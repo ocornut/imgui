@@ -77,9 +77,9 @@ or view this file with any Markdown viewer.
 ### Q: Which version should I get?
 I occasionally tag [Releases](https://github.com/ocornut/imgui/releases) but it is generally safe and recommended to sync to master/latest. The library is fairly stable and regressions tend to be fixed fast when reported.
 
-You may use the [docking](https://github.com/ocornut/imgui/tree/docking) branch which includes:
-- [Docking features](https://github.com/ocornut/imgui/issues/2109)
-- [Multi-viewport features](https://github.com/ocornut/imgui/issues/1542)
+You may use the ['docking'](https://github.com/ocornut/imgui/tree/docking) branch which includes:
+- [Docking features](https://github.com/ocornut/imgui/wiki/Docking)
+- [Multi-viewport features](https://github.com/ocornut/imgui/wiki/Multi-Viewports)
 
 Many projects are using this branch and it is kept in sync with master regularly.
 
@@ -204,10 +204,11 @@ ctx->RSSetScissorRects(1, &r);
 ### Q: How can I have multiple widgets with the same label?
 ### Q: How can I have multiple windows with the same label?
 
-**USING THE SAME LABEL+ID IS THE MOST COMMON USER MISTAKE:**
+**USING THE SAME LABEL+ID IS THE MOST COMMON USER MISTAKE!**
+<br>**USING AN EMPTY LABEL IS THE SAME AS USING THE SAME LABEL AS YOUR PARENT WIDGET!**
 <table>
 <tr>
-<td><img src="https://github.com/ocornut/imgui/assets/8225057/76eb9467-74d1-4e95-9f56-be81c6dd029d"></td>
+<td><img src="https://github.com/user-attachments/assets/776a8315-1164-4178-9a8c-df52e0ff28aa"></td>
 <td>
 <pre lang="cpp">
 ImGui::Begin("Incorrect!");
@@ -379,8 +380,9 @@ node open/closed state differently. See what makes more sense in your situation!
 Short explanation:
 - Refer to [Image Loading and Displaying Examples](https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples) on the [Wiki](https://github.com/ocornut/imgui/wiki).
 - You may use functions such as `ImGui::Image()`, `ImGui::ImageButton()` or lower-level `ImDrawList::AddImage()` to emit draw calls that will use your own textures.
-- Actual textures are identified in a way that is up to the user/engine. Those identifiers are stored and passed as ImTextureID (void*) value.
-- Loading image files from the disk and turning them into a texture is not within the scope of Dear ImGui (for a good reason).
+- Actual textures are identified in a way that is up to the user/engine. Those identifiers are stored and passed as an opaque ImTextureID value.
+- By default ImTextureID can store up to 64-bits. You may `#define` it to a custom type/structure if you need.
+- Loading image files from the disk and turning them into a texture is not within the scope of Dear ImGui (for a good reason), but the examples linked above may be useful references.
 
 **Please read documentations or tutorials on your graphics API to understand how to display textures on the screen before moving onward.**
 
@@ -388,27 +390,27 @@ Long explanation:
 - Dear ImGui's job is to create "meshes", defined in a renderer-agnostic format made of draw commands and vertices. At the end of the frame, those meshes (ImDrawList) will be displayed by your rendering function. They are made up of textured polygons and the code to render them is generally fairly short (a few dozen lines). In the examples/ folder, we provide functions for popular graphics APIs (OpenGL, DirectX, etc.).
 - Each rendering function decides on a data type to represent "textures". The concept of what is a "texture" is entirely tied to your underlying engine/graphics API.
  We carry the information to identify a "texture" in the ImTextureID type.
-ImTextureID is nothing more than a void*, aka 4/8 bytes worth of data: just enough to store one pointer or integer of your choice.
+ImTextureID default to ImU64 aka 8 bytes worth of data: just enough to store one pointer or integer of your choice.
 Dear ImGui doesn't know or understand what you are storing in ImTextureID, it merely passes ImTextureID values until they reach your rendering function.
 - In the [examples/](https://github.com/ocornut/imgui/tree/master/examples) backends, for each graphics API we decided on a type that is likely to be a good representation for specifying an image from the end-user perspective. This is what the _examples_ rendering functions are using:
 ```cpp
 OpenGL:
-- ImTextureID = GLuint
+- ImTextureID should contains 'GLuint' (GL texture identifier).
 - See ImGui_ImplOpenGL3_RenderDrawData() function in imgui_impl_opengl3.cpp
 ```
 ```cpp
 DirectX9:
-- ImTextureID = LPDIRECT3DTEXTURE9
+- ImTextureID should contain a 'LPDIRECT3DTEXTURE9' (pointer).
 - See ImGui_ImplDX9_RenderDrawData() function in imgui_impl_dx9.cpp
 ```
 ```cpp
 DirectX11:
-- ImTextureID = ID3D11ShaderResourceView*
+- ImTextureID should contain a 'ID3D11ShaderResourceView*' (pointer)
 - See ImGui_ImplDX11_RenderDrawData() function in imgui_impl_dx11.cpp
 ```
 ```cpp
 DirectX12:
-- ImTextureID = D3D12_GPU_DESCRIPTOR_HANDLE
+- ImTextureID should contain a 'D3D12_GPU_DESCRIPTOR_HANDLE' (always 64-bits)
 - See ImGui_ImplDX12_RenderDrawData() function in imgui_impl_dx12.cpp
 ```
 For example, in the OpenGL example backend we store raw OpenGL texture identifier (GLuint) inside ImTextureID.
@@ -420,14 +422,14 @@ If you are starting with OpenGL or DirectX or Vulkan and haven't built much of a
 
 User code may do:
 ```cpp
-// Cast our texture type to ImTextureID / void*
+// Cast our texture type to ImTextureID
 MyTexture* texture = g_CoffeeTableTexture;
-ImGui::Image((void*)texture, ImVec2(texture->Width, texture->Height));
+ImGui::Image((ImTextureID)(intptr_t)texture, ImVec2(texture->Width, texture->Height));
 ```
 The renderer function called after ImGui::Render() will receive that same value that the user code passed:
 ```cpp
-// Cast ImTextureID / void* stored in the draw command as our texture type
-MyTexture* texture = (MyTexture*)pcmd->GetTexID();
+// Cast ImTextureID stored in the draw command as our texture type
+MyTexture* texture = (MyTexture*)(intptr_t)pcmd->GetTexID();
 MyEngineBindTexture2D(texture);
 ```
 Once you understand this design, you will understand that loading image files and turning them into displayable textures is not within the scope of Dear ImGui.
@@ -436,19 +438,19 @@ If you want to display an image file (e.g. PNG file) on the screen, please refer
 
 Refer to [Image Loading and Displaying Examples](https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples) on the [Wiki](https://github.com/ocornut/imgui/wiki) to find simplified examples for loading textures with OpenGL, DirectX9 and DirectX11.
 
-C/C++ tip: a void* is pointer-sized storage. You may safely store any pointer or integer into it by casting your value to ImTextureID / void*, and vice-versa.
-Because both end-points (user code and rendering function) are under your control, you know exactly what is stored inside the ImTextureID / void*.
+C/C++ tip: a u64 is 8 bytes. You may safely store any pointer or integer into it by casting your value to ImTextureID, and vice-versa.
+Because both end-points (user code and rendering function) are under your control, you know exactly what is stored inside the ImTextureID.
 Here are some examples:
 ```cpp
 GLuint my_tex = XXX;
-void* my_void_ptr;
-my_void_ptr = (void*)(intptr_t)my_tex;                  // cast a GLuint into a void* (we don't take its address! we literally store the value inside the pointer)
-my_tex = (GLuint)(intptr_t)my_void_ptr;                 // cast a void* into a GLuint
+ImTextureID my_imtexid;
+my_imtexid = (ImTextureID)(intptr_t)my_tex;                     // cast a GLuint into a ImTextureID (we don't take its address! we just copy the address)
+my_tex = (GLuint)(intptr_t)my_imtexid;                          // cast a ImTextureID into a GLuint
 
 ID3D11ShaderResourceView* my_dx11_srv = XXX;
-void* my_void_ptr;
-my_void_ptr = (void*)my_dx11_srv;                       // cast a ID3D11ShaderResourceView* into an opaque void*
-my_dx11_srv = (ID3D11ShaderResourceView*)my_void_ptr;   // cast a void* into a ID3D11ShaderResourceView*
+ImTextureID my_imtexid;
+my_imtexid = (ImTextureID)(intptr_t)my_dx11_srv;                // cast a ID3D11ShaderResourceView* into an opaque ImTextureID
+my_dx11_srv = (ID3D11ShaderResourceView*)(intptr_t)_my_imtexid; // cast a ImTextureID into a ID3D11ShaderResourceView*
 ```
 Finally, you may call `ImGui::ShowMetricsWindow()` to explore/visualize/understand how the ImDrawList are generated.
 
@@ -639,7 +641,7 @@ The applications in examples/ are doing that.
 Windows: you can use the WM_CHAR or WM_UNICHAR or WM_IME_CHAR message (depending if your app is built using Unicode or MultiByte mode).
 You may also use `MultiByteToWideChar()` or `ToUnicode()` to retrieve Unicode codepoints from MultiByte characters or keyboard state.
 Windows: if your language is relying on an Input Method Editor (IME), you can write your HWND to ImGui::GetMainViewport()->PlatformHandleRaw
-for the default implementation of io.SetPlatformImeDataFn() to set your Microsoft IME position correctly.
+for the default implementation of GetPlatformIO().Platform_SetImeDataFn() to set your Microsoft IME position correctly.
 
 ##### [Return to Index](#index)
 
@@ -654,7 +656,7 @@ You may take a look at:
 - [Quotes](https://github.com/ocornut/imgui/wiki/Quotes)
 - [Software using Dear ImGui](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui)
 - [Funding & Sponsors](https://github.com/ocornut/imgui/wiki/Funding)
-- [Gallery](https://github.com/ocornut/imgui/issues/7503)
+- [Gallery](https://github.com/ocornut/imgui/issues?q=label%3Agallery)
 
 ##### [Return to Index](#index)
 
@@ -700,7 +702,7 @@ There is an auto-generated [c-api for Dear ImGui (cimgui)](https://github.com/ci
 - Individuals: you can support continued maintenance and development via PayPal donations. See [README](https://github.com/ocornut/imgui/blob/master/docs/README.md).
 - If you are experienced with Dear ImGui and C++, look at [GitHub Issues](https://github.com/ocornut/imgui/issues), [GitHub Discussions](https://github.com/ocornut/imgui/discussions), the [Wiki](https://github.com/ocornut/imgui/wiki), read [docs/TODO.txt](https://github.com/ocornut/imgui/blob/master/docs/TODO.txt), and see how you want to help and can help!
 - Disclose your usage of Dear ImGui via a dev blog post, a tweet, a screenshot, a mention somewhere, etc.
-You may post screenshots or links in the [gallery threads](https://github.com/ocornut/imgui/issues/7503). Visuals are ideal as they inspire other programmers. Disclosing your use of Dear ImGui helps the library grow credibility, and helps other teams and programmers with taking decisions.
+You may post screenshots or links in the [gallery threads](https://github.com/ocornut/imgui/issues?q=label%3Agallery). Visuals are ideal as they inspire other programmers. Disclosing your use of Dear ImGui helps the library grow credibility, and helps other teams and programmers with taking decisions.
 - If you have issues or if you need to hack into the library, even if you don't expect any support it is useful that you share your issues or sometimes incomplete PR.
 
 ##### [Return to Index](#index)

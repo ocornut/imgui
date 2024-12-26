@@ -1,4 +1,4 @@
-// dear imgui, v1.90.9 WIP
+// dear imgui, v1.91.7 WIP
 // (drawing and font code)
 
 /*
@@ -14,7 +14,7 @@ Index of this file:
 // [SECTION] Helpers ShadeVertsXXX functions
 // [SECTION] ImFontConfig
 // [SECTION] ImFontAtlas
-// [SECTION] ImFontAtlas glyph ranges helpers
+// [SECTION] ImFontAtlas: glyph ranges helpers
 // [SECTION] ImFontGlyphRangesBuilder
 // [SECTION] ImFont
 // [SECTION] ImGui Internal Render Helpers
@@ -66,13 +66,18 @@ Index of this file:
 #pragma clang diagnostic ignored "-Wimplicit-int-float-conversion"  // warning: implicit conversion from 'xxx' to 'float' may lose precision
 #pragma clang diagnostic ignored "-Wreserved-identifier"            // warning: identifier '_Xxx' is reserved because it starts with '_' followed by a capital letter
 #pragma clang diagnostic ignored "-Wunsafe-buffer-usage"            // warning: 'xxx' is an unsafe pointer used for buffer access
+#pragma clang diagnostic ignored "-Wnontrivial-memaccess"           // warning: first argument in call to 'memset' is a pointer to non-trivially copyable type
+#pragma clang diagnostic ignored "-Wcast-qual"                      // warning: cast from 'const xxxx *' to 'xxx *' drops const qualifier
 #elif defined(__GNUC__)
-#pragma GCC diagnostic ignored "-Wpragmas"                  // warning: unknown option after '#pragma GCC diagnostic' kind
-#pragma GCC diagnostic ignored "-Wunused-function"          // warning: 'xxxx' defined but not used
-#pragma GCC diagnostic ignored "-Wdouble-promotion"         // warning: implicit conversion from 'float' to 'double' when passing argument to function
-#pragma GCC diagnostic ignored "-Wconversion"               // warning: conversion to 'xxxx' from 'xxxx' may alter its value
-#pragma GCC diagnostic ignored "-Wstack-protector"          // warning: stack protector not protecting local variables: variable length buffer
-#pragma GCC diagnostic ignored "-Wclass-memaccess"          // [__GNUC__ >= 8] warning: 'memset/memcpy' clearing/writing an object of type 'xxxx' with no trivial copy-assignment; use assignment or value-initialization instead
+#pragma GCC diagnostic ignored "-Wpragmas"                          // warning: unknown option after '#pragma GCC diagnostic' kind
+#pragma GCC diagnostic ignored "-Wunused-function"                  // warning: 'xxxx' defined but not used
+#pragma GCC diagnostic ignored "-Wfloat-equal"                      // warning: comparing floating-point with '==' or '!=' is unsafe
+#pragma GCC diagnostic ignored "-Wdouble-promotion"                 // warning: implicit conversion from 'float' to 'double' when passing argument to function
+#pragma GCC diagnostic ignored "-Wconversion"                       // warning: conversion to 'xxxx' from 'xxxx' may alter its value
+#pragma GCC diagnostic ignored "-Wstack-protector"                  // warning: stack protector not protecting local variables: variable length buffer
+#pragma GCC diagnostic ignored "-Wstrict-overflow"                  // warning: assuming signed overflow does not occur when simplifying division / ..when changing X +- C1 cmp C2 to X cmp C2 -+ C1
+#pragma GCC diagnostic ignored "-Wclass-memaccess"                  // [__GNUC__ >= 8] warning: 'memset/memcpy' clearing/writing an object of type 'xxxx' with no trivial copy-assignment; use assignment or value-initialization instead
+#pragma GCC diagnostic ignored "-Wcast-qual"                        // warning: cast from type 'const xxxx *' to type 'xxxx *' casts away qualifiers
 #endif
 
 //-------------------------------------------------------------------------
@@ -101,16 +106,15 @@ namespace IMGUI_STB_NAMESPACE
 
 #if defined(__clang__)
 #pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-function"
+#pragma clang diagnostic ignored "-Wunused-function"        // warning: 'xxxx' defined but not used
 #pragma clang diagnostic ignored "-Wmissing-prototypes"
 #pragma clang diagnostic ignored "-Wimplicit-fallthrough"
-#pragma clang diagnostic ignored "-Wcast-qual"              // warning: cast from 'const xxxx *' to 'xxx *' drops const qualifier
 #endif
 
 #if defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wtype-limits"              // warning: comparison is always true due to limited range of data type [-Wtype-limits]
-#pragma GCC diagnostic ignored "-Wcast-qual"                // warning: cast from type 'const xxxx *' to type 'xxxx *' casts away qualifiers
+#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"     // warning: this statement may fall through
 #endif
 
 #ifndef STB_RECT_PACK_IMPLEMENTATION                        // in case the user already have an implementation in the _same_ compilation unit (e.g. unity builds)
@@ -217,7 +221,7 @@ void ImGui::StyleColorsDark(ImGuiStyle* dst)
     colors[ImGuiCol_TabSelectedOverline]    = colors[ImGuiCol_HeaderActive];
     colors[ImGuiCol_TabDimmed]              = ImLerp(colors[ImGuiCol_Tab],          colors[ImGuiCol_TitleBg], 0.80f);
     colors[ImGuiCol_TabDimmedSelected]      = ImLerp(colors[ImGuiCol_TabSelected],  colors[ImGuiCol_TitleBg], 0.40f);
-    colors[ImGuiCol_TabDimmedSelectedOverline] = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
+    colors[ImGuiCol_TabDimmedSelectedOverline] = ImVec4(0.50f, 0.50f, 0.50f, 0.00f);
     colors[ImGuiCol_DockingPreview]         = colors[ImGuiCol_HeaderActive] * ImVec4(1.0f, 1.0f, 1.0f, 0.7f);
     colors[ImGuiCol_DockingEmptyBg]         = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
     colors[ImGuiCol_PlotLines]              = ImVec4(0.61f, 0.61f, 0.61f, 1.00f);
@@ -229,9 +233,10 @@ void ImGui::StyleColorsDark(ImGuiStyle* dst)
     colors[ImGuiCol_TableBorderLight]       = ImVec4(0.23f, 0.23f, 0.25f, 1.00f);   // Prefer using Alpha=1.0 here
     colors[ImGuiCol_TableRowBg]             = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
     colors[ImGuiCol_TableRowBgAlt]          = ImVec4(1.00f, 1.00f, 1.00f, 0.06f);
+    colors[ImGuiCol_TextLink]               = colors[ImGuiCol_HeaderActive];
     colors[ImGuiCol_TextSelectedBg]         = ImVec4(0.26f, 0.59f, 0.98f, 0.35f);
     colors[ImGuiCol_DragDropTarget]         = ImVec4(1.00f, 1.00f, 0.00f, 0.90f);
-    colors[ImGuiCol_NavHighlight]           = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+    colors[ImGuiCol_NavCursor]              = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
     colors[ImGuiCol_NavWindowingHighlight]  = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
     colors[ImGuiCol_NavWindowingDimBg]      = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
     colors[ImGuiCol_ModalWindowDimBg]       = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
@@ -281,7 +286,7 @@ void ImGui::StyleColorsClassic(ImGuiStyle* dst)
     colors[ImGuiCol_TabSelectedOverline]    = colors[ImGuiCol_HeaderActive];
     colors[ImGuiCol_TabDimmed]              = ImLerp(colors[ImGuiCol_Tab],          colors[ImGuiCol_TitleBg], 0.80f);
     colors[ImGuiCol_TabDimmedSelected]      = ImLerp(colors[ImGuiCol_TabSelected],  colors[ImGuiCol_TitleBg], 0.40f);
-    colors[ImGuiCol_TabDimmedSelectedOverline] = colors[ImGuiCol_HeaderActive];
+    colors[ImGuiCol_TabDimmedSelectedOverline] = ImVec4(0.53f, 0.53f, 0.87f, 0.00f);
     colors[ImGuiCol_DockingPreview]         = colors[ImGuiCol_Header] * ImVec4(1.0f, 1.0f, 1.0f, 0.7f);
     colors[ImGuiCol_DockingEmptyBg]         = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
     colors[ImGuiCol_PlotLines]              = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
@@ -293,9 +298,10 @@ void ImGui::StyleColorsClassic(ImGuiStyle* dst)
     colors[ImGuiCol_TableBorderLight]       = ImVec4(0.26f, 0.26f, 0.28f, 1.00f);   // Prefer using Alpha=1.0 here
     colors[ImGuiCol_TableRowBg]             = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
     colors[ImGuiCol_TableRowBgAlt]          = ImVec4(1.00f, 1.00f, 1.00f, 0.07f);
+    colors[ImGuiCol_TextLink]               = colors[ImGuiCol_HeaderActive];
     colors[ImGuiCol_TextSelectedBg]         = ImVec4(0.00f, 0.00f, 1.00f, 0.35f);
     colors[ImGuiCol_DragDropTarget]         = ImVec4(1.00f, 1.00f, 0.00f, 0.90f);
-    colors[ImGuiCol_NavHighlight]           = colors[ImGuiCol_HeaderHovered];
+    colors[ImGuiCol_NavCursor]              = colors[ImGuiCol_HeaderHovered];
     colors[ImGuiCol_NavWindowingHighlight]  = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
     colors[ImGuiCol_NavWindowingDimBg]      = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
     colors[ImGuiCol_ModalWindowDimBg]       = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
@@ -346,7 +352,7 @@ void ImGui::StyleColorsLight(ImGuiStyle* dst)
     colors[ImGuiCol_TabSelectedOverline]    = colors[ImGuiCol_HeaderActive];
     colors[ImGuiCol_TabDimmed]              = ImLerp(colors[ImGuiCol_Tab],          colors[ImGuiCol_TitleBg], 0.80f);
     colors[ImGuiCol_TabDimmedSelected]      = ImLerp(colors[ImGuiCol_TabSelected],  colors[ImGuiCol_TitleBg], 0.40f);
-    colors[ImGuiCol_TabDimmedSelectedOverline] = ImVec4(0.26f, 0.59f, 1.00f, 1.00f);
+    colors[ImGuiCol_TabDimmedSelectedOverline] = ImVec4(0.26f, 0.59f, 1.00f, 0.00f);
     colors[ImGuiCol_DockingPreview]         = colors[ImGuiCol_Header] * ImVec4(1.0f, 1.0f, 1.0f, 0.7f);
     colors[ImGuiCol_DockingEmptyBg]         = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
     colors[ImGuiCol_PlotLines]              = ImVec4(0.39f, 0.39f, 0.39f, 1.00f);
@@ -358,9 +364,10 @@ void ImGui::StyleColorsLight(ImGuiStyle* dst)
     colors[ImGuiCol_TableBorderLight]       = ImVec4(0.68f, 0.68f, 0.74f, 1.00f);   // Prefer using Alpha=1.0 here
     colors[ImGuiCol_TableRowBg]             = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
     colors[ImGuiCol_TableRowBgAlt]          = ImVec4(0.30f, 0.30f, 0.30f, 0.09f);
+    colors[ImGuiCol_TextLink]               = colors[ImGuiCol_HeaderActive];
     colors[ImGuiCol_TextSelectedBg]         = ImVec4(0.26f, 0.59f, 0.98f, 0.35f);
     colors[ImGuiCol_DragDropTarget]         = ImVec4(0.26f, 0.59f, 0.98f, 0.95f);
-    colors[ImGuiCol_NavHighlight]           = colors[ImGuiCol_HeaderHovered];
+    colors[ImGuiCol_NavCursor]              = colors[ImGuiCol_HeaderHovered];
     colors[ImGuiCol_NavWindowingHighlight]  = ImVec4(0.70f, 0.70f, 0.70f, 0.70f);
     colors[ImGuiCol_NavWindowingDimBg]      = ImVec4(0.20f, 0.20f, 0.20f, 0.20f);
     colors[ImGuiCol_ModalWindowDimBg]       = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
@@ -396,6 +403,17 @@ void ImDrawListSharedData::SetCircleTessellationMaxError(float max_error)
     ArcFastRadiusCutoff = IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC_R(IM_DRAWLIST_ARCFAST_SAMPLE_MAX, CircleSegmentMaxError);
 }
 
+ImDrawList::ImDrawList(ImDrawListSharedData* shared_data)
+{
+    memset(this, 0, sizeof(*this));
+    _Data = shared_data;
+}
+
+ImDrawList::~ImDrawList()
+{
+    _ClearFreeMemory();
+}
+
 // Initialize before use in a new frame. We always have a command ready in the buffer.
 // In the majority of cases, you would want to call PushClipRect() and PushTextureID() after this.
 void ImDrawList::_ResetForNewFrame()
@@ -417,6 +435,7 @@ void ImDrawList::_ResetForNewFrame()
     _IdxWritePtr = NULL;
     _ClipRectStack.resize(0);
     _TextureIdStack.resize(0);
+    _CallbacksDataBuf.resize(0);
     _Path.resize(0);
     _Splitter.Clear();
     CmdBuffer.push_back(ImDrawCmd());
@@ -434,6 +453,7 @@ void ImDrawList::_ClearFreeMemory()
     _IdxWritePtr = NULL;
     _ClipRectStack.clear();
     _TextureIdStack.clear();
+    _CallbacksDataBuf.clear();
     _Path.clear();
     _Splitter.ClearFreeMemory();
 }
@@ -473,7 +493,7 @@ void ImDrawList::_PopUnusedDrawCmd()
     }
 }
 
-void ImDrawList::AddCallback(ImDrawCallback callback, void* callback_data)
+void ImDrawList::AddCallback(ImDrawCallback callback, void* userdata, size_t userdata_size)
 {
     IM_ASSERT_PARANOID(CmdBuffer.Size > 0);
     ImDrawCmd* curr_cmd = &CmdBuffer.Data[CmdBuffer.Size - 1];
@@ -483,8 +503,26 @@ void ImDrawList::AddCallback(ImDrawCallback callback, void* callback_data)
         AddDrawCmd();
         curr_cmd = &CmdBuffer.Data[CmdBuffer.Size - 1];
     }
+
     curr_cmd->UserCallback = callback;
-    curr_cmd->UserCallbackData = callback_data;
+    if (userdata_size == 0)
+    {
+        // Store user data directly in command (no indirection)
+        curr_cmd->UserCallbackData = userdata;
+        curr_cmd->UserCallbackDataSize = 0;
+        curr_cmd->UserCallbackDataOffset = -1;
+    }
+    else
+    {
+        // Copy and store user data in a buffer
+        IM_ASSERT(userdata != NULL);
+        IM_ASSERT(userdata_size < (1u << 31));
+        curr_cmd->UserCallbackData = NULL; // Will be resolved during Render()
+        curr_cmd->UserCallbackDataSize = (int)userdata_size;
+        curr_cmd->UserCallbackDataOffset = _CallbacksDataBuf.Size;
+        _CallbacksDataBuf.resize(_CallbacksDataBuf.Size + (int)userdata_size);
+        memcpy(_CallbacksDataBuf.Data + (size_t)curr_cmd->UserCallbackDataOffset, userdata, userdata_size);
+    }
 
     AddDrawCmd(); // Force a new command after us (see comment below)
 }
@@ -529,7 +567,6 @@ void ImDrawList::_OnChangedClipRect()
         CmdBuffer.pop_back();
         return;
     }
-
     curr_cmd->ClipRect = _CmdHeader.ClipRect;
 }
 
@@ -552,7 +589,6 @@ void ImDrawList::_OnChangedTextureID()
         CmdBuffer.pop_back();
         return;
     }
-
     curr_cmd->TextureId = _CmdHeader.TextureId;
 }
 
@@ -625,6 +661,15 @@ void ImDrawList::PopTextureID()
 {
     _TextureIdStack.pop_back();
     _CmdHeader.TextureId = (_TextureIdStack.Size == 0) ? (ImTextureID)NULL : _TextureIdStack.Data[_TextureIdStack.Size - 1];
+    _OnChangedTextureID();
+}
+
+// This is used by ImGui::PushFont()/PopFont(). It works because we never use _TextureIdStack[] elsewhere than in PushTextureID()/PopTextureID().
+void ImDrawList::_SetTextureID(ImTextureID texture_id)
+{
+    if (_CmdHeader.TextureId == texture_id)
+        return;
+    _CmdHeader.TextureId = texture_id;
     _OnChangedTextureID();
 }
 
@@ -1622,7 +1667,7 @@ void ImDrawList::AddBezierQuadratic(const ImVec2& p1, const ImVec2& p2, const Im
     PathStroke(col, 0, thickness);
 }
 
-void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect)
+void ImDrawList::AddText(ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
@@ -2218,6 +2263,12 @@ void ImGui::AddDrawListToDrawDataEx(ImDrawData* draw_data, ImVector<ImDrawList*>
     if (sizeof(ImDrawIdx) == 2)
         IM_ASSERT(draw_list->_VtxCurrentIdx < (1 << 16) && "Too many vertices in ImDrawList using 16-bit indices. Read comment above");
 
+    // Resolve callback data pointers
+    if (draw_list->_CallbacksDataBuf.Size > 0)
+        for (ImDrawCmd& cmd : draw_list->CmdBuffer)
+            if (cmd.UserCallback != NULL && cmd.UserCallbackDataOffset != -1 && cmd.UserCallbackDataSize > 0)
+                cmd.UserCallbackData = draw_list->_CallbacksDataBuf.Data + cmd.UserCallbackDataOffset;
+
     // Add to output list + records state in ImDrawData
     out_list->push_back(draw_list);
     draw_data->CmdListsCount++;
@@ -2335,11 +2386,43 @@ ImFontConfig::ImFontConfig()
     GlyphMaxAdvanceX = FLT_MAX;
     RasterizerMultiply = 1.0f;
     RasterizerDensity = 1.0f;
-    EllipsisChar = (ImWchar)-1;
+    EllipsisChar = 0;
 }
 
 //-----------------------------------------------------------------------------
 // [SECTION] ImFontAtlas
+//-----------------------------------------------------------------------------
+// - Default texture data encoded in ASCII
+// - ImFontAtlas::ClearInputData()
+// - ImFontAtlas::ClearTexData()
+// - ImFontAtlas::ClearFonts()
+// - ImFontAtlas::Clear()
+// - ImFontAtlas::GetTexDataAsAlpha8()
+// - ImFontAtlas::GetTexDataAsRGBA32()
+// - ImFontAtlas::AddFont()
+// - ImFontAtlas::AddFontDefault()
+// - ImFontAtlas::AddFontFromFileTTF()
+// - ImFontAtlas::AddFontFromMemoryTTF()
+// - ImFontAtlas::AddFontFromMemoryCompressedTTF()
+// - ImFontAtlas::AddFontFromMemoryCompressedBase85TTF()
+// - ImFontAtlas::AddCustomRectRegular()
+// - ImFontAtlas::AddCustomRectFontGlyph()
+// - ImFontAtlas::CalcCustomRectUV()
+// - ImFontAtlas::GetMouseCursorTexData()
+// - ImFontAtlas::Build()
+// - ImFontAtlasBuildMultiplyCalcLookupTable()
+// - ImFontAtlasBuildMultiplyRectAlpha8()
+// - ImFontAtlasBuildWithStbTruetype()
+// - ImFontAtlasGetBuilderForStbTruetype()
+// - ImFontAtlasUpdateConfigDataPointers()
+// - ImFontAtlasBuildSetupFont()
+// - ImFontAtlasBuildPackCustomRects()
+// - ImFontAtlasBuildRender8bppRectFromString()
+// - ImFontAtlasBuildRender32bppRectFromString()
+// - ImFontAtlasBuildRenderDefaultTexData()
+// - ImFontAtlasBuildRenderLinesTexData()
+// - ImFontAtlasBuildInit()
+// - ImFontAtlasBuildFinish()
 //-----------------------------------------------------------------------------
 
 // A work of art lies ahead! (. = white layer, X = black layer, others are blank)
@@ -2495,13 +2578,15 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas between NewFrame() and EndFrame/Render()!");
     IM_ASSERT(font_cfg->FontData != NULL && font_cfg->FontDataSize > 0);
-    IM_ASSERT(font_cfg->SizePixels > 0.0f);
+    IM_ASSERT(font_cfg->SizePixels > 0.0f && "Is ImFontConfig struct correctly initialized?");
+    IM_ASSERT(font_cfg->OversampleH > 0 && font_cfg->OversampleV > 0 && "Is ImFontConfig struct correctly initialized?");
+    IM_ASSERT(font_cfg->RasterizerDensity > 0.0f);
 
     // Create new font
     if (!font_cfg->MergeMode)
         Fonts.push_back(IM_NEW(ImFont));
     else
-        IM_ASSERT(!Fonts.empty() && "Cannot use MergeMode for the first font"); // When using MergeMode make sure that a font has already been added before. You can use ImGui::GetIO().Fonts->AddFontDefault() to add the default imgui font.
+        IM_ASSERT(Fonts.Size > 0 && "Cannot use MergeMode for the first font"); // When using MergeMode make sure that a font has already been added before. You can use ImGui::GetIO().Fonts->AddFontDefault() to add the default imgui font.
 
     ConfigData.push_back(*font_cfg);
     ImFontConfig& new_font_cfg = ConfigData.back();
@@ -2514,9 +2599,13 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
         memcpy(new_font_cfg.FontData, font_cfg->FontData, (size_t)new_font_cfg.FontDataSize);
     }
 
-    if (new_font_cfg.DstFont->EllipsisChar == (ImWchar)-1)
-        new_font_cfg.DstFont->EllipsisChar = font_cfg->EllipsisChar;
+    // Round font size
+    // - We started rounding in 1.90 WIP (18991) as our layout system currently doesn't support non-rounded font size well yet.
+    // - Note that using io.FontGlobalScale or SetWindowFontScale(), with are legacy-ish, partially supported features, can still lead to unrounded sizes.
+    // - We may support it better later and remove this rounding.
+    new_font_cfg.SizePixels = ImTrunc(new_font_cfg.SizePixels);
 
+    // Pointers to ConfigData and BuilderData are otherwise dangling
     ImFontAtlasUpdateConfigDataPointers(this);
 
     // Invalidate texture
@@ -2528,7 +2617,6 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
 // Default font TTF is compressed with stb_compress then base85 encoded (see misc/fonts/binary_to_compressed_c.cpp for encoder)
 static unsigned int stb_decompress_length(const unsigned char* input);
 static unsigned int stb_decompress(unsigned char* output, const unsigned char* input, unsigned int length);
-static const char*  GetDefaultCompressedFontDataTTFBase85();
 static unsigned int Decode85Byte(char c)                                    { return c >= '\\' ? c-36 : c-35; }
 static void         Decode85(const unsigned char* src, unsigned char* dst)
 {
@@ -2540,10 +2628,14 @@ static void         Decode85(const unsigned char* src, unsigned char* dst)
         dst += 4;
     }
 }
+#ifndef IMGUI_DISABLE_DEFAULT_FONT
+static const char* GetDefaultCompressedFontDataTTF(int* out_size);
+#endif
 
 // Load embedded ProggyClean.ttf at size 13, disable oversampling
 ImFont* ImFontAtlas::AddFontDefault(const ImFontConfig* font_cfg_template)
 {
+#ifndef IMGUI_DISABLE_DEFAULT_FONT
     ImFontConfig font_cfg = font_cfg_template ? *font_cfg_template : ImFontConfig();
     if (!font_cfg_template)
     {
@@ -2557,10 +2649,16 @@ ImFont* ImFontAtlas::AddFontDefault(const ImFontConfig* font_cfg_template)
     font_cfg.EllipsisChar = (ImWchar)0x0085;
     font_cfg.GlyphOffset.y = 1.0f * IM_TRUNC(font_cfg.SizePixels / 13.0f);  // Add +1 offset per 13 units
 
-    const char* ttf_compressed_base85 = GetDefaultCompressedFontDataTTFBase85();
+    int ttf_compressed_size = 0;
+    const char* ttf_compressed = GetDefaultCompressedFontDataTTF(&ttf_compressed_size);
     const ImWchar* glyph_ranges = font_cfg.GlyphRanges != NULL ? font_cfg.GlyphRanges : GetGlyphRangesDefault();
-    ImFont* font = AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_cfg.SizePixels, &font_cfg, glyph_ranges);
+    ImFont* font = AddFontFromMemoryCompressedTTF(ttf_compressed, ttf_compressed_size, font_cfg.SizePixels, &font_cfg, glyph_ranges);
     return font;
+#else
+    IM_ASSERT(0 && "AddFontDefault() disabled in this build.");
+    IM_UNUSED(font_cfg_template);
+    return NULL;
+#endif // #ifndef IMGUI_DISABLE_DEFAULT_FONT
 }
 
 ImFont* ImFontAtlas::AddFontFromFileTTF(const char* filename, float size_pixels, const ImFontConfig* font_cfg_template, const ImWchar* glyph_ranges)
@@ -2644,6 +2742,7 @@ int ImFontAtlas::AddCustomRectFontGlyph(ImFont* font, ImWchar id, int width, int
     r.Width = (unsigned short)width;
     r.Height = (unsigned short)height;
     r.GlyphID = id;
+    r.GlyphColored = 0; // Set to 1 manually to mark glyph as colored // FIXME: No official API for that (#8133)
     r.GlyphAdvanceX = advance_x;
     r.GlyphOffset = offset;
     r.Font = font;
@@ -2818,8 +2917,9 @@ static bool ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
         for (const ImWchar* src_range = src_tmp.SrcRanges; src_range[0] && src_range[1]; src_range += 2)
         {
             // Check for valid range. This may also help detect *some* dangling pointers, because a common
-            // user error is to setup ImFontConfig::GlyphRanges with a pointer to data that isn't persistent.
-            IM_ASSERT(src_range[0] <= src_range[1]);
+            // user error is to setup ImFontConfig::GlyphRanges with a pointer to data that isn't persistent,
+            // or to forget to zero-terminate the glyph range array.
+            IM_ASSERT(src_range[0] <= src_range[1] && "Invalid range: is your glyph range array persistent? it is zero-terminated?");
             src_tmp.GlyphsHighest = ImMax(src_tmp.GlyphsHighest, (int)src_range[1]);
         }
         dst_tmp.SrcCount++;
@@ -2879,6 +2979,7 @@ static bool ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
     int total_surface = 0;
     int buf_rects_out_n = 0;
     int buf_packedchars_out_n = 0;
+    const int pack_padding = atlas->TexGlyphPadding;
     for (int src_i = 0; src_i < src_tmp_array.Size; src_i++)
     {
         ImFontBuildSrcData& src_tmp = src_tmp_array[src_i];
@@ -2902,18 +3003,19 @@ static bool ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
 
         // Gather the sizes of all rectangles we will need to pack (this loop is based on stbtt_PackFontRangesGatherRects)
         const float scale = (cfg.SizePixels > 0.0f) ? stbtt_ScaleForPixelHeight(&src_tmp.FontInfo, cfg.SizePixels * cfg.RasterizerDensity) : stbtt_ScaleForMappingEmToPixels(&src_tmp.FontInfo, -cfg.SizePixels * cfg.RasterizerDensity);
-        const int padding = atlas->TexGlyphPadding;
         for (int glyph_i = 0; glyph_i < src_tmp.GlyphsList.Size; glyph_i++)
         {
             int x0, y0, x1, y1;
             const int glyph_index_in_font = stbtt_FindGlyphIndex(&src_tmp.FontInfo, src_tmp.GlyphsList[glyph_i]);
             IM_ASSERT(glyph_index_in_font != 0);
             stbtt_GetGlyphBitmapBoxSubpixel(&src_tmp.FontInfo, glyph_index_in_font, scale * cfg.OversampleH, scale * cfg.OversampleV, 0, 0, &x0, &y0, &x1, &y1);
-            src_tmp.Rects[glyph_i].w = (stbrp_coord)(x1 - x0 + padding + cfg.OversampleH - 1);
-            src_tmp.Rects[glyph_i].h = (stbrp_coord)(y1 - y0 + padding + cfg.OversampleV - 1);
+            src_tmp.Rects[glyph_i].w = (stbrp_coord)(x1 - x0 + pack_padding + cfg.OversampleH - 1);
+            src_tmp.Rects[glyph_i].h = (stbrp_coord)(y1 - y0 + pack_padding + cfg.OversampleV - 1);
             total_surface += src_tmp.Rects[glyph_i].w * src_tmp.Rects[glyph_i].h;
         }
     }
+    for (int i = 0; i < atlas->CustomRects.Size; i++)
+        total_surface += (atlas->CustomRects[i].Width + pack_padding) * (atlas->CustomRects[i].Height + pack_padding);
 
     // We need a width for the skyline algorithm, any width!
     // The exact width doesn't really matter much, but some API/GPU have texture size limitations and increasing width can decrease height.
@@ -2929,7 +3031,8 @@ static bool ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
     // Pack our extra data rectangles first, so it will be on the upper-left corner of our texture (UV will have small values).
     const int TEX_HEIGHT_MAX = 1024 * 32;
     stbtt_pack_context spc = {};
-    stbtt_PackBegin(&spc, NULL, atlas->TexWidth, TEX_HEIGHT_MAX, 0, atlas->TexGlyphPadding, NULL);
+    stbtt_PackBegin(&spc, NULL, atlas->TexWidth, TEX_HEIGHT_MAX, 0, 0, NULL);
+    spc.padding = atlas->TexGlyphPadding; // Because we mixup stbtt_PackXXX and stbrp_PackXXX there's a bit of a hack here, not passing the value to stbtt_PackBegin() allows us to still pack a TexWidth-1 wide item. (#8107)
     ImFontAtlasBuildPackCustomRects(atlas, spc.pack_info);
 
     // 6. Pack each source font. No rendering yet, we are working with rectangles in an infinitely tall texture at this point.
@@ -3075,13 +3178,14 @@ void ImFontAtlasBuildPackCustomRects(ImFontAtlas* atlas, void* stbrp_context_opa
     if (user_rects.Size < 1) { __builtin_unreachable(); } // Workaround for GCC bug if IM_ASSERT() is defined to conditionally throw (see #5343)
 #endif
 
+    const int pack_padding = atlas->TexGlyphPadding;
     ImVector<stbrp_rect> pack_rects;
     pack_rects.resize(user_rects.Size);
     memset(pack_rects.Data, 0, (size_t)pack_rects.size_in_bytes());
     for (int i = 0; i < user_rects.Size; i++)
     {
-        pack_rects[i].w = user_rects[i].Width;
-        pack_rects[i].h = user_rects[i].Height;
+        pack_rects[i].w = user_rects[i].Width + pack_padding;
+        pack_rects[i].h = user_rects[i].Height + pack_padding;
     }
     stbrp_pack_rects(pack_context, &pack_rects[0], pack_rects.Size);
     for (int i = 0; i < pack_rects.Size; i++)
@@ -3089,7 +3193,7 @@ void ImFontAtlasBuildPackCustomRects(ImFontAtlas* atlas, void* stbrp_context_opa
         {
             user_rects[i].X = (unsigned short)pack_rects[i].x;
             user_rects[i].Y = (unsigned short)pack_rects[i].y;
-            IM_ASSERT(pack_rects[i].w == user_rects[i].Width && pack_rects[i].h == user_rects[i].Height);
+            IM_ASSERT(pack_rects[i].w == user_rects[i].Width + pack_padding && pack_rects[i].h == user_rects[i].Height + pack_padding);
             atlas->TexHeight = ImMax(atlas->TexHeight, pack_rects[i].y + pack_rects[i].h);
         }
 }
@@ -3120,9 +3224,23 @@ static void ImFontAtlasBuildRenderDefaultTexData(ImFontAtlas* atlas)
     IM_ASSERT(r->IsPacked());
 
     const int w = atlas->TexWidth;
-    if (!(atlas->Flags & ImFontAtlasFlags_NoMouseCursors))
+    if (atlas->Flags & ImFontAtlasFlags_NoMouseCursors)
     {
-        // Render/copy pixels
+        // White pixels only
+        IM_ASSERT(r->Width == 2 && r->Height == 2);
+        const int offset = (int)r->X + (int)r->Y * w;
+        if (atlas->TexPixelsAlpha8 != NULL)
+        {
+            atlas->TexPixelsAlpha8[offset] = atlas->TexPixelsAlpha8[offset + 1] = atlas->TexPixelsAlpha8[offset + w] = atlas->TexPixelsAlpha8[offset + w + 1] = 0xFF;
+        }
+        else
+        {
+            atlas->TexPixelsRGBA32[offset] = atlas->TexPixelsRGBA32[offset + 1] = atlas->TexPixelsRGBA32[offset + w] = atlas->TexPixelsRGBA32[offset + w + 1] = IM_COL32_WHITE;
+        }
+    }
+    else
+    {
+        // White pixels and mouse cursor
         IM_ASSERT(r->Width == FONT_ATLAS_DEFAULT_TEX_DATA_W * 2 + 1 && r->Height == FONT_ATLAS_DEFAULT_TEX_DATA_H);
         const int x_for_white = r->X;
         const int x_for_black = r->X + FONT_ATLAS_DEFAULT_TEX_DATA_W + 1;
@@ -3137,20 +3255,6 @@ static void ImFontAtlasBuildRenderDefaultTexData(ImFontAtlas* atlas)
             ImFontAtlasBuildRender32bppRectFromString(atlas, x_for_black, r->Y, FONT_ATLAS_DEFAULT_TEX_DATA_W, FONT_ATLAS_DEFAULT_TEX_DATA_H, FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS, 'X', IM_COL32_WHITE);
         }
     }
-    else
-    {
-        // Render 4 white pixels
-        IM_ASSERT(r->Width == 2 && r->Height == 2);
-        const int offset = (int)r->X + (int)r->Y * w;
-        if (atlas->TexPixelsAlpha8 != NULL)
-        {
-            atlas->TexPixelsAlpha8[offset] = atlas->TexPixelsAlpha8[offset + 1] = atlas->TexPixelsAlpha8[offset + w] = atlas->TexPixelsAlpha8[offset + w + 1] = 0xFF;
-        }
-        else
-        {
-            atlas->TexPixelsRGBA32[offset] = atlas->TexPixelsRGBA32[offset + 1] = atlas->TexPixelsRGBA32[offset + w] = atlas->TexPixelsRGBA32[offset + w + 1] = IM_COL32_WHITE;
-        }
-    }
     atlas->TexUvWhitePixel = ImVec2((r->X + 0.5f) * atlas->TexUvScale.x, (r->Y + 0.5f) * atlas->TexUvScale.y);
 }
 
@@ -3162,38 +3266,38 @@ static void ImFontAtlasBuildRenderLinesTexData(ImFontAtlas* atlas)
     // This generates a triangular shape in the texture, with the various line widths stacked on top of each other to allow interpolation between them
     ImFontAtlasCustomRect* r = atlas->GetCustomRectByIndex(atlas->PackIdLines);
     IM_ASSERT(r->IsPacked());
-    for (unsigned int n = 0; n < IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1; n++) // +1 because of the zero-width row
+    for (int n = 0; n < IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1; n++) // +1 because of the zero-width row
     {
         // Each line consists of at least two empty pixels at the ends, with a line of solid pixels in the middle
-        unsigned int y = n;
-        unsigned int line_width = n;
-        unsigned int pad_left = (r->Width - line_width) / 2;
-        unsigned int pad_right = r->Width - (pad_left + line_width);
+        int y = n;
+        int line_width = n;
+        int pad_left = (r->Width - line_width) / 2;
+        int pad_right = r->Width - (pad_left + line_width);
 
         // Write each slice
         IM_ASSERT(pad_left + line_width + pad_right == r->Width && y < r->Height); // Make sure we're inside the texture bounds before we start writing pixels
         if (atlas->TexPixelsAlpha8 != NULL)
         {
             unsigned char* write_ptr = &atlas->TexPixelsAlpha8[r->X + ((r->Y + y) * atlas->TexWidth)];
-            for (unsigned int i = 0; i < pad_left; i++)
+            for (int i = 0; i < pad_left; i++)
                 *(write_ptr + i) = 0x00;
 
-            for (unsigned int i = 0; i < line_width; i++)
+            for (int i = 0; i < line_width; i++)
                 *(write_ptr + pad_left + i) = 0xFF;
 
-            for (unsigned int i = 0; i < pad_right; i++)
+            for (int i = 0; i < pad_right; i++)
                 *(write_ptr + pad_left + line_width + i) = 0x00;
         }
         else
         {
             unsigned int* write_ptr = &atlas->TexPixelsRGBA32[r->X + ((r->Y + y) * atlas->TexWidth)];
-            for (unsigned int i = 0; i < pad_left; i++)
+            for (int i = 0; i < pad_left; i++)
                 *(write_ptr + i) = IM_COL32(255, 255, 255, 0);
 
-            for (unsigned int i = 0; i < line_width; i++)
+            for (int i = 0; i < line_width; i++)
                 *(write_ptr + pad_left + i) = IM_COL32_WHITE;
 
-            for (unsigned int i = 0; i < pad_right; i++)
+            for (int i = 0; i < pad_right; i++)
                 *(write_ptr + pad_left + line_width + i) = IM_COL32(255, 255, 255, 0);
         }
 
@@ -3208,13 +3312,6 @@ static void ImFontAtlasBuildRenderLinesTexData(ImFontAtlas* atlas)
 // Note: this is called / shared by both the stb_truetype and the FreeType builder
 void ImFontAtlasBuildInit(ImFontAtlas* atlas)
 {
-    // Round font size
-    // - We started rounding in 1.90 WIP (18991) as our layout system currently doesn't support non-rounded font size well yet.
-    // - Note that using io.FontGlobalScale or SetWindowFontScale(), with are legacy-ish, partially supported features, can still lead to unrounded sizes.
-    // - We may support it better later and remove this rounding.
-    for (ImFontConfig& cfg : atlas->ConfigData)
-       cfg.SizePixels = ImTrunc(cfg.SizePixels);
-
     // Register texture region for mouse cursors or standard white pixels
     if (atlas->PackIdMouseCursors < 0)
     {
@@ -3253,6 +3350,8 @@ void ImFontAtlasBuildFinish(ImFontAtlas* atlas)
         ImVec2 uv0, uv1;
         atlas->CalcCustomRectUV(r, &uv0, &uv1);
         r->Font->AddGlyph(NULL, (ImWchar)r->GlyphID, r->GlyphOffset.x, r->GlyphOffset.y, r->GlyphOffset.x + r->Width, r->GlyphOffset.y + r->Height, uv0.x, uv0.y, uv1.x, uv1.y, r->GlyphAdvanceX);
+        if (r->GlyphColored)
+            r->Font->Glyphs.back().Colored = 1;
     }
 
     // Build all fonts lookup tables
@@ -3262,6 +3361,20 @@ void ImFontAtlasBuildFinish(ImFontAtlas* atlas)
 
     atlas->TexReady = true;
 }
+
+//-------------------------------------------------------------------------
+// [SECTION] ImFontAtlas: glyph ranges helpers
+//-------------------------------------------------------------------------
+// - GetGlyphRangesDefault()
+// - GetGlyphRangesGreek()
+// - GetGlyphRangesKorean()
+// - GetGlyphRangesChineseFull()
+// - GetGlyphRangesChineseSimplifiedCommon()
+// - GetGlyphRangesJapanese()
+// - GetGlyphRangesCyrillic()
+// - GetGlyphRangesThai()
+// - GetGlyphRangesVietnamese()
+//-----------------------------------------------------------------------------
 
 // Retrieve list of range (2 int per range, values are inclusive)
 const ImWchar*   ImFontAtlas::GetGlyphRangesDefault()
@@ -3323,10 +3436,6 @@ static void UnpackAccumulativeOffsetsIntoRanges(int base_codepoint, const short*
     }
     out_ranges[0] = 0;
 }
-
-//-------------------------------------------------------------------------
-// [SECTION] ImFontAtlas glyph ranges helpers
-//-------------------------------------------------------------------------
 
 const ImWchar*  ImFontAtlas::GetGlyphRangesChineseSimplifiedCommon()
 {
@@ -3574,8 +3683,8 @@ ImFont::ImFont()
 {
     FontSize = 0.0f;
     FallbackAdvanceX = 0.0f;
-    FallbackChar = (ImWchar)-1;
-    EllipsisChar = (ImWchar)-1;
+    FallbackChar = 0;
+    EllipsisChar = 0;
     EllipsisWidth = EllipsisCharStep = 0.0f;
     EllipsisCharCount = 0;
     FallbackGlyph = NULL;
@@ -3606,6 +3715,7 @@ void    ImFont::ClearOutputData()
     DirtyLookupTables = true;
     Ascent = Descent = 0.0f;
     MetricsTotalSurface = 0;
+    memset(Used4kPagesMap, 0, sizeof(Used4kPagesMap));
 }
 
 static ImWchar FindFirstExistingGlyph(ImFont* font, const ImWchar* candidate_chars, int candidate_chars_count)
@@ -3613,7 +3723,7 @@ static ImWchar FindFirstExistingGlyph(ImFont* font, const ImWchar* candidate_cha
     for (int n = 0; n < candidate_chars_count; n++)
         if (font->FindGlyphNoFallback(candidate_chars[n]) != NULL)
             return candidate_chars[n];
-    return (ImWchar)-1;
+    return 0;
 }
 
 void ImFont::BuildLookupTable()
@@ -3680,17 +3790,17 @@ void ImFont::BuildLookupTable()
     // Setup Ellipsis character. It is required for rendering elided text. We prefer using U+2026 (horizontal ellipsis).
     // However some old fonts may contain ellipsis at U+0085. Here we auto-detect most suitable ellipsis character.
     // FIXME: Note that 0x2026 is rarely included in our font ranges. Because of this we are more likely to use three individual dots.
-    const ImWchar ellipsis_chars[] = { (ImWchar)0x2026, (ImWchar)0x0085 };
+    const ImWchar ellipsis_chars[] = { ConfigData->EllipsisChar, (ImWchar)0x2026, (ImWchar)0x0085 };
     const ImWchar dots_chars[] = { (ImWchar)'.', (ImWchar)0xFF0E };
-    if (EllipsisChar == (ImWchar)-1)
+    if (EllipsisChar == 0)
         EllipsisChar = FindFirstExistingGlyph(this, ellipsis_chars, IM_ARRAYSIZE(ellipsis_chars));
     const ImWchar dot_char = FindFirstExistingGlyph(this, dots_chars, IM_ARRAYSIZE(dots_chars));
-    if (EllipsisChar != (ImWchar)-1)
+    if (EllipsisChar != 0)
     {
         EllipsisCharCount = 1;
         EllipsisWidth = EllipsisCharStep = FindGlyph(EllipsisChar)->X1;
     }
-    else if (dot_char != (ImWchar)-1)
+    else if (dot_char != 0)
     {
         const ImFontGlyph* glyph = FindGlyph(dot_char);
         EllipsisChar = dot_char;
@@ -3753,8 +3863,9 @@ void ImFont::AddGlyph(const ImFontConfig* cfg, ImWchar codepoint, float x0, floa
         advance_x += cfg->GlyphExtraSpacing.x;
     }
 
+    int glyph_idx = Glyphs.Size;
     Glyphs.resize(Glyphs.Size + 1);
-    ImFontGlyph& glyph = Glyphs.back();
+    ImFontGlyph& glyph = Glyphs[glyph_idx];
     glyph.Codepoint = (unsigned int)codepoint;
     glyph.Visible = (x0 != x1) && (y0 != y1);
     glyph.Colored = false;
@@ -3790,7 +3901,8 @@ void ImFont::AddRemapChar(ImWchar dst, ImWchar src, bool overwrite_dst)
     IndexAdvanceX[dst] = (src < index_size) ? IndexAdvanceX.Data[src] : 1.0f;
 }
 
-const ImFontGlyph* ImFont::FindGlyph(ImWchar c) const
+// Find glyph, return fallback if missing
+const ImFontGlyph* ImFont::FindGlyph(ImWchar c)
 {
     if (c >= (size_t)IndexLookup.Size)
         return FallbackGlyph;
@@ -3800,7 +3912,7 @@ const ImFontGlyph* ImFont::FindGlyph(ImWchar c) const
     return &Glyphs.Data[i];
 }
 
-const ImFontGlyph* ImFont::FindGlyphNoFallback(ImWchar c) const
+const ImFontGlyph* ImFont::FindGlyphNoFallback(ImWchar c)
 {
     if (c >= (size_t)IndexLookup.Size)
         return NULL;
@@ -3810,7 +3922,7 @@ const ImFontGlyph* ImFont::FindGlyphNoFallback(ImWchar c) const
     return &Glyphs.Data[i];
 }
 
-// Wrapping skips upcoming blanks
+// Trim trailing space and find beginning of next line
 static inline const char* CalcWordWrapNextLineStartA(const char* text, const char* text_end)
 {
     while (text < text_end && ImCharIsBlankA(*text))
@@ -3820,10 +3932,12 @@ static inline const char* CalcWordWrapNextLineStartA(const char* text, const cha
     return text;
 }
 
+#define ImFontGetCharAdvanceX(_FONT, _CH)  ((int)(_CH) < (_FONT)->IndexAdvanceX.Size ? (_FONT)->IndexAdvanceX.Data[_CH] : (_FONT)->FallbackAdvanceX)
+
 // Simple word-wrapping for English, not full-featured. Please submit failing cases!
 // This will return the next location to wrap from. If no wrapping if necessary, this will fast-forward to e.g. text_end.
 // FIXME: Much possible improvements (don't cut things like "word !", "word!!!" but cut within "word,,,,", more sensible support for punctuations, support for Unicode punctuations, etc.)
-const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width) const
+const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width)
 {
     // For references, possible wrap point marked with ^
     //  "aaa bbb, ccc,ddd. eee   fff. ggg!"
@@ -3872,7 +3986,7 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
             }
         }
 
-        const float char_width = ((int)c < IndexAdvanceX.Size ? IndexAdvanceX.Data[c] : FallbackAdvanceX);
+        const float char_width = ImFontGetCharAdvanceX(this, c);
         if (ImCharIsBlankW(c))
         {
             if (inside_word)
@@ -3921,7 +4035,7 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
     return s;
 }
 
-ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, const char* text_begin, const char* text_end, const char** remaining) const
+ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, const char* text_begin, const char* text_end, const char** remaining)
 {
     if (!text_end)
         text_end = text_begin + strlen(text_begin); // FIXME-OPT: Need to avoid this.
@@ -3977,7 +4091,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
                 continue;
         }
 
-        const float char_width = ((int)c < IndexAdvanceX.Size ? IndexAdvanceX.Data[c] : FallbackAdvanceX) * scale;
+        const float char_width = ImFontGetCharAdvanceX(this, c) * scale;
         if (line_width + char_width >= max_width)
         {
             s = prev_s;
@@ -4000,7 +4114,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
 }
 
 // Note: as with every ImDrawList drawing function, this expects that the font atlas texture is bound.
-void ImFont::RenderChar(ImDrawList* draw_list, float size, const ImVec2& pos, ImU32 col, ImWchar c) const
+void ImFont::RenderChar(ImDrawList* draw_list, float size, const ImVec2& pos, ImU32 col, ImWchar c)
 {
     const ImFontGlyph* glyph = FindGlyph(c);
     if (!glyph || !glyph->Visible)
@@ -4015,7 +4129,7 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, const ImVec2& pos, Im
 }
 
 // Note: as with every ImDrawList drawing function, this expects that the font atlas texture is bound.
-void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width, bool cpu_fine_clip) const
+void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width, bool cpu_fine_clip)
 {
     if (!text_end)
         text_end = text_begin + strlen(text_begin); // ImGui:: functions generally already provides a valid text_end, so this is merely to handle direct calls.
@@ -4026,9 +4140,9 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
     if (y > clip_rect.w)
         return;
 
-    const float start_x = x;
     const float scale = size / FontSize;
     const float line_height = FontSize * scale;
+    const float origin_x = x;
     const bool word_wrap_enabled = (wrap_width > 0.0f);
 
     // Fast-forward to first visible line
@@ -4087,11 +4201,11 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
         {
             // Calculate how far we can render. Requires two passes on the string data but keeps the code simple and not intrusive for what's essentially an uncommon feature.
             if (!word_wrap_eol)
-                word_wrap_eol = CalcWordWrapPositionA(scale, s, text_end, wrap_width - (x - start_x));
+                word_wrap_eol = CalcWordWrapPositionA(scale, s, text_end, wrap_width - (x - origin_x));
 
             if (s >= word_wrap_eol)
             {
-                x = start_x;
+                x = origin_x;
                 y += line_height;
                 if (y > clip_rect.w)
                     break; // break out of main loop
@@ -4112,7 +4226,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
         {
             if (c == '\n')
             {
-                x = start_x;
+                x = origin_x;
                 y += line_height;
                 if (y > clip_rect.w)
                     break; // break out of main loop
@@ -4555,101 +4669,187 @@ static unsigned int stb_decompress(unsigned char *output, const unsigned char *i
 // MIT license (see License.txt in http://www.proggyfonts.net/index.php?menu=download)
 // Download and more information at http://www.proggyfonts.net or http://upperboundsinteractive.com/fonts.php
 //-----------------------------------------------------------------------------
-// File: 'ProggyClean.ttf' (41208 bytes)
-// Exported using misc/fonts/binary_to_compressed_c.cpp (with compression + base85 string encoding).
-// The purpose of encoding as base85 instead of "0x00,0x01,..." style is only save on _source code_ size.
-//-----------------------------------------------------------------------------
-static const char proggy_clean_ttf_compressed_data_base85[11980 + 1] =
-    "7])#######hV0qs'/###[),##/l:$#Q6>##5[n42>c-TH`->>#/e>11NNV=Bv(*:.F?uu#(gRU.o0XGH`$vhLG1hxt9?W`#,5LsCp#-i>.r$<$6pD>Lb';9Crc6tgXmKVeU2cD4Eo3R/"
-    "2*>]b(MC;$jPfY.;h^`IWM9<Lh2TlS+f-s$o6Q<BWH`YiU.xfLq$N;$0iR/GX:U(jcW2p/W*q?-qmnUCI;jHSAiFWM.R*kU@C=GH?a9wp8f$e.-4^Qg1)Q-GL(lf(r/7GrRgwV%MS=C#"
-    "`8ND>Qo#t'X#(v#Y9w0#1D$CIf;W'#pWUPXOuxXuU(H9M(1<q-UE31#^-V'8IRUo7Qf./L>=Ke$$'5F%)]0^#0X@U.a<r:QLtFsLcL6##lOj)#.Y5<-R&KgLwqJfLgN&;Q?gI^#DY2uL"
-    "i@^rMl9t=cWq6##weg>$FBjVQTSDgEKnIS7EM9>ZY9w0#L;>>#Mx&4Mvt//L[MkA#W@lK.N'[0#7RL_&#w+F%HtG9M#XL`N&.,GM4Pg;-<nLENhvx>-VsM.M0rJfLH2eTM`*oJMHRC`N"
-    "kfimM2J,W-jXS:)r0wK#@Fge$U>`w'N7G#$#fB#$E^$#:9:hk+eOe--6x)F7*E%?76%^GMHePW-Z5l'&GiF#$956:rS?dA#fiK:)Yr+`&#0j@'DbG&#^$PG.Ll+DNa<XCMKEV*N)LN/N"
-    "*b=%Q6pia-Xg8I$<MR&,VdJe$<(7G;Ckl'&hF;;$<_=X(b.RS%%)###MPBuuE1V:v&cX&#2m#(&cV]`k9OhLMbn%s$G2,B$BfD3X*sp5#l,$R#]x_X1xKX%b5U*[r5iMfUo9U`N99hG)"
-    "tm+/Us9pG)XPu`<0s-)WTt(gCRxIg(%6sfh=ktMKn3j)<6<b5Sk_/0(^]AaN#(p/L>&VZ>1i%h1S9u5o@YaaW$e+b<TWFn/Z:Oh(Cx2$lNEoN^e)#CFY@@I;BOQ*sRwZtZxRcU7uW6CX"
-    "ow0i(?$Q[cjOd[P4d)]>ROPOpxTO7Stwi1::iB1q)C_=dV26J;2,]7op$]uQr@_V7$q^%lQwtuHY]=DX,n3L#0PHDO4f9>dC@O>HBuKPpP*E,N+b3L#lpR/MrTEH.IAQk.a>D[.e;mc."
-    "x]Ip.PH^'/aqUO/$1WxLoW0[iLA<QT;5HKD+@qQ'NQ(3_PLhE48R.qAPSwQ0/WK?Z,[x?-J;jQTWA0X@KJ(_Y8N-:/M74:/-ZpKrUss?d#dZq]DAbkU*JqkL+nwX@@47`5>w=4h(9.`G"
-    "CRUxHPeR`5Mjol(dUWxZa(>STrPkrJiWx`5U7F#.g*jrohGg`cg:lSTvEY/EV_7H4Q9[Z%cnv;JQYZ5q.l7Zeas:HOIZOB?G<Nald$qs]@]L<J7bR*>gv:[7MI2k).'2($5FNP&EQ(,)"
-    "U]W]+fh18.vsai00);D3@4ku5P?DP8aJt+;qUM]=+b'8@;mViBKx0DE[-auGl8:PJ&Dj+M6OC]O^((##]`0i)drT;-7X`=-H3[igUnPG-NZlo.#k@h#=Ork$m>a>$-?Tm$UV(?#P6YY#"
-    "'/###xe7q.73rI3*pP/$1>s9)W,JrM7SN]'/4C#v$U`0#V.[0>xQsH$fEmPMgY2u7Kh(G%siIfLSoS+MK2eTM$=5,M8p`A.;_R%#u[K#$x4AG8.kK/HSB==-'Ie/QTtG?-.*^N-4B/ZM"
-    "_3YlQC7(p7q)&](`6_c)$/*JL(L-^(]$wIM`dPtOdGA,U3:w2M-0<q-]L_?^)1vw'.,MRsqVr.L;aN&#/EgJ)PBc[-f>+WomX2u7lqM2iEumMTcsF?-aT=Z-97UEnXglEn1K-bnEO`gu"
-    "Ft(c%=;Am_Qs@jLooI&NX;]0#j4#F14;gl8-GQpgwhrq8'=l_f-b49'UOqkLu7-##oDY2L(te+Mch&gLYtJ,MEtJfLh'x'M=$CS-ZZ%P]8bZ>#S?YY#%Q&q'3^Fw&?D)UDNrocM3A76/"
-    "/oL?#h7gl85[qW/NDOk%16ij;+:1a'iNIdb-ou8.P*w,v5#EI$TWS>Pot-R*H'-SEpA:g)f+O$%%`kA#G=8RMmG1&O`>to8bC]T&$,n.LoO>29sp3dt-52U%VM#q7'DHpg+#Z9%H[K<L"
-    "%a2E-grWVM3@2=-k22tL]4$##6We'8UJCKE[d_=%wI;'6X-GsLX4j^SgJ$##R*w,vP3wK#iiW&#*h^D&R?jp7+/u&#(AP##XU8c$fSYW-J95_-Dp[g9wcO&#M-h1OcJlc-*vpw0xUX&#"
-    "OQFKNX@QI'IoPp7nb,QU//MQ&ZDkKP)X<WSVL(68uVl&#c'[0#(s1X&xm$Y%B7*K:eDA323j998GXbA#pwMs-jgD$9QISB-A_(aN4xoFM^@C58D0+Q+q3n0#3U1InDjF682-SjMXJK)("
-    "h$hxua_K]ul92%'BOU&#BRRh-slg8KDlr:%L71Ka:.A;%YULjDPmL<LYs8i#XwJOYaKPKc1h:'9Ke,g)b),78=I39B;xiY$bgGw-&.Zi9InXDuYa%G*f2Bq7mn9^#p1vv%#(Wi-;/Z5h"
-    "o;#2:;%d&#x9v68C5g?ntX0X)pT`;%pB3q7mgGN)3%(P8nTd5L7GeA-GL@+%J3u2:(Yf>et`e;)f#Km8&+DC$I46>#Kr]]u-[=99tts1.qb#q72g1WJO81q+eN'03'eM>&1XxY-caEnO"
-    "j%2n8)),?ILR5^.Ibn<-X-Mq7[a82Lq:F&#ce+S9wsCK*x`569E8ew'He]h:sI[2LM$[guka3ZRd6:t%IG:;$%YiJ:Nq=?eAw;/:nnDq0(CYcMpG)qLN4$##&J<j$UpK<Q4a1]MupW^-"
-    "sj_$%[HK%'F####QRZJ::Y3EGl4'@%FkiAOg#p[##O`gukTfBHagL<LHw%q&OV0##F=6/:chIm0@eCP8X]:kFI%hl8hgO@RcBhS-@Qb$%+m=hPDLg*%K8ln(wcf3/'DW-$.lR?n[nCH-"
-    "eXOONTJlh:.RYF%3'p6sq:UIMA945&^HFS87@$EP2iG<-lCO$%c`uKGD3rC$x0BL8aFn--`ke%#HMP'vh1/R&O_J9'um,.<tx[@%wsJk&bUT2`0uMv7gg#qp/ij.L56'hl;.s5CUrxjO"
-    "M7-##.l+Au'A&O:-T72L]P`&=;ctp'XScX*rU.>-XTt,%OVU4)S1+R-#dg0/Nn?Ku1^0f$B*P:Rowwm-`0PKjYDDM'3]d39VZHEl4,.j']Pk-M.h^&:0FACm$maq-&sgw0t7/6(^xtk%"
-    "LuH88Fj-ekm>GA#_>568x6(OFRl-IZp`&b,_P'$M<Jnq79VsJW/mWS*PUiq76;]/NM_>hLbxfc$mj`,O;&%W2m`Zh:/)Uetw:aJ%]K9h:TcF]u_-Sj9,VK3M.*'&0D[Ca]J9gp8,kAW]"
-    "%(?A%R$f<->Zts'^kn=-^@c4%-pY6qI%J%1IGxfLU9CP8cbPlXv);C=b),<2mOvP8up,UVf3839acAWAW-W?#ao/^#%KYo8fRULNd2.>%m]UK:n%r$'sw]J;5pAoO_#2mO3n,'=H5(et"
-    "Hg*`+RLgv>=4U8guD$I%D:W>-r5V*%j*W:Kvej.Lp$<M-SGZ':+Q_k+uvOSLiEo(<aD/K<CCc`'Lx>'?;++O'>()jLR-^u68PHm8ZFWe+ej8h:9r6L*0//c&iH&R8pRbA#Kjm%upV1g:"
-    "a_#Ur7FuA#(tRh#.Y5K+@?3<-8m0$PEn;J:rh6?I6uG<-`wMU'ircp0LaE_OtlMb&1#6T.#FDKu#1Lw%u%+GM+X'e?YLfjM[VO0MbuFp7;>Q&#WIo)0@F%q7c#4XAXN-U&VB<HFF*qL("
-    "$/V,;(kXZejWO`<[5?\?ewY(*9=%wDc;,u<'9t3W-(H1th3+G]ucQ]kLs7df($/*JL]@*t7Bu_G3_7mp7<iaQjO@.kLg;x3B0lqp7Hf,^Ze7-##@/c58Mo(3;knp0%)A7?-W+eI'o8)b<"
-    "nKnw'Ho8C=Y>pqB>0ie&jhZ[?iLR@@_AvA-iQC(=ksRZRVp7`.=+NpBC%rh&3]R:8XDmE5^V8O(x<<aG/1N$#FX$0V5Y6x'aErI3I$7x%E`v<-BY,)%-?Psf*l?%C3.mM(=/M0:JxG'?"
-    "7WhH%o'a<-80g0NBxoO(GH<dM]n.+%q@jH?f.UsJ2Ggs&4<-e47&Kl+f//9@`b+?.TeN_&B8Ss?v;^Trk;f#YvJkl&w$]>-+k?'(<S:68tq*WoDfZu';mM?8X[ma8W%*`-=;D.(nc7/;"
-    ")g:T1=^J$&BRV(-lTmNB6xqB[@0*o.erM*<SWF]u2=st-*(6v>^](H.aREZSi,#1:[IXaZFOm<-ui#qUq2$##Ri;u75OK#(RtaW-K-F`S+cF]uN`-KMQ%rP/Xri.LRcB##=YL3BgM/3M"
-    "D?@f&1'BW-)Ju<L25gl8uhVm1hL$##*8###'A3/LkKW+(^rWX?5W_8g)a(m&K8P>#bmmWCMkk&#TR`C,5d>g)F;t,4:@_l8G/5h4vUd%&%950:VXD'QdWoY-F$BtUwmfe$YqL'8(PWX("
-    "P?^@Po3$##`MSs?DWBZ/S>+4%>fX,VWv/w'KD`LP5IbH;rTV>n3cEK8U#bX]l-/V+^lj3;vlMb&[5YQ8#pekX9JP3XUC72L,,?+Ni&co7ApnO*5NK,((W-i:$,kp'UDAO(G0Sq7MVjJs"
-    "bIu)'Z,*[>br5fX^:FPAWr-m2KgL<LUN098kTF&#lvo58=/vjDo;.;)Ka*hLR#/k=rKbxuV`>Q_nN6'8uTG&#1T5g)uLv:873UpTLgH+#FgpH'_o1780Ph8KmxQJ8#H72L4@768@Tm&Q"
-    "h4CB/5OvmA&,Q&QbUoi$a_%3M01H)4x7I^&KQVgtFnV+;[Pc>[m4k//,]1?#`VY[Jr*3&&slRfLiVZJ:]?=K3Sw=[$=uRB?3xk48@aeg<Z'<$#4H)6,>e0jT6'N#(q%.O=?2S]u*(m<-"
-    "V8J'(1)G][68hW$5'q[GC&5j`TE?m'esFGNRM)j,ffZ?-qx8;->g4t*:CIP/[Qap7/9'#(1sao7w-.qNUdkJ)tCF&#B^;xGvn2r9FEPFFFcL@.iFNkTve$m%#QvQS8U@)2Z+3K:AKM5i"
-    "sZ88+dKQ)W6>J%CL<KE>`.d*(B`-n8D9oK<Up]c$X$(,)M8Zt7/[rdkqTgl-0cuGMv'?>-XV1q['-5k'cAZ69e;D_?$ZPP&s^+7])$*$#@QYi9,5P&#9r+$%CE=68>K8r0=dSC%%(@p7"
-    ".m7jilQ02'0-VWAg<a/''3u.=4L$Y)6k/K:_[3=&jvL<L0C/2'v:^;-DIBW,B4E68:kZ;%?8(Q8BH=kO65BW?xSG&#@uU,DS*,?.+(o(#1vCS8#CHF>TlGW'b)Tq7VT9q^*^$$.:&N@@"
-    "$&)WHtPm*5_rO0&e%K&#-30j(E4#'Zb.o/(Tpm$>K'f@[PvFl,hfINTNU6u'0pao7%XUp9]5.>%h`8_=VYbxuel.NTSsJfLacFu3B'lQSu/m6-Oqem8T+oE--$0a/k]uj9EwsG>%veR*"
-    "hv^BFpQj:K'#SJ,sB-'#](j.Lg92rTw-*n%@/;39rrJF,l#qV%OrtBeC6/,;qB3ebNW[?,Hqj2L.1NP&GjUR=1D8QaS3Up&@*9wP?+lo7b?@%'k4`p0Z$22%K3+iCZj?XJN4Nm&+YF]u"
-    "@-W$U%VEQ/,,>>#)D<h#`)h0:<Q6909ua+&VU%n2:cG3FJ-%@Bj-DgLr`Hw&HAKjKjseK</xKT*)B,N9X3]krc12t'pgTV(Lv-tL[xg_%=M_q7a^x?7Ubd>#%8cY#YZ?=,`Wdxu/ae&#"
-    "w6)R89tI#6@s'(6Bf7a&?S=^ZI_kS&ai`&=tE72L_D,;^R)7[$s<Eh#c&)q.MXI%#v9ROa5FZO%sF7q7Nwb&#ptUJ:aqJe$Sl68%.D###EC><?-aF&#RNQv>o8lKN%5/$(vdfq7+ebA#"
-    "u1p]ovUKW&Y%q]'>$1@-[xfn$7ZTp7mM,G,Ko7a&Gu%G[RMxJs[0MM%wci.LFDK)(<c`Q8N)jEIF*+?P2a8g%)$q]o2aH8C&<SibC/q,(e:v;-b#6[$NtDZ84Je2KNvB#$P5?tQ3nt(0"
-    "d=j.LQf./Ll33+(;q3L-w=8dX$#WF&uIJ@-bfI>%:_i2B5CsR8&9Z&#=mPEnm0f`<&c)QL5uJ#%u%lJj+D-r;BoF&#4DoS97h5g)E#o:&S4weDF,9^Hoe`h*L+_a*NrLW-1pG_&2UdB8"
-    "6e%B/:=>)N4xeW.*wft-;$'58-ESqr<b?UI(_%@[P46>#U`'6AQ]m&6/`Z>#S?YY#Vc;r7U2&326d=w&H####?TZ`*4?&.MK?LP8Vxg>$[QXc%QJv92.(Db*B)gb*BM9dM*hJMAo*c&#"
-    "b0v=Pjer]$gG&JXDf->'StvU7505l9$AFvgYRI^&<^b68?j#q9QX4SM'RO#&sL1IM.rJfLUAj221]d##DW=m83u5;'bYx,*Sl0hL(W;;$doB&O/TQ:(Z^xBdLjL<Lni;''X.`$#8+1GD"
-    ":k$YUWsbn8ogh6rxZ2Z9]%nd+>V#*8U_72Lh+2Q8Cj0i:6hp&$C/:p(HK>T8Y[gHQ4`4)'$Ab(Nof%V'8hL&#<NEdtg(n'=S1A(Q1/I&4([%dM`,Iu'1:_hL>SfD07&6D<fp8dHM7/g+"
-    "tlPN9J*rKaPct&?'uBCem^jn%9_K)<,C5K3s=5g&GmJb*[SYq7K;TRLGCsM-$$;S%:Y@r7AK0pprpL<Lrh,q7e/%KWK:50I^+m'vi`3?%Zp+<-d+$L-Sv:@.o19n$s0&39;kn;S%BSq*"
-    "$3WoJSCLweV[aZ'MQIjO<7;X-X;&+dMLvu#^UsGEC9WEc[X(wI7#2.(F0jV*eZf<-Qv3J-c+J5AlrB#$p(H68LvEA'q3n0#m,[`*8Ft)FcYgEud]CWfm68,(aLA$@EFTgLXoBq/UPlp7"
-    ":d[/;r_ix=:TF`S5H-b<LI&HY(K=h#)]Lk$K14lVfm:x$H<3^Ql<M`$OhapBnkup'D#L$Pb_`N*g]2e;X/Dtg,bsj&K#2[-:iYr'_wgH)NUIR8a1n#S?Yej'h8^58UbZd+^FKD*T@;6A"
-    "7aQC[K8d-(v6GI$x:T<&'Gp5Uf>@M.*J:;$-rv29'M]8qMv-tLp,'886iaC=Hb*YJoKJ,(j%K=H`K.v9HggqBIiZu'QvBT.#=)0ukruV&.)3=(^1`o*Pj4<-<aN((^7('#Z0wK#5GX@7"
-    "u][`*S^43933A4rl][`*O4CgLEl]v$1Q3AeF37dbXk,.)vj#x'd`;qgbQR%FW,2(?LO=s%Sc68%NP'##Aotl8x=BE#j1UD([3$M(]UI2LX3RpKN@;/#f'f/&_mt&F)XdF<9t4)Qa.*kT"
-    "LwQ'(TTB9.xH'>#MJ+gLq9-##@HuZPN0]u:h7.T..G:;$/Usj(T7`Q8tT72LnYl<-qx8;-HV7Q-&Xdx%1a,hC=0u+HlsV>nuIQL-5<N?)NBS)QN*_I,?&)2'IM%L3I)X((e/dl2&8'<M"
-    ":^#M*Q+[T.Xri.LYS3v%fF`68h;b-X[/En'CR.q7E)p'/kle2HM,u;^%OKC-N+Ll%F9CF<Nf'^#t2L,;27W:0O@6##U6W7:$rJfLWHj$#)woqBefIZ.PK<b*t7ed;p*_m;4ExK#h@&]>"
-    "_>@kXQtMacfD.m-VAb8;IReM3$wf0''hra*so568'Ip&vRs849'MRYSp%:t:h5qSgwpEr$B>Q,;s(C#$)`svQuF$##-D,##,g68@2[T;.XSdN9Qe)rpt._K-#5wF)sP'##p#C0c%-Gb%"
-    "hd+<-j'Ai*x&&HMkT]C'OSl##5RG[JXaHN;d'uA#x._U;.`PU@(Z3dt4r152@:v,'R.Sj'w#0<-;kPI)FfJ&#AYJ&#//)>-k=m=*XnK$>=)72L]0I%>.G690a:$##<,);?;72#?x9+d;"
-    "^V'9;jY@;)br#q^YQpx:X#Te$Z^'=-=bGhLf:D6&bNwZ9-ZD#n^9HhLMr5G;']d&6'wYmTFmL<LD)F^%[tC'8;+9E#C$g%#5Y>q9wI>P(9mI[>kC-ekLC/R&CH+s'B;K-M6$EB%is00:"
-    "+A4[7xks.LrNk0&E)wILYF@2L'0Nb$+pv<(2.768/FrY&h$^3i&@+G%JT'<-,v`3;_)I9M^AE]CN?Cl2AZg+%4iTpT3<n-&%H%b<FDj2M<hH=&Eh<2Len$b*aTX=-8QxN)k11IM1c^j%"
-    "9s<L<NFSo)B?+<-(GxsF,^-Eh@$4dXhN$+#rxK8'je'D7k`e;)2pYwPA'_p9&@^18ml1^[@g4t*[JOa*[=Qp7(qJ_oOL^('7fB&Hq-:sf,sNj8xq^>$U4O]GKx'm9)b@p7YsvK3w^YR-"
-    "CdQ*:Ir<($u&)#(&?L9Rg3H)4fiEp^iI9O8KnTj,]H?D*r7'M;PwZ9K0E^k&-cpI;.p/6_vwoFMV<->#%Xi.LxVnrU(4&8/P+:hLSKj$#U%]49t'I:rgMi'FL@a:0Y-uA[39',(vbma*"
-    "hU%<-SRF`Tt:542R_VV$p@[p8DV[A,?1839FWdF<TddF<9Ah-6&9tWoDlh]&1SpGMq>Ti1O*H&#(AL8[_P%.M>v^-))qOT*F5Cq0`Ye%+$B6i:7@0IX<N+T+0MlMBPQ*Vj>SsD<U4JHY"
-    "8kD2)2fU/M#$e.)T4,_=8hLim[&);?UkK'-x?'(:siIfL<$pFM`i<?%W(mGDHM%>iWP,##P`%/L<eXi:@Z9C.7o=@(pXdAO/NLQ8lPl+HPOQa8wD8=^GlPa8TKI1CjhsCTSLJM'/Wl>-"
-    "S(qw%sf/@%#B6;/U7K]uZbi^Oc^2n<bhPmUkMw>%t<)'mEVE''n`WnJra$^TKvX5B>;_aSEK',(hwa0:i4G?.Bci.(X[?b*($,=-n<.Q%`(X=?+@Am*Js0&=3bh8K]mL<LoNs'6,'85`"
-    "0?t/'_U59@]ddF<#LdF<eWdF<OuN/45rY<-L@&#+fm>69=Lb,OcZV/);TTm8VI;?%OtJ<(b4mq7M6:u?KRdF<gR@2L=FNU-<b[(9c/ML3m;Z[$oF3g)GAWqpARc=<ROu7cL5l;-[A]%/"
-    "+fsd;l#SafT/f*W]0=O'$(Tb<[)*@e775R-:Yob%g*>l*:xP?Yb.5)%w_I?7uk5JC+FS(m#i'k.'a0i)9<7b'fs'59hq$*5Uhv##pi^8+hIEBF`nvo`;'l0.^S1<-wUK2/Coh58KKhLj"
-    "M=SO*rfO`+qC`W-On.=AJ56>>i2@2LH6A:&5q`?9I3@@'04&p2/LVa*T-4<-i3;M9UvZd+N7>b*eIwg:CC)c<>nO&#<IGe;__.thjZl<%w(Wk2xmp4Q@I#I9,DF]u7-P=.-_:YJ]aS@V"
-    "?6*C()dOp7:WL,b&3Rg/.cmM9&r^>$(>.Z-I&J(Q0Hd5Q%7Co-b`-c<N(6r@ip+AurK<m86QIth*#v;-OBqi+L7wDE-Ir8K['m+DDSLwK&/.?-V%U_%3:qKNu$_b*B-kp7NaD'QdWQPK"
-    "Yq[@>P)hI;*_F]u`Rb[.j8_Q/<&>uu+VsH$sM9TA%?)(vmJ80),P7E>)tjD%2L=-t#fK[%`v=Q8<FfNkgg^oIbah*#8/Qt$F&:K*-(N/'+1vMB,u()-a.VUU*#[e%gAAO(S>WlA2);Sa"
-    ">gXm8YB`1d@K#n]76-a$U,mF<fX]idqd)<3,]J7JmW4`6]uks=4-72L(jEk+:bJ0M^q-8Dm_Z?0olP1C9Sa&H[d&c$ooQUj]Exd*3ZM@-WGW2%s',B-_M%>%Ul:#/'xoFM9QX-$.QN'>"
-    "[%$Z$uF6pA6Ki2O5:8w*vP1<-1`[G,)-m#>0`P&#eb#.3i)rtB61(o'$?X3B</R90;eZ]%Ncq;-Tl]#F>2Qft^ae_5tKL9MUe9b*sLEQ95C&`=G?@Mj=wh*'3E>=-<)Gt*Iw)'QG:`@I"
-    "wOf7&]1i'S01B+Ev/Nac#9S;=;YQpg_6U`*kVY39xK,[/6Aj7:'1Bm-_1EYfa1+o&o4hp7KN_Q(OlIo@S%;jVdn0'1<Vc52=u`3^o-n1'g4v58Hj&6_t7$##?M)c<$bgQ_'SY((-xkA#"
-    "Y(,p'H9rIVY-b,'%bCPF7.J<Up^,(dU1VY*5#WkTU>h19w,WQhLI)3S#f$2(eb,jr*b;3Vw]*7NH%$c4Vs,eD9>XW8?N]o+(*pgC%/72LV-u<Hp,3@e^9UB1J+ak9-TN/mhKPg+AJYd$"
-    "MlvAF_jCK*.O-^(63adMT->W%iewS8W6m2rtCpo'RS1R84=@paTKt)>=%&1[)*vp'u+x,VrwN;&]kuO9JDbg=pO$J*.jVe;u'm0dr9l,<*wMK*Oe=g8lV_KEBFkO'oU]^=[-792#ok,)"
-    "i]lR8qQ2oA8wcRCZ^7w/Njh;?.stX?Q1>S1q4Bn$)K1<-rGdO'$Wr.Lc.CG)$/*JL4tNR/,SVO3,aUw'DJN:)Ss;wGn9A32ijw%FL+Z0Fn.U9;reSq)bmI32U==5ALuG&#Vf1398/pVo"
-    "1*c-(aY168o<`JsSbk-,1N;$>0:OUas(3:8Z972LSfF8eb=c-;>SPw7.6hn3m`9^Xkn(r.qS[0;T%&Qc=+STRxX'q1BNk3&*eu2;&8q$&x>Q#Q7^Tf+6<(d%ZVmj2bDi%.3L2n+4W'$P"
-    "iDDG)g,r%+?,$@?uou5tSe2aN_AQU*<h`e-GI7)?OK2A.d7_c)?wQ5AS@DL3r#7fSkgl6-++D:'A,uq7SvlB$pcpH'q3n0#_%dY#xCpr-l<F0NR@-##FEV6NTF6##$l84N1w?AO>'IAO"
-    "URQ##V^Fv-XFbGM7Fl(N<3DhLGF%q.1rC$#:T__&Pi68%0xi_&[qFJ(77j_&JWoF.V735&T,[R*:xFR*K5>>#`bW-?4Ne_&6Ne_&6Ne_&n`kr-#GJcM6X;uM6X;uM(.a..^2TkL%oR(#"
-    ";u.T%fAr%4tJ8&><1=GHZ_+m9/#H1F^R#SC#*N=BA9(D?v[UiFY>>^8p,KKF.W]L29uLkLlu/+4T<XoIB&hx=T1PcDaB&;HH+-AFr?(m9HZV)FKS8JCw;SD=6[^/DZUL`EUDf]GGlG&>"
-    "w$)F./^n3+rlo+DB;5sIYGNk+i1t-69Jg--0pao7Sm#K)pdHW&;LuDNH@H>#/X-TI(;P>#,Gc>#0Su>#4`1?#8lC?#<xU?#@.i?#D:%@#HF7@#LRI@#P_[@#Tkn@#Xw*A#]-=A#a9OA#"
-    "d<F&#*;G##.GY##2Sl##6`($#:l:$#>xL$#B.`$#F:r$#JF.%#NR@%#R_R%#Vke%#Zww%#_-4&#3^Rh%Sflr-k'MS.o?.5/sWel/wpEM0%3'/1)K^f1-d>G21&v(35>V`39V7A4=onx4"
-    "A1OY5EI0;6Ibgr6M$HS7Q<)58C5w,;WoA*#[%T*#`1g*#d=#+#hI5+#lUG+#pbY+#tnl+#x$),#&1;,#*=M,#.I`,#2Ur,#6b.-#;w[H#iQtA#m^0B#qjBB#uvTB##-hB#'9$C#+E6C#"
-    "/QHC#3^ZC#7jmC#;v)D#?,<D#C8ND#GDaD#KPsD#O]/E#g1A5#KA*1#gC17#MGd;#8(02#L-d3#rWM4#Hga1#,<w0#T.j<#O#'2#CYN1#qa^:#_4m3#o@/=#eG8=#t8J5#`+78#4uI-#"
-    "m3B2#SB[8#Q0@8#i[*9#iOn8#1Nm;#^sN9#qh<9#:=x-#P;K2#$%X9#bC+.#Rg;<#mN=.#MTF.#RZO.#2?)4#Y#(/#[)1/#b;L/#dAU/#0Sv;#lY$0#n`-0#sf60#(F24#wrH0#%/e0#"
-    "TmD<#%JSMFove:CTBEXI:<eh2g)B,3h2^G3i;#d3jD>)4kMYD4lVu`4m`:&5niUA5@(A5BA1]PBB:xlBCC=2CDLXMCEUtiCf&0g2'tN?PGT4CPGT4CPGT4CPGT4CPGT4CPGT4CPGT4CP"
-    "GT4CPGT4CPGT4CPGT4CPGT4CPGT4CP-qekC`.9kEg^+F$kwViFJTB&5KTB&5KTB&5KTB&5KTB&5KTB&5KTB&5KTB&5KTB&5KTB&5KTB&5KTB&5KTB&5KTB&5KTB&5o,^<-28ZI'O?;xp"
-    "O?;xpO?;xpO?;xpO?;xpO?;xpO?;xpO?;xpO?;xpO?;xpO?;xpO?;xpO?;xpO?;xp;7q-#lLYI:xvD=#";
 
-static const char* GetDefaultCompressedFontDataTTFBase85()
+#ifndef IMGUI_DISABLE_DEFAULT_FONT
+
+// File: 'ProggyClean.ttf' (41208 bytes)
+// Exported using binary_to_compressed_c.exe -u8 "ProggyClean.ttf" proggy_clean_ttf
+static const unsigned int proggy_clean_ttf_compressed_size = 9583;
+static const unsigned char proggy_clean_ttf_compressed_data[9583] =
 {
-    return proggy_clean_ttf_compressed_data_base85;
+    87,188,0,0,0,0,0,0,0,0,160,248,0,4,0,0,55,0,1,0,0,0,12,0,128,0,3,0,64,79,83,47,50,136,235,116,144,0,0,1,72,130,21,44,78,99,109,97,112,2,18,35,117,0,0,3,160,130,19,36,82,99,118,116,
+    32,130,23,130,2,33,4,252,130,4,56,2,103,108,121,102,18,175,137,86,0,0,7,4,0,0,146,128,104,101,97,100,215,145,102,211,130,27,32,204,130,3,33,54,104,130,16,39,8,66,1,195,0,0,1,4,130,
+    15,59,36,104,109,116,120,138,0,126,128,0,0,1,152,0,0,2,6,108,111,99,97,140,115,176,216,0,0,5,130,30,41,2,4,109,97,120,112,1,174,0,218,130,31,32,40,130,16,44,32,110,97,109,101,37,89,
+    187,150,0,0,153,132,130,19,44,158,112,111,115,116,166,172,131,239,0,0,155,36,130,51,44,210,112,114,101,112,105,2,1,18,0,0,4,244,130,47,32,8,132,203,46,1,0,0,60,85,233,213,95,15,60,
+    245,0,3,8,0,131,0,34,183,103,119,130,63,43,0,0,189,146,166,215,0,0,254,128,3,128,131,111,130,241,33,2,0,133,0,32,1,130,65,38,192,254,64,0,0,3,128,131,16,130,5,32,1,131,7,138,3,33,2,
+    0,130,17,36,1,1,0,144,0,130,121,130,23,38,2,0,8,0,64,0,10,130,9,32,118,130,9,130,6,32,0,130,59,33,1,144,131,200,35,2,188,2,138,130,16,32,143,133,7,37,1,197,0,50,2,0,131,0,33,4,9,131,
+    5,145,3,43,65,108,116,115,0,64,0,0,32,172,8,0,131,0,35,5,0,1,128,131,77,131,3,33,3,128,191,1,33,1,128,130,184,35,0,0,128,0,130,3,131,11,32,1,130,7,33,0,128,131,1,32,1,136,9,32,0,132,
+    15,135,5,32,1,131,13,135,27,144,35,32,1,149,25,131,21,32,0,130,0,32,128,132,103,130,35,132,39,32,0,136,45,136,97,133,17,130,5,33,0,0,136,19,34,0,128,1,133,13,133,5,32,128,130,15,132,
+    131,32,3,130,5,32,3,132,27,144,71,32,0,133,27,130,29,130,31,136,29,131,63,131,3,65,63,5,132,5,132,205,130,9,33,0,0,131,9,137,119,32,3,132,19,138,243,130,55,32,1,132,35,135,19,131,201,
+    136,11,132,143,137,13,130,41,32,0,131,3,144,35,33,128,0,135,1,131,223,131,3,141,17,134,13,136,63,134,15,136,53,143,15,130,96,33,0,3,131,4,130,3,34,28,0,1,130,5,34,0,0,76,130,17,131,
+    9,36,28,0,4,0,48,130,17,46,8,0,8,0,2,0,0,0,127,0,255,32,172,255,255,130,9,34,0,0,129,132,9,130,102,33,223,213,134,53,132,22,33,1,6,132,6,64,4,215,32,129,165,216,39,177,0,1,141,184,
+    1,255,133,134,45,33,198,0,193,1,8,190,244,1,28,1,158,2,20,2,136,2,252,3,20,3,88,3,156,3,222,4,20,4,50,4,80,4,98,4,162,5,22,5,102,5,188,6,18,6,116,6,214,7,56,7,126,7,236,8,78,8,108,
+    8,150,8,208,9,16,9,74,9,136,10,22,10,128,11,4,11,86,11,200,12,46,12,130,12,234,13,94,13,164,13,234,14,80,14,150,15,40,15,176,16,18,16,116,16,224,17,82,17,182,18,4,18,110,18,196,19,
+    76,19,172,19,246,20,88,20,174,20,234,21,64,21,128,21,166,21,184,22,18,22,126,22,198,23,52,23,142,23,224,24,86,24,186,24,238,25,54,25,150,25,212,26,72,26,156,26,240,27,92,27,200,28,
+    4,28,76,28,150,28,234,29,42,29,146,29,210,30,64,30,142,30,224,31,36,31,118,31,166,31,166,32,16,130,1,52,46,32,138,32,178,32,200,33,20,33,116,33,152,33,238,34,98,34,134,35,12,130,1,
+    33,128,35,131,1,60,152,35,176,35,216,36,0,36,74,36,104,36,144,36,174,37,6,37,96,37,130,37,248,37,248,38,88,38,170,130,1,8,190,216,39,64,39,154,40,10,40,104,40,168,41,14,41,32,41,184,
+    41,248,42,54,42,96,42,96,43,2,43,42,43,94,43,172,43,230,44,32,44,52,44,154,45,40,45,92,45,120,45,170,45,232,46,38,46,166,47,38,47,182,47,244,48,94,48,200,49,62,49,180,50,30,50,158,
+    51,30,51,130,51,238,52,92,52,206,53,58,53,134,53,212,54,38,54,114,54,230,55,118,55,216,56,58,56,166,57,18,57,116,57,174,58,46,58,154,59,6,59,124,59,232,60,58,60,150,61,34,61,134,61,
+    236,62,86,62,198,63,42,63,154,64,18,64,106,64,208,65,54,65,162,66,8,66,64,66,122,66,184,66,240,67,98,67,204,68,42,68,138,68,238,69,88,69,182,69,226,70,84,70,180,71,20,71,122,71,218,
+    72,84,72,198,73,64,0,36,70,21,8,8,77,3,0,7,0,11,0,15,0,19,0,23,0,27,0,31,0,35,0,39,0,43,0,47,0,51,0,55,0,59,0,63,0,67,0,71,0,75,0,79,0,83,0,87,0,91,0,95,0,99,0,103,0,107,0,111,0,115,
+    0,119,0,123,0,127,0,131,0,135,0,139,0,143,0,0,17,53,51,21,49,150,3,32,5,130,23,32,33,130,3,211,7,151,115,32,128,133,0,37,252,128,128,2,128,128,190,5,133,74,32,4,133,6,206,5,42,0,7,
+    1,128,0,0,2,0,4,0,0,65,139,13,37,0,1,53,51,21,7,146,3,32,3,130,19,32,1,141,133,32,3,141,14,131,13,38,255,0,128,128,0,6,1,130,84,35,2,128,4,128,140,91,132,89,32,51,65,143,6,139,7,33,
+    1,0,130,57,32,254,130,3,32,128,132,4,32,4,131,14,138,89,35,0,0,24,0,130,0,33,3,128,144,171,66,55,33,148,115,65,187,19,32,5,130,151,143,155,163,39,32,1,136,182,32,253,134,178,132,7,
+    132,200,145,17,32,3,65,48,17,165,17,39,0,0,21,0,128,255,128,3,65,175,17,65,3,27,132,253,131,217,139,201,155,233,155,27,131,67,131,31,130,241,33,255,0,131,181,137,232,132,15,132,4,138,
+    247,34,255,0,128,179,238,32,0,130,0,32,20,65,239,48,33,0,19,67,235,10,32,51,65,203,14,65,215,11,32,7,154,27,135,39,32,33,130,35,33,128,128,130,231,32,253,132,231,32,128,132,232,34,
+    128,128,254,133,13,136,8,32,253,65,186,5,130,36,130,42,176,234,133,231,34,128,0,0,66,215,44,33,0,1,68,235,6,68,211,19,32,49,68,239,14,139,207,139,47,66,13,7,32,51,130,47,33,1,0,130,
+    207,35,128,128,1,0,131,222,131,5,130,212,130,6,131,212,32,0,130,10,133,220,130,233,130,226,32,254,133,255,178,233,39,3,1,128,3,0,2,0,4,68,15,7,68,99,12,130,89,130,104,33,128,4,133,
+    93,130,10,38,0,0,11,1,0,255,0,68,63,16,70,39,9,66,215,8,32,7,68,77,6,68,175,14,32,29,68,195,6,132,7,35,2,0,128,255,131,91,132,4,65,178,5,141,111,67,129,23,165,135,140,107,142,135,33,
+    21,5,69,71,6,131,7,33,1,0,140,104,132,142,130,4,137,247,140,30,68,255,12,39,11,0,128,0,128,3,0,3,69,171,15,67,251,7,65,15,8,66,249,11,65,229,7,67,211,7,66,13,7,35,1,128,128,254,133,
+    93,32,254,131,145,132,4,132,18,32,2,151,128,130,23,34,0,0,9,154,131,65,207,8,68,107,15,68,51,7,32,7,70,59,7,135,121,130,82,32,128,151,111,41,0,0,4,0,128,255,0,1,128,1,137,239,33,0,
+    37,70,145,10,65,77,10,65,212,14,37,0,0,0,5,0,128,66,109,5,70,123,10,33,0,19,72,33,18,133,237,70,209,11,33,0,2,130,113,137,119,136,115,33,1,0,133,43,130,5,34,0,0,10,69,135,6,70,219,
+    13,66,155,7,65,9,12,66,157,11,66,9,11,32,7,130,141,132,252,66,151,9,137,9,66,15,30,36,0,20,0,128,0,130,218,71,11,42,68,51,8,65,141,7,73,19,15,69,47,23,143,39,66,81,7,32,1,66,55,6,34,
+    1,128,128,68,25,5,69,32,6,137,6,136,25,32,254,131,42,32,3,66,88,26,148,26,32,0,130,0,32,14,164,231,70,225,12,66,233,7,67,133,19,71,203,15,130,161,32,255,130,155,32,254,139,127,134,
+    12,164,174,33,0,15,164,159,33,59,0,65,125,20,66,25,7,32,5,68,191,6,66,29,7,144,165,65,105,9,35,128,128,255,0,137,2,133,182,164,169,33,128,128,197,171,130,155,68,235,7,32,21,70,77,19,
+    66,21,10,68,97,8,66,30,5,66,4,43,34,0,17,0,71,19,41,65,253,20,71,25,23,65,91,15,65,115,7,34,2,128,128,66,9,8,130,169,33,1,0,66,212,13,132,28,72,201,43,35,0,0,0,18,66,27,38,76,231,5,
+    68,157,20,135,157,32,7,68,185,13,65,129,28,66,20,5,32,253,66,210,11,65,128,49,133,61,32,0,65,135,6,74,111,37,72,149,12,66,203,19,65,147,19,68,93,7,68,85,8,76,4,5,33,255,0,133,129,34,
+    254,0,128,68,69,8,181,197,34,0,0,12,65,135,32,65,123,20,69,183,27,133,156,66,50,5,72,87,10,67,137,32,33,0,19,160,139,78,251,13,68,55,20,67,119,19,65,91,36,69,177,15,32,254,143,16,65,
+    98,53,32,128,130,0,32,0,66,43,54,70,141,23,66,23,15,131,39,69,47,11,131,15,70,129,19,74,161,9,36,128,255,0,128,254,130,153,65,148,32,67,41,9,34,0,0,4,79,15,5,73,99,10,71,203,8,32,3,
+    72,123,6,72,43,8,32,2,133,56,131,99,130,9,34,0,0,6,72,175,5,73,159,14,144,63,135,197,132,189,133,66,33,255,0,73,6,7,70,137,12,35,0,0,0,10,130,3,73,243,25,67,113,12,65,73,7,69,161,7,
+    138,7,37,21,2,0,128,128,254,134,3,73,116,27,33,128,128,130,111,39,12,0,128,1,0,3,128,2,72,219,21,35,43,0,47,0,67,47,20,130,111,33,21,1,68,167,13,81,147,8,133,230,32,128,77,73,6,32,
+    128,131,142,134,18,130,6,32,255,75,18,12,131,243,37,128,0,128,3,128,3,74,231,21,135,123,32,29,134,107,135,7,32,21,74,117,7,135,7,134,96,135,246,74,103,23,132,242,33,0,10,67,151,28,
+    67,133,20,66,141,11,131,11,32,3,77,71,6,32,128,130,113,32,1,81,4,6,134,218,66,130,24,131,31,34,0,26,0,130,0,77,255,44,83,15,11,148,155,68,13,7,32,49,78,231,18,79,7,11,73,243,11,32,
+    33,65,187,10,130,63,65,87,8,73,239,19,35,0,128,1,0,131,226,32,252,65,100,6,32,128,139,8,33,1,0,130,21,32,253,72,155,44,73,255,20,32,128,71,67,8,81,243,39,67,15,20,74,191,23,68,121,
+    27,32,1,66,150,6,32,254,79,19,11,131,214,32,128,130,215,37,2,0,128,253,0,128,136,5,65,220,24,147,212,130,210,33,0,24,72,219,42,84,255,13,67,119,16,69,245,19,72,225,19,65,3,15,69,93,
+    19,131,55,132,178,71,115,14,81,228,6,142,245,33,253,0,132,43,172,252,65,16,11,75,219,8,65,219,31,66,223,24,75,223,10,33,29,1,80,243,10,66,175,8,131,110,134,203,133,172,130,16,70,30,
+    7,164,183,130,163,32,20,65,171,48,65,163,36,65,143,23,65,151,19,65,147,13,65,134,17,133,17,130,216,67,114,5,164,217,65,137,12,72,147,48,79,71,19,74,169,22,80,251,8,65,173,7,66,157,
+    15,74,173,15,32,254,65,170,8,71,186,45,72,131,6,77,143,40,187,195,152,179,65,123,38,68,215,57,68,179,15,65,85,7,69,187,14,32,21,66,95,15,67,19,25,32,1,83,223,6,32,2,76,240,7,77,166,
+    43,65,8,5,130,206,32,0,67,39,54,143,167,66,255,19,82,193,11,151,47,85,171,5,67,27,17,132,160,69,172,11,69,184,56,66,95,6,33,12,1,130,237,32,2,68,179,27,68,175,16,80,135,15,72,55,7,
+    71,87,12,73,3,12,132,12,66,75,32,76,215,5,169,139,147,135,148,139,81,12,12,81,185,36,75,251,7,65,23,27,76,215,9,87,165,12,65,209,15,72,157,7,65,245,31,32,128,71,128,6,32,1,82,125,5,
+    34,0,128,254,131,169,32,254,131,187,71,180,9,132,27,32,2,88,129,44,32,0,78,47,40,65,79,23,79,171,14,32,21,71,87,8,72,15,14,65,224,33,130,139,74,27,62,93,23,7,68,31,7,75,27,7,139,15,
+    74,3,7,74,23,27,65,165,11,65,177,15,67,123,5,32,1,130,221,32,252,71,96,5,74,12,12,133,244,130,25,34,1,0,128,130,2,139,8,93,26,8,65,9,32,65,57,14,140,14,32,0,73,79,67,68,119,11,135,
+    11,32,51,90,75,14,139,247,65,43,7,131,19,139,11,69,159,11,65,247,6,36,1,128,128,253,0,90,71,9,33,1,0,132,14,32,128,89,93,14,69,133,6,130,44,131,30,131,6,65,20,56,33,0,16,72,179,40,
+    75,47,12,65,215,19,74,95,19,65,43,11,131,168,67,110,5,75,23,17,69,106,6,75,65,5,71,204,43,32,0,80,75,47,71,203,15,159,181,68,91,11,67,197,7,73,101,13,68,85,6,33,128,128,130,214,130,
+    25,32,254,74,236,48,130,194,37,0,18,0,128,255,128,77,215,40,65,139,64,32,51,80,159,10,65,147,39,130,219,84,212,43,130,46,75,19,97,74,33,11,65,201,23,65,173,31,33,1,0,79,133,6,66,150,
+    5,67,75,48,85,187,6,70,207,37,32,71,87,221,13,73,163,14,80,167,15,132,15,83,193,19,82,209,8,78,99,9,72,190,11,77,110,49,89,63,5,80,91,35,99,63,32,70,235,23,81,99,10,69,148,10,65,110,
+    36,32,0,65,99,47,95,219,11,68,171,51,66,87,7,72,57,7,74,45,17,143,17,65,114,50,33,14,0,65,111,40,159,195,98,135,15,35,7,53,51,21,100,78,9,95,146,16,32,254,82,114,6,32,128,67,208,37,
+    130,166,99,79,58,32,17,96,99,14,72,31,19,72,87,31,82,155,7,67,47,14,32,21,131,75,134,231,72,51,17,72,78,8,133,8,80,133,6,33,253,128,88,37,9,66,124,36,72,65,12,134,12,71,55,43,66,139,
+    27,85,135,10,91,33,12,65,35,11,66,131,11,71,32,8,90,127,6,130,244,71,76,11,168,207,33,0,12,66,123,32,32,0,65,183,15,68,135,11,66,111,7,67,235,11,66,111,15,32,254,97,66,12,160,154,67,
+    227,52,80,33,15,87,249,15,93,45,31,75,111,12,93,45,11,77,99,9,160,184,81,31,12,32,15,98,135,30,104,175,7,77,249,36,69,73,15,78,5,12,32,254,66,151,19,34,128,128,4,87,32,12,149,35,133,
+    21,96,151,31,32,19,72,35,5,98,173,15,143,15,32,21,143,99,158,129,33,0,0,65,35,52,65,11,15,147,15,98,75,11,33,1,0,143,151,132,15,32,254,99,200,37,132,43,130,4,39,0,10,0,128,1,128,3,
+    0,104,151,14,97,187,20,69,131,15,67,195,11,87,227,7,33,128,128,132,128,33,254,0,68,131,9,65,46,26,42,0,0,0,7,0,0,255,128,3,128,0,88,223,15,33,0,21,89,61,22,66,209,12,65,2,12,37,0,2,
+    1,0,3,128,101,83,8,36,0,1,53,51,29,130,3,34,21,1,0,66,53,8,32,0,68,215,6,100,55,25,107,111,9,66,193,11,72,167,8,73,143,31,139,31,33,1,0,131,158,32,254,132,5,33,253,128,65,16,9,133,
+    17,89,130,25,141,212,33,0,0,93,39,8,90,131,25,93,39,14,66,217,6,106,179,8,159,181,71,125,15,139,47,138,141,87,11,14,76,23,14,65,231,26,140,209,66,122,8,81,179,5,101,195,26,32,47,74,
+    75,13,69,159,11,83,235,11,67,21,16,136,167,131,106,130,165,130,15,32,128,101,90,24,134,142,32,0,65,103,51,108,23,11,101,231,15,75,173,23,74,237,23,66,15,6,66,46,17,66,58,17,65,105,
+    49,66,247,55,71,179,12,70,139,15,86,229,7,84,167,15,32,1,95,72,12,89,49,6,33,128,128,65,136,38,66,30,9,32,0,100,239,7,66,247,29,70,105,20,65,141,19,69,81,15,130,144,32,128,83,41,5,
+    32,255,131,177,68,185,5,133,126,65,97,37,32,0,130,0,33,21,0,130,55,66,195,28,67,155,13,34,79,0,83,66,213,13,73,241,19,66,59,19,65,125,11,135,201,66,249,16,32,128,66,44,11,66,56,17,
+    68,143,8,68,124,38,67,183,12,96,211,9,65,143,29,112,171,5,32,0,68,131,63,34,33,53,51,71,121,11,32,254,98,251,16,32,253,74,231,10,65,175,37,133,206,37,0,0,8,1,0,0,107,123,11,113,115,
+    9,33,0,1,130,117,131,3,73,103,7,66,51,18,66,44,5,133,75,70,88,5,32,254,65,39,12,68,80,9,34,12,0,128,107,179,28,68,223,6,155,111,86,147,15,32,2,131,82,141,110,33,254,0,130,15,32,4,103,
+    184,15,141,35,87,176,5,83,11,5,71,235,23,114,107,11,65,189,16,70,33,15,86,153,31,135,126,86,145,30,65,183,41,32,0,130,0,32,10,65,183,24,34,35,0,39,67,85,9,65,179,15,143,15,33,1,0,65,
+    28,17,157,136,130,123,32,20,130,3,32,0,97,135,24,115,167,19,80,71,12,32,51,110,163,14,78,35,19,131,19,155,23,77,229,8,78,9,17,151,17,67,231,46,94,135,8,73,31,31,93,215,56,82,171,25,
+    72,77,8,162,179,169,167,99,131,11,69,85,19,66,215,15,76,129,13,68,115,22,72,79,35,67,113,5,34,0,0,19,70,31,46,65,89,52,73,223,15,85,199,33,95,33,8,132,203,73,29,32,67,48,16,177,215,
+    101,13,15,65,141,43,69,141,15,75,89,5,70,0,11,70,235,21,178,215,36,10,0,128,0,0,71,207,24,33,0,19,100,67,6,80,215,11,66,67,7,80,43,12,71,106,7,80,192,5,65,63,5,66,217,26,33,0,13,156,
+    119,68,95,5,72,233,12,134,129,85,81,11,76,165,20,65,43,8,73,136,8,75,10,31,38,128,128,0,0,0,13,1,130,4,32,3,106,235,29,114,179,12,66,131,23,32,7,77,133,6,67,89,12,131,139,116,60,9,
+    89,15,37,32,0,74,15,7,103,11,22,65,35,5,33,55,0,93,81,28,67,239,23,78,85,5,107,93,14,66,84,17,65,193,26,74,183,10,66,67,34,143,135,79,91,15,32,7,117,111,8,75,56,9,84,212,9,154,134,
+    32,0,130,0,32,18,130,3,70,171,41,83,7,16,70,131,19,84,191,15,84,175,19,84,167,30,84,158,12,154,193,68,107,15,33,0,0,65,79,42,65,71,7,73,55,7,118,191,16,83,180,9,32,255,76,166,9,154,
+    141,32,0,130,0,69,195,52,65,225,15,151,15,75,215,31,80,56,10,68,240,17,100,32,9,70,147,39,65,93,12,71,71,41,92,85,15,84,135,23,78,35,15,110,27,10,84,125,8,107,115,29,136,160,38,0,0,
+    14,0,128,255,0,82,155,24,67,239,8,119,255,11,69,131,11,77,29,6,112,31,8,134,27,105,203,8,32,2,75,51,11,75,195,12,74,13,29,136,161,37,128,0,0,0,11,1,130,163,82,115,8,125,191,17,69,35,
+    12,74,137,15,143,15,32,1,65,157,12,136,12,161,142,65,43,40,65,199,6,65,19,24,102,185,11,76,123,11,99,6,12,135,12,32,254,130,8,161,155,101,23,9,39,8,0,0,1,128,3,128,2,78,63,17,72,245,
+    12,67,41,11,90,167,9,32,128,97,49,9,32,128,109,51,14,132,97,81,191,8,130,97,125,99,12,121,35,9,127,75,15,71,79,12,81,151,23,87,97,7,70,223,15,80,245,16,105,97,15,32,254,113,17,6,32,
+    128,130,8,105,105,8,76,122,18,65,243,21,74,63,7,38,4,1,0,255,0,2,0,119,247,28,133,65,32,255,141,91,35,0,0,0,16,67,63,36,34,59,0,63,77,59,9,119,147,11,143,241,66,173,15,66,31,11,67,
+    75,8,81,74,16,32,128,131,255,87,181,42,127,43,5,34,255,128,2,120,235,11,37,19,0,23,0,0,37,109,191,14,118,219,7,127,43,14,65,79,14,35,0,0,0,3,73,91,5,130,5,38,3,0,7,0,11,0,0,70,205,
+    11,88,221,12,32,0,73,135,7,87,15,22,73,135,10,79,153,15,97,71,19,65,49,11,32,1,131,104,121,235,11,80,65,11,142,179,144,14,81,123,46,32,1,88,217,5,112,5,8,65,201,15,83,29,15,122,147,
+    11,135,179,142,175,143,185,67,247,39,66,199,7,35,5,0,128,3,69,203,15,123,163,12,67,127,7,130,119,71,153,10,141,102,70,175,8,32,128,121,235,30,136,89,100,191,11,116,195,11,111,235,15,
+    72,39,7,32,2,97,43,5,132,5,94,67,8,131,8,125,253,10,32,3,65,158,16,146,16,130,170,40,0,21,0,128,0,0,3,128,5,88,219,15,24,64,159,32,135,141,65,167,15,68,163,10,97,73,49,32,255,82,58,
+    7,93,80,8,97,81,16,24,67,87,52,34,0,0,5,130,231,33,128,2,80,51,13,65,129,8,113,61,6,132,175,65,219,5,130,136,77,152,17,32,0,95,131,61,70,215,6,33,21,51,90,53,10,78,97,23,105,77,31,
+    65,117,7,139,75,24,68,195,9,24,64,22,9,33,0,128,130,11,33,128,128,66,25,5,121,38,5,134,5,134,45,66,40,36,66,59,18,34,128,0,0,66,59,81,135,245,123,103,19,120,159,19,77,175,12,33,255,
+    0,87,29,10,94,70,21,66,59,54,39,3,1,128,3,0,2,128,4,24,65,7,15,66,47,7,72,98,12,37,0,0,0,3,1,0,24,65,55,21,131,195,32,1,67,178,6,33,4,0,77,141,8,32,6,131,47,74,67,16,24,69,3,20,24,
+    65,251,7,133,234,130,229,94,108,17,35,0,0,6,0,141,175,86,59,5,162,79,85,166,8,70,112,13,32,13,24,64,67,26,24,71,255,7,123,211,12,80,121,11,69,215,15,66,217,11,69,71,10,131,113,132,
+    126,119,90,9,66,117,19,132,19,32,0,130,0,24,64,47,59,33,7,0,73,227,5,68,243,15,85,13,12,76,37,22,74,254,15,130,138,33,0,4,65,111,6,137,79,65,107,16,32,1,77,200,6,34,128,128,3,75,154,
+    12,37,0,16,0,0,2,0,104,115,36,140,157,68,67,19,68,51,15,106,243,15,134,120,70,37,10,68,27,10,140,152,65,121,24,32,128,94,155,7,67,11,8,24,74,11,25,65,3,12,83,89,18,82,21,37,67,200,
+    5,130,144,24,64,172,12,33,4,0,134,162,74,80,14,145,184,32,0,130,0,69,251,20,32,19,81,243,5,82,143,8,33,5,53,89,203,5,133,112,79,109,15,33,0,21,130,71,80,175,41,36,75,0,79,0,83,121,
+    117,9,87,89,27,66,103,11,70,13,15,75,191,11,135,67,87,97,20,109,203,5,69,246,8,108,171,5,78,195,38,65,51,13,107,203,11,77,3,17,24,75,239,17,65,229,28,79,129,39,130,175,32,128,123,253,
+    7,132,142,24,65,51,15,65,239,41,36,128,128,0,0,13,65,171,5,66,163,28,136,183,118,137,11,80,255,15,67,65,7,74,111,8,32,0,130,157,32,253,24,76,35,10,103,212,5,81,175,9,69,141,7,66,150,
+    29,131,158,24,75,199,28,124,185,7,76,205,15,68,124,14,32,3,123,139,16,130,16,33,128,128,108,199,6,33,0,3,65,191,35,107,11,6,73,197,11,24,70,121,15,83,247,15,24,70,173,23,69,205,14,
+    32,253,131,140,32,254,136,4,94,198,9,32,3,78,4,13,66,127,13,143,13,32,0,130,0,33,16,0,24,69,59,39,109,147,12,76,253,19,24,69,207,15,69,229,15,130,195,71,90,10,139,10,130,152,73,43,
+    40,91,139,10,65,131,37,35,75,0,79,0,84,227,12,143,151,68,25,15,80,9,23,95,169,11,34,128,2,128,112,186,5,130,6,83,161,19,76,50,6,130,37,65,145,44,110,83,5,32,16,67,99,6,71,67,15,76,
+    55,17,140,215,67,97,23,76,69,15,77,237,11,104,211,23,77,238,11,65,154,43,33,0,10,83,15,28,83,13,20,67,145,19,67,141,14,97,149,21,68,9,15,86,251,5,66,207,5,66,27,37,82,1,23,127,71,12,
+    94,235,10,110,175,24,98,243,15,132,154,132,4,24,66,69,10,32,4,67,156,43,130,198,35,2,1,0,4,75,27,9,69,85,9,95,240,7,32,128,130,35,32,28,66,43,40,24,82,63,23,83,123,12,72,231,15,127,
+    59,23,116,23,19,117,71,7,24,77,99,15,67,111,15,71,101,8,36,2,128,128,252,128,127,60,11,32,1,132,16,130,18,141,24,67,107,9,32,3,68,194,15,175,15,38,0,11,0,128,1,128,2,80,63,25,32,0,
+    24,65,73,11,69,185,15,83,243,16,32,0,24,81,165,8,130,86,77,35,6,155,163,88,203,5,24,66,195,30,70,19,19,24,80,133,15,32,1,75,211,8,32,254,108,133,8,79,87,20,65,32,9,41,0,0,7,0,128,0,
+    0,2,128,2,68,87,15,66,1,16,92,201,16,24,76,24,17,133,17,34,128,0,30,66,127,64,34,115,0,119,73,205,9,66,43,11,109,143,15,24,79,203,11,90,143,15,131,15,155,31,65,185,15,86,87,11,35,128,
+    128,253,0,69,7,6,130,213,33,1,0,119,178,15,142,17,66,141,74,83,28,6,36,7,0,0,4,128,82,39,18,76,149,12,67,69,21,32,128,79,118,15,32,0,130,0,32,8,131,206,32,2,79,83,9,100,223,14,102,
+    113,23,115,115,7,24,65,231,12,130,162,32,4,68,182,19,130,102,93,143,8,69,107,29,24,77,255,12,143,197,72,51,7,76,195,15,132,139,85,49,15,130,152,131,18,71,81,23,70,14,11,36,0,10,0,128,
+    2,69,59,9,89,151,15,66,241,11,76,165,12,71,43,15,75,49,13,65,12,23,132,37,32,0,179,115,130,231,95,181,16,132,77,32,254,67,224,8,65,126,20,79,171,8,32,2,89,81,5,75,143,6,80,41,8,34,
+    2,0,128,24,81,72,9,32,0,130,0,35,17,0,0,255,77,99,39,95,65,36,67,109,15,24,69,93,11,77,239,5,95,77,23,35,128,1,0,128,24,86,7,8,132,167,32,2,69,198,41,130,202,33,0,26,120,75,44,24,89,
+    51,15,71,243,12,70,239,11,24,84,3,11,66,7,11,71,255,10,32,21,69,155,35,88,151,12,32,128,74,38,10,65,210,8,74,251,5,65,226,5,75,201,13,32,3,65,9,41,146,41,40,0,0,0,9,1,0,1,0,2,91,99,
+    19,32,35,106,119,13,70,219,15,83,239,12,137,154,32,2,67,252,19,36,128,0,0,4,1,130,196,32,2,130,8,91,107,8,32,0,135,81,24,73,211,8,132,161,73,164,13,36,0,8,0,128,2,105,123,26,139,67,
+    76,99,15,34,1,0,128,135,76,83,156,20,92,104,8,67,251,30,24,86,47,27,123,207,12,24,86,7,15,71,227,8,32,4,65,20,20,131,127,32,0,130,123,32,0,71,223,26,32,19,90,195,22,71,223,15,84,200,
+    6,32,128,133,241,24,84,149,9,67,41,25,36,0,0,0,22,0,88,111,49,32,87,66,21,5,77,3,27,123,75,7,71,143,19,135,183,71,183,19,130,171,74,252,5,131,5,89,87,17,32,1,132,18,130,232,68,11,10,
+    33,1,128,70,208,16,66,230,18,147,18,130,254,223,255,75,27,23,65,59,15,135,39,155,255,34,128,128,254,104,92,8,33,0,128,65,32,11,65,1,58,33,26,0,130,0,72,71,18,78,55,17,76,11,19,86,101,
+    12,75,223,11,89,15,11,24,76,87,15,75,235,15,131,15,72,95,7,85,71,11,72,115,11,73,64,6,34,1,128,128,66,215,9,34,128,254,128,134,14,33,128,255,67,102,5,32,0,130,16,70,38,11,66,26,57,
+    88,11,8,24,76,215,34,78,139,7,95,245,7,32,7,24,73,75,23,32,128,131,167,130,170,101,158,9,82,49,22,118,139,6,32,18,67,155,44,116,187,9,108,55,14,80,155,23,66,131,15,93,77,10,131,168,
+    32,128,73,211,12,24,75,187,22,32,4,96,71,20,67,108,19,132,19,120,207,8,32,5,76,79,15,66,111,21,66,95,8,32,3,190,211,111,3,8,211,212,32,20,65,167,44,34,75,0,79,97,59,13,32,33,112,63,
+    10,65,147,19,69,39,19,143,39,24,66,71,9,130,224,65,185,43,94,176,12,65,183,24,71,38,8,24,72,167,7,65,191,38,136,235,24,96,167,12,65,203,62,115,131,13,65,208,42,175,235,67,127,6,32,
+    4,76,171,29,114,187,5,32,71,65,211,5,65,203,68,72,51,8,164,219,32,0,172,214,71,239,58,78,3,27,66,143,15,77,19,15,147,31,35,33,53,51,21,66,183,10,173,245,66,170,30,150,30,34,0,0,23,
+    80,123,54,76,1,16,73,125,15,82,245,11,167,253,24,76,85,12,70,184,5,32,254,131,185,37,254,0,128,1,0,128,133,16,117,158,18,92,27,38,65,3,17,130,251,35,17,0,128,254,24,69,83,39,140,243,
+    121,73,19,109,167,7,81,41,15,24,95,175,12,102,227,15,121,96,11,24,95,189,7,32,3,145,171,154,17,24,77,47,9,33,0,5,70,71,37,68,135,7,32,29,117,171,11,69,87,15,24,79,97,19,24,79,149,23,
+    131,59,32,1,75,235,5,72,115,11,72,143,7,132,188,71,27,46,131,51,32,0,69,95,6,175,215,32,21,131,167,81,15,19,151,191,151,23,131,215,71,43,5,32,254,24,79,164,24,74,109,8,77,166,13,65,
+    176,26,88,162,5,98,159,6,171,219,120,247,6,79,29,8,99,169,10,103,59,19,65,209,35,131,35,91,25,19,112,94,15,83,36,8,173,229,33,20,0,88,75,43,71,31,12,65,191,71,33,1,0,130,203,32,254,
+    131,4,68,66,7,67,130,6,104,61,13,173,215,38,13,1,0,0,0,2,128,67,111,28,74,129,16,104,35,19,79,161,16,87,14,7,138,143,132,10,67,62,36,114,115,5,162,151,67,33,16,108,181,15,143,151,67,
+    5,5,24,100,242,15,170,153,34,0,0,14,65,51,34,32,55,79,75,9,32,51,74,7,10,65,57,38,132,142,32,254,72,0,14,139,163,32,128,80,254,8,67,158,21,65,63,7,32,4,72,227,27,95,155,12,67,119,19,
+    124,91,24,149,154,72,177,34,97,223,8,155,151,24,108,227,15,88,147,16,72,117,19,68,35,11,92,253,15,70,199,15,24,87,209,17,32,2,87,233,7,32,1,24,88,195,10,119,24,8,32,3,81,227,24,65,
+    125,21,35,128,128,0,25,76,59,48,24,90,187,9,97,235,12,66,61,11,91,105,19,24,79,141,11,24,79,117,15,24,79,129,27,90,53,13,130,13,32,253,131,228,24,79,133,40,69,70,8,66,137,31,65,33,
+    19,96,107,8,68,119,29,66,7,5,68,125,16,65,253,19,65,241,27,24,90,179,13,24,79,143,18,33,128,128,130,246,32,254,130,168,68,154,36,77,51,9,97,47,5,167,195,32,21,131,183,78,239,27,155,
+    195,78,231,14,201,196,77,11,6,32,5,73,111,37,97,247,12,77,19,31,155,207,78,215,19,162,212,69,17,14,66,91,19,80,143,57,78,203,39,159,215,32,128,93,134,8,24,80,109,24,66,113,15,169,215,
+    66,115,6,32,4,69,63,33,32,0,101,113,7,86,227,35,143,211,36,49,53,51,21,1,77,185,14,65,159,28,69,251,34,67,56,8,33,9,0,24,107,175,25,90,111,12,110,251,11,119,189,24,119,187,34,87,15,
+    9,32,4,66,231,37,90,39,7,66,239,8,84,219,15,69,105,23,24,85,27,27,87,31,11,33,1,128,76,94,6,32,1,85,241,7,33,128,128,106,48,10,33,128,128,69,136,11,133,13,24,79,116,49,84,236,8,24,
+    91,87,9,32,5,165,255,69,115,12,66,27,15,159,15,24,72,247,12,74,178,5,24,80,64,15,33,0,128,143,17,77,89,51,130,214,24,81,43,7,170,215,74,49,8,159,199,143,31,139,215,69,143,5,32,254,
+    24,81,50,35,181,217,84,123,70,143,195,159,15,65,187,16,66,123,7,65,175,15,65,193,29,68,207,39,79,27,5,70,131,6,32,4,68,211,33,33,67,0,83,143,14,159,207,143,31,140,223,33,0,128,24,80,
+    82,14,24,93,16,23,32,253,65,195,5,68,227,40,133,214,107,31,7,32,5,67,115,27,87,9,8,107,31,43,66,125,6,32,0,103,177,23,131,127,72,203,36,32,0,110,103,8,155,163,73,135,6,32,19,24,112,
+    99,10,65,71,11,73,143,19,143,31,126,195,5,24,85,21,9,24,76,47,14,32,254,24,93,77,36,68,207,11,39,25,0,0,255,128,3,128,4,66,51,37,95,247,13,82,255,24,76,39,19,147,221,66,85,27,24,118,
+    7,8,24,74,249,12,76,74,8,91,234,8,67,80,17,131,222,33,253,0,121,30,44,73,0,16,69,15,6,32,0,65,23,38,69,231,12,65,179,6,98,131,16,86,31,27,24,108,157,14,80,160,8,24,65,46,17,33,4,0,
+    96,2,18,144,191,65,226,8,68,19,5,171,199,80,9,15,180,199,67,89,5,32,255,24,79,173,28,174,201,24,79,179,50,32,1,24,122,5,10,82,61,10,180,209,83,19,8,32,128,24,80,129,27,111,248,43,131,
+    71,24,115,103,8,67,127,41,78,213,24,100,247,19,66,115,39,75,107,5,32,254,165,219,78,170,40,24,112,163,49,32,1,97,203,6,65,173,64,32,0,83,54,7,133,217,88,37,12,32,254,131,28,33,128,
+    3,67,71,44,84,183,6,32,5,69,223,33,96,7,7,123,137,16,192,211,24,112,14,9,32,255,67,88,29,68,14,10,84,197,38,33,0,22,116,47,50,32,87,106,99,9,116,49,15,89,225,15,97,231,23,70,41,19,
+    82,85,8,93,167,6,32,253,132,236,108,190,7,89,251,5,116,49,58,33,128,128,131,234,32,15,24,74,67,38,70,227,24,24,83,45,23,89,219,12,70,187,12,89,216,19,32,2,69,185,24,141,24,70,143,66,
+    24,82,119,56,78,24,10,32,253,133,149,132,6,24,106,233,7,69,198,48,178,203,81,243,12,68,211,15,106,255,23,66,91,15,69,193,7,100,39,10,24,83,72,16,176,204,33,19,0,88,207,45,68,21,12,
+    68,17,10,65,157,53,68,17,6,32,254,92,67,10,65,161,25,69,182,43,24,118,91,47,69,183,18,181,209,111,253,12,89,159,8,66,112,12,69,184,45,35,0,0,0,9,24,80,227,26,73,185,16,118,195,15,131,
+    15,33,1,0,65,59,15,66,39,27,160,111,66,205,12,148,111,143,110,33,128,128,156,112,24,81,199,8,75,199,23,66,117,20,155,121,32,254,68,126,12,72,213,29,134,239,149,123,89,27,16,148,117,
+    65,245,8,24,71,159,14,141,134,134,28,73,51,55,109,77,15,105,131,11,68,67,11,76,169,27,107,209,12,102,174,8,32,128,72,100,18,116,163,56,79,203,11,75,183,44,85,119,19,71,119,23,151,227,
+    32,1,93,27,8,65,122,5,77,102,8,110,120,20,66,23,8,66,175,17,66,63,12,133,12,79,35,8,74,235,33,67,149,16,69,243,15,78,57,15,69,235,16,67,177,7,151,192,130,23,67,84,29,141,192,174,187,
+    77,67,15,69,11,12,159,187,77,59,10,199,189,24,70,235,50,96,83,19,66,53,23,105,65,19,77,47,12,163,199,66,67,37,78,207,50,67,23,23,174,205,67,228,6,71,107,13,67,22,14,66,85,11,83,187,
+    38,124,47,49,95,7,19,66,83,23,67,23,19,24,96,78,17,80,101,16,71,98,40,33,0,7,88,131,22,24,89,245,12,84,45,12,102,213,5,123,12,9,32,2,126,21,14,43,255,0,128,128,0,0,20,0,128,255,128,
+    3,126,19,39,32,75,106,51,7,113,129,15,24,110,135,19,126,47,15,115,117,11,69,47,11,32,2,109,76,9,102,109,9,32,128,75,2,10,130,21,32,254,69,47,6,32,3,94,217,47,32,0,65,247,10,69,15,46,
+    65,235,31,65,243,15,101,139,10,66,174,14,65,247,16,72,102,28,69,17,14,84,243,9,165,191,88,47,48,66,53,12,32,128,71,108,6,203,193,32,17,75,187,42,73,65,16,65,133,52,114,123,9,167,199,
+    69,21,37,86,127,44,75,171,11,180,197,78,213,12,148,200,81,97,46,24,95,243,9,32,4,66,75,33,113,103,9,87,243,36,143,225,24,84,27,31,90,145,8,148,216,67,49,5,24,84,34,14,75,155,27,67,
+    52,13,140,13,36,0,20,0,128,255,24,135,99,46,88,59,43,155,249,80,165,7,136,144,71,161,23,32,253,132,33,32,254,88,87,44,136,84,35,128,0,0,21,81,103,5,94,47,44,76,51,12,143,197,151,15,
+    65,215,31,24,64,77,13,65,220,20,65,214,14,71,4,40,65,213,13,32,0,130,0,35,21,1,2,0,135,0,34,36,0,72,134,10,36,1,0,26,0,130,134,11,36,2,0,14,0,108,134,11,32,3,138,23,32,4,138,11,34,
+    5,0,20,134,33,34,0,0,6,132,23,32,1,134,15,32,18,130,25,133,11,37,1,0,13,0,49,0,133,11,36,2,0,7,0,38,134,11,36,3,0,17,0,45,134,11,32,4,138,35,36,5,0,10,0,62,134,23,32,6,132,23,36,3,
+    0,1,4,9,130,87,131,167,133,11,133,167,133,11,133,167,133,11,37,3,0,34,0,122,0,133,11,133,167,133,11,133,167,133,11,133,167,34,50,0,48,130,1,34,52,0,47,134,5,8,49,49,0,53,98,121,32,
+    84,114,105,115,116,97,110,32,71,114,105,109,109,101,114,82,101,103,117,108,97,114,84,84,88,32,80,114,111,103,103,121,67,108,101,97,110,84,84,50,48,48,52,47,130,2,53,49,53,0,98,0,121,
+    0,32,0,84,0,114,0,105,0,115,0,116,0,97,0,110,130,15,32,71,132,15,36,109,0,109,0,101,130,9,32,82,130,5,36,103,0,117,0,108,130,29,32,114,130,43,34,84,0,88,130,35,32,80,130,25,34,111,
+    0,103,130,1,34,121,0,67,130,27,32,101,132,59,32,84,130,31,33,0,0,65,155,9,34,20,0,0,65,11,6,130,8,135,2,33,1,1,130,9,8,120,1,1,2,1,3,1,4,1,5,1,6,1,7,1,8,1,9,1,10,1,11,1,12,1,13,1,14,
+    1,15,1,16,1,17,1,18,1,19,1,20,1,21,1,22,1,23,1,24,1,25,1,26,1,27,1,28,1,29,1,30,1,31,1,32,0,3,0,4,0,5,0,6,0,7,0,8,0,9,0,10,0,11,0,12,0,13,0,14,0,15,0,16,0,17,0,18,0,19,0,20,0,21,0,
+    22,0,23,0,24,0,25,0,26,0,27,0,28,0,29,0,30,0,31,130,187,8,66,33,0,34,0,35,0,36,0,37,0,38,0,39,0,40,0,41,0,42,0,43,0,44,0,45,0,46,0,47,0,48,0,49,0,50,0,51,0,52,0,53,0,54,0,55,0,56,0,
+    57,0,58,0,59,0,60,0,61,0,62,0,63,0,64,0,65,0,66,130,243,9,75,68,0,69,0,70,0,71,0,72,0,73,0,74,0,75,0,76,0,77,0,78,0,79,0,80,0,81,0,82,0,83,0,84,0,85,0,86,0,87,0,88,0,89,0,90,0,91,0,
+    92,0,93,0,94,0,95,0,96,0,97,1,33,1,34,1,35,1,36,1,37,1,38,1,39,1,40,1,41,1,42,1,43,1,44,1,45,1,46,1,47,1,48,1,49,1,50,1,51,1,52,1,53,1,54,1,55,1,56,1,57,1,58,1,59,1,60,1,61,1,62,1,
+    63,1,64,1,65,0,172,0,163,0,132,0,133,0,189,0,150,0,232,0,134,0,142,0,139,0,157,0,169,0,164,0,239,0,138,0,218,0,131,0,147,0,242,0,243,0,141,0,151,0,136,0,195,0,222,0,241,0,158,0,170,
+    0,245,0,244,0,246,0,162,0,173,0,201,0,199,0,174,0,98,0,99,0,144,0,100,0,203,0,101,0,200,0,202,0,207,0,204,0,205,0,206,0,233,0,102,0,211,0,208,0,209,0,175,0,103,0,240,0,145,0,214,0,
+    212,0,213,0,104,0,235,0,237,0,137,0,106,0,105,0,107,0,109,0,108,0,110,0,160,0,111,0,113,0,112,0,114,0,115,0,117,0,116,0,118,0,119,0,234,0,120,0,122,0,121,0,123,0,125,0,124,0,184,0,
+    161,0,127,0,126,0,128,0,129,0,236,0,238,0,186,14,117,110,105,99,111,100,101,35,48,120,48,48,48,49,141,14,32,50,141,14,32,51,141,14,32,52,141,14,32,53,141,14,32,54,141,14,32,55,141,
+    14,32,56,141,14,32,57,141,14,32,97,141,14,32,98,141,14,32,99,141,14,32,100,141,14,32,101,141,14,32,102,140,14,33,49,48,141,14,141,239,32,49,141,239,32,49,141,239,32,49,141,239,32,49,
+    141,239,32,49,141,239,32,49,141,239,32,49,141,239,32,49,141,239,32,49,141,239,32,49,141,239,32,49,141,239,32,49,141,239,32,49,141,239,45,49,102,6,100,101,108,101,116,101,4,69,117,114,
+    111,140,236,32,56,141,236,32,56,141,236,32,56,141,236,32,56,141,236,32,56,141,236,32,56,141,236,32,56,141,236,32,56,141,236,32,56,141,236,32,56,141,236,32,56,141,236,32,56,141,236,
+    32,56,141,236,32,56,141,236,32,56,65,220,13,32,57,65,220,13,32,57,141,239,32,57,141,239,32,57,141,239,32,57,141,239,32,57,141,239,32,57,141,239,32,57,141,239,32,57,141,239,32,57,141,
+    239,32,57,141,239,32,57,141,239,32,57,141,239,32,57,141,239,32,57,141,239,35,57,102,0,0,5,250,72,249,98,247,
+};
+
+static const char* GetDefaultCompressedFontDataTTF(int* out_size)
+{
+    *out_size = proggy_clean_ttf_compressed_size;
+    return (const char*)proggy_clean_ttf_compressed_data;
 }
+#endif // #ifndef IMGUI_DISABLE_DEFAULT_FONT
 
 #endif // #ifndef IMGUI_DISABLE
