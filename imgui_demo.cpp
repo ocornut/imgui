@@ -7851,6 +7851,8 @@ void ImGui::ShowFontSelector(const char* label)
             ImGui::PushID((void*)font);
             if (ImGui::Selectable(font->GetDebugName(), font == font_current))
                 io.FontDefault = font;
+            if (font == font_current)
+                ImGui::SetItemDefaultFocus();
             ImGui::PopID();
         }
         ImGui::EndCombo();
