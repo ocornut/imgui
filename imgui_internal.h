@@ -826,7 +826,6 @@ struct IMGUI_API ImDrawListSharedData
     ImVec2          ArcFastVtx[IM_DRAWLIST_ARCFAST_TABLE_SIZE]; // Sample points on the quarter of the circle.
     float           ArcFastRadiusCutoff;                        // Cutoff radius after which arc drawing will fallback to slower PathArcTo()
     ImU8            CircleSegmentCounts[64];    // Precomputed segment count for given radius before we calculate it dynamically (to avoid calculation overhead)
-    bool            RendererHasTextures;        // Copy of (GetIO().BackendFlags & ImGuiBackendFlags_RendererHasTextures).
 
     ImDrawListSharedData();
     ~ImDrawListSharedData();

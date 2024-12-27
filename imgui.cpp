@@ -5341,7 +5341,8 @@ static void ImGui::UpdateTexturesNewFrame()
     // FIXME-NEWATLAS: How to reach/target all atlas?
     ImGuiContext& g = *GImGui;
     ImFontAtlas* atlas = g.IO.Fonts;
-    ImFontAtlasUpdateNewFrame(atlas);
+    if (g.FontAtlasOwnedByContext)
+        ImFontAtlasUpdateNewFrame(atlas);
 }
 
 // Build a single texture list
@@ -5402,7 +5403,7 @@ void ImGui::NewFrame()
     if (!atlas->TexIsBuilt && (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures))
         ImFontAtlasBuildMain(atlas);
     else // Legacy backend
-        IM_ASSERT(atlas->TexIsBuilt && "Backend does not support ImGuiBackendFlags_RendererHasTexUpdates, and font atlas is not built! Update backend OR make sure you called ImGui_ImplXXXX_NewFrame() function for renderer backend, which should call io.Fonts->GetTexDataAsRGBA32() / GetTexDataAsAlpha8().");
+        IM_ASSERT(atlas->TexIsBuilt && "Backend does not support ImGuiBackendFlags_RendererHasTextures, and font atlas is not built! Update backend OR make sure you called ImGui_ImplXXXX_NewFrame() function for renderer backend, which should call io.Fonts->GetTexDataAsRGBA32() / GetTexDataAsAlpha8().");
 
     // Check and assert for various common IO and Configuration mistakes
     g.ConfigFlagsLastFrame = g.ConfigFlagsCurrFrame;
@@ -21214,7 +21215,7 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
     if (TreeNode("Loader", "Loader: \'%s\'", atlas->FontLoaderName ? atlas->FontLoaderName : "NULL"))
     {
         const ImFontLoader* loader_current = atlas->FontLoader;
-        BeginDisabled(!atlas->DrawListSharedData || !atlas->DrawListSharedData->RendererHasTextures);
+        BeginDisabled(!atlas->RendererHasTextures);
 #ifdef IMGUI_ENABLE_STB_TRUETYPE
         const ImFontLoader* loader_stbtruetype = ImFontAtlasGetFontLoaderForStbTruetype();
         if (RadioButton("stb_truetype", loader_current == loader_stbtruetype))

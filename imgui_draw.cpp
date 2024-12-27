@@ -393,7 +393,6 @@ ImDrawListSharedData::ImDrawListSharedData()
         ArcFastVtx[i] = ImVec2(ImCos(a), ImSin(a));
     }
     ArcFastRadiusCutoff = IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC_R(IM_DRAWLIST_ARCFAST_SAMPLE_MAX, CircleSegmentMaxError);
-    RendererHasTextures = false; // Assumed false by default, as apps can call e.g Atlas::Build() after backend init and before ImGui can update.
 }
 
 ImDrawListSharedData::~ImDrawListSharedData()
@@ -2582,6 +2581,7 @@ ImFontAtlas::ImFontAtlas()
     memset(this, 0, sizeof(*this));
     TexDesiredFormat = ImTextureFormat_RGBA32;
     TexGlyphPadding = 1;
+    RendererHasTextures = false; // Assumed false by default, as apps can call e.g Atlas::Build() after backend init and before ImGui can update.
     TexRef._TexData = NULL;// this;
     TexNextUniqueID = 1;
     Builder = NULL;
@@ -2639,10 +2639,10 @@ void ImFontAtlas::ClearFonts()
     ClearInputData();
     Fonts.clear_delete();
     TexIsBuilt = false;
-    if (DrawListSharedData)
+    for (ImDrawListSharedData* shared_data : DrawListSharedDatas)
     {
-        DrawListSharedData->Font = NULL;
-        DrawListSharedData->FontScale = DrawListSharedData->FontSize = 0.0f;
+        shared_data->Font = NULL;
+        shared_data->FontScale = shared_data->FontSize = 0.0f;
     }
 }
 
@@ -2683,18 +2683,21 @@ static void ImFontAtlasBuildUpdateRendererHasTexturesFromContext(ImFontAtlas* at
     //   time of an early call to Build(), it would be impossible for us to tell if the backend supports texture update.
     // - Without this hack, we would have quite a pitfall as many legacy codebases have an early call to Build().
     //   Whereas conversely, the portion of people using ImDrawList without ImGui is expected to be pathologically rare.
-    if (atlas->DrawListSharedData)
-        if (ImGuiContext* imgui_ctx = atlas->DrawListSharedData->Context)
-            atlas->DrawListSharedData->RendererHasTextures = (imgui_ctx->IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures) != 0;
+    for (ImDrawListSharedData* shared_data : atlas->DrawListSharedDatas)
+        if (ImGuiContext* imgui_ctx = shared_data->Context)
+        {
+            atlas->RendererHasTextures = (imgui_ctx->IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures) != 0;
+            break;
+        }
 }
 
-// Called by NewFrame()
+// Called by NewFrame(). When multiple context own the atlas, only the first one calls this.
 void ImFontAtlasUpdateNewFrame(ImFontAtlas* atlas)
 {
     if (atlas->TexIsBuilt && atlas->Builder->PreloadedAllGlyphsRanges)
     {
         ImFontAtlasBuildUpdateRendererHasTexturesFromContext(atlas);
-        IM_ASSERT_USER_ERROR(atlas->DrawListSharedData->RendererHasTextures == false,
+        IM_ASSERT_USER_ERROR(atlas->RendererHasTextures == false,
             "Called ImFontAtlas::Build() before ImGuiBackendFlags_RendererHasTextures got set! With new backends: you don't need to call Build().");
     }
 
@@ -3053,7 +3056,7 @@ ImFont* ImFontAtlas::AddFontFromMemoryCompressedBase85TTF(const char* compressed
 // We allow old_font == new_font which forces updating all values (e.g. sizes)
 static void ImFontAtlasBuildNotifySetFont(ImFontAtlas* atlas, ImFont* old_font, ImFont* new_font)
 {
-    if (ImDrawListSharedData* shared_data = atlas->DrawListSharedData)
+    for (ImDrawListSharedData* shared_data : atlas->DrawListSharedDatas)
     {
         if (shared_data->Font == old_font)
             shared_data->Font = new_font;
@@ -3127,7 +3130,7 @@ int ImFontAtlas::AddCustomRectRegular(int width, int height)
     IM_ASSERT(width > 0 && width <= 0xFFFF);
     IM_ASSERT(height > 0 && height <= 0xFFFF);
 
-    if (DrawListSharedData && DrawListSharedData->RendererHasTextures)
+    if (RendererHasTextures)
     {
         ImFontAtlasRectId r_id = ImFontAtlasPackAddRect(this, width, height);
         ImFontAtlasRect* r = ImFontAtlasPackGetRect(this, r_id);
@@ -3223,7 +3226,7 @@ void ImFontAtlasBuildMain(ImFontAtlas* atlas)
 
     // [LEGACY] For backends not supporting RendererHasTexUpdates: preload all glyphs
     ImFontAtlasBuildUpdateRendererHasTexturesFromContext(atlas);
-    if (atlas->DrawListSharedData && atlas->DrawListSharedData->RendererHasTextures == false) // ~ImGuiBackendFlags_RendererHasTextures
+    if (atlas->RendererHasTextures == false) // ~ImGuiBackendFlags_RendererHasTextures
         ImFontAtlasBuildPreloadAllGlyphRanges(atlas);
     atlas->TexIsBuilt = true;
 }
@@ -3581,48 +3584,46 @@ void ImFontAtlasBuildReloadFont(ImFontAtlas* atlas, ImFont* font)
 // Those functions are designed to facilitate changing the underlying structures for ImFontAtlas to store an array of ImDrawListSharedData*
 void ImFontAtlasAddDrawListSharedData(ImFontAtlas* atlas, ImDrawListSharedData* data)
 {
-    IM_ASSERT(atlas->DrawListSharedData == NULL && data->FontAtlas == NULL);
-    atlas->DrawListSharedData = data;
+    IM_ASSERT(!atlas->DrawListSharedDatas.contains(data) && data->FontAtlas == NULL);
+    atlas->DrawListSharedDatas.push_back(data);
     data->FontAtlas = atlas;
 }
 
 void ImFontAtlasRemoveDrawListSharedData(ImFontAtlas* atlas, ImDrawListSharedData* data)
 {
-    IM_ASSERT(atlas->DrawListSharedData == data && data->FontAtlas == atlas);
-    atlas->DrawListSharedData = data;
+    IM_ASSERT(atlas->DrawListSharedDatas.contains(data) && data->FontAtlas == atlas);
+    atlas->DrawListSharedDatas.find_erase(data);
     data->FontAtlas = NULL;
 }
 
 // Update texture identifier in all active draw lists
 void ImFontAtlasUpdateDrawListsTextures(ImFontAtlas* atlas, ImTextureRef old_tex, ImTextureRef new_tex)
 {
-    ImDrawListSharedData* shared_data = atlas->DrawListSharedData;
-    if (shared_data == NULL)
-        return;
-    for (ImDrawList* draw_list : shared_data->DrawLists)
-    {
-        // Replace in command-buffer
-        // (there is not need to replace in ImDrawListSplitter: current channel is in ImDrawList's CmdBuffer[],
-        //  other channels will be on SetCurrentChannel() which already needs to compare CmdHeader anyhow)
-        if (draw_list->CmdBuffer.Size > 0 && draw_list->_CmdHeader.TexRef == old_tex)
-            draw_list->_SetTextureRef(new_tex);
+    for (ImDrawListSharedData* shared_data : atlas->DrawListSharedDatas)
+        for (ImDrawList* draw_list : shared_data->DrawLists)
+        {
+            // Replace in command-buffer
+            // (there is not need to replace in ImDrawListSplitter: current channel is in ImDrawList's CmdBuffer[],
+            //  other channels will be on SetCurrentChannel() which already needs to compare CmdHeader anyhow)
+            if (draw_list->CmdBuffer.Size > 0 && draw_list->_CmdHeader.TexRef == old_tex)
+                draw_list->_SetTextureRef(new_tex);
 
-        // Replace in stack
-        for (ImTextureRef& stacked_tex : draw_list->_TextureStack)
-            if (stacked_tex == old_tex)
-                stacked_tex = new_tex;
-    }
+            // Replace in stack
+            for (ImTextureRef& stacked_tex : draw_list->_TextureStack)
+                if (stacked_tex == old_tex)
+                    stacked_tex = new_tex;
+        }
 }
 
 // Update texture coordinates in all draw list shared context
 void ImFontAtlasUpdateDrawListsSharedData(ImFontAtlas* atlas)
 {
-    ImDrawListSharedData* shared_data = atlas->DrawListSharedData;
-    if (shared_data == NULL)
-        return;
-    shared_data->FontAtlas = atlas;
-    shared_data->TexUvWhitePixel = atlas->TexUvWhitePixel;
-    shared_data->TexUvLines = atlas->TexUvLines;
+    for (ImDrawListSharedData* shared_data : atlas->DrawListSharedDatas)
+    {
+        shared_data->FontAtlas = atlas;
+        shared_data->TexUvWhitePixel = atlas->TexUvWhitePixel;
+        shared_data->TexUvLines = atlas->TexUvLines;
+    }
 }
 
 // Set current texture. This is mostly called from AddTexture() + to handle a failed resize.

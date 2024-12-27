@@ -3700,6 +3700,7 @@ struct ImFontAtlas
     ImTextureData*              TexData;            // Current texture
     ImVector<ImTextureData*>    TexList;            // Texture list (most often TexList.Size == 1). TexData is always == TexList.back(). DO NOT USE DIRECTLY, USE GetPlatformIO().Textures[] instead!
     bool                        Locked;             // Marked as Locked by ImGui::NewFrame() so attempt to modify the atlas will assert.
+    bool                        RendererHasTextures;// Copy of (BackendFlags & ImGuiBackendFlags_RendererHasTextures) from supporting context.
     bool                        TexIsBuilt;         // Set when texture was built matching current font input
     bool                        TexPixelsUseColors; // Tell whether our texture data is known to use colors (rather than just alpha channel), in order to help backend select a format or conversion process.
     ImVec2                      TexUvScale;         // = (1.0f/TexData->TexWidth, 1.0f/TexData->TexHeight)
@@ -3709,7 +3710,7 @@ struct ImFontAtlas
     //ImVector<ImFontAtlasCustomRect> CustomRects;  // Rectangles for packing custom texture data into the atlas.
     ImVec4                      TexUvLines[IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1];  // UVs for baked anti-aliased lines
     int                         TexNextUniqueID;    // Next value to be stored in TexData->UniqueID
-    ImDrawListSharedData*       DrawListSharedData; // In principle this could become an array (e.g. multiple contexts using same atlas)
+    ImVector<ImDrawListSharedData*> DrawListSharedDatas;
 
     // [Internal] Font builder
     ImFontAtlasBuilder*         Builder;            // Opaque interface to our data that doesn't need to be public
