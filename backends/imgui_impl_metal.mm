@@ -156,6 +156,7 @@ void ImGui_ImplMetal_NewFrame(MTLRenderPassDescriptor* renderPassDescriptor)
 {
     ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
     IM_ASSERT(bd != nil && "Context or backend not initialized! Did you call ImGui_ImplMetal_Init()?");
+    [bd->SharedMetalContext.framebufferDescriptor release];
     bd->SharedMetalContext.framebufferDescriptor = [[FramebufferDescriptor alloc] initWithRenderPassDescriptor:renderPassDescriptor];
 
     if (bd->SharedMetalContext.depthStencilState == nil)
@@ -226,14 +227,14 @@ void ImGui_ImplMetal_RenderDrawData(ImDrawData* drawData, id<MTLCommandBuffer> c
         // No luck; make a new render pipeline state
         renderPipelineState = [ctx renderPipelineStateForFramebufferDescriptor:ctx.framebufferDescriptor device:commandBuffer.device];
 
-        // Cache render pipeline state for later reuse
+        // Cache render pipeline state for later reuse - dictionary will retain it
         ctx.renderPipelineStateCache[ctx.framebufferDescriptor] = renderPipelineState;
     }
 
     size_t vertexBufferLength = (size_t)drawData->TotalVtxCount * sizeof(ImDrawVert);
     size_t indexBufferLength = (size_t)drawData->TotalIdxCount * sizeof(ImDrawIdx);
-    MetalBuffer* vertexBuffer = [ctx dequeueReusableBufferOfLength:vertexBufferLength device:commandBuffer.device];
-    MetalBuffer* indexBuffer = [ctx dequeueReusableBufferOfLength:indexBufferLength device:commandBuffer.device];
+    MetalBuffer* vertexBuffer = [[ctx dequeueReusableBufferOfLength:vertexBufferLength device:commandBuffer.device] retain];
+    MetalBuffer* indexBuffer = [[ctx dequeueReusableBufferOfLength:indexBufferLength device:commandBuffer.device] retain];
 
     ImGui_ImplMetal_SetupRenderState(drawData, commandBuffer, commandEncoder, renderPipelineState, vertexBuffer, 0);
 
@@ -316,6 +317,8 @@ void ImGui_ImplMetal_RenderDrawData(ImDrawData* drawData, id<MTLCommandBuffer> c
                 {
                     [bd->SharedMetalContext.bufferCache addObject:vertexBuffer];
                     [bd->SharedMetalContext.bufferCache addObject:indexBuffer];
+                    [vertexBuffer release];
+                    [indexBuffer release];
                 }
             }
         });
@@ -468,7 +471,11 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
             for (MetalBuffer* candidate in self.bufferCache)
                 if (candidate.lastReuseTime > self.lastBufferCachePurge)
                     [survivors addObject:candidate];
+
+            NSMutableArray* oldArray = self.bufferCache;
             self.bufferCache = [survivors mutableCopy];
+            [oldArray release];
+
             self.lastBufferCachePurge = now;
         }
 
@@ -480,15 +487,16 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
 
         if (bestCandidate != nil)
         {
+            [bestCandidate retain];  // Retain before removing from array
             [self.bufferCache removeObject:bestCandidate];
-            bestCandidate.lastReuseTime = now;
-            return bestCandidate;
+            bestCandidate.lastReuseTime = now;  // Now safe to modify
+            return [bestCandidate autorelease];  // Return autoreleased for caller
         }
     }
 
     // No luck; make a new buffer
     id<MTLBuffer> backing = [device newBufferWithLength:length options:MTLResourceStorageModeShared];
-    return [[MetalBuffer alloc] initWithBuffer:backing];
+    return [[[MetalBuffer alloc] initWithBuffer:backing] autorelease];
 }
 
 // Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling.
@@ -582,7 +590,8 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
     if (error != nil)
         NSLog(@"Error: failed to create Metal pipeline state: %@", error);
 
-    return renderPipelineState;
+    // Add autorelease to balance the new
+    return [renderPipelineState autorelease];
 }
 
 @end
