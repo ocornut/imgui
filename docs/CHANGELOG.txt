@@ -51,6 +51,9 @@ Other changes:
   value is being modified. (#8242)
 - InputText: Added sanity check to detect some cases of passing a non
   zero-terminated input buffer.
+- Tables: Fixed TableAngledHeadersRow() creating an infinite horizontal
+  scrolling region when the table is hosted in a viewport with negative
+  coordinates.
 - Tables, MultiSelect: Fixed an issue where column width may be mismeasured
   when calling BeginMultiSelect() while inside a table. (#8250)
 - Drags: Added ImGuiSliderFlags_NoSpeedTweaks flag to disable keyboard
@@ -60,8 +63,16 @@ Other changes:
   windows with the ImGuiWindowFlags_NoNavInputs flag. (#8231)
 - Debug Tools: Debug Log: hovering 0xXXXXXXXX values in log is allowed even
   if a popup is blocking mouse access to the debug log window. (#5855)
+- Demo: Added label edition to Property Editor demo + fix an ID issue. (#8266) [@moritz-h]
+- Misc: Fixed misc/cpp/imgui_stdlib.h/.cpp not supporting IMGUI_DISABLE. (#8294) [@juur]
+- Backends: Allegro5: Avoid calling al_set_mouse_cursor() repeatedly since it appears
+  to leak on on X11 (#8256). [@Helodity]
+- Backends: Metal: Fixed resource leak when using multiple contexts. (#7419) [@anszom]
 - Backends: Vulkan: Fixed setting VkSwapchainCreateInfoKHR::preTransform for
   platforms not supporting VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR. (#8222) [@Zer0xFF]
+- Backends: Vulkan: Added a few more ImGui_ImplVulkanH_XXX helper functions
+  primarily for the purpose of making our examples simpler.
+- Examples: Added Win32+Vulkan example for completeness. (#8180) [@jristic]
 
 
 -----------------------------------------------------------------------

@@ -307,6 +307,7 @@ struct ExampleMemberInfo
 // Metadata description of ExampleTreeNode struct.
 static const ExampleMemberInfo ExampleTreeNodeMemberInfos[]
 {
+    { "MyName",     ImGuiDataType_String,  1, offsetof(ExampleTreeNode, Name) },
     { "MyBool",     ImGuiDataType_Bool,    1, offsetof(ExampleTreeNode, DataMyBool) },
     { "MyInt",      ImGuiDataType_S32,     1, offsetof(ExampleTreeNode, DataMyInt) },
     { "MyVec2",     ImGuiDataType_Float,   2, offsetof(ExampleTreeNode, DataMyVec2) },
@@ -7767,7 +7768,8 @@ void ImGui::ShowAboutWindow(bool* p_open)
     ImGui::TextLinkOpenURL("Funding", "https://github.com/ocornut/imgui/wiki/Funding");
 
     ImGui::Separator();
-    ImGui::Text("By Omar Cornut and all Dear ImGui contributors.");
+    ImGui::Text("(c) 2014-2025 Omar Cornut");
+    ImGui::Text("Developed by Omar Cornut and all Dear ImGui contributors.");
     ImGui::Text("Dear ImGui is licensed under the MIT License, see LICENSE for more information.");
     ImGui::Text("If your company uses this, please consider funding the project.");
 
@@ -9055,6 +9057,8 @@ struct ExampleAppPropertyEditor
             ImGui::Separator();
             if (ImGui::BeginTable("##properties", 2, ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY))
             {
+                // Push object ID after we entered the table, so table is shared for all objects
+                ImGui::PushID((int)node->UID);
                 ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed);
                 ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch, 2.0f); // Default twice larger
                 if (node->HasData)
@@ -9093,10 +9097,16 @@ struct ExampleAppPropertyEditor
                             ImGui::SliderScalarN("##Editor", field_desc.DataType, field_ptr, field_desc.DataCount, &v_min, &v_max);
                             break;
                         }
+                        case ImGuiDataType_String:
+                        {
+                            ImGui::InputText("##Editor", reinterpret_cast<char*>(field_ptr), 28);
+                            break;
+                        }
                         }
                         ImGui::PopID();
                     }
                 }
+                ImGui::PopID();
                 ImGui::EndTable();
             }
         }

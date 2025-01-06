@@ -3299,7 +3299,7 @@ void ImGui::TableAngledHeadersRowEx(ImGuiID row_id, float angle, float max_label
     const ImVec2 align = g.Style.TableAngledHeadersTextAlign;
 
     // Draw background and labels in first pass, then all borders.
-    float max_x = 0.0f;
+    float max_x = -FLT_MAX;
     for (int pass = 0; pass < 2; pass++)
         for (int order_n = 0; order_n < data_count; order_n++)
         {
