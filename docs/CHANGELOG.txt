@@ -72,6 +72,7 @@ Other changes:
   platforms not supporting VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR. (#8222) [@Zer0xFF]
 - Backends: Vulkan: Added a few more ImGui_ImplVulkanH_XXX helper functions
   primarily for the purpose of making our examples simpler.
+- Examples: Added Win32+Vulkan example for completeness. (#8180) [@jristic]
 
 
 -----------------------------------------------------------------------
