@@ -64,6 +64,7 @@ Other changes:
 - Misc: Fixed misc/cpp/imgui_stdlib.h/.cpp not supporting IMGUI_DISABLE. (#8294) [@juur]
 - Backends: Allegro5: Avoid calling al_set_mouse_cursor() repeatedly since it appears
   to leak on on X11 (#8256). [@Helodity]
+- Backends: Metal: Fixed resource leak when using multiple contexts. (#7419) [@anszom]
 - Backends: Vulkan: Fixed setting VkSwapchainCreateInfoKHR::preTransform for
   platforms not supporting VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR. (#8222) [@Zer0xFF]
 
