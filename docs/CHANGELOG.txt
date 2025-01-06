@@ -51,6 +51,9 @@ Other changes:
   value is being modified. (#8242)
 - InputText: Added sanity check to detect some cases of passing a non
   zero-terminated input buffer.
+- Tables: Fixed TableAngledHeadersRow() creating an infinite horizontal
+  scrolling region when the table is hosted in a viewport with negative
+  coordinates.
 - Tables, MultiSelect: Fixed an issue where column width may be mismeasured
   when calling BeginMultiSelect() while inside a table. (#8250)
 - Drags: Added ImGuiSliderFlags_NoSpeedTweaks flag to disable keyboard
