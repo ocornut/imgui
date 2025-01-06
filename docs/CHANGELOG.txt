@@ -72,6 +72,8 @@ Other changes:
   platforms not supporting VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR. (#8222) [@Zer0xFF]
 - Backends: Vulkan: Added a few more ImGui_ImplVulkanH_XXX helper functions
   primarily for the purpose of making our examples simpler.
+- Backends: DX11: Expose vertex constant buffer in ImGui_ImplDX11_RenderState.
+  Reset projection matrix in ImDrawCallback_ResetRenderState handlers. (#6969, #5834, #7468, #3590)
 - Examples: Added Win32+Vulkan example for completeness. (#8180) [@jristic]
 
 
