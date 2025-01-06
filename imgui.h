@@ -29,7 +29,7 @@
 // Library Version
 // (Integer encoded as XYYZZ for use in #if preprocessor conditionals, e.g. '#if IMGUI_VERSION_NUM >= 12345')
 #define IMGUI_VERSION       "1.91.7 WIP"
-#define IMGUI_VERSION_NUM   19163
+#define IMGUI_VERSION_NUM   19164
 #define IMGUI_HAS_TABLE
 
 /*
@@ -1399,6 +1399,7 @@ enum ImGuiDataType_
     ImGuiDataType_Float,    // float
     ImGuiDataType_Double,   // double
     ImGuiDataType_Bool,     // bool (provided for user convenience, not supported by scalar widgets)
+    ImGuiDataType_String,   // char* (provided for user convenience, not supported by scalar widgets)
     ImGuiDataType_COUNT
 };
 

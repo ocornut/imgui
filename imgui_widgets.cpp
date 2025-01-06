@@ -2171,6 +2171,7 @@ static const ImGuiDataTypeInfo GDataTypeInfo[] =
     { sizeof(float),            "float", "%.3f","%f"    },  // ImGuiDataType_Float (float are promoted to double in va_arg)
     { sizeof(double),           "double","%f",  "%lf"   },  // ImGuiDataType_Double
     { sizeof(bool),             "bool", "%d",   "%d"    },  // ImGuiDataType_Bool
+    { 0,                        "char*","%s",   "%s"    },  // ImGuiDataType_String
 };
 IM_STATIC_ASSERT(IM_ARRAYSIZE(GDataTypeInfo) == ImGuiDataType_COUNT);
 

@@ -827,8 +827,7 @@ struct ImGuiDataTypeInfo
 // Extend ImGuiDataType_
 enum ImGuiDataTypePrivate_
 {
-    ImGuiDataType_String = ImGuiDataType_COUNT + 1,
-    ImGuiDataType_Pointer,
+    ImGuiDataType_Pointer = ImGuiDataType_COUNT + 1,
     ImGuiDataType_ID,
 };
 
