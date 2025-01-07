@@ -363,12 +363,14 @@ void ImGui_ImplMetal_DestroyFontsTexture()
 bool ImGui_ImplMetal_CreateDeviceObjects(id<MTLDevice> device)
 {
     ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
-    MTLDepthStencilDescriptor* depthStencilDescriptor = [[[MTLDepthStencilDescriptor alloc] init] autorelease];
+    MTLDepthStencilDescriptor* depthStencilDescriptor = [[MTLDepthStencilDescriptor alloc] init];
     depthStencilDescriptor.depthWriteEnabled = NO;
     depthStencilDescriptor.depthCompareFunction = MTLCompareFunctionAlways;
-    bd->SharedMetalContext.depthStencilState = [device newDepthStencilStateWithDescriptor:depthStencilDescriptor];
-    ImGui_ImplMetal_CreateFontsTexture(device);
 
+    bd->SharedMetalContext.depthStencilState = [device newDepthStencilStateWithDescriptor:depthStencilDescriptor];
+    [depthStencilDescriptor release];
+
+    ImGui_ImplMetal_CreateFontsTexture(device);
     return true;
 }
 
@@ -376,6 +378,8 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
 {
     ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
     ImGui_ImplMetal_DestroyFontsTexture();
+    [bd->SharedMetalContext.depthStencilState release];
+    bd->SharedMetalContext.depthStencilState = nil;
     [bd->SharedMetalContext.renderPipelineStateCache removeAllObjects];
 }
 
