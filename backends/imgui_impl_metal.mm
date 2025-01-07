@@ -154,12 +154,17 @@ void ImGui_ImplMetal_Shutdown()
 
 void ImGui_ImplMetal_NewFrame(MTLRenderPassDescriptor* renderPassDescriptor)
 {
-    ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
-    IM_ASSERT(bd != nil && "Context or backend not initialized! Did you call ImGui_ImplMetal_Init()?");
-    bd->SharedMetalContext.framebufferDescriptor = [[[FramebufferDescriptor alloc] initWithRenderPassDescriptor:renderPassDescriptor]autorelease];
+   ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
+   IM_ASSERT(bd != nil && "Context or backend not initialized! Did you call ImGui_ImplMetal_Init()?");
 
-    if (bd->SharedMetalContext.depthStencilState == nil)
-        ImGui_ImplMetal_CreateDeviceObjects(bd->SharedMetalContext.device);
+#ifdef IMGUI_IMPL_METAL_CPP
+   bd->SharedMetalContext.framebufferDescriptor = (__bridge FramebufferDescriptor*)CFBridgingRelease([[FramebufferDescriptor alloc] initWithRenderPassDescriptor:(__bridge MTLRenderPassDescriptor*)renderPassDescriptor]);
+#else
+   bd->SharedMetalContext.framebufferDescriptor = [[FramebufferDescriptor alloc] initWithRenderPassDescriptor:renderPassDescriptor];
+#endif
+
+   if (bd->SharedMetalContext.depthStencilState == nil)
+       ImGui_ImplMetal_CreateDeviceObjects(bd->SharedMetalContext.device);
 }
 
 static void ImGui_ImplMetal_SetupRenderState(ImDrawData* drawData, id<MTLCommandBuffer> commandBuffer,
@@ -306,17 +311,14 @@ void ImGui_ImplMetal_RenderDrawData(ImDrawData* drawData, id<MTLCommandBuffer> c
         indexBufferOffset += (size_t)draw_list->IdxBuffer.Size * sizeof(ImDrawIdx);
     }
 
+    __block MetalContext* sharedMetalContext = bd->SharedMetalContext;
     [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer>)
     {
         dispatch_async(dispatch_get_main_queue(), ^{
-            ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
-            if (bd != nullptr)
+            @synchronized(bd->SharedMetalContext.bufferCache)
             {
-                @synchronized(bd->SharedMetalContext.bufferCache)
-                {
-                    [bd->SharedMetalContext.bufferCache addObject:vertexBuffer];
-                    [bd->SharedMetalContext.bufferCache addObject:indexBuffer];
-                }
+                [sharedMetalContext.bufferCache addObject:vertexBuffer];
+                [sharedMetalContext.bufferCache addObject:indexBuffer];
             }
         });
     }];
@@ -362,24 +364,34 @@ void ImGui_ImplMetal_DestroyFontsTexture()
 
 bool ImGui_ImplMetal_CreateDeviceObjects(id<MTLDevice> device)
 {
-    ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
-    MTLDepthStencilDescriptor* depthStencilDescriptor = [[MTLDepthStencilDescriptor alloc] init];
-    depthStencilDescriptor.depthWriteEnabled = NO;
-    depthStencilDescriptor.depthCompareFunction = MTLCompareFunctionAlways;
+   ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
 
-    bd->SharedMetalContext.depthStencilState = [device newDepthStencilStateWithDescriptor:depthStencilDescriptor];
-    [depthStencilDescriptor release];
+#ifdef IMGUI_IMPL_METAL_CPP
+   @autoreleasepool {
+       MTLDepthStencilDescriptor* depthStencilDescriptor = [MTLDepthStencilDescriptor new];
+       depthStencilDescriptor.depthWriteEnabled = NO;
+       depthStencilDescriptor.depthCompareFunction = MTLCompareFunctionAlways;
+       depthStencilDescriptor.backFaceStencil = nil;
+       depthStencilDescriptor.frontFaceStencil = nil;
+       id<MTLDepthStencilState> state = [(__bridge id<MTLDevice>)device newDepthStencilStateWithDescriptor:depthStencilDescriptor];
+       bd->SharedMetalContext.depthStencilState = (__bridge id<MTLDepthStencilState>)state;
+       [depthStencilDescriptor release];
+   }
+#else
+   MTLDepthStencilDescriptor* depthStencilDescriptor = [[MTLDepthStencilDescriptor alloc] init];
+   depthStencilDescriptor.depthWriteEnabled = NO;
+   depthStencilDescriptor.depthCompareFunction = MTLCompareFunctionAlways;
+   bd->SharedMetalContext.depthStencilState = [device newDepthStencilStateWithDescriptor:depthStencilDescriptor];
+#endif
 
-    ImGui_ImplMetal_CreateFontsTexture(device);
-    return true;
+   ImGui_ImplMetal_CreateFontsTexture(device);
+   return true;
 }
 
 void ImGui_ImplMetal_DestroyDeviceObjects()
 {
     ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
     ImGui_ImplMetal_DestroyFontsTexture();
-    [bd->SharedMetalContext.depthStencilState release];
-    bd->SharedMetalContext.depthStencilState = nil;
     [bd->SharedMetalContext.renderPipelineStateCache removeAllObjects];
 }
 
