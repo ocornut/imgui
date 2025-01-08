@@ -25,7 +25,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2024-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2025-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
 //  2024-10-07: OpenGL: Changed default texture sampler to Clamp instead of Repeat/Wrap.
 //  2024-06-28: OpenGL: ImGui_ImplOpenGL2_NewFrame() recreates font texture if it has been destroyed by ImGui_ImplOpenGL2_DestroyFontsTexture(). (#7748)
 //  2022-10-11: Using 'nullptr' instead of 'NULL' as per our switch to C++11.

@@ -170,6 +170,7 @@ static bool g_FunctionsLoaded = true;
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkDestroySurfaceKHR) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkDestroySwapchainKHR) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkDeviceWaitIdle) \
+    IMGUI_VULKAN_FUNC_MAP_MACRO(vkEnumeratePhysicalDevices) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkEndCommandBuffer) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkFlushMappedMemoryRanges) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkFreeCommandBuffers) \
@@ -177,7 +178,9 @@ static bool g_FunctionsLoaded = true;
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkFreeMemory) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkGetBufferMemoryRequirements) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkGetImageMemoryRequirements) \
+    IMGUI_VULKAN_FUNC_MAP_MACRO(vkGetPhysicalDeviceProperties) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkGetPhysicalDeviceMemoryProperties) \
+    IMGUI_VULKAN_FUNC_MAP_MACRO(vkGetPhysicalDeviceQueueFamilyProperties) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkGetPhysicalDeviceSurfaceCapabilitiesKHR) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkGetPhysicalDeviceSurfaceFormatsKHR) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkGetPhysicalDeviceSurfacePresentModesKHR) \
@@ -232,7 +235,7 @@ struct ImGui_ImplVulkan_Texture
     VkImageView                 ImageView;
     VkDescriptorSet             DescriptorSet;
 
-    ImGui_ImplVulkan_Texture() { memset(this, 0, sizeof(*this)); }
+    ImGui_ImplVulkan_Texture() { memset((void*)this, 0, sizeof(*this)); }
 };
 
 // For multi-viewport support:

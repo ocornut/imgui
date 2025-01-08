@@ -17,7 +17,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2024-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2025-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
 //  2024-10-07: DirectX9: Changed default texture sampler to Clamp instead of Repeat/Wrap.
 //  2024-02-12: DirectX9: Using RGBA format when supported by the driver to avoid CPU side conversion. (#6575)
 //  2022-10-11: Using 'nullptr' instead of 'NULL' as per our switch to C++11.
