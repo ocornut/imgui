@@ -2464,6 +2464,7 @@ void ImTextureData::DestroyPixels()
 // - ImFontAtlasTextureBlockConvert()
 // - ImFontAtlasTextureBlockPostProcess()
 // - ImFontAtlasTextureBlockPostProcessMultiply()
+// - ImFontAtlasTextureBlockFill()
 // - ImFontAtlasTextureBlockCopy()
 // - ImFontAtlasTextureBlockQueueUpload()
 //-----------------------------------------------------------------------------
@@ -2492,6 +2493,7 @@ void ImTextureData::DestroyPixels()
 // - ImFontAtlasBuildUpdateBasicTexData()
 // - ImFontAtlasBuildUpdateLinesTexData()
 // - ImFontAtlasBuildAddFont()
+// - ImFontAtlasBuildSetupFontCreateEllipsisFromDot()
 // - ImFontAtlasBuildSetupFontSpecialGlyphs()
 // - ImFontAtlasBuildReloadFont()
 //-----------------------------------------------------------------------------
@@ -2823,10 +2825,29 @@ void ImFontAtlasTextureBlockPostProcessMultiply(ImFontAtlasPostProcessData* data
     }
 }
 
-// Convert block from one texture to another
+// Fill with single color. We don't use this directly but it is convenient for anyone working on uploading custom rects.
+void ImFontAtlasTextureBlockFill(ImTextureData* dst_tex, int dst_x, int dst_y, int w, int h, ImU32 col)
+{
+    if (dst_tex->Format == ImTextureFormat_Alpha8)
+    {
+        ImU8 col_a = (col >> IM_COL32_A_SHIFT) & 0xFF;
+        for (int y = 0; y < h; y++)
+            memset((ImU8*)dst_tex->GetPixelsAt(dst_x, dst_y + y), col_a, w);
+    }
+    else
+    {
+        for (int y = 0; y < h; y++)
+        {
+            ImU32* p = (ImU32*)(void*)dst_tex->GetPixelsAt(dst_x, dst_y + y);
+            for (int x = w; x > 0; x--, p++)
+                *p = col;
+        }
+    }
+}
+
+// Copy block from one texture to another
 void ImFontAtlasTextureBlockCopy(ImTextureData* src_tex, int src_x, int src_y, ImTextureData* dst_tex, int dst_x, int dst_y, int w, int h)
 {
-    IM_ASSERT(src_tex != dst_tex);
     IM_ASSERT(src_tex->Pixels != NULL && dst_tex->Pixels != NULL);
     IM_ASSERT(src_tex->Format == dst_tex->Format);
     IM_ASSERT(src_x >= 0 && src_x + w <= src_tex->Width);
@@ -3486,6 +3507,44 @@ bool ImFontAtlasBuildAddFont(ImFontAtlas* atlas, ImFontConfig* src)
     return true;
 }
 
+// Rasterize our own ellipsis character from a dot.
+// This may seem overly complicated right now but the point is to exercise and improve a technique which should be increasingly used.
+// FIXME-NEWATLAS: This borrows too much from FontBackend_FontAddGlyph() and suggest that we should add further helpers.
+static void ImFontAtlasBuildSetupFontCreateEllipsisFromDot(ImFontAtlas* atlas, ImFontConfig* cfg, const ImFontGlyph* dot_glyph)
+{
+    ImFont* font = cfg->DstFont;
+
+    ImFontAtlasRect* dot_r = ImFontAtlasPackGetRect(atlas, dot_glyph->PackId);
+    const int dot_spacing = 1;
+    const float dot_step = (dot_glyph->X1 - dot_glyph->X0) + dot_spacing;
+    ImFontAtlasRectId pack_id = ImFontAtlasPackAddRect(atlas, (dot_r->w * 3 + dot_spacing * 2), dot_r->h);
+    ImFontAtlasRect* r = ImFontAtlasPackGetRect(atlas, pack_id);
+    font->MetricsTotalSurface += r->w * r->h;
+
+    ImFontGlyph glyph;
+    glyph.Codepoint = (ImWchar)0x0085; // FIXME: Using arbitrary codepoint.
+    glyph.AdvanceX = ImMax(dot_glyph->AdvanceX, dot_glyph->X0 + dot_step * 3.0f - dot_spacing); // FIXME: Slightly odd for normally mono-space fonts but since this is used for trailing contents.
+    glyph.X0 = dot_glyph->X0;
+    glyph.Y0 = dot_glyph->Y0;
+    glyph.X1 = dot_glyph->X0 + dot_step * 3 - dot_spacing;
+    glyph.Y1 = dot_glyph->Y1;
+    glyph.U0 = (r->x) * atlas->TexUvScale.x;
+    glyph.V0 = (r->y) * atlas->TexUvScale.y;
+    glyph.U1 = (r->x + r->w) * atlas->TexUvScale.x;
+    glyph.V1 = (r->y + r->h) * atlas->TexUvScale.y;
+    glyph.Visible = true;
+    glyph.PackId = pack_id;
+    font->BuildRegisterGlyph(cfg, &glyph);
+    font->EllipsisChar = (ImWchar)glyph.Codepoint;
+
+    // Copy to texture, post-process and queue update for backend
+    // FIXME-NEWATLAS-V2: Dot glyph is already post-processed as this point, so this would damage it.
+    ImTextureData* tex = atlas->TexData;
+    for (int n = 0; n < 3; n++)
+        ImFontAtlasTextureBlockCopy(tex, dot_r->x, dot_r->y, tex, r->x + (dot_r->w + dot_spacing) * n, r->y, dot_r->w, dot_r->h);
+    ImFontAtlasTextureBlockQueueUpload(atlas, tex, r->x, r->y, r->w, r->h);
+}
+
 // Load/identify special glyphs
 // (note that this is called again for fonts with MergeMode)
 void ImFontAtlasBuildSetupFontSpecialGlyphs(ImFontAtlas* atlas, ImFontConfig* src)
@@ -3529,23 +3588,19 @@ void ImFontAtlasBuildSetupFontSpecialGlyphs(ImFontAtlas* atlas, ImFontConfig* sr
     // FIXME: Note that 0x2026 is rarely included in our font ranges. Because of this we are more likely to use three individual dots.
     const ImWchar ellipsis_chars[] = { src->EllipsisChar, (ImWchar)0x2026, (ImWchar)0x0085 };
     if (font->EllipsisChar == 0)
-        if (const ImFontGlyph* glyph = LoadFirstExistingGlyph(font, ellipsis_chars, IM_ARRAYSIZE(ellipsis_chars)))
-        {
-            font->EllipsisChar = (ImWchar)glyph->Codepoint;
-            font->EllipsisCharCount = 1;
-            font->EllipsisWidth = font->EllipsisCharStep = glyph->X1;
-        }
+        for (ImWchar candidate_char : ellipsis_chars)
+            if (candidate_char != 0 && font->IsGlyphInFont(candidate_char))
+            {
+                font->EllipsisChar = candidate_char;
+                break;
+            }
     if (font->EllipsisChar == 0)
     {
-        // FIXME-NEWATLAS-V2: We can now rasterize this into a regular character and register it!
         const ImWchar dots_chars[] = { (ImWchar)'.', (ImWchar)0xFF0E };
         if (const ImFontGlyph* dot_glyph = LoadFirstExistingGlyph(font, dots_chars, IM_ARRAYSIZE(dots_chars)))
-        {
-            font->EllipsisChar = (ImWchar)dot_glyph->Codepoint;
-            font->EllipsisCharCount = 3;
-            font->EllipsisCharStep = (float)(int)(dot_glyph->X1 - dot_glyph->X0) + 1.0f;
-            font->EllipsisWidth = ImMax(dot_glyph->AdvanceX, dot_glyph->X0 + font->EllipsisCharStep * 3.0f - 1.0f); // FIXME: Slightly odd for normally mono-space fonts but since this is used for trailing contents.
-        }
+            ImFontAtlasBuildSetupFontCreateEllipsisFromDot(atlas, src, dot_glyph);
+        else
+            font->EllipsisChar = (ImWchar)' ';
     }
     font->LockSingleSrcConfigIdx = -1;
 }
