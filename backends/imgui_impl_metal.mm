@@ -15,6 +15,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2024-01-08: Metal: Fixed memory leaks when using metal-cpp (#8276, #8166) or when using multiple contexts (#7419).
 //  2022-08-23: Metal: Update deprecated property 'sampleCount'->'rasterSampleCount'.
 //  2022-07-05: Metal: Add dispatch synchronization.
 //  2022-06-30: Metal: Use __bridge for ARC based systems.
@@ -156,8 +157,11 @@ void ImGui_ImplMetal_NewFrame(MTLRenderPassDescriptor* renderPassDescriptor)
 {
     ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
     IM_ASSERT(bd != nil && "Context or backend not initialized! Did you call ImGui_ImplMetal_Init()?");
+#ifdef IMGUI_IMPL_METAL_CPP
+    bd->SharedMetalContext.framebufferDescriptor = [[[FramebufferDescriptor alloc] initWithRenderPassDescriptor:renderPassDescriptor]autorelease];
+#else
     bd->SharedMetalContext.framebufferDescriptor = [[FramebufferDescriptor alloc] initWithRenderPassDescriptor:renderPassDescriptor];
-
+#endif
     if (bd->SharedMetalContext.depthStencilState == nil)
         ImGui_ImplMetal_CreateDeviceObjects(bd->SharedMetalContext.device);
 }
@@ -364,8 +368,10 @@ bool ImGui_ImplMetal_CreateDeviceObjects(id<MTLDevice> device)
     depthStencilDescriptor.depthWriteEnabled = NO;
     depthStencilDescriptor.depthCompareFunction = MTLCompareFunctionAlways;
     bd->SharedMetalContext.depthStencilState = [device newDepthStencilStateWithDescriptor:depthStencilDescriptor];
+#ifdef IMGUI_IMPL_METAL_CPP
+    [depthStencilDescriptor release];
+#endif
     ImGui_ImplMetal_CreateFontsTexture(device);
-
     return true;
 }
 
