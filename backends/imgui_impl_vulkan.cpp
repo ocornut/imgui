@@ -225,7 +225,7 @@ struct ImGui_ImplVulkan_Texture
     VkImageView                 ImageView;
     VkDescriptorSet             DescriptorSet;
 
-    ImGui_ImplVulkan_Texture() { memset(this, 0, sizeof(*this)); }
+    ImGui_ImplVulkan_Texture() { memset((void*)this, 0, sizeof(*this)); }
 };
 
 // Vulkan data

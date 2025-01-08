@@ -43,7 +43,7 @@ struct ImGui_ImplDX12_InitInfo
     D3D12_GPU_DESCRIPTOR_HANDLE LegacySingleSrvGpuDescriptor;
 #endif
 
-    ImGui_ImplDX12_InitInfo()   { memset(this, 0, sizeof(*this)); }
+    ImGui_ImplDX12_InitInfo()   { memset((void*)this, 0, sizeof(*this)); }
 };
 
 // Follow "Getting Started" link and check examples/ folder to learn about using backends!
