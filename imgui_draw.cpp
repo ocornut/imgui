@@ -3799,8 +3799,8 @@ void ImFont::BuildLookupTable()
         const ImFontGlyph* glyph = FindGlyph(dot_char);
         EllipsisChar = dot_char;
         EllipsisCharCount = 3;
-        EllipsisCharStep = (glyph->X1 - glyph->X0) + 1.0f;
-        EllipsisWidth = EllipsisCharStep * 3.0f - 1.0f;
+        EllipsisCharStep = (float)(int)(glyph->X1 - glyph->X0) + 1.0f;
+        EllipsisWidth = glyph->X0 + EllipsisCharStep * 3.0f - 1.0f;
     }
 }
 
