@@ -4,9 +4,9 @@
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'ALLEGRO_BITMAP*' as ImTextureID. Read the FAQ about ImTextureID!
 //  [X] Platform: Keyboard support. Since 1.87 we are using the io.AddKeyEvent() function. Pass ImGuiKey values to all key functions e.g. ImGui::IsKeyPressed(ImGuiKey_Space). [Legacy ALLEGRO_KEY_* values are obsolete since 1.87 and not supported since 1.91.5]
-//  [X] Platform: Clipboard support (from Allegro 5.1.12)
-//  [X] Platform: Mouse cursor shape and visibility. Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'.
-// Issues:
+//  [X] Platform: Clipboard support (from Allegro 5.1.12).
+//  [X] Platform: Mouse cursor shape and visibility (ImGuiBackendFlags_HasMouseCursors). Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'.
+// Missing features or Issues:
 //  [ ] Renderer: The renderer is suboptimal as we need to convert vertices manually.
 //  [ ] Platform: Missing gamepad support.
 
@@ -20,6 +20,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2025-01-06: Avoid calling al_set_mouse_cursor() repeatedly since it appears to leak on on X11 (#8256).
 //  2024-08-22: moved some OS/backend related function pointers from ImGuiIO to ImGuiPlatformIO:
 //               - io.GetClipboardTextFn    -> platform_io.Platform_GetClipboardTextFn
 //               - io.SetClipboardTextFn    -> platform_io.Platform_SetClipboardTextFn
@@ -95,6 +96,7 @@ struct ImGui_ImplAllegro5_Data
     ALLEGRO_MOUSE_CURSOR*       MouseCursorInvisible;
     ALLEGRO_VERTEX_DECL*        VertexDecl;
     char*                       ClipboardTextData;
+    ImGuiMouseCursor            LastCursor;
 
     ImVector<ImDrawVertAllegro> BufVertices;
     ImVector<int>               BufIndices;
@@ -438,6 +440,7 @@ bool ImGui_ImplAllegro5_Init(ALLEGRO_DISPLAY* display)
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;       // We can honor GetMouseCursor() values (optional)
 
     bd->Display = display;
+    bd->LastCursor = ALLEGRO_SYSTEM_MOUSE_CURSOR_NONE;
 
     // Create custom vertex declaration.
     // Unfortunately Allegro doesn't support 32-bit packed colors so we have to convert them to 4 floats.
@@ -568,9 +571,16 @@ static void ImGui_ImplAllegro5_UpdateMouseCursor()
 
     ImGui_ImplAllegro5_Data* bd = ImGui_ImplAllegro5_GetBackendData();
     ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
-    if (io.MouseDrawCursor || imgui_cursor == ImGuiMouseCursor_None)
+
+    // Hide OS mouse cursor if imgui is drawing it
+    if (io.MouseDrawCursor)
+        imgui_cursor = ImGuiMouseCursor_None;
+
+    if (bd->LastCursor == imgui_cursor)
+        return;
+    bd->LastCursor = imgui_cursor;
+    if (imgui_cursor == ImGuiMouseCursor_None)
     {
-        // Hide OS mouse cursor if imgui is drawing it or if it wants no cursor
         al_set_mouse_cursor(bd->Display, bd->MouseCursorInvisible);
     }
     else

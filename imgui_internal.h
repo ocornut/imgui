@@ -1,4 +1,4 @@
-// dear imgui, v1.91.6 WIP
+// dear imgui, v1.91.7 WIP
 // (internal structures/api)
 
 // You may use this file to debug, understand or extend Dear ImGui features but we don't provide any guarantee of forward compatibility.
@@ -61,6 +61,14 @@ Index of this file:
 #if (defined __SSE__ || defined __x86_64__ || defined _M_X64 || (defined(_M_IX86_FP) && (_M_IX86_FP >= 1))) && !defined(IMGUI_DISABLE_SSE)
 #define IMGUI_ENABLE_SSE
 #include <immintrin.h>
+#if (defined __AVX__ || defined __SSE4_2__)
+#define IMGUI_ENABLE_SSE4_2
+#include <nmmintrin.h>
+#endif
+#endif
+// Emscripten has partial SSE 4.2 support where _mm_crc32_u32 is not available. See https://emscripten.org/docs/porting/simd.html#id11 and #8213
+#if defined(IMGUI_ENABLE_SSE4_2) && !defined(IMGUI_USE_LEGACY_CRC32_ADLER) && !defined(__EMSCRIPTEN__)
+#define IMGUI_ENABLE_SSE4_2_CRC
 #endif
 
 // Visual Studio warnings
@@ -93,6 +101,7 @@ Index of this file:
 #elif defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpragmas"                          // warning: unknown option after '#pragma GCC diagnostic' kind
+#pragma GCC diagnostic ignored "-Wfloat-equal"                      // warning: comparing floating-point with '==' or '!=' is unsafe
 #pragma GCC diagnostic ignored "-Wclass-memaccess"                  // [__GNUC__ >= 8] warning: 'memset/memcpy' clearing/writing an object of type 'xxxx' with no trivial copy-assignment; use assignment or value-initialization instead
 #pragma GCC diagnostic ignored "-Wdeprecated-enum-enum-conversion"  // warning: bitwise operation between different enumeration types ('XXXFlags_' and 'XXXFlagsPrivate_') is deprecated
 #endif
@@ -212,11 +221,6 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit context pointer
 #endif
 
 // Debug Logging for ShowDebugLogWindow(). This is designed for relatively rare events so please don't spam.
-#ifndef IMGUI_DISABLE_DEBUG_TOOLS
-#define IMGUI_DEBUG_LOG(...)            ImGui::DebugLog(__VA_ARGS__)
-#else
-#define IMGUI_DEBUG_LOG(...)            ((void)0)
-#endif
 #define IMGUI_DEBUG_LOG_ERROR(...)      do { ImGuiContext& g2 = *GImGui; if (g2.DebugLogFlags & ImGuiDebugLogFlags_EventError) IMGUI_DEBUG_LOG(__VA_ARGS__); else g2.DebugLogSkippedErrors++; } while (0)
 #define IMGUI_DEBUG_LOG_ACTIVEID(...)   do { if (g.DebugLogFlags & ImGuiDebugLogFlags_EventActiveId)    IMGUI_DEBUG_LOG(__VA_ARGS__); } while (0)
 #define IMGUI_DEBUG_LOG_FOCUS(...)      do { if (g.DebugLogFlags & ImGuiDebugLogFlags_EventFocus)       IMGUI_DEBUG_LOG(__VA_ARGS__); } while (0)
@@ -225,6 +229,7 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit context pointer
 #define IMGUI_DEBUG_LOG_SELECTION(...)  do { if (g.DebugLogFlags & ImGuiDebugLogFlags_EventSelection)   IMGUI_DEBUG_LOG(__VA_ARGS__); } while (0)
 #define IMGUI_DEBUG_LOG_CLIPPER(...)    do { if (g.DebugLogFlags & ImGuiDebugLogFlags_EventClipper)     IMGUI_DEBUG_LOG(__VA_ARGS__); } while (0)
 #define IMGUI_DEBUG_LOG_IO(...)         do { if (g.DebugLogFlags & ImGuiDebugLogFlags_EventIO)          IMGUI_DEBUG_LOG(__VA_ARGS__); } while (0)
+#define IMGUI_DEBUG_LOG_FONT(...)       do { if (g.DebugLogFlags & ImGuiDebugLogFlags_EventFont)        IMGUI_DEBUG_LOG(__VA_ARGS__); } while (0)
 #define IMGUI_DEBUG_LOG_INPUTROUTING(...) do{if (g.DebugLogFlags & ImGuiDebugLogFlags_EventInputRouting)IMGUI_DEBUG_LOG(__VA_ARGS__); } while (0)
 
 // Static Asserts
@@ -456,7 +461,7 @@ static inline double ImRsqrt(double x)          { return 1.0 / sqrt(x); }
 template<typename T> static inline T ImMin(T lhs, T rhs)                        { return lhs < rhs ? lhs : rhs; }
 template<typename T> static inline T ImMax(T lhs, T rhs)                        { return lhs >= rhs ? lhs : rhs; }
 template<typename T> static inline T ImClamp(T v, T mn, T mx)                   { return (v < mn) ? mn : (v > mx) ? mx : v; }
-template<typename T> static inline T ImLerp(T a, T b, float t)                  { return (T)(a + (b - a) * t); }
+template<typename T> static inline T ImLerp(T a, T b, float t)                  { return (T)(a + (b - a) * (T)t); }
 template<typename T> static inline void ImSwap(T& a, T& b)                      { T tmp = a; a = b; b = tmp; }
 template<typename T> static inline T ImAddClampOverflow(T a, T b, T mn, T mx)   { if (b < 0 && (a < mn - b)) return mn; if (b > 0 && (a > mx - b)) return mx; return a + b; }
 template<typename T> static inline T ImSubClampOverflow(T a, T b, T mn, T mx)   { if (b > 0 && (a < mn + b)) return mn; if (b < 0 && (a > mx + b)) return mx; return a - b; }
@@ -760,10 +765,13 @@ IMGUI_API ImGuiStoragePair* ImLowerBound(ImGuiStoragePair* in_begin, ImGuiStorag
 #define IM_DRAWLIST_ARCFAST_SAMPLE_MAX                          IM_DRAWLIST_ARCFAST_TABLE_SIZE // Sample index _PathArcToFastEx() for 360 angle.
 
 // Data shared between all ImDrawList instances
-// You may want to create your own instance of this if you want to use ImDrawList completely without ImGui. In that case, watch out for future changes to this structure.
+// Conceptually this could have been called e.g. ImDrawListSharedContext
+// Typically one ImGui context would create and maintain one of this.
+// You may want to create your own instance of you try to ImDrawList completely without ImGui. In that case, watch out for future changes to this structure.
 struct IMGUI_API ImDrawListSharedData
 {
     ImVec2          TexUvWhitePixel;            // UV of white pixel in the atlas
+    const ImVec4*   TexUvLines;                 // UV of anti-aliased lines in the atlas
     ImFont*         Font;                       // Current/default font (optional, for simplified AddText overload)
     float           FontSize;                   // Current/default font size (optional, for simplified AddText overload)
     float           FontScale;                  // Current/default font scale (== FontSize / Font->FontSize)
@@ -771,15 +779,12 @@ struct IMGUI_API ImDrawListSharedData
     float           CircleSegmentMaxError;      // Number of circle segments to use per pixel of radius for AddCircle() etc
     ImVec4          ClipRectFullscreen;         // Value for PushClipRectFullscreen()
     ImDrawListFlags InitialFlags;               // Initial flags at the beginning of the frame (it is possible to alter flags on a per-drawlist basis afterwards)
+    ImVector<ImVec2> TempBuffer;                // Temporary write buffer
 
-    // [Internal] Temp write buffer
-    ImVector<ImVec2> TempBuffer;
-
-    // [Internal] Lookup tables
+    // Lookup tables
     ImVec2          ArcFastVtx[IM_DRAWLIST_ARCFAST_TABLE_SIZE]; // Sample points on the quarter of the circle.
     float           ArcFastRadiusCutoff;                        // Cutoff radius after which arc drawing will fallback to slower PathArcTo()
     ImU8            CircleSegmentCounts[64];    // Precomputed segment count for given radius before we calculate it dynamically (to avoid calculation overhead)
-    const ImVec4*   TexUvLines;                 // UV of anti-aliased lines in the atlas
 
     ImDrawListSharedData();
     void SetCircleTessellationMaxError(float max_error);
@@ -822,8 +827,7 @@ struct ImGuiDataTypeInfo
 // Extend ImGuiDataType_
 enum ImGuiDataTypePrivate_
 {
-    ImGuiDataType_String = ImGuiDataType_COUNT + 1,
-    ImGuiDataType_Pointer,
+    ImGuiDataType_Pointer = ImGuiDataType_COUNT + 1,
     ImGuiDataType_ID,
 };
 
@@ -909,7 +913,7 @@ enum ImGuiButtonFlagsPrivate_
     ImGuiButtonFlags_PressedOnRelease       = 1 << 7,   // return true on release (default requires click+release)
     ImGuiButtonFlags_PressedOnDoubleClick   = 1 << 8,   // return true on double-click (default requires click+release)
     ImGuiButtonFlags_PressedOnDragDropHold  = 1 << 9,   // return true when held into while we are drag and dropping another item (used by e.g. tree nodes, collapsing headers)
-    //ImGuiButtonFlags_Repeat               = 1 << 10,  // hold to repeat
+    //ImGuiButtonFlags_Repeat               = 1 << 10,  // hold to repeat -> use ImGuiItemFlags_ButtonRepeat instead.
     ImGuiButtonFlags_FlattenChildren        = 1 << 11,  // allow interactions even if a child window is overlapping
     ImGuiButtonFlags_AllowOverlap           = 1 << 12,  // require previous frame HoveredId to either match id or be null before being usable.
     //ImGuiButtonFlags_DontClosePopups      = 1 << 13,  // disable automatically closing parent popup on press
@@ -1117,8 +1121,10 @@ struct IMGUI_API ImGuiInputTextState
 {
     ImGuiContext*           Ctx;                    // parent UI context (needs to be set explicitly by parent).
     ImStbTexteditState*     Stb;                    // State for stb_textedit.h
+    ImGuiInputTextFlags     Flags;                  // copy of InputText() flags. may be used to check if e.g. ImGuiInputTextFlags_Password is set.
     ImGuiID                 ID;                     // widget id owning the text state
     int                     TextLen;                // UTF-8 length of the string in TextA (in bytes)
+    const char*             TextSrc;                // == TextA.Data unless read-only, in which case == buf passed to InputText(). Field only set and valid _inside_ the call InputText() call.
     ImVector<char>          TextA;                  // main UTF8 buffer. TextA.Size is a buffer size! Should always be >= buf_size passed by user (and of course >= CurLenA + 1).
     ImVector<char>          TextToRevertTo;         // value to revert to when pressing Escape = backup of end-user buffer at the time of focus (in UTF-8, unaltered)
     ImVector<char>          CallbackTextBackup;     // temporary storage for callback to support automatic reconcile of undo-stack
@@ -1128,9 +1134,8 @@ struct IMGUI_API ImGuiInputTextState
     bool                    CursorFollow;           // set when we want scrolling to follow the current cursor position (not always!)
     bool                    SelectedAllMouseLock;   // after a double-click to select all, we ignore further mouse drags to update selection
     bool                    Edited;                 // edited this frame
-    ImGuiInputTextFlags     Flags;                  // copy of InputText() flags. may be used to check if e.g. ImGuiInputTextFlags_Password is set.
-    bool                    ReloadUserBuf;          // force a reload of user buf so it may be modified externally. may be automatic in future version.
-    int                     ReloadSelectionStart;   // POSITIONS ARE IN IMWCHAR units *NOT* UTF-8 this is why this is not exposed yet.
+    bool                    WantReloadUserBuf;      // force a reload of user buf so it may be modified externally. may be automatic in future version.
+    int                     ReloadSelectionStart;
     int                     ReloadSelectionEnd;
 
     ImGuiInputTextState();
@@ -1919,6 +1924,7 @@ typedef void (*ImGuiErrorCallback)(ImGuiContext* ctx, void* user_data, const cha
 // [SECTION] Metrics, Debug Tools
 //-----------------------------------------------------------------------------
 
+// See IMGUI_DEBUG_LOG() and IMGUI_DEBUG_LOG_XXX() macros.
 enum ImGuiDebugLogFlags_
 {
     // Event types
@@ -1931,11 +1937,12 @@ enum ImGuiDebugLogFlags_
     ImGuiDebugLogFlags_EventClipper         = 1 << 5,
     ImGuiDebugLogFlags_EventSelection       = 1 << 6,
     ImGuiDebugLogFlags_EventIO              = 1 << 7,
-    ImGuiDebugLogFlags_EventInputRouting    = 1 << 8,
-    ImGuiDebugLogFlags_EventDocking         = 1 << 9,   // Unused in this branch
-    ImGuiDebugLogFlags_EventViewport        = 1 << 10,  // Unused in this branch
+    ImGuiDebugLogFlags_EventFont            = 1 << 8,
+    ImGuiDebugLogFlags_EventInputRouting    = 1 << 9,
+    ImGuiDebugLogFlags_EventDocking         = 1 << 10,  // Unused in this branch
+    ImGuiDebugLogFlags_EventViewport        = 1 << 11,  // Unused in this branch
 
-    ImGuiDebugLogFlags_EventMask_           = ImGuiDebugLogFlags_EventError | ImGuiDebugLogFlags_EventActiveId | ImGuiDebugLogFlags_EventFocus | ImGuiDebugLogFlags_EventPopup | ImGuiDebugLogFlags_EventNav | ImGuiDebugLogFlags_EventClipper | ImGuiDebugLogFlags_EventSelection | ImGuiDebugLogFlags_EventIO | ImGuiDebugLogFlags_EventInputRouting | ImGuiDebugLogFlags_EventDocking | ImGuiDebugLogFlags_EventViewport,
+    ImGuiDebugLogFlags_EventMask_           = ImGuiDebugLogFlags_EventError | ImGuiDebugLogFlags_EventActiveId | ImGuiDebugLogFlags_EventFocus | ImGuiDebugLogFlags_EventPopup | ImGuiDebugLogFlags_EventNav | ImGuiDebugLogFlags_EventClipper | ImGuiDebugLogFlags_EventSelection | ImGuiDebugLogFlags_EventIO | ImGuiDebugLogFlags_EventFont | ImGuiDebugLogFlags_EventInputRouting | ImGuiDebugLogFlags_EventDocking | ImGuiDebugLogFlags_EventViewport,
     ImGuiDebugLogFlags_OutputToTTY          = 1 << 20,  // Also send output to TTY
     ImGuiDebugLogFlags_OutputToTestEngine   = 1 << 21,  // Also send output to Test Engine
 };
@@ -2037,9 +2044,9 @@ struct ImGuiContext
     int                     FrameCount;
     int                     FrameCountEnded;
     int                     FrameCountRendered;
+    ImGuiID                 WithinEndChildID;                   // Set within EndChild()
     bool                    WithinFrameScope;                   // Set by NewFrame(), cleared by EndFrame()
     bool                    WithinFrameScopeWithImplicitWindow; // Set by NewFrame(), cleared by EndFrame() when the implicit debug window has been pushed
-    bool                    WithinEndChild;                     // Set within EndChild()
     bool                    GcCompactAll;                       // Request full GC
     bool                    TestEngineHookItems;                // Will call test engine hooks: ImGuiTestEngineHook_ItemAdd(), ImGuiTestEngineHook_ItemInfo(), ImGuiTestEngineHook_Log()
     void*                   TestEngine;                         // Test engine user data
@@ -2102,6 +2109,7 @@ struct ImGuiContext
     bool                    ActiveIdPreviousFrameIsAlive;
     bool                    ActiveIdPreviousFrameHasBeenEditedBefore;
     ImGuiWindow*            ActiveIdPreviousFrameWindow;
+    ImGuiDataTypeStorage    ActiveIdValueOnActivation;          // Backup of initial value at the time of activation. ONLY SET BY SPECIFIC WIDGETS: DragXXX and SliderXXX.
     ImGuiID                 LastActiveId;                       // Store the last non-zero ActiveId, useful for animation.
     float                   LastActiveIdTimer;                  // Store the last non-zero ActiveId timer since the beginning of activation, useful for animation.
 
@@ -3011,6 +3019,7 @@ namespace ImGui
     IMGUI_API void          CallContextHooks(ImGuiContext* context, ImGuiContextHookType type);
 
     // Viewports
+    IMGUI_API void          ScaleWindowsInViewport(ImGuiViewportP* viewport, float scale);
     IMGUI_API void          SetWindowViewport(ImGuiWindow* window, ImGuiViewportP* viewport);
 
     // Settings
@@ -3384,7 +3393,7 @@ namespace ImGui
     IMGUI_API void          TextEx(const char* text, const char* text_end = NULL, ImGuiTextFlags flags = 0);
     IMGUI_API bool          ButtonEx(const char* label, const ImVec2& size_arg = ImVec2(0, 0), ImGuiButtonFlags flags = 0);
     IMGUI_API bool          ArrowButtonEx(const char* str_id, ImGuiDir dir, ImVec2 size_arg, ImGuiButtonFlags flags = 0);
-    IMGUI_API bool          ImageButtonEx(ImGuiID id, ImTextureID texture_id, const ImVec2& image_size, const ImVec2& uv0, const ImVec2& uv1, const ImVec4& bg_col, const ImVec4& tint_col, ImGuiButtonFlags flags = 0);
+    IMGUI_API bool          ImageButtonEx(ImGuiID id, ImTextureID user_texture_id, const ImVec2& image_size, const ImVec2& uv0, const ImVec2& uv1, const ImVec4& bg_col, const ImVec4& tint_col, ImGuiButtonFlags flags = 0);
     IMGUI_API void          SeparatorEx(ImGuiSeparatorFlags flags, float thickness = 1.0f);
     IMGUI_API void          SeparatorTextEx(ImGuiID id, const char* label, const char* label_end, float extra_width);
     IMGUI_API bool          CheckboxFlags(const char* label, ImS64* flags, ImS64 flags_value);
@@ -3394,7 +3403,7 @@ namespace ImGui
     IMGUI_API bool          CloseButton(ImGuiID id, const ImVec2& pos);
     IMGUI_API bool          CollapseButton(ImGuiID id, const ImVec2& pos);
     IMGUI_API void          Scrollbar(ImGuiAxis axis);
-    IMGUI_API bool          ScrollbarEx(const ImRect& bb, ImGuiID id, ImGuiAxis axis, ImS64* p_scroll_v, ImS64 avail_v, ImS64 contents_v, ImDrawFlags flags);
+    IMGUI_API bool          ScrollbarEx(const ImRect& bb, ImGuiID id, ImGuiAxis axis, ImS64* p_scroll_v, ImS64 avail_v, ImS64 contents_v, ImDrawFlags draw_rounding_flags = 0);
     IMGUI_API ImRect        GetWindowScrollbarRect(ImGuiWindow* window, ImGuiAxis axis);
     IMGUI_API ImGuiID       GetWindowScrollbarID(ImGuiWindow* window, ImGuiAxis axis);
     IMGUI_API ImGuiID       GetWindowResizeCornerID(ImGuiWindow* window, int n); // 0..3: corners
@@ -3524,7 +3533,8 @@ namespace ImGui
 // [SECTION] ImFontAtlas internal API
 //-----------------------------------------------------------------------------
 
-// This structure is likely to evolve as we add support for incremental atlas updates
+// This structure is likely to evolve as we add support for incremental atlas updates.
+// Conceptually this could be in ImGuiPlatformIO, but we are far from ready to make this public.
 struct ImFontBuilderIO
 {
     bool    (*FontBuilder_Build)(ImFontAtlas* atlas);

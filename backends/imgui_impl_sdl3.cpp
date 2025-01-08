@@ -9,7 +9,8 @@
 //  [X] Platform: Mouse support. Can discriminate Mouse/TouchScreen.
 //  [X] Platform: Keyboard support. Since 1.87 we are using the io.AddKeyEvent() function. Pass ImGuiKey values to all key functions e.g. ImGui::IsKeyPressed(ImGuiKey_Space). [Legacy SDL_SCANCODE_* values are obsolete since 1.87 and not supported since 1.91.5]
 //  [X] Platform: Gamepad support. Enabled with 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad'.
-//  [X] Platform: Mouse cursor shape and visibility. Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'.
+//  [X] Platform: Mouse cursor shape and visibility (ImGuiBackendFlags_HasMouseCursors). Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'.
+//  [X] Platform: IME support.
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
@@ -128,7 +129,7 @@ static const char* ImGui_ImplSDL3_GetClipboardText(ImGuiContext*)
     if (bd->ClipboardTextData)
         SDL_free(bd->ClipboardTextData);
     const char* sdl_clipboard_text = SDL_GetClipboardText();
-    bd->ClipboardTextData = sdl_clipboard_text ? SDL_strdup(sdl_clipboard_text) : NULL;
+    bd->ClipboardTextData = sdl_clipboard_text ? SDL_strdup(sdl_clipboard_text) : nullptr;
     return bd->ClipboardTextData;
 }
 
@@ -142,7 +143,7 @@ static void ImGui_ImplSDL3_PlatformSetImeData(ImGuiContext*, ImGuiViewport* view
     ImGui_ImplSDL3_Data* bd = ImGui_ImplSDL3_GetBackendData();
     SDL_WindowID window_id = (SDL_WindowID)(intptr_t)viewport->PlatformHandle;
     SDL_Window* window = SDL_GetWindowFromID(window_id);
-    if ((data->WantVisible == false || bd->ImeWindow != window) && bd->ImeWindow != NULL)
+    if ((data->WantVisible == false || bd->ImeWindow != window) && bd->ImeWindow != nullptr)
     {
         SDL_StopTextInput(bd->ImeWindow);
         bd->ImeWindow = nullptr;
@@ -308,7 +309,7 @@ static void ImGui_ImplSDL3_UpdateKeyModifiers(SDL_Keymod sdl_key_mods)
 static ImGuiViewport* ImGui_ImplSDL3_GetViewportForWindowID(SDL_WindowID window_id)
 {
     ImGui_ImplSDL3_Data* bd = ImGui_ImplSDL3_GetBackendData();
-    return (window_id == bd->WindowID) ? ImGui::GetMainViewport() : NULL;
+    return (window_id == bd->WindowID) ? ImGui::GetMainViewport() : nullptr;
 }
 
 // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
@@ -326,7 +327,7 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
     {
         case SDL_EVENT_MOUSE_MOTION:
         {
-            if (ImGui_ImplSDL3_GetViewportForWindowID(event->motion.windowID) == NULL)
+            if (ImGui_ImplSDL3_GetViewportForWindowID(event->motion.windowID) == nullptr)
                 return false;
             ImVec2 mouse_pos((float)event->motion.x, (float)event->motion.y);
             io.AddMouseSourceEvent(event->motion.which == SDL_TOUCH_MOUSEID ? ImGuiMouseSource_TouchScreen : ImGuiMouseSource_Mouse);
@@ -335,7 +336,7 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
         }
         case SDL_EVENT_MOUSE_WHEEL:
         {
-            if (ImGui_ImplSDL3_GetViewportForWindowID(event->wheel.windowID) == NULL)
+            if (ImGui_ImplSDL3_GetViewportForWindowID(event->wheel.windowID) == nullptr)
                 return false;
             //IMGUI_DEBUG_LOG("wheel %.2f %.2f, precise %.2f %.2f\n", (float)event->wheel.x, (float)event->wheel.y, event->wheel.preciseX, event->wheel.preciseY);
             float wheel_x = -event->wheel.x;
@@ -347,7 +348,7 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
         case SDL_EVENT_MOUSE_BUTTON_DOWN:
         case SDL_EVENT_MOUSE_BUTTON_UP:
         {
-            if (ImGui_ImplSDL3_GetViewportForWindowID(event->button.windowID) == NULL)
+            if (ImGui_ImplSDL3_GetViewportForWindowID(event->button.windowID) == nullptr)
                 return false;
             int mouse_button = -1;
             if (event->button.button == SDL_BUTTON_LEFT) { mouse_button = 0; }
@@ -364,7 +365,7 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
         }
         case SDL_EVENT_TEXT_INPUT:
         {
-            if (ImGui_ImplSDL3_GetViewportForWindowID(event->text.windowID) == NULL)
+            if (ImGui_ImplSDL3_GetViewportForWindowID(event->text.windowID) == nullptr)
                 return false;
             io.AddInputCharactersUTF8(event->text.text);
             return true;
@@ -372,7 +373,7 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
         case SDL_EVENT_KEY_DOWN:
         case SDL_EVENT_KEY_UP:
         {
-            if (ImGui_ImplSDL3_GetViewportForWindowID(event->key.windowID) == NULL)
+            if (ImGui_ImplSDL3_GetViewportForWindowID(event->key.windowID) == nullptr)
                 return false;
             //IMGUI_DEBUG_LOG("SDL_EVENT_KEY_%d: key=%d, scancode=%d, mod=%X\n", (event->type == SDL_EVENT_KEY_DOWN) ? "DOWN" : "UP", event->key.key, event->key.scancode, event->key.mod);
             ImGui_ImplSDL3_UpdateKeyModifiers((SDL_Keymod)event->key.mod);
@@ -383,7 +384,7 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
         }
         case SDL_EVENT_WINDOW_MOUSE_ENTER:
         {
-            if (ImGui_ImplSDL3_GetViewportForWindowID(event->window.windowID) == NULL)
+            if (ImGui_ImplSDL3_GetViewportForWindowID(event->window.windowID) == nullptr)
                 return false;
             bd->MouseWindowID = event->window.windowID;
             bd->MousePendingLeaveFrame = 0;
@@ -395,7 +396,7 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
         // FIXME: Unconfirmed whether this is still needed with SDL3.
         case SDL_EVENT_WINDOW_MOUSE_LEAVE:
         {
-            if (ImGui_ImplSDL3_GetViewportForWindowID(event->window.windowID) == NULL)
+            if (ImGui_ImplSDL3_GetViewportForWindowID(event->window.windowID) == nullptr)
                 return false;
             bd->MousePendingLeaveFrame = ImGui::GetFrameCount() + 1;
             return true;
@@ -403,7 +404,7 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
         case SDL_EVENT_WINDOW_FOCUS_GAINED:
         case SDL_EVENT_WINDOW_FOCUS_LOST:
         {
-            if (ImGui_ImplSDL3_GetViewportForWindowID(event->window.windowID) == NULL)
+            if (ImGui_ImplSDL3_GetViewportForWindowID(event->window.windowID) == nullptr)
                 return false;
             io.AddFocusEvent(event->type == SDL_EVENT_WINDOW_FOCUS_GAINED);
             return true;

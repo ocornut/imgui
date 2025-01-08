@@ -3,7 +3,8 @@
 
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'LPDIRECT3DTEXTURE9' as ImTextureID. Read the FAQ about ImTextureID!
-//  [X] Renderer: Large meshes support (64k+ vertices) with 16-bit indices.
+//  [X] Renderer: Large meshes support (64k+ vertices) even with 16-bit indices (ImGuiBackendFlags_RendererHasVtxOffset).
+//  [X] Renderer: IMGUI_USE_BGRA_PACKED_COLOR support, as this is the optimal color encoding for DirectX9.
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
@@ -52,6 +53,7 @@ struct ImGui_ImplDX9_Data
     LPDIRECT3DTEXTURE9          FontTexture;
     int                         VertexBufferSize;
     int                         IndexBufferSize;
+    bool                        HasRgbaSupport;
 
     ImGui_ImplDX9_Data()        { memset((void*)this, 0, sizeof(*this)); VertexBufferSize = 5000; IndexBufferSize = 10000; }
 };
@@ -291,6 +293,24 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
     state_block->Release();
 }
 
+static bool ImGui_ImplDX9_CheckFormatSupport(LPDIRECT3DDEVICE9 pDevice, D3DFORMAT format)
+{
+    LPDIRECT3D9 pd3d = nullptr;
+    if (pDevice->GetDirect3D(&pd3d) != D3D_OK)
+        return false;
+    D3DDEVICE_CREATION_PARAMETERS param = {};
+    D3DDISPLAYMODE mode = {};
+    if (pDevice->GetCreationParameters(&param) != D3D_OK || pDevice->GetDisplayMode(0, &mode) != D3D_OK)
+    {
+        pd3d->Release();
+        return false;
+    }
+    // Font texture should support linear filter, color blend and write to render-target
+    bool support = (pd3d->CheckDeviceFormat(param.AdapterOrdinal, param.DeviceType, mode.Format, D3DUSAGE_DYNAMIC | D3DUSAGE_QUERY_FILTER | D3DUSAGE_QUERY_POSTPIXELSHADER_BLENDING, D3DRTYPE_TEXTURE, format)) == D3D_OK;
+    pd3d->Release();
+    return support;
+}
+
 bool ImGui_ImplDX9_Init(IDirect3DDevice9* device)
 {
     ImGuiIO& io = ImGui::GetIO();
@@ -305,6 +325,7 @@ bool ImGui_ImplDX9_Init(IDirect3DDevice9* device)
 
     bd->pd3dDevice = device;
     bd->pd3dDevice->AddRef();
+    bd->HasRgbaSupport = ImGui_ImplDX9_CheckFormatSupport(bd->pd3dDevice, D3DFMT_A8B8G8R8);
 
     return true;
 }
@@ -323,22 +344,26 @@ void ImGui_ImplDX9_Shutdown()
     IM_DELETE(bd);
 }
 
-static bool ImGui_ImplDX9_CheckFormatSupport(IDirect3DDevice9* pDevice, D3DFORMAT format)
+// Convert RGBA32 to BGRA32 (because RGBA32 is not well supported by DX9 devices)
+static void ImGui_ImplDX9_CopyTextureRegion(bool tex_use_colors, ImU32* src, int src_pitch, ImU32* dst, int dst_pitch, int w, int h)
 {
-    IDirect3D9* pd3d = nullptr;
-    if (pDevice->GetDirect3D(&pd3d) != D3D_OK)
-        return false;
-    D3DDEVICE_CREATION_PARAMETERS param = {};
-    D3DDISPLAYMODE mode = {};
-    if (pDevice->GetCreationParameters(&param) != D3D_OK || pDevice->GetDisplayMode(0, &mode) != D3D_OK)
+#ifndef IMGUI_USE_BGRA_PACKED_COLOR
+    ImGui_ImplDX9_Data* bd = ImGui_ImplDX9_GetBackendData();
+    const bool convert_rgba_to_bgra = (!bd->HasRgbaSupport && tex_use_colors);
+#else
+    const bool convert_rgba_to_bgra = false;
+    IM_UNUSED(tex_use_colors);
+#endif
+    for (int y = 0; y < h; y++)
     {
-        pd3d->Release();
-        return false;
+        ImU32* src_p = (ImU32*)((unsigned char*)src + src_pitch * y);
+        ImU32* dst_p = (ImU32*)((unsigned char*)dst + dst_pitch * y);
+        if (convert_rgba_to_bgra)
+            for (int x = w; x > 0; x--, src_p++, dst_p++) // Convert copy
+                *dst_p = IMGUI_COL_TO_DX9_ARGB(*src_p);
+        else
+            memcpy(dst_p, src_p, w * 4); // Raw copy
     }
-    // Font texture should support linear filter, color blend and write to render-target
-    bool support = (pd3d->CheckDeviceFormat(param.AdapterOrdinal, param.DeviceType, mode.Format, D3DUSAGE_DYNAMIC | D3DUSAGE_QUERY_FILTER | D3DUSAGE_QUERY_POSTPIXELSHADER_BLENDING, D3DRTYPE_TEXTURE, format)) == D3D_OK;
-    pd3d->Release();
-    return support;
 }
 
 static bool ImGui_ImplDX9_CreateFontsTexture()
@@ -350,39 +375,18 @@ static bool ImGui_ImplDX9_CreateFontsTexture()
     int width, height, bytes_per_pixel;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height, &bytes_per_pixel);
 
-    // Convert RGBA32 to BGRA32 (because RGBA32 is not well supported by DX9 devices)
-#ifndef IMGUI_USE_BGRA_PACKED_COLOR
-    const bool rgba_support = ImGui_ImplDX9_CheckFormatSupport(bd->pd3dDevice, D3DFMT_A8B8G8R8);
-    if (!rgba_support && io.Fonts->TexPixelsUseColors)
-    {
-        ImU32* dst_start = (ImU32*)ImGui::MemAlloc((size_t)width * height * bytes_per_pixel);
-        for (ImU32* src = (ImU32*)pixels, *dst = dst_start, *dst_end = dst_start + (size_t)width * height; dst < dst_end; src++, dst++)
-            *dst = IMGUI_COL_TO_DX9_ARGB(*src);
-        pixels = (unsigned char*)dst_start;
-    }
-#else
-    const bool rgba_support = false;
-#endif
-
     // Upload texture to graphics system
     bd->FontTexture = nullptr;
-    if (bd->pd3dDevice->CreateTexture(width, height, 1, D3DUSAGE_DYNAMIC, rgba_support ? D3DFMT_A8B8G8R8 : D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &bd->FontTexture, nullptr) < 0)
+    if (bd->pd3dDevice->CreateTexture(width, height, 1, D3DUSAGE_DYNAMIC, bd->HasRgbaSupport ? D3DFMT_A8B8G8R8 : D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &bd->FontTexture, nullptr) < 0)
         return false;
     D3DLOCKED_RECT tex_locked_rect;
     if (bd->FontTexture->LockRect(0, &tex_locked_rect, nullptr, 0) != D3D_OK)
         return false;
-    for (int y = 0; y < height; y++)
-        memcpy((unsigned char*)tex_locked_rect.pBits + (size_t)tex_locked_rect.Pitch * y, pixels + (size_t)width * bytes_per_pixel * y, (size_t)width * bytes_per_pixel);
+    ImGui_ImplDX9_CopyTextureRegion(io.Fonts->TexPixelsUseColors, (ImU32*)pixels, width * bytes_per_pixel, (ImU32*)tex_locked_rect.pBits, (int)tex_locked_rect.Pitch, width, height);
     bd->FontTexture->UnlockRect(0);
 
     // Store our identifier
     io.Fonts->SetTexID((ImTextureID)bd->FontTexture);
-
-#ifndef IMGUI_USE_BGRA_PACKED_COLOR
-    if (!rgba_support && io.Fonts->TexPixelsUseColors)
-        ImGui::MemFree(pixels);
-#endif
-
     return true;
 }
 

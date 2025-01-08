@@ -1,4 +1,4 @@
-// Dear ImGui: standalone example application for SDL3 + Vulkan
+// Dear ImGui: standalone example application for Win32 + Vulkan
 
 // Learn about Dear ImGui:
 // - FAQ                  https://dearimgui.com/faq
@@ -14,17 +14,13 @@
 // Read comments in imgui_impl_vulkan.h.
 
 #include "imgui.h"
-#include "imgui_impl_sdl3.h"
+#include "imgui_impl_win32.h"
+#define VK_USE_PLATFORM_WIN32_KHR
 #include "imgui_impl_vulkan.h"
+#include <windows.h>
 #include <stdio.h>          // printf, fprintf
 #include <stdlib.h>         // abort
-#include <SDL3/SDL.h>
-#include <SDL3/SDL_vulkan.h>
-
-// This example doesn't compile with Emscripten yet! Awaiting SDL3 support.
-#ifdef __EMSCRIPTEN__
-#include "../libs/emscripten/emscripten_mainloop_stub.h"
-#endif
+#include <tchar.h>
 
 // Volk headers
 #ifdef IMGUI_IMPL_VULKAN_USE_VOLK
@@ -221,7 +217,7 @@ static void SetupVulkanWindow(ImGui_ImplVulkanH_Window* wd, VkSurfaceKHR surface
     wd->SurfaceFormat = ImGui_ImplVulkanH_SelectSurfaceFormat(g_PhysicalDevice, wd->Surface, requestSurfaceImageFormat, (size_t)IM_ARRAYSIZE(requestSurfaceImageFormat), requestSurfaceColorSpace);
 
     // Select Present Mode
-#ifdef APP_UNLIMITED_FRAME_RATE
+#ifdef APP_USE_UNLIMITED_FRAME_RATE
     VkPresentModeKHR present_modes[] = { VK_PRESENT_MODE_MAILBOX_KHR, VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_FIFO_KHR };
 #else
     VkPresentModeKHR present_modes[] = { VK_PRESENT_MODE_FIFO_KHR };
@@ -342,50 +338,41 @@ static void FramePresent(ImGui_ImplVulkanH_Window* wd)
     wd->SemaphoreIndex = (wd->SemaphoreIndex + 1) % wd->SemaphoreCount; // Now we can use the next set of semaphores
 }
 
+LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
 // Main code
 int main(int, char**)
 {
-    // Setup SDL
-    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD) != 0)
-    {
-        printf("Error: SDL_Init(): %s\n", SDL_GetError());
-        return -1;
-    }
-
-    // Create window with Vulkan graphics context
-    SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY | SDL_WINDOW_HIDDEN);
-    SDL_Window* window = SDL_CreateWindow("Dear ImGui SDL3+Vulkan example", 1280, 720, window_flags);
-    if (window == nullptr)
-    {
-        printf("Error: SDL_CreateWindow(): %s\n", SDL_GetError());
-        return -1;
-    }
+    // Create application window
+    //ImGui_ImplWin32_EnableDpiAwareness();
+    WNDCLASSEXW wc = { sizeof(wc), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, L"ImGui Example", nullptr };
+    ::RegisterClassExW(&wc);
+    HWND hwnd = ::CreateWindowW(wc.lpszClassName, L"Dear ImGui Win32+Vulkan Example", WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, nullptr, nullptr, wc.hInstance, nullptr);
 
     ImVector<const char*> extensions;
-    {
-        uint32_t sdl_extensions_count = 0;
-        const char* const* sdl_extensions = SDL_Vulkan_GetInstanceExtensions(&sdl_extensions_count);
-        for (uint32_t n = 0; n < sdl_extensions_count; n++)
-            extensions.push_back(sdl_extensions[n]);
-    }
+    extensions.push_back("VK_KHR_surface");
+    extensions.push_back("VK_KHR_win32_surface");
     SetupVulkan(extensions);
 
     // Create Window Surface
     VkSurfaceKHR surface;
     VkResult err;
-    if (SDL_Vulkan_CreateSurface(window, g_Instance, g_Allocator, &surface) == 0)
+    VkWin32SurfaceCreateInfoKHR createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+    createInfo.hwnd = hwnd;
+    createInfo.hinstance = ::GetModuleHandle(nullptr);
+    if (vkCreateWin32SurfaceKHR(g_Instance, &createInfo, nullptr, &surface) != VK_SUCCESS)
     {
         printf("Failed to create Vulkan surface.\n");
         return 1;
     }
 
-    // Create Framebuffers
-    int w, h;
-    SDL_GetWindowSize(window, &w, &h);
+    // Show the window
+    // FIXME: Retrieve client size from window itself.
     ImGui_ImplVulkanH_Window* wd = &g_MainWindowData;
-    SetupVulkanWindow(wd, surface, w, h);
-    SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
-    SDL_ShowWindow(window);
+    SetupVulkanWindow(wd, surface, 1280, 800);
+    ::ShowWindow(hwnd, SW_SHOWDEFAULT);
+    ::UpdateWindow(hwnd);
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -399,7 +386,7 @@ int main(int, char**)
     //ImGui::StyleColorsLight();
 
     // Setup Platform/Renderer backends
-    ImGui_ImplSDL3_InitForVulkan(window);
+    ImGui_ImplWin32_Init(hwnd);
     ImGui_ImplVulkan_InitInfo init_info = {};
     init_info.Instance = g_Instance;
     init_info.PhysicalDevice = g_PhysicalDevice;
@@ -442,40 +429,22 @@ int main(int, char**)
     bool done = false;
     while (!done)
     {
-        // Poll and handle events (inputs, window resize, etc.)
-        // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
-        // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
-        // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
-        // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
-        SDL_Event event;
-        while (SDL_PollEvent(&event))
+        // Poll and handle messages (inputs, window resize, etc.)
+        // See the WndProc() function below for our to dispatch events to the Win32 backend.
+        MSG msg;
+        while (::PeekMessage(&msg, nullptr, 0U, 0U, PM_REMOVE))
         {
-            ImGui_ImplSDL3_ProcessEvent(&event);
-            if (event.type == SDL_EVENT_QUIT)
-                done = true;
-            if (event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED && event.window.windowID == SDL_GetWindowID(window))
+            ::TranslateMessage(&msg);
+            ::DispatchMessage(&msg);
+            if (msg.message == WM_QUIT)
                 done = true;
         }
-        if (SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED)
-        {
-            SDL_Delay(10);
-            continue;
-        }
-
-        // Resize swap chain?
-        int fb_width, fb_height;
-        SDL_GetWindowSize(window, &fb_width, &fb_height);
-        if (fb_width > 0 && fb_height > 0 && (g_SwapChainRebuild || g_MainWindowData.Width != fb_width || g_MainWindowData.Height != fb_height))
-        {
-            ImGui_ImplVulkan_SetMinImageCount(g_MinImageCount);
-            ImGui_ImplVulkanH_CreateOrResizeWindow(g_Instance, g_PhysicalDevice, g_Device, &g_MainWindowData, g_QueueFamily, g_Allocator, fb_width, fb_height, g_MinImageCount);
-            g_MainWindowData.FrameIndex = 0;
-            g_SwapChainRebuild = false;
-        }
+        if (done)
+            break;
 
         // Start the Dear ImGui frame
         ImGui_ImplVulkan_NewFrame();
-        ImGui_ImplSDL3_NewFrame();
+        ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
 
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
@@ -534,14 +503,57 @@ int main(int, char**)
     err = vkDeviceWaitIdle(g_Device);
     check_vk_result(err);
     ImGui_ImplVulkan_Shutdown();
-    ImGui_ImplSDL3_Shutdown();
+    ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
 
     CleanupVulkanWindow();
     CleanupVulkan();
 
-    SDL_DestroyWindow(window);
-    SDL_Quit();
+    ::DestroyWindow(hwnd);
+    ::UnregisterClassW(wc.lpszClassName, wc.hInstance);
 
     return 0;
+}
+
+// Helper functions
+
+// Forward declare message handler from imgui_impl_win32.cpp
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+// Win32 message handler
+// You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
+// - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
+// - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
+// Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
+LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
+        return true;
+
+    switch (msg)
+    {
+    case WM_SIZE:
+        if (g_Device != VK_NULL_HANDLE && wParam != SIZE_MINIMIZED)
+        {
+            // Resize swap chain
+            int fb_width = (UINT)LOWORD(lParam);
+            int fb_height = (UINT)HIWORD(lParam);
+            if (fb_width > 0 && fb_height > 0 && (g_SwapChainRebuild || g_MainWindowData.Width != fb_width || g_MainWindowData.Height != fb_height))
+            {
+                ImGui_ImplVulkan_SetMinImageCount(g_MinImageCount);
+                ImGui_ImplVulkanH_CreateOrResizeWindow(g_Instance, g_PhysicalDevice, g_Device, &g_MainWindowData, g_QueueFamily, g_Allocator, fb_width, fb_height, g_MinImageCount);
+                g_MainWindowData.FrameIndex = 0;
+                g_SwapChainRebuild = false;
+            }
+        }
+        return 0;
+    case WM_SYSCOMMAND:
+        if ((wParam & 0xfff0) == SC_KEYMENU) // Disable ALT application menu
+            return 0;
+        break;
+    case WM_DESTROY:
+        ::PostQuitMessage(0);
+        return 0;
+    }
+    return ::DefWindowProcW(hWnd, msg, wParam, lParam);
 }

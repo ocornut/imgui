@@ -58,7 +58,7 @@ struct ExampleDescriptorHeapAllocator
     }
     void Destroy()
     {
-        Heap = NULL;
+        Heap = nullptr;
         FreeIndices.clear();
     }
     void Alloc(D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu_desc_handle, D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu_desc_handle)
@@ -146,6 +146,7 @@ int main(int, char**)
     init_info.CommandQueue = g_pd3dCommandQueue;
     init_info.NumFramesInFlight = APP_NUM_FRAMES_IN_FLIGHT;
     init_info.RTVFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+    init_info.DSVFormat = DXGI_FORMAT_UNKNOWN;
     // Allocating SRV descriptors (for textures) is up to the application, so we provide callbacks.
     // (current version of the backend will only allocate one descriptor, future versions will need to allocate more)
     init_info.SrvDescriptorHeap = g_pd3dSrvDescHeap;

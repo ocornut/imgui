@@ -1,4 +1,4 @@
-// dear imgui, v1.91.6 WIP
+// dear imgui, v1.91.7 WIP
 // (tables and columns code)
 
 /*
@@ -232,7 +232,11 @@ Index of this file:
 #pragma clang diagnostic ignored "-Wnontrivial-memaccess"           // warning: first argument in call to 'memset' is a pointer to non-trivially copyable type
 #elif defined(__GNUC__)
 #pragma GCC diagnostic ignored "-Wpragmas"                          // warning: unknown option after '#pragma GCC diagnostic' kind
+#pragma GCC diagnostic ignored "-Wfloat-equal"                      // warning: comparing floating-point with '==' or '!=' is unsafe
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"                // warning: format not a string literal, format string not checked
+#pragma GCC diagnostic ignored "-Wdouble-promotion"                 // warning: implicit conversion from 'float' to 'double' when passing argument to function
+#pragma GCC diagnostic ignored "-Wformat"                           // warning: format '%p' expects argument of type 'int'/'void*', but argument X has type 'unsigned int'/'ImGuiWindow*'
+#pragma GCC diagnostic ignored "-Wstrict-overflow"
 #pragma GCC diagnostic ignored "-Wclass-memaccess"                  // [__GNUC__ >= 8] warning: 'memset/memcpy' clearing/writing an object of type 'xxxx' with no trivial copy-assignment; use assignment or value-initialization instead
 #endif
 
@@ -410,7 +414,8 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
 
         // Reset scroll if we are reactivating it
         if ((previous_flags & (ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY)) == 0)
-            SetNextWindowScroll(ImVec2(0.0f, 0.0f));
+            if ((g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasScroll) == 0)
+                SetNextWindowScroll(ImVec2(0.0f, 0.0f));
 
         // Create scrolling region (without border and zero window padding)
         ImGuiWindowFlags child_window_flags = (flags & ImGuiTableFlags_ScrollX) ? ImGuiWindowFlags_HorizontalScrollbar : ImGuiWindowFlags_None;
@@ -3294,7 +3299,7 @@ void ImGui::TableAngledHeadersRowEx(ImGuiID row_id, float angle, float max_label
     const ImVec2 align = g.Style.TableAngledHeadersTextAlign;
 
     // Draw background and labels in first pass, then all borders.
-    float max_x = 0.0f;
+    float max_x = -FLT_MAX;
     for (int pass = 0; pass < 2; pass++)
         for (int order_n = 0; order_n < data_count; order_n++)
         {

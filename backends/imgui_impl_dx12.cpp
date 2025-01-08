@@ -3,7 +3,7 @@
 
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'D3D12_GPU_DESCRIPTOR_HANDLE' as ImTextureID. Read the FAQ about ImTextureID!
-//  [X] Renderer: Large meshes support (64k+ vertices) with 16-bit indices.
+//  [X] Renderer: Large meshes support (64k+ vertices) even with 16-bit indices (ImGuiBackendFlags_RendererHasVtxOffset).
 //  [X] Renderer: Expose selected render state for draw callbacks to use. Access in '(ImGui_ImplXXXX_RenderState*)GetPlatformIO().Renderer_RenderState'.
 
 // The aim of imgui_impl_dx12.h/.cpp is to be usable in your engine without any modification.
@@ -19,6 +19,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2024-12-09: DirectX12: Let user specifies the DepthStencilView format by setting ImGui_ImplDX12_InitInfo::DSVFormat.
 //  2024-11-15: DirectX12: *BREAKING CHANGE* Changed ImGui_ImplDX12_Init() signature to take a ImGui_ImplDX12_InitInfo struct. Legacy ImGui_ImplDX12_Init() signature is still supported (will obsolete).
 //  2024-11-15: DirectX12: *BREAKING CHANGE* User is now required to pass function pointers to allocate/free SRV Descriptors. We provide convenience legacy fields to pass a single descriptor, matching the old API, but upcoming features will want multiple.
 //  2024-10-23: DirectX12: Unmap() call specify written range. The range is informational and may be used by debug tools.
@@ -72,6 +73,7 @@ struct ImGui_ImplDX12_Data
     ID3D12RootSignature*        pRootSignature;
     ID3D12PipelineState*        pPipelineState;
     DXGI_FORMAT                 RTVFormat;
+    DXGI_FORMAT                 DSVFormat;
     ID3D12DescriptorHeap*       pd3dSrvDescHeap;
     UINT                        numFramesInFlight;
 
@@ -311,7 +313,7 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandL
         global_idx_offset += draw_list->IdxBuffer.Size;
         global_vtx_offset += draw_list->VtxBuffer.Size;
     }
-    platform_io.Renderer_RenderState = NULL;
+    platform_io.Renderer_RenderState = nullptr;
 }
 
 static void ImGui_ImplDX12_CreateFontsTexture()
@@ -407,7 +409,7 @@ static void ImGui_ImplDX12_CreateFontsTexture()
         hr = bd->pd3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
         IM_ASSERT(SUCCEEDED(hr));
 
-        HANDLE event = CreateEvent(0, 0, 0, 0);
+        HANDLE event = ::CreateEvent(0, 0, 0, 0);
         IM_ASSERT(event != nullptr);
 
         D3D12_COMMAND_QUEUE_DESC queueDesc = {};
@@ -438,12 +440,12 @@ static void ImGui_ImplDX12_CreateFontsTexture()
         IM_ASSERT(SUCCEEDED(hr));
 
         fence->SetEventOnCompletion(1, event);
-        WaitForSingleObject(event, INFINITE);
+        ::WaitForSingleObject(event, INFINITE);
 
         cmdList->Release();
         cmdAlloc->Release();
         cmdQueue->Release();
-        CloseHandle(event);
+        ::CloseHandle(event);
         fence->Release();
         uploadBuffer->Release();
 
@@ -569,6 +571,7 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
     psoDesc.SampleMask = UINT_MAX;
     psoDesc.NumRenderTargets = 1;
     psoDesc.RTVFormats[0] = bd->RTVFormat;
+    psoDesc.DSVFormat = bd->DSVFormat;
     psoDesc.SampleDesc.Count = 1;
     psoDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 
@@ -735,6 +738,7 @@ bool ImGui_ImplDX12_Init(ImGui_ImplDX12_InitInfo* init_info)
 
     bd->pd3dDevice = init_info->Device;
     bd->RTVFormat = init_info->RTVFormat;
+    bd->DSVFormat = init_info->DSVFormat;
     bd->numFramesInFlight = init_info->NumFramesInFlight;
     bd->pd3dSrvDescHeap = init_info->SrvDescriptorHeap;
 
@@ -743,7 +747,7 @@ bool ImGui_ImplDX12_Init(ImGui_ImplDX12_InitInfo* init_info)
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    if (init_info->SrvDescriptorAllocFn == NULL)
+    if (init_info->SrvDescriptorAllocFn == nullptr)
     {
         // Wrap legacy behavior of passing space for a single descriptor
         IM_ASSERT(init_info->LegacySingleSrvCpuDescriptor.ptr != 0 && init_info->LegacySingleSrvGpuDescriptor.ptr != 0);
@@ -765,7 +769,7 @@ bool ImGui_ImplDX12_Init(ImGui_ImplDX12_InitInfo* init_info)
 #endif
 
     // Allocate 1 SRV descriptor for the font texture
-    IM_ASSERT(init_info->SrvDescriptorAllocFn != NULL && init_info->SrvDescriptorFreeFn != NULL);
+    IM_ASSERT(init_info->SrvDescriptorAllocFn != nullptr && init_info->SrvDescriptorFreeFn != nullptr);
     init_info->SrvDescriptorAllocFn(&bd->InitInfo, &bd->FontTexture.hFontSrvCpuDescHandle, &bd->FontTexture.hFontSrvGpuDescHandle);
 
     // Create buffers with a default size (they will later be grown as needed)
