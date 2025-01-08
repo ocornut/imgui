@@ -6049,9 +6049,12 @@ bool ImGui::BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, I
     }
     SetNextWindowSize(size);
 
-    // Forward child flags
+    // Forward child flags (we allow prior settings to merge but it'll only work for adding flags)
+    if (g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasChildFlags)
+        g.NextWindowData.ChildFlags |= child_flags;
+    else
+        g.NextWindowData.ChildFlags = child_flags;
     g.NextWindowData.Flags |= ImGuiNextWindowDataFlags_HasChildFlags;
-    g.NextWindowData.ChildFlags = child_flags;
 
     // Build up name. If you need to append to a same child from multiple location in the ID stack, use BeginChild(ImGuiID id) with a stable value.
     // FIXME: 2023/11/14: commented out shorted version. We had an issue with multiple ### in child window path names, which the trailing hash helped workaround.
