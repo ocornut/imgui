@@ -3796,11 +3796,11 @@ void ImFont::BuildLookupTable()
     }
     else if (dot_char != 0)
     {
-        const ImFontGlyph* glyph = FindGlyph(dot_char);
+        const ImFontGlyph* dot_glyph = FindGlyph(dot_char);
         EllipsisChar = dot_char;
         EllipsisCharCount = 3;
-        EllipsisCharStep = (float)(int)(glyph->X1 - glyph->X0) + 1.0f;
-        EllipsisWidth = glyph->X0 + EllipsisCharStep * 3.0f - 1.0f;
+        EllipsisCharStep = (float)(int)(dot_glyph->X1 - dot_glyph->X0) + 1.0f;
+        EllipsisWidth = ImMax(dot_glyph->AdvanceX, dot_glyph->X0 + EllipsisCharStep * 3.0f - 1.0f); // FIXME: Slightly odd for normally mono-space fonts but since this is used for trailing contents.
     }
 }
 
