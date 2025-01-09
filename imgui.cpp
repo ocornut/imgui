@@ -2282,7 +2282,7 @@ ImGuiID ImHashStr(const char* data_p, size_t data_size, ImGuiID seed)
 
 ImFileHandle ImFileOpen(const char* filename, const char* mode)
 {
-#if defined(_WIN32) && !defined(IMGUI_DISABLE_WIN32_FUNCTIONS) && !defined(__CYGWIN__) && !defined(__GNUC__)
+#if defined(_WIN32) && !defined(IMGUI_DISABLE_WIN32_FUNCTIONS) && (defined(__MINGW32__) || (!defined(__CYGWIN__) && !defined(__GNUC__)))
     // We need a fopen() wrapper because MSVC/Windows fopen doesn't handle UTF-8 filenames.
     // Previously we used ImTextCountCharsFromUtf8/ImTextStrFromUtf8 here but we now need to support ImWchar16 and ImWchar32!
     const int filename_wsize = ::MultiByteToWideChar(CP_UTF8, 0, filename, -1, NULL, 0);
