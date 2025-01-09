@@ -509,6 +509,13 @@ bool ImGui_ImplFreeType_FontAddGlyph(ImFontAtlas* atlas, ImFont* font, ImFontCon
     if (is_visible)
     {
         ImFontAtlasRectId pack_id = ImFontAtlasPackAddRect(atlas, w, h);
+        if (pack_id < 0)
+        {
+            // Pathological out of memory case (TexMaxWidth/TexMaxHeight set too small?)
+            IM_ASSERT_USER_ERROR(pack_id >= 0, "Out of texture memory.");
+            return false;
+        }
+
         ImFontAtlasRect* r = ImFontAtlasPackGetRect(atlas, pack_id);
         font->MetricsTotalSurface += w * h;
 
