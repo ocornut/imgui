@@ -79,6 +79,10 @@ Other changes:
   platforms not supporting VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR. (#8222) [@Zer0xFF]
 - Backends: Vulkan: Added a few more ImGui_ImplVulkanH_XXX helper functions
   primarily for the purpose of making our examples simpler.
+- Backends: Vulkan: Added IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE to clarify
+  how many image sampler descriptors are expected to be available in the provided
+  descriptor pool. Current backend needs 1 but it is expected that by end of Q1 2025
+  this number will grow (will staying a very small number). (#6642)
 - Backends: DX11: Expose vertex constant buffer in ImGui_ImplDX11_RenderState.
   Reset projection matrix in ImDrawCallback_ResetRenderState handlers. (#6969, #5834, #7468, #3590)
 - Backends: DX10: Expose ImGui_ImplDX10_RenderState for completeness. (#6969, #5834, #7468, #3590)
