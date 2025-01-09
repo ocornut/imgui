@@ -3687,7 +3687,6 @@ struct ImFont
     IMGUI_API void              AddRemapChar(ImWchar from_codepoint, ImWchar to_codepoint, bool overwrite_dst);// , bool overwrite_dst = true); // Makes 'dst' character/glyph points to 'src' character/glyph. Currently needs to be called AFTER fonts have been built.
     IMGUI_API bool              IsGlyphRangeUnused(unsigned int c_begin, unsigned int c_last);
     IMGUI_API ImFontGlyph*      BuildLoadGlyph(ImWchar c);
-    IMGUI_API void              BuildRegisterGlyph(ImFontConfig* src, const ImFontGlyph* glyph);
     IMGUI_API void              BuildGrowIndex(int new_size);
     IMGUI_API void              BuildClearGlyphs();
 };
