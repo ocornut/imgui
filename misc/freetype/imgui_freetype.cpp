@@ -529,14 +529,10 @@ bool ImGui_ImplFreeType_FontAddGlyph(ImFontAtlas* atlas, ImFont* font, ImFontCon
         glyph.Y0 = glyph_off_y * recip_v + font_off_y;
         glyph.X1 = (glyph_off_x + w) * recip_h + font_off_x;
         glyph.Y1 = (glyph_off_y + h) * recip_v + font_off_y;
-        glyph.U0 = (r->x) * atlas->TexUvScale.x;
-        glyph.V0 = (r->y) * atlas->TexUvScale.y;
-        glyph.U1 = (r->x + r->w) * atlas->TexUvScale.x;
-        glyph.V1 = (r->y + r->h) * atlas->TexUvScale.y;
-        glyph.PackId = pack_id;
         glyph.Visible = true;
         glyph.Colored = (ft_bitmap->pixel_mode == FT_PIXEL_MODE_BGRA);
-        font->BuildRegisterGlyph(src, &glyph);
+        glyph.PackId = pack_id;
+        ImFontAtlasBuildAddFontGlyph(atlas, font, src, &glyph);
 
         // Copy to texture, post-process and queue update for backend
         ImTextureData* tex = atlas->TexData;
@@ -548,7 +544,7 @@ bool ImGui_ImplFreeType_FontAddGlyph(ImFontAtlas* atlas, ImFont* font, ImFontCon
     }
     else
     {
-        font->BuildRegisterGlyph(src, &glyph);
+        ImFontAtlasBuildAddFontGlyph(atlas, font, src, &glyph);
     }
     return true;
 }

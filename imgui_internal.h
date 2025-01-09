@@ -4007,6 +4007,8 @@ IMGUI_API void              ImFontAtlasBuildReloadFont(ImFontAtlas* atlas, ImFon
 IMGUI_API void              ImFontAtlasBuildPreloadAllGlyphRanges(ImFontAtlas* atlas); // Legacy
 IMGUI_API void              ImFontAtlasBuildGetOversampleFactors(ImFontConfig* src, int* out_oversample_h, int* out_oversample_v);
 
+IMGUI_API ImFontGlyph*      ImFontAtlasBuildAddFontGlyph(ImFontAtlas* atlas, ImFont* font, ImFontConfig* cfg, const ImFontGlyph* in_glyph);
+
 IMGUI_API void              ImFontAtlasPackInit(ImFontAtlas* atlas);
 IMGUI_API ImFontAtlasRectId ImFontAtlasPackAddRect(ImFontAtlas* atlas, int w, int h, ImFontAtlasRectEntry* overwrite_entry = NULL);
 IMGUI_API void              ImFontAtlasPackDiscardRect(ImFontAtlas* atlas, ImFontAtlasRectId id);

@@ -3510,9 +3510,9 @@ bool ImFontAtlasBuildAddFont(ImFontAtlas* atlas, ImFontConfig* src)
 // Rasterize our own ellipsis character from a dot.
 // This may seem overly complicated right now but the point is to exercise and improve a technique which should be increasingly used.
 // FIXME-NEWATLAS: This borrows too much from FontBackend_FontAddGlyph() and suggest that we should add further helpers.
-static void ImFontAtlasBuildSetupFontCreateEllipsisFromDot(ImFontAtlas* atlas, ImFontConfig* cfg, const ImFontGlyph* dot_glyph)
+static void ImFontAtlasBuildSetupFontCreateEllipsisFromDot(ImFontAtlas* atlas, ImFontConfig* src, const ImFontGlyph* dot_glyph)
 {
-    ImFont* font = cfg->DstFont;
+    ImFont* font = src->DstFont;
 
     ImFontAtlasRect* dot_r = ImFontAtlasPackGetRect(atlas, dot_glyph->PackId);
     const int dot_spacing = 1;
@@ -3528,13 +3528,9 @@ static void ImFontAtlasBuildSetupFontCreateEllipsisFromDot(ImFontAtlas* atlas, I
     glyph.Y0 = dot_glyph->Y0;
     glyph.X1 = dot_glyph->X0 + dot_step * 3 - dot_spacing;
     glyph.Y1 = dot_glyph->Y1;
-    glyph.U0 = (r->x) * atlas->TexUvScale.x;
-    glyph.V0 = (r->y) * atlas->TexUvScale.y;
-    glyph.U1 = (r->x + r->w) * atlas->TexUvScale.x;
-    glyph.V1 = (r->y + r->h) * atlas->TexUvScale.y;
     glyph.Visible = true;
     glyph.PackId = pack_id;
-    font->BuildRegisterGlyph(cfg, &glyph);
+    ImFontAtlasBuildAddFontGlyph(atlas, font, NULL, &glyph);
     font->EllipsisChar = (ImWchar)glyph.Codepoint;
 
     // Copy to texture, post-process and queue update for backend
@@ -3580,7 +3576,7 @@ void ImFontAtlasBuildSetupFontSpecialGlyphs(ImFontAtlas* atlas, ImFontConfig* sr
         ImFontGlyph tab_glyph;
         tab_glyph.Codepoint = '\t';
         tab_glyph.AdvanceX = space_glyph->AdvanceX * IM_TABSIZE;
-        font->BuildRegisterGlyph(font->Sources, &tab_glyph);
+        ImFontAtlasBuildAddFontGlyph(atlas, font, src, &tab_glyph);
     }
 
     // Setup Ellipsis character. It is required for rendering elided text. We prefer using U+2026 (horizontal ellipsis).
@@ -4285,13 +4281,9 @@ static bool ImGui_ImplStbTrueType_FontAddGlyph(ImFontAtlas* atlas, ImFont* font,
         glyph.Y0 = y0 * recip_v + font_off_y;
         glyph.X1 = (x0 + (int)r->w) * recip_h + font_off_x;
         glyph.Y1 = (y0 + (int)r->h) * recip_v + font_off_y;
-        glyph.U0 = (r->x) * atlas->TexUvScale.x;
-        glyph.V0 = (r->y) * atlas->TexUvScale.y;
-        glyph.U1 = (r->x + r->w) * atlas->TexUvScale.x;
-        glyph.V1 = (r->y + r->h) * atlas->TexUvScale.y;
         glyph.Visible = true;
         glyph.PackId = pack_id;
-        font->BuildRegisterGlyph(src, &glyph);
+        ImFontAtlasBuildAddFontGlyph(atlas, font, src, &glyph);
 
         // Copy to texture, post-process and queue update for backend
         ImTextureData* tex = atlas->TexData;
@@ -4303,7 +4295,7 @@ static bool ImGui_ImplStbTrueType_FontAddGlyph(ImFontAtlas* atlas, ImFont* font,
     }
     else
     {
-        font->BuildRegisterGlyph(src, &glyph);
+        ImFontAtlasBuildAddFontGlyph(atlas, font, src, &glyph);
     }
 
     return true;
@@ -4702,12 +4694,23 @@ void ImFont::BuildGrowIndex(int new_size)
 // x0/y0/x1/y1 are offset from the character upper-left layout position, in pixels. Therefore x0/y0 are often fairly close to zero.
 // Not to be mistaken with texture coordinates, which are held by u0/v0/u1/v1 in normalized format (0.0..1.0 on each texture axis).
 // 'src' is not necessarily == 'this->Sources' because multiple source fonts+configs can be used to build one target font.
-void ImFont::BuildRegisterGlyph(ImFontConfig* src, const ImFontGlyph* in_glyph)
+ImFontGlyph* ImFontAtlasBuildAddFontGlyph(ImFontAtlas* atlas, ImFont* font, ImFontConfig* src, const ImFontGlyph* in_glyph)
 {
-    int glyph_idx = Glyphs.Size;
-    Glyphs.push_back(*in_glyph);
-    ImFontGlyph& glyph = Glyphs[glyph_idx];
-    IM_ASSERT(Glyphs.Size < 0xFFFE); // IndexLookup[] hold 16-bit values and -1/-2 are reserved.
+    int glyph_idx = font->Glyphs.Size;
+    font->Glyphs.push_back(*in_glyph);
+    ImFontGlyph& glyph = font->Glyphs[glyph_idx];
+    IM_ASSERT(font->Glyphs.Size < 0xFFFE); // IndexLookup[] hold 16-bit values and -1/-2 are reserved.
+
+    // Set UV from packed rectangle
+    if (in_glyph->PackId >= 0)
+    {
+        ImFontAtlasRect* r = ImFontAtlasPackGetRect(atlas, in_glyph->PackId);
+        IM_ASSERT(in_glyph->U0 == 0.0f && in_glyph->V0 == 0.0f && in_glyph->U1 == 0.0f && in_glyph->V1 == 0.0f);
+        glyph.U0 = (r->x) * atlas->TexUvScale.x;
+        glyph.V0 = (r->y) * atlas->TexUvScale.y;
+        glyph.U1 = (r->x + r->w) * atlas->TexUvScale.x;
+        glyph.V1 = (r->y + r->h) * atlas->TexUvScale.y;
+    }
 
     if (src != NULL)
     {
@@ -4728,17 +4731,17 @@ void ImFont::BuildRegisterGlyph(ImFontConfig* src, const ImFontGlyph* in_glyph)
         glyph.AdvanceX = advance_x + src->GlyphExtraAdvanceX;
     }
     if (glyph.Colored)
-        ContainerAtlas->TexPixelsUseColors = ContainerAtlas->TexData->UseColors = true;
+        atlas->TexPixelsUseColors = atlas->TexData->UseColors = true;
 
     // Update lookup tables
     int codepoint = glyph.Codepoint;
-    BuildGrowIndex(codepoint + 1);
-    IndexAdvanceX[codepoint] = glyph.AdvanceX;
-    IndexLookup[codepoint] = (ImU16)glyph_idx;
-
-    // Mark 4K page as used
+    font->BuildGrowIndex(codepoint + 1);
+    font->IndexAdvanceX[codepoint] = glyph.AdvanceX;
+    font->IndexLookup[codepoint] = (ImU16)glyph_idx;
     const int page_n = codepoint / 8192;
-    Used8kPagesMap[page_n >> 3] |= 1 << (page_n & 7);
+    font->Used8kPagesMap[page_n >> 3] |= 1 << (page_n & 7);
+
+    return &glyph;
 }
 
 void ImFont::AddRemapChar(ImWchar dst, ImWchar src, bool overwrite_dst)
