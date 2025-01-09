@@ -2437,6 +2437,8 @@ void ImTextureData::Create(ImTextureFormat format, int w, int h)
     Pixels = (unsigned char*)IM_ALLOC(Width * Height * BytesPerPixel);
     IM_ASSERT(Pixels != NULL);
     memset(Pixels, 0, Width * Height * BytesPerPixel);
+    UpdateRect.x = UpdateRect.y = (unsigned short)~0;
+    UpdateRect.w = UpdateRect.h = 0;
 }
 
 void ImTextureData::DestroyPixels()
@@ -2707,9 +2709,12 @@ void ImFontAtlasUpdateNewFrame(ImFontAtlas* atlas)
     {
         ImTextureData* tex = atlas->TexList[tex_n];
         bool remove_from_list = false;
-        tex->Updates.resize(0);
-        tex->UpdateRect.x = tex->UpdateRect.y = (unsigned short)~0;
-        tex->UpdateRect.w = tex->UpdateRect.h = 0;
+        if (tex->Status == ImTextureStatus_OK)
+        {
+            tex->Updates.resize(0);
+            tex->UpdateRect.x = tex->UpdateRect.y = (unsigned short)~0;
+            tex->UpdateRect.w = tex->UpdateRect.h = 0;
+        }
 
         if (tex->Status == ImTextureStatus_Destroyed)
         {
@@ -2861,22 +2866,23 @@ void ImFontAtlasTextureBlockCopy(ImTextureData* src_tex, int src_x, int src_y, I
 // Queue texture block update for renderer backend
 void ImFontAtlasTextureBlockQueueUpload(ImFontAtlas* atlas, ImTextureData* tex, int x, int y, int w, int h)
 {
-    // Queue texture update (no need to queue if status is _WantCreate)
-    IM_ASSERT(atlas);
+    IM_ASSERT(tex->Status != ImTextureStatus_WantDestroy && tex->Status != ImTextureStatus_Destroyed);
+    IM_ASSERT(x >= 0 && x <= 0xFFFF && y >= 0 && y <= 0xFFFF && w >= 0 && x + w <= 0x10000 && h >= 0 && y + h <= 0x10000);
+    IM_UNUSED(atlas);
+
+    ImTextureRect req = { (unsigned short)x, (unsigned short)y, (unsigned short)w, (unsigned short)h };
+    int new_x1 = ImMax(tex->UpdateRect.w == 0 ? 0 : tex->UpdateRect.x + tex->UpdateRect.w, req.x + req.w);
+    int new_y1 = ImMax(tex->UpdateRect.h == 0 ? 0 : tex->UpdateRect.y + tex->UpdateRect.h, req.y + req.h);
+    tex->UpdateRect.x = ImMin(tex->UpdateRect.x, req.x);
+    tex->UpdateRect.y = ImMin(tex->UpdateRect.y, req.y);
+    tex->UpdateRect.w = (unsigned short)(new_x1 - tex->UpdateRect.x);
+    tex->UpdateRect.h = (unsigned short)(new_y1 - tex->UpdateRect.y);
+
+    // No need to queue if status is _WantCreate
     if (tex->Status == ImTextureStatus_OK || tex->Status == ImTextureStatus_WantUpdates)
     {
-        IM_ASSERT(x >= 0 && x <= 0xFFFF && y >= 0 && y <= 0xFFFF && w >= 0 && x + w <= 0x10000 && h >= 0 && y + h <= 0x10000);
-        ImTextureRect req = { (unsigned short)x, (unsigned short)y, (unsigned short)w, (unsigned short)h };
         tex->Status = ImTextureStatus_WantUpdates;
         tex->Updates.push_back(req);
-        int new_x1 = ImMax(tex->UpdateRect.w == 0 ? 0 : tex->UpdateRect.x + tex->UpdateRect.w, req.x + req.w);
-        int new_y1 = ImMax(tex->UpdateRect.h == 0 ? 0 : tex->UpdateRect.y + tex->UpdateRect.h, req.y + req.h);
-        IM_ASSERT(new_x1 < 0x8000);
-        IM_ASSERT(new_y1 < 0x8000);
-        tex->UpdateRect.x = ImMin(tex->UpdateRect.x, req.x);
-        tex->UpdateRect.y = ImMin(tex->UpdateRect.y, req.y);
-        tex->UpdateRect.w = (unsigned short)(new_x1 - tex->UpdateRect.x);
-        tex->UpdateRect.h = (unsigned short)(new_y1 - tex->UpdateRect.y);
     }
 }
 
@@ -3406,6 +3412,7 @@ static void ImFontAtlasBuildUpdateBasicTexData(ImFontAtlas* atlas, bool add_and_
             ImFontAtlasBuildRenderBitmapFromString(atlas, x_for_black, r->y, FONT_ATLAS_DEFAULT_TEX_DATA_W, FONT_ATLAS_DEFAULT_TEX_DATA_H, FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS, 'X');
         }
     }
+    ImFontAtlasTextureBlockQueueUpload(atlas, atlas->TexData, r->x, r->y, r->w, r->h);
     atlas->TexUvWhitePixel = ImVec2((r->x + 0.5f) * atlas->TexUvScale.x, (r->y + 0.5f) * atlas->TexUvScale.y);
 }
 
@@ -3475,6 +3482,7 @@ static void ImFontAtlasBuildUpdateLinesTexData(ImFontAtlas* atlas, bool add_and_
         float half_v = (uv0.y + uv1.y) * 0.5f; // Calculate a constant V in the middle of the row to avoid sampling artifacts
         atlas->TexUvLines[n] = ImVec4(uv0.x, half_v, uv1.x, half_v);
     }
+    ImFontAtlasTextureBlockQueueUpload(atlas, tex, r->x, r->y, r->w, r->h);
 }
 
 //-----------------------------------------------------------------------------------------------------------------------------
