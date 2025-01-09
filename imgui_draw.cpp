@@ -2578,13 +2578,16 @@ static const ImVec2 FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[ImGuiMouseCursor_COUNT][3
 
 #define IM_FONTGLYPH_INDEX_UNUSED           ((ImU16)-1) // 0xFFFF
 #define IM_FONTGLYPH_INDEX_NOT_FOUND        ((ImU16)-2) // 0xFFFE
-#define IM_FONTATLAS_DEFAULT_TEXTURE_SIZE   ImVec2i(512, 128)
 
 ImFontAtlas::ImFontAtlas()
 {
     memset(this, 0, sizeof(*this));
     TexDesiredFormat = ImTextureFormat_RGBA32;
     TexGlyphPadding = 1;
+    TexMinWidth = 512;
+    TexMinHeight = 128;
+    TexMaxWidth = 8192;
+    TexMaxHeight = 8192;
     RendererHasTextures = false; // Assumed false by default, as apps can call e.g Atlas::Build() after backend init and before ImGui can update.
     TexRef._TexData = NULL;// this;
     TexNextUniqueID = 1;
@@ -3251,7 +3254,7 @@ void ImFontAtlasBuildMain(ImFontAtlas* atlas)
     if (atlas->Sources.Size == 0)
         atlas->AddFontDefault();
 
-    // [LEGACY] For backends not supporting RendererHasTexUpdates: preload all glyphs
+    // [LEGACY] For backends not supporting RendererHasTextures: preload all glyphs
     ImFontAtlasBuildUpdateRendererHasTexturesFromContext(atlas);
     if (atlas->RendererHasTextures == false) // ~ImGuiBackendFlags_RendererHasTextures
         ImFontAtlasBuildPreloadAllGlyphRanges(atlas);
@@ -3271,7 +3274,7 @@ void ImFontAtlasBuildSetupFontLoader(ImFontAtlas* atlas, const ImFontLoader* fon
         return;
     IM_ASSERT(!atlas->Locked && "Cannot modify a locked ImFontAtlas!");
 
-    // Note that texture size estimate is likely incorrect in this situation, as Freetype backend doesn't use oversampling.
+    // Note that texture size estimate is likely incorrect in this situation, as FreeType backend doesn't use oversampling.
     ImVec2i new_tex_size = ImFontAtlasBuildGetTextureSizeEstimate(atlas);
     ImFontAtlasBuildDestroy(atlas);
 
@@ -3393,6 +3396,8 @@ static void ImFontAtlasBuildUpdateBasicTexData(ImFontAtlas* atlas, bool add_and_
 
     if (add_and_draw)
         builder->PackIdMouseCursors = ImFontAtlasPackAddRect(atlas, pack_size.x, pack_size.y);
+    if (builder->PackIdMouseCursors < 0)
+        return;
     ImFontAtlasRect* r = ImFontAtlasPackGetRect(atlas, builder->PackIdMouseCursors);
 
     // Draw to texture
@@ -3427,6 +3432,8 @@ static void ImFontAtlasBuildUpdateLinesTexData(ImFontAtlas* atlas, bool add_and_
     ImFontAtlasBuilder* builder = atlas->Builder;
     if (add_and_draw)
         builder->PackIdLinesTexData = ImFontAtlasPackAddRect(atlas, pack_size.x, pack_size.y);
+    if (builder->PackIdLinesTexData < 0)
+        return;
     ImFontAtlasRect* r = ImFontAtlasPackGetRect(atlas, builder->PackIdLinesTexData);
 
     // Register texture region for thick lines
@@ -3816,6 +3823,7 @@ void ImFontAtlasBuildGrowTexture(ImFontAtlas* atlas, int old_tex_w, int old_tex_
     // FIXME-NEWATLAS-V2: What to do when reaching limits exposed by backend?
     // FIXME-NEWATLAS-V2: does ImFontAtlasFlags_NoPowerOfTwoHeight makes sense now? Allow 'lock' and 'compact' operations?
     IM_ASSERT(ImIsPowerOfTwo(old_tex_w) && ImIsPowerOfTwo(old_tex_h));
+    IM_ASSERT(ImIsPowerOfTwo(atlas->TexMinWidth) && ImIsPowerOfTwo(atlas->TexMaxWidth) && ImIsPowerOfTwo(atlas->TexMinHeight) && ImIsPowerOfTwo(atlas->TexMaxHeight));
 
     // Grow texture so it follows roughly a square.
     // FIXME-NEWATLAS-V1: Take account of RectsDiscardedSurface: may not need to grow.
@@ -3826,19 +3834,24 @@ void ImFontAtlasBuildGrowTexture(ImFontAtlas* atlas, int old_tex_w, int old_tex_
     const int pack_padding = atlas->TexGlyphPadding;
     new_tex_w = ImMax(new_tex_w, ImUpperPowerOfTwo(builder->MaxRectSize.x + pack_padding));
     new_tex_h = ImMax(new_tex_h, ImUpperPowerOfTwo(builder->MaxRectSize.y + pack_padding));
+    new_tex_w = ImClamp(new_tex_w, atlas->TexMinWidth, atlas->TexMaxWidth);
+    new_tex_h = ImClamp(new_tex_h, atlas->TexMinHeight, atlas->TexMaxHeight);
+    if (new_tex_w == old_tex_w && new_tex_h == old_tex_h)
+        return;
 
     ImFontAtlasBuildRepackTexture(atlas, new_tex_w, new_tex_h);
 }
 
-// FIXME-NEWATLAS: Expose atlas->TexMinWidth etc.
 ImVec2i ImFontAtlasBuildGetTextureSizeEstimate(ImFontAtlas* atlas)
 {
+    int min_w = ImUpperPowerOfTwo(atlas->TexMinWidth);
+    int min_h = ImUpperPowerOfTwo(atlas->TexMinHeight);
     if (atlas->Builder == NULL || atlas->TexData == NULL || atlas->TexData->Status == ImTextureStatus_WantDestroy)
-        return IM_FONTATLAS_DEFAULT_TEXTURE_SIZE;
+        return ImVec2i(min_w, min_h);
 
     ImFontAtlasBuilder* builder = atlas->Builder;
-    const int min_w = ImMax(builder->MaxRectSize.x, 512);
-    const int min_h = builder->MaxRectSize.y;
+    min_w = ImMax(ImUpperPowerOfTwo(builder->MaxRectSize.x), min_w);
+    min_h = ImMax(ImUpperPowerOfTwo(builder->MaxRectSize.y), min_h);
     const int surface_approx = atlas->_PackedSurface - builder->RectsDiscardedSurface; // Expected surface after repack
     const int surface_sqrt = (int)sqrtf((float)surface_approx);
 
@@ -3858,6 +3871,8 @@ ImVec2i ImFontAtlasBuildGetTextureSizeEstimate(ImFontAtlas* atlas)
             new_tex_h = ImUpperPowerOfTwo(new_tex_h);
         new_tex_w = ImMax(min_w, (int)((surface_approx + new_tex_h - 1) / new_tex_h));
     }
+
+    IM_ASSERT(ImIsPowerOfTwo(new_tex_w) && ImIsPowerOfTwo(new_tex_h));
     return ImVec2i(new_tex_w, new_tex_h);
 }
 
@@ -3897,7 +3912,7 @@ void ImFontAtlasBuildInit(ImFontAtlas* atlas)
     }
     // Create initial texture size
     if (atlas->TexData == NULL)
-        ImFontAtlasBuildAddTexture(atlas, IM_FONTATLAS_DEFAULT_TEXTURE_SIZE.x, IM_FONTATLAS_DEFAULT_TEXTURE_SIZE.y);
+        ImFontAtlasBuildAddTexture(atlas, ImUpperPowerOfTwo(atlas->TexMinWidth), ImUpperPowerOfTwo(atlas->TexMinHeight));
 
     const bool builder_is_new = (builder == NULL);
     if (builder_is_new)
@@ -4054,6 +4069,7 @@ ImFontAtlasRectId ImFontAtlasPackAddRect(ImFontAtlas* atlas, int w, int h, ImFon
 
 ImFontAtlasRect* ImFontAtlasPackGetRect(ImFontAtlas* atlas, ImFontAtlasRectId id)
 {
+    IM_ASSERT(id >= 0);
     ImFontAtlasBuilder* builder = (ImFontAtlasBuilder*)atlas->Builder;
     ImFontAtlasRectEntry* index_entry = &builder->RectsIndex[id];
     IM_ASSERT(index_entry->Used);
@@ -4258,6 +4274,13 @@ static bool ImGui_ImplStbTrueType_FontAddGlyph(ImFontAtlas* atlas, ImFont* font,
         const int w = (x1 - x0 + oversample_h - 1);
         const int h = (y1 - y0 + oversample_v - 1);
         ImFontAtlasRectId pack_id = ImFontAtlasPackAddRect(atlas, w, h);
+        if (pack_id < 0)
+        {
+            // Pathological out of memory case (TexMaxWidth/TexMaxHeight set too small?)
+            IM_ASSERT_USER_ERROR(pack_id >= 0, "Out of texture memory.");
+            return false;
+        }
+
         ImFontAtlasRect* r = ImFontAtlasPackGetRect(atlas, pack_id);
         font->MetricsTotalSurface += w * h;
 

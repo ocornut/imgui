@@ -3982,7 +3982,7 @@ struct ImFontAtlasBuilder
     ImFontAtlasRectId           PackIdMouseCursors;     // White pixel + mouse cursors. Also happen to be fallback in case of packing failure.
     ImFontAtlasRectId           PackIdLinesTexData;
 
-    ImFontAtlasBuilder()        { memset(this, 0, sizeof(*this)); RectsIndexFreeListStart = -1; }
+    ImFontAtlasBuilder()        { memset(this, 0, sizeof(*this)); RectsIndexFreeListStart = -1; PackIdMouseCursors = PackIdLinesTexData = -1; }
 };
 
 // FIXME-NEWATLAS: Cleanup

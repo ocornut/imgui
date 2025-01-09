@@ -3693,6 +3693,10 @@ struct ImFontAtlas
     ImFontAtlasFlags            Flags;              // Build flags (see ImFontAtlasFlags_)
     ImTextureFormat             TexDesiredFormat;   // Desired texture format (default to ImTextureFormat_RGBA32 but may be changed to ImTextureFormat_Alpha8).
     int                         TexGlyphPadding;    // FIXME: Should be called "TexPackPadding". Padding between glyphs within texture in pixels. Defaults to 1. If your rendering method doesn't rely on bilinear filtering you may set this to 0 (will also need to set AntiAliasedLinesUseTex = false).
+    int                         TexMinWidth;        // Minimum desired texture width. Must be a power of two. Default to 512.
+    int                         TexMinHeight;       // Minimum desired texture height. Must be a power of two. Default to 128.
+    int                         TexMaxWidth;        // Maximum desired texture width. Must be a power of two. Default to 8096.
+    int                         TexMaxHeight;       // Maximum desired texture height. Must be a power of two. Default to 8096.
     void*                       UserData;           // Store your own atlas related user-data (if e.g. you have multiple font atlas).
 
     // [Internal]
