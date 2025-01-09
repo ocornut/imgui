@@ -2342,7 +2342,7 @@ ImGuiID ImHashStr(const char* data_p, size_t data_size, ImGuiID seed)
 
 ImFileHandle ImFileOpen(const char* filename, const char* mode)
 {
-#if defined(_WIN32) && !defined(IMGUI_DISABLE_WIN32_FUNCTIONS) && !defined(__CYGWIN__) && !defined(__GNUC__)
+#if defined(_WIN32) && !defined(IMGUI_DISABLE_WIN32_FUNCTIONS) && (defined(__MINGW32__) || (!defined(__CYGWIN__) && !defined(__GNUC__)))
     // We need a fopen() wrapper because MSVC/Windows fopen doesn't handle UTF-8 filenames.
     // Previously we used ImTextCountCharsFromUtf8/ImTextStrFromUtf8 here but we now need to support ImWchar16 and ImWchar32!
     const int filename_wsize = ::MultiByteToWideChar(CP_UTF8, 0, filename, -1, NULL, 0);
@@ -6326,9 +6326,12 @@ bool ImGui::BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, I
     }
     SetNextWindowSize(size);
 
-    // Forward child flags
+    // Forward child flags (we allow prior settings to merge but it'll only work for adding flags)
+    if (g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasChildFlags)
+        g.NextWindowData.ChildFlags |= child_flags;
+    else
+        g.NextWindowData.ChildFlags = child_flags;
     g.NextWindowData.Flags |= ImGuiNextWindowDataFlags_HasChildFlags;
-    g.NextWindowData.ChildFlags = child_flags;
 
     // Build up name. If you need to append to a same child from multiple location in the ID stack, use BeginChild(ImGuiID id) with a stable value.
     // FIXME: 2023/11/14: commented out shorted version. We had an issue with multiple ### in child window path names, which the trailing hash helped workaround.
