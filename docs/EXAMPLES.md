@@ -139,13 +139,33 @@ This support building with Emscripten and targeting WebGL.<BR>
 Prefer using that if you are using modern GL or WebGL in your application.
 
 [example_sdl2_sdlrenderer2/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl2_sdlrenderer2/) <BR>
-SDL2 (Win32, Mac, Linux, etc.) + SDL_Renderer for SDL2 (most graphics backends are supported underneath) <BR>
-= main.cpp + imgui_impl_sdl2.cpp + imgui_impl_sdlrenderer.cpp <BR>
+SDL2 (Win32, Mac, Linux, etc.) + SDL_Renderer for SDL2 example.<BR>
+= main.cpp + imgui_impl_sdl2.cpp + imgui_impl_sdlrenderer2.cpp <BR>
 This requires SDL 2.0.18+ (released November 2021) <BR>
 
 [example_sdl2_vulkan/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl2_vulkan/) <BR>
 SDL2 (Win32, Mac, Linux, etc.) + Vulkan example. <BR>
 = main.cpp + imgui_impl_sdl2.cpp + imgui_impl_vulkan.cpp <BR>
+This is quite long and tedious, because: Vulkan. <BR>
+For this example, the main.cpp file exceptionally use helpers function from imgui_impl_vulkan.h/cpp.
+
+[example_sdl3_opengl3/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl3_opengl3/) <BR>
+SDL3 (Win32, Mac, Linux, etc.) + OpenGL3+/ES2/ES3 example. <BR>
+= main.cpp + imgui_impl_sdl3.cpp + imgui_impl_opengl3.cpp <BR>
+This uses more modern GL calls and custom shaders. <BR>
+This support building with Emscripten and targeting WebGL.<BR>
+
+[example_sdl3_sdlgpu3/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl3_sdlgpu3/) <BR>
+SDL3 (Win32, Mac, Linux, etc.) + SDL_GPU for SDL3 example.<BR>
+= main.cpp + imgui_impl_sdl3.cpp + imgui_impl_sdlrenderer3.cpp <BR>
+
+[example_sdl3_sdlrenderer3/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl3_sdlrenderer3/) <BR>
+SDL3 (Win32, Mac, Linux, etc.) + SDL_Renderer for SDL3 example.<BR>
+= main.cpp + imgui_impl_sdl3.cpp + imgui_impl_sdlrenderer3.cpp <BR>
+
+[example_sdl3_vulkan/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl3_vulkan/) <BR>
+SDL3 (Win32, Mac, Linux, etc.) + Vulkan example. <BR>
+= main.cpp + imgui_impl_sdl3.cpp + imgui_impl_vulkan.cpp <BR>
 This is quite long and tedious, because: Vulkan. <BR>
 For this example, the main.cpp file exceptionally use helpers function from imgui_impl_vulkan.h/cpp.
 

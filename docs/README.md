@@ -123,7 +123,7 @@ On most platforms and when using C++, **you should be able to use a combination 
 Integrating Dear ImGui within your custom engine is a matter of 1) wiring mouse/keyboard/gamepad inputs 2) uploading a texture to your GPU/render engine 3) providing a render function that can bind textures and render textured triangles, which is essentially what Backends are doing. The [examples/](https://github.com/ocornut/imgui/tree/master/examples) folder is populated with applications doing just that: setting up a window and using backends. If you follow the [Getting Started](https://github.com/ocornut/imgui/wiki/Getting-Started) guide it should in theory takes you less than an hour to integrate Dear ImGui.  **Make sure to spend time reading the [FAQ](https://www.dearimgui.com/faq), comments, and the examples applications!**
 
 Officially maintained backends/bindings (in repository):
-- Renderers: DirectX9, DirectX10, DirectX11, DirectX12, Metal, OpenGL/ES/ES2, SDL_Renderer, Vulkan, WebGPU.
+- Renderers: DirectX9, DirectX10, DirectX11, DirectX12, Metal, OpenGL/ES/ES2, SDL_GPU, SDL_Renderer2/3, Vulkan, WebGPU.
 - Platforms: GLFW, SDL2/SDL3, Win32, Glut, OSX, Android.
 - Frameworks: Allegro5, Emscripten.
 

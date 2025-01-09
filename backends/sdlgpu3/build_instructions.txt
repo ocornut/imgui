@@ -1,3 +1,7 @@
+
+Instructions to rebuild imgui_impl_sdlgpu3_shaders.h
+(You don't need to copy this folder if you are using the backend as-is)
+
 1) Compile the raw shader files to SPIRV:
 
     glslc -o vertex.spv -c shader.vert
@@ -33,4 +37,4 @@
     Proceed to step 4
 
 
-4) Either find a way to load the shader bytecode from file, or use a tool like https://notisrac.github.io/FileToCArray/ to convert the file to a uint8_t array
+4) Use a tool like https://notisrac.github.io/FileToCArray/ or misc/fonts/binary_to_compressed_c.cpp in imgui repository to convert the file to a uint8_t array.

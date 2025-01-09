@@ -1,4 +1,4 @@
-// Dear ImGui: standalone example application for SDL_Gpu
+// Dear ImGui: standalone example application for SDL3 + SDL_GPU
 
 // Learn about Dear ImGui:
 // - FAQ                  https://dearimgui.com/faq
@@ -17,7 +17,6 @@
 #include <stdlib.h>         // abort
 #include <SDL3/SDL.h>
 
-
 // This example doesn't compile with Emscripten yet! Awaiting SDL3 support.
 #ifdef __EMSCRIPTEN__
 #include "../libs/emscripten/emscripten_mainloop_stub.h"
@@ -34,23 +33,23 @@ int main(int, char**)
     }
 
     // Create SDL window graphics context
-    SDL_Window* window = SDL_CreateWindow("Dear ImGui SDLGpu example", 1280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
+    SDL_Window* window = SDL_CreateWindow("Dear ImGui SDL3+SDL_GPU example", 1280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
     if (window == nullptr)
     {
         printf("Error: SDL_CreateWindow(): %s\n", SDL_GetError());
         return -1;
     }
 
-    // Create SDL Gpu Device
-    SDL_GPUDevice* gpuDevice = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL | SDL_GPU_SHADERFORMAT_METALLIB,true,nullptr);
-    if (gpuDevice == nullptr)
+    // Create GPU Device
+    SDL_GPUDevice* gpu_device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL | SDL_GPU_SHADERFORMAT_METALLIB,true,nullptr);
+    if (gpu_device == nullptr)
     {
         printf("Error: SDL_CreateGPUDevice(): %s\n", SDL_GetError());
         return -1;
     }
 
     // Claim window for GPU Device
-    if (!SDL_ClaimWindowForGPUDevice(gpuDevice, window))
+    if (!SDL_ClaimWindowForGPUDevice(gpu_device, window))
     {
         printf("Error: SDL_ClaimWindowForGPUDevice(): %s\n", SDL_GetError());
         return -1;
@@ -69,11 +68,11 @@ int main(int, char**)
 
     // Setup Platform/Renderer backends
     ImGui_ImplSDL3_InitForOther(window);
-    ImGui_ImplSDLGPU_InitInfo init_info = {};
-    init_info.GpuDevice = gpuDevice;
-    init_info.ColorTargetFormat = SDL_GetGPUSwapchainTextureFormat(gpuDevice, window);
+    ImGui_ImplSDLGPU3_InitInfo init_info = {};
+    init_info.GpuDevice = gpu_device;
+    init_info.ColorTargetFormat = SDL_GetGPUSwapchainTextureFormat(gpu_device, window);
     init_info.MSAASamples = SDL_GPU_SAMPLECOUNT_1;
-    ImGui_ImplSDLGPU_Init(&init_info);
+    ImGui_ImplSDLGPU3_Init(&init_info);
 
     // Load Fonts
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
@@ -119,9 +118,9 @@ int main(int, char**)
             SDL_Delay(10);
             continue;
         }
-         
+
         // Start the Dear ImGui frame
-        ImGui_ImplSDLGPU_NewFrame();
+        ImGui_ImplSDLGPU3_NewFrame();
         ImGui_ImplSDL3_NewFrame();
         ImGui::NewFrame();
 
@@ -167,18 +166,15 @@ int main(int, char**)
         ImDrawData* draw_data = ImGui::GetDrawData();
         const bool is_minimized = (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f);
 
-        // Acquire a GPU command buffer
-        SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(gpuDevice);
+        SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(gpu_device); // Acquire a GPU command buffer
 
-        //Acquire a swapchain texture
         SDL_GPUTexture* swapchain_texture;
-        SDL_AcquireGPUSwapchainTexture(command_buffer, window, &swapchain_texture, nullptr, nullptr);
+        SDL_AcquireGPUSwapchainTexture(command_buffer, window, &swapchain_texture, nullptr, nullptr); // Acquire a swapchain texture
 
         if (swapchain_texture != nullptr && !is_minimized)
         {
-            // !!! THIS IS MANDATORY !!!
-            // Call Imgui_ImplSDLGPU_PrepareDrawData to upload the vertex/index buffer 
-            Imgui_ImplSDLGPU_PrepareDrawData(draw_data, command_buffer);
+            // This is mandatory: call Imgui_ImplSDLGPU3_PrepareDrawData() to upload the vertex/index buffer!
+            Imgui_ImplSDLGPU3_PrepareDrawData(draw_data, command_buffer);
 
             // Setup and start a render pass
             SDL_GPUColorTargetInfo target_info = {};
@@ -190,21 +186,26 @@ int main(int, char**)
             target_info.layer_or_depth_plane = 0;
             target_info.cycle = false;
             SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass(command_buffer, &target_info, 1, nullptr);
-            /// Render ImGui
-            ImGui_ImplSDLGPU_RenderDrawData(draw_data, command_buffer, render_pass);
+
+            // Render ImGui
+            ImGui_ImplSDLGPU3_RenderDrawData(draw_data, command_buffer, render_pass);
+
             SDL_EndGPURenderPass(render_pass);
         }
+
         // Submit the command buffer
         SDL_SubmitGPUCommandBuffer(command_buffer);
     }
     // Cleanup
-    SDL_WaitForGPUIdle(gpuDevice);
+    SDL_WaitForGPUIdle(gpu_device);
     ImGui_ImplSDL3_Shutdown();
-    ImGui_ImplSDLGPU_Shutdown();
+    ImGui_ImplSDLGPU3_Shutdown();
     ImGui::DestroyContext();
-    SDL_ReleaseWindowFromGPUDevice(gpuDevice, window);
-    SDL_DestroyGPUDevice(gpuDevice);
+
+    SDL_ReleaseWindowFromGPUDevice(gpu_device, window);
+    SDL_DestroyGPUDevice(gpu_device);
     SDL_DestroyWindow(window);
     SDL_Quit();
+
     return 0;
 }

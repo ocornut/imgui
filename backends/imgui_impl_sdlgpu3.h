@@ -1,4 +1,4 @@
-// dear imgui: Renderer Backend for SDL_Gpu
+// dear imgui: Renderer Backend for SDL_GPU
 // This needs to be used along with the SDL3 Platform Backend
 
 // Implemented features:
@@ -27,7 +27,7 @@
 
 // Initialization data, for ImGui_ImplSDLGPU_Init()
 // - Remember to set ColorTargetFormat to the correct format. If you're rendering to the swapchain, call SDL_GetGPUSwapchainTextureFormat to query the right value
-struct ImGui_ImplSDLGPU_InitInfo
+struct ImGui_ImplSDLGPU3_InitInfo
 {
     SDL_GPUDevice*       GpuDevice          = nullptr;
     SDL_GPUTextureFormat ColorTargetFormat  = SDL_GPU_TEXTUREFORMAT_INVALID;
@@ -35,12 +35,12 @@ struct ImGui_ImplSDLGPU_InitInfo
 };
 
 // Follow "Getting Started" link and check examples/ folder to learn about using backends!
-IMGUI_IMPL_API bool             ImGui_ImplSDLGPU_Init(ImGui_ImplSDLGPU_InitInfo* info);
-IMGUI_IMPL_API void             ImGui_ImplSDLGPU_Shutdown();
-IMGUI_IMPL_API void             ImGui_ImplSDLGPU_NewFrame();
-IMGUI_IMPL_API void             Imgui_ImplSDLGPU_PrepareDrawData(ImDrawData* draw_data, SDL_GPUCommandBuffer* command_buffer);
-IMGUI_IMPL_API void             ImGui_ImplSDLGPU_RenderDrawData(ImDrawData* draw_data, SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_pass, SDL_GPUGraphicsPipeline* pipeline = nullptr);
-IMGUI_IMPL_API bool             ImGui_ImplSDLGPU_CreateFontsTexture();
-IMGUI_IMPL_API void             ImGui_ImplSDLGPU_DestroyFontsTexture();
+IMGUI_IMPL_API bool    ImGui_ImplSDLGPU3_Init(ImGui_ImplSDLGPU3_InitInfo* info);
+IMGUI_IMPL_API void    ImGui_ImplSDLGPU3_Shutdown();
+IMGUI_IMPL_API void    ImGui_ImplSDLGPU3_NewFrame();
+IMGUI_IMPL_API void    Imgui_ImplSDLGPU3_PrepareDrawData(ImDrawData* draw_data, SDL_GPUCommandBuffer* command_buffer);
+IMGUI_IMPL_API void    ImGui_ImplSDLGPU3_RenderDrawData(ImDrawData* draw_data, SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_pass, SDL_GPUGraphicsPipeline* pipeline = nullptr);
+IMGUI_IMPL_API bool    ImGui_ImplSDLGPU3_CreateFontsTexture();
+IMGUI_IMPL_API void    ImGui_ImplSDLGPU3_DestroyFontsTexture();
 
 #endif // #ifndef IMGUI_DISABLE
