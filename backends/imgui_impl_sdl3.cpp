@@ -531,6 +531,11 @@ bool ImGui_ImplSDL3_InitForSDLRenderer(SDL_Window* window, SDL_Renderer* rendere
     return ImGui_ImplSDL3_Init(window, renderer, nullptr);
 }
 
+bool ImGui_ImplSDL3_InitForSDLGPU(SDL_Window* window)
+{
+    return ImGui_ImplSDL3_Init(window, nullptr, nullptr);
+}
+
 bool ImGui_ImplSDL3_InitForOther(SDL_Window* window)
 {
     return ImGui_ImplSDL3_Init(window, nullptr, nullptr);

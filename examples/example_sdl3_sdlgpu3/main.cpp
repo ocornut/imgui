@@ -67,7 +67,7 @@ int main(int, char**)
     //ImGui::StyleColorsLight();
 
     // Setup Platform/Renderer backends
-    ImGui_ImplSDL3_InitForOther(window);
+    ImGui_ImplSDL3_InitForSDLGPU(window);
     ImGui_ImplSDLGPU3_InitInfo init_info = {};
     init_info.GpuDevice = gpu_device;
     init_info.ColorTargetFormat = SDL_GetGPUSwapchainTextureFormat(gpu_device, window);
