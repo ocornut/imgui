@@ -43,6 +43,15 @@ Breaking changes:
 
 Other changes:
 
+- Fixed issues with IsItemDeactivated() and IsItemDeactivatedAfterEdit() not
+  emitting a reliable signal when an item is deactivated externally: e.g.
+  via an explicit clear of focus, clear of active id, opening of modal etc.
+  (#5184, #5904, #6766, #8303, #8004)
+  - It used to work when the interruption happened in the frame before the
+    active item as submitted, but not after. It should work in both cases now.
+  - While this is not specific to a certain widgets, typically it would
+    mostly be noticeable on InputText() because it keeps ActiveId for a
+    longer time while allowing other interaction to happen.
 - Error Handling: Fixed bugs recovering from within a table that created
   a child window, and from nested child windows. (#1651)
 - Error Handling: Turned common EndTable() and other TableXXX functions
