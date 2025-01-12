@@ -45,6 +45,8 @@ Other changes:
 
 - Error Handling: Fixed bugs recovering from within a table that created
   a child window, and from nested child windows. (#1651)
+- Error Handling: Turned common EndTable() and other TableXXX functions
+  fail cases into a recoverable error. (#1651, #8314)
 - InputText: Fixed a bug where character replacements performed from a callback
   were not applied when pasting from clipbard. (#8229)
 - InputText: Fixed issue when activating a ReadOnly field when the underlying
