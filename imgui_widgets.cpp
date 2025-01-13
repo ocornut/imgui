@@ -6532,6 +6532,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     // We vertically grow up to current line height up the typical widget height.
     const float frame_height = ImMax(ImMin(window->DC.CurrLineSize.y, g.FontSize + style.FramePadding.y * 2), label_size.y + padding.y * 2);
     const bool span_all_columns = (flags & ImGuiTreeNodeFlags_SpanAllColumns) != 0 && (g.CurrentTable != NULL);
+    const bool span_all_columns_label = (flags & ImGuiTreeNodeFlags_LabelSpanAllColumns) != 0 && (g.CurrentTable != NULL);
     ImRect frame_bb;
     frame_bb.Min.x = span_all_columns ? window->ParentWorkRect.Min.x : (flags & ImGuiTreeNodeFlags_SpanFullWidth) ? window->WorkRect.Min.x : window->DC.CursorPos.x;
     frame_bb.Min.y = window->DC.CursorPos.y;
@@ -6557,7 +6558,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     bool is_open = TreeNodeUpdateNextOpen(storage_id, flags);
 
     bool is_visible;
-    if (span_all_columns)
+    if (span_all_columns || span_all_columns_label)
     {
         // Modify ClipRect for the ItemAdd(), faster than doing a PushColumnsBackground/PushTableBackgroundChannel for every Selectable..
         const float backup_clip_rect_min_x = window->ClipRect.Min.x;
@@ -6598,7 +6599,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
         return is_open;
     }
 
-    if (span_all_columns)
+    if (span_all_columns || span_all_columns_label)
     {
         TablePushBackgroundChannel();
         g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_HasClipRect;
@@ -6751,7 +6752,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
                 LogSetNextTextDecoration(">", NULL);
         }
 
-        if (span_all_columns)
+        if (span_all_columns && !span_all_columns_label)
             TablePopBackgroundChannel();
 
         // Label
@@ -6759,6 +6760,9 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
             RenderTextClipped(text_pos, frame_bb.Max, label, label_end, &label_size);
         else
             RenderText(text_pos, label, label_end, false);
+
+        if (span_all_columns_label)
+            TablePopBackgroundChannel();
     }
 
     if (store_tree_node_stack_data && is_open)
