@@ -2457,16 +2457,14 @@ void ImTextureData::DestroyPixels()
 // [SECTION] ImFontAtlas, ImFontAtlasBuilder
 //-----------------------------------------------------------------------------
 // - Default texture data encoded in ASCII
-// - ImFontAtlasBuilder
+// - ImFontAtlas()
+// - ImFontAtlas::Clear()
+// - ImFontAtlas::ClearCache()
 // - ImFontAtlas::ClearInputData()
 // - ImFontAtlas::ClearTexData()
 // - ImFontAtlas::ClearFonts()
-// - ImFontAtlas::Clear()
-// - ImFontAtlas::ClearCache()
-// - ImFontAtlas::BuildGrowTexture()
-// - ImFontAtlas::BuildCompactTexture()
-// - ImFontAtlasUpdateTextures()
 //-----------------------------------------------------------------------------
+// - ImFontAtlasUpdateNewFrame()
 // - ImFontAtlasTextureBlockConvert()
 // - ImFontAtlasTextureBlockPostProcess()
 // - ImFontAtlasTextureBlockPostProcessMultiply()
@@ -2474,9 +2472,9 @@ void ImTextureData::DestroyPixels()
 // - ImFontAtlasTextureBlockCopy()
 // - ImFontAtlasTextureBlockQueueUpload()
 //-----------------------------------------------------------------------------
-// - ImFontAtlas::Build() [legacy]
 // - ImFontAtlas::GetTexDataAsAlpha8() [legacy]
 // - ImFontAtlas::GetTexDataAsRGBA32() [legacy]
+// - ImFontAtlas::Build() [legacy]
 //-----------------------------------------------------------------------------
 // - ImFontAtlas::AddFont()
 // - ImFontAtlas::AddFontDefault()
@@ -2489,6 +2487,7 @@ void ImTextureData::DestroyPixels()
 //-----------------------------------------------------------------------------
 // - ImFontAtlas::AddCustomRectRegular()
 // - ImFontAtlas::AddCustomRectFontGlyph()
+// - ImFontAtlas::GetCustomRectByIndex()
 // - ImFontAtlas::CalcCustomRectUV()
 // - ImFontAtlasGetMouseCursorTexData()
 //-----------------------------------------------------------------------------
@@ -2501,6 +2500,8 @@ void ImTextureData::DestroyPixels()
 // - ImFontAtlasBuildAddFont()
 // - ImFontAtlasBuildSetupFontCreateEllipsisFromDot()
 // - ImFontAtlasBuildSetupFontSpecialGlyphs()
+// - ImFontAtlasBuildDiscardFontGlyph()
+// - ImFontAtlasBuildDiscardFontGlyphs()
 // - ImFontAtlasBuildReloadFont()
 //-----------------------------------------------------------------------------
 // - ImFontAtlasAddDrawListSharedData()
@@ -2513,11 +2514,15 @@ void ImTextureData::DestroyPixels()
 // - ImFontAtlasBuildMakeSpace()
 // - ImFontAtlasBuildRepackTexture()
 // - ImFontAtlasBuildGrowTexture()
+// - ImFontAtlasBuildRepackOrGrowTexture()
+// - ImFontAtlasBuildGetTextureSizeEstimate()
 // - ImFontAtlasBuildCompactTexture()
 // - ImFontAtlasBuildInit()
 // - ImFontAtlasBuildDestroy()
 //-----------------------------------------------------------------------------
 // - ImFontAtlasPackInit()
+// - ImFontAtlasPackAllocRectEntry()
+// - ImFontAtlasPackDiscardRect()
 // - ImFontAtlasPackAddRect()
 // - ImFontAtlasPackGetRect()
 //-----------------------------------------------------------------------------
@@ -2605,6 +2610,21 @@ ImFontAtlas::~ImFontAtlas()
     Clear();
 }
 
+void ImFontAtlas::Clear()
+{
+    ClearInputData();
+    ClearTexData();
+    ClearFonts();
+}
+
+void ImFontAtlas::ClearCache()
+{
+    ImVec2i new_tex_size = ImFontAtlasBuildGetTextureSizeEstimate(this);
+    ImFontAtlasBuildDestroy(this);
+    ImFontAtlasBuildAddTexture(this, new_tex_size.x, new_tex_size.y);
+    ImFontAtlasBuildInit(this);
+}
+
 void ImFontAtlas::ClearInputData()
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas!");
@@ -2630,8 +2650,6 @@ void ImFontAtlas::ClearInputData()
         font->LockDisableLoading = true;
     }
     Sources.clear();
-    //CustomRects.clear();
-    // Important: we leave TexReady untouched
 }
 
 void ImFontAtlas::ClearTexData()
@@ -2640,7 +2658,6 @@ void ImFontAtlas::ClearTexData()
     TexList.clear();
     IM_DELETE(TexData);
     TexData = NULL;
-    // Important: we leave TexReady untouched
 }
 
 void ImFontAtlas::ClearFonts()
@@ -2656,36 +2673,6 @@ void ImFontAtlas::ClearFonts()
         shared_data->Font = NULL;
         shared_data->FontScale = shared_data->FontSize = 0.0f;
     }
-}
-
-void ImFontAtlas::Clear()
-{
-    //IM_DELETE(Builder); // FIXME-NEW-ATLAS: Clarify ClearXXX functions
-    //const ImFontLoader* font_loader = FontLoader;
-    //ImFontAtlasBuildSetupFontLoader(this, NULL);
-    ClearInputData();
-    ClearTexData();
-    ClearFonts();
-    //ImFontAtlasBuildSetupFontLoader(this, font_loader);
-}
-
-// FIXME-NEWATLAS: Too widespread purpose. Clarify each call site in current WIP demo.
-void ImFontAtlas::ClearCache()
-{
-    ImVec2i new_tex_size = ImFontAtlasBuildGetTextureSizeEstimate(this);
-    ImFontAtlasBuildDestroy(this);
-    ImFontAtlasBuildAddTexture(this, new_tex_size.x, new_tex_size.y);
-    ImFontAtlasBuildInit(this);
-}
-
-void ImFontAtlas::BuildGrowTexture()
-{
-    ImFontAtlasBuildGrowTexture(this, TexData->Width, TexData->Height);
-}
-
-void ImFontAtlas::BuildCompactTexture()
-{
-    ImFontAtlasBuildCompactTexture(this);
 }
 
 static void ImFontAtlasBuildUpdateRendererHasTexturesFromContext(ImFontAtlas* atlas)
@@ -2760,15 +2747,6 @@ void ImFontAtlasUpdateNewFrame(ImFontAtlas* atlas)
     }
 }
 
-// Source buffer may be written to (used for in-place mods).
-// Post-process hooks may eventually be added here.
-void ImFontAtlasTextureBlockPostProcess(ImFontAtlasPostProcessData* data)
-{
-    // Multiply operator (legacy)
-    if (data->FontSrc->RasterizerMultiply != 1.0f)
-        ImFontAtlasTextureBlockPostProcessMultiply(data, data->FontSrc->RasterizerMultiply);
-}
-
 void ImFontAtlasTextureBlockConvert(const unsigned char* src_pixels, ImTextureFormat src_fmt, int src_pitch, unsigned char* dst_pixels, ImTextureFormat dst_fmt, int dst_pitch, int w, int h)
 {
     IM_ASSERT(src_pixels != NULL && dst_pixels != NULL);
@@ -2802,6 +2780,15 @@ void ImFontAtlasTextureBlockConvert(const unsigned char* src_pixels, ImTextureFo
     {
         IM_ASSERT(0);
     }
+}
+
+// Source buffer may be written to (used for in-place mods).
+// Post-process hooks may eventually be added here.
+void ImFontAtlasTextureBlockPostProcess(ImFontAtlasPostProcessData* data)
+{
+    // Multiply operator (legacy)
+    if (data->FontSrc->RasterizerMultiply != 1.0f)
+        ImFontAtlasTextureBlockPostProcessMultiply(data, data->FontSrc->RasterizerMultiply);
 }
 
 void ImFontAtlasTextureBlockPostProcessMultiply(ImFontAtlasPostProcessData* data, float multiply_factor)
@@ -3760,10 +3747,9 @@ void ImFontAtlasBuildRepackTexture(ImFontAtlas* atlas, int w, int h)
     new_tex->UseColors = old_tex->UseColors;
     IMGUI_DEBUG_LOG_FONT("[font] Texture #%03d: resize+repack %dx%d => Texture #%03d: %dx%d\n", old_tex->UniqueID, old_tex->Width, old_tex->Height, new_tex->UniqueID, new_tex->Width, new_tex->Height);
 
-    // FIXME-NEWATLAS-TESTS: Test calling RepackTexture with size too small to fits existing rects.
-
     // Repack, lose discarded rectangle, copy pixels
     // FIXME-NEWATLAS-V2: Repacking in batch would be beneficial to packing heuristic.
+    // FIXME-NEWATLAS-TESTS: Test calling RepackTexture with size too small to fits existing rects.
     ImFontAtlasPackInit(atlas);
     ImVector<ImFontAtlasRect> old_rects;
     ImVector<ImFontAtlasRectEntry> old_index = builder->RectsIndex;
@@ -3826,7 +3812,7 @@ void ImFontAtlasBuildGrowTexture(ImFontAtlas* atlas, int old_tex_w, int old_tex_
         old_tex_h = atlas->TexData->Height;
 
     // FIXME-NEWATLAS-V2: What to do when reaching limits exposed by backend?
-    // FIXME-NEWATLAS-V2: does ImFontAtlasFlags_NoPowerOfTwoHeight makes sense now? Allow 'lock' and 'compact' operations?
+    // FIXME-NEWATLAS-V2: Does ImFontAtlasFlags_NoPowerOfTwoHeight makes sense now? Allow 'lock' and 'compact' operations? Could we expose e.g. tex->UsedRect.
     IM_ASSERT(ImIsPowerOfTwo(old_tex_w) && ImIsPowerOfTwo(old_tex_h));
     IM_ASSERT(ImIsPowerOfTwo(atlas->TexMinWidth) && ImIsPowerOfTwo(atlas->TexMaxWidth) && ImIsPowerOfTwo(atlas->TexMinHeight) && ImIsPowerOfTwo(atlas->TexMaxHeight));
 
@@ -4025,7 +4011,7 @@ void ImFontAtlasPackDiscardRect(ImFontAtlas* atlas, ImFontAtlasRectId id)
 }
 
 // Important: Calling this may recreate a new texture and therefore change atlas->TexData
-// FIXME-NEWATLAS-V2: Expose other glyph padding settings for custom alteration (e.g. drop shadows). See #7962
+// FIXME-NEWFONTS: Expose other glyph padding settings for custom alteration (e.g. drop shadows). See #7962
 ImFontAtlasRectId ImFontAtlasPackAddRect(ImFontAtlas* atlas, int w, int h, ImFontAtlasRectEntry* overwrite_entry)
 {
     IM_ASSERT(w > 0 && w <= 0xFFFF);
@@ -4197,9 +4183,10 @@ static bool ImGui_ImplStbTrueType_FontSrcInit(ImFontAtlas* atlas, ImFontConfig* 
     }
     src->FontLoaderData = bd_font_data;
 
-    // FIXME-NEWATLAS-V2: reevaluate sizing metrics
+    // FIXME-NEWFONTS: reevaluate sizing metrics
     int oversample_h, oversample_v;
     ImFontAtlasBuildGetOversampleFactors(src, &oversample_h, &oversample_v);
+
     if (src->SizePixels > 0.0f)
     {
         bd_font_data->ScaleForRasterX = stbtt_ScaleForPixelHeight(&bd_font_data->FontInfo, src->SizePixels * src->RasterizerDensity) * oversample_h;
@@ -4213,7 +4200,7 @@ static bool ImGui_ImplStbTrueType_FontSrcInit(ImFontAtlas* atlas, ImFontConfig* 
         bd_font_data->ScaleForLayout = stbtt_ScaleForMappingEmToPixels(&bd_font_data->FontInfo, -src->SizePixels);
     }
 
-    // FIXME-NEWATLAS-V2: make use of line gap value
+    // FIXME-NEWFONTS: make use of line gap value
     int unscaled_ascent, unscaled_descent, unscaled_line_gap;
     stbtt_GetFontVMetrics(&bd_font_data->FontInfo, &unscaled_ascent, &unscaled_descent, &unscaled_line_gap);
 
