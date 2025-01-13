@@ -43,8 +43,19 @@ Breaking changes:
 
 Other changes:
 
+- Fixed issues with IsItemDeactivated() and IsItemDeactivatedAfterEdit() not
+  emitting a reliable signal when an item is deactivated externally: e.g.
+  via an explicit clear of focus, clear of active id, opening of modal etc.
+  (#5184, #5904, #6766, #8303, #8004)
+  - It used to work when the interruption happened in the frame before the
+    active item as submitted, but not after. It should work in both cases now.
+  - While this is not specific to a certain widgets, typically it would
+    mostly be noticeable on InputText() because it keeps ActiveId for a
+    longer time while allowing other interaction to happen.
 - Error Handling: Fixed bugs recovering from within a table that created
   a child window, and from nested child windows. (#1651)
+- Error Handling: Turned common EndTable() and other TableXXX functions
+  fail cases into a recoverable error. (#1651, #8314)
 - InputText: Fixed a bug where character replacements performed from a callback
   were not applied when pasting from clipbard. (#8229)
 - InputText: Fixed issue when activating a ReadOnly field when the underlying
@@ -79,6 +90,10 @@ Other changes:
   platforms not supporting VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR. (#8222) [@Zer0xFF]
 - Backends: Vulkan: Added a few more ImGui_ImplVulkanH_XXX helper functions
   primarily for the purpose of making our examples simpler.
+- Backends: Vulkan: Added IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE to clarify
+  how many image sampler descriptors are expected to be available in the provided
+  descriptor pool. Current backend needs 1 but it is expected that by end of Q1 2025
+  this number will grow (will staying a very small number). (#6642)
 - Backends: DX11: Expose vertex constant buffer in ImGui_ImplDX11_RenderState.
   Reset projection matrix in ImDrawCallback_ResetRenderState handlers. (#6969, #5834, #7468, #3590)
 - Backends: DX10: Expose ImGui_ImplDX10_RenderState for completeness. (#6969, #5834, #7468, #3590)
@@ -156,11 +171,12 @@ Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v
 Breaking changes:
 
 - Commented out pre-1.87 IO system (equivalent to using IMGUI_DISABLE_OBSOLETE_KEYIO or IMGUI_DISABLE_OBSOLETE_FUNCTIONS before).
-  - io.KeyMap[] and io.KeysDown[] are removed (obsoleted February 2022).
+  - io.KeyMap[] and io.KeysDown[] are removed (obsoleted February 2022). Use IsKeyDown() instead.
   - io.NavInputs[] and ImGuiNavInput are removed (obsoleted July 2022).
   - Pre-1.87 backends are not supported:
     - backends need to call io.AddKeyEvent(), io.AddMouseEvent() instead of writing to io.KeysDown[], io.MouseDown[] fields.
     - backends need to call io.AddKeyAnalogEvent() for gamepad values instead of writing to io.NavInputs[] fields.
+    - you can use IsKeyDown() instead of reading from io.KeysDown[].
   - For more references:
     - read 1.87 and 1.88 part of API BREAKING CHANGES in imgui.cpp or read Changelog for 1.87 and 1.88.
     - read https://github.com/ocornut/imgui/issues/4921
@@ -2656,6 +2672,7 @@ Breaking Changes:
   - For all calls to IO new functions, the Dear ImGui context should be bound/current.
 - Reworked IO keyboard input API: (#4921, #2625, #3724) [@thedmd, @ocornut]
   - Added io.AddKeyEvent() function, obsoleting writing directly to io.KeyMap[], io.KeysDown[] arrays.
+  - You can use IsKeyDown() instead of reading from io.KeysDown[].
   - For keyboard modifiers, you can call io.AddKeyEvent() with ImGuiKey_ModXXX values,
     obsoleting writing directly to io.KeyCtrl, io.KeyShift etc.
   - Added io.SetKeyEventNativeData() function (optional) to pass native and old legacy indices.
