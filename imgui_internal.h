@@ -3971,6 +3971,8 @@ struct ImFontAtlasBuilder
     ImVector<ImFontAtlasRectEntry> RectsIndex;          // ImFontAtlasRectId -> index into Rects[]
     ImVector<unsigned char>     TempBuffer;             // Misc scratch buffer
     int                         RectsIndexFreeListStart;// First unused entry
+    int                         RectsPackedCount;       // Number of packed rectangles.
+    int                         RectsPackedSurface;     // Number of packed pixels. Used when compacting to heuristically find the ideal texture size.
     int                         RectsDiscardedCount;
     int                         RectsDiscardedSurface;
     ImVec2i                     MaxRectSize;            // Largest rectangle to pack (de-facto used as a "minimum texture size")
@@ -3995,6 +3997,7 @@ IMGUI_API void              ImFontAtlasBuildInit(ImFontAtlas* atlas);
 IMGUI_API void              ImFontAtlasBuildDestroy(ImFontAtlas* atlas);
 
 IMGUI_API ImTextureData*    ImFontAtlasBuildAddTexture(ImFontAtlas* atlas, int w, int h);
+IMGUI_API void              ImFontAtlasBuildMakeSpace(ImFontAtlas* atlas);
 IMGUI_API void              ImFontAtlasBuildRepackTexture(ImFontAtlas* atlas, int w, int h);
 IMGUI_API void              ImFontAtlasBuildGrowTexture(ImFontAtlas* atlas, int old_w = -1, int old_h = -1);
 IMGUI_API void              ImFontAtlasBuildCompactTexture(ImFontAtlas* atlas);

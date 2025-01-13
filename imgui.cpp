@@ -21204,7 +21204,7 @@ static void MetricsHelpMarker(const char* desc)
 }
 
 #ifdef IMGUI_ENABLE_FREETYPE
-namespace ImGuiFreeType { IMGUI_API const ImFontLoader* GetBackendIOForFreeType(); }
+namespace ImGuiFreeType { IMGUI_API const ImFontLoader* GetFontLoader(); }
 #endif
 
 // [DEBUG] List fonts in a font atlas and display its texture
@@ -21227,7 +21227,7 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
 #endif
         SameLine();
 #ifdef IMGUI_ENABLE_FREETYPE
-        const ImFontLoader* loader_freetype = ImGuiFreeType::GetBackendIOForFreeType();
+        const ImFontLoader* loader_freetype = ImGuiFreeType::GetFontLoader();
         if (RadioButton("FreeType", loader_current == loader_freetype))
             ImFontAtlasBuildSetupFontLoader(atlas, loader_freetype);
 #else

@@ -2506,6 +2506,7 @@ void ImTextureData::DestroyPixels()
 //-----------------------------------------------------------------------------
 // - ImFontAtlasBuildSetTexture()
 // - ImFontAtlasBuildAddTexture()
+// - ImFontAtlasBuildMakeSpace()
 // - ImFontAtlasBuildRepackTexture()
 // - ImFontAtlasBuildGrowTexture()
 // - ImFontAtlasBuildCompactTexture()
@@ -3524,7 +3525,7 @@ bool ImFontAtlasBuildAddFont(ImFontAtlas* atlas, ImFontConfig* src)
 
 // Rasterize our own ellipsis character from a dot.
 // This may seem overly complicated right now but the point is to exercise and improve a technique which should be increasingly used.
-// FIXME-NEWATLAS: This borrows too much from FontBackend_FontAddGlyph() and suggest that we should add further helpers.
+// FIXME-NEWATLAS: This borrows too much from FontLoader's FontAddGlyph() and suggest that we should add further helpers.
 static void ImFontAtlasBuildSetupFontCreateEllipsisFromDot(ImFontAtlas* atlas, ImFontConfig* src, const ImFontGlyph* dot_glyph)
 {
     ImFont* font = src->DstFont;
@@ -3826,7 +3827,7 @@ void ImFontAtlasBuildGrowTexture(ImFontAtlas* atlas, int old_tex_w, int old_tex_
     IM_ASSERT(ImIsPowerOfTwo(atlas->TexMinWidth) && ImIsPowerOfTwo(atlas->TexMaxWidth) && ImIsPowerOfTwo(atlas->TexMinHeight) && ImIsPowerOfTwo(atlas->TexMaxHeight));
 
     // Grow texture so it follows roughly a square.
-    // FIXME-NEWATLAS-V1: Take account of RectsDiscardedSurface: may not need to grow.
+    // Caller should be taking account of RectsDiscardedSurface and may not need to grow.
     int new_tex_w = (old_tex_h < old_tex_w) ? old_tex_w : old_tex_w * 2;
     int new_tex_h = (old_tex_h < old_tex_w) ? old_tex_h * 2 : old_tex_h;
 
@@ -3842,6 +3843,16 @@ void ImFontAtlasBuildGrowTexture(ImFontAtlas* atlas, int old_tex_w, int old_tex_
     ImFontAtlasBuildRepackTexture(atlas, new_tex_w, new_tex_h);
 }
 
+void ImFontAtlasBuildMakeSpace(ImFontAtlas* atlas)
+{
+    // Currently using a heuristic for repack without growing.
+    ImFontAtlasBuilder* builder = atlas->Builder;
+    if (builder->RectsDiscardedSurface < builder->RectsPackedSurface * 0.20f)
+        ImFontAtlasBuildGrowTexture(atlas);
+    else
+        ImFontAtlasBuildRepackTexture(atlas, atlas->TexData->Width, atlas->TexData->Height);
+}
+
 ImVec2i ImFontAtlasBuildGetTextureSizeEstimate(ImFontAtlas* atlas)
 {
     int min_w = ImUpperPowerOfTwo(atlas->TexMinWidth);
@@ -3852,7 +3863,7 @@ ImVec2i ImFontAtlasBuildGetTextureSizeEstimate(ImFontAtlas* atlas)
     ImFontAtlasBuilder* builder = atlas->Builder;
     min_w = ImMax(ImUpperPowerOfTwo(builder->MaxRectSize.x), min_w);
     min_h = ImMax(ImUpperPowerOfTwo(builder->MaxRectSize.y), min_h);
-    const int surface_approx = atlas->_PackedSurface - builder->RectsDiscardedSurface; // Expected surface after repack
+    const int surface_approx = builder->RectsPackedSurface - builder->RectsDiscardedSurface; // Expected surface after repack
     const int surface_sqrt = (int)sqrtf((float)surface_approx);
 
     int new_tex_w;
@@ -3896,10 +3907,10 @@ void ImFontAtlasBuildInit(ImFontAtlas* atlas)
     ImFontAtlasBuilder* builder = atlas->Builder;
 
     // Select Backend
-    // - Note that we do not reassign to atlas->FontBackendIO, since it is likely to point to static data which
+    // - Note that we do not reassign to atlas->FontLoader, since it is likely to point to static data which
     //   may mess with some hot-reloading schemes. If you need to assign to this (for dynamic selection) AND are
-    //   using a hot-reloading scheme that messes up static data, store your own instance of ImFontBackendIO somewhere
-    //   and point to it instead of pointing directly to return value of the GetBackendIOXXX functions.
+    //   using a hot-reloading scheme that messes up static data, store your own instance of FontLoader somewhere
+    //   and point to it instead of pointing directly to return value of the GetFontLoaderXXX functions.
     if (atlas->FontLoader == NULL)
     {
 #ifdef IMGUI_ENABLE_FREETYPE
@@ -3961,7 +3972,7 @@ void ImFontAtlasPackInit(ImFontAtlas * atlas)
     builder->PackNodes.resize(pack_node_count);
     IM_STATIC_ASSERT(sizeof(stbrp_context) <= sizeof(stbrp_context_opaque));
     stbrp_init_target((stbrp_context*)(void*)&builder->PackContext, tex->Width, tex->Height, builder->PackNodes.Data, builder->PackNodes.Size);
-    atlas->_PackedSurface = atlas->_PackedRects = 0;
+    builder->RectsPackedSurface = builder->RectsPackedCount = 0;
     builder->MaxRectSize = ImVec2i(0, 0);
     builder->MaxRectBounds = ImVec2i(0, 0);
 }
@@ -4044,14 +4055,14 @@ ImFontAtlasRectId ImFontAtlasPackAddRect(ImFontAtlas* atlas, int w, int h, ImFon
             return -1;
         }
 
-        // Resize atlas! (this should be a rare event)
-        ImFontAtlasBuildGrowTexture(atlas);
+        // Resize or repack atlas! (this should be a rare event)
+        ImFontAtlasBuildMakeSpace(atlas);
     }
 
     builder->MaxRectBounds.x = ImMax(builder->MaxRectBounds.x, r.x + r.w + pack_padding);
     builder->MaxRectBounds.y = ImMax(builder->MaxRectBounds.y, r.y + r.h + pack_padding);
-    atlas->_PackedSurface += (w + pack_padding) * (h + pack_padding);
-    atlas->_PackedRects++;
+    builder->RectsPackedCount++;
+    builder->RectsPackedSurface += (w + pack_padding) * (h + pack_padding);
 
     builder->Rects.push_back(r);
     if (overwrite_entry != NULL)
