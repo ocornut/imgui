@@ -3436,6 +3436,7 @@ struct ImDrawData
 //-----------------------------------------------------------------------------
 
 // We intentionally support a limited amount of texture formats to limit burden on CPU-side code and extension.
+// Most standard backends only support RGBA32 but we provide a single channel option for low-resource/embedded systems.
 enum ImTextureFormat
 {
     ImTextureFormat_RGBA32,         // 4 components per pixel, each is unsigned 8-bit. Total size = TexWidth * TexHeight * 4
@@ -3620,16 +3621,14 @@ struct ImFontAtlas
     IMGUI_API ImFont*           AddFontFromMemoryCompressedBase85TTF(const char* compressed_font_data_base85, float size_pixels, const ImFontConfig* font_cfg = NULL, const ImWchar* glyph_ranges = NULL);              // 'compressed_font_data_base85' still owned by caller. Compress with binary_to_compressed_c.cpp with -base85 parameter.
     IMGUI_API void              RemoveFont(ImFont* font);
 
-    // FIXME-NEWATLAS: Clarify meaning/purpose
     IMGUI_API void              Clear();                    // Clear everything (input fonts, output glyphs/textures)
     IMGUI_API void              ClearCache();               // Clear cached glyphs and textures.
+
     // As we are transitioning toward a new font system, we expect to obsolete those soon:
     IMGUI_API void              ClearInputData();           // [OBSOLETE] Clear input data (all ImFontConfig structures including sizes, TTF data, glyph ranges, etc.) = all the data used to build the texture and fonts.
     IMGUI_API void              ClearFonts();               // [OBSOLETE] Clear input+output font data (same as ClearInputData() + glyphs storage, UV coordinates).
     IMGUI_API void              ClearTexData();             // [OBSOLETE] Clear output texture data (CPU side). Saves RAM once the texture has been copied to graphics memory.
 
-    IMGUI_API void              BuildGrowTexture();
-    IMGUI_API void              BuildCompactTexture();
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     // Build atlas, retrieve pixel data.
     // User is in charge of copying the pixels into graphics memory (e.g. create a texture with your engine). Then store your texture handle with SetTexID().
@@ -3641,8 +3640,8 @@ struct ImFontAtlas
     IMGUI_API void              GetTexDataAsRGBA32(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel = NULL); // 4 bytes-per-pixel
     void                        SetTexID(ImTextureID id)    { TexRef._TexData = NULL; TexRef._TexID = id; } // Called by legacy backends.
     void                        SetTexID(ImTextureRef id)   { TexRef = id; }                                // Called by legacy backends.
+    bool                        IsBuilt() const             { return Fonts.Size > 0 && TexIsBuilt; }        // Bit ambiguous: used to detect when user didn't build texture but effectively we should check TexID != 0 except that would be backend dependent...
 #endif
-    bool                        IsBuilt() const { return Fonts.Size > 0 && TexIsBuilt; } // Bit ambiguous: used to detect when user didn't build texture but effectively we should check TexID != 0 except that would be backend dependent...
 
     //-------------------------------------------
     // Glyph Ranges
@@ -3786,7 +3785,7 @@ struct ImFont
     IMGUI_API void              BuildClearGlyphs();
 };
 
-// FIXME-NEWATLAS: Added indirection to avoid patching ImDrawCmd after texture updates.
+// Added indirection to avoid patching ImDrawCmd after texture updates.
 inline ImTextureID ImDrawCmd::GetTexID() const
 {
     ImTextureID tex_id = TexRef._TexData ? TexRef._TexData->TexID : TexRef._TexID;

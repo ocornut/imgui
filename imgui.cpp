@@ -5337,7 +5337,7 @@ void ImGui::UpdateHoveredWindowAndCaptureFlags(const ImVec2& mouse_pos)
 
 static void ImGui::UpdateTexturesNewFrame()
 {
-    // FIXME-NEWATLAS: How to reach/target all atlas?
+    // FIXME-NEWATLAS-V2: If we aim to support multiple atlases used by same context: how to reach/target all atlases?
     ImGuiContext& g = *GImGui;
     ImFontAtlas* atlas = g.IO.Fonts;
     if (g.FontAtlasOwnedByContext)
@@ -8501,7 +8501,7 @@ void ImGui::SetCurrentFont(ImFont* font)
 //   - The right-ish solution may be to remove _SetTextureID() and make AddText/RenderText lazily call PushTextureID()/PopTextureID()
 //     the same way AddImage() does, but then all other primitives would also need to? I don't think we should tackle this problem
 //     because we have a concrete need and a test bed for multiple atlas textures.
-// FIXME-NEWATLAS: perhaps we can now leverage ImFontAtlasUpdateDrawListsTextures() ?
+// FIXME-NEWATLAS-V2: perhaps we can now leverage ImFontAtlasUpdateDrawListsTextures() ?
 void ImGui::PushFont(ImFont* font)
 {
     ImGuiContext& g = *GImGui;
