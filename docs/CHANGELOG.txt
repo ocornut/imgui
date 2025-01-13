@@ -56,6 +56,7 @@ Other changes:
   a child window, and from nested child windows. (#1651)
 - Error Handling: Turned common EndTable() and other TableXXX functions
   fail cases into a recoverable error. (#1651, #8314)
+- Error Handling: Exposed some options in Demo->Tools->Debug Options. (#1651)
 - InputText: Fixed a bug where character replacements performed from a callback
   were not applied when pasting from clipbard. (#8229)
 - InputText: Fixed issue when activating a ReadOnly field when the underlying
@@ -76,6 +77,8 @@ Other changes:
   windows with the ImGuiWindowFlags_NoNavInputs flag. (#8231)
 - Debug Tools: Debug Log: hovering 0xXXXXXXXX values in log is allowed even
   if a popup is blocking mouse access to the debug log window. (#5855)
+- Debug Tools: Item Picker: Always available regardless of value of
+  io.ConfigDebugIsDebuggerPresent. (#2673)
 - Fonts: Fixed miscalculation of Ellipsis ("...") character width when automatically
   created from a single comma character, affecting some fonts/settings (not all).
 - Demo: Added label edition to Property Editor demo + fix an ID issue. (#8266) [@moritz-h]

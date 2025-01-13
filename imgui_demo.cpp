@@ -743,19 +743,27 @@ static void ShowDemoWindowMenuBar(ImGuiDemoWindowData* demo_data)
 #else
             const bool has_debug_tools = false;
 #endif
+            if (ImGui::BeginMenu("Debug Options"))
+            {
+                ImGui::BeginDisabled(!has_debug_tools);
+                ImGui::Checkbox("Highlight ID Conflicts", &io.ConfigDebugHighlightIdConflicts);
+                ImGui::EndDisabled();
+                ImGui::Checkbox("Assert on error recovery", &io.ConfigErrorRecoveryEnableAssert);
+                ImGui::TextDisabled("(see Demo->Configuration for details & more)");
+                ImGui::EndMenu();
+            }
+
             ImGui::MenuItem("Metrics/Debugger", NULL, &demo_data->ShowMetrics, has_debug_tools);
             ImGui::MenuItem("Debug Log", NULL, &demo_data->ShowDebugLog, has_debug_tools);
             ImGui::MenuItem("ID Stack Tool", NULL, &demo_data->ShowIDStackTool, has_debug_tools);
             bool is_debugger_present = io.ConfigDebugIsDebuggerPresent;
-            if (ImGui::MenuItem("Item Picker", NULL, false, has_debug_tools && is_debugger_present))
+            if (ImGui::MenuItem("Item Picker", NULL, false, has_debug_tools))// && is_debugger_present))
                 ImGui::DebugStartItemPicker();
             if (!is_debugger_present)
-                ImGui::SetItemTooltip("Requires io.ConfigDebugIsDebuggerPresent=true to be set.\n\nWe otherwise disable the menu option to avoid casual users crashing the application.\n\nYou can however always access the Item Picker in Metrics->Tools.");
+                ImGui::SetItemTooltip("Requires io.ConfigDebugIsDebuggerPresent=true to be set.\n\nWe otherwise disable some extra features to avoid casual users crashing the application.");
             ImGui::MenuItem("Style Editor", NULL, &demo_data->ShowStyleEditor);
             ImGui::MenuItem("About Dear ImGui", NULL, &demo_data->ShowAbout);
 
-            ImGui::SeparatorText("Debug Options");
-            ImGui::MenuItem("Highlight ID Conflicts", NULL, &io.ConfigDebugHighlightIdConflicts, has_debug_tools);
             ImGui::EndMenu();
         }
         ImGui::EndMenuBar();
