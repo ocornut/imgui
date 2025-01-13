@@ -3678,7 +3678,7 @@ struct ImFontAtlas
     // - Read docs/FONTS.md for more details about using colorful icons.
     // - Note: this API may be redesigned later in order to support multi-monitor varying DPI settings.
     IMGUI_API int               AddCustomRectRegular(int width, int height);
-    IMGUI_API int               AddCustomRectFontGlyph(ImFont* font, ImWchar id, int width, int height, float advance_x, const ImVec2& offset = ImVec2(0, 0));
+    IMGUI_API int               AddCustomRectFontGlyph(ImFont* font, ImWchar codepoint, int width, int height, float advance_x, const ImVec2& offset = ImVec2(0, 0));
     IMGUI_API ImFontAtlasCustomRect* GetCustomRectByIndex(int index);
 
     // [Internal]
