@@ -153,11 +153,12 @@ Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v
 Breaking changes:
 
 - Commented out pre-1.87 IO system (equivalent to using IMGUI_DISABLE_OBSOLETE_KEYIO or IMGUI_DISABLE_OBSOLETE_FUNCTIONS before).
-  - io.KeyMap[] and io.KeysDown[] are removed (obsoleted February 2022).
+  - io.KeyMap[] and io.KeysDown[] are removed (obsoleted February 2022). Use IsKeyDown() instead.
   - io.NavInputs[] and ImGuiNavInput are removed (obsoleted July 2022).
   - Pre-1.87 backends are not supported:
     - backends need to call io.AddKeyEvent(), io.AddMouseEvent() instead of writing to io.KeysDown[], io.MouseDown[] fields.
     - backends need to call io.AddKeyAnalogEvent() for gamepad values instead of writing to io.NavInputs[] fields.
+    - you can use IsKeyDown() instead of reading from io.KeysDown[].
   - For more references:
     - read 1.87 and 1.88 part of API BREAKING CHANGES in imgui.cpp or read Changelog for 1.87 and 1.88.
     - read https://github.com/ocornut/imgui/issues/4921
@@ -2390,6 +2391,7 @@ Breaking Changes:
   - For all calls to IO new functions, the Dear ImGui context should be bound/current.
 - Reworked IO keyboard input API: (#4921, #2625, #3724) [@thedmd, @ocornut]
   - Added io.AddKeyEvent() function, obsoleting writing directly to io.KeyMap[], io.KeysDown[] arrays.
+  - You can use IsKeyDown() instead of reading from io.KeysDown[].
   - For keyboard modifiers, you can call io.AddKeyEvent() with ImGuiKey_ModXXX values,
     obsoleting writing directly to io.KeyCtrl, io.KeyShift etc.
   - Added io.SetKeyEventNativeData() function (optional) to pass native and old legacy indices.
