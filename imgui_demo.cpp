@@ -743,6 +743,7 @@ static void ShowDemoWindowMenuBar(ImGuiDemoWindowData* demo_data)
 #else
             const bool has_debug_tools = false;
 #endif
+            ImGui::MenuItem("Metrics/Debugger", NULL, &demo_data->ShowMetrics, has_debug_tools);
             if (ImGui::BeginMenu("Debug Options"))
             {
                 ImGui::BeginDisabled(!has_debug_tools);
@@ -752,8 +753,6 @@ static void ShowDemoWindowMenuBar(ImGuiDemoWindowData* demo_data)
                 ImGui::TextDisabled("(see Demo->Configuration for details & more)");
                 ImGui::EndMenu();
             }
-
-            ImGui::MenuItem("Metrics/Debugger", NULL, &demo_data->ShowMetrics, has_debug_tools);
             ImGui::MenuItem("Debug Log", NULL, &demo_data->ShowDebugLog, has_debug_tools);
             ImGui::MenuItem("ID Stack Tool", NULL, &demo_data->ShowIDStackTool, has_debug_tools);
             bool is_debugger_present = io.ConfigDebugIsDebuggerPresent;
