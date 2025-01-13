@@ -3121,68 +3121,51 @@ void ImFontAtlas::RemoveFont(ImFont* font)
     ImFontAtlasBuildNotifySetFont(this, font, new_current_font);
 }
 
-// FIXME-NEWATLAS-V1: Feature is broken for now.
-/*
-    // Register custom rectangle glyphs
-    for (int i = 0; i < atlas->CustomRects.Size; i++)
-    {
-        const ImFontAtlasCustomRect* r = &atlas->CustomRects[i];
-        if (r->Font == NULL || r->GlyphID == 0)
-            continue;
-
-        // Will ignore ImFontConfig settings: GlyphMinAdvanceX, GlyphMinAdvanceY, PixelSnapH
-        IM_ASSERT(r->Font->ContainerAtlas == atlas);
-        ImVec2 uv0, uv1;
-        atlas->CalcCustomRectUV(r, &uv0, &uv1);
-        r->Font->AddGlyph(NULL, (ImWchar)r->GlyphID, r->GlyphOffset.x, r->GlyphOffset.y, r->GlyphOffset.x + r->Width, r->GlyphOffset.y + r->Height, uv0.x, uv0.y, uv1.x, uv1.y, r->GlyphAdvanceX);
-        if (r->GlyphColored)
-            r->Font->Glyphs.back().Colored = 1;
-    }
-*/
-
 int ImFontAtlas::AddCustomRectRegular(int width, int height)
 {
     IM_ASSERT(width > 0 && width <= 0xFFFF);
     IM_ASSERT(height > 0 && height <= 0xFFFF);
 
-    if (RendererHasTextures)
-    {
-        ImFontAtlasRectId r_id = ImFontAtlasPackAddRect(this, width, height);
-        ImFontAtlasRect* r = ImFontAtlasPackGetRect(this, r_id);
-        ImFontAtlasTextureBlockQueueUpload(this, TexData, r->x, r->y, r->w, r->h);
-        return r_id;
-    }
-    else
-    {
-        // FIXME-NEWATLAS-V1: Unfinished
-        ImFontAtlasCustomRect r;
-        r.Width = (unsigned short)width;
-        r.Height = (unsigned short)height;
-        //CustomRects.push_back(r);
-        //return CustomRects.Size - 1; // Return index
+    ImFontAtlasRectId r_id = ImFontAtlasPackAddRect(this, width, height);
+    if (r_id < 0)
         return -1;
-    }
+    ImFontAtlasRect* r = ImFontAtlasPackGetRect(this, r_id);
+    if (RendererHasTextures)
+        ImFontAtlasTextureBlockQueueUpload(this, TexData, r->x, r->y, r->w, r->h);
+    return r_id;
 }
 
-int ImFontAtlas::AddCustomRectFontGlyph(ImFont* font, ImWchar id, int width, int height, float advance_x, const ImVec2& offset)
+int ImFontAtlas::AddCustomRectFontGlyph(ImFont* font, ImWchar codepoint, int width, int height, float advance_x, const ImVec2& offset)
 {
 #ifdef IMGUI_USE_WCHAR32
-    IM_ASSERT(id <= IM_UNICODE_CODEPOINT_MAX);
+    IM_ASSERT(codepoint <= IM_UNICODE_CODEPOINT_MAX);
 #endif
     IM_ASSERT(font != NULL);
     IM_ASSERT(width > 0 && width <= 0xFFFF);
     IM_ASSERT(height > 0 && height <= 0xFFFF);
-    ImFontAtlasCustomRect r;
-    r.Width = (unsigned short)width;
-    r.Height = (unsigned short)height;
-    r.GlyphID = id;
-    r.GlyphColored = 0; // Set to 1 manually to mark glyph as colored // FIXME: No official API for that (#8133)
-    r.GlyphAdvanceX = advance_x;
-    r.GlyphOffset = offset;
-    r.Font = font;
-    //CustomRects.push_back(r);
-    //return CustomRects.Size - 1; // Return index
-    return -1;
+
+    ImFontAtlasRectId r_id = ImFontAtlasPackAddRect(this, width, height);
+    if (r_id < 0)
+        return -1;
+    ImFontAtlasRect* r = ImFontAtlasPackGetRect(this, r_id);
+    if (RendererHasTextures)
+        ImFontAtlasTextureBlockQueueUpload(this, TexData, r->x, r->y, r->w, r->h);
+
+    if (font->IsGlyphLoaded(codepoint))
+        ImFontAtlasBuildDiscardFontGlyph(this, font, (ImFontGlyph*)(void*)font->FindGlyph(codepoint));
+
+    ImFontGlyph glyph;
+    glyph.Codepoint = codepoint;
+    glyph.AdvanceX = advance_x;
+    glyph.X0 = offset.x;
+    glyph.Y0 = offset.y;
+    glyph.X1 = offset.x + r->w;
+    glyph.Y1 = offset.y + r->h;
+    glyph.Visible = true;
+    glyph.Colored = true; // FIXME: Arbitrary
+    glyph.PackId = r_id;
+    ImFontAtlasBuildAddFontGlyph(this, font, &font->Sources[0], &glyph);
+    return r_id;
 }
 
 ImFontAtlasCustomRect* ImFontAtlas::GetCustomRectByIndex(int idx)
@@ -3307,41 +3290,6 @@ void ImFontAtlasBuildUpdatePointers(ImFontAtlas* atlas)
         font->SourcesCount++;
     }
 }
-
-// FIXME-NEWATLAS: Unused
-#if 0
-void ImFontAtlasBuildPackCustomRects(ImFontAtlas* atlas, void* stbrp_context_opaque)
-{
-    ImTextureData* tex = atlas->TexData;
-    stbrp_context* pack_context = (stbrp_context*)stbrp_context_opaque;
-    IM_ASSERT(pack_context != NULL);
-
-    ImVector<ImFontAtlasCustomRect>& user_rects = atlas->CustomRects;
-    IM_ASSERT(user_rects.Size >= 1); // We expect at least the default custom rects to be registered, else something went wrong.
-#ifdef __GNUC__
-    if (user_rects.Size < 1) { __builtin_unreachable(); } // Workaround for GCC bug if IM_ASSERT() is defined to conditionally throw (see #5343)
-#endif
-
-    const int pack_padding = atlas->TexGlyphPadding;
-    ImVector<stbrp_rect> pack_rects;
-    pack_rects.resize(user_rects.Size);
-    memset(pack_rects.Data, 0, (size_t)pack_rects.size_in_bytes());
-    for (int i = 0; i < user_rects.Size; i++)
-    {
-        pack_rects[i].w = user_rects[i].Width + pack_padding;
-        pack_rects[i].h = user_rects[i].Height + pack_padding;
-    }
-    stbrp_pack_rects(pack_context, &pack_rects[0], pack_rects.Size);
-    for (int i = 0; i < pack_rects.Size; i++)
-        if (pack_rects[i].was_packed)
-        {
-            user_rects[i].X = (unsigned short)pack_rects[i].x;
-            user_rects[i].Y = (unsigned short)pack_rects[i].y;
-            IM_ASSERT(pack_rects[i].w == user_rects[i].Width && pack_rects[i].h == user_rects[i].Height);
-            tex->Height = ImMax(tex->Height, pack_rects[i].y + pack_rects[i].h);
-        }
-}
-#endif
 
 // Render a white-colored bitmap encoded in a string
 void ImFontAtlasBuildRenderBitmapFromString(ImFontAtlas* atlas, int x, int y, int w, int h, const char* in_str, char in_marker_char)
@@ -3599,6 +3547,20 @@ void ImFontAtlasBuildSetupFontSpecialGlyphs(ImFontAtlas* atlas, ImFontConfig* sr
             font->EllipsisChar = (ImWchar)' ';
     }
     font->LockSingleSrcConfigIdx = -1;
+}
+
+void ImFontAtlasBuildDiscardFontGlyph(ImFontAtlas* atlas, ImFont* font, ImFontGlyph* glyph)
+{
+    if (glyph->PackId >= 0)
+    {
+        ImFontAtlasPackDiscardRect(atlas, glyph->PackId);
+        glyph->PackId = -1;
+    }
+    ImWchar c = glyph->Codepoint;
+    IM_ASSERT(font->FallbackChar != c && font->EllipsisChar != c); // Unsupported for simplicity
+    IM_ASSERT(glyph >= font->Glyphs.Data && glyph < font->Glyphs.Data + font->Glyphs.Size);
+    font->IndexLookup[c] = (ImWchar)IM_FONTGLYPH_INDEX_UNUSED;
+    font->IndexAdvanceX[c] = font->FallbackAdvanceX;
 }
 
 void ImFontAtlasBuildDiscardFontGlyphs(ImFontAtlas* atlas, ImFont* font)
@@ -3912,7 +3874,7 @@ void ImFontAtlasBuildInit(ImFontAtlas* atlas)
     if (builder_is_new)
         builder = atlas->Builder = IM_NEW(ImFontAtlasBuilder)();
 
-    ImFontAtlasBuildUpdateRendererHasTexUpdatesFromContext(atlas);
+    ImFontAtlasBuildUpdateRendererHasTexturesFromContext(atlas);
 
     ImFontAtlasPackInit(atlas);
 
