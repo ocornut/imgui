@@ -62,6 +62,8 @@ Other changes:
   value is being modified. (#8242)
 - InputText: Added sanity check to detect some cases of passing a non
   zero-terminated input buffer.
+- InputText: Fixed not calling CallbackEdit on revert/clear with Escape key,
+  although IsItemEdited() was behaving correctly. (#8273)
 - Tables: Fixed TableAngledHeadersRow() creating an infinite horizontal
   scrolling region when the table is hosted in a viewport with negative
   coordinates.
