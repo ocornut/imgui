@@ -41,6 +41,9 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+- TreeNode: renamed ImGuiTreeNodeFlags_SpanTextWidth to ImGuiTreeNodeFlags_SpanLabelWidth
+  for consistency with other names. Kept redirection enum (will obsolete). (#6937)
+
 Other changes:
 
 - Fixed issues with IsItemDeactivated() and IsItemDeactivatedAfterEdit() not
