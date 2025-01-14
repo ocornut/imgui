@@ -426,6 +426,8 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
             if (ImGui_ImplSDL2_GetViewportForWindowID(event->key.windowID) == nullptr)
                 return false;
             ImGui_ImplSDL2_UpdateKeyModifiers((SDL_Keymod)event->key.keysym.mod);
+            //IMGUI_DEBUG_LOG("SDL_KEY_%s : key=%d ('%s'), scancode=%d ('%s'), mod=%X\n",
+            //    (event->type == SDL_KEYDOWN) ? "DOWN" : "UP  ", event->key.keysym.sym, SDL_GetKeyName(event->key.keysym.sym), event->key.keysym.scancode, SDL_GetScancodeName(event->key.keysym.scancode), event->key.keysym.mod);
             ImGuiKey key = ImGui_ImplSDL2_KeyEventToImGuiKey(event->key.keysym.sym, event->key.keysym.scancode);
             io.AddKeyEvent(key, (event->type == SDL_KEYDOWN));
             io.SetKeyEventNativeData(key, event->key.keysym.sym, event->key.keysym.scancode, event->key.keysym.scancode); // To support legacy indexing (<1.87 user code). Legacy backend uses SDLK_*** as indices to IsKeyXXX() functions.

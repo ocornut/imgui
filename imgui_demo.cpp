@@ -1,4 +1,4 @@
-// dear imgui, v1.91.7 WIP
+// dear imgui, v1.91.7
 // (demo code)
 
 // Help:
@@ -804,18 +804,25 @@ static void ShowDemoWindowMenuBar(ImGuiDemoWindowData* demo_data)
             const bool has_debug_tools = false;
 #endif
             ImGui::MenuItem("Metrics/Debugger", NULL, &demo_data->ShowMetrics, has_debug_tools);
+            if (ImGui::BeginMenu("Debug Options"))
+            {
+                ImGui::BeginDisabled(!has_debug_tools);
+                ImGui::Checkbox("Highlight ID Conflicts", &io.ConfigDebugHighlightIdConflicts);
+                ImGui::EndDisabled();
+                ImGui::Checkbox("Assert on error recovery", &io.ConfigErrorRecoveryEnableAssert);
+                ImGui::TextDisabled("(see Demo->Configuration for details & more)");
+                ImGui::EndMenu();
+            }
             ImGui::MenuItem("Debug Log", NULL, &demo_data->ShowDebugLog, has_debug_tools);
             ImGui::MenuItem("ID Stack Tool", NULL, &demo_data->ShowIDStackTool, has_debug_tools);
             bool is_debugger_present = io.ConfigDebugIsDebuggerPresent;
-            if (ImGui::MenuItem("Item Picker", NULL, false, has_debug_tools && is_debugger_present))
+            if (ImGui::MenuItem("Item Picker", NULL, false, has_debug_tools))// && is_debugger_present))
                 ImGui::DebugStartItemPicker();
             if (!is_debugger_present)
-                ImGui::SetItemTooltip("Requires io.ConfigDebugIsDebuggerPresent=true to be set.\n\nWe otherwise disable the menu option to avoid casual users crashing the application.\n\nYou can however always access the Item Picker in Metrics->Tools.");
+                ImGui::SetItemTooltip("Requires io.ConfigDebugIsDebuggerPresent=true to be set.\n\nWe otherwise disable some extra features to avoid casual users crashing the application.");
             ImGui::MenuItem("Style Editor", NULL, &demo_data->ShowStyleEditor);
             ImGui::MenuItem("About Dear ImGui", NULL, &demo_data->ShowAbout);
 
-            ImGui::SeparatorText("Debug Options");
-            ImGui::MenuItem("Highlight ID Conflicts", NULL, &io.ConfigDebugHighlightIdConflicts, has_debug_tools);
             ImGui::EndMenu();
         }
         ImGui::EndMenuBar();
@@ -1175,7 +1182,7 @@ static void ShowDemoWindowWidgets(ImGuiDemoWindowData* demo_data)
             ImGui::CheckboxFlags("ImGuiTreeNodeFlags_OpenOnDoubleClick", &base_flags, ImGuiTreeNodeFlags_OpenOnDoubleClick);
             ImGui::CheckboxFlags("ImGuiTreeNodeFlags_SpanAvailWidth",    &base_flags, ImGuiTreeNodeFlags_SpanAvailWidth); ImGui::SameLine(); HelpMarker("Extend hit area to all available width instead of allowing more items to be laid out after the node.");
             ImGui::CheckboxFlags("ImGuiTreeNodeFlags_SpanFullWidth",     &base_flags, ImGuiTreeNodeFlags_SpanFullWidth);
-            ImGui::CheckboxFlags("ImGuiTreeNodeFlags_SpanTextWidth",     &base_flags, ImGuiTreeNodeFlags_SpanTextWidth); ImGui::SameLine(); HelpMarker("Reduce hit area to the text label and a bit of margin.");
+            ImGui::CheckboxFlags("ImGuiTreeNodeFlags_SpanLabelWidth",    &base_flags, ImGuiTreeNodeFlags_SpanLabelWidth); ImGui::SameLine(); HelpMarker("Reduce hit area to the text label and a bit of margin.");
             ImGui::CheckboxFlags("ImGuiTreeNodeFlags_SpanAllColumns",    &base_flags, ImGuiTreeNodeFlags_SpanAllColumns); ImGui::SameLine(); HelpMarker("For use in Tables only.");
             ImGui::CheckboxFlags("ImGuiTreeNodeFlags_AllowOverlap",      &base_flags, ImGuiTreeNodeFlags_AllowOverlap);
             ImGui::CheckboxFlags("ImGuiTreeNodeFlags_Framed",            &base_flags, ImGuiTreeNodeFlags_Framed); ImGui::SameLine(); HelpMarker("Draw frame with background (e.g. for CollapsingHeader)");
@@ -1212,9 +1219,9 @@ static void ShowDemoWindowWidgets(ImGuiDemoWindowData* demo_data)
                         ImGui::Text("This is a drag and drop source");
                         ImGui::EndDragDropSource();
                     }
-                    if (i == 2 && (base_flags & ImGuiTreeNodeFlags_SpanTextWidth))
+                    if (i == 2 && (base_flags & ImGuiTreeNodeFlags_SpanLabelWidth))
                     {
-                        // Item 2 has an additional inline button to help demonstrate SpanTextWidth.
+                        // Item 2 has an additional inline button to help demonstrate SpanLabelWidth.
                         ImGui::SameLine();
                         if (ImGui::SmallButton("button")) {}
                     }
@@ -6425,15 +6432,17 @@ static void ShowDemoWindowTables()
     IMGUI_DEMO_MARKER("Tables/Tree view");
     if (ImGui::TreeNode("Tree view"))
     {
-        static ImGuiTableFlags flags = ImGuiTableFlags_BordersV | ImGuiTableFlags_BordersOuterH | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_NoBordersInBody;
+        static ImGuiTableFlags table_flags = ImGuiTableFlags_BordersV | ImGuiTableFlags_BordersOuterH | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_NoBordersInBody;
 
-        static ImGuiTreeNodeFlags tree_node_flags = ImGuiTreeNodeFlags_SpanAllColumns;
-        ImGui::CheckboxFlags("ImGuiTreeNodeFlags_SpanFullWidth",  &tree_node_flags, ImGuiTreeNodeFlags_SpanFullWidth);
-        ImGui::CheckboxFlags("ImGuiTreeNodeFlags_SpanTextWidth",  &tree_node_flags, ImGuiTreeNodeFlags_SpanTextWidth);
-        ImGui::CheckboxFlags("ImGuiTreeNodeFlags_SpanAllColumns", &tree_node_flags, ImGuiTreeNodeFlags_SpanAllColumns);
+        static ImGuiTreeNodeFlags tree_node_flags_base = ImGuiTreeNodeFlags_SpanAllColumns;
+        ImGui::CheckboxFlags("ImGuiTreeNodeFlags_SpanFullWidth",  &tree_node_flags_base, ImGuiTreeNodeFlags_SpanFullWidth);
+        ImGui::CheckboxFlags("ImGuiTreeNodeFlags_SpanLabelWidth",  &tree_node_flags_base, ImGuiTreeNodeFlags_SpanLabelWidth);
+        ImGui::CheckboxFlags("ImGuiTreeNodeFlags_SpanAllColumns", &tree_node_flags_base, ImGuiTreeNodeFlags_SpanAllColumns);
+        ImGui::CheckboxFlags("ImGuiTreeNodeFlags_LabelSpanAllColumns", &tree_node_flags_base, ImGuiTreeNodeFlags_LabelSpanAllColumns);
+        ImGui::SameLine(); HelpMarker("Useful if you know that you aren't displaying contents in other columns");
 
         HelpMarker("See \"Columns flags\" section to configure how indentation is applied to individual columns.");
-        if (ImGui::BeginTable("3ways", 3, flags))
+        if (ImGui::BeginTable("3ways", 3, table_flags))
         {
             // The first column will use the default _WidthStretch when ScrollX is Off and _WidthFixed when ScrollX is On
             ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_NoHide);
@@ -6454,13 +6463,21 @@ static void ShowDemoWindowTables()
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();
                     const bool is_folder = (node->ChildCount > 0);
+
+                    ImGuiTreeNodeFlags node_flags = tree_node_flags_base;
+                    if (node != &all_nodes[0])
+                        node_flags &= ~ImGuiTreeNodeFlags_LabelSpanAllColumns; // Only demonstrate this on the root node.
+
                     if (is_folder)
                     {
-                        bool open = ImGui::TreeNodeEx(node->Name, tree_node_flags);
-                        ImGui::TableNextColumn();
-                        ImGui::TextDisabled("--");
-                        ImGui::TableNextColumn();
-                        ImGui::TextUnformatted(node->Type);
+                        bool open = ImGui::TreeNodeEx(node->Name, node_flags);
+                        if ((node_flags & ImGuiTreeNodeFlags_LabelSpanAllColumns) == 0)
+                        {
+                            ImGui::TableNextColumn();
+                            ImGui::TextDisabled("--");
+                            ImGui::TableNextColumn();
+                            ImGui::TextUnformatted(node->Type);
+                        }
                         if (open)
                         {
                             for (int child_n = 0; child_n < node->ChildCount; child_n++)
@@ -6470,7 +6487,7 @@ static void ShowDemoWindowTables()
                     }
                     else
                     {
-                        ImGui::TreeNodeEx(node->Name, tree_node_flags | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_Bullet | ImGuiTreeNodeFlags_NoTreePushOnOpen);
+                        ImGui::TreeNodeEx(node->Name, node_flags | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_Bullet | ImGuiTreeNodeFlags_NoTreePushOnOpen);
                         ImGui::TableNextColumn();
                         ImGui::Text("%d", node->Size);
                         ImGui::TableNextColumn();
@@ -6480,7 +6497,7 @@ static void ShowDemoWindowTables()
             };
             static const MyTreeNode nodes[] =
             {
-                { "Root",                         "Folder",       -1,       1, 3    }, // 0
+                { "Root with Long Name",          "Folder",       -1,       1, 3    }, // 0
                 { "Music",                        "Folder",       -1,       4, 2    }, // 1
                 { "Textures",                     "Folder",       -1,       6, 3    }, // 2
                 { "desktop.ini",                  "System file",  1024,    -1,-1    }, // 3

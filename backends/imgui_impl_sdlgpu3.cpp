@@ -102,7 +102,7 @@ static void ImGui_ImplSDLGPU3_SetupRenderState(ImDrawData* draw_data, SDL_GPUGra
     viewport.w = (float)fb_width;
     viewport.h = (float)fb_height;
     viewport.min_depth = 0.0f;
-    viewport.min_depth = 1.0f;
+    viewport.max_depth = 1.0f;
     SDL_SetGPUViewport(render_pass,&viewport);
 
     // Setup scale and translation

@@ -1,4 +1,4 @@
-// dear imgui, v1.91.7 WIP
+// dear imgui, v1.91.7
 // (main code and documentation)
 
 // Help:
@@ -432,12 +432,13 @@ CODE
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
 (Docking/Viewport Branch)
- - 2024/XX/XX (1.XXXX) - when multi-viewports are enabled, all positions will be in your natural OS coordinates space. It means that:
+ - 2025/XX/XX (1.XXXX) - when multi-viewports are enabled, all positions will be in your natural OS coordinates space. It means that:
                           - reference to hard-coded positions such as in SetNextWindowPos(ImVec2(0,0)) are probably not what you want anymore.
                             you may use GetMainViewport()->Pos to offset hard-coded positions, e.g. SetNextWindowPos(GetMainViewport()->Pos)
                           - likewise io.MousePos and GetMousePos() will use OS coordinates.
                             If you query mouse positions to interact with non-imgui coordinates you will need to offset them, e.g. subtract GetWindowViewport()->Pos.
 
+ - 2025/01/14 (1.91.7) - renamed ImGuiTreeNodeFlags_SpanTextWidth to ImGuiTreeNodeFlags_SpanLabelWidth for consistency with other names. Kept redirection enum (will obsolete). (#6937)
  - 2024/11/27 (1.91.6) - changed CRC32 table from CRC32-adler to CRC32c polynomial in order to be compatible with the result of SSE 4.2 instructions.
                          As a result, old .ini data may be partially lost (docking and tables information particularly).
                          Because some users have crafted and storing .ini data as a way to workaround limitations of the docking API, we are providing a '#define IMGUI_USE_LEGACY_CRC32_ADLER' compile-time option to keep using old CRC32 tables if you cannot afford invalidating old .ini data.

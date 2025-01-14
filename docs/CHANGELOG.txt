@@ -36,10 +36,15 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.91.7 WIP (In Progress)
+ VERSION 1.91.7 (Released 2025-01-14)
 -----------------------------------------------------------------------
 
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.91.7
+
 Breaking changes:
+
+- TreeNode: renamed ImGuiTreeNodeFlags_SpanTextWidth to ImGuiTreeNodeFlags_SpanLabelWidth
+  for consistency with other names. Kept redirection enum (will obsolete). (#6937)
 
 Other changes:
 
@@ -56,17 +61,24 @@ Other changes:
   a child window, and from nested child windows. (#1651)
 - Error Handling: Turned common EndTable() and other TableXXX functions
   fail cases into a recoverable error. (#1651, #8314)
+- Error Handling: Basic error handling options in Demo->Tools->Debug Options. (#1651)
 - InputText: Fixed a bug where character replacements performed from a callback
-  were not applied when pasting from clipbard. (#8229)
+  were not applied when pasting from clipboard. (#8229)
 - InputText: Fixed issue when activating a ReadOnly field when the underlying
   value is being modified. (#8242)
 - InputText: Added sanity check to detect some cases of passing a non
   zero-terminated input buffer.
+- InputText: Fixed not calling CallbackEdit on revert/clear with Escape key,
+  although IsItemEdited() was behaving correctly. (#8273)
 - Tables: Fixed TableAngledHeadersRow() creating an infinite horizontal
   scrolling region when the table is hosted in a viewport with negative
-  coordinates.
+  coordinates (left of primary monitor, with multi-viewports enabled).
 - Tables, MultiSelect: Fixed an issue where column width may be mismeasured
   when calling BeginMultiSelect() while inside a table. (#8250)
+- TreeNode, Tables: Added ImGuiTreeNodeFlags_LabelSpanAllColumns to make
+  the label (not only the highlight/frame) also spans all columns. This is
+  useful for table rows where you know nothing else is submitted. (#8318, #3565)
+  Obviously best used with ImGuiTableFlags_NoBordersInBodyUntilResize.
 - Drags: Added ImGuiSliderFlags_NoSpeedTweaks flag to disable keyboard
   modifiers altering the tweak speed. Useful if you want to alter tweak speed
   yourself based on your own logic. (#8223)
@@ -74,11 +86,13 @@ Other changes:
   windows with the ImGuiWindowFlags_NoNavInputs flag. (#8231)
 - Debug Tools: Debug Log: hovering 0xXXXXXXXX values in log is allowed even
   if a popup is blocking mouse access to the debug log window. (#5855)
+- Debug Tools: Item Picker: Always available in Tools menu regardless of value
+  of io.ConfigDebugIsDebuggerPresent. (#2673)
 - Fonts: Fixed miscalculation of Ellipsis ("...") character width when automatically
   created from a single comma character, affecting some fonts/settings (not all).
 - Demo: Added label edition to Property Editor demo + fix an ID issue. (#8266) [@moritz-h]
 - Misc: Fixed misc/cpp/imgui_stdlib.h/.cpp not supporting IMGUI_DISABLE. (#8294) [@juur]
-- Misc: Fixed MinGW builds uses UTF-8 friendly _wfopen(). (#8300)
+- Misc: Fixed MinGW builds not using UTF-8 friendly _wfopen(). (#8300)
 - Backends: SDL_GPU for SDL3: Added backend for SDL_GPU! (#8163, #7998, #7988) [@DeltaW0x].
 - Backends: SDL3: Added ImGui_ImplSDL3_InitForSDLGPU() for consistency, even
   though it is currently not doing anything particular. (#8163, #7998, #7988)
@@ -93,7 +107,7 @@ Other changes:
 - Backends: Vulkan: Added IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE to clarify
   how many image sampler descriptors are expected to be available in the provided
   descriptor pool. Current backend needs 1 but it is expected that by end of Q1 2025
-  this number will grow (will staying a very small number). (#6642)
+  this number will grow (will stay a small number). (#6642)
 - Backends: DX11: Expose vertex constant buffer in ImGui_ImplDX11_RenderState.
   Reset projection matrix in ImDrawCallback_ResetRenderState handlers. (#6969, #5834, #7468, #3590)
 - Backends: DX10: Expose ImGui_ImplDX10_RenderState for completeness. (#6969, #5834, #7468, #3590)
