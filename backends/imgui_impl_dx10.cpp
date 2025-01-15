@@ -47,7 +47,7 @@
 #pragma comment(lib, "d3dcompiler") // Automatically link with d3dcompiler.lib as we are using D3DCompile() below.
 #endif
 
-// DirectX data
+// DirectX10 data
 struct ImGui_ImplDX10_Data
 {
     ID3D10Device*               pd3dDevice;
