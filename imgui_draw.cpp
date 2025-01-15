@@ -3135,6 +3135,8 @@ int ImFontAtlas::AddCustomRectRegular(int width, int height)
     return r_id;
 }
 
+// FIXME: we automatically set glyph.Colored=true by default.
+// If you need to alter this, you can write 'font->Glyphs.back()->Colored' after calling AddCustomRectFontGlyph().
 int ImFontAtlas::AddCustomRectFontGlyph(ImFont* font, ImWchar codepoint, int width, int height, float advance_x, const ImVec2& offset)
 {
 #ifdef IMGUI_USE_WCHAR32
@@ -3168,21 +3170,20 @@ int ImFontAtlas::AddCustomRectFontGlyph(ImFont* font, ImWchar codepoint, int wid
     return r_id;
 }
 
-ImFontAtlasCustomRect* ImFontAtlas::GetCustomRectByIndex(int idx)
+ImTextureRect* ImFontAtlas::GetCustomRectByIndex(int idx)
 {
-    IM_STATIC_ASSERT(offsetof(ImFontAtlasCustomRect, X) == offsetof(ImFontAtlasRect, x));
-    IM_STATIC_ASSERT(offsetof(ImFontAtlasCustomRect, Y) == offsetof(ImFontAtlasRect, y));
-    IM_STATIC_ASSERT(offsetof(ImFontAtlasCustomRect, Width) == offsetof(ImFontAtlasRect, w));
-    IM_STATIC_ASSERT(offsetof(ImFontAtlasCustomRect, Height) == offsetof(ImFontAtlasRect, h));
-    return (ImFontAtlasCustomRect*)(void*)ImFontAtlasPackGetRect(this, idx);
+    IM_STATIC_ASSERT(offsetof(ImTextureRect, x) == offsetof(ImFontAtlasRect, x));
+    IM_STATIC_ASSERT(offsetof(ImTextureRect, y) == offsetof(ImFontAtlasRect, y));
+    IM_STATIC_ASSERT(offsetof(ImTextureRect, w) == offsetof(ImFontAtlasRect, w));
+    IM_STATIC_ASSERT(offsetof(ImTextureRect, h) == offsetof(ImFontAtlasRect, h));
+    return (ImTextureRect*)(void*)ImFontAtlasPackGetRect(this, idx);
 }
 
-void ImFontAtlas::CalcCustomRectUV(const ImFontAtlasCustomRect* rect, ImVec2* out_uv_min, ImVec2* out_uv_max) const
+void ImFontAtlas::CalcCustomRectUV(const ImTextureRect* rect, ImVec2* out_uv_min, ImVec2* out_uv_max) const
 {
     IM_ASSERT(TexData->Width > 0 && TexData->Height > 0);   // Font atlas needs to be built before we can calculate UV coordinates
-    IM_ASSERT(rect->IsPacked());                // Make sure the rectangle has been packed
-    *out_uv_min = ImVec2((float)rect->X * TexUvScale.x, (float)rect->Y * TexUvScale.y);
-    *out_uv_max = ImVec2((float)(rect->X + rect->Width) * TexUvScale.x, (float)(rect->Y + rect->Height) * TexUvScale.y);
+    *out_uv_min = ImVec2((float)rect->x * TexUvScale.x, (float)rect->y * TexUvScale.y);
+    *out_uv_max = ImVec2((float)(rect->x + rect->w) * TexUvScale.x, (float)(rect->y + rect->w) * TexUvScale.y);
 }
 
 bool ImFontAtlasGetMouseCursorTexData(ImFontAtlas* atlas, ImGuiMouseCursor cursor_type, ImVec2* out_offset, ImVec2* out_size, ImVec2 out_uv_border[2], ImVec2 out_uv_fill[2])
