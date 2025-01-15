@@ -247,8 +247,9 @@ struct ImGui_ImplVulkan_ViewportData
     ImGui_ImplVulkan_WindowRenderBuffers    RenderBuffers;          // Used by all viewports
     bool                                    WindowOwned;
     bool                                    SwapChainNeedRebuild;   // Flag when viewport swapchain resized in the middle of processing a frame
+    bool                                    SwapChainSuboptimal;    // Flag when VK_SUBOPTIMAL_KHR was returned.
 
-    ImGui_ImplVulkan_ViewportData() { WindowOwned = SwapChainNeedRebuild = false; memset(&RenderBuffers, 0, sizeof(RenderBuffers)); }
+    ImGui_ImplVulkan_ViewportData() { WindowOwned = SwapChainNeedRebuild = SwapChainSuboptimal = false; memset(&RenderBuffers, 0, sizeof(RenderBuffers)); }
     ~ImGui_ImplVulkan_ViewportData() { }
 };
 
@@ -1808,10 +1809,10 @@ static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport, void*)
     ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
     VkResult err;
 
-    if (vd->SwapChainNeedRebuild)
+    if (vd->SwapChainNeedRebuild || vd->SwapChainSuboptimal)
     {
         ImGui_ImplVulkanH_CreateOrResizeWindow(v->Instance, v->PhysicalDevice, v->Device, wd, v->QueueFamily, v->Allocator, (int)viewport->Size.x, (int)viewport->Size.y, v->MinImageCount);
-        vd->SwapChainNeedRebuild = false;
+        vd->SwapChainNeedRebuild = vd->SwapChainSuboptimal = false;
     }
 
     ImGui_ImplVulkanH_Frame* fd = nullptr;
@@ -1821,11 +1822,13 @@ static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport, void*)
             err = vkAcquireNextImageKHR(v->Device, wd->Swapchain, UINT64_MAX, fsd->ImageAcquiredSemaphore, VK_NULL_HANDLE, &wd->FrameIndex);
             if (err == VK_ERROR_OUT_OF_DATE_KHR)
             {
-                // Since we are not going to swap this frame anyway, it's ok that recreation happens on next frame.
-                vd->SwapChainNeedRebuild = true;
+                vd->SwapChainNeedRebuild = true; // Since we are not going to swap this frame anyway, it's ok that recreation happens on next frame.
                 return;
             }
-            check_vk_result(err);
+            if (err == VK_SUBOPTIMAL_KHR)
+                vd->SwapChainSuboptimal = true;
+            else
+                check_vk_result(err);
             fd = &wd->Frames[wd->FrameIndex];
         }
         for (;;)
@@ -1967,11 +1970,14 @@ static void ImGui_ImplVulkan_SwapBuffers(ImGuiViewport* viewport, void*)
     info.pSwapchains = &wd->Swapchain;
     info.pImageIndices = &present_index;
     err = vkQueuePresentKHR(v->Queue, &info);
-    if (err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_SUBOPTIMAL_KHR)
-        vd->SwapChainNeedRebuild = true;
     if (err == VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        vd->SwapChainNeedRebuild = true;
         return;
-    if (err != VK_SUBOPTIMAL_KHR)
+    }
+    if (err == VK_SUBOPTIMAL_KHR)
+        vd->SwapChainSuboptimal = true;
+    else
         check_vk_result(err);
     wd->SemaphoreIndex = (wd->SemaphoreIndex + 1) % wd->SemaphoreCount; // Now we can use the next set of semaphores
 }
