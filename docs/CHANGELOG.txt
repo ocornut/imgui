@@ -36,6 +36,23 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
+ VERSION 1.91.8 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Breaking changes:
+
+Other changes:
+
+- ImDrawList: texture baked storage for thick line reduced from ~64x64 to ~32x32. (#3245)
+- Examples: DirectX12: Reduced number of frame in flight from 3 to 2 in
+  provided example, to reduce latency.
+- Examples: Vulkan: better handle VK_SUBOPTIMAL_KHR being returned by
+  vkAcquireNextImageKHR() or vkQueuePresentKHR(). (#7825, #7831) [@NostraMagister]
+- Backends: DirectX12: Texture upload use the command queue provided in
+  ImGui_ImplDX12_InitInfo instead of creating its own.
+
+
+-----------------------------------------------------------------------
  VERSION 1.91.7 (Released 2025-01-14)
 -----------------------------------------------------------------------
 

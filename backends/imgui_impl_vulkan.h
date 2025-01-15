@@ -207,8 +207,8 @@ struct ImGui_ImplVulkanH_Window
     uint32_t            ImageCount;             // Number of simultaneous in-flight frames (returned by vkGetSwapchainImagesKHR, usually derived from min_image_count)
     uint32_t            SemaphoreCount;         // Number of simultaneous in-flight frames + 1, to be able to use it in vkAcquireNextImageKHR
     uint32_t            SemaphoreIndex;         // Current set of swapchain wait semaphores we're using (needs to be distinct from per frame data)
-    ImGui_ImplVulkanH_Frame*            Frames;
-    ImGui_ImplVulkanH_FrameSemaphores*  FrameSemaphores;
+    ImVector<ImGui_ImplVulkanH_Frame>           Frames;
+    ImVector<ImGui_ImplVulkanH_FrameSemaphores> FrameSemaphores;
 
     ImGui_ImplVulkanH_Window()
     {
