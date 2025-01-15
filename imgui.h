@@ -3565,22 +3565,6 @@ struct ImFontGlyphRangesBuilder
     IMGUI_API void  BuildRanges(ImVector<ImWchar>* out_ranges);                 // Output new ranges
 };
 
-// See ImFontAtlas::AddCustomRectXXX functions.
-struct ImFontAtlasCustomRect
-{
-    unsigned short  X, Y;           // Output   // Packed position in Atlas
-
-    // [Internal]
-    unsigned short  Width, Height;  // Input    // Desired rectangle dimension
-    unsigned int    GlyphID : 31;   // Input    // For custom font glyphs only (ID < 0x110000)
-    unsigned int    GlyphColored : 1; // Input  // For custom font glyphs only: glyph is colored, removed tinting.
-    float           GlyphAdvanceX;  // Input    // For custom font glyphs only: glyph xadvance
-    ImVec2          GlyphOffset;    // Input    // For custom font glyphs only: glyph display offset
-    ImFont*         Font;           // Input    // For custom font glyphs only: target font
-    ImFontAtlasCustomRect()         { X = Y = 0xFFFF; Width = Height = 0; GlyphID = 0; GlyphColored = 0; GlyphAdvanceX = 0.0f; GlyphOffset = ImVec2(0, 0); Font = NULL; }
-    bool IsPacked() const           { return X != 0xFFFF; }
-};
-
 // Flags for ImFontAtlas build
 enum ImFontAtlasFlags_
 {
@@ -3665,24 +3649,21 @@ struct ImFontAtlas
     // [ALPHA] Custom Rectangles/Glyphs API
     //-------------------------------------------
 
-    // You can request arbitrary rectangles to be packed into the atlas, for your own purposes.
+    // You can request arbitrary rectangles to be packed into the atlas, for your own purpose.
     // You can request your rectangles to be mapped as font glyph (given a font + Unicode point),
     // so you can render e.g. custom colorful icons and use them as regular glyphs.
-    // - If your backend supports ImGuiBackendFlags_RendererHasTextures (since 1.92.X):
-    //   - Packing is done immediately. Returns >= on success. Return <0 on error.
-    //   - You can render your pixels into the texture right after calling the AddCustomRectXXX functions.
-    //   - Texture may be resized, so you cannot cache UV coordinates. // FIXME-NEWATLAS-V1: How to handle that smoothly?
-    // - If your backend does NOT supports ImGuiBackendFlags_RendererHasTextures (older than 1.92.X):
-    //   - After calling Build(), you can query the rectangle position and render your pixels.
-    //   - If you render colored output, set 'atlas->TexPixelsUseColors = true' as this may help some backends decide of preferred texture format.
+    // - Since 1.92.X, packing is done immediately in the function call. Returns >= on success, <0 on error.
+    // - You can render your pixels into the texture right after calling the AddCustomRectXXX functions, without waiting for the Build() call.
+    // - If your backend supports ImGuiBackendFlags_RendererHasTextures:
+    //   Texture may be resized, so you cannot cache UV coordinates: always use CalcCustomRectUV().
+    // - If you render colored output into your AddCustomRectRegular() rectangle: set 'atlas->TexPixelsUseColors = true'
+    //   as this may help some backends decide of preferred texture format.
     // - Read docs/FONTS.md for more details about using colorful icons.
     // - Note: this API may be redesigned later in order to support multi-monitor varying DPI settings.
     IMGUI_API int               AddCustomRectRegular(int width, int height);
     IMGUI_API int               AddCustomRectFontGlyph(ImFont* font, ImWchar codepoint, int width, int height, float advance_x, const ImVec2& offset = ImVec2(0, 0));
-    IMGUI_API ImFontAtlasCustomRect* GetCustomRectByIndex(int index);
-
-    // [Internal]
-    IMGUI_API void              CalcCustomRectUV(const ImFontAtlasCustomRect* rect, ImVec2* out_uv_min, ImVec2* out_uv_max) const;
+    IMGUI_API ImTextureRect*    GetCustomRectByIndex(int index);
+    IMGUI_API void              CalcCustomRectUV(const ImTextureRect* rect, ImVec2* out_uv_min, ImVec2* out_uv_max) const;
 
     //-------------------------------------------
     // Members
@@ -3710,7 +3691,6 @@ struct ImFontAtlas
     ImVec2                      TexUvWhitePixel;    // Texture coordinates to a white pixel
     ImVector<ImFont*>           Fonts;              // Hold all the fonts returned by AddFont*. Fonts[0] is the default font upon calling ImGui::NewFrame(), use ImGui::PushFont()/PopFont() to change the current font.
     ImVector<ImFontConfig>      Sources;            // Source/configuration data
-    //ImVector<ImFontAtlasCustomRect> CustomRects;  // Rectangles for packing custom texture data into the atlas.
     ImVec4                      TexUvLines[IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1];  // UVs for baked anti-aliased lines
     int                         TexNextUniqueID;    // Next value to be stored in TexData->UniqueID
     ImVector<ImDrawListSharedData*> DrawListSharedDatas;
@@ -3724,7 +3704,8 @@ struct ImFontAtlas
     int                         RefCount;           // Number of contexts using this atlas
 
     // [Obsolete]
-    //int                              TexDesiredWidth;         // OBSOLETED in 1.91.5 (force texture width before calling Build(). Must be a power-of-two. If have many glyphs your graphics API have texture size restrictions you may want to increase texture width to decrease height)
+    //int                              TexDesiredWidth;         // OBSOLETED in 1.92.X (force texture width before calling Build(). Must be a power-of-two. If have many glyphs your graphics API have texture size restrictions you may want to increase texture width to decrease height)
+    //typedef ImTextureRect            ImFontAtlasCustomRect;   // OBSOLETED in 1.92.X
     //typedef ImFontAtlasCustomRect    CustomRect;              // OBSOLETED in 1.72+
     //typedef ImFontGlyphRangesBuilder GlyphRangesBuilder;      // OBSOLETED in 1.67+
 };
@@ -4129,6 +4110,27 @@ namespace ImGui
     //static inline float GetWindowFontSize()                   { return GetFontSize(); }                                           // OBSOLETED in 1.48
     //static inline void  SetScrollPosHere()                    { SetScrollHere(); }                                                // OBSOLETED in 1.42
 }
+
+//-- OBSOLETED in 1.91.7 (from January 2025): ImFontAtlasCustomRect becomes ImTextureRect
+// - ImFontAtlasCustomRect::X            --> ImTextureRect::x
+// - ImFontAtlasCustomRect::Y            --> ImTextureRect::y
+// - ImFontAtlasCustomRect::Width        --> ImTextureRect::w
+// - ImFontAtlasCustomRect::Height       --> ImTextureRect::h
+// - ImFontAtlasCustomRect::GlyphColored --> if you need to write to this, instead you can write to 'font->Glyphs.back()->Colored' after calling AddCustomRectFontGlyph()
+// We could make ImTextureRect an union to use old names, such 1) this would be confusing 2) the fix is easy 3) ImFontAtlasCustomRect was always a rather esoteric api.
+typedef ImTextureRect ImFontAtlasCustomRect;
+/*struct ImFontAtlasCustomRect
+{
+    unsigned short  X, Y;           // Output   // Packed position in Atlas
+    unsigned short  Width, Height;  // Input    // [Internal] Desired rectangle dimension
+    unsigned int    GlyphID:31;     // Input    // [Internal] For custom font glyphs only (ID < 0x110000)
+    unsigned int    GlyphColored:1; // Input    // [Internal] For custom font glyphs only: glyph is colored, removed tinting.
+    float           GlyphAdvanceX;  // Input    // [Internal] For custom font glyphs only: glyph xadvance
+    ImVec2          GlyphOffset;    // Input    // [Internal] For custom font glyphs only: glyph display offset
+    ImFont*         Font;           // Input    // [Internal] For custom font glyphs only: target font
+    ImFontAtlasCustomRect()         { X = Y = 0xFFFF; Width = Height = 0; GlyphID = 0; GlyphColored = 0; GlyphAdvanceX = 0.0f; GlyphOffset = ImVec2(0, 0); Font = NULL; }
+    bool IsPacked() const           { return X != 0xFFFF; }
+};*/
 
 //-- OBSOLETED in 1.82 (from Mars 2021): flags for AddRect(), AddRectFilled(), AddImageRounded(), PathRect()
 //typedef ImDrawFlags ImDrawCornerFlags;
