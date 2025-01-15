@@ -1968,15 +1968,11 @@ static void ImGui_ImplVulkan_SwapBuffers(ImGuiViewport* viewport, void*)
     info.pImageIndices = &present_index;
     err = vkQueuePresentKHR(v->Queue, &info);
     if (err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_SUBOPTIMAL_KHR)
-    {
         vd->SwapChainNeedRebuild = true;
-        if (err == VK_ERROR_OUT_OF_DATE_KHR)
-            return;
-    }
-    else
-    {
+    if (err == VK_ERROR_OUT_OF_DATE_KHR)
+        return;
+    if (err != VK_SUBOPTIMAL_KHR)
         check_vk_result(err);
-    }
     wd->SemaphoreIndex = (wd->SemaphoreIndex + 1) % wd->SemaphoreCount; // Now we can use the next set of semaphores
 }
 
