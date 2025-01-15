@@ -43,6 +43,9 @@ Breaking changes:
 
 Other changes:
 
+- Backends: DirectX12: Texture upload use the command queue provided in
+  ImGui_ImplDX12_InitInfo instead of creating its own.
+
 
 -----------------------------------------------------------------------
  VERSION 1.91.7 (Released 2025-01-14)
