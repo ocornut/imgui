@@ -43,6 +43,7 @@ Breaking changes:
 
 Other changes:
 
+- ImDrawList: texture baked storage for thick line reduced from ~64x64 to ~32x32. (#3245)
 - Backends: DirectX12: Texture upload use the command queue provided in
   ImGui_ImplDX12_InitInfo instead of creating its own.
 
