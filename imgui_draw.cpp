@@ -1,4 +1,4 @@
-// dear imgui, v1.91.6
+// dear imgui, v1.91.8 WIP
 // (drawing and font code)
 
 /*
@@ -67,13 +67,17 @@ Index of this file:
 #pragma clang diagnostic ignored "-Wreserved-identifier"            // warning: identifier '_Xxx' is reserved because it starts with '_' followed by a capital letter
 #pragma clang diagnostic ignored "-Wunsafe-buffer-usage"            // warning: 'xxx' is an unsafe pointer used for buffer access
 #pragma clang diagnostic ignored "-Wnontrivial-memaccess"           // warning: first argument in call to 'memset' is a pointer to non-trivially copyable type
+#pragma clang diagnostic ignored "-Wcast-qual"                      // warning: cast from 'const xxxx *' to 'xxx *' drops const qualifier
 #elif defined(__GNUC__)
 #pragma GCC diagnostic ignored "-Wpragmas"                          // warning: unknown option after '#pragma GCC diagnostic' kind
 #pragma GCC diagnostic ignored "-Wunused-function"                  // warning: 'xxxx' defined but not used
+#pragma GCC diagnostic ignored "-Wfloat-equal"                      // warning: comparing floating-point with '==' or '!=' is unsafe
 #pragma GCC diagnostic ignored "-Wdouble-promotion"                 // warning: implicit conversion from 'float' to 'double' when passing argument to function
 #pragma GCC diagnostic ignored "-Wconversion"                       // warning: conversion to 'xxxx' from 'xxxx' may alter its value
 #pragma GCC diagnostic ignored "-Wstack-protector"                  // warning: stack protector not protecting local variables: variable length buffer
+#pragma GCC diagnostic ignored "-Wstrict-overflow"                  // warning: assuming signed overflow does not occur when simplifying division / ..when changing X +- C1 cmp C2 to X cmp C2 -+ C1
 #pragma GCC diagnostic ignored "-Wclass-memaccess"                  // [__GNUC__ >= 8] warning: 'memset/memcpy' clearing/writing an object of type 'xxxx' with no trivial copy-assignment; use assignment or value-initialization instead
+#pragma GCC diagnostic ignored "-Wcast-qual"                        // warning: cast from type 'const xxxx *' to type 'xxxx *' casts away qualifiers
 #endif
 
 //-------------------------------------------------------------------------
@@ -105,13 +109,12 @@ namespace IMGUI_STB_NAMESPACE
 #pragma clang diagnostic ignored "-Wunused-function"        // warning: 'xxxx' defined but not used
 #pragma clang diagnostic ignored "-Wmissing-prototypes"
 #pragma clang diagnostic ignored "-Wimplicit-fallthrough"
-#pragma clang diagnostic ignored "-Wcast-qual"              // warning: cast from 'const xxxx *' to 'xxx *' drops const qualifier
 #endif
 
 #if defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wtype-limits"              // warning: comparison is always true due to limited range of data type [-Wtype-limits]
-#pragma GCC diagnostic ignored "-Wcast-qual"                // warning: cast from type 'const xxxx *' to type 'xxxx *' casts away qualifiers
+#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"     // warning: this statement may fall through
 #endif
 
 #ifndef STB_RECT_PACK_IMPLEMENTATION                        // in case the user already have an implementation in the _same_ compilation unit (e.g. unity builds)
@@ -2383,11 +2386,43 @@ ImFontConfig::ImFontConfig()
     GlyphMaxAdvanceX = FLT_MAX;
     RasterizerMultiply = 1.0f;
     RasterizerDensity = 1.0f;
-    EllipsisChar = (ImWchar)-1;
+    EllipsisChar = 0;
 }
 
 //-----------------------------------------------------------------------------
 // [SECTION] ImFontAtlas
+//-----------------------------------------------------------------------------
+// - Default texture data encoded in ASCII
+// - ImFontAtlas::ClearInputData()
+// - ImFontAtlas::ClearTexData()
+// - ImFontAtlas::ClearFonts()
+// - ImFontAtlas::Clear()
+// - ImFontAtlas::GetTexDataAsAlpha8()
+// - ImFontAtlas::GetTexDataAsRGBA32()
+// - ImFontAtlas::AddFont()
+// - ImFontAtlas::AddFontDefault()
+// - ImFontAtlas::AddFontFromFileTTF()
+// - ImFontAtlas::AddFontFromMemoryTTF()
+// - ImFontAtlas::AddFontFromMemoryCompressedTTF()
+// - ImFontAtlas::AddFontFromMemoryCompressedBase85TTF()
+// - ImFontAtlas::AddCustomRectRegular()
+// - ImFontAtlas::AddCustomRectFontGlyph()
+// - ImFontAtlas::CalcCustomRectUV()
+// - ImFontAtlas::GetMouseCursorTexData()
+// - ImFontAtlas::Build()
+// - ImFontAtlasBuildMultiplyCalcLookupTable()
+// - ImFontAtlasBuildMultiplyRectAlpha8()
+// - ImFontAtlasBuildWithStbTruetype()
+// - ImFontAtlasGetBuilderForStbTruetype()
+// - ImFontAtlasUpdateConfigDataPointers()
+// - ImFontAtlasBuildSetupFont()
+// - ImFontAtlasBuildPackCustomRects()
+// - ImFontAtlasBuildRender8bppRectFromString()
+// - ImFontAtlasBuildRender32bppRectFromString()
+// - ImFontAtlasBuildRenderDefaultTexData()
+// - ImFontAtlasBuildRenderLinesTexData()
+// - ImFontAtlasBuildInit()
+// - ImFontAtlasBuildFinish()
 //-----------------------------------------------------------------------------
 
 // A work of art lies ahead! (. = white layer, X = black layer, others are blank)
@@ -2569,9 +2604,6 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
     // - Note that using io.FontGlobalScale or SetWindowFontScale(), with are legacy-ish, partially supported features, can still lead to unrounded sizes.
     // - We may support it better later and remove this rounding.
     new_font_cfg.SizePixels = ImTrunc(new_font_cfg.SizePixels);
-
-    if (new_font_cfg.DstFont->EllipsisChar == (ImWchar)-1)
-        new_font_cfg.DstFont->EllipsisChar = font_cfg->EllipsisChar;
 
     // Pointers to ConfigData and BuilderData are otherwise dangling
     ImFontAtlasUpdateConfigDataPointers(this);
@@ -3333,6 +3365,16 @@ void ImFontAtlasBuildFinish(ImFontAtlas* atlas)
 //-------------------------------------------------------------------------
 // [SECTION] ImFontAtlas: glyph ranges helpers
 //-------------------------------------------------------------------------
+// - GetGlyphRangesDefault()
+// - GetGlyphRangesGreek()
+// - GetGlyphRangesKorean()
+// - GetGlyphRangesChineseFull()
+// - GetGlyphRangesChineseSimplifiedCommon()
+// - GetGlyphRangesJapanese()
+// - GetGlyphRangesCyrillic()
+// - GetGlyphRangesThai()
+// - GetGlyphRangesVietnamese()
+//-----------------------------------------------------------------------------
 
 // Retrieve list of range (2 int per range, values are inclusive)
 const ImWchar*   ImFontAtlas::GetGlyphRangesDefault()
@@ -3641,8 +3683,8 @@ ImFont::ImFont()
 {
     FontSize = 0.0f;
     FallbackAdvanceX = 0.0f;
-    FallbackChar = (ImWchar)-1;
-    EllipsisChar = (ImWchar)-1;
+    FallbackChar = 0;
+    EllipsisChar = 0;
     EllipsisWidth = EllipsisCharStep = 0.0f;
     EllipsisCharCount = 0;
     FallbackGlyph = NULL;
@@ -3681,7 +3723,7 @@ static ImWchar FindFirstExistingGlyph(ImFont* font, const ImWchar* candidate_cha
     for (int n = 0; n < candidate_chars_count; n++)
         if (font->FindGlyphNoFallback(candidate_chars[n]) != NULL)
             return candidate_chars[n];
-    return (ImWchar)-1;
+    return 0;
 }
 
 void ImFont::BuildLookupTable()
@@ -3748,23 +3790,23 @@ void ImFont::BuildLookupTable()
     // Setup Ellipsis character. It is required for rendering elided text. We prefer using U+2026 (horizontal ellipsis).
     // However some old fonts may contain ellipsis at U+0085. Here we auto-detect most suitable ellipsis character.
     // FIXME: Note that 0x2026 is rarely included in our font ranges. Because of this we are more likely to use three individual dots.
-    const ImWchar ellipsis_chars[] = { (ImWchar)0x2026, (ImWchar)0x0085 };
+    const ImWchar ellipsis_chars[] = { ConfigData->EllipsisChar, (ImWchar)0x2026, (ImWchar)0x0085 };
     const ImWchar dots_chars[] = { (ImWchar)'.', (ImWchar)0xFF0E };
-    if (EllipsisChar == (ImWchar)-1)
+    if (EllipsisChar == 0)
         EllipsisChar = FindFirstExistingGlyph(this, ellipsis_chars, IM_ARRAYSIZE(ellipsis_chars));
     const ImWchar dot_char = FindFirstExistingGlyph(this, dots_chars, IM_ARRAYSIZE(dots_chars));
-    if (EllipsisChar != (ImWchar)-1)
+    if (EllipsisChar != 0)
     {
         EllipsisCharCount = 1;
         EllipsisWidth = EllipsisCharStep = FindGlyph(EllipsisChar)->X1;
     }
-    else if (dot_char != (ImWchar)-1)
+    else if (dot_char != 0)
     {
-        const ImFontGlyph* glyph = FindGlyph(dot_char);
+        const ImFontGlyph* dot_glyph = FindGlyph(dot_char);
         EllipsisChar = dot_char;
         EllipsisCharCount = 3;
-        EllipsisCharStep = (glyph->X1 - glyph->X0) + 1.0f;
-        EllipsisWidth = EllipsisCharStep * 3.0f - 1.0f;
+        EllipsisCharStep = (float)(int)(dot_glyph->X1 - dot_glyph->X0) + 1.0f;
+        EllipsisWidth = ImMax(dot_glyph->AdvanceX, dot_glyph->X0 + EllipsisCharStep * 3.0f - 1.0f); // FIXME: Slightly odd for normally mono-space fonts but since this is used for trailing contents.
     }
 }
 

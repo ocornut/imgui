@@ -25,7 +25,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2024-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2025-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
 //  2024-09-11: (Docking) Added support for viewport->ParentViewportId field to support parenting at OS level. (#7973)
 //  2024-10-24: Emscripten: SDL_EVENT_MOUSE_WHEEL event doesn't require dividing by 100.0f on Emscripten.
 //  2024-09-03: Update for SDL3 api changes: SDL_GetGamepads() memory ownership revert. (#7918, #7898, #7807)
@@ -392,8 +392,9 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
         {
             if (ImGui_ImplSDL3_GetViewportForWindowID(event->key.windowID) == nullptr)
                 return false;
-            //IMGUI_DEBUG_LOG("SDL_EVENT_KEY_%d: key=%d, scancode=%d, mod=%X\n", (event->type == SDL_EVENT_KEY_DOWN) ? "DOWN" : "UP", event->key.key, event->key.scancode, event->key.mod);
             ImGui_ImplSDL3_UpdateKeyModifiers((SDL_Keymod)event->key.mod);
+            //IMGUI_DEBUG_LOG("SDL_EVENT_KEY_%s : key=%d ('%s'), scancode=%d ('%s'), mod=%X\n",
+            //    (event->type == SDL_EVENT_KEY_DOWN) ? "DOWN" : "UP  ", event->key.key, SDL_GetKeyName(event->key.key), event->key.scancode, SDL_GetScancodeName(event->key.scancode), event->key.mod);
             ImGuiKey key = ImGui_ImplSDL3_KeyEventToImGuiKey(event->key.key, event->key.scancode);
             io.AddKeyEvent(key, (event->type == SDL_EVENT_KEY_DOWN));
             io.SetKeyEventNativeData(key, event->key.key, event->key.scancode, event->key.scancode); // To support legacy indexing (<1.87 user code). Legacy backend uses SDLK_*** as indices to IsKeyXXX() functions.
@@ -591,6 +592,11 @@ bool ImGui_ImplSDL3_InitForMetal(SDL_Window* window)
 bool ImGui_ImplSDL3_InitForSDLRenderer(SDL_Window* window, SDL_Renderer* renderer)
 {
     return ImGui_ImplSDL3_Init(window, renderer, nullptr);
+}
+
+bool ImGui_ImplSDL3_InitForSDLGPU(SDL_Window* window)
+{
+    return ImGui_ImplSDL3_Init(window, nullptr, nullptr);
 }
 
 bool ImGui_ImplSDL3_InitForOther(SDL_Window* window)

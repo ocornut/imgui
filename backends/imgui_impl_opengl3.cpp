@@ -23,7 +23,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2024-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2025-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
 //  2024-10-07: OpenGL: Changed default texture sampler to Clamp instead of Repeat/Wrap.
 //  2024-06-28: OpenGL: ImGui_ImplOpenGL3_NewFrame() recreates font texture if it has been destroyed by ImGui_ImplOpenGL3_DestroyFontsTexture(). (#7748)
 //  2024-05-07: OpenGL: Update loader for Linux to support EGL/GLVND. (#7562)
@@ -139,6 +139,7 @@
 #pragma GCC diagnostic ignored "-Wpragmas"                  // warning: unknown option after '#pragma GCC diagnostic' kind
 #pragma GCC diagnostic ignored "-Wunknown-warning-option"   // warning: unknown warning group 'xxx'
 #pragma GCC diagnostic ignored "-Wcast-function-type"       // warning: cast between incompatible function types (for loader)
+#pragma GCC diagnostic ignored "-Wstrict-overflow"          // warning: assuming signed overflow does not occur when simplifying division / ..when changing X +- C1 cmp C2 to X cmp C2 -+ C1
 #endif
 
 // GL includes

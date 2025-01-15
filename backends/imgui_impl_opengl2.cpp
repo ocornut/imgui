@@ -25,7 +25,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2024-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2025-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
 //  2024-10-07: OpenGL: Changed default texture sampler to Clamp instead of Repeat/Wrap.
 //  2024-06-28: OpenGL: ImGui_ImplOpenGL2_NewFrame() recreates font texture if it has been destroyed by ImGui_ImplOpenGL2_DestroyFontsTexture(). (#7748)
 //  2022-10-11: Using 'nullptr' instead of 'NULL' as per our switch to C++11.
@@ -71,6 +71,16 @@
 #include <GL/gl.h>
 #endif
 
+// [Debugging]
+//#define IMGUI_IMPL_OPENGL_DEBUG
+#ifdef IMGUI_IMPL_OPENGL_DEBUG
+#include <stdio.h>
+#define GL_CALL(_CALL)      do { _CALL; GLenum gl_err = glGetError(); if (gl_err != 0) fprintf(stderr, "GL error 0x%x returned from '%s'.\n", gl_err, #_CALL); } while (0)  // Call with error check
+#else
+#define GL_CALL(_CALL)      _CALL   // Call without error check
+#endif
+
+// OpenGL data
 struct ImGui_ImplOpenGL2_Data
 {
     GLuint       FontTexture;
@@ -166,7 +176,7 @@ static void ImGui_ImplOpenGL2_SetupRenderState(ImDrawData* draw_data, int fb_wid
 
     // Setup viewport, orthographic projection matrix
     // Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayPos is (0,0) for single viewport apps.
-    glViewport(0, 0, (GLsizei)fb_width, (GLsizei)fb_height);
+    GL_CALL(glViewport(0, 0, (GLsizei)fb_width, (GLsizei)fb_height));
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
     glLoadIdentity();

@@ -1,5 +1,4 @@
-// Dear ImGui: standalone example application for SDL2 + OpenGL
-// (SDL is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan/Metal graphics context creation, etc.)
+// Dear ImGui: standalone example application for SDL3 + SDL_GPU
 
 // Learn about Dear ImGui:
 // - FAQ                  https://dearimgui.com/faq
@@ -7,18 +6,18 @@
 // - Documentation        https://dearimgui.com/docs (same as your local docs/ folder).
 // - Introduction, links and more at the top of imgui.cpp
 
-#include "imgui.h"
-#include "imgui_impl_sdl2.h"
-#include "imgui_impl_opengl3.h"
-#include <stdio.h>
-#include <SDL.h>
-#if defined(IMGUI_IMPL_OPENGL_ES2)
-#include <SDL_opengles2.h>
-#else
-#include <SDL_opengl.h>
-#endif
+// Important note to the reader who wish to integrate imgui_impl_sdlgpu3.cpp/.h in their own engine/app.
+// - Unline other backends, the user must call the function Imgui_ImplSDLGPU_PrepareDrawData BEFORE issuing a SDL_GPURenderPass containing ImGui_ImplSDLGPU_RenderDrawData.
+//   Calling the function is MANDATORY, otherwise the ImGui will not upload neither the vertex nor the index buffer for the GPU. See imgui_impl_sdlgpu3.cpp for more info.
 
-// This example can also compile and run with Emscripten! See 'Makefile.emscripten' for details.
+#include "imgui.h"
+#include "imgui_impl_sdl3.h"
+#include "imgui_impl_sdlgpu3.h"
+#include <stdio.h>          // printf, fprintf
+#include <stdlib.h>         // abort
+#include <SDL3/SDL.h>
+
+// This example doesn't compile with Emscripten yet! Awaiting SDL3 support.
 #ifdef __EMSCRIPTEN__
 #include "../libs/emscripten/emscripten_mainloop_stub.h"
 #endif
@@ -27,69 +26,34 @@
 int main(int, char**)
 {
     // Setup SDL
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD) != 0)
     {
-        printf("Error: %s\n", SDL_GetError());
+        printf("Error: SDL_Init(): %s\n", SDL_GetError());
         return -1;
     }
 
-    // Decide GL+GLSL versions
-#if defined(IMGUI_IMPL_OPENGL_ES2)
-    // GL ES 2.0 + GLSL 100 (WebGL 1.0)
-    const char* glsl_version = "#version 100";
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
-#elif defined(IMGUI_IMPL_OPENGL_ES3)
-    // GL ES 3.0 + GLSL 300 es (WebGL 2.0)
-    const char* glsl_version = "#version 300 es";
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
-#elif defined(__APPLE__)
-    // GL 3.2 Core + GLSL 150
-    const char* glsl_version = "#version 150";
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG); // Always required on Mac
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
-#else
-    // GL 3.0 + GLSL 130
-    const char* glsl_version = "#version 130";
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
-#endif
-
-    // From 2.0.18: Enable native IME.
-#ifdef SDL_HINT_IME_SHOW_UI
-    SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");
-#endif
-
-    // Create window with graphics context
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-    SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
-    SDL_Window* window = SDL_CreateWindow("Dear ImGui SDL2+OpenGL3 example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags);
+    // Create SDL window graphics context
+    SDL_Window* window = SDL_CreateWindow("Dear ImGui SDL3+SDL_GPU example", 1280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
     if (window == nullptr)
     {
         printf("Error: SDL_CreateWindow(): %s\n", SDL_GetError());
         return -1;
     }
 
-    SDL_GLContext gl_context = SDL_GL_CreateContext(window);
-    if (gl_context == nullptr)
+    // Create GPU Device
+    SDL_GPUDevice* gpu_device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL | SDL_GPU_SHADERFORMAT_METALLIB,true,nullptr);
+    if (gpu_device == nullptr)
     {
-        printf("Error: SDL_GL_CreateContext(): %s\n", SDL_GetError());
+        printf("Error: SDL_CreateGPUDevice(): %s\n", SDL_GetError());
         return -1;
     }
 
-    SDL_GL_MakeCurrent(window, gl_context);
-    SDL_GL_SetSwapInterval(1); // Enable vsync
+    // Claim window for GPU Device
+    if (!SDL_ClaimWindowForGPUDevice(gpu_device, window))
+    {
+        printf("Error: SDL_ClaimWindowForGPUDevice(): %s\n", SDL_GetError());
+        return -1;
+    }
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -97,26 +61,18 @@ int main(int, char**)
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // Enable Docking
-    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
-    //io.ConfigViewportsNoAutoMerge = true;
-    //io.ConfigViewportsNoTaskBarIcon = true;
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsLight();
 
-    // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
-    ImGuiStyle& style = ImGui::GetStyle();
-    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-    {
-        style.WindowRounding = 0.0f;
-        style.Colors[ImGuiCol_WindowBg].w = 1.0f;
-    }
-
     // Setup Platform/Renderer backends
-    ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
-    ImGui_ImplOpenGL3_Init(glsl_version);
+    ImGui_ImplSDL3_InitForSDLGPU(window);
+    ImGui_ImplSDLGPU3_InitInfo init_info = {};
+    init_info.GpuDevice = gpu_device;
+    init_info.ColorTargetFormat = SDL_GetGPUSwapchainTextureFormat(gpu_device, window);
+    init_info.MSAASamples = SDL_GPU_SAMPLECOUNT_1;
+    ImGui_ImplSDLGPU3_Init(&init_info);
 
     // Load Fonts
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
@@ -126,7 +82,6 @@ int main(int, char**)
     // - Use '#define IMGUI_ENABLE_FREETYPE' in your imconfig file to use Freetype for higher quality font rendering.
     // - Read 'docs/FONTS.md' for more instructions and details.
     // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
-    // - Our Emscripten build process allows embedding fonts to be accessible at runtime from the "fonts/" folder. See Makefile.emscripten for details.
     //io.Fonts->AddFontDefault();
     //io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf", 18.0f);
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
@@ -142,14 +97,7 @@ int main(int, char**)
 
     // Main loop
     bool done = false;
-#ifdef __EMSCRIPTEN__
-    // For an Emscripten build we are disabling file-system access, so let's not attempt to do a fopen() of the imgui.ini file.
-    // You may manually call LoadIniSettingsFromMemory() to load settings from your own storage.
-    io.IniFilename = nullptr;
-    EMSCRIPTEN_MAINLOOP_BEGIN
-#else
     while (!done)
-#endif
     {
         // Poll and handle events (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
@@ -159,10 +107,10 @@ int main(int, char**)
         SDL_Event event;
         while (SDL_PollEvent(&event))
         {
-            ImGui_ImplSDL2_ProcessEvent(&event);
-            if (event.type == SDL_QUIT)
+            ImGui_ImplSDL3_ProcessEvent(&event);
+            if (event.type == SDL_EVENT_QUIT)
                 done = true;
-            if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
+            if (event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED && event.window.windowID == SDL_GetWindowID(window))
                 done = true;
         }
         if (SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED)
@@ -172,8 +120,8 @@ int main(int, char**)
         }
 
         // Start the Dear ImGui frame
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplSDL2_NewFrame();
+        ImGui_ImplSDLGPU3_NewFrame();
+        ImGui_ImplSDL3_NewFrame();
         ImGui::NewFrame();
 
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
@@ -215,35 +163,47 @@ int main(int, char**)
 
         // Rendering
         ImGui::Render();
-        glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
-        glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
-        glClear(GL_COLOR_BUFFER_BIT);
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        ImDrawData* draw_data = ImGui::GetDrawData();
+        const bool is_minimized = (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f);
 
-        // Update and Render additional Platform Windows
-        // (Platform functions may change the current OpenGL context, so we save/restore it to make it easier to paste this code elsewhere.
-        //  For this specific demo app we could also call SDL_GL_MakeCurrent(window, gl_context) directly)
-        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(gpu_device); // Acquire a GPU command buffer
+
+        SDL_GPUTexture* swapchain_texture;
+        SDL_AcquireGPUSwapchainTexture(command_buffer, window, &swapchain_texture, nullptr, nullptr); // Acquire a swapchain texture
+
+        if (swapchain_texture != nullptr && !is_minimized)
         {
-            SDL_Window* backup_current_window = SDL_GL_GetCurrentWindow();
-            SDL_GLContext backup_current_context = SDL_GL_GetCurrentContext();
-            ImGui::UpdatePlatformWindows();
-            ImGui::RenderPlatformWindowsDefault();
-            SDL_GL_MakeCurrent(backup_current_window, backup_current_context);
+            // This is mandatory: call Imgui_ImplSDLGPU3_PrepareDrawData() to upload the vertex/index buffer!
+            Imgui_ImplSDLGPU3_PrepareDrawData(draw_data, command_buffer);
+
+            // Setup and start a render pass
+            SDL_GPUColorTargetInfo target_info = {};
+            target_info.texture = swapchain_texture;
+            target_info.clear_color = SDL_FColor{ clear_color.x,clear_color.y,clear_color.z,clear_color.w };
+            target_info.load_op = SDL_GPU_LOADOP_CLEAR;
+            target_info.store_op = SDL_GPU_STOREOP_STORE;
+            target_info.mip_level = 0;
+            target_info.layer_or_depth_plane = 0;
+            target_info.cycle = false;
+            SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass(command_buffer, &target_info, 1, nullptr);
+
+            // Render ImGui
+            ImGui_ImplSDLGPU3_RenderDrawData(draw_data, command_buffer, render_pass);
+
+            SDL_EndGPURenderPass(render_pass);
         }
 
-        SDL_GL_SwapWindow(window);
+        // Submit the command buffer
+        SDL_SubmitGPUCommandBuffer(command_buffer);
     }
-#ifdef __EMSCRIPTEN__
-    EMSCRIPTEN_MAINLOOP_END;
-#endif
-
     // Cleanup
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplSDL2_Shutdown();
+    SDL_WaitForGPUIdle(gpu_device);
+    ImGui_ImplSDL3_Shutdown();
+    ImGui_ImplSDLGPU3_Shutdown();
     ImGui::DestroyContext();
 
-    SDL_GL_DeleteContext(gl_context);
+    SDL_ReleaseWindowFromGPUDevice(gpu_device, window);
+    SDL_DestroyGPUDevice(gpu_device);
     SDL_DestroyWindow(window);
     SDL_Quit();
 

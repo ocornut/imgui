@@ -1,4 +1,4 @@
-// dear imgui, v1.91.6
+// dear imgui, v1.91.8 WIP
 // (internal structures/api)
 
 // You may use this file to debug, understand or extend Dear ImGui features but we don't provide any guarantee of forward compatibility.
@@ -101,6 +101,7 @@ Index of this file:
 #elif defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpragmas"                          // warning: unknown option after '#pragma GCC diagnostic' kind
+#pragma GCC diagnostic ignored "-Wfloat-equal"                      // warning: comparing floating-point with '==' or '!=' is unsafe
 #pragma GCC diagnostic ignored "-Wclass-memaccess"                  // [__GNUC__ >= 8] warning: 'memset/memcpy' clearing/writing an object of type 'xxxx' with no trivial copy-assignment; use assignment or value-initialization instead
 #pragma GCC diagnostic ignored "-Wdeprecated-enum-enum-conversion"  // warning: bitwise operation between different enumeration types ('XXXFlags_' and 'XXXFlagsPrivate_') is deprecated
 #endif
@@ -129,16 +130,24 @@ Index of this file:
 // [SECTION] Forward declarations
 //-----------------------------------------------------------------------------
 
+// Utilities
+// (other types which are not forwarded declared are: ImBitArray<>, ImSpan<>, ImSpanAllocator<>, ImPool<>, ImChunkStream<>)
 struct ImBitVector;                 // Store 1-bit per value
 struct ImRect;                      // An axis-aligned rectangle (2 points)
+struct ImGuiTextIndex;              // Maintain a line index for a text buffer.
+
+// ImDrawList/ImFontAtlas
 struct ImDrawDataBuilder;           // Helper to build a ImDrawData instance
 struct ImDrawListSharedData;        // Data shared between all ImDrawList instances
+
+// ImGui
 struct ImGuiBoxSelectState;         // Box-selection state (currently used by multi-selection, could potentially be used by others)
 struct ImGuiColorMod;               // Stacked color modifier, backup of modified data so we can restore it
 struct ImGuiContext;                // Main Dear ImGui context
 struct ImGuiContextHook;            // Hook for extensions like ImGuiTestEngine
 struct ImGuiDataVarInfo;            // Variable information (e.g. to access style variables from an enum)
 struct ImGuiDataTypeInfo;           // Type information associated to a ImGuiDataType enum
+struct ImGuiDeactivatedItemData;    // Data for IsItemDeactivated()/IsItemDeactivatedAfterEdit() function.
 struct ImGuiDockContext;            // Docking system context
 struct ImGuiDockRequest;            // Docking system dock/undock queued request
 struct ImGuiDockNode;               // Docking system node (hold a list of Windows OR two child dock nodes)
@@ -471,7 +480,7 @@ static inline double ImRsqrt(double x)          { return 1.0 / sqrt(x); }
 template<typename T> static inline T ImMin(T lhs, T rhs)                        { return lhs < rhs ? lhs : rhs; }
 template<typename T> static inline T ImMax(T lhs, T rhs)                        { return lhs >= rhs ? lhs : rhs; }
 template<typename T> static inline T ImClamp(T v, T mn, T mx)                   { return (v < mn) ? mn : (v > mx) ? mx : v; }
-template<typename T> static inline T ImLerp(T a, T b, float t)                  { return (T)(a + (b - a) * t); }
+template<typename T> static inline T ImLerp(T a, T b, float t)                  { return (T)(a + (b - a) * (T)t); }
 template<typename T> static inline void ImSwap(T& a, T& b)                      { T tmp = a; a = b; b = tmp; }
 template<typename T> static inline T ImAddClampOverflow(T a, T b, T mn, T mx)   { if (b < 0 && (a < mn - b)) return mn; if (b > 0 && (a > mx - b)) return mx; return a + b; }
 template<typename T> static inline T ImSubClampOverflow(T a, T b, T mn, T mx)   { if (b > 0 && (a < mn + b)) return mn; if (b < 0 && (a > mx + b)) return mx; return a - b; }
@@ -745,6 +754,7 @@ struct ImGuiTextIndex
 
 // Helper: ImGuiStorage
 IMGUI_API ImGuiStoragePair* ImLowerBound(ImGuiStoragePair* in_begin, ImGuiStoragePair* in_end, ImGuiID key);
+
 //-----------------------------------------------------------------------------
 // [SECTION] ImDrawList support
 //-----------------------------------------------------------------------------
@@ -837,8 +847,7 @@ struct ImGuiDataTypeInfo
 // Extend ImGuiDataType_
 enum ImGuiDataTypePrivate_
 {
-    ImGuiDataType_String = ImGuiDataType_COUNT + 1,
-    ImGuiDataType_Pointer,
+    ImGuiDataType_Pointer = ImGuiDataType_COUNT + 1,
     ImGuiDataType_ID,
 };
 
@@ -924,7 +933,7 @@ enum ImGuiButtonFlagsPrivate_
     ImGuiButtonFlags_PressedOnRelease       = 1 << 7,   // return true on release (default requires click+release)
     ImGuiButtonFlags_PressedOnDoubleClick   = 1 << 8,   // return true on double-click (default requires click+release)
     ImGuiButtonFlags_PressedOnDragDropHold  = 1 << 9,   // return true when held into while we are drag and dropping another item (used by e.g. tree nodes, collapsing headers)
-    //ImGuiButtonFlags_Repeat               = 1 << 10,  // hold to repeat
+    //ImGuiButtonFlags_Repeat               = 1 << 10,  // hold to repeat -> use ImGuiItemFlags_ButtonRepeat instead.
     ImGuiButtonFlags_FlattenChildren        = 1 << 11,  // allow interactions even if a child window is overlapping
     ImGuiButtonFlags_AllowOverlap           = 1 << 12,  // require previous frame HoveredId to either match id or be null before being usable.
     //ImGuiButtonFlags_DontClosePopups      = 1 << 13,  // disable automatically closing parent popup on press
@@ -1081,7 +1090,7 @@ struct IMGUI_API ImGuiGroupData
     ImVec2      BackupCurrLineSize;
     float       BackupCurrLineTextBaseOffset;
     ImGuiID     BackupActiveIdIsAlive;
-    bool        BackupActiveIdPreviousFrameIsAlive;
+    bool        BackupDeactivatedIdIsAlive;
     bool        BackupHoveredIdIsAlive;
     bool        BackupIsSameLine;
     bool        EmitItem;
@@ -1132,8 +1141,10 @@ struct IMGUI_API ImGuiInputTextState
 {
     ImGuiContext*           Ctx;                    // parent UI context (needs to be set explicitly by parent).
     ImStbTexteditState*     Stb;                    // State for stb_textedit.h
+    ImGuiInputTextFlags     Flags;                  // copy of InputText() flags. may be used to check if e.g. ImGuiInputTextFlags_Password is set.
     ImGuiID                 ID;                     // widget id owning the text state
     int                     TextLen;                // UTF-8 length of the string in TextA (in bytes)
+    const char*             TextSrc;                // == TextA.Data unless read-only, in which case == buf passed to InputText(). Field only set and valid _inside_ the call InputText() call.
     ImVector<char>          TextA;                  // main UTF8 buffer. TextA.Size is a buffer size! Should always be >= buf_size passed by user (and of course >= CurLenA + 1).
     ImVector<char>          TextToRevertTo;         // value to revert to when pressing Escape = backup of end-user buffer at the time of focus (in UTF-8, unaltered)
     ImVector<char>          CallbackTextBackup;     // temporary storage for callback to support automatic reconcile of undo-stack
@@ -1143,9 +1154,8 @@ struct IMGUI_API ImGuiInputTextState
     bool                    CursorFollow;           // set when we want scrolling to follow the current cursor position (not always!)
     bool                    SelectedAllMouseLock;   // after a double-click to select all, we ignore further mouse drags to update selection
     bool                    Edited;                 // edited this frame
-    ImGuiInputTextFlags     Flags;                  // copy of InputText() flags. may be used to check if e.g. ImGuiInputTextFlags_Password is set.
-    bool                    ReloadUserBuf;          // force a reload of user buf so it may be modified externally. may be automatic in future version.
-    int                     ReloadSelectionStart;   // POSITIONS ARE IN IMWCHAR units *NOT* UTF-8 this is why this is not exposed yet.
+    bool                    WantReloadUserBuf;      // force a reload of user buf so it may be modified externally. may be automatic in future version.
+    int                     ReloadSelectionStart;
     int                     ReloadSelectionEnd;
 
     ImGuiInputTextState();
@@ -1265,11 +1275,11 @@ struct ImGuiNextItemData
 struct ImGuiLastItemData
 {
     ImGuiID                 ID;
-    ImGuiItemFlags          ItemFlags;          // See ImGuiItemFlags_
+    ImGuiItemFlags          ItemFlags;          // See ImGuiItemFlags_ (called 'InFlags' before v1.91.4).
     ImGuiItemStatusFlags    StatusFlags;        // See ImGuiItemStatusFlags_
     ImRect                  Rect;               // Full rectangle
     ImRect                  NavRect;            // Navigation scoring rectangle (not displayed)
-    // Rarely used fields are not explicitly cleared, only valid when the corresponding ImGuiItemStatusFlags ar set.
+    // Rarely used fields are not explicitly cleared, only valid when the corresponding ImGuiItemStatusFlags are set.
     ImRect                  DisplayRect;        // Display rectangle. ONLY VALID IF (StatusFlags & ImGuiItemStatusFlags_HasDisplayRect) is set.
     ImRect                  ClipRect;           // Clip rectangle at the time of submitting item. ONLY VALID IF (StatusFlags & ImGuiItemStatusFlags_HasClipRect) is set..
     ImGuiKeyChord           Shortcut;           // Shortcut at the time of submitting item. ONLY VALID IF (StatusFlags & ImGuiItemStatusFlags_HasShortcut) is set..
@@ -1330,6 +1340,15 @@ struct ImGuiPtrOrIndex
 
     ImGuiPtrOrIndex(void* ptr)  { Ptr = ptr; Index = -1; }
     ImGuiPtrOrIndex(int index)  { Ptr = NULL; Index = index; }
+};
+
+// Data used by IsItemDeactivated()/IsItemDeactivatedAfterEdit() functions
+struct ImGuiDeactivatedItemData
+{
+    ImGuiID     ID;
+    int         ElapseFrame;
+    bool        HasBeenEditedBefore;
+    bool        IsAlive;
 };
 
 //-----------------------------------------------------------------------------
@@ -2239,9 +2258,9 @@ struct ImGuiContext
     int                     FrameCountEnded;
     int                     FrameCountPlatformEnded;
     int                     FrameCountRendered;
+    ImGuiID                 WithinEndChildID;                   // Set within EndChild()
     bool                    WithinFrameScope;                   // Set by NewFrame(), cleared by EndFrame()
     bool                    WithinFrameScopeWithImplicitWindow; // Set by NewFrame(), cleared by EndFrame() when the implicit debug window has been pushed
-    bool                    WithinEndChild;                     // Set within EndChild()
     bool                    GcCompactAll;                       // Request full GC
     bool                    TestEngineHookItems;                // Will call test engine hooks: ImGuiTestEngineHook_ItemAdd(), ImGuiTestEngineHook_ItemInfo(), ImGuiTestEngineHook_Log()
     void*                   TestEngine;                         // Test engine user data
@@ -2301,9 +2320,8 @@ struct ImGuiContext
     ImGuiWindow*            ActiveIdWindow;
     ImGuiInputSource        ActiveIdSource;                     // Activating source: ImGuiInputSource_Mouse OR ImGuiInputSource_Keyboard OR ImGuiInputSource_Gamepad
     ImGuiID                 ActiveIdPreviousFrame;
-    bool                    ActiveIdPreviousFrameIsAlive;
-    bool                    ActiveIdPreviousFrameHasBeenEditedBefore;
-    ImGuiWindow*            ActiveIdPreviousFrameWindow;
+    ImGuiDeactivatedItemData DeactivatedItemData;
+    ImGuiDataTypeStorage    ActiveIdValueOnActivation;          // Backup of initial value at the time of activation. ONLY SET BY SPECIFIC WIDGETS: DragXXX and SliderXXX.
     ImGuiID                 LastActiveId;                       // Store the last non-zero ActiveId, useful for animation.
     float                   LastActiveIdTimer;                  // Store the last non-zero ActiveId timer since the beginning of activation, useful for animation.
 
