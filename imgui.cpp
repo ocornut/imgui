@@ -21202,6 +21202,13 @@ namespace ImGuiFreeType { IMGUI_API const ImFontLoader* GetFontLoader(); }
 // [DEBUG] List fonts in a font atlas and display its texture
 void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
 {
+    SeparatorText("Fonts");
+    Text("Read the FAQ at ");
+    SameLine(0, 0);
+    TextLinkOpenURL("https://www.dearimgui.com/faq/");
+    SameLine(0, 0);
+    Text(" for details on font loading.");
+
     // Font loaders
     if (TreeNode("Loader", "Loader: \'%s\'", atlas->FontLoaderName ? atlas->FontLoaderName : "NULL"))
     {
@@ -21239,6 +21246,28 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
         DebugNodeFont(font);
         PopID();
     }
+
+    SeparatorText("Font Atlas");
+    if (Button("Clear Cache"))
+        atlas->ClearCache();
+    SameLine();
+    if (Button("Grow"))
+        ImFontAtlasBuildGrowTexture(atlas);
+    SameLine();
+    if (Button("Compact"))
+        ImFontAtlasBuildCompactTexture(atlas);
+
+    for (int tex_n = 0; tex_n < atlas->TexList.Size; tex_n++)
+    {
+        ImTextureData* tex = atlas->TexList[tex_n];
+        if (tex_n > 0)
+            SameLine();
+        Text("Tex: %dx%d", tex->Width, tex->Height);
+    }
+    const int packed_surface_sqrt = (int)sqrtf((float)atlas->Builder->RectsPackedSurface);
+    const int discarded_surface_sqrt = (int)sqrtf((float)atlas->Builder->RectsDiscardedSurface);
+    Text("Packed rects: %d, area: about %d px ~%dx%d px", atlas->Builder->RectsPackedCount, atlas->Builder->RectsPackedSurface, packed_surface_sqrt, packed_surface_sqrt);
+    Text("incl. Discarded rects: %d, area: about %d px ~%dx%d px", atlas->Builder->RectsDiscardedCount, atlas->Builder->RectsDiscardedSurface, discarded_surface_sqrt, discarded_surface_sqrt);
 
     // Texture list
     for (ImTextureData* tex : atlas->TexList)
