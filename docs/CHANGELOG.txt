@@ -41,6 +41,9 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+- Backends: SDLGPU3: Renamed ImGui_ImplSDLGPU3_InitInfo::GpuDevice to Device
+  for consistency. (#8163, #7998, #7988)
+
 Other changes:
 
 - ImDrawList: texture baked storage for thick line reduced from ~64x64 to ~32x32. (#3245)
@@ -48,6 +51,8 @@ Other changes:
   provided example, to reduce latency.
 - Examples: Vulkan: better handle VK_SUBOPTIMAL_KHR being returned by
   vkAcquireNextImageKHR() or vkQueuePresentKHR(). (#7825, #7831) [@NostraMagister]
+- Backends: SDLGPU3: Exposed ImGui_ImplSDLGPU3_CreateDeviceObjects()/_DestroyDeviceObjects().
+  Removed return value from ImGui_ImplSDLGPU3_CreateFontsTexture(). (#8163, #7998, #7988)
 - Backends: DirectX12: Texture upload use the command queue provided in
   ImGui_ImplDX12_InitInfo instead of creating its own.
 
@@ -110,7 +115,7 @@ Other changes:
 - Demo: Added label edition to Property Editor demo + fix an ID issue. (#8266) [@moritz-h]
 - Misc: Fixed misc/cpp/imgui_stdlib.h/.cpp not supporting IMGUI_DISABLE. (#8294) [@juur]
 - Misc: Fixed MinGW builds not using UTF-8 friendly _wfopen(). (#8300)
-- Backends: SDL_GPU for SDL3: Added backend for SDL_GPU! (#8163, #7998, #7988) [@DeltaW0x].
+- Backends: SDLGPU3 for SDL3: Added backend for SDL_GPU! (#8163, #7998, #7988) [@DeltaW0x].
 - Backends: SDL3: Added ImGui_ImplSDL3_InitForSDLGPU() for consistency, even
   though it is currently not doing anything particular. (#8163, #7998, #7988)
 - Backends: Allegro5: Avoid calling al_set_mouse_cursor() repeatedly since it appears
