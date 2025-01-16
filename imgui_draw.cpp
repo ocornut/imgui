@@ -2487,6 +2487,7 @@ void ImTextureData::DestroyPixels()
 // - ImFontAtlas::CalcCustomRectUV()
 // - ImFontAtlasGetMouseCursorTexData()
 //-----------------------------------------------------------------------------
+// - ImFontAtlasBuildMain()
 // - ImFontAtlasBuildSetupFontLoader()
 // - ImFontAtlasBuildPreloadAllGlyphRanges()
 // - ImFontAtlasBuildUpdatePointers()
@@ -2687,15 +2688,24 @@ static void ImFontAtlasBuildUpdateRendererHasTexturesFromContext(ImFontAtlas* at
 }
 
 // Called by NewFrame(). When multiple context own the atlas, only the first one calls this.
+// If you are calling this yourself, ensure atlas->RendererHasTexUpdates is et.
 void ImFontAtlasUpdateNewFrame(ImFontAtlas* atlas)
 {
-    if (atlas->TexIsBuilt && atlas->Builder->PreloadedAllGlyphsRanges)
+    // Check that font atlas was built or backend support texture reload in which case we can build now
+    if (atlas->RendererHasTextures)
     {
-        ImFontAtlasBuildUpdateRendererHasTexturesFromContext(atlas);
-        IM_ASSERT_USER_ERROR(atlas->RendererHasTextures == false,
-            "Called ImFontAtlas::Build() before ImGuiBackendFlags_RendererHasTextures got set! With new backends: you don't need to call Build().");
+        atlas->TexIsBuilt = true;
+        if (atlas->Builder == NULL) // This will only happen if fonts were not already loaded.
+            ImFontAtlasBuildMain(atlas);
     }
+    else // Legacy backend
+    {
+        IM_ASSERT_USER_ERROR(atlas->TexIsBuilt, "Backend does not support ImGuiBackendFlags_RendererHasTextures, and font atlas is not built! Update backend OR make sure you called ImGui_ImplXXXX_NewFrame() function for renderer backend, which should call io.Fonts->GetTexDataAsRGBA32() / GetTexDataAsAlpha8().");
+    }
+    if (atlas->TexIsBuilt && atlas->Builder->PreloadedAllGlyphsRanges)
+        IM_ASSERT_USER_ERROR(atlas->RendererHasTextures == false, "Called ImFontAtlas::Build() before ImGuiBackendFlags_RendererHasTextures got set! With new backends: you don't need to call Build().");
 
+    // Update texture status
     for (int tex_n = 0; tex_n < atlas->TexList.Size; tex_n++)
     {
         ImTextureData* tex = atlas->TexList[tex_n];
@@ -2868,6 +2878,7 @@ void ImFontAtlasTextureBlockQueueUpload(ImFontAtlas* atlas, ImTextureData* tex, 
     tex->UpdateRect.y = ImMin(tex->UpdateRect.y, req.y);
     tex->UpdateRect.w = (unsigned short)(new_x1 - tex->UpdateRect.x);
     tex->UpdateRect.h = (unsigned short)(new_y1 - tex->UpdateRect.y);
+    atlas->TexIsBuilt = false;
 
     // No need to queue if status is _WantCreate
     if (tex->Status == ImTextureStatus_OK || tex->Status == ImTextureStatus_WantUpdates)
@@ -3209,6 +3220,7 @@ bool ImFontAtlasGetMouseCursorTexData(ImFontAtlas* atlas, ImGuiMouseCursor curso
     return true;
 }
 
+// When atlas->RendererHasTexUpdates == true, this is only called if no font were loaded.
 void ImFontAtlasBuildMain(ImFontAtlas* atlas)
 {
     IM_ASSERT(!atlas->Locked && "Cannot modify a locked ImFontAtlas!");
@@ -3592,6 +3604,7 @@ void ImFontAtlasBuildReloadFont(ImFontAtlas* atlas, ImFont* font)
             atlas->FontLoader->FontSrcInit(atlas, src);
 
         ImFontAtlasBuildSetupFontSpecialGlyphs(atlas, src); // Technically this is called for each source sub-font, tho 99.9% of the time the first one fills everything.
+        atlas->TexIsBuilt = false;
     }
 
     // Notify external systems
@@ -3687,6 +3700,7 @@ ImTextureData* ImFontAtlasBuildAddTexture(ImFontAtlas* atlas, int w, int h)
 
     new_tex->Create(atlas->TexDesiredFormat, w, h);
     new_tex->Status = ImTextureStatus_WantCreate;
+    atlas->TexIsBuilt = false;
 
     ImFontAtlasBuildSetTexture(atlas, new_tex);
 
@@ -4040,12 +4054,12 @@ ImFontAtlasRect* ImFontAtlasPackGetRect(ImFontAtlas* atlas, ImFontAtlasRectId id
 
 ImFontGlyph* ImFont::BuildLoadGlyph(ImWchar codepoint)
 {
-    if (LockDisableLoading)
+    ImFontAtlas* atlas = ContainerAtlas;
+    if (LockDisableLoading || atlas->Locked)
         return NULL;
 
     //char utf8_buf[5];
     //IMGUI_DEBUG_LOG("[font] BuildAddGlyph U+%04X (%s)\n", (unsigned int)codepoint, ImTextCharToUtf8(utf8_buf, (unsigned int)codepoint));
-    ImFontAtlas* atlas = ContainerAtlas;
 
     // Load from single source or all sources?
     int srcs_count = (LockSingleSrcConfigIdx != -1) ? 1 : SourcesCount;
