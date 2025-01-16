@@ -2,8 +2,9 @@
 // This needs to be used along with the SDL3 Platform Backend
 
 // Implemented features:
-//  [X] Renderer: User texture binding. Use simply cast a reference to your SDL_GPUTextureSamplerBinding to ImTextureID.
+//  [X] Renderer: User texture binding. Use 'SDL_GPUTextureSamplerBinding*' as texture identifier. Read the FAQ about ImTextureID/ImTextureRef!
 //  [X] Renderer: Large meshes support (64k+ vertices) with 16-bit indices.
+//  [X] Renderer: Texture updates support for dynamic font system (ImGuiBackendFlags_RendererHasTextures).
 // Missing features:
 //  [ ] Renderer: Multi-viewport support (multiple windows).
 
@@ -43,9 +44,11 @@ IMGUI_IMPL_API void     ImGui_ImplSDLGPU3_NewFrame();
 IMGUI_IMPL_API void     ImGui_ImplSDLGPU3_PrepareDrawData(ImDrawData* draw_data, SDL_GPUCommandBuffer* command_buffer);
 IMGUI_IMPL_API void     ImGui_ImplSDLGPU3_RenderDrawData(ImDrawData* draw_data, SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_pass, SDL_GPUGraphicsPipeline* pipeline = nullptr);
 
+// Use if you want to reset your rendering device without losing Dear ImGui state.
 IMGUI_IMPL_API void     ImGui_ImplSDLGPU3_CreateDeviceObjects();
 IMGUI_IMPL_API void     ImGui_ImplSDLGPU3_DestroyDeviceObjects();
-IMGUI_IMPL_API void     ImGui_ImplSDLGPU3_CreateFontsTexture();
-IMGUI_IMPL_API void     ImGui_ImplSDLGPU3_DestroyFontsTexture();
+
+// (Advanced) Use e.g. if you want to start updating textures after ImGui::Render() without waiting for the RenderDrawData call.
+IMGUI_IMPL_API void     ImGui_ImplSDLGPU3_UpdateTexture(ImTextureData* tex);
 
 #endif // #ifndef IMGUI_DISABLE
