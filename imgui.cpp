@@ -5178,13 +5178,16 @@ void ImGui::UpdateHoveredWindowAndCaptureFlags(const ImVec2& mouse_pos)
     io.WantTextInput = (g.WantTextInputNextFrame != -1) ? (g.WantTextInputNextFrame != 0) : false;
 }
 
+// FIXME-NEWATLAS-V2: If we aim to support multiple atlases used by same context: how to reach/target all atlases?
 static void ImGui::UpdateTexturesNewFrame()
 {
-    // FIXME-NEWATLAS-V2: If we aim to support multiple atlases used by same context: how to reach/target all atlases?
     ImGuiContext& g = *GImGui;
     ImFontAtlas* atlas = g.IO.Fonts;
     if (g.FontAtlasOwnedByContext)
+    {
+        atlas->RendererHasTextures = (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures) != 0;
         ImFontAtlasUpdateNewFrame(atlas);
+    }
 }
 
 // Build a single texture list
@@ -5239,13 +5242,6 @@ void ImGui::NewFrame()
             g.Hooks.erase(&g.Hooks[n]);
 
     CallContextHooks(&g, ImGuiContextHookType_NewFramePre);
-
-    // Check that font atlas was built or backend support texture reload in which case we can build now
-    ImFontAtlas* atlas = g.IO.Fonts;
-    if (!atlas->TexIsBuilt && (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures))
-        ImFontAtlasBuildMain(atlas);
-    else // Legacy backend
-        IM_ASSERT(atlas->TexIsBuilt && "Backend does not support ImGuiBackendFlags_RendererHasTextures, and font atlas is not built! Update backend OR make sure you called ImGui_ImplXXXX_NewFrame() function for renderer backend, which should call io.Fonts->GetTexDataAsRGBA32() / GetTexDataAsAlpha8().");
 
     // Check and assert for various common IO and Configuration mistakes
     ErrorCheckNewFrameSanityChecks();
@@ -8573,11 +8569,7 @@ void ImGui::UpdateFontsNewFrame()
 {
     ImGuiContext& g = *GImGui;
     if ((g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures) == 0)
-    {
         g.IO.Fonts->Locked = true;
-        for (ImFont* font : g.IO.Fonts->Fonts)
-            font->LockDisableLoading = true;
-    }
     SetCurrentFont(GetDefaultFont());
     IM_ASSERT(g.Font->IsLoaded());
 }
