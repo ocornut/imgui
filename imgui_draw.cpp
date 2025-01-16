@@ -2524,8 +2524,6 @@ void ImTextureData::DestroyPixels()
 // - ImFontAtlasPackGetRect()
 //-----------------------------------------------------------------------------
 // - ImFont::BuildLoadGlyph()
-// - ImFont::BuildClearGlyphs()
-//-----------------------------------------------------------------------------
 // - ImFontAtlasDebugLogTextureRequests()
 //-----------------------------------------------------------------------------
 // - ImFontAtlasGetFontLoaderForStbTruetype()
@@ -3584,7 +3582,7 @@ void ImFontAtlasBuildDiscardFontGlyphs(ImFontAtlas* atlas, ImFont* font)
     for (ImFontGlyph& glyph : font->Glyphs)
         if (glyph.PackId >= 0)
             ImFontAtlasPackDiscardRect(atlas, glyph.PackId);
-    font->BuildClearGlyphs();
+    font->ClearOutputData();
     font->FallbackChar = font->EllipsisChar = 0;
 }
 
@@ -3918,7 +3916,7 @@ void ImFontAtlasBuildInit(ImFontAtlas* atlas)
 void ImFontAtlasBuildDestroy(ImFontAtlas* atlas)
 {
     for (ImFont* font : atlas->Fonts)
-        font->BuildClearGlyphs();
+        font->ClearOutputData();
     if (atlas->FontLoader && atlas->FontLoader->FontSrcDestroy != NULL)
         for (ImFontConfig& font_cfg : atlas->Sources)
             atlas->FontLoader->FontSrcDestroy(atlas, &font_cfg);
@@ -4653,28 +4651,14 @@ ImFont::~ImFont()
 
 void ImFont::ClearOutputData()
 {
-    FontSize = 0.0f;
     FallbackAdvanceX = 0.0f;
     Glyphs.clear();
     IndexAdvanceX.clear();
     IndexLookup.clear();
     FallbackGlyphIndex = -1;
-    ContainerAtlas = NULL;
     Ascent = Descent = 0.0f;
     MetricsTotalSurface = 0;
     memset(Used8kPagesMap, 0, sizeof(Used8kPagesMap));
-}
-
-void ImFont::BuildClearGlyphs()
-{
-    FallbackAdvanceX = 0.0f;
-    Glyphs.clear();
-    IndexAdvanceX.clear();
-    IndexLookup.clear();
-    FallbackGlyphIndex = 0;
-    MetricsTotalSurface = 0;
-    memset(Used8kPagesMap, 0, sizeof(Used8kPagesMap));
-    // Don't clear BuilderData
 }
 
 // API is designed this way to avoid exposing the 8K page size

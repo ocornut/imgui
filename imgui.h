@@ -3766,7 +3766,6 @@ struct ImFont
     IMGUI_API bool              IsGlyphRangeUnused(unsigned int c_begin, unsigned int c_last);
     IMGUI_API ImFontGlyph*      BuildLoadGlyph(ImWchar c);
     IMGUI_API void              BuildGrowIndex(int new_size);
-    IMGUI_API void              BuildClearGlyphs();
 };
 
 // Added indirection to avoid patching ImDrawCmd after texture updates.
