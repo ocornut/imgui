@@ -47,6 +47,10 @@ Breaking changes:
 Other changes:
 
 - ImDrawList: texture baked storage for thick line reduced from ~64x64 to ~32x32. (#3245)
+- imgui_freetype: fixed issue where glyph advances would incorrectly be
+  snapped to pixels. Effectively it would only be noticeable when hinting
+  is disabled with ImGuiFreeTypeBuilderFlags_NoHinting, as hinting itself
+  snaps glyph advances.
 - Examples: DirectX12: Reduced number of frame in flight from 3 to 2 in
   provided example, to reduce latency.
 - Examples: Vulkan: better handle VK_SUBOPTIMAL_KHR being returned by
