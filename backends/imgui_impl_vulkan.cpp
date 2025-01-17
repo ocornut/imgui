@@ -1079,6 +1079,15 @@ void    ImGui_ImplVulkan_DestroyDeviceObjects()
     if (bd->DescriptorPool)       { vkDestroyDescriptorPool(v->Device, bd->DescriptorPool, v->Allocator); bd->DescriptorPool = VK_NULL_HANDLE; }
 }
 
+#ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
+static void ImGui_ImplVulkan_LoadDynamicRenderingFunctions(PFN_vkVoidFunction(*loader_func)(const char* function_name, void* user_data), void* user_data)
+{
+    // Manually load those two (see #5446)
+    ImGuiImplVulkanFuncs_vkCmdBeginRenderingKHR = reinterpret_cast<PFN_vkCmdBeginRenderingKHR>(loader_func("vkCmdBeginRenderingKHR", user_data));
+    ImGuiImplVulkanFuncs_vkCmdEndRenderingKHR = reinterpret_cast<PFN_vkCmdEndRenderingKHR>(loader_func("vkCmdEndRenderingKHR", user_data));
+}
+#endif
+
 bool    ImGui_ImplVulkan_LoadFunctions(PFN_vkVoidFunction(*loader_func)(const char* function_name, void* user_data), void* user_data)
 {
     // Load function pointers
@@ -1094,9 +1103,7 @@ bool    ImGui_ImplVulkan_LoadFunctions(PFN_vkVoidFunction(*loader_func)(const ch
 #undef IMGUI_VULKAN_FUNC_LOAD
 
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
-    // Manually load those two (see #5446)
-    ImGuiImplVulkanFuncs_vkCmdBeginRenderingKHR = reinterpret_cast<PFN_vkCmdBeginRenderingKHR>(loader_func("vkCmdBeginRenderingKHR", user_data));
-    ImGuiImplVulkanFuncs_vkCmdEndRenderingKHR = reinterpret_cast<PFN_vkCmdEndRenderingKHR>(loader_func("vkCmdEndRenderingKHR", user_data));
+    ImGui_ImplVulkan_LoadDynamicRenderingFunctions(loader_func, user_data);
 #endif
 #else
     IM_UNUSED(loader_func);
@@ -1115,8 +1122,7 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info)
     {
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
 #ifndef IMGUI_IMPL_VULKAN_USE_LOADER
-        ImGuiImplVulkanFuncs_vkCmdBeginRenderingKHR = reinterpret_cast<PFN_vkCmdBeginRenderingKHR>(vkGetInstanceProcAddr(info->Instance, "vkCmdBeginRenderingKHR"));
-        ImGuiImplVulkanFuncs_vkCmdEndRenderingKHR = reinterpret_cast<PFN_vkCmdEndRenderingKHR>(vkGetInstanceProcAddr(info->Instance, "vkCmdEndRenderingKHR"));
+        ImGui_ImplVulkan_LoadDynamicRenderingFunctions([](const char* function_name, void* user_data) { return vkGetInstanceProcAddr((VkInstance)user_data, function_name); }, (void*)info->Instance);
 #endif
         IM_ASSERT(ImGuiImplVulkanFuncs_vkCmdBeginRenderingKHR != nullptr);
         IM_ASSERT(ImGuiImplVulkanFuncs_vkCmdEndRenderingKHR != nullptr);
