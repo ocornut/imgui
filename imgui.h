@@ -3744,19 +3744,19 @@ struct ImFont
     float                       FallbackAdvanceX;   // 4     // out // FindGlyph(FallbackChar)->AdvanceX
     float                       FontSize;           // 4     // in  // Height of characters/line, set during loading (don't change after loading)
 
-    // [Internal] Members: Hot ~28/40 bytes (for RenderText loop)
+    // [Internal] Members: Hot ~28/36 bytes (for RenderText loop)
     ImVector<ImU16>             IndexLookup;        // 12-16 // out // Sparse. Index glyphs by Unicode code-point.
     ImVector<ImFontGlyph>       Glyphs;             // 12-16 // out // All glyphs.
     int                         FallbackGlyphIndex; // 4     // out // Index of FontFallbackChar
 
-    // [Internal] Members: Cold ~32/40 bytes
+    // [Internal] Members: Cold ~32/40/60 bytes
     // Conceptually Sources[] is the list of font sources merged to create this font.
-    ImFontAtlas*                ContainerAtlas;     // 4-8   // out // What we has been loaded into
-    ImFontConfig*               Sources;            // 4-8   // in  // Pointer within ContainerAtlas->Sources[], to SourcesCount instances
     short                       SourcesCount;       // 2     // in  // Number of ImFontConfig involved in creating this font. Usually 1, or >1 when merging multiple font sources into one ImFont.
     short                       EllipsisCharCount;  // 1     // out // 1 or 3
     ImWchar                     EllipsisChar;       // 2-4   // out // Character used for ellipsis rendering ('...').
     ImWchar                     FallbackChar;       // 2-4   // out // Character used if a glyph isn't found (U+FFFD, '?')
+    ImFontConfig*               Sources;            // 4-8   // in  // Pointer within ContainerAtlas->Sources[], to SourcesCount instances
+    ImFontAtlas*                ContainerAtlas;     // 4-8   // out // What we has been loaded into
     float                       EllipsisWidth;      // 4     // out // Total ellipsis Width
     float                       EllipsisCharStep;   // 4     // out // Step between characters when EllipsisCount > 0
     float                       Scale;              // 4     // in  // Base font scale (~1.0f), multiplied by the per-window font scale which you can adjust with SetWindowFontScale()
@@ -3764,7 +3764,7 @@ struct ImFont
     int                         MetricsTotalSurface;// 4     // out // Total surface in pixels to get an idea of the font rasterization/texture cost (not exact, we approximate the cost of padding between glyphs)
     ImU8                        Used8kPagesMap[(IM_UNICODE_CODEPOINT_MAX+1)/8192/8]; // 1 bytes if ImWchar=ImWchar16, 16 bytes if ImWchar==ImWchar32. Store 1-bit for each block of 4K codepoints that has one active glyph. This is mainly used to facilitate iterations across all used codepoints.
     bool                        LockDisableLoading;
-    ImFontConfig*               LockSingleSrcConfig;
+    short                       LockSingleSrcConfigIdx;
 
     // Methods
     IMGUI_API ImFont();

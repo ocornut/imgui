@@ -3927,7 +3927,7 @@ struct ImFontLoader
     bool            (*FontSrcInit)(ImFontAtlas* atlas, ImFontConfig* src);
     void            (*FontSrcDestroy)(ImFontAtlas* atlas, ImFontConfig* src);
     bool            (*FontSrcContainsGlyph)(ImFontAtlas* atlas, ImFontConfig* src, ImWchar codepoint);
-    bool            (*FontAddGlyph)(ImFontAtlas* atlas, ImFont* font, ImWchar codepoint);
+    bool            (*FontAddGlyph)(ImFontAtlas* atlas, ImFont* font, ImFontConfig* srcs, int srcs_count, ImWchar codepoint);
 
     ImFontLoader()  { memset(this, 0, sizeof(*this)); }
 };

@@ -3401,10 +3401,12 @@ bool ImFontAtlasBuildAddFont(ImFontAtlas* atlas, ImFontConfig* src)
 void ImFontAtlasBuildSetupFontSpecialGlyphs(ImFontAtlas* atlas, ImFontConfig* src)
 {
     ImFont* font = src->DstFont;
+    const int cfg_idx_in_font = (int)(src - font->Sources);
+    IM_ASSERT(cfg_idx_in_font >= 0 && cfg_idx_in_font < font->SourcesCount);
     IM_UNUSED(atlas);
 
     // While manipulating glyphs during init we want to restrict all searches for one source font.
-    font->LockSingleSrcConfig = src;
+    font->LockSingleSrcConfigIdx = (short)cfg_idx_in_font;
 
     // Setup Fallback character
     // FIXME-NEWATLAS: could we use a scheme where this is lazily loaded?
@@ -3455,8 +3457,7 @@ void ImFontAtlasBuildSetupFontSpecialGlyphs(ImFontAtlas* atlas, ImFontConfig* sr
             font->EllipsisWidth = ImMax(dot_glyph->AdvanceX, dot_glyph->X0 + font->EllipsisCharStep * 3.0f - 1.0f); // FIXME: Slightly odd for normally mono-space fonts but since this is used for trailing contents.
         }
     }
-
-    font->LockSingleSrcConfig = NULL;
+    font->LockSingleSrcConfigIdx = -1;
 }
 
 // Those functions are designed to facilitate changing the underlying structures for ImFontAtlas to store an array of ImDrawListSharedData*
@@ -3816,10 +3817,15 @@ ImFontGlyph* ImFont::BuildLoadGlyph(ImWchar codepoint)
 
     //char utf8_buf[5];
     //IMGUI_DEBUG_LOG("[font] BuildAddGlyph U+%04X (%s)\n", (unsigned int)codepoint, ImTextCharToUtf8(utf8_buf, (unsigned int)codepoint));
-
     ImFontAtlas* atlas = ContainerAtlas;
+
+    // Load from single source or all sources?
+    int srcs_count = (LockSingleSrcConfigIdx != -1) ? 1 : SourcesCount;
+    ImFontConfig* srcs = (LockSingleSrcConfigIdx != -1) ? &Sources[LockSingleSrcConfigIdx] : Sources;
+
+    // Call backend
     const ImFontLoader* font_loader = atlas->FontLoader;
-    if (!font_loader->FontAddGlyph(atlas, this, codepoint))
+    if (!font_loader->FontAddGlyph(atlas, this, srcs, srcs_count, codepoint))
     {
         // Mark index as not found, so we don't attempt the search twice
         BuildGrowIndex(codepoint + 1);
@@ -3944,16 +3950,15 @@ static bool ImGui_ImplStbTrueType_FontSrcContainsGlyph(ImFontAtlas* atlas, ImFon
     return glyph_index != 0;
 }
 
-static bool ImGui_ImplStbTrueType_FontAddGlyph(ImFontAtlas* atlas, ImFont* font, ImWchar codepoint)
+static bool ImGui_ImplStbTrueType_FontAddGlyph(ImFontAtlas* atlas, ImFont* font, ImFontConfig* srcs, int srcs_count, ImWchar codepoint)
 {
     // Search for first font which has the glyph
     ImGui_ImplStbTrueType_FontSrcData* bd_font_data = NULL;
     ImFontConfig* src = NULL;
     int glyph_index = 0;
-    int scan_count = (font->LockSingleSrcConfig != NULL) ? 1 : font->SourcesCount;
-    for (int src_n = 0; src_n < scan_count; src_n++, bd_font_data++)
+    for (int src_n = 0; src_n < srcs_count; src_n++)
     {
-        src = font->LockSingleSrcConfig ? font->LockSingleSrcConfig : &font->Sources[src_n];
+        src = &srcs[src_n];
         bd_font_data = (ImGui_ImplStbTrueType_FontSrcData*)src->FontLoaderData;
         glyph_index = stbtt_FindGlyphIndex(&bd_font_data->FontInfo, (int)codepoint);
         if (glyph_index != 0)
@@ -4376,6 +4381,7 @@ ImFont::ImFont()
 {
     memset(this, 0, sizeof(*this));
     Scale = 1.0f;
+    LockSingleSrcConfigIdx = -1;
 }
 
 ImFont::~ImFont()
