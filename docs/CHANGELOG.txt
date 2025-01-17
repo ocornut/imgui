@@ -60,6 +60,8 @@ Other changes:
   vkAcquireNextImageKHR() or vkQueuePresentKHR(). (#7825, #7831) [@NostraMagister]
 - Backends: SDLGPU3: Exposed ImGui_ImplSDLGPU3_CreateDeviceObjects()/_DestroyDeviceObjects().
   Removed return value from ImGui_ImplSDLGPU3_CreateFontsTexture(). (#8163, #7998, #7988)
+- Backends: SDL_Renderer2/3: Use endian-dependent RGBA32 texture format, to match
+  SDL_Color. (#8327) [@dkosmari]
 - Backends: DirectX12: Texture upload use the command queue provided in
   ImGui_ImplDX12_InitInfo instead of creating its own.
 
