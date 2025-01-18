@@ -4003,7 +4003,7 @@ IMGUI_API ImVec2i           ImFontAtlasBuildGetTextureSizeEstimate(ImFontAtlas* 
 
 IMGUI_API bool              ImFontAtlasBuildAddFont(ImFontAtlas* atlas, ImFontConfig* src);
 IMGUI_API ImFontGlyph*      ImFontAtlasBuildAddFontGlyph(ImFontAtlas* atlas, ImFont* font, ImFontConfig* src, const ImFontGlyph* in_glyph);
-IMGUI_API void              ImFontAtlasBuildSetupFontSpecialGlyphs(ImFontAtlas* atlas, ImFontConfig* src);
+IMGUI_API void              ImFontAtlasBuildSetupFontSpecialGlyphs(ImFontAtlas* atlas, ImFont* font, ImFontConfig* src);
 IMGUI_API void              ImFontAtlasBuildDiscardFontGlyph(ImFontAtlas* atlas, ImFont* font, ImFontGlyph* glyph);
 IMGUI_API void              ImFontAtlasBuildDiscardFontGlyphs(ImFontAtlas* atlas, ImFont* font);
 IMGUI_API void              ImFontAtlasBuildReloadFont(ImFontAtlas* atlas, ImFont* font); // <--- Your future new best friend!
