@@ -16215,7 +16215,7 @@ void ImGui::DebugNodeDrawCmdShowMeshAndBoundingBox(ImDrawList* out_draw_list, co
 void ImGui::DebugNodeFont(ImFont* font)
 {
     bool opened = TreeNode(font, "Font: \"%s\": %.2f px, %d glyphs, %d sources(s)",
-        font->ConfigData ? font->ConfigData[0].Name : "", font->FontSize, font->Glyphs.Size, font->ConfigDataCount);
+        font->Sources ? font->Sources[0].Name : "", font->FontSize, font->Glyphs.Size, font->SourcesCount);
 
     // Display preview text
     if (!opened)
@@ -16248,14 +16248,14 @@ void ImGui::DebugNodeFont(ImFont* font)
     Text("Ellipsis character: '%s' (U+%04X)", ImTextCharToUtf8(c_str, font->EllipsisChar), font->EllipsisChar);
     const int surface_sqrt = (int)ImSqrt((float)font->MetricsTotalSurface);
     Text("Texture Area: about %d px ~%dx%d px", font->MetricsTotalSurface, surface_sqrt, surface_sqrt);
-    for (int config_i = 0; config_i < font->ConfigDataCount; config_i++)
-        if (font->ConfigData)
+    for (int config_i = 0; config_i < font->SourcesCount; config_i++)
+        if (font->Sources)
         {
-            const ImFontConfig* cfg = &font->ConfigData[config_i];
+            const ImFontConfig* src = &font->Sources[config_i];
             int oversample_h, oversample_v;
-            ImFontAtlasBuildGetOversampleFactors(cfg, &oversample_h, &oversample_v);
+            ImFontAtlasBuildGetOversampleFactors(src, &oversample_h, &oversample_v);
             BulletText("Input %d: \'%s\', Oversample: (%d=>%d,%d=>%d), PixelSnapH: %d, Offset: (%.1f,%.1f)",
-                config_i, cfg->Name, cfg->OversampleH, oversample_h, cfg->OversampleV, oversample_v, cfg->PixelSnapH, cfg->GlyphOffset.x, cfg->GlyphOffset.y);
+                config_i, src->Name, src->OversampleH, oversample_h, src->OversampleV, oversample_v, src->PixelSnapH, src->GlyphOffset.x, src->GlyphOffset.y);
         }
 
     // Display all glyphs of the fonts in separate pages of 256 characters

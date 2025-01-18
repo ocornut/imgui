@@ -3441,7 +3441,7 @@ struct ImFontAtlas
     ImVec2                      TexUvWhitePixel;    // Texture coordinates to a white pixel
     ImVector<ImFont*>           Fonts;              // Hold all the fonts returned by AddFont*. Fonts[0] is the default font upon calling ImGui::NewFrame(), use ImGui::PushFont()/PopFont() to change the current font.
     ImVector<ImFontAtlasCustomRect> CustomRects;    // Rectangles for packing custom texture data into the atlas.
-    ImVector<ImFontConfig>      ConfigData;         // Configuration data
+    ImVector<ImFontConfig>      Sources;            // Source/configuration data
     ImVec4                      TexUvLines[IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1];  // UVs for baked anti-aliased lines
 
     // [Internal] Font builder
@@ -3472,10 +3472,10 @@ struct ImFont
     ImFontGlyph*                FallbackGlyph;      // 4-8   // out // = FindGlyph(FontFallbackChar)
 
     // [Internal] Members: Cold ~32/40 bytes
-    // Conceptually ConfigData[] is the list of font sources merged to create this font.
+    // Conceptually Sources[] is the list of font sources merged to create this font.
     ImFontAtlas*                ContainerAtlas;     // 4-8   // out // What we has been loaded into
-    const ImFontConfig*         ConfigData;         // 4-8   // in  // Pointer within ContainerAtlas->ConfigData to ConfigDataCount instances
-    short                       ConfigDataCount;    // 2     // in  // Number of ImFontConfig involved in creating this font. Usually 1, or >1 when merging multiple font sources into one ImFont.
+    ImFontConfig*               Sources;            // 4-8   // in  // Pointer within ContainerAtlas->Sources[], to SourcesCount instances
+    short                       SourcesCount;       // 2     // in  // Number of ImFontConfig involved in creating this font. Usually 1, or >1 when merging multiple font sources into one ImFont.
     short                       EllipsisCharCount;  // 1     // out // 1 or 3
     ImWchar                     EllipsisChar;       // 2-4   // out // Character used for ellipsis rendering ('...').
     ImWchar                     FallbackChar;       // 2-4   // out // Character used if a glyph isn't found (U+FFFD, '?')
@@ -3494,7 +3494,7 @@ struct ImFont
     IMGUI_API ImFontGlyph*      FindGlyphNoFallback(ImWchar c);
     float                       GetCharAdvance(ImWchar c)       { return ((int)c < IndexAdvanceX.Size) ? IndexAdvanceX[(int)c] : FallbackAdvanceX; }
     bool                        IsLoaded() const                { return ContainerAtlas != NULL; }
-    const char*                 GetDebugName() const            { return ConfigData ? ConfigData->Name : "<unknown>"; }
+    const char*                 GetDebugName() const            { return Sources ? Sources->Name : "<unknown>"; }
 
     // [Internal] Don't use!
     // 'max_width' stops rendering after a certain width (could be turned into a 2d size). FLT_MAX to disable.
