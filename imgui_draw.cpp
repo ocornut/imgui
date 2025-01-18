@@ -2966,9 +2966,6 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
         return NULL;
     }
 
-    // Invalidate texture
-    //TexReady = false;
-    //ClearTexData();
     return new_font_cfg.DstFont;
 }
 
@@ -3276,15 +3273,16 @@ void ImFontAtlasBuildSetupFontLoader(ImFontAtlas* atlas, const ImFontLoader* fon
 void ImFontAtlasBuildPreloadAllGlyphRanges(ImFontAtlas* atlas)
 {
     atlas->Builder->PreloadedAllGlyphsRanges = true;
-    for (int src_n = 0; src_n < atlas->Sources.Size; src_n++)
-    {
-        ImFontConfig* src = &atlas->Sources[src_n];
-        const ImWchar* ranges = src->GlyphRanges ? src->GlyphRanges : atlas->GetGlyphRangesDefault();
-        IM_ASSERT(ranges != NULL);
-        for (; ranges[0]; ranges += 2)
-            for (unsigned int c = ranges[0]; c <= ranges[1] && c <= IM_UNICODE_CODEPOINT_MAX; c++) //-V560
-                src->DstFont->FindGlyphNoFallback((ImWchar)c);
-    }
+    for (ImFont* font : atlas->Fonts)
+        for (int src_n = 0; src_n < font->SourcesCount; src_n++)
+        {
+            ImFontConfig* src = &font->Sources[src_n];
+            const ImWchar* ranges = src->GlyphRanges ? src->GlyphRanges : atlas->GetGlyphRangesDefault();
+            IM_ASSERT(ranges != NULL);
+            for (; ranges[0]; ranges += 2)
+                for (unsigned int c = ranges[0]; c <= ranges[1] && c <= IM_UNICODE_CODEPOINT_MAX; c++) //-V560
+                    font->FindGlyphNoFallback((ImWchar)c);
+        }
 }
 
 void ImFontAtlasBuildUpdatePointers(ImFontAtlas* atlas)
@@ -3462,17 +3460,15 @@ bool ImFontAtlasBuildAddFont(ImFontAtlas* atlas, ImFontConfig* src)
     if (!font_loader->FontSrcInit(atlas, src))
         return false;
 
-    ImFontAtlasBuildSetupFontSpecialGlyphs(atlas, src);
+    ImFontAtlasBuildSetupFontSpecialGlyphs(atlas, font, src);
     return true;
 }
 
 // Rasterize our own ellipsis character from a dot.
 // This may seem overly complicated right now but the point is to exercise and improve a technique which should be increasingly used.
 // FIXME-NEWATLAS: This borrows too much from FontLoader's FontAddGlyph() and suggest that we should add further helpers.
-static void ImFontAtlasBuildSetupFontCreateEllipsisFromDot(ImFontAtlas* atlas, ImFontConfig* src, const ImFontGlyph* dot_glyph)
+static void ImFontAtlasBuildSetupFontCreateEllipsisFromDot(ImFontAtlas* atlas, ImFont* font, const ImFontGlyph* dot_glyph)
 {
-    ImFont* font = src->DstFont;
-
     ImFontAtlasRect* dot_r = ImFontAtlasPackGetRect(atlas, dot_glyph->PackId);
     const int dot_spacing = 1;
     const float dot_step = (dot_glyph->X1 - dot_glyph->X0) + dot_spacing;
@@ -3502,15 +3498,14 @@ static void ImFontAtlasBuildSetupFontCreateEllipsisFromDot(ImFontAtlas* atlas, I
 
 // Load/identify special glyphs
 // (note that this is called again for fonts with MergeMode)
-void ImFontAtlasBuildSetupFontSpecialGlyphs(ImFontAtlas* atlas, ImFontConfig* src)
+void ImFontAtlasBuildSetupFontSpecialGlyphs(ImFontAtlas* atlas, ImFont* font, ImFontConfig* src)
 {
-    ImFont* font = src->DstFont;
-    const int cfg_idx_in_font = (int)(src - font->Sources);
-    IM_ASSERT(cfg_idx_in_font >= 0 && cfg_idx_in_font < font->SourcesCount);
+    const int src_idx_in_font = (int)(src - font->Sources);
+    IM_ASSERT(src_idx_in_font >= 0 && src_idx_in_font < font->SourcesCount);
     IM_UNUSED(atlas);
 
     // While manipulating glyphs during init we want to restrict all searches for one source font.
-    font->LockSingleSrcConfigIdx = (short)cfg_idx_in_font;
+    font->LockSingleSrcConfigIdx = (short)src_idx_in_font;
 
     // Setup Fallback character
     // FIXME-NEWATLAS: could we use a scheme where this is lazily loaded?
@@ -3553,7 +3548,7 @@ void ImFontAtlasBuildSetupFontSpecialGlyphs(ImFontAtlas* atlas, ImFontConfig* sr
     {
         const ImWchar dots_chars[] = { (ImWchar)'.', (ImWchar)0xFF0E };
         if (const ImFontGlyph* dot_glyph = LoadFirstExistingGlyph(font, dots_chars, IM_ARRAYSIZE(dots_chars)))
-            ImFontAtlasBuildSetupFontCreateEllipsisFromDot(atlas, src, dot_glyph);
+            ImFontAtlasBuildSetupFontCreateEllipsisFromDot(atlas, font, dot_glyph);
         else
             font->EllipsisChar = (ImWchar)' ';
     }
@@ -3598,7 +3593,7 @@ void ImFontAtlasBuildReloadFont(ImFontAtlas* atlas, ImFont* font)
         if (atlas->FontLoader && atlas->FontLoader->FontSrcInit != NULL)
             atlas->FontLoader->FontSrcInit(atlas, src);
 
-        ImFontAtlasBuildSetupFontSpecialGlyphs(atlas, src); // Technically this is called for each source sub-font, tho 99.9% of the time the first one fills everything.
+        ImFontAtlasBuildSetupFontSpecialGlyphs(atlas, font, src); // Technically this is called for each source sub-font, tho 99.9% of the time the first one fills everything.
         atlas->TexIsBuilt = false;
     }
 
