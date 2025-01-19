@@ -38,9 +38,4 @@ IMGUI_IMPL_API void     ImGui_ImplSDL2_Shutdown();
 IMGUI_IMPL_API void     ImGui_ImplSDL2_NewFrame();
 IMGUI_IMPL_API bool     ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event);
 
-// Gamepad selection automatically starts in AutoFirst mode, picking first available SDL_Gamepad. You may override this.
-// When using manual mode, caller is responsible for opening/closing gamepad.
-enum ImGui_ImplSDL2_GamepadMode { ImGui_ImplSDL2_GamepadMode_AutoFirst, ImGui_ImplSDL2_GamepadMode_AutoAll, ImGui_ImplSDL2_GamepadMode_Manual };
-IMGUI_IMPL_API void     ImGui_ImplSDL2_SetGamepadMode(ImGui_ImplSDL2_GamepadMode mode, struct _SDL_GameController** manual_gamepads_array = nullptr, int manual_gamepads_count = -1);
-
 #endif // #ifndef IMGUI_DISABLE
