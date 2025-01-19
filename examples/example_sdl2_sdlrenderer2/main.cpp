@@ -102,10 +102,27 @@ int main(int, char**)
         while (SDL_PollEvent(&event))
         {
             ImGui_ImplSDL2_ProcessEvent(&event);
-            if (event.type == SDL_QUIT)
-                done = true;
-            if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
-                done = true;
+            switch (event.type)
+            {
+                case SDL_QUIT:
+                {
+                    done = true;
+                    break;
+                }
+                case SDL_CONTROLLERDEVICEADDED:
+                {
+                    // Start receiving SDL_CONTROLLER* events.
+                    SDL_GameControllerOpen(event.cdevice.which);
+                    break;
+                }
+                case SDL_CONTROLLERDEVICEREMOVED:
+                {
+                    SDL_GameController* ctr = SDL_GameControllerFromInstanceID(event.cdevice.which);
+                    if (ctr)
+                        SDL_GameControllerClose(ctr);
+                    break;
+                }
+            }
         }
         if (SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED)
         {
