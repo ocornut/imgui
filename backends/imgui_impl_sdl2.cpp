@@ -21,6 +21,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2025-01-??: Removed ImGui_ImplSDL2_SetGamepadMode(), gamepad events are now handled by ImGui_ImplSDL2_ProcessEvent().
 //  2024-10-24: Emscripten: from SDL 2.30.9, SDL_EVENT_MOUSE_WHEEL event doesn't require dividing by 100.0f.
 //  2024-09-09: use SDL_Vulkan_GetDrawableSize() when available. (#7967, #3190)
 //  2024-08-22: moved some OS/backend related function pointers from ImGuiIO to ImGuiPlatformIO:
@@ -134,11 +135,6 @@ struct ImGui_ImplSDL2_Data
     SDL_Cursor*             MouseLastCursor;
     int                     MouseLastLeaveFrame;
     bool                    MouseCanUseGlobalState;
-
-    // Gamepad handling
-    ImVector<SDL_GameController*> Gamepads;
-    ImGui_ImplSDL2_GamepadMode    GamepadMode;
-    bool                          WantUpdateGamepadsList;
 
     ImGui_ImplSDL2_Data()   { memset((void*)this, 0, sizeof(*this)); }
 };
@@ -321,6 +317,95 @@ static void ImGui_ImplSDL2_UpdateKeyModifiers(SDL_Keymod sdl_key_mods)
     io.AddKeyEvent(ImGuiMod_Super, (sdl_key_mods & KMOD_GUI) != 0);
 }
 
+static ImGuiKey ImGui_ImplSDL2_GameControllerButtonToImGuiKey(SDL_GameControllerButton button, bool swapped)
+{
+    switch (button)
+    {
+        case SDL_CONTROLLER_BUTTON_A:
+            return swapped ? ImGuiKey_GamepadFaceRight : ImGuiKey_GamepadFaceDown;
+        case SDL_CONTROLLER_BUTTON_B:
+            return swapped ? ImGuiKey_GamepadFaceDown : ImGuiKey_GamepadFaceRight;
+        case SDL_CONTROLLER_BUTTON_X:
+            return swapped ? ImGuiKey_GamepadFaceUp : ImGuiKey_GamepadFaceLeft;
+        case SDL_CONTROLLER_BUTTON_Y:
+            return swapped ? ImGuiKey_GamepadFaceLeft : ImGuiKey_GamepadFaceUp;
+        case SDL_CONTROLLER_BUTTON_BACK:
+            return ImGuiKey_GamepadBack;
+        case SDL_CONTROLLER_BUTTON_START:
+            return ImGuiKey_GamepadStart;
+        case SDL_CONTROLLER_BUTTON_LEFTSTICK:
+            return ImGuiKey_GamepadL3;
+        case SDL_CONTROLLER_BUTTON_RIGHTSTICK:
+            return ImGuiKey_GamepadR3;
+        case SDL_CONTROLLER_BUTTON_LEFTSHOULDER:
+            return ImGuiKey_GamepadL1;
+        case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER:
+            return ImGuiKey_GamepadR1;
+        case SDL_CONTROLLER_BUTTON_DPAD_UP:
+            return ImGuiKey_GamepadDpadUp;
+        case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
+            return ImGuiKey_GamepadDpadDown;
+        case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
+            return ImGuiKey_GamepadDpadLeft;
+        case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
+            return ImGuiKey_GamepadDpadRight;
+        default:
+            return ImGuiKey_None;
+    }
+}
+
+static void ImGui_ImplSDL2_NormalizeValue(int raw_value, int deadzone, int max_value, bool& active, float& norm_value)
+{
+    if (raw_value < deadzone) {
+        active = false;
+        norm_value = 0.0f;
+    } else {
+        active = true;
+        raw_value -= deadzone;
+        max_value -= deadzone;
+        norm_value = raw_value / float(max_value);
+    }
+}
+
+static void ImGui_ImplSDL2_HandleControllerAxes(ImGuiIO& io, const SDL_ControllerAxisEvent& event)
+{
+    const int deadzone = 8192;
+    bool active1 = false;
+    float value1 = 0.0f;
+    bool active2 = false;
+    float value2 = 0.0f;
+    switch (event.axis)
+    {
+        case SDL_CONTROLLER_AXIS_LEFTX:
+            ImGui_ImplSDL2_NormalizeValue(-event.value, deadzone, -SDL_JOYSTICK_AXIS_MIN, active1, value1);
+            ImGui_ImplSDL2_NormalizeValue( event.value, deadzone,  SDL_JOYSTICK_AXIS_MAX, active2, value2);
+            io.AddKeyAnalogEvent(ImGuiKey_GamepadLStickLeft,  active1, value1);
+            io.AddKeyAnalogEvent(ImGuiKey_GamepadLStickRight, active2, value2);
+            break;
+
+        case SDL_CONTROLLER_AXIS_LEFTY:
+            ImGui_ImplSDL2_NormalizeValue(-event.value, deadzone, -SDL_JOYSTICK_AXIS_MIN, active1, value1);
+            ImGui_ImplSDL2_NormalizeValue( event.value, deadzone,  SDL_JOYSTICK_AXIS_MAX, active2, value2);
+            io.AddKeyAnalogEvent(ImGuiKey_GamepadLStickUp,   active1, value1);
+            io.AddKeyAnalogEvent(ImGuiKey_GamepadLStickDown, active2, value2);
+            break;
+
+        case SDL_CONTROLLER_AXIS_RIGHTX:
+            ImGui_ImplSDL2_NormalizeValue(-event.value, deadzone, -SDL_JOYSTICK_AXIS_MIN, active1, value1);
+            ImGui_ImplSDL2_NormalizeValue( event.value, deadzone,  SDL_JOYSTICK_AXIS_MAX, active2, value2);
+            io.AddKeyAnalogEvent(ImGuiKey_GamepadRStickLeft,  active1, value1);
+            io.AddKeyAnalogEvent(ImGuiKey_GamepadRStickRight, active2, value2);
+            break;
+
+        case SDL_CONTROLLER_AXIS_RIGHTY:
+            ImGui_ImplSDL2_NormalizeValue(-event.value, deadzone, -SDL_JOYSTICK_AXIS_MIN, active1, value1);
+            ImGui_ImplSDL2_NormalizeValue( event.value, deadzone,  SDL_JOYSTICK_AXIS_MAX, active2, value2);
+            io.AddKeyAnalogEvent(ImGuiKey_GamepadRStickUp,   active1, value1);
+            io.AddKeyAnalogEvent(ImGuiKey_GamepadRStickDown, active2, value2);
+            break;
+    }
+}
+
 static ImGuiViewport* ImGui_ImplSDL2_GetViewportForWindowID(Uint32 window_id)
 {
     ImGui_ImplSDL2_Data* bd = ImGui_ImplSDL2_GetBackendData();
@@ -430,9 +515,25 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
             return true;
         }
         case SDL_CONTROLLERDEVICEADDED:
-        case SDL_CONTROLLERDEVICEREMOVED:
         {
-            bd->WantUpdateGamepadsList = true;
+            if ((io.BackendFlags & ImGuiBackendFlags_HasGamepad) == 0)
+                io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
+            return true;
+        }
+        case SDL_CONTROLLERBUTTONDOWN:
+        case SDL_CONTROLLERBUTTONUP:
+        {
+            if ((io.BackendFlags & ImGuiBackendFlags_HasGamepad) == 0)
+                io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
+            io.AddKeyEvent(ImGui_ImplSDL2_GameControllerButtonToImGuiKey(static_cast<SDL_GameControllerButton>(event->cbutton.button), io.ConfigNavSwapGamepadButtons),
+                           event->cbutton.state == SDL_PRESSED);
+            return true;
+        }
+        case SDL_CONTROLLERAXISMOTION:
+        {
+            if ((io.BackendFlags & ImGuiBackendFlags_HasGamepad) == 0)
+                io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
+            ImGui_ImplSDL2_HandleControllerAxes(io, event->caxis);
             return true;
         }
     }
@@ -480,10 +581,6 @@ static bool ImGui_ImplSDL2_Init(SDL_Window* window, SDL_Renderer* renderer, void
 #ifdef __EMSCRIPTEN__
     platform_io.Platform_OpenInShellFn = [](ImGuiContext*, const char* url) { ImGui_ImplSDL2_EmscriptenOpenURL(url); return true; };
 #endif
-
-    // Gamepad handling
-    bd->GamepadMode = ImGui_ImplSDL2_GamepadMode_AutoFirst;
-    bd->WantUpdateGamepadsList = true;
 
     // Load mouse cursors
     bd->MouseCursors[ImGuiMouseCursor_Arrow] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
@@ -573,8 +670,6 @@ bool ImGui_ImplSDL2_InitForOther(SDL_Window* window)
     return ImGui_ImplSDL2_Init(window, nullptr, nullptr);
 }
 
-static void ImGui_ImplSDL2_CloseGamepads();
-
 void ImGui_ImplSDL2_Shutdown()
 {
     ImGui_ImplSDL2_Data* bd = ImGui_ImplSDL2_GetBackendData();
@@ -585,7 +680,6 @@ void ImGui_ImplSDL2_Shutdown()
         SDL_free(bd->ClipboardTextData);
     for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_COUNT; cursor_n++)
         SDL_FreeCursor(bd->MouseCursors[cursor_n]);
-    ImGui_ImplSDL2_CloseGamepads();
 
     io.BackendPlatformName = nullptr;
     io.BackendPlatformUserData = nullptr;
@@ -650,111 +744,6 @@ static void ImGui_ImplSDL2_UpdateMouseCursor()
     }
 }
 
-static void ImGui_ImplSDL2_CloseGamepads()
-{
-    ImGui_ImplSDL2_Data* bd = ImGui_ImplSDL2_GetBackendData();
-    if (bd->GamepadMode != ImGui_ImplSDL2_GamepadMode_Manual)
-        for (SDL_GameController* gamepad : bd->Gamepads)
-            SDL_GameControllerClose(gamepad);
-    bd->Gamepads.resize(0);
-}
-
-void ImGui_ImplSDL2_SetGamepadMode(ImGui_ImplSDL2_GamepadMode mode, struct _SDL_GameController** manual_gamepads_array, int manual_gamepads_count)
-{
-    ImGui_ImplSDL2_Data* bd = ImGui_ImplSDL2_GetBackendData();
-    ImGui_ImplSDL2_CloseGamepads();
-    if (mode == ImGui_ImplSDL2_GamepadMode_Manual)
-    {
-        IM_ASSERT(manual_gamepads_array != nullptr && manual_gamepads_count > 0);
-        for (int n = 0; n < manual_gamepads_count; n++)
-            bd->Gamepads.push_back(manual_gamepads_array[n]);
-    }
-    else
-    {
-        IM_ASSERT(manual_gamepads_array == nullptr && manual_gamepads_count <= 0);
-        bd->WantUpdateGamepadsList = true;
-    }
-    bd->GamepadMode = mode;
-}
-
-static void ImGui_ImplSDL2_UpdateGamepadButton(ImGui_ImplSDL2_Data* bd, ImGuiIO& io, ImGuiKey key, SDL_GameControllerButton button_no)
-{
-    bool merged_value = false;
-    for (SDL_GameController* gamepad : bd->Gamepads)
-        merged_value |= SDL_GameControllerGetButton(gamepad, button_no) != 0;
-    io.AddKeyEvent(key, merged_value);
-}
-
-static inline float Saturate(float v) { return v < 0.0f ? 0.0f : v  > 1.0f ? 1.0f : v; }
-static void ImGui_ImplSDL2_UpdateGamepadAnalog(ImGui_ImplSDL2_Data* bd, ImGuiIO& io, ImGuiKey key, SDL_GameControllerAxis axis_no, float v0, float v1)
-{
-    float merged_value = 0.0f;
-    for (SDL_GameController* gamepad : bd->Gamepads)
-    {
-        float vn = Saturate((float)(SDL_GameControllerGetAxis(gamepad, axis_no) - v0) / (float)(v1 - v0));
-        if (merged_value < vn)
-            merged_value = vn;
-    }
-    io.AddKeyAnalogEvent(key, merged_value > 0.1f, merged_value);
-}
-
-static void ImGui_ImplSDL2_UpdateGamepads()
-{
-    ImGui_ImplSDL2_Data* bd = ImGui_ImplSDL2_GetBackendData();
-    ImGuiIO& io = ImGui::GetIO();
-
-    // Update list of controller(s) to use
-    if (bd->WantUpdateGamepadsList && bd->GamepadMode != ImGui_ImplSDL2_GamepadMode_Manual)
-    {
-        ImGui_ImplSDL2_CloseGamepads();
-        int joystick_count = SDL_NumJoysticks();
-        for (int n = 0; n < joystick_count; n++)
-            if (SDL_IsGameController(n))
-                if (SDL_GameController* gamepad = SDL_GameControllerOpen(n))
-                {
-                    bd->Gamepads.push_back(gamepad);
-                    if (bd->GamepadMode == ImGui_ImplSDL2_GamepadMode_AutoFirst)
-                        break;
-                }
-        bd->WantUpdateGamepadsList = false;
-    }
-
-    // FIXME: Technically feeding gamepad shouldn't depend on this now that they are regular inputs.
-    if ((io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) == 0)
-        return;
-    io.BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
-    if (bd->Gamepads.Size == 0)
-        return;
-    io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
-
-    // Update gamepad inputs
-    const int thumb_dead_zone = 8000; // SDL_gamecontroller.h suggests using this value.
-    ImGui_ImplSDL2_UpdateGamepadButton(bd, io, ImGuiKey_GamepadStart,       SDL_CONTROLLER_BUTTON_START);
-    ImGui_ImplSDL2_UpdateGamepadButton(bd, io, ImGuiKey_GamepadBack,        SDL_CONTROLLER_BUTTON_BACK);
-    ImGui_ImplSDL2_UpdateGamepadButton(bd, io, ImGuiKey_GamepadFaceLeft,    SDL_CONTROLLER_BUTTON_X);              // Xbox X, PS Square
-    ImGui_ImplSDL2_UpdateGamepadButton(bd, io, ImGuiKey_GamepadFaceRight,   SDL_CONTROLLER_BUTTON_B);              // Xbox B, PS Circle
-    ImGui_ImplSDL2_UpdateGamepadButton(bd, io, ImGuiKey_GamepadFaceUp,      SDL_CONTROLLER_BUTTON_Y);              // Xbox Y, PS Triangle
-    ImGui_ImplSDL2_UpdateGamepadButton(bd, io, ImGuiKey_GamepadFaceDown,    SDL_CONTROLLER_BUTTON_A);              // Xbox A, PS Cross
-    ImGui_ImplSDL2_UpdateGamepadButton(bd, io, ImGuiKey_GamepadDpadLeft,    SDL_CONTROLLER_BUTTON_DPAD_LEFT);
-    ImGui_ImplSDL2_UpdateGamepadButton(bd, io, ImGuiKey_GamepadDpadRight,   SDL_CONTROLLER_BUTTON_DPAD_RIGHT);
-    ImGui_ImplSDL2_UpdateGamepadButton(bd, io, ImGuiKey_GamepadDpadUp,      SDL_CONTROLLER_BUTTON_DPAD_UP);
-    ImGui_ImplSDL2_UpdateGamepadButton(bd, io, ImGuiKey_GamepadDpadDown,    SDL_CONTROLLER_BUTTON_DPAD_DOWN);
-    ImGui_ImplSDL2_UpdateGamepadButton(bd, io, ImGuiKey_GamepadL1,          SDL_CONTROLLER_BUTTON_LEFTSHOULDER);
-    ImGui_ImplSDL2_UpdateGamepadButton(bd, io, ImGuiKey_GamepadR1,          SDL_CONTROLLER_BUTTON_RIGHTSHOULDER);
-    ImGui_ImplSDL2_UpdateGamepadAnalog(bd, io, ImGuiKey_GamepadL2,          SDL_CONTROLLER_AXIS_TRIGGERLEFT,  0.0f, 32767);
-    ImGui_ImplSDL2_UpdateGamepadAnalog(bd, io, ImGuiKey_GamepadR2,          SDL_CONTROLLER_AXIS_TRIGGERRIGHT, 0.0f, 32767);
-    ImGui_ImplSDL2_UpdateGamepadButton(bd, io, ImGuiKey_GamepadL3,          SDL_CONTROLLER_BUTTON_LEFTSTICK);
-    ImGui_ImplSDL2_UpdateGamepadButton(bd, io, ImGuiKey_GamepadR3,          SDL_CONTROLLER_BUTTON_RIGHTSTICK);
-    ImGui_ImplSDL2_UpdateGamepadAnalog(bd, io, ImGuiKey_GamepadLStickLeft,  SDL_CONTROLLER_AXIS_LEFTX,  -thumb_dead_zone, -32768);
-    ImGui_ImplSDL2_UpdateGamepadAnalog(bd, io, ImGuiKey_GamepadLStickRight, SDL_CONTROLLER_AXIS_LEFTX,  +thumb_dead_zone, +32767);
-    ImGui_ImplSDL2_UpdateGamepadAnalog(bd, io, ImGuiKey_GamepadLStickUp,    SDL_CONTROLLER_AXIS_LEFTY,  -thumb_dead_zone, -32768);
-    ImGui_ImplSDL2_UpdateGamepadAnalog(bd, io, ImGuiKey_GamepadLStickDown,  SDL_CONTROLLER_AXIS_LEFTY,  +thumb_dead_zone, +32767);
-    ImGui_ImplSDL2_UpdateGamepadAnalog(bd, io, ImGuiKey_GamepadRStickLeft,  SDL_CONTROLLER_AXIS_RIGHTX, -thumb_dead_zone, -32768);
-    ImGui_ImplSDL2_UpdateGamepadAnalog(bd, io, ImGuiKey_GamepadRStickRight, SDL_CONTROLLER_AXIS_RIGHTX, +thumb_dead_zone, +32767);
-    ImGui_ImplSDL2_UpdateGamepadAnalog(bd, io, ImGuiKey_GamepadRStickUp,    SDL_CONTROLLER_AXIS_RIGHTY, -thumb_dead_zone, -32768);
-    ImGui_ImplSDL2_UpdateGamepadAnalog(bd, io, ImGuiKey_GamepadRStickDown,  SDL_CONTROLLER_AXIS_RIGHTY, +thumb_dead_zone, +32767);
-}
-
 void ImGui_ImplSDL2_NewFrame()
 {
     ImGui_ImplSDL2_Data* bd = ImGui_ImplSDL2_GetBackendData();
@@ -797,9 +786,6 @@ void ImGui_ImplSDL2_NewFrame()
 
     ImGui_ImplSDL2_UpdateMouseData();
     ImGui_ImplSDL2_UpdateMouseCursor();
-
-    // Update game controllers (if enabled and available)
-    ImGui_ImplSDL2_UpdateGamepads();
 }
 
 //-----------------------------------------------------------------------------
