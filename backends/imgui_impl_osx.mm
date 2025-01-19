@@ -497,6 +497,7 @@ void ImGui_ImplOSX_Shutdown()
     ImGui_ImplOSX_Data* bd = ImGui_ImplOSX_GetBackendData();
     IM_ASSERT(bd != nullptr && "No platform backend to shutdown, or already shutdown?");
 
+    [[NSNotificationCenter defaultCenter] removeObserver:bd->Observer];
     bd->Observer = nullptr;
     if (bd->Monitor != nullptr)
     {
