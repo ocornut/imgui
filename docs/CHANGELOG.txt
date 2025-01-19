@@ -64,6 +64,7 @@ Other changes:
   SDL_Color. (#8327) [@dkosmari]
 - Backends: DirectX12: Texture upload use the command queue provided in
   ImGui_ImplDX12_InitInfo instead of creating its own.
+- Backends: OSX: Removed notification observer when shutting down. (#8331) [@jrachele]
 
 
 -----------------------------------------------------------------------
