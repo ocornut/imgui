@@ -58,6 +58,10 @@ Other changes:
   provided example, to reduce latency.
 - Examples: Vulkan: better handle VK_SUBOPTIMAL_KHR being returned by
   vkAcquireNextImageKHR() or vkQueuePresentKHR(). (#7825, #7831) [@NostraMagister]
+- Backends: SDL2: removed assert preventing using ImGui_ImplSDL2_SetGamepadMode()
+  with ImGui_ImplSDL2_GamepadMode_Manual and an empty array. (#8329)
+- Backends: SDL3: removed assert preventing using ImGui_ImplSDL3_SetGamepadMode()
+  with ImGui_ImplSDL3_GamepadMode_Manual and an empty array. (#8329)
 - Backends: SDLGPU3: Exposed ImGui_ImplSDLGPU3_CreateDeviceObjects()/_DestroyDeviceObjects().
   Removed return value from ImGui_ImplSDLGPU3_CreateFontsTexture(). (#8163, #7998, #7988)
 - Backends: SDL_Renderer2/3: Use endian-dependent RGBA32 texture format, to match
