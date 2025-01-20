@@ -4151,19 +4151,14 @@ static bool ImGui_ImplStbTrueType_FontSrcInit(ImFontAtlas* atlas, ImFontConfig* 
     // FIXME-NEWFONTS: reevaluate sizing metrics
     int oversample_h, oversample_v;
     ImFontAtlasBuildGetOversampleFactors(src, &oversample_h, &oversample_v);
-
+    float scale;
     if (src->SizePixels > 0.0f)
-    {
-        bd_font_data->ScaleForRasterX = stbtt_ScaleForPixelHeight(&bd_font_data->FontInfo, src->SizePixels * src->RasterizerDensity) * oversample_h;
-        bd_font_data->ScaleForRasterY = stbtt_ScaleForPixelHeight(&bd_font_data->FontInfo, src->SizePixels * src->RasterizerDensity) * oversample_v;
-        bd_font_data->ScaleForLayout = stbtt_ScaleForPixelHeight(&bd_font_data->FontInfo, src->SizePixels);
-    }
+        scale = stbtt_ScaleForPixelHeight(&bd_font_data->FontInfo, 1.0f);
     else
-    {
-        bd_font_data->ScaleForRasterX = stbtt_ScaleForMappingEmToPixels(&bd_font_data->FontInfo, -src->SizePixels * src->RasterizerDensity) * oversample_h;
-        bd_font_data->ScaleForRasterY = stbtt_ScaleForMappingEmToPixels(&bd_font_data->FontInfo, -src->SizePixels * src->RasterizerDensity) * oversample_v;
-        bd_font_data->ScaleForLayout = stbtt_ScaleForMappingEmToPixels(&bd_font_data->FontInfo, -src->SizePixels);
-    }
+        scale = -stbtt_ScaleForMappingEmToPixels(&bd_font_data->FontInfo, 1.0f);
+    bd_font_data->ScaleForRasterX = scale * src->SizePixels * src->RasterizerDensity * oversample_h;
+    bd_font_data->ScaleForRasterY = scale * src->SizePixels * src->RasterizerDensity * oversample_v;
+    bd_font_data->ScaleForLayout = scale * src->SizePixels;
 
     // FIXME-NEWFONTS: make use of line gap value
     int unscaled_ascent, unscaled_descent, unscaled_line_gap;
