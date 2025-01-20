@@ -34,6 +34,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2025-XX-XX: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2025-01-20: Removed notification observer when shutting down. (#8331)
 //  2024-08-22: moved some OS/backend related function pointers from ImGuiIO to ImGuiPlatformIO:
 //               - io.GetClipboardTextFn    -> platform_io.Platform_GetClipboardTextFn
 //               - io.SetClipboardTextFn    -> platform_io.Platform_SetClipboardTextFn
@@ -531,6 +532,7 @@ void ImGui_ImplOSX_Shutdown()
     ImGui_ImplOSX_Data* bd = ImGui_ImplOSX_GetBackendData();
     IM_ASSERT(bd != nullptr && "No platform backend to shutdown, or already shutdown?");
 
+    [[NSNotificationCenter defaultCenter] removeObserver:bd->Observer];
     bd->Observer = nullptr;
     if (bd->Monitor != nullptr)
     {

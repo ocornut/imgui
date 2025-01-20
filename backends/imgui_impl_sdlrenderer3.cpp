@@ -1,13 +1,13 @@
 // dear imgui: Renderer Backend for SDL_Renderer for SDL3
-// (Requires: SDL 3.0.0+)
+// (Requires: SDL 3.1.8+)
 
-// (**IMPORTANT: SDL 3.0.0 is NOT YET RELEASED AND CURRENTLY HAS A FAST CHANGING API. THIS CODE BREAKS OFTEN AS SDL3 CHANGES.**)
-
-// Note how SDL_Renderer is an _optional_ component of SDL3.
-// For a multi-platform app consider using e.g. SDL+DirectX on Windows and SDL+OpenGL on Linux/OSX.
-// If your application will want to render any non trivial amount of graphics other than UI,
-// please be aware that SDL_Renderer currently offers a limited graphic API to the end-user and
-// it might be difficult to step out of those boundaries.
+// Note that SDL_Renderer is an _optional_ component of SDL3, which IMHO is now largely obsolete.
+// For a multi-platform app consider using other technologies:
+// - SDL3+SDL_GPU: SDL_GPU is SDL3 new graphics abstraction API.
+// - SDL3+DirectX, SDL3+OpenGL, SDL3+Vulkan: combine SDL with dedicated renderers.
+// If your application wants to render any non trivial amount of graphics other than UI,
+// please be aware that SDL_Renderer currently offers a limited graphic API to the end-user
+// and it might be difficult to step out of those boundaries.
 
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'SDL_Texture*' as ImTextureID. Read the FAQ about ImTextureID!
@@ -25,6 +25,7 @@
 // - Introduction, links and more at the top of imgui.cpp
 
 // CHANGELOG
+//  2025-01-18: Use endian-dependent RGBA32 texture format, to match SDL_Color.
 //  2024-10-09: Expose selected render state in ImGui_ImplSDLRenderer3_RenderState, which you can access in 'void* platform_io.Renderer_RenderState' during draw callbacks.
 //  2024-07-01: Update for SDL3 api changes: SDL_RenderGeometryRaw() uint32 version was removed (SDL#9009).
 //  2024-05-14: *BREAKING CHANGE* ImGui_ImplSDLRenderer3_RenderDrawData() requires SDL_Renderer* passed as parameter.
@@ -249,7 +250,7 @@ bool ImGui_ImplSDLRenderer3_CreateFontsTexture()
 
     // Upload texture to graphics system
     // (Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling)
-    bd->FontTexture = SDL_CreateTexture(bd->Renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, width, height);
+    bd->FontTexture = SDL_CreateTexture(bd->Renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC, width, height);
     if (bd->FontTexture == nullptr)
     {
         SDL_Log("error creating texture");
