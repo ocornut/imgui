@@ -54,6 +54,10 @@ Other changes:
 - Windows: legacy SetWindowFontScale() is properly inherited by nested child
   windows. Note that an upcoming major release should make this obsolete,
   but in the meanwhile it works better now. (#2701, #8138, #1018)
+- Tabs, Style: reworked selected overline rendering to better accommodate
+  for rounded tabs. Reduced default thickness (style.TabBarOverlineSize),
+  increased default rounding (style.TabRounding). (#8334) [@Kian738, @ocornut]
+  styles as the current look is not right (but ImGuiCol_TabSelectedOverline stays the same).
 - Examples: DirectX12: Reduced number of frame in flight from 3 to 2 in
   provided example, to reduce latency.
 - Examples: Vulkan: better handle VK_SUBOPTIMAL_KHR being returned by
