@@ -41,6 +41,14 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+- ColorEdit, ColorPicker: redesigned how alpha is displayed in the preview square. (#8335, #1578, #346)
+   - Removed ImGuiColorEditFlags_AlphaPreview (made value 0): it is now the default behavior.
+   - Prior to 1.91.8: alpha was made opaque in the preview by default _unless_ using ImGuiColorEditFlags_AlphaPreview.
+   - We now display the preview as transparent by default. You can use ImGuiColorEditFlags_AlphaOpaque to use old behavior.
+   - The new flags may be combined better and allow finer controls:
+     - ImGuiColorEditFlags_AlphaOpaque: disable alpha in the preview, but alpha value still editable.
+     - ImGuiColorEditFlags_AlphaNoBg: disable rendering a checkerboard background behind transparent color.
+     - ImGuiColorEditFlags_AlphaPreviewHalf: display half opaque / half transparent preview.
 - Backends: SDLGPU3: Renamed ImGui_ImplSDLGPU3_InitInfo::GpuDevice to Device
   for consistency. (#8163, #7998, #7988)
 
