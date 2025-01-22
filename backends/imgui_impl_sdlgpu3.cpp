@@ -89,8 +89,8 @@ static void ImGui_ImplSDLGPU3_SetupRenderState(ImDrawData* draw_data, SDL_GPUGra
         SDL_GPUBufferBinding index_buffer_binding = {};
         index_buffer_binding.buffer = fd->IndexBuffer;
         index_buffer_binding.offset = 0;
-        SDL_BindGPUVertexBuffers(render_pass,0,&vertex_buffer_binding,1);
-        SDL_BindGPUIndexBuffer(render_pass,&index_buffer_binding,sizeof(ImDrawIdx) == 2 ? SDL_GPU_INDEXELEMENTSIZE_16BIT : SDL_GPU_INDEXELEMENTSIZE_32BIT);
+        SDL_BindGPUVertexBuffers(render_pass,0, &vertex_buffer_binding, 1);
+        SDL_BindGPUIndexBuffer(render_pass, &index_buffer_binding, sizeof(ImDrawIdx) == 2 ? SDL_GPU_INDEXELEMENTSIZE_16BIT : SDL_GPU_INDEXELEMENTSIZE_32BIT);
     }
 
     // Setup viewport
@@ -101,7 +101,7 @@ static void ImGui_ImplSDLGPU3_SetupRenderState(ImDrawData* draw_data, SDL_GPUGra
     viewport.h = (float)fb_height;
     viewport.min_depth = 0.0f;
     viewport.max_depth = 1.0f;
-    SDL_SetGPUViewport(render_pass,&viewport);
+    SDL_SetGPUViewport(render_pass, &viewport);
 
     // Setup scale and translation
     // Our visible imgui space lies from draw_data->DisplayPps (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayPos is (0,0) for single viewport apps.
@@ -118,6 +118,7 @@ static void CreateOrResizeBuffer(SDL_GPUBuffer** buffer, uint32_t* old_size, uin
     ImGui_ImplSDLGPU3_Data* bd = ImGui_ImplSDLGPU3_GetBackendData();
     ImGui_ImplSDLGPU3_InitInfo* v = &bd->InitInfo;
 
+    // Even though this is fairly rarely called.
     SDL_WaitForGPUIdle(v->Device);
     SDL_ReleaseGPUBuffer(v->Device, *buffer);
 
@@ -196,8 +197,8 @@ void Imgui_ImplSDLGPU3_PrepareDrawData(ImDrawData* draw_data, SDL_GPUCommandBuff
     index_buffer_region.size = index_size;
 
     SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass(command_buffer);
-    SDL_UploadToGPUBuffer(copy_pass, &vertex_buffer_location, &vertex_buffer_region,true);
-    SDL_UploadToGPUBuffer(copy_pass, &index_buffer_location, &index_buffer_region,true);
+    SDL_UploadToGPUBuffer(copy_pass, &vertex_buffer_location, &vertex_buffer_region, true);
+    SDL_UploadToGPUBuffer(copy_pass, &index_buffer_location, &index_buffer_region, true);
     SDL_EndGPUCopyPass(copy_pass);
     SDL_ReleaseGPUTransferBuffer(v->Device, index_transferbuffer);
     SDL_ReleaseGPUTransferBuffer(v->Device, vertex_transferbuffer);
@@ -527,7 +528,7 @@ void ImGui_ImplSDLGPU3_CreateDeviceObjects()
         sampler_info.mip_lod_bias = 0.0f;
         sampler_info.min_lod = -1000.0f;
         sampler_info.max_lod = 1000.0f;
-        sampler_info.enable_anisotropy = true;
+        sampler_info.enable_anisotropy = false;
         sampler_info.max_anisotropy = 1.0f;
         sampler_info.enable_compare = false;
 
