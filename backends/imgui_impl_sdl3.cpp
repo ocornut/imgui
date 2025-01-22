@@ -955,6 +955,7 @@ static void ImGui_ImplSDL3_CreateWindow(ImGuiViewport* viewport)
     }
 
     SDL_WindowFlags sdl_flags = 0;
+    sdl_flags |= SDL_WINDOW_HIDDEN;
     sdl_flags |= use_opengl ? SDL_WINDOW_OPENGL : (bd->UseVulkan ? SDL_WINDOW_VULKAN : 0);
     sdl_flags |= SDL_GetWindowFlags(bd->Window) & SDL_WINDOW_HIGH_PIXEL_DENSITY;
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoDecoration) ? SDL_WINDOW_BORDERLESS : 0;

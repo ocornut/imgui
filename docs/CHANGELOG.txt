@@ -72,6 +72,9 @@ Other changes:
 
 Docking+Viewports Branch:
 
+- Backends: SDL3: new viewport windows are created with the SDL_WINDOW_HIDDEN flag
+  before calling SDL_ShowWindow(). (#8328) [@PathogenDavid]
+
 
 -----------------------------------------------------------------------
  VERSION 1.91.7 (Released 2025-01-14)
