@@ -133,7 +133,7 @@ Index of this file:
 //-----------------------------------------------------------------------------
 
 // Utilities
-// (other types which are not forwarded declared are: ImBitArray<>, ImSpan<>, ImSpanAllocator<>, ImPool<>, ImChunkStream<>)
+// (other types which are not forwarded declared are: ImBitArray<>, ImSpan<>, ImSpanAllocator<>, ImStableVector<>, ImPool<>, ImChunkStream<>)
 struct ImBitVector;                 // Store 1-bit per value
 struct ImRect;                      // An axis-aligned rectangle (2 points)
 struct ImGuiTextIndex;              // Maintain a line index for a text buffer.
@@ -364,6 +364,7 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit context pointer
 // - Helper: ImBitArray
 // - Helper: ImBitVector
 // - Helper: ImSpan<>, ImSpanAllocator<>
+// - Helper: ImStableVector<>
 // - Helper: ImPool<>
 // - Helper: ImChunkStream<>
 // - Helper: ImGuiTextIndex
@@ -697,6 +698,39 @@ struct ImSpanAllocator
     inline void* GetSpanPtrEnd(int n)               { IM_ASSERT(n >= 0 && n < CHUNKS && CurrIdx == CHUNKS); return (void*)(BasePtr + Offsets[n] + Sizes[n]); }
     template<typename T>
     inline void  GetSpan(int n, ImSpan<T>* span)    { span->set((T*)GetSpanPtrBegin(n), (T*)GetSpanPtrEnd(n)); }
+};
+
+// Helper: ImStableVector<>
+// Allocating chunks of BLOCK_SIZE items. Objects pointers are never invalidated when growing, only by clear().
+// Important: does not destruct anything!
+// Implemented only the minimum set of functions we need for it.
+template<typename T, int BLOCK_SIZE>
+struct ImStableVector
+{
+    int                 Size = 0;
+    int                 Capacity = 0;
+    ImVector<T*>        Blocks;
+
+    // Functions
+    inline ~ImStableVector()                        { for (T* block : Blocks) IM_FREE(block); }
+
+    inline void         clear()                     { Size = Capacity = 0; Blocks.clear_delete(); }
+    inline void         resize(int new_size)        { if (new_size > Capacity) reserve(new_size); Size = new_size; }
+    inline void         reserve(int new_cap)
+    {
+        new_cap = IM_MEMALIGN(new_cap, BLOCK_SIZE);
+        int old_count = Capacity / BLOCK_SIZE;
+        int new_count = new_cap / BLOCK_SIZE;
+        if (new_count <= old_count)
+            return;
+        Blocks.resize(new_count);
+        for (int n = old_count; n < new_count; n++)
+            Blocks[n] = (T*)IM_ALLOC(sizeof(T) * BLOCK_SIZE);
+        Capacity = new_cap;
+    }
+    inline T&           operator[](int i)           { IM_ASSERT(i >= 0 && i < Size); return Blocks[i / BLOCK_SIZE][i % BLOCK_SIZE]; }
+    inline const T&     operator[](int i) const     { IM_ASSERT(i >= 0 && i < Size); return Blocks[i / BLOCK_SIZE][i % BLOCK_SIZE]; }
+    inline T*           push_back(const T& v)       { int i = Size; IM_ASSERT(i >= 0); if (Size == Capacity) reserve(Capacity + BLOCK_SIZE); void* ptr = &Blocks[i / BLOCK_SIZE][i % BLOCK_SIZE]; memcpy(ptr, &v, sizeof(v)); Size++; return (T*)ptr; }
 };
 
 // Helper: ImPool<>
