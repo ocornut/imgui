@@ -9210,6 +9210,17 @@ bool ImGui::IsMouseReleased(ImGuiMouseButton button, ImGuiID owner_id)
     return g.IO.MouseReleased[button] && TestKeyOwner(MouseButtonToKey(button), owner_id); // Should be same as IsKeyReleased(MouseButtonToKey(button), owner_id)
 }
 
+// Use if you absolutely need to distinguish single-click from double-click by introducing a delay.
+// Generally use with 'delay >= io.MouseDoubleClickTime' + combined with a 'io.MouseClickedLastCount == 1' test.
+// This is a very rarely used UI idiom, but some apps use this: e.g. MS Explorer single click on an icon to rename.
+bool ImGui::IsMouseReleasedWithDelay(ImGuiMouseButton button, float delay)
+{
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
+    const float time_since_release = (float)(g.Time - g.IO.MouseReleasedTime[button]);
+    return !IsMouseDown(button) && (time_since_release - g.IO.DeltaTime < delay) && (time_since_release >= delay);
+}
+
 bool ImGui::IsMouseDoubleClicked(ImGuiMouseButton button)
 {
     ImGuiContext& g = *GImGui;
@@ -9483,6 +9494,8 @@ static void ImGui::UpdateMouseInputs()
         io.MouseClicked[i] = io.MouseDown[i] && io.MouseDownDuration[i] < 0.0f;
         io.MouseClickedCount[i] = 0; // Will be filled below
         io.MouseReleased[i] = !io.MouseDown[i] && io.MouseDownDuration[i] >= 0.0f;
+        if (io.MouseReleased[i])
+            io.MouseReleasedTime[i] = g.Time;
         io.MouseDownDurationPrev[i] = io.MouseDownDuration[i];
         io.MouseDownDuration[i] = io.MouseDown[i] ? (io.MouseDownDuration[i] < 0.0f ? 0.0f : io.MouseDownDuration[i] + io.DeltaTime) : -1.0f;
         if (io.MouseClicked[i])

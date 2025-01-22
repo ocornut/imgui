@@ -51,6 +51,12 @@ Other changes:
   snapped to pixels. Effectively it would only be noticeable when hinting
   is disabled with ImGuiFreeTypeBuilderFlags_NoHinting, as hinting itself
   snaps glyph advances.
+- Inputs: added IsMouseReleasedWithDelay() helper. (#8337, #8320)
+  Use if you absolutely need to distinguish single-click from double-clicks
+  by introducing a delay. This is a very rarely used UI idiom, but some apps
+  use this: e.g. MS Explorer single-click on an icon triggers a rename.
+  Generally use with 'delay >= io.MouseDoubleClickTime' + combine with a
+  'io.MouseClickedLastCount == 1' check.
 - Windows: legacy SetWindowFontScale() is properly inherited by nested child
   windows. Note that an upcoming major release should make this obsolete,
   but in the meanwhile it works better now. (#2701, #8138, #1018)
