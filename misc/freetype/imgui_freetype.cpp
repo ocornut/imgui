@@ -46,6 +46,7 @@
 #include FT_FREETYPE_H          // <freetype/freetype.h>
 #include FT_MODULE_H            // <freetype/ftmodapi.h>
 #include FT_GLYPH_H             // <freetype/ftglyph.h>
+#include FT_SIZES_H             // <freetype/ftsizes.h>
 #include FT_SYNTHESIS_H         // <freetype/ftsynth.h>
 
 // Handle LunaSVG and PlutoSVG
@@ -150,15 +151,19 @@ namespace
         ImGui_ImplFreeType_Data()       { memset((void*)this, 0, sizeof(*this)); }
     };
 
-    // Font parameters and metrics.
-    struct ImGui_ImplFreeType_FontInfo
+    // Stored in ImFontBaked::FontBackendData: pointer to SourcesCount instances of this.
+    struct ImGui_ImplFreeType_FontSrcBakedData
     {
-        float       PixelHeight;        // Size this font was generated with.
+        FT_Size     FtSize;             // This represent a FT_Face with a given size.
+
+        // Metrics
         float       Ascender;           // The pixel extents above the baseline in pixels (typically positive).
         float       Descender;          // The extents below the baseline in pixels (typically negative).
         float       LineSpacing;        // The baseline-to-baseline distance. Note that it usually is larger than the sum of the ascender and descender taken as absolute values. There is also no guarantee that no glyphs extend above or below subsequent baselines when using this distance. Think of it as a value the designer of the font finds appropriate.
         float       LineGap;            // The spacing in pixels between one row's descent and the next row's ascent.
         float       MaxAdvanceWidth;    // This field gives the maximum horizontal cursor advance for all glyphs in the font.
+
+        ImGui_ImplFreeType_FontSrcBakedData() { memset((void*)this, 0, sizeof(*this)); }
     };
 
     // Stored in ImFontConfig::FontLoaderData
@@ -166,20 +171,19 @@ namespace
     {
         bool                            InitFont(FT_Library ft_library, ImFontConfig* src, unsigned int extra_user_flags); // Initialize from an external data buffer. Doesn't copy data, and you must ensure it stays valid up to this object lifetime.
         void                            CloseFont();
-        void                            SetPixelHeight(float pixel_height); // Change font pixel size.
         const FT_Glyph_Metrics*         LoadGlyph(uint32_t in_codepoint);
         void                            BlitGlyph(const FT_Bitmap* ft_bitmap, uint32_t* dst, uint32_t dst_pitch);
         ImGui_ImplFreeType_FontSrcData()   { memset((void*)this, 0, sizeof(*this)); }
         ~ImGui_ImplFreeType_FontSrcData()  { CloseFont(); }
 
         // Members
-        ImGui_ImplFreeType_FontInfo     Info;               // Font descriptor of the current font.
         FT_Face                         FtFace;
         unsigned int                    UserFlags;          // = ImFontConfig::RasterizerFlags
         FT_Int32                        LoadFlags;
         FT_Render_Mode                  RenderMode;
         float                           RasterizationDensity;
         float                           InvRasterizationDensity;
+        ImFontBaked*                    BakedLastActivated;
     };
 
     bool ImGui_ImplFreeType_FontSrcData::InitFont(FT_Library ft_library, ImFontConfig* src, unsigned int extra_font_builder_flags)
@@ -222,9 +226,6 @@ namespace
         RasterizationDensity = src->RasterizerDensity;
         InvRasterizationDensity = 1.0f / RasterizationDensity;
 
-        memset(&Info, 0, sizeof(Info));
-        SetPixelHeight(src->SizePixels);
-
         return true;
     }
 
@@ -235,31 +236,6 @@ namespace
             FT_Done_Face(FtFace);
             FtFace = nullptr;
         }
-    }
-
-    void ImGui_ImplFreeType_FontSrcData::SetPixelHeight(float pixel_height)
-    {
-        // Vuhdo (2017): "I'm not sure how to deal with font sizes properly. As far as I understand, currently ImGui assumes that the 'pixel_height'
-        // is a maximum height of an any given glyph, i.e. it's the sum of font's ascender and descender. Seems strange to me.
-        // FT_Set_Pixel_Sizes() doesn't seem to get us the same result."
-        // (FT_Set_Pixel_Sizes() essentially calls FT_Request_Size() with FT_SIZE_REQUEST_TYPE_NOMINAL)
-        FT_Size_RequestRec req;
-        req.type = (UserFlags & ImGuiFreeTypeBuilderFlags_Bitmap) ? FT_SIZE_REQUEST_TYPE_NOMINAL : FT_SIZE_REQUEST_TYPE_REAL_DIM;
-        req.width = 0;
-        req.height = (uint32_t)(pixel_height * 64 * RasterizationDensity);
-        req.horiResolution = 0;
-        req.vertResolution = 0;
-        FT_Request_Size(FtFace, &req);
-        // Note: To handle multiple sizes later, we may need to use FT_New_Size(), FT_Activate_Size()
-
-        // Update font info
-        FT_Size_Metrics metrics = FtFace->size->metrics;
-        Info.PixelHeight = pixel_height * InvRasterizationDensity;
-        Info.Ascender = (float)FT_CEIL(metrics.ascender) * InvRasterizationDensity;
-        Info.Descender = (float)FT_CEIL(metrics.descender) * InvRasterizationDensity;
-        Info.LineSpacing = (float)FT_CEIL(metrics.height) * InvRasterizationDensity;
-        Info.LineGap = (float)FT_CEIL(metrics.height - metrics.ascender + metrics.descender) * InvRasterizationDensity;
-        Info.MaxAdvanceWidth = (float)FT_CEIL(metrics.max_advance) * InvRasterizationDensity;
     }
 
     const FT_Glyph_Metrics* ImGui_ImplFreeType_FontSrcData::LoadGlyph(uint32_t codepoint)
@@ -447,12 +423,6 @@ bool ImGui_ImplFreeType_FontSrcInit(ImFontAtlas* atlas, ImFontConfig* src)
     if (!bd_font_data->InitFont(bd->Library, src, atlas->FontBuilderFlags))
         return false;
 
-    if (src->MergeMode == false)
-    {
-        ImFont* font = src->DstFont;
-        font->Ascent = bd_font_data->Info.Ascender;
-        font->Descent = bd_font_data->Info.Descender;
-    }
     return true;
 }
 
@@ -464,7 +434,65 @@ void ImGui_ImplFreeType_FontSrcDestroy(ImFontAtlas* atlas, ImFontConfig* src)
     src->FontLoaderData = NULL;
 }
 
-bool ImGui_ImplFreeType_FontAddGlyph(ImFontAtlas* atlas, ImFont* font, ImFontConfig* srcs, int srcs_count, ImWchar codepoint)
+void ImGui_ImplFreeType_FontBakedInit(ImFontAtlas* atlas, ImFontBaked* baked)
+{
+    IM_UNUSED(atlas);
+    ImFont* font = baked->ContainerFont;
+    const float size = baked->Size;
+
+    IM_ASSERT(baked->FontBackendData == NULL);
+    ImGui_ImplFreeType_FontSrcBakedData* bd_baked_datas = (ImGui_ImplFreeType_FontSrcBakedData*)IM_ALLOC(sizeof(ImGui_ImplFreeType_FontSrcBakedData) * font->SourcesCount);
+    baked->FontBackendData = bd_baked_datas;
+
+    for (int src_n = 0; src_n < font->SourcesCount; src_n++)
+    {
+        ImFontConfig* src = &font->Sources[src_n];
+        ImGui_ImplFreeType_FontSrcData* bd_font_data = (ImGui_ImplFreeType_FontSrcData*)src->FontBackendData;
+        bd_font_data->BakedLastActivated = baked;
+
+        // We need one FT_Size per source, so create one ImGui_ImplFreeType_FontBakedData for each source.
+        ImGui_ImplFreeType_FontSrcBakedData* bd_baked_data = &bd_baked_datas[src_n];
+        FT_New_Size(bd_font_data->FtFace, &bd_baked_data->FtSize);
+        FT_Activate_Size(bd_baked_data->FtSize);
+
+        // Vuhdo 2017: "I'm not sure how to deal with font sizes properly. As far as I understand, currently ImGui assumes that the 'pixel_height'
+        // is a maximum height of an any given glyph, i.e. it's the sum of font's ascender and descender. Seems strange to me.
+        // FT_Set_Pixel_Sizes() doesn't seem to get us the same result."
+        // (FT_Set_Pixel_Sizes() essentially calls FT_Request_Size() with FT_SIZE_REQUEST_TYPE_NOMINAL)
+        FT_Size_RequestRec req;
+        req.type = (bd_font_data->UserFlags & ImGuiFreeTypeBuilderFlags_Bitmap) ? FT_SIZE_REQUEST_TYPE_NOMINAL : FT_SIZE_REQUEST_TYPE_REAL_DIM;
+        req.width = 0;
+        req.height = (uint32_t)(size * 64 * bd_font_data->RasterizationDensity);
+        req.horiResolution = 0;
+        req.vertResolution = 0;
+        FT_Request_Size(bd_font_data->FtFace, &req);
+
+        // Read metrics
+        FT_Size_Metrics metrics = bd_baked_data->FtSize->metrics;
+        bd_baked_data->Ascender = (float)FT_CEIL(metrics.ascender) * bd_font_data->InvRasterizationDensity;
+        bd_baked_data->Descender = (float)FT_CEIL(metrics.descender) * bd_font_data->InvRasterizationDensity;
+        bd_baked_data->LineSpacing = (float)FT_CEIL(metrics.height) * bd_font_data->InvRasterizationDensity;
+        bd_baked_data->LineGap = (float)FT_CEIL(metrics.height - metrics.ascender + metrics.descender) * bd_font_data->InvRasterizationDensity;
+        bd_baked_data->MaxAdvanceWidth = (float)FT_CEIL(metrics.max_advance) * bd_font_data->InvRasterizationDensity;
+
+        // Output
+        baked->Ascent = bd_baked_data->Ascender;
+        baked->Descent = bd_baked_data->Descender;
+    }
+}
+
+void ImGui_ImplFreeType_FontBakedDestroy(ImFontAtlas* atlas, ImFontBaked* baked)
+{
+    IM_UNUSED(atlas);
+    ImFont* font = baked->ContainerFont;
+    ImGui_ImplFreeType_FontSrcBakedData* bd_baked_datas = (ImGui_ImplFreeType_FontSrcBakedData*)baked->FontBackendData;
+    for (int src_n = 0; src_n < font->SourcesCount; src_n++)
+        FT_Done_Size(bd_baked_datas[src_n].FtSize);
+    IM_FREE(bd_baked_datas);
+    baked->FontBackendData = NULL;
+}
+
+bool ImGui_ImplFreeType_FontBakedAddGlyph(ImFontAtlas* atlas, ImFontBaked* baked, ImFontConfig* srcs, int srcs_count, ImWchar codepoint)
 {
     // Search for first font which has the glyph
     ImGui_ImplFreeType_FontSrcData* bd_font_data = NULL;
@@ -480,6 +508,15 @@ bool ImGui_ImplFreeType_FontAddGlyph(ImFontAtlas* atlas, ImFont* font, ImFontCon
     }
     if (glyph_index == 0)
         return false; // Not found
+
+    if (bd_font_data->BakedLastActivated != baked)
+    {
+        // Activate current size
+        int src_n = (int)(font_cfg - srcs);
+        ImGui_ImplFreeType_FontSrcBakedData* bd_baked_data = &((ImGui_ImplFreeType_FontSrcBakedData*)baked->FontBackendData)[src_n];
+        FT_Activate_Size(bd_baked_data->FtSize);
+        bd_font_data->BakedLastActivated = baked;
+    }
 
     const FT_Glyph_Metrics* metrics = bd_font_data->LoadGlyph(codepoint);
     if (metrics == NULL)
@@ -515,9 +552,7 @@ bool ImGui_ImplFreeType_FontAddGlyph(ImFontAtlas* atlas, ImFont* font, ImFontCon
             IM_ASSERT_USER_ERROR(pack_id >= 0, "Out of texture memory.");
             return false;
         }
-
         ImFontAtlasRect* r = ImFontAtlasPackGetRect(atlas, pack_id);
-        font->MetricsTotalSurface += w * h;
 
         // Render pixels to our temporary buffer
         atlas->Builder->TempBuffer.resize(w * h * 4);
@@ -525,7 +560,7 @@ bool ImGui_ImplFreeType_FontAddGlyph(ImFontAtlas* atlas, ImFont* font, ImFontCon
         bd_font_data->BlitGlyph(ft_bitmap, temp_buffer, w);
 
         float font_off_x = src->GlyphOffset.x;
-        float font_off_y = src->GlyphOffset.y + IM_ROUND(font->Ascent);
+        float font_off_y = src->GlyphOffset.y + IM_ROUND(baked->Ascent);
         float recip_h = 1.0f / src->RasterizerDensity;
         float recip_v = 1.0f / src->RasterizerDensity;
 
@@ -539,19 +574,19 @@ bool ImGui_ImplFreeType_FontAddGlyph(ImFontAtlas* atlas, ImFont* font, ImFontCon
         glyph.Visible = true;
         glyph.Colored = (ft_bitmap->pixel_mode == FT_PIXEL_MODE_BGRA);
         glyph.PackId = pack_id;
-        ImFontAtlasBuildAddFontGlyph(atlas, font, src, &glyph);
+        ImFontAtlasBakedAddFontGlyph(atlas, baked, src, &glyph);
 
         // Copy to texture, post-process and queue update for backend
         ImTextureData* tex = atlas->TexData;
         IM_ASSERT(r->x + r->w <= tex->Width && r->y + r->h <= tex->Height);
         ImFontAtlasTextureBlockConvert(temp_buffer, ImTextureFormat_RGBA32, w * 4, tex->GetPixelsAt(r->x, r->y), tex->Format, tex->GetPitch(), w, h);
-        ImFontAtlasPostProcessData pp_data = { atlas, font, src, &font->Glyphs.back(), tex->GetPixelsAt(r->x, r->y), tex->Format, tex->GetPitch(), w, h };
+        ImFontAtlasPostProcessData pp_data = { atlas, baked->ContainerFont, src, baked, &baked->Glyphs.back(), tex->GetPixelsAt(r->x, r->y), tex->Format, tex->GetPitch(), w, h };
         ImFontAtlasTextureBlockPostProcess(&pp_data);
         ImFontAtlasTextureBlockQueueUpload(atlas, tex, r->x, r->y, r->w, r->h);
     }
     else
     {
-        ImFontAtlasBuildAddFontGlyph(atlas, font, src, &glyph);
+        ImFontAtlasBakedAddFontGlyph(atlas, baked, src, &glyph);
     }
     return true;
 }
@@ -573,7 +608,9 @@ const ImFontLoader* ImGuiFreeType::GetFontLoader()
     loader.FontSrcInit = ImGui_ImplFreeType_FontSrcInit;
     loader.FontSrcDestroy = ImGui_ImplFreeType_FontSrcDestroy;
     loader.FontSrcContainsGlyph = ImGui_ImplFreetype_FontSrcContainsGlyph;
-    loader.FontAddGlyph = ImGui_ImplFreeType_FontAddGlyph;
+    loader.FontBakedInit = ImGui_ImplFreeType_FontBakedInit;
+    loader.FontBakedDestroy = ImGui_ImplFreeType_FontBakedDestroy;
+    loader.FontBakedAddGlyph = ImGui_ImplFreeType_FontBakedAddGlyph;
     return &loader;
 }
 
