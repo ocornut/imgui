@@ -2313,10 +2313,11 @@ struct ImGuiContext
     ImGuiStyle              Style;
     ImGuiConfigFlags        ConfigFlagsCurrFrame;               // = g.IO.ConfigFlags at the time of NewFrame()
     ImGuiConfigFlags        ConfigFlagsLastFrame;
-    ImFont*                 Font;                               // (Shortcut) == FontStack.empty() ? IO.Font : FontStack.back()
-    float                   FontSize;                           // (Shortcut) == FontBaseSize * g.CurrentWindow->FontWindowScale == window->FontSize(). Text height for current window.
-    float                   FontBaseSize;                       // (Shortcut) == IO.FontGlobalScale * Font->Scale * Font->FontSize. Base text height.
-    float                   FontScale;                          // == FontSize / Font->FontSize
+    ImFont*                 Font;                               // == FontStack.back().Font
+    ImFontBaked*            FontBaked;                          // == Font->GetFontBaked(FontSize)
+    float                   FontSize;                           // == FontBaseSize * g.CurrentWindow->FontWindowScale == window->FontSize(). Text height for current window.
+    //float                 FontBaseSize;                       // == io.FontGlobalScale * Font->Scale * Font->FontSize. Base text height.
+    float                   FontScale;                          // == FontBaked->Size / Font->FontSize. Scale factor over baked size.
     float                   CurrentDpiScale;                    // Current window/viewport DpiScale == CurrentViewport->DpiScale
     ImDrawListSharedData    DrawListSharedData;
     ImVector<ImTextureData*>Textures;
@@ -2897,7 +2898,7 @@ public:
 
     // We don't use g.FontSize because the window may be != g.CurrentWindow.
     ImRect      Rect() const            { return ImRect(Pos.x, Pos.y, Pos.x + Size.x, Pos.y + Size.y); }
-    float       CalcFontSize() const    { ImGuiContext& g = *Ctx; return g.FontBaseSize * FontWindowScale * FontDpiScale * FontWindowScaleParents; }
+    //float     CalcFontSize() const    { ImGuiContext& g = *Ctx; return g.FontBaseSize * FontWindowScale * FontDpiScale * FontWindowScaleParents; }
     ImRect      TitleBarRect() const    { return ImRect(Pos, ImVec2(Pos.x + SizeFull.x, Pos.y + TitleBarHeight)); }
     ImRect      MenuBarRect() const     { float y1 = Pos.y + TitleBarHeight; return ImRect(Pos.x, y1, Pos.x + SizeFull.x, y1 + MenuBarHeight); }
 };
@@ -3327,7 +3328,7 @@ namespace ImGui
     IMGUI_API void          SetNextWindowRefreshPolicy(ImGuiWindowRefreshFlags flags);
 
     // Fonts, drawing
-    IMGUI_API void          SetCurrentFont(ImFont* font);
+    IMGUI_API void          SetCurrentFont(ImFont* font, float font_size);
     inline ImFont*          GetDefaultFont() { ImGuiContext& g = *GImGui; return g.IO.FontDefault ? g.IO.FontDefault : g.IO.Fonts->Fonts[0]; }
     IMGUI_API void          PushPasswordFont();
     inline ImDrawList*      GetForegroundDrawList(ImGuiWindow* window) { return GetForegroundDrawList(window->Viewport); }
@@ -3947,7 +3948,9 @@ struct ImFontLoader
     bool            (*FontSrcInit)(ImFontAtlas* atlas, ImFontConfig* src);
     void            (*FontSrcDestroy)(ImFontAtlas* atlas, ImFontConfig* src);
     bool            (*FontSrcContainsGlyph)(ImFontAtlas* atlas, ImFontConfig* src, ImWchar codepoint);
-    bool            (*FontAddGlyph)(ImFontAtlas* atlas, ImFont* font, ImFontConfig* srcs, int srcs_count, ImWchar codepoint);
+    void            (*FontBakedInit)(ImFontAtlas* atlas, ImFontBaked* baked);
+    void            (*FontBakedDestroy)(ImFontAtlas* atlas, ImFontBaked* baked);
+    bool            (*FontBakedAddGlyph)(ImFontAtlas* atlas, ImFontBaked* baked, ImFontConfig* srcs, int srcs_count, ImWchar codepoint);
 
     ImFontLoader()  { memset(this, 0, sizeof(*this)); }
 };
@@ -3984,6 +3987,7 @@ struct ImFontAtlasPostProcessData
     ImFontAtlas*        FontAtlas;
     ImFont*             Font;
     ImFontConfig*       FontSrc;
+    ImFontBaked*        FontBaked;
     ImFontGlyph*        Glyph;
 
     // Pixel data
@@ -4009,10 +4013,16 @@ struct ImFontAtlasBuilder
     int                         RectsPackedSurface;     // Number of packed pixels. Used when compacting to heuristically find the ideal texture size.
     int                         RectsDiscardedCount;
     int                         RectsDiscardedSurface;
+    int                         FrameCount;             // Current frame count
     ImVec2i                     MaxRectSize;            // Largest rectangle to pack (de-facto used as a "minimum texture size")
     ImVec2i                     MaxRectBounds;          // Bottom-right most used pixels
     bool                        LockDisableResize;      // Disable resizing texture
     bool                        PreloadedAllGlyphsRanges; // Set when missing ImGuiBackendFlags_RendererHasTextures features forces atlas to preload everything.
+
+    // Cache of all ImFontBaked
+    ImStableVector<ImFontBaked,32> BakedPool;
+    ImGuiStorage                BakedMap;
+    int                         BakedDiscardedCount;
 
     // Custom rectangle identifiers
     ImFontAtlasRectId           PackIdMouseCursors;     // White pixel + mouse cursors. Also happen to be fallback in case of packing failure.
@@ -4036,20 +4046,23 @@ IMGUI_API void              ImFontAtlasBuildCompactTexture(ImFontAtlas* atlas);
 IMGUI_API ImVec2i           ImFontAtlasBuildGetTextureSizeEstimate(ImFontAtlas* atlas);
 
 IMGUI_API bool              ImFontAtlasBuildAddFont(ImFontAtlas* atlas, ImFontConfig* src);
-IMGUI_API ImFontGlyph*      ImFontAtlasBuildAddFontGlyph(ImFontAtlas* atlas, ImFont* font, ImFontConfig* src, const ImFontGlyph* in_glyph);
 IMGUI_API void              ImFontAtlasBuildSetupFontSpecialGlyphs(ImFontAtlas* atlas, ImFont* font, ImFontConfig* src);
-IMGUI_API void              ImFontAtlasBuildDiscardFontGlyph(ImFontAtlas* atlas, ImFont* font, ImFontGlyph* glyph);
-IMGUI_API void              ImFontAtlasBuildDiscardFontGlyphs(ImFontAtlas* atlas, ImFont* font);
+IMGUI_API void              ImFontAtlasBuildDiscardUnusedBakes(ImFontAtlas* atlas, ImFont* font_filter);
+IMGUI_API void              ImFontAtlasBuildDiscardFontBaked(ImFontAtlas* atlas, ImFont* font, ImFontBaked* baked);
+IMGUI_API void              ImFontAtlasBuildDiscardFontBakedGlyph(ImFontAtlas* atlas, ImFont* font, ImFontBaked* baked, ImFontGlyph* glyph);
 IMGUI_API void              ImFontAtlasBuildReloadFont(ImFontAtlas* atlas, ImFont* font); // <--- Your future new best friend!
 IMGUI_API void              ImFontAtlasBuildPreloadAllGlyphRanges(ImFontAtlas* atlas); // Legacy
-IMGUI_API void              ImFontAtlasBuildGetOversampleFactors(ImFontConfig* src, int* out_oversample_h, int* out_oversample_v);
+IMGUI_API void              ImFontAtlasBuildGetOversampleFactors(ImFontConfig* src, float size, int* out_oversample_h, int* out_oversample_v);
+
+IMGUI_API ImFontGlyph*      ImFontAtlasBakedAddFontGlyph(ImFontAtlas* atlas, ImFontBaked* baked, ImFontConfig* src, const ImFontGlyph* in_glyph);
+IMGUI_API ImGuiID           ImFontAtlasBakedGetId(ImGuiID font_id, float baked_size);
 
 IMGUI_API void              ImFontAtlasPackInit(ImFontAtlas* atlas);
 IMGUI_API ImFontAtlasRectId ImFontAtlasPackAddRect(ImFontAtlas* atlas, int w, int h, ImFontAtlasRectEntry* overwrite_entry = NULL);
 IMGUI_API ImFontAtlasRect*  ImFontAtlasPackGetRect(ImFontAtlas* atlas, ImFontAtlasRectId id);
 IMGUI_API void              ImFontAtlasPackDiscardRect(ImFontAtlas* atlas, ImFontAtlasRectId id);
 
-IMGUI_API void              ImFontAtlasUpdateNewFrame(ImFontAtlas* atlas);
+IMGUI_API void              ImFontAtlasUpdateNewFrame(ImFontAtlas* atlas, int frame_count);
 IMGUI_API void              ImFontAtlasAddDrawListSharedData(ImFontAtlas* atlas, ImDrawListSharedData* data);
 IMGUI_API void              ImFontAtlasRemoveDrawListSharedData(ImFontAtlas* atlas, ImDrawListSharedData* data);
 IMGUI_API void              ImFontAtlasUpdateDrawListsTextures(ImFontAtlas* atlas, ImTextureRef old_tex, ImTextureRef new_tex);

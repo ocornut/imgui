@@ -1484,7 +1484,7 @@ bool ImGui::TextLink(const char* label)
         ColorConvertHSVtoRGB(h, s, v, line_colf.x, line_colf.y, line_colf.z);
     }
 
-    float line_y = bb.Max.y + ImFloor(g.Font->Descent * g.FontScale * 0.20f);
+    float line_y = bb.Max.y + ImFloor(g.FontBaked->Descent * g.FontScale * 0.20f);
     window->DrawList->AddLine(ImVec2(bb.Min.x, line_y), ImVec2(bb.Max.x, line_y), GetColorU32(line_colf)); // FIXME-TEXT: Underline mode // FIXME-DPI
 
     PushStyleColor(ImGuiCol_Text, GetColorU32(text_colf));
@@ -3921,9 +3921,10 @@ static int InputTextCalcTextLenAndLineCount(const char* text_begin, const char**
 static ImVec2 InputTextCalcTextSize(ImGuiContext* ctx, const char* text_begin, const char* text_end, const char** remaining, ImVec2* out_offset, bool stop_on_new_line)
 {
     ImGuiContext& g = *ctx;
-    ImFont* font = g.Font;
+    //ImFont* font = g.Font;
+    ImFontBaked* baked = g.FontBaked;
     const float line_height = g.FontSize;
-    const float scale = line_height / font->FontSize;
+    const float scale = line_height / baked->Size;
 
     ImVec2 text_size = ImVec2(0, 0);
     float line_width = 0.0f;
@@ -3949,7 +3950,7 @@ static ImVec2 InputTextCalcTextSize(ImGuiContext* ctx, const char* text_begin, c
         if (c == '\r')
             continue;
 
-        line_width += font->GetCharAdvance((ImWchar)c) * scale;
+        line_width += baked->GetCharAdvance((ImWchar)c) * scale;
     }
 
     if (text_size.x < line_width)
@@ -3976,7 +3977,7 @@ namespace ImStb
 {
 static int     STB_TEXTEDIT_STRINGLEN(const ImGuiInputTextState* obj)                             { return obj->TextLen; }
 static char    STB_TEXTEDIT_GETCHAR(const ImGuiInputTextState* obj, int idx)                      { IM_ASSERT(idx <= obj->TextLen); return obj->TextSrc[idx]; }
-static float   STB_TEXTEDIT_GETWIDTH(ImGuiInputTextState* obj, int line_start_idx, int char_idx)  { unsigned int c; ImTextCharFromUtf8(&c, obj->TextSrc + line_start_idx + char_idx, obj->TextSrc + obj->TextLen); if ((ImWchar)c == '\n') return IMSTB_TEXTEDIT_GETWIDTH_NEWLINE; ImGuiContext& g = *obj->Ctx; return g.Font->GetCharAdvance((ImWchar)c) * g.FontScale; }
+static float   STB_TEXTEDIT_GETWIDTH(ImGuiInputTextState* obj, int line_start_idx, int char_idx)  { unsigned int c; ImTextCharFromUtf8(&c, obj->TextSrc + line_start_idx + char_idx, obj->TextSrc + obj->TextLen); if ((ImWchar)c == '\n') return IMSTB_TEXTEDIT_GETWIDTH_NEWLINE; ImGuiContext& g = *obj->Ctx; return g.FontBaked->GetCharAdvance((ImWchar)c) * g.FontScale; }
 static char    STB_TEXTEDIT_NEWLINE = '\n';
 static void    STB_TEXTEDIT_LAYOUTROW(StbTexteditRow* r, ImGuiInputTextState* obj, int line_start_idx)
 {
@@ -4279,19 +4280,21 @@ void ImGui::PushPasswordFont()
 {
     ImGuiContext& g = *GImGui;
     ImFont* in_font = g.Font;
+    ImFontBaked* in_baked = g.FontBaked;
+    ImFontGlyph glyph = *in_baked->FindGlyph('*');
+    glyph.PackId = -1;
     ImFont* out_font = &g.InputTextPasswordFont;
-    ImFontGlyph* glyph = in_font->FindGlyph('*');
-    out_font->FontSize = in_font->FontSize;
     out_font->Scale = in_font->Scale;
-    out_font->Ascent = in_font->Ascent;
-    out_font->Descent = in_font->Descent;
     out_font->ContainerAtlas = in_font->ContainerAtlas;
-    out_font->Glyphs.resize(0);
-    out_font->Glyphs.push_back(*glyph);
-    out_font->FallbackGlyphIndex = 0;
-    out_font->FallbackAdvanceX = glyph->AdvanceX;
     out_font->LockDisableLoading = true;
-    IM_ASSERT(out_font->Glyphs.Size == 1 && out_font->IndexAdvanceX.Size == 0 && out_font->IndexLookup.Size == 0);
+    ImFontBaked* out_baked = out_font->GetFontBaked(in_baked->Size);
+    IM_ASSERT(out_baked->Glyphs.Size <= 1 && out_baked->IndexAdvanceX.Size == 0 && out_baked->IndexLookup.Size == 0);
+    out_baked->Ascent = in_baked->Ascent;
+    out_baked->Descent = in_baked->Descent;
+    out_baked->Glyphs.resize(0);
+    out_baked->Glyphs.push_back(glyph);
+    out_baked->FallbackGlyphIndex = 0;
+    out_baked->FallbackAdvanceX = glyph.AdvanceX;
     PushFont(out_font);
 }
 
@@ -5321,7 +5324,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                 else
                 {
                     ImVec2 rect_size = InputTextCalcTextSize(&g, p, text_selected_end, &p, NULL, true);
-                    if (rect_size.x <= 0.0f) rect_size.x = IM_TRUNC(g.Font->GetCharAdvance((ImWchar)' ') * 0.50f); // So we can see selected empty lines
+                    if (rect_size.x <= 0.0f) rect_size.x = IM_TRUNC(g.FontBaked->GetCharAdvance((ImWchar)' ') * 0.50f); // So we can see selected empty lines
                     ImRect rect(rect_pos + ImVec2(0.0f, bg_offy_up - g.FontSize), rect_pos + ImVec2(rect_size.x, bg_offy_dn));
                     rect.ClipWith(clip_rect);
                     if (rect.Overlaps(clip_rect))

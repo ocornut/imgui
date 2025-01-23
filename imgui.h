@@ -52,7 +52,7 @@ Index of this file:
 // [SECTION] Multi-Select API flags and structures (ImGuiMultiSelectFlags, ImGuiMultiSelectIO, ImGuiSelectionRequest, ImGuiSelectionBasicStorage, ImGuiSelectionExternalStorage)
 // [SECTION] Drawing API (ImDrawCallback, ImDrawCmd, ImDrawIdx, ImDrawVert, ImDrawChannel, ImDrawListSplitter, ImDrawFlags, ImDrawListFlags, ImDrawList, ImDrawData)
 // [SECTION] Texture API (ImTextureFormat, ImTextureStatus, ImTextureRect, ImTextureData)
-// [SECTION] Font API (ImFontConfig, ImFontGlyph, ImFontGlyphRangesBuilder, ImFontAtlasFlags, ImFontAtlas, ImFont)
+// [SECTION] Font API (ImFontConfig, ImFontGlyph, ImFontGlyphRangesBuilder, ImFontAtlasFlags, ImFontAtlas, ImFontBaked, ImFont)
 // [SECTION] Viewports (ImGuiViewportFlags, ImGuiViewport)
 // [SECTION] ImGuiPlatformIO + other Platform Dependent Interfaces (ImGuiPlatformMonitor, ImGuiPlatformImeData)
 // [SECTION] Obsolete functions and types
@@ -174,6 +174,7 @@ struct ImDrawVert;                  // A single vertex (pos + uv + col = 20 byte
 struct ImFont;                      // Runtime data for a single font within a parent ImFontAtlas
 struct ImFontAtlas;                 // Runtime data for multiple fonts, bake multiple fonts into a single texture, TTF/OTF font loader
 struct ImFontAtlasBuilder;          // Opaque storage for building a ImFontAtlas
+struct ImFontBaked;                 // Baked data for a ImFont at a given size.
 struct ImFontConfig;                // Configuration data when adding a font or merging fonts
 struct ImFontGlyph;                 // A single font glyph (code point + coordinates within in ImFontAtlas + offset)
 struct ImFontGlyphRangesBuilder;    // Helper to build glyph ranges from text/string data
@@ -479,6 +480,8 @@ namespace ImGui
     // Parameters stacks (shared)
     IMGUI_API void          PushFont(ImFont* font);                                         // use NULL as a shortcut to push default font
     IMGUI_API void          PopFont();
+    IMGUI_API void          SetFontSize(float size);
+    //IMGUI_API void          PopFontSize();
     IMGUI_API void          PushStyleColor(ImGuiCol idx, ImU32 col);                        // modify a style color. always use this if you modify the style after NewFrame().
     IMGUI_API void          PushStyleColor(ImGuiCol idx, const ImVec4& col);
     IMGUI_API void          PopStyleColor(int count = 1);
@@ -3516,10 +3519,10 @@ struct ImFontConfig
     int             OversampleV;            // 0 (1)    // Rasterize at higher quality for sub-pixel positioning. 0 == auto == 1. This is not really useful as we don't use sub-pixel positions on the Y axis.
     float           SizePixels;             //          // Size in pixels for rasterizer (more or less maps to the resulting font height).
     //ImVec2        GlyphExtraSpacing;      // 0, 0     // (REMOVED IN 1.91.9: use GlyphExtraAdvanceX)
-    ImVec2          GlyphOffset;            // 0, 0     // Offset all glyphs from this font input.
+    ImVec2          GlyphOffset;            // 0, 0     // [FIXME-BAKED] Offset all glyphs from this font input.
     const ImWchar*  GlyphRanges;            // NULL     // THE ARRAY DATA NEEDS TO PERSIST AS LONG AS THE FONT IS ALIVE. Pointer to a user-provided list of Unicode range (2 value per range, values are inclusive, zero-terminated list).
-    float           GlyphMinAdvanceX;       // 0        // Minimum AdvanceX for glyphs, set Min to align font icons, set both Min/Max to enforce mono-space font
-    float           GlyphMaxAdvanceX;       // FLT_MAX  // Maximum AdvanceX for glyphs
+    float           GlyphMinAdvanceX;       // 0        // [FIXME-BAKED] Minimum AdvanceX for glyphs, set Min to align font icons, set both Min/Max to enforce mono-space font
+    float           GlyphMaxAdvanceX;       // FLT_MAX  // [FIXME-BAKED] Maximum AdvanceX for glyphs
     float           GlyphExtraAdvanceX;     // 0        // Extra spacing (in pixels) between glyphs. Please contact us if you are using this.
     unsigned int    FontBuilderFlags;       // 0        // Settings for custom font builder. THIS IS BUILDER IMPLEMENTATION DEPENDENT. Leave as zero if unsure.
     float           RasterizerMultiply;     // 1.0f     // Linearly brighten (>1.0f) or darken (<1.0f) font output. Brightening small fonts may be a good workaround to make them more readable. This is a silly thing we may remove in the future.
@@ -3696,6 +3699,7 @@ struct ImFontAtlas
     ImVector<ImFontConfig>      Sources;            // Source/configuration data
     ImVec4                      TexUvLines[IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1];  // UVs for baked anti-aliased lines
     int                         TexNextUniqueID;    // Next value to be stored in TexData->UniqueID
+    int                         FontNextUniqueID;   // Next value to be stored in ImFont->SourceID
     ImVector<ImDrawListSharedData*> DrawListSharedDatas;
 
     // [Internal] Font builder
@@ -3713,30 +3717,57 @@ struct ImFontAtlas
     //typedef ImFontGlyphRangesBuilder GlyphRangesBuilder;      // OBSOLETED in 1.67+
 };
 
-// Font runtime data and rendering
-// ImFontAtlas automatically loads a default embedded font for you when you call GetTexDataAsAlpha8() or GetTexDataAsRGBA32().
-struct ImFont
+// Font runtime data for a given size
+// Important: pointers to ImFontBaked are only valid for the current frame.
+struct ImFontBaked
 {
     // [Internal] Members: Hot ~20/24 bytes (for CalcTextSize)
     ImVector<float>             IndexAdvanceX;      // 12-16 // out // Sparse. Glyphs->AdvanceX in a directly indexable way (cache-friendly for CalcTextSize functions which only this info, and are often bottleneck in large UI).
     float                       FallbackAdvanceX;   // 4     // out // FindGlyph(FallbackChar)->AdvanceX
-    float                       FontSize;           // 4     // in  // Height of characters/line, set during loading (don't change after loading)
+    float                       Size;               // 4     // in  // Height of characters/line, set during loading (doesn't change after loading)
 
     // [Internal] Members: Hot ~28/36 bytes (for RenderText loop)
     ImVector<ImU16>             IndexLookup;        // 12-16 // out // Sparse. Index glyphs by Unicode code-point.
     ImVector<ImFontGlyph>       Glyphs;             // 12-16 // out // All glyphs.
     int                         FallbackGlyphIndex; // 4     // out // Index of FontFallbackChar
 
-    // [Internal] Members: Cold ~32/40/60 bytes
+    // [Internal] Members: Cold
+    float                       Ascent, Descent;    // 4+4   // out // Ascent: distance from top to bottom of e.g. 'A' [0..FontSize] (unscaled)
+    unsigned int                MetricsTotalSurface:26;// 3  // out // Total surface in pixels to get an idea of the font rasterization/texture cost (not exact, we approximate the cost of padding between glyphs)
+    unsigned int                WantDestroy:1;      // 1     //     // Queued for destroy
+    int                         LastUsedFrame;      // 4     //     // Record of that time this was bounds
+    ImGuiID                     BakedId;            // 4     //
+    ImFont*                     ContainerFont;      // 4-8   // in  // Parent font
+    void*                       FontBackendData;    // 4-8   //     // Font backend opaque storage (per baked font)
+
+    // Functions
+    IMGUI_API ImFontBaked();
+    IMGUI_API void              ClearOutputData();
+    IMGUI_API ImFontGlyph*      FindGlyph(ImWchar c);               // Return U+FFFD glyph if requested glyph doesn't exists.
+    IMGUI_API ImFontGlyph*      FindGlyphNoFallback(ImWchar c);     // Return NULL if glyph doesn't exist
+    IMGUI_API float             GetCharAdvance(ImWchar c);
+    IMGUI_API bool              IsGlyphLoaded(ImWchar c);
+    IMGUI_API ImFontGlyph*      BuildLoadGlyph(ImWchar c);
+    IMGUI_API void              BuildGrowIndex(int new_size);
+};
+
+// Font runtime data and rendering
+// - ImFontAtlas automatically loads a default embedded font for you if you didn't load one manually.
+// - Since 1.92.X a font may be rendered as any size! Therefore a font doesn't have one specific size.
+// - Use 'font->GetBakedForSize(size)' to retrieve the ImFontBaked* corresponding to a given size.
+// - If you used g.Font + g.FontSize (which is frequent from the ImGui layer), you can use g.FontBaked as a shortcut, as g.FontBaked == g.Font->GetBakedForSize(g.FontSize).
+struct ImFont
+{
+    // [Internal] Members: Cold ~32/40/80 bytes
     // Conceptually Sources[] is the list of font sources merged to create this font.
+    ImFontBaked*                LastBaked;          // Cache last bound baked. DO NOT USE. Use GetFontBaked().
+    ImGuiID                     FontId;             // Unique identifier for the font
     short                       SourcesCount;       // 2     // in  // Number of ImFontConfig involved in creating this font. Usually 1, or >1 when merging multiple font sources into one ImFont.
     ImFontConfig*               Sources;            // 4-8   // in  // Pointer within ContainerAtlas->Sources[], to SourcesCount instances
     ImFontAtlas*                ContainerAtlas;     // 4-8   // out // What we has been loaded into
     ImWchar                     EllipsisChar;       // 2-4   // out // Character used for ellipsis rendering ('...').
     ImWchar                     FallbackChar;       // 2-4   // out // Character used if a glyph isn't found (U+FFFD, '?')
     float                       Scale;              // 4     // in  // Base font scale (~1.0f), multiplied by the per-window font scale which you can adjust with SetWindowFontScale()
-    float                       Ascent, Descent;    // 4+4   // out // Ascent: distance from top to bottom of e.g. 'A' [0..FontSize] (unscaled)
-    int                         MetricsTotalSurface;// 4     // out // Total surface in pixels to get an idea of the font rasterization/texture cost (not exact, we approximate the cost of padding between glyphs)
     ImU8                        Used8kPagesMap[(IM_UNICODE_CODEPOINT_MAX+1)/8192/8]; // 1 bytes if ImWchar=ImWchar16, 16 bytes if ImWchar==ImWchar32. Store 1-bit for each block of 4K codepoints that has one active glyph. This is mainly used to facilitate iterations across all used codepoints.
     bool                        LockDisableLoading;
     short                       LockSingleSrcConfigIdx;
@@ -3744,10 +3775,7 @@ struct ImFont
     // Methods
     IMGUI_API ImFont();
     IMGUI_API ~ImFont();
-    IMGUI_API ImFontGlyph*      FindGlyph(ImWchar c);           // Return fallback glyph if requested glyph doesn't exists.
-    IMGUI_API ImFontGlyph*      FindGlyphNoFallback(ImWchar c); // Return NULL if glyph doesn't exist
-    IMGUI_API float             GetCharAdvance(ImWchar c);
-    IMGUI_API bool              IsGlyphLoaded(ImWchar c);
+    IMGUI_API ImFontBaked*      GetFontBaked(float font_size);  // Get or create baked data for given size
     IMGUI_API bool              IsGlyphInFont(ImWchar c);
     bool                        IsLoaded() const                { return ContainerAtlas != NULL; }
     const char*                 GetDebugName() const            { return Sources ? Sources->Name : "<unknown>"; }
@@ -3761,15 +3789,13 @@ struct ImFont
     IMGUI_API void              RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width = 0.0f, bool cpu_fine_clip = false);
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    inline const char*          CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width) { return CalcWordWrapPosition(FontSize * scale, text, text_end, wrap_width); }
+    inline const char*          CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width) { return CalcWordWrapPosition(Sources[0].SizePixels * scale, text, text_end, wrap_width); }
 #endif
 
     // [Internal] Don't use!
     IMGUI_API void              ClearOutputData();
     IMGUI_API void              AddRemapChar(ImWchar dst, ImWchar src, bool overwrite_dst = true); // Makes 'dst' character/glyph points to 'src' character/glyph. Currently needs to be called AFTER fonts have been built.
     IMGUI_API bool              IsGlyphRangeUnused(unsigned int c_begin, unsigned int c_last);
-    IMGUI_API ImFontGlyph*      BuildLoadGlyph(ImWchar c);
-    IMGUI_API void              BuildGrowIndex(int new_size);
 };
 
 // Added indirection to avoid patching ImDrawCmd after texture updates.

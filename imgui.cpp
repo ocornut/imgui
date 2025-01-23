@@ -3778,7 +3778,8 @@ void ImGui::RenderTextEllipsis(ImDrawList* draw_list, const ImVec2& pos_min, con
         const float font_size = draw_list->_Data->FontSize;
         const float font_scale = draw_list->_Data->FontScale;
         const char* text_end_ellipsis = NULL;
-        const float ellipsis_width = font->GetCharAdvance(font->EllipsisChar) * font_scale;
+        ImFontBaked* baked = font->GetFontBaked(font_size);
+        const float ellipsis_width = baked->GetCharAdvance(font->EllipsisChar) * font_scale;
 
         // We can now claim the space between pos_max.x and ellipsis_max.x
         const float text_avail_width = ImMax((ImMax(pos_max.x, ellipsis_max_x) - ellipsis_width) - pos_min.x, 1.0f);
@@ -3989,7 +3990,8 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     ConfigFlagsCurrFrame = ConfigFlagsLastFrame = ImGuiConfigFlags_None;
     FontAtlasOwnedByContext = shared_font_atlas ? false : true;
     Font = NULL;
-    FontSize = FontBaseSize = FontScale = CurrentDpiScale = 0.0f;
+    FontBaked = NULL;
+    FontSize = /*FontBaseSize = */FontScale = CurrentDpiScale = 0.0f;
     IO.Fonts = shared_font_atlas ? shared_font_atlas : IM_NEW(ImFontAtlas)();
     IO.Fonts->RefCount++;
     Time = 0.0f;
@@ -4349,6 +4351,7 @@ void ImGui::Shutdown()
     g.MenusIdSubmittedThisFrame.clear();
     g.InputTextState.ClearFreeMemory();
     g.InputTextDeactivatedState.ClearFreeMemory();
+    g.InputTextPasswordFont.ContainerAtlas = NULL;
 
     g.SettingsWindows.clear();
     g.SettingsHandlers.clear();
@@ -4450,8 +4453,9 @@ static void SetCurrentWindow(ImGuiWindow* window)
     g.CurrentTable = window && window->DC.CurrentTableIdx != -1 ? g.Tables.GetByIndex(window->DC.CurrentTableIdx) : NULL;
     if (window)
     {
-        g.FontSize = g.DrawListSharedData.FontSize = window->CalcFontSize();
-        g.FontScale = g.DrawListSharedData.FontScale = g.FontSize / g.Font->FontSize;
+        // FIXME-BAKED
+        //g.FontSize = g.DrawListSharedData.FontSize = window->CalcFontSize();
+        //g.FontScale = g.DrawListSharedData.FontScale = g.FontSize / g.Font->FontSize;
         ImGui::NavUpdateCurrentWindowIsScrollPushableX();
     }
 }
@@ -5343,7 +5347,7 @@ static void ImGui::UpdateTexturesNewFrame()
     if (g.FontAtlasOwnedByContext)
     {
         atlas->RendererHasTextures = (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures) != 0;
-        ImFontAtlasUpdateNewFrame(atlas);
+        ImFontAtlasUpdateNewFrame(atlas, g.FrameCount);
     }
 }
 
@@ -5435,7 +5439,7 @@ void ImGui::NewFrame()
     if ((g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures) == 0)
         g.IO.Fonts->Locked = true;
     SetupDrawListSharedData();
-    SetCurrentFont(GetDefaultFont());
+    SetCurrentFont(GetDefaultFont(), GetDefaultFont()->Sources[0].SizePixels);
     IM_ASSERT(g.Font->IsLoaded());
 
     g.WithinFrameScope = true;
@@ -8469,15 +8473,16 @@ void ImGui::End()
 }
 
 // Important: this alone doesn't alter current ImDrawList state. This is called by PushFont/PopFont only.
-void ImGui::SetCurrentFont(ImFont* font)
+void ImGui::SetCurrentFont(ImFont* font, float font_size)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(font && font->IsLoaded());    // Font Atlas not created. Did you call io.Fonts->GetTexDataAsRGBA32 / GetTexDataAsAlpha8 ?
     IM_ASSERT(font->Scale > 0.0f);
     g.Font = font;
-    g.FontBaseSize = ImMax(1.0f, g.IO.FontGlobalScale * g.Font->FontSize * g.Font->Scale);
-    g.FontSize = g.CurrentWindow ? g.CurrentWindow->CalcFontSize() : 0.0f;
-    g.FontScale = g.FontSize / g.Font->FontSize;
+    //g.FontBaseSize = ImMax(1.0f, g.IO.FontGlobalScale * g.FontBaked->Size * g.Font->Scale);
+    g.FontSize = font_size;// g.CurrentWindow ? g.CurrentWindow->CalcFontSize() : 0.0f;
+    g.FontBaked = g.Font->GetFontBaked(g.FontSize);
+    g.FontScale = g.FontSize / g.FontBaked->Size;
     g.DrawListSharedData.Font = g.Font;
     g.DrawListSharedData.FontSize = g.FontSize;
     g.DrawListSharedData.FontScale = g.FontScale;
@@ -8500,7 +8505,7 @@ void ImGui::PushFont(ImFont* font)
     if (font == NULL)
         font = GetDefaultFont();
     g.FontStack.push_back(font);
-    SetCurrentFont(font);
+    SetCurrentFont(font, g.FontSize);
 }
 
 void  ImGui::PopFont()
@@ -8513,7 +8518,14 @@ void  ImGui::PopFont()
     }
     g.FontStack.pop_back();
     ImFont* font = g.FontStack.Size == 0 ? GetDefaultFont() : g.FontStack.back();
-    SetCurrentFont(font);
+    SetCurrentFont(font, g.FontSize); // FIXME-BAKED: size in stack
+}
+
+void    ImGui::SetFontSize(float size)
+{
+    // FIXME-BAKED
+    ImGuiContext& g = *GImGui;
+    SetCurrentFont(g.Font, size);
 }
 
 void ImGui::PushItemFlag(ImGuiItemFlags option, bool enabled)
@@ -9034,11 +9046,14 @@ ImVec2 ImGui::GetFontTexUvWhitePixel()
 void ImGui::SetWindowFontScale(float scale)
 {
     IM_ASSERT(scale > 0.0f);
+    // FIXME-BAKED
+    /*
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     window->FontWindowScale = scale;
     g.FontSize = g.DrawListSharedData.FontSize = window->CalcFontSize();
     g.FontScale = g.DrawListSharedData.FontScale = g.FontSize / g.Font->FontSize;
+    */
 }
 
 void ImGui::PushFocusScope(ImGuiID id)
@@ -21122,7 +21137,7 @@ void ImGui::DebugTextEncoding(const char* str)
         }
         TableNextColumn();
         TextUnformatted(p, p + c_utf8_len);
-        if (GetFont()->FindGlyphNoFallback((ImWchar)c) == NULL)
+        if (!GetFont()->IsGlyphInFont((ImWchar)c))
         {
             SameLine();
             TextUnformatted("[missing]");
@@ -22261,8 +22276,8 @@ void ImGui::DebugNodeDrawCmdShowMeshAndBoundingBox(ImDrawList* out_draw_list, co
 // [DEBUG] Display details for a single font, called by ShowStyleEditor().
 void ImGui::DebugNodeFont(ImFont* font)
 {
-    bool opened = TreeNode(font, "Font: \"%s\": %.2f px, %d glyphs, %d sources(s)",
-        font->Sources ? font->Sources[0].Name : "", font->FontSize, font->Glyphs.Size, font->SourcesCount);
+    ImFontAtlas* atlas = font->ContainerAtlas;
+    bool opened = TreeNode(font, "Font: \"%s\": %d sources(s)", font->Sources ? font->Sources[0].Name : "", font->SourcesCount);
 
     // Display preview text
     if (!opened)
@@ -22279,11 +22294,11 @@ void ImGui::DebugNodeFont(ImFont* font)
     }
     if (SmallButton("Set as default"))
         GetIO().FontDefault = font;
-    if (font->ContainerAtlas->Fonts.Size > 1 && !font->ContainerAtlas->Locked)
+    if (atlas->Fonts.Size > 1 && !atlas->Locked)
     {
         SameLine();
         if (SmallButton("Remove"))
-            font->ContainerAtlas->RemoveFont(font);
+            atlas->RemoveFont(font);
     }
 
     // Display details
@@ -22295,33 +22310,43 @@ void ImGui::DebugNodeFont(ImFont* font)
         "You may oversample them to get some flexibility with scaling. "
         "You can also render at multiple sizes and select which one to use at runtime.\n\n"
         "(Glimmer of hope: the atlas system will be rewritten in the future to make scaling more flexible.)");
-    Text("Ascent: %f, Descent: %f, Height: %f", font->Ascent, font->Descent, font->Ascent - font->Descent);
+
     char c_str[5];
     Text("Fallback character: '%s' (U+%04X)", ImTextCharToUtf8(c_str, font->FallbackChar), font->FallbackChar);
     Text("Ellipsis character: '%s' (U+%04X)", ImTextCharToUtf8(c_str, font->EllipsisChar), font->EllipsisChar);
-    const int surface_sqrt = (int)ImSqrt((float)font->MetricsTotalSurface);
-    Text("Texture Area: about %d px ~%dx%d px", font->MetricsTotalSurface, surface_sqrt, surface_sqrt);
-    for (int config_i = 0; config_i < font->SourcesCount; config_i++)
-        if (font->Sources)
-        {
-            ImFontConfig* src = &font->Sources[config_i];
-            int oversample_h, oversample_v;
-            ImFontAtlasBuildGetOversampleFactors(src, &oversample_h, &oversample_v);
-            BulletText("Input %d: \'%s\', Oversample: (%d=>%d,%d=>%d), PixelSnapH: %d, Offset: (%.1f,%.1f)",
-                config_i, src->Name, src->OversampleH, oversample_h, src->OversampleV, oversample_v, src->PixelSnapH, src->GlyphOffset.x, src->GlyphOffset.y);
-        }
+    for (int src_n = 0; src_n < font->SourcesCount; src_n++)
+        if (ImFontConfig* src = &font->Sources[src_n])
+            BulletText("Input %d: \'%s\', Oversample: %d,%d, PixelSnapH: %d, Offset: (%.1f,%.1f)",
+                src_n, src->Name, src->OversampleH, src->OversampleV, src->PixelSnapH, src->GlyphOffset.x, src->GlyphOffset.y);
 
     // Display all glyphs of the fonts in separate pages of 256 characters
+    for (int baked_n = 0; baked_n < atlas->Builder->BakedPool.Size; baked_n++)
     {
-        if (TreeNode("Glyphs", "Glyphs (%d)", font->Glyphs.Size))
+        ImFontBaked* baked = &atlas->Builder->BakedPool[baked_n];
+        if (baked->ContainerFont != font)
+            continue;
+        PushID(baked_n);
+        if (TreeNode("Glyphs", "Baked at %.2fpx: %d glyphs%s", baked->Size, baked->Glyphs.Size, (baked->LastUsedFrame < atlas->Builder->FrameCount - 1) ? " *Unused*" : ""))
         {
             if (SmallButton("Load all"))
                 for (unsigned int base = 0; base <= IM_UNICODE_CODEPOINT_MAX; base++)
-                    font->FindGlyph((ImWchar)base);
+                    baked->FindGlyph((ImWchar)base);
+
+            const int surface_sqrt = (int)ImSqrt((float)baked->MetricsTotalSurface);
+            Text("Ascent: %f, Descent: %f, Ascent-Descent: %f", baked->Ascent, baked->Descent, baked->Ascent - baked->Descent);
+            Text("Texture Area: about %d px ~%dx%d px", baked->MetricsTotalSurface, surface_sqrt, surface_sqrt);
+            for (int src_n = 0; src_n < font->SourcesCount; src_n++)
+            {
+                ImFontConfig* src = &font->Sources[src_n];
+                int oversample_h, oversample_v;
+                ImFontAtlasBuildGetOversampleFactors(src, baked->Size, &oversample_h, &oversample_v);
+                BulletText("Input %d: \'%s\', Oversample: (%d=>%d,%d=>%d), PixelSnapH: %d, Offset: (%.1f,%.1f)",
+                    src_n, src->Name, src->OversampleH, oversample_h, src->OversampleV, oversample_v, src->PixelSnapH, src->GlyphOffset.x, src->GlyphOffset.y);
+            }
 
             ImDrawList* draw_list = GetWindowDrawList();
             const ImU32 glyph_col = GetColorU32(ImGuiCol_Text);
-            const float cell_size = font->FontSize * 1;
+            const float cell_size = baked->Size * 1;
             const float cell_spacing = GetStyle().ItemSpacing.y;
             for (unsigned int base = 0; base <= IM_UNICODE_CODEPOINT_MAX; base += 256)
             {
@@ -22336,7 +22361,7 @@ void ImGui::DebugNodeFont(ImFont* font)
 
                 int count = 0;
                 for (unsigned int n = 0; n < 256; n++)
-                    if (font->IsGlyphLoaded((ImWchar)(base + n)))
+                    if (baked->IsGlyphLoaded((ImWchar)(base + n)))
                         count++;
                 if (count <= 0)
                     continue;
@@ -22351,7 +22376,7 @@ void ImGui::DebugNodeFont(ImFont* font)
                     // available here and thus cannot easily generate a zero-terminated UTF-8 encoded string.
                     ImVec2 cell_p1(base_pos.x + (n % 16) * (cell_size + cell_spacing), base_pos.y + (n / 16) * (cell_size + cell_spacing));
                     ImVec2 cell_p2(cell_p1.x + cell_size, cell_p1.y + cell_size);
-                    const ImFontGlyph* glyph = font->IsGlyphLoaded((ImWchar)(base + n)) ? font->FindGlyph((ImWchar)(base + n)) : NULL;
+                    const ImFontGlyph* glyph = baked->IsGlyphLoaded((ImWchar)(base + n)) ? baked->FindGlyph((ImWchar)(base + n)) : NULL;
                     draw_list->AddRect(cell_p1, cell_p2, glyph ? IM_COL32(255, 255, 255, 100) : IM_COL32(255, 255, 255, 50));
                     if (!glyph)
                         continue;
@@ -22367,6 +22392,7 @@ void ImGui::DebugNodeFont(ImFont* font)
             }
             TreePop();
         }
+        PopID();
     }
     TreePop();
     Unindent();
