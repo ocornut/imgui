@@ -3857,8 +3857,6 @@ void ImFontAtlasBuildCompactTexture(ImFontAtlas* atlas)
 // Start packing over current empty texture
 void ImFontAtlasBuildInit(ImFontAtlas* atlas)
 {
-    ImFontAtlasBuilder* builder = atlas->Builder;
-
     // Select Backend
     // - Note that we do not reassign to atlas->FontLoader, since it is likely to point to static data which
     //   may mess with some hot-reloading schemes. If you need to assign to this (for dynamic selection) AND are
@@ -3873,14 +3871,20 @@ void ImFontAtlasBuildInit(ImFontAtlas* atlas)
 #else
         IM_ASSERT(0); // Invalid Build function
 #endif
+        return; // ImFontAtlasBuildSetupFontBackendIO() automatically call ImFontAtlasBuildInit()
     }
+
     // Create initial texture size
     if (atlas->TexData == NULL)
         ImFontAtlasBuildAddTexture(atlas, ImUpperPowerOfTwo(atlas->TexMinWidth), ImUpperPowerOfTwo(atlas->TexMinHeight));
 
+    ImFontAtlasBuilder* builder = atlas->Builder; // Do not move above
     const bool builder_is_new = (builder == NULL);
     if (builder_is_new)
+    {
+        IM_ASSERT(atlas->Builder == NULL);
         builder = atlas->Builder = IM_NEW(ImFontAtlasBuilder)();
+    }
 
     ImFontAtlasBuildUpdateRendererHasTexturesFromContext(atlas);
 
