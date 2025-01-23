@@ -2520,6 +2520,7 @@ void    ImFontAtlas::ClearTexData()
 void    ImFontAtlas::ClearFonts()
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas between NewFrame() and EndFrame/Render()!");
+    ClearInputData();
     Fonts.clear_delete();
     TexReady = false;
 }
