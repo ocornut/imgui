@@ -67,6 +67,8 @@ Other changes:
 - Windows: legacy SetWindowFontScale() is properly inherited by nested child
   windows. Note that an upcoming major release should make this obsolete,
   but in the meanwhile it works better now. (#2701, #8138, #1018)
+- Windows, Style: Fixed small rendering issues with menu bar, resize grip and
+  scrollbar when using thick border sizes. (#8267, #7887)
 - ColorEdit, ColorPicker: Fixed alpha preview broken in 1.91.7. (#8336, #8241). [@PathogenDavid]
 - Tabs, Style: reworked selected overline rendering to better accommodate
   for rounded tabs. Reduced default thickness (style.TabBarOverlineSize),
