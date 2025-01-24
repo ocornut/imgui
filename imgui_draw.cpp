@@ -4795,7 +4795,7 @@ bool ImFont::IsGlyphInFont(ImWchar c)
     return false;
 }
 
-// This is manually inlined in CalcTextSizeA() and CalcWordWrapPositionA(), with a non-inline call to BuildLoadGlyphGetAdvanceOrFallback().
+// This is manually inlined in CalcTextSizeA() and CalcWordWrapPosition(), with a non-inline call to BuildLoadGlyphGetAdvanceOrFallback().
 IM_MSVC_RUNTIME_CHECKS_OFF
 float ImFont::GetCharAdvance(ImWchar c)
 {
