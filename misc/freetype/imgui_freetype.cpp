@@ -33,7 +33,7 @@
 // - For correct results you need to be using sRGB and convert to linear space in the pixel shader output.
 // - The default dear imgui styles will be impacted by this change (alpha values will need tweaking).
 
-// FIXME: cfg.OversampleH, OversampleV are not supported (but perhaps not so necessary with this rasterizer).
+// FIXME: cfg.OversampleH, OversampleV are not supported, but generally not necessary with this rasterizer because Hinting makes everything look better.
 
 #include "imgui.h"
 #ifndef IMGUI_DISABLE

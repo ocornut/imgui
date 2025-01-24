@@ -76,11 +76,15 @@ Other changes:
   styles as the current look is not right (but ImGuiCol_TabSelectedOverline stays the same).
 - Debug Tools: Tweaked font preview.
 - ImDrawList: texture baked storage for thick line reduced from ~64x64 to ~32x32. (#3245)
-- ImFontAtlas: made calling ClearFonts() call ClearInputData(), as calling
-  one without the other is never correct. (#8174, #6556, #6336, #4723)
-- ImFont: IndexLookup[] table hold 16-bit values even in ImWchar32 mode,
+- Fonts: IndexLookup[] table hold 16-bit values even in ImWchar32 mode,
   as it accounts for number of glyphs in same font. This is favorable to
   CalcTextSize() calls touching less memory.
+- Fonts: OversampleH/OversampleV defaults to 0 for automatic selection.
+   - OversampleH == 0 --> use 1 or 2 depending on font size and use of PixelSnapH.
+   - OversampleV == 0 --> always use 1.
+  This also
+- ImFontAtlas: made calling ClearFonts() call ClearInputData(), as calling
+  one without the other is never correct. (#8174, #6556, #6336, #4723)
 - Examples: DirectX12: Reduced number of frame in flight from 3 to 2 in
   provided example, to reduce latency.
 - Examples: Vulkan: better handle VK_SUBOPTIMAL_KHR being returned by
