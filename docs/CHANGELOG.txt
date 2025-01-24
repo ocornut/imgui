@@ -139,6 +139,8 @@ Other changes:
   the label (not only the highlight/frame) also spans all columns. This is
   useful for table rows where you know nothing else is submitted. (#8318, #3565)
   Obviously best used with ImGuiTableFlags_NoBordersInBodyUntilResize.
+- Selectable: Fixed horizontal label alignment when combined with using
+  ImGuiSelectableFlags_SpanAllColumns. (#8338)
 - Drags: Added ImGuiSliderFlags_NoSpeedTweaks flag to disable keyboard
   modifiers altering the tweak speed. Useful if you want to alter tweak speed
   yourself based on your own logic. (#8223)
