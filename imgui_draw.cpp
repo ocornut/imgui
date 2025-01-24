@@ -2859,8 +2859,8 @@ static void UnpackBitVectorToFlatIndexList(const ImBitVector* in, ImVector<int>*
 
 void ImFontAtlasBuildGetOversampleFactors(const ImFontConfig* cfg, int* out_oversample_h, int* out_oversample_v)
 {
-    // Automatically disable horizontal oversampling over size 32
-    *out_oversample_h = (cfg->OversampleH != 0) ? cfg->OversampleH : (cfg->SizePixels * cfg->RasterizerDensity > 32.0f || cfg->PixelSnapH) ? 1 : 2;
+    // Automatically disable horizontal oversampling over size 36
+    *out_oversample_h = (cfg->OversampleH != 0) ? cfg->OversampleH : (cfg->SizePixels * cfg->RasterizerDensity > 36.0f || cfg->PixelSnapH) ? 1 : 2;
     *out_oversample_v = (cfg->OversampleV != 0) ? cfg->OversampleV : 1;
 }
 
