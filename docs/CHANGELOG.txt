@@ -54,7 +54,6 @@ Breaking changes:
 
 Other changes:
 
-- ImDrawList: texture baked storage for thick line reduced from ~64x64 to ~32x32. (#3245)
 - imgui_freetype: fixed issue where glyph advances would incorrectly be
   snapped to pixels. Effectively it would only be noticeable when hinting
   is disabled with ImGuiFreeTypeBuilderFlags_NoHinting, as hinting itself
@@ -68,11 +67,24 @@ Other changes:
 - Windows: legacy SetWindowFontScale() is properly inherited by nested child
   windows. Note that an upcoming major release should make this obsolete,
   but in the meanwhile it works better now. (#2701, #8138, #1018)
+- Windows, Style: Fixed small rendering issues with menu bar, resize grip and
+  scrollbar when using thick border sizes. (#8267, #7887)
 - ColorEdit, ColorPicker: Fixed alpha preview broken in 1.91.7. (#8336, #8241). [@PathogenDavid]
 - Tabs, Style: reworked selected overline rendering to better accommodate
   for rounded tabs. Reduced default thickness (style.TabBarOverlineSize),
   increased default rounding (style.TabRounding). (#8334) [@Kian738, @ocornut]
   styles as the current look is not right (but ImGuiCol_TabSelectedOverline stays the same).
+- Debug Tools: Tweaked font preview.
+- ImDrawList: texture baked storage for thick line reduced from ~64x64 to ~32x32. (#3245)
+- Fonts: IndexLookup[] table hold 16-bit values even in ImWchar32 mode,
+  as it accounts for number of glyphs in same font. This is favorable to
+  CalcTextSize() calls touching less memory.
+- Fonts: OversampleH/OversampleV defaults to 0 for automatic selection.
+   - OversampleH == 0 --> use 1 or 2 depending on font size and use of PixelSnapH.
+   - OversampleV == 0 --> always use 1.
+  This also
+- ImFontAtlas: made calling ClearFonts() call ClearInputData(), as calling
+  one without the other is never correct. (#8174, #6556, #6336, #4723)
 - Examples: DirectX12: Reduced number of frame in flight from 3 to 2 in
   provided example, to reduce latency.
 - Backends+Examples: Vulkan: better handle VK_SUBOPTIMAL_KHR being returned by
@@ -139,6 +151,8 @@ Other changes:
   the label (not only the highlight/frame) also spans all columns. This is
   useful for table rows where you know nothing else is submitted. (#8318, #3565)
   Obviously best used with ImGuiTableFlags_NoBordersInBodyUntilResize.
+- Selectable: Fixed horizontal label alignment when combined with using
+  ImGuiSelectableFlags_SpanAllColumns. (#8338)
 - Drags: Added ImGuiSliderFlags_NoSpeedTweaks flag to disable keyboard
   modifiers altering the tweak speed. Useful if you want to alter tweak speed
   yourself based on your own logic. (#8223)
