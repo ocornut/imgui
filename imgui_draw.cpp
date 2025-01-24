@@ -3936,7 +3936,7 @@ static inline const char* CalcWordWrapNextLineStartA(const char* text, const cha
 // Simple word-wrapping for English, not full-featured. Please submit failing cases!
 // This will return the next location to wrap from. If no wrapping if necessary, this will fast-forward to e.g. text_end.
 // FIXME: Much possible improvements (don't cut things like "word !", "word!!!" but cut within "word,,,,", more sensible support for punctuations, support for Unicode punctuations, etc.)
-const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width)
+const char* ImFont::CalcWordWrapPosition(float size, const char* text, const char* text_end, float wrap_width)
 {
     // For references, possible wrap point marked with ^
     //  "aaa bbb, ccc,ddd. eee   fff. ggg!"
@@ -3952,6 +3952,7 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
     float line_width = 0.0f;
     float word_width = 0.0f;
     float blank_width = 0.0f;
+    const float scale = size / FontSize;
     wrap_width /= scale; // We work with unscaled widths to avoid scaling every characters
 
     const char* word_end = text;
@@ -4055,7 +4056,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
         {
             // Calculate how far we can render. Requires two passes on the string data but keeps the code simple and not intrusive for what's essentially an uncommon feature.
             if (!word_wrap_eol)
-                word_wrap_eol = CalcWordWrapPositionA(scale, s, text_end, wrap_width - line_width);
+                word_wrap_eol = CalcWordWrapPosition(size, s, text_end, wrap_width - line_width);
 
             if (s >= word_wrap_eol)
             {
@@ -4175,10 +4176,10 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
             const char* line_end = (const char*)ImMemchr(s, '\n', text_end - s);
             if (word_wrap_enabled)
             {
-                // FIXME-OPT: This is not optimal as do first do a search for \n before calling CalcWordWrapPositionA().
-                // If the specs for CalcWordWrapPositionA() were reworked to optionally return on \n we could combine both.
+                // FIXME-OPT: This is not optimal as do first do a search for \n before calling CalcWordWrapPosition().
+                // If the specs for CalcWordWrapPosition() were reworked to optionally return on \n we could combine both.
                 // However it is still better than nothing performing the fast-forward!
-                s = CalcWordWrapPositionA(scale, s, line_end ? line_end : text_end, wrap_width);
+                s = CalcWordWrapPosition(size, s, line_end ? line_end : text_end, wrap_width);
                 s = CalcWordWrapNextLineStartA(s, text_end);
             }
             else
@@ -4223,7 +4224,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
         {
             // Calculate how far we can render. Requires two passes on the string data but keeps the code simple and not intrusive for what's essentially an uncommon feature.
             if (!word_wrap_eol)
-                word_wrap_eol = CalcWordWrapPositionA(scale, s, text_end, wrap_width - (x - origin_x));
+                word_wrap_eol = CalcWordWrapPosition(size, s, text_end, wrap_width - (x - origin_x));
 
             if (s >= word_wrap_eol)
             {

@@ -43,6 +43,12 @@ Breaking changes:
 
 - TreeNode: renamed ImGuiTreeNodeFlags_NavLeftJumpsBackHere to ImGuiTreeNodeFlags_NavLeftJumpsToParent
   for clarity. Kept inline redirection enum (will obsolete). (#1079, #8639)
+- Fonts: changed ImFont::CalcWordWrapPositionA() to ImFont::CalcWordWrapPosition():
+    - old: const char* CalcWordWrapPositionA(float scale, const char* text, ....);
+    - new: const char* CalcWordWrapPosition (float size,  const char* text, ....);
+  The leading 'float scale' parameters was changed to 'float size'.
+  This was necessary as 'scale' is assuming standard font size which is a concept we aim to
+  eliminate in an upcoming update. Kept inline redirection function.
 - Commented out PushAllowKeyboardFocus()/PopAllowKeyboardFocus() which was obsoleted
   in 1.89.4 (March 2023). (#3092)
    - PushAllowKeyboardFocus(bool tab_stop) --> PushItemFlag(ImGuiItemFlags_NoTabStop, !tab_stop);
@@ -51,7 +57,7 @@ Breaking changes:
   in 1.89.6 (June 2023).
    - ForceDisplayRangeByIndices()          --> IncludeItemsByIndex()
 - Backends: SDL3: Fixed casing typo in function name: (#8509, #8163, #7998, #7988) [@puugz]
-   - Imgui_ImplSDLGPU3_PrepareDrawData() -> ImGui_ImplSDLGPU3_PrepareDrawData()
+   - Imgui_ImplSDLGPU3_PrepareDrawData() --> ImGui_ImplSDLGPU3_PrepareDrawData()
 - Internals: RenderTextEllipsis() function removed the 'float clip_max_x' parameter directly
   preceding 'float ellipsis_max_x'. Values were identical for a vast majority of users. (#8387)
 
@@ -109,7 +115,7 @@ Other changes:
 - Fonts: reworked text ellipsis logic to ensure a "..." is always displayed instead
   of a single character. (#7024)
 - Fonts: word-wrapping code handle ideographic comma & full stop (U+3001, U+3002). (#8540)
-- Fonts: fixed CalcWordWrapPositionA() fallback when width is too small to wrap:
+- Fonts: fixed CalcWordWrapPosition() fallback when width is too small to wrap:
   would use a +1 offset instead of advancing to the next UTF-8 codepoint. (#8540)
 - Style, InputText: added ImGuiCol_InputTextCursor to configure color of
   the InputText cursor/caret. (#7031)

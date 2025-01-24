@@ -431,6 +431,10 @@ CODE
  When you are not sure about an old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2025/05/23 (1.92.0) - Fonts: changed ImFont::CalcWordWrapPositionA() to ImFont::CalcWordWrapPosition()
+                            - old:  const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, ....);
+                            - new:  const char* ImFont::CalcWordWrapPosition (float size,  const char* text, ....);
+                         The leading 'float scale' parameters was changed to 'float size'. This was necessary as 'scale' is assuming standard font size which is a concept we aim to eliminate in an upcoming update. Kept inline redirection function.
  - 2025/05/15 (1.92.0) - TreeNode: renamed ImGuiTreeNodeFlags_NavLeftJumpsBackHere to ImGuiTreeNodeFlags_NavLeftJumpsToParent for clarity. Kept inline redirection enum (will obsolete).
  - 2025/05/15 (1.92.0) - Commented out PushAllowKeyboardFocus()/PopAllowKeyboardFocus() which was obsoleted in 1.89.4. Use PushItemFlag(ImGuiItemFlags_NoTabStop, !tab_stop)/PopItemFlag() instead. (#3092)
  - 2025/05/15 (1.92.0) - Commented out ImGuiListClipper::ForceDisplayRangeByIndices() which was obsoleted in 1.89.6. Use ImGuiListClipper::IncludeItemsByIndex() instead.
