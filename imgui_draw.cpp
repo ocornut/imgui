@@ -2825,6 +2825,13 @@ void    ImFontAtlasBuildMultiplyRectAlpha8(const unsigned char table[256], unsig
             *data = table[*data];
 }
 
+void ImFontAtlasBuildGetOversampleFactors(const ImFontConfig* cfg, int* out_oversample_h, int* out_oversample_v)
+{
+    // Automatically disable horizontal oversampling over size 36
+    *out_oversample_h = (cfg->OversampleH != 0) ? cfg->OversampleH : (cfg->SizePixels * cfg->RasterizerDensity > 36.0f || cfg->PixelSnapH) ? 1 : 2;
+    *out_oversample_v = (cfg->OversampleV != 0) ? cfg->OversampleV : 1;
+}
+
 #ifdef IMGUI_ENABLE_STB_TRUETYPE
 // Temporary data for one source font (multiple source fonts can be merged into one destination ImFont)
 // (C++03 doesn't allow instancing ImVector<> with function-local types so we declare the type here.)
@@ -2861,13 +2868,6 @@ static void UnpackBitVectorToFlatIndexList(const ImBitVector* in, ImVector<int>*
             for (ImU32 bit_n = 0; bit_n < 32; bit_n++)
                 if (entries_32 & ((ImU32)1 << bit_n))
                     out->push_back((int)(((it - it_begin) << 5) + bit_n));
-}
-
-void ImFontAtlasBuildGetOversampleFactors(const ImFontConfig* cfg, int* out_oversample_h, int* out_oversample_v)
-{
-    // Automatically disable horizontal oversampling over size 32
-    *out_oversample_h = (cfg->OversampleH != 0) ? cfg->OversampleH : (cfg->SizePixels * cfg->RasterizerDensity > 32.0f || cfg->PixelSnapH) ? 1 : 2;
-    *out_oversample_v = (cfg->OversampleV != 0) ? cfg->OversampleV : 1;
 }
 
 static bool ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
