@@ -5440,7 +5440,7 @@ void ImGui::NewFrame()
     if ((g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures) == 0)
         atlas->Locked = true;
     SetupDrawListSharedData();
-    SetCurrentFont(GetDefaultFont(), GetDefaultFont()->Sources[0].SizePixels);
+    PushFont(GetDefaultFont(), GetDefaultFont()->Sources[0].SizePixels);
     IM_ASSERT(g.Font->IsLoaded());
 
     g.WithinFrameScope = true;
@@ -5983,6 +5983,7 @@ void ImGui::EndFrame()
     }
 
     // End frame
+    PopFont();
     g.WithinFrameScope = false;
     g.FrameCountEnded = g.FrameCount;
 
@@ -8474,40 +8475,49 @@ void ImGui::End()
         SetCurrentViewport(g.CurrentWindow, g.CurrentWindow->Viewport);
 }
 
-// Important: this alone doesn't alter current ImDrawList state. This is called by PushFont/PopFont only.
-void ImGui::SetCurrentFont(ImFont* font, float font_size)
-{
-    ImGuiContext& g = *GImGui;
-    IM_ASSERT(font && font->IsLoaded());    // Font Atlas not created. Did you call io.Fonts->GetTexDataAsRGBA32 / GetTexDataAsAlpha8 ?
-    IM_ASSERT(font->Scale > 0.0f);
-    g.Font = font;
-    //g.FontBaseSize = ImMax(1.0f, g.IO.FontGlobalScale * g.FontBaked->Size * g.Font->Scale);
-    g.FontSize = font_size;// g.CurrentWindow ? g.CurrentWindow->CalcFontSize() : 0.0f;
-    g.FontBaked = g.Font->GetFontBaked(g.FontSize);
-    g.FontScale = g.FontSize / g.FontBaked->Size;
-    g.DrawListSharedData.Font = g.Font;
-    g.DrawListSharedData.FontSize = g.FontSize;
-    g.DrawListSharedData.FontScale = g.FontScale;
-    ImFontAtlasUpdateDrawListsSharedData(g.Font->ContainerAtlas);
-    if (g.CurrentWindow)
-        g.CurrentWindow->DrawList->_SetTextureRef(font->ContainerAtlas->TexRef);
-}
-
-// Use ImDrawList::_SetTextureID(), making our shared g.FontStack[] authoritative against window-local ImDrawList.
-// - Whereas ImDrawList::PushTextureID()/PopTextureID() is not to be used across Begin() calls.
+// Use ImDrawList::_SetTextureRef(), making our shared g.FontStack[] authoritative against window-local ImDrawList.
+// - Whereas ImDrawList::PushTexture()/PopTexture() is not to be used across Begin() calls.
 // - Note that we don't propagate current texture id when e.g. Begin()-ing into a new window, we never really did...
 //   - Some code paths never really fully worked with multiple atlas textures.
-//   - The right-ish solution may be to remove _SetTextureID() and make AddText/RenderText lazily call PushTextureID()/PopTextureID()
+//   - The right-ish solution may be to remove _SetTextureRef() and make AddText/RenderText lazily call PushTexture()/PopTexture()
 //     the same way AddImage() does, but then all other primitives would also need to? I don't think we should tackle this problem
 //     because we have a concrete need and a test bed for multiple atlas textures.
 // FIXME-NEWATLAS-V2: perhaps we can now leverage ImFontAtlasUpdateDrawListsTextures() ?
-void ImGui::PushFont(ImFont* font)
+void ImGui::SetCurrentFont(ImFont* font, float font_size)
+{
+    ImGuiContext& g = *GImGui;
+    g.Font = font;
+    //g.FontBaseSize = ImMax(1.0f, g.IO.FontGlobalScale * g.FontBaked->FontSize * g.Font->Scale);
+    g.FontSize = font_size;// g.CurrentWindow ? g.CurrentWindow->CalcFontSize() : 0.0f;
+    if (font != NULL)
+    {
+        IM_ASSERT(font && font->IsLoaded());    // Font Atlas not created. Did you call io.Fonts->GetTexDataAsRGBA32 / GetTexDataAsAlpha8 ?
+        IM_ASSERT(font->Scale > 0.0f);
+        g.FontBaked = g.Font->GetFontBaked(g.FontSize);
+        g.FontScale = g.FontSize / g.FontBaked->Size;
+        g.DrawListSharedData.Font = g.Font;
+        g.DrawListSharedData.FontSize = g.FontSize;
+        g.DrawListSharedData.FontScale = g.FontScale;
+        ImFontAtlasUpdateDrawListsSharedData(g.Font->ContainerAtlas);
+        if (g.CurrentWindow != NULL)
+            g.CurrentWindow->DrawList->_SetTextureRef(font->ContainerAtlas->TexRef);
+    }
+    else
+    {
+        g.FontBaked = NULL;
+        g.FontScale = 0.0f;
+    }
+}
+
+void ImGui::PushFont(ImFont* font, float font_size)
 {
     ImGuiContext& g = *GImGui;
     if (font == NULL)
         font = GetDefaultFont();
-    g.FontStack.push_back(font);
-    SetCurrentFont(font, g.FontSize);
+    if (font_size < 0.0f)
+        font_size = g.FontSize;
+    g.FontStack.push_back({ font, font_size });
+    SetCurrentFont(font, font_size);
 }
 
 void  ImGui::PopFont()
@@ -8519,15 +8529,21 @@ void  ImGui::PopFont()
         return;
     }
     g.FontStack.pop_back();
-    ImFont* font = g.FontStack.Size == 0 ? GetDefaultFont() : g.FontStack.back();
-    SetCurrentFont(font, g.FontSize); // FIXME-BAKED: size in stack
+    if (ImFontStackData* font_stack_data = (g.FontStack.Size > 0) ? &g.FontStack.back() : NULL)
+        SetCurrentFont(font_stack_data->Font, font_stack_data->FontSize);
+    else
+        SetCurrentFont(NULL, 0.0f);
 }
 
-void    ImGui::SetFontSize(float size)
+void    ImGui::PushFontSize(float font_size)
 {
-    // FIXME-BAKED
     ImGuiContext& g = *GImGui;
-    SetCurrentFont(g.Font, size);
+    PushFont(g.Font, font_size);
+}
+
+void    ImGui::PopFontSize()
+{
+    PopFont();
 }
 
 void ImGui::PushItemFlag(ImGuiItemFlags option, bool enabled)

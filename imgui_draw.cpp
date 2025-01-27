@@ -437,7 +437,7 @@ void ImDrawList::_SetDrawListSharedData(ImDrawListSharedData* data)
 }
 
 // Initialize before use in a new frame. We always have a command ready in the buffer.
-// In the majority of cases, you would want to call PushClipRect() and PushTextureID() after this.
+// In the majority of cases, you would want to call PushClipRect() and PushTexture() after this.
 void ImDrawList::_ResetForNewFrame()
 {
     // Verify that the ImDrawCmd fields we want to memcmp() are contiguous in memory.
@@ -686,7 +686,7 @@ void ImDrawList::PopTexture()
     _OnChangedTextureID();
 }
 
-// This is used by ImGui::PushFont()/PopFont(). It works because we never use _TextureIdStack[] elsewhere than in PushTextureID()/PopTextureID().
+// This is used by ImGui::PushFont()/PopFont(). It works because we never use _TextureIdStack[] elsewhere than in PushTexture()/PopTexture().
 void ImDrawList::_SetTextureRef(ImTextureRef tex_ref)
 {
     if (_CmdHeader.TexRef == tex_ref)
@@ -3045,7 +3045,7 @@ ImFont* ImFontAtlas::AddFontDefault(const ImFontConfig* font_cfg_template)
     if (font_cfg.SizePixels <= 0.0f)
         font_cfg.SizePixels = 13.0f * 1.0f;
     if (font_cfg.Name[0] == '\0')
-        ImFormatString(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), "ProggyClean.ttf, %dpx", (int)font_cfg.SizePixels);
+        ImFormatString(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), "ProggyClean.ttf");
     font_cfg.EllipsisChar = (ImWchar)0x0085;
     font_cfg.GlyphOffset.y = 1.0f * IM_TRUNC(font_cfg.SizePixels / 13.0f);  // Add +1 offset per 13 units
 
@@ -3077,7 +3077,7 @@ ImFont* ImFontAtlas::AddFontFromFileTTF(const char* filename, float size_pixels,
         // Store a short copy of filename into into the font name for convenience
         const char* p;
         for (p = filename + ImStrlen(filename); p > filename && p[-1] != '/' && p[-1] != '\\'; p--) {}
-        ImFormatString(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), "%s, %.0fpx", p, size_pixels);
+        ImFormatString(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), "%s", p);
     }
     return AddFontFromMemoryTTF(data, (int)data_size, size_pixels, &font_cfg, glyph_ranges);
 }
@@ -3140,6 +3140,9 @@ static void ImFontAtlasBuildNotifySetFont(ImFontAtlas* atlas, ImFont* old_font, 
                 if (need_bind_ctx)
                     ImGui::SetCurrentContext(curr_ctx);
             }
+            for (ImFontStackData& font_stack_data : ctx->FontStack)
+                if (font_stack_data.Font == old_font)
+                    font_stack_data.Font = new_font;
         }
     }
 }

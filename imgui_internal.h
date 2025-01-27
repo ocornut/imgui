@@ -874,6 +874,12 @@ struct ImDrawDataBuilder
     ImDrawDataBuilder()                     { memset(this, 0, sizeof(*this)); }
 };
 
+struct ImFontStackData
+{
+    ImFont*     Font;
+    float       FontSize;
+};
+
 //-----------------------------------------------------------------------------
 // [SECTION] Style support
 //-----------------------------------------------------------------------------
@@ -2421,7 +2427,7 @@ struct ImGuiContext
     ImGuiCol                        DebugFlashStyleColorIdx;    // (Keep close to ColorStack to share cache line)
     ImVector<ImGuiColorMod>         ColorStack;                 // Stack for PushStyleColor()/PopStyleColor() - inherited by Begin()
     ImVector<ImGuiStyleMod>         StyleVarStack;              // Stack for PushStyleVar()/PopStyleVar() - inherited by Begin()
-    ImVector<ImFont*>               FontStack;                  // Stack for PushFont()/PopFont() - inherited by Begin()
+    ImVector<ImFontStackData>       FontStack;                  // Stack for PushFont()/PopFont() - inherited by Begin()
     ImVector<ImGuiFocusScopeData>   FocusScopeStack;            // Stack for PushFocusScope()/PopFocusScope() - inherited by BeginChild(), pushed into by Begin()
     ImVector<ImGuiItemFlags>        ItemFlagsStack;             // Stack for PushItemFlag()/PopItemFlag() - inherited by Begin()
     ImVector<ImGuiGroupData>        GroupStack;                 // Stack for BeginGroup()/EndGroup() - not inherited by Begin()

@@ -477,11 +477,13 @@ namespace ImGui
     IMGUI_API void          SetScrollFromPosX(float local_x, float center_x_ratio = 0.5f);  // adjust scrolling amount to make given position visible. Generally GetCursorStartPos() + offset to compute a valid position.
     IMGUI_API void          SetScrollFromPosY(float local_y, float center_y_ratio = 0.5f);  // adjust scrolling amount to make given position visible. Generally GetCursorStartPos() + offset to compute a valid position.
 
-    // Parameters stacks (shared)
-    IMGUI_API void          PushFont(ImFont* font);                                         // use NULL as a shortcut to push default font
+    // Parameters stacks (font)
+    IMGUI_API void          PushFont(ImFont* font, float font_size = -1);                   // use NULL as a shortcut to push default font. Use <0.0f to keep current font size.
     IMGUI_API void          PopFont();
-    IMGUI_API void          SetFontSize(float size);
-    //IMGUI_API void          PopFontSize();
+    IMGUI_API void          PushFontSize(float size);
+    IMGUI_API void          PopFontSize();
+
+    // Parameters stacks (shared)
     IMGUI_API void          PushStyleColor(ImGuiCol idx, ImU32 col);                        // modify a style color. always use this if you modify the style after NewFrame().
     IMGUI_API void          PushStyleColor(ImGuiCol idx, const ImVec4& col);
     IMGUI_API void          PopStyleColor(int count = 1);
@@ -3754,8 +3756,8 @@ struct ImFontBaked
 // Font runtime data and rendering
 // - ImFontAtlas automatically loads a default embedded font for you if you didn't load one manually.
 // - Since 1.92.X a font may be rendered as any size! Therefore a font doesn't have one specific size.
-// - Use 'font->GetBakedForSize(size)' to retrieve the ImFontBaked* corresponding to a given size.
-// - If you used g.Font + g.FontSize (which is frequent from the ImGui layer), you can use g.FontBaked as a shortcut, as g.FontBaked == g.Font->GetBakedForSize(g.FontSize).
+// - Use 'font->GetFontBaked(size)' to retrieve the ImFontBaked* corresponding to a given size.
+// - If you used g.Font + g.FontSize (which is frequent from the ImGui layer), you can use g.FontBaked as a shortcut, as g.FontBaked == g.Font->GetFontBaked(g.FontSize).
 struct ImFont
 {
     // [Internal] Members: Cold ~32/40/80 bytes
