@@ -4714,7 +4714,7 @@ static void ImGui::SetLastItemDataForWindow(ImGuiWindow* window, const ImRect& r
 static void ImGui::SetLastItemDataForChildWindowItem(ImGuiWindow* window, const ImRect& rect)
 {
     ImGuiContext& g = *GImGui;
-    SetLastItemData(window->ChildId, g.CurrentItemFlags, window->DC.WindowItemStatusFlags, rect);
+    SetLastItemData(window->ChildId, g.CurrentItemFlags, window->DC.ChildItemStatusFlags, rect);
 }
 
 float ImGui::CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x)
@@ -6170,7 +6170,7 @@ void ImGui::EndChild()
         }
         if (g.HoveredWindow == child_window)
             g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_HoveredWindow;
-        child_window->DC.WindowItemStatusFlags = g.LastItemData.StatusFlags;
+        child_window->DC.ChildItemStatusFlags = g.LastItemData.StatusFlags;
         //SetLastItemDataForChildWindowItem(child_window, child_window->Rect()); // Not needed, effectively done by ItemAdd()
     }
     else
