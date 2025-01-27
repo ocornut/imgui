@@ -1270,6 +1270,7 @@ static void             RenderWindowTitleBarContents(ImGuiWindow* window, const 
 static void             RenderDimmedBackgroundBehindWindow(ImGuiWindow* window, ImU32 col);
 static void             RenderDimmedBackgrounds();
 static void             SetLastItemDataForWindow(ImGuiWindow* window, const ImRect& rect);
+static void             SetLastItemDataForChildWindowItem(ImGuiWindow* window, const ImRect& rect);
 
 // Viewports
 const ImGuiID           IMGUI_VIEWPORT_DEFAULT_ID = 0x11111111; // Using an arbitrary constant instead of e.g. ImHashStr("ViewportDefault", 0); so it's easier to spot in the debugger. The exact value doesn't matter.
@@ -4802,13 +4803,28 @@ bool ImGui::IsClippedEx(const ImRect& bb, ImGuiID id)
 
 // This is also inlined in ItemAdd()
 // Note: if ImGuiItemStatusFlags_HasDisplayRect is set, user needs to set g.LastItemData.DisplayRect.
-void ImGui::SetLastItemData(ImGuiID item_id, ImGuiItemFlags in_flags, ImGuiItemStatusFlags item_flags, const ImRect& item_rect)
+void ImGui::SetLastItemData(ImGuiID item_id, ImGuiItemFlags item_flags, ImGuiItemStatusFlags status_flags, const ImRect& item_rect)
 {
     ImGuiContext& g = *GImGui;
     g.LastItemData.ID = item_id;
-    g.LastItemData.ItemFlags = in_flags;
-    g.LastItemData.StatusFlags = item_flags;
+    g.LastItemData.ItemFlags = item_flags;
+    g.LastItemData.StatusFlags = status_flags;
     g.LastItemData.Rect = g.LastItemData.NavRect = item_rect;
+}
+
+static void ImGui::SetLastItemDataForWindow(ImGuiWindow* window, const ImRect& rect)
+{
+    ImGuiContext& g = *GImGui;
+    if (window->DockIsActive)
+        SetLastItemData(window->MoveId, g.CurrentItemFlags, window->DC.DockTabItemStatusFlags, window->DC.DockTabItemRect);
+    else
+        SetLastItemData(window->MoveId, g.CurrentItemFlags, window->DC.WindowItemStatusFlags, rect);
+}
+
+static void ImGui::SetLastItemDataForChildWindowItem(ImGuiWindow* window, const ImRect& rect)
+{
+    ImGuiContext& g = *GImGui;
+    SetLastItemData(window->ChildId, g.CurrentItemFlags, window->DC.ChildItemStatusFlags, rect);
 }
 
 float ImGui::CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x)
@@ -6434,7 +6450,14 @@ void ImGui::EndChild()
         }
         if (g.HoveredWindow == child_window)
             g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_HoveredWindow;
+        child_window->DC.ChildItemStatusFlags = g.LastItemData.StatusFlags;
+        //SetLastItemDataForChildWindowItem(child_window, child_window->Rect()); // Not needed, effectively done by ItemAdd()
     }
+    else
+    {
+        SetLastItemDataForChildWindowItem(child_window, child_window->Rect());
+    }
+
     g.WithinEndChildID = backup_within_end_child_id;
     g.LogLinePosY = -FLT_MAX; // To enforce a carriage return
 }
@@ -8175,6 +8198,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         // We fill last item data based on Title Bar/Tab, in order for IsItemHovered() and IsItemActive() to be usable after Begin().
         // This is useful to allow creating context menus on title bar only, etc.
+        window->DC.WindowItemStatusFlags = ImGuiItemStatusFlags_None;
+        window->DC.WindowItemStatusFlags |= IsMouseHoveringRect(title_bar_rect.Min, title_bar_rect.Max, false) ? ImGuiItemStatusFlags_HoveredRect : 0;
         SetLastItemDataForWindow(window, title_bar_rect);
 
         // [DEBUG]
@@ -8331,15 +8356,6 @@ void ImGui::DrawOverlappingDecorators()
             window->DrawList->PathArcToFast(rg.Pc, rg.R, rg.A1, rg.A2);
             window->DrawList->PathFillConvex(rg.Col);
         }
-}
-
-static void ImGui::SetLastItemDataForWindow(ImGuiWindow* window, const ImRect& rect)
-{
-    ImGuiContext& g = *GImGui;
-    if (window->DockIsActive)
-        SetLastItemData(window->MoveId, g.CurrentItemFlags, window->DockTabItemStatusFlags, window->DockTabItemRect);
-    else
-        SetLastItemData(window->MoveId, g.CurrentItemFlags, IsMouseHoveringRect(rect.Min, rect.Max, false) ? ImGuiItemStatusFlags_HoveredRect : 0, rect);
 }
 
 void ImGui::End()
@@ -18577,8 +18593,8 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
                 node->VisibleWindow = window;
 
             // Store last item data so it can be queried with IsItemXXX functions after the user Begin() call
-            window->DockTabItemStatusFlags = g.LastItemData.StatusFlags;
-            window->DockTabItemRect = g.LastItemData.Rect;
+            window->DC.DockTabItemStatusFlags = g.LastItemData.StatusFlags;
+            window->DC.DockTabItemRect = g.LastItemData.Rect;
 
             // Update navigation ID on menu layer
             if (g.NavWindow && g.NavWindow->RootWindow == window && (window->DC.NavLayersActiveMask & (1 << ImGuiNavLayer_Menu)) == 0)
