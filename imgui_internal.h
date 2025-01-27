@@ -2668,8 +2668,12 @@ struct IMGUI_API ImGuiWindowTempData
     ImGuiLayoutType         LayoutType;
     ImGuiLayoutType         ParentLayoutType;       // Layout type of parent window at the time of Begin()
     ImU32                   ModalDimBgColor;
+
+    // Status flags
     ImGuiItemStatusFlags    WindowItemStatusFlags;
     ImGuiItemStatusFlags    ChildItemStatusFlags;
+    ImGuiItemStatusFlags    DockTabItemStatusFlags;
+    ImRect                  DockTabItemRect;
 
     // Local parameters stacks
     // We store the current settings outside of the vectors to increase memory locality (reduce cache misses). The vectors are rarely modified. Also it allows us to not heap allocate for short-lived windows which are not using those settings.
@@ -2809,8 +2813,6 @@ struct IMGUI_API ImGuiWindow
     ImGuiDockNode*          DockNode;                           // Which node are we docked into. Important: Prefer testing DockIsActive in many cases as this will still be set when the dock node is hidden.
     ImGuiDockNode*          DockNodeAsHost;                     // Which node are we owning (for parent windows)
     ImGuiID                 DockId;                             // Backup of last valid DockNode->ID, so single window remember their dock node id even when they are not bound any more
-    ImGuiItemStatusFlags    DockTabItemStatusFlags;
-    ImRect                  DockTabItemRect;
 
 public:
     ImGuiWindow(ImGuiContext* context, const char* name);

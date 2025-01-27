@@ -4816,7 +4816,7 @@ static void ImGui::SetLastItemDataForWindow(ImGuiWindow* window, const ImRect& r
 {
     ImGuiContext& g = *GImGui;
     if (window->DockIsActive)
-        SetLastItemData(window->MoveId, g.CurrentItemFlags, window->DockTabItemStatusFlags, window->DockTabItemRect);
+        SetLastItemData(window->MoveId, g.CurrentItemFlags, window->DC.DockTabItemStatusFlags, window->DC.DockTabItemRect);
     else
         SetLastItemData(window->MoveId, g.CurrentItemFlags, window->DC.WindowItemStatusFlags, rect);
 }
@@ -18537,8 +18537,8 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
                 node->VisibleWindow = window;
 
             // Store last item data so it can be queried with IsItemXXX functions after the user Begin() call
-            window->DockTabItemStatusFlags = g.LastItemData.StatusFlags;
-            window->DockTabItemRect = g.LastItemData.Rect;
+            window->DC.DockTabItemStatusFlags = g.LastItemData.StatusFlags;
+            window->DC.DockTabItemRect = g.LastItemData.Rect;
 
             // Update navigation ID on menu layer
             if (g.NavWindow && g.NavWindow->RootWindow == window && (window->DC.NavLayersActiveMask & (1 << ImGuiNavLayer_Menu)) == 0)
