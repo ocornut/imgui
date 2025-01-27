@@ -4695,12 +4695,12 @@ bool ImGui::IsClippedEx(const ImRect& bb, ImGuiID id)
 
 // This is also inlined in ItemAdd()
 // Note: if ImGuiItemStatusFlags_HasDisplayRect is set, user needs to set g.LastItemData.DisplayRect.
-void ImGui::SetLastItemData(ImGuiID item_id, ImGuiItemFlags in_flags, ImGuiItemStatusFlags item_flags, const ImRect& item_rect)
+void ImGui::SetLastItemData(ImGuiID item_id, ImGuiItemFlags item_flags, ImGuiItemStatusFlags status_flags, const ImRect& item_rect)
 {
     ImGuiContext& g = *GImGui;
     g.LastItemData.ID = item_id;
-    g.LastItemData.ItemFlags = in_flags;
-    g.LastItemData.StatusFlags = item_flags;
+    g.LastItemData.ItemFlags = item_flags;
+    g.LastItemData.StatusFlags = status_flags;
     g.LastItemData.Rect = g.LastItemData.NavRect = item_rect;
 }
 
