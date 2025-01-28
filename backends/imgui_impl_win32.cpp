@@ -174,6 +174,11 @@ static bool ImGui_ImplWin32_InitEx(void* hwnd, bool platform_has_own_dc)
     bd->LastMouseCursor = ImGuiMouseCursor_COUNT;
     ImGui_ImplWin32_UpdateKeyboardCodePage(io);
 
+    // Setup display size
+    RECT rect = { 0, 0, 0, 0 };
+    ::GetClientRect(bd->hWnd, &rect);
+    io.DisplaySize = ImVec2((float)(rect.right - rect.left), (float)(rect.bottom - rect.top));
+
     // Set platform dependent data in viewport
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     main_viewport->PlatformHandle = main_viewport->PlatformHandleRaw = (void*)bd->hWnd;
@@ -389,11 +394,6 @@ void    ImGui_ImplWin32_NewFrame()
     ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
     IM_ASSERT(bd != nullptr && "Context or backend not initialized? Did you call ImGui_ImplWin32_Init()?");
     ImGuiIO& io = ImGui::GetIO();
-
-    // Setup display size (every frame to accommodate for window resizing)
-    RECT rect = { 0, 0, 0, 0 };
-    ::GetClientRect(bd->hWnd, &rect);
-    io.DisplaySize = ImVec2((float)(rect.right - rect.left), (float)(rect.bottom - rect.top));
 
     // Setup time step
     INT64 current_time = 0;
@@ -764,6 +764,10 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandlerEx(HWND hwnd, UINT msg, WPA
         if ((UINT)wParam == DBT_DEVNODES_CHANGED)
             bd->WantUpdateHasGamepad = true;
 #endif
+        return 0;
+    case WM_SIZE:
+        io.DisplaySize.x = static_cast<float>(LOWORD(lParam));
+        io.DisplaySize.y = static_cast<float>(HIWORD(lParam));
         return 0;
     }
     return 0;
