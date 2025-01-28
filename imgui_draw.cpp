@@ -3838,9 +3838,10 @@ void ImFontAtlasBuildGrowTexture(ImFontAtlas* atlas, int old_tex_w, int old_tex_
     IM_ASSERT(ImIsPowerOfTwo(atlas->TexMinWidth) && ImIsPowerOfTwo(atlas->TexMaxWidth) && ImIsPowerOfTwo(atlas->TexMinHeight) && ImIsPowerOfTwo(atlas->TexMaxHeight));
 
     // Grow texture so it follows roughly a square.
-    // Caller should be taking account of RectsDiscardedSurface and may not need to grow.
-    int new_tex_w = (old_tex_h < old_tex_w) ? old_tex_w : old_tex_w * 2;
-    int new_tex_h = (old_tex_h < old_tex_w) ? old_tex_h * 2 : old_tex_h;
+    // - Grow height before width, as width imply more packing nodes.
+    // - Caller should be taking account of RectsDiscardedSurface and may not need to grow.
+    int new_tex_w = (old_tex_h <= old_tex_w) ? old_tex_w : old_tex_w * 2;
+    int new_tex_h = (old_tex_h <= old_tex_w) ? old_tex_h * 2 : old_tex_h;
 
     // Handle minimum size first (for pathologically large packed rects)
     const int pack_padding = atlas->TexGlyphPadding;
@@ -3990,7 +3991,7 @@ void ImFontAtlasPackInit(ImFontAtlas * atlas)
     ImFontAtlasBuilder* builder = atlas->Builder;
 
     // In theory we could decide to reduce the number of nodes, e.g. halve them, and waste a little texture space, but it doesn't seem worth it.
-    const int pack_node_count = tex->Width;
+    const int pack_node_count = tex->Width / 2;
     builder->PackNodes.resize(pack_node_count);
     IM_STATIC_ASSERT(sizeof(stbrp_context) <= sizeof(stbrp_context_opaque));
     stbrp_init_target((stbrp_context*)(void*)&builder->PackContext, tex->Width, tex->Height, builder->PackNodes.Data, builder->PackNodes.Size);
