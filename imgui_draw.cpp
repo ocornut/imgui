@@ -3625,9 +3625,6 @@ void ImFontAtlasBuildDiscardFontBakedGlyph(ImFontAtlas* atlas, ImFont* font, ImF
 
 void ImFontAtlasBuildDiscardFontBaked(ImFontAtlas* atlas, ImFontBaked* baked)
 {
-    ImGuiContext& g = *GImGui;
-    IM_UNUSED(g); // for IMGUI_DEBUG_LOG_FONT()
-
     ImFontAtlasBuilder* builder = atlas->Builder;
     ImFont* font = baked->ContainerFont;
     IMGUI_DEBUG_LOG_FONT("[font] Discard baked %.2f for \"%s\"\n", baked->Size, font->GetDebugName());
@@ -3755,11 +3752,20 @@ ImTextureData* ImFontAtlasBuildAddTexture(ImFontAtlas* atlas, int w, int h)
     return new_tex;
 }
 
-void ImFontAtlasBuildRepackTexture(ImFontAtlas* atlas, int w, int h)
+#if 0
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "../stb/stb_image_write.h"
+static void ImFontAtlasDebugWriteTexToDisk(ImTextureData* tex, const char* description)
 {
     ImGuiContext& g = *GImGui;
-    IM_UNUSED(g); // for IMGUI_DEBUG_LOG_FONT()
+    char buf[128];
+    ImFormatString(buf, IM_ARRAYSIZE(buf), "[%05d] Texture #%03d - %s.png", g.FrameCount, tex->UniqueID, description);
+    stbi_write_png(buf, tex->Width, tex->Height, tex->BytesPerPixel, tex->Pixels, tex->GetPitch()); // tex->BytesPerPixel is technically not component, but ok for the formats we support.
+}
+#endif
 
+void ImFontAtlasBuildRepackTexture(ImFontAtlas* atlas, int w, int h)
+{
     ImFontAtlasBuilder* builder = atlas->Builder;
     builder->LockDisableResize = true;
 
@@ -3767,6 +3773,10 @@ void ImFontAtlasBuildRepackTexture(ImFontAtlas* atlas, int w, int h)
     ImTextureData* new_tex = ImFontAtlasBuildAddTexture(atlas, w, h);
     new_tex->UseColors = old_tex->UseColors;
     IMGUI_DEBUG_LOG_FONT("[font] Texture #%03d: resize+repack %dx%d => Texture #%03d: %dx%d\n", old_tex->UniqueID, old_tex->Width, old_tex->Height, new_tex->UniqueID, new_tex->Width, new_tex->Height);
+    //for (int baked_n = 0; baked_n < builder->BakedPool.Size; baked_n++)
+    //    IMGUI_DEBUG_LOG_FONT("[font] - Baked %.2fpx, %d glyphs, want_destroy=%d\n", builder->BakedPool[baked_n].FontSize, builder->BakedPool[baked_n].Glyphs.Size, builder->BakedPool[baked_n].WantDestroy);
+    //IMGUI_DEBUG_LOG_FONT("[font] - Old packed rects: %d, area %d px\n", builder->RectsPackedCount, builder->RectsPackedSurface);
+    //ImFontAtlasDebugWriteTexToDisk(old_tex, "Before Pack");
 
     // Repack, lose discarded rectangle, copy pixels
     // FIXME-NEWATLAS-V2: Repacking in batch would be beneficial to packing heuristic.
@@ -3822,10 +3832,12 @@ void ImFontAtlasBuildRepackTexture(ImFontAtlas* atlas, int w, int h)
 
     builder->LockDisableResize = false;
     ImFontAtlasUpdateDrawListsSharedData(atlas);
+    //ImFontAtlasDebugWriteTexToDisk(new_tex, "After Pack");
 }
 
 void ImFontAtlasBuildGrowTexture(ImFontAtlas* atlas, int old_tex_w, int old_tex_h)
 {
+    //ImFontAtlasDebugWriteTexToDisk(atlas->TexData, "Before Grow");
     ImFontAtlasBuilder* builder = atlas->Builder;
     if (old_tex_w == -1)
         old_tex_w = atlas->TexData->Width;
@@ -3858,6 +3870,7 @@ void ImFontAtlasBuildGrowTexture(ImFontAtlas* atlas, int old_tex_w, int old_tex_
 void ImFontAtlasBuildMakeSpace(ImFontAtlas* atlas)
 {
     // Can some baked contents be ditched?
+    //IMGUI_DEBUG_LOG_FONT("[font] ImFontAtlasBuildMakeSpace()\n");
     ImFontAtlasBuilder* builder = atlas->Builder;
     ImFontAtlasBuildDiscardUnusedBakes(atlas, NULL);
 
@@ -4072,8 +4085,6 @@ ImFontAtlasRectId ImFontAtlasPackAddRect(ImFontAtlas* atlas, int w, int h, ImFon
         // If we ran out of attempts, return fallback
         if (attempts_remaining == 0 || builder->LockDisableResize)
         {
-            ImGuiContext& g = *GImGui;
-            IM_UNUSED(g);
             IMGUI_DEBUG_LOG_FONT("[font] Failed packing %dx%d rectangle. Returning fallback.\n", w, h);
             return -1;
         }
@@ -4717,8 +4728,6 @@ void ImFontBaked::BuildGrowIndex(int new_size)
     IM_ASSERT(IndexAdvanceX.Size == IndexLookup.Size);
     if (new_size <= IndexLookup.Size)
         return;
-    //ImGuiContext& g = *GImGui;
-    //IMGUI_DEBUG_LOG_FONT("[font] BuildGrowIndex(%d)\n", new_size);
     IndexAdvanceX.resize(new_size, -1.0f);
     IndexLookup.resize(new_size, IM_FONTGLYPH_INDEX_UNUSED);
 }
@@ -4943,8 +4952,6 @@ ImFontBaked* ImFont::GetFontBaked(float size)
         IM_ASSERT(!atlas->Locked && "Cannot use dynamic font size with a locked ImFontAtlas!"); // Locked because rendering backend does not support ImGuiBackendFlags_RendererHasTextures!
 
     // Create new
-    ImGuiContext& g = *GImGui;
-    IM_UNUSED(g); // for IMGUI_DEBUG_LOG_FONT()
     IMGUI_DEBUG_LOG_FONT("[font] Created baked %.2fpx\n", size);
     baked = builder->BakedPool.push_back(ImFontBaked());
     baked->Size = size;
