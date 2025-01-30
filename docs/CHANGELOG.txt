@@ -108,6 +108,9 @@ Other changes:
 
 Docking+Viewports Branch:
 
+- Docking: Fixed an issue in 1.91.7 where using legacy ImGuiWindowFlags_NavFlattened
+  flag (instead of ImGuiChildFlags_NavFlattened) in docking branch would conflict
+  with internal docking flags. (#8357) [@DanielGibson]
 - Backends: SDL3: new viewport windows are created with the SDL_WINDOW_HIDDEN flag
   before calling SDL_ShowWindow(). (#8328) [@PathogenDavid]
 
