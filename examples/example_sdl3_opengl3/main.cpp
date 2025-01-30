@@ -18,7 +18,6 @@
 #include <SDL3/SDL_opengl.h>
 #endif
 
-// This example doesn't compile with Emscripten yet! Awaiting SDL3 support.
 #ifdef __EMSCRIPTEN__
 #include "../libs/emscripten/emscripten_mainloop_stub.h"
 #endif
