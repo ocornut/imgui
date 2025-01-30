@@ -10301,6 +10301,11 @@ void    ImGui::ErrorRecoveryTryToRecoverWindowState(const ImGuiErrorRecoveryStat
         IM_ASSERT_USER_ERROR(0, "Missing EndMultiSelect()");
         EndMultiSelect();
     }
+    if (window->DC.MenuBarAppending) //-V1044
+    {
+        IM_ASSERT_USER_ERROR(0, "Missing EndMenuBar()");
+        EndMenuBar();
+    }
     while (window->DC.TreeDepth > state_in->SizeOfTreeStack) //-V1044
     {
         IM_ASSERT_USER_ERROR(0, "Missing TreePop()");

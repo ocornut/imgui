@@ -71,6 +71,7 @@ Other changes:
   scrollbar when using thick border sizes. (#8267, #7887)
 - Windows: Fixed IsItemXXXX() functions not working on append-version of EndChild(). (#8350)
   Also made some of the fields accessible after BeginChild() to match Begin() logic.
+- Error Handling: Recovery from missing EndMenuBar() call. (#1651)
 - Tables, Menus: Fixed using BeginTable() in menu layer (any menu bar). (#8355)
   It previously overrode the current layer back to main layer, which caused an issue
   with MainMenuBar attempted to release focus when leaving the menu layer.
