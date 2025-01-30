@@ -316,12 +316,17 @@ IM_MSVC_RUNTIME_CHECKS_RESTORE
 //-----------------------------------------------------------------------------
 
 // ImTextureID: user data for renderer backend to identify a texture [Compile-time configurable type]
-// - To use something else than an opaque void* pointer: override with e.g. '#define ImTextureID MyTextureType*' in your imconfig.h file.
-// - This can be whatever to you want it to be! read the FAQ about ImTextureID for details.
-// - You can make this a structure with various constructors if you need. You will have to implement ==/!= operators.
-// - (note: before v1.91.4 (2024/10/08) the default type for ImTextureID was void*. Use intermediary intptr_t cast and read FAQ if you have casting warnings)
+// Overview:
+// - Backend and user/app code provides ImTextureID values that gets stored inside draw commands (ImDrawCmd) during the ImGui frame.
+// - Backend uses ImDrawCmd::GetTexID() to retrieve the ImTextureID value during rendering. Then, they can bind the textures of each draw command.
+// Configuring the type:
+// - To use something else than a 64-bit value: override with e.g. '#define ImTextureID MyTextureType*' in your imconfig.h file.
+// - This can be whatever to you want it to be! read the FAQ entry about textures for details.
+// - You may decide to store a higher-level structure containing texture, sampler, shader etc. with various constructors if you like. You will need to implement ==/!= operators.
+// History:
+// - In v1.91.4 (2024/10/08): the default type for ImTextureID was changed from 'void*' to 'ImU64'. This allowed backends requirig 64-bit worth of data to build on 32-bit architectures. Use intermediary intptr_t cast and read FAQ if you have casting warnings.
 #ifndef ImTextureID
-typedef ImU64 ImTextureID;  // Default: store a pointer or an integer fitting in a pointer (most renderer backends are ok with that)
+typedef ImU64 ImTextureID;      // Default: store up to 64-bits (any pointer or integer). A majority of backends are ok with that.
 #endif
 
 // Define this to another value if you need value of 0 to be valid.
