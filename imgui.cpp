@@ -5785,7 +5785,8 @@ void ImGui::EndFrame()
     UpdateTexturesEndFrame();
 
     // Unlock font atlas
-    g.IO.Fonts->Locked = false;
+    ImFontAtlas* atlas = g.IO.Fonts;
+    atlas->Locked = false;
 
     // Clear Input data for next frame
     g.IO.MousePosPrev = g.IO.MousePos;
@@ -8575,8 +8576,9 @@ bool ImGui::IsRectVisible(const ImVec2& rect_min, const ImVec2& rect_max)
 void ImGui::UpdateFontsNewFrame()
 {
     ImGuiContext& g = *GImGui;
+    ImFontAtlas* atlas = g.IO.Fonts;
     if ((g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures) == 0)
-        g.IO.Fonts->Locked = true;
+        atlas->Locked = true;
     SetCurrentFont(GetDefaultFont(), GetDefaultFont()->Sources[0].SizePixels);
     IM_ASSERT(g.Font->IsLoaded());
 }
