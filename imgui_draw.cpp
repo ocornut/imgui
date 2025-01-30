@@ -2609,9 +2609,11 @@ ImFontAtlas::~ImFontAtlas()
 
 void ImFontAtlas::Clear()
 {
-    ClearInputData();
-    ClearTexData();
     ClearFonts();
+    bool backup_renderer_has_textures = RendererHasTextures;
+    RendererHasTextures = false; // Full Clear() is supported, but ClearTexData() only isn't.
+    ClearTexData();
+    RendererHasTextures = backup_renderer_has_textures;
 }
 
 void ImFontAtlas::ClearCache()
@@ -2649,12 +2651,14 @@ void ImFontAtlas::ClearInputData()
     Sources.clear();
 }
 
+// Clear CPU-side copy of the texture data.
 void ImFontAtlas::ClearTexData()
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas!");
-    TexList.clear();
-    IM_DELETE(TexData);
-    TexData = NULL;
+    IM_ASSERT(RendererHasTextures == false && "Not supported for dynamic atlases, but you may call Clear().");
+    for (ImTextureData* tex : TexList)
+        tex->DestroyPixels();
+    //Locked = true; // Hoped to be able to lock this down but some reload patterns may not be happy with it.
 }
 
 void ImFontAtlas::ClearFonts()
@@ -2688,7 +2692,7 @@ static void ImFontAtlasBuildUpdateRendererHasTexturesFromContext(ImFontAtlas* at
 }
 
 // Called by NewFrame(). When multiple context own the atlas, only the first one calls this.
-// If you are calling this yourself, ensure atlas->RendererHasTexUpdates is et.
+// If you are calling this yourself, ensure atlas->RendererHasTextures is set.
 // 'frame_count' needs to be provided because we can gc/prioritize baked fonts based on their age.
 void ImFontAtlasUpdateNewFrame(ImFontAtlas* atlas, int frame_count)
 {
@@ -3259,7 +3263,7 @@ bool ImFontAtlasGetMouseCursorTexData(ImFontAtlas* atlas, ImGuiMouseCursor curso
     return true;
 }
 
-// When atlas->RendererHasTexUpdates == true, this is only called if no font were loaded.
+// When atlas->RendererHasTextures = true, this is only called if no font were loaded.
 void ImFontAtlasBuildMain(ImFontAtlas* atlas)
 {
     IM_ASSERT(!atlas->Locked && "Cannot modify a locked ImFontAtlas!");
@@ -3480,16 +3484,6 @@ static void ImFontAtlasBuildUpdateLinesTexData(ImFontAtlas* atlas, bool add_and_
         atlas->TexUvLines[n] = ImVec4(uv0.x, half_v, uv1.x, half_v);
     }
     ImFontAtlasTextureBlockQueueUpload(atlas, tex, r->x, r->y, r->w, r->h);
-}
-
-//-----------------------------------------------------------------------------------------------------------------------------
-
-ImGuiID ImFontAtlasBakedGetId(ImGuiID font_id, float baked_size)
-{
-    struct { ImGuiID FontId; float BakedSize; } hashed_data;
-    hashed_data.FontId = font_id;
-    hashed_data.BakedSize = baked_size;
-    return ImHashData(&hashed_data, sizeof(hashed_data));
 }
 
 //-----------------------------------------------------------------------------------------------------------------------------
@@ -4913,6 +4907,14 @@ float ImFontBaked::GetCharAdvance(ImWchar c)
 }
 IM_MSVC_RUNTIME_CHECKS_RESTORE
 
+ImGuiID ImFontAtlasBakedGetId(ImGuiID font_id, float baked_size)
+{
+    struct { ImGuiID FontId; float BakedSize; } hashed_data;
+    hashed_data.FontId = font_id;
+    hashed_data.BakedSize = baked_size;
+    return ImHashData(&hashed_data, sizeof(hashed_data));
+}
+
 // ImFontBaked pointers are valid for the entire frame but shall never be kept between frames.
 ImFontBaked* ImFont::GetFontBaked(float size)
 {
@@ -4923,17 +4925,21 @@ ImFontBaked* ImFont::GetFontBaked(float size)
     ImFontAtlas* atlas = ContainerAtlas;
     ImFontAtlasBuilder* builder = atlas->Builder;
 
+    // FIXME-BAKED: Design for picking a nearest size?
     ImGuiID baked_id = ImFontAtlasBakedGetId(FontId, size);
     ImFontBaked** p_baked_in_map = (ImFontBaked**)builder->BakedMap.GetVoidPtrRef(baked_id);
     baked = *p_baked_in_map;
     if (baked != NULL)
     {
-        // FIXME-BAKED: Design for picking a nearest size?
         IM_ASSERT(baked->Size == size && baked->ContainerFont == this && baked->BakedId == baked_id);
         baked->LastUsedFrame = builder->FrameCount;
         LastBaked = baked;
         return baked;
     }
+
+    // FIXME-BAKED: If atlas is locked, find closest match
+    if (atlas->Locked)
+        IM_ASSERT(!atlas->Locked && "Cannot use dynamic font size with a locked ImFontAtlas!"); // Locked because rendering backend does not support ImGuiBackendFlags_RendererHasTextures!
 
     // Create new
     ImGuiContext& g = *GImGui;

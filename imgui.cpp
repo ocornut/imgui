@@ -5436,8 +5436,9 @@ void ImGui::NewFrame()
     UpdateTexturesNewFrame();
 
     // Setup current font and draw list shared data
+    ImFontAtlas* atlas = g.IO.Fonts;
     if ((g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures) == 0)
-        g.IO.Fonts->Locked = true;
+        atlas->Locked = true;
     SetupDrawListSharedData();
     SetCurrentFont(GetDefaultFont(), GetDefaultFont()->Sources[0].SizePixels);
     IM_ASSERT(g.Font->IsLoaded());
@@ -6010,7 +6011,8 @@ void ImGui::EndFrame()
     UpdateTexturesEndFrame();
 
     // Unlock font atlas
-    g.IO.Fonts->Locked = false;
+    ImFontAtlas* atlas = g.IO.Fonts;
+    atlas->Locked = false;
 
     // Clear Input data for next frame
     g.IO.MousePosPrev = g.IO.MousePos;
