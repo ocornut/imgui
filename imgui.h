@@ -3594,7 +3594,7 @@ enum ImFontAtlasFlags_
 //  - Mouse cursor shapes for software cursor rendering (unless setting 'Flags |= ImFontAtlasFlags_NoMouseCursors' in the font atlas).
 //  - If you don't call any AddFont*** functions, the default font embedded in the code will be loaded for you.
 // It is the rendering backend responsibility to upload texture into your graphics API:
-//  - ImGui_ImplXXXX_RenderDrawData() functions generally iterate atlas->TexList[] to create/update/destroy each ImTextureData instance.
+//  - ImGui_ImplXXXX_RenderDrawData() functions generally iterate platform_io->Textures[] to create/update/destroy each ImTextureData instance.
 //  - Backend then set ImTextureData's TexID and BackendUserData.
 //  - Texture id are passed back to you during rendering to identify the texture. Read FAQ entry about ImTextureID for more details.
 // Legacy path:
@@ -3695,11 +3695,9 @@ struct ImFontAtlas
     int                         TexGlyphPadding;    // FIXME: Should be called "TexPackPadding". Padding between glyphs within texture in pixels. Defaults to 1. If your rendering method doesn't rely on bilinear filtering you may set this to 0 (will also need to set AntiAliasedLinesUseTex = false).
     void*                       UserData;           // Store your own atlas related user-data (if e.g. you have multiple font atlas).
 
-    // Output
-    ImTextureData*              TexData;            // Current texture
-    ImVector<ImTextureData*>    TexList;            // Texture list (most often TexList.Size == 1). TexData is always == TexList.back().
-
     // [Internal]
+    ImTextureData*              TexData;            // Current texture
+    ImVector<ImTextureData*>    TexList;            // Texture list (most often TexList.Size == 1). TexData is always == TexList.back(). DO NOT USE DIRECTLY, USE GetPlatformIO().Textures[] instead!
     bool                        Locked;             // Marked as Locked by ImGui::NewFrame() so attempt to modify the atlas will assert.
     bool                        TexIsBuilt;         // Set when texture was built matching current font input
     bool                        TexPixelsUseColors; // Tell whether our texture data is known to use colors (rather than just alpha channel), in order to help backend select a format or conversion process.
@@ -4004,8 +4002,11 @@ struct ImGuiPlatformIO
     ImVector<ImGuiPlatformMonitor>  Monitors;
 
     //------------------------------------------------------------------
-    // Output - List of viewports to render into platform windows
+    // Output
     //------------------------------------------------------------------
+
+    // Textures list (the list is updated by calling ImGui::EndFrame or ImGui::Render)
+    ImVector<ImTextureData*>        Textures;           // Texture list (most often Textures.Size == 1).
 
     // Viewports list (the list is updated by calling ImGui::EndFrame or ImGui::Render)
     // (in the future we will attempt to organize this feature to remove the need for a "main viewport")
