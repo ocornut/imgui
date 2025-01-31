@@ -1090,11 +1090,11 @@ namespace ImGui
     // (Optional) Platform/OS interface for multi-viewport support
     // Read comments around the ImGuiPlatformIO structure for more details.
     // Note: You may use GetWindowViewport() to get the current viewport of the current window.
-    IMGUI_API void              UpdatePlatformWindows();                                        // call in main loop. will call CreateWindow/ResizeWindow/etc. platform functions for each secondary viewport, and DestroyWindow for each inactive viewport.
-    IMGUI_API void              RenderPlatformWindowsDefault(void* platform_render_arg = NULL, void* renderer_render_arg = NULL); // call in main loop. will call RenderWindow/SwapBuffers platform functions for each secondary viewport which doesn't have the ImGuiViewportFlags_Minimized flag set. May be reimplemented by user for custom rendering needs.
-    IMGUI_API void              DestroyPlatformWindows();                                       // call DestroyWindow platform functions for all viewports. call from backend Shutdown() if you need to close platform windows before imgui shutdown. otherwise will be called by DestroyContext().
-    IMGUI_API ImGuiViewport*    FindViewportByID(ImGuiID id);                                   // this is a helper for backends.
-    IMGUI_API ImGuiViewport*    FindViewportByPlatformHandle(void* platform_handle);            // this is a helper for backends. the type platform_handle is decided by the backend (e.g. HWND, MyWindow*, GLFWwindow* etc.)
+    IMGUI_API void          UpdatePlatformWindows();                                // call in main loop. will call CreateWindow/ResizeWindow/etc. platform functions for each secondary viewport, and DestroyWindow for each inactive viewport.
+    IMGUI_API void          RenderPlatformWindowsDefault(void* platform_render_arg = NULL, void* renderer_render_arg = NULL); // call in main loop. will call RenderWindow/SwapBuffers platform functions for each secondary viewport which doesn't have the ImGuiViewportFlags_Minimized flag set. May be reimplemented by user for custom rendering needs.
+    IMGUI_API void          DestroyPlatformWindows();                               // call DestroyWindow platform functions for all viewports. call from backend Shutdown() if you need to close platform windows before imgui shutdown. otherwise will be called by DestroyContext().
+    IMGUI_API ImGuiViewport* FindViewportByID(ImGuiID id);                          // this is a helper for backends.
+    IMGUI_API ImGuiViewport* FindViewportByPlatformHandle(void* platform_handle);   // this is a helper for backends. the type platform_handle is decided by the backend (e.g. HWND, MyWindow*, GLFWwindow* etc.)
 
 } // namespace ImGui
 
@@ -3740,7 +3740,7 @@ struct ImGuiPlatformIO
     IMGUI_API ImGuiPlatformIO();
 
     //------------------------------------------------------------------
-    // Interface with OS and Platform backend (basic)
+    // Input - Interface with OS and Platform backend (most common stuff)
     //------------------------------------------------------------------
 
     // Optional: Access OS clipboard
@@ -3765,14 +3765,14 @@ struct ImGuiPlatformIO
     ImWchar     Platform_LocaleDecimalPoint;     // '.'
 
     //------------------------------------------------------------------
-    // Interface with Renderer Backend
+    // Input - Interface with Renderer Backend
     //------------------------------------------------------------------
 
     // Written by some backends during ImGui_ImplXXXX_RenderDrawData() call to point backend_specific ImGui_ImplXXXX_RenderState* structure.
     void*       Renderer_RenderState;
 
     //------------------------------------------------------------------
-    // Input - Interface with OS/backends (Multi-Viewport support!)
+    // Input - Interface with Platform & Renderer backends for Multi-Viewport support
     //------------------------------------------------------------------
 
     // For reference, the second column shows which function are generally calling the Platform Functions:
@@ -3826,7 +3826,7 @@ struct ImGuiPlatformIO
 
     // Viewports list (the list is updated by calling ImGui::EndFrame or ImGui::Render)
     // (in the future we will attempt to organize this feature to remove the need for a "main viewport")
-    ImVector<ImGuiViewport*>        Viewports;                              // Main viewports, followed by all secondary viewports.
+    ImVector<ImGuiViewport*>        Viewports;          // Main viewports, followed by all secondary viewports.
 };
 
 // (Optional) This is required when enabling multi-viewport. Represent the bounds of each connected monitor/display and their DPI.
@@ -3843,11 +3843,11 @@ struct ImGuiPlatformMonitor
 // (Optional) Support for IME (Input Method Editor) via the platform_io.Platform_SetImeDataFn() function.
 struct ImGuiPlatformImeData
 {
-    bool    WantVisible;        // A widget wants the IME to be visible
-    ImVec2  InputPos;           // Position of the input cursor
-    float   InputLineHeight;    // Line height
+    bool    WantVisible;            // A widget wants the IME to be visible
+    ImVec2  InputPos;               // Position of the input cursor
+    float   InputLineHeight;        // Line height
 
-    ImGuiPlatformImeData() { memset(this, 0, sizeof(*this)); }
+    ImGuiPlatformImeData()          { memset(this, 0, sizeof(*this)); }
 };
 
 //-----------------------------------------------------------------------------
