@@ -36,12 +36,15 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.91.8 WIP (In Progress)
+ VERSION 1.91.8 (Released 2025-01-31)
 -----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.91.8
 
 Breaking changes:
 
-- ColorEdit, ColorPicker: redesigned how alpha is displayed in the preview square. (#8335, #1578, #346)
+- ColorEdit, ColorPicker: redesigned how alpha is displayed in the preview
+  square. (#8335, #1578, #346)
    - Removed ImGuiColorEditFlags_AlphaPreview (made value 0): it is now the default behavior.
    - Prior to 1.91.8: alpha was made opaque in the preview by default _unless_ using ImGuiColorEditFlags_AlphaPreview.
    - We now display the preview as transparent by default. You can use ImGuiColorEditFlags_AlphaOpaque to use old behavior.
@@ -63,7 +66,7 @@ Other changes:
   by introducing a delay. This is a very rarely used UI idiom, but some apps
   use this: e.g. MS Explorer single-click on an icon triggers a rename.
   Generally use with 'delay >= io.MouseDoubleClickTime' + combine with a
-  'io.MouseClickedLastCount == 1' check.
+  'GetMouseClickedCount() == 1' check.
 - Windows: legacy SetWindowFontScale() is properly inherited by nested child
   windows. Note that an upcoming major release should make this obsolete,
   but in the meanwhile it works better now. (#2701, #8138, #1018)
@@ -81,7 +84,6 @@ Other changes:
 - Tabs, Style: reworked selected overline rendering to better accommodate
   for rounded tabs. Reduced default thickness (style.TabBarOverlineSize),
   increased default rounding (style.TabRounding). (#8334) [@Kian738, @ocornut]
-  styles as the current look is not right (but ImGuiCol_TabSelectedOverline stays the same).
 - Debug Tools: Tweaked font preview.
 - ImDrawList: texture baked storage for thick line reduced from ~64x64 to ~32x32. (#3245)
 - Fonts: IndexLookup[] table hold 16-bit values even in ImWchar32 mode,
@@ -90,7 +92,6 @@ Other changes:
 - Fonts: OversampleH/OversampleV defaults to 0 for automatic selection.
    - OversampleH == 0 --> use 1 or 2 depending on font size and use of PixelSnapH.
    - OversampleV == 0 --> always use 1.
-  This also
 - ImFontAtlas: made calling ClearFonts() call ClearInputData(), as calling
   one without the other is never correct. (#8174, #6556, #6336, #4723)
 - Examples: DirectX12: Reduced number of frame in flight from 3 to 2 in
