@@ -4829,7 +4829,7 @@ ImGuiPlatformIO& ImGui::GetPlatformIO()
 // This variant exists to facilitate backends experimenting with multi-threaded parallel context. (#8069, #6293, #5856)
 ImGuiPlatformIO& ImGui::GetPlatformIO(ImGuiContext* ctx)
 {
-    IM_ASSERT(ctx != NULL;
+    IM_ASSERT(ctx != NULL);
     return ctx->PlatformIO;
 }
 
