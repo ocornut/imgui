@@ -1275,6 +1275,7 @@ static void             UpdateKeyRoutingTable(ImGuiKeyRoutingTable* rt);
 
 // Misc
 static void             UpdateTexturesNewFrame();
+static void             UpdateTexturesEndFrame();
 static void             UpdateSettings();
 static int              UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& size_auto_fit, int* border_hovered, int* border_held, int resize_grip_count, ImU32 resize_grip_col[4], const ImRect& visibility_rect);
 static void             RenderWindowOuterBorders(ImGuiWindow* window);
@@ -5340,6 +5341,18 @@ static void ImGui::UpdateTexturesNewFrame()
     ImFontAtlasUpdateNewFrame(atlas);
 }
 
+// Build a single texture list
+// We want to avoid user reading from atlas->TexList[] in order to facilitate better support for multiple atlases.
+static void ImGui::UpdateTexturesEndFrame()
+{
+    ImGuiContext& g = *GImGui;
+    ImFontAtlas* atlas = g.IO.Fonts;
+    g.PlatformIO.Textures.resize(0);
+    g.PlatformIO.Textures.reserve(atlas->TexList.Size);
+    for (ImTextureData* tex : atlas->TexList)
+        g.PlatformIO.Textures.push_back(tex);
+}
+
 // Called once a frame. Followed by SetCurrentFont() which sets up the remaining data.
 // FIXME-VIEWPORT: the concept of a single ClipRectFullscreen is not ideal!
 static void SetupDrawListSharedData()
@@ -5994,6 +6007,8 @@ void ImGui::EndFrame()
     IM_ASSERT(g.Windows.Size == g.WindowsTempSortBuffer.Size);
     g.Windows.swap(g.WindowsTempSortBuffer);
     g.IO.MetricsActiveWindows = g.WindowsActiveCount;
+
+    UpdateTexturesEndFrame();
 
     // Unlock font atlas
     g.IO.Fonts->Locked = false;
