@@ -58,6 +58,12 @@
 #include <limits.h>
 #include <webgpu/webgpu.h>
 
+#ifdef IMGUI_IMPL_WEBGPU_BACKEND_DAWN
+// Dawn renamed WGPUProgrammableStageDescriptor to WGPUComputeState (see: https://github.com/webgpu-native/webgpu-headers/pull/413)
+// Using type alias until WGPU adopts the same naming convention (#8369)
+using WGPUProgrammableStageDescriptor = WGPUComputeState;
+#endif
+
 // Dear ImGui prototypes from imgui_internal.h
 extern ImGuiID ImHashData(const void* data_p, size_t data_size, ImU32 seed = 0);
 #define MEMALIGN(_SIZE,_ALIGN)        (((_SIZE) + ((_ALIGN) - 1)) & ~((_ALIGN) - 1))    // Memory align (copied from IM_ALIGN() macro).

@@ -49,6 +49,8 @@ Other changes:
   when a user callback modified the buffer contents in a way that altered the
   visibility of the preview/hint buffer. (#8368) [@m9710797, @ocornut]
 - Backends: Metal: Fixed a crash on application resources. (#8367, #7419) [@anszom]
+- Backends: WebGPU: Fix for DAWN API rename WGPUProgrammableStageDescriptor -> WGPUComputeState.
+  [@PhantomCloak] (#8369)
 
 -----------------------------------------------------------------------
  VERSION 1.91.8 (Released 2025-01-31)
