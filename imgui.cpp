@@ -2012,6 +2012,7 @@ const char* ImStreolRange(const char* str, const char* str_end)
 
 const char* ImStrbol(const char* buf_mid_line, const char* buf_begin) // find beginning-of-line
 {
+    IM_ASSERT_PARANOID(buf_mid_line >= buf_begin && buf_mid_line <= buf_begin + strlen(buf_begin));
     while (buf_mid_line > buf_begin && buf_mid_line[-1] != '\n')
         buf_mid_line--;
     return buf_mid_line;
