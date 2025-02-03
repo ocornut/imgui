@@ -4351,8 +4351,15 @@ static bool ImGui_ImplStbTrueType_FontBakedAddGlyph(ImFontAtlas* atlas, ImFontBa
         if (oversample_v > 1)
             stbtt__v_prefilter(bitmap_pixels, r->w, r->h, r->w, oversample_v);
 
-        float font_off_x = src->GlyphOffset.x + stbtt__oversample_shift(oversample_h);
-        float font_off_y = src->GlyphOffset.y + stbtt__oversample_shift(oversample_v) + IM_ROUND(baked->Ascent);
+        const float offsets_scale = baked->Size / baked->ContainerFont->Sources[0].SizePixels;
+        float font_off_x = (src->GlyphOffset.x * offsets_scale);
+        float font_off_y = (src->GlyphOffset.y * offsets_scale);
+        if (src->PixelSnapH) // Snap scaled offset. This is to mitigate backward compatibility issues for GlyphOffset, but a better design would be welcome.
+            font_off_x = IM_ROUND(font_off_x);
+        if (src->PixelSnapV)
+            font_off_y = IM_ROUND(font_off_y);
+        font_off_x += stbtt__oversample_shift(oversample_h);
+        font_off_y += stbtt__oversample_shift(oversample_v) + IM_ROUND(baked->Ascent);
         float recip_h = 1.0f / (oversample_h * src->RasterizerDensity);
         float recip_v = 1.0f / (oversample_v * src->RasterizerDensity);
 
@@ -4800,7 +4807,8 @@ ImFontGlyph* ImFontAtlasBakedAddFontGlyph(ImFontAtlas* atlas, ImFontBaked* baked
     if (src != NULL)
     {
         // Clamp & recenter if needed
-        float advance_x = ImClamp(glyph.AdvanceX, src->GlyphMinAdvanceX, src->GlyphMaxAdvanceX);
+        const float offsets_scale = baked->Size / baked->ContainerFont->Sources[0].SizePixels;
+        float advance_x = ImClamp(glyph.AdvanceX, src->GlyphMinAdvanceX * offsets_scale, src->GlyphMaxAdvanceX * offsets_scale);
         if (advance_x != glyph.AdvanceX)
         {
             float char_off_x = src->PixelSnapH ? ImTrunc((advance_x - glyph.AdvanceX) * 0.5f) : (advance_x - glyph.AdvanceX) * 0.5f;
