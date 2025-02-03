@@ -1308,7 +1308,7 @@ static void ImGui_ImplWin32_OnChangedViewport(ImGuiViewport* viewport)
 #endif
 }
 
-namespace ImGui { extern ImGuiIO& GetIOEx(ImGuiContext*); extern ImGuiPlatformIO& GetPlatformIOEx(ImGuiContext*); }
+namespace ImGui { extern ImGuiIO& GetIO(ImGuiContext*); extern ImGuiPlatformIO& GetPlatformIO(ImGuiContext*); }
 
 static LRESULT CALLBACK ImGui_ImplWin32_WndProcHandler_PlatformWindow(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -1317,8 +1317,8 @@ static LRESULT CALLBACK ImGui_ImplWin32_WndProcHandler_PlatformWindow(HWND hWnd,
     if (ctx == NULL)
         return DefWindowProc(hWnd, msg, wParam, lParam); // unlike ImGui_ImplWin32_WndProcHandler() we are called directly by Windows, we can't just return 0.
 
-    ImGuiIO& io = ImGui::GetIOEx(ctx);
-    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIOEx(ctx);
+    ImGuiIO& io = ImGui::GetIO(ctx);
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO(ctx);
     LRESULT result = 0;
     if (ImGui_ImplWin32_WndProcHandlerEx(hWnd, msg, wParam, lParam, io))
         result = true;

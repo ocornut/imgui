@@ -36,6 +36,26 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
+ VERSION 1.91.9 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Breaking changes:
+
+- Removed ImFontConfig::GlyphExtraSpacing option which seems largely obsolete and
+  unused. If you were using this please report it! (#242).
+
+Other changes:
+
+- Fixed IsItemDeactivatedAfterEdit() signal being broken for Checkbox(),
+  RadioButton(), Selectable(). Regression from 2025/01/13. (#8370)
+- InputTextWithHint(): Fixed buffer-overflow (luckily often with no visible effect)
+  when a user callback modified the buffer contents in a way that altered the
+  visibility of the preview/hint buffer. (#8368) [@m9710797, @ocornut]
+- Backends: Metal: Fixed a crash on application resources. (#8367, #7419) [@anszom]
+- Backends: WebGPU: Fix for DAWN API rename WGPUProgrammableStageDescriptor -> WGPUComputeState.
+  [@PhantomCloak] (#8369)
+
+-----------------------------------------------------------------------
  VERSION 1.91.8 (Released 2025-01-31)
 -----------------------------------------------------------------------
 
