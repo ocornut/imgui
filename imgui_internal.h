@@ -4053,10 +4053,10 @@ IMGUI_API ImVec2i           ImFontAtlasBuildGetTextureSizeEstimate(ImFontAtlas* 
 
 IMGUI_API bool              ImFontAtlasBuildAddFont(ImFontAtlas* atlas, ImFontConfig* src);
 IMGUI_API void              ImFontAtlasBuildSetupFontSpecialGlyphs(ImFontAtlas* atlas, ImFont* font, ImFontConfig* src);
-IMGUI_API void              ImFontAtlasBuildDiscardUnusedBakes(ImFontAtlas* atlas, ImFont* font_filter);
+IMGUI_API void              ImFontAtlasBuildDiscardUnusedBakes(ImFontAtlas* atlas, int gc_frames);
+IMGUI_API void              ImFontAtlasBuildDiscardFont(ImFontAtlas* atlas, ImFont* font);
 IMGUI_API void              ImFontAtlasBuildDiscardFontBaked(ImFontAtlas* atlas, ImFont* font, ImFontBaked* baked);
 IMGUI_API void              ImFontAtlasBuildDiscardFontBakedGlyph(ImFontAtlas* atlas, ImFont* font, ImFontBaked* baked, ImFontGlyph* glyph);
-IMGUI_API void              ImFontAtlasBuildReloadFont(ImFontAtlas* atlas, ImFont* font); // <--- Your future new best friend!
 IMGUI_API void              ImFontAtlasBuildPreloadAllGlyphRanges(ImFontAtlas* atlas); // Legacy
 IMGUI_API void              ImFontAtlasBuildGetOversampleFactors(ImFontConfig* src, float size, int* out_oversample_h, int* out_oversample_v);
 

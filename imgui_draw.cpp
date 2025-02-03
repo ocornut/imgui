@@ -2499,8 +2499,9 @@ void ImTextureData::DestroyPixels()
 // - ImFontAtlasBuildSetupFontCreateEllipsisFromDot()
 // - ImFontAtlasBuildSetupFontSpecialGlyphs()
 // - ImFontAtlasBuildDiscardUnusedBakes()
-// - ImFontAtlasBuildDiscardFontBaked()
 // - ImFontAtlasBuildDiscardFontBakedGlyph()
+// - ImFontAtlasBuildDiscardFontBaked()
+// - ImFontAtlasBuildDiscardFont()
 //-----------------------------------------------------------------------------
 // - ImFontAtlasAddDrawListSharedData()
 // - ImFontAtlasRemoveDrawListSharedData()
@@ -3626,10 +3627,9 @@ void ImFontAtlasBuildDiscardFontBakedGlyph(ImFontAtlas* atlas, ImFont* font, ImF
     baked->IndexAdvanceX[c] = baked->FallbackAdvanceX;
 }
 
-void ImFontAtlasBuildDiscardFontBaked(ImFontAtlas* atlas, ImFontBaked* baked)
+void ImFontAtlasBuildDiscardFontBaked(ImFontAtlas* atlas, ImFont* font, ImFontBaked* baked)
 {
     ImFontAtlasBuilder* builder = atlas->Builder;
-    ImFont* font = baked->ContainerFont;
     IMGUI_DEBUG_LOG_FONT("[font] Discard baked %.2f for \"%s\"\n", baked->Size, font->GetDebugName());
 
     for (ImFontGlyph& glyph : baked->Glyphs)
@@ -3646,16 +3646,25 @@ void ImFontAtlasBuildDiscardFontBaked(ImFontAtlas* atlas, ImFontBaked* baked)
     font->LastBaked = NULL;
 }
 
-void ImFontAtlasBuildDiscardUnusedBakes(ImFontAtlas* atlas, ImFont* font_filter)
+void ImFontAtlasBuildDiscardFont(ImFontAtlas* atlas, ImFont* font)
+{
+    if (ImFontAtlasBuilder* builder = atlas->Builder) // This can be called from font destructor
+        for (int baked_n = 0; baked_n < builder->BakedPool.Size; baked_n++)
+        {
+            ImFontBaked* baked = &builder->BakedPool[baked_n];
+            if (baked->ContainerFont == font && !baked->WantDestroy)
+                ImFontAtlasBuildDiscardFontBaked(atlas, font, baked);
+        }
+}
+
+void ImFontAtlasBuildDiscardUnusedBakes(ImFontAtlas* atlas, int gc_frames)
 {
     ImFontAtlasBuilder* builder = atlas->Builder;
-    const int GC_FRAMES = 2;
     for (int baked_n = 0; baked_n < builder->BakedPool.Size; baked_n++)
     {
         ImFontBaked* baked = &builder->BakedPool[baked_n];
-        if (font_filter == NULL || baked->ContainerFont == font_filter)
-            if (baked->LastUsedFrame + GC_FRAMES < atlas->Builder->FrameCount && !baked->WantDestroy)
-                ImFontAtlasBuildDiscardFontBaked(atlas, baked);
+        if (baked->LastUsedFrame + gc_frames < atlas->Builder->FrameCount && !baked->WantDestroy)
+            ImFontAtlasBuildDiscardFontBaked(atlas, baked->ContainerFont, baked);
     }
 }
 
@@ -3875,7 +3884,7 @@ void ImFontAtlasBuildMakeSpace(ImFontAtlas* atlas)
     // Can some baked contents be ditched?
     //IMGUI_DEBUG_LOG_FONT("[font] ImFontAtlasBuildMakeSpace()\n");
     ImFontAtlasBuilder* builder = atlas->Builder;
-    ImFontAtlasBuildDiscardUnusedBakes(atlas, NULL);
+    ImFontAtlasBuildDiscardUnusedBakes(atlas, 2);
 
     // Currently using a heuristic for repack without growing.
     if (builder->RectsDiscardedSurface < builder->RectsPackedSurface * 0.20f)
@@ -3923,7 +3932,7 @@ ImVec2i ImFontAtlasBuildGetTextureSizeEstimate(ImFontAtlas* atlas)
 void ImFontAtlasBuildCompactTexture(ImFontAtlas* atlas)
 {
     ImFontAtlasBuilder* builder = atlas->Builder;
-    ImFontAtlasBuildDiscardUnusedBakes(atlas, NULL);
+    ImFontAtlasBuildDiscardUnusedBakes(atlas, 1);
 
     ImTextureData* old_tex = atlas->TexData;
     ImVec2i old_tex_size = ImVec2i(old_tex->Width, old_tex->Height);
@@ -4750,13 +4759,7 @@ ImFont::~ImFont()
 void ImFont::ClearOutputData()
 {
     if (ImFontAtlas* atlas = ContainerAtlas)
-        if (ImFontAtlasBuilder* builder = atlas->Builder)
-            for (int baked_n = 0; baked_n < builder->BakedPool.Size; baked_n++)
-            {
-                ImFontBaked* baked = &builder->BakedPool[baked_n];
-                if (baked->ContainerFont == this)
-                    ImFontAtlasBuildDiscardFontBaked(atlas, baked);
-            }
+        ImFontAtlasBuildDiscardFont(atlas, this);
     FallbackChar = EllipsisChar = 0;
     memset(Used8kPagesMap, 0, sizeof(Used8kPagesMap));
     LastBaked = NULL;
@@ -4939,6 +4942,7 @@ ImFontBaked* ImFont::GetFontBaked(float size)
     ImFontAtlasBuilder* builder = atlas->Builder;
 
     // FIXME-BAKED: Design for picking a nearest size?
+    // FIXME-BAKED: Altering font density won't work right away.
     ImGuiID baked_id = ImFontAtlasBakedGetId(FontId, size);
     ImFontBaked** p_baked_in_map = (ImFontBaked**)builder->BakedMap.GetVoidPtrRef(baked_id);
     baked = *p_baked_in_map;
