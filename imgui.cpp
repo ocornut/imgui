@@ -5391,6 +5391,8 @@ static void SetupDrawListSharedData()
     g.DrawListSharedData.InitialFringeScale = 1.0f; // FIXME-DPI: Change this for some DPI scaling experiments.
 }
 
+static void PushDefaultFont();
+
 void ImGui::NewFrame()
 {
     IM_ASSERT(GImGui != NULL && "No current context. Did you call ImGui::CreateContext() and ImGui::SetCurrentContext() ?");
@@ -5440,7 +5442,7 @@ void ImGui::NewFrame()
     if ((g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures) == 0)
         atlas->Locked = true;
     SetupDrawListSharedData();
-    PushFont(GetDefaultFont(), GetDefaultFont()->Sources[0].SizePixels);
+    PushDefaultFont();
     IM_ASSERT(g.Font->IsLoaded());
 
     g.WithinFrameScope = true;
@@ -8518,6 +8520,16 @@ void ImGui::PushFont(ImFont* font, float font_size)
         font_size = g.FontSize;
     g.FontStack.push_back({ font, font_size });
     SetCurrentFont(font, font_size);
+}
+
+// NewFrame() calls this and we do this really unusual thing of calling *push_front()*, the reason behind that we want to support the PushFont()/NewFrame()/PopFont() idiom.
+static void PushDefaultFont()
+{
+    ImGuiContext& g = *GImGui;
+    ImFontStackData font_stack_data = { ImGui::GetDefaultFont(), ImGui::GetDefaultFont()->Sources[0].SizePixels };
+    g.FontStack.push_front(font_stack_data);
+    if (g.FontStack.Size == 1)
+        ImGui::SetCurrentFont(font_stack_data.Font, font_stack_data.FontSize);
 }
 
 void  ImGui::PopFont()
