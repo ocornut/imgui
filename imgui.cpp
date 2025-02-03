@@ -4440,8 +4440,11 @@ void ImGui::MarkItemEdited(ImGuiID id)
         return;
     if (g.ActiveId == id || g.ActiveId == 0)
     {
+        // FIXME: Can't we fully rely on LastItemData yet?
         g.ActiveIdHasBeenEditedThisFrame = true;
         g.ActiveIdHasBeenEditedBefore = true;
+        if (g.DeactivatedItemData.ID == id)
+            g.DeactivatedItemData.HasBeenEditedBefore = true;
     }
 
     // We accept a MarkItemEdited() on drag and drop targets (see https://github.com/ocornut/imgui/issues/1875#issuecomment-978243343)
