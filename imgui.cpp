@@ -8581,7 +8581,13 @@ void ImGui::UpdateFontsNewFrame()
     ImFontAtlas* atlas = g.IO.Fonts;
     if ((g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures) == 0)
         atlas->Locked = true;
-    PushFont(GetDefaultFont(), GetDefaultFont()->Sources[0].SizePixels);
+
+    // We do this really unusual thing of calling *push_front()*, the reason behind that we want to support the PushFont()/NewFrame()/PopFont() idiom.
+    ImFontStackData font_stack_data = { ImGui::GetDefaultFont(), ImGui::GetDefaultFont()->Sources[0].SizePixels };
+    g.FontStack.push_front(font_stack_data);
+    if (g.FontStack.Size == 1)
+        ImGui::SetCurrentFont(font_stack_data.Font, font_stack_data.FontSize);
+
     IM_ASSERT(g.Font->IsLoaded());
 }
 
