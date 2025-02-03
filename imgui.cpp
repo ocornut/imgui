@@ -8487,7 +8487,7 @@ void ImGui::SetCurrentFont(ImFont* font, float font_size)
 {
     ImGuiContext& g = *GImGui;
     g.Font = font;
-    //g.FontBaseSize = ImMax(1.0f, g.IO.FontGlobalScale * g.FontBaked->FontSize * g.Font->Scale);
+    //g.FontBaseSize = ImMax(1.0f, g.IO.FontGlobalScale * g.FontBaked->Size * g.Font->Scale);
     g.FontSize = font_size;// g.CurrentWindow ? g.CurrentWindow->CalcFontSize() : 0.0f;
     if (font != NULL)
     {

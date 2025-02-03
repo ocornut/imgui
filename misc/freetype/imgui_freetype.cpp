@@ -204,6 +204,9 @@ namespace
 
         if (UserFlags & ImGuiFreeTypeBuilderFlags_NoHinting)
             LoadFlags |= FT_LOAD_NO_HINTING;
+        else
+            src->PixelSnapH = true; // FIXME: A bit weird to do this this way.
+
         if (UserFlags & ImGuiFreeTypeBuilderFlags_NoAutoHint)
             LoadFlags |= FT_LOAD_NO_AUTOHINT;
         if (UserFlags & ImGuiFreeTypeBuilderFlags_ForceAutoHint)
@@ -559,8 +562,13 @@ bool ImGui_ImplFreeType_FontBakedAddGlyph(ImFontAtlas* atlas, ImFontBaked* baked
         uint32_t* temp_buffer = (uint32_t*)atlas->Builder->TempBuffer.Data;
         bd_font_data->BlitGlyph(ft_bitmap, temp_buffer, w);
 
-        float font_off_x = src->GlyphOffset.x;
-        float font_off_y = src->GlyphOffset.y + IM_ROUND(baked->Ascent);
+        const float offsets_scale = baked->Size / baked->ContainerFont->Sources[0].SizePixels;
+        float font_off_x = (src->GlyphOffset.x * offsets_scale);
+        float font_off_y = (src->GlyphOffset.y * offsets_scale) + baked->Ascent;
+        if (src->PixelSnapH) // Snap scaled offset. This is to mitigate backward compatibility issues for GlyphOffset, but a better design would be welcome.
+            font_off_x = IM_ROUND(font_off_x);
+        if (src->PixelSnapV)
+            font_off_y = IM_ROUND(font_off_y);
         float recip_h = 1.0f / src->RasterizerDensity;
         float recip_v = 1.0f / src->RasterizerDensity;
 
