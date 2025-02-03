@@ -3770,8 +3770,10 @@ void ImFont::BuildLookupTable()
     }
 
     // Mark special glyphs as not visible (note that AddGlyph already mark as non-visible glyphs with zero-size polygons)
-    SetGlyphVisible((ImWchar)' ', false);
-    SetGlyphVisible((ImWchar)'\t', false);
+    if (ImFontGlyph* glyph = (ImFontGlyph*)(void*)FindGlyph((ImWchar)' '))
+        glyph->Visible = false;
+    if (ImFontGlyph* glyph = (ImFontGlyph*)(void*)FindGlyph((ImWchar)'\t'))
+        glyph->Visible = false;
 
     // Setup Fallback character
     const ImWchar fallback_chars[] = { (ImWchar)IM_UNICODE_CODEPOINT_INVALID, (ImWchar)'?', (ImWchar)' ' };
@@ -3825,12 +3827,6 @@ bool ImFont::IsGlyphRangeUnused(unsigned int c_begin, unsigned int c_last)
             if (Used8kPagesMap[page_n >> 3] & (1 << (page_n & 7)))
                 return false;
     return true;
-}
-
-void ImFont::SetGlyphVisible(ImWchar c, bool visible)
-{
-    if (ImFontGlyph* glyph = (ImFontGlyph*)(void*)FindGlyph((ImWchar)c))
-        glyph->Visible = visible ? 1 : 0;
 }
 
 void ImFont::GrowIndex(int new_size)
