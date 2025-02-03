@@ -311,11 +311,11 @@ void ImGui_ImplMetal_RenderDrawData(ImDrawData* drawData, id<MTLCommandBuffer> c
         indexBufferOffset += (size_t)draw_list->IdxBuffer.Size * sizeof(ImDrawIdx);
     }
 
-    __block MetalContext* sharedMetalContext = bd->SharedMetalContext;
+    MetalContext* sharedMetalContext = bd->SharedMetalContext;
     [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer>)
     {
         dispatch_async(dispatch_get_main_queue(), ^{
-            @synchronized(bd->SharedMetalContext.bufferCache)
+            @synchronized(sharedMetalContext.bufferCache)
             {
                 [sharedMetalContext.bufferCache addObject:vertexBuffer];
                 [sharedMetalContext.bufferCache addObject:indexBuffer];

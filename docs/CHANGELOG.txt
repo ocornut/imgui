@@ -43,9 +43,9 @@ Breaking changes:
 
 Other changes:
 
-- Fixed IsItemDeactivatedAfterEdit() signal being broken for Checkbox(), Selectable(). (#8370)
-  Regression from 2025/01/13.
-
+- Fixed IsItemDeactivatedAfterEdit() signal being broken for Checkbox(),
+  RadioButton(), Selectable(). Regression from 2025/01/13. (#8370)
+- Backends: Metal: Fixed a crash on application resources. (#8367, #7419) [@anszom]
 
 -----------------------------------------------------------------------
  VERSION 1.91.8 (Released 2025-01-31)
