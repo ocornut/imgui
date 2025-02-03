@@ -8517,7 +8517,7 @@ void ImGui::PushFont(ImFont* font, float font_size)
     if (font == NULL)
         font = GetDefaultFont();
     if (font_size < 0.0f)
-        font_size = g.FontSize;
+        font_size = font->Sources[0].SizePixels; // g.FontSize;
     g.FontStack.push_back({ font, font_size });
     SetCurrentFont(font, font_size);
 }
