@@ -3349,7 +3349,7 @@ void ImFontAtlasBuildFinish(ImFontAtlas* atlas)
         if (r->Font == NULL || r->GlyphID == 0)
             continue;
 
-        // Will ignore ImFontConfig settings: GlyphMinAdvanceX, GlyphMinAdvanceY, GlyphExtraSpacing, PixelSnapH
+        // Will ignore ImFontConfig settings: GlyphMinAdvanceX, GlyphMinAdvanceY, PixelSnapH
         IM_ASSERT(r->Font->ContainerAtlas == atlas);
         ImVec2 uv0, uv1;
         atlas->CalcCustomRectUV(r, &uv0, &uv1);
@@ -3858,9 +3858,6 @@ void ImFont::AddGlyph(const ImFontConfig* cfg, ImWchar codepoint, float x0, floa
         // Snap to pixel
         if (cfg->PixelSnapH)
             advance_x = IM_ROUND(advance_x);
-
-        // Bake spacing
-        advance_x += cfg->GlyphExtraSpacing.x;
     }
 
     int glyph_idx = Glyphs.Size;

@@ -41,6 +41,9 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+- Removed ImFontConfig::GlyphExtraSpacing option which seems largely obsolete and
+  unused. If you were using this please report it! (#242).
+
 Other changes:
 
 - Fixed IsItemDeactivatedAfterEdit() signal being broken for Checkbox(),
