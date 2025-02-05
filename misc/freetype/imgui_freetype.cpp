@@ -504,6 +504,8 @@ bool ImGui_ImplFreeType_FontBakedAddGlyph(ImFontAtlas* atlas, ImFontBaked* baked
     for (int src_n = 0; src_n < srcs_count; src_n++)
     {
         src = &srcs[src_n];
+        if (src->GlyphExcludeRanges && !ImFontAtlasBuildFilterCodepointForSource(src, codepoint))
+            continue;
         bd_font_data = (ImGui_ImplFreeType_FontSrcData*)src->FontLoaderData;
         glyph_index = FT_Get_Char_Index(bd_font_data->FtFace, codepoint);
         if (glyph_index != 0)
