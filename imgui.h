@@ -3618,7 +3618,7 @@ struct ImFontAtlas
     IMGUI_API void              RemoveFont(ImFont* font);
 
     IMGUI_API void              Clear();                    // Clear everything (input fonts, output glyphs/textures)
-    IMGUI_API void              ClearCache();               // Clear cached glyphs and textures.
+    IMGUI_API void              ClearCache();               // Clear cached glyphs and textures. Invalidates all AddCustomRectXXX return values.
 
     // As we are transitioning toward a new font system, we expect to obsolete those soon:
     IMGUI_API void              ClearInputData();           // [OBSOLETE] Clear input data (all ImFontConfig structures including sizes, TTF data, glyph ranges, etc.) = all the data used to build the texture and fonts.
@@ -3668,7 +3668,7 @@ struct ImFontAtlas
     // You can request your rectangles to be mapped as font glyph (given a font + Unicode point),
     // so you can render e.g. custom colorful icons and use them as regular glyphs.
     // - Since 1.92.X, packing is done immediately in the function call. Returns >= on success, <0 on error.
-    // - You can render your pixels into the texture right after calling the AddCustomRectXXX functions, without waiting for the Build() call.
+    // - You can render your pixels into the texture right after calling the AddCustomRectXXX() functions.
     // - If your backend supports ImGuiBackendFlags_RendererHasTextures:
     //   Texture may be resized, so you cannot cache UV coordinates: always use CalcCustomRectUV().
     // - If you render colored output into your AddCustomRectRegular() rectangle: set 'atlas->TexPixelsUseColors = true'
@@ -3676,7 +3676,10 @@ struct ImFontAtlas
     // - Read docs/FONTS.md for more details about using colorful icons.
     // - Note: this API may be redesigned later in order to support multi-monitor varying DPI settings.
     IMGUI_API int               AddCustomRectRegular(int width, int height);
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     IMGUI_API int               AddCustomRectFontGlyph(ImFont* font, ImWchar codepoint, int width, int height, float advance_x, const ImVec2& offset = ImVec2(0, 0));
+    IMGUI_API int               AddCustomRectFontGlyphForSize(ImFont* font, float font_size, ImWchar codepoint, int width, int height, float advance_x, const ImVec2& offset = ImVec2(0, 0));
+#endif
     IMGUI_API ImTextureRect*    GetCustomRectByIndex(int index);
     IMGUI_API void              CalcCustomRectUV(const ImTextureRect* rect, ImVec2* out_uv_min, ImVec2* out_uv_max) const;
 
@@ -4154,13 +4157,11 @@ namespace ImGui
     //static inline void  SetScrollPosHere()                    { SetScrollHere(); }                                                // OBSOLETED in 1.42
 }
 
-//-- OBSOLETED in 1.91.7 (from January 2025): ImFontAtlasCustomRect becomes ImTextureRect
-// - ImFontAtlasCustomRect::X            --> ImTextureRect::x
-// - ImFontAtlasCustomRect::Y            --> ImTextureRect::y
-// - ImFontAtlasCustomRect::Width        --> ImTextureRect::w
-// - ImFontAtlasCustomRect::Height       --> ImTextureRect::h
+//-- OBSOLETED in 1.92.x: ImFontAtlasCustomRect becomes ImTextureRect
+// - ImFontAtlasCustomRect::X,Y          --> ImTextureRect::x,y
+// - ImFontAtlasCustomRect::Width,Height --> ImTextureRect::w,h
 // - ImFontAtlasCustomRect::GlyphColored --> if you need to write to this, instead you can write to 'font->Glyphs.back()->Colored' after calling AddCustomRectFontGlyph()
-// We could make ImTextureRect an union to use old names, such 1) this would be confusing 2) the fix is easy 3) ImFontAtlasCustomRect was always a rather esoteric api.
+// We could make ImTextureRect an union to use old names, but 1) this would be confusing 2) the fix is easy 3) ImFontAtlasCustomRect was always a rather esoteric api.
 typedef ImTextureRect ImFontAtlasCustomRect;
 /*struct ImFontAtlasCustomRect
 {
