@@ -15688,14 +15688,14 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
     }
 
     SeparatorText("Font Atlas");
-    if (Button("Clear Cache"))
-        atlas->ClearCache();
+    if (Button("Compact"))
+        atlas->CompactCache();
     SameLine();
     if (Button("Grow"))
         ImFontAtlasBuildGrowTexture(atlas);
     SameLine();
-    if (Button("Compact"))
-        ImFontAtlasBuildCompactTexture(atlas);
+    if (Button("Clear Output"))
+        ImFontAtlasBuildClearTexture(atlas);
 
     for (int tex_n = 0; tex_n < atlas->TexList.Size; tex_n++)
     {
