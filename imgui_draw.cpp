@@ -2990,6 +2990,15 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
         memcpy(new_font_cfg.FontData, font_cfg->FontData, (size_t)new_font_cfg.FontDataSize);
     }
 
+    // Sanity check
+    if (font_cfg->GlyphExcludeRanges != NULL)
+    {
+        int size = 0;
+        for (const ImWchar* p = font_cfg->GlyphExcludeRanges; p[0] != 0; p++, size++) {}
+        IM_ASSERT((size & 1) == 0 && "GlyphExcludeRanges[] size must be multiple of two!");
+        IM_ASSERT((size <= 64) && "GlyphExcludeRanges[] size must be small!");
+    }
+
     // Round font size
     // - We started rounding in 1.90 WIP (18991) as our layout system currently doesn't support non-rounded font size well yet.
     // - Note that using io.FontGlobalScale or SetWindowFontScale(), with are legacy-ish, partially supported features, can still lead to unrounded sizes.
@@ -4149,7 +4158,7 @@ ImFontGlyph* ImFontBaked::BuildLoadGlyph(ImWchar codepoint)
         return NULL;
 
     //char utf8_buf[5];
-    //IMGUI_DEBUG_LOG("[font] BuildAddGlyph U+%04X (%s)\n", (unsigned int)codepoint, ImTextCharToUtf8(utf8_buf, (unsigned int)codepoint));
+    //IMGUI_DEBUG_LOG("[font] BuildLoadGlyph U+%04X (%s)\n", (unsigned int)codepoint, ImTextCharToUtf8(utf8_buf, (unsigned int)codepoint));
 
     // Load from single source or all sources?
     int srcs_count = (font->LockSingleSrcConfigIdx != -1) ? 1 : font->SourcesCount;
@@ -4293,6 +4302,16 @@ static void ImGui_ImplStbTrueType_FontBakedInit(ImFontAtlas* atlas, ImFontBaked*
     }
 }
 
+// Important! This assume by ImFontConfig::GlyphFilter is a SMALL ARRAY (e.g. <10 entries)
+bool ImFontAtlasBuildAcceptCodepointForSource(ImFontConfig* src, ImWchar codepoint)
+{
+    if (const ImWchar* exclude_list = src->GlyphExcludeRanges)
+        for (; exclude_list[0] != 0; exclude_list += 2)
+            if (codepoint >= exclude_list[0] && codepoint <= exclude_list[1])
+                return false;
+    return true;
+}
+
 static bool ImGui_ImplStbTrueType_FontBakedAddGlyph(ImFontAtlas* atlas, ImFontBaked* baked, ImFontConfig* srcs, int srcs_count, ImWchar codepoint)
 {
     // Search for first font which has the glyph
@@ -4302,6 +4321,8 @@ static bool ImGui_ImplStbTrueType_FontBakedAddGlyph(ImFontAtlas* atlas, ImFontBa
     for (int src_n = 0; src_n < srcs_count; src_n++)
     {
         src = &srcs[src_n];
+        if (src->GlyphExcludeRanges && !ImFontAtlasBuildAcceptCodepointForSource(src, codepoint))
+            continue;
         bd_font_data = (ImGui_ImplStbTrueType_FontSrcData*)src->FontLoaderData;
         IM_ASSERT(bd_font_data);
         glyph_index = stbtt_FindGlyphIndex(&bd_font_data->FontInfo, (int)codepoint);
