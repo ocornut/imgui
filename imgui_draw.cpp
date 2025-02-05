@@ -3545,19 +3545,26 @@ bool ImFontAtlasBuildAddFont(ImFontAtlas* atlas, ImFontConfig* src)
 
 static void ImFontAtlasBuildSetupFontBakedSpecialGlyphs(ImFontAtlas* atlas, ImFont* font, ImFontBaked* baked)
 {
-    // FIXME-NEWATLAS: could we use a scheme where this is lazily loaded?
-    IM_ASSERT(baked->FallbackGlyphIndex == -1);
-    if (font->FallbackChar != 0)
-        if (const ImFontGlyph* glyph = baked->FindGlyphNoFallback(font->FallbackChar))
-        {
-            baked->FallbackGlyphIndex = baked->Glyphs.index_from_ptr(glyph); // Storing index avoid need to update pointer on growth.
-            baked->FallbackAdvanceX = glyph->AdvanceX;
-        }
-
     // Mark space as always hidden (not strictly correct/necessary. but some e.g. icons fonts don't have a space. it tends to look neater in previews)
     ImFontGlyph* space_glyph = (ImFontGlyph*)(void*)baked->FindGlyphNoFallback((ImWchar)' ');
     if (space_glyph != NULL)
         space_glyph->Visible = false;
+
+    // Load fallback in order to obtain its index
+    // FIXME-NEWATLAS: could we use a scheme where this is lazily loaded?
+    IM_ASSERT(baked->FallbackGlyphIndex == -1);
+    ImFontGlyph* fallback_glyph = NULL;
+    if (font->FallbackChar != 0)
+        fallback_glyph = baked->FindGlyphNoFallback(font->FallbackChar);
+    if (fallback_glyph == NULL)
+    {
+        ImFontGlyph glyph;
+        glyph.Codepoint = 0;
+        glyph.AdvanceX = space_glyph ? space_glyph->AdvanceX : IM_ROUND(baked->Size * 0.40f);
+        fallback_glyph = ImFontAtlasBakedAddFontGlyph(atlas, baked, NULL, &glyph);
+    }
+    baked->FallbackGlyphIndex = baked->Glyphs.index_from_ptr(fallback_glyph); // Storing index avoid need to update pointer on growth and simplify inner loop code
+    baked->FallbackAdvanceX = fallback_glyph->AdvanceX;
 
     // Setup Tab character.
     // FIXME: Needs proper TAB handling but it needs to be contextualized (or we could arbitrary say that each string starts at "column 0" ?)
