@@ -3618,7 +3618,7 @@ struct ImFontAtlas
     IMGUI_API void              RemoveFont(ImFont* font);
 
     IMGUI_API void              Clear();                    // Clear everything (input fonts, output glyphs/textures)
-    IMGUI_API void              ClearCache();               // Clear cached glyphs and textures. Invalidates all AddCustomRectXXX return values.
+    IMGUI_API void              CompactCache();             // Compact cached glyphs and texture.
 
     // As we are transitioning toward a new font system, we expect to obsolete those soon:
     IMGUI_API void              ClearInputData();           // [OBSOLETE] Clear input data (all ImFontConfig structures including sizes, TTF data, glyph ranges, etc.) = all the data used to build the texture and fonts.

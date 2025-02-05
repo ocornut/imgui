@@ -2459,7 +2459,7 @@ void ImTextureData::DestroyPixels()
 // - Default texture data encoded in ASCII
 // - ImFontAtlas()
 // - ImFontAtlas::Clear()
-// - ImFontAtlas::ClearCache()
+// - ImFontAtlas::CompactCache()
 // - ImFontAtlas::ClearInputData()
 // - ImFontAtlas::ClearTexData()
 // - ImFontAtlas::ClearFonts()
@@ -2501,7 +2501,7 @@ void ImTextureData::DestroyPixels()
 // - ImFontAtlasBuildAddFont()
 // - ImFontAtlasBuildSetupFontCreateEllipsisFromDot()
 // - ImFontAtlasBuildSetupFontSpecialGlyphs()
-// - ImFontAtlasBuildDiscardUnusedBakes()
+// - ImFontAtlasBuildDiscardBakes()
 // - ImFontAtlasBuildDiscardFontBakedGlyph()
 // - ImFontAtlasBuildDiscardFontBaked()
 // - ImFontAtlasBuildDiscardFont()
@@ -2617,15 +2617,14 @@ void ImFontAtlas::Clear()
     bool backup_renderer_has_textures = RendererHasTextures;
     RendererHasTextures = false; // Full Clear() is supported, but ClearTexData() only isn't.
     ClearTexData();
+    if (Builder != NULL)
+        ImFontAtlasBuildClearTexture(this);
     RendererHasTextures = backup_renderer_has_textures;
 }
 
-void ImFontAtlas::ClearCache()
+void ImFontAtlas::CompactCache()
 {
-    ImVec2i new_tex_size = ImFontAtlasBuildGetTextureSizeEstimate(this);
-    ImFontAtlasBuildDestroy(this);
-    ImFontAtlasBuildAddTexture(this, new_tex_size.x, new_tex_size.y);
-    ImFontAtlasBuildInit(this);
+    ImFontAtlasBuildCompactTexture(this);
 }
 
 void ImFontAtlas::ClearInputData()
@@ -3685,13 +3684,14 @@ void ImFontAtlasBuildDiscardFont(ImFontAtlas* atlas, ImFont* font)
         }
 }
 
-void ImFontAtlasBuildDiscardUnusedBakes(ImFontAtlas* atlas, int gc_frames)
+// use unused_frames==0 to discard everything.
+void ImFontAtlasBuildDiscardBakes(ImFontAtlas* atlas, int unused_frames)
 {
     ImFontAtlasBuilder* builder = atlas->Builder;
     for (int baked_n = 0; baked_n < builder->BakedPool.Size; baked_n++)
     {
         ImFontBaked* baked = &builder->BakedPool[baked_n];
-        if (baked->LastUsedFrame + gc_frames < atlas->Builder->FrameCount && !baked->WantDestroy)
+        if (baked->LastUsedFrame + unused_frames <= atlas->Builder->FrameCount && !baked->WantDestroy)
             ImFontAtlasBuildDiscardFontBaked(atlas, baked->ContainerFont, baked);
     }
 }
@@ -3912,7 +3912,7 @@ void ImFontAtlasBuildMakeSpace(ImFontAtlas* atlas)
     // Can some baked contents be ditched?
     //IMGUI_DEBUG_LOG_FONT("[font] ImFontAtlasBuildMakeSpace()\n");
     ImFontAtlasBuilder* builder = atlas->Builder;
-    ImFontAtlasBuildDiscardUnusedBakes(atlas, 2);
+    ImFontAtlasBuildDiscardBakes(atlas, 2);
 
     // Currently using a heuristic for repack without growing.
     if (builder->RectsDiscardedSurface < builder->RectsPackedSurface * 0.20f)
@@ -3955,12 +3955,21 @@ ImVec2i ImFontAtlasBuildGetTextureSizeEstimate(ImFontAtlas* atlas)
     return ImVec2i(new_tex_w, new_tex_h);
 }
 
+// Clear all output. Invalidates all AddCustomRectXXX return values.
+void ImFontAtlasBuildClearTexture(ImFontAtlas* atlas)
+{
+    ImVec2i new_tex_size = ImFontAtlasBuildGetTextureSizeEstimate(atlas);
+    ImFontAtlasBuildDestroy(atlas);
+    ImFontAtlasBuildAddTexture(atlas, new_tex_size.x, new_tex_size.y);
+    ImFontAtlasBuildInit(atlas);
+}
+
 // You should not need to call this manually!
 // If you think you do, let us know and we can advise about policies auto-compact.
 void ImFontAtlasBuildCompactTexture(ImFontAtlas* atlas)
 {
     ImFontAtlasBuilder* builder = atlas->Builder;
-    ImFontAtlasBuildDiscardUnusedBakes(atlas, 1);
+    ImFontAtlasBuildDiscardBakes(atlas, 0);
 
     ImTextureData* old_tex = atlas->TexData;
     ImVec2i old_tex_size = ImVec2i(old_tex->Width, old_tex->Height);

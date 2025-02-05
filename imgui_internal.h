@@ -4047,13 +4047,14 @@ IMGUI_API void              ImFontAtlasBuildRenderBitmapFromString(ImFontAtlas* 
 IMGUI_API ImTextureData*    ImFontAtlasBuildAddTexture(ImFontAtlas* atlas, int w, int h);
 IMGUI_API void              ImFontAtlasBuildMakeSpace(ImFontAtlas* atlas);
 IMGUI_API void              ImFontAtlasBuildRepackTexture(ImFontAtlas* atlas, int w, int h);
+IMGUI_API void              ImFontAtlasBuildClearTexture(ImFontAtlas* atlas);
 IMGUI_API void              ImFontAtlasBuildGrowTexture(ImFontAtlas* atlas, int old_w = -1, int old_h = -1);
 IMGUI_API void              ImFontAtlasBuildCompactTexture(ImFontAtlas* atlas);
 IMGUI_API ImVec2i           ImFontAtlasBuildGetTextureSizeEstimate(ImFontAtlas* atlas);
 
 IMGUI_API bool              ImFontAtlasBuildAddFont(ImFontAtlas* atlas, ImFontConfig* src);
 IMGUI_API void              ImFontAtlasBuildSetupFontSpecialGlyphs(ImFontAtlas* atlas, ImFont* font, ImFontConfig* src);
-IMGUI_API void              ImFontAtlasBuildDiscardUnusedBakes(ImFontAtlas* atlas, int gc_frames);
+IMGUI_API void              ImFontAtlasBuildDiscardBakes(ImFontAtlas* atlas, int unused_frames);
 IMGUI_API void              ImFontAtlasBuildDiscardFont(ImFontAtlas* atlas, ImFont* font);
 IMGUI_API void              ImFontAtlasBuildDiscardFontBaked(ImFontAtlas* atlas, ImFont* font, ImFontBaked* baked);
 IMGUI_API void              ImFontAtlasBuildDiscardFontBakedGlyph(ImFontAtlas* atlas, ImFont* font, ImFontBaked* baked, ImFontGlyph* glyph);
