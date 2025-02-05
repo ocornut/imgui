@@ -3199,9 +3199,21 @@ int ImFontAtlas::AddCustomRectRegular(int width, int height)
     return r_id;
 }
 
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+// This API does not make sense anymore with scalable fonts.
+// - Prefer adding a font source (ImFontConfig) using a custom/procedural loader.
+// - You may use ImFontFlags_LockBakedSizes to limit an existing font to known baked sizes:
+//     ImFont* myfont = io.Fonts->AddFontFromFileTTF(....);
+//     myfont->GetFontBaked(16.0f);
+//     myfont->Flags |= ImFontFlags_LockBakedSizes;
+int ImFontAtlas::AddCustomRectFontGlyph(ImFont* font, ImWchar codepoint, int width, int height, float advance_x, const ImVec2& offset)
+{
+    float font_size = font->Sources[0].SizePixels;
+    return AddCustomRectFontGlyphForSize(font, font_size, codepoint, width, height, advance_x, offset);
+}
 // FIXME: we automatically set glyph.Colored=true by default.
 // If you need to alter this, you can write 'font->Glyphs.back()->Colored' after calling AddCustomRectFontGlyph().
-int ImFontAtlas::AddCustomRectFontGlyph(ImFont* font, ImWchar codepoint, int width, int height, float advance_x, const ImVec2& offset)
+int ImFontAtlas::AddCustomRectFontGlyphForSize(ImFont* font, float font_size, ImWchar codepoint, int width, int height, float advance_x, const ImVec2& offset)
 {
 #ifdef IMGUI_USE_WCHAR32
     IM_ASSERT(codepoint <= IM_UNICODE_CODEPOINT_MAX);
@@ -3209,7 +3221,9 @@ int ImFontAtlas::AddCustomRectFontGlyph(ImFont* font, ImWchar codepoint, int wid
     IM_ASSERT(font != NULL);
     IM_ASSERT(width > 0 && width <= 0xFFFF);
     IM_ASSERT(height > 0 && height <= 0xFFFF);
-#if 0
+
+    ImFontBaked* baked = font->GetFontBaked(font_size);
+
     ImFontAtlasRectId r_id = ImFontAtlasPackAddRect(this, width, height);
     if (r_id < 0)
         return -1;
@@ -3217,8 +3231,8 @@ int ImFontAtlas::AddCustomRectFontGlyph(ImFont* font, ImWchar codepoint, int wid
     if (RendererHasTextures)
         ImFontAtlasTextureBlockQueueUpload(this, TexData, r->x, r->y, r->w, r->h);
 
-    if (font->IsGlyphLoaded(codepoint))
-        ImFontAtlasBuildDiscardFontGlyph(this, font, (ImFontGlyph*)(void*)font->FindGlyph(codepoint));
+    if (baked->IsGlyphLoaded(codepoint))
+        ImFontAtlasBuildDiscardFontBakedGlyph(this, font, baked, (ImFontGlyph*)(void*)baked->FindGlyph(codepoint));
 
     ImFontGlyph glyph;
     glyph.Codepoint = codepoint;
@@ -3230,15 +3244,10 @@ int ImFontAtlas::AddCustomRectFontGlyph(ImFont* font, ImWchar codepoint, int wid
     glyph.Visible = true;
     glyph.Colored = true; // FIXME: Arbitrary
     glyph.PackId = r_id;
-    ImFontAtlasBuildAddFontGlyph(this, font, &font->Sources[0], &glyph);
+    ImFontAtlasBakedAddFontGlyph(this, baked, &font->Sources[0], &glyph);
     return r_id;
-#endif
-    // FIXME-BAKED: Need a design for AddCustomRectFontGlyph()
-    IM_UNUSED(codepoint);
-    IM_UNUSED(offset);
-    IM_UNUSED(advance_x);
-    return -1;
 }
+#endif // #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 
 ImTextureRect* ImFontAtlas::GetCustomRectByIndex(int idx)
 {
