@@ -2649,7 +2649,7 @@ void ImFontAtlas::ClearInputData()
             font->Sources = NULL;
             font->SourcesCount = 0;
         }
-        font->LockDisableLoading = true;
+        font->Flags |= ImFontFlags_NoLoadGlyphs;
     }
     Sources.clear();
 }
@@ -3691,8 +3691,11 @@ void ImFontAtlasBuildDiscardBakes(ImFontAtlas* atlas, int unused_frames)
     for (int baked_n = 0; baked_n < builder->BakedPool.Size; baked_n++)
     {
         ImFontBaked* baked = &builder->BakedPool[baked_n];
-        if (baked->LastUsedFrame + unused_frames <= atlas->Builder->FrameCount && !baked->WantDestroy)
-            ImFontAtlasBuildDiscardFontBaked(atlas, baked->ContainerFont, baked);
+        if (baked->LastUsedFrame + unused_frames > atlas->Builder->FrameCount)
+            continue;
+        if (baked->WantDestroy || (baked->ContainerFont->Flags & ImFontFlags_LockBakedSizes))
+            continue;
+        ImFontAtlasBuildDiscardFontBaked(atlas, baked->ContainerFont, baked);
     }
 }
 
@@ -3819,7 +3822,8 @@ void ImFontAtlasBuildRepackTexture(ImFontAtlas* atlas, int w, int h)
     //ImFontAtlasDebugWriteTexToDisk(old_tex, "Before Pack");
 
     // Repack, lose discarded rectangle, copy pixels
-    // FIXME-NEWATLAS-V2: Repacking in batch would be beneficial to packing heuristic.
+    // FIXME-NEWATLAS: This is unstable because packing order is based on RectsIndex
+    // FIXME-NEWATLAS-V2: Repacking in batch would be beneficial to packing heuristic, and fix stability.
     // FIXME-NEWATLAS-TESTS: Test calling RepackTexture with size too small to fits existing rects.
     ImFontAtlasPackInit(atlas);
     ImVector<ImFontAtlasRect> old_rects;
@@ -4175,7 +4179,7 @@ ImFontGlyph* ImFontBaked::BuildLoadGlyph(ImWchar codepoint)
     ImFont* font = ContainerFont;
     ImFontBaked* baked = this;
     ImFontAtlas* atlas = font->ContainerAtlas;
-    if (font->LockDisableLoading || atlas->Locked)
+    if (atlas->Locked || (font->Flags & ImFontFlags_NoLoadGlyphs))
         return NULL;
 
     //char utf8_buf[5];
@@ -5009,6 +5013,13 @@ ImFontBaked* ImFont::GetFontBaked(float size)
         baked->LastUsedFrame = builder->FrameCount;
         LastBaked = baked;
         return baked;
+    }
+
+    // FIXME-BAKED: If loading is locked, find closest match
+    if (Flags & ImFontFlags_LockBakedSizes)
+    {
+        IM_ASSERT(LastBaked);
+        return LastBaked;
     }
 
     // FIXME-BAKED: If atlas is locked, find closest match

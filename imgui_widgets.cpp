@@ -4286,7 +4286,7 @@ void ImGui::PushPasswordFont()
     ImFont* out_font = &g.InputTextPasswordFont;
     out_font->Scale = in_font->Scale;
     out_font->ContainerAtlas = in_font->ContainerAtlas;
-    out_font->LockDisableLoading = true;
+    out_font->Flags |= ImFontFlags_NoLoadGlyphs;
     ImFontBaked* out_baked = out_font->GetFontBaked(in_baked->Size);
     IM_ASSERT(out_baked->Glyphs.Size <= 1 && out_baked->IndexAdvanceX.Size == 0 && out_baked->IndexLookup.Size == 0);
     out_baked->Ascent = in_baked->Ascent;

@@ -234,7 +234,8 @@ typedef int ImGuiTableBgTarget;     // -> enum ImGuiTableBgTarget_   // Enum: A 
 //   - In VS Code, CLion, etc.: CTRL+click can follow symbols inside comments.
 typedef int ImDrawFlags;            // -> enum ImDrawFlags_          // Flags: for ImDrawList functions
 typedef int ImDrawListFlags;        // -> enum ImDrawListFlags_      // Flags: for ImDrawList instance
-typedef int ImFontAtlasFlags;       // -> enum ImFontAtlasFlags_     // Flags: for ImFontAtlas build
+typedef int ImFontFlags;            // -> enum ImFontFlags_          // Flags: for ImFont
+typedef int ImFontAtlasFlags;       // -> enum ImFontAtlasFlags_     // Flags: for ImFontAtlas
 typedef int ImGuiBackendFlags;      // -> enum ImGuiBackendFlags_    // Flags: for io.BackendFlags
 typedef int ImGuiButtonFlags;       // -> enum ImGuiButtonFlags_     // Flags: for InvisibleButton()
 typedef int ImGuiChildFlags;        // -> enum ImGuiChildFlags_      // Flags: for BeginChild()
@@ -3763,6 +3764,15 @@ struct ImFontBaked
     IMGUI_API void              BuildGrowIndex(int new_size);
 };
 
+// Font flags
+// (in future versions as we redesign font loading API, this will become more important and better documented. for now please consider this as internal/advanced use)
+enum ImFontFlags_
+{
+    ImFontFlags_None                    = 0,
+    ImFontFlags_LockBakedSizes          = 1 << 0,   // Disable loading new baked sizes, disable garbage collecting current ones. e.g. if you want to lock a font to a single size.
+    ImFontFlags_NoLoadGlyphs            = 1 << 1,   // Disable loading new glyphs.
+};
+
 // Font runtime data and rendering
 // - ImFontAtlas automatically loads a default embedded font for you if you didn't load one manually.
 // - Since 1.92.X a font may be rendered as any size! Therefore a font doesn't have one specific size.
@@ -3770,9 +3780,10 @@ struct ImFontBaked
 // - If you used g.Font + g.FontSize (which is frequent from the ImGui layer), you can use g.FontBaked as a shortcut, as g.FontBaked == g.Font->GetFontBaked(g.FontSize).
 struct ImFont
 {
-    // [Internal] Members: Hot ~8-16 bytes
+    // [Internal] Members: Hot ~12-20 bytes
     ImFontBaked*                LastBaked;          // 4-8   // Cache last bound baked. DO NOT USE. Use GetFontBaked().
     ImFontAtlas*                ContainerAtlas;     // 4-8   // What we has been loaded into
+    ImFontFlags                 Flags;              // 4     // Font flags
 
     // [Internal] Members: Cold ~24-52 bytes
     // Conceptually Sources[] is the list of font sources merged to create this font.
@@ -3783,7 +3794,6 @@ struct ImFont
     ImWchar                     FallbackChar;       // 2-4   // out // Character used if a glyph isn't found (U+FFFD, '?')
     float                       Scale;              // 4     // in  // Base font scale (~1.0f), multiplied by the per-window font scale which you can adjust with SetWindowFontScale()
     ImU8                        Used8kPagesMap[(IM_UNICODE_CODEPOINT_MAX+1)/8192/8]; // 1 bytes if ImWchar=ImWchar16, 16 bytes if ImWchar==ImWchar32. Store 1-bit for each block of 4K codepoints that has one active glyph. This is mainly used to facilitate iterations across all used codepoints.
-    bool                        LockDisableLoading;
     short                       LockSingleSrcConfigIdx;
 
     // Methods
