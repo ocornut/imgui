@@ -3751,7 +3751,7 @@ struct ImFontBaked
     int                         LastUsedFrame;      // 4     //     // Record of that time this was bounds
     ImGuiID                     BakedId;            // 4     //
     ImFont*                     ContainerFont;      // 4-8   // in  // Parent font
-    void*                       FontBackendData;    // 4-8   //     // Font backend opaque storage (per baked font)
+    void*                       FontLoaderDatas;    // 4-8   //     // Font loader opaque storage (per baked font * sources): single contiguous buffer allocated by imgui, passed to loader.
 
     // Functions
     IMGUI_API ImFontBaked();
