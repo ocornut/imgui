@@ -3531,7 +3531,7 @@ bool ImFontAtlasBuildAddFont(ImFontAtlas* atlas, ImFontConfig* src)
 
 // Create a compact, baked "..." if it doesn't exist, by using the ".".
 // This may seem overly complicated right now but the point is to exercise and improve a technique which should be increasingly used.
-// FIXME-NEWATLAS: This borrows too much from FontLoader's FontLoaderGlyph() handlers and suggest that we should add further helpers.
+// FIXME-NEWATLAS: This borrows too much from FontLoader's FontLoadGlyph() handlers and suggest that we should add further helpers.
 static ImFontGlyph* ImFontAtlasBuildSetupFontBakedEllipsis(ImFontAtlas* atlas, ImFontBaked* baked)
 {
     ImFont* font = baked->ContainerFont;
@@ -3670,6 +3670,31 @@ void ImFontAtlasBuildDiscardFontBakedGlyph(ImFontAtlas* atlas, ImFont* font, ImF
     baked->IndexAdvanceX[c] = baked->FallbackAdvanceX;
 }
 
+ImFontBaked* ImFontAtlasBuildAddFontBaked(ImFontAtlas* atlas, ImFont* font, float size, ImGuiID baked_id)
+{
+    IMGUI_DEBUG_LOG_FONT("[font] Created baked %.2fpx\n", size);
+    ImFontBaked* baked = atlas->Builder->BakedPool.push_back(ImFontBaked());
+    baked->Size = size;
+    baked->BakedId = baked_id;
+    baked->ContainerFont = font;
+    baked->LastUsedFrame = atlas->Builder->FrameCount;
+
+    // Initialize backend data
+    size_t loader_data_size = font->SourcesCount * atlas->FontLoader->FontBakedSrcLoaderDataSize;
+    baked->FontLoaderDatas = (loader_data_size > 0) ? IM_ALLOC(loader_data_size) : NULL;
+    char* backend_user_data_p = (char*)baked->FontLoaderDatas;
+    for (int src_n = 0; src_n < font->SourcesCount; src_n++)
+    {
+        ImFontConfig* src = &font->Sources[src_n];
+        if (atlas->FontLoader->FontBakedInit)
+            atlas->FontLoader->FontBakedInit(atlas, src, baked, backend_user_data_p);
+        backend_user_data_p += atlas->FontLoader->FontBakedSrcLoaderDataSize;
+    }
+
+    ImFontAtlasBuildSetupFontBakedSpecialGlyphs(atlas, baked->ContainerFont, baked);
+    return baked;
+}
+
 void ImFontAtlasBuildDiscardFontBaked(ImFontAtlas* atlas, ImFont* font, ImFontBaked* baked)
 {
     ImFontAtlasBuilder* builder = atlas->Builder;
@@ -3679,9 +3704,19 @@ void ImFontAtlasBuildDiscardFontBaked(ImFontAtlas* atlas, ImFont* font, ImFontBa
         if (glyph.PackId >= 0)
             ImFontAtlasPackDiscardRect(atlas, glyph.PackId);
 
-    if (atlas->FontLoader->FontBakedDestroy)
-        atlas->FontLoader->FontBakedDestroy(atlas, baked);
-
+    char* backend_user_data_p = (char*)baked->FontLoaderDatas;
+    for (int src_n = 0; src_n < font->SourcesCount; src_n++)
+    {
+        ImFontConfig* src = &font->Sources[src_n];
+        if (atlas->FontLoader->FontBakedDestroy)
+            atlas->FontLoader->FontBakedDestroy(atlas, src, baked, backend_user_data_p);
+        backend_user_data_p += atlas->FontLoader->FontBakedSrcLoaderDataSize;
+    }
+    if (baked->FontLoaderDatas)
+    {
+        IM_FREE(baked->FontLoaderDatas);
+        baked->FontLoaderDatas = NULL;
+    }
     builder->BakedMap.SetVoidPtr(baked->BakedId, NULL);
     builder->BakedDiscardedCount++;
     baked->ClearOutputData();
@@ -4017,7 +4052,7 @@ void ImFontAtlasBuildInit(ImFontAtlas* atlas)
 #else
         IM_ASSERT(0); // Invalid Build function
 #endif
-        return; // ImFontAtlasBuildSetupFontBackendIO() automatically call ImFontAtlasBuildInit()
+        return; // ImFontAtlasBuildSetupFontLoader() automatically call ImFontAtlasBuildInit()
     }
 
     // Create initial texture size
@@ -4191,6 +4226,16 @@ ImFontAtlasRect* ImFontAtlasPackGetRect(ImFontAtlas* atlas, ImFontAtlasRectId id
     return &builder->Rects[index_entry->TargetIndex];
 }
 
+// Important! This assume by ImFontConfig::GlyphFilter is a SMALL ARRAY (e.g. <10 entries)
+static bool ImFontAtlasBuildAcceptCodepointForSource(ImFontConfig* src, ImWchar codepoint)
+{
+    if (const ImWchar* exclude_list = src->GlyphExcludeRanges)
+        for (; exclude_list[0] != 0; exclude_list += 2)
+            if (codepoint >= exclude_list[0] && codepoint <= exclude_list[1])
+                return false;
+    return true;
+}
+
 ImFontGlyph* ImFontBaked::BuildLoadGlyph(ImWchar codepoint)
 {
     ImFont* font = ContainerFont;
@@ -4214,18 +4259,25 @@ ImFontGlyph* ImFontBaked::BuildLoadGlyph(ImWchar codepoint)
 
     // Call backend
     const ImFontLoader* font_loader = atlas->FontLoader;
-    if (!font_loader->FontBakedAddGlyph(atlas, baked, srcs, srcs_count, codepoint))
+    char* backend_user_data_p = (char*)baked->FontLoaderDatas;
+    for (int src_n = 0; src_n < srcs_count; src_n++)
     {
-        // Mark index as not found, so we don't attempt the search twice
-        baked->BuildGrowIndex(codepoint + 1);
-        baked->IndexAdvanceX[codepoint] = baked->FallbackAdvanceX;
-        baked->IndexLookup[codepoint] = IM_FONTGLYPH_INDEX_NOT_FOUND;
-        return NULL;
+        ImFontConfig* src = &srcs[src_n];
+        if (!src->GlyphExcludeRanges || ImFontAtlasBuildAcceptCodepointForSource(src, codepoint))
+            if (font_loader->FontBakedAddGlyph(atlas, src, baked, backend_user_data_p, codepoint))
+            {
+                // FIXME: Add hooks for e.g. #7962
+                ImFontGlyph* glyph = &baked->Glyphs.back();
+                return glyph;
+            }
+        backend_user_data_p += font_loader->FontBakedSrcLoaderDataSize;
     }
 
-    // FIXME: Add hooks for e.g. #7962
-    ImFontGlyph* glyph = &baked->Glyphs.back();
-    return glyph;
+    // Mark index as not found, so we don't attempt the search twice
+    baked->BuildGrowIndex(codepoint + 1);
+    baked->IndexAdvanceX[codepoint] = baked->FallbackAdvanceX;
+    baked->IndexLookup[codepoint] = IM_FONTGLYPH_INDEX_NOT_FOUND;
+    return NULL;
 }
 
 // The point of this indirection is to not be inlined in debug mode in order to not bloat inner loop.b
@@ -4330,17 +4382,13 @@ static bool ImGui_ImplStbTrueType_FontSrcContainsGlyph(ImFontAtlas* atlas, ImFon
     return glyph_index != 0;
 }
 
-static void ImGui_ImplStbTrueType_FontBakedInit(ImFontAtlas* atlas, ImFontBaked* baked)
+static void ImGui_ImplStbTrueType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void*)
 {
     IM_UNUSED(atlas);
-    ImFont* font = baked->ContainerFont;
 
-    for (int src_n = 0; src_n < font->SourcesCount; src_n++)
+    ImGui_ImplStbTrueType_FontSrcData* bd_font_data = (ImGui_ImplStbTrueType_FontSrcData*)src->FontLoaderData;
+    if (src->MergeMode == false)
     {
-        ImFontConfig* src = &font->Sources[src_n];
-        ImGui_ImplStbTrueType_FontSrcData* bd_font_data = (ImGui_ImplStbTrueType_FontSrcData*)src->FontLoaderData;
-        if (src_n != 0)
-            continue;
         // FIXME-NEWFONTS: reevaluate how to use sizing metrics
         // FIXME-NEWFONTS: make use of line gap value
         float scale_for_layout = bd_font_data->ScaleFactor * baked->Size;
@@ -4351,33 +4399,12 @@ static void ImGui_ImplStbTrueType_FontBakedInit(ImFontAtlas* atlas, ImFontBaked*
     }
 }
 
-// Important! This assume by ImFontConfig::GlyphFilter is a SMALL ARRAY (e.g. <10 entries)
-bool ImFontAtlasBuildAcceptCodepointForSource(ImFontConfig* src, ImWchar codepoint)
-{
-    if (const ImWchar* exclude_list = src->GlyphExcludeRanges)
-        for (; exclude_list[0] != 0; exclude_list += 2)
-            if (codepoint >= exclude_list[0] && codepoint <= exclude_list[1])
-                return false;
-    return true;
-}
-
-static bool ImGui_ImplStbTrueType_FontBakedAddGlyph(ImFontAtlas* atlas, ImFontBaked* baked, ImFontConfig* srcs, int srcs_count, ImWchar codepoint)
+static bool ImGui_ImplStbTrueType_FontBakedAddGlyph(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void*, ImWchar codepoint)
 {
     // Search for first font which has the glyph
-    ImGui_ImplStbTrueType_FontSrcData* bd_font_data = NULL;
-    ImFontConfig* src = NULL;
-    int glyph_index = 0;
-    for (int src_n = 0; src_n < srcs_count; src_n++)
-    {
-        src = &srcs[src_n];
-        if (src->GlyphExcludeRanges && !ImFontAtlasBuildAcceptCodepointForSource(src, codepoint))
-            continue;
-        bd_font_data = (ImGui_ImplStbTrueType_FontSrcData*)src->FontLoaderData;
-        IM_ASSERT(bd_font_data);
-        glyph_index = stbtt_FindGlyphIndex(&bd_font_data->FontInfo, (int)codepoint);
-        if (glyph_index != 0)
-            break;
-    }
+    ImGui_ImplStbTrueType_FontSrcData* bd_font_data = (ImGui_ImplStbTrueType_FontSrcData*)src->FontLoaderData;
+    IM_ASSERT(bd_font_data);
+    int glyph_index = stbtt_FindGlyphIndex(&bd_font_data->FontInfo, (int)codepoint);
     if (glyph_index == 0)
         return false; // Not found
 
@@ -5056,17 +5083,9 @@ ImFontBaked* ImFont::GetFontBaked(float size)
         IM_ASSERT(!atlas->Locked && "Cannot use dynamic font size with a locked ImFontAtlas!"); // Locked because rendering backend does not support ImGuiBackendFlags_RendererHasTextures!
 
     // Create new
-    IMGUI_DEBUG_LOG_FONT("[font] Created baked %.2fpx\n", size);
-    baked = builder->BakedPool.push_back(ImFontBaked());
-    baked->Size = size;
-    baked->BakedId = baked_id;
-    baked->ContainerFont = this;
-    baked->LastUsedFrame = ContainerAtlas->Builder->FrameCount;
+    baked = ImFontAtlasBuildAddFontBaked(atlas, this, size, baked_id);
     LastBaked = baked;
     *p_baked_in_map = baked; // To avoid 'builder->BakedMap.SetVoidPtr(baked_id, baked);' while we can.
-    if (atlas->FontLoader->FontBakedInit)
-        atlas->FontLoader->FontBakedInit(atlas, baked);
-    ImFontAtlasBuildSetupFontBakedSpecialGlyphs(atlas, baked->ContainerFont, baked);
 
     return baked;
 }
