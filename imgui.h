@@ -3541,7 +3541,9 @@ struct ImFontConfig
 
     // [Internal]
     char            Name[40];               // Name (strictly to ease debugging)
+    ImFontFlags     Flags;                  // Font flags (don't use just yet)
     ImFont*         DstFont;                // Target font (as we merging fonts, multiple ImFontConfig may target the same font)
+    const ImFontLoader* FontLoader;         // Custom font backend for this source (other use one stored in ImFontAtlas)
     void*           FontLoaderData;         // Font loader opaque storage (per font config)
 
     IMGUI_API ImFontConfig();

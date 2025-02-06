@@ -2609,14 +2609,18 @@ ImFontAtlas::ImFontAtlas()
 ImFontAtlas::~ImFontAtlas()
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas!");
-    Clear();
+    RendererHasTextures = false; // Full Clear() is supported, but ClearTexData() only isn't.
+    ClearFonts();
+    ClearTexData();
+    TexList.clear_delete();
+    TexData = NULL;
 }
 
 void ImFontAtlas::Clear()
 {
-    ClearFonts();
     bool backup_renderer_has_textures = RendererHasTextures;
     RendererHasTextures = false; // Full Clear() is supported, but ClearTexData() only isn't.
+    ClearFonts();
     ClearTexData();
     if (Builder != NULL)
         ImFontAtlasBuildClearTexture(this);
@@ -2633,8 +2637,9 @@ void ImFontAtlas::ClearInputData()
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas!");
     for (ImFontConfig& font_cfg : Sources)
     {
-        if (FontLoader && FontLoader->FontSrcDestroy != NULL)
-            FontLoader->FontSrcDestroy(this, &font_cfg);
+        const ImFontLoader* loader = font_cfg.FontLoader ? font_cfg.FontLoader : FontLoader;
+        if (loader && loader->FontSrcDestroy != NULL)
+            loader->FontSrcDestroy(this, &font_cfg);
         if (font_cfg.FontData && font_cfg.FontDataOwnedByAtlas)
         {
             IM_FREE(font_cfg.FontData);
@@ -2960,7 +2965,7 @@ bool ImFontAtlas::Build()
 ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas!");
-    IM_ASSERT(font_cfg->FontData != NULL && font_cfg->FontDataSize > 0);
+    IM_ASSERT((font_cfg->FontData != NULL && font_cfg->FontDataSize > 0) || (font_cfg->FontLoader != NULL));
     IM_ASSERT(font_cfg->SizePixels > 0.0f && "Is ImFontConfig struct correctly initialized?");
     IM_ASSERT(font_cfg->RasterizerDensity > 0.0f && "Is ImFontConfig struct correctly initialized?");
 
@@ -2974,6 +2979,7 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
     {
         font = IM_NEW(ImFont)();
         font->FontId = FontNextUniqueID++;
+        font->Flags = font_cfg->Flags;
         Fonts.push_back(font);
     }
     else
@@ -3001,6 +3007,9 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
         IM_ASSERT((size & 1) == 0 && "GlyphExcludeRanges[] size must be multiple of two!");
         IM_ASSERT((size <= 64) && "GlyphExcludeRanges[] size must be small!");
     }
+    if (font_cfg->FontLoader != NULL)
+        IM_ASSERT(font_cfg->FontLoader->FontBakedAddGlyph != NULL);
+    IM_ASSERT(font_cfg->FontLoaderData == NULL);
 
     // Round font size
     // - We started rounding in 1.90 WIP (18991) as our layout system currently doesn't support non-rounded font size well yet.
@@ -3168,8 +3177,9 @@ void ImFontAtlas::RemoveFont(ImFont* font)
     for (int src_n = 0; src_n < font->SourcesCount; src_n++)
     {
         ImFontConfig* src = (ImFontConfig*)(void*)&font->Sources[src_n];
-        if (FontLoader && FontLoader->FontSrcDestroy != NULL)
-            FontLoader->FontSrcDestroy(this, src);
+        const ImFontLoader* loader = src->FontLoader ? src->FontLoader : FontLoader;
+        if (loader && loader->FontSrcDestroy != NULL)
+            loader->FontSrcDestroy(this, src);
         if (src->FontData != NULL && src->FontDataOwnedByAtlas)
             IM_FREE(src->FontData);
     }
@@ -3320,6 +3330,8 @@ void ImFontAtlasBuildGetOversampleFactors(ImFontConfig* src, float size, int* ou
     *out_oversample_v = (src->OversampleV != 0) ? src->OversampleV : 1;
 }
 
+// Setup main font loader for the atlas
+// Every font source (ImFontConfig) will use this unless ImFontConfig::FontLoader specify a custom loader.
 void ImFontAtlasBuildSetupFontLoader(ImFontAtlas* atlas, const ImFontLoader* font_loader)
 {
     if (atlas->FontLoader == font_loader)
@@ -3524,9 +3536,10 @@ bool ImFontAtlasBuildAddFont(ImFontAtlas* atlas, ImFontConfig* src)
         IM_ASSERT(font->Sources == src);
     }
 
-    const ImFontLoader* font_loader = atlas->FontLoader;
-    if (!font_loader->FontSrcInit(atlas, src))
-        return false;
+    const ImFontLoader* loader = src->FontLoader ? src->FontLoader : atlas->FontLoader;
+    if (loader->FontSrcInit != NULL)
+        if (!loader->FontSrcInit(atlas, src))
+            return false;
 
     ImFontAtlasBuildSetupFontSpecialGlyphs(atlas, font, src);
     return true;
@@ -3683,15 +3696,22 @@ ImFontBaked* ImFontAtlasBuildAddFontBaked(ImFontAtlas* atlas, ImFont* font, floa
     baked->LastUsedFrame = atlas->Builder->FrameCount;
 
     // Initialize backend data
-    size_t loader_data_size = font->SourcesCount * atlas->FontLoader->FontBakedSrcLoaderDataSize;
+    size_t loader_data_size = 0;
+    for (int src_n = 0; src_n < font->SourcesCount; src_n++) // Cannot easily be cached as we allow changing backend
+    {
+        ImFontConfig* src = &font->Sources[src_n];
+        const ImFontLoader* loader = src->FontLoader ? src->FontLoader : atlas->FontLoader;
+        loader_data_size += loader->FontBakedSrcLoaderDataSize;
+    }
     baked->FontLoaderDatas = (loader_data_size > 0) ? IM_ALLOC(loader_data_size) : NULL;
-    char* backend_user_data_p = (char*)baked->FontLoaderDatas;
+    char* loader_data_p = (char*)baked->FontLoaderDatas;
     for (int src_n = 0; src_n < font->SourcesCount; src_n++)
     {
         ImFontConfig* src = &font->Sources[src_n];
-        if (atlas->FontLoader->FontBakedInit)
-            atlas->FontLoader->FontBakedInit(atlas, src, baked, backend_user_data_p);
-        backend_user_data_p += atlas->FontLoader->FontBakedSrcLoaderDataSize;
+        const ImFontLoader* loader = src->FontLoader ? src->FontLoader : atlas->FontLoader;
+        if (loader->FontBakedInit)
+            loader->FontBakedInit(atlas, src, baked, loader_data_p);
+        loader_data_p += loader->FontBakedSrcLoaderDataSize;
     }
 
     ImFontAtlasBuildSetupFontBakedSpecialGlyphs(atlas, baked->ContainerFont, baked);
@@ -3707,13 +3727,14 @@ void ImFontAtlasBuildDiscardFontBaked(ImFontAtlas* atlas, ImFont* font, ImFontBa
         if (glyph.PackId >= 0)
             ImFontAtlasPackDiscardRect(atlas, glyph.PackId);
 
-    char* backend_user_data_p = (char*)baked->FontLoaderDatas;
+    char* loader_data_p = (char*)baked->FontLoaderDatas;
     for (int src_n = 0; src_n < font->SourcesCount; src_n++)
     {
         ImFontConfig* src = &font->Sources[src_n];
-        if (atlas->FontLoader->FontBakedDestroy)
-            atlas->FontLoader->FontBakedDestroy(atlas, src, baked, backend_user_data_p);
-        backend_user_data_p += atlas->FontLoader->FontBakedSrcLoaderDataSize;
+        const ImFontLoader* loader = src->FontLoader ? src->FontLoader : atlas->FontLoader;
+        if (loader->FontBakedDestroy)
+            loader->FontBakedDestroy(atlas, src, baked, loader_data_p);
+        loader_data_p += loader->FontBakedSrcLoaderDataSize;
     }
     if (baked->FontLoaderDatas)
     {
@@ -4097,9 +4118,12 @@ void ImFontAtlasBuildDestroy(ImFontAtlas* atlas)
 {
     for (ImFont* font : atlas->Fonts)
         font->ClearOutputData();
-    if (atlas->FontLoader && atlas->FontLoader->FontSrcDestroy != NULL)
-        for (ImFontConfig& font_cfg : atlas->Sources)
-            atlas->FontLoader->FontSrcDestroy(atlas, &font_cfg);
+    for (ImFontConfig& font_cfg : atlas->Sources)
+    {
+        const ImFontLoader* loader = font_cfg.FontLoader ? font_cfg.FontLoader : atlas->FontLoader;
+        if (loader && loader->FontSrcDestroy != NULL)
+            loader->FontSrcDestroy(atlas, &font_cfg);
+    }
 
     IM_DELETE(atlas->Builder);
     atlas->Builder = NULL;
@@ -4261,19 +4285,19 @@ ImFontGlyph* ImFontBaked::BuildLoadGlyph(ImWchar codepoint)
     ImFontConfig* srcs = (font->LockSingleSrcConfigIdx != -1) ? &font->Sources[font->LockSingleSrcConfigIdx] : font->Sources;
 
     // Call backend
-    const ImFontLoader* font_loader = atlas->FontLoader;
-    char* backend_user_data_p = (char*)baked->FontLoaderDatas;
+    char* loader_user_data_p = (char*)baked->FontLoaderDatas;
     for (int src_n = 0; src_n < srcs_count; src_n++)
     {
         ImFontConfig* src = &srcs[src_n];
+        const ImFontLoader* loader = src->FontLoader ? src->FontLoader : atlas->FontLoader;
         if (!src->GlyphExcludeRanges || ImFontAtlasBuildAcceptCodepointForSource(src, codepoint))
-            if (font_loader->FontBakedAddGlyph(atlas, src, baked, backend_user_data_p, codepoint))
+            if (loader->FontBakedAddGlyph(atlas, src, baked, loader_user_data_p, codepoint))
             {
                 // FIXME: Add hooks for e.g. #7962
                 ImFontGlyph* glyph = &baked->Glyphs.back();
                 return glyph;
             }
-        backend_user_data_p += font_loader->FontBakedSrcLoaderDataSize;
+        loader_user_data_p += loader->FontBakedSrcLoaderDataSize;
     }
 
     // Mark index as not found, so we don't attempt the search twice
@@ -5020,8 +5044,12 @@ bool ImFont::IsGlyphInFont(ImWchar c)
 {
     ImFontAtlas* atlas = ContainerAtlas;
     for (int src_n = 0; src_n < SourcesCount; src_n++)
-        if (atlas->FontLoader->FontSrcContainsGlyph(atlas, &Sources[src_n], c))
+    {
+        ImFontConfig* src = &Sources[src_n];
+        const ImFontLoader* loader = src->FontLoader ? src->FontLoader : atlas->FontLoader;
+        if (loader->FontSrcContainsGlyph != NULL && loader->FontSrcContainsGlyph(atlas, src, c))
             return true;
+    }
     return false;
 }
 
