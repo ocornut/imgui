@@ -971,8 +971,8 @@ bool ImGui::ScrollbarEx(const ImRect& bb_frame, ImGuiID id, ImGuiAxis axis, ImS6
 
     // When we are too small, start hiding and disabling the grab (this reduce visual noise on very small window and facilitate using the window resize grab)
     float alpha = 1.0f;
-    if ((axis == ImGuiAxis_Y) && bb_frame_height < g.FontSize + g.Style.FramePadding.y * 2.0f)
-        alpha = ImSaturate((bb_frame_height - g.FontSize) / (g.Style.FramePadding.y * 2.0f));
+    if ((axis == ImGuiAxis_Y) && bb_frame_height < bb_frame_width)
+        alpha = ImSaturate(bb_frame_height / ImMax(bb_frame_width * 2.0f, 1.0f));
     if (alpha <= 0.0f)
         return false;
 
@@ -989,7 +989,8 @@ bool ImGui::ScrollbarEx(const ImRect& bb_frame, ImGuiID id, ImGuiAxis axis, ImS6
     // But we maintain a minimum size in pixel to allow for the user to still aim inside.
     IM_ASSERT(ImMax(size_contents_v, size_visible_v) > 0.0f); // Adding this assert to check if the ImMax(XXX,1.0f) is still needed. PLEASE CONTACT ME if this triggers.
     const ImS64 win_size_v = ImMax(ImMax(size_contents_v, size_visible_v), (ImS64)1);
-    const float grab_h_pixels = ImClamp(scrollbar_size_v * ((float)size_visible_v / (float)win_size_v), style.GrabMinSize, scrollbar_size_v);
+    const float grab_h_minsize = ImMin(bb.GetSize()[axis], style.GrabMinSize);
+    const float grab_h_pixels = ImClamp(scrollbar_size_v * ((float)size_visible_v / (float)win_size_v), grab_h_minsize, scrollbar_size_v);
     const float grab_h_norm = grab_h_pixels / scrollbar_size_v;
 
     // Handle input right away. None of the code of Begin() is relying on scrolling position before calling Scrollbar().
