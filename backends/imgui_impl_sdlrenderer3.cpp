@@ -99,10 +99,10 @@ void ImGui_ImplSDLRenderer3_Shutdown()
 
 static void ImGui_ImplSDLRenderer3_SetupRenderState(SDL_Renderer* renderer)
 {
-	// Clear out any viewports and cliprect set by the user
+    // Clear out any viewports and cliprect set by the user
     // FIXME: Technically speaking there are lots of other things we could backup/setup/restore during our render process.
-	SDL_SetRenderViewport(renderer, nullptr);
-	SDL_SetRenderClipRect(renderer, nullptr);
+    SDL_SetRenderViewport(renderer, nullptr);
+    SDL_SetRenderClipRect(renderer, nullptr);
 }
 
 void ImGui_ImplSDLRenderer3_NewFrame()
@@ -136,21 +136,21 @@ void ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* 
 {
     ImGui_ImplSDLRenderer3_Data* bd = ImGui_ImplSDLRenderer3_GetBackendData();
 
-	// If there's a scale factor set by the user, use that instead
+    // If there's a scale factor set by the user, use that instead
     // If the user has specified a scale factor to SDL_Renderer already via SDL_RenderSetScale(), SDL will scale whatever we pass
     // to SDL_RenderGeometryRaw() by that scale factor. In that case we don't want to be also scaling it ourselves here.
     float rsx = 1.0f;
-	float rsy = 1.0f;
-	SDL_GetRenderScale(renderer, &rsx, &rsy);
+    float rsy = 1.0f;
+    SDL_GetRenderScale(renderer, &rsx, &rsy);
     ImVec2 render_scale;
-	render_scale.x = (rsx == 1.0f) ? draw_data->FramebufferScale.x : 1.0f;
-	render_scale.y = (rsy == 1.0f) ? draw_data->FramebufferScale.y : 1.0f;
+    render_scale.x = (rsx == 1.0f) ? draw_data->FramebufferScale.x : 1.0f;
+    render_scale.y = (rsy == 1.0f) ? draw_data->FramebufferScale.y : 1.0f;
 
-	// Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
-	int fb_width = (int)(draw_data->DisplaySize.x * render_scale.x);
-	int fb_height = (int)(draw_data->DisplaySize.y * render_scale.y);
-	if (fb_width == 0 || fb_height == 0)
-		return;
+    // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
+    int fb_width = (int)(draw_data->DisplaySize.x * render_scale.x);
+    int fb_height = (int)(draw_data->DisplaySize.y * render_scale.y);
+    if (fb_width == 0 || fb_height == 0)
+        return;
 
     // Backup SDL_Renderer state that will be modified to restore it afterwards
     struct BackupSDLRendererState
@@ -175,9 +175,9 @@ void ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* 
     render_state.Renderer = renderer;
     platform_io.Renderer_RenderState = &render_state;
 
-	// Will project scissor/clipping rectangles into framebuffer space
-	ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
-	ImVec2 clip_scale = render_scale;
+    // Will project scissor/clipping rectangles into framebuffer space
+    ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
+    ImVec2 clip_scale = render_scale;
 
     // Render command lists
     for (int n = 0; n < draw_data->CmdListsCount; n++)
@@ -218,7 +218,7 @@ void ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* 
                 const SDL_Color* color = (const SDL_Color*)(const void*)((const char*)(vtx_buffer + pcmd->VtxOffset) + offsetof(ImDrawVert, col)); // SDL 2.0.19+
 
                 // Bind texture, Draw
-				SDL_Texture* tex = (SDL_Texture*)pcmd->GetTexID();
+                SDL_Texture* tex = (SDL_Texture*)pcmd->GetTexID();
                 SDL_RenderGeometryRaw8BitColor(renderer, bd->ColorBuffer, tex,
                     xy, (int)sizeof(ImDrawVert),
                     color, (int)sizeof(ImDrawVert),

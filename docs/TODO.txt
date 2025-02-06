@@ -9,7 +9,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - doc: add a proper documentation system (maybe relying on automation? #435)
  - doc: checklist app to verify backends/integration of imgui (test inputs, rendering, callback, etc.).
  - doc/tips: tips of the day: website? applet in imgui_club?
- 
+
  - window: preserve/restore relative focus ordering (persistent or not), and e.g. of multiple reappearing windows (#2304) -> also see docking reference to same #.
  - window: calling SetNextWindowSize() every frame with <= 0 doesn't do anything, may be useful to allow (particularly when used for a single axis). (#690)
  - window: add a way for very transient windows (non-saved, temporary overlay over hundreds of objects) to "clean" up from the global window list. perhaps a lightweight explicit cleanup pass.
