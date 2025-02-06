@@ -3858,6 +3858,9 @@ void ImFont::AddGlyph(const ImFontConfig* cfg, ImWchar codepoint, float x0, floa
         // Snap to pixel
         if (cfg->PixelSnapH)
             advance_x = IM_ROUND(advance_x);
+
+        // Bake extra spacing
+        advance_x += cfg->GlyphExtraAdvanceX;
     }
 
     int glyph_idx = Glyphs.Size;
