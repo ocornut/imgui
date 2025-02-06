@@ -479,8 +479,11 @@ void ImGui_ImplFreeType_FontBakedInit(ImFontAtlas* atlas, ImFontBaked* baked)
         bd_baked_data->MaxAdvanceWidth = (float)FT_CEIL(metrics.max_advance) * bd_font_data->InvRasterizationDensity;
 
         // Output
-        baked->Ascent = bd_baked_data->Ascender;
-        baked->Descent = bd_baked_data->Descender;
+        if (src_n == 0)
+        {
+            baked->Ascent = bd_baked_data->Ascender;
+            baked->Descent = bd_baked_data->Descender;
+        }
     }
 }
 

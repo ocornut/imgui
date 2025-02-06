@@ -4313,7 +4313,8 @@ static void ImGui_ImplStbTrueType_FontBakedInit(ImFontAtlas* atlas, ImFontBaked*
     {
         ImFontConfig* src = &font->Sources[src_n];
         ImGui_ImplStbTrueType_FontSrcData* bd_font_data = (ImGui_ImplStbTrueType_FontSrcData*)src->FontLoaderData;
-
+        if (src_n != 0)
+            continue;
         // FIXME-NEWFONTS: reevaluate how to use sizing metrics
         // FIXME-NEWFONTS: make use of line gap value
         float scale_for_layout = bd_font_data->ScaleFactor * baked->Size;
