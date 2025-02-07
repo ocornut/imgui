@@ -340,6 +340,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     {
         ItemSize(outer_rect);
         ItemAdd(outer_rect, id);
+        g.NextWindowData.ClearFlags();
         return false;
     }
 

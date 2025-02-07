@@ -55,6 +55,8 @@ Other changes:
   visibility of the preview/hint buffer. (#8368) [@m9710797, @ocornut]
 - Scrollbar: Rework logic that fades-out scrollbar when it becomes too small,
   which amusingly made it disappear when using very big font/frame size.
+- Tables: fixed calling SetNextWindowScroll() on clipped scrolling table
+  to not leak the value into a subsequent window. (#8196)
 - Backends: Metal: Fixed a crash on application resources. (#8367, #7419) [@anszom]
 - Backends: WebGPU: Fix for DAWN API rename WGPUProgrammableStageDescriptor -> WGPUComputeState.
   [@PhantomCloak] (#8369)
