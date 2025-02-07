@@ -38,7 +38,7 @@ You can use the `ImGuiFreeTypeBuilderFlags_LoadColor` flag to load certain color
 
 ### Using OpenType SVG fonts (SVGinOT)
 - *SVG in Open Type* is a standard by Adobe and Mozilla for color OpenType and Open Font Format fonts. It allows font creators to embed complete SVG files within a font enabling full color and even animations.
-- Popular fonts such as [twemoji](https://github.com/13rac1/twemoji-color-font) and fonts made with [scfbuild](https://github.com/13rac1/scfbuild) is SVGinOT 
+- Popular fonts such as [twemoji](https://github.com/13rac1/twemoji-color-font) and fonts made with [scfbuild](https://github.com/13rac1/scfbuild) is SVGinOT.
 - Two alternatives are possible to render SVG fonts: use "lunasvg" or "plutosvg". plutosvg will support some more fonts (e.g. NotoColorEmoji-Regular) and may load them faster.
 
 #### Using lunasvg

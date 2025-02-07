@@ -41,16 +41,20 @@ HOW TO UPDATE?
 
 Breaking changes:
 
-- Removed ImFontConfig::GlyphExtraSpacing option which seems largely obsolete and
-  unused. If you were using this please report it! (#242).
+- Renamed ImFontConfig::GlyphExtraSpacing.x option to GlyphExtraAdvanceX. (#242)
 
 Other changes:
 
 - Fixed IsItemDeactivatedAfterEdit() signal being broken for Checkbox(),
   RadioButton(), Selectable(). Regression from 2025/01/13. (#8370)
+- Windows, Style: Added style.WindowBorderHoverPadding setting to configure
+  inner/outer padding applied to hit-testing of windows borders and detection
+  of hovered window.
 - InputTextWithHint(): Fixed buffer-overflow (luckily often with no visible effect)
   when a user callback modified the buffer contents in a way that altered the
   visibility of the preview/hint buffer. (#8368) [@m9710797, @ocornut]
+- Scrollbar: Rework logic that fades-out scrollbar when it becomes too small,
+  which amusingly made it disappear when using very big font/frame size.
 - Backends: Metal: Fixed a crash on application resources. (#8367, #7419) [@anszom]
 - Backends: WebGPU: Fix for DAWN API rename WGPUProgrammableStageDescriptor -> WGPUComputeState.
   [@PhantomCloak] (#8369)
