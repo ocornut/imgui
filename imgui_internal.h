@@ -4063,6 +4063,7 @@ IMGUI_API void              ImFontAtlasBuildGetOversampleFactors(ImFontConfig* s
 IMGUI_API bool              ImFontAtlasBuildAcceptCodepointForSource(ImFontConfig* src, ImWchar codepoint);
 
 IMGUI_API ImFontGlyph*      ImFontAtlasBakedAddFontGlyph(ImFontAtlas* atlas, ImFontBaked* baked, ImFontConfig* src, const ImFontGlyph* in_glyph);
+IMGUI_API void              ImFontAtlasBakedSetFontGlyphBitmap(ImFontAtlas* atlas, ImFontBaked* baked, ImFontConfig* src, ImFontGlyph* glyph, ImFontAtlasRect* r, const unsigned char* src_pixels, ImTextureFormat src_fmt, int src_pitch);
 IMGUI_API ImGuiID           ImFontAtlasBakedGetId(ImGuiID font_id, float baked_size);
 
 IMGUI_API void              ImFontAtlasPackInit(ImFontAtlas* atlas);

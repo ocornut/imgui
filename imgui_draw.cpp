@@ -4373,9 +4373,10 @@ static bool ImGui_ImplStbTrueType_FontBakedAddGlyph(ImFontAtlas* atlas, ImFontBa
     const bool is_visible = (x0 != x1 && y0 != y1);
 
     // Prepare glyph
-    ImFontGlyph glyph;
-    glyph.Codepoint = codepoint;
-    glyph.AdvanceX = advance * scale_for_layout;
+    ImFontGlyph glyph_in = {};
+    ImFontGlyph* glyph = &glyph_in;
+    glyph->Codepoint = codepoint;
+    glyph->AdvanceX = advance * scale_for_layout;
 
     // Pack and retrieve position inside texture atlas
     // (generally based on stbtt_PackFontRangesRenderIntoRects)
@@ -4423,25 +4424,18 @@ static bool ImGui_ImplStbTrueType_FontBakedAddGlyph(ImFontAtlas* atlas, ImFontBa
         // Register glyph
         // r->x r->y are coordinates inside texture (in pixels)
         // glyph.X0, glyph.Y0 are drawing coordinates from base text position, and accounting for oversampling.
-        glyph.X0 = x0 * recip_h + font_off_x;
-        glyph.Y0 = y0 * recip_v + font_off_y;
-        glyph.X1 = (x0 + (int)r->w) * recip_h + font_off_x;
-        glyph.Y1 = (y0 + (int)r->h) * recip_v + font_off_y;
-        glyph.Visible = true;
-        glyph.PackId = pack_id;
-        ImFontAtlasBakedAddFontGlyph(atlas, baked, src, &glyph);
-
-        // Copy to texture, post-process and queue update for backend
-        ImTextureData* tex = atlas->TexData;
-        IM_ASSERT(r->x + r->w <= tex->Width && r->y + r->h <= tex->Height);
-        ImFontAtlasTextureBlockConvert(bitmap_pixels, ImTextureFormat_Alpha8, w, tex->GetPixelsAt(r->x, r->y), tex->Format, tex->GetPitch(), w, h);
-        ImFontAtlasPostProcessData pp_data = { atlas, baked->ContainerFont, src, baked, &baked->Glyphs.back(), tex->GetPixelsAt(r->x, r->y), tex->Format, tex->GetPitch(), w, h };
-        ImFontAtlasTextureBlockPostProcess(&pp_data);
-        ImFontAtlasTextureBlockQueueUpload(atlas, tex, r->x, r->y, r->w, r->h);
+        glyph->X0 = x0 * recip_h + font_off_x;
+        glyph->Y0 = y0 * recip_v + font_off_y;
+        glyph->X1 = (x0 + (int)r->w) * recip_h + font_off_x;
+        glyph->Y1 = (y0 + (int)r->h) * recip_v + font_off_y;
+        glyph->Visible = true;
+        glyph->PackId = pack_id;
+        glyph = ImFontAtlasBakedAddFontGlyph(atlas, baked, src, glyph);
+        ImFontAtlasBakedSetFontGlyphBitmap(atlas, baked, src, glyph, r, bitmap_pixels, ImTextureFormat_Alpha8, w);
     }
     else
     {
-        ImFontAtlasBakedAddFontGlyph(atlas, baked, src, &glyph);
+        glyph = ImFontAtlasBakedAddFontGlyph(atlas, baked, src, glyph);
     }
 
     return true;
@@ -4892,6 +4886,17 @@ ImFontGlyph* ImFontAtlasBakedAddFontGlyph(ImFontAtlas* atlas, ImFontBaked* baked
     baked->ContainerFont->Used8kPagesMap[page_n >> 3] |= 1 << (page_n & 7);
 
     return &glyph;
+}
+
+// Copy to texture, post-process and queue update for backend
+void ImFontAtlasBakedSetFontGlyphBitmap(ImFontAtlas* atlas, ImFontBaked* baked, ImFontConfig* src, ImFontGlyph* glyph, ImFontAtlasRect* r, const unsigned char* src_pixels, ImTextureFormat src_fmt, int src_pitch)
+{
+    ImTextureData* tex = atlas->TexData;
+    IM_ASSERT(r->x + r->w <= tex->Width && r->y + r->h <= tex->Height);
+    ImFontAtlasTextureBlockConvert(src_pixels, src_fmt, src_pitch, tex->GetPixelsAt(r->x, r->y), tex->Format, tex->GetPitch(), r->w, r->h);
+    ImFontAtlasPostProcessData pp_data = { atlas, baked->ContainerFont, src, baked, glyph, tex->GetPixelsAt(r->x, r->y), tex->Format, tex->GetPitch(), r->w, r->h };
+    ImFontAtlasTextureBlockPostProcess(&pp_data);
+    ImFontAtlasTextureBlockQueueUpload(atlas, tex, r->x, r->y, r->w, r->h);
 }
 
 void ImFont::AddRemapChar(ImWchar dst, ImWchar src, bool overwrite_dst)
