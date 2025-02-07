@@ -3766,13 +3766,15 @@ struct ImFontBaked
 // - If you used g.Font + g.FontSize (which is frequent from the ImGui layer), you can use g.FontBaked as a shortcut, as g.FontBaked == g.Font->GetFontBaked(g.FontSize).
 struct ImFont
 {
-    // [Internal] Members: Cold ~32/40/80 bytes
+    // [Internal] Members: Hot ~8-16 bytes
+    ImFontBaked*                LastBaked;          // 4-8   // Cache last bound baked. DO NOT USE. Use GetFontBaked().
+    ImFontAtlas*                ContainerAtlas;     // 4-8   // What we has been loaded into
+
+    // [Internal] Members: Cold ~24-52 bytes
     // Conceptually Sources[] is the list of font sources merged to create this font.
-    ImFontBaked*                LastBaked;          // Cache last bound baked. DO NOT USE. Use GetFontBaked().
     ImGuiID                     FontId;             // Unique identifier for the font
     short                       SourcesCount;       // 2     // in  // Number of ImFontConfig involved in creating this font. Usually 1, or >1 when merging multiple font sources into one ImFont.
     ImFontConfig*               Sources;            // 4-8   // in  // Pointer within ContainerAtlas->Sources[], to SourcesCount instances
-    ImFontAtlas*                ContainerAtlas;     // 4-8   // out // What we has been loaded into
     ImWchar                     EllipsisChar;       // 2-4   // out // Character used for ellipsis rendering ('...').
     ImWchar                     FallbackChar;       // 2-4   // out // Character used if a glyph isn't found (U+FFFD, '?')
     float                       Scale;              // 4     // in  // Base font scale (~1.0f), multiplied by the per-window font scale which you can adjust with SetWindowFontScale()
