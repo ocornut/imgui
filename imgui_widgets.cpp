@@ -4252,7 +4252,7 @@ void ImGui::PushPasswordFont()
     ImGuiContext& g = *GImGui;
     ImFont* in_font = g.Font;
     ImFont* out_font = &g.InputTextPasswordFont;
-    const ImFontGlyph* glyph = in_font->FindGlyph('*');
+    ImFontGlyph* glyph = in_font->FindGlyph('*');
     out_font->FontSize = in_font->FontSize;
     out_font->Scale = in_font->Scale;
     out_font->Ascent = in_font->Ascent;
