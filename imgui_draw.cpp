@@ -2499,7 +2499,8 @@ void ImTextureData::DestroyPixels()
 // - ImFontAtlasBuildUpdateBasicTexData()
 // - ImFontAtlasBuildUpdateLinesTexData()
 // - ImFontAtlasBuildAddFont()
-// - ImFontAtlasBuildSetupFontCreateEllipsisFromDot()
+// - ImFontAtlasBuildSetupFontBakedEllipsis()
+// - ImFontAtlasBuildSetupFontBakedBlanks()
 // - ImFontAtlasBuildSetupFontSpecialGlyphs()
 // - ImFontAtlasBuildDiscardBakes()
 // - ImFontAtlasBuildDiscardFontBakedGlyph()
@@ -3531,37 +3532,50 @@ bool ImFontAtlasBuildAddFont(ImFontAtlas* atlas, ImFontConfig* src)
     return true;
 }
 
-// Rasterize our own ellipsis character from a dot.
+// Create a compact, baked "..." if it doesn't exist, by using the ".".
 // This may seem overly complicated right now but the point is to exercise and improve a technique which should be increasingly used.
-// FIXME-NEWATLAS: This borrows too much from FontBackend_FontAddGlyph() and suggest that we should add further helpers.
-// FIXME-BAKED: prebaked ellipsis
-/*static void ImFontAtlasBuildSetupFontCreateEllipsisFromDot(ImFontAtlas* atlas, ImFont* font, const ImFontGlyph* dot_glyph)
+// FIXME-NEWATLAS: This borrows too much from FontLoader's FontLoaderGlyph() handlers and suggest that we should add further helpers.
+static ImFontGlyph* ImFontAtlasBuildSetupFontBakedEllipsis(ImFontAtlas* atlas, ImFontBaked* baked)
 {
-    ImFontAtlasRect* dot_r = ImFontAtlasPackGetRect(atlas, dot_glyph->PackId);
+    ImFont* font = baked->ContainerFont;
+    IM_ASSERT(font->EllipsisChar != 0);
+
+    const ImFontGlyph* dot_glyph = baked->FindGlyphNoFallback((ImWchar)'.');
+    if (dot_glyph == NULL)
+        dot_glyph = baked->FindGlyphNoFallback((ImWchar)0xFF0E);
+    if (dot_glyph == NULL)
+        return NULL;
+    ImFontAtlasRectId dot_r_id = dot_glyph->PackId; // Deep copy to avoid invalidation of glyphs and rect pointers
+    ImFontAtlasRect* dot_r = ImFontAtlasPackGetRect(atlas, dot_r_id);
     const int dot_spacing = 1;
     const float dot_step = (dot_glyph->X1 - dot_glyph->X0) + dot_spacing;
+
     ImFontAtlasRectId pack_id = ImFontAtlasPackAddRect(atlas, (dot_r->w * 3 + dot_spacing * 2), dot_r->h);
     ImFontAtlasRect* r = ImFontAtlasPackGetRect(atlas, pack_id);
 
-    ImFontGlyph glyph;
-    glyph.Codepoint = (ImWchar)0x0085; // FIXME: Using arbitrary codepoint.
-    glyph.AdvanceX = ImMax(dot_glyph->AdvanceX, dot_glyph->X0 + dot_step * 3.0f - dot_spacing); // FIXME: Slightly odd for normally mono-space fonts but since this is used for trailing contents.
-    glyph.X0 = dot_glyph->X0;
-    glyph.Y0 = dot_glyph->Y0;
-    glyph.X1 = dot_glyph->X0 + dot_step * 3 - dot_spacing;
-    glyph.Y1 = dot_glyph->Y1;
-    glyph.Visible = true;
-    glyph.PackId = pack_id;
-    ImFontAtlasBuildAddFontGlyph(atlas, font, NULL, &glyph);
-    font->EllipsisChar = (ImWchar)glyph.Codepoint;
+    ImFontGlyph glyph_in = {};
+    ImFontGlyph* glyph = &glyph_in;
+    glyph->Codepoint = font->EllipsisChar;
+    glyph->AdvanceX = ImMax(dot_glyph->AdvanceX, dot_glyph->X0 + dot_step * 3.0f - dot_spacing); // FIXME: Slightly odd for normally mono-space fonts but since this is used for trailing contents.
+    glyph->X0 = dot_glyph->X0;
+    glyph->Y0 = dot_glyph->Y0;
+    glyph->X1 = dot_glyph->X0 + dot_step * 3 - dot_spacing;
+    glyph->Y1 = dot_glyph->Y1;
+    glyph->Visible = true;
+    glyph->PackId = pack_id;
+    glyph = ImFontAtlasBakedAddFontGlyph(atlas, baked, NULL, glyph);
+    dot_glyph = NULL; // Invalidated
 
     // Copy to texture, post-process and queue update for backend
     // FIXME-NEWATLAS-V2: Dot glyph is already post-processed as this point, so this would damage it.
+    dot_r = ImFontAtlasPackGetRect(atlas, dot_r_id);
     ImTextureData* tex = atlas->TexData;
     for (int n = 0; n < 3; n++)
         ImFontAtlasTextureBlockCopy(tex, dot_r->x, dot_r->y, tex, r->x + (dot_r->w + dot_spacing) * n, r->y, dot_r->w, dot_r->h);
     ImFontAtlasTextureBlockQueueUpload(atlas, tex, r->x, r->y, r->w, r->h);
-}*/
+
+    return glyph;
+}
 
 static void ImFontAtlasBuildSetupFontBakedSpecialGlyphs(ImFontAtlas* atlas, ImFont* font, ImFontBaked* baked)
 {
@@ -3585,6 +3599,14 @@ static void ImFontAtlasBuildSetupFontBakedSpecialGlyphs(ImFontAtlas* atlas, ImFo
     }
     baked->FallbackGlyphIndex = baked->Glyphs.index_from_ptr(fallback_glyph); // Storing index avoid need to update pointer on growth and simplify inner loop code
     baked->FallbackAdvanceX = fallback_glyph->AdvanceX;
+}
+
+static void ImFontAtlasBuildSetupFontBakedBlanks(ImFontAtlas* atlas, ImFontBaked* baked)
+{
+    // Mark space as always hidden (not strictly correct/necessary. but some e.g. icons fonts don't have a space. it tends to look neater in previews)
+    ImFontGlyph* space_glyph = baked->FindGlyphNoFallback((ImWchar)' ');
+    if (space_glyph != NULL)
+        space_glyph->Visible = false;
 
     // Setup Tab character.
     // FIXME: Needs proper TAB handling but it needs to be contextualized (or we could arbitrary say that each string starts at "column 0" ?)
@@ -3631,11 +3653,8 @@ void ImFontAtlasBuildSetupFontSpecialGlyphs(ImFontAtlas* atlas, ImFont* font, Im
             }
     if (font->EllipsisChar == 0)
     {
-        /*const ImWchar dots_chars[] = { (ImWchar)'.', (ImWchar)0xFF0E };
-        if (const ImFontGlyph* dot_glyph = LoadFirstExistingGlyph(font, dots_chars, IM_ARRAYSIZE(dots_chars)))
-            ImFontAtlasBuildSetupFontCreateEllipsisFromDot(atlas, font, dot_glyph);
-        else*/
-            font->EllipsisChar = (ImWchar)' ';
+        font->EllipsisChar = 0x0085;
+        font->EllipsisAutoBake = true;
     }
     font->LockSingleSrcConfigIdx = -1;
 }
@@ -4165,6 +4184,7 @@ ImFontAtlasRectId ImFontAtlasPackAddRect(ImFontAtlas* atlas, int w, int h, ImFon
     }
 }
 
+// Important: don'return pointer valid until next call to AddRect(), e.g. FindGlyph(), CalcTextSize() can all potentially invalidate previous pointers.
 ImFontAtlasRect* ImFontAtlasPackGetRect(ImFontAtlas* atlas, ImFontAtlasRectId id)
 {
     IM_ASSERT(id >= 0);
@@ -4184,6 +4204,12 @@ ImFontGlyph* ImFontBaked::BuildLoadGlyph(ImWchar codepoint)
 
     //char utf8_buf[5];
     //IMGUI_DEBUG_LOG("[font] BuildLoadGlyph U+%04X (%s)\n", (unsigned int)codepoint, ImTextCharToUtf8(utf8_buf, (unsigned int)codepoint));
+
+    // Special hook
+    // FIXME-NEWATLAS: it would be nicer if this used a more standardized way of hooking
+    if (codepoint == font->EllipsisChar && font->EllipsisAutoBake)
+        if (ImFontGlyph* glyph = ImFontAtlasBuildSetupFontBakedEllipsis(atlas, baked))
+            return glyph;
 
     // Load from single source or all sources?
     int srcs_count = (font->LockSingleSrcConfigIdx != -1) ? 1 : font->SourcesCount;
