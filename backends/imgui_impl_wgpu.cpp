@@ -66,6 +66,9 @@
 #include <limits.h>
 #include <webgpu/webgpu.h>
 
+#include <stdio.h>
+#include <stdlib.h>
+
 #ifdef IMGUI_IMPL_WEBGPU_BACKEND_DAWN
 // Dawn renamed WGPUProgrammableStageDescriptor to WGPUComputeState (see: https://github.com/webgpu-native/webgpu-headers/pull/413)
 // Using type alias until WGPU adopts the same naming convention (#8369)
@@ -273,7 +276,7 @@ static WGPUProgrammableStageDescriptor ImGui_ImplWGPU_CreateShaderModule(const c
 #endif
 
     WGPUShaderModuleDescriptor desc = {};
-    desc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgsl_desc);
+    desc.nextInChain = (WGPUChainedStruct*)&wgsl_desc;
 
     WGPUProgrammableStageDescriptor stage_desc = {};
     stage_desc.module = wgpuDeviceCreateShaderModule(bd->wgpuDevice, &desc);
@@ -913,6 +916,98 @@ void ImGui_ImplWGPU_NewFrame()
     if (!bd->pipelineState)
         if (!ImGui_ImplWGPU_CreateDeviceObjects())
             IM_ASSERT(0 && "ImGui_ImplWGPU_CreateDeviceObjects() failed!");
+}
+
+//-----------------------------------------------------------------------------
+// WebGPU Helpers
+//-----------------------------------------------------------------------------
+
+// Check if the status of surface texture is optimal. If false, it is necessary to reconfigure the surface texture.
+// FIXME: Can abort on unrecoverable errors.
+bool ImGui_ImplWGPU_CheckSurfaceTextureOptimalStatus(WGPUSurfaceGetCurrentTextureStatus status)
+{
+    switch (status)
+    {
+#if defined(__EMSCRIPTEN__) && !defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
+        case WGPUSurfaceGetCurrentTextureStatus_Success:
+            return true;
+#else
+        case WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal:
+            return true;
+        case WGPUSurfaceGetCurrentTextureStatus_SuccessSuboptimal:
+            return false;
+#endif
+        case WGPUSurfaceGetCurrentTextureStatus_Timeout:
+        case WGPUSurfaceGetCurrentTextureStatus_Outdated:
+        case WGPUSurfaceGetCurrentTextureStatus_Lost:
+            return false;
+        default:
+            fprintf(stderr, "Unexpected Error Check Surface Texture status=%#.8x\n", status);
+            IM_ASSERT(0);
+            return false;
+    }
+}
+
+
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
+// DAWN Validation Layer callback: reason for device loss
+void ImGui_ImplWGPU_DAWN_DeviceLostCallback_Helper(const wgpu::Device&, wgpu::DeviceLostReason reason, wgpu::StringView msg)
+{
+    const char* reason_name = "";
+    switch (reason)
+    {
+    case wgpu::DeviceLostReason::Unknown:           reason_name = "Unknown";         break;
+    case wgpu::DeviceLostReason::Destroyed:         reason_name = "Destroyed";       break;
+    case wgpu::DeviceLostReason::CallbackCancelled: reason_name = "InstanceDropped"; break;
+    case wgpu::DeviceLostReason::FailedCreation:    reason_name = "FailedCreation";  break;
+    default:                                        reason_name = "UNREACHABLE";     break;
+    }
+    fprintf(stderr, "%s device message: %s\n", reason_name, msg.data);
+}
+
+// DAWN Validation Layer callback: print error type
+void ImGui_ImplWGPU_DAWN_ErrorCallback_Helper(const wgpu::Device&, wgpu::ErrorType type, wgpu::StringView msg)
+{
+    const char* error_type_name = "";
+    switch (type)
+    {
+    case wgpu::ErrorType::Validation:  error_type_name = "Validation";      break;
+    case wgpu::ErrorType::OutOfMemory: error_type_name = "Out of memory";   break;
+    case wgpu::ErrorType::Unknown:     error_type_name = "Unknown";         break;
+    case wgpu::ErrorType::Internal:    error_type_name = "Internal";        break;
+    default:                           error_type_name = "UNREACHABLE";     break;
+    }
+    fprintf(stderr, "%s error: %s\n", error_type_name, msg.data);
+}
+
+#elif !defined(__EMSCRIPTEN__)
+
+// WGPU-Native LOG callback: print information based on request level
+void ImGui_ImplWGPU_WGPU_LogCallback_Helper(WGPULogLevel level, WGPUStringView msg, void* userdata)
+{
+    const char* level_str = "";
+    switch (level)
+    {
+    case WGPULogLevel_Error: level_str = "error"; break;
+    case WGPULogLevel_Warn:  level_str = "warn";  break;
+    case WGPULogLevel_Info:  level_str = "info";  break;
+    case WGPULogLevel_Debug: level_str = "debug"; break;
+    case WGPULogLevel_Trace: level_str = "trace"; break;
+    default:                 level_str = "unknown"; break;
+    }
+    fprintf(stderr, "[wgpu] [%s] %.*s\n", level_str, (int)msg.length, msg.data);
+}
+#endif
+
+void ImGui_ImplWGPU_PrintAdapterInfo(const WGPUAdapter& adapter)
+{
+    WGPUAdapterInfo info = {};
+    wgpuAdapterGetInfo(adapter, &info);
+#ifndef __EMSCRIPTEN__
+    printf("Using: \"%.*s - %.*s\"\n", (int)info.device.length, info.device.data, (int)info.description.length, info.description.data);
+#endif
+    printf("BackendType (%u)\n", info.backendType);
+    wgpuAdapterInfoFreeMembers(info);
 }
 
 //-----------------------------------------------------------------------------
