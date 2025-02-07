@@ -546,9 +546,10 @@ bool ImGui_ImplFreeType_FontBakedAddGlyph(ImFontAtlas* atlas, ImFontBaked* baked
     const bool is_visible = (w != 0 && h != 0);
 
     // Prepare glyph
-    ImFontGlyph glyph = {};
-    glyph.Codepoint = codepoint;
-    glyph.AdvanceX = (slot->advance.x / FT_SCALEFACTOR) * bd_font_data->InvRasterizationDensity;
+    ImFontGlyph glyph_in = {};
+    ImFontGlyph* glyph = &glyph_in;
+    glyph->Codepoint = codepoint;
+    glyph->AdvanceX = (slot->advance.x / FT_SCALEFACTOR) * bd_font_data->InvRasterizationDensity;
 
     // Pack and retrieve position inside texture atlas
     if (is_visible)
@@ -580,26 +581,19 @@ bool ImGui_ImplFreeType_FontBakedAddGlyph(ImFontAtlas* atlas, ImFontBaked* baked
         // Register glyph
         float glyph_off_x = (float)face->glyph->bitmap_left;
         float glyph_off_y = (float)-face->glyph->bitmap_top;
-        glyph.X0 = glyph_off_x * recip_h + font_off_x;
-        glyph.Y0 = glyph_off_y * recip_v + font_off_y;
-        glyph.X1 = (glyph_off_x + w) * recip_h + font_off_x;
-        glyph.Y1 = (glyph_off_y + h) * recip_v + font_off_y;
-        glyph.Visible = true;
-        glyph.Colored = (ft_bitmap->pixel_mode == FT_PIXEL_MODE_BGRA);
-        glyph.PackId = pack_id;
-        ImFontAtlasBakedAddFontGlyph(atlas, baked, src, &glyph);
-
-        // Copy to texture, post-process and queue update for backend
-        ImTextureData* tex = atlas->TexData;
-        IM_ASSERT(r->x + r->w <= tex->Width && r->y + r->h <= tex->Height);
-        ImFontAtlasTextureBlockConvert(temp_buffer, ImTextureFormat_RGBA32, w * 4, tex->GetPixelsAt(r->x, r->y), tex->Format, tex->GetPitch(), w, h);
-        ImFontAtlasPostProcessData pp_data = { atlas, baked->ContainerFont, src, baked, &baked->Glyphs.back(), tex->GetPixelsAt(r->x, r->y), tex->Format, tex->GetPitch(), w, h };
-        ImFontAtlasTextureBlockPostProcess(&pp_data);
-        ImFontAtlasTextureBlockQueueUpload(atlas, tex, r->x, r->y, r->w, r->h);
+        glyph->X0 = glyph_off_x * recip_h + font_off_x;
+        glyph->Y0 = glyph_off_y * recip_v + font_off_y;
+        glyph->X1 = (glyph_off_x + w) * recip_h + font_off_x;
+        glyph->Y1 = (glyph_off_y + h) * recip_v + font_off_y;
+        glyph->Visible = true;
+        glyph->Colored = (ft_bitmap->pixel_mode == FT_PIXEL_MODE_BGRA);
+        glyph->PackId = pack_id;
+        glyph = ImFontAtlasBakedAddFontGlyph(atlas, baked, src, glyph);
+        ImFontAtlasBakedSetFontGlyphBitmap(atlas, baked, src, glyph, r, (const unsigned char*)temp_buffer, ImTextureFormat_RGBA32, w * 4);
     }
     else
     {
-        ImFontAtlasBakedAddFontGlyph(atlas, baked, src, &glyph);
+        glyph = ImFontAtlasBakedAddFontGlyph(atlas, baked, src, glyph);
     }
     return true;
 }
