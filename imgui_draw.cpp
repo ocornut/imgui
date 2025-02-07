@@ -3005,7 +3005,7 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
         IM_ASSERT((size <= 64) && "GlyphExcludeRanges[] size must be small!");
     }
     if (font_cfg->FontLoader != NULL)
-        IM_ASSERT(font_cfg->FontLoader->FontBakedAddGlyph != NULL);
+        IM_ASSERT(font_cfg->FontLoader->FontBakedLoadGlyph != NULL);
     IM_ASSERT(font_cfg->FontLoaderData == NULL);
 
     // Round font size
@@ -4288,12 +4288,8 @@ ImFontGlyph* ImFontBaked::BuildLoadGlyph(ImWchar codepoint)
         ImFontConfig* src = &srcs[src_n];
         const ImFontLoader* loader = src->FontLoader ? src->FontLoader : atlas->FontLoader;
         if (!src->GlyphExcludeRanges || ImFontAtlasBuildAcceptCodepointForSource(src, codepoint))
-            if (loader->FontBakedAddGlyph(atlas, src, baked, loader_user_data_p, codepoint))
-            {
-                // FIXME: Add hooks for e.g. #7962
-                ImFontGlyph* glyph = &baked->Glyphs.back();
-                return glyph;
-            }
+            if (ImFontGlyph* glyph = loader->FontBakedLoadGlyph(atlas, src, baked, loader_user_data_p, codepoint))
+                return glyph; // FIXME: Add hooks for e.g. #7962
         loader_user_data_p += loader->FontBakedSrcLoaderDataSize;
     }
 
@@ -4406,7 +4402,7 @@ static bool ImGui_ImplStbTrueType_FontSrcContainsGlyph(ImFontAtlas* atlas, ImFon
     return glyph_index != 0;
 }
 
-static void ImGui_ImplStbTrueType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void*)
+static bool ImGui_ImplStbTrueType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void*)
 {
     IM_UNUSED(atlas);
 
@@ -4421,16 +4417,17 @@ static void ImGui_ImplStbTrueType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig
         baked->Ascent = ImCeil(unscaled_ascent * scale_for_layout);
         baked->Descent = ImFloor(unscaled_descent * scale_for_layout);
     }
+    return true;
 }
 
-static bool ImGui_ImplStbTrueType_FontBakedAddGlyph(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void*, ImWchar codepoint)
+static ImFontGlyph* ImGui_ImplStbTrueType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void*, ImWchar codepoint)
 {
     // Search for first font which has the glyph
     ImGui_ImplStbTrueType_FontSrcData* bd_font_data = (ImGui_ImplStbTrueType_FontSrcData*)src->FontLoaderData;
     IM_ASSERT(bd_font_data);
     int glyph_index = stbtt_FindGlyphIndex(&bd_font_data->FontInfo, (int)codepoint);
     if (glyph_index == 0)
-        return false; // Not found
+        return NULL;
 
     // Fonts unit to pixels
     int oversample_h, oversample_v;
@@ -4463,7 +4460,7 @@ static bool ImGui_ImplStbTrueType_FontBakedAddGlyph(ImFontAtlas* atlas, ImFontCo
         {
             // Pathological out of memory case (TexMaxWidth/TexMaxHeight set too small?)
             IM_ASSERT_USER_ERROR(pack_id >= 0, "Out of texture memory.");
-            return false;
+            return NULL;
         }
         ImFontAtlasRect* r = ImFontAtlasPackGetRect(atlas, pack_id);
 
@@ -4512,7 +4509,7 @@ static bool ImGui_ImplStbTrueType_FontBakedAddGlyph(ImFontAtlas* atlas, ImFontCo
         glyph = ImFontAtlasBakedAddFontGlyph(atlas, baked, src, glyph);
     }
 
-    return true;
+    return glyph;
 }
 
 const ImFontLoader* ImFontAtlasGetFontLoaderForStbTruetype()
@@ -4524,7 +4521,7 @@ const ImFontLoader* ImFontAtlasGetFontLoaderForStbTruetype()
     loader.FontSrcContainsGlyph = ImGui_ImplStbTrueType_FontSrcContainsGlyph;
     loader.FontBakedInit = ImGui_ImplStbTrueType_FontBakedInit;
     loader.FontBakedDestroy = NULL;
-    loader.FontBakedAddGlyph = ImGui_ImplStbTrueType_FontBakedAddGlyph;
+    loader.FontBakedLoadGlyph = ImGui_ImplStbTrueType_FontBakedLoadGlyph;
     return &loader;
 }
 

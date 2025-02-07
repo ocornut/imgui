@@ -437,7 +437,7 @@ void ImGui_ImplFreeType_FontSrcDestroy(ImFontAtlas* atlas, ImFontConfig* src)
     src->FontLoaderData = NULL;
 }
 
-void ImGui_ImplFreeType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void* loader_data_for_baked_src)
+bool ImGui_ImplFreeType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void* loader_data_for_baked_src)
 {
     IM_UNUSED(atlas);
     const float size = baked->Size;
@@ -479,6 +479,7 @@ void ImGui_ImplFreeType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig* src, ImF
         baked->Ascent = bd_baked_data->Ascender;
         baked->Descent = bd_baked_data->Descender;
     }
+    return true;
 }
 
 void ImGui_ImplFreeType_FontBakedDestroy(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void* loader_data_for_baked_src)
@@ -492,12 +493,12 @@ void ImGui_ImplFreeType_FontBakedDestroy(ImFontAtlas* atlas, ImFontConfig* src, 
     bd_baked_data->~ImGui_ImplFreeType_FontSrcBakedData(); // ~IM_PLACEMENT_DELETE()
 }
 
-bool ImGui_ImplFreeType_FontBakedAddGlyph(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void* loader_data_for_baked_src, ImWchar codepoint)
+ImFontGlyph* ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void* loader_data_for_baked_src, ImWchar codepoint)
 {
     ImGui_ImplFreeType_FontSrcData* bd_font_data = (ImGui_ImplFreeType_FontSrcData*)src->FontLoaderData;
     uint32_t glyph_index = FT_Get_Char_Index(bd_font_data->FtFace, codepoint);
     if (glyph_index == 0)
-        return false; // Not found
+        return NULL;
 
     if (bd_font_data->BakedLastActivated != baked)
     {
@@ -509,18 +510,15 @@ bool ImGui_ImplFreeType_FontBakedAddGlyph(ImFontAtlas* atlas, ImFontConfig* src,
 
     const FT_Glyph_Metrics* metrics = bd_font_data->LoadGlyph(codepoint);
     if (metrics == NULL)
-        return false;
+        return NULL;
 
     // Render glyph into a bitmap (currently held by FreeType)
     FT_Face face = bd_font_data->FtFace;
     FT_GlyphSlot slot = face->glyph;
     FT_Error error = FT_Render_Glyph(slot, bd_font_data->RenderMode);
-    if (error != 0)
-        return false;
-
     const FT_Bitmap* ft_bitmap = &slot->bitmap;
-    if (ft_bitmap == nullptr)
-        return false;
+    if (error != 0 || ft_bitmap == nullptr)
+        return NULL;
 
     const int w = (int)ft_bitmap->width;
     const int h = (int)ft_bitmap->rows;
@@ -540,7 +538,7 @@ bool ImGui_ImplFreeType_FontBakedAddGlyph(ImFontAtlas* atlas, ImFontConfig* src,
         {
             // Pathological out of memory case (TexMaxWidth/TexMaxHeight set too small?)
             IM_ASSERT_USER_ERROR(pack_id >= 0, "Out of texture memory.");
-            return false;
+            return NULL;
         }
         ImFontAtlasRect* r = ImFontAtlasPackGetRect(atlas, pack_id);
 
@@ -576,7 +574,7 @@ bool ImGui_ImplFreeType_FontBakedAddGlyph(ImFontAtlas* atlas, ImFontConfig* src,
     {
         glyph = ImFontAtlasBakedAddFontGlyph(atlas, baked, src, glyph);
     }
-    return true;
+    return glyph;
 }
 
 bool ImGui_ImplFreetype_FontSrcContainsGlyph(ImFontAtlas* atlas, ImFontConfig* src, ImWchar codepoint)
@@ -598,7 +596,7 @@ const ImFontLoader* ImGuiFreeType::GetFontLoader()
     loader.FontSrcContainsGlyph = ImGui_ImplFreetype_FontSrcContainsGlyph;
     loader.FontBakedInit = ImGui_ImplFreeType_FontBakedInit;
     loader.FontBakedDestroy = ImGui_ImplFreeType_FontBakedDestroy;
-    loader.FontBakedAddGlyph = ImGui_ImplFreeType_FontBakedAddGlyph;
+    loader.FontBakedLoadGlyph = ImGui_ImplFreeType_FontBakedLoadGlyph;
     loader.FontBakedSrcLoaderDataSize = sizeof(ImGui_ImplFreeType_FontSrcBakedData);
     return &loader;
 }
