@@ -233,7 +233,7 @@ for (int n = 0; n < 3; n++)
 ImGui::End();
 </pre>
 </td>
-</tr>    
+</tr>
 </table>
 
 A primer on labels and the ID Stack...
