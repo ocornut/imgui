@@ -47,6 +47,9 @@ Other changes:
 
 - Fixed IsItemDeactivatedAfterEdit() signal being broken for Checkbox(),
   RadioButton(), Selectable(). Regression from 2025/01/13. (#8370)
+- Windows: Fixed an issue where BeginChild() inside a collapsed Begin()
+  wouldn't inherit the SkipItems flag, resulting in missing coarse clipping
+  opportunity for code not checking the BeginChild() return value.
 - Windows, Style: Added style.WindowBorderHoverPadding setting to configure
   inner/outer padding applied to hit-testing of windows borders and detection
   of hovered window.

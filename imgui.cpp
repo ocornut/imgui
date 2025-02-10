@@ -7702,7 +7702,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             // Hide along with parent or if parent is collapsed
             if (parent_window && (parent_window->Collapsed || parent_window->HiddenFramesCanSkipItems > 0))
                 window->HiddenFramesCanSkipItems = 1;
-            if (parent_window && (parent_window->Collapsed || parent_window->HiddenFramesCannotSkipItems > 0))
+            if (parent_window && parent_window->HiddenFramesCannotSkipItems > 0)
                 window->HiddenFramesCannotSkipItems = 1;
         }
 
