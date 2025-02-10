@@ -57,6 +57,8 @@ Other changes:
   which amusingly made it disappear when using very big font/frame size.
 - Tables: fixed calling SetNextWindowScroll() on clipped scrolling table
   to not leak the value into a subsequent window. (#8196)
+- TextLinkOpenURL(): fixed default Win32 io.PlatformOpenInShellFn handler to
+  handle UTF-8 regardless of system regional settings. (#7660) [@achabense]
 - Demo: Combos: demonstrate a very simple way to add a filter to a combo,
   by showing the filter inside the combo contents. (#718)
 - Backends: Metal: Fixed a crash on application resources. (#8367, #7419) [@anszom]
