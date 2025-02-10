@@ -2499,6 +2499,7 @@ void ImTextureData::DestroyPixels()
 // - ImFontAtlasBuildAddFont()
 // - ImFontAtlasBuildSetupFontBakedEllipsis()
 // - ImFontAtlasBuildSetupFontBakedBlanks()
+// - ImFontAtlasBuildSetupFontBakedFallback()
 // - ImFontAtlasBuildSetupFontSpecialGlyphs()
 // - ImFontAtlasBuildDiscardBakes()
 // - ImFontAtlasBuildDiscardFontBakedGlyph()
@@ -2527,7 +2528,8 @@ void ImTextureData::DestroyPixels()
 // - ImFontAtlasPackAddRect()
 // - ImFontAtlasPackGetRect()
 //-----------------------------------------------------------------------------
-// - ImFont::BuildLoadGlyph()
+// - ImFontBaked_BuildGrowIndex()
+// - ImFontBaked_BuildLoadGlyph()
 // - ImFontAtlasDebugLogTextureRequests()
 //-----------------------------------------------------------------------------
 // - ImFontAtlasGetFontLoaderForStbTruetype()
@@ -3242,7 +3244,7 @@ int ImFontAtlas::AddCustomRectFontGlyphForSize(ImFont* font, float font_size, Im
         ImFontAtlasTextureBlockQueueUpload(this, TexData, r->x, r->y, r->w, r->h);
 
     if (baked->IsGlyphLoaded(codepoint))
-        ImFontAtlasBuildDiscardFontBakedGlyph(this, font, baked, (ImFontGlyph*)(void*)baked->FindGlyph(codepoint));
+        ImFontAtlasBuildDiscardFontBakedGlyph(this, font, baked, baked->FindGlyph(codepoint));
 
     ImFontGlyph glyph;
     glyph.Codepoint = codepoint;
@@ -3367,7 +3369,7 @@ void ImFontAtlasBuildPreloadAllGlyphRanges(ImFontAtlas* atlas)
             IM_ASSERT(ranges != NULL);
             for (; ranges[0]; ranges += 2)
                 for (unsigned int c = ranges[0]; c <= ranges[1] && c <= IM_UNICODE_CODEPOINT_MAX; c++) //-V560
-                    baked->FindGlyphNoFallback((ImWchar)c);
+                    baked->FindGlyph((ImWchar)c);
         }
 }
 
@@ -3587,25 +3589,23 @@ static ImFontGlyph* ImFontAtlasBuildSetupFontBakedEllipsis(ImFontAtlas* atlas, I
     return glyph;
 }
 
-static void ImFontAtlasBuildSetupFontBakedSpecialGlyphs(ImFontAtlas* atlas, ImFont* font, ImFontBaked* baked)
+// Load fallback in order to obtain its index
+// (this is called from in hot-path so we avoid extraneous parameters to minimize impact on code size)
+static void ImFontAtlasBuildSetupFontBakedFallback(ImFontBaked* baked)
 {
-    // Mark space as always hidden (not strictly correct/necessary. but some e.g. icons fonts don't have a space. it tends to look neater in previews)
-    ImFontGlyph* space_glyph = (ImFontGlyph*)(void*)baked->FindGlyphNoFallback((ImWchar)' ');
-    if (space_glyph != NULL)
-        space_glyph->Visible = false;
-
-    // Load fallback in order to obtain its index
-    // FIXME-NEWATLAS: could we use a scheme where this is lazily loaded?
     IM_ASSERT(baked->FallbackGlyphIndex == -1);
+    IM_ASSERT(baked->FallbackAdvanceX == 0.0f);
+    ImFont* font = baked->ContainerFont;
     ImFontGlyph* fallback_glyph = NULL;
     if (font->FallbackChar != 0)
         fallback_glyph = baked->FindGlyphNoFallback(font->FallbackChar);
     if (fallback_glyph == NULL)
     {
+        ImFontGlyph* space_glyph = baked->FindGlyphNoFallback((ImWchar)' ');
         ImFontGlyph glyph;
         glyph.Codepoint = 0;
         glyph.AdvanceX = space_glyph ? space_glyph->AdvanceX : IM_ROUND(baked->Size * 0.40f);
-        fallback_glyph = ImFontAtlasBakedAddFontGlyph(atlas, baked, NULL, &glyph);
+        fallback_glyph = ImFontAtlasBakedAddFontGlyph(font->ContainerAtlas, baked, NULL, &glyph);
     }
     baked->FallbackGlyphIndex = baked->Glyphs.index_from_ptr(fallback_glyph); // Storing index avoid need to update pointer on growth and simplify inner loop code
     baked->FallbackAdvanceX = fallback_glyph->AdvanceX;
@@ -3711,7 +3711,7 @@ ImFontBaked* ImFontAtlasBuildAddFontBaked(ImFontAtlas* atlas, ImFont* font, floa
         loader_data_p += loader->FontBakedSrcLoaderDataSize;
     }
 
-    ImFontAtlasBuildSetupFontBakedSpecialGlyphs(atlas, baked->ContainerFont, baked);
+    ImFontAtlasBuildSetupFontBakedBlanks(atlas, baked);
     return baked;
 }
 
@@ -4260,13 +4260,26 @@ static bool ImFontAtlasBuildAcceptCodepointForSource(ImFontConfig* src, ImWchar 
     return true;
 }
 
-ImFontGlyph* ImFontBaked::BuildLoadGlyph(ImWchar codepoint)
+static void ImFontBaked_BuildGrowIndex(ImFontBaked* baked, int new_size)
 {
-    ImFont* font = ContainerFont;
-    ImFontBaked* baked = this;
+    IM_ASSERT(baked->IndexAdvanceX.Size == baked->IndexLookup.Size);
+    if (new_size <= baked->IndexLookup.Size)
+        return;
+    baked->IndexAdvanceX.resize(new_size, -1.0f);
+    baked->IndexLookup.resize(new_size, IM_FONTGLYPH_INDEX_UNUSED);
+}
+
+static ImFontGlyph* ImFontBaked_BuildLoadGlyph(ImFontBaked* baked, ImWchar codepoint)
+{
+    ImFont* font = baked->ContainerFont;
     ImFontAtlas* atlas = font->ContainerAtlas;
     if (atlas->Locked || (font->Flags & ImFontFlags_NoLoadGlyphs))
+    {
+        // Lazily load fallback glyph
+        if (baked->FallbackGlyphIndex == -1 && baked->LockLoadingFallback == 0)
+            ImFontAtlasBuildSetupFontBakedFallback(baked);
         return NULL;
+    }
 
     //char utf8_buf[5];
     //IMGUI_DEBUG_LOG("[font] BuildLoadGlyph U+%04X (%s)\n", (unsigned int)codepoint, ImTextCharToUtf8(utf8_buf, (unsigned int)codepoint));
@@ -4293,8 +4306,14 @@ ImFontGlyph* ImFontBaked::BuildLoadGlyph(ImWchar codepoint)
         loader_user_data_p += loader->FontBakedSrcLoaderDataSize;
     }
 
+    // Lazily load fallback glyph
+    if (baked->LockLoadingFallback)
+        return NULL;
+    if (baked->FallbackGlyphIndex == -1)
+        ImFontAtlasBuildSetupFontBakedFallback(baked);
+
     // Mark index as not found, so we don't attempt the search twice
-    baked->BuildGrowIndex(codepoint + 1);
+    ImFontBaked_BuildGrowIndex(baked, codepoint + 1);
     baked->IndexAdvanceX[codepoint] = baked->FallbackAdvanceX;
     baked->IndexLookup[codepoint] = IM_FONTGLYPH_INDEX_NOT_FOUND;
     return NULL;
@@ -4302,10 +4321,10 @@ ImFontGlyph* ImFontBaked::BuildLoadGlyph(ImWchar codepoint)
 
 // The point of this indirection is to not be inlined in debug mode in order to not bloat inner loop.b
 IM_MSVC_RUNTIME_CHECKS_OFF
-static float BuildLoadGlyphGetAdvanceOrFallback(ImFontBaked* font, unsigned int codepoint)
+static float BuildLoadGlyphGetAdvanceOrFallback(ImFontBaked* baked, unsigned int codepoint)
 {
-    ImFontGlyph* glyph = font->BuildLoadGlyph((ImWchar)codepoint);
-    return glyph ? glyph->AdvanceX : font->FallbackAdvanceX;
+    ImFontGlyph* glyph = ImFontBaked_BuildLoadGlyph(baked, (ImWchar)codepoint);
+    return glyph ? glyph->AdvanceX : baked->FallbackAdvanceX;
 }
 IM_MSVC_RUNTIME_CHECKS_RESTORE
 
@@ -4861,15 +4880,6 @@ void ImFontBaked::ClearOutputData()
     MetricsTotalSurface = 0;
 }
 
-void ImFontBaked::BuildGrowIndex(int new_size)
-{
-    IM_ASSERT(IndexAdvanceX.Size == IndexLookup.Size);
-    if (new_size <= IndexLookup.Size)
-        return;
-    IndexAdvanceX.resize(new_size, -1.0f);
-    IndexLookup.resize(new_size, IM_FONTGLYPH_INDEX_UNUSED);
-}
-
 ImFont::ImFont()
 {
     memset(this, 0, sizeof(*this));
@@ -4950,7 +4960,7 @@ ImFontGlyph* ImFontAtlasBakedAddFontGlyph(ImFontAtlas* atlas, ImFontBaked* baked
 
     // Update lookup tables
     int codepoint = glyph.Codepoint;
-    baked->BuildGrowIndex(codepoint + 1);
+    ImFontBaked_BuildGrowIndex(baked, codepoint + 1);
     baked->IndexAdvanceX[codepoint] = glyph.AdvanceX;
     baked->IndexLookup[codepoint] = (ImU16)glyph_idx;
     const int page_n = codepoint / 8192;
@@ -5002,7 +5012,7 @@ ImFontGlyph* ImFontBaked::FindGlyph(ImWchar c)
         if (i != IM_FONTGLYPH_INDEX_UNUSED)
             return &Glyphs.Data[i];
     }
-    ImFontGlyph* glyph = BuildLoadGlyph(c);
+    ImFontGlyph* glyph = ImFontBaked_BuildLoadGlyph(this, c);
     return glyph ? glyph : &Glyphs.Data[FallbackGlyphIndex];
 }
 
@@ -5017,7 +5027,10 @@ ImFontGlyph* ImFontBaked::FindGlyphNoFallback(ImWchar c)
         if (i != IM_FONTGLYPH_INDEX_UNUSED)
             return &Glyphs.Data[i];
     }
-    return BuildLoadGlyph(c);
+    LockLoadingFallback = true; // This is actually a rare call, not done in hot-loop, so we prioritize not adding extra cruft to ImFontBaked_BuildLoadGlyph() call sites.
+    ImFontGlyph* glyph = ImFontBaked_BuildLoadGlyph(this, c);
+    LockLoadingFallback = false;
+    return glyph;
 }
 
 bool ImFontBaked::IsGlyphLoaded(ImWchar c)
@@ -5060,7 +5073,7 @@ float ImFontBaked::GetCharAdvance(ImWchar c)
     }
 
     // Same as BuildLoadGlyphGetAdvanceOrFallback():
-    const ImFontGlyph* glyph = BuildLoadGlyph(c);
+    const ImFontGlyph* glyph = ImFontBaked_BuildLoadGlyph(this, c);
     return glyph ? glyph->AdvanceX : FallbackAdvanceX;
 }
 IM_MSVC_RUNTIME_CHECKS_RESTORE
