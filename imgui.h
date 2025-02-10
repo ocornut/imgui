@@ -3796,7 +3796,6 @@ struct ImFont
     float                       Scale;              // 4     // in  // Base font scale (~1.0f), multiplied by the per-window font scale which you can adjust with SetWindowFontScale()
     ImU8                        Used8kPagesMap[(IM_UNICODE_CODEPOINT_MAX+1)/8192/8]; // 1 bytes if ImWchar=ImWchar16, 16 bytes if ImWchar==ImWchar32. Store 1-bit for each block of 4K codepoints that has one active glyph. This is mainly used to facilitate iterations across all used codepoints.
     bool                        EllipsisAutoBake;   // 1     //     // Mark when the "..." glyph needs to be generated.
-    short                       LockSingleSrcConfigIdx;
 
     // Methods
     IMGUI_API ImFont();
