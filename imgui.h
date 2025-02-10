@@ -3749,7 +3749,8 @@ struct ImFontBaked
     // [Internal] Members: Cold
     float                       Ascent, Descent;    // 4+4   // out // Ascent: distance from top to bottom of e.g. 'A' [0..FontSize] (unscaled)
     unsigned int                MetricsTotalSurface:26;// 3  // out // Total surface in pixels to get an idea of the font rasterization/texture cost (not exact, we approximate the cost of padding between glyphs)
-    unsigned int                WantDestroy:1;      // 1     //     // Queued for destroy
+    unsigned int                WantDestroy:1;         // 0  //     // Queued for destroy
+    unsigned int                LockLoadingFallback:1; // 0  //     //
     int                         LastUsedFrame;      // 4     //     // Record of that time this was bounds
     ImGuiID                     BakedId;            // 4     //
     ImFont*                     ContainerFont;      // 4-8   // in  // Parent font
@@ -3762,8 +3763,6 @@ struct ImFontBaked
     IMGUI_API ImFontGlyph*      FindGlyphNoFallback(ImWchar c);     // Return NULL if glyph doesn't exist
     IMGUI_API float             GetCharAdvance(ImWchar c);
     IMGUI_API bool              IsGlyphLoaded(ImWchar c);
-    IMGUI_API ImFontGlyph*      BuildLoadGlyph(ImWchar c);
-    IMGUI_API void              BuildGrowIndex(int new_size);
 };
 
 // Font flags
