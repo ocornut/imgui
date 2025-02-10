@@ -61,6 +61,8 @@ Other changes:
   handle UTF-8 regardless of system regional settings. (#7660) [@achabense]
 - Demo: Combos: demonstrate a very simple way to add a filter to a combo,
   by showing the filter inside the combo contents. (#718)
+- Backends: SDL2, SDL3:  Using SDL_OpenURL() in platform_io.Platform_OpenInShellFn
+  handler. (#7660) [@achabense]
 - Backends: Metal: Fixed a crash on application resources. (#8367, #7419) [@anszom]
 - Backends: WebGPU: Fix for DAWN API rename WGPUProgrammableStageDescriptor -> WGPUComputeState.
   [@PhantomCloak] (#8369)
