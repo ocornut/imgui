@@ -2399,7 +2399,7 @@ int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* 
     int e = 0;
     e  = (*out_char < mins[len]) << 6; // non-canonical encoding
     e |= ((*out_char >> 11) == 0x1b) << 7;  // surrogate half?
-    e |= (*out_char > IM_UNICODE_CODEPOINT_MAX) << 8;  // out of range?
+    e |= (*out_char > IM_UNICODE_CODEPOINT_MAX) << 8;  // out of range we can store in ImWchar (FIXME: May evolve)
     e |= (s[1] & 0xc0) >> 2;
     e |= (s[2] & 0xc0) >> 4;
     e |= (s[3]       ) >> 6;
