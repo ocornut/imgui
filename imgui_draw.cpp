@@ -3637,14 +3637,11 @@ void ImFontAtlasBuildSetupFontSpecialGlyphs(ImFontAtlas* atlas, ImFont* font, Im
     IM_ASSERT(src_idx_in_font >= 0 && src_idx_in_font < font->SourcesCount);
     IM_UNUSED(atlas);
 
-    // While manipulating glyphs during init we want to restrict all searches for one source font.
-    font->LockSingleSrcConfigIdx = (short)src_idx_in_font;
-
     // Find Fallback character. Actual glyph loaded in GetFontBaked().
     const ImWchar fallback_chars[] = { font->FallbackChar, (ImWchar)IM_UNICODE_CODEPOINT_INVALID, (ImWchar)'?', (ImWchar)' ' };
     if (font->FallbackChar == 0)
         for (ImWchar candidate_char : fallback_chars)
-            if (candidate_char != 0 && font->IsGlyphInFont(candidate_char)) // FIXME: does not respect LockSingleSrcConfigIdx()
+            if (candidate_char != 0 && font->IsGlyphInFont(candidate_char))
             {
                 font->FallbackChar = (ImWchar)candidate_char;
                 break;
@@ -3666,7 +3663,6 @@ void ImFontAtlasBuildSetupFontSpecialGlyphs(ImFontAtlas* atlas, ImFont* font, Im
         font->EllipsisChar = 0x0085;
         font->EllipsisAutoBake = true;
     }
-    font->LockSingleSrcConfigIdx = -1;
 }
 
 void ImFontAtlasBuildDiscardFontBakedGlyph(ImFontAtlas* atlas, ImFont* font, ImFontBaked* baked, ImFontGlyph* glyph)
@@ -4290,15 +4286,11 @@ static ImFontGlyph* ImFontBaked_BuildLoadGlyph(ImFontBaked* baked, ImWchar codep
         if (ImFontGlyph* glyph = ImFontAtlasBuildSetupFontBakedEllipsis(atlas, baked))
             return glyph;
 
-    // Load from single source or all sources?
-    int srcs_count = (font->LockSingleSrcConfigIdx != -1) ? 1 : font->SourcesCount;
-    ImFontConfig* srcs = (font->LockSingleSrcConfigIdx != -1) ? &font->Sources[font->LockSingleSrcConfigIdx] : font->Sources;
-
     // Call backend
     char* loader_user_data_p = (char*)baked->FontLoaderDatas;
-    for (int src_n = 0; src_n < srcs_count; src_n++)
+    for (int src_n = 0; src_n < font->SourcesCount; src_n++)
     {
-        ImFontConfig* src = &srcs[src_n];
+        ImFontConfig* src = &font->Sources[src_n];
         const ImFontLoader* loader = src->FontLoader ? src->FontLoader : atlas->FontLoader;
         if (!src->GlyphExcludeRanges || ImFontAtlasBuildAcceptCodepointForSource(src, codepoint))
             if (ImFontGlyph* glyph = loader->FontBakedLoadGlyph(atlas, src, baked, loader_user_data_p, codepoint))
@@ -4884,7 +4876,6 @@ ImFont::ImFont()
 {
     memset(this, 0, sizeof(*this));
     Scale = 1.0f;
-    LockSingleSrcConfigIdx = -1;
 }
 
 ImFont::~ImFont()
