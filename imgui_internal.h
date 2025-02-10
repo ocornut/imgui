@@ -2944,7 +2944,7 @@ struct ImGuiTableColumnSettings
     ImGuiTableColumnIdx     DisplayOrder;
     ImGuiTableColumnIdx     SortOrder;
     ImU8                    SortDirection : 2;
-    ImU8                    IsEnabled : 1; // "Visible" in ini file
+    ImS8                    IsEnabled : 2; // "Visible" in ini file
     ImU8                    IsStretch : 1;
 
     ImGuiTableColumnSettings()
@@ -2954,7 +2954,7 @@ struct ImGuiTableColumnSettings
         Index = -1;
         DisplayOrder = SortOrder = -1;
         SortDirection = ImGuiSortDirection_None;
-        IsEnabled = 1;
+        IsEnabled = -1;
         IsStretch = 0;
     }
 };

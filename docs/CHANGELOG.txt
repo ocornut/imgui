@@ -57,6 +57,8 @@ Other changes:
   which amusingly made it disappear when using very big font/frame size.
 - Tables: fixed calling SetNextWindowScroll() on clipped scrolling table
   to not leak the value into a subsequent window. (#8196)
+- Tables: fixed an issue where Columns Visible/Hidden state wouldn't be correctly
+  overridden when hot-reloading .ini state. (#7934)
 - TextLinkOpenURL(): fixed default Win32 io.PlatformOpenInShellFn handler to
   handle UTF-8 regardless of system regional settings. (#7660) [@achabense]
 - Demo: Combos: demonstrate a very simple way to add a filter to a combo,
@@ -66,6 +68,7 @@ Other changes:
 - Backends: Metal: Fixed a crash on application resources. (#8367, #7419) [@anszom]
 - Backends: WebGPU: Fix for DAWN API rename WGPUProgrammableStageDescriptor -> WGPUComputeState.
   [@PhantomCloak] (#8369)
+
 
 -----------------------------------------------------------------------
  VERSION 1.91.8 (Released 2025-01-31)

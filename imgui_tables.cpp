@@ -3741,7 +3741,7 @@ void ImGui::TableLoadSettings(ImGuiTable* table)
         else
             column->DisplayOrder = (ImGuiTableColumnIdx)column_n;
         display_order_mask |= (ImU64)1 << column->DisplayOrder;
-        column->IsUserEnabled = column->IsUserEnabledNextFrame = column_settings->IsEnabled;
+        column->IsUserEnabled = column->IsUserEnabledNextFrame = (column_settings->IsEnabled != -1 ? column_settings->IsEnabled == 1 : (column->Flags & ImGuiTableColumnFlags_DefaultHide) ? 0 : 1);
         column->SortOrder = column_settings->SortOrder;
         column->SortDirection = column_settings->SortDirection;
     }
