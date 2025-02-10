@@ -21187,7 +21187,7 @@ static void MetricsHelpMarker(const char* desc)
 }
 
 #ifdef IMGUI_ENABLE_FREETYPE
-namespace ImGuiFreeType { IMGUI_API const ImFontBackendIO* GetBackendIOForFreeType(); }
+namespace ImGuiFreeType { IMGUI_API const ImFontLoader* GetBackendIOForFreeType(); }
 #endif
 
 // [DEBUG] List fonts in a font atlas and display its texture
@@ -21205,14 +21205,14 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
     Checkbox("Show font preview", &cfg->ShowFontPreview);
 
     // Font loaders
-    if (TreeNode("Loader", "Loader: \'%s\'", atlas->FontBackendName ? atlas->FontBackendName : "NULL"))
+    if (TreeNode("Loader", "Loader: \'%s\'", atlas->FontLoaderName ? atlas->FontLoaderName : "NULL"))
     {
-        const ImFontBackendIO* backend_io_current = atlas->FontBackendIO;
+        const ImFontLoader* loader_current = atlas->FontLoader;
         BeginDisabled(!atlas->DrawListSharedData || !atlas->DrawListSharedData->RendererHasTextures);
 #ifdef IMGUI_ENABLE_STB_TRUETYPE
-        const ImFontBackendIO* backend_io_stbtruetype = ImFontAtlasGetBackendIOForStbTruetype();
-        if (RadioButton("stb_truetype", backend_io_current == backend_io_stbtruetype))
-            ImFontAtlasBuildSetupFontBackendIO(atlas, backend_io_stbtruetype);
+        const ImFontLoader* loader_stbtruetype = ImFontAtlasGetFontLoaderForStbTruetype();
+        if (RadioButton("stb_truetype", loader_current == loader_stbtruetype))
+            ImFontAtlasBuildSetupFontLoader(atlas, loader_stbtruetype);
 #else
         BeginDisabled();
         RadioButton("stb_truetype", false);
@@ -21221,9 +21221,9 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
 #endif
         SameLine();
 #ifdef IMGUI_ENABLE_FREETYPE
-        const ImFontBackendIO* backend_io_freetype = ImGuiFreeType::GetBackendIOForFreeType();
-        if (RadioButton("FreeType", backend_io_current == backend_io_freetype))
-            ImFontAtlasBuildSetupFontBackendIO(atlas, backend_io_freetype);
+        const ImFontLoader* loader_freetype = ImGuiFreeType::GetBackendIOForFreeType();
+        if (RadioButton("FreeType", loader_current == loader_freetype))
+            ImFontAtlasBuildSetupFontLoader(atlas, loader_freetype);
 #else
         BeginDisabled();
         RadioButton("FreeType", false);

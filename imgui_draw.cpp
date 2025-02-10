@@ -2464,25 +2464,30 @@ void ImTextureData::DestroyPixels()
 // - ImFontAtlas::BuildGrowTexture()
 // - ImFontAtlas::BuildCompactTexture()
 // - ImFontAtlasUpdateTextures()
+//-----------------------------------------------------------------------------
 // - ImFontAtlasTextureBlockConvertAndPostProcess()
 // - ImFontAtlasTextureBlockConvert()
 // - ImFontAtlasTextureBlockPostProcessMultiply()
 // - ImFontAtlasTextureBlockCopy()
 // - ImFontAtlasTextureBlockQueueUpload()
+//-----------------------------------------------------------------------------
 // - ImFontAtlas::GetTexDataAsAlpha8() [legacy]
 // - ImFontAtlas::GetTexDataAsRGBA32() [legacy]
+// - ImFontAtlas::Build()
+//-----------------------------------------------------------------------------
 // - ImFontAtlas::AddFont()
 // - ImFontAtlas::AddFontDefault()
 // - ImFontAtlas::AddFontFromFileTTF()
 // - ImFontAtlas::AddFontFromMemoryTTF()
 // - ImFontAtlas::AddFontFromMemoryCompressedTTF()
 // - ImFontAtlas::AddFontFromMemoryCompressedBase85TTF()
+//-----------------------------------------------------------------------------
 // - ImFontAtlas::AddCustomRectRegular()
 // - ImFontAtlas::AddCustomRectFontGlyph()
 // - ImFontAtlas::CalcCustomRectUV()
 // - ImFontAtlasGetMouseCursorTexData()
-// - ImFontAtlas::Build()
-// - ImFontAtlasBuildSetupFontBackendIO()
+//-----------------------------------------------------------------------------
+// - ImFontAtlasBuildSetupFontLoader()
 // - ImFontAtlasBuildPreloadAllGlyphRanges()
 // - ImFontAtlasBuildUpdatePointers()
 // - ImFontAtlasBuildRenderBitmapFromString()
@@ -2491,10 +2496,12 @@ void ImTextureData::DestroyPixels()
 // - ImFontAtlasBuildAddFont()
 // - ImFontAtlasBuildSetupFontSpecialGlyphs()
 // - ImFontAtlasBuildReloadFont()
+//-----------------------------------------------------------------------------
 // - ImFontAtlasAddDrawListSharedData()
 // - ImFontAtlasRemoveDrawListSharedData()
 // - ImFontAtlasUpdateDrawListsTextures()
 // - ImFontAtlasUpdateDrawListsSharedData()
+//-----------------------------------------------------------------------------
 // - ImFontAtlasBuildSetTexture()
 // - ImFontAtlasBuildAddTexture()
 // - ImFontAtlasBuildRepackTexture()
@@ -2502,14 +2509,17 @@ void ImTextureData::DestroyPixels()
 // - ImFontAtlasBuildCompactTexture()
 // - ImFontAtlasBuildInit()
 // - ImFontAtlasBuildDestroy()
+//-----------------------------------------------------------------------------
 // - ImFontAtlasPackInit()
 // - ImFontAtlasPackAddRect()
 // - ImFontAtlasPackGetRect()
+//-----------------------------------------------------------------------------
 // - ImFont::BuildLoadGlyph()
 // - ImFont::BuildClearGlyphs()
+//-----------------------------------------------------------------------------
 // - ImFontAtlasDebugLogTextureRequests()
 //-----------------------------------------------------------------------------
-// - ImFontAtlasGetBackendIOForStbTruetype()
+// - ImFontAtlasGetFontLoaderForStbTruetype()
 //-----------------------------------------------------------------------------
 
 // A work of art lies ahead! (. = white layer, X = black layer, others are blank)
@@ -2631,12 +2641,12 @@ void ImFontAtlas::ClearFonts()
 void ImFontAtlas::Clear()
 {
     //IM_DELETE(Builder); // FIXME-NEW-ATLAS: ClearXXX functions
-    const ImFontBackendIO* font_backend_io = FontBackendIO;
-    ImFontAtlasBuildSetupFontBackendIO(this, NULL);
+    const ImFontLoader* font_loader = FontLoader;
+    ImFontAtlasBuildSetupFontLoader(this, NULL);
     ClearInputData();
     ClearTexData();
     ClearFonts();
-    ImFontAtlasBuildSetupFontBackendIO(this, font_backend_io);
+    ImFontAtlasBuildSetupFontLoader(this, font_loader);
 }
 
 void ImFontAtlas::ClearCache()
@@ -3110,16 +3120,16 @@ bool ImFontAtlas::Build()
         AddFontDefault();
 
     // Select builder
-    // - Note that we do not reassign to atlas->FontBackendIO, since it is likely to point to static data which
+    // - Note that we do not reassign to atlas->FontLoader, since it is likely to point to static data which
     //   may mess with some hot-reloading schemes. If you need to assign to this (for dynamic selection) AND are
-    //   using a hot-reloading scheme that messes up static data, store your own instance of ImFontBackendIO somewhere
+    //   using a hot-reloading scheme that messes up static data, store your own instance of ImFontLoader somewhere
     //   and point to it instead of pointing directly to return value of the GetBackendIOXXX functions.
-    if (FontBackendIO == NULL)
+    if (FontLoader == NULL)
     {
 #ifdef IMGUI_ENABLE_FREETYPE
-        ImFontAtlasBuildSetupFontBackendIO(this, ImGuiFreeType::GetBackendIOForFreeType());
+        ImFontAtlasBuildSetupFontLoader(this, ImGuiFreeType::GetBackendIOForFreeType());
 #elif defined(IMGUI_ENABLE_STB_TRUETYPE)
-        ImFontAtlasBuildSetupFontBackendIO(this, ImFontAtlasGetBackendIOForStbTruetype());
+        ImFontAtlasBuildSetupFontLoader(this, ImFontAtlasGetFontLoaderForStbTruetype());
 #else
         IM_ASSERT(0); // Invalid Build function
 #endif
@@ -3145,23 +3155,23 @@ void ImFontAtlasBuildGetOversampleFactors(ImFontConfig* src, int* out_oversample
     *out_oversample_v = (src->OversampleV != 0) ? src->OversampleV : 1;
 }
 
-void ImFontAtlasBuildSetupFontBackendIO(ImFontAtlas* atlas, const ImFontBackendIO* font_backend_io)
+void ImFontAtlasBuildSetupFontLoader(ImFontAtlas* atlas, const ImFontLoader* font_loader)
 {
-    if (atlas->FontBackendIO == font_backend_io)
+    if (atlas->FontLoader == font_loader)
         return;
     IM_ASSERT(!atlas->Locked && "Cannot modify a locked ImFontAtlas!");
 
     ImFontAtlasBuildDestroy(atlas);
-    if (atlas->FontBackendIO && atlas->FontBackendIO->FontBackend_BackendShutdown)
+    if (atlas->FontLoader && atlas->FontLoader->LoaderShutdown)
     {
-        atlas->FontBackendIO->FontBackend_BackendShutdown(atlas);
-        IM_ASSERT(atlas->FontBackendData == NULL);
+        atlas->FontLoader->LoaderShutdown(atlas);
+        IM_ASSERT(atlas->FontLoaderData == NULL);
     }
-    atlas->FontBackendIO = font_backend_io;
-    atlas->FontBackendName = font_backend_io ? font_backend_io->FontBackend_Name : "NULL";
-    if (atlas->FontBackendIO && atlas->FontBackendIO->FontBackend_BackendInit)
-        atlas->FontBackendIO->FontBackend_BackendInit(atlas);
-    if (atlas->Builder && font_backend_io != NULL)
+    atlas->FontLoader = font_loader;
+    atlas->FontLoaderName = font_loader ? font_loader->Name : "NULL";
+    if (atlas->FontLoader && atlas->FontLoader->LoaderInit)
+        atlas->FontLoader->LoaderInit(atlas);
+    if (atlas->Builder && font_loader != NULL)
         atlas->ClearCache();
 }
 
@@ -3378,8 +3388,8 @@ bool ImFontAtlasBuildAddFont(ImFontAtlas* atlas, ImFontConfig* src)
         IM_ASSERT(font->Sources == src);
     }
 
-    const ImFontBackendIO* font_backend_io = atlas->FontBackendIO;
-    if (!font_backend_io->FontBackend_FontSrcInit(atlas, src))
+    const ImFontLoader* font_loader = atlas->FontLoader;
+    if (!font_loader->FontSrcInit(atlas, src))
         return false; // FIXME-NEWATLAS: error handling
 
     ImFontAtlasBuildSetupFontSpecialGlyphs(atlas, src);
@@ -3722,9 +3732,9 @@ void ImFontAtlasBuildDestroy(ImFontAtlas* atlas)
 {
     for (ImFont* font : atlas->Fonts)
         font->BuildClearGlyphs();
-    if (atlas->FontBackendIO && atlas->FontBackendIO->FontBackend_FontSrcDestroy != NULL)
+    if (atlas->FontLoader && atlas->FontLoader->FontSrcDestroy != NULL)
         for (ImFontConfig& font_cfg : atlas->Sources)
-            atlas->FontBackendIO->FontBackend_FontSrcDestroy(atlas, &font_cfg);
+            atlas->FontLoader->FontSrcDestroy(atlas, &font_cfg);
 
     IM_DELETE(atlas->Builder);
     atlas->Builder = NULL;
@@ -3808,8 +3818,8 @@ ImFontGlyph* ImFont::BuildLoadGlyph(ImWchar codepoint)
     //IMGUI_DEBUG_LOG("[font] BuildAddGlyph U+%04X (%s)\n", (unsigned int)codepoint, ImTextCharToUtf8(utf8_buf, (unsigned int)codepoint));
 
     ImFontAtlas* atlas = ContainerAtlas;
-    const ImFontBackendIO* font_backend_io = atlas->FontBackendIO;
-    if (!font_backend_io->FontBackend_FontAddGlyph(atlas, this, codepoint))
+    const ImFontLoader* font_loader = atlas->FontLoader;
+    if (!font_loader->FontAddGlyph(atlas, this, codepoint))
     {
         // Mark index as not found, so we don't attempt the search twice
         BuildGrowIndex(codepoint + 1);
@@ -3873,7 +3883,7 @@ static bool ImGui_ImplStbTrueType_FontSrcInit(ImFontAtlas* atlas, ImFontConfig* 
     IM_UNUSED(atlas);
 
     ImGui_ImplStbTrueType_FontSrcData* bd_font_data = IM_NEW(ImGui_ImplStbTrueType_FontSrcData);
-    IM_ASSERT(src->FontBackendData == NULL);
+    IM_ASSERT(src->FontLoaderData == NULL);
 
     // Initialize helper structure for font loading and verify that the TTF/OTF data is correct
     const int font_offset = stbtt_GetFontOffsetForIndex((unsigned char*)src->FontData, src->FontNo);
@@ -3883,7 +3893,7 @@ static bool ImGui_ImplStbTrueType_FontSrcInit(ImFontAtlas* atlas, ImFontConfig* 
         IM_ASSERT(0 && "stbtt_InitFont(): failed to parse FontData. It is correct and complete? Check FontDataSize.");
         return false;
     }
-    src->FontBackendData = bd_font_data;
+    src->FontLoaderData = bd_font_data;
 
     // FIXME-NEWATLAS-V2: reevaluate sizing metrics
     int oversample_h, oversample_v;
@@ -3918,16 +3928,16 @@ static bool ImGui_ImplStbTrueType_FontSrcInit(ImFontAtlas* atlas, ImFontConfig* 
 static void ImGui_ImplStbTrueType_FontSrcDestroy(ImFontAtlas* atlas, ImFontConfig* src)
 {
     IM_UNUSED(atlas);
-    ImGui_ImplStbTrueType_FontSrcData* bd_font_data = (ImGui_ImplStbTrueType_FontSrcData*)src->FontBackendData;
+    ImGui_ImplStbTrueType_FontSrcData* bd_font_data = (ImGui_ImplStbTrueType_FontSrcData*)src->FontLoaderData;
     IM_DELETE(bd_font_data);
-    src->FontBackendData = NULL;
+    src->FontLoaderData = NULL;
 }
 
 static bool ImGui_ImplStbTrueType_FontSrcContainsGlyph(ImFontAtlas* atlas, ImFontConfig* src, ImWchar codepoint)
 {
     IM_UNUSED(atlas);
 
-    ImGui_ImplStbTrueType_FontSrcData* bd_font_data = (ImGui_ImplStbTrueType_FontSrcData*)src->FontBackendData;
+    ImGui_ImplStbTrueType_FontSrcData* bd_font_data = (ImGui_ImplStbTrueType_FontSrcData*)src->FontLoaderData;
     IM_ASSERT(bd_font_data != NULL);
 
     int glyph_index = stbtt_FindGlyphIndex(&bd_font_data->FontInfo, (int)codepoint);
@@ -3944,7 +3954,7 @@ static bool ImGui_ImplStbTrueType_FontAddGlyph(ImFontAtlas* atlas, ImFont* font,
     for (int src_n = 0; src_n < scan_count; src_n++, bd_font_data++)
     {
         src = font->LockSingleSrcConfig ? font->LockSingleSrcConfig : &font->Sources[src_n];
-        bd_font_data = (ImGui_ImplStbTrueType_FontSrcData*)src->FontBackendData;
+        bd_font_data = (ImGui_ImplStbTrueType_FontSrcData*)src->FontLoaderData;
         glyph_index = stbtt_FindGlyphIndex(&bd_font_data->FontInfo, (int)codepoint);
         if (glyph_index != 0)
             break;
@@ -4032,15 +4042,15 @@ static bool ImGui_ImplStbTrueType_FontAddGlyph(ImFontAtlas* atlas, ImFont* font,
     return true;
 }
 
-const ImFontBackendIO* ImFontAtlasGetBackendIOForStbTruetype()
+const ImFontLoader* ImFontAtlasGetFontLoaderForStbTruetype()
 {
-    static ImFontBackendIO io;
-    io.FontBackend_Name = "stb_truetype";
-    io.FontBackend_FontSrcInit = ImGui_ImplStbTrueType_FontSrcInit;
-    io.FontBackend_FontSrcDestroy = ImGui_ImplStbTrueType_FontSrcDestroy;
-    io.FontBackend_FontSrcContainsGlyph = ImGui_ImplStbTrueType_FontSrcContainsGlyph;
-    io.FontBackend_FontAddGlyph = ImGui_ImplStbTrueType_FontAddGlyph;
-    return &io;
+    static ImFontLoader loader;
+    loader.Name = "stb_truetype";
+    loader.FontSrcInit = ImGui_ImplStbTrueType_FontSrcInit;
+    loader.FontSrcDestroy = ImGui_ImplStbTrueType_FontSrcDestroy;
+    loader.FontSrcContainsGlyph = ImGui_ImplStbTrueType_FontSrcContainsGlyph;
+    loader.FontAddGlyph = ImGui_ImplStbTrueType_FontAddGlyph;
+    return &loader;
 }
 
 #endif // IMGUI_ENABLE_STB_TRUETYPE
@@ -4526,7 +4536,7 @@ bool ImFont::IsGlyphInFont(ImWchar c)
 {
     ImFontAtlas* atlas = ContainerAtlas;
     for (int src_n = 0; src_n < SourcesCount; src_n++)
-        if (atlas->FontBackendIO->FontBackend_FontSrcContainsGlyph(atlas, &Sources[src_n], c))
+        if (atlas->FontLoader->FontSrcContainsGlyph(atlas, &Sources[src_n], c))
             return true;
     return false;
 }

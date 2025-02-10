@@ -174,10 +174,10 @@ struct ImDrawVert;                  // A single vertex (pos + uv + col = 20 byte
 struct ImFont;                      // Runtime data for a single font within a parent ImFontAtlas
 struct ImFontAtlas;                 // Runtime data for multiple fonts, bake multiple fonts into a single texture, TTF/OTF font loader
 struct ImFontAtlasBuilder;          // Opaque storage for building a ImFontAtlas
-struct ImFontBackendIO;             // Opaque interface to a font builder (stb_truetype or FreeType).
 struct ImFontConfig;                // Configuration data when adding a font or merging fonts
 struct ImFontGlyph;                 // A single font glyph (code point + coordinates within in ImFontAtlas + offset)
 struct ImFontGlyphRangesBuilder;    // Helper to build glyph ranges from text/string data
+struct ImFontLoader;                // Opaque interface to a font loading backend (stb_truetype, FreeType etc.).
 struct ImTextureData;               // Specs and pixel storage for a texture used by Dear ImGui.
 struct ImTextureRect;               // Coordinates of a rectangle within a texture.
 struct ImColor;                     // Helper functions to create a color that can be converted to either u32 or float4 (*OBSOLETE* please avoid using)
@@ -3535,7 +3535,7 @@ struct ImFontConfig
     // [Internal]
     char            Name[40];               // Name (strictly to ease debugging)
     ImFont*         DstFont;                // Target font (as we merging fonts, multiple ImFontConfig may target the same font)
-    void*           FontBackendData;        // Font backend opaque storage (per font config)
+    void*           FontLoaderData;         // Font loader opaque storage (per font config)
 
     IMGUI_API ImFontConfig();
 };
@@ -3722,10 +3722,10 @@ struct ImFontAtlas
 
     // [Internal] Font builder
     ImFontAtlasBuilder*         Builder;            // Opaque interface to our data that doesn't need to be public
-    const ImFontBackendIO*      FontBackendIO;      // Font backend opaque interface (default to stb_truetype, can be changed to use FreeType by defining IMGUI_ENABLE_FREETYPE). Don't set directly!
-    const char*                 FontBackendName;    // Font backend name (for display e.g. in About box)
-    void*                       FontBackendData;    // Font backend opaque storage
-    unsigned int                FontBuilderFlags;   // (FIXME: Should be called FontBackendFlags) Shared flags (for all fonts) for custom font builder. THIS IS BUILD IMPLEMENTATION DEPENDENT (e.g. . Per-font override is also available in ImFontConfig.
+    const ImFontLoader*         FontLoader;         // Font loader opaque interface (default to stb_truetype, can be changed to use FreeType by defining IMGUI_ENABLE_FREETYPE). Don't set directly!
+    const char*                 FontLoaderName;     // Font loader name (for display e.g. in About box) == FontLoader->Name
+    void*                       FontLoaderData;     // Font backend opaque storage
+    unsigned int                FontBuilderFlags;   // [FIXME: Should be called FontLoaderFlags] Shared flags (for all fonts) for font loader. THIS IS BUILD IMPLEMENTATION DEPENDENT (e.g. . Per-font override is also available in ImFontConfig.
     int                         _PackedSurface;     // Number of packed pixels. Used when compacting to heuristically find the ideal texture size.
     int                         _PackedRects;       // Number of packed rectangles.
     float                       _PackNodesFactor = 1.0f;

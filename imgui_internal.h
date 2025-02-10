@@ -37,7 +37,7 @@ Index of this file:
 // [SECTION] Tab bar, Tab item support
 // [SECTION] Table support
 // [SECTION] ImGui internal API
-// [SECTION] ImFontBackendIO
+// [SECTION] ImFontLoader
 // [SECTION] ImFontAtlas internal API
 // [SECTION] Test Engine specific hooks (imgui_test_engine)
 
@@ -141,7 +141,6 @@ struct ImGuiTextIndex;              // Maintain a line index for a text buffer.
 // ImDrawList/ImFontAtlas
 struct ImDrawDataBuilder;           // Helper to build a ImDrawData instance
 struct ImDrawListSharedData;        // Data shared between all ImDrawList instances
-struct ImFontBackendIO;             // Hooks and storage for a given font backend.
 struct ImFontAtlasRect;             // Packed rectangle (same as ImTextureRect)
 struct ImFontAtlasBuilder;          // Internal storage for incrementally packing and building a ImFontAtlas
 
@@ -3914,28 +3913,27 @@ namespace ImGui
 
 
 //-----------------------------------------------------------------------------
-// [SECTION] ImFontBackendIO
+// [SECTION] ImFontLoader
 //-----------------------------------------------------------------------------
 
 // Hooks and storage for a given font backend.
 // This structure is likely to evolve as we add support for incremental atlas updates.
 // Conceptually this could be in ImGuiPlatformIO, but we are far from ready to make this public.
-struct ImFontBackendIO
+struct ImFontLoader
 {
-    const char*     FontBackend_Name;
-    bool            (*FontBackend_BackendInit)(ImFontAtlas* atlas);
-    void            (*FontBackend_BackendShutdown)(ImFontAtlas* atlas);
-    bool            (*FontBackend_FontSrcInit)(ImFontAtlas* atlas, ImFontConfig* src);
-    void            (*FontBackend_FontSrcDestroy)(ImFontAtlas* atlas, ImFontConfig* src);
-    bool            (*FontBackend_FontSrcContainsGlyph)(ImFontAtlas* atlas, ImFontConfig* src, ImWchar codepoint);
-    bool            (*FontBackend_FontAddGlyph)(ImFontAtlas* atlas, ImFont* font, ImWchar codepoint);
+    const char*     Name;
+    bool            (*LoaderInit)(ImFontAtlas* atlas);
+    void            (*LoaderShutdown)(ImFontAtlas* atlas);
+    bool            (*FontSrcInit)(ImFontAtlas* atlas, ImFontConfig* src);
+    void            (*FontSrcDestroy)(ImFontAtlas* atlas, ImFontConfig* src);
+    bool            (*FontSrcContainsGlyph)(ImFontAtlas* atlas, ImFontConfig* src, ImWchar codepoint);
+    bool            (*FontAddGlyph)(ImFontAtlas* atlas, ImFont* font, ImWchar codepoint);
 
-    ImFontBackendIO() { memset(this, 0, sizeof(*this)); }
+    ImFontLoader()  { memset(this, 0, sizeof(*this)); }
 };
 
-// Helper for font builder
 #ifdef IMGUI_ENABLE_STB_TRUETYPE
-IMGUI_API const ImFontBackendIO* ImFontAtlasGetBackendIOForStbTruetype();
+IMGUI_API const ImFontLoader* ImFontAtlasGetFontLoaderForStbTruetype();
 #endif
 
 //-----------------------------------------------------------------------------
@@ -3973,7 +3971,7 @@ struct ImFontAtlasBuilder
 };
 
 // FIXME-NEWATLAS: Cleanup
-IMGUI_API void              ImFontAtlasBuildSetupFontBackendIO(ImFontAtlas* atlas, const ImFontBackendIO* font_backend_io);
+IMGUI_API void              ImFontAtlasBuildSetupFontLoader(ImFontAtlas* atlas, const ImFontLoader* font_loader);
 IMGUI_API void              ImFontAtlasBuildUpdatePointers(ImFontAtlas* atlas);
 IMGUI_API void              ImFontAtlasBuildRenderBitmapFromString(ImFontAtlas* atlas, int x, int y, int w, int h, const char* in_str, char in_marker_char);
 
