@@ -155,14 +155,6 @@ namespace
     struct ImGui_ImplFreeType_FontSrcBakedData
     {
         FT_Size     FtSize;             // This represent a FT_Face with a given size.
-
-        // Metrics
-        float       Ascender;           // The pixel extents above the baseline in pixels (typically positive).
-        float       Descender;          // The extents below the baseline in pixels (typically negative).
-        float       LineSpacing;        // The baseline-to-baseline distance. Note that it usually is larger than the sum of the ascender and descender taken as absolute values. There is also no guarantee that no glyphs extend above or below subsequent baselines when using this distance. Think of it as a value the designer of the font finds appropriate.
-        float       LineGap;            // The spacing in pixels between one row's descent and the next row's ascent.
-        float       MaxAdvanceWidth;    // This field gives the maximum horizontal cursor advance for all glyphs in the font.
-
         ImGui_ImplFreeType_FontSrcBakedData() { memset((void*)this, 0, sizeof(*this)); }
     };
 
@@ -465,19 +457,17 @@ bool ImGui_ImplFreeType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig* src, ImF
     req.vertResolution = 0;
     FT_Request_Size(bd_font_data->FtFace, &req);
 
-    // Read metrics
-    FT_Size_Metrics metrics = bd_baked_data->FtSize->metrics;
-    bd_baked_data->Ascender = (float)FT_CEIL(metrics.ascender) * bd_font_data->InvRasterizationDensity;
-    bd_baked_data->Descender = (float)FT_CEIL(metrics.descender) * bd_font_data->InvRasterizationDensity;
-    bd_baked_data->LineSpacing = (float)FT_CEIL(metrics.height) * bd_font_data->InvRasterizationDensity;
-    bd_baked_data->LineGap = (float)FT_CEIL(metrics.height - metrics.ascender + metrics.descender) * bd_font_data->InvRasterizationDensity;
-    bd_baked_data->MaxAdvanceWidth = (float)FT_CEIL(metrics.max_advance) * bd_font_data->InvRasterizationDensity;
-
     // Output
     if (src->MergeMode == false)
     {
-        baked->Ascent = bd_baked_data->Ascender;
-        baked->Descent = bd_baked_data->Descender;
+        // Read metrics
+        FT_Size_Metrics metrics = bd_baked_data->FtSize->metrics;
+        const float scale = bd_font_data->InvRasterizationDensity;
+        baked->Ascent     = (float)FT_CEIL(metrics.ascender) * scale;       // The pixel extents above the baseline in pixels (typically positive).
+        baked->Descent    = (float)FT_CEIL(metrics.descender) * scale;      // The extents below the baseline in pixels (typically negative).
+        //LineSpacing     = (float)FT_CEIL(metrics.height) * scale;         // The baseline-to-baseline distance. Note that it usually is larger than the sum of the ascender and descender taken as absolute values. There is also no guarantee that no glyphs extend above or below subsequent baselines when using this distance. Think of it as a value the designer of the font finds appropriate.
+        //LineGap         = (float)FT_CEIL(metrics.height - metrics.ascender + metrics.descender) * scale; // The spacing in pixels between one row's descent and the next row's ascent.
+        //MaxAdvanceWidth = (float)FT_CEIL(metrics.max_advance) * scale;    // This field gives the maximum horizontal cursor advance for all glyphs in the font.
     }
     return true;
 }
@@ -500,7 +490,7 @@ ImFontGlyph* ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontCon
     if (glyph_index == 0)
         return NULL;
 
-    if (bd_font_data->BakedLastActivated != baked)
+    if (bd_font_data->BakedLastActivated != baked) // <-- could use id
     {
         // Activate current size
         ImGui_ImplFreeType_FontSrcBakedData* bd_baked_data = (ImGui_ImplFreeType_FontSrcBakedData*)loader_data_for_baked_src;
