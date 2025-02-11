@@ -862,7 +862,7 @@ static void ShowDemoWindowWidgets(ImGuiDemoWindowData* demo_data)
                 "CTRL+Left/Right to word jump.\n"
                 "CTRL+A or Double-Click to select all.\n"
                 "CTRL+X,CTRL+C,CTRL+V clipboard.\n"
-                "CTRL+Z,CTRL+Y undo/redo.\n"
+                "CTRL+Z undo, CTRL+Y/CTRL+SHIFT+Z redo.\n"
                 "ESCAPE to revert.\n\n"
                 "PROGRAMMER:\n"
                 "You can use the ImGuiInputTextFlags_CallbackResize facility if you need to wire InputText() "
@@ -8237,7 +8237,7 @@ void ImGui::ShowUserGuide()
     ImGui::BulletText("CTRL+Left/Right to word jump.");
     ImGui::BulletText("CTRL+A or double-click to select all.");
     ImGui::BulletText("CTRL+X/C/V to use clipboard cut/copy/paste.");
-    ImGui::BulletText("CTRL+Z,CTRL+Y to undo/redo.");
+    ImGui::BulletText("CTRL+Z to undo, CTRL+Y/CTRL+SHIFT+Z to redo.");
     ImGui::BulletText("ESCAPE to revert.");
     ImGui::Unindent();
     ImGui::BulletText("With keyboard navigation enabled:");
