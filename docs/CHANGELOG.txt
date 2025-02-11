@@ -53,6 +53,7 @@ Other changes:
 - Windows, Style: Added style.WindowBorderHoverPadding setting to configure
   inner/outer padding applied to hit-testing of windows borders and detection
   of hovered window.
+- InputText: Allow CTRL+Shift+Z to redo even outside of OSX. (#8389) [@tanksdude]
 - InputTextWithHint(): Fixed buffer-overflow (luckily often with no visible effect)
   when a user callback modified the buffer contents in a way that altered the
   visibility of the preview/hint buffer. (#8368) [@m9710797, @ocornut]
