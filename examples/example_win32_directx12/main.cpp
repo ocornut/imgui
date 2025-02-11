@@ -54,7 +54,7 @@ struct ExampleDescriptorHeapAllocator
         HeapHandleIncrement = device->GetDescriptorHandleIncrementSize(HeapType);
         FreeIndices.reserve((int)desc.NumDescriptors);
         for (int n = desc.NumDescriptors; n > 0; n--)
-            FreeIndices.push_back(n);
+            FreeIndices.push_back(n - 1);
     }
     void Destroy()
     {
