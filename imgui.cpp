@@ -3906,6 +3906,7 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     InputEventsNextEventId = 1;
 
     WindowsActiveCount = 0;
+    WindowsBorderHoverPadding = 0.0f;
     CurrentWindow = NULL;
     HoveredWindow = NULL;
     HoveredWindowUnderMovingWindow = NULL;
