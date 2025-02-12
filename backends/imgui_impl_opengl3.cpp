@@ -309,6 +309,7 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     // GLES 2
     bd->GlVersion = 200;
     bd->GlProfileIsES2 = true;
+    IM_UNUSED(gl_version_str);
 #else
     // Desktop or GLES 3
     GLint major = 0;
