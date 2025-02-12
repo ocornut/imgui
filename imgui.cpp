@@ -16538,7 +16538,7 @@ static int ImGui::FindPlatformMonitorForRect(const ImRect& rect)
     // Use a minimum threshold of 1.0f so a zero-sized rect won't false positive, and will still find the correct monitor given its position.
     // This is necessary for tooltips which always resize down to zero at first.
     const float surface_threshold = ImMax(rect.GetWidth() * rect.GetHeight() * 0.5f, 1.0f);
-    int best_monitor_n = -1;
+    int best_monitor_n = 0; // Default to the first monitor as fallback
     float best_monitor_surface = 0.001f;
 
     for (int monitor_n = 0; monitor_n < g.PlatformIO.Monitors.Size && best_monitor_surface < surface_threshold; monitor_n++)
