@@ -15,14 +15,30 @@ set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DVK_PROTOTYPES")
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVK_PROTOTYPES")
 
 # GLFW
-set(GLFW_DIR ../../../glfw) # Set this to point to an up-to-date GLFW repo
-option(GLFW_BUILD_EXAMPLES "Build the GLFW example programs" OFF)
-option(GLFW_BUILD_TESTS "Build the GLFW test programs" OFF)
-option(GLFW_BUILD_DOCS "Build the GLFW documentation" OFF)
-option(GLFW_INSTALL "Generate installation target" OFF)
-option(GLFW_DOCUMENT_INTERNALS "Include internals in documentation" OFF)
-add_subdirectory(${GLFW_DIR} binary_dir EXCLUDE_FROM_ALL)
-include_directories(${GLFW_DIR}/include)
+set(GLFW_VERSION 3.4)
+include(FetchContent)
+	FetchContent_Declare(
+    glfw
+    URL https://github.com/glfw/glfw/archive/refs/tags/${GLFW_VERSION}.tar.gz)
+	#GIT_REPOSITORY https://github.com/glfw/glfw )
+
+FetchContent_GetProperties(glfw)
+if (NOT glfw_POPULATED)
+	set(FETCHCONTENT_QUIET NO)
+    FetchContent_Populate(glfw)
+	set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+	set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+	set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+	if (NOT STATIC_BUILD)
+	set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
+	endif()
+	add_subdirectory(${glfw_SOURCE_DIR} ${glfw_BINARY_DIR} EXCLUDE_FROM_ALL)
+endif()
+
+#if dynamic glfw then install
+install(TARGETS glfw RUNTIME DESTINATION ${CMAKE_CURRENT_BINARY_DIR}
+					LIBRARY DESTINATION ${CMAKE_CURRENT_BINARY_DIR}
+)
 
 # Dear ImGui
 set(IMGUI_DIR ../../)
