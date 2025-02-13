@@ -66,6 +66,7 @@ Other changes:
   overridden when hot-reloading .ini state. (#7934)
 - Tables: tamed some .ini settings optimizations to more accurately allow
   overwriting/hot-reloading settings in more situations. (#7934)
+- Tables, Error Handling: Recovery from invalid index in TableSetColumnIndex(). (#1651)
 - Styles, Tabs: made the Close Button of selected tabs always visible by default,
   without requiring to hover the tab. (#8387)
   - Added style.TabCloseButtonMinWidthSelected/TabCloseButtonMinWidthUnselected settings
