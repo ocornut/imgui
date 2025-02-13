@@ -72,13 +72,15 @@ Other changes:
 - Tables, Error Handling: Recovery from invalid index in TableSetColumnIndex(). (#1651)
 - Selectable: Fixed horizontal label alignment with SelectableTextAlign.x > 0 and
   specifying a selectable size. (#8338)
-- Styles, Tabs: made the Close Button of selected tabs always visible by default,
+- Tabs, Style: made the Close Button of selected tabs always visible by default,
   without requiring to hover the tab. (#8387)
   - Added style.TabCloseButtonMinWidthSelected/TabCloseButtonMinWidthUnselected settings
     to configure visibility of the Close Button for selected and unselected tabs.
     (-1: always visible. 0.0f: visible when hovered. >0.0f: visible when hovered if minimum width)
   - Default for selected tabs: TabCloseButtonMinWidthSelected = -1.0f (always visible)
   - Default for unselected tabs: TabCloseButtonMinWidthUnselected = 0.0f (visible when hovered)
+- Tabs: fixed middle-mouse-button to close tab not checking that close button
+  is hovered, merely it's visibility. (#8399, #8387) [@nicovanbentum]
 - TextLinkOpenURL(): fixed default Win32 io.PlatformOpenInShellFn handler to
   handle UTF-8 regardless of system regional settings. (#7660) [@achabense]
 - Demo: Combos: demonstrate a very simple way to add a filter to a combo,
