@@ -1159,7 +1159,14 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info)
 
     bd->VulkanInitInfo = *info;
     if (bd->VulkanInitInfo.ApiVersion == 0)
+    {
+        // We don't care about other versions for now, so don't need to make this exhaustive (with #ifdef VK_VERSION_1_X checks)
+#ifdef VK_HEADER_VERSION_COMPLETE
         bd->VulkanInitInfo.ApiVersion = VK_HEADER_VERSION_COMPLETE;
+#else
+        bd->VulkanInitInfo.ApiVersion = VK_API_VERSION_1_0;
+#endif
+    }
 
     ImGui_ImplVulkan_CreateDeviceObjects();
 
