@@ -43,6 +43,10 @@ Breaking changes:
 
 - Renamed ImFontConfig::GlyphExtraSpacing.x option to GlyphExtraAdvanceX. (#242)
 - Renamed style.TabMinWidthForCloseButton to style.TabCloseButtonMinWidthUnselected.
+- Backends: Vulkan: Added 'uint32_t api_version' argument to ImGui_ImplVulkan_LoadFunctions().
+  Note that it was also added to ImGui_ImplVulkan_InitInfo but for the later it is optional.
+  (#8326, #8365, #8400)
+
 
 Other changes:
 
