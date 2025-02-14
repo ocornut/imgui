@@ -47,7 +47,6 @@ Breaking changes:
   Note that it was also added to ImGui_ImplVulkan_InitInfo but for the later it is optional.
   (#8326, #8365, #8400)
 
-
 Other changes:
 
 - Fixed IsItemDeactivatedAfterEdit() signal being broken for Checkbox(),
@@ -71,6 +70,8 @@ Other changes:
 - Tables: tamed some .ini settings optimizations to more accurately allow
   overwriting/hot-reloading settings in more situations. (#7934)
 - Tables, Error Handling: Recovery from invalid index in TableSetColumnIndex(). (#1651)
+- Selectable: Fixed horizontal label alignment with SelectableTextAlign.x > 0 and
+  specifying a selectable size. (#8338)
 - Styles, Tabs: made the Close Button of selected tabs always visible by default,
   without requiring to hover the tab. (#8387)
   - Added style.TabCloseButtonMinWidthSelected/TabCloseButtonMinWidthUnselected settings
