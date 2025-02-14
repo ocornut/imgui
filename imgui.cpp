@@ -16117,6 +16117,8 @@ ImGuiViewportP* ImGui::AddUpdateViewport(ImGuiWindow* window, ImGuiID id, const 
         // This is so we can select an appropriate font size on the first frame of our window lifetime
         if (viewport->PlatformMonitor != -1)
             viewport->DpiScale = g.PlatformIO.Monitors[viewport->PlatformMonitor].DpiScale;
+        else
+            viewport->DpiScale = 1.0f;
     }
 
     viewport->Window = window;
@@ -16536,9 +16538,8 @@ static int ImGui::FindPlatformMonitorForRect(const ImRect& rect)
     ImGuiContext& g = *GImGui;
 
     const int monitor_count = g.PlatformIO.Monitors.Size;
-    IM_ASSERT(monitor_count > 0);
     if (monitor_count <= 1)
-        return 0;
+        return monitor_count - 1;
 
     // Use a minimum threshold of 1.0f so a zero-sized rect won't false positive, and will still find the correct monitor given its position.
     // This is necessary for tooltips which always resize down to zero at first.
