@@ -2106,7 +2106,11 @@ bool ImGui::TableSetColumnIndex(int column_n)
     {
         if (table->CurrentColumn != -1)
             TableEndCell(table);
-        IM_ASSERT(column_n >= 0 && table->ColumnsCount);
+        if ((column_n >= 0 && column_n < table->ColumnsCount) == false)
+        {
+            IM_ASSERT_USER_ERROR(column_n >= 0 && column_n < table->ColumnsCount, "TableSetColumnIndex() invalid column index!");
+            return false;
+        }
         TableBeginCell(table, column_n);
     }
 
