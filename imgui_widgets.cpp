@@ -2287,9 +2287,9 @@ bool ImGui::DataTypeApplyFromText(const char* buf, ImGuiDataType data_type, void
     else
         format = ImParseFormatSanitizeForScanning(format, format_sanitized, IM_ARRAYSIZE(format_sanitized));
 
-    // Small types need a 32-bit buffer to receive the result from scanf()
+    // Small types need a 32-bit buffer to receive the result from scanf_s()
     int v32 = 0;
-    if (sscanf(buf, format, type_info->Size >= 4 ? p_data : &v32) < 1)
+    if (sscanf_s(buf, format, type_info->Size >= 4 ? p_data : &v32) < 1)
         return false;
     if (type_info->Size < 4)
     {

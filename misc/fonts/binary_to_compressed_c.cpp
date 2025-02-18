@@ -248,8 +248,9 @@ static void outliterals(stb_uchar *in, int numlit)
     else /*  numlit <= 65536) */ stb_out3(0x070000 + numlit-1);
 
     if (stb__out) {
-        memcpy(stb__out,in,numlit);
-        stb__out += numlit;
+        if (!memcpy_s(stb__out, sizeof(stb__out), in, numlit)) {
+            stb__out += numlit;
+        }
     } else
         fwrite(in, 1, numlit, stb__outfile);
 }
