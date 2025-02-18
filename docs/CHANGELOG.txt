@@ -87,6 +87,8 @@ Other changes:
   by showing the filter inside the combo contents. (#718)
 - Backends: SDL2, SDL3:  Using SDL_OpenURL() in platform_io.Platform_OpenInShellFn
   handler. (#7660) [@achabense]
+- Backends: OpenGL3: Lazily reinitialize embedded GL loader for when calling backend
+  from e.g. other DLL boundaries. (#8406)
 - Backends: Metal: Fixed a crash on application resources. (#8367, #7419) [@anszom]
 - Backends: Vulkan: Added ApiVersion field in ImGui_ImplVulkan_InitInfo.
   Default to header version if unspecified. (#8326, #8365) [@mklefrancois]
