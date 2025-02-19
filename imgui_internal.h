@@ -814,9 +814,9 @@ struct ImDrawDataBuilder
 
 struct ImGuiDataVarInfo
 {
-    ImGuiDataType   Type;
-    ImU32           Count;      // 1+
-    ImU32           Offset;     // Offset in parent structure
+    ImGuiDataType   DataType : 8;
+    ImU32           Count : 8;      // 1+
+    ImU32           Offset : 16;    // Offset in parent structure
     void* GetVarPtr(void* parent) const { return (void*)((unsigned char*)parent + Offset); }
 };
 
@@ -837,7 +837,7 @@ struct ImGuiDataTypeInfo
 // Extend ImGuiDataType_
 enum ImGuiDataTypePrivate_
 {
-    ImGuiDataType_Pointer = ImGuiDataType_COUNT + 1,
+    ImGuiDataType_Pointer = ImGuiDataType_COUNT,
     ImGuiDataType_ID,
 };
 
