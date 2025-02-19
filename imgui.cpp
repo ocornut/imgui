@@ -3992,7 +3992,7 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     FontAtlasOwnedByContext = shared_font_atlas ? false : true;
     Font = NULL;
     FontBaked = NULL;
-    FontSize = /*FontBaseSize = */FontScale = CurrentDpiScale = 0.0f;
+    FontSize = FontSizeBeforeScaling = FontScale = CurrentDpiScale = 0.0f;
     IO.Fonts = shared_font_atlas ? shared_font_atlas : IM_NEW(ImFontAtlas)();
     IO.Fonts->RefCount++;
     Time = 0.0f;
@@ -4454,9 +4454,7 @@ static void SetCurrentWindow(ImGuiWindow* window)
     g.CurrentTable = window && window->DC.CurrentTableIdx != -1 ? g.Tables.GetByIndex(window->DC.CurrentTableIdx) : NULL;
     if (window)
     {
-        // FIXME-BAKED
-        //g.FontSize = g.DrawListSharedData.FontSize = window->CalcFontSize();
-        //g.FontScale = g.DrawListSharedData.FontScale = g.FontSize / g.Font->FontSize;
+        ImGui::UpdateCurrentFontSize();
         ImGui::NavUpdateCurrentWindowIsScrollPushableX();
     }
 }
@@ -8496,26 +8494,33 @@ void ImGui::SetCurrentFont(ImFont* font, float font_size)
 {
     ImGuiContext& g = *GImGui;
     g.Font = font;
-    //g.FontBaseSize = ImMax(1.0f, g.IO.FontGlobalScale * g.FontBaked->Size * g.Font->Scale);
-    g.FontSize = font_size;// g.CurrentWindow ? g.CurrentWindow->CalcFontSize() : 0.0f;
+    g.FontSizeBeforeScaling = font_size;
+    UpdateCurrentFontSize();
+
     if (font != NULL)
     {
         IM_ASSERT(font && font->IsLoaded());    // Font Atlas not created. Did you call io.Fonts->GetTexDataAsRGBA32 / GetTexDataAsAlpha8 ?
         IM_ASSERT(font->Scale > 0.0f);
-        g.FontBaked = g.Font->GetFontBaked(g.FontSize);
-        g.FontScale = g.FontSize / g.FontBaked->Size;
         g.DrawListSharedData.Font = g.Font;
-        g.DrawListSharedData.FontSize = g.FontSize;
-        g.DrawListSharedData.FontScale = g.FontScale;
         ImFontAtlasUpdateDrawListsSharedData(g.Font->ContainerAtlas);
         if (g.CurrentWindow != NULL)
             g.CurrentWindow->DrawList->_SetTextureRef(font->ContainerAtlas->TexRef);
     }
-    else
-    {
-        g.FontBaked = NULL;
-        g.FontScale = 0.0f;
-    }
+}
+
+void ImGui::UpdateCurrentFontSize()
+{
+    ImGuiContext& g = *GImGui;
+    float final_size = g.FontSizeBeforeScaling * g.IO.FontGlobalScale;
+    if (ImGuiWindow* window = g.CurrentWindow)
+        final_size *= window->FontWindowScale * window->FontDpiScale;
+    final_size = ImMax(1.0f, IM_ROUND(final_size));
+
+    g.FontSize = final_size;
+    g.FontBaked = (g.Font != NULL) ? g.Font->GetFontBaked(g.FontSize) : NULL;
+    g.FontScale = (g.Font != NULL) ? (g.FontSize / g.FontBaked->Size) : 0.0f;
+    g.DrawListSharedData.FontSize = g.FontSize;
+    g.DrawListSharedData.FontScale = g.FontScale;
 }
 
 void ImGui::PushFont(ImFont* font, float font_size)
@@ -9083,14 +9088,9 @@ ImVec2 ImGui::GetFontTexUvWhitePixel()
 void ImGui::SetWindowFontScale(float scale)
 {
     IM_ASSERT(scale > 0.0f);
-    // FIXME-BAKED
-    /*
-    ImGuiContext& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     window->FontWindowScale = scale;
-    g.FontSize = g.DrawListSharedData.FontSize = window->CalcFontSize();
-    g.FontScale = g.DrawListSharedData.FontScale = g.FontSize / g.Font->FontSize;
-    */
+    UpdateCurrentFontSize();
 }
 
 void ImGui::PushFocusScope(ImGuiID id)
