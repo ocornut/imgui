@@ -16,6 +16,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2025-05-07: DirectX11: Honor draw_data->FramebufferScale to allow for custom backends and experiment using it (consistently with other renderer backends, even though in normal condition it is not set under Windows).
 //  2025-01-06: DirectX11: Expose VertexConstantBuffer in ImGui_ImplDX11_RenderState. Reset projection matrix in ImDrawCallback_ResetRenderState handler.
 //  2024-10-07: DirectX11: Changed default texture sampler to Clamp instead of Repeat/Wrap.
 //  2024-10-07: DirectX11: Expose selected render state in ImGui_ImplDX11_RenderState, which you can access in 'void* platform_io.Renderer_RenderState' during draw callbacks.
@@ -91,8 +92,8 @@ static void ImGui_ImplDX11_SetupRenderState(ImDrawData* draw_data, ID3D11DeviceC
 
     // Setup viewport
     D3D11_VIEWPORT vp = {};
-    vp.Width = draw_data->DisplaySize.x;
-    vp.Height = draw_data->DisplaySize.y;
+    vp.Width = draw_data->DisplaySize.x * draw_data->FramebufferScale.x;
+    vp.Height = draw_data->DisplaySize.y * draw_data->FramebufferScale.y;
     vp.MinDepth = 0.0f;
     vp.MaxDepth = 1.0f;
     vp.TopLeftX = vp.TopLeftY = 0;
@@ -260,6 +261,7 @@ void ImGui_ImplDX11_RenderDrawData(ImDrawData* draw_data)
     int global_idx_offset = 0;
     int global_vtx_offset = 0;
     ImVec2 clip_off = draw_data->DisplayPos;
+    ImVec2 clip_scale = draw_data->FramebufferScale;
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
         const ImDrawList* draw_list = draw_data->CmdLists[n];
@@ -278,8 +280,8 @@ void ImGui_ImplDX11_RenderDrawData(ImDrawData* draw_data)
             else
             {
                 // Project scissor/clipping rectangles into framebuffer space
-                ImVec2 clip_min(pcmd->ClipRect.x - clip_off.x, pcmd->ClipRect.y - clip_off.y);
-                ImVec2 clip_max(pcmd->ClipRect.z - clip_off.x, pcmd->ClipRect.w - clip_off.y);
+                ImVec2 clip_min((pcmd->ClipRect.x - clip_off.x) * clip_scale.x, (pcmd->ClipRect.y - clip_off.y) * clip_scale.y);
+                ImVec2 clip_max((pcmd->ClipRect.z - clip_off.x) * clip_scale.x, (pcmd->ClipRect.w - clip_off.y) * clip_scale.y);
                 if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)
                     continue;
 

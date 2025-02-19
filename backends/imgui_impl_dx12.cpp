@@ -19,6 +19,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2025-05-07: DirectX12: Honor draw_data->FramebufferScale to allow for custom backends and experiment using it (consistently with other renderer backends, even though in normal condition it is not set under Windows).
 //  2025-02-24: DirectX12: Fixed an issue where ImGui_ImplDX12_Init() signature change from 2024-11-15 combined with change from 2025-01-15 made legacy ImGui_ImplDX12_Init() crash. (#8429)
 //  2025-01-15: DirectX12: Texture upload use the command queue provided in ImGui_ImplDX12_InitInfo instead of creating its own.
 //  2024-12-09: DirectX12: Let user specifies the DepthStencilView format by setting ImGui_ImplDX12_InitInfo::DSVFormat.
@@ -138,8 +139,8 @@ static void ImGui_ImplDX12_SetupRenderState(ImDrawData* draw_data, ID3D12Graphic
 
     // Setup viewport
     D3D12_VIEWPORT vp = {};
-    vp.Width = draw_data->DisplaySize.x;
-    vp.Height = draw_data->DisplaySize.y;
+    vp.Width = draw_data->DisplaySize.x * draw_data->FramebufferScale.x;
+    vp.Height = draw_data->DisplaySize.y * draw_data->FramebufferScale.y;
     vp.MinDepth = 0.0f;
     vp.MaxDepth = 1.0f;
     vp.TopLeftX = vp.TopLeftY = 0.0f;
@@ -274,6 +275,7 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandL
     int global_vtx_offset = 0;
     int global_idx_offset = 0;
     ImVec2 clip_off = draw_data->DisplayPos;
+    ImVec2 clip_scale = draw_data->FramebufferScale;
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
         const ImDrawList* draw_list = draw_data->CmdLists[n];
@@ -292,8 +294,8 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandL
             else
             {
                 // Project scissor/clipping rectangles into framebuffer space
-                ImVec2 clip_min(pcmd->ClipRect.x - clip_off.x, pcmd->ClipRect.y - clip_off.y);
-                ImVec2 clip_max(pcmd->ClipRect.z - clip_off.x, pcmd->ClipRect.w - clip_off.y);
+                ImVec2 clip_min((pcmd->ClipRect.x - clip_off.x) * clip_scale.x, (pcmd->ClipRect.y - clip_off.y) * clip_scale.y);
+                ImVec2 clip_max((pcmd->ClipRect.z - clip_off.x) * clip_scale.x, (pcmd->ClipRect.w - clip_off.y) * clip_scale.y);
                 if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)
                     continue;
 
