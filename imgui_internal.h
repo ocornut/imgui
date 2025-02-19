@@ -2138,8 +2138,8 @@ struct ImGuiContext
     ImGuiStyle              Style;
     ImFont*                 Font;                               // == FontStack.back().Font
     ImFontBaked*            FontBaked;                          // == Font->GetFontBaked(FontSize)
-    float                   FontSize;                           // == FontBaseSize * g.CurrentWindow->FontWindowScale == window->FontSize(). Text height for current window.
-    //float                 FontBaseSize;                       // == io.FontGlobalScale * Font->Scale * Font->FontSize. Base text height.
+    float                   FontSize;                           // == FontSizeBeforeScaling * io.FontGlobalScale * font->Scale * g.CurrentWindow->FontWindowScale. Current text height.
+    float                   FontSizeBeforeScaling;              // == value passed to PushFontSize()
     float                   FontScale;                          // == FontBaked->Size / Font->FontSize. Scale factor over baked size.
     float                   CurrentDpiScale;                    // Current window/viewport DpiScale == CurrentViewport->DpiScale
     ImDrawListSharedData    DrawListSharedData;
@@ -2680,9 +2680,11 @@ public:
 
     // We don't use g.FontSize because the window may be != g.CurrentWindow.
     ImRect      Rect() const            { return ImRect(Pos.x, Pos.y, Pos.x + Size.x, Pos.y + Size.y); }
-    //float     CalcFontSize() const    { ImGuiContext& g = *Ctx; return g.FontBaseSize * FontWindowScale * FontWindowScaleParents; }
     ImRect      TitleBarRect() const    { return ImRect(Pos, ImVec2(Pos.x + SizeFull.x, Pos.y + TitleBarHeight)); }
     ImRect      MenuBarRect() const     { float y1 = Pos.y + TitleBarHeight; return ImRect(Pos.x, y1, Pos.x + SizeFull.x, y1 + MenuBarHeight); }
+
+    // [Obsolete] ImGuiWindow::CalcFontSize() was removed in 1.92.x because error-prone/misleading. You can use window->FontRefSize for a copy of g.FontSize at the time of the last Begin() call for this window.
+    //float     CalcFontSize() const    { ImGuiContext& g = *Ctx; return g.FontBaseSize * FontWindowScale * FontWindowScaleParents; }
 };
 
 //-----------------------------------------------------------------------------
@@ -3106,6 +3108,7 @@ namespace ImGui
 
     // Fonts, drawing
     IMGUI_API void          SetCurrentFont(ImFont* font, float font_size);
+    IMGUI_API void          UpdateCurrentFontSize();
     inline ImFont*          GetDefaultFont() { ImGuiContext& g = *GImGui; return g.IO.FontDefault ? g.IO.FontDefault : g.IO.Fonts->Fonts[0]; }
     IMGUI_API void          PushPasswordFont();
     inline ImDrawList*      GetForegroundDrawList(ImGuiWindow* window) { IM_UNUSED(window); return GetForegroundDrawList(); } // This seemingly unnecessary wrapper simplifies compatibility between the 'master' and 'docking' branches.
