@@ -3487,9 +3487,10 @@ struct IMGUI_API ImTextureData
     int                 BytesPerPixel;          // 4 or 1
     int                 UniqueID;               // Sequential index to facilitate identifying a texture when debugging/printing. Only unique per atlas.
     unsigned char*      Pixels;                 // Pointer to buffer holding 'Width*Height' pixels and 'Width*Height*BytesPerPixels' bytes.
-    ImTextureID         TexID;                  // Always use SetTexID(): Identifier stored in ImDrawCmd::GetTexID() and passed to backend RenderDrawData loop.
+    ImTextureID         TexID;                  // Always use SetTexID() to modify: Identifier stored in ImDrawCmd::GetTexID() and passed to backend RenderDrawData loop.
     void*               BackendUserData;        // Convenience storage for backend. Some backends may have enough with TexID.
-    ImTextureRect       UpdateRect;             // Bounding box encompassing all individual updates.
+    ImTextureRect       UsedRect;               // Bounding box encompassing all past and queued Updates[].
+    ImTextureRect       UpdateRect;             // Bounding box encompassing all queued Updates[].
     ImVector<ImTextureRect> Updates;            // Array of individual updates.
     int                 UnusedFrames;           // In order to facilitate handling Status==WantDestroy in some backend: this is a count successive frames where the texture was not used.
     unsigned short      RefCount;               // Number of contexts using this texture.

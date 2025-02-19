@@ -2441,6 +2441,7 @@ void ImTextureData::Create(ImTextureFormat format, int w, int h)
     Pixels = (unsigned char*)IM_ALLOC(Width * Height * BytesPerPixel);
     IM_ASSERT(Pixels != NULL);
     memset(Pixels, 0, Width * Height * BytesPerPixel);
+    UsedRect.x = UsedRect.y = UsedRect.w = UsedRect.h = 0;
     UpdateRect.x = UpdateRect.y = (unsigned short)~0;
     UpdateRect.w = UpdateRect.h = 0;
 }
@@ -2921,6 +2922,10 @@ void ImFontAtlasTextureBlockQueueUpload(ImFontAtlas* atlas, ImTextureData* tex, 
     tex->UpdateRect.y = ImMin(tex->UpdateRect.y, req.y);
     tex->UpdateRect.w = (unsigned short)(new_x1 - tex->UpdateRect.x);
     tex->UpdateRect.h = (unsigned short)(new_y1 - tex->UpdateRect.y);
+    tex->UsedRect.x = ImMin(tex->UsedRect.x, req.x);
+    tex->UsedRect.y = ImMin(tex->UsedRect.y, req.y);
+    tex->UsedRect.w = (unsigned short)(ImMax(tex->UsedRect.x + tex->UsedRect.w, req.x + req.w) - tex->UsedRect.x);
+    tex->UsedRect.h = (unsigned short)(ImMax(tex->UsedRect.y + tex->UsedRect.h, req.y + req.h) - tex->UsedRect.y);
     atlas->TexIsBuilt = false;
 
     // No need to queue if status is _WantCreate
@@ -3960,7 +3965,7 @@ void ImFontAtlasBuildGrowTexture(ImFontAtlas* atlas, int old_tex_w, int old_tex_
         old_tex_h = atlas->TexData->Height;
 
     // FIXME-NEWATLAS-V2: What to do when reaching limits exposed by backend?
-    // FIXME-NEWATLAS-V2: Does ImFontAtlasFlags_NoPowerOfTwoHeight makes sense now? Allow 'lock' and 'compact' operations? Could we expose e.g. tex->UsedRect.
+    // FIXME-NEWATLAS-V2: Does ImFontAtlasFlags_NoPowerOfTwoHeight makes sense now? Allow 'lock' and 'compact' operations?
     IM_ASSERT(ImIsPowerOfTwo(old_tex_w) && ImIsPowerOfTwo(old_tex_h));
     IM_ASSERT(ImIsPowerOfTwo(atlas->TexMinWidth) && ImIsPowerOfTwo(atlas->TexMaxWidth) && ImIsPowerOfTwo(atlas->TexMinHeight) && ImIsPowerOfTwo(atlas->TexMaxHeight));
 
