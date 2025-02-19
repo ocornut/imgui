@@ -1608,6 +1608,7 @@ void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, flo
     flags = column->Flags;
 
     // Initialize defaults
+    // FIXME: Similar to code in TableLoadSettings(), best to see how if we can merge.
     column->InitStretchWeightOrWidth = init_width_or_weight;
     if (table->IsInitializing)
     {
@@ -1627,7 +1628,7 @@ void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, flo
         // Init default visibility/sort state
         if ((flags & ImGuiTableColumnFlags_DefaultHide) && (table->SettingsLoadedFlags & ImGuiTableFlags_Hideable) == 0)
             column->IsUserEnabled = column->IsUserEnabledNextFrame = false;
-        if (flags & ImGuiTableColumnFlags_DefaultSort && (table->SettingsLoadedFlags & ImGuiTableFlags_Sortable) == 0)
+        if ((flags & ImGuiTableColumnFlags_DefaultSort) && (table->SettingsLoadedFlags & ImGuiTableFlags_Sortable) == 0)
         {
             column->SortOrder = 0; // Multiple columns using _DefaultSort will be reassigned unique SortOrder values when building the sort specs.
             column->SortDirection = (column->Flags & ImGuiTableColumnFlags_PreferSortDescending) ? (ImS8)ImGuiSortDirection_Descending : (ImU8)(ImGuiSortDirection_Ascending);
@@ -3724,16 +3725,17 @@ void ImGui::TableLoadSettings(ImGuiTable* table)
     table->RefScale = settings->RefScale;
 
     // Initialize default columns settings
+    // FIXME: Similar to code in TableSetupColumn(), best to see how if we can merge.
     for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
     {
         ImGuiTableColumn* column = &table->Columns[column_n];
-        column->StretchWeight = -1.0f;
-        column->WidthRequest = -1.0f;
+        column->StretchWeight = (column->Flags & ImGuiTableColumnFlags_WidthStretch) && (column->InitStretchWeightOrWidth > 0.0f) ? column->InitStretchWeightOrWidth : -1.0f;
+        column->WidthRequest = (column->Flags & ImGuiTableColumnFlags_WidthFixed) && (column->InitStretchWeightOrWidth > 0.0f) ? column->InitStretchWeightOrWidth : -1.0f;
         column->AutoFitQueue = 0x00;
         column->DisplayOrder = (ImGuiTableColumnIdx)column_n;
         column->IsUserEnabled = column->IsUserEnabledNextFrame = (column->Flags & ImGuiTableColumnFlags_DefaultHide) ? 0 : 1;
         column->SortOrder = (column->Flags & ImGuiTableColumnFlags_DefaultSort) ? 0 : -1;
-        column->SortDirection = (column->Flags & ImGuiTableColumnFlags_DefaultSort) ? (ImS8)ImGuiSortDirection_None : (column->Flags & ImGuiTableColumnFlags_PreferSortDescending) ? (ImS8)ImGuiSortDirection_Descending : (ImU8)(ImGuiSortDirection_Ascending);
+        column->SortDirection = (column->Flags & ImGuiTableColumnFlags_DefaultSort) ? ((column->Flags & ImGuiTableColumnFlags_PreferSortDescending) ? (ImS8)ImGuiSortDirection_Descending : (ImU8)(ImGuiSortDirection_Ascending)) : (ImS8)ImGuiSortDirection_None;
     }
 
     // Serialize ImGuiTableSettings/ImGuiTableColumnSettings into ImGuiTable/ImGuiTableColumn

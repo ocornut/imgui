@@ -65,8 +65,8 @@ Other changes:
   which amusingly made it disappear when using very big font/frame size.
 - Tables: fixed calling SetNextWindowScroll() on clipped scrolling table
   to not leak the value into a subsequent window. (#8196)
-- Tables: fixed an issue where Columns Visible/Hidden state wouldn't be correctly
-  overridden when hot-reloading .ini state. (#7934)
+- Tables: fixed an issue where Columns Visible/Width state wouldn't be correctly
+  restored when hot-reloading .ini state. (#7934)
 - Tables: tamed some .ini settings optimizations to more accurately allow
   overwriting/hot-reloading settings in more situations. (#7934)
 - Tables, Error Handling: Recovery from invalid index in TableSetColumnIndex(). (#1651)
