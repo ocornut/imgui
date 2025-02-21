@@ -65,8 +65,8 @@ Other changes:
   which amusingly made it disappear when using very big font/frame size.
 - Tables: fixed calling SetNextWindowScroll() on clipped scrolling table
   to not leak the value into a subsequent window. (#8196)
-- Tables: fixed an issue where Columns Visible/Hidden state wouldn't be correctly
-  overridden when hot-reloading .ini state. (#7934)
+- Tables: fixed an issue where Columns Visible/Width state wouldn't be correctly
+  restored when hot-reloading .ini state. (#7934)
 - Tables: tamed some .ini settings optimizations to more accurately allow
   overwriting/hot-reloading settings in more situations. (#7934)
 - Tables, Error Handling: Recovery from invalid index in TableSetColumnIndex(). (#1651)
@@ -83,10 +83,16 @@ Other changes:
   is hovered, merely it's visibility. (#8399, #8387) [@nicovanbentum]
 - TextLinkOpenURL(): fixed default Win32 io.PlatformOpenInShellFn handler to
   handle UTF-8 regardless of system regional settings. (#7660) [@achabense]
+- Misc: Added ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress mouse cursors
+  (busy/wait/hourglass shape, with or without an arrow cursor).
 - Demo: Combos: demonstrate a very simple way to add a filter to a combo,
   by showing the filter inside the combo contents. (#718)
 - Backends: SDL2, SDL3:  Using SDL_OpenURL() in platform_io.Platform_OpenInShellFn
   handler. (#7660) [@achabense]
+- Backends: SDL2, SDL3, Win32, Allegro5: Added support for ImGuiMouseCursor_Wait
+  and ImGuiMouseCursor_Progress cursors.
+- Backends: OpenGL3: Lazily reinitialize embedded GL loader for when calling backend
+  from e.g. other DLL boundaries. (#8406)
 - Backends: Metal: Fixed a crash on application resources. (#8367, #7419) [@anszom]
 - Backends: Vulkan: Added ApiVersion field in ImGui_ImplVulkan_InitInfo.
   Default to header version if unspecified. (#8326, #8365) [@mklefrancois]

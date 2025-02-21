@@ -1565,6 +1565,31 @@ void    ImGui::EndTable()
     NavUpdateCurrentWindowIsScrollPushableX();
 }
 
+// Called in TableSetupColumn() when initializing and in TableLoadSettings() for defaults before applying stored settings.
+// 'init_mask' specify which fields to initialize.
+static void TableInitColumnDefaults(ImGuiTable* table, ImGuiTableColumn* column, ImGuiTableColumnFlags init_mask)
+{
+    ImGuiTableColumnFlags flags = column->Flags;
+    if (init_mask & ImGuiTableFlags_Resizable)
+    {
+        float init_width_or_weight = column->InitStretchWeightOrWidth;
+        column->WidthRequest = ((flags & ImGuiTableColumnFlags_WidthFixed) && init_width_or_weight > 0.0f) ? init_width_or_weight : -1.0f;
+        column->StretchWeight = (init_width_or_weight > 0.0f && (flags & ImGuiTableColumnFlags_WidthStretch)) ? init_width_or_weight : -1.0f;
+        if (init_width_or_weight > 0.0f) // Disable auto-fit if an explicit width/weight has been specified
+            column->AutoFitQueue = 0x00;
+    }
+    if (init_mask & ImGuiTableFlags_Reorderable)
+        column->DisplayOrder = (ImGuiTableColumnIdx)table->Columns.index_from_ptr(column);
+    if (init_mask & ImGuiTableFlags_Hideable)
+        column->IsUserEnabled = column->IsUserEnabledNextFrame = (flags & ImGuiTableColumnFlags_DefaultHide) ? 0 : 1;
+    if (init_mask & ImGuiTableFlags_Sortable)
+    {
+        // Multiple columns using _DefaultSort will be reassigned unique SortOrder values when building the sort specs.
+        column->SortOrder = (flags & ImGuiTableColumnFlags_DefaultSort) ? 0 : -1;
+        column->SortDirection = (flags & ImGuiTableColumnFlags_DefaultSort) ? ((flags & ImGuiTableColumnFlags_PreferSortDescending) ? (ImS8)ImGuiSortDirection_Descending : (ImU8)(ImGuiSortDirection_Ascending)) : (ImS8)ImGuiSortDirection_None;
+    }
+}
+
 // See "COLUMNS SIZING POLICIES" comments at the top of this file
 // If (init_width_or_weight <= 0.0f) it is ignored
 void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, float init_width_or_weight, ImGuiID user_id)
@@ -1593,7 +1618,7 @@ void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, flo
         IM_ASSERT(init_width_or_weight <= 0.0f && "Can only specify width/weight if sizing policy is set explicitly in either Table or Column.");
 
     // When passing a width automatically enforce WidthFixed policy
-    // (whereas TableSetupColumnFlags would default to WidthAuto if table is not Resizable)
+    // (whereas TableSetupColumnFlags would default to WidthAuto if table is not resizable)
     if ((flags & ImGuiTableColumnFlags_WidthMask_) == 0 && init_width_or_weight > 0.0f)
         if ((table->Flags & ImGuiTableFlags_SizingMask_) == ImGuiTableFlags_SizingFixedFit || (table->Flags & ImGuiTableFlags_SizingMask_) == ImGuiTableFlags_SizingFixedSame)
             flags |= ImGuiTableColumnFlags_WidthFixed;
@@ -1611,27 +1636,10 @@ void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, flo
     column->InitStretchWeightOrWidth = init_width_or_weight;
     if (table->IsInitializing)
     {
-        // Init width or weight
-        if (column->WidthRequest < 0.0f && column->StretchWeight < 0.0f)
-        {
-            if ((flags & ImGuiTableColumnFlags_WidthFixed) && init_width_or_weight > 0.0f)
-                column->WidthRequest = init_width_or_weight;
-            if (flags & ImGuiTableColumnFlags_WidthStretch)
-                column->StretchWeight = (init_width_or_weight > 0.0f) ? init_width_or_weight : -1.0f;
-
-            // Disable auto-fit if an explicit width/weight has been specified
-            if (init_width_or_weight > 0.0f)
-                column->AutoFitQueue = 0x00;
-        }
-
-        // Init default visibility/sort state
-        if ((flags & ImGuiTableColumnFlags_DefaultHide) && (table->SettingsLoadedFlags & ImGuiTableFlags_Hideable) == 0)
-            column->IsUserEnabled = column->IsUserEnabledNextFrame = false;
-        if (flags & ImGuiTableColumnFlags_DefaultSort && (table->SettingsLoadedFlags & ImGuiTableFlags_Sortable) == 0)
-        {
-            column->SortOrder = 0; // Multiple columns using _DefaultSort will be reassigned unique SortOrder values when building the sort specs.
-            column->SortDirection = (column->Flags & ImGuiTableColumnFlags_PreferSortDescending) ? (ImS8)ImGuiSortDirection_Descending : (ImU8)(ImGuiSortDirection_Ascending);
-        }
+        ImGuiTableFlags init_flags = ~0;
+        if (column->WidthRequest >= 0.0f && column->StretchWeight >= 0.0f)
+            init_flags &= ~ImGuiTableFlags_Resizable;
+        TableInitColumnDefaults(table, column, init_flags);
     }
 
     // Store name (append with zero-terminator in contiguous buffer)
@@ -3727,13 +3735,8 @@ void ImGui::TableLoadSettings(ImGuiTable* table)
     for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
     {
         ImGuiTableColumn* column = &table->Columns[column_n];
-        column->StretchWeight = -1.0f;
-        column->WidthRequest = -1.0f;
+        TableInitColumnDefaults(table, column, ~0);
         column->AutoFitQueue = 0x00;
-        column->DisplayOrder = (ImGuiTableColumnIdx)column_n;
-        column->IsUserEnabled = column->IsUserEnabledNextFrame = (column->Flags & ImGuiTableColumnFlags_DefaultHide) ? 0 : 1;
-        column->SortOrder = (column->Flags & ImGuiTableColumnFlags_DefaultSort) ? 0 : -1;
-        column->SortDirection = (column->Flags & ImGuiTableColumnFlags_DefaultSort) ? (ImS8)ImGuiSortDirection_None : (column->Flags & ImGuiTableColumnFlags_PreferSortDescending) ? (ImS8)ImGuiSortDirection_Descending : (ImU8)(ImGuiSortDirection_Ascending);
     }
 
     // Serialize ImGuiTableSettings/ImGuiTableColumnSettings into ImGuiTable/ImGuiTableColumn
