@@ -1272,7 +1272,12 @@ static void ImGui_ImplWin32_SetWindowTitle(ImGuiViewport* viewport, const char* 
     ImVector<wchar_t> title_w;
     title_w.resize(n);
     ::MultiByteToWideChar(CP_UTF8, 0, title, -1, title_w.Data, n);
-    ::SetWindowTextW(vd->Hwnd, title_w.Data);
+
+    // Calling SetWindowTextW() in a project where UNICODE is not set doesn't work but there's a trick
+    // which is to pass it directly to the DefWindowProcW() handler.
+    // See: https://stackoverflow.com/questions/9410681/setwindowtextw-in-an-ansi-project
+    //::SetWindowTextW(vd->Hwnd, title_w.Data);
+    ::DefWindowProcW(vd->Hwnd, WM_SETTEXT, 0, (LPARAM)title_w.Data);
 }
 
 static void ImGui_ImplWin32_SetWindowAlpha(ImGuiViewport* viewport, float alpha)

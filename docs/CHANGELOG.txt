@@ -105,6 +105,8 @@ Docking+Viewports Branch:
 
 - Viewports: fixed an assert when a window load settings with a position outside
   monitor bounds, when there are multiple monitors. (#8393, #8385) [@gaborodriguez]
+- Viewports + Backends: Win32: Fixed setting title bar text when application
+  is compiled without UNICODE. (#7979, #5725) [@lailoken]
 - Backends: GLFW, SDL2/SDL3: Update monitors and work areas information every frame,
   as the later may change regardless of monitor/display changes. (#8415)
 - Backends: Win32: WM_SETTINGCHANGE's SPI_SETWORKAREA message also triggers a refresh
