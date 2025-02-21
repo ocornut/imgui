@@ -24,6 +24,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2025-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2025-02-21: [Docking] Update monitors and work areas information every frame, as the later may change regardless of monitor changes. (#8415)
 //  2025-02-10: Using SDL_OpenURL() in platform_io.Platform_OpenInShellFn handler.
 //  2025-01-20: Made ImGui_ImplSDL3_SetGamepadMode(ImGui_ImplSDL3_GamepadMode_Manual) accept an empty array.
 //  2024-10-24: Emscripten: SDL_EVENT_MOUSE_WHEEL event doesn't require dividing by 100.0f on Emscripten.
@@ -99,7 +100,6 @@ struct ImGui_ImplSDL3_Data
     Uint64                  Time;
     char*                   ClipboardTextData;
     bool                    UseVulkan;
-    bool                    WantUpdateMonitors;
 
     // IME handling
     SDL_Window*             ImeWindow;
@@ -398,15 +398,6 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
             ImGuiKey key = ImGui_ImplSDL3_KeyEventToImGuiKey(event->key.key, event->key.scancode);
             io.AddKeyEvent(key, (event->type == SDL_EVENT_KEY_DOWN));
             io.SetKeyEventNativeData(key, event->key.key, event->key.scancode, event->key.scancode); // To support legacy indexing (<1.87 user code). Legacy backend uses SDLK_*** as indices to IsKeyXXX() functions.
-            return true;
-        }
-        case SDL_EVENT_DISPLAY_ORIENTATION:
-        case SDL_EVENT_DISPLAY_ADDED:
-        case SDL_EVENT_DISPLAY_REMOVED:
-        case SDL_EVENT_DISPLAY_MOVED:
-        case SDL_EVENT_DISPLAY_CONTENT_SCALE_CHANGED:
-        {
-            bd->WantUpdateMonitors = true;
             return true;
         }
         case SDL_EVENT_WINDOW_MOUSE_ENTER:
@@ -824,10 +815,8 @@ static void ImGui_ImplSDL3_UpdateGamepads()
 
 static void ImGui_ImplSDL3_UpdateMonitors()
 {
-    ImGui_ImplSDL3_Data* bd = ImGui_ImplSDL3_GetBackendData();
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     platform_io.Monitors.resize(0);
-    bd->WantUpdateMonitors = false;
 
     int display_count;
     SDL_DisplayID* displays = SDL_GetDisplays(&display_count);
@@ -872,8 +861,7 @@ void ImGui_ImplSDL3_NewFrame()
         io.DisplayFramebufferScale = ImVec2((float)display_w / w, (float)display_h / h);
 
     // Update monitors
-    if (bd->WantUpdateMonitors)
-        ImGui_ImplSDL3_UpdateMonitors();
+    ImGui_ImplSDL3_UpdateMonitors();
 
     // Setup time step (we don't use SDL_GetTicks() because it is using millisecond resolution)
     // (Accept SDL_GetPerformanceCounter() not returning a monotonically increasing value. Happens in VMs and Emscripten, see #6189, #6114, #3644)
