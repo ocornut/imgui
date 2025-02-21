@@ -1411,7 +1411,7 @@ static void ImGui_ImplWin32_InitMultiViewportSupport(bool platform_has_own_dc)
 
 static void ImGui_ImplWin32_ShutdownMultiViewportSupport()
 {
-    ::UnregisterClass(_T("ImGui Platform"), ::GetModuleHandle(nullptr));
+    ::UnregisterClassW(L"ImGui Platform", ::GetModuleHandle(nullptr));
     ImGui::DestroyPlatformWindows();
 }
 
