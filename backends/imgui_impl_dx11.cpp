@@ -18,6 +18,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2025-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2025-02-24: [Docking] Added undocumented ImGui_ImplDX11_SetSwapChainDescs() to configure swap chain creation for secondary viewports.
 //  2025-01-06: DirectX11: Expose VertexConstantBuffer in ImGui_ImplDX11_RenderState. Reset projection matrix in ImDrawCallback_ResetRenderState handler.
 //  2024-10-07: DirectX11: Changed default texture sampler to Clamp instead of Repeat/Wrap.
 //  2024-10-07: DirectX11: Expose selected render state in ImGui_ImplDX11_RenderState, which you can access in 'void* platform_io.Renderer_RenderState' during draw callbacks.
@@ -70,6 +71,7 @@ struct ImGui_ImplDX11_Data
     ID3D11DepthStencilState*    pDepthStencilState;
     int                         VertexBufferSize;
     int                         IndexBufferSize;
+    ImVector<DXGI_SWAP_CHAIN_DESC> SwapChainDescsForViewports;
 
     ImGui_ImplDX11_Data()       { memset((void*)this, 0, sizeof(*this)); VertexBufferSize = 5000; IndexBufferSize = 10000; }
 };
@@ -652,6 +654,16 @@ struct ImGui_ImplDX11_ViewportData
     ~ImGui_ImplDX11_ViewportData()  { IM_ASSERT(SwapChain == nullptr && RTView == nullptr); }
 };
 
+// Multi-Viewports: configure templates used when creating swapchains for secondary viewports. Will try them in order.
+// This is intentionally not declared in the .h file yet, so you will need to copy this declaration:
+void ImGui_ImplDX11_SetSwapChainDescs(const DXGI_SWAP_CHAIN_DESC* desc_templates, int desc_templates_count);
+void ImGui_ImplDX11_SetSwapChainDescs(const DXGI_SWAP_CHAIN_DESC* desc_templates, int desc_templates_count)
+{
+    ImGui_ImplDX11_Data* bd = ImGui_ImplDX11_GetBackendData();
+    bd->SwapChainDescsForViewports.resize(desc_templates_count);
+    memcpy(bd->SwapChainDescsForViewports.Data, desc_templates, sizeof(DXGI_SWAP_CHAIN_DESC));
+}
+
 static void ImGui_ImplDX11_CreateWindow(ImGuiViewport* viewport)
 {
     ImGui_ImplDX11_Data* bd = ImGui_ImplDX11_GetBackendData();
@@ -662,27 +674,25 @@ static void ImGui_ImplDX11_CreateWindow(ImGuiViewport* viewport)
     // Some backends will leave PlatformHandleRaw == 0, in which case we assume PlatformHandle will contain the HWND.
     HWND hwnd = viewport->PlatformHandleRaw ? (HWND)viewport->PlatformHandleRaw : (HWND)viewport->PlatformHandle;
     IM_ASSERT(hwnd != 0);
+    IM_ASSERT(vd->SwapChain == nullptr && vd->RTView == nullptr);
 
     // Create swap chain
-    DXGI_SWAP_CHAIN_DESC sd;
-    ZeroMemory(&sd, sizeof(sd));
-    sd.BufferDesc.Width = (UINT)viewport->Size.x;
-    sd.BufferDesc.Height = (UINT)viewport->Size.y;
-    sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    sd.SampleDesc.Count = 1;
-    sd.SampleDesc.Quality = 0;
-    sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    sd.BufferCount = 1;
-    sd.OutputWindow = hwnd;
-    sd.Windowed = TRUE;
-    sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
-    sd.Flags = 0;
-
-    IM_ASSERT(vd->SwapChain == nullptr && vd->RTView == nullptr);
-    bd->pFactory->CreateSwapChain(bd->pd3dDevice, &sd, &vd->SwapChain);
+    HRESULT hr = DXGI_ERROR_UNSUPPORTED;
+    for (const DXGI_SWAP_CHAIN_DESC& sd_template : bd->SwapChainDescsForViewports)
+    {
+        IM_ASSERT(sd_template.BufferDesc.Width == 0 && sd_template.BufferDesc.Height == 0 && sd_template.OutputWindow == nullptr);
+        DXGI_SWAP_CHAIN_DESC sd = sd_template;
+        sd.BufferDesc.Width = (UINT)viewport->Size.x;
+        sd.BufferDesc.Height = (UINT)viewport->Size.y;
+        sd.OutputWindow = hwnd;
+        hr = bd->pFactory->CreateSwapChain(bd->pd3dDevice, &sd, &vd->SwapChain);
+        if (SUCCEEDED(hr))
+            break;
+    }
+    IM_ASSERT(SUCCEEDED(hr));
 
     // Create the render target
-    if (vd->SwapChain)
+    if (vd->SwapChain != nullptr)
     {
         ID3D11Texture2D* pBackBuffer;
         vd->SwapChain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
@@ -752,6 +762,19 @@ static void ImGui_ImplDX11_InitMultiViewportSupport()
     platform_io.Renderer_SetWindowSize = ImGui_ImplDX11_SetWindowSize;
     platform_io.Renderer_RenderWindow = ImGui_ImplDX11_RenderWindow;
     platform_io.Renderer_SwapBuffers = ImGui_ImplDX11_SwapBuffers;
+
+    // Default swapchain format
+    DXGI_SWAP_CHAIN_DESC sd;
+    ZeroMemory(&sd, sizeof(sd));
+    sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    sd.SampleDesc.Count = 1;
+    sd.SampleDesc.Quality = 0;
+    sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    sd.BufferCount = 1;
+    sd.Windowed = TRUE;
+    sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+    sd.Flags = 0;
+    ImGui_ImplDX11_SetSwapChainDescs(&sd, 1);
 }
 
 static void ImGui_ImplDX11_ShutdownMultiViewportSupport()
