@@ -577,6 +577,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
         // Initialize
         table->SettingsOffset = -1;
         table->IsSortSpecsDirty = true;
+        table->IsSettingsDirty = true; // Records itself into .ini file even when in default state (#7934)
         table->InstanceInteracted = -1;
         table->ContextPopupColumn = -1;
         table->ReorderColumn = table->ResizedColumn = table->LastResizedColumn = -1;
@@ -1564,6 +1565,31 @@ void    ImGui::EndTable()
     NavUpdateCurrentWindowIsScrollPushableX();
 }
 
+// Called in TableSetupColumn() when initializing and in TableLoadSettings() for defaults before applying stored settings.
+// 'init_mask' specify which fields to initialize.
+static void TableInitColumnDefaults(ImGuiTable* table, ImGuiTableColumn* column, ImGuiTableColumnFlags init_mask)
+{
+    ImGuiTableColumnFlags flags = column->Flags;
+    if (init_mask & ImGuiTableFlags_Resizable)
+    {
+        float init_width_or_weight = column->InitStretchWeightOrWidth;
+        column->WidthRequest = ((flags & ImGuiTableColumnFlags_WidthFixed) && init_width_or_weight > 0.0f) ? init_width_or_weight : -1.0f;
+        column->StretchWeight = (init_width_or_weight > 0.0f && (flags & ImGuiTableColumnFlags_WidthStretch)) ? init_width_or_weight : -1.0f;
+        if (init_width_or_weight > 0.0f) // Disable auto-fit if an explicit width/weight has been specified
+            column->AutoFitQueue = 0x00;
+    }
+    if (init_mask & ImGuiTableFlags_Reorderable)
+        column->DisplayOrder = (ImGuiTableColumnIdx)table->Columns.index_from_ptr(column);
+    if (init_mask & ImGuiTableFlags_Hideable)
+        column->IsUserEnabled = column->IsUserEnabledNextFrame = (flags & ImGuiTableColumnFlags_DefaultHide) ? 0 : 1;
+    if (init_mask & ImGuiTableFlags_Sortable)
+    {
+        // Multiple columns using _DefaultSort will be reassigned unique SortOrder values when building the sort specs.
+        column->SortOrder = (flags & ImGuiTableColumnFlags_DefaultSort) ? 0 : -1;
+        column->SortDirection = (flags & ImGuiTableColumnFlags_DefaultSort) ? ((flags & ImGuiTableColumnFlags_PreferSortDescending) ? (ImS8)ImGuiSortDirection_Descending : (ImU8)(ImGuiSortDirection_Ascending)) : (ImS8)ImGuiSortDirection_None;
+    }
+}
+
 // See "COLUMNS SIZING POLICIES" comments at the top of this file
 // If (init_width_or_weight <= 0.0f) it is ignored
 void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, float init_width_or_weight, ImGuiID user_id)
@@ -1592,7 +1618,7 @@ void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, flo
         IM_ASSERT(init_width_or_weight <= 0.0f && "Can only specify width/weight if sizing policy is set explicitly in either Table or Column.");
 
     // When passing a width automatically enforce WidthFixed policy
-    // (whereas TableSetupColumnFlags would default to WidthAuto if table is not Resizable)
+    // (whereas TableSetupColumnFlags would default to WidthAuto if table is not resizable)
     if ((flags & ImGuiTableColumnFlags_WidthMask_) == 0 && init_width_or_weight > 0.0f)
         if ((table->Flags & ImGuiTableFlags_SizingMask_) == ImGuiTableFlags_SizingFixedFit || (table->Flags & ImGuiTableFlags_SizingMask_) == ImGuiTableFlags_SizingFixedSame)
             flags |= ImGuiTableColumnFlags_WidthFixed;
@@ -1610,27 +1636,10 @@ void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, flo
     column->InitStretchWeightOrWidth = init_width_or_weight;
     if (table->IsInitializing)
     {
-        // Init width or weight
-        if (column->WidthRequest < 0.0f && column->StretchWeight < 0.0f)
-        {
-            if ((flags & ImGuiTableColumnFlags_WidthFixed) && init_width_or_weight > 0.0f)
-                column->WidthRequest = init_width_or_weight;
-            if (flags & ImGuiTableColumnFlags_WidthStretch)
-                column->StretchWeight = (init_width_or_weight > 0.0f) ? init_width_or_weight : -1.0f;
-
-            // Disable auto-fit if an explicit width/weight has been specified
-            if (init_width_or_weight > 0.0f)
-                column->AutoFitQueue = 0x00;
-        }
-
-        // Init default visibility/sort state
-        if ((flags & ImGuiTableColumnFlags_DefaultHide) && (table->SettingsLoadedFlags & ImGuiTableFlags_Hideable) == 0)
-            column->IsUserEnabled = column->IsUserEnabledNextFrame = false;
-        if (flags & ImGuiTableColumnFlags_DefaultSort && (table->SettingsLoadedFlags & ImGuiTableFlags_Sortable) == 0)
-        {
-            column->SortOrder = 0; // Multiple columns using _DefaultSort will be reassigned unique SortOrder values when building the sort specs.
-            column->SortDirection = (column->Flags & ImGuiTableColumnFlags_PreferSortDescending) ? (ImS8)ImGuiSortDirection_Descending : (ImU8)(ImGuiSortDirection_Ascending);
-        }
+        ImGuiTableFlags init_flags = ~0;
+        if (column->WidthRequest >= 0.0f && column->StretchWeight >= 0.0f)
+            init_flags &= ~ImGuiTableFlags_Resizable;
+        TableInitColumnDefaults(table, column, init_flags);
     }
 
     // Store name (append with zero-terminator in contiguous buffer)
@@ -2105,7 +2114,11 @@ bool ImGui::TableSetColumnIndex(int column_n)
     {
         if (table->CurrentColumn != -1)
             TableEndCell(table);
-        IM_ASSERT(column_n >= 0 && table->ColumnsCount);
+        if ((column_n >= 0 && column_n < table->ColumnsCount) == false)
+        {
+            IM_ASSERT_USER_ERROR(column_n >= 0 && column_n < table->ColumnsCount, "TableSetColumnIndex() invalid column index!");
+            return false;
+        }
         TableBeginCell(table, column_n);
     }
 
@@ -3718,6 +3731,14 @@ void ImGui::TableLoadSettings(ImGuiTable* table)
     table->SettingsLoadedFlags = settings->SaveFlags;
     table->RefScale = settings->RefScale;
 
+    // Initialize default columns settings
+    for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
+    {
+        ImGuiTableColumn* column = &table->Columns[column_n];
+        TableInitColumnDefaults(table, column, ~0);
+        column->AutoFitQueue = 0x00;
+    }
+
     // Serialize ImGuiTableSettings/ImGuiTableColumnSettings into ImGuiTable/ImGuiTableColumn
     ImGuiTableColumnSettings* column_settings = settings->GetColumnSettings();
     ImU64 display_order_mask = 0;
@@ -3734,14 +3755,12 @@ void ImGui::TableLoadSettings(ImGuiTable* table)
                 column->StretchWeight = column_settings->WidthOrWeight;
             else
                 column->WidthRequest = column_settings->WidthOrWeight;
-            column->AutoFitQueue = 0x00;
         }
         if (settings->SaveFlags & ImGuiTableFlags_Reorderable)
             column->DisplayOrder = column_settings->DisplayOrder;
-        else
-            column->DisplayOrder = (ImGuiTableColumnIdx)column_n;
         display_order_mask |= (ImU64)1 << column->DisplayOrder;
-        column->IsUserEnabled = column->IsUserEnabledNextFrame = column_settings->IsEnabled;
+        if ((settings->SaveFlags & ImGuiTableFlags_Hideable) && column_settings->IsEnabled != -1)
+            column->IsUserEnabled = column->IsUserEnabledNextFrame = column_settings->IsEnabled == 1;
         column->SortOrder = column_settings->SortOrder;
         column->SortDirection = column_settings->SortDirection;
     }
@@ -3837,8 +3856,7 @@ static void TableSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandle
         const bool save_visible = (settings->SaveFlags & ImGuiTableFlags_Hideable) != 0;
         const bool save_order   = (settings->SaveFlags & ImGuiTableFlags_Reorderable) != 0;
         const bool save_sort    = (settings->SaveFlags & ImGuiTableFlags_Sortable) != 0;
-        if (!save_size && !save_visible && !save_order && !save_sort)
-            continue;
+        // We need to save the [Table] entry even if all the bools are false, since this records a table with "default settings".
 
         buf->reserve(buf->size() + 30 + settings->ColumnsCount * 50); // ballpark reserve
         buf->appendf("[%s][0x%08X,%d]\n", handler->TypeName, settings->ID, settings->ColumnsCount);

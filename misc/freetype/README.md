@@ -48,15 +48,7 @@ Requires: [lunasvg](https://github.com/sammycage/lunasvg) v2.3.2 and above
 
 #### Using plutosvg (and plutovg)
 - Add `#define IMGUI_ENABLE_FREETYPE_PLUTOSVG` in your `imconfig.h`.
-- Compile and link with plutosvg *and* plutovg (which is required by plutosvg)
-
-_Compilation hints for plutovg_
-- Compile all source files in `plutovg/source/*.c`
-- Add include directory: `plutovg/include` + `plutovg/stb`
-
-_Compilation hints for plutosvg_
-- Compile `plutosvg/source/plutosvg.c`
-- Add include directory: `plutosvg/source`
-- Add define: `PLUTOSVG_HAS_FREETYPE`
-- Link with: plutovg, freetype
-
+- Get latest plutosvg binaries or build yourself. Under Windows you may use vcpkg with: `vcpkg install plutosvg --triplet=x64-windows`. Alternatively, if you build imgui from vcpkg, you just need to enable the plutosvg feature: `vcpkg install imgui[plutosvg] --triplet=x64-windows`
+- If you prefer to build plutosvg manually:
+    - Compilation hints for plutovg: Compile all source files in `plutovg/source/*.c` + Add include directory: `plutovg/include` + `plutovg/stb`
+    - Compilation hints for plutosvg: Compile `plutosvg/source/plutosvg.c` + Add include directory: `plutosvg/source` + Add define: `PLUTOSVG_HAS_FREETYPE` + Link with: plutovg, freetype

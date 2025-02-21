@@ -400,6 +400,7 @@ int main(int, char**)
     // Setup Platform/Renderer backends
     ImGui_ImplSDL3_InitForVulkan(window);
     ImGui_ImplVulkan_InitInfo init_info = {};
+    //init_info.ApiVersion = VK_API_VERSION_1_3;              // Pass in your value of VkApplicationInfo::apiVersion, otherwise will default to header version.
     init_info.Instance = g_Instance;
     init_info.PhysicalDevice = g_PhysicalDevice;
     init_info.Device = g_Device;

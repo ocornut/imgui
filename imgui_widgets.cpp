@@ -913,7 +913,7 @@ ImRect ImGui::GetWindowScrollbarRect(ImGuiWindow* window, ImGuiAxis axis)
     const ImRect outer_rect = window->Rect();
     const ImRect inner_rect = window->InnerRect;
     const float scrollbar_size = window->ScrollbarSizes[axis ^ 1]; // (ScrollbarSizes.x = width of Y scrollbar; ScrollbarSizes.y = height of X scrollbar)
-    IM_ASSERT(scrollbar_size > 0.0f);
+    IM_ASSERT(scrollbar_size >= 0.0f);
     const float border_size = IM_ROUND(window->WindowBorderSize * 0.5f);
     const float border_top = (window->Flags & ImGuiWindowFlags_MenuBar) ? IM_ROUND(g.Style.FrameBorderSize * 0.5f) : 0.0f;
     if (axis == ImGuiAxis_X)
@@ -4804,14 +4804,14 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         const bool is_wordmove_key_down = is_osx ? io.KeyAlt : io.KeyCtrl;                     // OS X style: Text editing cursor movement using Alt instead of Ctrl
         const bool is_startend_key_down = is_osx && io.KeyCtrl && !io.KeySuper && !io.KeyAlt;  // OS X style: Line/Text Start and End using Cmd+Arrows instead of Home/End
 
-        // Using Shortcut() with ImGuiInputFlags_RouteFocused (default policy) to allow routing operations for other code (e.g. calling window trying to use CTRL+A and CTRL+B: formet would be handled by InputText)
+        // Using Shortcut() with ImGuiInputFlags_RouteFocused (default policy) to allow routing operations for other code (e.g. calling window trying to use CTRL+A and CTRL+B: former would be handled by InputText)
         // Otherwise we could simply assume that we own the keys as we are active.
         const ImGuiInputFlags f_repeat = ImGuiInputFlags_Repeat;
         const bool is_cut   = (Shortcut(ImGuiMod_Ctrl | ImGuiKey_X, f_repeat, id) || Shortcut(ImGuiMod_Shift | ImGuiKey_Delete, f_repeat, id)) && !is_readonly && !is_password && (!is_multiline || state->HasSelection());
         const bool is_copy  = (Shortcut(ImGuiMod_Ctrl | ImGuiKey_C, 0,        id) || Shortcut(ImGuiMod_Ctrl  | ImGuiKey_Insert, 0,        id)) && !is_password && (!is_multiline || state->HasSelection());
         const bool is_paste = (Shortcut(ImGuiMod_Ctrl | ImGuiKey_V, f_repeat, id) || Shortcut(ImGuiMod_Shift | ImGuiKey_Insert, f_repeat, id)) && !is_readonly;
         const bool is_undo  = (Shortcut(ImGuiMod_Ctrl | ImGuiKey_Z, f_repeat, id)) && !is_readonly && is_undoable;
-        const bool is_redo =  (Shortcut(ImGuiMod_Ctrl | ImGuiKey_Y, f_repeat, id) || (is_osx && Shortcut(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_Z, f_repeat, id))) && !is_readonly && is_undoable;
+        const bool is_redo =  (Shortcut(ImGuiMod_Ctrl | ImGuiKey_Y, f_repeat, id) || Shortcut(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_Z, f_repeat, id)) && !is_readonly && is_undoable;
         const bool is_select_all = Shortcut(ImGuiMod_Ctrl | ImGuiKey_A, 0, id);
 
         // We allow validate/cancel with Nav source (gamepad) to makes it easier to undo an accidental NavInput press with no keyboard wired, but otherwise it isn't very useful.
@@ -7101,7 +7101,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
 
     // Text stays at the submission position. Alignment/clipping extents ignore SpanAllColumns.
     if (is_visible)
-        RenderTextClipped(pos, ImVec2(window->WorkRect.Max.x, pos.y + size.y), label, NULL, &label_size, style.SelectableTextAlign, &bb);
+        RenderTextClipped(pos, ImVec2(ImMin(pos.x + size.x, window->WorkRect.Max.x), pos.y + size.y), label, NULL, &label_size, style.SelectableTextAlign, &bb);
 
     // Automatically close popups
     if (pressed && (window->Flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiSelectableFlags_NoAutoClosePopups) && (g.LastItemData.ItemFlags & ImGuiItemFlags_AutoClosePopups))
@@ -10368,10 +10368,15 @@ void ImGui::TabItemLabelAndCloseButton(ImDrawList* draw_list, const ImRect& bb, 
     //  'g.ActiveId==close_button_id' will be true when we are holding on the close button, in which case both hovered booleans are false
     bool close_button_pressed = false;
     bool close_button_visible = false;
+    bool is_hovered = g.HoveredId == tab_id || g.HoveredId == close_button_id || g.ActiveId == tab_id || g.ActiveId == close_button_id; // Any interaction account for this too.
+
     if (close_button_id != 0)
-        if (is_contents_visible || bb.GetWidth() >= ImMax(button_sz, g.Style.TabMinWidthForCloseButton))
-            if (g.HoveredId == tab_id || g.HoveredId == close_button_id || g.ActiveId == tab_id || g.ActiveId == close_button_id)
-                close_button_visible = true;
+    {
+        if (is_contents_visible)
+            close_button_visible = (g.Style.TabCloseButtonMinWidthSelected < 0.0f) ? true : (is_hovered && bb.GetWidth() >= ImMax(button_sz, g.Style.TabCloseButtonMinWidthSelected));
+        else
+            close_button_visible = (g.Style.TabCloseButtonMinWidthUnselected < 0.0f) ? true : (is_hovered && bb.GetWidth() >= ImMax(button_sz, g.Style.TabCloseButtonMinWidthUnselected));
+    }
     bool unsaved_marker_visible = (flags & ImGuiTabItemFlags_UnsavedDocument) != 0 && (button_pos.x + button_sz <= bb.Max.x);
 
     if (close_button_visible)
@@ -10382,7 +10387,7 @@ void ImGui::TabItemLabelAndCloseButton(ImDrawList* draw_list, const ImRect& bb, 
         g.LastItemData = last_item_backup;
 
         // Close with middle mouse button
-        if (!(flags & ImGuiTabItemFlags_NoCloseWithMiddleMouseButton) && IsMouseClicked(2))
+        if (is_hovered && !(flags & ImGuiTabItemFlags_NoCloseWithMiddleMouseButton) && IsMouseClicked(2))
             close_button_pressed = true;
     }
     else if (unsaved_marker_visible)

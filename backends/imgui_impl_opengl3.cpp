@@ -22,6 +22,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2025-02-18: OpenGL: Lazily reinitialize embedded GL loader for when calling backend from e.g. other DLL boundaries. (#8406)
 //  2024-10-07: OpenGL: Changed default texture sampler to Clamp instead of Repeat/Wrap.
 //  2024-06-28: OpenGL: ImGui_ImplOpenGL3_NewFrame() recreates font texture if it has been destroyed by ImGui_ImplOpenGL3_DestroyFontsTexture(). (#7748)
 //  2024-05-07: OpenGL: Update loader for Linux to support EGL/GLVND. (#7562)
@@ -169,6 +170,7 @@
 // - You can temporarily use an unstripped version. See https://github.com/dearimgui/gl3w_stripped/releases
 // Changes to this backend using new APIs should be accompanied by a regenerated stripped loader version.
 #define IMGL3W_IMPL
+#define IMGUI_IMPL_OPENGL_LOADER_IMGL3W
 #include "imgui_impl_opengl3_loader.h"
 #endif
 
@@ -276,6 +278,21 @@ struct ImGui_ImplOpenGL3_VtxAttribState
 };
 #endif
 
+// Not static to allow third-party code to use that if they want to (but undocumented)
+bool ImGui_ImplOpenGL3_InitLoader();
+bool ImGui_ImplOpenGL3_InitLoader()
+{
+    // Initialize our loader
+#ifdef IMGUI_IMPL_OPENGL_LOADER_IMGL3W
+    if (glGetIntegerv == NULL && imgl3wInit() != 0)
+    {
+        fprintf(stderr, "Failed to initialize OpenGL loader!\n");
+        return false;
+    }
+#endif
+    return true;
+}
+
 // Functions
 bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
 {
@@ -283,14 +300,9 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     IMGUI_CHECKVERSION();
     IM_ASSERT(io.BackendRendererUserData == nullptr && "Already initialized a renderer backend!");
 
-    // Initialize our loader
-#if !defined(IMGUI_IMPL_OPENGL_ES2) && !defined(IMGUI_IMPL_OPENGL_ES3) && !defined(IMGUI_IMPL_OPENGL_LOADER_CUSTOM)
-    if (imgl3wInit() != 0)
-    {
-        fprintf(stderr, "Failed to initialize OpenGL loader!\n");
+    // Initialize loader
+    if (!ImGui_ImplOpenGL3_InitLoader())
         return false;
-    }
-#endif
 
     // Setup backend capabilities flags
     ImGui_ImplOpenGL3_Data* bd = IM_NEW(ImGui_ImplOpenGL3_Data)();
@@ -303,6 +315,7 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     // GLES 2
     bd->GlVersion = 200;
     bd->GlProfileIsES2 = true;
+    IM_UNUSED(gl_version_str);
 #else
     // Desktop or GLES 3
     GLint major = 0;
@@ -405,6 +418,8 @@ void    ImGui_ImplOpenGL3_NewFrame()
     ImGui_ImplOpenGL3_Data* bd = ImGui_ImplOpenGL3_GetBackendData();
     IM_ASSERT(bd != nullptr && "Context or backend not initialized! Did you call ImGui_ImplOpenGL3_Init()?");
 
+    ImGui_ImplOpenGL3_InitLoader(); // Lazily init loader if not already done for e.g. DLL boundaries.
+
     if (!bd->ShaderHandle)
         ImGui_ImplOpenGL3_CreateDeviceObjects();
     if (!bd->FontTexture)
@@ -495,6 +510,8 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     int fb_height = (int)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
     if (fb_width <= 0 || fb_height <= 0)
         return;
+
+    ImGui_ImplOpenGL3_InitLoader(); // Lazily init loader if not already done for e.g. DLL boundaries.
 
     ImGui_ImplOpenGL3_Data* bd = ImGui_ImplOpenGL3_GetBackendData();
 

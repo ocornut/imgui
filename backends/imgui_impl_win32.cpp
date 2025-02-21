@@ -21,6 +21,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2025-02-18: Added ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress mouse cursor support.
 //  2024-07-08: Inputs: Fixed ImGuiMod_Super being mapped to VK_APPS instead of VK_LWIN||VK_RWIN. (#7768)
 //  2023-10-05: Inputs: Added support for extra ImGuiKey values: F13 to F24 function keys, app back/forward keys.
 //  2023-09-25: Inputs: Synthesize key-down event on key-up for VK_SNAPSHOT / ImGuiKey_PrintScreen as Windows doesn't emit it (same behavior as GLFW/SDL).
@@ -256,6 +257,8 @@ static bool ImGui_ImplWin32_UpdateMouseCursor(ImGuiIO& io, ImGuiMouseCursor imgu
         case ImGuiMouseCursor_ResizeNESW:   win32_cursor = IDC_SIZENESW; break;
         case ImGuiMouseCursor_ResizeNWSE:   win32_cursor = IDC_SIZENWSE; break;
         case ImGuiMouseCursor_Hand:         win32_cursor = IDC_HAND; break;
+        case ImGuiMouseCursor_Wait:         win32_cursor = IDC_WAIT; break;
+        case ImGuiMouseCursor_Progress:     win32_cursor = IDC_APPSTARTING; break;
         case ImGuiMouseCursor_NotAllowed:   win32_cursor = IDC_NO; break;
         }
         ::SetCursor(::LoadCursor(nullptr, win32_cursor));

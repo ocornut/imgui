@@ -20,6 +20,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2025-02-18: Added ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress mouse cursor support.
 //  2025-01-06: Avoid calling al_set_mouse_cursor() repeatedly since it appears to leak on on X11 (#8256).
 //  2024-08-22: moved some OS/backend related function pointers from ImGuiIO to ImGuiPlatformIO:
 //               - io.GetClipboardTextFn    -> platform_io.Platform_GetClipboardTextFn
@@ -594,6 +595,8 @@ static void ImGui_ImplAllegro5_UpdateMouseCursor()
         case ImGuiMouseCursor_ResizeEW:     cursor_id = ALLEGRO_SYSTEM_MOUSE_CURSOR_RESIZE_E; break;
         case ImGuiMouseCursor_ResizeNESW:   cursor_id = ALLEGRO_SYSTEM_MOUSE_CURSOR_RESIZE_NE; break;
         case ImGuiMouseCursor_ResizeNWSE:   cursor_id = ALLEGRO_SYSTEM_MOUSE_CURSOR_RESIZE_NW; break;
+        case ImGuiMouseCursor_Wait:         cursor_id = ALLEGRO_SYSTEM_MOUSE_CURSOR_BUSY; break;
+        case ImGuiMouseCursor_Progress:     cursor_id = ALLEGRO_SYSTEM_MOUSE_CURSOR_PROGRESS; break;
         case ImGuiMouseCursor_NotAllowed:   cursor_id = ALLEGRO_SYSTEM_MOUSE_CURSOR_UNAVAILABLE; break;
         }
         al_set_system_mouse_cursor(bd->Display, cursor_id);

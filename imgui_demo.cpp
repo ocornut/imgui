@@ -861,8 +861,8 @@ static void ShowDemoWindowWidgets(ImGuiDemoWindowData* demo_data)
                 "Hold SHIFT or use mouse to select text.\n"
                 "CTRL+Left/Right to word jump.\n"
                 "CTRL+A or Double-Click to select all.\n"
-                "CTRL+X,CTRL+C,CTRL+V clipboard.\n"
-                "CTRL+Z,CTRL+Y undo/redo.\n"
+                "CTRL+X,CTRL+C,CTRL+V for clipboard.\n"
+                "CTRL+Z to undo, CTRL+Y/CTRL+SHIFT+Z to redo.\n"
                 "ESCAPE to revert.\n\n"
                 "PROGRAMMER:\n"
                 "You can use the ImGuiInputTextFlags_CallbackResize facility if you need to wire InputText() "
@@ -1435,7 +1435,6 @@ static void ShowDemoWindowWidgets(ImGuiDemoWindowData* demo_data)
 
         // Pass in the preview value visible before opening the combo (it could technically be different contents or not pulled from items[])
         const char* combo_preview_value = items[item_selected_idx];
-
         if (ImGui::BeginCombo("combo 1", combo_preview_value, flags))
         {
             for (int n = 0; n < IM_ARRAYSIZE(items); n++)
@@ -1451,23 +1450,46 @@ static void ShowDemoWindowWidgets(ImGuiDemoWindowData* demo_data)
             ImGui::EndCombo();
         }
 
+        // Show case embedding a filter using a simple trick: displaying the filter inside combo contents.
+        // See https://github.com/ocornut/imgui/issues/718 for advanced/esoteric alternatives.
+        if (ImGui::BeginCombo("combo 2 (w/ filter)", combo_preview_value, flags))
+        {
+            static ImGuiTextFilter filter;
+            if (ImGui::IsWindowAppearing())
+            {
+                ImGui::SetKeyboardFocusHere();
+                filter.Clear();
+            }
+            ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_F);
+            filter.Draw("##Filter", -FLT_MIN);
+
+            for (int n = 0; n < IM_ARRAYSIZE(items); n++)
+            {
+                const bool is_selected = (item_selected_idx == n);
+                if (filter.PassFilter(items[n]))
+                    if (ImGui::Selectable(items[n], is_selected))
+                        item_selected_idx = n;
+            }
+            ImGui::EndCombo();
+        }
+
         ImGui::Spacing();
         ImGui::SeparatorText("One-liner variants");
-        HelpMarker("Flags above don't apply to this section.");
+        HelpMarker("The Combo() function is not greatly useful apart from cases were you want to embed all options in a single strings.\nFlags above don't apply to this section.");
 
         // Simplified one-liner Combo() API, using values packed in a single constant string
         // This is a convenience for when the selection set is small and known at compile-time.
         static int item_current_2 = 0;
-        ImGui::Combo("combo 2 (one-liner)", &item_current_2, "aaaa\0bbbb\0cccc\0dddd\0eeee\0\0");
+        ImGui::Combo("combo 3 (one-liner)", &item_current_2, "aaaa\0bbbb\0cccc\0dddd\0eeee\0\0");
 
         // Simplified one-liner Combo() using an array of const char*
         // This is not very useful (may obsolete): prefer using BeginCombo()/EndCombo() for full control.
         static int item_current_3 = -1; // If the selection isn't within 0..count, Combo won't display a preview
-        ImGui::Combo("combo 3 (array)", &item_current_3, items, IM_ARRAYSIZE(items));
+        ImGui::Combo("combo 4 (array)", &item_current_3, items, IM_ARRAYSIZE(items));
 
         // Simplified one-liner Combo() using an accessor function
         static int item_current_4 = 0;
-        ImGui::Combo("combo 4 (function)", &item_current_4, [](void* data, int n) { return ((const char**)data)[n]; }, items, IM_ARRAYSIZE(items));
+        ImGui::Combo("combo 5 (function)", &item_current_4, [](void* data, int n) { return ((const char**)data)[n]; }, items, IM_ARRAYSIZE(items));
 
         ImGui::TreePop();
     }
@@ -7571,7 +7593,7 @@ static void ShowDemoWindowInputs()
         IMGUI_DEMO_MARKER("Inputs & Focus/Mouse Cursors");
         if (ImGui::TreeNode("Mouse Cursors"))
         {
-            const char* mouse_cursors_names[] = { "Arrow", "TextInput", "ResizeAll", "ResizeNS", "ResizeEW", "ResizeNESW", "ResizeNWSE", "Hand", "NotAllowed" };
+            const char* mouse_cursors_names[] = { "Arrow", "TextInput", "ResizeAll", "ResizeNS", "ResizeEW", "ResizeNESW", "ResizeNWSE", "Hand", "Wait", "Progress", "NotAllowed" };
             IM_ASSERT(IM_ARRAYSIZE(mouse_cursors_names) == ImGuiMouseCursor_COUNT);
 
             ImGuiMouseCursor current = ImGui::GetMouseCursor();
@@ -7748,6 +7770,9 @@ void ImGui::ShowAboutWindow(bool* p_open)
 #endif
 #ifdef IMGUI_DISABLE_WIN32_FUNCTIONS
         ImGui::Text("define: IMGUI_DISABLE_WIN32_FUNCTIONS");
+#endif
+#ifdef IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS
+        ImGui::Text("define: IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS");
 #endif
 #ifdef IMGUI_DISABLE_DEFAULT_FORMAT_FUNCTIONS
         ImGui::Text("define: IMGUI_DISABLE_DEFAULT_FORMAT_FUNCTIONS");
@@ -7966,10 +7991,6 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             ImGui::SliderFloat("ChildBorderSize", &style.ChildBorderSize, 0.0f, 1.0f, "%.0f");
             ImGui::SliderFloat("PopupBorderSize", &style.PopupBorderSize, 0.0f, 1.0f, "%.0f");
             ImGui::SliderFloat("FrameBorderSize", &style.FrameBorderSize, 0.0f, 1.0f, "%.0f");
-            ImGui::SliderFloat("TabBorderSize", &style.TabBorderSize, 0.0f, 1.0f, "%.0f");
-            ImGui::SliderFloat("TabBarBorderSize", &style.TabBarBorderSize, 0.0f, 2.0f, "%.0f");
-            ImGui::SliderFloat("TabBarOverlineSize", &style.TabBarOverlineSize, 0.0f, 3.0f, "%.0f");
-            ImGui::SameLine(); HelpMarker("Overline is only drawn over the selected tab when ImGuiTabBarFlags_DrawSelectedOverline is set.");
 
             ImGui::SeparatorText("Rounding");
             ImGui::SliderFloat("WindowRounding", &style.WindowRounding, 0.0f, 12.0f, "%.0f");
@@ -7978,6 +7999,14 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             ImGui::SliderFloat("PopupRounding", &style.PopupRounding, 0.0f, 12.0f, "%.0f");
             ImGui::SliderFloat("ScrollbarRounding", &style.ScrollbarRounding, 0.0f, 12.0f, "%.0f");
             ImGui::SliderFloat("GrabRounding", &style.GrabRounding, 0.0f, 12.0f, "%.0f");
+
+            ImGui::SeparatorText("Tabs");
+            ImGui::SliderFloat("TabBorderSize", &style.TabBorderSize, 0.0f, 1.0f, "%.0f");
+            ImGui::SliderFloat("TabBarBorderSize", &style.TabBarBorderSize, 0.0f, 2.0f, "%.0f");
+            ImGui::SliderFloat("TabBarOverlineSize", &style.TabBarOverlineSize, 0.0f, 3.0f, "%.0f");
+            ImGui::SameLine(); HelpMarker("Overline is only drawn over the selected tab when ImGuiTabBarFlags_DrawSelectedOverline is set.");
+            ImGui::DragFloat("TabCloseButtonMinWidthSelected", &style.TabCloseButtonMinWidthSelected, 0.1f, -1.0f, 100.0f, (style.TabCloseButtonMinWidthSelected < 0.0f) ? "%.0f (Always)" : "%.0f");
+            ImGui::DragFloat("TabCloseButtonMinWidthUnselected", &style.TabCloseButtonMinWidthUnselected, 0.1f, -1.0f, 100.0f, (style.TabCloseButtonMinWidthUnselected < 0.0f) ? "%.0f (Always)" : "%.0f");
             ImGui::SliderFloat("TabRounding", &style.TabRounding, 0.0f, 12.0f, "%.0f");
 
             ImGui::SeparatorText("Tables");
@@ -8212,7 +8241,7 @@ void ImGui::ShowUserGuide()
     ImGui::BulletText("CTRL+Left/Right to word jump.");
     ImGui::BulletText("CTRL+A or double-click to select all.");
     ImGui::BulletText("CTRL+X/C/V to use clipboard cut/copy/paste.");
-    ImGui::BulletText("CTRL+Z,CTRL+Y to undo/redo.");
+    ImGui::BulletText("CTRL+Z to undo, CTRL+Y/CTRL+SHIFT+Z to redo.");
     ImGui::BulletText("ESCAPE to revert.");
     ImGui::Unindent();
     ImGui::BulletText("With keyboard navigation enabled:");
@@ -8248,7 +8277,7 @@ static void ShowExampleAppMainMenuBar()
         if (ImGui::BeginMenu("Edit"))
         {
             if (ImGui::MenuItem("Undo", "CTRL+Z")) {}
-            if (ImGui::MenuItem("Redo", "CTRL+Y", false, false)) {}  // Disabled item
+            if (ImGui::MenuItem("Redo", "CTRL+Y", false, false)) {} // Disabled item
             ImGui::Separator();
             if (ImGui::MenuItem("Cut", "CTRL+X")) {}
             if (ImGui::MenuItem("Copy", "CTRL+C")) {}

@@ -42,14 +42,22 @@ HOW TO UPDATE?
 Breaking changes:
 
 - Renamed ImFontConfig::GlyphExtraSpacing.x option to GlyphExtraAdvanceX. (#242)
+- Renamed style.TabMinWidthForCloseButton to style.TabCloseButtonMinWidthUnselected.
+- Backends: Vulkan: Added 'uint32_t api_version' argument to ImGui_ImplVulkan_LoadFunctions().
+  Note that it was also added to ImGui_ImplVulkan_InitInfo but for the later it is optional.
+  (#8326, #8365, #8400)
 
 Other changes:
 
 - Fixed IsItemDeactivatedAfterEdit() signal being broken for Checkbox(),
   RadioButton(), Selectable(). Regression from 2025/01/13. (#8370)
+- Windows: Fixed an issue where BeginChild() inside a collapsed Begin()
+  wouldn't inherit the SkipItems flag, resulting in missing coarse clipping
+  opportunity for code not checking the BeginChild() return value.
 - Windows, Style: Added style.WindowBorderHoverPadding setting to configure
   inner/outer padding applied to hit-testing of windows borders and detection
   of hovered window.
+- InputText: Allow CTRL+Shift+Z to redo even outside of OSX. (#8389) [@tanksdude]
 - InputTextWithHint(): Fixed buffer-overflow (luckily often with no visible effect)
   when a user callback modified the buffer contents in a way that altered the
   visibility of the preview/hint buffer. (#8368) [@m9710797, @ocornut]
@@ -57,9 +65,42 @@ Other changes:
   which amusingly made it disappear when using very big font/frame size.
 - Tables: fixed calling SetNextWindowScroll() on clipped scrolling table
   to not leak the value into a subsequent window. (#8196)
+- Tables: fixed an issue where Columns Visible/Width state wouldn't be correctly
+  restored when hot-reloading .ini state. (#7934)
+- Tables: tamed some .ini settings optimizations to more accurately allow
+  overwriting/hot-reloading settings in more situations. (#7934)
+- Tables, Error Handling: Recovery from invalid index in TableSetColumnIndex(). (#1651)
+- Selectable: Fixed horizontal label alignment with SelectableTextAlign.x > 0 and
+  specifying a selectable size. (#8338)
+- Tabs, Style: made the Close Button of selected tabs always visible by default,
+  without requiring to hover the tab. (#8387)
+  - Added style.TabCloseButtonMinWidthSelected/TabCloseButtonMinWidthUnselected settings
+    to configure visibility of the Close Button for selected and unselected tabs.
+    (-1: always visible. 0.0f: visible when hovered. >0.0f: visible when hovered if minimum width)
+  - Default for selected tabs: TabCloseButtonMinWidthSelected = -1.0f (always visible)
+  - Default for unselected tabs: TabCloseButtonMinWidthUnselected = 0.0f (visible when hovered)
+- Tabs: fixed middle-mouse-button to close tab not checking that close button
+  is hovered, merely it's visibility. (#8399, #8387) [@nicovanbentum]
+- TextLinkOpenURL(): fixed default Win32 io.PlatformOpenInShellFn handler to
+  handle UTF-8 regardless of system regional settings. (#7660) [@achabense]
+- Misc: Added ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress mouse cursors
+  (busy/wait/hourglass shape, with or without an arrow cursor).
+- Demo: Combos: demonstrate a very simple way to add a filter to a combo,
+  by showing the filter inside the combo contents. (#718)
+- Backends: SDL2, SDL3:  Using SDL_OpenURL() in platform_io.Platform_OpenInShellFn
+  handler. (#7660) [@achabense]
+- Backends: SDL2, SDL3, Win32, Allegro5: Added support for ImGuiMouseCursor_Wait
+  and ImGuiMouseCursor_Progress cursors.
+- Backends: OpenGL3: Lazily reinitialize embedded GL loader for when calling backend
+  from e.g. other DLL boundaries. (#8406)
 - Backends: Metal: Fixed a crash on application resources. (#8367, #7419) [@anszom]
+- Backends: Vulkan: Added ApiVersion field in ImGui_ImplVulkan_InitInfo.
+  Default to header version if unspecified. (#8326, #8365) [@mklefrancois]
+- Backends: Vulkan: Dynamic rendering path loads "vkCmdBeginRendering/vkCmdEndRendering"
+  (without -KHR suffix) on API 1.3. (#8326, #8365) [@mklefrancois]
 - Backends: WebGPU: Fix for DAWN API rename WGPUProgrammableStageDescriptor -> WGPUComputeState.
   [@PhantomCloak] (#8369)
+
 
 -----------------------------------------------------------------------
  VERSION 1.91.8 (Released 2025-01-31)

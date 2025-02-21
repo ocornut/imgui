@@ -142,7 +142,8 @@ CODE
    - CTRL+Shift+Left/Right:         Select words.
    - CTRL+A or Double-Click:        Select All.
    - CTRL+X, CTRL+C, CTRL+V:        Use OS clipboard.
-   - CTRL+Z, CTRL+Y:                Undo, Redo.
+   - CTRL+Z                         Undo.
+   - CTRL+Y or CTRL+Shift+Z:        Redo.
    - ESCAPE:                        Revert text to its original value.
    - On OSX, controls are automatically adjusted to match standard OSX text editing 2ts and behaviors.
 
@@ -1338,7 +1339,8 @@ ImGuiStyle::ImGuiStyle()
     LogSliderDeadzone           = 4.0f;             // The size in pixels of the dead-zone around zero on logarithmic sliders that cross zero.
     TabRounding                 = 5.0f;             // Radius of upper corners of a tab. Set to 0.0f to have rectangular tabs.
     TabBorderSize               = 0.0f;             // Thickness of border around tabs.
-    TabMinWidthForCloseButton   = 0.0f;             // Minimum width for close button to appear on an unselected tab when hovered. Set to 0.0f to always show when hovering, set to FLT_MAX to never show close button unless selected.
+    TabCloseButtonMinWidthSelected   = -1.0f;       // -1: always visible. 0.0f: visible when hovered. >0.0f: visible when hovered if minimum width.
+    TabCloseButtonMinWidthUnselected = 0.0f;        // -1: always visible. 0.0f: visible when hovered. >0.0f: visible when hovered if minimum width. FLT_MAX: never show close button when unselected.
     TabBarBorderSize            = 1.0f;             // Thickness of tab-bar separator, which takes on the tab active color to denote focus.
     TabBarOverlineSize          = 1.0f;             // Thickness of tab-bar overline, which highlights the selected tab-bar.
     TableAngledHeadersAngle     = 35.0f * (IM_PI / 180.0f); // Angle of angled headers (supported values range from -50 degrees to +50 degrees).
@@ -1393,7 +1395,8 @@ void ImGuiStyle::ScaleAllSizes(float scale_factor)
     GrabRounding = ImTrunc(GrabRounding * scale_factor);
     LogSliderDeadzone = ImTrunc(LogSliderDeadzone * scale_factor);
     TabRounding = ImTrunc(TabRounding * scale_factor);
-    TabMinWidthForCloseButton = (TabMinWidthForCloseButton != FLT_MAX) ? ImTrunc(TabMinWidthForCloseButton * scale_factor) : FLT_MAX;
+    TabCloseButtonMinWidthSelected = (TabCloseButtonMinWidthSelected > 0.0f && TabCloseButtonMinWidthSelected != FLT_MAX) ? ImTrunc(TabCloseButtonMinWidthSelected * scale_factor) : TabCloseButtonMinWidthSelected;
+    TabCloseButtonMinWidthUnselected = (TabCloseButtonMinWidthUnselected > 0.0f && TabCloseButtonMinWidthUnselected != FLT_MAX) ? ImTrunc(TabCloseButtonMinWidthUnselected * scale_factor) : TabCloseButtonMinWidthUnselected;
     TabBarOverlineSize = ImTrunc(TabBarOverlineSize * scale_factor);
     SeparatorTextPadding = ImTrunc(SeparatorTextPadding * scale_factor);
     DisplayWindowPadding = ImTrunc(DisplayWindowPadding * scale_factor);
@@ -2500,7 +2503,7 @@ int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* 
     int e = 0;
     e  = (*out_char < mins[len]) << 6; // non-canonical encoding
     e |= ((*out_char >> 11) == 0x1b) << 7;  // surrogate half?
-    e |= (*out_char > IM_UNICODE_CODEPOINT_MAX) << 8;  // out of range?
+    e |= (*out_char > IM_UNICODE_CODEPOINT_MAX) << 8;  // out of range we can store in ImWchar (FIXME: May evolve)
     e |= (s[1] & 0xc0) >> 2;
     e |= (s[2] & 0xc0) >> 4;
     e |= (s[3]       ) >> 6;
@@ -3891,7 +3894,7 @@ void ImGui::RenderMouseCursor(ImVec2 base_pos, float base_scale, ImGuiMouseCurso
     {
         // We scale cursor with current viewport/monitor, however Windows 10 for its own hardware cursor seems to be using a different scale factor.
         ImVec2 offset, size, uv[4];
-        if (!font_atlas->GetMouseCursorTexData(mouse_cursor, &offset, &size, &uv[0], &uv[2]))
+        if (!ImFontAtlasGetMouseCursorTexData(font_atlas, mouse_cursor, &offset, &size, &uv[0], &uv[2]))
             continue;
         const ImVec2 pos = base_pos - offset;
         const float scale = base_scale;
@@ -3904,6 +3907,13 @@ void ImGui::RenderMouseCursor(ImVec2 base_pos, float base_scale, ImGuiMouseCurso
         draw_list->AddImage(tex_id, pos + ImVec2(2, 0) * scale, pos + (ImVec2(2, 0) + size) * scale, uv[2], uv[3], col_shadow);
         draw_list->AddImage(tex_id, pos,                        pos + size * scale,                  uv[2], uv[3], col_border);
         draw_list->AddImage(tex_id, pos,                        pos + size * scale,                  uv[0], uv[1], col_fill);
+        if (mouse_cursor == ImGuiMouseCursor_Wait || mouse_cursor == ImGuiMouseCursor_Progress)
+        {
+            float a_min = ImFmod((float)g.Time * 5.0f, 2.0f * IM_PI);
+            float a_max = a_min + IM_PI * 1.65f;
+            draw_list->PathArcTo(pos + ImVec2(14, -1) * scale, 6.0f * scale, a_min, a_max);
+            draw_list->PathStroke(col_fill, ImDrawFlags_None, 3.0f * scale);
+        }
         draw_list->PopTextureID();
     }
 }
@@ -4004,6 +4014,7 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     InputEventsNextEventId = 1;
 
     WindowsActiveCount = 0;
+    WindowsBorderHoverPadding = 0.0f;
     CurrentWindow = NULL;
     HoveredWindow = NULL;
     HoveredWindowUnderMovingWindow = NULL;
@@ -5233,6 +5244,7 @@ static void SetupDrawListSharedData()
         g.DrawListSharedData.InitialFlags |= ImDrawListFlags_AntiAliasedFill;
     if (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasVtxOffset)
         g.DrawListSharedData.InitialFlags |= ImDrawListFlags_AllowVtxOffset;
+    g.DrawListSharedData.InitialFringeScale = 1.0f; // FIXME-DPI: Change this for some DPI scaling experiments.
 }
 
 void ImGui::NewFrame()
@@ -7803,7 +7815,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             // Hide along with parent or if parent is collapsed
             if (parent_window && (parent_window->Collapsed || parent_window->HiddenFramesCanSkipItems > 0))
                 window->HiddenFramesCanSkipItems = 1;
-            if (parent_window && (parent_window->Collapsed || parent_window->HiddenFramesCannotSkipItems > 0))
+            if (parent_window && parent_window->HiddenFramesCannotSkipItems > 0)
                 window->HiddenFramesCannotSkipItems = 1;
         }
 
@@ -15191,7 +15203,11 @@ static void Platform_SetClipboardTextFn_DefaultImpl(ImGuiContext* ctx, const cha
 #endif
 static bool Platform_OpenInShellFn_DefaultImpl(ImGuiContext*, const char* path)
 {
-    return (INT_PTR)::ShellExecuteA(NULL, "open", path, NULL, NULL, SW_SHOWDEFAULT) > 32;
+    const int path_wsize = ::MultiByteToWideChar(CP_UTF8, 0, path, -1, NULL, 0);
+    ImVector<wchar_t> path_wbuf;
+    path_wbuf.resize(path_wsize);
+    ::MultiByteToWideChar(CP_UTF8, 0, path, -1, path_wbuf.Data, path_wsize);
+    return (INT_PTR)::ShellExecuteW(NULL, L"open", path_wbuf.Data, NULL, NULL, SW_SHOWDEFAULT) > 32;
 }
 #else
 #include <sys/wait.h>

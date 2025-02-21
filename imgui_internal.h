@@ -809,8 +809,9 @@ struct IMGUI_API ImDrawListSharedData
     float           FontScale;                  // Current/default font scale (== FontSize / Font->FontSize)
     float           CurveTessellationTol;       // Tessellation tolerance when using PathBezierCurveTo()
     float           CircleSegmentMaxError;      // Number of circle segments to use per pixel of radius for AddCircle() etc
-    ImVec4          ClipRectFullscreen;         // Value for PushClipRectFullscreen()
+    float           InitialFringeScale;         // Initial scale to apply to AA fringe
     ImDrawListFlags InitialFlags;               // Initial flags at the beginning of the frame (it is possible to alter flags on a per-drawlist basis afterwards)
+    ImVec4          ClipRectFullscreen;         // Value for PushClipRectFullscreen()
     ImVector<ImVec2> TempBuffer;                // Temporary write buffer
 
     // Lookup tables
@@ -2967,7 +2968,7 @@ struct ImGuiTableColumnSettings
     ImGuiTableColumnIdx     DisplayOrder;
     ImGuiTableColumnIdx     SortOrder;
     ImU8                    SortDirection : 2;
-    ImU8                    IsEnabled : 1; // "Visible" in ini file
+    ImS8                    IsEnabled : 2; // "Visible" in ini file
     ImU8                    IsStretch : 1;
 
     ImGuiTableColumnSettings()
@@ -2977,7 +2978,7 @@ struct ImGuiTableColumnSettings
         Index = -1;
         DisplayOrder = SortOrder = -1;
         SortDirection = ImGuiSortDirection_None;
-        IsEnabled = 1;
+        IsEnabled = -1;
         IsStretch = 0;
     }
 };
@@ -3608,6 +3609,8 @@ IMGUI_API void      ImFontAtlasBuildRender32bppRectFromString(ImFontAtlas* atlas
 IMGUI_API void      ImFontAtlasBuildMultiplyCalcLookupTable(unsigned char out_table[256], float in_multiply_factor);
 IMGUI_API void      ImFontAtlasBuildMultiplyRectAlpha8(const unsigned char table[256], unsigned char* pixels, int x, int y, int w, int h, int stride);
 IMGUI_API void      ImFontAtlasBuildGetOversampleFactors(const ImFontConfig* cfg, int* out_oversample_h, int* out_oversample_v);
+
+IMGUI_API bool      ImFontAtlasGetMouseCursorTexData(ImFontAtlas* atlas, ImGuiMouseCursor cursor_type, ImVec2* out_offset, ImVec2* out_size, ImVec2 out_uv_border[2], ImVec2 out_uv_fill[2]);
 
 //-----------------------------------------------------------------------------
 // [SECTION] Test Engine specific hooks (imgui_test_engine)

@@ -75,16 +75,17 @@
 //   - When using dynamic rendering, set UseDynamicRendering=true and fill PipelineRenderingCreateInfo structure.
 struct ImGui_ImplVulkan_InitInfo
 {
+    uint32_t                        ApiVersion;                 // Fill with API version of Instance, e.g. VK_API_VERSION_1_3 or your value of VkApplicationInfo::apiVersion. May be lower than header version (VK_HEADER_VERSION_COMPLETE)
     VkInstance                      Instance;
     VkPhysicalDevice                PhysicalDevice;
     VkDevice                        Device;
     uint32_t                        QueueFamily;
     VkQueue                         Queue;
-    VkDescriptorPool                DescriptorPool;               // See requirements in note above; ignored if using DescriptorPoolSize > 0
-    VkRenderPass                    RenderPass;                   // Ignored if using dynamic rendering
-    uint32_t                        MinImageCount;                // >= 2
-    uint32_t                        ImageCount;                   // >= MinImageCount
-    VkSampleCountFlagBits           MSAASamples;                  // 0 defaults to VK_SAMPLE_COUNT_1_BIT
+    VkDescriptorPool                DescriptorPool;             // See requirements in note above; ignored if using DescriptorPoolSize > 0
+    VkRenderPass                    RenderPass;                 // Ignored if using dynamic rendering
+    uint32_t                        MinImageCount;              // >= 2
+    uint32_t                        ImageCount;                 // >= MinImageCount
+    VkSampleCountFlagBits           MSAASamples;                // 0 defaults to VK_SAMPLE_COUNT_1_BIT
 
     // (Optional)
     VkPipelineCache                 PipelineCache;
@@ -103,7 +104,7 @@ struct ImGui_ImplVulkan_InitInfo
     // (Optional) Allocation, Debugging
     const VkAllocationCallbacks*    Allocator;
     void                            (*CheckVkResultFn)(VkResult err);
-    VkDeviceSize                    MinAllocationSize;      // Minimum allocation size. Set to 1024*1024 to satisfy zealous best practices validation layer and waste a little memory.
+    VkDeviceSize                    MinAllocationSize;          // Minimum allocation size. Set to 1024*1024 to satisfy zealous best practices validation layer and waste a little memory.
 };
 
 // Follow "Getting Started" link and check examples/ folder to learn about using backends!
@@ -123,7 +124,7 @@ IMGUI_IMPL_API void             ImGui_ImplVulkan_RemoveTexture(VkDescriptorSet d
 
 // Optional: load Vulkan functions with a custom function loader
 // This is only useful with IMGUI_IMPL_VULKAN_NO_PROTOTYPES / VK_NO_PROTOTYPES
-IMGUI_IMPL_API bool             ImGui_ImplVulkan_LoadFunctions(PFN_vkVoidFunction(*loader_func)(const char* function_name, void* user_data), void* user_data = nullptr);
+IMGUI_IMPL_API bool             ImGui_ImplVulkan_LoadFunctions(uint32_t api_version, PFN_vkVoidFunction(*loader_func)(const char* function_name, void* user_data), void* user_data = nullptr);
 
 // [BETA] Selected render state data shared with callbacks.
 // This is temporarily stored in GetPlatformIO().Renderer_RenderState during the ImGui_ImplVulkan_RenderDrawData() call.

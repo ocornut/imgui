@@ -10,6 +10,8 @@
 //  [X] Platform: Gamepad support. Enabled with 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad'.
 //  [X] Platform: Mouse cursor shape and visibility (ImGuiBackendFlags_HasMouseCursors). Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'.
 //  [X] Platform: IME support.
+// Missing features or Issues:
+//  [ ] Missing ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress cursors.
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
@@ -422,12 +424,12 @@ bool ImGui_ImplOSX_Init(NSView* view)
     bd->MouseCursors[ImGuiMouseCursor_Arrow] = [NSCursor arrowCursor];
     bd->MouseCursors[ImGuiMouseCursor_TextInput] = [NSCursor IBeamCursor];
     bd->MouseCursors[ImGuiMouseCursor_ResizeAll] = [NSCursor closedHandCursor];
-    bd->MouseCursors[ImGuiMouseCursor_Hand] = [NSCursor pointingHandCursor];
-    bd->MouseCursors[ImGuiMouseCursor_NotAllowed] = [NSCursor operationNotAllowedCursor];
     bd->MouseCursors[ImGuiMouseCursor_ResizeNS] = [NSCursor respondsToSelector:@selector(_windowResizeNorthSouthCursor)] ? [NSCursor _windowResizeNorthSouthCursor] : [NSCursor resizeUpDownCursor];
     bd->MouseCursors[ImGuiMouseCursor_ResizeEW] = [NSCursor respondsToSelector:@selector(_windowResizeEastWestCursor)] ? [NSCursor _windowResizeEastWestCursor] : [NSCursor resizeLeftRightCursor];
     bd->MouseCursors[ImGuiMouseCursor_ResizeNESW] = [NSCursor respondsToSelector:@selector(_windowResizeNorthEastSouthWestCursor)] ? [NSCursor _windowResizeNorthEastSouthWestCursor] : [NSCursor closedHandCursor];
     bd->MouseCursors[ImGuiMouseCursor_ResizeNWSE] = [NSCursor respondsToSelector:@selector(_windowResizeNorthWestSouthEastCursor)] ? [NSCursor _windowResizeNorthWestSouthEastCursor] : [NSCursor closedHandCursor];
+    bd->MouseCursors[ImGuiMouseCursor_Hand] = [NSCursor pointingHandCursor];
+    bd->MouseCursors[ImGuiMouseCursor_NotAllowed] = [NSCursor operationNotAllowedCursor];
 
     // Note that imgui.cpp also include default OSX clipboard handlers which can be enabled
     // by adding '#define IMGUI_ENABLE_OSX_DEFAULT_CLIPBOARD_FUNCTIONS' in imconfig.h and adding '-framework ApplicationServices' to your linker command-line.

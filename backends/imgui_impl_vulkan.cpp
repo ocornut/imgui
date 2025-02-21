@@ -26,6 +26,8 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2025-02-14: *BREAKING CHANGE*: Added uint32_t api_version to ImGui_ImplVulkan_LoadFunctions().
+//  2025-02-13: Vulkan: Added ApiVersion field in ImGui_ImplVulkan_InitInfo. Default to header version if unspecified. Dynamic rendering path loads "vkCmdBeginRendering/vkCmdEndRendering" (without -KHR suffix) on API 1.3. (#8326)
 //  2025-01-09: Vulkan: Added IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE to clarify how many image sampler descriptors are expected to be available in descriptor pool. (#6642)
 //  2025-01-06: Vulkan: Added more ImGui_ImplVulkanH_XXXX helper functions to simplify our examples.
 //  2024-12-11: Vulkan: Fixed setting VkSwapchainCreateInfoKHR::preTransform for platforms not supporting VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR. (#8222)
@@ -1080,20 +1082,34 @@ void    ImGui_ImplVulkan_DestroyDeviceObjects()
 }
 
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
-static void ImGui_ImplVulkan_LoadDynamicRenderingFunctions(PFN_vkVoidFunction(*loader_func)(const char* function_name, void* user_data), void* user_data)
+static void ImGui_ImplVulkan_LoadDynamicRenderingFunctions(uint32_t api_version, PFN_vkVoidFunction(*loader_func)(const char* function_name, void* user_data), void* user_data)
 {
-    // Manually load those two (see #5446)
-    ImGuiImplVulkanFuncs_vkCmdBeginRenderingKHR = reinterpret_cast<PFN_vkCmdBeginRenderingKHR>(loader_func("vkCmdBeginRenderingKHR", user_data));
-    ImGuiImplVulkanFuncs_vkCmdEndRenderingKHR = reinterpret_cast<PFN_vkCmdEndRenderingKHR>(loader_func("vkCmdEndRenderingKHR", user_data));
+    // Manually load those two (see #5446, #8326, #8365)
+    ImGuiImplVulkanFuncs_vkCmdBeginRenderingKHR = reinterpret_cast<PFN_vkCmdBeginRenderingKHR>(loader_func(api_version < VK_API_VERSION_1_3 ? "vkCmdBeginRenderingKHR" : "vkCmdBeginRendering", user_data));
+    ImGuiImplVulkanFuncs_vkCmdEndRenderingKHR = reinterpret_cast<PFN_vkCmdEndRenderingKHR>(loader_func(api_version < VK_API_VERSION_1_3 ? "vkCmdEndRenderingKHR" : "vkCmdEndRendering", user_data));
 }
 #endif
 
-bool    ImGui_ImplVulkan_LoadFunctions(PFN_vkVoidFunction(*loader_func)(const char* function_name, void* user_data), void* user_data)
+// If unspecified by user, assume that ApiVersion == HeaderVersion
+ // We don't care about other versions than 1.3 for our checks, so don't need to make this exhaustive (e.g. with all #ifdef VK_VERSION_1_X checks)
+static uint32_t ImGui_ImplVulkan_GetDefaultApiVersion()
+{
+#ifdef VK_HEADER_VERSION_COMPLETE
+    return VK_HEADER_VERSION_COMPLETE;
+#else
+    return VK_API_VERSION_1_0;
+#endif
+}
+
+bool    ImGui_ImplVulkan_LoadFunctions(uint32_t api_version, PFN_vkVoidFunction(*loader_func)(const char* function_name, void* user_data), void* user_data)
 {
     // Load function pointers
     // You can use the default Vulkan loader using:
-    //      ImGui_ImplVulkan_LoadFunctions([](const char* function_name, void*) { return vkGetInstanceProcAddr(your_vk_isntance, function_name); });
+    //      ImGui_ImplVulkan_LoadFunctions(VK_API_VERSION_1_3, [](const char* function_name, void*) { return vkGetInstanceProcAddr(your_vk_isntance, function_name); });
     // But this would be roughly equivalent to not setting VK_NO_PROTOTYPES.
+    if (api_version == 0)
+        api_version = ImGui_ImplVulkan_GetDefaultApiVersion();
+
 #ifdef IMGUI_IMPL_VULKAN_USE_LOADER
 #define IMGUI_VULKAN_FUNC_LOAD(func) \
     func = reinterpret_cast<decltype(func)>(loader_func(#func, user_data)); \
@@ -1103,7 +1119,7 @@ bool    ImGui_ImplVulkan_LoadFunctions(PFN_vkVoidFunction(*loader_func)(const ch
 #undef IMGUI_VULKAN_FUNC_LOAD
 
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
-    ImGui_ImplVulkan_LoadDynamicRenderingFunctions(loader_func, user_data);
+    ImGui_ImplVulkan_LoadDynamicRenderingFunctions(api_version, loader_func, user_data);
 #endif
 #else
     IM_UNUSED(loader_func);
@@ -1118,11 +1134,14 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info)
 {
     IM_ASSERT(g_FunctionsLoaded && "Need to call ImGui_ImplVulkan_LoadFunctions() if IMGUI_IMPL_VULKAN_NO_PROTOTYPES or VK_NO_PROTOTYPES are set!");
 
+    if (info->ApiVersion == 0)
+        info->ApiVersion = ImGui_ImplVulkan_GetDefaultApiVersion();
+
     if (info->UseDynamicRendering)
     {
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
 #ifndef IMGUI_IMPL_VULKAN_USE_LOADER
-        ImGui_ImplVulkan_LoadDynamicRenderingFunctions([](const char* function_name, void* user_data) { return vkGetInstanceProcAddr((VkInstance)user_data, function_name); }, (void*)info->Instance);
+        ImGui_ImplVulkan_LoadDynamicRenderingFunctions(info->ApiVersion, [](const char* function_name, void* user_data) { return vkGetInstanceProcAddr((VkInstance)user_data, function_name); }, (void*)info->Instance);
 #endif
         IM_ASSERT(ImGuiImplVulkanFuncs_vkCmdBeginRenderingKHR != nullptr);
         IM_ASSERT(ImGuiImplVulkanFuncs_vkCmdEndRenderingKHR != nullptr);

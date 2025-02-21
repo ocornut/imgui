@@ -374,6 +374,7 @@ void ImGui::StyleColorsLight(ImGuiStyle* dst)
 ImDrawListSharedData::ImDrawListSharedData()
 {
     memset(this, 0, sizeof(*this));
+    InitialFringeScale = 1.0f;
     for (int i = 0; i < IM_ARRAYSIZE(ArcFastVtx); i++)
     {
         const float a = ((float)i * 2 * IM_PI) / (float)IM_ARRAYSIZE(ArcFastVtx);
@@ -433,7 +434,7 @@ void ImDrawList::_ResetForNewFrame()
     _Path.resize(0);
     _Splitter.Clear();
     CmdBuffer.push_back(ImDrawCmd());
-    _FringeScale = 1.0f;
+    _FringeScale = _Data->InitialFringeScale;
 }
 
 void ImDrawList::_ClearFreeMemory()
@@ -2401,7 +2402,7 @@ ImFontConfig::ImFontConfig()
 // - ImFontAtlas::AddCustomRectRegular()
 // - ImFontAtlas::AddCustomRectFontGlyph()
 // - ImFontAtlas::CalcCustomRectUV()
-// - ImFontAtlas::GetMouseCursorTexData()
+// - ImFontAtlasGetMouseCursorTexData()
 // - ImFontAtlas::Build()
 // - ImFontAtlasBuildMultiplyCalcLookupTable()
 // - ImFontAtlasBuildMultiplyRectAlpha8()
@@ -2465,6 +2466,8 @@ static const ImVec2 FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[ImGuiMouseCursor_COUNT][3
     { ImVec2(73,0), ImVec2(17,17), ImVec2( 8, 8) }, // ImGuiMouseCursor_ResizeNESW
     { ImVec2(55,0), ImVec2(17,17), ImVec2( 8, 8) }, // ImGuiMouseCursor_ResizeNWSE
     { ImVec2(91,0), ImVec2(17,22), ImVec2( 5, 0) }, // ImGuiMouseCursor_Hand
+    { ImVec2(0,3),  ImVec2(12,19), ImVec2(0, 0) },  // ImGuiMouseCursor_Wait       // Arrow + custom code in ImGui::RenderMouseCursor()
+    { ImVec2(0,3),  ImVec2(12,19), ImVec2(0, 0) },  // ImGuiMouseCursor_Progress   // Arrow + custom code in ImGui::RenderMouseCursor()
     { ImVec2(109,0),ImVec2(13,15), ImVec2( 6, 7) }, // ImGuiMouseCursor_NotAllowed
 };
 
@@ -2751,24 +2754,24 @@ void ImFontAtlas::CalcCustomRectUV(const ImFontAtlasCustomRect* rect, ImVec2* ou
     *out_uv_max = ImVec2((float)(rect->X + rect->Width) * TexUvScale.x, (float)(rect->Y + rect->Height) * TexUvScale.y);
 }
 
-bool ImFontAtlas::GetMouseCursorTexData(ImGuiMouseCursor cursor_type, ImVec2* out_offset, ImVec2* out_size, ImVec2 out_uv_border[2], ImVec2 out_uv_fill[2])
+bool ImFontAtlasGetMouseCursorTexData(ImFontAtlas* atlas, ImGuiMouseCursor cursor_type, ImVec2* out_offset, ImVec2* out_size, ImVec2 out_uv_border[2], ImVec2 out_uv_fill[2])
 {
     if (cursor_type <= ImGuiMouseCursor_None || cursor_type >= ImGuiMouseCursor_COUNT)
         return false;
-    if (Flags & ImFontAtlasFlags_NoMouseCursors)
+    if (atlas->Flags & ImFontAtlasFlags_NoMouseCursors)
         return false;
 
-    IM_ASSERT(PackIdMouseCursors != -1);
-    ImFontAtlasCustomRect* r = GetCustomRectByIndex(PackIdMouseCursors);
+    IM_ASSERT(atlas->PackIdMouseCursors != -1);
+    ImFontAtlasCustomRect* r = atlas->GetCustomRectByIndex(atlas->PackIdMouseCursors);
     ImVec2 pos = FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[cursor_type][0] + ImVec2((float)r->X, (float)r->Y);
     ImVec2 size = FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[cursor_type][1];
     *out_size = size;
     *out_offset = FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[cursor_type][2];
-    out_uv_border[0] = (pos) * TexUvScale;
-    out_uv_border[1] = (pos + size) * TexUvScale;
+    out_uv_border[0] = (pos) * atlas->TexUvScale;
+    out_uv_border[1] = (pos + size) * atlas->TexUvScale;
     pos.x += FONT_ATLAS_DEFAULT_TEX_DATA_W + 1;
-    out_uv_fill[0] = (pos) * TexUvScale;
-    out_uv_fill[1] = (pos + size) * TexUvScale;
+    out_uv_fill[0] = (pos) * atlas->TexUvScale;
+    out_uv_fill[1] = (pos + size) * atlas->TexUvScale;
     return true;
 }
 
@@ -3685,21 +3688,8 @@ void ImFontGlyphRangesBuilder::BuildRanges(ImVector<ImWchar>* out_ranges)
 
 ImFont::ImFont()
 {
-    FontSize = 0.0f;
-    FallbackAdvanceX = 0.0f;
-    FallbackChar = 0;
-    EllipsisChar = 0;
-    EllipsisWidth = EllipsisCharStep = 0.0f;
-    EllipsisCharCount = 0;
-    FallbackGlyph = NULL;
-    ContainerAtlas = NULL;
-    ConfigData = NULL;
-    ConfigDataCount = 0;
-    DirtyLookupTables = false;
+    memset(this, 0, sizeof(*this));
     Scale = 1.0f;
-    Ascent = Descent = 0.0f;
-    MetricsTotalSurface = 0;
-    memset(Used8kPagesMap, 0, sizeof(Used8kPagesMap));
 }
 
 ImFont::~ImFont()
