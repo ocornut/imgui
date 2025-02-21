@@ -99,6 +99,8 @@ Docking+Viewports Branch:
 
 - Viewports: fixed an assert when a window load settings with a position outside
   monitor bounds, when there are multiple monitors. (#8393, #8385) [@gaborodriguez]
+- Backends: Win32: WM_SETTINGCHANGE's SPI_SETWORKAREA message also triggers a refresh
+  of monitor list, as they contain work area information. (#8415) [@PathogenDavid, @lailoken]
 
 
 -----------------------------------------------------------------------
