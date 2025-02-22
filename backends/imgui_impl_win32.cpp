@@ -144,9 +144,9 @@ static void ImGui_ImplWin32_UpdateKeyboardCodePage(ImGuiIO& io)
 {
     // Retrieve keyboard code page, required for handling of non-Unicode Windows.
     ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData(io);
-    HKL keyboard_layout = ::GetKeyboardLayout(0);
+    HKL keyboard_layout = GetKeyboardLayout(0);
     LCID keyboard_lcid = MAKELCID(HIWORD(keyboard_layout), SORT_DEFAULT);
-    if (::GetLocaleInfoA(keyboard_lcid, (LOCALE_RETURN_NUMBER | LOCALE_IDEFAULTANSICODEPAGE), (LPSTR)&bd->KeyboardCodePage, sizeof(bd->KeyboardCodePage)) == 0)
+    if (GetLocaleInfoA(keyboard_lcid, (LOCALE_RETURN_NUMBER | LOCALE_IDEFAULTANSICODEPAGE), (LPSTR)&bd->KeyboardCodePage, sizeof(bd->KeyboardCodePage)) == 0)
         bd->KeyboardCodePage = CP_ACP; // Fallback to default ANSI code page when fails.
 }
 
@@ -157,9 +157,9 @@ static bool ImGui_ImplWin32_InitEx(void* hwnd, bool platform_has_own_dc)
     IM_ASSERT(io.BackendPlatformUserData == nullptr && "Already initialized a platform backend!");
 
     INT64 perf_frequency, perf_counter;
-    if (!::QueryPerformanceFrequency((LARGE_INTEGER*)&perf_frequency))
+    if (!QueryPerformanceFrequency((LARGE_INTEGER*)&perf_frequency))
         return false;
-    if (!::QueryPerformanceCounter((LARGE_INTEGER*)&perf_counter))
+    if (!QueryPerformanceCounter((LARGE_INTEGER*)&perf_counter))
         return false;
 
     // Setup backend capabilities flags
@@ -192,11 +192,11 @@ static bool ImGui_ImplWin32_InitEx(void* hwnd, bool platform_has_own_dc)
         "xinput1_1.dll"    // DirectX SDK
     };
     for (int n = 0; n < IM_ARRAYSIZE(xinput_dll_names); n++)
-        if (HMODULE dll = ::LoadLibraryA(xinput_dll_names[n]))
+        if (HMODULE dll = LoadLibraryA(xinput_dll_names[n]))
         {
             bd->XInputDLL = dll;
-            bd->XInputGetCapabilities = (PFN_XInputGetCapabilities)::GetProcAddress(dll, "XInputGetCapabilities");
-            bd->XInputGetState = (PFN_XInputGetState)::GetProcAddress(dll, "XInputGetState");
+            bd->XInputGetCapabilities = (PFN_XInputGetCapabilities)GetProcAddress(dll, "XInputGetCapabilities");
+            bd->XInputGetState = (PFN_XInputGetState)GetProcAddress(dll, "XInputGetState");
             break;
         }
 #endif // IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
@@ -224,7 +224,7 @@ void    ImGui_ImplWin32_Shutdown()
     // Unload XInput library
 #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
     if (bd->XInputDLL)
-        ::FreeLibrary(bd->XInputDLL);
+        FreeLibrary(bd->XInputDLL);
 #endif // IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
 
     io.BackendPlatformName = nullptr;
@@ -241,7 +241,7 @@ static bool ImGui_ImplWin32_UpdateMouseCursor(ImGuiIO& io, ImGuiMouseCursor imgu
     if (imgui_cursor == ImGuiMouseCursor_None || io.MouseDrawCursor)
     {
         // Hide OS mouse cursor if imgui is drawing it or if it wants no cursor
-        ::SetCursor(nullptr);
+        SetCursor(nullptr);
     }
     else
     {
@@ -261,14 +261,14 @@ static bool ImGui_ImplWin32_UpdateMouseCursor(ImGuiIO& io, ImGuiMouseCursor imgu
         case ImGuiMouseCursor_Progress:     win32_cursor = IDC_APPSTARTING; break;
         case ImGuiMouseCursor_NotAllowed:   win32_cursor = IDC_NO; break;
         }
-        ::SetCursor(::LoadCursor(nullptr, win32_cursor));
+        SetCursor(::LoadCursor(nullptr, win32_cursor));
     }
     return true;
 }
 
 static bool IsVkDown(int vk)
 {
-    return (::GetKeyState(vk) & 0x8000) != 0;
+    return (GetKeyState(vk) & 0x8000) != 0;
 }
 
 static void ImGui_ImplWin32_AddKeyEvent(ImGuiIO& io, ImGuiKey key, bool down, int native_keycode, int native_scancode = -1)
@@ -306,7 +306,7 @@ static void ImGui_ImplWin32_UpdateMouseData(ImGuiIO& io)
     ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData(io);
     IM_ASSERT(bd->hWnd != 0);
 
-    HWND focused_window = ::GetForegroundWindow();
+    HWND focused_window = GetForegroundWindow();
     const bool is_app_focused = (focused_window == bd->hWnd);
     if (is_app_focused)
     {
@@ -314,8 +314,8 @@ static void ImGui_ImplWin32_UpdateMouseData(ImGuiIO& io)
         if (io.WantSetMousePos)
         {
             POINT pos = { (int)io.MousePos.x, (int)io.MousePos.y };
-            if (::ClientToScreen(bd->hWnd, &pos))
-                ::SetCursorPos(pos.x, pos.y);
+            if (ClientToScreen(bd->hWnd, &pos))
+                SetCursorPos(pos.x, pos.y);
         }
 
         // (Optional) Fallback to provide mouse position when focused (WM_MOUSEMOVE already provides this when hovered or captured)
@@ -323,7 +323,7 @@ static void ImGui_ImplWin32_UpdateMouseData(ImGuiIO& io)
         if (!io.WantSetMousePos && bd->MouseTrackedArea == 0)
         {
             POINT pos;
-            if (::GetCursorPos(&pos) && ::ScreenToClient(bd->hWnd, &pos))
+            if (GetCursorPos(&pos) && ScreenToClient(bd->hWnd, &pos))
                 io.AddMousePosEvent((float)pos.x, (float)pos.y);
         }
     }
@@ -395,12 +395,12 @@ void    ImGui_ImplWin32_NewFrame()
 
     // Setup display size (every frame to accommodate for window resizing)
     RECT rect = { 0, 0, 0, 0 };
-    ::GetClientRect(bd->hWnd, &rect);
+    GetClientRect(bd->hWnd, &rect);
     io.DisplaySize = ImVec2((float)(rect.right - rect.left), (float)(rect.bottom - rect.top));
 
     // Setup time step
     INT64 current_time = 0;
-    ::QueryPerformanceCounter((LARGE_INTEGER*)&current_time);
+    QueryPerformanceCounter((LARGE_INTEGER*)&current_time);
     io.DeltaTime = (float)(current_time - bd->Time) / bd->TicksPerSecond;
     bd->Time = current_time;
 
@@ -567,7 +567,7 @@ ImGuiKey ImGui_ImplWin32_KeyEventToImGuiKey(WPARAM wParam, LPARAM lParam)
 // Prefer to call this at the top of the message handler to avoid the possibility of other Win32 calls interfering with this.
 static ImGuiMouseSource ImGui_ImplWin32_GetMouseSourceFromMessageExtraInfo()
 {
-    LPARAM extra_info = ::GetMessageExtraInfo();
+    LPARAM extra_info = GetMessageExtraInfo();
     if ((extra_info & 0xFFFFFF80) == 0xFF515700)
         return ImGuiMouseSource_Pen;
     if ((extra_info & 0xFFFFFF80) == 0xFF515780)
@@ -616,12 +616,12 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandlerEx(HWND hwnd, UINT msg, WPA
             TRACKMOUSEEVENT tme_cancel = { sizeof(tme_cancel), TME_CANCEL, hwnd, 0 };
             TRACKMOUSEEVENT tme_track = { sizeof(tme_track), (DWORD)((area == 2) ? (TME_LEAVE | TME_NONCLIENT) : TME_LEAVE), hwnd, 0 };
             if (bd->MouseTrackedArea != 0)
-                ::TrackMouseEvent(&tme_cancel);
-            ::TrackMouseEvent(&tme_track);
+                TrackMouseEvent(&tme_cancel);
+            TrackMouseEvent(&tme_track);
             bd->MouseTrackedArea = area;
         }
         POINT mouse_pos = { (LONG)GET_X_LPARAM(lParam), (LONG)GET_Y_LPARAM(lParam) };
-        if (msg == WM_NCMOUSEMOVE && ::ScreenToClient(hwnd, &mouse_pos) == FALSE) // WM_NCMOUSEMOVE are provided in absolute coordinates.
+        if (msg == WM_NCMOUSEMOVE && ScreenToClient(hwnd, &mouse_pos) == FALSE) // WM_NCMOUSEMOVE are provided in absolute coordinates.
             return 0;
         io.AddMouseSourceEvent(mouse_source);
         io.AddMousePosEvent((float)mouse_pos.x, (float)mouse_pos.y);
@@ -644,7 +644,7 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandlerEx(HWND hwnd, UINT msg, WPA
         if (bd->MouseHwnd == hwnd && bd->MouseTrackedArea != 0)
         {
             TRACKMOUSEEVENT tme_cancel = { sizeof(tme_cancel), TME_CANCEL, hwnd, 0 };
-            ::TrackMouseEvent(&tme_cancel);
+            TrackMouseEvent(&tme_cancel);
             bd->MouseHwnd = nullptr;
             bd->MouseTrackedArea = 0;
             io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);
@@ -661,8 +661,8 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandlerEx(HWND hwnd, UINT msg, WPA
         if (msg == WM_RBUTTONDOWN || msg == WM_RBUTTONDBLCLK) { button = 1; }
         if (msg == WM_MBUTTONDOWN || msg == WM_MBUTTONDBLCLK) { button = 2; }
         if (msg == WM_XBUTTONDOWN || msg == WM_XBUTTONDBLCLK) { button = (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) ? 3 : 4; }
-        if (bd->MouseButtonsDown == 0 && ::GetCapture() == nullptr)
-            ::SetCapture(hwnd); // Allow us to read mouse coordinates when dragging mouse outside of our window bounds.
+        if (bd->MouseButtonsDown == 0 && GetCapture() == nullptr)
+            SetCapture(hwnd); // Allow us to read mouse coordinates when dragging mouse outside of our window bounds.
         bd->MouseButtonsDown |= 1 << button;
         io.AddMouseSourceEvent(mouse_source);
         io.AddMouseButtonEvent(button, true);
@@ -680,8 +680,8 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandlerEx(HWND hwnd, UINT msg, WPA
         if (msg == WM_MBUTTONUP) { button = 2; }
         if (msg == WM_XBUTTONUP) { button = (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) ? 3 : 4; }
         bd->MouseButtonsDown &= ~(1 << button);
-        if (bd->MouseButtonsDown == 0 && ::GetCapture() == hwnd)
-            ::ReleaseCapture();
+        if (bd->MouseButtonsDown == 0 && GetCapture() == hwnd)
+            ReleaseCapture();
         io.AddMouseSourceEvent(mouse_source);
         io.AddMouseButtonEvent(button, false);
         return 0;
@@ -744,7 +744,7 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandlerEx(HWND hwnd, UINT msg, WPA
         ImGui_ImplWin32_UpdateKeyboardCodePage(io);
         return 0;
     case WM_CHAR:
-        if (::IsWindowUnicode(hwnd))
+        if (IsWindowUnicode(hwnd))
         {
             // You can also use ToAscii()+GetKeyboardState() to retrieve characters.
             if (wParam > 0 && wParam < 0x10000)
@@ -753,7 +753,7 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandlerEx(HWND hwnd, UINT msg, WPA
         else
         {
             wchar_t wch = 0;
-            ::MultiByteToWideChar(bd->KeyboardCodePage, MB_PRECOMPOSED, (char*)&wParam, 1, &wch, 1);
+            MultiByteToWideChar(bd->KeyboardCodePage, MB_PRECOMPOSED, (char*)&wParam, 1, &wch, 1);
             io.AddInputCharacter(wch);
         }
         return 0;
@@ -794,7 +794,7 @@ static BOOL _IsWindowsVersionOrGreater(WORD major, WORD minor, WORD)
     typedef LONG(WINAPI* PFN_RtlVerifyVersionInfo)(OSVERSIONINFOEXW*, ULONG, ULONGLONG);
     static PFN_RtlVerifyVersionInfo RtlVerifyVersionInfoFn = nullptr;
     if (RtlVerifyVersionInfoFn == nullptr)
-        if (HMODULE ntdllModule = ::GetModuleHandleA("ntdll.dll"))
+        if (HMODULE ntdllModule = GetModuleHandleA("ntdll.dll"))
             RtlVerifyVersionInfoFn = (PFN_RtlVerifyVersionInfo)GetProcAddress(ntdllModule, "RtlVerifyVersionInfo");
     if (RtlVerifyVersionInfoFn == nullptr)
         return FALSE;
@@ -834,8 +834,8 @@ void ImGui_ImplWin32_EnableDpiAwareness()
 {
     if (_IsWindows10OrGreater())
     {
-        static HINSTANCE user32_dll = ::LoadLibraryA("user32.dll"); // Reference counted per-process
-        if (PFN_SetThreadDpiAwarenessContext SetThreadDpiAwarenessContextFn = (PFN_SetThreadDpiAwarenessContext)::GetProcAddress(user32_dll, "SetThreadDpiAwarenessContext"))
+        static HINSTANCE user32_dll = LoadLibraryA("user32.dll"); // Reference counted per-process
+        if (PFN_SetThreadDpiAwarenessContext SetThreadDpiAwarenessContextFn = (PFN_SetThreadDpiAwarenessContext)GetProcAddress(user32_dll, "SetThreadDpiAwarenessContext"))
         {
             SetThreadDpiAwarenessContextFn(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
             return;
@@ -843,15 +843,15 @@ void ImGui_ImplWin32_EnableDpiAwareness()
     }
     if (_IsWindows8Point1OrGreater())
     {
-        static HINSTANCE shcore_dll = ::LoadLibraryA("shcore.dll"); // Reference counted per-process
-        if (PFN_SetProcessDpiAwareness SetProcessDpiAwarenessFn = (PFN_SetProcessDpiAwareness)::GetProcAddress(shcore_dll, "SetProcessDpiAwareness"))
+        static HINSTANCE shcore_dll = LoadLibraryA("shcore.dll"); // Reference counted per-process
+        if (PFN_SetProcessDpiAwareness SetProcessDpiAwarenessFn = (PFN_SetProcessDpiAwareness)GetProcAddress(shcore_dll, "SetProcessDpiAwareness"))
         {
             SetProcessDpiAwarenessFn(PROCESS_PER_MONITOR_DPI_AWARE);
             return;
         }
     }
 #if _WIN32_WINNT >= 0x0600
-    ::SetProcessDPIAware();
+    SetProcessDPIAware();
 #endif
 }
 
@@ -864,10 +864,10 @@ float ImGui_ImplWin32_GetDpiScaleForMonitor(void* monitor)
     UINT xdpi = 96, ydpi = 96;
     if (_IsWindows8Point1OrGreater())
     {
-        static HINSTANCE shcore_dll = ::LoadLibraryA("shcore.dll"); // Reference counted per-process
+        static HINSTANCE shcore_dll = LoadLibraryA("shcore.dll"); // Reference counted per-process
         static PFN_GetDpiForMonitor GetDpiForMonitorFn = nullptr;
         if (GetDpiForMonitorFn == nullptr && shcore_dll != nullptr)
-            GetDpiForMonitorFn = (PFN_GetDpiForMonitor)::GetProcAddress(shcore_dll, "GetDpiForMonitor");
+            GetDpiForMonitorFn = (PFN_GetDpiForMonitor)GetProcAddress(shcore_dll, "GetDpiForMonitor");
         if (GetDpiForMonitorFn != nullptr)
         {
             GetDpiForMonitorFn((HMONITOR)monitor, MDT_EFFECTIVE_DPI, &xdpi, &ydpi);
@@ -876,18 +876,18 @@ float ImGui_ImplWin32_GetDpiScaleForMonitor(void* monitor)
         }
     }
 #ifndef NOGDI
-    const HDC dc = ::GetDC(nullptr);
-    xdpi = ::GetDeviceCaps(dc, LOGPIXELSX);
-    ydpi = ::GetDeviceCaps(dc, LOGPIXELSY);
+    const HDC dc = GetDC(nullptr);
+    xdpi = GetDeviceCaps(dc, LOGPIXELSX);
+    ydpi = GetDeviceCaps(dc, LOGPIXELSY);
     IM_ASSERT(xdpi == ydpi); // Please contact me if you hit this assert!
-    ::ReleaseDC(nullptr, dc);
+    ReleaseDC(nullptr, dc);
 #endif
     return xdpi / 96.0f;
 }
 
 float ImGui_ImplWin32_GetDpiScaleForHwnd(void* hwnd)
 {
-    HMONITOR monitor = ::MonitorFromWindow((HWND)hwnd, MONITOR_DEFAULTTONEAREST);
+    HMONITOR monitor = MonitorFromWindow((HWND)hwnd, MONITOR_DEFAULTTONEAREST);
     return ImGui_ImplWin32_GetDpiScaleForMonitor(monitor);
 }
 
@@ -915,19 +915,19 @@ void ImGui_ImplWin32_EnableAlphaCompositing(void* hwnd)
     DWORD color;
     if (_IsWindows8OrGreater() || (SUCCEEDED(::DwmGetColorizationColor(&color, &opaque)) && !opaque))
     {
-        HRGN region = ::CreateRectRgn(0, 0, -1, -1);
+        HRGN region = CreateRectRgn(0, 0, -1, -1);
         DWM_BLURBEHIND bb = {};
         bb.dwFlags = DWM_BB_ENABLE | DWM_BB_BLURREGION;
         bb.hRgnBlur = region;
         bb.fEnable = TRUE;
-        ::DwmEnableBlurBehindWindow((HWND)hwnd, &bb);
-        ::DeleteObject(region);
+        DwmEnableBlurBehindWindow((HWND)hwnd, &bb);
+        DeleteObject(region);
     }
     else
     {
         DWM_BLURBEHIND bb = {};
         bb.dwFlags = DWM_BB_ENABLE;
-        ::DwmEnableBlurBehindWindow((HWND)hwnd, &bb);
+        DwmEnableBlurBehindWindow((HWND)hwnd, &bb);
     }
 }
 

@@ -496,7 +496,7 @@ static EM_BOOL ImGui_ImplEmscripten_WheelCallback(int, const EmscriptenWheelEven
 // Add support for Win32 (based on imgui_impl_win32), because we rely on _TouchScreen info to trickle inputs differently.
 static ImGuiMouseSource GetMouseSourceFromMessageExtraInfo()
 {
-    LPARAM extra_info = ::GetMessageExtraInfo();
+    LPARAM extra_info = GetMessageExtraInfo();
     if ((extra_info & 0xFFFFFF80) == 0xFF515700)
         return ImGuiMouseSource_Pen;
     if ((extra_info & 0xFFFFFF80) == 0xFF515780)
@@ -516,7 +516,7 @@ static LRESULT CALLBACK ImGui_ImplGlfw_WndProc(HWND hWnd, UINT msg, WPARAM wPara
         ImGui::GetIO().AddMouseSourceEvent(GetMouseSourceFromMessageExtraInfo());
         break;
     }
-    return ::CallWindowProcW(bd->PrevWndProc, hWnd, msg, wParam, lParam);
+    return CallWindowProcW(bd->PrevWndProc, hWnd, msg, wParam, lParam);
 }
 #endif
 
@@ -647,9 +647,9 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
 
     // Windows: register a WndProc hook so we can intercept some messages.
 #ifdef _WIN32
-    bd->PrevWndProc = (WNDPROC)::GetWindowLongPtrW((HWND)main_viewport->PlatformHandleRaw, GWLP_WNDPROC);
+    bd->PrevWndProc = (WNDPROC)GetWindowLongPtrW((HWND)main_viewport->PlatformHandleRaw, GWLP_WNDPROC);
     IM_ASSERT(bd->PrevWndProc != nullptr);
-    ::SetWindowLongPtrW((HWND)main_viewport->PlatformHandleRaw, GWLP_WNDPROC, (LONG_PTR)ImGui_ImplGlfw_WndProc);
+    SetWindowLongPtrW((HWND)main_viewport->PlatformHandleRaw, GWLP_WNDPROC, (LONG_PTR)ImGui_ImplGlfw_WndProc);
 #endif
 
     // Emscripten: the same application can run on various platforms, so we detect the Apple platform at runtime
@@ -707,7 +707,7 @@ void ImGui_ImplGlfw_Shutdown()
     // Windows: restore our WndProc hook
 #ifdef _WIN32
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
-    ::SetWindowLongPtrW((HWND)main_viewport->PlatformHandleRaw, GWLP_WNDPROC, (LONG_PTR)bd->PrevWndProc);
+    SetWindowLongPtrW((HWND)main_viewport->PlatformHandleRaw, GWLP_WNDPROC, (LONG_PTR)bd->PrevWndProc);
     bd->PrevWndProc = nullptr;
 #endif
 
@@ -861,7 +861,7 @@ void ImGui_ImplGlfw_NewFrame()
 void ImGui_ImplGlfw_Sleep(int milliseconds)
 {
 #ifdef _WIN32
-    ::Sleep(milliseconds);
+    Sleep(milliseconds);
 #else
     usleep(milliseconds * 1000);
 #endif
