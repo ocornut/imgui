@@ -590,12 +590,16 @@ static void ImGui_ImplSDL3_UpdateMouseData()
         // (Optional) Fallback to provide mouse position when focused (SDL_EVENT_MOUSE_MOTION already provides this when hovered or captured)
         if (bd->MouseCanUseGlobalState && bd->MouseButtonsDown == 0)
         {
-            // Single-viewport mode: mouse position in client window coordinates (io.MousePos is (0,0) when the mouse is on the upper-left corner of the app window)
-            float mouse_x_global, mouse_y_global;
-            int window_x, window_y;
-            SDL_GetGlobalMouseState(&mouse_x_global, &mouse_y_global);
-            SDL_GetWindowPosition(focused_window, &window_x, &window_y);
-            io.AddMousePosEvent(mouse_x_global - window_x, mouse_y_global - window_y);
+            // `SDL_GetGlobalMouseState` is invalid in relative mouse mode
+            if (!SDL_GetWindowRelativeMouseMode(bd->Window))
+            {
+                // Single-viewport mode: mouse position in client window coordinates (io.MousePos is (0,0) when the mouse is on the upper-left corner of the app window)
+                float mouse_x_global, mouse_y_global;
+                int window_x, window_y;
+                SDL_GetGlobalMouseState(&mouse_x_global, &mouse_y_global);
+                SDL_GetWindowPosition(focused_window, &window_x, &window_y);
+                io.AddMousePosEvent(mouse_x_global - window_x, mouse_y_global - window_y);
+            }
         }
     }
 }
