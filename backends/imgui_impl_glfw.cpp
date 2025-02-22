@@ -755,9 +755,9 @@ static void ImGui_ImplGlfw_UpdateMouseCursor()
     if (io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange || glfwGetInputMode(bd->Window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED)
         return;
 
-    ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
     // (those braces are here to reduce diff with multi-viewports support in 'docking' branch)
     {
+        ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
         GLFWwindow* window = bd->Window;
         if (imgui_cursor == ImGuiMouseCursor_None || io.MouseDrawCursor)
         {
