@@ -167,7 +167,7 @@ static void ImGui_ImplDX12_SetupRenderState(ImDrawData* draw_data, ID3D12Graphic
     command_list->SetGraphicsRoot32BitConstants(0, 16, &vertex_constant_buffer, 0);
 
     // Setup blend factor
-    const float blend_factor[4] = { 0.f, 0.f, 0.f, 0.f };
+    constexpr float blend_factor[4] = { 0.f, 0.f, 0.f, 0.f };
     command_list->OMSetBlendFactor(blend_factor);
 }
 

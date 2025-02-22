@@ -131,7 +131,7 @@ static void ImGui_ImplDX10_SetupRenderState(ImDrawData* draw_data, ID3D10Device*
     device->GSSetShader(nullptr);
 
     // Setup render state
-    const float blend_factor[4] = { 0.f, 0.f, 0.f, 0.f };
+    constexpr float blend_factor[4] = { 0.f, 0.f, 0.f, 0.f };
     device->OMSetBlendState(bd->pBlendState, blend_factor, 0xffffffff);
     device->OMSetDepthStencilState(bd->pDepthStencilState, 0);
     device->RSSetState(bd->pRasterizerState);
