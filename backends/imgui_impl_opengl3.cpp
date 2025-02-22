@@ -284,7 +284,7 @@ bool ImGui_ImplOpenGL3_InitLoader()
 {
     // Initialize our loader
 #ifdef IMGUI_IMPL_OPENGL_LOADER_IMGL3W
-    if (glGetIntegerv == NULL && imgl3wInit() != 0)
+    if (glGetIntegerv == nullptr && imgl3wInit() != 0)
     {
         fprintf(stderr, "Failed to initialize OpenGL loader!\n");
         return false;

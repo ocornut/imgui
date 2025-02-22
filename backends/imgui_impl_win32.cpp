@@ -304,7 +304,7 @@ static void ImGui_ImplWin32_UpdateKeyModifiers(ImGuiIO& io)
 static void ImGui_ImplWin32_UpdateMouseData(ImGuiIO& io)
 {
     ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData(io);
-    IM_ASSERT(bd->hWnd != 0);
+    IM_ASSERT(bd->hWnd != nullptr);
 
     HWND focused_window = GetForegroundWindow();
     const bool is_app_focused = focused_window == bd->hWnd;
