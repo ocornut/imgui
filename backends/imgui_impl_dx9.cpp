@@ -306,7 +306,7 @@ static bool ImGui_ImplDX9_CheckFormatSupport(LPDIRECT3DDEVICE9 pDevice, D3DFORMA
         return false;
     }
     // Font texture should support linear filter, color blend and write to render-target
-    bool support = (pd3d->CheckDeviceFormat(param.AdapterOrdinal, param.DeviceType, mode.Format, D3DUSAGE_DYNAMIC | D3DUSAGE_QUERY_FILTER | D3DUSAGE_QUERY_POSTPIXELSHADER_BLENDING, D3DRTYPE_TEXTURE, format)) == D3D_OK;
+    bool support = pd3d->CheckDeviceFormat(param.AdapterOrdinal, param.DeviceType, mode.Format, D3DUSAGE_DYNAMIC | D3DUSAGE_QUERY_FILTER | D3DUSAGE_QUERY_POSTPIXELSHADER_BLENDING, D3DRTYPE_TEXTURE, format) == D3D_OK;
     pd3d->Release();
     return support;
 }
@@ -349,7 +349,7 @@ static void ImGui_ImplDX9_CopyTextureRegion(bool tex_use_colors, ImU32* src, int
 {
 #ifndef IMGUI_USE_BGRA_PACKED_COLOR
     ImGui_ImplDX9_Data* bd = ImGui_ImplDX9_GetBackendData();
-    const bool convert_rgba_to_bgra = (!bd->HasRgbaSupport && tex_use_colors);
+    const bool convert_rgba_to_bgra = !bd->HasRgbaSupport && tex_use_colors;
 #else
     const bool convert_rgba_to_bgra = false;
     IM_UNUSED(tex_use_colors);

@@ -383,9 +383,9 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
 
     // Detect extensions we support
 #ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_POLYGON_MODE
-    bd->HasPolygonMode = (!bd->GlProfileIsES2 && !bd->GlProfileIsES3);
+    bd->HasPolygonMode = !bd->GlProfileIsES2 && !bd->GlProfileIsES3;
 #endif
-    bd->HasClipOrigin = (bd->GlVersion >= 450);
+    bd->HasClipOrigin = bd->GlVersion >= 450;
 #ifdef IMGUI_IMPL_OPENGL_HAS_EXTENSIONS
     GLint num_extensions = 0;
     glGetIntegerv(GL_NUM_EXTENSIONS, &num_extensions);
@@ -551,7 +551,7 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     GLboolean last_enable_stencil_test = glIsEnabled(GL_STENCIL_TEST);
     GLboolean last_enable_scissor_test = glIsEnabled(GL_SCISSOR_TEST);
 #ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_PRIMITIVE_RESTART
-    GLboolean last_enable_primitive_restart = (bd->GlVersion >= 310) ? glIsEnabled(GL_PRIMITIVE_RESTART) : GL_FALSE;
+    GLboolean last_enable_primitive_restart = bd->GlVersion >= 310 ? glIsEnabled(GL_PRIMITIVE_RESTART) : GL_FALSE;
 #endif
 
     // Setup desired GL state

@@ -388,7 +388,7 @@ static uint32_t ImGui_ImplVulkan_MemoryType(VkMemoryPropertyFlags properties, ui
     VkPhysicalDeviceMemoryProperties prop;
     vkGetPhysicalDeviceMemoryProperties(v->PhysicalDevice, &prop);
     for (uint32_t i = 0; i < prop.memoryTypeCount; i++)
-        if ((prop.memoryTypes[i].propertyFlags & properties) == properties && type_bits & (1 << i))
+        if ((prop.memoryTypes[i].propertyFlags & properties) == properties && type_bits & 1 << i)
             return i;
     return 0xFFFFFFFF; // Unable to find memoryType
 }
@@ -406,7 +406,7 @@ static void check_vk_result(VkResult err)
 // Same as IM_MEMALIGN(). 'alignment' must be a power of two.
 static inline VkDeviceSize AlignBufferSize(VkDeviceSize size, VkDeviceSize alignment)
 {
-    return (size + alignment - 1) & ~(alignment - 1);
+    return size + alignment - 1 & ~(alignment - 1);
 }
 
 static void CreateOrResizeBuffer(VkBuffer& buffer, VkDeviceMemory& buffer_memory, VkDeviceSize& buffer_size, VkDeviceSize new_size, VkBufferUsageFlagBits usage)
@@ -430,7 +430,7 @@ static void CreateOrResizeBuffer(VkBuffer& buffer, VkDeviceMemory& buffer_memory
 
     VkMemoryRequirements req;
     vkGetBufferMemoryRequirements(v->Device, buffer, &req);
-    bd->BufferMemoryAlignment = (bd->BufferMemoryAlignment > req.alignment) ? bd->BufferMemoryAlignment : req.alignment;
+    bd->BufferMemoryAlignment = bd->BufferMemoryAlignment > req.alignment ? bd->BufferMemoryAlignment : req.alignment;
     VkMemoryAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     alloc_info.allocationSize = req.size;
@@ -742,7 +742,7 @@ bool ImGui_ImplVulkan_CreateFontsTexture()
         check_vk_result(err);
         VkMemoryRequirements req;
         vkGetBufferMemoryRequirements(v->Device, upload_buffer, &req);
-        bd->BufferMemoryAlignment = (bd->BufferMemoryAlignment > req.alignment) ? bd->BufferMemoryAlignment : req.alignment;
+        bd->BufferMemoryAlignment = bd->BufferMemoryAlignment > req.alignment ? bd->BufferMemoryAlignment : req.alignment;
         VkMemoryAllocateInfo alloc_info = {};
         alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         alloc_info.allocationSize = IM_MAX(v->MinAllocationSize, req.size);
@@ -756,7 +756,7 @@ bool ImGui_ImplVulkan_CreateFontsTexture()
     // Upload to Buffer:
     {
         char* map = nullptr;
-        err = vkMapMemory(v->Device, upload_buffer_memory, 0, upload_size, 0, (void**)(&map));
+        err = vkMapMemory(v->Device, upload_buffer_memory, 0, upload_size, 0, (void**)&map);
         check_vk_result(err);
         memcpy(map, pixels, upload_size);
         VkMappedMemoryRange range[1] = {};
@@ -930,7 +930,7 @@ static void ImGui_ImplVulkan_CreatePipeline(VkDevice device, const VkAllocationC
 
     VkPipelineMultisampleStateCreateInfo ms_info = {};
     ms_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    ms_info.rasterizationSamples = (MSAASamples != 0) ? MSAASamples : VK_SAMPLE_COUNT_1_BIT;
+    ms_info.rasterizationSamples = MSAASamples != 0 ? MSAASamples : VK_SAMPLE_COUNT_1_BIT;
 
     VkPipelineColorBlendAttachmentState color_attachment[1] = {};
     color_attachment[0].blendEnable = VK_TRUE;
@@ -1511,7 +1511,7 @@ void ImGui_ImplVulkanH_CreateWindowSwapChain(VkPhysicalDevice physical_device, V
         info.imageArrayLayers = 1;
         info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;           // Assume that graphics family == present family
-        info.preTransform = (cap.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR : cap.currentTransform;
+        info.preTransform = cap.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR : cap.currentTransform;
         info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
         info.presentMode = wd->PresentMode;
         info.clipped = VK_TRUE;

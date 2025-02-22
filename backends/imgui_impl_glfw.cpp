@@ -322,16 +322,16 @@ ImGuiKey ImGui_ImplGlfw_KeyToImGuiKey(int keycode, int scancode)
 static void ImGui_ImplGlfw_UpdateKeyModifiers(GLFWwindow* window)
 {
     ImGuiIO& io = ImGui::GetIO();
-    io.AddKeyEvent(ImGuiMod_Ctrl,  (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) || (glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS));
-    io.AddKeyEvent(ImGuiMod_Shift, (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT)   == GLFW_PRESS) || (glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT)   == GLFW_PRESS));
-    io.AddKeyEvent(ImGuiMod_Alt,   (glfwGetKey(window, GLFW_KEY_LEFT_ALT)     == GLFW_PRESS) || (glfwGetKey(window, GLFW_KEY_RIGHT_ALT)     == GLFW_PRESS));
-    io.AddKeyEvent(ImGuiMod_Super, (glfwGetKey(window, GLFW_KEY_LEFT_SUPER)   == GLFW_PRESS) || (glfwGetKey(window, GLFW_KEY_RIGHT_SUPER)   == GLFW_PRESS));
+    io.AddKeyEvent(ImGuiMod_Ctrl,  glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS);
+    io.AddKeyEvent(ImGuiMod_Shift, glfwGetKey(window, GLFW_KEY_LEFT_SHIFT)   == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT)   == GLFW_PRESS);
+    io.AddKeyEvent(ImGuiMod_Alt,   glfwGetKey(window, GLFW_KEY_LEFT_ALT)     == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_ALT)     == GLFW_PRESS);
+    io.AddKeyEvent(ImGuiMod_Super, glfwGetKey(window, GLFW_KEY_LEFT_SUPER)   == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_SUPER)   == GLFW_PRESS);
 }
 
 static bool ImGui_ImplGlfw_ShouldChainCallback(GLFWwindow* window)
 {
     ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
-    return bd->CallbacksChainForAllWindows ? true : (window == bd->Window);
+    return bd->CallbacksChainForAllWindows ? true : window == bd->Window;
 }
 
 void ImGui_ImplGlfw_MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
@@ -411,7 +411,7 @@ void ImGui_ImplGlfw_KeyCallback(GLFWwindow* window, int keycode, int scancode, i
 
     ImGuiIO& io = ImGui::GetIO();
     ImGuiKey imgui_key = ImGui_ImplGlfw_KeyToImGuiKey(keycode, scancode);
-    io.AddKeyEvent(imgui_key, (action == GLFW_PRESS));
+    io.AddKeyEvent(imgui_key, action == GLFW_PRESS);
     io.SetKeyEventNativeData(imgui_key, keycode, scancode); // To support legacy indexing (<1.87 user code)
 }
 
@@ -752,7 +752,7 @@ static void ImGui_ImplGlfw_UpdateMouseCursor()
 {
     ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
-    if ((io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange) || glfwGetInputMode(bd->Window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED)
+    if (io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange || glfwGetInputMode(bd->Window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED)
         return;
 
     ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();

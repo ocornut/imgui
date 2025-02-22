@@ -146,7 +146,7 @@ static void ImGui_ImplWin32_UpdateKeyboardCodePage(ImGuiIO& io)
     ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData(io);
     HKL keyboard_layout = GetKeyboardLayout(0);
     LCID keyboard_lcid = MAKELCID(HIWORD(keyboard_layout), SORT_DEFAULT);
-    if (GetLocaleInfoA(keyboard_lcid, (LOCALE_RETURN_NUMBER | LOCALE_IDEFAULTANSICODEPAGE), (LPSTR)&bd->KeyboardCodePage, sizeof(bd->KeyboardCodePage)) == 0)
+    if (GetLocaleInfoA(keyboard_lcid, LOCALE_RETURN_NUMBER | LOCALE_IDEFAULTANSICODEPAGE, (LPSTR)&bd->KeyboardCodePage, sizeof(bd->KeyboardCodePage)) == 0)
         bd->KeyboardCodePage = CP_ACP; // Fallback to default ANSI code page when fails.
 }
 
@@ -307,7 +307,7 @@ static void ImGui_ImplWin32_UpdateMouseData(ImGuiIO& io)
     IM_ASSERT(bd->hWnd != 0);
 
     HWND focused_window = GetForegroundWindow();
-    const bool is_app_focused = (focused_window == bd->hWnd);
+    const bool is_app_focused = focused_window == bd->hWnd;
     if (is_app_focused)
     {
         // (Optional) Set OS mouse position from Dear ImGui if requested (rarely used, only when io.ConfigNavMoveSetMousePos is enabled by user)
@@ -342,7 +342,7 @@ static void ImGui_ImplWin32_UpdateGamepads(ImGuiIO& io)
     if (bd->WantUpdateHasGamepad)
     {
         XINPUT_CAPABILITIES caps = {};
-        bd->HasGamepad = bd->XInputGetCapabilities ? (bd->XInputGetCapabilities(0, XINPUT_FLAG_GAMEPAD, &caps) == ERROR_SUCCESS) : false;
+        bd->HasGamepad = bd->XInputGetCapabilities ? bd->XInputGetCapabilities(0, XINPUT_FLAG_GAMEPAD, &caps) == ERROR_SUCCESS : false;
         bd->WantUpdateHasGamepad = false;
     }
 
@@ -428,7 +428,7 @@ ImGuiKey ImGui_ImplWin32_KeyEventToImGuiKey(WPARAM wParam, LPARAM lParam);
 ImGuiKey ImGui_ImplWin32_KeyEventToImGuiKey(WPARAM wParam, LPARAM lParam)
 {
     // There is no distinct VK_xxx for keypad enter, instead it is VK_RETURN + KF_EXTENDED.
-    if ((wParam == VK_RETURN) && (HIWORD(lParam) & KF_EXTENDED))
+    if (wParam == VK_RETURN && HIWORD(lParam) & KF_EXTENDED)
         return ImGuiKey_KeypadEnter;
 
     switch (wParam)
@@ -609,12 +609,12 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandlerEx(HWND hwnd, UINT msg, WPA
     {
         // We need to call TrackMouseEvent in order to receive WM_MOUSELEAVE events
         ImGuiMouseSource mouse_source = ImGui_ImplWin32_GetMouseSourceFromMessageExtraInfo();
-        const int area = (msg == WM_MOUSEMOVE) ? 1 : 2;
+        const int area = msg == WM_MOUSEMOVE ? 1 : 2;
         bd->MouseHwnd = hwnd;
         if (bd->MouseTrackedArea != area)
         {
             TRACKMOUSEEVENT tme_cancel = { sizeof(tme_cancel), TME_CANCEL, hwnd, 0 };
-            TRACKMOUSEEVENT tme_track = { sizeof(tme_track), (DWORD)((area == 2) ? (TME_LEAVE | TME_NONCLIENT) : TME_LEAVE), hwnd, 0 };
+            TRACKMOUSEEVENT tme_track = { sizeof(tme_track), (DWORD)(area == 2 ? TME_LEAVE | TME_NONCLIENT : TME_LEAVE), hwnd, 0 };
             if (bd->MouseTrackedArea != 0)
                 TrackMouseEvent(&tme_cancel);
             TrackMouseEvent(&tme_track);
@@ -630,7 +630,7 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandlerEx(HWND hwnd, UINT msg, WPA
     case WM_MOUSELEAVE:
     case WM_NCMOUSELEAVE:
     {
-        const int area = (msg == WM_MOUSELEAVE) ? 1 : 2;
+        const int area = msg == WM_MOUSELEAVE ? 1 : 2;
         if (bd->MouseTrackedArea == area)
         {
             if (bd->MouseHwnd == hwnd)
@@ -660,7 +660,7 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandlerEx(HWND hwnd, UINT msg, WPA
         if (msg == WM_LBUTTONDOWN || msg == WM_LBUTTONDBLCLK) { button = 0; }
         if (msg == WM_RBUTTONDOWN || msg == WM_RBUTTONDBLCLK) { button = 1; }
         if (msg == WM_MBUTTONDOWN || msg == WM_MBUTTONDBLCLK) { button = 2; }
-        if (msg == WM_XBUTTONDOWN || msg == WM_XBUTTONDBLCLK) { button = (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) ? 3 : 4; }
+        if (msg == WM_XBUTTONDOWN || msg == WM_XBUTTONDBLCLK) { button = GET_XBUTTON_WPARAM(wParam) == XBUTTON1 ? 3 : 4; }
         if (bd->MouseButtonsDown == 0 && GetCapture() == nullptr)
             SetCapture(hwnd); // Allow us to read mouse coordinates when dragging mouse outside of our window bounds.
         bd->MouseButtonsDown |= 1 << button;
@@ -678,7 +678,7 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandlerEx(HWND hwnd, UINT msg, WPA
         if (msg == WM_LBUTTONUP) { button = 0; }
         if (msg == WM_RBUTTONUP) { button = 1; }
         if (msg == WM_MBUTTONUP) { button = 2; }
-        if (msg == WM_XBUTTONUP) { button = (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) ? 3 : 4; }
+        if (msg == WM_XBUTTONUP) { button = GET_XBUTTON_WPARAM(wParam) == XBUTTON1 ? 3 : 4; }
         bd->MouseButtonsDown &= ~(1 << button);
         if (bd->MouseButtonsDown == 0 && GetCapture() == hwnd)
             ReleaseCapture();
@@ -697,7 +697,7 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandlerEx(HWND hwnd, UINT msg, WPA
     case WM_SYSKEYDOWN:
     case WM_SYSKEYUP:
     {
-        const bool is_key_down = (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN);
+        const bool is_key_down = msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN;
         if (wParam < 256)
         {
             // Submit modifiers
@@ -806,7 +806,7 @@ static BOOL _IsWindowsVersionOrGreater(WORD major, WORD minor, WORD)
     versionInfo.dwMinorVersion = minor;
     VER_SET_CONDITION(conditionMask, VER_MAJORVERSION, VER_GREATER_EQUAL);
     VER_SET_CONDITION(conditionMask, VER_MINORVERSION, VER_GREATER_EQUAL);
-    return (RtlVerifyVersionInfoFn(&versionInfo, VER_MAJORVERSION | VER_MINORVERSION, conditionMask) == 0) ? TRUE : FALSE;
+    return RtlVerifyVersionInfoFn(&versionInfo, VER_MAJORVERSION | VER_MINORVERSION, conditionMask) == 0 ? TRUE : FALSE;
 }
 
 #define _IsWindowsVistaOrGreater()   _IsWindowsVersionOrGreater(HIBYTE(0x0600), LOBYTE(0x0600), 0) // _WIN32_WINNT_VISTA
