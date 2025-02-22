@@ -346,7 +346,7 @@ Other changes:
     initial mouse down event.
   - Note that it may reveal incorrect usage if you were using InputInt/InputFloat
     without persistent storage by relying solely on e.g. IsItemDeactivatedAfterEdit():
-    this was never supported and didn't work consistantly (see #8149).
+    this was never supported and didn't work consistently (see #8149).
 - InputText: fixed a bug (regression in 1.91.2) where modifying text buffer within
   a callback would sometimes prevents further appending to the buffer.
 - Tabs, Style: made ImGuiCol_TabDimmedSelectedOverline alpha 0 (not visible) in default
@@ -450,7 +450,7 @@ Other changes:
   supported by InputFloat, InputInt, InputScalar etc. widgets. It actually never was. (#8065, #3946)
 - imgui_freetype: Added support for plutosvg (as an alternative to lunasvg) to render
   OpenType SVG fonts. Requires defining IMGUI_ENABLE_FREETYPE_PLUTOSVG along with IMGUI_ENABLE_FREETYPE.
-  Providing headers/librairies for plutosvg + plutovg is up to you (see #7927 for help).
+  Providing headers/libraries for plutosvg + plutovg is up to you (see #7927 for help).
   (#7927, #7187, #6591, #6607) [@pthom]
 - Backends: DX11, DX12, SDLRenderer2/3. Vulkan, WGPU: expose selected state in
   ImGui_ImplXXXX_RenderState structures during render loop user draw callbacks.

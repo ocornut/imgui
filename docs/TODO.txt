@@ -22,7 +22,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window: using SetWindowPos() inside Begin() and moving the window with the mouse reacts a very ugly glitch. We should just defer the SetWindowPos() call.
  - window: GetWindowSize() returns (0,0) when not calculated? (#1045)
  - window: investigate better auto-positioning for new windows.
- - window: top most window flag? more z-order contrl? (#2574)
+ - window: top most window flag? more z-order control? (#2574)
  - window/size: manually triggered auto-fit (double-click on grip) shouldn't resize window down to viewport size?
  - window/size: how to allow to e.g. auto-size vertically to fit contents, but be horizontally resizable? Assuming SetNextWindowSize() is modified to treat -1.0f on each axis as "keep as-is" (would be good but might break erroneous code): Problem is UpdateWindowManualResize() and lots of code treat (window->AutoFitFramesX > 0 || window->AutoFitFramesY > 0) together.
  - window/opt: freeze window flag: if not focused/hovered, return false, render with previous ImDrawList. and/or reduce refresh rate. -> this may require enforcing that it is illegal to submit contents if Begin returns false.
@@ -57,7 +57,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - widgets: start exposing PushItemFlag() and ImGuiItemFlags
  - widgets: alignment options in style (e.g. center Selectable, Right-Align within Button, etc.) #1260
  - widgets: activate by identifier (trigger button, focus given id)
- - widgets: custom glyph/shapes replacements for stock sapes. (also #6090 #2431 #2235 #6517)
+ - widgets: custom glyph/shapes replacements for stock shapes. (also #6090 #2431 #2235 #6517)
  - widgets: coloredit: keep reporting as active when picker is on?
  - widgets: group/scalarn functions: expose more per-component information. e.g. store NextItemData.ComponentIdx set by scalarn function, groups can expose them back somehow.
  - selectable: using (size.x == 0.0f) and (SelectableTextAlign.x > 0.0f) followed by SameLine() is currently not supported.
@@ -137,7 +137,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - image/image button: misalignment on padded/bordered button?
  - image/image button: parameters are confusing, image() has tint_col,border_col whereas imagebutton() has bg_col/tint_col. Even thou they are different parameters ordering could be more consistent. can we fix that?
  - slider: allow using the [-]/[+] buttons used by InputFloat()/InputInt()
- - slider: add dragging-based widgets to edit values with mouse (on 2 axises), saving screen real-estate.
+ - slider: add dragging-based widgets to edit values with mouse (on 2 axes), saving screen real-estate.
  - slider: tint background based on value (e.g. v_min -> v_max, or use 0.0f either side of the sign)
  - slider: relative dragging? + precision dragging
  - slider: step option (#1183)
@@ -213,7 +213,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - log: let user copy any window content to clipboard easily (CTRL+C on windows? while moving it? context menu?). code is commented because it fails with multiple Begin/End pairs.
  - log: obsolete LogButtons().... (was: LogButtons() options for specifying depth and/or hiding depth slider)
 
- - filters: set a current filter that certains items (e.g. tree node) can automatically query to hide themselves
+ - filters: set a current filter that certain items (e.g. tree node) can automatically query to hide themselves
  - filters: handle wild-cards (with implicit leading/trailing *), reg-exprs
  - filters: fuzzy matches (may use code at blog.forrestthewoods.com/4cffeed33fdb)
 
