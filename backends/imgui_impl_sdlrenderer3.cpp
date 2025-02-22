@@ -33,7 +33,7 @@
 #include "imgui.h"
 #ifndef IMGUI_DISABLE
 #include "imgui_impl_sdlrenderer3.h"
-#include <stdint.h>     // intptr_t
+#include <cstdint>     // intptr_t
 
 // Clang warnings with -Weverything
 #if defined(__clang__)

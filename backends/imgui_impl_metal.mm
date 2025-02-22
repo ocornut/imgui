@@ -37,7 +37,7 @@
 #include "imgui.h"
 #ifndef IMGUI_DISABLE
 #include "imgui_impl_metal.h"
-#import <time.h>
+#import <ctime>
 #import <Metal/Metal.h>
 
 #pragma mark - Support classes

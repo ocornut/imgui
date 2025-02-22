@@ -55,7 +55,7 @@
 #include "imgui.h"
 #ifndef IMGUI_DISABLE
 #include "imgui_impl_wgpu.h"
-#include <limits.h>
+#include <climits>
 #include <webgpu/webgpu.h>
 
 #ifdef IMGUI_IMPL_WEBGPU_BACKEND_DAWN

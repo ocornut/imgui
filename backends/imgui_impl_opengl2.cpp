@@ -46,7 +46,7 @@
 #include "imgui.h"
 #ifndef IMGUI_DISABLE
 #include "imgui_impl_opengl2.h"
-#include <stdint.h>     // intptr_t
+#include <cstdint>     // intptr_t
 
 // Clang/GCC warnings with -Weverything
 #if defined(__clang__)
