@@ -542,7 +542,7 @@ union ImGL3WProcs {
     } gl;
 };
 
-GL3W_API extern union ImGL3WProcs imgl3wProcs;
+GL3W_API extern ImGL3WProcs imgl3wProcs;
 
 /* OpenGL functions */
 #define glActiveTexture                   imgl3wProcs.gl.ActiveTexture
@@ -901,7 +901,7 @@ static const char *proc_names[] = {
     "glViewport",
 };
 
-GL3W_API union ImGL3WProcs imgl3wProcs;
+GL3W_API ImGL3WProcs imgl3wProcs;
 
 static void load_procs(GL3WGetProcAddressProc proc)
 {
