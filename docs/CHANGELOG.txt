@@ -104,8 +104,9 @@ Other changes:
   Default to header version if unspecified. (#8326, #8365) [@mklefrancois]
 - Backends: Vulkan: Dynamic rendering path loads "vkCmdBeginRendering/vkCmdEndRendering"
   (without -KHR suffix) on API 1.3. (#8326, #8365) [@mklefrancois]
-- Backends: WebGPU: Fix for DAWN API rename WGPUProgrammableStageDescriptor -> WGPUComputeState.
+- Backends: WebGPU: Fix for DAWN API change WGPUProgrammableStageDescriptor -> WGPUComputeState.
   [@PhantomCloak] (#8369)
+- Backends: WebGPU: Fix for webgpu-native API changes. (#8426) [@pplux]
 
 
 -----------------------------------------------------------------------
