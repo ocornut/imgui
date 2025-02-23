@@ -641,8 +641,7 @@ static int open_libgl(void)
 static void close_libgl(void) { FreeLibrary(libgl); }
 static GL3WglProc get_proc(const char *proc)
 {
-    GL3WglProc res;
-    res = (GL3WglProc)wgl_get_proc_address(proc);
+    GL3WglProc res = (GL3WglProc)wgl_get_proc_address(proc);
     if (!res)
         res = (GL3WglProc)GetProcAddress(libgl, proc);
     return res;
@@ -904,8 +903,7 @@ GL3W_API ImGL3WProcs imgl3wProcs;
 
 static void load_procs(GL3WGetProcAddressProc proc)
 {
-    size_t i;
-    for (i = 0; i < GL3W_ARRAY_SIZE(proc_names); i++)
+    for (size_t i = 0; i < GL3W_ARRAY_SIZE(proc_names); i++)
         imgl3wProcs.ptr[i] = proc(proc_names[i]);
 }
 
