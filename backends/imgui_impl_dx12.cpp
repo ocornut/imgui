@@ -19,6 +19,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2025-02-24: DirectX12: Fixed an issue where ImGui_ImplDX12_Init() signature change from 2024-11-15 combined with change from 2025-01-15 made legacy ImGui_ImplDX12_Init() crash. (#8429)
 //  2025-01-15: DirectX12: Texture upload use the command queue provided in ImGui_ImplDX12_InitInfo instead of creating its own.
 //  2024-12-09: DirectX12: Let user specifies the DepthStencilView format by setting ImGui_ImplDX12_InitInfo::DSVFormat.
 //  2024-11-15: DirectX12: *BREAKING CHANGE* Changed ImGui_ImplDX12_Init() signature to take a ImGui_ImplDX12_InitInfo struct. Legacy ImGui_ImplDX12_Init() signature is still supported (will obsolete).
@@ -75,6 +76,8 @@ struct ImGui_ImplDX12_Data
     ID3D12Device*               pd3dDevice;
     ID3D12RootSignature*        pRootSignature;
     ID3D12PipelineState*        pPipelineState;
+    ID3D12CommandQueue*         pCommandQueue;
+    bool                        commandQueueOwned;
     DXGI_FORMAT                 RTVFormat;
     DXGI_FORMAT                 DSVFormat;
     ID3D12DescriptorHeap*       pd3dSrvDescHeap;
@@ -430,7 +433,7 @@ static void ImGui_ImplDX12_CreateFontsTexture()
         hr = cmdList->Close();
         IM_ASSERT(SUCCEEDED(hr));
 
-        ID3D12CommandQueue* cmdQueue = bd->InitInfo.CommandQueue;
+        ID3D12CommandQueue* cmdQueue = bd->pCommandQueue;
         cmdQueue->ExecuteCommandLists(1, (ID3D12CommandList* const*)&cmdList);
         hr = cmdQueue->Signal(fence, 1);
         IM_ASSERT(SUCCEEDED(hr));
@@ -702,6 +705,9 @@ void    ImGui_ImplDX12_InvalidateDeviceObjects()
     if (!bd || !bd->pd3dDevice)
         return;
 
+    if (bd->commandQueueOwned)
+        SafeRelease(bd->pCommandQueue);
+    bd->commandQueueOwned = false;
     SafeRelease(bd->pRootSignature);
     SafeRelease(bd->pPipelineState);
 
@@ -732,6 +738,8 @@ bool ImGui_ImplDX12_Init(ImGui_ImplDX12_InitInfo* init_info)
     init_info = &bd->InitInfo;
 
     bd->pd3dDevice = init_info->Device;
+    IM_ASSERT(init_info->CommandQueue != NULL);
+    bd->pCommandQueue = init_info->CommandQueue;
     bd->RTVFormat = init_info->RTVFormat;
     bd->DSVFormat = init_info->DSVFormat;
     bd->numFramesInFlight = init_info->NumFramesInFlight;
@@ -793,8 +801,19 @@ bool ImGui_ImplDX12_Init(ID3D12Device* device, int num_frames_in_flight, DXGI_FO
     init_info.RTVFormat = rtv_format;
     init_info.SrvDescriptorHeap = srv_descriptor_heap;
     init_info.LegacySingleSrvCpuDescriptor = font_srv_cpu_desc_handle;
-    init_info.LegacySingleSrvGpuDescriptor = font_srv_gpu_desc_handle;;
-    return ImGui_ImplDX12_Init(&init_info);
+    init_info.LegacySingleSrvGpuDescriptor = font_srv_gpu_desc_handle;
+
+    D3D12_COMMAND_QUEUE_DESC queueDesc = {};
+    queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+    queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+    queueDesc.NodeMask = 1;
+    HRESULT hr = device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&init_info.CommandQueue));
+    IM_ASSERT(SUCCEEDED(hr));
+
+    bool ret = ImGui_ImplDX12_Init(&init_info);
+    ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
+    bd->commandQueueOwned = true;
+    return ret;
 }
 #endif
 

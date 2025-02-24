@@ -93,6 +93,8 @@ Other changes:
   and ImGuiMouseCursor_Progress cursors.
 - Backends: OpenGL3: Lazily reinitialize embedded GL loader for when calling backend
   from e.g. other DLL boundaries. (#8406)
+- Backends: DirectX12: Fixed an issue where pre-1.91.5 legacy ImGui_ImplDX12_Init()
+  signature started breaking in 1.91.8 due to missing command queue. (#8429)
 - Backends: Metal: Fixed a crash on application resources. (#8367, #7419) [@anszom]
 - Backends: Vulkan: Added ApiVersion field in ImGui_ImplVulkan_InitInfo.
   Default to header version if unspecified. (#8326, #8365) [@mklefrancois]
