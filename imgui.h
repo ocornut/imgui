@@ -2319,7 +2319,8 @@ struct ImGuiIO
     // - Code should use PushID()/PopID() in loops, or append "##xx" to same-label identifiers.
     // - Empty label e.g. Button("") == same ID as parent widget/node. Use Button("##xx") instead!
     // - See FAQ https://github.com/ocornut/imgui/blob/master/docs/FAQ.md#q-about-the-id-stack-system
-    bool        ConfigDebugHighlightIdConflicts;// = true           // Highlight and show an error message when multiple items have conflicting identifiers.
+    bool        ConfigDebugHighlightIdConflicts;// = true           // Highlight and show an error message popup when multiple items have conflicting identifiers.
+    bool        ConfigDebugHighlightIdConflictsShowItemPicker;//=true // Show "Item Picker" button in aforementioned popup.
 
     // Tools to test correct Begin/End and BeginChild/EndChild behaviors.
     // - Presently Begin()/End() and BeginChild()/EndChild() needs to ALWAYS be called in tandem, regardless of return value of BeginXXX()

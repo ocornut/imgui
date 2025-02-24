@@ -83,6 +83,8 @@ Other changes:
   is hovered, merely it's visibility. (#8399, #8387) [@nicovanbentum]
 - TextLinkOpenURL(): fixed default Win32 io.PlatformOpenInShellFn handler to
   handle UTF-8 regardless of system regional settings. (#7660) [@achabense]
+- Debug Tools: Added io.ConfigDebugHighlightIdConflictsShowItemPicker (defaults to true)
+  to allow disabled Item Picker suggestion in user facing builds. (#7961, #7669)
 - Misc: Added ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress mouse cursors
   (busy/wait/hourglass shape, with or without an arrow cursor).
 - Demo: Combos: demonstrate a very simple way to add a filter to a combo,

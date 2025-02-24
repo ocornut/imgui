@@ -1454,6 +1454,7 @@ ImGuiIO::ImGuiIO()
     ConfigMemoryCompactTimer = 60.0f;
     ConfigDebugIsDebuggerPresent = false;
     ConfigDebugHighlightIdConflicts = true;
+    ConfigDebugHighlightIdConflictsShowItemPicker = true;
     ConfigDebugBeginReturnValueOnce = false;
     ConfigDebugBeginReturnValueLoop = false;
 
@@ -10445,15 +10446,24 @@ void ImGui::ErrorCheckEndFrameFinalizeErrorTooltip()
         //BulletText("Code intending to use duplicate ID may use e.g. PushItemFlag(ImGuiItemFlags_AllowDuplicateId, true); ... PopItemFlag()"); // Not making this too visible for fear of it being abused.
         BulletText("Set io.ConfigDebugHighlightIdConflicts=false to disable this warning in non-programmers builds.");
         Separator();
-        Text("(Hold CTRL to: use");
-        SameLine();
-        if (SmallButton("Item Picker"))
-            DebugStartItemPicker();
-        SameLine();
-        Text("to break in item call-stack, or");
-        SameLine();
+        if (g.IO.ConfigDebugHighlightIdConflictsShowItemPicker)
+        {
+            Text("(Hold CTRL to: use ");
+            SameLine(0.0f, 0.0f);
+            if (SmallButton("Item Picker"))
+                DebugStartItemPicker();
+            SameLine(0.0f, 0.0f);
+            Text(" to break in item call-stack, or ");
+        }
+        else
+        {
+            Text("(Hold CTRL to ");
+        }
+        SameLine(0.0f, 0.0f);
         if (SmallButton("Open FAQ->About ID Stack System") && g.PlatformIO.Platform_OpenInShellFn != NULL)
             g.PlatformIO.Platform_OpenInShellFn(&g, "https://github.com/ocornut/imgui/blob/master/docs/FAQ.md#qa-usage");
+        SameLine(0.0f, 0.0f);
+        Text(")");
         EndErrorTooltip();
     }
 
