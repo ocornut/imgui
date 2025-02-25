@@ -902,17 +902,17 @@ void ImGui_ImplSDL3_NewFrame()
 // If you are new to dear imgui or creating a new binding for dear imgui, it is recommended that you completely ignore this section first..
 //--------------------------------------------------------------------------------------------------------
 
-// Helper structure we store in the void* RendererUserData field of each ImGuiViewport to easily retrieve our backend data.
+// Helper structure we store in the void* PlatformUserData field of each ImGuiViewport to easily retrieve our backend data.
 struct ImGui_ImplSDL3_ViewportData
 {
     SDL_Window*     Window;
     SDL_Window*     ParentWindow;
-    Uint32          WindowID;
+    Uint32          WindowID;       // Stored in ImGuiViewport::PlatformHandle. Use SDL_GetWindowFromID() to get SDL_Window* from Uint32 WindowID.
     bool            WindowOwned;
     SDL_GLContext   GLContext;
 
-    ImGui_ImplSDL3_ViewportData() { Window = ParentWindow = nullptr; WindowID = 0; WindowOwned = false; GLContext = nullptr; }
-    ~ImGui_ImplSDL3_ViewportData() { IM_ASSERT(Window == nullptr && GLContext == nullptr); }
+    ImGui_ImplSDL3_ViewportData()   { Window = ParentWindow = nullptr; WindowID = 0; WindowOwned = false; GLContext = nullptr; }
+    ~ImGui_ImplSDL3_ViewportData()  { IM_ASSERT(Window == nullptr && GLContext == nullptr); }
 };
 
 static SDL_Window* ImGui_ImplSDL3_GetSDLWindowFromViewportID(ImGuiID viewport_id)

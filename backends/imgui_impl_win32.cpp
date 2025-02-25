@@ -1046,10 +1046,10 @@ void ImGui_ImplWin32_EnableAlphaCompositing(void* hwnd)
 // If you are new to dear imgui or creating a new binding for dear imgui, it is recommended that you completely ignore this section first..
 //--------------------------------------------------------------------------------------------------------
 
-// Helper structure we store in the void* RendererUserData field of each ImGuiViewport to easily retrieve our backend data.
+// Helper structure we store in the void* PlatformUserData field of each ImGuiViewport to easily retrieve our backend data.
 struct ImGui_ImplWin32_ViewportData
 {
-    HWND    Hwnd;
+    HWND    Hwnd;               // Stored in ImGuiViewport::PlatformHandle + PlatformHandleRaw
     HWND    HwndParent;
     bool    HwndOwned;
     DWORD   DwStyle;

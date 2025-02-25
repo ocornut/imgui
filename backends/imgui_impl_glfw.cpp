@@ -1050,10 +1050,10 @@ void ImGui_ImplGlfw_InstallEmscriptenCallbacks(GLFWwindow* window, const char* c
 // If you are new to dear imgui or creating a new binding for dear imgui, it is recommended that you completely ignore this section first..
 //--------------------------------------------------------------------------------------------------------
 
-// Helper structure we store in the void* RendererUserData field of each ImGuiViewport to easily retrieve our backend data.
+// Helper structure we store in the void* PlatformUserData field of each ImGuiViewport to easily retrieve our backend data.
 struct ImGui_ImplGlfw_ViewportData
 {
-    GLFWwindow* Window;
+    GLFWwindow* Window;             // Stored in ImGuiViewport::PlatformHandle
     bool        WindowOwned;
     int         IgnoreWindowPosEventFrame;
     int         IgnoreWindowSizeEventFrame;

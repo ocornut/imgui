@@ -141,7 +141,7 @@ static const Uint32 SDL_WINDOW_VULKAN = 0x10000000;
 struct ImGui_ImplSDL2_Data
 {
     SDL_Window*             Window;
-    Uint32                  WindowID;
+    Uint32                  WindowID;       // Stored in ImGuiViewport::PlatformHandle. Use SDL_GetWindowFromID() to get SDL_Window* from Uint32 WindowID.
     SDL_Renderer*           Renderer;
     Uint64                  Time;
     char*                   ClipboardTextData;
@@ -951,16 +951,16 @@ void ImGui_ImplSDL2_NewFrame()
 // If you are new to dear imgui or creating a new binding for dear imgui, it is recommended that you completely ignore this section first..
 //--------------------------------------------------------------------------------------------------------
 
-// Helper structure we store in the void* RendererUserData field of each ImGuiViewport to easily retrieve our backend data.
+// Helper structure we store in the void* PlatformUserData field of each ImGuiViewport to easily retrieve our backend data.
 struct ImGui_ImplSDL2_ViewportData
 {
     SDL_Window*     Window;
-    Uint32          WindowID;
+    Uint32          WindowID;       // Stored in ImGuiViewport::PlatformHandle. Use SDL_GetWindowFromID() to get SDL_Window* from Uint32 WindowID.
     bool            WindowOwned;
     SDL_GLContext   GLContext;
 
-    ImGui_ImplSDL2_ViewportData() { Window = nullptr; WindowID = 0; WindowOwned = false; GLContext = nullptr; }
-    ~ImGui_ImplSDL2_ViewportData() { IM_ASSERT(Window == nullptr && GLContext == nullptr); }
+    ImGui_ImplSDL2_ViewportData()   { Window = nullptr; WindowID = 0; WindowOwned = false; GLContext = nullptr; }
+    ~ImGui_ImplSDL2_ViewportData()  { IM_ASSERT(Window == nullptr && GLContext == nullptr); }
 };
 
 static void ImGui_ImplSDL2_CreateWindow(ImGuiViewport* viewport)
