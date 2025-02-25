@@ -87,8 +87,10 @@ Other changes:
   (busy/wait/hourglass shape, with or without an arrow cursor).
 - Demo: Combos: demonstrate a very simple way to add a filter to a combo,
   by showing the filter inside the combo contents. (#718)
-- Backends: SDL2, SDL3:  Using SDL_OpenURL() in platform_io.Platform_OpenInShellFn
+- Backends: SDL2, SDL3: Using SDL_OpenURL() in platform_io.Platform_OpenInShellFn
   handler. (#7660) [@achabense]
+- Backends: SDL2, SDL3: Use display bounds when SDL_GetDisplayUsableBounds() 
+  fails or return a zero size. (#8415, #3457)
 - Backends: SDL2, SDL3, Win32, Allegro5: Added support for ImGuiMouseCursor_Wait
   and ImGuiMouseCursor_Progress cursors.
 - Backends: OpenGL3: Lazily reinitialize embedded GL loader for when calling backend
