@@ -569,12 +569,20 @@ static void ImGui_ImplWGPU_CreateFontsTexture()
 
     // Upload texture data
     {
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) || defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
         WGPUTexelCopyTextureInfo dst_view = {};
+#else
+        WGPUImageCopyTexture dst_view = {};
+#endif
         dst_view.texture = bd->renderResources.FontTexture;
         dst_view.mipLevel = 0;
         dst_view.origin = { 0, 0, 0 };
         dst_view.aspect = WGPUTextureAspect_All;
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) || defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
         WGPUTexelCopyBufferLayout layout = {};
+#else
+        WGPUTextureDataLayout layout = {};
+#endif
         layout.offset = 0;
         layout.bytesPerRow = width * size_pp;
         layout.rowsPerImage = height;
