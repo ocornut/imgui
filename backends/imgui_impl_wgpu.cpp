@@ -493,7 +493,7 @@ void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder 
             {
                 // Bind custom texture
                 ImTextureID tex_id = pcmd->GetTexID();
-                ImGuiID tex_id_hash = ImHashData(&tex_id, sizeof(tex_id));
+                ImGuiID tex_id_hash = ImHashData(&tex_id, sizeof(tex_id), 0);
                 auto bind_group = bd->renderResources.ImageBindGroups.GetVoidPtr(tex_id_hash);
                 if (bind_group)
                 {
@@ -755,7 +755,7 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     WGPUBindGroup image_bind_group = ImGui_ImplWGPU_CreateImageBindGroup(bg_layouts[1], bd->renderResources.FontTextureView);
     bd->renderResources.ImageBindGroup = image_bind_group;
     bd->renderResources.ImageBindGroupLayout = bg_layouts[1];
-    bd->renderResources.ImageBindGroups.SetVoidPtr(ImHashData(&bd->renderResources.FontTextureView, sizeof(ImTextureID)), image_bind_group);
+    bd->renderResources.ImageBindGroups.SetVoidPtr(ImHashData(&bd->renderResources.FontTextureView, sizeof(ImTextureID), 0), image_bind_group);
 
     SafeRelease(vertex_shader_desc.module);
     SafeRelease(pixel_shader_desc.module);
