@@ -8,8 +8,9 @@
 // - Documentation        https://dearimgui.com/docs (same as your local docs/ folder).
 // - Introduction, links and more at the top of imgui.cpp
 
+
 #include "imgui.h"
-#include "imgui_impl_glfw.h"
+#include "imgui_impl_sdl2.h"
 #include "imgui_impl_wgpu.h"
 #include <stdio.h>
 
@@ -18,15 +19,16 @@
 #include <emscripten/html5.h>
 #include <emscripten/html5_webgpu.h>
 #else
-#include <webgpu/webgpu_glfw.h>
 #endif
+#define SDL_MAIN_HANDLED
+#include "sdl2wgpu.h"
+#include <SDL.h>
 
-#include <GLFW/glfw3.h>
+#include <webgpu/webgpu.h>
+#include <webgpu/webgpu_cpp.h>
 
 // This example can also compile and run with Emscripten! See 'Makefile.emscripten' for details.
 #ifdef __EMSCRIPTEN__
-#include <webgpu/webgpu.h>
-#include <webgpu/webgpu_cpp.h>
 #include "../libs/emscripten/emscripten_mainloop_stub.h"
 #endif
 
@@ -34,18 +36,17 @@
 static WGPUInstance             wgpu_instance = nullptr;
 static WGPUDevice               wgpu_device = nullptr;
 static WGPUSurface              wgpu_surface = nullptr;
-static WGPUQueue                wgpu_queue = nullptr;
 static WGPUTextureFormat        wgpu_preferred_fmt = WGPUTextureFormat_Undefined;  // acquired from SurfaceCapabilities
 static WGPUSurfaceConfiguration wgpu_surface_configuration {};
 static int                      wgpu_surface_width = 1280;
 static int                      wgpu_surface_height = 720;
 
 // Forward declarations
-static bool InitWGPU(GLFWwindow* window);
+static bool InitWGPU(SDL_Window* window);
 static void ResizeSurface(int width, int height);
 
 #ifndef __EMSCRIPTEN__
-static void wgpu_device_lost_callback(const wgpu::Device&, wgpu::DeviceLostReason reason, wgpu::StringView message)
+void wgpu_device_lost_callback(const wgpu::Device&, wgpu::DeviceLostReason reason, wgpu::StringView message)
 {
     const char* reasonName = "";
     switch (reason)
@@ -56,10 +57,10 @@ static void wgpu_device_lost_callback(const wgpu::Device&, wgpu::DeviceLostReaso
         case wgpu::DeviceLostReason::FailedCreation:  reasonName = "FailedCreation";  break;
         default:                                      reasonName = "UNREACHABLE";     break;
     }
-    printf("%s device message: %s\n", reasonName, message.data);
+    printf("%s error: %s\n", reasonName, message.data);
 }
 
-static void wgpu_error_callback(const wgpu::Device&, wgpu::ErrorType type, wgpu::StringView message)
+void wgpu_error_callback(const wgpu::Device&, wgpu::ErrorType type, wgpu::StringView message)
 {
     const char* errorTypeName = "";
     switch (type)
@@ -74,34 +75,15 @@ static void wgpu_error_callback(const wgpu::Device&, wgpu::ErrorType type, wgpu:
 }
 #endif
 
-static void glfw_error_callback(int error, const char* description)
-{
-    printf("GLFW Error %d: %s\n", error, description);
-}
-
 // Main code
 int main(int, char**)
 {
-    glfwSetErrorCallback(glfw_error_callback);
-    if (!glfwInit())
-        return 1;
+    // Init SDL
+    SDL_Init(SDL_INIT_VIDEO);
+    SDL_Window *window = SDL_CreateWindow("Dear ImGui SDL+WebGPU example", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, wgpu_surface_width, wgpu_surface_height, SDL_WINDOW_RESIZABLE);
 
-    // Make sure GLFW does not initialize any graphics context.
-    // This needs to be done explicitly later.
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    GLFWwindow* window = glfwCreateWindow(wgpu_surface_width, wgpu_surface_height, "Dear ImGui GLFW+WebGPU example", nullptr, nullptr);
-    if (window == nullptr)
-        return 1;
-
-    // Initialize the WebGPU environment
-    if (!InitWGPU(window))
-    {
-        glfwDestroyWindow(window);
-        glfwTerminate();
-        return 1;
-    }
-
-    glfwShowWindow(window);
+    // Initialize WGPU
+    InitWGPU(window);
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -115,9 +97,9 @@ int main(int, char**)
     //ImGui::StyleColorsLight();
 
     // Setup Platform/Renderer backends
-    ImGui_ImplGlfw_InitForOther(window, true);
+    ImGui_ImplSDL2_InitForOther(window);
 #ifdef __EMSCRIPTEN__
-    ImGui_ImplGlfw_InstallEmscriptenCallbacks(window, "#canvas");
+    //ImGui_ImplSDL2_InstallEmscriptenCallbacks(window, "#canvas");
 #endif
     ImGui_ImplWGPU_InitInfo init_info;
     init_info.Device = wgpu_device;
@@ -151,6 +133,8 @@ int main(int, char**)
     bool show_another_window = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
+    SDL_Event event;
+    bool canCloseWindow = false;
     // Main loop
 #ifdef __EMSCRIPTEN__
     // For an Emscripten build we are disabling file-system access, so let's not attempt to do a fopen() of the imgui.ini file.
@@ -158,24 +142,26 @@ int main(int, char**)
     io.IniFilename = nullptr;
     EMSCRIPTEN_MAINLOOP_BEGIN
 #else
-    while (!glfwWindowShouldClose(window))
+    while (!canCloseWindow) 
 #endif
     {
+        while (SDL_PollEvent(&event))
+        {
+            ImGui_ImplSDL2_ProcessEvent(&event);
+            if (event.type == SDL_QUIT ||
+               (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE &&
+                event.window.windowID == SDL_GetWindowID(window)))
+                    canCloseWindow = true;
+        }
         // Poll and handle events (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
         // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
         // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
         // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
-        glfwPollEvents();
-        if (glfwGetWindowAttrib(window, GLFW_ICONIFIED) != 0)
-        {
-            ImGui_ImplGlfw_Sleep(10);
-            continue;
-        }
 
         // React to changes in screen size
         int width, height;
-        glfwGetFramebufferSize((GLFWwindow*)window, &width, &height);
+        SDL_GetWindowSize(window, &width, &height);
         if (width != wgpu_surface_width || height != wgpu_surface_height)
         {
             ImGui_ImplWGPU_InvalidateDeviceObjects();
@@ -186,8 +172,9 @@ int main(int, char**)
 
         // Start the Dear ImGui frame
         ImGui_ImplWGPU_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
+        ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
+
 
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
         if (show_demo_window)
@@ -233,17 +220,17 @@ int main(int, char**)
         // Tick needs to be called in Dawn to display validation errors
         wgpuDeviceTick(wgpu_device);
 #endif
-        WGPUSurfaceTexture surfaceTexture = {};
+        WGPUSurfaceTexture surfaceTexture;
         wgpuSurfaceGetCurrentTexture(wgpu_surface, &surfaceTexture);
 
         WGPUTextureViewDescriptor viewDescriptor {};
         viewDescriptor.format          = wgpu_preferred_fmt;
-        viewDescriptor.dimension       = WGPUTextureViewDimension_2D ;
+        viewDescriptor.dimension       = WGPUTextureViewDimension_2D;
         viewDescriptor.mipLevelCount   = WGPU_MIP_LEVEL_COUNT_UNDEFINED;
         viewDescriptor.arrayLayerCount = WGPU_ARRAY_LAYER_COUNT_UNDEFINED;
         viewDescriptor.aspect          = WGPUTextureAspect_All;
 
-        WGPUTextureView textureView = wgpuTextureCreateView(surfaceTexture.texture, &viewDescriptor);
+        WGPUTextureView textureView = wgpuTextureCreateView((WGPUTexture &) surfaceTexture, &viewDescriptor);
 
         WGPURenderPassColorAttachment color_attachments {};
         color_attachments.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
@@ -257,23 +244,23 @@ int main(int, char**)
         render_pass_desc.colorAttachments       = &color_attachments;
         render_pass_desc.depthStencilAttachment = nullptr;
 
-        WGPUCommandEncoderDescriptor enc_desc = {};
+        WGPUCommandEncoderDescriptor enc_desc {};
         WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(wgpu_device, &enc_desc);
 
         WGPURenderPassEncoder pass = wgpuCommandEncoderBeginRenderPass(encoder, &render_pass_desc);
         ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), pass);
         wgpuRenderPassEncoderEnd(pass);
-        wgpuRenderPassEncoderRelease(pass);
 
         WGPUCommandBufferDescriptor cmd_buffer_desc {};
         WGPUCommandBuffer cmd_buffer = wgpuCommandEncoderFinish(encoder, &cmd_buffer_desc);
-        wgpuQueueSubmit(wgpu_queue, 1, &cmd_buffer);
+        WGPUQueue queue = wgpuDeviceGetQueue(wgpu_device);
+        wgpuQueueSubmit(queue, 1, &cmd_buffer);
 
 #ifndef __EMSCRIPTEN__
         wgpuSurfacePresent(wgpu_surface);
-        //wgpuInstanceProcessEvents(wgpu_instance);
 #endif
-        wgpuTextureViewRelease(textureView);
+        wgpuTextureViewRelease(color_attachments.view);
+        wgpuRenderPassEncoderRelease(pass);
         wgpuCommandEncoderRelease(encoder);
         wgpuCommandBufferRelease(cmd_buffer);
     }
@@ -283,23 +270,21 @@ int main(int, char**)
 
     // Cleanup
     ImGui_ImplWGPU_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
+    ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
 
-    wgpuSurfaceUnconfigure(wgpu_surface);
-    wgpuSurfaceRelease(wgpu_surface);
-    wgpuQueueRelease(wgpu_queue);
-    wgpuDeviceRelease(wgpu_device);
-    wgpuInstanceRelease(wgpu_instance);
-
-    glfwDestroyWindow(window);
-    glfwTerminate();
+    // Terminate SDL
+    SDL_DestroyWindow(window);
+    SDL_Quit();
 
     return 0;
 }
 
-static bool InitWGPU(GLFWwindow* window)
+static bool InitWGPU(SDL_Window* window)
 {
+    static wgpu::Adapter localAdapter;
+    static wgpu::Device localDevice;
+
     wgpu_surface_configuration.presentMode = WGPUPresentMode_Fifo;
     wgpu_surface_configuration.alphaMode   = WGPUCompositeAlphaMode_Auto;
     wgpu_surface_configuration.usage       = WGPUTextureUsage_RenderAttachment;
@@ -324,20 +309,13 @@ static bool InitWGPU(GLFWwindow* window)
     wgpu_surface_configuration.device      = wgpu_device;
     wgpu_surface_configuration.format      = wgpu_preferred_fmt;
 #else
-
-    wgpu::InstanceDescriptor instanceDescriptor {};
+    WGPUInstanceDescriptor instanceDescriptor {};
     instanceDescriptor.capabilities.timedWaitAnyEnable = true;
-    wgpu::Instance instance = wgpu::CreateInstance(&instanceDescriptor);
+    wgpu::Instance instance = wgpuCreateInstance(&instanceDescriptor);
 
-    static wgpu::Adapter localAdapter;
     wgpu::RequestAdapterOptions adapterOptions {};
 
-#if defined(_WIN32) || defined(WIN32)
-    // force DirectX backend due to Vulkan trouble with GetPhysicalDeviceCooperativeMatrixPropertiesKHR (DAWN branch 16/2/2025)
-    adapterOptions.backendType = wgpu::BackendType::D3D11; // or D3D12 in w10/W11   due
-#endif
-
-    auto onRequestAdapter = [](wgpu::RequestAdapterStatus status, wgpu::Adapter adapter, wgpu::StringView message)
+    auto RequestAdapter = [](wgpu::RequestAdapterStatus status, wgpu::Adapter adapter, wgpu::StringView message)
     {
         if (status != wgpu::RequestAdapterStatus::Success)
         {
@@ -348,7 +326,7 @@ static bool InitWGPU(GLFWwindow* window)
     };
 
     // Synchronously (wait until) acquire Adapter
-    auto waitedAdapterFunc { instance.RequestAdapter(&adapterOptions, wgpu::CallbackMode::WaitAnyOnly, onRequestAdapter) };
+    auto waitedAdapterFunc { instance.RequestAdapter(&adapterOptions, wgpu::CallbackMode::WaitAnyOnly, RequestAdapter) };
     instance.WaitAny(waitedAdapterFunc, UINT64_MAX);
     assert(localAdapter != nullptr);
 
@@ -360,15 +338,25 @@ static bool InitWGPU(GLFWwindow* window)
 
     // Set device callback functions
     wgpu::DeviceDescriptor deviceDesc {};
-
     deviceDesc.SetDeviceLostCallback(wgpu::CallbackMode::AllowSpontaneous, wgpu_device_lost_callback);
     deviceDesc.SetUncapturedErrorCallback(wgpu_error_callback);
 
-    // get device Synchronously
-    wgpu_device = localAdapter.CreateDevice(&deviceDesc).MoveToCHandle();
-    assert(wgpu_device != nullptr);
-    
-    wgpu::Surface surface = wgpu::glfw::CreateSurfaceForWindow(instance, window);
+    auto RequestDevice = [](wgpu::RequestDeviceStatus status, wgpu::Device device, wgpu::StringView message)
+    {
+        if (status != wgpu::RequestDeviceStatus::Success)
+        {
+            printf("Failed to get an device: %s\n", message.data);
+            return;
+        }
+        localDevice = std::move(device);
+    };
+
+    // Synchronously (wait until) create the device
+    auto waitedDeviceFunc { localAdapter.RequestDevice(&deviceDesc, wgpu::CallbackMode::WaitAnyOnly, RequestDevice) };
+    instance.WaitAny(waitedDeviceFunc, UINT64_MAX);
+    assert(localDevice != nullptr);
+
+    wgpu::Surface surface = SDL_getWGPUSurface(instance.Get(), window);
     if (!surface)
         return false;
 
@@ -377,6 +365,8 @@ static bool InitWGPU(GLFWwindow* window)
     surface.GetCapabilities(localAdapter, &capabilities);
     wgpu_preferred_fmt = (WGPUTextureFormat) capabilities.formats[0];
 
+    wgpu_device   = localDevice.MoveToCHandle();
+
     wgpu_surface_configuration.device      = wgpu_device;
     wgpu_surface_configuration.format      = wgpu_preferred_fmt;
     surface.Configure((const wgpu::SurfaceConfiguration *) &wgpu_surface_configuration);
@@ -384,20 +374,14 @@ static bool InitWGPU(GLFWwindow* window)
 
     wgpu_instance = instance.MoveToCHandle();
     wgpu_surface  = surface.MoveToCHandle();
-    wgpu_queue    = wgpuDeviceGetQueue(wgpu_device);
 
     return true;
 }
 
 void ResizeSurface(int width, int height)
 {
-    wgpu_surface_configuration.width  = wgpu_surface_width  = width;
-    wgpu_surface_configuration.height = wgpu_surface_height = height;
+    wgpu_surface_width  = wgpu_surface_configuration.width  = width;
+    wgpu_surface_height = wgpu_surface_configuration.height = height;
 
-    // Workaround to avoid black screen (round to ceiling) float Viewport
-    wgpu_surface_configuration.width  ++;
-    wgpu_surface_configuration.height ++;
-
-    wgpuSurfaceUnconfigure(wgpu_surface);
-    wgpuSurfaceConfigure(wgpu_surface, (WGPUSurfaceConfiguration *) &wgpu_surface_configuration);
+    wgpuSurfaceConfigure( wgpu_surface, (WGPUSurfaceConfiguration *) &wgpu_surface_configuration );
 }
