@@ -17,7 +17,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2025-02-26: Update for latest webgpu-native changes.
+//  2025-02-26: Recreate image bind groups during render. (#8426, #8046, #7765, #8027) + Update for latest webgpu-native changes.
 //  2024-10-14: Update Dawn support for change of string usages. (#8082, #8083)
 //  2024-10-07: Expose selected render state in ImGui_ImplWGPU_RenderState, which you can access in 'void* platform_io.Renderer_RenderState' during draw callbacks.
 //  2024-10-07: Changed default texture sampler to Clamp instead of Repeat/Wrap.
@@ -78,7 +78,6 @@ struct RenderResources
     WGPUBuffer          Uniforms = nullptr;             // Shader uniforms
     WGPUBindGroup       CommonBindGroup = nullptr;      // Resources bind-group to bind the common resources to pipeline
     ImGuiStorage        ImageBindGroups;                // Resources bind-group to bind the font/image resources to pipeline (this is a key->value map)
-    WGPUBindGroup       ImageBindGroup = nullptr;       // Default font-resource of Dear ImGui
     WGPUBindGroupLayout ImageBindGroupLayout = nullptr; // Cache layout used for the image bind group. Avoids allocating unnecessary JS objects when working with WebASM
 };
 
@@ -252,7 +251,6 @@ static void SafeRelease(RenderResources& res)
     SafeRelease(res.Sampler);
     SafeRelease(res.Uniforms);
     SafeRelease(res.CommonBindGroup);
-    SafeRelease(res.ImageBindGroup);
     SafeRelease(res.ImageBindGroupLayout);
 };
 
@@ -494,17 +492,13 @@ void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder 
                 // Bind custom texture
                 ImTextureID tex_id = pcmd->GetTexID();
                 ImGuiID tex_id_hash = ImHashData(&tex_id, sizeof(tex_id), 0);
-                auto bind_group = bd->renderResources.ImageBindGroups.GetVoidPtr(tex_id_hash);
-                if (bind_group)
+                WGPUBindGroup bind_group = (WGPUBindGroup)bd->renderResources.ImageBindGroups.GetVoidPtr(tex_id_hash);
+                if (!bind_group)
                 {
-                    wgpuRenderPassEncoderSetBindGroup(pass_encoder, 1, (WGPUBindGroup)bind_group, 0, nullptr);
+                    bind_group = ImGui_ImplWGPU_CreateImageBindGroup(bd->renderResources.ImageBindGroupLayout, (WGPUTextureView)tex_id);
+                    bd->renderResources.ImageBindGroups.SetVoidPtr(tex_id_hash, bind_group);
                 }
-                else
-                {
-                    WGPUBindGroup image_bind_group = ImGui_ImplWGPU_CreateImageBindGroup(bd->renderResources.ImageBindGroupLayout, (WGPUTextureView)tex_id);
-                    bd->renderResources.ImageBindGroups.SetVoidPtr(tex_id_hash, image_bind_group);
-                    wgpuRenderPassEncoderSetBindGroup(pass_encoder, 1, image_bind_group, 0, nullptr);
-                }
+                wgpuRenderPassEncoderSetBindGroup(pass_encoder, 1, (WGPUBindGroup)bind_group, 0, nullptr);
 
                 // Project scissor/clipping rectangles into framebuffer space
                 ImVec2 clip_min((pcmd->ClipRect.x - clip_off.x) * clip_scale.x, (pcmd->ClipRect.y - clip_off.y) * clip_scale.y);
@@ -526,6 +520,16 @@ void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder 
         global_idx_offset += draw_list->IdxBuffer.Size;
         global_vtx_offset += draw_list->VtxBuffer.Size;
     }
+
+    // Remove all ImageBindGroups
+    ImGuiStorage& image_bind_groups = bd->renderResources.ImageBindGroups;
+    for (int i = 0; i < image_bind_groups.Data.Size; i++)
+    {
+        WGPUBindGroup bind_group = (WGPUBindGroup)image_bind_groups.Data[i].val_p;
+        SafeRelease(bind_group);
+    }
+    image_bind_groups.Data.resize(0);
+
     platform_io.Renderer_RenderState = nullptr;
 }
 
@@ -759,11 +763,7 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     common_bg_descriptor.entryCount = sizeof(common_bg_entries) / sizeof(WGPUBindGroupEntry);
     common_bg_descriptor.entries = common_bg_entries;
     bd->renderResources.CommonBindGroup = wgpuDeviceCreateBindGroup(bd->wgpuDevice, &common_bg_descriptor);
-
-    WGPUBindGroup image_bind_group = ImGui_ImplWGPU_CreateImageBindGroup(bg_layouts[1], bd->renderResources.FontTextureView);
-    bd->renderResources.ImageBindGroup = image_bind_group;
     bd->renderResources.ImageBindGroupLayout = bg_layouts[1];
-    bd->renderResources.ImageBindGroups.SetVoidPtr(ImHashData(&bd->renderResources.FontTextureView, sizeof(ImTextureID), 0), image_bind_group);
 
     SafeRelease(vertex_shader_desc.module);
     SafeRelease(pixel_shader_desc.module);
@@ -823,7 +823,6 @@ bool ImGui_ImplWGPU_Init(ImGui_ImplWGPU_InitInfo* init_info)
     bd->renderResources.Uniforms = nullptr;
     bd->renderResources.CommonBindGroup = nullptr;
     bd->renderResources.ImageBindGroups.Data.reserve(100);
-    bd->renderResources.ImageBindGroup = nullptr;
     bd->renderResources.ImageBindGroupLayout = nullptr;
 
     // Create buffers with a default size (they will later be grown as needed)
