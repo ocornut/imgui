@@ -83,6 +83,8 @@ Other changes:
   is hovered, merely it's visibility. (#8399, #8387) [@nicovanbentum]
 - TextLinkOpenURL(): fixed default Win32 io.PlatformOpenInShellFn handler to
   handle UTF-8 regardless of system regional settings. (#7660) [@achabense]
+- Debug Tools: Added io.ConfigDebugHighlightIdConflictsShowItemPicker (defaults to true)
+  to allow disabled Item Picker suggestion in user facing builds. (#7961, #7669)
 - Misc: Added ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress mouse cursors
   (busy/wait/hourglass shape, with or without an arrow cursor).
 - Demo: Combos: demonstrate a very simple way to add a filter to a combo,
@@ -93,15 +95,24 @@ Other changes:
   fails or return a zero size. (#8415, #3457)
 - Backends: SDL2, SDL3, Win32, Allegro5: Added support for ImGuiMouseCursor_Wait
   and ImGuiMouseCursor_Progress cursors.
+- Backends: SDL2, SDL3: Avoid calling SDL_GetGlobalMouseState() when mouse is in
+  relative mode. (#8425, #8407) [@TheMode]
+- Backends: SDL2, SDL3: Only start SDL_CaptureMouse() when mouse is being dragged,
+  to mitigate issues with e.g. Linux debuggers not claiming capture back. (#6410, #3650)
 - Backends: OpenGL3: Lazily reinitialize embedded GL loader for when calling backend
   from e.g. other DLL boundaries. (#8406)
+- Backends: DirectX12: Fixed an issue where pre-1.91.5 legacy ImGui_ImplDX12_Init()
+  signature started breaking in 1.91.8 due to missing command queue. (#8429)
 - Backends: Metal: Fixed a crash on application resources. (#8367, #7419) [@anszom]
 - Backends: Vulkan: Added ApiVersion field in ImGui_ImplVulkan_InitInfo.
   Default to header version if unspecified. (#8326, #8365) [@mklefrancois]
 - Backends: Vulkan: Dynamic rendering path loads "vkCmdBeginRendering/vkCmdEndRendering"
   (without -KHR suffix) on API 1.3. (#8326, #8365) [@mklefrancois]
-- Backends: WebGPU: Fix for DAWN API rename WGPUProgrammableStageDescriptor -> WGPUComputeState.
+- Backends: WebGPU: Recreate image bind groups during render to allow reuse of
+  WGPUTextureView pointers. (#8426, #8046, #7765, #8027) [@pplux, @Jairard]
+- Backends: WebGPU: Fix for DAWN API change WGPUProgrammableStageDescriptor -> WGPUComputeState.
   [@PhantomCloak] (#8369)
+- Backends: WebGPU: Fix for webgpu-native API changes. (#8426) [@pplux]
 
 Docking+Viewports Branch:
 
@@ -376,7 +387,7 @@ Other changes:
     initial mouse down event.
   - Note that it may reveal incorrect usage if you were using InputInt/InputFloat
     without persistent storage by relying solely on e.g. IsItemDeactivatedAfterEdit():
-    this was never supported and didn't work consistantly (see #8149).
+    this was never supported and didn't work consistently (see #8149).
 - InputText: fixed a bug (regression in 1.91.2) where modifying text buffer within
   a callback would sometimes prevents further appending to the buffer.
 - Tabs, Style: made ImGuiCol_TabDimmedSelectedOverline alpha 0 (not visible) in default
@@ -489,7 +500,7 @@ Other changes:
   supported by InputFloat, InputInt, InputScalar etc. widgets. It actually never was. (#8065, #3946)
 - imgui_freetype: Added support for plutosvg (as an alternative to lunasvg) to render
   OpenType SVG fonts. Requires defining IMGUI_ENABLE_FREETYPE_PLUTOSVG along with IMGUI_ENABLE_FREETYPE.
-  Providing headers/librairies for plutosvg + plutovg is up to you (see #7927 for help).
+  Providing headers/libraries for plutosvg + plutovg is up to you (see #7927 for help).
   (#7927, #7187, #6591, #6607) [@pthom]
 - Backends: DX11, DX12, SDLRenderer2/3. Vulkan, WGPU: expose selected state in
   ImGui_ImplXXXX_RenderState structures during render loop user draw callbacks.
