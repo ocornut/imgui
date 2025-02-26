@@ -95,6 +95,8 @@ Other changes:
   and ImGuiMouseCursor_Progress cursors.
 - Backends: SDL2, SDL3: Avoid calling SDL_GetGlobalMouseState() when mouse is in
   relative mode. (#8425, #8407) [@TheMode]
+- Backends: SDL2, SDL3: Only start SDL_CaptureMouse() when mouse is being dragged,
+  to mitigate issues with e.g. Linux debuggers not claiming capture back. (#6410, #3650)
 - Backends: OpenGL3: Lazily reinitialize embedded GL loader for when calling backend
   from e.g. other DLL boundaries. (#8406)
 - Backends: DirectX12: Fixed an issue where pre-1.91.5 legacy ImGui_ImplDX12_Init()
