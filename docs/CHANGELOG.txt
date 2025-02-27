@@ -95,6 +95,8 @@ Other changes:
   and ImGuiMouseCursor_Progress cursors.
 - Backends: SDL2, SDL3: Avoid calling SDL_GetGlobalMouseState() when mouse is in
   relative mode. (#8425, #8407) [@TheMode]
+- Backends: SDL2, SDL3: Only start SDL_CaptureMouse() when mouse is being dragged,
+  to mitigate issues with e.g. Linux debuggers not claiming capture back. (#6410, #3650)
 - Backends: OpenGL3: Lazily reinitialize embedded GL loader for when calling backend
   from e.g. other DLL boundaries. (#8406)
 - Backends: DirectX12: Fixed an issue where pre-1.91.5 legacy ImGui_ImplDX12_Init()
@@ -104,8 +106,11 @@ Other changes:
   Default to header version if unspecified. (#8326, #8365) [@mklefrancois]
 - Backends: Vulkan: Dynamic rendering path loads "vkCmdBeginRendering/vkCmdEndRendering"
   (without -KHR suffix) on API 1.3. (#8326, #8365) [@mklefrancois]
-- Backends: WebGPU: Fix for DAWN API rename WGPUProgrammableStageDescriptor -> WGPUComputeState.
+- Backends: WebGPU: Recreate image bind groups during render to allow reuse of
+  WGPUTextureView pointers. (#8426, #8046, #7765, #8027) [@pplux, @Jairard]
+- Backends: WebGPU: Fix for DAWN API change WGPUProgrammableStageDescriptor -> WGPUComputeState.
   [@PhantomCloak] (#8369)
+- Backends: WebGPU: Fix for webgpu-native API changes. (#8426) [@pplux]
 
 
 -----------------------------------------------------------------------

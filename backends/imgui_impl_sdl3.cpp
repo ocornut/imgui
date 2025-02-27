@@ -20,6 +20,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2025-02-26: Only start SDL_CaptureMouse() when mouse is being dragged, to mitigate issues with e.g.Linux debuggers not claiming capture back. (#6410, #3650)
 //  2025-02-24: Avoid calling SDL_GetGlobalMouseState() when mouse is in relative mode.
 //  2025-02-18: Added ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress mouse cursor support.
 //  2025-02-10: Using SDL_OpenURL() in platform_io.Platform_OpenInShellFn handler.
@@ -574,8 +575,14 @@ static void ImGui_ImplSDL3_UpdateMouseData()
 
     // We forward mouse input when hovered or captured (via SDL_EVENT_MOUSE_MOTION) or when focused (below)
 #if SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE
-    // SDL_CaptureMouse() let the OS know e.g. that our imgui drag outside the SDL window boundaries shouldn't e.g. trigger other operations outside
-    SDL_CaptureMouse(bd->MouseButtonsDown != 0);
+    // - SDL_CaptureMouse() let the OS know e.g. that our drags can extend outside of parent boundaries (we want updated position) and shouldn't trigger other operations outside.
+    // - Debuggers under Linux tends to leave captured mouse on break, which may be very inconvenient, so to migitate the issue we wait until mouse has moved to begin capture.
+    bool want_capture = false;
+    for (int button_n = 0; button_n < ImGuiMouseButton_COUNT && !want_capture; button_n++)
+        if (ImGui::IsMouseDragging(button_n, 1.0f))
+            want_capture = true;
+    SDL_CaptureMouse(want_capture);
+
     SDL_Window* focused_window = SDL_GetKeyboardFocus();
     const bool is_app_focused = (bd->Window == focused_window);
 #else
