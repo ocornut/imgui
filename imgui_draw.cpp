@@ -4004,7 +4004,14 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
             }
 
             // Allow wrapping after punctuation.
-            inside_word = (c != '.' && c != ',' && c != ';' && c != '!' && c != '?' && c != '\"');
+            unsigned int next_c = (unsigned int)*next_s;
+            bool current_is_punctuation = (c == '.' || c == ',' || c == ';' || c == '!' || c == '?' || c == '\"');
+            bool next_is_punctuation = (next_c == '.' || next_c == ',' || next_c == ';' || next_c == '!' || next_c == '?' || next_c == '\"');
+            if (current_is_punctuation && !next_is_punctuation) {
+                inside_word = false;
+            } else {
+                inside_word = true;
+            }
         }
 
         // We ignore blank width at the end of the line (they can be skipped)
