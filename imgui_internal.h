@@ -1998,7 +1998,6 @@ struct ImGuiMetricsConfig
     bool        ShowDrawCmdMesh = true;
     bool        ShowDrawCmdBoundingBoxes = true;
     bool        ShowTextEncodingViewer = false;
-    bool        ShowAtlasTintedWithTextColor = false;
     int         ShowWindowsRectsType = -1;
     int         ShowTablesRectsType = -1;
     int         HighlightMonitorIdx = -1;

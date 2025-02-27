@@ -41,6 +41,22 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+- Image: removed 'tint_col' and 'border_col' parameter from Image() function. (#8131, #8238)
+  - Old function signature:
+      void Image      (ImTextureID tex_id, ImVec2 image_size, ImVec2 uv0 = (0,0), ImVec2 uv1 = (1,1), ImVec4 tint_col = (1,1,1,1), ImVec4 border_col = (0,0,0,0));
+  - New function signatures:
+      void Image      (ImTextureID tex_id, ImVec2 image_size, ImVec2 uv0 = (0,0), ImVec2 uv1 = (1,1));
+      void ImageWithBg(ImTextureID tex_id, ImVec2 image_size, ImVec2 uv0 = (0,0), ImVec2 uv1 = (1,1), ImVec4 bg_col = (0,0,0,0), ImVec4 tint_col = (1,1,1,1));
+  - TL;DR: 'border_col' had misleading side-effect on layout, 'bg_col' was missing, parameter order couldn't be consistent with ImageButton().
+  - New behavior always use ImGuiCol_Border color + style.ImageBorderSize / ImGuiStyleVar_ImageBorderSize.
+  - Old behavior altered border size (and therefore layout) based on border color's
+    alpha, which caused variety of problems.
+  - Old behavior used a fixed value of 1.0f for border size which was not tweakable.
+  - Kept legacy signature (will obsolete), which mimics the old behavior,
+    but uses Max(1.0f, style.ImageBorderSize) when border_col is specified.
+  - Added ImageWithBg() function which has both 'bg_col' (which was missing) and 'tint_col'.
+    It was impossible to add 'bg_col' to Image() with a parameter order consistent with
+    other functions, so we decided to remove 'tint_col' and introduce ImageWithBg().
 - Renamed ImFontConfig::GlyphExtraSpacing.x option to GlyphExtraAdvanceX. (#242)
 - Renamed style.TabMinWidthForCloseButton to style.TabCloseButtonMinWidthUnselected.
 - Backends: Vulkan: Added 'uint32_t api_version' argument to ImGui_ImplVulkan_LoadFunctions().
@@ -70,6 +86,8 @@ Other changes:
 - Tables: tamed some .ini settings optimizations to more accurately allow
   overwriting/hot-reloading settings in more situations. (#7934)
 - Tables, Error Handling: Recovery from invalid index in TableSetColumnIndex(). (#1651)
+- Image: Added ImageWithBg() variant with bg color and tint color. (#8131, #8238)
+- Image, Style: Added style.ImageBorderSize, ImGuiStyleVar_ImageBorderSize. (#8131, #8238)
 - Selectable: Fixed horizontal label alignment with SelectableTextAlign.x > 0 and
   specifying a selectable size. (#8338)
 - Tabs, Style: made the Close Button of selected tabs always visible by default,

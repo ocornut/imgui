@@ -1062,24 +1062,44 @@ bool ImGui::ScrollbarEx(const ImRect& bb_frame, ImGuiID id, ImGuiAxis axis, ImS6
 
 // - Read about ImTextureID here: https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
 // - 'uv0' and 'uv1' are texture coordinates. Read about them from the same link above.
-void ImGui::Image(ImTextureID user_texture_id, const ImVec2& image_size, const ImVec2& uv0, const ImVec2& uv1, const ImVec4& tint_col, const ImVec4& border_col)
+void ImGui::ImageWithBg(ImTextureID user_texture_id, const ImVec2& image_size, const ImVec2& uv0, const ImVec2& uv1, const ImVec4& bg_col, const ImVec4& tint_col)
 {
+    ImGuiContext& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return;
 
-    const float border_size = (border_col.w > 0.0f) ? 1.0f : 0.0f;
-    const ImVec2 padding(border_size, border_size);
+    const ImVec2 padding(g.Style.ImageBorderSize, g.Style.ImageBorderSize);
     const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + image_size + padding * 2.0f);
     ItemSize(bb);
     if (!ItemAdd(bb, 0))
         return;
 
     // Render
-    if (border_size > 0.0f)
-        window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(border_col), 0.0f, ImDrawFlags_None, border_size);
+    if (g.Style.ImageBorderSize > 0.0f)
+        window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_Border), 0.0f, ImDrawFlags_None, g.Style.ImageBorderSize);
+    if (bg_col.w > 0.0f)
+        window->DrawList->AddRectFilled(bb.Min + padding, bb.Max - padding, GetColorU32(bg_col));
     window->DrawList->AddImage(user_texture_id, bb.Min + padding, bb.Max - padding, uv0, uv1, GetColorU32(tint_col));
 }
+
+void ImGui::Image(ImTextureID user_texture_id, const ImVec2& image_size, const ImVec2& uv0, const ImVec2& uv1)
+{
+    ImageWithBg(user_texture_id, image_size, uv0, uv1);
+}
+
+// 1.91.9 (February 2025) removed 'tint_col' and 'border_col' parameters, made border size not depend on color value. (#8131, #8238)
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+void ImGui::Image(ImTextureID user_texture_id, const ImVec2& image_size, const ImVec2& uv0, const ImVec2& uv1, const ImVec4& tint_col, const ImVec4& border_col)
+{
+    ImGuiContext& g = *GImGui;
+    PushStyleVar(ImGuiStyleVar_ImageBorderSize, (border_col.w > 0.0f) ? ImMax(1.0f, g.Style.ImageBorderSize) : 0.0f); // Preserve legacy behavior where border is always visible when border_col's Alpha is >0.0f
+    PushStyleColor(ImGuiCol_Border, border_col);
+    ImageWithBg(user_texture_id, image_size, uv0, uv1, ImVec4(0, 0, 0, 0), tint_col);
+    PopStyleColor();
+    PopStyleVar();
+}
+#endif
 
 bool ImGui::ImageButtonEx(ImGuiID id, ImTextureID user_texture_id, const ImVec2& image_size, const ImVec2& uv0, const ImVec2& uv1, const ImVec4& bg_col, const ImVec4& tint_col, ImGuiButtonFlags flags)
 {
