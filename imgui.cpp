@@ -15435,10 +15435,7 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
     {
         ImGuiContext& g = *GImGui;
         PushStyleVar(ImGuiStyleVar_ImageBorderSize, ImMax(1.0f, g.Style.ImageBorderSize));
-        ImVec2 image_pos = GetCursorScreenPos();
-        ImVec2 image_size((float)atlas->TexWidth, (float)atlas->TexHeight);
-        GetWindowDrawList()->AddRectFilled(image_pos, image_pos + image_size + ImVec2(g.Style.ImageBorderSize, g.Style.ImageBorderSize), IM_COL32(0, 0, 0, 255));
-        Image(atlas->TexID, image_size);
+        ImageWithBg(atlas->TexID, ImVec2((float)atlas->TexWidth, (float)atlas->TexHeight), ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f), ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
         PopStyleVar();
         TreePop();
     }
