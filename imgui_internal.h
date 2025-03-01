@@ -90,8 +90,10 @@ Index of this file:
 
 // Only AVX2 supports integer and byte instructions for 256-bit registers. Implementation this on AVX1 is not possible.
 #if defined(IMGUI_ENABLE_AVX2)
+#define IMGUI_ENABLE_AVX2_IMSTRLEN
 #define IMGUI_ENABLE_AVX2_IMMEMCHR
 #elif defined(IMGUI_ENABLE_AVX) || defined(IMGUI_ENABLE_SSE)
+#define IMGUI_ENABLE_SSE_IMSTRLEN
 #define IMGUI_ENABLE_SSE_IMMEMCHR
 #endif
 
@@ -395,7 +397,7 @@ static inline bool      ImIsPowerOfTwo(ImU64 v)         { return v != 0 && (v & 
 static inline int       ImUpperPowerOfTwo(int v)        { v--; v |= v >> 1; v |= v >> 2; v |= v >> 4; v |= v >> 8; v |= v >> 16; v++; return v; }
 
 // Helpers: String
-#define ImStrlen strlen
+IMGUI_API size_t        ImStrlen(const char* str);                                          // Compute the length of a null-terminated string.
 IMGUI_API const void*   ImMemchr(const void* buf, int val, size_t count);                   // Find first occurrence of 'val' in buffer given length.
 IMGUI_API int           ImStricmp(const char* str1, const char* str2);                      // Case insensitive compare.
 IMGUI_API int           ImStrnicmp(const char* str1, const char* str2, size_t count);       // Case insensitive compare to a certain count.
