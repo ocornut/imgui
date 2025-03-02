@@ -3258,11 +3258,11 @@ static bool ImGuiListClipper_StepInternal(ImGuiListClipper* clipper)
     {
         clipper->DisplayStart = ImMax(data->Ranges[data->StepNo].Min, already_submitted);
         clipper->DisplayEnd = ImMin(data->Ranges[data->StepNo].Max, clipper->ItemsCount);
-        if (clipper->DisplayStart > already_submitted) //-V1051
-            clipper->SeekCursorForItem(clipper->DisplayStart);
         data->StepNo++;
-        if (clipper->DisplayStart == clipper->DisplayEnd && data->StepNo < data->Ranges.Size)
+        if (clipper->DisplayStart >= clipper->DisplayEnd)
             continue;
+        if (clipper->DisplayStart > already_submitted)
+            clipper->SeekCursorForItem(clipper->DisplayStart);
         return true;
     }
 
@@ -3279,7 +3279,7 @@ bool ImGuiListClipper::Step()
     ImGuiContext& g = *Ctx;
     bool need_items_height = (ItemsHeight <= 0.0f);
     bool ret = ImGuiListClipper_StepInternal(this);
-    if (ret && (DisplayStart == DisplayEnd))
+    if (ret && (DisplayStart >= DisplayEnd))
         ret = false;
     if (g.CurrentTable && g.CurrentTable->IsUnfrozenRows == false)
         IMGUI_DEBUG_LOG_CLIPPER("Clipper: Step(): inside frozen table row.\n");
