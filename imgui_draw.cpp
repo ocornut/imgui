@@ -3719,6 +3719,30 @@ ImFontBaked* ImFontAtlasBuildAddFontBaked(ImFontAtlas* atlas, ImFont* font, floa
     return baked;
 }
 
+// FIXME-OPT: This is not a fast query. Adding a BakedCount field in Font might allow to take a shortcut for the most common case.
+ImFontBaked* ImFontAtlasBuildGetClosestFontBakedMatch(ImFontAtlas* atlas, ImFont* font, float font_size)
+{
+    ImFontAtlasBuilder* builder = atlas->Builder;
+    ImFontBaked* closest_larger_match = NULL;
+    ImFontBaked* closest_smaller_match = NULL;
+    for (int baked_n = 0; baked_n < builder->BakedPool.Size; baked_n++)
+    {
+        ImFontBaked* baked = &builder->BakedPool[baked_n];
+        if (baked->ContainerFont != font || baked->WantDestroy)
+            continue;
+        if (baked->Size > font_size && (closest_larger_match == NULL || baked->Size < closest_larger_match->Size))
+            closest_larger_match = baked;
+        if (baked->Size < font_size && (closest_smaller_match == NULL || baked->Size > closest_smaller_match->Size))
+            closest_smaller_match = baked;
+    }
+    if (closest_larger_match)
+        if (closest_smaller_match == NULL || (closest_larger_match->Size >= font_size * 2.0f && closest_smaller_match->Size > font_size * 0.5f))
+            return closest_larger_match;
+    if (closest_smaller_match)
+        return closest_smaller_match;
+    return NULL;
+}
+
 void ImFontAtlasBuildDiscardFontBaked(ImFontAtlas* atlas, ImFont* font, ImFontBaked* baked)
 {
     ImFontAtlasBuilder* builder = atlas->Builder;
@@ -4979,9 +5003,9 @@ void ImFontAtlasBakedSetFontGlyphBitmap(ImFontAtlas* atlas, ImFontBaked* baked, 
     ImFontAtlasTextureBlockQueueUpload(atlas, tex, r->x, r->y, r->w, r->h);
 }
 
+// FIXME-NEWATLAS: Implement AddRemapChar() which was removed since transitioning to baked logic.
 void ImFont::AddRemapChar(ImWchar dst, ImWchar src, bool overwrite_dst)
 {
-    // FIXME-BAKED: Implement AddRemapChar()
     IM_UNUSED(dst);
     IM_UNUSED(src);
     IM_UNUSED(overwrite_dst);
@@ -5095,8 +5119,8 @@ ImFontBaked* ImFont::GetFontBaked(float size)
     ImFontAtlas* atlas = ContainerAtlas;
     ImFontAtlasBuilder* builder = atlas->Builder;
 
-    // FIXME-BAKED: Design for picking a nearest size?
-    // FIXME-BAKED: Altering font density won't work right away.
+    // FIXME-NEWATLAS: Design for picking a nearest size based on some criterias?
+    // FIXME-NEWATLAS: Altering font density won't work right away.
     ImGuiID baked_id = ImFontAtlasBakedGetId(FontId, size);
     ImFontBaked** p_baked_in_map = (ImFontBaked**)builder->BakedMap.GetVoidPtrRef(baked_id);
     baked = *p_baked_in_map;
@@ -5108,16 +5132,23 @@ ImFontBaked* ImFont::GetFontBaked(float size)
         return baked;
     }
 
-    // FIXME-BAKED: If loading is locked, find closest match
-    if (Flags & ImFontFlags_LockBakedSizes)
+    // If atlas is locked, find closest match
+    // FIXME-OPT: This is not an optimal query.
+    if ((Flags & ImFontFlags_LockBakedSizes) || atlas->Locked)
     {
-        IM_ASSERT(LastBaked);
-        return LastBaked;
+        baked = ImFontAtlasBuildGetClosestFontBakedMatch(atlas, this, size);
+        if (baked != NULL)
+        {
+            baked->LastUsedFrame = builder->FrameCount;
+            LastBaked = baked;
+            return baked;;
+        }
+        if (atlas->Locked)
+        {
+            IM_ASSERT(!atlas->Locked && "Cannot use dynamic font size with a locked ImFontAtlas!"); // Locked because rendering backend does not support ImGuiBackendFlags_RendererHasTextures!
+            return NULL;
+        }
     }
-
-    // FIXME-BAKED: If atlas is locked, find closest match
-    if (atlas->Locked)
-        IM_ASSERT(!atlas->Locked && "Cannot use dynamic font size with a locked ImFontAtlas!"); // Locked because rendering backend does not support ImGuiBackendFlags_RendererHasTextures!
 
     // Create new
     baked = ImFontAtlasBuildAddFontBaked(atlas, this, size, baked_id);

@@ -4065,6 +4065,7 @@ IMGUI_API void              ImFontAtlasBuildSetupFontSpecialGlyphs(ImFontAtlas* 
 IMGUI_API void              ImFontAtlasBuildDiscardBakes(ImFontAtlas* atlas, int unused_frames);
 IMGUI_API void              ImFontAtlasBuildDiscardFont(ImFontAtlas* atlas, ImFont* font);
 IMGUI_API ImFontBaked*      ImFontAtlasBuildAddFontBaked(ImFontAtlas* atlas, ImFont* font, float font_size, ImGuiID baked_id);
+IMGUI_API ImFontBaked*      ImFontAtlasBuildGetClosestFontBakedMatch(ImFontAtlas* atlas, ImFont* font, float font_size);
 IMGUI_API void              ImFontAtlasBuildDiscardFontBaked(ImFontAtlas* atlas, ImFont* font, ImFontBaked* baked);
 IMGUI_API void              ImFontAtlasBuildDiscardFontBakedGlyph(ImFontAtlas* atlas, ImFont* font, ImFontBaked* baked, ImFontGlyph* glyph);
 IMGUI_API void              ImFontAtlasBuildPreloadAllGlyphRanges(ImFontAtlas* atlas); // Legacy
