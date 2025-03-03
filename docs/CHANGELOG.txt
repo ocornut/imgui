@@ -103,6 +103,8 @@ Other changes:
   (#8451, #7660) [@achabense]
 - TextLinkOpenURL(): fixed default Win32 io.PlatformOpenInShellFn handler to
   handle UTF-8 regardless of system regional settings. (#7660) [@achabense]
+- Disabled: Fixed an issue restoring Alpha in EndDisabled() when using nested
+  BeginDisabled() calls with PushStyleVar(ImGuiStyleVar_DisabledAlpha) within. (#8454, #7640)
 - Clipper: Fixed an issue where passing an out of bound index to IncludeItemByIndex()
   could incorrectly offset the final cursor, even if that index was not iterated through.
   One case where it would manifest was calling Combo() with an out of range index. (#8450)

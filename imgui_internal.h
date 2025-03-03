@@ -1316,6 +1316,7 @@ struct ImGuiWindowStackData
     ImGuiLastItemData       ParentLastItemDataBackup;
     ImGuiErrorRecoveryState StackSizesInBegin;          // Store size of various stacks for asserting
     bool                    DisabledOverrideReenable;   // Non-child window override disabled flag
+    float                   DisabledOverrideReenableAlphaBackup;
 };
 
 struct ImGuiShrinkWidthItem

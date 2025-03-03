@@ -7084,6 +7084,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     window_stack_data.Window = window;
     window_stack_data.ParentLastItemDataBackup = g.LastItemData;
     window_stack_data.DisabledOverrideReenable = (flags & ImGuiWindowFlags_Tooltip) && (g.CurrentItemFlags & ImGuiItemFlags_Disabled);
+    window_stack_data.DisabledOverrideReenableAlphaBackup = 0.0f;
     ErrorRecoveryStoreState(&window_stack_data.StackSizesInBegin);
     g.StackSizesInBeginForCurrentWindow = &window_stack_data.StackSizesInBegin;
     if (flags & ImGuiWindowFlags_ChildMenu)
@@ -7950,6 +7951,7 @@ void ImGui::BeginDisabledOverrideReenable()
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.CurrentItemFlags & ImGuiItemFlags_Disabled);
+    g.CurrentWindowStack.back().DisabledOverrideReenableAlphaBackup = g.Style.Alpha;
     g.Style.Alpha = g.DisabledAlphaBackup;
     g.CurrentItemFlags &= ~ImGuiItemFlags_Disabled;
     g.ItemFlagsStack.push_back(g.CurrentItemFlags);
@@ -7963,7 +7965,7 @@ void ImGui::EndDisabledOverrideReenable()
     IM_ASSERT(g.DisabledStackSize > 0);
     g.ItemFlagsStack.pop_back();
     g.CurrentItemFlags = g.ItemFlagsStack.back();
-    g.Style.Alpha = g.DisabledAlphaBackup * g.Style.DisabledAlpha;
+    g.Style.Alpha = g.CurrentWindowStack.back().DisabledOverrideReenableAlphaBackup;
 }
 
 void ImGui::PushTextWrapPos(float wrap_pos_x)
