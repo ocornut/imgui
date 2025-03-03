@@ -256,6 +256,7 @@ static void DemoWindowWidgetsCollapsingHeaders();
 static void DemoWindowWidgetsComboBoxes();
 static void DemoWindowWidgetsColorAndPickers();
 static void DemoWindowWidgetsDataTypes();
+static void DemoWindowWidgetsDisableBlocks(ImGuiDemoWindowData* demo_data);
 static void DemoWindowWidgetsDragAndDrop();
 static void DemoWindowWidgetsDragsAndSliders();
 static void DemoWindowWidgetsImages();
@@ -427,6 +428,7 @@ struct ImGuiDemoWindowData
     bool ShowAbout = false;
 
     // Other data
+    bool DisableSections = false;
     ExampleTreeNode* DemoTree = NULL;
 
     ~ImGuiDemoWindowData() { if (DemoTree) ExampleTree_DestroyNode(DemoTree); }
@@ -825,7 +827,7 @@ static void DemoWindowWidgets(ImGuiDemoWindowData* demo_data)
     if (!ImGui::CollapsingHeader("Widgets"))
         return;
 
-    static bool disable_all = false; // The Checkbox for that is inside the "Disabled" section at the bottom
+    const bool disable_all = demo_data->DisableSections; // The Checkbox for that is inside the "Disabled" section at the bottom
     if (disable_all)
         ImGui::BeginDisabled();
 
@@ -835,6 +837,13 @@ static void DemoWindowWidgets(ImGuiDemoWindowData* demo_data)
     DemoWindowWidgetsComboBoxes();
     DemoWindowWidgetsColorAndPickers();
     DemoWindowWidgetsDataTypes();
+
+    if (disable_all)
+        ImGui::EndDisabled();
+    DemoWindowWidgetsDisableBlocks(demo_data);
+    if (disable_all)
+        ImGui::BeginDisabled();
+
     DemoWindowWidgetsDragAndDrop();
     DemoWindowWidgetsDragsAndSliders();
     DemoWindowWidgetsImages();
@@ -853,18 +862,8 @@ static void DemoWindowWidgets(ImGuiDemoWindowData* demo_data)
     DemoWindowWidgetsTreeNodes();
     DemoWindowWidgetsVerticalSliders();
 
-    // Demonstrate BeginDisabled/EndDisabled using a checkbox located at the bottom of the section (which is a bit odd:
-    // logically we'd have this checkbox at the top of the section, but we don't want this feature to steal that space)
     if (disable_all)
         ImGui::EndDisabled();
-
-    IMGUI_DEMO_MARKER("Widgets/Disable Block");
-    if (ImGui::TreeNode("Disable block"))
-    {
-        ImGui::Checkbox("Disable entire section above", &disable_all);
-        ImGui::SameLine(); HelpMarker("Demonstrate using BeginDisabled()/EndDisabled() across this section.");
-        ImGui::TreePop();
-    }
 }
 
 //-----------------------------------------------------------------------------
@@ -1567,6 +1566,17 @@ static void DemoWindowWidgetsDataTypes()
 // [SECTION] DemoWindowWidgetsDisableBlocks()
 //-----------------------------------------------------------------------------
 
+static void DemoWindowWidgetsDisableBlocks(ImGuiDemoWindowData* demo_data)
+{
+    IMGUI_DEMO_MARKER("Widgets/Disable Blocks");
+    if (ImGui::TreeNode("Disable Blocks"))
+    {
+        ImGui::Checkbox("Disable entire section above", &demo_data->DisableSections);
+        ImGui::SameLine(); HelpMarker("Demonstrate using BeginDisabled()/EndDisabled() across other sections.");
+        ImGui::TreePop();
+    }
+}
+
 //-----------------------------------------------------------------------------
 // [SECTION] DemoWindowWidgetsDragAndDrop()
 //-----------------------------------------------------------------------------
@@ -1872,7 +1882,7 @@ static void DemoWindowWidgetsImages()
 static void DemoWindowWidgetsListBoxes()
 {
     IMGUI_DEMO_MARKER("Widgets/List Boxes");
-    if (ImGui::TreeNode("List boxes"))
+    if (ImGui::TreeNode("List Boxes"))
     {
         // BeginListBox() is essentially a thin wrapper to using BeginChild()/EndChild()
         // using the ImGuiChildFlags_FrameStyle flag for stylistic changes + displaying a label.
