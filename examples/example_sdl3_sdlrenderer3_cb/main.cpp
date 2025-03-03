@@ -18,24 +18,7 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 
-// Main code
-#if 0
-int main(int, char**)
-{
-
-    // Cleanup
-    ImGui_ImplSDLRenderer3_Shutdown();
-    ImGui_ImplSDL3_Shutdown();
-    ImGui::DestroyContext();
-
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-    SDL_Quit();
-
-    return 0;
-}
-#endif
-
+// Struct for our common data
 struct app_data
 {
 	SDL_Window* window;
