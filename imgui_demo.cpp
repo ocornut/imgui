@@ -256,6 +256,7 @@ static void DemoWindowWidgetsCollapsingHeaders();
 static void DemoWindowWidgetsComboBoxes();
 static void DemoWindowWidgetsColorAndPickers();
 static void DemoWindowWidgetsDataTypes();
+static void DemoWindowWidgetsDragAndDrop();
 static void DemoWindowWidgetsDragsAndSliders();
 static void DemoWindowWidgetsImages();
 static void DemoWindowWidgetsListBoxes();
@@ -833,6 +834,7 @@ static void DemoWindowWidgets(ImGuiDemoWindowData* demo_data)
     DemoWindowWidgetsComboBoxes();
     DemoWindowWidgetsColorAndPickers();
     DemoWindowWidgetsDataTypes();
+    DemoWindowWidgetsDragAndDrop();
     DemoWindowWidgetsDragsAndSliders();
     DemoWindowWidgetsImages();
     DemoWindowWidgetsListBoxes();
@@ -848,157 +850,6 @@ static void DemoWindowWidgets(ImGuiDemoWindowData* demo_data)
     DemoWindowWidgetsTooltips();
     DemoWindowWidgetsTreeNodes();
     DemoWindowWidgetsVerticalSliders();
-
-    IMGUI_DEMO_MARKER("Widgets/Drag and drop");
-    if (ImGui::TreeNode("Drag and Drop"))
-    {
-        IMGUI_DEMO_MARKER("Widgets/Drag and drop/Standard widgets");
-        if (ImGui::TreeNode("Drag and drop in standard widgets"))
-        {
-            // ColorEdit widgets automatically act as drag source and drag target.
-            // They are using standardized payload strings IMGUI_PAYLOAD_TYPE_COLOR_3F and IMGUI_PAYLOAD_TYPE_COLOR_4F
-            // to allow your own widgets to use colors in their drag and drop interaction.
-            // Also see 'Demo->Widgets->Color/Picker Widgets->Palette' demo.
-            HelpMarker("You can drag from the color squares.");
-            static float col1[3] = { 1.0f, 0.0f, 0.2f };
-            static float col2[4] = { 0.4f, 0.7f, 0.0f, 0.5f };
-            ImGui::ColorEdit3("color 1", col1);
-            ImGui::ColorEdit4("color 2", col2);
-            ImGui::TreePop();
-        }
-
-        IMGUI_DEMO_MARKER("Widgets/Drag and drop/Copy-swap items");
-        if (ImGui::TreeNode("Drag and drop to copy/swap items"))
-        {
-            enum Mode
-            {
-                Mode_Copy,
-                Mode_Move,
-                Mode_Swap
-            };
-            static int mode = 0;
-            if (ImGui::RadioButton("Copy", mode == Mode_Copy)) { mode = Mode_Copy; } ImGui::SameLine();
-            if (ImGui::RadioButton("Move", mode == Mode_Move)) { mode = Mode_Move; } ImGui::SameLine();
-            if (ImGui::RadioButton("Swap", mode == Mode_Swap)) { mode = Mode_Swap; }
-            static const char* names[9] =
-            {
-                "Bobby", "Beatrice", "Betty",
-                "Brianna", "Barry", "Bernard",
-                "Bibi", "Blaine", "Bryn"
-            };
-            for (int n = 0; n < IM_ARRAYSIZE(names); n++)
-            {
-                ImGui::PushID(n);
-                if ((n % 3) != 0)
-                    ImGui::SameLine();
-                ImGui::Button(names[n], ImVec2(60, 60));
-
-                // Our buttons are both drag sources and drag targets here!
-                if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
-                {
-                    // Set payload to carry the index of our item (could be anything)
-                    ImGui::SetDragDropPayload("DND_DEMO_CELL", &n, sizeof(int));
-
-                    // Display preview (could be anything, e.g. when dragging an image we could decide to display
-                    // the filename and a small preview of the image, etc.)
-                    if (mode == Mode_Copy) { ImGui::Text("Copy %s", names[n]); }
-                    if (mode == Mode_Move) { ImGui::Text("Move %s", names[n]); }
-                    if (mode == Mode_Swap) { ImGui::Text("Swap %s", names[n]); }
-                    ImGui::EndDragDropSource();
-                }
-                if (ImGui::BeginDragDropTarget())
-                {
-                    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DND_DEMO_CELL"))
-                    {
-                        IM_ASSERT(payload->DataSize == sizeof(int));
-                        int payload_n = *(const int*)payload->Data;
-                        if (mode == Mode_Copy)
-                        {
-                            names[n] = names[payload_n];
-                        }
-                        if (mode == Mode_Move)
-                        {
-                            names[n] = names[payload_n];
-                            names[payload_n] = "";
-                        }
-                        if (mode == Mode_Swap)
-                        {
-                            const char* tmp = names[n];
-                            names[n] = names[payload_n];
-                            names[payload_n] = tmp;
-                        }
-                    }
-                    ImGui::EndDragDropTarget();
-                }
-                ImGui::PopID();
-            }
-            ImGui::TreePop();
-        }
-
-        IMGUI_DEMO_MARKER("Widgets/Drag and Drop/Drag to reorder items (simple)");
-        if (ImGui::TreeNode("Drag to reorder items (simple)"))
-        {
-            // FIXME: there is temporary (usually single-frame) ID Conflict during reordering as a same item may be submitting twice.
-            // This code was always slightly faulty but in a way which was not easily noticeable.
-            // Until we fix this, enable ImGuiItemFlags_AllowDuplicateId to disable detecting the issue.
-            ImGui::PushItemFlag(ImGuiItemFlags_AllowDuplicateId, true);
-
-            // Simple reordering
-            HelpMarker(
-                "We don't use the drag and drop api at all here! "
-                "Instead we query when the item is held but not hovered, and order items accordingly.");
-            static const char* item_names[] = { "Item One", "Item Two", "Item Three", "Item Four", "Item Five" };
-            for (int n = 0; n < IM_ARRAYSIZE(item_names); n++)
-            {
-                const char* item = item_names[n];
-                ImGui::Selectable(item);
-
-                if (ImGui::IsItemActive() && !ImGui::IsItemHovered())
-                {
-                    int n_next = n + (ImGui::GetMouseDragDelta(0).y < 0.f ? -1 : 1);
-                    if (n_next >= 0 && n_next < IM_ARRAYSIZE(item_names))
-                    {
-                        item_names[n] = item_names[n_next];
-                        item_names[n_next] = item;
-                        ImGui::ResetMouseDragDelta();
-                    }
-                }
-            }
-
-            ImGui::PopItemFlag();
-            ImGui::TreePop();
-        }
-
-        IMGUI_DEMO_MARKER("Widgets/Drag and Drop/Tooltip at target location");
-        if (ImGui::TreeNode("Tooltip at target location"))
-        {
-            for (int n = 0; n < 2; n++)
-            {
-                // Drop targets
-                ImGui::Button(n ? "drop here##1" : "drop here##0");
-                if (ImGui::BeginDragDropTarget())
-                {
-                    ImGuiDragDropFlags drop_target_flags = ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoPreviewTooltip;
-                    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_4F, drop_target_flags))
-                    {
-                        IM_UNUSED(payload);
-                        ImGui::SetMouseCursor(ImGuiMouseCursor_NotAllowed);
-                        ImGui::SetTooltip("Cannot drop here!");
-                    }
-                    ImGui::EndDragDropTarget();
-                }
-
-                // Drop source
-                static ImVec4 col4 = { 1.0f, 0.0f, 0.2f, 1.0f };
-                if (n == 0)
-                    ImGui::ColorButton("drag me", col4);
-
-            }
-            ImGui::TreePop();
-        }
-
-        ImGui::TreePop();
-    }
 
     IMGUI_DEMO_MARKER("Widgets/Querying Item Status (Edited,Active,Hovered etc.)");
     if (ImGui::TreeNode("Querying Item Status (Edited/Active/Hovered etc.)"))
@@ -1911,6 +1762,160 @@ static void DemoWindowWidgetsDataTypes()
 //-----------------------------------------------------------------------------
 // [SECTION] DemoWindowWidgetsDragAndDrop()
 //-----------------------------------------------------------------------------
+
+static void DemoWindowWidgetsDragAndDrop()
+{
+    IMGUI_DEMO_MARKER("Widgets/Drag and drop");
+    if (ImGui::TreeNode("Drag and Drop"))
+    {
+        IMGUI_DEMO_MARKER("Widgets/Drag and drop/Standard widgets");
+        if (ImGui::TreeNode("Drag and drop in standard widgets"))
+        {
+            // ColorEdit widgets automatically act as drag source and drag target.
+            // They are using standardized payload strings IMGUI_PAYLOAD_TYPE_COLOR_3F and IMGUI_PAYLOAD_TYPE_COLOR_4F
+            // to allow your own widgets to use colors in their drag and drop interaction.
+            // Also see 'Demo->Widgets->Color/Picker Widgets->Palette' demo.
+            HelpMarker("You can drag from the color squares.");
+            static float col1[3] = { 1.0f, 0.0f, 0.2f };
+            static float col2[4] = { 0.4f, 0.7f, 0.0f, 0.5f };
+            ImGui::ColorEdit3("color 1", col1);
+            ImGui::ColorEdit4("color 2", col2);
+            ImGui::TreePop();
+        }
+
+        IMGUI_DEMO_MARKER("Widgets/Drag and drop/Copy-swap items");
+        if (ImGui::TreeNode("Drag and drop to copy/swap items"))
+        {
+            enum Mode
+            {
+                Mode_Copy,
+                Mode_Move,
+                Mode_Swap
+            };
+            static int mode = 0;
+            if (ImGui::RadioButton("Copy", mode == Mode_Copy)) { mode = Mode_Copy; } ImGui::SameLine();
+            if (ImGui::RadioButton("Move", mode == Mode_Move)) { mode = Mode_Move; } ImGui::SameLine();
+            if (ImGui::RadioButton("Swap", mode == Mode_Swap)) { mode = Mode_Swap; }
+            static const char* names[9] =
+            {
+                "Bobby", "Beatrice", "Betty",
+                "Brianna", "Barry", "Bernard",
+                "Bibi", "Blaine", "Bryn"
+            };
+            for (int n = 0; n < IM_ARRAYSIZE(names); n++)
+            {
+                ImGui::PushID(n);
+                if ((n % 3) != 0)
+                    ImGui::SameLine();
+                ImGui::Button(names[n], ImVec2(60, 60));
+
+                // Our buttons are both drag sources and drag targets here!
+                if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
+                {
+                    // Set payload to carry the index of our item (could be anything)
+                    ImGui::SetDragDropPayload("DND_DEMO_CELL", &n, sizeof(int));
+
+                    // Display preview (could be anything, e.g. when dragging an image we could decide to display
+                    // the filename and a small preview of the image, etc.)
+                    if (mode == Mode_Copy) { ImGui::Text("Copy %s", names[n]); }
+                    if (mode == Mode_Move) { ImGui::Text("Move %s", names[n]); }
+                    if (mode == Mode_Swap) { ImGui::Text("Swap %s", names[n]); }
+                    ImGui::EndDragDropSource();
+                }
+                if (ImGui::BeginDragDropTarget())
+                {
+                    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DND_DEMO_CELL"))
+                    {
+                        IM_ASSERT(payload->DataSize == sizeof(int));
+                        int payload_n = *(const int*)payload->Data;
+                        if (mode == Mode_Copy)
+                        {
+                            names[n] = names[payload_n];
+                        }
+                        if (mode == Mode_Move)
+                        {
+                            names[n] = names[payload_n];
+                            names[payload_n] = "";
+                        }
+                        if (mode == Mode_Swap)
+                        {
+                            const char* tmp = names[n];
+                            names[n] = names[payload_n];
+                            names[payload_n] = tmp;
+                        }
+                    }
+                    ImGui::EndDragDropTarget();
+                }
+                ImGui::PopID();
+            }
+            ImGui::TreePop();
+        }
+
+        IMGUI_DEMO_MARKER("Widgets/Drag and Drop/Drag to reorder items (simple)");
+        if (ImGui::TreeNode("Drag to reorder items (simple)"))
+        {
+            // FIXME: there is temporary (usually single-frame) ID Conflict during reordering as a same item may be submitting twice.
+            // This code was always slightly faulty but in a way which was not easily noticeable.
+            // Until we fix this, enable ImGuiItemFlags_AllowDuplicateId to disable detecting the issue.
+            ImGui::PushItemFlag(ImGuiItemFlags_AllowDuplicateId, true);
+
+            // Simple reordering
+            HelpMarker(
+                "We don't use the drag and drop api at all here! "
+                "Instead we query when the item is held but not hovered, and order items accordingly.");
+            static const char* item_names[] = { "Item One", "Item Two", "Item Three", "Item Four", "Item Five" };
+            for (int n = 0; n < IM_ARRAYSIZE(item_names); n++)
+            {
+                const char* item = item_names[n];
+                ImGui::Selectable(item);
+
+                if (ImGui::IsItemActive() && !ImGui::IsItemHovered())
+                {
+                    int n_next = n + (ImGui::GetMouseDragDelta(0).y < 0.f ? -1 : 1);
+                    if (n_next >= 0 && n_next < IM_ARRAYSIZE(item_names))
+                    {
+                        item_names[n] = item_names[n_next];
+                        item_names[n_next] = item;
+                        ImGui::ResetMouseDragDelta();
+                    }
+                }
+            }
+
+            ImGui::PopItemFlag();
+            ImGui::TreePop();
+        }
+
+        IMGUI_DEMO_MARKER("Widgets/Drag and Drop/Tooltip at target location");
+        if (ImGui::TreeNode("Tooltip at target location"))
+        {
+            for (int n = 0; n < 2; n++)
+            {
+                // Drop targets
+                ImGui::Button(n ? "drop here##1" : "drop here##0");
+                if (ImGui::BeginDragDropTarget())
+                {
+                    ImGuiDragDropFlags drop_target_flags = ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoPreviewTooltip;
+                    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_4F, drop_target_flags))
+                    {
+                        IM_UNUSED(payload);
+                        ImGui::SetMouseCursor(ImGuiMouseCursor_NotAllowed);
+                        ImGui::SetTooltip("Cannot drop here!");
+                    }
+                    ImGui::EndDragDropTarget();
+                }
+
+                // Drop source
+                static ImVec4 col4 = { 1.0f, 0.0f, 0.2f, 1.0f };
+                if (n == 0)
+                    ImGui::ColorButton("drag me", col4);
+
+            }
+            ImGui::TreePop();
+        }
+
+        ImGui::TreePop();
+    }
+}
 
 //-----------------------------------------------------------------------------
 // [SECTION] DemoWindowWidgetsDragsAndSliders()
