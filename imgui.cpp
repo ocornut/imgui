@@ -3318,11 +3318,11 @@ static bool ImGuiListClipper_StepInternal(ImGuiListClipper* clipper)
     {
         clipper->DisplayStart = ImMax(data->Ranges[data->StepNo].Min, already_submitted);
         clipper->DisplayEnd = ImMin(data->Ranges[data->StepNo].Max, clipper->ItemsCount);
-        if (clipper->DisplayStart > already_submitted) //-V1051
-            clipper->SeekCursorForItem(clipper->DisplayStart);
         data->StepNo++;
-        if (clipper->DisplayStart == clipper->DisplayEnd && data->StepNo < data->Ranges.Size)
+        if (clipper->DisplayStart >= clipper->DisplayEnd)
             continue;
+        if (clipper->DisplayStart > already_submitted)
+            clipper->SeekCursorForItem(clipper->DisplayStart);
         return true;
     }
 
@@ -3339,7 +3339,7 @@ bool ImGuiListClipper::Step()
     ImGuiContext& g = *Ctx;
     bool need_items_height = (ItemsHeight <= 0.0f);
     bool ret = ImGuiListClipper_StepInternal(this);
-    if (ret && (DisplayStart == DisplayEnd))
+    if (ret && (DisplayStart >= DisplayEnd))
         ret = false;
     if (g.CurrentTable && g.CurrentTable->IsUnfrozenRows == false)
         IMGUI_DEBUG_LOG_CLIPPER("Clipper: Step(): inside frozen table row.\n");
@@ -21089,10 +21089,7 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
     {
         ImGuiContext& g = *GImGui;
         PushStyleVar(ImGuiStyleVar_ImageBorderSize, ImMax(1.0f, g.Style.ImageBorderSize));
-        ImVec2 image_pos = GetCursorScreenPos();
-        ImVec2 image_size((float)atlas->TexWidth, (float)atlas->TexHeight);
-        GetWindowDrawList()->AddRectFilled(image_pos, image_pos + image_size + ImVec2(g.Style.ImageBorderSize, g.Style.ImageBorderSize), IM_COL32(0, 0, 0, 255));
-        Image(atlas->TexID, image_size);
+        ImageWithBg(atlas->TexID, ImVec2((float)atlas->TexWidth, (float)atlas->TexHeight), ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f), ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
         PopStyleVar();
         TreePop();
     }

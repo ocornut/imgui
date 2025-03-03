@@ -3178,7 +3178,7 @@ struct IMGUI_API ImGuiTableTempData
     ImGuiTableTempData()        { memset(this, 0, sizeof(*this)); LastTimeActive = -1.0f; }
 };
 
-// sizeof() ~ 12
+// sizeof() ~ 16
 struct ImGuiTableColumnSettings
 {
     float                   WidthOrWeight;
