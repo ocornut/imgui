@@ -72,13 +72,36 @@ Index of this file:
 // [SECTION] Helpers
 // [SECTION] Helpers: ExampleTreeNode, ExampleMemberInfo (for use by Property Editor & Multi-Select demos)
 // [SECTION] Demo Window / ShowDemoWindow()
-// [SECTION] ShowDemoWindowMenuBar()
-// [SECTION] ShowDemoWindowWidgets()
-// [SECTION] ShowDemoWindowMultiSelect()
-// [SECTION] ShowDemoWindowLayout()
-// [SECTION] ShowDemoWindowPopups()
-// [SECTION] ShowDemoWindowTables()
-// [SECTION] ShowDemoWindowInputs()
+// [SECTION] DemoWindowMenuBar()
+// [SECTION] DemoWindowWidgets()
+// [SECTION] DemoWindowWidgetsBasic()
+// [SECTION] DemoWindowWidgetsBullets()
+// [SECTION] DemoWindowWidgetsCollapsingHeaders()
+// [SECTION] DemoWindowWidgetsComboBoxes()
+// [SECTION] DemoWindowWidgetsColorAndPickers()
+// [SECTION] DemoWindowWidgetsDataTypes()
+// [SECTION] DemoWindowWidgetsDisableBlocks()
+// [SECTION] DemoWindowWidgetsDragAndDrop()
+// [SECTION] DemoWindowWidgetsDragsAndSliders()
+// [SECTION] DemoWindowWidgetsImages()
+// [SECTION] DemoWindowWidgetsListBoxes()
+// [SECTION] DemoWindowWidgetsMultiComponents()
+// [SECTION] DemoWindowWidgetsPlotting()
+// [SECTION] DemoWindowWidgetsProgressBars()
+// [SECTION] DemoWindowWidgetsQueryingStatuses()
+// [SECTION] DemoWindowWidgetsSelectables()
+// [SECTION] DemoWindowWidgetsSelectionAndMultiSelect()
+// [SECTION] DemoWindowWidgetsTabs()
+// [SECTION] DemoWindowWidgetsText()
+// [SECTION] DemoWindowWidgetsTextFilter()
+// [SECTION] DemoWindowWidgetsTextInput()
+// [SECTION] DemoWindowWidgetsTooltips()
+// [SECTION] DemoWindowWidgetsTreeNodes()
+// [SECTION] DemoWindowWidgetsVerticalSliders()
+// [SECTION] DemoWindowLayout()
+// [SECTION] DemoWindowPopups()
+// [SECTION] DemoWindowTables()
+// [SECTION] DemoWindowInputs()
 // [SECTION] About Window / ShowAboutWindow()
 // [SECTION] Style Editor / ShowStyleEditor()
 // [SECTION] User Guide / ShowUserGuide()
@@ -225,14 +248,14 @@ static void ShowExampleMenuFile();
 
 // We split the contents of the big ShowDemoWindow() function into smaller functions
 // (because the link time of very large functions tends to grow non-linearly)
-static void ShowDemoWindowMenuBar(ImGuiDemoWindowData* demo_data);
-static void ShowDemoWindowWidgets(ImGuiDemoWindowData* demo_data);
-static void ShowDemoWindowMultiSelect(ImGuiDemoWindowData* demo_data);
-static void ShowDemoWindowLayout();
-static void ShowDemoWindowPopups();
-static void ShowDemoWindowTables();
-static void ShowDemoWindowColumns();
-static void ShowDemoWindowInputs();
+static void DemoWindowMenuBar(ImGuiDemoWindowData* demo_data);
+static void DemoWindowWidgets(ImGuiDemoWindowData* demo_data);
+static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_data);
+static void DemoWindowLayout();
+static void DemoWindowPopups();
+static void DemoWindowTables();
+static void DemoWindowColumns();
+static void DemoWindowInputs();
 
 //-----------------------------------------------------------------------------
 // [SECTION] Helpers
@@ -475,7 +498,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
     //ImGui::PushItemWidth(-ImGui::GetWindowWidth() * 0.35f);   // e.g. Use 2/3 of the space for widgets and 1/3 for labels (right align)
 
     // Menu Bar
-    ShowDemoWindowMenuBar(&demo_data);
+    DemoWindowMenuBar(&demo_data);
 
     ImGui::Text("dear imgui says hello! (%s) (%d)", IMGUI_VERSION, IMGUI_VERSION_NUM);
     ImGui::Spacing();
@@ -683,11 +706,11 @@ void ImGui::ShowDemoWindow(bool* p_open)
     }
 
     // All demo contents
-    ShowDemoWindowWidgets(&demo_data);
-    ShowDemoWindowLayout();
-    ShowDemoWindowPopups();
-    ShowDemoWindowTables();
-    ShowDemoWindowInputs();
+    DemoWindowWidgets(&demo_data);
+    DemoWindowLayout();
+    DemoWindowPopups();
+    DemoWindowTables();
+    DemoWindowInputs();
 
     // End of ShowDemoWindow()
     ImGui::PopItemWidth();
@@ -695,10 +718,10 @@ void ImGui::ShowDemoWindow(bool* p_open)
 }
 
 //-----------------------------------------------------------------------------
-// [SECTION] ShowDemoWindowMenuBar()
+// [SECTION] DemoWindowMenuBar()
 //-----------------------------------------------------------------------------
 
-static void ShowDemoWindowMenuBar(ImGuiDemoWindowData* demo_data)
+static void DemoWindowMenuBar(ImGuiDemoWindowData* demo_data)
 {
     IMGUI_DEMO_MARKER("Menu");
     if (ImGui::BeginMenuBar())
@@ -770,10 +793,10 @@ static void ShowDemoWindowMenuBar(ImGuiDemoWindowData* demo_data)
 }
 
 //-----------------------------------------------------------------------------
-// [SECTION] ShowDemoWindowWidgets()
+// [SECTION] DemoWindowWidgets()
 //-----------------------------------------------------------------------------
 
-static void ShowDemoWindowWidgets(ImGuiDemoWindowData* demo_data)
+static void DemoWindowWidgets(ImGuiDemoWindowData* demo_data)
 {
     IMGUI_DEMO_MARKER("Widgets");
     //ImGui::SetNextItemOpen(true, ImGuiCond_Once);
@@ -1680,7 +1703,7 @@ static void ShowDemoWindowWidgets(ImGuiDemoWindowData* demo_data)
         ImGui::TreePop();
     }
 
-    ShowDemoWindowMultiSelect(demo_data);
+    DemoWindowWidgetsSelectionAndMultiSelect(demo_data);
 
     // To wire InputText() with std::string or any other custom string type,
     // see the "Text Input > Resize Callback" section of this demo, and the misc/cpp/imgui_stdlib.h file.
@@ -2986,6 +3009,70 @@ static void ShowDemoWindowWidgets(ImGuiDemoWindowData* demo_data)
     }
 }
 
+//-----------------------------------------------------------------------------
+// [SECTION] DemoWindowWidgetsBasic()
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// [SECTION] DemoWindowWidgetsBullets()
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// [SECTION] DemoWindowWidgetsCollapsingHeaders()
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// [SECTION] DemoWindowWidgetsColorAndPickers()
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// [SECTION] DemoWindowWidgetsComboBoxes()
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// [SECTION] DemoWindowWidgetsDataTypes()
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// [SECTION] DemoWindowWidgetsDisableBlocks()
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// [SECTION] DemoWindowWidgetsDragAndDrop()
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// [SECTION] DemoWindowWidgetsDragsAndSliders()
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// [SECTION] DemoWindowWidgetsImages()
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// [SECTION] DemoWindowWidgetsListBoxes()
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// [SECTION] DemoWindowWidgetsMultiComponents()
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// [SECTION] DemoWindowWidgetsPlotting()
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// [SECTION] DemoWindowWidgetsProgressBars()
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// [SECTION] DemoWindowWidgetsQueryingStatuses()
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// [SECTION] DemoWindowWidgetsSelectables()
+//-----------------------------------------------------------------------------
+
 static const char* ExampleNames[] =
 {
     "Artichoke", "Arugula", "Asparagus", "Avocado", "Bamboo Shoots", "Bean Sprouts", "Beans", "Beet", "Belgian Endive", "Bell Pepper",
@@ -3212,13 +3299,13 @@ struct ExampleDualListBox
 };
 
 //-----------------------------------------------------------------------------
-// [SECTION] ShowDemoWindowMultiSelect()
+// [SECTION] DemoWindowWidgetsSelectionAndMultiSelect()
 //-----------------------------------------------------------------------------
 // Multi-selection demos
 // Also read: https://github.com/ocornut/imgui/wiki/Multi-Select
 //-----------------------------------------------------------------------------
 
-static void ShowDemoWindowMultiSelect(ImGuiDemoWindowData* demo_data)
+static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_data)
 {
     IMGUI_DEMO_MARKER("Widgets/Selection State & Multi-Select");
     if (ImGui::TreeNode("Selection State & Multi-Select"))
@@ -3954,10 +4041,38 @@ static void ShowDemoWindowMultiSelect(ImGuiDemoWindowData* demo_data)
 }
 
 //-----------------------------------------------------------------------------
-// [SECTION] ShowDemoWindowLayout()
+// [SECTION] DemoWindowWidgetsTabs()
 //-----------------------------------------------------------------------------
 
-static void ShowDemoWindowLayout()
+//-----------------------------------------------------------------------------
+// [SECTION] DemoWindowWidgetsText()
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// [SECTION] DemoWindowWidgetsTextFilter()
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// [SECTION] DemoWindowWidgetsTextInput()
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// [SECTION] DemoWindowWidgetsTooltips()
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// [SECTION] DemoWindowWidgetsTreeNodes()
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// [SECTION] DemoWindowWidgetsVerticalSliders()
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// [SECTION] DemoWindowLayout()
+//-----------------------------------------------------------------------------
+
+static void DemoWindowLayout()
 {
     IMGUI_DEMO_MARKER("Layout");
     if (!ImGui::CollapsingHeader("Layout & Scrolling"))
@@ -4820,10 +4935,10 @@ static void ShowDemoWindowLayout()
 }
 
 //-----------------------------------------------------------------------------
-// [SECTION] ShowDemoWindowPopups()
+// [SECTION] DemoWindowPopups()
 //-----------------------------------------------------------------------------
 
-static void ShowDemoWindowPopups()
+static void DemoWindowPopups()
 {
     IMGUI_DEMO_MARKER("Popups");
     if (!ImGui::CollapsingHeader("Popups & Modal windows"))
@@ -5284,10 +5399,10 @@ static void ShowTableColumnsStatusFlags(ImGuiTableColumnFlags flags)
 }
 
 //-----------------------------------------------------------------------------
-// [SECTION] ShowDemoWindowTables()
+// [SECTION] DemoWindowTables()
 //-----------------------------------------------------------------------------
 
-static void ShowDemoWindowTables()
+static void DemoWindowTables()
 {
     //ImGui::SetNextItemOpen(true, ImGuiCond_Once);
     IMGUI_DEMO_MARKER("Tables");
@@ -7184,7 +7299,7 @@ static void ShowDemoWindowTables()
 
     ImGui::PopID();
 
-    ShowDemoWindowColumns();
+    DemoWindowColumns();
 
     if (disable_indent)
         ImGui::PopStyleVar();
@@ -7192,7 +7307,7 @@ static void ShowDemoWindowTables()
 
 // Demonstrate old/legacy Columns API!
 // [2020: Columns are under-featured and not maintained. Prefer using the more flexible and powerful BeginTable() API!]
-static void ShowDemoWindowColumns()
+static void DemoWindowColumns()
 {
     IMGUI_DEMO_MARKER("Columns (legacy API)");
     bool open = ImGui::TreeNode("Legacy Columns API");
@@ -7399,10 +7514,10 @@ static void ShowDemoWindowColumns()
 }
 
 //-----------------------------------------------------------------------------
-// [SECTION] ShowDemoWindowInputs()
+// [SECTION] DemoWindowInputs()
 //-----------------------------------------------------------------------------
 
-static void ShowDemoWindowInputs()
+static void DemoWindowInputs()
 {
     IMGUI_DEMO_MARKER("Inputs & Focus");
     if (ImGui::CollapsingHeader("Inputs & Focus"))

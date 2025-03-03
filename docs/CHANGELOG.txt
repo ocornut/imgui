@@ -110,6 +110,7 @@ Other changes:
   to allow disabled Item Picker suggestion in user facing builds. (#7961, #7669)
 - Misc: Added ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress mouse cursors
   (busy/wait/hourglass shape, with or without an arrow cursor).
+- Demo: Reorganized "Widgets" section to be alphabetically ordered and split in more functions.
 - Demo: Combos: demonstrate a very simple way to add a filter to a combo,
   by showing the filter inside the combo contents. (#718)
 - Backends: GLFW: Fixed clipboard handler assertion when using GLFW <= 3.2.1 compiled
