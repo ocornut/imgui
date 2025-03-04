@@ -115,6 +115,8 @@ Other changes:
 - Demo: Reorganized "Widgets" section to be alphabetically ordered and split in more functions.
 - Demo: Combos: demonstrate a very simple way to add a filter to a combo,
   by showing the filter inside the combo contents. (#718)
+- Examples: SDL3: Added comments to clarify setup for users of the unfortunate
+  SDL_MAIN_USE_CALLBACKS feature. (#8455)
 - Backends: GLFW: Fixed clipboard handler assertion when using GLFW <= 3.2.1 compiled
   with asserts enabled. (#8452)
 - Backends: SDL2, SDL3: Using SDL_OpenURL() in platform_io.Platform_OpenInShellFn
