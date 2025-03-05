@@ -70,10 +70,9 @@ Index of this file:
 
 // [SECTION] Forward Declarations
 // [SECTION] Helpers
-// [SECTION] Helpers: ExampleTreeNode, ExampleMemberInfo (for use by Property Editor & Multi-Select demos)
 // [SECTION] Demo Window / ShowDemoWindow()
 // [SECTION] DemoWindowMenuBar()
-// [SECTION] DemoWindowWidgets()
+// [SECTION] Helpers: ExampleTreeNode, ExampleMemberInfo (for use by Property Editor & Multi-Select demos)
 // [SECTION] DemoWindowWidgetsBasic()
 // [SECTION] DemoWindowWidgetsBullets()
 // [SECTION] DemoWindowWidgetsCollapsingHeaders()
@@ -98,6 +97,7 @@ Index of this file:
 // [SECTION] DemoWindowWidgetsTooltips()
 // [SECTION] DemoWindowWidgetsTreeNodes()
 // [SECTION] DemoWindowWidgetsVerticalSliders()
+// [SECTION] DemoWindowWidgets()
 // [SECTION] DemoWindowLayout()
 // [SECTION] DemoWindowPopups()
 // [SECTION] DemoWindowTables()
@@ -252,35 +252,16 @@ static void ShowExampleMenuFile();
 // (because the link time of very large functions tends to grow non-linearly)
 static void DemoWindowMenuBar(ImGuiDemoWindowData* demo_data);
 static void DemoWindowWidgets(ImGuiDemoWindowData* demo_data);
-static void DemoWindowWidgetsBasic();
-static void DemoWindowWidgetsBullets();
-static void DemoWindowWidgetsCollapsingHeaders();
-static void DemoWindowWidgetsComboBoxes();
-static void DemoWindowWidgetsColorAndPickers();
-static void DemoWindowWidgetsDataTypes();
-static void DemoWindowWidgetsDisableBlocks(ImGuiDemoWindowData* demo_data);
-static void DemoWindowWidgetsDragAndDrop();
-static void DemoWindowWidgetsDragsAndSliders();
-static void DemoWindowWidgetsImages();
-static void DemoWindowWidgetsListBoxes();
-static void DemoWindowWidgetsPlotting();
-static void DemoWindowWidgetsMultiComponents();
-static void DemoWindowWidgetsProgressBars();
-static void DemoWindowWidgetsQueryingStatuses();
-static void DemoWindowWidgetsSelectables();
-static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_data);
-static void DemoWindowWidgetsTabs();
-static void DemoWindowWidgetsText();
-static void DemoWindowWidgetsTextFilter();
-static void DemoWindowWidgetsTextInput();
-static void DemoWindowWidgetsTooltips();
-static void DemoWindowWidgetsTreeNodes();
-static void DemoWindowWidgetsVerticalSliders();
 static void DemoWindowLayout();
 static void DemoWindowPopups();
 static void DemoWindowTables();
 static void DemoWindowColumns();
 static void DemoWindowInputs();
+
+// Helper tree functions used by Property Editor & Multi-Select demos
+struct ExampleTreeNode;
+static ExampleTreeNode* ExampleTree_CreateNode(const char* name, int uid, ExampleTreeNode* parent);
+static void             ExampleTree_DestroyNode(ExampleTreeNode* node);
 
 //-----------------------------------------------------------------------------
 // [SECTION] Helpers
@@ -317,97 +298,6 @@ extern void*                        GImGuiDemoMarkerCallbackUserData;
 ImGuiDemoMarkerCallback             GImGuiDemoMarkerCallback = NULL;
 void*                               GImGuiDemoMarkerCallbackUserData = NULL;
 #define IMGUI_DEMO_MARKER(section)  do { if (GImGuiDemoMarkerCallback != NULL) GImGuiDemoMarkerCallback(__FILE__, __LINE__, section, GImGuiDemoMarkerCallbackUserData); } while (0)
-
-//-----------------------------------------------------------------------------
-// [SECTION] Helpers: ExampleTreeNode, ExampleMemberInfo (for use by Property Editor etc.)
-//-----------------------------------------------------------------------------
-
-// Simple representation for a tree
-// (this is designed to be simple to understand for our demos, not to be fancy or efficient etc.)
-struct ExampleTreeNode
-{
-    // Tree structure
-    char                        Name[28] = "";
-    int                         UID = 0;
-    ExampleTreeNode*            Parent = NULL;
-    ImVector<ExampleTreeNode*>  Childs;
-    unsigned short              IndexInParent = 0;  // Maintaining this allows us to implement linear traversal more easily
-
-    // Leaf Data
-    bool                        HasData = false;    // All leaves have data
-    bool                        DataMyBool = true;
-    int                         DataMyInt = 128;
-    ImVec2                      DataMyVec2 = ImVec2(0.0f, 3.141592f);
-};
-
-// Simple representation of struct metadata/serialization data.
-// (this is a minimal version of what a typical advanced application may provide)
-struct ExampleMemberInfo
-{
-    const char*     Name;       // Member name
-    ImGuiDataType   DataType;   // Member type
-    int             DataCount;  // Member count (1 when scalar)
-    int             Offset;     // Offset inside parent structure
-};
-
-// Metadata description of ExampleTreeNode struct.
-static const ExampleMemberInfo ExampleTreeNodeMemberInfos[]
-{
-    { "MyName",     ImGuiDataType_String,  1, offsetof(ExampleTreeNode, Name) },
-    { "MyBool",     ImGuiDataType_Bool,    1, offsetof(ExampleTreeNode, DataMyBool) },
-    { "MyInt",      ImGuiDataType_S32,     1, offsetof(ExampleTreeNode, DataMyInt) },
-    { "MyVec2",     ImGuiDataType_Float,   2, offsetof(ExampleTreeNode, DataMyVec2) },
-};
-
-static ExampleTreeNode* ExampleTree_CreateNode(const char* name, int uid, ExampleTreeNode* parent)
-{
-    ExampleTreeNode* node = IM_NEW(ExampleTreeNode);
-    snprintf(node->Name, IM_ARRAYSIZE(node->Name), "%s", name);
-    node->UID = uid;
-    node->Parent = parent;
-    node->IndexInParent = parent ? (unsigned short)parent->Childs.Size : 0;
-    if (parent)
-        parent->Childs.push_back(node);
-    return node;
-}
-
-static void ExampleTree_DestroyNode(ExampleTreeNode* node)
-{
-    for (ExampleTreeNode* child_node : node->Childs)
-        ExampleTree_DestroyNode(child_node);
-    IM_DELETE(node);
-}
-
-// Create example tree data
-// (this allocates _many_ more times than most other code in either Dear ImGui or others demo)
-static ExampleTreeNode* ExampleTree_CreateDemoTree()
-{
-    static const char* root_names[] = { "Apple", "Banana", "Cherry", "Kiwi", "Mango", "Orange", "Pear", "Pineapple", "Strawberry", "Watermelon" };
-    const size_t NAME_MAX_LEN = sizeof(ExampleTreeNode::Name);
-    char name_buf[NAME_MAX_LEN];
-    int uid = 0;
-    ExampleTreeNode* node_L0 = ExampleTree_CreateNode("<ROOT>", ++uid, NULL);
-    const int root_items_multiplier = 2;
-    for (int idx_L0 = 0; idx_L0 < IM_ARRAYSIZE(root_names) * root_items_multiplier; idx_L0++)
-    {
-        snprintf(name_buf, IM_ARRAYSIZE(name_buf), "%s %d", root_names[idx_L0 / root_items_multiplier], idx_L0 % root_items_multiplier);
-        ExampleTreeNode* node_L1 = ExampleTree_CreateNode(name_buf, ++uid, node_L0);
-        const int number_of_childs = (int)strlen(node_L1->Name);
-        for (int idx_L1 = 0; idx_L1 < number_of_childs; idx_L1++)
-        {
-            snprintf(name_buf, IM_ARRAYSIZE(name_buf), "Child %d", idx_L1);
-            ExampleTreeNode* node_L2 = ExampleTree_CreateNode(name_buf, ++uid, node_L1);
-            node_L2->HasData = true;
-            if (idx_L1 == 0)
-            {
-                snprintf(name_buf, IM_ARRAYSIZE(name_buf), "Sub-child %d", 0);
-                ExampleTreeNode* node_L3 = ExampleTree_CreateNode(name_buf, ++uid, node_L2);
-                node_L3->HasData = true;
-            }
-        }
-    }
-    return node_L0;
-}
 
 //-----------------------------------------------------------------------------
 // [SECTION] Demo Window / ShowDemoWindow()
@@ -877,53 +767,94 @@ static void DemoWindowMenuBar(ImGuiDemoWindowData* demo_data)
 }
 
 //-----------------------------------------------------------------------------
-// [SECTION] DemoWindowWidgets()
+// [SECTION] Helpers: ExampleTreeNode, ExampleMemberInfo (for use by Property Editor & Multi-Select demos)
 //-----------------------------------------------------------------------------
 
-static void DemoWindowWidgets(ImGuiDemoWindowData* demo_data)
+// Simple representation for a tree
+// (this is designed to be simple to understand for our demos, not to be fancy or efficient etc.)
+struct ExampleTreeNode
 {
-    IMGUI_DEMO_MARKER("Widgets");
-    //ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-    if (!ImGui::CollapsingHeader("Widgets"))
-        return;
+    // Tree structure
+    char                        Name[28] = "";
+    int                         UID = 0;
+    ExampleTreeNode* Parent = NULL;
+    ImVector<ExampleTreeNode*>  Childs;
+    unsigned short              IndexInParent = 0;  // Maintaining this allows us to implement linear traversal more easily
 
-    const bool disable_all = demo_data->DisableSections; // The Checkbox for that is inside the "Disabled" section at the bottom
-    if (disable_all)
-        ImGui::BeginDisabled();
+    // Leaf Data
+    bool                        HasData = false;    // All leaves have data
+    bool                        DataMyBool = true;
+    int                         DataMyInt = 128;
+    ImVec2                      DataMyVec2 = ImVec2(0.0f, 3.141592f);
+};
 
-    DemoWindowWidgetsBasic();
-    DemoWindowWidgetsBullets();
-    DemoWindowWidgetsCollapsingHeaders();
-    DemoWindowWidgetsComboBoxes();
-    DemoWindowWidgetsColorAndPickers();
-    DemoWindowWidgetsDataTypes();
+// Simple representation of struct metadata/serialization data.
+// (this is a minimal version of what a typical advanced application may provide)
+struct ExampleMemberInfo
+{
+    const char* Name;       // Member name
+    ImGuiDataType   DataType;   // Member type
+    int             DataCount;  // Member count (1 when scalar)
+    int             Offset;     // Offset inside parent structure
+};
 
-    if (disable_all)
-        ImGui::EndDisabled();
-    DemoWindowWidgetsDisableBlocks(demo_data);
-    if (disable_all)
-        ImGui::BeginDisabled();
+// Metadata description of ExampleTreeNode struct.
+static const ExampleMemberInfo ExampleTreeNodeMemberInfos[]
+{
+    { "MyName",     ImGuiDataType_String,  1, offsetof(ExampleTreeNode, Name) },
+    { "MyBool",     ImGuiDataType_Bool,    1, offsetof(ExampleTreeNode, DataMyBool) },
+    { "MyInt",      ImGuiDataType_S32,     1, offsetof(ExampleTreeNode, DataMyInt) },
+    { "MyVec2",     ImGuiDataType_Float,   2, offsetof(ExampleTreeNode, DataMyVec2) },
+};
 
-    DemoWindowWidgetsDragAndDrop();
-    DemoWindowWidgetsDragsAndSliders();
-    DemoWindowWidgetsImages();
-    DemoWindowWidgetsListBoxes();
-    DemoWindowWidgetsMultiComponents();
-    DemoWindowWidgetsPlotting();
-    DemoWindowWidgetsProgressBars();
-    DemoWindowWidgetsQueryingStatuses();
-    DemoWindowWidgetsSelectables();
-    DemoWindowWidgetsSelectionAndMultiSelect(demo_data);
-    DemoWindowWidgetsTabs();
-    DemoWindowWidgetsText();
-    DemoWindowWidgetsTextFilter();
-    DemoWindowWidgetsTextInput();
-    DemoWindowWidgetsTooltips();
-    DemoWindowWidgetsTreeNodes();
-    DemoWindowWidgetsVerticalSliders();
+static ExampleTreeNode* ExampleTree_CreateNode(const char* name, int uid, ExampleTreeNode* parent)
+{
+    ExampleTreeNode* node = IM_NEW(ExampleTreeNode);
+    snprintf(node->Name, IM_ARRAYSIZE(node->Name), "%s", name);
+    node->UID = uid;
+    node->Parent = parent;
+    node->IndexInParent = parent ? (unsigned short)parent->Childs.Size : 0;
+    if (parent)
+        parent->Childs.push_back(node);
+    return node;
+}
 
-    if (disable_all)
-        ImGui::EndDisabled();
+static void ExampleTree_DestroyNode(ExampleTreeNode* node)
+{
+    for (ExampleTreeNode* child_node : node->Childs)
+        ExampleTree_DestroyNode(child_node);
+    IM_DELETE(node);
+}
+
+// Create example tree data
+// (this allocates _many_ more times than most other code in either Dear ImGui or others demo)
+static ExampleTreeNode* ExampleTree_CreateDemoTree()
+{
+    static const char* root_names[] = { "Apple", "Banana", "Cherry", "Kiwi", "Mango", "Orange", "Pear", "Pineapple", "Strawberry", "Watermelon" };
+    const size_t NAME_MAX_LEN = sizeof(ExampleTreeNode::Name);
+    char name_buf[NAME_MAX_LEN];
+    int uid = 0;
+    ExampleTreeNode* node_L0 = ExampleTree_CreateNode("<ROOT>", ++uid, NULL);
+    const int root_items_multiplier = 2;
+    for (int idx_L0 = 0; idx_L0 < IM_ARRAYSIZE(root_names) * root_items_multiplier; idx_L0++)
+    {
+        snprintf(name_buf, IM_ARRAYSIZE(name_buf), "%s %d", root_names[idx_L0 / root_items_multiplier], idx_L0 % root_items_multiplier);
+        ExampleTreeNode* node_L1 = ExampleTree_CreateNode(name_buf, ++uid, node_L0);
+        const int number_of_childs = (int)strlen(node_L1->Name);
+        for (int idx_L1 = 0; idx_L1 < number_of_childs; idx_L1++)
+        {
+            snprintf(name_buf, IM_ARRAYSIZE(name_buf), "Child %d", idx_L1);
+            ExampleTreeNode* node_L2 = ExampleTree_CreateNode(name_buf, ++uid, node_L1);
+            node_L2->HasData = true;
+            if (idx_L1 == 0)
+            {
+                snprintf(name_buf, IM_ARRAYSIZE(name_buf), "Sub-child %d", 0);
+                ExampleTreeNode* node_L3 = ExampleTree_CreateNode(name_buf, ++uid, node_L2);
+                node_L3->HasData = true;
+            }
+        }
+    }
+    return node_L0;
 }
 
 //-----------------------------------------------------------------------------
@@ -4256,6 +4187,56 @@ static void DemoWindowWidgetsVerticalSliders()
         ImGui::PopStyleVar();
         ImGui::TreePop();
     }
+}
+
+//-----------------------------------------------------------------------------
+// [SECTION] DemoWindowWidgets()
+//-----------------------------------------------------------------------------
+
+static void DemoWindowWidgets(ImGuiDemoWindowData* demo_data)
+{
+    IMGUI_DEMO_MARKER("Widgets");
+    //ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+    if (!ImGui::CollapsingHeader("Widgets"))
+        return;
+
+    const bool disable_all = demo_data->DisableSections; // The Checkbox for that is inside the "Disabled" section at the bottom
+    if (disable_all)
+        ImGui::BeginDisabled();
+
+    DemoWindowWidgetsBasic();
+    DemoWindowWidgetsBullets();
+    DemoWindowWidgetsCollapsingHeaders();
+    DemoWindowWidgetsComboBoxes();
+    DemoWindowWidgetsColorAndPickers();
+    DemoWindowWidgetsDataTypes();
+
+    if (disable_all)
+        ImGui::EndDisabled();
+    DemoWindowWidgetsDisableBlocks(demo_data);
+    if (disable_all)
+        ImGui::BeginDisabled();
+
+    DemoWindowWidgetsDragAndDrop();
+    DemoWindowWidgetsDragsAndSliders();
+    DemoWindowWidgetsImages();
+    DemoWindowWidgetsListBoxes();
+    DemoWindowWidgetsMultiComponents();
+    DemoWindowWidgetsPlotting();
+    DemoWindowWidgetsProgressBars();
+    DemoWindowWidgetsQueryingStatuses();
+    DemoWindowWidgetsSelectables();
+    DemoWindowWidgetsSelectionAndMultiSelect(demo_data);
+    DemoWindowWidgetsTabs();
+    DemoWindowWidgetsText();
+    DemoWindowWidgetsTextFilter();
+    DemoWindowWidgetsTextInput();
+    DemoWindowWidgetsTooltips();
+    DemoWindowWidgetsTreeNodes();
+    DemoWindowWidgetsVerticalSliders();
+
+    if (disable_all)
+        ImGui::EndDisabled();
 }
 
 //-----------------------------------------------------------------------------
