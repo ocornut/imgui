@@ -32,7 +32,7 @@ LIBS =
 
 ifeq ($(UNAME_S), Linux) #LINUX
 	ECHO_MESSAGE = "Linux"
-	LIBS += -lGL `pkg-config --static --libs glfw3`
+	LIBS += -lGL -lX11 `pkg-config --static --libs glfw3`
 
 	CXXFLAGS += `pkg-config --cflags glfw3`
 	CFLAGS = $(CXXFLAGS)
