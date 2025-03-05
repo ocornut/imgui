@@ -73,7 +73,6 @@ Index of this file:
 // [SECTION] Helpers: ExampleTreeNode, ExampleMemberInfo (for use by Property Editor & Multi-Select demos)
 // [SECTION] Demo Window / ShowDemoWindow()
 // [SECTION] DemoWindowMenuBar()
-// [SECTION] DemoWindowWidgets()
 // [SECTION] DemoWindowWidgetsBasic()
 // [SECTION] DemoWindowWidgetsBullets()
 // [SECTION] DemoWindowWidgetsCollapsingHeaders()
@@ -98,6 +97,7 @@ Index of this file:
 // [SECTION] DemoWindowWidgetsTooltips()
 // [SECTION] DemoWindowWidgetsTreeNodes()
 // [SECTION] DemoWindowWidgetsVerticalSliders()
+// [SECTION] DemoWindowWidgets()
 // [SECTION] DemoWindowLayout()
 // [SECTION] DemoWindowPopups()
 // [SECTION] DemoWindowTables()
@@ -250,30 +250,6 @@ static void ShowExampleMenuFile();
 // (because the link time of very large functions tends to grow non-linearly)
 static void DemoWindowMenuBar(ImGuiDemoWindowData* demo_data);
 static void DemoWindowWidgets(ImGuiDemoWindowData* demo_data);
-static void DemoWindowWidgetsBasic();
-static void DemoWindowWidgetsBullets();
-static void DemoWindowWidgetsCollapsingHeaders();
-static void DemoWindowWidgetsComboBoxes();
-static void DemoWindowWidgetsColorAndPickers();
-static void DemoWindowWidgetsDataTypes();
-static void DemoWindowWidgetsDisableBlocks(ImGuiDemoWindowData* demo_data);
-static void DemoWindowWidgetsDragAndDrop();
-static void DemoWindowWidgetsDragsAndSliders();
-static void DemoWindowWidgetsImages();
-static void DemoWindowWidgetsListBoxes();
-static void DemoWindowWidgetsPlotting();
-static void DemoWindowWidgetsMultiComponents();
-static void DemoWindowWidgetsProgressBars();
-static void DemoWindowWidgetsQueryingStatuses();
-static void DemoWindowWidgetsSelectables();
-static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_data);
-static void DemoWindowWidgetsTabs();
-static void DemoWindowWidgetsText();
-static void DemoWindowWidgetsTextFilter();
-static void DemoWindowWidgetsTextInput();
-static void DemoWindowWidgetsTooltips();
-static void DemoWindowWidgetsTreeNodes();
-static void DemoWindowWidgetsVerticalSliders();
 static void DemoWindowLayout();
 static void DemoWindowPopups();
 static void DemoWindowTables();
@@ -814,56 +790,6 @@ static void DemoWindowMenuBar(ImGuiDemoWindowData* demo_data)
         }
         ImGui::EndMenuBar();
     }
-}
-
-//-----------------------------------------------------------------------------
-// [SECTION] DemoWindowWidgets()
-//-----------------------------------------------------------------------------
-
-static void DemoWindowWidgets(ImGuiDemoWindowData* demo_data)
-{
-    IMGUI_DEMO_MARKER("Widgets");
-    //ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-    if (!ImGui::CollapsingHeader("Widgets"))
-        return;
-
-    const bool disable_all = demo_data->DisableSections; // The Checkbox for that is inside the "Disabled" section at the bottom
-    if (disable_all)
-        ImGui::BeginDisabled();
-
-    DemoWindowWidgetsBasic();
-    DemoWindowWidgetsBullets();
-    DemoWindowWidgetsCollapsingHeaders();
-    DemoWindowWidgetsComboBoxes();
-    DemoWindowWidgetsColorAndPickers();
-    DemoWindowWidgetsDataTypes();
-
-    if (disable_all)
-        ImGui::EndDisabled();
-    DemoWindowWidgetsDisableBlocks(demo_data);
-    if (disable_all)
-        ImGui::BeginDisabled();
-
-    DemoWindowWidgetsDragAndDrop();
-    DemoWindowWidgetsDragsAndSliders();
-    DemoWindowWidgetsImages();
-    DemoWindowWidgetsListBoxes();
-    DemoWindowWidgetsMultiComponents();
-    DemoWindowWidgetsPlotting();
-    DemoWindowWidgetsProgressBars();
-    DemoWindowWidgetsQueryingStatuses();
-    DemoWindowWidgetsSelectables();
-    DemoWindowWidgetsSelectionAndMultiSelect(demo_data);
-    DemoWindowWidgetsTabs();
-    DemoWindowWidgetsText();
-    DemoWindowWidgetsTextFilter();
-    DemoWindowWidgetsTextInput();
-    DemoWindowWidgetsTooltips();
-    DemoWindowWidgetsTreeNodes();
-    DemoWindowWidgetsVerticalSliders();
-
-    if (disable_all)
-        ImGui::EndDisabled();
 }
 
 //-----------------------------------------------------------------------------
@@ -4181,6 +4107,56 @@ static void DemoWindowWidgetsVerticalSliders()
         ImGui::PopStyleVar();
         ImGui::TreePop();
     }
+}
+
+//-----------------------------------------------------------------------------
+// [SECTION] DemoWindowWidgets()
+//-----------------------------------------------------------------------------
+
+static void DemoWindowWidgets(ImGuiDemoWindowData* demo_data)
+{
+    IMGUI_DEMO_MARKER("Widgets");
+    //ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+    if (!ImGui::CollapsingHeader("Widgets"))
+        return;
+
+    const bool disable_all = demo_data->DisableSections; // The Checkbox for that is inside the "Disabled" section at the bottom
+    if (disable_all)
+        ImGui::BeginDisabled();
+
+    DemoWindowWidgetsBasic();
+    DemoWindowWidgetsBullets();
+    DemoWindowWidgetsCollapsingHeaders();
+    DemoWindowWidgetsComboBoxes();
+    DemoWindowWidgetsColorAndPickers();
+    DemoWindowWidgetsDataTypes();
+
+    if (disable_all)
+        ImGui::EndDisabled();
+    DemoWindowWidgetsDisableBlocks(demo_data);
+    if (disable_all)
+        ImGui::BeginDisabled();
+
+    DemoWindowWidgetsDragAndDrop();
+    DemoWindowWidgetsDragsAndSliders();
+    DemoWindowWidgetsImages();
+    DemoWindowWidgetsListBoxes();
+    DemoWindowWidgetsMultiComponents();
+    DemoWindowWidgetsPlotting();
+    DemoWindowWidgetsProgressBars();
+    DemoWindowWidgetsQueryingStatuses();
+    DemoWindowWidgetsSelectables();
+    DemoWindowWidgetsSelectionAndMultiSelect(demo_data);
+    DemoWindowWidgetsTabs();
+    DemoWindowWidgetsText();
+    DemoWindowWidgetsTextFilter();
+    DemoWindowWidgetsTextInput();
+    DemoWindowWidgetsTooltips();
+    DemoWindowWidgetsTreeNodes();
+    DemoWindowWidgetsVerticalSliders();
+
+    if (disable_all)
+        ImGui::EndDisabled();
 }
 
 //-----------------------------------------------------------------------------
