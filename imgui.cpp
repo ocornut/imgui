@@ -21247,6 +21247,11 @@ namespace ImGuiFreeType { IMGUI_API const ImFontLoader* GetFontLoader(); }
 // [DEBUG] List fonts in a font atlas and display its texture
 void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
 {
+    SeparatorText("Backend Support for Dynamic Fonts");
+    BeginDisabled();
+    CheckboxFlags("io.BackendFlags: RendererHasTextures", &GetIO().BackendFlags, ImGuiBackendFlags_RendererHasTextures);
+    EndDisabled();
+
     SeparatorText("Fonts");
     Text("Read the FAQ at ");
     SameLine(0, 0);
@@ -22327,12 +22332,11 @@ void ImGui::DebugNodeFont(ImFont* font)
     }
     if (SmallButton("Set as default"))
         GetIO().FontDefault = font;
-    if (atlas->Fonts.Size > 1 && !atlas->Locked)
-    {
-        SameLine();
-        if (SmallButton("Remove"))
-            atlas->RemoveFont(font);
-    }
+    SameLine();
+    BeginDisabled(atlas->Fonts.Size <= 1 || atlas->Locked);
+    if (SmallButton("Remove"))
+        atlas->RemoveFont(font);
+    EndDisabled();
 
     // Display details
     SetNextItemWidth(GetFontSize() * 8);
