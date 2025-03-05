@@ -2604,7 +2604,7 @@ struct ImGuiTextBuffer
     int                 size() const            { return Buf.Size ? Buf.Size - 1 : 0; }
     bool                empty() const           { return Buf.Size <= 1; }
     void                clear()                 { Buf.clear(); }
-    void                resize(int size)        { IM_ASSERT(size == 0); if (Buf.Size > 0) Buf.Data[0] = 0; Buf.resize(0); } // Similar to resize(0) on ImVector: empty string but don't free buffer. Only resize(0) supported for now.
+    void                resize(int size)        { if (Buf.Size > size) Buf.Data[size] = 0; Buf.resize(size ? size + 1 : 0, 0); } // Similar to resize(0) on ImVector: empty string but don't free buffer.
     void                reserve(int capacity)   { Buf.reserve(capacity); }
     const char*         c_str() const           { return Buf.Data ? Buf.Data : EmptyString; }
     IMGUI_API void      append(const char* str, const char* str_end = NULL);
