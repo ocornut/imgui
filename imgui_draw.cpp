@@ -679,6 +679,8 @@ void ImDrawList::PushTexture(ImTextureRef tex_ref)
 {
     _TextureStack.push_back(tex_ref);
     _CmdHeader.TexRef = tex_ref;
+    if (tex_ref._TexData != NULL)
+        IM_ASSERT(tex_ref._TexData->WantDestroyNextFrame == false);
     _OnChangedTextureID();
 }
 
