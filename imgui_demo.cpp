@@ -1795,6 +1795,7 @@ static void DemoWindowWidgetsFonts()
     {
         ImFontAtlas* atlas = ImGui::GetIO().Fonts;
         ImGui::ShowFontAtlas(atlas);
+        // FIXME-NEWATLAS: Provide a demo to add/create a procedural font?
         ImGui::TreePop();
     }
 }
@@ -8245,9 +8246,6 @@ void ImGui::ShowAboutWindow(bool* p_open)
 // - ShowStyleSelector()
 // - ShowStyleEditor()
 //-----------------------------------------------------------------------------
-
-// Forward declare ShowFontAtlas() which isn't worth putting in public API yet
-namespace ImGui { IMGUI_API void ShowFontAtlas(ImFontAtlas* atlas); }
 
 // Demo helper function to select among loaded fonts.
 // Here we use the regular BeginCombo()/EndCombo() api which is the more flexible one.
