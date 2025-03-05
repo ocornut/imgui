@@ -3773,6 +3773,7 @@ enum ImFontFlags_
     ImFontFlags_None                    = 0,
     ImFontFlags_LockBakedSizes          = 1 << 0,   // Disable loading new baked sizes, disable garbage collecting current ones. e.g. if you want to lock a font to a single size.
     ImFontFlags_NoLoadGlyphs            = 1 << 1,   // Disable loading new glyphs.
+    ImFontFlags_NoLoadError             = 1 << 2,   // Disable throwing an error/assert when calling AddFontXXX() with missing file/data. Calling code is expected to check AddFontXXX() return value.
 };
 
 // Font runtime data and rendering
