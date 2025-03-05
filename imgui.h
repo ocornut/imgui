@@ -344,7 +344,7 @@ struct ImTextureRef
 {
     ImTextureRef()                          { memset(this, 0, sizeof(*this)); }
     ImTextureRef(ImTextureID tex_id)        { memset(this, 0, sizeof(*this)); _TexID = tex_id; }
-#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+#if !defined(IMGUI_DISABLE_OBSOLETE_FUNCTIONS) && !defined(ImTextureUserID)
     ImTextureRef(void* tex_id)              { memset(this, 0, sizeof(*this)); _TexID = (ImTextureID)(size_t)tex_id; }   // For legacy backends casting to ImTextureID
     //inline operator intptr_t() const      { return (intptr_t)_TexID; }                                                // For legacy backends casting to ImTextureID
 #endif
@@ -3506,7 +3506,7 @@ struct IMGUI_API ImTextureData
     unsigned char*      GetPixelsAt(int x, int y)   { IM_ASSERT(Pixels != NULL); return Pixels + (x + y * Width) * BytesPerPixel; }
     int                 GetSizeInBytes() const      { return Width * Height * BytesPerPixel; }
     int                 GetPitch() const            { return Width * BytesPerPixel; }
-    ImTextureRef        GetTexRef() const           { ImTextureRef tex_ref; tex_ref._TexData = (ImTextureData*)(void*)this; tex_ref._TexID = TexID; return tex_ref; }
+    ImTextureRef        GetTexRef()                 { ImTextureRef tex_ref; tex_ref._TexData = this; tex_ref._TexID = TexID; return tex_ref; }
     ImTextureID         GetTexID() const            { return TexID; }
     void                SetTexID(ImTextureID tex_id){ TexID = tex_id; } // Called by the Renderer backend after creating or destroying the texture. Never modify TexID directly!
 };

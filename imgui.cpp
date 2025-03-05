@@ -22449,7 +22449,7 @@ void ImGui::DebugNodeFontGlyph(ImFont* font, const ImFontGlyph* glyph)
     if (glyph->PackId >= 0)
     {
         ImFontAtlasRect* r = ImFontAtlasPackGetRect(font->ContainerAtlas, glyph->PackId);
-        Text("PackId: %d (%dx%d rect at %d,%d)", glyph->PackId, r->w, r->h, r->x, r->y);;
+        Text("PackId: %d (%dx%d rect at %d,%d)", glyph->PackId, r->w, r->h, r->x, r->y);
     }
 }
 

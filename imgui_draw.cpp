@@ -40,6 +40,7 @@ Index of this file:
 #endif
 
 #include <stdio.h>      // vsnprintf, sscanf, printf
+#include <stdint.h>     // intptr_t
 
 // Visual Studio warnings
 #ifdef _MSC_VER
@@ -3196,6 +3197,7 @@ void ImFontAtlas::RemoveFont(ImFont* font)
 
     bool removed = Fonts.find_erase(font);
     IM_ASSERT(removed);
+    IM_UNUSED(removed);
 
     Sources.erase(font->Sources, font->Sources + font->SourcesCount);
     ImFontAtlasBuildUpdatePointers(this);
@@ -3647,6 +3649,7 @@ void ImFontAtlasBuildSetupFontSpecialGlyphs(ImFontAtlas* atlas, ImFont* font, Im
     const int src_idx_in_font = (int)(src - font->Sources);
     IM_ASSERT(src_idx_in_font >= 0 && src_idx_in_font < font->SourcesCount);
     IM_UNUSED(atlas);
+    IM_UNUSED(src_idx_in_font);
 
     // Find Fallback character. Actual glyph loaded in GetFontBaked().
     const ImWchar fallback_chars[] = { font->FallbackChar, (ImWchar)IM_UNICODE_CODEPOINT_INVALID, (ImWchar)'?', (ImWchar)' ' };
@@ -3683,9 +3686,10 @@ void ImFontAtlasBuildDiscardFontBakedGlyph(ImFontAtlas* atlas, ImFont* font, ImF
         ImFontAtlasPackDiscardRect(atlas, glyph->PackId);
         glyph->PackId = -1;
     }
-    ImWchar c = glyph->Codepoint;
+    ImWchar c = (ImWchar)glyph->Codepoint;
     IM_ASSERT(font->FallbackChar != c && font->EllipsisChar != c); // Unsupported for simplicity
     IM_ASSERT(glyph >= baked->Glyphs.Data && glyph < baked->Glyphs.Data + baked->Glyphs.Size);
+    IM_UNUSED(font);
     baked->IndexLookup[c] = IM_FONTGLYPH_INDEX_UNUSED;
     baked->IndexAdvanceX[c] = baked->FallbackAdvanceX;
 }
@@ -4374,6 +4378,7 @@ void ImFontAtlasDebugLogTextureRequests(ImFontAtlas* atlas)
             IMGUI_DEBUG_LOG_FONT("[font] Texture #%03d: update %d regions, texid=0x%" IM_PRIX64 ", backend_data=0x%" IM_PRIX64 "\n", tex->UniqueID, tex->Updates.Size, tex->TexID, (ImU64)(intptr_t)tex->BackendUserData);
             for (const ImTextureRect& r : tex->Updates)
             {
+                IM_UNUSED(r);
                 IM_ASSERT(r.x >= 0 && r.y >= 0);
                 IM_ASSERT(r.x + r.w <= tex->Width && r.y + r.h <= tex->Height); // In theory should subtract PackPadding but it's currently part of atlas and mid-frame change would wreck assert.
                 //IMGUI_DEBUG_LOG_FONT("[font] Texture #%03d: update (% 4d..%-4d)->(% 4d..%-4d), texid=0x%" IM_PRIX64 ", backend_data=0x%" IM_PRIX64 "\n", tex->UniqueID, r.x, r.y, r.x + r.w, r.y + r.h, tex->TexID, (ImU64)(intptr_t)tex->BackendUserData);
@@ -5144,7 +5149,7 @@ ImFontBaked* ImFont::GetFontBaked(float size)
         {
             baked->LastUsedFrame = builder->FrameCount;
             LastBaked = baked;
-            return baked;;
+            return baked;
         }
         if (atlas->Locked)
         {
