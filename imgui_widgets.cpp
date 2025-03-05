@@ -8867,7 +8867,7 @@ bool ImGui::BeginMenuEx(const char* label, const char* icon, bool enabled)
     if (g.MenusIdSubmittedThisFrame.contains(id))
     {
         if (menu_is_open)
-            menu_is_open = BeginPopupEx(id, window_flags); // menu_is_open can be 'false' when the popup is completely clipped (e.g. zero size display)
+            menu_is_open = BeginPopupMenuEx(id, label, window_flags); // menu_is_open can be 'false' when the popup is completely clipped (e.g. zero size display)
         else
             g.NextWindowData.ClearFlags();          // we behave like Begin() and need to consume those values
         return menu_is_open;
@@ -9029,7 +9029,7 @@ bool ImGui::BeginMenuEx(const char* label, const char* icon, bool enabled)
         ImGuiLastItemData last_item_in_parent = g.LastItemData;
         SetNextWindowPos(popup_pos, ImGuiCond_Always);                  // Note: misleading: the value will serve as reference for FindBestWindowPosForPopup(), not actual pos.
         PushStyleVar(ImGuiStyleVar_ChildRounding, style.PopupRounding); // First level will use _PopupRounding, subsequent will use _ChildRounding
-        menu_is_open = BeginPopupEx(id, window_flags);                  // menu_is_open can be 'false' when the popup is completely clipped (e.g. zero size display)
+        menu_is_open = BeginPopupMenuEx(id, label, window_flags); // menu_is_open may be 'false' when the popup is completely clipped (e.g. zero size display)
         PopStyleVar();
         if (menu_is_open)
         {

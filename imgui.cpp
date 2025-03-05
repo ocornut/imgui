@@ -431,6 +431,7 @@ CODE
  When you are not sure about an old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2025/03/05 (1.91.9) - BeginMenu(): Internals: reworked mangling of menu windows to use "###Menu_00" etc. instead of "##Menu_00", allowing them to also store the menu name before it. This shouldn't affect code unless directly accessing menu window from their mangled name.
  - 2025/02/27 (1.91.9) - Image(): removed 'tint_col' and 'border_col' parameter from Image() function. Added ImageWithBg() replacement. (#8131, #8238)
                             - old: void Image      (ImTextureID tex_id, ImVec2 image_size, ImVec2 uv0 = (0,0), ImVec2 uv1 = (1,1), ImVec4 tint_col = (1,1,1,1), ImVec4 border_col = (0,0,0,0));
                             - new: void Image      (ImTextureID tex_id, ImVec2 image_size, ImVec2 uv0 = (0,0), ImVec2 uv1 = (1,1));
@@ -7202,7 +7203,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // Update stored window name when it changes (which can _only_ happen with the "###" operator, so the ID would stay unchanged).
         // The title bar always display the 'name' parameter, so we only update the string storage if it needs to be visible to the end-user elsewhere.
         bool window_title_visible_elsewhere = false;
-        if (g.NavWindowingListWindow != NULL && (window->Flags & ImGuiWindowFlags_NoNavFocus) == 0)   // Window titles visible when using CTRL+TAB
+        if (g.NavWindowingListWindow != NULL && (flags & ImGuiWindowFlags_NoNavFocus) == 0)   // Window titles visible when using CTRL+TAB
+            window_title_visible_elsewhere = true;
+        if (flags & ImGuiWindowFlags_ChildMenu)
             window_title_visible_elsewhere = true;
         if (window_title_visible_elsewhere && !window_just_created && strcmp(name, window->Name) != 0)
         {
@@ -11714,17 +11717,32 @@ bool ImGui::BeginPopupEx(ImGuiID id, ImGuiWindowFlags extra_window_flags)
     }
 
     char name[20];
-    if (extra_window_flags & ImGuiWindowFlags_ChildMenu)
-        ImFormatString(name, IM_ARRAYSIZE(name), "##Menu_%02d", g.BeginMenuDepth); // Recycle windows based on depth
-    else
-        ImFormatString(name, IM_ARRAYSIZE(name), "##Popup_%08x", id); // Not recycling, so we can close/open during the same frame
+    IM_ASSERT((extra_window_flags & ImGuiWindowFlags_ChildMenu) == 0); // Use BeginPopupMenuEx()
+    ImFormatString(name, IM_ARRAYSIZE(name), "##Popup_%08x", id); // No recycling, so we can close/open during the same frame
 
     bool is_open = Begin(name, NULL, extra_window_flags | ImGuiWindowFlags_Popup);
     if (!is_open) // NB: Begin can return false when the popup is completely clipped (e.g. zero size display)
         EndPopup();
-
     //g.CurrentWindow->FocusRouteParentWindow = g.CurrentWindow->ParentWindowInBeginStack;
+    return is_open;
+}
 
+bool ImGui::BeginPopupMenuEx(ImGuiID id, const char* label, ImGuiWindowFlags extra_window_flags)
+{
+    ImGuiContext& g = *GImGui;
+    if (!IsPopupOpen(id, ImGuiPopupFlags_None))
+    {
+        g.NextWindowData.ClearFlags(); // We behave like Begin() and need to consume those values
+        return false;
+    }
+
+    char name[128];
+    IM_ASSERT(extra_window_flags & ImGuiWindowFlags_ChildMenu);
+    ImFormatString(name, IM_ARRAYSIZE(name), "%s###Menu_%02d", label, g.BeginMenuDepth); // Recycle windows based on depth
+    bool is_open = Begin(name, NULL, extra_window_flags | ImGuiWindowFlags_Popup);
+    if (!is_open) // NB: Begin can return false when the popup is completely clipped (e.g. zero size display)
+        EndPopup();
+    //g.CurrentWindow->FocusRouteParentWindow = g.CurrentWindow->ParentWindowInBeginStack;
     return is_open;
 }
 
