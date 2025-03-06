@@ -2056,6 +2056,12 @@ char* ImStrdup(const char* str)
     return (char*)memcpy(buf, (const void*)str, len + 1);
 }
 
+void* ImMemdup(const void* src, size_t size)
+{
+    void* dst = IM_ALLOC(size);
+    return memcpy(dst, src, size);
+}
+
 char* ImStrdupcpy(char* dst, size_t* p_dst_size, const char* src)
 {
     size_t dst_buf_size = p_dst_size ? *p_dst_size : ImStrlen(dst) + 1;

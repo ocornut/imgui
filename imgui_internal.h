@@ -396,6 +396,7 @@ IMGUI_API int           ImStricmp(const char* str1, const char* str2);          
 IMGUI_API int           ImStrnicmp(const char* str1, const char* str2, size_t count);       // Case insensitive compare to a certain count.
 IMGUI_API void          ImStrncpy(char* dst, const char* src, size_t count);                // Copy to a certain count and always zero terminate (strncpy doesn't).
 IMGUI_API char*         ImStrdup(const char* str);                                          // Duplicate a string.
+IMGUI_API void*         ImMemdup(const void* src, size_t size);                             // Duplicate a chunk of memory.
 IMGUI_API char*         ImStrdupcpy(char* dst, size_t* p_dst_size, const char* str);        // Copy in provided buffer, recreate buffer if needed.
 IMGUI_API const char*   ImStrchrRange(const char* str_begin, const char* str_end, char c);  // Find first occurrence of 'c' in string range.
 IMGUI_API const char*   ImStreolRange(const char* str, const char* str_end);                // End end-of-line
@@ -4064,6 +4065,7 @@ IMGUI_API bool              ImFontAtlasBuildAddFont(ImFontAtlas* atlas, ImFontCo
 IMGUI_API void              ImFontAtlasBuildSetupFontSpecialGlyphs(ImFontAtlas* atlas, ImFont* font, ImFontConfig* src);
 IMGUI_API void              ImFontAtlasBuildDiscardBakes(ImFontAtlas* atlas, int unused_frames);
 IMGUI_API void              ImFontAtlasBuildDiscardFont(ImFontAtlas* atlas, ImFont* font);
+IMGUI_API void              ImFontAtlasBuildDiscardFontSource(ImFontAtlas* atlas, ImFontConfig* src);
 IMGUI_API ImFontBaked*      ImFontAtlasBuildAddFontBaked(ImFontAtlas* atlas, ImFont* font, float font_size, ImGuiID baked_id);
 IMGUI_API ImFontBaked*      ImFontAtlasBuildGetClosestFontBakedMatch(ImFontAtlas* atlas, ImFont* font, float font_size);
 IMGUI_API void              ImFontAtlasBuildDiscardFontBaked(ImFontAtlas* atlas, ImFont* font, ImFontBaked* baked);

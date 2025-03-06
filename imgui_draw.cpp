@@ -2646,11 +2646,7 @@ void ImFontAtlas::ClearInputData()
         const ImFontLoader* loader = font_cfg.FontLoader ? font_cfg.FontLoader : FontLoader;
         if (loader && loader->FontSrcDestroy != NULL)
             loader->FontSrcDestroy(this, &font_cfg);
-        if (font_cfg.FontData && font_cfg.FontDataOwnedByAtlas)
-        {
-            IM_FREE(font_cfg.FontData);
-            font_cfg.FontData = NULL;
-        }
+        ImFontAtlasBuildDiscardFontSource(this, &font_cfg);
     }
 
     // When clearing this we lose access to the font name and other information used to build the font.
@@ -2972,6 +2968,17 @@ bool ImFontAtlas::Build()
 }
 #endif // #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 
+void ImFontAtlasBuildDiscardFontSource(ImFontAtlas* atlas, ImFontConfig* src)
+{
+    IM_UNUSED(atlas);
+    if (src->FontDataOwnedByAtlas)
+        IM_FREE(src->FontData);
+    if (src->GlyphExcludeRanges)
+        IM_FREE((void*)src->GlyphExcludeRanges);
+    src->FontData = NULL;
+    src->GlyphExcludeRanges = NULL;
+}
+
 ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas!");
@@ -3004,9 +3011,8 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
         new_font_cfg.DstFont = font;
     if (!new_font_cfg.FontDataOwnedByAtlas)
     {
-        new_font_cfg.FontData = IM_ALLOC(new_font_cfg.FontDataSize);
         new_font_cfg.FontDataOwnedByAtlas = true;
-        memcpy(new_font_cfg.FontData, font_cfg->FontData, (size_t)new_font_cfg.FontDataSize);
+        new_font_cfg.FontData = ImMemdup(font_cfg->FontData, (size_t)new_font_cfg.FontDataSize);
     }
 
     // Sanity check
@@ -3016,6 +3022,7 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
         for (const ImWchar* p = font_cfg->GlyphExcludeRanges; p[0] != 0; p++, size++) {}
         IM_ASSERT((size & 1) == 0 && "GlyphExcludeRanges[] size must be multiple of two!");
         IM_ASSERT((size <= 64) && "GlyphExcludeRanges[] size must be small!");
+        new_font_cfg.GlyphExcludeRanges = (ImWchar*)ImMemdup(font_cfg->GlyphExcludeRanges, sizeof(font_cfg->GlyphExcludeRanges[0]) * (size + 1));
     }
     if (font_cfg->FontLoader != NULL)
         IM_ASSERT(font_cfg->FontLoader->FontBakedLoadGlyph != NULL);
@@ -3032,8 +3039,7 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
     if (!ImFontAtlasBuildAddFont(this, &new_font_cfg))
     {
         // Rollback (this is a fragile/rarely exercised code-path. TestSuite's "misc_atlas_add_invalid_font" aim to test this)
-        if (new_font_cfg.FontDataOwnedByAtlas)
-            IM_FREE(new_font_cfg.FontData);
+        ImFontAtlasBuildDiscardFontSource(this, &new_font_cfg);
         Sources.pop_back();
         if (!font_cfg->MergeMode)
         {
