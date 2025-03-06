@@ -21256,7 +21256,7 @@ static void MetricsHelpMarker(const char* desc)
 }
 
 #ifdef IMGUI_ENABLE_FREETYPE
-namespace ImGuiFreeType { IMGUI_API const ImFontLoader* GetFontLoader(); }
+namespace ImGuiFreeType { IMGUI_API const ImFontLoader* GetFontLoader(); IMGUI_API bool DebugEditFontBuilderFlags(unsigned int* p_font_builder_flags); }
 #endif
 
 // [DEBUG] List fonts in a font atlas and display its texture
@@ -21299,6 +21299,12 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
         const ImFontLoader* loader_freetype = ImGuiFreeType::GetFontLoader();
         if (RadioButton("FreeType", loader_current == loader_freetype))
             ImFontAtlasBuildSetupFontLoader(atlas, loader_freetype);
+        if (loader_current == loader_freetype)
+        {
+            Text("Shared FreeType Loader Flags:");
+            if (ImGuiFreeType::DebugEditFontBuilderFlags(&atlas->FontBuilderFlags))
+                ImFontAtlasBuildReloadAll(atlas);
+        }
 #else
         BeginDisabled();
         RadioButton("FreeType", false);
@@ -22382,10 +22388,24 @@ void ImGui::DebugNodeFont(ImFont* font)
     char c_str[5];
     Text("Fallback character: '%s' (U+%04X)", ImTextCharToUtf8(c_str, font->FallbackChar), font->FallbackChar);
     Text("Ellipsis character: '%s' (U+%04X)", ImTextCharToUtf8(c_str, font->EllipsisChar), font->EllipsisChar);
+
     for (int src_n = 0; src_n < font->SourcesCount; src_n++)
         if (ImFontConfig* src = &font->Sources[src_n])
-            BulletText("Input %d: \'%s\', Oversample: %d,%d, PixelSnapH: %d, Offset: (%.1f,%.1f)",
-                src_n, src->Name, src->OversampleH, src->OversampleV, src->PixelSnapH, src->GlyphOffset.x, src->GlyphOffset.y);
+            if (TreeNode(src, "Input %d: \'%s\', Oversample: %d,%d, PixelSnapH: %d, Offset: (%.1f,%.1f)",
+                src_n, src->Name, src->OversampleH, src->OversampleV, src->PixelSnapH, src->GlyphOffset.x, src->GlyphOffset.y))
+            {
+                const ImFontLoader* loader = src->FontLoader ? src->FontLoader : atlas->FontLoader;
+                Text("Loader: '%s'", loader->Name ? loader->Name : "N/A");
+#ifdef IMGUI_ENABLE_FREETYPE
+                if (loader->Name != NULL && strcmp(loader->Name, "FreeType") == 0)
+                {
+                    Text("FreeType Loader Flags: 0x%08X", src->FontBuilderFlags);
+                    if (ImGuiFreeType::DebugEditFontBuilderFlags(&src->FontBuilderFlags))
+                        ImFontAtlasBuildReloadFont(atlas, src);
+                }
+#endif
+                TreePop();
+            }
 
     // Display all glyphs of the fonts in separate pages of 256 characters
     for (int baked_n = 0; baked_n < atlas->Builder->BakedPool.Size; baked_n++)
