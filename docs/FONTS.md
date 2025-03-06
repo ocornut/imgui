@@ -12,6 +12,7 @@ In the [misc/fonts/](https://github.com/ocornut/imgui/tree/master/misc/fonts) fo
 
 ## Index
 - [Troubleshooting](#troubleshooting)
+- [New! Dynamic Fonts system in 1.92 (March 2025)](#new-dynamic-fonts-system-in-192-march-2025)
 - [How should I handle DPI in my application?](#how-should-i-handle-dpi-in-my-application)
 - [Fonts Loading Instructions](#fonts-loading-instructions)
 - [Loading Font Data from Memory](#loading-font-data-from-memory)
@@ -43,12 +44,16 @@ See [About UTF-8 Encoding](#about-utf-8-encoding). Use the encoding viewer to co
 
 ### (3) Missing glyph ranges.
 
+🆕 **Since 1.92, with an up to date backend: specifying glyph ranges is necessary.**
+
 You need to load a font with explicit glyph ranges if you want to use non-ASCII characters. See [Fonts Loading Instructions](#fonts-loading-instructions). Use [Debug Tools](#debug-tools) confirm loaded fonts and loaded glyph ranges.
 
 This is a current constraint of Dear ImGui (which we will lift in the future): when loading a font you need to specify which characters glyphs to load.
 All loaded fonts glyphs are rendered into a single texture atlas ahead of time. Calling either of `io.Fonts->GetTexDataAsAlpha8()`, `io.Fonts->GetTexDataAsRGBA32()` or `io.Fonts->Build()` will build the atlas. This is generally called by the Renderer backend, e.g. `ImGui_ImplDX11_NewFrame()` calls it. **If you use custom glyphs ranges, make sure the array is persistent** and available during the calls to `GetTexDataAsAlpha8()/GetTexDataAsRGBA32()/Build()`.
 
 ### (4) Font atlas texture fails to upload to GPU.
+
+🆕 **Since 1.92, with an up to date backend: atlas is built incrementally and dynamically resized, this is less likely to happen**
 
 This is often of byproduct of point 3. If you have large number of glyphs or multiple fonts, the texture may become too big for your graphics API. **The typical result of failing to upload a texture is if every glyph or everything appears as empty white rectangles.** Mind the fact that some graphics drivers have texture size limitation. If you are building a PC application, mind the fact that your users may use hardware with lower limitations than yours.
 
@@ -62,6 +67,22 @@ Some solutions:
 - Set `io.Fonts.Flags |= ImFontAtlasFlags_NoPowerOfTwoHeight;` to disable rounding the texture height to the next power of two.
 
 Future versions of Dear ImGui should solve this problem.
+
+##### [Return to Index](#index)
+
+---------------------------------------
+
+## New! Dynamic Fonts system in 1.92 (March 2025+)
+
+v1.92 will introduce a newer, dynamic font system. It requires backend to support the `ImGuiBackendFlags_HasTextures` feature:
+- Users of icons, Asian and non-English languages do not need to pre-build all glyphs ahead of time. Saving on loading time, memory, and also reducing issues with missing glyphs. Specifying glyph ranges is not needed anymore.
+- PushFontSize() may be used anytime to change font size.
+- Packing custom rectangles is more convenient as pixels may be written to immediately.
+- Any update to fonts previously required backend specific calls to re-upload the texture, and said calls were not portable across backends. It is now possible to scale fonts etc. in a way that doesn't require you to make backend-specific calls.
+- It is possible to plug a custom loader/backend to any font source.
+
+See [#8465](https://github.com/ocornut/imgui/issues/8465) for more details.
+
 
 ##### [Return to Index](#index)
 
@@ -131,6 +152,8 @@ io.Fonts->Build();
 
 **Add a fourth parameter to bake specific font ranges only:**
 
+🆕 **Since 1.92, with an up to date backend: specifying glyph ranges is necessary. All the GetGlyphRangesXXX() functions are marked obsolete.**
+
 ```cpp
 // Basic Latin, Extended Latin
 io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, nullptr, io.Fonts->GetGlyphRangesDefault());
@@ -145,10 +168,20 @@ See [Using Custom Glyph Ranges](#using-custom-glyph-ranges) section to create yo
 
 **Example loading and using a Japanese font:**
 
+🆕 **Since 1.92, with an up to date backend:**
+
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+io.Fonts->AddFontFromFileTTF("NotoSansCJKjp-Medium.otf", 20.0f);
+```
+
+**Before 1.92, or without an up to date backend:**
+
 ```cpp
 ImGuiIO& io = ImGui::GetIO();
 io.Fonts->AddFontFromFileTTF("NotoSansCJKjp-Medium.otf", 20.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
 ```
+
 ```cpp
 ImGui::Text(u8"こんにちは！テスト %d", 123);
 if (ImGui::Button(u8"ロード"))
@@ -214,6 +247,8 @@ A common pattern is to merge the icon font within your main font, so you can emb
 To refer to the icon UTF-8 codepoints from your C++ code, you may use those headers files created by Juliette Foucaut: https://github.com/juliettef/IconFontCppHeaders.
 
 So you can use `ICON_FA_SEARCH` as a string that will render as a "Search" icon.
+
+🆕 **Since 1.92, with an up to date backend: specifying glyph ranges is necessary. You can omit this parameter.**
 
 Example Setup:
 ```cpp
@@ -289,6 +324,8 @@ io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\seguiemj.ttf", 16.0f, &cfg, ra
 
 ## Using Custom Glyph Ranges
 
+🆕 **Since 1.92, with an up to date backend: specifying glyph ranges is necessary, so this is not needed.**
+
 You can use the `ImFontGlyphRangesBuilder` helper to create glyph ranges based on text input. For example: for a game where your script is known, if you can feed your entire script to it and only build the characters the game needs.
 ```cpp
 ImVector<ImWchar> ranges;
@@ -307,6 +344,15 @@ io.Fonts->Build();                                     // Build the atlas while 
 ---------------------------------------
 
 ## Using Custom Colorful Icons
+
+🆕 **Since 1.92, with an up to date backend: this system has been revamped.**
+
+TL;DR; With the new system, it is recommended that you create a custom `ImFontLoader` and register your fonts with it.
+`AddCustomRectFontGlyph()` has been obsolete because its API does not make much sense with resizable fonts.
+
+You can ask questions in [#8466](https://github.com/ocornut/imgui/issues/8466).
+
+🆕 **Before 1.92:**
 
 As an alternative to rendering colorful glyphs using imgui_freetype with `ImGuiFreeTypeBuilderFlags_LoadColor`, you may allocate your own space in the texture atlas and write yourself into it. **(This is a BETA api, use if you are familiar with dear imgui and with your rendering backend)**
 
