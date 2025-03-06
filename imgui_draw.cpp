@@ -2521,7 +2521,7 @@ void ImTextureData::DestroyPixels()
 // - ImFontAtlasBuildDiscardBakes()
 // - ImFontAtlasBuildDiscardFontBakedGlyph()
 // - ImFontAtlasBuildDiscardFontBaked()
-// - ImFontAtlasBuildDiscardFont()
+// - ImFontAtlasBuildDiscardFontBakes()
 //-----------------------------------------------------------------------------
 // - ImFontAtlasAddDrawListSharedData()
 // - ImFontAtlasRemoveDrawListSharedData()
@@ -3554,6 +3554,22 @@ static void ImFontAtlasBuildUpdateLinesTexData(ImFontAtlas* atlas, bool add_and_
 
 //-----------------------------------------------------------------------------------------------------------------------------
 
+void ImFontAtlasBuildReloadAll(ImFontAtlas* atlas)
+{
+    const ImFontLoader* main_loader = atlas->FontLoader;
+    ImFontAtlasBuildSetupFontLoader(atlas, NULL);
+    ImFontAtlasBuildSetupFontLoader(atlas, main_loader);
+}
+
+void ImFontAtlasBuildReloadFont(ImFontAtlas* atlas, ImFontConfig* src)
+{
+    // FIXME-NEWATLAS: rebuild single font not supported yet.
+    IM_UNUSED(src);
+    ImFontAtlasBuildReloadAll(atlas);
+}
+
+//-----------------------------------------------------------------------------------------------------------------------------
+
 bool ImFontAtlasBuildAddFont(ImFontAtlas* atlas, ImFontConfig* src)
 {
     ImFont* font = src->DstFont;
@@ -3797,7 +3813,7 @@ void ImFontAtlasBuildDiscardFontBaked(ImFontAtlas* atlas, ImFont* font, ImFontBa
     font->LastBaked = NULL;
 }
 
-void ImFontAtlasBuildDiscardFont(ImFontAtlas* atlas, ImFont* font)
+void ImFontAtlasBuildDiscardFontBakes(ImFontAtlas* atlas, ImFont* font)
 {
     if (ImFontAtlasBuilder* builder = atlas->Builder) // This can be called from font destructor
         for (int baked_n = 0; baked_n < builder->BakedPool.Size; baked_n++)
@@ -4946,7 +4962,7 @@ ImFont::~ImFont()
 void ImFont::ClearOutputData()
 {
     if (ImFontAtlas* atlas = ContainerAtlas)
-        ImFontAtlasBuildDiscardFont(atlas, this);
+        ImFontAtlasBuildDiscardFontBakes(atlas, this);
     FallbackChar = EllipsisChar = 0;
     memset(Used8kPagesMap, 0, sizeof(Used8kPagesMap));
     LastBaked = NULL;

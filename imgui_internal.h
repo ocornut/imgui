@@ -4061,10 +4061,13 @@ IMGUI_API void              ImFontAtlasBuildGrowTexture(ImFontAtlas* atlas, int 
 IMGUI_API void              ImFontAtlasBuildCompactTexture(ImFontAtlas* atlas);
 IMGUI_API ImVec2i           ImFontAtlasBuildGetTextureSizeEstimate(ImFontAtlas* atlas);
 
+IMGUI_API void              ImFontAtlasBuildReloadAll(ImFontAtlas* atlas);                     // Reinit/rebuild, notably if font loader params have changed.
+IMGUI_API void              ImFontAtlasBuildReloadFont(ImFontAtlas* atlas, ImFontConfig* src); // Reinit/rebuild, notably if font loader params have changed.
+
 IMGUI_API bool              ImFontAtlasBuildAddFont(ImFontAtlas* atlas, ImFontConfig* src);
 IMGUI_API void              ImFontAtlasBuildSetupFontSpecialGlyphs(ImFontAtlas* atlas, ImFont* font, ImFontConfig* src);
 IMGUI_API void              ImFontAtlasBuildDiscardBakes(ImFontAtlas* atlas, int unused_frames);
-IMGUI_API void              ImFontAtlasBuildDiscardFont(ImFontAtlas* atlas, ImFont* font);
+IMGUI_API void              ImFontAtlasBuildDiscardFontBakes(ImFontAtlas* atlas, ImFont* font);
 IMGUI_API void              ImFontAtlasBuildDiscardFontSource(ImFontAtlas* atlas, ImFontConfig* src);
 IMGUI_API ImFontBaked*      ImFontAtlasBuildAddFontBaked(ImFontAtlas* atlas, ImFont* font, float font_size, ImGuiID baked_id);
 IMGUI_API ImFontBaked*      ImFontAtlasBuildGetClosestFontBakedMatch(ImFontAtlas* atlas, ImFont* font, float font_size);
