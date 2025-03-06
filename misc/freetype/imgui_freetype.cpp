@@ -578,7 +578,7 @@ bool ImGui_ImplFreetype_FontSrcContainsGlyph(ImFontAtlas* atlas, ImFontConfig* s
 const ImFontLoader* ImGuiFreeType::GetFontLoader()
 {
     static ImFontLoader loader;
-    loader.Name = "freetype";
+    loader.Name = "FreeType";
     loader.LoaderInit = ImGui_ImplFreeType_LoaderInit;
     loader.LoaderShutdown = ImGui_ImplFreeType_LoaderShutdown;
     loader.FontSrcInit = ImGui_ImplFreeType_FontSrcInit;
@@ -596,6 +596,22 @@ void ImGuiFreeType::SetAllocatorFunctions(void* (*alloc_func)(size_t sz, void* u
     GImGuiFreeTypeAllocFunc = alloc_func;
     GImGuiFreeTypeFreeFunc = free_func;
     GImGuiFreeTypeAllocatorUserData = user_data;
+}
+
+bool ImGuiFreeType::DebugEditFontBuilderFlags(unsigned int* p_font_loader_flags)
+{
+    bool edited = false;
+    edited |= ImGui::CheckboxFlags("NoHinting",    p_font_loader_flags, ImGuiFreeTypeBuilderFlags_NoHinting);
+    edited |= ImGui::CheckboxFlags("NoAutoHint",   p_font_loader_flags, ImGuiFreeTypeBuilderFlags_NoAutoHint);
+    edited |= ImGui::CheckboxFlags("ForceAutoHint",p_font_loader_flags, ImGuiFreeTypeBuilderFlags_ForceAutoHint);
+    edited |= ImGui::CheckboxFlags("LightHinting", p_font_loader_flags, ImGuiFreeTypeBuilderFlags_LightHinting);
+    edited |= ImGui::CheckboxFlags("MonoHinting",  p_font_loader_flags, ImGuiFreeTypeBuilderFlags_MonoHinting);
+    edited |= ImGui::CheckboxFlags("Bold",         p_font_loader_flags, ImGuiFreeTypeBuilderFlags_Bold);
+    edited |= ImGui::CheckboxFlags("Oblique",      p_font_loader_flags, ImGuiFreeTypeBuilderFlags_Oblique);
+    edited |= ImGui::CheckboxFlags("Monochrome",   p_font_loader_flags, ImGuiFreeTypeBuilderFlags_Monochrome);
+    edited |= ImGui::CheckboxFlags("LoadColor",    p_font_loader_flags, ImGuiFreeTypeBuilderFlags_LoadColor);
+    edited |= ImGui::CheckboxFlags("Bitmap",       p_font_loader_flags, ImGuiFreeTypeBuilderFlags_Bitmap);
+    return edited;
 }
 
 #ifdef IMGUI_ENABLE_FREETYPE_LUNASVG

@@ -49,6 +49,9 @@ namespace ImGuiFreeType
     // However, as FreeType does lots of allocations we provide a way for the user to redirect it to a separate memory heap if desired.
     IMGUI_API void                      SetAllocatorFunctions(void* (*alloc_func)(size_t sz, void* user_data), void (*free_func)(void* ptr, void* user_data), void* user_data = nullptr);
 
+    // Display UI to edit FontBuilderFlags in ImFontAtlas (shared) or ImFontConfig (single source)
+    IMGUI_API bool                      DebugEditFontBuilderFlags(unsigned int* p_font_loader_flags);
+
     // Obsolete names (will be removed soon)
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     //static inline bool BuildFontAtlas(ImFontAtlas* atlas, unsigned int flags = 0) { atlas->FontBuilderIO = GetBuilderForFreeType(); atlas->FontBuilderFlags = flags; return atlas->Build(); } // Prefer using '#define IMGUI_ENABLE_FREETYPE'
