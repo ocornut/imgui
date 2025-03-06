@@ -436,6 +436,17 @@ void ImGui::ShowDemoWindow(bool* p_open)
     ImGui::Text("dear imgui says hello! (%s) (%d)", IMGUI_VERSION, IMGUI_VERSION_NUM);
     ImGui::Spacing();
 
+    ImGui::SeparatorText("dynamic_fonts branch");
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 5);
+    ImGui::DragFloat("io.FontGlobalScale", &ImGui::GetIO().FontGlobalScale, 0.05f, 0.5f, 5.0f);
+    ImGui::BulletText("This is scaling font only. General scaling will come later.");
+    ImGui::BulletText("Load an actual font that's not the default for best result!");
+    ImGui::BulletText("See 'Widgets->Fonts' below for more..");
+    ImGui::BulletText("Current font loader: '%s'", ImGui::GetIO().Fonts->FontLoaderName);
+    ImGui::BulletText("Please submit feedback:"); ImGui::SameLine();
+    ImGui::TextLinkOpenURL("https://github.com/ocornut/imgui/issues/8465");
+    ImGui::Spacing();
+
     IMGUI_DEMO_MARKER("Help");
     if (ImGui::CollapsingHeader("Help"))
     {
