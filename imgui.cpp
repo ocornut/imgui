@@ -21010,7 +21010,8 @@ static void Platform_SetImeDataFn_DefaultImpl(ImGuiContext*, ImGuiViewport*, ImG
 // - RenderViewportsThumbnails() [Internal]
 // - DebugTextEncoding()
 // - MetricsHelpMarker() [Internal]
-// - ShowFontAtlas() [Internal]
+// - ShowFontAtlas() [Internal but called by Demo!]
+// - DebugNodeTexture() [Internal]
 // - ShowMetricsWindow()
 // - DebugNodeColumns() [Internal]
 // - DebugNodeDockNode() [Internal]
@@ -21326,18 +21327,20 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
     Text("incl. Discarded rects: %d, area: about %d px ~%dx%d px", atlas->Builder->RectsDiscardedCount, atlas->Builder->RectsDiscardedSurface, discarded_surface_sqrt, discarded_surface_sqrt);
 
     // Texture list
-    for (ImTextureData* tex : atlas->TexList)
+    // (ensure the last texture always use the same ID, so we can keep it open neatly)
+    for (int tex_n = 0; tex_n < atlas->TexList.Size; tex_n++)
     {
-        PushID(tex);
-        DebugNodeTexture(tex);
-        PopID();
+        if (tex_n == atlas->TexList.Size - 1)
+            SetNextItemOpen(true, ImGuiCond_Once);
+        DebugNodeTexture(atlas->TexList[tex_n], atlas->TexList.Size - 1 - tex_n);
     }
 }
 
-void ImGui::DebugNodeTexture(ImTextureData* tex)
+void ImGui::DebugNodeTexture(ImTextureData* tex, int int_id)
 {
     ImGuiContext& g = *GImGui;
-    if (TreeNode(tex, "Texture #%03d (%dx%d pixels)", tex->UniqueID, tex->Width, tex->Height))
+    PushID(int_id);
+    if (TreeNode("", "Texture #%03d (%dx%d pixels)", tex->UniqueID, tex->Width, tex->Height))
     {
         ImGuiMetricsConfig* cfg = &g.DebugMetricsConfig;
         Checkbox("Show used rect", &cfg->ShowTextureUsedRect);
@@ -21352,12 +21355,13 @@ void ImGui::DebugNodeTexture(ImTextureData* tex)
         PopStyleVar();
 
         char texid_desc[20];
-        Text("Format = %d", tex->Format);
+        Text("Format = %s (%d)", ImTextureDataGetFormatName(tex->Format), tex->Format);
         Text("TexID = %s", FormatTextureIDForDebugDisplay(texid_desc, IM_ARRAYSIZE(texid_desc), tex->TexID));
         Text("BackendUserData = %p", tex->BackendUserData);
         Text("UseColors = %d", tex->UseColors);
         TreePop();
     }
+    PopID();
 }
 
 void ImGui::ShowMetricsWindow(bool* p_open)

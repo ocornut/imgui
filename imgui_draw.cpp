@@ -2422,7 +2422,7 @@ ImFontConfig::ImFontConfig()
 // - ImTextureData::DestroyPixels()
 //-----------------------------------------------------------------------------
 
-static int GetTextureFormatBytesPerPixel(ImTextureFormat format)
+int ImTextureDataGetFormatBytesPerPixel(ImTextureFormat format)
 {
     switch (format)
     {
@@ -2433,13 +2433,24 @@ static int GetTextureFormatBytesPerPixel(ImTextureFormat format)
     return 0;
 }
 
+const char* ImTextureDataGetFormatName(ImTextureFormat format)
+{
+    switch (format)
+    {
+    case ImTextureFormat_Alpha8: return "Alpha8";
+    case ImTextureFormat_RGBA32: return "RGBA32";
+    }
+    return "N/A";
+}
+
+
 void ImTextureData::Create(ImTextureFormat format, int w, int h)
 {
     DestroyPixels();
     Format = format;
     Width = w;
     Height = h;
-    BytesPerPixel = GetTextureFormatBytesPerPixel(format);
+    BytesPerPixel = ImTextureDataGetFormatBytesPerPixel(format);
     UseColors = false;
     Pixels = (unsigned char*)IM_ALLOC(Width * Height * BytesPerPixel);
     IM_ASSERT(Pixels != NULL);
@@ -2801,7 +2812,7 @@ void ImFontAtlasTextureBlockConvert(const unsigned char* src_pixels, ImTextureFo
     IM_ASSERT(src_pixels != NULL && dst_pixels != NULL);
     if (src_fmt == dst_fmt)
     {
-        int line_sz = w * GetTextureFormatBytesPerPixel(src_fmt);
+        int line_sz = w * ImTextureDataGetFormatBytesPerPixel(src_fmt);
         for (int ny = h; ny > 0; ny--, src_pixels += src_pitch, dst_pixels += dst_pitch)
             memcpy(dst_pixels, src_pixels, line_sz);
     }

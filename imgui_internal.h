@@ -3910,7 +3910,7 @@ namespace ImGui
     IMGUI_API void          DebugNodeDrawCmdShowMeshAndBoundingBox(ImDrawList* out_draw_list, const ImDrawList* draw_list, const ImDrawCmd* draw_cmd, bool show_mesh, bool show_aabb);
     IMGUI_API void          DebugNodeFont(ImFont* font);
     IMGUI_API void          DebugNodeFontGlyph(ImFont* font, const ImFontGlyph* glyph);
-    IMGUI_API void          DebugNodeTexture(ImTextureData* tex);
+    IMGUI_API void          DebugNodeTexture(ImTextureData* tex, int int_id); // ID used to facilitate persisting the "current" texture.
     IMGUI_API void          DebugNodeStorage(ImGuiStorage* storage, const char* label);
     IMGUI_API void          DebugNodeTabBar(ImGuiTabBar* tab_bar, const char* label);
     IMGUI_API void          DebugNodeTable(ImGuiTable* table);
@@ -4094,6 +4094,9 @@ IMGUI_API void              ImFontAtlasTextureBlockPostProcessMultiply(ImFontAtl
 IMGUI_API void              ImFontAtlasTextureBlockFill(ImTextureData* dst_tex, int dst_x, int dst_y, int w, int h, ImU32 col);
 IMGUI_API void              ImFontAtlasTextureBlockCopy(ImTextureData* src_tex, int src_x, int src_y, ImTextureData* dst_tex, int dst_x, int dst_y, int w, int h);
 IMGUI_API void              ImFontAtlasTextureBlockQueueUpload(ImFontAtlas* atlas, ImTextureData* tex, int x, int y, int w, int h);
+
+IMGUI_API int               ImTextureDataGetFormatBytesPerPixel(ImTextureFormat format);
+IMGUI_API const char*       ImTextureDataGetFormatName(ImTextureFormat format);
 
 #ifndef IMGUI_DISABLE_DEBUG_TOOLS
 IMGUI_API void              ImFontAtlasDebugLogTextureRequests(ImFontAtlas* atlas);
