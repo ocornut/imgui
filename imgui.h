@@ -3480,6 +3480,7 @@ struct IMGUI_API ImTextureData
     ImTextureRect       UpdateRect;             // Bounding box encompassing all individual updates.
     ImVector<ImTextureRect> Updates;            // Array of individual updates.
     int                 UnusedFrames;           // In order to facilitate handling Status==WantDestroy in some backend: this is a count successive frames where the texture was not used.
+    unsigned short      RefCount;               // Number of contexts using this texture.
     bool                UseColors;              // Tell whether our texture data is known to use colors (rather than just white + alpha).
     bool                WantDestroyNextFrame;   // [Internal] Queued to set ImTextureStatus_WantDestroy next frame. May still be used in the current frame.
 
@@ -3689,13 +3690,12 @@ struct ImFontAtlas
 
     // Input
     ImFontAtlasFlags            Flags;              // Build flags (see ImFontAtlasFlags_)
-    ImTextureRef                TexRef;             // User data to refer to the latest texture once it has been uploaded to user's graphic systems. It is passed back to you during rendering via the ImDrawCmd structure.
-    int                         TexDesiredWidth;    // Texture width desired by user before Build(). Must be a power-of-two. If have many glyphs your graphics API have texture size restrictions you may want to increase texture width to decrease height.
     ImTextureFormat             TexDesiredFormat;   // Desired texture format (default to ImTextureFormat_RGBA32 but may be changed to ImTextureFormat_Alpha8).
     int                         TexGlyphPadding;    // FIXME: Should be called "TexPackPadding". Padding between glyphs within texture in pixels. Defaults to 1. If your rendering method doesn't rely on bilinear filtering you may set this to 0 (will also need to set AntiAliasedLinesUseTex = false).
     void*                       UserData;           // Store your own atlas related user-data (if e.g. you have multiple font atlas).
 
     // [Internal]
+    ImTextureRef                TexRef;             // User data to refer to the latest texture once it has been uploaded to user's graphic systems. It is passed back to you during rendering via the ImDrawCmd structure.
     ImTextureData*              TexData;            // Current texture
     ImVector<ImTextureData*>    TexList;            // Texture list (most often TexList.Size == 1). TexData is always == TexList.back(). DO NOT USE DIRECTLY, USE GetPlatformIO().Textures[] instead!
     bool                        Locked;             // Marked as Locked by ImGui::NewFrame() so attempt to modify the atlas will assert.
@@ -3716,6 +3716,7 @@ struct ImFontAtlas
     const char*                 FontLoaderName;     // Font loader name (for display e.g. in About box) == FontLoader->Name
     void*                       FontLoaderData;     // Font backend opaque storage
     unsigned int                FontBuilderFlags;   // [FIXME: Should be called FontLoaderFlags] Shared flags (for all fonts) for font loader. THIS IS BUILD IMPLEMENTATION DEPENDENT (e.g. . Per-font override is also available in ImFontConfig.
+    int                         RefCount;           // Number of contexts using this atlas
     int                         _PackedSurface;     // Number of packed pixels. Used when compacting to heuristically find the ideal texture size.
     int                         _PackedRects;       // Number of packed rectangles.
     float                       _PackNodesFactor = 1.0f;
