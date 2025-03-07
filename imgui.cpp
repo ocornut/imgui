@@ -19911,8 +19911,6 @@ ImGuiID ImGui::DockBuilderSplitNode(ImGuiID id, ImGuiDir split_dir, float size_r
         return 0;
     }
 
-    IM_ASSERT(!node->IsSplitNode()); // Assert if already Split
-
     ImGuiDockRequest req;
     req.Type = ImGuiDockRequestType_Split;
     req.DockTargetWindow = NULL;
