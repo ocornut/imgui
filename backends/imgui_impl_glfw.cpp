@@ -112,12 +112,21 @@
 #define GLFW_EXPOSE_NATIVE_WIN32
 #endif
 #include <GLFW/glfw3native.h>   // for glfwGetWin32Window()
-#endif
-#ifdef __APPLE__
+#elif defined(__APPLE__)
 #ifndef GLFW_EXPOSE_NATIVE_COCOA
 #define GLFW_EXPOSE_NATIVE_COCOA
 #endif
 #include <GLFW/glfw3native.h>   // for glfwGetCocoaWindow()
+#elif !defined(__EMSCRIPTEN__)
+// Freedesktop(Linux, BSD, etc)
+#ifndef GLFW_EXPOSE_NATIVE_X11
+#define GLFW_EXPOSE_NATIVE_X11
+#include <X11/Xatom.h>
+#endif
+#ifndef GLFW_EXPOSE_NATIVE_WAYLAND
+#define GLFW_EXPOSE_NATIVE_WAYLAND
+#endif
+#include <GLFW/glfw3native.h>   // For getting the X11/Wayland window
 #endif
 #ifndef _WIN32
 #include <unistd.h>             // for usleep()
@@ -1114,6 +1123,60 @@ static void ImGui_ImplGlfw_WindowSizeCallback(GLFWwindow* window, int, int)
     }
 }
 
+#if !defined(__APPLE__) && !defined(_WIN32) && !defined(__EMSCRIPTEN__) && (GLFW_VERSION_MAJOR > 3 || (GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 4)) 
+static void ImGui_ImplGlfw_SetWindowIDFreedesktop(GLFWwindow* root)
+{
+    // Should resolve issues where applications that utilise the viewports that have not set a WM_CLASS/WM_INSTANCE/xdg_toplevel
+    // application ID are shown incorrectly in desktop menus on freedesktop systems.
+    //
+    // CAUTION: Only really supports X11 right now!
+    //
+    // Gets the WM_CLASS and WM_INSTANCE properties from the root application X11 window and sets them for every viewport window.
+    //
+    // The major issue with this implementation is that as of now it's X11-specific. Scroll to the next comment to learn
+    // more about this.
+#ifdef GLFW_EXPOSE_NATIVE_X11
+    if (glfwGetPlatform() == GLFW_PLATFORM_X11)
+    {
+        const auto display = glfwGetX11Display();
+        const auto window = glfwGetX11Window(root);
+
+        const Atom wmClassAtom = XInternAtom(display, "WM_CLASS", False);
+        Atom actualAtom;
+        int format;
+        unsigned long n, bytesAfter;
+        unsigned char* prop = NULL;
+
+        if (XGetWindowProperty(display, window, wmClassAtom, 0, 1024, False, XA_STRING, &actualAtom, &format, &n, &bytesAfter, &prop) == Success && prop)
+        {
+            // These 2 strings are packed into 1 string with 2 null terminators. Weird, I know
+            const char* instance = (char*)prop;
+            const char* className = instance + strlen(instance) + 1;
+            
+            glfwWindowHintString(GLFW_X11_CLASS_NAME, className);
+            glfwWindowHintString(GLFW_X11_INSTANCE_NAME, instance);
+
+            XFree(prop);
+        }
+    }
+#endif
+
+#ifdef GLFW_EXPOSE_NATIVE_WAYLAND
+    // TODO: HELP NEEDED! NOT IMPLEMENTED! Periodically check if the statements below are true
+    // Explanation: GLFW always sets some type of WM_CLASS or WM_INSTANCE on X11, however on Wayland it seems that it
+    // does not set any value, unless we tell it to. Given that child windows inherit window hints of parent windows,
+    // this means that parents and any subsequent windows have the same app ID of "". This means that they(should) be
+    // grouped correctly, however applications which do not set the app ID manually for their root window will not be
+    // able to take advantage of features of their desktop that require app IDs, including users being able to
+    // configure their behaviour in the window manager settings!
+    //
+    // And why is this not implemented? It might be impossible in the scope of dear imgui, or at least I do not know
+    // how to implement it. From what I found, the current xdg_toplevel interface does not support a way to get the app
+    // ID of a window in a non-compositor-specific manner
+#endif
+}
+#endif
+
 static void ImGui_ImplGlfw_CreateWindow(ImGuiViewport* viewport)
 {
     ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
@@ -1137,6 +1200,9 @@ static void ImGui_ImplGlfw_CreateWindow(ImGuiViewport* viewport)
     glfwWindowHint(GLFW_FLOATING, (viewport->Flags & ImGuiViewportFlags_TopMost) ? true : false);
 #endif
     GLFWwindow* share_window = (bd->ClientApi == GlfwClientApi_OpenGL) ? bd->Window : nullptr;
+#if !defined(__APPLE__) && !defined(_WIN32) && !defined(__EMSCRIPTEN__) && (GLFW_VERSION_MAJOR > 3 || (GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 4))
+    ImGui_ImplGlfw_SetWindowIDFreedesktop(bd->Window);
+#endif
     vd->Window = glfwCreateWindow((int)viewport->Size.x, (int)viewport->Size.y, "No Title Yet", nullptr, share_window);
     vd->WindowOwned = true;
     viewport->PlatformHandle = (void*)vd->Window;
