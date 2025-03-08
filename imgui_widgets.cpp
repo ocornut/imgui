@@ -8898,7 +8898,7 @@ bool ImGui::BeginMenuEx(const char* label, const char* icon, bool enabled)
     const ImGuiSelectableFlags selectable_flags = ImGuiSelectableFlags_NoHoldingActiveID | ImGuiSelectableFlags_NoSetKeyOwner | ImGuiSelectableFlags_SelectOnClick | ImGuiSelectableFlags_NoAutoClosePopups;
     if (window->DC.LayoutType == ImGuiLayoutType_Horizontal)
     {
-        // Menu inside an horizontal menu bar
+        // Menu inside a horizontal menu bar
         // Selectable extend their highlight by half ItemSpacing in each direction.
         // For ChildMenu, the popup position will be overwritten by the call to FindBestWindowPosForPopup() in Begin()
         popup_pos = ImVec2(pos.x - 1.0f - IM_TRUNC(style.ItemSpacing.x * 0.5f), pos.y - style.FramePadding.y + window->MenuBarHeight);

@@ -544,7 +544,7 @@ namespace ImGui
     IMGUI_API void          LabelTextV(const char* label, const char* fmt, va_list args)    IM_FMTLIST(2);
     IMGUI_API void          BulletText(const char* fmt, ...)                                IM_FMTARGS(1); // shortcut for Bullet()+Text()
     IMGUI_API void          BulletTextV(const char* fmt, va_list args)                      IM_FMTLIST(1);
-    IMGUI_API void          SeparatorText(const char* label);                               // currently: formatted text with an horizontal line
+    IMGUI_API void          SeparatorText(const char* label);                               // currently: formatted text with a horizontal line
 
     // Widgets: Main
     // - Most widgets return true when the value has been changed or when pressed/selected

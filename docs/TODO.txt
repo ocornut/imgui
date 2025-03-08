@@ -279,7 +279,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - nav: expose wrap around flags/logic to allow e.g. grid based layout (pressing NavRight on the right-most element would go to the next row, etc.). see internal's NavMoveRequestTryWrapping().
  - nav: patterns to make it possible for arrows key to update selection (see JustMovedTo in range_select branch)
  - nav: restore/find nearest NavId when current one disappear (e.g. pressed a button that disappear, or perhaps auto restoring when current button change name)
- - nav: SetItemDefaultFocus() level of priority, so widget like Selectable when inside a popup could claim a low-priority default focus on the first selected iem
+ - nav: SetItemDefaultFocus() level of priority, so widgets like Selectable when inside a popup could claim a low-priority default focus on the first selected item
  - nav: holding space to repeat a button doesn't show button activated during hold.
  - nav: NavFlattened: init requests don't work properly on flattened siblings.
  - nav: NavFlattened: pageup/pagedown/home/end don't work properly on flattened siblings.
@@ -329,7 +329,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - backends: opengl: explicitly disable GL_STENCIL_TEST in bindings.
  - backends: vulkan: viewport: support for synchronized swapping of multiple swap chains.
  - backends: bgfx: https://gist.github.com/RichardGale/6e2b74bc42b3005e08397236e4be0fd0
- - backends: emscriptem: with refactored examples, we could provide a direct imgui_impl_emscripten platform layer (see eg. https://github.com/floooh/sokol-samples/blob/master/html5/imgui-emsc.cc#L42)
+ - backends: emscripten: with refactored examples, we could provide a direct imgui_impl_emscripten platform layer (see eg. https://github.com/floooh/sokol-samples/blob/master/html5/imgui-emsc.cc#L42)
 
  - bindings: ways to use clang ast dump to generate bindings or helpers for bindings? (e.g. clang++ -Xclang -ast-dump=json imgui.h) (--> use https://github.com/dearimgui/dear_bindings)
 

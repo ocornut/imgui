@@ -39,7 +39,7 @@
 //  2024-07-02: Update for io.SetPlatformImeDataFn() -> io.PlatformSetImeDataFn() renaming in main library.
 //  2023-10-05: Inputs: Added support for extra ImGuiKey values: F13 to F20 function keys. Stopped mapping F13 into PrintScreen.
 //  2023-04-09: Inputs: Added support for io.AddMouseSourceEvent() to discriminate ImGuiMouseSource_Mouse/ImGuiMouseSource_Pen.
-//  2023-02-01: Fixed scroll wheel scaling for devices emitting events with hasPreciseScrollingDeltas==false (e.g. non-Apple mices).
+//  2023-02-01: Fixed scroll wheel scaling for devices emitting events with hasPreciseScrollingDeltas==false (e.g. non-Apple mice).
 //  2022-11-02: Fixed mouse coordinates before clicking the host window.
 //  2022-10-06: Fixed mouse inputs on flipped views.
 //  2022-09-26: Inputs: Renamed ImGuiKey_ModXXX introduced in 1.87 to ImGuiMod_XXX (old names still supported).
