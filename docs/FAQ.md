@@ -562,7 +562,8 @@ Please note that if you are not using multi-viewports with multi-monitors using 
 
 On Windows, in addition to scaling the font size (make sure to round to an integer) and using `style.ScaleAllSizes()`, you will need to inform Windows that your application is DPI aware. If this is not done, Windows will scale the application window and the UI text will be blurry. Potential solutions to indicate DPI awareness on Windows are:
 
-- For SDL: the flag `SDL_WINDOW_ALLOW_HIGHDPI` needs to be passed to `SDL_CreateWindow()``.
+- For SDL2: the flag `SDL_WINDOW_ALLOW_HIGHDPI` needs to be passed to `SDL_CreateWindow()`.
+- For SDL3: the flag `SDL_WINDOW_HIGH_PIXEL_DENSITY` needs to be passed to `SDL_CreateWindow()`.
 - For GLFW: this is done automatically.
 - For other Windows projects with other backends, or wrapper projects:
   - We provide a `ImGui_ImplWin32_EnableDpiAwareness()` helper method in the Win32 backend.
