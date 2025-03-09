@@ -4460,6 +4460,8 @@ static bool ImGui_ImplStbTrueType_FontSrcInit(ImFontAtlas* atlas, ImFontConfig* 
         bd_font_data->ScaleFactor = stbtt_ScaleForPixelHeight(&bd_font_data->FontInfo, 1.0f);
     else
         bd_font_data->ScaleFactor = -stbtt_ScaleForMappingEmToPixels(&bd_font_data->FontInfo, 1.0f);
+    if (src > src->DstFont->Sources)
+        bd_font_data->ScaleFactor *= src->SizePixels / src->DstFont->Sources[0].SizePixels; // FIXME-NEWATLAS: Should tidy up that a bit
 
     return true;
 }

@@ -432,7 +432,7 @@ void ImGui_ImplFreeType_FontSrcDestroy(ImFontAtlas* atlas, ImFontConfig* src)
 bool ImGui_ImplFreeType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void* loader_data_for_baked_src)
 {
     IM_UNUSED(atlas);
-    const float size = baked->Size;
+    const float size = baked->Size * (src->SizePixels / baked->ContainerFont->Sources[0].SizePixels); // FIXME-NEWATLAS: Should tidy up that a bit
 
     ImGui_ImplFreeType_FontSrcData* bd_font_data = (ImGui_ImplFreeType_FontSrcData*)src->FontLoaderData;
     bd_font_data->BakedLastActivated = baked;
