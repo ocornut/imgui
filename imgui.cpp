@@ -8772,7 +8772,7 @@ ImGuiKeyData* ImGui::GetKeyData(ImGuiContext* ctx, ImGuiKey key)
     return &g.IO.KeysData[key - ImGuiKey_NamedKey_BEGIN];
 }
 
-// Those names a provided for debugging purpose and are not meant to be saved persistently not compared.
+// Those names are provided for debugging purpose and are not meant to be saved persistently nor compared.
 static const char* const GKeyNames[] =
 {
     "Tab", "LeftArrow", "RightArrow", "UpArrow", "DownArrow", "PageUp", "PageDown",
@@ -8787,7 +8787,7 @@ static const char* const GKeyNames[] =
     "Pause", "Keypad0", "Keypad1", "Keypad2", "Keypad3", "Keypad4", "Keypad5", "Keypad6",
     "Keypad7", "Keypad8", "Keypad9", "KeypadDecimal", "KeypadDivide", "KeypadMultiply",
     "KeypadSubtract", "KeypadAdd", "KeypadEnter", "KeypadEqual",
-    "AppBack", "AppForward",
+    "AppBack", "AppForward", "Oem102",
     "GamepadStart", "GamepadBack",
     "GamepadFaceLeft", "GamepadFaceRight", "GamepadFaceUp", "GamepadFaceDown",
     "GamepadDpadLeft", "GamepadDpadRight", "GamepadDpadUp", "GamepadDpadDown",

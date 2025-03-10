@@ -21,6 +21,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2025-03-10: When dealing with OEM keys, use scancodes instead of translated keycodes to choose ImGuiKey values. (#7136, #7201, #7206, #7306, #7670, #7672, #8468)
 //  2025-02-26: Only start SDL_CaptureMouse() when mouse is being dragged, to mitigate issues with e.g.Linux debuggers not claiming capture back. (#6410, #3650)
 //  2025-02-24: Avoid calling SDL_GetGlobalMouseState() when mouse is in relative mode.
 //  2025-02-18: Added ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress mouse cursor support.
@@ -209,17 +210,17 @@ ImGuiKey ImGui_ImplSDL2_KeyEventToImGuiKey(SDL_Keycode keycode, SDL_Scancode sca
         case SDLK_SPACE: return ImGuiKey_Space;
         case SDLK_RETURN: return ImGuiKey_Enter;
         case SDLK_ESCAPE: return ImGuiKey_Escape;
-        case SDLK_QUOTE: return ImGuiKey_Apostrophe;
+        //case SDLK_QUOTE: return ImGuiKey_Apostrophe;
         case SDLK_COMMA: return ImGuiKey_Comma;
-        case SDLK_MINUS: return ImGuiKey_Minus;
+        //case SDLK_MINUS: return ImGuiKey_Minus;
         case SDLK_PERIOD: return ImGuiKey_Period;
-        case SDLK_SLASH: return ImGuiKey_Slash;
+        //case SDLK_SLASH: return ImGuiKey_Slash;
         case SDLK_SEMICOLON: return ImGuiKey_Semicolon;
-        case SDLK_EQUALS: return ImGuiKey_Equal;
-        case SDLK_LEFTBRACKET: return ImGuiKey_LeftBracket;
-        case SDLK_BACKSLASH: return ImGuiKey_Backslash;
-        case SDLK_RIGHTBRACKET: return ImGuiKey_RightBracket;
-        case SDLK_BACKQUOTE: return ImGuiKey_GraveAccent;
+        //case SDLK_EQUALS: return ImGuiKey_Equal;
+        //case SDLK_LEFTBRACKET: return ImGuiKey_LeftBracket;
+        //case SDLK_BACKSLASH: return ImGuiKey_Backslash;
+        //case SDLK_RIGHTBRACKET: return ImGuiKey_RightBracket;
+        //case SDLK_BACKQUOTE: return ImGuiKey_GraveAccent;
         case SDLK_CAPSLOCK: return ImGuiKey_CapsLock;
         case SDLK_SCROLLLOCK: return ImGuiKey_ScrollLock;
         case SDLK_NUMLOCKCLEAR: return ImGuiKey_NumLock;
@@ -314,6 +315,23 @@ ImGuiKey ImGui_ImplSDL2_KeyEventToImGuiKey(SDL_Keycode keycode, SDL_Scancode sca
         case SDLK_AC_BACK: return ImGuiKey_AppBack;
         case SDLK_AC_FORWARD: return ImGuiKey_AppForward;
         default: break;
+    }
+
+    // Fallback to scancode
+    switch (scancode)
+    {
+    case SDL_SCANCODE_GRAVE: return ImGuiKey_GraveAccent;
+    case SDL_SCANCODE_MINUS: return ImGuiKey_Minus;
+    case SDL_SCANCODE_EQUALS: return ImGuiKey_Equal;
+    case SDL_SCANCODE_LEFTBRACKET: return ImGuiKey_LeftBracket;
+    case SDL_SCANCODE_RIGHTBRACKET: return ImGuiKey_RightBracket;
+    case SDL_SCANCODE_NONUSBACKSLASH: return ImGuiKey_Oem102;
+    case SDL_SCANCODE_BACKSLASH: return ImGuiKey_Backslash;
+    case SDL_SCANCODE_SEMICOLON: return ImGuiKey_Semicolon;
+    case SDL_SCANCODE_APOSTROPHE: return ImGuiKey_Apostrophe;
+    case SDL_SCANCODE_COMMA: return ImGuiKey_Comma;
+    case SDL_SCANCODE_PERIOD: return ImGuiKey_Period;
+    case SDL_SCANCODE_SLASH: return ImGuiKey_Slash;
     }
     return ImGuiKey_None;
 }

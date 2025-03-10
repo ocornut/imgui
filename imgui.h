@@ -29,7 +29,7 @@
 // Library Version
 // (Integer encoded as XYYZZ for use in #if preprocessor conditionals, e.g. '#if IMGUI_VERSION_NUM >= 12345')
 #define IMGUI_VERSION       "1.91.9 WIP"
-#define IMGUI_VERSION_NUM   19187
+#define IMGUI_VERSION_NUM   19188
 #define IMGUI_HAS_TABLE
 
 /*
@@ -975,7 +975,7 @@ namespace ImGui
     IMGUI_API bool          IsKeyReleased(ImGuiKey key);                                        // was key released (went from Down to !Down)?
     IMGUI_API bool          IsKeyChordPressed(ImGuiKeyChord key_chord);                         // was key chord (mods + key) pressed, e.g. you can pass 'ImGuiMod_Ctrl | ImGuiKey_S' as a key-chord. This doesn't do any routing or focus check, please consider using Shortcut() function instead.
     IMGUI_API int           GetKeyPressedAmount(ImGuiKey key, float repeat_delay, float rate);  // uses provided repeat rate/delay. return a count, most often 0 or 1 but might be >1 if RepeatRate is small enough that DeltaTime > RepeatRate
-    IMGUI_API const char*   GetKeyName(ImGuiKey key);                                           // [DEBUG] returns English name of the key. Those names a provided for debugging purpose and are not meant to be saved persistently not compared.
+    IMGUI_API const char*   GetKeyName(ImGuiKey key);                                           // [DEBUG] returns English name of the key. Those names are provided for debugging purpose and are not meant to be saved persistently nor compared.
     IMGUI_API void          SetNextFrameWantCaptureKeyboard(bool want_capture_keyboard);        // Override io.WantCaptureKeyboard flag next frame (said flag is left for your application to handle, typically when true it instructs your app to ignore inputs). e.g. force capture keyboard when your widget is being hovered. This is equivalent to setting "io.WantCaptureKeyboard = want_capture_keyboard"; after the next NewFrame() call.
 
     // Inputs Utilities: Shortcut Testing & Routing [BETA]
@@ -1493,6 +1493,7 @@ enum ImGuiKey : int
     ImGuiKey_KeypadEqual,
     ImGuiKey_AppBack,               // Available on some keyboard/mouses. Often referred as "Browser Back"
     ImGuiKey_AppForward,
+    ImGuiKey_Oem102,                // Non-US backslash.
 
     // Gamepad (some of those are analog values, 0.0f to 1.0f)                          // NAVIGATION ACTION
     // (download controller mapping PNG/PSD at http://dearimgui.com/controls_sheets)

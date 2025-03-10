@@ -21,6 +21,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2025-03-10: When dealing with OEM keys, use scancodes instead of translated keycodes to choose ImGuiKey values. (#7136, #7201, #7206, #7306, #7670, #7672, #8468)
 //  2025-02-18: Added ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress mouse cursor support.
 //  2024-07-08: Inputs: Fixed ImGuiMod_Super being mapped to VK_APPS instead of VK_LWIN||VK_RWIN. (#7768)
 //  2023-10-05: Inputs: Added support for extra ImGuiKey values: F13 to F24 function keys, app back/forward keys.
@@ -431,6 +432,8 @@ ImGuiKey ImGui_ImplWin32_KeyEventToImGuiKey(WPARAM wParam, LPARAM lParam)
     if ((wParam == VK_RETURN) && (HIWORD(lParam) & KF_EXTENDED))
         return ImGuiKey_KeypadEnter;
 
+    const int scancode = (int)LOBYTE(HIWORD(lParam));
+    //IMGUI_DEBUG_LOG("scancode %3d, keycode = 0x%02X\n", scancode, wParam);
     switch (wParam)
     {
         case VK_TAB: return ImGuiKey_Tab;
@@ -448,17 +451,17 @@ ImGuiKey ImGui_ImplWin32_KeyEventToImGuiKey(WPARAM wParam, LPARAM lParam)
         case VK_SPACE: return ImGuiKey_Space;
         case VK_RETURN: return ImGuiKey_Enter;
         case VK_ESCAPE: return ImGuiKey_Escape;
-        case VK_OEM_7: return ImGuiKey_Apostrophe;
+        //case VK_OEM_7: return ImGuiKey_Apostrophe;
         case VK_OEM_COMMA: return ImGuiKey_Comma;
-        case VK_OEM_MINUS: return ImGuiKey_Minus;
+        //case VK_OEM_MINUS: return ImGuiKey_Minus;
         case VK_OEM_PERIOD: return ImGuiKey_Period;
-        case VK_OEM_2: return ImGuiKey_Slash;
-        case VK_OEM_1: return ImGuiKey_Semicolon;
-        case VK_OEM_PLUS: return ImGuiKey_Equal;
-        case VK_OEM_4: return ImGuiKey_LeftBracket;
-        case VK_OEM_5: return ImGuiKey_Backslash;
-        case VK_OEM_6: return ImGuiKey_RightBracket;
-        case VK_OEM_3: return ImGuiKey_GraveAccent;
+        //case VK_OEM_2: return ImGuiKey_Slash;
+        //case VK_OEM_1: return ImGuiKey_Semicolon;
+        //case VK_OEM_PLUS: return ImGuiKey_Equal;
+        //case VK_OEM_4: return ImGuiKey_LeftBracket;
+        //case VK_OEM_5: return ImGuiKey_Backslash;
+        //case VK_OEM_6: return ImGuiKey_RightBracket;
+        //case VK_OEM_3: return ImGuiKey_GraveAccent;
         case VK_CAPITAL: return ImGuiKey_CapsLock;
         case VK_SCROLL: return ImGuiKey_ScrollLock;
         case VK_NUMLOCK: return ImGuiKey_NumLock;
@@ -550,8 +553,28 @@ ImGuiKey ImGui_ImplWin32_KeyEventToImGuiKey(WPARAM wParam, LPARAM lParam)
         case VK_F24: return ImGuiKey_F24;
         case VK_BROWSER_BACK: return ImGuiKey_AppBack;
         case VK_BROWSER_FORWARD: return ImGuiKey_AppForward;
-        default: return ImGuiKey_None;
+        default: break;
     }
+
+    // Fallback to scancode
+    // https://handmade.network/forums/t/2011-keyboard_inputs_-_scancodes,_raw_input,_text_input,_key_names
+    switch (scancode)
+    {
+    case 41: return ImGuiKey_GraveAccent;  // VK_OEM_8 in EN-UK, VK_OEM_3 in EN-US, VK_OEM_7 in FR, VK_OEM_5 in DE, etc.
+    case 12: return ImGuiKey_Minus;
+    case 13: return ImGuiKey_Equal;
+    case 26: return ImGuiKey_LeftBracket;
+    case 27: return ImGuiKey_RightBracket;
+    case 86: return ImGuiKey_Oem102;
+    case 43: return ImGuiKey_Backslash;
+    case 39: return ImGuiKey_Semicolon;
+    case 40: return ImGuiKey_Apostrophe;
+    case 51: return ImGuiKey_Comma;
+    case 52: return ImGuiKey_Period;
+    case 53: return ImGuiKey_Slash;
+    }
+
+    return ImGuiKey_None;
 }
 
 // Allow compilation with old Windows SDK. MinGW doesn't have default _WIN32_WINNT/WINVER versions.

@@ -28,6 +28,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2025-03-10: Map GLFW_KEY_WORLD_1 and GLFW_KEY_WORLD_2 into ImGuiKey_Oem102.
 //  2025-03-03: Fixed clipboard handler assertion when using GLFW <= 3.2.1 compiled with asserts enabled.
 //  2024-08-22: Moved some OS/backend related function pointers from ImGuiIO to ImGuiPlatformIO:
 //               - io.GetClipboardTextFn    -> platform_io.Platform_GetClipboardTextFn
@@ -221,6 +222,8 @@ ImGuiKey ImGui_ImplGlfw_KeyToImGuiKey(int keycode, int scancode)
         case GLFW_KEY_EQUAL: return ImGuiKey_Equal;
         case GLFW_KEY_LEFT_BRACKET: return ImGuiKey_LeftBracket;
         case GLFW_KEY_BACKSLASH: return ImGuiKey_Backslash;
+        case GLFW_KEY_WORLD_1: return ImGuiKey_Oem102;
+        case GLFW_KEY_WORLD_2: return ImGuiKey_Oem102;
         case GLFW_KEY_RIGHT_BRACKET: return ImGuiKey_RightBracket;
         case GLFW_KEY_GRAVE_ACCENT: return ImGuiKey_GraveAccent;
         case GLFW_KEY_CAPS_LOCK: return ImGuiKey_CapsLock;
