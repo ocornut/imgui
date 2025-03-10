@@ -2782,9 +2782,9 @@ void ImFontAtlasUpdateNewFrame(ImFontAtlas* atlas, int frame_count)
         else if (tex->WantDestroyNextFrame && tex->Status != ImTextureStatus_WantDestroy)
         {
             // Request destroy. Keep bool as it allows us to keep track of things.
+            // We don't destroy pixels right away, as backend may have an in-flight copy from RAM.
             IM_ASSERT(tex->Status == ImTextureStatus_OK || tex->Status == ImTextureStatus_WantCreate || tex->Status == ImTextureStatus_WantUpdates);
             tex->Status = ImTextureStatus_WantDestroy;
-            tex->DestroyPixels();
         }
         else if (tex->Status == ImTextureStatus_WantDestroy)
         {
@@ -2797,9 +2797,10 @@ void ImFontAtlasUpdateNewFrame(ImFontAtlas* atlas, int frame_count)
         if (tex->Status == ImTextureStatus_WantDestroy && tex->TexID == ImTextureID_Invalid && tex->BackendUserData == NULL)
             remove_from_list = true;
 
-        // Remove
+        // Destroy and remove
         if (remove_from_list)
         {
+            tex->DestroyPixels();
             IM_DELETE(tex);
             atlas->TexList.erase(atlas->TexList.begin() + tex_n);
             tex_n--;
