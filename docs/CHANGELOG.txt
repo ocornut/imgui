@@ -123,16 +123,18 @@ Other changes:
   SDL_MAIN_USE_CALLBACKS feature. (#8455)
 - IO: Added ImGuiKey_Oem102 to ImGuiKey enum. (#7136, #7201, #7206, #7306, #8468)
 - Backends: reworked key handlers to use/prioritize untranslated scancodes instead of
-  translated keycodes when dealing with OEM keys. (#7136, #7201, #7206, #7306, #7670, #7672, #8468)
-  Not that only ImGuiKey value (NOT the characters used for text input) are affected.
+  translated keycodes when dealing with OEM keys which are too difficult to find a reliable
+  translated mapping on all systems, backends and keyboard layout.
+  (#7136, #7201, #7206, #7306, #7670, #7672, #8468)
+  - The affected keys are: ImGuiKey_Apostrophe, ImGuiKey_Comma, ImGuiKey_Minus, ImGuiKey_Period,
+    ImGuiKey_Slash, ImGuiKey_Semicolon, ImGuiKey_Equal, ImGuiKey_LeftBracket, ImGuiKey_RightBracket,
+    ImGuiKey_Backslash, ImGuiKey_GraveAccent, and newly introduced ImGuiKey_Oem102.
+  - This is NOT affecting characters used the text inputs.
+  - Fixes many cases of keys not emitting a ImGuiKey value with certain keyboad layouts.
+  - Makes emitted ImGuiKey values more consistent regardless of keyboard mapping,
+    but you may be getting different values as before.
   - Win32, SDL2, SDL3: Use scancodes for OEM keys.
   - GLFW: GLFW_KEY_WORLD_1 and GLFW_KEY_WORLD_2 are emitting ImGuiKey_Oem102.
-  - Fixes many cases of keys not emitting a ImGuiKey value with certain keyboad layouts.
-  - Makes emitted ImGuiKey values more consistent regardless of keyboard mapping.
-  - OEM keys are: ImGuiKey_Apostrophe, ImGuiKey_Comma, ImGuiKey_Minus, ImGuiKey_Period,
-    ImGuiKey_Slash, ImGuiKey_Semicolon, ImGuiKey_Equal, ImGuiKey_LeftBracket,
-    ImGuiKey_RightBracket, ImGuiKey_Backslash, ImGuiKey_GraveAccent, which are difficult
-    to find a reliable translated mapping on all keyboard layouts.
 - Backends: GLFW: Fixed clipboard handler assertion when using GLFW <= 3.2.1 compiled
   with asserts enabled. (#8452)
 - Backends: SDL2, SDL3: Using SDL_OpenURL() in platform_io.Platform_OpenInShellFn
@@ -2061,7 +2063,7 @@ Other changes:
    - Public API: PushTabStop(false) / PopTabStop()
    - Internal: PushItemFlag(ImGuiItemFlags_NoTabStop, true);
    - Internal: Directly pass ImGuiItemFlags_NoTabStop to ItemAdd() for custom widgets.
-- Nav: Tabbing/Shift-Tabbing can more reliably be used to step out of an item that is not
+- Nav: Tabbing/Shift+Tabbing can more reliably be used to step out of an item that is not
   tab-stoppable. (#3092, #5759, #787)
 - Nav: Made Enter key submit the same type of Activation event as Space key,
   allowing to press buttons with Enter. (#5606)
