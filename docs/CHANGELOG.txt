@@ -166,6 +166,9 @@ Docking+Viewports Branch:
 
 - Docking: Removed legacy assert preventing to call DockBuilderSplitNode() on an existing
   split node. This makes using DockBuilder a little more flexible and bearable! (#8472) [@MegaMech]
+- Viewports: fixed an issue where in certain cases, a window repositioning leading 
+  to a monitor change could have the window incorrectly get clamped within the boundaries 
+  of its previous monitor. Would happen e.g. when loading .ini data during runtime. (#8484) 
 - Viewports: fixed an assert when a window load settings with a position outside
   monitor bounds, when there are multiple monitors. (#8393, #8385) [@gaborodriguez]
 - Viewports + Backends: Win32: Fixed setting title bar text when application
