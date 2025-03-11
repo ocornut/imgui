@@ -3808,7 +3808,7 @@ struct ImFont
     IMGUI_API ImFontBaked*      GetFontBaked(float font_size);  // Get or create baked data for given size
     IMGUI_API bool              IsGlyphInFont(ImWchar c);
     bool                        IsLoaded() const                { return ContainerAtlas != NULL; }
-    const char*                 GetDebugName() const            { return Sources ? Sources->Name : "<unknown>"; }
+    const char*                 GetDebugName() const            { return Sources ? Sources[0].Name : "<unknown>"; }
 
     // [Internal] Don't use!
     // 'max_width' stops rendering after a certain width (could be turned into a 2d size). FLT_MAX to disable.
@@ -3817,7 +3817,6 @@ struct ImFont
     IMGUI_API const char*       CalcWordWrapPosition(float size, const char* text, const char* text_end, float wrap_width);
     IMGUI_API void              RenderChar(ImDrawList* draw_list, float size, const ImVec2& pos, ImU32 col, ImWchar c);
     IMGUI_API void              RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width = 0.0f, bool cpu_fine_clip = false);
-
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     inline const char*          CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width) { return CalcWordWrapPosition(Sources[0].SizePixels * scale, text, text_end, wrap_width); }
 #endif
