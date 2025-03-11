@@ -416,7 +416,11 @@ bool ImGui_ImplFreeType_FontSrcInit(ImFontAtlas* atlas, ImFontConfig* src)
     src->FontLoaderData = bd_font_data;
 
     if (!bd_font_data->InitFont(bd->Library, src, atlas->FontBuilderFlags))
+    {
+        IM_DELETE(bd_font_data);
+        src->FontLoaderData = NULL;
         return false;
+    }
 
     return true;
 }
