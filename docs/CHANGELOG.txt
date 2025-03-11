@@ -68,6 +68,10 @@ Breaking changes:
 
 Other changes:
 
+- This is the last release we are thoroughly testing with VS2015 + Windows SDK 8.1. 
+  Example projects have been transitioned to VS2019 + Windows SDK 10. The library
+  as of today still compiles and works fine with VS2015, but onward we may break 
+  support more often.
 - Fixed IsItemDeactivatedAfterEdit() signal being broken for Checkbox(),
   RadioButton(), Selectable(). Regression from 2025/01/13. (#8370)
 - Windows: Fixed an issue where BeginChild() inside a collapsed Begin()
@@ -121,6 +125,8 @@ Other changes:
   by showing the filter inside the combo contents. (#718)
 - Examples: SDL3: Added comments to clarify setup for users of the unfortunate
   SDL_MAIN_USE_CALLBACKS feature. (#8455)
+- Examples: Updated all .vcxproj from VS2015 to VS2019 (toolset v140 to v142),
+  and from Windows SDK 8.1 to Windows SDK 10 ("latest" setting).
 - IO: Added ImGuiKey_Oem102 to ImGuiKey enum. (#7136, #7201, #7206, #7306, #8468)
 - Backends: reworked key handlers to use/prioritize untranslated scancodes instead of
   translated keycodes when dealing with OEM keys which are too difficult to find a reliable
