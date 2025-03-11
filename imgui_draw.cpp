@@ -2639,8 +2639,6 @@ void ImFontAtlas::Clear()
     RendererHasTextures = false; // Full Clear() is supported, but ClearTexData() only isn't.
     ClearFonts();
     ClearTexData();
-    if (Builder != NULL)
-        ImFontAtlasBuildClearTexture(this);
     RendererHasTextures = backup_renderer_has_textures;
 }
 
@@ -3377,8 +3375,6 @@ void ImFontAtlasBuildSetupFontLoader(ImFontAtlas* atlas, const ImFontLoader* fon
 
     atlas->FontLoader = font_loader;
     atlas->FontLoaderName = font_loader ? font_loader->Name : "NULL";
-    if (atlas->FontLoader && atlas->FontLoader->LoaderInit)
-        atlas->FontLoader->LoaderInit(atlas);
 
     ImFontAtlasBuildAddTexture(atlas, new_tex_size.x, new_tex_size.y);
     ImFontAtlasBuildInit(atlas);
@@ -4143,8 +4139,12 @@ void ImFontAtlasBuildInit(ImFontAtlas* atlas)
         return; // ImFontAtlasBuildSetupFontLoader() automatically call ImFontAtlasBuildInit()
     }
 
+    IM_ASSERT(atlas->FontLoaderData == NULL);
+    if (atlas->FontLoader && atlas->FontLoader->LoaderInit)
+        atlas->FontLoader->LoaderInit(atlas);
+
     // Create initial texture size
-    if (atlas->TexData == NULL)
+    if (atlas->TexData == NULL || atlas->TexData->Pixels == NULL)
         ImFontAtlasBuildAddTexture(atlas, ImUpperPowerOfTwo(atlas->TexMinWidth), ImUpperPowerOfTwo(atlas->TexMinHeight));
 
     ImFontAtlasBuilder* builder = atlas->Builder; // Do not move above
