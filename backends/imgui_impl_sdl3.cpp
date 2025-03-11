@@ -313,6 +313,7 @@ ImGuiKey ImGui_ImplSDL3_KeyEventToImGuiKey(SDL_Keycode keycode, SDL_Scancode sca
     case SDL_SCANCODE_COMMA: return ImGuiKey_Comma;
     case SDL_SCANCODE_PERIOD: return ImGuiKey_Period;
     case SDL_SCANCODE_SLASH: return ImGuiKey_Slash;
+    default: break;
     }
     return ImGuiKey_None;
 }
