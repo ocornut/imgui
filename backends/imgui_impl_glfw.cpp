@@ -28,7 +28,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2025-03-10: Map GLFW_KEY_WORLD_1 and GLFW_KEY_WORLD_2 into ImGuiKey_Oem102.
+//  2025-03-11: Added support for ImGuiKey_Oem102, ImGuiKey_AbntC1, ImGuiKey_AbntC2.
 //  2025-03-03: Fixed clipboard handler assertion when using GLFW <= 3.2.1 compiled with asserts enabled.
 //  2024-08-22: Moved some OS/backend related function pointers from ImGuiIO to ImGuiPlatformIO:
 //               - io.GetClipboardTextFn    -> platform_io.Platform_GetClipboardTextFn
@@ -195,7 +195,6 @@ static ImGui_ImplGlfw_Data* ImGui_ImplGlfw_GetBackendData()
 ImGuiKey ImGui_ImplGlfw_KeyToImGuiKey(int keycode, int scancode);
 ImGuiKey ImGui_ImplGlfw_KeyToImGuiKey(int keycode, int scancode)
 {
-    IM_UNUSED(scancode);
     switch (keycode)
     {
         case GLFW_KEY_TAB: return ImGuiKey_Tab;
@@ -317,8 +316,15 @@ ImGuiKey ImGui_ImplGlfw_KeyToImGuiKey(int keycode, int scancode)
         case GLFW_KEY_F22: return ImGuiKey_F22;
         case GLFW_KEY_F23: return ImGuiKey_F23;
         case GLFW_KEY_F24: return ImGuiKey_F24;
-        default: return ImGuiKey_None;
+        default: break;
     }
+    switch (scancode)
+    {
+        case 115: return ImGuiKey_AbntC1;
+        case 126: return ImGuiKey_AbntC2;
+        default: break;
+    }
+    return ImGuiKey_None;
 }
 
 // X11 does not include current pressed/released modifier key in 'mods' flags submitted by GLFW

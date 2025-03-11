@@ -1494,6 +1494,8 @@ enum ImGuiKey : int
     ImGuiKey_AppBack,               // Available on some keyboard/mouses. Often referred as "Browser Back"
     ImGuiKey_AppForward,
     ImGuiKey_Oem102,                // Non-US backslash.
+    ImGuiKey_AbntC1,                // Brazil ABNT extra keys
+    ImGuiKey_AbntC2,
 
     // Gamepad (some of those are analog values, 0.0f to 1.0f)                          // NAVIGATION ACTION
     // (download controller mapping PNG/PSD at http://dearimgui.com/controls_sheets)

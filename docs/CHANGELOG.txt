@@ -128,6 +128,7 @@ Other changes:
 - Examples: Updated all .vcxproj from VS2015 to VS2019 (toolset v140 to v142),
   and from Windows SDK 8.1 to Windows SDK 10 ("latest" setting).
 - IO: Added ImGuiKey_Oem102 to ImGuiKey enum. (#7136, #7201, #7206, #7306, #8468)
+- IO: Added ImGuiKey_AbntC1, ImGuiKey_AbntC2 to ImGuiKey enum. (#8468)
 - Backends: reworked key handlers to use/prioritize untranslated scancodes instead of
   translated keycodes when dealing with OEM keys which are too difficult to find a reliable
   translated mapping on all systems, backends and keyboard layout.
@@ -139,7 +140,8 @@ Other changes:
   - Fixes many cases of keys not emitting a ImGuiKey value with certain keyboad layouts.
   - Makes emitted ImGuiKey values more consistent regardless of keyboard mapping,
     but you may be getting different values as before.
-  - Win32, SDL2, SDL3: Use scancodes for OEM keys.
+  - Win32: Use scancodes for OEM keys. Added support for the 3 new keys.
+  - SDL2, SDL3: Use scancodes for OEM keys. Added support for the Oem102 new key.
   - GLFW: GLFW_KEY_WORLD_1 and GLFW_KEY_WORLD_2 are emitting ImGuiKey_Oem102.
 - Backends: GLFW: Fixed clipboard handler assertion when using GLFW <= 3.2.1 compiled
   with asserts enabled. (#8452)
