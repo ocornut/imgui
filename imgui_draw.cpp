@@ -3034,7 +3034,10 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
         new_font_cfg.GlyphExcludeRanges = (ImWchar*)ImMemdup(font_cfg->GlyphExcludeRanges, sizeof(font_cfg->GlyphExcludeRanges[0]) * (size + 1));
     }
     if (font_cfg->FontLoader != NULL)
+    {
         IM_ASSERT(font_cfg->FontLoader->FontBakedLoadGlyph != NULL);
+        IM_ASSERT(font_cfg->FontLoader->LoaderInit == NULL && font_cfg->FontLoader->LoaderShutdown == NULL); // FIXME-NEWATLAS: Unsupported yet.
+    }
     IM_ASSERT(font_cfg->FontLoaderData == NULL);
 
     // Round font size
@@ -3369,11 +3372,6 @@ void ImFontAtlasBuildSetupFontLoader(ImFontAtlas* atlas, const ImFontLoader* fon
     ImVec2i new_tex_size = ImFontAtlasBuildGetTextureSizeEstimate(atlas);
     ImFontAtlasBuildDestroy(atlas);
 
-    if (atlas->FontLoader && atlas->FontLoader->LoaderShutdown)
-    {
-        atlas->FontLoader->LoaderShutdown(atlas);
-        IM_ASSERT(atlas->FontLoaderData == NULL);
-    }
     atlas->FontLoader = font_loader;
     atlas->FontLoaderName = font_loader ? font_loader->Name : "NULL";
     if (atlas->FontLoader && atlas->FontLoader->LoaderInit)
@@ -4187,7 +4185,11 @@ void ImFontAtlasBuildDestroy(ImFontAtlas* atlas)
         if (loader && loader->FontSrcDestroy != NULL)
             loader->FontSrcDestroy(atlas, &font_cfg);
     }
-
+    if (atlas->FontLoader && atlas->FontLoader->LoaderShutdown)
+    {
+        atlas->FontLoader->LoaderShutdown(atlas);
+        IM_ASSERT(atlas->FontLoaderData == NULL);
+    }
     IM_DELETE(atlas->Builder);
     atlas->Builder = NULL;
 }
