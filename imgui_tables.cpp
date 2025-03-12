@@ -1637,7 +1637,7 @@ void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, flo
     if (table->IsInitializing)
     {
         ImGuiTableFlags init_flags = ~0;
-        if (column->WidthRequest >= 0.0f && column->StretchWeight >= 0.0f)
+        if (column->WidthRequest >= 0.0f || column->StretchWeight >= 0.0f)
             init_flags &= ~ImGuiTableFlags_Resizable;
         TableInitColumnDefaults(table, column, init_flags);
     }
