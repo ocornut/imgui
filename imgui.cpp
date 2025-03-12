@@ -7456,9 +7456,23 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             ImVec2 needed_size_from_last_frame = window_just_created ? ImVec2(0, 0) : window->ContentSize + window->WindowPadding * 2.0f;
             float size_x_for_scrollbars = use_current_size_for_scrollbar_x ? avail_size_from_current_frame.x : avail_size_from_last_frame.x;
             float size_y_for_scrollbars = use_current_size_for_scrollbar_y ? avail_size_from_current_frame.y : avail_size_from_last_frame.y;
+            bool scrollbar_x_prev = window->ScrollbarX;
             //bool scrollbar_y_from_last_frame = window->ScrollbarY; // FIXME: May want to use that in the ScrollbarX expression? How many pros vs cons?
             window->ScrollbarY = (flags & ImGuiWindowFlags_AlwaysVerticalScrollbar) || ((needed_size_from_last_frame.y > size_y_for_scrollbars) && !(flags & ImGuiWindowFlags_NoScrollbar));
             window->ScrollbarX = (flags & ImGuiWindowFlags_AlwaysHorizontalScrollbar) || ((needed_size_from_last_frame.x > size_x_for_scrollbars - (window->ScrollbarY ? style.ScrollbarSize : 0.0f)) && !(flags & ImGuiWindowFlags_NoScrollbar) && (flags & ImGuiWindowFlags_HorizontalScrollbar));
+
+            // Track when ScrollbarX visibility keeps toggling, which is a sign of a feedback loop, and stabilize by enforcing visibility (#3285, #8488)
+            // (Feedback loops of this sort can manifest in various situations, but combining horizontal + vertical scrollbar + using a clipper with varying width items is one frequent cause.
+            //  The better solution is to, either (1) enforce visibility by using ImGuiWindowFlags_AlwaysHorizontalScrollbar or (2) declare stable contents width with SetNextWindowContentSize(), if you can compute it)
+            window->ScrollbarXStabilizeToggledHistory <<= 1;
+            window->ScrollbarXStabilizeToggledHistory |= (scrollbar_x_prev != window->ScrollbarX) ? 0x01 : 0x00;
+            const bool scrollbar_x_stabilize = (window->ScrollbarXStabilizeToggledHistory != 0) && ImCountSetBits(window->ScrollbarXStabilizeToggledHistory) >= 4; // 4 == half of bits in our U8 history.
+            if (scrollbar_x_stabilize)
+                window->ScrollbarX = true;
+            //if (scrollbar_x_stabilize && !window->ScrollbarXStabilizeEnabled)
+            //    IMGUI_DEBUG_LOG("[scroll] Stabilize ScrollbarX for Window '%s'\n", window->Name);
+            window->ScrollbarXStabilizeEnabled = scrollbar_x_stabilize;
+
             if (window->ScrollbarX && !window->ScrollbarY)
                 window->ScrollbarY = (needed_size_from_last_frame.y > size_y_for_scrollbars - style.ScrollbarSize) && !(flags & ImGuiWindowFlags_NoScrollbar);
             window->ScrollbarSizes = ImVec2(window->ScrollbarY ? style.ScrollbarSize : 0.0f, window->ScrollbarX ? style.ScrollbarSize : 0.0f);

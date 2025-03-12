@@ -367,9 +367,10 @@ static inline void      ImQsort(void* base, size_t count, size_t size_of_element
 IMGUI_API ImU32         ImAlphaBlendColors(ImU32 col_a, ImU32 col_b);
 
 // Helpers: Bit manipulation
-static inline bool      ImIsPowerOfTwo(int v)           { return v != 0 && (v & (v - 1)) == 0; }
-static inline bool      ImIsPowerOfTwo(ImU64 v)         { return v != 0 && (v & (v - 1)) == 0; }
-static inline int       ImUpperPowerOfTwo(int v)        { v--; v |= v >> 1; v |= v >> 2; v |= v >> 4; v |= v >> 8; v |= v >> 16; v++; return v; }
+static inline bool      ImIsPowerOfTwo(int v)               { return v != 0 && (v & (v - 1)) == 0; }
+static inline bool      ImIsPowerOfTwo(ImU64 v)             { return v != 0 && (v & (v - 1)) == 0; }
+static inline int       ImUpperPowerOfTwo(int v)            { v--; v |= v >> 1; v |= v >> 2; v |= v >> 4; v |= v >> 8; v |= v >> 16; v++; return v; }
+static inline unsigned int ImCountSetBits(unsigned int v)   { unsigned int count = 0; while (v > 0) { v = v & (v - 1); count++; } return count; }
 
 // Helpers: String
 #define ImStrlen strlen
@@ -2514,6 +2515,8 @@ struct IMGUI_API ImGuiWindow
     ImVec2                  ScrollTargetEdgeSnapDist;           // 0.0f = no snapping, >0.0f snapping threshold
     ImVec2                  ScrollbarSizes;                     // Size taken by each scrollbars on their smaller axis. Pay attention! ScrollbarSizes.x == width of the vertical scrollbar, ScrollbarSizes.y = height of the horizontal scrollbar.
     bool                    ScrollbarX, ScrollbarY;             // Are scrollbars visible?
+    bool                    ScrollbarXStabilizeEnabled;         // Was ScrollbarX previously auto-stabilized?
+    ImU8                    ScrollbarXStabilizeToggledHistory;  // Used to stabilize scrollbar visibility in case of feedback loops
     bool                    Active;                             // Set to true on Begin(), unless Collapsed
     bool                    WasActive;
     bool                    WriteAccessed;                      // Set to true when any widget access the current window

@@ -82,6 +82,14 @@ Other changes:
   visibility of the preview/hint buffer. (#8368) [@m9710797, @ocornut]
 - Scrollbar: Rework logic that fades-out scrollbar when it becomes too small,
   which amusingly made it disappear when using very big font/frame size.
+- Scrollbar: Automatically stabilize ScrollbarX visibility when detecting a
+  feedback loop manifesting with ScrollbarX visibility toggling on and off
+  repeatedly. (#8488, #3285, #4539)
+  (feedback loops of this sort can manifest in various situations, but combining
+  horizontal + vertical scrollbar + using a clipper with varying width items is
+  one frequent cause. The better solution is to, either: (1) enforce visibility
+  by using ImGuiWindowFlags_AlwaysHorizontalScrollbar or (2) declare stable
+  contents width with SetNextWindowContentSize(), if you can compute it.)
 - Tables: fixed calling SetNextWindowScroll() on clipped scrolling table
   to not leak the value into a subsequent window. (#8196)
 - Tables: fixed an issue where Columns Visible/Width state wouldn't be correctly
