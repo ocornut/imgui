@@ -34,7 +34,7 @@ struct ImGui_ImplDX12_InitInfo
     void*                       UserData;
 
     // Allocating SRV descriptors for textures is up to the application, so we provide callbacks.
-    // (current version of the backend will only allocate one descriptor, future versions will need to allocate more)
+    // (current version of the backend will only allocate one descriptor, from 1.92 the backend will need to allocate more)
     ID3D12DescriptorHeap*       SrvDescriptorHeap;
     void                        (*SrvDescriptorAllocFn)(ImGui_ImplDX12_InitInfo* info, D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu_desc_handle, D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu_desc_handle);
     void                        (*SrvDescriptorFreeFn)(ImGui_ImplDX12_InitInfo* info, D3D12_CPU_DESCRIPTOR_HANDLE cpu_desc_handle, D3D12_GPU_DESCRIPTOR_HANDLE gpu_desc_handle);
