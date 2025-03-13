@@ -4048,11 +4048,11 @@ IMGUI_API void              ImFontAtlasBuildMain(ImFontAtlas* atlas);
 IMGUI_API void              ImFontAtlasBuildSetupFontLoader(ImFontAtlas* atlas, const ImFontLoader* font_loader);
 IMGUI_API void              ImFontAtlasBuildUpdatePointers(ImFontAtlas* atlas);
 IMGUI_API void              ImFontAtlasBuildRenderBitmapFromString(ImFontAtlas* atlas, int x, int y, int w, int h, const char* in_str, char in_marker_char);
+IMGUI_API void              ImFontAtlasBuildClear(ImFontAtlas* atlas); // Clear output and custom rects
 
 IMGUI_API ImTextureData*    ImFontAtlasBuildAddTexture(ImFontAtlas* atlas, int w, int h);
 IMGUI_API void              ImFontAtlasBuildMakeSpace(ImFontAtlas* atlas);
 IMGUI_API void              ImFontAtlasBuildRepackTexture(ImFontAtlas* atlas, int w, int h);
-IMGUI_API void              ImFontAtlasBuildClearTexture(ImFontAtlas* atlas);
 IMGUI_API void              ImFontAtlasBuildGrowTexture(ImFontAtlas* atlas, int old_w = -1, int old_h = -1);
 IMGUI_API void              ImFontAtlasBuildCompactTexture(ImFontAtlas* atlas);
 IMGUI_API ImVec2i           ImFontAtlasBuildGetTextureSizeEstimate(ImFontAtlas* atlas);

@@ -21318,7 +21318,7 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
         ImFontAtlasBuildGrowTexture(atlas);
     SameLine();
     if (Button("Clear Output"))
-        ImFontAtlasBuildClearTexture(atlas);
+        ImFontAtlasBuildClear(atlas);
 
     for (int tex_n = 0; tex_n < atlas->TexList.Size; tex_n++)
     {
