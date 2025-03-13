@@ -3298,7 +3298,7 @@ const ImTextureRect* ImFontAtlas::GetCustomRect(int id)
     return ImFontAtlasPackGetRect(this, (ImFontAtlasRectId)id);
 }
 
-void ImFontAtlas::CalcCustomRectUV(const ImTextureRect* rect, ImVec2* out_uv_min, ImVec2* out_uv_max) const
+void ImFontAtlas::GetCustomRectUV(const ImTextureRect* rect, ImVec2* out_uv_min, ImVec2* out_uv_max) const
 {
     IM_ASSERT(TexData->Width > 0 && TexData->Height > 0);   // Font atlas needs to be built before we can calculate UV coordinates
     *out_uv_min = ImVec2((float)rect->x * TexUvScale.x, (float)rect->y * TexUvScale.y);
