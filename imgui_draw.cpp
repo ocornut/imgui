@@ -3237,7 +3237,7 @@ int ImFontAtlas::AddCustomRectRegular(int width, int height)
     ImFontAtlasRectId r_id = ImFontAtlasPackAddRect(this, width, height);
     if (r_id < 0)
         return -1;
-    ImFontAtlasRect* r = ImFontAtlasPackGetRect(this, r_id);
+    ImTextureRect* r = ImFontAtlasPackGetRect(this, r_id);
     if (RendererHasTextures)
         ImFontAtlasTextureBlockQueueUpload(this, TexData, r->x, r->y, r->w, r->h);
     return r_id;
@@ -3271,7 +3271,7 @@ int ImFontAtlas::AddCustomRectFontGlyphForSize(ImFont* font, float font_size, Im
     ImFontAtlasRectId r_id = ImFontAtlasPackAddRect(this, width, height);
     if (r_id < 0)
         return -1;
-    ImFontAtlasRect* r = ImFontAtlasPackGetRect(this, r_id);
+    ImTextureRect* r = ImFontAtlasPackGetRect(this, r_id);
     if (RendererHasTextures)
         ImFontAtlasTextureBlockQueueUpload(this, TexData, r->x, r->y, r->w, r->h);
 
@@ -3295,11 +3295,7 @@ int ImFontAtlas::AddCustomRectFontGlyphForSize(ImFont* font, float font_size, Im
 
 ImTextureRect* ImFontAtlas::GetCustomRectByIndex(int idx)
 {
-    IM_STATIC_ASSERT(offsetof(ImTextureRect, x) == offsetof(ImFontAtlasRect, x));
-    IM_STATIC_ASSERT(offsetof(ImTextureRect, y) == offsetof(ImFontAtlasRect, y));
-    IM_STATIC_ASSERT(offsetof(ImTextureRect, w) == offsetof(ImFontAtlasRect, w));
-    IM_STATIC_ASSERT(offsetof(ImTextureRect, h) == offsetof(ImFontAtlasRect, h));
-    return (ImTextureRect*)(void*)ImFontAtlasPackGetRect(this, idx);
+    return ImFontAtlasPackGetRect(this, idx);
 }
 
 void ImFontAtlas::CalcCustomRectUV(const ImTextureRect* rect, ImVec2* out_uv_min, ImVec2* out_uv_max) const
@@ -3316,7 +3312,7 @@ bool ImFontAtlasGetMouseCursorTexData(ImFontAtlas* atlas, ImGuiMouseCursor curso
     if (atlas->Flags & ImFontAtlasFlags_NoMouseCursors)
         return false;
 
-    ImFontAtlasRect* r = ImFontAtlasPackGetRect(atlas, atlas->Builder->PackIdMouseCursors);
+    ImTextureRect* r = ImFontAtlasPackGetRect(atlas, atlas->Builder->PackIdMouseCursors);
     ImVec2 pos = FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[cursor_type][0] + ImVec2((float)r->x, (float)r->y);
     ImVec2 size = FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[cursor_type][1];
     *out_size = size;
@@ -3453,7 +3449,7 @@ static void ImFontAtlasBuildUpdateBasicTexData(ImFontAtlas* atlas, bool add_and_
         builder->PackIdMouseCursors = ImFontAtlasPackAddRect(atlas, pack_size.x, pack_size.y);
     if (builder->PackIdMouseCursors < 0)
         return;
-    ImFontAtlasRect* r = ImFontAtlasPackGetRect(atlas, builder->PackIdMouseCursors);
+    ImTextureRect* r = ImFontAtlasPackGetRect(atlas, builder->PackIdMouseCursors);
 
     // Draw to texture
     if (add_and_draw)
@@ -3489,7 +3485,7 @@ static void ImFontAtlasBuildUpdateLinesTexData(ImFontAtlas* atlas, bool add_and_
         builder->PackIdLinesTexData = ImFontAtlasPackAddRect(atlas, pack_size.x, pack_size.y);
     if (builder->PackIdLinesTexData < 0)
         return;
-    ImFontAtlasRect* r = ImFontAtlasPackGetRect(atlas, builder->PackIdLinesTexData);
+    ImTextureRect* r = ImFontAtlasPackGetRect(atlas, builder->PackIdLinesTexData);
 
     // Register texture region for thick lines
     // The +2 here is to give space for the end caps, whilst height +1 is to accommodate the fact we have a zero-width row
@@ -3599,12 +3595,12 @@ static ImFontGlyph* ImFontAtlasBuildSetupFontBakedEllipsis(ImFontAtlas* atlas, I
     if (dot_glyph == NULL)
         return NULL;
     ImFontAtlasRectId dot_r_id = dot_glyph->PackId; // Deep copy to avoid invalidation of glyphs and rect pointers
-    ImFontAtlasRect* dot_r = ImFontAtlasPackGetRect(atlas, dot_r_id);
+    ImTextureRect* dot_r = ImFontAtlasPackGetRect(atlas, dot_r_id);
     const int dot_spacing = 1;
     const float dot_step = (dot_glyph->X1 - dot_glyph->X0) + dot_spacing;
 
     ImFontAtlasRectId pack_id = ImFontAtlasPackAddRect(atlas, (dot_r->w * 3 + dot_spacing * 2), dot_r->h);
-    ImFontAtlasRect* r = ImFontAtlasPackGetRect(atlas, pack_id);
+    ImTextureRect* r = ImFontAtlasPackGetRect(atlas, pack_id);
 
     ImFontGlyph glyph_in = {};
     ImFontGlyph* glyph = &glyph_in;
@@ -3961,7 +3957,7 @@ void ImFontAtlasBuildRepackTexture(ImFontAtlas* atlas, int w, int h)
     // FIXME-NEWATLAS-V2: Repacking in batch would be beneficial to packing heuristic, and fix stability.
     // FIXME-NEWATLAS-TESTS: Test calling RepackTexture with size too small to fits existing rects.
     ImFontAtlasPackInit(atlas);
-    ImVector<ImFontAtlasRect> old_rects;
+    ImVector<ImTextureRect> old_rects;
     ImVector<ImFontAtlasRectEntry> old_index = builder->RectsIndex;
     old_rects.swap(builder->Rects);
 
@@ -3969,7 +3965,7 @@ void ImFontAtlasBuildRepackTexture(ImFontAtlas* atlas, int w, int h)
     {
         if (index_entry.Used == false)
             continue;
-        ImFontAtlasRect& old_r = old_rects[index_entry.TargetIndex];
+        ImTextureRect& old_r = old_rects[index_entry.TargetIndex];
         if (old_r.w == 0 && old_r.h == 0)
             continue;
         ImFontAtlasRectId new_r_id = ImFontAtlasPackAddRect(atlas, old_r.w, old_r.h, &index_entry);
@@ -3986,7 +3982,7 @@ void ImFontAtlasBuildRepackTexture(ImFontAtlas* atlas, int w, int h)
             return;
         }
         IM_ASSERT(new_r_id == builder->RectsIndex.index_from_ptr(&index_entry));
-        ImFontAtlasRect* new_r = ImFontAtlasPackGetRect(atlas, new_r_id);
+        ImTextureRect* new_r = ImFontAtlasPackGetRect(atlas, new_r_id);
         ImFontAtlasTextureBlockCopy(old_tex, old_r.x, old_r.y, new_tex, new_r->x, new_r->y, new_r->w, new_r->h);
     }
     IM_ASSERT(old_rects.Size == builder->Rects.Size + builder->RectsDiscardedCount);
@@ -3998,7 +3994,7 @@ void ImFontAtlasBuildRepackTexture(ImFontAtlas* atlas, int w, int h)
         for (ImFontGlyph& glyph : builder->BakedPool[baked_n].Glyphs)
             if (glyph.PackId != -1)
             {
-                ImFontAtlasRect* r = ImFontAtlasPackGetRect(atlas, glyph.PackId);
+                ImTextureRect* r = ImFontAtlasPackGetRect(atlas, glyph.PackId);
                 glyph.U0 = (r->x) * atlas->TexUvScale.x;
                 glyph.V0 = (r->y) * atlas->TexUvScale.y;
                 glyph.U1 = (r->x + r->w) * atlas->TexUvScale.x;
@@ -4244,7 +4240,7 @@ void ImFontAtlasPackDiscardRect(ImFontAtlas* atlas, ImFontAtlasRectId id)
     ImFontAtlasRectEntry* index_entry = &builder->RectsIndex[id];
     IM_ASSERT(index_entry->Used && index_entry->TargetIndex >= 0);
 
-    ImFontAtlasRect* rect = ImFontAtlasPackGetRect(atlas, id);
+    ImTextureRect* rect = ImFontAtlasPackGetRect(atlas, id);
     index_entry->Used = false;
     index_entry->TargetIndex = builder->RectsIndexFreeListStart;
 
@@ -4268,7 +4264,7 @@ ImFontAtlasRectId ImFontAtlasPackAddRect(ImFontAtlas* atlas, int w, int h, ImFon
     builder->MaxRectSize.y = ImMax(builder->MaxRectSize.y, h);
 
     // Pack
-    ImFontAtlasRect r = { 0, 0, (unsigned short)w, (unsigned short)h };
+    ImTextureRect r = { 0, 0, (unsigned short)w, (unsigned short)h };
     for (int attempts_remaining = 3; attempts_remaining >= 0; attempts_remaining--)
     {
         // Try packing
@@ -4312,7 +4308,7 @@ ImFontAtlasRectId ImFontAtlasPackAddRect(ImFontAtlas* atlas, int w, int h, ImFon
 }
 
 // Important: don'return pointer valid until next call to AddRect(), e.g. FindGlyph(), CalcTextSize() can all potentially invalidate previous pointers.
-ImFontAtlasRect* ImFontAtlasPackGetRect(ImFontAtlas* atlas, ImFontAtlasRectId id)
+ImTextureRect* ImFontAtlasPackGetRect(ImFontAtlas* atlas, ImFontAtlasRectId id)
 {
     IM_ASSERT(id >= 0);
     ImFontAtlasBuilder* builder = (ImFontAtlasBuilder*)atlas->Builder;
@@ -4551,7 +4547,7 @@ static ImFontGlyph* ImGui_ImplStbTrueType_FontBakedLoadGlyph(ImFontAtlas* atlas,
             IM_ASSERT_USER_ERROR(pack_id >= 0, "Out of texture memory.");
             return NULL;
         }
-        ImFontAtlasRect* r = ImFontAtlasPackGetRect(atlas, pack_id);
+        ImTextureRect* r = ImFontAtlasPackGetRect(atlas, pack_id);
 
         // Render
         stbtt_GetGlyphBitmapBox(&bd_font_data->FontInfo, glyph_index, scale_for_raster_x, scale_for_raster_y, &x0, &y0, &x1, &y1);
@@ -4999,7 +4995,7 @@ ImFontGlyph* ImFontAtlasBakedAddFontGlyph(ImFontAtlas* atlas, ImFontBaked* baked
     // Set UV from packed rectangle
     if (in_glyph->PackId >= 0)
     {
-        ImFontAtlasRect* r = ImFontAtlasPackGetRect(atlas, in_glyph->PackId);
+        ImTextureRect* r = ImFontAtlasPackGetRect(atlas, in_glyph->PackId);
         IM_ASSERT(in_glyph->U0 == 0.0f && in_glyph->V0 == 0.0f && in_glyph->U1 == 0.0f && in_glyph->V1 == 0.0f);
         glyph.U0 = (r->x) * atlas->TexUvScale.x;
         glyph.V0 = (r->y) * atlas->TexUvScale.y;
@@ -5042,7 +5038,7 @@ ImFontGlyph* ImFontAtlasBakedAddFontGlyph(ImFontAtlas* atlas, ImFontBaked* baked
 }
 
 // Copy to texture, post-process and queue update for backend
-void ImFontAtlasBakedSetFontGlyphBitmap(ImFontAtlas* atlas, ImFontBaked* baked, ImFontConfig* src, ImFontGlyph* glyph, ImFontAtlasRect* r, const unsigned char* src_pixels, ImTextureFormat src_fmt, int src_pitch)
+void ImFontAtlasBakedSetFontGlyphBitmap(ImFontAtlas* atlas, ImFontBaked* baked, ImFontConfig* src, ImFontGlyph* glyph, ImTextureRect* r, const unsigned char* src_pixels, ImTextureFormat src_fmt, int src_pitch)
 {
     ImTextureData* tex = atlas->TexData;
     IM_ASSERT(r->x + r->w <= tex->Width && r->y + r->h <= tex->Height);
