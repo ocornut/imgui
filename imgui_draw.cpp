@@ -4091,7 +4091,7 @@ ImVec2i ImFontAtlasBuildGetTextureSizeEstimate(ImFontAtlas* atlas)
 }
 
 // Clear all output. Invalidates all AddCustomRectXXX return values.
-void ImFontAtlasBuildClearTexture(ImFontAtlas* atlas)
+void ImFontAtlasBuildClear(ImFontAtlas* atlas)
 {
     ImVec2i new_tex_size = ImFontAtlasBuildGetTextureSizeEstimate(atlas);
     ImFontAtlasBuildDestroy(atlas);
