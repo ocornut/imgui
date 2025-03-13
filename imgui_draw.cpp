@@ -3231,6 +3231,9 @@ int ImFontAtlas::AddCustomRectRegular(int width, int height)
     IM_ASSERT(width > 0 && width <= 0xFFFF);
     IM_ASSERT(height > 0 && height <= 0xFFFF);
 
+    if (Builder == NULL)
+        ImFontAtlasBuildInit(this);
+
     ImFontAtlasRectId r_id = ImFontAtlasPackAddRect(this, width, height);
     if (r_id < 0)
         return -1;
@@ -4185,7 +4188,7 @@ void ImFontAtlasBuildDestroy(ImFontAtlas* atlas)
         if (loader && loader->FontSrcDestroy != NULL)
             loader->FontSrcDestroy(atlas, &font_cfg);
     }
-    if (atlas->FontLoader && atlas->FontLoader->LoaderShutdown)
+    if (atlas->Builder && atlas->FontLoader && atlas->FontLoader->LoaderShutdown)
     {
         atlas->FontLoader->LoaderShutdown(atlas);
         IM_ASSERT(atlas->FontLoaderData == NULL);
