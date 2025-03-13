@@ -3674,7 +3674,7 @@ struct ImFontAtlas
     // You can request arbitrary rectangles to be packed into the atlas, for your own purpose.
     // You can request your rectangles to be mapped as font glyph (given a font + Unicode point),
     // so you can render e.g. custom colorful icons and use them as regular glyphs.
-    // - Since 1.92.X, packing is done immediately in the function call. Returns >= on success, <0 on error.
+    // - Since 1.92.X, packing is done immediately in the function call. Returns -1 on error.
     // - You can render your pixels into the texture right after calling the AddCustomRectXXX() functions.
     // - If your backend supports ImGuiBackendFlags_RendererHasTextures:
     //   Texture may be resized, so you cannot cache UV coordinates: always use CalcCustomRectUV().

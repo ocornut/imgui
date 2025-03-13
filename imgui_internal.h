@@ -3977,7 +3977,7 @@ IMGUI_API const ImFontLoader* ImFontAtlasGetFontLoaderForStbTruetype();
 // [SECTION] ImFontAtlas internal API
 //-----------------------------------------------------------------------------
 
-typedef int ImFontAtlasRectId;          // <0 when invalid
+typedef int ImFontAtlasRectId; // -1 when invalid
 
 // Packed rectangle lookup entry (we need an indirection to allow removing/reordering rectangles)
 // User are returned ImFontAtlasRectId values which are meant to be persistent.
