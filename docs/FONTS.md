@@ -357,7 +357,7 @@ You can ask questions in [#8466](https://github.com/ocornut/imgui/issues/8466).
 As an alternative to rendering colorful glyphs using imgui_freetype with `ImGuiFreeTypeBuilderFlags_LoadColor`, you may allocate your own space in the texture atlas and write yourself into it. **(This is a BETA api, use if you are familiar with dear imgui and with your rendering backend)**
 
 - You can use the `ImFontAtlas::AddCustomRect()` and `ImFontAtlas::AddCustomRectFontGlyph()` api to register rectangles that will be packed into the font atlas texture. Register them before building the atlas, then call Build()`.
-- You can then use `ImFontAtlas::GetCustomRectByIndex(int)` to query the position/size of your rectangle within the texture, and blit/copy any graphics data of your choice into those rectangles.
+- You can then use `ImFontAtlas::GetCustomRect(int)` to query the position/size of your rectangle within the texture, and blit/copy any graphics data of your choice into those rectangles.
 - This API is beta because it is likely to change in order to support multi-dpi (multiple viewports on multiple monitors with varying DPI scale).
 
 #### Pseudo-code:
@@ -377,9 +377,7 @@ int tex_width, tex_height;
 io.Fonts->GetTexDataAsRGBA32(&tex_pixels, &tex_width, &tex_height);
 
 for (int rect_n = 0; rect_n < IM_ARRAYSIZE(rect_ids); rect_n++)
-{
-    int rect_id = rect_ids[rect_n];
-    if (const ImFontAtlasCustomRect* rect = io.Fonts->GetCustomRectByIndex(rect_id))
+    if (const ImTextureRect* rect = io.Fonts->GetCustomRect(rect_ids[rect_n]))
     {
         // Fill the custom rectangle with red pixels (in reality you would draw/copy your bitmap data here!)
         for (int y = 0; y < rect->Height; y++)
@@ -389,7 +387,6 @@ for (int rect_n = 0; rect_n < IM_ARRAYSIZE(rect_ids); rect_n++)
                 *p++ = IM_COL32(255, 0, 0, 255);
         }
     }
-}
 ```
 
 ##### [Return to Index](#index)
