@@ -2502,7 +2502,7 @@ void ImTextureData::DestroyPixels()
 //-----------------------------------------------------------------------------
 // - ImFontAtlas::AddCustomRectRegular()
 // - ImFontAtlas::AddCustomRectFontGlyph()
-// - ImFontAtlas::GetCustomRectByIndex()
+// - ImFontAtlas::GetCustomRect()
 // - ImFontAtlas::CalcCustomRectUV()
 // - ImFontAtlasGetMouseCursorTexData()
 //-----------------------------------------------------------------------------
@@ -3296,9 +3296,9 @@ int ImFontAtlas::AddCustomRectFontGlyphForSize(ImFont* font, float font_size, Im
 }
 #endif // #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 
-ImTextureRect* ImFontAtlas::GetCustomRectByIndex(int idx)
+const ImTextureRect* ImFontAtlas::GetCustomRect(int id)
 {
-    return ImFontAtlasPackGetRect(this, idx);
+    return ImFontAtlasPackGetRect(this, (ImFontAtlasRectId)id);
 }
 
 void ImFontAtlas::CalcCustomRectUV(const ImTextureRect* rect, ImVec2* out_uv_min, ImVec2* out_uv_max) const

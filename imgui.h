@@ -3671,24 +3671,24 @@ struct ImFontAtlas
     // [ALPHA] Custom Rectangles/Glyphs API
     //-------------------------------------------
 
-    // You can request arbitrary rectangles to be packed into the atlas, for your own purpose.
-    // You can request your rectangles to be mapped as font glyph (given a font + Unicode point),
-    // so you can render e.g. custom colorful icons and use them as regular glyphs.
-    // - Since 1.92.X, packing is done immediately in the function call. Returns -1 on error.
+    // Register and retrieve custom rectangles
+    // - You can request arbitrary rectangles to be packed into the atlas, for your own purpose.
+    // - You can request your rectangles to be mapped as font glyph (given a font + Unicode point),
+    //   so you can render e.g. custom colorful icons and use them as regular glyphs.
+    // - Since 1.92.X, packing is done immediately in the function call.
     // - You can render your pixels into the texture right after calling the AddCustomRectXXX() functions.
-    // - If your backend supports ImGuiBackendFlags_RendererHasTextures:
-    //   Texture may be resized, so you cannot cache UV coordinates: always use CalcCustomRectUV().
-    // - If you render colored output into your AddCustomRectRegular() rectangle: set 'atlas->TexPixelsUseColors = true'
-    //   as this may help some backends decide of preferred texture format.
+    // - Texture may be resized, so you cannot cache UV coordinates: always use CalcCustomRectUV()!
+    // - If you render colored output into your AddCustomRectRegular() rectangle: set 'atlas->TexPixelsUseColors = true' as this may help some backends decide of preferred texture format.
     // - Read docs/FONTS.md for more details about using colorful icons.
-    // - Note: this API may be redesigned later in order to support multi-monitor varying DPI settings.
-    IMGUI_API int               AddCustomRectRegular(int width, int height);
+    // - Note: this API may be reworked further in order to facilitate supporting e.g. multi-monitor, varying DPI settings.
+    IMGUI_API int                   AddCustomRectRegular(int width, int height);    // Register a rectangle. Return -1 on error.
+    IMGUI_API const ImTextureRect*  GetCustomRect(int id);                          // Get rectangle coordinate in current texture.
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    IMGUI_API int               AddCustomRectFontGlyph(ImFont* font, ImWchar codepoint, int width, int height, float advance_x, const ImVec2& offset = ImVec2(0, 0));
-    IMGUI_API int               AddCustomRectFontGlyphForSize(ImFont* font, float font_size, ImWchar codepoint, int width, int height, float advance_x, const ImVec2& offset = ImVec2(0, 0));
+    IMGUI_API int                   AddCustomRectFontGlyph(ImFont* font, ImWchar codepoint, int width, int height, float advance_x, const ImVec2& offset = ImVec2(0, 0));
+    IMGUI_API int                   AddCustomRectFontGlyphForSize(ImFont* font, float font_size, ImWchar codepoint, int width, int height, float advance_x, const ImVec2& offset = ImVec2(0, 0));
+    inline const ImTextureRect*     GetCustomRectByIndex(int id) { return GetCustomRect(id); }
 #endif
-    IMGUI_API ImTextureRect*    GetCustomRectByIndex(int index);
-    IMGUI_API void              CalcCustomRectUV(const ImTextureRect* rect, ImVec2* out_uv_min, ImVec2* out_uv_max) const;
+    IMGUI_API void                  CalcCustomRectUV(const ImTextureRect* rect, ImVec2* out_uv_min, ImVec2* out_uv_max) const;
 
     //-------------------------------------------
     // Members
