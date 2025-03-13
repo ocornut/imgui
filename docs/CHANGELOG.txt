@@ -77,6 +77,8 @@ Other changes:
   inner/outer padding applied to hit-testing of windows borders and detection
   of hovered window.
 - InputText: Allow CTRL+Shift+Z to redo even outside of OSX. (#8389) [@tanksdude]
+- InputText: Pasting a multi-line buffer into a single-line edit replaces
+  carriage return by spaces. (#8459)
 - InputTextWithHint(): Fixed buffer-overflow (luckily often with no visible effect)
   when a user callback modified the buffer contents in a way that altered the
   visibility of the preview/hint buffer. (#8368) [@m9710797, @ocornut]
