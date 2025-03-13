@@ -21,7 +21,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2025-03-10: When dealing with OEM keys, use scancodes instead of translated keycodes to choose ImGuiKey values. (#7136, #7201, #7206, #7306, #7670, #7672, #8468) + Added support for ImGuiKey_Oem102, ImGuiKey_AbntC1, ImGuiKey_AbntC2.
+//  2025-03-10: When dealing with OEM keys, use scancodes instead of translated keycodes to choose ImGuiKey values. (#7136, #7201, #7206, #7306, #7670, #7672, #8468)
 //  2025-02-18: Added ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress mouse cursor support.
 //  2024-07-08: Inputs: Fixed ImGuiMod_Super being mapped to VK_APPS instead of VK_LWIN||VK_RWIN. (#7768)
 //  2023-10-05: Inputs: Added support for extra ImGuiKey values: F13 to F24 function keys, app back/forward keys.
@@ -565,15 +565,13 @@ ImGuiKey ImGui_ImplWin32_KeyEventToImGuiKey(WPARAM wParam, LPARAM lParam)
     case 13: return ImGuiKey_Equal;
     case 26: return ImGuiKey_LeftBracket;
     case 27: return ImGuiKey_RightBracket;
+    case 86: return ImGuiKey_Oem102;
     case 43: return ImGuiKey_Backslash;
     case 39: return ImGuiKey_Semicolon;
     case 40: return ImGuiKey_Apostrophe;
     case 51: return ImGuiKey_Comma;
     case 52: return ImGuiKey_Period;
     case 53: return ImGuiKey_Slash;
-    case 86: return ImGuiKey_Oem102;
-    case 115: return ImGuiKey_AbntC1;
-    case 126: return ImGuiKey_AbntC2;
     }
 
     return ImGuiKey_None;
