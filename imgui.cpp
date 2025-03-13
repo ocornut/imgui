@@ -22478,7 +22478,7 @@ void ImGui::DebugNodeFontGlyph(ImFont* font, const ImFontGlyph* glyph)
     Text("UV: (%.3f,%.3f)->(%.3f,%.3f)", glyph->U0, glyph->V0, glyph->U1, glyph->V1);
     if (glyph->PackId >= 0)
     {
-        ImFontAtlasRect* r = ImFontAtlasPackGetRect(font->ContainerAtlas, glyph->PackId);
+        ImTextureRect* r = ImFontAtlasPackGetRect(font->ContainerAtlas, glyph->PackId);
         Text("PackId: %d (%dx%d rect at %d,%d)", glyph->PackId, r->w, r->h, r->x, r->y);
     }
 }

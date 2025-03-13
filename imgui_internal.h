@@ -143,7 +143,6 @@ struct ImDrawDataBuilder;           // Helper to build a ImDrawData instance
 struct ImDrawListSharedData;        // Data shared between all ImDrawList instances
 struct ImFontAtlasBuilder;          // Internal storage for incrementally packing and building a ImFontAtlas
 struct ImFontAtlasPostProcessData;  // Data available to potential texture post-processing functions
-struct ImFontAtlasRect;             // Packed rectangle (same as ImTextureRect)
 struct ImFontAtlasRectEntry;        // Packed rectangle lookup entry
 
 // ImGui
@@ -3978,11 +3977,6 @@ IMGUI_API const ImFontLoader* ImFontAtlasGetFontLoaderForStbTruetype();
 // [SECTION] ImFontAtlas internal API
 //-----------------------------------------------------------------------------
 
-struct ImFontAtlasRect
-{
-    unsigned short  x, y;
-    unsigned short  w, h;
-};
 typedef int ImFontAtlasRectId;          // <0 when invalid
 
 // Packed rectangle lookup entry (we need an indirection to allow removing/reordering rectangles)
@@ -4020,7 +4014,7 @@ struct ImFontAtlasBuilder
 {
     stbrp_context_opaque        PackContext;            // Actually 'stbrp_context' but we don't want to define this in the header file.
     ImVector<stbrp_node>        PackNodes;
-    ImVector<ImFontAtlasRect>   Rects;
+    ImVector<ImTextureRect>     Rects;
     ImVector<ImFontAtlasRectEntry> RectsIndex;          // ImFontAtlasRectId -> index into Rects[]
     ImVector<unsigned char>     TempBuffer;             // Misc scratch buffer
     int                         RectsIndexFreeListStart;// First unused entry
@@ -4077,12 +4071,12 @@ IMGUI_API void              ImFontAtlasBuildPreloadAllGlyphRanges(ImFontAtlas* a
 IMGUI_API void              ImFontAtlasBuildGetOversampleFactors(ImFontConfig* src, float size, int* out_oversample_h, int* out_oversample_v);
 
 IMGUI_API ImFontGlyph*      ImFontAtlasBakedAddFontGlyph(ImFontAtlas* atlas, ImFontBaked* baked, ImFontConfig* src, const ImFontGlyph* in_glyph);
-IMGUI_API void              ImFontAtlasBakedSetFontGlyphBitmap(ImFontAtlas* atlas, ImFontBaked* baked, ImFontConfig* src, ImFontGlyph* glyph, ImFontAtlasRect* r, const unsigned char* src_pixels, ImTextureFormat src_fmt, int src_pitch);
+IMGUI_API void              ImFontAtlasBakedSetFontGlyphBitmap(ImFontAtlas* atlas, ImFontBaked* baked, ImFontConfig* src, ImFontGlyph* glyph, ImTextureRect* r, const unsigned char* src_pixels, ImTextureFormat src_fmt, int src_pitch);
 IMGUI_API ImGuiID           ImFontAtlasBakedGetId(ImGuiID font_id, float baked_size);
 
 IMGUI_API void              ImFontAtlasPackInit(ImFontAtlas* atlas);
 IMGUI_API ImFontAtlasRectId ImFontAtlasPackAddRect(ImFontAtlas* atlas, int w, int h, ImFontAtlasRectEntry* overwrite_entry = NULL);
-IMGUI_API ImFontAtlasRect*  ImFontAtlasPackGetRect(ImFontAtlas* atlas, ImFontAtlasRectId id);
+IMGUI_API ImTextureRect*    ImFontAtlasPackGetRect(ImFontAtlas* atlas, ImFontAtlasRectId id);
 IMGUI_API void              ImFontAtlasPackDiscardRect(ImFontAtlas* atlas, ImFontAtlasRectId id);
 
 IMGUI_API void              ImFontAtlasUpdateNewFrame(ImFontAtlas* atlas, int frame_count);

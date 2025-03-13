@@ -534,7 +534,7 @@ ImFontGlyph* ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontCon
             IM_ASSERT_USER_ERROR(pack_id >= 0, "Out of texture memory.");
             return NULL;
         }
-        ImFontAtlasRect* r = ImFontAtlasPackGetRect(atlas, pack_id);
+        ImTextureRect* r = ImFontAtlasPackGetRect(atlas, pack_id);
 
         // Render pixels to our temporary buffer
         atlas->Builder->TempBuffer.resize(w * h * 4);
