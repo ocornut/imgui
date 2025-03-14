@@ -36,8 +36,10 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.91.9 WIP (In Progress)
+ VERSION 1.91.9 (Released 2025-03-14)
 -----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.91.9
 
 Breaking changes:
 
@@ -72,7 +74,7 @@ Other changes:
   RadioButton(), Selectable(). Regression from 2025/01/13. (#8370)
 - Windows: Fixed an issue where BeginChild() inside a collapsed Begin()
   wouldn't inherit the SkipItems flag, resulting in missing coarse clipping
-  opportunity for code not checking the BeginChild() return value.
+  opportunities for code not checking the BeginChild() return value.
 - Windows, Style: Added style.WindowBorderHoverPadding setting to configure
   inner/outer padding applied to hit-testing of windows borders and detection
   of hovered window.
@@ -141,7 +143,7 @@ Other changes:
     ImGuiKey_Slash, ImGuiKey_Semicolon, ImGuiKey_Equal, ImGuiKey_LeftBracket, ImGuiKey_RightBracket,
     ImGuiKey_Backslash, ImGuiKey_GraveAccent, and newly introduced ImGuiKey_Oem102.
   - This is NOT affecting characters used the text inputs.
-  - Fixes many cases of keys not emitting a ImGuiKey value with certain keyboad layouts.
+  - Fixes many cases of keys not emitting a ImGuiKey value with certain keyboard layouts.
   - Makes emitted ImGuiKey values more consistent regardless of keyboard mapping,
     but you may be getting different values as before.
   - Win32, SDL2, SDL3: Use scancodes for OEM keys.
@@ -155,7 +157,8 @@ Other changes:
 - Backends: SDL2, SDL3: Avoid calling SDL_GetGlobalMouseState() when mouse is in
   relative mode. (#8425, #8407) [@TheMode]
 - Backends: SDL2, SDL3: Only start SDL_CaptureMouse() when mouse is being dragged,
-  to mitigate issues with e.g. Linux debuggers not claiming capture back. (#6410, #3650)
+  to mitigate issues with e.g. Linux debuggers not claiming capture back on debug
+  break. (#6410, #3650)
 - Backends: OpenGL3: Lazily reinitialize embedded GL loader for when calling backend
   from e.g. other DLL boundaries. (#8406)
 - Backends: DirectX12: Fixed an issue where pre-1.91.5 legacy ImGui_ImplDX12_Init()
