@@ -124,6 +124,7 @@ Other changes:
 - Debug Tools: Added io.ConfigDebugHighlightIdConflictsShowItemPicker (defaults to true)
   to allow disabled Item Picker suggestion in user facing builds. (#7961, #7669)
 - Debug Tools: Tweaked layout of ID Stack Tool and always display full path. (#4631)
+- Misc: Various zealous warning fixes for newer version of Clang.
 - Misc: Added ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress mouse cursors
   (busy/wait/hourglass shape, with or without an arrow cursor).
 - Demo: Reorganized "Widgets" section to be alphabetically ordered and split in more functions.
