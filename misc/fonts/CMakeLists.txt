@@ -1,0 +1,1 @@
+add_executable(fonts-bin2compressed binary_to_compressed_c.cpp)
