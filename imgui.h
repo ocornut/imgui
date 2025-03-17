@@ -348,6 +348,7 @@ struct ImTextureRef
     ImTextureRef(void* tex_id)              { memset(this, 0, sizeof(*this)); _TexID = (ImTextureID)(size_t)tex_id; }   // For legacy backends casting to ImTextureID
     //inline operator intptr_t() const      { return (intptr_t)_TexID; }                                                // For legacy backends casting to ImTextureID
 #endif
+    inline ImTextureID GetTexID() const;    // == (_TexData ? _TexData->TexID : _TexID) // Implemented below in the file.
 
     // Members
     ImTextureData*  _TexData;               // Texture, generally owned by a ImFontAtlas
@@ -3173,7 +3174,7 @@ struct ImDrawCmd
     // Since 1.83: returns ImTextureID associated with this draw call. Warning: DO NOT assume this is always same as 'TextureId' (we will change this function for an upcoming feature)
     // Since 1.92: removed ImDrawCmd::TextureId field, the getter function must be used!
     // If for some reason you non C++ tech stack makes it difficult to call it, we may decide to separate the fields in ImDrawCmd.
-    inline ImTextureID GetTexID() const;
+    inline ImTextureID GetTexID() const;    // == (TexRef._TexData ? TexRef._TexData->TexID : TexRef._TexID
 };
 
 // Vertex layout
@@ -3832,12 +3833,15 @@ struct ImFont
     IMGUI_API bool              IsGlyphRangeUnused(unsigned int c_begin, unsigned int c_last);
 };
 
-// Added indirection to avoid patching ImDrawCmd after texture updates.
+// We added an indirection to avoid patching ImDrawCmd after texture updates but this could be a solution too.
+inline ImTextureID ImTextureRef::GetTexID() const
+{
+    return _TexData ? _TexData->TexID : _TexID;
+}
 inline ImTextureID ImDrawCmd::GetTexID() const
 {
     ImTextureID tex_id = TexRef._TexData ? TexRef._TexData->TexID : TexRef._TexID;
-    if (TexRef._TexData != NULL)
-        IM_ASSERT(tex_id != ImTextureID_Invalid && "ImDrawCmd is referring to ImTextureData that wasn't uploaded to graphics system. Backend must call ImTextureData::SetTexID()!");
+    IM_ASSERT((TexRef._TexData == NULL || tex_id != ImTextureID_Invalid) && "ImDrawCmd is referring to ImTextureData that wasn't uploaded to graphics system. Backend must call ImTextureData::SetTexID()!");
     return tex_id;
 }
 
