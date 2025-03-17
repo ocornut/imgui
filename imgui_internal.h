@@ -2594,7 +2594,8 @@ struct ImGuiContext
     // Widget state
     ImGuiInputTextState     InputTextState;
     ImGuiInputTextDeactivatedState InputTextDeactivatedState;
-    ImFont                  InputTextPasswordFont;
+    ImFontBaked             InputTextPasswordFontBackupBaked;
+    ImFontFlags             InputTextPasswordFontBackupFlags;
     ImGuiID                 TempInputId;                        // Temporary text input when CTRL+clicking on a slider, etc.
     ImGuiDataTypeStorage    DataTypeZeroValue;                  // 0 for all data types
     int                     BeginMenuDepth;
@@ -3348,6 +3349,7 @@ namespace ImGui
     IMGUI_API void          UpdateCurrentFontSize();
     inline ImFont*          GetDefaultFont() { ImGuiContext& g = *GImGui; return g.IO.FontDefault ? g.IO.FontDefault : g.IO.Fonts->Fonts[0]; }
     IMGUI_API void          PushPasswordFont();
+    IMGUI_API void          PopPasswordFont();
     inline ImDrawList*      GetForegroundDrawList(ImGuiWindow* window) { return GetForegroundDrawList(window->Viewport); }
     IMGUI_API void          AddDrawListToDrawDataEx(ImDrawData* draw_data, ImVector<ImDrawList*>* out_list, ImDrawList* draw_list);
 
