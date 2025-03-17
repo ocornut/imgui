@@ -4279,23 +4279,29 @@ void ImGuiInputTextCallbackData::InsertChars(int pos, const char* new_text, cons
 void ImGui::PushPasswordFont()
 {
     ImGuiContext& g = *GImGui;
-    ImFont* in_font = g.Font;
-    ImFontBaked* in_baked = g.FontBaked;
-    ImFontGlyph glyph = *in_baked->FindGlyph('*');
-    glyph.PackId = -1;
-    ImFont* out_font = &g.InputTextPasswordFont;
-    out_font->Scale = in_font->Scale;
-    out_font->ContainerAtlas = in_font->ContainerAtlas;
-    out_font->Flags |= ImFontFlags_NoLoadGlyphs;
-    ImFontBaked* out_baked = out_font->GetFontBaked(in_baked->Size);
-    IM_ASSERT(out_baked->Glyphs.Size <= 1 && out_baked->IndexAdvanceX.Size == 0 && out_baked->IndexLookup.Size == 0);
-    out_baked->Ascent = in_baked->Ascent;
-    out_baked->Descent = in_baked->Descent;
-    out_baked->Glyphs.resize(0);
-    out_baked->Glyphs.push_back(glyph);
-    out_baked->FallbackGlyphIndex = 0;
-    out_baked->FallbackAdvanceX = glyph.AdvanceX;
-    PushFont(out_font);
+    ImFontBaked* backup = &g.InputTextPasswordFontBackupBaked;
+    IM_ASSERT(backup->IndexAdvanceX.Size == 0 && backup->IndexLookup.Size == 0);
+    ImFontGlyph* glyph = g.FontBaked->FindGlyph('*');
+    g.InputTextPasswordFontBackupFlags = g.Font->Flags;
+    backup->FallbackGlyphIndex = g.FontBaked->FallbackGlyphIndex;
+    backup->FallbackAdvanceX = g.FontBaked->FallbackAdvanceX;
+    backup->IndexLookup.swap(g.FontBaked->IndexLookup);
+    backup->IndexAdvanceX.swap(g.FontBaked->IndexAdvanceX);
+    g.Font->Flags |= ImFontFlags_NoLoadGlyphs;
+    g.FontBaked->FallbackGlyphIndex = g.FontBaked->Glyphs.index_from_ptr(glyph);
+    g.FontBaked->FallbackAdvanceX = glyph->AdvanceX;
+}
+
+void ImGui::PopPasswordFont()
+{
+    ImGuiContext& g = *GImGui;
+    ImFontBaked* backup = &g.InputTextPasswordFontBackupBaked;
+    g.Font->Flags = g.InputTextPasswordFontBackupFlags;
+    g.FontBaked->FallbackGlyphIndex = backup->FallbackGlyphIndex;
+    g.FontBaked->FallbackAdvanceX = backup->FallbackAdvanceX;
+    g.FontBaked->IndexLookup.swap(backup->IndexLookup);
+    g.FontBaked->IndexAdvanceX.swap(backup->IndexAdvanceX);
+    IM_ASSERT(backup->IndexAdvanceX.Size == 0 && backup->IndexLookup.Size == 0);
 }
 
 // Return false to discard a character.
@@ -5199,7 +5205,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     if (new_is_displaying_hint != is_displaying_hint)
     {
         if (is_password && !is_displaying_hint)
-            PopFont();
+            PopPasswordFont();
         is_displaying_hint = new_is_displaying_hint;
         if (is_password && !is_displaying_hint)
             PushPasswordFont();
@@ -5386,7 +5392,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     }
 
     if (is_password && !is_displaying_hint)
-        PopFont();
+        PopPasswordFont();
 
     if (is_multiline)
     {
