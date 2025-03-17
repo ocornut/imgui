@@ -1809,7 +1809,7 @@ static void DemoWindowWidgetsImages()
         // - Consider using the lower-level ImDrawList::AddImage() API, via ImGui::GetWindowDrawList()->AddImage().
         // - Read https://github.com/ocornut/imgui/blob/master/docs/FAQ.md
         // - Read https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
-        ImTextureID my_tex_id = io.Fonts->TexID;
+        ImTextureRef my_tex_id = io.Fonts->TexID;
         float my_tex_w = (float)io.Fonts->TexWidth;
         float my_tex_h = (float)io.Fonts->TexHeight;
         {
