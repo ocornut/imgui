@@ -64,6 +64,8 @@ Breaking changes:
 - Backends: Vulkan: Added 'uint32_t api_version' argument to ImGui_ImplVulkan_LoadFunctions().
   Note that it was also added to ImGui_ImplVulkan_InitInfo but for the later it is optional.
   (#8326, #8365, #8400)
+- Internals: Fonts: ImFontAtlas::ConfigData[] has been renamed to ImFontAtlas::Sources[],
+- Internals: Fonts: ImFont::ConfigData[], ConfigDataCount has been renamed to Sources[], SourceCount.
 - Internals: Menus: reworked mangling of menu windows to use "###Menu_00" etc. instead
   of "##Menu_00", allowing them to also store the menu name before it. This shouldn't
   affect code unless directly accessing menu window from their mangled name.
