@@ -1,4 +1,4 @@
-// dear imgui, v1.91.9
+// dear imgui, v1.91b
 // (tables and columns code)
 
 /*
@@ -1638,9 +1638,9 @@ void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, flo
     column->InitStretchWeightOrWidth = init_width_or_weight;
     if (table->IsInitializing)
     {
-        ImGuiTableFlags init_flags = ~0;
-        if (column->WidthRequest >= 0.0f || column->StretchWeight >= 0.0f)
-            init_flags &= ~ImGuiTableFlags_Resizable;
+        ImGuiTableFlags init_flags = ~table->SettingsLoadedFlags;
+        if (column->WidthRequest < 0.0f && column->StretchWeight < 0.0f)
+            init_flags |= ImGuiTableFlags_Resizable;
         TableInitColumnDefaults(table, column, init_flags);
     }
 

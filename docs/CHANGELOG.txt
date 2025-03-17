@@ -36,6 +36,17 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
+ VERSION 1.91.9b (Released 2025-03-17)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.91.9b
+
+- Tables: Fixed assert when loading .ini settings with reordered columns. (#8496, #7934)
+- Tables: Fixed issues when loading .ini settings for a table with columns using
+  ImGuiTableColumnFlags_DefaultHide or ImGuiTableColumnFlags_DefaultSort. (#8496, #7934)
+
+
+-----------------------------------------------------------------------
  VERSION 1.91.9 (Released 2025-03-14)
 -----------------------------------------------------------------------
 
@@ -64,6 +75,8 @@ Breaking changes:
 - Backends: Vulkan: Added 'uint32_t api_version' argument to ImGui_ImplVulkan_LoadFunctions().
   Note that it was also added to ImGui_ImplVulkan_InitInfo but for the later it is optional.
   (#8326, #8365, #8400)
+- Internals: Fonts: ImFontAtlas::ConfigData[] has been renamed to ImFontAtlas::Sources[],
+- Internals: Fonts: ImFont::ConfigData[], ConfigDataCount has been renamed to Sources[], SourcesCount.
 - Internals: Menus: reworked mangling of menu windows to use "###Menu_00" etc. instead
   of "##Menu_00", allowing them to also store the menu name before it. This shouldn't
   affect code unless directly accessing menu window from their mangled name.
