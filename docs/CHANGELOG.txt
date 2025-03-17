@@ -43,6 +43,10 @@ Breaking changes:
 
 Other changes:
 
+- Tables: Fixed assert when loading .ini settings of reordered columns. (#8496, #7934)
+- Tables: Fixed issues when loading .ini settings for a table with columns using
+  ImGuiTableColumnFlags_DefaultHide or ImGuiTableColumnFlags_DefaultSort. (#8496, #7934)
+
 
 -----------------------------------------------------------------------
  VERSION 1.91.9 (Released 2025-03-14)
