@@ -36,14 +36,12 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.91.9b WIP (In Progress)
+ VERSION 1.91.9b (Released 2025-03-17)
 -----------------------------------------------------------------------
 
-Breaking changes:
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.91.9b
 
-Other changes:
-
-- Tables: Fixed assert when loading .ini settings of reordered columns. (#8496, #7934)
+- Tables: Fixed assert when loading .ini settings with reordered columns. (#8496, #7934)
 - Tables: Fixed issues when loading .ini settings for a table with columns using
   ImGuiTableColumnFlags_DefaultHide or ImGuiTableColumnFlags_DefaultSort. (#8496, #7934)
 
