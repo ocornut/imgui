@@ -5989,9 +5989,9 @@ void ImGui::EndFrame()
     }
 
     // End frame
-    PopFont();
     g.WithinFrameScope = false;
     g.FrameCountEnded = g.FrameCount;
+    PopFont();
 
     // Initiate moving window + handle left-click and right-click focus
     UpdateMouseMovingWindowEndFrame();
@@ -8546,7 +8546,7 @@ static void PushDefaultFont()
 void  ImGui::PopFont()
 {
     ImGuiContext& g = *GImGui;
-    if (g.FontStack.Size <= 0)
+    if (g.FontStack.Size <= 1 && g.WithinFrameScope)
     {
         IM_ASSERT_USER_ERROR(0, "Calling PopFont() too many times!");
         return;
