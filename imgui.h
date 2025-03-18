@@ -342,11 +342,11 @@ typedef ImU64 ImTextureID;      // Default: store up to 64-bits (any pointer or 
 IM_MSVC_RUNTIME_CHECKS_OFF
 struct ImTextureRef
 {
-    ImTextureRef()                          { memset(this, 0, sizeof(*this)); }
-    ImTextureRef(ImTextureID tex_id)        { memset(this, 0, sizeof(*this)); _TexID = tex_id; }
-#if !defined(IMGUI_DISABLE_OBSOLETE_FUNCTIONS) && !defined(ImTextureUserID)
-    ImTextureRef(void* tex_id)              { memset(this, 0, sizeof(*this)); _TexID = (ImTextureID)(size_t)tex_id; }   // For legacy backends casting to ImTextureID
-    //inline operator intptr_t() const      { return (intptr_t)_TexID; }                                                // For legacy backends casting to ImTextureID
+    ImTextureRef()                          { _TexData = NULL; _TexID = ImTextureID_Invalid; }
+    ImTextureRef(ImTextureID tex_id)        { _TexData = NULL; _TexID = tex_id; }
+#if !defined(IMGUI_DISABLE_OBSOLETE_FUNCTIONS) && !defined(ImTextureID)
+    ImTextureRef(void* tex_id)              { _TexData = NULL; _TexID = (ImTextureID)(size_t)tex_id; }  // For legacy backends casting to ImTextureID
+    //inline operator intptr_t() const      { return (intptr_t)_TexID; }                                // For legacy backends casting to ImTextureID
 #endif
     inline ImTextureID GetTexID() const;    // == (_TexData ? _TexData->TexID : _TexID) // Implemented below in the file.
 
