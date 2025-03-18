@@ -36,6 +36,18 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
+ VERSION 1.92.0 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Breaking changes:
+
+Other changes:
+
+- Error Handling: added better error report and recovery for extraneous 
+  EndPopup() call. (#1651, #8499)
+
+
+-----------------------------------------------------------------------
  VERSION 1.91.9b (Released 2025-03-17)
 -----------------------------------------------------------------------
 
