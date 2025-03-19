@@ -3724,9 +3724,10 @@ struct ImFontAtlas
     void*                       UserData;           // Store your own atlas related user-data (if e.g. you have multiple font atlas).
 
     // Output
-    ImTextureRef                TexRef;             // Current texture identifier == TexData->GetTexRef().
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    ImTextureRef&               TexID = TexRef;     // RENAMED in 1.92.x
+    union { ImTextureRef TexRef; ImTextureRef TexID; }; // Current texture identifier == TexData->GetTexRef(). // RENAMED TexID to TexRef in 1.92.x
+#else
+    ImTextureRef                TexRef;             // Current texture identifier == TexData->GetTexRef().
 #endif
     ImTextureData*              TexData;            // Current texture.
 
