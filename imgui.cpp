@@ -6647,8 +6647,19 @@ static ImGuiCol GetWindowBgColorIdx(ImGuiWindow* window)
     return ImGuiCol_WindowBg;
 }
 
-static void CalcResizePosSizeFromAnyCorner(ImGuiWindow* window, const ImVec2& corner_target, const ImVec2& corner_norm, ImVec2* out_pos, ImVec2* out_size)
+static void CalcResizePosSizeFromAnyCorner(ImGuiWindow* window, ImVec2 corner_target, const ImVec2& corner_norm, ImVec2* out_pos, ImVec2* out_size)
 {
+    if (window->Flags & ImGuiWindowFlags_ChildWindow) // Clamp resizing of childs within parent
+    {
+        ImGuiWindow* parent_window = window->ParentWindow;
+        ImGuiWindowFlags parent_flags = parent_window->Flags;
+        ImRect corner_limit_rect = parent_window->InnerRect;
+        corner_limit_rect.Expand(ImVec2(-ImMax(parent_window->WindowPadding.x, parent_window->WindowBorderSize), -ImMax(parent_window->WindowPadding.y, parent_window->WindowBorderSize)));
+        if ((parent_flags & (ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysHorizontalScrollbar)) == 0 || (parent_flags & ImGuiWindowFlags_NoScrollbar))
+            corner_target.x = ImClamp(corner_target.x, corner_limit_rect.Min.x, corner_limit_rect.Max.x);
+        if (parent_flags & ImGuiWindowFlags_NoScrollbar)
+            corner_target.y = ImClamp(corner_target.y, corner_limit_rect.Min.y, corner_limit_rect.Max.y);
+    }
     ImVec2 pos_min = ImLerp(corner_target, window->Pos, corner_norm);                // Expected window upper-left
     ImVec2 pos_max = ImLerp(window->Pos + window->Size, corner_target, corner_norm); // Expected window lower-right
     ImVec2 size_expected = pos_max - pos_min;
@@ -6868,17 +6879,6 @@ static int ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& si
             ImVec2 clamp_min(border_n == ImGuiDir_Right ? clamp_rect.Min.x : -FLT_MAX, border_n == ImGuiDir_Down || (border_n == ImGuiDir_Up && window_move_from_title_bar) ? clamp_rect.Min.y : -FLT_MAX);
             ImVec2 clamp_max(border_n == ImGuiDir_Left ? clamp_rect.Max.x : +FLT_MAX, border_n == ImGuiDir_Up ? clamp_rect.Max.y : +FLT_MAX);
             border_target = ImClamp(border_target, clamp_min, clamp_max);
-            if (flags & ImGuiWindowFlags_ChildWindow) // Clamp resizing of childs within parent
-            {
-                ImGuiWindow* parent_window = window->ParentWindow;
-                ImGuiWindowFlags parent_flags = parent_window->Flags;
-                ImRect border_limit_rect = parent_window->InnerRect;
-                border_limit_rect.Expand(ImVec2(-ImMax(parent_window->WindowPadding.x, parent_window->WindowBorderSize), -ImMax(parent_window->WindowPadding.y, parent_window->WindowBorderSize)));
-                if ((axis == ImGuiAxis_X) && ((parent_flags & (ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysHorizontalScrollbar)) == 0 || (parent_flags & ImGuiWindowFlags_NoScrollbar)))
-                    border_target.x = ImClamp(border_target.x, border_limit_rect.Min.x, border_limit_rect.Max.x);
-                if ((axis == ImGuiAxis_Y) && (parent_flags & ImGuiWindowFlags_NoScrollbar))
-                    border_target.y = ImClamp(border_target.y, border_limit_rect.Min.y, border_limit_rect.Max.y);
-            }
             if (!ignore_resize)
                 CalcResizePosSizeFromAnyCorner(window, border_target, ImMin(def.SegmentN1, def.SegmentN2), &pos_target, &size_target);
         }
@@ -7657,7 +7657,19 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // Handle manual resize: Resize Grips, Borders, Gamepad
         int border_hovered = -1, border_held = -1;
         ImU32 resize_grip_col[4] = {};
-        const int resize_grip_count = ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Popup)) ? 0 : g.IO.ConfigWindowsResizeFromEdges ? 2 : 1; // Allow resize from lower-left if we have the mouse cursor feedback for it.
+        int resize_grip_count;
+        if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Popup)) {
+          // Child windows can only be resized when they have the flags set. The resize grip allows resizing in both directions, so it should appear only if both flags are set.
+          if ((window->ChildFlags & ImGuiChildFlags_ResizeX) && (window->ChildFlags & ImGuiChildFlags_ResizeY)) {
+            resize_grip_count = 1; // Child windows can only be resized in the layout direction, that is rightwards and downwards.
+          }
+          else {
+            resize_grip_count = 0;
+          }
+        }
+        else {
+          resize_grip_count = g.IO.ConfigWindowsResizeFromEdges ? 2 : 1; // Allow resize from lower-left if we have the mouse cursor feedback for it.
+        }
         const float resize_grip_draw_size = IM_TRUNC(ImMax(g.FontSize * 1.10f, window->WindowRounding + 1.0f + g.FontSize * 0.2f));
         if (handle_borders_and_resize_grips && !window->Collapsed)
             if (int auto_fit_mask = UpdateWindowManualResize(window, size_auto_fit, &border_hovered, &border_held, resize_grip_count, &resize_grip_col[0], visibility_rect))
