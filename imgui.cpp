@@ -3544,6 +3544,7 @@ const char* ImGui::GetStyleColorName(ImGuiCol idx)
     case ImGuiCol_ResizeGrip: return "ResizeGrip";
     case ImGuiCol_ResizeGripHovered: return "ResizeGripHovered";
     case ImGuiCol_ResizeGripActive: return "ResizeGripActive";
+    case ImGuiCol_InputTextCursor: return "InputTextCursor";
     case ImGuiCol_TabHovered: return "TabHovered";
     case ImGuiCol_Tab: return "Tab";
     case ImGuiCol_TabSelected: return "TabSelected";
