@@ -3426,7 +3426,7 @@ struct IMGUI_API ImTextureData
     unsigned char*      GetPixelsAt(int x, int y)   { IM_ASSERT(Pixels != NULL); return Pixels + (x + y * Width) * BytesPerPixel; }
     int                 GetSizeInBytes() const      { return Width * Height * BytesPerPixel; }
     int                 GetPitch() const            { return Width * BytesPerPixel; }
-    ImTextureRef        GetTexRef()                 { ImTextureRef tex_ref; tex_ref._TexData = this; tex_ref._TexID = TexID; return tex_ref; } // FIXME-TEXREF
+    ImTextureRef        GetTexRef()                 { ImTextureRef tex_ref; tex_ref._TexData = this; tex_ref._TexID = ImTextureID_Invalid; return tex_ref; }
     ImTextureID         GetTexID() const            { return TexID; }
 
     // Called by Renderer backend
@@ -3761,6 +3761,7 @@ struct ImFont
 // We added an indirection to avoid patching ImDrawCmd after texture updates but this could be a solution too.
 inline ImTextureID ImTextureRef::GetTexID() const
 {
+    IM_ASSERT(!(_TexData != NULL && _TexID != ImTextureID_Invalid));
     return _TexData ? _TexData->TexID : _TexID;
 }
 
@@ -3768,7 +3769,7 @@ inline ImTextureID ImDrawCmd::GetTexID() const
 {
     // If you are getting this assert: A renderer backend with support for ImGuiBackendFlags_RendererHasTextures (1.92)
     // must iterate and handle ImTextureData requests stored in ImDrawData::Textures[].
-    ImTextureID tex_id = TexRef._TexData ? TexRef._TexData->TexID : TexRef._TexID;
+    ImTextureID tex_id = TexRef._TexData ? TexRef._TexData->TexID : TexRef._TexID; // == TexRef.GetTexID() above.
     if (TexRef._TexData != NULL)
         IM_ASSERT(tex_id != ImTextureID_Invalid && "ImDrawCmd is referring to ImTextureData that wasn't uploaded to graphics system. Backend must call ImTextureData::SetTexID() after handling ImTextureStatus_WantCreate request!");
     return tex_id;
