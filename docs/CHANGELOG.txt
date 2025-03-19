@@ -43,7 +43,7 @@ Breaking changes:
 
 Other changes:
 
-- Error Handling: added better error report and recovery for extraneous 
+- Error Handling: added better error report and recovery for extraneous
   EndPopup() call. (#1651, #8499)
 
 
