@@ -22334,7 +22334,7 @@ void ImGui::DebugNodeDrawCmdShowMeshAndBoundingBox(ImDrawList* out_draw_list, co
 void ImGui::DebugNodeFont(ImFont* font)
 {
     ImFontAtlas* atlas = font->ContainerAtlas;
-    bool opened = TreeNode(font, "Font: \"%s\": %d sources(s)", font->Sources ? font->Sources[0].Name : "", font->SourcesCount);
+    bool opened = TreeNode(font, "Font: \"%s\": %d sources(s)", font->GetDebugName(), font->SourcesCount);
 
     // Display preview text
     if (!opened)

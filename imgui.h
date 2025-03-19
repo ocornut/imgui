@@ -316,29 +316,44 @@ IM_MSVC_RUNTIME_CHECKS_RESTORE
 // [SECTION] Texture identifiers (ImTextureID, ImTextureRef)
 //-----------------------------------------------------------------------------
 
-// ImTextureID: user data for renderer backend to identify a texture [Compile-time configurable type]
+// ImTextureID = backend specific, low-level identifier for a texture uploaded in GPU/graphics system.
+// [Compile-time configurable type]
 // Overview:
-// - Backend and user/app code provides ImTextureID values that gets stored inside draw commands (ImDrawCmd) during the ImGui frame.
-// - Backend uses ImDrawCmd::GetTexID() to retrieve the ImTextureID value during rendering. Then, they can bind the textures of each draw command.
+// - When a Rendered Backend creates a texture, it store its native identifier into a ImTextureID value.
+//   (e.g. Used by DX11 backend to a `ID3D11ShaderResourceView*`; Used by OpenGL backends to store `GLuint';
+//         Used by SDLGPU backend to store a `SDL_GPUTextureSamplerBinding*`, etc.).
+// - User may submit their own textures to e.g. ImGui::Image() function by passing the same type.
+// - During the rendering loop, the Renderer Backend retrieve the ImTextureID, which stored inside
+//   ImTextureRef, which is stored inside ImDrawCmd.
 // Configuring the type:
-// - To use something else than a 64-bit value: override with e.g. '#define ImTextureID MyTextureType*' in your imconfig.h file.
+// - To use something other than a 64-bit value: add '#define ImTextureID MyTextureType*' in your imconfig.h file.
 // - This can be whatever to you want it to be! read the FAQ entry about textures for details.
-// - You may decide to store a higher-level structure containing texture, sampler, shader etc. with various constructors if you like. You will need to implement ==/!= operators.
+// - You may decide to store a higher-level structure containing texture, sampler, shader etc. with various
+//   constructors if you like. You will need to implement ==/!= operators.
 // History:
 // - In v1.91.4 (2024/10/08): the default type for ImTextureID was changed from 'void*' to 'ImU64'. This allowed backends requirig 64-bit worth of data to build on 32-bit architectures. Use intermediary intptr_t cast and read FAQ if you have casting warnings.
+// - In v1.92.0 (2025/XX/XX): added ImTextureRef which carry either a ImTextureID either a pointer to internal texture atlas. All user facing functions taking ImTextureID changed to ImTextureRef
 #ifndef ImTextureID
 typedef ImU64 ImTextureID;      // Default: store up to 64-bits (any pointer or integer). A majority of backends are ok with that.
 #endif
 
-// Define this to another value if you need value of 0 to be valid.
+// Define this if you need 0 to be a valid ImTextureID for your backend.
 #ifndef ImTextureID_Invalid
 #define ImTextureID_Invalid     ((ImTextureID)0)
 #endif
 
-// ImTextureRef contains:
-// -    a texture/atlas pointer, typically when created by Dear ImGui itself.
-// - OR a raw ImTextureID value (user/backend identifier), typically when created by user code to load images.
-// There is no constructor to create a ImTextureID from a ImTextureData* as we don't expect this to be useful to the end-user.
+// ImTextureRef = higher-level identifier for a texture.
+// The identifier is valid even before the texture has been uploaded to the GPU/graphics system.
+// This is what gets passed to functions such as ImGui::Image(), ImDrawList::AddImage().
+// This is what gets stored in draw commands (ImDrawCmd) to identify a texture during rendering.
+// - When a texture is created by user code (e.g. custom images), we directly stores the low-level ImTextureID.
+// - When a texture is created by the backend, we stores a ImTextureData* which becomes an indirection
+//   to extract the ImTextureID value during rendering, after texture upload has happened.
+// - There is no constructor to create a ImTextureID from a ImTextureData* as we don't expect this
+//   to be useful to the end-user, and it would be erroneously called by many legacy code.
+// - If you want to bind the current atlas when using custom rectangle, you can use io.Fonts->TexRef.
+// - Binding generators for languages such as C (which don't have constructors), should provide a helper:
+//      inline ImTextureRef ImTextureRefFromID(ImTextureID tex_id) { ImTextureRef tex_ref = { ._TexData = NULL, .TexID = tex_id }; return tex_ref; }
 IM_MSVC_RUNTIME_CHECKS_OFF
 struct ImTextureRef
 {
@@ -346,13 +361,12 @@ struct ImTextureRef
     ImTextureRef(ImTextureID tex_id)        { _TexData = NULL; _TexID = tex_id; }
 #if !defined(IMGUI_DISABLE_OBSOLETE_FUNCTIONS) && !defined(ImTextureID)
     ImTextureRef(void* tex_id)              { _TexData = NULL; _TexID = (ImTextureID)(size_t)tex_id; }  // For legacy backends casting to ImTextureID
-    //inline operator intptr_t() const      { return (intptr_t)_TexID; }                                // For legacy backends casting to ImTextureID
 #endif
     inline ImTextureID GetTexID() const;    // == (_TexData ? _TexData->TexID : _TexID) // Implemented below in the file.
 
-    // Members
-    ImTextureData*  _TexData;               // Texture, generally owned by a ImFontAtlas
-    ImTextureID     _TexID;                 // _OR_ Underlying texture identifier for backend, if already uploaded (otherwise pulled from _TexData)
+    // Members (either are set, never both!)
+    ImTextureData*      _TexData;           //      A texture, generally owned by a ImFontAtlas. Will convert to ImTextureID during render loop, after texture has been uploaded.
+    ImTextureID         _TexID;             // _OR_ Low-level backend texture identifier, if already uploaded or created by user/app. Generally provided to e.g. ImGui::Image() calls.
 };
 IM_MSVC_RUNTIME_CHECKS_RESTORE
 
@@ -612,7 +626,7 @@ namespace ImGui
     IMGUI_API void          TextLinkOpenURL(const char* label, const char* url = NULL);     // hyperlink text button, automatically open file/url when clicked
 
     // Widgets: Images
-    // - Read about ImTextureID here: https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
+    // - Read about ImTextureID/ImTextureRef  here: https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
     // - 'uv0' and 'uv1' are texture coordinates. Read about them from the same link above.
     // - Image() pads adds style.ImageBorderSize on each side, ImageButton() adds style.FramePadding on each side.
     // - ImageButton() draws a background based on regular Button() color + optionally an inner background if specified.
@@ -2918,7 +2932,8 @@ static inline bool    operator!=(const ImVec4& lhs, const ImVec4& rhs)  { return
 IM_MSVC_RUNTIME_CHECKS_RESTORE
 #endif
 
-// Helpers: ImTexture ==/!= operators provided as convenience (not strictly necessary)
+// Helpers: ImTextureRef ==/!= operators provided as convenience
+// (note that _TexID and _TexData are never set simultaneously)
 static inline bool operator==(const ImTextureRef& lhs, const ImTextureRef& rhs) { return lhs._TexID == rhs._TexID && lhs._TexData == rhs._TexData; }
 static inline bool operator!=(const ImTextureRef& lhs, const ImTextureRef& rhs) { return lhs._TexID != rhs._TexID || lhs._TexData != rhs._TexData; }
 //#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS // For legacy backends
@@ -3173,7 +3188,6 @@ struct ImDrawCmd
 
     // Since 1.83: returns ImTextureID associated with this draw call. Warning: DO NOT assume this is always same as 'TextureId' (we will change this function for an upcoming feature)
     // Since 1.92: removed ImDrawCmd::TextureId field, the getter function must be used!
-    // If for some reason you non C++ tech stack makes it difficult to call it, we may decide to separate the fields in ImDrawCmd.
     inline ImTextureID GetTexID() const;    // == (TexRef._TexData ? TexRef._TexData->TexID : TexRef._TexID
 };
 
@@ -3396,8 +3410,8 @@ struct ImDrawList
 
     // Obsolete names
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    //IMGUI_API void  PushTextureID(ImTextureRef tex_ref) { PushTexture(tex_ref); } // RENAMED in 1.92.x
-    //IMGUI_API void  PopTextureID() { PopTexture(); }                              // RENAMED in 1.92.x
+    IMGUI_API void  PushTextureID(ImTextureRef tex_ref) { PushTexture(tex_ref); }   // RENAMED in 1.92.x
+    IMGUI_API void  PopTextureID()                      { PopTexture(); }           // RENAMED in 1.92.x
 #endif
     //inline  void  AddEllipse(const ImVec2& center, float radius_x, float radius_y, ImU32 col, float rot = 0.0f, int num_segments = 0, float thickness = 1.0f) { AddEllipse(center, ImVec2(radius_x, radius_y), col, rot, num_segments, thickness); } // OBSOLETED in 1.90.5 (Mar 2024)
     //inline  void  AddEllipseFilled(const ImVec2& center, float radius_x, float radius_y, ImU32 col, float rot = 0.0f, int num_segments = 0) { AddEllipseFilled(center, ImVec2(radius_x, radius_y), col, rot, num_segments); }                        // OBSOLETED in 1.90.5 (Mar 2024)
@@ -3444,7 +3458,11 @@ struct ImDrawData
 };
 
 //-----------------------------------------------------------------------------
-// [SECTION] Texture API (ImTextureFormat, ImTextureStatus, ImTextureRect, ImTextureData
+// [SECTION] Texture API (ImTextureFormat, ImTextureStatus, ImTextureRect, ImTextureData)
+//-----------------------------------------------------------------------------
+// In principle, the only data types that user/application code should care about are 'ImTextureRef' and 'ImTextureID'.
+// They are defined above in this header file. Read their description to the difference between ImTextureRef and ImTextureID.
+// FOR ALL OTHER ImTextureXXXX TYPES: ONLY CORE LIBRARY AND RENDERER BACKENDS NEED TO KNOW AND CARE ABOUT THEM.
 //-----------------------------------------------------------------------------
 
 // We intentionally support a limited amount of texture formats to limit burden on CPU-side code and extension.
@@ -3455,7 +3473,7 @@ enum ImTextureFormat
     ImTextureFormat_Alpha8,         // 1 component per pixel, each is unsigned 8-bit. Total size = TexWidth * TexHeight
 };
 
-// Status of a texture
+// Status of a texture to communicate with Renderer Backend.
 enum ImTextureStatus
 {
     ImTextureStatus_OK,
@@ -3466,7 +3484,7 @@ enum ImTextureStatus
 };
 
 // Coordinates of a rectangle within a texture.
-// When a texture is in ImTextureStatus_WantUpdates state, we provide a list of individual rectangles to copy to GPU texture.
+// When a texture is in ImTextureStatus_WantUpdates state, we provide a list of individual rectangles to copy to the graphics system.
 // You may use ImTextureData::Updates[] for the list, or ImTextureData::UpdateBox for a single bounding box.
 struct ImTextureRect
 {
@@ -3475,7 +3493,8 @@ struct ImTextureRect
 };
 
 // Specs and pixel storage for a texture used by Dear ImGui.
-// The renderer backend will generally create a GPU-side version of this.
+// This is only useful for (1) core library and (2) backends. End-user/applications do not need to care about this.
+// Renderer Backends will create a GPU-side version of this.
 // Why does we store two identifiers: TexID and BackendUserData?
 // - ImTextureID    TexID           = lower-level identifier stored in ImDrawCmd. ImDrawCmd can refer to textures not created by the backend, and for which there's no ImTextureData.
 // - void*          BackendUserData = higher-level opaque storage for backend own book-keeping. Some backends may have enough with TexID and not need both.
@@ -3507,7 +3526,7 @@ struct IMGUI_API ImTextureData
     unsigned char*      GetPixelsAt(int x, int y)   { IM_ASSERT(Pixels != NULL); return Pixels + (x + y * Width) * BytesPerPixel; }
     int                 GetSizeInBytes() const      { return Width * Height * BytesPerPixel; }
     int                 GetPitch() const            { return Width * BytesPerPixel; }
-    ImTextureRef        GetTexRef()                 { ImTextureRef tex_ref; tex_ref._TexData = this; tex_ref._TexID = TexID; return tex_ref; }
+    ImTextureRef        GetTexRef()                 { ImTextureRef tex_ref; tex_ref._TexData = this; tex_ref._TexID = TexID; return tex_ref; } // FIXME-TEXREF
     ImTextureID         GetTexID() const            { return TexID; }
     void                SetTexID(ImTextureID tex_id){ TexID = tex_id; } // Called by the Renderer backend after creating or destroying the texture. Never modify TexID directly!
 };
@@ -3599,7 +3618,7 @@ enum ImFontAtlasFlags_
 // It is the rendering backend responsibility to upload texture into your graphics API:
 //  - ImGui_ImplXXXX_RenderDrawData() functions generally iterate platform_io->Textures[] to create/update/destroy each ImTextureData instance.
 //  - Backend then set ImTextureData's TexID and BackendUserData.
-//  - Texture id are passed back to you during rendering to identify the texture. Read FAQ entry about ImTextureID for more details.
+//  - Texture id are passed back to you during rendering to identify the texture. Read FAQ entry about ImTextureID/ImTextureRef for more details.
 // Legacy path:
 //  - Call Build() + GetTexDataAsAlpha8() or GetTexDataAsRGBA32() to build and retrieve pixels data.
 //  - Call SetTexID(my_tex_id); and pass the pointer/identifier to your texture in a format natural to your graphics API.
@@ -3651,7 +3670,7 @@ struct ImFontAtlas
     // Glyph Ranges
     //-------------------------------------------
 
-    // Since 1.92: specifying glyph ranges is only useful/necessary if your backend doesn't support ImGuiBackendFlags_HasTextures!
+    // Since 1.92: specifying glyph ranges is only useful/necessary if your backend doesn't support ImGuiBackendFlags_RendererHasTextures!
     IMGUI_API const ImWchar*    GetGlyphRangesDefault();                // Basic Latin, Extended Latin
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     // Helpers to retrieve list of common Unicode ranges (2 value per range, values are inclusive, zero-terminated list)
@@ -3704,9 +3723,14 @@ struct ImFontAtlas
     int                         TexMaxHeight;       // Maximum desired texture height. Must be a power of two. Default to 8096.
     void*                       UserData;           // Store your own atlas related user-data (if e.g. you have multiple font atlas).
 
+    // Output
+    ImTextureRef                TexRef;             // Current texture identifier == TexData->GetTexRef().
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    ImTextureRef&               TexID = TexRef;     // RENAMED in 1.92.x
+#endif
+    ImTextureData*              TexData;            // Current texture.
+
     // [Internal]
-    ImTextureRef                TexRef;             // User data to refer to the latest texture once it has been uploaded to user's graphic systems. It is passed back to you during rendering via the ImDrawCmd structure.
-    ImTextureData*              TexData;            // Current texture
     ImVector<ImTextureData*>    TexList;            // Texture list (most often TexList.Size == 1). TexData is always == TexList.back(). DO NOT USE DIRECTLY, USE GetPlatformIO().Textures[] instead!
     bool                        Locked;             // Marked as locked during ImGui::NewFrame()..EndFrame() scope if TexUpdates are not supported. Any attempt to modify the atlas will assert.
     bool                        RendererHasTextures;// Copy of (BackendFlags & ImGuiBackendFlags_RendererHasTextures) from supporting context.
@@ -3719,10 +3743,8 @@ struct ImFontAtlas
     ImVec4                      TexUvLines[IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1];  // UVs for baked anti-aliased lines
     int                         TexNextUniqueID;    // Next value to be stored in TexData->UniqueID
     int                         FontNextUniqueID;   // Next value to be stored in ImFont->SourceID
-    ImVector<ImDrawListSharedData*> DrawListSharedDatas;
-
-    // [Internal] Font builder
-    ImFontAtlasBuilder*         Builder;            // Opaque interface to our data that doesn't need to be public
+    ImVector<ImDrawListSharedData*> DrawListSharedDatas; // List of users for this atlas. Typically one per Dear ImGui context.
+    ImFontAtlasBuilder*         Builder;            // Opaque interface to our data that doesn't need to be public and may be discarded when rebuilding.
     const ImFontLoader*         FontLoader;         // Font loader opaque interface (default to stb_truetype, can be changed to use FreeType by defining IMGUI_ENABLE_FREETYPE). Don't set directly!
     const char*                 FontLoaderName;     // Font loader name (for display e.g. in About box) == FontLoader->Name
     void*                       FontLoaderData;     // Font backend opaque storage
@@ -3814,7 +3836,7 @@ struct ImFont
     IMGUI_API ImFontBaked*      GetFontBaked(float font_size);  // Get or create baked data for given size
     IMGUI_API bool              IsGlyphInFont(ImWchar c);
     bool                        IsLoaded() const                { return ContainerAtlas != NULL; }
-    const char*                 GetDebugName() const            { return Sources ? Sources[0].Name : "<unknown>"; }
+    const char*                 GetDebugName() const            { return Sources ? Sources[0].Name : "<unknown>"; } // Fill ImFontConfig::Name.
 
     // [Internal] Don't use!
     // 'max_width' stops rendering after a certain width (could be turned into a 2d size). FLT_MAX to disable.
