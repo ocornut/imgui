@@ -2617,7 +2617,6 @@ ImFontAtlas::ImFontAtlas()
     TexMaxWidth = 8192;
     TexMaxHeight = 8192;
     RendererHasTextures = false; // Assumed false by default, as apps can call e.g Atlas::Build() after backend init and before ImGui can update.
-    TexRef._TexData = NULL;// this;
     TexNextUniqueID = 1;
     FontNextUniqueID = 1;
     Builder = NULL;
@@ -3885,9 +3884,8 @@ static void ImFontAtlasBuildSetTexture(ImFontAtlas* atlas, ImTextureData* tex)
     atlas->TexData = tex;
     atlas->TexUvScale = ImVec2(1.0f / tex->Width, 1.0f / tex->Height);
     atlas->TexRef._TexData = tex;
-    //atlas->TexID._TexID = tex->TexID; // <-- We intentionally don't do that and leave it 0, to allow late upload.
-    ImTextureRef new_tex_ref = atlas->TexRef;
-    ImFontAtlasUpdateDrawListsTextures(atlas, old_tex_ref, new_tex_ref);
+    //atlas->TexRef._TexID = tex->TexID; // <-- We intentionally don't do that. It would be misleading and betray promise that both fields aren't set.
+    ImFontAtlasUpdateDrawListsTextures(atlas, old_tex_ref, atlas->TexRef);
 }
 
 // Create a new texture, discard previous one

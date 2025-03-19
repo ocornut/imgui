@@ -3526,7 +3526,7 @@ struct IMGUI_API ImTextureData
     unsigned char*      GetPixelsAt(int x, int y)   { IM_ASSERT(Pixels != NULL); return Pixels + (x + y * Width) * BytesPerPixel; }
     int                 GetSizeInBytes() const      { return Width * Height * BytesPerPixel; }
     int                 GetPitch() const            { return Width * BytesPerPixel; }
-    ImTextureRef        GetTexRef()                 { ImTextureRef tex_ref; tex_ref._TexData = this; tex_ref._TexID = TexID; return tex_ref; } // FIXME-TEXREF
+    ImTextureRef        GetTexRef()                 { ImTextureRef tex_ref; tex_ref._TexData = this; tex_ref._TexID = ImTextureID_Invalid; return tex_ref; }
     ImTextureID         GetTexID() const            { return TexID; }
     void                SetTexID(ImTextureID tex_id){ TexID = tex_id; } // Called by the Renderer backend after creating or destroying the texture. Never modify TexID directly!
 };
@@ -3858,11 +3858,12 @@ struct ImFont
 // We added an indirection to avoid patching ImDrawCmd after texture updates but this could be a solution too.
 inline ImTextureID ImTextureRef::GetTexID() const
 {
+    IM_ASSERT(!(_TexData != NULL && _TexID != ImTextureID_Invalid));
     return _TexData ? _TexData->TexID : _TexID;
 }
 inline ImTextureID ImDrawCmd::GetTexID() const
 {
-    ImTextureID tex_id = TexRef._TexData ? TexRef._TexData->TexID : TexRef._TexID;
+    ImTextureID tex_id = TexRef.GetTexID();
     IM_ASSERT((TexRef._TexData == NULL || tex_id != ImTextureID_Invalid) && "ImDrawCmd is referring to ImTextureData that wasn't uploaded to graphics system. Backend must call ImTextureData::SetTexID()!");
     return tex_id;
 }
