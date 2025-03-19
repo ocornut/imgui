@@ -2767,10 +2767,12 @@ void ImFontAtlasUpdateNewFrame(ImFontAtlas* atlas, int frame_count)
             tex->UpdateRect.x = tex->UpdateRect.y = (unsigned short)~0;
             tex->UpdateRect.w = tex->UpdateRect.h = 0;
         }
+        if (tex->Status == ImTextureStatus_WantCreate && atlas->RendererHasTextures)
+            IM_ASSERT(tex->TexID == ImTextureID_Invalid && tex->BackendUserData == NULL && "Backend set texture's TexID/BackendUserData but did not update Status to OK.");
 
         if (tex->Status == ImTextureStatus_Destroyed)
         {
-            IM_ASSERT(tex->TexID == ImTextureID_Invalid && tex->BackendUserData == NULL);
+            IM_ASSERT(tex->TexID == ImTextureID_Invalid && tex->BackendUserData == NULL && "Backend set texture Status to Destroyed but did not clear TexID/BackendUserData!");
             if (tex->WantDestroyNextFrame)
                 remove_from_list = true; // Destroy was scheduled by us
             else
