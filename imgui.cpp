@@ -22349,7 +22349,7 @@ void ImGui::DebugNodeFont(ImFont* font)
     ImGuiContext& g = *GImGui;
     ImGuiMetricsConfig* cfg = &g.DebugMetricsConfig;
     ImFontAtlas* atlas = font->ContainerAtlas;
-    bool opened = TreeNode(font, "Font: \"%s\": %d sources(s)", font->Sources ? font->Sources[0].Name : "", font->SourcesCount);
+    bool opened = TreeNode(font, "Font: \"%s\": %d sources(s)", font->GetDebugName(), font->SourcesCount);
 
     // Display preview text
     if (!opened)
