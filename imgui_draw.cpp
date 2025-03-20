@@ -3386,16 +3386,22 @@ void ImFontAtlasBuildPreloadAllGlyphRanges(ImFontAtlas* atlas)
 {
     atlas->Builder->PreloadedAllGlyphsRanges = true;
     for (ImFont* font : atlas->Fonts)
+    {
+        ImFontConfig* src = &font->Sources[0];
+        ImFontBaked* baked = font->GetFontBaked(src->SizePixels);
+        if (font->FallbackChar != 0)
+            baked->FindGlyph(font->FallbackChar);
+        if (font->EllipsisChar != 0)
+            baked->FindGlyph(font->EllipsisChar);
         for (int src_n = 0; src_n < font->SourcesCount; src_n++)
         {
-            ImFontConfig* src = &font->Sources[src_n];
-            ImFontBaked* baked = font->GetFontBaked(src->SizePixels);
+            src = &font->Sources[src_n];
             const ImWchar* ranges = src->GlyphRanges ? src->GlyphRanges : atlas->GetGlyphRangesDefault();
-            IM_ASSERT(ranges != NULL);
             for (; ranges[0]; ranges += 2)
                 for (unsigned int c = ranges[0]; c <= ranges[1] && c <= IM_UNICODE_CODEPOINT_MAX; c++) //-V560
                     baked->FindGlyph((ImWchar)c);
         }
+    }
 }
 
 void ImFontAtlasBuildUpdatePointers(ImFontAtlas* atlas)
