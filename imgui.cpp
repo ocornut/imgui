@@ -8628,7 +8628,12 @@ void ImGui::UpdateCurrentFontSize()
     final_size *= g.Font->Scale;
     if (ImGuiWindow* window = g.CurrentWindow)
         final_size *= window->FontWindowScale;
-    final_size = ImMax(1.0f, IM_ROUND(final_size));
+
+    // Round font size
+    // - We started rounding in 1.90 WIP (18991) as our layout system currently doesn't support non-rounded font size well yet.
+    // - We may support it better later and remove this rounding.
+    final_size = GetRoundedFontSize(final_size);
+    final_size = ImMax(1.0f, final_size);
 
     g.FontSize = final_size;
     g.FontBaked = (g.Font != NULL) ? g.Font->GetFontBaked(g.FontSize) : NULL;
