@@ -3340,6 +3340,7 @@ namespace ImGui
     // Fonts, drawing
     IMGUI_API void          SetCurrentFont(ImFont* font, float font_size);
     IMGUI_API void          UpdateCurrentFontSize();
+    inline float            GetRoundedFontSize(float size) { return IM_ROUND(size); }
     inline ImFont*          GetDefaultFont() { ImGuiContext& g = *GImGui; return g.IO.FontDefault ? g.IO.FontDefault : g.IO.Fonts->Fonts[0]; }
     IMGUI_API void          PushPasswordFont();
     IMGUI_API void          PopPasswordFont();

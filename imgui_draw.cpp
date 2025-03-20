@@ -3027,6 +3027,7 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
     }
 
     // Sanity check
+    // We don't round cfg.SizePixels yet as relative size of merged fonts are used afterwards.
     if (font_cfg->GlyphExcludeRanges != NULL)
     {
         int size = 0;
@@ -3041,12 +3042,6 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
         IM_ASSERT(font_cfg->FontLoader->LoaderInit == NULL && font_cfg->FontLoader->LoaderShutdown == NULL); // FIXME-NEWATLAS: Unsupported yet.
     }
     IM_ASSERT(font_cfg->FontLoaderData == NULL);
-
-    // Round font size
-    // - We started rounding in 1.90 WIP (18991) as our layout system currently doesn't support non-rounded font size well yet.
-    // - Note that using io.FontGlobalScale or SetWindowFontScale(), with are legacy-ish, partially supported features, can still lead to unrounded sizes.
-    // - We may support it better later and remove this rounding.
-    new_font_cfg.SizePixels = ImTrunc(new_font_cfg.SizePixels);
 
     // Pointers to Sources are otherwise dangling
     ImFontAtlasBuildUpdatePointers(this);
@@ -5167,6 +5162,11 @@ ImGuiID ImFontAtlasBakedGetId(ImGuiID font_id, float baked_size)
 ImFontBaked* ImFont::GetFontBaked(float size)
 {
     ImFontBaked* baked = LastBaked;
+
+    // Round font size
+    // - ImGui::PushFontSize() will already round, but other paths calling GetFontBaked() directly also needs it (e.g. ImFontAtlasBuildPreloadAllGlyphRanges)
+    size = ImGui::GetRoundedFontSize(size);
+
     if (baked && baked->Size == size)
         return baked;
 
