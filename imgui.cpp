@@ -8532,8 +8532,13 @@ void ImGui::PushFont(ImFont* font, float font_size)
     ImGuiContext& g = *GImGui;
     if (font == NULL)
         font = GetDefaultFont();
-    if (font_size < 0.0f)
-        font_size = font->Sources[0].SizePixels; // g.FontSize;
+    if (font_size <= 0.0f)
+    {
+        if (font->Flags & ImFontFlags_UseDefaultSize)
+            font_size = font->DefaultSize;       // Legacy: use default font size. Same as doing PushFont(font, font->DefaultSize). // FIXME-NEWATLAS
+        else
+            font_size = g.FontSizeBeforeScaling; // Keep current font size
+    }
     g.FontStack.push_back({ font, font_size });
     SetCurrentFont(font, font_size);
 }
@@ -8568,7 +8573,7 @@ void    ImGui::PopFontSize()
 static void PushDefaultFont()
 {
     ImGuiContext& g = *GImGui;
-    ImFontStackData font_stack_data = { ImGui::GetDefaultFont(), ImGui::GetDefaultFont()->Sources[0].SizePixels };
+    ImFontStackData font_stack_data = { ImGui::GetDefaultFont(), ImGui::GetDefaultFont()->DefaultSize };
     g.FontStack.push_front(font_stack_data);
     if (g.FontStack.Size == 1)
         ImGui::SetCurrentFont(font_stack_data.Font, font_stack_data.FontSize);

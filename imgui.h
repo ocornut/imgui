@@ -499,9 +499,13 @@ namespace ImGui
     IMGUI_API void          SetScrollFromPosY(float local_y, float center_y_ratio = 0.5f);  // adjust scrolling amount to make given position visible. Generally GetCursorStartPos() + offset to compute a valid position.
 
     // Parameters stacks (font)
-    IMGUI_API void          PushFont(ImFont* font, float font_size = -1);                   // use NULL as a shortcut to push default font. Use <0.0f to keep current font size.
+    // *IMPORTANT* before 1.92, fonts had a single size. They can now be dynamically be adjusted.
+    // - Before 1.92: PushFont() always used font default size.
+    // -  Since 1.92: PushFont() preserve the current shared font size.
+    // - To use old behavior: use 'PushFont(font, font->DefaultSize)' in call site, or set 'ImFontConfig::Flags |= ImFontFlags_UseDefaultSize' before calling AddFont().
+    IMGUI_API void          PushFont(ImFont* font, float font_size = -1);                   // use NULL as a shortcut to push default font. Use <0.0f to keep current font size. Use font->DefaultSize to revert to font default size.
     IMGUI_API void          PopFont();
-    IMGUI_API void          PushFontSize(float size);
+    IMGUI_API void          PushFontSize(float font_size);
     IMGUI_API void          PopFontSize();
 
     // Parameters stacks (shared)
@@ -3806,6 +3810,7 @@ enum ImFontFlags_
     ImFontFlags_LockBakedSizes          = 1 << 0,   // Disable loading new baked sizes, disable garbage collecting current ones. e.g. if you want to lock a font to a single size.
     ImFontFlags_NoLoadGlyphs            = 1 << 1,   // Disable loading new glyphs.
     ImFontFlags_NoLoadError             = 1 << 2,   // Disable throwing an error/assert when calling AddFontXXX() with missing file/data. Calling code is expected to check AddFontXXX() return value.
+    ImFontFlags_UseDefaultSize          = 1 << 3,   // Legacy compatibility: make PushFont() calls without explicit size use font->DefaultSize instead of current font size.
 };
 
 // Font runtime data and rendering
@@ -3823,6 +3828,7 @@ struct ImFont
     // [Internal] Members: Cold ~24-52 bytes
     // Conceptually Sources[] is the list of font sources merged to create this font.
     ImGuiID                     FontId;             // Unique identifier for the font
+    float                       DefaultSize;        // 4     // in  // Default font size
     short                       SourcesCount;       // 2     // in  // Number of ImFontConfig involved in creating this font. Usually 1, or >1 when merging multiple font sources into one ImFont.
     ImFontConfig*               Sources;            // 4-8   // in  // Pointer within ContainerAtlas->Sources[], to SourcesCount instances
     ImWchar                     EllipsisChar;       // 2-4   // out // Character used for ellipsis rendering ('...').
@@ -3847,7 +3853,7 @@ struct ImFont
     IMGUI_API void              RenderChar(ImDrawList* draw_list, float size, const ImVec2& pos, ImU32 col, ImWchar c);
     IMGUI_API void              RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width = 0.0f, bool cpu_fine_clip = false);
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    inline const char*          CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width) { return CalcWordWrapPosition(Sources[0].SizePixels * scale, text, text_end, wrap_width); }
+    inline const char*          CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width) { return CalcWordWrapPosition(DefaultSize * scale, text, text_end, wrap_width); }
 #endif
 
     // [Internal] Don't use!
