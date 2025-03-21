@@ -2262,6 +2262,7 @@ struct ImGuiMetricsConfig
     int         ShowTablesRectsType = -1;
     int         HighlightMonitorIdx = -1;
     ImGuiID     HighlightViewportID = 0;
+    bool        ShowFontPreview = true;
 };
 
 struct ImGuiStackLevelInfo
