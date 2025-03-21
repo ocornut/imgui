@@ -41,6 +41,9 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+- Backends: SDL3: Fixed casing typo in function name: (#8509, #8163, #7998, #7988) [@puugz]
+  - Imgui_ImplSDLGPU3_PrepareDrawData() -> ImGui_ImplSDLGPU3_PrepareDrawData()
+
 Other changes:
 
 - IO: variations in analog-only components of gamepad events do not interfere
@@ -49,8 +52,6 @@ Other changes:
   EndPopup() call. (#1651, #8499)
 - Style, InputText: added ImGuiCol_InputTextCursor to configure color of
   the InputText cursor/caret. (#7031)
-- Backends: SDL3: Fixed casing typo in function name: (#8509, #8163, #7998, #7988) [@puugz]
-  - Imgui_ImplSDLGPU3_PrepareDrawData() -> ImGui_ImplSDLGPU3_PrepareDrawData()
 - Backends: SDL2, SDL3, OSX: Fill gamepad inputs and set ImGuiBackendFlags_HasGamepad
   regardless of ImGuiConfigFlags_NavEnableGamepad being set. (#8508)
 
