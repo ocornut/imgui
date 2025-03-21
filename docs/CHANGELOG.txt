@@ -47,6 +47,8 @@ Other changes:
   EndPopup() call. (#1651, #8499)
 - Style, InputText: added ImGuiCol_InputTextCursor to configure color of
   the InputText cursor/caret. (#7031)
+- Backends: SDL2, SDL3, OSX: Fill gamepad inputs and set ImGuiBackendFlags_HasGamepad
+  regardless of ImGuiConfigFlags_NavEnableGamepad being set. (#8508)
 
 
 -----------------------------------------------------------------------
