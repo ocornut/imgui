@@ -43,6 +43,8 @@ Breaking changes:
 
 Other changes:
 
+- IO: variations in analog-only components of gamepad events do not interfere
+  with trickling of mouse position events (#4921, #8508)
 - Error Handling: added better error report and recovery for extraneous
   EndPopup() call. (#1651, #8499)
 - Style, InputText: added ImGuiCol_InputTextCursor to configure color of

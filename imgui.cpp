@@ -9868,12 +9868,16 @@ void ImGui::UpdateInputEvents(bool trickle_fast_inputs)
             if (trickle_interleaved_nonchar_keys_and_text && (text_inputted && !key_is_potentially_for_char_input))
                 break;
 
+            if (key_data->Down != e->Key.Down) // Analog change only do not trigger this, so it won't block e.g. further mouse pos events testing key_changed.
+            {
+                key_changed = true;
+                key_changed_mask.SetBit(key_data_index);
+                if (trickle_interleaved_nonchar_keys_and_text && !key_is_potentially_for_char_input)
+                    key_changed_nonchar = true;
+            }
+
             key_data->Down = e->Key.Down;
             key_data->AnalogValue = e->Key.AnalogValue;
-            key_changed = true;
-            key_changed_mask.SetBit(key_data_index);
-            if (trickle_interleaved_nonchar_keys_and_text && !key_is_potentially_for_char_input)
-                key_changed_nonchar = true;
         }
         else if (e->Type == ImGuiInputEventType_Text)
         {
