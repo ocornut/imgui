@@ -8228,8 +8228,10 @@ void ImGui::SetWindowCollapsed(ImGuiWindow* window, bool collapsed, ImGuiCond co
         return;
     window->SetWindowCollapsedAllowFlags &= ~(ImGuiCond_Once | ImGuiCond_FirstUseEver | ImGuiCond_Appearing);
 
-    // Set
-    window->Collapsed = collapsed;
+    // Queue applying in Begin()
+    if (window->WantCollapseToggle)
+        window->Collapsed ^= 1;
+    window->WantCollapseToggle = (window->Collapsed != collapsed);
 }
 
 void ImGui::SetWindowHitTestHole(ImGuiWindow* window, const ImVec2& pos, const ImVec2& size)

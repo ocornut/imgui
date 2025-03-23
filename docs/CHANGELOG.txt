@@ -48,6 +48,10 @@ Other changes:
 
 - IO: variations in analog-only components of gamepad events do not interfere
   with trickling of mouse position events (#4921, #8508)
+- Windows: fixed SetNextWindowCollapsed()/SetWindowCollapsed() breaking
+  codepath that preserve last contents size when collapsed, resulting in
+  programmatically uncollapsing auto-sizing windows having them flicker size
+  for a frame. (#7691) [@achabense]
 - Error Handling: added better error report and recovery for extraneous
   EndPopup() call. (#1651, #8499)
 - Style, InputText: added ImGuiCol_InputTextCursor to configure color of
