@@ -93,8 +93,7 @@ static void ImGui_ImplDX10_SetupRenderState(ImDrawData* draw_data, ID3D10Device*
     ImGui_ImplDX10_Data* bd = ImGui_ImplDX10_GetBackendData();
 
     // Setup viewport
-    D3D10_VIEWPORT vp;
-    memset(&vp, 0, sizeof(D3D10_VIEWPORT));
+    D3D10_VIEWPORT vp = {};
     vp.Width = (UINT)draw_data->DisplaySize.x;
     vp.Height = (UINT)draw_data->DisplaySize.y;
     vp.MinDepth = 0.0f;
@@ -158,8 +157,7 @@ void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
     {
         if (bd->pVB) { bd->pVB->Release(); bd->pVB = nullptr; }
         bd->VertexBufferSize = draw_data->TotalVtxCount + 5000;
-        D3D10_BUFFER_DESC desc;
-        memset(&desc, 0, sizeof(D3D10_BUFFER_DESC));
+        D3D10_BUFFER_DESC desc = {};
         desc.Usage = D3D10_USAGE_DYNAMIC;
         desc.ByteWidth = bd->VertexBufferSize * sizeof(ImDrawVert);
         desc.BindFlags = D3D10_BIND_VERTEX_BUFFER;
@@ -173,8 +171,7 @@ void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
     {
         if (bd->pIB) { bd->pIB->Release(); bd->pIB = nullptr; }
         bd->IndexBufferSize = draw_data->TotalIdxCount + 10000;
-        D3D10_BUFFER_DESC desc;
-        memset(&desc, 0, sizeof(D3D10_BUFFER_DESC));
+        D3D10_BUFFER_DESC desc = {};
         desc.Usage = D3D10_USAGE_DYNAMIC;
         desc.ByteWidth = bd->IndexBufferSize * sizeof(ImDrawIdx);
         desc.BindFlags = D3D10_BIND_INDEX_BUFFER;
@@ -437,7 +434,7 @@ bool    ImGui_ImplDX10_CreateDeviceObjects()
 
         // Create the constant buffer
         {
-            D3D10_BUFFER_DESC desc;
+            D3D10_BUFFER_DESC desc = {};
             desc.ByteWidth = sizeof(VERTEX_CONSTANT_BUFFER_DX10);
             desc.Usage = D3D10_USAGE_DYNAMIC;
             desc.BindFlags = D3D10_BIND_CONSTANT_BUFFER;
@@ -638,7 +635,7 @@ static void ImGui_ImplDX10_CreateWindow(ImGuiViewport* viewport)
     ImGui_ImplDX10_ViewportData* vd = IM_NEW(ImGui_ImplDX10_ViewportData)();
     viewport->RendererUserData = vd;
 
-    // PlatformHandleRaw should always be a HWND, whereas PlatformHandle might be a higher-level handle (e.g. GLFWWindow*, SDL_Window*).
+    // PlatformHandleRaw should always be a HWND, whereas PlatformHandle might be a higher-level handle (e.g. GLFWWindow*, SDL's WindowID).
     // Some backends will leave PlatformHandleRaw == 0, in which case we assume PlatformHandle will contain the HWND.
     HWND hwnd = viewport->PlatformHandleRaw ? (HWND)viewport->PlatformHandleRaw : (HWND)viewport->PlatformHandle;
     IM_ASSERT(hwnd != 0);

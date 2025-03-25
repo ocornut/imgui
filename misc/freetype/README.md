@@ -38,7 +38,7 @@ You can use the `ImGuiFreeTypeBuilderFlags_LoadColor` flag to load certain color
 
 ### Using OpenType SVG fonts (SVGinOT)
 - *SVG in Open Type* is a standard by Adobe and Mozilla for color OpenType and Open Font Format fonts. It allows font creators to embed complete SVG files within a font enabling full color and even animations.
-- Popular fonts such as [twemoji](https://github.com/13rac1/twemoji-color-font) and fonts made with [scfbuild](https://github.com/13rac1/scfbuild) is SVGinOT 
+- Popular fonts such as [twemoji](https://github.com/13rac1/twemoji-color-font) and fonts made with [scfbuild](https://github.com/13rac1/scfbuild) is SVGinOT.
 - Two alternatives are possible to render SVG fonts: use "lunasvg" or "plutosvg". plutosvg will support some more fonts (e.g. NotoColorEmoji-Regular) and may load them faster.
 
 #### Using lunasvg
@@ -48,15 +48,7 @@ Requires: [lunasvg](https://github.com/sammycage/lunasvg) v2.3.2 and above
 
 #### Using plutosvg (and plutovg)
 - Add `#define IMGUI_ENABLE_FREETYPE_PLUTOSVG` in your `imconfig.h`.
-- Compile and link with plutosvg *and* plutovg (which is required by plutosvg)
-
-_Compilation hints for plutovg_
-- Compile all source files in `plutovg/source/*.c`
-- Add include directory: `plutovg/include` + `plutovg/stb`
-
-_Compilation hints for plutosvg_
-- Compile `plutosvg/source/plutosvg.c`
-- Add include directory: `plutosvg/source`
-- Add define: `PLUTOSVG_HAS_FREETYPE`
-- Link with: plutovg, freetype
-
+- Get latest plutosvg binaries or build yourself. Under Windows you may use vcpkg with: `vcpkg install plutosvg --triplet=x64-windows`. Alternatively, if you build imgui from vcpkg, you just need to enable the plutosvg feature: `vcpkg install imgui[plutosvg] --triplet=x64-windows`
+- If you prefer to build plutosvg manually:
+    - Compilation hints for plutovg: Compile all source files in `plutovg/source/*.c` + Add include directory: `plutovg/include` + `plutovg/stb`
+    - Compilation hints for plutosvg: Compile `plutosvg/source/plutosvg.c` + Add include directory: `plutosvg/source` + Add define: `PLUTOSVG_HAS_FREETYPE` + Link with: plutovg, freetype

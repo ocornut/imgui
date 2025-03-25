@@ -1,11 +1,13 @@
 // dear imgui: Renderer Backend for SDL_Renderer for SDL2
 // (Requires: SDL 2.0.17+)
 
-// Note how SDL_Renderer is an _optional_ component of SDL2.
-// For a multi-platform app consider using e.g. SDL+DirectX on Windows and SDL+OpenGL on Linux/OSX.
-// If your application will want to render any non trivial amount of graphics other than UI,
-// please be aware that SDL_Renderer currently offers a limited graphic API to the end-user and
-// it might be difficult to step out of those boundaries.
+// Note that SDL_Renderer is an _optional_ component of SDL2, which IMHO is now largely obsolete.
+// For a multi-platform app consider using other technologies:
+// - SDL3+SDL_GPU: SDL_GPU is SDL3 new graphics abstraction API. You will need to update to SDL3.
+// - SDL2+DirectX, SDL2+OpenGL, SDL2+Vulkan: combine SDL with dedicated renderers.
+// If your application wants to render any non trivial amount of graphics other than UI,
+// please be aware that SDL_Renderer currently offers a limited graphic API to the end-user
+// and it might be difficult to step out of those boundaries.
 
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'SDL_Texture*' as ImTextureID. Read the FAQ about ImTextureID!
@@ -23,6 +25,7 @@
 // - Introduction, links and more at the top of imgui.cpp
 
 // CHANGELOG
+//  2025-01-18: Use endian-dependent RGBA32 texture format, to match SDL_Color.
 //  2024-10-09: Expose selected render state in ImGui_ImplSDLRenderer2_RenderState, which you can access in 'void* platform_io.Renderer_RenderState' during draw callbacks.
 //  2024-05-14: *BREAKING CHANGE* ImGui_ImplSDLRenderer3_RenderDrawData() requires SDL_Renderer* passed as parameter.
 //  2023-05-30: Renamed imgui_impl_sdlrenderer.h/.cpp to imgui_impl_sdlrenderer2.h/.cpp to accommodate for upcoming SDL3.
@@ -99,10 +102,10 @@ void ImGui_ImplSDLRenderer2_Shutdown()
 
 static void ImGui_ImplSDLRenderer2_SetupRenderState(SDL_Renderer* renderer)
 {
-	// Clear out any viewports and cliprect set by the user
+    // Clear out any viewports and cliprect set by the user
     // FIXME: Technically speaking there are lots of other things we could backup/setup/restore during our render process.
-	SDL_RenderSetViewport(renderer, nullptr);
-	SDL_RenderSetClipRect(renderer, nullptr);
+    SDL_RenderSetViewport(renderer, nullptr);
+    SDL_RenderSetClipRect(renderer, nullptr);
 }
 
 void ImGui_ImplSDLRenderer2_NewFrame()
@@ -116,21 +119,21 @@ void ImGui_ImplSDLRenderer2_NewFrame()
 
 void ImGui_ImplSDLRenderer2_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* renderer)
 {
-	// If there's a scale factor set by the user, use that instead
+    // If there's a scale factor set by the user, use that instead
     // If the user has specified a scale factor to SDL_Renderer already via SDL_RenderSetScale(), SDL will scale whatever we pass
     // to SDL_RenderGeometryRaw() by that scale factor. In that case we don't want to be also scaling it ourselves here.
     float rsx = 1.0f;
-	float rsy = 1.0f;
-	SDL_RenderGetScale(renderer, &rsx, &rsy);
+    float rsy = 1.0f;
+    SDL_RenderGetScale(renderer, &rsx, &rsy);
     ImVec2 render_scale;
-	render_scale.x = (rsx == 1.0f) ? draw_data->FramebufferScale.x : 1.0f;
-	render_scale.y = (rsy == 1.0f) ? draw_data->FramebufferScale.y : 1.0f;
+    render_scale.x = (rsx == 1.0f) ? draw_data->FramebufferScale.x : 1.0f;
+    render_scale.y = (rsy == 1.0f) ? draw_data->FramebufferScale.y : 1.0f;
 
-	// Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
-	int fb_width = (int)(draw_data->DisplaySize.x * render_scale.x);
-	int fb_height = (int)(draw_data->DisplaySize.y * render_scale.y);
-	if (fb_width == 0 || fb_height == 0)
-		return;
+    // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
+    int fb_width = (int)(draw_data->DisplaySize.x * render_scale.x);
+    int fb_height = (int)(draw_data->DisplaySize.y * render_scale.y);
+    if (fb_width == 0 || fb_height == 0)
+        return;
 
     // Backup SDL_Renderer state that will be modified to restore it afterwards
     struct BackupSDLRendererState
@@ -153,9 +156,9 @@ void ImGui_ImplSDLRenderer2_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* 
     render_state.Renderer = renderer;
     platform_io.Renderer_RenderState = &render_state;
 
-	// Will project scissor/clipping rectangles into framebuffer space
-	ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
-	ImVec2 clip_scale = render_scale;
+    // Will project scissor/clipping rectangles into framebuffer space
+    ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
+    ImVec2 clip_scale = render_scale;
 
     // Render command lists
     for (int n = 0; n < draw_data->CmdListsCount; n++)
@@ -200,7 +203,7 @@ void ImGui_ImplSDLRenderer2_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* 
 #endif
 
                 // Bind texture, Draw
-				SDL_Texture* tex = (SDL_Texture*)pcmd->GetTexID();
+                SDL_Texture* tex = (SDL_Texture*)pcmd->GetTexID();
                 SDL_RenderGeometryRaw(renderer, tex,
                     xy, (int)sizeof(ImDrawVert),
                     color, (int)sizeof(ImDrawVert),
@@ -230,7 +233,7 @@ bool ImGui_ImplSDLRenderer2_CreateFontsTexture()
 
     // Upload texture to graphics system
     // (Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling)
-    bd->FontTexture = SDL_CreateTexture(bd->Renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, width, height);
+    bd->FontTexture = SDL_CreateTexture(bd->Renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC, width, height);
     if (bd->FontTexture == nullptr)
     {
         SDL_Log("error creating texture");
