@@ -5198,6 +5198,15 @@ void ImGui::NewFrame()
     g.FramerateSecPerFrameCount = ImMin(g.FramerateSecPerFrameCount + 1, IM_ARRAYSIZE(g.FramerateSecPerFrame));
     g.IO.Framerate = (g.FramerateSecPerFrameAccum > 0.0f) ? (1.0f / (g.FramerateSecPerFrameAccum / (float)g.FramerateSecPerFrameCount)) : FLT_MAX;
 
+    // While the accumulated frame time exceeds 1 second and there is more than one frame in the buffer, remove the oldest frame to keep the window within approximately 1 second.
+    while ((g.FramerateSecPerFrameAccum > 1.0f) && (g.FramerateSecPerFrameCount > 1))
+    {
+        int pop_index = (g.FramerateSecPerFrameIdx + IM_ARRAYSIZE(g.FramerateSecPerFrame) - g.FramerateSecPerFrameCount) % IM_ARRAYSIZE(g.FramerateSecPerFrame);
+        g.FramerateSecPerFrameAccum -= g.FramerateSecPerFrame[pop_index];
+        g.FramerateSecPerFrame[pop_index] = 0.0f;
+        g.FramerateSecPerFrameCount--;
+    }
+
     // Process input queue (trickle as many events as possible), turn events into writes to IO structure
     g.InputEventsTrail.resize(0);
     UpdateInputEvents(g.IO.ConfigInputTrickleEventQueue);
