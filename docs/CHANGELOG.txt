@@ -48,6 +48,15 @@ Other changes:
 - Style, InputText: added ImGuiCol_InputTextCursor to configure color of
   the InputText cursor/caret. (#7031)
 
+Docking+Viewports Branch:
+
+- Backends: Win32: Viewports: fixed an issue when closing a window from 
+  the OS close button (with io.ConfigViewportsNoDecoration=false) while 
+  user code is discarding the 'bool *p_open=false output' from Begin(). 
+  Because we allowed the Win32 window to close early, Windows destroyed
+  it and our imgui window became not visible even though user code was
+  still submitting it.
+
 
 -----------------------------------------------------------------------
  VERSION 1.91.9b (Released 2025-03-17)
