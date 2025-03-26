@@ -3583,6 +3583,7 @@ bool ImFontAtlasBuildAddFont(ImFontAtlas* atlas, ImFontConfig* src)
         if (!loader->FontSrcInit(atlas, src))
             return false;
 
+    atlas->TexIsBuilt = false; // For legacy backends
     ImFontAtlasBuildSetupFontSpecialGlyphs(atlas, font, src);
     return true;
 }
