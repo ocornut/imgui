@@ -40,7 +40,7 @@ struct ImGui_ImplSDLGPU3_InitInfo
 IMGUI_IMPL_API bool     ImGui_ImplSDLGPU3_Init(ImGui_ImplSDLGPU3_InitInfo* info);
 IMGUI_IMPL_API void     ImGui_ImplSDLGPU3_Shutdown();
 IMGUI_IMPL_API void     ImGui_ImplSDLGPU3_NewFrame();
-IMGUI_IMPL_API void     Imgui_ImplSDLGPU3_PrepareDrawData(ImDrawData* draw_data, SDL_GPUCommandBuffer* command_buffer);
+IMGUI_IMPL_API void     ImGui_ImplSDLGPU3_PrepareDrawData(ImDrawData* draw_data, SDL_GPUCommandBuffer* command_buffer);
 IMGUI_IMPL_API void     ImGui_ImplSDLGPU3_RenderDrawData(ImDrawData* draw_data, SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_pass, SDL_GPUGraphicsPipeline* pipeline = nullptr);
 
 IMGUI_IMPL_API void     ImGui_ImplSDLGPU3_CreateDeviceObjects();
