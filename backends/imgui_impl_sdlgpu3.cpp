@@ -368,7 +368,7 @@ void ImGui_ImplSDLGPU3_DestroyFontsTexture()
     io.Fonts->SetTexID(0);
 }
 
-static void Imgui_ImplSDLGPU3_CreateShaders()
+static void ImGui_ImplSDLGPU3_CreateShaders()
 {
     // Create the shader modules
     ImGui_ImplSDLGPU3_Data* bd = ImGui_ImplSDLGPU3_GetBackendData();
@@ -433,7 +433,7 @@ static void ImGui_ImplSDLGPU3_CreateGraphicsPipeline()
 {
     ImGui_ImplSDLGPU3_Data* bd = ImGui_ImplSDLGPU3_GetBackendData();
     ImGui_ImplSDLGPU3_InitInfo* v = &bd->InitInfo;
-    Imgui_ImplSDLGPU3_CreateShaders();
+    ImGui_ImplSDLGPU3_CreateShaders();
 
     SDL_GPUVertexBufferDescription vertex_buffer_desc[1];
     vertex_buffer_desc[0].slot = 0;
