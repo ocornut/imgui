@@ -431,6 +431,21 @@ ImGuiKey ImGui_ImplWin32_KeyEventToImGuiKey(WPARAM wParam, LPARAM lParam)
         return ImGuiKey_KeypadEnter;
 
     const int scancode = (int)LOBYTE(HIWORD(lParam));
+
+    // Convert keycodes for languages that use IME
+    if (wParam == VK_PROCESSKEY)
+    {
+        wParam = ::MapVirtualKey(scancode, MAPVK_VSC_TO_VK_EX);
+
+        // In some Korean layout, unmatching key down and key up events are emitted when you switch language to Korean.
+        // (e.g. VK_LMENU on key down and VK_HANGUL on key up when you press right alt)
+        // So it must be ignored to avoid key stucks
+        if (wParam == VK_LMENU || wParam == VK_LCONTROL)
+        {
+            return ImGuiKey_None;
+        }
+    }    
+
     //IMGUI_DEBUG_LOG("scancode %3d, keycode = 0x%02X\n", scancode, wParam);
     switch (wParam)
     {
