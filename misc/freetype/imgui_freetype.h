@@ -21,7 +21,7 @@ struct ImFontBuilderIO;
 // - When disabled, FreeType generates blurrier glyphs, more or less matches the stb_truetype.h
 // - The Default hinting mode usually looks good, but may distort glyphs in an unusual way.
 // - The Light hinting mode generates fuzzier glyphs but better matches Microsoft's rasterizer.
-// You can set those flags globaly in ImFontAtlas::FontBuilderFlags
+// You can set those flags globally in ImFontAtlas::FontBuilderFlags
 // You can set those flags on a per font basis in ImFontConfig::FontBuilderFlags
 enum ImGuiFreeTypeBuilderFlags
 {
