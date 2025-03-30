@@ -3581,9 +3581,9 @@ struct ImFontGlyph
     unsigned int    Colored : 1;        // Flag to indicate glyph is colored and should generally ignore tinting (make it usable with no shift on little-endian as this is used in loops)
     unsigned int    Visible : 1;        // Flag to indicate glyph has no visible pixels (e.g. space). Allow early out when rendering.
     unsigned int    Codepoint : 30;     // 0x0000..0x10FFFF
-    float           AdvanceX;           // Horizontal distance to advance layout with
-    float           X0, Y0, X1, Y1;     // Glyph corners
-    float           U0, V0, U1, V1;     // Texture coordinates
+    float           AdvanceX;           // Horizontal distance to advance cursor/layout position.
+    float           X0, Y0, X1, Y1;     // Glyph corners. Offsets from current cursor/layout position.
+    float           U0, V0, U1, V1;     // Texture coordinates for the current value of ImFontAtlas->TexRef. Cached equivalent of calling GetCustomRectUV() with PackId.
     int             PackId;             // [Internal] ImFontAtlasRectId value (FIXME: Cold data, could be moved elsewhere?)
 
     ImFontGlyph()   { memset(this, 0, sizeof(*this)); PackId = -1; }
@@ -3697,21 +3697,23 @@ struct ImFontAtlas
 
     // Register and retrieve custom rectangles
     // - You can request arbitrary rectangles to be packed into the atlas, for your own purpose.
-    // - You can request your rectangles to be mapped as font glyph (given a font + Unicode point),
-    //   so you can render e.g. custom colorful icons and use them as regular glyphs.
-    // - Since 1.92.X, packing is done immediately in the function call.
-    // - You can render your pixels into the texture right after calling the AddCustomRectXXX() functions.
+    // - Since 1.92.X, packing is done immediately in the function call (previously packing was done during the Build call)
+    // - You can render your pixels into the texture right after calling the AddCustomRect() functions.
     // - Texture may be resized, so you cannot cache UV coordinates: always use GetCustomRectUV()!
-    // - If you render colored output into your AddCustomRectRegular() rectangle: set 'atlas->TexPixelsUseColors = true' as this may help some backends decide of preferred texture format.
+    //   VERY IMPORTANT:
+    //   - RECTANGLE DATA AND UV COORDINATES MAY BE INVALIDATED BY *ANY* CALL TO IMGUI FUNCTIONS (e.g. ImGui::Text call) OR BY atlas->AddCustomRectegular(). NEVER CACHE THOSE!!!
+    //   - RECTANGLE DATA AND UV COORDINATES ARE ASSOCIATED TO THE CURRENT TEXTURE IDENTIFIER AKA 'atlas->TexRef'. Both are typically invalidated at the same time.
+    // - If you render colored output into your AddCustomRect() rectangle: set 'atlas->TexPixelsUseColors = true' as this may help some backends decide of preferred texture format.
     // - Read docs/FONTS.md for more details about using colorful icons.
     // - Note: this API may be reworked further in order to facilitate supporting e.g. multi-monitor, varying DPI settings.
-    // - Pre-1.92 names:
-    //   - AddCustomRectFontGlyph() --> Use custom ImFontLoader inside ImFontConfig
+    // - (Pre-1.92 names) ------------> (1.92 names)
     //   - GetCustomRectByIndex()   --> Use GetCustomRect()
     //   - CalcCustomRectUV()       --> Use GetCustomRectUV()
+    //   - AddCustomRectFontGlyph() --> Prefer using custom ImFontLoader inside ImFontConfig
+    //   - ImFontAtlasCustomRect    --> ImTextureRect
     IMGUI_API int                   AddCustomRectRegular(int width, int height);    // Register a rectangle. Return -1 on error.
-    IMGUI_API const ImTextureRect*  GetCustomRect(int id);                          // Get rectangle coordinate in current texture.
-    IMGUI_API void                  GetCustomRectUV(const ImTextureRect* r, ImVec2* out_uv_min, ImVec2* out_uv_max) const; // Get UV coordinates for a given rectangle
+    IMGUI_API const ImTextureRect*  GetCustomRect(int id);                          // Get rectangle coordinate in current texture. Valid immediately, never store this (read above)!
+    IMGUI_API void                  GetCustomRectUV(const ImTextureRect* r, ImVec2* out_uv_min, ImVec2* out_uv_max) const; // Get UV coordinates for a given rectangle. Valid immediately, never store this (read above)!
 
     //-------------------------------------------
     // Members
@@ -3728,12 +3730,14 @@ struct ImFontAtlas
     void*                       UserData;           // Store your own atlas related user-data (if e.g. you have multiple font atlas).
 
     // Output
-#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    union { ImTextureRef TexRef; ImTextureRef TexID; }; // Current texture identifier == TexData->GetTexRef(). // RENAMED TexID to TexRef in 1.92.x
+    // - Because textures are dynamically created/resized, the current texture identifier may changed at *ANY TIME* during the frame.
+    // - This should not affect you as you can always use the latest value. But note that any precomputed UV coordinates are only valid for the current TexRef.
+#ifdef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    ImTextureRef                TexRef;             // Latest texture identifier == TexData->GetTexRef().
 #else
-    ImTextureRef                TexRef;             // Current texture identifier == TexData->GetTexRef().
+    union { ImTextureRef TexRef; ImTextureRef TexID; }; // Latest texture identifier == TexData->GetTexRef(). // RENAMED TexID to TexRef in 1.92.x
 #endif
-    ImTextureData*              TexData;            // Current texture.
+    ImTextureData*              TexData;            // Latest texture.
 
     // [Internal]
     ImVector<ImTextureData*>    TexList;            // Texture list (most often TexList.Size == 1). TexData is always == TexList.back(). DO NOT USE DIRECTLY, USE GetPlatformIO().Textures[] instead!
@@ -3741,8 +3745,8 @@ struct ImFontAtlas
     bool                        RendererHasTextures;// Copy of (BackendFlags & ImGuiBackendFlags_RendererHasTextures) from supporting context.
     bool                        TexIsBuilt;         // Set when texture was built matching current font input. Mostly useful for legacy IsBuilt() call.
     bool                        TexPixelsUseColors; // Tell whether our texture data is known to use colors (rather than just alpha channel), in order to help backend select a format or conversion process.
-    ImVec2                      TexUvScale;         // = (1.0f/TexData->TexWidth, 1.0f/TexData->TexHeight)
-    ImVec2                      TexUvWhitePixel;    // Texture coordinates to a white pixel
+    ImVec2                      TexUvScale;         // = (1.0f/TexData->TexWidth, 1.0f/TexData->TexHeight). May change as new texture gets created.
+    ImVec2                      TexUvWhitePixel;    // Texture coordinates to a white pixel. May change as new texture gets created.
     ImVector<ImFont*>           Fonts;              // Hold all the fonts returned by AddFont*. Fonts[0] is the default font upon calling ImGui::NewFrame(), use ImGui::PushFont()/PopFont() to change the current font.
     ImVector<ImFontConfig>      Sources;            // Source/configuration data
     ImVec4                      TexUvLines[IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1];  // UVs for baked anti-aliased lines
@@ -3758,6 +3762,7 @@ struct ImFontAtlas
 
     // [Obsolete]
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    // Legacy: You can request your rectangles to be mapped as font glyph (given a font + Unicode point), so you can render e.g. custom colorful icons and use them as regular glyphs. --> Prefer using a custom ImFontLoader.
     IMGUI_API int                       AddCustomRectFontGlyph(ImFont* font, ImWchar codepoint, int width, int height, float advance_x, const ImVec2& offset = ImVec2(0, 0)); // OBSOLETED in 1.92.X: Use custom ImFontLoader in ImFontConfig
     IMGUI_API int                       AddCustomRectFontGlyphForSize(ImFont* font, float font_size, ImWchar codepoint, int width, int height, float advance_x, const ImVec2& offset = ImVec2(0, 0)); // OBSOLETED in 1.92.X
     inline const ImTextureRect*         GetCustomRectByIndex(int id) { return GetCustomRect(id); } // OBSOLETED in 1.92.X
