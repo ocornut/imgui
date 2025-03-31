@@ -2504,7 +2504,7 @@ void ImTextureData::DestroyPixels()
 // - ImFontAtlas::RemoveFont()
 // - ImFontAtlasBuildNotifySetFont()
 //-----------------------------------------------------------------------------
-// - ImFontAtlas::AddCustomRectRegular()
+// - ImFontAtlas::AddCustomRect()
 // - ImFontAtlas::AddCustomRectFontGlyph()
 // - ImFontAtlas::GetCustomRect()
 // - ImFontAtlas::GetCustomRectUV()
@@ -3230,7 +3230,7 @@ void ImFontAtlas::RemoveFont(ImFont* font)
     ImFontAtlasBuildNotifySetFont(this, font, new_current_font);
 }
 
-int ImFontAtlas::AddCustomRectRegular(int width, int height)
+int ImFontAtlas::AddCustomRect(int width, int height)
 {
     IM_ASSERT(width > 0 && width <= 0xFFFF);
     IM_ASSERT(height > 0 && height <= 0xFFFF);
