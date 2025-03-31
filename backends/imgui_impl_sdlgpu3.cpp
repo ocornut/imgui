@@ -35,10 +35,10 @@
 // Reusable buffers used for rendering 1 current in-flight frame, for ImGui_ImplSDLGPU3_RenderDrawData()
 struct ImGui_ImplSDLGPU3_FrameData
 {
-    SDL_GPUBuffer*         VertexBuffer     = nullptr;
-    SDL_GPUBuffer*         IndexBuffer      = nullptr;
-    uint32_t               VertexBufferSize = 0;
-    uint32_t               IndexBufferSize  = 0;
+    SDL_GPUBuffer*      VertexBuffer     = nullptr;
+    SDL_GPUBuffer*      IndexBuffer      = nullptr;
+    uint32_t            VertexBufferSize = 0;
+    uint32_t            IndexBufferSize  = 0;
 
     SDL_GPUTransferBuffer* VertexTransferBuffer = nullptr;
     SDL_GPUTransferBuffer* IndexTransferBuffer = nullptr;
