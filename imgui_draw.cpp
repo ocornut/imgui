@@ -2503,7 +2503,6 @@ void ImTextureData::DestroyPixels()
 // - ImFontAtlas::AddCustomRect()
 // - ImFontAtlas::AddCustomRectFontGlyph()
 // - ImFontAtlas::GetCustomRect()
-// - ImFontAtlas::GetCustomRectUV()
 // - ImFontAtlasGetMouseCursorTexData()
 //-----------------------------------------------------------------------------
 // - ImFontAtlasBuildMain()
@@ -3293,18 +3292,19 @@ int ImFontAtlas::AddCustomRectFontGlyphForSize(ImFont* font, float font_size, Im
 }
 #endif // #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 
-const ImTextureRect* ImFontAtlas::GetCustomRect(int id)
+bool ImFontAtlas::GetCustomRect(int id, ImFontAtlasRect* out_r) const
 {
-    return ImFontAtlasPackGetRect(this, (ImFontAtlasRectId)id);
-}
-
-void ImFontAtlas::GetCustomRectUV(const ImTextureRect* rect, ImVec2* out_uv_min, ImVec2* out_uv_max) const
-{
+    ImTextureRect* r = ImFontAtlasPackGetRect((ImFontAtlas*)this, (ImFontAtlasRectId)id);
+    if (r == NULL)
+        return false;
     IM_ASSERT(TexData->Width > 0 && TexData->Height > 0);   // Font atlas needs to be built before we can calculate UV coordinates
-    ImVec2 pos = ImVec2((float)rect->x, (float)rect->y);
-    ImVec2 size = ImVec2((float)rect->w, (float)rect->h);
-    *out_uv_min = (pos) * TexUvScale;
-    *out_uv_max = (pos + size) * TexUvScale;
+    out_r->x = r->x;
+    out_r->y = r->y;
+    out_r->w = r->w;
+    out_r->h = r->h;
+    out_r->uv0 = ImVec2((float)(r->x), (float)(r->y)) * TexUvScale;
+    out_r->uv1 = ImVec2((float)(r->x + r->w), (float)(r->y + r->h)) * TexUvScale;
+    return true;
 }
 
 bool ImFontAtlasGetMouseCursorTexData(ImFontAtlas* atlas, ImGuiMouseCursor cursor_type, ImVec2* out_offset, ImVec2* out_size, ImVec2 out_uv_border[2], ImVec2 out_uv_fill[2])
