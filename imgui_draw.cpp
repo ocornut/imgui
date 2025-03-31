@@ -3225,7 +3225,7 @@ void ImFontAtlas::RemoveFont(ImFont* font)
     ImFontAtlasBuildNotifySetFont(this, font, new_current_font);
 }
 
-int ImFontAtlas::AddCustomRect(int width, int height)
+ImFontAtlasRectId ImFontAtlas::AddCustomRect(int width, int height)
 {
     IM_ASSERT(width > 0 && width <= 0xFFFF);
     IM_ASSERT(height > 0 && height <= 0xFFFF);
@@ -3292,9 +3292,9 @@ int ImFontAtlas::AddCustomRectFontGlyphForSize(ImFont* font, float font_size, Im
 }
 #endif // #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 
-bool ImFontAtlas::GetCustomRect(int id, ImFontAtlasRect* out_r) const
+bool ImFontAtlas::GetCustomRect(ImFontAtlasRectId id, ImFontAtlasRect* out_r) const
 {
-    ImTextureRect* r = ImFontAtlasPackGetRect((ImFontAtlas*)this, (ImFontAtlasRectId)id);
+    ImTextureRect* r = ImFontAtlasPackGetRect((ImFontAtlas*)this, id);
     if (r == NULL)
         return false;
     IM_ASSERT(TexData->Width > 0 && TexData->Height > 0);   // Font atlas needs to be built before we can calculate UV coordinates

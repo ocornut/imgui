@@ -3606,8 +3606,14 @@ struct ImFontGlyphRangesBuilder
     IMGUI_API void  BuildRanges(ImVector<ImWchar>* out_ranges);                 // Output new ranges
 };
 
+// An identifier to a rectangle in the atlas. -1 when invalid.
+// The rectangle may move and UV may be invalidated, use GetCustomRect() to retrieve it.
+typedef int ImFontAtlasRectId;
+#define ImFontAtlasRectId_Invalid -1
+
 // Output of ImFontAtlas::GetCustomRect() when using custom rectangles.
 // Those values may not be cached/stored as they are only valid for the current value of atlas->TexRef
+// (this is in theory derived from ImTextureRect but we use separate structures for reasons)
 struct ImFontAtlasRect
 {
     unsigned short  x, y;               // Position (in current texture)
@@ -3724,8 +3730,8 @@ struct ImFontAtlas
     //   - AddCustomRectRegular()   --> Renamed to AddCustomRect()
     //   - AddCustomRectFontGlyph() --> Prefer using custom ImFontLoader inside ImFontConfig
     //   - ImFontAtlasCustomRect    --> Renamed to ImFontAtlasRect
-    IMGUI_API int               AddCustomRect(int width, int height);                   // Register a rectangle. Return -1 on error.
-    IMGUI_API bool              GetCustomRect(int id, ImFontAtlasRect* out_r) const;    // Get rectangle coordinates for current texture. Valid immediately, never store this (read above)!
+    IMGUI_API ImFontAtlasRectId AddCustomRect(int width, int height);                               // Register a rectangle. Return -1 (ImFontAtlasRectId_Invalid) on error.
+    IMGUI_API bool              GetCustomRect(ImFontAtlasRectId id, ImFontAtlasRect* out_r) const;  // Get rectangle coordinates for current texture. Valid immediately, never store this (read above)!
 
     //-------------------------------------------
     // Members
@@ -3776,11 +3782,11 @@ struct ImFontAtlas
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     // Legacy: You can request your rectangles to be mapped as font glyph (given a font + Unicode point), so you can render e.g. custom colorful icons and use them as regular glyphs. --> Prefer using a custom ImFontLoader.
     ImFontAtlasRect             TempRect;           // For old GetCustomRectByIndex() API
-    inline int                  AddCustomRectRegular(int w, int h)                                                          { return AddCustomRect(w, h); }                             // RENAMED in 1.92.X
-    inline const ImFontAtlasRect* GetCustomRectByIndex(int id)                                                              { return GetCustomRect(id, &TempRect) ? &TempRect : NULL; } // OBSOLETED in 1.92.X
+    inline ImFontAtlasRectId    AddCustomRectRegular(int w, int h)                                                          { return AddCustomRect(w, h); }                             // RENAMED in 1.92.X
+    inline const ImFontAtlasRect* GetCustomRectByIndex(ImFontAtlasRectId id)                                                { return GetCustomRect(id, &TempRect) ? &TempRect : NULL; } // OBSOLETED in 1.92.X
     inline void                 CalcCustomRectUV(const ImFontAtlasRect* r, ImVec2* out_uv_min, ImVec2* out_uv_max) const    { *out_uv_min = r->uv0; *out_uv_max = r->uv1; }             // OBSOLETED in 1.92.X
-    IMGUI_API int               AddCustomRectFontGlyph(ImFont* font, ImWchar codepoint, int w, int h, float advance_x, const ImVec2& offset = ImVec2(0, 0));                            // OBSOLETED in 1.92.X: Use custom ImFontLoader in ImFontConfig
-    IMGUI_API int               AddCustomRectFontGlyphForSize(ImFont* font, float font_size, ImWchar codepoint, int w, int h, float advance_x, const ImVec2& offset = ImVec2(0, 0));    // ADDED AND OBSOLETED in 1.92.X
+    IMGUI_API ImFontAtlasRectId AddCustomRectFontGlyph(ImFont* font, ImWchar codepoint, int w, int h, float advance_x, const ImVec2& offset = ImVec2(0, 0));                            // OBSOLETED in 1.92.X: Use custom ImFontLoader in ImFontConfig
+    IMGUI_API ImFontAtlasRectId AddCustomRectFontGlyphForSize(ImFont* font, float font_size, ImWchar codepoint, int w, int h, float advance_x, const ImVec2& offset = ImVec2(0, 0));    // ADDED AND OBSOLETED in 1.92.X
 #endif
     //int                               TexDesiredWidth;         // OBSOLETED in 1.92.X (force texture width before calling Build(). Must be a power-of-two. If have many glyphs your graphics API have texture size restrictions you may want to increase texture width to decrease height)
     //typedef ImFontAtlasRect           ImFontAtlasCustomRect;   // OBSOLETED in 1.92.X
