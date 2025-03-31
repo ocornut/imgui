@@ -7,7 +7,7 @@
 
 // Implemented features:
 //  [X] Platform: Partial keyboard support. Since 1.87 we are using the io.AddKeyEvent() function. Pass ImGuiKey values to all key functions e.g. ImGui::IsKeyPressed(ImGuiKey_Space). [Legacy GLUT values are obsolete since 1.87 and not supported since 1.91.5]
-// Issues:
+// Missing features or Issues:
 //  [ ] Platform: GLUT is unable to distinguish e.g. Backspace from CTRL+H or TAB from CTRL+I
 //  [ ] Platform: Missing horizontal mouse wheel support.
 //  [ ] Platform: Missing mouse cursor shape/visibility support.

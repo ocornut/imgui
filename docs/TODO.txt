@@ -9,7 +9,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - doc: add a proper documentation system (maybe relying on automation? #435)
  - doc: checklist app to verify backends/integration of imgui (test inputs, rendering, callback, etc.).
  - doc/tips: tips of the day: website? applet in imgui_club?
- 
+
  - window: preserve/restore relative focus ordering (persistent or not), and e.g. of multiple reappearing windows (#2304) -> also see docking reference to same #.
  - window: calling SetNextWindowSize() every frame with <= 0 doesn't do anything, may be useful to allow (particularly when used for a single axis). (#690)
  - window: add a way for very transient windows (non-saved, temporary overlay over hundreds of objects) to "clean" up from the global window list. perhaps a lightweight explicit cleanup pass.
@@ -22,7 +22,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window: using SetWindowPos() inside Begin() and moving the window with the mouse reacts a very ugly glitch. We should just defer the SetWindowPos() call.
  - window: GetWindowSize() returns (0,0) when not calculated? (#1045)
  - window: investigate better auto-positioning for new windows.
- - window: top most window flag? more z-order contrl? (#2574)
+ - window: top most window flag? more z-order control? (#2574)
  - window/size: manually triggered auto-fit (double-click on grip) shouldn't resize window down to viewport size?
  - window/size: how to allow to e.g. auto-size vertically to fit contents, but be horizontally resizable? Assuming SetNextWindowSize() is modified to treat -1.0f on each axis as "keep as-is" (would be good but might break erroneous code): Problem is UpdateWindowManualResize() and lots of code treat (window->AutoFitFramesX > 0 || window->AutoFitFramesY > 0) together.
  - window/opt: freeze window flag: if not focused/hovered, return false, render with previous ImDrawList. and/or reduce refresh rate. -> this may require enforcing that it is illegal to submit contents if Begin returns false.
@@ -57,7 +57,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - widgets: start exposing PushItemFlag() and ImGuiItemFlags
  - widgets: alignment options in style (e.g. center Selectable, Right-Align within Button, etc.) #1260
  - widgets: activate by identifier (trigger button, focus given id)
- - widgets: custom glyph/shapes replacements for stock sapes. (also #6090 #2431 #2235 #6517)
+ - widgets: custom glyph/shapes replacements for stock shapes. (also #6090 #2431 #2235 #6517)
  - widgets: coloredit: keep reporting as active when picker is on?
  - widgets: group/scalarn functions: expose more per-component information. e.g. store NextItemData.ComponentIdx set by scalarn function, groups can expose them back somehow.
  - selectable: using (size.x == 0.0f) and (SelectableTextAlign.x > 0.0f) followed by SameLine() is currently not supported.
@@ -165,7 +165,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - image/image button: misalignment on padded/bordered button?
  - image/image button: parameters are confusing, image() has tint_col,border_col whereas imagebutton() has bg_col/tint_col. Even thou they are different parameters ordering could be more consistent. can we fix that?
  - slider: allow using the [-]/[+] buttons used by InputFloat()/InputInt()
- - slider: add dragging-based widgets to edit values with mouse (on 2 axises), saving screen real-estate.
+ - slider: add dragging-based widgets to edit values with mouse (on 2 axes), saving screen real-estate.
  - slider: tint background based on value (e.g. v_min -> v_max, or use 0.0f either side of the sign)
  - slider: relative dragging? + precision dragging
  - slider: step option (#1183)
@@ -241,7 +241,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - log: let user copy any window content to clipboard easily (CTRL+C on windows? while moving it? context menu?). code is commented because it fails with multiple Begin/End pairs.
  - log: obsolete LogButtons().... (was: LogButtons() options for specifying depth and/or hiding depth slider)
 
- - filters: set a current filter that certains items (e.g. tree node) can automatically query to hide themselves
+ - filters: set a current filter that certain items (e.g. tree node) can automatically query to hide themselves
  - filters: handle wild-cards (with implicit leading/trailing *), reg-exprs
  - filters: fuzzy matches (may use code at blog.forrestthewoods.com/4cffeed33fdb)
 
@@ -307,7 +307,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - nav: expose wrap around flags/logic to allow e.g. grid based layout (pressing NavRight on the right-most element would go to the next row, etc.). see internal's NavMoveRequestTryWrapping().
  - nav: patterns to make it possible for arrows key to update selection (see JustMovedTo in range_select branch)
  - nav: restore/find nearest NavId when current one disappear (e.g. pressed a button that disappear, or perhaps auto restoring when current button change name)
- - nav: SetItemDefaultFocus() level of priority, so widget like Selectable when inside a popup could claim a low-priority default focus on the first selected iem
+ - nav: SetItemDefaultFocus() level of priority, so widgets like Selectable when inside a popup could claim a low-priority default focus on the first selected item
  - nav: holding space to repeat a button doesn't show button activated during hold.
  - nav: NavFlattened: init requests don't work properly on flattened siblings.
  - nav: NavFlattened: pageup/pagedown/home/end don't work properly on flattened siblings.
@@ -371,7 +371,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - backends: opengl: explicitly disable GL_STENCIL_TEST in bindings.
  - backends: vulkan: viewport: support for synchronized swapping of multiple swap chains.
  - backends: bgfx: https://gist.github.com/RichardGale/6e2b74bc42b3005e08397236e4be0fd0
- - backends: emscriptem: with refactored examples, we could provide a direct imgui_impl_emscripten platform layer (see eg. https://github.com/floooh/sokol-samples/blob/master/html5/imgui-emsc.cc#L42)
+ - backends: emscripten: with refactored examples, we could provide a direct imgui_impl_emscripten platform layer (see eg. https://github.com/floooh/sokol-samples/blob/master/html5/imgui-emsc.cc#L42)
 
  - bindings: ways to use clang ast dump to generate bindings or helpers for bindings? (e.g. clang++ -Xclang -ast-dump=json imgui.h) (--> use https://github.com/dearimgui/dear_bindings)
 

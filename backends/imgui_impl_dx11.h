@@ -3,7 +3,7 @@
 
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'ID3D11ShaderResourceView*' as ImTextureID. Read the FAQ about ImTextureID!
-//  [X] Renderer: Large meshes support (64k+ vertices) with 16-bit indices.
+//  [X] Renderer: Large meshes support (64k+ vertices) even with 16-bit indices (ImGuiBackendFlags_RendererHasVtxOffset).
 //  [X] Renderer: Expose selected render state for draw callbacks to use. Access in '(ImGui_ImplXXXX_RenderState*)GetPlatformIO().Renderer_RenderState'.
 //  [X] Renderer: Multi-viewport support (multiple windows). Enable with 'io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable'.
 
@@ -22,6 +22,7 @@
 struct ID3D11Device;
 struct ID3D11DeviceContext;
 struct ID3D11SamplerState;
+struct ID3D11Buffer;
 
 // Follow "Getting Started" link and check examples/ folder to learn about using backends!
 IMGUI_IMPL_API bool     ImGui_ImplDX11_Init(ID3D11Device* device, ID3D11DeviceContext* device_context);
@@ -41,6 +42,7 @@ struct ImGui_ImplDX11_RenderState
     ID3D11Device*           Device;
     ID3D11DeviceContext*    DeviceContext;
     ID3D11SamplerState*     SamplerDefault;
+    ID3D11Buffer*           VertexConstantBuffer;
 };
 
 #endif // #ifndef IMGUI_DISABLE

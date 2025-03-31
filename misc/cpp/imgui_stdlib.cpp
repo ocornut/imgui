@@ -8,6 +8,7 @@
 //   https://github.com/ocornut/imgui/wiki/Useful-Extensions#cness
 
 #include "imgui.h"
+#ifndef IMGUI_DISABLE
 #include "imgui_stdlib.h"
 
 // Clang warnings with -Weverything
@@ -83,3 +84,5 @@ bool ImGui::InputTextWithHint(const char* label, const char* hint, std::string* 
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #endif
+
+#endif // #ifndef IMGUI_DISABLE

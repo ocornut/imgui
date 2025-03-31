@@ -2,8 +2,8 @@
 // This needs to be used along with a Platform Backend (e.g. GLFW, SDL, Win32, custom..)
 
 // Implemented features:
-//  [x] Renderer: User texture binding. Use 'VkDescriptorSet' as ImTextureID. Read the FAQ about ImTextureID! See https://github.com/ocornut/imgui/pull/914 for discussions.
-//  [X] Renderer: Large meshes support (64k+ vertices) with 16-bit indices.
+//  [!] Renderer: User texture binding. Use 'VkDescriptorSet' as ImTextureID. Call ImGui_ImplVulkan_AddTexture() to register one. Read the FAQ about ImTextureID! See https://github.com/ocornut/imgui/pull/914 for discussions.
+//  [X] Renderer: Large meshes support (64k+ vertices) even with 16-bit indices (ImGuiBackendFlags_RendererHasVtxOffset).
 //  [X] Renderer: Expose selected render state for draw callbacks to use. Access in '(ImGui_ImplXXXX_RenderState*)GetPlatformIO().Renderer_RenderState'.
 //  [x] Renderer: Multi-viewport / platform windows. With issues (flickering when creating a new viewport).
 
@@ -62,27 +62,38 @@
 #define IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
 #endif
 
+// Current version of the backend use 1 descriptor for the font atlas + as many as additional calls done to ImGui_ImplVulkan_AddTexture().
+// It is expected that as early as Q1 2025 the backend will use a few more descriptors. Use this value + number of desired calls to ImGui_ImplVulkan_AddTexture().
+#define IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE   (1)     // Minimum per atlas
+
 // Initialization data, for ImGui_ImplVulkan_Init()
-// - VkDescriptorPool should be created with VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
-//   and must contain a pool size large enough to hold an ImGui VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER descriptor.
-// - When using dynamic rendering, set UseDynamicRendering=true and fill PipelineRenderingCreateInfo structure.
 // [Please zero-clear before use!]
+// - About descriptor pool:
+//   - A VkDescriptorPool should be created with VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
+//     and must contain a pool size large enough to hold a small number of VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER descriptors.
+//   - As an convenience, by setting DescriptorPoolSize > 0 the backend will create one for you.
+// - About dynamic rendering:
+//   - When using dynamic rendering, set UseDynamicRendering=true and fill PipelineRenderingCreateInfo structure.
 struct ImGui_ImplVulkan_InitInfo
 {
+    uint32_t                        ApiVersion;                 // Fill with API version of Instance, e.g. VK_API_VERSION_1_3 or your value of VkApplicationInfo::apiVersion. May be lower than header version (VK_HEADER_VERSION_COMPLETE)
     VkInstance                      Instance;
     VkPhysicalDevice                PhysicalDevice;
     VkDevice                        Device;
     uint32_t                        QueueFamily;
     VkQueue                         Queue;
-    VkDescriptorPool                DescriptorPool;               // See requirements in note above
-    VkRenderPass                    RenderPass;                   // Ignored if using dynamic rendering
-    uint32_t                        MinImageCount;                // >= 2
-    uint32_t                        ImageCount;                   // >= MinImageCount
-    VkSampleCountFlagBits           MSAASamples;                  // 0 defaults to VK_SAMPLE_COUNT_1_BIT
+    VkDescriptorPool                DescriptorPool;             // See requirements in note above; ignored if using DescriptorPoolSize > 0
+    VkRenderPass                    RenderPass;                 // Ignored if using dynamic rendering
+    uint32_t                        MinImageCount;              // >= 2
+    uint32_t                        ImageCount;                 // >= MinImageCount
+    VkSampleCountFlagBits           MSAASamples;                // 0 defaults to VK_SAMPLE_COUNT_1_BIT
 
     // (Optional)
     VkPipelineCache                 PipelineCache;
     uint32_t                        Subpass;
+
+    // (Optional) Set to create internal descriptor pool instead of using DescriptorPool
+    uint32_t                        DescriptorPoolSize;
 
     // (Optional) Dynamic Rendering
     // Need to explicitly enable VK_KHR_dynamic_rendering extension to use this, even for Vulkan 1.3.
@@ -94,7 +105,7 @@ struct ImGui_ImplVulkan_InitInfo
     // (Optional) Allocation, Debugging
     const VkAllocationCallbacks*    Allocator;
     void                            (*CheckVkResultFn)(VkResult err);
-    VkDeviceSize                    MinAllocationSize;      // Minimum allocation size. Set to 1024*1024 to satisfy zealous best practices validation layer and waste a little memory.
+    VkDeviceSize                    MinAllocationSize;          // Minimum allocation size. Set to 1024*1024 to satisfy zealous best practices validation layer and waste a little memory.
 };
 
 // Follow "Getting Started" link and check examples/ folder to learn about using backends!
@@ -114,7 +125,7 @@ IMGUI_IMPL_API void             ImGui_ImplVulkan_RemoveTexture(VkDescriptorSet d
 
 // Optional: load Vulkan functions with a custom function loader
 // This is only useful with IMGUI_IMPL_VULKAN_NO_PROTOTYPES / VK_NO_PROTOTYPES
-IMGUI_IMPL_API bool             ImGui_ImplVulkan_LoadFunctions(PFN_vkVoidFunction(*loader_func)(const char* function_name, void* user_data), void* user_data = nullptr);
+IMGUI_IMPL_API bool             ImGui_ImplVulkan_LoadFunctions(uint32_t api_version, PFN_vkVoidFunction(*loader_func)(const char* function_name, void* user_data), void* user_data = nullptr);
 
 // [BETA] Selected render state data shared with callbacks.
 // This is temporarily stored in GetPlatformIO().Renderer_RenderState during the ImGui_ImplVulkan_RenderDrawData() call.
@@ -128,18 +139,24 @@ struct ImGui_ImplVulkan_RenderState
 
 //-------------------------------------------------------------------------
 // Internal / Miscellaneous Vulkan Helpers
-// (Used by example's main.cpp. Used by multi-viewport features. PROBABLY NOT used by your own engine/app.)
 //-------------------------------------------------------------------------
+// Used by example's main.cpp. Used by multi-viewport features. PROBABLY NOT used by your own engine/app.
+//
 // You probably do NOT need to use or care about those functions.
 // Those functions only exist because:
 //   1) they facilitate the readability and maintenance of the multiple main.cpp examples files.
 //   2) the multi-viewport / platform window implementation needs them internally.
-// Generally we avoid exposing any kind of superfluous high-level helpers in the bindings,
+// Generally we avoid exposing any kind of superfluous high-level helpers in the backends,
 // but it is too much code to duplicate everywhere so we exceptionally expose them.
 //
-// Your engine/app will likely _already_ have code to setup all that stuff (swap chain, render pass, frame buffers, etc.).
-// You may read this code to learn about Vulkan, but it is recommended you use you own custom tailored code to do equivalent work.
-// (The ImGui_ImplVulkanH_XXX functions do not interact with any of the state used by the regular ImGui_ImplVulkan_XXX functions)
+// Your engine/app will likely _already_ have code to setup all that stuff (swap chain,
+// render pass, frame buffers, etc.). You may read this code if you are curious, but
+// it is recommended you use you own custom tailored code to do equivalent work.
+//
+// We don't provide a strong guarantee that we won't change those functions API.
+//
+// The ImGui_ImplVulkanH_XXX functions should NOT interact with any of the state used
+// by the regular ImGui_ImplVulkan_XXX functions).
 //-------------------------------------------------------------------------
 
 struct ImGui_ImplVulkanH_Frame;
@@ -150,6 +167,8 @@ IMGUI_IMPL_API void                 ImGui_ImplVulkanH_CreateOrResizeWindow(VkIns
 IMGUI_IMPL_API void                 ImGui_ImplVulkanH_DestroyWindow(VkInstance instance, VkDevice device, ImGui_ImplVulkanH_Window* wd, const VkAllocationCallbacks* allocator);
 IMGUI_IMPL_API VkSurfaceFormatKHR   ImGui_ImplVulkanH_SelectSurfaceFormat(VkPhysicalDevice physical_device, VkSurfaceKHR surface, const VkFormat* request_formats, int request_formats_count, VkColorSpaceKHR request_color_space);
 IMGUI_IMPL_API VkPresentModeKHR     ImGui_ImplVulkanH_SelectPresentMode(VkPhysicalDevice physical_device, VkSurfaceKHR surface, const VkPresentModeKHR* request_modes, int request_modes_count);
+IMGUI_IMPL_API VkPhysicalDevice     ImGui_ImplVulkanH_SelectPhysicalDevice(VkInstance instance);
+IMGUI_IMPL_API uint32_t             ImGui_ImplVulkanH_SelectQueueFamilyIndex(VkPhysicalDevice physical_device);
 IMGUI_IMPL_API int                  ImGui_ImplVulkanH_GetMinImageCountFromPresentMode(VkPresentModeKHR present_mode);
 
 // Helper structure to hold the data needed by one rendering frame
@@ -189,8 +208,8 @@ struct ImGui_ImplVulkanH_Window
     uint32_t            ImageCount;             // Number of simultaneous in-flight frames (returned by vkGetSwapchainImagesKHR, usually derived from min_image_count)
     uint32_t            SemaphoreCount;         // Number of simultaneous in-flight frames + 1, to be able to use it in vkAcquireNextImageKHR
     uint32_t            SemaphoreIndex;         // Current set of swapchain wait semaphores we're using (needs to be distinct from per frame data)
-    ImGui_ImplVulkanH_Frame*            Frames;
-    ImGui_ImplVulkanH_FrameSemaphores*  FrameSemaphores;
+    ImVector<ImGui_ImplVulkanH_Frame>           Frames;
+    ImVector<ImGui_ImplVulkanH_FrameSemaphores> FrameSemaphores;
 
     ImGui_ImplVulkanH_Window()
     {

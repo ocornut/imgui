@@ -233,7 +233,7 @@ for (int n = 0; n < 3; n++)
 ImGui::End();
 </pre>
 </td>
-</tr>    
+</tr>
 </table>
 
 A primer on labels and the ID Stack...
@@ -543,7 +543,7 @@ The short answer is: obtain the desired DPI scale, load your fonts resized with 
 
 Your application may want to detect DPI change and reload the fonts and reset style between frames.
 
-Your ui code  should avoid using hardcoded constants for size and positioning. Prefer to express values as multiple of reference values such as `ImGui::GetFontSize()` or `ImGui::GetFrameHeight()`. So e.g. instead of seeing a hardcoded height of 500 for a given item/window, you may want to use `30*ImGui::GetFontSize()` instead.
+Your UI code should avoid using hardcoded constants for size and positioning. Prefer to express values as multiple of reference values such as `ImGui::GetFontSize()` or `ImGui::GetFrameHeight()`. So e.g. instead of seeing a hardcoded height of 500 for a given item/window, you may want to use `30*ImGui::GetFontSize()` instead.
 
 Down the line Dear ImGui will provide a variety of standardized reference values to facilitate using this.
 
@@ -562,7 +562,8 @@ Please note that if you are not using multi-viewports with multi-monitors using 
 
 On Windows, in addition to scaling the font size (make sure to round to an integer) and using `style.ScaleAllSizes()`, you will need to inform Windows that your application is DPI aware. If this is not done, Windows will scale the application window and the UI text will be blurry. Potential solutions to indicate DPI awareness on Windows are:
 
-- For SDL: the flag `SDL_WINDOW_ALLOW_HIGHDPI` needs to be passed to `SDL_CreateWindow()``.
+- For SDL2: the flag `SDL_WINDOW_ALLOW_HIGHDPI` needs to be passed to `SDL_CreateWindow()`.
+- For SDL3: the flag `SDL_WINDOW_HIGH_PIXEL_DENSITY` needs to be passed to `SDL_CreateWindow()`.
 - For GLFW: this is done automatically.
 - For other Windows projects with other backends, or wrapper projects:
   - We provide a `ImGui_ImplWin32_EnableDpiAwareness()` helper method in the Win32 backend.
@@ -666,7 +667,7 @@ You may take a look at:
 
 Yes. People have written game editors, data browsers, debuggers, profilers, and all sorts of non-trivial tools with the library. In my experience, the simplicity of the API is very empowering. Your UI runs close to your live data. Make the tools always-on and everybody in the team will be inclined to create new tools (as opposed to more "offline" UI toolkits where only a fraction of your team effectively creates tools). The list of sponsors below is also an indicator that serious game teams have been using the library.
 
-Dear ImGui is very programmer centric and the immediate-mode GUI paradigm might require you to readjust some habits before you can realize its full potential. Dear ImGui is about making things that are simple, efficient, and powerful.
+Dear ImGui is very programmer-centric and the immediate-mode GUI paradigm might require you to readjust some habits before you can realize its full potential. Dear ImGui is about making things that are simple, efficient, and powerful.
 
 Dear ImGui is built to be efficient and scalable toward the needs for AAA-quality applications running all day. The IMGUI paradigm offers different opportunities for optimization than the more typical RMGUI paradigm.
 
