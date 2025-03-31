@@ -2501,8 +2501,10 @@ void ImTextureData::DestroyPixels()
 // - ImFontAtlasBuildNotifySetFont()
 //-----------------------------------------------------------------------------
 // - ImFontAtlas::AddCustomRect()
-// - ImFontAtlas::AddCustomRectFontGlyph()
+// - ImFontAtlas::RemoveCustomRect()
 // - ImFontAtlas::GetCustomRect()
+// - ImFontAtlas::AddCustomRectFontGlyph() [legacy]
+// - ImFontAtlas::AddCustomRectFontGlyphForSize() [legacy]
 // - ImFontAtlasGetMouseCursorTexData()
 //-----------------------------------------------------------------------------
 // - ImFontAtlasBuildMain()
@@ -2540,6 +2542,7 @@ void ImTextureData::DestroyPixels()
 //-----------------------------------------------------------------------------
 // - ImFontAtlasPackInit()
 // - ImFontAtlasPackAllocRectEntry()
+// - ImFontAtlasPackReuseRectEntry()
 // - ImFontAtlasPackDiscardRect()
 // - ImFontAtlasPackAddRect()
 // - ImFontAtlasPackGetRect()
@@ -3240,6 +3243,12 @@ ImFontAtlasRectId ImFontAtlas::AddCustomRect(int width, int height)
     if (RendererHasTextures)
         ImFontAtlasTextureBlockQueueUpload(this, TexData, r->x, r->y, r->w, r->h);
     return r_id;
+}
+
+void ImFontAtlas::RemoveCustomRect(ImFontAtlasRectId id)
+{
+    IM_ASSERT(id != ImFontAtlasRectId_Invalid);
+    ImFontAtlasPackDiscardRect(this, id);
 }
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
@@ -4098,7 +4107,7 @@ ImVec2i ImFontAtlasBuildGetTextureSizeEstimate(ImFontAtlas* atlas)
     return ImVec2i(new_tex_w, new_tex_h);
 }
 
-// Clear all output. Invalidates all AddCustomRectXXX return values.
+// Clear all output. Invalidates all AddCustomRect() return values!
 void ImFontAtlasBuildClear(ImFontAtlas* atlas)
 {
     ImVec2i new_tex_size = ImFontAtlasBuildGetTextureSizeEstimate(atlas);
@@ -4240,6 +4249,13 @@ static ImFontAtlasRectId ImFontAtlasPackAllocRectEntry(ImFontAtlas* atlas, int r
     return (ImFontAtlasRectId)index_idx;
 }
 
+static ImFontAtlasRectId ImFontAtlasPackReuseRectEntry(ImFontAtlas* atlas, ImFontAtlasRectEntry* overwrite_entry)
+{
+    IM_ASSERT(overwrite_entry->Used);
+    overwrite_entry->TargetIndex = atlas->Builder->Rects.Size - 1;
+    return atlas->Builder->RectsIndex.index_from_ptr(overwrite_entry);
+}
+
 // This is expected to be called in batches and followed by a repack
 void ImFontAtlasPackDiscardRect(ImFontAtlas* atlas, ImFontAtlasRectId id)
 {
@@ -4303,16 +4319,9 @@ ImFontAtlasRectId ImFontAtlasPackAddRect(ImFontAtlas* atlas, int w, int h, ImFon
 
     builder->Rects.push_back(r);
     if (overwrite_entry != NULL)
-    {
-        // Write into an existing entry instead of adding one (used during repack)
-        IM_ASSERT(overwrite_entry->Used);
-        overwrite_entry->TargetIndex = builder->Rects.Size - 1;
-        return builder->RectsIndex.index_from_ptr(overwrite_entry);
-    }
+        return ImFontAtlasPackReuseRectEntry(atlas, overwrite_entry); // Write into an existing entry instead of adding one (used during repack)
     else
-    {
         return ImFontAtlasPackAllocRectEntry(atlas, builder->Rects.Size - 1);
-    }
 }
 
 // Important: don'return pointer valid until next call to AddRect(), e.g. FindGlyph(), CalcTextSize() can all potentially invalidate previous pointers.

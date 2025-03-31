@@ -3731,6 +3731,7 @@ struct ImFontAtlas
     //   - AddCustomRectFontGlyph() --> Prefer using custom ImFontLoader inside ImFontConfig
     //   - ImFontAtlasCustomRect    --> Renamed to ImFontAtlasRect
     IMGUI_API ImFontAtlasRectId AddCustomRect(int width, int height);                               // Register a rectangle. Return -1 (ImFontAtlasRectId_Invalid) on error.
+    IMGUI_API void              RemoveCustomRect(ImFontAtlasRectId id);                             // Unregister a rectangle. Existing pixels will stay in texture until resized / garbage collected.
     IMGUI_API bool              GetCustomRect(ImFontAtlasRectId id, ImFontAtlasRect* out_r) const;  // Get rectangle coordinates for current texture. Valid immediately, never store this (read above)!
 
     //-------------------------------------------

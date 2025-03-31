@@ -3988,8 +3988,8 @@ IMGUI_API const ImFontLoader* ImFontAtlasGetFontLoaderForStbTruetype();
 // Having this also makes it easier to e.g. sort rectangles during repack.
 struct ImFontAtlasRectEntry
 {
-    int             TargetIndex : 31; // When Used: ImFontAtlasRectId -> into Rects[]. When unused: index to next unused RectsIndex[] slot to consume free-list.
-    unsigned int    Used : 1;
+    int                 TargetIndex : 31;   // When Used: ImFontAtlasRectId -> into Rects[]. When unused: index to next unused RectsIndex[] slot to consume free-list.
+    unsigned int        Used : 1;
 };
 
 // Data available to potential texture post-processing functions
