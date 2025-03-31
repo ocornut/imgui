@@ -63,6 +63,8 @@ Other changes:
   regardless of ImGuiConfigFlags_NavEnableGamepad being set. (#8508)
 - Backends: SDL3: Update for SDL3 api changes: revert SDL_GetClipboardText()
   memory ownership change. (#8530, #7801) [@Green-Sky]
+- Backends: SDLGPU3: Made ImGui_ImplSDLGPU3_PrepareDrawData() reuse GPU Transfer Buffers
+  which were unusually slow to recreate every frame. Much faster now. (#8534)
 
 Docking+Viewports Branch:
 
