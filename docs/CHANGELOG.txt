@@ -63,8 +63,8 @@ Other changes:
   regardless of ImGuiConfigFlags_NavEnableGamepad being set. (#8508)
 - Backends: SDL3: Update for SDL3 api changes: revert SDL_GetClipboardText()
   memory ownership change. (#8530, #7801) [@Green-Sky]
-- Backends: SDLGPU3: Made ImGui_ImplSDLGPU3_PrepareDrawData() reuse GPU Transfer Buffers
-  which were unusually slow to recreate every frame. Much faster now. (#8534)
+- Backends: SDLGPU3: Made ImGui_ImplSDLGPU3_PrepareDrawData() reuse GPU Transfer Buffers which
+  were unusually slow to recreate every frame. Much faster now. (#8534) [@ocornut, @TheMode]
 
 
 -----------------------------------------------------------------------
@@ -530,7 +530,7 @@ Other changes:
      - Set io.ConfigNavCursorVisibleAuto = true (default) to enable automatic toggling
        of cursor visibility (mouse click hide the cursor, arrow keys makes it visible).
      - Set io.ConfigNavCursorVisibleAlways to keep cursor always visible.
-  - Nav: added NavSetCursorVisible(bool visible) function to manipulate visibility of
+  - Nav: added SetNavCursorVisible(bool visible) function to manipulate visibility of
     navigation cursor (e.g. set default state, or after some actions). (#1074, #2048, #7237, #8059)
   - Nav: added io.ConfigNavEscapeClearFocusItem and io.ConfigNavEscapeClearFocusWindow to change
     how pressing Escape affects navigation. (#8059, #2048, #1074, #3200)
