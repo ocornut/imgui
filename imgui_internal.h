@@ -4003,7 +4003,7 @@ IMGUI_API const ImFontLoader* ImFontAtlasGetFontLoaderForStbTruetype();
 struct ImFontAtlasRectEntry
 {
     int                 TargetIndex : 31;   // When Used: ImFontAtlasRectId -> into Rects[]. When unused: index to next unused RectsIndex[] slot to consume free-list.
-    unsigned int        Used : 1;
+    unsigned int        IsUsed : 1;
 };
 
 // Data available to potential texture post-processing functions
