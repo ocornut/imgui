@@ -3709,9 +3709,10 @@ struct ImFontAtlas
     // - (Pre-1.92 names) ------------> (1.92 names)
     //   - GetCustomRectByIndex()   --> Use GetCustomRect()
     //   - CalcCustomRectUV()       --> Use GetCustomRectUV()
+    //   - AddCustomRectRegular()   --> Renamed to AddCustomRect()
     //   - AddCustomRectFontGlyph() --> Prefer using custom ImFontLoader inside ImFontConfig
     //   - ImFontAtlasCustomRect    --> ImTextureRect
-    IMGUI_API int                   AddCustomRectRegular(int width, int height);    // Register a rectangle. Return -1 on error.
+    IMGUI_API int                   AddCustomRect(int width, int height);           // Register a rectangle. Return -1 on error.
     IMGUI_API const ImTextureRect*  GetCustomRect(int id);                          // Get rectangle coordinate in current texture. Valid immediately, never store this (read above)!
     IMGUI_API void                  GetCustomRectUV(const ImTextureRect* r, ImVec2* out_uv_min, ImVec2* out_uv_max) const; // Get UV coordinates for a given rectangle. Valid immediately, never store this (read above)!
 
@@ -3763,6 +3764,7 @@ struct ImFontAtlas
     // [Obsolete]
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     // Legacy: You can request your rectangles to be mapped as font glyph (given a font + Unicode point), so you can render e.g. custom colorful icons and use them as regular glyphs. --> Prefer using a custom ImFontLoader.
+    IMGUI_API int                       AddCustomRectRegular(int width, int height) { return AddCustomRect(width, height); } // RENAMED in 1.92.X
     IMGUI_API int                       AddCustomRectFontGlyph(ImFont* font, ImWchar codepoint, int width, int height, float advance_x, const ImVec2& offset = ImVec2(0, 0)); // OBSOLETED in 1.92.X: Use custom ImFontLoader in ImFontConfig
     IMGUI_API int                       AddCustomRectFontGlyphForSize(ImFont* font, float font_size, ImWchar codepoint, int width, int height, float advance_x, const ImVec2& offset = ImVec2(0, 0)); // OBSOLETED in 1.92.X
     inline const ImTextureRect*         GetCustomRectByIndex(int id) { return GetCustomRect(id); } // OBSOLETED in 1.92.X
