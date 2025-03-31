@@ -57,10 +57,12 @@ struct ImGui_ImplSDLGPU3_Data
     ImGui_ImplSDLGPU3_InitInfo   InitInfo;
 
     // Graphics pipeline & shaders
-    SDL_GPUShader*               VertexShader   = nullptr;
-    SDL_GPUShader*               FragmentShader = nullptr;
-    SDL_GPUGraphicsPipeline*     Pipeline       = nullptr;
-    SDL_GPUSampler*              TexSampler     = nullptr;
+    SDL_GPUShader*               VertexShader           = nullptr;
+    SDL_GPUShader*               FragmentShader         = nullptr;
+    SDL_GPUGraphicsPipeline*     Pipeline               = nullptr;
+    SDL_GPUSampler*              TexSampler             = nullptr;
+    SDL_GPUTransferBuffer*       TexTransferBuffer      = nullptr;
+    uint32_t                     TexTransferBufferSize  = 0;
 
     // Frame data for main window
     ImGui_ImplSDLGPU3_FrameData  MainWindowFrameData;
@@ -333,22 +335,29 @@ void ImGui_ImplSDLGPU3_UpdateTexture(ImTextureData* tex)
         uint32_t upload_pitch = upload_w * tex->BytesPerPixel;
         uint32_t upload_size = upload_w * upload_h * tex->BytesPerPixel;
 
-        // Create all the upload structures and upload:
-        SDL_GPUTransferBufferCreateInfo transferbuffer_info = {};
-        transferbuffer_info.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
-        transferbuffer_info.size = upload_size;
+        // Create transfer buffer
+        if (bd->TexTransferBufferSize < upload_size)
+        {
+            SDL_ReleaseGPUTransferBuffer(v->Device, bd->TexTransferBuffer);
+            SDL_GPUTransferBufferCreateInfo transferbuffer_info = {};
+            transferbuffer_info.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
+            transferbuffer_info.size = upload_size + 1024;
+            bd->TexTransferBufferSize = upload_size + 1024;
+            bd->TexTransferBuffer = SDL_CreateGPUTransferBuffer(v->Device, &transferbuffer_info);
+            IM_ASSERT(bd->TexTransferBuffer != nullptr && "Failed to create font transfer buffer, call SDL_GetError() for more information");
+        }
 
-        SDL_GPUTransferBuffer* transferbuffer = SDL_CreateGPUTransferBuffer(v->Device, &transferbuffer_info);
-        IM_ASSERT(transferbuffer != nullptr && "Failed to create font transfer buffer, call SDL_GetError() for more information");
-
-        void* texture_ptr = SDL_MapGPUTransferBuffer(v->Device, transferbuffer, false);
-        for (int y = 0; y < upload_h; y++)
-            memcpy((void*)((uintptr_t)texture_ptr + y * upload_pitch), tex->GetPixelsAt(upload_x, upload_y + y), upload_pitch);
-        SDL_UnmapGPUTransferBuffer(v->Device, transferbuffer);
+        // Copy to transfer buffer
+        {
+            void* texture_ptr = SDL_MapGPUTransferBuffer(v->Device, bd->TexTransferBuffer, false);
+            for (int y = 0; y < upload_h; y++)
+                memcpy((void*)((uintptr_t)texture_ptr + y * upload_pitch), tex->GetPixelsAt(upload_x, upload_y + y), upload_pitch);
+            SDL_UnmapGPUTransferBuffer(v->Device, bd->TexTransferBuffer);
+        }
 
         SDL_GPUTextureTransferInfo transfer_info = {};
         transfer_info.offset = 0;
-        transfer_info.transfer_buffer = transferbuffer;
+        transfer_info.transfer_buffer = bd->TexTransferBuffer;
 
         SDL_GPUTextureRegion texture_region = {};
         texture_region.texture = backend_tex->Texture;
@@ -358,12 +367,14 @@ void ImGui_ImplSDLGPU3_UpdateTexture(ImTextureData* tex)
         texture_region.h = (Uint32)upload_h;
         texture_region.d = 1;
 
-        SDL_GPUCommandBuffer* cmd = SDL_AcquireGPUCommandBuffer(v->Device);
-        SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass(cmd);
-        SDL_UploadToGPUTexture(copy_pass, &transfer_info, &texture_region, false);
-        SDL_EndGPUCopyPass(copy_pass);
-        SDL_SubmitGPUCommandBuffer(cmd);
-        SDL_ReleaseGPUTransferBuffer(v->Device, transferbuffer);
+        // Upload
+        {
+            SDL_GPUCommandBuffer* cmd = SDL_AcquireGPUCommandBuffer(v->Device);
+            SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass(cmd);
+            SDL_UploadToGPUTexture(copy_pass, &transfer_info, &texture_region, false);
+            SDL_EndGPUCopyPass(copy_pass);
+            SDL_SubmitGPUCommandBuffer(cmd);
+        }
 
         tex->Status = ImTextureStatus_OK;
     }
@@ -588,10 +599,11 @@ void ImGui_ImplSDLGPU3_DestroyDeviceObjects()
             tex->Status = ImTextureStatus_WantDestroy;
             ImGui_ImplSDLGPU3_UpdateTexture(tex);
         }
-    if (bd->VertexShader)   { SDL_ReleaseGPUShader(v->Device, bd->VertexShader); bd->VertexShader = nullptr;}
-    if (bd->FragmentShader) { SDL_ReleaseGPUShader(v->Device, bd->FragmentShader); bd->FragmentShader = nullptr;}
-    if (bd->TexSampler)     { SDL_ReleaseGPUSampler(v->Device, bd->TexSampler); bd->TexSampler = nullptr;}
-    if (bd->Pipeline)       { SDL_ReleaseGPUGraphicsPipeline(v->Device, bd->Pipeline); bd->Pipeline = nullptr;}
+    if (bd->TexTransferBuffer)  { SDL_ReleaseGPUTransferBuffer(v->Device, bd->TexTransferBuffer); bd->TexTransferBuffer = nullptr; }
+    if (bd->VertexShader)       { SDL_ReleaseGPUShader(v->Device, bd->VertexShader); bd->VertexShader = nullptr; }
+    if (bd->FragmentShader)     { SDL_ReleaseGPUShader(v->Device, bd->FragmentShader); bd->FragmentShader = nullptr; }
+    if (bd->TexSampler)         { SDL_ReleaseGPUSampler(v->Device, bd->TexSampler); bd->TexSampler = nullptr; }
+    if (bd->Pipeline)           { SDL_ReleaseGPUGraphicsPipeline(v->Device, bd->Pipeline); bd->Pipeline = nullptr; }
 }
 
 bool ImGui_ImplSDLGPU3_Init(ImGui_ImplSDLGPU3_InitInfo* info)
