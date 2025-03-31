@@ -3984,6 +3984,7 @@ IMGUI_API const ImFontLoader* ImFontAtlasGetFontLoaderForStbTruetype();
 // An identifier to a rectangle in the atlas. -1 when invalid.
 // The rectangle may move and UV may be invalidated, use GetCustomRect() to retrieve it.
 typedef int ImFontAtlasRectId;
+#define ImFontAtlasRectId_Invalid -1
 
 // Packed rectangle lookup entry (we need an indirection to allow removing/reordering rectangles)
 // User are returned ImFontAtlasRectId values which are meant to be persistent.
