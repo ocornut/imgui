@@ -3228,7 +3228,8 @@ void ImFontAtlas::RemoveFont(ImFont* font)
     ImFontAtlasBuildNotifySetFont(this, font, new_current_font);
 }
 
-ImFontAtlasRectId ImFontAtlas::AddCustomRect(int width, int height)
+// At it is common to do an AddCustomRect() followed by a GetCustomRect(), we provide an optional 'ImFontAtlasRect* out_r = NULL' argument to retrieve the info straight away.
+ImFontAtlasRectId ImFontAtlas::AddCustomRect(int width, int height, ImFontAtlasRect* out_r)
 {
     IM_ASSERT(width > 0 && width <= 0xFFFF);
     IM_ASSERT(height > 0 && height <= 0xFFFF);
@@ -3239,9 +3240,14 @@ ImFontAtlasRectId ImFontAtlas::AddCustomRect(int width, int height)
     ImFontAtlasRectId r_id = ImFontAtlasPackAddRect(this, width, height);
     if (r_id == ImFontAtlasRectId_Invalid)
         return ImFontAtlasRectId_Invalid;
-    ImTextureRect* r = ImFontAtlasPackGetRect(this, r_id);
+    if (out_r != NULL)
+        GetCustomRect(r_id, out_r);
+
     if (RendererHasTextures)
+    {
+        ImTextureRect* r = ImFontAtlasPackGetRect(this, r_id);
         ImFontAtlasTextureBlockQueueUpload(this, TexData, r->x, r->y, r->w, r->h);
+    }
     return r_id;
 }
 
@@ -4324,7 +4330,7 @@ ImFontAtlasRectId ImFontAtlasPackAddRect(ImFontAtlas* atlas, int w, int h, ImFon
         return ImFontAtlasPackAllocRectEntry(atlas, builder->Rects.Size - 1);
 }
 
-// Important: don'return pointer valid until next call to AddRect(), e.g. FindGlyph(), CalcTextSize() can all potentially invalidate previous pointers.
+// Important: return pointer is valid until next call to AddRect(), e.g. FindGlyph(), CalcTextSize() can all potentially invalidate previous pointers.
 ImTextureRect* ImFontAtlasPackGetRect(ImFontAtlas* atlas, ImFontAtlasRectId id)
 {
     IM_ASSERT(id != ImFontAtlasRectId_Invalid);
