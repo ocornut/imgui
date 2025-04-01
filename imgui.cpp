@@ -4016,9 +4016,11 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
 
     // All platforms use Ctrl+Tab but Ctrl<>Super are swapped on Mac...
     // FIXME: Because this value is stored, it annoyingly interfere with toggling io.ConfigMacOSXBehaviors updating this..
+    ConfigNavWindowingWithGamepad = true;
     ConfigNavWindowingKeyNext = IO.ConfigMacOSXBehaviors ? (ImGuiMod_Super | ImGuiKey_Tab) : (ImGuiMod_Ctrl | ImGuiKey_Tab);
     ConfigNavWindowingKeyPrev = IO.ConfigMacOSXBehaviors ? (ImGuiMod_Super | ImGuiMod_Shift | ImGuiKey_Tab) : (ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_Tab);
     NavWindowingTarget = NavWindowingTargetAnim = NavWindowingListWindow = NULL;
+    NavWindowingInputSource = ImGuiInputSource_None;
     NavWindowingTimer = NavWindowingHighlightAlpha = 0.0f;
     NavWindowingToggleLayer = false;
     NavWindowingToggleKey = ImGuiKey_None;
@@ -13788,17 +13790,18 @@ static void ImGui::NavUpdateWindowing()
     const bool nav_keyboard_active = (io.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard) != 0;
     const bool keyboard_next_window = allow_windowing && g.ConfigNavWindowingKeyNext && Shortcut(g.ConfigNavWindowingKeyNext, ImGuiInputFlags_Repeat | ImGuiInputFlags_RouteAlways, owner_id);
     const bool keyboard_prev_window = allow_windowing && g.ConfigNavWindowingKeyPrev && Shortcut(g.ConfigNavWindowingKeyPrev, ImGuiInputFlags_Repeat | ImGuiInputFlags_RouteAlways, owner_id);
-    const bool start_windowing_with_gamepad = allow_windowing && nav_gamepad_active && !g.NavWindowingTarget && IsKeyPressed(ImGuiKey_NavGamepadMenu, ImGuiInputFlags_None);
+    const bool start_windowing_with_gamepad = allow_windowing && nav_gamepad_active && !g.NavWindowingTarget && Shortcut(ImGuiKey_NavGamepadMenu, ImGuiInputFlags_RouteAlways, owner_id);
     const bool start_windowing_with_keyboard = allow_windowing && !g.NavWindowingTarget && (keyboard_next_window || keyboard_prev_window); // Note: enabled even without NavEnableKeyboard!
     bool just_started_windowing_from_null_focus = false;
     if (start_windowing_with_gamepad || start_windowing_with_keyboard)
         if (ImGuiWindow* window = g.NavWindow ? g.NavWindow : FindWindowNavFocusable(g.WindowsFocusOrder.Size - 1, -INT_MAX, -1))
         {
-            g.NavWindowingTarget = g.NavWindowingTargetAnim = window->RootWindow; // Current location
+            if (start_windowing_with_keyboard || g.ConfigNavWindowingWithGamepad)
+                g.NavWindowingTarget = g.NavWindowingTargetAnim = window->RootWindow; // Current location
             g.NavWindowingTimer = g.NavWindowingHighlightAlpha = 0.0f;
             g.NavWindowingAccumDeltaPos = g.NavWindowingAccumDeltaSize = ImVec2(0.0f, 0.0f);
             g.NavWindowingToggleLayer = start_windowing_with_gamepad ? true : false; // Gamepad starts toggling layer
-            g.NavInputSource = start_windowing_with_keyboard ? ImGuiInputSource_Keyboard : ImGuiInputSource_Gamepad;
+            g.NavWindowingInputSource = g.NavInputSource = start_windowing_with_keyboard ? ImGuiInputSource_Keyboard : ImGuiInputSource_Gamepad;
             if (g.NavWindow == NULL)
                 just_started_windowing_from_null_focus = true;
 
@@ -13808,18 +13811,22 @@ static void ImGui::NavUpdateWindowing()
         }
 
     // Gamepad update
-    g.NavWindowingTimer += io.DeltaTime;
-    if (g.NavWindowingTarget && g.NavInputSource == ImGuiInputSource_Gamepad)
+    if ((g.NavWindowingTarget || g.NavWindowingToggleLayer) && g.NavWindowingInputSource == ImGuiInputSource_Gamepad)
     {
-        // Highlight only appears after a brief time holding the button, so that a fast tap on PadMenu (to toggle NavLayer) doesn't add visual noise
-        g.NavWindowingHighlightAlpha = ImMax(g.NavWindowingHighlightAlpha, ImSaturate((g.NavWindowingTimer - NAV_WINDOWING_HIGHLIGHT_DELAY) / 0.05f));
-
-        // Select window to focus
-        const int focus_change_dir = (int)IsKeyPressed(ImGuiKey_GamepadL1) - (int)IsKeyPressed(ImGuiKey_GamepadR1);
-        if (focus_change_dir != 0 && !just_started_windowing_from_null_focus)
+        if (g.NavWindowingTarget != NULL)
         {
-            NavUpdateWindowingTarget(focus_change_dir);
-            g.NavWindowingHighlightAlpha = 1.0f;
+            // Highlight only appears after a brief time holding the button, so that a fast tap on ImGuiKey_NavGamepadMenu (to toggle NavLayer) doesn't add visual noise
+            // However inputs are accepted immediately, so you press ImGuiKey_NavGamepadMenu + L1/R1 fast.
+            g.NavWindowingTimer += io.DeltaTime;
+            g.NavWindowingHighlightAlpha = ImMax(g.NavWindowingHighlightAlpha, ImSaturate((g.NavWindowingTimer - NAV_WINDOWING_HIGHLIGHT_DELAY) / 0.05f));
+
+            // Select window to focus
+            const int focus_change_dir = (int)IsKeyPressed(ImGuiKey_GamepadL1) - (int)IsKeyPressed(ImGuiKey_GamepadR1);
+            if (focus_change_dir != 0 && !just_started_windowing_from_null_focus)
+            {
+                NavUpdateWindowingTarget(focus_change_dir);
+                g.NavWindowingHighlightAlpha = 1.0f;
+            }
         }
 
         // Single press toggles NavLayer, long press with L/R apply actual focus on release (until then the window was merely rendered top-most)
@@ -13831,15 +13838,17 @@ static void ImGui::NavUpdateWindowing()
             else if (!g.NavWindowingToggleLayer)
                 apply_focus_window = g.NavWindowingTarget;
             g.NavWindowingTarget = NULL;
+            g.NavWindowingToggleLayer = false;
         }
     }
 
     // Keyboard: Focus
-    if (g.NavWindowingTarget && g.NavInputSource == ImGuiInputSource_Keyboard)
+    if (g.NavWindowingTarget && g.NavWindowingInputSource == ImGuiInputSource_Keyboard)
     {
         // Visuals only appears after a brief time after pressing TAB the first time, so that a fast CTRL+TAB doesn't add visual noise
         ImGuiKeyChord shared_mods = ((g.ConfigNavWindowingKeyNext ? g.ConfigNavWindowingKeyNext : ImGuiMod_Mask_) & (g.ConfigNavWindowingKeyPrev ? g.ConfigNavWindowingKeyPrev : ImGuiMod_Mask_)) & ImGuiMod_Mask_;
         IM_ASSERT(shared_mods != 0); // Next/Prev shortcut currently needs a shared modifier to "hold", otherwise Prev actions would keep cycling between two windows.
+        g.NavWindowingTimer += io.DeltaTime;
         g.NavWindowingHighlightAlpha = ImMax(g.NavWindowingHighlightAlpha, ImSaturate((g.NavWindowingTimer - NAV_WINDOWING_HIGHLIGHT_DELAY) / 0.05f)); // 1.0f
         if ((keyboard_next_window || keyboard_prev_window) && !just_started_windowing_from_null_focus)
             NavUpdateWindowingTarget(keyboard_next_window ? -1 : +1);
@@ -13857,10 +13866,10 @@ static void ImGui::NavUpdateWindowing()
                 windowing_toggle_layer_start = true;
                 g.NavWindowingToggleLayer = true;
                 g.NavWindowingToggleKey = windowing_toggle_key;
-                g.NavInputSource = ImGuiInputSource_Keyboard;
+                g.NavWindowingInputSource = g.NavInputSource = ImGuiInputSource_Keyboard;
                 break;
             }
-    if (g.NavWindowingToggleLayer && g.NavInputSource == ImGuiInputSource_Keyboard)
+    if (g.NavWindowingToggleLayer && g.NavWindowingInputSource == ImGuiInputSource_Keyboard)
     {
         // We cancel toggling nav layer when any text has been typed (generally while holding Alt). (See #370)
         // We cancel toggling nav layer when other modifiers are pressed. (See #4439)

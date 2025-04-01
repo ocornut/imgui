@@ -52,6 +52,8 @@ Other changes:
   codepath that preserve last contents size when collapsed, resulting in
   programmatically uncollapsing auto-sizing windows having them flicker size
   for a frame. (#7691) [@achabense]
+- Nav: fixed assertion when holding gamepad FaceLeft/West button to open
+  CTRL+Tab windowing + pressing a keyboard key. (#8525)
 - Error Handling: added better error report and recovery for extraneous
   EndPopup() call. (#1651, #8499)
 - Style, InputText: added ImGuiCol_InputTextCursor to configure color of
@@ -59,6 +61,10 @@ Other changes:
 - Misc: added extra operators to ImVec4 in IMGUI_DEFINE_MATH_OPERATORS block. (#8510) [@gan74]
 - Backends: SDL2, SDL3, OSX: Fill gamepad inputs and set ImGuiBackendFlags_HasGamepad
   regardless of ImGuiConfigFlags_NavEnableGamepad being set. (#8508)
+- Backends: SDL3: Update for SDL3 api changes: revert SDL_GetClipboardText()
+  memory ownership change. (#8530, #7801) [@Green-Sky]
+- Backends: SDLGPU3: Made ImGui_ImplSDLGPU3_PrepareDrawData() reuse GPU Transfer Buffers which
+  were unusually slow to recreate every frame. Much faster now. (#8534) [@ocornut, @TheMode]
 
 
 -----------------------------------------------------------------------
@@ -524,7 +530,7 @@ Other changes:
      - Set io.ConfigNavCursorVisibleAuto = true (default) to enable automatic toggling
        of cursor visibility (mouse click hide the cursor, arrow keys makes it visible).
      - Set io.ConfigNavCursorVisibleAlways to keep cursor always visible.
-  - Nav: added NavSetCursorVisible(bool visible) function to manipulate visibility of
+  - Nav: added SetNavCursorVisible(bool visible) function to manipulate visibility of
     navigation cursor (e.g. set default state, or after some actions). (#1074, #2048, #7237, #8059)
   - Nav: added io.ConfigNavEscapeClearFocusItem and io.ConfigNavEscapeClearFocusWindow to change
     how pressing Escape affects navigation. (#8059, #2048, #1074, #3200)
