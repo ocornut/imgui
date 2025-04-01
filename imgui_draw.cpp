@@ -4027,7 +4027,7 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
     // Wrap_width is too small to fit anything. Force displaying 1 character to minimize the height discontinuity.
     // +1 may not be a character start point in UTF-8 but it's ok because caller loops use (text >= word_wrap_eol).
     if (s == text && text < text_end)
-        return s + 1;
+        return s + ImTextCountUtf8BytesFromChar(s, text_end);
     return s;
 }
 
