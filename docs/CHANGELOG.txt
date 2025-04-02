@@ -56,6 +56,9 @@ Other changes:
   CTRL+Tab windowing + pressing a keyboard key. (#8525)
 - Error Handling: added better error report and recovery for extraneous
   EndPopup() call. (#1651, #8499)
+- Fonts: word-wrapping code handle ideographic comma & full stop (U+3001, U+3002). (#8540)
+- Fonts: fixed CalcWordWrapPositionA() fallback when width is too small to wrap:
+  would use a +1 offset instead of advancing to the next UTF-8 codepoint. (#8540)
 - Style, InputText: added ImGuiCol_InputTextCursor to configure color of
   the InputText cursor/caret. (#7031)
 - Misc: added extra operators to ImVec4 in IMGUI_DEFINE_MATH_OPERATORS block. (#8510) [@gan74]
