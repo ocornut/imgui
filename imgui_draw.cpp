@@ -2654,17 +2654,14 @@ void ImFontAtlas::ClearInputData()
         const ImFontLoader* loader = font_cfg.FontLoader ? font_cfg.FontLoader : FontLoader;
         if (loader && loader->FontSrcDestroy != NULL)
             loader->FontSrcDestroy(this, &font_cfg);
-        ImFontAtlasBuildDiscardFontSource(this, &font_cfg);
+        ImFontAtlasBuildDestroyFontSourceData(this, &font_cfg);
     }
 
-    // When clearing this we lose access to the font name and other information used to build the font.
     for (ImFont* font : Fonts)
     {
-        if (font->Sources >= Sources.Data && font->Sources < Sources.Data + Sources.Size)
-        {
-            font->Sources = NULL;
-            font->SourcesCount = 0;
-        }
+        // When clearing this we lose access to the font name and other information used to build the font.
+        font->Sources = NULL;
+        font->SourcesCount = 0;
         font->Flags |= ImFontFlags_NoLoadGlyphs;
     }
     Sources.clear();
@@ -2978,14 +2975,14 @@ bool ImFontAtlas::Build()
 }
 #endif // #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 
-void ImFontAtlasBuildDiscardFontSource(ImFontAtlas* atlas, ImFontConfig* src)
+void ImFontAtlasBuildDestroyFontSourceData(ImFontAtlas* atlas, ImFontConfig* src)
 {
     IM_UNUSED(atlas);
     if (src->FontDataOwnedByAtlas)
         IM_FREE(src->FontData);
+    src->FontData = NULL;
     if (src->GlyphExcludeRanges)
         IM_FREE((void*)src->GlyphExcludeRanges);
-    src->FontData = NULL;
     src->GlyphExcludeRanges = NULL;
 }
 
@@ -3048,7 +3045,7 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
     if (!ImFontAtlasBuildAddFont(this, &new_font_cfg))
     {
         // Rollback (this is a fragile/rarely exercised code-path. TestSuite's "misc_atlas_add_invalid_font" aim to test this)
-        ImFontAtlasBuildDiscardFontSource(this, &new_font_cfg);
+        ImFontAtlasBuildDestroyFontSourceData(this, &new_font_cfg);
         Sources.pop_back();
         if (!font_cfg->MergeMode)
         {
@@ -3593,9 +3590,8 @@ bool ImFontAtlasBuildAddFont(ImFontAtlas* atlas, ImFontConfig* src)
     }
 
     const ImFontLoader* loader = src->FontLoader ? src->FontLoader : atlas->FontLoader;
-    if (loader->FontSrcInit != NULL)
-        if (!loader->FontSrcInit(atlas, src))
-            return false;
+    if (loader->FontSrcInit != NULL && !loader->FontSrcInit(atlas, src))
+        return false;
 
     atlas->TexIsBuilt = false; // For legacy backends
     ImFontAtlasBuildSetupFontSpecialGlyphs(atlas, font, src);
