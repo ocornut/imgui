@@ -4075,9 +4075,9 @@ IMGUI_API bool              ImFontAtlasBuildAddFont(ImFontAtlas* atlas, ImFontCo
 IMGUI_API void              ImFontAtlasBuildSetupFontSpecialGlyphs(ImFontAtlas* atlas, ImFont* font, ImFontConfig* src);
 IMGUI_API void              ImFontAtlasBuildPreloadAllGlyphRanges(ImFontAtlas* atlas); // Legacy
 IMGUI_API void              ImFontAtlasBuildGetOversampleFactors(ImFontConfig* src, float size, int* out_oversample_h, int* out_oversample_v);
+IMGUI_API bool              ImFontAtlasBuildInitFontOutput(ImFontAtlas* atlas, ImFont* font); // Using DestroyFontOutput/InitFontOutput sequence useful notably if font loader params have changed
+IMGUI_API void              ImFontAtlasBuildDestroyFontOutput(ImFontAtlas* atlas, ImFont* font);
 IMGUI_API void              ImFontAtlasBuildDestroyFontSourceData(ImFontAtlas* atlas, ImFontConfig* src);
-IMGUI_API void              ImFontAtlasBuildReloadAll(ImFontAtlas* atlas);                     // Reinit/rebuild, notably if font loader params have changed.
-IMGUI_API void              ImFontAtlasBuildReloadFont(ImFontAtlas* atlas, ImFontConfig* src); // Reinit/rebuild, notably if font loader params have changed.
 
 IMGUI_API ImFontBaked*      ImFontAtlasBuildAddFontBaked(ImFontAtlas* atlas, ImFont* font, float font_size, ImGuiID baked_id);
 IMGUI_API ImFontBaked*      ImFontAtlasBuildGetClosestFontBakedMatch(ImFontAtlas* atlas, ImFont* font, float font_size);
