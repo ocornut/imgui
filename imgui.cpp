@@ -21304,9 +21304,16 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
             ImFontAtlasBuildSetupFontLoader(atlas, loader_freetype);
         if (loader_current == loader_freetype)
         {
-            Text("Shared FreeType Loader Flags:");
-            if (ImGuiFreeType::DebugEditFontBuilderFlags(&atlas->FontBuilderFlags))
-                ImFontAtlasBuildReloadAll(atlas);
+            unsigned int loader_flags = atlas->FontBuilderFlags;
+            Text("Shared FreeType Loader Flags:  0x%08", loader_flags);
+            if (ImGuiFreeType::DebugEditFontBuilderFlags(&loader_flags))
+            {
+                for (ImFont* font : atlas->Fonts)
+                    ImFontAtlasBuildDestroyFontOutput(atlas, font);
+                atlas->FontBuilderFlags = loader_flags;
+                for (ImFont* font : atlas->Fonts)
+                    ImFontAtlasBuildInitFontOutput(atlas, font);
+            }
         }
 #else
         BeginDisabled();
@@ -21333,8 +21340,9 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
     if (Button("Grow"))
         ImFontAtlasBuildGrowTexture(atlas);
     SameLine();
-    if (Button("Clear Output"))
+    if (Button("Clear All"))
         ImFontAtlasBuildClear(atlas);
+    SetItemTooltip("Destroy cache and custom rectangles.");
 
     for (int tex_n = 0; tex_n < atlas->TexList.Size; tex_n++)
     {
@@ -22402,9 +22410,14 @@ void ImGui::DebugNodeFont(ImFont* font)
 #ifdef IMGUI_ENABLE_FREETYPE
                 if (loader->Name != NULL && strcmp(loader->Name, "FreeType") == 0)
                 {
-                    Text("FreeType Loader Flags: 0x%08X", src->FontBuilderFlags);
-                    if (ImGuiFreeType::DebugEditFontBuilderFlags(&src->FontBuilderFlags))
-                        ImFontAtlasBuildReloadFont(atlas, src);
+                    unsigned int loader_flags = src->FontBuilderFlags;
+                    Text("FreeType Loader Flags: 0x%08X", loader_flags);
+                    if (ImGuiFreeType::DebugEditFontBuilderFlags(&loader_flags))
+                    {
+                        ImFontAtlasBuildDestroyFontOutput(atlas, font);
+                        src->FontBuilderFlags = loader_flags;
+                        ImFontAtlasBuildInitFontOutput(atlas, font);
+                    }
                 }
 #endif
                 TreePop();
