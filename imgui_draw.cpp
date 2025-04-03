@@ -2649,14 +2649,11 @@ void ImFontAtlas::CompactCache()
 void ImFontAtlas::ClearInputData()
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas!");
-    for (ImFontConfig& font_cfg : Sources)
-    {
-        const ImFontLoader* loader = font_cfg.FontLoader ? font_cfg.FontLoader : FontLoader;
-        if (loader && loader->FontSrcDestroy != NULL)
-            loader->FontSrcDestroy(this, &font_cfg);
-        ImFontAtlasBuildDestroyFontSourceData(this, &font_cfg);
-    }
 
+    for (ImFont* font : Fonts)
+        ImFontAtlasBuildDestroyFontOutput(this, font);
+    for (ImFontConfig& font_cfg : Sources)
+        ImFontAtlasBuildDestroyFontSourceData(this, &font_cfg);
     for (ImFont* font : Fonts)
     {
         // When clearing this we lose access to the font name and other information used to build the font.
@@ -3197,15 +3194,9 @@ void ImFontAtlas::RemoveFont(ImFont* font)
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas!");
     font->ClearOutputData();
 
+    ImFontAtlasBuildDestroyFontOutput(this, font);
     for (int src_n = 0; src_n < font->SourcesCount; src_n++)
-    {
-        ImFontConfig* src = (ImFontConfig*)(void*)&font->Sources[src_n];
-        const ImFontLoader* loader = src->FontLoader ? src->FontLoader : FontLoader;
-        if (loader && loader->FontSrcDestroy != NULL)
-            loader->FontSrcDestroy(this, src);
-        if (src->FontData != NULL && src->FontDataOwnedByAtlas)
-            IM_FREE(src->FontData);
-    }
+        ImFontAtlasBuildDestroyFontSourceData(this, &font->Sources[src_n]);
 
     bool removed = Fonts.find_erase(font);
     IM_ASSERT(removed);
@@ -3376,15 +3367,19 @@ void ImFontAtlasBuildSetupFontLoader(ImFontAtlas* atlas, const ImFontLoader* fon
         return;
     IM_ASSERT(!atlas->Locked && "Cannot modify a locked ImFontAtlas!");
 
-    // Note that texture size estimate is likely incorrect in this situation, as FreeType backend doesn't use oversampling.
-    ImVec2i new_tex_size = ImFontAtlasBuildGetTextureSizeEstimate(atlas);
-    ImFontAtlasBuildDestroy(atlas);
+    for (ImFont* font : atlas->Fonts)
+        ImFontAtlasBuildDestroyFontOutput(atlas, font);
+    if (atlas->Builder && atlas->FontLoader && atlas->FontLoader->LoaderShutdown)
+        atlas->FontLoader->LoaderShutdown(atlas);
 
     atlas->FontLoader = font_loader;
     atlas->FontLoaderName = font_loader ? font_loader->Name : "NULL";
+    IM_ASSERT(atlas->FontLoaderData == NULL);
 
-    ImFontAtlasBuildAddTexture(atlas, new_tex_size.x, new_tex_size.y);
-    ImFontAtlasBuildInit(atlas);
+    if (atlas->Builder && atlas->FontLoader && atlas->FontLoader->LoaderInit)
+        atlas->FontLoader->LoaderInit(atlas);
+    for (ImFont* font : atlas->Fonts)
+        ImFontAtlasBuildInitFontOutput(atlas, font);
 }
 
 // Preload all glyph ranges for legacy backends.
@@ -3562,18 +3557,31 @@ static void ImFontAtlasBuildUpdateLinesTexData(ImFontAtlas* atlas, bool add_and_
 
 //-----------------------------------------------------------------------------------------------------------------------------
 
-void ImFontAtlasBuildReloadAll(ImFontAtlas* atlas)
+bool ImFontAtlasBuildInitFontOutput(ImFontAtlas* atlas, ImFont* font)
 {
-    const ImFontLoader* main_loader = atlas->FontLoader;
-    ImFontAtlasBuildSetupFontLoader(atlas, NULL);
-    ImFontAtlasBuildSetupFontLoader(atlas, main_loader);
+    bool ret = true;
+    for (int src_n = 0; src_n < font->SourcesCount; src_n++)
+    {
+        ImFontConfig* src = &font->Sources[src_n];
+        const ImFontLoader* loader = src->FontLoader ? src->FontLoader : atlas->FontLoader;
+        if (loader && loader->FontSrcInit != NULL && !loader->FontSrcInit(atlas, src))
+            ret = false;
+    }
+    IM_ASSERT(ret); // Unclear how to react to this meaningfully. Assume that result will be same as initial AddFont() call.
+    return ret;
 }
 
-void ImFontAtlasBuildReloadFont(ImFontAtlas* atlas, ImFontConfig* src)
+// Keep source/input FontData
+void ImFontAtlasBuildDestroyFontOutput(ImFontAtlas* atlas, ImFont* font)
 {
-    // FIXME-NEWATLAS: rebuild single font not supported yet.
-    IM_UNUSED(src);
-    ImFontAtlasBuildReloadAll(atlas);
+    font->ClearOutputData();
+    for (int src_n = 0; src_n < font->SourcesCount; src_n++)
+    {
+        ImFontConfig* src = &font->Sources[src_n];
+        const ImFontLoader* loader = src->FontLoader ? src->FontLoader : atlas->FontLoader;
+        if (loader && loader->FontSrcDestroy != NULL)
+            loader->FontSrcDestroy(atlas, src);
+    }
 }
 
 //-----------------------------------------------------------------------------------------------------------------------------
@@ -4148,12 +4156,7 @@ void ImFontAtlasBuildInit(ImFontAtlas* atlas)
 #else
         IM_ASSERT(0); // Invalid Build function
 #endif
-        return; // ImFontAtlasBuildSetupFontLoader() automatically call ImFontAtlasBuildInit()
     }
-
-    IM_ASSERT(atlas->FontLoaderData == NULL);
-    if (atlas->FontLoader->LoaderInit)
-        atlas->FontLoader->LoaderInit(atlas);
 
     // Create initial texture size
     if (atlas->TexData == NULL || atlas->TexData->Pixels == NULL)
@@ -4165,6 +4168,8 @@ void ImFontAtlasBuildInit(ImFontAtlas* atlas)
     {
         IM_ASSERT(atlas->Builder == NULL);
         builder = atlas->Builder = IM_NEW(ImFontAtlasBuilder)();
+        if (atlas->FontLoader->LoaderInit)
+            atlas->FontLoader->LoaderInit(atlas);
     }
 
     ImFontAtlasBuildUpdateRendererHasTexturesFromContext(atlas);
@@ -4193,13 +4198,7 @@ void ImFontAtlasBuildInit(ImFontAtlas* atlas)
 void ImFontAtlasBuildDestroy(ImFontAtlas* atlas)
 {
     for (ImFont* font : atlas->Fonts)
-        font->ClearOutputData();
-    for (ImFontConfig& font_cfg : atlas->Sources)
-    {
-        const ImFontLoader* loader = font_cfg.FontLoader ? font_cfg.FontLoader : atlas->FontLoader;
-        if (loader && loader->FontSrcDestroy != NULL)
-            loader->FontSrcDestroy(atlas, &font_cfg);
-    }
+        ImFontAtlasBuildDestroyFontOutput(atlas, font);
     if (atlas->Builder && atlas->FontLoader && atlas->FontLoader->LoaderShutdown)
     {
         atlas->FontLoader->LoaderShutdown(atlas);
