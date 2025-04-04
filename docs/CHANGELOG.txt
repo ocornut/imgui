@@ -41,12 +41,37 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+- Backends: SDL3: Fixed casing typo in function name: (#8509, #8163, #7998, #7988) [@puugz]
+  - Imgui_ImplSDLGPU3_PrepareDrawData() -> ImGui_ImplSDLGPU3_PrepareDrawData()
+
 Other changes:
 
+- IO: variations in analog-only components of gamepad events do not interfere
+  with trickling of mouse position events (#4921, #8508)
+- Windows: fixed SetNextWindowCollapsed()/SetWindowCollapsed() breaking
+  codepath that preserve last contents size when collapsed, resulting in
+  programmatically uncollapsing auto-sizing windows having them flicker size
+  for a frame. (#7691) [@achabense]
+- Nav: fixed assertion when holding gamepad FaceLeft/West button to open
+  CTRL+Tab windowing + pressing a keyboard key. (#8525)
 - Error Handling: added better error report and recovery for extraneous
   EndPopup() call. (#1651, #8499)
 - Style, InputText: added ImGuiCol_InputTextCursor to configure color of
   the InputText cursor/caret. (#7031)
+- Misc: added extra operators to ImVec4 in IMGUI_DEFINE_MATH_OPERATORS block. (#8510) [@gan74]
+- Backends: SDL2, SDL3, OSX: Fill gamepad inputs and set ImGuiBackendFlags_HasGamepad
+  regardless of ImGuiConfigFlags_NavEnableGamepad being set. (#8508)
+- Backends: SDL3: Update for SDL3 api changes: revert SDL_GetClipboardText()
+  memory ownership change. (#8530, #7801) [@Green-Sky]
+
+Docking+Viewports Branch:
+
+- Backends: Win32: Viewports: fixed an issue when closing a window from 
+  the OS close button (with io.ConfigViewportsNoDecoration=false) while 
+  user code is discarding the 'bool *p_open=false output' from Begin(). 
+  Because we allowed the Win32 window to close early, Windows destroyed
+  it and our imgui window became not visible even though user code was
+  still submitting it.
 
 
 -----------------------------------------------------------------------
@@ -685,7 +710,7 @@ Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v
 
 Breaking changes:
 
- - Internals: using multiple overlayed ButtonBehavior() with same ID will now have the
+ - Internals: using multiple overlaid ButtonBehavior() with same ID will now have the
    io.ConfigDebugHighlightIdConflicts=true feature emit a warning. (#8030)
    It was one of the rare case where using same ID is legal. Workarounds:
    - use single ButtonBehavior() call with multiple _MouseButton flags
