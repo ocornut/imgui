@@ -64,6 +64,8 @@ Other Changes:
   - Better perf on X11 as querying global position requires a round trip to X11 server.
 - Backends: Win32: minor optimization not submitting gamepad io again if
   XInput's dwPacketNumber has not changed. (#8556) [@MidTerm-CN]
+- Backends: Vulkan: added a way to specify custom shaders by filling init fields
+  CustomShaderVertCreateInfo and CustomShaderFragCreateInfo. (#8585, #8271) [@johan0A]
 - Examples: SDL2+DirectX11: Try WARP software driver if hardware driver is
   not available. (#5924, #5562)
 - Examples: SDL3+DirectX11: Added SDL3+DirectX11 example. (#8956, #8957) [@tomaz82]

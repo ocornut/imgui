@@ -102,7 +102,13 @@ struct ImGui_ImplVulkan_InitInfo
     // (Optional) Allocation, Debugging
     const VkAllocationCallbacks*    Allocator;
     void                            (*CheckVkResultFn)(VkResult err);
-    VkDeviceSize                    MinAllocationSize;              // Minimum allocation size. Set to 1024*1024 to satisfy zealous best practices validation layer and waste a little memory.
+    VkDeviceSize                    MinAllocationSize;          // Minimum allocation size. Set to 1024*1024 to satisfy zealous best practices validation layer and waste a little memory.
+
+    // (Optional) Customize default vertex/fragment shaders.
+    // - if .sType == VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO we use specified structs, otherwise we use defaults.
+    // - Shader inputs/outputs need to match ours. Code/data pointed to by the structure needs to survive for whole during of backend usage.
+    VkShaderModuleCreateInfo        CustomShaderVertCreateInfo;
+    VkShaderModuleCreateInfo        CustomShaderFragCreateInfo;
 };
 
 // Follow "Getting Started" link and check examples/ folder to learn about using backends!
