@@ -852,12 +852,21 @@ static void ImGui_ImplVulkan_CreateShaderModules(VkDevice device, const VkAlloca
 {
     // Create the shader modules
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
+    ImGui_ImplVulkan_InitInfo* initInfo = &bd->VulkanInitInfo;   
     if (bd->ShaderModuleVert == VK_NULL_HANDLE)
     {
         VkShaderModuleCreateInfo vert_info = {};
         vert_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        vert_info.codeSize = sizeof(__glsl_shader_vert_spv);
-        vert_info.pCode = (uint32_t*)__glsl_shader_vert_spv;
+        if (initInfo->CustomVertShader)
+        {
+            vert_info.codeSize = initInfo->CustomVertShaderSize;
+            vert_info.pCode = initInfo->CustomVertShader;
+        } 
+        else
+        {
+            vert_info.codeSize = sizeof(__glsl_shader_vert_spv);
+            vert_info.pCode = (uint32_t*)__glsl_shader_vert_spv;
+        }
         VkResult err = vkCreateShaderModule(device, &vert_info, allocator, &bd->ShaderModuleVert);
         check_vk_result(err);
     }
@@ -865,8 +874,16 @@ static void ImGui_ImplVulkan_CreateShaderModules(VkDevice device, const VkAlloca
     {
         VkShaderModuleCreateInfo frag_info = {};
         frag_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        frag_info.codeSize = sizeof(__glsl_shader_frag_spv);
-        frag_info.pCode = (uint32_t*)__glsl_shader_frag_spv;
+        if (initInfo->CustomFragShader)
+        {
+            frag_info.codeSize = initInfo->CustomFragShaderSize;
+            frag_info.pCode = initInfo->CustomFragShader;
+        } 
+        else
+        {
+            frag_info.codeSize = sizeof(__glsl_shader_frag_spv);
+            frag_info.pCode = (uint32_t*)__glsl_shader_frag_spv;
+        }
         VkResult err = vkCreateShaderModule(device, &frag_info, allocator, &bd->ShaderModuleFrag);
         check_vk_result(err);
     }
