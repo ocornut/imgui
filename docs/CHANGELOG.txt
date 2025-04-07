@@ -52,6 +52,9 @@ Other changes:
   codepath that preserve last contents size when collapsed, resulting in
   programmatically uncollapsing auto-sizing windows having them flicker size
   for a frame. (#7691) [@achabense]
+- Windows: loosened code to allow hovering of resize grips, borders, and table
+  borders while hovering a sibling child window, so that the code in master matches
+  one in docking (they accidentally diverged). (#8554)
 - Nav: fixed assertion when holding gamepad FaceLeft/West button to open
   CTRL+Tab windowing + pressing a keyboard key. (#8525)
 - Error Handling: added better error report and recovery for extraneous
