@@ -1175,9 +1175,9 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info)
         IM_ASSERT(info->RenderPass != VK_NULL_HANDLE);
 
     bd->VulkanInitInfo = *info;
-    ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
-    if (bd->VulkanInitInfo.PipelineRenderingCreateInfo.pColorAttachmentFormats != NULL)
+    ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
+    if (v->PipelineRenderingCreateInfo.pColorAttachmentFormats != NULL)
     {
         // Deep copy buffer to reduce error-rate for end user (#8282)
         VkFormat* formats_copy = (VkFormat*)IM_ALLOC(sizeof(VkFormat) * v->PipelineRenderingCreateInfo.colorAttachmentCount);
@@ -1198,7 +1198,9 @@ void ImGui_ImplVulkan_Shutdown()
     ImGuiIO& io = ImGui::GetIO();
 
     ImGui_ImplVulkan_DestroyDeviceObjects();
+#ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
     IM_FREE((void*)bd->VulkanInitInfo.PipelineRenderingCreateInfo.pColorAttachmentFormats);
+#endif
 
     io.BackendRendererName = nullptr;
     io.BackendRendererUserData = nullptr;
