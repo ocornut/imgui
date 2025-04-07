@@ -6691,6 +6691,8 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
         button_flags |= ImGuiButtonFlags_PressedOnClickRelease | ImGuiButtonFlags_PressedOnDoubleClick;
     else
         button_flags |= ImGuiButtonFlags_PressedOnClickRelease;
+    if (flags & ImGuiTreeNodeFlags_NoNavFocus)
+        button_flags |= ImGuiButtonFlags_NoNavFocus;
 
     bool selected = (flags & ImGuiTreeNodeFlags_Selected) != 0;
     const bool was_selected = selected;
