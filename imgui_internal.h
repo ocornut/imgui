@@ -1294,7 +1294,6 @@ struct ImGuiTreeNodeStackData
     ImGuiTreeNodeFlags      TreeFlags;
     ImGuiItemFlags          ItemFlags;      // Used for nav landing
     ImRect                  NavRect;        // Used for nav landing
-    ImU32                   DrawLinesCol;
     float                   DrawLinesX1;
     float                   DrawLinesY2;
 };

@@ -6560,16 +6560,10 @@ static void TreeNodeStoreStackData(ImGuiTreeNodeFlags flags, float x1)
     tree_node_data->TreeFlags = flags;
     tree_node_data->ItemFlags = g.LastItemData.ItemFlags;
     tree_node_data->NavRect = g.LastItemData.NavRect;
-    if (flags & (ImGuiTreeNodeFlags_DrawLinesFull | ImGuiTreeNodeFlags_DrawLinesToNodes))
-    {
-        tree_node_data->DrawLinesCol = ImGui::GetColorU32(ImGuiCol_TreeLines);
-        tree_node_data->DrawLinesX1 = x1;
-        tree_node_data->DrawLinesY2 = -FLT_MAX;
-    }
-    else
-    {
-        tree_node_data->DrawLinesCol = 0;
-    }    
+
+    // Initially I tried to latch value for GetColorU32(ImGuiCol_TreeLines) but it's not a good trade-off for very large trees.
+    tree_node_data->DrawLinesX1 = (flags & (ImGuiTreeNodeFlags_DrawLinesFull | ImGuiTreeNodeFlags_DrawLinesToNodes)) ? x1 : +FLT_MAX;
+    tree_node_data->DrawLinesY2 = -FLT_MAX;
     window->DC.TreeHasStackDataDepthMask |= (1 << window->DC.TreeDepth);
 }
 
@@ -6837,7 +6831,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
             float y = text_pos.y + ImTrunc(g.FontSize * 0.5f);
             parent_data->DrawLinesY2 = ImMax(parent_data->DrawLinesY2, y);
             if (x1 < x2)
-                window->DrawList->AddLine(ImVec2(x1, y), ImVec2(x2, y), parent_data->DrawLinesCol, g.Style.TreeLinesSize);
+                window->DrawList->AddLine(ImVec2(x1, y), ImVec2(x2, y), GetColorU32(ImGuiCol_TreeLines), g.Style.TreeLinesSize);
         }
 
         if (span_all_columns && !span_all_columns_label)
@@ -6906,7 +6900,7 @@ void ImGui::TreePop()
             if (g.NavIdIsAlive && g.NavMoveDir == ImGuiDir_Left && g.NavWindow == window && NavMoveRequestButNoResultYet())
                 NavMoveRequestResolveWithPastTreeNode(&g.NavMoveResultLocal, data);
         }
-        if (data->DrawLinesCol != 0 && window->DC.CursorPos.y >= window->ClipRect.Min.y)
+        if (data->DrawLinesX1 != +FLT_MAX && window->DC.CursorPos.y >= window->ClipRect.Min.y)
         {
             // Draw vertical line of the hierarchy
             float y1 = ImMax(data->NavRect.Max.y, window->ClipRect.Min.y);
@@ -6915,7 +6909,7 @@ void ImGui::TreePop()
             if (y1 < y2)
             {
                 float x = data->DrawLinesX1 + ImTrunc(g.FontSize * 0.5f + g.Style.FramePadding.x); // GetTreeNodeToLabelSpacing() * 0.5f
-                window->DrawList->AddLine(ImVec2(x, y1), ImVec2(x, y2), data->DrawLinesCol, g.Style.TreeLinesSize);
+                window->DrawList->AddLine(ImVec2(x, y1), ImVec2(x, y2), GetColorU32(ImGuiCol_TreeLines), g.Style.TreeLinesSize);
             }
         }
         g.TreeNodeStack.pop_back();

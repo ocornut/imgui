@@ -64,8 +64,6 @@ Other changes:
     which may be overriden in individual TreeNode() calls.
   - Added style.TreeLinesSize (default to 1.0f).
   - Added ImGuiCol_TreeLines (in default style this is the same as ImGuiCol_Border).
-    The color for a given hierarchy level is latched in TreeNode(),
-    allowing advanced tree drawing code to potentially alter it. 
   - The feature adds a little cost as extra data needs to be stored.
 - Nav: fixed assertion when holding gamepad FaceLeft/West button to open
   CTRL+Tab windowing + pressing a keyboard key. (#8525)
