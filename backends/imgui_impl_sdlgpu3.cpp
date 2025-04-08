@@ -23,6 +23,7 @@
 //   Calling the function is MANDATORY, otherwise the ImGui will not upload neither the vertex nor the index buffer for the GPU. See imgui_impl_sdlgpu3.cpp for more info.
 
 // CHANGELOG
+//  2025-03-30: Made ImGui_ImplSDLGPU3_PrepareDrawData() reuse GPU Transfer Buffers which were unusually slow to recreate every frame. Much faster now.
 //  2025-03-21: Fixed typo in function name Imgui_ImplSDLGPU3_PrepareDrawData() -> ImGui_ImplSDLGPU3_PrepareDrawData().
 //  2025-01-16: Renamed ImGui_ImplSDLGPU3_InitInfo::GpuDevice to Device.
 //  2025-01-09: SDL_GPU: Added the SDL_GPU3 backend.
@@ -37,10 +38,12 @@
 // Reusable buffers used for rendering 1 current in-flight frame, for ImGui_ImplSDLGPU3_RenderDrawData()
 struct ImGui_ImplSDLGPU3_FrameData
 {
-    SDL_GPUBuffer*      VertexBuffer     = nullptr;
-    SDL_GPUBuffer*      IndexBuffer      = nullptr;
-    uint32_t            VertexBufferSize = 0;
-    uint32_t            IndexBufferSize  = 0;
+    SDL_GPUBuffer*          VertexBuffer            = nullptr;
+    SDL_GPUTransferBuffer*  VertexTransferBuffer    = nullptr;
+    uint32_t                VertexBufferSize        = 0;
+    SDL_GPUBuffer*          IndexBuffer             = nullptr;
+    SDL_GPUTransferBuffer*  IndexTransferBuffer     = nullptr;
+    uint32_t                IndexBufferSize         = 0;
 };
 
 struct ImGui_ImplSDLGPU3_Data
@@ -116,14 +119,15 @@ static void ImGui_ImplSDLGPU3_SetupRenderState(ImDrawData* draw_data, SDL_GPUGra
     SDL_PushGPUVertexUniformData(command_buffer, 0, &ubo, sizeof(UBO));
 }
 
-static void CreateOrResizeBuffer(SDL_GPUBuffer** buffer, uint32_t* old_size, uint32_t new_size, SDL_GPUBufferUsageFlags usage)
+static void CreateOrResizeBuffers(SDL_GPUBuffer** buffer, SDL_GPUTransferBuffer** transferbuffer, uint32_t* old_size, uint32_t new_size, SDL_GPUBufferUsageFlags usage)
 {
     ImGui_ImplSDLGPU3_Data* bd = ImGui_ImplSDLGPU3_GetBackendData();
     ImGui_ImplSDLGPU3_InitInfo* v = &bd->InitInfo;
 
-    // Even though this is fairly rarely called.
+    // FIXME-OPT: Not optimal, but this is fairly rarely called.
     SDL_WaitForGPUIdle(v->Device);
     SDL_ReleaseGPUBuffer(v->Device, *buffer);
+    SDL_ReleaseGPUTransferBuffer(v->Device, *transferbuffer);
 
     SDL_GPUBufferCreateInfo buffer_info = {};
     buffer_info.usage = usage;
@@ -132,6 +136,12 @@ static void CreateOrResizeBuffer(SDL_GPUBuffer** buffer, uint32_t* old_size, uin
     *buffer = SDL_CreateGPUBuffer(v->Device, &buffer_info);
     *old_size = new_size;
     IM_ASSERT(*buffer != nullptr && "Failed to create GPU Buffer, call SDL_GetError() for more information");
+
+    SDL_GPUTransferBufferCreateInfo transferbuffer_info = {};
+    transferbuffer_info.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
+    transferbuffer_info.size = new_size;
+    *transferbuffer = SDL_CreateGPUTransferBuffer(v->Device, &transferbuffer_info);
+    IM_ASSERT(*transferbuffer != nullptr && "Failed to create GPU Transfer Buffer, call SDL_GetError() for more information");
 }
 
 // SDL_GPU doesn't allow copy passes to occur while a render or compute pass is bound!
@@ -152,25 +162,12 @@ void ImGui_ImplSDLGPU3_PrepareDrawData(ImDrawData* draw_data, SDL_GPUCommandBuff
     uint32_t vertex_size = draw_data->TotalVtxCount * sizeof(ImDrawVert);
     uint32_t index_size  = draw_data->TotalIdxCount * sizeof(ImDrawIdx);
     if (fd->VertexBuffer == nullptr || fd->VertexBufferSize < vertex_size)
-        CreateOrResizeBuffer(&fd->VertexBuffer, &fd->VertexBufferSize, vertex_size, SDL_GPU_BUFFERUSAGE_VERTEX);
+        CreateOrResizeBuffers(&fd->VertexBuffer, &fd->VertexTransferBuffer, &fd->VertexBufferSize, vertex_size, SDL_GPU_BUFFERUSAGE_VERTEX);
     if (fd->IndexBuffer == nullptr || fd->IndexBufferSize < index_size)
-        CreateOrResizeBuffer(&fd->IndexBuffer, &fd->IndexBufferSize, index_size, SDL_GPU_BUFFERUSAGE_INDEX);
+        CreateOrResizeBuffers(&fd->IndexBuffer, &fd->IndexTransferBuffer, &fd->IndexBufferSize, index_size, SDL_GPU_BUFFERUSAGE_INDEX);
 
-    // FIXME: It feels like more code could be shared there.
-    SDL_GPUTransferBufferCreateInfo vertex_transferbuffer_info = {};
-    vertex_transferbuffer_info.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
-    vertex_transferbuffer_info.size = vertex_size;
-    SDL_GPUTransferBufferCreateInfo index_transferbuffer_info = {};
-    index_transferbuffer_info.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
-    index_transferbuffer_info.size = index_size;
-
-    SDL_GPUTransferBuffer* vertex_transferbuffer = SDL_CreateGPUTransferBuffer(v->Device, &vertex_transferbuffer_info);
-    IM_ASSERT(vertex_transferbuffer != nullptr && "Failed to create the vertex transfer buffer, call SDL_GetError() for more information");
-    SDL_GPUTransferBuffer* index_transferbuffer = SDL_CreateGPUTransferBuffer(v->Device, &index_transferbuffer_info);
-    IM_ASSERT(index_transferbuffer != nullptr && "Failed to create the index transfer buffer, call SDL_GetError() for more information");
-
-    ImDrawVert* vtx_dst = (ImDrawVert*)SDL_MapGPUTransferBuffer(v->Device, vertex_transferbuffer, true);
-    ImDrawIdx*  idx_dst = (ImDrawIdx*)SDL_MapGPUTransferBuffer(v->Device, index_transferbuffer, true);
+    ImDrawVert* vtx_dst = (ImDrawVert*)SDL_MapGPUTransferBuffer(v->Device, fd->VertexTransferBuffer, true);
+    ImDrawIdx* idx_dst = (ImDrawIdx*)SDL_MapGPUTransferBuffer(v->Device, fd->IndexTransferBuffer, true);
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
         const ImDrawList* draw_list = draw_data->CmdLists[n];
@@ -179,15 +176,15 @@ void ImGui_ImplSDLGPU3_PrepareDrawData(ImDrawData* draw_data, SDL_GPUCommandBuff
         vtx_dst += draw_list->VtxBuffer.Size;
         idx_dst += draw_list->IdxBuffer.Size;
     }
-    SDL_UnmapGPUTransferBuffer(v->Device, vertex_transferbuffer);
-    SDL_UnmapGPUTransferBuffer(v->Device, index_transferbuffer);
+    SDL_UnmapGPUTransferBuffer(v->Device, fd->VertexTransferBuffer);
+    SDL_UnmapGPUTransferBuffer(v->Device, fd->IndexTransferBuffer);
 
     SDL_GPUTransferBufferLocation vertex_buffer_location = {};
     vertex_buffer_location.offset = 0;
-    vertex_buffer_location.transfer_buffer = vertex_transferbuffer;
+    vertex_buffer_location.transfer_buffer = fd->VertexTransferBuffer;
     SDL_GPUTransferBufferLocation index_buffer_location = {};
     index_buffer_location.offset = 0;
-    index_buffer_location.transfer_buffer = index_transferbuffer;
+    index_buffer_location.transfer_buffer = fd->IndexTransferBuffer;
 
     SDL_GPUBufferRegion vertex_buffer_region = {};
     vertex_buffer_region.buffer = fd->VertexBuffer;
@@ -203,8 +200,6 @@ void ImGui_ImplSDLGPU3_PrepareDrawData(ImDrawData* draw_data, SDL_GPUCommandBuff
     SDL_UploadToGPUBuffer(copy_pass, &vertex_buffer_location, &vertex_buffer_region, true);
     SDL_UploadToGPUBuffer(copy_pass, &index_buffer_location, &index_buffer_region, true);
     SDL_EndGPUCopyPass(copy_pass);
-    SDL_ReleaseGPUTransferBuffer(v->Device, index_transferbuffer);
-    SDL_ReleaseGPUTransferBuffer(v->Device, vertex_transferbuffer);
 }
 
 void ImGui_ImplSDLGPU3_RenderDrawData(ImDrawData* draw_data, SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_pass, SDL_GPUGraphicsPipeline* pipeline)
@@ -549,12 +544,14 @@ void ImGui_ImplSDLGPU3_DestroyFrameData()
     ImGui_ImplSDLGPU3_Data* bd = ImGui_ImplSDLGPU3_GetBackendData();
     ImGui_ImplSDLGPU3_InitInfo* v = &bd->InitInfo;
 
-    SDL_ReleaseGPUBuffer(v->Device, bd->MainWindowFrameData.VertexBuffer);
-    SDL_ReleaseGPUBuffer(v->Device, bd->MainWindowFrameData.IndexBuffer);
-    bd->MainWindowFrameData.VertexBuffer = nullptr;
-    bd->MainWindowFrameData.IndexBuffer = nullptr;
-    bd->MainWindowFrameData.VertexBufferSize = 0;
-    bd->MainWindowFrameData.IndexBufferSize = 0;
+    ImGui_ImplSDLGPU3_FrameData* fd = &bd->MainWindowFrameData;
+    SDL_ReleaseGPUBuffer(v->Device, fd->VertexBuffer);
+    SDL_ReleaseGPUBuffer(v->Device, fd->IndexBuffer);
+    SDL_ReleaseGPUTransferBuffer(v->Device, fd->VertexTransferBuffer);
+    SDL_ReleaseGPUTransferBuffer(v->Device, fd->IndexTransferBuffer);
+    fd->VertexBuffer = fd->IndexBuffer = nullptr;
+    fd->VertexTransferBuffer = fd->IndexTransferBuffer = nullptr;
+    fd->VertexBufferSize = fd->IndexBufferSize = 0;
 }
 
 void ImGui_ImplSDLGPU3_DestroyDeviceObjects()

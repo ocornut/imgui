@@ -451,6 +451,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
         // But at this point we do NOT have a correct value for .Max.y (unless a height has been explicitly passed in). It will only be updated in EndTable().
         table->WorkRect = table->OuterRect = table->InnerRect = outer_rect;
         table->HasScrollbarYPrev = table->HasScrollbarYCurr = false;
+        table->InnerWindow->DC.TreeDepth++; // This is designed to always linking ImGuiTreeNodeFlags_DrawLines linking accross a table
     }
 
     // Push a standardized ID for both child-using and not-child-using tables
@@ -1510,6 +1511,7 @@ void    ImGui::EndTable()
     }
     else
     {
+        table->InnerWindow->DC.TreeDepth--;
         ItemSize(table->OuterRect.GetSize());
         ItemAdd(table->OuterRect, 0);
     }
