@@ -3403,7 +3403,7 @@ struct ImTextureRect
 // Why does we store two identifiers: TexID and BackendUserData?
 // - ImTextureID    TexID           = lower-level identifier stored in ImDrawCmd. ImDrawCmd can refer to textures not created by the backend, and for which there's no ImTextureData.
 // - void*          BackendUserData = higher-level opaque storage for backend own book-keeping. Some backends may have enough with TexID and not need both.
-struct IMGUI_API ImTextureData
+struct ImTextureData
 {
     ImTextureStatus     Status;                 // ImTextureStatus_OK/_WantCreate/_WantUpdates/_WantDestroy. Always use SetStatus() to modify!
     ImTextureFormat     Format;                 // ImTextureFormat_RGBA32 (default) or ImTextureFormat_Alpha8
@@ -3425,8 +3425,8 @@ struct IMGUI_API ImTextureData
     // Functions
     ImTextureData()     { memset(this, 0, sizeof(*this)); }
     ~ImTextureData()    { DestroyPixels(); }
-    void                Create(ImTextureFormat format, int w, int h);
-    void                DestroyPixels();
+    IMGUI_API void      Create(ImTextureFormat format, int w, int h);
+    IMGUI_API void      DestroyPixels();
     unsigned char*      GetPixels()                 { IM_ASSERT(Pixels != NULL); return Pixels; }
     unsigned char*      GetPixelsAt(int x, int y)   { IM_ASSERT(Pixels != NULL); return Pixels + (x + y * Width) * BytesPerPixel; }
     int                 GetSizeInBytes() const      { return Width * Height * BytesPerPixel; }
