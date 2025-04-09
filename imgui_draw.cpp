@@ -3451,11 +3451,10 @@ void ImFontAtlasBuildRenderBitmapFromString(ImFontAtlas* atlas, int x, int y, in
 
 static void ImFontAtlasBuildUpdateBasicTexData(ImFontAtlas* atlas, bool add_and_draw)
 {
-    ImVec2i pack_size = (atlas->Flags & ImFontAtlasFlags_NoMouseCursors) ? ImVec2i(2, 2) : ImVec2i(FONT_ATLAS_DEFAULT_TEX_DATA_W * 2 + 1, FONT_ATLAS_DEFAULT_TEX_DATA_H);
-
     // Pack and store identifier so we can refresh UV coordinates on texture resize.
     // FIXME-NEWATLAS: User/custom rects where user code wants to store UV coordinates will need to do the same thing.
     ImFontAtlasBuilder* builder = atlas->Builder;
+    ImVec2i pack_size = (atlas->Flags & ImFontAtlasFlags_NoMouseCursors) ? ImVec2i(2, 2) : ImVec2i(FONT_ATLAS_DEFAULT_TEX_DATA_W * 2 + 1, FONT_ATLAS_DEFAULT_TEX_DATA_H);
 
     if (add_and_draw)
         builder->PackIdMouseCursors = ImFontAtlasPackAddRect(atlas, pack_size.x, pack_size.y);
@@ -3480,8 +3479,10 @@ static void ImFontAtlasBuildUpdateBasicTexData(ImFontAtlas* atlas, bool add_and_
             ImFontAtlasBuildRenderBitmapFromString(atlas, x_for_white, r.y, FONT_ATLAS_DEFAULT_TEX_DATA_W, FONT_ATLAS_DEFAULT_TEX_DATA_H, FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS, '.');
             ImFontAtlasBuildRenderBitmapFromString(atlas, x_for_black, r.y, FONT_ATLAS_DEFAULT_TEX_DATA_W, FONT_ATLAS_DEFAULT_TEX_DATA_H, FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS, 'X');
         }
+        ImFontAtlasTextureBlockQueueUpload(atlas, atlas->TexData, r.x, r.y, r.w, r.h);
     }
-    ImFontAtlasTextureBlockQueueUpload(atlas, atlas->TexData, r.x, r.y, r.w, r.h);
+
+    // Refresh UV coordinates
     atlas->TexUvWhitePixel = ImVec2((r.x + 0.5f) * atlas->TexUvScale.x, (r.y + 0.5f) * atlas->TexUvScale.y);
 }
 
@@ -3490,71 +3491,64 @@ static void ImFontAtlasBuildUpdateLinesTexData(ImFontAtlas* atlas, bool add_and_
     if (atlas->Flags & ImFontAtlasFlags_NoBakedLines)
         return;
 
-    ImVec2i pack_size = ImVec2i(IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 2, IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1);
-
     // Pack and store identifier so we can refresh UV coordinates on texture resize.
+    ImTextureData* tex = atlas->TexData;
     ImFontAtlasBuilder* builder = atlas->Builder;
+    ImVec2i pack_size = ImVec2i(IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 2, IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1);
     if (add_and_draw)
         builder->PackIdLinesTexData = ImFontAtlasPackAddRect(atlas, pack_size.x, pack_size.y);
     if (builder->PackIdLinesTexData == ImFontAtlasRectId_Invalid)
         return;
+
     ImFontAtlasRect r;
     atlas->GetCustomRect(builder->PackIdLinesTexData, &r);
 
     // Register texture region for thick lines
     // The +2 here is to give space for the end caps, whilst height +1 is to accommodate the fact we have a zero-width row
     // This generates a triangular shape in the texture, with the various line widths stacked on top of each other to allow interpolation between them
-    ImTextureData* tex = atlas->TexData;
     for (int n = 0; n < IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1; n++) // +1 because of the zero-width row
     {
         // Each line consists of at least two empty pixels at the ends, with a line of solid pixels in the middle
-        int y = n;
-        int line_width = n;
-        int pad_left = (r.w - line_width) / 2;
-        int pad_right = r.w - (pad_left + line_width);
+        const int y = n;
+        const int line_width = n;
+        const int pad_left = (r.w - line_width) / 2;
+        const int pad_right = r.w - (pad_left + line_width);
+        IM_ASSERT(pad_left + line_width + pad_right == r.w && y < r.h); // Make sure we're inside the texture bounds before we start writing pixels
 
         // Write each slice
-        IM_ASSERT(pad_left + line_width + pad_right == r.w && y < r.h); // Make sure we're inside the texture bounds before we start writing pixels
-        if (add_and_draw)
+        if (add_and_draw && tex->Format == ImTextureFormat_Alpha8)
         {
-            switch (tex->Format)
-            {
-            case ImTextureFormat_Alpha8:
-            {
-                ImU8* write_ptr = (ImU8*)tex->GetPixelsAt(r.x, r.y + y);
-                for (int i = 0; i < pad_left; i++)
-                    *(write_ptr + i) = 0x00;
+            ImU8* write_ptr = (ImU8*)tex->GetPixelsAt(r.x, r.y + y);
+            for (int i = 0; i < pad_left; i++)
+                *(write_ptr + i) = 0x00;
 
-                for (int i = 0; i < line_width; i++)
-                    *(write_ptr + pad_left + i) = 0xFF;
+            for (int i = 0; i < line_width; i++)
+                *(write_ptr + pad_left + i) = 0xFF;
 
-                for (int i = 0; i < pad_right; i++)
-                    *(write_ptr + pad_left + line_width + i) = 0x00;
-                break;
-            }
-            case ImTextureFormat_RGBA32:
-            {
-                ImU32* write_ptr = (ImU32*)(void*)tex->GetPixelsAt(r.x, r.y + y);
-                for (int i = 0; i < pad_left; i++)
-                    *(write_ptr + i) = IM_COL32(255, 255, 255, 0);
+            for (int i = 0; i < pad_right; i++)
+                *(write_ptr + pad_left + line_width + i) = 0x00;
+        }
+        else if (add_and_draw && tex->Format == ImTextureFormat_RGBA32)
+        {
+            ImU32* write_ptr = (ImU32*)(void*)tex->GetPixelsAt(r.x, r.y + y);
+            for (int i = 0; i < pad_left; i++)
+                *(write_ptr + i) = IM_COL32(255, 255, 255, 0);
 
-                for (int i = 0; i < line_width; i++)
-                    *(write_ptr + pad_left + i) = IM_COL32_WHITE;
+            for (int i = 0; i < line_width; i++)
+                *(write_ptr + pad_left + i) = IM_COL32_WHITE;
 
-                for (int i = 0; i < pad_right; i++)
-                    *(write_ptr + pad_left + line_width + i) = IM_COL32(255, 255, 255, 0);
-                break;
-            }
-            }
+            for (int i = 0; i < pad_right; i++)
+                *(write_ptr + pad_left + line_width + i) = IM_COL32(255, 255, 255, 0);
         }
 
-        // Calculate UVs for this line
+        // Refresh UV coordinates
         ImVec2 uv0 = ImVec2((float)(r.x + pad_left - 1), (float)(r.y + y)) * atlas->TexUvScale;
         ImVec2 uv1 = ImVec2((float)(r.x + pad_left + line_width + 1), (float)(r.y + y + 1)) * atlas->TexUvScale;
         float half_v = (uv0.y + uv1.y) * 0.5f; // Calculate a constant V in the middle of the row to avoid sampling artifacts
         atlas->TexUvLines[n] = ImVec4(uv0.x, half_v, uv1.x, half_v);
     }
-    ImFontAtlasTextureBlockQueueUpload(atlas, tex, r.x, r.y, r.w, r.h);
+    if (add_and_draw)
+        ImFontAtlasTextureBlockQueueUpload(atlas, tex, r.x, r.y, r.w, r.h);
 }
 
 //-----------------------------------------------------------------------------------------------------------------------------
