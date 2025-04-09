@@ -6823,7 +6823,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
         }
 
         if (draw_tree_lines)
-            TreeNodeDrawLineToChildNode(ImVec2(text_pos.x - text_offset_x, text_pos.y + g.FontSize * 0.5f));
+            TreeNodeDrawLineToChildNode(ImVec2(text_pos.x - text_offset_x + padding.x, text_pos.y + g.FontSize * 0.5f));
 
         if (span_all_columns && !span_all_columns_label)
             TablePopBackgroundChannel();
@@ -6858,7 +6858,7 @@ void ImGui::TreeNodeDrawLineToChildNode(const ImVec2& target_pos)
 
     ImGuiTreeNodeStackData* parent_data = &g.TreeNodeStack.Data[g.TreeNodeStack.Size - 1];
     float x1 = ImTrunc(parent_data->DrawLinesX1);
-    float x2 = ImTrunc(target_pos.x);
+    float x2 = ImTrunc(target_pos.x - g.Style.ItemInnerSpacing.x);
     float y = ImTrunc(target_pos.y);
     parent_data->DrawLinesY2 = ImMax(parent_data->DrawLinesY2, y);
     if (x1 < x2)
