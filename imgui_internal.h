@@ -3467,6 +3467,7 @@ namespace ImGui
 
     // Widgets: Tree Nodes
     IMGUI_API bool          TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* label, const char* label_end = NULL);
+    IMGUI_API void          TreeNodeDrawLineToChildNode(const ImVec2& target_pos);
     IMGUI_API void          TreePushOverrideID(ImGuiID id);
     IMGUI_API bool          TreeNodeGetOpen(ImGuiID storage_id);
     IMGUI_API void          TreeNodeSetOpen(ImGuiID storage_id, bool open);

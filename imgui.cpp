@@ -16578,9 +16578,9 @@ void ImGui::DebugNodeWindowsListByBeginStackParent(ImGuiWindow** windows, int wi
         ImFormatString(buf, IM_ARRAYSIZE(buf), "[%04d] Window", window->BeginOrderWithinContext);
         //BulletText("[%04d] Window '%s'", window->BeginOrderWithinContext, window->Name);
         DebugNodeWindow(window, buf);
-        Indent();
+        TreePush(buf);
         DebugNodeWindowsListByBeginStackParent(windows + i + 1, windows_size - i - 1, window);
-        Unindent();
+        TreePop();
     }
 }
 
