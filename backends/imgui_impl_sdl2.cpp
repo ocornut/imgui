@@ -27,6 +27,7 @@
 // (minor and older changes stripped away, please see git history for details)
 //  2025-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
 //  2025-04-09: [Docking] Revert update monitors and work areas information every frame. Only do it on Windows. (#8415, #8558)
+//  2025-04-09: Don't attempt to call SDL_CaptureMouse() on drivers where we don't call SDL_GetGlobalMouseState(). (#8561)
 //  2025-03-21: Fill gamepad inputs and set ImGuiBackendFlags_HasGamepad regardless of ImGuiConfigFlags_NavEnableGamepad being set.
 //  2025-03-10: When dealing with OEM keys, use scancodes instead of translated keycodes to choose ImGuiKey values. (#7136, #7201, #7206, #7306, #7670, #7672, #8468)
 //  2025-02-26: Only start SDL_CaptureMouse() when mouse is being dragged, to mitigate issues with e.g.Linux debuggers not claiming capture back. (#6410, #3650)
@@ -161,6 +162,7 @@ struct ImGui_ImplSDL2_Data
     SDL_Cursor*             MouseLastCursor;
     int                     MouseLastLeaveFrame;
     bool                    MouseCanUseGlobalState;
+    bool                    MouseCanUseCapture;
     bool                    MouseCanReportHoveredViewport;  // This is hard to use/unreliable on SDL so we'll set ImGuiBackendFlags_HasMouseHoveredViewport dynamically based on state.
 
     // Gamepad handling
@@ -521,25 +523,13 @@ static bool ImGui_ImplSDL2_Init(SDL_Window* window, SDL_Renderer* renderer, void
     IMGUI_CHECKVERSION();
     IM_ASSERT(io.BackendPlatformUserData == nullptr && "Already initialized a platform backend!");
 
-    // Check and store if we are on a SDL backend that supports global mouse position
-    // ("wayland" and "rpi" don't support it, but we chose to use a white-list instead of a black-list)
-    bool mouse_can_use_global_state = false;
-#if SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE
-    const char* sdl_backend = SDL_GetCurrentVideoDriver();
-    const char* global_mouse_whitelist[] = { "windows", "cocoa", "x11", "DIVE", "VMAN" };
-    for (int n = 0; n < IM_ARRAYSIZE(global_mouse_whitelist); n++)
-        if (strncmp(sdl_backend, global_mouse_whitelist[n], strlen(global_mouse_whitelist[n])) == 0)
-            mouse_can_use_global_state = true;
-#endif
-
     // Setup backend capabilities flags
     ImGui_ImplSDL2_Data* bd = IM_NEW(ImGui_ImplSDL2_Data)();
     io.BackendPlatformUserData = (void*)bd;
     io.BackendPlatformName = "imgui_impl_sdl2";
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;           // We can honor GetMouseCursor() values (optional)
     io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;            // We can honor io.WantSetMousePos requests (optional, rarely used)
-    if (mouse_can_use_global_state)
-        io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;  // We can create multi-viewports on the Platform side (optional)
+    // (ImGuiBackendFlags_PlatformHasViewports may be set just below)
 
     bd->Window = window;
     bd->WindowID = SDL_GetWindowID(window);
@@ -547,12 +537,26 @@ static bool ImGui_ImplSDL2_Init(SDL_Window* window, SDL_Renderer* renderer, void
 
     // SDL on Linux/OSX doesn't report events for unfocused windows (see https://github.com/ocornut/imgui/issues/4960)
     // We will use 'MouseCanReportHoveredViewport' to set 'ImGuiBackendFlags_HasMouseHoveredViewport' dynamically each frame.
-    bd->MouseCanUseGlobalState = mouse_can_use_global_state;
 #ifndef __APPLE__
     bd->MouseCanReportHoveredViewport = bd->MouseCanUseGlobalState;
 #else
     bd->MouseCanReportHoveredViewport = false;
 #endif
+
+    // Check and store if we are on a SDL backend that supports SDL_GetGlobalMouseState() and SDL_CaptureMouse()
+    // ("wayland" and "rpi" don't support it, but we chose to use a white-list instead of a black-list)
+    bd->MouseCanUseGlobalState = false;
+    bd->MouseCanUseCapture = false;
+#if SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE
+    const char* sdl_backend = SDL_GetCurrentVideoDriver();
+    const char* capture_and_global_state_whitelist[] = { "windows", "cocoa", "x11", "DIVE", "VMAN" };
+    for (const char* item : capture_and_global_state_whitelist)
+        if (strncmp(sdl_backend, item, strlen(item)) == 0)
+            bd->MouseCanUseGlobalState = bd->MouseCanUseCapture = true;
+#endif
+    if (bd->MouseCanUseGlobalState)
+        io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;  // We can create multi-viewports on the Platform side (optional)
+
 
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     platform_io.Platform_SetClipboardTextFn = ImGui_ImplSDL2_SetClipboardText;
@@ -701,12 +705,15 @@ static void ImGui_ImplSDL2_UpdateMouseData()
     // We forward mouse input when hovered or captured (via SDL_MOUSEMOTION) or when focused (below)
 #if SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE
     // - SDL_CaptureMouse() let the OS know e.g. that our drags can extend outside of parent boundaries (we want updated position) and shouldn't trigger other operations outside.
-    // - Debuggers under Linux tends to leave captured mouse on break, which may be very inconvenient, so to migitate the issue we wait until mouse has moved to begin capture.
-    bool want_capture = false;
-    for (int button_n = 0; button_n < ImGuiMouseButton_COUNT && !want_capture; button_n++)
-        if (ImGui::IsMouseDragging(button_n, 1.0f))
-            want_capture = true;
-    SDL_CaptureMouse(want_capture ? SDL_TRUE : SDL_FALSE);
+    // - Debuggers under Linux tends to leave captured mouse on break, which may be very inconvenient, so to mitigate the issue we wait until mouse has moved to begin capture.
+    if (bd->MouseCanUseCapture)
+    {
+        bool want_capture = false;
+        for (int button_n = 0; button_n < ImGuiMouseButton_COUNT && !want_capture; button_n++)
+            if (ImGui::IsMouseDragging(button_n, 1.0f))
+                want_capture = true;
+        SDL_CaptureMouse(want_capture ? SDL_TRUE : SDL_FALSE);
+    }
 
     SDL_Window* focused_window = SDL_GetKeyboardFocus();
     const bool is_app_focused = (focused_window && (bd->Window == focused_window || ImGui_ImplSDL2_GetViewportForWindowID(SDL_GetWindowID(focused_window)) != NULL));

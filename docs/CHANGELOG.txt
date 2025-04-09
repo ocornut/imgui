@@ -57,14 +57,18 @@ Other changes:
   one in docking (they accidentally diverged). (#8554)
 - TreeNode: added flags to draw tree hierarchy outlines linking parent
   and tree nodes: (#2920)
-  - ImGuiTreeNodeFlags_DrawLinesNone: No lines drawn.
+  - ImGuiTreeNodeFlags_DrawLinesNone: No lines drawn (default value in style.TreeLinesFlags).
   - ImGuiTreeNodeFlags_DrawLinesFull: Horizontal lines to child nodes. Vertical line drawn down to TreePop() position: cover full contents.
   - ImGuiTreeNodeFlags_DrawLinesToNodes: Horizontal lines to child nodes. Vertical line drawn down to bottom-most child node.
   - Added style.TreeLinesFlags which stores the default setting, 
     which may be overriden in individual TreeNode() calls.
   - Added style.TreeLinesSize (default to 1.0f).
   - Added ImGuiCol_TreeLines (in default style this is the same as ImGuiCol_Border).
-  - The feature adds a little cost as extra data needs to be stored.
+  - Caveats:
+    - Tree nodes may be used in many creative ways (manually positioning openable
+      nodes in unusual ways, using indent to create tree-looking structures, etc.)
+      and the feature may not accurately represent them in every cases.
+    - The feature adds a little cost as extra data needs to be stored.
 - Nav: fixed assertion when holding gamepad FaceLeft/West button to open
   CTRL+Tab windowing + pressing a keyboard key. (#8525)
 - Error Handling: added better error report and recovery for extraneous
@@ -77,6 +81,9 @@ Other changes:
 - Misc: added extra operators to ImVec4 in IMGUI_DEFINE_MATH_OPERATORS block. (#8510) [@gan74]
 - Backends: SDL2, SDL3, OSX: Fill gamepad inputs and set ImGuiBackendFlags_HasGamepad
   regardless of ImGuiConfigFlags_NavEnableGamepad being set. (#8508)
+- Backends: SDL2, SDL3: don't attempt to call SDL_CaptureMouse() on drivers where we don't
+  call SDL_GetGlobalMouseState(). This is specifically for Wayland but we currently use
+  the same white-list as SDL_GetGlobalMouseState(). (#8561) [@vs49688]
 - Backends: SDL3: Update for SDL3 api changes: revert SDL_GetClipboardText()
   memory ownership change. (#8530, #7801) [@Green-Sky]
 - Backends: SDLGPU3: Made ImGui_ImplSDLGPU3_PrepareDrawData() reuse GPU Transfer Buffers which

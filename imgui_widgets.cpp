@@ -6569,7 +6569,7 @@ static void TreeNodeStoreStackData(ImGuiTreeNodeFlags flags, float x1)
     tree_node_data->NavRect = g.LastItemData.NavRect;
 
     // Initially I tried to latch value for GetColorU32(ImGuiCol_TreeLines) but it's not a good trade-off for very large trees.
-    tree_node_data->DrawLinesX1 = (flags & (ImGuiTreeNodeFlags_DrawLinesFull | ImGuiTreeNodeFlags_DrawLinesToNodes)) ? x1 : +FLT_MAX;
+    tree_node_data->DrawLinesX1 = (flags & (ImGuiTreeNodeFlags_DrawLinesFull | ImGuiTreeNodeFlags_DrawLinesToNodes)) ? (x1 + g.FontSize * 0.5f + g.Style.FramePadding.x) : +FLT_MAX;
     tree_node_data->DrawLinesY2 = -FLT_MAX;
     window->DC.TreeHasStackDataDepthMask |= (1 << window->DC.TreeDepth);
 }
@@ -6648,7 +6648,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     bool store_tree_node_stack_data = false;
     if ((flags & ImGuiTreeNodeFlags_DrawLinesMask_) == 0)
         flags |= g.Style.TreeLinesFlags;
-    const bool draw_tree_lines = (flags & (ImGuiTreeNodeFlags_DrawLinesFull | ImGuiTreeNodeFlags_DrawLinesToNodes)) && (frame_bb.Min.y < window->ClipRect.Max.y);// && (g.Style.TreeLinesSize > 0.0f);
+    const bool draw_tree_lines = (flags & (ImGuiTreeNodeFlags_DrawLinesFull | ImGuiTreeNodeFlags_DrawLinesToNodes)) && (frame_bb.Min.y < window->ClipRect.Max.y) && (g.Style.TreeLinesSize > 0.0f);
     if (is_open && !(flags & ImGuiTreeNodeFlags_NoTreePushOnOpen))
     {
         if ((flags & ImGuiTreeNodeFlags_NavLeftJumpsBackHere) && !g.NavIdIsAlive)
@@ -6829,17 +6829,8 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
                 LogSetNextTextDecoration(">", NULL);
         }
 
-        if (draw_tree_lines && (window->DC.TreeHasStackDataDepthMask & (1 << (window->DC.TreeDepth - 1))))
-        {
-            // Draw horizontal line from our parent node
-            ImGuiTreeNodeStackData* parent_data = &g.TreeNodeStack.Data[g.TreeNodeStack.Size - 1];
-            float x1 = parent_data->DrawLinesX1 + ImTrunc(g.FontSize * 0.5f + g.Style.FramePadding.x); // GetTreeNodeToLabelSpacing() * 0.5f
-            float x2 = text_pos.x - text_offset_x;
-            float y = text_pos.y + ImTrunc(g.FontSize * 0.5f);
-            parent_data->DrawLinesY2 = ImMax(parent_data->DrawLinesY2, y);
-            if (x1 < x2)
-                window->DrawList->AddLine(ImVec2(x1, y), ImVec2(x2, y), GetColorU32(ImGuiCol_TreeLines), g.Style.TreeLinesSize);
-        }
+        if (draw_tree_lines)
+            TreeNodeDrawLineToChildNode(ImVec2(text_pos.x - text_offset_x + padding.x, text_pos.y + g.FontSize * 0.5f));
 
         if (span_all_columns && !span_all_columns_label)
             TablePopBackgroundChannel();
@@ -6861,6 +6852,24 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
 
     IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags | (is_leaf ? 0 : ImGuiItemStatusFlags_Openable) | (is_open ? ImGuiItemStatusFlags_Opened : 0));
     return is_open;
+}
+
+// Draw horizontal line from our parent node
+// This is only called for visible child nodes so we are not too fussy anymore about performances
+void ImGui::TreeNodeDrawLineToChildNode(const ImVec2& target_pos)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    if ((window->DC.TreeHasStackDataDepthMask & (1 << (window->DC.TreeDepth - 1))) == 0)
+        return;
+
+    ImGuiTreeNodeStackData* parent_data = &g.TreeNodeStack.Data[g.TreeNodeStack.Size - 1];
+    float x1 = ImTrunc(parent_data->DrawLinesX1);
+    float x2 = ImTrunc(target_pos.x - g.Style.ItemInnerSpacing.x);
+    float y = ImTrunc(target_pos.y);
+    parent_data->DrawLinesY2 = ImMax(parent_data->DrawLinesY2, y);
+    if (x1 < x2)
+        window->DrawList->AddLine(ImVec2(x1, y), ImVec2(x2, y), GetColorU32(ImGuiCol_TreeLines), g.Style.TreeLinesSize);
 }
 
 void ImGui::TreePush(const char* str_id)
@@ -6915,7 +6924,7 @@ void ImGui::TreePop()
             y2 = ImMin(y2, window->ClipRect.Max.y);
             if (y1 < y2)
             {
-                float x = data->DrawLinesX1 + ImTrunc(g.FontSize * 0.5f + g.Style.FramePadding.x); // GetTreeNodeToLabelSpacing() * 0.5f
+                float x = ImTrunc(data->DrawLinesX1);
                 window->DrawList->AddLine(ImVec2(x, y1), ImVec2(x, y2), GetColorU32(ImGuiCol_TreeLines), g.Style.TreeLinesSize);
             }
         }
