@@ -629,13 +629,15 @@ static void ImGui_ImplSDL2_UpdateMouseData()
 
     // We forward mouse input when hovered or captured (via SDL_MOUSEMOTION) or when focused (below)
 #if SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE
-    // - SDL_CaptureMouse() let the OS know e.g. that our drags can extend outside of parent boundaries (we want updated position) and shouldn't trigger other operations outside.
-    // - Debuggers under Linux tends to leave captured mouse on break, which may be very inconvenient, so to migitate the issue we wait until mouse has moved to begin capture.
-    bool want_capture = false;
-    for (int button_n = 0; button_n < ImGuiMouseButton_COUNT && !want_capture; button_n++)
-        if (ImGui::IsMouseDragging(button_n, 1.0f))
-            want_capture = true;
-    SDL_CaptureMouse(want_capture ? SDL_TRUE : SDL_FALSE);
+    if (bd->MouseCanUseGlobalState) {
+        // - SDL_CaptureMouse() let the OS know e.g. that our drags can extend outside of parent boundaries (we want updated position) and shouldn't trigger other operations outside.
+        // - Debuggers under Linux tends to leave captured mouse on break, which may be very inconvenient, so to migitate the issue we wait until mouse has moved to begin capture.
+        bool want_capture = false;
+        for (int button_n = 0; button_n < ImGuiMouseButton_COUNT && !want_capture; button_n++)
+            if (ImGui::IsMouseDragging(button_n, 1.0f))
+                want_capture = true;
+        SDL_CaptureMouse(want_capture ? SDL_TRUE : SDL_FALSE);
+    }
 
     SDL_Window* focused_window = SDL_GetKeyboardFocus();
     const bool is_app_focused = (bd->Window == focused_window);
