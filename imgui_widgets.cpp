@@ -6562,7 +6562,7 @@ static void TreeNodeStoreStackData(ImGuiTreeNodeFlags flags, float x1)
     tree_node_data->NavRect = g.LastItemData.NavRect;
 
     // Initially I tried to latch value for GetColorU32(ImGuiCol_TreeLines) but it's not a good trade-off for very large trees.
-    tree_node_data->DrawLinesX1 = (flags & (ImGuiTreeNodeFlags_DrawLinesFull | ImGuiTreeNodeFlags_DrawLinesToNodes)) ? x1 : +FLT_MAX;
+    tree_node_data->DrawLinesX1 = (flags & (ImGuiTreeNodeFlags_DrawLinesFull | ImGuiTreeNodeFlags_DrawLinesToNodes)) ? (x1 + g.FontSize * 0.5f + g.Style.FramePadding.x) : +FLT_MAX;
     tree_node_data->DrawLinesY2 = -FLT_MAX;
     window->DC.TreeHasStackDataDepthMask |= (1 << window->DC.TreeDepth);
 }
@@ -6857,11 +6857,12 @@ void ImGui::TreeNodeDrawLineToChildNode(const ImVec2& target_pos)
         return;
 
     ImGuiTreeNodeStackData* parent_data = &g.TreeNodeStack.Data[g.TreeNodeStack.Size - 1];
-    float x1 = parent_data->DrawLinesX1 + ImTrunc(g.FontSize * 0.5f + g.Style.FramePadding.x); // GetTreeNodeToLabelSpacing() * 0.5f
+    float x1 = ImTrunc(parent_data->DrawLinesX1);
+    float x2 = ImTrunc(target_pos.x);
     float y = ImTrunc(target_pos.y);
     parent_data->DrawLinesY2 = ImMax(parent_data->DrawLinesY2, y);
-    if (x1 < target_pos.x)
-        window->DrawList->AddLine(ImVec2(x1, y), ImVec2(target_pos.x, y), GetColorU32(ImGuiCol_TreeLines), g.Style.TreeLinesSize);
+    if (x1 < x2)
+        window->DrawList->AddLine(ImVec2(x1, y), ImVec2(x2, y), GetColorU32(ImGuiCol_TreeLines), g.Style.TreeLinesSize);
 }
 
 void ImGui::TreePush(const char* str_id)
@@ -6916,7 +6917,7 @@ void ImGui::TreePop()
             y2 = ImMin(y2, window->ClipRect.Max.y);
             if (y1 < y2)
             {
-                float x = data->DrawLinesX1 + ImTrunc(g.FontSize * 0.5f + g.Style.FramePadding.x); // GetTreeNodeToLabelSpacing() * 0.5f
+                float x = ImTrunc(data->DrawLinesX1);
                 window->DrawList->AddLine(ImVec2(x, y1), ImVec2(x, y2), GetColorU32(ImGuiCol_TreeLines), g.Style.TreeLinesSize);
             }
         }
