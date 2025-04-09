@@ -24,6 +24,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2025-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2025-04-09: [Docking] Revert update monitors and work areas information every frame. Only do it on Windows. (#8415, #8558)
 //  2025-03-30: Update for SDL3 api changes: Revert SDL_GetClipboardText() memory ownership change. (#8530, #7801)
 //  2025-03-21: Fill gamepad inputs and set ImGuiBackendFlags_HasGamepad regardless of ImGuiConfigFlags_NavEnableGamepad being set.
 //  2025-03-10: When dealing with OEM keys, use scancodes instead of translated keycodes to choose ImGuiKey values. (#7136, #7201, #7206, #7306, #7670, #7672, #8468)
@@ -107,6 +108,7 @@ struct ImGui_ImplSDL3_Data
     Uint64                  Time;
     char*                   ClipboardTextData;
     bool                    UseVulkan;
+    bool                    WantUpdateMonitors;
 
     // IME handling
     SDL_Window*             ImeWindow;
@@ -422,6 +424,15 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
             ImGuiKey key = ImGui_ImplSDL3_KeyEventToImGuiKey(event->key.key, event->key.scancode);
             io.AddKeyEvent(key, (event->type == SDL_EVENT_KEY_DOWN));
             io.SetKeyEventNativeData(key, event->key.key, event->key.scancode, event->key.scancode); // To support legacy indexing (<1.87 user code). Legacy backend uses SDLK_*** as indices to IsKeyXXX() functions.
+            return true;
+        }
+        case SDL_EVENT_DISPLAY_ORIENTATION:
+        case SDL_EVENT_DISPLAY_ADDED:
+        case SDL_EVENT_DISPLAY_REMOVED:
+        case SDL_EVENT_DISPLAY_MOVED:
+        case SDL_EVENT_DISPLAY_CONTENT_SCALE_CHANGED:
+        {
+            bd->WantUpdateMonitors = true;
             return true;
         }
         case SDL_EVENT_WINDOW_MOUSE_ENTER:
@@ -845,8 +856,10 @@ static void ImGui_ImplSDL3_UpdateGamepads()
 
 static void ImGui_ImplSDL3_UpdateMonitors()
 {
+    ImGui_ImplSDL3_Data* bd = ImGui_ImplSDL3_GetBackendData();
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     platform_io.Monitors.resize(0);
+    bd->WantUpdateMonitors = false;
 
     int display_count;
     SDL_DisplayID* displays = SDL_GetDisplays(&display_count);
@@ -893,7 +906,11 @@ void ImGui_ImplSDL3_NewFrame()
         io.DisplayFramebufferScale = ImVec2((float)display_w / w, (float)display_h / h);
 
     // Update monitors
-    ImGui_ImplSDL3_UpdateMonitors();
+#ifdef WIN32
+    bd->WantUpdateMonitors = true; // Keep polling under Windows to handle changes of work area when resizing task-bar (#8415)
+#endif
+    if (bd->WantUpdateMonitors)
+        ImGui_ImplSDL3_UpdateMonitors();
 
     // Setup time step (we don't use SDL_GetTicks() because it is using millisecond resolution)
     // (Accept SDL_GetPerformanceCounter() not returning a monotonically increasing value. Happens in VMs and Emscripten, see #6189, #6114, #3644)

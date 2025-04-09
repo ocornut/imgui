@@ -26,6 +26,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2025-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2025-04-09: [Docking] Revert update monitors and work areas information every frame. Only do it on Windows. (#8415, #8558)
 //  2025-03-21: Fill gamepad inputs and set ImGuiBackendFlags_HasGamepad regardless of ImGuiConfigFlags_NavEnableGamepad being set.
 //  2025-03-10: When dealing with OEM keys, use scancodes instead of translated keycodes to choose ImGuiKey values. (#7136, #7201, #7206, #7306, #7670, #7672, #8468)
 //  2025-02-26: Only start SDL_CaptureMouse() when mouse is being dragged, to mitigate issues with e.g.Linux debuggers not claiming capture back. (#6410, #3650)
@@ -151,6 +152,7 @@ struct ImGui_ImplSDL2_Data
     Uint64                  Time;
     char*                   ClipboardTextData;
     bool                    UseVulkan;
+    bool                    WantUpdateMonitors;
 
     // Mouse handling
     Uint32                  MouseWindowID;
@@ -459,6 +461,15 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
             io.SetKeyEventNativeData(key, event->key.keysym.sym, event->key.keysym.scancode, event->key.keysym.scancode); // To support legacy indexing (<1.87 user code). Legacy backend uses SDLK_*** as indices to IsKeyXXX() functions.
             return true;
         }
+#if SDL_HAS_DISPLAY_EVENT
+        case SDL_DISPLAYEVENT:
+        {
+            // 2.0.26 has SDL_DISPLAYEVENT_CONNECTED/SDL_DISPLAYEVENT_DISCONNECTED/SDL_DISPLAYEVENT_ORIENTATION,
+            // so change of DPI/Scaling are not reflected in this event. (SDL3 has it)
+            bd->WantUpdateMonitors = true;
+            return true;
+        }
+#endif
         case SDL_WINDOWEVENT:
         {
             ImGuiViewport* viewport = ImGui_ImplSDL2_GetViewportForWindowID(event->window.windowID);
@@ -882,8 +893,10 @@ static void ImGui_ImplSDL2_UpdateGamepads()
 // FIXME: Note that doesn't update with DPI/Scaling change only as SDL2 doesn't have an event for it (SDL3 has).
 static void ImGui_ImplSDL2_UpdateMonitors()
 {
+    ImGui_ImplSDL2_Data* bd = ImGui_ImplSDL2_GetBackendData();
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     platform_io.Monitors.resize(0);
+    bd->WantUpdateMonitors = false;
     int display_count = SDL_GetNumVideoDisplays();
     for (int n = 0; n < display_count; n++)
     {
@@ -941,7 +954,11 @@ void ImGui_ImplSDL2_NewFrame()
         io.DisplayFramebufferScale = ImVec2((float)display_w / w, (float)display_h / h);
 
     // Update monitors
-    ImGui_ImplSDL2_UpdateMonitors();
+#ifdef WIN32
+    bd->WantUpdateMonitors = true; // Keep polling under Windows to handle changes of work area when resizing task-bar (#8415)
+#endif
+    if (bd->WantUpdateMonitors)
+        ImGui_ImplSDL2_UpdateMonitors();
 
     // Setup time step (we don't use SDL_GetTicks() because it is using millisecond resolution)
     // (Accept SDL_GetPerformanceCounter() not returning a monotonically increasing value. Happens in VMs and Emscripten, see #6189, #6114, #3644)
