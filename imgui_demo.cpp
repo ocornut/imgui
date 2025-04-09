@@ -8286,7 +8286,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
                         style.TreeLinesFlags = option;
                 ImGui::EndCombo();
             }
-            ImGui::SliderFloat("TreeLinesSize", &style.TreeLinesSize, 0.0f, 1.0f, "%.0f");
+            ImGui::SliderFloat("TreeLinesSize", &style.TreeLinesSize, 0.0f, 2.0f, "%.0f");
             ImGui::Combo("ColorButtonPosition", (int*)&style.ColorButtonPosition, "Left\0Right\0");
             ImGui::SliderFloat2("ButtonTextAlign", (float*)&style.ButtonTextAlign, 0.0f, 1.0f, "%.2f");
             ImGui::SameLine(); HelpMarker("Alignment applies when a button is larger than its text content.");
