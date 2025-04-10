@@ -60,9 +60,10 @@ Other changes:
   - ImGuiTreeNodeFlags_DrawLinesNone: No lines drawn (default value in style.TreeLinesFlags).
   - ImGuiTreeNodeFlags_DrawLinesFull: Horizontal lines to child nodes. Vertical line drawn down to TreePop() position: cover full contents.
   - ImGuiTreeNodeFlags_DrawLinesToNodes: Horizontal lines to child nodes. Vertical line drawn down to bottom-most child node.
-  - Added style.TreeLinesFlags which stores the default setting, 
+  - Added style.TreeLinesFlags which stores the default setting,
     which may be overriden in individual TreeNode() calls.
   - Added style.TreeLinesSize (default to 1.0f).
+  - Added style.TreeLinesRadius (default to 0.0f).
   - Added ImGuiCol_TreeLines (in default style this is the same as ImGuiCol_Border).
   - Caveats:
     - Tree nodes may be used in many creative ways (manually positioning openable

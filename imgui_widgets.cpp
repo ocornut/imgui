@@ -6867,9 +6867,22 @@ void ImGui::TreeNodeDrawLineToChildNode(const ImVec2& target_pos)
     float x1 = ImTrunc(parent_data->DrawLinesX1);
     float x2 = ImTrunc(target_pos.x - g.Style.ItemInnerSpacing.x);
     float y = ImTrunc(target_pos.y);
-    parent_data->DrawLinesToNodesY2 = ImMax(parent_data->DrawLinesToNodesY2, y);
-    if (x1 < x2)
+    float rounding = (g.Style.TreeLinesRounding > 0.0f) ? ImMin(x2 - x1, g.Style.TreeLinesRounding) : 0.0f;
+    parent_data->DrawLinesToNodesY2 = ImMax(parent_data->DrawLinesToNodesY2, y - rounding);
+    if (x1 >= x2)
+        return;
+    if (rounding > 0.0f)
+    {
+        x1 += 0.5f + rounding;
+        window->DrawList->PathArcToFast(ImVec2(x1, y - rounding), rounding, 6, 3);
+        if (x1 < x2)
+            window->DrawList->PathLineTo(ImVec2(x2, y));
+        window->DrawList->PathStroke(GetColorU32(ImGuiCol_TreeLines), ImDrawFlags_None, g.Style.TreeLinesSize);
+    }
+    else
+    {
         window->DrawList->AddLine(ImVec2(x1, y), ImVec2(x2, y), GetColorU32(ImGuiCol_TreeLines), g.Style.TreeLinesSize);
+    }
 }
 
 // Draw vertical line of the hierarchy
@@ -6885,7 +6898,7 @@ void ImGui::TreeNodeDrawLineToTreePop(const ImGuiTreeNodeStackData* data)
         if (g.CurrentTable)
             y2_full = ImMax(g.CurrentTable->RowPosY2, y2_full);
         y2_full = ImTrunc(y2_full - g.Style.ItemSpacing.y - g.FontSize * 0.5f);
-        if (y2 + g.Style.ItemSpacing.y < y2_full) // FIXME: threshold to use ToNodes Y2 instead of Full Y2 when close by ItemSpacing.y
+        if (y2 + (g.Style.ItemSpacing.y + g.Style.TreeLinesRounding) < y2_full) // FIXME: threshold to use ToNodes Y2 instead of Full Y2 when close by ItemSpacing.y
             y2 = y2_full;
     }
     y2 = ImMin(y2, window->ClipRect.Max.y);
