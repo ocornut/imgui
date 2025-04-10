@@ -69,6 +69,7 @@ Other changes:
       nodes in unusual ways, using indent to create tree-looking structures, etc.)
       and the feature may not accurately represent them in every cases.
     - The feature adds a little cost as extra data needs to be stored.
+- TreeNode: fixed incorrect clipping of arrow/bullet when using ImGuiTreeNodeFlags_SpanAllColumns.
 - Nav: fixed assertion when holding gamepad FaceLeft/West button to open
   CTRL+Tab windowing + pressing a keyboard key. (#8525)
 - Error Handling: added better error report and recovery for extraneous
