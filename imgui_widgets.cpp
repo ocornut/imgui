@@ -6919,7 +6919,10 @@ void ImGui::TreePop()
             float y2 = data->DrawLinesToNodesY2;
             if (data->TreeFlags & ImGuiTreeNodeFlags_DrawLinesFull)
             {
-                float y2_full = ImTrunc(window->DC.CursorPos.y - g.Style.ItemSpacing.y - g.FontSize * 0.5f);
+                float y2_full = window->DC.CursorPos.y;
+                if (g.CurrentTable)
+                    y2_full = ImMax(g.CurrentTable->RowPosY2, y2_full);
+                y2_full = ImTrunc(y2_full - g.Style.ItemSpacing.y - g.FontSize * 0.5f);
                 if (y2 + g.Style.ItemSpacing.y < y2_full) // FIXME: threshold to use ToNodes Y2 instead of Full Y2 when close by ItemSpacing.y
                     y2 = y2_full;
             }

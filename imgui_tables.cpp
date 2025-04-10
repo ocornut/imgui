@@ -2494,7 +2494,7 @@ void ImGui::TablePopColumnChannel()
     ImGuiTable* table = g.CurrentTable;
 
     // Optimization: avoid PopClipRect() + SetCurrentChannel()
-    if (table->Flags & ImGuiTableFlags_NoClip)
+    if ((table->Flags & ImGuiTableFlags_NoClip) || (table->CurrentColumn == -1)) // Calling TreePop() after TableNextRow() is supported.
         return;
     ImGuiWindow* window = g.CurrentWindow;
     const ImGuiTableColumn* column = &table->Columns[table->CurrentColumn];
