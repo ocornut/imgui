@@ -6565,7 +6565,7 @@ static void TreeNodeStoreStackData(ImGuiTreeNodeFlags flags, float x1)
     const bool draw_lines = (flags & (ImGuiTreeNodeFlags_DrawLinesFull | ImGuiTreeNodeFlags_DrawLinesToNodes)) != 0;
     tree_node_data->DrawLinesX1 = draw_lines ? (x1 + g.FontSize * 0.5f + g.Style.FramePadding.x) : +FLT_MAX;
     tree_node_data->DrawLinesTableColumn = draw_lines && g.CurrentTable ? (ImGuiTableColumnIdx)g.CurrentTable->CurrentColumn : -1;
-    tree_node_data->DrawLinesY2 = -FLT_MAX;
+    tree_node_data->DrawLinesToNodesY2 = -FLT_MAX;
     window->DC.TreeHasStackDataDepthMask |= (1 << window->DC.TreeDepth);
 }
 
@@ -6659,7 +6659,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
         if (draw_tree_lines && (flags & ImGuiTreeNodeFlags_DrawLinesToNodes) && (window->DC.TreeHasStackDataDepthMask & (1 << window->DC.TreeDepth)))
         {
             ImGuiTreeNodeStackData* parent_data = &g.TreeNodeStack.Data[g.TreeNodeStack.Size - 1];
-            parent_data->DrawLinesY2 = ImMax(parent_data->DrawLinesY2, window->DC.CursorPos.y); // Don't need to aim to mid Y position as we are clipped anyway.
+            parent_data->DrawLinesToNodesY2 = ImMax(parent_data->DrawLinesToNodesY2, window->DC.CursorPos.y); // Don't need to aim to mid Y position as we are clipped anyway.
         }
         if (is_open && store_tree_node_stack_data)
             TreeNodeStoreStackData(flags, text_pos.x - text_offset_x); // Call before TreePushOverrideID()
@@ -6863,7 +6863,7 @@ void ImGui::TreeNodeDrawLineToChildNode(const ImVec2& target_pos)
     float x1 = ImTrunc(parent_data->DrawLinesX1);
     float x2 = ImTrunc(target_pos.x - g.Style.ItemInnerSpacing.x);
     float y = ImTrunc(target_pos.y);
-    parent_data->DrawLinesY2 = ImMax(parent_data->DrawLinesY2, y);
+    parent_data->DrawLinesToNodesY2 = ImMax(parent_data->DrawLinesToNodesY2, y);
     if (x1 < x2)
         window->DrawList->AddLine(ImVec2(x1, y), ImVec2(x2, y), GetColorU32(ImGuiCol_TreeLines), g.Style.TreeLinesSize);
 }
@@ -6916,7 +6916,13 @@ void ImGui::TreePop()
         {
             // Draw vertical line of the hierarchy
             float y1 = ImMax(data->NavRect.Max.y, window->ClipRect.Min.y);
-            float y2 = (data->TreeFlags & ImGuiTreeNodeFlags_DrawLinesToNodes) ? data->DrawLinesY2 : ImTrunc(window->DC.CursorPos.y - g.Style.ItemSpacing.y - g.FontSize * 0.5f);
+            float y2 = data->DrawLinesToNodesY2;
+            if (data->TreeFlags & ImGuiTreeNodeFlags_DrawLinesFull)
+            {
+                float y2_full = ImTrunc(window->DC.CursorPos.y - g.Style.ItemSpacing.y - g.FontSize * 0.5f);
+                if (y2 + g.Style.ItemSpacing.y < y2_full) // FIXME: threshold to use ToNodes Y2 instead of Full Y2 when close by ItemSpacing.y
+                    y2 = y2_full;
+            }
             y2 = ImMin(y2, window->ClipRect.Max.y);
             if (y1 < y2)
             {

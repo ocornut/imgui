@@ -1299,7 +1299,7 @@ struct ImGuiTreeNodeStackData
     ImGuiItemFlags          ItemFlags;      // Used for nav landing
     ImRect                  NavRect;        // Used for nav landing
     float                   DrawLinesX1;
-    float                   DrawLinesY2;
+    float                   DrawLinesToNodesY2;
     ImGuiTableColumnIdx     DrawLinesTableColumn;
 };
 
