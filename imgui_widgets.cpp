@@ -6868,6 +6868,33 @@ void ImGui::TreeNodeDrawLineToChildNode(const ImVec2& target_pos)
         window->DrawList->AddLine(ImVec2(x1, y), ImVec2(x2, y), GetColorU32(ImGuiCol_TreeLines), g.Style.TreeLinesSize);
 }
 
+// Draw vertical line of the hierarchy
+void ImGui::TreeNodeDrawLineToTreePop(const ImGuiTreeNodeStackData* data)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    float y1 = ImMax(data->NavRect.Max.y, window->ClipRect.Min.y);
+    float y2 = data->DrawLinesToNodesY2;
+    if (data->TreeFlags & ImGuiTreeNodeFlags_DrawLinesFull)
+    {
+        float y2_full = window->DC.CursorPos.y;
+        if (g.CurrentTable)
+            y2_full = ImMax(g.CurrentTable->RowPosY2, y2_full);
+        y2_full = ImTrunc(y2_full - g.Style.ItemSpacing.y - g.FontSize * 0.5f);
+        if (y2 + g.Style.ItemSpacing.y < y2_full) // FIXME: threshold to use ToNodes Y2 instead of Full Y2 when close by ItemSpacing.y
+            y2 = y2_full;
+    }
+    y2 = ImMin(y2, window->ClipRect.Max.y);
+    if (y2 <= y1)
+        return;
+    float x = ImTrunc(data->DrawLinesX1);
+    if (data->DrawLinesTableColumn != -1)
+        TablePushColumnChannel(data->DrawLinesTableColumn);
+    window->DrawList->AddLine(ImVec2(x, y1), ImVec2(x, y2), GetColorU32(ImGuiCol_TreeLines), g.Style.TreeLinesSize);
+    if (data->DrawLinesTableColumn != -1)
+        TablePopColumnChannel();
+}
+
 void ImGui::TreePush(const char* str_id)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -6906,37 +6933,16 @@ void ImGui::TreePop()
     {
         const ImGuiTreeNodeStackData* data = &g.TreeNodeStack.Data[g.TreeNodeStack.Size - 1];
         IM_ASSERT(data->ID == window->IDStack.back());
+
+        // Handle Left arrow to move to parent tree node (when ImGuiTreeNodeFlags_NavLeftJumpsBackHere is enabled)
         if (data->TreeFlags & ImGuiTreeNodeFlags_NavLeftJumpsBackHere)
-        {
-            // Handle Left arrow to move to parent tree node (when ImGuiTreeNodeFlags_NavLeftJumpsBackHere is enabled)
             if (g.NavIdIsAlive && g.NavMoveDir == ImGuiDir_Left && g.NavWindow == window && NavMoveRequestButNoResultYet())
                 NavMoveRequestResolveWithPastTreeNode(&g.NavMoveResultLocal, data);
-        }
+
+        // Draw hierarchy lines
         if (data->DrawLinesX1 != +FLT_MAX && window->DC.CursorPos.y >= window->ClipRect.Min.y)
-        {
-            // Draw vertical line of the hierarchy
-            float y1 = ImMax(data->NavRect.Max.y, window->ClipRect.Min.y);
-            float y2 = data->DrawLinesToNodesY2;
-            if (data->TreeFlags & ImGuiTreeNodeFlags_DrawLinesFull)
-            {
-                float y2_full = window->DC.CursorPos.y;
-                if (g.CurrentTable)
-                    y2_full = ImMax(g.CurrentTable->RowPosY2, y2_full);
-                y2_full = ImTrunc(y2_full - g.Style.ItemSpacing.y - g.FontSize * 0.5f);
-                if (y2 + g.Style.ItemSpacing.y < y2_full) // FIXME: threshold to use ToNodes Y2 instead of Full Y2 when close by ItemSpacing.y
-                    y2 = y2_full;
-            }
-            y2 = ImMin(y2, window->ClipRect.Max.y);
-            if (y1 < y2)
-            {
-                float x = ImTrunc(data->DrawLinesX1);
-                if (data->DrawLinesTableColumn != -1)
-                    TablePushColumnChannel(data->DrawLinesTableColumn);
-                window->DrawList->AddLine(ImVec2(x, y1), ImVec2(x, y2), GetColorU32(ImGuiCol_TreeLines), g.Style.TreeLinesSize);
-                if (data->DrawLinesTableColumn != -1)
-                    TablePopColumnChannel();
-            }
-        }
+            TreeNodeDrawLineToTreePop(data);
+
         g.TreeNodeStack.pop_back();
         window->DC.TreeHasStackDataDepthMask &= ~tree_depth_mask;
     }
