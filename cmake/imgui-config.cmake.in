@@ -1,0 +1,46 @@
+@PACKAGE_INIT@ # Init
+
+include(CMakeFindDependencyMacro)
+
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/imgui-opengl2-targets.cmake" OR
+EXISTS "${CMAKE_CURRENT_LIST_DIR}/imgui-opengl3-targets.cmake")
+find_dependency(OpenGL)
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/imgui-core-targets.cmake") 
+include("${CMAKE_CURRENT_LIST_DIR}/imgui-cpp-targets.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/imgui-jumbo-targets.cmake")
+
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/imgui-freetype-targets.cmake")
+find_dependency(Freetype)
+include("${CMAKE_CURRENT_LIST_DIR}/imgui-freetype-targets.cmake")
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/imgui-win32-targets.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/imgui-win32-targets.cmake")
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/imgui-opengl2-targets.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/imgui-opengl2-targets.cmake")
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/imgui-opengl3-targets.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/imgui-opengl3-targets.cmake")
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/imgui-dx9-targets.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/imgui-dx9-targets.cmake")
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/imgui-dx10-targets.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/imgui-dx10-targets.cmake")
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/imgui-dx11-targets.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/imgui-dx11-targets.cmake")
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/imgui-dx12-targets.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/imgui-dx12-targets.cmake")
+endif()
+
