@@ -6562,7 +6562,9 @@ static void TreeNodeStoreStackData(ImGuiTreeNodeFlags flags, float x1)
     tree_node_data->NavRect = g.LastItemData.NavRect;
 
     // Initially I tried to latch value for GetColorU32(ImGuiCol_TreeLines) but it's not a good trade-off for very large trees.
-    tree_node_data->DrawLinesX1 = (flags & (ImGuiTreeNodeFlags_DrawLinesFull | ImGuiTreeNodeFlags_DrawLinesToNodes)) ? (x1 + g.FontSize * 0.5f + g.Style.FramePadding.x) : +FLT_MAX;
+    const bool draw_lines = (flags & (ImGuiTreeNodeFlags_DrawLinesFull | ImGuiTreeNodeFlags_DrawLinesToNodes)) != 0;
+    tree_node_data->DrawLinesX1 = draw_lines ? (x1 + g.FontSize * 0.5f + g.Style.FramePadding.x) : +FLT_MAX;
+    tree_node_data->DrawLinesTableColumn = draw_lines && g.CurrentTable ? (ImGuiTableColumnIdx)g.CurrentTable->CurrentColumn : -1;
     tree_node_data->DrawLinesY2 = -FLT_MAX;
     window->DC.TreeHasStackDataDepthMask |= (1 << window->DC.TreeDepth);
 }
@@ -6919,7 +6921,11 @@ void ImGui::TreePop()
             if (y1 < y2)
             {
                 float x = ImTrunc(data->DrawLinesX1);
+                if (data->DrawLinesTableColumn != -1)
+                    TablePushColumnChannel(data->DrawLinesTableColumn);
                 window->DrawList->AddLine(ImVec2(x, y1), ImVec2(x, y2), GetColorU32(ImGuiCol_TreeLines), g.Style.TreeLinesSize);
+                if (data->DrawLinesTableColumn != -1)
+                    TablePopColumnChannel();
             }
         }
         g.TreeNodeStack.pop_back();
