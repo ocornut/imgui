@@ -3509,7 +3509,7 @@ struct ImFontGlyphRangesBuilder
     IMGUI_API void  BuildRanges(ImVector<ImWchar>* out_ranges);                 // Output new ranges
 };
 
-// An identifier to a rectangle in the atlas. -1 when invalid.
+// An opaque identifier to a rectangle in the atlas. -1 when invalid.
 // The rectangle may move and UV may be invalidated, use GetCustomRect() to retrieve it.
 typedef int ImFontAtlasRectId;
 #define ImFontAtlasRectId_Invalid -1

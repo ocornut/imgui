@@ -15747,17 +15747,47 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
     Text("Packed rects: %d, area: about %d px ~%dx%d px", atlas->Builder->RectsPackedCount, atlas->Builder->RectsPackedSurface, packed_surface_sqrt, packed_surface_sqrt);
     Text("incl. Discarded rects: %d, area: about %d px ~%dx%d px", atlas->Builder->RectsDiscardedCount, atlas->Builder->RectsDiscardedSurface, discarded_surface_sqrt, discarded_surface_sqrt);
 
+    ImFontAtlasRectId highlight_r_id = ImFontAtlasRectId_Invalid;
+    if (TreeNode("Rects Index", "Rects Index (%d)", atlas->Builder->RectsPackedCount)) // <-- Use count of used rectangles
+    {
+        PushStyleVar(ImGuiStyleVar_ImageBorderSize, 1.0f);
+        if (BeginTable("##table", 2, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY, ImVec2(0.0f, GetTextLineHeightWithSpacing() * 12)))
+        {
+            for (const ImFontAtlasRectEntry& entry : atlas->Builder->RectsIndex)
+                if (entry.IsUsed)
+                {
+                    ImFontAtlasRectId id = ImFontAtlasRectId_Make(atlas->Builder->RectsIndex.index_from_ptr(&entry), entry.Generation);
+                    ImFontAtlasRect r = {};
+                    atlas->GetCustomRect(id, &r);
+                    const char* buf;
+                    ImFormatStringToTempBuffer(&buf, NULL, "ID:%08X, used:%d, { w:%3d, h:%3d } { x:%4d, y:%4d }", id, entry.IsUsed, r.w, r.h, r.x, r.y);
+                    TableNextColumn();
+                    Selectable(buf);
+                    if (IsItemHovered())
+                        highlight_r_id = id;
+                    TableNextColumn();
+                    Image(atlas->TexID, ImVec2(r.w, r.h), r.uv0, r.uv1);
+                }
+            EndTable();
+        }
+        PopStyleVar();
+        TreePop();
+    }
+
     // Texture list
     // (ensure the last texture always use the same ID, so we can keep it open neatly)
+    ImFontAtlasRect highlight_r;
+    if (highlight_r_id != ImFontAtlasRectId_Invalid)
+        atlas->GetCustomRect(highlight_r_id, &highlight_r);
     for (int tex_n = 0; tex_n < atlas->TexList.Size; tex_n++)
     {
         if (tex_n == atlas->TexList.Size - 1)
             SetNextItemOpen(true, ImGuiCond_Once);
-        DebugNodeTexture(atlas->TexList[tex_n], atlas->TexList.Size - 1 - tex_n);
+        DebugNodeTexture(atlas->TexList[tex_n], atlas->TexList.Size - 1 - tex_n, (highlight_r_id != ImFontAtlasRectId_Invalid) ? &highlight_r : NULL);
     }
 }
 
-void ImGui::DebugNodeTexture(ImTextureData* tex, int int_id)
+void ImGui::DebugNodeTexture(ImTextureData* tex, int int_id, const ImFontAtlasRect* highlight_rect)
 {
     ImGuiContext& g = *GImGui;
     PushID(int_id);
@@ -15773,6 +15803,13 @@ void ImGui::DebugNodeTexture(ImTextureData* tex, int int_id)
             ImageWithBg(tex->GetTexRef(), ImVec2((float)tex->Width, (float)tex->Height), ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f), ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
         if (cfg->ShowTextureUsedRect)
             GetWindowDrawList()->AddRect(ImVec2(p.x + tex->UsedRect.x, p.y + tex->UsedRect.y), ImVec2(p.x + tex->UsedRect.x + tex->UsedRect.w, p.y + tex->UsedRect.y + tex->UsedRect.h), IM_COL32(255, 0, 255, 255));
+        if (highlight_rect != NULL)
+        {
+            ImRect r_outer(p.x, p.y, p.x + tex->Width, p.y + tex->Height);
+            ImRect r_inner(p.x + highlight_rect->x, p.y + highlight_rect->y, p.x + highlight_rect->x + highlight_rect->w, p.y + highlight_rect->y + highlight_rect->h);
+            RenderRectFilledWithHole(GetWindowDrawList(), r_outer, r_inner, IM_COL32(0, 0, 0, 100), 0.0f);
+            GetWindowDrawList()->AddRect(r_inner.Min - ImVec2(1, 1), r_inner.Max + ImVec2(1, 1), IM_COL32(255, 255, 0, 255));
+        }
         PopStyleVar();
 
         char texid_desc[20];
