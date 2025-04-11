@@ -451,6 +451,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
         // But at this point we do NOT have a correct value for .Max.y (unless a height has been explicitly passed in). It will only be updated in EndTable().
         table->WorkRect = table->OuterRect = table->InnerRect = outer_rect;
         table->HasScrollbarYPrev = table->HasScrollbarYCurr = false;
+        table->InnerWindow->DC.TreeDepth++; // This is designed to always linking ImGuiTreeNodeFlags_DrawLines linking accross a table
     }
 
     // Push a standardized ID for both child-using and not-child-using tables
@@ -1510,6 +1511,7 @@ void    ImGui::EndTable()
     }
     else
     {
+        table->InnerWindow->DC.TreeDepth--;
         ItemSize(table->OuterRect.GetSize());
         ItemAdd(table->OuterRect, 0);
     }
@@ -2191,6 +2193,7 @@ void ImGui::TableBeginCell(ImGuiTable* table, int column_n)
         g.LastItemData.StatusFlags = 0;
     }
 
+    // Also see TablePushColumnChannel()
     if (table->Flags & ImGuiTableFlags_NoClip)
     {
         // FIXME: if we end up drawing all borders/bg in EndTable, could remove this and just assert that channel hasn't changed.
@@ -2464,10 +2467,38 @@ void ImGui::TablePopBackgroundChannel()
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
     ImGuiTable* table = g.CurrentTable;
-    ImGuiTableColumn* column = &table->Columns[table->CurrentColumn];
 
     // Optimization: avoid PopClipRect() + SetCurrentChannel()
     SetWindowClipRectBeforeSetChannel(window, table->HostBackupInnerClipRect);
+    table->DrawSplitter->SetCurrentChannel(window->DrawList, table->Columns[table->CurrentColumn].DrawChannelCurrent);
+}
+
+// Also see TableBeginCell()
+void ImGui::TablePushColumnChannel(int column_n)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiTable* table = g.CurrentTable;
+
+    // Optimization: avoid SetCurrentChannel() + PushClipRect()
+    if (table->Flags & ImGuiTableFlags_NoClip)
+        return;
+    ImGuiWindow* window = g.CurrentWindow;
+    const ImGuiTableColumn* column = &table->Columns[column_n];
+    SetWindowClipRectBeforeSetChannel(window, column->ClipRect);
+    table->DrawSplitter->SetCurrentChannel(window->DrawList, column->DrawChannelCurrent);
+}
+
+void ImGui::TablePopColumnChannel()
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiTable* table = g.CurrentTable;
+
+    // Optimization: avoid PopClipRect() + SetCurrentChannel()
+    if ((table->Flags & ImGuiTableFlags_NoClip) || (table->CurrentColumn == -1)) // Calling TreePop() after TableNextRow() is supported.
+        return;
+    ImGuiWindow* window = g.CurrentWindow;
+    const ImGuiTableColumn* column = &table->Columns[table->CurrentColumn];
+    SetWindowClipRectBeforeSetChannel(window, column->ClipRect);
     table->DrawSplitter->SetCurrentChannel(window->DrawList, column->DrawChannelCurrent);
 }
 
