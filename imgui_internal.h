@@ -3927,7 +3927,7 @@ namespace ImGui
     IMGUI_API void          DebugNodeDrawCmdShowMeshAndBoundingBox(ImDrawList* out_draw_list, const ImDrawList* draw_list, const ImDrawCmd* draw_cmd, bool show_mesh, bool show_aabb);
     IMGUI_API void          DebugNodeFont(ImFont* font);
     IMGUI_API void          DebugNodeFontGlyph(ImFont* font, const ImFontGlyph* glyph);
-    IMGUI_API void          DebugNodeTexture(ImTextureData* tex, int int_id); // ID used to facilitate persisting the "current" texture.
+    IMGUI_API void          DebugNodeTexture(ImTextureData* tex, int int_id, const ImFontAtlasRect* highlight_rect = NULL); // ID used to facilitate persisting the "current" texture.
     IMGUI_API void          DebugNodeStorage(ImGuiStorage* storage, const char* label);
     IMGUI_API void          DebugNodeTabBar(ImGuiTabBar* tab_bar, const char* label);
     IMGUI_API void          DebugNodeTable(ImGuiTable* table);
@@ -3995,6 +3995,14 @@ IMGUI_API const ImFontLoader* ImFontAtlasGetFontLoaderForStbTruetype();
 // [SECTION] ImFontAtlas internal API
 //-----------------------------------------------------------------------------
 
+// Refer to ImFontAtlasPackGetRect() to better understand how this works.
+#define ImFontAtlasRectId_IndexMask_        (0x000FFFFF)    // 20-bits: index to access builder->RectsIndex[].
+#define ImFontAtlasRectId_GenerationMask_   (0x3FF00000)    // 10-bits: entry generation, so each ID is unique and get can safely detected old identifiers.
+#define ImFontAtlasRectId_GenerationShift_  (20)
+inline int               ImFontAtlasRectId_GetIndex(ImFontAtlasRectId id)       { return id & ImFontAtlasRectId_IndexMask_; }
+inline int               ImFontAtlasRectId_GetGeneration(ImFontAtlasRectId id)  { return (id & ImFontAtlasRectId_GenerationMask_) >> ImFontAtlasRectId_GenerationShift_; }
+inline ImFontAtlasRectId ImFontAtlasRectId_Make(int index_idx, int gen_idx)     { IM_ASSERT(index_idx < ImFontAtlasRectId_IndexMask_ && gen_idx < (ImFontAtlasRectId_GenerationMask_ >> ImFontAtlasRectId_GenerationShift_)); return (ImFontAtlasRectId)(index_idx | (gen_idx << ImFontAtlasRectId_GenerationShift_)); }
+
 // Packed rectangle lookup entry (we need an indirection to allow removing/reordering rectangles)
 // User are returned ImFontAtlasRectId values which are meant to be persistent.
 // We handle this with an indirection. While Rects[] may be in theory shuffled, compacted etc., RectsIndex[] cannot it is keyed by ImFontAtlasRectId.
@@ -4002,7 +4010,8 @@ IMGUI_API const ImFontLoader* ImFontAtlasGetFontLoaderForStbTruetype();
 // Having this also makes it easier to e.g. sort rectangles during repack.
 struct ImFontAtlasRectEntry
 {
-    int                 TargetIndex : 31;   // When Used: ImFontAtlasRectId -> into Rects[]. When unused: index to next unused RectsIndex[] slot to consume free-list.
+    int                 TargetIndex : 20;   // When Used: ImFontAtlasRectId -> into Rects[]. When unused: index to next unused RectsIndex[] slot to consume free-list.
+    int                 Generation : 10;    // Increased each time the entry is reused for a new rectangle.
     unsigned int        IsUsed : 1;
 };
 
@@ -4093,6 +4102,7 @@ IMGUI_API ImGuiID           ImFontAtlasBakedGetId(ImGuiID font_id, float baked_s
 IMGUI_API void              ImFontAtlasPackInit(ImFontAtlas* atlas);
 IMGUI_API ImFontAtlasRectId ImFontAtlasPackAddRect(ImFontAtlas* atlas, int w, int h, ImFontAtlasRectEntry* overwrite_entry = NULL);
 IMGUI_API ImTextureRect*    ImFontAtlasPackGetRect(ImFontAtlas* atlas, ImFontAtlasRectId id);
+IMGUI_API ImTextureRect*    ImFontAtlasPackGetRectSafe(ImFontAtlas* atlas, ImFontAtlasRectId id);
 IMGUI_API void              ImFontAtlasPackDiscardRect(ImFontAtlas* atlas, ImFontAtlasRectId id);
 
 IMGUI_API void              ImFontAtlasUpdateNewFrame(ImFontAtlas* atlas, int frame_count);

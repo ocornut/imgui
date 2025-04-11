@@ -3245,7 +3245,8 @@ ImFontAtlasRectId ImFontAtlas::AddCustomRect(int width, int height, ImFontAtlasR
 
 void ImFontAtlas::RemoveCustomRect(ImFontAtlasRectId id)
 {
-    IM_ASSERT(id != ImFontAtlasRectId_Invalid);
+    if (ImFontAtlasPackGetRectSafe(this, id) == NULL)
+        return;
     ImFontAtlasPackDiscardRect(this, id);
 }
 
@@ -3301,10 +3302,12 @@ int ImFontAtlas::AddCustomRectFontGlyphForSize(ImFont* font, float font_size, Im
 
 bool ImFontAtlas::GetCustomRect(ImFontAtlasRectId id, ImFontAtlasRect* out_r) const
 {
-    ImTextureRect* r = ImFontAtlasPackGetRect((ImFontAtlas*)this, id);
+    ImTextureRect* r = ImFontAtlasPackGetRectSafe((ImFontAtlas*)this, id);
     if (r == NULL)
         return false;
     IM_ASSERT(TexData->Width > 0 && TexData->Height > 0);   // Font atlas needs to be built before we can calculate UV coordinates
+    if (out_r == NULL)
+        return true;
     out_r->x = r->x;
     out_r->y = r->y;
     out_r->w = r->w;
@@ -4008,7 +4011,7 @@ void ImFontAtlasBuildRepackTexture(ImFontAtlas* atlas, int w, int h)
             ImFontAtlasBuildGrowTexture(atlas, w, h); // Recurse
             return;
         }
-        IM_ASSERT(new_r_id == builder->RectsIndex.index_from_ptr(&index_entry));
+        IM_ASSERT(ImFontAtlasRectId_GetIndex(new_r_id) == builder->RectsIndex.index_from_ptr(&index_entry));
         ImTextureRect* new_r = ImFontAtlasPackGetRect(atlas, new_r_id);
         ImFontAtlasTextureBlockCopy(old_tex, old_r.x, old_r.y, new_tex, new_r->x, new_r->y, new_r->w, new_r->h);
     }
@@ -4237,17 +4240,18 @@ static ImFontAtlasRectId ImFontAtlasPackAllocRectEntry(ImFontAtlas* atlas, int r
         builder->RectsIndex.resize(builder->RectsIndex.Size + 1);
         index_idx = builder->RectsIndex.Size - 1;
         index_entry = &builder->RectsIndex[index_idx];
+        memset(index_entry, 0, sizeof(*index_entry));
     }
     else
     {
         index_idx = builder->RectsIndexFreeListStart;
         index_entry = &builder->RectsIndex[index_idx];
-        IM_ASSERT(index_entry->IsUsed == false);
+        IM_ASSERT(index_entry->IsUsed == false && index_entry->Generation > 0); // Generation is incremented during DiscardRect
         builder->RectsIndexFreeListStart = index_entry->TargetIndex;
     }
     index_entry->TargetIndex = rect_idx;
     index_entry->IsUsed = 1;
-    return (ImFontAtlasRectId)index_idx;
+    return ImFontAtlasRectId_Make(index_idx, index_entry->Generation);
 }
 
 // Overwrite existing entry
@@ -4255,23 +4259,29 @@ static ImFontAtlasRectId ImFontAtlasPackReuseRectEntry(ImFontAtlas* atlas, ImFon
 {
     IM_ASSERT(index_entry->IsUsed);
     index_entry->TargetIndex = atlas->Builder->Rects.Size - 1;
-    return atlas->Builder->RectsIndex.index_from_ptr(index_entry);
+    int index_idx = atlas->Builder->RectsIndex.index_from_ptr(index_entry);
+    return ImFontAtlasRectId_Make(index_idx, index_entry->Generation);
 }
 
 // This is expected to be called in batches and followed by a repack
 void ImFontAtlasPackDiscardRect(ImFontAtlas* atlas, ImFontAtlasRectId id)
 {
     IM_ASSERT(id != ImFontAtlasRectId_Invalid);
-    ImFontAtlasBuilder* builder = (ImFontAtlasBuilder*)atlas->Builder;
-    ImFontAtlasRectEntry* index_entry = &builder->RectsIndex[id];
-    IM_ASSERT(index_entry->IsUsed && index_entry->TargetIndex >= 0);
 
     ImTextureRect* rect = ImFontAtlasPackGetRect(atlas, id);
+    if (rect == NULL)
+        return;
+
+    ImFontAtlasBuilder* builder = atlas->Builder;
+    int index_idx = ImFontAtlasRectId_GetIndex(id);
+    ImFontAtlasRectEntry* index_entry = &builder->RectsIndex[index_idx];
+    IM_ASSERT(index_entry->IsUsed && index_entry->TargetIndex >= 0);
     index_entry->IsUsed = false;
     index_entry->TargetIndex = builder->RectsIndexFreeListStart;
+    index_entry->Generation++;
 
     const int pack_padding = atlas->TexGlyphPadding;
-    builder->RectsIndexFreeListStart = id;
+    builder->RectsIndexFreeListStart = index_idx;
     builder->RectsDiscardedCount++;
     builder->RectsDiscardedSurface += (rect->w + pack_padding) * (rect->h + pack_padding);
     rect->w = rect->h = 0; // Clear rectangle so it won't be packed again
@@ -4326,13 +4336,33 @@ ImFontAtlasRectId ImFontAtlasPackAddRect(ImFontAtlas* atlas, int w, int h, ImFon
         return ImFontAtlasPackAllocRectEntry(atlas, builder->Rects.Size - 1);
 }
 
-// Important: return pointer is valid until next call to AddRect(), e.g. FindGlyph(), CalcTextSize() can all potentially invalidate previous pointers.
+// Generally for non-user facing functions: assert on invalid ID.
 ImTextureRect* ImFontAtlasPackGetRect(ImFontAtlas* atlas, ImFontAtlasRectId id)
 {
     IM_ASSERT(id != ImFontAtlasRectId_Invalid);
+    int index_idx = ImFontAtlasRectId_GetIndex(id);
+    int generation = ImFontAtlasRectId_GetGeneration(id);
     ImFontAtlasBuilder* builder = (ImFontAtlasBuilder*)atlas->Builder;
-    ImFontAtlasRectEntry* index_entry = &builder->RectsIndex[id];
+    ImFontAtlasRectEntry* index_entry = &builder->RectsIndex[index_idx];
+    IM_ASSERT(index_entry->Generation == generation);
     IM_ASSERT(index_entry->IsUsed);
+    return &builder->Rects[index_entry->TargetIndex];
+}
+
+// For user-facing functions: return NULL on invalid ID.
+// Important: return pointer is valid until next call to AddRect(), e.g. FindGlyph(), CalcTextSize() can all potentially invalidate previous pointers.
+ImTextureRect* ImFontAtlasPackGetRectSafe(ImFontAtlas* atlas, ImFontAtlasRectId id)
+{
+    if (id == ImFontAtlasRectId_Invalid)
+        return NULL;
+    int index_idx = ImFontAtlasRectId_GetIndex(id);
+    int generation = ImFontAtlasRectId_GetGeneration(id);
+    ImFontAtlasBuilder* builder = (ImFontAtlasBuilder*)atlas->Builder;
+    if (index_idx >= builder->RectsIndex.Size)
+        return NULL;
+    ImFontAtlasRectEntry* index_entry = &builder->RectsIndex[index_idx];
+    if (index_entry->Generation != generation || !index_entry->IsUsed)
+        return NULL;
     return &builder->Rects[index_entry->TargetIndex];
 }
 
