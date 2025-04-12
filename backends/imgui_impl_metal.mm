@@ -162,6 +162,14 @@ void ImGui_ImplMetal_NewFrame(MTLRenderPassDescriptor* renderPassDescriptor)
 #ifdef IMGUI_IMPL_METAL_CPP
     bd->SharedMetalContext.framebufferDescriptor = [[[FramebufferDescriptor alloc] initWithRenderPassDescriptor:renderPassDescriptor]autorelease];
 #else
+  // if no ARC
+  if (!__has_feature(objc_arc)) {
+    // check for existing framebufferDescriptor, destroy if there is one
+    if (bd->SharedMetalContext.framebufferDescriptor) {
+      CFRelease(
+          (__bridge CFTypeRef)bd->SharedMetalContext.framebufferDescriptor);
+    }
+  }
     bd->SharedMetalContext.framebufferDescriptor = [[FramebufferDescriptor alloc] initWithRenderPassDescriptor:renderPassDescriptor];
 #endif
     if (bd->SharedMetalContext.depthStencilState == nil)
@@ -238,8 +246,52 @@ void ImGui_ImplMetal_RenderDrawData(ImDrawData* drawData, id<MTLCommandBuffer> c
 
     size_t vertexBufferLength = (size_t)drawData->TotalVtxCount * sizeof(ImDrawVert);
     size_t indexBufferLength = (size_t)drawData->TotalIdxCount * sizeof(ImDrawIdx);
-    MetalBuffer* vertexBuffer = [ctx dequeueReusableBufferOfLength:vertexBufferLength device:commandBuffer.device];
-    MetalBuffer* indexBuffer = [ctx dequeueReusableBufferOfLength:indexBufferLength device:commandBuffer.device];
+    MetalBuffer *vertexBuffer = nil;
+    MetalBuffer *indexBuffer = nil;
+    // if ARC do what did before
+    if (__has_feature(objc_arc)) {
+      vertexBuffer = [ctx dequeueReusableBufferOfLength:vertexBufferLength
+                                                 device:commandBuffer.device];
+      indexBuffer = [ctx dequeueReusableBufferOfLength:indexBufferLength
+                                                device:commandBuffer.device];
+    } else {
+        // else caching
+      @synchronized(ctx.bufferCache) {
+        // Find suitable buffers in the cache
+
+        for (NSInteger i = ctx.bufferCache.count - 1; i >= 0; i--) {
+          MetalBuffer *buffer = ctx.bufferCache[i];
+
+          // If buffer is large enough for vertex data and not yet assigned
+          if (!vertexBuffer && buffer.buffer.length >= vertexBufferLength) {
+            vertexBuffer = buffer;
+            [ctx.bufferCache removeObjectAtIndex:i];
+            continue;
+          }
+
+          // If buffer is large enough for index data and not yet assigned
+          if (!indexBuffer && buffer.buffer.length >= indexBufferLength) {
+            indexBuffer = buffer;
+            [ctx.bufferCache removeObjectAtIndex:i];
+          }
+
+          // If we found both buffers, break
+          if (vertexBuffer && indexBuffer)
+            break;
+        }
+      }
+      // Create buffers only in case none found before
+      if (!vertexBuffer) {
+        vertexBuffer =
+            [ctx dequeueReusableBufferOfLength:vertexBufferLength
+                                        device:commandBuffer.device];
+      }
+      if (!indexBuffer) {
+        indexBuffer =
+            [ctx dequeueReusableBufferOfLength:indexBufferLength
+                                        device:commandBuffer.device];
+      }
+    }
 
     ImGui_ImplMetal_SetupRenderState(drawData, commandBuffer, commandEncoder, renderPipelineState, vertexBuffer, 0);
 
