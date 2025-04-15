@@ -4,8 +4,7 @@
 // Implemented features:
 //  [X] Renderer: User texture binding. Use simply cast a reference to your SDL_GPUTextureSamplerBinding to ImTextureID.
 //  [X] Renderer: Large meshes support (64k+ vertices) with 16-bit indices.
-// Missing features:
-//  [ ] Renderer: Multi-viewport support (multiple windows).
+//  [X] Renderer: Multi-viewport support (multiple windows).
 
 // The aim of imgui_impl_sdlgpu3.h/.cpp is to be usable in your engine without any modification.
 // IF YOU FEEL YOU NEED TO MAKE ANY CHANGE TO THIS CODE, please share them and your feedback at https://github.com/ocornut/imgui/
