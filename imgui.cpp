@@ -5641,7 +5641,11 @@ void ImGui::EndFrame()
     // Don't process EndFrame() multiple times.
     if (g.FrameCountEnded == g.FrameCount)
         return;
-    IM_ASSERT(g.WithinFrameScope && "Forgot to call ImGui::NewFrame()?");
+    if (!g.WithinFrameScope)
+    {
+        IM_ASSERT_USER_ERROR(g.WithinFrameScope, "Forgot to call ImGui::NewFrame()?");
+        return;
+    }
 
     CallContextHooks(&g, ImGuiContextHookType_EndFramePre);
 
