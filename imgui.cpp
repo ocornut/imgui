@@ -21387,7 +21387,7 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
                     if (IsItemHovered())
                         highlight_r_id = id;
                     TableNextColumn();
-                    Image(atlas->TexID, ImVec2(r.w, r.h), r.uv0, r.uv1);
+                    Image(atlas->TexRef, ImVec2(r.w, r.h), r.uv0, r.uv1);
                 }
             EndTable();
         }

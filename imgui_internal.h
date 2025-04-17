@@ -4087,6 +4087,7 @@ IMGUI_API bool              ImFontAtlasBuildInitFontOutput(ImFontAtlas* atlas, I
 IMGUI_API void              ImFontAtlasBuildDestroyFontOutput(ImFontAtlas* atlas, ImFont* font);
 IMGUI_API void              ImFontAtlasBuildDestroyFontSourceData(ImFontAtlas* atlas, ImFontConfig* src);
 
+IMGUI_API ImFontBaked*      ImFontAtlasBuildGetFontBaked(ImFontAtlas* atlas, ImFont* font, float font_size);
 IMGUI_API ImFontBaked*      ImFontAtlasBuildAddFontBaked(ImFontAtlas* atlas, ImFont* font, float font_size, ImGuiID baked_id);
 IMGUI_API ImFontBaked*      ImFontAtlasBuildGetClosestFontBakedMatch(ImFontAtlas* atlas, ImFont* font, float font_size);
 IMGUI_API void              ImFontAtlasBuildDiscardBakes(ImFontAtlas* atlas, int unused_frames);
