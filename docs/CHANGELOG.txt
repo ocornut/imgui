@@ -76,10 +76,16 @@ Other changes:
     - The feature is unlikely to ever work properly when using a coarse clipper
       such as ImGuiListClipper.
 - TreeNode: fixed incorrect clipping of arrow/bullet when using ImGuiTreeNodeFlags_SpanAllColumns.
+- Tabs: fixes small issues with how "..." ellipsis moved depending on visibility
+  of Close Button or Unsaved Document marker. (#8387)
 - Nav: fixed assertion when holding gamepad FaceLeft/West button to open
   CTRL+Tab windowing + pressing a keyboard key. (#8525)
 - Error Handling: added better error report and recovery for extraneous
   EndPopup() call. (#1651, #8499)
+- Error Handling: added better error report and recovery when calling EndFrame()
+  or Render() without NewFrame(). Was previously only an assert.
+- Fonts: reworked text ellipsis logic to ensure a "..." is always displayed instead
+  of a single character. (#7024)
 - Fonts: word-wrapping code handle ideographic comma & full stop (U+3001, U+3002). (#8540)
 - Fonts: fixed CalcWordWrapPositionA() fallback when width is too small to wrap:
   would use a +1 offset instead of advancing to the next UTF-8 codepoint. (#8540)
