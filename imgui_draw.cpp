@@ -2983,12 +2983,12 @@ void ImFontAtlasBuildDestroyFontSourceData(ImFontAtlas* atlas, ImFontConfig* src
     src->GlyphExcludeRanges = NULL;
 }
 
-ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
+ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg_in)
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas!");
-    IM_ASSERT((font_cfg->FontData != NULL && font_cfg->FontDataSize > 0) || (font_cfg->FontLoader != NULL));
-    IM_ASSERT(font_cfg->SizePixels > 0.0f && "Is ImFontConfig struct correctly initialized?");
-    IM_ASSERT(font_cfg->RasterizerDensity > 0.0f && "Is ImFontConfig struct correctly initialized?");
+    IM_ASSERT((font_cfg_in->FontData != NULL && font_cfg_in->FontDataSize > 0) || (font_cfg_in->FontLoader != NULL));
+    IM_ASSERT(font_cfg_in->SizePixels > 0.0f && "Is ImFontConfig struct correctly initialized?");
+    IM_ASSERT(font_cfg_in->RasterizerDensity > 0.0f && "Is ImFontConfig struct correctly initialized?");
 
     // Lazily create builder on the first call to AddFont
     if (Builder == NULL)
@@ -2996,12 +2996,12 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
 
     // Create new font
     ImFont* font;
-    if (!font_cfg->MergeMode)
+    if (!font_cfg_in->MergeMode)
     {
         font = IM_NEW(ImFont)();
         font->FontId = FontNextUniqueID++;
-        font->Flags = font_cfg->Flags;
-        font->DefaultSize = font_cfg->SizePixels;
+        font->Flags = font_cfg_in->Flags;
+        font->DefaultSize = font_cfg_in->SizePixels;
         Fonts.push_back(font);
     }
     else
@@ -3010,14 +3010,14 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
         font = Fonts.back();
     }
 
-    Sources.push_back(*font_cfg);
-    ImFontConfig& new_font_cfg = Sources.back();
-    if (new_font_cfg.DstFont == NULL)
-        new_font_cfg.DstFont = font;
-    if (!new_font_cfg.FontDataOwnedByAtlas)
+    Sources.push_back(*font_cfg_in);
+    ImFontConfig* font_cfg = &Sources.back();
+    if (font_cfg->DstFont == NULL)
+        font_cfg->DstFont = font;
+    if (font_cfg->FontDataOwnedByAtlas == false)
     {
-        new_font_cfg.FontDataOwnedByAtlas = true;
-        new_font_cfg.FontData = ImMemdup(font_cfg->FontData, (size_t)new_font_cfg.FontDataSize);
+        font_cfg->FontDataOwnedByAtlas = true;
+        font_cfg->FontData = ImMemdup(font_cfg->FontData, (size_t)font_cfg->FontDataSize);
     }
 
     // Sanity check
@@ -3028,7 +3028,7 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
         for (const ImWchar* p = font_cfg->GlyphExcludeRanges; p[0] != 0; p++, size++) {}
         IM_ASSERT((size & 1) == 0 && "GlyphExcludeRanges[] size must be multiple of two!");
         IM_ASSERT((size <= 64) && "GlyphExcludeRanges[] size must be small!");
-        new_font_cfg.GlyphExcludeRanges = (ImWchar*)ImMemdup(font_cfg->GlyphExcludeRanges, sizeof(font_cfg->GlyphExcludeRanges[0]) * (size + 1));
+        font_cfg->GlyphExcludeRanges = (ImWchar*)ImMemdup(font_cfg->GlyphExcludeRanges, sizeof(font_cfg->GlyphExcludeRanges[0]) * (size + 1));
     }
     if (font_cfg->FontLoader != NULL)
     {
@@ -3038,12 +3038,14 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
     IM_ASSERT(font_cfg->FontLoaderData == NULL);
 
     // Pointers to Sources are otherwise dangling
+    font->SourcesCount++;
     ImFontAtlasBuildUpdatePointers(this);
-    if (!ImFontAtlasBuildAddFont(this, &new_font_cfg))
+    if (!ImFontAtlasBuildAddFont(this, font_cfg))
     {
         // Rollback (this is a fragile/rarely exercised code-path. TestSuite's "misc_atlas_add_invalid_font" aim to test this)
-        ImFontAtlasBuildDestroyFontSourceData(this, &new_font_cfg);
+        ImFontAtlasBuildDestroyFontSourceData(this, font_cfg);
         Sources.pop_back();
+        font->SourcesCount--;
         if (!font_cfg->MergeMode)
         {
             IM_DELETE(font);
@@ -3051,8 +3053,7 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
         }
         return NULL;
     }
-
-    return new_font_cfg.DstFont;
+    return font;
 }
 
 // Default font TTF is compressed with stb_compress then base85 encoded (see misc/fonts/binary_to_compressed_c.cpp for encoder)
@@ -3416,11 +3417,7 @@ void ImFontAtlasBuildUpdatePointers(ImFontAtlas* atlas)
         ImFontConfig* src = &atlas->Sources[src_n];
         ImFont* font = src->DstFont;
         if (!src->MergeMode)
-        {
             font->Sources = src;
-            font->SourcesCount = 0;
-        }
-        font->SourcesCount++;
     }
 }
 
@@ -3739,11 +3736,11 @@ void ImFontAtlasBuildDiscardFontBakedGlyph(ImFontAtlas* atlas, ImFont* font, ImF
     baked->IndexAdvanceX[c] = baked->FallbackAdvanceX;
 }
 
-ImFontBaked* ImFontAtlasBuildAddFontBaked(ImFontAtlas* atlas, ImFont* font, float size, ImGuiID baked_id)
+ImFontBaked* ImFontAtlasBuildAddFontBaked(ImFontAtlas* atlas, ImFont* font, float font_size, ImGuiID baked_id)
 {
-    IMGUI_DEBUG_LOG_FONT("[font] Created baked %.2fpx\n", size);
+    IMGUI_DEBUG_LOG_FONT("[font] Created baked %.2fpx\n", font_size);
     ImFontBaked* baked = atlas->Builder->BakedPool.push_back(ImFontBaked());
-    baked->Size = size;
+    baked->Size = font_size;
     baked->BakedId = baked_id;
     baked->ContainerFont = font;
     baked->LastUsedFrame = atlas->Builder->FrameCount;
@@ -5021,10 +5018,10 @@ ImFontGlyph* ImFontAtlasBakedAddFontGlyph(ImFontAtlas* atlas, ImFontBaked* baked
     IM_ASSERT(baked->Glyphs.Size < 0xFFFE); // IndexLookup[] hold 16-bit values and -1/-2 are reserved.
 
     // Set UV from packed rectangle
-    if (in_glyph->PackId != ImFontAtlasRectId_Invalid)
+    if (glyph.PackId != ImFontAtlasRectId_Invalid)
     {
-        ImTextureRect* r = ImFontAtlasPackGetRect(atlas, in_glyph->PackId);
-        IM_ASSERT(in_glyph->U0 == 0.0f && in_glyph->V0 == 0.0f && in_glyph->U1 == 0.0f && in_glyph->V1 == 0.0f);
+        ImTextureRect* r = ImFontAtlasPackGetRect(atlas, glyph.PackId);
+        IM_ASSERT(glyph.U0 == 0.0f && glyph.V0 == 0.0f && glyph.U1 == 0.0f && glyph.V1 == 0.0f);
         glyph.U0 = (r->x) * atlas->TexUvScale.x;
         glyph.V0 = (r->y) * atlas->TexUvScale.y;
         glyph.U1 = (r->x + r->w) * atlas->TexUvScale.x;
@@ -5196,31 +5193,35 @@ ImFontBaked* ImFont::GetFontBaked(float size)
 
     ImFontAtlas* atlas = ContainerAtlas;
     ImFontAtlasBuilder* builder = atlas->Builder;
+    baked = ImFontAtlasBuildGetFontBaked(atlas, this, size);
+    if (baked == NULL)
+        return NULL;
+    baked->LastUsedFrame = builder->FrameCount;
+    LastBaked = baked;
+    return baked;
+}
 
-    // FIXME-NEWATLAS: Design for picking a nearest size based on some criterias?
+ImFontBaked* ImFontAtlasBuildGetFontBaked(ImFontAtlas* atlas, ImFont* font, float font_size)
+{
+    // FIXME-NEWATLAS: Design for picking a nearest size based on some criteria?
     // FIXME-NEWATLAS: Altering font density won't work right away.
-    ImGuiID baked_id = ImFontAtlasBakedGetId(FontId, size);
+    ImGuiID baked_id = ImFontAtlasBakedGetId(font->FontId, font_size);
+    ImFontAtlasBuilder* builder = atlas->Builder;
     ImFontBaked** p_baked_in_map = (ImFontBaked**)builder->BakedMap.GetVoidPtrRef(baked_id);
-    baked = *p_baked_in_map;
+    ImFontBaked* baked = *p_baked_in_map;
     if (baked != NULL)
     {
-        IM_ASSERT(baked->Size == size && baked->ContainerFont == this && baked->BakedId == baked_id);
-        baked->LastUsedFrame = builder->FrameCount;
-        LastBaked = baked;
+        IM_ASSERT(baked->Size == font_size && baked->ContainerFont == font && baked->BakedId == baked_id);
         return baked;
     }
 
     // If atlas is locked, find closest match
     // FIXME-OPT: This is not an optimal query.
-    if ((Flags & ImFontFlags_LockBakedSizes) || atlas->Locked)
+    if ((font->Flags & ImFontFlags_LockBakedSizes) || atlas->Locked)
     {
-        baked = ImFontAtlasBuildGetClosestFontBakedMatch(atlas, this, size);
+        baked = ImFontAtlasBuildGetClosestFontBakedMatch(atlas, font, font_size);
         if (baked != NULL)
-        {
-            baked->LastUsedFrame = builder->FrameCount;
-            LastBaked = baked;
             return baked;
-        }
         if (atlas->Locked)
         {
             IM_ASSERT(!atlas->Locked && "Cannot use dynamic font size with a locked ImFontAtlas!"); // Locked because rendering backend does not support ImGuiBackendFlags_RendererHasTextures!
@@ -5229,10 +5230,8 @@ ImFontBaked* ImFont::GetFontBaked(float size)
     }
 
     // Create new
-    baked = ImFontAtlasBuildAddFontBaked(atlas, this, size, baked_id);
-    LastBaked = baked;
+    baked = ImFontAtlasBuildAddFontBaked(atlas, font, font_size, baked_id);
     *p_baked_in_map = baked; // To avoid 'builder->BakedMap.SetVoidPtr(baked_id, baked);' while we can.
-
     return baked;
 }
 
