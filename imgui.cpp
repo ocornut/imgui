@@ -8520,7 +8520,11 @@ void ImGui::UpdateCurrentFontSize()
     ImGuiContext& g = *GImGui;
     float final_size = g.FontSizeBeforeScaling * g.IO.FontGlobalScale;
     if (ImGuiWindow* window = g.CurrentWindow)
+    {
+        if (window->SkipItems)
+            return;
         final_size *= window->FontWindowScale * window->FontDpiScale;
+    }
 
     // Round font size
     // - We started rounding in 1.90 WIP (18991) as our layout system currently doesn't support non-rounded font size well yet.
