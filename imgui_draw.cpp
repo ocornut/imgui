@@ -3558,6 +3558,7 @@ static void ImFontAtlasBuildUpdateLinesTexData(ImFontAtlas* atlas)
 
 //-----------------------------------------------------------------------------------------------------------------------------
 
+// Was tempted to lazily init FontSrc but wouldn't save much + makes it more complicated to detect invalid data at AddFont()
 bool ImFontAtlasBuildInitFontOutput(ImFontAtlas* atlas, ImFont* font)
 {
     bool ret = true;
@@ -4163,15 +4164,9 @@ void ImFontAtlasBuildInit(ImFontAtlas* atlas)
     if (atlas->TexData == NULL || atlas->TexData->Pixels == NULL)
         ImFontAtlasBuildAddTexture(atlas, ImUpperPowerOfTwo(atlas->TexMinWidth), ImUpperPowerOfTwo(atlas->TexMinHeight));
 
-    ImFontAtlasBuilder* builder = atlas->Builder; // Do not move above
-    const bool builder_is_new = (builder == NULL);
-    if (builder_is_new)
-    {
-        IM_ASSERT(atlas->Builder == NULL);
-        builder = atlas->Builder = IM_NEW(ImFontAtlasBuilder)();
-        if (atlas->FontLoader->LoaderInit)
-            atlas->FontLoader->LoaderInit(atlas);
-    }
+    atlas->Builder = IM_NEW(ImFontAtlasBuilder)();
+    if (atlas->FontLoader->LoaderInit)
+        atlas->FontLoader->LoaderInit(atlas);
 
     ImFontAtlasBuildUpdateRendererHasTexturesFromContext(atlas);
 
@@ -4182,12 +4177,9 @@ void ImFontAtlasBuildInit(ImFontAtlas* atlas)
     ImFontAtlasBuildUpdateBasicTexData(atlas);
 
     // Register fonts
-    if (builder_is_new)
-    {
-        ImFontAtlasBuildUpdatePointers(atlas);
-        for (ImFontConfig& cfg : atlas->Sources)
-            ImFontAtlasBuildAddFont(atlas, &cfg);
-    }
+    ImFontAtlasBuildUpdatePointers(atlas);
+    for (ImFontConfig& cfg : atlas->Sources)
+        ImFontAtlasBuildAddFont(atlas, &cfg);
 
     // Update UV coordinates etc. stored in bound ImDrawListSharedData instance
     ImFontAtlasUpdateDrawListsSharedData(atlas);
