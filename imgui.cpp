@@ -8625,9 +8625,13 @@ void ImGui::SetCurrentFont(ImFont* font, float font_size)
 void ImGui::UpdateCurrentFontSize()
 {
     ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    if (window != NULL && window->SkipItems)
+        return;
+
     float final_size = g.FontSizeBeforeScaling * g.IO.FontGlobalScale;
     final_size *= g.Font->Scale;
-    if (ImGuiWindow* window = g.CurrentWindow)
+    if (window != NULL)
         final_size *= window->FontWindowScale;
 
     // Round font size

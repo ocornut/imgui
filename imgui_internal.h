@@ -2144,7 +2144,6 @@ struct ImGuiContext
     float                   FontScale;                          // == FontBaked->Size / Font->FontSize. Scale factor over baked size.
     float                   CurrentDpiScale;                    // Current window/viewport DpiScale == CurrentViewport->DpiScale
     ImDrawListSharedData    DrawListSharedData;
-    ImVector<ImTextureData*>Textures;
     double                  Time;
     int                     FrameCount;
     int                     FrameCountEnded;
