@@ -4336,10 +4336,9 @@ ImTextureRect* ImFontAtlasPackGetRect(ImFontAtlas* atlas, ImFontAtlasRectId id)
 {
     IM_ASSERT(id != ImFontAtlasRectId_Invalid);
     int index_idx = ImFontAtlasRectId_GetIndex(id);
-    int generation = ImFontAtlasRectId_GetGeneration(id);
     ImFontAtlasBuilder* builder = (ImFontAtlasBuilder*)atlas->Builder;
     ImFontAtlasRectEntry* index_entry = &builder->RectsIndex[index_idx];
-    IM_ASSERT(index_entry->Generation == generation);
+    IM_ASSERT(index_entry->Generation == ImFontAtlasRectId_GetGeneration(id));
     IM_ASSERT(index_entry->IsUsed);
     return &builder->Rects[index_entry->TargetIndex];
 }
@@ -4351,12 +4350,11 @@ ImTextureRect* ImFontAtlasPackGetRectSafe(ImFontAtlas* atlas, ImFontAtlasRectId 
     if (id == ImFontAtlasRectId_Invalid)
         return NULL;
     int index_idx = ImFontAtlasRectId_GetIndex(id);
-    int generation = ImFontAtlasRectId_GetGeneration(id);
     ImFontAtlasBuilder* builder = (ImFontAtlasBuilder*)atlas->Builder;
     if (index_idx >= builder->RectsIndex.Size)
         return NULL;
     ImFontAtlasRectEntry* index_entry = &builder->RectsIndex[index_idx];
-    if (index_entry->Generation != generation || !index_entry->IsUsed)
+    if (index_entry->Generation != ImFontAtlasRectId_GetGeneration(id) || !index_entry->IsUsed)
         return NULL;
     return &builder->Rects[index_entry->TargetIndex];
 }
