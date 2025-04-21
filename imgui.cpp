@@ -16700,58 +16700,64 @@ void ImGui::DebugNodeFont(ImFont* font)
                     src_n, src->Name, src->OversampleH, oversample_h, src->OversampleV, oversample_v, src->PixelSnapH, src->GlyphOffset.x, src->GlyphOffset.y);
             }
 
-            ImDrawList* draw_list = GetWindowDrawList();
-            const ImU32 glyph_col = GetColorU32(ImGuiCol_Text);
-            const float cell_size = baked->Size * 1;
-            const float cell_spacing = GetStyle().ItemSpacing.y;
-            for (unsigned int base = 0; base <= IM_UNICODE_CODEPOINT_MAX; base += 256)
-            {
-                // Skip ahead if a large bunch of glyphs are not present in the font (test in chunks of 4k)
-                // This is only a small optimization to reduce the number of iterations when IM_UNICODE_MAX_CODEPOINT
-                // is large // (if ImWchar==ImWchar32 we will do at least about 272 queries here)
-                if (!(base & 8191) && font->IsGlyphRangeUnused(base, base + 8191))
-                {
-                    base += 8192 - 256;
-                    continue;
-                }
-
-                int count = 0;
-                for (unsigned int n = 0; n < 256; n++)
-                    if (baked->IsGlyphLoaded((ImWchar)(base + n)))
-                        count++;
-                if (count <= 0)
-                    continue;
-                if (!TreeNode((void*)(intptr_t)base, "U+%04X..U+%04X (%d %s)", base, base + 255, count, count > 1 ? "glyphs" : "glyph"))
-                    continue;
-
-                // Draw a 16x16 grid of glyphs
-                ImVec2 base_pos = GetCursorScreenPos();
-                for (unsigned int n = 0; n < 256; n++)
-                {
-                    // We use ImFont::RenderChar as a shortcut because we don't have UTF-8 conversion functions
-                    // available here and thus cannot easily generate a zero-terminated UTF-8 encoded string.
-                    ImVec2 cell_p1(base_pos.x + (n % 16) * (cell_size + cell_spacing), base_pos.y + (n / 16) * (cell_size + cell_spacing));
-                    ImVec2 cell_p2(cell_p1.x + cell_size, cell_p1.y + cell_size);
-                    const ImFontGlyph* glyph = baked->IsGlyphLoaded((ImWchar)(base + n)) ? baked->FindGlyph((ImWchar)(base + n)) : NULL;
-                    draw_list->AddRect(cell_p1, cell_p2, glyph ? IM_COL32(255, 255, 255, 100) : IM_COL32(255, 255, 255, 50));
-                    if (!glyph)
-                        continue;
-                    font->RenderChar(draw_list, cell_size, cell_p1, glyph_col, (ImWchar)(base + n));
-                    if (IsMouseHoveringRect(cell_p1, cell_p2) && BeginTooltip())
-                    {
-                        DebugNodeFontGlyph(font, glyph);
-                        EndTooltip();
-                    }
-                }
-                Dummy(ImVec2((cell_size + cell_spacing) * 16, (cell_size + cell_spacing) * 16));
-                TreePop();
-            }
+            DebugNodeFontGlyphesForSrcMask(font, baked, ~0);
             TreePop();
         }
         PopID();
     }
     TreePop();
     Unindent();
+}
+
+void ImGui::DebugNodeFontGlyphesForSrcMask(ImFont* font, ImFontBaked* baked, int src_mask)
+{
+    ImDrawList* draw_list = GetWindowDrawList();
+    const ImU32 glyph_col = GetColorU32(ImGuiCol_Text);
+    const float cell_size = baked->Size * 1;
+    const float cell_spacing = GetStyle().ItemSpacing.y;
+    for (unsigned int base = 0; base <= IM_UNICODE_CODEPOINT_MAX; base += 256)
+    {
+        // Skip ahead if a large bunch of glyphs are not present in the font (test in chunks of 4k)
+        // This is only a small optimization to reduce the number of iterations when IM_UNICODE_MAX_CODEPOINT
+        // is large // (if ImWchar==ImWchar32 we will do at least about 272 queries here)
+        if (!(base & 8191) && font->IsGlyphRangeUnused(base, base + 8191))
+        {
+            base += 8192 - 256;
+            continue;
+        }
+
+        int count = 0;
+        for (unsigned int n = 0; n < 256; n++)
+            if (const ImFontGlyph* glyph = baked->IsGlyphLoaded((ImWchar)(base + n)) ? baked->FindGlyph((ImWchar)(base + n)) : NULL)
+                if (src_mask & (1 << glyph->SourceIdx))
+                    count++;
+        if (count <= 0)
+            continue;
+        if (!TreeNode((void*)(intptr_t)base, "U+%04X..U+%04X (%d %s)", base, base + 255, count, count > 1 ? "glyphs" : "glyph"))
+            continue;
+
+        // Draw a 16x16 grid of glyphs
+        ImVec2 base_pos = GetCursorScreenPos();
+        for (unsigned int n = 0; n < 256; n++)
+        {
+            // We use ImFont::RenderChar as a shortcut because we don't have UTF-8 conversion functions
+            // available here and thus cannot easily generate a zero-terminated UTF-8 encoded string.
+            ImVec2 cell_p1(base_pos.x + (n % 16) * (cell_size + cell_spacing), base_pos.y + (n / 16) * (cell_size + cell_spacing));
+            ImVec2 cell_p2(cell_p1.x + cell_size, cell_p1.y + cell_size);
+            const ImFontGlyph* glyph = baked->IsGlyphLoaded((ImWchar)(base + n)) ? baked->FindGlyph((ImWchar)(base + n)) : NULL;
+            draw_list->AddRect(cell_p1, cell_p2, glyph ? IM_COL32(255, 255, 255, 100) : IM_COL32(255, 255, 255, 50));
+            if (!glyph || (src_mask & (1 << glyph->SourceIdx)) == 0)
+                continue;
+            font->RenderChar(draw_list, cell_size, cell_p1, glyph_col, (ImWchar)(base + n));
+            if (IsMouseHoveringRect(cell_p1, cell_p2) && BeginTooltip())
+            {
+                DebugNodeFontGlyph(font, glyph);
+                EndTooltip();
+            }
+        }
+        Dummy(ImVec2((cell_size + cell_spacing) * 16, (cell_size + cell_spacing) * 16));
+        TreePop();
+    }
 }
 
 void ImGui::DebugNodeFontGlyph(ImFont* font, const ImFontGlyph* glyph)
@@ -16767,6 +16773,7 @@ void ImGui::DebugNodeFontGlyph(ImFont* font, const ImFontGlyph* glyph)
         ImTextureRect* r = ImFontAtlasPackGetRect(font->ContainerAtlas, glyph->PackId);
         Text("PackId: %d (%dx%d rect at %d,%d)", glyph->PackId, r->w, r->h, r->x, r->y);
     }
+    Text("SourceIdx: %d", glyph->SourceIdx);
 }
 
 // [DEBUG] Display contents of ImGuiStorage
@@ -17429,6 +17436,7 @@ void ImGui::DebugNodeColumns(ImGuiOldColumns*) {}
 void ImGui::DebugNodeDrawList(ImGuiWindow*, ImGuiViewportP*, const ImDrawList*, const char*) {}
 void ImGui::DebugNodeDrawCmdShowMeshAndBoundingBox(ImDrawList*, const ImDrawList*, const ImDrawCmd*, bool, bool) {}
 void ImGui::DebugNodeFont(ImFont*) {}
+void ImGui::DebugNodeFontGlyphesForSrcMask(ImFont*, ImFontBaked*, int) {}
 void ImGui::DebugNodeStorage(ImGuiStorage*, const char*) {}
 void ImGui::DebugNodeTabBar(ImGuiTabBar*, const char*) {}
 void ImGui::DebugNodeWindow(ImGuiWindow*, const char*) {}

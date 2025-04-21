@@ -4390,7 +4390,11 @@ static ImFontGlyph* ImFontBaked_BuildLoadGlyph(ImFontBaked* baked, ImWchar codep
         const ImFontLoader* loader = src->FontLoader ? src->FontLoader : atlas->FontLoader;
         if (!src->GlyphExcludeRanges || ImFontAtlasBuildAcceptCodepointForSource(src, codepoint))
             if (ImFontGlyph* glyph = loader->FontBakedLoadGlyph(atlas, src, baked, loader_user_data_p, codepoint))
-                return glyph; // FIXME: Add hooks for e.g. #7962
+            {
+                // FIXME: Add hooks for e.g. #7962
+                glyph->SourceIdx = src_n;
+                return glyph;
+            }
         loader_user_data_p += loader->FontBakedSrcLoaderDataSize;
     }
 
