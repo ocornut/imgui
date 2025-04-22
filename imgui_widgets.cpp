@@ -5345,11 +5345,12 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             // As per #6341, make sure we don't set that on the deactivating frame.
             if (!is_readonly && g.ActiveId == id)
             {
-                g.PlatformImeData.WantVisible = true;
-                g.PlatformImeData.WantTextInput = true;
-                g.PlatformImeData.InputPos = ImVec2(cursor_screen_pos.x - 1.0f, cursor_screen_pos.y - g.FontSize);
-                g.PlatformImeData.InputLineHeight = g.FontSize;
-                g.PlatformImeData.ViewportId = window->Viewport->ID;
+                ImGuiPlatformImeData* ime_data = &g.PlatformImeData; // (this is a public struct, passed to io.Platform_SetImeDataFn() handler)
+                ime_data->WantVisible = true;
+                ime_data->WantTextInput = true;
+                ime_data->InputPos = ImVec2(cursor_screen_pos.x - 1.0f, cursor_screen_pos.y - g.FontSize);
+                ime_data->InputLineHeight = g.FontSize;
+                ime_data->ViewportId = window->Viewport->ID;
             }
         }
     }
