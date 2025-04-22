@@ -3592,7 +3592,7 @@ struct ImFontConfig
 };
 
 // Hold rendering data for one glyph.
-// (Note: some language parsers may fail to convert the 31+1 bitfield members, in this case maybe drop store a single u32 or we can rework this)
+// (Note: some language parsers may fail to convert the bitfield members, in this case maybe drop store a single u32 or we can rework this)
 struct ImFontGlyph
 {
     unsigned int    Colored : 1;        // Flag to indicate glyph is colored and should generally ignore tinting (make it usable with no shift on little-endian as this is used in loops)
