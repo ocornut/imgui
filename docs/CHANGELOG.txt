@@ -91,6 +91,10 @@ Other changes:
   would use a +1 offset instead of advancing to the next UTF-8 codepoint. (#8540)
 - Style, InputText: added ImGuiCol_InputTextCursor to configure color of
   the InputText cursor/caret. (#7031)
+- Platform IME: added ImGuiPlatformImeData::ViewportId info (backported from Docking branch).
+- Platform IME: added ImGuiPlatformImeData::WantTextInput which might set independently
+  of WantVisible. This is set in the same structure because activating text input generally
+  requires providing a window to the backend. (#8584, #6341)
 - Misc: added extra operators to ImVec4 in IMGUI_DEFINE_MATH_OPERATORS block. (#8510) [@gan74]
 - Backends: SDL2, SDL3, OSX: Fill gamepad inputs and set ImGuiBackendFlags_HasGamepad
   regardless of ImGuiConfigFlags_NavEnableGamepad being set. (#8508)
@@ -99,6 +103,8 @@ Other changes:
   the same white-list as SDL_GetGlobalMouseState(). (#8561) [@vs49688]
 - Backends: SDL3: Update for SDL3 api changes: revert SDL_GetClipboardText()
   memory ownership change. (#8530, #7801) [@Green-Sky]
+- Backends: SDL3: honor ImGuiPlatformImeData->WantTextInput as an alternative
+  way to call SDL_StartTextInput(), without IME being necessarily visible. (#8584)
 - Backends: SDLGPU3: Made ImGui_ImplSDLGPU3_PrepareDrawData() reuse GPU Transfer Buffers which
   were unusually slow to recreate every frame. Much faster now. (#8534) [@ocornut, @TheMode]
 - Backends: Vulkan: Deep-copy ImGui_ImplVulkan_InitInfo::PipelineRenderingCreateInfo's
