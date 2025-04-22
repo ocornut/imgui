@@ -21321,10 +21321,10 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
             if (ImGuiFreeType::DebugEditFontBuilderFlags(&loader_flags))
             {
                 for (ImFont* font : atlas->Fonts)
-                    ImFontAtlasBuildDestroyFontOutput(atlas, font);
+                    ImFontAtlasFontDestroyOutput(atlas, font);
                 atlas->FontBuilderFlags = loader_flags;
                 for (ImFont* font : atlas->Fonts)
-                    ImFontAtlasBuildInitFontOutput(atlas, font);
+                    ImFontAtlasFontInitOutput(atlas, font);
             }
         }
 #else
@@ -21350,7 +21350,7 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
         atlas->CompactCache();
     SameLine();
     if (Button("Grow"))
-        ImFontAtlasBuildGrowTexture(atlas);
+        ImFontAtlasTextureGrow(atlas);
     SameLine();
     if (Button("Clear All"))
         ImFontAtlasBuildClear(atlas);
@@ -22463,9 +22463,9 @@ void ImGui::DebugNodeFont(ImFont* font)
                     Text("FreeType Loader Flags: 0x%08X", loader_flags);
                     if (ImGuiFreeType::DebugEditFontBuilderFlags(&loader_flags))
                     {
-                        ImFontAtlasBuildDestroyFontOutput(atlas, font);
+                        ImFontAtlasFontDestroyOutput(atlas, font);
                         src->FontBuilderFlags = loader_flags;
-                        ImFontAtlasBuildInitFontOutput(atlas, font);
+                        ImFontAtlasFontInitOutput(atlas, font);
                     }
                 }
 #endif

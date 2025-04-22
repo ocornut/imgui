@@ -4073,32 +4073,32 @@ IMGUI_API void              ImFontAtlasBuildUpdatePointers(ImFontAtlas* atlas);
 IMGUI_API void              ImFontAtlasBuildRenderBitmapFromString(ImFontAtlas* atlas, int x, int y, int w, int h, const char* in_str, char in_marker_char);
 IMGUI_API void              ImFontAtlasBuildClear(ImFontAtlas* atlas); // Clear output and custom rects
 
-IMGUI_API ImTextureData*    ImFontAtlasBuildAddTexture(ImFontAtlas* atlas, int w, int h);
-IMGUI_API void              ImFontAtlasBuildMakeSpace(ImFontAtlas* atlas);
-IMGUI_API void              ImFontAtlasBuildRepackTexture(ImFontAtlas* atlas, int w, int h);
-IMGUI_API void              ImFontAtlasBuildGrowTexture(ImFontAtlas* atlas, int old_w = -1, int old_h = -1);
-IMGUI_API void              ImFontAtlasBuildCompactTexture(ImFontAtlas* atlas);
-IMGUI_API ImVec2i           ImFontAtlasBuildGetTextureSizeEstimate(ImFontAtlas* atlas);
+IMGUI_API ImTextureData*    ImFontAtlasTextureAdd(ImFontAtlas* atlas, int w, int h);
+IMGUI_API void              ImFontAtlasTextureMakeSpace(ImFontAtlas* atlas);
+IMGUI_API void              ImFontAtlasTextureRepack(ImFontAtlas* atlas, int w, int h);
+IMGUI_API void              ImFontAtlasTextureGrow(ImFontAtlas* atlas, int old_w = -1, int old_h = -1);
+IMGUI_API void              ImFontAtlasTextureCompact(ImFontAtlas* atlas);
+IMGUI_API ImVec2i           ImFontAtlasTextureGetSizeEstimate(ImFontAtlas* atlas);
 
-IMGUI_API bool              ImFontAtlasBuildAddFont(ImFontAtlas* atlas, ImFontConfig* src);
 IMGUI_API void              ImFontAtlasBuildSetupFontSpecialGlyphs(ImFontAtlas* atlas, ImFont* font, ImFontConfig* src);
 IMGUI_API void              ImFontAtlasBuildPreloadAllGlyphRanges(ImFontAtlas* atlas); // Legacy
 IMGUI_API void              ImFontAtlasBuildGetOversampleFactors(ImFontConfig* src, float size, int* out_oversample_h, int* out_oversample_v);
-IMGUI_API bool              ImFontAtlasBuildInitFontOutput(ImFontAtlas* atlas, ImFont* font); // Using DestroyFontOutput/InitFontOutput sequence useful notably if font loader params have changed
-IMGUI_API void              ImFontAtlasBuildDestroyFontOutput(ImFontAtlas* atlas, ImFont* font);
-IMGUI_API void              ImFontAtlasBuildDestroyFontSourceData(ImFontAtlas* atlas, ImFontConfig* src);
-
-IMGUI_API ImFontBaked*      ImFontAtlasBuildGetFontBaked(ImFontAtlas* atlas, ImFont* font, float font_size);
-IMGUI_API ImFontBaked*      ImFontAtlasBuildAddFontBaked(ImFontAtlas* atlas, ImFont* font, float font_size, ImGuiID baked_id);
-IMGUI_API ImFontBaked*      ImFontAtlasBuildGetClosestFontBakedMatch(ImFontAtlas* atlas, ImFont* font, float font_size);
 IMGUI_API void              ImFontAtlasBuildDiscardBakes(ImFontAtlas* atlas, int unused_frames);
-IMGUI_API void              ImFontAtlasBuildDiscardFontBakes(ImFontAtlas* atlas, ImFont* font);
-IMGUI_API void              ImFontAtlasBuildDiscardFontBaked(ImFontAtlas* atlas, ImFont* font, ImFontBaked* baked);
-IMGUI_API void              ImFontAtlasBuildDiscardFontBakedGlyph(ImFontAtlas* atlas, ImFont* font, ImFontBaked* baked, ImFontGlyph* glyph);
 
-IMGUI_API ImFontGlyph*      ImFontAtlasBakedAddFontGlyph(ImFontAtlas* atlas, ImFontBaked* baked, ImFontConfig* src, const ImFontGlyph* in_glyph);
-IMGUI_API void              ImFontAtlasBakedSetFontGlyphBitmap(ImFontAtlas* atlas, ImFontBaked* baked, ImFontConfig* src, ImFontGlyph* glyph, ImTextureRect* r, const unsigned char* src_pixels, ImTextureFormat src_fmt, int src_pitch);
+IMGUI_API bool              ImFontAtlasFontInitSource(ImFontAtlas* atlas, ImFontConfig* src);
+IMGUI_API void              ImFontAtlasFontDestroySourceData(ImFontAtlas* atlas, ImFontConfig* src);
+IMGUI_API bool              ImFontAtlasFontInitOutput(ImFontAtlas* atlas, ImFont* font); // Using FontDestroyOutput/FontInitOutput sequence useful notably if font loader params have changed
+IMGUI_API void              ImFontAtlasFontDestroyOutput(ImFontAtlas* atlas, ImFont* font);
+IMGUI_API void              ImFontAtlasFontDiscardOutputBakes(ImFontAtlas* atlas, ImFont* font);
+
 IMGUI_API ImGuiID           ImFontAtlasBakedGetId(ImGuiID font_id, float baked_size);
+IMGUI_API ImFontBaked*      ImFontAtlasBakedGetOrAdd(ImFontAtlas* atlas, ImFont* font, float font_size);
+IMGUI_API ImFontBaked*      ImFontAtlasBakedGetClosestMatch(ImFontAtlas* atlas, ImFont* font, float font_size);
+IMGUI_API ImFontBaked*      ImFontAtlasBakedAdd(ImFontAtlas* atlas, ImFont* font, float font_size, ImGuiID baked_id);
+IMGUI_API void              ImFontAtlasBakedDiscard(ImFontAtlas* atlas, ImFont* font, ImFontBaked* baked);
+IMGUI_API ImFontGlyph*      ImFontAtlasBakedAddFontGlyph(ImFontAtlas* atlas, ImFontBaked* baked, ImFontConfig* src, const ImFontGlyph* in_glyph);
+IMGUI_API void              ImFontAtlasBakedDiscardFontGlyph(ImFontAtlas* atlas, ImFont* font, ImFontBaked* baked, ImFontGlyph* glyph);
+IMGUI_API void              ImFontAtlasBakedSetFontGlyphBitmap(ImFontAtlas* atlas, ImFontBaked* baked, ImFontConfig* src, ImFontGlyph* glyph, ImTextureRect* r, const unsigned char* src_pixels, ImTextureFormat src_fmt, int src_pitch);
 
 IMGUI_API void              ImFontAtlasPackInit(ImFontAtlas* atlas);
 IMGUI_API ImFontAtlasRectId ImFontAtlasPackAddRect(ImFontAtlas* atlas, int w, int h, ImFontAtlasRectEntry* overwrite_entry = NULL);

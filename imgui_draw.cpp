@@ -2649,7 +2649,7 @@ void ImFontAtlas::Clear()
 
 void ImFontAtlas::CompactCache()
 {
-    ImFontAtlasBuildCompactTexture(this);
+    ImFontAtlasTextureCompact(this);
 }
 
 void ImFontAtlas::ClearInputData()
@@ -2657,9 +2657,9 @@ void ImFontAtlas::ClearInputData()
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas!");
 
     for (ImFont* font : Fonts)
-        ImFontAtlasBuildDestroyFontOutput(this, font);
+        ImFontAtlasFontDestroyOutput(this, font);
     for (ImFontConfig& font_cfg : Sources)
-        ImFontAtlasBuildDestroyFontSourceData(this, &font_cfg);
+        ImFontAtlasFontDestroySourceData(this, &font_cfg);
     for (ImFont* font : Fonts)
     {
         // When clearing this we lose access to the font name and other information used to build the font.
@@ -2979,17 +2979,6 @@ bool ImFontAtlas::Build()
 }
 #endif // #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 
-void ImFontAtlasBuildDestroyFontSourceData(ImFontAtlas* atlas, ImFontConfig* src)
-{
-    IM_UNUSED(atlas);
-    if (src->FontDataOwnedByAtlas)
-        IM_FREE(src->FontData);
-    src->FontData = NULL;
-    if (src->GlyphExcludeRanges)
-        IM_FREE((void*)src->GlyphExcludeRanges);
-    src->GlyphExcludeRanges = NULL;
-}
-
 ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg_in)
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas!");
@@ -3047,10 +3036,10 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg_in)
     // Pointers to Sources are otherwise dangling
     font->SourcesCount++;
     ImFontAtlasBuildUpdatePointers(this);
-    if (!ImFontAtlasBuildAddFont(this, font_cfg))
+    if (!ImFontAtlasFontInitSource(this, font_cfg))
     {
         // Rollback (this is a fragile/rarely exercised code-path. TestSuite's "misc_atlas_add_invalid_font" aim to test this)
-        ImFontAtlasBuildDestroyFontSourceData(this, font_cfg);
+        ImFontAtlasFontDestroySourceData(this, font_cfg);
         Sources.pop_back();
         font->SourcesCount--;
         if (!font_cfg->MergeMode)
@@ -3202,9 +3191,9 @@ void ImFontAtlas::RemoveFont(ImFont* font)
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas!");
     font->ClearOutputData();
 
-    ImFontAtlasBuildDestroyFontOutput(this, font);
+    ImFontAtlasFontDestroyOutput(this, font);
     for (int src_n = 0; src_n < font->SourcesCount; src_n++)
-        ImFontAtlasBuildDestroyFontSourceData(this, &font->Sources[src_n]);
+        ImFontAtlasFontDestroySourceData(this, &font->Sources[src_n]);
 
     bool removed = Fonts.find_erase(font);
     IM_ASSERT(removed);
@@ -3258,14 +3247,14 @@ void ImFontAtlas::RemoveCustomRect(ImFontAtlasRectId id)
 //     ImFont* myfont = io.Fonts->AddFontFromFileTTF(....);
 //     myfont->GetFontBaked(16.0f);
 //     myfont->Flags |= ImFontFlags_LockBakedSizes;
-int ImFontAtlas::AddCustomRectFontGlyph(ImFont* font, ImWchar codepoint, int width, int height, float advance_x, const ImVec2& offset)
+ImFontAtlasRectId ImFontAtlas::AddCustomRectFontGlyph(ImFont* font, ImWchar codepoint, int width, int height, float advance_x, const ImVec2& offset)
 {
     float font_size = font->DefaultSize;
     return AddCustomRectFontGlyphForSize(font, font_size, codepoint, width, height, advance_x, offset);
 }
 // FIXME: we automatically set glyph.Colored=true by default.
 // If you need to alter this, you can write 'font->Glyphs.back()->Colored' after calling AddCustomRectFontGlyph().
-int ImFontAtlas::AddCustomRectFontGlyphForSize(ImFont* font, float font_size, ImWchar codepoint, int width, int height, float advance_x, const ImVec2& offset)
+ImFontAtlasRectId ImFontAtlas::AddCustomRectFontGlyphForSize(ImFont* font, float font_size, ImWchar codepoint, int width, int height, float advance_x, const ImVec2& offset)
 {
 #ifdef IMGUI_USE_WCHAR32
     IM_ASSERT(codepoint <= IM_UNICODE_CODEPOINT_MAX);
@@ -3284,7 +3273,7 @@ int ImFontAtlas::AddCustomRectFontGlyphForSize(ImFont* font, float font_size, Im
         ImFontAtlasTextureBlockQueueUpload(this, TexData, r->x, r->y, r->w, r->h);
 
     if (baked->IsGlyphLoaded(codepoint))
-        ImFontAtlasBuildDiscardFontBakedGlyph(this, font, baked, baked->FindGlyph(codepoint));
+        ImFontAtlasBakedDiscardFontGlyph(this, font, baked, baked->FindGlyph(codepoint));
 
     ImFontGlyph glyph;
     glyph.Codepoint = codepoint;
@@ -3344,9 +3333,9 @@ void ImFontAtlasBuildMain(ImFontAtlas* atlas)
     IM_ASSERT(!atlas->Locked && "Cannot modify a locked ImFontAtlas!");
     if (atlas->TexData && atlas->TexData->Format != atlas->TexDesiredFormat)
     {
-        ImVec2i new_tex_size = ImFontAtlasBuildGetTextureSizeEstimate(atlas);
+        ImVec2i new_tex_size = ImFontAtlasTextureGetSizeEstimate(atlas);
         ImFontAtlasBuildDestroy(atlas);
-        ImFontAtlasBuildAddTexture(atlas, new_tex_size.x, new_tex_size.y);
+        ImFontAtlasTextureAdd(atlas, new_tex_size.x, new_tex_size.y);
     }
 
     if (atlas->Builder == NULL)
@@ -3379,7 +3368,7 @@ void ImFontAtlasBuildSetupFontLoader(ImFontAtlas* atlas, const ImFontLoader* fon
     IM_ASSERT(!atlas->Locked && "Cannot modify a locked ImFontAtlas!");
 
     for (ImFont* font : atlas->Fonts)
-        ImFontAtlasBuildDestroyFontOutput(atlas, font);
+        ImFontAtlasFontDestroyOutput(atlas, font);
     if (atlas->Builder && atlas->FontLoader && atlas->FontLoader->LoaderShutdown)
         atlas->FontLoader->LoaderShutdown(atlas);
 
@@ -3390,7 +3379,7 @@ void ImFontAtlasBuildSetupFontLoader(ImFontAtlas* atlas, const ImFontLoader* fon
     if (atlas->Builder && atlas->FontLoader && atlas->FontLoader->LoaderInit)
         atlas->FontLoader->LoaderInit(atlas);
     for (ImFont* font : atlas->Fonts)
-        ImFontAtlasBuildInitFontOutput(atlas, font);
+        ImFontAtlasFontInitOutput(atlas, font);
 }
 
 // Preload all glyph ranges for legacy backends.
@@ -3557,7 +3546,7 @@ static void ImFontAtlasBuildUpdateLinesTexData(ImFontAtlas* atlas)
 //-----------------------------------------------------------------------------------------------------------------------------
 
 // Was tempted to lazily init FontSrc but wouldn't save much + makes it more complicated to detect invalid data at AddFont()
-bool ImFontAtlasBuildInitFontOutput(ImFontAtlas* atlas, ImFont* font)
+bool ImFontAtlasFontInitOutput(ImFontAtlas* atlas, ImFont* font)
 {
     bool ret = true;
     for (int src_n = 0; src_n < font->SourcesCount; src_n++)
@@ -3572,7 +3561,7 @@ bool ImFontAtlasBuildInitFontOutput(ImFontAtlas* atlas, ImFont* font)
 }
 
 // Keep source/input FontData
-void ImFontAtlasBuildDestroyFontOutput(ImFontAtlas* atlas, ImFont* font)
+void ImFontAtlasFontDestroyOutput(ImFontAtlas* atlas, ImFont* font)
 {
     font->ClearOutputData();
     for (int src_n = 0; src_n < font->SourcesCount; src_n++)
@@ -3586,7 +3575,7 @@ void ImFontAtlasBuildDestroyFontOutput(ImFontAtlas* atlas, ImFont* font)
 
 //-----------------------------------------------------------------------------------------------------------------------------
 
-bool ImFontAtlasBuildAddFont(ImFontAtlas* atlas, ImFontConfig* src)
+bool ImFontAtlasFontInitSource(ImFontAtlas* atlas, ImFontConfig* src)
 {
     ImFont* font = src->DstFont;
     if (src->MergeMode == false)
@@ -3604,6 +3593,17 @@ bool ImFontAtlasBuildAddFont(ImFontAtlas* atlas, ImFontConfig* src)
     atlas->TexIsBuilt = false; // For legacy backends
     ImFontAtlasBuildSetupFontSpecialGlyphs(atlas, font, src);
     return true;
+}
+
+void ImFontAtlasFontDestroySourceData(ImFontAtlas* atlas, ImFontConfig* src)
+{
+    IM_UNUSED(atlas);
+    if (src->FontDataOwnedByAtlas)
+        IM_FREE(src->FontData);
+    src->FontData = NULL;
+    if (src->GlyphExcludeRanges)
+        IM_FREE((void*)src->GlyphExcludeRanges);
+    src->GlyphExcludeRanges = NULL;
 }
 
 // Create a compact, baked "..." if it doesn't exist, by using the ".".
@@ -3728,7 +3728,7 @@ void ImFontAtlasBuildSetupFontSpecialGlyphs(ImFontAtlas* atlas, ImFont* font, Im
     }
 }
 
-void ImFontAtlasBuildDiscardFontBakedGlyph(ImFontAtlas* atlas, ImFont* font, ImFontBaked* baked, ImFontGlyph* glyph)
+void ImFontAtlasBakedDiscardFontGlyph(ImFontAtlas* atlas, ImFont* font, ImFontBaked* baked, ImFontGlyph* glyph)
 {
     if (glyph->PackId != ImFontAtlasRectId_Invalid)
     {
@@ -3743,7 +3743,7 @@ void ImFontAtlasBuildDiscardFontBakedGlyph(ImFontAtlas* atlas, ImFont* font, ImF
     baked->IndexAdvanceX[c] = baked->FallbackAdvanceX;
 }
 
-ImFontBaked* ImFontAtlasBuildAddFontBaked(ImFontAtlas* atlas, ImFont* font, float font_size, ImGuiID baked_id)
+ImFontBaked* ImFontAtlasBakedAdd(ImFontAtlas* atlas, ImFont* font, float font_size, ImGuiID baked_id)
 {
     IMGUI_DEBUG_LOG_FONT("[font] Created baked %.2fpx\n", font_size);
     ImFontBaked* baked = atlas->Builder->BakedPool.push_back(ImFontBaked());
@@ -3776,7 +3776,7 @@ ImFontBaked* ImFontAtlasBuildAddFontBaked(ImFontAtlas* atlas, ImFont* font, floa
 }
 
 // FIXME-OPT: This is not a fast query. Adding a BakedCount field in Font might allow to take a shortcut for the most common case.
-ImFontBaked* ImFontAtlasBuildGetClosestFontBakedMatch(ImFontAtlas* atlas, ImFont* font, float font_size)
+ImFontBaked* ImFontAtlasBakedGetClosestMatch(ImFontAtlas* atlas, ImFont* font, float font_size)
 {
     ImFontAtlasBuilder* builder = atlas->Builder;
     ImFontBaked* closest_larger_match = NULL;
@@ -3799,7 +3799,7 @@ ImFontBaked* ImFontAtlasBuildGetClosestFontBakedMatch(ImFontAtlas* atlas, ImFont
     return NULL;
 }
 
-void ImFontAtlasBuildDiscardFontBaked(ImFontAtlas* atlas, ImFont* font, ImFontBaked* baked)
+void ImFontAtlasBakedDiscard(ImFontAtlas* atlas, ImFont* font, ImFontBaked* baked)
 {
     ImFontAtlasBuilder* builder = atlas->Builder;
     IMGUI_DEBUG_LOG_FONT("[font] Discard baked %.2f for \"%s\"\n", baked->Size, font->GetDebugName());
@@ -3829,14 +3829,14 @@ void ImFontAtlasBuildDiscardFontBaked(ImFontAtlas* atlas, ImFont* font, ImFontBa
     font->LastBaked = NULL;
 }
 
-void ImFontAtlasBuildDiscardFontBakes(ImFontAtlas* atlas, ImFont* font)
+void ImFontAtlasFontDiscardOutputBakes(ImFontAtlas* atlas, ImFont* font)
 {
     if (ImFontAtlasBuilder* builder = atlas->Builder) // This can be called from font destructor
         for (int baked_n = 0; baked_n < builder->BakedPool.Size; baked_n++)
         {
             ImFontBaked* baked = &builder->BakedPool[baked_n];
             if (baked->ContainerFont == font && !baked->WantDestroy)
-                ImFontAtlasBuildDiscardFontBaked(atlas, font, baked);
+                ImFontAtlasBakedDiscard(atlas, font, baked);
         }
 }
 
@@ -3851,7 +3851,7 @@ void ImFontAtlasBuildDiscardBakes(ImFontAtlas* atlas, int unused_frames)
             continue;
         if (baked->WantDestroy || (baked->ContainerFont->Flags & ImFontFlags_LockBakedSizes))
             continue;
-        ImFontAtlasBuildDiscardFontBaked(atlas, baked->ContainerFont, baked);
+        ImFontAtlasBakedDiscard(atlas, baked->ContainerFont, baked);
     }
 }
 
@@ -3912,7 +3912,7 @@ static void ImFontAtlasBuildSetTexture(ImFontAtlas* atlas, ImTextureData* tex)
 }
 
 // Create a new texture, discard previous one
-ImTextureData* ImFontAtlasBuildAddTexture(ImFontAtlas* atlas, int w, int h)
+ImTextureData* ImFontAtlasTextureAdd(ImFontAtlas* atlas, int w, int h)
 {
     ImTextureData* old_tex = atlas->TexData;
     ImTextureData* new_tex;
@@ -3962,13 +3962,13 @@ static void ImFontAtlasDebugWriteTexToDisk(ImTextureData* tex, const char* descr
 }
 #endif
 
-void ImFontAtlasBuildRepackTexture(ImFontAtlas* atlas, int w, int h)
+void ImFontAtlasTextureRepack(ImFontAtlas* atlas, int w, int h)
 {
     ImFontAtlasBuilder* builder = atlas->Builder;
     builder->LockDisableResize = true;
 
     ImTextureData* old_tex = atlas->TexData;
-    ImTextureData* new_tex = ImFontAtlasBuildAddTexture(atlas, w, h);
+    ImTextureData* new_tex = ImFontAtlasTextureAdd(atlas, w, h);
     new_tex->UseColors = old_tex->UseColors;
     IMGUI_DEBUG_LOG_FONT("[font] Texture #%03d: resize+repack %dx%d => Texture #%03d: %dx%d\n", old_tex->UniqueID, old_tex->Width, old_tex->Height, new_tex->UniqueID, new_tex->Width, new_tex->Height);
     //for (int baked_n = 0; baked_n < builder->BakedPool.Size; baked_n++)
@@ -4002,7 +4002,7 @@ void ImFontAtlasBuildRepackTexture(ImFontAtlas* atlas, int w, int h)
             builder->Rects.swap(old_rects);
             builder->RectsIndex = old_index;
             ImFontAtlasBuildSetTexture(atlas, old_tex);
-            ImFontAtlasBuildGrowTexture(atlas, w, h); // Recurse
+            ImFontAtlasTextureGrow(atlas, w, h); // Recurse
             return;
         }
         IM_ASSERT(ImFontAtlasRectId_GetIndex(new_r_id) == builder->RectsIndex.index_from_ptr(&index_entry));
@@ -4034,7 +4034,7 @@ void ImFontAtlasBuildRepackTexture(ImFontAtlas* atlas, int w, int h)
     //ImFontAtlasDebugWriteTexToDisk(new_tex, "After Pack");
 }
 
-void ImFontAtlasBuildGrowTexture(ImFontAtlas* atlas, int old_tex_w, int old_tex_h)
+void ImFontAtlasTextureGrow(ImFontAtlas* atlas, int old_tex_w, int old_tex_h)
 {
     //ImFontAtlasDebugWriteTexToDisk(atlas->TexData, "Before Grow");
     ImFontAtlasBuilder* builder = atlas->Builder;
@@ -4063,10 +4063,10 @@ void ImFontAtlasBuildGrowTexture(ImFontAtlas* atlas, int old_tex_w, int old_tex_
     if (new_tex_w == old_tex_w && new_tex_h == old_tex_h)
         return;
 
-    ImFontAtlasBuildRepackTexture(atlas, new_tex_w, new_tex_h);
+    ImFontAtlasTextureRepack(atlas, new_tex_w, new_tex_h);
 }
 
-void ImFontAtlasBuildMakeSpace(ImFontAtlas* atlas)
+void ImFontAtlasTextureMakeSpace(ImFontAtlas* atlas)
 {
     // Can some baked contents be ditched?
     //IMGUI_DEBUG_LOG_FONT("[font] ImFontAtlasBuildMakeSpace()\n");
@@ -4075,12 +4075,12 @@ void ImFontAtlasBuildMakeSpace(ImFontAtlas* atlas)
 
     // Currently using a heuristic for repack without growing.
     if (builder->RectsDiscardedSurface < builder->RectsPackedSurface * 0.20f)
-        ImFontAtlasBuildGrowTexture(atlas);
+        ImFontAtlasTextureGrow(atlas);
     else
-        ImFontAtlasBuildRepackTexture(atlas, atlas->TexData->Width, atlas->TexData->Height);
+        ImFontAtlasTextureRepack(atlas, atlas->TexData->Width, atlas->TexData->Height);
 }
 
-ImVec2i ImFontAtlasBuildGetTextureSizeEstimate(ImFontAtlas* atlas)
+ImVec2i ImFontAtlasTextureGetSizeEstimate(ImFontAtlas* atlas)
 {
     int min_w = ImUpperPowerOfTwo(atlas->TexMinWidth);
     int min_h = ImUpperPowerOfTwo(atlas->TexMinHeight);
@@ -4117,26 +4117,26 @@ ImVec2i ImFontAtlasBuildGetTextureSizeEstimate(ImFontAtlas* atlas)
 // Clear all output. Invalidates all AddCustomRect() return values!
 void ImFontAtlasBuildClear(ImFontAtlas* atlas)
 {
-    ImVec2i new_tex_size = ImFontAtlasBuildGetTextureSizeEstimate(atlas);
+    ImVec2i new_tex_size = ImFontAtlasTextureGetSizeEstimate(atlas);
     ImFontAtlasBuildDestroy(atlas);
-    ImFontAtlasBuildAddTexture(atlas, new_tex_size.x, new_tex_size.y);
+    ImFontAtlasTextureAdd(atlas, new_tex_size.x, new_tex_size.y);
     ImFontAtlasBuildInit(atlas);
 }
 
 // You should not need to call this manually!
 // If you think you do, let us know and we can advise about policies auto-compact.
-void ImFontAtlasBuildCompactTexture(ImFontAtlas* atlas)
+void ImFontAtlasTextureCompact(ImFontAtlas* atlas)
 {
     ImFontAtlasBuilder* builder = atlas->Builder;
     ImFontAtlasBuildDiscardBakes(atlas, 1);
 
     ImTextureData* old_tex = atlas->TexData;
     ImVec2i old_tex_size = ImVec2i(old_tex->Width, old_tex->Height);
-    ImVec2i new_tex_size = ImFontAtlasBuildGetTextureSizeEstimate(atlas);
+    ImVec2i new_tex_size = ImFontAtlasTextureGetSizeEstimate(atlas);
     if (builder->RectsDiscardedCount == 0 && new_tex_size.x == old_tex_size.x && new_tex_size.y == old_tex_size.y)
         return;
 
-    ImFontAtlasBuildRepackTexture(atlas, new_tex_size.x, new_tex_size.y);
+    ImFontAtlasTextureRepack(atlas, new_tex_size.x, new_tex_size.y);
 }
 
 // Start packing over current empty texture
@@ -4160,7 +4160,7 @@ void ImFontAtlasBuildInit(ImFontAtlas* atlas)
 
     // Create initial texture size
     if (atlas->TexData == NULL || atlas->TexData->Pixels == NULL)
-        ImFontAtlasBuildAddTexture(atlas, ImUpperPowerOfTwo(atlas->TexMinWidth), ImUpperPowerOfTwo(atlas->TexMinHeight));
+        ImFontAtlasTextureAdd(atlas, ImUpperPowerOfTwo(atlas->TexMinWidth), ImUpperPowerOfTwo(atlas->TexMinHeight));
 
     atlas->Builder = IM_NEW(ImFontAtlasBuilder)();
     if (atlas->FontLoader->LoaderInit)
@@ -4177,7 +4177,7 @@ void ImFontAtlasBuildInit(ImFontAtlas* atlas)
     // Register fonts
     ImFontAtlasBuildUpdatePointers(atlas);
     for (ImFontConfig& cfg : atlas->Sources)
-        ImFontAtlasBuildAddFont(atlas, &cfg);
+        ImFontAtlasFontInitSource(atlas, &cfg);
 
     // Update UV coordinates etc. stored in bound ImDrawListSharedData instance
     ImFontAtlasUpdateDrawListsSharedData(atlas);
@@ -4189,7 +4189,7 @@ void ImFontAtlasBuildInit(ImFontAtlas* atlas)
 void ImFontAtlasBuildDestroy(ImFontAtlas* atlas)
 {
     for (ImFont* font : atlas->Fonts)
-        ImFontAtlasBuildDestroyFontOutput(atlas, font);
+        ImFontAtlasFontDestroyOutput(atlas, font);
     if (atlas->Builder && atlas->FontLoader && atlas->FontLoader->LoaderShutdown)
     {
         atlas->FontLoader->LoaderShutdown(atlas);
@@ -4306,7 +4306,7 @@ ImFontAtlasRectId ImFontAtlasPackAddRect(ImFontAtlas* atlas, int w, int h, ImFon
         }
 
         // Resize or repack atlas! (this should be a rare event)
-        ImFontAtlasBuildMakeSpace(atlas);
+        ImFontAtlasTextureMakeSpace(atlas);
     }
 
     builder->MaxRectBounds.x = ImMax(builder->MaxRectBounds.x, r.x + r.w + pack_padding);
@@ -4999,7 +4999,7 @@ ImFont::~ImFont()
 void ImFont::ClearOutputData()
 {
     if (ImFontAtlas* atlas = ContainerAtlas)
-        ImFontAtlasBuildDiscardFontBakes(atlas, this);
+        ImFontAtlasFontDiscardOutputBakes(atlas, this);
     FallbackChar = EllipsisChar = 0;
     memset(Used8kPagesMap, 0, sizeof(Used8kPagesMap));
     LastBaked = NULL;
@@ -5204,7 +5204,7 @@ ImFontBaked* ImFont::GetFontBaked(float size)
 
     ImFontAtlas* atlas = ContainerAtlas;
     ImFontAtlasBuilder* builder = atlas->Builder;
-    baked = ImFontAtlasBuildGetFontBaked(atlas, this, size);
+    baked = ImFontAtlasBakedGetOrAdd(atlas, this, size);
     if (baked == NULL)
         return NULL;
     baked->LastUsedFrame = builder->FrameCount;
@@ -5212,7 +5212,7 @@ ImFontBaked* ImFont::GetFontBaked(float size)
     return baked;
 }
 
-ImFontBaked* ImFontAtlasBuildGetFontBaked(ImFontAtlas* atlas, ImFont* font, float font_size)
+ImFontBaked* ImFontAtlasBakedGetOrAdd(ImFontAtlas* atlas, ImFont* font, float font_size)
 {
     // FIXME-NEWATLAS: Design for picking a nearest size based on some criteria?
     // FIXME-NEWATLAS: Altering font density won't work right away.
@@ -5230,7 +5230,7 @@ ImFontBaked* ImFontAtlasBuildGetFontBaked(ImFontAtlas* atlas, ImFont* font, floa
     // FIXME-OPT: This is not an optimal query.
     if ((font->Flags & ImFontFlags_LockBakedSizes) || atlas->Locked)
     {
-        baked = ImFontAtlasBuildGetClosestFontBakedMatch(atlas, font, font_size);
+        baked = ImFontAtlasBakedGetClosestMatch(atlas, font, font_size);
         if (baked != NULL)
             return baked;
         if (atlas->Locked)
@@ -5241,7 +5241,7 @@ ImFontBaked* ImFontAtlasBuildGetFontBaked(ImFontAtlas* atlas, ImFont* font, floa
     }
 
     // Create new
-    baked = ImFontAtlasBuildAddFontBaked(atlas, font, font_size, baked_id);
+    baked = ImFontAtlasBakedAdd(atlas, font, font_size, baked_id);
     *p_baked_in_map = baked; // To avoid 'builder->BakedMap.SetVoidPtr(baked_id, baked);' while we can.
     return baked;
 }
