@@ -5013,23 +5013,23 @@ bool ImFont::IsGlyphRangeUnused(unsigned int c_begin, unsigned int c_last)
 
 // x0/y0/x1/y1 are offset from the character upper-left layout position, in pixels. Therefore x0/y0 are often fairly close to zero.
 // Not to be mistaken with texture coordinates, which are held by u0/v0/u1/v1 in normalized format (0.0..1.0 on each texture axis).
-// 'src' is not necessarily == 'this->Sources' because multiple source fonts+configs can be used to build one target font.
+// - 'src' is not necessarily == 'this->Sources' because multiple source fonts+configs can be used to build one target font.
 ImFontGlyph* ImFontAtlasBakedAddFontGlyph(ImFontAtlas* atlas, ImFontBaked* baked, ImFontConfig* src, const ImFontGlyph* in_glyph)
 {
     int glyph_idx = baked->Glyphs.Size;
     baked->Glyphs.push_back(*in_glyph);
-    ImFontGlyph& glyph = baked->Glyphs[glyph_idx];
+    ImFontGlyph* glyph = &baked->Glyphs[glyph_idx];
     IM_ASSERT(baked->Glyphs.Size < 0xFFFE); // IndexLookup[] hold 16-bit values and -1/-2 are reserved.
 
     // Set UV from packed rectangle
-    if (glyph.PackId != ImFontAtlasRectId_Invalid)
+    if (glyph->PackId != ImFontAtlasRectId_Invalid)
     {
-        ImTextureRect* r = ImFontAtlasPackGetRect(atlas, glyph.PackId);
-        IM_ASSERT(glyph.U0 == 0.0f && glyph.V0 == 0.0f && glyph.U1 == 0.0f && glyph.V1 == 0.0f);
-        glyph.U0 = (r->x) * atlas->TexUvScale.x;
-        glyph.V0 = (r->y) * atlas->TexUvScale.y;
-        glyph.U1 = (r->x + r->w) * atlas->TexUvScale.x;
-        glyph.V1 = (r->y + r->h) * atlas->TexUvScale.y;
+        ImTextureRect* r = ImFontAtlasPackGetRect(atlas, glyph->PackId);
+        IM_ASSERT(glyph->U0 == 0.0f && glyph->V0 == 0.0f && glyph->U1 == 0.0f && glyph->V1 == 0.0f);
+        glyph->U0 = (r->x) * atlas->TexUvScale.x;
+        glyph->V0 = (r->y) * atlas->TexUvScale.y;
+        glyph->U1 = (r->x + r->w) * atlas->TexUvScale.x;
+        glyph->V1 = (r->y + r->h) * atlas->TexUvScale.y;
         baked->MetricsTotalSurface += r->w * r->h;
     }
 
@@ -5037,12 +5037,12 @@ ImFontGlyph* ImFontAtlasBakedAddFontGlyph(ImFontAtlas* atlas, ImFontBaked* baked
     {
         // Clamp & recenter if needed
         const float offsets_scale = baked->Size / baked->ContainerFont->Sources[0].SizePixels;
-        float advance_x = ImClamp(glyph.AdvanceX, src->GlyphMinAdvanceX * offsets_scale, src->GlyphMaxAdvanceX * offsets_scale);
-        if (advance_x != glyph.AdvanceX)
+        float advance_x = ImClamp(glyph->AdvanceX, src->GlyphMinAdvanceX * offsets_scale, src->GlyphMaxAdvanceX * offsets_scale);
+        if (advance_x != glyph->AdvanceX)
         {
-            float char_off_x = src->PixelSnapH ? ImTrunc((advance_x - glyph.AdvanceX) * 0.5f) : (advance_x - glyph.AdvanceX) * 0.5f;
-            glyph.X0 += char_off_x;
-            glyph.X1 += char_off_x;
+            float char_off_x = src->PixelSnapH ? ImTrunc((advance_x - glyph->AdvanceX) * 0.5f) : (advance_x - glyph->AdvanceX) * 0.5f;
+            glyph->X0 += char_off_x;
+            glyph->X1 += char_off_x;
         }
 
         // Snap to pixel
@@ -5050,20 +5050,20 @@ ImFontGlyph* ImFontAtlasBakedAddFontGlyph(ImFontAtlas* atlas, ImFontBaked* baked
             advance_x = IM_ROUND(advance_x);
 
         // Bake spacing
-        glyph.AdvanceX = advance_x + src->GlyphExtraAdvanceX;
+        glyph->AdvanceX = advance_x + src->GlyphExtraAdvanceX;
     }
-    if (glyph.Colored)
+    if (glyph->Colored)
         atlas->TexPixelsUseColors = atlas->TexData->UseColors = true;
 
     // Update lookup tables
-    int codepoint = glyph.Codepoint;
+    const int codepoint = glyph->Codepoint;
     ImFontBaked_BuildGrowIndex(baked, codepoint + 1);
-    baked->IndexAdvanceX[codepoint] = glyph.AdvanceX;
+    baked->IndexAdvanceX[codepoint] = glyph->AdvanceX;
     baked->IndexLookup[codepoint] = (ImU16)glyph_idx;
     const int page_n = codepoint / 8192;
     baked->ContainerFont->Used8kPagesMap[page_n >> 3] |= 1 << (page_n & 7);
 
-    return &glyph;
+    return glyph;
 }
 
 // Copy to texture, post-process and queue update for backend
