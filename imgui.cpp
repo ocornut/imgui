@@ -5551,7 +5551,7 @@ void ImGui::NewFrame()
 
     // Platform IME data: reset for the frame
     g.PlatformImeDataPrev = g.PlatformImeData;
-    g.PlatformImeData.WantVisible = false;
+    g.PlatformImeData.WantVisible = g.PlatformImeData.WantTextInput = false;
 
     // Mouse wheel scrolling, scale
     UpdateMouseWheel();
@@ -5901,6 +5901,7 @@ void ImGui::EndFrame()
             viewport = GetMainViewport();
         g.PlatformIO.Platform_SetImeDataFn(&g, viewport, ime_data);
     }
+    g.WantTextInputNextFrame = ime_data->WantTextInput ? 1 : 0;
 
     // Hide implicit/fallback "Debug" window if it hasn't been used
     g.WithinFrameScopeWithImplicitWindow = false;

@@ -29,7 +29,7 @@
 // Library Version
 // (Integer encoded as XYYZZ for use in #if preprocessor conditionals, e.g. '#if IMGUI_VERSION_NUM >= 12345')
 #define IMGUI_VERSION       "1.92.0 WIP"
-#define IMGUI_VERSION_NUM   19193
+#define IMGUI_VERSION_NUM   19194
 #define IMGUI_HAS_TABLE
 #define IMGUI_HAS_VIEWPORT          // Viewport WIP branch
 #define IMGUI_HAS_DOCK              // Docking WIP branch
@@ -3882,12 +3882,14 @@ struct ImGuiPlatformMonitor
     ImGuiPlatformMonitor()          { MainPos = MainSize = WorkPos = WorkSize = ImVec2(0, 0); DpiScale = 1.0f; PlatformHandle = NULL; }
 };
 
-// (Optional) Support for IME (Input Method Editor) via the platform_io.Platform_SetImeDataFn() function.
+// (Optional) Support for IME (Input Method Editor) via the platform_io.Platform_SetImeDataFn() function. Handler is called during EndFrame().
 struct ImGuiPlatformImeData
 {
-    bool    WantVisible;            // A widget wants the IME to be visible
-    ImVec2  InputPos;               // Position of the input cursor
-    float   InputLineHeight;        // Line height
+    bool    WantVisible;            // A widget wants the IME to be visible.
+    bool    WantTextInput;          // A widget wants text input, not necessarily IME to be visible. This is automatically set to the upcoming value of io.WantTextInput.
+    ImVec2  InputPos;               // Position of input cursor (for IME).
+    float   InputLineHeight;        // Line height (for IME).
+    ImGuiID ViewportId;             // ID of platform window/viewport.
 
     ImGuiPlatformImeData()          { memset(this, 0, sizeof(*this)); }
 };
