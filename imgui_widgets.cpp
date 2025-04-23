@@ -356,13 +356,10 @@ void ImGui::TextAlignedV(float align_x, float size_x, const char* fmt, va_list a
     if (window->SkipItems)
         return;
 
-    // ~CalcItemSize()
-    if (size_x <= 0.0f)
-        size_x = GetContentRegionAvail().x + size_x; // <-- Remember that size_x is negative here
-
     const char* text, *text_end;
     ImFormatStringToTempBufferV(&text, &text_end, fmt, args);
     const ImVec2 text_size = CalcTextSize(text, text_end);
+    size_x = CalcItemSize(ImVec2(size_x, 0.0f), 0.0f, text_size.y).x;
 
     ImVec2 pos(window->DC.CursorPos.x, window->DC.CursorPos.y + window->DC.CurrLineTextBaseOffset);
     ImVec2 pos_max(pos.x + size_x, window->ClipRect.Max.y);
@@ -370,10 +367,7 @@ void ImGui::TextAlignedV(float align_x, float size_x, const char* fmt, va_list a
     window->DC.CursorMaxPos.x = ImMax(window->DC.CursorMaxPos.x, pos.x + text_size.x);
     window->DC.IdealMaxPos.x = ImMax(window->DC.IdealMaxPos.x, pos.x + text_size.x);
     if (align_x > 0.0f && text_size.x < size_x)
-    {
         pos.x += ImTrunc((size_x - text_size.x) * align_x);
-        window->DC.CursorPos = pos;
-    }
     RenderTextEllipsis(window->DrawList, pos, pos_max, pos_max.x, text, text_end, &text_size);
 
     const ImVec2 backup_max_pos = window->DC.CursorMaxPos;
