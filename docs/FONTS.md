@@ -14,12 +14,13 @@ In the [misc/fonts/](https://github.com/ocornut/imgui/tree/master/misc/fonts) fo
 - [Troubleshooting](#troubleshooting)
 - [How should I handle DPI in my application?](#how-should-i-handle-dpi-in-my-application)
 - [Fonts Loading Instructions](#fonts-loading-instructions)
+- [Loading Font Data from Memory](#loading-font-data-from-memory)
+- [Loading Font Data Embedded In Source Code](#loading-font-data-embedded-in-source-code)
 - [Using Icon Fonts](#using-icon-fonts)
 - [Using FreeType Rasterizer (imgui_freetype)](#using-freetype-rasterizer-imgui_freetype)
 - [Using Colorful Glyphs/Emojis](#using-colorful-glyphsemojis)
 - [Using Custom Glyph Ranges](#using-custom-glyph-ranges)
 - [Using Custom Colorful Icons](#using-custom-colorful-icons)
-- [Using Font Data Embedded In Source Code](#using-font-data-embedded-in-source-code)
 - [About Filenames](#about-filenames)
 - [About UTF-8 Encoding](#about-utf-8-encoding)
 - [Debug Tools](#debug-tools)
@@ -49,18 +50,23 @@ All loaded fonts glyphs are rendered into a single texture atlas ahead of time. 
 
 ### (4) Font atlas texture fails to upload to GPU.
 
-This is often of byproduct of point 3. If you have large number of glyphs or multiple fonts, the texture may become too big for your graphics API. **The typical result of failing to upload a texture is if every glyph or everything appears as empty black or white rectangle.** Mind the fact that some graphics drivers have texture size limitation. If you are building a PC application, mind the fact that your users may use hardware with lower limitations than yours.
+This is often of byproduct of point 3. If you have large number of glyphs or multiple fonts, the texture may become too big for your graphics API. **The typical result of failing to upload a texture is if every glyph or everything appears as empty white rectangles.** Mind the fact that some graphics drivers have texture size limitation. If you are building a PC application, mind the fact that your users may use hardware with lower limitations than yours.
+
+![empty squares](https://github.com/user-attachments/assets/68b50fb5-8b9d-4c38-baec-6ac384f06d26)
 
 Some solutions:
-- You may reduce oversampling, e.g. `font_config.OversampleH = 1`, this will half your texture size for a quality looss.
+- You may reduce oversampling, e.g. `font_config.OversampleH = 1`, this will half your texture size for a quality loss.
   Note that while OversampleH = 2 looks visibly very close to 3 in most situations, with OversampleH = 1 the quality drop will be noticeable. Read about oversampling [here](https://github.com/nothings/stb/blob/master/tests/oversample).
 - Reduce glyphs ranges by calculating them from source localization data.
   You can use the `ImFontGlyphRangesBuilder` for this purpose and rebuilding your atlas between frames when new characters are needed. This will be the biggest win!
 - Set `io.Fonts.Flags |= ImFontAtlasFlags_NoPowerOfTwoHeight;` to disable rounding the texture height to the next power of two.
 - Set `io.Fonts.TexDesiredWidth` to specify a texture width to reduce maximum texture height (see comment in `ImFontAtlas::Build()` function).
 
+Future versions of Dear ImGui should solve this problem.
+
 ##### [Return to Index](#index)
 
+---------------------------------------
 
 ## How should I handle DPI in my application?
 
@@ -68,6 +74,7 @@ See [FAQ entry](https://github.com/ocornut/imgui/blob/master/docs/FAQ.md#q-how-s
 
 ##### [Return to Index](#index)
 
+---------------------------------------
 
 ## Fonts Loading Instructions
 
@@ -103,9 +110,7 @@ ImGui::PopFont();
 **For advanced options create a ImFontConfig structure and pass it to the AddFont() function (it will be copied internally):**
 ```cpp
 ImFontConfig config;
-config.OversampleH = 2;
-config.OversampleV = 1;
-config.GlyphExtraSpacing.x = 1.0f;
+config.RasterizerDensity = 2.0f;
 ImFont* font = io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, &config);
 ```
 
@@ -139,7 +144,6 @@ io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, nullptr, io.Fonts->GetGlyp
 ```
 See [Using Custom Glyph Ranges](#using-custom-glyph-ranges) section to create your own ranges.
 
-
 **Example loading and using a Japanese font:**
 
 ```cpp
@@ -160,6 +164,48 @@ ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
 <br>_(settings: Dark style (left), Light style (right) / Font: NotoSansCJKjp-Medium, 20px / Rounding: 5)_
 
 ##### [Return to Index](#index)
+
+---------------------------------------
+
+## Loading Font Data from Memory
+
+```cpp
+ImFont* font = io.Fonts->AddFontFromMemoryTTF(data, data_size, size_pixels, ...);
+```
+
+IMPORTANT: `AddFontFromMemoryTTF()` by default transfer ownership of the data buffer to the font atlas, which will attempt to free it on destruction.
+This was to avoid an unnecessary copy, and is perhaps not a good API (a future version will redesign it).
+If you want to keep ownership of the data and free it yourself, you need to clear the `FontDataOwnedByAtlas` field:
+
+```cpp
+ImFontConfig font_cfg;
+font_cfg.FontDataOwnedByAtlas = false;
+ImFont* font = io.Fonts->AddFontFromMemoryTTF(data, data_size, size_pixels, &font_cfg);
+```
+
+##### [Return to Index](#index)
+
+---------------------------------------
+
+## Loading Font Data Embedded In Source Code
+
+- Compile and use [binary_to_compressed_c.cpp](https://github.com/ocornut/imgui/blob/master/misc/fonts/binary_to_compressed_c.cpp) to create a compressed C style array that you can embed in source code.
+- See the documentation in [binary_to_compressed_c.cpp](https://github.com/ocornut/imgui/blob/master/misc/fonts/binary_to_compressed_c.cpp) for instructions on how to use the tool.
+- You may find a precompiled version binary_to_compressed_c.exe for Windows inside the demo binaries package (see [README](https://github.com/ocornut/imgui/blob/master/docs/README.md)).
+- The tool can optionally output Base85 encoding to reduce the size of _source code_ but the read-only arrays in the actual binary will be about 20% bigger.
+
+Then load the font with:
+```cpp
+ImFont* font = io.Fonts->AddFontFromMemoryCompressedTTF(compressed_data, compressed_data_size, size_pixels, ...);
+```
+or
+```cpp
+ImFont* font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(compressed_data_base85, size_pixels, ...);
+```
+
+##### [Return to Index](#index)
+
+---------------------------------------
 
 ## Using Icon Fonts
 
@@ -204,6 +250,8 @@ Here's an application using icons ("Avoyd", https://www.avoyd.com):
 
 ##### [Return to Index](#index)
 
+---------------------------------------
+
 ## Using FreeType Rasterizer (imgui_freetype)
 
 - Dear ImGui uses imstb\_truetype.h to rasterize fonts (with optional oversampling). This technique and its implementation are not ideal for fonts rendered at small sizes, which may appear a little blurry or hard to read.
@@ -213,6 +261,8 @@ Here's an application using icons ("Avoyd", https://www.avoyd.com):
 - Correct sRGB space blending will have an important effect on your font rendering quality.
 
 ##### [Return to Index](#index)
+
+---------------------------------------
 
 ## Using Colorful Glyphs/Emojis
 
@@ -236,6 +286,8 @@ io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\seguiemj.ttf", 16.0f, &cfg, ra
 
 ##### [Return to Index](#index)
 
+---------------------------------------
+
 ## Using Custom Glyph Ranges
 
 You can use the `ImFontGlyphRangesBuilder` helper to create glyph ranges based on text input. For example: for a game where your script is known, if you can feed your entire script to it and only build the characters the game needs.
@@ -252,6 +304,8 @@ io.Fonts->Build();                                     // Build the atlas while 
 ```
 
 ##### [Return to Index](#index)
+
+---------------------------------------
 
 ## Using Custom Colorful Icons
 
@@ -295,25 +349,7 @@ for (int rect_n = 0; rect_n < IM_ARRAYSIZE(rect_ids); rect_n++)
 
 ##### [Return to Index](#index)
 
-## Using Font Data Embedded In Source Code
-
-- Compile and use [binary_to_compressed_c.cpp](https://github.com/ocornut/imgui/blob/master/misc/fonts/binary_to_compressed_c.cpp) to create a compressed C style array that you can embed in source code.
-- See the documentation in [binary_to_compressed_c.cpp](https://github.com/ocornut/imgui/blob/master/misc/fonts/binary_to_compressed_c.cpp) for instructions on how to use the tool.
-- You may find a precompiled version binary_to_compressed_c.exe for Windows inside the demo binaries package (see [README](https://github.com/ocornut/imgui/blob/master/docs/README.md)).
-- The tool can optionally output Base85 encoding to reduce the size of _source code_ but the read-only arrays in the actual binary will be about 20% bigger.
-
-Then load the font with:
-```cpp
-ImFont* font = io.Fonts->AddFontFromMemoryCompressedTTF(compressed_data, compressed_data_size, size_pixels, ...);
-```
-or
-```cpp
-ImFont* font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(compressed_data_base85, size_pixels, ...);
-```
-
-##### [Return to Index](#index)
-
---
+---------------------------------------
 
 ## About Filenames
 
@@ -335,7 +371,7 @@ io.Fonts->AddFontFromFileTTF("../MyImage01.jpg", ...);    // Load from the paren
 ```
 ##### [Return to Index](#index)
 
---
+---------------------------------------
 
 ## About UTF-8 Encoding
 
@@ -370,19 +406,15 @@ ImGui::Text(u8"こんにちは");   // this will always be encoded as UTF-8
 ImGui::Text("こんにちは");     // the encoding of this is depending on compiler settings/flags and may be incorrect.
 ```
 
-Since C++20, because the C++ committee hate its users, they decided to change the `u8""` syntax to not return `const char*` but a new type `const char_t*` which doesn't cast to `const char*`.
+Since C++20, because the C++ committee hate its users, they decided to change the `u8""` syntax to not return `const char*` but a new type `const char8_t*` which doesn't cast to `const char*`.
 Because of type usage of `u8""` in C++20 is a little more tedious:
 ```cpp
 ImGui::Text((const char*)u8"こんにちは");
 ```
-We suggest using a macro in your codebase:
-```cpp
-#define U8(_S)    (const char*)u8##_S
-ImGui::Text(U8("こんにちは"));
-```
+However, you can disable this behavior completely using the compiler option [`/Zc:char8_t-`](https://learn.microsoft.com/en-us/cpp/build/reference/zc-char8-t?view=msvc-170) for MSVC and [`-fno-char8_t`](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/p1423r3.html) for Clang and GCC.
 ##### [Return to Index](#index)
 
---
+---------------------------------------
 
 ## Debug Tools
 
@@ -398,7 +430,7 @@ You can use the `UTF-8 Encoding viewer` in `Metrics/Debugger` to verify the cont
 
 ##### [Return to Index](#index)
 
---
+---------------------------------------
 
 ## Credits/Licenses For Fonts Included In Repository
 
@@ -452,7 +484,7 @@ Some fonts files are available in the `misc/fonts/` folder:
 #### MONOSPACE FONTS
 
 Pixel Perfect:
-- Proggy Fonts, by Tristan Grimmer http://www.proggyfonts.net or http://upperbounds.net
+- Proggy Fonts, by Tristan Grimmer http://www.proggyfonts.net or http://upperboundsinteractive.com/fonts.php
 - Sweet16, Sweet16 Mono, by Martin Sedlak (Latin + Supplemental + Extended A) https://github.com/kmar/Sweet16Font (also include an .inl file to use directly in dear imgui.)
 
 Regular:

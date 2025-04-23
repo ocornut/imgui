@@ -1,6 +1,10 @@
 // Dear ImGui: standalone example application for Glfw + Vulkan
-// If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
-// Read online: https://github.com/ocornut/imgui/tree/master/docs
+
+// Learn about Dear ImGui:
+// - FAQ                  https://dearimgui.com/faq
+// - Getting Started      https://dearimgui.com/getting-started
+// - Documentation        https://dearimgui.com/docs (same as your local docs/ folder).
+// - Introduction, links and more at the top of imgui.cpp
 
 // Important note to the reader who wish to integrate imgui_impl_vulkan.cpp/.h in their own engine/app.
 // - Common ImGui_ImplVulkan_XXX functions and structures are used to interface with imgui_impl_vulkan.cpp/.h.
@@ -17,8 +21,12 @@
 #define GLFW_INCLUDE_NONE
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-#include <vulkan/vulkan.h>
-//#include <vulkan/vulkan_beta.h>
+
+// Volk headers
+#ifdef IMGUI_IMPL_VULKAN_USE_VOLK
+#define VOLK_IMPLEMENTATION
+#include <volk.h>
+#endif
 
 // [Win32] Our example includes a copy of glfw3.lib pre-compiled with VS2010 to maximize ease of testing and compatibility with old VS compilers.
 // To link with VS2010-era libraries, VS2015+ requires linking with legacy_stdio_definitions.lib, which we do using this pragma.
@@ -27,9 +35,10 @@
 #pragma comment(lib, "legacy_stdio_definitions")
 #endif
 
-//#define IMGUI_UNLIMITED_FRAME_RATE
+//#define APP_USE_UNLIMITED_FRAME_RATE
 #ifdef _DEBUG
-#define IMGUI_VULKAN_DEBUG_REPORT
+#define APP_USE_VULKAN_DEBUG_REPORT
+static VkDebugReportCallbackEXT g_DebugReport = VK_NULL_HANDLE;
 #endif
 
 // Data
@@ -39,12 +48,11 @@ static VkPhysicalDevice         g_PhysicalDevice = VK_NULL_HANDLE;
 static VkDevice                 g_Device = VK_NULL_HANDLE;
 static uint32_t                 g_QueueFamily = (uint32_t)-1;
 static VkQueue                  g_Queue = VK_NULL_HANDLE;
-static VkDebugReportCallbackEXT g_DebugReport = VK_NULL_HANDLE;
 static VkPipelineCache          g_PipelineCache = VK_NULL_HANDLE;
 static VkDescriptorPool         g_DescriptorPool = VK_NULL_HANDLE;
 
 static ImGui_ImplVulkanH_Window g_MainWindowData;
-static int                      g_MinImageCount = 2;
+static uint32_t                 g_MinImageCount = 2;
 static bool                     g_SwapChainRebuild = false;
 
 static void glfw_error_callback(int error, const char* description)
@@ -53,21 +61,21 @@ static void glfw_error_callback(int error, const char* description)
 }
 static void check_vk_result(VkResult err)
 {
-    if (err == 0)
+    if (err == VK_SUCCESS)
         return;
     fprintf(stderr, "[vulkan] Error: VkResult = %d\n", err);
     if (err < 0)
         abort();
 }
 
-#ifdef IMGUI_VULKAN_DEBUG_REPORT
+#ifdef APP_USE_VULKAN_DEBUG_REPORT
 static VKAPI_ATTR VkBool32 VKAPI_CALL debug_report(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData)
 {
     (void)flags; (void)object; (void)location; (void)messageCode; (void)pUserData; (void)pLayerPrefix; // Unused arguments
     fprintf(stderr, "[vulkan] Debug report from ObjectType: %i\nMessage: %s\n\n", objectType, pMessage);
     return VK_FALSE;
 }
-#endif // IMGUI_VULKAN_DEBUG_REPORT
+#endif // APP_USE_VULKAN_DEBUG_REPORT
 
 static bool IsExtensionAvailable(const ImVector<VkExtensionProperties>& properties, const char* extension)
 {
@@ -77,38 +85,12 @@ static bool IsExtensionAvailable(const ImVector<VkExtensionProperties>& properti
     return false;
 }
 
-static VkPhysicalDevice SetupVulkan_SelectPhysicalDevice()
-{
-    uint32_t gpu_count;
-    VkResult err = vkEnumeratePhysicalDevices(g_Instance, &gpu_count, nullptr);
-    check_vk_result(err);
-    IM_ASSERT(gpu_count > 0);
-
-    ImVector<VkPhysicalDevice> gpus;
-    gpus.resize(gpu_count);
-    err = vkEnumeratePhysicalDevices(g_Instance, &gpu_count, gpus.Data);
-    check_vk_result(err);
-
-    // If a number >1 of GPUs got reported, find discrete GPU if present, or use first one available. This covers
-    // most common cases (multi-gpu/integrated+dedicated graphics). Handling more complicated setups (multiple
-    // dedicated GPUs) is out of scope of this sample.
-    for (VkPhysicalDevice& device : gpus)
-    {
-        VkPhysicalDeviceProperties properties;
-        vkGetPhysicalDeviceProperties(device, &properties);
-        if (properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
-            return device;
-    }
-
-    // Use first GPU (Integrated) is a Discrete one is not available.
-    if (gpu_count > 0)
-        return gpus[0];
-    return VK_NULL_HANDLE;
-}
-
 static void SetupVulkan(ImVector<const char*> instance_extensions)
 {
     VkResult err;
+#ifdef IMGUI_IMPL_VULKAN_USE_VOLK
+    volkInitialize();
+#endif
 
     // Create Vulkan Instance
     {
@@ -135,7 +117,7 @@ static void SetupVulkan(ImVector<const char*> instance_extensions)
 #endif
 
         // Enabling validation layers
-#ifdef IMGUI_VULKAN_DEBUG_REPORT
+#ifdef APP_USE_VULKAN_DEBUG_REPORT
         const char* layers[] = { "VK_LAYER_KHRONOS_validation" };
         create_info.enabledLayerCount = 1;
         create_info.ppEnabledLayerNames = layers;
@@ -147,39 +129,31 @@ static void SetupVulkan(ImVector<const char*> instance_extensions)
         create_info.ppEnabledExtensionNames = instance_extensions.Data;
         err = vkCreateInstance(&create_info, g_Allocator, &g_Instance);
         check_vk_result(err);
+#ifdef IMGUI_IMPL_VULKAN_USE_VOLK
+        volkLoadInstance(g_Instance);
+#endif
 
         // Setup the debug report callback
-#ifdef IMGUI_VULKAN_DEBUG_REPORT
-        auto vkCreateDebugReportCallbackEXT = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(g_Instance, "vkCreateDebugReportCallbackEXT");
-        IM_ASSERT(vkCreateDebugReportCallbackEXT != nullptr);
+#ifdef APP_USE_VULKAN_DEBUG_REPORT
+        auto f_vkCreateDebugReportCallbackEXT = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(g_Instance, "vkCreateDebugReportCallbackEXT");
+        IM_ASSERT(f_vkCreateDebugReportCallbackEXT != nullptr);
         VkDebugReportCallbackCreateInfoEXT debug_report_ci = {};
         debug_report_ci.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
         debug_report_ci.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
         debug_report_ci.pfnCallback = debug_report;
         debug_report_ci.pUserData = nullptr;
-        err = vkCreateDebugReportCallbackEXT(g_Instance, &debug_report_ci, g_Allocator, &g_DebugReport);
+        err = f_vkCreateDebugReportCallbackEXT(g_Instance, &debug_report_ci, g_Allocator, &g_DebugReport);
         check_vk_result(err);
 #endif
     }
 
     // Select Physical Device (GPU)
-    g_PhysicalDevice = SetupVulkan_SelectPhysicalDevice();
+    g_PhysicalDevice = ImGui_ImplVulkanH_SelectPhysicalDevice(g_Instance);
+    IM_ASSERT(g_PhysicalDevice != VK_NULL_HANDLE);
 
     // Select graphics queue family
-    {
-        uint32_t count;
-        vkGetPhysicalDeviceQueueFamilyProperties(g_PhysicalDevice, &count, nullptr);
-        VkQueueFamilyProperties* queues = (VkQueueFamilyProperties*)malloc(sizeof(VkQueueFamilyProperties) * count);
-        vkGetPhysicalDeviceQueueFamilyProperties(g_PhysicalDevice, &count, queues);
-        for (uint32_t i = 0; i < count; i++)
-            if (queues[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
-            {
-                g_QueueFamily = i;
-                break;
-            }
-        free(queues);
-        IM_ASSERT(g_QueueFamily != (uint32_t)-1);
-    }
+    g_QueueFamily = ImGui_ImplVulkanH_SelectQueueFamilyIndex(g_PhysicalDevice);
+    IM_ASSERT(g_QueueFamily != (uint32_t)-1);
 
     // Create Logical Device (with 1 queue)
     {
@@ -215,17 +189,18 @@ static void SetupVulkan(ImVector<const char*> instance_extensions)
     }
 
     // Create Descriptor Pool
-    // The example only requires a single combined image sampler descriptor for the font image and only uses one descriptor set (for that)
-    // If you wish to load e.g. additional textures you may need to alter pools sizes.
+    // If you wish to load e.g. additional textures you may need to alter pools sizes and maxSets.
     {
         VkDescriptorPoolSize pool_sizes[] =
         {
-            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 },
+            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE },
         };
         VkDescriptorPoolCreateInfo pool_info = {};
         pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-        pool_info.maxSets = 1;
+        pool_info.maxSets = 0;
+        for (VkDescriptorPoolSize& pool_size : pool_sizes)
+            pool_info.maxSets += pool_size.descriptorCount;
         pool_info.poolSizeCount = (uint32_t)IM_ARRAYSIZE(pool_sizes);
         pool_info.pPoolSizes = pool_sizes;
         err = vkCreateDescriptorPool(g_Device, &pool_info, g_Allocator, &g_DescriptorPool);
@@ -254,7 +229,7 @@ static void SetupVulkanWindow(ImGui_ImplVulkanH_Window* wd, VkSurfaceKHR surface
     wd->SurfaceFormat = ImGui_ImplVulkanH_SelectSurfaceFormat(g_PhysicalDevice, wd->Surface, requestSurfaceImageFormat, (size_t)IM_ARRAYSIZE(requestSurfaceImageFormat), requestSurfaceColorSpace);
 
     // Select Present Mode
-#ifdef IMGUI_UNLIMITED_FRAME_RATE
+#ifdef APP_USE_UNLIMITED_FRAME_RATE
     VkPresentModeKHR present_modes[] = { VK_PRESENT_MODE_MAILBOX_KHR, VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_FIFO_KHR };
 #else
     VkPresentModeKHR present_modes[] = { VK_PRESENT_MODE_FIFO_KHR };
@@ -271,11 +246,11 @@ static void CleanupVulkan()
 {
     vkDestroyDescriptorPool(g_Device, g_DescriptorPool, g_Allocator);
 
-#ifdef IMGUI_VULKAN_DEBUG_REPORT
+#ifdef APP_USE_VULKAN_DEBUG_REPORT
     // Remove the debug report callback
-    auto vkDestroyDebugReportCallbackEXT = (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(g_Instance, "vkDestroyDebugReportCallbackEXT");
-    vkDestroyDebugReportCallbackEXT(g_Instance, g_DebugReport, g_Allocator);
-#endif // IMGUI_VULKAN_DEBUG_REPORT
+    auto f_vkDestroyDebugReportCallbackEXT = (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(g_Instance, "vkDestroyDebugReportCallbackEXT");
+    f_vkDestroyDebugReportCallbackEXT(g_Instance, g_DebugReport, g_Allocator);
+#endif // APP_USE_VULKAN_DEBUG_REPORT
 
     vkDestroyDevice(g_Device, g_Allocator);
     vkDestroyInstance(g_Instance, g_Allocator);
@@ -288,17 +263,15 @@ static void CleanupVulkanWindow()
 
 static void FrameRender(ImGui_ImplVulkanH_Window* wd, ImDrawData* draw_data)
 {
-    VkResult err;
-
     VkSemaphore image_acquired_semaphore  = wd->FrameSemaphores[wd->SemaphoreIndex].ImageAcquiredSemaphore;
     VkSemaphore render_complete_semaphore = wd->FrameSemaphores[wd->SemaphoreIndex].RenderCompleteSemaphore;
-    err = vkAcquireNextImageKHR(g_Device, wd->Swapchain, UINT64_MAX, image_acquired_semaphore, VK_NULL_HANDLE, &wd->FrameIndex);
+    VkResult err = vkAcquireNextImageKHR(g_Device, wd->Swapchain, UINT64_MAX, image_acquired_semaphore, VK_NULL_HANDLE, &wd->FrameIndex);
     if (err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_SUBOPTIMAL_KHR)
-    {
         g_SwapChainRebuild = true;
+    if (err == VK_ERROR_OUT_OF_DATE_KHR)
         return;
-    }
-    check_vk_result(err);
+    if (err != VK_SUBOPTIMAL_KHR)
+        check_vk_result(err);
 
     ImGui_ImplVulkanH_Frame* fd = &wd->Frames[wd->FrameIndex];
     {
@@ -367,12 +340,12 @@ static void FramePresent(ImGui_ImplVulkanH_Window* wd)
     info.pImageIndices = &wd->FrameIndex;
     VkResult err = vkQueuePresentKHR(g_Queue, &info);
     if (err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_SUBOPTIMAL_KHR)
-    {
         g_SwapChainRebuild = true;
+    if (err == VK_ERROR_OUT_OF_DATE_KHR)
         return;
-    }
-    check_vk_result(err);
-    wd->SemaphoreIndex = (wd->SemaphoreIndex + 1) % wd->ImageCount; // Now we can use the next set of semaphores
+    if (err != VK_SUBOPTIMAL_KHR)
+        check_vk_result(err);
+    wd->SemaphoreIndex = (wd->SemaphoreIndex + 1) % wd->SemaphoreCount; // Now we can use the next set of semaphores
 }
 
 // Main code
@@ -423,6 +396,7 @@ int main(int, char**)
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForVulkan(window, true);
     ImGui_ImplVulkan_InitInfo init_info = {};
+    //init_info.ApiVersion = VK_API_VERSION_1_3;              // Pass in your value of VkApplicationInfo::apiVersion, otherwise will default to header version.
     init_info.Instance = g_Instance;
     init_info.PhysicalDevice = g_PhysicalDevice;
     init_info.Device = g_Device;
@@ -430,13 +404,14 @@ int main(int, char**)
     init_info.Queue = g_Queue;
     init_info.PipelineCache = g_PipelineCache;
     init_info.DescriptorPool = g_DescriptorPool;
+    init_info.RenderPass = wd->RenderPass;
     init_info.Subpass = 0;
     init_info.MinImageCount = g_MinImageCount;
     init_info.ImageCount = wd->ImageCount;
     init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
     init_info.Allocator = g_Allocator;
     init_info.CheckVkResultFn = check_vk_result;
-    ImGui_ImplVulkan_Init(&init_info, wd->RenderPass);
+    ImGui_ImplVulkan_Init(&init_info);
 
     // Load Fonts
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
@@ -454,36 +429,6 @@ int main(int, char**)
     //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
     //IM_ASSERT(font != nullptr);
 
-    // Upload Fonts
-    {
-        // Use any command queue
-        VkCommandPool command_pool = wd->Frames[wd->FrameIndex].CommandPool;
-        VkCommandBuffer command_buffer = wd->Frames[wd->FrameIndex].CommandBuffer;
-
-        err = vkResetCommandPool(g_Device, command_pool, 0);
-        check_vk_result(err);
-        VkCommandBufferBeginInfo begin_info = {};
-        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        begin_info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        err = vkBeginCommandBuffer(command_buffer, &begin_info);
-        check_vk_result(err);
-
-        ImGui_ImplVulkan_CreateFontsTexture(command_buffer);
-
-        VkSubmitInfo end_info = {};
-        end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        end_info.commandBufferCount = 1;
-        end_info.pCommandBuffers = &command_buffer;
-        err = vkEndCommandBuffer(command_buffer);
-        check_vk_result(err);
-        err = vkQueueSubmit(g_Queue, 1, &end_info, VK_NULL_HANDLE);
-        check_vk_result(err);
-
-        err = vkDeviceWaitIdle(g_Device);
-        check_vk_result(err);
-        ImGui_ImplVulkan_DestroyFontUploadObjects();
-    }
-
     // Our state
     bool show_demo_window = true;
     bool show_another_window = false;
@@ -500,17 +445,19 @@ int main(int, char**)
         glfwPollEvents();
 
         // Resize swap chain?
-        if (g_SwapChainRebuild)
+        int fb_width, fb_height;
+        glfwGetFramebufferSize(window, &fb_width, &fb_height);
+        if (fb_width > 0 && fb_height > 0 && (g_SwapChainRebuild || g_MainWindowData.Width != fb_width || g_MainWindowData.Height != fb_height))
         {
-            int width, height;
-            glfwGetFramebufferSize(window, &width, &height);
-            if (width > 0 && height > 0)
-            {
-                ImGui_ImplVulkan_SetMinImageCount(g_MinImageCount);
-                ImGui_ImplVulkanH_CreateOrResizeWindow(g_Instance, g_PhysicalDevice, g_Device, &g_MainWindowData, g_QueueFamily, g_Allocator, width, height, g_MinImageCount);
-                g_MainWindowData.FrameIndex = 0;
-                g_SwapChainRebuild = false;
-            }
+            ImGui_ImplVulkan_SetMinImageCount(g_MinImageCount);
+            ImGui_ImplVulkanH_CreateOrResizeWindow(g_Instance, g_PhysicalDevice, g_Device, &g_MainWindowData, g_QueueFamily, g_Allocator, fb_width, fb_height, g_MinImageCount);
+            g_MainWindowData.FrameIndex = 0;
+            g_SwapChainRebuild = false;
+        }
+        if (glfwGetWindowAttrib(window, GLFW_ICONIFIED) != 0)
+        {
+            ImGui_ImplGlfw_Sleep(10);
+            continue;
         }
 
         // Start the Dear ImGui frame

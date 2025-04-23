@@ -2,12 +2,12 @@
 // This needs to be used along with the OpenGL 3 Renderer (imgui_impl_opengl3)
 
 // Implemented features:
-//  [X] Platform: Keyboard support. Since 1.87 we are using the io.AddKeyEvent() function. Pass ImGuiKey values to all key functions e.g. ImGui::IsKeyPressed(ImGuiKey_Space). [Legacy AKEYCODE_* values will also be supported unless IMGUI_DISABLE_OBSOLETE_KEYIO is set]
+//  [X] Platform: Keyboard support. Since 1.87 we are using the io.AddKeyEvent() function. Pass ImGuiKey values to all key functions e.g. ImGui::IsKeyPressed(ImGuiKey_Space). [Legacy AKEYCODE_* values are obsolete since 1.87 and not supported since 1.91.5]
 //  [X] Platform: Mouse support. Can discriminate Mouse/TouchScreen/Pen.
-// Missing features:
+// Missing features or Issues:
 //  [ ] Platform: Clipboard support.
-//  [ ] Platform: Gamepad support. Enable with 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad'.
-//  [ ] Platform: Mouse cursor shape and visibility. Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'. FIXME: Check if this is even possible with Android.
+//  [ ] Platform: Gamepad support.
+//  [ ] Platform: Mouse cursor shape and visibility (ImGuiBackendFlags_HasMouseCursors). Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'. FIXME: Check if this is even possible with Android.
 // Important:
 //  - Consider using SDL or GLFW backend on Android, which will be more full-featured than this.
 //  - FIXME: On-screen keyboard currently needs to be enabled by the application (see examples/ and issue #3446)
@@ -15,8 +15,11 @@
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
-// If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
-// Read online: https://github.com/ocornut/imgui/tree/master/docs
+// Learn about Dear ImGui:
+// - FAQ                  https://dearimgui.com/faq
+// - Getting Started      https://dearimgui.com/getting-started
+// - Documentation        https://dearimgui.com/docs (same as your local docs/ folder).
+// - Introduction, links and more at the top of imgui.cpp
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
@@ -153,7 +156,7 @@ static ImGuiKey ImGui_ImplAndroid_KeyCodeToImGuiKey(int32_t key_code)
     }
 }
 
-int32_t ImGui_ImplAndroid_HandleInputEvent(AInputEvent* input_event)
+int32_t ImGui_ImplAndroid_HandleInputEvent(const AInputEvent* input_event)
 {
     ImGuiIO& io = ImGui::GetIO();
     int32_t event_type = AInputEvent_getType(input_event);
@@ -180,7 +183,7 @@ int32_t ImGui_ImplAndroid_HandleInputEvent(AInputEvent* input_event)
         case AKEY_EVENT_ACTION_UP:
         {
             ImGuiKey key = ImGui_ImplAndroid_KeyCodeToImGuiKey(event_key_code);
-            if (key != ImGuiKey_None && (event_action == AKEY_EVENT_ACTION_DOWN || event_action == AKEY_EVENT_ACTION_UP))
+            if (key != ImGuiKey_None)
             {
                 io.AddKeyEvent(key, event_action == AKEY_EVENT_ACTION_DOWN);
                 io.SetKeyEventNativeData(key, event_key_code, event_scan_code);
@@ -218,25 +221,27 @@ int32_t ImGui_ImplAndroid_HandleInputEvent(AInputEvent* input_event)
         {
         case AMOTION_EVENT_ACTION_DOWN:
         case AMOTION_EVENT_ACTION_UP:
+        {
             // Physical mouse buttons (and probably other physical devices) also invoke the actions AMOTION_EVENT_ACTION_DOWN/_UP,
             // but we have to process them separately to identify the actual button pressed. This is done below via
             // AMOTION_EVENT_ACTION_BUTTON_PRESS/_RELEASE. Here, we only process "FINGER" input (and "UNKNOWN", as a fallback).
-            if((AMotionEvent_getToolType(input_event, event_pointer_index) == AMOTION_EVENT_TOOL_TYPE_FINGER)
-            || (AMotionEvent_getToolType(input_event, event_pointer_index) == AMOTION_EVENT_TOOL_TYPE_UNKNOWN))
+            int tool_type = AMotionEvent_getToolType(input_event, event_pointer_index);
+            if (tool_type == AMOTION_EVENT_TOOL_TYPE_FINGER || tool_type == AMOTION_EVENT_TOOL_TYPE_UNKNOWN)
             {
                 io.AddMousePosEvent(AMotionEvent_getX(input_event, event_pointer_index), AMotionEvent_getY(input_event, event_pointer_index));
                 io.AddMouseButtonEvent(0, event_action == AMOTION_EVENT_ACTION_DOWN);
             }
             break;
+        }
         case AMOTION_EVENT_ACTION_BUTTON_PRESS:
         case AMOTION_EVENT_ACTION_BUTTON_RELEASE:
-            {
-                int32_t button_state = AMotionEvent_getButtonState(input_event);
-                io.AddMouseButtonEvent(0, (button_state & AMOTION_EVENT_BUTTON_PRIMARY) != 0);
-                io.AddMouseButtonEvent(1, (button_state & AMOTION_EVENT_BUTTON_SECONDARY) != 0);
-                io.AddMouseButtonEvent(2, (button_state & AMOTION_EVENT_BUTTON_TERTIARY) != 0);
-            }
+        {
+            int32_t button_state = AMotionEvent_getButtonState(input_event);
+            io.AddMouseButtonEvent(0, (button_state & AMOTION_EVENT_BUTTON_PRIMARY) != 0);
+            io.AddMouseButtonEvent(1, (button_state & AMOTION_EVENT_BUTTON_SECONDARY) != 0);
+            io.AddMouseButtonEvent(2, (button_state & AMOTION_EVENT_BUTTON_TERTIARY) != 0);
             break;
+        }
         case AMOTION_EVENT_ACTION_HOVER_MOVE: // Hovering: Tool moves while NOT pressed (such as a physical mouse)
         case AMOTION_EVENT_ACTION_MOVE:       // Touch pointer moves while DOWN
             io.AddMousePosEvent(AMotionEvent_getX(input_event, event_pointer_index), AMotionEvent_getY(input_event, event_pointer_index));
@@ -258,6 +263,8 @@ int32_t ImGui_ImplAndroid_HandleInputEvent(AInputEvent* input_event)
 
 bool ImGui_ImplAndroid_Init(ANativeWindow* window)
 {
+    IMGUI_CHECKVERSION();
+
     g_Window = window;
     g_Time = 0.0;
 

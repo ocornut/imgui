@@ -8,6 +8,7 @@ on:
     # "scheduled" workflow, while maintaining ability to perform local CI builds.
     workflows:
       - scheduled
+      - manual
     branches:
       - master
       - docking
@@ -21,7 +22,7 @@ jobs:
       VS_PATH: C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\
       MSBUILD_PATH: C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin\
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install Dependencies
         shell: powershell
@@ -123,6 +124,11 @@ jobs:
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_glfw_vulkan/example_glfw_vulkan.vcxproj /p:Platform=Win32 /p:Configuration=Release'
         if: github.event_name == 'workflow_run'
 
+      - name: Build Win32 example_sdl2_sdlrenderer2
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl2_sdlrenderer2/example_sdl2_sdlrenderer2.vcxproj /p:Platform=Win32 /p:Configuration=Release'
+        if: github.event_name == 'workflow_run'
+
       - name: Build Win32 example_sdl2_vulkan
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl2_vulkan/example_sdl2_vulkan.vcxproj /p:Platform=Win32 /p:Configuration=Release'
@@ -168,6 +174,11 @@ jobs:
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_glfw_vulkan/example_glfw_vulkan.vcxproj /p:Platform=x64 /p:Configuration=Release'
 
+      - name: Build x64 example_sdl2_sdlrenderer2
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl2_sdlrenderer2/example_sdl2_sdlrenderer2.vcxproj /p:Platform=x64 /p:Configuration=Release'
+        if: github.event_name == 'workflow_run'
+
       - name: Build x64 example_sdl2_vulkan
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl2_vulkan/example_sdl2_vulkan.vcxproj /p:Platform=x64 /p:Configuration=Release'
@@ -207,9 +218,9 @@ jobs:
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_win32_directx12/example_win32_directx12.vcxproj /p:Platform=x64 /p:Configuration=Release'
 
   Linux:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Install Dependencies
       run: |
@@ -313,6 +324,18 @@ jobs:
         EOF
         g++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
 
+    - name: Build example_null (with C++20)
+      run: |
+        cat > example_single_file.cpp <<'EOF'
+
+        #define IMGUI_DISABLE_OBSOLETE_KEYIO
+        #define IMGUI_IMPLEMENTATION
+        #include "misc/single_file/imgui_single_file.h"
+        #include "examples/example_null/main.cpp"
+
+        EOF
+        g++ -I. -std=c++20 -Wall -Wformat -o example_single_file example_single_file.cpp
+
     - name: Build example_null (with IMGUI_DISABLE_DEMO_WINDOWS and IMGUI_DISABLE_DEBUG_TOOLS)
       run: |
         cat > example_single_file.cpp <<'EOF'
@@ -370,6 +393,18 @@ jobs:
         EOF
         g++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
 
+    - name: Build example_null (C++26, Clang)
+      run: |
+        cat > example_single_file.cpp <<'EOF'
+
+        #define IMGUI_IMPLEMENTATION
+        #define IMGUI_DISABLE_DEMO_WINDOWS
+        #include "misc/single_file/imgui_single_file.h"
+        #include "examples/example_null/main.cpp"
+
+        EOF
+        clang++ -I. -std=c++26 -Wall -Wformat -fno-exceptions -fno-threadsafe-statics -lc -lm -o example_single_file example_single_file.cpp
+
     - name: Build example_null (without c++ runtime, Clang)
       run: |
         cat > example_single_file.cpp <<'EOF'
@@ -402,7 +437,7 @@ jobs:
   MacOS:
     runs-on: macos-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Install Dependencies
       run: |
@@ -421,6 +456,17 @@ jobs:
 
         EOF
         clang++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
+
+    - name: Build example_null (single file build, c++20)
+      run: |
+        cat > example_single_file.cpp <<'EOF'
+
+        #define IMGUI_IMPLEMENTATION
+        #include "misc/single_file/imgui_single_file.h"
+        #include "examples/example_null/main.cpp"
+
+        EOF
+        clang++ -I. -std=c++20 -Wall -Wformat -o example_single_file example_single_file.cpp
 
     - name: Build example_null (without c++ runtime)
       run: |
@@ -462,7 +508,7 @@ jobs:
   iOS:
     runs-on: macos-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Build example_apple_metal
       run: |
@@ -470,9 +516,9 @@ jobs:
         xcodebuild -project examples/example_apple_metal/example_apple_metal.xcodeproj -target example_apple_metal_ios CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
 
   Emscripten:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Install Dependencies
       run: |
@@ -481,6 +527,7 @@ jobs:
         emsdk-master/emsdk update
         emsdk-master/emsdk install latest
         emsdk-master/emsdk activate latest
+        sudo apt-get install build-essential
 
     - name: Build example_sdl2_opengl3 with Emscripten
       run: |
@@ -489,17 +536,30 @@ jobs:
         popd
         make -C examples/example_sdl2_opengl3 -f Makefile.emscripten
 
-    - name: Build example_emscripten_wgpu
+    # This build compiles example_glfw_wgpu using Makefile.emscripten and Emscripten GLFW built-in implementation (-sUSE_GLFW=3)
+    # This ensures 2 things: the make build works, and the GLFW built-in implementation is tested
+    - name: Build example_glfw_wgpu with Emscripten/Makefile
       run: |
         pushd emsdk-master
         source ./emsdk_env.sh
         popd
-        make -C examples/example_emscripten_wgpu
+        make -C examples/example_glfw_wgpu -f Makefile.emscripten
+
+    # This build compiles example_glfw_wgpu using CMakeLists.txt and Emscripten GLFW contrib port (--use-port=contrib.glfw3)
+    # This ensures 2 things: the CMake build works, and the GLFW contrib port is tested
+    - name: Build example_glfw_wgpu with Emscripten/CMake
+      run: |
+        pushd emsdk-master
+        source ./emsdk_env.sh
+        popd
+        emcc -v
+        emcmake cmake -B build -DCMAKE_BUILD_TYPE=Release examples/example_glfw_wgpu
+        cmake --build build
 
   Android:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Build example_android_opengl3
       run: |

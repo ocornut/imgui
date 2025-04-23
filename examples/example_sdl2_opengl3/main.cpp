@@ -1,7 +1,11 @@
 // Dear ImGui: standalone example application for SDL2 + OpenGL
 // (SDL is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan/Metal graphics context creation, etc.)
-// If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
-// Read online: https://github.com/ocornut/imgui/tree/master/docs
+
+// Learn about Dear ImGui:
+// - FAQ                  https://dearimgui.com/faq
+// - Getting Started      https://dearimgui.com/getting-started
+// - Documentation        https://dearimgui.com/docs (same as your local docs/ folder).
+// - Introduction, links and more at the top of imgui.cpp
 
 #include "imgui.h"
 #include "imgui_impl_sdl2.h"
@@ -31,11 +35,18 @@ int main(int, char**)
 
     // Decide GL+GLSL versions
 #if defined(IMGUI_IMPL_OPENGL_ES2)
-    // GL ES 2.0 + GLSL 100
+    // GL ES 2.0 + GLSL 100 (WebGL 1.0)
     const char* glsl_version = "#version 100";
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+#elif defined(IMGUI_IMPL_OPENGL_ES3)
+    // GL ES 3.0 + GLSL 300 es (WebGL 2.0)
+    const char* glsl_version = "#version 300 es";
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 #elif defined(__APPLE__)
     // GL 3.2 Core + GLSL 150
@@ -64,7 +75,19 @@ int main(int, char**)
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
     SDL_Window* window = SDL_CreateWindow("Dear ImGui SDL2+OpenGL3 example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags);
+    if (window == nullptr)
+    {
+        printf("Error: SDL_CreateWindow(): %s\n", SDL_GetError());
+        return -1;
+    }
+
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
+    if (gl_context == nullptr)
+    {
+        printf("Error: SDL_GL_CreateContext(): %s\n", SDL_GetError());
+        return -1;
+    }
+
     SDL_GL_MakeCurrent(window, gl_context);
     SDL_GL_SetSwapInterval(1); // Enable vsync
 
@@ -129,6 +152,11 @@ int main(int, char**)
                 done = true;
             if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
                 done = true;
+        }
+        if (SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED)
+        {
+            SDL_Delay(10);
+            continue;
         }
 
         // Start the Dear ImGui frame

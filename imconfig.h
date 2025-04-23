@@ -23,21 +23,28 @@
 
 //---- Define attributes of all API symbols declarations, e.g. for DLL under Windows
 // Using Dear ImGui via a shared library is not recommended, because of function call overhead and because we don't guarantee backward nor forward ABI compatibility.
+
 // DLL users: heaps and globals are not shared across DLL boundaries! You will need to call SetCurrentContext() + SetAllocatorFunctions()
 // for each static/DLL boundary you are calling from. Read "Context and Memory Allocators" section of imgui.cpp for more details.
 #define IMGUI_API CV_EXPORTS
 #define IMGUI_API CV_EXPORTS
 #define GImGui cv::v4d::detail::ImGuiContextImpl::getContext()  // Current implicit context pointer
 #define IMGUI_SET_CURRENT_CONTEXT_FUNC cv::v4d::detail::ImGuiContextImpl::setContext
+
+// - Windows DLL users: heaps and globals are not shared across DLL boundaries! You will need to call SetCurrentContext() + SetAllocatorFunctions()
+//   for each static/DLL boundary you are calling from. Read "Context and Memory Allocators" section of imgui.cpp for more details.
+//#define IMGUI_API __declspec(dllexport)                   // MSVC Windows: DLL export
+//#define IMGUI_API __declspec(dllimport)                   // MSVC Windows: DLL import
+//#define IMGUI_API __attribute__((visibility("default")))  // GCC/Clang: override visibility when set is hidden
+
 //---- Don't define obsolete functions/enums/behaviors. Consider enabling from time to time after updating to clean your code of obsolete function/names.
 //#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-//#define IMGUI_DISABLE_OBSOLETE_KEYIO                      // 1.87: disable legacy io.KeyMap[]+io.KeysDown[] in favor io.AddKeyEvent(). This will be folded into IMGUI_DISABLE_OBSOLETE_FUNCTIONS in a few versions.
 
 //---- Disable all of Dear ImGui or don't implement standard windows/tools.
 // It is very strongly recommended to NOT disable the demo windows and debug tool during development. They are extremely useful in day to day work. Please read comments in imgui_demo.cpp.
 //#define IMGUI_DISABLE                                     // Disable everything: all headers and source files will be empty.
 //#define IMGUI_DISABLE_DEMO_WINDOWS                        // Disable demo windows: ShowDemoWindow()/ShowStyleEditor() will be empty.
-//#define IMGUI_DISABLE_DEBUG_TOOLS                         // Disable metrics/debugger and other debug tools: ShowMetricsWindow(), ShowDebugLogWindow() and ShowStackToolWindow() will be empty (this was called IMGUI_DISABLE_METRICS_WINDOW before 1.88).
+//#define IMGUI_DISABLE_DEBUG_TOOLS                         // Disable metrics/debugger and other debug tools: ShowMetricsWindow(), ShowDebugLogWindow() and ShowIDStackToolWindow() will be empty.
 
 //---- Don't implement some functions to reduce linkage requirements.
 //#define IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCTIONS   // [Win32] Don't implement default clipboard handler. Won't use and link with OpenClipboard/GetClipboardData/CloseClipboard etc. (user32.lib/.a, kernel32.lib/.a)
@@ -45,20 +52,30 @@
 //#define IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS         // [Win32] [Default with non-Visual Studio compilers] Don't implement default IME handler (won't require imm32.lib/.a)
 //#define IMGUI_DISABLE_WIN32_FUNCTIONS                     // [Win32] Won't use and link with any Win32 function (clipboard, IME).
 //#define IMGUI_ENABLE_OSX_DEFAULT_CLIPBOARD_FUNCTIONS      // [OSX] Implement default OSX clipboard handler (need to link with '-framework ApplicationServices', this is why this is not the default).
+//#define IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS             // Don't implement default platform_io.Platform_OpenInShellFn() handler (Win32: ShellExecute(), require shell32.lib/.a, Mac/Linux: use system("")).
 //#define IMGUI_DISABLE_DEFAULT_FORMAT_FUNCTIONS            // Don't implement ImFormatString/ImFormatStringV so you can implement them yourself (e.g. if you don't want to link with vsnprintf)
 //#define IMGUI_DISABLE_DEFAULT_MATH_FUNCTIONS              // Don't implement ImFabs/ImSqrt/ImPow/ImFmod/ImCos/ImSin/ImAcos/ImAtan2 so you can implement them yourself.
 //#define IMGUI_DISABLE_FILE_FUNCTIONS                      // Don't implement ImFileOpen/ImFileClose/ImFileRead/ImFileWrite and ImFileHandle at all (replace them with dummies)
 //#define IMGUI_DISABLE_DEFAULT_FILE_FUNCTIONS              // Don't implement ImFileOpen/ImFileClose/ImFileRead/ImFileWrite and ImFileHandle so you can implement them yourself if you don't want to link with fopen/fclose/fread/fwrite. This will also disable the LogToTTY() function.
 //#define IMGUI_DISABLE_DEFAULT_ALLOCATORS                  // Don't implement default allocators calling malloc()/free() to avoid linking with them. You will need to call ImGui::SetAllocatorFunctions().
+//#define IMGUI_DISABLE_DEFAULT_FONT                        // Disable default embedded font (ProggyClean.ttf), remove ~9.5 KB from output binary. AddFontDefault() will assert.
 //#define IMGUI_DISABLE_SSE                                 // Disable use of SSE intrinsics even if available
 
-//---- Include imgui_user.h at the end of imgui.h as a convenience
-//#define IMGUI_INCLUDE_IMGUI_USER_H
+//---- Enable Test Engine / Automation features.
+//#define IMGUI_ENABLE_TEST_ENGINE                          // Enable imgui_test_engine hooks. Generally set automatically by include "imgui_te_config.h", see Test Engine for details.
 
-//---- Pack colors to BGRA8 instead of RGBA8 (to avoid converting from one to another)
+//---- Include imgui_user.h at the end of imgui.h as a convenience
+// May be convenient for some users to only explicitly include vanilla imgui.h and have extra stuff included.
+//#define IMGUI_INCLUDE_IMGUI_USER_H
+//#define IMGUI_USER_H_FILENAME         "my_folder/my_imgui_user.h"
+
+//---- Pack vertex colors as BGRA8 instead of RGBA8 (to avoid converting from one to another). Need dedicated backend support.
 //#define IMGUI_USE_BGRA_PACKED_COLOR
 
-//---- Use 32-bit for ImWchar (default is 16-bit) to support unicode planes 1-16. (e.g. point beyond 0xFFFF like emoticons, dingbats, symbols, shapes, ancient languages, etc...)
+//---- Use legacy CRC32-adler tables (used before 1.91.6), in order to preserve old .ini data that you cannot afford to invalidate.
+//#define IMGUI_USE_LEGACY_CRC32_ADLER
+
+//---- Use 32-bit for ImWchar (default is 16-bit) to support Unicode planes 1-16. (e.g. point beyond 0xFFFF like emoticons, dingbats, symbols, shapes, ancient languages, etc...)
 //#define IMGUI_USE_WCHAR32
 
 //---- Avoid multiple STB libraries implementations, or redefine path/filenames to prioritize another version
@@ -79,10 +96,12 @@
 // On Windows you may use vcpkg with 'vcpkg install freetype --triplet=x64-windows' + 'vcpkg integrate install'.
 //#define IMGUI_ENABLE_FREETYPE
 
-//---- Use FreeType+lunasvg library to render OpenType SVG fonts (SVGinOT)
-// Requires lunasvg headers to be available in the include path + program to be linked with the lunasvg library (not provided).
+//---- Use FreeType + plutosvg or lunasvg to render OpenType SVG fonts (SVGinOT)
 // Only works in combination with IMGUI_ENABLE_FREETYPE.
-// (implementation is based on Freetype's rsvg-port.c which is licensed under CeCILL-C Free Software License Agreement)
+// - plutosvg is currently easier to install, as e.g. it is part of vcpkg. It will support more fonts and may load them faster. See misc/freetype/README for instructions.
+// - Both require headers to be available in the include path + program to be linked with the library code (not provided).
+// - (note: lunasvg implementation is based on Freetype's rsvg-port.c which is licensed under CeCILL-C Free Software License Agreement)
+//#define IMGUI_ENABLE_FREETYPE_PLUTOSVG
 //#define IMGUI_ENABLE_FREETYPE_LUNASVG
 
 //---- Use stb_truetype to build and rasterize the font atlas (default)

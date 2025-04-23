@@ -3,11 +3,16 @@
 
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'GLuint' OpenGL texture identifier as void*/ImTextureID. Read the FAQ about ImTextureID!
+// Missing features or Issues:
+//  [ ] Renderer: Large meshes support (64k+ vertices) even with 16-bit indices (ImGuiBackendFlags_RendererHasVtxOffset).
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
-// If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
-// Read online: https://github.com/ocornut/imgui/tree/master/docs
+// Learn about Dear ImGui:
+// - FAQ                  https://dearimgui.com/faq
+// - Getting Started      https://dearimgui.com/getting-started
+// - Documentation        https://dearimgui.com/docs (same as your local docs/ folder).
+// - Introduction, links and more at the top of imgui.cpp
 
 // **DO NOT USE THIS CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL (SHADERS, VBO, VAO, etc.)**
 // **Prefer using the code in imgui_impl_opengl3.cpp**
@@ -21,6 +26,7 @@
 #include "imgui.h"      // IMGUI_IMPL_API
 #ifndef IMGUI_DISABLE
 
+// Follow "Getting Started" link and check examples/ folder to learn about using backends!
 IMGUI_IMPL_API bool     ImGui_ImplOpenGL2_Init();
 IMGUI_IMPL_API void     ImGui_ImplOpenGL2_Shutdown();
 IMGUI_IMPL_API void     ImGui_ImplOpenGL2_NewFrame();
