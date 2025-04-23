@@ -420,11 +420,12 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
         case SDL_EVENT_KEY_DOWN:
         case SDL_EVENT_KEY_UP:
         {
-            if (ImGui_ImplSDL3_GetViewportForWindowID(event->key.windowID) == nullptr)
+            ImGuiViewport* viewport = ImGui_ImplSDL3_GetViewportForWindowID(event->key.windowID);
+            if (viewport == nullptr)
                 return false;
+            //IMGUI_DEBUG_LOG("SDL_EVENT_KEY_%s : key=0x%08X ('%s'), scancode=%d ('%s'), mod=%X, windowID=%d, viewport=%08X\n",
+            //    (event->type == SDL_EVENT_KEY_DOWN) ? "DOWN" : "UP  ", event->key.key, SDL_GetKeyName(event->key.key), event->key.scancode, SDL_GetScancodeName(event->key.scancode), event->key.mod, event->key.windowID, viewport ? viewport->ID : 0);
             ImGui_ImplSDL3_UpdateKeyModifiers((SDL_Keymod)event->key.mod);
-            //IMGUI_DEBUG_LOG("SDL_EVENT_KEY_%s : key=%d ('%s'), scancode=%d ('%s'), mod=%X\n",
-            //    (event->type == SDL_EVENT_KEY_DOWN) ? "DOWN" : "UP  ", event->key.key, SDL_GetKeyName(event->key.key), event->key.scancode, SDL_GetScancodeName(event->key.scancode), event->key.mod);
             ImGuiKey key = ImGui_ImplSDL3_KeyEventToImGuiKey(event->key.key, event->key.scancode);
             io.AddKeyEvent(key, (event->type == SDL_EVENT_KEY_DOWN));
             io.SetKeyEventNativeData(key, event->key.key, event->key.scancode, event->key.scancode); // To support legacy indexing (<1.87 user code). Legacy backend uses SDLK_*** as indices to IsKeyXXX() functions.
@@ -461,8 +462,10 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
         case SDL_EVENT_WINDOW_FOCUS_GAINED:
         case SDL_EVENT_WINDOW_FOCUS_LOST:
         {
-            if (ImGui_ImplSDL3_GetViewportForWindowID(event->window.windowID) == nullptr)
+            ImGuiViewport* viewport = ImGui_ImplSDL3_GetViewportForWindowID(event->window.windowID);
+            if (viewport == nullptr)
                 return false;
+            //IMGUI_DEBUG_LOG("%s: windowId %d, viewport: %08X\n", (event->type == SDL_EVENT_WINDOW_FOCUS_GAINED) ? "SDL_EVENT_WINDOW_FOCUS_GAINED" : "SDL_WINDOWEVENT_FOCUS_LOST", event->window.windowID, viewport ? viewport->ID : 0);
             io.AddFocusEvent(event->type == SDL_EVENT_WINDOW_FOCUS_GAINED);
             return true;
         }
@@ -508,6 +511,7 @@ static bool ImGui_ImplSDL3_Init(SDL_Window* window, SDL_Renderer* renderer, void
     IMGUI_CHECKVERSION();
     IM_ASSERT(io.BackendPlatformUserData == nullptr && "Already initialized a platform backend!");
     IM_UNUSED(sdl_gl_context); // Unused in this branch
+    //SDL_SetHint(SDL_HINT_EVENT_LOGGING, "2");
 
     // Setup backend capabilities flags
     ImGui_ImplSDL3_Data* bd = IM_NEW(ImGui_ImplSDL3_Data)();
@@ -578,7 +582,7 @@ static bool ImGui_ImplSDL3_Init(SDL_Window* window, SDL_Renderer* renderer, void
     // Without this, when clicking to gain focus, our widgets wouldn't activate even though they showed as hovered.
     // (This is unfortunately a global SDL setting, so enabling it might have a side-effect on your application.
     // It is unlikely to make a difference, but if your app absolutely needs to ignore the initial on-focus click:
-    // you can ignore SDL_EVENT_MOUSE_BUTTON_DOWN events coming right after a SDL_WINDOWEVENT_FOCUS_GAINED)
+    // you can ignore SDL_EVENT_MOUSE_BUTTON_DOWN events coming right after a SDL_EVENT_WINDOW_FOCUS_GAINED)
     SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
 
     // From 2.0.22: Disable auto-capture, this is preventing drag and drop across multiple windows (see #5710)

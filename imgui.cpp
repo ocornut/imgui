@@ -15941,7 +15941,7 @@ static void ImGui::UpdateViewportsNewFrame()
         // Focused viewport has changed?
         if (focused_viewport && g.PlatformLastFocusedViewportId != focused_viewport->ID)
         {
-            IMGUI_DEBUG_LOG_VIEWPORT("[viewport] Focused viewport changed %08X -> %08X, attempting to apply our focus.\n", g.PlatformLastFocusedViewportId, focused_viewport->ID);
+            IMGUI_DEBUG_LOG_VIEWPORT("[viewport] Focused viewport changed %08X -> %08X '%s', attempting to apply our focus.\n", g.PlatformLastFocusedViewportId, focused_viewport->ID, focused_viewport->Window ? focused_viewport->Window->Name : "n/a");
             const ImGuiViewport* prev_focused_viewport = FindViewportByID(g.PlatformLastFocusedViewportId);
             const bool prev_focused_has_been_destroyed = (prev_focused_viewport == NULL) || (prev_focused_viewport->PlatformWindowCreated == false);
 
