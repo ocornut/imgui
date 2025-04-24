@@ -436,7 +436,7 @@ void ImGui_ImplFreeType_FontSrcDestroy(ImFontAtlas* atlas, ImFontConfig* src)
 bool ImGui_ImplFreeType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void* loader_data_for_baked_src)
 {
     IM_UNUSED(atlas);
-    const float size = baked->Size * (src->SizePixels / baked->ContainerFont->Sources[0].SizePixels); // FIXME-NEWATLAS: Should tidy up that a bit
+    const float size = baked->Size * (src->SizePixels / baked->ContainerFont->Sources[0]->SizePixels); // FIXME-NEWATLAS: Should tidy up that a bit
 
     ImGui_ImplFreeType_FontSrcData* bd_font_data = (ImGui_ImplFreeType_FontSrcData*)src->FontLoaderData;
     bd_font_data->BakedLastActivated = baked;
@@ -541,7 +541,7 @@ ImFontGlyph* ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontCon
         uint32_t* temp_buffer = (uint32_t*)atlas->Builder->TempBuffer.Data;
         bd_font_data->BlitGlyph(ft_bitmap, temp_buffer, w);
 
-        const float offsets_scale = baked->Size / baked->ContainerFont->Sources[0].SizePixels;
+        const float offsets_scale = baked->Size / baked->ContainerFont->Sources[0]->SizePixels;
         float font_off_x = (src->GlyphOffset.x * offsets_scale);
         float font_off_y = (src->GlyphOffset.y * offsets_scale) + baked->Ascent;
         if (src->PixelSnapH) // Snap scaled offset. This is to mitigate backward compatibility issues for GlyphOffset, but a better design would be welcome.

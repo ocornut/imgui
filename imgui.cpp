@@ -16612,7 +16612,7 @@ void ImGui::DebugNodeFont(ImFont* font)
     ImGuiContext& g = *GImGui;
     ImGuiMetricsConfig* cfg = &g.DebugMetricsConfig;
     ImFontAtlas* atlas = font->ContainerAtlas;
-    bool opened = TreeNode(font, "Font: \"%s\": %d sources(s)", font->GetDebugName(), font->SourcesCount);
+    bool opened = TreeNode(font, "Font: \"%s\": %d sources(s)", font->GetDebugName(), font->Sources.Size);
 
     // Display preview text
     if (!opened)
@@ -16652,28 +16652,30 @@ void ImGui::DebugNodeFont(ImFont* font)
     Text("Fallback character: '%s' (U+%04X)", ImTextCharToUtf8(c_str, font->FallbackChar), font->FallbackChar);
     Text("Ellipsis character: '%s' (U+%04X)", ImTextCharToUtf8(c_str, font->EllipsisChar), font->EllipsisChar);
 
-    for (int src_n = 0; src_n < font->SourcesCount; src_n++)
-        if (ImFontConfig* src = &font->Sources[src_n])
-            if (TreeNode(src, "Input %d: \'%s\', Oversample: %d,%d, PixelSnapH: %d, Offset: (%.1f,%.1f)",
-                src_n, src->Name, src->OversampleH, src->OversampleV, src->PixelSnapH, src->GlyphOffset.x, src->GlyphOffset.y))
-            {
-                const ImFontLoader* loader = src->FontLoader ? src->FontLoader : atlas->FontLoader;
-                Text("Loader: '%s'", loader->Name ? loader->Name : "N/A");
+    for (int src_n = 0; src_n < font->Sources.Size; src_n++)
+    {
+        ImFontConfig* src = font->Sources[src_n];
+        if (TreeNode(src, "Input %d: \'%s\', Oversample: %d,%d, PixelSnapH: %d, Offset: (%.1f,%.1f)",
+            src_n, src->Name, src->OversampleH, src->OversampleV, src->PixelSnapH, src->GlyphOffset.x, src->GlyphOffset.y))
+        {
+            const ImFontLoader* loader = src->FontLoader ? src->FontLoader : atlas->FontLoader;
+            Text("Loader: '%s'", loader->Name ? loader->Name : "N/A");
 #ifdef IMGUI_ENABLE_FREETYPE
-                if (loader->Name != NULL && strcmp(loader->Name, "FreeType") == 0)
+            if (loader->Name != NULL && strcmp(loader->Name, "FreeType") == 0)
+            {
+                unsigned int loader_flags = src->FontBuilderFlags;
+                Text("FreeType Loader Flags: 0x%08X", loader_flags);
+                if (ImGuiFreeType::DebugEditFontBuilderFlags(&loader_flags))
                 {
-                    unsigned int loader_flags = src->FontBuilderFlags;
-                    Text("FreeType Loader Flags: 0x%08X", loader_flags);
-                    if (ImGuiFreeType::DebugEditFontBuilderFlags(&loader_flags))
-                    {
-                        ImFontAtlasFontDestroyOutput(atlas, font);
-                        src->FontBuilderFlags = loader_flags;
-                        ImFontAtlasFontInitOutput(atlas, font);
-                    }
+                    ImFontAtlasFontDestroyOutput(atlas, font);
+                    src->FontBuilderFlags = loader_flags;
+                    ImFontAtlasFontInitOutput(atlas, font);
                 }
-#endif
-                TreePop();
             }
+#endif
+            TreePop();
+        }
+    }
 
     // Display all glyphs of the fonts in separate pages of 256 characters
     for (int baked_n = 0; baked_n < atlas->Builder->BakedPool.Size; baked_n++)
@@ -16691,9 +16693,9 @@ void ImGui::DebugNodeFont(ImFont* font)
             const int surface_sqrt = (int)ImSqrt((float)baked->MetricsTotalSurface);
             Text("Ascent: %f, Descent: %f, Ascent-Descent: %f", baked->Ascent, baked->Descent, baked->Ascent - baked->Descent);
             Text("Texture Area: about %d px ~%dx%d px", baked->MetricsTotalSurface, surface_sqrt, surface_sqrt);
-            for (int src_n = 0; src_n < font->SourcesCount; src_n++)
+            for (int src_n = 0; src_n < font->Sources.Size; src_n++)
             {
-                ImFontConfig* src = &font->Sources[src_n];
+                ImFontConfig* src = font->Sources[src_n];
                 int oversample_h, oversample_v;
                 ImFontAtlasBuildGetOversampleFactors(src, baked->Size, &oversample_h, &oversample_v);
                 BulletText("Input %d: \'%s\', Oversample: (%d=>%d,%d=>%d), PixelSnapH: %d, Offset: (%.1f,%.1f)",
