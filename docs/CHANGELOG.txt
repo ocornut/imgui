@@ -78,6 +78,8 @@ Other changes:
 - TreeNode: fixed incorrect clipping of arrow/bullet when using ImGuiTreeNodeFlags_SpanAllColumns.
 - Tables: fixed TableHeader() eager vertical clipping of text which may be noticeable
   with FramePadding.y was too small. (#6236)
+- Tables: fixed an assert when combining Tables, Frozen Rows, Clipper and BeginMultiSelect()
+  in a certain order. (#8595, #8250)
 - Tabs: fixes small issues with how "..." ellipsis moved depending on visibility
   of Close Button or Unsaved Document marker. (#8387)
 - Nav: fixed assertion when holding gamepad FaceLeft/West button to open

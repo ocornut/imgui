@@ -1953,7 +1953,10 @@ void ImGui::TableEndRow(ImGuiTable* table)
     IM_ASSERT(table->IsInsideRow);
 
     if (table->CurrentColumn != -1)
+    {
         TableEndCell(table);
+        table->CurrentColumn = -1;
+    }
 
     // Logging
     if (g.LogEnabled)
