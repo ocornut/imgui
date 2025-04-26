@@ -151,17 +151,11 @@ namespace
         ImGui_ImplFreeType_Data()       { memset((void*)this, 0, sizeof(*this)); }
     };
 
-    // Stored in ImFontBaked::FontLoaderDatas: pointer to SourcesCount instances of this. ALLOCATED BY CORE.
-    struct ImGui_ImplFreeType_FontSrcBakedData
-    {
-        FT_Size     FtSize;             // This represent a FT_Face with a given size.
-        ImGui_ImplFreeType_FontSrcBakedData() { memset((void*)this, 0, sizeof(*this)); }
-    };
-
     // Stored in ImFontConfig::FontLoaderData. ALLOCATED BY US.
     struct ImGui_ImplFreeType_FontSrcData
     {
-        bool                            InitFont(FT_Library ft_library, ImFontConfig* src, unsigned int extra_user_flags); // Initialize from an external data buffer. Doesn't copy data, and you must ensure it stays valid up to this object lifetime.
+        // Initialize from an external data buffer. Doesn't copy data, and you must ensure it stays valid up to this object lifetime.
+        bool                            InitFont(FT_Library ft_library, ImFontConfig* src, ImGuiFreeTypeBuilderFlags extra_user_flags);
         void                            CloseFont();
         const FT_Glyph_Metrics*         LoadGlyph(uint32_t in_codepoint);
         void                            BlitGlyph(const FT_Bitmap* ft_bitmap, uint32_t* dst, uint32_t dst_pitch);
@@ -170,15 +164,19 @@ namespace
 
         // Members
         FT_Face                         FtFace;
-        unsigned int                    UserFlags;          // = ImFontConfig::RasterizerFlags
+        ImGuiFreeTypeBuilderFlags       UserFlags;          // = ImFontConfig::FontBuilderFlags
         FT_Int32                        LoadFlags;
-        FT_Render_Mode                  RenderMode;
-        float                           RasterizationDensity;
-        float                           InvRasterizationDensity;
         ImFontBaked*                    BakedLastActivated;
     };
 
-    bool ImGui_ImplFreeType_FontSrcData::InitFont(FT_Library ft_library, ImFontConfig* src, unsigned int extra_font_builder_flags)
+    // Stored in ImFontBaked::FontLoaderDatas: pointer to SourcesCount instances of this. ALLOCATED BY CORE.
+    struct ImGui_ImplFreeType_FontSrcBakedData
+    {
+        FT_Size     FtSize;             // This represent a FT_Face with a given size.
+        ImGui_ImplFreeType_FontSrcBakedData() { memset((void*)this, 0, sizeof(*this)); }
+    };
+
+    bool ImGui_ImplFreeType_FontSrcData::InitFont(FT_Library ft_library, ImFontConfig* src, ImGuiFreeTypeBuilderFlags extra_font_builder_flags)
     {
         FT_Error error = FT_New_Memory_Face(ft_library, (uint8_t*)src->FontData, (uint32_t)src->FontDataSize, (uint32_t)src->FontNo, &FtFace);
         if (error != 0)
@@ -188,7 +186,7 @@ namespace
             return false;
 
         // Convert to FreeType flags (NB: Bold and Oblique are processed separately)
-        UserFlags = src->FontBuilderFlags | extra_font_builder_flags;
+        UserFlags = (ImGuiFreeTypeBuilderFlags)(src->FontBuilderFlags | extra_font_builder_flags);
 
         LoadFlags = 0;
         if ((UserFlags & ImGuiFreeTypeBuilderFlags_Bitmap) == 0)
@@ -210,16 +208,8 @@ namespace
         else
             LoadFlags |= FT_LOAD_TARGET_NORMAL;
 
-        if (UserFlags & ImGuiFreeTypeBuilderFlags_Monochrome)
-            RenderMode = FT_RENDER_MODE_MONO;
-        else
-            RenderMode = FT_RENDER_MODE_NORMAL;
-
         if (UserFlags & ImGuiFreeTypeBuilderFlags_LoadColor)
             LoadFlags |= FT_LOAD_COLOR;
-
-        RasterizationDensity = src->RasterizerDensity;
-        InvRasterizationDensity = 1.0f / RasterizationDensity;
 
         return true;
     }
@@ -415,7 +405,7 @@ bool ImGui_ImplFreeType_FontSrcInit(ImFontAtlas* atlas, ImFontConfig* src)
     IM_ASSERT(src->FontLoaderData == NULL);
     src->FontLoaderData = bd_font_data;
 
-    if (!bd_font_data->InitFont(bd->Library, src, atlas->FontBuilderFlags))
+    if (!bd_font_data->InitFont(bd->Library, src, (ImGuiFreeTypeBuilderFlags)atlas->FontBuilderFlags))
     {
         IM_DELETE(bd_font_data);
         src->FontLoaderData = NULL;
@@ -456,7 +446,7 @@ bool ImGui_ImplFreeType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig* src, ImF
     FT_Size_RequestRec req;
     req.type = (bd_font_data->UserFlags & ImGuiFreeTypeBuilderFlags_Bitmap) ? FT_SIZE_REQUEST_TYPE_NOMINAL : FT_SIZE_REQUEST_TYPE_REAL_DIM;
     req.width = 0;
-    req.height = (uint32_t)(size * 64 * bd_font_data->RasterizationDensity);
+    req.height = (uint32_t)(size * 64 * src->RasterizerDensity);
     req.horiResolution = 0;
     req.vertResolution = 0;
     FT_Request_Size(bd_font_data->FtFace, &req);
@@ -466,7 +456,7 @@ bool ImGui_ImplFreeType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig* src, ImF
     {
         // Read metrics
         FT_Size_Metrics metrics = bd_baked_data->FtSize->metrics;
-        const float scale = bd_font_data->InvRasterizationDensity;
+        const float scale = 1.0f / src->RasterizerDensity;
         baked->Ascent     = (float)FT_CEIL(metrics.ascender) * scale;       // The pixel extents above the baseline in pixels (typically positive).
         baked->Descent    = (float)FT_CEIL(metrics.descender) * scale;      // The extents below the baseline in pixels (typically negative).
         //LineSpacing     = (float)FT_CEIL(metrics.height) * scale;         // The baseline-to-baseline distance. Note that it usually is larger than the sum of the ascender and descender taken as absolute values. There is also no guarantee that no glyphs extend above or below subsequent baselines when using this distance. Think of it as a value the designer of the font finds appropriate.
@@ -509,7 +499,8 @@ ImFontGlyph* ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontCon
     // Render glyph into a bitmap (currently held by FreeType)
     FT_Face face = bd_font_data->FtFace;
     FT_GlyphSlot slot = face->glyph;
-    FT_Error error = FT_Render_Glyph(slot, bd_font_data->RenderMode);
+    FT_Render_Mode render_mode = (bd_font_data->UserFlags & ImGuiFreeTypeBuilderFlags_Monochrome) ? FT_RENDER_MODE_MONO : FT_RENDER_MODE_NORMAL;
+    FT_Error error = FT_Render_Glyph(slot, render_mode);
     const FT_Bitmap* ft_bitmap = &slot->bitmap;
     if (error != 0 || ft_bitmap == nullptr)
         return NULL;
@@ -522,7 +513,7 @@ ImFontGlyph* ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontCon
     ImFontGlyph glyph_in = {};
     ImFontGlyph* glyph = &glyph_in;
     glyph->Codepoint = codepoint;
-    glyph->AdvanceX = (slot->advance.x / FT_SCALEFACTOR) * bd_font_data->InvRasterizationDensity;
+    glyph->AdvanceX = (slot->advance.x / FT_SCALEFACTOR) / src->RasterizerDensity;
 
     // Pack and retrieve position inside texture atlas
     if (is_visible)
