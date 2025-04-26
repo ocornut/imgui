@@ -125,6 +125,7 @@ Docking+Viewports Branch:
 - Backends: SDL2, SDL3: revert updating monitors and work areas info every
   frame. Only do it on Windows to detect task-bar resize until we get an
   adequate event for it. (#8415, #8558)
+- Backends: GLFW: Disable multi-viewports under Wayland (require GLFW 3.4). (#8587)
 
 
 -----------------------------------------------------------------------

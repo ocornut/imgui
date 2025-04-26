@@ -561,7 +561,6 @@ static bool ImGui_ImplSDL2_Init(SDL_Window* window, SDL_Renderer* renderer, void
     if (bd->MouseCanUseGlobalState)
         io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;  // We can create multi-viewports on the Platform side (optional)
 
-
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     platform_io.Platform_SetClipboardTextFn = ImGui_ImplSDL2_SetClipboardText;
     platform_io.Platform_GetClipboardTextFn = ImGui_ImplSDL2_GetClipboardText;
