@@ -3192,7 +3192,7 @@ typedef void (*ImDrawCallback)(const ImDrawList* parent_list, const ImDrawCmd* c
 struct ImDrawCmd
 {
     ImVec4          ClipRect;           // 4*4  // Clipping rectangle (x1, y1, x2, y2). Subtract ImDrawData->DisplayPos to get clipping rectangle in "viewport" coordinates
-    ImTextureRef    TexRef;             // 16   // User-provided texture ID. Set by user in ImFontAtlas::SetTexID() for fonts or passed to Image*() functions. Ignore if never using images or multiple fonts atlas.
+    ImTextureRef    TexRef;             // 16   // Reference to a font/texture atlas (where backend called ImTextureData::SetTexID()) or to a user-provided texture ID (via e.g. ImGui::Image() calls). Both will lead to a ImTextureID value.
     unsigned int    VtxOffset;          // 4    // Start offset in vertex buffer. ImGuiBackendFlags_RendererHasVtxOffset: always 0, otherwise may be >0 to support meshes larger than 64K vertices with 16-bit indices.
     unsigned int    IdxOffset;          // 4    // Start offset in index buffer.
     unsigned int    ElemCount;          // 4    // Number of indices (multiple of 3) to be rendered as triangles. Vertices are stored in the callee ImDrawList's vtx_buffer[] array, indices in idx_buffer[].
@@ -3516,24 +3516,26 @@ struct ImTextureRect
 // Why does we store two identifiers: TexID and BackendUserData?
 // - ImTextureID    TexID           = lower-level identifier stored in ImDrawCmd. ImDrawCmd can refer to textures not created by the backend, and for which there's no ImTextureData.
 // - void*          BackendUserData = higher-level opaque storage for backend own book-keeping. Some backends may have enough with TexID and not need both.
+ // In columns below: who reads/writes each fields? 'r'=read, 'w'=write, 'core'=main library, 'backend'=renderer backend
 struct ImTextureData
 {
-    ImTextureStatus     Status;                 // ImTextureStatus_OK/_WantCreate/_WantUpdates/_WantDestroy. Always use SetStatus() to modify!
-    ImTextureFormat     Format;                 // ImTextureFormat_RGBA32 (default) or ImTextureFormat_Alpha8
-    int                 Width;                  // Texture width
-    int                 Height;                 // Texture height
-    int                 BytesPerPixel;          // 4 or 1
-    int                 UniqueID;               // Sequential index to facilitate identifying a texture when debugging/printing. Only unique per atlas.
-    unsigned char*      Pixels;                 // Pointer to buffer holding 'Width*Height' pixels and 'Width*Height*BytesPerPixels' bytes.
-    ImTextureID         TexID;                  // Always use SetTexID() to modify! Identifier stored in ImDrawCmd::GetTexID() and passed to backend RenderDrawData loop.
-    void*               BackendUserData;        // Convenience storage for backend. Some backends may have enough with TexID.
-    ImTextureRect       UsedRect;               // Bounding box encompassing all past and queued Updates[].
-    ImTextureRect       UpdateRect;             // Bounding box encompassing all queued Updates[].
-    ImVector<ImTextureRect> Updates;            // Array of individual updates.
-    int                 UnusedFrames;           // In order to facilitate handling Status==WantDestroy in some backend: this is a count successive frames where the texture was not used.
-    unsigned short      RefCount;               // Number of contexts using this texture.
-    bool                UseColors;              // Tell whether our texture data is known to use colors (rather than just white + alpha).
-    bool                WantDestroyNextFrame;   // [Internal] Queued to set ImTextureStatus_WantDestroy next frame. May still be used in the current frame.
+    //------------------------------------------ core / backend ---------------------------------------
+    int                 UniqueID;               // w    -   // Sequential index to facilitate identifying a texture when debugging/printing. Unique per atlas.
+    ImTextureStatus     Status;                 // rw   rw  // ImTextureStatus_OK/_WantCreate/_WantUpdates/_WantDestroy. Always use SetStatus() to modify!
+    void*               BackendUserData;        // -    rw  // Convenience storage for backend. Some backends may have enough with TexID.
+    ImTextureID         TexID;                  // r    w   // Backend-specific texture identifier. Always use SetTexID() to modify! The identifier will stored in ImDrawCmd::GetTexID() and passed to backend's RenderDrawData function.
+    ImTextureFormat     Format;                 // w    r   // ImTextureFormat_RGBA32 (default) or ImTextureFormat_Alpha8
+    int                 Width;                  // w    r   // Texture width
+    int                 Height;                 // w    r   // Texture height
+    int                 BytesPerPixel;          // w    r   // 4 or 1
+    unsigned char*      Pixels;                 // w    r   // Pointer to buffer holding 'Width*Height' pixels and 'Width*Height*BytesPerPixels' bytes.
+    ImTextureRect       UsedRect;               // w    r   // Bounding box encompassing all past and queued Updates[].
+    ImTextureRect       UpdateRect;             // w    r   // Bounding box encompassing all queued Updates[].
+    ImVector<ImTextureRect> Updates;            // w    r   // Array of individual updates.
+    int                 UnusedFrames;           // w    r   // In order to facilitate handling Status==WantDestroy in some backend: this is a count successive frames where the texture was not used.
+    unsigned short      RefCount;               // w    r   // Number of contexts using this texture. Used during backend shutdown.
+    bool                UseColors;              // w    r   // Tell whether our texture data is known to use colors (rather than just white + alpha).
+    bool                WantDestroyNextFrame;   // rw   -   // [Internal] Queued to set ImTextureStatus_WantDestroy next frame. May still be used in the current frame.
 
     // Functions
     ImTextureData()     { memset(this, 0, sizeof(*this)); }

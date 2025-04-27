@@ -298,7 +298,7 @@ CODE
          // Any application code here
          ImGui::Text("Hello, world!");
 
-         // Render dear imgui into screen
+         // Render dear imgui into framebuffer
          ImGui::Render();
          ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
          g_pSwapChain->Present(1, 0);
@@ -311,24 +311,14 @@ CODE
 
  EXHIBIT 2: IMPLEMENTING CUSTOM BACKEND / CUSTOM ENGINE
 
-     // Application init: create a dear imgui context, setup some options, load fonts
+     // Application init: create a Dear ImGui context, setup some options, load fonts
      ImGui::CreateContext();
      ImGuiIO& io = ImGui::GetIO();
-     // TODO: Set optional io.ConfigFlags values, e.g. 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard' to enable keyboard controls.
-     // TODO: Fill optional fields of the io structure later.
+     // TODO: set io.ConfigXXX values, e.g.
+     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable keyboard controls
+
      // TODO: Load TTF/OTF fonts if you don't want to use the default font.
-
-     // Build and load the texture atlas into a texture
-     // (In the examples/ app this is usually done within the ImGui_ImplXXX_Init() function from one of the demo Renderer)
-     int width, height;
-     unsigned char* pixels = nullptr;
-     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
-
-     // At this point you've got the texture data and you need to upload that to your graphic system:
-     // After we have created the texture, store its pointer/identifier (_in whichever format your engine uses_) in 'io.Fonts->TexID'.
-     // This will be passed back to your via the renderer. Basically ImTextureID == void*. Read FAQ for details about ImTextureID.
-     MyTexture* texture = MyEngine::CreateTextureFromMemoryPixels(pixels, width, height, TEXTURE_TYPE_RGBA32)
-     io.Fonts->SetTexID((void*)texture);
+     io.Fonts->AddFontFromFileTTF("NotoSans.ttf", 18.0f);
 
      // Application main loop
      while (true)
@@ -351,12 +341,19 @@ CODE
         MyGameUpdate(); // may use any Dear ImGui functions, e.g. ImGui::Begin("My window"); ImGui::Text("Hello, world!"); ImGui::End();
         MyGameRender(); // may use any Dear ImGui functions as well!
 
-        // Render dear imgui, swap buffers
+        // End the dear imgui frame
         // (You want to try calling EndFrame/Render as late as you can, to be able to use Dear ImGui in your own game rendering code)
-        ImGui::EndFrame();
+        ImGui::EndFrame(); // this is automatically called by Render(), but available
         ImGui::Render();
+
+        // Update textures
+        for (ImTextureData* tex : ImGui::GetPlatformIO().Textures)
+            if (tex->Status != ImTextureStatus_OK)
+                MyImGuiBackend_UpdateTexture(tex);
+
+        // Render dear imgui contents, swap buffers
         ImDrawData* draw_data = ImGui::GetDrawData();
-        MyImGuiRenderFunction(draw_data);
+        MyImGuiBackend_RenderDrawData(draw_data);
         SwapBuffers();
      }
 
@@ -367,12 +364,32 @@ CODE
  you should read the 'io.WantCaptureMouse', 'io.WantCaptureKeyboard' and 'io.WantTextInput' flags!
  Please read the FAQ entry "How can I tell whether to dispatch mouse/keyboard to Dear ImGui or my application?" about this.
 
-
  HOW A SIMPLE RENDERING FUNCTION MAY LOOK LIKE
  ---------------------------------------------
  The backends in impl_impl_XXX.cpp files contain many working implementations of a rendering function.
 
-    void MyImGuiRenderFunction(ImDrawData* draw_data)
+    void MyImGuiBackend_UpdateTexture(ImTextureData* tex)
+    {
+        if (tex->Status == ImTextureStatus_WantCreate)
+        {
+            // create texture based on tex->Width/Height/Pixels
+            // call tex->SetTexID() to specify backend-specific identifiers
+            // tex->Status = ImTextureStatus_OK;
+        }
+        if (tex->Status == ImTextureStatus_WantUpdates)
+        {
+            // update texture blocks based on tex->UpdateRect
+            // tex->Status = ImTextureStatus_OK;
+        }
+        if (tex->Status == ImTextureStatus_WantDestroy)
+        {
+            // destroy texture
+            // call tex->SetTexID(ImTextureID_Invalid)
+            // tex->Status = ImTextureStatus_Destroyed;
+        }
+    }
+
+    void MyImGuiBackend_RenderDrawData(ImDrawData* draw_data)
     {
        // TODO: Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled
        // TODO: Setup texture sampling state: sample with bilinear filtering (NOT point/nearest filtering). Use 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines;' to allow point/nearest filtering.
