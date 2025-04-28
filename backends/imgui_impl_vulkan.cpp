@@ -1698,6 +1698,83 @@ void ImGui_ImplVulkanH_CreateWindowSwapChain(VkPhysicalDevice physical_device, V
             check_vk_result(err);
         }
     }
+
+    // this may be done also if we don't use dynamic rendering
+    if(wd->UseDynamicRendering)
+    {
+        ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
+        ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
+
+        VkCommandPool command_pool;
+        VkCommandPoolCreateInfo pool_info = {};
+        pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        pool_info.queueFamilyIndex = v->QueueFamily;
+        pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+        err = vkCreateCommandPool(device, &pool_info, v->Allocator, &command_pool);
+        check_vk_result(err);
+        
+        VkFenceCreateInfo fence_info = {};
+        fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        VkFence fence;
+        err = vkCreateFence(device, &fence_info, v->Allocator, &fence);
+        check_vk_result(err);
+        
+        VkCommandBufferAllocateInfo alloc_info = {};
+        alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        alloc_info.commandPool = command_pool;
+        alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        alloc_info.commandBufferCount = 1;
+        VkCommandBuffer command_buffer;
+        err = vkAllocateCommandBuffers(device, &alloc_info, &command_buffer);
+        check_vk_result(err);
+        
+        VkCommandBufferBeginInfo begin_info = {};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        err = vkBeginCommandBuffer(command_buffer, &begin_info);
+        check_vk_result(err);
+        
+        // transition the images to the correct layout for rendering
+        for (uint32_t i = 0; i < wd->ImageCount; i++)
+        {
+            ImGui_ImplVulkanH_Frame* fd = &wd->Frames[i];
+            VkImageMemoryBarrier barrier = {};
+            barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            barrier.image = wd->Frames[i].Backbuffer;
+            barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+            barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            barrier.subresourceRange.levelCount = 1;
+            barrier.subresourceRange.layerCount = 1;
+            vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+        }
+
+        err = vkEndCommandBuffer(command_buffer);
+        check_vk_result(err);
+        VkSubmitInfo submit_info = {};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &command_buffer;
+        err = vkQueueSubmit(v->Queue, 1, &submit_info, fence);
+        check_vk_result(err);
+        err = vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX);
+        check_vk_result(err);
+        err = vkResetFences(device, 1, &fence);
+        check_vk_result(err);
+
+        err = vkResetCommandPool(device, command_pool, 0);
+        check_vk_result(err);
+
+        // destroy command buffer and fence and command pool
+        vkFreeCommandBuffers(device, command_pool, 1, &command_buffer);
+        vkDestroyCommandPool(device, command_pool, v->Allocator);
+        vkDestroyFence(device, fence, v->Allocator);
+        command_pool = VK_NULL_HANDLE;
+        command_buffer = VK_NULL_HANDLE;
+        fence = VK_NULL_HANDLE;
+    }
 }
 
 // Create or resize window
@@ -1897,13 +1974,13 @@ static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport, void*)
             VkImageMemoryBarrier barrier = {};
             barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
             barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-            barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            barrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
             barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
             barrier.image = fd->Backbuffer;
             barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
             barrier.subresourceRange.levelCount = 1;
             barrier.subresourceRange.layerCount = 1;
-            vkCmdPipelineBarrier(fd->CommandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+            vkCmdPipelineBarrier(fd->CommandBuffer, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_NONE, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 
             VkRenderingAttachmentInfo attachmentInfo = {};
             attachmentInfo.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
