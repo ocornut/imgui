@@ -111,6 +111,7 @@ Other changes:
   way to call SDL_StartTextInput(), without IME being necessarily visible. (#8584)
 - Backends: SDLGPU3: Made ImGui_ImplSDLGPU3_PrepareDrawData() reuse GPU Transfer Buffers which
   were unusually slow to recreate every frame. Much faster now. (#8534) [@ocornut, @TheMode]
+- Backends: SDLGPU3: added support for ImDrawCallback_ResetRenderState. (#8599)
 - Backends: Vulkan: Deep-copy ImGui_ImplVulkan_InitInfo::PipelineRenderingCreateInfo's
   pColorAttachmentFormats buffer when set, in order to reduce common user-error of
   specifying a pointer to data that gets out of scope. (#8282)
