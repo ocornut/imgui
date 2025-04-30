@@ -196,7 +196,7 @@ int main(int, char**)
             break;
 
         // Handle window screen locked
-        if (g_SwapChainOccluded && g_pSwapChain->Present(0, DXGI_PRESENT_TEST) == DXGI_STATUS_OCCLUDED)
+        if ((g_SwapChainOccluded && g_pSwapChain->Present(0, DXGI_PRESENT_TEST) == DXGI_STATUS_OCCLUDED) || ::IsIconic(hwnd))
         {
             ::Sleep(10);
             continue;

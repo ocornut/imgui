@@ -115,6 +115,8 @@ Other changes:
 - Backends: Vulkan: Deep-copy ImGui_ImplVulkan_InitInfo::PipelineRenderingCreateInfo's
   pColorAttachmentFormats buffer when set, in order to reduce common user-error of
   specifying a pointer to data that gets out of scope. (#8282)
+- Examples: DirectX12+Win32: also test for IsIconic() for sleeping since we don't seem to
+  get a DXGI_STATUS_OCCLUDED signal when minimized. (#8603) [@dooann]
 
 
 -----------------------------------------------------------------------
