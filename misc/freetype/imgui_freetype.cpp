@@ -438,10 +438,11 @@ bool ImGui_ImplFreeType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig* src, ImF
     // is a maximum height of an any given glyph, i.e. it's the sum of font's ascender and descender. Seems strange to me.
     // FT_Set_Pixel_Sizes() doesn't seem to get us the same result."
     // (FT_Set_Pixel_Sizes() essentially calls FT_Request_Size() with FT_SIZE_REQUEST_TYPE_NOMINAL)
+    const float rasterizer_density = src->RasterizerDensity * baked->RasterizerDensity;
     FT_Size_RequestRec req;
     req.type = (bd_font_data->UserFlags & ImGuiFreeTypeBuilderFlags_Bitmap) ? FT_SIZE_REQUEST_TYPE_NOMINAL : FT_SIZE_REQUEST_TYPE_REAL_DIM;
     req.width = 0;
-    req.height = (uint32_t)(size * 64 * src->RasterizerDensity);
+    req.height = (uint32_t)(size * 64 * rasterizer_density);
     req.horiResolution = 0;
     req.vertResolution = 0;
     FT_Request_Size(bd_font_data->FtFace, &req);
@@ -451,7 +452,7 @@ bool ImGui_ImplFreeType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig* src, ImF
     {
         // Read metrics
         FT_Size_Metrics metrics = bd_baked_data->FtSize->metrics;
-        const float scale = 1.0f / src->RasterizerDensity;
+        const float scale = 1.0f / rasterizer_density;
         baked->Ascent     = (float)FT_CEIL(metrics.ascender) * scale;       // The pixel extents above the baseline in pixels (typically positive).
         baked->Descent    = (float)FT_CEIL(metrics.descender) * scale;      // The extents below the baseline in pixels (typically negative).
         //LineSpacing     = (float)FT_CEIL(metrics.height) * scale;         // The baseline-to-baseline distance. Note that it usually is larger than the sum of the ascender and descender taken as absolute values. There is also no guarantee that no glyphs extend above or below subsequent baselines when using this distance. Think of it as a value the designer of the font finds appropriate.
@@ -503,12 +504,13 @@ ImFontGlyph* ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontCon
     const int w = (int)ft_bitmap->width;
     const int h = (int)ft_bitmap->rows;
     const bool is_visible = (w != 0 && h != 0);
+    const float rasterizer_density = src->RasterizerDensity * baked->RasterizerDensity;
 
     // Prepare glyph
     ImFontGlyph glyph_in = {};
     ImFontGlyph* glyph = &glyph_in;
     glyph->Codepoint = codepoint;
-    glyph->AdvanceX = (slot->advance.x / FT_SCALEFACTOR) / src->RasterizerDensity;
+    glyph->AdvanceX = (slot->advance.x / FT_SCALEFACTOR) / rasterizer_density;
 
     // Pack and retrieve position inside texture atlas
     if (is_visible)
@@ -534,8 +536,8 @@ ImFontGlyph* ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontCon
             font_off_x = IM_ROUND(font_off_x);
         if (src->PixelSnapV)
             font_off_y = IM_ROUND(font_off_y);
-        float recip_h = 1.0f / src->RasterizerDensity;
-        float recip_v = 1.0f / src->RasterizerDensity;
+        float recip_h = 1.0f / rasterizer_density;
+        float recip_v = 1.0f / rasterizer_density;
 
         // Register glyph
         float glyph_off_x = (float)face->glyph->bitmap_left;

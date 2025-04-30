@@ -3356,10 +3356,11 @@ void ImFontAtlasBuildMain(ImFontAtlas* atlas)
     atlas->TexIsBuilt = true;
 }
 
-void ImFontAtlasBuildGetOversampleFactors(ImFontConfig* src, float size, int* out_oversample_h, int* out_oversample_v)
+void ImFontAtlasBuildGetOversampleFactors(ImFontConfig* src, ImFontBaked* baked, int* out_oversample_h, int* out_oversample_v)
 {
     // Automatically disable horizontal oversampling over size 36
-    *out_oversample_h = (src->OversampleH != 0) ? src->OversampleH : ((size * src->RasterizerDensity > 36.0f) || src->PixelSnapH) ? 1 : 2;
+    const float raster_size = baked->Size * baked->RasterizerDensity * src->RasterizerDensity;
+    *out_oversample_h = (src->OversampleH != 0) ? src->OversampleH : (raster_size > 36.0f || src->PixelSnapH) ? 1 : 2;
     *out_oversample_v = (src->OversampleV != 0) ? src->OversampleV : 1;
 }
 
@@ -3740,11 +3741,12 @@ void ImFontAtlasBakedDiscardFontGlyph(ImFontAtlas* atlas, ImFont* font, ImFontBa
     baked->IndexAdvanceX[c] = baked->FallbackAdvanceX;
 }
 
-ImFontBaked* ImFontAtlasBakedAdd(ImFontAtlas* atlas, ImFont* font, float font_size, ImGuiID baked_id)
+ImFontBaked* ImFontAtlasBakedAdd(ImFontAtlas* atlas, ImFont* font, float font_size, float font_rasterizer_density, ImGuiID baked_id)
 {
     IMGUI_DEBUG_LOG_FONT("[font] Created baked %.2fpx\n", font_size);
     ImFontBaked* baked = atlas->Builder->BakedPool.push_back(ImFontBaked());
     baked->Size = font_size;
+    baked->RasterizerDensity = font_rasterizer_density;
     baked->BakedId = baked_id;
     baked->ContainerFont = font;
     baked->LastUsedFrame = atlas->Builder->FrameCount;
@@ -3771,7 +3773,7 @@ ImFontBaked* ImFontAtlasBakedAdd(ImFontAtlas* atlas, ImFont* font, float font_si
 }
 
 // FIXME-OPT: This is not a fast query. Adding a BakedCount field in Font might allow to take a shortcut for the most common case.
-ImFontBaked* ImFontAtlasBakedGetClosestMatch(ImFontAtlas* atlas, ImFont* font, float font_size)
+ImFontBaked* ImFontAtlasBakedGetClosestMatch(ImFontAtlas* atlas, ImFont* font, float font_size, float font_rasterizer_density)
 {
     ImFontAtlasBuilder* builder = atlas->Builder;
     ImFontBaked* closest_larger_match = NULL;
@@ -3780,6 +3782,8 @@ ImFontBaked* ImFontAtlasBakedGetClosestMatch(ImFontAtlas* atlas, ImFont* font, f
     {
         ImFontBaked* baked = &builder->BakedPool[baked_n];
         if (baked->ContainerFont != font || baked->WantDestroy)
+            continue;
+        if (baked->RasterizerDensity != font_rasterizer_density)
             continue;
         if (baked->Size > font_size && (closest_larger_match == NULL || baked->Size < closest_larger_match->Size))
             closest_larger_match = baked;
@@ -4550,10 +4554,11 @@ static ImFontGlyph* ImGui_ImplStbTrueType_FontBakedLoadGlyph(ImFontAtlas* atlas,
 
     // Fonts unit to pixels
     int oversample_h, oversample_v;
-    ImFontAtlasBuildGetOversampleFactors(src, baked->Size, &oversample_h, &oversample_v);
+    ImFontAtlasBuildGetOversampleFactors(src, baked, &oversample_h, &oversample_v);
     const float scale_for_layout = bd_font_data->ScaleFactor * baked->Size;
-    const float scale_for_raster_x = bd_font_data->ScaleFactor * baked->Size * src->RasterizerDensity * oversample_h;
-    const float scale_for_raster_y = bd_font_data->ScaleFactor * baked->Size * src->RasterizerDensity * oversample_v;
+    const float rasterizer_density = src->RasterizerDensity * baked->RasterizerDensity;
+    const float scale_for_raster_x = bd_font_data->ScaleFactor * baked->Size * rasterizer_density * oversample_h;
+    const float scale_for_raster_y = bd_font_data->ScaleFactor * baked->Size * rasterizer_density * oversample_v;
 
     // Obtain size and advance
     int x0, y0, x1, y1;
@@ -4608,8 +4613,8 @@ static ImFontGlyph* ImGui_ImplStbTrueType_FontBakedLoadGlyph(ImFontAtlas* atlas,
             font_off_y = IM_ROUND(font_off_y);
         font_off_x += stbtt__oversample_shift(oversample_h);
         font_off_y += stbtt__oversample_shift(oversample_v) + IM_ROUND(baked->Ascent);
-        float recip_h = 1.0f / (oversample_h * src->RasterizerDensity);
-        float recip_v = 1.0f / (oversample_v * src->RasterizerDensity);
+        float recip_h = 1.0f / (oversample_h * rasterizer_density);
+        float recip_v = 1.0f / (oversample_v * rasterizer_density);
 
         // Register glyph
         // r->x r->y are coordinates inside texture (in pixels)
@@ -5179,11 +5184,12 @@ float ImFontBaked::GetCharAdvance(ImWchar c)
 }
 IM_MSVC_RUNTIME_CHECKS_RESTORE
 
-ImGuiID ImFontAtlasBakedGetId(ImGuiID font_id, float baked_size)
+ImGuiID ImFontAtlasBakedGetId(ImGuiID font_id, float baked_size, float rasterizer_density)
 {
-    struct { ImGuiID FontId; float BakedSize; } hashed_data;
+    struct { ImGuiID FontId; float BakedSize; float RasterizerDensity; } hashed_data;
     hashed_data.FontId = font_id;
     hashed_data.BakedSize = baked_size;
+    hashed_data.RasterizerDensity = rasterizer_density;
     return ImHashData(&hashed_data, sizeof(hashed_data));
 }
 
@@ -5196,12 +5202,12 @@ ImFontBaked* ImFont::GetFontBaked(float size)
     // - ImGui::PushFontSize() will already round, but other paths calling GetFontBaked() directly also needs it (e.g. ImFontAtlasBuildPreloadAllGlyphRanges)
     size = ImGui::GetRoundedFontSize(size);
 
-    if (baked && baked->Size == size)
+    if (baked && baked->Size == size && baked->RasterizerDensity == CurrentRasterizerDensity)
         return baked;
 
     ImFontAtlas* atlas = ContainerAtlas;
     ImFontAtlasBuilder* builder = atlas->Builder;
-    baked = ImFontAtlasBakedGetOrAdd(atlas, this, size);
+    baked = ImFontAtlasBakedGetOrAdd(atlas, this, size, CurrentRasterizerDensity);
     if (baked == NULL)
         return NULL;
     baked->LastUsedFrame = builder->FrameCount;
@@ -5209,11 +5215,11 @@ ImFontBaked* ImFont::GetFontBaked(float size)
     return baked;
 }
 
-ImFontBaked* ImFontAtlasBakedGetOrAdd(ImFontAtlas* atlas, ImFont* font, float font_size)
+ImFontBaked* ImFontAtlasBakedGetOrAdd(ImFontAtlas* atlas, ImFont* font, float font_size, float font_rasterizer_density)
 {
     // FIXME-NEWATLAS: Design for picking a nearest size based on some criteria?
     // FIXME-NEWATLAS: Altering font density won't work right away.
-    ImGuiID baked_id = ImFontAtlasBakedGetId(font->FontId, font_size);
+    ImGuiID baked_id = ImFontAtlasBakedGetId(font->FontId, font_size, font_rasterizer_density);
     ImFontAtlasBuilder* builder = atlas->Builder;
     ImFontBaked** p_baked_in_map = (ImFontBaked**)builder->BakedMap.GetVoidPtrRef(baked_id);
     ImFontBaked* baked = *p_baked_in_map;
@@ -5227,7 +5233,7 @@ ImFontBaked* ImFontAtlasBakedGetOrAdd(ImFontAtlas* atlas, ImFont* font, float fo
     // FIXME-OPT: This is not an optimal query.
     if ((font->Flags & ImFontFlags_LockBakedSizes) || atlas->Locked)
     {
-        baked = ImFontAtlasBakedGetClosestMatch(atlas, font, font_size);
+        baked = ImFontAtlasBakedGetClosestMatch(atlas, font, font_size, font_rasterizer_density);
         if (baked != NULL)
             return baked;
         if (atlas->Locked)
@@ -5238,7 +5244,7 @@ ImFontBaked* ImFontAtlasBakedGetOrAdd(ImFontAtlas* atlas, ImFont* font, float fo
     }
 
     // Create new
-    baked = ImFontAtlasBakedAdd(atlas, font, font_size, baked_id);
+    baked = ImFontAtlasBakedAdd(atlas, font, font_size, font_rasterizer_density, baked_id);
     *p_baked_in_map = baked; // To avoid 'builder->BakedMap.SetVoidPtr(baked_id, baked);' while we can.
     return baked;
 }

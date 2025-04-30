@@ -2335,6 +2335,7 @@ struct ImGuiContext
     float                   FontSize;                           // == FontSizeBeforeScaling * io.FontGlobalScale * font->Scale * g.CurrentWindow->FontWindowScale. Current text height.
     float                   FontSizeBeforeScaling;              // == value passed to PushFontSize()
     float                   FontScale;                          // == FontBaked->Size / Font->FontSize. Scale factor over baked size.
+    float                   FontRasterizerDensity;              // Current font density. Used by all calls to GetFontBaked().
     float                   CurrentDpiScale;                    // Current window/viewport DpiScale == CurrentViewport->DpiScale
     ImDrawListSharedData    DrawListSharedData;
     double                  Time;
@@ -3345,6 +3346,7 @@ namespace ImGui
 
     // Fonts, drawing
     IMGUI_API void          SetCurrentFont(ImFont* font, float font_size);
+    IMGUI_API void          SetFontRasterizerDensity(float rasterizer_density);
     IMGUI_API void          UpdateCurrentFontSize();
     inline float            GetRoundedFontSize(float size) { return IM_ROUND(size); }
     inline ImFont*          GetDefaultFont() { ImGuiContext& g = *GImGui; return g.IO.FontDefault ? g.IO.FontDefault : g.IO.Fonts->Fonts[0]; }
@@ -4082,7 +4084,7 @@ IMGUI_API ImVec2i           ImFontAtlasTextureGetSizeEstimate(ImFontAtlas* atlas
 
 IMGUI_API void              ImFontAtlasBuildSetupFontSpecialGlyphs(ImFontAtlas* atlas, ImFont* font, ImFontConfig* src);
 IMGUI_API void              ImFontAtlasBuildPreloadAllGlyphRanges(ImFontAtlas* atlas); // Legacy
-IMGUI_API void              ImFontAtlasBuildGetOversampleFactors(ImFontConfig* src, float size, int* out_oversample_h, int* out_oversample_v);
+IMGUI_API void              ImFontAtlasBuildGetOversampleFactors(ImFontConfig* src, ImFontBaked* baked, int* out_oversample_h, int* out_oversample_v);
 IMGUI_API void              ImFontAtlasBuildDiscardBakes(ImFontAtlas* atlas, int unused_frames);
 
 IMGUI_API bool              ImFontAtlasFontSourceInit(ImFontAtlas* atlas, ImFontConfig* src);
@@ -4092,10 +4094,10 @@ IMGUI_API bool              ImFontAtlasFontInitOutput(ImFontAtlas* atlas, ImFont
 IMGUI_API void              ImFontAtlasFontDestroyOutput(ImFontAtlas* atlas, ImFont* font);
 IMGUI_API void              ImFontAtlasFontDiscardOutputBakes(ImFontAtlas* atlas, ImFont* font);
 
-IMGUI_API ImGuiID           ImFontAtlasBakedGetId(ImGuiID font_id, float baked_size);
-IMGUI_API ImFontBaked*      ImFontAtlasBakedGetOrAdd(ImFontAtlas* atlas, ImFont* font, float font_size);
-IMGUI_API ImFontBaked*      ImFontAtlasBakedGetClosestMatch(ImFontAtlas* atlas, ImFont* font, float font_size);
-IMGUI_API ImFontBaked*      ImFontAtlasBakedAdd(ImFontAtlas* atlas, ImFont* font, float font_size, ImGuiID baked_id);
+IMGUI_API ImGuiID           ImFontAtlasBakedGetId(ImGuiID font_id, float baked_size, float rasterizer_density);
+IMGUI_API ImFontBaked*      ImFontAtlasBakedGetOrAdd(ImFontAtlas* atlas, ImFont* font, float font_size, float font_rasterizer_density);
+IMGUI_API ImFontBaked*      ImFontAtlasBakedGetClosestMatch(ImFontAtlas* atlas, ImFont* font, float font_size, float font_rasterizer_density);
+IMGUI_API ImFontBaked*      ImFontAtlasBakedAdd(ImFontAtlas* atlas, ImFont* font, float font_size, float font_rasterizer_density, ImGuiID baked_id);
 IMGUI_API void              ImFontAtlasBakedDiscard(ImFontAtlas* atlas, ImFont* font, ImFontBaked* baked);
 IMGUI_API ImFontGlyph*      ImFontAtlasBakedAddFontGlyph(ImFontAtlas* atlas, ImFontBaked* baked, ImFontConfig* src, const ImFontGlyph* in_glyph);
 IMGUI_API void              ImFontAtlasBakedDiscardFontGlyph(ImFontAtlas* atlas, ImFont* font, ImFontBaked* baked, ImFontGlyph* glyph);

@@ -4016,6 +4016,7 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     Font = NULL;
     FontBaked = NULL;
     FontSize = FontSizeBeforeScaling = FontScale = CurrentDpiScale = 0.0f;
+    FontRasterizerDensity = 1.0f;
     IO.Fonts = shared_font_atlas ? shared_font_atlas : IM_NEW(ImFontAtlas)();
     IO.Fonts->RefCount++;
     Time = 0.0f;
@@ -8536,7 +8537,8 @@ void ImGui::UpdateCurrentFontSize()
 {
     ImGuiContext& g = *GImGui;
     float final_size = g.FontSizeBeforeScaling * g.IO.FontGlobalScale;
-    if (ImGuiWindow* window = g.CurrentWindow)
+    ImGuiWindow* window = g.CurrentWindow;
+    if (window != NULL)
     {
         if (window->SkipItems)
             return;
@@ -8548,12 +8550,23 @@ void ImGui::UpdateCurrentFontSize()
     // - We may support it better later and remove this rounding.
     final_size = GetRoundedFontSize(final_size);
     final_size = ImMax(1.0f, final_size);
-
+    if (g.Font != NULL)
+        g.Font->CurrentRasterizerDensity = g.FontRasterizerDensity;
+    g.FontBaked = (g.Font != NULL) ? g.Font->GetFontBaked(final_size) : NULL;
     g.FontSize = final_size;
-    g.FontBaked = (g.Font != NULL) ? g.Font->GetFontBaked(g.FontSize) : NULL;
     g.FontScale = (g.Font != NULL) ? (g.FontSize / g.FontBaked->Size) : 0.0f;
     g.DrawListSharedData.FontSize = g.FontSize;
     g.DrawListSharedData.FontScale = g.FontScale;
+}
+
+// FIXME-DPI: Not sure how to expose this. It may be automatically applied based on current viewport, if we had this information stored in viewport or monitor.
+void ImGui::SetFontRasterizerDensity(float rasterizer_density)
+{
+    ImGuiContext& g = *GImGui;
+    if (g.FontRasterizerDensity == rasterizer_density)
+        return;
+    g.FontRasterizerDensity = rasterizer_density;
+    UpdateCurrentFontSize();
 }
 
 void ImGui::PushFont(ImFont* font, float font_size)
@@ -22498,7 +22511,7 @@ void ImGui::DebugNodeFont(ImFont* font)
         if (baked->ContainerFont != font)
             continue;
         PushID(baked_n);
-        if (TreeNode("Glyphs", "Baked at %.2fpx: %d glyphs%s", baked->Size, baked->Glyphs.Size, (baked->LastUsedFrame < atlas->Builder->FrameCount - 1) ? " *Unused*" : ""))
+        if (TreeNode("Glyphs", "Baked at { %.2fpx, d.%.1f }: %d glyphs%s", baked->Size, baked->RasterizerDensity, baked->Glyphs.Size, (baked->LastUsedFrame < atlas->Builder->FrameCount - 1) ? " *Unused*" : ""))
         {
             if (SmallButton("Load all"))
                 for (unsigned int base = 0; base <= IM_UNICODE_CODEPOINT_MAX; base++)
@@ -22511,7 +22524,7 @@ void ImGui::DebugNodeFont(ImFont* font)
             {
                 ImFontConfig* src = font->Sources[src_n];
                 int oversample_h, oversample_v;
-                ImFontAtlasBuildGetOversampleFactors(src, baked->Size, &oversample_h, &oversample_v);
+                ImFontAtlasBuildGetOversampleFactors(src, baked, &oversample_h, &oversample_v);
                 BulletText("Input %d: \'%s\', Oversample: (%d=>%d,%d=>%d), PixelSnapH: %d, Offset: (%.1f,%.1f)",
                     src_n, src->Name, src->OversampleH, oversample_h, src->OversampleV, oversample_v, src->PixelSnapH, src->GlyphOffset.x, src->GlyphOffset.y);
             }

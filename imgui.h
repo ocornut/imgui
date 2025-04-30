@@ -3580,7 +3580,7 @@ struct ImFontConfig
     float           GlyphExtraAdvanceX;     // 0        // Extra spacing (in pixels) between glyphs. Please contact us if you are using this.
     unsigned int    FontBuilderFlags;       // 0        // Settings for custom font builder. THIS IS BUILDER IMPLEMENTATION DEPENDENT. Leave as zero if unsure.
     float           RasterizerMultiply;     // 1.0f     // Linearly brighten (>1.0f) or darken (<1.0f) font output. Brightening small fonts may be a good workaround to make them more readable. This is a silly thing we may remove in the future.
-    float           RasterizerDensity;      // 1.0f     // DPI scale for rasterization, not altering other font metrics: make it easy to swap between e.g. a 100% and a 400% fonts for a zooming display, or handle Retina screen. IMPORTANT: If you change this it is expected that you increase/decrease font scale roughly to the inverse of this, otherwise quality may look lowered.
+    float           RasterizerDensity;      // 1.0f     // DPI scale multiplier for rasterization. Not altering other font metrics: makes it easy to swap between e.g. a 100% and a 400% fonts for a zooming display, or handle Retina screen. IMPORTANT: If you change this it is expected that you increase/decrease font scale roughly to the inverse of this, otherwise quality may look lowered.
     ImWchar         EllipsisChar;           // 0        // Explicitly specify Unicode codepoint of ellipsis character. When fonts are being merged first specified ellipsis will be used.
 
     // [Internal]
@@ -3822,6 +3822,7 @@ struct ImFontBaked
     ImVector<float>             IndexAdvanceX;      // 12-16 // out // Sparse. Glyphs->AdvanceX in a directly indexable way (cache-friendly for CalcTextSize functions which only this info, and are often bottleneck in large UI).
     float                       FallbackAdvanceX;   // 4     // out // FindGlyph(FallbackChar)->AdvanceX
     float                       Size;               // 4     // in  // Height of characters/line, set during loading (doesn't change after loading)
+    float                       RasterizerDensity;  // 4     // in  // Density this is baked at
 
     // [Internal] Members: Hot ~28/36 bytes (for RenderText loop)
     ImVector<ImU16>             IndexLookup;        // 12-16 // out // Sparse. Index glyphs by Unicode code-point.
@@ -3866,9 +3867,10 @@ enum ImFontFlags_
 struct ImFont
 {
     // [Internal] Members: Hot ~12-20 bytes
-    ImFontBaked*                LastBaked;          // 4-8   // Cache last bound baked. DO NOT USE. Use GetFontBaked().
-    ImFontAtlas*                ContainerAtlas;     // 4-8   // What we has been loaded into
-    ImFontFlags                 Flags;              // 4     // Font flags
+    ImFontBaked*                LastBaked;          // 4-8   // Cache last bound baked. NEVER USE DIRECTLY. Use GetFontBaked().
+    ImFontAtlas*                ContainerAtlas;     // 4-8   // What we have been loaded into.
+    ImFontFlags                 Flags;              // 4     // Font flags.
+    float                       CurrentRasterizerDensity;    // Current rasterizer density. This is a varying state of the font.
 
     // [Internal] Members: Cold ~24-52 bytes
     // Conceptually Sources[] is the list of font sources merged to create this font.
