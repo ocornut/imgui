@@ -3697,6 +3697,7 @@ const char* ImGui::GetStyleColorName(ImGuiCol idx)
     case ImGuiCol_Header: return "Header";
     case ImGuiCol_HeaderHovered: return "HeaderHovered";
     case ImGuiCol_HeaderActive: return "HeaderActive";
+    case ImGuiCol_HeaderSelected: return "HeaderSelected";
     case ImGuiCol_Separator: return "Separator";
     case ImGuiCol_SeparatorHovered: return "SeparatorHovered";
     case ImGuiCol_SeparatorActive: return "SeparatorActive";
