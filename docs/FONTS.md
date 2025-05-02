@@ -50,7 +50,9 @@ All loaded fonts glyphs are rendered into a single texture atlas ahead of time. 
 
 ### (4) Font atlas texture fails to upload to GPU.
 
-This is often of byproduct of point 3. If you have large number of glyphs or multiple fonts, the texture may become too big for your graphics API. **The typical result of failing to upload a texture is if every glyph or everything appears as empty black or white rectangle.** Mind the fact that some graphics drivers have texture size limitation. If you are building a PC application, mind the fact that your users may use hardware with lower limitations than yours.
+This is often of byproduct of point 3. If you have large number of glyphs or multiple fonts, the texture may become too big for your graphics API. **The typical result of failing to upload a texture is if every glyph or everything appears as empty white rectangles.** Mind the fact that some graphics drivers have texture size limitation. If you are building a PC application, mind the fact that your users may use hardware with lower limitations than yours.
+
+![empty squares](https://github.com/user-attachments/assets/68b50fb5-8b9d-4c38-baec-6ac384f06d26)
 
 Some solutions:
 - You may reduce oversampling, e.g. `font_config.OversampleH = 1`, this will half your texture size for a quality loss.
@@ -59,6 +61,8 @@ Some solutions:
   You can use the `ImFontGlyphRangesBuilder` for this purpose and rebuilding your atlas between frames when new characters are needed. This will be the biggest win!
 - Set `io.Fonts.Flags |= ImFontAtlasFlags_NoPowerOfTwoHeight;` to disable rounding the texture height to the next power of two.
 - Set `io.Fonts.TexDesiredWidth` to specify a texture width to reduce maximum texture height (see comment in `ImFontAtlas::Build()` function).
+
+Future versions of Dear ImGui should solve this problem.
 
 ##### [Return to Index](#index)
 
@@ -106,9 +110,7 @@ ImGui::PopFont();
 **For advanced options create a ImFontConfig structure and pass it to the AddFont() function (it will be copied internally):**
 ```cpp
 ImFontConfig config;
-config.OversampleH = 2;
-config.OversampleV = 1;
-config.GlyphExtraSpacing.x = 1.0f;
+config.RasterizerDensity = 2.0f;
 ImFont* font = io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, &config);
 ```
 

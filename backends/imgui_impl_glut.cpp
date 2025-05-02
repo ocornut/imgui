@@ -6,8 +6,8 @@
 // !!! Nowadays, prefer using GLFW or SDL instead!
 
 // Implemented features:
-//  [X] Platform: Partial keyboard support. Since 1.87 we are using the io.AddKeyEvent() function. Pass ImGuiKey values to all key functions e.g. ImGui::IsKeyPressed(ImGuiKey_Space). [Legacy GLUT values will also be supported unless IMGUI_DISABLE_OBSOLETE_KEYIO is set]
-// Issues:
+//  [X] Platform: Partial keyboard support. Since 1.87 we are using the io.AddKeyEvent() function. Pass ImGuiKey values to all key functions e.g. ImGui::IsKeyPressed(ImGuiKey_Space). [Legacy GLUT values are obsolete since 1.87 and not supported since 1.91.5]
+// Missing features or Issues:
 //  [ ] Platform: GLUT is unable to distinguish e.g. Backspace from CTRL+H or TAB from CTRL+I
 //  [ ] Platform: Missing horizontal mouse wheel support.
 //  [ ] Platform: Missing mouse cursor shape/visibility support.
@@ -50,7 +50,7 @@
 
 static int g_Time = 0;          // Current time, in milliseconds
 
-// Glut has 1 function for characters and one for "special keys". We map the characters in the 0..255 range and the keys above.
+// Glut has one function for characters and one for "special keys". We map the characters in the 0..255 range and the keys above.
 static ImGuiKey ImGui_ImplGLUT_KeyToImGuiKey(int key)
 {
     switch (key)
@@ -167,6 +167,7 @@ static ImGuiKey ImGui_ImplGLUT_KeyToImGuiKey(int key)
 bool ImGui_ImplGLUT_Init()
 {
     ImGuiIO& io = ImGui::GetIO();
+    IMGUI_CHECKVERSION();
 
 #ifdef FREEGLUT
     io.BackendPlatformName = "imgui_impl_glut (freeglut)";

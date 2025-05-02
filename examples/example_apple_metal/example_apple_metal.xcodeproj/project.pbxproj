@@ -268,9 +268,9 @@
 				8309BDBB253CCCAD0045E2A1 /* imgui_impl_metal.mm in Sources */,
 				83BBEA0920EB54E700295997 /* imgui.cpp in Sources */,
 				83BBEA0720EB54E700295997 /* imgui_demo.cpp in Sources */,
-                83BBEA0520EB54E700295997 /* imgui_draw.cpp in Sources */,
+				83BBEA0520EB54E700295997 /* imgui_draw.cpp in Sources */,
 				5079822E257677DB0038A28D /* imgui_tables.cpp in Sources */,
-                07A82ED82139413D0078D120 /* imgui_widgets.cpp in Sources */,
+				07A82ED82139413D0078D120 /* imgui_widgets.cpp in Sources */,
 				8309BDA5253CCC070045E2A1 /* main.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -281,10 +281,10 @@
 			files = (
 				8309BDBE253CCCB60045E2A1 /* imgui_impl_metal.mm in Sources */,
 				8309BDBF253CCCB60045E2A1 /* imgui_impl_osx.mm in Sources */,
-                83BBEA0A20EB54E700295997 /* imgui.cpp in Sources */,
-                83BBEA0820EB54E700295997 /* imgui_demo.cpp in Sources */,
-                83BBEA0620EB54E700295997 /* imgui_draw.cpp in Sources */,
-                5079822E257677DB0038A28D /* imgui_tables.cpp in Sources */,
+				83BBEA0A20EB54E700295997 /* imgui.cpp in Sources */,
+				83BBEA0820EB54E700295997 /* imgui_demo.cpp in Sources */,
+				83BBEA0620EB54E700295997 /* imgui_draw.cpp in Sources */,
+				5079822E257677DB0038A28D /* imgui_tables.cpp in Sources */,
 				07A82ED92139418F0078D120 /* imgui_widgets.cpp in Sources */,
 				8309BDA8253CCC080045E2A1 /* main.mm in Sources */,
 			);

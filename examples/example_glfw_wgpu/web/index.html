@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no"/>
-    <title>Dear ImGui Emscripten+WebGPU example</title>
+    <title>Dear ImGui Emscripten+GLFW+WebGPU example</title>
     <style>
         body { margin: 0; background-color: black }
         .emscripten {
@@ -63,6 +63,10 @@
 
       // Initialize the graphics adapter
       {
+          if (!navigator.gpu) {
+            throw Error("WebGPU not supported.");
+          }
+
           const adapter = await navigator.gpu.requestAdapter();
           const device = await adapter.requestDevice();
           Module.preinitializedWebGPUDevice = device;

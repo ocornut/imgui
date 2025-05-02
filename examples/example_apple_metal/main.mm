@@ -129,7 +129,7 @@
     if (renderPassDescriptor == nil)
     {
         [commandBuffer commit];
-		return;
+        return;
     }
 
     // Start the Dear ImGui frame
@@ -192,7 +192,7 @@
     [renderEncoder popDebugGroup];
     [renderEncoder endEncoding];
 
-	// Present
+    // Present
     [commandBuffer presentDrawable:view.currentDrawable];
     [commandBuffer commit];
 }

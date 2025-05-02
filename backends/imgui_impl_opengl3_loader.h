@@ -10,7 +10,7 @@
 // THE REST OF YOUR APP SHOULD USE A DIFFERENT GL LOADER: ANY GL LOADER OF YOUR CHOICE.
 //
 // IF YOU GET BUILD ERRORS IN THIS FILE (commonly macro redefinitions or function redefinitions):
-// IT LIKELY MEANS THAT YOU ARE BUILDING 'imgui_impl_opengl3.cpp' OR INCUDING 'imgui_impl_opengl3_loader.h'
+// IT LIKELY MEANS THAT YOU ARE BUILDING 'imgui_impl_opengl3.cpp' OR INCLUDING 'imgui_impl_opengl3_loader.h'
 // IN THE SAME COMPILATION UNIT AS ONE OF YOUR FILE WHICH IS USING A THIRD-PARTY OPENGL LOADER.
 // (e.g. COULD HAPPEN IF YOU ARE DOING A UNITY/JUMBO BUILD, OR INCLUDING .CPP FILES FROM OTHERS)
 // YOU SHOULD NOT BUILD BOTH IN THE SAME COMPILATION UNIT.
@@ -18,7 +18,7 @@
 // WILL NOT BE USING OUR LOADER, AND INSTEAD EXPECT ANOTHER/YOUR LOADER TO BE AVAILABLE IN THE COMPILATION UNIT.
 //
 // Regenerate with:
-//   python gl3w_gen.py --output ../imgui/backends/imgui_impl_opengl3_loader.h --ref ../imgui/backends/imgui_impl_opengl3.cpp ./extra_symbols.txt
+//   python3 gl3w_gen.py --output ../imgui/backends/imgui_impl_opengl3_loader.h --ref ../imgui/backends/imgui_impl_opengl3.cpp ./extra_symbols.txt
 //
 // More info:
 //   https://github.com/dearimgui/gl3w_stripped
@@ -118,7 +118,7 @@ extern "C" {
 ** included as <GL/glcorearb.h>.
 **
 ** glcorearb.h includes only APIs in the latest OpenGL core profile
-** implementation together with APIs in newer ARB extensions which
+** implementation together with APIs in newer ARB extensions which 
 ** can be supported by the core profile. It does not, and never will
 ** include functionality removed from the core profile, such as
 ** fixed-function vertex and fragment processing.
@@ -181,6 +181,9 @@ typedef khronos_uint8_t GLubyte;
 #define GL_LINEAR                         0x2601
 #define GL_TEXTURE_MAG_FILTER             0x2800
 #define GL_TEXTURE_MIN_FILTER             0x2801
+#define GL_TEXTURE_WRAP_S                 0x2802
+#define GL_TEXTURE_WRAP_T                 0x2803
+#define GL_REPEAT                         0x2901
 typedef void (APIENTRYP PFNGLPOLYGONMODEPROC) (GLenum face, GLenum mode);
 typedef void (APIENTRYP PFNGLSCISSORPROC) (GLint x, GLint y, GLsizei width, GLsizei height);
 typedef void (APIENTRYP PFNGLTEXPARAMETERIPROC) (GLenum target, GLenum pname, GLint param);
@@ -231,6 +234,9 @@ GLAPI void APIENTRY glDeleteTextures (GLsizei n, const GLuint *textures);
 GLAPI void APIENTRY glGenTextures (GLsizei n, GLuint *textures);
 #endif
 #endif /* GL_VERSION_1_1 */
+#ifndef GL_VERSION_1_2
+#define GL_CLAMP_TO_EDGE                  0x812F
+#endif /* GL_VERSION_1_2 */
 #ifndef GL_VERSION_1_3
 #define GL_TEXTURE0                       0x84C0
 #define GL_ACTIVE_TEXTURE                 0x84E0
@@ -260,8 +266,6 @@ typedef khronos_intptr_t GLintptr;
 #define GL_ARRAY_BUFFER_BINDING           0x8894
 #define GL_ELEMENT_ARRAY_BUFFER_BINDING   0x8895
 #define GL_STREAM_DRAW                    0x88E0
-#define GL_PIXEL_UNPACK_BUFFER            0x88EC
-#define GL_PIXEL_UNPACK_BUFFER_BINDING    0x88EF
 typedef void (APIENTRYP PFNGLBINDBUFFERPROC) (GLenum target, GLuint buffer);
 typedef void (APIENTRYP PFNGLDELETEBUFFERSPROC) (GLsizei n, const GLuint *buffers);
 typedef void (APIENTRYP PFNGLGENBUFFERSPROC) (GLsizei n, GLuint *buffers);
@@ -348,6 +352,10 @@ GLAPI void APIENTRY glUniformMatrix4fv (GLint location, GLsizei count, GLboolean
 GLAPI void APIENTRY glVertexAttribPointer (GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const void *pointer);
 #endif
 #endif /* GL_VERSION_2_0 */
+#ifndef GL_VERSION_2_1
+#define GL_PIXEL_UNPACK_BUFFER            0x88EC
+#define GL_PIXEL_UNPACK_BUFFER_BINDING    0x88EF
+#endif /* GL_VERSION_2_1 */
 #ifndef GL_VERSION_3_0
 typedef khronos_uint16_t GLhalf;
 #define GL_MAJOR_VERSION                  0x821B
@@ -663,31 +671,123 @@ static GL3WglProc get_proc(const char *proc)
 #else
 #include <dlfcn.h>
 
-static void *libgl;
-static GL3WglProc (*glx_get_proc_address)(const GLubyte *);
+static void* libgl;  // OpenGL library
+static void* libglx;  // GLX library
+static void* libegl;  // EGL library
+static GL3WGetProcAddressProc gl_get_proc_address;
 
-static int open_libgl(void)
+static void close_libgl(void)
 {
+    if (libgl) {
+        dlclose(libgl);
+        libgl = NULL;
+    }
+    if (libegl) {
+        dlclose(libegl);
+        libegl = NULL;
+    }
+    if (libglx) {
+        dlclose(libglx);
+        libglx = NULL;
+    }
+}
+
+static int is_library_loaded(const char* name, void** lib)
+{
+    *lib = dlopen(name, RTLD_LAZY | RTLD_LOCAL | RTLD_NOLOAD);
+    return *lib != NULL;
+}
+
+static int open_libs(void)
+{
+    // On Linux we have two APIs to get process addresses: EGL and GLX.
+    // EGL is supported under both X11 and Wayland, whereas GLX is X11-specific.
+
+    libgl = NULL;
+    libegl = NULL;
+    libglx = NULL;
+
+    // First check what's already loaded, the windowing library might have
+    // already loaded either EGL or GLX and we want to use the same one.
+
+    if (is_library_loaded("libEGL.so.1", &libegl) ||
+        is_library_loaded("libGLX.so.0", &libglx)) {
+        libgl = dlopen("libOpenGL.so.0", RTLD_LAZY | RTLD_LOCAL);
+        if (libgl)
+            return GL3W_OK;
+        else
+            close_libgl();
+    }
+
+    if (is_library_loaded("libGL.so", &libgl))
+        return GL3W_OK;
+    if (is_library_loaded("libGL.so.1", &libgl))
+        return GL3W_OK;
+    if (is_library_loaded("libGL.so.3", &libgl))
+        return GL3W_OK;
+
+    // Neither is already loaded, so we have to load one.  Try EGL first
+    // because it is supported under both X11 and Wayland.
+
+    // Load OpenGL + EGL
+    libgl = dlopen("libOpenGL.so.0", RTLD_LAZY | RTLD_LOCAL);
+    libegl = dlopen("libEGL.so.1", RTLD_LAZY | RTLD_LOCAL);
+    if (libgl && libegl)
+        return GL3W_OK;
+    else
+        close_libgl();
+
+    // Fall back to legacy libGL, which includes GLX
     // While most systems use libGL.so.1, NetBSD seems to use that libGL.so.3. See https://github.com/ocornut/imgui/issues/6983
     libgl = dlopen("libGL.so", RTLD_LAZY | RTLD_LOCAL);
     if (!libgl)
         libgl = dlopen("libGL.so.1", RTLD_LAZY | RTLD_LOCAL);
     if (!libgl)
         libgl = dlopen("libGL.so.3", RTLD_LAZY | RTLD_LOCAL);
-    if (!libgl)
+
+    if (libgl)
+        return GL3W_OK;
+
+    return GL3W_ERROR_LIBRARY_OPEN;
+}
+
+static int open_libgl(void)
+{
+    int res = open_libs();
+    if (res)
+        return res;
+
+    if (libegl)
+        *(void**)(&gl_get_proc_address) = dlsym(libegl, "eglGetProcAddress");
+    else if (libglx)
+        *(void**)(&gl_get_proc_address) = dlsym(libglx, "glXGetProcAddressARB");
+    else
+        *(void**)(&gl_get_proc_address) = dlsym(libgl, "glXGetProcAddressARB");
+
+    if (!gl_get_proc_address) {
+        close_libgl();
         return GL3W_ERROR_LIBRARY_OPEN;
-    *(void **)(&glx_get_proc_address) = dlsym(libgl, "glXGetProcAddressARB");
+    }
+
     return GL3W_OK;
 }
 
-static void close_libgl(void) { dlclose(libgl); }
-
-static GL3WglProc get_proc(const char *proc)
+static GL3WglProc get_proc(const char* proc)
 {
-    GL3WglProc res;
-    res = glx_get_proc_address((const GLubyte *)proc);
+    GL3WglProc res = NULL;
+
+    // Before EGL version 1.5, eglGetProcAddress doesn't support querying core
+    // functions and may return a dummy function if we try, so try to load the
+    // function from the GL library directly first.
+    if (libegl)
+        *(void**)(&res) = dlsym(libgl, proc);
+
     if (!res)
-        *(void **)(&res) = dlsym(libgl, proc);
+        res = gl_get_proc_address(proc);
+
+    if (!libegl && !res)
+        *(void**)(&res) = dlsym(libgl, proc);
+
     return res;
 }
 #endif
