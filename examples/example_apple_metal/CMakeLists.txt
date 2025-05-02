@@ -2,10 +2,7 @@ if (TARGET imgui-metal AND TARGET imgui-osx)
     # TODO proper bundling of assets for macOS and iOS
 
     add_executable (imgui_example_apple_metal
-        Shared/main.m
-        Shared/AppDelegate.m
-        Shared/Renderer.mm
-        Shared/ViewController.mm
+        main.mm
     )
 
     target_link_libraries (imgui_example_apple_metal
