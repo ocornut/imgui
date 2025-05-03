@@ -4485,6 +4485,8 @@ void ImGui::InputTextDeactivateHook(ImGuiID id)
     }
 }
 
+#define STB_TEXT_HAS_SELECTION(s)   ((s)->select_start != (s)->select_end)
+
 // Edit a string of text
 // - buf_size account for the zero-terminator, so a buf_size of 6 can hold "Hello" but not "Hello!".
 //   This is so we can easily call InputText() on static arrays using ARRAYSIZE() and to match
