@@ -3102,7 +3102,10 @@ ImFont* ImFontAtlas::AddFontFromFileTTF(const char* filename, float size_pixels,
     if (!data)
     {
         if (font_cfg_template == NULL || (font_cfg_template->Flags & ImFontFlags_NoLoadError) == 0)
+        {
+            IMGUI_DEBUG_LOG("While loading '%s'\n", filename);
             IM_ASSERT_USER_ERROR(0, "Could not load font file!");
+        }
         return NULL;
     }
     ImFontConfig font_cfg = font_cfg_template ? *font_cfg_template : ImFontConfig();
@@ -4576,7 +4579,7 @@ static ImFontGlyph* ImGui_ImplStbTrueType_FontBakedLoadGlyph(ImFontAtlas* atlas,
         if (pack_id == ImFontAtlasRectId_Invalid)
         {
             // Pathological out of memory case (TexMaxWidth/TexMaxHeight set too small?)
-            IM_ASSERT_USER_ERROR(pack_id != ImFontAtlasRectId_Invalid, "Out of texture memory.");
+            IM_ASSERT(pack_id != ImFontAtlasRectId_Invalid && "Out of texture memory.");
             return NULL;
         }
         ImTextureRect* r = ImFontAtlasPackGetRect(atlas, pack_id);
