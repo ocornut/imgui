@@ -24,6 +24,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2025-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2025-05-06: [Docking] macOS: fixed secondary viewports not appearing on other monitors before of parenting.
 //  2025-04-09: [Docking] Revert update monitors and work areas information every frame. Only do it on Windows. (#8415, #8558)
 //  2025-04-22: IME: honor ImGuiPlatformImeData->WantTextInput as an alternative way to call SDL_StartTextInput(), without IME being necessarily visible.
 //  2025-04-09: Don't attempt to call SDL_CaptureMouse() on drivers where we don't call SDL_GetGlobalMouseState(). (#8561)
@@ -1014,7 +1015,9 @@ static void ImGui_ImplSDL3_CreateWindow(ImGuiViewport* viewport)
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoTaskBarIcon) ? SDL_WINDOW_UTILITY : 0;
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_TopMost) ? SDL_WINDOW_ALWAYS_ON_TOP : 0;
     vd->Window = SDL_CreateWindow("No Title Yet", (int)viewport->Size.x, (int)viewport->Size.y, sdl_flags);
+#ifndef __APPLE__ // On Mac, SDL3 Parenting appears to prevent viewport from appearing in another monitor
     SDL_SetWindowParent(vd->Window, vd->ParentWindow);
+#endif
     SDL_SetWindowPosition(vd->Window, (int)viewport->Pos.x, (int)viewport->Pos.y);
     vd->WindowOwned = true;
     if (use_opengl)
@@ -1061,14 +1064,20 @@ static void ImGui_ImplSDL3_ShowWindow(ImGuiViewport* viewport)
     }
 #endif
 
+#ifdef __APPLE__
+    SDL_SetHint(SDL_HINT_WINDOW_ACTIVATE_WHEN_SHOWN, "1"); // Otherwise new window appear under
+#else
     SDL_SetHint(SDL_HINT_WINDOW_ACTIVATE_WHEN_SHOWN, (viewport->Flags & ImGuiViewportFlags_NoFocusOnAppearing) ? "0" : "1");
+#endif
     SDL_ShowWindow(vd->Window);
 }
 
 static void ImGui_ImplSDL3_UpdateWindow(ImGuiViewport* viewport)
 {
     ImGui_ImplSDL3_ViewportData* vd = (ImGui_ImplSDL3_ViewportData*)viewport->PlatformUserData;
+    IM_UNUSED(vd);
 
+#ifndef __APPLE__ // On Mac, SDL3 Parenting appears to prevent viewport from appearing in another monitor
     // Update SDL3 parent if it changed _after_ creation.
     // This is for advanced apps that are manipulating ParentViewportID manually.
     SDL_Window* new_parent = ImGui_ImplSDL3_GetSDLWindowFromViewportID(viewport->ParentViewportId);
@@ -1077,6 +1086,7 @@ static void ImGui_ImplSDL3_UpdateWindow(ImGuiViewport* viewport)
         vd->ParentWindow = new_parent;
         SDL_SetWindowParent(vd->Window, vd->ParentWindow);
     }
+#endif
 }
 
 static ImVec2 ImGui_ImplSDL3_GetWindowPos(ImGuiViewport* viewport)
