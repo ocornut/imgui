@@ -589,8 +589,6 @@ bool ImGui_ImplSDLGPU3_Init(ImGui_ImplSDLGPU3_InitInfo* info)
 
     bd->InitInfo = *info;
 
-    ImGui_ImplSDLGPU3_CreateDeviceObjects();
-
     return true;
 }
 
@@ -612,6 +610,8 @@ void ImGui_ImplSDLGPU3_NewFrame()
     ImGui_ImplSDLGPU3_Data* bd = ImGui_ImplSDLGPU3_GetBackendData();
     IM_ASSERT(bd != nullptr && "Context or backend not initialized! Did you call ImGui_ImplSDLGPU3_Init()?");
 
+    if (!bd->FontSampler)
+        ImGui_ImplSDLGPU3_CreateDeviceObjects();
     if (!bd->FontTexture)
         ImGui_ImplSDLGPU3_CreateFontsTexture();
 }

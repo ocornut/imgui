@@ -111,6 +111,8 @@ Other changes:
   memory ownership change. (#8530, #7801) [@Green-Sky]
 - Backends: SDL3: honor ImGuiPlatformImeData->WantTextInput as an alternative
   way to call SDL_StartTextInput(), without IME being necessarily visible. (#8584)
+- Backends: SDLGPU3: Fixed creating atlas texture earlier than other backends, preventing
+  to load fonts between the Init and NewFrames calls.
 - Backends: SDLGPU3: Made ImGui_ImplSDLGPU3_PrepareDrawData() reuse GPU Transfer Buffers which
   were unusually slow to recreate every frame. Much faster now. (#8534) [@ocornut, @TheMode]
 - Backends: SDLGPU3: added support for ImDrawCallback_ResetRenderState. (#8599)
