@@ -53,6 +53,7 @@ cmake-build-*
 .vscode
 
 ## Unix executables from our example Makefiles
+examples/example_apple_metal/example_apple_metal
 examples/example_glfw_metal/example_glfw_metal
 examples/example_glfw_opengl2/example_glfw_opengl2
 examples/example_glfw_opengl3/example_glfw_opengl3
