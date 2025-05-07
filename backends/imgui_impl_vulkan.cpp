@@ -26,6 +26,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2025-05-07: Vulkan: Load dynamic rendering functions using vkGetDeviceProcAddr() + try both non-KHR and KHR versions. (#8600, #8326, #8365)
 //  2025-04-07: Vulkan: Deep-copy ImGui_ImplVulkan_InitInfo::PipelineRenderingCreateInfo's pColorAttachmentFormats buffer when set, in order to reduce common user-error of specifying a pointer to data that gets out of scope. (#8282)
 //  2025-02-14: *BREAKING CHANGE*: Added uint32_t api_version to ImGui_ImplVulkan_LoadFunctions().
 //  2025-02-13: Vulkan: Added ApiVersion field in ImGui_ImplVulkan_InitInfo. Default to header version if unspecified. Dynamic rendering path loads "vkCmdBeginRendering/vkCmdEndRendering" (without -KHR suffix) on API 1.3. (#8326)
@@ -1085,9 +1086,17 @@ void    ImGui_ImplVulkan_DestroyDeviceObjects()
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
 static void ImGui_ImplVulkan_LoadDynamicRenderingFunctions(uint32_t api_version, PFN_vkVoidFunction(*loader_func)(const char* function_name, void* user_data), void* user_data)
 {
-    // Manually load those two (see #5446, #8326, #8365)
-    ImGuiImplVulkanFuncs_vkCmdBeginRenderingKHR = reinterpret_cast<PFN_vkCmdBeginRenderingKHR>(loader_func(api_version < VK_API_VERSION_1_3 ? "vkCmdBeginRenderingKHR" : "vkCmdBeginRendering", user_data));
-    ImGuiImplVulkanFuncs_vkCmdEndRenderingKHR = reinterpret_cast<PFN_vkCmdEndRenderingKHR>(loader_func(api_version < VK_API_VERSION_1_3 ? "vkCmdEndRenderingKHR" : "vkCmdEndRendering", user_data));
+    // Manually load those two (see #5446, #8326, #8365, #8600)
+    // - Try loading core (non-KHR) versions first (this will work for Vulkan 1.3+ and the device supports dynamic rendering)
+    ImGuiImplVulkanFuncs_vkCmdBeginRenderingKHR = reinterpret_cast<PFN_vkCmdBeginRenderingKHR>(loader_func("vkCmdBeginRendering", user_data));
+    ImGuiImplVulkanFuncs_vkCmdEndRenderingKHR = reinterpret_cast<PFN_vkCmdEndRenderingKHR>(loader_func("vkCmdEndRendering", user_data));
+
+    // - Fallback to KHR versions if core not available (this will work if KHR extension is available and enabled and also the device supports dynamic rendering)
+    if (ImGuiImplVulkanFuncs_vkCmdBeginRenderingKHR == nullptr || ImGuiImplVulkanFuncs_vkCmdEndRenderingKHR == nullptr)
+    {
+        ImGuiImplVulkanFuncs_vkCmdBeginRenderingKHR = reinterpret_cast<PFN_vkCmdBeginRenderingKHR>(loader_func("vkCmdBeginRenderingKHR", user_data));
+        ImGuiImplVulkanFuncs_vkCmdEndRenderingKHR = reinterpret_cast<PFN_vkCmdEndRenderingKHR>(loader_func("vkCmdEndRenderingKHR", user_data));
+    }
 }
 #endif
 
@@ -1142,7 +1151,7 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info)
     {
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
 #ifndef IMGUI_IMPL_VULKAN_USE_LOADER
-        ImGui_ImplVulkan_LoadDynamicRenderingFunctions(info->ApiVersion, [](const char* function_name, void* user_data) { return vkGetInstanceProcAddr((VkInstance)user_data, function_name); }, (void*)info->Instance);
+        ImGui_ImplVulkan_LoadDynamicRenderingFunctions(info->ApiVersion, [](const char* function_name, void* user_data) { return vkGetDeviceProcAddr((VkDevice)user_data, function_name); }, (void*)info->Device);
 #endif
         IM_ASSERT(ImGuiImplVulkanFuncs_vkCmdBeginRenderingKHR != nullptr);
         IM_ASSERT(ImGuiImplVulkanFuncs_vkCmdEndRenderingKHR != nullptr);
