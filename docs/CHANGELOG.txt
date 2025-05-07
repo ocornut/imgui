@@ -121,6 +121,9 @@ Other changes:
   specifying a pointer to data that gets out of scope. (#8282)
 - Backends: Vulkan: Load dynamic rendering functions using vkGetDeviceProcAddr()
   + try both non-KHR and KHR versions. (#8600, #8326, #8365) [@ChrisTom-94]
+- Backends: Vulkan: fixed validation errors in window create/resize helpers used by examples
+  and by multi-viewports implementation, which would typically trigger errors while detaching
+  secondary viewports. (#8600, #8176) [@ChrisTom-94]
 - Examples: DirectX12+Win32: also test for IsIconic() for sleeping since we don't seem to
   get a DXGI_STATUS_OCCLUDED signal when minimized. (#8603) [@dooann]
 
