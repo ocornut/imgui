@@ -177,6 +177,7 @@ static bool g_FunctionsLoaded = true;
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkFreeDescriptorSets) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkFreeMemory) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkGetBufferMemoryRequirements) \
+    IMGUI_VULKAN_FUNC_MAP_MACRO(vkGetDeviceQueue) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkGetImageMemoryRequirements) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkGetPhysicalDeviceProperties) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkGetPhysicalDeviceMemoryProperties) \
@@ -189,8 +190,10 @@ static bool g_FunctionsLoaded = true;
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkQueueSubmit) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkQueueWaitIdle) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkResetCommandPool) \
+    IMGUI_VULKAN_FUNC_MAP_MACRO(vkResetFences) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkUnmapMemory) \
-    IMGUI_VULKAN_FUNC_MAP_MACRO(vkUpdateDescriptorSets)
+    IMGUI_VULKAN_FUNC_MAP_MACRO(vkUpdateDescriptorSets) \
+    IMGUI_VULKAN_FUNC_MAP_MACRO(vkWaitForFences)
 
 // Define function pointers
 #define IMGUI_VULKAN_FUNC_DEF(func) static PFN_##func func;
