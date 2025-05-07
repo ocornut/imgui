@@ -124,23 +124,6 @@ Other changes:
 - Examples: DirectX12+Win32: also test for IsIconic() for sleeping since we don't seem to
   get a DXGI_STATUS_OCCLUDED signal when minimized. (#8603) [@dooann]
 
-Docking+Viewports Branch:
-
-- Backends: Win32: Viewports: fixed an issue when closing a window from
-  the OS close button (with io.ConfigViewportsNoDecoration=false) while
-  user code is discarding the 'bool *p_open=false output' from Begin().
-  Because we allowed the Win32 window to close early, Windows destroyed
-  it and our imgui window became not visible even though user code was
-  still submitting it.
-- Backends: SDLGPU3 for SDL3: added multi-viewport support. (#8573) [@Lekoopapaul]
-- Backends: SDL2, SDL3: revert updating monitors and work areas info every
-  frame. Only do it on Windows to detect task-bar resize until we get an
-  adequate event for it. (#8415, #8558)
-- Backends: SDL3: macOS: Fixed secondary-viewports not appearing on a different
-  monitor than the main viewport. Because SDL_SetWindowParent() seems to restrict it.
-- Backends: GLFW: Disable multi-viewports under Wayland (require GLFW 3.4). (#8587)
->>>>>>> 6f2d429592 (Backends: Vulkan: Load dynamic rendering functions using vkGetDeviceProcAddr() + try both non-KHR and KHR versions. (#8600, #8326, #8365))
-
 
 -----------------------------------------------------------------------
  VERSION 1.91.9b (Released 2025-03-17)
