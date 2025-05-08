@@ -177,7 +177,6 @@ struct ImFontBaked;                 // Baked data for a ImFont at a given size.
 struct ImFontConfig;                // Configuration data when adding a font or merging fonts
 struct ImFontGlyph;                 // A single font glyph (code point + coordinates within in ImFontAtlas + offset)
 struct ImFontGlyphRangesBuilder;    // Helper to build glyph ranges from text/string data
-struct ImFontHooks;                 // Opaque interface to font hooks
 struct ImFontLoader;                // Opaque interface to a font loading backend (stb_truetype, FreeType etc.).
 struct ImTextureData;               // Specs and pixel storage for a texture used by Dear ImGui.
 struct ImTextureRect;               // Coordinates of a rectangle within a texture.
@@ -3683,7 +3682,6 @@ struct ImFontAtlas
     const ImFontLoader*         FontLoader;         // Font loader opaque interface (default to stb_truetype, can be changed to use FreeType by defining IMGUI_ENABLE_FREETYPE). Don't set directly!
     const char*                 FontLoaderName;     // Font loader name (for display e.g. in About box) == FontLoader->Name
     void*                       FontLoaderData;     // Font backend opaque storage
-    const ImFontHooks*          FontHooks;          // Shared font hooks for all fonts.
     unsigned int                FontBuilderFlags;   // [FIXME: Should be called FontLoaderFlags] Shared flags (for all fonts) for font loader. THIS IS BUILD IMPLEMENTATION DEPENDENT (e.g. . Per-font override is also available in ImFontConfig.
     int                         RefCount;           // Number of contexts using this atlas
 
@@ -3771,7 +3769,7 @@ struct ImFont
     float                       Scale;              // 4     // in  // Base font scale (~1.0f), multiplied by the per-window font scale which you can adjust with SetWindowFontScale()
     ImU8                        Used8kPagesMap[(IM_UNICODE_CODEPOINT_MAX+1)/8192/8]; // 1 bytes if ImWchar=ImWchar16, 16 bytes if ImWchar==ImWchar32. Store 1-bit for each block of 4K codepoints that has one active glyph. This is mainly used to facilitate iterations across all used codepoints.
     bool                        EllipsisAutoBake;   // 1     //     // Mark when the "..." glyph needs to be generated.
-    const ImFontHooks*          FontHooks;          // 8     // in  // Custom font hooks for the font.
+    ImGuiStorage                RemapPairs;         // 16    //     // Remapping pairs when using AddRemapChar(), otherwise empty.
 
     // Methods
     IMGUI_API ImFont();
@@ -3794,7 +3792,7 @@ struct ImFont
 
     // [Internal] Don't use!
     IMGUI_API void              ClearOutputData();
-    IMGUI_API void              AddRemapChar(ImWchar from_codepoint, ImWchar to_codepoint, bool overwrite_dst);// , bool overwrite_dst = true); // Makes 'dst' character/glyph points to 'src' character/glyph. Currently needs to be called AFTER fonts have been built.
+    IMGUI_API void              AddRemapChar(ImWchar from_codepoint, ImWchar to_codepoint); // Makes 'from_codepoint' character points to 'to_codepoint' glyph.
     IMGUI_API bool              IsGlyphRangeUnused(unsigned int c_begin, unsigned int c_last);
 };
 

@@ -37,7 +37,7 @@ Index of this file:
 // [SECTION] Tab bar, Tab item support
 // [SECTION] Table support
 // [SECTION] ImGui internal API
-// [SECTION] ImFontLoader, ImFontHooks
+// [SECTION] ImFontLoader
 // [SECTION] ImFontAtlas internal API
 // [SECTION] Test Engine specific hooks (imgui_test_engine)
 
@@ -3664,7 +3664,7 @@ namespace ImGui
 
 
 //-----------------------------------------------------------------------------
-// [SECTION] ImFontLoader, ImFontHooks
+// [SECTION] ImFontLoader
 //-----------------------------------------------------------------------------
 
 // Hooks and storage for a given font backend.
@@ -3692,14 +3692,6 @@ struct ImFontLoader
 #ifdef IMGUI_ENABLE_STB_TRUETYPE
 IMGUI_API const ImFontLoader* ImFontAtlasGetFontLoaderForStbTruetype();
 #endif
-
-// User hooks
-// Conceptually this could be public, but API is still going to be evolve.
-struct ImFontHooks
-{
-    // Modify codepoint to map to another value.
-    void            (*FontHookRemapCodepoint)(ImFontAtlas* atlas, ImFont* font, ImWchar* io_codepoint);
-};
 
 //-----------------------------------------------------------------------------
 // [SECTION] ImFontAtlas internal API
