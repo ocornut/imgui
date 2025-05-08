@@ -4393,12 +4393,15 @@ static ImFontGlyph* ImFontBaked_BuildLoadGlyph(ImFontBaked* baked, ImWchar codep
     {
         const ImFontLoader* loader = src->FontLoader ? src->FontLoader : atlas->FontLoader;
         if (!src->GlyphExcludeRanges || ImFontAtlasBuildAcceptCodepointForSource(src, codepoint))
-            if (ImFontGlyph* glyph = loader->FontBakedLoadGlyph(atlas, src, baked, loader_user_data_p, codepoint))
+        {
+            ImFontGlyph glyph_buf;
+            if (loader->FontBakedLoadGlyph(atlas, src, baked, loader_user_data_p, codepoint, &glyph_buf))
             {
                 // FIXME: Add hooks for e.g. #7962
-                glyph->SourceIdx = src_n;
-                return glyph;
+                glyph_buf.SourceIdx = src_n;
+                return ImFontAtlasBakedAddFontGlyph(atlas, baked, src, &glyph_buf);
             }
+        }
         loader_user_data_p += loader->FontBakedSrcLoaderDataSize;
         src_n++;
     }
@@ -4539,14 +4542,14 @@ static bool ImGui_ImplStbTrueType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig
     return true;
 }
 
-static ImFontGlyph* ImGui_ImplStbTrueType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void*, ImWchar codepoint)
+static bool ImGui_ImplStbTrueType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void*, ImWchar codepoint, ImFontGlyph* out_glyph)
 {
     // Search for first font which has the glyph
     ImGui_ImplStbTrueType_FontSrcData* bd_font_data = (ImGui_ImplStbTrueType_FontSrcData*)src->FontLoaderData;
     IM_ASSERT(bd_font_data);
     int glyph_index = stbtt_FindGlyphIndex(&bd_font_data->FontInfo, (int)codepoint);
     if (glyph_index == 0)
-        return NULL;
+        return false;
 
     // Fonts unit to pixels
     int oversample_h, oversample_v;
@@ -4564,10 +4567,8 @@ static ImFontGlyph* ImGui_ImplStbTrueType_FontBakedLoadGlyph(ImFontAtlas* atlas,
     const bool is_visible = (x0 != x1 && y0 != y1);
 
     // Prepare glyph
-    ImFontGlyph glyph_in = {};
-    ImFontGlyph* glyph = &glyph_in;
-    glyph->Codepoint = codepoint;
-    glyph->AdvanceX = advance * scale_for_layout;
+    out_glyph->Codepoint = codepoint;
+    out_glyph->AdvanceX = advance * scale_for_layout;
 
     // Pack and retrieve position inside texture atlas
     // (generally based on stbtt_PackFontRangesRenderIntoRects)
@@ -4580,7 +4581,7 @@ static ImFontGlyph* ImGui_ImplStbTrueType_FontBakedLoadGlyph(ImFontAtlas* atlas,
         {
             // Pathological out of memory case (TexMaxWidth/TexMaxHeight set too small?)
             IM_ASSERT(pack_id != ImFontAtlasRectId_Invalid && "Out of texture memory.");
-            return NULL;
+            return false;
         }
         ImTextureRect* r = ImFontAtlasPackGetRect(atlas, pack_id);
 
@@ -4615,21 +4616,16 @@ static ImFontGlyph* ImGui_ImplStbTrueType_FontBakedLoadGlyph(ImFontAtlas* atlas,
         // Register glyph
         // r->x r->y are coordinates inside texture (in pixels)
         // glyph.X0, glyph.Y0 are drawing coordinates from base text position, and accounting for oversampling.
-        glyph->X0 = x0 * recip_h + font_off_x;
-        glyph->Y0 = y0 * recip_v + font_off_y;
-        glyph->X1 = (x0 + (int)r->w) * recip_h + font_off_x;
-        glyph->Y1 = (y0 + (int)r->h) * recip_v + font_off_y;
-        glyph->Visible = true;
-        glyph->PackId = pack_id;
-        glyph = ImFontAtlasBakedAddFontGlyph(atlas, baked, src, glyph);
-        ImFontAtlasBakedSetFontGlyphBitmap(atlas, baked, src, glyph, r, bitmap_pixels, ImTextureFormat_Alpha8, w);
-    }
-    else
-    {
-        glyph = ImFontAtlasBakedAddFontGlyph(atlas, baked, src, glyph);
+        out_glyph->X0 = x0 * recip_h + font_off_x;
+        out_glyph->Y0 = y0 * recip_v + font_off_y;
+        out_glyph->X1 = (x0 + (int)r->w) * recip_h + font_off_x;
+        out_glyph->Y1 = (y0 + (int)r->h) * recip_v + font_off_y;
+        out_glyph->Visible = true;
+        out_glyph->PackId = pack_id;
+        ImFontAtlasBakedSetFontGlyphBitmap(atlas, baked, src, out_glyph, r, bitmap_pixels, ImTextureFormat_Alpha8, w);
     }
 
-    return glyph;
+    return true;
 }
 
 const ImFontLoader* ImFontAtlasGetFontLoaderForStbTruetype()
