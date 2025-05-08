@@ -4365,6 +4365,14 @@ static void ImFontBaked_BuildGrowIndex(ImFontBaked* baked, int new_size)
     baked->IndexLookup.resize(new_size, IM_FONTGLYPH_INDEX_UNUSED);
 }
 
+static void ImFont_FontHookRemapCodepoint(ImFontAtlas* atlas, ImFont* font, ImWchar* c)
+{
+    if (font->FontHooks && font->FontHooks->FontHookRemapCodepoint != NULL)
+        font->FontHooks->FontHookRemapCodepoint(atlas, font, c);
+    else if (atlas->FontHooks && atlas->FontHooks->FontHookRemapCodepoint != NULL)
+        atlas->FontHooks->FontHookRemapCodepoint(atlas, font, c);
+}
+
 static ImFontGlyph* ImFontBaked_BuildLoadGlyph(ImFontBaked* baked, ImWchar codepoint)
 {
     ImFont* font = baked->ContainerFont;
@@ -4376,6 +4384,10 @@ static ImFontGlyph* ImFontBaked_BuildLoadGlyph(ImFontBaked* baked, ImWchar codep
             ImFontAtlasBuildSetupFontBakedFallback(baked);
         return NULL;
     }
+
+    // User remapping hooks
+    ImWchar src_codepoint = codepoint;
+    ImFont_FontHookRemapCodepoint(atlas, font, &codepoint);
 
     //char utf8_buf[5];
     //IMGUI_DEBUG_LOG("[font] BuildLoadGlyph U+%04X (%s)\n", (unsigned int)codepoint, ImTextCharToUtf8(utf8_buf, (unsigned int)codepoint));
@@ -4398,6 +4410,7 @@ static ImFontGlyph* ImFontBaked_BuildLoadGlyph(ImFontBaked* baked, ImWchar codep
             if (loader->FontBakedLoadGlyph(atlas, src, baked, loader_user_data_p, codepoint, &glyph_buf))
             {
                 // FIXME: Add hooks for e.g. #7962
+                glyph_buf.Codepoint = src_codepoint;
                 glyph_buf.SourceIdx = src_n;
                 return ImFontAtlasBakedAddFontGlyph(atlas, baked, src, &glyph_buf);
             }
@@ -5079,7 +5092,7 @@ void ImFontAtlasBakedSetFontGlyphBitmap(ImFontAtlas* atlas, ImFontBaked* baked, 
     ImFontAtlasTextureBlockQueueUpload(atlas, tex, r->x, r->y, r->w, r->h);
 }
 
-// FIXME-NEWATLAS: Implement AddRemapChar() which was removed since transitioning to baked logic.
+// FIXME: Use ImFontHooks::FontHookRemapCodepoint() hooks.
 void ImFont::AddRemapChar(ImWchar from_codepoint, ImWchar to_codepoint, bool overwrite_dst)
 {
     IM_UNUSED(from_codepoint);
@@ -5149,6 +5162,7 @@ bool ImFontBaked::IsGlyphLoaded(ImWchar c)
 bool ImFont::IsGlyphInFont(ImWchar c)
 {
     ImFontAtlas* atlas = ContainerAtlas;
+    ImFont_FontHookRemapCodepoint(atlas, this, &c);
     for (ImFontConfig* src : Sources)
     {
         const ImFontLoader* loader = src->FontLoader ? src->FontLoader : atlas->FontLoader;
