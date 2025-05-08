@@ -3885,19 +3885,19 @@ void ImFont::AddGlyph(const ImFontConfig* src, ImWchar codepoint, float x0, floa
     MetricsTotalSurface += (int)((glyph.U1 - glyph.U0) * ContainerAtlas->TexWidth + pad) * (int)((glyph.V1 - glyph.V0) * ContainerAtlas->TexHeight + pad);
 }
 
-void ImFont::AddRemapChar(ImWchar dst, ImWchar src, bool overwrite_dst)
+void ImFont::AddRemapChar(ImWchar from_codepoint, ImWchar to_codepoint, bool overwrite_dst)
 {
     IM_ASSERT(IndexLookup.Size > 0);    // Currently this can only be called AFTER the font has been built, aka after calling ImFontAtlas::GetTexDataAs*() function.
     unsigned int index_size = (unsigned int)IndexLookup.Size;
 
-    if (dst < index_size && IndexLookup.Data[dst] == (ImU16)-1 && !overwrite_dst) // 'dst' already exists
+    if (from_codepoint < index_size && IndexLookup.Data[from_codepoint] == (ImU16)-1 && !overwrite_dst) // 'from_codepoint' already exists
         return;
-    if (src >= index_size && dst >= index_size) // both 'dst' and 'src' don't exist -> no-op
+    if (to_codepoint >= index_size && from_codepoint >= index_size) // both 'from_codepoint' and 'to_codepoint' don't exist -> no-op
         return;
 
-    GrowIndex(dst + 1);
-    IndexLookup[dst] = (src < index_size) ? IndexLookup.Data[src] : (ImU16)-1;
-    IndexAdvanceX[dst] = (src < index_size) ? IndexAdvanceX.Data[src] : 1.0f;
+    GrowIndex(from_codepoint + 1);
+    IndexLookup[from_codepoint] = (to_codepoint < index_size) ? IndexLookup.Data[to_codepoint] : (ImU16)-1;
+    IndexAdvanceX[from_codepoint] = (to_codepoint < index_size) ? IndexAdvanceX.Data[to_codepoint] : 1.0f;
 }
 
 // Find glyph, return fallback if missing
