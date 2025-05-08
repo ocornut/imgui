@@ -473,12 +473,12 @@ void ImGui_ImplFreeType_FontBakedDestroy(ImFontAtlas* atlas, ImFontConfig* src, 
     bd_baked_data->~ImGui_ImplFreeType_FontSrcBakedData(); // ~IM_PLACEMENT_DELETE()
 }
 
-ImFontGlyph* ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void* loader_data_for_baked_src, ImWchar codepoint)
+bool ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void* loader_data_for_baked_src, ImWchar codepoint, ImFontGlyph* out_glyph)
 {
     ImGui_ImplFreeType_FontSrcData* bd_font_data = (ImGui_ImplFreeType_FontSrcData*)src->FontLoaderData;
     uint32_t glyph_index = FT_Get_Char_Index(bd_font_data->FtFace, codepoint);
     if (glyph_index == 0)
-        return NULL;
+        return false;
 
     if (bd_font_data->BakedLastActivated != baked) // <-- could use id
     {
@@ -490,7 +490,7 @@ ImFontGlyph* ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontCon
 
     const FT_Glyph_Metrics* metrics = ImGui_ImplFreeType_LoadGlyph(bd_font_data, codepoint);
     if (metrics == NULL)
-        return NULL;
+        return false;
 
     // Render glyph into a bitmap (currently held by FreeType)
     FT_Face face = bd_font_data->FtFace;
@@ -507,10 +507,8 @@ ImFontGlyph* ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontCon
     const float rasterizer_density = src->RasterizerDensity * baked->RasterizerDensity;
 
     // Prepare glyph
-    ImFontGlyph glyph_in = {};
-    ImFontGlyph* glyph = &glyph_in;
-    glyph->Codepoint = codepoint;
-    glyph->AdvanceX = (slot->advance.x / FT_SCALEFACTOR) / rasterizer_density;
+    out_glyph->Codepoint = codepoint;
+    out_glyph->AdvanceX = (slot->advance.x / FT_SCALEFACTOR) / rasterizer_density;
 
     // Pack and retrieve position inside texture atlas
     if (is_visible)
@@ -542,21 +540,17 @@ ImFontGlyph* ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontCon
         // Register glyph
         float glyph_off_x = (float)face->glyph->bitmap_left;
         float glyph_off_y = (float)-face->glyph->bitmap_top;
-        glyph->X0 = glyph_off_x * recip_h + font_off_x;
-        glyph->Y0 = glyph_off_y * recip_v + font_off_y;
-        glyph->X1 = (glyph_off_x + w) * recip_h + font_off_x;
-        glyph->Y1 = (glyph_off_y + h) * recip_v + font_off_y;
-        glyph->Visible = true;
-        glyph->Colored = (ft_bitmap->pixel_mode == FT_PIXEL_MODE_BGRA);
-        glyph->PackId = pack_id;
-        glyph = ImFontAtlasBakedAddFontGlyph(atlas, baked, src, glyph);
-        ImFontAtlasBakedSetFontGlyphBitmap(atlas, baked, src, glyph, r, (const unsigned char*)temp_buffer, ImTextureFormat_RGBA32, w * 4);
+        out_glyph->X0 = glyph_off_x * recip_h + font_off_x;
+        out_glyph->Y0 = glyph_off_y * recip_v + font_off_y;
+        out_glyph->X1 = (glyph_off_x + w) * recip_h + font_off_x;
+        out_glyph->Y1 = (glyph_off_y + h) * recip_v + font_off_y;
+        out_glyph->Visible = true;
+        out_glyph->Colored = (ft_bitmap->pixel_mode == FT_PIXEL_MODE_BGRA);
+        out_glyph->PackId = pack_id;
+        ImFontAtlasBakedSetFontGlyphBitmap(atlas, baked, src, out_glyph, r, (const unsigned char*)temp_buffer, ImTextureFormat_RGBA32, w * 4);
     }
-    else
-    {
-        glyph = ImFontAtlasBakedAddFontGlyph(atlas, baked, src, glyph);
-    }
-    return glyph;
+
+    return true;
 }
 
 bool ImGui_ImplFreetype_FontSrcContainsGlyph(ImFontAtlas* atlas, ImFontConfig* src, ImWchar codepoint)
