@@ -4372,12 +4372,11 @@ static void ImFontBaked_BuildGrowIndex(ImFontBaked* baked, int new_size)
     baked->IndexLookup.resize(new_size, IM_FONTGLYPH_INDEX_UNUSED);
 }
 
-static void ImFont_FontHookRemapCodepoint(ImFontAtlas* atlas, ImFont* font, ImWchar* c)
+static void ImFontAtlas_FontHookRemapCodepoint(ImFontAtlas* atlas, ImFont* font, ImWchar* c)
 {
-    if (font->FontHooks && font->FontHooks->FontHookRemapCodepoint != NULL)
-        font->FontHooks->FontHookRemapCodepoint(atlas, font, c);
-    else if (atlas->FontHooks && atlas->FontHooks->FontHookRemapCodepoint != NULL)
-        atlas->FontHooks->FontHookRemapCodepoint(atlas, font, c);
+    IM_UNUSED(atlas);
+    if (font->RemapPairs.Data.Size != 0)
+        *c = (ImWchar)font->RemapPairs.GetInt((ImGuiID)*c, (int)*c);
 }
 
 static ImFontGlyph* ImFontBaked_BuildLoadGlyph(ImFontBaked* baked, ImWchar codepoint)
@@ -4394,7 +4393,7 @@ static ImFontGlyph* ImFontBaked_BuildLoadGlyph(ImFontBaked* baked, ImWchar codep
 
     // User remapping hooks
     ImWchar src_codepoint = codepoint;
-    ImFont_FontHookRemapCodepoint(atlas, font, &codepoint);
+    ImFontAtlas_FontHookRemapCodepoint(atlas, font, &codepoint);
 
     //char utf8_buf[5];
     //IMGUI_DEBUG_LOG("[font] BuildLoadGlyph U+%04X (%s)\n", (unsigned int)codepoint, ImTextCharToUtf8(utf8_buf, (unsigned int)codepoint));
@@ -5099,25 +5098,9 @@ void ImFontAtlasBakedSetFontGlyphBitmap(ImFontAtlas* atlas, ImFontBaked* baked, 
     ImFontAtlasTextureBlockQueueUpload(atlas, tex, r->x, r->y, r->w, r->h);
 }
 
-// FIXME: Use ImFontHooks::FontHookRemapCodepoint() hooks.
-void ImFont::AddRemapChar(ImWchar dst, ImWchar src, bool overwrite_dst)
+void ImFont::AddRemapChar(ImWchar from_codepoint, ImWchar to_codepoint)
 {
-    IM_UNUSED(dst);
-    IM_UNUSED(src);
-    IM_UNUSED(overwrite_dst);
-    /*
-    IM_ASSERT(IndexLookup.Size > 0);    // Currently this can only be called AFTER the font has been built, aka after calling ImFontAtlas::GetTexDataAs*() function.
-    unsigned int index_size = (unsigned int)IndexLookup.Size;
-
-    if (dst < index_size && IndexLookup.Data[dst] == (ImU16)-1 && !overwrite_dst) // 'dst' already exists
-        return;
-    if (src >= index_size && dst >= index_size) // both 'dst' and 'src' don't exist -> no-op
-        return;
-
-    BuildGrowIndex(dst + 1);
-    IndexLookup[dst] = (src < index_size) ? IndexLookup.Data[src] : (ImU16)-1;
-    IndexAdvanceX[dst] = (src < index_size) ? IndexAdvanceX.Data[src] : 1.0f;
-    */
+    RemapPairs.SetInt((ImGuiID)from_codepoint, (int)to_codepoint);
 }
 
 // Find glyph, load if necessary, return fallback if missing
@@ -5169,7 +5152,7 @@ bool ImFontBaked::IsGlyphLoaded(ImWchar c)
 bool ImFont::IsGlyphInFont(ImWchar c)
 {
     ImFontAtlas* atlas = ContainerAtlas;
-    ImFont_FontHookRemapCodepoint(atlas, this, &c);
+    ImFontAtlas_FontHookRemapCodepoint(atlas, this, &c);
     for (ImFontConfig* src : Sources)
     {
         const ImFontLoader* loader = src->FontLoader ? src->FontLoader : atlas->FontLoader;
