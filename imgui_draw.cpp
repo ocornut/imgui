@@ -3872,16 +3872,14 @@ void ImFontAtlasBuildDiscardBakes(ImFontAtlas* atlas, int unused_frames)
 // Those functions are designed to facilitate changing the underlying structures for ImFontAtlas to store an array of ImDrawListSharedData*
 void ImFontAtlasAddDrawListSharedData(ImFontAtlas* atlas, ImDrawListSharedData* data)
 {
-    IM_ASSERT(!atlas->DrawListSharedDatas.contains(data) && data->FontAtlas == NULL);
+    IM_ASSERT(!atlas->DrawListSharedDatas.contains(data));
     atlas->DrawListSharedDatas.push_back(data);
-    data->FontAtlas = atlas;
 }
 
 void ImFontAtlasRemoveDrawListSharedData(ImFontAtlas* atlas, ImDrawListSharedData* data)
 {
-    IM_ASSERT(atlas->DrawListSharedDatas.contains(data) && data->FontAtlas == atlas);
+    IM_ASSERT(atlas->DrawListSharedDatas.contains(data));
     atlas->DrawListSharedDatas.find_erase(data);
-    data->FontAtlas = NULL;
 }
 
 // Update texture identifier in all active draw lists
@@ -3909,7 +3907,6 @@ void ImFontAtlasUpdateDrawListsSharedData(ImFontAtlas* atlas)
 {
     for (ImDrawListSharedData* shared_data : atlas->DrawListSharedDatas)
     {
-        shared_data->FontAtlas = atlas;
         shared_data->TexUvWhitePixel = atlas->TexUvWhitePixel;
         shared_data->TexUvLines = atlas->TexUvLines;
     }
