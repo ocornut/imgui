@@ -15666,7 +15666,7 @@ static const char* FormatTextureIDForDebugDisplay(char* buf, int buf_size, const
     char* buf_end = buf + buf_size;
     if (cmd->TexRef._TexData != NULL)
         buf += ImFormatString(buf, buf_end - buf, "#%03d: ", cmd->TexRef._TexData->UniqueID);
-    return FormatTextureIDForDebugDisplay(buf, (int)(buf_end - buf), cmd->GetTexID());
+    return FormatTextureIDForDebugDisplay(buf, (int)(buf_end - buf), cmd->TexRef.GetTexID()); // Calling TexRef::GetTexID() to avoid assert of cmd->GetTexID()
 }
 
 // Avoid naming collision with imgui_demo.cpp's HelpMarker() for unity builds.
@@ -15690,18 +15690,26 @@ namespace ImGuiFreeType { IMGUI_API const ImFontLoader* GetFontLoader(); IMGUI_A
 void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
 {
     ImGuiContext& g = *GImGui;
+    ImGuiIO& io = g.IO;
+
+    Text("Read "); SameLine(0, 0);
+    TextLinkOpenURL("https://www.dearimgui.com/faq/"); SameLine(0, 0);
+    Text(" for details on font loading.");
 
     SeparatorText("Backend Support for Dynamic Fonts");
     BeginDisabled();
-    CheckboxFlags("io.BackendFlags: RendererHasTextures", &GetIO().BackendFlags, ImGuiBackendFlags_RendererHasTextures);
+    CheckboxFlags("io.BackendFlags: RendererHasTextures", &io.BackendFlags, ImGuiBackendFlags_RendererHasTextures);
+    EndDisabled();
+
+    BeginDisabled((io.BackendFlags & ImGuiBackendFlags_RendererHasTextures) == 0);
+    SetNextItemWidth(GetFontSize() * 5);
+    DragFloat("io.FontGlobalScale", &io.FontGlobalScale, 0.05f, 0.5f, 5.0f);
+    BulletText("This is scaling font only. General scaling will come later.");
+    BulletText("Load an actual font that's not the default for best result!");
+    BulletText("Please submit feedback:"); SameLine(); TextLinkOpenURL("https://github.com/ocornut/imgui/issues/8465");
     EndDisabled();
 
     SeparatorText("Fonts");
-    Text("Read ");
-    SameLine(0, 0);
-    TextLinkOpenURL("https://www.dearimgui.com/faq/");
-    SameLine(0, 0);
-    Text(" for details on font loading.");
 
     ImGuiMetricsConfig* cfg = &g.DebugMetricsConfig;
     Checkbox("Show font preview", &cfg->ShowFontPreview);
@@ -15845,7 +15853,8 @@ void ImGui::DebugNodeTexture(ImTextureData* tex, int int_id, const ImFontAtlasRe
         }
         PopStyleVar();
 
-        char texid_desc[20];
+        char texid_desc[30];
+        Text("Status = %s (%d)", ImTextureDataGetStatusName(tex->Status), tex->Status);
         Text("Format = %s (%d)", ImTextureDataGetFormatName(tex->Format), tex->Format);
         Text("TexID = %s", FormatTextureIDForDebugDisplay(texid_desc, IM_ARRAYSIZE(texid_desc), tex->TexID));
         Text("BackendUserData = %p", tex->BackendUserData);
@@ -16545,7 +16554,7 @@ void ImGui::DebugNodeDrawList(ImGuiWindow* window, ImGuiViewportP* viewport, con
             continue;
         }
 
-        char texid_desc[20];
+        char texid_desc[30];
         FormatTextureIDForDebugDisplay(texid_desc, IM_ARRAYSIZE(texid_desc), pcmd);
         char buf[300];
         ImFormatString(buf, IM_ARRAYSIZE(buf), "DrawCmd:%5d tris, Tex %s, ClipRect (%4.0f,%4.0f)-(%4.0f,%4.0f)",
