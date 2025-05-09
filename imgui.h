@@ -371,7 +371,7 @@ namespace ImGui
     IMGUI_API void          NewFrame();                                 // start a new Dear ImGui frame, you can submit any command from this point until Render()/EndFrame().
     IMGUI_API void          EndFrame();                                 // ends the Dear ImGui frame. automatically called by Render(). If you don't need to render data (skipping rendering) you may call EndFrame() without Render()... but you'll have wasted CPU already! If you don't need to render, better to not create any windows and not call NewFrame() at all!
     IMGUI_API void          Render();                                   // ends the Dear ImGui frame, finalize the draw data. You can then get call GetDrawData().
-    IMGUI_API ImDrawData*   GetDrawData();                              // valid after Render() and until the next call to NewFrame(). this is what you have to render.
+    IMGUI_API ImDrawData*   GetDrawData();                              // valid after Render() and until the next call to NewFrame(). Call ImGui_ImplXXXX_RenderDrawData() function in your Renderer Backend to render.
 
     // Demo, Debug, Information
     IMGUI_API void          ShowDemoWindow(bool* p_open = NULL);        // create Demo window. demonstrate most ImGui features. call this to learn about the library! try to make it always available in your application!
@@ -3426,7 +3426,7 @@ struct ImDrawList
 struct ImDrawData
 {
     bool                Valid;              // Only valid after Render() is called and before the next NewFrame() is called.
-    int                 CmdListsCount;      // Number of ImDrawList* to render
+    int                 CmdListsCount;      // Number of ImDrawList* to render. (== CmdLists.Size). Exists for legacy reason.
     int                 TotalIdxCount;      // For convenience, sum of all ImDrawList's IdxBuffer.Size
     int                 TotalVtxCount;      // For convenience, sum of all ImDrawList's VtxBuffer.Size
     ImVector<ImDrawList*> CmdLists;         // Array of ImDrawList* to render. The ImDrawLists are owned by ImGuiContext and only pointed to from here.
@@ -3434,6 +3434,7 @@ struct ImDrawData
     ImVec2              DisplaySize;        // Size of the viewport to render (== GetMainViewport()->Size for the main viewport, == io.DisplaySize in most single-viewport applications)
     ImVec2              FramebufferScale;   // Amount of pixels for each unit of DisplaySize. Based on io.DisplayFramebufferScale. Generally (1,1) on normal display, (2,2) on OSX with Retina display.
     ImGuiViewport*      OwnerViewport;      // Viewport carrying the ImDrawData instance, might be of use to the renderer (generally not).
+    ImVector<ImTextureData*>* Textures;     // List of textures to update. Most of the times the list is shared by all ImDrawData, has only 1 texture and it doesn't need any update. This almost always points to ImGui::GetPlatformIO().Textures[]. May be overriden or set to NULL if you want to manually update textures.
 
     // Functions
     ImDrawData()    { Clear(); }
@@ -3712,7 +3713,7 @@ struct ImFontAtlas
     // [Internal]
     ImTextureRef                TexRef;             // User data to refer to the latest texture once it has been uploaded to user's graphic systems. It is passed back to you during rendering via the ImDrawCmd structure.
     ImTextureData*              TexData;            // Current texture
-    ImVector<ImTextureData*>    TexList;            // Texture list (most often TexList.Size == 1). TexData is always == TexList.back(). DO NOT USE DIRECTLY, USE GetPlatformIO().Textures[] instead!
+    ImVector<ImTextureData*>    TexList;            // Texture list (most often TexList.Size == 1). TexData is always == TexList.back(). DO NOT USE DIRECTLY, USE GetDrawData().Textures[]/GetPlatformIO().Textures[] instead!
     bool                        Locked;             // Marked as Locked by ImGui::NewFrame() so attempt to modify the atlas will assert.
     bool                        TexIsBuilt;         // Set when texture was built matching current font input
     bool                        TexPixelsUseColors; // Tell whether our texture data is known to use colors (rather than just alpha channel), in order to help backend select a format or conversion process.
@@ -4024,7 +4025,8 @@ struct ImGuiPlatformIO
     //------------------------------------------------------------------
 
     // Textures list (the list is updated by calling ImGui::EndFrame or ImGui::Render)
-    ImVector<ImTextureData*>        Textures;           // Texture list (most often Textures.Size == 1).
+    // The ImGui_ImplXXXX_RenderDrawData() function of each backend generally access this via ImDrawData::Textures which points to this. The array is available here mostly because backends will want to destroy textures on shutdown.
+    ImVector<ImTextureData*>        Textures;           // List of textures used by Dear ImGui (most often 1).
 
     // Viewports list (the list is updated by calling ImGui::EndFrame or ImGui::Render)
     // (in the future we will attempt to organize this feature to remove the need for a "main viewport")

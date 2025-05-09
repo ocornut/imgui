@@ -2250,6 +2250,7 @@ void ImDrawData::Clear()
     CmdLists.resize(0); // The ImDrawList are NOT owned by ImDrawData but e.g. by ImGuiContext, so we don't clear them.
     DisplayPos = DisplaySize = FramebufferScale = ImVec2(0.0f, 0.0f);
     OwnerViewport = NULL;
+    Textures = NULL;
 }
 
 // Important: 'out_list' is generally going to be draw_data->CmdLists, but may be another temporary list
