@@ -4123,6 +4123,7 @@ IMGUI_API void              ImFontAtlasTextureBlockCopy(ImTextureData* src_tex, 
 IMGUI_API void              ImFontAtlasTextureBlockQueueUpload(ImFontAtlas* atlas, ImTextureData* tex, int x, int y, int w, int h);
 
 IMGUI_API int               ImTextureDataGetFormatBytesPerPixel(ImTextureFormat format);
+IMGUI_API const char*       ImTextureDataGetStatusName(ImTextureStatus status);
 IMGUI_API const char*       ImTextureDataGetFormatName(ImTextureFormat format);
 
 #ifndef IMGUI_DISABLE_DEBUG_TOOLS

@@ -2437,6 +2437,19 @@ int ImTextureDataGetFormatBytesPerPixel(ImTextureFormat format)
     return 0;
 }
 
+const char* ImTextureDataGetStatusName(ImTextureStatus status)
+{
+    switch (status)
+    {
+    case ImTextureStatus_OK: return "OK";
+    case ImTextureStatus_Destroyed: return "Destroyed";
+    case ImTextureStatus_WantCreate: return "WantCreate";
+    case ImTextureStatus_WantUpdates: return "WantUpdates";
+    case ImTextureStatus_WantDestroy: return "WantDestroy";
+    }
+    return "N/A";
+}
+
 const char* ImTextureDataGetFormatName(ImTextureFormat format)
 {
     switch (format)
@@ -2446,7 +2459,6 @@ const char* ImTextureDataGetFormatName(ImTextureFormat format)
     }
     return "N/A";
 }
-
 
 void ImTextureData::Create(ImTextureFormat format, int w, int h)
 {
@@ -3163,6 +3175,7 @@ ImFont* ImFontAtlas::AddFontFromMemoryCompressedBase85TTF(const char* compressed
     return font;
 }
 
+// On font removal we need to remove references (otherwise we could queue removal?)
 // We allow old_font == new_font which forces updating all values (e.g. sizes)
 static void ImFontAtlasBuildNotifySetFont(ImFontAtlas* atlas, ImFont* old_font, ImFont* new_font)
 {
@@ -3891,6 +3904,7 @@ void ImFontAtlasUpdateDrawListsTextures(ImFontAtlas* atlas, ImTextureRef old_tex
 }
 
 // Update texture coordinates in all draw list shared context
+// FIXME-NEWATLAS FIXME-OPT: Doesn't seem necessary to update for all, only one bound to current context?
 void ImFontAtlasUpdateDrawListsSharedData(ImFontAtlas* atlas)
 {
     for (ImDrawListSharedData* shared_data : atlas->DrawListSharedDatas)
