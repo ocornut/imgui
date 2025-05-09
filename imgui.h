@@ -3797,6 +3797,7 @@ struct ImFontAtlas
     void*                       FontLoaderData;     // Font backend opaque storage
     unsigned int                FontBuilderFlags;   // [FIXME: Should be called FontLoaderFlags] Shared flags (for all fonts) for font loader. THIS IS BUILD IMPLEMENTATION DEPENDENT (e.g. . Per-font override is also available in ImFontConfig.
     int                         RefCount;           // Number of contexts using this atlas
+    ImGuiContext*               OwnerContext;       // Context which own the atlas will be in charge of updating and destroying it.
 
     // [Obsolete]
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS

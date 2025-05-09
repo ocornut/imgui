@@ -4012,13 +4012,13 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
 
     Initialized = false;
     ConfigFlagsCurrFrame = ConfigFlagsLastFrame = ImGuiConfigFlags_None;
-    FontAtlasOwnedByContext = shared_font_atlas ? false : true;
     Font = NULL;
     FontBaked = NULL;
     FontSize = FontSizeBeforeScaling = FontScale = CurrentDpiScale = 0.0f;
     FontRasterizerDensity = 1.0f;
     IO.Fonts = shared_font_atlas ? shared_font_atlas : IM_NEW(ImFontAtlas)();
-    IO.Fonts->RefCount++;
+    if (shared_font_atlas == NULL)
+        IO.Fonts->OwnerContext = this;
     Time = 0.0f;
     FrameCount = 0;
     FrameCountEnded = FrameCountPlatformEnded = FrameCountRendered = -1;
@@ -4293,8 +4293,9 @@ void ImGui::Initialize()
 
     // ImDrawList/ImFontAtlas are designed to function without ImGui, and 99% of it works without an ImGui context.
     // But this link allows us to facilitate/handle a few edge cases better.
+    ImFontAtlas* atlas = g.IO.Fonts;
     g.DrawListSharedData.Context = &g;
-    ImFontAtlasAddDrawListSharedData(g.IO.Fonts, &g.DrawListSharedData);
+    RegisterFontAtlas(atlas);
 
     g.Initialized = true;
 }
@@ -4307,17 +4308,15 @@ void ImGui::Shutdown()
     IM_ASSERT_USER_ERROR(g.IO.BackendRendererUserData == NULL, "Forgot to shutdown Renderer backend?");
 
     // The fonts atlas can be used prior to calling NewFrame(), so we clear it even if g.Initialized is FALSE (which would happen if we never called NewFrame)
-    if (ImFontAtlas* atlas = g.IO.Fonts)
+    for (ImFontAtlas* atlas : g.FontAtlases)
     {
-        ImFontAtlasRemoveDrawListSharedData(atlas, &g.DrawListSharedData);
-        atlas->RefCount--;
-        if (g.FontAtlasOwnedByContext)
+        UnregisterFontAtlas(atlas);
+        if (atlas->OwnerContext == &g)
         {
             atlas->Locked = false;
             IM_DELETE(atlas);
         }
     }
-    g.IO.Fonts = NULL;
     g.DrawListSharedData.TempBuffer.clear();
 
     // Cleanup of other data are conditional on actually having initialized Dear ImGui.
@@ -4491,7 +4490,8 @@ void ImGui::GcCompactTransientMiscBuffers()
     g.MultiSelectTempDataStacked = 0;
     g.MultiSelectTempData.clear_destruct();
     TableGcCompactSettings();
-    g.IO.Fonts->CompactCache();
+    for (ImFontAtlas* atlas : g.FontAtlases)
+        atlas->CompactCache();
 }
 
 // Free up/compact internal window buffers, we can use this when a window becomes unused.
@@ -5367,29 +5367,27 @@ void ImGui::UpdateHoveredWindowAndCaptureFlags(const ImVec2& mouse_pos)
 static void ImGui::UpdateTexturesNewFrame()
 {
     ImGuiContext& g = *GImGui;
-    ImFontAtlas* atlas = g.IO.Fonts;
-    if (g.FontAtlasOwnedByContext)
-    {
-        atlas->RendererHasTextures = (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures) != 0;
-        ImFontAtlasUpdateNewFrame(atlas, g.FrameCount);
-    }
+    for (ImFontAtlas* atlas : g.FontAtlases)
+        if (atlas->OwnerContext == &g)
+        {
+            atlas->RendererHasTextures = (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures) != 0;
+            ImFontAtlasUpdateNewFrame(atlas, g.FrameCount);
+        }
 }
 
 // Build a single texture list
-// We want to avoid user reading from atlas->TexList[] in order to facilitate better support for multiple atlases.
 static void ImGui::UpdateTexturesEndFrame()
 {
     ImGuiContext& g = *GImGui;
-    ImFontAtlas* atlas = g.IO.Fonts;
     g.PlatformIO.Textures.resize(0);
-    g.PlatformIO.Textures.reserve(atlas->TexList.Size);
-    for (ImTextureData* tex : atlas->TexList)
-    {
-        // We provide this information so backends can decide whether to destroy textures.
-        // This means in practice that if N imgui contexts are created with a shared atlas, we assume all of them have a backend initialized.
-        tex->RefCount = (unsigned short)atlas->RefCount;
-        g.PlatformIO.Textures.push_back(tex);
-    }
+    for (ImFontAtlas* atlas : g.FontAtlases)
+        for (ImTextureData* tex : atlas->TexList)
+        {
+            // We provide this information so backends can decide whether to destroy textures.
+            // This means in practice that if N imgui contexts are created with a shared atlas, we assume all of them have a backend initialized.
+            tex->RefCount = (unsigned short)atlas->RefCount;
+            g.PlatformIO.Textures.push_back(tex);
+        }
 }
 
 // Called once a frame. Followed by SetCurrentFont() which sets up the remaining data.
@@ -5462,9 +5460,9 @@ void ImGui::NewFrame()
     UpdateTexturesNewFrame();
 
     // Setup current font and draw list shared data
-    ImFontAtlas* atlas = g.IO.Fonts;
     if ((g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures) == 0)
-        atlas->Locked = true;
+        for (ImFontAtlas* atlas : g.FontAtlases)
+            atlas->Locked = true;
     SetupDrawListSharedData();
     PushDefaultFont();
     IM_ASSERT(g.Font->IsLoaded());
@@ -6044,8 +6042,8 @@ void ImGui::EndFrame()
     UpdateTexturesEndFrame();
 
     // Unlock font atlas
-    ImFontAtlas* atlas = g.IO.Fonts;
-    atlas->Locked = false;
+    for (ImFontAtlas* atlas : g.FontAtlases)
+        atlas->Locked = false;
 
     // Clear Input data for next frame
     g.IO.MousePosPrev = g.IO.MousePos;
@@ -6124,7 +6122,8 @@ void ImGui::Render()
 
 #ifndef IMGUI_DISABLE_DEBUG_TOOLS
     if (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures)
-        ImFontAtlasDebugLogTextureRequests(g.IO.Fonts);
+        for (ImFontAtlas* atlas : g.FontAtlases)
+            ImFontAtlasDebugLogTextureRequests(atlas);
 #endif
 
     CallContextHooks(&g, ImGuiContextHookType_RenderPost);
@@ -8505,6 +8504,25 @@ void ImGui::End()
     SetCurrentWindow(g.CurrentWindowStack.Size == 0 ? NULL : g.CurrentWindowStack.back().Window);
     if (g.CurrentWindow)
         SetCurrentViewport(g.CurrentWindow, g.CurrentWindow->Viewport);
+}
+
+void ImGui::RegisterFontAtlas(ImFontAtlas* atlas)
+{
+    ImGuiContext& g = *GImGui;
+    if (g.FontAtlases.Size == 0)
+        IM_ASSERT(atlas == g.IO.Fonts);
+    atlas->RefCount++;
+    g.FontAtlases.push_back(atlas);
+    ImFontAtlasAddDrawListSharedData(atlas, &g.DrawListSharedData);
+}
+
+void ImGui::UnregisterFontAtlas(ImFontAtlas* atlas)
+{
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(atlas->RefCount > 0);
+    ImFontAtlasRemoveDrawListSharedData(atlas, &g.DrawListSharedData);
+    g.FontAtlases.find_erase(atlas);
+    atlas->RefCount--;
 }
 
 // Use ImDrawList::_SetTextureRef(), making our shared g.FontStack[] authoritative against window-local ImDrawList.
@@ -21766,12 +21784,12 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     }
 
     // Details for Fonts
-    ImFontAtlas* atlas = g.IO.Fonts;
-    if (TreeNode("Fonts", "Fonts (%d), Textures (%d)", atlas->Fonts.Size, atlas->TexList.Size))
-    {
-        ShowFontAtlas(atlas);
-        TreePop();
-    }
+    for (ImFontAtlas* atlas : g.FontAtlases)
+        if (TreeNode((void*)atlas, "Fonts (%d), Textures (%d)", atlas->Fonts.Size, atlas->TexList.Size))
+        {
+            ShowFontAtlas(atlas);
+            TreePop();
+        }
 
     // Details for Popups
     if (TreeNode("Popups", "Popups (%d)", g.OpenPopupStack.Size))

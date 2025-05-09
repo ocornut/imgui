@@ -2323,12 +2323,12 @@ struct ImGuiContextHook
 struct ImGuiContext
 {
     bool                    Initialized;
-    bool                    FontAtlasOwnedByContext;            // IO.Fonts-> is owned by the ImGuiContext and will be destructed along with it.
     ImGuiIO                 IO;
     ImGuiPlatformIO         PlatformIO;
     ImGuiStyle              Style;
     ImGuiConfigFlags        ConfigFlagsCurrFrame;               // = g.IO.ConfigFlags at the time of NewFrame()
     ImGuiConfigFlags        ConfigFlagsLastFrame;
+    ImVector<ImFontAtlas*>  FontAtlases;                        // List of font atlases used by the context (generally only contains g.IO.Fonts aka the main font atlas)
     ImFont*                 Font;                               // == FontStack.back().Font
     ImFontBaked*            FontBaked;                          // == Font->GetFontBaked(FontSize)
     float                   FontSize;                           // == FontSizeBeforeScaling * io.FontGlobalScale * font->Scale * g.CurrentWindow->FontWindowScale. Current text height.
@@ -3344,6 +3344,8 @@ namespace ImGui
     IMGUI_API void          SetNextWindowRefreshPolicy(ImGuiWindowRefreshFlags flags);
 
     // Fonts, drawing
+    IMGUI_API void          RegisterFontAtlas(ImFontAtlas* atlas);
+    IMGUI_API void          UnregisterFontAtlas(ImFontAtlas* atlas);
     IMGUI_API void          SetCurrentFont(ImFont* font, float font_size);
     IMGUI_API void          SetFontRasterizerDensity(float rasterizer_density);
     IMGUI_API void          UpdateCurrentFontSize();
