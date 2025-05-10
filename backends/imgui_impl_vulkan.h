@@ -105,6 +105,12 @@ struct ImGui_ImplVulkan_InitInfo
     const VkAllocationCallbacks*    Allocator;
     void                            (*CheckVkResultFn)(VkResult err);
     VkDeviceSize                    MinAllocationSize;          // Minimum allocation size. Set to 1024*1024 to satisfy zealous best practices validation layer and waste a little memory.
+
+    // (Optional) Set to overwrite default frag and vertex shaders
+    const uint32_t*                 CustomFragShader;
+    size_t                          CustomFragShaderSize; // in bytes
+    const uint32_t*                 CustomVertShader;
+    size_t                          CustomVertShaderSize; // in bytes
 };
 
 // Follow "Getting Started" link and check examples/ folder to learn about using backends!
