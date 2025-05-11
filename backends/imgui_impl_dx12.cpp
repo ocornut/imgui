@@ -499,7 +499,7 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
         staticSampler.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
         staticSampler.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
         staticSampler.MinLOD = 0.f;
-        staticSampler.MaxLOD = 0.f;
+        staticSampler.MaxLOD = D3D12_FLOAT32_MAX;
         staticSampler.ShaderRegister = 0;
         staticSampler.RegisterSpace = 0;
         staticSampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
