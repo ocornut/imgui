@@ -3002,6 +3002,7 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg_in)
         font->FontId = FontNextUniqueID++;
         font->Flags = font_cfg_in->Flags;
         font->DefaultSize = font_cfg_in->SizePixels;
+        font->CurrentRasterizerDensity = font_cfg_in->RasterizerDensity;
         Fonts.push_back(font);
     }
     else

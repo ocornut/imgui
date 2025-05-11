@@ -8657,7 +8657,7 @@ void ImGui::UpdateCurrentFontSize()
     // - We may support it better later and remove this rounding.
     final_size = GetRoundedFontSize(final_size);
     final_size = ImMax(1.0f, final_size);
-    if (g.Font != NULL)
+    if (g.Font != NULL && (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures))
         g.Font->CurrentRasterizerDensity = g.FontRasterizerDensity;
     g.FontBaked = (g.Font != NULL) ? g.Font->GetFontBaked(final_size) : NULL;
     g.FontSize = final_size;
