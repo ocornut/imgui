@@ -5231,6 +5231,8 @@ static void ImGui::UpdateTexturesEndFrame()
             tex->RefCount = (unsigned short)atlas->RefCount;
             g.PlatformIO.Textures.push_back(tex);
         }
+    for (ImTextureData* tex : g.UserTextures)
+        g.PlatformIO.Textures.push_back(tex);
 }
 
 // Called once a frame. Followed by SetCurrentFont() which sets up the remaining data.
@@ -8611,6 +8613,19 @@ void ImGui::UpdateFontsNewFrame()
 void ImGui::UpdateFontsEndFrame()
 {
     PopFont();
+}
+
+void ImGui::RegisterUserTexture(ImTextureData* tex)
+{
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(tex->RefCount > 0);
+    g.UserTextures.push_back(tex);
+}
+
+void ImGui::UnregisterUserTexture(ImTextureData* tex)
+{
+    ImGuiContext& g = *GImGui;
+    g.UserTextures.find_erase(tex);
 }
 
 void ImGui::RegisterFontAtlas(ImFontAtlas* atlas)
