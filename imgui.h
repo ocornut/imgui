@@ -4140,7 +4140,7 @@ struct ImGuiPlatformIO
 
     // Textures list (the list is updated by calling ImGui::EndFrame or ImGui::Render)
     // The ImGui_ImplXXXX_RenderDrawData() function of each backend generally access this via ImDrawData::Textures which points to this. The array is available here mostly because backends will want to destroy textures on shutdown.
-    ImVector<ImTextureData*>        Textures;           // List of textures used by Dear ImGui (most often 1).
+    ImVector<ImTextureData*>        Textures;           // List of textures used by Dear ImGui (most often 1) + contents of external texture list is automatically appended into this.
 
     // Viewports list (the list is updated by calling ImGui::EndFrame or ImGui::Render)
     // (in the future we will attempt to organize this feature to remove the need for a "main viewport")
