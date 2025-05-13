@@ -117,6 +117,7 @@
 #ifndef _WIN32
 #include <unistd.h>             // for usleep()
 #endif
+#include <stdio.h>              // for snprintf()
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -157,6 +158,7 @@ struct ImGui_ImplGlfw_Data
     ImVec2                  LastValidMousePos;
     bool                    InstalledCallbacks;
     bool                    CallbacksChainForAllWindows;
+    char                    BackendPlatformName[32];
 #ifdef EMSCRIPTEN_USE_EMBEDDED_GLFW3
     const char*             CanvasSelector;
 #endif
@@ -593,8 +595,9 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
 
     // Setup backend capabilities flags
     ImGui_ImplGlfw_Data* bd = IM_NEW(ImGui_ImplGlfw_Data)();
+    snprintf(bd->BackendPlatformName, sizeof(bd->BackendPlatformName), "imgui_impl_glfw (%d)", GLFW_VERSION_COMBINED);
     io.BackendPlatformUserData = (void*)bd;
-    io.BackendPlatformName = "imgui_impl_glfw";
+    io.BackendPlatformName = bd->BackendPlatformName;
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;         // We can honor GetMouseCursor() values (optional)
     io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
 

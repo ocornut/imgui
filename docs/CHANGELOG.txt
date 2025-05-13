@@ -107,6 +107,7 @@ Other changes:
 - Backends: SDL2, SDL3: don't attempt to call SDL_CaptureMouse() on drivers where we don't
   call SDL_GetGlobalMouseState(). This is specifically for Wayland but we currently use
   the same white-list as SDL_GetGlobalMouseState(). (#8561) [@vs49688]
+- Backends: GLFW, SDL2, SDL3: include GLFW/SDL version number in io.BackendPlatformName.
 - Backends: SDL3: Update for SDL3 api changes: revert SDL_GetClipboardText()
   memory ownership change. (#8530, #7801) [@Green-Sky]
 - Backends: SDL3: honor ImGuiPlatformImeData->WantTextInput as an alternative

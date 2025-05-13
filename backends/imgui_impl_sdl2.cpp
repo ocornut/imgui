@@ -109,6 +109,7 @@
 // SDL
 #include <SDL.h>
 #include <SDL_syswm.h>
+#include <stdio.h>              // for snprintf()
 #ifdef __APPLE__
 #include <TargetConditionals.h>
 #endif
@@ -135,6 +136,7 @@ struct ImGui_ImplSDL2_Data
     SDL_Renderer*           Renderer;
     Uint64                  Time;
     char*                   ClipboardTextData;
+    char                    BackendPlatformName[40];
 
     // Mouse handling
     Uint32                  MouseWindowID;
@@ -476,12 +478,20 @@ static bool ImGui_ImplSDL2_Init(SDL_Window* window, SDL_Renderer* renderer, void
     IMGUI_CHECKVERSION();
     IM_ASSERT(io.BackendPlatformUserData == nullptr && "Already initialized a platform backend!");
 
+    // Obtain compiled and runtime versions
+    SDL_version ver_compiled;
+    SDL_version ver_runtime;
+    SDL_VERSION(&ver_compiled);
+    SDL_GetVersion(&ver_runtime);
+
     // Setup backend capabilities flags
     ImGui_ImplSDL2_Data* bd = IM_NEW(ImGui_ImplSDL2_Data)();
+    snprintf(bd->BackendPlatformName, sizeof(bd->BackendPlatformName), "imgui_impl_sdl2 (%u.%u.%u, %u.%u.%u)",
+        ver_compiled.major, ver_compiled.minor, ver_compiled.patch, ver_runtime.major, ver_runtime.minor, ver_runtime.patch);
     io.BackendPlatformUserData = (void*)bd;
-    io.BackendPlatformName = "imgui_impl_sdl2";
-    io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;       // We can honor GetMouseCursor() values (optional)
-    io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;        // We can honor io.WantSetMousePos requests (optional, rarely used)
+    io.BackendPlatformName = bd->BackendPlatformName;
+    io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;           // We can honor GetMouseCursor() values (optional)
+    io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;            // We can honor io.WantSetMousePos requests (optional, rarely used)
 
     bd->Window = window;
     bd->WindowID = SDL_GetWindowID(window);
