@@ -1,25 +1,21 @@
 # Makefile for example_apple_metal, for macOS only (**not iOS**)
-TARGET      := example_apple_metal
-CXX         := clang++
-CXXFLAGS    := -std=c++17 -ObjC++ -fobjc-arc -Wall -Wextra \
-               -I../../                             \
-               -I../../backends
-FRAMEWORKS  := -framework AppKit -framework Metal -framework MetalKit -framework QuartzCore -framework GameController
-IMGUI_SRC   := ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp \
-               ../../imgui_tables.cpp ../../imgui_widgets.cpp
-BACKENDS    := ../../backends/imgui_impl_metal.mm ../../backends/imgui_impl_osx.mm
-SRC         := main.mm $(IMGUI_SRC) $(BACKENDS)
+CXX = clang++
+EXE = example_apple_metal
+IMGUI_DIR = ../../
+SOURCES = main.mm
+SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
+SOURCES += $(IMGUI_DIR)/backends/imgui_impl_osx.mm $(IMGUI_DIR)/backends/imgui_impl_metal.mm
 
-.PHONY: all run clean
+CXXFLAGS = -std=c++11 -ObjC++ -fobjc-arc -Wall -Wextra -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends
+FRAMEWORKS = -framework AppKit -framework Metal -framework MetalKit -framework QuartzCore -framework GameController
 
+all: $(EXE)
 
-all: $(TARGET)
-
-$(TARGET): $(SRC)
+$(EXE): $(SOURCES)
 	$(CXX) $(CXXFLAGS) $^ $(FRAMEWORKS) -o $@
 
 run: all
-	./$(TARGET)
+	./$(EXE)
 
 clean:
-	rm -f $(TARGET) *.o
+	rm -f $(EXE) *.o
