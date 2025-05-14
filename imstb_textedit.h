@@ -918,7 +918,7 @@ retry:
             state->cursor = start;
             STB_TEXTEDIT_LAYOUTROW(&row, str, state->cursor);
             x = row.x0;
-            for (i=0; i < row.num_chars; ++i) {
+            for (i=0; i < row.num_chars; ) {
                float dx = STB_TEXTEDIT_GETWIDTH(str, start, i);
                #ifdef IMSTB_TEXTEDIT_GETWIDTH_NEWLINE
                if (dx == IMSTB_TEXTEDIT_GETWIDTH_NEWLINE)
@@ -927,7 +927,9 @@ retry:
                x += dx;
                if (x > goal_x)
                   break;
-               state->cursor = IMSTB_TEXTEDIT_GETNEXTCHARINDEX(str, state->cursor);
+               int next_cursor = IMSTB_TEXTEDIT_GETNEXTCHARINDEX(str, state->cursor);
+               i += next_cursor - state->cursor;
+               state->cursor = next_cursor;
             }
             stb_textedit_clamp(str, state);
 
@@ -980,7 +982,7 @@ retry:
             state->cursor = find.prev_first;
             STB_TEXTEDIT_LAYOUTROW(&row, str, state->cursor);
             x = row.x0;
-            for (i=0; i < row.num_chars; ++i) {
+            for (i=0; i < row.num_chars; ) {
                float dx = STB_TEXTEDIT_GETWIDTH(str, find.prev_first, i);
                #ifdef IMSTB_TEXTEDIT_GETWIDTH_NEWLINE
                if (dx == IMSTB_TEXTEDIT_GETWIDTH_NEWLINE)
@@ -989,7 +991,9 @@ retry:
                x += dx;
                if (x > goal_x)
                   break;
-               state->cursor = IMSTB_TEXTEDIT_GETNEXTCHARINDEX(str, state->cursor);
+               int next_cursor = IMSTB_TEXTEDIT_GETNEXTCHARINDEX(str, state->cursor);
+               i += next_cursor - state->cursor;
+               state->cursor = next_cursor;
             }
             stb_textedit_clamp(str, state);
 

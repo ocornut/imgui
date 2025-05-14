@@ -76,6 +76,8 @@ Other changes:
     - The feature is unlikely to ever work properly when using a coarse clipper
       such as ImGuiListClipper.
 - TreeNode: fixed incorrect clipping of arrow/bullet when using ImGuiTreeNodeFlags_SpanAllColumns.
+- InputText: fixed cursor positioning issue using up/down keys near end of lines while
+  editing non-ASCII text. (Regression from 1.91.2) (#8635, #7925)
 - Tables: fixed TableHeader() eager vertical clipping of text which may be noticeable
   with FramePadding.y was too small. (#6236)
 - Tables: fixed an assert when combining Tables, Frozen Rows, Clipper and BeginMultiSelect()
