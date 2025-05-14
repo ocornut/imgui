@@ -400,6 +400,16 @@ typedef struct
 #define IMSTB_TEXTEDIT_memmove memmove
 #endif
 
+// [DEAR IMGUI]
+// Functions must be implemented for UTF8 support
+// Code in this file that uses those functions is modified for [DEAR IMGUI] and deviates from the original stb_textedit.
+// There is not necessarily a '[DEAR IMGUI]' at the usage sites.
+#ifndef IMSTB_TEXTEDIT_GETPREVCHARINDEX
+#define IMSTB_TEXTEDIT_GETPREVCHARINDEX(OBJ, IDX) ((IDX) - 1)
+#endif
+#ifndef IMSTB_TEXTEDIT_GETNEXTCHARINDEX
+#define IMSTB_TEXTEDIT_GETNEXTCHARINDEX(OBJ, IDX) ((IDX) + 1)
+#endif
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -647,17 +657,6 @@ static void stb_textedit_move_to_last(IMSTB_TEXTEDIT_STRING *str, STB_TexteditSt
       state->has_preferred_x = 0;
    }
 }
-
-// [DEAR IMGUI]
-// Functions must be implemented for UTF8 support
-// Code in this file that uses those functions is modified for [DEAR IMGUI] and deviates from the original stb_textedit.
-// There is not necessarily a '[DEAR IMGUI]' at the usage sites.
-#ifndef IMSTB_TEXTEDIT_GETPREVCHARINDEX
-#define IMSTB_TEXTEDIT_GETPREVCHARINDEX(obj, idx) (idx - 1)
-#endif
-#ifndef IMSTB_TEXTEDIT_GETNEXTCHARINDEX
-#define IMSTB_TEXTEDIT_GETNEXTCHARINDEX(obj, idx) (idx + 1)
-#endif
 
 #ifdef STB_TEXTEDIT_IS_SPACE
 static int is_word_boundary( IMSTB_TEXTEDIT_STRING *str, int idx )
@@ -920,6 +919,7 @@ retry:
             x = row.x0;
             for (i=0; i < row.num_chars; ) {
                float dx = STB_TEXTEDIT_GETWIDTH(str, start, i);
+               int next = IMSTB_TEXTEDIT_GETNEXTCHARINDEX(str, state->cursor);
                #ifdef IMSTB_TEXTEDIT_GETWIDTH_NEWLINE
                if (dx == IMSTB_TEXTEDIT_GETWIDTH_NEWLINE)
                   break;
@@ -927,9 +927,8 @@ retry:
                x += dx;
                if (x > goal_x)
                   break;
-               int next_cursor = IMSTB_TEXTEDIT_GETNEXTCHARINDEX(str, state->cursor);
-               i += next_cursor - state->cursor;
-               state->cursor = next_cursor;
+               i += next - state->cursor;
+               state->cursor = next;
             }
             stb_textedit_clamp(str, state);
 
@@ -984,6 +983,7 @@ retry:
             x = row.x0;
             for (i=0; i < row.num_chars; ) {
                float dx = STB_TEXTEDIT_GETWIDTH(str, find.prev_first, i);
+               int next = IMSTB_TEXTEDIT_GETNEXTCHARINDEX(str, state->cursor);
                #ifdef IMSTB_TEXTEDIT_GETWIDTH_NEWLINE
                if (dx == IMSTB_TEXTEDIT_GETWIDTH_NEWLINE)
                   break;
@@ -991,9 +991,8 @@ retry:
                x += dx;
                if (x > goal_x)
                   break;
-               int next_cursor = IMSTB_TEXTEDIT_GETNEXTCHARINDEX(str, state->cursor);
-               i += next_cursor - state->cursor;
-               state->cursor = next_cursor;
+               i += next - state->cursor;
+               state->cursor = next;
             }
             stb_textedit_clamp(str, state);
 
