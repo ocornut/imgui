@@ -141,6 +141,7 @@
 //                                        with previous char)
 //    STB_TEXTEDIT_KEYTOTEXT(k)         maps a keyboard input to an insertable character
 //                                        (return type is int, -1 means not valid to insert)
+//                                        (not supported if you want to use UTF-8, see below)
 //    STB_TEXTEDIT_GETCHAR(obj,i)       returns the i'th character of obj, 0-based
 //    STB_TEXTEDIT_NEWLINE              the character returned by _GETCHAR() we recognize
 //                                        as manually wordwrapping for end-of-line positioning
@@ -177,6 +178,13 @@
 //    STB_TEXTEDIT_K_LINEEND2            secondary keyboard input to move cursor to end of line
 //    STB_TEXTEDIT_K_TEXTSTART2          secondary keyboard input to move cursor to start of text
 //    STB_TEXTEDIT_K_TEXTEND2            secondary keyboard input to move cursor to end of text
+//
+// To support UTF-8:
+//
+//    STB_TEXTEDIT_GETPREVCHARINDEX      returns index of previous character 
+//    STB_TEXTEDIT_GETNEXTCHARINDEX      returns index of next character 
+//    Do NOT define STB_TEXTEDIT_KEYTOTEXT.
+//    Instead, call stb_textedit_text() directly for text contents. 
 //
 // Keyboard input must be encoded as a single integer value; e.g. a character code
 // and some bitflags that represent shift states. to simplify the interface, SHIFT must
@@ -250,8 +258,10 @@
 //          if the STB_TEXTEDIT_KEYTOTEXT function is defined, selected keys are
 //          transformed into text and stb_textedit_text() is automatically called.
 //
-//      text: [DEAR IMGUI] added 2024-09
-//          call this to text inputs sent to the textfield.
+//      text: (added 2025)
+//          call this to directly send text input the textfield, which is required
+//          for UTF-8 support, because stb_textedit_key() + STB_TEXTEDIT_KEYTOTEXT() 
+//          cannot infer text length.
 //
 //
 //   When rendering, you can read the cursor position and selection state from
@@ -738,6 +748,7 @@ static int stb_textedit_paste_internal(IMSTB_TEXTEDIT_STRING *str, STB_TexteditS
 #define STB_TEXTEDIT_KEYTYPE int
 #endif
 
+// API key: process text input
 // [DEAR IMGUI] Added stb_textedit_text(), extracted out and called by stb_textedit_key() for backward compatibility.
 static void stb_textedit_text(IMSTB_TEXTEDIT_STRING* str, STB_TexteditState* state, const IMSTB_TEXTEDIT_CHARTYPE* text, int text_len)
 {
@@ -752,8 +763,7 @@ static void stb_textedit_text(IMSTB_TEXTEDIT_STRING* str, STB_TexteditState* sta
          state->cursor += text_len;
          state->has_preferred_x = 0;
       }
-   }
-   else {
+   } else {
       stb_textedit_delete_selection(str, state); // implicitly clamps
       if (STB_TEXTEDIT_INSERTCHARS(str, state->cursor, text, text_len)) {
          stb_text_makeundo_insert(state, state->cursor, text_len);
@@ -770,6 +780,7 @@ retry:
    switch (key) {
       default: {
 #ifdef STB_TEXTEDIT_KEYTOTEXT
+         // This is not suitable for UTF-8 support.
          int c = STB_TEXTEDIT_KEYTOTEXT(key);
          if (c > 0) {
             IMSTB_TEXTEDIT_CHARTYPE ch = (IMSTB_TEXTEDIT_CHARTYPE)c;
