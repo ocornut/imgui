@@ -47,6 +47,9 @@ Breaking changes:
   in 1.89.4 (March 2023). (#3092)
    - PushAllowKeyboardFocus(bool tab_stop) --> PushItemFlag(ImGuiItemFlags_NoTabStop, !tab_stop);
    - PopAllowKeyboardFocus()               --> PopItemFlag().
+- Commented out ImGuiListClipper::ForceDisplayRangeByIndices() which was obsoleted
+  in 1.89.6 (June 2023).
+   - ForceDisplayRangeByIndices()          --> IncludeItemsByIndex()
 - Backends: SDL3: Fixed casing typo in function name: (#8509, #8163, #7998, #7988) [@puugz]
   - Imgui_ImplSDLGPU3_PrepareDrawData() -> ImGui_ImplSDLGPU3_PrepareDrawData()
 
