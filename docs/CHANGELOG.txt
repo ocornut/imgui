@@ -43,6 +43,10 @@ Breaking changes:
 
 - TreeNode: renamed ImGuiTreeNodeFlags_NavLeftJumpsBackHere to ImGuiTreeNodeFlags_NavLeftJumpsToParent
   for clarity. Kept inline redirection enum (will obsolete). (#1079, #8639)
+- Commented out PushAllowKeyboardFocus()/PopAllowKeyboardFocus() which was obsoleted
+  in 1.89.4 (March 2023). (#3092)
+   - PushAllowKeyboardFocus(bool tab_stop) --> PushItemFlag(ImGuiItemFlags_NoTabStop, !tab_stop);
+   - PopAllowKeyboardFocus()               --> PopItemFlag().
 - Backends: SDL3: Fixed casing typo in function name: (#8509, #8163, #7998, #7988) [@puugz]
   - Imgui_ImplSDLGPU3_PrepareDrawData() -> ImGui_ImplSDLGPU3_PrepareDrawData()
 
