@@ -136,7 +136,7 @@ struct ImGui_ImplSDL2_Data
     SDL_Renderer*           Renderer;
     Uint64                  Time;
     char*                   ClipboardTextData;
-    char                    BackendPlatformName[40];
+    char                    BackendPlatformName[48];
 
     // Mouse handling
     Uint32                  MouseWindowID;
