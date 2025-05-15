@@ -76,6 +76,8 @@ Other changes:
     - The feature is unlikely to ever work properly when using a coarse clipper
       such as ImGuiListClipper.
 - TreeNode: fixed incorrect clipping of arrow/bullet when using ImGuiTreeNodeFlags_SpanAllColumns.
+- InputText: fixed cursor positioning issue using up/down keys near end of lines while
+  editing non-ASCII text. (Regression from 1.91.2) (#8635, #7925)
 - Tables: fixed TableHeader() eager vertical clipping of text which may be noticeable
   with FramePadding.y was too small. (#6236)
 - Tables: fixed an assert when combining Tables, Frozen Rows, Clipper and BeginMultiSelect()
@@ -107,6 +109,7 @@ Other changes:
 - Backends: SDL2, SDL3: don't attempt to call SDL_CaptureMouse() on drivers where we don't
   call SDL_GetGlobalMouseState(). This is specifically for Wayland but we currently use
   the same white-list as SDL_GetGlobalMouseState(). (#8561) [@vs49688]
+- Backends: GLFW, SDL2, SDL3: include GLFW/SDL version number in io.BackendPlatformName.
 - Backends: SDL3: Update for SDL3 api changes: revert SDL_GetClipboardText()
   memory ownership change. (#8530, #7801) [@Green-Sky]
 - Backends: SDL3: honor ImGuiPlatformImeData->WantTextInput as an alternative
@@ -116,6 +119,9 @@ Other changes:
 - Backends: SDLGPU3: Made ImGui_ImplSDLGPU3_PrepareDrawData() reuse GPU Transfer Buffers which
   were unusually slow to recreate every frame. Much faster now. (#8534) [@ocornut, @TheMode]
 - Backends: SDLGPU3: added support for ImDrawCallback_ResetRenderState. (#8599)
+- Backends: DirectX10, DirectX11, DirectX12: Honor FramebufferScale to allow for custom
+  platform backends and experiments using it (consistently with other renderer backends,
+  even though in normal condition it is not set under Windows). (#8412) [@WSSDude]
 - Backends: Vulkan: Deep-copy ImGui_ImplVulkan_InitInfo::PipelineRenderingCreateInfo's
   pColorAttachmentFormats buffer when set, in order to reduce common user-error of
   specifying a pointer to data that gets out of scope. (#8282)
@@ -124,6 +130,7 @@ Other changes:
 - Backends: Vulkan: fixed validation errors in window create/resize helpers used by examples
   and by multi-viewports implementation, which would typically trigger errors while detaching
   secondary viewports. (#8600, #8176) [@ChrisTom-94]
+- Examples: Apple+Metal, Apple+OpenGL: add Makefile (CLion opens them nicely). (#8637) [@pthom]
 - Examples: DirectX12+Win32: also test for IsIconic() for sleeping since we don't seem to
   get a DXGI_STATUS_OCCLUDED signal when minimized. (#8603) [@dooann]
 
