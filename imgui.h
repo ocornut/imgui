@@ -2836,15 +2836,6 @@ static inline bool    operator!=(const ImVec4& lhs, const ImVec4& rhs)  { return
 IM_MSVC_RUNTIME_CHECKS_RESTORE
 #endif
 
-// Helpers: ImTextureRef ==/!= operators provided as convenience
-// (note that _TexID and _TexData are never set simultaneously)
-static inline bool operator==(const ImTextureRef& lhs, const ImTextureRef& rhs) { return lhs._TexID == rhs._TexID && lhs._TexData == rhs._TexData; }
-static inline bool operator!=(const ImTextureRef& lhs, const ImTextureRef& rhs) { return lhs._TexID != rhs._TexID || lhs._TexData != rhs._TexData; }
-//#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS // For legacy backends
-//static inline bool operator==(ImTextureID lhs, const ImTextureRef& rhs)    { return lhs == rhs._TexID && rhs._TexData == NULL; }
-//static inline bool operator==(const ImTextureRef& lhs, ImTextureID rhs)    { return lhs._TexID == rhs && lhs._TexData == NULL; }
-//#endif
-
 // Helpers macros to generate 32-bit encoded colors
 // - User can declare their own format by #defining the 5 _SHIFT/_MASK macros in their imconfig file.
 // - Any setting other than the default will need custom backend support. The only standard backend that supports anything else than the default is DirectX9.
