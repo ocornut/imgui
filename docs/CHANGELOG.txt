@@ -41,6 +41,8 @@ HOW TO UPDATE?
 
 Breaking changes:
 
+- TreeNode: renamed ImGuiTreeNodeFlags_NavLeftJumpsBackHere to ImGuiTreeNodeFlags_NavLeftJumpsToParent
+  for clarity. Kept inline redirection enum (will obsolete). (#1079, #8639)
 - Backends: SDL3: Fixed casing typo in function name: (#8509, #8163, #7998, #7988) [@puugz]
   - Imgui_ImplSDLGPU3_PrepareDrawData() -> ImGui_ImplSDLGPU3_PrepareDrawData()
 
