@@ -3732,10 +3732,10 @@ struct ImFontBaked
 enum ImFontFlags_
 {
     ImFontFlags_None                    = 0,
-    ImFontFlags_LockBakedSizes          = 1 << 0,   // Disable loading new baked sizes, disable garbage collecting current ones. e.g. if you want to lock a font to a single size.
-    ImFontFlags_NoLoadGlyphs            = 1 << 1,   // Disable loading new glyphs.
-    ImFontFlags_NoLoadError             = 1 << 2,   // Disable throwing an error/assert when calling AddFontXXX() with missing file/data. Calling code is expected to check AddFontXXX() return value.
-    ImFontFlags_UseDefaultSize          = 1 << 3,   // Legacy compatibility: make PushFont() calls without explicit size use font->DefaultSize instead of current font size.
+    ImFontFlags_UseDefaultSize          = 1 << 0,   // Legacy compatibility: make PushFont() calls without explicit size use font->DefaultSize instead of current font size.
+    ImFontFlags_NoLoadError             = 1 << 1,   // Disable throwing an error/assert when calling AddFontXXX() with missing file/data. Calling code is expected to check AddFontXXX() return value.
+    ImFontFlags_NoLoadGlyphs            = 1 << 2,   // Disable loading new glyphs.
+    ImFontFlags_LockBakedSizes          = 1 << 3,   // Disable loading new baked sizes, disable garbage collecting current ones. e.g. if you want to lock a font to a single size.
 };
 
 // Font runtime data and rendering
@@ -3788,13 +3788,14 @@ struct ImFont
     IMGUI_API bool              IsGlyphRangeUnused(unsigned int c_begin, unsigned int c_last);
 };
 
-// We added an indirection to avoid patching ImDrawCmd after texture updates but this could be a solution too.
+// This is provided for consistency (but we don't actually use this)
 inline ImTextureID ImTextureRef::GetTexID() const
 {
     IM_ASSERT(!(_TexData != NULL && _TexID != ImTextureID_Invalid));
     return _TexData ? _TexData->TexID : _TexID;
 }
 
+// Using an indirection to avoid patching ImDrawCmd after a SetTexID() call (but this could be an alternative solution too)
 inline ImTextureID ImDrawCmd::GetTexID() const
 {
     // If you are getting this assert: A renderer backend with support for ImGuiBackendFlags_RendererHasTextures (1.92)
