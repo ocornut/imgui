@@ -1547,6 +1547,21 @@ void ImDrawList::AddTriangleFilled(const ImVec2& p1, const ImVec2& p2, const ImV
     PathFillConvex(col);
 }
 
+
+void ImDrawList::AddTriangleFilledMultiColor(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 col_p1, ImU32 col_p2, ImU32 col_p3)
+{
+     if (((col_p1 | col_p2 | col_p3 ) & IM_COL32_A_MASK) == 0)
+        return;
+
+    const ImVec2 uv = _Data->TexUvWhitePixel;
+    PrimReserve(6, 3);
+    PrimWriteIdx((ImDrawIdx)(_VtxCurrentIdx)); PrimWriteIdx((ImDrawIdx)(_VtxCurrentIdx + 2)); PrimWriteIdx((ImDrawIdx)(_VtxCurrentIdx + 1));
+    PrimWriteIdx((ImDrawIdx)(_VtxCurrentIdx)); PrimWriteIdx((ImDrawIdx)(_VtxCurrentIdx + 1)); PrimWriteIdx((ImDrawIdx)(_VtxCurrentIdx + 2));
+    PrimWriteVtx(p1, uv, col_p1);
+    PrimWriteVtx(p2, uv, col_p2);
+    PrimWriteVtx(p3, uv, col_p3);
+}
+
 void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int num_segments, float thickness)
 {
     if ((col & IM_COL32_A_MASK) == 0 || radius < 0.5f)
