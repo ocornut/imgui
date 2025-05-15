@@ -485,13 +485,12 @@ static void ImGui_ImplMetal_RenderWindow(ImGuiViewport* viewport, void*)
     }
     data->FirstFrame = false;
 
-    viewport->DpiScale = (float)window.backingScaleFactor;
-    if (data->MetalLayer.contentsScale != viewport->DpiScale)
+    float fb_scale = (float)window.backingScaleFactor;
+    if (data->MetalLayer.contentsScale != fb_scale)
     {
-        data->MetalLayer.contentsScale = viewport->DpiScale;
-        data->MetalLayer.drawableSize = MakeScaledSize(window.frame.size, viewport->DpiScale);
+        data->MetalLayer.contentsScale = fb_scale;
+        data->MetalLayer.drawableSize = MakeScaledSize(window.frame.size, fb_scale);
     }
-    viewport->DrawData->FramebufferScale = ImVec2(viewport->DpiScale, viewport->DpiScale);
 #endif
 
     id <CAMetalDrawable> drawable = [data->MetalLayer nextDrawable];

@@ -129,12 +129,20 @@ Other changes:
 
 Docking+Viewports Branch:
 
-- Backends: Win32: Viewports: fixed an issue when closing a window from 
+- Viewports: added per-viewport FramebufferScale for Retina display multi-monitor support.
+  Backend must provide platform_io.platform_io.Platform_GetWindowFramebufferScale handler.
+  This effectively fixes clipping/rendering on multi-monitors with varying Retina scale.
+  (this per-se doesn't fix the font quality which requires setting RasterizerDensity
+  separately. More on this later as it should soon become automatic).
+  (#1065, #1542, #1676, #1786, #2826, #3757, #5081, #5580, #5592, #6465, #7273, #7779 etc.)
+- Backends: Win32: Viewports: fixed an issue when closing a window from
   the OS close button (with io.ConfigViewportsNoDecoration=false) while 
   user code is discarding the 'bool *p_open=false output' from Begin(). 
   Because we allowed the Win32 window to close early, Windows destroyed
   it and our imgui window became not visible even though user code was
   still submitting it.
+- Backends: GLFW, SDL2, SDL3, Apple: provide Platform_GetWindowFramebufferScale handler,
+  (#1065, #1542, #1676, #1786, #2826, #3757, #5081, #5580, #5592, #6465, #7273, #7779 etc.)
 - Backends: SDLGPU3 for SDL3: added multi-viewport support. (#8573) [@Lekoopapaul]
 - Backends: SDL2, SDL3: revert updating monitors and work areas info every
   frame. Only do it on Windows to detect task-bar resize until we get an

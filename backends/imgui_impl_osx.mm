@@ -35,6 +35,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2025-XX-XX: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2025-05-15: [Docking] Add Platform_GetWindowFramebufferScale() handler, to allow varying Retina display density on multiple monitors.
 //  2025-03-21: Fill gamepad inputs and set ImGuiBackendFlags_HasGamepad regardless of ImGuiConfigFlags_NavEnableGamepad being set.
 //  2025-01-20: Removed notification observer when shutting down. (#8331)
 //  2024-08-22: moved some OS/backend related function pointers from ImGuiIO to ImGuiPlatformIO:
@@ -1021,6 +1022,14 @@ static void ImGui_ImplOSX_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
     [window setFrame:rect display:YES];
 }
 
+static ImVec2 ImGui_ImplOSX_GetWindowFramebufferScale(ImGuiViewport* viewport)
+{
+    ImGui_ImplOSX_ViewportData* vd = (ImGui_ImplOSX_ViewportData*)viewport->PlatformUserData;
+    NSWindow* window = vd->Window;
+    const float fb_scale = (float)[window backingScaleFactor];
+    return ImVec2(fb_scale, fb_scale);
+}
+
 static void ImGui_ImplOSX_SetWindowFocus(ImGuiViewport* viewport)
 {
     ImGui_ImplOSX_Data* bd = ImGui_ImplOSX_GetBackendData();
@@ -1110,6 +1119,7 @@ static void ImGui_ImplOSX_InitMultiViewportSupport()
     platform_io.Platform_GetWindowPos = ImGui_ImplOSX_GetWindowPos;
     platform_io.Platform_SetWindowSize = ImGui_ImplOSX_SetWindowSize;
     platform_io.Platform_GetWindowSize = ImGui_ImplOSX_GetWindowSize;
+    platform_io.Platform_GetWindowFramebufferScale = ImGui_ImplOSX_GetWindowFramebufferScale;
     platform_io.Platform_SetWindowFocus = ImGui_ImplOSX_SetWindowFocus;
     platform_io.Platform_GetWindowFocus = ImGui_ImplOSX_GetWindowFocus;
     platform_io.Platform_GetWindowMinimized = ImGui_ImplOSX_GetWindowMinimized;

@@ -26,6 +26,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2025-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2025-05-15: [Docking] Add Platform_GetWindowFramebufferScale() handler, to allow varying Retina display density on multiple monitors.
 //  2025-04-09: [Docking] Revert update monitors and work areas information every frame. Only do it on Windows. (#8415, #8558)
 //  2025-04-09: Don't attempt to call SDL_CaptureMouse() on drivers where we don't call SDL_GetGlobalMouseState(). (#8561)
 //  2025-03-21: Fill gamepad inputs and set ImGuiBackendFlags_HasGamepad regardless of ImGuiConfigFlags_NavEnableGamepad being set.
@@ -939,29 +940,35 @@ static void ImGui_ImplSDL2_UpdateMonitors()
     }
 }
 
+static void ImGui_ImplSDL2_GetWindowSizeAndFramebufferScale(SDL_Window* window, SDL_Renderer* renderer, ImVec2* out_size, ImVec2* out_framebuffer_scale)
+{
+    int w, h;
+    int display_w, display_h;
+    SDL_GetWindowSize(window, &w, &h);
+    if (SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED)
+        w = h = 0;
+    if (renderer != nullptr)
+        SDL_GetRendererOutputSize(renderer, &display_w, &display_h);
+#if SDL_HAS_VULKAN
+    else if (SDL_GetWindowFlags(window) & SDL_WINDOW_VULKAN)
+        SDL_Vulkan_GetDrawableSize(window, &display_w, &display_h);
+#endif
+    else
+        SDL_GL_GetDrawableSize(window, &display_w, &display_h);
+    if (out_size != nullptr)
+        *out_size = ImVec2((float)w, (float)h);
+    if (out_framebuffer_scale != nullptr)
+        *out_framebuffer_scale = (w > 0 && h > 0) ? ImVec2((float)display_w / w, (float)display_h / h) : ImVec2(1.0f, 1.0f);
+}
+
 void ImGui_ImplSDL2_NewFrame()
 {
     ImGui_ImplSDL2_Data* bd = ImGui_ImplSDL2_GetBackendData();
     IM_ASSERT(bd != nullptr && "Context or backend not initialized! Did you call ImGui_ImplSDL2_Init()?");
     ImGuiIO& io = ImGui::GetIO();
 
-    // Setup display size (every frame to accommodate for window resizing)
-    int w, h;
-    int display_w, display_h;
-    SDL_GetWindowSize(bd->Window, &w, &h);
-    if (SDL_GetWindowFlags(bd->Window) & SDL_WINDOW_MINIMIZED)
-        w = h = 0;
-    if (bd->Renderer != nullptr)
-        SDL_GetRendererOutputSize(bd->Renderer, &display_w, &display_h);
-#if SDL_HAS_VULKAN
-    else if (SDL_GetWindowFlags(bd->Window) & SDL_WINDOW_VULKAN)
-        SDL_Vulkan_GetDrawableSize(bd->Window, &display_w, &display_h);
-#endif
-    else
-        SDL_GL_GetDrawableSize(bd->Window, &display_w, &display_h);
-    io.DisplaySize = ImVec2((float)w, (float)h);
-    if (w > 0 && h > 0)
-        io.DisplayFramebufferScale = ImVec2((float)display_w / w, (float)display_h / h);
+    // Setup main viewport size (every frame to accommodate for window resizing)
+    ImGui_ImplSDL2_GetWindowSizeAndFramebufferScale(bd->Window, bd->Renderer, &io.DisplaySize, &io.DisplayFramebufferScale);
 
     // Update monitors
 #ifdef WIN32
@@ -1147,6 +1154,15 @@ static void ImGui_ImplSDL2_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
     SDL_SetWindowSize(vd->Window, (int)size.x, (int)size.y);
 }
 
+static ImVec2 ImGui_ImplSDL2_GetWindowFramebufferScale(ImGuiViewport* viewport)
+{
+    // FIXME: SDL_Renderer does not support multi-viewport.
+    ImGui_ImplSDL2_ViewportData* vd = (ImGui_ImplSDL2_ViewportData*)viewport->PlatformUserData;
+    ImVec2 framebuffer_scale;
+    ImGui_ImplSDL2_GetWindowSizeAndFramebufferScale(vd->Window, nullptr, nullptr, &framebuffer_scale);
+    return framebuffer_scale;
+}
+
 static void ImGui_ImplSDL2_SetWindowTitle(ImGuiViewport* viewport, const char* title)
 {
     ImGui_ImplSDL2_ViewportData* vd = (ImGui_ImplSDL2_ViewportData*)viewport->PlatformUserData;
@@ -1220,6 +1236,7 @@ static void ImGui_ImplSDL2_InitMultiViewportSupport(SDL_Window* window, void* sd
     platform_io.Platform_GetWindowPos = ImGui_ImplSDL2_GetWindowPos;
     platform_io.Platform_SetWindowSize = ImGui_ImplSDL2_SetWindowSize;
     platform_io.Platform_GetWindowSize = ImGui_ImplSDL2_GetWindowSize;
+    platform_io.Platform_GetWindowFramebufferScale = ImGui_ImplSDL2_GetWindowFramebufferScale;
     platform_io.Platform_SetWindowFocus = ImGui_ImplSDL2_SetWindowFocus;
     platform_io.Platform_GetWindowFocus = ImGui_ImplSDL2_GetWindowFocus;
     platform_io.Platform_GetWindowMinimized = ImGui_ImplSDL2_GetWindowMinimized;
