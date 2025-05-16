@@ -4398,6 +4398,8 @@ static void SetCurrentWindow(ImGuiWindow* window)
     g.CurrentDpiScale = 1.0f; // FIXME-DPI: WIP this is modified in docking
     if (window)
     {
+        if (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures)
+            g.FontRasterizerDensity = window->Viewport->FramebufferScale.x; // == SetFontRasterizerDensity()
         ImGui::UpdateCurrentFontSize();
         ImGui::NavUpdateCurrentWindowIsScrollPushableX();
     }
@@ -8699,7 +8701,8 @@ void ImGui::UpdateCurrentFontSize()
     g.DrawListSharedData.FontScale = g.FontScale;
 }
 
-// FIXME-DPI: Not sure how to expose this. It may be automatically applied based on current viewport, if we had this information stored in viewport or monitor.
+// Exposed in case user may want to override setting density.
+// IMPORTANT: Begin()/End() is overriding density. Be considerate of this you change it.
 void ImGui::SetFontRasterizerDensity(float rasterizer_density)
 {
     ImGuiContext& g = *GImGui;
@@ -15240,6 +15243,7 @@ static void ImGui::UpdateViewportsNewFrame()
     main_viewport->Flags = ImGuiViewportFlags_IsPlatformWindow | ImGuiViewportFlags_OwnedByApp;
     main_viewport->Pos = ImVec2(0.0f, 0.0f);
     main_viewport->Size = g.IO.DisplaySize;
+    main_viewport->FramebufferScale = g.IO.DisplayFramebufferScale;
 
     for (ImGuiViewportP* viewport : g.Viewports)
     {

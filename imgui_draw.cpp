@@ -3786,25 +3786,28 @@ ImFontBaked* ImFontAtlasBakedAdd(ImFontAtlas* atlas, ImFont* font, float font_si
 ImFontBaked* ImFontAtlasBakedGetClosestMatch(ImFontAtlas* atlas, ImFont* font, float font_size, float font_rasterizer_density)
 {
     ImFontAtlasBuilder* builder = atlas->Builder;
-    ImFontBaked* closest_larger_match = NULL;
-    ImFontBaked* closest_smaller_match = NULL;
-    for (int baked_n = 0; baked_n < builder->BakedPool.Size; baked_n++)
+    for (int step_n = 0; step_n < 2; step_n++)
     {
-        ImFontBaked* baked = &builder->BakedPool[baked_n];
-        if (baked->ContainerFont != font || baked->WantDestroy)
-            continue;
-        if (baked->RasterizerDensity != font_rasterizer_density)
-            continue;
-        if (baked->Size > font_size && (closest_larger_match == NULL || baked->Size < closest_larger_match->Size))
-            closest_larger_match = baked;
-        if (baked->Size < font_size && (closest_smaller_match == NULL || baked->Size > closest_smaller_match->Size))
-            closest_smaller_match = baked;
+        ImFontBaked* closest_larger_match = NULL;
+        ImFontBaked* closest_smaller_match = NULL;
+        for (int baked_n = 0; baked_n < builder->BakedPool.Size; baked_n++)
+        {
+            ImFontBaked* baked = &builder->BakedPool[baked_n];
+            if (baked->ContainerFont != font || baked->WantDestroy)
+                continue;
+            if (step_n == 0 && baked->RasterizerDensity != font_rasterizer_density) // First try with same density
+                continue;
+            if (baked->Size > font_size && (closest_larger_match == NULL || baked->Size < closest_larger_match->Size))
+                closest_larger_match = baked;
+            if (baked->Size < font_size && (closest_smaller_match == NULL || baked->Size > closest_smaller_match->Size))
+                closest_smaller_match = baked;
+        }
+        if (closest_larger_match)
+            if (closest_smaller_match == NULL || (closest_larger_match->Size >= font_size * 2.0f && closest_smaller_match->Size > font_size * 0.5f))
+                return closest_larger_match;
+        if (closest_smaller_match)
+            return closest_smaller_match;
     }
-    if (closest_larger_match)
-        if (closest_smaller_match == NULL || (closest_larger_match->Size >= font_size * 2.0f && closest_smaller_match->Size > font_size * 0.5f))
-            return closest_larger_match;
-    if (closest_smaller_match)
-        return closest_smaller_match;
     return NULL;
 }
 
@@ -5195,7 +5198,7 @@ ImGuiID ImFontAtlasBakedGetId(ImGuiID font_id, float baked_size, float rasterize
 }
 
 // ImFontBaked pointers are valid for the entire frame but shall never be kept between frames.
-ImFontBaked* ImFont::GetFontBaked(float size)
+ImFontBaked* ImFont::GetFontBaked(float size, float density)
 {
     ImFontBaked* baked = LastBaked;
 
@@ -5203,12 +5206,14 @@ ImFontBaked* ImFont::GetFontBaked(float size)
     // - ImGui::PushFontSize() will already round, but other paths calling GetFontBaked() directly also needs it (e.g. ImFontAtlasBuildPreloadAllGlyphRanges)
     size = ImGui::GetRoundedFontSize(size);
 
-    if (baked && baked->Size == size && baked->RasterizerDensity == CurrentRasterizerDensity)
+    if (density < 0.0f)
+        density = CurrentRasterizerDensity;
+    if (baked && baked->Size == size && baked->RasterizerDensity == density)
         return baked;
 
     ImFontAtlas* atlas = ContainerAtlas;
     ImFontAtlasBuilder* builder = atlas->Builder;
-    baked = ImFontAtlasBakedGetOrAdd(atlas, this, size, CurrentRasterizerDensity);
+    baked = ImFontAtlasBakedGetOrAdd(atlas, this, size, density);
     if (baked == NULL)
         return NULL;
     baked->LastUsedFrame = builder->FrameCount;
