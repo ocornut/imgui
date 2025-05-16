@@ -3205,10 +3205,10 @@ void ImFontAtlas::RemoveFont(ImFont* font)
 
     ImFontAtlasFontDestroyOutput(this, font);
     for (ImFontConfig* src : font->Sources)
-    {
         ImFontAtlasFontDestroySourceData(this, src);
-        Sources.erase(src);
-    }
+    for (int src_n = 0; src_n < Sources.Size; src_n++)
+        if (Sources[src_n].DstFont == font)
+            Sources.erase(&Sources[src_n--]);
 
     bool removed = Fonts.find_erase(font);
     IM_ASSERT(removed);
