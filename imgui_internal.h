@@ -3746,13 +3746,21 @@ struct ImFontAtlasPostProcessData
     int                 Height;
 };
 
-// Internal storage for incrementally packing and building a ImFontAtlas
-struct stbrp_context_opaque { char data[80]; };
+// We avoid dragging imstb_rectpack.h into public header (partly because binding generators are having issues with it)
+#ifdef IMGUI_STB_NAMESPACE
+namespace IMGUI_STB_NAMESPACE { struct stbrp_node; }
+typedef IMGUI_STB_NAMESPACE::stbrp_node stbrp_node_im;
+#else
 struct stbrp_node;
+typedef stbrp_node stbrp_node_im;
+#endif
+struct stbrp_context_opaque { char data[80]; };
+
+// Internal storage for incrementally packing and building a ImFontAtlas
 struct ImFontAtlasBuilder
 {
     stbrp_context_opaque        PackContext;            // Actually 'stbrp_context' but we don't want to define this in the header file.
-    ImVector<stbrp_node>        PackNodes;
+    ImVector<stbrp_node_im>     PackNodes;
     ImVector<ImTextureRect>     Rects;
     ImVector<ImFontAtlasRectEntry> RectsIndex;          // ImFontAtlasRectId -> index into Rects[]
     ImVector<unsigned char>     TempBuffer;             // Misc scratch buffer
