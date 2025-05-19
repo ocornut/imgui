@@ -112,7 +112,7 @@ struct ImGui_ImplSDL3_Data
     SDL_Renderer*           Renderer;
     Uint64                  Time;
     char*                   ClipboardTextData;
-    char                    BackendPlatformName[40];
+    char                    BackendPlatformName[48];
     bool                    UseVulkan;
     bool                    WantUpdateMonitors;
 

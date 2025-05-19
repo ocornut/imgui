@@ -439,6 +439,9 @@ CODE
                           - likewise io.MousePos and GetMousePos() will use OS coordinates.
                             If you query mouse positions to interact with non-imgui coordinates you will need to offset them, e.g. subtract GetWindowViewport()->Pos.
 
+ - 2025/05/15 (1.92.0) - TreeNode: renamed ImGuiTreeNodeFlags_NavLeftJumpsBackHere to ImGuiTreeNodeFlags_NavLeftJumpsToParent for clarity. Kept inline redirection enum (will obsolete).
+ - 2025/05/15 (1.92.0) - Commented out PushAllowKeyboardFocus()/PopAllowKeyboardFocus() which was obsoleted in 1.89.4. Use PushItemFlag(ImGuiItemFlags_NoTabStop, !tab_stop)/PopItemFlag() instead. (#3092)
+ - 2025/05/15 (1.92.0) - Commented out ImGuiListClipper::ForceDisplayRangeByIndices() which was obsoleted in 1.89.6. Use ImGuiListClipper::IncludeItemsByIndex() instead.
  - 2025/03/05 (1.91.9) - BeginMenu(): Internals: reworked mangling of menu windows to use "###Menu_00" etc. instead of "##Menu_00", allowing them to also store the menu name before it. This shouldn't affect code unless directly accessing menu window from their mangled name.
  - 2025/02/27 (1.91.9) - Image(): removed 'tint_col' and 'border_col' parameter from Image() function. Added ImageWithBg() replacement. (#8131, #8238)
                             - old: void Image      (ImTextureID tex_id, ImVec2 image_size, ImVec2 uv0 = (0,0), ImVec2 uv1 = (1,1), ImVec4 tint_col = (1,1,1,1), ImVec4 border_col = (0,0,0,0));
@@ -6688,28 +6691,28 @@ static ImVec2 CalcWindowAutoFitSize(ImGuiWindow* window, const ImVec2& size_cont
     const float decoration_h_without_scrollbars = window->DecoOuterSizeY1 + window->DecoOuterSizeY2 - window->ScrollbarSizes.y;
     ImVec2 size_pad = window->WindowPadding * 2.0f;
     ImVec2 size_desired = size_contents + size_pad + ImVec2(decoration_w_without_scrollbars, decoration_h_without_scrollbars);
+
+    // Determine maximum window size
+    // Child windows are layed within their parent (unless they are also popups/menus) and thus have no restriction
+    ImVec2 size_max = ImVec2(FLT_MAX, FLT_MAX);
+    if ((window->Flags & ImGuiWindowFlags_ChildWindow) == 0 || (window->Flags & ImGuiWindowFlags_Popup) != 0)
+    {
+        if (!window->ViewportOwned)
+            size_max = ImGui::GetMainViewport()->WorkSize - style.DisplaySafeAreaPadding * 2.0f;
+        const int monitor_idx = window->ViewportAllowPlatformMonitorExtend;
+        if (monitor_idx >= 0 && monitor_idx < g.PlatformIO.Monitors.Size)
+            size_max = g.PlatformIO.Monitors[monitor_idx].WorkSize - style.DisplaySafeAreaPadding * 2.0f;
+    }
+
     if (window->Flags & ImGuiWindowFlags_Tooltip)
     {
-        // Tooltip always resize
-        return size_desired;
+        // Tooltip always resize (up to maximum size)
+        return ImMin(size_desired, size_max);
     }
     else
     {
-        // Maximum window size is determined by the viewport size or monitor size
         ImVec2 size_min = CalcWindowMinSize(window);
-        ImVec2 size_max = ImVec2(FLT_MAX, FLT_MAX);
-
-        // Child windows are layed within their parent (unless they are also popups/menus) and thus have no restriction
-        if ((window->Flags & ImGuiWindowFlags_ChildWindow) == 0 || (window->Flags & ImGuiWindowFlags_Popup) != 0)
-        {
-            if (!window->ViewportOwned)
-                size_max = ImGui::GetMainViewport()->WorkSize - style.DisplaySafeAreaPadding * 2.0f;
-            const int monitor_idx = window->ViewportAllowPlatformMonitorExtend;
-            if (monitor_idx >= 0 && monitor_idx < g.PlatformIO.Monitors.Size)
-                size_max = g.PlatformIO.Monitors[monitor_idx].WorkSize - style.DisplaySafeAreaPadding * 2.0f;
-        }
-
-        ImVec2 size_auto_fit = ImClamp(size_desired, size_min, ImMax(size_min, size_max));
+        ImVec2 size_auto_fit = ImClamp(size_desired, ImMin(size_min, size_max), size_max);
 
         // FIXME: CalcWindowAutoFitSize() doesn't take into account that only one axis may be auto-fit when calculating scrollbars,
         // we may need to compute/store three variants of size_auto_fit, for x/y/xy.
@@ -13493,7 +13496,7 @@ void ImGui::NavMoveRequestResolveWithLastItem(ImGuiNavItemData* result)
     NavUpdateAnyRequestFlag();
 }
 
-// Called by TreePop() to implement ImGuiTreeNodeFlags_NavLeftJumpsBackHere
+// Called by TreePop() to implement ImGuiTreeNodeFlags_NavLeftJumpsToParent
 void ImGui::NavMoveRequestResolveWithPastTreeNode(ImGuiNavItemData* result, const ImGuiTreeNodeStackData* tree_node_data)
 {
     ImGuiContext& g = *GImGui;

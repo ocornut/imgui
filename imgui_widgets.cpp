@@ -6687,17 +6687,17 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_HasDisplayRect;
     g.LastItemData.DisplayRect = frame_bb;
 
-    // If a NavLeft request is happening and ImGuiTreeNodeFlags_NavLeftJumpsBackHere enabled:
+    // If a NavLeft request is happening and ImGuiTreeNodeFlags_NavLeftJumpsToParent enabled:
     // Store data for the current depth to allow returning to this node from any child item.
     // For this purpose we essentially compare if g.NavIdIsAlive went from 0 to 1 between TreeNode() and TreePop().
-    // It will become tempting to enable ImGuiTreeNodeFlags_NavLeftJumpsBackHere by default or move it to ImGuiStyle.
+    // It will become tempting to enable ImGuiTreeNodeFlags_NavLeftJumpsToParent by default or move it to ImGuiStyle.
     bool store_tree_node_stack_data = false;
     if ((flags & ImGuiTreeNodeFlags_DrawLinesMask_) == 0)
         flags |= g.Style.TreeLinesFlags;
     const bool draw_tree_lines = (flags & (ImGuiTreeNodeFlags_DrawLinesFull | ImGuiTreeNodeFlags_DrawLinesToNodes)) && (frame_bb.Min.y < window->ClipRect.Max.y) && (g.Style.TreeLinesSize > 0.0f);
     if (is_open && !(flags & ImGuiTreeNodeFlags_NoTreePushOnOpen))
     {
-        if ((flags & ImGuiTreeNodeFlags_NavLeftJumpsBackHere) && !g.NavIdIsAlive)
+        if ((flags & ImGuiTreeNodeFlags_NavLeftJumpsToParent) && !g.NavIdIsAlive)
             if (g.NavMoveDir == ImGuiDir_Left && g.NavWindow == window && NavMoveRequestButNoResultYet())
                 store_tree_node_stack_data = true;
         if (draw_tree_lines)
@@ -7000,8 +7000,8 @@ void ImGui::TreePop()
         const ImGuiTreeNodeStackData* data = &g.TreeNodeStack.Data[g.TreeNodeStack.Size - 1];
         IM_ASSERT(data->ID == window->IDStack.back());
 
-        // Handle Left arrow to move to parent tree node (when ImGuiTreeNodeFlags_NavLeftJumpsBackHere is enabled)
-        if (data->TreeFlags & ImGuiTreeNodeFlags_NavLeftJumpsBackHere)
+        // Handle Left arrow to move to parent tree node (when ImGuiTreeNodeFlags_NavLeftJumpsToParent is enabled)
+        if (data->TreeFlags & ImGuiTreeNodeFlags_NavLeftJumpsToParent)
             if (g.NavIdIsAlive && g.NavMoveDir == ImGuiDir_Left && g.NavWindow == window && NavMoveRequestButNoResultYet())
                 NavMoveRequestResolveWithPastTreeNode(&g.NavMoveResultLocal, data);
 
