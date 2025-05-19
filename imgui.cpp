@@ -6408,7 +6408,7 @@ static ImVec2 CalcWindowAutoFitSize(ImGuiWindow* window, const ImVec2& size_cont
         // Maximum window size is determined by the viewport size or monitor size
         ImVec2 size_min = CalcWindowMinSize(window);
         ImVec2 size_max = ((window->Flags & ImGuiWindowFlags_ChildWindow) && !(window->Flags & ImGuiWindowFlags_Popup)) ? ImVec2(FLT_MAX, FLT_MAX) : ImGui::GetMainViewport()->WorkSize - style.DisplaySafeAreaPadding * 2.0f;
-        ImVec2 size_auto_fit = ImClamp(size_desired, size_min, size_max);
+        ImVec2 size_auto_fit = ImClamp(size_desired, ImMin(size_min, size_max), size_max);
 
         // FIXME: CalcWindowAutoFitSize() doesn't take into account that only one axis may be auto-fit when calculating scrollbars,
         // we may need to compute/store three variants of size_auto_fit, for x/y/xy.
