@@ -3699,6 +3699,9 @@ struct ImFontLoader
 #ifdef IMGUI_ENABLE_STB_TRUETYPE
 IMGUI_API const ImFontLoader* ImFontAtlasGetFontLoaderForStbTruetype();
 #endif
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+typedef ImFontLoader ImFontBuilderIO; // [renamed/changed in 1.92] The types are not actually compatible but we provide this as a compile-time error report helper.
+#endif
 
 //-----------------------------------------------------------------------------
 // [SECTION] ImFontAtlas internal API
