@@ -495,7 +495,7 @@ namespace ImGui
     // *IMPORTANT* before 1.92, fonts had a single size. They can now be dynamically be adjusted.
     // - Before 1.92: PushFont() always used font default size.
     // -  Since 1.92: PushFont() preserve the current shared font size.
-    // - To use old behavior: use 'PushFont(font, font->DefaultSize)' in call site, or set 'ImFontConfig::Flags |= ImFontFlags_UseDefaultSize' before calling AddFont().
+    // - To use old behavior (single size font): use 'PushFont(font, font->DefaultSize)' in call site, or set 'ImFontConfig::Flags |= ImFontFlags_UseDefaultSize' before calling AddFont().
     IMGUI_API void          PushFont(ImFont* font, float font_size = -1);                   // use NULL as a shortcut to push default font. Use <0.0f to keep current font size. Use font->DefaultSize to revert to font default size.
     IMGUI_API void          PopFont();
     IMGUI_API void          PushFontSize(float font_size);
@@ -526,6 +526,7 @@ namespace ImGui
     IMGUI_API ImFont*       GetFont();                                                      // get current font
     IMGUI_API float         GetFontSize();                                                  // get current font size (= height in pixels) of current font with current scale applied
     IMGUI_API ImVec2        GetFontTexUvWhitePixel();                                       // get UV coordinate for a white pixel, useful to draw custom shapes via the ImDrawList API
+    IMGUI_API ImFontBaked*  GetFontBaked();                                                 // get current font bound at current size // == GetFont()->GetFontBaked(GetFontSize())
     IMGUI_API ImU32         GetColorU32(ImGuiCol idx, float alpha_mul = 1.0f);              // retrieve given style color with style alpha applied and optional extra alpha multiplier, packed as a 32-bit value suitable for ImDrawList
     IMGUI_API ImU32         GetColorU32(const ImVec4& col);                                 // retrieve given color with style alpha applied, packed as a 32-bit value suitable for ImDrawList
     IMGUI_API ImU32         GetColorU32(ImU32 col, float alpha_mul = 1.0f);                 // retrieve given color with style alpha applied, packed as a 32-bit value suitable for ImDrawList
@@ -3754,7 +3755,7 @@ struct ImFont
     // [Internal] Members: Cold ~24-52 bytes
     // Conceptually Sources[] is the list of font sources merged to create this font.
     ImGuiID                     FontId;             // Unique identifier for the font
-    float                       DefaultSize;        // 4     // in  // Default font size
+    float                       DefaultSize;        // 4     // in  // Default font size passed to AddFont(). It's unlikely you should use this (use ImGui::GetFontBaked() to get font baked at current bound size).
     ImVector<ImFontConfig*>     Sources;            // 16    // in  // List of sources. Pointers within ContainerAtlas->Sources[]
     ImWchar                     EllipsisChar;       // 2-4   // out // Character used for ellipsis rendering ('...').
     ImWchar                     FallbackChar;       // 2-4   // out // Character used if a glyph isn't found (U+FFFD, '?')

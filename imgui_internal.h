@@ -2136,9 +2136,9 @@ struct ImGuiContext
     ImGuiPlatformIO         PlatformIO;
     ImGuiStyle              Style;
     ImVector<ImFontAtlas*>  FontAtlases;                        // List of font atlases used by the context (generally only contains g.IO.Fonts aka the main font atlas)
-    ImFont*                 Font;                               // == FontStack.back().Font
-    ImFontBaked*            FontBaked;                          // == Font->GetFontBaked(FontSize)
-    float                   FontSize;                           // == FontSizeBeforeScaling * io.FontGlobalScale * font->Scale * g.CurrentWindow->FontWindowScale. Current text height.
+    ImFont*                 Font;                               // Currently bound font. (== FontStack.back().Font)
+    ImFontBaked*            FontBaked;                          // Currently bound font at currently bound size. (== Font->GetFontBaked(FontSize))
+    float                   FontSize;                           // Currently bound font size == line height (== FontSizeBeforeScaling * io.FontGlobalScale * font->Scale * g.CurrentWindow->FontWindowScale).
     float                   FontSizeBeforeScaling;              // == value passed to PushFontSize()
     float                   FontScale;                          // == FontBaked->Size / Font->FontSize. Scale factor over baked size.
     float                   FontRasterizerDensity;              // Current font density. Used by all calls to GetFontBaked().
