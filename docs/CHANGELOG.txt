@@ -51,7 +51,9 @@ Breaking changes:
   in 1.89.6 (June 2023).
    - ForceDisplayRangeByIndices()          --> IncludeItemsByIndex()
 - Backends: SDL3: Fixed casing typo in function name: (#8509, #8163, #7998, #7988) [@puugz]
-  - Imgui_ImplSDLGPU3_PrepareDrawData() -> ImGui_ImplSDLGPU3_PrepareDrawData()
+   - Imgui_ImplSDLGPU3_PrepareDrawData() -> ImGui_ImplSDLGPU3_PrepareDrawData()
+- Internals: RenderTextEllipsis() function removed the 'float clip_max_x' parameter directly
+  preceding 'float ellipsis_max_x'. Values were identical for a vast majority of users. (#8387)
 
 Other changes:
 
