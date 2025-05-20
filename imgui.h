@@ -350,6 +350,8 @@ typedef ImU64 ImTextureID;      // Default: store up to 64-bits (any pointer or 
 // - If you want to bind the current atlas when using custom rectangle, you can use io.Fonts->TexRef.
 // - Binding generators for languages such as C (which don't have constructors), should provide a helper:
 //      inline ImTextureRef ImTextureRefFromID(ImTextureID tex_id) { ImTextureRef tex_ref = { ._TexData = NULL, .TexID = tex_id }; return tex_ref; }
+// In 1.92 we changed most drawing functions using ImTextureID to use ImTextureRef.
+// We intentionally do not provide an implicit ImTextureRef -> ImTextureID cast operator because it is technically lossy to convert ImTextureRef to ImTextureID before rendering.
 IM_MSVC_RUNTIME_CHECKS_OFF
 struct ImTextureRef
 {
@@ -358,7 +360,8 @@ struct ImTextureRef
 #if !defined(IMGUI_DISABLE_OBSOLETE_FUNCTIONS) && !defined(ImTextureID)
     ImTextureRef(void* tex_id)              { _TexData = NULL; _TexID = (ImTextureID)(size_t)tex_id; }  // For legacy backends casting to ImTextureID
 #endif
-    inline ImTextureID GetTexID() const;    // == (_TexData ? _TexData->TexID : _TexID) // Implemented below in the file.
+
+    inline ImTextureID  GetTexID() const;   // == (_TexData ? _TexData->TexID : _TexID) // Implemented below in the file.
 
     // Members (either are set, never both!)
     ImTextureData*      _TexData;           //      A texture, generally owned by a ImFontAtlas. Will convert to ImTextureID during render loop, after texture has been uploaded.
