@@ -6398,17 +6398,20 @@ static ImVec2 CalcWindowAutoFitSize(ImGuiWindow* window, const ImVec2& size_cont
     const float decoration_h_without_scrollbars = window->DecoOuterSizeY1 + window->DecoOuterSizeY2 - window->ScrollbarSizes.y;
     ImVec2 size_pad = window->WindowPadding * 2.0f;
     ImVec2 size_desired = size_contents + size_pad + ImVec2(decoration_w_without_scrollbars, decoration_h_without_scrollbars);
+
+    // Determine maximum window size
+    // Child windows are layed within their parent (unless they are also popups/menus) and thus have no restriction
+    ImVec2 size_max = ((window->Flags & ImGuiWindowFlags_ChildWindow) && !(window->Flags & ImGuiWindowFlags_Popup)) ? ImVec2(FLT_MAX, FLT_MAX) : ImGui::GetMainViewport()->WorkSize - style.DisplaySafeAreaPadding * 2.0f;
+
     if (window->Flags & ImGuiWindowFlags_Tooltip)
     {
-        // Tooltip always resize
-        return size_desired;
+        // Tooltip always resize (up to maximum size)
+        return ImMin(size_desired, size_max);
     }
     else
     {
-        // Maximum window size is determined by the viewport size or monitor size
         ImVec2 size_min = CalcWindowMinSize(window);
-        ImVec2 size_max = ((window->Flags & ImGuiWindowFlags_ChildWindow) && !(window->Flags & ImGuiWindowFlags_Popup)) ? ImVec2(FLT_MAX, FLT_MAX) : ImGui::GetMainViewport()->WorkSize - style.DisplaySafeAreaPadding * 2.0f;
-        ImVec2 size_auto_fit = ImClamp(size_desired, size_min, size_max);
+        ImVec2 size_auto_fit = ImClamp(size_desired, ImMin(size_min, size_max), size_max);
 
         // FIXME: CalcWindowAutoFitSize() doesn't take into account that only one axis may be auto-fit when calculating scrollbars,
         // we may need to compute/store three variants of size_auto_fit, for x/y/xy.
