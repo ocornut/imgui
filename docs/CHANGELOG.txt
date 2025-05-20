@@ -97,6 +97,7 @@ Other changes:
   which mitigates edge case issues in multi-viewport scenarios where abnormally large
   windows (e.g. determined programmatically) can lead to renderer backend trying to
   create abnormally large framebuffers.
+- TextLinkOpenURL(): added bool return value on click. (#8645, #8451, #7660)
 - Nav: fixed assertion when holding gamepad FaceLeft/West button to open
   CTRL+Tab windowing + pressing a keyboard key. (#8525)
 - Error Handling: added better error report and recovery for extraneous
