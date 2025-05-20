@@ -4399,7 +4399,10 @@ static void SetCurrentWindow(ImGuiWindow* window)
     if (window)
     {
         if (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures)
-            g.FontRasterizerDensity = window->Viewport->FramebufferScale.x; // == SetFontRasterizerDensity()
+        {
+            ImGuiViewport* viewport = window->Viewport;
+            g.FontRasterizerDensity = (viewport->FramebufferScale.x != 0.0f) ? viewport->FramebufferScale.x : g.IO.DisplayFramebufferScale.x; // == SetFontRasterizerDensity()
+        }
         ImGui::UpdateCurrentFontSize();
         ImGui::NavUpdateCurrentWindowIsScrollPushableX();
     }
@@ -15249,6 +15252,7 @@ static void ImGui::UpdateViewportsNewFrame()
     main_viewport->Pos = ImVec2(0.0f, 0.0f);
     main_viewport->Size = g.IO.DisplaySize;
     main_viewport->FramebufferScale = g.IO.DisplayFramebufferScale;
+    IM_ASSERT(main_viewport->FramebufferScale.x > 0.0f && main_viewport->FramebufferScale.y > 0.0f);
 
     for (ImGuiViewportP* viewport : g.Viewports)
     {
