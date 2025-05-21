@@ -5502,6 +5502,7 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, const ImVec2& pos, Im
 void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width, bool cpu_fine_clip)
 {
     // Align to be pixel perfect
+begin:
     float x = IM_TRUNC(pos.x);
     float y = IM_TRUNC(pos.y);
     if (y > clip_rect.w)
@@ -5556,6 +5557,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
         return;
 
     // Reserve vertices for remaining worse case (over-reserving is useful and easily amortized)
+    const int cmd_count = draw_list->CmdBuffer.Size;
     const int vtx_count_max = (int)(text_end - s) * 4;
     const int idx_count_max = (int)(text_end - s) * 6;
     const int idx_expected_size = draw_list->IdxBuffer.Size + idx_count_max;
@@ -5676,6 +5678,18 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
             }
         }
         x += char_width;
+    }
+
+    // Edge case: calling RenderText() with unloaded glyphs triggering texture change. It doesn't happen via ImGui:: calls because CalcTextSize() is always used.
+    if (cmd_count != draw_list->CmdBuffer.Size)
+    {
+        IM_ASSERT(draw_list->CmdBuffer[draw_list->CmdBuffer.Size - 1].ElemCount == 0);
+        draw_list->CmdBuffer.pop_back();
+        draw_list->PrimUnreserve(idx_count_max, vtx_count_max);
+        draw_list->AddDrawCmd();
+        goto begin;
+        //RenderText(draw_list, size, pos, col, clip_rect, text_begin, text_end, wrap_width, cpu_fine_clip); // FIXME-OPT: Would a 'goto begin' be better for code-gen?
+        //return;
     }
 
     // Give back unused vertices (clipped ones, blanks) ~ this is essentially a PrimUnreserve() action.
