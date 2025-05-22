@@ -5211,16 +5211,24 @@ void ImGui::UpdateHoveredWindowAndCaptureFlags(const ImVec2& mouse_pos)
     io.WantTextInput = (g.WantTextInputNextFrame != -1) ? (g.WantTextInputNextFrame != 0) : false;
 }
 
-// FIXME-NEWATLAS-V2: If we aim to support multiple atlases used by same context: how to reach/target all atlases?
 static void ImGui::UpdateTexturesNewFrame()
 {
+    // Cannot update every atlases based on atlas's FrameCount < g.FrameCount, because an atlas may be shared by multiple contexts with different frame count.
     ImGuiContext& g = *GImGui;
+    const bool has_textures = (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures) != 0;
     for (ImFontAtlas* atlas : g.FontAtlases)
+    {
         if (atlas->OwnerContext == &g)
         {
-            atlas->RendererHasTextures = (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures) != 0;
+            atlas->RendererHasTextures = has_textures;
             ImFontAtlasUpdateNewFrame(atlas, g.FrameCount);
         }
+        else
+        {
+            IM_ASSERT(atlas->Builder != NULL && atlas->Builder->FrameCount != -1 && "If you manage font atlases yourself you need to call ImFontAtlasUpdateNewFrame() on it.");
+            IM_ASSERT(atlas->RendererHasTextures == has_textures && "If you manage font atlases yourself make sure atlas->RendererHasTextures is set consistently with all contexts using it.");
+        }
+    }
 }
 
 // Build a single texture list
