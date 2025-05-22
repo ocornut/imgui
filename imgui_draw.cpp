@@ -3843,14 +3843,18 @@ void ImFontAtlasBakedDiscard(ImFontAtlas* atlas, ImFont* font, ImFontBaked* bake
     font->LastBaked = NULL;
 }
 
-void ImFontAtlasFontDiscardOutputBakes(ImFontAtlas* atlas, ImFont* font)
+// use unused_frames==0 to discard everything.
+void ImFontAtlasFontDiscardBakes(ImFontAtlas* atlas, ImFont* font, int unused_frames)
 {
     if (ImFontAtlasBuilder* builder = atlas->Builder) // This can be called from font destructor
         for (int baked_n = 0; baked_n < builder->BakedPool.Size; baked_n++)
         {
             ImFontBaked* baked = &builder->BakedPool[baked_n];
-            if (baked->ContainerFont == font && !baked->WantDestroy)
-                ImFontAtlasBakedDiscard(atlas, font, baked);
+            if (baked->LastUsedFrame + unused_frames > atlas->Builder->FrameCount)
+                continue;
+            if (baked->ContainerFont != font || baked->WantDestroy)
+                continue;
+            ImFontAtlasBakedDiscard(atlas, font, baked);
         }
 }
 
@@ -4364,7 +4368,8 @@ ImTextureRect* ImFontAtlasPackGetRectSafe(ImFontAtlas* atlas, ImFontAtlasRectId 
     return &builder->Rects[index_entry->TargetIndex];
 }
 
-// Important! This assume by ImFontConfig::GlyphFilter is a SMALL ARRAY (e.g. <10 entries)
+// Important! This assume by ImFontConfig::GlyphExcludeRanges[] is a SMALL ARRAY (e.g. <10 entries)
+// Use "Input Glyphs Overlap Detection Tool" to display a list of glyphs provided by multiple sources in order to set this array up.
 static bool ImFontAtlasBuildAcceptCodepointForSource(ImFontConfig* src, ImWchar codepoint)
 {
     if (const ImWchar* exclude_list = src->GlyphExcludeRanges)
@@ -5024,7 +5029,7 @@ ImFont::~ImFont()
 void ImFont::ClearOutputData()
 {
     if (ImFontAtlas* atlas = ContainerAtlas)
-        ImFontAtlasFontDiscardOutputBakes(atlas, this);
+        ImFontAtlasFontDiscardBakes(atlas, this, 0);
     FallbackChar = EllipsisChar = 0;
     memset(Used8kPagesMap, 0, sizeof(Used8kPagesMap));
     LastBaked = NULL;
