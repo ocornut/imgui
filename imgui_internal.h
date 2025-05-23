@@ -2568,7 +2568,6 @@ struct ImGuiContext
     // Platform support
     ImGuiPlatformImeData    PlatformImeData;                    // Data updated by current frame. Will be applied at end of the frame. For some backends, this is required to have WantVisible=true in order to receive text message.
     ImGuiPlatformImeData    PlatformImeDataPrev;                // Previous frame data. When changed we call the platform_io.Platform_SetImeDataFn() handler.
-    ImGuiID                 PlatformImeViewport;
 
     // Extensions
     // FIXME: We could provide an API to register one slot in an array held in ImGuiContext?

@@ -4158,7 +4158,6 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
 
     PlatformImeData.InputPos = ImVec2(0.0f, 0.0f);
     PlatformImeDataPrev.InputPos = ImVec2(-1.0f, -1.0f); // Different to ensure initial submission
-    PlatformImeViewport = 0;
 
     DockNodeWindowMenuHandler = NULL;
 
@@ -5898,7 +5897,7 @@ void ImGui::EndFrame()
     ImGuiPlatformImeData* ime_data = &g.PlatformImeData;
     if (g.PlatformIO.Platform_SetImeDataFn != NULL && memcmp(ime_data, &g.PlatformImeDataPrev, sizeof(ImGuiPlatformImeData)) != 0)
     {
-        ImGuiViewport* viewport = FindViewportByID(g.PlatformImeViewport);
+        ImGuiViewport* viewport = FindViewportByID(ime_data->ViewportId);
         IMGUI_DEBUG_LOG_IO("[io] Calling Platform_SetImeDataFn(): WantVisible: %d, InputPos (%.2f,%.2f)\n", ime_data->WantVisible, ime_data->InputPos.x, ime_data->InputPos.y);
         if (viewport == NULL)
             viewport = GetMainViewport();
