@@ -3190,7 +3190,7 @@ static void ImFontAtlasBuildNotifySetFont(ImFontAtlas* atlas, ImFont* old_font, 
                 bool need_bind_ctx = ctx != curr_ctx;
                 if (need_bind_ctx)
                     ImGui::SetCurrentContext(ctx);
-                ImGui::SetCurrentFont(new_font, ctx->FontSize);
+                ImGui::SetCurrentFont(new_font, ctx->FontSizeBeforeScaling, ctx->FontSize);
                 if (need_bind_ctx)
                     ImGui::SetCurrentContext(curr_ctx);
             }

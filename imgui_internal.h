@@ -871,7 +871,8 @@ struct ImDrawDataBuilder
 struct ImFontStackData
 {
     ImFont*     Font;
-    float       FontSize;
+    float       FontSizeBeforeScaling;
+    float       FontSizeAfterScaling;
 };
 
 //-----------------------------------------------------------------------------
@@ -3116,12 +3117,12 @@ namespace ImGui
     IMGUI_API void          UnregisterUserTexture(ImTextureData* tex);
     IMGUI_API void          RegisterFontAtlas(ImFontAtlas* atlas);
     IMGUI_API void          UnregisterFontAtlas(ImFontAtlas* atlas);
-    IMGUI_API void          SetCurrentFont(ImFont* font, float font_size);
+    IMGUI_API void          SetCurrentFont(ImFont* font, float font_size_before_scaling, float font_size_after_scaling);
+    IMGUI_API void          UpdateCurrentFontSize(float restore_font_size_after_scaling);
     IMGUI_API void          SetFontRasterizerDensity(float rasterizer_density);
     inline float            GetFontRasterizerDensity() { return GImGui->FontRasterizerDensity; }
-    IMGUI_API void          UpdateCurrentFontSize();
     inline float            GetRoundedFontSize(float size) { return IM_ROUND(size); }
-    inline ImFont*          GetDefaultFont() { ImGuiContext& g = *GImGui; return g.IO.FontDefault ? g.IO.FontDefault : g.IO.Fonts->Fonts[0]; }
+    IMGUI_API ImFont*       GetDefaultFont();
     IMGUI_API void          PushPasswordFont();
     IMGUI_API void          PopPasswordFont();
     inline ImDrawList*      GetForegroundDrawList(ImGuiWindow* window) { IM_UNUSED(window); return GetForegroundDrawList(); } // This seemingly unnecessary wrapper simplifies compatibility between the 'master' and 'docking' branches.
