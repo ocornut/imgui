@@ -546,6 +546,8 @@ void ImGui::ShowDemoWindow(bool* p_open)
                 ImGui::SameLine(); HelpMarker("Toggling this at runtime is normally unsupported (most platform backends won't refresh the decoration right away).");
                 ImGui::Checkbox("io.ConfigViewportsNoDefaultParent", &io.ConfigViewportsNoDefaultParent);
                 ImGui::SameLine(); HelpMarker("Toggling this at runtime is normally unsupported (most platform backends won't refresh the parenting right away).");
+                //ImGui::CheckboxFlags("ImGuiConfigFlags_DpiEnableScaleViewports", &io.ConfigFlags, ImGuiConfigFlags_DpiEnableScaleViewports);
+                //ImGui::CheckboxFlags("ImGuiConfigFlags_DpiEnableScaleFonts", &io.ConfigFlags, ImGuiConfigFlags_DpiEnableScaleFonts);
                 ImGui::Unindent();
             }
 
