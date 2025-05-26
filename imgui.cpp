@@ -15914,11 +15914,8 @@ void ImGui::DebugNodeTexture(ImTextureData* tex, int int_id, const ImFontAtlasRe
         PopStyleVar();
 
         char texid_desc[30];
-        Text("Status = %s (%d)", ImTextureDataGetStatusName(tex->Status), tex->Status);
-        Text("Format = %s (%d)", ImTextureDataGetFormatName(tex->Format), tex->Format);
-        Text("TexID = %s", FormatTextureIDForDebugDisplay(texid_desc, IM_ARRAYSIZE(texid_desc), tex->TexID));
-        Text("BackendUserData = %p", tex->BackendUserData);
-        Text("UseColors = %d", tex->UseColors);
+        Text("Status = %s (%d), Format = %s (%d), UseColors = %d", ImTextureDataGetStatusName(tex->Status), tex->Status, ImTextureDataGetFormatName(tex->Format), tex->Format, tex->UseColors);
+        Text("TexID = %s, BackendUserData = %p", FormatTextureIDForDebugDisplay(texid_desc, IM_ARRAYSIZE(texid_desc), tex->TexID), tex->BackendUserData);
         TreePop();
     }
     PopID();
