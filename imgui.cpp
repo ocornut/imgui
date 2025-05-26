@@ -8683,7 +8683,9 @@ void ImGui::SetCurrentFont(ImFont* font, float font_size)
     if (font != NULL)
     {
         IM_ASSERT(font && font->IsLoaded());    // Font Atlas not created. Did you call io.Fonts->GetTexDataAsRGBA32 / GetTexDataAsAlpha8 ?
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
         IM_ASSERT(font->Scale > 0.0f);
+#endif
         g.DrawListSharedData.Font = g.Font;
         ImFontAtlasUpdateDrawListsSharedData(g.Font->ContainerAtlas);
         if (g.CurrentWindow != NULL)
@@ -8699,7 +8701,10 @@ void ImGui::UpdateCurrentFontSize()
         return;
 
     float final_size = g.FontSizeBeforeScaling * g.IO.FontGlobalScale;
-    final_size *= g.Font->Scale;
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    if (g.Font != NULL)
+        final_size *= g.Font->Scale;
+#endif
     if (window != NULL)
         final_size *= window->FontWindowScale;
 
@@ -16753,14 +16758,16 @@ void ImGui::DebugNodeFont(ImFont* font)
         ImFontAtlasFontDiscardBakes(atlas, font, 2);
 
     // Display details
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     SetNextItemWidth(GetFontSize() * 8);
     DragFloat("Font scale", &font->Scale, 0.005f, 0.3f, 2.0f, "%.1f");
-    SameLine(); MetricsHelpMarker(
+    /*SameLine(); MetricsHelpMarker(
         "Note that the default embedded font is NOT meant to be scaled.\n\n"
         "Font are currently rendered into bitmaps at a given size at the time of building the atlas. "
         "You may oversample them to get some flexibility with scaling. "
         "You can also render at multiple sizes and select which one to use at runtime.\n\n"
-        "(Glimmer of hope: the atlas system will be rewritten in the future to make scaling more flexible.)");
+        "(Glimmer of hope: the atlas system will be rewritten in the future to make scaling more flexible.)");*/
+#endif
 
     char c_str[5];
     Text("Fallback character: '%s' (U+%04X)", ImTextCharToUtf8(c_str, font->FallbackChar), font->FallbackChar);

@@ -2139,7 +2139,7 @@ struct ImGuiContext
     ImFont*                 Font;                               // Currently bound font. (== FontStack.back().Font)
     ImFontBaked*            FontBaked;                          // Currently bound font at currently bound size. (== Font->GetFontBaked(FontSize))
     float                   FontSize;                           // Currently bound font size == line height (== FontSizeBeforeScaling * io.FontGlobalScale * font->Scale * g.CurrentWindow->FontWindowScale).
-    float                   FontSizeBeforeScaling;              // == value passed to PushFontSize()
+    float                   FontSizeBeforeScaling;              // == value passed to PushFont() / PushFontSize() when specified.
     float                   FontScale;                          // == FontBaked->Size / Font->FontSize. Scale factor over baked size.
     float                   FontRasterizerDensity;              // Current font density. Used by all calls to GetFontBaked().
     float                   CurrentDpiScale;                    // Current window/viewport DpiScale == CurrentViewport->DpiScale

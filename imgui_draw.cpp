@@ -5018,7 +5018,9 @@ void ImFontBaked::ClearOutputData()
 ImFont::ImFont()
 {
     memset(this, 0, sizeof(*this));
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     Scale = 1.0f;
+#endif
 }
 
 ImFont::~ImFont()
