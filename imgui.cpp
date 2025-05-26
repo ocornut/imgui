@@ -8715,9 +8715,9 @@ void ImGui::UpdateCurrentFontSize()
     final_size = ImMax(1.0f, final_size);
     if (g.Font != NULL && (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures))
         g.Font->CurrentRasterizerDensity = g.FontRasterizerDensity;
-    g.FontBaked = (g.Font != NULL) ? g.Font->GetFontBaked(final_size) : NULL;
     g.FontSize = final_size;
-    g.FontScale = (g.Font != NULL) ? (g.FontSize / g.FontBaked->Size) : 0.0f;
+    g.FontBaked = (g.Font != NULL && window != NULL) ? g.Font->GetFontBaked(final_size) : NULL;
+    g.FontScale = (g.Font != NULL && window != NULL) ? (g.FontSize / g.FontBaked->Size) : 0.0f;
     g.DrawListSharedData.FontSize = g.FontSize;
     g.DrawListSharedData.FontScale = g.FontScale;
 }
