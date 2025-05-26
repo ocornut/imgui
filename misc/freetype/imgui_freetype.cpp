@@ -527,7 +527,8 @@ bool ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConfig* src
         uint32_t* temp_buffer = (uint32_t*)atlas->Builder->TempBuffer.Data;
         ImGui_ImplFreeType_BlitGlyph(ft_bitmap, temp_buffer, w);
 
-        const float offsets_scale = baked->Size / baked->ContainerFont->Sources[0]->SizePixels;
+        const float ref_size = baked->ContainerFont->Sources[0]->SizePixels;
+        const float offsets_scale = (ref_size != 0.0f) ? (baked->Size / ref_size) : 1.0f;
         float font_off_x = (src->GlyphOffset.x * offsets_scale);
         float font_off_y = (src->GlyphOffset.y * offsets_scale) + baked->Ascent;
         if (src->PixelSnapH) // Snap scaled offset. This is to mitigate backward compatibility issues for GlyphOffset, but a better design would be welcome.

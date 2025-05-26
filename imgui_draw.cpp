@@ -2988,10 +2988,13 @@ bool ImFontAtlas::Build()
 
 ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg_in)
 {
+    // Sanity Checks
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas!");
     IM_ASSERT((font_cfg_in->FontData != NULL && font_cfg_in->FontDataSize > 0) || (font_cfg_in->FontLoader != NULL));
-    IM_ASSERT(font_cfg_in->SizePixels > 0.0f && "Is ImFontConfig struct correctly initialized?");
+    //IM_ASSERT(font_cfg_in->SizePixels > 0.0f && "Is ImFontConfig struct correctly initialized?");
     IM_ASSERT(font_cfg_in->RasterizerDensity > 0.0f && "Is ImFontConfig struct correctly initialized?");
+    if (font_cfg_in->GlyphOffset.x != 0.0f || font_cfg_in->GlyphOffset.y != 0.0f || font_cfg_in->GlyphMinAdvanceX != 0.0f || font_cfg_in->GlyphMaxAdvanceX != FLT_MAX)
+        IM_ASSERT(font_cfg_in->SizePixels != 0.0f && "Specifying glyph offset/advances requires a reference size to base it on.");
 
     // Lazily create builder on the first call to AddFont
     if (Builder == NULL)
@@ -4636,7 +4639,8 @@ static bool ImGui_ImplStbTrueType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontC
         if (oversample_v > 1)
             stbtt__v_prefilter(bitmap_pixels, r->w, r->h, r->w, oversample_v);
 
-        const float offsets_scale = baked->Size / baked->ContainerFont->Sources[0]->SizePixels;
+        const float ref_size = baked->ContainerFont->Sources[0]->SizePixels;
+        const float offsets_scale = (ref_size != 0.0f) ? (baked->Size / ref_size) : 1.0f;
         float font_off_x = (src->GlyphOffset.x * offsets_scale);
         float font_off_y = (src->GlyphOffset.y * offsets_scale);
         if (src->PixelSnapH) // Snap scaled offset. This is to mitigate backward compatibility issues for GlyphOffset, but a better design would be welcome.
@@ -5075,7 +5079,8 @@ ImFontGlyph* ImFontAtlasBakedAddFontGlyph(ImFontAtlas* atlas, ImFontBaked* baked
     if (src != NULL)
     {
         // Clamp & recenter if needed
-        const float offsets_scale = baked->Size / baked->ContainerFont->Sources[0]->SizePixels;
+        const float ref_size = baked->ContainerFont->Sources[0]->SizePixels;
+        const float offsets_scale = (ref_size != 0.0f) ? (baked->Size / ref_size) : 1.0f;
         float advance_x = ImClamp(glyph->AdvanceX, src->GlyphMinAdvanceX * offsets_scale, src->GlyphMaxAdvanceX * offsets_scale);
         if (advance_x != glyph->AdvanceX)
         {
