@@ -498,8 +498,8 @@ namespace ImGui
     // *IMPORTANT* before 1.92, fonts had a single size. They can now be dynamically be adjusted.
     // - Before 1.92: PushFont() always used font default size.
     // -  Since 1.92: PushFont() preserve the current shared font size.
-    // - To use old behavior (single size font): use 'PushFont(font, font->DefaultSize)' in call site, or set 'ImFontConfig::Flags |= ImFontFlags_UseDefaultSize' before calling AddFont().
-    IMGUI_API void          PushFont(ImFont* font, float font_size = -1);                   // use NULL as a shortcut to push default font. Use <0.0f to keep current font size. Use font->DefaultSize to revert to font default size.
+    // - To use old behavior (single size font): use 'PushFont(font, font->LegacySize)' in call site, or set 'ImFontConfig::Flags |= ImFontFlags_DefaultToLegacySize' before calling AddFont().
+    IMGUI_API void          PushFont(ImFont* font, float font_size = -1);                   // use NULL as a shortcut to push default font. Use <0.0f to keep current font size. Use font->LegacySize to revert to font size specified by AddFont().
     IMGUI_API void          PopFont();
     IMGUI_API void          PushFontSize(float font_size);
     IMGUI_API void          PopFontSize();
@@ -3736,7 +3736,7 @@ struct ImFontBaked
 enum ImFontFlags_
 {
     ImFontFlags_None                    = 0,
-    ImFontFlags_UseDefaultSize          = 1 << 0,   // Legacy compatibility: make PushFont() calls without explicit size use font->DefaultSize instead of current font size.
+    ImFontFlags_DefaultToLegacySize     = 1 << 0,   // Legacy compatibility: make PushFont() calls without explicit size use font->LegacySize instead of current font size.
     ImFontFlags_NoLoadError             = 1 << 1,   // Disable throwing an error/assert when calling AddFontXXX() with missing file/data. Calling code is expected to check AddFontXXX() return value.
     ImFontFlags_NoLoadGlyphs            = 1 << 2,   // [Internal] Disable loading new glyphs.
     ImFontFlags_LockBakedSizes          = 1 << 3,   // [Internal] Disable loading new baked sizes, disable garbage collecting current ones. e.g. if you want to lock a font to a single size. Important: if you use this to preload given sizes, consider the possibility of multiple font density used on Retina display.
@@ -3758,7 +3758,7 @@ struct ImFont
     // [Internal] Members: Cold ~24-52 bytes
     // Conceptually Sources[] is the list of font sources merged to create this font.
     ImGuiID                     FontId;             // Unique identifier for the font
-    float                       DefaultSize;        // 4     // in  // Default font size passed to AddFont(). It's unlikely you should use this (use ImGui::GetFontBaked() to get font baked at current bound size).
+    float                       LegacySize;         // 4     // in  // Font size passed to AddFont(). Use for old code calling PushFont() expecting to use that size. (use ImGui::GetFontBaked() to get font baked at current bound size).
     ImVector<ImFontConfig*>     Sources;            // 16    // in  // List of sources. Pointers within ContainerAtlas->Sources[]
     ImWchar                     EllipsisChar;       // 2-4   // out // Character used for ellipsis rendering ('...').
     ImWchar                     FallbackChar;       // 2-4   // out // Character used if a glyph isn't found (U+FFFD, '?')
@@ -3785,7 +3785,7 @@ struct ImFont
     IMGUI_API void              RenderChar(ImDrawList* draw_list, float size, const ImVec2& pos, ImU32 col, ImWchar c, const ImVec4* cpu_fine_clip = NULL);
     IMGUI_API void              RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width = 0.0f, bool cpu_fine_clip = false);
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    inline const char*          CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width) { return CalcWordWrapPosition(DefaultSize * scale, text, text_end, wrap_width); }
+    inline const char*          CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width) { return CalcWordWrapPosition(LegacySize * scale, text, text_end, wrap_width); }
 #endif
 
     // [Internal] Don't use!

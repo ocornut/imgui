@@ -3004,7 +3004,7 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg_in)
         font = IM_NEW(ImFont)();
         font->FontId = FontNextUniqueID++;
         font->Flags = font_cfg_in->Flags;
-        font->DefaultSize = font_cfg_in->SizePixels;
+        font->LegacySize = font_cfg_in->SizePixels;
         font->CurrentRasterizerDensity = font_cfg_in->RasterizerDensity;
         Fonts.push_back(font);
     }
@@ -3266,7 +3266,7 @@ void ImFontAtlas::RemoveCustomRect(ImFontAtlasRectId id)
 //     myfont->Flags |= ImFontFlags_LockBakedSizes;
 ImFontAtlasRectId ImFontAtlas::AddCustomRectFontGlyph(ImFont* font, ImWchar codepoint, int width, int height, float advance_x, const ImVec2& offset)
 {
-    float font_size = font->DefaultSize;
+    float font_size = font->LegacySize;
     return AddCustomRectFontGlyphForSize(font, font_size, codepoint, width, height, advance_x, offset);
 }
 // FIXME: we automatically set glyph.Colored=true by default.

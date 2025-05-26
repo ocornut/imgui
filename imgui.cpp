@@ -8620,7 +8620,7 @@ void ImGui::UpdateFontsNewFrame()
             atlas->Locked = true;
 
     // We do this really unusual thing of calling *push_front()*, the reason behind that we want to support the PushFont()/NewFrame()/PopFont() idiom.
-    ImFontStackData font_stack_data = { ImGui::GetDefaultFont(), ImGui::GetDefaultFont()->DefaultSize };
+    ImFontStackData font_stack_data = { ImGui::GetDefaultFont(), ImGui::GetDefaultFont()->LegacySize };
     g.FontStack.push_front(font_stack_data);
     if (g.FontStack.Size == 1)
         ImGui::SetCurrentFont(font_stack_data.Font, font_stack_data.FontSize);
@@ -8741,8 +8741,8 @@ void ImGui::PushFont(ImFont* font, float font_size)
         font = GetDefaultFont();
     if (font_size <= 0.0f)
     {
-        if (font->Flags & ImFontFlags_UseDefaultSize)
-            font_size = font->DefaultSize;       // Legacy: use default font size. Same as doing PushFont(font, font->DefaultSize). // FIXME-NEWATLAS
+        if (font->Flags & ImFontFlags_DefaultToLegacySize)
+            font_size = font->LegacySize;       // Legacy: use AddFont() specified font size. Same as doing PushFont(font, font->LegacySize)
         else
             font_size = g.FontSizeBeforeScaling; // Keep current font size
     }
