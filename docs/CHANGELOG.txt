@@ -108,6 +108,7 @@ Other changes:
 - TextLinkOpenURL(): added bool return value on click. (#8645, #8451, #7660)
 - Scroll: fixed contents size, scrollbar visibility and scrolling resetting issues
   with abnormally large contents ranges. (#3609, #8215)
+- Clipper: some mitigation/improvements for abnormally large contents ranges. (#3609, #8215)
 - Nav: fixed assertion when holding gamepad FaceLeft/West button to open
   CTRL+Tab windowing + pressing a keyboard key. (#8525)
 - Error Handling: added better error report and recovery for extraneous
