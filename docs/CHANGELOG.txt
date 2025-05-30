@@ -111,6 +111,8 @@ Other changes:
 - Clipper: some mitigation/improvements for abnormally large contents ranges. (#3609, #8215)
 - Nav: fixed assertion when holding gamepad FaceLeft/West button to open
   CTRL+Tab windowing + pressing a keyboard key. (#8525)
+- Nav: fixed scroll fallback (when there are no interactive widgets to jump to) not
+  being enabled on windows with menu or title bar.
 - Error Handling: added better error report and recovery for extraneous
   EndPopup() call. (#1651, #8499)
 - Error Handling: added better error report and recovery when calling EndFrame()
