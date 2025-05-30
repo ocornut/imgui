@@ -880,8 +880,12 @@ static FT_Error ImGuiLunasvgPortRender(FT_GlyphSlot slot, FT_Pointer* _state)
 
     // rows is height, pitch (or stride) equals to width * sizeof(int32)
     lunasvg::Bitmap bitmap((uint8_t*)slot->bitmap.buffer, slot->bitmap.width, slot->bitmap.rows, slot->bitmap.pitch);
+#if LUNASVG_VERSION_MAJOR >= 3
+    state->svg->render(bitmap, state->matrix); // state->matrix is already scaled and translated
+#else
     state->svg->setMatrix(state->svg->matrix().identity()); // Reset the svg matrix to the default value
     state->svg->render(bitmap, state->matrix);              // state->matrix is already scaled and translated
+#endif 
     state->err = FT_Err_Ok;
     return state->err;
 }
@@ -904,7 +908,11 @@ static FT_Error ImGuiLunasvgPortPresetSlot(FT_GlyphSlot slot, FT_Bool cache, FT_
         return state->err;
     }
 
+#if LUNASVG_VERSION_MAJOR >= 3
+    lunasvg::Box box = state->svg->boundingBox();
+#else
     lunasvg::Box box = state->svg->box();
+#endif
     double scale = std::min(metrics.x_ppem / box.w, metrics.y_ppem / box.h);
     double xx = (double)document->transform.xx / (1 << 16);
     double xy = -(double)document->transform.xy / (1 << 16);
@@ -913,6 +921,15 @@ static FT_Error ImGuiLunasvgPortPresetSlot(FT_GlyphSlot slot, FT_Bool cache, FT_
     double x0 = (double)document->delta.x / 64 * box.w / metrics.x_ppem;
     double y0 = -(double)document->delta.y / 64 * box.h / metrics.y_ppem;
 
+#if LUNASVG_VERSION_MAJOR >= 3
+    // Scale, transform and pre-translate the matrix for the rendering step
+    state->matrix = lunasvg::Matrix::translated(-box.x, -box.y);
+    state->matrix.multiply(lunasvg::Matrix(xx, xy, yx, yy, x0, y0));
+    state->matrix.scale(scale, scale);
+
+    // Apply updated transformation to the bounding box
+    box.transform(state->matrix);
+#else
     // Scale and transform, we don't translate the svg yet
     state->matrix.identity();
     state->matrix.scale(scale, scale);
@@ -924,6 +941,7 @@ static FT_Error ImGuiLunasvgPortPresetSlot(FT_GlyphSlot slot, FT_Bool cache, FT_
 
     // Get the box again after the transformation
     box = state->svg->box();
+#endif
 
     // Calculate the bitmap size
     slot->bitmap_left = FT_Int(box.x);

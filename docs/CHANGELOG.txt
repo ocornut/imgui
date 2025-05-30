@@ -43,6 +43,12 @@ Breaking changes:
 
 - TreeNode: renamed ImGuiTreeNodeFlags_NavLeftJumpsBackHere to ImGuiTreeNodeFlags_NavLeftJumpsToParent
   for clarity. Kept inline redirection enum (will obsolete). (#1079, #8639)
+- Fonts: changed ImFont::CalcWordWrapPositionA() to ImFont::CalcWordWrapPosition():
+    - old: const char* CalcWordWrapPositionA(float scale, const char* text, ....);
+    - new: const char* CalcWordWrapPosition (float size,  const char* text, ....);
+  The leading 'float scale' parameters was changed to 'float size'.
+  This was necessary as 'scale' is assuming standard font size which is a concept we aim to
+  eliminate in an upcoming update. Kept inline redirection function.
 - Commented out PushAllowKeyboardFocus()/PopAllowKeyboardFocus() which was obsoleted
   in 1.89.4 (March 2023). (#3092)
    - PushAllowKeyboardFocus(bool tab_stop) --> PushItemFlag(ImGuiItemFlags_NoTabStop, !tab_stop);
@@ -51,7 +57,9 @@ Breaking changes:
   in 1.89.6 (June 2023).
    - ForceDisplayRangeByIndices()          --> IncludeItemsByIndex()
 - Backends: SDL3: Fixed casing typo in function name: (#8509, #8163, #7998, #7988) [@puugz]
-  - Imgui_ImplSDLGPU3_PrepareDrawData() -> ImGui_ImplSDLGPU3_PrepareDrawData()
+   - Imgui_ImplSDLGPU3_PrepareDrawData() --> ImGui_ImplSDLGPU3_PrepareDrawData()
+- Internals: RenderTextEllipsis() function removed the 'float clip_max_x' parameter directly
+  preceding 'float ellipsis_max_x'. Values were identical for a vast majority of users. (#8387)
 
 Other changes:
 
@@ -97,8 +105,16 @@ Other changes:
   which mitigates edge case issues in multi-viewport scenarios where abnormally large
   windows (e.g. determined programmatically) can lead to renderer backend trying to
   create abnormally large framebuffers.
+- TextLinkOpenURL(): added bool return value on click. (#8645, #8451, #7660)
+- Scroll: fixed contents size, scrollbar visibility and scrolling resetting issues
+  with abnormally large contents ranges. (#3609, #8215)
+- Clipper: some mitigation/improvements for abnormally large contents ranges. (#3609, #8215)
 - Nav: fixed assertion when holding gamepad FaceLeft/West button to open
   CTRL+Tab windowing + pressing a keyboard key. (#8525)
+- Nav: fixed scroll fallback (when there are no interactive widgets to jump to) not
+  being enabled on windows with menu or title bar.
+- Nav: fixed an issue handling PageUp/PageDown on windows with abnormally large contents
+  range which could lead to clipper requesting very large ranges.
 - Error Handling: added better error report and recovery for extraneous
   EndPopup() call. (#1651, #8499)
 - Error Handling: added better error report and recovery when calling EndFrame()
@@ -106,7 +122,7 @@ Other changes:
 - Fonts: reworked text ellipsis logic to ensure a "..." is always displayed instead
   of a single character. (#7024)
 - Fonts: word-wrapping code handle ideographic comma & full stop (U+3001, U+3002). (#8540)
-- Fonts: fixed CalcWordWrapPositionA() fallback when width is too small to wrap:
+- Fonts: fixed CalcWordWrapPosition() fallback when width is too small to wrap:
   would use a +1 offset instead of advancing to the next UTF-8 codepoint. (#8540)
 - Style, InputText: added ImGuiCol_InputTextCursor to configure color of
   the InputText cursor/caret. (#7031)
@@ -276,6 +292,7 @@ Other changes:
 - Debug Tools: Added io.ConfigDebugHighlightIdConflictsShowItemPicker (defaults to true)
   to allow disabled Item Picker suggestion in user facing builds. (#7961, #7669)
 - Debug Tools: Tweaked layout of ID Stack Tool and always display full path. (#4631)
+- imgui_freetype: update lunasvg API to support v3.0+. (#8656, #6842, #6591) [@moretromain]
 - Misc: Various zealous warning fixes for newer version of Clang.
 - Misc: Added ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress mouse cursors
   (busy/wait/hourglass shape, with or without an arrow cursor).
