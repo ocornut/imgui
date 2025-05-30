@@ -113,6 +113,8 @@ Other changes:
   CTRL+Tab windowing + pressing a keyboard key. (#8525)
 - Nav: fixed scroll fallback (when there are no interactive widgets to jump to) not
   being enabled on windows with menu or title bar.
+- Nav: fixed an issue handling PageUp/PageDown on windows with abnormally large contents
+  range which could lead to clipper requesting very large ranges.
 - Error Handling: added better error report and recovery for extraneous
   EndPopup() call. (#1651, #8499)
 - Error Handling: added better error report and recovery when calling EndFrame()
