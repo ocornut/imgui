@@ -171,6 +171,8 @@ Docking+Viewports Branch:
   (this per-se doesn't fix the font quality which requires setting RasterizerDensity
   separately. More on this later as it should soon become automatic).
   (#1065, #1542, #1676, #1786, #2826, #3757, #5081, #5580, #5592, #6465, #7273, #7779 etc.)
+- Viewports: fixed handling of simultaneous move + resize (e.g. toggling maximized) when
+  ImGuiConfigFlags_DpiEnableScaleViewports is enabled.
 - Backends: Win32: Viewports: fixed an issue when closing a window from
   the OS close button (with io.ConfigViewportsNoDecoration=false) while 
   user code is discarding the 'bool *p_open=false output' from Begin(). 

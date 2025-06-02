@@ -15886,6 +15886,7 @@ static bool ImGui::UpdateTryMergeWindowIntoHostViewports(ImGuiWindow* window)
 void ImGui::TranslateWindowsInViewport(ImGuiViewportP* viewport, const ImVec2& old_pos, const ImVec2& new_pos, const ImVec2& old_size, const ImVec2& new_size)
 {
     ImGuiContext& g = *GImGui;
+    //IMGUI_DEBUG_LOG_VIEWPORT("[viewport] TranslateWindowsInViewport 0x%08X\n", viewport->ID);
     IM_ASSERT(viewport->Window == NULL && (viewport->Flags & ImGuiViewportFlags_CanHostOtherWindows));
 
     // 1) We test if ImGuiConfigFlags_ViewportsEnable was just toggled, which allows us to conveniently
@@ -15894,7 +15895,7 @@ void ImGui::TranslateWindowsInViewport(ImGuiViewportP* viewport, const ImVec2& o
     // One problem with this is that most Win32 applications doesn't update their render while dragging,
     // and so the window will appear to teleport when releasing the mouse.
     const bool translate_all_windows = (g.ConfigFlagsCurrFrame & ImGuiConfigFlags_ViewportsEnable) != (g.ConfigFlagsLastFrame & ImGuiConfigFlags_ViewportsEnable);
-    ImRect test_still_fit_rect(old_pos, old_pos + viewport->Size);
+    ImRect test_still_fit_rect(old_pos, old_pos + old_size);
     ImVec2 delta_pos = new_pos - old_pos;
     for (ImGuiWindow* window : g.Windows) // FIXME-OPT
         if (translate_all_windows || (window->Viewport == viewport && (old_size == new_size || test_still_fit_rect.Contains(window->Rect()))))
@@ -15905,6 +15906,7 @@ void ImGui::TranslateWindowsInViewport(ImGuiViewportP* viewport, const ImVec2& o
 void ImGui::ScaleWindowsInViewport(ImGuiViewportP* viewport, float scale)
 {
     ImGuiContext& g = *GImGui;
+    //IMGUI_DEBUG_LOG_VIEWPORT("[viewport] ScaleWindowsInViewport 0x%08X\n", viewport->ID);
     if (viewport->Window)
     {
         ScaleWindow(viewport->Window, scale);
