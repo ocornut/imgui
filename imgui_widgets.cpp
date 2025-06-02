@@ -6990,7 +6990,7 @@ void ImGui::TreePop()
     window->DC.TreeDepth--;
     ImU32 tree_depth_mask = (1 << window->DC.TreeDepth);
 
-    if (window->DC.TreeHasStackDataDepthMask & tree_depth_mask) // Only set during request
+    if (window->DC.TreeHasStackDataDepthMask & tree_depth_mask)
     {
         const ImGuiTreeNodeStackData* data = &g.TreeNodeStack.Data[g.TreeNodeStack.Size - 1];
         IM_ASSERT(data->ID == window->IDStack.back());
@@ -7006,6 +7006,7 @@ void ImGui::TreePop()
 
         g.TreeNodeStack.pop_back();
         window->DC.TreeHasStackDataDepthMask &= ~tree_depth_mask;
+        window->DC.TreeRecordsClippedNodesY2Mask &= ~tree_depth_mask;
     }
 
     IM_ASSERT(window->IDStack.Size > 1); // There should always be 1 element in the IDStack (pushed during window creation). If this triggers you called TreePop/PopID too much.
