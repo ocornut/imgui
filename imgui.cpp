@@ -1359,6 +1359,7 @@ ImGuiStyle::ImGuiStyle()
 {
     FontSizeBase                = 0.0f;             // Will default to io.Fonts->Fonts[0] on first frame.
     FontScaleMain               = 1.0f;             // Main global scale factor.
+    FontScaleDpi                = 1.0f;             // Scale factor from viewport/monitor. When io.ConfigDpiScaleFonts is enabled, this is automatically overwritten when changing monitor DPI.
 
     Alpha                       = 1.0f;             // Global alpha applies to everything in Dear ImGui.
     DisabledAlpha               = 0.60f;            // Additional alpha multiplier applied by BeginDisabled(). Multiply over current value of Alpha.
@@ -1429,12 +1430,12 @@ ImGuiStyle::ImGuiStyle()
     ImGui::StyleColorsDark(this);
 }
 
-// To scale your entire UI (e.g. if you want your app to use High DPI or generally be DPI aware) you may use this helper function. Scaling the fonts is done separately and is up to you.
+
+// Scale all spacing/padding/thickness values. Do not scale fonts.
 // Important: This operation is lossy because we round all sizes to integer. If you need to change your scale multiples, call this over a freshly initialized ImGuiStyle structure rather than scaling multiple times.
 void ImGuiStyle::ScaleAllSizes(float scale_factor)
 {
     _MainScale *= scale_factor;
-    FontSizeBase = ImTrunc(FontSizeBase * scale_factor);
     WindowPadding = ImTrunc(WindowPadding * scale_factor);
     WindowRounding = ImTrunc(WindowRounding * scale_factor);
     WindowMinSize = ImTrunc(WindowMinSize * scale_factor);
@@ -8646,7 +8647,7 @@ void ImGui::UpdateFontsNewFrame()
     // Apply default font size the first time
     ImFont* font = ImGui::GetDefaultFont();
     if (g.Style.FontSizeBase <= 0.0f)
-        g.Style.FontSizeBase = (font->LegacySize > 0.0f ? font->LegacySize : FONT_DEFAULT_SIZE) * g.Style._MainScale;
+        g.Style.FontSizeBase = (font->LegacySize > 0.0f ? font->LegacySize : FONT_DEFAULT_SIZE);
 
     // Set initial font
     g.Font = font;
@@ -8748,7 +8749,10 @@ void ImGui::UpdateCurrentFontSize(float restore_font_size_after_scaling)
         final_size = g.FontSizeBeforeScaling;
 
         // External scale factors
-        final_size *= g.Style.FontScaleMain;
+        final_size *= g.Style.FontScaleMain;    // Main global scale factor
+        final_size *= g.Style.FontScaleDpi;     // Per-monitor/viewport DPI scale factor, automatically updated when io.ConfigDpiScaleFonts is enabled.
+
+        // Window scale (mostly obsolete now)
         if (window != NULL)
             final_size *= window->FontWindowScale;
 
@@ -15819,6 +15823,10 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
     SameLine(0.0f, 0.0f); Text(" (out %.2f)", GetFontSize());
     SameLine(); MetricsHelpMarker("- This is scaling font only. General scaling will come later.");
     DragFloat("FontScaleMain", &style.FontScaleMain, 0.02f, 0.5f, 5.0f);
+    //BeginDisabled(io.ConfigDpiScaleFonts);
+    DragFloat("FontScaleDpi", &style.FontScaleDpi, 0.02f, 0.5f, 5.0f);
+    //SetItemTooltip("When io.ConfigDpiScaleFonts is set, this value is automatically overwritten.");
+    //EndDisabled();
     BulletText("Load a nice font for better results!");
     BulletText("Please submit feedback:");
     SameLine(); TextLinkOpenURL("#8465", "https://github.com/ocornut/imgui/issues/8465");

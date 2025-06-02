@@ -2228,6 +2228,7 @@ struct ImGuiStyle
 {
     float       FontSizeBase;               // Current base font size (scaling applied). Use PushFont()/PushFontSize() to modify. Use ImGui::GetFontSize() to obtain scaled value.
     float       FontScaleMain;              // Main global scale factor. Other scale factors may apply.
+    float       FontScaleDpi;               // Scale factor from viewport/monitor. When io.ConfigDpiScaleFonts is enabled, this is automatically overwritten when changing monitor.
 
     float       Alpha;                      // Global alpha applies to everything in Dear ImGui.
     float       DisabledAlpha;              // Additional alpha multiplier applied by BeginDisabled(). Multiply over current value of Alpha.
@@ -2300,7 +2301,7 @@ struct ImGuiStyle
 
     // Functions
     IMGUI_API   ImGuiStyle();
-    IMGUI_API   void ScaleAllSizes(float scale_factor);
+    IMGUI_API   void ScaleAllSizes(float scale_factor); // Scale all spacing/padding/thickness values. Do not scale fonts.
 
     // Obsolete names
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
