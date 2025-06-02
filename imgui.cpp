@@ -8445,6 +8445,7 @@ ImFontBaked* ImGui::GetFontBaked()
     return GImGui->FontBaked;
 }
 
+// Get current font size (= height in pixels) of current font, with external scale factors applied. Use ImGui::GetStyle().FontSizeBase to get value before external scale factors.
 float ImGui::GetFontSize()
 {
     return GImGui->FontSize;
@@ -8455,6 +8456,8 @@ ImVec2 ImGui::GetFontTexUvWhitePixel()
     return GImGui->DrawListSharedData.TexUvWhitePixel;
 }
 
+// Prefer using PushFontSize(style.FontSize * factor), or use io.FontGlobalScale to scale all windows.
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 void ImGui::SetWindowFontScale(float scale)
 {
     IM_ASSERT(scale > 0.0f);
@@ -8462,6 +8465,7 @@ void ImGui::SetWindowFontScale(float scale)
     window->FontWindowScale = scale;
     UpdateCurrentFontSize(0.0f);
 }
+#endif
 
 void ImGui::PushFocusScope(ImGuiID id)
 {
@@ -8737,13 +8741,16 @@ void ImGui::UpdateCurrentFontSize(float restore_font_size_after_scaling)
     float final_size = (restore_font_size_after_scaling > 0.0f) ? restore_font_size_after_scaling : 0.0f;
     if (final_size == 0.0f)
     {
-        final_size = g.FontSizeBeforeScaling * g.IO.FontGlobalScale;
-#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-        if (g.Font != NULL)
-          final_size *= g.Font->Scale;
-#endif
+        final_size = g.FontSizeBeforeScaling;
+
+        // External scale factors
+        final_size *= g.IO.FontGlobalScale;
         if (window != NULL)
             final_size *= window->FontWindowScale;
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+        if (g.Font != NULL)
+            final_size *= g.Font->Scale;
+#endif
     }
 
     // Round font size
