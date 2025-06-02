@@ -6692,11 +6692,10 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     const bool draw_tree_lines = (flags & (ImGuiTreeNodeFlags_DrawLinesFull | ImGuiTreeNodeFlags_DrawLinesToNodes)) && (frame_bb.Min.y < window->ClipRect.Max.y) && (g.Style.TreeLinesSize > 0.0f);
     if (!(flags & ImGuiTreeNodeFlags_NoTreePushOnOpen))
     {
+        store_tree_node_stack_data = draw_tree_lines;
         if ((flags & ImGuiTreeNodeFlags_NavLeftJumpsToParent) && !g.NavIdIsAlive)
             if (g.NavMoveDir == ImGuiDir_Left && g.NavWindow == window && NavMoveRequestButNoResultYet())
                 store_tree_node_stack_data = true;
-        if (draw_tree_lines)
-            store_tree_node_stack_data = true;
     }
 
     const bool is_leaf = (flags & ImGuiTreeNodeFlags_Leaf) != 0;
