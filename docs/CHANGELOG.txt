@@ -131,6 +131,7 @@ Other changes:
   of WantVisible. This is set in the same structure because activating text input generally
   requires providing a window to the backend. (#8584, #6341)
 - Misc: added extra operators to ImVec4 in IMGUI_DEFINE_MATH_OPERATORS block. (#8510) [@gan74]
+- Demo: changed default framed item width to use Min(GetFontSize() * 12, GetContentRegionAvail().x * 0.40f).
 - Backends: Win32: Fixed an issue where externally losing mouse capture (due to e.g. focus loss)
   would fail to claim it again the next subsequent click. (#8594)
 - Backends: SDL2, SDL3, OSX: Fill gamepad inputs and set ImGuiBackendFlags_HasGamepad
