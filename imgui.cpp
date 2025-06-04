@@ -1358,6 +1358,8 @@ static void*                GImAllocatorUserData = NULL;
 ImGuiStyle::ImGuiStyle()
 {
     FontSizeBase                = 0.0f;             // Will default to io.Fonts->Fonts[0] on first frame.
+    FontScaleMain               = 1.0f;             // Main global scale factor.
+
     Alpha                       = 1.0f;             // Global alpha applies to everything in Dear ImGui.
     DisabledAlpha               = 0.60f;            // Additional alpha multiplier applied by BeginDisabled(). Multiply over current value of Alpha.
     WindowPadding               = ImVec2(8,8);      // Padding within a window
@@ -1481,9 +1483,11 @@ ImGuiIO::ImGuiIO()
     UserData = NULL;
 
     Fonts = NULL;
-    FontGlobalScale = 1.0f;
     FontDefault = NULL;
     FontAllowUserScaling = false;
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    FontGlobalScale = 1.0f; // Use style.FontScaleMain instead!
+#endif
     DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
 
     // Keyboard/Gamepad Navigation options
@@ -8456,7 +8460,7 @@ ImVec2 ImGui::GetFontTexUvWhitePixel()
     return GImGui->DrawListSharedData.TexUvWhitePixel;
 }
 
-// Prefer using PushFontSize(style.FontSize * factor), or use io.FontGlobalScale to scale all windows.
+// Prefer using PushFontSize(style.FontSizeBase * factor), or use style.FontScaleMain to scale all windows.
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 void ImGui::SetWindowFontScale(float scale)
 {
@@ -8744,12 +8748,15 @@ void ImGui::UpdateCurrentFontSize(float restore_font_size_after_scaling)
         final_size = g.FontSizeBeforeScaling;
 
         // External scale factors
-        final_size *= g.IO.FontGlobalScale;
+        final_size *= g.Style.FontScaleMain;
         if (window != NULL)
             final_size *= window->FontWindowScale;
+
+        // Legacy scale factors
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+        final_size *= g.IO.FontGlobalScale; // Use style.FontScaleMain instead!
         if (g.Font != NULL)
-            final_size *= g.Font->Scale;
+            final_size *= g.Font->Scale;    // Was never really useful.
 #endif
     }
 
@@ -10544,6 +10551,9 @@ static void ImGui::ErrorCheckNewFrameSanityChecks()
         IM_ASSERT(g.IO.ConfigErrorRecoveryEnableAssert || g.IO.ConfigErrorRecoveryEnableDebugLog || g.IO.ConfigErrorRecoveryEnableTooltip || g.ErrorCallback != NULL);
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    if (g.IO.FontGlobalScale > 1.0f)
+        IM_ASSERT(g.Style.FontScaleMain == 1.0f && "Since 1.92: use style.FontScaleMain instead of g.IO.FontGlobalScale!");
+
     // Remap legacy names
     if (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableSetMousePos)
     {
@@ -15799,29 +15809,24 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
     ImGuiIO& io = g.IO;
     ImGuiStyle& style = g.Style;
 
-    Text("Read "); SameLine(0, 0);
-    TextLinkOpenURL("https://www.dearimgui.com/faq/"); SameLine(0, 0);
-    Text(" for details.");
-
-    SeparatorText("Backend Support for Dynamic Fonts");
     BeginDisabled();
     CheckboxFlags("io.BackendFlags: RendererHasTextures", &io.BackendFlags, ImGuiBackendFlags_RendererHasTextures);
     EndDisabled();
-
+    ShowFontSelector("Font");
     BeginDisabled((io.BackendFlags & ImGuiBackendFlags_RendererHasTextures) == 0);
-    SetNextItemWidth(GetFontSize() * 10);
     if (DragFloat("FontSizeBase", &style.FontSizeBase, 0.20f, 5.0f, 100.0f, "%.0f"))
         style._NextFrameFontSizeBase = style.FontSizeBase; // FIXME: Temporary hack until we finish remaining work.
     SameLine(0.0f, 0.0f); Text(" (out %.2f)", GetFontSize());
     SameLine(); MetricsHelpMarker("- This is scaling font only. General scaling will come later.");
-    SetNextItemWidth(GetFontSize() * 10);
-    DragFloat("io.FontGlobalScale", &io.FontGlobalScale, 0.05f, 0.5f, 5.0f); // <-- This works, but no need to make it too visible.
+    DragFloat("FontScaleMain", &style.FontScaleMain, 0.02f, 0.5f, 5.0f);
     BulletText("Load a nice font for better results!");
     BulletText("Please submit feedback:");
     SameLine(); TextLinkOpenURL("#8465", "https://github.com/ocornut/imgui/issues/8465");
+    BulletText("Read FAQ for more details:");
+    SameLine(); TextLinkOpenURL("dearimgui.com/faq", "https://www.dearimgui.com/faq/");
     EndDisabled();
 
-    SeparatorText("Fonts");
+    SeparatorText("Font List");
 
     ImGuiMetricsConfig* cfg = &g.DebugMetricsConfig;
     Checkbox("Show font preview", &cfg->ShowFontPreview);

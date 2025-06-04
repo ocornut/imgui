@@ -440,13 +440,13 @@ void ImGui::ShowDemoWindow(bool* p_open)
             style._NextFrameFontSizeBase = style.FontSizeBase; // FIXME: Temporary hack until we finish remaining work.
         ImGui::SameLine(0.0f, 0.0f); Text(" (out %.2f)", ImGui::GetFontSize());
         ImGui::SameLine(); HelpMarker("- This is scaling font only. General scaling will come later.");
-        //ImGui::SetNextItemWidth(ImGui::GetFontSize() * 20);
-        //ImGui::DragFloat("FontGlobalScale", &ImGui::GetIO().FontGlobalScale, 0.05f, 0.5f, 5.0f);
+        ImGui::SetNextItemWidth(ImGui::GetFontSize() * 20);
+        ImGui::DragFloat("FontScaleMain", &style.FontScaleMain, 0.02f, 0.5f, 4.0f);
         ImGui::BulletText("Load a nice font for better results!");
-        ImGui::BulletText("See 'Widgets->Fonts' below for more.");
         //ImGui::BulletText("Current font loader: '%s'", ImGui::GetIO().Fonts->FontLoaderName);
         ImGui::BulletText("Please submit feedback:"); ImGui::SameLine();
         ImGui::TextLinkOpenURL("#8465", "https://github.com/ocornut/imgui/issues/8465");
+        ImGui::BulletText("See 'Widgets->Fonts' below for more.");
         ImGui::Spacing();
     }
 
@@ -8276,9 +8276,16 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
 
     {
         // General
+        SeparatorText("General");
         if (ShowStyleSelector("Colors##Selector"))
             ref_saved_style = style;
         ShowFontSelector("Fonts##Selector");
+        BeginDisabled((GetIO().BackendFlags & ImGuiBackendFlags_RendererHasTextures) == 0);
+        if (DragFloat("FontSizeBase", &style.FontSizeBase, 0.20f, 5.0f, 100.0f, "%.0f"))
+            style._NextFrameFontSizeBase = style.FontSizeBase; // FIXME: Temporary hack until we finish remaining work.
+        SameLine(0.0f, 0.0f); Text(" (out %.2f)", GetFontSize());
+        DragFloat("FontScaleMain", &style.FontScaleMain, 0.02f, 0.5f, 4.0f);
+        EndDisabled();
 
         // Simplified Settings (expose floating-pointer border sizes as boolean representing 0.0f or 1.0f)
         if (SliderFloat("FrameRounding", &style.FrameRounding, 0.0f, 12.0f, "%.0f"))
@@ -8301,8 +8308,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         "Save/Revert in local non-persistent storage. Default Colors definition are not affected. "
         "Use \"Export\" below to save them somewhere.");
 
-    Separator();
-
+    SeparatorText("Details");
     if (BeginTabBar("##tabs", ImGuiTabBarFlags_None))
     {
         if (BeginTabItem("Sizes"))
@@ -8477,6 +8483,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
 
             // Post-baking font scaling. Note that this is NOT the nice way of scaling fonts, read below.
             // (we enforce hard clamping manually as by default DragFloat/SliderFloat allows CTRL+Click text to get out of bounds).
+            /*
             SeparatorText("Legacy Scaling");
             const float MIN_SCALE = 0.3f;
             const float MAX_SCALE = 2.0f;
@@ -8491,6 +8498,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             //if (DragFloat("window scale", &window_scale, 0.005f, MIN_SCALE, MAX_SCALE, "%.2f", ImGuiSliderFlags_AlwaysClamp)) // Scale only this window
             //    SetWindowFontScale(window_scale);
             PopItemWidth();
+            */
 
             EndTabItem();
         }

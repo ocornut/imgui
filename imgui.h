@@ -502,7 +502,7 @@ namespace ImGui
     //   - Or set 'ImFontConfig::Flags |= ImFontFlags_DefaultToLegacySize' before calling AddFont(), and then 'PushFont(font)' will use this size.
     // *IMPORTANT* If you want to scale an existing font size:
     //   - OK: PushFontSize(style.FontSizeBase * factor) (= value before external scale factors applied).
-    //   - KO: PushFontSize(GetFontSize() * factor)      (= value after external scale factors applied. external scale factors are io.FontGlobalScale and per-viewport scales.).
+    //   - KO: PushFontSize(GetFontSize() * factor)      (= value after external scale factors applied. external scale factors are style.FontScaleMain + per-viewport scales.).
     IMGUI_API void          PushFont(ImFont* font, float font_size = -1);                   // use NULL as a shortcut to push default font. Use <0.0f to keep current font size.
     IMGUI_API void          PopFont();
     IMGUI_API void          PushFontSize(float font_size);
@@ -2227,6 +2227,7 @@ IM_MSVC_RUNTIME_CHECKS_RESTORE
 struct ImGuiStyle
 {
     float       FontSizeBase;               // Current base font size (scaling applied). Use PushFont()/PushFontSize() to modify. Use ImGui::GetFontSize() to obtain scaled value.
+    float       FontScaleMain;              // Main global scale factor. Other scale factors may apply.
 
     float       Alpha;                      // Global alpha applies to everything in Dear ImGui.
     float       DisabledAlpha;              // Additional alpha multiplier applied by BeginDisabled(). Multiply over current value of Alpha.
@@ -2347,9 +2348,8 @@ struct ImGuiIO
 
     // Font system
     ImFontAtlas*Fonts;                          // <auto>           // Font atlas: load, rasterize and pack one or more fonts into a single texture.
-    float       FontGlobalScale;                // = 1.0f           // Global scale all fonts
-    bool        FontAllowUserScaling;           // = false          // [OBSOLETE] Allow user scaling text of individual window with CTRL+Wheel.
     ImFont*     FontDefault;                    // = NULL           // Font to use on NewFrame(). Use NULL to uses Fonts->Fonts[0].
+    bool        FontAllowUserScaling;           // = false          // [OBSOLETE] Allow user scaling text of individual window with CTRL+Wheel.
 
     // Keyboard/Gamepad Navigation options
     bool        ConfigNavSwapGamepadButtons;    // = false          // Swap Activate<>Cancel (A<>B) buttons, matching typical "Nintendo/Japanese style" gamepad layout.
@@ -2546,9 +2546,11 @@ struct ImGuiIO
     //float     NavInputs[ImGuiNavInput_COUNT];     // [LEGACY] Since 1.88, NavInputs[] was removed. Backends from 1.60 to 1.86 won't build. Feed gamepad inputs via io.AddKeyEvent() and ImGuiKey_GamepadXXX enums.
     //void*     ImeWindowHandle;                    // [Obsoleted in 1.87] Set ImGuiViewport::PlatformHandleRaw instead. Set this to your HWND to get automatic IME cursor positioning.
 
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    float       FontGlobalScale;                    // Moved io.FontGlobalScale to style.FontScaleMain in 1.92 (June 2025)
+
     // Legacy: before 1.91.1, clipboard functions were stored in ImGuiIO instead of ImGuiPlatformIO.
     // As this is will affect all users of custom engines/backends, we are providing proper legacy redirection (will obsolete).
-#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     const char* (*GetClipboardTextFn)(void* user_data);
     void        (*SetClipboardTextFn)(void* user_data, const char* text);
     void*       ClipboardUserData;
@@ -3943,7 +3945,7 @@ struct ImGuiPlatformImeData
 namespace ImGui
 {
     // OBSOLETED in 1.92.0 (from June 2025)
-    IMGUI_API void      SetWindowFontScale(float scale);                        // Set font scale factor for current window. Prefer using PushFontSize(style.FontSize * factor) or use io.FontGlobalScale to scale all windows.
+    IMGUI_API void      SetWindowFontScale(float scale);                        // Set font scale factor for current window. Prefer using PushFontSize(style.FontSizeBase * factor) or use style.FontScaleMain to scale all windows.
     // OBSOLETED in 1.91.9 (from February 2025)
     IMGUI_API void      Image(ImTextureRef tex_ref, const ImVec2& image_size, const ImVec2& uv0, const ImVec2& uv1, const ImVec4& tint_col, const ImVec4& border_col); // <-- 'border_col' was removed in favor of ImGuiCol_ImageBorder. If you use 'tint_col', use ImageWithBg() instead.
     // OBSOLETED in 1.91.0 (from July 2024)
