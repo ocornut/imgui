@@ -8244,18 +8244,21 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
 
     PushItemWidth(GetWindowWidth() * 0.50f);
 
-    if (ShowStyleSelector("Colors##Selector"))
-        ref_saved_style = style;
-    ShowFontSelector("Fonts##Selector");
+    {
+        // General
+        if (ShowStyleSelector("Colors##Selector"))
+            ref_saved_style = style;
+        ShowFontSelector("Fonts##Selector");
 
-    // Simplified Settings (expose floating-pointer border sizes as boolean representing 0.0f or 1.0f)
-    if (SliderFloat("FrameRounding", &style.FrameRounding, 0.0f, 12.0f, "%.0f"))
-        style.GrabRounding = style.FrameRounding; // Make GrabRounding always the same value as FrameRounding
-    { bool border = (style.WindowBorderSize > 0.0f); if (Checkbox("WindowBorder", &border)) { style.WindowBorderSize = border ? 1.0f : 0.0f; } }
-    SameLine();
-    { bool border = (style.FrameBorderSize > 0.0f);  if (Checkbox("FrameBorder",  &border)) { style.FrameBorderSize  = border ? 1.0f : 0.0f; } }
-    SameLine();
-    { bool border = (style.PopupBorderSize > 0.0f);  if (Checkbox("PopupBorder",  &border)) { style.PopupBorderSize  = border ? 1.0f : 0.0f; } }
+        // Simplified Settings (expose floating-pointer border sizes as boolean representing 0.0f or 1.0f)
+        if (SliderFloat("FrameRounding", &style.FrameRounding, 0.0f, 12.0f, "%.0f"))
+            style.GrabRounding = style.FrameRounding; // Make GrabRounding always the same value as FrameRounding
+        { bool border = (style.WindowBorderSize > 0.0f); if (Checkbox("WindowBorder", &border)) { style.WindowBorderSize = border ? 1.0f : 0.0f; } }
+        SameLine();
+        { bool border = (style.FrameBorderSize > 0.0f);  if (Checkbox("FrameBorder", &border)) { style.FrameBorderSize = border ? 1.0f : 0.0f; } }
+        SameLine();
+        { bool border = (style.PopupBorderSize > 0.0f);  if (Checkbox("PopupBorder", &border)) { style.PopupBorderSize = border ? 1.0f : 0.0f; } }
+    }
 
     // Save/Revert button
     if (Button("Save Ref"))
