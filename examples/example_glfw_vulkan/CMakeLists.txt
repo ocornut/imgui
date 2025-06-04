@@ -35,7 +35,7 @@ find_package(Vulkan REQUIRED)
 #find_library(VULKAN_LIBRARY
   #NAMES vulkan vulkan-1)
 #set(LIBRARIES "glfw;${VULKAN_LIBRARY}")
-set(LIBRARIES "glfw;Vulkan::Vulkan")
+set(LIBRARIES "glfw;Vulkan::Vulkan;X11")
 
 # Use vulkan headers from glfw:
 include_directories(${GLFW_DIR}/deps)
