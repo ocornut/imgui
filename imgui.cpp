@@ -440,6 +440,8 @@ CODE
                           - likewise io.MousePos and GetMousePos() will use OS coordinates.
                             If you query mouse positions to interact with non-imgui coordinates you will need to offset them, e.g. subtract GetWindowViewport()->Pos.
 
+ - 2025/06/XX (1.92.0) - Renamed/moved ImGuiConfigFlags_DpiEnableScaleFonts -> bool io.ConfigDpiScaleFonts.
+                       - Renamed/moved ImGuiConfigFlags_DpiEnableScaleViewports -> bool io.ConfigDpiScaleViewports. **Neither of those flags are very useful in current code. They will be useful once we merge font changes.**
  - 2025/05/23 (1.92.0) - Fonts: changed ImFont::CalcWordWrapPositionA() to ImFont::CalcWordWrapPosition()
                             - old:  const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, ....);
                             - new:  const char* ImFont::CalcWordWrapPosition (float size,  const char* text, ....);
@@ -7718,7 +7720,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         WindowSelectViewport(window);
         SetCurrentViewport(window, window->Viewport);
-        window->FontDpiScale = (g.IO.ConfigFlags & ImGuiConfigFlags_DpiEnableScaleFonts) ? window->Viewport->DpiScale : 1.0f;
+        window->FontDpiScale = g.IO.ConfigDpiScaleFonts ? window->Viewport->DpiScale : 1.0f;
         SetCurrentWindow(window);
         flags = window->Flags;
 
@@ -7863,7 +7865,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 // FIXME-DPI
                 //IM_ASSERT(old_viewport->DpiScale == window->Viewport->DpiScale); // FIXME-DPI: Something went wrong
                 SetCurrentViewport(window, window->Viewport);
-                window->FontDpiScale = (g.IO.ConfigFlags & ImGuiConfigFlags_DpiEnableScaleFonts) ? window->Viewport->DpiScale : 1.0f;
+                window->FontDpiScale = g.IO.ConfigDpiScaleViewports ? window->Viewport->DpiScale : 1.0f;
                 SetCurrentWindow(window);
             }
 
@@ -10923,6 +10925,16 @@ static void ImGui::ErrorCheckNewFrameSanityChecks()
     {
         g.IO.ConfigNavCaptureKeyboard = false;
         g.IO.ConfigFlags &= ~ImGuiConfigFlags_NavNoCaptureKeyboard;
+    }
+    if (g.IO.ConfigFlags & ImGuiConfigFlags_DpiEnableScaleFonts)
+    {
+        g.IO.ConfigDpiScaleFonts = false;
+        g.IO.ConfigFlags &= ~ImGuiConfigFlags_DpiEnableScaleFonts;
+    }
+    if (g.IO.ConfigFlags & ImGuiConfigFlags_DpiEnableScaleViewports)
+    {
+        g.IO.ConfigDpiScaleViewports = false;
+        g.IO.ConfigFlags &= ~ImGuiConfigFlags_DpiEnableScaleViewports;
     }
 
     // Remap legacy clipboard handlers (OBSOLETED in 1.91.1, August 2024)
@@ -16091,7 +16103,7 @@ static void ImGui::UpdateViewportsNewFrame()
         if (viewport->DpiScale != 0.0f && new_dpi_scale != viewport->DpiScale)
         {
             float scale_factor = new_dpi_scale / viewport->DpiScale;
-            if (g.IO.ConfigFlags & ImGuiConfigFlags_DpiEnableScaleViewports)
+            if (g.IO.ConfigDpiScaleViewports)
                 ScaleWindowsInViewport(viewport, scale_factor);
             //if (viewport == GetMainViewport())
             //    g.PlatformInterface.SetWindowSize(viewport, viewport->Size * scale_factor);

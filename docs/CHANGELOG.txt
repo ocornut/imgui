@@ -60,6 +60,9 @@ Breaking changes:
    - Imgui_ImplSDLGPU3_PrepareDrawData() --> ImGui_ImplSDLGPU3_PrepareDrawData()
 - Internals: RenderTextEllipsis() function removed the 'float clip_max_x' parameter directly
   preceding 'float ellipsis_max_x'. Values were identical for a vast majority of users. (#8387)
+- [Docking] renamed/moved ImGuiConfigFlags_DpiEnableScaleFonts     -> bool io.ConfigDpiScaleFonts.
+- [Docking] renamed/moved ImGuiConfigFlags_DpiEnableScaleViewports -> bool io.ConfigDpiScaleViewports.
+  **Neither of those flags are very useful in current code. They will be useful once we merge font changes.**
 
 Other changes:
 
