@@ -1358,8 +1358,8 @@ static void*                GImAllocatorUserData = NULL;
 ImGuiStyle::ImGuiStyle()
 {
     FontSizeBase                = 0.0f;             // Will default to io.Fonts->Fonts[0] on first frame.
-    FontScaleMain               = 1.0f;             // Main global scale factor.
-    FontScaleDpi                = 1.0f;             // Scale factor from viewport/monitor. When io.ConfigDpiScaleFonts is enabled, this is automatically overwritten when changing monitor DPI.
+    FontScaleMain               = 1.0f;             // Main scale factor. May be set by application once, or exposed to end-user.
+    FontScaleDpi                = 1.0f;             // Additional scale factor from viewport/monitor contents scale. When io.ConfigDpiScaleFonts is enabled, this is automatically overwritten when changing monitor DPI.
 
     Alpha                       = 1.0f;             // Global alpha applies to everything in Dear ImGui.
     DisabledAlpha               = 0.60f;            // Additional alpha multiplier applied by BeginDisabled(). Multiply over current value of Alpha.
@@ -3979,7 +3979,7 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     Initialized = false;
     Font = NULL;
     FontBaked = NULL;
-    FontSize = FontSizeBeforeScaling = FontBakedScale = CurrentDpiScale = 0.0f;
+    FontSize = FontSizeBase = FontBakedScale = CurrentDpiScale = 0.0f;
     FontRasterizerDensity = 1.0f;
     IO.Fonts = shared_font_atlas ? shared_font_atlas : IM_NEW(ImFontAtlas)();
     if (shared_font_atlas == NULL)
@@ -8651,7 +8651,7 @@ void ImGui::UpdateFontsNewFrame()
 
     // Set initial font
     g.Font = font;
-    g.FontSizeBeforeScaling = g.Style.FontSizeBase;
+    g.FontSizeBase = g.Style.FontSizeBase;
     g.FontSize = 0.0f;
     ImFontStackData font_stack_data = { font, g.Style.FontSizeBase, g.Style.FontSizeBase };           // <--- Will restore FontSize
     SetCurrentFont(font_stack_data.Font, font_stack_data.FontSizeBeforeScaling, 0.0f); // <--- but use 0.0f to enable scale
@@ -8717,7 +8717,7 @@ void ImGui::SetCurrentFont(ImFont* font, float font_size_before_scaling, float f
 {
     ImGuiContext& g = *GImGui;
     g.Font = font;
-    g.FontSizeBeforeScaling = font_size_before_scaling;
+    g.FontSizeBase = font_size_before_scaling;
     UpdateCurrentFontSize(font_size_after_scaling);
 
     if (font != NULL)
@@ -8738,7 +8738,7 @@ void ImGui::UpdateCurrentFontSize(float restore_font_size_after_scaling)
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
 
-    g.Style.FontSizeBase = g.FontSizeBeforeScaling;
+    g.Style.FontSizeBase = g.FontSizeBase;
     if (window != NULL && window->SkipItems)
         return;
 
@@ -8746,7 +8746,7 @@ void ImGui::UpdateCurrentFontSize(float restore_font_size_after_scaling)
     float final_size = (restore_font_size_after_scaling > 0.0f) ? restore_font_size_after_scaling : 0.0f;
     if (final_size == 0.0f)
     {
-        final_size = g.FontSizeBeforeScaling;
+        final_size = g.FontSizeBase;
 
         // External scale factors
         final_size *= g.Style.FontScaleMain;    // Main global scale factor
@@ -8796,7 +8796,7 @@ void ImGui::SetFontRasterizerDensity(float rasterizer_density)
 void ImGui::PushFont(ImFont* font, float font_size_base)
 {
     ImGuiContext& g = *GImGui;
-    g.FontStack.push_back({ g.Font, g.FontSizeBeforeScaling, g.FontSize });
+    g.FontStack.push_back({ g.Font, g.FontSizeBase, g.FontSize });
     if (font == NULL)
         font = GetDefaultFont();
     if (font_size_base <= 0.0f)
@@ -8804,7 +8804,7 @@ void ImGui::PushFont(ImFont* font, float font_size_base)
         if (font->Flags & ImFontFlags_DefaultToLegacySize)
             font_size_base = font->LegacySize;       // Legacy: use AddFont() specified font size. Same as doing PushFont(font, font->LegacySize)
         else
-            font_size_base = g.FontSizeBeforeScaling; // Keep current font size
+            font_size_base = g.FontSizeBase; // Keep current font size
     }
     SetCurrentFont(font, font_size_base, 0.0f);
 }
