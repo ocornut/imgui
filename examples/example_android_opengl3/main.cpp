@@ -154,7 +154,6 @@ void Init(struct android_app* app)
     // Load Fonts
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
     // - If the file cannot be loaded, the function will return a nullptr. Please handle those errors in your application (e.g. use an assertion, or display an error and quit).
-    // - The fonts will be rasterized at a given size (w/ oversampling) and stored into a texture when calling ImFontAtlas::Build()/GetTexDataAsXXXX(), which ImGui_ImplXXXX_NewFrame below will call.
     // - Read 'docs/FONTS.md' for more instructions and details.
     // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
     // - Android: The TTF files have to be placed into the assets/ directory (android/app/src/main/assets), we use our GetAssetData() helper to retrieve them.
@@ -181,7 +180,7 @@ void Init(struct android_app* app)
     //font = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, 15.0f);
     //IM_ASSERT(font != nullptr);
     //font_data_size = GetAssetData("ArialUni.ttf", &font_data);
-    //font = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, 18.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
+    //font = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, 18.0f);
     //IM_ASSERT(font != nullptr);
 
     // Arbitrary scale-up
