@@ -500,12 +500,13 @@ namespace ImGui
     // - To use old behavior (single size font, size specified in AddFontXXX() call:
     //   - Use 'PushFont(font, font->LegacySize)' at call site
     //   - Or set 'ImFontConfig::Flags |= ImFontFlags_DefaultToLegacySize' before calling AddFont(), and then 'PushFont(font)' will use this size.
+    // - External scale factors are applied over the provided value.
     // *IMPORTANT* If you want to scale an existing font size:
     //   - OK: PushFontSize(style.FontSizeBase * factor) (= value before external scale factors applied).
     //   - KO: PushFontSize(GetFontSize() * factor)      (= value after external scale factors applied. external scale factors are style.FontScaleMain + per-viewport scales.).
-    IMGUI_API void          PushFont(ImFont* font, float font_size = -1);                   // use NULL as a shortcut to push default font. Use <0.0f to keep current font size.
+    IMGUI_API void          PushFont(ImFont* font, float font_size_base = -1);              // use NULL as a shortcut to push default font. Use <0.0f to keep current font size.
     IMGUI_API void          PopFont();
-    IMGUI_API void          PushFontSize(float font_size);
+    IMGUI_API void          PushFontSize(float font_size_base);
     IMGUI_API void          PopFontSize();
 
     // Parameters stacks (shared)
@@ -2226,9 +2227,9 @@ IM_MSVC_RUNTIME_CHECKS_RESTORE
 
 struct ImGuiStyle
 {
-    float       FontSizeBase;               // Current base font size (scaling applied). Use PushFont()/PushFontSize() to modify. Use ImGui::GetFontSize() to obtain scaled value.
-    float       FontScaleMain;              // Main global scale factor. Other scale factors may apply.
-    float       FontScaleDpi;               // Scale factor from viewport/monitor. When io.ConfigDpiScaleFonts is enabled, this is automatically overwritten when changing monitor.
+    float       FontSizeBase;               // Current base font size before external scaling factors are applied. Use PushFont()/PushFontSize() to modify. Use ImGui::GetFontSize() to obtain scaled value. Final FontSize = FontSizeBase * (FontScaleBase * FontScaleDpi * other_factors)
+    float       FontScaleMain;              // Main scale factor. May be set by application once, or exposed to end-user.
+    float       FontScaleDpi;               // Scale factor from viewport/monitor contents scale. When io.ConfigDpiScaleFonts is enabled, this is automatically overwritten when changing monitor.
 
     float       Alpha;                      // Global alpha applies to everything in Dear ImGui.
     float       DisabledAlpha;              // Additional alpha multiplier applied by BeginDisabled(). Multiply over current value of Alpha.

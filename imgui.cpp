@@ -3979,7 +3979,7 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     Initialized = false;
     Font = NULL;
     FontBaked = NULL;
-    FontSize = FontSizeBeforeScaling = FontScale = CurrentDpiScale = 0.0f;
+    FontSize = FontSizeBeforeScaling = FontBakedScale = CurrentDpiScale = 0.0f;
     FontRasterizerDensity = 1.0f;
     IO.Fonts = shared_font_atlas ? shared_font_atlas : IM_NEW(ImFontAtlas)();
     if (shared_font_atlas == NULL)
@@ -8773,9 +8773,9 @@ void ImGui::UpdateCurrentFontSize(float restore_font_size_after_scaling)
         g.Font->CurrentRasterizerDensity = g.FontRasterizerDensity;
     g.FontSize = final_size;
     g.FontBaked = (g.Font != NULL && window != NULL) ? g.Font->GetFontBaked(final_size) : NULL;
-    g.FontScale = (g.Font != NULL && window != NULL) ? (g.FontSize / g.FontBaked->Size) : 0.0f;
+    g.FontBakedScale = (g.Font != NULL && window != NULL) ? (g.FontSize / g.FontBaked->Size) : 0.0f;
     g.DrawListSharedData.FontSize = g.FontSize;
-    g.DrawListSharedData.FontScale = g.FontScale;
+    g.DrawListSharedData.FontScale = g.FontBakedScale;
 }
 
 // Exposed in case user may want to override setting density.
@@ -8793,20 +8793,20 @@ void ImGui::SetFontRasterizerDensity(float rasterizer_density)
 // If you want to scale an existing font size:
 // - Use e.g. PushFontSize(style.FontSizeBase * factor) (= value before external scale factors applied).
 // - Do NOT use PushFontSize(GetFontSize() * factor) (= value after external scale factors applied).
-void ImGui::PushFont(ImFont* font, float font_size)
+void ImGui::PushFont(ImFont* font, float font_size_base)
 {
     ImGuiContext& g = *GImGui;
     g.FontStack.push_back({ g.Font, g.FontSizeBeforeScaling, g.FontSize });
     if (font == NULL)
         font = GetDefaultFont();
-    if (font_size <= 0.0f)
+    if (font_size_base <= 0.0f)
     {
         if (font->Flags & ImFontFlags_DefaultToLegacySize)
-            font_size = font->LegacySize;       // Legacy: use AddFont() specified font size. Same as doing PushFont(font, font->LegacySize)
+            font_size_base = font->LegacySize;       // Legacy: use AddFont() specified font size. Same as doing PushFont(font, font->LegacySize)
         else
-            font_size = g.FontSizeBeforeScaling; // Keep current font size
+            font_size_base = g.FontSizeBeforeScaling; // Keep current font size
     }
-    SetCurrentFont(font, font_size, 0.0f);
+    SetCurrentFont(font, font_size_base, 0.0f);
 }
 
 void  ImGui::PopFont()
@@ -8822,10 +8822,10 @@ void  ImGui::PopFont()
     g.FontStack.pop_back();
 }
 
-void    ImGui::PushFontSize(float font_size)
+void    ImGui::PushFontSize(float font_size_base)
 {
     ImGuiContext& g = *GImGui;
-    PushFont(g.Font, font_size);
+    PushFont(g.Font, font_size_base);
 }
 
 void    ImGui::PopFontSize()

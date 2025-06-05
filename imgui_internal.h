@@ -871,8 +871,8 @@ struct ImDrawDataBuilder
 struct ImFontStackData
 {
     ImFont*     Font;
-    float       FontSizeBeforeScaling;
-    float       FontSizeAfterScaling;
+    float       FontSizeBeforeScaling;      // ~~ style.FontSizeBase
+    float       FontSizeAfterScaling;       // ~~ g.FontSize
 };
 
 //-----------------------------------------------------------------------------
@@ -2140,8 +2140,8 @@ struct ImGuiContext
     ImFont*                 Font;                               // Currently bound font. (== FontStack.back().Font)
     ImFontBaked*            FontBaked;                          // Currently bound font at currently bound size. (== Font->GetFontBaked(FontSize))
     float                   FontSize;                           // Currently bound font size == line height (== FontSizeBeforeScaling + externals scales applied in the UpdateCurrentFontSize() function).
-    float                   FontSizeBeforeScaling;              // == value passed to PushFont() / PushFontSize() when specified.
-    float                   FontScale;                          // == FontBaked->Size / Font->FontSize. Scale factor over baked size.
+    float                   FontSizeBeforeScaling;              // Font size before scaling == style.FontSizeBase == value passed to PushFont() / PushFontSize() when specified.
+    float                   FontBakedScale;                     // == FontBaked->Size / FontSize. Scale factor over baked size. Rarely used nowadays, very often == 1.0f.
     float                   FontRasterizerDensity;              // Current font density. Used by all calls to GetFontBaked().
     float                   CurrentDpiScale;                    // Current window/viewport DpiScale == CurrentViewport->DpiScale
     ImDrawListSharedData    DrawListSharedData;
