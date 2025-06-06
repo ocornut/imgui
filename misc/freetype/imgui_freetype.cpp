@@ -421,7 +421,9 @@ void ImGui_ImplFreeType_FontSrcDestroy(ImFontAtlas* atlas, ImFontConfig* src)
 bool ImGui_ImplFreeType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void* loader_data_for_baked_src)
 {
     IM_UNUSED(atlas);
-    const float size = baked->Size * (src->SizePixels / baked->ContainerFont->Sources[0]->SizePixels); // FIXME-NEWATLAS: Should tidy up that a bit
+    float size = baked->Size;
+    if (src->MergeMode && src->SizePixels != 0.0f)
+        size *= (src->SizePixels / baked->ContainerFont->Sources[0]->SizePixels);
 
     ImGui_ImplFreeType_FontSrcData* bd_font_data = (ImGui_ImplFreeType_FontSrcData*)src->FontLoaderData;
     bd_font_data->BakedLastActivated = baked;
@@ -637,7 +639,7 @@ static FT_Error ImGuiLunasvgPortRender(FT_GlyphSlot slot, FT_Pointer* _state)
 #else
     state->svg->setMatrix(state->svg->matrix().identity()); // Reset the svg matrix to the default value
     state->svg->render(bitmap, state->matrix);              // state->matrix is already scaled and translated
-#endif 
+#endif
     state->err = FT_Err_Ok;
     return state->err;
 }
