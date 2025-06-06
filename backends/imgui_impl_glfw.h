@@ -62,5 +62,8 @@ IMGUI_IMPL_API void     ImGui_ImplGlfw_MonitorCallback(GLFWmonitor* monitor, int
 
 // GLFW helpers
 IMGUI_IMPL_API void     ImGui_ImplGlfw_Sleep(int milliseconds);
+IMGUI_IMPL_API float    ImGui_ImplGlfw_GetContentScaleForWindow(GLFWwindow* window);
+IMGUI_IMPL_API float    ImGui_ImplGlfw_GetContentScaleForMonitor(GLFWmonitor* monitor);
+
 
 #endif // #ifndef IMGUI_DISABLE
