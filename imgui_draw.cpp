@@ -3368,7 +3368,7 @@ void ImFontAtlasBuildMain(ImFontAtlas* atlas)
     // [LEGACY] For backends not supporting RendererHasTextures: preload all glyphs
     ImFontAtlasBuildUpdateRendererHasTexturesFromContext(atlas);
     if (atlas->RendererHasTextures == false) // ~ImGuiBackendFlags_RendererHasTextures
-        ImFontAtlasBuildPreloadAllGlyphRanges(atlas);
+        ImFontAtlasBuildLegacyPreloadAllGlyphRanges(atlas);
     atlas->TexIsBuilt = true;
 }
 
@@ -3405,12 +3405,12 @@ void ImFontAtlasBuildSetupFontLoader(ImFontAtlas* atlas, const ImFontLoader* fon
 
 // Preload all glyph ranges for legacy backends.
 // This may lead to multiple texture creation which might be a little slower than before.
-void ImFontAtlasBuildPreloadAllGlyphRanges(ImFontAtlas* atlas)
+void ImFontAtlasBuildLegacyPreloadAllGlyphRanges(ImFontAtlas* atlas)
 {
     atlas->Builder->PreloadedAllGlyphsRanges = true;
     for (ImFont* font : atlas->Fonts)
     {
-        ImFontBaked* baked = font->GetFontBaked(font->Sources[0]->SizePixels);
+        ImFontBaked* baked = font->GetFontBaked(font->LegacySize);
         if (font->FallbackChar != 0)
             baked->FindGlyph(font->FallbackChar);
         if (font->EllipsisChar != 0)
