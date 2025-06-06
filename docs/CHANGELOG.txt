@@ -90,6 +90,8 @@ Other Changes:
   textures. (#8802) [@Daandelange]
 - Backends: Vulkan: Fixed texture update corruption introduced in 1.92.0,
   affecting some drivers/setups. (#8801, #8755, #8840) [@Retro52, @Miolith]
+- Backends: Vulkan: Avoid calling vkCmdBindDescriptorSets() when texture
+  has not changed. (#8666) [@micb25]
 
 
 -----------------------------------------------------------------------

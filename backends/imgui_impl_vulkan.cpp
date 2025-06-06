@@ -588,6 +588,7 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
 
     // Render command lists
     // (Because we merged all buffers into a single one, we maintain our own offset into them)
+    VkDescriptorSet last_desc_set = VK_NULL_HANDLE;
     int global_vtx_offset = 0;
     int global_idx_offset = 0;
     for (const ImDrawList* draw_list : draw_data->CmdLists)
@@ -603,6 +604,7 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
                     ImGui_ImplVulkan_SetupRenderState(draw_data, pipeline, command_buffer, rb, fb_width, fb_height);
                 else
                     pcmd->UserCallback(draw_list, pcmd);
+                last_desc_set = VK_NULL_HANDLE;
             }
             else
             {
@@ -628,7 +630,9 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
 
                 // Bind DescriptorSet with font or user texture
                 VkDescriptorSet desc_set = (VkDescriptorSet)pcmd->GetTexID();
-                vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 0, 1, &desc_set, 0, nullptr);
+                if (desc_set != last_desc_set)
+                    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 0, 1, &desc_set, 0, nullptr);
+                last_desc_set = desc_set;
 
                 // Draw
                 vkCmdDrawIndexed(command_buffer, pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0);
