@@ -119,13 +119,14 @@ int main(int, char**)
     // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
     // - Emscripten allows preloading a file or folder to be accessible at runtime. See Makefile for details.
     //io.Fonts->AddFontDefault();
+    //style.FontSizeBase = 20.0f;
 #ifndef IMGUI_DISABLE_FILE_FUNCTIONS
-    //io.Fonts->AddFontFromFileTTF("fonts/segoeui.ttf", 18.0f);
-    //io.Fonts->AddFontFromFileTTF("fonts/DroidSans.ttf", 16.0f);
-    //io.Fonts->AddFontFromFileTTF("fonts/Roboto-Medium.ttf", 16.0f);
-    //io.Fonts->AddFontFromFileTTF("fonts/Cousine-Regular.ttf", 15.0f);
-    //io.Fonts->AddFontFromFileTTF("fonts/ProggyTiny.ttf", 10.0f);
-    //ImFont* font = io.Fonts->AddFontFromFileTTF("fonts/ArialUni.ttf", 18.0f);
+    //io.Fonts->AddFontFromFileTTF("fonts/segoeui.ttf");
+    //io.Fonts->AddFontFromFileTTF("fonts/DroidSans.ttf");
+    //io.Fonts->AddFontFromFileTTF("fonts/Roboto-Medium.ttf");
+    //io.Fonts->AddFontFromFileTTF("fonts/Cousine-Regular.ttf");
+    //io.Fonts->AddFontFromFileTTF("fonts/ProggyTiny.ttf");
+    //ImFont* font = io.Fonts->AddFontFromFileTTF("fonts/ArialUni.ttf");
     //IM_ASSERT(font != nullptr);
 #endif
 
