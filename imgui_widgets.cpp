@@ -3780,7 +3780,7 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* p_data
             BeginDisabled();
         PushItemFlag(ImGuiItemFlags_ButtonRepeat, true);
         SameLine(0, style.ItemInnerSpacing.x);
-        if (ButtonEx("-", ImVec2(button_size, button_size)))
+        if (ButtonEx("−", ImVec2(button_size, button_size)))
         {
             DataTypeApplyOp(data_type, '-', p_data, p_data, g.IO.KeyCtrl && p_step_fast ? p_step_fast : p_step);
             value_changed = true;
