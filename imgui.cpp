@@ -8812,7 +8812,7 @@ void ImGui::PushFont(ImFont* font, float font_size_base)
 void  ImGui::PopFont()
 {
     ImGuiContext& g = *GImGui;
-    if (g.FontStack.Size <= 0 && g.WithinFrameScope)
+    if (g.FontStack.Size <= 0)
     {
         IM_ASSERT_USER_ERROR(0, "Calling PopFont() too many times!");
         return;
