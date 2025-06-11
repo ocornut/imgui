@@ -55,7 +55,7 @@ target_include_directories(example_glfw_wgpu PUBLIC
 
 if(EMSCRIPTEN)
   if (EMSCRIPTEN VERSION_GREATER_EQUAL "3.1.54")
-    message(FATAL_ERROR "Emscripten version must be greater than 3.1.53 (4.0.10 recommended for supporting emdawn)")
+    message(FATAL_ERROR "Emscripten version must be greater than 3.1.53 to support '--use-port' argument")
   endif()
   target_link_libraries(example_glfw_wgpu PRIVATE emdawnwebgpu_cpp)
   target_link_options(example_glfw_wgpu PRIVATE "-sASYNCIFY=1" "--use-port=contrib.glfw3") # if using emscripten 4.0.10 or above, you can use `--use-port=emdawnwebgpu`

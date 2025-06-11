@@ -29,13 +29,12 @@
 #endif
 
 // Global WebGPU required states
-static wgpu::Instance wgpu_instance;
-static wgpu::Device wgpu_device;
+static wgpu::Instance      wgpu_instance;
+static wgpu::Device        wgpu_device;
 static wgpu::TextureFormat wgpu_preferred_fmt = wgpu::TextureFormat::Undefined;
-static wgpu::Surface wgpu_surface;
-
-static uint32_t wgpu_surface_width = 1280;
-static uint32_t wgpu_surface_height = 720;
+static wgpu::Surface       wgpu_surface;
+static uint32_t            wgpu_surface_width = 1280;
+static uint32_t            wgpu_surface_height = 720;
 
 // Forward declarations
 static bool InitWGPU(GLFWwindow *window);
@@ -151,10 +150,10 @@ int main(int, char **)
             wgpu_surface_width = width;
             wgpu_surface_height = height;
             wgpu::SurfaceConfiguration config{
-                .device = wgpu_device,
-                .format = wgpu_preferred_fmt,
-                .width = wgpu_surface_width,
-                .height = wgpu_surface_height,
+                .device      = wgpu_device,
+                .format      = wgpu_preferred_fmt,
+                .width       = wgpu_surface_width,
+                .height      = wgpu_surface_height,
                 .presentMode = wgpu::PresentMode::Fifo};
             wgpu_surface.Configure(&config);
 
@@ -212,10 +211,10 @@ int main(int, char **)
             .loadOp = wgpu::LoadOp::Clear,
             .storeOp = wgpu::StoreOp::Store,
             .clearValue = wgpu::Color{
-                clear_color.x * clear_color.w,
-                clear_color.y * clear_color.w,
-                clear_color.z * clear_color.w,
-                clear_color.w}};
+                .r = clear_color.x * clear_color.w,
+                .g = clear_color.y * clear_color.w,
+                .b = clear_color.z * clear_color.w,
+                .a = clear_color.w}};
 
         wgpu::RenderPassDescriptor render_pass{
             .colorAttachmentCount = 1,
@@ -272,7 +271,7 @@ static bool InitWGPU(GLFWwindow *window)
     device_desc.SetDeviceLostCallback(wgpu::CallbackMode::WaitAnyOnly,
         [](const wgpu::Device &, wgpu::DeviceLostReason reason, wgpu::StringView message)
         {
-        fprintf(stderr, "Lost device (%d) %s\n", reason, message.data);
+            fprintf(stderr, "Lost device (%d) %s\n", reason, message.data);
         });
     device_desc.SetUncapturedErrorCallback(
         [](const wgpu::Device &, wgpu::ErrorType errorType, wgpu::StringView message)
@@ -307,10 +306,10 @@ static bool InitWGPU(GLFWwindow *window)
     wgpu_preferred_fmt = capabilities.formats[0];
 
     wgpu::SurfaceConfiguration config{
-        .device = wgpu_device,
-        .format = wgpu_preferred_fmt,
-        .width = wgpu_surface_width,
-        .height = wgpu_surface_height,
+        .device      = wgpu_device,
+        .format      = wgpu_preferred_fmt,
+        .width       = wgpu_surface_width,
+        .height      = wgpu_surface_height,
         .presentMode = wgpu::PresentMode::Fifo};
     wgpu_surface.Configure(&config);
 
