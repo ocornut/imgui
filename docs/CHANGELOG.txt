@@ -107,6 +107,8 @@ Other Changes:
     - hidden scrollbar in Firefox.
   - Vulkan: added ImGui_ImplVulkan_PipelineInfo::ExtraDynamicStates[] to allow specifying
     extra dynamic states to add when creating the VkPipeline. (#9211) [@DziubanMaciej]
+  - Vulkan: ImGui_ImplVulkan_AddTexture() skips updating descriptor_set if failing
+    to allocate one. (#8677) [@micb25]
   - WebGPU: fixed undefined behaviors in example code for requesting adapter
     and device. (#9246, #9256) [@r-lyeh]
   - GLFW/SDL2/SDL3+WebGPU: removed suport for Emscripten <4.0.10. (#9281) [@ypujante]
