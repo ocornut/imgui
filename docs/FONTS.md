@@ -12,7 +12,7 @@ In the [misc/fonts/](https://github.com/ocornut/imgui/tree/master/misc/fonts) fo
 
 ## Index
 - [Troubleshooting](#troubleshooting)
-- [New! Dynamic Fonts system in 1.92 (March 2025)](#new-dynamic-fonts-system-in-192-march-2025)
+- [New! Dynamic Fonts system in 1.92 (June 2025)](#new-dynamic-fonts-system-in-192-june-2025)
 - [How should I handle DPI in my application?](#how-should-i-handle-dpi-in-my-application)
 - [Fonts Loading Instructions](#fonts-loading-instructions)
 - [Loading Font Data from Memory](#loading-font-data-from-memory)
@@ -72,11 +72,11 @@ Future versions of Dear ImGui should solve this problem.
 
 ---------------------------------------
 
-## New! Dynamic Fonts system in 1.92 (March 2025+)
+## New! Dynamic Fonts system in 1.92 (June 2025)
 
-v1.92 will introduce a newer, dynamic font system. It requires backend to support the `ImGuiBackendFlags_HasTextures` feature:
+v1.92 introduces a newer, dynamic font system. It requires backend to support the `ImGuiBackendFlags_HasTextures` feature:
 - Users of icons, Asian and non-English languages do not need to pre-build all glyphs ahead of time. Saving on loading time, memory, and also reducing issues with missing glyphs. Specifying glyph ranges is not needed anymore.
-- PushFontSize() may be used anytime to change font size.
+- `PushFontSize()` may be used anytime to change font size.
 - Packing custom rectangles is more convenient as pixels may be written to immediately.
 - Any update to fonts previously required backend specific calls to re-upload the texture, and said calls were not portable across backends. It is now possible to scale fonts etc. in a way that doesn't require you to make backend-specific calls.
 - It is possible to plug a custom loader/backend to any font source.
@@ -105,6 +105,12 @@ io.Fonts->AddFontDefault();
 ```
 
 **Load .TTF/.OTF file with:**
+🆕 **Since 1.92, with an up to date backend: passing a size is not necessary**
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+io.Fonts->AddFontFromFileTTF("font.ttf");
+```
+**Before 1.92, or without an up to date backend:**
 ```cpp
 ImGuiIO& io = ImGui::GetIO();
 io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels);
@@ -115,8 +121,8 @@ If you get an assert stating "Could not load font file!", your font filename is 
 ```cpp
 // Init
 ImGuiIO& io = ImGui::GetIO();
-ImFont* font1 = io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels);
-ImFont* font2 = io.Fonts->AddFontFromFileTTF("anotherfont.otf", size_pixels);
+ImFont* font1 = io.Fonts->AddFontFromFileTTF("font.ttf",);
+ImFont* font2 = io.Fonts->AddFontFromFileTTF("anotherfont.otf");
 ```
 
 In your application loop, select which font to use:
@@ -135,6 +141,18 @@ ImFont* font = io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, &config);
 ```
 
 **Combine multiple fonts into one:**
+
+🆕 **Since 1.92, with an up to date backend: specifying glyph ranges is unnecessary.**
+```cpp
+// Load a first font
+ImFont* font = io.Fonts->AddFontDefault();
+ImFontConfig config;
+config.MergeMode = true;
+io.Fonts->AddFontFromFileTTF("DroidSans.ttf", 0.0f, &config);           // Merge into first font to add e.g. Asian characters
+io.Fonts->AddFontFromFileTTF("fontawesome-webfont.ttf", 0.0f, &config); // Merge into first font to add Icons
+io.Fonts->Build();
+```
+**Before 1.92, or without an up to date backend:**
 ```cpp
 // Load a first font
 ImFont* font = io.Fonts->AddFontDefault();
@@ -152,8 +170,7 @@ io.Fonts->Build();
 
 **Add a fourth parameter to bake specific font ranges only:**
 
-🆕 **Since 1.92, with an up to date backend: specifying glyph ranges is necessary. All the GetGlyphRangesXXX() functions are marked obsolete.**
-
+🆕 **Since 1.92, with an up to date backend: specifying glyph ranges is unnecessary. All the GetGlyphRangesXXX() functions are marked obsolete.**
 ```cpp
 // Basic Latin, Extended Latin
 io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, nullptr, io.Fonts->GetGlyphRangesDefault());
@@ -169,14 +186,12 @@ See [Using Custom Glyph Ranges](#using-custom-glyph-ranges) section to create yo
 **Example loading and using a Japanese font:**
 
 🆕 **Since 1.92, with an up to date backend:**
-
 ```cpp
 ImGuiIO& io = ImGui::GetIO();
-io.Fonts->AddFontFromFileTTF("NotoSansCJKjp-Medium.otf", 20.0f);
+io.Fonts->AddFontFromFileTTF("NotoSansCJKjp-Medium.otf");
 ```
 
 **Before 1.92, or without an up to date backend:**
-
 ```cpp
 ImGuiIO& io = ImGui::GetIO();
 io.Fonts->AddFontFromFileTTF("NotoSansCJKjp-Medium.otf", 20.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
@@ -248,9 +263,19 @@ To refer to the icon UTF-8 codepoints from your C++ code, you may use those head
 
 So you can use `ICON_FA_SEARCH` as a string that will render as a "Search" icon.
 
-🆕 **Since 1.92, with an up to date backend: specifying glyph ranges is necessary. You can omit this parameter.**
-
+🆕 **Since 1.92, with an up to date backend: specifying glyph ranges is unnecessary. You can omit this parameter.**
 Example Setup:
+```cpp
+// Merge icons into default tool font
+#include "IconsFontAwesome.h"
+ImGuiIO& io = ImGui::GetIO();
+io.Fonts->AddFontDefault();
+ImFontConfig config;
+config.MergeMode = true;
+config.GlyphMinAdvanceX = 13.0f; // Use if you want to make the icon monospaced
+io.Fonts->AddFontFromFileTTF("fonts/fontawesome-webfont.ttf", 13.0f, &config);
+```
+**Before 1.92:**
 ```cpp
 // Merge icons into default tool font
 #include "IconsFontAwesome.h"
@@ -275,7 +300,8 @@ See Links below for other icons fonts and related tools.
 
 **Monospace Icons?**
 
-To make your icon look more monospace and facilitate alignment, you may want to set the ImFontConfig::GlyphMinAdvanceX value when loading an icon font.
+To make your icon look more monospace and facilitate alignment, you may want to set the `ImFontConfig::GlyphMinAdvanceX` value when loading an icon font.
+If you `GlyphMinAdvanceX` you need to pass a `font_size` to `AddFontXXX()` calls, as the MinAdvanceX value will be specified for the given size and scaled otherwise.
 
 **Screenshot**
 
@@ -288,8 +314,8 @@ Here's an application using icons ("Avoyd", https://www.avoyd.com):
 
 ## Using FreeType Rasterizer (imgui_freetype)
 
-- Dear ImGui uses imstb\_truetype.h to rasterize fonts (with optional oversampling). This technique and its implementation are not ideal for fonts rendered at small sizes, which may appear a little blurry or hard to read.
-- There is an implementation of the ImFontAtlas builder using FreeType that you can use in the [misc/freetype/](https://github.com/ocornut/imgui/tree/master/misc/freetype) folder.
+- Dear ImGui uses [stb_truetype.h](https://github.com/nothings/stb/) to rasterize fonts (with optional oversampling). This technique and its implementation are not ideal for fonts rendered at small sizes, which may appear a little blurry or hard to read.
+- You can however use `imgui_freetype.cpp` from the [misc/freetype/](https://github.com/ocornut/imgui/tree/master/misc/freetype) folder.
 - FreeType supports auto-hinting which tends to improve the readability of small fonts.
 - Read documentation in the [misc/freetype/](https://github.com/ocornut/imgui/tree/master/misc/freetype) folder.
 - Correct sRGB space blending will have an important effect on your font rendering quality.
@@ -312,10 +338,9 @@ Here's an application using icons ("Avoyd", https://www.avoyd.com):
 io.Fonts->AddFontFromFileTTF("../../../imgui_dev/data/fonts/NotoSans-Regular.ttf", 16.0f);
 static ImWchar ranges[] = { 0x1, 0x1FFFF, 0 };
 static ImFontConfig cfg;
-cfg.OversampleH = cfg.OversampleV = 1;
 cfg.MergeMode = true;
-cfg.FontBuilderFlags |= ImGuiFreeTypeBuilderFlags_LoadColor;
-io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\seguiemj.ttf", 16.0f, &cfg, ranges);
+cfg.FontLoaderFlags |= ImGuiFreeTypeLoaderFlags_LoadColor;
+io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\seguiemj.ttf", 16.0f, &cfg);
 ```
 
 ##### [Return to Index](#index)
@@ -348,7 +373,7 @@ io.Fonts->Build();                                     // Build the atlas while 
 🆕 **Since 1.92, with an up to date backend: this system has been revamped.**
 
 TL;DR; With the new system, it is recommended that you create a custom `ImFontLoader` and register your fonts with it.
-`AddCustomRectFontGlyph()` has been obsolete because its API does not make much sense with resizable fonts.
+`AddCustomRectFontGlyph()` has been obsoleted because its API does not make much sense with resizable fonts.
 
 You can ask questions in [#8466](https://github.com/ocornut/imgui/issues/8466).
 

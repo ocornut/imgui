@@ -39,16 +39,161 @@ HOW TO UPDATE?
  VERSION 1.92.0 WIP (In Progress)
 -----------------------------------------------------------------------
 
+THIS VERSION CONTAINS THE LARGEST AMOUNT OF BREAKING CHANGES SINCE 2015!
+I TRIED REALLY HARD TO KEEP THEM TO A MINIMUM, REDUCE THE AMOUNT OF INTERFERENCES,
+BUT INEVITABLY SOME USERS WILL BE AFFECTED.
+
+IN ORDER TO HELP US IMPROVE THE TRANSITION PROCESS, INCL. DOCUMENTATION AND COMMENTS,
+PLEASE REPORT **ANY** DOUBT, CONFUSION, QUESTIONS, FEEDBACK TO:
+    https://github.com/ocornut/imgui/issues/
+
+As part of the plan to reduce impact of API breaking changes, several unfinished
+changes/features/refactors related to font and text systems and scaling will be
+part of subsequent releases (1.92.1+).
+
+If you are updating from an old version, and expecting a massive or difficult update,
+consider first updating to 1.91.9 to reduce the amount of changes.
+
 Breaking changes:
 
+- Fonts: **IMPORTANT**: if your app was solving the OSX/iOS Retina screen specific
+  logical vs display scale problem by setting io.DisplayFramebufferScale (e.g. to 2.0f)
+  + setting io.FontGlobalScale (e.g. to 1.0f/2.0f) + loading fonts at scaled sizes (e.g. size X * 2.0f):
+  This WILL NOT map correctly to the new system! Because font will rasterize as requested size.
+    - With a legacy backend (< 1.92):
+      - Instead of setting io.FontGlobalScale = 1.0f/N -> set ImFontCfg::RasterizerDensity = N.
+      - This already worked before, but is now pretty much required.
+    - With a new backend (1.92+)
+      - FramebufferScale is automatically used to set current font RasterizerDensity.
+      - FramebufferScale is a per-viewport property provided by backend through the
+        Platform_GetWindowFramebufferScale() handler in 'docking' branch.
+      - So this should be all automatic.
+- Fonts: **IMPORTANT** on Font Sizing:
+   - Before 1.92, fonts were of a single size. They can now be dynamically sized.
+   - PushFont() API now has an optional size parameter. PushFontSize() was also added.
+       void PushFont(ImFont* font) --> void PushFont(ImFont* font, float size = 0.0f);
+   - Before 1.92: ImGui::PushFont() always used font "default" size specified in AddFont() call.
+   - Since  1.92: ImGui::PushFont() preserve the current font size which is a shared value.
+   - To use old behavior:
+     - use 'ImGui::PushFont(font, font->LegacySize)' at call site.
+     - or set 'ImFontConfig::Flags |= ImFontFlags_DefaultToLegacySize' in AddFont() call
+       (not desirable as it requires e.g. third-party code to be aware of it).
+   - ImFont::FontSize was removed and does not make sense anymore.
+     ImFont::LegacySize is the size passed to AddFont().
+   - Renamed/moved 'io.FontGlobalScale' to 'style.FontScaleMain'.
+
+- Textures:
+  - All API functions taking a 'ImTextureID' parameter are now taking a 'ImTextureRef':
+    - ImTextureRef a small composite structure which may be constructed from a ImTextureID.
+      (or constructed from a ImTextureData* which represent a texture which will generally
+      be ready by the time of rendering).
+    - Affected functions are:
+      - ImGui::Image(), ImGui::ImageWithBg(), ImGui::ImageButton(),
+      - ImDrawList::AddImage(), ImDrawList::AddImageQuad(), ImDrawList::AddImageRounded().
+    - We suggest that C users and any higher-level language bindings generators may
+      facilitate converting this in some way, aka emulating the trivial C++ constructor.
+- Fonts: obsoleted ImFontAtlas::GetTexDataAsRGBA32(), GetTexDataAsAlpha8(), Build(), SetTexID()
+  and IsBuilt() functions. The new protocol for backends to handle textures doesn't need them.
+  Kept redirection functions (will obsolete).
+   - A majority of old backends should still work with new code (behaving like they did before).
+   - Calling ImFontAtlas::Build() before initializing new backends will erroneously trigger
+     preloading all glyphs. Will be detected with an assertion after the backend is initialized.
+- Fonts: ImFontConfig::OversampleH/OversampleV default to automatic (== 0)
+  since v1.91.8. It is quite important you keep it automatic until we decide if we want
+  to provide a way to express finer policy, otherwise you will likely waste texture space
+  when using large glyphs. Note that the imgui_freetype backend doesn't use and does not
+  need oversampling.
+- Fonts: specifying glyph ranges is now unnecessary.
+  - The value of ImFontConfig::GlyphRanges[] is only useful for legacy backends.
+  - All GetGlyphRangesXXXX() functions are now marked obsolete:
+    - GetGlyphRangesDefault(), GetGlyphRangesGreek(), GetGlyphRangesKorean(),
+      GetGlyphRangesJapanese(), GetGlyphRangesChineseSimplifiedCommon(),
+      GetGlyphRangesChineseFull(), GetGlyphRangesCyrillic(),
+      GetGlyphRangesThai(), GetGlyphRangesVietnamese().
+- Fonts: removed ImFontAtlas::TexDesiredWidth to enforce a texture width. (#327)
+  (it vaguely made sense with the old system as if unspecified textures width maxed up
+  to 4096 but that limit isn't necessary anymore, and Renderer_TextureMaxWidth covers this)
+  However you may set TexMinWidth = TexMaxWidth for the same effect.
+- Fonts: if you create and manage ImFontAtlas instances yourself (instead of relying on
+  ImGuiContext to create one, you'll need to set the atlas->RendererHasTextures field
+  and call ImFontAtlasUpdateNewFrame() yourself. An assert will trigger if you don't.
+- Fonts: obsolete ImGui::SetWindowFontScale() which is not useful anymore. Prefer using
+  PushFontSize(style.FontSizeBase * factor) or to manipulate other scaling factors.
+- Fonts: obsoleted ImFont::Scale which is not useful anymore.
+- Fonts: changed ImFont::CalcWordWrapPositionA() to ImFont::CalcWordWrapPosition():
+   - old: const char* CalcWordWrapPositionA(float scale, const char* text, ....);
+   - new: const char* CalcWordWrapPosition (float size,  const char* text, ....);
+  The leading 'float scale' parameters was changed to 'float size'.
+  This was necessary as 'scale' is assuming a unique font size.
+  Kept inline redirection function assuming using font->LegacySize.
+- Fonts: generally reworked Internals of ImFontAtlas and ImFont.
+  While in theory a vast majority of users shouldn't be affected, some use cases or
+  extensions might be. Among other things:
+    - ImDrawCmd::TextureId has been changed to ImDrawCmd::TexRef.
+    - ImFontAtlas::ConfigData[] has been renamed to ImFontAtlas::Sources[]
+    - ImFont::ConfigData[], ConfigDataCount has been renamed to Sources[], SourceCount.
+    - Each ImFont has a number of ImFontBaked instances corresponding to actively used
+      sizes. ImFont::GetFontBaked(size) retrieves the one for a given size.
+    - Things moved from ImFont to ImFontBaked:
+      - ImFont::IndexAdvanceX[]       -> ImFontBaked::IndexAdvanceX[]
+      - ImFont::Glyphs[]              -> ImFontBaked::Glyphs[]
+      - ImFont::Ascent, Descent       -> ImFontBaked::Ascent, Descent
+      - ImFont::FindGlyph()           -> ImFontBaked::FindGlyph()
+      - ImFont::FindGlyphNoFallback() -> ImFontBaked::FindGlyphNoFallback()
+      - ImFont::GetCharAdvance()      -> ImFontBaked::GetCharAdvance()
+      - Widget code may use ImGui::GetFontBaked() instead of ImGui::GetFont() to
+        access font data for current font at current font size.
+        (and you may use font->GetFontBaked(size) to access it for any other size.)
+            g.Font      == ImGui::GetFont()
+            g.FontSize  == ImGui::GetFontSize()
+            g.FontBaked == ImGui::GetFontBaked() == ImGui::GetFont()->GetFontBaked(ImGui::GetFontSize())
+  Please report if you are affected!
+- Fonts: (users of imgui_freetype)
+  - renamed ImFontAtlas::FontBuilderFlags to ImFontAtlas::FontLoaderFlags.
+  - renamed ImFontConfig::FontBuilderFlags to ImFontConfig::FontLoaderFlags.
+  - renamed ImGuiFreeTypeBuilderFlags to ImGuiFreeTypeLoaderFlags.
+  - if you used runtime imgui_freetype selection rather than the default compile-time
+    option provided by IMGUI_ENABLE_FREETYPE:
+     - renamed/reworked ImFontBuilderIO into ImFontLoader,
+     - renamed ImGuiFreeType::GetBuilderForFreeType() to ImGuiFreeType::GetFontLoader().
+       - old:  io.Fonts->FontBuilderIO = ImGuiFreeType::GetBuilderForFreeType()
+       - new:  io.Fonts.FontLoader = ImGuiFreeType::GetFontLoader()
+- DrawList: Renamed ImDrawList::PushTextureID()/PopTextureID() to PushTexture()/PopTexture().
+- Fonts: (users of custom rectangles)
+  - Renamed AddCustomRectRegular() to AddCustomRect(). (#8466)
+  - Added GetCustomRect() as a replacement for GetCustomRectByIndex() + CalcCustomRectUV(). (#8466)
+  - The output type of GetCustomRect() is now ImFontAtlasRect, which include UV coordinates.
+      - ImFontAtlasCustomRect::X      --> ImFontAtlasRect::x
+      - ImFontAtlasCustomRect::Y      --> ImFontAtlasRect::y
+      - ImFontAtlasCustomRect::Width  --> ImFontAtlasRect::w
+      - ImFontAtlasCustomRect::Height --> ImFontAtlasRect::h
+    Before:
+        const ImFontAtlasCustomRect* r = atlas->GetCustomRectByIndex(custom_rect_id);
+        ImVec2 uv0, uv1;
+        atlas->GetCustomRectUV(r, &uv0, &uv1);
+        ImGui::Image(atlas->TexRef, ImVec2(r->w, r->h), uv0, uv1);
+    After:
+        ImFontAtlasRect r;
+        atlas->GetCustomRect(custom_rect_id, &r);
+        ImGui::Image(atlas->TexRef, ImVec2(r.w, r.h), r.uv0, r.uv1);
+    We added a redirecting typedef but haven't attempted to magically redirect
+    the field names, as this API is rarely used and the fix is simple.
+  - Obsoleted AddCustomRectFontGlyph() as the API does not make sense for scalable fonts:
+    - Kept existing function which uses the font "default size" (Sources[0]->LegacySize).
+    - Added a helper AddCustomRectFontGlyphForSize() which is immediately marked obsolete,
+      but can facilitate transitioning old code.
+    - Prefer adding a font source (ImFontConfig) using a custom/procedural loader.
+- Backends: removed ImGui_ImplXXXX_CreateFontsTexture()/ImGui_ImplXXXX_DestroyFontsTexture()
+  for all backends that had them. They should not be necessary any more.
+   - removed ImGui_ImplMetal_CreateFontsTexture(), ImGui_ImplMetal_DestroyFontsTexture().
+   - removed ImGui_ImplOpenGL2_CreateFontsTexture(), ImGui_ImplOpenGL2_DestroyFontsTexture().
+   - removed ImGui_ImplOpenGL3_CreateFontsTexture(), ImGui_ImplOpenGL3_DestroyFontsTexture().
+   - removed ImGui_ImplSDLGPU3_CreateFontsTexture(), ImGui_ImplSDLGPU3_DestroyFontsTexture().
+   - removed ImGui_ImplSDLRenderer2_CreateFontsTexture(), ImGui_ImplSDLRenderer2_DestroyFontsTexture().
+   - removed ImGui_ImplSDLRenderer3_CreateFontsTexture(), ImGui_ImplSDLRenderer3_DestroyFontsTexture().
+   - removed ImGui_ImplVulkan_CreateFontsTexture(), ImGui_ImplVulkan_DestroyFontsTexture().
 - TreeNode: renamed ImGuiTreeNodeFlags_NavLeftJumpsBackHere to ImGuiTreeNodeFlags_NavLeftJumpsToParent
   for clarity. Kept inline redirection enum (will obsolete). (#1079, #8639)
-- Fonts: changed ImFont::CalcWordWrapPositionA() to ImFont::CalcWordWrapPosition():
-    - old: const char* CalcWordWrapPositionA(float scale, const char* text, ....);
-    - new: const char* CalcWordWrapPosition (float size,  const char* text, ....);
-  The leading 'float scale' parameters was changed to 'float size'.
-  This was necessary as 'scale' is assuming standard font size which is a concept we aim to
-  eliminate in an upcoming update. Kept inline redirection function.
 - Commented out PushAllowKeyboardFocus()/PopAllowKeyboardFocus() which was obsoleted
   in 1.89.4 (March 2023). (#3092)
    - PushAllowKeyboardFocus(bool tab_stop) --> PushItemFlag(ImGuiItemFlags_NoTabStop, !tab_stop);
@@ -62,6 +207,89 @@ Breaking changes:
   preceding 'float ellipsis_max_x'. Values were identical for a vast majority of users. (#8387)
 
 Other changes:
+
+- Textures: added partial texture update protocol. (#8465, #3761)
+  - The Renderer Backend needs to set io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures
+    and handle texture updates requests.
+  - New structs: ImTextureData, ImTextureRect.
+  - New enums: ImTextureStatus, ImTextureFormat.
+  - During its ImGui_ImplXXXX_RenderDrawData() call, the backend can now access a texture list
+    in ImDrawData::Textures[]. Textures may have four distinct states:
+    - ImTextureStatus_WantCreate: requesting backend to create a texture.
+    - ImTextureStatus_WantUpdates: requesting backend to copy given blocks from the CPU side
+       copy of the texture to your graphics pipeline.
+       A 'tex->Updates[]' list of update is provided as well as a single 'tex->UpdatesRect' bounding box.
+    - ImTextureStatus_WantDestroy: requesting backend to destroy the texture.
+       - A 'int UnusedFrames' value is provided to conveniently defer destroying.
+       - Backend is generally free to destroy textures whenever they like.
+    - ImTextureStatus_OK: nothing to do.
+  - Almost all standard backends have been updated to support this.
+  - Backends have allowed to destroy textures at any time if they desire so.
+    A list is available in platform_io.Textures[] for this purpose and for backend shutdown.
+  - Both stb_truetype and FreeType backends have been updated to work with the new
+    system, and they now share more code than before.
+  - Added '#define IMGUI_HAS_TEXTURES' to facilitate compile-time checks for third-party
+    extensions until this is merged with a definitive version number to check.
+- Fonts: font backend/loader may easily be changed dynamically, allowing users to compare
+  rasterizers outputs and features. imgui_freetype is generally beneficial.
+- Fonts: ImFontAtlas::AddFontXXX() functions may be called at any time during the frame.
+- Fonts: ImFontAtlas::AddFontXXX() can fail more gracefully if error handling is configured
+  to not assert (this will be better exposed via future font flags).
+- Fonts: added ImGui::PushFontSize()/PopFontSize() functions.
+- Fonts: added style.FontScaleBase scaling factor (previously called io.FontGlobalScale).
+- Fonts: added style.FontScaleDpi scaling factor. This is designed to be be changed on
+  per-monitor/per-viewport basis, which `io.ConfigDpiScaleFonts` does automatically.
+  (which is why it is separate from FontScaleBase).
+- Fonts: added optional font_size parameter to ImGui::PushFont() function.
+- Fonts: added ImFontAtlas::RemoveFont() function.
+- Fonts: added ImFontAtlas::CompactCache() function.
+- Fonts: added ImFontAtlas::TexDesiredFormat field (default to ImTextureFormat_RGBA32,
+  can be changed to ImTextureFormat_Alpha8).
+- Fonts: added ImFontAtlas::TexMinWidth, TexMinHeight, TexMaxWidth, TexMaxHeight fields.
+- Fonts: added ImFontConfig::PixelSnapV to align scaled GlyphOffset.y to pixel boundaries.
+- Fonts: added ImFontConfig::GlyphExcludeRanges[], which behave similarly to
+  ImFontConfig::GlyphRanges[], but has the opposite meaning. It is tailored to situations
+  where merged fonts have overlapping characters.
+- Fonts: added "Input Glyphs Overlap Detection Tool" which dumps a list of glyphs
+  provided by merged sources, which may help setting up a GlyphExcludeRanges[] filter.
+- Fonts: added ImFontAtlas::FontBackendName (which is surfaced in the "About Dear ImGui"
+  window and other locations).
+- Fonts: added ImFontFlags (currently needs to be passed through ImFontConfig until
+  we revamp font loading API):
+   - ImFontFlags_DefaultToLegacySize: for legacy compatibility: make PushFont() calls
+     without explicit size use font->LegacySize instead of current font size.
+   - ImFontFlags_NoLoadError: disable erroring/assert when calling AddFontXXX()
+     with missing file/data. Calling code is expected to check AddFontXXX() return value.
+   - ImFontFlags_NoLoadGlyphs: disable loading new glyphs.
+   - ImFontFlags_LockBakedSizes: disable loading new baked sizes, disable garbage
+     collecting current ones. e.g. if you want to lock a font to a single size.
+- Fonts: the general design has changed toward meaning that a ImFont doesn't have
+  have a specific size: it may be bound and drawn with any size.
+   - We store ImFontBaked structures internally, which are a cache of information
+     for a given size being drawn. You should not need to deal with ImFontBaked directly.
+   - ImFontBaked structures may be cleaned up between frames when unused, pointers
+     to them are only valid for the current frame.
+   - Added ImFontBaked::IsGlyphLoaded() function.
+- Fonts: custom rect packing has generally been reworked. (#8107, #7962, #1282)
+  - ImFontAtlas::AddCustomRect() (previously AddCustomRectRegular()/AddCustomRectFontGlyph())
+    functions will immediately return a packed rectangle identifier, and you can write your
+    pixels immediately - previously had to wait for Build() to be called.
+    This is also the case when using a legacy backend.
+  - Custom packed rectangles may be moved during a texture change, aka practically anytime.
+    Always refer to latest uvs/position returned by GetCustomRect().
+  - AddCustomRect() returns ImFontAtlasRectId_Invalid on failure.
+  - Added ImFontAtlas::RemoveCustomRect() function.
+  - GetCustomRect() can safely return false and not crash when passed an invalid or removed id.
+- Fonts: texture is now stored in a single format CPU side (save ~25% when using RGBA).
+- Fonts: changing current font to one from a different atlas is supported. (#8080)
+- Fonts: automatic baking of an "..." ellipsis works better with monospace fonts.
+- Fonts: each ImFontConfig font source may provide a custom backend/loader.
+- Fonts: added platform_io.Renderer_TextureMaxWidth/Renderer_TextureMaxHeight fields
+  for Renderer Backend to specify if there is a maximum accepted texture size (not yet used).
+- Fonts: added compile-time overridable '#define ImTextureID_Invalid 0' if you need 0
+  to be a valid low-level texture identifier.
+- Debug Tools: Fonts section: add font preview, add "Remove" button, add "Load all glyphs"
+  button, add selection to change font backend when both are compiled in.
 
 - IO: variations in analog-only components of gamepad events do not interfere
   with trickling of mouse position events (#4921, #8508)
@@ -132,39 +360,62 @@ Other changes:
   requires providing a window to the backend. (#8584, #6341)
 - Misc: added extra operators to ImVec4 in IMGUI_DEFINE_MATH_OPERATORS block. (#8510) [@gan74]
 - Demo: changed default framed item width to use Min(GetFontSize() * 12, GetContentRegionAvail().x * 0.40f).
-- Backends: Win32: Fixed an issue where externally losing mouse capture (due to e.g. focus loss)
-  would fail to claim it again the next subsequent click. (#8594)
-- Backends: SDL2, SDL3, OSX: Fill gamepad inputs and set ImGuiBackendFlags_HasGamepad
-  regardless of ImGuiConfigFlags_NavEnableGamepad being set. (#8508)
-- Backends: SDL2, SDL3: don't attempt to call SDL_CaptureMouse() on drivers where we don't
-  call SDL_GetGlobalMouseState(). This is specifically for Wayland but we currently use
-  the same white-list as SDL_GetGlobalMouseState(). (#8561) [@vs49688]
-- Backends: GLFW, SDL2, SDL3: include GLFW/SDL version number in io.BackendPlatformName.
-- Backends: SDL3: Update for SDL3 api changes: revert SDL_GetClipboardText()
-  memory ownership change. (#8530, #7801) [@Green-Sky]
-- Backends: SDL3: honor ImGuiPlatformImeData->WantTextInput as an alternative
-  way to call SDL_StartTextInput(), without IME being necessarily visible. (#8584)
-- Backends: SDLGPU3: Fixed creating atlas texture earlier than other backends, preventing
-  to load fonts between the Init and NewFrames calls.
-- Backends: SDLGPU3: Made ImGui_ImplSDLGPU3_PrepareDrawData() reuse GPU Transfer Buffers which
-  were unusually slow to recreate every frame. Much faster now. (#8534) [@ocornut, @TheMode]
-- Backends: SDLGPU3: added support for ImDrawCallback_ResetRenderState. (#8599)
-- Backends: OpenGL3: made GLES 3.20 contexts not access GL_CONTEXT_PROFILE_MASK nor
-  GL_PRIMITIVE_RESTART. (#8664) [@DyXel]
-- Backends: DirectX10, DirectX11, DirectX12: Honor FramebufferScale to allow for custom
-  platform backends and experiments using it (consistently with other renderer backends,
-  even though in normal condition it is not set under Windows). (#8412) [@WSSDude]
-- Backends: Vulkan: Deep-copy ImGui_ImplVulkan_InitInfo::PipelineRenderingCreateInfo's
-  pColorAttachmentFormats buffer when set, in order to reduce common user-error of
-  specifying a pointer to data that gets out of scope. (#8282)
-- Backends: Vulkan: Load dynamic rendering functions using vkGetDeviceProcAddr()
-  + try both non-KHR and KHR versions. (#8600, #8326, #8365) [@ChrisTom-94]
-- Backends: Vulkan: fixed validation errors in window create/resize helpers used by examples
-  and by multi-viewports implementation, which would typically trigger errors while detaching
-  secondary viewports. (#8600, #8176) [@ChrisTom-94]
-- Examples: Apple+Metal, Apple+OpenGL: add Makefile (CLion opens them nicely). (#8637) [@pthom]
-- Examples: DirectX12+Win32: also test for IsIconic() for sleeping since we don't seem to
-  get a DXGI_STATUS_OCCLUDED signal when minimized. (#8603) [@dooann]
+- Backends:
+  - Backends: DX9/DX10/DX11/DX12, Vulkan, OpenGL2/3, Metal, SDLGPU3, SDLRenderer2/3, Allegro5:
+    - Added ImGuiBackendFlags_RendererHasTextures support. (#8465, #3761, #3471)
+      [@ocornut, @ShironekoBen, @thedmd]
+    - Added ImGui_ImplXXXX_UpdateTexture(ImTextureData* tex) functions for all backend.
+      Available if you want to start uploading textures right after ImGui::Render() and without
+      waiting for the call to ImGui_ImplXXXX_RenderDrawData(). Also useful if you use a staged or
+      multi-threaded rendering schemes, where you might want to set ImDrawData::Textures = NULL. (#8597, #1860)
+  - Backends: GLFW: added ImGui_ImplGlfw_GetContentScaleForMonitor(), ImGui_ImplGlfw_GetContentScaleForWindow()
+    helpers. They are wrappers to glfwGetMonitorContentScale()/glfwGetWindowContentScale(), with compile-time
+    GLFW version checks + returning 1.0f on Apple platform.
+  - Backends: SDL2: added ImGui_ImplSDL2_GetDpiScaleForDisplay() and ImGui_ImplSDL2_GetContentScaleForWindow()
+    helpers. They are wrappers to SDL_GetDisplayDPI(), with compile-time SDL version checks + returning 1.0f
+    on Apple platforms. SDL3 already does this by default.
+  - Backends: Win32: Fixed an issue where externally losing mouse capture (due to e.g. focus loss)
+    would fail to claim it again the next subsequent click. (#8594)
+  - Backends: SDL2, SDL3, OSX: Fill gamepad inputs and set ImGuiBackendFlags_HasGamepad
+    regardless of ImGuiConfigFlags_NavEnableGamepad being set. (#8508)
+  - Backends: SDL2, SDL3: don't attempt to call SDL_CaptureMouse() on drivers where we don't
+    call SDL_GetGlobalMouseState(). This is specifically for Wayland but we currently use
+    the same white-list as SDL_GetGlobalMouseState(). (#8561) [@vs49688]
+  - Backends: GLFW, SDL2, SDL3: include GLFW/SDL version number in io.BackendPlatformName.
+  - Backends: SDL3: Update for SDL3 api changes: revert SDL_GetClipboardText()
+    memory ownership change. (#8530, #7801) [@Green-Sky]
+  - Backends: SDL3: honor ImGuiPlatformImeData->WantTextInput as an alternative
+    way to call SDL_StartTextInput(), without IME being necessarily visible. (#8584)
+  - Backends: SDLGPU3: Fixed creating atlas texture earlier than other backends, preventing
+    to load fonts between the Init and NewFrames calls.
+  - Backends: SDLGPU3: Made ImGui_ImplSDLGPU3_PrepareDrawData() reuse GPU Transfer Buffers which
+    were unusually slow to recreate every frame. Much faster now. (#8534) [@ocornut, @TheMode]
+  - Backends: SDLGPU3: added support for ImDrawCallback_ResetRenderState. (#8599)
+  - Backends: OpenGL3: made GLES 3.20 contexts not access GL_CONTEXT_PROFILE_MASK nor
+    GL_PRIMITIVE_RESTART. (#8664) [@DyXel]
+  - Backends: DirectX10, DirectX11, DirectX12: Honor FramebufferScale to allow for custom
+    platform backends and experiments using it (consistently with other renderer backends,
+    even though in normal condition it is not set under Windows). (#8412) [@WSSDude]
+  - Backends: Vulkan: Deep-copy ImGui_ImplVulkan_InitInfo::PipelineRenderingCreateInfo's
+    pColorAttachmentFormats buffer when set, in order to reduce common user-error of
+    specifying a pointer to data that gets out of scope. (#8282)
+  - Backends: Vulkan: Load dynamic rendering functions using vkGetDeviceProcAddr()
+    + try both non-KHR and KHR versions. (#8600, #8326, #8365) [@ChrisTom-94]
+  - Backends: Vulkan: fixed validation errors in window create/resize helpers used by examples
+    and by multi-viewports implementation, which would typically trigger errors while detaching
+    secondary viewports. (#8600, #8176) [@ChrisTom-94]
+- Examples:
+  - Examples: Made many examples DPI aware by default.
+    The single-viewport is basically:
+     - Query monitor DPI scale. Helpers are provided in some backends.
+     - Call style.ScaleAllSizes() and set style.FontScaleDpi with this factor.
+    Multi-viewport applications may set both of those flags:
+     - io.ConfigDpiScaleFonts = true;
+     - io.ConfigDpiScaleViewports = true;
+    Which will scale fonts but NOT style padding/spacings/thicknesses yet.
+  - Examples: Apple+Metal, Apple+OpenGL: add Makefile (CLion opens them nicely). (#8637) [@pthom]
+  - Examples: DirectX12+Win32: also test for IsIconic() for sleeping since we don't seem to
+    get a DXGI_STATUS_OCCLUDED signal when minimized. (#8603) [@dooann]
 
 
 -----------------------------------------------------------------------

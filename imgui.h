@@ -314,18 +314,17 @@ IM_MSVC_RUNTIME_CHECKS_RESTORE
 
 // ImTextureID = backend specific, low-level identifier for a texture uploaded in GPU/graphics system.
 // [Compile-time configurable type]
-// Overview:
 // - When a Rendered Backend creates a texture, it store its native identifier into a ImTextureID value.
-//   (e.g. Used by DX11 backend to a `ID3D11ShaderResourceView*`; Used by OpenGL backends to store `GLuint';
+//   (e.g. Used by DX11 backend to a `ID3D11ShaderResourceView*`; Used by OpenGL backends to store `GLuint`;
 //         Used by SDLGPU backend to store a `SDL_GPUTextureSamplerBinding*`, etc.).
 // - User may submit their own textures to e.g. ImGui::Image() function by passing the same type.
-// - During the rendering loop, the Renderer Backend retrieve the ImTextureID, which stored inside
-//   ImTextureRef, which is stored inside ImDrawCmd.
-// Configuring the type:
-// - To use something other than a 64-bit value: add '#define ImTextureID MyTextureType*' in your imconfig.h file.
-// - This can be whatever to you want it to be! read the FAQ entry about textures for details.
-// - You may decide to store a higher-level structure containing texture, sampler, shader etc. with various
-//   constructors if you like. You will need to implement ==/!= operators.
+// - During the rendering loop, the Renderer Backend retrieve the ImTextureID, which stored inside a
+//   ImTextureRef, which is stored inside a ImDrawCmd.
+// - Compile-time type configuration:
+//   - To use something other than a 64-bit value: add '#define ImTextureID MyTextureType*' in your imconfig.h file.
+//   - This can be whatever to you want it to be! read the FAQ entry about textures for details.
+//   - You may decide to store a higher-level structure containing texture, sampler, shader etc. with various
+//     constructors if you like. You will need to implement ==/!= operators.
 // History:
 // - In v1.91.4 (2024/10/08): the default type for ImTextureID was changed from 'void*' to 'ImU64'. This allowed backends requirig 64-bit worth of data to build on 32-bit architectures. Use intermediary intptr_t cast and read FAQ if you have casting warnings.
 // - In v1.92.0 (2025/XX/XX): added ImTextureRef which carry either a ImTextureID either a pointer to internal texture atlas. All user facing functions taking ImTextureID changed to ImTextureRef
@@ -340,15 +339,15 @@ typedef ImU64 ImTextureID;      // Default: store up to 64-bits (any pointer or 
 
 // ImTextureRef = higher-level identifier for a texture.
 // The identifier is valid even before the texture has been uploaded to the GPU/graphics system.
-// This is what gets passed to functions such as ImGui::Image(), ImDrawList::AddImage().
-// This is what gets stored in draw commands (ImDrawCmd) to identify a texture during rendering.
+// This is what gets passed to functions such as `ImGui::Image()`, `ImDrawList::AddImage()`.
+// This is what gets stored in draw commands (`ImDrawCmd`) to identify a texture during rendering.
 // - When a texture is created by user code (e.g. custom images), we directly stores the low-level ImTextureID.
 // - When a texture is created by the backend, we stores a ImTextureData* which becomes an indirection
 //   to extract the ImTextureID value during rendering, after texture upload has happened.
 // - There is no constructor to create a ImTextureID from a ImTextureData* as we don't expect this
 //   to be useful to the end-user, and it would be erroneously called by many legacy code.
 // - If you want to bind the current atlas when using custom rectangle, you can use io.Fonts->TexRef.
-// - Binding generators for languages such as C (which don't have constructors), should provide a helper:
+// - Binding generators for languages such as C (which don't have constructors), should provide a helper, e.g.
 //      inline ImTextureRef ImTextureRefFromID(ImTextureID tex_id) { ImTextureRef tex_ref = { ._TexData = NULL, .TexID = tex_id }; return tex_ref; }
 // In 1.92 we changed most drawing functions using ImTextureID to use ImTextureRef.
 // We intentionally do not provide an implicit ImTextureRef -> ImTextureID cast operator because it is technically lossy to convert ImTextureRef to ImTextureID before rendering.
