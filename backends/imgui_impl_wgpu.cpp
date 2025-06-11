@@ -49,10 +49,6 @@
     #if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) == defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
     #error exactly one of IMGUI_IMPL_WEBGPU_BACKEND_DAWN or IMGUI_IMPL_WEBGPU_BACKEND_WGPU must be defined!
     #endif
-#else
-    #if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) || defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
-    #error neither IMGUI_IMPL_WEBGPU_BACKEND_DAWN nor IMGUI_IMPL_WEBGPU_BACKEND_WGPU may be defined if targeting emscripten!
-    #endif
 #endif
 
 #ifndef IMGUI_DISABLE
@@ -263,7 +259,11 @@ static void SafeRelease(FrameResources& res)
     SafeRelease(res.VertexBufferHost);
 }
 
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
+static WGPUComputeState ImGui_ImplWGPU_CreateShaderModule(const char* wgsl_source)
+#else
 static WGPUProgrammableStageDescriptor ImGui_ImplWGPU_CreateShaderModule(const char* wgsl_source)
+#endif
 {
     ImGui_ImplWGPU_Data* bd = ImGui_ImplWGPU_GetBackendData();
 
@@ -280,7 +280,11 @@ static WGPUProgrammableStageDescriptor ImGui_ImplWGPU_CreateShaderModule(const c
     WGPUShaderModuleDescriptor desc = {};
     desc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgsl_desc);
 
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
+    WGPUComputeState stage_desc = {};
+#else
     WGPUProgrammableStageDescriptor stage_desc = {};
+#endif
     stage_desc.module = wgpuDeviceCreateShaderModule(bd->wgpuDevice, &desc);
 
 #if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) || defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
@@ -680,7 +684,11 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     graphics_pipeline_desc.layout = wgpuDeviceCreatePipelineLayout(bd->wgpuDevice, &layout_desc);
 
     // Create the vertex shader
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
+    WGPUComputeState vertex_shader_desc = ImGui_ImplWGPU_CreateShaderModule(__shader_vert_wgsl);
+#else
     WGPUProgrammableStageDescriptor vertex_shader_desc = ImGui_ImplWGPU_CreateShaderModule(__shader_vert_wgsl);
+#endif
     graphics_pipeline_desc.vertex.module = vertex_shader_desc.module;
     graphics_pipeline_desc.vertex.entryPoint = vertex_shader_desc.entryPoint;
 
@@ -708,7 +716,11 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     graphics_pipeline_desc.vertex.buffers = buffer_layouts;
 
     // Create the pixel shader
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
+    WGPUComputeState pixel_shader_desc = ImGui_ImplWGPU_CreateShaderModule(__shader_frag_wgsl);
+#else
     WGPUProgrammableStageDescriptor pixel_shader_desc = ImGui_ImplWGPU_CreateShaderModule(__shader_frag_wgsl);
+#endif
 
     // Create the blending setup
     WGPUBlendState blend_state = {};
