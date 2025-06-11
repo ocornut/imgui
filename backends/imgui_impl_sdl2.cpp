@@ -956,17 +956,10 @@ static void ImGui_ImplSDL2_UpdateMonitors()
             monitor.WorkSize = ImVec2((float)r.w, (float)r.h);
         }
 #endif
-#if SDL_HAS_PER_MONITOR_DPI
-        // FIXME-VIEWPORT: On MacOS SDL reports actual monitor DPI scale, ignoring OS configuration. We may want to set
-        //  DpiScale to cocoa_window.backingScaleFactor here.
-        float dpi = 0.0f;
-        if (!SDL_GetDisplayDPI(n, &dpi, nullptr, nullptr))
-        {
-            if (dpi <= 0.0f)
-                continue; // Some accessibility applications are declaring virtual monitors with a DPI of 0, see #7902.
-            monitor.DpiScale = dpi / 96.0f;
-        }
-#endif
+        float dpi_scale = ImGui_ImplSDL2_GetContentScaleForDisplay(n);
+        if (dpi_scale <= 0.0f)
+            continue; // Some accessibility applications are declaring virtual monitors with a DPI of 0, see #7902.
+        monitor.DpiScale = dpi_scale;
         monitor.PlatformHandle = (void*)(intptr_t)n;
         platform_io.Monitors.push_back(monitor);
     }
