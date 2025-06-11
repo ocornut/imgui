@@ -15824,7 +15824,7 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
     CheckboxFlags("io.BackendFlags: RendererHasTextures", &io.BackendFlags, ImGuiBackendFlags_RendererHasTextures);
     EndDisabled();
     ShowFontSelector("Font");
-    BeginDisabled((io.BackendFlags & ImGuiBackendFlags_RendererHasTextures) == 0);
+    //BeginDisabled((io.BackendFlags & ImGuiBackendFlags_RendererHasTextures) == 0);
     if (DragFloat("FontSizeBase", &style.FontSizeBase, 0.20f, 5.0f, 100.0f, "%.0f"))
         style._NextFrameFontSizeBase = style.FontSizeBase; // FIXME: Temporary hack until we finish remaining work.
     SameLine(0.0f, 0.0f); Text(" (out %.2f)", GetFontSize());
@@ -15834,12 +15834,13 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
     DragFloat("FontScaleDpi", &style.FontScaleDpi, 0.02f, 0.5f, 5.0f);
     //SetItemTooltip("When io.ConfigDpiScaleFonts is set, this value is automatically overwritten.");
     //EndDisabled();
+    BulletText("Warning: Font scaling will NOT be smooth, because\nImGuiBackendFlags_RendererHasTextures is not set!");
     BulletText("Load a nice font for better results!");
     BulletText("Please submit feedback:");
     SameLine(); TextLinkOpenURL("#8465", "https://github.com/ocornut/imgui/issues/8465");
     BulletText("Read FAQ for more details:");
     SameLine(); TextLinkOpenURL("dearimgui.com/faq", "https://www.dearimgui.com/faq/");
-    EndDisabled();
+    //EndDisabled();
 
     SeparatorText("Font List");
 

@@ -430,26 +430,6 @@ void ImGui::ShowDemoWindow(bool* p_open)
     ImGui::Text("dear imgui says hello! (%s) (%d)", IMGUI_VERSION, IMGUI_VERSION_NUM);
     ImGui::Spacing();
 
-    {
-        ImGui::SeparatorText("dynamic_fonts branch");
-        ImGuiStyle& style = ImGui::GetStyle();
-        ImGui::SetNextItemWidth(ImGui::GetFontSize() * 20);
-        ImGui::ShowFontSelector("Font");
-        ImGui::SetNextItemWidth(ImGui::GetFontSize() * 20);
-        if (ImGui::DragFloat("FontSizeBase", &style.FontSizeBase, 0.20f, 5.0f, 100.0f, "%.0f"))
-            style._NextFrameFontSizeBase = style.FontSizeBase; // FIXME: Temporary hack until we finish remaining work.
-        ImGui::SameLine(0.0f, 0.0f); Text(" (out %.2f)", ImGui::GetFontSize());
-        ImGui::SameLine(); HelpMarker("- This is scaling font only. General scaling will come later.");
-        ImGui::SetNextItemWidth(ImGui::GetFontSize() * 20);
-        ImGui::DragFloat("FontScaleMain", &style.FontScaleMain, 0.02f, 0.5f, 4.0f);
-        ImGui::BulletText("Load a nice font for better results!");
-        //ImGui::BulletText("Current font loader: '%s'", ImGui::GetIO().Fonts->FontLoaderName);
-        ImGui::BulletText("Please submit feedback:"); ImGui::SameLine();
-        ImGui::TextLinkOpenURL("#8465", "https://github.com/ocornut/imgui/issues/8465");
-        ImGui::BulletText("See 'Widgets->Fonts' below for more.");
-        ImGui::Spacing();
-    }
-
     IMGUI_DEMO_MARKER("Help");
     if (ImGui::CollapsingHeader("Help"))
     {
@@ -603,8 +583,8 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::Spacing();
         }
 
-        IMGUI_DEMO_MARKER("Configuration/Style");
-        if (ImGui::TreeNode("Style"))
+        IMGUI_DEMO_MARKER("Configuration/Style, Fonts");
+        if (ImGui::TreeNode("Style, Fonts"))
         {
             ImGui::Checkbox("Style Editor", &demo_data.ShowStyleEditor);
             ImGui::SameLine();
@@ -8277,10 +8257,12 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
     {
         // General
         SeparatorText("General");
+        if ((GetIO().BackendFlags & ImGuiBackendFlags_RendererHasTextures) == 0)
+            BulletText("Warning: Font scaling will NOT be smooth, because\nImGuiBackendFlags_RendererHasTextures is not set!");
+
         if (ShowStyleSelector("Colors##Selector"))
             ref_saved_style = style;
         ShowFontSelector("Fonts##Selector");
-        BeginDisabled((GetIO().BackendFlags & ImGuiBackendFlags_RendererHasTextures) == 0);
         if (DragFloat("FontSizeBase", &style.FontSizeBase, 0.20f, 5.0f, 100.0f, "%.0f"))
             style._NextFrameFontSizeBase = style.FontSizeBase; // FIXME: Temporary hack until we finish remaining work.
         SameLine(0.0f, 0.0f); Text(" (out %.2f)", GetFontSize());
@@ -8289,7 +8271,6 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         DragFloat("FontScaleDpi", &style.FontScaleDpi, 0.02f, 0.5f, 5.0f);
         //SetItemTooltip("When io.ConfigDpiScaleFonts is set, this value is automatically overwritten.");
         //EndDisabled();
-        EndDisabled();
 
         // Simplified Settings (expose floating-pointer border sizes as boolean representing 0.0f or 1.0f)
         if (SliderFloat("FrameRounding", &style.FrameRounding, 0.0f, 12.0f, "%.0f"))
