@@ -2880,7 +2880,7 @@ void ImFontAtlasTextureBlockPostProcessMultiply(ImFontAtlasPostProcessData* data
             }
         }
     }
-    else if (data->Format == ImTextureFormat_RGBA32)
+    else if (data->Format == ImTextureFormat_RGBA32) //-V547
     {
         for (int ny = data->Height; ny > 0; ny--, pixels += pitch)
         {
@@ -5637,8 +5637,8 @@ begin:
         }
 
         const ImFontGlyph* glyph = baked->FindGlyph((ImWchar)c);
-        if (glyph == NULL)
-            continue;
+        //if (glyph == NULL)
+        //    continue;
 
         float char_width = glyph->AdvanceX * scale;
         if (glyph->Visible)

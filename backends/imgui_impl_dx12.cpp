@@ -906,6 +906,7 @@ bool ImGui_ImplDX12_Init(ImGui_ImplDX12_InitInfo* init_info)
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     main_viewport->RendererUserData = IM_NEW(ImGui_ImplDX12_ViewportData)(bd->numFramesInFlight);
 
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     if (init_info->SrvDescriptorAllocFn == nullptr)
     {
         // Wrap legacy behavior of passing space for a single descriptor
