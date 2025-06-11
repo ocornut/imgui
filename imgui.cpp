@@ -15810,7 +15810,7 @@ static void MetricsHelpMarker(const char* desc)
 }
 
 #ifdef IMGUI_ENABLE_FREETYPE
-namespace ImGuiFreeType { IMGUI_API const ImFontLoader* GetFontLoader(); IMGUI_API bool DebugEditFontBuilderFlags(unsigned int* p_font_builder_flags); }
+namespace ImGuiFreeType { IMGUI_API const ImFontLoader* GetFontLoader(); IMGUI_API bool DebugEditFontLoaderFlags(unsigned int* p_font_builder_flags); }
 #endif
 
 // [DEBUG] List fonts in a font atlas and display its texture
@@ -15868,13 +15868,13 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
             ImFontAtlasBuildSetupFontLoader(atlas, loader_freetype);
         if (loader_current == loader_freetype)
         {
-            unsigned int loader_flags = atlas->FontBuilderFlags;
+            unsigned int loader_flags = atlas->FontLoaderFlags;
             Text("Shared FreeType Loader Flags:  0x%08", loader_flags);
-            if (ImGuiFreeType::DebugEditFontBuilderFlags(&loader_flags))
+            if (ImGuiFreeType::DebugEditFontLoaderFlags(&loader_flags))
             {
                 for (ImFont* font : atlas->Fonts)
                     ImFontAtlasFontDestroyOutput(atlas, font);
-                atlas->FontBuilderFlags = loader_flags;
+                atlas->FontLoaderFlags = loader_flags;
                 for (ImFont* font : atlas->Fonts)
                     ImFontAtlasFontInitOutput(atlas, font);
             }
@@ -16853,12 +16853,12 @@ void ImGui::DebugNodeFont(ImFont* font)
 #ifdef IMGUI_ENABLE_FREETYPE
             if (loader->Name != NULL && strcmp(loader->Name, "FreeType") == 0)
             {
-                unsigned int loader_flags = src->FontBuilderFlags;
+                unsigned int loader_flags = src->FontLoaderFlags;
                 Text("FreeType Loader Flags: 0x%08X", loader_flags);
-                if (ImGuiFreeType::DebugEditFontBuilderFlags(&loader_flags))
+                if (ImGuiFreeType::DebugEditFontLoaderFlags(&loader_flags))
                 {
                     ImFontAtlasFontDestroyOutput(atlas, font);
-                    src->FontBuilderFlags = loader_flags;
+                    src->FontLoaderFlags = loader_flags;
                     ImFontAtlasFontInitOutput(atlas, font);
                 }
             }

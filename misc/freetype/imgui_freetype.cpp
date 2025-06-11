@@ -153,14 +153,14 @@ struct ImGui_ImplFreeType_Data
 struct ImGui_ImplFreeType_FontSrcData
 {
     // Initialize from an external data buffer. Doesn't copy data, and you must ensure it stays valid up to this object lifetime.
-    bool                            InitFont(FT_Library ft_library, ImFontConfig* src, ImGuiFreeTypeBuilderFlags extra_user_flags);
+    bool                            InitFont(FT_Library ft_library, ImFontConfig* src, ImGuiFreeTypeLoaderFlags extra_user_flags);
     void                            CloseFont();
     ImGui_ImplFreeType_FontSrcData()   { memset((void*)this, 0, sizeof(*this)); }
     ~ImGui_ImplFreeType_FontSrcData()  { CloseFont(); }
 
     // Members
     FT_Face                         FtFace;
-    ImGuiFreeTypeBuilderFlags       UserFlags;          // = ImFontConfig::FontBuilderFlags
+    ImGuiFreeTypeLoaderFlags        UserFlags;          // = ImFontConfig::FontLoaderFlags
     FT_Int32                        LoadFlags;
     ImFontBaked*                    BakedLastActivated;
 };
@@ -172,7 +172,7 @@ struct ImGui_ImplFreeType_FontSrcBakedData
     ImGui_ImplFreeType_FontSrcBakedData() { memset((void*)this, 0, sizeof(*this)); }
 };
 
-bool ImGui_ImplFreeType_FontSrcData::InitFont(FT_Library ft_library, ImFontConfig* src, ImGuiFreeTypeBuilderFlags extra_font_builder_flags)
+bool ImGui_ImplFreeType_FontSrcData::InitFont(FT_Library ft_library, ImFontConfig* src, ImGuiFreeTypeLoaderFlags extra_font_loader_flags)
 {
     FT_Error error = FT_New_Memory_Face(ft_library, (uint8_t*)src->FontData, (uint32_t)src->FontDataSize, (uint32_t)src->FontNo, &FtFace);
     if (error != 0)
@@ -182,7 +182,7 @@ bool ImGui_ImplFreeType_FontSrcData::InitFont(FT_Library ft_library, ImFontConfi
         return false;
 
     // Convert to FreeType flags (NB: Bold and Oblique are processed separately)
-    UserFlags = (ImGuiFreeTypeBuilderFlags)(src->FontBuilderFlags | extra_font_builder_flags);
+    UserFlags = (ImGuiFreeTypeLoaderFlags)(src->FontLoaderFlags | extra_font_loader_flags);
 
     LoadFlags = 0;
     if ((UserFlags & ImGuiFreeTypeBuilderFlags_Bitmap) == 0)
@@ -400,7 +400,7 @@ bool ImGui_ImplFreeType_FontSrcInit(ImFontAtlas* atlas, ImFontConfig* src)
     IM_ASSERT(src->FontLoaderData == NULL);
     src->FontLoaderData = bd_font_data;
 
-    if (!bd_font_data->InitFont(bd->Library, src, (ImGuiFreeTypeBuilderFlags)atlas->FontBuilderFlags))
+    if (!bd_font_data->InitFont(bd->Library, src, (ImGuiFreeTypeLoaderFlags)atlas->FontLoaderFlags))
     {
         IM_DELETE(bd_font_data);
         src->FontLoaderData = NULL;
@@ -587,7 +587,7 @@ void ImGuiFreeType::SetAllocatorFunctions(void* (*alloc_func)(size_t sz, void* u
     GImGuiFreeTypeAllocatorUserData = user_data;
 }
 
-bool ImGuiFreeType::DebugEditFontBuilderFlags(unsigned int* p_font_loader_flags)
+bool ImGuiFreeType::DebugEditFontLoaderFlags(unsigned int* p_font_loader_flags)
 {
     bool edited = false;
     edited |= ImGui::CheckboxFlags("NoHinting",    p_font_loader_flags, ImGuiFreeTypeBuilderFlags_NoHinting);
