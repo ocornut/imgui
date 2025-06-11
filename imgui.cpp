@@ -4491,7 +4491,7 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* ctx, const char* name) : DrawListInst(NUL
     LastFrameJustFocused = -1;
     LastTimeActive = -1.0f;
     FontRefSize = 0.0f;
-    FontWindowScale = FontWindowScaleParents = FontDpiScale = 1.0f;
+    FontWindowScale = FontWindowScaleParents = 1.0f;
     SettingsOffset = -1;
     DockOrder = -1;
     DrawList = &DrawListInst;
@@ -7833,7 +7833,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         WindowSelectViewport(window);
         SetCurrentViewport(window, window->Viewport);
-        window->FontDpiScale = g.IO.ConfigDpiScaleFonts ? window->Viewport->DpiScale : 1.0f;
         SetCurrentWindow(window);
         flags = window->Flags;
 
@@ -7978,7 +7977,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 // FIXME-DPI
                 //IM_ASSERT(old_viewport->DpiScale == window->Viewport->DpiScale); // FIXME-DPI: Something went wrong
                 SetCurrentViewport(window, window->Viewport);
-                window->FontDpiScale = g.IO.ConfigDpiScaleViewports ? window->Viewport->DpiScale : 1.0f;
                 SetCurrentWindow(window);
             }
 
