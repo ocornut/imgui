@@ -820,15 +820,6 @@ bool ImGui_ImplDX12_Init(ImGui_ImplDX12_InitInfo* init_info)
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
     io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;   // We can honor ImGuiPlatformIO::Textures[] requests during render.
 
-    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-        ImGui_ImplDX12_InitPlatformInterface();
-
-    // Create a dummy ImGui_ImplDX12_ViewportData holder for the main viewport,
-    // Since this is created and managed by the application, we will only use the ->Resources[] fields.
-    ImGuiViewport* main_viewport = ImGui::GetMainViewport();
-    main_viewport->RendererUserData = IM_NEW(ImGui_ImplDX12_ViewportData)(bd->numFramesInFlight);
->>>>>>> dda12fbd9a (Backends: DirectX12: added ImGuiBackendFlags_RendererHasTextures support.)
-
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     if (init_info->SrvDescriptorAllocFn == nullptr)
     {

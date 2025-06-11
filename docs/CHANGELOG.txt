@@ -63,11 +63,11 @@ Breaking changes:
     - With a legacy backend (< 1.92):
       - Instead of setting io.FontGlobalScale = 1.0f/N -> set ImFontCfg::RasterizerDensity = N.
       - This already worked before, but is now pretty much required.
-    - With a new backend (1.92+)
+    - With a new backend (1.92+),
+      - This should be all automatic.
       - FramebufferScale is automatically used to set current font RasterizerDensity.
       - FramebufferScale is a per-viewport property provided by backend through the
         Platform_GetWindowFramebufferScale() handler in 'docking' branch.
-      - So this should be all automatic.
 - Fonts: **IMPORTANT** on Font Sizing:
    - Before 1.92, fonts were of a single size. They can now be dynamically sized.
    - PushFont() API now has an optional size parameter. PushFontSize() was also added.
@@ -75,9 +75,9 @@ Breaking changes:
    - Before 1.92: ImGui::PushFont() always used font "default" size specified in AddFont() call.
    - Since  1.92: ImGui::PushFont() preserve the current font size which is a shared value.
    - To use old behavior:
-     - use 'ImGui::PushFont(font, font->LegacySize)' at call site.
+     - use 'ImGui::PushFont(font, font->LegacySize)' at call site (preferred).
      - or set 'ImFontConfig::Flags |= ImFontFlags_DefaultToLegacySize' in AddFont() call
-       (not desirable as it requires e.g. third-party code to be aware of it).
+       (not desirable as it requires e.g. all third-party code to be aware of it).
    - ImFont::FontSize was removed and does not make sense anymore.
      ImFont::LegacySize is the size passed to AddFont().
    - Renamed/moved 'io.FontGlobalScale' to 'style.FontScaleMain'.
@@ -134,7 +134,7 @@ Breaking changes:
     - ImFont::ConfigData[], ConfigDataCount has been renamed to Sources[], SourceCount.
     - Each ImFont has a number of ImFontBaked instances corresponding to actively used
       sizes. ImFont::GetFontBaked(size) retrieves the one for a given size.
-    - Things moved from ImFont to ImFontBaked:
+    - Fields moved from ImFont to ImFontBaked:
       - ImFont::IndexAdvanceX[]       -> ImFontBaked::IndexAdvanceX[]
       - ImFont::Glyphs[]              -> ImFontBaked::Glyphs[]
       - ImFont::Ascent, Descent       -> ImFontBaked::Ascent, Descent
@@ -155,9 +155,9 @@ Breaking changes:
   - if you used runtime imgui_freetype selection rather than the default compile-time
     option provided by IMGUI_ENABLE_FREETYPE:
      - renamed/reworked ImFontBuilderIO into ImFontLoader,
-     - renamed ImGuiFreeType::GetBuilderForFreeType() to ImGuiFreeType::GetFontLoader().
+     - renamed ImGuiFreeType::GetBuilderForFreeType() to ImGuiFreeType::GetFontLoader()
        - old:  io.Fonts->FontBuilderIO = ImGuiFreeType::GetBuilderForFreeType()
-       - new:  io.Fonts.FontLoader = ImGuiFreeType::GetFontLoader()
+       - new:  io.Fonts.FontLoader = ImGuiFreeType::GetFontLoader();
 - DrawList: Renamed ImDrawList::PushTextureID()/PopTextureID() to PushTexture()/PopTexture().
 - Fonts: (users of custom rectangles)
   - Renamed AddCustomRectRegular() to AddCustomRect(). (#8466)
