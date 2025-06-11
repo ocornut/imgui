@@ -17,6 +17,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2025-06-11: Update Dawn support to maintain WebGPU api changes (WGPUProgrammableStageDescriptor -> WGPUComputeState) (#8674) 
 //  2025-02-26: Recreate image bind groups during render. (#8426, #8046, #7765, #8027) + Update for latest webgpu-native changes.
 //  2024-10-14: Update Dawn support for change of string usages. (#8082, #8083)
 //  2024-10-07: Expose selected render state in ImGui_ImplWGPU_RenderState, which you can access in 'void* platform_io.Renderer_RenderState' during draw callbacks.
