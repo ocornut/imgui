@@ -7,7 +7,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2025/XX/XX: refactored for the new ImFontLoader architecture, and ImGuiBackendFlags_RendererHasTextures support.
+//  2025/06/11: refactored for the new ImFontLoader architecture, and ImGuiBackendFlags_RendererHasTextures support.
 //  2024/10/17: added plutosvg support for SVG Fonts (seems faster/better than lunasvg). Enable by using '#define IMGUI_ENABLE_FREETYPE_PLUTOSVG'. (#7927)
 //  2023/11/13: added support for ImFontConfig::RasterizationDensity field for scaling render density without scaling metrics.
 //  2023/08/01: added support for SVG fonts, enable by using '#define IMGUI_ENABLE_FREETYPE_LUNASVG'. (#6591)
@@ -185,26 +185,26 @@ bool ImGui_ImplFreeType_FontSrcData::InitFont(FT_Library ft_library, ImFontConfi
     UserFlags = (ImGuiFreeTypeLoaderFlags)(src->FontLoaderFlags | extra_font_loader_flags);
 
     LoadFlags = 0;
-    if ((UserFlags & ImGuiFreeTypeBuilderFlags_Bitmap) == 0)
+    if ((UserFlags & ImGuiFreeTypeLoaderFlags_Bitmap) == 0)
         LoadFlags |= FT_LOAD_NO_BITMAP;
 
-    if (UserFlags & ImGuiFreeTypeBuilderFlags_NoHinting)
+    if (UserFlags & ImGuiFreeTypeLoaderFlags_NoHinting)
         LoadFlags |= FT_LOAD_NO_HINTING;
     else
         src->PixelSnapH = true; // FIXME: A bit weird to do this this way.
 
-    if (UserFlags & ImGuiFreeTypeBuilderFlags_NoAutoHint)
+    if (UserFlags & ImGuiFreeTypeLoaderFlags_NoAutoHint)
         LoadFlags |= FT_LOAD_NO_AUTOHINT;
-    if (UserFlags & ImGuiFreeTypeBuilderFlags_ForceAutoHint)
+    if (UserFlags & ImGuiFreeTypeLoaderFlags_ForceAutoHint)
         LoadFlags |= FT_LOAD_FORCE_AUTOHINT;
-    if (UserFlags & ImGuiFreeTypeBuilderFlags_LightHinting)
+    if (UserFlags & ImGuiFreeTypeLoaderFlags_LightHinting)
         LoadFlags |= FT_LOAD_TARGET_LIGHT;
-    else if (UserFlags & ImGuiFreeTypeBuilderFlags_MonoHinting)
+    else if (UserFlags & ImGuiFreeTypeLoaderFlags_MonoHinting)
         LoadFlags |= FT_LOAD_TARGET_MONO;
     else
         LoadFlags |= FT_LOAD_TARGET_NORMAL;
 
-    if (UserFlags & ImGuiFreeTypeBuilderFlags_LoadColor)
+    if (UserFlags & ImGuiFreeTypeLoaderFlags_LoadColor)
         LoadFlags |= FT_LOAD_COLOR;
 
     return true;
@@ -246,9 +246,9 @@ static const FT_Glyph_Metrics* ImGui_ImplFreeType_LoadGlyph(ImGui_ImplFreeType_F
 #endif // IMGUI_ENABLE_FREETYPE_LUNASVG
 
     // Apply convenience transform (this is not picking from real "Bold"/"Italic" fonts! Merely applying FreeType helper transform. Oblique == Slanting)
-    if (src_data->UserFlags & ImGuiFreeTypeBuilderFlags_Bold)
+    if (src_data->UserFlags & ImGuiFreeTypeLoaderFlags_Bold)
         FT_GlyphSlot_Embolden(slot);
-    if (src_data->UserFlags & ImGuiFreeTypeBuilderFlags_Oblique)
+    if (src_data->UserFlags & ImGuiFreeTypeLoaderFlags_Oblique)
     {
         FT_GlyphSlot_Oblique(slot);
         //FT_BBox bbox;
@@ -442,7 +442,7 @@ bool ImGui_ImplFreeType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig* src, ImF
     // (FT_Set_Pixel_Sizes() essentially calls FT_Request_Size() with FT_SIZE_REQUEST_TYPE_NOMINAL)
     const float rasterizer_density = src->RasterizerDensity * baked->RasterizerDensity;
     FT_Size_RequestRec req;
-    req.type = (bd_font_data->UserFlags & ImGuiFreeTypeBuilderFlags_Bitmap) ? FT_SIZE_REQUEST_TYPE_NOMINAL : FT_SIZE_REQUEST_TYPE_REAL_DIM;
+    req.type = (bd_font_data->UserFlags & ImGuiFreeTypeLoaderFlags_Bitmap) ? FT_SIZE_REQUEST_TYPE_NOMINAL : FT_SIZE_REQUEST_TYPE_REAL_DIM;
     req.width = 0;
     req.height = (uint32_t)(size * 64 * rasterizer_density);
     req.horiResolution = 0;
@@ -497,7 +497,7 @@ bool ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConfig* src
     // Render glyph into a bitmap (currently held by FreeType)
     FT_Face face = bd_font_data->FtFace;
     FT_GlyphSlot slot = face->glyph;
-    FT_Render_Mode render_mode = (bd_font_data->UserFlags & ImGuiFreeTypeBuilderFlags_Monochrome) ? FT_RENDER_MODE_MONO : FT_RENDER_MODE_NORMAL;
+    FT_Render_Mode render_mode = (bd_font_data->UserFlags & ImGuiFreeTypeLoaderFlags_Monochrome) ? FT_RENDER_MODE_MONO : FT_RENDER_MODE_NORMAL;
     FT_Error error = FT_Render_Glyph(slot, render_mode);
     const FT_Bitmap* ft_bitmap = &slot->bitmap;
     if (error != 0 || ft_bitmap == nullptr)
@@ -590,16 +590,16 @@ void ImGuiFreeType::SetAllocatorFunctions(void* (*alloc_func)(size_t sz, void* u
 bool ImGuiFreeType::DebugEditFontLoaderFlags(unsigned int* p_font_loader_flags)
 {
     bool edited = false;
-    edited |= ImGui::CheckboxFlags("NoHinting",    p_font_loader_flags, ImGuiFreeTypeBuilderFlags_NoHinting);
-    edited |= ImGui::CheckboxFlags("NoAutoHint",   p_font_loader_flags, ImGuiFreeTypeBuilderFlags_NoAutoHint);
-    edited |= ImGui::CheckboxFlags("ForceAutoHint",p_font_loader_flags, ImGuiFreeTypeBuilderFlags_ForceAutoHint);
-    edited |= ImGui::CheckboxFlags("LightHinting", p_font_loader_flags, ImGuiFreeTypeBuilderFlags_LightHinting);
-    edited |= ImGui::CheckboxFlags("MonoHinting",  p_font_loader_flags, ImGuiFreeTypeBuilderFlags_MonoHinting);
-    edited |= ImGui::CheckboxFlags("Bold",         p_font_loader_flags, ImGuiFreeTypeBuilderFlags_Bold);
-    edited |= ImGui::CheckboxFlags("Oblique",      p_font_loader_flags, ImGuiFreeTypeBuilderFlags_Oblique);
-    edited |= ImGui::CheckboxFlags("Monochrome",   p_font_loader_flags, ImGuiFreeTypeBuilderFlags_Monochrome);
-    edited |= ImGui::CheckboxFlags("LoadColor",    p_font_loader_flags, ImGuiFreeTypeBuilderFlags_LoadColor);
-    edited |= ImGui::CheckboxFlags("Bitmap",       p_font_loader_flags, ImGuiFreeTypeBuilderFlags_Bitmap);
+    edited |= ImGui::CheckboxFlags("NoHinting",    p_font_loader_flags, ImGuiFreeTypeLoaderFlags_NoHinting);
+    edited |= ImGui::CheckboxFlags("NoAutoHint",   p_font_loader_flags, ImGuiFreeTypeLoaderFlags_NoAutoHint);
+    edited |= ImGui::CheckboxFlags("ForceAutoHint",p_font_loader_flags, ImGuiFreeTypeLoaderFlags_ForceAutoHint);
+    edited |= ImGui::CheckboxFlags("LightHinting", p_font_loader_flags, ImGuiFreeTypeLoaderFlags_LightHinting);
+    edited |= ImGui::CheckboxFlags("MonoHinting",  p_font_loader_flags, ImGuiFreeTypeLoaderFlags_MonoHinting);
+    edited |= ImGui::CheckboxFlags("Bold",         p_font_loader_flags, ImGuiFreeTypeLoaderFlags_Bold);
+    edited |= ImGui::CheckboxFlags("Oblique",      p_font_loader_flags, ImGuiFreeTypeLoaderFlags_Oblique);
+    edited |= ImGui::CheckboxFlags("Monochrome",   p_font_loader_flags, ImGuiFreeTypeLoaderFlags_Monochrome);
+    edited |= ImGui::CheckboxFlags("LoadColor",    p_font_loader_flags, ImGuiFreeTypeLoaderFlags_LoadColor);
+    edited |= ImGui::CheckboxFlags("Bitmap",       p_font_loader_flags, ImGuiFreeTypeLoaderFlags_Bitmap);
     return edited;
 }
 
