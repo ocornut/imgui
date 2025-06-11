@@ -1267,6 +1267,7 @@ VkDescriptorSet ImGui_ImplVulkan_AddTexture(VkSampler sampler, VkImageView image
     }
 
     // Update the Descriptor Set:
+    if (descriptor_set != VK_NULL_HANDLE)
     {
         VkDescriptorImageInfo desc_image[1] = {};
         desc_image[0].sampler = sampler;
