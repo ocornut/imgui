@@ -8668,7 +8668,7 @@ ImFont* ImGui::GetDefaultFont()
 {
     ImGuiContext& g = *GImGui;
     ImFontAtlas* atlas = g.IO.Fonts;
-    if (atlas->Builder == NULL)
+    if (atlas->Builder == NULL || atlas->Fonts.Size == 0)
         ImFontAtlasBuildMain(atlas);
     return g.IO.FontDefault ? g.IO.FontDefault : atlas->Fonts[0];
 }

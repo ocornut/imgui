@@ -4362,6 +4362,8 @@ ImTextureRect* ImFontAtlasPackGetRectSafe(ImFontAtlas* atlas, ImFontAtlasRectId 
     if (id == ImFontAtlasRectId_Invalid)
         return NULL;
     int index_idx = ImFontAtlasRectId_GetIndex(id);
+    if (atlas->Builder == NULL)
+        ImFontAtlasBuildInit(atlas);
     ImFontAtlasBuilder* builder = (ImFontAtlasBuilder*)atlas->Builder;
     if (index_idx >= builder->RectsIndex.Size)
         return NULL;
