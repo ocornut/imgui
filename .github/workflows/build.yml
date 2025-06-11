@@ -434,6 +434,12 @@ jobs:
     - name: Build with IMGUI_IMPL_VULKAN_NO_PROTOTYPES
       run: g++ -c -I. -std=c++11 -DIMGUI_IMPL_VULKAN_NO_PROTOTYPES=1 backends/imgui_impl_vulkan.cpp
 
+    # This compiles the native example_glfw_wgpu using CMakeLists.txt
+    - name: Build example_glfw_wgpu with CMake
+      run: |
+        cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release examples/example_glfw_wgpu
+        cmake --build build
+
   MacOS:
     runs-on: macos-latest
     steps:
@@ -535,15 +541,6 @@ jobs:
         source ./emsdk_env.sh
         popd
         make -C examples/example_sdl2_opengl3 -f Makefile.emscripten
-
-    # This compiles the native example_glfw_wgpu using CMakeLists.txt
-    - name: Build example_glfw_wgpu with Emscripten/CMake
-      run: |
-        pushd emsdk-master
-        source ./emsdk_env.sh
-        popd
-        cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release examples/example_glfw_wgpu
-        cmake --build build
 
     # This compiles example_glfw_wgpu using CMakeLists.txt and Emscripten GLFW contrib port (--use-port=contrib.glfw3)
     # This ensures 2 things: the CMake build works, and the GLFW contrib port is tested
