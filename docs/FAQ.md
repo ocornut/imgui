@@ -24,7 +24,7 @@ or view this file with any Markdown viewer.
 | [I integrated Dear ImGui in my engine and some elements are displaying outside their expected windows boundaries...](#q-i-integrated-dear-imgui-in-my-engine-and-some-elements-are-displaying-outside-their-expected-windows-boundaries) |
 | **Q&A: Usage** |
 | **[About the ID Stack system..<br>Why is my widget not reacting when I click on it?<br>Why is the wrong widget reacting when I click on one?<br>How can I have widgets with an empty label?<br>How can I have multiple widgets with the same label?<br>How can I have multiple windows with the same label?](#q-about-the-id-stack-system)** |
-| [How can I display an image? What is ImTextureID, how does it work?](#q-how-can-i-display-an-image-what-is-imtextureid-how-does-it-work)|
+| [How can I display an image?](#q-how-can-i-display-an-image)<br>[What are ImTextureID/ImTextureRef?](#q-what-are-imtextureidimtextureref)|
 | [How can I use maths operators with ImVec2?](#q-how-can-i-use-maths-operators-with-imvec2) |
 | [How can I use my own maths types instead of ImVec2/ImVec4?](#q-how-can-i-use-my-own-maths-types-instead-of-imvec2imvec4) |
 | [How can I interact with standard C++ types (such as std::string and std::vector)?](#q-how-can-i-interact-with-standard-c-types-such-as-stdstring-and-stdvector) |
@@ -161,7 +161,8 @@ Console SDK also sometimes provide equivalent tooling or wrapper for Synergy-lik
 
 ### Q: I integrated Dear ImGui in my engine and little squares are showing instead of text...
 Your renderer backend is not using the font texture correctly or it hasn't been uploaded to the GPU.
-- If this happens using the standard backends: A) have you modified the font atlas after `ImGui_ImplXXX_NewFrame()`? B) maybe the texture failed to upload, which **can if your texture atlas is too big**. Also see [docs/FONTS.md](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md).
+- If this happens using standard backends (before 1.92): A) have you modified the font atlas after `ImGui_ImplXXX_NewFrame()`? B) maybe the texture failed to upload, which **can if your texture atlas is too big**. Also see [docs/FONTS.md](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md).
+- If this happens using standard backends (after 1.92): please report.
 - If this happens with a custom backend: make sure you have uploaded the font texture to the GPU, that all shaders are rendering states are setup properly (e.g. texture is bound). Compare your code to existing backends and use a graphics debugger such as [RenderDoc](https://renderdoc.org) to debug your rendering states.
 
 ##### [Return to Index](#index)
@@ -375,23 +376,49 @@ node open/closed state differently. See what makes more sense in your situation!
 
 ---
 
-### Q: How can I display an image? What is ImTextureID, how does it work?
+### Q: How can I display an image?
+### Q: What are ImTextureID/ImTextureRef?
 
-Short explanation:
+**Short explanation:**
 - Refer to [Image Loading and Displaying Examples](https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples) on the [Wiki](https://github.com/ocornut/imgui/wiki).
 - You may use functions such as `ImGui::Image()`, `ImGui::ImageButton()` or lower-level `ImDrawList::AddImage()` to emit draw calls that will use your own textures.
 - Actual textures are identified in a way that is up to the user/engine. Those identifiers are stored and passed as an opaque ImTextureID value.
 - By default ImTextureID can store up to 64-bits. You may `#define` it to a custom type/structure if you need.
 - Loading image files from the disk and turning them into a texture is not within the scope of Dear ImGui (for a good reason), but the examples linked above may be useful references.
 
+**Details:**
+
+1.92 introduced `ImTextureRef` in June 2025.
+- Most drawing functions using ImTextureID were changed to use ImTextureRef.
+- We intentionally do not provide an implicit ImTextureRef -> ImTextureID cast operator because it is technically lossy to convert ImTextureRef to ImTextureID before rendering.
+
+**ImTextureID = backend specific, low-level identifier for a texture uploaded in GPU/graphics system.**
+- When a Rendered Backend creates a texture, it store its native identifier into a ImTextureID value (e.g. Used by DX11 backend to a `ID3D11ShaderResourceView*`; Used by OpenGL backends to store `GLuint`; Used by SDLGPU backend to store a `SDL_GPUTextureSamplerBinding*`, etc.).
+- User may submit their own textures to e.g. ImGui::Image() function by passing the same type.
+- During the rendering loop, the Renderer Backend retrieve the ImTextureID, which stored inside a ImTextureRef, which is stored inside ImDrawCmd.
+- Compile-time type configuration:
+  - To use something other than a 64-bit value: add '#define ImTextureID MyTextureType*' in your imconfig.h file.
+  - This can be whatever to you want it to be! read the FAQ entry about textures for details.
+  - You may decide to store a higher-level structure containing texture, sampler, shader etc. with various constructors if you like. You will need to implement ==/!= operators.
+
+**ImTextureRef = higher-level identifier for a texture.**
+- The identifier is valid even before the texture has been uploaded to the GPU/graphics system.
+- This is what gets passed to functions such as `ImGui::Image()`, `ImDrawList::AddImage()`.
+- This is what gets stored in draw commands (`ImDrawCmd`) to identify a texture during rendering.
+ - When a texture is created by user code (e.g. custom images), we directly stores the low-level `ImTextureID`.
+ - When a texture is created by the backend, we stores a `ImTextureData*` which becomes an indirection to extract the `ImTextureID` value during rendering, after texture upload has happened.
+ - There is no constructor to create a `ImTextureID` from a `ImTextureData*` as we don't expect this to be useful to the end-user, and it would be erroneously called by many legacy code.
+ - If you want to bind the current atlas when using custom rectangle, you can use `io.Fonts->TexRef`.
+ - Binding generators for languages such as C (which don't have constructors), should provide a helper, e.g. `inline ImTextureRef ImTextureRefFromID(ImTextureID tex_id) { ImTextureRef tex_ref = { ._TexData = NULL, .TexID = tex_id }; return tex_ref; }`
+
 **Please read documentations or tutorials on your graphics API to understand how to display textures on the screen before moving onward.**
 
 Long explanation:
 - Dear ImGui's job is to create "meshes", defined in a renderer-agnostic format made of draw commands and vertices. At the end of the frame, those meshes (ImDrawList) will be displayed by your rendering function. They are made up of textured polygons and the code to render them is generally fairly short (a few dozen lines). In the examples/ folder, we provide functions for popular graphics APIs (OpenGL, DirectX, etc.).
 - Each rendering function decides on a data type to represent "textures". The concept of what is a "texture" is entirely tied to your underlying engine/graphics API.
- We carry the information to identify a "texture" in the ImTextureID type.
+We carry the information to identify a "texture" in the ImTextureID type, which itself tends to be stored inside a ImTextureRef.
 ImTextureID default to ImU64 aka 8 bytes worth of data: just enough to store one pointer or integer of your choice.
-Dear ImGui doesn't know or understand what you are storing in ImTextureID, it merely passes ImTextureID values until they reach your rendering function.
+Dear ImGui doesn't know or understand what you are storing in ImTextureID, it merely passes values until they reach your rendering function.
 - In the [examples/](https://github.com/ocornut/imgui/tree/master/examples) backends, for each graphics API we decided on a type that is likely to be a good representation for specifying an image from the end-user perspective. This is what the _examples_ rendering functions are using:
 ```cpp
 OpenGL:
@@ -539,30 +566,49 @@ ImGui::End();
 
 ### Q: How should I handle DPI in my application?
 
-The short answer is: obtain the desired DPI scale, load your fonts resized with that scale (always round down fonts size to the nearest integer), and scale your Style structure accordingly using `style.ScaleAllSizes()`.
+Since 1.92 (June 2025) fonts may be dynamically used at any size.
 
-Your application may want to detect DPI change and reload the fonts and reset style between frames.
+**Scaling fonts**
+
+To change font size:
+```cpp
+ImGui::PushFontSize(42.0f);
+```
+To change font and font size:
+```cpp
+ImGui::PushFont(new_font, 42.0f);
+```
+To scale all fonts:
+```cpp
+style.FontScaleDpi = 2.0f;
+```
+In `docking` branch or with multi-viewports:
+```cpp
+io.ConfigDpiScaleFonts = true;          // [Experimental] Automatically overwrite style.FontScaleDpi in Begin() when Monitor DPI changes. This will scale fonts but _NOT_ scale sizes/padding for now.
+io.ConfigDpiScaleViewports = true;      // [Experimental] Scale Dear ImGui and Platform Windows when Monitor DPI changes.
+```
+
+**Scaling style** (paddings, spacings, thicknesses)
+
+This is still massively work in progress, expect turbulence.
+Style values are currently not easily scalable dynamically.
+For single viewport application you can call once:
+```cpp
+style.ScaleAllSizes(factor); // call once!
+```
+If you need to change the scaling factor, it is currently most practical to reset the style and call this again with a new value.
 
 Your UI code should avoid using hardcoded constants for size and positioning. Prefer to express values as multiple of reference values such as `ImGui::GetFontSize()` or `ImGui::GetFrameHeight()`. So e.g. instead of seeing a hardcoded height of 500 for a given item/window, you may want to use `30*ImGui::GetFontSize()` instead.
 
-Down the line Dear ImGui will provide a variety of standardized reference values to facilitate using this.
+Down the line Dear ImGui will provide a variety of standardized reference values to facilitate using this. This is expected to happen during subsequent 1.92.x releases.
 
-Applications in the `examples/` folder are not DPI aware partly because they are unable to load a custom font from the file-system (may change that in the future).
+Applications in the `examples/` folder are partly DPI aware but they are unable to load a custom font from the file-system, so they look ugly (may change that in the future).
 
-The reason DPI is not auto-magically solved in stock examples is that we don't yet have a satisfying solution for the "multi-dpi" problem (using the `docking` branch: when multiple viewport windows are over multiple monitors using different DPI scales). The current way to handle this on the application side is:
-- Create and maintain one font atlas per active DPI scale (e.g. by iterating `platform_io.Monitors[]` before `NewFrame()`).
-- Hook `platform_io.OnChangedViewport()` to detect when a `Begin()` call makes a Dear ImGui window change monitor (and therefore DPI).
-- In the hook: swap atlas, swap style with correctly sized one, and remap the current font from one atlas to the other (you may need to maintain a remapping table of your fonts at varying DPI scales).
+The reason DPI is not auto-magically solved in stock examples is that we don't yet have a satisfying solution for the "multi-dpi" problem (using the `docking` branch: when multiple viewport windows are over multiple monitors using different DPI scales) specifically for the `ImGuiStyle` structure. Fonts are however now perfectly scalable.
 
-This approach is relatively easy and functional but comes with two issues:
-- It's not possibly to reliably size or position a window ahead of `Begin()` without knowing on which monitor it'll land.
-- Style override may be lost during the `Begin()` call crossing monitor boundaries. You may need to do some custom scaling mumbo-jumbo if you want your `OnChangedViewport()` handler to preserve style overrides.
-
-Please note that if you are not using multi-viewports with multi-monitors using different DPI scales, you can ignore that and use the simpler technique recommended at the top.
-
-On Windows, in addition to scaling the font size (make sure to round to an integer) and using `style.ScaleAllSizes()`, you will need to inform Windows that your application is DPI aware. If this is not done, Windows will scale the application window and the UI text will be blurry. Potential solutions to indicate DPI awareness on Windows are:
-
-- For SDL2: the flag `SDL_WINDOW_ALLOW_HIGHDPI` needs to be passed to `SDL_CreateWindow()`.
+**On Windows, you need to inform Windows that your application is DPI aware!**
+If this is not done, Windows will scale the application window and the UI text will be blurry. Potential solutions to indicate DPI awareness on Windows are:
+- For SDL2: the flag `SDL_WINDOW_ALLOW_HIGHDPI` needs to be passed to `SDL_CreateWindow()` + call `::SetProcessDPIAware()`.
 - For SDL3: the flag `SDL_WINDOW_HIGH_PIXEL_DENSITY` needs to be passed to `SDL_CreateWindow()`.
 - For GLFW: this is done automatically.
 - For other Windows projects with other backends, or wrapper projects:
@@ -615,9 +661,12 @@ Use the font atlas to pack them into a single texture. Read [docs/FONTS.md](http
 ---
 
 ### Q: How can I display and input non-Latin characters such as Chinese, Japanese, Korean, Cyrillic?
-When loading a font, pass custom Unicode ranges to specify the glyphs to load.
 
+Since 1.92 (June 2025) and with an updated backend, it is not necessary to specify glyph ranges at all.
+
+Before 1.92, when loading a font, pass custom Unicode ranges to specify the glyphs to load.
 ```cpp
+// [BEFORE 1.92]
 // Add default Japanese ranges
 io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels, nullptr, io.Fonts->GetGlyphRangesJapanese());
 
@@ -641,8 +690,8 @@ Text input: it is up to your application to pass the right character code by cal
 The applications in examples/ are doing that.
 Windows: you can use the WM_CHAR or WM_UNICHAR or WM_IME_CHAR message (depending if your app is built using Unicode or MultiByte mode).
 You may also use `MultiByteToWideChar()` or `ToUnicode()` to retrieve Unicode codepoints from MultiByte characters or keyboard state.
-Windows: if your language is relying on an Input Method Editor (IME), you can write your HWND to ImGui::GetMainViewport()->PlatformHandleRaw
-for the default implementation of GetPlatformIO().Platform_SetImeDataFn() to set your Microsoft IME position correctly.
+Windows: if your language is relying on an Input Method Editor (IME), you can write your HWND to `ImGui::GetMainViewport()->PlatformHandleRaw`
+for the default implementation of `GetPlatformIO().Platform_SetImeDataFn()` to set your Microsoft IME position correctly.
 
 ##### [Return to Index](#index)
 

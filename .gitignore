@@ -29,8 +29,9 @@ ipch
 ## Getting files created in JSON/Schemas/Catalog/ from a VS2022 update
 JSON/
 
-## Commonly used CMake directories
+## Commonly used CMake directories & CMake CPM cache
 build*/
+.cache
 
 ## Xcode & macOS artifacts
 project.xcworkspace
