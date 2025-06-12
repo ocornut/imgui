@@ -21,9 +21,10 @@
 // - Issues & support ........... https://github.com/ocornut/imgui/issues
 // - Test Engine & Automation ... https://github.com/ocornut/imgui_test_engine (test suite, test engine to automate your apps)
 
-// For first-time users having issues compiling/linking/running/loading fonts:
+// For first-time users having issues compiling/linking/running:
 // please post in https://github.com/ocornut/imgui/discussions if you cannot find a solution in resources above.
 // Everything else should be asked in 'Issues'! We are building a database of cross-linked knowledge there.
+// Since 1.92, we encourage font loading question to also be posted in 'Issues'.
 
 // Copyright (c) 2014-2025 Omar Cornut
 // Developed by Omar Cornut and every direct or indirect contributors to the GitHub.
@@ -347,12 +348,12 @@ CODE
         ImGui::Render();
 
         // Update textures
-        for (ImTextureData* tex : ImGui::GetPlatformIO().Textures)
+        ImDrawData* draw_data = ImGui::GetDrawData();
+        for (ImTextureData* tex : *draw_data->Textures)
             if (tex->Status != ImTextureStatus_OK)
                 MyImGuiBackend_UpdateTexture(tex);
 
         // Render dear imgui contents, swap buffers
-        ImDrawData* draw_data = ImGui::GetDrawData();
         MyImGuiBackend_RenderDrawData(draw_data);
         SwapBuffers();
      }
@@ -372,25 +373,32 @@ CODE
     {
         if (tex->Status == ImTextureStatus_WantCreate)
         {
-            // create texture based on tex->Width/Height/Pixels
-            // call tex->SetTexID() to specify backend-specific identifiers
-            // tex->Status = ImTextureStatus_OK;
+            // <create texture based on tex->Width/Height/Pixels>
+            tex->SetTexID(xxxx); // specify backend-specific ImTextureID identifier
+            tex->SetStatus(ImTextureStatus_OK);
+            tex->BackendUserData = xxxx; // store more backend data
         }
         if (tex->Status == ImTextureStatus_WantUpdates)
         {
-            // update texture blocks based on tex->UpdateRect
-            // tex->Status = ImTextureStatus_OK;
+            // <update texture blocks based on tex->UpdateRect>
+            tex->SetStatus(ImTextureStatus_OK);
         }
         if (tex->Status == ImTextureStatus_WantDestroy)
         {
-            // destroy texture
-            // call tex->SetTexID(ImTextureID_Invalid)
-            // tex->Status = ImTextureStatus_Destroyed;
+            // <destroy texture>
+            tex->SetTexID(ImTextureID_Invalid);
+            tex->SetStatus(ImTextureStatus_Destroyed);
         }
     }
 
     void MyImGuiBackend_RenderDrawData(ImDrawData* draw_data)
     {
+       if (draw_data->Textures != nullptr)
+           for (ImTextureData* tex : *draw_data->Textures)
+               if (tex->Status != ImTextureStatus_OK)
+                   MyImGuiBackend_UpdateTexture(tex);
+
+
        // TODO: Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled
        // TODO: Setup texture sampling state: sample with bilinear filtering (NOT point/nearest filtering). Use 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines;' to allow point/nearest filtering.
        // TODO: Setup viewport covering draw_data->DisplayPos to draw_data->DisplayPos + draw_data->DisplaySize
@@ -407,7 +415,10 @@ CODE
              const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
              if (pcmd->UserCallback)
              {
-                 pcmd->UserCallback(cmd_list, pcmd);
+                 if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
+                     MyEngineResetRenderState();
+                 else
+                     pcmd->UserCallback(cmd_list, pcmd);
              }
              else
              {
