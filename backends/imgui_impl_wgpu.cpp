@@ -597,20 +597,6 @@ static void ImGui_ImplWGPU_CreateFontsTexture()
         wgpuQueueWriteTexture(bd->defaultQueue, &dst_view, pixels, (uint32_t)(width * size_pp * height), &layout, &size);
     }
 
-    // Create the associated sampler
-    // (Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling)
-    {
-        WGPUSamplerDescriptor sampler_desc = {};
-        sampler_desc.minFilter = WGPUFilterMode_Linear;
-        sampler_desc.magFilter = WGPUFilterMode_Linear;
-        sampler_desc.mipmapFilter = WGPUMipmapFilterMode_Linear;
-        sampler_desc.addressModeU = WGPUAddressMode_ClampToEdge;
-        sampler_desc.addressModeV = WGPUAddressMode_ClampToEdge;
-        sampler_desc.addressModeW = WGPUAddressMode_ClampToEdge;
-        sampler_desc.maxAnisotropy = 1;
-        bd->renderResources.Sampler = wgpuDeviceCreateSampler(bd->wgpuDevice, &sampler_desc);
-    }
-
     // Store our identifier
     static_assert(sizeof(ImTextureID) >= sizeof(bd->renderResources.FontTexture), "Can't pack descriptor handle into TexID, 32-bit not supported yet.");
     io.Fonts->SetTexID((ImTextureID)bd->renderResources.FontTextureView);
@@ -760,13 +746,24 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     ImGui_ImplWGPU_CreateFontsTexture();
     ImGui_ImplWGPU_CreateUniformBuffer();
 
+    // Create sampler
+    // (Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling)
+    WGPUSamplerDescriptor sampler_desc = {};
+    sampler_desc.minFilter = WGPUFilterMode_Linear;
+    sampler_desc.magFilter = WGPUFilterMode_Linear;
+    sampler_desc.mipmapFilter = WGPUMipmapFilterMode_Linear;
+    sampler_desc.addressModeU = WGPUAddressMode_ClampToEdge;
+    sampler_desc.addressModeV = WGPUAddressMode_ClampToEdge;
+    sampler_desc.addressModeW = WGPUAddressMode_ClampToEdge;
+    sampler_desc.maxAnisotropy = 1;
+    bd->renderResources.Sampler = wgpuDeviceCreateSampler(bd->wgpuDevice, &sampler_desc);
+
     // Create resource bind group
     WGPUBindGroupEntry common_bg_entries[] =
     {
         { nullptr, 0, bd->renderResources.Uniforms, 0, MEMALIGN(sizeof(Uniforms), 16), 0, 0 },
         { nullptr, 1, 0, 0, 0, bd->renderResources.Sampler, 0 },
     };
-
     WGPUBindGroupDescriptor common_bg_descriptor = {};
     common_bg_descriptor.layout = bg_layouts[0];
     common_bg_descriptor.entryCount = sizeof(common_bg_entries) / sizeof(WGPUBindGroupEntry);
