@@ -115,8 +115,8 @@ Breaking changes:
   to 4096 but that limit isn't necessary anymore, and Renderer_TextureMaxWidth covers this)
   However you may set TexMinWidth = TexMaxWidth for the same effect.
 - Fonts: if you create and manage ImFontAtlas instances yourself (instead of relying on
-  ImGuiContext to create one, you'll need to set the atlas->RendererHasTextures field
-  and call ImFontAtlasUpdateNewFrame() yourself. An assert will trigger if you don't.
+  ImGuiContext to create one, you'll need to call ImFontAtlasUpdateNewFrame() yourself.
+  An assert will trigger if you don't.
 - Fonts: obsolete ImGui::SetWindowFontScale() which is not useful anymore. Prefer using
   PushFontSize(style.FontSizeBase * factor) or to manipulate other scaling factors.
 - Fonts: obsoleted ImFont::Scale which is not useful anymore.

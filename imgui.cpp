@@ -470,7 +470,7 @@ CODE
                        - Fonts: ImFontConfig::OversampleH/OversampleV default to automatic (== 0) since v1.91.8. It is quite important you keep it automatic until we decide if we want to provide a way to express finer policy, otherwise you will likely waste texture space when using large glyphs. Note that the imgui_freetype backend doesn't use and does not need oversampling.
                        - Fonts: specifying glyph ranges is now unnecessary. The value of ImFontConfig::GlyphRanges[] is only useful for legacy backends. All GetGlyphRangesXXXX() functions are now marked obsolete: GetGlyphRangesDefault(), GetGlyphRangesGreek(), GetGlyphRangesKorean(), GetGlyphRangesJapanese(), GetGlyphRangesChineseSimplifiedCommon(), GetGlyphRangesChineseFull(), GetGlyphRangesCyrillic(), GetGlyphRangesThai(), GetGlyphRangesVietnamese().
                        - Fonts: removed ImFontAtlas::TexDesiredWidth to enforce a texture width. (#327)
-                       - Fonts: if you create and manage ImFontAtlas instances yourself (instead of relying on ImGuiContext to create one, you'll need to set the atlas->RendererHasTextures field and call ImFontAtlasUpdateNewFrame() yourself. An assert will trigger if you don't.
+                       - Fonts: if you create and manage ImFontAtlas instances yourself (instead of relying on ImGuiContext to create one, you'll need to call ImFontAtlasUpdateNewFrame() yourself. An assert will trigger if you don't.
                        - Fonts: obsolete ImGui::SetWindowFontScale() which is not useful anymore. Prefer using 'PushFontSize(style.FontSizeBase * factor)' or to manipulate other scaling factors.
                        - Fonts: obsoleted ImFont::Scale which is not useful anymore.
                        - Fonts: generally reworked Internals of ImFontAtlas and ImFont. While in theory a vast majority of users shouldn't be affected, some use cases or extensions might be. Among other things:
@@ -5286,13 +5286,12 @@ static void ImGui::UpdateTexturesNewFrame()
     {
         if (atlas->OwnerContext == &g)
         {
-            atlas->RendererHasTextures = has_textures;
-            ImFontAtlasUpdateNewFrame(atlas, g.FrameCount);
+            ImFontAtlasUpdateNewFrame(atlas, g.FrameCount, has_textures);
         }
         else
         {
             IM_ASSERT(atlas->Builder != NULL && atlas->Builder->FrameCount != -1 && "If you manage font atlases yourself you need to call ImFontAtlasUpdateNewFrame() on it.");
-            IM_ASSERT(atlas->RendererHasTextures == has_textures && "If you manage font atlases yourself make sure atlas->RendererHasTextures is set consistently with all contexts using it.");
+            IM_ASSERT(atlas->RendererHasTextures == has_textures && "If you manage font atlases yourself make sure ImGuiBackendFlags_RendererHasTextures is set consistently with atlas->RendererHasTextures as specified in the ImFontAtlasUpdateNewFrame() call.");
         }
     }
 }

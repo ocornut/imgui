@@ -2716,12 +2716,13 @@ static void ImFontAtlasBuildUpdateRendererHasTexturesFromContext(ImFontAtlas* at
 }
 
 // Called by NewFrame() for atlases owned by a context.
-// If you manually manage font atlases, you'll need to call this yourself + ensure atlas->RendererHasTextures is set.
-// 'frame_count' needs to be provided because we can gc/prioritize baked fonts based on their age.
-// 'frame_count' may not match those of imgui contexts using this atlas, as contexts may be updated as different frequencies.
-void ImFontAtlasUpdateNewFrame(ImFontAtlas* atlas, int frame_count)
+// If you manually manage font atlases, you'll need to call this yourself.
+// - 'frame_count' needs to be provided because we can gc/prioritize baked fonts based on their age.
+// - 'frame_count' may not match those of all imgui contexts using this atlas, as contexts may be updated as different frequencies. But generally you can use ImGui::GetFrameCount() on one of your context.
+void ImFontAtlasUpdateNewFrame(ImFontAtlas* atlas, int frame_count, bool renderer_has_textures)
 {
-    IM_ASSERT(atlas->Builder == NULL || atlas->Builder->FrameCount < frame_count); // Protection against being called twice?
+    IM_ASSERT(atlas->Builder == NULL || atlas->Builder->FrameCount < frame_count); // Protection against being called twice.
+    atlas->RendererHasTextures = renderer_has_textures;
 
     // Check that font atlas was built or backend support texture reload in which case we can build now
     if (atlas->RendererHasTextures)
