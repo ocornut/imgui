@@ -363,7 +363,7 @@ Other changes:
 - Misc: added extra operators to ImVec4 in IMGUI_DEFINE_MATH_OPERATORS block. (#8510) [@gan74]
 - Demo: changed default framed item width to use Min(GetFontSize() * 12, GetContentRegionAvail().x * 0.40f).
 - Backends:
-  - Backends: DX9/DX10/DX11/DX12, Vulkan, OpenGL2/3, Metal, SDLGPU3, SDLRenderer2/3, Allegro5:
+  - Backends: DX9/DX10/DX11/DX12, Vulkan, OpenGL2/3, Metal, SDLGPU3, SDLRenderer2/3, WebGPU, Allegro5:
     - Added ImGuiBackendFlags_RendererHasTextures support. (#8465, #3761, #3471)
       [@ocornut, @ShironekoBen, @thedmd]
     - Added ImGui_ImplXXXX_UpdateTexture(ImTextureData* tex) functions for all backend.
