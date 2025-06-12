@@ -510,7 +510,6 @@ CODE
                            - Prefer adding a font source (ImFontConfig) using a custom/procedural loader.
                        - DrawList: Renamed ImDrawList::PushTextureID()/PopTextureID() to PushTexture()/PopTexture().
                        - Backends: removed ImGui_ImplXXXX_CreateFontsTexture()/ImGui_ImplXXXX_DestroyFontsTexture() for all backends that had them. They should not be necessary any more.
->>>>>>> master
  - 2025/05/23 (1.92.0) - Fonts: changed ImFont::CalcWordWrapPositionA() to ImFont::CalcWordWrapPosition()
                             - old:  const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, ....);
                             - new:  const char* ImFont::CalcWordWrapPosition (float size,  const char* text, ....);
@@ -21584,7 +21583,7 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
         if (loader_current == loader_freetype)
         {
             unsigned int loader_flags = atlas->FontLoaderFlags;
-            Text("Shared FreeType Loader Flags:  0x%08", loader_flags);
+            Text("Shared FreeType Loader Flags:  0x%08X", loader_flags);
             if (ImGuiFreeType::DebugEditFontLoaderFlags(&loader_flags))
             {
                 for (ImFont* font : atlas->Fonts)
@@ -23601,6 +23600,40 @@ void ImGui::DebugStartItemPicker() {}
 void ImGui::DebugHookIdInfo(ImGuiID, ImGuiDataType, const void*, const void*) {}
 
 #endif // #ifndef IMGUI_DISABLE_DEBUG_TOOLS
+
+#if !defined(IMGUI_DISABLE_DEMO_WINDOWS) || !defined(IMGUI_DISABLE_DEBUG_TOOLS)
+// Demo helper function to select among loaded fonts.
+// Here we use the regular BeginCombo()/EndCombo() api which is the more flexible one.
+void ImGui::ShowFontSelector(const char* label)
+{
+    ImGuiIO& io = GetIO();
+    ImFont* font_current = GetFont();
+    if (BeginCombo(label, font_current->GetDebugName()))
+    {
+        for (ImFont* font : io.Fonts->Fonts)
+        {
+            PushID((void*)font);
+            if (Selectable(font->GetDebugName(), font == font_current))
+                io.FontDefault = font;
+            if (font == font_current)
+                SetItemDefaultFocus();
+            PopID();
+        }
+        EndCombo();
+    }
+    SameLine();
+    if (io.BackendFlags & ImGuiBackendFlags_RendererHasTextures)
+        MetricsHelpMarker(
+            "- Load additional fonts with io.Fonts->AddFontXXX() functions.\n"
+            "- Read FAQ and docs/FONTS.md for more details.");
+    else
+        MetricsHelpMarker(
+            "- Load additional fonts with io.Fonts->AddFontXXX() functions.\n"
+            "- The font atlas is built when calling io.Fonts->GetTexDataAsXXXX() or io.Fonts->Build().\n"
+            "- Read FAQ and docs/FONTS.md for more details.\n"
+            "- If you need to add/remove fonts at runtime (e.g. for DPI change), do it before calling NewFrame().");
+}
+#endif // #if !defined(IMGUI_DISABLE_DEMO_WINDOWS) || !defined(IMGUI_DISABLE_DEBUG_TOOLS)
 
 //-----------------------------------------------------------------------------
 
