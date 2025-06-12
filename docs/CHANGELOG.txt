@@ -407,6 +407,8 @@ Other changes:
     memory ownership change. (#8530, #7801) [@Green-Sky]
   - Backends: SDL3: honor ImGuiPlatformImeData->WantTextInput as an alternative
     way to call SDL_StartTextInput(), without IME being necessarily visible. (#8584)
+  - Backends: OSX: ImGui_ImplOSX_HandleEvent() only process event for window containing
+    our view. (#8644) [@BingoXuan]
 - Examples:
   - Examples: Made many examples DPI aware by default.
     The single-viewport is basically:
