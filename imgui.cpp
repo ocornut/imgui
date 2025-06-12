@@ -5301,8 +5301,12 @@ static void ImGui::UpdateTexturesNewFrame()
         }
         else
         {
-            IM_ASSERT(atlas->Builder != NULL && atlas->Builder->FrameCount != -1 && "If you manage font atlases yourself you need to call ImFontAtlasUpdateNewFrame() on it.");
-            IM_ASSERT(atlas->RendererHasTextures == has_textures && "If you manage font atlases yourself make sure ImGuiBackendFlags_RendererHasTextures is set consistently with atlas->RendererHasTextures as specified in the ImFontAtlasUpdateNewFrame() call.");
+            // (1) If you manage font atlases yourself, e.g. create a ImFontAtlas yourself you need to call ImFontAtlasUpdateNewFrame() on it.
+            // Otherwise, calling ImGui::CreateContext() without parameter will create an atlas owned by the context.
+            // (2) If you have multiple font atlases, make sure the 'atlas->RendererHasTextures' as specified in the ImFontAtlasUpdateNewFrame() call matches for that.
+            // (3) If you have multiple imgui contexts, they also need to have a matching value for ImGuiBackendFlags_RendererHasTextures.
+            IM_ASSERT(atlas->Builder != NULL && atlas->Builder->FrameCount != -1);
+            IM_ASSERT(atlas->RendererHasTextures == has_textures);
         }
     }
 }
@@ -16967,7 +16971,7 @@ void ImGui::DebugNodeFont(ImFont* font)
         if (baked->ContainerFont != font)
             continue;
         PushID(baked_n);
-        if (TreeNode("Glyphs", "Baked at { %.2fpx, d.%.1f }: %d glyphs%s", baked->Size, baked->RasterizerDensity, baked->Glyphs.Size, (baked->LastUsedFrame < atlas->Builder->FrameCount - 1) ? " *Unused*" : ""))
+        if (TreeNode("Glyphs", "Baked at { %.2fpx, d.%.2f }: %d glyphs%s", baked->Size, baked->RasterizerDensity, baked->Glyphs.Size, (baked->LastUsedFrame < atlas->Builder->FrameCount - 1) ? " *Unused*" : ""))
         {
             if (SmallButton("Load all"))
                 for (unsigned int base = 0; base <= IM_UNICODE_CODEPOINT_MAX; base++)

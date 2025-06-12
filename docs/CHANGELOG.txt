@@ -41,11 +41,14 @@ HOW TO UPDATE?
 
 THIS VERSION CONTAINS THE LARGEST AMOUNT OF BREAKING CHANGES SINCE 2015!
 I TRIED REALLY HARD TO KEEP THEM TO A MINIMUM, REDUCE THE AMOUNT OF INTERFERENCES,
-BUT INEVITABLY SOME USERS WILL BE AFFECTED.
+BUT INEVITABLY SOME USERS OR THIRD-PARTY EXTENSIONS WILL BE AFFECTED.
 
 IN ORDER TO HELP US IMPROVE THE TRANSITION PROCESS, INCL. DOCUMENTATION AND COMMENTS,
 PLEASE REPORT **ANY** DOUBT, CONFUSION, QUESTIONS, FEEDBACK TO:
     https://github.com/ocornut/imgui/issues/
+If you are using custom widgets, internals or third-party extension that are somehow
+breaking and aren't obvious how to solve, please post in Issues so we can gather
+data and share solutions that may help others.
 
 As part of the plan to reduce impact of API breaking changes, several unfinished
 changes/features/refactors related to font and text systems and scaling will be
