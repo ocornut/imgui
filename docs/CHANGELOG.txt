@@ -290,6 +290,8 @@ Other changes:
   to be a valid low-level texture identifier.
 - Debug Tools: Fonts section: add font preview, add "Remove" button, add "Load all glyphs"
   button, add selection to change font backend when both are compiled in.
+- Special thanks for fonts/texture related feedback to: @thedmd, @ShironekoBen, @rodrigorc,
+  @pathogendavid, @itamago, @rokups, @DucaRii, @Aarkham, @cyfewlp.
 
 - IO: variations in analog-only components of gamepad events do not interfere
   with trickling of mouse position events (#4921, #8508)

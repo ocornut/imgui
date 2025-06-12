@@ -8171,42 +8171,9 @@ void ImGui::ShowAboutWindow(bool* p_open)
 //-----------------------------------------------------------------------------
 // [SECTION] Style Editor / ShowStyleEditor()
 //-----------------------------------------------------------------------------
-// - ShowFontSelector()
 // - ShowStyleSelector()
 // - ShowStyleEditor()
 //-----------------------------------------------------------------------------
-
-// Demo helper function to select among loaded fonts.
-// Here we use the regular BeginCombo()/EndCombo() api which is the more flexible one.
-void ImGui::ShowFontSelector(const char* label)
-{
-    ImGuiIO& io = ImGui::GetIO();
-    ImFont* font_current = ImGui::GetFont();
-    if (ImGui::BeginCombo(label, font_current->GetDebugName()))
-    {
-        for (ImFont* font : io.Fonts->Fonts)
-        {
-            ImGui::PushID((void*)font);
-            if (ImGui::Selectable(font->GetDebugName(), font == font_current))
-                io.FontDefault = font;
-            if (font == font_current)
-                ImGui::SetItemDefaultFocus();
-            ImGui::PopID();
-        }
-        ImGui::EndCombo();
-    }
-    ImGui::SameLine();
-    if (io.BackendFlags & ImGuiBackendFlags_RendererHasTextures)
-        HelpMarker(
-            "- Load additional fonts with io.Fonts->AddFontXXX() functions.\n"
-            "- Read FAQ and docs/FONTS.md for more details.");
-    else
-        HelpMarker(
-            "- Load additional fonts with io.Fonts->AddFontXXX() functions.\n"
-            "- The font atlas is built when calling io.Fonts->GetTexDataAsXXXX() or io.Fonts->Build().\n"
-            "- Read FAQ and docs/FONTS.md for more details.\n"
-            "- If you need to add/remove fonts at runtime (e.g. for DPI change), do it before calling NewFrame().");
-}
 
 // Demo helper function to select among default colors. See ShowStyleEditor() for more advanced options.
 // Here we use the simplified Combo() api that packs items into a single literal string.
@@ -10808,9 +10775,9 @@ void ImGui::ShowAboutWindow(bool*) {}
 void ImGui::ShowDemoWindow(bool*) {}
 void ImGui::ShowUserGuide() {}
 void ImGui::ShowStyleEditor(ImGuiStyle*) {}
-bool ImGui::ShowStyleSelector(const char* label) { return false; }
-void ImGui::ShowFontSelector(const char* label) {}
+bool ImGui::ShowStyleSelector(const char*) { return false; }
+void ImGui::ShowFontSelector(const char*) {}
 
-#endif
+#endif // #ifndef IMGUI_DISABLE_DEMO_WINDOWS
 
 #endif // #ifndef IMGUI_DISABLE
