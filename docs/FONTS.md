@@ -105,6 +105,7 @@ io.Fonts->AddFontDefault();
 ```
 
 **Load .TTF/.OTF file with:**
+
 🆕 **Since 1.92, with an up to date backend: passing a size is not necessary**
 ```cpp
 ImGuiIO& io = ImGui::GetIO();
@@ -377,7 +378,7 @@ TL;DR; With the new system, it is recommended that you create a custom `ImFontLo
 
 You can ask questions in [#8466](https://github.com/ocornut/imgui/issues/8466).
 
-🆕 **Before 1.92:**
+**Before 1.92:**
 
 As an alternative to rendering colorful glyphs using imgui_freetype with `ImGuiFreeTypeBuilderFlags_LoadColor`, you may allocate your own space in the texture atlas and write yourself into it. **(This is a BETA api, use if you are familiar with dear imgui and with your rendering backend)**
 

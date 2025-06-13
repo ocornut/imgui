@@ -41,11 +41,14 @@ HOW TO UPDATE?
 
 THIS VERSION CONTAINS THE LARGEST AMOUNT OF BREAKING CHANGES SINCE 2015!
 I TRIED REALLY HARD TO KEEP THEM TO A MINIMUM, REDUCE THE AMOUNT OF INTERFERENCES,
-BUT INEVITABLY SOME USERS WILL BE AFFECTED.
+BUT INEVITABLY SOME USERS OR THIRD-PARTY EXTENSIONS WILL BE AFFECTED.
 
 IN ORDER TO HELP US IMPROVE THE TRANSITION PROCESS, INCL. DOCUMENTATION AND COMMENTS,
 PLEASE REPORT **ANY** DOUBT, CONFUSION, QUESTIONS, FEEDBACK TO:
     https://github.com/ocornut/imgui/issues/
+If you are using custom widgets, internals or third-party extension that are somehow
+breaking and aren't obvious how to solve, please post in Issues so we can gather
+data and share solutions that may help others.
 
 As part of the plan to reduce impact of API breaking changes, several unfinished
 changes/features/refactors related to font and text systems and scaling will be
@@ -115,8 +118,8 @@ Breaking changes:
   to 4096 but that limit isn't necessary anymore, and Renderer_TextureMaxWidth covers this)
   However you may set TexMinWidth = TexMaxWidth for the same effect.
 - Fonts: if you create and manage ImFontAtlas instances yourself (instead of relying on
-  ImGuiContext to create one, you'll need to set the atlas->RendererHasTextures field
-  and call ImFontAtlasUpdateNewFrame() yourself. An assert will trigger if you don't.
+  ImGuiContext to create one, you'll need to call ImFontAtlasUpdateNewFrame() yourself.
+  An assert will trigger if you don't.
 - Fonts: obsolete ImGui::SetWindowFontScale() which is not useful anymore. Prefer using
   PushFontSize(style.FontSizeBase * factor) or to manipulate other scaling factors.
 - Fonts: obsoleted ImFont::Scale which is not useful anymore.
@@ -302,6 +305,7 @@ Other changes:
   codepath that preserve last contents size when collapsed, resulting in
   programmatically uncollapsing auto-sizing windows having them flicker size
   for a frame. (#7691) [@achabense]
+- Windows: clicking on a window close button doesn't claim focus and bring to front. (#8683)
 - Windows: loosened code to allow hovering of resize grips, borders, and table
   borders while hovering a sibling child window, so that the code in master matches
   one in docking (they accidentally diverged). (#8554)
@@ -365,32 +369,14 @@ Other changes:
   requires providing a window to the backend. (#8584, #6341)
 - Misc: added extra operators to ImVec4 in IMGUI_DEFINE_MATH_OPERATORS block. (#8510) [@gan74]
 - Demo: changed default framed item width to use Min(GetFontSize() * 12, GetContentRegionAvail().x * 0.40f).
-- Backends:
-  - Backends: DX9/DX10/DX11/DX12, Vulkan, OpenGL2/3, Metal, SDLGPU3, SDLRenderer2/3, Allegro5:
+- Renderer Backends:
+  - Backends: DX9/DX10/DX11/DX12, Vulkan, OpenGL2/3, Metal, SDLGPU3, SDLRenderer2/3, WebGPU, Allegro5:
     - Added ImGuiBackendFlags_RendererHasTextures support. (#8465, #3761, #3471)
       [@ocornut, @ShironekoBen, @thedmd]
     - Added ImGui_ImplXXXX_UpdateTexture(ImTextureData* tex) functions for all backend.
       Available if you want to start uploading textures right after ImGui::Render() and without
       waiting for the call to ImGui_ImplXXXX_RenderDrawData(). Also useful if you use a staged or
       multi-threaded rendering schemes, where you might want to set ImDrawData::Textures = NULL. (#8597, #1860)
-  - Backends: GLFW: added ImGui_ImplGlfw_GetContentScaleForMonitor(), ImGui_ImplGlfw_GetContentScaleForWindow()
-    helpers. They are wrappers to glfwGetMonitorContentScale()/glfwGetWindowContentScale(), with compile-time
-    GLFW version checks + returning 1.0f on Apple platform.
-  - Backends: SDL2: added ImGui_ImplSDL2_GetDpiScaleForDisplay() and ImGui_ImplSDL2_GetContentScaleForWindow()
-    helpers. They are wrappers to SDL_GetDisplayDPI(), with compile-time SDL version checks + returning 1.0f
-    on Apple platforms. SDL3 already does this by default.
-  - Backends: Win32: Fixed an issue where externally losing mouse capture (due to e.g. focus loss)
-    would fail to claim it again the next subsequent click. (#8594)
-  - Backends: SDL2, SDL3, OSX: Fill gamepad inputs and set ImGuiBackendFlags_HasGamepad
-    regardless of ImGuiConfigFlags_NavEnableGamepad being set. (#8508)
-  - Backends: SDL2, SDL3: don't attempt to call SDL_CaptureMouse() on drivers where we don't
-    call SDL_GetGlobalMouseState(). This is specifically for Wayland but we currently use
-    the same white-list as SDL_GetGlobalMouseState(). (#8561) [@vs49688]
-  - Backends: GLFW, SDL2, SDL3: include GLFW/SDL version number in io.BackendPlatformName.
-  - Backends: SDL3: Update for SDL3 api changes: revert SDL_GetClipboardText()
-    memory ownership change. (#8530, #7801) [@Green-Sky]
-  - Backends: SDL3: honor ImGuiPlatformImeData->WantTextInput as an alternative
-    way to call SDL_StartTextInput(), without IME being necessarily visible. (#8584)
   - Backends: SDLGPU3: Fixed creating atlas texture earlier than other backends, preventing
     to load fonts between the Init and NewFrames calls.
   - Backends: SDLGPU3: Made ImGui_ImplSDLGPU3_PrepareDrawData() reuse GPU Transfer Buffers which
@@ -409,6 +395,27 @@ Other changes:
   - Backends: Vulkan: fixed validation errors in window create/resize helpers used by examples
     and by multi-viewports implementation, which would typically trigger errors while detaching
     secondary viewports. (#8600, #8176) [@ChrisTom-94]
+- Platform Backends:
+  - Backends: GLFW: added ImGui_ImplGlfw_GetContentScaleForMonitor(), ImGui_ImplGlfw_GetContentScaleForWindow()
+    helpers. They are wrappers to glfwGetMonitorContentScale()/glfwGetWindowContentScale(), with compile-time
+    GLFW version checks + returning 1.0f on Apple platform.
+  - Backends: SDL2: added ImGui_ImplSDL2_GetDpiScaleForDisplay() and ImGui_ImplSDL2_GetContentScaleForWindow()
+    helpers. They are wrappers to SDL_GetDisplayDPI(), with compile-time SDL version checks + returning 1.0f
+    on Apple platforms. SDL3 already does this by default.
+  - Backends: Win32: Fixed an issue where externally losing mouse capture (due to e.g. focus loss)
+    would fail to claim it again the next subsequent click. (#8594)
+  - Backends: SDL2, SDL3, OSX: Fill gamepad inputs and set ImGuiBackendFlags_HasGamepad
+    regardless of ImGuiConfigFlags_NavEnableGamepad being set. (#8508)
+  - Backends: SDL2, SDL3: don't attempt to call SDL_CaptureMouse() on drivers where we don't
+    call SDL_GetGlobalMouseState(). This is specifically for Wayland but we currently use
+    the same white-list as SDL_GetGlobalMouseState(). (#8561) [@vs49688]
+  - Backends: GLFW, SDL2, SDL3: include GLFW/SDL version number in io.BackendPlatformName.
+  - Backends: SDL3: Update for SDL3 api changes: revert SDL_GetClipboardText()
+    memory ownership change. (#8530, #7801) [@Green-Sky]
+  - Backends: SDL3: honor ImGuiPlatformImeData->WantTextInput as an alternative
+    way to call SDL_StartTextInput(), without IME being necessarily visible. (#8584)
+  - Backends: OSX: ImGui_ImplOSX_HandleEvent() only process event for window containing
+    our view. (#8644) [@BingoXuan]
 - Examples:
   - Examples: Made many examples DPI aware by default.
     The single-viewport is basically:
