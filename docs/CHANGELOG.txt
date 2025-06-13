@@ -302,6 +302,7 @@ Other changes:
   codepath that preserve last contents size when collapsed, resulting in
   programmatically uncollapsing auto-sizing windows having them flicker size
   for a frame. (#7691) [@achabense]
+- Windows: clicking on a window close button doesn't claim focus and bring to front. (#8683)
 - Windows: loosened code to allow hovering of resize grips, borders, and table
   borders while hovering a sibling child window, so that the code in master matches
   one in docking (they accidentally diverged). (#8554)
