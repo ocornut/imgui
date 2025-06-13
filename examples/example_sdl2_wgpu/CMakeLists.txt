@@ -3,8 +3,8 @@
 #  2. cmake -B build -DIMGUI_DAWN_DIR=dawn
 #  3. cmake --build build
 # The resulting binary will be found at one of the following locations:
-#   * build/Debug/example_glfw_wgpu[.exe]
-#   * build/example_glfw_wgpu[.exe]
+#   * build/Debug/example_sdl2_wgpu[.exe]
+#   * build/example_sdl2_wgpu[.exe]
 
 # Building for Emscripten:
 #  1. Install Emscripten SDK following the instructions: https://emscripten.org/docs/getting_started/downloads.html
@@ -14,7 +14,7 @@
 #  4. emrun build/index.html
 
 cmake_minimum_required(VERSION 3.10.2)
-project(imgui_example_glfw_wgpu C CXX)
+project(imgui_example_sdl2_wgpu C CXX)
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Debug CACHE STRING "" FORCE)
@@ -27,23 +27,11 @@ set(IMGUI_DIR ../../)
 
 # Libraries
 if(EMSCRIPTEN)
-  if(EMSCRIPTEN_VERSION VERSION_GREATER_EQUAL "4.0.10")
-    set(IMGUI_EMSCRIPTEN_WEBGPU_FLAG "--use-port=emdawnwebgpu" CACHE STRING "Choose between --use-port=emdawnwebgpu (Dawn implementation of EMSCRIPTEN) and -sUSE_WEBGPU=1 (WGPU implementation of EMSCRIPTEN, deprecated in 4.0.10): default to --use-port=emdawnwebgpu for EMSCRIPTEN >= 4.0.10")
-  else()
-    set(IMGUI_EMSCRIPTEN_WEBGPU_FLAG "-sUSE_WEBGPU=1" CACHE STRING "Use -sUSE_WEBGPU=1 for EMSCRIPTEN WGPU implementation" FORCE)
-  endif()
-  if(EMSCRIPTEN_VERSION VERSION_GREATER_EQUAL "3.1.57")
-    set(IMGUI_EMSCRIPTEN_GLFW3 "--use-port=contrib.glfw3" CACHE STRING "Choose between --use-port=contrib.glfw3 and -sUSE_GLFW=3 for GLFW implementation (default to --use-port=contrib.glfw3)")
-  else()
-    # cannot use contrib.glfw3 prior to 3.1.57
-    set(IMGUI_EMSCRIPTEN_GLFW3 "-sUSE_GLFW=3" CACHE STRING "Use -sUSE_GLFW=3 for GLFW implementation" FORCE)
-  endif()
-  set(LIBRARIES glfw)
   add_compile_options(-sDISABLE_EXCEPTION_CATCHING=1 -DIMGUI_DISABLE_FILE_FUNCTIONS=1)
 else()
   # Dawn wgpu desktop
   set(DAWN_FETCH_DEPENDENCIES ON)
-  set(IMGUI_DAWN_DIR CACHE PATH "Path to Dawn repository")
+  set(IMGUI_DAWN_DIR CACHE PATH "path to dawn")
   if (NOT IMGUI_DAWN_DIR)
     message(FATAL_ERROR "Please specify the Dawn repository by setting IMGUI_DAWN_DIR")
   endif()
@@ -66,10 +54,9 @@ else()
     option(TINT_BUILD_SPV_WRITER "Build the SPIR-V output writer" OFF)
     option(TINT_BUILD_WGSL_WRITER "Build the WGSL output writer" ON)
   endif()
-
 # check if WAYLAND is the current Session Type and enable DAWN_USE_WAYLAND Wayland option @compile time
 # You can override this using: cmake -DDAWN_USE_WAYLAND=X (X = ON | OFF)
-  if(LINUX)
+  if(UNIX)
     if ($ENV{XDG_SESSION_TYPE} MATCHES wayland)
       option(DAWN_USE_WAYLAND "Enable support for Wayland surface" ON)
     endif()
@@ -77,13 +64,17 @@ else()
 
   add_subdirectory("${IMGUI_DAWN_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/dawn" EXCLUDE_FROM_ALL)
 
-  set(LIBRARIES webgpu_dawn webgpu_cpp webgpu_glfw glfw)
+  find_package(SDL2 REQUIRED)
+
+  set(LIBRARIES webgpu_dawn webgpu_cpp)
 endif()
 
-add_executable(example_glfw_wgpu
+
+add_executable(example_sdl2_wgpu
   main.cpp
+  sdl2wgpu.cpp
   # backend files
-  ${IMGUI_DIR}/backends/imgui_impl_glfw.cpp
+  ${IMGUI_DIR}/backends/imgui_impl_sdl2.cpp
   ${IMGUI_DIR}/backends/imgui_impl_wgpu.cpp
   # Dear ImGui files
   ${IMGUI_DIR}/imgui.cpp
@@ -92,49 +83,35 @@ add_executable(example_glfw_wgpu
   ${IMGUI_DIR}/imgui_tables.cpp
   ${IMGUI_DIR}/imgui_widgets.cpp
 )
-IF(NOT EMSCRIPTEN OR "${IMGUI_EMSCRIPTEN_WEBGPU_FLAG}" STREQUAL "--use-port=emdawnwebgpu")
-  target_compile_definitions(example_glfw_wgpu PUBLIC
+IF(NOT EMSCRIPTEN)
+  target_compile_definitions(example_sdl2_wgpu PUBLIC
     "IMGUI_IMPL_WEBGPU_BACKEND_DAWN"
   )
 endif()
-target_include_directories(example_glfw_wgpu PUBLIC
+target_include_directories(example_sdl2_wgpu PUBLIC
   ${IMGUI_DIR}
   ${IMGUI_DIR}/backends
+  ${SDL2_INCLUDE_DIRS}
 )
 
-target_link_libraries(example_glfw_wgpu PUBLIC ${LIBRARIES})
+target_link_libraries(example_sdl2_wgpu PUBLIC ${LIBRARIES} ${SDL2_LIBRARIES})
 
 # Emscripten settings
 if(EMSCRIPTEN)
-  if("${IMGUI_EMSCRIPTEN_GLFW3}" STREQUAL "--use-port=contrib.glfw3")
-    target_compile_options(example_glfw_wgpu PUBLIC
-        "${IMGUI_EMSCRIPTEN_GLFW3}"
-    )
-  endif()
-  message(STATUS "Using ${IMGUI_EMSCRIPTEN_GLFW3} GLFW implementation")
-  if("${IMGUI_EMSCRIPTEN_WEBGPU_FLAG}" STREQUAL "--use-port=emdawnwebgpu")
-    target_compile_options(example_glfw_wgpu PUBLIC
-        "${IMGUI_EMSCRIPTEN_WEBGPU_FLAG}"
-    )
-  endif()
-  message(STATUS "Using ${IMGUI_EMSCRIPTEN_WEBGPU_FLAG} WebGPU implementation")
-
-  target_link_options(example_glfw_wgpu PRIVATE
-    "${IMGUI_EMSCRIPTEN_WEBGPU_FLAG}"
-    "${IMGUI_EMSCRIPTEN_GLFW3}"
+  target_compile_options(example_sdl2_wgpu PUBLIC "-sUSE_SDL=2" )
+  target_link_options(example_sdl2_wgpu PRIVATE
+    "-sUSE_WEBGPU=1"
     "-sWASM=1"
-    "-sASYNCIFY"
     "-sALLOW_MEMORY_GROWTH=1"
     "-sNO_EXIT_RUNTIME=0"
     "-sASSERTIONS=1"
     "-sDISABLE_EXCEPTION_CATCHING=1"
     "-sNO_FILESYSTEM=1"
-    "--shell-file=${CMAKE_CURRENT_LIST_DIR}/web/index.html"
-
+    "-sUSE_SDL=2"
   )
-  set_target_properties(example_glfw_wgpu PROPERTIES OUTPUT_NAME "index")
+  set_target_properties(example_sdl2_wgpu PROPERTIES OUTPUT_NAME "index")
   # copy our custom index.html to build directory
-#  add_custom_command(TARGET example_glfw_wgpu POST_BUILD
-#    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_LIST_DIR}/web/index.html" $<TARGET_FILE_DIR:example_glfw_wgpu>
-#  )
+  add_custom_command(TARGET example_sdl2_wgpu POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_LIST_DIR}/web/index.html" $<TARGET_FILE_DIR:example_sdl2_wgpu>
+  )
 endif()
