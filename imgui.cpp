@@ -4475,12 +4475,15 @@ static void SetCurrentWindow(ImGuiWindow* window)
     g.CurrentDpiScale = 1.0f; // FIXME-DPI: WIP this is modified in docking
     if (window)
     {
+        bool backup_skip_items = window->SkipItems;
+        window->SkipItems = false;
         if (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures)
         {
             ImGuiViewport* viewport = window->Viewport;
             g.FontRasterizerDensity = (viewport->FramebufferScale.x != 0.0f) ? viewport->FramebufferScale.x : g.IO.DisplayFramebufferScale.x; // == SetFontRasterizerDensity()
         }
         ImGui::UpdateCurrentFontSize(0.0f);
+        window->SkipItems = backup_skip_items;
         ImGui::NavUpdateCurrentWindowIsScrollPushableX();
     }
 }
@@ -8694,6 +8697,21 @@ bool ImGui::IsRectVisible(const ImVec2& rect_min, const ImVec2& rect_max)
 //-----------------------------------------------------------------------------
 // Most of the relevant font logic is in imgui_draw.cpp.
 // Those are high-level support functions.
+//-----------------------------------------------------------------------------
+// - UpdateFontsNewFrame() [Internal]
+// - UpdateFontsEndFrame() [Internal]
+// - GetDefaultFont() [Internal]
+// - RegisterUserTexture() [Internal]
+// - UnregisterUserTexture() [Internal]
+// - RegisterFontAtlas() [Internal]
+// - UnregisterFontAtlas() [Internal]
+// - SetCurrentFont() [Internal]
+// - UpdateCurrentFontSize() [Internal]
+// - SetFontRasterizerDensity() [Internal]
+// - PushFont()
+// - PopFont()
+// - PushFontSize()
+// - PopFontSize()
 //-----------------------------------------------------------------------------
 
 void ImGui::UpdateFontsNewFrame()
