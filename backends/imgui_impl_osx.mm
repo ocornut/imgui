@@ -699,10 +699,15 @@ static ImGuiMouseSource GetMouseSource(NSEvent* event)
 static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
 {
     // Only process events from the window containing ImGui view
-    if (event.window != view.window)
+    void* event_handle = (__bridge void*)(event.window);
+    void* view_handle = (__bridge void*)(view.window);
+    if (event_handle == nullptr || view_handle == nullptr)
         return false;
-    ImGuiIO& io = ImGui::GetIO();
+    ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle(view_handle);
+    if (viewport == nullptr || viewport->PlatformHandleRaw != event_handle)
+        return false;
 
+    ImGuiIO& io = ImGui::GetIO();
     if (event.type == NSEventTypeLeftMouseDown || event.type == NSEventTypeRightMouseDown || event.type == NSEventTypeOtherMouseDown)
     {
         int button = (int)[event buttonNumber];
