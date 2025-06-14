@@ -264,16 +264,19 @@ struct ImGui_ImplVulkan_ViewportData
 // Vulkan data
 struct ImGui_ImplVulkan_Data
 {
-    ImGui_ImplVulkan_InitInfo   VulkanInitInfo;
-    VkDeviceSize                BufferMemoryAlignment;
-    VkPipelineCreateFlags       PipelineCreateFlags;
-    VkDescriptorSetLayout       DescriptorSetLayout;
-    VkPipelineLayout            PipelineLayout;
-    VkPipeline                  Pipeline;               // pipeline for main render pass (created by app)
-    VkPipeline                  PipelineForViewports;   // pipeline for secondary viewports (created by backend)
-    VkShaderModule              ShaderModuleVert;
-    VkShaderModule              ShaderModuleFrag;
-    VkDescriptorPool            DescriptorPool;
+    ImGui_ImplVulkan_InitInfo        VulkanInitInfo;
+    VkDeviceSize                     BufferMemoryAlignment;
+    VkPipelineCreateFlags            PipelineCreateFlags;
+    VkDescriptorSetLayout            DescriptorSetLayout;
+    VkPipelineLayout                 PipelineLayout;
+    VkPipeline                       Pipeline;               // pipeline for main render pass (created by app)
+    VkPipeline                       PipelineForViewports;   // pipeline for secondary viewports (created by backend)
+    VkShaderModule                   ShaderModuleVert;
+    VkShaderModule                   ShaderModuleFrag;
+    VkDescriptorPool                 DescriptorPool;
+#ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
+    VkPipelineRenderingCreateInfoKHR PipelineForViewportsRenderingCreateInfo;
+#endif
 
     // Texture management
     VkSampler                   TexSampler;
@@ -1021,10 +1024,11 @@ static void ImGui_ImplVulkan_CreatePipeline(VkDevice device, const VkAllocationC
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
     if (bd->VulkanInitInfo.UseDynamicRendering)
     {
-        IM_ASSERT(bd->VulkanInitInfo.PipelineRenderingCreateInfo.sType == VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR && "PipelineRenderingCreateInfo sType must be VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR");
-        IM_ASSERT(bd->VulkanInitInfo.PipelineRenderingCreateInfo.pNext == nullptr && "PipelineRenderingCreateInfo pNext must be nullptr");
-        info.pNext = &bd->VulkanInitInfo.PipelineRenderingCreateInfo;
+        VkPipelineRenderingCreateInfoKHR* pipeline_rendering_create_info = bd->Pipeline ? &bd->PipelineForViewportsRenderingCreateInfo : &bd->VulkanInitInfo.PipelineRenderingCreateInfo;
         info.renderPass = VK_NULL_HANDLE; // Just make sure it's actually nullptr.
+        IM_ASSERT(pipeline_rendering_create_info->sType == VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR && "PipelineRenderingCreateInfo sType must be VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR");
+        IM_ASSERT(pipeline_rendering_create_info->pNext == nullptr && "PipelineRenderingCreateInfo pNext must be nullptr");
+        info.pNext = pipeline_rendering_create_info;
     }
 #endif
 
@@ -1931,6 +1935,16 @@ static void ImGui_ImplVulkan_CreateWindow(ImGuiViewport* viewport)
     ImGui_ImplVulkanH_CreateOrResizeWindow(v->Instance, v->PhysicalDevice, v->Device, wd, v->QueueFamily, v->Allocator, (int)viewport->Size.x, (int)viewport->Size.y, v->MinImageCount);
     vd->WindowOwned = true;
 
+#ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
+    if (v->UseDynamicRendering && bd->PipelineForViewportsRenderingCreateInfo.pColorAttachmentFormats == NULL)
+    {
+        VkPipelineRenderingCreateInfoKHR rendering_create_info{};
+        rendering_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
+        rendering_create_info.colorAttachmentCount = 1;
+        rendering_create_info.pColorAttachmentFormats = &wd->SurfaceFormat.format;
+        bd->PipelineForViewportsRenderingCreateInfo = rendering_create_info;
+    }
+#endif
     // Create pipeline (shared by all secondary viewports)
     if (bd->PipelineForViewports == VK_NULL_HANDLE)
         ImGui_ImplVulkan_CreatePipeline(v->Device, v->Allocator, VK_NULL_HANDLE, wd->RenderPass, VK_SAMPLE_COUNT_1_BIT, &bd->PipelineForViewports, 0);
