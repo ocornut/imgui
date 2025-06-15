@@ -51,10 +51,11 @@
     #if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) == defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
     #error exactly one of IMGUI_IMPL_WEBGPU_BACKEND_DAWN or IMGUI_IMPL_WEBGPU_BACKEND_WGPU must be defined!
     #endif
-#else
-    #if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) || defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
-    #error neither IMGUI_IMPL_WEBGPU_BACKEND_DAWN nor IMGUI_IMPL_WEBGPU_BACKEND_WGPU may be defined if targeting emscripten!
-    #endif
+#endif
+
+// Using EMSCRIPTEN with flag -sUSE_WEBGPU=1 (deprecated from 4.0.10)
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) && defined(__EMSCRIPTEN__)
+    #define IMGUI_IMPL_WEBGPU_BACKEND_WGPU_EMSCRIPTEN
 #endif
 
 #ifndef IMGUI_DISABLE
@@ -258,7 +259,7 @@ static WGPUProgrammableStageDescriptor ImGui_ImplWGPU_CreateShaderModule(const c
 {
     ImGui_ImplWGPU_Data* bd = ImGui_ImplWGPU_GetBackendData();
 
-#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) || defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
+#if !defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU_EMSCRIPTEN)
     WGPUShaderSourceWGSL wgsl_desc = {};
     wgsl_desc.chain.sType = WGPUSType_ShaderSourceWGSL;
     wgsl_desc.code = { wgsl_source, WGPU_STRLEN };
@@ -274,7 +275,7 @@ static WGPUProgrammableStageDescriptor ImGui_ImplWGPU_CreateShaderModule(const c
     WGPUProgrammableStageDescriptor stage_desc = {};
     stage_desc.module = wgpuDeviceCreateShaderModule(bd->wgpuDevice, &desc);
 
-#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) || defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
+#if !defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU_EMSCRIPTEN)
     stage_desc.entryPoint = { "main", WGPU_STRLEN };
 #else
     stage_desc.entryPoint = "main";
@@ -398,7 +399,7 @@ void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder 
         {
             nullptr,
             "Dear ImGui Vertex buffer",
-#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) || defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
+#if !defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU_EMSCRIPTEN)
             WGPU_STRLEN,
 #endif
             WGPUBufferUsage_CopyDst | WGPUBufferUsage_Vertex,
@@ -425,7 +426,7 @@ void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder 
         {
             nullptr,
             "Dear ImGui Index buffer",
-#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) || defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
+#if !defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU_EMSCRIPTEN)
             WGPU_STRLEN,
 #endif
             WGPUBufferUsage_CopyDst | WGPUBufferUsage_Index,
@@ -562,7 +563,7 @@ void ImGui_ImplWGPU_UpdateTexture(ImTextureData* tex)
 
         // Create texture
         WGPUTextureDescriptor tex_desc = {};
-#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) || defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
+#if !defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU_EMSCRIPTEN)
         tex_desc.label = { "Dear ImGui Texture", WGPU_STRLEN };
 #else
         tex_desc.label = "Dear ImGui Texture";
@@ -607,7 +608,7 @@ void ImGui_ImplWGPU_UpdateTexture(ImTextureData* tex)
 
         // Update full texture or selected blocks. We only ever write to textures regions which have never been used before!
         // This backend choose to use tex->UpdateRect but you can use tex->Updates[] to upload individual regions.
-#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) || defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
+#if !defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU_EMSCRIPTEN)
         WGPUTexelCopyTextureInfo dst_view = {};
 #else
         WGPUImageCopyTexture dst_view = {};
@@ -616,7 +617,7 @@ void ImGui_ImplWGPU_UpdateTexture(ImTextureData* tex)
         dst_view.mipLevel = 0;
         dst_view.origin = { (uint32_t)upload_x, (uint32_t)upload_y, 0 };
         dst_view.aspect = WGPUTextureAspect_All;
-#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) || defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
+#if !defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU_EMSCRIPTEN)
         WGPUTexelCopyBufferLayout layout = {};
 #else
         WGPUTextureDataLayout layout = {};
@@ -639,7 +640,7 @@ static void ImGui_ImplWGPU_CreateUniformBuffer()
     {
         nullptr,
         "Dear ImGui Uniform buffer",
-#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) || defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
+#if !defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU_EMSCRIPTEN)
         WGPU_STRLEN,
 #endif
         WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform,
@@ -705,6 +706,7 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     // Vertex input configuration
     WGPUVertexAttribute attribute_desc[] =
     {
+
 #ifdef IMGUI_IMPL_WEBGPU_BACKEND_DAWN
         { nullptr, WGPUVertexFormat_Float32x2, (uint64_t)offsetof(ImDrawVert, pos), 0 },
         { nullptr, WGPUVertexFormat_Float32x2, (uint64_t)offsetof(ImDrawVert, uv),  1 },
@@ -753,7 +755,7 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     // Create depth-stencil State
     WGPUDepthStencilState depth_stencil_state = {};
     depth_stencil_state.format = bd->depthStencilFormat;
-#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) || defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
+#if !defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU_EMSCRIPTEN)
     depth_stencil_state.depthWriteEnabled = WGPUOptionalBool_False;
 #else
     depth_stencil_state.depthWriteEnabled = false;
@@ -835,14 +837,18 @@ bool ImGui_ImplWGPU_Init(ImGui_ImplWGPU_InitInfo* init_info)
     // Setup backend capabilities flags
     ImGui_ImplWGPU_Data* bd = IM_NEW(ImGui_ImplWGPU_Data)();
     io.BackendRendererUserData = (void*)bd;
-#if defined(__EMSCRIPTEN__)
-    io.BackendRendererName = "imgui_impl_webgpu_emscripten";
-#elif defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
-    io.BackendRendererName = "imgui_impl_webgpu_dawn";
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
+    #if defined(__EMSCRIPTEN__)     // compiled/linked using "--use-port=emdawnwebgpu" flag
+        io.BackendRendererName = "imgui_impl_webgpu_dawn_emscripten";
+    #else
+        io.BackendRendererName = "imgui_impl_webgpu_dawn";
+    #endif
 #elif defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
-    io.BackendRendererName = "imgui_impl_webgpu_wgpu";
-#else
-    io.BackendRendererName = "imgui_impl_webgpu";
+    #if defined(__EMSCRIPTEN__)     // linked using "-sUSE_WEBGPU=1" flag, deprecated from EMSCRIPTEN 4.0.10
+        io.BackendRendererName = "imgui_impl_webgpu_wgpu_emscripten";
+    #else
+        io.BackendRendererName = "imgui_impl_webgpu_wgpu";
+    #endif
 #endif
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
     io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;   // We can honor ImGuiPlatformIO::Textures[] requests during render.
