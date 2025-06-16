@@ -501,7 +501,7 @@ bool ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConfig* src
     FT_Error error = FT_Render_Glyph(slot, render_mode);
     const FT_Bitmap* ft_bitmap = &slot->bitmap;
     if (error != 0 || ft_bitmap == nullptr)
-        return NULL;
+        return false;
 
     const int w = (int)ft_bitmap->width;
     const int h = (int)ft_bitmap->rows;
@@ -520,7 +520,7 @@ bool ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConfig* src
         {
             // Pathological out of memory case (TexMaxWidth/TexMaxHeight set too small?)
             IM_ASSERT(pack_id != ImFontAtlasRectId_Invalid && "Out of texture memory.");
-            return NULL;
+            return false;
         }
         ImTextureRect* r = ImFontAtlasPackGetRect(atlas, pack_id);
 
