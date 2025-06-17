@@ -701,6 +701,7 @@ void ImDrawList::_SetTexture(ImTextureRef tex_ref)
     if (_CmdHeader.TexRef == tex_ref)
         return;
     _CmdHeader.TexRef = tex_ref;
+    _TextureStack.back() = tex_ref;
     _OnChangedTexture();
 }
 
@@ -2700,10 +2701,11 @@ void ImFontAtlas::ClearFonts()
     Fonts.clear_delete();
     TexIsBuilt = false;
     for (ImDrawListSharedData* shared_data : DrawListSharedDatas)
-    {
-        shared_data->Font = NULL;
-        shared_data->FontScale = shared_data->FontSize = 0.0f;
-    }
+        if (shared_data->FontAtlas == this)
+        {
+            shared_data->Font = NULL;
+            shared_data->FontScale = shared_data->FontSize = 0.0f;
+        }
 }
 
 static void ImFontAtlasBuildUpdateRendererHasTexturesFromContext(ImFontAtlas* atlas)
@@ -3920,10 +3922,11 @@ void ImFontAtlasUpdateDrawListsTextures(ImFontAtlas* atlas, ImTextureRef old_tex
 void ImFontAtlasUpdateDrawListsSharedData(ImFontAtlas* atlas)
 {
     for (ImDrawListSharedData* shared_data : atlas->DrawListSharedDatas)
-    {
-        shared_data->TexUvWhitePixel = atlas->TexUvWhitePixel;
-        shared_data->TexUvLines = atlas->TexUvLines;
-    }
+        if (shared_data->FontAtlas == atlas)
+        {
+            shared_data->TexUvWhitePixel = atlas->TexUvWhitePixel;
+            shared_data->TexUvLines = atlas->TexUvLines;
+        }
 }
 
 // Set current texture. This is mostly called from AddTexture() + to handle a failed resize.

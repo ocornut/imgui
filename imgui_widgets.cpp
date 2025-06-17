@@ -4288,23 +4288,24 @@ void ImGuiInputTextCallbackData::InsertChars(int pos, const char* new_text, cons
     if (new_text == new_text_end)
         return;
 
+    ImGuiContext& g = *Ctx;
+    ImGuiInputTextState* obj = &g.InputTextState;
+    IM_ASSERT(obj->ID != 0 && g.ActiveId == obj->ID);
+
     // Grow internal buffer if needed
     const bool is_resizable = (Flags & ImGuiInputTextFlags_CallbackResize) != 0;
     const int new_text_len = new_text_end ? (int)(new_text_end - new_text) : (int)ImStrlen(new_text);
-    if (new_text_len + BufTextLen >= BufSize)
+    if (new_text_len + BufTextLen + 1 > obj->TextA.Size)
     {
         if (!is_resizable)
             return;
 
-        ImGuiContext& g = *Ctx;
-        ImGuiInputTextState* edit_state = &g.InputTextState;
-        IM_ASSERT(edit_state->ID != 0 && g.ActiveId == edit_state->ID);
-        IM_ASSERT(Buf == edit_state->TextA.Data);
+        IM_ASSERT(Buf == obj->TextA.Data);
         int new_buf_size = BufTextLen + ImClamp(new_text_len * 4, 32, ImMax(256, new_text_len)) + 1;
-        edit_state->TextA.resize(new_buf_size + 1);
-        edit_state->TextSrc = edit_state->TextA.Data;
-        Buf = edit_state->TextA.Data;
-        BufSize = edit_state->BufCapacity = new_buf_size;
+        obj->TextA.resize(new_buf_size + 1);
+        obj->TextSrc = obj->TextA.Data;
+        Buf = obj->TextA.Data;
+        BufSize = obj->BufCapacity = new_buf_size;
     }
 
     if (BufTextLen != pos)
@@ -5489,7 +5490,7 @@ void ImGui::DebugNodeInputTextState(ImGuiInputTextState* state)
     Text("ID: 0x%08X, ActiveID: 0x%08X", state->ID, g.ActiveId);
     DebugLocateItemOnHover(state->ID);
     Text("CurLenA: %d, Cursor: %d, Selection: %d..%d", state->TextLen, stb_state->cursor, stb_state->select_start, stb_state->select_end);
-    Text("BufCapacityA: %d", state->BufCapacity);
+    Text("BufCapacity: %d", state->BufCapacity);
     Text("(Internal Buffer: TextA Size: %d, Capacity: %d)", state->TextA.Size, state->TextA.Capacity);
     Text("has_preferred_x: %d (%.2f)", stb_state->has_preferred_x, stb_state->preferred_x);
     Text("undo_point: %d, redo_point: %d, undo_char_point: %d, redo_char_point: %d", undo_state->undo_point, undo_state->redo_point, undo_state->undo_char_point, undo_state->redo_char_point);
