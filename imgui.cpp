@@ -3932,7 +3932,7 @@ void ImGui::RenderMouseCursor(ImVec2 base_pos, float base_scale, ImGuiMouseCurso
     ImGuiContext& g = *GImGui;
     if (mouse_cursor <= ImGuiMouseCursor_None || mouse_cursor >= ImGuiMouseCursor_COUNT) // We intentionally accept out of bound values.
         mouse_cursor = ImGuiMouseCursor_Arrow;
-    ImFontAtlas* font_atlas = g.DrawListSharedData.Font->ContainerAtlas;
+    ImFontAtlas* font_atlas = g.DrawListSharedData.FontAtlas; 
     for (ImGuiViewportP* viewport : g.Viewports)
     {
         // We scale cursor with current viewport/monitor, however Windows 10 for its own hardware cursor seems to be using a different scale factor.
@@ -8813,10 +8813,12 @@ void ImGui::SetCurrentFont(ImFont* font, float font_size_before_scaling, float f
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
         IM_ASSERT(font->Scale > 0.0f);
 #endif
-        g.DrawListSharedData.Font = g.Font;
-        ImFontAtlasUpdateDrawListsSharedData(g.Font->ContainerAtlas);
+        ImFontAtlas* atlas = font->ContainerAtlas;
+        g.DrawListSharedData.FontAtlas = atlas;
+        g.DrawListSharedData.Font = font;
+        ImFontAtlasUpdateDrawListsSharedData(atlas);
         if (g.CurrentWindow != NULL)
-            g.CurrentWindow->DrawList->_SetTexture(font->ContainerAtlas->TexRef);
+            g.CurrentWindow->DrawList->_SetTexture(atlas->TexRef);
     }
 }
 

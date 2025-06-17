@@ -838,9 +838,10 @@ struct IMGUI_API ImDrawListSharedData
 {
     ImVec2          TexUvWhitePixel;            // UV of white pixel in the atlas (== FontAtlas->TexUvWhitePixel)
     const ImVec4*   TexUvLines;                 // UV of anti-aliased lines in the atlas (== FontAtlas->TexUvLines)
-    ImFont*         Font;                       // Current/default font (optional, for simplified AddText overload)
-    float           FontSize;                   // Current/default font size (optional, for simplified AddText overload)
-    float           FontScale;                  // Current/default font scale (== FontSize / Font->FontSize)
+    ImFontAtlas*    FontAtlas;                  // Current font atlas
+    ImFont*         Font;                       // Current font (used for simplified AddText overload)
+    float           FontSize;                   // Current font size (used for for simplified AddText overload)
+    float           FontScale;                  // Current font scale (== FontSize / Font->FontSize)
     float           CurveTessellationTol;       // Tessellation tolerance when using PathBezierCurveTo()
     float           CircleSegmentMaxError;      // Number of circle segments to use per pixel of radius for AddCircle() etc
     float           InitialFringeScale;         // Initial scale to apply to AA fringe
