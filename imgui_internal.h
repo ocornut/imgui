@@ -3713,8 +3713,8 @@ typedef ImFontLoader ImFontBuilderIO; // [renamed/changed in 1.92] The types are
 
 // Helpers: ImTextureRef ==/!= operators provided as convenience
 // (note that _TexID and _TexData are never set simultaneously)
-static inline bool operator==(const ImTextureRef& lhs, const ImTextureRef& rhs) { return lhs._TexID == rhs._TexID && lhs._TexData == rhs._TexData; }
-static inline bool operator!=(const ImTextureRef& lhs, const ImTextureRef& rhs) { return lhs._TexID != rhs._TexID || lhs._TexData != rhs._TexData; }
+inline bool operator==(const ImTextureRef& lhs, const ImTextureRef& rhs)    { return lhs._TexID == rhs._TexID && lhs._TexData == rhs._TexData; }
+inline bool operator!=(const ImTextureRef& lhs, const ImTextureRef& rhs)    { return lhs._TexID != rhs._TexID || lhs._TexData != rhs._TexData; }
 
 // Refer to ImFontAtlasPackGetRect() to better understand how this works.
 #define ImFontAtlasRectId_IndexMask_        (0x000FFFFF)    // 20-bits: index to access builder->RectsIndex[].
