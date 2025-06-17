@@ -695,6 +695,7 @@ void ImDrawList::_SetTexture(ImTextureRef tex_ref)
     if (_CmdHeader.TexRef == tex_ref)
         return;
     _CmdHeader.TexRef = tex_ref;
+    _TextureStack.back() = tex_ref;
     _OnChangedTexture();
 }
 

@@ -161,6 +161,9 @@ Breaking changes:
      - renamed ImGuiFreeType::GetBuilderForFreeType() to ImGuiFreeType::GetFontLoader()
        - old:  io.Fonts->FontBuilderIO = ImGuiFreeType::GetBuilderForFreeType()
        - new:  io.Fonts.FontLoader = ImGuiFreeType::GetFontLoader();
+- DrawList: Fixed a regression from 1.91.1 where a Begin()/PushFont()/AddImage() sequence 
+  would not restore the correct atlas Texture Identifier when the PushFont() call used 
+  a font from a different atlas. (#8694, caused by #3224, #3875, #6398, #7903)
 - DrawList: Renamed ImDrawList::PushTextureID()/PopTextureID() to PushTexture()/PopTexture().
 - Fonts: (users of custom rectangles)
   - Renamed AddCustomRectRegular() to AddCustomRect(). (#8466)
