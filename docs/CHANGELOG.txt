@@ -372,6 +372,7 @@ Other changes:
   of WantVisible. This is set in the same structure because activating text input generally
   requires providing a window to the backend. (#8584, #6341)
 - Misc: added extra operators to ImVec4 in IMGUI_DEFINE_MATH_OPERATORS block. (#8510) [@gan74]
+- Misc: removed static linkage from operators to facilitate using in C++ modules. (#8682, #8358) [@johmani]
 - Demo: changed default framed item width to use Min(GetFontSize() * 12, GetContentRegionAvail().x * 0.40f).
 - Renderer Backends:
   - Backends: DX9/DX10/DX11/DX12, Vulkan, OpenGL2/3, Metal, SDLGPU3, SDLRenderer2/3, WebGPU, Allegro5:
