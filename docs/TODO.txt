@@ -26,9 +26,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window/size: manually triggered auto-fit (double-click on grip) shouldn't resize window down to viewport size?
  - window/size: how to allow to e.g. auto-size vertically to fit contents, but be horizontally resizable? Assuming SetNextWindowSize() is modified to treat -1.0f on each axis as "keep as-is" (would be good but might break erroneous code): Problem is UpdateWindowManualResize() and lots of code treat (window->AutoFitFramesX > 0 || window->AutoFitFramesY > 0) together.
  - window/opt: freeze window flag: if not focused/hovered, return false, render with previous ImDrawList. and/or reduce refresh rate. -> this may require enforcing that it is illegal to submit contents if Begin returns false.
- - window/child: background options for child windows, border option (disable rounding).
- - window/child: allow resizing of child windows (possibly given min/max for each axis?.)
- - window/child: allow SetNextWindowContentSize() to work on child windows.
  - window/clipping: some form of clipping when DisplaySize (or corresponding viewport) is zero.
  - window/tabbing: add a way to signify that a window or docked window requires attention (e.g. blinking title bar, trying to click behind a modal).
  - window/id_stack: add e.g. window->GetIDFromPath() with support for leading / and ../ (#1390, #331) -> model from test engine.

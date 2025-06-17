@@ -309,6 +309,10 @@ Other changes:
 - Windows: loosened code to allow hovering of resize grips, borders, and table
   borders while hovering a sibling child window, so that the code in master matches
   one in docking (they accidentally diverged). (#8554)
+- Windows: BeginChild(): fixed being unable to combine manual resize on one axis
+  and automatic resize on the other axis. (#8690)
+  e.g. neither ImGuiChildFlags_ResizeX | ImGuiChildFlags_AutoResizeY 
+            or ImGuiChildFlags_ResizeY | ImGuiChildFlags_AutoResizeX worked before.
 - TreeNode: added experimental flags to draw tree hierarchy outlines linking
   parent and tree nodes: (#2920)
   - ImGuiTreeNodeFlags_DrawLinesNone: No lines drawn (default value in style.TreeLinesFlags).
