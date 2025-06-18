@@ -191,6 +191,10 @@ static ImGui_ImplGlfw_Data* ImGui_ImplGlfw_GetBackendData()
 {
     return ImGui::GetCurrentContext() ? (ImGui_ImplGlfw_Data*)ImGui::GetIO().BackendPlatformUserData : nullptr;
 }
+static ImGui_ImplGlfw_Data* ImGui_ImplGlfw_GetBackendData(ImGuiIO& io)
+{
+    return (ImGui_ImplGlfw_Data*)io.BackendPlatformUserData;
+}
 
 // Functions
 
@@ -501,6 +505,7 @@ static EM_BOOL ImGui_ImplEmscripten_WheelCallback(int, const EmscriptenWheelEven
 #ifdef _WIN32
 // GLFW doesn't allow to distinguish Mouse vs TouchScreen vs Pen.
 // Add support for Win32 (based on imgui_impl_win32), because we rely on _TouchScreen info to trickle inputs differently.
+namespace ImGui { extern ImGuiIO& GetIO(ImGuiContext*); }
 static ImGuiMouseSource GetMouseSourceFromMessageExtraInfo()
 {
     LPARAM extra_info = ::GetMessageExtraInfo();
@@ -512,7 +517,10 @@ static ImGuiMouseSource GetMouseSourceFromMessageExtraInfo()
 }
 static LRESULT CALLBACK ImGui_ImplGlfw_WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-    ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
+    ImGuiContext* ctx = (ImGuiContext*)::GetPropA(hWnd, "IMGUI_CONTEXT");
+    ImGuiIO& io = ImGui::GetIO(ctx);
+
+    ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData(io);
     switch (msg)
     {
     case WM_MOUSEMOVE: case WM_NCMOUSEMOVE:
@@ -520,7 +528,7 @@ static LRESULT CALLBACK ImGui_ImplGlfw_WndProc(HWND hWnd, UINT msg, WPARAM wPara
     case WM_RBUTTONDOWN: case WM_RBUTTONDBLCLK: case WM_RBUTTONUP:
     case WM_MBUTTONDOWN: case WM_MBUTTONDBLCLK: case WM_MBUTTONUP:
     case WM_XBUTTONDOWN: case WM_XBUTTONDBLCLK: case WM_XBUTTONUP:
-        ImGui::GetIO().AddMouseSourceEvent(GetMouseSourceFromMessageExtraInfo());
+        io.AddMouseSourceEvent(GetMouseSourceFromMessageExtraInfo());
         break;
     }
     return ::CallWindowProcW(bd->PrevWndProc, hWnd, msg, wParam, lParam);
@@ -661,6 +669,7 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
 
     // Windows: register a WndProc hook so we can intercept some messages.
 #ifdef _WIN32
+    ::SetPropA((HWND)main_viewport->PlatformHandleRaw, "IMGUI_CONTEXT", ImGui::GetCurrentContext());
     bd->PrevWndProc = (WNDPROC)::GetWindowLongPtrW((HWND)main_viewport->PlatformHandleRaw, GWLP_WNDPROC);
     IM_ASSERT(bd->PrevWndProc != nullptr);
     ::SetWindowLongPtrW((HWND)main_viewport->PlatformHandleRaw, GWLP_WNDPROC, (LONG_PTR)ImGui_ImplGlfw_WndProc);
@@ -672,7 +681,7 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
 #if EMSCRIPTEN_USE_PORT_CONTRIB_GLFW3 >= 34020240817
     if (emscripten::glfw3::IsRuntimePlatformApple())
     {
-        ImGui::GetIO().ConfigMacOSXBehaviors = true;
+        io.ConfigMacOSXBehaviors = true;
 
         // Due to how the browser (poorly) handles the Meta Key, this line essentially disables repeats when used.
         // This means that Meta + V only registers a single key-press, even if the keys are held.
@@ -721,6 +730,7 @@ void ImGui_ImplGlfw_Shutdown()
     // Windows: restore our WndProc hook
 #ifdef _WIN32
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
+    ::SetPropA((HWND)main_viewport->PlatformHandleRaw, "IMGUI_CONTEXT", nullptr);
     ::SetWindowLongPtrW((HWND)main_viewport->PlatformHandleRaw, GWLP_WNDPROC, (LONG_PTR)bd->PrevWndProc);
     bd->PrevWndProc = nullptr;
 #endif

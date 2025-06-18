@@ -407,6 +407,7 @@ Other changes:
   - Backends: GLFW: added ImGui_ImplGlfw_GetContentScaleForMonitor(), ImGui_ImplGlfw_GetContentScaleForWindow()
     helpers. They are wrappers to glfwGetMonitorContentScale()/glfwGetWindowContentScale(), with compile-time
     GLFW version checks + returning 1.0f on Apple platform.
+  - Backends: GLFW: fixed Win32 specific WndProc handler relying on current context. (#8676, #8239, #8069)
   - Backends: SDL2: added ImGui_ImplSDL2_GetDpiScaleForDisplay() and ImGui_ImplSDL2_GetContentScaleForWindow()
     helpers. They are wrappers to SDL_GetDisplayDPI(), with compile-time SDL version checks + returning 1.0f
     on Apple platforms. SDL3 already does this by default.
