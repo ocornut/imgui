@@ -324,7 +324,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - nav/windowing: Resizing window will currently fail with certain types of resizing constraints/callback applied
  - focus: preserve ActiveId/focus stack state, e.g. when opening a menu and close it, previously selected InputText() focus gets restored (#622)
 
- - viewport: make it possible to have no main/hosting viewport
+ - viewport: make it possible to have no main/hosting viewport (see #8268)
  - viewport: We set ImGuiViewportFlags_NoFocusOnAppearing in a way that is required for GLFW/SDL binding, but could be handled better without
    on a custom e.g. Win32 bindings. It prevents newly dragged-out viewports from taking the focus, which makes ALT+F4 more ambiguous.
  - viewport: not focusing newly undocked viewport means clicking back on previous one doesn't bring OS window to front.
@@ -333,6 +333,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - viewport: store per-viewport/monitor DPI in .ini file so an application reload or main window changing DPI on reload can be properly patched for.
  - viewport: implicit/fallback Debug window can hog a zombie viewport (harmless, noisy?) > could at least clear out the reference on a per session basis?
  - viewport: need to clarify how to use GetMousePos() from a user point of view.
+ - viewport: could apply monitor boundaries to cliprect to coarse clip things out of monitor? (#8698)
  - platform: glfw: no support for ImGuiBackendFlags_HasMouseHoveredViewport.
  - platform: sdl: no support for ImGuiBackendFlags_HasMouseHoveredViewport. maybe we could use SDL_GetMouseFocus() / SDL_WINDOW_MOUSE_FOCUS if imgui could fallback on its heuristic when NoInputs is set
  - platform: sdl: no refresh of monitor/display (SDL doesn't seem to have an event for it).

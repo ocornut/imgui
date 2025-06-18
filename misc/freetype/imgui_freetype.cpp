@@ -346,7 +346,7 @@ static void* FreeType_Realloc(FT_Memory /*memory*/, long cur_size, long new_size
 
 bool ImGui_ImplFreeType_LoaderInit(ImFontAtlas* atlas)
 {
-    IM_ASSERT(atlas->FontLoaderData == NULL);
+    IM_ASSERT(atlas->FontLoaderData == nullptr);
     ImGui_ImplFreeType_Data* bd = IM_NEW(ImGui_ImplFreeType_Data)();
 
     // FreeType memory management: https://www.freetype.org/freetype2/docs/design/design-4.html
@@ -387,23 +387,23 @@ bool ImGui_ImplFreeType_LoaderInit(ImFontAtlas* atlas)
 void ImGui_ImplFreeType_LoaderShutdown(ImFontAtlas* atlas)
 {
     ImGui_ImplFreeType_Data* bd = (ImGui_ImplFreeType_Data*)atlas->FontLoaderData;
-    IM_ASSERT(bd != NULL);
+    IM_ASSERT(bd != nullptr);
     FT_Done_Library(bd->Library);
     IM_DELETE(bd);
-    atlas->FontLoaderData = NULL;
+    atlas->FontLoaderData = nullptr;
 }
 
 bool ImGui_ImplFreeType_FontSrcInit(ImFontAtlas* atlas, ImFontConfig* src)
 {
     ImGui_ImplFreeType_Data* bd = (ImGui_ImplFreeType_Data*)atlas->FontLoaderData;
     ImGui_ImplFreeType_FontSrcData* bd_font_data = IM_NEW(ImGui_ImplFreeType_FontSrcData);
-    IM_ASSERT(src->FontLoaderData == NULL);
+    IM_ASSERT(src->FontLoaderData == nullptr);
     src->FontLoaderData = bd_font_data;
 
     if (!bd_font_data->InitFont(bd->Library, src, (ImGuiFreeTypeLoaderFlags)atlas->FontLoaderFlags))
     {
         IM_DELETE(bd_font_data);
-        src->FontLoaderData = NULL;
+        src->FontLoaderData = nullptr;
         return false;
     }
 
@@ -415,7 +415,7 @@ void ImGui_ImplFreeType_FontSrcDestroy(ImFontAtlas* atlas, ImFontConfig* src)
     IM_UNUSED(atlas);
     ImGui_ImplFreeType_FontSrcData* bd_font_data = (ImGui_ImplFreeType_FontSrcData*)src->FontLoaderData;
     IM_DELETE(bd_font_data);
-    src->FontLoaderData = NULL;
+    src->FontLoaderData = nullptr;
 }
 
 bool ImGui_ImplFreeType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void* loader_data_for_baked_src)
@@ -430,7 +430,7 @@ bool ImGui_ImplFreeType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig* src, ImF
 
     // We use one FT_Size per (source + baked) combination.
     ImGui_ImplFreeType_FontSrcBakedData* bd_baked_data = (ImGui_ImplFreeType_FontSrcBakedData*)loader_data_for_baked_src;
-    IM_ASSERT(bd_baked_data != NULL);
+    IM_ASSERT(bd_baked_data != nullptr);
     IM_PLACEMENT_NEW(bd_baked_data) ImGui_ImplFreeType_FontSrcBakedData();
 
     FT_New_Size(bd_font_data->FtFace, &bd_baked_data->FtSize);
@@ -470,7 +470,7 @@ void ImGui_ImplFreeType_FontBakedDestroy(ImFontAtlas* atlas, ImFontConfig* src, 
     IM_UNUSED(baked);
     IM_UNUSED(src);
     ImGui_ImplFreeType_FontSrcBakedData* bd_baked_data = (ImGui_ImplFreeType_FontSrcBakedData*)loader_data_for_baked_src;
-    IM_ASSERT(bd_baked_data != NULL);
+    IM_ASSERT(bd_baked_data != nullptr);
     FT_Done_Size(bd_baked_data->FtSize);
     bd_baked_data->~ImGui_ImplFreeType_FontSrcBakedData(); // ~IM_PLACEMENT_DELETE()
 }
@@ -491,7 +491,7 @@ bool ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConfig* src
     }
 
     const FT_Glyph_Metrics* metrics = ImGui_ImplFreeType_LoadGlyph(bd_font_data, codepoint);
-    if (metrics == NULL)
+    if (metrics == nullptr)
         return false;
 
     // Render glyph into a bitmap (currently held by FreeType)
