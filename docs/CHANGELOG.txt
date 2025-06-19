@@ -392,6 +392,7 @@ Other changes:
   - Backends: SDLGPU3: added support for ImDrawCallback_ResetRenderState. (#8599)
   - Backends: OpenGL3: made GLES 3.20 contexts not access GL_CONTEXT_PROFILE_MASK nor
     GL_PRIMITIVE_RESTART. (#8664) [@DyXel]
+  - Backends: DirectX12: Fixed build on MinGW. (#8702, #4594) [@playday3008]
   - Backends: DirectX10, DirectX11, DirectX12: Honor FramebufferScale to allow for custom
     platform backends and experiments using it (consistently with other renderer backends,
     even though in normal condition it is not set under Windows). (#8412) [@WSSDude]

@@ -20,6 +20,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2025-06-19: Fixed build on MinGW. (#8702, #4594)
 //  2025-06-11: DirectX12: Added support for ImGuiBackendFlags_RendererHasTextures, for dynamic font atlas.
 //  2025-05-07: DirectX12: Honor draw_data->FramebufferScale to allow for custom backends and experiment using it (consistently with other renderer backends, even though in normal condition it is not set under Windows).
 //  2025-02-24: DirectX12: Fixed an issue where ImGui_ImplDX12_Init() signature change from 2024-11-15 combined with change from 2025-01-15 made legacy ImGui_ImplDX12_Init() crash. (#8429)
@@ -60,6 +61,9 @@
 #ifdef _MSC_VER
 #pragma comment(lib, "d3dcompiler") // Automatically link with d3dcompiler.lib as we are using D3DCompile() below.
 #endif
+
+// MinGW workaround, see #4594
+typedef decltype(D3D12SerializeRootSignature) *_PFN_D3D12_SERIALIZE_ROOT_SIGNATURE;
 
 // DirectX12 data
 struct ImGui_ImplDX12_RenderBuffers;
@@ -618,7 +622,7 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
                 return false;
         }
 
-        PFN_D3D12_SERIALIZE_ROOT_SIGNATURE D3D12SerializeRootSignatureFn = (PFN_D3D12_SERIALIZE_ROOT_SIGNATURE)(void*)::GetProcAddress(d3d12_dll, "D3D12SerializeRootSignature");
+        _PFN_D3D12_SERIALIZE_ROOT_SIGNATURE D3D12SerializeRootSignatureFn = (_PFN_D3D12_SERIALIZE_ROOT_SIGNATURE)(void*)::GetProcAddress(d3d12_dll, "D3D12SerializeRootSignature");
         if (D3D12SerializeRootSignatureFn == nullptr)
             return false;
 
