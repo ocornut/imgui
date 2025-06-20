@@ -914,7 +914,8 @@ void ImGui_ImplDX12_NewFrame()
     IM_ASSERT(bd != nullptr && "Context or backend not initialized! Did you call ImGui_ImplDX12_Init()?");
 
     if (!bd->pPipelineState)
-        ImGui_ImplDX12_CreateDeviceObjects();
+        if (!ImGui_ImplDX12_CreateDeviceObjects())
+            IM_ASSERT(0 && "ImGui_ImplDX12_CreateDeviceObjects() failed!");
 }
 
 //-----------------------------------------------------------------------------

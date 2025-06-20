@@ -901,7 +901,8 @@ void ImGui_ImplWGPU_NewFrame()
 {
     ImGui_ImplWGPU_Data* bd = ImGui_ImplWGPU_GetBackendData();
     if (!bd->pipelineState)
-        ImGui_ImplWGPU_CreateDeviceObjects();
+        if (!ImGui_ImplWGPU_CreateDeviceObjects())
+            IM_ASSERT(0 && "ImGui_ImplWGPU_CreateDeviceObjects() failed!");
 }
 
 //-----------------------------------------------------------------------------

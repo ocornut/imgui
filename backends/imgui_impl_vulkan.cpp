@@ -1236,7 +1236,8 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info)
     }
 #endif
 
-    ImGui_ImplVulkan_CreateDeviceObjects();
+    if (!ImGui_ImplVulkan_CreateDeviceObjects())
+        IM_ASSERT(0 && "ImGui_ImplVulkan_CreateDeviceObjects() failed!"); // <- Can't be hit yet.
 
     return true;
 }

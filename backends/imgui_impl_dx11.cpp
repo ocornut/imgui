@@ -662,7 +662,8 @@ void ImGui_ImplDX11_NewFrame()
     IM_ASSERT(bd != nullptr && "Context or backend not initialized! Did you call ImGui_ImplDX11_Init()?");
 
     if (!bd->pVertexShader)
-        ImGui_ImplDX11_CreateDeviceObjects();
+        if (!ImGui_ImplDX11_CreateDeviceObjects())
+            IM_ASSERT(0 && "ImGui_ImplDX11_CreateDeviceObjects() failed!");
 }
 
 //-----------------------------------------------------------------------------
