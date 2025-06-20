@@ -8,28 +8,30 @@
 // - Documentation        https://dearimgui.com/docs (same as your local docs/ folder).
 // - Introduction, links and more at the top of imgui.cpp
 
+
 #include "imgui.h"
-#include "imgui_impl_glfw.h"
+#include "imgui_impl_sdl2.h"
 #include "imgui_impl_wgpu.h"
 #include <stdio.h>
-#include <stdlib.h>
 
-#include <GLFW/glfw3.h>
 #ifdef __EMSCRIPTEN__
-    #include <emscripten.h>
-    #include <emscripten/html5.h>
+#include <emscripten.h>
+#include <emscripten/html5.h>
     #if defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
         #include <emscripten/html5_webgpu.h>
     #endif
-    #include <webgpu/webgpu.h>
+
+#include "../libs/emscripten/emscripten_mainloop_stub.h"
+#endif
+
+#include <SDL.h>
+#include <webgpu/webgpu.h>
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
     #include <webgpu/webgpu_cpp.h>
-    #include "../libs/emscripten/emscripten_mainloop_stub.h"
-#else
-    #if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
-        #include <webgpu/webgpu_glfw.h>
-    #else
-        #include <webgpu/wgpu.h>
-    #endif
+#endif
+
+// This example can also compile and run with Emscripten! See 'Makefile.emscripten' for details.
+#ifdef __EMSCRIPTEN__
 #endif
 
 // Global WebGPU required states
@@ -45,12 +47,7 @@ int                      wgpu_surface_height = 720;
 // Forward declarations
 bool InitWGPU(void* window);
 
-static void glfw_error_callback(int error, const char* description)
-{
-    printf("GLFW Error %d: %s\n", error, description);
-}
-
-static WGPUTexture check_surface_texture_status(GLFWwindow * window)
+static WGPUTexture check_surface_texture_status(SDL_Window * window)
 {
     WGPUSurfaceTexture surfaceTexture;
     wgpuSurfaceGetCurrentTexture(wgpu_surface, &surfaceTexture);
@@ -73,7 +70,7 @@ static WGPUTexture check_surface_texture_status(GLFWwindow * window)
             if (surfaceTexture.texture)
                 wgpuTextureRelease(surfaceTexture.texture);
             int width, height;
-            glfwGetFramebufferSize(window, &width, &height);
+            SDL_GetWindowSize(window, &width, &height);
             if ( width > 0 && height > 0 )
             {
                 wgpu_surface_configuration.width  = width;
@@ -102,37 +99,32 @@ static WGPUTexture check_surface_texture_status(GLFWwindow * window)
     return surfaceTexture.texture;
 }
 
-static void ResizeSurface(int width, int height)
+void ResizeSurface(int width, int height)
 {
     wgpu_surface_configuration.width  = wgpu_surface_width  = width;
     wgpu_surface_configuration.height = wgpu_surface_height = height;
 
-    wgpuSurfaceConfigure(wgpu_surface, &wgpu_surface_configuration);
+    wgpuSurfaceConfigure( wgpu_surface, (WGPUSurfaceConfiguration *) &wgpu_surface_configuration );
 }
 
 // Main code
 int main(int, char**)
 {
-    glfwSetErrorCallback(glfw_error_callback);
-    if (!glfwInit())
-        return EXIT_FAILURE;
 
-    // Make sure GLFW does not initialize any graphics context.
-    // This needs to be done explicitly later.
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    GLFWwindow* window = glfwCreateWindow(wgpu_surface_width, wgpu_surface_height, "Dear ImGui GLFW+WebGPU example", nullptr, nullptr);
-    if (window == nullptr)
-        return EXIT_FAILURE;
+#if defined(__linux__)
+    // it's necessary to specify "x11" or "wayland": default is "x11" it works also in wayland
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "x11");
+        // or comment the previous line and export SDL_VIDEODRIVER environment variable:
+        // export SDL_VIDEODRIVER=wayland             (to set wayland session type)
+        // export SDL_VIDEODRIVER=$XDG_SESSION_TYPE   (to get current session type from WM: x11 | wayland)
+#endif
 
-    // Initialize the WebGPU environment
-    if (!InitWGPU(window))
-    {
-        glfwDestroyWindow(window);
-        glfwTerminate();
-        return EXIT_FAILURE;
-    }
+    // Init SDL
+    SDL_Init(SDL_INIT_VIDEO);
+    SDL_Window *window = SDL_CreateWindow("Dear ImGui SDL2+WebGPU example", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, wgpu_surface_width, wgpu_surface_height, SDL_WINDOW_RESIZABLE);
 
-    glfwShowWindow(window);
+    // Initialize WGPU
+    InitWGPU(window);
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -146,10 +138,8 @@ int main(int, char**)
     //ImGui::StyleColorsLight();
 
     // Setup Platform/Renderer backends
-    ImGui_ImplGlfw_InitForOther(window, true);
-#ifdef __EMSCRIPTEN__
-    ImGui_ImplGlfw_InstallEmscriptenCallbacks(window, "#canvas");
-#endif
+    ImGui_ImplSDL2_InitForOther(window);
+
     ImGui_ImplWGPU_InitInfo init_info;
     init_info.Device = wgpu_device;
     init_info.NumFramesInFlight = 3;
@@ -182,6 +172,8 @@ int main(int, char**)
     bool show_another_window = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
+    SDL_Event event;
+    bool canCloseWindow = false;
     // Main loop
 #ifdef __EMSCRIPTEN__
     // For an Emscripten build we are disabling file-system access, so let's not attempt to do a fopen() of the imgui.ini file.
@@ -189,38 +181,41 @@ int main(int, char**)
     io.IniFilename = nullptr;
     EMSCRIPTEN_MAINLOOP_BEGIN
 #else
-    while (!glfwWindowShouldClose(window))
+    while (!canCloseWindow) 
 #endif
     {
+        while (SDL_PollEvent(&event))
+        {
+            ImGui_ImplSDL2_ProcessEvent(&event);
+            if (event.type == SDL_QUIT ||
+               (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE &&
+                event.window.windowID == SDL_GetWindowID(window)))
+                    canCloseWindow = true;
+        }
         // Poll and handle events (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
         // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
         // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
         // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
-        glfwPollEvents();
-        if (glfwGetWindowAttrib(window, GLFW_ICONIFIED) != 0)
-        {
-            ImGui_ImplGlfw_Sleep(10);
-            continue;
-        }
 
         // React to changes in screen size
         int width, height;
-        glfwGetFramebufferSize((GLFWwindow*)window, &width, &height);
+        SDL_GetWindowSize(window, &width, &height);
         if (width != wgpu_surface_width || height != wgpu_surface_height)
         {
             ImGui_ImplWGPU_InvalidateDeviceObjects();
             ResizeSurface(width, height);
             ImGui_ImplWGPU_CreateDeviceObjects();
+            //continue;
         }
 
         // Check surface texture status
         WGPUTexture texture = check_surface_texture_status(window);
-        if (texture == nullptr) continue;
+        if(!texture) continue;
 
         // Start the Dear ImGui frame
         ImGui_ImplWGPU_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
+        ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
 
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
@@ -265,13 +260,12 @@ int main(int, char**)
 
         WGPUTextureViewDescriptor viewDescriptor {};
         viewDescriptor.format          = wgpu_preferred_fmt;
-        viewDescriptor.dimension       = WGPUTextureViewDimension_2D ;
+        viewDescriptor.dimension       = WGPUTextureViewDimension_2D;
         viewDescriptor.mipLevelCount   = WGPU_MIP_LEVEL_COUNT_UNDEFINED;
         viewDescriptor.arrayLayerCount = WGPU_ARRAY_LAYER_COUNT_UNDEFINED;
         viewDescriptor.aspect          = WGPUTextureAspect_All;
 
-        WGPUTextureView textureView = wgpuTextureCreateView(texture, &viewDescriptor);
-
+        WGPUTextureView textureView    = wgpuTextureCreateView(texture, &viewDescriptor);
 
         WGPURenderPassColorAttachment color_attachments {};
         color_attachments.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
@@ -285,7 +279,7 @@ int main(int, char**)
         render_pass_desc.colorAttachments       = &color_attachments;
         render_pass_desc.depthStencilAttachment = nullptr;
 
-        WGPUCommandEncoderDescriptor enc_desc = {};
+        WGPUCommandEncoderDescriptor enc_desc {};
         WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(wgpu_device, &enc_desc);
 
         WGPURenderPassEncoder pass = wgpuCommandEncoderBeginRenderPass(encoder, &render_pass_desc);
@@ -314,7 +308,7 @@ int main(int, char**)
 
     // Cleanup
     ImGui_ImplWGPU_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
+    ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
 
     wgpuSurfaceUnconfigure(wgpu_surface);
@@ -323,11 +317,10 @@ int main(int, char**)
     wgpuDeviceRelease(wgpu_device);
     wgpuInstanceRelease(wgpu_instance);
 
-    glfwDestroyWindow(window);
-    glfwTerminate();
+    // Terminate SDL
+    SDL_DestroyWindow(window);
+    SDL_Quit();
 
     return EXIT_SUCCESS;
 }
-
-
 
