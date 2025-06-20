@@ -3746,7 +3746,7 @@ struct ImFontAtlasPostProcessData
     ImFontGlyph*        Glyph;
 
     // Pixel data
-    unsigned char*      Pixels;
+    void*               Pixels;
     ImTextureFormat     Format;
     int                 Pitch;
     int                 Width;
