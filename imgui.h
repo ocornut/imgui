@@ -1530,7 +1530,7 @@ enum ImGuiKey : int
     ImGuiKey_Space,
     ImGuiKey_Enter,
     ImGuiKey_Escape,
-    ImGuiKey_LeftCtrl, ImGuiKey_LeftShift, ImGuiKey_LeftAlt, ImGuiKey_LeftSuper,
+    ImGuiKey_LeftCtrl, ImGuiKey_LeftShift, ImGuiKey_LeftAlt, ImGuiKey_LeftSuper,     // Also see ImGuiMod_Ctrl, ImGuiMod_Shift, ImGuiMod_Alt, ImGuiMod_Super below!
     ImGuiKey_RightCtrl, ImGuiKey_RightShift, ImGuiKey_RightAlt, ImGuiKey_RightSuper,
     ImGuiKey_Menu,
     ImGuiKey_0, ImGuiKey_1, ImGuiKey_2, ImGuiKey_3, ImGuiKey_4, ImGuiKey_5, ImGuiKey_6, ImGuiKey_7, ImGuiKey_8, ImGuiKey_9,
@@ -1570,32 +1570,34 @@ enum ImGuiKey : int
     ImGuiKey_AppForward,
     ImGuiKey_Oem102,                // Non-US backslash.
 
-    // Gamepad (some of those are analog values, 0.0f to 1.0f)                          // NAVIGATION ACTION
+    // Gamepad
+    // (analog values are 0.0f to 1.0f)
     // (download controller mapping PNG/PSD at http://dearimgui.com/controls_sheets)
-    ImGuiKey_GamepadStart,          // Menu (Xbox)      + (Switch)   Start/Options (PS)
-    ImGuiKey_GamepadBack,           // View (Xbox)      - (Switch)   Share (PS)
-    ImGuiKey_GamepadFaceLeft,       // X (Xbox)         Y (Switch)   Square (PS)        // Tap: Toggle Menu. Hold: Windowing mode (Focus/Move/Resize windows)
-    ImGuiKey_GamepadFaceRight,      // B (Xbox)         A (Switch)   Circle (PS)        // Cancel / Close / Exit
-    ImGuiKey_GamepadFaceUp,         // Y (Xbox)         X (Switch)   Triangle (PS)      // Text Input / On-screen Keyboard
-    ImGuiKey_GamepadFaceDown,       // A (Xbox)         B (Switch)   Cross (PS)         // Activate / Open / Toggle / Tweak
-    ImGuiKey_GamepadDpadLeft,       // D-pad Left                                       // Move / Tweak / Resize Window (in Windowing mode)
-    ImGuiKey_GamepadDpadRight,      // D-pad Right                                      // Move / Tweak / Resize Window (in Windowing mode)
-    ImGuiKey_GamepadDpadUp,         // D-pad Up                                         // Move / Tweak / Resize Window (in Windowing mode)
-    ImGuiKey_GamepadDpadDown,       // D-pad Down                                       // Move / Tweak / Resize Window (in Windowing mode)
-    ImGuiKey_GamepadL1,             // L Bumper (Xbox)  L (Switch)   L1 (PS)            // Tweak Slower / Focus Previous (in Windowing mode)
-    ImGuiKey_GamepadR1,             // R Bumper (Xbox)  R (Switch)   R1 (PS)            // Tweak Faster / Focus Next (in Windowing mode)
-    ImGuiKey_GamepadL2,             // L Trig. (Xbox)   ZL (Switch)  L2 (PS) [Analog]
-    ImGuiKey_GamepadR2,             // R Trig. (Xbox)   ZR (Switch)  R2 (PS) [Analog]
-    ImGuiKey_GamepadL3,             // L Stick (Xbox)   L3 (Switch)  L3 (PS)
-    ImGuiKey_GamepadR3,             // R Stick (Xbox)   R3 (Switch)  R3 (PS)
-    ImGuiKey_GamepadLStickLeft,     // [Analog]                                         // Move Window (in Windowing mode)
-    ImGuiKey_GamepadLStickRight,    // [Analog]                                         // Move Window (in Windowing mode)
-    ImGuiKey_GamepadLStickUp,       // [Analog]                                         // Move Window (in Windowing mode)
-    ImGuiKey_GamepadLStickDown,     // [Analog]                                         // Move Window (in Windowing mode)
-    ImGuiKey_GamepadRStickLeft,     // [Analog]
-    ImGuiKey_GamepadRStickRight,    // [Analog]
-    ImGuiKey_GamepadRStickUp,       // [Analog]
-    ImGuiKey_GamepadRStickDown,     // [Analog]
+    //                              // XBOX        | SWITCH  | PLAYSTA. | -> ACTION
+    ImGuiKey_GamepadStart,          // Menu        | +       | Options  |
+    ImGuiKey_GamepadBack,           // View        | -       | Share    |
+    ImGuiKey_GamepadFaceLeft,       // X           | Y       | Square   | Tap: Toggle Menu. Hold: Windowing mode (Focus/Move/Resize windows)
+    ImGuiKey_GamepadFaceRight,      // B           | A       | Circle   | Cancel / Close / Exit
+    ImGuiKey_GamepadFaceUp,         // Y           | X       | Triangle | Text Input / On-screen Keyboard
+    ImGuiKey_GamepadFaceDown,       // A           | B       | Cross    | Activate / Open / Toggle / Tweak
+    ImGuiKey_GamepadDpadLeft,       // D-pad Left  | "       | "        | Move / Tweak / Resize Window (in Windowing mode)
+    ImGuiKey_GamepadDpadRight,      // D-pad Right | "       | "        | Move / Tweak / Resize Window (in Windowing mode)
+    ImGuiKey_GamepadDpadUp,         // D-pad Up    | "       | "        | Move / Tweak / Resize Window (in Windowing mode)
+    ImGuiKey_GamepadDpadDown,       // D-pad Down  | "       | "        | Move / Tweak / Resize Window (in Windowing mode)
+    ImGuiKey_GamepadL1,             // L Bumper    | L       | L1       | Tweak Slower / Focus Previous (in Windowing mode)
+    ImGuiKey_GamepadR1,             // R Bumper    | R       | R1       | Tweak Faster / Focus Next (in Windowing mode)
+    ImGuiKey_GamepadL2,             // L Trigger   | ZL      | L2       | [Analog]
+    ImGuiKey_GamepadR2,             // R Trigger   | ZR      | R2       | [Analog]
+    ImGuiKey_GamepadL3,             // L Stick     | L3      | L3       |
+    ImGuiKey_GamepadR3,             // R Stick     | R3      | R3       |
+    ImGuiKey_GamepadLStickLeft,     //             |         |          | [Analog] Move Window (in Windowing mode)
+    ImGuiKey_GamepadLStickRight,    //             |         |          | [Analog] Move Window (in Windowing mode)
+    ImGuiKey_GamepadLStickUp,       //             |         |          | [Analog] Move Window (in Windowing mode)
+    ImGuiKey_GamepadLStickDown,     //             |         |          | [Analog] Move Window (in Windowing mode)
+    ImGuiKey_GamepadRStickLeft,     //             |         |          | [Analog]
+    ImGuiKey_GamepadRStickRight,    //             |         |          | [Analog]
+    ImGuiKey_GamepadRStickUp,       //             |         |          | [Analog]
+    ImGuiKey_GamepadRStickDown,     //             |         |          | [Analog]
 
     // Aliases: Mouse Buttons (auto-submitted from AddMouseButtonEvent() calls)
     // - This is mirroring the data also written to io.MouseDown[], io.MouseWheel, in a format allowing them to be accessed via standard key API.
@@ -1603,11 +1605,15 @@ enum ImGuiKey : int
 
     // [Internal] Reserved for mod storage
     ImGuiKey_ReservedForModCtrl, ImGuiKey_ReservedForModShift, ImGuiKey_ReservedForModAlt, ImGuiKey_ReservedForModSuper,
+
+    // [Internal] If you need to iterate all keys (for e.g. an input mapper) you may use ImGuiKey_NamedKey_BEGIN..ImGuiKey_NamedKey_END.
     ImGuiKey_NamedKey_END,
+    ImGuiKey_NamedKey_COUNT = ImGuiKey_NamedKey_END - ImGuiKey_NamedKey_BEGIN,
 
     // Keyboard Modifiers (explicitly submitted by backend via AddKeyEvent() calls)
-    // - This is mirroring the data also written to io.KeyCtrl, io.KeyShift, io.KeyAlt, io.KeySuper, in a format allowing
-    //   them to be accessed via standard key API, allowing calls such as IsKeyPressed(), IsKeyReleased(), querying duration etc.
+    // - Any functions taking a ImGuiKeyChord parameter can binary-or those with regular keys, e.g. Shortcut(ImGuiMod_Ctrl | ImGuiKey_S).
+    // - Those are written back into io.KeyCtrl, io.KeyShift, io.KeyAlt, io.KeySuper for convenience,
+    //   but may be accessed via standard key API such as IsKeyPressed(), IsKeyReleased(), querying duration etc.
     // - Code polling every key (e.g. an interface to detect a key press for input mapping) might want to ignore those
     //   and prefer using the real keys (e.g. ImGuiKey_LeftCtrl, ImGuiKey_RightCtrl instead of ImGuiMod_Ctrl).
     // - In theory the value of keyboard modifiers should be roughly equivalent to a logical or of the equivalent left/right keys.
@@ -1620,11 +1626,6 @@ enum ImGuiKey : int
     ImGuiMod_Alt                    = 1 << 14, // Option/Menu
     ImGuiMod_Super                  = 1 << 15, // Windows/Super (non-macOS), Ctrl (macOS)
     ImGuiMod_Mask_                  = 0xF000,  // 4-bits
-
-    // [Internal] If you need to iterate all keys (for e.g. an input mapper) you may use ImGuiKey_NamedKey_BEGIN..ImGuiKey_NamedKey_END.
-    ImGuiKey_NamedKey_COUNT         = ImGuiKey_NamedKey_END - ImGuiKey_NamedKey_BEGIN,
-    //ImGuiKey_KeysData_SIZE        = ImGuiKey_NamedKey_COUNT,  // Size of KeysData[]: only hold named keys
-    //ImGuiKey_KeysData_OFFSET      = ImGuiKey_NamedKey_BEGIN,  // Accesses to io.KeysData[] must use (key - ImGuiKey_NamedKey_BEGIN) index.
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     ImGuiKey_COUNT                  = ImGuiKey_NamedKey_END,    // Obsoleted in 1.91.5 because it was extremely misleading (since named keys don't start at 0 anymore)
@@ -2514,7 +2515,7 @@ struct ImGuiIO
 
     // Other state maintained from data above + IO function calls
     ImGuiKeyChord KeyMods;                          // Key mods flags (any of ImGuiMod_Ctrl/ImGuiMod_Shift/ImGuiMod_Alt/ImGuiMod_Super flags, same as io.KeyCtrl/KeyShift/KeyAlt/KeySuper but merged into flags. Read-only, updated by NewFrame()
-    ImGuiKeyData  KeysData[ImGuiKey_NamedKey_COUNT];// Key state for all known keys. Use IsKeyXXX() functions to access this.
+    ImGuiKeyData  KeysData[ImGuiKey_NamedKey_COUNT];// Key state for all known keys. MUST use 'key - ImGuiKey_NamedKey_BEGIN' as index. Use IsKeyXXX() functions to access this.
     bool        WantCaptureMouseUnlessPopupClose;   // Alternative to WantCaptureMouse: (WantCaptureMouse == true && WantCaptureMouseUnlessPopupClose == false) when a click over void is expected to close a popup.
     ImVec2      MousePosPrev;                       // Previous mouse position (note that MouseDelta is not necessary == MousePos-MousePosPrev, in case either position is invalid)
     ImVec2      MouseClickedPos[5];                 // Position at time of clicking
