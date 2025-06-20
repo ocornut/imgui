@@ -1127,7 +1127,7 @@ static void ImGui_ImplSDL2_DestroyWindow(ImGuiViewport* viewport)
 static void ImGui_ImplSDL2_ShowWindow(ImGuiViewport* viewport)
 {
     ImGui_ImplSDL2_ViewportData* vd = (ImGui_ImplSDL2_ViewportData*)viewport->PlatformUserData;
-#if defined(_WIN32) && !(defined(WINAPI_FAMILY) && (WINAPI_FAMILY == WINAPI_FAMILY_APP || WINAPI_FAMILY == WINAPI_FAMILY_GAMES))
+#if defined(_WIN32) && !(defined(WINAPI_FAMILY) && ((defined(WINAPI_FAMILY_APP) && WINAPI_FAMILY == WINAPI_FAMILY_APP) || (defined(WINAPI_FAMILY_GAMES) && WINAPI_FAMILY == WINAPI_FAMILY_GAMES)))
     HWND hwnd = (HWND)viewport->PlatformHandleRaw;
 
     // SDL hack: Hide icon from task bar

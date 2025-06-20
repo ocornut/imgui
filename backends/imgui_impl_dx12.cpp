@@ -1215,7 +1215,7 @@ static void ImGui_ImplDX12_RenderWindow(ImGuiViewport* viewport, void*)
     cmd_list->ResourceBarrier(1, &barrier);
     cmd_list->OMSetRenderTargets(1, &vd->FrameCtx[back_buffer_idx].RenderTargetCpuDescriptors, FALSE, nullptr);
     if (!(viewport->Flags & ImGuiViewportFlags_NoRendererClear))
-        cmd_list->ClearRenderTargetView(vd->FrameCtx[back_buffer_idx].RenderTargetCpuDescriptors, (float*)&clear_color, 0, nullptr);
+        cmd_list->ClearRenderTargetView(vd->FrameCtx[back_buffer_idx].RenderTargetCpuDescriptors, (const float*)&clear_color, 0, nullptr);
     cmd_list->SetDescriptorHeaps(1, &bd->pd3dSrvDescHeap);
 
     ImGui_ImplDX12_RenderDrawData(viewport->DrawData, cmd_list);

@@ -1063,7 +1063,7 @@ static void ImGui_ImplSDL3_DestroyWindow(ImGuiViewport* viewport)
 static void ImGui_ImplSDL3_ShowWindow(ImGuiViewport* viewport)
 {
     ImGui_ImplSDL3_ViewportData* vd = (ImGui_ImplSDL3_ViewportData*)viewport->PlatformUserData;
-#if defined(_WIN32) && !(defined(WINAPI_FAMILY) && (WINAPI_FAMILY == WINAPI_FAMILY_APP || WINAPI_FAMILY == WINAPI_FAMILY_GAMES))
+#if defined(_WIN32) && !(defined(WINAPI_FAMILY) && ((defined(WINAPI_FAMILY_APP) && WINAPI_FAMILY == WINAPI_FAMILY_APP) || (defined(WINAPI_FAMILY_GAMES) && WINAPI_FAMILY == WINAPI_FAMILY_GAMES)))
     HWND hwnd = (HWND)viewport->PlatformHandleRaw;
 
     // SDL hack: Show icon in task bar (#7989)
@@ -1193,7 +1193,7 @@ static int ImGui_ImplSDL3_CreateVkSurface(ImGuiViewport* viewport, ImU64 vk_inst
 {
     ImGui_ImplSDL3_ViewportData* vd = (ImGui_ImplSDL3_ViewportData*)viewport->PlatformUserData;
     (void)vk_allocator;
-    bool ret = SDL_Vulkan_CreateSurface(vd->Window, (VkInstance)vk_instance, (VkAllocationCallbacks*)vk_allocator, (VkSurfaceKHR*)out_vk_surface);
+    bool ret = SDL_Vulkan_CreateSurface(vd->Window, (VkInstance)vk_instance, (const VkAllocationCallbacks*)vk_allocator, (VkSurfaceKHR*)out_vk_surface);
     return ret ? 0 : 1; // ret ? VK_SUCCESS : VK_NOT_READY
 }
 

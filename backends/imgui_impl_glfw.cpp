@@ -107,6 +107,8 @@
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wold-style-cast"     // warning: use of old-style cast
 #pragma clang diagnostic ignored "-Wsign-conversion"    // warning: implicit conversion changes signedness
+#elif defined(__GNUC__)
+#pragma GCC diagnostic ignored "-Wfloat-equal"          // warning: comparing floating-point with '==' or '!=' is unsafe
 #endif
 
 // GLFW
@@ -1331,7 +1333,7 @@ static ImVec2 ImGui_ImplGlfw_GetWindowSize(ImGuiViewport* viewport)
 static void ImGui_ImplGlfw_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 {
     ImGui_ImplGlfw_ViewportData* vd = (ImGui_ImplGlfw_ViewportData*)viewport->PlatformUserData;
-#if __APPLE__ && !GLFW_HAS_OSX_WINDOW_POS_FIX
+#if defined(__APPLE__) && !GLFW_HAS_OSX_WINDOW_POS_FIX
     // Native OS windows are positioned from the bottom-left corner on macOS, whereas on other platforms they are
     // positioned from the upper-left corner. GLFW makes an effort to convert macOS style coordinates, however it
     // doesn't handle it when changing size. We are manually moving the window in order for changes of size to be based

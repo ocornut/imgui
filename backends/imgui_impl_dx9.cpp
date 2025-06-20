@@ -391,7 +391,7 @@ static void ImGui_ImplDX9_CopyTextureRegion(bool tex_use_colors, const ImU32* sr
 #endif
     for (int y = 0; y < h; y++)
     {
-        const ImU32* src_p = (const ImU32*)(void*)((const unsigned char*)src + src_pitch * y);
+        const ImU32* src_p = (const ImU32*)(const void*)((const unsigned char*)src + src_pitch * y);
         ImU32* dst_p = (ImU32*)(void*)((unsigned char*)dst + dst_pitch * y);
         if (convert_rgba_to_bgra)
             for (int x = w; x > 0; x--, src_p++, dst_p++) // Convert copy

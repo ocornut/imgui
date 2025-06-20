@@ -17623,7 +17623,7 @@ static void ImGui::DockContextPruneUnusedSettingsNodes(ImGuiContext* ctx)
     {
         ImGuiDockNodeSettings* settings = &dc->NodesSettings[settings_n];
         ImGuiDockContextPruneNodeData* data = pool.GetByKey(settings->ID);
-        if (data->CountWindows > 1)
+        if (data == NULL || data->CountWindows > 1)
             continue;
         ImGuiDockContextPruneNodeData* data_root = (data->RootId == settings->ID) ? data : pool.GetByKey(data->RootId);
 
