@@ -545,6 +545,7 @@ static LRESULT CALLBACK ImGui_ImplGlfw_WndProc(HWND hWnd, UINT msg, WPARAM wPara
     case WM_XBUTTONDOWN: case WM_XBUTTONDBLCLK: case WM_XBUTTONUP:
         io.AddMouseSourceEvent(GetMouseSourceFromMessageExtraInfo());
         break;
+    default: break;
     }
     return ::CallWindowProcW(bd->PrevWndProc, hWnd, msg, wParam, lParam);
 }

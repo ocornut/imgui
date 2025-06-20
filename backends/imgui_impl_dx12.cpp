@@ -62,6 +62,12 @@
 #pragma comment(lib, "d3dcompiler") // Automatically link with d3dcompiler.lib as we are using D3DCompile() below.
 #endif
 
+// Clang/GCC warnings with -Weverything
+#if defined(__clang__)
+#pragma clang diagnostic ignored "-Wold-style-cast"         // warning: use of old-style cast                            // yes, they are more terse.
+#pragma clang diagnostic ignored "-Wsign-conversion"        // warning: implicit conversion changes signedness
+#endif
+
 // MinGW workaround, see #4594
 typedef decltype(D3D12SerializeRootSignature) *_PFN_D3D12_SERIALIZE_ROOT_SIGNATURE;
 
@@ -800,6 +806,28 @@ void    ImGui_ImplDX12_InvalidateDeviceObjects()
     }
 }
 
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+static void ImGui_ImplDX12_InitLegacySingleDescriptorMode(ImGui_ImplDX12_InitInfo* init_info)
+{
+    // Wrap legacy behavior of passing space for a single descriptor
+    IM_ASSERT(init_info->LegacySingleSrvCpuDescriptor.ptr != 0 && init_info->LegacySingleSrvGpuDescriptor.ptr != 0);
+    init_info->SrvDescriptorAllocFn = [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu_handle)
+    {
+        ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
+        IM_ASSERT(bd->LegacySingleDescriptorUsed == false && "Only 1 simultaneous texture allowed with legacy ImGui_ImplDX12_Init() signature!");
+        *out_cpu_handle = bd->InitInfo.LegacySingleSrvCpuDescriptor;
+        *out_gpu_handle = bd->InitInfo.LegacySingleSrvGpuDescriptor;
+        bd->LegacySingleDescriptorUsed = true;
+    };
+    init_info->SrvDescriptorFreeFn = [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE)
+    {
+        ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
+        IM_ASSERT(bd->LegacySingleDescriptorUsed == true);
+        bd->LegacySingleDescriptorUsed = false;
+    };
+}
+#endif
+
 bool ImGui_ImplDX12_Init(ImGui_ImplDX12_InitInfo* init_info)
 {
     ImGuiIO& io = ImGui::GetIO();
@@ -826,24 +854,7 @@ bool ImGui_ImplDX12_Init(ImGui_ImplDX12_InitInfo* init_info)
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     if (init_info->SrvDescriptorAllocFn == nullptr)
-    {
-        // Wrap legacy behavior of passing space for a single descriptor
-        IM_ASSERT(init_info->LegacySingleSrvCpuDescriptor.ptr != 0 && init_info->LegacySingleSrvGpuDescriptor.ptr != 0);
-        init_info->SrvDescriptorAllocFn = [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu_handle)
-        {
-            ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
-            IM_ASSERT(bd->LegacySingleDescriptorUsed == false && "Only 1 simultaneous texture allowed with legacy ImGui_ImplDX12_Init() signature!");
-            *out_cpu_handle = bd->InitInfo.LegacySingleSrvCpuDescriptor;
-            *out_gpu_handle = bd->InitInfo.LegacySingleSrvGpuDescriptor;
-            bd->LegacySingleDescriptorUsed = true;
-        };
-        init_info->SrvDescriptorFreeFn = [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE)
-        {
-            ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
-            IM_ASSERT(bd->LegacySingleDescriptorUsed == true);
-            bd->LegacySingleDescriptorUsed = false;
-        };
-    }
+        ImGui_ImplDX12_InitLegacySingleDescriptorMode(init_info);
 #endif
     IM_ASSERT(init_info->SrvDescriptorAllocFn != nullptr && init_info->SrvDescriptorFreeFn != nullptr);
 

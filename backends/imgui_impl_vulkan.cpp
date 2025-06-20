@@ -1250,7 +1250,7 @@ void ImGui_ImplVulkan_Shutdown()
 
     ImGui_ImplVulkan_DestroyDeviceObjects();
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
-    IM_FREE((void*)bd->VulkanInitInfo.PipelineRenderingCreateInfo.pColorAttachmentFormats);
+    IM_FREE((void*)const_cast<VkFormat*>(bd->VulkanInitInfo.PipelineRenderingCreateInfo.pColorAttachmentFormats));
 #endif
 
     io.BackendRendererName = nullptr;

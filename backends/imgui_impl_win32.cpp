@@ -571,6 +571,7 @@ ImGuiKey ImGui_ImplWin32_KeyEventToImGuiKey(WPARAM wParam, LPARAM lParam)
     case 51: return ImGuiKey_Comma;
     case 52: return ImGuiKey_Period;
     case 53: return ImGuiKey_Slash;
+    default: break;
     }
 
     return ImGuiKey_None;
