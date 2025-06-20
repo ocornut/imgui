@@ -55,6 +55,12 @@
 #pragma comment(lib, "d3dcompiler") // Automatically link with d3dcompiler.lib as we are using D3DCompile() below.
 #endif
 
+// Clang/GCC warnings with -Weverything
+#if defined(__clang__)
+#pragma clang diagnostic ignored "-Wold-style-cast"         // warning: use of old-style cast                            // yes, they are more terse.
+#pragma clang diagnostic ignored "-Wsign-conversion"        // warning: implicit conversion changes signedness
+#endif
+
 // DirectX11 data
 struct ImGui_ImplDX11_Texture
 {
@@ -674,7 +680,8 @@ void ImGui_ImplDX11_NewFrame()
     IM_ASSERT(bd != nullptr && "Context or backend not initialized! Did you call ImGui_ImplDX11_Init()?");
 
     if (!bd->pVertexShader)
-        ImGui_ImplDX11_CreateDeviceObjects();
+        if (!ImGui_ImplDX11_CreateDeviceObjects())
+            IM_ASSERT(0 && "ImGui_ImplDX11_CreateDeviceObjects() failed!");
 }
 
 //--------------------------------------------------------------------------------------------------------

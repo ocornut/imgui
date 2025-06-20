@@ -1267,7 +1267,8 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info)
     }
 #endif
 
-    ImGui_ImplVulkan_CreateDeviceObjects();
+    if (!ImGui_ImplVulkan_CreateDeviceObjects())
+        IM_ASSERT(0 && "ImGui_ImplVulkan_CreateDeviceObjects() failed!"); // <- Can't be hit yet.
 
     // Our render function expect RendererUserData to be storing the window render buffer we need (for the main viewport we won't use ->Window)
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
@@ -1287,7 +1288,7 @@ void ImGui_ImplVulkan_Shutdown()
     // First destroy objects in all viewports
     ImGui_ImplVulkan_DestroyDeviceObjects();
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
-    IM_FREE((void*)bd->VulkanInitInfo.PipelineRenderingCreateInfo.pColorAttachmentFormats);
+    IM_FREE((void*)const_cast<VkFormat*>(bd->VulkanInitInfo.PipelineRenderingCreateInfo.pColorAttachmentFormats));
 #endif
 
     // Manually delete main viewport render data in-case we haven't initialized for viewports

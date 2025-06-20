@@ -1530,6 +1530,7 @@ static LRESULT CALLBACK ImGui_ImplGlfw_WndProc(HWND hWnd, UINT msg, WPARAM wPara
         break;
     }
 #endif
+    default: break;
     }
     return ::CallWindowProcW(prev_wndproc, hWnd, msg, wParam, lParam);
 }

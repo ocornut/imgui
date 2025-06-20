@@ -48,6 +48,12 @@
 // DirectX
 #include <d3d9.h>
 
+// Clang/GCC warnings with -Weverything
+#if defined(__clang__)
+#pragma clang diagnostic ignored "-Wold-style-cast"         // warning: use of old-style cast                            // yes, they are more terse.
+#pragma clang diagnostic ignored "-Wsign-conversion"        // warning: implicit conversion changes signedness
+#endif
+
 // DirectX data
 struct ImGui_ImplDX9_Data
 {
@@ -385,8 +391,8 @@ static void ImGui_ImplDX9_CopyTextureRegion(bool tex_use_colors, const ImU32* sr
 #endif
     for (int y = 0; y < h; y++)
     {
-        ImU32* src_p = (ImU32*)((unsigned char*)src + src_pitch * y);
-        ImU32* dst_p = (ImU32*)((unsigned char*)dst + dst_pitch * y);
+        const ImU32* src_p = (const ImU32*)(void*)((const unsigned char*)src + src_pitch * y);
+        ImU32* dst_p = (ImU32*)(void*)((unsigned char*)dst + dst_pitch * y);
         if (convert_rgba_to_bgra)
             for (int x = w; x > 0; x--, src_p++, dst_p++) // Convert copy
                 *dst_p = IMGUI_COL_TO_DX9_ARGB(*src_p);

@@ -441,7 +441,8 @@ void    ImGui_ImplOpenGL3_NewFrame()
     ImGui_ImplOpenGL3_InitLoader(); // Lazily init loader if not already done for e.g. DLL boundaries.
 
     if (!bd->ShaderHandle)
-        ImGui_ImplOpenGL3_CreateDeviceObjects();
+        if (!ImGui_ImplOpenGL3_CreateDeviceObjects())
+            IM_ASSERT(0 && "ImGui_ImplOpenGL3_CreateDeviceObjects() failed!");
 }
 
 static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, int fb_width, int fb_height, GLuint vertex_array_object)
@@ -975,21 +976,24 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
     GL_CALL(vert_handle = glCreateShader(GL_VERTEX_SHADER));
     glShaderSource(vert_handle, 2, vertex_shader_with_version, nullptr);
     glCompileShader(vert_handle);
-    CheckShader(vert_handle, "vertex shader");
+    if (!CheckShader(vert_handle, "vertex shader"))
+        return false;
 
     const GLchar* fragment_shader_with_version[2] = { bd->GlslVersionString, fragment_shader };
     GLuint frag_handle;
     GL_CALL(frag_handle = glCreateShader(GL_FRAGMENT_SHADER));
     glShaderSource(frag_handle, 2, fragment_shader_with_version, nullptr);
     glCompileShader(frag_handle);
-    CheckShader(frag_handle, "fragment shader");
+    if (!CheckShader(frag_handle, "fragment shader"))
+        return false;
 
     // Link
     bd->ShaderHandle = glCreateProgram();
     glAttachShader(bd->ShaderHandle, vert_handle);
     glAttachShader(bd->ShaderHandle, frag_handle);
     glLinkProgram(bd->ShaderHandle);
-    CheckProgram(bd->ShaderHandle, "shader program");
+    if (!CheckProgram(bd->ShaderHandle, "shader program"))
+        return false;
 
     glDetachShader(bd->ShaderHandle, vert_handle);
     glDetachShader(bd->ShaderHandle, frag_handle);

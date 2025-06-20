@@ -648,6 +648,9 @@ void ImGui_ImplAllegro5_NewFrame()
     ImGui_ImplAllegro5_Data* bd = ImGui_ImplAllegro5_GetBackendData();
     IM_ASSERT(bd != nullptr && "Context or backend not initialized! Did you call ImGui_ImplAllegro5_Init()?");
 
+    if (!bd->MouseCursorInvisible)
+        ImGui_ImplAllegro5_CreateDeviceObjects();
+
     // Setup display size (every frame to accommodate for window resizing)
     ImGuiIO& io = ImGui::GetIO();
     int w, h;
