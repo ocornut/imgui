@@ -469,6 +469,9 @@ Docking+Viewports Branch:
 - Backends: SDL3: macOS: Fixed secondary-viewports not appearing on a different
   monitor than the main viewport. Because SDL_SetWindowParent() seems to restrict it.
 - Backends: GLFW: Disable multi-viewports under Wayland (require GLFW 3.4). (#8587)
+- Backends: GLFW: Fixed an issue where Win32 specific WndProc hook was not installed
+  for all GLFW version, preventing mouse vs touch detection from working on
+  secondary viewports.
 
 
 -----------------------------------------------------------------------
