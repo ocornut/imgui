@@ -5705,7 +5705,7 @@ begin:
     }
 
     // Edge case: calling RenderText() with unloaded glyphs triggering texture change. It doesn't happen via ImGui:: calls because CalcTextSize() is always used.
-    if (cmd_count != draw_list->CmdBuffer.Size)
+    if (cmd_count != draw_list->CmdBuffer.Size) //-V547
     {
         IM_ASSERT(draw_list->CmdBuffer[draw_list->CmdBuffer.Size - 1].ElemCount == 0);
         draw_list->CmdBuffer.pop_back();
