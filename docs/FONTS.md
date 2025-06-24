@@ -18,6 +18,7 @@ In the [misc/fonts/](https://github.com/ocornut/imgui/tree/master/misc/fonts) fo
 - [Loading Font Data from Memory](#loading-font-data-from-memory)
 - [Loading Font Data Embedded In Source Code](#loading-font-data-embedded-in-source-code)
 - [Using Icon Fonts](#using-icon-fonts)
+  - [Excluding Overlapping Ranges](#excluding-overlapping-ranges)
 - [Using FreeType Rasterizer (imgui_freetype)](#using-freetype-rasterizer-imgui_freetype)
 - [Using Colorful Glyphs/Emojis](#using-colorful-glyphsemojis)
 - [Using Custom Glyph Ranges](#using-custom-glyph-ranges)
@@ -308,6 +309,44 @@ If you `GlyphMinAdvanceX` you need to pass a `font_size` to `AddFontXXX()` calls
 
 Here's an application using icons ("Avoyd", https://www.avoyd.com):
 ![avoyd](https://user-images.githubusercontent.com/8225057/81696852-c15d9e80-9464-11ea-9cab-2a4d4fc84396.jpg)
+
+##### [Return to Index](#index)
+
+---------------------------------------
+
+### Excluding Overlapping Ranges
+
+🆕 **Since 1.92, with an up to date backend: glyphs ranges are ignored**: when loading a glyph, input fonts in the merge list are queried in order. The first font which has the glyph loads it.
+<BR>‼️ **If you are merging several fonts, you may have undesirable overlapping ranges.** You can use `ImFontConfig::GlyphExcludeRanges[] `to specify ranges to ignore in a given Input.
+
+```cpp
+// Add Font Source 1 but ignore ICON_MIN_FA..ICON_MAX_FA range
+static ImWchar exclude_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
+ImFontConfig cfg1;
+cfg1.GlyphExcludeRanges = exclude_ranges;
+io.Fonts->AddFontFromFileTTF("segoeui.ttf", 0.0f, &cfg1);
+
+// Add Font Source 2, which expects to use the range above
+ImFontConfig cfg2;
+cfg2.MergeMode = true;
+io.Fonts->AddFontFromFileTTF("FontAwesome4.ttf", 0.0f, &cfg2);
+```
+Another (silly) example:
+```cpp
+// Remove 'A'-'Z' from first font
+static ImWchar exclude_ranges[] = { 'A', 'Z', 0 };
+ImFontConfig cfg1;
+cfg1.GlyphExcludeRanges = exclude_ranges;
+io.Fonts->AddFontFromFileTTF("segoeui.ttf", 0.0f, &cfg1);
+
+// Load another font to fill the gaps
+ImFontConfig cfg2;
+cfg2.MergeMode = true;
+io.Fonts->AddFontFromFileTTF("Roboto-Medium.ttf", 0.0f, &cfg2);
+```
+![image](https://github.com/user-attachments/assets/f3d751d3-1aee-4698-bd9b-f511902f56bb)
+
+You can use `Metrics/Debugger->Fonts->Font->Input Glyphs Overlap Detection Tool` to see list of glyphs available in multiple font sources. This can facilitate understanding which font input is providing which glyph.
 
 ##### [Return to Index](#index)
 
