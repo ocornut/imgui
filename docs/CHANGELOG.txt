@@ -80,10 +80,7 @@ Breaking changes:
        - PushFont(font, 20.0f)                      // Change font and set size to 20.0f
        - PushFont(font, style.FontSizeBase * 2.0f)  // Change font and set size to be twice bigger than current size.
        - PushFont(font, font->LegacySize)           // Change font and set size to size passed to AddFontXXX() function. Same as pre-1.92 behavor, for fixed size fonts.
-   - To use old behavior:
-     - use 'ImGui::PushFont(font, font->LegacySize)' at call site (preferred).
-     - or set 'ImFontConfig::Flags |= ImFontFlags_DefaultToLegacySize' in AddFont() call
-       (not desirable as it requires e.g. all third-party code to be aware of it).
+   - To use old behavior use 'ImGui::PushFont(font, font->LegacySize)' at call site.
      We intentionally didn't add a default parameter because it would make the long-term
      transition more difficult.
    - Kept inline redirection font. Will obsolete.
@@ -290,8 +287,6 @@ Other changes:
   window and other locations).
 - Fonts: added ImFontFlags (currently needs to be passed through ImFontConfig until
   we revamp font loading API):
-   - ImFontFlags_DefaultToLegacySize: for legacy compatibility: make PushFont() calls
-     without explicit size use font->LegacySize instead of current font size.
    - ImFontFlags_NoLoadError: disable erroring/assert when calling AddFontXXX()
      with missing file/data. Calling code is expected to check AddFontXXX() return value.
    - ImFontFlags_NoLoadGlyphs: disable loading new glyphs.

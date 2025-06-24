@@ -473,7 +473,7 @@ CODE
                          - PushFont() API now has a REQUIRED size parameter.
                          - Before 1.92: PushFont() always used font "default" size specified in AddFont() call. It is equivalent to calling PushFont(font, font->LegacySize).
                          - Since  1.92: PushFont(font, 0.0f) preserve the current font size which is a shared value.
-                         - To use old behavior: (A) use 'ImGui::PushFont(font, font->LegacySize)' at call site (preferred). (B) Set 'ImFontConfig::Flags |= ImFontFlags_DefaultToLegacySize' in AddFont() call (not desirable as it requires e.g. third-party code to be aware of it).
+                         - To use old behavior: use 'ImGui::PushFont(font, font->LegacySize)' at call site.
                          - Kept inline single parameter function. Will obsolete.
                        - Fonts: **IMPORTANT** on Font Merging:
                          - When searching for a glyph in multiple merged fonts: font inputs are now scanned in orderfor the first font input which the desired glyph. This is technically a different behavior than before!
@@ -8911,12 +8911,7 @@ void ImGui::PushFont(ImFont* font, float font_size_base)
 
     g.FontStack.push_back({ g.Font, g.FontSizeBase, g.FontSize });
     if (font_size_base == 0.0f)
-    {
-        if (font->Flags & ImFontFlags_DefaultToLegacySize)
-            font_size_base = font->LegacySize;  // Legacy: use AddFont() specified font size. Same as doing PushFont(font, font->LegacySize)
-        else
-            font_size_base = g.FontSizeBase;    // Keep current font size
-    }
+        font_size_base = g.FontSizeBase; // Keep current font size
     SetCurrentFont(font, font_size_base, 0.0f);
 }
 

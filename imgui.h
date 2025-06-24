@@ -3759,7 +3759,6 @@ struct ImFontBaked
 enum ImFontFlags_
 {
     ImFontFlags_None                    = 0,
-    ImFontFlags_DefaultToLegacySize     = 1 << 0,   // Legacy compatibility: make `PushFont(font)` == `PushFont(font, font->LegacySize)`. Otherwise by default/shared current font size is used.
     ImFontFlags_NoLoadError             = 1 << 1,   // Disable throwing an error/assert when calling AddFontXXX() with missing file/data. Calling code is expected to check AddFontXXX() return value.
     ImFontFlags_NoLoadGlyphs            = 1 << 2,   // [Internal] Disable loading new glyphs.
     ImFontFlags_LockBakedSizes          = 1 << 3,   // [Internal] Disable loading new baked sizes, disable garbage collecting current ones. e.g. if you want to lock a font to a single size. Important: if you use this to preload given sizes, consider the possibility of multiple font density used on Retina display.
