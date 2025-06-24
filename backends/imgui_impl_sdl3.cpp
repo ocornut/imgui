@@ -169,7 +169,7 @@ static void ImGui_ImplSDL3_PlatformSetImeData(ImGuiContext*, ImGuiViewport* view
         SDL_SetTextInputArea(window, &r, 0);
         bd->ImeWindow = window;
     }
-    if (data->WantVisible || data->WantTextInput)
+    if (!SDL_TextInputActive(window) && (data->WantVisible || data->WantTextInput))
         SDL_StartTextInput(window);
 }
 
