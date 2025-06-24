@@ -507,14 +507,16 @@ namespace ImGui
     // - To use old behavior (single size font, size specified in AddFontXXX() call:
     //   - Use 'PushFont(font, font->LegacySize)' at call site
     //   - Or set 'ImFontConfig::Flags |= ImFontFlags_DefaultToLegacySize' before calling AddFont(), and then 'PushFont(font)' will use this size.
-    // - External scale factors are applied over the provided value.
-    // *IMPORTANT* If you want to scale an existing font size:
-    //   - OK: PushFontSize(style.FontSizeBase * factor) (= value before external scale factors applied).
-    //   - KO: PushFontSize(GetFontSize() * factor)      (= value after external scale factors applied. external scale factors are style.FontScaleMain + per-viewport scales.).
+    // *IMPORTANT* External scale factors are applied over the provided value. If you want to scale an existing font size:
+    //   -     OK: PushFontSize(style.FontSizeBase * 2.0f) (= value before external scale factors applied).
+    //   - NOT OK: PushFontSize(GetFontSize() * 2.0f)      (= value after external scale factors applied. External scale factors are: 'style.FontScaleMain * style.FontScaleDpi * maybe more').
     IMGUI_API void          PushFont(ImFont* font, float font_size_base = -1);              // use NULL as a shortcut to push default font. Use <0.0f to keep current font size.
     IMGUI_API void          PopFont();
-    IMGUI_API void          PushFontSize(float font_size_base);
+    IMGUI_API void          PushFontSize(float font_size_base);                             // keep current font, change its size. Final 'font size = font_size_base * external scale factors'.
     IMGUI_API void          PopFontSize();
+    IMGUI_API ImFont*       GetFont();                                                      // get current font
+    IMGUI_API float         GetFontSize();                                                  // get current font size (= height in pixels) AFTER external scale factors applied. *IMPORTANT* DO NOT PASS THIS VALUE TO PushFont()/PushFontSize()! Use ImGui::GetStyle().FontSizeBase to get value before external scale factors.
+    IMGUI_API ImFontBaked*  GetFontBaked();                                                 // get current font bound at current size // == GetFont()->GetFontBaked(GetFontSize())
 
     // Parameters stacks (shared)
     IMGUI_API void          PushStyleColor(ImGuiCol idx, ImU32 col);                        // modify a style color. always use this if you modify the style after NewFrame().
@@ -538,10 +540,7 @@ namespace ImGui
 
     // Style read access
     // - Use the ShowStyleEditor() function to interactively see/edit the colors.
-    IMGUI_API ImFont*       GetFont();                                                      // get current font
-    IMGUI_API float         GetFontSize();                                                  // get current font size (= height in pixels) of current font with external scale factors applied. Use ImGui::GetStyle().FontSizeBase to get value before external scale factors.
     IMGUI_API ImVec2        GetFontTexUvWhitePixel();                                       // get UV coordinate for a white pixel, useful to draw custom shapes via the ImDrawList API
-    IMGUI_API ImFontBaked*  GetFontBaked();                                                 // get current font bound at current size // == GetFont()->GetFontBaked(GetFontSize())
     IMGUI_API ImU32         GetColorU32(ImGuiCol idx, float alpha_mul = 1.0f);              // retrieve given style color with style alpha applied and optional extra alpha multiplier, packed as a 32-bit value suitable for ImDrawList
     IMGUI_API ImU32         GetColorU32(const ImVec4& col);                                 // retrieve given color with style alpha applied, packed as a 32-bit value suitable for ImDrawList
     IMGUI_API ImU32         GetColorU32(ImU32 col, float alpha_mul = 1.0f);                 // retrieve given color with style alpha applied, packed as a 32-bit value suitable for ImDrawList
@@ -3594,7 +3593,7 @@ struct ImFontConfig
     ImS8            OversampleV;            // 0 (1)    // Rasterize at higher quality for sub-pixel positioning. 0 == auto == 1. This is not really useful as we don't use sub-pixel positions on the Y axis.
     float           SizePixels;             //          // Size in pixels for rasterizer (more or less maps to the resulting font height).
     const ImWchar*  GlyphRanges;            // NULL     // *LEGACY* THE ARRAY DATA NEEDS TO PERSIST AS LONG AS THE FONT IS ALIVE. Pointer to a user-provided list of Unicode range (2 value per range, values are inclusive, zero-terminated list).
-    const ImWchar*  GlyphExcludeRanges;     // NULL     // Pointer to a VERY SHORT user-provided list of Unicode range (2 value per range, values are inclusive, zero-terminated list). This is very close to GlyphRanges[] but designed to exclude ranges from a font source, when merging fonts with overlapping glyphs. Use "Input Glyphs Overlap Detection Tool" to find about your overlapping ranges.
+    const ImWchar*  GlyphExcludeRanges;     // NULL     // Pointer to a small user-provided list of Unicode ranges (2 value per range, values are inclusive, zero-terminated list). This is very close to GlyphRanges[] but designed to exclude ranges from a font source, when merging fonts with overlapping glyphs. Use "Input Glyphs Overlap Detection Tool" to find about your overlapping ranges.
     //ImVec2        GlyphExtraSpacing;      // 0, 0     // (REMOVED AT IT SEEMS LARGELY OBSOLETE. PLEASE REPORT IF YOU WERE USING THIS). Extra spacing (in pixels) between glyphs when rendered: essentially add to glyph->AdvanceX. Only X axis is supported for now.
     ImVec2          GlyphOffset;            // 0, 0     // Offset (in pixels) all glyphs from this font input. Absolute value for default size, other sizes will scale this value.
     float           GlyphMinAdvanceX;       // 0        // Minimum AdvanceX for glyphs, set Min to align font icons, set both Min/Max to enforce mono-space font. Absolute value for default size, other sizes will scale this value.

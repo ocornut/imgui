@@ -62,7 +62,7 @@ Breaking changes:
 - Fonts: **IMPORTANT**: if your app was solving the OSX/iOS Retina screen specific
   logical vs display scale problem by setting io.DisplayFramebufferScale (e.g. to 2.0f)
   + setting io.FontGlobalScale (e.g. to 1.0f/2.0f) + loading fonts at scaled sizes (e.g. size X * 2.0f):
-  This WILL NOT map correctly to the new system! Because font will rasterize as requested size.
+    - This WILL NOT map correctly to the new system! Because font will rasterize as requested size.
     - With a legacy backend (< 1.92):
       - Instead of setting io.FontGlobalScale = 1.0f/N -> set ImFontCfg::RasterizerDensity = N.
       - This already worked before, but is now pretty much required.
@@ -83,7 +83,28 @@ Breaking changes:
        (not desirable as it requires e.g. all third-party code to be aware of it).
    - ImFont::FontSize was removed and does not make sense anymore.
      ImFont::LegacySize is the size passed to AddFont().
+   - Removed support for PushFont(NULL) which was a shortcut for "default font".
    - Renamed/moved 'io.FontGlobalScale' to 'style.FontScaleMain'.
+- Fonts: **IMPORTANT** on Font Merging:
+  - When searching for a glyph in multiple merged fonts: font inputs are now scanned in order
+    for the first font input which the desired glyph. This is technically a different behavior
+    than before!
+  - e.g. If you are merging fonts you may have glyphs that you expected to load from
+    Font Source 2 which exists in Font Source 1. After the update and when using a new backend,
+    those glyphs may now loaded from Font Source 1!
+  - You can use `ImFontConfig::GlyphExcludeRanges[]` to specify ranges to ignore in given Input:
+        // Add Font Source 1 but ignore ICON_MIN_FA..ICON_MAX_FA range
+        static ImWchar exclude_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
+        ImFontConfig cfg1;
+        cfg1.GlyphExcludeRanges = exclude_ranges;
+        io.Fonts->AddFontFromFileTTF("segoeui.ttf", 0.0f, &cfg1);
+        // Add Font Source 2, which expects to use the range above
+        ImFontConfig cfg2;
+        cfg2.MergeMode = true;
+        io.Fonts->AddFontFromFileTTF("FontAwesome4.ttf", 0.0f, &cfg2);
+    - You can use `Metrics/Debugger->Fonts->Font->Input Glyphs Overlap Detection Tool` to
+      see list of glyphs available in multiple font sources. This can facilitate understanding
+      which font input is providing which glyph.
 
 - Textures:
   - All API functions taking a 'ImTextureID' parameter are now taking a 'ImTextureRef':

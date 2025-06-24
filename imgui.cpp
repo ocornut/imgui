@@ -484,7 +484,22 @@ CODE
                          - Before 1.92: ImGui::PushFont() always used font "default" size specified in AddFont() call.
                          - Since  1.92: ImGui::PushFont() preserve the current font size which is a shared value.
                          - To use old behavior: (A) use 'ImGui::PushFont(font, font->LegacySize)' at call site (preferred). (B) Set 'ImFontConfig::Flags |= ImFontFlags_DefaultToLegacySize' in AddFont() call (not desirable as it requires e.g. third-party code to be aware of it).
+                       - Fonts: **IMPORTANT** on Font Merging:
+                         - When searching for a glyph in multiple merged fonts: font inputs are now scanned in orderfor the first font input which the desired glyph. This is technically a different behavior than before!
+                         - e.g. If you are merging fonts you may have glyphs that you expected to load from Font Source 2 which exists in Font Source 1. After the update and when using a new backend, those glyphs may now loaded from Font Source 1!
+                         - You can use `ImFontConfig::GlyphExcludeRanges[]` to specify ranges to ignore in given Input:
+                             // Add Font Source 1 but ignore ICON_MIN_FA..ICON_MAX_FA range
+                             static ImWchar exclude_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
+                             ImFontConfig cfg1;
+                             cfg1.GlyphExcludeRanges = exclude_ranges;
+                             io.Fonts->AddFontFromFileTTF("segoeui.ttf", 0.0f, &cfg1);
+                             // Add Font Source 2, which expects to use the range above
+                             ImFontConfig cfg2;
+                             cfg2.MergeMode = true;
+                             io.Fonts->AddFontFromFileTTF("FontAwesome4.ttf", 0.0f, &cfg2);
+                         - You can use `Metrics/Debugger->Fonts->Font->Input Glyphs Overlap Detection Tool` to see list of glyphs available in multiple font sources. This can facilitate unde
                        - Fonts: ImFont::FontSize was removed and does not make sense anymore. ImFont::LegacySize is the size passed to AddFont().
+                       - Fonts: Removed support for PushFont(NULL) which was a shortcut for "default font".
                        - Fonts: Renamed/moved 'io.FontGlobalScale' to 'style.FontScaleMain'.
                        - Textures: all API functions taking a 'ImTextureID' parameter are now taking a 'ImTextureRef'. Affected functions are: ImGui::Image(), ImGui::ImageWithBg(), ImGui::ImageButton(), ImDrawList::AddImage(), ImDrawList::AddImageQuad(), ImDrawList::AddImageRounded().
                        - Fonts: obsoleted ImFontAtlas::GetTexDataAsRGBA32(), GetTexDataAsAlpha8(), Build(), SetTexID(), IsBuilt() functions. The new protocol for backends to handle textures doesn't need them. Kept redirection functions (will obsolete).
@@ -4002,7 +4017,7 @@ void ImGui::RenderMouseCursor(ImVec2 base_pos, float base_scale, ImGuiMouseCurso
     ImGuiContext& g = *GImGui;
     if (mouse_cursor <= ImGuiMouseCursor_None || mouse_cursor >= ImGuiMouseCursor_COUNT) // We intentionally accept out of bound values.
         mouse_cursor = ImGuiMouseCursor_Arrow;
-    ImFontAtlas* font_atlas = g.DrawListSharedData.FontAtlas; 
+    ImFontAtlas* font_atlas = g.DrawListSharedData.FontAtlas;
     for (ImGuiViewportP* viewport : g.Viewports)
     {
         // We scale cursor with current viewport/monitor, however Windows 10 for its own hardware cursor seems to be using a different scale factor.
@@ -9503,9 +9518,11 @@ void ImGui::SetFontRasterizerDensity(float rasterizer_density)
 void ImGui::PushFont(ImFont* font, float font_size_base)
 {
     ImGuiContext& g = *GImGui;
+    //if (font == NULL) // Before 1.92 (June 2025), PushFont(NULL) == PushFont(GetDefaultFont())
+    //    font = g.Font;
+    IM_ASSERT(font != NULL);
+
     g.FontStack.push_back({ g.Font, g.FontSizeBase, g.FontSize });
-    if (font == NULL)
-        font = GetDefaultFont();
     if (font_size_base <= 0.0f)
     {
         if (font->Flags & ImFontFlags_DefaultToLegacySize)
@@ -22800,7 +22817,8 @@ void ImGui::DebugNodeFont(ImFont* font)
     }
     if (font->Sources.Size > 1 && TreeNode("Input Glyphs Overlap Detection Tool"))
     {
-        TextWrapped("- First Input that contains the glyph is used.\n- Use ImFontConfig::GlyphExcludeRanges[] to specify ranges to ignore glyph in given Input.\n- This tool doesn't cache results and is slow, don't keep it open!");
+        TextWrapped("- First Input that contains the glyph is used.\n"
+            "- Use ImFontConfig::GlyphExcludeRanges[] to specify ranges to ignore glyph in given Input.\n- Prefer using a small number of ranges as the list is scanned every time a new glyph is loaded,\n  - e.g. GlyphExcludeRanges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };\n- This tool doesn't cache results and is slow, don't keep it open!");
         if (BeginTable("table", 2))
         {
             for (unsigned int c = 0; c < 0x10000; c++)
