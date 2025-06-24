@@ -249,7 +249,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - font: finish CustomRectRegister() to allow mapping Unicode codepoint to custom texture data
  - font: remove ID from CustomRect registration, it seems unnecessary!
  - font: make it easier to submit own bitmap font (same texture, another texture?). (#2127, #2575)
- - font: PushFontSize API (#1018)
  - font: MemoryTTF taking ownership confusing/not obvious, maybe default should be opposite?
  - font: storing MinAdvanceX per font would allow us to skip calculating line width (under a threshold of character count) in loops looking for block width
  - font/demo: add tools to show glyphs used by a text blob, display U16 value, list missing glyphs.

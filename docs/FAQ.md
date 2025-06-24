@@ -572,7 +572,7 @@ Since 1.92 (June 2025) fonts may be dynamically used at any size.
 
 To change font size:
 ```cpp
-ImGui::PushFontSize(42.0f);
+ImGui::PushFont(NULL, 42.0f);
 ```
 To change font and font size:
 ```cpp

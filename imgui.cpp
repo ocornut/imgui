@@ -470,7 +470,7 @@ CODE
                          - With a legacy backend (< 1.92): Instead of setting io.FontGlobalScale = 1.0f/N -> set ImFontCfg::RasterizerDensity = N. This already worked before, but is now pretty much required.
                          - With a new backend (1.92+): This should be all automatic. FramebufferScale is automatically used to set current font RasterizerDensity. FramebufferScale is a per-viewport property provided by backend through the Platform_GetWindowFramebufferScale() handler in 'docking' branch.
                        - Fonts: **IMPORTANT** on Font Sizing: Before 1.92, fonts were of a single size. They can now be dynamically sized.
-                         - PushFont() API now has a REQUIRED size parameter. PushFontSize() was also added.
+                         - PushFont() API now has a REQUIRED size parameter.
                          - Before 1.92: PushFont() always used font "default" size specified in AddFont() call. It is equivalent to calling PushFont(font, font->LegacySize).
                          - Since  1.92: PushFont(font, 0.0f) preserve the current font size which is a shared value.
                          - To use old behavior: (A) use 'ImGui::PushFont(font, font->LegacySize)' at call site (preferred). (B) Set 'ImFontConfig::Flags |= ImFontFlags_DefaultToLegacySize' in AddFont() call (not desirable as it requires e.g. third-party code to be aware of it).
@@ -498,7 +498,7 @@ CODE
                        - Fonts: specifying glyph ranges is now unnecessary. The value of ImFontConfig::GlyphRanges[] is only useful for legacy backends. All GetGlyphRangesXXXX() functions are now marked obsolete: GetGlyphRangesDefault(), GetGlyphRangesGreek(), GetGlyphRangesKorean(), GetGlyphRangesJapanese(), GetGlyphRangesChineseSimplifiedCommon(), GetGlyphRangesChineseFull(), GetGlyphRangesCyrillic(), GetGlyphRangesThai(), GetGlyphRangesVietnamese().
                        - Fonts: removed ImFontAtlas::TexDesiredWidth to enforce a texture width. (#327)
                        - Fonts: if you create and manage ImFontAtlas instances yourself (instead of relying on ImGuiContext to create one, you'll need to call ImFontAtlasUpdateNewFrame() yourself. An assert will trigger if you don't.
-                       - Fonts: obsolete ImGui::SetWindowFontScale() which is not useful anymore. Prefer using 'PushFontSize(style.FontSizeBase * factor)' or to manipulate other scaling factors.
+                       - Fonts: obsolete ImGui::SetWindowFontScale() which is not useful anymore. Prefer using 'PushFont(NULL, style.FontSizeBase * factor)' or to manipulate other scaling factors.
                        - Fonts: obsoleted ImFont::Scale which is not useful anymore.
                        - Fonts: generally reworked Internals of ImFontAtlas and ImFont. While in theory a vast majority of users shouldn't be affected, some use cases or extensions might be. Among other things:
                           - ImDrawCmd::TextureId has been changed to ImDrawCmd::TexRef.
@@ -8551,7 +8551,7 @@ ImVec2 ImGui::GetFontTexUvWhitePixel()
     return GImGui->DrawListSharedData.TexUvWhitePixel;
 }
 
-// Prefer using PushFontSize(style.FontSizeBase * factor), or use style.FontScaleMain to scale all windows.
+// Prefer using PushFont(NULL, style.FontSizeBase * factor), or use style.FontScaleMain to scale all windows.
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 void ImGui::SetWindowFontScale(float scale)
 {
@@ -8732,8 +8732,6 @@ bool ImGui::IsRectVisible(const ImVec2& rect_min, const ImVec2& rect_max)
 // - SetFontRasterizerDensity() [Internal]
 // - PushFont()
 // - PopFont()
-// - PushFontSize()
-// - PopFontSize()
 //-----------------------------------------------------------------------------
 
 void ImGui::UpdateFontsNewFrame()
@@ -8854,7 +8852,7 @@ void ImGui::UpdateCurrentFontSize(float restore_font_size_after_scaling)
         if (g.CurrentTable == NULL || g.CurrentTable->CurrentColumn != -1) // See 8465#issuecomment-2951509561. Ideally the SkipItems=true in tables would be amended with extra data.
             return;
 
-    // Restoring is pretty much only used by PopFont()/PopFontSize()
+    // Restoring is pretty much only used by PopFont()
     float final_size = (restore_font_size_after_scaling > 0.0f) ? restore_font_size_after_scaling : 0.0f;
     if (final_size == 0.0f)
     {
@@ -8933,17 +8931,6 @@ void  ImGui::PopFont()
     ImFontStackData* font_stack_data = &g.FontStack.back();
     SetCurrentFont(font_stack_data->Font, font_stack_data->FontSizeBeforeScaling, font_stack_data->FontSizeAfterScaling);
     g.FontStack.pop_back();
-}
-
-void    ImGui::PushFontSize(float font_size_base)
-{
-    ImGuiContext& g = *GImGui;
-    PushFont(g.Font, font_size_base);
-}
-
-void    ImGui::PopFontSize()
-{
-    PopFont();
 }
 
 //-----------------------------------------------------------------------------

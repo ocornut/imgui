@@ -150,7 +150,7 @@ Breaking changes:
   ImGuiContext to create one, you'll need to call ImFontAtlasUpdateNewFrame() yourself.
   An assert will trigger if you don't.
 - Fonts: obsolete ImGui::SetWindowFontScale() which is not useful anymore. Prefer using
-  PushFontSize(style.FontSizeBase * factor) or to manipulate other scaling factors.
+  PushFont(NULL, style.FontSizeBase * factor) or to manipulate other scaling factors.
 - Fonts: obsoleted ImFont::Scale which is not useful anymore.
 - Fonts: changed ImFont::CalcWordWrapPositionA() to ImFont::CalcWordWrapPosition():
    - old: const char* CalcWordWrapPositionA(float scale, const char* text, ....);
@@ -270,7 +270,6 @@ Other changes:
 - Fonts: ImFontAtlas::AddFontXXX() functions may be called at any time during the frame.
 - Fonts: ImFontAtlas::AddFontXXX() can fail more gracefully if error handling is configured
   to not assert (this will be better exposed via future font flags).
-- Fonts: added ImGui::PushFontSize()/PopFontSize() functions.
 - Fonts: added style.FontScaleBase scaling factor (previously called io.FontGlobalScale).
 - Fonts: added style.FontScaleDpi scaling factor. This is designed to be be changed on
   per-monitor/per-viewport basis, which `io.ConfigDpiScaleFonts` does automatically.

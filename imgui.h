@@ -509,10 +509,8 @@ namespace ImGui
     //  - INCORRECT: PushFont(NULL, GetFontSize() * 2.0f)       // INCORRECT! use size after external factors applied == EXTERNAL SCALING FACTORS WILL APPLY TWICE!
     IMGUI_API void          PushFont(ImFont* font, float font_size_base_unscaled);          // Use NULL as a shortcut to keep current font. Use 0.0f to keep current size.
     IMGUI_API void          PopFont();
-    IMGUI_API void          PushFontSize(float font_size_base);                             // keep current font, change its size. Final 'font size = font_size_base * external scale factors'.
-    IMGUI_API void          PopFontSize();
     IMGUI_API ImFont*       GetFont();                                                      // get current font
-    IMGUI_API float         GetFontSize();                                                  // get current scaled font size (= height in pixels). AFTER external scale factors applied. *IMPORTANT* DO NOT PASS THIS VALUE TO PushFont()/PushFontSize()! Use ImGui::GetStyle().FontSizeBase to get value before external scale factors.
+    IMGUI_API float         GetFontSize();                                                  // get current scaled font size (= height in pixels). AFTER external scale factors applied. *IMPORTANT* DO NOT PASS THIS VALUE TO PushFont()! Use ImGui::GetStyle().FontSizeBase to get value before external scale factors.
     IMGUI_API ImFontBaked*  GetFontBaked();                                                 // get current font bound at current size // == GetFont()->GetFontBaked(GetFontSize())
 
     // Parameters stacks (shared)
@@ -2232,7 +2230,7 @@ IM_MSVC_RUNTIME_CHECKS_RESTORE
 struct ImGuiStyle
 {
     // ImGui::GetFontSize() == FontSizeBase * (FontScaleMain * FontScaleDpi * other_scaling_factors)
-    float       FontSizeBase;               // Current base font size before external scaling factors are applied. Use PushFont()/PushFontSize() to modify. Use ImGui::GetFontSize() to obtain scaled value.
+    float       FontSizeBase;               // Current base font size before external scaling factors are applied. Use PushFont(NULL, size) to modify. Use ImGui::GetFontSize() to obtain scaled value.
     float       FontScaleMain;              // Main scale factor. May be set by application once, or exposed to end-user.
     float       FontScaleDpi;               // Additional scale factor from viewport/monitor contents scale. When io.ConfigDpiScaleFonts is enabled, this is automatically overwritten when changing monitor DPI.
 

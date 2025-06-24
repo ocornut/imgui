@@ -77,7 +77,7 @@ Future versions of Dear ImGui should solve this problem.
 
 v1.92 introduces a newer, dynamic font system. It requires backend to support the `ImGuiBackendFlags_HasTextures` feature:
 - Users of icons, Asian and non-English languages do not need to pre-build all glyphs ahead of time. Saving on loading time, memory, and also reducing issues with missing glyphs. Specifying glyph ranges is not needed anymore.
-- `PushFontSize()` may be used anytime to change font size.
+- `PushFont(NULL, new_size)` may be used anytime to change font size.
 - Packing custom rectangles is more convenient as pixels may be written to immediately.
 - Any update to fonts previously required backend specific calls to re-upload the texture, and said calls were not portable across backends. It is now possible to scale fonts etc. in a way that doesn't require you to make backend-specific calls.
 - It is possible to plug a custom loader/backend to any font source.
