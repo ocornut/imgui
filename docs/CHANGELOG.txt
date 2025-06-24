@@ -43,6 +43,8 @@ Breaking changes:
 
 Other changes:
 
+- Backends: SDL3: avoid calling SDL_StartTextInput() again if already active.
+  (#8727) [@morrazzzz]
 - Backends: OSX: added ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress
   mouse cursor support. (#8739) [@cfillion]
 - Backends: Vulkan: use nonCoherentAtomSize to align upload_size, fixing
