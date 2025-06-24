@@ -489,6 +489,7 @@ CODE
                              io.Fonts->AddFontFromFileTTF("FontAwesome4.ttf", 0.0f, &cfg2);
                          - You can use `Metrics/Debugger->Fonts->Font->Input Glyphs Overlap Detection Tool` to see list of glyphs available in multiple font sources. This can facilitate unde
                        - Fonts: ImFont::FontSize was removed and does not make sense anymore. ImFont::LegacySize is the size passed to AddFont().
+                       - Fonts: Removed support for PushFont(NULL) which was a shortcut for "default font".
                        - Fonts: Renamed/moved 'io.FontGlobalScale' to 'style.FontScaleMain'.
                        - Textures: all API functions taking a 'ImTextureID' parameter are now taking a 'ImTextureRef'. Affected functions are: ImGui::Image(), ImGui::ImageWithBg(), ImGui::ImageButton(), ImDrawList::AddImage(), ImDrawList::AddImageQuad(), ImDrawList::AddImageRounded().
                        - Fonts: obsoleted ImFontAtlas::GetTexDataAsRGBA32(), GetTexDataAsAlpha8(), Build(), SetTexID(), IsBuilt() functions. The new protocol for backends to handle textures doesn't need them. Kept redirection functions (will obsolete).
@@ -8906,9 +8907,11 @@ void ImGui::SetFontRasterizerDensity(float rasterizer_density)
 void ImGui::PushFont(ImFont* font, float font_size_base)
 {
     ImGuiContext& g = *GImGui;
+    //if (font == NULL) // Before 1.92 (June 2025), PushFont(NULL) == PushFont(GetDefaultFont())
+    //    font = g.Font;
+    IM_ASSERT(font != NULL);
+
     g.FontStack.push_back({ g.Font, g.FontSizeBase, g.FontSize });
-    if (font == NULL)
-        font = GetDefaultFont();
     if (font_size_base <= 0.0f)
     {
         if (font->Flags & ImFontFlags_DefaultToLegacySize)

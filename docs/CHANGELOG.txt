@@ -83,6 +83,7 @@ Breaking changes:
        (not desirable as it requires e.g. all third-party code to be aware of it).
    - ImFont::FontSize was removed and does not make sense anymore.
      ImFont::LegacySize is the size passed to AddFont().
+   - Removed support for PushFont(NULL) which was a shortcut for "default font".
    - Renamed/moved 'io.FontGlobalScale' to 'style.FontScaleMain'.
 - Fonts: **IMPORTANT** on Font Merging:
   - When searching for a glyph in multiple merged fonts: font inputs are now scanned in order
