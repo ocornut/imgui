@@ -470,10 +470,11 @@ CODE
                          - With a legacy backend (< 1.92): Instead of setting io.FontGlobalScale = 1.0f/N -> set ImFontCfg::RasterizerDensity = N. This already worked before, but is now pretty much required.
                          - With a new backend (1.92+): This should be all automatic. FramebufferScale is automatically used to set current font RasterizerDensity. FramebufferScale is a per-viewport property provided by backend through the Platform_GetWindowFramebufferScale() handler in 'docking' branch.
                        - Fonts: **IMPORTANT** on Font Sizing: Before 1.92, fonts were of a single size. They can now be dynamically sized.
-                         - PushFont() API now has an optional size parameter. PushFontSize() was also added.
-                         - Before 1.92: ImGui::PushFont() always used font "default" size specified in AddFont() call.
-                         - Since  1.92: ImGui::PushFont() preserve the current font size which is a shared value.
+                         - PushFont() API now has a REQUIRED size parameter. PushFontSize() was also added.
+                         - Before 1.92: PushFont() always used font "default" size specified in AddFont() call. It is equivalent to calling PushFont(font, font->LegacySize).
+                         - Since  1.92: PushFont(font, 0.0f) preserve the current font size which is a shared value.
                          - To use old behavior: (A) use 'ImGui::PushFont(font, font->LegacySize)' at call site (preferred). (B) Set 'ImFontConfig::Flags |= ImFontFlags_DefaultToLegacySize' in AddFont() call (not desirable as it requires e.g. third-party code to be aware of it).
+                         - Kept inline single parameter function. Will obsolete.
                        - Fonts: **IMPORTANT** on Font Merging:
                          - When searching for a glyph in multiple merged fonts: font inputs are now scanned in orderfor the first font input which the desired glyph. This is technically a different behavior than before!
                          - e.g. If you are merging fonts you may have glyphs that you expected to load from Font Source 2 which exists in Font Source 1. After the update and when using a new backend, those glyphs may now loaded from Font Source 1!
@@ -8901,23 +8902,22 @@ void ImGui::SetFontRasterizerDensity(float rasterizer_density)
     UpdateCurrentFontSize(0.0f);
 }
 
-// If you want to scale an existing font size:
-// - Use e.g. PushFontSize(style.FontSizeBase * factor) (= value before external scale factors applied).
-// - Do NOT use PushFontSize(GetFontSize() * factor) (= value after external scale factors applied).
+// If you want to scale an existing font size! Read comments in imgui.h!
 void ImGui::PushFont(ImFont* font, float font_size_base)
 {
     ImGuiContext& g = *GImGui;
     //if (font == NULL) // Before 1.92 (June 2025), PushFont(NULL) == PushFont(GetDefaultFont())
     //    font = g.Font;
     IM_ASSERT(font != NULL);
+    IM_ASSERT(font_size_base >= 0.0f);
 
     g.FontStack.push_back({ g.Font, g.FontSizeBase, g.FontSize });
-    if (font_size_base <= 0.0f)
+    if (font_size_base == 0.0f)
     {
         if (font->Flags & ImFontFlags_DefaultToLegacySize)
-            font_size_base = font->LegacySize;       // Legacy: use AddFont() specified font size. Same as doing PushFont(font, font->LegacySize)
+            font_size_base = font->LegacySize;  // Legacy: use AddFont() specified font size. Same as doing PushFont(font, font->LegacySize)
         else
-            font_size_base = g.FontSizeBase; // Keep current font size
+            font_size_base = g.FontSizeBase;    // Keep current font size
     }
     SetCurrentFont(font, font_size_base, 0.0f);
 }
@@ -16909,7 +16909,7 @@ void ImGui::DebugNodeFont(ImFont* font)
     Indent();
     if (cfg->ShowFontPreview)
     {
-        PushFont(font);
+        PushFont(font, 0.0f);
         Text("The quick brown fox jumps over the lazy dog");
         PopFont();
     }

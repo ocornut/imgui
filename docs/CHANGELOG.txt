@@ -73,17 +73,25 @@ Breaking changes:
         Platform_GetWindowFramebufferScale() handler in 'docking' branch.
 - Fonts: **IMPORTANT** on Font Sizing:
    - Before 1.92, fonts were of a single size. They can now be dynamically sized.
-   - PushFont() API now has an optional size parameter. PushFontSize() was also added.
-       void PushFont(ImFont* font) --> void PushFont(ImFont* font, float size = 0.0f);
-   - Before 1.92: ImGui::PushFont() always used font "default" size specified in AddFont() call.
-   - Since  1.92: ImGui::PushFont() preserve the current font size which is a shared value.
+   - PushFont() API now has a REQUIRED size parameter.
+       void PushFont(ImFont* font) --> void PushFont(ImFont* font, float size);
+       - PushFont(font, 0.0f)                       // Change font and keep current size
+       - PushFont(NULL, 20.0f)                      // Keep font and change current size
+       - PushFont(font, 20.0f)                      // Change font and set size to 20.0f
+       - PushFont(font, style.FontSizeBase * 2.0f)  // Change font and set size to be twice bigger than current size.
+       - PushFont(font, font->LegacySize)           // Change font and set size to size passed to AddFontXXX() function. Same as pre-1.92 behavor, for fixed size fonts.
    - To use old behavior:
      - use 'ImGui::PushFont(font, font->LegacySize)' at call site (preferred).
      - or set 'ImFontConfig::Flags |= ImFontFlags_DefaultToLegacySize' in AddFont() call
        (not desirable as it requires e.g. all third-party code to be aware of it).
+     We intentionally didn't add a default parameter because it would make the long-term
+     transition more difficult.
+   - Kept inline redirection font. Will obsolete.
+   - External scale factors may be applied over the provided size.
+     This is why it is called 'FontSizeBase' in the style structure.
    - ImFont::FontSize was removed and does not make sense anymore.
      ImFont::LegacySize is the size passed to AddFont().
-   - Removed support for PushFont(NULL) which was a shortcut for "default font".
+   - Removed support for old PushFont(NULL) which was a shortcut for "revert to default font".
    - Renamed/moved 'io.FontGlobalScale' to 'style.FontScaleMain'.
 - Fonts: **IMPORTANT** on Font Merging:
   - When searching for a glyph in multiple merged fonts: font inputs are now scanned in order
@@ -182,8 +190,8 @@ Breaking changes:
      - renamed ImGuiFreeType::GetBuilderForFreeType() to ImGuiFreeType::GetFontLoader()
        - old:  io.Fonts->FontBuilderIO = ImGuiFreeType::GetBuilderForFreeType()
        - new:  io.Fonts.FontLoader = ImGuiFreeType::GetFontLoader();
-- DrawList: Fixed a regression from 1.91.1 where a Begin()/PushFont()/AddImage() sequence 
-  would not restore the correct atlas Texture Identifier when the PushFont() call used 
+- DrawList: Fixed a regression from 1.91.1 where a Begin()/PushFont()/AddImage() sequence
+  would not restore the correct atlas Texture Identifier when the PushFont() call used
   a font from a different atlas. (#8694, caused by #3224, #3875, #6398, #7903)
 - DrawList: Renamed ImDrawList::PushTextureID()/PopTextureID() to PushTexture()/PopTexture().
 - Fonts: (users of custom rectangles)
@@ -332,7 +340,7 @@ Other changes:
   one in docking (they accidentally diverged). (#8554)
 - Windows: BeginChild(): fixed being unable to combine manual resize on one axis
   and automatic resize on the other axis. (#8690)
-  e.g. neither ImGuiChildFlags_ResizeX | ImGuiChildFlags_AutoResizeY 
+  e.g. neither ImGuiChildFlags_ResizeX | ImGuiChildFlags_AutoResizeY
             or ImGuiChildFlags_ResizeY | ImGuiChildFlags_AutoResizeX worked before.
 - TreeNode: added experimental flags to draw tree hierarchy outlines linking
   parent and tree nodes: (#2920)
@@ -357,7 +365,7 @@ Other changes:
 - TreeNode: fixed incorrect clipping of arrow/bullet when using ImGuiTreeNodeFlags_SpanAllColumns.
 - InputText: fixed cursor positioning issue using up/down keys near end of lines while
   editing non-ASCII text. (Regression from 1.91.2) (#8635, #7925)
-- InputText: fixed a buffer overrun that could happen when using dynamically resizing 
+- InputText: fixed a buffer overrun that could happen when using dynamically resizing
   buffers (e.g. imgui_stdlib.cpp for std::string, or ImGuiInputTextFlags_CallbackRezize)
   and programmatically making an insertion. (#8689) [@ocornut, @m9710797]
 - Tables: fixed TableHeader() eager vertical clipping of text which may be noticeable
