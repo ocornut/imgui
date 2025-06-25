@@ -12,7 +12,7 @@ _(You may browse this at https://github.com/ocornut/imgui/blob/master/docs/BACKE
 Dear ImGui is highly portable and only requires a few things to run and render, typically:
 
  - Required: providing mouse/keyboard inputs (fed into the `ImGuiIO` structure).
- - Required: uploading the font atlas texture into graphics memory.
+ - Required: creating, updating and destroying textures.
  - Required: rendering indexed textured triangles with a clipping rectangle.
 
  Extra features are opt-in, our backends try to support as many as possible:
