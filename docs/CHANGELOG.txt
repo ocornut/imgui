@@ -225,6 +225,16 @@ Breaking changes:
    - removed ImGui_ImplSDLRenderer2_CreateFontsTexture(), ImGui_ImplSDLRenderer2_DestroyFontsTexture().
    - removed ImGui_ImplSDLRenderer3_CreateFontsTexture(), ImGui_ImplSDLRenderer3_DestroyFontsTexture().
    - removed ImGui_ImplVulkan_CreateFontsTexture(), ImGui_ImplVulkan_DestroyFontsTexture().
+- Layout: commented out legacy ErrorCheckUsingSetCursorPosToExtendParentBoundaries() fallback
+  obsoleted in 1.89 (August 2022) which allowed a SetCursorPos()/SetCursorScreenPos() call WITHOUT AN ITEM
+  to extend parent window/cell boundaries. Replaced with assert/tooltip that would already happens if
+  previously using IMGUI_DISABLE_OBSOLETE_FUNCTIONS. (#5548, #4510, #3355, #1760, #1490, #4152, #150)
+  - Incorrect way to make a window content size 200x200:
+      Begin(...) + SetCursorScreenPos(GetCursorScreenPos() + ImVec2(200,200)) + End();
+  - Correct ways to make a window content size 200x200:
+      Begin(...) + SetCursorScreenPos(GetCursorScreenPos() + ImVec2(200,200)) + Dummy(ImVec2(0,0)) + End();
+      Begin(...) + Dummy(ImVec2(200,200)) + End();
+  - TL;DR; if the assert triggers, you can add a Dummy({0,0}) call to validate extending parent boundaries.
 - TreeNode: renamed ImGuiTreeNodeFlags_NavLeftJumpsBackHere to ImGuiTreeNodeFlags_NavLeftJumpsToParent
   for clarity. Kept inline redirection enum (will obsolete). (#1079, #8639)
 - Commented out PushAllowKeyboardFocus()/PopAllowKeyboardFocus() which was obsoleted
