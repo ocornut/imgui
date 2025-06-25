@@ -8906,8 +8906,8 @@ void ImGui::SetFontRasterizerDensity(float rasterizer_density)
 void ImGui::PushFont(ImFont* font, float font_size_base)
 {
     ImGuiContext& g = *GImGui;
-    //if (font == NULL) // Before 1.92 (June 2025), PushFont(NULL) == PushFont(GetDefaultFont())
-    //    font = g.Font;
+    if (font == NULL) // Before 1.92 (June 2025), PushFont(NULL) == PushFont(GetDefaultFont())
+        font = g.Font;
     IM_ASSERT(font != NULL);
     IM_ASSERT(font_size_base >= 0.0f);
 
