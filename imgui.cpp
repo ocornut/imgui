@@ -8540,7 +8540,9 @@ ImFontBaked* ImGui::GetFontBaked()
     return GImGui->FontBaked;
 }
 
-// Get current font size (= height in pixels) of current font, with external scale factors applied. Use ImGui::GetStyle().FontSizeBase to get value before external scale factors.
+// Get current font size (= height in pixels) of current font, with global scale factors applied.
+// - Use style.FontSizeBase to get value before global scale factors.
+// - recap: ImGui::GetFontSize() == style.FontSizeBase * (style.FontScaleMain * style.FontScaleDpi * other_scaling_factors)
 float ImGui::GetFontSize()
 {
     return GImGui->FontSize;
@@ -8858,7 +8860,7 @@ void ImGui::UpdateCurrentFontSize(float restore_font_size_after_scaling)
     {
         final_size = g.FontSizeBase;
 
-        // External scale factors
+        // Global scale factors
         final_size *= g.Style.FontScaleMain;    // Main global scale factor
         final_size *= g.Style.FontScaleDpi;     // Per-monitor/viewport DPI scale factor, automatically updated when io.ConfigDpiScaleFonts is enabled.
 

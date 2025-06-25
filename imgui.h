@@ -501,16 +501,17 @@ namespace ImGui
     // *IMPORTANT* before 1.92, fonts had a single size. They can now be dynamically be adjusted.
     //  - In 1.92 we have REMOVED the single parameter version of PushFont() because it seems like the easiest way to provide an error-proof transition.
     //  - PushFont(font) before 1.92 = PushFont(font, font->LegacySize) after 1.92          // Use default font size as passed to AddFontXXX() function.
-    // *IMPORTANT* external scale factors are applied over the provided size. If you want to scale an *existing* font size:
-    //  - External scale factors are: 'style.FontScaleMain * style.FontScaleDpi' and maybe more.
+    // *IMPORTANT* global scale factors are applied over the provided size.
+    //  - Global scale factors are: 'style.FontScaleMain', 'style.FontScaleDpi' and maybe more.
+    // -  If you want to apply a factor to the _current_ font size:
     //  - CORRECT:   PushFont(NULL, style.FontSizeBase)         // use current unscaled size    == does nothing
     //  - CORRECT:   PushFont(NULL, style.FontSizeBase * 2.0f)  // use current unscaled size x2 == make text twice bigger
-    //  - INCORRECT: PushFont(NULL, GetFontSize())              // INCORRECT! use size after external factors applied == EXTERNAL SCALING FACTORS WILL APPLY TWICE!
-    //  - INCORRECT: PushFont(NULL, GetFontSize() * 2.0f)       // INCORRECT! use size after external factors applied == EXTERNAL SCALING FACTORS WILL APPLY TWICE!
+    //  - INCORRECT: PushFont(NULL, GetFontSize())              // INCORRECT! using size after global factors already applied == GLOBAL SCALING FACTORS WILL APPLY TWICE!
+    //  - INCORRECT: PushFont(NULL, GetFontSize() * 2.0f)       // INCORRECT! using size after global factors already applied == GLOBAL SCALING FACTORS WILL APPLY TWICE!
     IMGUI_API void          PushFont(ImFont* font, float font_size_base_unscaled);          // Use NULL as a shortcut to keep current font. Use 0.0f to keep current size.
     IMGUI_API void          PopFont();
     IMGUI_API ImFont*       GetFont();                                                      // get current font
-    IMGUI_API float         GetFontSize();                                                  // get current scaled font size (= height in pixels). AFTER external scale factors applied. *IMPORTANT* DO NOT PASS THIS VALUE TO PushFont()! Use ImGui::GetStyle().FontSizeBase to get value before external scale factors.
+    IMGUI_API float         GetFontSize();                                                  // get current scaled font size (= height in pixels). AFTER global scale factors applied. *IMPORTANT* DO NOT PASS THIS VALUE TO PushFont()! Use ImGui::GetStyle().FontSizeBase to get value before global scale factors.
     IMGUI_API ImFontBaked*  GetFontBaked();                                                 // get current font bound at current size // == GetFont()->GetFontBaked(GetFontSize())
 
     // Parameters stacks (shared)
@@ -2229,10 +2230,11 @@ IM_MSVC_RUNTIME_CHECKS_RESTORE
 
 struct ImGuiStyle
 {
-    // ImGui::GetFontSize() == FontSizeBase * (FontScaleMain * FontScaleDpi * other_scaling_factors)
-    float       FontSizeBase;               // Current base font size before external scaling factors are applied. Use PushFont(NULL, size) to modify. Use ImGui::GetFontSize() to obtain scaled value.
-    float       FontScaleMain;              // Main scale factor. May be set by application once, or exposed to end-user.
-    float       FontScaleDpi;               // Additional scale factor from viewport/monitor contents scale. When io.ConfigDpiScaleFonts is enabled, this is automatically overwritten when changing monitor DPI.
+    // Font scaling
+    // - recap: ImGui::GetFontSize() == FontSizeBase * (FontScaleMain * FontScaleDpi * other_scaling_factors)
+    float       FontSizeBase;               // Current base font size before external global factors are applied. Use PushFont(NULL, size) to modify. Use ImGui::GetFontSize() to obtain scaled value.
+    float       FontScaleMain;              // Main global scale factor. May be set by application once, or exposed to end-user.
+    float       FontScaleDpi;               // Additional global scale factor from viewport/monitor contents scale. When io.ConfigDpiScaleFonts is enabled, this is automatically overwritten when changing monitor DPI.
 
     float       Alpha;                      // Global alpha applies to everything in Dear ImGui.
     float       DisabledAlpha;              // Additional alpha multiplier applied by BeginDisabled(). Multiply over current value of Alpha.

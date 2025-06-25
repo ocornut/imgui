@@ -79,13 +79,14 @@ Breaking changes:
        - PushFont(NULL, 20.0f)                      // Keep font and change current size
        - PushFont(font, 20.0f)                      // Change font and set size to 20.0f
        - PushFont(font, style.FontSizeBase * 2.0f)  // Change font and set size to be twice bigger than current size.
-       - PushFont(font, font->LegacySize)           // Change font and set size to size passed to AddFontXXX() function. Same as pre-1.92 behavor, for fixed size fonts.
+       - PushFont(font, font->LegacySize)           // Change font and set size to size passed to AddFontXXX() function. Same as pre-1.92 behavior, for fixed size fonts.
    - To use old behavior use 'ImGui::PushFont(font, font->LegacySize)' at call site.
      We intentionally didn't add a default parameter because it would make the long-term
      transition more difficult.
    - Kept inline redirection font. Will obsolete.
-   - External scale factors may be applied over the provided size.
+   - Global scale factors may be applied over the provided size.
      This is why it is called 'FontSizeBase' in the style structure.
+   - Global scale factors are: 'style.FontScaleMain', 'style.FontScaleDpi' and maybe more.
    - ImFont::FontSize was removed and does not make sense anymore.
      ImFont::LegacySize is the size passed to AddFont().
    - Removed support for old PushFont(NULL) which was a shortcut for "revert to default font".
