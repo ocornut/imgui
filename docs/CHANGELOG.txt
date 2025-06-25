@@ -36,11 +36,13 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.92.0 WIP (In Progress)
+ VERSION 1.92.0 (Released 2025-06-25)
 -----------------------------------------------------------------------
 
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.92
+
 THIS VERSION CONTAINS THE LARGEST AMOUNT OF BREAKING CHANGES SINCE 2015!
-I TRIED REALLY HARD TO KEEP THEM TO A MINIMUM, REDUCE THE AMOUNT OF INTERFERENCES,
+I TRIED REALLY HARD TO KEEP THEM TO A MINIMUM, REDUCE THE AMOUNT OF INTERFERENCE,
 BUT INEVITABLY SOME USERS OR THIRD-PARTY EXTENSIONS WILL BE AFFECTED.
 
 IN ORDER TO HELP US IMPROVE THE TRANSITION PROCESS, INCL. DOCUMENTATION AND COMMENTS,
@@ -88,8 +90,9 @@ Breaking changes:
      This is why it is called 'FontSizeBase' in the style structure.
    - Global scale factors are: 'style.FontScaleMain', 'style.FontScaleDpi' and maybe more.
    - ImFont::FontSize was removed and does not make sense anymore.
-     ImFont::LegacySize is the size passed to AddFont().
+   - ImFont::LegacySize is the size passed to AddFont().
    - Removed support for old PushFont(NULL) which was a shortcut for "revert to default font".
+     `PushFont(NULL, some_size)` now keeps current change and changes size.
    - Renamed/moved 'io.FontGlobalScale' to 'style.FontScaleMain'.
 - Fonts: **IMPORTANT** on Font Merging:
   - When searching for a glyph in multiple merged fonts: font inputs are now scanned in order
@@ -114,7 +117,7 @@ Breaking changes:
 
 - Textures:
   - All API functions taking a 'ImTextureID' parameter are now taking a 'ImTextureRef':
-    - ImTextureRef a small composite structure which may be constructed from a ImTextureID.
+    - ImTextureRef ais  small composite structure which may be constructed from a ImTextureID.
       (or constructed from a ImTextureData* which represent a texture which will generally
       be ready by the time of rendering).
     - Affected functions are:
@@ -147,7 +150,7 @@ Breaking changes:
 - Fonts: if you create and manage ImFontAtlas instances yourself (instead of relying on
   ImGuiContext to create one, you'll need to call ImFontAtlasUpdateNewFrame() yourself.
   An assert will trigger if you don't.
-- Fonts: obsolete ImGui::SetWindowFontScale() which is not useful anymore. Prefer using
+- Fonts: obsoleted ImGui::SetWindowFontScale() which is not useful anymore. Prefer using
   PushFont(NULL, style.FontSizeBase * factor) or to manipulate other scaling factors.
 - Fonts: obsoleted ImFont::Scale which is not useful anymore.
 - Fonts: changed ImFont::CalcWordWrapPositionA() to ImFont::CalcWordWrapPosition():
@@ -160,7 +163,7 @@ Breaking changes:
   While in theory a vast majority of users shouldn't be affected, some use cases or
   extensions might be. Among other things:
     - ImDrawCmd::TextureId has been changed to ImDrawCmd::TexRef.
-    - ImFontAtlas::ConfigData[] has been renamed to ImFontAtlas::Sources[]
+    - ImFontAtlas::ConfigData[] has been renamed to ImFontAtlas::Sources[].
     - ImFont::ConfigData[], ConfigDataCount has been renamed to Sources[], SourceCount.
     - Each ImFont has a number of ImFontBaked instances corresponding to actively used
       sizes. ImFont::GetFontBaked(size) retrieves the one for a given size.
@@ -188,9 +191,6 @@ Breaking changes:
      - renamed ImGuiFreeType::GetBuilderForFreeType() to ImGuiFreeType::GetFontLoader()
        - old:  io.Fonts->FontBuilderIO = ImGuiFreeType::GetBuilderForFreeType()
        - new:  io.Fonts.FontLoader = ImGuiFreeType::GetFontLoader();
-- DrawList: Fixed a regression from 1.91.1 where a Begin()/PushFont()/AddImage() sequence
-  would not restore the correct atlas Texture Identifier when the PushFont() call used
-  a font from a different atlas. (#8694, caused by #3224, #3875, #6398, #7903)
 - DrawList: Renamed ImDrawList::PushTextureID()/PopTextureID() to PushTexture()/PopTexture().
 - Fonts: (users of custom rectangles)
   - Renamed AddCustomRectRegular() to AddCustomRect(). (#8466)
@@ -249,7 +249,7 @@ Breaking changes:
 - Internals: RenderTextEllipsis() function removed the 'float clip_max_x' parameter directly
   preceding 'float ellipsis_max_x'. Values were identical for a vast majority of users. (#8387)
 
-Other changes:
+Non-breaking Fonts/Textures related changes:
 
 - Textures: added partial texture update protocol. (#8465, #3761)
   - The Renderer Backend needs to set io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures
@@ -310,7 +310,7 @@ Other changes:
    - ImFontBaked structures may be cleaned up between frames when unused, pointers
      to them are only valid for the current frame.
    - Added ImFontBaked::IsGlyphLoaded() function.
-- Fonts: custom rect packing has generally been reworked. (#8107, #7962, #1282)
+- Fonts: Custom Rect packing has generally been reworked. (#8107, #7962, #1282)
   - ImFontAtlas::AddCustomRect() (previously AddCustomRectRegular()/AddCustomRectFontGlyph())
     functions will immediately return a packed rectangle identifier, and you can write your
     pixels immediately - previously had to wait for Build() to be called.
@@ -328,14 +328,29 @@ Other changes:
   for Renderer Backend to specify if there is a maximum accepted texture size (not yet used).
 - Fonts: added compile-time overridable '#define ImTextureID_Invalid 0' if you need 0
   to be a valid low-level texture identifier.
+- Fonts: reworked text ellipsis logic to ensure a "..." is always displayed instead
+  of a single character. (#7024)
+- Fonts: word-wrapping code handle ideographic comma & full stop (U+3001, U+3002). (#8540)
+- Fonts: fixed CalcWordWrapPosition() fallback when width is too small to wrap:
+  would use a +1 offset instead of advancing to the next UTF-8 codepoint. (#8540)
 - Debug Tools: Fonts section: add font preview, add "Remove" button, add "Load all glyphs"
   button, add selection to change font backend when both are compiled in.
+- Renderer Backends:
+  - Backends: DX9/DX10/DX11/DX12, Vulkan, OpenGL2/3, Metal, SDLGPU3, SDLRenderer2/3, WebGPU, Allegro5:
+    - Added ImGuiBackendFlags_RendererHasTextures support for all backends. (#8465, #3761, #3471)
+      [@ocornut, @ShironekoBen, @thedmd]
+    - Added ImGui_ImplXXXX_UpdateTexture(ImTextureData* tex) functions for all backends.
+      Available if you want to start uploading textures right after ImGui::Render() and without
+      waiting for the call to ImGui_ImplXXXX_RenderDrawData(). Also useful if you use a staged or
+      multi-threaded rendering schemes, where you might want to set ImDrawData::Textures = NULL. (#8597, #1860)
 - Special thanks for fonts/texture related feedback to: @thedmd, @ShironekoBen, @rodrigorc,
   @pathogendavid, @itamago, @rokups, @DucaRii, @Aarkham, @cyfewlp.
 
+Other Changes:
+
 - IO: variations in analog-only components of gamepad events do not interfere
   with trickling of mouse position events (#4921, #8508)
-- Windows: fixed SetNextWindowCollapsed()/SetWindowCollapsed() breaking
+- Windows: fixed SetNextWindowCollapsed()/SetWindowCollapsed() bypassing the
   codepath that preserve last contents size when collapsed, resulting in
   programmatically uncollapsing auto-sizing windows having them flicker size
   for a frame. (#7691) [@achabense]
@@ -353,10 +368,10 @@ Other changes:
   - ImGuiTreeNodeFlags_DrawLinesFull: Horizontal lines to child nodes. Vertical line drawn down to TreePop() position: cover full contents.
   - ImGuiTreeNodeFlags_DrawLinesToNodes: Horizontal lines to child nodes. Vertical line drawn down to bottom-most child node.
   - Added style.TreeLinesFlags which stores the default setting,
-    which may be overriden in individual TreeNode() calls.
+    which may be overridden in individual TreeNode() calls.
   - Added style.TreeLinesSize (default to 1.0f).
   - Added style.TreeLinesRadius (default to 0.0f).
-  - Added ImGuiCol_TreeLines (in default style this is the same as ImGuiCol_Border).
+  - Added ImGuiCol_TreeLines (in default styles this is the same as ImGuiCol_Border).
   - Caveats:
     - Tree nodes may be used in many creative ways (manually positioning openable
       nodes in unusual ways, using indent to create tree-looking structures, etc.)
@@ -397,28 +412,19 @@ Other changes:
   EndPopup() call. (#1651, #8499)
 - Error Handling: added better error report and recovery when calling EndFrame()
   or Render() without NewFrame(). Was previously only an assert.
-- Fonts: reworked text ellipsis logic to ensure a "..." is always displayed instead
-  of a single character. (#7024)
-- Fonts: word-wrapping code handle ideographic comma & full stop (U+3001, U+3002). (#8540)
-- Fonts: fixed CalcWordWrapPosition() fallback when width is too small to wrap:
-  would use a +1 offset instead of advancing to the next UTF-8 codepoint. (#8540)
 - Style, InputText: added ImGuiCol_InputTextCursor to configure color of
   the InputText cursor/caret. (#7031)
 - Platform IME: added ImGuiPlatformImeData::ViewportId info (backported from Docking branch).
 - Platform IME: added ImGuiPlatformImeData::WantTextInput which might set independently
   of WantVisible. This is set in the same structure because activating text input generally
   requires providing a window to the backend. (#8584, #6341)
+- DrawList: Fixed a regression from 1.91.1 where a Begin()/PushFont()/AddImage() sequence
+  would not restore the correct atlas Texture Identifier when the PushFont() call used
+  a font from a different atlas. (#8694, caused by #3224, #3875, #6398, #7903)
 - Misc: added extra operators to ImVec4 in IMGUI_DEFINE_MATH_OPERATORS block. (#8510) [@gan74]
 - Misc: removed static linkage from operators to facilitate using in C++ modules. (#8682, #8358) [@johmani]
 - Demo: changed default framed item width to use Min(GetFontSize() * 12, GetContentRegionAvail().x * 0.40f).
 - Renderer Backends:
-  - Backends: DX9/DX10/DX11/DX12, Vulkan, OpenGL2/3, Metal, SDLGPU3, SDLRenderer2/3, WebGPU, Allegro5:
-    - Added ImGuiBackendFlags_RendererHasTextures support. (#8465, #3761, #3471)
-      [@ocornut, @ShironekoBen, @thedmd]
-    - Added ImGui_ImplXXXX_UpdateTexture(ImTextureData* tex) functions for all backend.
-      Available if you want to start uploading textures right after ImGui::Render() and without
-      waiting for the call to ImGui_ImplXXXX_RenderDrawData(). Also useful if you use a staged or
-      multi-threaded rendering schemes, where you might want to set ImDrawData::Textures = NULL. (#8597, #1860)
   - Backends: SDLGPU3: Fixed creating atlas texture earlier than other backends, preventing
     to load fonts between the Init and NewFrames calls.
   - Backends: SDLGPU3: Made ImGui_ImplSDLGPU3_PrepareDrawData() reuse GPU Transfer Buffers which
@@ -456,7 +462,7 @@ Other changes:
   - Backends: GLFW, SDL2, SDL3: include GLFW/SDL version number in io.BackendPlatformName.
   - Backends: SDL3: Update for SDL3 api changes: revert SDL_GetClipboardText()
     memory ownership change. (#8530, #7801) [@Green-Sky]
-  - Backends: SDL3: honor ImGuiPlatformImeData->WantTextInput as an alternative
+  - Backends: SDL3: honor ImGuiPlatformImeData::WantTextInput as an alternative
     way to call SDL_StartTextInput(), without IME being necessarily visible. (#8584)
   - Backends: SDL3: fixed pulling SDL_PROP_WINDOW_COCOA_WINDOW_POINTER into
     viewport->PlatformHandleRaw. (#8725, #8726) [@eertbleyen]
