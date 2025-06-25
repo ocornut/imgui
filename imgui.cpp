@@ -10581,21 +10581,30 @@ bool ImGui::DebugCheckVersionAndDataLayout(const char* version, size_t sz_io, si
     return !error;
 }
 
-// Until 1.89 (IMGUI_VERSION_NUM < 18814) it was legal to use SetCursorPos() to extend the boundary of a parent (e.g. window or table cell)
-// This is causing issues and ambiguity and we need to retire that.
-// See https://github.com/ocornut/imgui/issues/5548 for more details.
-// [Scenario 1]
+// Until 1.89 (August 2022, IMGUI_VERSION_NUM < 18814) it was legal to use SetCursorPos()/SetCursorScreenPos()
+// to extend contents size of our parent container (e.g. window contents size, which is used for auto-resizing
+// windows, table column contents size used for auto-resizing columns, group size).
+// This was causing issues and ambiguities and we needed to retire that.
+// From 1.89, extending contents size boundaries REQUIRES AN ITEM TO BE SUBMITTED.
+//
 //  Previously this would make the window content size ~200x200:
-//    Begin(...) + SetCursorScreenPos(GetCursorScreenPos() + ImVec2(200,200)) + End();  // NOT OK
+//    Begin(...) + SetCursorScreenPos(GetCursorScreenPos() + ImVec2(200,200)) + End();                      // NOT OK ANYMORE
 //  Instead, please submit an item:
 //    Begin(...) + SetCursorScreenPos(GetCursorScreenPos() + ImVec2(200,200)) + Dummy(ImVec2(0,0)) + End(); // OK
 //  Alternative:
 //    Begin(...) + Dummy(ImVec2(200,200)) + End(); // OK
-// [Scenario 2]
-//  For reference this is one of the issue what we aim to fix with this change:
-//    BeginGroup() + SomeItem("foobar") + SetCursorScreenPos(GetCursorScreenPos()) + EndGroup()
-//  The previous logic made SetCursorScreenPos(GetCursorScreenPos()) have a side-effect! It would erroneously incorporate ItemSpacing.y after the item into content size, making the group taller!
-//  While this code is a little twisted, no-one would expect SetXXX(GetXXX()) to have a side-effect. Using vertical alignment patterns could trigger this issue.
+//
+// The assert below detects when the _last_ call in a window was a SetCursorPos() not followed by an Item,
+// and with a position that would grow the parent contents size.
+//
+// Advanced:
+// - For reference, old logic was causing issues because it meant that SetCursorScreenPos(GetCursorScreenPos())
+//   had a side-effect on layout! In particular this caused problem to compute group boundaries.
+//   e.g. BeginGroup() + SomeItem() + SetCursorScreenPos(GetCursorScreenPos()) + EndGroup() would cause the
+//   group to be taller because auto-sizing generally adds padding on bottom and right side.
+// - While this code is a little twisted, no-one would expect SetXXX(GetXXX()) to have a side-effect.
+//   Using vertical alignment patterns would frequently trigger this sorts of issue.
+// - See https://github.com/ocornut/imgui/issues/5548 for more details.
 void ImGui::ErrorCheckUsingSetCursorPosToExtendParentBoundaries()
 {
     ImGuiContext& g = *GImGui;
