@@ -15940,7 +15940,8 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
     DragFloat("FontScaleDpi", &style.FontScaleDpi, 0.02f, 0.5f, 5.0f);
     //SetItemTooltip("When io.ConfigDpiScaleFonts is set, this value is automatically overwritten.");
     //EndDisabled();
-    BulletText("Warning: Font scaling will NOT be smooth, because\nImGuiBackendFlags_RendererHasTextures is not set!");
+    if ((io.BackendFlags & ImGuiBackendFlags_RendererHasTextures) == 0)
+        BulletText("Warning: Font scaling will NOT be smooth, because\nImGuiBackendFlags_RendererHasTextures is not set!");
     BulletText("Load a nice font for better results!");
     BulletText("Please submit feedback:");
     SameLine(); TextLinkOpenURL("#8465", "https://github.com/ocornut/imgui/issues/8465");
