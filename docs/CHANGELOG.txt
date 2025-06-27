@@ -36,6 +36,24 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
+ VERSION 1.92.1 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Breaking changes:
+
+Other changes:
+
+- Backends: SDL3: avoid calling SDL_StartTextInput() again if already active.
+  (#8727) [@morrazzzz]
+- Backends: OSX: added ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress
+  mouse cursor support. (#8739) [@cfillion]
+- Backends: Vulkan: use nonCoherentAtomSize to align upload_size, fixing
+  validation error on some setups. (#8743, #8744) [@tquante]
+
+Docking+Viewports Branch:
+
+
+-----------------------------------------------------------------------
  VERSION 1.92.0 (Released 2025-06-25)
 -----------------------------------------------------------------------
 
@@ -44,6 +62,9 @@ Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v
 THIS VERSION CONTAINS THE LARGEST AMOUNT OF BREAKING CHANGES SINCE 2015!
 I TRIED REALLY HARD TO KEEP THEM TO A MINIMUM, REDUCE THE AMOUNT OF INTERFERENCE,
 BUT INEVITABLY SOME USERS OR THIRD-PARTY EXTENSIONS WILL BE AFFECTED.
+
+For instructions to upgrade your custom backend:
+--> See https://github.com/ocornut/imgui/blob/master/docs/BACKENDS.md
 
 IN ORDER TO HELP US IMPROVE THE TRANSITION PROCESS, INCL. DOCUMENTATION AND COMMENTS,
 PLEASE REPORT **ANY** DOUBT, CONFUSION, QUESTIONS, FEEDBACK TO:

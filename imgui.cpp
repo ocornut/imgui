@@ -1,4 +1,4 @@
-// dear imgui, v1.92.0
+// dear imgui, v1.92.1 WIP
 // (main code and documentation)
 
 // Help:
@@ -53,7 +53,7 @@ DOCUMENTATION
   - HOW TO UPDATE TO A NEWER VERSION OF DEAR IMGUI
   - GETTING STARTED WITH INTEGRATING DEAR IMGUI IN YOUR CODE/ENGINE
   - HOW A SIMPLE APPLICATION MAY LOOK LIKE
-  - HOW A SIMPLE RENDERING FUNCTION MAY LOOK LIKE
+  - USING CUSTOM BACKEND / CUSTOM ENGINE
 - API BREAKING CHANGES (read me when you update!)
 - FREQUENTLY ASKED QUESTIONS (FAQ)
   - Read all answers online: https://www.dearimgui.com/faq, or in docs/FAQ.md (with a Markdown viewer)
@@ -275,7 +275,8 @@ CODE
 
  HOW A SIMPLE APPLICATION MAY LOOK LIKE
  --------------------------------------
- EXHIBIT 1: USING THE EXAMPLE BACKENDS (= imgui_impl_XXX.cpp files from the backends/ folder).
+
+ USING THE EXAMPLE BACKENDS (= imgui_impl_XXX.cpp files from the backends/ folder).
  The sub-folders in examples/ contain examples applications following this structure.
 
      // Application init: create a dear imgui context, setup some options, load fonts
@@ -311,7 +312,27 @@ CODE
      ImGui_ImplWin32_Shutdown();
      ImGui::DestroyContext();
 
- EXHIBIT 2: IMPLEMENTING CUSTOM BACKEND / CUSTOM ENGINE
+ To decide whether to dispatch mouse/keyboard inputs to Dear ImGui to the rest of your application,
+ you should read the 'io.WantCaptureMouse', 'io.WantCaptureKeyboard' and 'io.WantTextInput' flags!
+ Please read the FAQ entry "How can I tell whether to dispatch mouse/keyboard to Dear ImGui or my application?" about this.
+
+
+USING CUSTOM BACKEND / CUSTOM ENGINE
+------------------------------------
+
+IMPLEMENTING YOUR PLATFORM BACKEND:
+ -> see https://github.com/ocornut/imgui/blob/master/docs/BACKENDS.md for basic instructions.
+ -> the Platform backends in impl_impl_XXX.cpp files contain many implementations.
+
+IMPLEMENTING YOUR RenderDrawData() function:
+ -> see https://github.com/ocornut/imgui/blob/master/docs/BACKENDS.md
+ -> the Renderer Backends in impl_impl_XXX.cpp files contain many implementations of a ImGui_ImplXXXX_RenderDrawData() function.
+
+IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
+ -> see https://github.com/ocornut/imgui/blob/master/docs/BACKENDS.md
+ -> the Renderer Backends in impl_impl_XXX.cpp files contain many implementations of a ImGui_ImplXXXX_UpdateTexture() function.
+
+ Basic application/backend skeleton:
 
      // Application init: create a Dear ImGui context, setup some options, load fonts
      ImGui::CreateContext();
@@ -320,7 +341,7 @@ CODE
      io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable keyboard controls
 
      // TODO: Load TTF/OTF fonts if you don't want to use the default font.
-     io.Fonts->AddFontFromFileTTF("NotoSans.ttf", 18.0f);
+     io.Fonts->AddFontFromFileTTF("NotoSans.ttf");
 
      // Application main loop
      while (true)
@@ -362,95 +383,6 @@ CODE
      // Shutdown
      ImGui::DestroyContext();
 
- To decide whether to dispatch mouse/keyboard inputs to Dear ImGui to the rest of your application,
- you should read the 'io.WantCaptureMouse', 'io.WantCaptureKeyboard' and 'io.WantTextInput' flags!
- Please read the FAQ entry "How can I tell whether to dispatch mouse/keyboard to Dear ImGui or my application?" about this.
-
- HOW A SIMPLE RENDERING FUNCTION MAY LOOK LIKE
- ---------------------------------------------
- The backends in impl_impl_XXX.cpp files contain many working implementations of a rendering function.
-
-    void MyImGuiBackend_UpdateTexture(ImTextureData* tex)
-    {
-        if (tex->Status == ImTextureStatus_WantCreate)
-        {
-            // <create texture based on tex->Width/Height/Pixels>
-            tex->SetTexID(xxxx); // specify backend-specific ImTextureID identifier
-            tex->SetStatus(ImTextureStatus_OK);
-            tex->BackendUserData = xxxx; // store more backend data
-        }
-        if (tex->Status == ImTextureStatus_WantUpdates)
-        {
-            // <update texture blocks based on tex->UpdateRect>
-            tex->SetStatus(ImTextureStatus_OK);
-        }
-        if (tex->Status == ImTextureStatus_WantDestroy)
-        {
-            // <destroy texture>
-            tex->SetTexID(ImTextureID_Invalid);
-            tex->SetStatus(ImTextureStatus_Destroyed);
-        }
-    }
-
-    void MyImGuiBackend_RenderDrawData(ImDrawData* draw_data)
-    {
-       if (draw_data->Textures != nullptr)
-           for (ImTextureData* tex : *draw_data->Textures)
-               if (tex->Status != ImTextureStatus_OK)
-                   MyImGuiBackend_UpdateTexture(tex);
-
-
-       // TODO: Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled
-       // TODO: Setup texture sampling state: sample with bilinear filtering (NOT point/nearest filtering). Use 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines;' to allow point/nearest filtering.
-       // TODO: Setup viewport covering draw_data->DisplayPos to draw_data->DisplayPos + draw_data->DisplaySize
-       // TODO: Setup orthographic projection matrix cover draw_data->DisplayPos to draw_data->DisplayPos + draw_data->DisplaySize
-       // TODO: Setup shader: vertex { float2 pos, float2 uv, u32 color }, fragment shader sample color from 1 texture, multiply by vertex color.
-       ImVec2 clip_off = draw_data->DisplayPos;
-       for (int n = 0; n < draw_data->CmdListsCount; n++)
-       {
-          const ImDrawList* cmd_list = draw_data->CmdLists[n];
-          const ImDrawVert* vtx_buffer = cmd_list->VtxBuffer.Data;  // vertex buffer generated by Dear ImGui
-          const ImDrawIdx* idx_buffer = cmd_list->IdxBuffer.Data;   // index buffer generated by Dear ImGui
-          for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
-          {
-             const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
-             if (pcmd->UserCallback)
-             {
-                 if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
-                     MyEngineResetRenderState();
-                 else
-                     pcmd->UserCallback(cmd_list, pcmd);
-             }
-             else
-             {
-                 // Project scissor/clipping rectangles into framebuffer space
-                 ImVec2 clip_min(pcmd->ClipRect.x - clip_off.x, pcmd->ClipRect.y - clip_off.y);
-                 ImVec2 clip_max(pcmd->ClipRect.z - clip_off.x, pcmd->ClipRect.w - clip_off.y);
-                 if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)
-                     continue;
-
-                 // We are using scissoring to clip some objects. All low-level graphics API should support it.
-                 // - If your engine doesn't support scissoring yet, you may ignore this at first. You will get some small glitches
-                 //   (some elements visible outside their bounds) but you can fix that once everything else works!
-                 // - Clipping coordinates are provided in imgui coordinates space:
-                 //   - For a given viewport, draw_data->DisplayPos == viewport->Pos and draw_data->DisplaySize == viewport->Size
-                 //   - In a single viewport application, draw_data->DisplayPos == (0,0) and draw_data->DisplaySize == io.DisplaySize, but always use GetMainViewport()->Pos/Size instead of hardcoding those values.
-                 //   - In the interest of supporting multi-viewport applications (see 'docking' branch on github),
-                 //     always subtract draw_data->DisplayPos from clipping bounds to convert them to your viewport space.
-                 // - Note that pcmd->ClipRect contains Min+Max bounds. Some graphics API may use Min+Max, other may use Min+Size (size being Max-Min)
-                 MyEngineSetScissor(clip_min.x, clip_min.y, clip_max.x, clip_max.y);
-
-                 // The texture for the draw call is specified by pcmd->GetTexID().
-                 // The vast majority of draw calls will use the Dear ImGui texture atlas, which value you have set yourself during initialization.
-                 MyEngineBindTexture((MyTexture*)pcmd->GetTexID());
-
-                 // Render 'pcmd->ElemCount/3' indexed triangles.
-                 // By default the indices ImDrawIdx are 16-bit, you can change them to 32-bit in imconfig.h if your engine doesn't support 16-bit indices.
-                 MyEngineDrawIndexedTriangles(pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, idx_buffer + pcmd->IdxOffset, vtx_buffer, pcmd->VtxOffset);
-             }
-          }
-       }
-    }
 
 
  API BREAKING CHANGES
@@ -21602,7 +21534,13 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
     DragFloat("FontScaleDpi", &style.FontScaleDpi, 0.02f, 0.5f, 5.0f);
     //SetItemTooltip("When io.ConfigDpiScaleFonts is set, this value is automatically overwritten.");
     //EndDisabled();
-    BulletText("Warning: Font scaling will NOT be smooth, because\nImGuiBackendFlags_RendererHasTextures is not set!");
+    if ((io.BackendFlags & ImGuiBackendFlags_RendererHasTextures) == 0)
+    {
+        BulletText("Warning: Font scaling will NOT be smooth, because\nImGuiBackendFlags_RendererHasTextures is not set!");
+        BulletText("For instructions, see:");
+        SameLine();
+        TextLinkOpenURL("docs/BACKENDS.md", "https://github.com/ocornut/imgui/blob/master/docs/BACKENDS.md");
+    }
     BulletText("Load a nice font for better results!");
     BulletText("Please submit feedback:");
     SameLine(); TextLinkOpenURL("#8465", "https://github.com/ocornut/imgui/issues/8465");
