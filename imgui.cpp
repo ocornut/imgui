@@ -319,6 +319,10 @@ CODE
 USING CUSTOM BACKEND / CUSTOM ENGINE
 ------------------------------------
 
+IMPLEMENTING YOUR PLATFORM BACKEND:
+ -> see https://github.com/ocornut/imgui/blob/master/docs/BACKENDS.md for basic instructions.
+ -> the Platform backends in impl_impl_XXX.cpp files contain many implementations.
+
 IMPLEMENTING YOUR RenderDrawData() function:
  -> see https://github.com/ocornut/imgui/blob/master/docs/BACKENDS.md
  -> the Renderer Backends in impl_impl_XXX.cpp files contain many implementations of a ImGui_ImplXXXX_RenderDrawData() function.
@@ -326,10 +330,6 @@ IMPLEMENTING YOUR RenderDrawData() function:
 IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
  -> see https://github.com/ocornut/imgui/blob/master/docs/BACKENDS.md
  -> the Renderer Backends in impl_impl_XXX.cpp files contain many implementations of a ImGui_ImplXXXX_UpdateTexture() function.
-
-IMPLEMENTING YOUR PLATFORM BACKEND:
- -> missing documentation.
- -> the Platform backends in impl_impl_XXX.cpp files contain many implementations.
 
  Basic application/backend skeleton:
 

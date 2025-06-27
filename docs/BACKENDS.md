@@ -5,10 +5,13 @@ _(You may browse this at https://github.com/ocornut/imgui/blob/master/docs/BACKE
 ## Index
 
 - [Introduction](#introduction)
-- [Using standard backends](#using-standard-backends)
-- [List of third-party backends](#list-of-third-party-backends)
+   - [Getting Started](#getting-started)
+   - [What are Backends?](#what-are-backends)
+- [Using standard Backends](#using-standard-backends)
+- [Using third-party Backends](#using-third-party-backends)
 - [Writing your own Backend](#writing-your-own-backend)
   - [Using a custom engine?](#using-a-custom-engine)
+  - [Platform: Implementing your Platform Backend](#platform-implementing-your-platform-backend)
   - [Rendering: Implementing your RenderDrawData function](#rendering-implementing-your-renderdrawdata-function)
   - [Rendering: Adding support for `ImGuiBackendFlags_RendererHasTextures` (1.92+)](#rendering-adding-support-for-imguibackendflags_rendererhastextures-192)
 
@@ -19,7 +22,7 @@ _(You may browse this at https://github.com/ocornut/imgui/blob/master/docs/BACKE
 💡 The **[Getting Started](https://github.com/ocornut/imgui/wiki/Getting-Started) wiki guide** has examples of how to integrate Dear ImGui into an existing application.
 <BR> The [EXAMPLES.MD](https://github.com/ocornut/imgui/blob/master/docs/EXAMPLES.md) documentation may also be worth a read.
 
-### What are backends?
+### What are Backends?
 
 Dear ImGui is highly portable and only requires a few things to run and render, typically:
 
@@ -46,7 +49,7 @@ and the backends which we are describing here (backends/ folder).
 - You should be able to write backends for pretty much any platform and any 3D graphics API.
   e.g. you can get creative and use software rendering or render remotely on a different machine.
 
-## Using standard backends
+## Using standard Backends
 
 **The [backends/](https://github.com/ocornut/imgui/blob/master/backends) folder contains backends for popular platforms/graphics API, which you can use in
 your application or engine to easily integrate Dear ImGui.** Each backend is typically self-contained in a pair of files: imgui_impl_XXXX.cpp + imgui_impl_XXXX.h.
@@ -65,7 +68,7 @@ For example, the [example_win32_directx11](https://github.com/ocornut/imgui/tree
 
 **Once Dear ImGui is setup and running, run and refer to `ImGui::ShowDemoWindow()` in imgui_demo.cpp for usage of the end-user API.**
 
-### List of standard backends
+### List of standard Backends
 
 In the [backends/](https://github.com/ocornut/imgui/blob/master/backends) folder:
 
@@ -114,7 +117,7 @@ If you are not sure which backend to use, the recommended platform/frameworks fo
 
 If your application runs on Windows or if you are using multi-viewport, the win32 backend handles some details a little better than other backends.
 
-## List of third-party backends
+## Using third-party Backends
 
 See https://github.com/ocornut/imgui/wiki/Bindings for the full list (e.g. Adventure Game Studio, Cinder, Cocos2d-x, Game Maker Studio2, Godot, LÖVE+LUA, Magnum, Monogame, Ogre, openFrameworks, OpenSceneGraph, SFML, Sokol, Unity, Unreal Engine and many others).
 
@@ -164,6 +167,46 @@ Supporting the multi-viewports feature correctly using 100% of your own abstract
 than supporting single-viewport.
 If you decide to use unmodified imgui_impl_XXXX.cpp files, you can automatically benefit from
 improvements and fixes related to viewports and platform windows without extra work on your side.
+
+### Platform: Implementing your Platform Backend
+
+The Platform backends in impl_impl_XXX.cpp files contain many implementations.
+
+**In your `ImGui_ImplXXX_Init()` function:**
+- You can allocate your backend data and use `io.BackendPlatformUserData` to store/retrieve it later.
+- Set `io.BackendPlatformName` to a name `"imgui_impl_xxxx"` which will be available in e.g. About box.
+- Set `io.BackendPlatformUserData` to your backend data.
+- Set `io.BackendFlags` with supported optional features:
+  - `ImGuiBackendFlags_HasGamepad`: supports gamepad and currently has one connected.
+  - `ImGuiBackendFlags_HasMouseCursors`: supports honoring GetMouseCursor() value to change the OS cursor shape.
+  - `ImGuiBackendFlags_HasSetMousePos`: supports io.WantSetMousePos requests to reposition the OS mouse position (only used if io.ConfigNavMoveSetMousePos is set).
+  - `ImGuiBackendFlags_PlatformHasViewports` supports multiple viewports. (multi-viewports only)
+  - `ImGuiBackendFlags_HasMouseHoveredViewport` supports calling io.AddMouseViewportEvent() with the viewport under the mouse. IF POSSIBLE, ignore viewports with the ImGuiViewportFlags_NoInputs flag. If this cannot be done, Dear ImGui needs to use a flawed heuristic to find the viewport under mouse position, as it doesn't know about foreign windows. (multi-viewports only)
+
+**In your `ImGui_ImplXXX_NewFrame()` function:**
+- Set `io.DeltaTime` to the time elapsed (in seconds) since last frame.
+- Set `io.DisplaySize` to your window size.
+- Set `io.DisplayFrameBufferSize` to your window pixel density (macOS/iOS only).
+- Update mouse cursor shape is supported.
+
+**In your `ImGui_ImplXXX_NewFrame()` function or event handlers:**
+- **Mouse Support**
+  - Use `io.AddMousePosEvent()`, `io.AddMouseButtonEvent()`, `io.AddMouseWheelEvent()` to pass mouse events.
+  - Use `io.AddMouseSourceEvent()` if you are able to distinguish Mouse from TouchScreen from Pen inputs. TouchScreen and Pen inputs requires different logic for some Dear ImGui features.
+  - Use `io.AddMouseViewportEvent()` to specify which viewport/OS window is being hovered by the mouse. Read instructions carefully as this is not as simple as it seems! (multi-viewports only)
+- **Keyboard Support**
+  - Use `io.AddKeyEvent()` to pass key events.
+  - Use `io.AddInputCharacter()` to pass text/character events.
+- **Gamepad Support**
+  - Use `io.AddKeyEvent()` and `io.AddKeyAnalogEvent()` to pass gamepad events, using `ImGuiKey_GamepadXXX` values.
+- **Miscellaneous**
+  - Clipboard Support: setup `Platform_GetClipboardTextFn()`, `Platform_SetClipboardTextFn()` handlers in `ImGuiPlatformIO`.
+  - Open in Shell support: setup `Platform_OpenInShellFn()` handler in `ImGuiPlatformIO`.
+  - IME Support: setup `Platform_SetImeDataFn()` handler in `ImGuiPlatformIO`.
+  - Use `io.AddFocusEvent()` to notify when application window gets focused/unfocused.
+- **Multi-viewport Support**
+  - Update monitor list if supported.
+  - Setup all required handlers in `ImGuiPlatformIO` to create/destroy/move/resize/title/focus/etc. windows.
 
 ### Rendering: Implementing your RenderDrawData function
 
@@ -271,7 +314,7 @@ Version [1.92.0](https://github.com/ocornut/imgui/releases/tag/v1.92.0) (June 20
 - Vulkan: [abe294b](https://github.com/ocornut/imgui/commit/abe294b) (+33 lines)
 - WGPU: [571dae9](https://github.com/ocornut/imgui/commit/571dae9) (+30 lines)
 
-**Instructions**
+**Instructions:**
 
 - Set `ImGuiBackendFlags_RendererHasTextures` to signify your backend can handle the feature.
 - During rendering, e.g. in your RenderDrawData function, iterate `ImDrawData->Textures` array and process all textures.
