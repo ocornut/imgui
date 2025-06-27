@@ -27,6 +27,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2025-06-27: Vulkan: Fixed validation errors during texture upload/update by aligning upload size to 'nonCoherentAtomSize'. (#8743, #8744)
 //  2025-06-11: Vulkan: Added support for ImGuiBackendFlags_RendererHasTextures, for dynamic font atlas. Removed ImGui_ImplVulkan_CreateFontsTexture() and ImGui_ImplVulkan_DestroyFontsTexture().
 //  2025-05-07: Vulkan: Fixed validation errors during window detach in multi-viewport mode. (#8600, #8176)
 //  2025-05-07: Vulkan: Load dynamic rendering functions using vkGetDeviceProcAddr() + try both non-KHR and KHR versions. (#8600, #8326, #8365)
@@ -244,6 +245,7 @@ struct ImGui_ImplVulkan_Data
 {
     ImGui_ImplVulkan_InitInfo   VulkanInitInfo;
     VkDeviceSize                BufferMemoryAlignment;
+    VkDeviceSize                NonCoherentAtomSize;
     VkPipelineCreateFlags       PipelineCreateFlags;
     VkDescriptorSetLayout       DescriptorSetLayout;
     VkPipelineLayout            PipelineLayout;
@@ -264,6 +266,7 @@ struct ImGui_ImplVulkan_Data
     {
         memset((void*)this, 0, sizeof(*this));
         BufferMemoryAlignment = 256;
+        NonCoherentAtomSize = 64;
     }
 };
 
@@ -751,7 +754,7 @@ void ImGui_ImplVulkan_UpdateTexture(ImTextureData* tex)
 
         VkBuffer upload_buffer;
         VkDeviceSize upload_pitch = upload_w * tex->BytesPerPixel;
-        VkDeviceSize upload_size = upload_h * upload_pitch;
+        VkDeviceSize upload_size = AlignBufferSize(upload_h * upload_pitch, bd->NonCoherentAtomSize);
         {
             VkBufferCreateInfo buffer_info = {};
             buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -1225,6 +1228,11 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info)
         IM_ASSERT(info->RenderPass != VK_NULL_HANDLE);
 
     bd->VulkanInitInfo = *info;
+
+    VkPhysicalDeviceProperties properties;
+    vkGetPhysicalDeviceProperties(info->PhysicalDevice, &properties);
+    bd->NonCoherentAtomSize = properties.limits.nonCoherentAtomSize;
+
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
     ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
     if (v->PipelineRenderingCreateInfo.pColorAttachmentFormats != NULL)

@@ -45,6 +45,8 @@ Other changes:
 
 - Backends: OSX: added ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress
   mouse cursor support. (#8739) [@cfillion]
+- Backends: Vulkan: use nonCoherentAtomSize to align upload_size, fixing
+  validation error on some setups. (#8743, #8744) [@tquante]
 
 
 -----------------------------------------------------------------------
