@@ -10,6 +10,7 @@
 //  [X] Platform: Gamepad support. Enable with 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad'.
 //  [X] Platform: Mouse cursor shape and visibility (ImGuiBackendFlags_HasMouseCursors). Resizing cursors requires GLFW 3.4+! Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'.
 //  [X] Platform: Multi-viewport support (multiple windows). Enable with 'io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable'.
+//  [X] Multiple Dear ImGui contexts support.
 // Missing features or Issues:
 //  [ ] Touch events are only correctly identified as Touch on Windows. This create issues with some interactions. GLFW doesn't provide a way to identify touch inputs from mouse inputs, we cannot call io.AddMouseSourceEvent() to identify the source. We provide a Windows-specific workaround.
 //  [ ] Missing ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress cursors.
@@ -65,5 +66,8 @@ IMGUI_IMPL_API void     ImGui_ImplGlfw_MonitorCallback(GLFWmonitor* monitor, int
 
 // GLFW helpers
 IMGUI_IMPL_API void     ImGui_ImplGlfw_Sleep(int milliseconds);
+IMGUI_IMPL_API float    ImGui_ImplGlfw_GetContentScaleForWindow(GLFWwindow* window);
+IMGUI_IMPL_API float    ImGui_ImplGlfw_GetContentScaleForMonitor(GLFWmonitor* monitor);
+
 
 #endif // #ifndef IMGUI_DISABLE

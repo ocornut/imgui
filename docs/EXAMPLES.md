@@ -58,7 +58,7 @@ Allegro 5 example. <BR>
 Android + OpenGL3 (ES) example. <BR>
 = main.cpp + imgui_impl_android.cpp + imgui_impl_opengl3.cpp
 
-[example_apple_metal/](https://github.com/ocornut/imgui/blob/master/examples/example_metal/) <BR>
+[example_apple_metal/](https://github.com/ocornut/imgui/tree/master/examples/example_apple_metal/) <BR>
 OSX & iOS + Metal example. <BR>
 = main.m + imgui_impl_osx.mm + imgui_impl_metal.mm <BR>
 It is based on the "cross-platform" game template provided with Xcode as of Xcode 9.

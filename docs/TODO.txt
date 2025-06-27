@@ -26,9 +26,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window/size: manually triggered auto-fit (double-click on grip) shouldn't resize window down to viewport size?
  - window/size: how to allow to e.g. auto-size vertically to fit contents, but be horizontally resizable? Assuming SetNextWindowSize() is modified to treat -1.0f on each axis as "keep as-is" (would be good but might break erroneous code): Problem is UpdateWindowManualResize() and lots of code treat (window->AutoFitFramesX > 0 || window->AutoFitFramesY > 0) together.
  - window/opt: freeze window flag: if not focused/hovered, return false, render with previous ImDrawList. and/or reduce refresh rate. -> this may require enforcing that it is illegal to submit contents if Begin returns false.
- - window/child: background options for child windows, border option (disable rounding).
- - window/child: allow resizing of child windows (possibly given min/max for each axis?.)
- - window/child: allow SetNextWindowContentSize() to work on child windows.
  - window/clipping: some form of clipping when DisplaySize (or corresponding viewport) is zero.
  - window/tabbing: add a way to signify that a window or docked window requires attention (e.g. blinking title bar, trying to click behind a modal).
  - window/id_stack: add e.g. window->GetIDFromPath() with support for leading / and ../ (#1390, #331) -> model from test engine.
@@ -272,22 +269,14 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
 
  - font: arbitrary line spacing. (#2945)
  - font: MergeMode: flags to select overwriting or not (this is now very easy with refactored ImFontAtlasBuildWithStbTruetype)
- - font: free the Alpha buffer if user only requested RGBA.
-!- font: better CalcTextSizeA() API, at least for simple use cases. current one is horrible (perhaps have simple vs extended versions).
+ - font: better CalcTextSizeA() API, at least for simple use cases. current one is horrible (perhaps have simple vs extended versions).
  - font: for the purpose of RenderTextEllipsis(), it might be useful that CalcTextSizeA() can ignore the trailing padding?
  - font: a CalcTextHeight() helper could run faster than CalcTextSize().y
  - font: enforce monospace through ImFontConfig (for icons?) + create dual ImFont output from same input, reusing rasterized data but with different glyphs/AdvanceX
- - font: finish CustomRectRegister() to allow mapping Unicode codepoint to custom texture data
- - font: remove ID from CustomRect registration, it seems unnecessary!
  - font: make it easier to submit own bitmap font (same texture, another texture?). (#2127, #2575)
- - font: PushFontSize API (#1018)
  - font: MemoryTTF taking ownership confusing/not obvious, maybe default should be opposite?
  - font: storing MinAdvanceX per font would allow us to skip calculating line width (under a threshold of character count) in loops looking for block width
- - font/demo: add tools to show glyphs used by a text blob, display U16 value, list missing glyphs.
  - font/demo: demonstrate use of ImFontGlyphRangesBuilder.
- - font/atlas: add a missing Glyphs.reserve()
- - font/atlas: incremental updates
- - font/atlas: dynamic font atlas to avoid baking huge ranges into bitmap and make scaling easier.
  - font/draw: vertical and/or rotated text renderer (#705) - vertical is easier clipping wise
  - font/draw: need to be able to specify wrap start position.
  - font/draw: better reserve policy for large horizontal block of text (shouldn't reserve for all clipped lines). also see #3349.
@@ -296,7 +285,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - font: optimization: for monospace font (like the default one) we can trim IndexXAdvance as long as trailing value is == FallbackXAdvance (need to make sure TAB is still correct), would save on cache line.
  - font: add support for kerning, probably optional. A) perhaps default to (32..128)^2 matrix ~ 9K entries = 36KB, then hash for non-ascii?. B) or sparse lookup into per-char list?
  - font: add a simpler CalcTextSizeA() api? current one ok but not welcome if user needs to call it directly (without going through ImGui::CalcTextSize)
- - font: fix AddRemapChar() to work before atlas  has been built.
  - font: (api breaking) remove "TTF" from symbol names. also because it now supports OTF.
  - font/opt: Considering storing standalone AdvanceX table as 16-bit fixed point integer?
  - font/opt: Glyph currently 40 bytes (2+9*4). Consider storing UV as 16-bits integer? (->32 bytes). X0/Y0/X1/Y1 as 16 fixed-point integers? Or X0/Y0 as float and X1/Y1 as fixed8_8?
@@ -327,7 +315,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - nav/windowing: Resizing window will currently fail with certain types of resizing constraints/callback applied
  - focus: preserve ActiveId/focus stack state, e.g. when opening a menu and close it, previously selected InputText() focus gets restored (#622)
 
- - viewport: make it possible to have no main/hosting viewport
+ - viewport: make it possible to have no main/hosting viewport (see #8268)
  - viewport: We set ImGuiViewportFlags_NoFocusOnAppearing in a way that is required for GLFW/SDL binding, but could be handled better without
    on a custom e.g. Win32 bindings. It prevents newly dragged-out viewports from taking the focus, which makes ALT+F4 more ambiguous.
  - viewport: not focusing newly undocked viewport means clicking back on previous one doesn't bring OS window to front.
@@ -336,6 +324,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - viewport: store per-viewport/monitor DPI in .ini file so an application reload or main window changing DPI on reload can be properly patched for.
  - viewport: implicit/fallback Debug window can hog a zombie viewport (harmless, noisy?) > could at least clear out the reference on a per session basis?
  - viewport: need to clarify how to use GetMousePos() from a user point of view.
+ - viewport: could apply monitor boundaries to cliprect to coarse clip things out of monitor? (#8698)
  - platform: glfw: no support for ImGuiBackendFlags_HasMouseHoveredViewport.
  - platform: sdl: no support for ImGuiBackendFlags_HasMouseHoveredViewport. maybe we could use SDL_GetMouseFocus() / SDL_WINDOW_MOUSE_FOCUS if imgui could fallback on its heuristic when NoInputs is set
  - platform: sdl: no refresh of monitor/display (SDL doesn't seem to have an event for it).
