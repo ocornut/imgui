@@ -3548,6 +3548,35 @@ static void DemoWindowWidgetsText()
             ImGui::TreePop();
         }
 
+        IMGUI_DEMO_MARKER("Widgets/Text/Different Size Text");
+        if (ImGui::TreeNode("Different Size Text"))
+        {
+            const ImGuiStyle& style = ImGui::GetStyle();
+
+            for (float scaling = 0.5f; scaling < 4.01f; scaling += 0.5f)
+            {
+                ImGui::PushFont(nullptr, style.FontSizeBase * scaling);
+                ImGui::Text("Text size is %.1f (style.FontSizeBase * %.1f)", style.FontSizeBase * scaling, scaling);
+                ImGui::PopFont();
+            }
+
+            static float custom_scaling{ 1.0f };
+            ImGui::SliderFloat("Custom Scaling##Different Size Text", &custom_scaling, 0.5f, 4.0f, "%.1f");
+            ImGui::SameLine(); HelpMarker("ImGui::PushFont(nullptr, style.FontSizeBase * custom_scaling);");
+            ImGui::PushFont(nullptr, style.FontSizeBase * custom_scaling);
+            ImGui::Text("Text size is %.1f (style.FontSizeBase * %.1f)", style.FontSizeBase * custom_scaling, custom_scaling);
+            ImGui::PopFont();
+
+            static float custom_font_size{ 16.0f };
+            ImGui::SliderFloat("Custom Font Size##Different Size Text", &custom_font_size, 10.0f, 100.0f, "%.1f");
+            ImGui::SameLine(); HelpMarker("ImGui::PushFont(nullptr, custom_font_size);");
+            ImGui::PushFont(nullptr, custom_font_size);
+            ImGui::Text("Text size is %.1f", custom_font_size);
+            ImGui::PopFont();
+
+            ImGui::TreePop();
+        }
+
         IMGUI_DEMO_MARKER("Widgets/Text/Word Wrapping");
         if (ImGui::TreeNode("Word Wrapping"))
         {
