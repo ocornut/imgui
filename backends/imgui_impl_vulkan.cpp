@@ -244,6 +244,7 @@ struct ImGui_ImplVulkan_Data
 {
     ImGui_ImplVulkan_InitInfo   VulkanInitInfo;
     VkDeviceSize                BufferMemoryAlignment;
+    VkDeviceSize                nonCoherentAtomSize;
     VkPipelineCreateFlags       PipelineCreateFlags;
     VkDescriptorSetLayout       DescriptorSetLayout;
     VkPipelineLayout            PipelineLayout;
@@ -264,6 +265,7 @@ struct ImGui_ImplVulkan_Data
     {
         memset((void*)this, 0, sizeof(*this));
         BufferMemoryAlignment = 256;
+        nonCoherentAtomSize = 64;
     }
 };
 
@@ -752,10 +754,11 @@ void ImGui_ImplVulkan_UpdateTexture(ImTextureData* tex)
         VkBuffer upload_buffer;
         VkDeviceSize upload_pitch = upload_w * tex->BytesPerPixel;
         VkDeviceSize upload_size = upload_h * upload_pitch;
+        VkDeviceSize upload_size_aligned = AlignBufferSize( upload_size, bd->nonCoherentAtomSize);
         {
             VkBufferCreateInfo buffer_info = {};
             buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-            buffer_info.size = upload_size;
+            buffer_info.size = upload_size_aligned;
             buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
             buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
             err = vkCreateBuffer(v->Device, &buffer_info, v->Allocator, &upload_buffer);
@@ -776,14 +779,14 @@ void ImGui_ImplVulkan_UpdateTexture(ImTextureData* tex)
         // Upload to Buffer:
         {
             char* map = nullptr;
-            err = vkMapMemory(v->Device, upload_buffer_memory, 0, upload_size, 0, (void**)(&map));
+            err = vkMapMemory(v->Device, upload_buffer_memory, 0, upload_size_aligned, 0, (void**)(&map));
             check_vk_result(err);
             for (int y = 0; y < upload_h; y++)
                 memcpy(map + upload_pitch * y, tex->GetPixelsAt(upload_x, upload_y + y), (size_t)upload_pitch);
             VkMappedMemoryRange range[1] = {};
             range[0].sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
             range[0].memory = upload_buffer_memory;
-            range[0].size = upload_size;
+            range[0].size = upload_size_aligned;
             err = vkFlushMappedMemoryRanges(v->Device, 1, range);
             check_vk_result(err);
             vkUnmapMemory(v->Device, upload_buffer_memory);
@@ -1225,6 +1228,11 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info)
         IM_ASSERT(info->RenderPass != VK_NULL_HANDLE);
 
     bd->VulkanInitInfo = *info;
+
+    VkPhysicalDeviceProperties properties;
+    vkGetPhysicalDeviceProperties(info->PhysicalDevice,&properties);
+    bd->nonCoherentAtomSize = properties.limits.nonCoherentAtomSize;
+
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
     ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
     if (v->PipelineRenderingCreateInfo.pColorAttachmentFormats != NULL)
