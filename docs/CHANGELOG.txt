@@ -61,6 +61,9 @@ Other changes:
 - Demo: Added "Text -> Font Size" demo section. (#8738) [@Demonese]
 - CI: Fixed dllimport/dllexport tests. (#8757) [@AidanSun05]
 - CI: Updated to use latest Windows image + VS2022.
+- Backends: GLFW, SDL2 made ImGui_ImplGLFW_GetContentScaleXXX() and 
+  ImGui_ImplSDL2_GetContentScaleXXXX() helpers return 1.0f on Emscripten 
+  and Android platforms, matching macOS logic. (#8742, #8733) [@pthom]
 - Backends: SDL3: avoid calling SDL_StartTextInput() again if already active.
   (fixes e.g.: an issue on iOS where the keyboard animation will popup every 
   time the user types a key + probably other things) (#8727) [@morrazzzz]
