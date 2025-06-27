@@ -61,6 +61,8 @@ Other changes:
 - Demo: Added "Text -> Font Size" demo section. (#8738) [@Demonese]
 - CI: Fixed dllimport/dllexport tests. (#8757) [@AidanSun05]
 - CI: Updated to use latest Windows image + VS2022.
+- Examples: GLFW+OpenGL3, GLFW+WGPU: Emscripten Makefiles uses GLFW port 
+  'contrib.glfw3' which offers better HiDPI support. (#8742) [@pthom]
 - Backends: GLFW, SDL2 made ImGui_ImplGLFW_GetContentScaleXXX() and 
   ImGui_ImplSDL2_GetContentScaleXXXX() helpers return 1.0f on Emscripten 
   and Android platforms, matching macOS logic. (#8742, #8733) [@pthom]
