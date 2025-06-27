@@ -3548,31 +3548,39 @@ static void DemoWindowWidgetsText()
             ImGui::TreePop();
         }
 
-        IMGUI_DEMO_MARKER("Widgets/Text/Different Size Text");
-        if (ImGui::TreeNode("Different Size Text"))
+        IMGUI_DEMO_MARKER("Widgets/Text/Font Size");
+        if (ImGui::TreeNode("Font Size"))
         {
-            const ImGuiStyle& style = ImGui::GetStyle();
+            ImGuiStyle& style = ImGui::GetStyle();
+            const float global_scale = style.FontScaleMain * style.FontScaleDpi;
+            ImGui::Text("style.FontScaleMain = %0.2f", style.FontScaleMain);
+            ImGui::Text("style.FontScaleDpi = %0.2f", style.FontScaleDpi);
+            ImGui::Text("global_scale = ~%0.2f", global_scale); // This is not technically accurate as internal scales may apply, but conceptually let's pretend it is.
+            ImGui::Text("FontSize = %0.2f", ImGui::GetFontSize());
 
-            for (float scaling = 0.5f; scaling < 4.01f; scaling += 0.5f)
+            ImGui::SeparatorText("");
+            static float custom_size = 16.0f;
+            ImGui::SliderFloat("custom_size", &custom_size, 10.0f, 100.0f, "%.0f");
+            ImGui::Text("ImGui::PushFont(nullptr, custom_size);");
+            ImGui::PushFont(NULL, custom_size);
+            ImGui::Text("FontSize = %.2f (== %.2f * global_scale)", ImGui::GetFontSize(), custom_size);
+            ImGui::PopFont();
+
+            ImGui::SeparatorText("");
+            static float custom_scale = 1.0f;
+            ImGui::SliderFloat("custom_scale", &custom_scale, 0.5f, 4.0f, "%.2f");
+            ImGui::Text("ImGui::PushFont(nullptr, style.FontSizeBase * custom_scale);");
+            ImGui::PushFont(NULL, style.FontSizeBase * custom_scale);
+            ImGui::Text("FontSize = %.2f (== style.FontSizeBase * %.2f * global_scale)", ImGui::GetFontSize(), custom_scale);
+            ImGui::PopFont();
+
+            ImGui::SeparatorText("");
+            for (float scaling = 0.5f; scaling <= 4.0f; scaling += 0.5f)
             {
-                ImGui::PushFont(nullptr, style.FontSizeBase * scaling);
-                ImGui::Text("Text size is %.1f (style.FontSizeBase * %.1f)", style.FontSizeBase * scaling, scaling);
+                ImGui::PushFont(NULL, style.FontSizeBase * scaling);
+                ImGui::Text("FontSize = %.2f (== style.FontSizeBase * %.2f * global_scale)", ImGui::GetFontSize(), scaling);
                 ImGui::PopFont();
             }
-
-            static float custom_scaling{ 1.0f };
-            ImGui::SliderFloat("Custom Scaling##Different Size Text", &custom_scaling, 0.5f, 4.0f, "%.1f");
-            ImGui::SameLine(); HelpMarker("ImGui::PushFont(nullptr, style.FontSizeBase * custom_scaling);");
-            ImGui::PushFont(nullptr, style.FontSizeBase * custom_scaling);
-            ImGui::Text("Text size is %.1f (style.FontSizeBase * %.1f)", style.FontSizeBase * custom_scaling, custom_scaling);
-            ImGui::PopFont();
-
-            static float custom_font_size{ 16.0f };
-            ImGui::SliderFloat("Custom Font Size##Different Size Text", &custom_font_size, 10.0f, 100.0f, "%.1f");
-            ImGui::SameLine(); HelpMarker("ImGui::PushFont(nullptr, custom_font_size);");
-            ImGui::PushFont(nullptr, custom_font_size);
-            ImGui::Text("Text size is %.1f", custom_font_size);
-            ImGui::PopFont();
 
             ImGui::TreePop();
         }
