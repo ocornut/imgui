@@ -43,6 +43,9 @@ Breaking changes:
 
 Other changes:
 
+- Backends: OSX: added ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress
+  mouse cursor support. (#8739) [@cfillion]
+
 
 -----------------------------------------------------------------------
  VERSION 1.92.0 (Released 2025-06-25)
