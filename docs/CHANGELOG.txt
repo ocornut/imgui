@@ -43,6 +43,9 @@ Breaking changes:
 
 Other changes:
 
+- Textures: Fixed support for `#define ImTextureID_Invalid` to non-zero value:
+  ImTextureData() was incorrectly cleared with zeroes. (#8745) [@rachit7645]
+- Demo: Added "Text -> Font Size" demo section. (#8738) [@Demonese]
 - Backends: SDL3: avoid calling SDL_StartTextInput() again if already active.
   (#8727) [@morrazzzz]
 - Backends: OSX: added ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress
