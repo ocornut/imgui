@@ -718,7 +718,7 @@ float ImGui_ImplSDL2_GetContentScaleForWindow(SDL_Window* window)
 float ImGui_ImplSDL2_GetContentScaleForDisplay(int display_index)
 {
 #if SDL_HAS_PER_MONITOR_DPI
-#ifndef __APPLE__
+#if !defined(__APPLE__) && !defined(__EMSCRIPTEN__) && !defined(__ANDROID__)
     float dpi = 0.0f;
     if (SDL_GetDisplayDPI(display_index, &dpi, nullptr, nullptr) == 0)
         return dpi / 96.0f;
