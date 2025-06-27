@@ -7,9 +7,10 @@ _(You may browse this at https://github.com/ocornut/imgui/blob/master/docs/BACKE
 - [Introduction](#introduction)
 - [Using standard backends](#using-standard-backends)
 - [List of third-party backends](#list-of-third-party-backends)
-- [Writing your own backend](#writing-your-own-backend)
+- [Writing your own Backend](#writing-your-own-backend)
   - [Using a custom engine?](#using-a-custom-engine)
-  - [Adding support for `ImGuiBackendFlags_RendererHasTextures` (1.92+)](#adding-support-for-imguibackendflags_rendererhastextures-192)
+  - [Rendering: Implementing your RenderDrawData function](#rendering-implementing-your-renderdrawdata-function)
+  - [Rendering: Adding support for `ImGuiBackendFlags_RendererHasTextures` (1.92+)](#rendering-adding-support-for-imguibackendflags_rendererhastextures-192)
 
 ## Introduction
 
@@ -117,15 +118,20 @@ If your application runs on Windows or if you are using multi-viewport, the win3
 
 See https://github.com/ocornut/imgui/wiki/Bindings for the full list (e.g. Adventure Game Studio, Cinder, Cocos2d-x, Game Maker Studio2, Godot, LÖVE+LUA, Magnum, Monogame, Ogre, openFrameworks, OpenSceneGraph, SFML, Sokol, Unity, Unreal Engine and many others).
 
-## Writing your own backend
+## Writing your own Backend
 
 ### Using a custom engine?
 
 You will likely be tempted to start by rewrite your own backend using your own custom/high-level facilities...<BR>
 Think twice!
 
+TL;DR;
+- Writing your own Renderer Backend is easy.
+- Writing your own Platform Backend is harder and you are more likely to introduce bugs.
+- **It is unlikely you will add value to your project by creating your own backend.**
+
 **Consider using the existing backends as-is**.
-You will save lots of time integrating the library. 
+You will save lots of time integrating the library.
 Standard backends are battle-tested and handle subtleties that you are likely to implement incorrectly.
 You can LATER decide to rewrite yourself a custom backend if you really need to.
 In most situations, custom backends have fewer features and more bugs than the standard backends we provide.
@@ -148,23 +154,180 @@ Suggestion: try using a non-portable backend first (e.g. win32 + underlying grap
 your desktop builds working first. This will get you running faster and get your acquainted with
 how Dear ImGui works and is setup. You can then rewrite a custom backend using your own engine API...
 
-TL;DR;
-- **It is unlikely you will add value to your project by creating your own backend.**
-- Writing your own Renderer Backend is easier.
-- Writing your own Platform Backend is harder and you are more likely to introduce bugs.
-
 Also:
 The [multi-viewports feature](https://github.com/ocornut/imgui/wiki/Multi-Viewports) of the 'docking' branch allows
 Dear ImGui windows to be seamlessly detached from the main application window. This is achieved using an
 extra layer to the Platform and Renderer backends, which allows Dear ImGui to communicate platform-specific
 requests such as: "create an additional OS window", "create a render context", "get the OS position of this
-window" etc. See 'ImGuiPlatformIO' for details.
+window", but some things are more difficult "find OS window under mouse position BUT with some windows marked as passthrough". See 'ImGuiPlatformIO' for details.
 Supporting the multi-viewports feature correctly using 100% of your own abstractions is more difficult
 than supporting single-viewport.
 If you decide to use unmodified imgui_impl_XXXX.cpp files, you can automatically benefit from
 improvements and fixes related to viewports and platform windows without extra work on your side.
 
-### Adding support for `ImGuiBackendFlags_RendererHasTextures` (1.92+)
+### Rendering: Implementing your RenderDrawData function
 
-Version [1.92.0](https://github.com/ocornut/imgui/releases/tag/v1.92.0), released June 2025, added texture support in Rendering Backends, which is the backbone for supporting dynamic font scaling among other things.
-<BR>**In order to move forward and take advantage of all new features, support for `ImGuiBackendFlags_RendererHasTextures` will likely be REQUIRED for all backends before June 2026.**
+Note: set `ImGuiBackendFlags_RendererHasVtxOffset` to signify your backend can handle rendering with a vertex offset (`ImDrawCmd::VtxOffset` field).
+Otherwise, rendering will be limited to 64K vertices per window, which may be limiting for advanced plot.
+As an alternative, you may also use `#define ImDrawIdx unsigned int` in your `imconfig.h` file to support 32-bit indices.
+
+```cpp
+void MyImGuiBackend_RenderDrawData(ImDrawData* draw_data)
+{
+    // TODO: Update textures.
+    // - Most of the times, the list will have 1 element with an OK status, aka nothing to do.
+    // - This almost always points to ImGui::GetPlatformIO().Textures[] but is part of ImDrawData to allow overriding or disabling texture updates.
+    if (draw_data->Textures != nullptr)
+        for (ImTextureData* tex : *draw_data->Textures)
+            if (tex->Status != ImTextureStatus_OK)
+                MyImGuiBackend_UpdateTexture(tex);
+
+    // TODO: Setup render state:
+    // - Alpha-blending enabled
+    // - No backface culling
+    // - No depth testing, no depth writing
+    // - Scissor enabled
+    MyEngineSetupenderState();
+
+    // TODO: Setup texture sampling state
+    // - Sample with bilinear filtering (NOT point/nearest filtering).
+    // - Use 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines;' to allow point/nearest filtering.
+
+    // TODO: Setup viewport covering draw_data->DisplayPos to draw_data->DisplayPos + draw_data->DisplaySize
+
+    // TODO: Setup orthographic projection matrix cover draw_data->DisplayPos to draw_data->DisplayPos + draw_data->DisplaySize
+
+    // TODO: Setup shader: vertex { float2 pos, float2 uv, u32 color }, fragment shader sample color from 1 texture, multiply by vertex color.
+
+    // Render command lists
+    ImVec2 clip_off = draw_data->DisplayPos;
+    ImVec2 clip_scale = draw_data->FramebufferScale;
+    for (int n = 0; n < draw_data->CmdListsCount; n++)
+    {
+        const ImDrawList* cmd_list = draw_data->CmdLists[n];
+        const ImDrawVert* vtx_buffer = cmd_list->VtxBuffer.Data;  // vertex buffer generated by Dear ImGui
+        const ImDrawIdx* idx_buffer = cmd_list->IdxBuffer.Data;   // index buffer generated by Dear ImGui
+        for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
+        {
+            const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
+            if (pcmd->UserCallback)
+            {
+                if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
+                    MyEngineSetupenderState();
+                else
+                    pcmd->UserCallback(cmd_list, pcmd);
+            }
+            else
+            {
+                // Project scissor/clipping rectangles into framebuffer space
+                // - Clipping coordinates are provided in imgui coordinates space:
+                //   - For a given viewport, draw_data->DisplayPos == viewport->Pos and draw_data->DisplaySize == viewport->Size
+                //   - In a single viewport application, draw_data->DisplayPos == (0,0) and draw_data->DisplaySize == io.DisplaySize, but always use GetMainViewport()->Pos/Size instead of hardcoding those values.
+                //   - In the interest of supporting multi-viewport applications (see 'docking' branch on github),
+                //     always subtract draw_data->DisplayPos from clipping bounds to convert them to your viewport space.
+                // - Note that pcmd->ClipRect contains Min+Max bounds. Some graphics API may use Min+Max, other may use Min+Size (size being Max-Min)
+                ImVec2 clip_min((pcmd->ClipRect.x - clip_off.x) * clip_scale.x, (pcmd->ClipRect.y - clip_off.y) * clip_scale.y);
+                ImVec2 clip_max((pcmd->ClipRect.z - clip_off.x) * clip_scale.x, (pcmd->ClipRect.w - clip_off.y) * clip_scale.y);
+                if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)
+                    continue;
+
+                // We are using scissoring to clip some objects. All low-level graphics API should support it.
+                // - If your engine doesn't support scissoring yet, you may ignore this at first. You will get some small glitches
+                //   (some elements visible outside their bounds) but you can fix that once everything else works!
+                MyEngineSetScissor(clip_min.x, clip_min.y, clip_max.x, clip_max.y);
+
+                // The texture for the draw call is specified by pcmd->GetTexID().
+                // The vast majority of draw calls will use the Dear ImGui texture atlas, which value you have set yourself during initialization.
+                MyEngineBindTexture((MyTexture*)pcmd->GetTexID());
+
+                // Render 'pcmd->ElemCount/3' indexed triangles.
+                // By default the indices ImDrawIdx are 16-bit, you can change them to 32-bit in imconfig.h if your engine doesn't support 16-bit indices.
+                MyEngineDrawIndexedTriangles(pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, idx_buffer + pcmd->IdxOffset, vtx_buffer, pcmd->VtxOffset);
+            }
+        }
+    }
+}
+```
+
+### Rendering: Adding support for `ImGuiBackendFlags_RendererHasTextures` (1.92+)
+
+Version [1.92.0](https://github.com/ocornut/imgui/releases/tag/v1.92.0) (June 2025), added texture support in Rendering Backends, which is the backbone for supporting dynamic font scaling among other things.
+
+**In order to move forward and take advantage of all new features, support for `ImGuiBackendFlags_RendererHasTextures` will likely be REQUIRED for all backends before June 2026.**
+
+**TD;DR: List of commits which added support for `ImGuiBackendFlags_RendererHasTextures` in standard backends:**
+
+- Allegro5: [ee8941e](https://github.com/ocornut/imgui/commit/ee8941e) (+35 lines)
+- DirectX9: [75efba7](https://github.com/ocornut/imgui/commit/75efba7) (+48 lines)
+- DirectX10: [2d2b1bc](https://github.com/ocornut/imgui/commit/2d2b1bc) (+40 lines)
+- DirectX11: [372fd27](https://github.com/ocornut/imgui/commit/372fd27) (+40 lines)
+- DirectX12: [eefe5d5](https://github.com/ocornut/imgui/commit/eefe5d5) (+87 lines)
+- Metal: [26c017d](https://github.com/ocornut/imgui/commit/26c017d) (+55 lines)
+- OpenGL Legacy: [0430c55](https://github.com/ocornut/imgui/commit/0430c55) (+25 lines)
+- OpenGL3/WebGL/ES: [dbb91a5](https://github.com/ocornut/imgui/commit/dbb91a5) (+47 lines)
+- SDL_Renderer2: [9fa65cd](https://github.com/ocornut/imgui/commit/9fa65cd) (+20 lines)
+- SDL_Renderer3: [e538883](https://github.com/ocornut/imgui/commit/e538883) (+19 lines)
+- SDL_GPU: [16fe666](https://github.com/ocornut/imgui/commit/16fe666) (+41 lines)
+- Vulkan: [abe294b](https://github.com/ocornut/imgui/commit/abe294b) (+33 lines)
+- WGPU: [571dae9](https://github.com/ocornut/imgui/commit/571dae9) (+30 lines)
+
+**Instructions**
+
+- Set `ImGuiBackendFlags_RendererHasTextures` to signify your backend can handle the feature.
+- During rendering, e.g. in your RenderDrawData function, iterate `ImDrawData->Textures` array and process all textures.
+- During shutdown, iterate the `ImGui::GetPlatformIO().Textures` and destroy all textures.
+- (Both arrays are `ImVector<ImTextureData*>`. They are only in different location because: to allow advanced users to perform multi-threaded rendering, we store a pointer to the texture list in ImDrawData, with the aim that multi-threaded rendering users replace it with their own pointer.)
+
+Pseudo-code for processing a texture:
+```cpp
+if (draw_data->Textures != nullptr)
+    for (ImTextureData* tex : *draw_data->Textures)
+        if (tex->Status != ImTextureStatus_OK)
+            MyImGuiBackend_UpdateTexture(tex);
+```
+```cpp
+void MyImGuiBackend_UpdateTexture(ImTextureData* tex)
+{
+    if (tex->Status == ImTextureStatus_WantCreate)
+    {
+        // Create texture based on tex->Width, tex->Height.
+        // - Most backends only support tex->Format == ImTextureFormat_RGBA32.
+        // - Backends for particularly memory constrainted platforms may support tex->Format == ImTextureFormat_Alpha8.
+
+        // Upload all texture pixels
+        // - Read from our CPU-side copy of the texture and copy to your graphics API.
+        // - Use tex->Width, tex->Height, tex->GetPixels(), tex->GetPixelsAt(), tex->GetPitch() as needed.
+
+        // Store your data, and acknowledge creation.
+        tex->SetTexID(xxxx); // Specify backend-specific ImTextureID identifier which will be stored in ImDrawCmd.
+        tex->SetStatus(ImTextureStatus_OK);
+        tex->BackendUserData = xxxx; // Store more backend data if needed (most backend allocate a small texture to store data in there)
+    }
+    if (tex->Status == ImTextureStatus_WantUpdates)
+    {
+        // Upload a rectangle of pixels to the existing texture
+        // - We only ever write to textures regions which have never been used before!
+        // - Use tex->TexID or tex->BackendUserData to retrieve your stored data.
+        // - Use tex->UpdateRect.x/y, tex->UpdateRect.w/h to obtain the block position and size.
+        //   - Use tex->Updates[] to obtain individual sub-regions within tex->UpdateRect. Not recommended.
+        // - Read from our CPU-side copy of the texture and copy to your graphics API.
+        // - Use tex->Width, tex->Height, tex->GetPixels(), tex->GetPixelsAt(), tex->GetPitch() as needed.
+
+        // Acknowledge update
+        tex->SetStatus(ImTextureStatus_OK);
+    }
+    if (tex->Status == ImTextureStatus_WantDestroy && tex->UnusedFrames > 0)
+    {
+        // If you use staged rendering and have in-flight renders, changed tex->UnusedFrames > 0 check to higher count as needed e.g. > 2
+
+        // Destroy texture
+        // - Use tex->TexID or tex->BackendUserData to retrieve your stored data.
+        // - Destroy texture in your graphics API.
+
+        // Acknowledge destruction
+        tex->SetTexID(ImTextureID_Invalid);
+        tex->SetStatus(ImTextureStatus_Destroyed);
+    }
+}
+```
+Refer to "List of commits which added support for `ImGuiBackendFlags_RendererHasTextures` in standard backends" above for concrete examples of this.

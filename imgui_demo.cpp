@@ -8230,7 +8230,12 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         // General
         SeparatorText("General");
         if ((GetIO().BackendFlags & ImGuiBackendFlags_RendererHasTextures) == 0)
+        {
             BulletText("Warning: Font scaling will NOT be smooth, because\nImGuiBackendFlags_RendererHasTextures is not set!");
+            BulletText("For instructions, see:");
+            SameLine();
+            TextLinkOpenURL("docs/BACKENDS.md", "https://github.com/ocornut/imgui/blob/master/docs/BACKENDS.md");
+        }
 
         if (ShowStyleSelector("Colors##Selector"))
             ref_saved_style = style;
