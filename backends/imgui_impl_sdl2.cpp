@@ -118,6 +118,9 @@
 #ifdef __EMSCRIPTEN__
 #include <emscripten/em_js.h>
 #endif
+#ifdef Status // X11 headers
+#undef Status
+#endif
 
 #if SDL_VERSION_ATLEAST(2,0,4) && !defined(__EMSCRIPTEN__) && !defined(__ANDROID__) && !(defined(__APPLE__) && TARGET_OS_IOS) && !defined(__amigaos4__)
 #define SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE    1
