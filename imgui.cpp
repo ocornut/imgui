@@ -416,9 +416,12 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
                          - To use old behavior: use 'ImGui::PushFont(font, font->LegacySize)' at call site.
                          - Kept inline single parameter function. Will obsolete.
                        - Fonts: **IMPORTANT** on Font Merging:
-                         - When searching for a glyph in multiple merged fonts: font inputs are now scanned in orderfor the first font input which the desired glyph. This is technically a different behavior than before!
-                         - e.g. If you are merging fonts you may have glyphs that you expected to load from Font Source 2 which exists in Font Source 1. After the update and when using a new backend, those glyphs may now loaded from Font Source 1!
-                         - You can use `ImFontConfig::GlyphExcludeRanges[]` to specify ranges to ignore in given Input:
+                         - When searching for a glyph in multiple merged fonts: we search for the FIRST font source which contains the desired glyph.
+                           Because the user doesn't need to provide glyph ranges any more, it is possible that a glyph that you expected to fetch from a secondary/merged icon font may be erroneously fetched from the primary font.
+                         - When searching for a glyph in multiple merged fonts: we now search for the FIRST font source which contains the desired glyph. This is technically a different behavior than before!
+                         - e.g. If you are merging fonts you may have glyphs that you expected to load from Font Source 2 which exists in Font Source 1.
+                           After the update and when using a new backend, those glyphs may now loaded from Font Source 1!
+                         - We added `ImFontConfig::GlyphExcludeRanges[]` to specify ranges to exclude from a given font source:
                              // Add Font Source 1 but ignore ICON_MIN_FA..ICON_MAX_FA range
                              static ImWchar exclude_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
                              ImFontConfig cfg1;

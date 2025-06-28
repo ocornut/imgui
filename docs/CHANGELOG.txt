@@ -117,13 +117,11 @@ Breaking changes:
      `PushFont(NULL, some_size)` now keeps current change and changes size.
    - Renamed/moved 'io.FontGlobalScale' to 'style.FontScaleMain'.
 - Fonts: **IMPORTANT** on Font Merging:
-  - When searching for a glyph in multiple merged fonts: font inputs are now scanned in order
-    for the first font input which the desired glyph. This is technically a different behavior
-    than before!
-  - e.g. If you are merging fonts you may have glyphs that you expected to load from
-    Font Source 2 which exists in Font Source 1. After the update and when using a new backend,
-    those glyphs may now loaded from Font Source 1!
-  - You can use `ImFontConfig::GlyphExcludeRanges[]` to specify ranges to ignore in given Input:
+  - When searching for a glyph in multiple merged fonts: we search for the FIRST font source
+    which contains the desired glyph. Because the user doesn't need to provide glyph ranges
+    any more, it is possible that a glyph that you expected to fetch from a secondary/merged
+    icon font may be erroneously fetched from the primary font.
+  - We added `ImFontConfig::GlyphExcludeRanges[]` to specify ranges to exclude from a given font source:
         // Add Font Source 1 but ignore ICON_MIN_FA..ICON_MAX_FA range
         static ImWchar exclude_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
         ImFontConfig cfg1;
