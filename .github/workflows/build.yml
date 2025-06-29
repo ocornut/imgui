@@ -51,15 +51,11 @@ jobs:
       - name: Build example_null (mingw 64-bit, as DLL)
         shell: bash
         run: |
-          echo '#ifdef _EXPORT'                                  >  example_single_file.cpp
-          echo '#  define IMGUI_API __declspec(dllexport)'       >> example_single_file.cpp
-          echo '#else'                                           >> example_single_file.cpp
-          echo '#  define IMGUI_API __declspec(dllimport)'       >> example_single_file.cpp
-          echo '#endif'                                          >> example_single_file.cpp
+          echo '#define IMGUI_API __declspec(dllexport)'         >  example_single_file.cpp
           echo '#define IMGUI_IMPLEMENTATION'                    >> example_single_file.cpp
           echo '#include "misc/single_file/imgui_single_file.h"' >> example_single_file.cpp
-          g++ -I. -Wall -Wformat -D_EXPORT -shared -o libimgui.dll -Wl,--out-implib,libimgui.a example_single_file.cpp -limm32
-          g++ -I. -Wall -Wformat -o example_null.exe examples/example_null/main.cpp -L. -limgui
+          g++ -I. -Wall -Wformat -shared -o libimgui.dll -Wl,--out-implib,libimgui.a example_single_file.cpp -limm32
+          g++ -I. -Wall -Wformat -DIMGUI_API='__declspec(dllimport)' -o example_null.exe examples/example_null/main.cpp -L. -limgui
           rm -f example_null.exe libimgui.* example_single_file.*
 
       - name: Build example_null (extra warnings, msvc 64-bit)
@@ -99,16 +95,12 @@ jobs:
         run: |
           call "%VS_PATH%\VC\Auxiliary\Build\vcvars64.bat"
 
-          echo #ifdef _EXPORT                                  >  example_single_file.cpp
-          echo #  define IMGUI_API __declspec(dllexport)       >> example_single_file.cpp
-          echo #else                                           >> example_single_file.cpp
-          echo #  define IMGUI_API __declspec(dllimport)       >> example_single_file.cpp
-          echo #endif                                          >> example_single_file.cpp
+          echo #define IMGUI_API __declspec(dllexport)         >  example_single_file.cpp
           echo #define IMGUI_IMPLEMENTATION                    >> example_single_file.cpp
           echo #include "misc/single_file/imgui_single_file.h" >> example_single_file.cpp
 
-          cl.exe /D_USRDLL /D_WINDLL /D_EXPORT /I. example_single_file.cpp /LD /FeImGui.dll /link
-          cl.exe /I. ImGui.lib /Feexample_null.exe examples/example_null/main.cpp
+          cl.exe /D_USRDLL /D_WINDLL /I. example_single_file.cpp /LD /FeImGui.dll /link
+          cl.exe /DIMGUI_API=__declspec(dllimport) /I. ImGui.lib /Feexample_null.exe examples/example_null/main.cpp
 
       - name: Build Win32 example_glfw_opengl2
         shell: cmd
