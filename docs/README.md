@@ -110,7 +110,7 @@ Reading the changelogs is a good way to keep up to date with the things Dear ImG
 Calling the `ImGui::ShowDemoWindow()` function will create a demo window showcasing a variety of features and examples. The code is always available for reference in `imgui_demo.cpp`. [Here's how the demo looks](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v167/v167-misc.png).
 
 You should be able to build the examples from sources. If you don't, let us know! If you want to have a quick look at some Dear ImGui features, you can download Windows binaries of the demo app here:
-- [imgui-demo-binaries-20241211.zip](https://www.dearimgui.com/binaries/imgui-demo-binaries-20241211.zip) (Windows, 1.91.6, built 2024/11/11, master) or [older binaries](https://www.dearimgui.com/binaries).
+- [imgui-demo-binaries-20250625.zip](https://www.dearimgui.com/binaries/imgui-demo-binaries-20250625.zip) (Windows, 1.92.0, built 2025/06/25, master) or [older binaries](https://www.dearimgui.com/binaries).
 
 The demo applications are not DPI aware so expect some blurriness on a 4K screen. For DPI awareness in your application, you can load/reload your font at a different scale and scale your style with `style.ScaleAllSizes()` (see [FAQ](https://www.dearimgui.com/faq)).
 
@@ -120,7 +120,7 @@ See the [Getting Started](https://github.com/ocornut/imgui/wiki/Getting-Started)
 
 On most platforms and when using C++, **you should be able to use a combination of the [imgui_impl_xxxx](https://github.com/ocornut/imgui/tree/master/backends) backends without modification** (e.g. `imgui_impl_win32.cpp` + `imgui_impl_dx11.cpp`). If your engine supports multiple platforms, consider using more imgui_impl_xxxx files instead of rewriting them: this will be less work for you, and you can get Dear ImGui running immediately. You can _later_ decide to rewrite a custom backend using your custom engine functions if you wish so.
 
-Integrating Dear ImGui within your custom engine is a matter of 1) wiring mouse/keyboard/gamepad inputs 2) uploading a texture to your GPU/render engine 3) providing a render function that can bind textures and render textured triangles, which is essentially what Backends are doing. The [examples/](https://github.com/ocornut/imgui/tree/master/examples) folder is populated with applications doing just that: setting up a window and using backends. If you follow the [Getting Started](https://github.com/ocornut/imgui/wiki/Getting-Started) guide it should in theory takes you less than an hour to integrate Dear ImGui.  **Make sure to spend time reading the [FAQ](https://www.dearimgui.com/faq), comments, and the examples applications!**
+Integrating Dear ImGui within your custom engine is a matter of 1) wiring mouse/keyboard/gamepad inputs 2) uploading a texture to your GPU/render engine 3) providing a render function that can bind textures and render textured triangles, which is essentially what Backends are doing. The [examples/](https://github.com/ocornut/imgui/tree/master/examples) folder is populated with applications doing just that: setting up a window and using backends. If you follow the [Getting Started](https://github.com/ocornut/imgui/wiki/Getting-Started) guide it should in theory take you less than an hour to integrate Dear ImGui.  **Make sure to spend time reading the [FAQ](https://www.dearimgui.com/faq), comments, and the examples applications!**
 
 Officially maintained backends/bindings (in repository):
 - Renderers: DirectX9, DirectX10, DirectX11, DirectX12, Metal, OpenGL/ES/ES2, SDL_GPU, SDL_Renderer2/3, Vulkan, WebGPU.

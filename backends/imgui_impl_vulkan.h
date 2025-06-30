@@ -2,8 +2,9 @@
 // This needs to be used along with a Platform Backend (e.g. GLFW, SDL, Win32, custom..)
 
 // Implemented features:
-//  [!] Renderer: User texture binding. Use 'VkDescriptorSet' as ImTextureID. Call ImGui_ImplVulkan_AddTexture() to register one. Read the FAQ about ImTextureID! See https://github.com/ocornut/imgui/pull/914 for discussions.
+//  [!] Renderer: User texture binding. Use 'VkDescriptorSet' as texture identifier. Call ImGui_ImplVulkan_AddTexture() to register one. Read the FAQ about ImTextureID/ImTextureRef + https://github.com/ocornut/imgui/pull/914 for discussions.
 //  [X] Renderer: Large meshes support (64k+ vertices) even with 16-bit indices (ImGuiBackendFlags_RendererHasVtxOffset).
+//  [X] Renderer: Texture updates support for dynamic font atlas (ImGuiBackendFlags_RendererHasTextures).
 //  [X] Renderer: Expose selected render state for draw callbacks to use. Access in '(ImGui_ImplXXXX_RenderState*)GetPlatformIO().Renderer_RenderState'.
 //  [x] Renderer: Multi-viewport / platform windows. With issues (flickering when creating a new viewport).
 
@@ -62,9 +63,8 @@
 #define IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
 #endif
 
-// Current version of the backend use 1 descriptor for the font atlas + as many as additional calls done to ImGui_ImplVulkan_AddTexture().
-// It is expected that as early as Q1 2025 the backend will use a few more descriptors. Use this value + number of desired calls to ImGui_ImplVulkan_AddTexture().
-#define IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE   (1)     // Minimum per atlas
+// Backend uses a small number of descriptors per font atlas + as many as additional calls done to ImGui_ImplVulkan_AddTexture().
+#define IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE   (8)     // Minimum per atlas
 
 // Initialization data, for ImGui_ImplVulkan_Init()
 // [Please zero-clear before use!]
@@ -76,16 +76,17 @@
 //   - When using dynamic rendering, set UseDynamicRendering=true and fill PipelineRenderingCreateInfo structure.
 struct ImGui_ImplVulkan_InitInfo
 {
+    uint32_t                        ApiVersion;                 // Fill with API version of Instance, e.g. VK_API_VERSION_1_3 or your value of VkApplicationInfo::apiVersion. May be lower than header version (VK_HEADER_VERSION_COMPLETE)
     VkInstance                      Instance;
     VkPhysicalDevice                PhysicalDevice;
     VkDevice                        Device;
     uint32_t                        QueueFamily;
     VkQueue                         Queue;
-    VkDescriptorPool                DescriptorPool;               // See requirements in note above; ignored if using DescriptorPoolSize > 0
-    VkRenderPass                    RenderPass;                   // Ignored if using dynamic rendering
-    uint32_t                        MinImageCount;                // >= 2
-    uint32_t                        ImageCount;                   // >= MinImageCount
-    VkSampleCountFlagBits           MSAASamples;                  // 0 defaults to VK_SAMPLE_COUNT_1_BIT
+    VkDescriptorPool                DescriptorPool;             // See requirements in note above; ignored if using DescriptorPoolSize > 0
+    VkRenderPass                    RenderPass;                 // Ignored if using dynamic rendering
+    uint32_t                        MinImageCount;              // >= 2
+    uint32_t                        ImageCount;                 // >= MinImageCount
+    VkSampleCountFlagBits           MSAASamples;                // 0 defaults to VK_SAMPLE_COUNT_1_BIT
 
     // (Optional)
     VkPipelineCache                 PipelineCache;
@@ -104,7 +105,7 @@ struct ImGui_ImplVulkan_InitInfo
     // (Optional) Allocation, Debugging
     const VkAllocationCallbacks*    Allocator;
     void                            (*CheckVkResultFn)(VkResult err);
-    VkDeviceSize                    MinAllocationSize;      // Minimum allocation size. Set to 1024*1024 to satisfy zealous best practices validation layer and waste a little memory.
+    VkDeviceSize                    MinAllocationSize;          // Minimum allocation size. Set to 1024*1024 to satisfy zealous best practices validation layer and waste a little memory.
 };
 
 // Follow "Getting Started" link and check examples/ folder to learn about using backends!
@@ -112,9 +113,10 @@ IMGUI_IMPL_API bool             ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo*
 IMGUI_IMPL_API void             ImGui_ImplVulkan_Shutdown();
 IMGUI_IMPL_API void             ImGui_ImplVulkan_NewFrame();
 IMGUI_IMPL_API void             ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer, VkPipeline pipeline = VK_NULL_HANDLE);
-IMGUI_IMPL_API bool             ImGui_ImplVulkan_CreateFontsTexture();
-IMGUI_IMPL_API void             ImGui_ImplVulkan_DestroyFontsTexture();
 IMGUI_IMPL_API void             ImGui_ImplVulkan_SetMinImageCount(uint32_t min_image_count); // To override MinImageCount after initialization (e.g. if swap chain is recreated)
+
+// (Advanced) Use e.g. if you need to precisely control the timing of texture updates (e.g. for staged rendering), by setting ImDrawData::Textures = NULL to handle this manually.
+IMGUI_IMPL_API void             ImGui_ImplVulkan_UpdateTexture(ImTextureData* tex);
 
 // Register a texture (VkDescriptorSet == ImTextureID)
 // FIXME: This is experimental in the sense that we are unsure how to best design/tackle this problem
@@ -124,7 +126,7 @@ IMGUI_IMPL_API void             ImGui_ImplVulkan_RemoveTexture(VkDescriptorSet d
 
 // Optional: load Vulkan functions with a custom function loader
 // This is only useful with IMGUI_IMPL_VULKAN_NO_PROTOTYPES / VK_NO_PROTOTYPES
-IMGUI_IMPL_API bool             ImGui_ImplVulkan_LoadFunctions(PFN_vkVoidFunction(*loader_func)(const char* function_name, void* user_data), void* user_data = nullptr);
+IMGUI_IMPL_API bool             ImGui_ImplVulkan_LoadFunctions(uint32_t api_version, PFN_vkVoidFunction(*loader_func)(const char* function_name, void* user_data), void* user_data = nullptr);
 
 // [BETA] Selected render state data shared with callbacks.
 // This is temporarily stored in GetPlatformIO().Renderer_RenderState during the ImGui_ImplVulkan_RenderDrawData() call.

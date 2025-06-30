@@ -43,11 +43,11 @@ ifeq ($(UNAME_S), Darwin) #APPLE
 endif
 
 ifeq ($(OS), Windows_NT)
-    ECHO_MESSAGE = "MinGW"
-    LIBS += -lgdi32 -limm32 `pkg-config --static --libs sdl3`
+	ECHO_MESSAGE = "MinGW"
+	LIBS += -lgdi32 -limm32 `pkg-config --static --libs sdl3`
 
-    CXXFLAGS += `pkg-config --cflags sdl3`
-    CFLAGS = $(CXXFLAGS)
+	CXXFLAGS += `pkg-config --cflags sdl3`
+	CFLAGS = $(CXXFLAGS)
 endif
 
 ##---------------------------------------------------------------------

@@ -20,6 +20,9 @@
 #include <stdlib.h>         // abort
 #include <SDL.h>
 #include <SDL_vulkan.h>
+#ifdef _WIN32
+#include <windows.h>        // SetProcessDPIAware()
+#endif
 
 // Volk headers
 #ifdef IMGUI_IMPL_VULKAN_USE_VOLK
@@ -30,6 +33,7 @@
 //#define APP_USE_UNLIMITED_FRAME_RATE
 #ifdef _DEBUG
 #define APP_USE_VULKAN_DEBUG_REPORT
+static VkDebugReportCallbackEXT g_DebugReport = VK_NULL_HANDLE;
 #endif
 
 // Data
@@ -39,7 +43,6 @@ static VkPhysicalDevice         g_PhysicalDevice = VK_NULL_HANDLE;
 static VkDevice                 g_Device = VK_NULL_HANDLE;
 static uint32_t                 g_QueueFamily = (uint32_t)-1;
 static VkQueue                  g_Queue = VK_NULL_HANDLE;
-static VkDebugReportCallbackEXT g_DebugReport = VK_NULL_HANDLE;
 static VkPipelineCache          g_PipelineCache = VK_NULL_HANDLE;
 static VkDescriptorPool         g_DescriptorPool = VK_NULL_HANDLE;
 
@@ -217,7 +220,7 @@ static void SetupVulkanWindow(ImGui_ImplVulkanH_Window* wd, VkSurfaceKHR surface
     wd->SurfaceFormat = ImGui_ImplVulkanH_SelectSurfaceFormat(g_PhysicalDevice, wd->Surface, requestSurfaceImageFormat, (size_t)IM_ARRAYSIZE(requestSurfaceImageFormat), requestSurfaceColorSpace);
 
     // Select Present Mode
-#ifdef APP_UNLIMITED_FRAME_RATE
+#ifdef APP_USE_UNLIMITED_FRAME_RATE
     VkPresentModeKHR present_modes[] = { VK_PRESENT_MODE_MAILBOX_KHR, VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_FIFO_KHR };
 #else
     VkPresentModeKHR present_modes[] = { VK_PRESENT_MODE_FIFO_KHR };
@@ -340,6 +343,9 @@ static void FramePresent(ImGui_ImplVulkanH_Window* wd)
 int main(int, char**)
 {
     // Setup SDL
+#ifdef _WIN32
+    ::SetProcessDPIAware();
+#endif
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
     {
         printf("Error: %s\n", SDL_GetError());
@@ -352,8 +358,9 @@ int main(int, char**)
 #endif
 
     // Create window with Vulkan graphics context
+    float main_scale = ImGui_ImplSDL2_GetContentScaleForDisplay(0);
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
-    SDL_Window* window = SDL_CreateWindow("Dear ImGui SDL2+Vulkan example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags);
+    SDL_Window* window = SDL_CreateWindow("Dear ImGui SDL2+Vulkan example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, (int)(1280 * main_scale), (int)(720 * main_scale), window_flags);
     if (window == nullptr)
     {
         printf("Error: SDL_CreateWindow(): %s\n", SDL_GetError());
@@ -397,8 +404,14 @@ int main(int, char**)
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsLight();
 
-    // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
+    // Setup scaling
     ImGuiStyle& style = ImGui::GetStyle();
+    style.ScaleAllSizes(main_scale);        // Bake a fixed style scale. (until we have a solution for dynamic style scaling, changing this requires resetting Style + calling this again)
+    style.FontScaleDpi = main_scale;        // Set initial font scale. (using io.ConfigDpiScaleFonts=true makes this unnecessary. We leave both here for documentation purpose)
+    io.ConfigDpiScaleFonts = true;          // [Experimental] Automatically overwrite style.FontScaleDpi in Begin() when Monitor DPI changes. This will scale fonts but _NOT_ scale sizes/padding for now.
+    io.ConfigDpiScaleViewports = true;      // [Experimental] Scale Dear ImGui and Platform Windows when Monitor DPI changes.
+
+    // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
     {
         style.WindowRounding = 0.0f;
@@ -408,6 +421,7 @@ int main(int, char**)
     // Setup Platform/Renderer backends
     ImGui_ImplSDL2_InitForVulkan(window);
     ImGui_ImplVulkan_InitInfo init_info = {};
+    //init_info.ApiVersion = VK_API_VERSION_1_3;              // Pass in your value of VkApplicationInfo::apiVersion, otherwise will default to header version.
     init_info.Instance = g_Instance;
     init_info.PhysicalDevice = g_PhysicalDevice;
     init_info.Device = g_Device;
@@ -428,16 +442,16 @@ int main(int, char**)
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
     // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
     // - If the file cannot be loaded, the function will return a nullptr. Please handle those errors in your application (e.g. use an assertion, or display an error and quit).
-    // - The fonts will be rasterized at a given size (w/ oversampling) and stored into a texture when calling ImFontAtlas::Build()/GetTexDataAsXXXX(), which ImGui_ImplXXXX_NewFrame below will call.
     // - Use '#define IMGUI_ENABLE_FREETYPE' in your imconfig file to use Freetype for higher quality font rendering.
     // - Read 'docs/FONTS.md' for more instructions and details.
     // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
+    //style.FontSizeBase = 20.0f;
     //io.Fonts->AddFontDefault();
-    //io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf", 18.0f);
-    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
-    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 16.0f);
-    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
-    //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
+    //io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf");
+    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf");
+    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf");
+    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf");
+    //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf");
     //IM_ASSERT(font != nullptr);
 
     // Our state

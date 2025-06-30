@@ -1,17 +1,18 @@
 // dear imgui: Renderer Backend for SDL_Renderer for SDL3
-// (Requires: SDL 3.0.0+)
+// (Requires: SDL 3.1.8+)
 
-// (**IMPORTANT: SDL 3.0.0 is NOT YET RELEASED AND CURRENTLY HAS A FAST CHANGING API. THIS CODE BREAKS OFTEN AS SDL3 CHANGES.**)
-
-// Note how SDL_Renderer is an _optional_ component of SDL3.
-// For a multi-platform app consider using e.g. SDL+DirectX on Windows and SDL+OpenGL on Linux/OSX.
-// If your application will want to render any non trivial amount of graphics other than UI,
-// please be aware that SDL_Renderer currently offers a limited graphic API to the end-user and
-// it might be difficult to step out of those boundaries.
+// Note that SDL_Renderer is an _optional_ component of SDL3, which IMHO is now largely obsolete.
+// For a multi-platform app consider using other technologies:
+// - SDL3+SDL_GPU: SDL_GPU is SDL3 new graphics abstraction API.
+// - SDL3+DirectX, SDL3+OpenGL, SDL3+Vulkan: combine SDL with dedicated renderers.
+// If your application wants to render any non trivial amount of graphics other than UI,
+// please be aware that SDL_Renderer currently offers a limited graphic API to the end-user
+// and it might be difficult to step out of those boundaries.
 
 // Implemented features:
-//  [X] Renderer: User texture binding. Use 'SDL_Texture*' as ImTextureID. Read the FAQ about ImTextureID!
+//  [X] Renderer: User texture binding. Use 'SDL_Texture*' as texture identifier. Read the FAQ about ImTextureID/ImTextureRef!
 //  [X] Renderer: Large meshes support (64k+ vertices) even with 16-bit indices (ImGuiBackendFlags_RendererHasVtxOffset).
+//  [X] Renderer: Texture updates support for dynamic font atlas (ImGuiBackendFlags_RendererHasTextures).
 //  [X] Renderer: Expose selected render state for draw callbacks to use. Access in '(ImGui_ImplXXXX_RenderState*)GetPlatformIO().Renderer_RenderState'.
 // Missing features:
 //  [ ] Renderer: Multi-viewport support (multiple windows).
@@ -25,6 +26,8 @@
 // - Introduction, links and more at the top of imgui.cpp
 
 // CHANGELOG
+//  2025-06-11: Added support for ImGuiBackendFlags_RendererHasTextures, for dynamic font atlas. Removed ImGui_ImplSDLRenderer3_CreateFontsTexture() and ImGui_ImplSDLRenderer3_DestroyFontsTexture().
+//  2025-01-18: Use endian-dependent RGBA32 texture format, to match SDL_Color.
 //  2024-10-09: Expose selected render state in ImGui_ImplSDLRenderer3_RenderState, which you can access in 'void* platform_io.Renderer_RenderState' during draw callbacks.
 //  2024-07-01: Update for SDL3 api changes: SDL_RenderGeometryRaw() uint32 version was removed (SDL#9009).
 //  2024-05-14: *BREAKING CHANGE* ImGui_ImplSDLRenderer3_RenderDrawData() requires SDL_Renderer* passed as parameter.
@@ -40,6 +43,8 @@
 #if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wsign-conversion"    // warning: implicit conversion changes signedness
+#elif defined(__GNUC__)
+#pragma GCC diagnostic ignored "-Wfloat-equal"          // warning: comparing floating-point with '==' or '!=' is unsafe
 #endif
 
 // SDL
@@ -52,7 +57,6 @@
 struct ImGui_ImplSDLRenderer3_Data
 {
     SDL_Renderer*           Renderer;       // Main viewport's renderer
-    SDL_Texture*            FontTexture;
     ImVector<SDL_FColor>    ColorBuffer;
 
     ImGui_ImplSDLRenderer3_Data()   { memset((void*)this, 0, sizeof(*this)); }
@@ -78,6 +82,7 @@ bool ImGui_ImplSDLRenderer3_Init(SDL_Renderer* renderer)
     io.BackendRendererUserData = (void*)bd;
     io.BackendRendererName = "imgui_impl_sdlrenderer3";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;   // We can honor ImGuiPlatformIO::Textures[] requests during render.
 
     bd->Renderer = renderer;
 
@@ -94,25 +99,23 @@ void ImGui_ImplSDLRenderer3_Shutdown()
 
     io.BackendRendererName = nullptr;
     io.BackendRendererUserData = nullptr;
-    io.BackendFlags &= ~ImGuiBackendFlags_RendererHasVtxOffset;
+    io.BackendFlags &= ~(ImGuiBackendFlags_RendererHasVtxOffset | ImGuiBackendFlags_RendererHasTextures);
     IM_DELETE(bd);
 }
 
 static void ImGui_ImplSDLRenderer3_SetupRenderState(SDL_Renderer* renderer)
 {
-	// Clear out any viewports and cliprect set by the user
+    // Clear out any viewports and cliprect set by the user
     // FIXME: Technically speaking there are lots of other things we could backup/setup/restore during our render process.
-	SDL_SetRenderViewport(renderer, nullptr);
-	SDL_SetRenderClipRect(renderer, nullptr);
+    SDL_SetRenderViewport(renderer, nullptr);
+    SDL_SetRenderClipRect(renderer, nullptr);
 }
 
 void ImGui_ImplSDLRenderer3_NewFrame()
 {
     ImGui_ImplSDLRenderer3_Data* bd = ImGui_ImplSDLRenderer3_GetBackendData();
     IM_ASSERT(bd != nullptr && "Context or backend not initialized! Did you call ImGui_ImplSDLRenderer3_Init()?");
-
-    if (!bd->FontTexture)
-        ImGui_ImplSDLRenderer3_CreateDeviceObjects();
+    IM_UNUSED(bd);
 }
 
 // https://github.com/libsdl-org/SDL/issues/9009
@@ -137,21 +140,28 @@ void ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* 
 {
     ImGui_ImplSDLRenderer3_Data* bd = ImGui_ImplSDLRenderer3_GetBackendData();
 
-	// If there's a scale factor set by the user, use that instead
+    // If there's a scale factor set by the user, use that instead
     // If the user has specified a scale factor to SDL_Renderer already via SDL_RenderSetScale(), SDL will scale whatever we pass
     // to SDL_RenderGeometryRaw() by that scale factor. In that case we don't want to be also scaling it ourselves here.
     float rsx = 1.0f;
-	float rsy = 1.0f;
-	SDL_GetRenderScale(renderer, &rsx, &rsy);
+    float rsy = 1.0f;
+    SDL_GetRenderScale(renderer, &rsx, &rsy);
     ImVec2 render_scale;
-	render_scale.x = (rsx == 1.0f) ? draw_data->FramebufferScale.x : 1.0f;
-	render_scale.y = (rsy == 1.0f) ? draw_data->FramebufferScale.y : 1.0f;
+    render_scale.x = (rsx == 1.0f) ? draw_data->FramebufferScale.x : 1.0f;
+    render_scale.y = (rsy == 1.0f) ? draw_data->FramebufferScale.y : 1.0f;
 
-	// Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
-	int fb_width = (int)(draw_data->DisplaySize.x * render_scale.x);
-	int fb_height = (int)(draw_data->DisplaySize.y * render_scale.y);
-	if (fb_width == 0 || fb_height == 0)
-		return;
+    // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
+    int fb_width = (int)(draw_data->DisplaySize.x * render_scale.x);
+    int fb_height = (int)(draw_data->DisplaySize.y * render_scale.y);
+    if (fb_width == 0 || fb_height == 0)
+        return;
+
+    // Catch up with texture updates. Most of the times, the list will have 1 element with an OK status, aka nothing to do.
+    // (This almost always points to ImGui::GetPlatformIO().Textures[] but is part of ImDrawData to allow overriding or disabling texture updates).
+    if (draw_data->Textures != nullptr)
+        for (ImTextureData* tex : *draw_data->Textures)
+            if (tex->Status != ImTextureStatus_OK)
+                ImGui_ImplSDLRenderer3_UpdateTexture(tex);
 
     // Backup SDL_Renderer state that will be modified to restore it afterwards
     struct BackupSDLRendererState
@@ -176,9 +186,9 @@ void ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* 
     render_state.Renderer = renderer;
     platform_io.Renderer_RenderState = &render_state;
 
-	// Will project scissor/clipping rectangles into framebuffer space
-	ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
-	ImVec2 clip_scale = render_scale;
+    // Will project scissor/clipping rectangles into framebuffer space
+    ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
+    ImVec2 clip_scale = render_scale;
 
     // Render command lists
     for (int n = 0; n < draw_data->CmdListsCount; n++)
@@ -219,7 +229,7 @@ void ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* 
                 const SDL_Color* color = (const SDL_Color*)(const void*)((const char*)(vtx_buffer + pcmd->VtxOffset) + offsetof(ImDrawVert, col)); // SDL 2.0.19+
 
                 // Bind texture, Draw
-				SDL_Texture* tex = (SDL_Texture*)pcmd->GetTexID();
+                SDL_Texture* tex = (SDL_Texture*)pcmd->GetTexID();
                 SDL_RenderGeometryRaw8BitColor(renderer, bd->ColorBuffer, tex,
                     xy, (int)sizeof(ImDrawVert),
                     color, (int)sizeof(ImDrawVert),
@@ -236,55 +246,67 @@ void ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* 
     SDL_SetRenderClipRect(renderer, old.ClipEnabled ? &old.ClipRect : nullptr);
 }
 
-// Called by Init/NewFrame/Shutdown
-bool ImGui_ImplSDLRenderer3_CreateFontsTexture()
+void ImGui_ImplSDLRenderer3_UpdateTexture(ImTextureData* tex)
 {
-    ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplSDLRenderer3_Data* bd = ImGui_ImplSDLRenderer3_GetBackendData();
 
-    // Build texture atlas
-    unsigned char* pixels;
-    int width, height;
-    io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);   // Load as RGBA 32-bit (75% of the memory is wasted, but default font is so small) because it is more likely to be compatible with user's existing shaders. If your ImTextureId represent a higher-level concept than just a GL texture id, consider calling GetTexDataAsAlpha8() instead to save on GPU memory.
-
-    // Upload texture to graphics system
-    // (Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling)
-    bd->FontTexture = SDL_CreateTexture(bd->Renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, width, height);
-    if (bd->FontTexture == nullptr)
+    if (tex->Status == ImTextureStatus_WantCreate)
     {
-        SDL_Log("error creating texture");
-        return false;
+        // Create and upload new texture to graphics system
+        //IMGUI_DEBUG_LOG("UpdateTexture #%03d: WantCreate %dx%d\n", tex->UniqueID, tex->Width, tex->Height);
+        IM_ASSERT(tex->TexID == 0 && tex->BackendUserData == nullptr);
+        IM_ASSERT(tex->Format == ImTextureFormat_RGBA32);
+
+        // Create texture
+        // (Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling)
+        SDL_Texture* sdl_texture = SDL_CreateTexture(bd->Renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC, tex->Width, tex->Height);
+        IM_ASSERT(sdl_texture != nullptr && "Backend failed to create texture!");
+        SDL_UpdateTexture(sdl_texture, nullptr, tex->GetPixels(), tex->GetPitch());
+        SDL_SetTextureBlendMode(sdl_texture, SDL_BLENDMODE_BLEND);
+        SDL_SetTextureScaleMode(sdl_texture, SDL_SCALEMODE_LINEAR);
+
+        // Store identifiers
+        tex->SetTexID((ImTextureID)(intptr_t)sdl_texture);
+        tex->SetStatus(ImTextureStatus_OK);
     }
-    SDL_UpdateTexture(bd->FontTexture, nullptr, pixels, 4 * width);
-    SDL_SetTextureBlendMode(bd->FontTexture, SDL_BLENDMODE_BLEND);
-    SDL_SetTextureScaleMode(bd->FontTexture, SDL_SCALEMODE_LINEAR);
+    else if (tex->Status == ImTextureStatus_WantUpdates)
+    {
+        // Update selected blocks. We only ever write to textures regions which have never been used before!
+        // This backend choose to use tex->Updates[] but you can use tex->UpdateRect to upload a single region.
+        SDL_Texture* sdl_texture = (SDL_Texture*)(intptr_t)tex->TexID;
+        for (ImTextureRect& r : tex->Updates)
+        {
+            SDL_Rect sdl_r = { r.x, r.y, r.w, r.h };
+            SDL_UpdateTexture(sdl_texture, &sdl_r, tex->GetPixelsAt(r.x, r.y), tex->GetPitch());
+        }
+        tex->SetStatus(ImTextureStatus_OK);
+    }
+    else if (tex->Status == ImTextureStatus_WantDestroy)
+    {
+        SDL_Texture* sdl_texture = (SDL_Texture*)(intptr_t)tex->TexID;
+        if (sdl_texture == nullptr)
+            return;
+        SDL_DestroyTexture(sdl_texture);
 
-    // Store our identifier
-    io.Fonts->SetTexID((ImTextureID)(intptr_t)bd->FontTexture);
-
-    return true;
+        // Clear identifiers and mark as destroyed (in order to allow e.g. calling InvalidateDeviceObjects while running)
+        tex->SetTexID(ImTextureID_Invalid);
+        tex->SetStatus(ImTextureStatus_Destroyed);
+    }
 }
 
-void ImGui_ImplSDLRenderer3_DestroyFontsTexture()
+void ImGui_ImplSDLRenderer3_CreateDeviceObjects()
 {
-    ImGuiIO& io = ImGui::GetIO();
-    ImGui_ImplSDLRenderer3_Data* bd = ImGui_ImplSDLRenderer3_GetBackendData();
-    if (bd->FontTexture)
-    {
-        io.Fonts->SetTexID(0);
-        SDL_DestroyTexture(bd->FontTexture);
-        bd->FontTexture = nullptr;
-    }
-}
-
-bool ImGui_ImplSDLRenderer3_CreateDeviceObjects()
-{
-    return ImGui_ImplSDLRenderer3_CreateFontsTexture();
 }
 
 void ImGui_ImplSDLRenderer3_DestroyDeviceObjects()
 {
-    ImGui_ImplSDLRenderer3_DestroyFontsTexture();
+    // Destroy all textures
+    for (ImTextureData* tex : ImGui::GetPlatformIO().Textures)
+        if (tex->RefCount == 1)
+        {
+            tex->SetStatus(ImTextureStatus_WantDestroy);
+            ImGui_ImplSDLRenderer3_UpdateTexture(tex);
+        }
 }
 
 //-----------------------------------------------------------------------------

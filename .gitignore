@@ -29,12 +29,14 @@ ipch
 ## Getting files created in JSON/Schemas/Catalog/ from a VS2022 update
 JSON/
 
-## Commonly used CMake directories
+## Commonly used CMake directories & CMake CPM cache
 build*/
+.cache
 
-## Xcode artifacts
+## Xcode & macOS artifacts
 project.xcworkspace
 xcuserdata
+examples/*/*.dSYM
 
 ## Emscripten artifacts
 examples/*.o.tmp
@@ -49,13 +51,24 @@ examples/example_sdl2_opengl3/web/*
 .idea
 cmake-build-*
 
+## VS code artifacts
+.vscode
+
 ## Unix executables from our example Makefiles
+examples/example_apple_metal/example_apple_metal
+examples/example_apple_opengl2/example_apple_opengl2
 examples/example_glfw_metal/example_glfw_metal
 examples/example_glfw_opengl2/example_glfw_opengl2
 examples/example_glfw_opengl3/example_glfw_opengl3
+examples/example_glfw_vulkan/example_glfw_vulkan
 examples/example_glut_opengl2/example_glut_opengl2
 examples/example_null/example_null
 examples/example_sdl2_metal/example_sdl2_metal
 examples/example_sdl2_opengl2/example_sdl2_opengl2
 examples/example_sdl2_opengl3/example_sdl2_opengl3
-examples/example_sdl2_sdlrenderer/example_sdl2_sdlrenderer
+examples/example_sdl2_sdlrenderer2/example_sdl2_sdlrenderer2
+examples/example_sdl2_vulkan/example_sdl2_vulkan
+examples/example_sdl3_opengl3/example_sdl3_opengl3
+examples/example_sdl3_sdlgpu3/example_sdl3_sdlgpu3
+examples/example_sdl3_sdlrenderer3/example_sdl3_sdlrenderer3
+examples/example_sdl3_vulkan/example_sdl3_vulkan

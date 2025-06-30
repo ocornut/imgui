@@ -6,7 +6,7 @@
 //  [X] Platform: Mouse support. Can discriminate Mouse/TouchScreen/Pen.
 // Missing features or Issues:
 //  [ ] Platform: Clipboard support.
-//  [ ] Platform: Gamepad support. Enable with 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad'.
+//  [ ] Platform: Gamepad support.
 //  [ ] Platform: Mouse cursor shape and visibility (ImGuiBackendFlags_HasMouseCursors). Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'. FIXME: Check if this is even possible with Android.
 //  [ ] Platform: Multi-viewport support (multiple windows). Not meaningful on Android.
 // Important:
