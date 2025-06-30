@@ -2267,6 +2267,8 @@ struct ImGuiStyle
 
     IMGUI_API ImGuiStyle();
     IMGUI_API void ScaleAllSizes(float scale_factor);
+    IMGUI_API bool Save(const char* filename);
+    IMGUI_API bool Load(const char* filename);
 };
 
 //-----------------------------------------------------------------------------

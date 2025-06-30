@@ -1425,6 +1425,269 @@ void ImGuiStyle::ScaleAllSizes(float scale_factor)
     MouseCursorScale = ImTrunc(MouseCursorScale * scale_factor);
 }
 
+bool ImGuiStyle::Save(const char* filename)
+{
+    ImGuiStyle& style = *this;
+    FILE* f = fopen(filename, "w");
+    if (!f)
+        return false;
+    fprintf(f, "Version=%d\n",                                              IMGUI_VERSION_NUM);
+    fprintf(f, "Alpha=%f\n",                                                style.Alpha);
+    fprintf(f, "DisabledAlpha=%f\n",                                        style.DisabledAlpha);
+    fprintf(f, "WindowPadding=%f,%f\n",                                     style.WindowPadding.x, style.WindowPadding.y);
+    fprintf(f, "WindowRounding=%f\n",                                       style.WindowRounding);
+    fprintf(f, "WindowBorderSize=%f\n",                                     style.WindowBorderSize);
+    fprintf(f, "WindowMinSize=%f,%f\n",                                     style.WindowMinSize.x, style.WindowMinSize.y);
+    fprintf(f, "WindowTitleAlign=%f,%f\n",                                  style.WindowTitleAlign.x, style.WindowTitleAlign.y);
+    fprintf(f, "WindowMenuButtonPosition=%d\n",                             style.WindowMenuButtonPosition);
+    fprintf(f, "ChildRounding=%f\n",                                        style.ChildRounding);
+    fprintf(f, "ChildBorderSize=%f\n",                                      style.ChildBorderSize);
+    fprintf(f, "PopupRounding=%f\n",                                        style.PopupRounding);
+    fprintf(f, "PopupBorderSize=%f\n",                                      style.PopupBorderSize);
+    fprintf(f, "FramePadding=%f,%f\n",                                      style.FramePadding.x, style.FramePadding.y);
+    fprintf(f, "FrameRounding=%f\n",                                        style.FrameRounding);
+    fprintf(f, "FrameBorderSize=%f\n",                                      style.FrameBorderSize);
+    fprintf(f, "ItemSpacing=%f,%f\n",                                       style.ItemSpacing.x, style.ItemSpacing.y);
+    fprintf(f, "ItemInnerSpacing=%f,%f\n",                                  style.ItemInnerSpacing.x, style.ItemInnerSpacing.y);
+    fprintf(f, "CellPadding=%f,%f\n",                                       style.CellPadding.x, style.CellPadding.y);
+    fprintf(f, "TouchExtraPadding=%f,%f\n",                                 style.TouchExtraPadding.x, style.TouchExtraPadding.y);
+    fprintf(f, "IndentSpacing=%f\n",                                        style.IndentSpacing);
+    fprintf(f, "ColumnsMinSpacing=%f\n",                                    style.ColumnsMinSpacing);
+    fprintf(f, "ScrollbarSize=%f\n",                                        style.ScrollbarSize);
+    fprintf(f, "ScrollbarRounding=%f\n",                                    style.ScrollbarRounding);
+    fprintf(f, "GrabMinSize=%f\n",                                          style.GrabMinSize);
+    fprintf(f, "GrabRounding=%f\n",                                         style.GrabRounding);
+    fprintf(f, "LogSliderDeadzone=%f\n",                                    style.LogSliderDeadzone);
+    fprintf(f, "TabRounding=%f\n",                                          style.TabRounding);
+    fprintf(f, "TabBorderSize=%f\n",                                        style.TabBorderSize);
+    fprintf(f, "TabMinWidthForCloseButton=%f\n",                            style.TabMinWidthForCloseButton);
+    fprintf(f, "TabBarBorderSize=%f\n",                                     style.TabBarBorderSize);
+    fprintf(f, "TabBarOverlineSize=%f\n",                                   style.TabBarOverlineSize);
+    fprintf(f, "TableAngledHeadersAngle=%f\n",                              style.TableAngledHeadersAngle);
+    fprintf(f, "TableAngledHeadersTextAlign=%f,%f\n",                       style.TableAngledHeadersTextAlign.x, style.TableAngledHeadersTextAlign.y);
+    fprintf(f, "ColorButtonPosition=%d\n",                                  style.ColorButtonPosition);
+    fprintf(f, "ButtonTextAlign=%f,%f\n",                                   style.ButtonTextAlign.x, style.ButtonTextAlign.y);
+    fprintf(f, "SelectableTextAlign=%f,%f\n",                               style.SelectableTextAlign.x, style.SelectableTextAlign.y);
+    fprintf(f, "SeparatorTextBorderSize=%f\n",                              style.SeparatorTextBorderSize);
+    fprintf(f, "SeparatorTextAlign=%f,%f\n",                                style.SeparatorTextAlign.x, style.SeparatorTextAlign.y);
+    fprintf(f, "SeparatorTextPadding=%f,%f\n",                              style.SeparatorTextPadding.x, style.SeparatorTextPadding.y);
+    fprintf(f, "DisplayWindowPadding=%f,%f\n",                              style.DisplayWindowPadding.x, style.DisplayWindowPadding.y);
+    fprintf(f, "DisplaySafeAreaPadding=%f,%f\n",                            style.DisplaySafeAreaPadding.x, style.DisplaySafeAreaPadding.y);
+    fprintf(f, "DockingSeparatorSize=%f\n",                                 style.DockingSeparatorSize);
+    fprintf(f, "MouseCursorScale=%f\n",                                     style.MouseCursorScale); 
+    fprintf(f, "AntiAliasedLines=%d\n",                                     style.AntiAliasedLines);       
+    fprintf(f, "AntiAliasedLinesUseTex=%d\n",                               style.AntiAliasedLinesUseTex);
+    fprintf(f, "AntiAliasedFill=%d\n",                                      style.AntiAliasedFill);
+    fprintf(f, "CurveTessellationTol=%f\n",                                 style.CurveTessellationTol);
+    fprintf(f, "CircleTessellationMaxError=%f\n",                           style.CircleTessellationMaxError);
+    fprintf(f, "HoverStationaryDelay=%f\n",                                 style.HoverStationaryDelay);
+    fprintf(f, "HoverDelayShort=%f\n",                                      style.HoverDelayShort);
+    fprintf(f, "HoverDelayNormal=%f\n",                                     style.HoverDelayNormal);
+    fprintf(f, "HoverFlagsForTooltipMouse=%d\n",                            style.HoverFlagsForTooltipMouse);
+    fprintf(f, "HoverFlagsForTooltipNav=%d\n",                              style.HoverFlagsForTooltipNav);
+
+    fprintf(f, "Colors[ImGuiCol_Text]=%f,%f,%f,%f\n",                       style.Colors[ImGuiCol_Text].x, style.Colors[ImGuiCol_Text].y, style.Colors[ImGuiCol_Text].z, style.Colors[ImGuiCol_Text].w);
+    fprintf(f, "Colors[ImGuiCol_TextDisabled]=%f,%f,%f,%f\n",               style.Colors[ImGuiCol_TextDisabled].x, style.Colors[ImGuiCol_TextDisabled].y, style.Colors[ImGuiCol_TextDisabled].z, style.Colors[ImGuiCol_TextDisabled].w);
+    fprintf(f, "Colors[ImGuiCol_WindowBg]=%f,%f,%f,%f\n",                   style.Colors[ImGuiCol_WindowBg].x, style.Colors[ImGuiCol_WindowBg].y, style.Colors[ImGuiCol_WindowBg].z, style.Colors[ImGuiCol_WindowBg].w);
+    fprintf(f, "Colors[ImGuiCol_ChildBg]=%f,%f,%f,%f\n",                    style.Colors[ImGuiCol_ChildBg].x, style.Colors[ImGuiCol_ChildBg].y, style.Colors[ImGuiCol_ChildBg].z, style.Colors[ImGuiCol_ChildBg].w);
+    fprintf(f, "Colors[ImGuiCol_PopupBg]=%f,%f,%f,%f\n",                    style.Colors[ImGuiCol_PopupBg].x, style.Colors[ImGuiCol_PopupBg].y, style.Colors[ImGuiCol_PopupBg].z, style.Colors[ImGuiCol_PopupBg].w);
+    fprintf(f, "Colors[ImGuiCol_Border]=%f,%f,%f,%f\n",                     style.Colors[ImGuiCol_Border].x, style.Colors[ImGuiCol_Border].y, style.Colors[ImGuiCol_Border].z, style.Colors[ImGuiCol_Border].w);
+    fprintf(f, "Colors[ImGuiCol_BorderShadow]=%f,%f,%f,%f\n",               style.Colors[ImGuiCol_BorderShadow].x, style.Colors[ImGuiCol_BorderShadow].y, style.Colors[ImGuiCol_BorderShadow].z, style.Colors[ImGuiCol_BorderShadow].w);
+    fprintf(f, "Colors[ImGuiCol_FrameBg]=%f,%f,%f,%f\n",                    style.Colors[ImGuiCol_FrameBg].x, style.Colors[ImGuiCol_FrameBg].y, style.Colors[ImGuiCol_FrameBg].z, style.Colors[ImGuiCol_FrameBg].w);
+    fprintf(f, "Colors[ImGuiCol_FrameBgHovered]=%f,%f,%f,%f\n",             style.Colors[ImGuiCol_FrameBgHovered].x, style.Colors[ImGuiCol_FrameBgHovered].y, style.Colors[ImGuiCol_FrameBgHovered].z, style.Colors[ImGuiCol_FrameBgHovered].w);
+    fprintf(f, "Colors[ImGuiCol_FrameBgActive]=%f,%f,%f,%f\n",              style.Colors[ImGuiCol_FrameBgActive].x, style.Colors[ImGuiCol_FrameBgActive].y, style.Colors[ImGuiCol_FrameBgActive].z, style.Colors[ImGuiCol_FrameBgActive].w);
+    fprintf(f, "Colors[ImGuiCol_TitleBg]=%f,%f,%f,%f\n",                    style.Colors[ImGuiCol_TitleBg].x, style.Colors[ImGuiCol_TitleBg].y, style.Colors[ImGuiCol_TitleBg].z, style.Colors[ImGuiCol_TitleBg].w);
+    fprintf(f, "Colors[ImGuiCol_TitleBgActive]=%f,%f,%f,%f\n",              style.Colors[ImGuiCol_TitleBgActive].x, style.Colors[ImGuiCol_TitleBgActive].y, style.Colors[ImGuiCol_TitleBgActive].z, style.Colors[ImGuiCol_TitleBgActive].w);
+    fprintf(f, "Colors[ImGuiCol_TitleBgCollapsed]=%f,%f,%f,%f\n",           style.Colors[ImGuiCol_TitleBgCollapsed].x, style.Colors[ImGuiCol_TitleBgCollapsed].y, style.Colors[ImGuiCol_TitleBgCollapsed].z, style.Colors[ImGuiCol_TitleBgCollapsed].w);
+    fprintf(f, "Colors[ImGuiCol_MenuBarBg]=%f,%f,%f,%f\n",                  style.Colors[ImGuiCol_MenuBarBg].x, style.Colors[ImGuiCol_MenuBarBg].y, style.Colors[ImGuiCol_MenuBarBg].z, style.Colors[ImGuiCol_MenuBarBg].w);
+    fprintf(f, "Colors[ImGuiCol_ScrollbarBg]=%f,%f,%f,%f\n",                style.Colors[ImGuiCol_ScrollbarBg].x, style.Colors[ImGuiCol_ScrollbarBg].y, style.Colors[ImGuiCol_ScrollbarBg].z, style.Colors[ImGuiCol_ScrollbarBg].w);
+    fprintf(f, "Colors[ImGuiCol_ScrollbarGrab]=%f,%f,%f,%f\n",              style.Colors[ImGuiCol_ScrollbarGrab].x, style.Colors[ImGuiCol_ScrollbarGrab].y, style.Colors[ImGuiCol_ScrollbarGrab].z, style.Colors[ImGuiCol_ScrollbarGrab].w);
+    fprintf(f, "Colors[ImGuiCol_ScrollbarGrabHovered]=%f,%f,%f,%f\n",       style.Colors[ImGuiCol_ScrollbarGrabHovered].x, style.Colors[ImGuiCol_ScrollbarGrabHovered].y, style.Colors[ImGuiCol_ScrollbarGrabHovered].z, style.Colors[ImGuiCol_ScrollbarGrabHovered].w);
+    fprintf(f, "Colors[ImGuiCol_ScrollbarGrabActive]=%f,%f,%f,%f\n",        style.Colors[ImGuiCol_ScrollbarGrabActive].x, style.Colors[ImGuiCol_ScrollbarGrabActive].y, style.Colors[ImGuiCol_ScrollbarGrabActive].z, style.Colors[ImGuiCol_ScrollbarGrabActive].w);
+    fprintf(f, "Colors[ImGuiCol_CheckMark]=%f,%f,%f,%f\n",                  style.Colors[ImGuiCol_CheckMark].x, style.Colors[ImGuiCol_CheckMark].y, style.Colors[ImGuiCol_CheckMark].z, style.Colors[ImGuiCol_CheckMark].w);
+    fprintf(f, "Colors[ImGuiCol_SliderGrab]=%f,%f,%f,%f\n",                 style.Colors[ImGuiCol_SliderGrab].x, style.Colors[ImGuiCol_SliderGrab].y, style.Colors[ImGuiCol_SliderGrab].z, style.Colors[ImGuiCol_SliderGrab].w);
+    fprintf(f, "Colors[ImGuiCol_SliderGrabActive]=%f,%f,%f,%f\n",           style.Colors[ImGuiCol_SliderGrabActive].x, style.Colors[ImGuiCol_SliderGrabActive].y, style.Colors[ImGuiCol_SliderGrabActive].z, style.Colors[ImGuiCol_SliderGrabActive].w);
+    fprintf(f, "Colors[ImGuiCol_Button]=%f,%f,%f,%f\n",                     style.Colors[ImGuiCol_Button].x, style.Colors[ImGuiCol_Button].y, style.Colors[ImGuiCol_Button].z, style.Colors[ImGuiCol_Button].w);
+    fprintf(f, "Colors[ImGuiCol_ButtonHovered]=%f,%f,%f,%f\n",              style.Colors[ImGuiCol_ButtonHovered].x, style.Colors[ImGuiCol_ButtonHovered].y, style.Colors[ImGuiCol_ButtonHovered].z, style.Colors[ImGuiCol_ButtonHovered].w);
+    fprintf(f, "Colors[ImGuiCol_ButtonActive]=%f,%f,%f,%f\n",               style.Colors[ImGuiCol_ButtonActive].x, style.Colors[ImGuiCol_ButtonActive].y, style.Colors[ImGuiCol_ButtonActive].z, style.Colors[ImGuiCol_ButtonActive].w);
+    fprintf(f, "Colors[ImGuiCol_Header]=%f,%f,%f,%f\n",                     style.Colors[ImGuiCol_Header].x, style.Colors[ImGuiCol_Header].y, style.Colors[ImGuiCol_Header].z, style.Colors[ImGuiCol_Header].w);
+    fprintf(f, "Colors[ImGuiCol_HeaderHovered]=%f,%f,%f,%f\n",              style.Colors[ImGuiCol_HeaderHovered].x, style.Colors[ImGuiCol_HeaderHovered].y, style.Colors[ImGuiCol_HeaderHovered].z, style.Colors[ImGuiCol_HeaderHovered].w);
+    fprintf(f, "Colors[ImGuiCol_HeaderActive]=%f,%f,%f,%f\n",               style.Colors[ImGuiCol_HeaderActive].x, style.Colors[ImGuiCol_HeaderActive].y, style.Colors[ImGuiCol_HeaderActive].z, style.Colors[ImGuiCol_HeaderActive].w);
+    fprintf(f, "Colors[ImGuiCol_Separator]=%f,%f,%f,%f\n",                  style.Colors[ImGuiCol_Separator].x, style.Colors[ImGuiCol_Separator].y, style.Colors[ImGuiCol_Separator].z, style.Colors[ImGuiCol_Separator].w);
+    fprintf(f, "Colors[ImGuiCol_SeparatorHovered]=%f,%f,%f,%f\n",           style.Colors[ImGuiCol_SeparatorHovered].x, style.Colors[ImGuiCol_SeparatorHovered].y, style.Colors[ImGuiCol_SeparatorHovered].z, style.Colors[ImGuiCol_SeparatorHovered].w);
+    fprintf(f, "Colors[ImGuiCol_SeparatorActive]=%f,%f,%f,%f\n",            style.Colors[ImGuiCol_SeparatorActive].x, style.Colors[ImGuiCol_SeparatorActive].y, style.Colors[ImGuiCol_SeparatorActive].z, style.Colors[ImGuiCol_SeparatorActive].w);
+    fprintf(f, "Colors[ImGuiCol_ResizeGrip]=%f,%f,%f,%f\n",                 style.Colors[ImGuiCol_ResizeGrip].x, style.Colors[ImGuiCol_ResizeGrip].y, style.Colors[ImGuiCol_ResizeGrip].z, style.Colors[ImGuiCol_ResizeGrip].w);
+    fprintf(f, "Colors[ImGuiCol_ResizeGripHovered]=%f,%f,%f,%f\n",          style.Colors[ImGuiCol_ResizeGripHovered].x, style.Colors[ImGuiCol_ResizeGripHovered].y, style.Colors[ImGuiCol_ResizeGripHovered].z, style.Colors[ImGuiCol_ResizeGripHovered].w);
+    fprintf(f, "Colors[ImGuiCol_ResizeGripActive]=%f,%f,%f,%f\n",           style.Colors[ImGuiCol_ResizeGripActive].x, style.Colors[ImGuiCol_ResizeGripActive].y, style.Colors[ImGuiCol_ResizeGripActive].z, style.Colors[ImGuiCol_ResizeGripActive].w);
+    fprintf(f, "Colors[ImGuiCol_TabHovered]=%f,%f,%f,%f\n",                 style.Colors[ImGuiCol_TabHovered].x, style.Colors[ImGuiCol_TabHovered].y, style.Colors[ImGuiCol_TabHovered].z, style.Colors[ImGuiCol_TabHovered].w);
+    fprintf(f, "Colors[ImGuiCol_Tab]=%f,%f,%f,%f\n",                        style.Colors[ImGuiCol_Tab].x, style.Colors[ImGuiCol_Tab].y, style.Colors[ImGuiCol_Tab].z, style.Colors[ImGuiCol_Tab].w);
+    fprintf(f, "Colors[ImGuiCol_TabSelected]=%f,%f,%f,%f\n",                style.Colors[ImGuiCol_TabSelected].x, style.Colors[ImGuiCol_TabSelected].y, style.Colors[ImGuiCol_TabSelected].z, style.Colors[ImGuiCol_TabSelected].w);
+    fprintf(f, "Colors[ImGuiCol_TabSelectedOverline]=%f,%f,%f,%f\n",        style.Colors[ImGuiCol_TabSelectedOverline].x, style.Colors[ImGuiCol_TabSelectedOverline].y, style.Colors[ImGuiCol_TabSelectedOverline].z, style.Colors[ImGuiCol_TabSelectedOverline].w);
+    fprintf(f, "Colors[ImGuiCol_TabDimmed]=%f,%f,%f,%f\n",                  style.Colors[ImGuiCol_TabDimmed].x, style.Colors[ImGuiCol_TabDimmed].y, style.Colors[ImGuiCol_TabDimmed].z, style.Colors[ImGuiCol_TabDimmed].w);
+    fprintf(f, "Colors[ImGuiCol_TabDimmedSelected]=%f,%f,%f,%f\n",          style.Colors[ImGuiCol_TabDimmedSelected].x, style.Colors[ImGuiCol_TabDimmedSelected].y, style.Colors[ImGuiCol_TabDimmedSelected].z, style.Colors[ImGuiCol_TabDimmedSelected].w);
+    fprintf(f, "Colors[ImGuiCol_TabDimmedSelectedOverline]=%f,%f,%f,%f\n",  style.Colors[ImGuiCol_TabDimmedSelectedOverline].x, style.Colors[ImGuiCol_TabDimmedSelectedOverline].y, style.Colors[ImGuiCol_TabDimmedSelectedOverline].z, style.Colors[ImGuiCol_TabDimmedSelectedOverline].w);
+    fprintf(f, "Colors[ImGuiCol_DockingPreview]=%f,%f,%f,%f\n",             style.Colors[ImGuiCol_DockingPreview].x, style.Colors[ImGuiCol_DockingPreview].y, style.Colors[ImGuiCol_DockingPreview].z, style.Colors[ImGuiCol_DockingPreview].w);
+    fprintf(f, "Colors[ImGuiCol_DockingEmptyBg]=%f,%f,%f,%f\n",             style.Colors[ImGuiCol_DockingEmptyBg].x, style.Colors[ImGuiCol_DockingEmptyBg].y, style.Colors[ImGuiCol_DockingEmptyBg].z, style.Colors[ImGuiCol_DockingEmptyBg].w);
+    fprintf(f, "Colors[ImGuiCol_PlotLines]=%f,%f,%f,%f\n",                  style.Colors[ImGuiCol_PlotLines].x, style.Colors[ImGuiCol_PlotLines].y, style.Colors[ImGuiCol_PlotLines].z, style.Colors[ImGuiCol_PlotLines].w);
+    fprintf(f, "Colors[ImGuiCol_PlotLinesHovered]=%f,%f,%f,%f\n",           style.Colors[ImGuiCol_PlotLinesHovered].x, style.Colors[ImGuiCol_PlotLinesHovered].y, style.Colors[ImGuiCol_PlotLinesHovered].z, style.Colors[ImGuiCol_PlotLinesHovered].w);
+    fprintf(f, "Colors[ImGuiCol_PlotHistogram]=%f,%f,%f,%f\n",              style.Colors[ImGuiCol_PlotHistogram].x, style.Colors[ImGuiCol_PlotHistogram].y, style.Colors[ImGuiCol_PlotHistogram].z, style.Colors[ImGuiCol_PlotHistogram].w);
+    fprintf(f, "Colors[ImGuiCol_PlotHistogramHovered]=%f,%f,%f,%f\n",       style.Colors[ImGuiCol_PlotHistogramHovered].x, style.Colors[ImGuiCol_PlotHistogramHovered].y, style.Colors[ImGuiCol_PlotHistogramHovered].z, style.Colors[ImGuiCol_PlotHistogramHovered].w);
+    fprintf(f, "Colors[ImGuiCol_TableHeaderBg]=%f,%f,%f,%f\n",              style.Colors[ImGuiCol_TableHeaderBg].x, style.Colors[ImGuiCol_TableHeaderBg].y, style.Colors[ImGuiCol_TableHeaderBg].z, style.Colors[ImGuiCol_TableHeaderBg].w);
+    fprintf(f, "Colors[ImGuiCol_TableBorderStrong]=%f,%f,%f,%f\n",          style.Colors[ImGuiCol_TableBorderStrong].x, style.Colors[ImGuiCol_TableBorderStrong].y, style.Colors[ImGuiCol_TableBorderStrong].z, style.Colors[ImGuiCol_TableBorderStrong].w);
+    fprintf(f, "Colors[ImGuiCol_TableBorderLight]=%f,%f,%f,%f\n",           style.Colors[ImGuiCol_TableBorderLight].x, style.Colors[ImGuiCol_TableBorderLight].y, style.Colors[ImGuiCol_TableBorderLight].z, style.Colors[ImGuiCol_TableBorderLight].w);
+    fprintf(f, "Colors[ImGuiCol_TableRowBg]=%f,%f,%f,%f\n",                 style.Colors[ImGuiCol_TableRowBg].x, style.Colors[ImGuiCol_TableRowBg].y, style.Colors[ImGuiCol_TableRowBg].z, style.Colors[ImGuiCol_TableRowBg].w);
+    fprintf(f, "Colors[ImGuiCol_TableRowBgAlt]=%f,%f,%f,%f\n",              style.Colors[ImGuiCol_TableRowBgAlt].x, style.Colors[ImGuiCol_TableRowBgAlt].y, style.Colors[ImGuiCol_TableRowBgAlt].z, style.Colors[ImGuiCol_TableRowBgAlt].w);
+    fprintf(f, "Colors[ImGuiCol_TextLink]=%f,%f,%f,%f\n",                   style.Colors[ImGuiCol_TextLink].x, style.Colors[ImGuiCol_TextLink].y, style.Colors[ImGuiCol_TextLink].z, style.Colors[ImGuiCol_TextLink].w);
+    fprintf(f, "Colors[ImGuiCol_TextSelectedBg]=%f,%f,%f,%f\n",             style.Colors[ImGuiCol_TextSelectedBg].x, style.Colors[ImGuiCol_TextSelectedBg].y, style.Colors[ImGuiCol_TextSelectedBg].z, style.Colors[ImGuiCol_TextSelectedBg].w);
+    fprintf(f, "Colors[ImGuiCol_DragDropTarget]=%f,%f,%f,%f\n",             style.Colors[ImGuiCol_DragDropTarget].x, style.Colors[ImGuiCol_DragDropTarget].y, style.Colors[ImGuiCol_DragDropTarget].z, style.Colors[ImGuiCol_DragDropTarget].w);
+    fprintf(f, "Colors[ImGuiCol_NavCursor]=%f,%f,%f,%f\n",                  style.Colors[ImGuiCol_NavCursor].x, style.Colors[ImGuiCol_NavCursor].y, style.Colors[ImGuiCol_NavCursor].z, style.Colors[ImGuiCol_NavCursor].w);
+    fprintf(f, "Colors[ImGuiCol_NavWindowingHighlight]=%f,%f,%f,%f\n",      style.Colors[ImGuiCol_NavWindowingHighlight].x, style.Colors[ImGuiCol_NavWindowingHighlight].y, style.Colors[ImGuiCol_NavWindowingHighlight].z, style.Colors[ImGuiCol_NavWindowingHighlight].w);
+    fprintf(f, "Colors[ImGuiCol_NavWindowingDimBg]=%f,%f,%f,%f\n",          style.Colors[ImGuiCol_NavWindowingDimBg].x, style.Colors[ImGuiCol_NavWindowingDimBg].y, style.Colors[ImGuiCol_NavWindowingDimBg].z, style.Colors[ImGuiCol_NavWindowingDimBg].w);
+    fprintf(f, "Colors[ImGuiCol_ModalWindowDimBg]=%f,%f,%f,%f\n",           style.Colors[ImGuiCol_ModalWindowDimBg].x, style.Colors[ImGuiCol_ModalWindowDimBg].y, style.Colors[ImGuiCol_ModalWindowDimBg].z, style.Colors[ImGuiCol_ModalWindowDimBg].w);
+
+    fclose(f);
+    return true;
+}
+
+bool ImGuiStyle::Load(const char* filename)
+{
+    ImGuiStyle& style = *this; 
+    FILE* f = fopen(filename, "r");
+    if (!f)
+        return false;
+
+    int version = 0;
+    char line[256];
+    while (fgets(line, sizeof(line), f))
+    {
+        if (sscanf(line, "Version=%d",                                              version) == 1) continue;
+        if (sscanf(line, "Alpha=%f",                                                style.Alpha) == 1) continue;
+        if (sscanf(line, "DisabledAlpha=%f",                                        style.DisabledAlpha) == 1) continue;
+        if (sscanf(line, "WindowPadding=%f,%f",                                     style.WindowPadding.x, style.WindowPadding.y) == 2) continue;
+        if (sscanf(line, "WindowRounding=%f",                                       style.WindowRounding) == 1) continue;
+        if (sscanf(line, "WindowBorderSize=%f",                                     style.WindowBorderSize) == 1) continue;
+        if (sscanf(line, "WindowMinSize=%f,%f",                                     style.WindowMinSize.x, style.WindowMinSize.y) == 2) continue;
+        if (sscanf(line, "WindowTitleAlign=%f,%f",                                  style.WindowTitleAlign.x, style.WindowTitleAlign.y) == 2) continue;
+        if (sscanf(line, "WindowMenuButtonPosition=%d",                             style.WindowMenuButtonPosition) == 1) continue;
+        if (sscanf(line, "ChildRounding=%f",                                        style.ChildRounding) == 1) continue;
+        if (sscanf(line, "ChildBorderSize=%f",                                      style.ChildBorderSize) == 1) continue;
+        if (sscanf(line, "PopupRounding=%f",                                        style.PopupRounding) == 1) continue;
+        if (sscanf(line, "PopupBorderSize=%f",                                      style.PopupBorderSize) == 1) continue;
+        if (sscanf(line, "FramePadding=%f,%f",                                      style.FramePadding.x, style.FramePadding.y) == 2) continue;
+        if (sscanf(line, "FrameRounding=%f",                                        style.FrameRounding) == 1) continue;
+        if (sscanf(line, "FrameBorderSize=%f",                                      style.FrameBorderSize) == 1) continue;
+        if (sscanf(line, "ItemSpacing=%f,%f",                                       style.ItemSpacing.x, style.ItemSpacing.y) == 2) continue;
+        if (sscanf(line, "ItemInnerSpacing=%f,%f",                                  style.ItemInnerSpacing.x, style.ItemInnerSpacing.y) == 2) continue;
+        if (sscanf(line, "CellPadding=%f,%f",                                       style.CellPadding.x, style.CellPadding.y) == 2) continue;
+        if (sscanf(line, "TouchExtraPadding=%f,%f",                                 style.TouchExtraPadding.x, style.TouchExtraPadding.y) == 2) continue;
+        if (sscanf(line, "IndentSpacing=%f",                                        style.IndentSpacing) == 1) continue;
+        if (sscanf(line, "ColumnsMinSpacing=%f",                                    style.ColumnsMinSpacing) == 1) continue;
+        if (sscanf(line, "ScrollbarSize=%f",                                        style.ScrollbarSize) == 1) continue;
+        if (sscanf(line, "ScrollbarRounding=%f",                                    style.ScrollbarRounding) == 1) continue;
+        if (sscanf(line, "GrabMinSize=%f",                                          style.GrabMinSize) == 1) continue;
+        if (sscanf(line, "GrabRounding=%f",                                         style.GrabRounding) == 1) continue;
+        if (sscanf(line, "LogSliderDeadzone=%f",                                    style.LogSliderDeadzone) == 1) continue;
+        if (sscanf(line, "TabRounding=%f",                                          style.TabRounding) == 1) continue;
+        if (sscanf(line, "TabBorderSize=%f",                                        style.TabBorderSize) == 1) continue;
+        if (sscanf(line, "TabMinWidthForCloseButton=%f",                            style.TabMinWidthForCloseButton) == 1) continue;
+        if (sscanf(line, "TabBarBorderSize=%f",                                     style.TabBarBorderSize) == 1) continue;
+        if (sscanf(line, "TabBarOverlineSize=%f",                                   style.TabBarOverlineSize) == 1) continue;
+        if (sscanf(line, "TableAngledHeadersAngle=%f",                              style.TableAngledHeadersAngle) == 1) continue;
+        if (sscanf(line, "TableAngledHeadersTextAlign=%f,%f",                       style.TableAngledHeadersTextAlign.x, style.TableAngledHeadersTextAlign.y) == 2) continue;
+        if (sscanf(line, "ColorButtonPosition=%d",                                  style.ColorButtonPosition) == 1) continue;
+        if (sscanf(line, "ButtonTextAlign=%f,%f",                                   style.ButtonTextAlign.x, style.ButtonTextAlign.y) == 2) continue;
+        if (sscanf(line, "SelectableTextAlign=%f,%f",                               style.SelectableTextAlign.x, style.SelectableTextAlign.y) == 2) continue;
+        if (sscanf(line, "SeparatorTextBorderSize=%f",                              style.SeparatorTextBorderSize) == 1) continue;
+        if (sscanf(line, "SeparatorTextAlign=%f,%f",                                style.SeparatorTextAlign.x, style.SeparatorTextAlign.y) == 2) continue;
+        if (sscanf(line, "SeparatorTextPadding=%f,%f",                              style.SeparatorTextPadding.x, style.SeparatorTextPadding.y) == 2) continue;
+        if (sscanf(line, "DisplayWindowPadding=%f,%f",                              style.DisplayWindowPadding.x, style.DisplayWindowPadding.y) == 2) continue;
+        if (sscanf(line, "DisplaySafeAreaPadding=%f,%f",                            style.DisplaySafeAreaPadding.x, style.DisplaySafeAreaPadding.y) == 2) continue;
+        if (sscanf(line, "DockingSeparatorSize=%f",                                 style.DockingSeparatorSize) == 1) continue;
+        if (sscanf(line, "MouseCursorScale=%f",                                     style.MouseCursorScale) == 1) continue; 
+        if (sscanf(line, "AntiAliasedLines=%d",                                     style.AntiAliasedLines) == 1) continue;       
+        if (sscanf(line, "AntiAliasedLinesUseTex=%d",                               style.AntiAliasedLinesUseTex) == 1) continue;
+        if (sscanf(line, "AntiAliasedFill=%d",                                      style.AntiAliasedFill) == 1) continue;
+        if (sscanf(line, "CurveTessellationTol=%f",                                 style.CurveTessellationTol) == 1) continue;
+        if (sscanf(line, "CircleTessellationMaxError=%f",                           style.CircleTessellationMaxError) == 1) continue;
+        if (sscanf(line, "HoverStationaryDelay=%f",                                 style.HoverStationaryDelay) == 1) continue;
+        if (sscanf(line, "HoverDelayShort=%f",                                      style.HoverDelayShort) == 1) continue;
+        if (sscanf(line, "HoverDelayNormal=%f",                                     style.HoverDelayNormal) == 1) continue;
+        if (sscanf(line, "HoverFlagsForTooltipMouse=%d",                            style.HoverFlagsForTooltipMouse) == 1) continue;
+        if (sscanf(line, "HoverFlagsForTooltipNav=%d",                              style.HoverFlagsForTooltipNav) == 1) continue;
+
+        if (sscanf(line, "Colors[ImGuiCol_Text]=%f,%f,%f,%f",                       style.Colors[ImGuiCol_Text].x, style.Colors[ImGuiCol_Text].y, style.Colors[ImGuiCol_Text].z, style.Colors[ImGuiCol_Text].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_TextDisabled]=%f,%f,%f,%f",               style.Colors[ImGuiCol_TextDisabled].x, style.Colors[ImGuiCol_TextDisabled].y, style.Colors[ImGuiCol_TextDisabled].z, style.Colors[ImGuiCol_TextDisabled].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_WindowBg]=%f,%f,%f,%f",                   style.Colors[ImGuiCol_WindowBg].x, style.Colors[ImGuiCol_WindowBg].y, style.Colors[ImGuiCol_WindowBg].z, style.Colors[ImGuiCol_WindowBg].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_ChildBg]=%f,%f,%f,%f",                    style.Colors[ImGuiCol_ChildBg].x, style.Colors[ImGuiCol_ChildBg].y, style.Colors[ImGuiCol_ChildBg].z, style.Colors[ImGuiCol_ChildBg].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_PopupBg]=%f,%f,%f,%f",                    style.Colors[ImGuiCol_PopupBg].x, style.Colors[ImGuiCol_PopupBg].y, style.Colors[ImGuiCol_PopupBg].z, style.Colors[ImGuiCol_PopupBg].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_Border]=%f,%f,%f,%f",                     style.Colors[ImGuiCol_Border].x, style.Colors[ImGuiCol_Border].y, style.Colors[ImGuiCol_Border].z, style.Colors[ImGuiCol_Border].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_BorderShadow]=%f,%f,%f,%f",               style.Colors[ImGuiCol_BorderShadow].x, style.Colors[ImGuiCol_BorderShadow].y, style.Colors[ImGuiCol_BorderShadow].z, style.Colors[ImGuiCol_BorderShadow].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_FrameBg]=%f,%f,%f,%f",                    style.Colors[ImGuiCol_FrameBg].x, style.Colors[ImGuiCol_FrameBg].y, style.Colors[ImGuiCol_FrameBg].z, style.Colors[ImGuiCol_FrameBg].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_FrameBgHovered]=%f,%f,%f,%f",             style.Colors[ImGuiCol_FrameBgHovered].x, style.Colors[ImGuiCol_FrameBgHovered].y, style.Colors[ImGuiCol_FrameBgHovered].z, style.Colors[ImGuiCol_FrameBgHovered].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_FrameBgActive]=%f,%f,%f,%f",              style.Colors[ImGuiCol_FrameBgActive].x, style.Colors[ImGuiCol_FrameBgActive].y, style.Colors[ImGuiCol_FrameBgActive].z, style.Colors[ImGuiCol_FrameBgActive].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_TitleBg]=%f,%f,%f,%f",                    style.Colors[ImGuiCol_TitleBg].x, style.Colors[ImGuiCol_TitleBg].y, style.Colors[ImGuiCol_TitleBg].z, style.Colors[ImGuiCol_TitleBg].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_TitleBgActive]=%f,%f,%f,%f",              style.Colors[ImGuiCol_TitleBgActive].x, style.Colors[ImGuiCol_TitleBgActive].y, style.Colors[ImGuiCol_TitleBgActive].z, style.Colors[ImGuiCol_TitleBgActive].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_TitleBgCollapsed]=%f,%f,%f,%f",           style.Colors[ImGuiCol_TitleBgCollapsed].x, style.Colors[ImGuiCol_TitleBgCollapsed].y, style.Colors[ImGuiCol_TitleBgCollapsed].z, style.Colors[ImGuiCol_TitleBgCollapsed].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_MenuBarBg]=%f,%f,%f,%f",                  style.Colors[ImGuiCol_MenuBarBg].x, style.Colors[ImGuiCol_MenuBarBg].y, style.Colors[ImGuiCol_MenuBarBg].z, style.Colors[ImGuiCol_MenuBarBg].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_ScrollbarBg]=%f,%f,%f,%f",                style.Colors[ImGuiCol_ScrollbarBg].x, style.Colors[ImGuiCol_ScrollbarBg].y, style.Colors[ImGuiCol_ScrollbarBg].z, style.Colors[ImGuiCol_ScrollbarBg].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_ScrollbarGrab]=%f,%f,%f,%f",              style.Colors[ImGuiCol_ScrollbarGrab].x, style.Colors[ImGuiCol_ScrollbarGrab].y, style.Colors[ImGuiCol_ScrollbarGrab].z, style.Colors[ImGuiCol_ScrollbarGrab].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_ScrollbarGrabHovered]=%f,%f,%f,%f",       style.Colors[ImGuiCol_ScrollbarGrabHovered].x, style.Colors[ImGuiCol_ScrollbarGrabHovered].y, style.Colors[ImGuiCol_ScrollbarGrabHovered].z, style.Colors[ImGuiCol_ScrollbarGrabHovered].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_ScrollbarGrabActive]=%f,%f,%f,%f",        style.Colors[ImGuiCol_ScrollbarGrabActive].x, style.Colors[ImGuiCol_ScrollbarGrabActive].y, style.Colors[ImGuiCol_ScrollbarGrabActive].z, style.Colors[ImGuiCol_ScrollbarGrabActive].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_CheckMark]=%f,%f,%f,%f",                  style.Colors[ImGuiCol_CheckMark].x, style.Colors[ImGuiCol_CheckMark].y, style.Colors[ImGuiCol_CheckMark].z, style.Colors[ImGuiCol_CheckMark].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_SliderGrab]=%f,%f,%f,%f",                 style.Colors[ImGuiCol_SliderGrab].x, style.Colors[ImGuiCol_SliderGrab].y, style.Colors[ImGuiCol_SliderGrab].z, style.Colors[ImGuiCol_SliderGrab].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_SliderGrabActive]=%f,%f,%f,%f",           style.Colors[ImGuiCol_SliderGrabActive].x, style.Colors[ImGuiCol_SliderGrabActive].y, style.Colors[ImGuiCol_SliderGrabActive].z, style.Colors[ImGuiCol_SliderGrabActive].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_Button]=%f,%f,%f,%f",                     style.Colors[ImGuiCol_Button].x, style.Colors[ImGuiCol_Button].y, style.Colors[ImGuiCol_Button].z, style.Colors[ImGuiCol_Button].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_ButtonHovered]=%f,%f,%f,%f",              style.Colors[ImGuiCol_ButtonHovered].x, style.Colors[ImGuiCol_ButtonHovered].y, style.Colors[ImGuiCol_ButtonHovered].z, style.Colors[ImGuiCol_ButtonHovered].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_ButtonActive]=%f,%f,%f,%f",               style.Colors[ImGuiCol_ButtonActive].x, style.Colors[ImGuiCol_ButtonActive].y, style.Colors[ImGuiCol_ButtonActive].z, style.Colors[ImGuiCol_ButtonActive].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_Header]=%f,%f,%f,%f",                     style.Colors[ImGuiCol_Header].x, style.Colors[ImGuiCol_Header].y, style.Colors[ImGuiCol_Header].z, style.Colors[ImGuiCol_Header].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_HeaderHovered]=%f,%f,%f,%f",              style.Colors[ImGuiCol_HeaderHovered].x, style.Colors[ImGuiCol_HeaderHovered].y, style.Colors[ImGuiCol_HeaderHovered].z, style.Colors[ImGuiCol_HeaderHovered].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_HeaderActive]=%f,%f,%f,%f",               style.Colors[ImGuiCol_HeaderActive].x, style.Colors[ImGuiCol_HeaderActive].y, style.Colors[ImGuiCol_HeaderActive].z, style.Colors[ImGuiCol_HeaderActive].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_Separator]=%f,%f,%f,%f",                  style.Colors[ImGuiCol_Separator].x, style.Colors[ImGuiCol_Separator].y, style.Colors[ImGuiCol_Separator].z, style.Colors[ImGuiCol_Separator].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_SeparatorHovered]=%f,%f,%f,%f",           style.Colors[ImGuiCol_SeparatorHovered].x, style.Colors[ImGuiCol_SeparatorHovered].y, style.Colors[ImGuiCol_SeparatorHovered].z, style.Colors[ImGuiCol_SeparatorHovered].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_SeparatorActive]=%f,%f,%f,%f",            style.Colors[ImGuiCol_SeparatorActive].x, style.Colors[ImGuiCol_SeparatorActive].y, style.Colors[ImGuiCol_SeparatorActive].z, style.Colors[ImGuiCol_SeparatorActive].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_ResizeGrip]=%f,%f,%f,%f",                 style.Colors[ImGuiCol_ResizeGrip].x, style.Colors[ImGuiCol_ResizeGrip].y, style.Colors[ImGuiCol_ResizeGrip].z, style.Colors[ImGuiCol_ResizeGrip].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_ResizeGripHovered]=%f,%f,%f,%f",          style.Colors[ImGuiCol_ResizeGripHovered].x, style.Colors[ImGuiCol_ResizeGripHovered].y, style.Colors[ImGuiCol_ResizeGripHovered].z, style.Colors[ImGuiCol_ResizeGripHovered].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_ResizeGripActive]=%f,%f,%f,%f",           style.Colors[ImGuiCol_ResizeGripActive].x, style.Colors[ImGuiCol_ResizeGripActive].y, style.Colors[ImGuiCol_ResizeGripActive].z, style.Colors[ImGuiCol_ResizeGripActive].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_TabHovered]=%f,%f,%f,%f",                 style.Colors[ImGuiCol_TabHovered].x, style.Colors[ImGuiCol_TabHovered].y, style.Colors[ImGuiCol_TabHovered].z, style.Colors[ImGuiCol_TabHovered].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_Tab]=%f,%f,%f,%f",                        style.Colors[ImGuiCol_Tab].x, style.Colors[ImGuiCol_Tab].y, style.Colors[ImGuiCol_Tab].z, style.Colors[ImGuiCol_Tab].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_TabSelected]=%f,%f,%f,%f",                style.Colors[ImGuiCol_TabSelected].x, style.Colors[ImGuiCol_TabSelected].y, style.Colors[ImGuiCol_TabSelected].z, style.Colors[ImGuiCol_TabSelected].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_TabSelectedOverline]=%f,%f,%f,%f",        style.Colors[ImGuiCol_TabSelectedOverline].x, style.Colors[ImGuiCol_TabSelectedOverline].y, style.Colors[ImGuiCol_TabSelectedOverline].z, style.Colors[ImGuiCol_TabSelectedOverline].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_TabDimmed]=%f,%f,%f,%f",                  style.Colors[ImGuiCol_TabDimmed].x, style.Colors[ImGuiCol_TabDimmed].y, style.Colors[ImGuiCol_TabDimmed].z, style.Colors[ImGuiCol_TabDimmed].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_TabDimmedSelected]=%f,%f,%f,%f",          style.Colors[ImGuiCol_TabDimmedSelected].x, style.Colors[ImGuiCol_TabDimmedSelected].y, style.Colors[ImGuiCol_TabDimmedSelected].z, style.Colors[ImGuiCol_TabDimmedSelected].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_TabDimmedSelectedOverline]=%f,%f,%f,%f",  style.Colors[ImGuiCol_TabDimmedSelectedOverline].x, style.Colors[ImGuiCol_TabDimmedSelectedOverline].y, style.Colors[ImGuiCol_TabDimmedSelectedOverline].z, style.Colors[ImGuiCol_TabDimmedSelectedOverline].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_DockingPreview]=%f,%f,%f,%f",             style.Colors[ImGuiCol_DockingPreview].x, style.Colors[ImGuiCol_DockingPreview].y, style.Colors[ImGuiCol_DockingPreview].z, style.Colors[ImGuiCol_DockingPreview].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_DockingEmptyBg]=%f,%f,%f,%f",             style.Colors[ImGuiCol_DockingEmptyBg].x, style.Colors[ImGuiCol_DockingEmptyBg].y, style.Colors[ImGuiCol_DockingEmptyBg].z, style.Colors[ImGuiCol_DockingEmptyBg].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_PlotLines]=%f,%f,%f,%f",                  style.Colors[ImGuiCol_PlotLines].x, style.Colors[ImGuiCol_PlotLines].y, style.Colors[ImGuiCol_PlotLines].z, style.Colors[ImGuiCol_PlotLines].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_PlotLinesHovered]=%f,%f,%f,%f",           style.Colors[ImGuiCol_PlotLinesHovered].x, style.Colors[ImGuiCol_PlotLinesHovered].y, style.Colors[ImGuiCol_PlotLinesHovered].z, style.Colors[ImGuiCol_PlotLinesHovered].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_PlotHistogram]=%f,%f,%f,%f",              style.Colors[ImGuiCol_PlotHistogram].x, style.Colors[ImGuiCol_PlotHistogram].y, style.Colors[ImGuiCol_PlotHistogram].z, style.Colors[ImGuiCol_PlotHistogram].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_PlotHistogramHovered]=%f,%f,%f,%f",       style.Colors[ImGuiCol_PlotHistogramHovered].x, style.Colors[ImGuiCol_PlotHistogramHovered].y, style.Colors[ImGuiCol_PlotHistogramHovered].z, style.Colors[ImGuiCol_PlotHistogramHovered].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_TableHeaderBg]=%f,%f,%f,%f",              style.Colors[ImGuiCol_TableHeaderBg].x, style.Colors[ImGuiCol_TableHeaderBg].y, style.Colors[ImGuiCol_TableHeaderBg].z, style.Colors[ImGuiCol_TableHeaderBg].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_TableBorderStrong]=%f,%f,%f,%f",          style.Colors[ImGuiCol_TableBorderStrong].x, style.Colors[ImGuiCol_TableBorderStrong].y, style.Colors[ImGuiCol_TableBorderStrong].z, style.Colors[ImGuiCol_TableBorderStrong].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_TableBorderLight]=%f,%f,%f,%f",           style.Colors[ImGuiCol_TableBorderLight].x, style.Colors[ImGuiCol_TableBorderLight].y, style.Colors[ImGuiCol_TableBorderLight].z, style.Colors[ImGuiCol_TableBorderLight].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_TableRowBg]=%f,%f,%f,%f",                 style.Colors[ImGuiCol_TableRowBg].x, style.Colors[ImGuiCol_TableRowBg].y, style.Colors[ImGuiCol_TableRowBg].z, style.Colors[ImGuiCol_TableRowBg].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_TableRowBgAlt]=%f,%f,%f,%f",              style.Colors[ImGuiCol_TableRowBgAlt].x, style.Colors[ImGuiCol_TableRowBgAlt].y, style.Colors[ImGuiCol_TableRowBgAlt].z, style.Colors[ImGuiCol_TableRowBgAlt].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_TextLink]=%f,%f,%f,%f",                   style.Colors[ImGuiCol_TextLink].x, style.Colors[ImGuiCol_TextLink].y, style.Colors[ImGuiCol_TextLink].z, style.Colors[ImGuiCol_TextLink].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_TextSelectedBg]=%f,%f,%f,%f",             style.Colors[ImGuiCol_TextSelectedBg].x, style.Colors[ImGuiCol_TextSelectedBg].y, style.Colors[ImGuiCol_TextSelectedBg].z, style.Colors[ImGuiCol_TextSelectedBg].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_DragDropTarget]=%f,%f,%f,%f",             style.Colors[ImGuiCol_DragDropTarget].x, style.Colors[ImGuiCol_DragDropTarget].y, style.Colors[ImGuiCol_DragDropTarget].z, style.Colors[ImGuiCol_DragDropTarget].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_NavCursor]=%f,%f,%f,%f",                  style.Colors[ImGuiCol_NavCursor].x, style.Colors[ImGuiCol_NavCursor].y, style.Colors[ImGuiCol_NavCursor].z, style.Colors[ImGuiCol_NavCursor].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_NavWindowingHighlight]=%f,%f,%f,%f",      style.Colors[ImGuiCol_NavWindowingHighlight].x, style.Colors[ImGuiCol_NavWindowingHighlight].y, style.Colors[ImGuiCol_NavWindowingHighlight].z, style.Colors[ImGuiCol_NavWindowingHighlight].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_NavWindowingDimBg]=%f,%f,%f,%f",          style.Colors[ImGuiCol_NavWindowingDimBg].x, style.Colors[ImGuiCol_NavWindowingDimBg].y, style.Colors[ImGuiCol_NavWindowingDimBg].z, style.Colors[ImGuiCol_NavWindowingDimBg].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_ModalWindowDimBg]=%f,%f,%f,%f",           style.Colors[ImGuiCol_ModalWindowDimBg].x, style.Colors[ImGuiCol_ModalWindowDimBg].y, style.Colors[ImGuiCol_ModalWindowDimBg].z, style.Colors[ImGuiCol_ModalWindowDimBg].w) == 4) continue;
+        
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+        if(version<IMGUI_VERSION_NUM){
+            if (sscanf(line, "Colors[ImGuiCol_TabActive]=%f,%f,%f,%f",              style.Colors[ImGuiCol_TabSelected].x, style.Colors[ImGuiCol_TabSelected].y, style.Colors[ImGuiCol_TabSelected].z, style.Colors[ImGuiCol_TabSelected].w) == 4) continue;
+            if (sscanf(line, "Colors[ImGuiCol_TabUnfocused]=%f,%f,%f,%f",           style.Colors[ImGuiCol_TabDimmed].x, style.Colors[ImGuiCol_TabDimmed].y, style.Colors[ImGuiCol_TabDimmed].z, style.Colors[ImGuiCol_TabDimmed].w) == 4) continue;
+            if (sscanf(line, "Colors[ImGuiCol_TabUnfocusedActive]=%f,%f,%f,%f",     style.Colors[ImGuiCol_TabDimmedSelected].x, style.Colors[ImGuiCol_TabDimmedSelected].y, style.Colors[ImGuiCol_TabDimmedSelected].z, style.Colors[ImGuiCol_TabDimmedSelected].w) == 4) continue;
+            if (sscanf(line, "Colors[ImGuiCol_NavHighlight]=%f,%f,%f,%f",           style.Colors[ImGuiCol_NavCursor].x, style.Colors[ImGuiCol_NavCursor].y, style.Colors[ImGuiCol_NavCursor].z, style.Colors[ImGuiCol_NavCursor].w) == 4) continue;
+        }
+#endif
+
+    }
+    fclose(f);
+    return true;
+}
+
 ImGuiIO::ImGuiIO()
 {
     // Most fields are initialized with zero
