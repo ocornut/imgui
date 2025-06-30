@@ -43,6 +43,8 @@ Breaking changes:
 
 Other changes:
 
+- Fonts: added ImFontAtlas::SetFontLoader() to dynamically change font
+  loader at runtime without using internal API. (#8752, #8465)
 - Textures: Fixed support for `#define ImTextureID_Invalid` to non-zero value:
   ImTextureData() was incorrectly cleared with zeroes. (#8745) [@rachit7645]
 - Demo: Added "Text -> Font Size" demo section. (#8738) [@Demonese]
@@ -211,7 +213,7 @@ Breaking changes:
      - renamed/reworked ImFontBuilderIO into ImFontLoader,
      - renamed ImGuiFreeType::GetBuilderForFreeType() to ImGuiFreeType::GetFontLoader()
        - old:  io.Fonts->FontBuilderIO = ImGuiFreeType::GetBuilderForFreeType()
-       - new:  io.Fonts.FontLoader = ImGuiFreeType::GetFontLoader();
+       - new:  io.Fonts->FontLoader = ImGuiFreeType::GetFontLoader()
 - DrawList: Renamed ImDrawList::PushTextureID()/PopTextureID() to PushTexture()/PopTexture().
 - Fonts: (users of custom rectangles)
   - Renamed AddCustomRectRegular() to AddCustomRect(). (#8466)

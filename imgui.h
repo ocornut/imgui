@@ -3493,7 +3493,7 @@ struct ImFontConfig
     // [Internal]
     ImFontFlags     Flags;                  // Font flags (don't use just yet, will be exposed in upcoming 1.92.X updates)
     ImFont*         DstFont;                // Target font (as we merging fonts, multiple ImFontConfig may target the same font)
-    const ImFontLoader* FontLoader;         // Custom font backend for this source (other use one stored in ImFontAtlas)
+    const ImFontLoader* FontLoader;         // Custom font backend for this source (default source is the one stored in ImFontAtlas)
     void*           FontLoaderData;         // Font loader opaque storage (per font config)
 
     IMGUI_API ImFontConfig();
@@ -3590,6 +3590,7 @@ struct ImFontAtlas
 
     IMGUI_API void              Clear();                    // Clear everything (input fonts, output glyphs/textures)
     IMGUI_API void              CompactCache();             // Compact cached glyphs and texture.
+    IMGUI_API void              SetFontLoader(const ImFontLoader* font_loader); // Change font loader at runtime.
 
     // As we are transitioning toward a new font system, we expect to obsolete those soon:
     IMGUI_API void              ClearInputData();           // [OBSOLETE] Clear input data (all ImFontConfig structures including sizes, TTF data, glyph ranges, etc.) = all the data used to build the texture and fonts.
@@ -3698,7 +3699,7 @@ struct ImFontAtlas
     int                         FontNextUniqueID;   // Next value to be stored in ImFont->FontID
     ImVector<ImDrawListSharedData*> DrawListSharedDatas; // List of users for this atlas. Typically one per Dear ImGui context.
     ImFontAtlasBuilder*         Builder;            // Opaque interface to our data that doesn't need to be public and may be discarded when rebuilding.
-    const ImFontLoader*         FontLoader;         // Font loader opaque interface (default to stb_truetype, can be changed to use FreeType by defining IMGUI_ENABLE_FREETYPE). Don't set directly!
+    const ImFontLoader*         FontLoader;         // Font loader opaque interface (default to use FreeType when IMGUI_ENABLE_FREETYPE is defined, otherwise default to use stb_truetype). Use SetFontLoader() to change this at runtime.
     const char*                 FontLoaderName;     // Font loader name (for display e.g. in About box) == FontLoader->Name
     void*                       FontLoaderData;     // Font backend opaque storage
     unsigned int                FontLoaderFlags;    // Shared flags (for all fonts) for font loader. THIS IS BUILD IMPLEMENTATION DEPENDENT (e.g. Per-font override is also available in ImFontConfig).

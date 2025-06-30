@@ -8,7 +8,7 @@
 // Usage:
 // - Add '#define IMGUI_ENABLE_FREETYPE' in your imconfig to automatically enable support
 //   for imgui_freetype in imgui. It is equivalent to selecting the default loader with:
-//      io.Fonts.FontLoader = ImGuiFreeType::GetFontLoader()
+//      io.Fonts->SetFontLoader(ImGuiFreeType::GetFontLoader())
 
 // Optional support for OpenType SVG fonts:
 // - Add '#define IMGUI_ENABLE_FREETYPE_PLUTOSVG' to use plutosvg (not provided). See #7927.
@@ -62,7 +62,7 @@ namespace ImGuiFreeType
 {
     // This is automatically assigned when using '#define IMGUI_ENABLE_FREETYPE'.
     // If you need to dynamically select between multiple builders:
-    // - you can manually assign this builder with 'atlas->FontLoader = ImGuiFreeType::GetFontLoader()'
+    // - you can manually assign this builder with 'atlas->SetFontLoader(ImGuiFreeType::GetFontLoader())'
     // - prefer deep-copying this into your own ImFontLoader instance if you use hot-reloading that messes up static data.
     IMGUI_API const ImFontLoader*       GetFontLoader();
 
@@ -75,7 +75,7 @@ namespace ImGuiFreeType
 
     // Obsolete names (will be removed)
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    //IMGUI_API const ImFontBuilderIO* GetBuilderForFreeType(); // Renamed/changed in 1.92. Change 'io.Fonts->FontBuilderIO = ImGuiFreeType::GetBuilderForFreeType()' to 'io.Fonts.FontLoader = ImGuiFreeType::GetFontLoader()' if you need runtime selection.
+    //IMGUI_API const ImFontBuilderIO* GetBuilderForFreeType(); // Renamed/changed in 1.92. Change 'io.Fonts->FontBuilderIO = ImGuiFreeType::GetBuilderForFreeType()' to 'io.Fonts->SetFontLoader(ImGuiFreeType::GetFontLoader())' if you need runtime selection.
     //static inline bool BuildFontAtlas(ImFontAtlas* atlas, unsigned int flags = 0) { atlas->FontBuilderIO = GetBuilderForFreeType(); atlas->FontLoaderFlags = flags; return atlas->Build(); } // Prefer using '#define IMGUI_ENABLE_FREETYPE'
 #endif
 }

@@ -2659,6 +2659,11 @@ void ImFontAtlas::CompactCache()
     ImFontAtlasTextureCompact(this);
 }
 
+void ImFontAtlas::SetFontLoader(const ImFontLoader* font_loader)
+{
+    ImFontAtlasBuildSetupFontLoader(this, font_loader);
+}
+
 void ImFontAtlas::ClearInputData()
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas!");
@@ -4178,9 +4183,9 @@ void ImFontAtlasBuildInit(ImFontAtlas* atlas)
     if (atlas->FontLoader == NULL)
     {
 #ifdef IMGUI_ENABLE_FREETYPE
-        ImFontAtlasBuildSetupFontLoader(atlas, ImGuiFreeType::GetFontLoader());
+        atlas->SetFontLoader(ImGuiFreeType::GetFontLoader());
 #elif defined(IMGUI_ENABLE_STB_TRUETYPE)
-        ImFontAtlasBuildSetupFontLoader(atlas, ImFontAtlasGetFontLoaderForStbTruetype());
+        atlas->SetFontLoader(ImFontAtlasGetFontLoaderForStbTruetype());
 #else
         IM_ASSERT(0); // Invalid Build function
 #endif
