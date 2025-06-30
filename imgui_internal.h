@@ -56,7 +56,6 @@ Index of this file:
 
 #include <stdio.h>      // FILE*, sscanf
 #include <stdlib.h>     // NULL, malloc, free, qsort, atoi, atof
-#include <math.h>       // sqrtf, fabsf, fmodf, powf, floorf, ceilf, cosf, sinf
 #include <limits.h>     // INT_MIN, INT_MAX
 
 // Enable SSE intrinsics if available
@@ -453,6 +452,49 @@ IMGUI_API void*             ImFileLoadToMemory(const char* filename, const char*
 IM_MSVC_RUNTIME_CHECKS_OFF
 // - Wrapper for standard libs functions. (Note that imgui_demo.cpp does _not_ use them to keep the code easy to copy)
 #ifndef IMGUI_DISABLE_DEFAULT_MATH_FUNCTIONS
+#if defined(__has_builtin)             && \
+        __has_builtin(__builtin_fabs) && \
+        __has_builtin(__builtin_fabsf) && \
+        __has_builtin(__builtin_sqrt) && \
+        __has_builtin(__builtin_sqrtf) && \
+        __has_builtin(__builtin_fmodf) && \
+        __has_builtin(__builtin_cosf) && \
+        __has_builtin(__builtin_sinf) && \
+        __has_builtin(__builtin_acosf) && \
+        __has_builtin(__builtin_atan2f) && \
+        __has_builtin(__builtin_ceilf) && \
+        __has_builtin(__builtin_pow) && \
+        __has_builtin(__builtin_powf) && \
+        __has_builtin(__builtin_log) && \
+        __has_builtin(__builtin_logf)
+
+#define ImFabs(X)           __builtin_fabsf(X)
+#define ImSqrt(X)           __builtin_sqrtf(X)
+#define ImFmod(X, Y)        __builtin_fmodf((X), (Y))
+#define ImCos(X)            __builtin_cosf(X)
+#define ImSin(X)            __builtin_sinf(X)
+#define ImAcos(X)           __builtin_acosf(X)
+#define ImAtan2(Y, X)       __builtin_atan2f((Y), (X))
+#define ImCeil(X)           __builtin_ceilf(X)
+
+static inline float  ImPow(float x, float y)    { return __builtin_powf(x, y); }          // DragBehaviorT/SliderBehaviorT uses ImPow with either float/double and need the precision
+static inline double ImPow(double x, double y)  { return __builtin_pow(x, y); }
+static inline float  ImLog(float x)             { return __builtin_logf(x); }             // DragBehaviorT/SliderBehaviorT uses ImLog with either float/double and need the precision
+static inline double ImLog(double x)            { return __builtin_log(x); }
+static inline float  ImAbs(float x)             { return __builtin_fabsf(x); }
+static inline double ImAbs(double x)            { return __builtin_fabs(x); }
+
+#ifdef IMGUI_ENABLE_SSE
+static inline float  ImRsqrt(float x)           { return _mm_cvtss_f32(_mm_rsqrt_ss(_mm_set_ss(x))); }
+#else
+static inline float  ImRsqrt(float x)           { return 1.0f / __builtin_sqrtf(x); }
+#endif
+static inline double ImRsqrt(double x)          { return 1.0 / __builtin_sqrt(x); }
+
+#else
+
+#include <math.h>       // sqrtf, fabsf, fmodf, powf, floorf, ceilf, cosf, sinf
+
 #define ImFabs(X)           fabsf(X)
 #define ImSqrt(X)           sqrtf(X)
 #define ImFmod(X, Y)        fmodf((X), (Y))
@@ -460,24 +502,30 @@ IM_MSVC_RUNTIME_CHECKS_OFF
 #define ImSin(X)            sinf(X)
 #define ImAcos(X)           acosf(X)
 #define ImAtan2(Y, X)       atan2f((Y), (X))
-#define ImAtof(STR)         atof(STR)
 #define ImCeil(X)           ceilf(X)
+
 static inline float  ImPow(float x, float y)    { return powf(x, y); }          // DragBehaviorT/SliderBehaviorT uses ImPow with either float/double and need the precision
 static inline double ImPow(double x, double y)  { return pow(x, y); }
 static inline float  ImLog(float x)             { return logf(x); }             // DragBehaviorT/SliderBehaviorT uses ImLog with either float/double and need the precision
 static inline double ImLog(double x)            { return log(x); }
-static inline int    ImAbs(int x)               { return x < 0 ? -x : x; }
 static inline float  ImAbs(float x)             { return fabsf(x); }
 static inline double ImAbs(double x)            { return fabs(x); }
-static inline float  ImSign(float x)            { return (x < 0.0f) ? -1.0f : (x > 0.0f) ? 1.0f : 0.0f; } // Sign operator - returns -1, 0 or 1 based on sign of argument
-static inline double ImSign(double x)           { return (x < 0.0) ? -1.0 : (x > 0.0) ? 1.0 : 0.0; }
+
 #ifdef IMGUI_ENABLE_SSE
 static inline float  ImRsqrt(float x)           { return _mm_cvtss_f32(_mm_rsqrt_ss(_mm_set_ss(x))); }
 #else
 static inline float  ImRsqrt(float x)           { return 1.0f / sqrtf(x); }
 #endif
 static inline double ImRsqrt(double x)          { return 1.0 / sqrt(x); }
+
 #endif
+#endif
+
+#define ImAtof(STR) atof(STR)
+
+static inline int    ImAbs(int x)               { return x < 0 ? -x : x; }
+static inline float  ImSign(float x)            { return (x < 0.0f) ? -1.0f : (x > 0.0f) ? 1.0f : 0.0f; } // Sign operator - returns -1, 0 or 1 based on sign of argument
+static inline double ImSign(double x)           { return (x < 0.0) ? -1.0 : (x > 0.0) ? 1.0 : 0.0; }
 // - ImMin/ImMax/ImClamp/ImLerp/ImSwap are used by widgets which support variety of types: signed/unsigned int/long long float/double
 // (Exceptionally using templates here but we could also redefine them for those types)
 template<typename T> static inline T ImMin(T lhs, T rhs)                        { return lhs < rhs ? lhs : rhs; }
