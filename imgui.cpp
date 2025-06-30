@@ -1525,11 +1525,17 @@ bool ImGuiStyle::Save(const char* filename)
     if (!f)
         return false;
     fprintf(f, "Version=%d\n",                                              IMGUI_VERSION_NUM);
+    // Font scaling
+    fprintf(f, "FontSizeBase=%f\n",                                         style.FontSizeBase);
+    fprintf(f, "FontScaleMain=%f\n",                                        style.FontScaleMain);
+    fprintf(f, "FontScaleDpi=%f\n",                                         style.FontScaleDpi);
+    
     fprintf(f, "Alpha=%f\n",                                                style.Alpha);
     fprintf(f, "DisabledAlpha=%f\n",                                        style.DisabledAlpha);
     fprintf(f, "WindowPadding=%f,%f\n",                                     style.WindowPadding.x, style.WindowPadding.y);
     fprintf(f, "WindowRounding=%f\n",                                       style.WindowRounding);
     fprintf(f, "WindowBorderSize=%f\n",                                     style.WindowBorderSize);
+    fprintf(f, "WindowBorderHoverPadding=%f\n",                             style.WindowBorderHoverPadding);
     fprintf(f, "WindowMinSize=%f,%f\n",                                     style.WindowMinSize.x, style.WindowMinSize.y);
     fprintf(f, "WindowTitleAlign=%f,%f\n",                                  style.WindowTitleAlign.x, style.WindowTitleAlign.y);
     fprintf(f, "WindowMenuButtonPosition=%d\n",                             style.WindowMenuButtonPosition);
@@ -1551,6 +1557,7 @@ bool ImGuiStyle::Save(const char* filename)
     fprintf(f, "GrabMinSize=%f\n",                                          style.GrabMinSize);
     fprintf(f, "GrabRounding=%f\n",                                         style.GrabRounding);
     fprintf(f, "LogSliderDeadzone=%f\n",                                    style.LogSliderDeadzone);
+    fprintf(f, "ImageBorderSize=%f\n",                                      style.ImageBorderSize);
     fprintf(f, "TabRounding=%f\n",                                          style.TabRounding);
     fprintf(f, "TabBorderSize=%f\n",                                        style.TabBorderSize);
     fprintf(f, "TabMinWidthForCloseButton=%f\n",                            style.TabMinWidthForCloseButton);
@@ -1558,6 +1565,9 @@ bool ImGuiStyle::Save(const char* filename)
     fprintf(f, "TabBarOverlineSize=%f\n",                                   style.TabBarOverlineSize);
     fprintf(f, "TableAngledHeadersAngle=%f\n",                              style.TableAngledHeadersAngle);
     fprintf(f, "TableAngledHeadersTextAlign=%f,%f\n",                       style.TableAngledHeadersTextAlign.x, style.TableAngledHeadersTextAlign.y);
+    fprintf(f, "TreeLinesFlags=%d\n",                                       style.TreeLinesFlags);
+    fprintf(f, "TreeLinesSize=%f\n",                                        style.TreeLinesSize);
+    fprintf(f, "TreeLinesRounding=%f\n",                                    style.TreeLinesRounding);
     fprintf(f, "ColorButtonPosition=%d\n",                                  style.ColorButtonPosition);
     fprintf(f, "ButtonTextAlign=%f,%f\n",                                   style.ButtonTextAlign.x, style.ButtonTextAlign.y);
     fprintf(f, "SelectableTextAlign=%f,%f\n",                               style.SelectableTextAlign.x, style.SelectableTextAlign.y);
@@ -1573,12 +1583,15 @@ bool ImGuiStyle::Save(const char* filename)
     fprintf(f, "AntiAliasedFill=%d\n",                                      style.AntiAliasedFill);
     fprintf(f, "CurveTessellationTol=%f\n",                                 style.CurveTessellationTol);
     fprintf(f, "CircleTessellationMaxError=%f\n",                           style.CircleTessellationMaxError);
+    
+    //Behaviors
     fprintf(f, "HoverStationaryDelay=%f\n",                                 style.HoverStationaryDelay);
     fprintf(f, "HoverDelayShort=%f\n",                                      style.HoverDelayShort);
     fprintf(f, "HoverDelayNormal=%f\n",                                     style.HoverDelayNormal);
     fprintf(f, "HoverFlagsForTooltipMouse=%d\n",                            style.HoverFlagsForTooltipMouse);
     fprintf(f, "HoverFlagsForTooltipNav=%d\n",                              style.HoverFlagsForTooltipNav);
 
+    //Colors
     fprintf(f, "Colors[ImGuiCol_Text]=%f,%f,%f,%f\n",                       style.Colors[ImGuiCol_Text].x, style.Colors[ImGuiCol_Text].y, style.Colors[ImGuiCol_Text].z, style.Colors[ImGuiCol_Text].w);
     fprintf(f, "Colors[ImGuiCol_TextDisabled]=%f,%f,%f,%f\n",               style.Colors[ImGuiCol_TextDisabled].x, style.Colors[ImGuiCol_TextDisabled].y, style.Colors[ImGuiCol_TextDisabled].z, style.Colors[ImGuiCol_TextDisabled].w);
     fprintf(f, "Colors[ImGuiCol_WindowBg]=%f,%f,%f,%f\n",                   style.Colors[ImGuiCol_WindowBg].x, style.Colors[ImGuiCol_WindowBg].y, style.Colors[ImGuiCol_WindowBg].z, style.Colors[ImGuiCol_WindowBg].w);
@@ -1612,6 +1625,7 @@ bool ImGuiStyle::Save(const char* filename)
     fprintf(f, "Colors[ImGuiCol_ResizeGrip]=%f,%f,%f,%f\n",                 style.Colors[ImGuiCol_ResizeGrip].x, style.Colors[ImGuiCol_ResizeGrip].y, style.Colors[ImGuiCol_ResizeGrip].z, style.Colors[ImGuiCol_ResizeGrip].w);
     fprintf(f, "Colors[ImGuiCol_ResizeGripHovered]=%f,%f,%f,%f\n",          style.Colors[ImGuiCol_ResizeGripHovered].x, style.Colors[ImGuiCol_ResizeGripHovered].y, style.Colors[ImGuiCol_ResizeGripHovered].z, style.Colors[ImGuiCol_ResizeGripHovered].w);
     fprintf(f, "Colors[ImGuiCol_ResizeGripActive]=%f,%f,%f,%f\n",           style.Colors[ImGuiCol_ResizeGripActive].x, style.Colors[ImGuiCol_ResizeGripActive].y, style.Colors[ImGuiCol_ResizeGripActive].z, style.Colors[ImGuiCol_ResizeGripActive].w);
+    fprintf(f, "Colors[ImGuiCol_InputTextCursor]=%f,%f,%f,%f\n",           style.Colors[ImGuiCol_InputTextCursor].x, style.Colors[ImGuiCol_InputTextCursor].y, style.Colors[ImGuiCol_InputTextCursor].z, style.Colors[ImGuiCol_InputTextCursor].w);
     fprintf(f, "Colors[ImGuiCol_TabHovered]=%f,%f,%f,%f\n",                 style.Colors[ImGuiCol_TabHovered].x, style.Colors[ImGuiCol_TabHovered].y, style.Colors[ImGuiCol_TabHovered].z, style.Colors[ImGuiCol_TabHovered].w);
     fprintf(f, "Colors[ImGuiCol_Tab]=%f,%f,%f,%f\n",                        style.Colors[ImGuiCol_Tab].x, style.Colors[ImGuiCol_Tab].y, style.Colors[ImGuiCol_Tab].z, style.Colors[ImGuiCol_Tab].w);
     fprintf(f, "Colors[ImGuiCol_TabSelected]=%f,%f,%f,%f\n",                style.Colors[ImGuiCol_TabSelected].x, style.Colors[ImGuiCol_TabSelected].y, style.Colors[ImGuiCol_TabSelected].z, style.Colors[ImGuiCol_TabSelected].w);
@@ -1654,11 +1668,17 @@ bool ImGuiStyle::Load(const char* filename)
     while (fgets(line, sizeof(line), f))
     {
         if (sscanf(line, "Version=%d",                                              version) == 1) continue;
+        // Font scaling
+        if (sscanf(line, "FontSizeBase=%f\n",                                       style.FontSizeBase) == 1) continue;
+        if (sscanf(line, "FontScaleMain=%f\n",                                      style.FontScaleMain) == 1) continue;
+        if (sscanf(line, "FontScaleDpi=%f\n",                                       style.FontScaleDpi) == 1) continue;
+
         if (sscanf(line, "Alpha=%f",                                                style.Alpha) == 1) continue;
         if (sscanf(line, "DisabledAlpha=%f",                                        style.DisabledAlpha) == 1) continue;
         if (sscanf(line, "WindowPadding=%f,%f",                                     style.WindowPadding.x, style.WindowPadding.y) == 2) continue;
         if (sscanf(line, "WindowRounding=%f",                                       style.WindowRounding) == 1) continue;
         if (sscanf(line, "WindowBorderSize=%f",                                     style.WindowBorderSize) == 1) continue;
+        if (sscanf(line, "WindowBorderHoverPadding=%f",                             style.WindowBorderHoverPadding) == 1) continue;
         if (sscanf(line, "WindowMinSize=%f,%f",                                     style.WindowMinSize.x, style.WindowMinSize.y) == 2) continue;
         if (sscanf(line, "WindowTitleAlign=%f,%f",                                  style.WindowTitleAlign.x, style.WindowTitleAlign.y) == 2) continue;
         if (sscanf(line, "WindowMenuButtonPosition=%d",                             style.WindowMenuButtonPosition) == 1) continue;
@@ -1687,6 +1707,9 @@ bool ImGuiStyle::Load(const char* filename)
         if (sscanf(line, "TabBarOverlineSize=%f",                                   style.TabBarOverlineSize) == 1) continue;
         if (sscanf(line, "TableAngledHeadersAngle=%f",                              style.TableAngledHeadersAngle) == 1) continue;
         if (sscanf(line, "TableAngledHeadersTextAlign=%f,%f",                       style.TableAngledHeadersTextAlign.x, style.TableAngledHeadersTextAlign.y) == 2) continue;
+        if (sscanf(line, "TreeLinesFlags=%d",                                       style.TreeLinesFlags) == 1) continue;
+        if (sscanf(line, "TreeLinesSize=%f",                                        style.TreeLinesSize) == 1) continue;
+        if (sscanf(line, "TreeLinesRounding=%f",                                    style.TreeLinesRounding) == 1) continue;
         if (sscanf(line, "ColorButtonPosition=%d",                                  style.ColorButtonPosition) == 1) continue;
         if (sscanf(line, "ButtonTextAlign=%f,%f",                                   style.ButtonTextAlign.x, style.ButtonTextAlign.y) == 2) continue;
         if (sscanf(line, "SelectableTextAlign=%f,%f",                               style.SelectableTextAlign.x, style.SelectableTextAlign.y) == 2) continue;
@@ -1702,12 +1725,15 @@ bool ImGuiStyle::Load(const char* filename)
         if (sscanf(line, "AntiAliasedFill=%d",                                      style.AntiAliasedFill) == 1) continue;
         if (sscanf(line, "CurveTessellationTol=%f",                                 style.CurveTessellationTol) == 1) continue;
         if (sscanf(line, "CircleTessellationMaxError=%f",                           style.CircleTessellationMaxError) == 1) continue;
+
+        //Behaviors
         if (sscanf(line, "HoverStationaryDelay=%f",                                 style.HoverStationaryDelay) == 1) continue;
         if (sscanf(line, "HoverDelayShort=%f",                                      style.HoverDelayShort) == 1) continue;
         if (sscanf(line, "HoverDelayNormal=%f",                                     style.HoverDelayNormal) == 1) continue;
         if (sscanf(line, "HoverFlagsForTooltipMouse=%d",                            style.HoverFlagsForTooltipMouse) == 1) continue;
         if (sscanf(line, "HoverFlagsForTooltipNav=%d",                              style.HoverFlagsForTooltipNav) == 1) continue;
 
+        //Colors
         if (sscanf(line, "Colors[ImGuiCol_Text]=%f,%f,%f,%f",                       style.Colors[ImGuiCol_Text].x, style.Colors[ImGuiCol_Text].y, style.Colors[ImGuiCol_Text].z, style.Colors[ImGuiCol_Text].w) == 4) continue;
         if (sscanf(line, "Colors[ImGuiCol_TextDisabled]=%f,%f,%f,%f",               style.Colors[ImGuiCol_TextDisabled].x, style.Colors[ImGuiCol_TextDisabled].y, style.Colors[ImGuiCol_TextDisabled].z, style.Colors[ImGuiCol_TextDisabled].w) == 4) continue;
         if (sscanf(line, "Colors[ImGuiCol_WindowBg]=%f,%f,%f,%f",                   style.Colors[ImGuiCol_WindowBg].x, style.Colors[ImGuiCol_WindowBg].y, style.Colors[ImGuiCol_WindowBg].z, style.Colors[ImGuiCol_WindowBg].w) == 4) continue;
@@ -1741,6 +1767,7 @@ bool ImGuiStyle::Load(const char* filename)
         if (sscanf(line, "Colors[ImGuiCol_ResizeGrip]=%f,%f,%f,%f",                 style.Colors[ImGuiCol_ResizeGrip].x, style.Colors[ImGuiCol_ResizeGrip].y, style.Colors[ImGuiCol_ResizeGrip].z, style.Colors[ImGuiCol_ResizeGrip].w) == 4) continue;
         if (sscanf(line, "Colors[ImGuiCol_ResizeGripHovered]=%f,%f,%f,%f",          style.Colors[ImGuiCol_ResizeGripHovered].x, style.Colors[ImGuiCol_ResizeGripHovered].y, style.Colors[ImGuiCol_ResizeGripHovered].z, style.Colors[ImGuiCol_ResizeGripHovered].w) == 4) continue;
         if (sscanf(line, "Colors[ImGuiCol_ResizeGripActive]=%f,%f,%f,%f",           style.Colors[ImGuiCol_ResizeGripActive].x, style.Colors[ImGuiCol_ResizeGripActive].y, style.Colors[ImGuiCol_ResizeGripActive].z, style.Colors[ImGuiCol_ResizeGripActive].w) == 4) continue;
+        if (sscanf(line, "Colors[ImGuiCol_InputTextCursor]=%f,%f,%f,%f",           style.Colors[ImGuiCol_InputTextCursor].x, style.Colors[ImGuiCol_InputTextCursor].y, style.Colors[ImGuiCol_InputTextCursor].z, style.Colors[ImGuiCol_InputTextCursor].w) == 4) continue;
         if (sscanf(line, "Colors[ImGuiCol_TabHovered]=%f,%f,%f,%f",                 style.Colors[ImGuiCol_TabHovered].x, style.Colors[ImGuiCol_TabHovered].y, style.Colors[ImGuiCol_TabHovered].z, style.Colors[ImGuiCol_TabHovered].w) == 4) continue;
         if (sscanf(line, "Colors[ImGuiCol_Tab]=%f,%f,%f,%f",                        style.Colors[ImGuiCol_Tab].x, style.Colors[ImGuiCol_Tab].y, style.Colors[ImGuiCol_Tab].z, style.Colors[ImGuiCol_Tab].w) == 4) continue;
         if (sscanf(line, "Colors[ImGuiCol_TabSelected]=%f,%f,%f,%f",                style.Colors[ImGuiCol_TabSelected].x, style.Colors[ImGuiCol_TabSelected].y, style.Colors[ImGuiCol_TabSelected].z, style.Colors[ImGuiCol_TabSelected].w) == 4) continue;
