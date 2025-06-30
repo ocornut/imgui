@@ -45,6 +45,9 @@ Other changes:
 
 - Fonts: added ImFontAtlas::SetFontLoader() to dynamically change font
   loader at runtime without using internal API. (#8752, #8465)
+- Fonts: set a maximum font size of 512.0f at ImGui:: API level to reduce
+  edge cases (e.g. out of memory errors). ImDrawList:: API doesn't have the
+  constraint. (#8758)
 - Textures: Fixed support for `#define ImTextureID_Invalid` to non-zero value:
   ImTextureData() was incorrectly cleared with zeroes. (#8745) [@rachit7645]
 - Demo: Added "Text -> Font Size" demo section. (#8738) [@Demonese]

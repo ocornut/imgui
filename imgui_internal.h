@@ -3711,6 +3711,8 @@ typedef ImFontLoader ImFontBuilderIO; // [renamed/changed in 1.92] The types are
 // [SECTION] ImFontAtlas internal API
 //-----------------------------------------------------------------------------
 
+#define IMGUI_FONT_SIZE_MAX     (512.0f)
+
 // Helpers: ImTextureRef ==/!= operators provided as convenience
 // (note that _TexID and _TexData are never set simultaneously)
 inline bool operator==(const ImTextureRef& lhs, const ImTextureRef& rhs)    { return lhs._TexID == rhs._TexID && lhs._TexData == rhs._TexData; }

@@ -8824,7 +8824,7 @@ void ImGui::UpdateCurrentFontSize(float restore_font_size_after_scaling)
     // - We started rounding in 1.90 WIP (18991) as our layout system currently doesn't support non-rounded font size well yet.
     // - We may support it better later and remove this rounding.
     final_size = GetRoundedFontSize(final_size);
-    final_size = ImMax(1.0f, final_size);
+    final_size = ImClamp(final_size, 1.0f, IMGUI_FONT_SIZE_MAX);
     if (g.Font != NULL && (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures))
         g.Font->CurrentRasterizerDensity = g.FontRasterizerDensity;
     g.FontSize = final_size;
@@ -15871,9 +15871,9 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
         style._NextFrameFontSizeBase = style.FontSizeBase; // FIXME: Temporary hack until we finish remaining work.
     SameLine(0.0f, 0.0f); Text(" (out %.2f)", GetFontSize());
     SameLine(); MetricsHelpMarker("- This is scaling font only. General scaling will come later.");
-    DragFloat("FontScaleMain", &style.FontScaleMain, 0.02f, 0.5f, 5.0f);
+    DragFloat("FontScaleMain", &style.FontScaleMain, 0.02f, 0.5f, 4.0f);
     //BeginDisabled(io.ConfigDpiScaleFonts);
-    DragFloat("FontScaleDpi", &style.FontScaleDpi, 0.02f, 0.5f, 5.0f);
+    DragFloat("FontScaleDpi", &style.FontScaleDpi, 0.02f, 0.5f, 4.0f);
     //SetItemTooltip("When io.ConfigDpiScaleFonts is set, this value is automatically overwritten.");
     //EndDisabled();
     if ((io.BackendFlags & ImGuiBackendFlags_RendererHasTextures) == 0)

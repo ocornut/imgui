@@ -8282,7 +8282,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         SameLine(0.0f, 0.0f); Text(" (out %.2f)", GetFontSize());
         DragFloat("FontScaleMain", &style.FontScaleMain, 0.02f, 0.5f, 4.0f);
         //BeginDisabled(GetIO().ConfigDpiScaleFonts);
-        DragFloat("FontScaleDpi", &style.FontScaleDpi, 0.02f, 0.5f, 5.0f);
+        DragFloat("FontScaleDpi", &style.FontScaleDpi, 0.02f, 0.5f, 4.0f);
         //SetItemTooltip("When io.ConfigDpiScaleFonts is set, this value is automatically overwritten.");
         //EndDisabled();
 
