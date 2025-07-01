@@ -996,6 +996,97 @@ void ImGui_ImplGlfw_InstallEmscriptenCallbacks(GLFWwindow* window, const char* c
 }
 #endif // #ifdef EMSCRIPTEN_USE_PORT_CONTRIB_GLFW3
 
+// GLFW helper to create a WebGPU surface, used only in WGPU-Native, DAWN-Native already has a built-in function
+// At current date (jun/2025) there is no "official" support in GLFW to create a surface for WebGPU backend
+// This stub uses "low level" GLFW calls to acquire information from a specific Window Manager.
+// Currently supported platforms: Windows / Linux (X11 and Wayland) / MacOS
+// Not necessary/available with EMSCRIPTEN
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) && !defined(__EMSCRIPTEN__)
+// GLFW native necessary to get information about current platform / Window Manager
+#include <GLFW/glfw3native.h>
+// MacOS specific: is necessary to compile with "-x objective-c++" flags
+// (e.g. using cmake: set_source_files_properties(${IMGUI_DIR}/backends/imgui_impl_glfw.cpp PROPERTIES COMPILE_FLAGS "-x objective-c++") )
+#if defined(GLFW_EXPOSE_NATIVE_COCOA)
+#include <Foundation/Foundation.h>
+#include <QuartzCore/CAMetalLayer.h>
+#endif
+
+WGPUSurface ImGui_ImplGLFW_CreateWGPUSurface_Helper(WGPUInstance instance, GLFWwindow* window)
+{
+    WGPUSurfaceDescriptor surfaceDescriptor = {};
+    WGPUChainedStruct     chainedStruct     = {};
+
+    WGPUSurface surface = {};
+
+#if defined(GLFW_EXPOSE_NATIVE_COCOA)
+    {
+        id metal_layer = NULL;
+        NSWindow *ns_window = glfwGetCocoaWindow(window);
+        [ns_window.contentView setWantsLayer:YES];
+        metal_layer = [CAMetalLayer layer];
+        [ns_window.contentView setLayer:metal_layer];
+
+        chainedStruct.sType = WGPUSType_SurfaceSourceMetalLayer;
+
+        WGPUSurfaceSourceMetalLayer surfaceMetal = {};
+        surfaceMetal.chain = chainedStruct;
+        surfaceMetal.layer = metal_layer;
+
+        surfaceDescriptor.nextInChain = &surfaceMetal.chain;
+        surface = wgpuInstanceCreateSurface(instance, &surfaceDescriptor);
+    }
+#elif defined(GLFW_EXPOSE_NATIVE_WAYLAND) && defined(GLFW_EXPOSE_NATIVE_X11)
+    if (glfwGetPlatform() == GLFW_PLATFORM_X11) {
+        Display *x11_display = glfwGetX11Display();
+        Window x11_window = glfwGetX11Window(window);
+
+        chainedStruct.sType = WGPUSType_SurfaceSourceXlibWindow;
+
+        WGPUSurfaceSourceXlibWindow surfaceXlib = {};
+        surfaceXlib.chain   = chainedStruct;
+        surfaceXlib.display = x11_display;
+        surfaceXlib.window  = x11_window;
+
+        surfaceDescriptor.nextInChain = &surfaceXlib.chain;
+        surface = wgpuInstanceCreateSurface(instance, &surfaceDescriptor);
+    }
+    if (glfwGetPlatform() == GLFW_PLATFORM_WAYLAND) {
+        struct wl_display *wayland_display = glfwGetWaylandDisplay();
+        struct wl_surface *wayland_surface = glfwGetWaylandWindow(window);
+
+        chainedStruct.sType = WGPUSType_SurfaceSourceWaylandSurface;
+
+        WGPUSurfaceSourceWaylandSurface surfaceWayland = {};
+        surfaceWayland.chain   = chainedStruct;
+        surfaceWayland.display = wayland_display;
+        surfaceWayland.surface = wayland_surface;
+
+        surfaceDescriptor.nextInChain = &surfaceWayland.chain;
+        surface = wgpuInstanceCreateSurface(instance, &surfaceDescriptor);
+    }
+#elif defined(GLFW_EXPOSE_NATIVE_WIN32)
+    {
+        HWND hwnd = glfwGetWin32Window(window);
+        HINSTANCE hinstance = GetModuleHandle(NULL);
+
+        chainedStruct.sType = WGPUSType_SurfaceSourceWindowsHWND;
+
+        WGPUSurfaceSourceWindowsHWND surfaceHWND = {};
+        surfaceHWND.chain     = chainedStruct;
+        surfaceHWND.hinstance = hinstance;
+        surfaceHWND.hwnd      = hwnd;
+
+        surfaceDescriptor.nextInChain = &surfaceHWND.chain;
+        surface = wgpuInstanceCreateSurface(instance, &surfaceDescriptor);
+    }
+#elif
+#error "Unsupported GLFW/WebGPU native platform"
+#endif
+    return surface;
+}
+#endif // defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) && !defined(__EMSCRIPTEN__)
+
+
 //-----------------------------------------------------------------------------
 
 #if defined(__clang__)
