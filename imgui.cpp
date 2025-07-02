@@ -1521,7 +1521,7 @@ void ImGuiStyle::ScaleAllSizes(float scale_factor)
 bool ImGuiStyle::Save(const char* filename)
 {
     ImGuiStyle& style = *this;
-    FILE* f = fopen(filename, "w");
+    FILE* f = ImFileOpen(filename, "w");
     if (!f)
         return false;
     fprintf(f, "Version=%d\n",                                              IMGUI_VERSION_NUM);
@@ -1651,14 +1651,14 @@ bool ImGuiStyle::Save(const char* filename)
     fprintf(f, "Colors[ImGuiCol_NavWindowingDimBg]=%f,%f,%f,%f\n",          style.Colors[ImGuiCol_NavWindowingDimBg].x, style.Colors[ImGuiCol_NavWindowingDimBg].y, style.Colors[ImGuiCol_NavWindowingDimBg].z, style.Colors[ImGuiCol_NavWindowingDimBg].w);
     fprintf(f, "Colors[ImGuiCol_ModalWindowDimBg]=%f,%f,%f,%f\n",           style.Colors[ImGuiCol_ModalWindowDimBg].x, style.Colors[ImGuiCol_ModalWindowDimBg].y, style.Colors[ImGuiCol_ModalWindowDimBg].z, style.Colors[ImGuiCol_ModalWindowDimBg].w);
 
-    fclose(f);
+    ImFileClose(f);
     return true;
 }
 
 bool ImGuiStyle::Load(const char* filename)
 {
     ImGuiStyle& style = *this; 
-    FILE* f = fopen(filename, "r");
+    FILE* f = ImFileOpen(filename, "r");
     if (!f)
         return false;
 
@@ -1802,7 +1802,7 @@ bool ImGuiStyle::Load(const char* filename)
 #endif
 
     }
-    fclose(f);
+    ImFileClose(f);
     return true;
 }
 
