@@ -2391,6 +2391,8 @@ struct ImGuiStyle
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     // TabMinWidthForCloseButton = TabCloseButtonMinWidthUnselected // Renamed in 1.91.9.
 #endif
+    IMGUI_API bool Save(const char* filename);
+    IMGUI_API bool Load(const char* filename);
 };
 
 //-----------------------------------------------------------------------------
