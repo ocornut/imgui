@@ -807,6 +807,7 @@ void ImGui_ImplVulkan_UpdateTexture(ImTextureData* tex)
         {
             VkImageMemoryBarrier copy_barrier[1] = {};
             copy_barrier[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            copy_barrier[0].srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
             copy_barrier[0].dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
             copy_barrier[0].oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
             copy_barrier[0].newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
@@ -816,7 +817,7 @@ void ImGui_ImplVulkan_UpdateTexture(ImTextureData* tex)
             copy_barrier[0].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
             copy_barrier[0].subresourceRange.levelCount = 1;
             copy_barrier[0].subresourceRange.layerCount = 1;
-            vkCmdPipelineBarrier(bd->TexCommandBuffer, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, copy_barrier);
+            vkCmdPipelineBarrier(bd->TexCommandBuffer, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, copy_barrier);
 
             VkBufferImageCopy region = {};
             region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
