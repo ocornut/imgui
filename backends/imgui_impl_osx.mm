@@ -702,11 +702,22 @@ static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
 {
     // Only process events from the window containing ImGui view
     void* event_handle = (__bridge void*)(event.window);
-    void* view_handle = (__bridge void*)(view.window);
-    if (event_handle == nullptr || view_handle == nullptr)
+    if (event_handle == nullptr)
         return false;
-    ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle(view_handle);
-    if (viewport == nullptr || viewport->PlatformHandleRaw != event_handle)
+    
+    const ImVector<ImGuiViewport*>* viewports = &ImGui::GetPlatformIO().Viewports;
+    bool isInAnyViewport = false;
+    for (int i = 0; i < viewports->Size; ++i)
+    {
+        ImGuiViewport* viewport = (*viewports)[i];
+        if(viewport->PlatformHandleRaw == event_handle)
+        {
+            isInAnyViewport = true;
+            break;
+        }
+    }
+
+    if (!isInAnyViewport)
         return false;
 
     ImGuiIO& io = ImGui::GetIO();
