@@ -174,7 +174,7 @@ struct ImGui_ImplFreeType_FontSrcBakedData
 
 bool ImGui_ImplFreeType_FontSrcData::InitFont(FT_Library ft_library, ImFontConfig* src, ImGuiFreeTypeLoaderFlags extra_font_loader_flags)
 {
-    FT_Error error = FT_New_Memory_Face(ft_library, (uint8_t*)src->FontData, (uint32_t)src->FontDataSize, (uint32_t)src->FontNo, &FtFace);
+    FT_Error error = FT_New_Memory_Face(ft_library, (uint8_t*)src->FontData, (FT_Long)src->FontDataSize, (FT_Long)src->FontNo, &FtFace);
     if (error != 0)
         return false;
     error = FT_Select_Charmap(FtFace, FT_ENCODING_UNICODE);
