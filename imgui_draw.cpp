@@ -3410,6 +3410,9 @@ void ImFontAtlasBuildSetupFontLoader(ImFontAtlas* atlas, const ImFontLoader* fon
         atlas->FontLoader->LoaderInit(atlas);
     for (ImFont* font : atlas->Fonts)
         ImFontAtlasFontInitOutput(atlas, font);
+    for (ImFont* font : atlas->Fonts)
+        for (ImFontConfig* src : font->Sources)
+            ImFontAtlasFontSourceAddToFont(atlas, font, src);
 }
 
 // Preload all glyph ranges for legacy backends.
@@ -3576,11 +3579,8 @@ bool ImFontAtlasFontInitOutput(ImFontAtlas* atlas, ImFont* font)
 {
     bool ret = true;
     for (ImFontConfig* src : font->Sources)
-    {
-        const ImFontLoader* loader = src->FontLoader ? src->FontLoader : atlas->FontLoader;
-        if (loader && loader->FontSrcInit != NULL && !loader->FontSrcInit(atlas, src))
+        if (!ImFontAtlasFontSourceInit(atlas, src))
             ret = false;
-    }
     IM_ASSERT(ret); // Unclear how to react to this meaningfully. Assume that result will be same as initial AddFont() call.
     return ret;
 }
