@@ -21,6 +21,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2025-07-07: Fixed texture update broken on some platforms where ALLEGRO_LOCK_WRITEONLY needed all texels to be rewritten.
 //  2025-06-11: Added support for ImGuiBackendFlags_RendererHasTextures, for dynamic font atlas. Removed ImGui_ImplSDLGPU3_CreateFontsTexture() and ImGui_ImplSDLGPU3_DestroyFontsTexture().
 //  2025-02-18: Added ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress mouse cursor support.
 //  2025-01-06: Avoid calling al_set_mouse_cursor() repeatedly since it appears to leak on on X11 (#8256).
@@ -291,14 +292,12 @@ void ImGui_ImplAllegro5_UpdateTexture(ImTextureData* tex)
     {
         // Update selected blocks. We only ever write to textures regions which have never been used before!
         // This backend choose to use tex->Updates[] but you can use tex->UpdateRect to upload a single region.
-        ImTextureRect r_bb = tex->UpdateRect; // Bounding box encompassing all individual updates
+        ImTextureRect r = tex->UpdateRect; // Bounding box encompassing all individual updates
         ALLEGRO_BITMAP* gpu_bitmap = (ALLEGRO_BITMAP*)(intptr_t)tex->TexID;
-        ALLEGRO_LOCKED_REGION* locked_region = al_lock_bitmap_region(gpu_bitmap, r_bb.x, r_bb.y, r_bb.w, r_bb.h, al_get_bitmap_format(gpu_bitmap), ALLEGRO_LOCK_WRITEONLY);
+        ALLEGRO_LOCKED_REGION* locked_region = al_lock_bitmap_region(gpu_bitmap, r.x, r.y, r.w, r.h, al_get_bitmap_format(gpu_bitmap), ALLEGRO_LOCK_WRITEONLY);
         IM_ASSERT(locked_region && "Backend failed to update texture!");
-        for (ImTextureRect& r : tex->Updates)
-            for (int y = 0; y < r.h; y++)
-                memcpy((unsigned char*)locked_region->data + locked_region->pitch * (r.y - r_bb.y + y) + (r.x - r_bb.x) * tex->BytesPerPixel, // dst
-                    tex->GetPixelsAt(r.x, r.y + y), r.w * tex->BytesPerPixel); // src, block pitch
+        for (int y = 0; y < r.h; y++)
+            memcpy((unsigned char*)locked_region->data + locked_region->pitch * y, tex->GetPixelsAt(r.x, r.y + y), r.w * tex->BytesPerPixel); // dst, src, block pitch
         al_unlock_bitmap(gpu_bitmap);
         tex->SetStatus(ImTextureStatus_OK);
     }

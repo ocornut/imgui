@@ -63,6 +63,8 @@ Other changes:
   (#8727) [@morrazzzz]
 - Backends: OSX: added ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress
   mouse cursor support. (#8739) [@cfillion]
+- Backends: Allegro5: fixed texture update broken on some platforms where
+  ALLEGRO_LOCK_WRITEONLY needed all texels to be rewritten. (#8770)
 - Backends: Vulkan: use nonCoherentAtomSize to align upload_size, fixing
   validation error on some setups. (#8743, #8744) [@tquante]
 
