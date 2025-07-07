@@ -69,6 +69,8 @@ Other changes:
   ALLEGRO_LOCK_WRITEONLY needed all texels to be rewritten. (#8770)
 - Backends: Vulkan: use nonCoherentAtomSize to align upload_size, fixing
   validation error on some setups. (#8743, #8744) [@tquante]
+- Backends: Vulkan: fixed texture synchronization issue introduced in 1.92.0,
+  leading to validation layers reacting. (#8772) [@Majora320]
 
 
 -----------------------------------------------------------------------
