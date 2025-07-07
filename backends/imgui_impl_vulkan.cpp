@@ -97,6 +97,7 @@
 #ifndef IM_MAX
 #define IM_MAX(A, B)    (((A) >= (B)) ? (A) : (B))
 #endif
+#undef Status // X11 headers are leaking this.
 
 // Visual Studio warnings
 #ifdef _MSC_VER

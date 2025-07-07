@@ -3385,6 +3385,8 @@ struct ImDrawData
 // FOR ALL OTHER ImTextureXXXX TYPES: ONLY CORE LIBRARY AND RENDERER BACKENDS NEED TO KNOW AND CARE ABOUT THEM.
 //-----------------------------------------------------------------------------
 
+#undef Status // X11 headers are leaking this.
+
 // We intentionally support a limited amount of texture formats to limit burden on CPU-side code and extension.
 // Most standard backends only support RGBA32 but we provide a single channel option for low-resource/embedded systems.
 enum ImTextureFormat
