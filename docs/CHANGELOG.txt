@@ -58,6 +58,7 @@ Other changes:
   ImTextureData() was incorrectly cleared with zeroes. (#8745) [@rachit7645]
 - Demo: Added "Text -> Font Size" demo section. (#8738) [@Demonese]
 - CI: Fixed dllimport/dllexport tests. (#8757) [@AidanSun05]
+- CI: Updated to use latest Windows image + VS2022.
 - Backends: SDL3: avoid calling SDL_StartTextInput() again if already active.
   (#8727) [@morrazzzz]
 - Backends: OSX: added ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress
