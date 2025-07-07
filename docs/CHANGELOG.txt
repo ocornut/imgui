@@ -196,6 +196,7 @@ Breaking changes:
   While in theory a vast majority of users shouldn't be affected, some use cases or
   extensions might be. Among other things:
     - ImDrawCmd::TextureId has been changed to ImDrawCmd::TexRef.
+    - ImFontAtlas::TexID has been changed to ImFontAtlas::TexRef.
     - ImFontAtlas::ConfigData[] has been renamed to ImFontAtlas::Sources[].
     - ImFont::ConfigData[], ConfigDataCount has been renamed to Sources[], SourceCount.
     - Each ImFont has a number of ImFontBaked instances corresponding to actively used
@@ -213,6 +214,11 @@ Breaking changes:
             g.Font      == ImGui::GetFont()
             g.FontSize  == ImGui::GetFontSize()
             g.FontBaked == ImGui::GetFontBaked() == ImGui::GetFont()->GetFontBaked(ImGui::GetFontSize())
+    - Fields moved from ImFontAtlas to ImTextureData
+      - ImFontAtlas->TexWidth         -> ImFontAtlas->TexData->Width
+      - ImFontAtlas->TexHeight        -> ImFontAtlas->TexData->Height
+      - ImFontAtlas->TexPixelsAlpha8  -> ImFontAtlas->TexData->GetPixels() (when ImFontAtlas::TexDesiredFormat == ImTextureFormat_Alpha8)
+      - ImFontAtlas->TexPixelsRGBA32  -> ImFontAtlas->TexData->GetPixels() (when ImFontAtlas::TexDesiredFormat == ImTextureFormat_RGBA32)
   Please report if you are affected!
 - Fonts: (users of imgui_freetype)
   - renamed ImFontAtlas::FontBuilderFlags to ImFontAtlas::FontLoaderFlags.

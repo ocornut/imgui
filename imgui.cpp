@@ -445,10 +445,12 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
                        - Fonts: obsoleted ImFont::Scale which is not useful anymore.
                        - Fonts: generally reworked Internals of ImFontAtlas and ImFont. While in theory a vast majority of users shouldn't be affected, some use cases or extensions might be. Among other things:
                           - ImDrawCmd::TextureId has been changed to ImDrawCmd::TexRef.
+                          - ImFontAtlas::TexID has been changed to ImFontAtlas::TexRef.
                           - ImFontAtlas::ConfigData[] has been renamed to ImFontAtlas::Sources[]
                           - ImFont::ConfigData[], ConfigDataCount has been renamed to Sources[], SourceCount.
                           - Each ImFont has a number of ImFontBaked instances corresponding to actively used sizes. ImFont::GetFontBaked(size) retrieves the one for a given size.
                           - Fields moved from ImFont to ImFontBaked: IndexAdvanceX[], Glyphs[], Ascent, Descent, FindGlyph(), FindGlyphNoFallback(), GetCharAdvance().
+                          - Fields moved from ImFontAtlas to ImFontAtlas->Tex: ImFontAtlas::TexWidth => TexData->Width, ImFontAtlas::TexHeight => TexData->Height, ImFontAtlas::TexPixelsAlpha8/TexPixelsRGBA32 => TexData->GetPixels().
                           - Widget code may use ImGui::GetFontBaked() instead of ImGui::GetFont() to access font data for current font at current font size (and you may use font->GetFontBaked(size) to access it for any other size.)
                        - Fonts: (users of imgui_freetype): renamed ImFontAtlas::FontBuilderFlags to ImFontAtlas::FontLoaderFlags. Renamed ImFontConfig::FontBuilderFlags to ImFontConfig::FontLoaderFlags. Renamed ImGuiFreeTypeBuilderFlags to ImGuiFreeTypeLoaderFlags.
                          If you used runtime imgui_freetype selection rather than the default IMGUI_ENABLE_FREETYPE compile-time option: Renamed/reworked ImFontBuilderIO into ImFontLoader. Renamed ImGuiFreeType::GetBuilderForFreeType() to ImGuiFreeType::GetFontLoader().
