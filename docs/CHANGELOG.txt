@@ -63,6 +63,8 @@ Other changes:
 
 Docking+Viewports Branch:
 
+- Backends: OSX: Fixed multi-viewport handling broken in 1.92.0. (#8644, #8777) [@cfillion]
+
 
 -----------------------------------------------------------------------
  VERSION 1.92.0 (Released 2025-06-25)
