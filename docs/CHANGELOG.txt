@@ -62,7 +62,8 @@ Other changes:
 - CI: Fixed dllimport/dllexport tests. (#8757) [@AidanSun05]
 - CI: Updated to use latest Windows image + VS2022.
 - Backends: SDL3: avoid calling SDL_StartTextInput() again if already active.
-  (#8727) [@morrazzzz]
+  (fixes e.g.: an issue on iOS where the keyboard animation will popup every 
+  time the user types a key + probably other things) (#8727) [@morrazzzz]
 - Backends: OSX: added ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress
   mouse cursor support. (#8739) [@cfillion]
 - Backends: Allegro5: fixed texture update broken on some platforms where
@@ -168,6 +169,8 @@ Breaking changes:
   and IsBuilt() functions. The new protocol for backends to handle textures doesn't need them.
   Kept redirection functions (will obsolete).
    - A majority of old backends should still work with new code (behaving like they did before).
+   - For instructions to upgrade your custom backend:
+     https://github.com/ocornut/imgui/blob/master/docs/BACKENDS.md
    - Calling ImFontAtlas::Build() before initializing new backends will erroneously trigger
      preloading all glyphs. Will be detected with an assertion after the backend is initialized.
 - Fonts: ImFontConfig::OversampleH/OversampleV default to automatic (== 0)

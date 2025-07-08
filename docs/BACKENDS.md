@@ -298,6 +298,8 @@ Version [1.92.0](https://github.com/ocornut/imgui/releases/tag/v1.92.0) (June 20
 
 **In order to move forward and take advantage of all new features, support for `ImGuiBackendFlags_RendererHasTextures` will likely be REQUIRED for all backends before June 2026.**
 
+`ImFontAtlas` functions such as `Build()`, `GetTexDataAsRGBA32()`, `GetTexDataAsAlpha8()`, `SetTexID()`, `IsBuilt()` were obsoleted in favor if iterating a `Textures[]` array and updating their state when requested by Dear ImGui.
+
 **TD;DR: List of commits which added support for `ImGuiBackendFlags_RendererHasTextures` in standard backends:**
 
 - Allegro5: [ee8941e](https://github.com/ocornut/imgui/commit/ee8941e) (+35 lines)
