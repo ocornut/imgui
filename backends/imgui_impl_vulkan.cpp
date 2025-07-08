@@ -29,6 +29,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2025-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2025-07-07: Vulkan: Fixed texture synchronization issue introduced on 2025-06-11. (#8772)
 //  2025-06-27: Vulkan: Fixed validation errors during texture upload/update by aligning upload size to 'nonCoherentAtomSize'. (#8743, #8744)
 //  2025-06-11: Vulkan: Added support for ImGuiBackendFlags_RendererHasTextures, for dynamic font atlas. Removed ImGui_ImplVulkan_CreateFontsTexture() and ImGui_ImplVulkan_DestroyFontsTexture().
 //  2025-05-07: Vulkan: Fixed validation errors during window detach in multi-viewport mode. (#8600, #8176)
@@ -99,6 +100,7 @@
 #ifndef IM_MAX
 #define IM_MAX(A, B)    (((A) >= (B)) ? (A) : (B))
 #endif
+#undef Status // X11 headers are leaking this.
 
 // Visual Studio warnings
 #ifdef _MSC_VER
@@ -834,6 +836,16 @@ void ImGui_ImplVulkan_UpdateTexture(ImTextureData* tex)
 
         // Copy to Image:
         {
+            VkBufferMemoryBarrier upload_barrier[1] = {};
+            upload_barrier[0].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+            upload_barrier[0].srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+            upload_barrier[0].dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+            upload_barrier[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            upload_barrier[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            upload_barrier[0].buffer = upload_buffer;
+            upload_barrier[0].offset = 0;
+            upload_barrier[0].size = upload_size;
+
             VkImageMemoryBarrier copy_barrier[1] = {};
             copy_barrier[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
             copy_barrier[0].dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -845,7 +857,7 @@ void ImGui_ImplVulkan_UpdateTexture(ImTextureData* tex)
             copy_barrier[0].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
             copy_barrier[0].subresourceRange.levelCount = 1;
             copy_barrier[0].subresourceRange.layerCount = 1;
-            vkCmdPipelineBarrier(bd->TexCommandBuffer, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, copy_barrier);
+            vkCmdPipelineBarrier(bd->TexCommandBuffer, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 1, upload_barrier, 1, copy_barrier);
 
             VkBufferImageCopy region = {};
             region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
