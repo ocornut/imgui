@@ -61,6 +61,9 @@ Other changes:
 - Demo: Added "Text -> Font Size" demo section. (#8738) [@Demonese]
 - CI: Fixed dllimport/dllexport tests. (#8757) [@AidanSun05]
 - CI: Updated to use latest Windows image + VS2022.
+- Debug Tools: added IMGUI_DEBUG_HIGHLIGHT_ALL_ID_CONFLICTS to detect
+  id conflicts _before_ hovering. This is very slow and should only be used
+  temporarily. (#8651, #7961, #7669)
 - Examples: GLFW+OpenGL3, GLFW+WGPU: Emscripten Makefiles uses GLFW port 
   'contrib.glfw3' which offers better HiDPI support. (#8742) [@pthom]
 - Backends: GLFW, SDL2 made ImGui_ImplGLFW_GetContentScaleXXX() and 
