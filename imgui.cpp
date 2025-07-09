@@ -4032,7 +4032,7 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     WheelingWindowStartFrame = WheelingWindowScrolledFrame = -1;
     WheelingWindowReleaseTimer = 0.0f;
 
-    DebugDrawIdConflicts = 0;
+    DebugDrawIdConflictsId = 0;
     DebugHookIdInfo = 0;
     HoveredId = HoveredIdPreviousFrame = 0;
     HoveredIdPreviousFrameItemCount = 0;
@@ -4748,7 +4748,7 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id, ImGuiItemFlags item_flag
     if (id != 0 && g.HoveredIdPreviousFrame == id && (item_flags & ImGuiItemFlags_AllowDuplicateId) == 0)
     {
         g.HoveredIdPreviousFrameItemCount++;
-        if (g.DebugDrawIdConflicts == id)
+        if (g.DebugDrawIdConflictsId == id)
             window->DrawList->AddRect(bb.Min - ImVec2(1,1), bb.Max + ImVec2(1,1), IM_COL32(255, 0, 0, 255), 0.0f, ImDrawFlags_None, 2.0f);
     }
 #endif
@@ -5376,9 +5376,9 @@ void ImGui::NewFrame()
 
     // [DEBUG]
     if (!g.IO.ConfigDebugHighlightIdConflicts || !g.IO.KeyCtrl) // Count is locked while holding CTRL
-        g.DebugDrawIdConflicts = 0;
+        g.DebugDrawIdConflictsId = 0;
     if (g.IO.ConfigDebugHighlightIdConflicts && g.HoveredIdPreviousFrameItemCount > 1)
-        g.DebugDrawIdConflicts = g.HoveredIdPreviousFrame;
+        g.DebugDrawIdConflictsId = g.HoveredIdPreviousFrame;
 
     // Update HoveredId data
     if (!g.HoveredIdPreviousFrame)
@@ -10841,9 +10841,9 @@ void ImGui::ErrorCheckEndFrameFinalizeErrorTooltip()
 {
 #ifndef IMGUI_DISABLE_DEBUG_TOOLS
     ImGuiContext& g = *GImGui;
-    if (g.DebugDrawIdConflicts != 0 && g.IO.KeyCtrl == false)
+    if (g.DebugDrawIdConflictsId != 0 && g.IO.KeyCtrl == false)
         g.DebugDrawIdConflictsCount = g.HoveredIdPreviousFrameItemCount;
-    if (g.DebugDrawIdConflicts != 0 && g.DebugItemPickerActive == false && BeginErrorTooltip())
+    if (g.DebugDrawIdConflictsId != 0 && g.DebugItemPickerActive == false && BeginErrorTooltip())
     {
         Text("Programmer error: %d visible items with conflicting ID!", g.DebugDrawIdConflictsCount);
         BulletText("Code should use PushID()/PopID() in loops, or append \"##xx\" to same-label identifiers!");
