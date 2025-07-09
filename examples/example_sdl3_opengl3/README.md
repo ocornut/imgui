@@ -1,4 +1,3 @@
-
 # How to Build
 
 ## Windows with Visual Studio's IDE
@@ -8,6 +7,7 @@ Use the provided project file (.vcxproj). Add to solution (imgui_examples.sln) i
 ## Windows with Visual Studio's CLI
 
 Use build_win32.bat or directly:
+
 ```
 set SDL3_DIR=path_to_your_sdl3_folder
 cl /Zi /MD /utf-8 /I.. /I..\.. /I%SDL3_DIR%\include main.cpp ..\..\backends\imgui_impl_sdl3.cpp ..\..\backends\imgui_impl_opengl3.cpp ..\..\imgui*.cpp /FeDebug/example_sdl3_opengl3.exe /FoDebug/ /link /libpath:%SDL3_DIR%\lib\x86 SDL3.lib opengl32.lib /subsystem:console
@@ -19,6 +19,7 @@ cl /Zi /MD /utf-8 /I.. /I..\.. /I%SDL3_DIR%\include main.cpp ..\..\backends\imgu
 ## Linux and similar Unixes
 
 Use our Makefile or directly:
+
 ```
 c++ `sdl3-config --cflags` -I .. -I ../.. -I ../../backends
   main.cpp ../../backends/imgui_impl_sdl3.cpp ../../backends/imgui_impl_opengl3.cpp ../../imgui*.cpp
@@ -28,6 +29,7 @@ c++ `sdl3-config --cflags` -I .. -I ../.. -I ../../backends
 ## macOS
 
 Use our Makefile or directly:
+
 ```
 brew install sdl3
 c++ `sdl3-config --cflags` -I .. -I ../.. -I ../../backends

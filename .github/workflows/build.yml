@@ -212,35 +212,35 @@ jobs:
   Linux:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Install Dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libglfw3-dev libsdl2-dev gcc-multilib g++-multilib libfreetype6-dev libvulkan-dev
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libglfw3-dev libsdl2-dev gcc-multilib g++-multilib libfreetype6-dev libvulkan-dev
 
-    - name: Build example_null (extra warnings, gcc 32-bit)
-      run: |
-        make -C examples/example_null clean
-        CXXFLAGS="$CXXFLAGS -m32 -Werror" make -C examples/example_null WITH_EXTRA_WARNINGS=1
+      - name: Build example_null (extra warnings, gcc 32-bit)
+        run: |
+          make -C examples/example_null clean
+          CXXFLAGS="$CXXFLAGS -m32 -Werror" make -C examples/example_null WITH_EXTRA_WARNINGS=1
 
-    - name: Build example_null (extra warnings, gcc 64-bit)
-      run: |
-        make -C examples/example_null clean
-        CXXFLAGS="$CXXFLAGS -m64 -Werror" make -C examples/example_null WITH_EXTRA_WARNINGS=1
+      - name: Build example_null (extra warnings, gcc 64-bit)
+        run: |
+          make -C examples/example_null clean
+          CXXFLAGS="$CXXFLAGS -m64 -Werror" make -C examples/example_null WITH_EXTRA_WARNINGS=1
 
-    - name: Build example_null (extra warnings, clang 32-bit)
-      run: |
-        make -C examples/example_null clean
-        CXXFLAGS="$CXXFLAGS -m32 -Werror" CXX=clang++ make -C examples/example_null WITH_EXTRA_WARNINGS=1
+      - name: Build example_null (extra warnings, clang 32-bit)
+        run: |
+          make -C examples/example_null clean
+          CXXFLAGS="$CXXFLAGS -m32 -Werror" CXX=clang++ make -C examples/example_null WITH_EXTRA_WARNINGS=1
 
-    - name: Build example_null (extra warnings, clang 64-bit)
-      run: |
-        make -C examples/example_null clean
-        CXXFLAGS="$CXXFLAGS -m64 -Werror" CXX=clang++ make -C examples/example_null WITH_EXTRA_WARNINGS=1
+      - name: Build example_null (extra warnings, clang 64-bit)
+        run: |
+          make -C examples/example_null clean
+          CXXFLAGS="$CXXFLAGS -m64 -Werror" CXX=clang++ make -C examples/example_null WITH_EXTRA_WARNINGS=1
 
-    - name: Build example_null (extra warnings, empty IM_ASSERT)
-      run: |
+      - name: Build example_null (extra warnings, empty IM_ASSERT)
+        run: |
           cat > example_single_file.cpp <<'EOF'
 
           #define IM_ASSERT(x)
@@ -251,309 +251,309 @@ jobs:
           EOF
           g++ -I. -std=c++11 -Wall -Wformat -Wextra -Werror -Wno-zero-as-null-pointer-constant -Wno-double-promotion -Wno-variadic-macros -Wno-empty-body -o example_single_file example_single_file.cpp
 
-    - name: Build example_null (freetype)
-      run: |
-        make -C examples/example_null clean
-        make -C examples/example_null WITH_FREETYPE=1
+      - name: Build example_null (freetype)
+        run: |
+          make -C examples/example_null clean
+          make -C examples/example_null WITH_FREETYPE=1
 
-    - name: Build example_null (single file build)
-      run: |
-        cat > example_single_file.cpp <<'EOF'
+      - name: Build example_null (single file build)
+        run: |
+          cat > example_single_file.cpp <<'EOF'
+          
+          #define IMGUI_IMPLEMENTATION
+          #include "misc/single_file/imgui_single_file.h"
+          #include "examples/example_null/main.cpp"
+          
+          EOF
+          g++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
 
-        #define IMGUI_IMPLEMENTATION
-        #include "misc/single_file/imgui_single_file.h"
-        #include "examples/example_null/main.cpp"
+      - name: Build example_null (with ImWchar32)
+        run: |
+          cat > example_single_file.cpp <<'EOF'
+          
+          #define IMGUI_USE_WCHAR32
+          #define IMGUI_IMPLEMENTATION
+          #include "misc/single_file/imgui_single_file.h"
+          #include "examples/example_null/main.cpp"
+          
+          EOF
+          g++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
 
-        EOF
-        g++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
+      - name: Build example_null (with large ImDrawIdx + pointer ImTextureID)
+        run: |
+          cat > example_single_file.cpp <<'EOF'
+          
+          #define ImTextureID void*
+          #define ImDrawIdx unsigned int
+          #define IMGUI_IMPLEMENTATION
+          #include "misc/single_file/imgui_single_file.h"
+          #include "examples/example_null/main.cpp"
+          
+          EOF
+          g++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
 
-    - name: Build example_null (with ImWchar32)
-      run: |
-        cat > example_single_file.cpp <<'EOF'
+      - name: Build example_null (with IMGUI_DISABLE_OBSOLETE_FUNCTIONS)
+        run: |
+          cat > example_single_file.cpp <<'EOF'
+          
+          #define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+          #define IMGUI_IMPLEMENTATION
+          #include "misc/single_file/imgui_single_file.h"
+          #include "examples/example_null/main.cpp"
+          
+          EOF
+          g++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
 
-        #define IMGUI_USE_WCHAR32
-        #define IMGUI_IMPLEMENTATION
-        #include "misc/single_file/imgui_single_file.h"
-        #include "examples/example_null/main.cpp"
+      - name: Build example_null (with IMGUI_DISABLE_OBSOLETE_KEYIO)
+        run: |
+          cat > example_single_file.cpp <<'EOF'
+          
+          #define IMGUI_DISABLE_OBSOLETE_KEYIO
+          #define IMGUI_IMPLEMENTATION
+          #include "misc/single_file/imgui_single_file.h"
+          #include "examples/example_null/main.cpp"
+          
+          EOF
+          g++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
 
-        EOF
-        g++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
+      - name: Build example_null (with C++20)
+        run: |
+          cat > example_single_file.cpp <<'EOF'
+          
+          #define IMGUI_DISABLE_OBSOLETE_KEYIO
+          #define IMGUI_IMPLEMENTATION
+          #include "misc/single_file/imgui_single_file.h"
+          #include "examples/example_null/main.cpp"
+          
+          EOF
+          g++ -I. -std=c++20 -Wall -Wformat -o example_single_file example_single_file.cpp
 
-    - name: Build example_null (with large ImDrawIdx + pointer ImTextureID)
-      run: |
-        cat > example_single_file.cpp <<'EOF'
+      - name: Build example_null (with IMGUI_DISABLE_DEMO_WINDOWS and IMGUI_DISABLE_DEBUG_TOOLS)
+        run: |
+          cat > example_single_file.cpp <<'EOF'
+          
+          #define IMGUI_DISABLE_DEMO_WINDOWS
+          #define IMGUI_DISABLE_DEBUG_TOOLS
+          #define IMGUI_IMPLEMENTATION
+          #include "misc/single_file/imgui_single_file.h"
+          #include "examples/example_null/main.cpp"
+          
+          EOF
+          g++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
 
-        #define ImTextureID void*
-        #define ImDrawIdx unsigned int
-        #define IMGUI_IMPLEMENTATION
-        #include "misc/single_file/imgui_single_file.h"
-        #include "examples/example_null/main.cpp"
+      - name: Build example_null (with IMGUI_DISABLE_FILE_FUNCTIONS)
+        run: |
+          cat > example_single_file.cpp <<'EOF'
+          
+          #define IMGUI_DISABLE_FILE_FUNCTIONS
+          #define IMGUI_IMPLEMENTATION
+          #include "misc/single_file/imgui_single_file.h"
+          #include "examples/example_null/main.cpp"
+          
+          EOF
+          g++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
 
-        EOF
-        g++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
+      - name: Build example_null (with IMGUI_USE_BGRA_PACKED_COLOR)
+        run: |
+          cat > example_single_file.cpp <<'EOF'
+          
+          #define IMGUI_USE_BGRA_PACKED_COLOR
+          #define IMGUI_IMPLEMENTATION
+          #include "misc/single_file/imgui_single_file.h"
+          #include "examples/example_null/main.cpp"
+          
+          EOF
+          g++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
 
-    - name: Build example_null (with IMGUI_DISABLE_OBSOLETE_FUNCTIONS)
-      run: |
-        cat > example_single_file.cpp <<'EOF'
+      - name: Build example_null (with IM_VEC2_CLASS_EXTRA and IM_VEC4_CLASS_EXTRA)
+        run: |
+          cat > example_single_file.cpp <<'EOF'
+          
+          struct MyVec2 { float x; float y; MyVec2(float x, float y) : x(x), y(y) { } };
+          struct MyVec4 { float x; float y; float z; float w;
+          MyVec4(float x, float y, float z, float w) : x(x), y(y), z(z), w(w) { } };
+          #define IM_VEC2_CLASS_EXTRA                                             \
+                  ImVec2(const MyVec2& f) { x = f.x; y = f.y; }                   \
+                  operator MyVec2() const { return MyVec2(x, y); }
+          #define IM_VEC4_CLASS_EXTRA                                             \
+                  ImVec4(const MyVec4& f) { x = f.x; y = f.y; z = f.z; w = f.w; } \
+                  operator MyVec4() const { return MyVec4(x, y, z, w); }
+          #define IMGUI_IMPLEMENTATION
+          #include "misc/single_file/imgui_single_file.h"
+          #include "examples/example_null/main.cpp"
+          
+          EOF
+          g++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
 
-        #define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-        #define IMGUI_IMPLEMENTATION
-        #include "misc/single_file/imgui_single_file.h"
-        #include "examples/example_null/main.cpp"
+      - name: Build example_null (C++26, Clang)
+        run: |
+          cat > example_single_file.cpp <<'EOF'
+          
+          #define IMGUI_IMPLEMENTATION
+          #define IMGUI_DISABLE_DEMO_WINDOWS
+          #include "misc/single_file/imgui_single_file.h"
+          #include "examples/example_null/main.cpp"
+          
+          EOF
+          clang++ -I. -std=c++26 -Wall -Wformat -fno-exceptions -fno-threadsafe-statics -lc -lm -o example_single_file example_single_file.cpp
 
-        EOF
-        g++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
+      - name: Build example_null (without c++ runtime, Clang)
+        run: |
+          cat > example_single_file.cpp <<'EOF'
+          
+          #define IMGUI_IMPLEMENTATION
+          #define IMGUI_DISABLE_DEMO_WINDOWS
+          #include "misc/single_file/imgui_single_file.h"
+          #include "examples/example_null/main.cpp"
+          
+          EOF
+          clang++ -I. -std=c++11 -Wall -Wformat -nodefaultlibs -fno-rtti -fno-exceptions -fno-threadsafe-statics -lc -lm -o example_single_file example_single_file.cpp
 
-    - name: Build example_null (with IMGUI_DISABLE_OBSOLETE_KEYIO)
-      run: |
-        cat > example_single_file.cpp <<'EOF'
+      - name: Build example_glfw_opengl2
+        run: make -C examples/example_glfw_opengl2
 
-        #define IMGUI_DISABLE_OBSOLETE_KEYIO
-        #define IMGUI_IMPLEMENTATION
-        #include "misc/single_file/imgui_single_file.h"
-        #include "examples/example_null/main.cpp"
+      - name: Build example_glfw_opengl3
+        run: make -C examples/example_glfw_opengl3
+        if: github.event_name == 'workflow_run'
 
-        EOF
-        g++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
+      - name: Build example_sdl2_opengl2
+        run: make -C examples/example_sdl2_opengl2
+        if: github.event_name == 'workflow_run'
 
-    - name: Build example_null (with C++20)
-      run: |
-        cat > example_single_file.cpp <<'EOF'
+      - name: Build example_sdl2_opengl3
+        run: make -C examples/example_sdl2_opengl3
 
-        #define IMGUI_DISABLE_OBSOLETE_KEYIO
-        #define IMGUI_IMPLEMENTATION
-        #include "misc/single_file/imgui_single_file.h"
-        #include "examples/example_null/main.cpp"
-
-        EOF
-        g++ -I. -std=c++20 -Wall -Wformat -o example_single_file example_single_file.cpp
-
-    - name: Build example_null (with IMGUI_DISABLE_DEMO_WINDOWS and IMGUI_DISABLE_DEBUG_TOOLS)
-      run: |
-        cat > example_single_file.cpp <<'EOF'
-
-        #define IMGUI_DISABLE_DEMO_WINDOWS
-        #define IMGUI_DISABLE_DEBUG_TOOLS
-        #define IMGUI_IMPLEMENTATION
-        #include "misc/single_file/imgui_single_file.h"
-        #include "examples/example_null/main.cpp"
-
-        EOF
-        g++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
-
-    - name: Build example_null (with IMGUI_DISABLE_FILE_FUNCTIONS)
-      run: |
-        cat > example_single_file.cpp <<'EOF'
-
-        #define IMGUI_DISABLE_FILE_FUNCTIONS
-        #define IMGUI_IMPLEMENTATION
-        #include "misc/single_file/imgui_single_file.h"
-        #include "examples/example_null/main.cpp"
-
-        EOF
-        g++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
-
-    - name: Build example_null (with IMGUI_USE_BGRA_PACKED_COLOR)
-      run: |
-        cat > example_single_file.cpp <<'EOF'
-
-        #define IMGUI_USE_BGRA_PACKED_COLOR
-        #define IMGUI_IMPLEMENTATION
-        #include "misc/single_file/imgui_single_file.h"
-        #include "examples/example_null/main.cpp"
-
-        EOF
-        g++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
-
-    - name: Build example_null (with IM_VEC2_CLASS_EXTRA and IM_VEC4_CLASS_EXTRA)
-      run: |
-        cat > example_single_file.cpp <<'EOF'
-
-        struct MyVec2 { float x; float y; MyVec2(float x, float y) : x(x), y(y) { } };
-        struct MyVec4 { float x; float y; float z; float w;
-        MyVec4(float x, float y, float z, float w) : x(x), y(y), z(z), w(w) { } };
-        #define IM_VEC2_CLASS_EXTRA                                             \
-                ImVec2(const MyVec2& f) { x = f.x; y = f.y; }                   \
-                operator MyVec2() const { return MyVec2(x, y); }
-        #define IM_VEC4_CLASS_EXTRA                                             \
-                ImVec4(const MyVec4& f) { x = f.x; y = f.y; z = f.z; w = f.w; } \
-                operator MyVec4() const { return MyVec4(x, y, z, w); }
-        #define IMGUI_IMPLEMENTATION
-        #include "misc/single_file/imgui_single_file.h"
-        #include "examples/example_null/main.cpp"
-
-        EOF
-        g++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
-
-    - name: Build example_null (C++26, Clang)
-      run: |
-        cat > example_single_file.cpp <<'EOF'
-
-        #define IMGUI_IMPLEMENTATION
-        #define IMGUI_DISABLE_DEMO_WINDOWS
-        #include "misc/single_file/imgui_single_file.h"
-        #include "examples/example_null/main.cpp"
-
-        EOF
-        clang++ -I. -std=c++26 -Wall -Wformat -fno-exceptions -fno-threadsafe-statics -lc -lm -o example_single_file example_single_file.cpp
-
-    - name: Build example_null (without c++ runtime, Clang)
-      run: |
-        cat > example_single_file.cpp <<'EOF'
-
-        #define IMGUI_IMPLEMENTATION
-        #define IMGUI_DISABLE_DEMO_WINDOWS
-        #include "misc/single_file/imgui_single_file.h"
-        #include "examples/example_null/main.cpp"
-
-        EOF
-        clang++ -I. -std=c++11 -Wall -Wformat -nodefaultlibs -fno-rtti -fno-exceptions -fno-threadsafe-statics -lc -lm -o example_single_file example_single_file.cpp
-
-    - name: Build example_glfw_opengl2
-      run: make -C examples/example_glfw_opengl2
-
-    - name: Build example_glfw_opengl3
-      run: make -C examples/example_glfw_opengl3
-      if: github.event_name == 'workflow_run'
-
-    - name: Build example_sdl2_opengl2
-      run: make -C examples/example_sdl2_opengl2
-      if: github.event_name == 'workflow_run'
-
-    - name: Build example_sdl2_opengl3
-      run: make -C examples/example_sdl2_opengl3
-
-    - name: Build with IMGUI_IMPL_VULKAN_NO_PROTOTYPES
-      run: g++ -c -I. -std=c++11 -DIMGUI_IMPL_VULKAN_NO_PROTOTYPES=1 backends/imgui_impl_vulkan.cpp
+      - name: Build with IMGUI_IMPL_VULKAN_NO_PROTOTYPES
+        run: g++ -c -I. -std=c++11 -DIMGUI_IMPL_VULKAN_NO_PROTOTYPES=1 backends/imgui_impl_vulkan.cpp
 
   MacOS:
     runs-on: macos-latest
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Install Dependencies
-      run: |
-        brew install glfw3 sdl2
+      - name: Install Dependencies
+        run: |
+          brew install glfw3 sdl2
 
-    - name: Build example_null (extra warnings, clang 64-bit)
-      run: make -C examples/example_null WITH_EXTRA_WARNINGS=1
+      - name: Build example_null (extra warnings, clang 64-bit)
+        run: make -C examples/example_null WITH_EXTRA_WARNINGS=1
 
-    - name: Build example_null (single file build)
-      run: |
-        cat > example_single_file.cpp <<'EOF'
+      - name: Build example_null (single file build)
+        run: |
+          cat > example_single_file.cpp <<'EOF'
+          
+          #define IMGUI_IMPLEMENTATION
+          #include "misc/single_file/imgui_single_file.h"
+          #include "examples/example_null/main.cpp"
+          
+          EOF
+          clang++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
 
-        #define IMGUI_IMPLEMENTATION
-        #include "misc/single_file/imgui_single_file.h"
-        #include "examples/example_null/main.cpp"
+      - name: Build example_null (single file build, c++20)
+        run: |
+          cat > example_single_file.cpp <<'EOF'
+          
+          #define IMGUI_IMPLEMENTATION
+          #include "misc/single_file/imgui_single_file.h"
+          #include "examples/example_null/main.cpp"
+          
+          EOF
+          clang++ -I. -std=c++20 -Wall -Wformat -o example_single_file example_single_file.cpp
 
-        EOF
-        clang++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
+      - name: Build example_null (without c++ runtime)
+        run: |
+          cat > example_single_file.cpp <<'EOF'
+          
+          #define IMGUI_IMPLEMENTATION
+          #include "misc/single_file/imgui_single_file.h"
+          #include "examples/example_null/main.cpp"
+          
+          EOF
+          clang++ -I. -std=c++11 -Wall -Wformat -nodefaultlibs -fno-rtti -fno-exceptions -fno-threadsafe-statics -lc -lm -o example_single_file example_single_file.cpp
 
-    - name: Build example_null (single file build, c++20)
-      run: |
-        cat > example_single_file.cpp <<'EOF'
+      - name: Build example_glfw_opengl2
+        run: make -C examples/example_glfw_opengl2
 
-        #define IMGUI_IMPLEMENTATION
-        #include "misc/single_file/imgui_single_file.h"
-        #include "examples/example_null/main.cpp"
+      - name: Build example_glfw_opengl3
+        run: make -C examples/example_glfw_opengl3
+        if: github.event_name == 'workflow_run'
 
-        EOF
-        clang++ -I. -std=c++20 -Wall -Wformat -o example_single_file example_single_file.cpp
+      - name: Build example_glfw_metal
+        run: make -C examples/example_glfw_metal
 
-    - name: Build example_null (without c++ runtime)
-      run: |
-        cat > example_single_file.cpp <<'EOF'
+      - name: Build example_sdl2_metal
+        run: make -C examples/example_sdl2_metal
 
-        #define IMGUI_IMPLEMENTATION
-        #include "misc/single_file/imgui_single_file.h"
-        #include "examples/example_null/main.cpp"
+      - name: Build example_sdl2_opengl2
+        run: make -C examples/example_sdl2_opengl2
+        if: github.event_name == 'workflow_run'
 
-        EOF
-        clang++ -I. -std=c++11 -Wall -Wformat -nodefaultlibs -fno-rtti -fno-exceptions -fno-threadsafe-statics -lc -lm -o example_single_file example_single_file.cpp
+      - name: Build example_sdl2_opengl3
+        run: make -C examples/example_sdl2_opengl3
 
-    - name: Build example_glfw_opengl2
-      run: make -C examples/example_glfw_opengl2
+      - name: Build example_apple_metal
+        run: xcodebuild -project examples/example_apple_metal/example_apple_metal.xcodeproj -target example_apple_metal_macos
 
-    - name: Build example_glfw_opengl3
-      run: make -C examples/example_glfw_opengl3
-      if: github.event_name == 'workflow_run'
-
-    - name: Build example_glfw_metal
-      run: make -C examples/example_glfw_metal
-
-    - name: Build example_sdl2_metal
-      run: make -C examples/example_sdl2_metal
-
-    - name: Build example_sdl2_opengl2
-      run: make -C examples/example_sdl2_opengl2
-      if: github.event_name == 'workflow_run'
-
-    - name: Build example_sdl2_opengl3
-      run: make -C examples/example_sdl2_opengl3
-
-    - name: Build example_apple_metal
-      run: xcodebuild -project examples/example_apple_metal/example_apple_metal.xcodeproj -target example_apple_metal_macos
-
-    - name: Build example_apple_opengl2
-      run: xcodebuild -project examples/example_apple_opengl2/example_apple_opengl2.xcodeproj -target example_osx_opengl2
+      - name: Build example_apple_opengl2
+        run: xcodebuild -project examples/example_apple_opengl2/example_apple_opengl2.xcodeproj -target example_osx_opengl2
 
   iOS:
     runs-on: macos-latest
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Build example_apple_metal
-      run: |
-        # Code signing is required, but we disable it because it is irrelevant for CI builds.
-        xcodebuild -project examples/example_apple_metal/example_apple_metal.xcodeproj -target example_apple_metal_ios CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
+      - name: Build example_apple_metal
+        run: |
+          # Code signing is required, but we disable it because it is irrelevant for CI builds.
+          xcodebuild -project examples/example_apple_metal/example_apple_metal.xcodeproj -target example_apple_metal_ios CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
 
   Emscripten:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Install Dependencies
-      run: |
-        wget -q https://github.com/emscripten-core/emsdk/archive/master.tar.gz
-        tar -xvf master.tar.gz
-        emsdk-master/emsdk update
-        emsdk-master/emsdk install latest
-        emsdk-master/emsdk activate latest
-        sudo apt-get install build-essential
+      - name: Install Dependencies
+        run: |
+          wget -q https://github.com/emscripten-core/emsdk/archive/master.tar.gz
+          tar -xvf master.tar.gz
+          emsdk-master/emsdk update
+          emsdk-master/emsdk install latest
+          emsdk-master/emsdk activate latest
+          sudo apt-get install build-essential
 
-    - name: Build example_sdl2_opengl3 with Emscripten
-      run: |
-        pushd emsdk-master
-        source ./emsdk_env.sh
-        popd
-        make -C examples/example_sdl2_opengl3 -f Makefile.emscripten
+      - name: Build example_sdl2_opengl3 with Emscripten
+        run: |
+          pushd emsdk-master
+          source ./emsdk_env.sh
+          popd
+          make -C examples/example_sdl2_opengl3 -f Makefile.emscripten
 
-    # This build compiles example_glfw_wgpu using Makefile.emscripten and Emscripten GLFW built-in implementation (-sUSE_GLFW=3)
-    # This ensures 2 things: the make build works, and the GLFW built-in implementation is tested
-    - name: Build example_glfw_wgpu with Emscripten/Makefile
-      run: |
-        pushd emsdk-master
-        source ./emsdk_env.sh
-        popd
-        make -C examples/example_glfw_wgpu -f Makefile.emscripten
+      # This build compiles example_glfw_wgpu using Makefile.emscripten and Emscripten GLFW built-in implementation (-sUSE_GLFW=3)
+      # This ensures 2 things: the make build works, and the GLFW built-in implementation is tested
+      - name: Build example_glfw_wgpu with Emscripten/Makefile
+        run: |
+          pushd emsdk-master
+          source ./emsdk_env.sh
+          popd
+          make -C examples/example_glfw_wgpu -f Makefile.emscripten
 
-    # This build compiles example_glfw_wgpu using CMakeLists.txt and Emscripten GLFW contrib port (--use-port=contrib.glfw3)
-    # This ensures 2 things: the CMake build works, and the GLFW contrib port is tested
-    - name: Build example_glfw_wgpu with Emscripten/CMake
-      run: |
-        pushd emsdk-master
-        source ./emsdk_env.sh
-        popd
-        emcc -v
-        emcmake cmake -B build -DCMAKE_BUILD_TYPE=Release examples/example_glfw_wgpu
-        cmake --build build
+      # This build compiles example_glfw_wgpu using CMakeLists.txt and Emscripten GLFW contrib port (--use-port=contrib.glfw3)
+      # This ensures 2 things: the CMake build works, and the GLFW contrib port is tested
+      - name: Build example_glfw_wgpu with Emscripten/CMake
+        run: |
+          pushd emsdk-master
+          source ./emsdk_env.sh
+          popd
+          emcc -v
+          emcmake cmake -B build -DCMAKE_BUILD_TYPE=Release examples/example_glfw_wgpu
+          cmake --build build
 
   Android:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Build example_android_opengl3
-      run: |
-        cd examples/example_android_opengl3/android
-        gradle assembleDebug --stacktrace
+      - name: Build example_android_opengl3
+        run: |
+          cd examples/example_android_opengl3/android
+          gradle assembleDebug --stacktrace

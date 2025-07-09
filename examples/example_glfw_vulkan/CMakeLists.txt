@@ -6,18 +6,18 @@
 cmake_minimum_required(VERSION 2.8)
 project(imgui_example_glfw_vulkan C CXX)
 
-if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Debug CACHE STRING "" FORCE)
-endif()
+if (NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Debug CACHE STRING "" FORCE)
+endif ()
 
 set(CMAKE_CXX_STANDARD 11)
-set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DVK_PROTOTYPES")
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVK_PROTOTYPES")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DVK_PROTOTYPES")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVK_PROTOTYPES")
 
 # GLFW
-if(NOT GLFW_DIR)
-   set(GLFW_DIR ../../../glfw) # Set this to point to an up-to-date GLFW repo
-endif()
+if (NOT GLFW_DIR)
+    set(GLFW_DIR ../../../glfw) # Set this to point to an up-to-date GLFW repo
+endif ()
 option(GLFW_BUILD_EXAMPLES "Build the GLFW example programs" OFF)
 option(GLFW_BUILD_TESTS "Build the GLFW test programs" OFF)
 option(GLFW_BUILD_DOCS "Build the GLFW documentation" OFF)
@@ -33,7 +33,7 @@ include_directories(${IMGUI_DIR} ${IMGUI_DIR}/backends ..)
 # Libraries
 find_package(Vulkan REQUIRED)
 #find_library(VULKAN_LIBRARY
-  #NAMES vulkan vulkan-1)
+#NAMES vulkan vulkan-1)
 #set(LIBRARIES "glfw;${VULKAN_LIBRARY}")
 set(LIBRARIES "glfw;Vulkan::Vulkan")
 

@@ -2,22 +2,22 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <application
-        android:label="ImGuiExample"
-        android:allowBackup="false"
-        android:fullBackupContent="false"
-        android:hasCode="true">
+            android:label="ImGuiExample"
+            android:allowBackup="false"
+            android:fullBackupContent="false"
+            android:hasCode="true">
 
         <activity
-            android:name="imgui.example.android.MainActivity"
-            android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
-            android:configChanges="orientation|keyboardHidden|screenSize"
-            android:exported="true">
+                android:name="imgui.example.android.MainActivity"
+                android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
+                android:configChanges="orientation|keyboardHidden|screenSize"
+                android:exported="true">
             <meta-data android:name="android.app.lib_name"
-                android:value="ImGuiExample" />
+                       android:value="ImGuiExample"/>
 
             <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
     </application>

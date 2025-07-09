@@ -16,6 +16,8 @@ set(SOURCES
 
 add_library(ImGui STATIC ${SOURCES})
 
+target_link_libraries(ImGui PRIVATE platform_libs)
+
 target_include_directories(
         ImGui
         PRIVATE

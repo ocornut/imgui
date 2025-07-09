@@ -1,17 +1,21 @@
-_(You may browse this at https://github.com/ocornut/imgui/blob/master/docs/EXAMPLES.md or view this file with any Markdown viewer)_
+_(You may browse this at https://github.com/ocornut/imgui/blob/master/docs/EXAMPLES.md or view this file with any
+Markdown viewer)_
 
 ## Dear ImGui: Examples
 
-**The [examples/](https://github.com/ocornut/imgui/blob/master/examples) folder example applications (standalone, ready-to-build) for variety of
-platforms and graphics APIs.** They all use standard backends from the [backends/](https://github.com/ocornut/imgui/blob/master/backends) folder (see [docs/BACKENDS.md](https://github.com/ocornut/imgui/blob/master/docs/BACKENDS.md)).
+**The [examples/](https://github.com/ocornut/imgui/blob/master/examples) folder example applications (standalone,
+ready-to-build) for variety of
+platforms and graphics APIs.** They all use standard backends from
+the [backends/](https://github.com/ocornut/imgui/blob/master/backends) folder (
+see [docs/BACKENDS.md](https://github.com/ocornut/imgui/blob/master/docs/BACKENDS.md)).
 
 The purpose of Examples is to showcase integration with backends, let you try Dear ImGui, and guide you toward
 integrating Dear ImGui in your own application/game/engine.
-**Once Dear ImGui is setup and running, run and refer to `ImGui::ShowDemoWindow()` in imgui_demo.cpp for usage of the end-user API.**
+**Once Dear ImGui is setup and running, run and refer to `ImGui::ShowDemoWindow()` in imgui_demo.cpp for usage of the
+end-user API.**
 
 You can find Windows binaries for some of those example applications at:
-  https://www.dearimgui.com/binaries
-
+https://www.dearimgui.com/binaries
 
 ### Getting Started
 
@@ -36,9 +40,12 @@ At shutdown:
 ```
 
 Main resource:
-- Read **[Getting Started](https://github.com/ocornut/imgui/wiki/Getting-Started) wiki guide** for detailed examples of how to integrate Dear ImGui in an existing application.
+
+- Read **[Getting Started](https://github.com/ocornut/imgui/wiki/Getting-Started) wiki guide** for detailed examples of
+  how to integrate Dear ImGui in an existing application.
 
 Additional resources:
+
 - Read FAQ at https://www.dearimgui.com/faq
 - Read 'PROGRAMMER GUIDE' section in imgui.cpp.
 - Read the comments and instruction at the top of each file.
@@ -46,7 +53,6 @@ Additional resources:
 If you are using any of the backends provided here, you can add the backends/imgui_impl_xxxx(.cpp,.h)
 files to your project and use as-in. Each imgui_impl_xxxx.cpp file comes with its own individual
 Changelog, so if you want to update them later it will be easier to catch up with what changed.
-
 
 ### Examples Applications
 
@@ -69,7 +75,7 @@ You may prefer to use the GLFW Or SDL backends, which will also support Windows 
 OSX + OpenGL2 example. <BR>
 = main.mm + imgui_impl_osx.mm + imgui_impl_opengl2.cpp <BR>
 (NB: imgui_impl_osx.mm is currently not as feature complete as other platforms backends.
- You may prefer to use the GLFW Or SDL backends, which will also support Windows and Linux.)
+You may prefer to use the GLFW Or SDL backends, which will also support Windows and Linux.)
 
 [example_glfw_wgpu/](https://github.com/ocornut/imgui/blob/master/examples/example_glfw_wgpu/) <BR>
 GLFW + WebGPU example. Supports Emscripten (web) or Dawn (desktop) <BR>
@@ -194,7 +200,6 @@ Raw Windows + OpenGL3 example (modern, programmable pipeline) <BR>
 Raw Windows + Vulkan example <BR>
 = main.cpp + imgui_impl_win32.cpp + imgui_impl_vulkan.cpp <BR>
 
-
 ### Miscellaneous
 
 **Building**
@@ -202,16 +207,17 @@ Raw Windows + Vulkan example <BR>
 Unfortunately, nowadays it is still tedious to create and maintain portable build files using external
 libraries (the kind we're using here to create a window and render 3D triangles) without relying on
 third party software and build systems. For most examples here we choose to provide:
- - Makefiles for Linux/OSX
- - Batch files for Visual Studio 2008+
- - A .sln project file for Visual Studio 2012+
- - Xcode project files for the Apple examples
-Please let us know if they don't work with your setup!
-You can probably just import the imgui_impl_xxx.cpp/.h files into your own codebase or compile those
-directly with a command-line compiler.
+
+- Makefiles for Linux/OSX
+- Batch files for Visual Studio 2008+
+- A .sln project file for Visual Studio 2012+
+- Xcode project files for the Apple examples
+  Please let us know if they don't work with your setup!
+  You can probably just import the imgui_impl_xxx.cpp/.h files into your own codebase or compile those
+  directly with a command-line compiler.
 
 If you are interested in using Cmake to build and links examples, see:
-  https://github.com/ocornut/imgui/pull/1713 and https://github.com/ocornut/imgui/pull/3027
+https://github.com/ocornut/imgui/pull/1713 and https://github.com/ocornut/imgui/pull/3027
 
 **About mouse cursor latency**
 
