@@ -36,12 +36,12 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.92.1 WIP (In Progress)
+ VERSION 1.92.1 (Released 2025-07-09)
 -----------------------------------------------------------------------
 
-Breaking changes:
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.92.1
 
-Other changes:
+Changes:
 
 - Fonts: added ImFontAtlas::SetFontLoader() to dynamically change font
   loader at runtime without using internal API. (#8752, #8465)
@@ -86,7 +86,7 @@ Other changes:
  VERSION 1.92.0 (Released 2025-06-25)
 -----------------------------------------------------------------------
 
-Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.92
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.92.0
 
 THIS VERSION CONTAINS THE LARGEST AMOUNT OF BREAKING CHANGES SINCE 2015!
 I TRIED REALLY HARD TO KEEP THEM TO A MINIMUM, REDUCE THE AMOUNT OF INTERFERENCE,
