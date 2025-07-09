@@ -4730,7 +4730,8 @@ bool ImGui::IsItemHovered(ImGuiHoveredFlags flags)
     return true;
 }
 
-// Internal facing ItemHoverable() used when submitting widgets. Differs slightly from IsItemHovered().
+// Internal facing ItemHoverable() used when submitting widgets. THIS IS A SUBMISSION NOT A HOVER CHECK.
+// Returns whether the item was hovered, logic differs slightly from IsItemHovered().
 // (this does not rely on LastItemData it can be called from a ButtonBehavior() call not following an ItemAdd() call)
 // FIXME-LEGACY: the 'ImGuiItemFlags item_flags' parameter was added on 2023-06-28.
 // If you used this in your legacy/custom widgets code:
@@ -4742,6 +4743,7 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id, ImGuiItemFlags item_flag
     ImGuiWindow* window = g.CurrentWindow;
 
     // Detect ID conflicts
+    // (this is specifically done here by comparing on hover because it allows us a detection of duplicates that is algorithmically extra cheap, 1 u32 compare per item. No O(log N) lookup whatsoever)
 #ifndef IMGUI_DISABLE_DEBUG_TOOLS
     if (id != 0 && g.HoveredIdPreviousFrame == id && (item_flags & ImGuiItemFlags_AllowDuplicateId) == 0)
     {
