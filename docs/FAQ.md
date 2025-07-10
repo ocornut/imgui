@@ -389,8 +389,8 @@ node open/closed state differently. See what makes more sense in your situation!
 ### Q: What are ImTextureID/ImTextureRef?
 
 **Short explanation:**
-- Refer to [Image Loading and Displaying Examples](https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples) on the [Wiki](https://github.com/ocornut/imgui/wiki).
 - You may use functions such as `ImGui::Image()`, `ImGui::ImageButton()` or lower-level `ImDrawList::AddImage()` to emit draw calls that will use your own textures.
+- To load and display your own textures, refer to [Image Loading and Displaying Examples](https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples) on the [Wiki](https://github.com/ocornut/imgui/wiki).
 - Actual textures are identified in a way that is up to the user/engine. Those identifiers are stored and passed as an opaque ImTextureID value.
 - By default ImTextureID can store up to 64-bits. You may `#define` it to a custom type/structure if you need.
 - Loading image files from the disk and turning them into a texture is not within the scope of Dear ImGui (for a good reason), but the examples linked above may be useful references.
@@ -398,12 +398,20 @@ node open/closed state differently. See what makes more sense in your situation!
 **Details:**
 
 1.92 introduced `ImTextureRef` in June 2025.
-- Most drawing functions using ImTextureID were changed to use ImTextureRef.
-- We intentionally do not provide an implicit ImTextureRef -> ImTextureID cast operator because it is technically lossy to convert ImTextureRef to ImTextureID before rendering.
+- All drawing functions using `ImTextureID` were changed to use `ImTextureRef`.
+- You can trivially create a `ImTextureRef` from a `ImTextureID`.
+- **If you use Image functions with textures that you have loaded/created yourself, you will mostly likely only ever store/manipulate `ImTextureID` and then pass them as `ImTextureRef`.**
+- You only NEED to manipulate `ImTextureRef` when dealing with textures managed by the backend itself, aka mainly the atlas texture for now.
+- We intentionally do not provide an implicit `ImTextureRef` -> `ImTextureID` cast operator because it is technically lossy to convert ImTextureRef to ImTextureID before rendering.
 
 **ImTextureID = backend specific, low-level identifier for a texture uploaded in GPU/graphics system.**
+```cpp
+#ifndef ImTextureID
+typedef ImU64 ImTextureID;  // Default: store up to 64-bits (any pointer or integer). A majority of backends are ok with that.
+#endif
+```
 - When a Rendered Backend creates a texture, it store its native identifier into a ImTextureID value (e.g. Used by DX11 backend to a `ID3D11ShaderResourceView*`; Used by OpenGL backends to store `GLuint`; Used by SDLGPU backend to store a `SDL_GPUTextureSamplerBinding*`, etc.).
-- User may submit their own textures to e.g. ImGui::Image() function by passing the same type.
+- User may submit their own textures to e.g. `ImGui::Image()` function by passing this value.
 - During the rendering loop, the Renderer Backend retrieve the ImTextureID, which stored inside a ImTextureRef, which is stored inside ImDrawCmd.
 - Compile-time type configuration:
   - To use something other than a 64-bit value: add '#define ImTextureID MyTextureType*' in your imconfig.h file.
@@ -411,13 +419,27 @@ node open/closed state differently. See what makes more sense in your situation!
   - You may decide to store a higher-level structure containing texture, sampler, shader etc. with various constructors if you like. You will need to implement ==/!= operators.
 
 **ImTextureRef = higher-level identifier for a texture.**
+```cpp
+// Store a ImTextureID _or_ a ImTextureData*.
+struct ImTextureRef
+{
+    ImTextureRef()                          { _TexData = NULL; _TexID = ImTextureID_Invalid; }
+    ImTextureRef(ImTextureID tex_id)        { _TexData = NULL; _TexID = tex_id; }
+    inline ImTextureID  GetTexID() const    { return _TexData ? _TexData->TexID : _TexID; }
+
+    // Members (either are set, never both!)
+    ImTextureData*      _TexData;           //      A texture, generally owned by a ImFontAtlas. Will convert to ImTextureID during render loop, after texture has been uploaded.
+    ImTextureID         _TexID;             // _OR_ Low-level backend texture identifier, if already uploaded or created by user/app. Generally provided to e.g. ImGui::Image() calls.
+};
+```
 - The identifier is valid even before the texture has been uploaded to the GPU/graphics system.
 - This is what gets passed to functions such as `ImGui::Image()`, `ImDrawList::AddImage()`.
 - This is what gets stored in draw commands (`ImDrawCmd`) to identify a texture during rendering.
- - When a texture is created by user code (e.g. custom images), we directly stores the low-level `ImTextureID`.
- - When a texture is created by the backend, we stores a `ImTextureData*` which becomes an indirection to extract the `ImTextureID` value during rendering, after texture upload has happened.
- - There is no constructor to create a `ImTextureID` from a `ImTextureData*` as we don't expect this to be useful to the end-user, and it would be erroneously called by many legacy code.
- - If you want to bind the current atlas when using custom rectangle, you can use `io.Fonts->TexRef`.
+ - When a texture is created by user code (e.g. custom images), we directly store the low-level `ImTextureID`.
+   - Because of this, when displaying your own texture you are likely to ever only manage ImTextureID values on your side.
+ - When a texture is created by the backend, we store a `ImTextureData*` which becomes an indirection to extract the `ImTextureID` value during rendering, after texture upload has happened.
+ - There is no constructor to create a `ImTextureRef` from a `ImTextureData*` as we don't expect this to be useful to the end-user, and it would be erroneously called by many legacy code.
+ - If you want to bind the current atlas when using custom rectangles, you can use `io.Fonts->TexRef`.
  - Binding generators for languages such as C (which don't have constructors), should provide a helper, e.g. `inline ImTextureRef ImTextureRefFromID(ImTextureID tex_id) { ImTextureRef tex_ref = { ._TexData = NULL, .TexID = tex_id }; return tex_ref; }`
 
 **Please read documentations or tutorials on your graphics API to understand how to display textures on the screen before moving onward.**
