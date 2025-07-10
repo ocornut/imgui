@@ -36,6 +36,15 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
+ VERSION 1.92.2 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Breaking Changes:
+
+Other Changes:
+
+
+-----------------------------------------------------------------------
  VERSION 1.92.1 (Released 2025-07-09)
 -----------------------------------------------------------------------
 
@@ -64,13 +73,13 @@ Changes:
 - Debug Tools: added IMGUI_DEBUG_HIGHLIGHT_ALL_ID_CONFLICTS to detect
   id conflicts _before_ hovering. This is very slow and should only be used
   temporarily. (#8651, #7961, #7669)
-- Examples: GLFW+OpenGL3, GLFW+WGPU: Emscripten Makefiles uses GLFW port 
+- Examples: GLFW+OpenGL3, GLFW+WGPU: Emscripten Makefiles uses GLFW port
   'contrib.glfw3' which offers better HiDPI support. (#8742) [@pthom]
-- Backends: GLFW, SDL2 made ImGui_ImplGLFW_GetContentScaleXXX() and 
-  ImGui_ImplSDL2_GetContentScaleXXXX() helpers return 1.0f on Emscripten 
+- Backends: GLFW, SDL2 made ImGui_ImplGLFW_GetContentScaleXXX() and
+  ImGui_ImplSDL2_GetContentScaleXXXX() helpers return 1.0f on Emscripten
   and Android platforms, matching macOS logic. (#8742, #8733) [@pthom]
 - Backends: SDL3: avoid calling SDL_StartTextInput() again if already active.
-  (fixes e.g.: an issue on iOS where the keyboard animation will popup every 
+  (fixes e.g.: an issue on iOS where the keyboard animation will popup every
   time the user types a key + probably other things) (#8727) [@morrazzzz]
 - Backends: OSX: added ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress
   mouse cursor support. (#8739) [@cfillion]
