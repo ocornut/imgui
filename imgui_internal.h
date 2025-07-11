@@ -3124,7 +3124,7 @@ namespace ImGui
     IMGUI_API void          SetNextWindowRefreshPolicy(ImGuiWindowRefreshFlags flags);
 
     // Fonts, drawing
-    IMGUI_API void          RegisterUserTexture(ImTextureData* tex); // Register external texture
+    IMGUI_API void          RegisterUserTexture(ImTextureData* tex); // Register external texture. EXPERIMENTAL: DO NOT USE YET.
     IMGUI_API void          UnregisterUserTexture(ImTextureData* tex);
     IMGUI_API void          RegisterFontAtlas(ImFontAtlas* atlas);
     IMGUI_API void          UnregisterFontAtlas(ImFontAtlas* atlas);

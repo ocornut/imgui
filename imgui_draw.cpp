@@ -2457,8 +2457,10 @@ const char* ImTextureDataGetFormatName(ImTextureFormat format)
 
 void ImTextureData::Create(ImTextureFormat format, int w, int h)
 {
+    IM_ASSERT(Status == ImTextureStatus_Destroyed);
     DestroyPixels();
     Format = format;
+    Status = ImTextureStatus_WantCreate;
     Width = w;
     Height = h;
     BytesPerPixel = ImTextureDataGetFormatBytesPerPixel(format);
@@ -3971,7 +3973,6 @@ ImTextureData* ImFontAtlasTextureAdd(ImFontAtlas* atlas, int w, int h)
     }
 
     new_tex->Create(atlas->TexDesiredFormat, w, h);
-    new_tex->Status = ImTextureStatus_WantCreate;
     atlas->TexIsBuilt = false;
 
     ImFontAtlasBuildSetTexture(atlas, new_tex);

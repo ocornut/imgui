@@ -8732,16 +8732,19 @@ ImFont* ImGui::GetDefaultFont()
     return g.IO.FontDefault ? g.IO.FontDefault : atlas->Fonts[0];
 }
 
+// EXPERIMENTAL: DO NOT USE YET.
 void ImGui::RegisterUserTexture(ImTextureData* tex)
 {
     ImGuiContext& g = *GImGui;
-    IM_ASSERT(tex->RefCount > 0);
+    tex->RefCount++;
     g.UserTextures.push_back(tex);
 }
 
 void ImGui::UnregisterUserTexture(ImTextureData* tex)
 {
     ImGuiContext& g = *GImGui;
+    IM_ASSERT(tex->RefCount > 0);
+    tex->RefCount--;
     g.UserTextures.find_erase(tex);
 }
 

@@ -438,6 +438,8 @@ struct ImTextureRef
  - When a texture is created by user code (e.g. custom images), we directly store the low-level `ImTextureID`.
    - Because of this, when displaying your own texture you are likely to ever only manage ImTextureID values on your side.
  - When a texture is created by the backend, we store a `ImTextureData*` which becomes an indirection to extract the `ImTextureID` value during rendering, after texture upload has happened.
+ - To create a `ImTextureRef` from a `ImTextureData*` you can use `ImTextureData::GetTexRef()`.
+   We intentionally do not provide an `ImTextureRef` constructor for this: we don't expect this to be frequently useful to the end-user, and it would be erroneously called by many legacy code.
  - There is no constructor to create a `ImTextureRef` from a `ImTextureData*` as we don't expect this to be useful to the end-user, and it would be erroneously called by many legacy code.
  - If you want to bind the current atlas when using custom rectangles, you can use `io.Fonts->TexRef`.
  - Binding generators for languages such as C (which don't have constructors), should provide a helper, e.g. `inline ImTextureRef ImTextureRefFromID(ImTextureID tex_id) { ImTextureRef tex_ref = { ._TexData = NULL, .TexID = tex_id }; return tex_ref; }`

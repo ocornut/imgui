@@ -345,8 +345,9 @@ typedef ImU64 ImTextureID;      // Default: store up to 64-bits (any pointer or 
 //   Because of this, when displaying your own texture you are likely to ever only manage ImTextureID values on your side.
 // - When a texture is created by the backend, we stores a ImTextureData* which becomes an indirection
 //   to extract the ImTextureID value during rendering, after texture upload has happened.
-// - There is no constructor to create a ImTextureID from a ImTextureData* as we don't expect this
-//   to be useful to the end-user, and it would be erroneously called by many legacy code.
+// - To create a ImTextureRef from a ImTextureData you can use ImTextureData::GetTexRef().
+//   We intentionally do not provide an ImTextureRef constructor for this: we don't expect this
+//   to be frequently useful to the end-user, and it would be erroneously called by many legacy code.
 // - If you want to bind the current atlas when using custom rectangle, you can use io.Fonts->TexRef.
 // - Binding generators for languages such as C (which don't have constructors), should provide a helper, e.g.
 //      inline ImTextureRef ImTextureRefFromID(ImTextureID tex_id) { ImTextureRef tex_ref = { ._TexData = NULL, .TexID = tex_id }; return tex_ref; }
@@ -3425,7 +3426,7 @@ struct ImTextureRect
 struct ImTextureData
 {
     //------------------------------------------ core / backend ---------------------------------------
-    int                 UniqueID;               // w    -   // Sequential index to facilitate identifying a texture when debugging/printing. Unique per atlas.
+    int                 UniqueID;               // w    -   // [DEBUG] Sequential index to facilitate identifying a texture when debugging/printing. Unique per atlas.
     ImTextureStatus     Status;                 // rw   rw  // ImTextureStatus_OK/_WantCreate/_WantUpdates/_WantDestroy. Always use SetStatus() to modify!
     void*               BackendUserData;        // -    rw  // Convenience storage for backend. Some backends may have enough with TexID.
     ImTextureID         TexID;                  // r    w   // Backend-specific texture identifier. Always use SetTexID() to modify! The identifier will stored in ImDrawCmd::GetTexID() and passed to backend's RenderDrawData function.
@@ -3443,7 +3444,7 @@ struct ImTextureData
     bool                WantDestroyNextFrame;   // rw   -   // [Internal] Queued to set ImTextureStatus_WantDestroy next frame. May still be used in the current frame.
 
     // Functions
-    ImTextureData()     { memset(this, 0, sizeof(*this)); TexID = ImTextureID_Invalid; }
+    ImTextureData()     { memset(this, 0, sizeof(*this)); Status = ImTextureStatus_Destroyed; TexID = ImTextureID_Invalid; }
     ~ImTextureData()    { DestroyPixels(); }
     IMGUI_API void      Create(ImTextureFormat format, int w, int h);
     IMGUI_API void      DestroyPixels();
