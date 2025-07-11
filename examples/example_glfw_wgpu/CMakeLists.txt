@@ -1,117 +1,62 @@
 # Building for desktop (WebGPU-native) with Dawn:
 #  1. git clone https://github.com/google/dawn dawn
-#  2. cmake -B build -DIMGUI_DAWN_DIR=dawn
-#  3. cmake --build build
+#  2. cd dawn
+# command 3. will install at <dawn>/cmake-build-debug-clang/install, it takes a while
+#  3. CC=clang CXX=clang++ cmake -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld" -B cmake-build-debug-clang -S . -DDAWN_ENABLE_INSTALL=ON -DCMAKE_INSTALL_PREFIX=cmake-build-debug-clang/install -DBUILD_SAMPLES=OFF -DDAWN_FETCH_DEPENDENCIES=ON -DDAWN_USE_GLFW=ON -DDAWN_ENABLE_VULKAN=ON -DTINT_BUILD_CMD_TOOLS=OFF -DTINT_BUILD_TESTS=OFF -DDAWN_ENABLE_SPIRV_VALIDATION=OFF
+# build ImGui with Dawn
+#  4. cmake -B build -DDawn_DIR=<dawn>/cmake-build-debug-clang/install/lib/cmake/Dawn
+#  5. cmake --build build --target example_glfw_wgpu_dawn
 # The resulting binary will be found at one of the following locations:
-#   * build/Debug/example_glfw_wgpu[.exe]
-#   * build/example_glfw_wgpu[.exe]
+#   * build/Debug/example_glfw_wgpu_dawn[.exe]
+#   * build/example_glfw_wgpu_dawn[.exe]
 
 # Building for Emscripten:
 #  1. Install Emscripten SDK following the instructions: https://emscripten.org/docs/getting_started/downloads.html
 #  2. Install Ninja build system
 #  3. emcmake cmake -G Ninja -B build
-#  3. cmake --build build
+#  3. cmake --build build --target example_glfw_wgpu_emscripten
 #  4. emrun build/index.html
 
-cmake_minimum_required(VERSION 3.10.2)
-project(imgui_example_glfw_wgpu C CXX)
+cmake_minimum_required(VERSION 3.23)
+project(example_glfw_wgpu)
 
-if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Debug CACHE STRING "" FORCE)
-endif()
+# find_package(imgui REQUIRED)
 
-set(CMAKE_CXX_STANDARD 17) # Dawn requires C++17
+if (HAS_IMGUI_DAWN AND 0) # example does not compile with latest Dawn
+    add_executable(example_glfw_wgpu_dawn)
 
-# Dear ImGui
-set(IMGUI_DIR ../../)
+    target_sources(example_glfw_wgpu_dawn PRIVATE main.cpp)
 
-# Libraries
-if(EMSCRIPTEN)
-  if(EMSCRIPTEN_VERSION VERSION_GREATER_EQUAL "3.1.57")
-    set(IMGUI_EMSCRIPTEN_GLFW3 "--use-port=contrib.glfw3" CACHE STRING "Choose between --use-port=contrib.glfw3 and -sUSE_GLFW=3 for GLFW implementation (default to --use-port=contrib.glfw3)")
-  else()
-    # cannot use contrib.glfw3 prior to 3.1.57
-    set(IMGUI_EMSCRIPTEN_GLFW3 "-sUSE_GLFW=3" CACHE STRING "Use -sUSE_GLFW=3 for GLFW implementation" FORCE)
-  endif()
-  set(LIBRARIES glfw)
-  add_compile_options(-sDISABLE_EXCEPTION_CATCHING=1 -DIMGUI_DISABLE_FILE_FUNCTIONS=1)
-else()
-  # Dawn wgpu desktop
-  set(DAWN_FETCH_DEPENDENCIES ON)
-  set(IMGUI_DAWN_DIR CACHE PATH "Path to Dawn repository")
-  if (NOT IMGUI_DAWN_DIR)
-    message(FATAL_ERROR "Please specify the Dawn repository by setting IMGUI_DAWN_DIR")
-  endif()
+    target_link_libraries(example_glfw_wgpu_dawn PRIVATE imgui::imgui imgui::backend_glfw_wgpu_dawn)
+endif ()
 
-  option(DAWN_FETCH_DEPENDENCIES "Use fetch_dawn_dependencies.py as an alternative to using depot_tools" ON)
+if (HAS_IMGUI_EMSCRIPTEN)
+    add_executable(example_glfw_wgpu_emscripten)
 
-  # Dawn builds many things by default - disable things we don't need
-  option(DAWN_BUILD_SAMPLES "Enables building Dawn's samples" OFF)
-  option(TINT_BUILD_CMD_TOOLS "Build the Tint command line tools" OFF)
-  option(TINT_BUILD_DOCS "Build documentation" OFF)
-  option(TINT_BUILD_TESTS "Build tests" OFF)
-  if (NOT APPLE)
-    option(TINT_BUILD_MSL_WRITER "Build the MSL output writer" OFF)
-  endif()
-  if(WIN32)
-    option(TINT_BUILD_SPV_READER "Build the SPIR-V input reader" OFF)
-    option(TINT_BUILD_WGSL_READER "Build the WGSL input reader" ON)
-    option(TINT_BUILD_GLSL_WRITER "Build the GLSL output writer" OFF)
-    option(TINT_BUILD_GLSL_VALIDATOR "Build the GLSL output validator" OFF)
-    option(TINT_BUILD_SPV_WRITER "Build the SPIR-V output writer" OFF)
-    option(TINT_BUILD_WGSL_WRITER "Build the WGSL output writer" ON)
-  endif()
+    target_sources(example_glfw_wgpu_emscripten PRIVATE main.cpp)
 
-  add_subdirectory("${IMGUI_DAWN_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/dawn" EXCLUDE_FROM_ALL)
+    target_link_libraries(example_glfw_wgpu_emscripten PRIVATE imgui::imgui imgui::backend_glfw_wgpu_emscripten)
 
-  set(LIBRARIES webgpu_dawn webgpu_cpp webgpu_glfw glfw)
-endif()
-
-add_executable(example_glfw_wgpu
-  main.cpp
-  # backend files
-  ${IMGUI_DIR}/backends/imgui_impl_glfw.cpp
-  ${IMGUI_DIR}/backends/imgui_impl_wgpu.cpp
-  # Dear ImGui files
-  ${IMGUI_DIR}/imgui.cpp
-  ${IMGUI_DIR}/imgui_draw.cpp
-  ${IMGUI_DIR}/imgui_demo.cpp
-  ${IMGUI_DIR}/imgui_tables.cpp
-  ${IMGUI_DIR}/imgui_widgets.cpp
-)
-IF(NOT EMSCRIPTEN)
-  target_compile_definitions(example_glfw_wgpu PUBLIC
-    "IMGUI_IMPL_WEBGPU_BACKEND_DAWN"
-  )
-endif()
-target_include_directories(example_glfw_wgpu PUBLIC
-  ${IMGUI_DIR}
-  ${IMGUI_DIR}/backends
-)
-
-target_link_libraries(example_glfw_wgpu PUBLIC ${LIBRARIES})
-
-# Emscripten settings
-if(EMSCRIPTEN)
-  if("${IMGUI_EMSCRIPTEN_GLFW3}" STREQUAL "--use-port=contrib.glfw3")
-    target_compile_options(example_glfw_wgpu PUBLIC
-        "${IMGUI_EMSCRIPTEN_GLFW3}"
+    set_target_properties(example_glfw_wgpu_emscripten PROPERTIES OUTPUT_NAME "index")
+    # copy our custom index.html to build directory
+    add_custom_command(TARGET example_glfw_wgpu_emscripten POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_LIST_DIR}/web/index.html" $<TARGET_FILE_DIR:example_glfw_wgpu_emscripten>
     )
-  endif()
-  message(STATUS "Using ${IMGUI_EMSCRIPTEN_GLFW3} GLFW implementation")
-  target_link_options(example_glfw_wgpu PRIVATE
-    "-sUSE_WEBGPU=1"
-    "${IMGUI_EMSCRIPTEN_GLFW3}"
-    "-sWASM=1"
-    "-sALLOW_MEMORY_GROWTH=1"
-    "-sNO_EXIT_RUNTIME=0"
-    "-sASSERTIONS=1"
-    "-sDISABLE_EXCEPTION_CATCHING=1"
-    "-sNO_FILESYSTEM=1"
-  )
-  set_target_properties(example_glfw_wgpu PROPERTIES OUTPUT_NAME "index")
-  # copy our custom index.html to build directory
-  add_custom_command(TARGET example_glfw_wgpu POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_LIST_DIR}/web/index.html" $<TARGET_FILE_DIR:example_glfw_wgpu>
-  )
-endif()
+
+    if (IMGUI_HTTP_PORT)
+        set(HTTP_PORT ${IMGUI_HTTP_PORT})
+    else ()
+        set(HTTP_PORT 8080)
+    endif ()
+    if (IMGUI_HTTP_ADDRESS)
+        set(HTTP_ADDRESS ${IMGUI_HTTP_ADDRESS})
+    else ()
+        set(HTTP_ADDRESS 127.0.0.1)
+    endif ()
+    add_custom_target(run_example_glfw_wgpu_emscripten
+        COMMAND python -m http.server -b ${HTTP_ADDRESS} -d $<TARGET_FILE_DIR:example_glfw_wgpu_emscripten> ${HTTP_PORT}
+        DEPENDS example_glfw_wgpu_emscripten
+        COMMENT "Run a python http.server in example_glfw_wgpu_emscripten location http://${HTTP_ADDRESS}:${HTTP_PORT}/"
+        USES_TERMINAL
+    )
+endif ()
