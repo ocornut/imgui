@@ -43,6 +43,9 @@ Breaking Changes:
 
 Other Changes:
 
+- Error Handling: minor improvements to error handling for TableGetSortSpecs()
+  and TableSetBgColor() calls. (#1651, #8499)
+
 
 -----------------------------------------------------------------------
  VERSION 1.92.1 (Released 2025-07-09)
