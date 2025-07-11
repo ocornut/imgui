@@ -160,10 +160,8 @@ void ImGui_ImplAllegro5_RenderDrawData(ImDrawData* draw_data)
     ImGui_ImplAllegro5_SetupRenderState(draw_data);
 
     // Render command lists
-    for (int n = 0; n < draw_data->CmdListsCount; n++)
+    for (const ImDrawList* draw_list : draw_data->CmdLists)
     {
-        const ImDrawList* draw_list = draw_data->CmdLists[n];
-
         ImVector<ImDrawVertAllegro>& vertices = bd->BufVertices;
 #if ALLEGRO_HAS_DRAW_INDEXED_PRIM
         vertices.resize(draw_list->VtxBuffer.Size);

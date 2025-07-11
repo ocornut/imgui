@@ -200,9 +200,8 @@ void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
     ImDrawIdx* idx_dst = nullptr;
     bd->pVB->Map(D3D10_MAP_WRITE_DISCARD, 0, (void**)&vtx_dst);
     bd->pIB->Map(D3D10_MAP_WRITE_DISCARD, 0, (void**)&idx_dst);
-    for (int n = 0; n < draw_data->CmdListsCount; n++)
+    for (const ImDrawList* draw_list : draw_data->CmdLists)
     {
-        const ImDrawList* draw_list = draw_data->CmdLists[n];
         memcpy(vtx_dst, draw_list->VtxBuffer.Data, draw_list->VtxBuffer.Size * sizeof(ImDrawVert));
         memcpy(idx_dst, draw_list->IdxBuffer.Data, draw_list->IdxBuffer.Size * sizeof(ImDrawIdx));
         vtx_dst += draw_list->VtxBuffer.Size;
@@ -268,9 +267,8 @@ void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
     int global_idx_offset = 0;
     ImVec2 clip_off = draw_data->DisplayPos;
     ImVec2 clip_scale = draw_data->FramebufferScale;
-    for (int n = 0; n < draw_data->CmdListsCount; n++)
+    for (const ImDrawList* draw_list : draw_data->CmdLists)
     {
-        const ImDrawList* draw_list = draw_data->CmdLists[n];
         for (int cmd_i = 0; cmd_i < draw_list->CmdBuffer.Size; cmd_i++)
         {
             const ImDrawCmd* pcmd = &draw_list->CmdBuffer[cmd_i];

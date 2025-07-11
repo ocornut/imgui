@@ -189,9 +189,8 @@ void ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* 
     ImVec2 clip_scale = render_scale;
 
     // Render command lists
-    for (int n = 0; n < draw_data->CmdListsCount; n++)
+    for (const ImDrawList* draw_list : draw_data->CmdLists)
     {
-        const ImDrawList* draw_list = draw_data->CmdLists[n];
         const ImDrawVert* vtx_buffer = draw_list->VtxBuffer.Data;
         const ImDrawIdx* idx_buffer = draw_list->IdxBuffer.Data;
 

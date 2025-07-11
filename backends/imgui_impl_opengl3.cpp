@@ -584,10 +584,8 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     ImVec2 clip_scale = draw_data->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
 
     // Render command lists
-    for (int n = 0; n < draw_data->CmdListsCount; n++)
+    for (const ImDrawList* draw_list : draw_data->CmdLists)
     {
-        const ImDrawList* draw_list = draw_data->CmdLists[n];
-
         // Upload vertex/index buffers
         // - OpenGL drivers are in a very sorry state nowadays....
         //   During 2021 we attempted to switch from glBufferData() to orphaning+glBufferSubData() following reports

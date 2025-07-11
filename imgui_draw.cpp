@@ -2312,17 +2312,16 @@ void ImDrawData::DeIndexAllBuffers()
 {
     ImVector<ImDrawVert> new_vtx_buffer;
     TotalVtxCount = TotalIdxCount = 0;
-    for (int i = 0; i < CmdListsCount; i++)
+    for (ImDrawList* draw_list : CmdLists)
     {
-        ImDrawList* cmd_list = CmdLists[i];
-        if (cmd_list->IdxBuffer.empty())
+        if (draw_list->IdxBuffer.empty())
             continue;
-        new_vtx_buffer.resize(cmd_list->IdxBuffer.Size);
-        for (int j = 0; j < cmd_list->IdxBuffer.Size; j++)
-            new_vtx_buffer[j] = cmd_list->VtxBuffer[cmd_list->IdxBuffer[j]];
-        cmd_list->VtxBuffer.swap(new_vtx_buffer);
-        cmd_list->IdxBuffer.resize(0);
-        TotalVtxCount += cmd_list->VtxBuffer.Size;
+        new_vtx_buffer.resize(draw_list->IdxBuffer.Size);
+        for (int j = 0; j < draw_list->IdxBuffer.Size; j++)
+            new_vtx_buffer[j] = draw_list->VtxBuffer[draw_list->IdxBuffer[j]];
+        draw_list->VtxBuffer.swap(new_vtx_buffer);
+        draw_list->IdxBuffer.resize(0);
+        TotalVtxCount += draw_list->VtxBuffer.Size;
     }
 }
 

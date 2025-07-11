@@ -208,9 +208,8 @@ void ImGui_ImplOpenGL2_RenderDrawData(ImDrawData* draw_data)
     ImVec2 clip_scale = draw_data->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
 
     // Render command lists
-    for (int n = 0; n < draw_data->CmdListsCount; n++)
+    for (const ImDrawList* draw_list : draw_data->CmdLists)
     {
-        const ImDrawList* draw_list = draw_data->CmdLists[n];
         const ImDrawVert* vtx_buffer = draw_list->VtxBuffer.Data;
         const ImDrawIdx* idx_buffer = draw_list->IdxBuffer.Data;
         glVertexPointer(2, GL_FLOAT, sizeof(ImDrawVert), (const GLvoid*)((const char*)vtx_buffer + offsetof(ImDrawVert, pos)));

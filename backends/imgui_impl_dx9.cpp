@@ -228,9 +228,8 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
     // FIXME-OPT: This is a minor waste of resource, the ideal is to use imconfig.h and
     //  1) to avoid repacking colors:   #define IMGUI_USE_BGRA_PACKED_COLOR
     //  2) to avoid repacking vertices: #define IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT struct ImDrawVert { ImVec2 pos; float z; ImU32 col; ImVec2 uv; }
-    for (int n = 0; n < draw_data->CmdListsCount; n++)
+    for (const ImDrawList* draw_list : draw_data->CmdLists)
     {
-        const ImDrawList* draw_list = draw_data->CmdLists[n];
         const ImDrawVert* vtx_src = draw_list->VtxBuffer.Data;
         for (int i = 0; i < draw_list->VtxBuffer.Size; i++)
         {
@@ -260,9 +259,8 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
     int global_vtx_offset = 0;
     int global_idx_offset = 0;
     ImVec2 clip_off = draw_data->DisplayPos;
-    for (int n = 0; n < draw_data->CmdListsCount; n++)
+    for (const ImDrawList* draw_list : draw_data->CmdLists)
     {
-        const ImDrawList* draw_list = draw_data->CmdLists[n];
         for (int cmd_i = 0; cmd_i < draw_list->CmdBuffer.Size; cmd_i++)
         {
             const ImDrawCmd* pcmd = &draw_list->CmdBuffer[cmd_i];
