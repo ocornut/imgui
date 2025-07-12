@@ -477,6 +477,7 @@ typedef GL3WglProc (*GL3WGetProcAddressProc)(const char *proc);
 /* gl3w api */
 GL3W_API int imgl3wInit(void);
 GL3W_API int imgl3wInit2(GL3WGetProcAddressProc proc);
+GL3W_API void imgl3wShutdown(void);
 GL3W_API int imgl3wIsSupported(int major, int minor);
 GL3W_API GL3WglProc imgl3wGetProcAddress(const char *proc);
 
@@ -632,7 +633,7 @@ extern "C" {
 #endif
 #include <windows.h>
 
-static HMODULE libgl;
+static HMODULE libgl = NULL;
 typedef PROC(__stdcall* GL3WglGetProcAddr)(LPCSTR);
 static GL3WglGetProcAddr wgl_get_proc_address;
 
@@ -645,7 +646,7 @@ static int open_libgl(void)
     return GL3W_OK;
 }
 
-static void close_libgl(void) { FreeLibrary(libgl); }
+static void close_libgl(void) { FreeLibrary(libgl); libgl = NULL; }
 static GL3WglProc get_proc(const char *proc)
 {
     GL3WglProc res;
@@ -657,7 +658,7 @@ static GL3WglProc get_proc(const char *proc)
 #elif defined(__APPLE__)
 #include <dlfcn.h>
 
-static void *libgl;
+static void *libgl = NULL;
 static int open_libgl(void)
 {
     libgl = dlopen("/System/Library/Frameworks/OpenGL.framework/OpenGL", RTLD_LAZY | RTLD_LOCAL);
@@ -666,7 +667,7 @@ static int open_libgl(void)
     return GL3W_OK;
 }
 
-static void close_libgl(void) { dlclose(libgl); }
+static void close_libgl(void) { dlclose(libgl); libgl = NULL; }
 
 static GL3WglProc get_proc(const char *proc)
 {
@@ -832,6 +833,11 @@ int imgl3wInit2(GL3WGetProcAddressProc proc)
 {
     load_procs(proc);
     return parse_version();
+}
+
+void imgl3wShutdown(void)
+{
+    close_libgl();
 }
 
 int imgl3wIsSupported(int major, int minor)
