@@ -422,7 +422,9 @@ void    ImGui_ImplOpenGL3_Shutdown()
     io.BackendFlags &= ~(ImGuiBackendFlags_RendererHasVtxOffset | ImGuiBackendFlags_RendererHasTextures);
     IM_DELETE(bd);
 
+#ifdef IMGUI_IMPL_OPENGL_LOADER_IMGL3W
     imgl3wShutdown();
+#endif
 }
 
 void    ImGui_ImplOpenGL3_NewFrame()
