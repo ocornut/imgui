@@ -24,7 +24,7 @@ The resulting binary will be found at one of the following locations:
  2. Install Ninja build system
  3. `emcmake cmake -G Ninja -B build`
  4. `cmake --build build`
-
+ 
 To run:
  - `emrun build/index.html`
 

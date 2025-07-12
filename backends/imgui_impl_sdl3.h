@@ -44,4 +44,10 @@ IMGUI_IMPL_API bool     ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event);
 enum ImGui_ImplSDL3_GamepadMode { ImGui_ImplSDL3_GamepadMode_AutoFirst, ImGui_ImplSDL3_GamepadMode_AutoAll, ImGui_ImplSDL3_GamepadMode_Manual };
 IMGUI_IMPL_API void     ImGui_ImplSDL3_SetGamepadMode(ImGui_ImplSDL3_GamepadMode mode, SDL_Gamepad** manual_gamepads_array = nullptr, int manual_gamepads_count = -1);
 
+// SDL3 helper to create a WebGPU surface for Native/Desktop applications: available only with WebGPU/WGPU backend
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) || defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) && !defined(__EMSCRIPTEN__)
+#include <webgpu/webgpu.h>
+WGPUSurface ImGui_ImplSDL3_CreateWGPUSurface_Helper(WGPUInstance instance, SDL_Window* window);
+#endif
+
 #endif // #ifndef IMGUI_DISABLE
