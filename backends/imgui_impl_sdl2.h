@@ -47,4 +47,10 @@ IMGUI_IMPL_API float    ImGui_ImplSDL2_GetContentScaleForDisplay(int display_ind
 enum ImGui_ImplSDL2_GamepadMode { ImGui_ImplSDL2_GamepadMode_AutoFirst, ImGui_ImplSDL2_GamepadMode_AutoAll, ImGui_ImplSDL2_GamepadMode_Manual };
 IMGUI_IMPL_API void     ImGui_ImplSDL2_SetGamepadMode(ImGui_ImplSDL2_GamepadMode mode, struct _SDL_GameController** manual_gamepads_array = nullptr, int manual_gamepads_count = -1);
 
+// SDL2 helper to create a WebGPU surface (exclusively!) for Native/Desktop applications: available only together with WebGPU/WGPU backend
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) || defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) && !defined(__EMSCRIPTEN__)
+#include <webgpu/webgpu.h>
+WGPUSurface ImGui_ImplSDL2_CreateWGPUSurface_Helper(WGPUInstance instance, SDL_Window* window);
+#endif
+
 #endif // #ifndef IMGUI_DISABLE
