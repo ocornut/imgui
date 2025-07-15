@@ -166,6 +166,7 @@ typedef khronos_uint8_t GLubyte;
 #define GL_SCISSOR_BOX                    0x0C10
 #define GL_SCISSOR_TEST                   0x0C11
 #define GL_UNPACK_ROW_LENGTH              0x0CF2
+#define GL_UNPACK_ALIGNMENT               0x0CF5
 #define GL_PACK_ALIGNMENT                 0x0D05
 #define GL_MAX_TEXTURE_SIZE               0x0D33
 #define GL_TEXTURE_2D                     0x0DE1

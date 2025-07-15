@@ -45,6 +45,8 @@ Other Changes:
 
 - Error Handling: minor improvements to error handling for TableGetSortSpecs()
   and TableSetBgColor() calls. (#1651, #8499)
+- Backends: OpenGL2, OpenGL3: set GL_UNPACK_ALIGNMENT to 1 before updating 
+  textures. (#8802) [@Daandelange]
 
 
 -----------------------------------------------------------------------
