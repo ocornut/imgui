@@ -23,7 +23,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2025-07-15: OpenGL: Set GL_UNPACK_ALIGNMENT to 1 before updating textures. (#8802)
+//  2025-07-15: OpenGL: Set GL_UNPACK_ALIGNMENT to 1 before updating textures (#8802) + restore non-WebGL/ES update path that doesn't require a CPU-side copy.
 //  2025-06-11: OpenGL: Added support for ImGuiBackendFlags_RendererHasTextures, for dynamic font atlas. Removed ImGui_ImplOpenGL3_CreateFontsTexture() and ImGui_ImplOpenGL3_DestroyFontsTexture().
 //  2025-06-04: OpenGL: Made GLES 3.20 contexts not access GL_CONTEXT_PROFILE_MASK nor GL_PRIMITIVE_RESTART. (#8664)
 //  2025-02-18: OpenGL: Lazily reinitialize embedded GL loader for when calling backend from e.g. other DLL boundaries. (#8406)
@@ -758,7 +758,7 @@ void ImGui_ImplOpenGL3_UpdateTexture(ImTextureData* tex)
 
         GLuint gl_tex_id = (GLuint)(intptr_t)tex->TexID;
         GL_CALL(glBindTexture(GL_TEXTURE_2D, gl_tex_id));
-#if 0// GL_UNPACK_ROW_LENGTH // Not on WebGL/ES
+#if GL_UNPACK_ROW_LENGTH // Not on WebGL/ES
         GL_CALL(glPixelStorei(GL_UNPACK_ROW_LENGTH, tex->Width));
         for (ImTextureRect& r : tex->Updates)
             GL_CALL(glTexSubImage2D(GL_TEXTURE_2D, 0, r.x, r.y, r.w, r.h, GL_RGBA, GL_UNSIGNED_BYTE, tex->GetPixelsAt(r.x, r.y)));
