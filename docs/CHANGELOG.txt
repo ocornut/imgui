@@ -48,6 +48,8 @@ Other Changes:
   selected), impacting code not checking for BeginChild() return value. (#8815)
 - Error Handling: minor improvements to error handling for TableGetSortSpecs()
   and TableSetBgColor() calls. (#1651, #8499)
+- Misc: removed more redundant inline static linkage from imgui_internal.h to 
+  facilitate using in C++ modules. (#8813, #8682, #8358) [@stripe2933]
 - Backends: OpenGL2, OpenGL3: set GL_UNPACK_ALIGNMENT to 1 before updating 
   textures. (#8802) [@Daandelange]
 
