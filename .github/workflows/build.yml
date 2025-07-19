@@ -17,10 +17,10 @@ on:
 
 jobs:
   Windows:
-    runs-on: windows-2019
+    runs-on: windows-2025
     env:
-      VS_PATH: C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\
-      MSBUILD_PATH: C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin\
+      VS_PATH: C:\Program Files\Microsoft Visual Studio\2022\Enterprise\
+      MSBUILD_PATH: C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\
     steps:
       - uses: actions/checkout@v4
 
@@ -40,8 +40,8 @@ jobs:
         run: |
           # CI workers do not supporter older Visual Studio versions. Fix projects to target newer available version.
           gci -recurse -filter "*.vcxproj" | ForEach-Object {
-            (Get-Content $_.FullName) -Replace "<PlatformToolset>v\d{3}</PlatformToolset>","<PlatformToolset>v142</PlatformToolset>" | Set-Content -Path $_.FullName
-            (Get-Content $_.FullName) -Replace "<WindowsTargetPlatformVersion>[\d\.]+</WindowsTargetPlatformVersion>","<WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>" | Set-Content -Path $_.FullName
+            (Get-Content $_.FullName) -Replace "<PlatformToolset>v\d{3}</PlatformToolset>","<PlatformToolset>v143</PlatformToolset>" | Set-Content -Path $_.FullName
+            (Get-Content $_.FullName) -Replace "<WindowsTargetPlatformVersion>[\d\.]+</WindowsTargetPlatformVersion>",'<WindowsTargetPlatformVersion>$(LatestTargetPlatformVersion)</WindowsTargetPlatformVersion>' | Set-Content -Path $_.FullName
           }
 
       # Not using matrix here because it would inflate job count too much. Check out and setup is done for every job and that makes build times way too long.

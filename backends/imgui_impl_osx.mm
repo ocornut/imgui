@@ -34,6 +34,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2025-XX-XX: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2025-07-08: [Docking] Fixed multi-viewport handling broken on 2025-06-02. (#8644, #8777)
 //  2025-06-27: Added ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress mouse cursor support.
 //  2025-06-12: ImGui_ImplOSX_HandleEvent() only process event for window containing our view. (#8644)
 //  2025-05-15: [Docking] Add Platform_GetWindowFramebufferScale() handler, to allow varying Retina display density on multiple monitors.
@@ -701,12 +702,7 @@ static ImGuiMouseSource GetMouseSource(NSEvent* event)
 static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
 {
     // Only process events from the window containing ImGui view
-    void* event_handle = (__bridge void*)(event.window);
-    void* view_handle = (__bridge void*)(view.window);
-    if (event_handle == nullptr || view_handle == nullptr)
-        return false;
-    ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle(view_handle);
-    if (viewport == nullptr || viewport->PlatformHandleRaw != event_handle)
+    if (!ImGui::FindViewportByPlatformHandle((__bridge void*)event.window))
         return false;
 
     ImGuiIO& io = ImGui::GetIO();
@@ -951,9 +947,6 @@ static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* viewport)
 
 static void ImGui_ImplOSX_DestroyWindow(ImGuiViewport* viewport)
 {
-    NSWindow* window = (__bridge_transfer NSWindow*)viewport->PlatformHandleRaw;
-    window = nil;
-
     if (ImGui_ImplOSX_ViewportData* vd = (ImGui_ImplOSX_ViewportData*)viewport->PlatformUserData)
     {
         NSWindow* window = vd->Window;
