@@ -744,10 +744,10 @@ void ImGui_ImplVulkan_UpdateTexture(ImTextureData* tex)
         // Update full texture or selected blocks. We only ever write to textures regions which have never been used before!
         // This backend choose to use tex->UpdateRect but you can use tex->Updates[] to upload individual regions.
         // We could use the smaller rect on _WantCreate but using the full rect allows us to clear the texture.
-        const int upload_x = (tex->Status == ImTextureStatus_WantCreate) ? 0 : tex->UpdateRect.x;
-        const int upload_y = (tex->Status == ImTextureStatus_WantCreate) ? 0 : tex->UpdateRect.y;
-        const int upload_w = (tex->Status == ImTextureStatus_WantCreate) ? tex->Width : tex->UpdateRect.w;
-        const int upload_h = (tex->Status == ImTextureStatus_WantCreate) ? tex->Height : tex->UpdateRect.h;
+        const int upload_x = 0;
+        const int upload_y = 0;
+        const int upload_w = tex->Width;
+        const int upload_h = tex->Height;
 
         // Create the Upload Buffer:
         VkDeviceMemory upload_buffer_memory;
