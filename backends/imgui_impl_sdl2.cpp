@@ -26,6 +26,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2025-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2025-07-08: Made ImGui_ImplSDL2_GetContentScaleForWindow(), ImGui_ImplSDL2_GetContentScaleForDisplay() helpers return 1.0f on Emscripten and Android platforms, matching macOS logic. (#8742, #8733)
 //  2025-06-11: Added ImGui_ImplSDL2_GetContentScaleForWindow(SDL_Window* window) and ImGui_ImplSDL2_GetContentScaleForDisplay(int display_index) helper to facilitate making DPI-aware apps.
 //  2025-05-15: [Docking] Add Platform_GetWindowFramebufferScale() handler, to allow varying Retina display density on multiple monitors.
 //  2025-04-09: [Docking] Revert update monitors and work areas information every frame. Only do it on Windows. (#8415, #8558)
@@ -128,6 +129,7 @@
 #ifdef __EMSCRIPTEN__
 #include <emscripten/em_js.h>
 #endif
+#undef Status // X11 headers are leaking this.
 
 #if SDL_VERSION_ATLEAST(2,0,4) && !defined(__EMSCRIPTEN__) && !defined(__ANDROID__) && !(defined(__APPLE__) && TARGET_OS_IOS) && !defined(__amigaos4__)
 #define SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE    1
@@ -824,7 +826,7 @@ float ImGui_ImplSDL2_GetContentScaleForWindow(SDL_Window* window)
 float ImGui_ImplSDL2_GetContentScaleForDisplay(int display_index)
 {
 #if SDL_HAS_PER_MONITOR_DPI
-#ifndef __APPLE__
+#if !defined(__APPLE__) && !defined(__EMSCRIPTEN__) && !defined(__ANDROID__)
     float dpi = 0.0f;
     if (SDL_GetDisplayDPI(display_index, &dpi, nullptr, nullptr) == 0)
         return dpi / 96.0f;

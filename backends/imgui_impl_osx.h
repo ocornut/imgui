@@ -12,7 +12,6 @@
 //  [X] Platform: IME support.
 //  [x] Platform: Multi-viewport / platform windows.
 // Missing features or Issues:
-//  [ ] Missing ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress cursors.
 //  [ ] Multi-viewport: Window size not correctly reported when enabling io.ConfigViewportsNoDecoration
 //  [ ] Multi-viewport: ParentViewportID not honored, and so io.ConfigViewportsNoDefaultParent has no effect (minor).
 

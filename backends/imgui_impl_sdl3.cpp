@@ -24,6 +24,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2025-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2025-06-27: IME: avoid calling SDL_StartTextInput() again if already active. (#8727)
 //  2025-05-15: [Docking] Add Platform_GetWindowFramebufferScale() handler, to allow varying Retina display density on multiple monitors.
 //  2025-05-06: [Docking] macOS: fixed secondary viewports not appearing on other monitors before of parenting.
 //  2025-04-09: [Docking] Revert update monitors and work areas information every frame. Only do it on Windows. (#8415, #8558)
@@ -187,7 +188,7 @@ static void ImGui_ImplSDL3_PlatformSetImeData(ImGuiContext*, ImGuiViewport* view
         SDL_SetTextInputArea(window, &r, 0);
         bd->ImeWindow = window;
     }
-    if (data->WantVisible || data->WantTextInput)
+    if (!SDL_TextInputActive(window) && (data->WantVisible || data->WantTextInput))
         SDL_StartTextInput(window);
 }
 

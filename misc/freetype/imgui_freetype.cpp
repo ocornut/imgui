@@ -174,7 +174,7 @@ struct ImGui_ImplFreeType_FontSrcBakedData
 
 bool ImGui_ImplFreeType_FontSrcData::InitFont(FT_Library ft_library, ImFontConfig* src, ImGuiFreeTypeLoaderFlags extra_font_loader_flags)
 {
-    FT_Error error = FT_New_Memory_Face(ft_library, (uint8_t*)src->FontData, (uint32_t)src->FontDataSize, (uint32_t)src->FontNo, &FtFace);
+    FT_Error error = FT_New_Memory_Face(ft_library, (uint8_t*)src->FontData, (FT_Long)src->FontDataSize, (FT_Long)src->FontNo, &FtFace);
     if (error != 0)
         return false;
     error = FT_Select_Charmap(FtFace, FT_ENCODING_UNICODE);
@@ -475,7 +475,7 @@ void ImGui_ImplFreeType_FontBakedDestroy(ImFontAtlas* atlas, ImFontConfig* src, 
     bd_baked_data->~ImGui_ImplFreeType_FontSrcBakedData(); // ~IM_PLACEMENT_DELETE()
 }
 
-bool ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void* loader_data_for_baked_src, ImWchar codepoint, ImFontGlyph* out_glyph)
+bool ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void* loader_data_for_baked_src, ImWchar codepoint, ImFontGlyph* out_glyph, float* out_advance_x)
 {
     ImGui_ImplFreeType_FontSrcData* bd_font_data = (ImGui_ImplFreeType_FontSrcData*)src->FontLoaderData;
     uint32_t glyph_index = FT_Get_Char_Index(bd_font_data->FtFace, codepoint);
@@ -494,9 +494,20 @@ bool ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConfig* src
     if (metrics == nullptr)
         return false;
 
-    // Render glyph into a bitmap (currently held by FreeType)
     FT_Face face = bd_font_data->FtFace;
     FT_GlyphSlot slot = face->glyph;
+    const float rasterizer_density = src->RasterizerDensity * baked->RasterizerDensity;
+
+    // Load metrics only mode
+    const float advance_x = (slot->advance.x / FT_SCALEFACTOR) / rasterizer_density;
+    if (out_advance_x != NULL)
+    {
+        IM_ASSERT(out_glyph == NULL);
+        *out_advance_x = advance_x;
+        return true;
+    }
+
+    // Render glyph into a bitmap (currently held by FreeType)
     FT_Render_Mode render_mode = (bd_font_data->UserFlags & ImGuiFreeTypeLoaderFlags_Monochrome) ? FT_RENDER_MODE_MONO : FT_RENDER_MODE_NORMAL;
     FT_Error error = FT_Render_Glyph(slot, render_mode);
     const FT_Bitmap* ft_bitmap = &slot->bitmap;
@@ -506,11 +517,10 @@ bool ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConfig* src
     const int w = (int)ft_bitmap->width;
     const int h = (int)ft_bitmap->rows;
     const bool is_visible = (w != 0 && h != 0);
-    const float rasterizer_density = src->RasterizerDensity * baked->RasterizerDensity;
 
     // Prepare glyph
     out_glyph->Codepoint = codepoint;
-    out_glyph->AdvanceX = (slot->advance.x / FT_SCALEFACTOR) / rasterizer_density;
+    out_glyph->AdvanceX = advance_x;
 
     // Pack and retrieve position inside texture atlas
     if (is_visible)

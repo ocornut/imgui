@@ -12,7 +12,6 @@
 //  [X] Platform: IME support.
 //  [x] Platform: Multi-viewport / platform windows.
 // Missing features or Issues:
-//  [ ] Missing ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress cursors.
 //  [ ] Multi-viewport: Window size not correctly reported when enabling io.ConfigViewportsNoDecoration
 //  [ ] Multi-viewport: ParentViewportID not honored, and so io.ConfigViewportsNoDefaultParent has no effect (minor).
 
@@ -35,6 +34,8 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2025-XX-XX: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2025-07-08: [Docking] Fixed multi-viewport handling broken on 2025-06-02. (#8644, #8777)
+//  2025-06-27: Added ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress mouse cursor support.
 //  2025-06-12: ImGui_ImplOSX_HandleEvent() only process event for window containing our view. (#8644)
 //  2025-05-15: [Docking] Add Platform_GetWindowFramebufferScale() handler, to allow varying Retina display density on multiple monitors.
 //  2025-03-21: Fill gamepad inputs and set ImGuiBackendFlags_HasGamepad regardless of ImGuiConfigFlags_NavEnableGamepad being set.
@@ -118,6 +119,7 @@ static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view);
 + (id)_windowResizeNorthEastSouthWestCursor;
 + (id)_windowResizeNorthSouthCursor;
 + (id)_windowResizeEastWestCursor;
++ (id)busyButClickableCursor;
 @end
 
 /**
@@ -465,6 +467,7 @@ bool ImGui_ImplOSX_Init(NSView* view)
     bd->MouseCursors[ImGuiMouseCursor_ResizeNESW] = [NSCursor respondsToSelector:@selector(_windowResizeNorthEastSouthWestCursor)] ? [NSCursor _windowResizeNorthEastSouthWestCursor] : [NSCursor closedHandCursor];
     bd->MouseCursors[ImGuiMouseCursor_ResizeNWSE] = [NSCursor respondsToSelector:@selector(_windowResizeNorthWestSouthEastCursor)] ? [NSCursor _windowResizeNorthWestSouthEastCursor] : [NSCursor closedHandCursor];
     bd->MouseCursors[ImGuiMouseCursor_Hand] = [NSCursor pointingHandCursor];
+    bd->MouseCursors[ImGuiMouseCursor_Wait] = bd->MouseCursors[ImGuiMouseCursor_Progress] = [NSCursor respondsToSelector:@selector(busyButClickableCursor)] ? [NSCursor busyButClickableCursor] : [NSCursor arrowCursor];
     bd->MouseCursors[ImGuiMouseCursor_NotAllowed] = [NSCursor operationNotAllowedCursor];
 
     // Note that imgui.cpp also include default OSX clipboard handlers which can be enabled
@@ -699,12 +702,7 @@ static ImGuiMouseSource GetMouseSource(NSEvent* event)
 static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
 {
     // Only process events from the window containing ImGui view
-    void* event_handle = (__bridge void*)(event.window);
-    void* view_handle = (__bridge void*)(view.window);
-    if (event_handle == nullptr || view_handle == nullptr)
-        return false;
-    ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle(view_handle);
-    if (viewport == nullptr || viewport->PlatformHandleRaw != event_handle)
+    if (!ImGui::FindViewportByPlatformHandle((__bridge void*)event.window))
         return false;
 
     ImGuiIO& io = ImGui::GetIO();
@@ -949,9 +947,6 @@ static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* viewport)
 
 static void ImGui_ImplOSX_DestroyWindow(ImGuiViewport* viewport)
 {
-    NSWindow* window = (__bridge_transfer NSWindow*)viewport->PlatformHandleRaw;
-    window = nil;
-
     if (ImGui_ImplOSX_ViewportData* vd = (ImGui_ImplOSX_ViewportData*)viewport->PlatformUserData)
     {
         NSWindow* window = vd->Window;

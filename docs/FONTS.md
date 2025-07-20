@@ -387,7 +387,7 @@ io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\seguiemj.ttf", 16.0f, &cfg);
 
 ## Using Custom Glyph Ranges
 
-🆕 **Since 1.92, with an up to date backend: specifying glyph ranges is necessary, so this is not needed.**
+🆕 **Since 1.92, with an up to date backend: specifying glyph ranges is unnecessary. Therefore this is not really useful any more.**
 
 :rewind: You can use the `ImFontGlyphRangesBuilder` helper to create glyph ranges based on text input. For example: for a game where your script is known, if you can feed your entire script to it and only build the characters the game needs.
 ```cpp

@@ -1,4 +1,4 @@
-// dear imgui, v1.92.0
+// dear imgui, v1.92.1
 // (tables and columns code)
 
 /*
@@ -1251,7 +1251,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
 
     // [Part 11] Default context menu
     // - To append to this menu: you can call TableBeginContextMenuPopup()/.../EndPopup().
-    // - To modify or replace this: set table->IsContextPopupNoDefaultContents = true, then call TableBeginContextMenuPopup()/.../EndPopup().
+    // - To modify or replace this: set table->DisableDefaultContextMenu = true, then call TableBeginContextMenuPopup()/.../EndPopup().
     // - You may call TableDrawDefaultContextMenu() with selected flags to display specific sections of the default menu,
     //   e.g. TableDrawDefaultContextMenu(table, table->Flags & ~ImGuiTableFlags_Hideable) will display everything EXCEPT columns visibility options.
     if (table->DisableDefaultContextMenu == false && TableBeginContextMenuPopup(table))

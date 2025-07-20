@@ -1,4 +1,4 @@
-// dear imgui, v1.92.0
+// dear imgui, v1.92.1
 // (demo code)
 
 // Help:
@@ -3626,6 +3626,43 @@ static void DemoWindowWidgetsText()
             ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Yellow");
             ImGui::TextDisabled("Disabled");
             ImGui::SameLine(); HelpMarker("The TextDisabled color is stored in ImGuiStyle.");
+            ImGui::TreePop();
+        }
+
+        IMGUI_DEMO_MARKER("Widgets/Text/Font Size");
+        if (ImGui::TreeNode("Font Size"))
+        {
+            ImGuiStyle& style = ImGui::GetStyle();
+            const float global_scale = style.FontScaleMain * style.FontScaleDpi;
+            ImGui::Text("style.FontScaleMain = %0.2f", style.FontScaleMain);
+            ImGui::Text("style.FontScaleDpi = %0.2f", style.FontScaleDpi);
+            ImGui::Text("global_scale = ~%0.2f", global_scale); // This is not technically accurate as internal scales may apply, but conceptually let's pretend it is.
+            ImGui::Text("FontSize = %0.2f", ImGui::GetFontSize());
+
+            ImGui::SeparatorText("");
+            static float custom_size = 16.0f;
+            ImGui::SliderFloat("custom_size", &custom_size, 10.0f, 100.0f, "%.0f");
+            ImGui::Text("ImGui::PushFont(nullptr, custom_size);");
+            ImGui::PushFont(NULL, custom_size);
+            ImGui::Text("FontSize = %.2f (== %.2f * global_scale)", ImGui::GetFontSize(), custom_size);
+            ImGui::PopFont();
+
+            ImGui::SeparatorText("");
+            static float custom_scale = 1.0f;
+            ImGui::SliderFloat("custom_scale", &custom_scale, 0.5f, 4.0f, "%.2f");
+            ImGui::Text("ImGui::PushFont(nullptr, style.FontSizeBase * custom_scale);");
+            ImGui::PushFont(NULL, style.FontSizeBase * custom_scale);
+            ImGui::Text("FontSize = %.2f (== style.FontSizeBase * %.2f * global_scale)", ImGui::GetFontSize(), custom_scale);
+            ImGui::PopFont();
+
+            ImGui::SeparatorText("");
+            for (float scaling = 0.5f; scaling <= 4.0f; scaling += 0.5f)
+            {
+                ImGui::PushFont(NULL, style.FontSizeBase * scaling);
+                ImGui::Text("FontSize = %.2f (== style.FontSizeBase * %.2f * global_scale)", ImGui::GetFontSize(), scaling);
+                ImGui::PopFont();
+            }
+
             ImGui::TreePop();
         }
 
@@ -8332,7 +8369,12 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         // General
         SeparatorText("General");
         if ((GetIO().BackendFlags & ImGuiBackendFlags_RendererHasTextures) == 0)
+        {
             BulletText("Warning: Font scaling will NOT be smooth, because\nImGuiBackendFlags_RendererHasTextures is not set!");
+            BulletText("For instructions, see:");
+            SameLine();
+            TextLinkOpenURL("docs/BACKENDS.md", "https://github.com/ocornut/imgui/blob/master/docs/BACKENDS.md");
+        }
 
         if (ShowStyleSelector("Colors##Selector"))
             ref_saved_style = style;
@@ -8342,7 +8384,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         SameLine(0.0f, 0.0f); Text(" (out %.2f)", GetFontSize());
         DragFloat("FontScaleMain", &style.FontScaleMain, 0.02f, 0.5f, 4.0f);
         //BeginDisabled(GetIO().ConfigDpiScaleFonts);
-        DragFloat("FontScaleDpi", &style.FontScaleDpi, 0.02f, 0.5f, 5.0f);
+        DragFloat("FontScaleDpi", &style.FontScaleDpi, 0.02f, 0.5f, 4.0f);
         //SetItemTooltip("When io.ConfigDpiScaleFonts is set, this value is automatically overwritten.");
         //EndDisabled();
 
