@@ -30,6 +30,10 @@ jobs:
           Invoke-WebRequest -Uri "https://www.libsdl.org/release/SDL2-devel-2.32.8-VC.zip" -OutFile "SDL2-devel-2.32.8-VC.zip"
           Expand-Archive -Path SDL2-devel-2.32.8-VC.zip
           echo "SDL2_DIR=$(pwd)\SDL2-devel-2.32.8-VC\SDL2-2.32.8\" >>${env:GITHUB_ENV}
+          
+          Invoke-WebRequest -Uri "https://www.libsdl.org/release/SDL3-devel-3.2.18-VC.zip" -OutFile "SDL3-devel-3.2.18-VC.zip"
+          Expand-Archive -Path SDL3-devel-3.2.18-VC.zip
+          echo "SDL3_DIR=$(pwd)\SDL3-devel-3.2.18-VC\SDL3-3.2.18\" >>${env:GITHUB_ENV}
 
           Invoke-WebRequest -Uri "https://github.com/ocornut/imgui/files/3789205/vulkan-sdk-1.1.121.2.zip" -OutFile vulkan-sdk-1.1.121.2.zip
           Expand-Archive -Path vulkan-sdk-1.1.121.2.zip
@@ -140,6 +144,25 @@ jobs:
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl2_directx11/example_sdl2_directx11.vcxproj /p:Platform=Win32 /p:Configuration=Release'
         if: github.event_name == 'workflow_run'
 
+      - name: Build Win32 example_sdl3_opengl3
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl3_opengl3/example_sdl3_opengl3.vcxproj /p:Platform=Win32 /p:Configuration=Release'
+
+      - name: Build Win32 example_sdl3_sdlgpu3
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl3_sdlgpu3/example_sdl3_sdlgpu3.vcxproj /p:Platform=Win32 /p:Configuration=Release'
+        if: github.event_name == 'workflow_run'
+
+      - name: Build Win32 example_sdl3_sdlrenderer3
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl3_sdlrenderer3/example_sdl3_sdlrenderer3.vcxproj /p:Platform=Win32 /p:Configuration=Release'
+        if: github.event_name == 'workflow_run'
+
+      - name: Build Win32 example_sdl3_vulkan
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl3_vulkan/example_sdl3_vulkan.vcxproj /p:Platform=Win32 /p:Configuration=Release'
+        if: github.event_name == 'workflow_run'
+
       - name: Build Win32 example_win32_directx9
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_win32_directx9/example_win32_directx9.vcxproj /p:Platform=Win32 /p:Configuration=Release'
@@ -189,6 +212,26 @@ jobs:
       - name: Build x64 example_sdl2_directx11
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl2_directx11/example_sdl2_directx11.vcxproj /p:Platform=x64 /p:Configuration=Release'
+
+      - name: Build x64 example_sdl3_opengl3
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl3_opengl3/example_sdl3_opengl3.vcxproj /p:Platform=x64 /p:Configuration=Release'
+        if: github.event_name == 'workflow_run'
+
+      - name: Build x64 example_sdl3_sdlgpu3
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl3_sdlgpu3/example_sdl3_sdlgpu3.vcxproj /p:Platform=x64 /p:Configuration=Release'
+        if: github.event_name == 'workflow_run'
+
+      - name: Build x64 example_sdl3_sdlrenderer3
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl3_sdlrenderer3/example_sdl3_sdlrenderer3.vcxproj /p:Platform=x64 /p:Configuration=Release'
+        if: github.event_name == 'workflow_run'
+
+      - name: Build x64 example_sdl3_vulkan
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl3_vulkan/example_sdl3_vulkan.vcxproj /p:Platform=x64 /p:Configuration=Release'
+        if: github.event_name == 'workflow_run'
 
       - name: Build x64 example_win32_directx9
         shell: cmd
@@ -433,7 +476,7 @@ jobs:
 
     - name: Install Dependencies
       run: |
-        brew install glfw3 sdl2
+        brew install glfw3 sdl2 sdl3
 
     - name: Build example_null (extra warnings, clang 64-bit)
       run: make -C examples/example_null WITH_EXTRA_WARNINGS=1
@@ -490,6 +533,9 @@ jobs:
 
     - name: Build example_sdl2_opengl3
       run: make -C examples/example_sdl2_opengl3
+
+    - name: Build example_sdl3_opengl3
+      run: make -C examples/example_sdl3_opengl3
 
     - name: Build example_apple_metal
       run: xcodebuild -project examples/example_apple_metal/example_apple_metal.xcodeproj -target example_apple_metal_macos
