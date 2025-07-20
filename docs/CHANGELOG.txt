@@ -50,6 +50,7 @@ Other Changes:
   and TableSetBgColor() calls. (#1651, #8499)
 - Misc: removed more redundant inline static linkage from imgui_internal.h to 
   facilitate using in C++ modules. (#8813, #8682, #8358) [@stripe2933]
+- CI: Update Windows CI to use a more recent SDL2. (#8819, #8778) [@scribam]
 - Backends: OpenGL3: add and call embedded loader shutdown in ImGui_ImplOpenGL3_Shutdown() 
   to facilitate multiple init/shutdown cycles in same process. (#8792) [@tim-rex]
 - Backends: OpenGL2, OpenGL3: set GL_UNPACK_ALIGNMENT to 1 before updating 

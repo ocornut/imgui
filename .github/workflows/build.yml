@@ -27,9 +27,9 @@ jobs:
       - name: Install Dependencies
         shell: powershell
         run: |
-          Invoke-WebRequest -Uri "https://www.libsdl.org/release/SDL2-devel-2.26.3-VC.zip" -OutFile "SDL2-devel-2.26.3-VC.zip"
-          Expand-Archive -Path SDL2-devel-2.26.3-VC.zip
-          echo "SDL2_DIR=$(pwd)\SDL2-devel-2.26.3-VC\SDL2-2.26.3\" >>${env:GITHUB_ENV}
+          Invoke-WebRequest -Uri "https://www.libsdl.org/release/SDL2-devel-2.32.8-VC.zip" -OutFile "SDL2-devel-2.32.8-VC.zip"
+          Expand-Archive -Path SDL2-devel-2.32.8-VC.zip
+          echo "SDL2_DIR=$(pwd)\SDL2-devel-2.32.8-VC\SDL2-2.32.8\" >>${env:GITHUB_ENV}
 
           Invoke-WebRequest -Uri "https://github.com/ocornut/imgui/files/3789205/vulkan-sdk-1.1.121.2.zip" -OutFile vulkan-sdk-1.1.121.2.zip
           Expand-Archive -Path vulkan-sdk-1.1.121.2.zip
