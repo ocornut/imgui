@@ -150,6 +150,11 @@ static void ImGui_ImplSDL3_SetClipboardText(ImGuiContext*, const char* text)
     SDL_SetClipboardText(text);
 }
 
+inline bool operator==(const SDL_Rect& r1, const SDL_Rect& r2)
+{
+    return r1.x == r2.x && r1.y == r2.y && r1.w == r2.w && r1.h == r2.h;
+}
+
 static void ImGui_ImplSDL3_PlatformSetImeData(ImGuiContext*, ImGuiViewport* viewport, ImGuiPlatformImeData* data)
 {
     ImGui_ImplSDL3_Data* bd = ImGui_ImplSDL3_GetBackendData();
@@ -162,12 +167,16 @@ static void ImGui_ImplSDL3_PlatformSetImeData(ImGuiContext*, ImGuiViewport* view
     }
     if (data->WantVisible)
     {
-        SDL_Rect r;
-        r.x = (int)data->InputPos.x;
-        r.y = (int)data->InputPos.y;
-        r.w = 1;
-        r.h = (int)data->InputLineHeight;
-        SDL_SetTextInputArea(window, &r, 0);
+        SDL_Rect r1, r2;
+        r1.x = (int)data->InputPos.x;
+        r1.y = (int)data->InputPos.y;
+        r1.w = 1;
+        r1.h = (int)data->InputLineHeight;
+        SDL_GetTextInputArea(window, &r2, nullptr);
+
+        if (r1 != r2)
+            SDL_SetTextInputArea(window, &r1, 0);
+
         bd->ImeWindow = window;
     }
     if (!SDL_TextInputActive(window) && (data->WantVisible || data->WantTextInput))
