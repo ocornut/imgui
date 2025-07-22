@@ -50,6 +50,9 @@ Other Changes:
   specified but the target font doesn't. Usually either all fonts should
   have a reference size (only required when specifying e.g. GlyphOffset),
   or none should have a reference size. 
+- Fonts: fixed a crash when changing texture format when using a legacy
+  backend. Most commonly would happen when calling GetTexDataAsRGBA32()
+  then immediately GetTexDataAsAlpha8(). (#8824)
 - Windows: fixed an issue where resizable child windows would emit border
   logic when hidden/non-visible (e.g. when in a docked window that is not
   selected), impacting code not checking for BeginChild() return value. (#8815)
