@@ -1,6 +1,6 @@
 #
-# You will need SDL2 (http://www.libsdl.org):
-#   brew install sdl2
+# You will need SDL3 (http://www.libsdl.org):
+#   brew install sdl3
 #
 
 #CXX = g++
