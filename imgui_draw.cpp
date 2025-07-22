@@ -1,4 +1,4 @@
-// dear imgui, v1.92.1
+// dear imgui, v1.92.2 WIP
 // (drawing and font code)
 
 /*
@@ -2318,17 +2318,16 @@ void ImDrawData::DeIndexAllBuffers()
 {
     ImVector<ImDrawVert> new_vtx_buffer;
     TotalVtxCount = TotalIdxCount = 0;
-    for (int i = 0; i < CmdListsCount; i++)
+    for (ImDrawList* draw_list : CmdLists)
     {
-        ImDrawList* cmd_list = CmdLists[i];
-        if (cmd_list->IdxBuffer.empty())
+        if (draw_list->IdxBuffer.empty())
             continue;
-        new_vtx_buffer.resize(cmd_list->IdxBuffer.Size);
-        for (int j = 0; j < cmd_list->IdxBuffer.Size; j++)
-            new_vtx_buffer[j] = cmd_list->VtxBuffer[cmd_list->IdxBuffer[j]];
-        cmd_list->VtxBuffer.swap(new_vtx_buffer);
-        cmd_list->IdxBuffer.resize(0);
-        TotalVtxCount += cmd_list->VtxBuffer.Size;
+        new_vtx_buffer.resize(draw_list->IdxBuffer.Size);
+        for (int j = 0; j < draw_list->IdxBuffer.Size; j++)
+            new_vtx_buffer[j] = draw_list->VtxBuffer[draw_list->IdxBuffer[j]];
+        draw_list->VtxBuffer.swap(new_vtx_buffer);
+        draw_list->IdxBuffer.resize(0);
+        TotalVtxCount += draw_list->VtxBuffer.Size;
     }
 }
 
@@ -2463,8 +2462,10 @@ const char* ImTextureDataGetFormatName(ImTextureFormat format)
 
 void ImTextureData::Create(ImTextureFormat format, int w, int h)
 {
+    IM_ASSERT(Status == ImTextureStatus_Destroyed);
     DestroyPixels();
     Format = format;
+    Status = ImTextureStatus_WantCreate;
     Width = w;
     Height = h;
     BytesPerPixel = ImTextureDataGetFormatBytesPerPixel(format);
@@ -2745,10 +2746,9 @@ void ImFontAtlasUpdateNewFrame(ImFontAtlas* atlas, int frame_count, bool rendere
         if (atlas->Builder == NULL) // This will only happen if fonts were not already loaded.
             ImFontAtlasBuildMain(atlas);
     }
-    else // Legacy backend
-    {
+    // Legacy backend
+    if (!atlas->RendererHasTextures)
         IM_ASSERT_USER_ERROR(atlas->TexIsBuilt, "Backend does not support ImGuiBackendFlags_RendererHasTextures, and font atlas is not built! Update backend OR make sure you called ImGui_ImplXXXX_NewFrame() function for renderer backend, which should call io.Fonts->GetTexDataAsRGBA32() / GetTexDataAsAlpha8().");
-    }
     if (atlas->TexIsBuilt && atlas->Builder->PreloadedAllGlyphsRanges)
         IM_ASSERT_USER_ERROR(atlas->RendererHasTextures == false, "Called ImFontAtlas::Build() before ImGuiBackendFlags_RendererHasTextures got set! With new backends: you don't need to call Build().");
 
@@ -2803,8 +2803,9 @@ void ImFontAtlasUpdateNewFrame(ImFontAtlas* atlas, int frame_count, bool rendere
         }
         else if (tex->WantDestroyNextFrame && tex->Status != ImTextureStatus_WantDestroy)
         {
-            // Request destroy. Keep bool as it allows us to keep track of things.
-            // We don't destroy pixels right away, as backend may have an in-flight copy from RAM.
+            // Request destroy.
+            // - Keep bool to true in order to differentiate a planned destroy vs a destroy decided by the backend.
+            // - We don't destroy pixels right away, as backend may have an in-flight copy from RAM.
             IM_ASSERT(tex->Status == ImTextureStatus_OK || tex->Status == ImTextureStatus_WantCreate || tex->Status == ImTextureStatus_WantUpdates);
             tex->Status = ImTextureStatus_WantDestroy;
         }
@@ -2960,7 +2961,7 @@ void ImFontAtlasTextureBlockQueueUpload(ImFontAtlas* atlas, ImTextureData* tex, 
     tex->UsedRect.h = (unsigned short)(ImMax(tex->UsedRect.y + tex->UsedRect.h, req.y + req.h) - tex->UsedRect.y);
     atlas->TexIsBuilt = false;
 
-    // No need to queue if status is _WantCreate
+    // No need to queue if status is == ImTextureStatus_WantCreate
     if (tex->Status == ImTextureStatus_OK || tex->Status == ImTextureStatus_WantUpdates)
     {
         tex->Status = ImTextureStatus_WantUpdates;
@@ -3977,7 +3978,6 @@ ImTextureData* ImFontAtlasTextureAdd(ImFontAtlas* atlas, int w, int h)
     }
 
     new_tex->Create(atlas->TexDesiredFormat, w, h);
-    new_tex->Status = ImTextureStatus_WantCreate;
     atlas->TexIsBuilt = false;
 
     ImFontAtlasBuildSetTexture(atlas, new_tex);
