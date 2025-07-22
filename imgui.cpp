@@ -2582,11 +2582,11 @@ static inline int ImTextCharToUtf8_inline(char* buf, int buf_size, unsigned int 
     return 0;
 }
 
-const char* ImTextCharToUtf8(char out_buf[5], unsigned int c)
+int ImTextCharToUtf8(char out_buf[5], unsigned int c)
 {
     int count = ImTextCharToUtf8_inline(out_buf, 5, c);
     out_buf[count] = 0;
-    return out_buf;
+    return count;
 }
 
 // Not optimal but we very rarely use this function.
@@ -16922,8 +16922,10 @@ void ImGui::DebugNodeFont(ImFont* font)
 #endif
 
     char c_str[5];
-    Text("Fallback character: '%s' (U+%04X)", ImTextCharToUtf8(c_str, font->FallbackChar), font->FallbackChar);
-    Text("Ellipsis character: '%s' (U+%04X)", ImTextCharToUtf8(c_str, font->EllipsisChar), font->EllipsisChar);
+    ImTextCharToUtf8(c_str, font->FallbackChar);
+    Text("Fallback character: '%s' (U+%04X)", c_str, font->FallbackChar);
+    ImTextCharToUtf8(c_str, font->EllipsisChar);
+    Text("Ellipsis character: '%s' (U+%04X)", c_str, font->EllipsisChar);
 
     for (int src_n = 0; src_n < font->Sources.Size; src_n++)
     {
@@ -16965,7 +16967,10 @@ void ImGui::DebugNodeFont(ImFont* font)
                     {
                         char utf8_buf[5];
                         for (unsigned int n = c; n < c_end; n++)
-                            BulletText("Codepoint U+%04X (%s)", n, ImTextCharToUtf8(utf8_buf, n));
+                        {
+                            ImTextCharToUtf8(utf8_buf, n);
+                            BulletText("Codepoint U+%04X (%s)", n, utf8_buf);
+                        }
                         TreePop();
                     }
                     TableNextColumn();
