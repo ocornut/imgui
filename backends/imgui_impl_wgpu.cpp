@@ -44,13 +44,14 @@
 //  2021-01-28: Initial version.
 
 #include "imgui.h"
+#include <cstdlib>
 
 // When targeting native platforms (i.e. NOT emscripten), one of IMGUI_IMPL_WEBGPU_BACKEND_DAWN
 // or IMGUI_IMPL_WEBGPU_BACKEND_WGPU must be provided. See imgui_impl_wgpu.h for more details.
 #ifndef __EMSCRIPTEN__
-    #if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) == defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
-    #error exactly one of IMGUI_IMPL_WEBGPU_BACKEND_DAWN or IMGUI_IMPL_WEBGPU_BACKEND_WGPU must be defined!
-    #endif
+    //#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) == defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
+    //#error exactly one of IMGUI_IMPL_WEBGPU_BACKEND_DAWN or IMGUI_IMPL_WEBGPU_BACKEND_WGPU must be defined!
+    //#endif
 #else
     #if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) || defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
     #error neither IMGUI_IMPL_WEBGPU_BACKEND_DAWN nor IMGUI_IMPL_WEBGPU_BACKEND_WGPU may be defined if targeting emscripten!
@@ -254,11 +255,11 @@ static void SafeRelease(FrameResources& res)
     SafeRelease(res.VertexBufferHost);
 }
 
-static WGPUProgrammableStageDescriptor ImGui_ImplWGPU_CreateShaderModule(const char* wgsl_source)
+static WGPUShaderModule ImGui_ImplWGPU_CreateShaderModule(const char* wgsl_source)
 {
     ImGui_ImplWGPU_Data* bd = ImGui_ImplWGPU_GetBackendData();
 
-#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) || defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) || defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) || defined(IMGUI_IMPLE_WEBGPU_BACKEND_WGVK)
     WGPUShaderSourceWGSL wgsl_desc = {};
     wgsl_desc.chain.sType = WGPUSType_ShaderSourceWGSL;
     wgsl_desc.code = { wgsl_source, WGPU_STRLEN };
@@ -271,15 +272,7 @@ static WGPUProgrammableStageDescriptor ImGui_ImplWGPU_CreateShaderModule(const c
     WGPUShaderModuleDescriptor desc = {};
     desc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgsl_desc);
 
-    WGPUProgrammableStageDescriptor stage_desc = {};
-    stage_desc.module = wgpuDeviceCreateShaderModule(bd->wgpuDevice, &desc);
-
-#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) || defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
-    stage_desc.entryPoint = { "main", WGPU_STRLEN };
-#else
-    stage_desc.entryPoint = "main";
-#endif
-    return stage_desc;
+    return wgpuDeviceCreateShaderModule(bd->wgpuDevice, &desc);
 }
 
 static WGPUBindGroup ImGui_ImplWGPU_CreateImageBindGroup(WGPUBindGroupLayout layout, WGPUTextureView texture)
@@ -367,7 +360,7 @@ void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder 
     // Avoid rendering when minimized
     int fb_width = (int)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
     int fb_height = (int)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
-    if (fb_width <= 0 || fb_height <= 0 || draw_data->CmdLists.Size == 0)
+    if (fb_width <= 0 || fb_height <= 0 || draw_data->CmdListsCount == 0)
         return;
 
     // Catch up with texture updates. Most of the times, the list will have 1 element with an OK status, aka nothing to do.
@@ -442,8 +435,9 @@ void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder 
     // Upload vertex/index data into a single contiguous GPU buffer
     ImDrawVert* vtx_dst = (ImDrawVert*)fr->VertexBufferHost;
     ImDrawIdx* idx_dst = (ImDrawIdx*)fr->IndexBufferHost;
-    for (const ImDrawList* draw_list : draw_data->CmdLists)
+    for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
+        const ImDrawList* draw_list = draw_data->CmdLists[n];
         memcpy(vtx_dst, draw_list->VtxBuffer.Data, draw_list->VtxBuffer.Size * sizeof(ImDrawVert));
         memcpy(idx_dst, draw_list->IdxBuffer.Data, draw_list->IdxBuffer.Size * sizeof(ImDrawIdx));
         vtx_dst += draw_list->VtxBuffer.Size;
@@ -470,8 +464,9 @@ void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder 
     int global_idx_offset = 0;
     ImVec2 clip_scale = draw_data->FramebufferScale;
     ImVec2 clip_off = draw_data->DisplayPos;
-    for (const ImDrawList* draw_list : draw_data->CmdLists)
+    for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
+        const ImDrawList* draw_list = draw_data->CmdLists[n];
         for (int cmd_i = 0; cmd_i < draw_list->CmdBuffer.Size; cmd_i++)
         {
             const ImDrawCmd* pcmd = &draw_list->CmdBuffer[cmd_i];
@@ -510,7 +505,7 @@ void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder 
                     continue;
 
                 // Apply scissor/clipping rectangle, Draw
-                wgpuRenderPassEncoderSetScissorRect(pass_encoder, (uint32_t)clip_min.x, (uint32_t)clip_min.y, (uint32_t)(clip_max.x - clip_min.x), (uint32_t)(clip_max.y - clip_min.y));
+                //wgpuRenderPassEncoderSetScissorRect(pass_encoder, (uint32_t)clip_min.x, (uint32_t)clip_min.y, (uint32_t)(clip_max.x - clip_min.x), (uint32_t)(clip_max.y - clip_min.y));
                 wgpuRenderPassEncoderDrawIndexed(pass_encoder, pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0);
             }
         }
@@ -560,11 +555,7 @@ void ImGui_ImplWGPU_UpdateTexture(ImTextureData* tex)
 
         // Create texture
         WGPUTextureDescriptor tex_desc = {};
-#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) || defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
         tex_desc.label = { "Dear ImGui Texture", WGPU_STRLEN };
-#else
-        tex_desc.label = "Dear ImGui Texture";
-#endif
         tex_desc.dimension = WGPUTextureDimension_2D;
         tex_desc.size.width = tex->Width;
         tex_desc.size.height = tex->Height;
@@ -696,9 +687,9 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     graphics_pipeline_desc.layout = wgpuDeviceCreatePipelineLayout(bd->wgpuDevice, &layout_desc);
 
     // Create the vertex shader
-    WGPUProgrammableStageDescriptor vertex_shader_desc = ImGui_ImplWGPU_CreateShaderModule(__shader_vert_wgsl);
-    graphics_pipeline_desc.vertex.module = vertex_shader_desc.module;
-    graphics_pipeline_desc.vertex.entryPoint = vertex_shader_desc.entryPoint;
+    WGPUShaderModule vertex_shader_module = ImGui_ImplWGPU_CreateShaderModule(__shader_vert_wgsl);
+    graphics_pipeline_desc.vertex.module = vertex_shader_module;
+    graphics_pipeline_desc.vertex.entryPoint = WGPUStringView{"main", sizeof("main") - 1};
 
     // Vertex input configuration
     WGPUVertexAttribute attribute_desc[] =
@@ -724,7 +715,7 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     graphics_pipeline_desc.vertex.buffers = buffer_layouts;
 
     // Create the pixel shader
-    WGPUProgrammableStageDescriptor pixel_shader_desc = ImGui_ImplWGPU_CreateShaderModule(__shader_frag_wgsl);
+    WGPUShaderModule pixel_shader_module = ImGui_ImplWGPU_CreateShaderModule(__shader_frag_wgsl);
 
     // Create the blending setup
     WGPUBlendState blend_state = {};
@@ -741,8 +732,8 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     color_state.writeMask = WGPUColorWriteMask_All;
 
     WGPUFragmentState fragment_state = {};
-    fragment_state.module = pixel_shader_desc.module;
-    fragment_state.entryPoint = pixel_shader_desc.entryPoint;
+    fragment_state.module = pixel_shader_module;
+    fragment_state.entryPoint = WGPUStringView{"main", sizeof("main") - 1};
     fragment_state.targetCount = 1;
     fragment_state.targets = &color_state;
 
@@ -770,7 +761,9 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     graphics_pipeline_desc.depthStencil = (bd->depthStencilFormat == WGPUTextureFormat_Undefined) ? nullptr :  &depth_stencil_state;
 
     bd->pipelineState = wgpuDeviceCreateRenderPipeline(bd->wgpuDevice, &graphics_pipeline_desc);
-
+    if(bd->pipelineState == nullptr){
+        abort();
+    }
     ImGui_ImplWGPU_CreateUniformBuffer();
 
     // Create sampler
@@ -798,8 +791,8 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     bd->renderResources.CommonBindGroup = wgpuDeviceCreateBindGroup(bd->wgpuDevice, &common_bg_descriptor);
     bd->renderResources.ImageBindGroupLayout = bg_layouts[1];
 
-    SafeRelease(vertex_shader_desc.module);
-    SafeRelease(pixel_shader_desc.module);
+    SafeRelease(vertex_shader_module);
+    SafeRelease(pixel_shader_module);
     SafeRelease(graphics_pipeline_desc.layout);
     SafeRelease(bg_layouts[0]);
 
