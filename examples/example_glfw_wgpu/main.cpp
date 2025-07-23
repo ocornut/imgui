@@ -12,14 +12,18 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_wgpu.h"
-#include "wgvk.h"
+#include <webgpu/webgpu.h>
+
+#ifdef __EMSCRIPTEN__
+#include <webgpu/webgpu_cpp.h>
+#endif
+
 #include <stdio.h>
 #include <iostream>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #include <emscripten/html5.h>
-#include <emscripten/html5_webgpu.h>
 #else
 #endif
 #include <GLFW/glfw3.h>
@@ -361,8 +365,26 @@ static WGPUDevice RequestDevice(WGPUAdapter& adapter)
 }
 #endif
 
+static void resizeCallback(GLFWwindow* window, int width, int height){
+    WGPUTextureFormat surfaceViewFormat = WGPUTextureFormat_BGRA8Unorm;
+
+    WGPUSurfaceConfiguration surfaceConfig = {
+        .nextInChain = nullptr,
+        .device = wgpu_device,
+        .format = WGPUTextureFormat_BGRA8Unorm,
+        .usage = WGPUTextureUsage_RenderAttachment,
+        .width =  (uint32_t)width,
+        .height = (uint32_t)height,
+        .viewFormatCount = 1,
+        .viewFormats = &surfaceViewFormat,
+        .alphaMode = WGPUCompositeAlphaMode_Opaque,
+        .presentMode = WGPUPresentMode_Fifo,
+    };
+    wgpuSurfaceConfigure(wgpu_surface, &surfaceConfig);
+}
 static bool InitWGPU(GLFWwindow* window)
 {
+    #ifdef IMGUI_IMPL_WEBGPU_BACKEND_WGVK
     WGPUInstanceLayerSelection lsel{
         .chain = {
             nullptr,
@@ -372,9 +394,13 @@ static bool InitWGPU(GLFWwindow* window)
     lsel.instanceLayerCount = 1;
     const char* validation = "VK_LAYER_KHRONOS_validation";
     lsel.instanceLayers = &validation;
-    WGPUInstanceDescriptor idesc{.nextInChain = &lsel.chain};
     
+    WGPUInstanceDescriptor idesc{.nextInChain = &lsel.chain};
     wgpu_instance = wgpuCreateInstance(&idesc);
+    #else
+    wgpu_instance = wgpuCreateInstance(nullptr);
+    #endif
+    
 
 #ifdef __EMSCRIPTEN__
     wgpu_device = emscripten_webgpu_get_device();
@@ -388,14 +414,20 @@ static bool InitWGPU(GLFWwindow* window)
 #endif
     
 #ifdef __EMSCRIPTEN__
-    wgpu::SurfaceDescriptorFromCanvasHTMLSelector html_surface_desc = {};
-    html_surface_desc.selector = "#canvas";
-    wgpu::SurfaceDescriptor surface_desc = {};
-    surface_desc.nextInChain = &html_surface_desc;
-    wgpu::Surface surface = instance.CreateSurface(&surface_desc);
 
-    wgpu::Adapter adapter = {};
-    wgpu_preferred_fmt = (WGPUTextureFormat)surface.GetPreferredFormat(adapter);
+    WGPUSurfaceDescriptor surface_desc;
+    WGPUEmscriptenSurfaceSourceCanvasHTMLSelector html_surface_desc{};
+    html_surface_desc.chain.sType = WGPUSType_EmscriptenSurfaceSourceCanvasHTMLSelector;
+    html_surface_desc.selector = WGPUStringView{
+        .data = "#canvas",
+        .length = 7
+    };
+
+    surface_desc.nextInChain = &html_surface_desc.chain;
+    wgpu_surface = wgpuInstanceCreateSurface(wgpu_instance, &surface_desc);
+
+    // wgpu::Adapter adapter = {}; // wgpuSurfaceGetPreferredFormat is no more, the correct way would be to pick the first format set by wgpuSurfaceGetCapabilities 
+    wgpu_preferred_fmt = WGPUTextureFormat_BGRA8Unorm;
 #else
     wgpu_surface = glfwCreateWindowWGPUSurface(wgpu_instance, window);
     if (!wgpu_surface)
@@ -418,7 +450,7 @@ static bool InitWGPU(GLFWwindow* window)
     wgpuSurfaceConfigure(wgpu_surface, &surfaceConfig);
     
 #endif
-
+    glfwSetWindowSizeCallback(window, resizeCallback);
     //wgpuDeviceSetUncapturedErrorCallback(wgpu_device, wgpu_error_callback, nullptr);
 
     return true;
@@ -426,15 +458,6 @@ static bool InitWGPU(GLFWwindow* window)
 
 
 /**
- * This is an extension of GLFW for WebGPU, abstracting away the details of
- * OS-specific operations.
- * 
- * This file is part of the "Learn WebGPU for C++" book.
- *   https://eliemichel.github.io/LearnWebGPU
- * 
- * Most of this code comes from the wgpu-native triangle example:
- *   https://github.com/gfx-rs/wgpu-native/blob/master/examples/triangle/main.c
- * 
  * MIT License
  * Copyright (c) 2022-2025 Elie Michel and the wgpu-native authors
  * 
