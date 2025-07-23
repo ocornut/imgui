@@ -13196,7 +13196,7 @@ bool ImGui::IsWindowFocused(ImGuiFocusedFlags flags)
     if (flags & ImGuiFocusedFlags_RootWindow)
         cur_window = GetCombinedRootWindow(cur_window, popup_hierarchy, dock_hierarchy);
 
-    if (flags & ImGuiHoveredFlags_ChildWindows)
+    if (flags & ImGuiFocusedFlags_ChildWindows)
         return IsWindowChildOf(ref_window, cur_window, popup_hierarchy, dock_hierarchy);
     else
         return (ref_window == cur_window);
