@@ -4622,6 +4622,15 @@ static bool ImGui_ImplStbTrueType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig
     return true;
 }
 
+// Since 1.92.0 (June 2025) we rely on those 3 functions which are implemented inside stb_truetype.h and require STB_TRUETYPE_IMPLEMENTATION.
+// Using IMGUI_DISABLE_STB_TRUETYPE_IMPLEMENTATION became broken, see https://github.com/ocornut/imgui/issues/8794
+// One way to fix is to remove the 'static' keywords for those 3 functions in your copy of stb_truetype.h
+#ifdef IMGUI_DISABLE_STB_TRUETYPE_IMPLEMENTATION
+extern void stbtt__h_prefilter(unsigned char* pixels, int w, int h, int stride_in_bytes, unsigned int kernel_width);
+extern void stbtt__v_prefilter(unsigned char* pixels, int w, int h, int stride_in_bytes, unsigned int kernel_width);
+extern float stbtt__oversample_shift(int oversample);
+#endif
+
 static bool ImGui_ImplStbTrueType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void*, ImWchar codepoint, ImFontGlyph* out_glyph, float* out_advance_x)
 {
     // Search for first font which has the glyph
