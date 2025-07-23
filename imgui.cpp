@@ -15665,10 +15665,14 @@ static void Platform_SetImeDataFn_DefaultImpl(ImGuiContext*, ImGuiViewport*, ImG
 //-----------------------------------------------------------------------------
 // [SECTION] METRICS/DEBUGGER WINDOW
 //-----------------------------------------------------------------------------
+// - MetricsHelpMarker() [Internal]
 // - DebugRenderViewportThumbnail() [Internal]
 // - RenderViewportsThumbnails() [Internal]
+// - DebugRenderKeyboardPreview() [Internal]
 // - DebugTextEncoding()
-// - MetricsHelpMarker() [Internal]
+// - DebugFlashStyleColorStop() [Internal]
+// - DebugFlashStyleColor()
+// - UpdateDebugToolFlashStyleColor() [Internal]
 // - ShowFontAtlas() [Internal but called by Demo!]
 // - DebugNodeTexture() [Internal]
 // - ShowMetricsWindow()
@@ -15685,6 +15689,21 @@ static void Platform_SetImeDataFn_DefaultImpl(ImGuiContext*, ImGuiViewport*, ImG
 // - DebugNodeWindowsList() [Internal]
 // - DebugNodeWindowsListByBeginStackParent() [Internal]
 //-----------------------------------------------------------------------------
+
+#if !defined(IMGUI_DISABLE_DEMO_WINDOWS) || !defined(IMGUI_DISABLE_DEBUG_TOOLS)
+// Avoid naming collision with imgui_demo.cpp's HelpMarker() for unity builds.
+static void MetricsHelpMarker(const char* desc)
+{
+    ImGui::TextDisabled("(?)");
+    if (ImGui::BeginItemTooltip())
+    {
+        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+        ImGui::TextUnformatted(desc);
+        ImGui::PopTextWrapPos();
+        ImGui::EndTooltip();
+    }
+}
+#endif
 
 #ifndef IMGUI_DISABLE_DEBUG_TOOLS
 
@@ -15872,19 +15891,6 @@ static const char* FormatTextureIDForDebugDisplay(char* buf, int buf_size, const
     if (cmd->TexRef._TexData != NULL)
         buf += ImFormatString(buf, buf_end - buf, "#%03d: ", cmd->TexRef._TexData->UniqueID);
     return FormatTextureIDForDebugDisplay(buf, (int)(buf_end - buf), cmd->TexRef.GetTexID()); // Calling TexRef::GetTexID() to avoid assert of cmd->GetTexID()
-}
-
-// Avoid naming collision with imgui_demo.cpp's HelpMarker() for unity builds.
-static void MetricsHelpMarker(const char* desc)
-{
-    ImGui::TextDisabled("(?)");
-    if (ImGui::BeginItemTooltip())
-    {
-        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
-        ImGui::TextUnformatted(desc);
-        ImGui::PopTextWrapPos();
-        ImGui::EndTooltip();
-    }
 }
 
 #ifdef IMGUI_ENABLE_FREETYPE
