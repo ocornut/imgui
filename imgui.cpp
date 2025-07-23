@@ -19024,35 +19024,35 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
     for (int window_n = 0; window_n < node->Windows.Size; window_n++)
     {
         ImGuiWindow* window = node->Windows[window_n];
-        if (window->LastFrameActive + 1 >= g.FrameCount || !node_was_active)
-        {
-            ImGuiTabItemFlags tab_item_flags = 0;
-            tab_item_flags |= window->WindowClass.TabItemFlagsOverrideSet;
-            if (window->Flags & ImGuiWindowFlags_UnsavedDocument)
-                tab_item_flags |= ImGuiTabItemFlags_UnsavedDocument;
-            if (tab_bar->Flags & ImGuiTabBarFlags_NoCloseWithMiddleMouseButton)
-                tab_item_flags |= ImGuiTabItemFlags_NoCloseWithMiddleMouseButton;
+        if (window->LastFrameActive + 1 < g.FrameCount && node_was_active)
+            continue; // FIXME: Not sure if that's still taken/useful.
 
-            // Apply stored style overrides for the window
-            for (int color_n = 0; color_n < ImGuiWindowDockStyleCol_COUNT; color_n++)
-                g.Style.Colors[GWindowDockStyleColors[color_n]] = ColorConvertU32ToFloat4(window->DockStyle.Colors[color_n]);
+        ImGuiTabItemFlags tab_item_flags = 0;
+        tab_item_flags |= window->WindowClass.TabItemFlagsOverrideSet;
+        if (window->Flags & ImGuiWindowFlags_UnsavedDocument)
+            tab_item_flags |= ImGuiTabItemFlags_UnsavedDocument;
+        if (tab_bar->Flags & ImGuiTabBarFlags_NoCloseWithMiddleMouseButton)
+            tab_item_flags |= ImGuiTabItemFlags_NoCloseWithMiddleMouseButton;
 
-            // Note that TabItemEx() calls TabBarCalcTabID() so our tab item ID will ignore the current ID stack (rightly so)
-            bool tab_open = true;
-            TabItemEx(tab_bar, window->Name, window->HasCloseButton ? &tab_open : NULL, tab_item_flags, window);
-            if (!tab_open)
-                node->WantCloseTabId = window->TabId;
-            if (tab_bar->VisibleTabId == window->TabId)
-                node->VisibleWindow = window;
+        // Apply stored style overrides for the window
+        for (int color_n = 0; color_n < ImGuiWindowDockStyleCol_COUNT; color_n++)
+            g.Style.Colors[GWindowDockStyleColors[color_n]] = ColorConvertU32ToFloat4(window->DockStyle.Colors[color_n]);
 
-            // Store last item data so it can be queried with IsItemXXX functions after the user Begin() call
-            window->DC.DockTabItemStatusFlags = g.LastItemData.StatusFlags;
-            window->DC.DockTabItemRect = g.LastItemData.Rect;
+        // Note that TabItemEx() calls TabBarCalcTabID() so our tab item ID will ignore the current ID stack (rightly so)
+        bool tab_open = true;
+        TabItemEx(tab_bar, window->Name, window->HasCloseButton ? &tab_open : NULL, tab_item_flags, window);
+        if (!tab_open)
+            node->WantCloseTabId = window->TabId;
+        if (tab_bar->VisibleTabId == window->TabId)
+            node->VisibleWindow = window;
 
-            // Update navigation ID on menu layer
-            if (g.NavWindow && g.NavWindow->RootWindow == window && (window->DC.NavLayersActiveMask & (1 << ImGuiNavLayer_Menu)) == 0)
-                host_window->NavLastIds[1] = window->TabId;
-        }
+        // Store last item data so it can be queried with IsItemXXX functions after the user Begin() call
+        window->DC.DockTabItemStatusFlags = g.LastItemData.StatusFlags;
+        window->DC.DockTabItemRect = g.LastItemData.Rect;
+
+        // Update navigation ID on menu layer
+        if (g.NavWindow && g.NavWindow->RootWindow == window && (window->DC.NavLayersActiveMask & (1 << ImGuiNavLayer_Menu)) == 0)
+            host_window->NavLastIds[1] = window->TabId;
     }
 
     // Restore style colors
