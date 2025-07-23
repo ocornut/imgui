@@ -18873,8 +18873,6 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
     ImGuiStyle& style = g.Style;
 
     const bool node_was_active = (node->LastFrameActive + 1 == g.FrameCount);
-    const bool closed_all = node->WantCloseAll && node_was_active;
-    const ImGuiID closed_one = node->WantCloseTabId && node_was_active;
     node->WantCloseAll = false;
     node->WantCloseTabId = 0;
 
@@ -19026,8 +19024,6 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
     for (int window_n = 0; window_n < node->Windows.Size; window_n++)
     {
         ImGuiWindow* window = node->Windows[window_n];
-        if ((closed_all || closed_one == window->TabId) && window->HasCloseButton && !(window->Flags & ImGuiWindowFlags_UnsavedDocument))
-            continue;
         if (window->LastFrameActive + 1 >= g.FrameCount || !node_was_active)
         {
             ImGuiTabItemFlags tab_item_flags = 0;
