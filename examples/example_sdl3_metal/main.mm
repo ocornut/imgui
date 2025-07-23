@@ -10,12 +10,13 @@
 #include "imgui.h"
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_metal.h"
-#include <stdio.h>
+#include <stdio.h>          // printf, fprintf
 #include <SDL3/SDL.h>
 
 #import <Metal/Metal.h>
 #import <QuartzCore/QuartzCore.h>
 
+// Main code
 int main(int, char**)
 {
     // Setup SDL
@@ -26,9 +27,10 @@ int main(int, char**)
         return -1;
     }
 
+    // Create SDL window graphics context
     float main_scale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
     SDL_WindowFlags window_flags = SDL_WINDOW_METAL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN | SDL_WINDOW_HIGH_PIXEL_DENSITY;
-    SDL_Window *window = SDL_CreateWindow("Dear ImGui SDL3+SDL_GPU example", (int)(1280 * main_scale), (int)(720 * main_scale), window_flags);
+    SDL_Window* window = SDL_CreateWindow("Dear ImGui SDL3+Metal example", (int)(1280 * main_scale), (int)(720 * main_scale), window_flags);
     if (window == nullptr)
     {
         printf("Error: SDL_CreateWindow(): %s\n", SDL_GetError());
@@ -36,6 +38,23 @@ int main(int, char**)
     }
     SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
     SDL_ShowWindow(window);
+
+    // Create Metal device _before_ creating the view/layer
+    id<MTLDevice> metalDevice = MTLCreateSystemDefaultDevice(); 
+    if (!metalDevice)
+    {
+        printf("Error: failed to create Metal device.\n");
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return -1;
+    }
+    SDL_MetalView view = SDL_Metal_CreateView(window);
+    CAMetalLayer* layer = (__bridge CAMetalLayer*)SDL_Metal_GetLayer(view);
+    layer.device = metalDevice;
+    layer.pixelFormat = MTLPixelFormatBGRA8Unorm;
+
+    id<MTLCommandQueue> commandQueue = [layer.device newCommandQueue];
+    MTLRenderPassDescriptor* renderPassDescriptor = [MTLRenderPassDescriptor new];
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -54,31 +73,29 @@ int main(int, char**)
     style.FontScaleDpi = main_scale;        // Set initial font scale. (using io.ConfigDpiScaleFonts=true makes this unnecessary. We leave both here for documentation purpose)
 
     // Setup Platform/Renderer backends
-    // Create Metal device BEFORE creating the view/layer
-    id<MTLDevice> metalDevice = MTLCreateSystemDefaultDevice(); 
-    if (!metalDevice)
-    {
-        printf("Error: failed to create Metal device.\n");
-        SDL_DestroyWindow(window);
-        SDL_Quit();
-        return -1;
-    }
-
-    SDL_MetalView view = SDL_Metal_CreateView(window);
-    CAMetalLayer* layer = (__bridge CAMetalLayer*)SDL_Metal_GetLayer(view); 
-    layer.device = metalDevice;
-    layer.pixelFormat = MTLPixelFormatBGRA8Unorm;
     ImGui_ImplMetal_Init(layer.device);
-
     ImGui_ImplSDL3_InitForMetal(window);
 
-    id<MTLCommandQueue> commandQueue = [layer.device newCommandQueue];
-    MTLRenderPassDescriptor* renderPassDescriptor = [MTLRenderPassDescriptor new];
+    // Load Fonts
+    // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
+    // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
+    // - If the file cannot be loaded, the function will return a nullptr. Please handle those errors in your application (e.g. use an assertion, or display an error and quit).
+    // - Use '#define IMGUI_ENABLE_FREETYPE' in your imconfig file to use Freetype for higher quality font rendering.
+    // - Read 'docs/FONTS.md' for more instructions and details.
+    // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
+    //style.FontSizeBase = 20.0f;
+    //io.Fonts->AddFontDefault();
+    //io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf");
+    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf");
+    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf");
+    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf");
+    //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf");
+    //IM_ASSERT(font != nullptr);
 
     // Our state
     bool show_demo_window = true;
     bool show_another_window = false;
-    float clear_color[4] = {0.45f, 0.55f, 0.60f, 1.00f};
+    float clear_color[4] = { 0.45f, 0.55f, 0.60f, 1.00f };
 
     // Main loop
     bool done = false;
@@ -91,6 +108,7 @@ int main(int, char**)
             // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
             // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
             // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
+            // [If using SDL_MAIN_USE_CALLBACKS: call ImGui_ImplSDL3_ProcessEvent() from your SDL_AppEvent() function]
             SDL_Event event;
             while (SDL_PollEvent(&event))
             {
@@ -166,7 +184,8 @@ int main(int, char**)
 
             // Rendering
             ImGui::Render();
-            ImGui_ImplMetal_RenderDrawData(ImGui::GetDrawData(), commandBuffer, renderEncoder);
+            ImDrawData* draw_data = ImGui::GetDrawData();
+            ImGui_ImplMetal_RenderDrawData(draw_data, commandBuffer, renderEncoder);
 
             [renderEncoder popDebugGroup];
             [renderEncoder endEncoding];
@@ -177,6 +196,7 @@ int main(int, char**)
     }
 
     // Cleanup
+    // [If using SDL_MAIN_USE_CALLBACKS: all code below would likely be your SDL_AppQuit() function]
     ImGui_ImplMetal_Shutdown();
     ImGui_ImplSDL3_Shutdown();
     ImGui::DestroyContext();
