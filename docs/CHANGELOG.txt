@@ -49,8 +49,7 @@ Other Changes:
 - Error Handling: minor improvements to error handling for TableGetSortSpecs()
   and TableSetBgColor() calls. (#1651, #8499)
 - Misc: fixed building with IMGUI_DISABLE_DEBUG_TOOLS only. (#8796)
-- Misc: document/workaround an issue using IMGUI_DISABLE_STB_TRUETYPE_IMPLEMENTATION
-  since 1.92.0. (#8794) [@tim-rex]
+- Misc: fixed building with IMGUI_DISABLE_STB_TRUETYPE_IMPLEMENTATION. (#8794)
 - Misc: removed more redundant inline static linkage from imgui_internal.h to 
   facilitate using in C++ modules. (#8813, #8682, #8358) [@stripe2933]
 - CI: Added SDL3 builds to MacOS and Windows. (#8819, #8778) [@scribam]

@@ -4622,15 +4622,6 @@ static bool ImGui_ImplStbTrueType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig
     return true;
 }
 
-// Since 1.92.0 (June 2025) we rely on those 3 functions which are implemented inside stb_truetype.h and require STB_TRUETYPE_IMPLEMENTATION.
-// Using IMGUI_DISABLE_STB_TRUETYPE_IMPLEMENTATION became broken, see https://github.com/ocornut/imgui/issues/8794
-// One way to fix is to remove the 'static' keywords for those 3 functions in your copy of stb_truetype.h
-#ifdef IMGUI_DISABLE_STB_TRUETYPE_IMPLEMENTATION
-extern void stbtt__h_prefilter(unsigned char* pixels, int w, int h, int stride_in_bytes, unsigned int kernel_width);
-extern void stbtt__v_prefilter(unsigned char* pixels, int w, int h, int stride_in_bytes, unsigned int kernel_width);
-extern float stbtt__oversample_shift(int oversample);
-#endif
-
 static bool ImGui_ImplStbTrueType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void*, ImWchar codepoint, ImFontGlyph* out_glyph, float* out_advance_x)
 {
     // Search for first font which has the glyph
@@ -4688,15 +4679,12 @@ static bool ImGui_ImplStbTrueType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontC
         builder->TempBuffer.resize(w * h * 1);
         unsigned char* bitmap_pixels = builder->TempBuffer.Data;
         memset(bitmap_pixels, 0, w * h * 1);
-        stbtt_MakeGlyphBitmapSubpixel(&bd_font_data->FontInfo, bitmap_pixels, r->w - oversample_h + 1, r->h - oversample_v + 1, w,
-            scale_for_raster_x, scale_for_raster_y, 0, 0, glyph_index);
 
-        // Oversampling
+        // Render with oversampling
         // (those functions conveniently assert if pixels are not cleared, which is another safety layer)
-        if (oversample_h > 1)
-            stbtt__h_prefilter(bitmap_pixels, r->w, r->h, r->w, oversample_h);
-        if (oversample_v > 1)
-            stbtt__v_prefilter(bitmap_pixels, r->w, r->h, r->w, oversample_v);
+        float sub_x, sub_y;
+        stbtt_MakeGlyphBitmapSubpixelPrefilter(&bd_font_data->FontInfo, bitmap_pixels, w, h, w,
+            scale_for_raster_x, scale_for_raster_y, 0, 0, oversample_h, oversample_v, &sub_x, &sub_y, glyph_index);
 
         const float ref_size = baked->ContainerFont->Sources[0]->SizePixels;
         const float offsets_scale = (ref_size != 0.0f) ? (baked->Size / ref_size) : 1.0f;
@@ -4706,8 +4694,8 @@ static bool ImGui_ImplStbTrueType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontC
             font_off_x = IM_ROUND(font_off_x);
         if (src->PixelSnapV)
             font_off_y = IM_ROUND(font_off_y);
-        font_off_x += stbtt__oversample_shift(oversample_h);
-        font_off_y += stbtt__oversample_shift(oversample_v) + IM_ROUND(baked->Ascent);
+        font_off_x += sub_x;
+        font_off_y += sub_y + IM_ROUND(baked->Ascent);
         float recip_h = 1.0f / (oversample_h * rasterizer_density);
         float recip_v = 1.0f / (oversample_v * rasterizer_density);
 
