@@ -4436,11 +4436,14 @@ static ImFontGlyph* ImFontBaked_BuildLoadGlyph(ImFontBaked* baked, ImWchar codep
             return glyph;
 
     // Call backend
-    char* loader_user_data_p = (char*)baked->FontLoaderDatas;
-    int src_n = 0;
-    for (ImFontConfig* src : font->Sources)
+    bool no_fallback = false;
+    size_t loader_user_data_n = 0;
+    auto loadGlyph = [=, &no_fallback, &loader_user_data_n](int src_n) -> ImFontGlyph*
     {
+        ImFontConfig* src = font->Sources[src_n];
         const ImFontLoader* loader = src->FontLoader ? src->FontLoader : atlas->FontLoader;
+        void *loader_user_data_p = (char*)baked->FontLoaderDatas + loader_user_data_n;
+        loader_user_data_n += loader->FontBakedSrcLoaderDataSize;
         if (!src->GlyphExcludeRanges || ImFontAtlasBuildAcceptCodepointForSource(src, codepoint))
         {
             if (only_load_advance_x == NULL)
@@ -4460,12 +4463,57 @@ static ImFontGlyph* ImFontBaked_BuildLoadGlyph(ImFontBaked* baked, ImWchar codep
                 if (loader->FontBakedLoadGlyph(atlas, src, baked, loader_user_data_p, codepoint, NULL, only_load_advance_x))
                 {
                     ImFontAtlasBakedAddFontGlyphAdvancedX(atlas, baked, src, codepoint, *only_load_advance_x);
+                    no_fallback = true;
                     return NULL;
                 }
             }
         }
-        loader_user_data_p += loader->FontBakedSrcLoaderDataSize;
-        src_n++;
+
+        return NULL;
+    };
+
+    int src_n = 0;
+    for (; src_n < font->Sources.Size; ++src_n)
+    {
+        ImFontGlyph* glyph = loadGlyph(src_n);
+        if (glyph || no_fallback)
+            return glyph;
+    }
+
+    if (atlas->FontLoader->FontAddFallbackSrc)
+    {
+        atlas->FontLoader->FontAddFallbackSrc(atlas, font, codepoint);
+
+        for (; src_n < font->Sources.Size; ++src_n)
+        {
+            ImFontConfig* src = font->Sources[src_n];
+            const ImFontLoader* loader = src->FontLoader ? src->FontLoader : atlas->FontLoader;
+
+            for (int baked_n = 0; baked_n < atlas->Builder->BakedPool.Size; baked_n++)
+            {
+                ImFontBaked* baked_sibling = &atlas->Builder->BakedPool[baked_n];
+                if (baked_sibling->ContainerFont != font || baked_sibling->WantDestroy)
+                    continue;
+
+                if (loader->FontBakedSrcLoaderDataSize > 0)
+                {
+                    void *new_data = IM_ALLOC(loader_user_data_n + loader->FontBakedSrcLoaderDataSize);
+                    memcpy(new_data, baked_sibling->FontLoaderDatas, loader_user_data_n);
+                    IM_FREE(baked_sibling->FontLoaderDatas);
+                    baked_sibling->FontLoaderDatas = new_data;
+                }
+
+                if (loader->FontBakedInit)
+                {
+                    void *loader_user_data_p = (char*)baked_sibling->FontLoaderDatas + loader_user_data_n;
+                    loader->FontBakedInit(atlas, src, baked_sibling, loader_user_data_p);
+                }
+            }
+
+            ImFontGlyph* glyph = loadGlyph(src_n);
+            if (glyph || no_fallback)
+                return glyph;
+        }
     }
 
     // Lazily load fallback glyph
