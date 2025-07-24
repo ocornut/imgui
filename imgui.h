@@ -3499,6 +3499,7 @@ struct ImFontConfig
     ImFont*         DstFont;                // Target font (as we merging fonts, multiple ImFontConfig may target the same font)
     const ImFontLoader* FontLoader;         // Custom font backend for this source (default source is the one stored in ImFontAtlas)
     void*           FontLoaderData;         // Font loader opaque storage (per font config)
+    void*           UserData;
 
     IMGUI_API ImFontConfig();
 };
