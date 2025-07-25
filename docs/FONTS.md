@@ -147,7 +147,7 @@ ImFont* font = io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, &config);
 // Load a first font
 ImFont* font = io.Fonts->AddFontDefault();
 ImFontConfig config;
-config.MergeMode = true;
+config.MergeTarget = font;
 io.Fonts->AddFontFromFileTTF("DroidSans.ttf", 0.0f, &config);           // Merge into first font to add e.g. Asian characters
 io.Fonts->AddFontFromFileTTF("fontawesome-webfont.ttf", 0.0f, &config); // Merge into first font to add Icons
 io.Fonts->Build();
@@ -162,7 +162,7 @@ ImFont* font = io.Fonts->AddFontDefault();
 // so ensure it is available at the time of building or calling GetTexDataAsRGBA32().
 static const ImWchar icons_ranges[] = { 0xf000, 0xf3ff, 0 }; // Will not be copied by AddFont* so keep in scope.
 ImFontConfig config;
-config.MergeMode = true;
+config.MergeTarget = font;
 io.Fonts->AddFontFromFileTTF("DroidSans.ttf", 18.0f, &config, io.Fonts->GetGlyphRangesJapanese()); // Merge into first font
 io.Fonts->AddFontFromFileTTF("fontawesome-webfont.ttf", 18.0f, &config, icons_ranges);             // Merge into first font
 io.Fonts->Build();
@@ -269,9 +269,9 @@ Example Setup:
 // Merge icons into default tool font
 #include "IconsFontAwesome.h"
 ImGuiIO& io = ImGui::GetIO();
-io.Fonts->AddFontDefault();
+ImFont *font = io.Fonts->AddFontDefault();
 ImFontConfig config;
-config.MergeMode = true;
+config.MergeTarget = font;
 config.GlyphMinAdvanceX = 13.0f; // Use if you want to make the icon monospaced
 io.Fonts->AddFontFromFileTTF("fonts/fontawesome-webfont.ttf", 13.0f, &config);
 ```
@@ -280,10 +280,10 @@ io.Fonts->AddFontFromFileTTF("fonts/fontawesome-webfont.ttf", 13.0f, &config);
 // Merge icons into default tool font
 #include "IconsFontAwesome.h"
 ImGuiIO& io = ImGui::GetIO();
-io.Fonts->AddFontDefault();
+ImFont *font = io.Fonts->AddFontDefault();
 
 ImFontConfig config;
-config.MergeMode = true;
+config.MergeTarget = font;
 config.GlyphMinAdvanceX = 13.0f; // Use if you want to make the icon monospaced
 static const ImWchar icon_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
 io.Fonts->AddFontFromFileTTF("fonts/fontawesome-webfont.ttf", 13.0f, &config, icon_ranges);
@@ -322,11 +322,11 @@ Here's an application using icons ("Avoyd", https://www.avoyd.com):
 static ImWchar exclude_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
 ImFontConfig cfg1;
 cfg1.GlyphExcludeRanges = exclude_ranges;
-io.Fonts->AddFontFromFileTTF("segoeui.ttf", 0.0f, &cfg1);
+ImFont *font1 = io.Fonts->AddFontFromFileTTF("segoeui.ttf", 0.0f, &cfg1);
 
 // Add Font Source 2, which expects to use the range above
 ImFontConfig cfg2;
-cfg2.MergeMode = true;
+cfg2.MergeTarget = font1;
 io.Fonts->AddFontFromFileTTF("FontAwesome4.ttf", 0.0f, &cfg2);
 ```
 Another (silly) example:
@@ -335,11 +335,11 @@ Another (silly) example:
 static ImWchar exclude_ranges[] = { 'A', 'Z', 0 };
 ImFontConfig cfg1;
 cfg1.GlyphExcludeRanges = exclude_ranges;
-io.Fonts->AddFontFromFileTTF("segoeui.ttf", 0.0f, &cfg1);
+ImFont *font1 = io.Fonts->AddFontFromFileTTF("segoeui.ttf", 0.0f, &cfg1);
 
 // Load another font to fill the gaps
 ImFontConfig cfg2;
-cfg2.MergeMode = true;
+cfg2.MergeTarget = font1;
 io.Fonts->AddFontFromFileTTF("Roboto-Medium.ttf", 0.0f, &cfg2);
 ```
 ![image](https://github.com/user-attachments/assets/f3d751d3-1aee-4698-bd9b-f511902f56bb)
@@ -373,10 +373,10 @@ You can use `Metrics/Debugger->Fonts->Font->Input Glyphs Overlap Detection Tool`
 ![colored glyphs](https://user-images.githubusercontent.com/8225057/106171241-9dc4ba80-6191-11eb-8a69-ca1467b206d1.png)
 
 ```cpp
-io.Fonts->AddFontFromFileTTF("../../../imgui_dev/data/fonts/NotoSans-Regular.ttf", 16.0f);
+ImFont *font = io.Fonts->AddFontFromFileTTF("../../../imgui_dev/data/fonts/NotoSans-Regular.ttf", 16.0f);
 static ImWchar ranges[] = { 0x1, 0x1FFFF, 0 };
 static ImFontConfig cfg;
-cfg.MergeMode = true;
+cfg.MergeTarget = font;
 cfg.FontLoaderFlags |= ImGuiFreeTypeLoaderFlags_LoadColor;
 io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\seguiemj.ttf", 16.0f, &cfg);
 ```

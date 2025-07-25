@@ -3012,7 +3012,7 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg_in)
 
     // Create new font
     ImFont* font;
-    if (!font_cfg_in->MergeMode)
+    if (!font_cfg_in->MergeTarget)
     {
         font = IM_NEW(ImFont)();
         font->FontId = FontNextUniqueID++;
@@ -3023,8 +3023,8 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg_in)
     }
     else
     {
-        IM_ASSERT(Fonts.Size > 0 && "Cannot use MergeMode for the first font"); // When using MergeMode make sure that a font has already been added before. You can use ImGui::GetIO().Fonts->AddFontDefault() to add the default imgui font.
-        font = Fonts.back();
+        IM_ASSERT(font_cfg_in->MergeTarget->ContainerAtlas == this);
+        font = font_cfg_in->MergeTarget;
     }
 
     // Add to list
@@ -3064,7 +3064,7 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg_in)
         ImFontAtlasFontDestroySourceData(this, font_cfg);
         Sources.pop_back();
         font->Sources.pop_back();
-        if (!font_cfg->MergeMode)
+        if (!font_cfg->MergeTarget)
         {
             IM_DELETE(font);
             Fonts.pop_back();
@@ -3610,7 +3610,7 @@ bool ImFontAtlasFontSourceInit(ImFontAtlas* atlas, ImFontConfig* src)
 
 void ImFontAtlasFontSourceAddToFont(ImFontAtlas* atlas, ImFont* font, ImFontConfig* src)
 {
-    if (src->MergeMode == false)
+    if (!src->MergeTarget)
     {
         font->ClearOutputData();
         //font->FontSize = src->SizePixels;
@@ -3718,7 +3718,7 @@ static void ImFontAtlasBuildSetupFontBakedBlanks(ImFontAtlas* atlas, ImFontBaked
 }
 
 // Load/identify special glyphs
-// (note that this is called again for fonts with MergeMode)
+// (note that this is called again for fonts with MergeTarget)
 void ImFontAtlasBuildSetupFontSpecialGlyphs(ImFontAtlas* atlas, ImFont* font, ImFontConfig* src)
 {
     IM_UNUSED(atlas);
@@ -4436,11 +4436,14 @@ static ImFontGlyph* ImFontBaked_BuildLoadGlyph(ImFontBaked* baked, ImWchar codep
             return glyph;
 
     // Call backend
-    char* loader_user_data_p = (char*)baked->FontLoaderDatas;
-    int src_n = 0;
-    for (ImFontConfig* src : font->Sources)
+    bool no_fallback = false;
+    size_t loader_user_data_n = 0;
+    auto loadGlyph = [=, &no_fallback, &loader_user_data_n](int src_n) -> ImFontGlyph*
     {
+        ImFontConfig* src = font->Sources[src_n];
         const ImFontLoader* loader = src->FontLoader ? src->FontLoader : atlas->FontLoader;
+        void *loader_user_data_p = (char*)baked->FontLoaderDatas + loader_user_data_n;
+        loader_user_data_n += loader->FontBakedSrcLoaderDataSize;
         if (!src->GlyphExcludeRanges || ImFontAtlasBuildAcceptCodepointForSource(src, codepoint))
         {
             if (only_load_advance_x == NULL)
@@ -4460,12 +4463,56 @@ static ImFontGlyph* ImFontBaked_BuildLoadGlyph(ImFontBaked* baked, ImWchar codep
                 if (loader->FontBakedLoadGlyph(atlas, src, baked, loader_user_data_p, codepoint, NULL, only_load_advance_x))
                 {
                     ImFontAtlasBakedAddFontGlyphAdvancedX(atlas, baked, src, codepoint, *only_load_advance_x);
+                    no_fallback = true;
                     return NULL;
                 }
             }
         }
-        loader_user_data_p += loader->FontBakedSrcLoaderDataSize;
-        src_n++;
+
+        return NULL;
+    };
+
+    int src_n = 0;
+    for (; src_n < font->Sources.Size; ++src_n) {
+        ImFontGlyph* glyph = loadGlyph(src_n);
+        if (glyph || no_fallback)
+            return glyph;
+    }
+
+    if (atlas->FontLoader->FontAddFallbackSrc)
+    {
+        atlas->FontLoader->FontAddFallbackSrc(atlas, font, codepoint);
+
+        for (; src_n < font->Sources.Size; ++src_n)
+        {
+            ImFontConfig* src = font->Sources[src_n];
+            const ImFontLoader* loader = src->FontLoader ? src->FontLoader : atlas->FontLoader;
+
+            for (int baked_n = 0; baked_n < atlas->Builder->BakedPool.Size; baked_n++)
+            {
+                ImFontBaked* baked_sibling = &atlas->Builder->BakedPool[baked_n];
+                if (baked_sibling->ContainerFont != font || baked_sibling->WantDestroy)
+                    continue;
+
+                if (loader->FontBakedSrcLoaderDataSize > 0)
+                {
+                    void *new_data = IM_ALLOC(loader_user_data_n + loader->FontBakedSrcLoaderDataSize);
+                    memcpy(new_data, baked_sibling->FontLoaderDatas, loader_user_data_n);
+                    IM_FREE(baked_sibling->FontLoaderDatas);
+                    baked_sibling->FontLoaderDatas = new_data;
+                }
+
+                if (loader->FontBakedInit)
+                {
+                    void *loader_user_data_p = (char*)baked_sibling->FontLoaderDatas + loader_user_data_n;
+                    loader->FontBakedInit(atlas, src, baked_sibling, loader_user_data_p);
+                }
+            }
+
+            ImFontGlyph* glyph = loadGlyph(src_n);
+            if (glyph || no_fallback)
+                return glyph;
+        }
     }
 
     // Lazily load fallback glyph
@@ -4572,14 +4619,14 @@ static bool ImGui_ImplStbTrueType_FontSrcInit(ImFontAtlas* atlas, ImFontConfig* 
     }
     src->FontLoaderData = bd_font_data;
 
-    if (src->MergeMode && src->SizePixels == 0.0f)
+    if (src->MergeTarget && src->SizePixels == 0.0f)
         src->SizePixels = src->DstFont->Sources[0]->SizePixels;
 
     if (src->SizePixels >= 0.0f)
         bd_font_data->ScaleFactor = stbtt_ScaleForPixelHeight(&bd_font_data->FontInfo, 1.0f);
     else
         bd_font_data->ScaleFactor = stbtt_ScaleForMappingEmToPixels(&bd_font_data->FontInfo, 1.0f);
-    if (src->MergeMode && src->SizePixels != 0.0f)
+    if (src->MergeTarget && src->SizePixels != 0.0f)
         bd_font_data->ScaleFactor *= src->SizePixels / src->DstFont->Sources[0]->SizePixels; // FIXME-NEWATLAS: Should tidy up that a bit
 
     return true;
@@ -4609,7 +4656,7 @@ static bool ImGui_ImplStbTrueType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig
     IM_UNUSED(atlas);
 
     ImGui_ImplStbTrueType_FontSrcData* bd_font_data = (ImGui_ImplStbTrueType_FontSrcData*)src->FontLoaderData;
-    if (src->MergeMode == false)
+    if (!src->MergeTarget)
     {
         // FIXME-NEWFONTS: reevaluate how to use sizing metrics
         // FIXME-NEWFONTS: make use of line gap value

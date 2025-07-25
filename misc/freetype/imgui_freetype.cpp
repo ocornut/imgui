@@ -422,7 +422,7 @@ bool ImGui_ImplFreeType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig* src, ImF
 {
     IM_UNUSED(atlas);
     float size = baked->Size;
-    if (src->MergeMode && src->SizePixels != 0.0f)
+    if (src->MergeTarget && src->SizePixels != 0.0f)
         size *= (src->SizePixels / baked->ContainerFont->Sources[0]->SizePixels);
 
     ImGui_ImplFreeType_FontSrcData* bd_font_data = (ImGui_ImplFreeType_FontSrcData*)src->FontLoaderData;
@@ -450,7 +450,7 @@ bool ImGui_ImplFreeType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig* src, ImF
     FT_Request_Size(bd_font_data->FtFace, &req);
 
     // Output
-    if (src->MergeMode == false)
+    if (!src->MergeTarget)
     {
         // Read metrics
         FT_Size_Metrics metrics = bd_baked_data->FtSize->metrics;

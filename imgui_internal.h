@@ -3700,6 +3700,7 @@ struct ImFontLoader
     bool            (*FontBakedInit)(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void* loader_data_for_baked_src);
     void            (*FontBakedDestroy)(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void* loader_data_for_baked_src);
     bool            (*FontBakedLoadGlyph)(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void* loader_data_for_baked_src, ImWchar codepoint, ImFontGlyph* out_glyph, float* out_advance_x);
+    void            (*FontAddFallbackSrc)(ImFontAtlas* atlas, ImFont* parent, ImWchar codepoint); // merges zero or more new font sources into the parent ImFont which should contain a glyph for the codepoint
 
     // Size of backend data, Per Baked * Per Source. Buffers are managed by core to avoid excessive allocations.
     // FIXME: At this point the two other types of buffers may be managed by core to be consistent?
