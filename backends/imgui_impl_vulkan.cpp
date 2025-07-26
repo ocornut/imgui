@@ -744,10 +744,10 @@ void ImGui_ImplVulkan_UpdateTexture(ImTextureData* tex)
         // Update full texture or selected blocks. We only ever write to textures regions which have never been used before!
         // This backend choose to use tex->UpdateRect but you can use tex->Updates[] to upload individual regions.
         // We could use the smaller rect on _WantCreate but using the full rect allows us to clear the texture.
-        const int upload_x = 0;
-        const int upload_y = 0;
-        const int upload_w = tex->Width;
-        const int upload_h = tex->Height;
+        const int upload_x = (tex->Status == ImTextureStatus_WantCreate) ? 0 : tex->UpdateRect.x;
+        const int upload_y = (tex->Status == ImTextureStatus_WantCreate) ? 0 : tex->UpdateRect.y;
+        const int upload_w = (tex->Status == ImTextureStatus_WantCreate) ? tex->Width : tex->UpdateRect.w;
+        const int upload_h = (tex->Status == ImTextureStatus_WantCreate) ? tex->Height : tex->UpdateRect.h;
 
         // Create the Upload Buffer:
         VkDeviceMemory upload_buffer_memory;
@@ -818,7 +818,9 @@ void ImGui_ImplVulkan_UpdateTexture(ImTextureData* tex)
             VkImageMemoryBarrier copy_barrier[1] = {};
             copy_barrier[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
             copy_barrier[0].dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            copy_barrier[0].oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            copy_barrier[0].oldLayout = (tex->Status == ImTextureStatus_WantCreate)
+                        ? VK_IMAGE_LAYOUT_UNDEFINED
+                        : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
             copy_barrier[0].newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
             copy_barrier[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
             copy_barrier[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
