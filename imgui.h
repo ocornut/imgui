@@ -2611,10 +2611,10 @@ struct ImGuiIO
     float       MouseWheelH;                        // Mouse wheel Horizontal. >0 scrolls Left, <0 scrolls Right. Most users don't have a mouse with a horizontal wheel, may not be filled by all backends.
     ImGuiMouseSource MouseSource;                   // Mouse actual input peripheral (Mouse/TouchScreen/Pen).
     ImGuiID     MouseHoveredViewport;               // (Optional) Modify using io.AddMouseViewportEvent(). With multi-viewports: viewport the OS mouse is hovering. If possible _IGNORING_ viewports with the ImGuiViewportFlags_NoInputs flag is much better (few backends can handle that). Set io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport if you can provide this info. If you don't imgui will infer the value using the rectangles and last focused time of the viewports it knows about (ignoring other OS windows).
-    bool        KeyCtrl;                            // Keyboard modifier down: Control
+    bool        KeyCtrl;                            // Keyboard modifier down: Ctrl (non-macOS), Cmd (macOS)
     bool        KeyShift;                           // Keyboard modifier down: Shift
     bool        KeyAlt;                             // Keyboard modifier down: Alt
-    bool        KeySuper;                           // Keyboard modifier down: Cmd/Super/Windows
+    bool        KeySuper;                           // Keyboard modifier down: Windows/Super (non-macOS), Ctrl (macOS)
 
     // Other state maintained from data above + IO function calls
     ImGuiKeyChord KeyMods;                          // Key mods flags (any of ImGuiMod_Ctrl/ImGuiMod_Shift/ImGuiMod_Alt/ImGuiMod_Super flags, same as io.KeyCtrl/KeyShift/KeyAlt/KeySuper but merged into flags. Read-only, updated by NewFrame()
@@ -3866,9 +3866,10 @@ struct ImFontBaked
     float                       Ascent, Descent;    // 4+4   // out // Ascent: distance from top to bottom of e.g. 'A' [0..FontSize] (unscaled)
     unsigned int                MetricsTotalSurface:26;// 3  // out // Total surface in pixels to get an idea of the font rasterization/texture cost (not exact, we approximate the cost of padding between glyphs)
     unsigned int                WantDestroy:1;         // 0  //     // Queued for destroy
-    unsigned int                LockLoadingFallback:1; // 0  //     //
-    int                         LastUsedFrame;      // 4     //     // Record of that time this was bounds
-    ImGuiID                     BakedId;            // 4     //
+    unsigned int                LoadNoFallback:1;      // 0  //     // Disable loading fallback in lower-level calls.
+    unsigned int                LoadNoRenderOnLayout:1;// 0  //     // Enable a two-steps mode where CalcTextSize() calls will load AdvanceX *without* rendering/packing glyphs. Only advantagous if you know that the glyph is unlikely to actually be rendered, otherwise it is slower because we'd do one query on the first CalcTextSize and one query on the first Draw.
+    int                         LastUsedFrame;         // 4  //     // Record of that time this was bounds
+    ImGuiID                     BakedId;            // 4     //     // Unique ID for this baked storage
     ImFont*                     ContainerFont;      // 4-8   // in  // Parent font
     void*                       FontLoaderDatas;    // 4-8   //     // Font loader opaque storage (per baked font * sources): single contiguous buffer allocated by imgui, passed to loader.
 

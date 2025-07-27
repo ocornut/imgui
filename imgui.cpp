@@ -442,6 +442,8 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
                              cfg2.MergeMode = true;
                              io.Fonts->AddFontFromFileTTF("FontAwesome4.ttf", 0.0f, &cfg2);
                          - You can use `Metrics/Debugger->Fonts->Font->Input Glyphs Overlap Detection Tool` to see list of glyphs available in multiple font sources. This can facilitate unde
+                       - Fonts: **IMPORTANT** on Thread Safety:
+                          - A few functions such as font->CalcTextSizeA() were, by sheer luck (== accidentally) thread-safe even thou we had never provided that guarantee. They are definitively not thread-safe anymore as new glyphs may be loaded.
                        - Fonts: ImFont::FontSize was removed and does not make sense anymore. ImFont::LegacySize is the size passed to AddFont().
                        - Fonts: Removed support for PushFont(NULL) which was a shortcut for "default font".
                        - Fonts: Renamed/moved 'io.FontGlobalScale' to 'style.FontScaleMain'.
@@ -21302,10 +21304,14 @@ static void Platform_SetImeDataFn_DefaultImpl(ImGuiContext*, ImGuiViewport*, ImG
 //-----------------------------------------------------------------------------
 // [SECTION] METRICS/DEBUGGER WINDOW
 //-----------------------------------------------------------------------------
+// - MetricsHelpMarker() [Internal]
 // - DebugRenderViewportThumbnail() [Internal]
 // - RenderViewportsThumbnails() [Internal]
+// - DebugRenderKeyboardPreview() [Internal]
 // - DebugTextEncoding()
-// - MetricsHelpMarker() [Internal]
+// - DebugFlashStyleColorStop() [Internal]
+// - DebugFlashStyleColor()
+// - UpdateDebugToolFlashStyleColor() [Internal]
 // - ShowFontAtlas() [Internal but called by Demo!]
 // - DebugNodeTexture() [Internal]
 // - ShowMetricsWindow()
@@ -21323,6 +21329,21 @@ static void Platform_SetImeDataFn_DefaultImpl(ImGuiContext*, ImGuiViewport*, ImG
 // - DebugNodeWindowsList() [Internal]
 // - DebugNodeWindowsListByBeginStackParent() [Internal]
 //-----------------------------------------------------------------------------
+
+#if !defined(IMGUI_DISABLE_DEMO_WINDOWS) || !defined(IMGUI_DISABLE_DEBUG_TOOLS)
+// Avoid naming collision with imgui_demo.cpp's HelpMarker() for unity builds.
+static void MetricsHelpMarker(const char* desc)
+{
+    ImGui::TextDisabled("(?)");
+    if (ImGui::BeginItemTooltip())
+    {
+        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+        ImGui::TextUnformatted(desc);
+        ImGui::PopTextWrapPos();
+        ImGui::EndTooltip();
+    }
+}
+#endif
 
 #ifndef IMGUI_DISABLE_DEBUG_TOOLS
 
@@ -21528,19 +21549,6 @@ static const char* FormatTextureIDForDebugDisplay(char* buf, int buf_size, const
     if (cmd->TexRef._TexData != NULL)
         buf += ImFormatString(buf, buf_end - buf, "#%03d: ", cmd->TexRef._TexData->UniqueID);
     return FormatTextureIDForDebugDisplay(buf, (int)(buf_end - buf), cmd->TexRef.GetTexID()); // Calling TexRef::GetTexID() to avoid assert of cmd->GetTexID()
-}
-
-// Avoid naming collision with imgui_demo.cpp's HelpMarker() for unity builds.
-static void MetricsHelpMarker(const char* desc)
-{
-    ImGui::TextDisabled("(?)");
-    if (ImGui::BeginItemTooltip())
-    {
-        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
-        ImGui::TextUnformatted(desc);
-        ImGui::PopTextWrapPos();
-        ImGui::EndTooltip();
-    }
 }
 
 #ifdef IMGUI_ENABLE_FREETYPE
