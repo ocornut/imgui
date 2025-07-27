@@ -432,6 +432,8 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
                              cfg2.MergeMode = true;
                              io.Fonts->AddFontFromFileTTF("FontAwesome4.ttf", 0.0f, &cfg2);
                          - You can use `Metrics/Debugger->Fonts->Font->Input Glyphs Overlap Detection Tool` to see list of glyphs available in multiple font sources. This can facilitate unde
+                       - Fonts: **IMPORTANT** on Thread Safety:
+                          - A few functions such as font->CalcTextSizeA() were, by sheer luck (== accidentally) thread-safe even thou we had never provided that guarantee. They are definitively not thread-safe anymore as new glyphs may be loaded.
                        - Fonts: ImFont::FontSize was removed and does not make sense anymore. ImFont::LegacySize is the size passed to AddFont().
                        - Fonts: Removed support for PushFont(NULL) which was a shortcut for "default font".
                        - Fonts: Renamed/moved 'io.FontGlobalScale' to 'style.FontScaleMain'.
