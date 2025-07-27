@@ -43,8 +43,20 @@ Breaking Changes:
 
 Other Changes:
 
+- Windows: fixed an issue where resizable child windows would emit border
+  logic when hidden/non-visible (e.g. when in a docked window that is not
+  selected), impacting code not checking for BeginChild() return value. (#8815)
 - Error Handling: minor improvements to error handling for TableGetSortSpecs()
   and TableSetBgColor() calls. (#1651, #8499)
+- Misc: fixed building with IMGUI_DISABLE_DEBUG_TOOLS only. (#8796)
+- Misc: fixed building with IMGUI_DISABLE_STB_TRUETYPE_IMPLEMENTATION. (#8794)
+- Misc: removed more redundant inline static linkage from imgui_internal.h to 
+  facilitate using in C++ modules. (#8813, #8682, #8358) [@stripe2933]
+- CI: Added SDL3 builds to MacOS and Windows. (#8819, #8778) [@scribam]
+- CI: Updated Windows CI to use a more recent SDL2. (#8819, #8778) [@scribam]
+- Examples: SDL3+Metal: added SDL3+Metal example. (#8827, #8825) [@shi-yan]
+- Backends: OpenGL3: add and call embedded loader shutdown in ImGui_ImplOpenGL3_Shutdown() 
+  to facilitate multiple init/shutdown cycles in same process. (#8792) [@tim-rex]
 - Backends: OpenGL2, OpenGL3: set GL_UNPACK_ALIGNMENT to 1 before updating 
   textures. (#8802) [@Daandelange]
 
