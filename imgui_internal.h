@@ -409,6 +409,7 @@ inline bool             ImCharIsHeadProhibitedW(unsigned int c)   { return c == 
 // Only include characters can be typed within 1 or 2 hits on a standard keyboard.
 // List: （【《「『
 inline bool             ImCharIsTailProhibitedW(unsigned int c)   { return c == 0xff08 || c == 0x3010 || c == 0x300a || c == 0x300c || c == 0x300e; }
+inline bool             ImCharIsLineBreakableW(unsigned int c)    { return (c >= 0x4E00 && c <= 0x9FFF) || (c >= 0x3400 && c <= 0x4DBF) || (c >= 0x20000 && c <= 0x2EBEF) || (c >= 0x3040 && c <= 0x30FF) || (c >= 0xAC00 && c <= 0xD7AF); }
 inline bool             ImCharIsXdigitA(char c)         { return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f'); }
 IM_MSVC_RUNTIME_CHECKS_RESTORE
 
