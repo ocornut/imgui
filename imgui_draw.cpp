@@ -4483,7 +4483,7 @@ static ImFontGlyph* ImFontBaked_BuildLoadGlyph(ImFontBaked* baked, ImWchar codep
 
 static float ImFontBaked_BuildLoadGlyphAdvanceX(ImFontBaked* baked, ImWchar codepoint)
 {
-    if (baked->Size >= IMGUI_FONT_SIZE_THRESHOLD_FOR_LOADADVANCEXONLYMODE)
+    if (baked->Size >= IMGUI_FONT_SIZE_THRESHOLD_FOR_LOADADVANCEXONLYMODE || baked->LoadNoRenderOnLayout)
     {
         // First load AdvanceX value used by CalcTextSize() API then load the rest when loaded by drawing API.
         float only_advance_x = 0.0f;
