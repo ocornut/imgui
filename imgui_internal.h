@@ -401,14 +401,14 @@ IM_MSVC_RUNTIME_CHECKS_OFF
 inline char             ImToUpper(char c)               { return (c >= 'a' && c <= 'z') ? c &= ~32 : c; }
 inline bool             ImCharIsBlankA(char c)          { return c == ' ' || c == '\t'; }
 inline bool             ImCharIsBlankW(unsigned int c)  { return c == ' ' || c == '\t' || c == 0x3000; }
-// Terminators: Chinese punctuations that should not appear at the start of line.
-// Only include characters can be typed within 1 or 2 hits on a standard Chinese keyboard.
-// List: ～！）】、：；’”，。》」？
-inline bool             ImCharIsTermW(unsigned int c)   { return c == 0xff5e || c == 0xff01 || c == 0xff09 || c == 0x3011 || c == 0x3001 || c == 0xff1a || c == 0xff1b || c == 0x2019 || c == 0x201d || c == 0xff0c || c == 0x3002 || c == 0x300b || c == 0x300d || c == 0xff1f; }
-// Initializers: Chinese punctuations that should not appear at the end of line.
-// Only include characters can be typed within 1 or 2 hits on a standard Chinese keyboard.
-// List: （【《「
-inline bool             ImCharIsInitW(unsigned int c)   { return c == 0xff08 || c == 0x3010 || c == 0x300a || c == 0x300c; }
+// Head Prohibited: Punctuations that should not appear at the start of line.
+// Only include characters can be typed within 1 or 2 hits on a standard keyboard.
+// List: ～！）】、：；’”，。》」』？
+inline bool             ImCharIsHeadProhibitedW(unsigned int c)   { return c == 0xff5e || c == 0xff01 || c == 0xff09 || c == 0x3011 || c == 0x3001 || c == 0xff1a || c == 0xff1b || c == 0x2019 || c == 0x201d || c == 0xff0c || c == 0x3002 || c == 0x300b || c == 0x300d || c == 0x300f || c == 0xff1f; }
+// Tail Prohibited: Punctuations that should not appear at the end of line.
+// Only include characters can be typed within 1 or 2 hits on a standard keyboard.
+// List: （【《「『
+inline bool             ImCharIsTailProhibitedW(unsigned int c)   { return c == 0xff08 || c == 0x3010 || c == 0x300a || c == 0x300c || c == 0x300e; }
 inline bool             ImCharIsXdigitA(char c)         { return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f'); }
 IM_MSVC_RUNTIME_CHECKS_RESTORE
 

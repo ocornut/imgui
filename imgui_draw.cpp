@@ -5429,9 +5429,9 @@ const char* ImFont::CalcWordWrapPosition(float size, const char* text, const cha
             last_char_is_cjk = false;
             last_char_is_init = false;
         }
-        else if (ImCharIsTermW(c))
+        else if (ImCharIsHeadProhibitedW(c))
         {
-            // Terminators can overflow, at most once.
+            // Can overflow, at most once.
             line_width += word_width + blank_width;
             word_width = 0.0f;
             blank_width = char_width;
@@ -5443,7 +5443,7 @@ const char* ImFont::CalcWordWrapPosition(float size, const char* text, const cha
         }
         else
         {
-            if (ImCharIsInitW(c))
+            if (ImCharIsTailProhibitedW(c))
             {
                 line_width += word_width + blank_width;
                 word_width = blank_width = 0.0f;
@@ -5462,7 +5462,7 @@ const char* ImFont::CalcWordWrapPosition(float size, const char* text, const cha
             // CJK characters are not separated by spaces, so we treat them as a single word.
             // This is a very simple heuristic, but it works for most cases.
             last_char_is_cjk = 0x3003 <= c && c <= 0xFFFF;
-            last_char_is_init = ImCharIsInitW(c);
+            last_char_is_init = ImCharIsTailProhibitedW(c);
             word_width += char_width;
             if (inside_word)
             {
