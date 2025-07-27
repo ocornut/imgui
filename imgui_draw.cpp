@@ -5453,14 +5453,22 @@ const char* ImFont::CalcWordWrapPosition(float size, const char* text, const cha
             }
             else if (0x3003 <= c && c <= 0xFFFF)
             {
+                // CJK characters are not separated by spaces, so we treat them as a single word.
+                // This is a very simple heuristic, but it works for most cases.
                 line_width += word_width + blank_width;
                 word_width = blank_width = 0.0f;
                 inside_word = true;
                 if ((!last_char_is_init && 0x3003 <= c && c <= 0xFFFF) || !last_char_is_cjk)
                     prev_word_end = s;
             }
-            // CJK characters are not separated by spaces, so we treat them as a single word.
-            // This is a very simple heuristic, but it works for most cases.
+            else if (!ImCharIsHeadProhibitedW(c) && last_char_is_cjk && !last_char_is_init)
+            {
+                // Not a cjk character, not a head prohibited punctuation, previous char is not tail prohibited.
+                line_width += word_width + blank_width;
+                word_width = blank_width = 0.0f;
+                prev_word_end = s;
+                inside_word = true;
+            }
             last_char_is_cjk = 0x3003 <= c && c <= 0xFFFF;
             last_char_is_init = ImCharIsTailProhibitedW(c);
             word_width += char_width;
