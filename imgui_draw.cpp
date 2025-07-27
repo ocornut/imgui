@@ -5368,7 +5368,7 @@ const char* ImFont::CalcWordWrapPosition(float size, const char* text, const cha
     // Chinese punctuations are merged into nearby characters.
     // [《短][歌][行》][曹][操：][对][酒][当][歌，][人][生][几][何！][譬][如][朝][露，][去][日][苦][多……]
     // English words are separated even if no spaces are inserted.
-    // [ImGui][是][即][使][模][式][的][界][面][框][架。]
+    // [ImGui][是][即][时][模][式][的][界][面][框][架。]
 
     ImFontBaked* baked = GetFontBaked(size);
     const float scale = size / baked->Size;
@@ -5451,14 +5451,14 @@ const char* ImFont::CalcWordWrapPosition(float size, const char* text, const cha
                 prev_word_end = word_end;
                 word_end = next_s;
             }
-            else if (0x3003 <= c && c <= 0xFFFF) 
+            else if (0x3003 <= c && c <= 0xFFFF)
             {
                 line_width += word_width + blank_width;
                 word_width = blank_width = 0.0f;
                 inside_word = true;
                 if ((!last_char_is_init && 0x3003 <= c && c <= 0xFFFF) || !last_char_is_cjk)
                     prev_word_end = s;
-            } 
+            }
             // CJK characters are not separated by spaces, so we treat them as a single word.
             // This is a very simple heuristic, but it works for most cases.
             last_char_is_cjk = 0x3003 <= c && c <= 0xFFFF;
