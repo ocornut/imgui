@@ -3745,10 +3745,10 @@ struct ImFontBaked
     // [Internal] Members: Cold
     float                       Ascent, Descent;    // 4+4   // out // Ascent: distance from top to bottom of e.g. 'A' [0..FontSize] (unscaled)
     unsigned int                MetricsTotalSurface:26;// 3  // out // Total surface in pixels to get an idea of the font rasterization/texture cost (not exact, we approximate the cost of padding between glyphs)
-    unsigned int                WantDestroy:1;         // 0  //     // Queued for destroy
-    unsigned int                LockLoadingFallback:1; // 0  //     //
+    unsigned int                WantDestroy:1;      // 0     //     // Queued for destroy
+    unsigned int                LoadNoFallback:1;   // 0     //     // Disable loading fallback in lower-level calls.
     int                         LastUsedFrame;      // 4     //     // Record of that time this was bounds
-    ImGuiID                     BakedId;            // 4     //
+    ImGuiID                     BakedId;            // 4     //     // Unique ID for this baked storage
     ImFont*                     ContainerFont;      // 4-8   // in  // Parent font
     void*                       FontLoaderDatas;    // 4-8   //     // Font loader opaque storage (per baked font * sources): single contiguous buffer allocated by imgui, passed to loader.
 
