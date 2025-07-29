@@ -401,15 +401,15 @@ IM_MSVC_RUNTIME_CHECKS_OFF
 inline char             ImToUpper(char c)               { return (c >= 'a' && c <= 'z') ? c &= ~32 : c; }
 inline bool             ImCharIsBlankA(char c)          { return c == ' ' || c == '\t'; }
 inline bool             ImCharIsBlankW(unsigned int c)  { return c == ' ' || c == '\t' || c == 0x3000; }
-// Head Prohibited: Punctuations that should not appear at the start of line.
-// Only include characters can be typed within 1 or 2 hits on a standard keyboard.
-// List: ～！）】、：；’”，。》」』？
-inline bool             ImCharIsHeadProhibitedW(unsigned int c)   { return c == 0xff5e || c == 0xff01 || c == 0xff09 || c == 0x3011 || c == 0x3001 || c == 0xff1a || c == 0xff1b || c == 0x2019 || c == 0x201d || c == 0xff0c || c == 0x3002 || c == 0x300b || c == 0x300d || c == 0x300f || c == 0xff1f; }
-// Tail Prohibited: Punctuations that should not appear at the end of line.
-// Only include characters can be typed within 1 or 2 hits on a standard keyboard.
-// List: （【《「『
-inline bool             ImCharIsTailProhibitedW(unsigned int c)   { return c == 0xff08 || c == 0x3010 || c == 0x300a || c == 0x300c || c == 0x300e; }
-inline bool             ImCharIsLineBreakableW(unsigned int c)    { return (c >= 0x3040 && c <= 0x9fff) || (c >= 0x3400 && c <= 0x4dbf) || (c >= 0x20000 && c <= 0xdffff) || (c >= 0x3040 && c <= 0x30ff) || (c >= 0xac00 && c <= 0xd7ff) || (c >= 0xf900 && c <= 0xfaff) || (c >= 0x1100 && c <= 0x11ff) || (c >= 0x2e80 && c <= 0x2fff); }
+inline bool             ImCharIsHeadProhibitedA(char c) { return c == ' ' || c == '\t' || c == '}' || c == ')' || c == ']' || c == '?' || c == '|' || c == '/' || c == '&' || c == '.' || c == ',' || c == ';';}
+const unsigned int      HeadProhibitedW[] = { 0xa2, 0xb0, 0x2032, 0x2033, 0x2030, 0x2103, 0x3001, 0x3002, 0xff61, 0xff64, 0xffe0, 0xff0c, 0xff0e, 0xff1a, 0xff1b, 0xff1f, 0xff01, 0xff05, 0x30fb, 0xff65, 0x309d, 0x309e, 0x30fd, 0x30fe, 0x30fc, 0x30a1, 0x30a3, 0x30a5, 0x30a7, 0x30a9, 0x30c3, 0x30e3, 0x30e5, 0x30e7, 0x30ee, 0x30f5, 0x30f6, 0x3041, 0x3043, 0x3045, 0x3047, 0x3049, 0x3063, 0x3083, 0x3085, 0x3087, 0x308e, 0x3095, 0x3096, 0x31f0, 0x31f1, 0x31f2, 0x31f3, 0x31f4, 0x31f5, 0x31f6, 0x31f7, 0x31f8, 0x31f9, 0x31fa, 0x31fb, 0x31fc, 0x31fd, 0x31fe, 0x31ff, 0x3005, 0x303b, 0xff67, 0xff68, 0xff69, 0xff6a, 0xff6b, 0xff6c, 0xff6d, 0xff6e, 0xff6f, 0xff70, 0x201d, 0x3009, 0x300b, 0x300d, 0x300f, 0x3011, 0x3015, 0xff09, 0xff3d, 0xff5d, 0xff63};
+inline bool             ImCharIsHeadProhibitedW(unsigned int c) { for (int i = 0; i < IM_ARRAYSIZE(HeadProhibitedW); i++) if (c == HeadProhibitedW[i]) return true; return false;}
+inline bool             ImCharIsHeadProhibited(unsigned int c)  { return ImCharIsHeadProhibitedA(c) || ImCharIsHeadProhibitedW(c); }
+inline bool             ImCharIsTailProhibitedA(unsigned int c) { return c == '(' || c == '[' || c == '{' || c == '+'; }
+const unsigned int      TailProhibitedW[] = { 0x2018, 0x201c, 0x3008, 0x300a, 0x300c, 0x300e, 0x3010, 0x3014, 0xff08, 0xff3b, 0xff5b, 0xff62, 0xa3, 0xa5, 0xff04, 0xffe1, 0xffe5, 0xff0b };
+inline bool             ImCharIsTailProhibitedW(unsigned int c) { for (int i = 0; i < IM_ARRAYSIZE(TailProhibitedW); i++) if (c == TailProhibitedW[i]) return true; return false; }
+inline bool             ImCharIsTailProhibited(unsigned int c)  { return ImCharIsTailProhibitedA(c) || ImCharIsTailProhibitedW(c); }
+inline bool             ImCharIsLineBreakableW(unsigned int c)  { return (c >= 0x3040 && c <= 0x9fff) || (c >= 0x3400 && c <= 0x4dbf) || (c >= 0x20000 && c <= 0xdffff) || (c >= 0x3040 && c <= 0x30ff) || (c >= 0xac00 && c <= 0xd7ff) || (c >= 0xf900 && c <= 0xfaff) || (c >= 0x1100 && c <= 0x11ff) || (c >= 0x2e80 && c <= 0x2fff); }
 inline bool             ImCharIsXdigitA(char c)         { return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f'); }
 IM_MSVC_RUNTIME_CHECKS_RESTORE
 

@@ -3598,7 +3598,10 @@ static void DemoWindowWidgetsText()
             ImGui::SliderFloat("Wrap width", &wrap_width, -20, 600, "%.0f");
 
             ImDrawList* draw_list = ImGui::GetWindowDrawList();
-            for (int n = 0; n < 2; n++)
+            static char user_input[2048];
+            
+            ImGui::InputText("Input Any.", user_input, 2048);
+            for (int n = 0; n < 3; n++)
             {
                 ImGui::Text("Test paragraph %d:", n);
                 ImVec2 pos = ImGui::GetCursorScreenPos();
@@ -3607,9 +3610,11 @@ static void DemoWindowWidgetsText()
                 ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + wrap_width);
                 if (n == 0)
                     ImGui::Text("The lazy dog is a good dog. This paragraph should fit within %.0f pixels. Testing a 1 character word. The quick brown fox jumps over the lazy dog.", wrap_width);
-                else
+                else if (n == 1)
                     ImGui::Text("aaaaaaaa bbbbbbbb, c cccccccc,dddddddd. d eeeeeeee   ffffffff. gggggggg!hhhhhhhh");
-
+                else 
+                    ImGui::Text(user_input);
+                
                 // Draw actual text bounding box, following by marker of our expected limit (should not overlap!)
                 draw_list->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(255, 255, 0, 255));
                 draw_list->AddRectFilled(marker_min, marker_max, IM_COL32(255, 0, 255, 255));
