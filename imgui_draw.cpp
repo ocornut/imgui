@@ -5436,7 +5436,7 @@ do {\
         }
         else if (c && next_c)
         {
-            if (prev_c > '0' && prev_c < '9' && next_c > '0' && next_c < '9' && c == '.')
+            if (prev_c > '0' && prev_c < '9' && next_c > '0' && next_c < '9' && !ImCharIsLineBreakableW(c))
                 continue;
             if (ImCharIsLineBreakableW(next_c) && !ImCharIsHeadProhibited(next_c) && !ImCharIsTailProhibited(c))
                 IM_ADVANCE_WORD();
