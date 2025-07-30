@@ -5354,21 +5354,7 @@ static inline const char* CalcWordWrapNextLineStartA(const char* text, const cha
 const char* ImFont::CalcWordWrapPosition(float size, const char* text, const char* text_end, float wrap_width)
 {
     // Refactored word wrapping method detects wrapping points by looking for at most 3 consecutive characters.
-    // First we need to classify characters.
-    // [H] Head prohibited characters (include invisible characters like space):
-    // \t})]?|/&.,;¢°′″‰℃、。｡､￠，．：；？！％・･ゝゞヽヾーァィゥェォッャュョヮヵヶぁぃぅぇぉっゃゅょゎゕゖㇰㇱㇲㇳㇴㇵㇶㇷㇸㇹㇺㇻㇼㇽㇾㇿ々〻ｧｨｩｪｫｬｭｮｯｰ”〉》」』】〕）］｝｣
-    // [.] . is special [H] because I also want it to behave better when wrapping version numbers e.g. 1.4.313 should not break.
-    // [T] Tail prohibited characters: ([{‘“〈《「『【〔（［｛｢£¥＄￡￥+＋
-    // [A] Letters: a-z, A-Z in English and more in other languages
-    // [X] Numbers: 0-9 and full width variants
-    // [O] Others: Mostly CJK characters
-    // [?] When a ? appears, it is unconcerned
-    // Wrapping positions allowed:
-    // At middle:
-    // H[^H]? unconcerned, is head prohibited, isn't head prohibited
-    // [^X].[^H] isn't number, is dot, isn't head prohibited
-    // ?O[^H], unconcerned, is CJK, isn't head prohibited
-    // T[^T]?, is tail prohibited, is not tail prohibited, unconcerned
+    // (Currently only 2.)
 
     ImFontBaked* baked = GetFontBaked(size);
     const float scale = size / baked->Size;
@@ -5389,9 +5375,8 @@ const char* ImFont::CalcWordWrapPosition(float size, const char* text, const cha
 #define IM_ADVANCE_WORD() \
 do {\
     word_end = s; \
-    line_width += word_width; \
-    word_width = blank_width;\
-    blank_width = 0.0f;\
+    line_width += word_width + blank_width; \
+    word_width = blank_width = 0.0f;\
 } while (0)
     IM_ASSERT(text_end != NULL);
     while (s < text_end)
@@ -5451,26 +5436,13 @@ do {\
         }
         else if (c && next_c)
         {
-            if (ImCharIsLineBreakableW(next_c) && !ImCharIsTailProhibited(c))
+            if (ImCharIsLineBreakableW(next_c) && !ImCharIsHeadProhibited(next_c) && !ImCharIsTailProhibited(c))
                 IM_ADVANCE_WORD();
             if (ImCharIsHeadProhibited(c) && !ImCharIsHeadProhibited(next_c))
                 IM_ADVANCE_WORD();
             if (ImCharIsLineBreakableW(c) && !ImCharIsHeadProhibited(next_c))
-                IM_ADVANCE_WORD();
-            if (!ImCharIsTailProhibited(c) && ImCharIsTailProhibited(next_c))
-                IM_ADVANCE_WORD();
+                IM_ADVANCE_WORD(); 
         }
-        else if (c && prev_c)
-        {
-            if (ImCharIsTailProhibited(prev_c) && !ImCharIsTailProhibited(c))
-                IM_ADVANCE_WORD();
-            if (ImCharIsLineBreakableW(prev_c) && !ImCharIsTailProhibited(c))
-                IM_ADVANCE_WORD();
-            if (ImCharIsHeadProhibited(prev_c) && !ImCharIsHeadProhibited(c))
-                IM_ADVANCE_WORD();
-        }
-
-
     }
 #undef IM_ADVANCE_WORD
     // Wrap_width is too small to fit anything. Force displaying 1 character to minimize the height discontinuity.
