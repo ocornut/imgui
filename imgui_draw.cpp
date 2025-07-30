@@ -5440,8 +5440,8 @@ do {\
                 IM_ADVANCE_WORD();
             if (ImCharIsHeadProhibited(c) && !ImCharIsHeadProhibited(next_c))
                 IM_ADVANCE_WORD();
-            if (ImCharIsLineBreakableW(c) && !ImCharIsHeadProhibited(next_c))
-                IM_ADVANCE_WORD(); 
+            if (ImCharIsLineBreakableW(c) && (!ImCharIsHeadProhibited(next_c) || ImCharIsBlankW(next_c)))
+                IM_ADVANCE_WORD();
         }
     }
 #undef IM_ADVANCE_WORD
