@@ -5389,8 +5389,9 @@ const char* ImFont::CalcWordWrapPosition(float size, const char* text, const cha
 #define IM_ADVANCE_WORD() \
 do {\
     word_end = s; \
-    line_width += word_width + blank_width; \
-    word_width = blank_width = 0.0f;\
+    line_width += word_width; \
+    word_width = blank_width;\
+    blank_width = 0.0f;\
 } while (0)
     IM_ASSERT(text_end != NULL);
     while (s < text_end)
@@ -5440,6 +5441,8 @@ do {\
             // Words that cannot possibly fit within an entire line will be cut anywhere.
             if (word_width < wrap_width)
                 s = word_end;
+            else
+                s = prev_s;
             break;
         }
 
