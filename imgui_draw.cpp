@@ -5438,11 +5438,9 @@ do {\
         {
             if (ImCharIsLineBreakableW(next_c) && !ImCharIsHeadProhibited(next_c) && !ImCharIsTailProhibited(c))
                 IM_ADVANCE_WORD();
-            if (ImCharIsHeadProhibited(c) && !ImCharIsHeadProhibited(next_c))
+            if ((ImCharIsHeadProhibited(c) || ImCharIsLineBreakableW(c)) && !ImCharIsHeadProhibited(next_c))
                 IM_ADVANCE_WORD();
-            if (ImCharIsLineBreakableW(c) && (!ImCharIsHeadProhibited(next_c) || ImCharIsBlankW(next_c)))
-                IM_ADVANCE_WORD();
-        }
+            }
     }
 #undef IM_ADVANCE_WORD
     // Wrap_width is too small to fit anything. Force displaying 1 character to minimize the height discontinuity.
