@@ -62,6 +62,13 @@ Other Changes:
 - Backends: Vulkan: Fixed texture update corruption introduced in 1.92.0,
   affecting some drivers/setups. (#8801, #8755, #8840) [@Retro52, @Miolith]
 
+Docking+Viewports Branch:
+
+- Windows, Viewport: fixed an issue where interrupting a viewport move with
+  e.g. a ClearActiveID() call would leave the dragged viewport with the
+  normally temporary ImGuiViewportFlags_NoInputs flag, preventing further
+  interactions with the viewport. (#5324) (thanks @mdelaharpe)
+
 
 -----------------------------------------------------------------------
  VERSION 1.92.1 (Released 2025-07-09)
