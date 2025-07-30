@@ -5436,6 +5436,8 @@ do {\
         }
         else if (c && next_c)
         {
+            if (c == 0x300b) 
+                IM_ASSERT(true);
             if (ImCharIsLineBreakableW(next_c) && !ImCharIsHeadProhibited(next_c) && !ImCharIsTailProhibited(c))
                 IM_ADVANCE_WORD();
             if (ImCharIsHeadProhibited(c) && !ImCharIsHeadProhibited(next_c))
