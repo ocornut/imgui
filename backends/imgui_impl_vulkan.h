@@ -58,7 +58,7 @@
 #else
 #include <vulkan/vulkan.h>
 #endif
-#if defined(VK_VERSION_1_3) || defined(VK_KHR_dynamic_rendering)
+#if defined(VK_VERSION_1_3) || defined(VK_KHR_dynamic_rendering) || defined(VK_VERSION_1_4)
 #define IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
 #endif
 
