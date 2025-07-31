@@ -46,6 +46,11 @@ Other Changes:
 - Windows: fixed an issue where resizable child windows would emit border
   logic when hidden/non-visible (e.g. when in a docked window that is not
   selected), impacting code not checking for BeginChild() return value. (#8815)
+- Tables: fixed TableGetRowIndex() which never correctly worked when using
+  a clipper (it exists for consistency but is almost never used, as it is 
+  often more convenient to use index in caller-code, whereas TableGetRowIndex()
+  includes header rows). 
+- Tables: fixed imgui_internal.h's TableGetHoveredRow() the same way. (#7350, #6588, #6250)
 - Error Handling: minor improvements to error handling for TableGetSortSpecs()
   and TableSetBgColor() calls. (#1651, #8499)
 - Misc: fixed building with IMGUI_DISABLE_DEBUG_TOOLS only. (#8796)
