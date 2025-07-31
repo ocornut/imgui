@@ -9555,6 +9555,10 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
     ImGuiContext& g = *GImGui;
     tab_bar->WantLayout = false;
 
+    // Track selected tab when resizing our parent down
+    const bool scroll_to_selected_tab = (tab_bar->BarRectPrevWidth > tab_bar->BarRect.GetWidth());
+    tab_bar->BarRectPrevWidth = tab_bar->BarRect.GetWidth();
+
     // Garbage collect by compacting list
     // Detect if we need to sort out tab list (e.g. in rare case where a tab changed section)
     int tab_dst_n = 0;
@@ -9693,6 +9697,8 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
             if ((scroll_and_select_tab->Flags & ImGuiTabItemFlags_Button) == 0)
                 tab_bar->SelectedTabId = scroll_to_tab_id;
         }
+    if (scroll_to_tab_id == 0 && scroll_to_selected_tab)
+        scroll_to_tab_id = tab_bar->SelectedTabId;
 
     // Shrink widths if full tabs don't fit in their allocated space
     float section_0_w = sections[0].Width + sections[0].Spacing;

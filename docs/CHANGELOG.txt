@@ -60,6 +60,9 @@ Other Changes:
 - Tabs: added style.TabMinWidthShrink, ImGuiStyleVar_TabMinWidthShrink to
   control the width to shrink to in ImGuiTabBarFlags_FittingPolicyMixed mode.
   (#3421, #8800). 
+- Tabs: when scrolling is enabled, track selected tabs when resizing down
+  parent container. This does not prevent to horizontally scroll it out of
+  view during normal operations. (#3421, #8800)
 - Tabs: added style.TabMinWidthBase, ImGuiStyleVar_TabMinWidthBase to control
   the base minimum width of a tab (default to 1.0f). This is the size before
   any potential shrinking is applied.
