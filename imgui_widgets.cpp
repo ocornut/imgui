@@ -9429,8 +9429,8 @@ bool    ImGui::BeginTabBar(const char* str_id, ImGuiTabBarFlags flags)
     ImGuiTabBar* tab_bar = g.TabBars.GetOrAddByKey(id);
     ImRect tab_bar_bb = ImRect(window->DC.CursorPos.x, window->DC.CursorPos.y, window->WorkRect.Max.x, window->DC.CursorPos.y + g.FontSize + g.Style.FramePadding.y * 2);
     tab_bar->ID = id;
-    tab_bar->SeparatorMinX = tab_bar->BarRect.Min.x - IM_TRUNC(window->WindowPadding.x * 0.5f);
-    tab_bar->SeparatorMaxX = tab_bar->BarRect.Max.x + IM_TRUNC(window->WindowPadding.x * 0.5f);
+    tab_bar->SeparatorMinX = tab_bar_bb.x - IM_TRUNC(window->WindowPadding.x * 0.5f);
+    tab_bar->SeparatorMaxX = tab_bar_bb.x + IM_TRUNC(window->WindowPadding.x * 0.5f);
     //if (g.NavWindow && IsWindowChildOf(g.NavWindow, window, false, false))
     flags |= ImGuiTabBarFlags_IsFocused;
     return BeginTabBarEx(tab_bar, tab_bar_bb, flags);
@@ -9668,7 +9668,7 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
         tab_bar->WidthAllTabsIdeal += sections[section_n].Width + sections[section_n].Spacing;
 
     // Horizontal scrolling buttons
-    // (note that TabBarScrollButtons() will alter BarRect.Max.x)
+    // Important: note that TabBarScrollButtons() will alter BarRect.Max.x.
     if ((tab_bar->WidthAllTabsIdeal > tab_bar->BarRect.GetWidth() && tab_bar->Tabs.Size > 1) && !(tab_bar->Flags & ImGuiTabBarFlags_NoTabListScrollingButtons) && (tab_bar->Flags & ImGuiTabBarFlags_FittingPolicyScroll))
         if (ImGuiTabItem* scroll_and_select_tab = TabBarScrollingButtons(tab_bar))
         {
