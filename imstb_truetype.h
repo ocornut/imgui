@@ -271,6 +271,11 @@
 //   Inline sort     :  6.54 s     5.65 s
 //   New rasterizer  :  5.63 s     5.00 s
 
+//Missing forward declarations (A. Zonenberg 2025-07-31)
+void stbtt__h_prefilter(unsigned char *pixels, int w, int h, int stride_in_bytes, unsigned int kernel_width);
+void stbtt__v_prefilter(unsigned char *pixels, int w, int h, int stride_in_bytes, unsigned int kernel_width);
+float stbtt__oversample_shift(int oversample);
+
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 ////
