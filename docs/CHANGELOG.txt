@@ -41,11 +41,33 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
+- Tabs: Renamed ImGuiTabBarFlags_FittingPolicyResizeDown to ImGuiTabBarFlags_FittingPolicyShrink.
+  Kept inline redirection enum (will obsolete). (#261, #351)
+
 Other Changes:
 
 - Windows: fixed an issue where resizable child windows would emit border
   logic when hidden/non-visible (e.g. when in a docked window that is not
   selected), impacting code not checking for BeginChild() return value. (#8815)
+- Tables: fixed TableGetRowIndex() which never correctly worked when using
+  a clipper (it exists for consistency but is almost never used, as it is 
+  often more convenient to use index in caller-code, whereas TableGetRowIndex()
+  includes header rows). 
+- Tables: fixed imgui_internal.h's TableGetHoveredRow() the same way. (#7350, #6588, #6250)
+- Tabs: added new fitting policy ImGuiTabBarFlags_FittingPolicyMixed
+  and made it the default. This policy shrink tab width down to a given amount,
+  and then beyond that it enable scrolling buttons. (#3421, #8800)
+- Tabs: added style.TabMinWidthShrink, ImGuiStyleVar_TabMinWidthShrink to
+  control the width to shrink to in ImGuiTabBarFlags_FittingPolicyMixed mode.
+  (#3421, #8800). 
+- Tabs: when scrolling is enabled, track selected tabs when resizing down
+  parent container. This does not prevent to horizontally scroll it out of
+  view during normal operations. (#3421, #8800)
+- Tabs: added style.TabMinWidthBase, ImGuiStyleVar_TabMinWidthBase to control
+  the base minimum width of a tab (default to 1.0f). This is the size before
+  any potential shrinking is applied.
+- Tabs: fixed tab bar underline not drawing below scroll buttons, when
+  they are enabled (minor regression from 1.90). (#6820, #4859, #5022, #5239)
 - Error Handling: minor improvements to error handling for TableGetSortSpecs()
   and TableSetBgColor() calls. (#1651, #8499)
 - Misc: fixed building with IMGUI_DISABLE_DEBUG_TOOLS only. (#8796)
