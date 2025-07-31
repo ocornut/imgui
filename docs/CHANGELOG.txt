@@ -41,6 +41,9 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
+- Tabs: Renamed ImGuiTabBarFlags_FittingPolicyResizeDown to ImGuiTabBarFlags_FittingPolicyShrink.
+  Kept inline redirection enum (will obsolete). (#261, #351)
+
 Other Changes:
 
 - Windows: fixed an issue where resizable child windows would emit border
