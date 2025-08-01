@@ -821,6 +821,91 @@ void ImGui_ImplSDL3_NewFrame()
     ImGui_ImplSDL3_UpdateGamepads();
 }
 
+// SDL3 helper to create a WebGPU surface (exclusively!) for Native/Desktop applications: available only together with WebGPU/WGPU backend
+// At current date (jun/2025) there is no "official" support in SDL3 to create a surface for WebGPU backend
+// This stub uses "low level" SDL3 calls to acquire information from a specific Window Manager.
+// Currently supported platforms: Windows / Linux (X11 and Wayland) / MacOS
+// Not necessary/available with EMSCRIPTEN
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) || defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) && !defined(__EMSCRIPTEN__)
+#if defined(SDL_PLATFORM_MACOS)
+// MacOS specific: is necessary to compile with "-x objective-c++" flags
+// (e.g. using cmake: set_source_files_properties(${IMGUI_DIR}/backends/imgui_impl_sdl3.cpp PROPERTIES COMPILE_FLAGS "-x objective-c++") )
+#  include <Cocoa/Cocoa.h>
+#  include <QuartzCore/CAMetalLayer.h>
+#elif defined(SDL_PLATFORM_WIN32)
+#  include <windows.h>
+#endif
+
+WGPUSurface ImGui_ImplSDL3_CreateWGPUSurface_Helper(WGPUInstance instance, SDL_Window* window) {
+    SDL_PropertiesID propertiesID = SDL_GetWindowProperties(window);
+    WGPUSurfaceDescriptor surfaceDescriptor = {};
+
+    WGPUSurface surface = {};
+
+#if defined(SDL_PLATFORM_MACOS)
+    {
+        id metal_layer = NULL;
+        NSWindow *ns_window = (__bridge NSWindow *)SDL_GetPointerProperty(propertiesID, SDL_PROP_WINDOW_COCOA_WINDOW_POINTER, NULL);
+        if (!ns_window) return NULL;
+        [ns_window.contentView setWantsLayer : YES];
+        metal_layer = [CAMetalLayer layer];
+        [ns_window.contentView setLayer : metal_layer];
+
+        WGPUSurfaceSourceMetalLayer surfaceMetal = {};
+        surfaceMetal.chain.sType = WGPUSType_SurfaceSourceMetalLayer;
+        surfaceMetal.layer = metal_layer;
+
+        surfaceDescriptor.nextInChain = &surfaceMetal.chain;
+        surface = wgpuInstanceCreateSurface(instance, &surfaceDescriptor);
+    }
+#elif defined(SDL_PLATFORM_LINUX)
+    if (!SDL_strcmp(SDL_GetCurrentVideoDriver(), "wayland")) {
+        void *w_display = SDL_GetPointerProperty(propertiesID, SDL_PROP_WINDOW_WAYLAND_DISPLAY_POINTER, NULL);
+        void *w_surface = SDL_GetPointerProperty(propertiesID, SDL_PROP_WINDOW_WAYLAND_SURFACE_POINTER, NULL);
+        if (!w_display || !w_surface) return NULL;
+
+        WGPUSurfaceSourceWaylandSurface surfaceWayland = {};
+        surfaceWayland.chain.sType = WGPUSType_SurfaceSourceWaylandSurface;
+        surfaceWayland.display = w_display;
+        surfaceWayland.surface = w_surface;
+
+        surfaceDescriptor.nextInChain = &surfaceWayland.chain;
+        surface = wgpuInstanceCreateSurface(instance, &surfaceDescriptor);
+    } else if (!SDL_strcmp(SDL_GetCurrentVideoDriver(), "x11")) {
+        void *x_display   = SDL_GetPointerProperty(propertiesID, SDL_PROP_WINDOW_X11_DISPLAY_POINTER, NULL);
+        uint64_t x_window = SDL_GetNumberProperty(propertiesID, SDL_PROP_WINDOW_X11_WINDOW_NUMBER, 0);
+        if (!x_display || !x_window) return NULL;
+
+        WGPUSurfaceSourceXlibWindow surfaceXlib = {};
+        surfaceXlib.chain.sType = WGPUSType_SurfaceSourceXlibWindow;
+        surfaceXlib.display = x_display;
+        surfaceXlib.window  = x_window;
+
+        surfaceDescriptor.nextInChain = &surfaceXlib.chain;
+        surface = wgpuInstanceCreateSurface(instance, &surfaceDescriptor);
+    }
+
+#elif defined(SDL_PLATFORM_WIN32)
+    {
+        HWND hwnd = (HWND)SDL_GetPointerProperty(propertiesID, SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
+        if (!hwnd) return NULL;
+        HINSTANCE hinstance = GetModuleHandle(NULL);
+
+        WGPUSurfaceSourceWindowsHWND surfaceHWND = {};
+        surfaceHWND.chain.sType = WGPUSType_SurfaceSourceWindowsHWND;
+        surfaceHWND.hinstance = hinstance;
+        surfaceHWND.hwnd = hwnd;
+
+        surfaceDescriptor.nextInChain = &surfaceHWND.chain;
+        surface = wgpuInstanceCreateSurface(instance, &surfaceDescriptor);
+    }
+#else
+    #error "Unsupported SDL3/WebGPU Backend"
+#endif
+    return surface;
+}
+#endif // defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) || defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) && !defined(__EMSCRIPTEN__)
+
 //-----------------------------------------------------------------------------
 
 #if defined(__clang__)
