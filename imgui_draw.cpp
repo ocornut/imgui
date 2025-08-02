@@ -5436,7 +5436,7 @@ do {\
         }
         else if (c && next_c)
         {
-            if (prev_c > '0' && prev_c < '9' && next_c > '0' && next_c < '9' && !ImCharIsLineBreakableW(c))
+            if (prev_c >= '0' && prev_c <= '9' && next_c >= '0' && next_c <= '9' && !ImCharIsLineBreakableW(c))
                 continue;
             if (ImCharIsLineBreakableW(next_c) && !ImCharIsHeadProhibited(next_c) && !ImCharIsTailProhibited(c))
                 IM_ADVANCE_WORD();
@@ -5483,7 +5483,6 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
                 text_size.y += line_height;
                 line_width = 0.0f;
                 word_wrap_eol = NULL;
-                s = CalcWordWrapNextLineStartA(s, text_end); // Wrapping skips upcoming blanks
                 continue;
             }
         }
