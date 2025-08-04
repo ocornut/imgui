@@ -60,7 +60,7 @@ int main(int, char**)
         printf("Error: SDL_ClaimWindowForGPUDevice(): %s\n", SDL_GetError());
         return -1;
     }
-    SDL_SetGPUSwapchainParameters(gpu_device, window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, SDL_GPU_PRESENTMODE_MAILBOX);
+    SDL_SetGPUSwapchainParameters(gpu_device, window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, SDL_GPU_PRESENTMODE_VSYNC);
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
