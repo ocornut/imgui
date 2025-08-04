@@ -10046,7 +10046,7 @@ static ImGuiTabItem* ImGui::TabBarScrollingButtons(ImGuiTabBar* tab_bar)
 
     PushStyleColor(ImGuiCol_Text, arrow_col);
     PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
-    PushItemFlag(ImGuiItemFlags_ButtonRepeat, true);
+    PushItemFlag(ImGuiItemFlags_ButtonRepeat | ImGuiItemFlags_NoNav, true);
     const float backup_repeat_delay = g.IO.KeyRepeatDelay;
     const float backup_repeat_rate = g.IO.KeyRepeatRate;
     g.IO.KeyRepeatDelay = 0.250f;

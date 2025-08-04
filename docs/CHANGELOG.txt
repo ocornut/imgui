@@ -70,6 +70,7 @@ Other Changes:
   any potential shrinking is applied.
 - Tabs: fixed tab bar underline not drawing below scroll buttons, when
   they are enabled (minor regression from 1.90). (#6820, #4859, #5022, #5239)
+- Tabs: made scrolling buttons never keyboard/gamepad navigation candidates.
 - Nav: fixed a bug where GamepadMenu button couldn't toggle between main and
   menu layers while navigating a Modal window. (#8834)
 - Error Handling: minor improvements to error handling for TableGetSortSpecs()
