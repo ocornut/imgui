@@ -2328,8 +2328,8 @@ struct ImGuiContext
     float                   NavWindowingTimer;
     float                   NavWindowingHighlightAlpha;
     ImGuiInputSource        NavWindowingInputSource;
-    bool                    NavWindowingToggleLayer;
-    ImGuiKey                NavWindowingToggleKey;
+    bool                    NavWindowingToggleLayer;            // Set while Alt or GamepadMenu is held, may be cleared by other operations, and processed when releasing the key.
+    ImGuiKey                NavWindowingToggleKey;              // Keyboard/gamepad key used when toggling to menu layer.
     ImVec2                  NavWindowingAccumDeltaPos;
     ImVec2                  NavWindowingAccumDeltaSize;
 
