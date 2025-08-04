@@ -14,6 +14,7 @@ or view this file with any Markdown viewer.
 | [Where is the documentation?](#q-where-is-the-documentation) |
 | [What is this library called?](#q-what-is-this-library-called) |
 | [Which version should I get?](#q-which-version-should-i-get) |
+| [Why does Dear ImGui use *immediate-mode* instead of *retained-mode*?](#q-why-does-dear-imgui-use-immediate-mode-instead-of-retained-mode) |
 | **Q&A: Integration** |
 | **[How to get started?](#q-how-to-get-started)** |
 | **[How can I tell whether to dispatch mouse/keyboard to Dear ImGui or my application?](#q-how-can-i-tell-whether-to-dispatch-mousekeyboard-to-dear-imgui-or-my-application)** |
@@ -83,6 +84,32 @@ You may use the ['docking'](https://github.com/ocornut/imgui/tree/docking) branc
 - [Multi-viewport features](https://github.com/ocornut/imgui/wiki/Multi-Viewports)
 
 Many projects are using this branch and it is kept in sync with master regularly.
+
+##### [Return to Index](#index)
+
+---
+
+### Q: Why does Dear ImGui use *immediate-mode* instead of *retained-mode*?
+
+**Short answer** – It keeps **state management** in *your* code, not inside the GUI
+library, which makes UI logic deterministic, thread-friendly, and trivial to
+debug.
+
+**Long answer**
+
+|               | Immediate Mode (Dear ImGui) | Retained Mode (Qt/GTK/…) |
+|---------------|----------------------------|--------------------------|
+| **State**     | Re-issued every frame; GUI stores **minimal** state | Widget tree holds persistent state |
+| **UI → Logic**| Direct: `if (Button("Save")) Save();` | Indirect: callback/ signal ↔ slot |
+| **Ease of use**| ❤️ write UI in a single function; no lifetime headaches | Extra book-keeping; indirection |
+| **Cost**      | Slightly more CPU (rebuild every frame) | Larger in-memory widget graph |
+
+For a deeper dive, see the [Wikipedia article on *Immediate Mode GUI*](https://en.wikipedia.org/wiki/Immediate_mode_%28computer_graphics%29)
+(and Omar Cornut's original 2015 GDC talk, linked in `docs/README.md`).  <!-- keep-link-checker-happy -->
+
+> *Tip:* If you find yourself needing a persistent widget reference, you're
+> probably looking for **ImGuiID** or **ImGuiStorage** instead of a retained
+> object pointer.
 
 ##### [Return to Index](#index)
 

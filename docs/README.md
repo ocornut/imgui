@@ -154,6 +154,8 @@ For a list of third-party widgets and extensions, check out the [Useful Extensio
 
 See: [Frequently Asked Questions (FAQ)](https://github.com/ocornut/imgui/blob/master/docs/FAQ.md) where common questions are answered.
 
+See: [Why Immediate Mode?](FAQ.md#q-why-does-dear-imgui-use-immediate-mode-instead-of-retained-mode) to understand the rationale behind Dear ImGui's immediate-mode API.
+
 See: [Getting Started](https://github.com/ocornut/imgui/wiki/Getting-Started) and [Wiki](https://github.com/ocornut/imgui/wiki) for many links, references, articles.
 
 See: [Articles about the IMGUI paradigm](https://github.com/ocornut/imgui/wiki#about-the-imgui-paradigm) to read/learn about the Immediate Mode GUI paradigm.
