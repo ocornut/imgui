@@ -4617,6 +4617,7 @@ static bool ImGui_ImplStbTrueType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig
         stbtt_GetFontVMetrics(&bd_font_data->FontInfo, &unscaled_ascent, &unscaled_descent, &unscaled_line_gap);
         baked->Ascent = ImCeil(unscaled_ascent * scale_for_layout);
         baked->Descent = ImFloor(unscaled_descent * scale_for_layout);
+        baked->LineHeight = baked->Size;
     }
     return true;
 }
@@ -5061,7 +5062,7 @@ void ImFontBaked::ClearOutputData()
     IndexAdvanceX.clear();
     IndexLookup.clear();
     FallbackGlyphIndex = -1;
-    Ascent = Descent = 0.0f;
+    Ascent = Descent = LineHeight = 0.0f;
     MetricsTotalSurface = 0;
 }
 
@@ -5461,8 +5462,8 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
     if (!text_end)
         text_end = text_begin + ImStrlen(text_begin); // FIXME-OPT: Need to avoid this.
 
-    const float line_height = size;
     ImFontBaked* baked = GetFontBaked(size);
+    const float line_height = baked->LineHeight;
     const float scale = size / baked->Size;
 
     ImVec2 text_size = ImVec2(0, 0);
@@ -5592,9 +5593,9 @@ begin:
     if (!text_end)
         text_end = text_begin + ImStrlen(text_begin); // ImGui:: functions generally already provides a valid text_end, so this is merely to handle direct calls.
 
-    const float line_height = size;
     ImFontBaked* baked = GetFontBaked(size);
 
+    const float line_height = baked->LineHeight;
     const float scale = size / baked->Size;
     const float origin_x = x;
     const bool word_wrap_enabled = (wrap_width > 0.0f);
