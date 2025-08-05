@@ -2145,8 +2145,9 @@ struct ImGuiContext
     ImVector<ImFontAtlas*>  FontAtlases;                        // List of font atlases used by the context (generally only contains g.IO.Fonts aka the main font atlas)
     ImFont*                 Font;                               // Currently bound font. (== FontStack.back().Font)
     ImFontBaked*            FontBaked;                          // Currently bound font at currently bound size. (== Font->GetFontBaked(FontSize))
-    float                   FontSize;                           // Currently bound font size == line height (== FontSizeBase + externals scales applied in the UpdateCurrentFontSize() function).
+    float                   FontSize;                           // Currently bound font size (== FontSizeBase + externals scales applied in the UpdateCurrentFontSize() function).
     float                   FontSizeBase;                       // Font size before scaling == style.FontSizeBase == value passed to PushFont() when specified.
+    float                   LineHeight;                         // Currently bound font's line height (+ externals scales applied in the UpdateCurrentFontSize() function).
     float                   FontBakedScale;                     // == FontBaked->Size / FontSize. Scale factor over baked size. Rarely used nowadays, very often == 1.0f.
     float                   FontRasterizerDensity;              // Current font density. Used by all calls to GetFontBaked().
     float                   CurrentDpiScale;                    // Current window/viewport DpiScale == CurrentViewport->DpiScale
@@ -3551,8 +3552,8 @@ namespace ImGui
     IMGUI_API bool          CheckboxFlags(const char* label, ImU64* flags, ImU64 flags_value);
 
     // Widgets: Window Decorations
-    IMGUI_API bool          CloseButton(ImGuiID id, const ImVec2& pos);
-    IMGUI_API bool          CollapseButton(ImGuiID id, const ImVec2& pos);
+    IMGUI_API bool          CloseButton(ImGuiID id, ImVec2 pos);
+    IMGUI_API bool          CollapseButton(ImGuiID id, ImVec2 pos);
     IMGUI_API void          Scrollbar(ImGuiAxis axis);
     IMGUI_API bool          ScrollbarEx(const ImRect& bb, ImGuiID id, ImGuiAxis axis, ImS64* p_scroll_v, ImS64 avail_v, ImS64 contents_v, ImDrawFlags draw_rounding_flags = 0);
     IMGUI_API ImRect        GetWindowScrollbarRect(ImGuiWindow* window, ImGuiAxis axis);
