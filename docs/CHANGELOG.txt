@@ -122,6 +122,8 @@ Changes:
   to pass full range of information into e.g. FreeType's face_index, as higher
   bits are used from FreeType 2.6.1. (#8775) [@Valakor]
   (the field has been erroneously reduced from 32-bits to 8-bit in 1.92.0)
+- Fonts, Tables: fixed PushFont() having no effect when called after submitting
+  a hidden column. (#8865)
 - Textures: Fixed support for `#define ImTextureID_Invalid` to non-zero value:
   ImTextureData() was incorrectly cleared with zeroes. (#8745) [@rachit7645]
 - Demo: Added "Text -> Font Size" demo section. (#8738) [@Demonese]

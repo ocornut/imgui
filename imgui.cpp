@@ -8841,8 +8841,11 @@ void ImGui::UpdateCurrentFontSize(float restore_font_size_after_scaling)
     // However this would leave a pretty subtle and damning error surface area if g.FontBaked was mismatching, so for now we null it.
     // FIXME: perhaps g.FontSize should be updated?
     if (window != NULL && window->SkipItems)
-        if (g.CurrentTable == NULL || g.CurrentTable->CurrentColumn != -1) // See 8465#issuecomment-2951509561. Ideally the SkipItems=true in tables would be amended with extra data.
+    {
+        ImGuiTable* table = g.CurrentTable;
+        if (table == NULL || (table->CurrentColumn != -1 && table->Columns[table->CurrentColumn].IsSkipItems == false)) // See 8465#issuecomment-2951509561 and #8865. Ideally the SkipItems=true in tables would be amended with extra data.
             return;
+    }
 
     // Restoring is pretty much only used by PopFont()
     float final_size = (restore_font_size_after_scaling > 0.0f) ? restore_font_size_after_scaling : 0.0f;
