@@ -8838,7 +8838,7 @@ void ImGui::UpdateCurrentFontSize(float restore_font_size_after_scaling)
     g.Style.FontSizeBase = g.FontSizeBase;
 
     // Early out to avoid hidden window keeping bakes referenced and out of GC reach.
-    // However this would leave a pretty subtle and damning error surface area if g.FontBaked was mismatching, so for now we null it.
+    // However this would leave a pretty subtle and damning error surface area if g.FontBaked was mismatching.
     // FIXME: perhaps g.FontSize should be updated?
     if (window != NULL && window->SkipItems)
     {
