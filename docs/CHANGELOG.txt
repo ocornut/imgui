@@ -43,12 +43,24 @@ Breaking Changes:
 
 - Tabs: Renamed ImGuiTabBarFlags_FittingPolicyResizeDown to ImGuiTabBarFlags_FittingPolicyShrink.
   Kept inline redirection enum (will obsolete). (#261, #351)
+- Backends: SDL_GPU3: changed ImTextureID type from SDL_GPUTextureSamplerBinding* to SDL_GPUTexture*,
+  which is more natural and easier for user to manage. If you need to change the current sampler,
+  you can access the ImGui_ImplSDLGPU3_RenderState struct. (#8866, #8163, #7998, #7988)
 
 Other Changes:
 
+- Fonts: fixed an issue when a font using MergeMode has a reference size
+  specified but the target font doesn't. Usually either all fonts should
+  have a reference size (only required when specifying e.g. GlyphOffset),
+  or none should have a reference size. 
+- Fonts: fixed a crash when changing texture format when using a legacy
+  backend. Most commonly would happen when calling GetTexDataAsRGBA32()
+  then immediately GetTexDataAsAlpha8(). (#8824)
 - Windows: fixed an issue where resizable child windows would emit border
   logic when hidden/non-visible (e.g. when in a docked window that is not
   selected), impacting code not checking for BeginChild() return value. (#8815)
+- Textures: Fixed support for `#define ImTextureID_Invalid` to non-zero value:
+  ImFontAtlas() was incorrectly cleared with zeroes. (#8860, #8745) [@cfillion]
 - Tables: fixed TableGetRowIndex() which never correctly worked when using
   a clipper (it exists for consistency but is almost never used, as it is 
   often more convenient to use index in caller-code, whereas TableGetRowIndex()
@@ -68,6 +80,9 @@ Other Changes:
   any potential shrinking is applied.
 - Tabs: fixed tab bar underline not drawing below scroll buttons, when
   they are enabled (minor regression from 1.90). (#6820, #4859, #5022, #5239)
+- Tabs: made scrolling buttons never keyboard/gamepad navigation candidates.
+- Nav: fixed a bug where GamepadMenu button couldn't toggle between main and
+  menu layers while navigating a Modal window. (#8834)
 - Error Handling: minor improvements to error handling for TableGetSortSpecs()
   and TableSetBgColor() calls. (#1651, #8499)
 - Misc: fixed building with IMGUI_DISABLE_DEBUG_TOOLS only. (#8796)
@@ -77,12 +92,18 @@ Other Changes:
 - CI: Added SDL3 builds to MacOS and Windows. (#8819, #8778) [@scribam]
 - CI: Updated Windows CI to use a more recent SDL2. (#8819, #8778) [@scribam]
 - Examples: SDL3+Metal: added SDL3+Metal example. (#8827, #8825) [@shi-yan]
+- Examples: SDL3+SDL_GPU: use SDL_WaitAndAcquireGPUSwapchainTexture() instead 
+  of SDL_AcquireGPUSwapchainTexture(). (#8830) [@itsdanott]
 - Backends: OpenGL3: add and call embedded loader shutdown in ImGui_ImplOpenGL3_Shutdown() 
   to facilitate multiple init/shutdown cycles in same process. (#8792) [@tim-rex]
 - Backends: OpenGL2, OpenGL3: set GL_UNPACK_ALIGNMENT to 1 before updating 
   textures. (#8802) [@Daandelange]
+- Backends: SDL_GPU3: expose current SDL_GPUSampler* in the ImGui_ImplSDLGPU3_RenderState
+  struct. (#8866, #8163, #7998, #7988)
 - Backends: Vulkan: Fixed texture update corruption introduced in 1.92.0,
   affecting some drivers/setups. (#8801, #8755, #8840) [@Retro52, @Miolith]
+- Backends: Vulkan: Avoid calling vkCmdBindDescriptorSets() when texture
+  has not changed. (#8666) [@micb25]
 
 Docking+Viewports Branch:
 
@@ -113,6 +134,8 @@ Changes:
   to pass full range of information into e.g. FreeType's face_index, as higher
   bits are used from FreeType 2.6.1. (#8775) [@Valakor]
   (the field has been erroneously reduced from 32-bits to 8-bit in 1.92.0)
+- Fonts, Tables: fixed PushFont() having no effect when called after submitting
+  a hidden column. (#8865)
 - Textures: Fixed support for `#define ImTextureID_Invalid` to non-zero value:
   ImTextureData() was incorrectly cleared with zeroes. (#8745) [@rachit7645]
 - Demo: Added "Text -> Font Size" demo section. (#8738) [@Demonese]

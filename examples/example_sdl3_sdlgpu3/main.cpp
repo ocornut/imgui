@@ -60,7 +60,7 @@ int main(int, char**)
         printf("Error: SDL_ClaimWindowForGPUDevice(): %s\n", SDL_GetError());
         return -1;
     }
-    SDL_SetGPUSwapchainParameters(gpu_device, window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, SDL_GPU_PRESENTMODE_MAILBOX);
+    SDL_SetGPUSwapchainParameters(gpu_device, window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, SDL_GPU_PRESENTMODE_VSYNC);
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -195,7 +195,7 @@ int main(int, char**)
         SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(gpu_device); // Acquire a GPU command buffer
 
         SDL_GPUTexture* swapchain_texture;
-        SDL_AcquireGPUSwapchainTexture(command_buffer, window, &swapchain_texture, nullptr, nullptr); // Acquire a swapchain texture
+        SDL_WaitAndAcquireGPUSwapchainTexture(command_buffer, window, &swapchain_texture, nullptr, nullptr); // Acquire a swapchain texture
 
         if (swapchain_texture != nullptr && !is_minimized)
         {
