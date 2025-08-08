@@ -1572,6 +1572,7 @@ ImGuiIO::ImGuiIO()
     ConfigViewportsNoTaskBarIcon = false;
     ConfigViewportsNoDecoration = true;
     ConfigViewportsNoDefaultParent = false;
+    ConfigViewportPlatformFocusSetsImGuiFocus = true;
 
     // Miscellaneous options
     MouseDrawCursor = false;
@@ -16384,7 +16385,7 @@ static void ImGui::UpdateViewportsNewFrame()
             // - if focus didn't happen because we destroyed another window (#6462)
             // FIXME: perhaps 'FocusTopMostWindowUnderOne()' can handle the 'focused_window->Window != NULL' case as well.
             const bool apply_imgui_focus_on_focused_viewport = !IsAnyMouseDown() && !prev_focused_has_been_destroyed;
-            if (apply_imgui_focus_on_focused_viewport)
+            if (apply_imgui_focus_on_focused_viewport && g.IO.ConfigViewportPlatformFocusSetsImGuiFocus)
             {
                 focused_viewport->LastFocusedHadNavWindow |= (g.NavWindow != NULL) && (g.NavWindow->Viewport == focused_viewport); // Update so a window changing viewport won't lose focus.
                 ImGuiFocusRequestFlags focus_request_flags = ImGuiFocusRequestFlags_UnlessBelowModal | ImGuiFocusRequestFlags_RestoreFocusedChild;

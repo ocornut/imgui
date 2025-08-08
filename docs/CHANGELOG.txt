@@ -111,6 +111,12 @@ Docking+Viewports Branch:
   e.g. a ClearActiveID() call would leave the dragged viewport with the
   normally temporary ImGuiViewportFlags_NoInputs flag, preventing further
   interactions with the viewport. (#5324) (thanks @mdelaharpe)
+- Viewports: added io.ConfigViewportPlatformFocusSetsImGuiFocus to opt-out
+  of focusing imgui windows When a platform window is focused (e.g. using Alt+Tab,
+  clicking Platform Title Bar). In principle this is better enabled but we
+  provide an opt-out because some Linux window managers tend to eagerly focus
+  windows (on e.g. mouse hover, or even on a simple window pos/size change).
+  (#6299, #6462)
 
 
 -----------------------------------------------------------------------
