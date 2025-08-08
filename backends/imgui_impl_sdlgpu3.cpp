@@ -38,10 +38,6 @@
 #include "imgui_impl_sdlgpu3_shaders.h"
 
 // SDL_GPU Data
-struct ImGui_ImplSDLGPU3_Texture
-{
-    SDL_GPUTexture*              Texture = nullptr;
-};
 
 // Reusable buffers used for rendering 1 current in-flight frame, for ImGui_ImplSDLGPU3_RenderDrawData()
 struct ImGui_ImplSDLGPU3_FrameData
@@ -309,18 +305,13 @@ void ImGui_ImplSDLGPU3_RenderDrawData(ImDrawData* draw_data, SDL_GPUCommandBuffe
 static void ImGui_ImplSDLGPU3_DestroyTexture(ImTextureData* tex)
 {
     ImGui_ImplSDLGPU3_Data* bd = ImGui_ImplSDLGPU3_GetBackendData();
-    ImGui_ImplSDLGPU3_Texture* backend_tex = (ImGui_ImplSDLGPU3_Texture*)tex->BackendUserData;
-    if (backend_tex == nullptr)
-        return;
-    SDL_GPUTextureSamplerBinding* binding = (SDL_GPUTextureSamplerBinding*)(intptr_t)tex->BackendUserData;
-    IM_ASSERT(backend_tex->Texture == binding->texture);
-    SDL_ReleaseGPUTexture(bd->InitInfo.Device, backend_tex->Texture);
-    IM_DELETE(backend_tex);
+    SDL_GPUTexture* raw_tex = (SDL_GPUTexture*)(intptr_t)tex->GetTexID();
+    if (raw_tex != nullptr)
+        SDL_ReleaseGPUTexture(bd->InitInfo.Device, raw_tex);
 
     // Clear identifiers and mark as destroyed (in order to allow e.g. calling InvalidateDeviceObjects while running)
     tex->SetTexID(ImTextureID_Invalid);
     tex->SetStatus(ImTextureStatus_Destroyed);
-    tex->BackendUserData = nullptr;
 }
 
 void ImGui_ImplSDLGPU3_UpdateTexture(ImTextureData* tex)
@@ -334,7 +325,6 @@ void ImGui_ImplSDLGPU3_UpdateTexture(ImTextureData* tex)
         //IMGUI_DEBUG_LOG("UpdateTexture #%03d: WantCreate %dx%d\n", tex->UniqueID, tex->Width, tex->Height);
         IM_ASSERT(tex->TexID == ImTextureID_Invalid && tex->BackendUserData == nullptr);
         IM_ASSERT(tex->Format == ImTextureFormat_RGBA32);
-        ImGui_ImplSDLGPU3_Texture* backend_tex = IM_NEW(ImGui_ImplSDLGPU3_Texture)();
 
         // Create texture
         SDL_GPUTextureCreateInfo texture_info = {};
@@ -347,17 +337,16 @@ void ImGui_ImplSDLGPU3_UpdateTexture(ImTextureData* tex)
         texture_info.num_levels = 1;
         texture_info.sample_count = SDL_GPU_SAMPLECOUNT_1;
 
-        backend_tex->Texture = SDL_CreateGPUTexture(v->Device, &texture_info);
-        IM_ASSERT(backend_tex->Texture && "Failed to create font texture, call SDL_GetError() for more info");
+        SDL_GPUTexture* raw_tex = SDL_CreateGPUTexture(v->Device, &texture_info);
+        IM_ASSERT(raw_tex != nullptr && "Failed to create font texture, call SDL_GetError() for more info");
 
         // Store identifiers
-        tex->SetTexID((ImTextureID)(intptr_t)backend_tex->Texture);
-        tex->BackendUserData = backend_tex;
+        tex->SetTexID((ImTextureID)(intptr_t)raw_tex);
     }
 
     if (tex->Status == ImTextureStatus_WantCreate || tex->Status == ImTextureStatus_WantUpdates)
     {
-        ImGui_ImplSDLGPU3_Texture* backend_tex = (ImGui_ImplSDLGPU3_Texture*)tex->BackendUserData;
+        SDL_GPUTexture* raw_tex = (SDL_GPUTexture*)(intptr_t)tex->GetTexID();
         IM_ASSERT(tex->Format == ImTextureFormat_RGBA32);
 
         // Update full texture or selected blocks. We only ever write to textures regions which have never been used before!
@@ -395,7 +384,7 @@ void ImGui_ImplSDLGPU3_UpdateTexture(ImTextureData* tex)
         transfer_info.transfer_buffer = bd->TexTransferBuffer;
 
         SDL_GPUTextureRegion texture_region = {};
-        texture_region.texture = backend_tex->Texture;
+        texture_region.texture = raw_tex;
         texture_region.x = (Uint32)upload_x;
         texture_region.y = (Uint32)upload_y;
         texture_region.w = (Uint32)upload_w;
