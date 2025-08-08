@@ -43,6 +43,9 @@ Breaking Changes:
 
 - Tabs: Renamed ImGuiTabBarFlags_FittingPolicyResizeDown to ImGuiTabBarFlags_FittingPolicyShrink.
   Kept inline redirection enum (will obsolete). (#261, #351)
+- Backends: SDL_GPU3: changed ImTextureID type from SDL_GPUTextureSamplerBinding* to SDL_GPUTexture*,
+  which is more natural and easier for user to manage. If you need to change the current sampler,
+  you can access the ImGui_ImplSDLGPU3_RenderState struct. (#8866, #8163, #7998, #7988)
 
 Other Changes:
 
@@ -95,6 +98,8 @@ Other Changes:
   to facilitate multiple init/shutdown cycles in same process. (#8792) [@tim-rex]
 - Backends: OpenGL2, OpenGL3: set GL_UNPACK_ALIGNMENT to 1 before updating 
   textures. (#8802) [@Daandelange]
+- Backends: SDL_GPU3: expose current SDL_GPUSampler* in the ImGui_ImplSDLGPU3_RenderState
+  struct. (#8866, #8163, #7998, #7988)
 - Backends: Vulkan: Fixed texture update corruption introduced in 1.92.0,
   affecting some drivers/setups. (#8801, #8755, #8840) [@Retro52, @Miolith]
 - Backends: Vulkan: Avoid calling vkCmdBindDescriptorSets() when texture
