@@ -89,6 +89,8 @@ Other Changes:
 - Misc: fixed building with IMGUI_DISABLE_STB_TRUETYPE_IMPLEMENTATION. (#8794)
 - Misc: removed more redundant inline static linkage from imgui_internal.h to 
   facilitate using in C++ modules. (#8813, #8682, #8358) [@stripe2933]
+- Misc: ImVector: skip memcpy in operator= if `Data` isn't initialized in order
+  to play nice with -fsanitize=undefined. (#8874) [@i25e]
 - CI: Added SDL3 builds to MacOS and Windows. (#8819, #8778) [@scribam]
 - CI: Updated Windows CI to use a more recent SDL2. (#8819, #8778) [@scribam]
 - Examples: SDL3+Metal: added SDL3+Metal example. (#8827, #8825) [@shi-yan]
