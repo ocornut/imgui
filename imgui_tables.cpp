@@ -542,7 +542,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
 
     // Make table current
     g.CurrentTable = table;
-    outer_window->DC.NavIsScrollPushableX = false; // Shortcut for NavUpdateCurrentWindowIsScrollPushableX();
+    inner_window->DC.NavIsScrollPushableX = false; // Shortcut for NavUpdateCurrentWindowIsScrollPushableX();
     outer_window->DC.CurrentTableIdx = table_idx;
     if (inner_window != outer_window) // So EndChild() within the inner window can restore the table properly.
         inner_window->DC.CurrentTableIdx = table_idx;

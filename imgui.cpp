@@ -24,7 +24,7 @@
 // For first-time users having issues compiling/linking/running:
 // please post in https://github.com/ocornut/imgui/discussions if you cannot find a solution in resources above.
 // Everything else should be asked in 'Issues'! We are building a database of cross-linked knowledge there.
-// Since 1.92, we encourage font loading question to also be posted in 'Issues'.
+// Since 1.92, we encourage font loading questions to also be posted in 'Issues'.
 
 // Copyright (c) 2014-2025 Omar Cornut
 // Developed by Omar Cornut and every direct or indirect contributors to the GitHub.
@@ -13746,6 +13746,7 @@ void ImGui::NavUpdateCreateMoveRequest()
         }
     }
 
+    // Prepare scoring rectangle.
     // For scoring we use a single segment on the left side our current item bounding box (not touching the edge to avoid box overlap with zero-spaced items)
     ImRect scoring_rect;
     if (window != NULL)
