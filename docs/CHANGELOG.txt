@@ -36,8 +36,10 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.92.2 WIP (In Progress)
+ VERSION 1.92.2 (Released 2025-08-11)
 -----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.92.2
 
 Breaking Changes:
 
@@ -49,35 +51,36 @@ Breaking Changes:
 
 Other Changes:
 
-- Fixed an inconsistency between IsItemHovered() and internal hovering check,
+- Fixed an old inconsistency between IsItemHovered() and internal hovering check,
   where IsItemHovered() would return true to mouse was first clicked on the
   background of a non-moveable window then moved over the item or button.
   Note that while it is consistent with other logic, there is a possibility
-  that some third-party code may accidentally relied on this.
+  that some third-party code may accidentally relied on this. One can always use
+  ImGuiHoveredFlags_AllowWhenBlockedByActiveItem to bypass the active id check.
   (#8877) [@achabense, @ocornut]
 - Fonts: fixed an issue when a font using MergeMode has a reference size
   specified but the target font doesn't. Usually either all fonts should
   have a reference size (only required when specifying e.g. GlyphOffset),
-  or none should have a reference size. 
+  or none should have a reference size.
 - Fonts: fixed a crash when changing texture format when using a legacy
   backend. Most commonly would happen when calling GetTexDataAsRGBA32()
-  then immediately GetTexDataAsAlpha8(). (#8824)
+  then immediately calling GetTexDataAsAlpha8(). (#8824)
 - Windows: fixed an issue where resizable child windows would emit border
   logic when hidden/non-visible (e.g. when in a docked window that is not
   selected), impacting code not checking for BeginChild() return value. (#8815)
 - Textures: Fixed support for `#define ImTextureID_Invalid` to non-zero value:
   ImFontAtlas() was incorrectly cleared with zeroes. (#8860, #8745) [@cfillion]
 - Tables: fixed TableGetRowIndex() which never correctly worked when using
-  a clipper (it exists for consistency but is almost never used, as it is 
+  a clipper (it exists for consistency but is almost never used, as it is
   often more convenient to use index in caller-code, whereas TableGetRowIndex()
-  includes header rows). 
+  includes header rows).
 - Tables: fixed imgui_internal.h's TableGetHoveredRow() the same way. (#7350, #6588, #6250)
 - Tabs: added new fitting policy ImGuiTabBarFlags_FittingPolicyMixed
   and made it the default. This policy shrink tab width down to a given amount,
   and then beyond that it enable scrolling buttons. (#3421, #8800)
 - Tabs: added style.TabMinWidthShrink, ImGuiStyleVar_TabMinWidthShrink to
   control the width to shrink to in ImGuiTabBarFlags_FittingPolicyMixed mode.
-  (#3421, #8800). 
+  (#3421, #8800).
 - Tabs: when scrolling is enabled, track selected tabs when resizing down
   parent container. This does not prevent to horizontally scroll it out of
   view during normal operations. (#3421, #8800)
@@ -90,24 +93,26 @@ Other Changes:
 - Nav, Tables: fixed navigation within scrolling tables when item boundaries
   goes beyond columns limits. The fix done in 1.89.6 didn't work correctly
   on scrolling windows. (#8816, #2221)
-- Nav: fixed a bug where GamepadMenu button couldn't toggle between main and
-  menu layers while navigating a Modal window. (#8834)
+- Nav: fixed a bug where ImGuiKey_NavGamepadMenu (==ImGuiKey_GamepadFaceLeft)
+  button couldn't toggle between main and menu layers while navigating a Modal
+  window. (#8834)
 - Error Handling: minor improvements to error handling for TableGetSortSpecs()
   and TableSetBgColor() calls. (#1651, #8499)
 - Misc: fixed building with IMGUI_DISABLE_DEBUG_TOOLS only. (#8796)
 - Misc: fixed building with IMGUI_DISABLE_STB_TRUETYPE_IMPLEMENTATION. (#8794)
-- Misc: removed more redundant inline static linkage from imgui_internal.h to 
+- Misc: removed more redundant inline static linkage from imgui_internal.h to
   facilitate using in C++ modules. (#8813, #8682, #8358) [@stripe2933]
 - Misc: ImVector: skip memcpy in operator= if `Data` isn't initialized in order
   to play nice with -fsanitize=undefined. (#8874) [@i25e]
 - CI: Added SDL3 builds to MacOS and Windows. (#8819, #8778) [@scribam]
 - CI: Updated Windows CI to use a more recent SDL2. (#8819, #8778) [@scribam]
 - Examples: SDL3+Metal: added SDL3+Metal example. (#8827, #8825) [@shi-yan]
-- Examples: SDL3+SDL_GPU: use SDL_WaitAndAcquireGPUSwapchainTexture() instead 
+- Examples: SDL3+SDL_GPU: use SDL_WaitAndAcquireGPUSwapchainTexture() instead
   of SDL_AcquireGPUSwapchainTexture(). (#8830) [@itsdanott]
-- Backends: OpenGL3: add and call embedded loader shutdown in ImGui_ImplOpenGL3_Shutdown() 
+- Examples: SDL3+SDL_GPU: use SDL_GPU_PRESENTMODE_VSYNC present mode.
+- Backends: OpenGL3: add and call embedded loader shutdown in ImGui_ImplOpenGL3_Shutdown()
   to facilitate multiple init/shutdown cycles in same process. (#8792) [@tim-rex]
-- Backends: OpenGL2, OpenGL3: set GL_UNPACK_ALIGNMENT to 1 before updating 
+- Backends: OpenGL2, OpenGL3: set GL_UNPACK_ALIGNMENT to 1 before updating
   textures. (#8802) [@Daandelange]
 - Backends: SDL_GPU3: expose current SDL_GPUSampler* in the ImGui_ImplSDLGPU3_RenderState
   struct. (#8866, #8163, #7998, #7988)
@@ -247,7 +252,7 @@ Breaking changes:
       see list of glyphs available in multiple font sources. This can facilitate understanding
       which font input is providing which glyph.
 - Fonts: **IMPORTANT** on Thread Safety:
-  - A few functions such as font->CalcTextSizeA() were by sheer luck (== accidentally) 
+  - A few functions such as font->CalcTextSizeA() were by sheer luck (== accidentally)
     thread-safe even thou we had never provided that guarantee before. They are
     definitively not thread-safe anymore as new glyphs may be loaded.
 
