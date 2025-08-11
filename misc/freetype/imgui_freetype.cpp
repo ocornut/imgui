@@ -344,7 +344,7 @@ static void* FreeType_Realloc(FT_Memory /*memory*/, long cur_size, long new_size
     return block;
 }
 
-bool ImGui_ImplFreeType_LoaderInit(ImFontAtlas* atlas)
+static bool ImGui_ImplFreeType_LoaderInit(ImFontAtlas* atlas)
 {
     IM_ASSERT(atlas->FontLoaderData == nullptr);
     ImGui_ImplFreeType_Data* bd = IM_NEW(ImGui_ImplFreeType_Data)();
@@ -384,7 +384,7 @@ bool ImGui_ImplFreeType_LoaderInit(ImFontAtlas* atlas)
     return true;
 }
 
-void ImGui_ImplFreeType_LoaderShutdown(ImFontAtlas* atlas)
+static void ImGui_ImplFreeType_LoaderShutdown(ImFontAtlas* atlas)
 {
     ImGui_ImplFreeType_Data* bd = (ImGui_ImplFreeType_Data*)atlas->FontLoaderData;
     IM_ASSERT(bd != nullptr);
@@ -393,7 +393,7 @@ void ImGui_ImplFreeType_LoaderShutdown(ImFontAtlas* atlas)
     atlas->FontLoaderData = nullptr;
 }
 
-bool ImGui_ImplFreeType_FontSrcInit(ImFontAtlas* atlas, ImFontConfig* src)
+static bool ImGui_ImplFreeType_FontSrcInit(ImFontAtlas* atlas, ImFontConfig* src)
 {
     ImGui_ImplFreeType_Data* bd = (ImGui_ImplFreeType_Data*)atlas->FontLoaderData;
     ImGui_ImplFreeType_FontSrcData* bd_font_data = IM_NEW(ImGui_ImplFreeType_FontSrcData);
@@ -410,7 +410,7 @@ bool ImGui_ImplFreeType_FontSrcInit(ImFontAtlas* atlas, ImFontConfig* src)
     return true;
 }
 
-void ImGui_ImplFreeType_FontSrcDestroy(ImFontAtlas* atlas, ImFontConfig* src)
+static void ImGui_ImplFreeType_FontSrcDestroy(ImFontAtlas* atlas, ImFontConfig* src)
 {
     IM_UNUSED(atlas);
     ImGui_ImplFreeType_FontSrcData* bd_font_data = (ImGui_ImplFreeType_FontSrcData*)src->FontLoaderData;
@@ -418,7 +418,7 @@ void ImGui_ImplFreeType_FontSrcDestroy(ImFontAtlas* atlas, ImFontConfig* src)
     src->FontLoaderData = nullptr;
 }
 
-bool ImGui_ImplFreeType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void* loader_data_for_baked_src)
+static bool ImGui_ImplFreeType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void* loader_data_for_baked_src)
 {
     IM_UNUSED(atlas);
     float size = baked->Size;
@@ -464,7 +464,7 @@ bool ImGui_ImplFreeType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig* src, ImF
     return true;
 }
 
-void ImGui_ImplFreeType_FontBakedDestroy(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void* loader_data_for_baked_src)
+static void ImGui_ImplFreeType_FontBakedDestroy(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void* loader_data_for_baked_src)
 {
     IM_UNUSED(atlas);
     IM_UNUSED(baked);
@@ -475,7 +475,7 @@ void ImGui_ImplFreeType_FontBakedDestroy(ImFontAtlas* atlas, ImFontConfig* src, 
     bd_baked_data->~ImGui_ImplFreeType_FontSrcBakedData(); // ~IM_PLACEMENT_DELETE()
 }
 
-bool ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void* loader_data_for_baked_src, ImWchar codepoint, ImFontGlyph* out_glyph, float* out_advance_x)
+static bool ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void* loader_data_for_baked_src, ImWchar codepoint, ImFontGlyph* out_glyph, float* out_advance_x)
 {
     ImGui_ImplFreeType_FontSrcData* bd_font_data = (ImGui_ImplFreeType_FontSrcData*)src->FontLoaderData;
     uint32_t glyph_index = FT_Get_Char_Index(bd_font_data->FtFace, codepoint);
@@ -566,7 +566,7 @@ bool ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConfig* src
     return true;
 }
 
-bool ImGui_ImplFreetype_FontSrcContainsGlyph(ImFontAtlas* atlas, ImFontConfig* src, ImWchar codepoint)
+static bool ImGui_ImplFreetype_FontSrcContainsGlyph(ImFontAtlas* atlas, ImFontConfig* src, ImWchar codepoint)
 {
     IM_UNUSED(atlas);
     ImGui_ImplFreeType_FontSrcData* bd_font_data = (ImGui_ImplFreeType_FontSrcData*)src->FontLoaderData;
