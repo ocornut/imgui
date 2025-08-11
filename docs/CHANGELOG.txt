@@ -49,6 +49,12 @@ Breaking Changes:
 
 Other Changes:
 
+- Fixed an inconsistency between IsItemHovered() and internal hovering check,
+  where IsItemHovered() would return true to mouse was first clicked on the
+  background of a non-moveable window then moved over the item or button.
+  Note that while it is consistent with other logic, there is a possibility
+  that some third-party code may accidentally relied on this.
+  (#8877) [@achabense, @ocornut]
 - Fonts: fixed an issue when a font using MergeMode has a reference size
   specified but the target font doesn't. Usually either all fonts should
   have a reference size (only required when specifying e.g. GlyphOffset),
@@ -81,6 +87,9 @@ Other Changes:
 - Tabs: fixed tab bar underline not drawing below scroll buttons, when
   they are enabled (minor regression from 1.90). (#6820, #4859, #5022, #5239)
 - Tabs: made scrolling buttons never keyboard/gamepad navigation candidates.
+- Nav, Tables: fixed navigation within scrolling tables when item boundaries
+  goes beyond columns limits. The fix done in 1.89.6 didn't work correctly
+  on scrolling windows. (#8816, #2221)
 - Nav: fixed a bug where GamepadMenu button couldn't toggle between main and
   menu layers while navigating a Modal window. (#8834)
 - Error Handling: minor improvements to error handling for TableGetSortSpecs()
@@ -89,6 +98,8 @@ Other Changes:
 - Misc: fixed building with IMGUI_DISABLE_STB_TRUETYPE_IMPLEMENTATION. (#8794)
 - Misc: removed more redundant inline static linkage from imgui_internal.h to 
   facilitate using in C++ modules. (#8813, #8682, #8358) [@stripe2933]
+- Misc: ImVector: skip memcpy in operator= if `Data` isn't initialized in order
+  to play nice with -fsanitize=undefined. (#8874) [@i25e]
 - CI: Added SDL3 builds to MacOS and Windows. (#8819, #8778) [@scribam]
 - CI: Updated Windows CI to use a more recent SDL2. (#8819, #8778) [@scribam]
 - Examples: SDL3+Metal: added SDL3+Metal example. (#8827, #8825) [@shi-yan]
