@@ -21,6 +21,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2025-08-12: Inputs: fixed missing support for ImGuiKey_PrintScreen under Windows, as raw Allegro 5 does not receive it.
 //  2025-08-12: Added ImGui_ImplAllegro5_SetDisplay() function to change current ALLEGRO_DISPLAY, as Allegro applications often need to do that.
 //  2025-07-07: Fixed texture update broken on some platforms where ALLEGRO_LOCK_WRITEONLY needed all texels to be rewritten.
 //  2025-06-11: Added support for ImGuiBackendFlags_RendererHasTextures, for dynamic font atlas. Removed ImGui_ImplSDLGPU3_CreateFontsTexture() and ImGui_ImplSDLGPU3_DestroyFontsTexture().
@@ -678,6 +679,11 @@ void ImGui_ImplAllegro5_NewFrame()
     double current_time = al_get_time();
     io.DeltaTime = bd->Time > 0.0 ? (float)(current_time - bd->Time) : (float)(1.0f / 60.0f);
     bd->Time = current_time;
+
+    // Allegro 5 doesn't receive PrintScreen under Windows
+#ifdef _WIN32
+    io.AddKeyEvent(ImGuiKey_PrintScreen, (::GetAsyncKeyState(VK_SNAPSHOT) & 0x8000) != 0);
+#endif
 
     // Setup mouse cursor shape
     ImGui_ImplAllegro5_UpdateMouseCursor();

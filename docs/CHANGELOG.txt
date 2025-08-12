@@ -47,6 +47,8 @@ Other Changes:
   setups/drivers. (#8770, #8465)
 - Backends: Allegro5: Added ImGui_ImplAllegro5_SetDisplay() function to 
   change current ALLEGRO_DISPLAY, as Allegro applications often need to do that.
+- Backends: Allegro5: Fixed missing support for ImGuiKey_PrintScreen
+  under Windows, as raw Allegro 5 does not receive it.
 
 
 -----------------------------------------------------------------------
