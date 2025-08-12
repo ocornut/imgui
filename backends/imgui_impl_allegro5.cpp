@@ -268,8 +268,6 @@ void ImGui_ImplAllegro5_UpdateTexture(ImTextureData* tex)
         al_set_new_bitmap_flags(ALLEGRO_MEMORY_BITMAP | ALLEGRO_MIN_LINEAR | ALLEGRO_MAG_LINEAR);
         al_set_new_bitmap_format(ALLEGRO_PIXEL_FORMAT_ABGR_8888_LE);
         ALLEGRO_BITMAP* cpu_bitmap = al_create_bitmap(tex->Width, tex->Height);
-        al_set_new_bitmap_flags(new_bitmap_flags);
-        al_set_new_bitmap_format(new_bitmap_format);
         IM_ASSERT(cpu_bitmap != nullptr && "Backend failed to create texture!");
 
         // Upload pixels
@@ -279,9 +277,14 @@ void ImGui_ImplAllegro5_UpdateTexture(ImTextureData* tex)
         al_unlock_bitmap(cpu_bitmap);
 
         // Convert software texture to hardware texture.
+        al_set_new_bitmap_flags(ALLEGRO_VIDEO_BITMAP);
+        al_set_new_bitmap_format(ALLEGRO_PIXEL_FORMAT_ANY_32_WITH_ALPHA);
         ALLEGRO_BITMAP* gpu_bitmap = al_clone_bitmap(cpu_bitmap);
         al_destroy_bitmap(cpu_bitmap);
         IM_ASSERT(gpu_bitmap != nullptr && "Backend failed to create texture!");
+
+        al_set_new_bitmap_flags(new_bitmap_flags);
+        al_set_new_bitmap_format(new_bitmap_format);
 
         // Store identifiers
         tex->SetTexID((ImTextureID)(intptr_t)gpu_bitmap);
@@ -521,7 +524,7 @@ void ImGui_ImplAllegro5_SetDisplay(ALLEGRO_DISPLAY* display)
 
     if (bd->Display && !bd->VertexDecl)
     {
-        // Create custom vertex declaration. 
+        // Create custom vertex declaration.
         // Unfortunately Allegro doesn't support 32-bits packed colors so we have to convert them to 4 floats.
         // We still use a custom declaration to use 'ALLEGRO_PRIM_TEX_COORD' instead of 'ALLEGRO_PRIM_TEX_COORD_PIXEL' else we can't do a reliable conversion.
         ALLEGRO_VERTEX_ELEMENT elems[] =
