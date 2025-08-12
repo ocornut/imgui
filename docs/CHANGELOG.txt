@@ -43,6 +43,9 @@ Breaking Changes:
 
 Other Changes:
 
+- Backends: Allegro5: Added ImGui_ImplAllegro5_SetDisplay() function to 
+  change current ALLEGRO_DISPLAY, as Allegro applications often need to do that.
+
 
 -----------------------------------------------------------------------
  VERSION 1.92.2 (Released 2025-08-11)

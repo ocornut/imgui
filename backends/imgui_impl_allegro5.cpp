@@ -8,7 +8,7 @@
 //  [X] Platform: Clipboard support (from Allegro 5.1.12).
 //  [X] Platform: Mouse cursor shape and visibility (ImGuiBackendFlags_HasMouseCursors). Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'.
 // Missing features or Issues:
-//  [ ] Renderer: The renderer is suboptimal as we need to convert vertices manually.
+//  [ ] Renderer: The renderer is suboptimal as we need to unindex our buffers and convert vertices manually.
 //  [ ] Platform: Missing gamepad support.
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
@@ -21,6 +21,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2025-08-12: Added ImGui_ImplAllegro5_SetDisplay() function to change current ALLEGRO_DISPLAY, as Allegro applications often need to do that.
 //  2025-07-07: Fixed texture update broken on some platforms where ALLEGRO_LOCK_WRITEONLY needed all texels to be rewritten.
 //  2025-06-11: Added support for ImGuiBackendFlags_RendererHasTextures, for dynamic font atlas. Removed ImGui_ImplSDLGPU3_CreateFontsTexture() and ImGui_ImplSDLGPU3_DestroyFontsTexture().
 //  2025-02-18: Added ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress mouse cursor support.
@@ -476,20 +477,9 @@ bool ImGui_ImplAllegro5_Init(ALLEGRO_DISPLAY* display)
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;       // We can honor GetMouseCursor() values (optional)
     io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;   // We can honor ImGuiPlatformIO::Textures[] requests during render.
 
-    bd->Display = display;
     bd->LastCursor = ALLEGRO_SYSTEM_MOUSE_CURSOR_NONE;
 
-    // Create custom vertex declaration.
-    // Unfortunately Allegro doesn't support 32-bit packed colors so we have to convert them to 4 floats.
-    // We still use a custom declaration to use 'ALLEGRO_PRIM_TEX_COORD' instead of 'ALLEGRO_PRIM_TEX_COORD_PIXEL' else we can't do a reliable conversion.
-    ALLEGRO_VERTEX_ELEMENT elems[] =
-    {
-        { ALLEGRO_PRIM_POSITION, ALLEGRO_PRIM_FLOAT_2, offsetof(ImDrawVertAllegro, pos) },
-        { ALLEGRO_PRIM_TEX_COORD, ALLEGRO_PRIM_FLOAT_2, offsetof(ImDrawVertAllegro, uv) },
-        { ALLEGRO_PRIM_COLOR_ATTR, 0, offsetof(ImDrawVertAllegro, col) },
-        { 0, 0, 0 }
-    };
-    bd->VertexDecl = al_create_vertex_decl(elems, sizeof(ImDrawVertAllegro));
+    ImGui_ImplAllegro5_SetDisplay(display);
 
 #if ALLEGRO_HAS_CLIPBOARD
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
@@ -516,6 +506,33 @@ void ImGui_ImplAllegro5_Shutdown()
     io.BackendPlatformUserData = nullptr;
     io.BackendFlags &= ~(ImGuiBackendFlags_HasMouseCursors | ImGuiBackendFlags_RendererHasTextures);
     IM_DELETE(bd);
+}
+
+void ImGui_ImplAllegro5_SetDisplay(ALLEGRO_DISPLAY* display)
+{
+    ImGui_ImplAllegro5_Data* bd = ImGui_ImplAllegro5_GetBackendData();
+    bd->Display = display;
+
+    if (bd->VertexDecl)
+    {
+        al_destroy_vertex_decl(bd->VertexDecl);
+        bd->VertexDecl = NULL;
+    }
+
+    if (bd->Display && !bd->VertexDecl)
+    {
+        // Create custom vertex declaration. 
+        // Unfortunately Allegro doesn't support 32-bits packed colors so we have to convert them to 4 floats.
+        // We still use a custom declaration to use 'ALLEGRO_PRIM_TEX_COORD' instead of 'ALLEGRO_PRIM_TEX_COORD_PIXEL' else we can't do a reliable conversion.
+        ALLEGRO_VERTEX_ELEMENT elems[] =
+        {
+            { ALLEGRO_PRIM_POSITION, ALLEGRO_PRIM_FLOAT_2, IM_OFFSETOF(ImDrawVertAllegro, pos) },
+            { ALLEGRO_PRIM_TEX_COORD, ALLEGRO_PRIM_FLOAT_2, IM_OFFSETOF(ImDrawVertAllegro, uv) },
+            { ALLEGRO_PRIM_COLOR_ATTR, 0, IM_OFFSETOF(ImDrawVertAllegro, col) },
+            { 0, 0, 0 }
+        };
+        bd->VertexDecl = al_create_vertex_decl(elems, sizeof(ImDrawVertAllegro));
+    }
 }
 
 // ev->keyboard.modifiers seems always zero so using that...
