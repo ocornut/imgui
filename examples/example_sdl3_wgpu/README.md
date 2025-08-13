@@ -20,9 +20,15 @@ The resulting binary will be found at one of the following locations:
   * build/example_sdl2_wgpu[.exe]
 
 #### Building for Emscripten:
+At current date (Jul/2025) there is no official support for SDL3 in EMSCRIPTEN, and its use in EMSCRIPTEN is also in the experimental phase.
+To use SDL3 with EMSCRIPTEN you need to download the SDL3 repository (source code) and build the libraries for EMSCRIPTEN following the official page: 
+https://wiki.libsdl.org/SDL3/README-emscripten#building-sdlemscripten
+
+- the SDL3 library will be built in `your_SDL3_folder/build`
+
  1. Install Emscripten SDK following the instructions: https://emscripten.org/docs/getting_started/downloads.html
  2. Install Ninja build system
- 3. `emcmake cmake -G Ninja -B build`
+ 3. `emcmake cmake -DIMGUI_SDL3_EMSCRIPTEN_DIR=your_SDL3_folder -G Ninja -B build`
  4. `cmake --build build`
 
 To run:
@@ -30,8 +36,7 @@ To run:
 
 or
  - `python -m http.server`  then open WGPU browser with url: `http://localhost:8000/build`
-
-
+ 
 ### Using makefile 
 
 - You need to install Emscripten from https://emscripten.org/docs/getting_started/downloads.html, and have the environment variables set, as described in https://emscripten.org/docs/getting_started/downloads.html#installation-instructions
