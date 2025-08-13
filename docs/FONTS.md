@@ -150,7 +150,6 @@ ImFontConfig config;
 config.MergeMode = true;
 io.Fonts->AddFontFromFileTTF("DroidSans.ttf", 0.0f, &config);           // Merge into first font to add e.g. Asian characters
 io.Fonts->AddFontFromFileTTF("fontawesome-webfont.ttf", 0.0f, &config); // Merge into first font to add Icons
-io.Fonts->Build();
 ```
 :rewind: **Before 1.92, or without an up to date backend:**
 ```cpp

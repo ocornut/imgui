@@ -36,6 +36,27 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
+ VERSION 1.92.2b (Released 2025-08-13)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.92.2b
+
+Changes:
+
+- Fixed IsItemHovered() failing on disabled items and items that have no
+  identifier (e.g. Text() calls) when holding mouse button. (#8877, #8883)
+  [Regression in 1.92.2].
+- Made IsItemHovered() on holding mouse button down on disabled items not
+  leak between items when the window cannot be moved.
+- Backends: Allegro5: Fixed texture format setup which didn't work on all
+  setups/drivers. (#8770, #8465)
+- Backends: Allegro5: Added ImGui_ImplAllegro5_SetDisplay() function to 
+  change current ALLEGRO_DISPLAY, as Allegro applications often need to do that.
+- Backends: Allegro5: Fixed missing support for ImGuiKey_PrintScreen
+  under Windows, as raw Allegro 5 does not receive it.
+
+
+-----------------------------------------------------------------------
  VERSION 1.92.2 (Released 2025-08-11)
 -----------------------------------------------------------------------
 
