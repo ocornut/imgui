@@ -36,12 +36,12 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.92.3 WIP (In Progress)
+ VERSION 1.92.2b (Released 2025-08-13)
 -----------------------------------------------------------------------
 
-Breaking Changes:
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.92.2b
 
-Other Changes:
+Changes:
 
 - Fixed IsItemHovered() failing on disabled items and items that have no
   identifier (e.g. Text() calls) when holding mouse button. (#8877, #8883)
