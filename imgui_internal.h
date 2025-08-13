@@ -1487,7 +1487,7 @@ enum ImGuiInputEventType
     ImGuiInputEventType_COUNT
 };
 
-enum ImGuiInputSource
+enum ImGuiInputSource : int
 {
     ImGuiInputSource_None = 0,
     ImGuiInputSource_Mouse,         // Note: may be Mouse or TouchScreen or Pen. See io.MouseSource to distinguish them.
