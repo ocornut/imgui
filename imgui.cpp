@@ -4818,6 +4818,9 @@ bool ImGui::IsItemHovered(ImGuiHoveredFlags flags)
                 bool cancel_is_hovered = true;
                 if (g.ActiveId == window->MoveId && (id == 0 || g.ActiveIdDisabledId == id))
                     cancel_is_hovered = false;
+                // When ActiveId == TabId it means user clicked docking tab for the window.
+                if (g.ActiveId == window->TabId)
+                    cancel_is_hovered = false;
                 if (cancel_is_hovered)
                     return false;
             }
