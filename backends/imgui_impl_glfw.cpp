@@ -127,6 +127,16 @@
 #define GLFW_EXPOSE_NATIVE_COCOA
 #endif
 #include <GLFW/glfw3native.h>   // for glfwGetCocoaWindow()
+#elif !defined(__EMSCRIPTEN__)
+// Freedesktop(Linux, BSD, etc)
+#ifndef GLFW_EXPOSE_NATIVE_X11
+#define GLFW_EXPOSE_NATIVE_X11
+#include <X11/Xatom.h>
+#endif
+#ifndef GLFW_EXPOSE_NATIVE_WAYLAND
+#define GLFW_EXPOSE_NATIVE_WAYLAND
+#endif
+#include <GLFW/glfw3native.h>   // for getting the X11/Wayland window
 #endif
 #ifndef _WIN32
 #include <unistd.h>             // for usleep()
@@ -1190,6 +1200,30 @@ static void ImGui_ImplGlfw_WindowSizeCallback(GLFWwindow* window, int, int)
     }
 }
 
+#if !defined(__APPLE__) && !defined(_WIN32) && !defined(__EMSCRIPTEN__) && (GLFW_VERSION_MAJOR > 3 || (GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 4)) 
+static void ImGui_ImplGlfw_SetWindowFloating(GLFWwindow* window)
+{
+#ifdef GLFW_EXPOSE_NATIVE_X11
+    if (glfwGetPlatform() == GLFW_PLATFORM_X11)
+    {
+        Display* display = glfwGetX11Display();
+        Window xwindow = glfwGetX11Window(window);
+
+        Atom wm_type = XInternAtom(display, "_NET_WM_WINDOW_TYPE", False);
+        Atom wm_type_dialog = XInternAtom(display, "_NET_WM_WINDOW_TYPE_DIALOG", False);
+        XChangeProperty(display, xwindow, wm_type, XA_ATOM, 32,
+                      PropModeReplace, (unsigned char*)&wm_type_dialog, 1);
+
+        XSetWindowAttributes attrs;
+        attrs.override_redirect = False;
+        XChangeWindowAttributes(display, xwindow, CWOverrideRedirect, &attrs);
+
+        XFlush(display);
+    }
+#endif
+}
+#endif
+
 static void ImGui_ImplGlfw_CreateWindow(ImGuiViewport* viewport)
 {
     ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
@@ -1207,7 +1241,7 @@ static void ImGui_ImplGlfw_CreateWindow(ImGuiViewport* viewport)
     glfwWindowHint(GLFW_FOCUSED, false);
 #if GLFW_HAS_FOCUS_ON_SHOW
     glfwWindowHint(GLFW_FOCUS_ON_SHOW, false);
- #endif
+#endif
     glfwWindowHint(GLFW_DECORATED, (viewport->Flags & ImGuiViewportFlags_NoDecoration) ? false : true);
 #if GLFW_HAS_WINDOW_TOPMOST
     glfwWindowHint(GLFW_FLOATING, (viewport->Flags & ImGuiViewportFlags_TopMost) ? true : false);
@@ -1217,6 +1251,9 @@ static void ImGui_ImplGlfw_CreateWindow(ImGuiViewport* viewport)
     vd->WindowOwned = true;
     ImGui_ImplGlfw_ContextMap_Add(vd->Window, bd->Context);
     viewport->PlatformHandle = (void*)vd->Window;
+#if !defined(__APPLE__) && !defined(_WIN31) && !defined(__EMSCRIPTEN__) && (GLFW_VERSION_MAJOR > 3 || (GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 4))
+    ImGui_ImplGlfw_SetWindowFloating(vd->Window);
+#endif
 #ifdef _WIN32
     viewport->PlatformHandleRaw = glfwGetWin32Window(vd->Window);
     ::SetPropA((HWND)viewport->PlatformHandleRaw, "IMGUI_BACKEND_DATA", bd);
