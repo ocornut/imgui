@@ -1,16 +1,16 @@
-apply plugin: 'com.android.application'
-apply plugin: 'kotlin-android'
+plugins {
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+}
 
 android {
-    compileSdkVersion 33
-    buildToolsVersion "33.0.2"
-    ndkVersion "25.2.9519653"
+    namespace 'imgui.example.android'
+    compileSdk 36
 
     defaultConfig {
         applicationId "imgui.example.android"
-        namespace "imgui.example.android"
-        minSdkVersion 24
-        targetSdkVersion 33
+        minSdk 24
+        targetSdk 36
         versionCode 1
         versionName "1.0"
     }
@@ -21,26 +21,17 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
         }
     }
-
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11
     }
-
     kotlinOptions {
-        jvmTarget="11"
+        jvmTarget = '11'
     }
-
     externalNativeBuild {
         cmake {
-            path "../../CMakeLists.txt"
+            path file('../../CMakeLists.txt')
             version '3.22.1'
         }
     }
-}
-repositories {
-    mavenCentral()
-}
-dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 }
