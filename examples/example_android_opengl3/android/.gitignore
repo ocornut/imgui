@@ -1,12 +1,20 @@
-.cxx
-.externalNativeBuild
-build/
 *.iml
-
-.idea
 .gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
 local.properties
 
 # Android Studio puts a Gradle wrapper here, that we don't want:
 gradle/
+!gradle/libs.versions.toml
 gradlew*
