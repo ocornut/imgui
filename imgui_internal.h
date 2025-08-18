@@ -193,6 +193,7 @@ enum ImGuiLocKey : int;                 // -> enum ImGuiLocKey              // E
 typedef int ImGuiLayoutType;            // -> enum ImGuiLayoutType_         // Enum: Horizontal or vertical
 
 // Flags
+typedef int ImDrawTextFlags;            // -> enum ImDrawTextFlags_         // Flags: for ImTextCalcWordWrapPositionEx()
 typedef int ImGuiActivateFlags;         // -> enum ImGuiActivateFlags_      // Flags: for navigation/focus function (will be for ActivateItem() later)
 typedef int ImGuiDebugLogFlags;         // -> enum ImGuiDebugLogFlags_      // Flags: for ShowDebugLogWindow(), g.DebugLogFlags
 typedef int ImGuiFocusRequestFlags;     // -> enum ImGuiFocusRequestFlags_  // Flags: for FocusWindow()
@@ -430,8 +431,13 @@ IMGUI_API const char*   ImTextFindPreviousUtf8Codepoint(const char* in_text_star
 IMGUI_API int           ImTextCountLines(const char* in_text, const char* in_text_end);                                         // return number of lines taken by text. trailing carriage return doesn't count as an extra line.
 
 // Helpers: High-level text functions (DO NOT USE!!! THIS IS A MINIMAL SUBSET OF LARGER UPCOMING CHANGES)
+enum ImDrawTextFlags_
+{
+    ImDrawTextFlags_None                = 0,
+    ImDrawTextFlags_WrapKeepBlanks      = 1 << 1,
+};
 IMGUI_API ImVec2        ImFontCalcTextSizeEx(ImFont* font, float size, float max_width, float wrap_width, const char* text_begin, const char* text_end, const char** out_remaining);
-IMGUI_API const char*   ImFontCalcWordWrapPositionEx(ImFont* font, float size, const char* text, const char* text_end, float wrap_width);
+IMGUI_API const char*   ImFontCalcWordWrapPositionEx(ImFont* font, float size, const char* text, const char* text_end, float wrap_width, ImDrawTextFlags flags = 0);
 IMGUI_API const char*   ImTextCalcWordWrapNextLineStart(const char* text, const char* text_end);                                // trim trailing space and find beginning of next line
 
 // Helpers: File System

@@ -5352,8 +5352,7 @@ const char* ImTextCalcWordWrapNextLineStart(const char* text, const char* text_e
 // Simple word-wrapping for English, not full-featured. Please submit failing cases!
 // This will return the next location to wrap from. If no wrapping if necessary, this will fast-forward to e.g. text_end.
 // FIXME: Much possible improvements (don't cut things like "word !", "word!!!" but cut within "word,,,,", more sensible support for punctuations, support for Unicode punctuations, etc.)
-const char* ImFontCalcWordWrapPositionEx(ImFont* font, float size, const char* text, const char* text_end, float wrap_width)
-//, ImDrawTextFlags flags)
+const char* ImFontCalcWordWrapPositionEx(ImFont* font, float size, const char* text, const char* text_end, float wrap_width, ImDrawTextFlags flags)
 {
     // For references, possible wrap point marked with ^
     //  "aaa bbb, ccc,ddd. eee   fff. ggg!"
@@ -5428,6 +5427,8 @@ const char* ImFontCalcWordWrapPositionEx(ImFont* font, float size, const char* t
             {
                 prev_word_end = word_end;
                 line_width += word_width + blank_width;
+                if ((flags & ImDrawTextFlags_WrapKeepBlanks) && line_width <= wrap_width)
+                    prev_word_end = s;
                 word_width = blank_width = 0.0f;
             }
 
@@ -5456,7 +5457,7 @@ const char* ImFontCalcWordWrapPositionEx(ImFont* font, float size, const char* t
 
 const char* ImFont::CalcWordWrapPosition(float size, const char* text, const char* text_end, float wrap_width)
 {
-    return ImFontCalcWordWrapPositionEx(this, size, text, text_end, wrap_width);
+    return ImFontCalcWordWrapPositionEx(this, size, text, text_end, wrap_width, ImDrawTextFlags_None);
 }
 
 ImVec2 ImFontCalcTextSizeEx(ImFont* font, float size, float max_width, float wrap_width, const char* text_begin, const char* text_end, const char** out_remaining)
