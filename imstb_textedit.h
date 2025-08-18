@@ -1100,8 +1100,12 @@ retry:
          stb_textedit_move_to_first(state);
          if (state->single_line)
             state->cursor = 0;
-         else while (state->cursor > 0 && STB_TEXTEDIT_GETCHAR(str, state->cursor-1) != STB_TEXTEDIT_NEWLINE)
-            state->cursor = IMSTB_TEXTEDIT_GETPREVCHARINDEX(str, state->cursor);
+         else while (state->cursor > 0) {
+            int prev = IMSTB_TEXTEDIT_GETPREVCHARINDEX(str, state->cursor);
+            if (STB_TEXTEDIT_GETCHAR(str, prev) == STB_TEXTEDIT_NEWLINE)
+               break;
+            state->cursor = prev;
+         }
          state->has_preferred_x = 0;
          break;
 
@@ -1128,8 +1132,12 @@ retry:
          stb_textedit_prep_selection_at_cursor(state);
          if (state->single_line)
             state->cursor = 0;
-         else while (state->cursor > 0 && STB_TEXTEDIT_GETCHAR(str, state->cursor-1) != STB_TEXTEDIT_NEWLINE)
-            state->cursor = IMSTB_TEXTEDIT_GETPREVCHARINDEX(str, state->cursor);
+         else while (state->cursor > 0) {
+            int prev = IMSTB_TEXTEDIT_GETPREVCHARINDEX(str, state->cursor);
+            if (STB_TEXTEDIT_GETCHAR(str, prev) == STB_TEXTEDIT_NEWLINE)
+               break;
+            state->cursor = prev;
+         }
          state->select_end = state->cursor;
          state->has_preferred_x = 0;
          break;
