@@ -668,6 +668,35 @@ static void stb_textedit_move_to_last(IMSTB_TEXTEDIT_STRING *str, STB_TexteditSt
    }
 }
 
+// [DEAR IMGUI] Extracted this function so we can more easily add support for word-wrapping.
+#ifndef STB_TEXTEDIT_MOVELINESTART
+static int stb_textedit_move_line_start(IMSTB_TEXTEDIT_STRING *str, STB_TexteditState *state, int cursor)
+{
+   if (state->single_line)
+      return 0;
+   while (cursor > 0) {
+      int prev = IMSTB_TEXTEDIT_GETPREVCHARINDEX(str, cursor);
+      if (STB_TEXTEDIT_GETCHAR(str, prev) == STB_TEXTEDIT_NEWLINE)
+         break;
+      cursor = prev;
+   }
+   return cursor;
+}
+#define STB_TEXTEDIT_MOVELINESTART stb_textedit_move_line_start
+#endif
+#ifndef STB_TEXTEDIT_MOVELINEEND
+static int stb_textedit_move_line_end(IMSTB_TEXTEDIT_STRING *str, STB_TexteditState *state, int cursor)
+{
+   int n = STB_TEXTEDIT_STRINGLEN(str);
+   if (state->single_line)
+      return n;
+   while (cursor < n && STB_TEXTEDIT_GETCHAR(str, cursor) != STB_TEXTEDIT_NEWLINE)
+      cursor = IMSTB_TEXTEDIT_GETNEXTCHARINDEX(str, cursor);
+   return cursor;
+}
+#define STB_TEXTEDIT_MOVELINEEND stb_textedit_move_line_end
+#endif
+
 #ifdef STB_TEXTEDIT_IS_SPACE
 static int is_word_boundary( IMSTB_TEXTEDIT_STRING *str, int idx )
 {
@@ -1024,7 +1053,7 @@ retry:
                prev_scan = prev;
             }
             find.first_char = find.prev_first;
-            find.prev_first = prev_scan;
+            find.prev_first = STB_TEXTEDIT_MOVELINESTART(str, state, prev_scan);
          }
          break;
       }
@@ -1098,14 +1127,7 @@ retry:
       case STB_TEXTEDIT_K_LINESTART:
          stb_textedit_clamp(str, state);
          stb_textedit_move_to_first(state);
-         if (state->single_line)
-            state->cursor = 0;
-         else while (state->cursor > 0) {
-            int prev = IMSTB_TEXTEDIT_GETPREVCHARINDEX(str, state->cursor);
-            if (STB_TEXTEDIT_GETCHAR(str, prev) == STB_TEXTEDIT_NEWLINE)
-               break;
-            state->cursor = prev;
-         }
+         state->cursor = STB_TEXTEDIT_MOVELINESTART(str, state, state->cursor);
          state->has_preferred_x = 0;
          break;
 
@@ -1113,13 +1135,9 @@ retry:
       case STB_TEXTEDIT_K_LINEEND2:
 #endif
       case STB_TEXTEDIT_K_LINEEND: {
-         int n = STB_TEXTEDIT_STRINGLEN(str);
          stb_textedit_clamp(str, state);
          stb_textedit_move_to_first(state);
-         if (state->single_line)
-            state->cursor = n;
-         else while (state->cursor < n && STB_TEXTEDIT_GETCHAR(str, state->cursor) != STB_TEXTEDIT_NEWLINE)
-            state->cursor = IMSTB_TEXTEDIT_GETNEXTCHARINDEX(str, state->cursor);
+         state->cursor = STB_TEXTEDIT_MOVELINEEND(str, state, state->cursor);
          state->has_preferred_x = 0;
          break;
       }
@@ -1130,14 +1148,7 @@ retry:
       case STB_TEXTEDIT_K_LINESTART | STB_TEXTEDIT_K_SHIFT:
          stb_textedit_clamp(str, state);
          stb_textedit_prep_selection_at_cursor(state);
-         if (state->single_line)
-            state->cursor = 0;
-         else while (state->cursor > 0) {
-            int prev = IMSTB_TEXTEDIT_GETPREVCHARINDEX(str, state->cursor);
-            if (STB_TEXTEDIT_GETCHAR(str, prev) == STB_TEXTEDIT_NEWLINE)
-               break;
-            state->cursor = prev;
-         }
+         state->cursor = STB_TEXTEDIT_MOVELINESTART(str, state, state->cursor);
          state->select_end = state->cursor;
          state->has_preferred_x = 0;
          break;
@@ -1146,13 +1157,9 @@ retry:
       case STB_TEXTEDIT_K_LINEEND2 | STB_TEXTEDIT_K_SHIFT:
 #endif
       case STB_TEXTEDIT_K_LINEEND | STB_TEXTEDIT_K_SHIFT: {
-         int n = STB_TEXTEDIT_STRINGLEN(str);
          stb_textedit_clamp(str, state);
          stb_textedit_prep_selection_at_cursor(state);
-         if (state->single_line)
-             state->cursor = n;
-         else while (state->cursor < n && STB_TEXTEDIT_GETCHAR(str, state->cursor) != STB_TEXTEDIT_NEWLINE)
-            state->cursor = IMSTB_TEXTEDIT_GETNEXTCHARINDEX(str, state->cursor);
+         state->cursor = STB_TEXTEDIT_MOVELINEEND(str, state, state->cursor);
          state->select_end = state->cursor;
          state->has_preferred_x = 0;
          break;
