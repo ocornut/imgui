@@ -428,6 +428,7 @@ IMGUI_API int           ImTextCountUtf8BytesFromChar(const char* in_text, const 
 IMGUI_API int           ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in_text_end);                        // return number of bytes to express string in UTF-8
 IMGUI_API const char*   ImTextFindPreviousUtf8Codepoint(const char* in_text_start, const char* in_text_curr);                   // return previous UTF-8 code-point.
 IMGUI_API int           ImTextCountLines(const char* in_text, const char* in_text_end);                                         // return number of lines taken by text. trailing carriage return doesn't count as an extra line.
+IMGUI_API const char*   ImTextCalcWordWrapNextLineStart(const char* text, const char* text_end);                                // trim trailing space and find beginning of next line
 
 // Helpers: File System
 #ifdef IMGUI_DISABLE_FILE_FUNCTIONS

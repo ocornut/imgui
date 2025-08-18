@@ -3911,9 +3911,6 @@ bool ImGui::InputDouble(const char* label, double* v, double step, double step_f
 // - InputText()
 // - InputTextWithHint()
 // - InputTextMultiline()
-// - InputTextGetCharInfo() [Internal]
-// - InputTextReindexLines() [Internal]
-// - InputTextReindexLinesRange() [Internal]
 // - InputTextEx() [Internal]
 // - DebugNodeInputTextState() [Internal]
 //-------------------------------------------------------------------------
@@ -4525,7 +4522,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     IM_ASSERT(buf != NULL && buf_size >= 0);
     IM_ASSERT(!((flags & ImGuiInputTextFlags_CallbackHistory) && (flags & ImGuiInputTextFlags_Multiline)));        // Can't use both together (they both use up/down keys)
     IM_ASSERT(!((flags & ImGuiInputTextFlags_CallbackCompletion) && (flags & ImGuiInputTextFlags_AllowTabInput))); // Can't use both together (they both use tab key)
-    IM_ASSERT(!((flags & ImGuiInputTextFlags_ElideLeft) && (flags & ImGuiInputTextFlags_Multiline)));               // Multiline will not work with left-trimming
+    IM_ASSERT(!((flags & ImGuiInputTextFlags_ElideLeft) && (flags & ImGuiInputTextFlags_Multiline)));              // Multiline does not not work with left-trimming
 
     ImGuiContext& g = *GImGui;
     ImGuiIO& io = g.IO;
