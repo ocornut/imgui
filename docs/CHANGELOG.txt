@@ -36,6 +36,15 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
+ VERSION 1.92.3 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Breaking Changes:
+
+Other Changes:
+
+
+-----------------------------------------------------------------------
  VERSION 1.92.2b (Released 2025-08-13)
 -----------------------------------------------------------------------
 
@@ -50,7 +59,7 @@ Changes:
   leak between items when the window cannot be moved.
 - Backends: Allegro5: Fixed texture format setup which didn't work on all
   setups/drivers. (#8770, #8465)
-- Backends: Allegro5: Added ImGui_ImplAllegro5_SetDisplay() function to 
+- Backends: Allegro5: Added ImGui_ImplAllegro5_SetDisplay() function to
   change current ALLEGRO_DISPLAY, as Allegro applications often need to do that.
 - Backends: Allegro5: Fixed missing support for ImGuiKey_PrintScreen
   under Windows, as raw Allegro 5 does not receive it.
