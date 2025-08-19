@@ -83,7 +83,9 @@ int main(int, char**)
     ImGui_ImplSDLGPU3_InitInfo init_info = {};
     init_info.Device = gpu_device;
     init_info.ColorTargetFormat = SDL_GetGPUSwapchainTextureFormat(gpu_device, window);
-    init_info.MSAASamples = SDL_GPU_SAMPLECOUNT_1;
+    init_info.MSAASamples = SDL_GPU_SAMPLECOUNT_1;                      // Only used in multi-viewports mode.
+    init_info.SwapchainComposition = SDL_GPU_SWAPCHAINCOMPOSITION_SDR;  // Only used in multi-viewports mode.
+    init_info.PresentMode = SDL_GPU_PRESENTMODE_VSYNC;
     ImGui_ImplSDLGPU3_Init(&init_info);
 
     // Load Fonts
