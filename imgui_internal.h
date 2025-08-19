@@ -335,6 +335,7 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit context pointer
 #define IM_PRIu64   "llu"
 #define IM_PRIX64   "llX"
 #endif
+#define IM_TEXTUREID_TO_U64(_TEXID) ((ImU64)(intptr_t)(_TEXID))
 
 //-----------------------------------------------------------------------------
 // [SECTION] Generic helpers
