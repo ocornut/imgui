@@ -31,9 +31,11 @@
 // - Remember to set ColorTargetFormat to the correct format. If you're rendering to the swapchain, call SDL_GetGPUSwapchainTextureFormat to query the right value
 struct ImGui_ImplSDLGPU3_InitInfo
 {
-    SDL_GPUDevice*       Device             = nullptr;
-    SDL_GPUTextureFormat ColorTargetFormat  = SDL_GPU_TEXTUREFORMAT_INVALID;
-    SDL_GPUSampleCount   MSAASamples        = SDL_GPU_SAMPLECOUNT_1;
+    SDL_GPUDevice*              Device                  = nullptr;
+    SDL_GPUTextureFormat        ColorTargetFormat       = SDL_GPU_TEXTUREFORMAT_INVALID;
+    SDL_GPUSampleCount          MSAASamples             = SDL_GPU_SAMPLECOUNT_1;
+    SDL_GPUSwapchainComposition SwapchainComposition    = SDL_GPU_SWAPCHAINCOMPOSITION_SDR;
+    SDL_GPUPresentMode          PresentMode             = SDL_GPU_PRESENTMODE_VSYNC;
 };
 
 // Follow "Getting Started" link and check examples/ folder to learn about using backends!

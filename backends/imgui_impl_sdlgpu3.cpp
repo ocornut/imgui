@@ -677,6 +677,7 @@ static void ImGui_ImplSDLGPU3_CreateWindow(ImGuiViewport* viewport)
     ImGui_ImplSDLGPU3_Data* data = ImGui_ImplSDLGPU3_GetBackendData();
     SDL_Window* window = SDL_GetWindowFromID((SDL_WindowID)(intptr_t)viewport->PlatformHandle);
     SDL_ClaimWindowForGPUDevice(data->InitInfo.Device, window);
+    SDL_SetGPUSwapchainParameters(data->InitInfo.Device, window, data->InitInfo.SwapchainComposition, data->InitInfo.PresentMode);
     viewport->RendererUserData = (void*)1;
 }
 
