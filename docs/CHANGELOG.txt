@@ -70,6 +70,12 @@ Changes:
 - Backends: Allegro5: Fixed missing support for ImGuiKey_PrintScreen
   under Windows, as raw Allegro 5 does not receive it.
 
+Docking+Viewports Branch:
+
+- Fixed a bug where closing a viewport using OS facility (e.g. ALT+F4, Close Button)
+  would erroneously close all windows located in the viewport, even ones docked
+  into nested dockspaces. Only top-most windows should be closed. (#8887) [@lailoken]
+
 
 -----------------------------------------------------------------------
  VERSION 1.92.2 (Released 2025-08-11)
