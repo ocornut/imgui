@@ -5835,8 +5835,9 @@ void ImGui::RenderArrow(ImDrawList* draw_list, ImVec2 pos, ImU32 col, ImGuiDir d
 
 void ImGui::RenderBullet(ImDrawList* draw_list, ImVec2 pos, ImU32 col)
 {
-    // FIXME-OPT: This should be baked in font.
-    draw_list->AddCircleFilled(pos, draw_list->_Data->FontSize * 0.20f, col, 8);
+    // FIXME-OPT: This should be baked in font now that it's easier.
+    float font_size = draw_list->_Data->FontSize;
+    draw_list->AddCircleFilled(pos, font_size * 0.20f, col, (font_size < 22) ? 8 : (font_size < 40) ? 12 : 0); // Hardcode optimal/nice tessellation threshold
 }
 
 void ImGui::RenderCheckMark(ImDrawList* draw_list, ImVec2 pos, ImU32 col, float sz)
