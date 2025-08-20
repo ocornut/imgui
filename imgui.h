@@ -3757,6 +3757,7 @@ struct ImFontBaked
 
     // [Internal] Members: Cold
     float                       Ascent, Descent;    // 4+4   // out // Ascent: distance from top to bottom of e.g. 'A' [0..FontSize] (unscaled)
+    float                       LineHeight;         // 4     // out // Vertical distance between two baselines
     unsigned int                MetricsTotalSurface:26;// 3  // out // Total surface in pixels to get an idea of the font rasterization/texture cost (not exact, we approximate the cost of padding between glyphs)
     unsigned int                WantDestroy:1;         // 0  //     // Queued for destroy
     unsigned int                LoadNoFallback:1;      // 0  //     // Disable loading fallback in lower-level calls.
