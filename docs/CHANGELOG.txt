@@ -48,6 +48,9 @@ Other Changes:
 - DrawList: Fixed CloneOutput() unnecessarily taking a copy of the ImDrawListSharedData
   pointer, which could to issue when deleting the cloned list. (#8894, #1860)
 - Examples: Android: Android+OpenGL3: update Gradle project (#8888, #8878) [@scribam]
+- Backends: SDL_GPU: Added ImGui_ImplSDLGPU3_InitInfo::SwapchainComposition and
+  PresentMode to configure how secondary viewports are created. Currently only used
+  in multi-viewport mode. (#8892)
 
 
 -----------------------------------------------------------------------
