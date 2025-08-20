@@ -3097,6 +3097,7 @@ static const char* GetDefaultCompressedFontDataTTF(int* out_size);
 #endif
 
 // Load embedded ProggyClean.ttf at size 13, disable oversampling
+// If you want a similar font which may be better scaled, consider using ProggyVector from the same author!
 ImFont* ImFontAtlas::AddFontDefault(const ImFontConfig* font_cfg_template)
 {
 #ifndef IMGUI_DISABLE_DEFAULT_FONT
@@ -6118,6 +6119,7 @@ static unsigned int stb_decompress(unsigned char *output, const unsigned char *i
 // Copyright (c) 2004, 2005 Tristan Grimmer
 // MIT license (see License.txt in http://www.proggyfonts.net/index.php?menu=download)
 // Download and more information at http://www.proggyfonts.net or http://upperboundsinteractive.com/fonts.php
+// If you want a similar font which may be better scaled, consider using ProggyVector from the same author!
 //-----------------------------------------------------------------------------
 
 #ifndef IMGUI_DISABLE_DEFAULT_FONT
