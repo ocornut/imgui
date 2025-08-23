@@ -32,9 +32,13 @@ EMS =
 ##---------------------------------------------------------------------
 
 # ("EMS" options gets added to both CPPFLAGS and LDFLAGS, whereas some options are for linker only)
-EMS += -s DISABLE_EXCEPTION_CATCHING=1
-LDFLAGS += -s USE_GLFW=3 -s USE_WEBGPU=1
+# Note: For glfw, we use emscripten-glfw port (contrib.glfw3) instead of (-s USE_GLFW=3) to get a better support for High DPI displays.
+EMS += -s DISABLE_EXCEPTION_CATCHING=1 --use-port=contrib.glfw3
+LDFLAGS += -s USE_WEBGPU=1
 LDFLAGS += -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s NO_EXIT_RUNTIME=0 -s ASSERTIONS=1
+
+# Build as single file (binary text encoded in .html file)
+#LDFLAGS += -sSINGLE_FILE
 
 # Emscripten allows preloading a file or folder to be accessible at runtime.
 # The Makefile for this example project suggests embedding the misc/fonts/ folder into our application, it will then be accessible as "/fonts"

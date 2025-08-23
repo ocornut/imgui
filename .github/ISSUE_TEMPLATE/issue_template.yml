@@ -4,10 +4,12 @@ body:
   - type: markdown
     attributes:
       value: |
-        FOR FIRST-TIME USERS ISSUES COMPILING/LINKING/RUNNING or LOADING FONTS, please use [GitHub Discussions](https://github.com/ocornut/imgui/discussions)
-        For anything else: we are happy to use 'GitHub Issues' for many types of open-ended questions. We are encouraging 'Issues' becoming a large, centralized and cross-referenced database of Dear ImGui contents.
+        FOR FIRST-TIME USERS ISSUES COMPILING/LINKING/RUNNING, please use [GitHub Discussions](https://github.com/ocornut/imgui/discussions)
+        For anything else: **we are happy to use 'GitHub Issues' for many types of open-ended questions**. We are encouraging 'Issues' becoming a large, centralized, tagged, cross-referenced database of Dear ImGui contents.
 
         Be mindful that messages are being sent to the e-mail box of "Watching" users. Try to proof-read your messages before sending them. Edits are not seen by those users.
+
+        **If you are using Dear ImGui as part of a job that you are being well-paid for** and your company is not a sponsor. Please be mindful that this is a Free Software and you might be about to ask volunteers to help you doing your job. Please put extra effort describing your issue or question properly. If your company is wealthy, please read [Funding](https://github.com/ocornut/imgui/wiki/Funding) and consider getting in touch.
   - type: markdown
     attributes:
       value: |
