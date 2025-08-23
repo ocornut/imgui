@@ -15,7 +15,7 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
-#include <GL/GL.h>
+#include <GL/gl.h>
 #include <tchar.h>
 
 // Data stored per platform window

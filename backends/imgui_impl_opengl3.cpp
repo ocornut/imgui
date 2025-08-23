@@ -25,6 +25,8 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2025-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2025-07-22: OpenGL: Add and call embedded loader shutdown during ImGui_ImplOpenGL3_Shutdown() to facilitate multiple init/shutdown cycles in same process. (#8792)
+//  2025-07-15: OpenGL: Set GL_UNPACK_ALIGNMENT to 1 before updating textures (#8802) + restore non-WebGL/ES update path that doesn't require a CPU-side copy.
 //  2025-06-11: OpenGL: Added support for ImGuiBackendFlags_RendererHasTextures, for dynamic font atlas. Removed ImGui_ImplOpenGL3_CreateFontsTexture() and ImGui_ImplOpenGL3_DestroyFontsTexture().
 //  2025-06-04: OpenGL: Made GLES 3.20 contexts not access GL_CONTEXT_PROFILE_MASK nor GL_PRIMITIVE_RESTART. (#8664)
 //  2025-02-18: OpenGL: Lazily reinitialize embedded GL loader for when calling backend from e.g. other DLL boundaries. (#8406)
@@ -431,6 +433,10 @@ void    ImGui_ImplOpenGL3_Shutdown()
     io.BackendRendererUserData = nullptr;
     io.BackendFlags &= ~(ImGuiBackendFlags_RendererHasVtxOffset | ImGuiBackendFlags_RendererHasTextures | ImGuiBackendFlags_RendererHasViewports);
     IM_DELETE(bd);
+
+#ifdef IMGUI_IMPL_OPENGL_LOADER_IMGL3W
+    imgl3wShutdown();
+#endif
 }
 
 void    ImGui_ImplOpenGL3_NewFrame()
@@ -594,10 +600,8 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     ImVec2 clip_scale = draw_data->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
 
     // Render command lists
-    for (int n = 0; n < draw_data->CmdListsCount; n++)
+    for (const ImDrawList* draw_list : draw_data->CmdLists)
     {
-        const ImDrawList* draw_list = draw_data->CmdLists[n];
-
         // Upload vertex/index buffers
         // - OpenGL drivers are in a very sorry state nowadays....
         //   During 2021 we attempted to switch from glBufferData() to orphaning+glBufferSubData() following reports
@@ -721,6 +725,17 @@ static void ImGui_ImplOpenGL3_DestroyTexture(ImTextureData* tex)
 
 void ImGui_ImplOpenGL3_UpdateTexture(ImTextureData* tex)
 {
+    // FIXME: Consider backing up and restoring
+    if (tex->Status == ImTextureStatus_WantCreate || tex->Status == ImTextureStatus_WantUpdates)
+    {
+#ifdef GL_UNPACK_ROW_LENGTH // Not on WebGL/ES
+        GL_CALL(glPixelStorei(GL_UNPACK_ROW_LENGTH, 0));
+#endif
+#ifdef GL_UNPACK_ALIGNMENT
+        GL_CALL(glPixelStorei(GL_UNPACK_ALIGNMENT, 1));
+#endif
+    }
+
     if (tex->Status == ImTextureStatus_WantCreate)
     {
         // Create and upload new texture to graphics system
@@ -740,9 +755,6 @@ void ImGui_ImplOpenGL3_UpdateTexture(ImTextureData* tex)
         GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
         GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
         GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
-#ifdef GL_UNPACK_ROW_LENGTH // Not on WebGL/ES
-        GL_CALL(glPixelStorei(GL_UNPACK_ROW_LENGTH, 0));
-#endif
         GL_CALL(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex->Width, tex->Height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels));
 
         // Store identifiers
@@ -761,7 +773,7 @@ void ImGui_ImplOpenGL3_UpdateTexture(ImTextureData* tex)
 
         GLuint gl_tex_id = (GLuint)(intptr_t)tex->TexID;
         GL_CALL(glBindTexture(GL_TEXTURE_2D, gl_tex_id));
-#if 0// GL_UNPACK_ROW_LENGTH // Not on WebGL/ES
+#if GL_UNPACK_ROW_LENGTH // Not on WebGL/ES
         GL_CALL(glPixelStorei(GL_UNPACK_ROW_LENGTH, tex->Width));
         for (ImTextureRect& r : tex->Updates)
             GL_CALL(glTexSubImage2D(GL_TEXTURE_2D, 0, r.x, r.y, r.w, r.h, GL_RGBA, GL_UNSIGNED_BYTE, tex->GetPixelsAt(r.x, r.y)));
