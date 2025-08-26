@@ -2387,6 +2387,14 @@ ImGuiID ImHashStr(const char* data_p, size_t data_size, ImGuiID seed)
     return ~crc;
 }
 
+// Skip to the "###" marker if any. We don't skip past to match the behavior of GetID()
+const char* ImHashSkipUncontributingPrefix(const char* label)
+{
+    if (const char* p = strstr(label, "###")) // FIXME: Should loop.
+        label = p;
+    return label;
+}
+
 //-----------------------------------------------------------------------------
 // [SECTION] MISC HELPERS/UTILITIES (File functions)
 //-----------------------------------------------------------------------------
@@ -15259,13 +15267,9 @@ ImGuiWindowSettings* ImGui::CreateNewWindowSettings(const char* name)
 {
     ImGuiContext& g = *GImGui;
 
+    // Preserve the full string when ConfigDebugVerboseIniSettings is set to make .ini inspection easier.
     if (g.IO.ConfigDebugIniSettings == false)
-    {
-        // Skip to the "###" marker if any. We don't skip past to match the behavior of GetID()
-        // Preserve the full string when ConfigDebugVerboseIniSettings is set to make .ini inspection easier.
-        if (const char* p = strstr(name, "###"))
-            name = p;
-    }
+        name = ImHashSkipUncontributingPrefix(name);
     const size_t name_len = ImStrlen(name);
 
     // Allocate chunk

@@ -367,6 +367,7 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit context pointer
 // Helpers: Hashing
 IMGUI_API ImGuiID       ImHashData(const void* data, size_t data_size, ImGuiID seed = 0);
 IMGUI_API ImGuiID       ImHashStr(const char* data, size_t data_size = 0, ImGuiID seed = 0);
+IMGUI_API const char*   ImHashSkipUncontributingPrefix(const char* label);
 
 // Helpers: Sorting
 #ifndef ImQsort
