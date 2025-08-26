@@ -3116,9 +3116,7 @@ ImFont* ImFontAtlas::AddFontDefault(const ImFontConfig* font_cfg_template)
 
     int ttf_compressed_size = 0;
     const char* ttf_compressed = GetDefaultCompressedFontDataTTF(&ttf_compressed_size);
-    const ImWchar* glyph_ranges = font_cfg.GlyphRanges != NULL ? font_cfg.GlyphRanges : GetGlyphRangesDefault();
-    ImFont* font = AddFontFromMemoryCompressedTTF(ttf_compressed, ttf_compressed_size, font_cfg.SizePixels, &font_cfg, glyph_ranges);
-    return font;
+    return AddFontFromMemoryCompressedTTF(ttf_compressed, ttf_compressed_size, font_cfg.SizePixels, &font_cfg);
 #else
     IM_ASSERT(0 && "AddFontDefault() disabled in this build.");
     IM_UNUSED(font_cfg_template);
