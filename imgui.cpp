@@ -7113,10 +7113,11 @@ void ImGui::RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& titl
     // Close button
     if (has_close_button)
     {
+        ImGuiItemFlags backup_item_flags = g.CurrentItemFlags;
         g.CurrentItemFlags |= ImGuiItemFlags_NoFocus;
         if (CloseButton(window->GetID("#CLOSE"), close_button_pos))
             *p_open = false;
-        g.CurrentItemFlags &= ~ImGuiItemFlags_NoFocus;
+        g.CurrentItemFlags = backup_item_flags;
     }
 
     window->DC.NavLayerCurrent = ImGuiNavLayer_Main;
