@@ -50,6 +50,8 @@ Other Changes:
   pointer, which could to issue when deleting the cloned list. (#8894, #1860)
 - Debug Tools: ID Stack Tool: fixed using fixed-size buffers preventing long identifiers
   from being displayed in the tool. (#8905, #4631)
+- Debug Tools: ID Stack Tool: when ### is used, uncontributing prefix before the ###
+  is now skipped. (#8904, #4631)
 - Debug Tools: ID Stack Tool: added option to hex-encode non-ASCII characters in
   output path. (#8904, #4631)
 - Examples: Android: Android+OpenGL3: update Gradle project (#8888, #8878) [@scribam]
