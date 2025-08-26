@@ -2388,11 +2388,14 @@ ImGuiID ImHashStr(const char* data_p, size_t data_size, ImGuiID seed)
 }
 
 // Skip to the "###" marker if any. We don't skip past to match the behavior of GetID()
+// FIXME-OPT: This is not designed to be optimal. Use with care.
 const char* ImHashSkipUncontributingPrefix(const char* label)
 {
-    if (const char* p = strstr(label, "###")) // FIXME: Should loop.
-        label = p;
-    return label;
+    const char* result = label;
+    while (unsigned char c = *label++)
+        if (c == '#' && label[0] == '#' && label[1] == '#')
+            result = label - 1;
+    return result;
 }
 
 //-----------------------------------------------------------------------------
