@@ -17760,11 +17760,17 @@ void ImGui::ShowIDStackToolWindow(bool* p_open)
         char level_desc[256];
         StackToolFormatLevelInfo(tool, stack_n, false, level_desc, IM_ARRAYSIZE(level_desc));
         tool->ResultTempBuf.append(stack_n == 0 ? "//" : "/");
-        for (int n = 0; level_desc[n]; n++)
+        for (const char* p = level_desc; *p != 0; )
         {
-            if (level_desc[n] == '/')
+            unsigned int c;
+            const char* p_next = p + ImTextCharFromUtf8(&c, p, NULL);
+            if (c == '/')
                 tool->ResultTempBuf.append("\\");
-            tool->ResultTempBuf.append(level_desc + n, level_desc + n + 1);
+            if (c < 256 || !tool->OptHexEncodeNonAsciiChars)
+                tool->ResultTempBuf.append(p, p_next);
+            else for (; p < p_next; p++)
+                tool->ResultTempBuf.appendf("\\x%02x", (unsigned char)*p);
+            p = p_next;
         }
     }
     Text("0x%08X", tool->QueryId);
@@ -17773,11 +17779,14 @@ void ImGui::ShowIDStackToolWindow(bool* p_open)
 
     // CTRL+C to copy path
     const float time_since_copy = (float)g.Time - tool->CopyToClipboardLastTime;
+    PushStyleVarY(ImGuiStyleVar_FramePadding, 0.0f);
+    Checkbox("Hex-encode non-ASCII", &tool->OptHexEncodeNonAsciiChars);
     SameLine();
-    PushStyleVarY(ImGuiStyleVar_FramePadding, 0.0f); Checkbox("Ctrl+C: copy path", &tool->CopyToClipboardOnCtrlC); PopStyleVar();
+    Checkbox("Ctrl+C: copy path", &tool->OptCopyToClipboardOnCtrlC);
+    PopStyleVar();
     SameLine();
     TextColored((time_since_copy >= 0.0f && time_since_copy < 0.75f && ImFmod(time_since_copy, 0.25f) < 0.25f * 0.5f) ? ImVec4(1.f, 1.f, 0.3f, 1.f) : ImVec4(), "*COPIED*");
-    if (tool->CopyToClipboardOnCtrlC && Shortcut(ImGuiMod_Ctrl | ImGuiKey_C, ImGuiInputFlags_RouteGlobal | ImGuiInputFlags_RouteOverFocused))
+    if (tool->OptCopyToClipboardOnCtrlC && Shortcut(ImGuiMod_Ctrl | ImGuiKey_C, ImGuiInputFlags_RouteGlobal | ImGuiInputFlags_RouteOverFocused))
     {
         tool->CopyToClipboardLastTime = (float)g.Time;
         SetClipboardText(tool->ResultTempBuf.c_str());
