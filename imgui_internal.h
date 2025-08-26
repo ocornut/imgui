@@ -2095,10 +2095,10 @@ struct ImGuiStackLevelInfo
     ImGuiID                 ID;
     ImS8                    QueryFrameCount;            // >= 1: Query in progress
     bool                    QuerySuccess;               // Obtained result from DebugHookIdInfo()
-    ImGuiDataType           DataType : 8;
-    char                    Desc[57];                   // Arbitrarily sized buffer to hold a result (FIXME: could replace Results[] with a chunk stream?) FIXME: Now that we added CTRL+C this should be fixed.
+    ImS8                    DataType;                   // ImGuiDataType
+    int                     DescOffset;                 // -1 or offset into parent's ResultPathsBuf
 
-    ImGuiStackLevelInfo()   { memset(this, 0, sizeof(*this)); }
+    ImGuiStackLevelInfo()   { memset(this, 0, sizeof(*this)); DescOffset = -1; }
 };
 
 // State for ID Stack tool queries
@@ -2110,7 +2110,8 @@ struct ImGuiIDStackTool
     ImVector<ImGuiStackLevelInfo> Results;
     bool                    CopyToClipboardOnCtrlC;
     float                   CopyToClipboardLastTime;
-    ImGuiTextBuffer         ResultPathBuf;
+    ImGuiTextBuffer         ResultPathsBuf;
+    ImGuiTextBuffer         ResultTempBuf;
 
     ImGuiIDStackTool()      { memset(this, 0, sizeof(*this)); CopyToClipboardLastTime = -FLT_MAX; }
 };

@@ -17645,6 +17645,7 @@ void ImGui::UpdateDebugToolStackQueries()
         tool->QueryId = query_id;
         tool->StackLevel = -1;
         tool->Results.resize(0);
+        tool->ResultPathsBuf.resize(0);
     }
     if (query_id == 0)
         return;
@@ -17691,37 +17692,43 @@ void ImGui::DebugHookIdInfo(ImGuiID id, ImGuiDataType data_type, const void* dat
     ImGuiStackLevelInfo* info = &tool->Results[tool->StackLevel];
     IM_ASSERT(info->ID == id && info->QueryFrameCount > 0);
 
-    switch (data_type)
+    if (info->DescOffset == -1)
     {
-    case ImGuiDataType_S32:
-        ImFormatString(info->Desc, IM_ARRAYSIZE(info->Desc), "%d", (int)(intptr_t)data_id);
-        break;
-    case ImGuiDataType_String:
-        ImFormatString(info->Desc, IM_ARRAYSIZE(info->Desc), "%.*s", data_id_end ? (int)((const char*)data_id_end - (const char*)data_id) : (int)ImStrlen((const char*)data_id), (const char*)data_id);
-        break;
-    case ImGuiDataType_Pointer:
-        ImFormatString(info->Desc, IM_ARRAYSIZE(info->Desc), "(void*)0x%p", data_id);
-        break;
-    case ImGuiDataType_ID:
-        if (info->Desc[0] != 0) // PushOverrideID() is often used to avoid hashing twice, which would lead to 2 calls to DebugHookIdInfo(). We prioritize the first one.
-            return;
-        ImFormatString(info->Desc, IM_ARRAYSIZE(info->Desc), "0x%08X [override]", id);
-        break;
-    default:
-        IM_ASSERT(0);
+        const char* result = NULL;
+        const char* result_end = NULL;
+        switch (data_type)
+        {
+        case ImGuiDataType_S32:
+            ImFormatStringToTempBuffer(&result, &result_end, "%d", (int)(intptr_t)data_id);
+            break;
+        case ImGuiDataType_String:
+            ImFormatStringToTempBuffer(&result, &result_end, "%.*s", data_id_end ? (int)((const char*)data_id_end - (const char*)data_id) : (int)ImStrlen((const char*)data_id), (const char*)data_id);
+            break;
+        case ImGuiDataType_Pointer:
+            ImFormatStringToTempBuffer(&result, &result_end, "(void*)0x%p", data_id);
+            break;
+        case ImGuiDataType_ID:
+            // PushOverrideID() is often used to avoid hashing twice, which would lead to 2 calls to DebugHookIdInfo(). We prioritize the first one.
+            ImFormatStringToTempBuffer(&result, &result_end, "0x%08X [override]", id);
+            break;
+        default:
+            IM_ASSERT(0);
+        }
+        info->DescOffset = tool->ResultPathsBuf.size();
+        tool->ResultPathsBuf.append(result, result_end + 1); // Include zero terminator
     }
     info->QuerySuccess = true;
-    info->DataType = data_type;
+    info->DataType = (ImS8)data_type;
 }
 
 static int StackToolFormatLevelInfo(ImGuiIDStackTool* tool, int n, bool format_for_ui, char* buf, size_t buf_size)
 {
     ImGuiStackLevelInfo* info = &tool->Results[n];
-    ImGuiWindow* window = (info->Desc[0] == 0 && n == 0) ? ImGui::FindWindowByID(info->ID) : NULL;
+    ImGuiWindow* window = (info->DescOffset == -1 && n == 0) ? ImGui::FindWindowByID(info->ID) : NULL;
     if (window)                                                                 // Source: window name (because the root ID don't call GetID() and so doesn't get hooked)
         return ImFormatString(buf, buf_size, format_for_ui ? "\"%s\" [window]" : "%s", window->Name);
     if (info->QuerySuccess)                                                     // Source: GetID() hooks (prioritize over ItemInfo() because we frequently use patterns like: PushID(str), Button("") where they both have same id)
-        return ImFormatString(buf, buf_size, (format_for_ui && info->DataType == ImGuiDataType_String) ? "\"%s\"" : "%s", info->Desc);
+        return ImFormatString(buf, buf_size, (format_for_ui && info->DataType == ImGuiDataType_String) ? "\"%s\"" : "%s", &tool->ResultPathsBuf.Buf[info->DescOffset]);
     if (tool->StackLevel < tool->Results.Size)                                  // Only start using fallback below when all queries are done, so during queries we don't flickering ??? markers.
         return (*buf = 0);
 #ifdef IMGUI_ENABLE_TEST_ENGINE
@@ -17747,17 +17754,17 @@ void ImGui::ShowIDStackToolWindow(bool* p_open)
     ImGuiIDStackTool* tool = &g.DebugIDStackTool;
 
     // Build and display path
-    tool->ResultPathBuf.resize(0);
+    tool->ResultTempBuf.resize(0);
     for (int stack_n = 0; stack_n < tool->Results.Size; stack_n++)
     {
         char level_desc[256];
         StackToolFormatLevelInfo(tool, stack_n, false, level_desc, IM_ARRAYSIZE(level_desc));
-        tool->ResultPathBuf.append(stack_n == 0 ? "//" : "/");
+        tool->ResultTempBuf.append(stack_n == 0 ? "//" : "/");
         for (int n = 0; level_desc[n]; n++)
         {
             if (level_desc[n] == '/')
-                tool->ResultPathBuf.append("\\");
-            tool->ResultPathBuf.append(level_desc + n, level_desc + n + 1);
+                tool->ResultTempBuf.append("\\");
+            tool->ResultTempBuf.append(level_desc + n, level_desc + n + 1);
         }
     }
     Text("0x%08X", tool->QueryId);
@@ -17773,10 +17780,10 @@ void ImGui::ShowIDStackToolWindow(bool* p_open)
     if (tool->CopyToClipboardOnCtrlC && Shortcut(ImGuiMod_Ctrl | ImGuiKey_C, ImGuiInputFlags_RouteGlobal | ImGuiInputFlags_RouteOverFocused))
     {
         tool->CopyToClipboardLastTime = (float)g.Time;
-        SetClipboardText(tool->ResultPathBuf.c_str());
+        SetClipboardText(tool->ResultTempBuf.c_str());
     }
 
-    Text("- Path \"%s\"", tool->ResultPathBuf.c_str());
+    Text("- Path \"%s\"", tool->ResultTempBuf.c_str());
 #ifdef IMGUI_ENABLE_TEST_ENGINE
     Text("- Label \"%s\"", tool->QueryId ? ImGuiTestEngine_FindItemDebugLabel(&g, tool->QueryId) : "");
 #endif
