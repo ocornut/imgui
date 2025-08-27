@@ -434,6 +434,7 @@ IMGUI_API int           ImTextCountLines(const char* in_text, const char* in_tex
 enum ImDrawTextFlags_
 {
     ImDrawTextFlags_None                = 0,
+    ImDrawTextFlags_CpuFineClip         = 1 << 0,    // Must be == 1/true for legacy with 'bool cpu_fine_clip' arg to RenderText()
     ImDrawTextFlags_WrapKeepBlanks      = 1 << 1,
     ImDrawTextFlags_StopOnNewLine       = 1 << 2,
 };

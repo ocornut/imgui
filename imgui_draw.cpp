@@ -1718,7 +1718,7 @@ void ImDrawList::AddText(ImFont* font, float font_size, const ImVec2& pos, ImU32
         clip_rect.z = ImMin(clip_rect.z, cpu_fine_clip_rect->z);
         clip_rect.w = ImMin(clip_rect.w, cpu_fine_clip_rect->w);
     }
-    font->RenderText(this, font_size, pos, col, clip_rect, text_begin, text_end, wrap_width, cpu_fine_clip_rect != NULL);
+    font->RenderText(this, font_size, pos, col, clip_rect, text_begin, text_end, wrap_width, (cpu_fine_clip_rect != NULL) ? ImDrawTextFlags_CpuFineClip : ImDrawTextFlags_None);
 }
 
 void ImDrawList::AddText(const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end)
@@ -5597,7 +5597,8 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, const ImVec2& pos, Im
 }
 
 // Note: as with every ImDrawList drawing function, this expects that the font atlas texture is bound.
-void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width, bool cpu_fine_clip)
+// DO NOT CALL DIRECTLY THIS WILL CHANGE WIDLY IN 2025-2025. Use ImDrawList::AddText().
+void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width, ImDrawTextFlags flags)
 {
     // Align to be pixel perfect
 begin:
@@ -5627,8 +5628,8 @@ begin:
                 // FIXME-OPT: This is not optimal as do first do a search for \n before calling CalcWordWrapPosition().
                 // If the specs for CalcWordWrapPosition() were reworked to optionally return on \n we could combine both.
                 // However it is still better than nothing performing the fast-forward!
-                s = ImFontCalcWordWrapPositionEx(this, size, s, line_end ? line_end : text_end, wrap_width);
-                s = ImTextCalcWordWrapNextLineStart(s, text_end);
+                s = ImFontCalcWordWrapPositionEx(this, size, s, line_end ? line_end : text_end, wrap_width, flags);
+                s = ImTextCalcWordWrapNextLineStart(s, text_end, flags);
             }
             else
             {
@@ -5663,6 +5664,7 @@ begin:
     ImDrawIdx*   idx_write = draw_list->_IdxWritePtr;
     unsigned int vtx_index = draw_list->_VtxCurrentIdx;
     const int cmd_count = draw_list->CmdBuffer.Size;
+    const bool cpu_fine_clip = (flags & ImDrawTextFlags_CpuFineClip) != 0;
 
     const ImU32 col_untinted = col | ~IM_COL32_A_MASK;
     const char* word_wrap_eol = NULL;
@@ -5673,7 +5675,7 @@ begin:
         {
             // Calculate how far we can render. Requires two passes on the string data but keeps the code simple and not intrusive for what's essentially an uncommon feature.
             if (!word_wrap_eol)
-                word_wrap_eol = ImFontCalcWordWrapPositionEx(this, size, s, text_end, wrap_width - (x - origin_x));
+                word_wrap_eol = ImFontCalcWordWrapPositionEx(this, size, s, text_end, wrap_width - (x - origin_x), flags);
 
             if (s >= word_wrap_eol)
             {
@@ -5682,7 +5684,7 @@ begin:
                 if (y > clip_rect.w)
                     break; // break out of main loop
                 word_wrap_eol = NULL;
-                s = ImTextCalcWordWrapNextLineStart(s, text_end); // Wrapping skips upcoming blanks
+                s = ImTextCalcWordWrapNextLineStart(s, text_end, flags); // Wrapping skips upcoming blanks
                 continue;
             }
         }
