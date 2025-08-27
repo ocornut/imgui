@@ -4292,7 +4292,7 @@ void ImFontAtlasPackDiscardRect(ImFontAtlas* atlas, ImFontAtlasRectId id)
     IM_ASSERT(index_entry->IsUsed && index_entry->TargetIndex >= 0);
     index_entry->IsUsed = false;
     index_entry->TargetIndex = builder->RectsIndexFreeListStart;
-    index_entry->Generation++;
+    while (++index_entry->Generation == 0); // keep non-zero on overflow
 
     const int pack_padding = atlas->TexGlyphPadding;
     builder->RectsIndexFreeListStart = index_idx;
