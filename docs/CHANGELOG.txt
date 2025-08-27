@@ -51,7 +51,11 @@ Other Changes:
   disable the assumption that 1 clipper item == 1 table row, which breaks when
   e.g. using clipper with ItemsHeight=1 in order to clip in pixel units. (#8886)
 - Fixed Bullet() fixed tesselation amount which looked out of place in very large sizes.
-- DrawList: Fixed CloneOutput() unnecessarily taking a copy of the ImDrawListSharedData
+- InputText: allow passing an empty string with buf_size==0. (#8907)
+  In theory the buffer size should always account for a zero-terminator, but idioms
+  such as using InputTextMultiline() with ImGuiInputTextFlags_ReadOnly to display
+  a text blob are facilitated by allowing this.
+- DrawList: fixed CloneOutput() unnecessarily taking a copy of the ImDrawListSharedData
   pointer, which could to issue when deleting the cloned list. (#8894, #1860)
 - Debug Tools: ID Stack Tool: fixed using fixed-size buffers preventing long identifiers
   from being displayed in the tool. (#8905, #4631)
