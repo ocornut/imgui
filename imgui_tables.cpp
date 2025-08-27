@@ -3076,7 +3076,7 @@ float ImGui::TableGetHeaderRowHeight()
     // In your custom header row you may omit this all together and just call TableNextRow() without a height...
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
-    float row_height = g.FontSize;
+    float row_height = g.FontLineHeight;
     for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
         if (IM_BITARRAY_TESTBIT(table->EnabledMaskByIndex, column_n))
             if ((table->Columns[column_n].Flags & ImGuiTableColumnFlags_NoHeaderLabel) == 0)
