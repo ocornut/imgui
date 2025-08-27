@@ -5554,7 +5554,7 @@ ImVec2 ImFontCalcTextSizeEx(ImFont* font, float size, float max_width, float wra
 
 ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, const char* text_begin, const char* text_end, const char** out_remaining)
 {
-    return ImFontCalcTextSizeEx(this, size, max_width, wrap_width, text_begin, NULL, text_end, out_remaining, NULL, ImDrawTextFlags_None);
+    return ImFontCalcTextSizeEx(this, size, max_width, wrap_width, text_begin, text_end, text_end, out_remaining, NULL, ImDrawTextFlags_None);
 }
 
 // Note: as with every ImDrawList drawing function, this expects that the font atlas texture is bound.

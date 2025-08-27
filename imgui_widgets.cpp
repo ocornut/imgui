@@ -136,7 +136,7 @@ static const ImU64          IM_U64_MAX = (2ULL * 9223372036854775807LL + 1);
 // For InputTextEx()
 static bool     InputTextFilterCharacter(ImGuiContext* ctx, unsigned int* p_char, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data, bool input_source_is_clipboard = false);
 static int      InputTextCalcTextLenAndLineCount(ImGuiContext* ctx, const char* text_begin, const char** out_text_end);
-static ImVec2   InputTextCalcTextSize(ImGuiContext* ctx, const char* text_begin, const char* text_end, const char** remaining = NULL, ImVec2* out_offset = NULL, bool stop_on_new_line = false);
+static ImVec2   InputTextCalcTextSize(ImGuiContext* ctx, const char* text_begin, const char* text_end_display, const char* text_end, const char** out_remaining = NULL, ImVec2* out_offset = NULL, ImDrawTextFlags flags = 0);
 
 //-------------------------------------------------------------------------
 // [SECTION] Widgets: Text, etc.
@@ -3959,55 +3959,10 @@ static int InputTextCalcTextLenAndLineCount(ImGuiContext*, const char* text_begi
     return line_count;
 }
 
-// FIXME: Ideally we'd share code with ImFont::CalcTextSizeA()
-static ImVec2 InputTextCalcTextSize(ImGuiContext* ctx, const char* text_begin, const char* text_end, const char** remaining, ImVec2* out_offset, bool stop_on_new_line)
+static ImVec2 InputTextCalcTextSize(ImGuiContext* ctx, const char* text_begin, const char* text_end_display, const char* text_end, const char** out_remaining, ImVec2* out_offset, ImDrawTextFlags flags)
 {
     ImGuiContext& g = *ctx;
-    //ImFont* font = g.Font;
-    ImFontBaked* baked = g.FontBaked;
-    const float line_height = g.FontSize;
-    const float scale = line_height / baked->Size;
-
-    ImVec2 text_size = ImVec2(0, 0);
-    float line_width = 0.0f;
-
-    const char* s = text_begin;
-    while (s < text_end)
-    {
-        unsigned int c = (unsigned int)*s;
-        if (c < 0x80)
-            s += 1;
-        else
-            s += ImTextCharFromUtf8(&c, s, text_end);
-
-        if (c == '\n')
-        {
-            text_size.x = ImMax(text_size.x, line_width);
-            text_size.y += line_height;
-            line_width = 0.0f;
-            if (stop_on_new_line)
-                break;
-            continue;
-        }
-        if (c == '\r')
-            continue;
-
-        line_width += baked->GetCharAdvance((ImWchar)c) * scale;
-    }
-
-    if (text_size.x < line_width)
-        text_size.x = line_width;
-
-    if (out_offset)
-        *out_offset = ImVec2(line_width, text_size.y + line_height);  // offset allow for the possibility of sitting after a trailing \n
-
-    if (line_width > 0 || text_size.y == 0.0f)                        // whereas size.y will ignore the trailing \n
-        text_size.y += line_height;
-
-    if (remaining)
-        *remaining = s;
-
-    return text_size;
+    return ImFontCalcTextSizeEx(g.Font, g.FontSize, FLT_MAX, 0.0f, text_begin, text_end_display, text_end, out_remaining, out_offset, flags);
 }
 
 // Wrapper for stb_textedit.h to edit text (our wrapper is for: statically sized buffer, single-line, wchar characters. InputText converts between UTF-8 and wchar)
@@ -4025,7 +3980,7 @@ static void    STB_TEXTEDIT_LAYOUTROW(StbTexteditRow* r, ImGuiInputTextState* ob
 {
     const char* text = obj->TextSrc;
     const char* text_remaining = NULL;
-    const ImVec2 size = InputTextCalcTextSize(obj->Ctx, text + line_start_idx, text + obj->TextLen, &text_remaining, NULL, true);
+    const ImVec2 size = InputTextCalcTextSize(obj->Ctx, text + line_start_idx, text + obj->TextLen, text + obj->TextLen, &text_remaining, NULL, ImDrawTextFlags_StopOnNewLine | ImDrawTextFlags_WrapKeepTrailingBlanks);
     r->x0 = 0.0f;
     r->x1 = size.x;
     r->baseline_y_delta = size.y;
@@ -5303,11 +5258,11 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                 selmin_line_no = line_count;
 
             // Calculate 2d position by finding the beginning of the line and measuring distance
-            cursor_offset.x = InputTextCalcTextSize(&g, ImStrbol(cursor_ptr, text_begin), cursor_ptr).x;
+            cursor_offset.x = InputTextCalcTextSize(&g, ImStrbol(cursor_ptr, text_begin), cursor_ptr, cursor_ptr, NULL, NULL, ImDrawTextFlags_WrapKeepTrailingBlanks).x;
             cursor_offset.y = cursor_line_no * g.FontSize;
             if (selmin_line_no >= 0)
             {
-                select_start_offset.x = InputTextCalcTextSize(&g, ImStrbol(selmin_ptr, text_begin), selmin_ptr).x;
+                select_start_offset.x = InputTextCalcTextSize(&g, ImStrbol(selmin_ptr, text_begin), selmin_ptr, selmin_ptr, NULL, NULL, ImDrawTextFlags_WrapKeepTrailingBlanks).x;
                 select_start_offset.y = selmin_line_no * g.FontSize;
             }
 
@@ -5373,7 +5328,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                 }
                 else
                 {
-                    ImVec2 rect_size = InputTextCalcTextSize(&g, p, text_selected_end, &p, NULL, true);
+                    ImVec2 rect_size = InputTextCalcTextSize(&g, p, text_selected_end, text_selected_end, &p, NULL, ImDrawTextFlags_StopOnNewLine);
                     if (rect_size.x <= 0.0f)
                         rect_size.x = IM_TRUNC(g.FontBaked->GetCharAdvance((ImWchar)' ') * 0.50f); // So we can see selected empty lines
                     ImRect rect(rect_pos + ImVec2(0.0f, bg_offy_up - g.FontSize), rect_pos + ImVec2(rect_size.x, bg_offy_dn));
