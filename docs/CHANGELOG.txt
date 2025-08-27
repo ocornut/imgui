@@ -45,9 +45,24 @@ Other Changes:
 
 - Scrollbar, Style: added configurable style.ScrollbarPadding value and corresponding
   ImGuiStyleVar_ScrollbarPadding enum, instead of hardcoded computed default. (#8895)
+- Fonts: fixed an assertion failure when a rectangle entry has been reused
+  1024 times (e.g. due to constant change of font types). (#8906) [@cfillion]
+- Clipper, Tables: added ImGuiListClipperFlags_NoSetTableRowCounters as a way to
+  disable the assumption that 1 clipper item == 1 table row, which breaks when
+  e.g. using clipper with ItemsHeight=1 in order to clip in pixel units. (#8886)
+- Fixed Bullet() fixed tesselation amount which looked out of place in very large sizes.
 - DrawList: Fixed CloneOutput() unnecessarily taking a copy of the ImDrawListSharedData
   pointer, which could to issue when deleting the cloned list. (#8894, #1860)
+- Debug Tools: ID Stack Tool: fixed using fixed-size buffers preventing long identifiers
+  from being displayed in the tool. (#8905, #4631)
+- Debug Tools: ID Stack Tool: when ### is used, uncontributing prefix before the ###
+  is now skipped. (#8904, #4631)
+- Debug Tools: ID Stack Tool: added option to hex-encode non-ASCII characters in
+  output path. (#8904, #4631)
 - Examples: Android: Android+OpenGL3: update Gradle project (#8888, #8878) [@scribam]
+- Backends: SDL_GPU: Added ImGui_ImplSDLGPU3_InitInfo::SwapchainComposition and
+  PresentMode to configure how secondary viewports are created. Currently only used
+  multi-viewport mode. (#8892) [@PTSVU]
 
 
 -----------------------------------------------------------------------

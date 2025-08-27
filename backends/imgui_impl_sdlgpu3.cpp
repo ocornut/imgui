@@ -24,7 +24,7 @@
 
 // CHANGELOG
 //  2025-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
-//  2025-08-20: Added SwapchainComposition::SwapchainComposition and SwapchainComposition::PresentMode to configure how secondary viewports are created.
+//  2025-08-20: Added ImGui_ImplSDLGPU3_InitInfo::SwapchainComposition and ImGui_ImplSDLGPU3_InitInfo::PresentMode to configure how secondary viewports are created.
 //  2025-08-08: *BREAKING* Changed ImTextureID type from SDL_GPUTextureSamplerBinding* to SDL_GPUTexture*, which is more natural and easier for user to manage. If you need to change the current sampler, you can access the ImGui_ImplSDLGPU3_RenderState struct. (#8866, #8163, #7998, #7988)
 //  2025-08-08: Expose SamplerDefault and SamplerCurrent in ImGui_ImplSDLGPU3_RenderState. Allow callback to change sampler.
 //  2025-06-25: Mapping transfer buffer for texture update use cycle=true. Fixes artifacts e.g. on Metal backend.

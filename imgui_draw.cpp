@@ -3103,6 +3103,7 @@ static const char* GetDefaultCompressedFontDataTTF(int* out_size);
 #endif
 
 // Load embedded ProggyClean.ttf at size 13, disable oversampling
+// If you want a similar font which may be better scaled, consider using ProggyVector from the same author!
 ImFont* ImFontAtlas::AddFontDefault(const ImFontConfig* font_cfg_template)
 {
 #ifndef IMGUI_DISABLE_DEFAULT_FONT
@@ -3121,9 +3122,7 @@ ImFont* ImFontAtlas::AddFontDefault(const ImFontConfig* font_cfg_template)
 
     int ttf_compressed_size = 0;
     const char* ttf_compressed = GetDefaultCompressedFontDataTTF(&ttf_compressed_size);
-    const ImWchar* glyph_ranges = font_cfg.GlyphRanges != NULL ? font_cfg.GlyphRanges : GetGlyphRangesDefault();
-    ImFont* font = AddFontFromMemoryCompressedTTF(ttf_compressed, ttf_compressed_size, font_cfg.SizePixels, &font_cfg, glyph_ranges);
-    return font;
+    return AddFontFromMemoryCompressedTTF(ttf_compressed, ttf_compressed_size, font_cfg.SizePixels, &font_cfg);
 #else
     IM_ASSERT(0 && "AddFontDefault() disabled in this build.");
     IM_UNUSED(font_cfg_template);
@@ -4300,6 +4299,8 @@ void ImFontAtlasPackDiscardRect(ImFontAtlas* atlas, ImFontAtlasRectId id)
     index_entry->IsUsed = false;
     index_entry->TargetIndex = builder->RectsIndexFreeListStart;
     index_entry->Generation++;
+    if (index_entry->Generation == 0)
+        index_entry->Generation++; // Keep non-zero on overflow
 
     const int pack_padding = atlas->TexGlyphPadding;
     builder->RectsIndexFreeListStart = index_idx;
@@ -5841,8 +5842,9 @@ void ImGui::RenderArrow(ImDrawList* draw_list, ImVec2 pos, ImU32 col, ImGuiDir d
 
 void ImGui::RenderBullet(ImDrawList* draw_list, ImVec2 pos, ImU32 col)
 {
-    // FIXME-OPT: This should be baked in font.
-    draw_list->AddCircleFilled(pos, draw_list->_Data->FontSize * 0.20f, col, 8);
+    // FIXME-OPT: This should be baked in font now that it's easier.
+    float font_size = draw_list->_Data->FontSize;
+    draw_list->AddCircleFilled(pos, font_size * 0.20f, col, (font_size < 22) ? 8 : (font_size < 40) ? 12 : 0); // Hardcode optimal/nice tessellation threshold
 }
 
 void ImGui::RenderCheckMark(ImDrawList* draw_list, ImVec2 pos, ImU32 col, float sz)
@@ -6144,6 +6146,7 @@ static unsigned int stb_decompress(unsigned char *output, const unsigned char *i
 // Copyright (c) 2004, 2005 Tristan Grimmer
 // MIT license (see License.txt in http://www.proggyfonts.net/index.php?menu=download)
 // Download and more information at http://www.proggyfonts.net or http://upperboundsinteractive.com/fonts.php
+// If you want a similar font which may be better scaled, consider using ProggyVector from the same author!
 //-----------------------------------------------------------------------------
 
 #ifndef IMGUI_DISABLE_DEFAULT_FONT

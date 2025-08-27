@@ -2054,10 +2054,11 @@ void ImGui::TableEndRow(ImGuiTable* table)
     }
 
     // End frozen rows (when we are past the last frozen row line, teleport cursor and alter clipping rectangle)
-    // We need to do that in TableEndRow() instead of TableBeginRow() so the list clipper can mark end of row and
-    // get the new cursor position.
+    // - We need to do that in TableEndRow() instead of TableBeginRow() so the list clipper can mark
+    //   end of row and get the new cursor position.
     if (unfreeze_rows_request)
     {
+        IM_ASSERT(table->FreezeRowsRequest > 0);
         for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
             table->Columns[column_n].NavLayerCurrent = table->NavLayer;
         const float y0 = ImMax(table->RowPosY2 + 1, table->InnerClipRect.Min.y);

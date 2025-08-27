@@ -2450,6 +2450,17 @@ ImGuiID ImHashStr(const char* data_p, size_t data_size, ImGuiID seed)
     return ~crc;
 }
 
+// Skip to the "###" marker if any. We don't skip past to match the behavior of GetID()
+// FIXME-OPT: This is not designed to be optimal. Use with care.
+const char* ImHashSkipUncontributingPrefix(const char* label)
+{
+    const char* result = label;
+    while (unsigned char c = *label++)
+        if (c == '#' && label[0] == '#' && label[1] == '#')
+            result = label - 1;
+    return result;
+}
+
 //-----------------------------------------------------------------------------
 // [SECTION] MISC HELPERS/UTILITIES (File functions)
 //-----------------------------------------------------------------------------
@@ -3176,7 +3187,7 @@ static void ImGuiListClipper_SortAndFuseRanges(ImVector<ImGuiListClipperRange>& 
     }
 }
 
-static void ImGuiListClipper_SeekCursorAndSetupPrevLine(float pos_y, float line_height)
+static void ImGuiListClipper_SeekCursorAndSetupPrevLine(ImGuiListClipper* clipper, float pos_y, float line_height)
 {
     // Set cursor position and a few other things so that SetScrollHereY() and Columns() can work when seeking cursor.
     // FIXME: It is problematic that we have to do that here, because custom/equivalent end-user code would stumble on the same issue.
@@ -3194,10 +3205,14 @@ static void ImGuiListClipper_SeekCursorAndSetupPrevLine(float pos_y, float line_
     {
         if (table->IsInsideRow)
             ImGui::TableEndRow(table);
+        if ((clipper->Flags & ImGuiListClipperFlags_NoSetTableRowCounters) == 0)
+        {
+            const int row_increase = (int)((off_y / line_height) + 0.5f);
+            IM_ASSERT(row_increase >= 0); // If your clipper item height is != from actual table row height, consider using ImGuiListClipperFlags_NoSetTableRowCounters. See #8886.
+            table->CurrentRow += row_increase;
+            table->RowBgColorCounter += row_increase;
+        }
         table->RowPosY2 = window->DC.CursorPos.y;
-        const int row_increase = (int)((off_y / line_height) + 0.5f);
-        table->CurrentRow += row_increase;
-        table->RowBgColorCounter += row_increase;
     }
 }
 
@@ -3280,7 +3295,7 @@ void ImGuiListClipper::SeekCursorForItem(int item_n)
     // - StartPosY starts from ItemsFrozen, by adding SeekOffsetY we generally cancel that out (SeekOffsetY == LossynessOffset - ItemsFrozen * ItemsHeight).
     // - The reason we store SeekOffsetY instead of inferring it, is because we want to allow user to perform Seek after the last step, where ImGuiListClipperData is already done.
     float pos_y = (float)((double)StartPosY + StartSeekOffsetY + (double)item_n * ItemsHeight);
-    ImGuiListClipper_SeekCursorAndSetupPrevLine(pos_y, ItemsHeight);
+    ImGuiListClipper_SeekCursorAndSetupPrevLine(this, pos_y, ItemsHeight);
 }
 
 static bool ImGuiListClipper_StepInternal(ImGuiListClipper* clipper)
@@ -3379,7 +3394,6 @@ static bool ImGuiListClipper_StepInternal(ImGuiListClipper* clipper)
             if (g.NavId != 0 && window->NavLastIds[0] == g.NavId)
                 data->Ranges.push_back(ImGuiListClipperRange::FromPositions(nav_rect_abs.Min.y, nav_rect_abs.Max.y, 0, 0));
 
-            // Add visible range
             float min_y = window->ClipRect.Min.y;
             float max_y = window->ClipRect.Max.y;
 
@@ -3398,6 +3412,7 @@ static bool ImGuiListClipper_StepInternal(ImGuiListClipper* clipper)
                     data->Ranges.push_back(ImGuiListClipperRange::FromPositions(bs->UnclipRect.Min.y, bs->UnclipRect.Max.y, 0, 0));
             }
 
+            // Add main visible range
             const int off_min = (is_nav_request && g.NavMoveClipDir == ImGuiDir_Up) ? -1 : 0;
             const int off_max = (is_nav_request && g.NavMoveClipDir == ImGuiDir_Down) ? 1 : 0;
             data->Ranges.push_back(ImGuiListClipperRange::FromPositions(min_y, max_y, off_min, off_max));
@@ -7479,10 +7494,11 @@ void ImGui::RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& titl
     // Close button
     if (has_close_button)
     {
+        ImGuiItemFlags backup_item_flags = g.CurrentItemFlags;
         g.CurrentItemFlags |= ImGuiItemFlags_NoFocus;
         if (CloseButton(window->GetID("#CLOSE"), close_button_pos))
             *p_open = false;
-        g.CurrentItemFlags &= ~ImGuiItemFlags_NoFocus;
+        g.CurrentItemFlags = backup_item_flags;
     }
 
     window->DC.NavLayerCurrent = ImGuiNavLayer_Main;
@@ -15975,13 +15991,9 @@ ImGuiWindowSettings* ImGui::CreateNewWindowSettings(const char* name)
 {
     ImGuiContext& g = *GImGui;
 
+    // Preserve the full string when ConfigDebugVerboseIniSettings is set to make .ini inspection easier.
     if (g.IO.ConfigDebugIniSettings == false)
-    {
-        // Skip to the "###" marker if any. We don't skip past to match the behavior of GetID()
-        // Preserve the full string when ConfigDebugVerboseIniSettings is set to make .ini inspection easier.
-        if (const char* p = strstr(name, "###"))
-            name = p;
-    }
+        name = ImHashSkipUncontributingPrefix(name);
     const size_t name_len = ImStrlen(name);
 
     // Allocate chunk
@@ -22997,7 +23009,7 @@ void ImGui::DebugNodeFontGlyph(ImFont* font, const ImFontGlyph* glyph)
     if (glyph->PackId >= 0)
     {
         ImTextureRect* r = ImFontAtlasPackGetRect(font->ContainerAtlas, glyph->PackId);
-        Text("PackId: %d (%dx%d rect at %d,%d)", glyph->PackId, r->w, r->h, r->x, r->y);
+        Text("PackId: 0x%X (%dx%d rect at %d,%d)", glyph->PackId, r->w, r->h, r->x, r->y);
     }
     Text("SourceIdx: %d", glyph->SourceIdx);
 }
@@ -23522,6 +23534,7 @@ void ImGui::UpdateDebugToolStackQueries()
         tool->QueryId = query_id;
         tool->StackLevel = -1;
         tool->Results.resize(0);
+        tool->ResultPathsBuf.resize(0);
     }
     if (query_id == 0)
         return;
@@ -23568,42 +23581,48 @@ void ImGui::DebugHookIdInfo(ImGuiID id, ImGuiDataType data_type, const void* dat
     ImGuiStackLevelInfo* info = &tool->Results[tool->StackLevel];
     IM_ASSERT(info->ID == id && info->QueryFrameCount > 0);
 
-    switch (data_type)
+    if (info->DescOffset == -1)
     {
-    case ImGuiDataType_S32:
-        ImFormatString(info->Desc, IM_ARRAYSIZE(info->Desc), "%d", (int)(intptr_t)data_id);
-        break;
-    case ImGuiDataType_String:
-        ImFormatString(info->Desc, IM_ARRAYSIZE(info->Desc), "%.*s", data_id_end ? (int)((const char*)data_id_end - (const char*)data_id) : (int)ImStrlen((const char*)data_id), (const char*)data_id);
-        break;
-    case ImGuiDataType_Pointer:
-        ImFormatString(info->Desc, IM_ARRAYSIZE(info->Desc), "(void*)0x%p", data_id);
-        break;
-    case ImGuiDataType_ID:
-        if (info->Desc[0] != 0) // PushOverrideID() is often used to avoid hashing twice, which would lead to 2 calls to DebugHookIdInfo(). We prioritize the first one.
-            return;
-        ImFormatString(info->Desc, IM_ARRAYSIZE(info->Desc), "0x%08X [override]", id);
-        break;
-    default:
-        IM_ASSERT(0);
+        const char* result = NULL;
+        const char* result_end = NULL;
+        switch (data_type)
+        {
+        case ImGuiDataType_S32:
+            ImFormatStringToTempBuffer(&result, &result_end, "%d", (int)(intptr_t)data_id);
+            break;
+        case ImGuiDataType_String:
+            ImFormatStringToTempBuffer(&result, &result_end, "%.*s", data_id_end ? (int)((const char*)data_id_end - (const char*)data_id) : (int)ImStrlen((const char*)data_id), (const char*)data_id);
+            break;
+        case ImGuiDataType_Pointer:
+            ImFormatStringToTempBuffer(&result, &result_end, "(void*)0x%p", data_id);
+            break;
+        case ImGuiDataType_ID:
+            // PushOverrideID() is often used to avoid hashing twice, which would lead to 2 calls to DebugHookIdInfo(). We prioritize the first one.
+            ImFormatStringToTempBuffer(&result, &result_end, "0x%08X [override]", id);
+            break;
+        default:
+            IM_ASSERT(0);
+        }
+        info->DescOffset = tool->ResultPathsBuf.size();
+        tool->ResultPathsBuf.append(result, result_end + 1); // Include zero terminator
     }
     info->QuerySuccess = true;
-    info->DataType = data_type;
+    info->DataType = (ImS8)data_type;
 }
 
 static int StackToolFormatLevelInfo(ImGuiIDStackTool* tool, int n, bool format_for_ui, char* buf, size_t buf_size)
 {
     ImGuiStackLevelInfo* info = &tool->Results[n];
-    ImGuiWindow* window = (info->Desc[0] == 0 && n == 0) ? ImGui::FindWindowByID(info->ID) : NULL;
+    ImGuiWindow* window = (info->DescOffset == -1 && n == 0) ? ImGui::FindWindowByID(info->ID) : NULL;
     if (window)                                                                 // Source: window name (because the root ID don't call GetID() and so doesn't get hooked)
-        return ImFormatString(buf, buf_size, format_for_ui ? "\"%s\" [window]" : "%s", window->Name);
+        return ImFormatString(buf, buf_size, format_for_ui ? "\"%s\" [window]" : "%s", ImHashSkipUncontributingPrefix(window->Name));
     if (info->QuerySuccess)                                                     // Source: GetID() hooks (prioritize over ItemInfo() because we frequently use patterns like: PushID(str), Button("") where they both have same id)
-        return ImFormatString(buf, buf_size, (format_for_ui && info->DataType == ImGuiDataType_String) ? "\"%s\"" : "%s", info->Desc);
+        return ImFormatString(buf, buf_size, (format_for_ui && info->DataType == ImGuiDataType_String) ? "\"%s\"" : "%s", ImHashSkipUncontributingPrefix(&tool->ResultPathsBuf.Buf[info->DescOffset]));
     if (tool->StackLevel < tool->Results.Size)                                  // Only start using fallback below when all queries are done, so during queries we don't flickering ??? markers.
         return (*buf = 0);
 #ifdef IMGUI_ENABLE_TEST_ENGINE
     if (const char* label = ImGuiTestEngine_FindItemDebugLabel(GImGui, info->ID))   // Source: ImGuiTestEngine's ItemInfo()
-        return ImFormatString(buf, buf_size, format_for_ui ? "??? \"%s\"" : "%s", label);
+        return ImFormatString(buf, buf_size, format_for_ui ? "??? \"%s\"" : "%s", ImHashSkipUncontributingPrefix(label));
 #endif
     return ImFormatString(buf, buf_size, "???");
 }
@@ -23624,17 +23643,23 @@ void ImGui::ShowIDStackToolWindow(bool* p_open)
     ImGuiIDStackTool* tool = &g.DebugIDStackTool;
 
     // Build and display path
-    tool->ResultPathBuf.resize(0);
+    tool->ResultTempBuf.resize(0);
     for (int stack_n = 0; stack_n < tool->Results.Size; stack_n++)
     {
         char level_desc[256];
         StackToolFormatLevelInfo(tool, stack_n, false, level_desc, IM_ARRAYSIZE(level_desc));
-        tool->ResultPathBuf.append(stack_n == 0 ? "//" : "/");
-        for (int n = 0; level_desc[n]; n++)
+        tool->ResultTempBuf.append(stack_n == 0 ? "//" : "/");
+        for (const char* p = level_desc; *p != 0; )
         {
-            if (level_desc[n] == '/')
-                tool->ResultPathBuf.append("\\");
-            tool->ResultPathBuf.append(level_desc + n, level_desc + n + 1);
+            unsigned int c;
+            const char* p_next = p + ImTextCharFromUtf8(&c, p, NULL);
+            if (c == '/')
+                tool->ResultTempBuf.append("\\");
+            if (c < 256 || !tool->OptHexEncodeNonAsciiChars)
+                tool->ResultTempBuf.append(p, p_next);
+            else for (; p < p_next; p++)
+                tool->ResultTempBuf.appendf("\\x%02x", (unsigned char)*p);
+            p = p_next;
         }
     }
     Text("0x%08X", tool->QueryId);
@@ -23643,17 +23668,20 @@ void ImGui::ShowIDStackToolWindow(bool* p_open)
 
     // CTRL+C to copy path
     const float time_since_copy = (float)g.Time - tool->CopyToClipboardLastTime;
+    PushStyleVarY(ImGuiStyleVar_FramePadding, 0.0f);
+    Checkbox("Hex-encode non-ASCII", &tool->OptHexEncodeNonAsciiChars);
     SameLine();
-    PushStyleVarY(ImGuiStyleVar_FramePadding, 0.0f); Checkbox("Ctrl+C: copy path", &tool->CopyToClipboardOnCtrlC); PopStyleVar();
+    Checkbox("Ctrl+C: copy path", &tool->OptCopyToClipboardOnCtrlC);
+    PopStyleVar();
     SameLine();
     TextColored((time_since_copy >= 0.0f && time_since_copy < 0.75f && ImFmod(time_since_copy, 0.25f) < 0.25f * 0.5f) ? ImVec4(1.f, 1.f, 0.3f, 1.f) : ImVec4(), "*COPIED*");
-    if (tool->CopyToClipboardOnCtrlC && Shortcut(ImGuiMod_Ctrl | ImGuiKey_C, ImGuiInputFlags_RouteGlobal | ImGuiInputFlags_RouteOverFocused))
+    if (tool->OptCopyToClipboardOnCtrlC && Shortcut(ImGuiMod_Ctrl | ImGuiKey_C, ImGuiInputFlags_RouteGlobal | ImGuiInputFlags_RouteOverFocused))
     {
         tool->CopyToClipboardLastTime = (float)g.Time;
-        SetClipboardText(tool->ResultPathBuf.c_str());
+        SetClipboardText(tool->ResultTempBuf.c_str());
     }
 
-    Text("- Path \"%s\"", tool->ResultPathBuf.c_str());
+    Text("- Path \"%s\"", tool->ResultTempBuf.c_str());
 #ifdef IMGUI_ENABLE_TEST_ENGINE
     Text("- Label \"%s\"", tool->QueryId ? ImGuiTestEngine_FindItemDebugLabel(&g, tool->QueryId) : "");
 #endif
