@@ -45,6 +45,8 @@ Other Changes:
 
 - Scrollbar, Style: added configurable style.ScrollbarPadding value and corresponding
   ImGuiStyleVar_ScrollbarPadding enum, instead of hardcoded computed default. (#8895)
+- Fonts: fixed an assertion failure when a rectangle entry has been reused
+  1024 times (e.g. due to constant change of font types). (#8906) [@cfillion]
 - Fixed Bullet() fixed tesselation amount which looked out of place in very large sizes.
 - DrawList: Fixed CloneOutput() unnecessarily taking a copy of the ImDrawListSharedData
   pointer, which could to issue when deleting the cloned list. (#8894, #1860)
