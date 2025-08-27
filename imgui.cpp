@@ -3124,7 +3124,7 @@ static void ImGuiListClipper_SortAndFuseRanges(ImVector<ImGuiListClipperRange>& 
     }
 }
 
-static void ImGuiListClipper_SeekCursorAndSetupPrevLine(float pos_y, float line_height)
+static void ImGuiListClipper_SeekCursorAndSetupPrevLine(ImGuiListClipper* clipper, float pos_y, float line_height)
 {
     // Set cursor position and a few other things so that SetScrollHereY() and Columns() can work when seeking cursor.
     // FIXME: It is problematic that we have to do that here, because custom/equivalent end-user code would stumble on the same issue.
@@ -3142,10 +3142,14 @@ static void ImGuiListClipper_SeekCursorAndSetupPrevLine(float pos_y, float line_
     {
         if (table->IsInsideRow)
             ImGui::TableEndRow(table);
+        if ((clipper->Flags & ImGuiListClipperFlags_NoSetTableRowCounters) == 0)
+        {
+            const int row_increase = (int)((off_y / line_height) + 0.5f);
+            IM_ASSERT(row_increase >= 0); // If your clipper item height is != from actual table row height, consider using ImGuiListClipperFlags_NoSetTableRowCounters. See #8886.
+            table->CurrentRow += row_increase;
+            table->RowBgColorCounter += row_increase;
+        }
         table->RowPosY2 = window->DC.CursorPos.y;
-        const int row_increase = (int)((off_y / line_height) + 0.5f);
-        table->CurrentRow += row_increase;
-        table->RowBgColorCounter += row_increase;
     }
 }
 
@@ -3228,7 +3232,7 @@ void ImGuiListClipper::SeekCursorForItem(int item_n)
     // - StartPosY starts from ItemsFrozen, by adding SeekOffsetY we generally cancel that out (SeekOffsetY == LossynessOffset - ItemsFrozen * ItemsHeight).
     // - The reason we store SeekOffsetY instead of inferring it, is because we want to allow user to perform Seek after the last step, where ImGuiListClipperData is already done.
     float pos_y = (float)((double)StartPosY + StartSeekOffsetY + (double)item_n * ItemsHeight);
-    ImGuiListClipper_SeekCursorAndSetupPrevLine(pos_y, ItemsHeight);
+    ImGuiListClipper_SeekCursorAndSetupPrevLine(this, pos_y, ItemsHeight);
 }
 
 static bool ImGuiListClipper_StepInternal(ImGuiListClipper* clipper)
@@ -3327,7 +3331,6 @@ static bool ImGuiListClipper_StepInternal(ImGuiListClipper* clipper)
             if (g.NavId != 0 && window->NavLastIds[0] == g.NavId)
                 data->Ranges.push_back(ImGuiListClipperRange::FromPositions(nav_rect_abs.Min.y, nav_rect_abs.Max.y, 0, 0));
 
-            // Add visible range
             float min_y = window->ClipRect.Min.y;
             float max_y = window->ClipRect.Max.y;
 
@@ -3346,6 +3349,7 @@ static bool ImGuiListClipper_StepInternal(ImGuiListClipper* clipper)
                     data->Ranges.push_back(ImGuiListClipperRange::FromPositions(bs->UnclipRect.Min.y, bs->UnclipRect.Max.y, 0, 0));
             }
 
+            // Add main visible range
             const int off_min = (is_nav_request && g.NavMoveClipDir == ImGuiDir_Up) ? -1 : 0;
             const int off_max = (is_nav_request && g.NavMoveClipDir == ImGuiDir_Down) ? 1 : 0;
             data->Ranges.push_back(ImGuiListClipperRange::FromPositions(min_y, max_y, off_min, off_max));
