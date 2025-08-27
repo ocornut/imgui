@@ -3142,10 +3142,9 @@ static void ImGuiListClipper_SeekCursorAndSetupPrevLine(ImGuiListClipper* clippe
     {
         if (table->IsInsideRow)
             ImGui::TableEndRow(table);
-        if ((clipper->Flags & ImGuiListClipperFlags_NoSetTableRowCounters) == 0)
+        const int row_increase = (int)((off_y / line_height) + 0.5f);
+        if (row_increase > 0 && (clipper->Flags & ImGuiListClipperFlags_NoSetTableRowCounters) == 0) // If your clipper item height is != from actual table row height, consider using ImGuiListClipperFlags_NoSetTableRowCounters. See #8886.
         {
-            const int row_increase = (int)((off_y / line_height) + 0.5f);
-            IM_ASSERT(row_increase >= 0); // If your clipper item height is != from actual table row height, consider using ImGuiListClipperFlags_NoSetTableRowCounters. See #8886.
             table->CurrentRow += row_increase;
             table->RowBgColorCounter += row_increase;
         }
