@@ -5340,10 +5340,11 @@ ImFontBaked* ImFontAtlasBakedGetOrAdd(ImFontAtlas* atlas, ImFont* font, float fo
 }
 
 // Trim trailing space and find beginning of next line
-const char* ImTextCalcWordWrapNextLineStart(const char* text, const char* text_end)
+const char* ImTextCalcWordWrapNextLineStart(const char* text, const char* text_end, ImDrawTextFlags flags)
 {
-    while (text < text_end && ImCharIsBlankA(*text))
-        text++;
+    if ((flags & ImDrawTextFlags_WrapKeepBlanks) == 0)
+        while (text < text_end && ImCharIsBlankA(*text))
+            text++;
     if (*text == '\n')
         text++;
     return text;
@@ -5460,14 +5461,16 @@ const char* ImFont::CalcWordWrapPosition(float size, const char* text, const cha
     return ImFontCalcWordWrapPositionEx(this, size, text, text_end, wrap_width, ImDrawTextFlags_None);
 }
 
-ImVec2 ImFontCalcTextSizeEx(ImFont* font, float size, float max_width, float wrap_width, const char* text_begin, const char* text_end, const char** out_remaining)
+ImVec2 ImFontCalcTextSizeEx(ImFont* font, float size, float max_width, float wrap_width, const char* text_begin, const char* text_end_display, const char* text_end, const char** out_remaining, ImVec2* out_offset, ImDrawTextFlags flags)
 {
     if (!text_end)
         text_end = text_begin + ImStrlen(text_begin); // FIXME-OPT: Need to avoid this.
+    if (!text_end_display)
+        text_end_display = text_end;
 
-    const float line_height = size;
     ImFontBaked* baked = font->GetFontBaked(size);
-    const float scale = size / baked->Size;
+    const float line_height = size;
+    const float scale = line_height / baked->Size;
 
     ImVec2 text_size = ImVec2(0, 0);
     float line_width = 0.0f;
@@ -5476,14 +5479,14 @@ ImVec2 ImFontCalcTextSizeEx(ImFont* font, float size, float max_width, float wra
     const char* word_wrap_eol = NULL;
 
     const char* s = text_begin;
-    while (s < text_end)
+    while (s < text_end_display)
     {
         // Word-wrapping
         if (word_wrap_enabled)
         {
             // Calculate how far we can render. Requires two passes on the string data but keeps the code simple and not intrusive for what's essentially an uncommon feature.
             if (!word_wrap_eol)
-                word_wrap_eol = ImFontCalcWordWrapPositionEx(font, size, s, text_end, wrap_width - line_width);
+                word_wrap_eol = ImFontCalcWordWrapPositionEx(font, size, s, text_end, wrap_width - line_width, flags);
 
             if (s >= word_wrap_eol)
             {
@@ -5491,8 +5494,10 @@ ImVec2 ImFontCalcTextSizeEx(ImFont* font, float size, float max_width, float wra
                     text_size.x = line_width;
                 text_size.y += line_height;
                 line_width = 0.0f;
+                s = ImTextCalcWordWrapNextLineStart(s, text_end, flags); // Wrapping skips upcoming blanks
+                if (flags & ImDrawTextFlags_StopOnNewLine)
+                    break;
                 word_wrap_eol = NULL;
-                s = ImTextCalcWordWrapNextLineStart(s, text_end); // Wrapping skips upcoming blanks
                 continue;
             }
         }
@@ -5510,6 +5515,8 @@ ImVec2 ImFontCalcTextSizeEx(ImFont* font, float size, float max_width, float wra
             text_size.x = ImMax(text_size.x, line_width);
             text_size.y += line_height;
             line_width = 0.0f;
+            if (flags & ImDrawTextFlags_StopOnNewLine)
+                break;
             continue;
         }
         if (c == '\r')
@@ -5533,7 +5540,10 @@ ImVec2 ImFontCalcTextSizeEx(ImFont* font, float size, float max_width, float wra
     if (text_size.x < line_width)
         text_size.x = line_width;
 
-    if (line_width > 0 || text_size.y == 0.0f)
+    if (out_offset != NULL)
+        *out_offset = ImVec2(line_width, text_size.y + line_height);  // offset allow for the possibility of sitting after a trailing \n
+
+    if (line_width > 0 || text_size.y == 0.0f)                        // whereas size.y will ignore the trailing \n
         text_size.y += line_height;
 
     if (out_remaining != NULL)
@@ -5544,7 +5554,7 @@ ImVec2 ImFontCalcTextSizeEx(ImFont* font, float size, float max_width, float wra
 
 ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, const char* text_begin, const char* text_end, const char** out_remaining)
 {
-    return ImFontCalcTextSizeEx(this, size, max_width, wrap_width, text_begin, text_end, out_remaining);
+    return ImFontCalcTextSizeEx(this, size, max_width, wrap_width, text_begin, NULL, text_end, out_remaining, NULL, ImDrawTextFlags_None);
 }
 
 // Note: as with every ImDrawList drawing function, this expects that the font atlas texture is bound.

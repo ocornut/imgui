@@ -435,10 +435,11 @@ enum ImDrawTextFlags_
 {
     ImDrawTextFlags_None                = 0,
     ImDrawTextFlags_WrapKeepBlanks      = 1 << 1,
+    ImDrawTextFlags_StopOnNewLine       = 1 << 2,
 };
-IMGUI_API ImVec2        ImFontCalcTextSizeEx(ImFont* font, float size, float max_width, float wrap_width, const char* text_begin, const char* text_end, const char** out_remaining);
+IMGUI_API ImVec2        ImFontCalcTextSizeEx(ImFont* font, float size, float max_width, float wrap_width, const char* text_begin, const char* text_end_display, const char* text_end, const char** out_remaining, ImVec2* out_offset, ImDrawTextFlags flags);
 IMGUI_API const char*   ImFontCalcWordWrapPositionEx(ImFont* font, float size, const char* text, const char* text_end, float wrap_width, ImDrawTextFlags flags = 0);
-IMGUI_API const char*   ImTextCalcWordWrapNextLineStart(const char* text, const char* text_end);                                // trim trailing space and find beginning of next line
+IMGUI_API const char*   ImTextCalcWordWrapNextLineStart(const char* text, const char* text_end, ImDrawTextFlags flags = 0); // trim trailing space and find beginning of next line
 
 // Helpers: File System
 #ifdef IMGUI_DISABLE_FILE_FUNCTIONS
