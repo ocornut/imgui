@@ -181,10 +181,10 @@
 //
 // To support UTF-8:
 //
-//    STB_TEXTEDIT_GETPREVCHARINDEX      returns index of previous character 
-//    STB_TEXTEDIT_GETNEXTCHARINDEX      returns index of next character 
+//    STB_TEXTEDIT_GETPREVCHARINDEX      returns index of previous character
+//    STB_TEXTEDIT_GETNEXTCHARINDEX      returns index of next character
 //    Do NOT define STB_TEXTEDIT_KEYTOTEXT.
-//    Instead, call stb_textedit_text() directly for text contents. 
+//    Instead, call stb_textedit_text() directly for text contents.
 //
 // Keyboard input must be encoded as a single integer value; e.g. a character code
 // and some bitflags that represent shift states. to simplify the interface, SHIFT must
@@ -260,7 +260,7 @@
 //
 //      text: (added 2025)
 //          call this to directly send text input the textfield, which is required
-//          for UTF-8 support, because stb_textedit_key() + STB_TEXTEDIT_KEYTOTEXT() 
+//          for UTF-8 support, because stb_textedit_key() + STB_TEXTEDIT_KEYTOTEXT()
 //          cannot infer text length.
 //
 //
