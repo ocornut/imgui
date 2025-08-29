@@ -572,6 +572,8 @@ static void stb_textedit_find_charpos(StbFindState *find, IMSTB_TEXTEDIT_STRING 
       STB_TEXTEDIT_LAYOUTROW(&r, str, i);
       if (n < i + r.num_chars)
          break;
+      if (str->LastMoveDirectionLR == ImGuiDir_Right && str->Stb->cursor == i + r.num_chars && STB_TEXTEDIT_GETCHAR(str, i + r.num_chars - 1) != STB_TEXTEDIT_NEWLINE) // [DEAR IMGUI] Wrapping point handling
+         break;
       if (i + r.num_chars == z && z > 0 && STB_TEXTEDIT_GETCHAR(str, z - 1) != STB_TEXTEDIT_NEWLINE)  // [DEAR IMGUI] special handling for last line
          break;   // [DEAR IMGUI]
       prev_start = i;
@@ -972,6 +974,8 @@ retry:
             }
             stb_textedit_clamp(str, state);
 
+            if (state->cursor == find.first_char + find.length)
+               str->LastMoveDirectionLR = ImGuiDir_Left;
             state->has_preferred_x = 1;
             state->preferred_x = goal_x;
 
@@ -1036,6 +1040,10 @@ retry:
             }
             stb_textedit_clamp(str, state);
 
+            if (state->cursor == find.first_char)
+               str->LastMoveDirectionLR = ImGuiDir_Right;
+            else if (state->cursor == find.prev_first)
+               str->LastMoveDirectionLR = ImGuiDir_Left;
             state->has_preferred_x = 1;
             state->preferred_x = goal_x;
 
