@@ -4101,6 +4101,75 @@ static int  STB_TEXTEDIT_MOVEWORDRIGHT_IMPL(ImGuiInputTextState* obj, int idx)  
 #define STB_TEXTEDIT_MOVEWORDLEFT       STB_TEXTEDIT_MOVEWORDLEFT_IMPL  // They need to be #define for stb_textedit.h
 #define STB_TEXTEDIT_MOVEWORDRIGHT      STB_TEXTEDIT_MOVEWORDRIGHT_IMPL
 
+// Reimplementation of stb_textedit_move_line_start()/stb_textedit_move_line_end() which supports word-wrapping.
+static int STB_TEXTEDIT_MOVELINESTART_IMPL(ImGuiInputTextState* obj, ImStb::STB_TexteditState* state, int cursor)
+{
+    if (state->single_line)
+        return 0;
+
+    if (obj->WrapWidth > 0.0f)
+    {
+        ImGuiContext& g = *obj->Ctx;
+        const char* p_cursor = obj->TextSrc + cursor;
+        const char* p_bol = ImStrbol(p_cursor, obj->TextSrc);
+        const char* p = p_bol;
+        const char* text_end = obj->TextSrc + obj->TextLen; // End of line would be enough
+        while (p >= p_bol)
+        {
+            const char* p_eol = ImFontCalcWordWrapPositionEx(g.Font, g.FontSize, p, text_end, obj->WrapWidth, ImDrawTextFlags_WrapKeepBlanks);
+            if (p == p_cursor) // If we are already on a visible beginning-of-line, return real beginning-of-line (would be same as regular handler below)
+                return (int)(p_bol - obj->TextSrc);
+            if (p_eol == p_cursor && obj->TextA[cursor] != '\n' && obj->LastMoveDirectionLR == ImGuiDir_Left)
+                return (int)(p_bol - obj->TextSrc);
+            if (p_eol >= p_cursor)
+                return (int)(p - obj->TextSrc);
+            p = (*p_eol == '\n') ? p_eol + 1 : p_eol;
+        }
+    }
+
+    // Regular handler, same as stb_textedit_move_line_start()
+    while (cursor > 0)
+    {
+        int prev_cursor = IMSTB_TEXTEDIT_GETPREVCHARINDEX(obj, cursor);
+        if (STB_TEXTEDIT_GETCHAR(obj, prev_cursor) == STB_TEXTEDIT_NEWLINE)
+            break;
+        cursor = prev_cursor;
+    }
+    return cursor;
+}
+
+static int STB_TEXTEDIT_MOVELINEEND_IMPL(ImGuiInputTextState* obj, ImStb::STB_TexteditState* state, int cursor)
+{
+    int n = STB_TEXTEDIT_STRINGLEN(obj);
+    if (state->single_line)
+        return n;
+
+    if (obj->WrapWidth > 0.0f)
+    {
+        ImGuiContext& g = *obj->Ctx;
+        const char* p_cursor = obj->TextSrc + cursor;
+        const char* p = ImStrbol(p_cursor, obj->TextSrc);
+        const char* text_end = obj->TextSrc + obj->TextLen; // End of line would be enough
+        while (p < text_end)
+        {
+            const char* p_eol = ImFontCalcWordWrapPositionEx(g.Font, g.FontSize, p, text_end, obj->WrapWidth, ImDrawTextFlags_WrapKeepBlanks);
+            cursor = (int)(p_eol - obj->TextSrc);
+            if (p_eol == p_cursor && obj->LastMoveDirectionLR != ImGuiDir_Left) // If we are already on a visible end-of-line, switch to regular handle
+                break;
+            if (p_eol > p_cursor)
+                return cursor;
+            p = (*p_eol == '\n') ? p_eol + 1 : p_eol;
+        }
+    }
+    // Regular handler, same as stb_textedit_move_line_end()
+    while (cursor < n && STB_TEXTEDIT_GETCHAR(obj, cursor) != STB_TEXTEDIT_NEWLINE)
+        cursor = IMSTB_TEXTEDIT_GETNEXTCHARINDEX(obj, cursor);
+    return cursor;
+}
+
+#define STB_TEXTEDIT_MOVELINESTART      STB_TEXTEDIT_MOVELINESTART_IMPL
+#define STB_TEXTEDIT_MOVELINEEND        STB_TEXTEDIT_MOVELINEEND_IMPL
+
 static void STB_TEXTEDIT_DELETECHARS(ImGuiInputTextState* obj, int pos, int n)
 {
     // Offset remaining text (+ copy zero terminator)
