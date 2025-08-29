@@ -55,6 +55,9 @@ Other Changes:
   In theory the buffer size should always account for a zero-terminator, but idioms
   such as using InputTextMultiline() with ImGuiInputTextFlags_ReadOnly to display
   a text blob are facilitated by allowing this.
+- InputText: revert a change in 1.79 where pressing Down or PageDown on the last line
+  of a multi-line buffer without a trailing carriage return would keep the cursor
+  unmoved. We revert back to move to the end of line in this situation.
 - DrawList: fixed CloneOutput() unnecessarily taking a copy of the ImDrawListSharedData
   pointer, which could to issue when deleting the cloned list. (#8894, #1860)
 - Debug Tools: ID Stack Tool: fixed using fixed-size buffers preventing long identifiers
