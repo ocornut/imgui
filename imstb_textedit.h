@@ -181,10 +181,10 @@
 //
 // To support UTF-8:
 //
-//    STB_TEXTEDIT_GETPREVCHARINDEX      returns index of previous character 
-//    STB_TEXTEDIT_GETNEXTCHARINDEX      returns index of next character 
+//    STB_TEXTEDIT_GETPREVCHARINDEX      returns index of previous character
+//    STB_TEXTEDIT_GETNEXTCHARINDEX      returns index of next character
 //    Do NOT define STB_TEXTEDIT_KEYTOTEXT.
-//    Instead, call stb_textedit_text() directly for text contents. 
+//    Instead, call stb_textedit_text() directly for text contents.
 //
 // Keyboard input must be encoded as a single integer value; e.g. a character code
 // and some bitflags that represent shift states. to simplify the interface, SHIFT must
@@ -260,7 +260,7 @@
 //
 //      text: (added 2025)
 //          call this to directly send text input the textfield, which is required
-//          for UTF-8 support, because stb_textedit_key() + STB_TEXTEDIT_KEYTOTEXT() 
+//          for UTF-8 support, because stb_textedit_key() + STB_TEXTEDIT_KEYTOTEXT()
 //          cannot infer text length.
 //
 //
@@ -921,8 +921,8 @@ retry:
 
             // [DEAR IMGUI]
             // going down while being on the last line shouldn't bring us to that line end
-            if (STB_TEXTEDIT_GETCHAR(str, find.first_char + find.length - 1) != STB_TEXTEDIT_NEWLINE)
-               break;
+            //if (STB_TEXTEDIT_GETCHAR(str, find.first_char + find.length - 1) != STB_TEXTEDIT_NEWLINE)
+            //   break;
 
             // now find character position down a row
             state->cursor = start;
@@ -1100,8 +1100,12 @@ retry:
          stb_textedit_move_to_first(state);
          if (state->single_line)
             state->cursor = 0;
-         else while (state->cursor > 0 && STB_TEXTEDIT_GETCHAR(str, state->cursor-1) != STB_TEXTEDIT_NEWLINE)
-            state->cursor = IMSTB_TEXTEDIT_GETPREVCHARINDEX(str, state->cursor);
+         else while (state->cursor > 0) {
+            int prev = IMSTB_TEXTEDIT_GETPREVCHARINDEX(str, state->cursor);
+            if (STB_TEXTEDIT_GETCHAR(str, prev) == STB_TEXTEDIT_NEWLINE)
+               break;
+            state->cursor = prev;
+         }
          state->has_preferred_x = 0;
          break;
 
@@ -1128,8 +1132,12 @@ retry:
          stb_textedit_prep_selection_at_cursor(state);
          if (state->single_line)
             state->cursor = 0;
-         else while (state->cursor > 0 && STB_TEXTEDIT_GETCHAR(str, state->cursor-1) != STB_TEXTEDIT_NEWLINE)
-            state->cursor = IMSTB_TEXTEDIT_GETPREVCHARINDEX(str, state->cursor);
+         else while (state->cursor > 0) {
+            int prev = IMSTB_TEXTEDIT_GETPREVCHARINDEX(str, state->cursor);
+            if (STB_TEXTEDIT_GETCHAR(str, prev) == STB_TEXTEDIT_NEWLINE)
+               break;
+            state->cursor = prev;
+         }
          state->select_end = state->cursor;
          state->has_preferred_x = 0;
          break;

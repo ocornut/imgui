@@ -135,7 +135,7 @@ static const ImU64          IM_U64_MAX = (2ULL * 9223372036854775807LL + 1);
 
 // For InputTextEx()
 static bool     InputTextFilterCharacter(ImGuiContext* ctx, unsigned int* p_char, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data, bool input_source_is_clipboard = false);
-static int      InputTextCalcTextLenAndLineCount(const char* text_begin, const char** out_text_end);
+static int      InputTextCalcTextLenAndLineCount(ImGuiContext* ctx, const char* text_begin, const char** out_text_end);
 static ImVec2   InputTextCalcTextSize(ImGuiContext* ctx, const char* text_begin, const char* text_end, const char** remaining = NULL, ImVec2* out_offset = NULL, bool stop_on_new_line = false);
 
 //-------------------------------------------------------------------------
@@ -3947,20 +3947,22 @@ bool ImGui::InputTextWithHint(const char* label, const char* hint, char* buf, si
 }
 
 // This is only used in the path where the multiline widget is inactive.
-static int InputTextCalcTextLenAndLineCount(const char* text_begin, const char** out_text_end)
+static int InputTextCalcTextLenAndLineCount(ImGuiContext*, const char* text_begin, const char** out_text_end)
 {
     int line_count = 0;
     const char* s = text_begin;
-    while (true)
     {
-        const char* s_eol = strchr(s, '\n');
-        line_count++;
-        if (s_eol == NULL)
+        while (true)
         {
-            s = s + ImStrlen(s);
-            break;
+            const char* s_eol = strchr(s, '\n');
+            line_count++;
+            if (s_eol == NULL)
+            {
+                s = s + ImStrlen(s);
+                break;
+            }
+            s = s_eol + 1;
         }
-        s = s_eol + 1;
     }
     *out_text_end = s;
     return line_count;
@@ -4659,7 +4661,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         // Take a copy of the initial buffer value.
         // From the moment we focused we are normally ignoring the content of 'buf' (unless we are in read-only mode)
         const int buf_len = (int)ImStrlen(buf);
-        IM_ASSERT(buf_len + 1 <= buf_size && "Is your input buffer properly zero-terminated?");
+        IM_ASSERT(((buf_len + 1 <= buf_size) || (buf_len == 0 && buf_size == 0)) && "Is your input buffer properly zero-terminated?");
         state->TextToRevertTo.resize(buf_len + 1);    // UTF-8. we use +1 to make sure that .Data is always pointing to at least an empty string.
         memcpy(state->TextToRevertTo.Data, buf, buf_len + 1);
 
@@ -5236,7 +5238,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         RenderFrame(frame_bb.Min, frame_bb.Max, GetColorU32(ImGuiCol_FrameBg), true, style.FrameRounding);
     }
 
-    const ImVec4 clip_rect(frame_bb.Min.x, frame_bb.Min.y, frame_bb.Min.x + inner_size.x, frame_bb.Min.y + inner_size.y); // Not using frame_bb.Max because we have adjusted size
+    const ImRect clip_rect(frame_bb.Min.x, frame_bb.Min.y, frame_bb.Min.x + inner_size.x, frame_bb.Min.y + inner_size.y); // Not using frame_bb.Max because we have adjusted size
     ImVec2 draw_pos = is_multiline ? draw_window->DC.CursorPos : frame_bb.Min + style.FramePadding;
     ImVec2 text_size(0.0f, 0.0f);
 
@@ -5265,7 +5267,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     }
 
     // Render text. We currently only render selection when the widget is active or while scrolling.
-    // FIXME: We could remove the '&& render_cursor' to keep rendering selection when inactive.
+    // FIXME: This is one of the messiest piece of the whole codebase.
     if (render_cursor || render_selection)
     {
         IM_ASSERT(state != NULL);
@@ -5291,14 +5293,17 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             const char* selmin_ptr = render_selection ? text_begin + ImMin(state->Stb->select_start, state->Stb->select_end) : NULL;
 
             // Count lines and find line number for cursor and selection ends
+            // FIXME: Switch to zero-based index to reduce confusion.
             int line_count = 1;
             if (is_multiline)
             {
-                for (const char* s = text_begin; (s = (const char*)ImMemchr(s, '\n', (size_t)(text_end - s))) != NULL; s++)
                 {
-                    if (cursor_line_no == -1 && s >= cursor_ptr) { cursor_line_no = line_count; }
-                    if (selmin_line_no == -1 && s >= selmin_ptr) { selmin_line_no = line_count; }
-                    line_count++;
+                    for (const char* s = text_begin; (s = (const char*)ImMemchr(s, '\n', (size_t)(text_end - s))) != NULL; s++)
+                    {
+                        if (cursor_line_no == -1 && s >= cursor_ptr) { cursor_line_no = line_count; }
+                        if (selmin_line_no == -1 && s >= selmin_ptr) { selmin_line_no = line_count; }
+                        line_count++;
+                    }
                 }
             }
             if (cursor_line_no == -1)
@@ -5368,9 +5373,9 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             ImVec2 rect_pos = draw_pos + select_start_offset - draw_scroll;
             for (const char* p = text_selected_begin; p < text_selected_end; )
             {
-                if (rect_pos.y > clip_rect.w + g.FontSize)
+                if (rect_pos.y > clip_rect.Max.y + g.FontSize)
                     break;
-                if (rect_pos.y < clip_rect.y)
+                if (rect_pos.y < clip_rect.Min.y)
                 {
                     p = (const char*)ImMemchr((void*)p, '\n', text_selected_end - p);
                     p = p ? p + 1 : text_selected_end;
@@ -5378,7 +5383,8 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                 else
                 {
                     ImVec2 rect_size = InputTextCalcTextSize(&g, p, text_selected_end, &p, NULL, true);
-                    if (rect_size.x <= 0.0f) rect_size.x = IM_TRUNC(g.FontBaked->GetCharAdvance((ImWchar)' ') * 0.50f); // So we can see selected empty lines
+                    if (rect_size.x <= 0.0f)
+                        rect_size.x = IM_TRUNC(g.FontBaked->GetCharAdvance((ImWchar)' ') * 0.50f); // So we can see selected empty lines
                     ImRect rect(rect_pos + ImVec2(0.0f, bg_offy_up - g.FontSize), rect_pos + ImVec2(rect_size.x, bg_offy_dn));
                     rect.ClipWith(clip_rect);
                     if (rect.Overlaps(clip_rect))
@@ -5394,7 +5400,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         if (is_multiline || (buf_display_end - buf_display) < buf_display_max_length)
         {
             ImU32 col = GetColorU32(is_displaying_hint ? ImGuiCol_TextDisabled : ImGuiCol_Text);
-            draw_window->DrawList->AddText(g.Font, g.FontSize, draw_pos - draw_scroll, col, buf_display, buf_display_end, 0.0f, is_multiline ? NULL : &clip_rect);
+            draw_window->DrawList->AddText(g.Font, g.FontSize, draw_pos - draw_scroll, col, buf_display, buf_display_end, 0.0f, is_multiline ? NULL : &clip_rect.AsVec4());
         }
 
         // Draw blinking cursor
@@ -5425,7 +5431,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     {
         // Render text only (no selection, no cursor)
         if (is_multiline)
-            text_size = ImVec2(inner_size.x, InputTextCalcTextLenAndLineCount(buf_display, &buf_display_end) * g.FontSize); // We don't need width
+            text_size = ImVec2(inner_size.x, InputTextCalcTextLenAndLineCount(&g, buf_display, &buf_display_end) * g.FontSize); // We don't need width
         else if (!is_displaying_hint && g.ActiveId == id)
             buf_display_end = buf_display + state->TextLen;
         else if (!is_displaying_hint)
@@ -5439,7 +5445,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
 
             const ImVec2 draw_scroll = /*state ? ImVec2(state->Scroll.x, 0.0f) :*/ ImVec2(0.0f, 0.0f); // Preserve scroll when inactive?
             ImU32 col = GetColorU32(is_displaying_hint ? ImGuiCol_TextDisabled : ImGuiCol_Text);
-            draw_window->DrawList->AddText(g.Font, g.FontSize, draw_pos - draw_scroll, col, buf_display, buf_display_end, 0.0f, is_multiline ? NULL : &clip_rect);
+            draw_window->DrawList->AddText(g.Font, g.FontSize, draw_pos - draw_scroll, col, buf_display, buf_display_end, 0.0f, is_multiline ? NULL : &clip_rect.AsVec4());
         }
     }
 
