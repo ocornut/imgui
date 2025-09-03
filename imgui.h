@@ -409,6 +409,7 @@ namespace ImGui
     IMGUI_API void          ShowFontSelector(const char* label);        // add font selector block (not a window), essentially a combo listing the loaded fonts.
     IMGUI_API void          ShowUserGuide();                            // add basic help/info block (not a window): how to manipulate ImGui as an end-user (mouse/keyboard controls).
     IMGUI_API const char*   GetVersion();                               // get the compiled version string e.g. "1.80 WIP" (essentially the value for IMGUI_VERSION from the compiled version of imgui.cpp)
+    IMGUI_API void          FreeDemoWindow();                           // manual deallocation of demo window heap allocations if ignored the destructor will free the heap allocations on application exit, useful for cleaning up allocs when using ImGui::SetAllocatorFunctions.
 
     // Styles
     IMGUI_API void          StyleColorsDark(ImGuiStyle* dst = NULL);    // new, recommended style (default)

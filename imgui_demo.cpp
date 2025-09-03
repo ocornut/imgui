@@ -295,7 +295,7 @@ void*                               GImGuiDemoMarkerCallbackUserData = NULL;
 //-----------------------------------------------------------------------------
 
 // Data to be shared across different functions of the demo.
-struct ImGuiDemoWindowData
+static struct ImGuiDemoWindowData
 {
     // Examples Apps (accessible from the "Examples" menu)
     bool ShowMainMenuBar = false;
@@ -324,8 +324,10 @@ struct ImGuiDemoWindowData
     bool DisableSections = false;
     ExampleTreeNode* DemoTree = NULL;
 
-    ~ImGuiDemoWindowData() { if (DemoTree) ExampleTree_DestroyNode(DemoTree); }
-};
+    ~ImGuiDemoWindowData() { ImGui::FreeDemoWindow(); };
+}s_demo_data = {};
+
+void ImGui::FreeDemoWindow() { if (s_demo_data.DemoTree) ExampleTree_DestroyNode(s_demo_data.DemoTree); };
 
 // Demonstrate most Dear ImGui features (this is big function!)
 // You may execute this function to experiment with the UI and understand what it does.
@@ -340,7 +342,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
     IMGUI_CHECKVERSION();
 
     // Stored data
-    static ImGuiDemoWindowData demo_data;
+    ImGuiDemoWindowData& demo_data = s_demo_data;
 
     // Examples Apps (accessible from the "Examples" menu)
     if (demo_data.ShowMainMenuBar)          { ShowExampleAppMainMenuBar(); }
@@ -10834,6 +10836,7 @@ void ImGui::ShowDemoWindow(bool*) {}
 void ImGui::ShowUserGuide() {}
 void ImGui::ShowStyleEditor(ImGuiStyle*) {}
 bool ImGui::ShowStyleSelector(const char*) { return false; }
+void ImGui::FreeDemoWindow() {}
 
 #endif // #ifndef IMGUI_DISABLE_DEMO_WINDOWS
 
