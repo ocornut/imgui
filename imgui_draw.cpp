@@ -3026,7 +3026,7 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg_in)
     else
     {
         IM_ASSERT(Fonts.Size > 0 && "Cannot use MergeMode for the first font"); // When using MergeMode make sure that a font has already been added before. You can use ImGui::GetIO().Fonts->AddFontDefault() to add the default imgui font.
-        font = Fonts.back();
+        font = font_cfg_in->DstFont ? font_cfg_in->DstFont : Fonts.back();
     }
 
     // Add to list

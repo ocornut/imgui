@@ -47,6 +47,8 @@ Other Changes:
   ImGuiStyleVar_ScrollbarPadding enum, instead of hardcoded computed default. (#8895)
 - Fonts: fixed an assertion failure when a rectangle entry has been reused
   1024 times (e.g. due to constant change of font types). (#8906) [@cfillion]
+- Fonts: fixed merging a font and specifying a font target in DstFont
+  that's not the last added font (regression in 1.92). (#8912)
 - Clipper, Tables: added ImGuiListClipperFlags_NoSetTableRowCounters as a way to
   disable the assumption that 1 clipper item == 1 table row, which breaks when
   e.g. using clipper with ItemsHeight=1 in order to clip in pixel units. (#8886)
