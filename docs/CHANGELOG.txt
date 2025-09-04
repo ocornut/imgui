@@ -59,6 +59,9 @@ Other Changes:
   would not write back the reverted value during the IsItemDeactivatedAfterEdit()
   frame if the provided input buffer doesn't store temporary edits.
   (regression in 1.91.7) (#8915, #8273)
+- InputText: fixed an issue where using Escape with ImGuiInputTextFlags_EscapeClearsAll
+  would not write back the cleared value during the IsItemDeactivatedAfterEdit()
+  frame if the provided input buffer doesn't store temporary edits. (#8915, #8273)
 - InputText: allow passing an empty string with buf_size==0. (#8907)
   In theory the buffer size should always account for a zero-terminator, but idioms
   such as using InputTextMultiline() with ImGuiInputTextFlags_ReadOnly to display
