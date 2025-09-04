@@ -1164,8 +1164,10 @@ void ImGui_ImplVulkan_CreateMainPipeline(const ImGui_ImplVulkan_MainPipelineCrea
         if (v->PipelineRenderingCreateInfo.pColorAttachmentFormats != NULL)
         {
             // Deep copy buffer to reduce error-rate for end user (#8282)
-            bd->PipelineRenderingCreateInfoColorAttachmentFormats.resize((int)v->PipelineRenderingCreateInfo.colorAttachmentCount);
-            memcpy(bd->PipelineRenderingCreateInfoColorAttachmentFormats.Data, v->PipelineRenderingCreateInfo.pColorAttachmentFormats, (size_t)bd->PipelineRenderingCreateInfoColorAttachmentFormats.size_in_bytes());
+            ImVector<VkFormat> formats;
+            formats.resize((int)v->PipelineRenderingCreateInfo.colorAttachmentCount);
+            memcpy(formats.Data, v->PipelineRenderingCreateInfo.pColorAttachmentFormats, (size_t)formats.size_in_bytes());
+            formats.swap(bd->PipelineRenderingCreateInfoColorAttachmentFormats);
             v->PipelineRenderingCreateInfo.pColorAttachmentFormats = bd->PipelineRenderingCreateInfoColorAttachmentFormats.Data;
         }
     }
