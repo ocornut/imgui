@@ -65,12 +65,6 @@
 // Backend uses a small number of descriptors per font atlas + as many as additional calls done to ImGui_ImplVulkan_AddTexture().
 #define IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE   (8)     // Minimum per atlas
 
-#ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
-typedef VkPipelineRenderingCreateInfoKHR ImGui_ImplVulkan_PipelineRenderingCreateInfo;
-#else
-typedef void ImGui_ImplVulkan_PipelineRenderingCreateInfo;
-#endif
-
 // Initialization data, for ImGui_ImplVulkan_Init()
 // [Please zero-clear before use!]
 // - About descriptor pool:
@@ -104,8 +98,7 @@ struct ImGui_ImplVulkan_InitInfo
     // Need to explicitly enable VK_KHR_dynamic_rendering extension to use this, even for Vulkan 1.3.
     bool                            UseDynamicRendering;
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
-    // (Optional, valid iif .sType == VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR)
-    VkPipelineRenderingCreateInfoKHR PipelineRenderingCreateInfo;
+    VkPipelineRenderingCreateInfoKHR PipelineRenderingCreateInfo; // Optional, valid if .sType == VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR
 #endif
 
     // (Optional) Allocation, Debugging
@@ -115,21 +108,25 @@ struct ImGui_ImplVulkan_InitInfo
 };
 
 // Follow "Getting Started" link and check examples/ folder to learn about using backends!
-IMGUI_IMPL_API bool             ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info); // The main pipeline will be created if possible (RenderPass xor (UseDynamicRendering && PipelineRenderingCreateInfo->sType is correct))
-#define IMGUI_IMPL_VULKAN_HAS_MAIN_PIPELINE_RE_CREATION 1
-struct ImGui_ImplVulkan_MainPipelineCreateInfo
-{
-    VkRenderPass                    RenderPass = VK_NULL_HANDLE;
-    uint32_t                        Subpass = 0;
-    VkSampleCountFlagBits           MSAASamples = {};
-    const ImGui_ImplVulkan_PipelineRenderingCreateInfo* pDynamicRendering = nullptr;
-};
-IMGUI_IMPL_API void             ImGui_ImplVulkan_ReCreateMainPipeline(ImGui_ImplVulkan_MainPipelineCreateInfo const& info); // (render_pass xor (p_dynamic_rendering && p_dynamic_rendering is correct (sType and pNext))
+IMGUI_IMPL_API bool             ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info);
 IMGUI_IMPL_API void             ImGui_ImplVulkan_Shutdown();
 IMGUI_IMPL_API void             ImGui_ImplVulkan_NewFrame();
 IMGUI_IMPL_API void             ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer, VkPipeline pipeline = VK_NULL_HANDLE);
 IMGUI_IMPL_API void             ImGui_ImplVulkan_SetMinImageCount(uint32_t min_image_count); // To override MinImageCount after initialization (e.g. if swap chain is recreated)
 
+// (Advanced) Use e.g. if you need to recreate pipeline without reinitializing the backend (see #8110, #8111)
+// The main window pipeline will be created by ImGui_ImplVulkan_Init() if possible (== RenderPass xor (UseDynamicRendering && PipelineRenderingCreateInfo->sType == VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR))
+// Else, the pipeline can be created, or re-created, using ImGui_ImplVulkan_CreateMainPipeline() before rendering.
+struct ImGui_ImplVulkan_MainPipelineCreateInfo
+{
+    VkRenderPass                RenderPass = VK_NULL_HANDLE;
+    uint32_t                    Subpass = 0;
+    VkSampleCountFlagBits       MSAASamples = {};
+#ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
+    const VkPipelineRenderingCreateInfoKHR* pDynamicRendering = nullptr;
+#endif
+};
+IMGUI_IMPL_API void             ImGui_ImplVulkan_CreateMainPipeline(const ImGui_ImplVulkan_MainPipelineCreateInfo& info); // (render_pass xor (p_dynamic_rendering && p_dynamic_rendering is correct (sType and pNext))
 
 // (Advanced) Use e.g. if you need to precisely control the timing of texture updates (e.g. for staged rendering), by setting ImDrawData::Textures = NULL to handle this manually.
 IMGUI_IMPL_API void             ImGui_ImplVulkan_UpdateTexture(ImTextureData* tex);

@@ -81,6 +81,8 @@ Other Changes:
 - Backends: SDL_GPU: Added ImGui_ImplSDLGPU3_InitInfo::SwapchainComposition and
   PresentMode to configure how secondary viewports are created. Currently only used
   multi-viewport mode. (#8892) [@PTSVU]
+- Backends: Vulkan: added ImGui_ImplVulkan_CreateMainPipeline() to recreate pipeline
+  without reinitializing backend. (#8110, #8111) [@SuperRonan]
 
 
 -----------------------------------------------------------------------

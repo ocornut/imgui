@@ -27,6 +27,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2025-09-04: Vulkan: Added ImGui_ImplVulkan_CreateMainPipeline(). (#8110, #8111)
 //  2025-07-27: Vulkan: Fixed texture update corruption introduced on 2025-06-11. (#8801, #8755, #8840)
 //  2025-07-07: Vulkan: Fixed texture synchronization issue introduced on 2025-06-11. (#8772)
 //  2025-06-27: Vulkan: Fixed validation errors during texture upload/update by aligning upload size to 'nonCoherentAtomSize'. (#8743, #8744)
@@ -906,7 +907,11 @@ static void ImGui_ImplVulkan_CreateShaderModules(VkDevice device, const VkAlloca
     }
 }
 
-static VkPipeline ImGui_ImplVulkan_CreatePipeline(VkDevice device, const VkAllocationCallbacks* allocator, VkPipelineCache pipelineCache, VkRenderPass renderPass, VkSampleCountFlagBits MSAASamples, uint32_t subpass, const ImGui_ImplVulkan_PipelineRenderingCreateInfo* pipeline_rendering_create_info)
+#if !defined(IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING) && !(defined(VK_VERSION_1_3) || defined(VK_KHR_dynamic_rendering))
+typedef void VkPipelineRenderingCreateInfoKHR;
+#endif
+
+static VkPipeline ImGui_ImplVulkan_CreatePipeline(VkDevice device, const VkAllocationCallbacks* allocator, VkPipelineCache pipelineCache, VkRenderPass renderPass, VkSampleCountFlagBits MSAASamples, uint32_t subpass, const VkPipelineRenderingCreateInfoKHR* pipeline_rendering_create_info)
 {
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
     ImGui_ImplVulkan_CreateShaderModules(device, allocator);
@@ -1096,33 +1101,22 @@ bool ImGui_ImplVulkan_CreateDeviceObjects()
         check_vk_result(err);
     }
 
-    {
-        bool create_pipeline = false;
-        const ImGui_ImplVulkan_PipelineRenderingCreateInfo* p_dynamic_rendering = nullptr;
-        if (v->RenderPass)
-        {
-            create_pipeline = true;
-        }
-        else
-        {
+    // Create pipeline
+    const VkPipelineRenderingCreateInfoKHR* p_dynamic_rendering_create_info = nullptr;
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
-            if (v->UseDynamicRendering && v->PipelineRenderingCreateInfo.sType == VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR)
-            {
-                p_dynamic_rendering = &v->PipelineRenderingCreateInfo;
-                create_pipeline = true;
-            }
+    if (v->UseDynamicRendering && v->PipelineRenderingCreateInfo.sType == VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR)
+        p_dynamic_rendering_create_info = &v->PipelineRenderingCreateInfo;
 #endif
-        }
-        if (create_pipeline)
-        {
-            ImGui_ImplVulkan_MainPipelineCreateInfo mp_info = {};
-            mp_info.RenderPass = v->RenderPass;
-            mp_info.Subpass = v->Subpass;
-            mp_info.MSAASamples = v->MSAASamples;
-            mp_info.pDynamicRendering = p_dynamic_rendering;
-
-            ImGui_ImplVulkan_ReCreateMainPipeline(mp_info);
-        }
+    if (v->RenderPass || p_dynamic_rendering_create_info != nullptr)
+    {
+        ImGui_ImplVulkan_MainPipelineCreateInfo mp_info = {};
+        mp_info.RenderPass = v->RenderPass;
+        mp_info.Subpass = v->Subpass;
+        mp_info.MSAASamples = v->MSAASamples;
+#ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
+        mp_info.pDynamicRendering = p_dynamic_rendering_create_info;
+#endif
+        ImGui_ImplVulkan_CreateMainPipeline(mp_info);
     }
 
     // Create command pool/buffer for texture upload
@@ -1148,7 +1142,7 @@ bool ImGui_ImplVulkan_CreateDeviceObjects()
     return true;
 }
 
-void ImGui_ImplVulkan_ReCreateMainPipeline(ImGui_ImplVulkan_MainPipelineCreateInfo const& info)
+void ImGui_ImplVulkan_CreateMainPipeline(const ImGui_ImplVulkan_MainPipelineCreateInfo& info)
 {
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
     ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
@@ -1161,15 +1155,13 @@ void ImGui_ImplVulkan_ReCreateMainPipeline(ImGui_ImplVulkan_MainPipelineCreateIn
     v->MSAASamples = info.MSAASamples;
     v->Subpass = info.Subpass;
 
-    ImGui_ImplVulkan_PipelineRenderingCreateInfo * pipeline_rendering_create_info = nullptr;
+    VkPipelineRenderingCreateInfoKHR* pipeline_rendering_create_info = nullptr;
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
     if (info.pDynamicRendering)
     {
         v->PipelineRenderingCreateInfo = *info.pDynamicRendering;
         pipeline_rendering_create_info = &v->PipelineRenderingCreateInfo;
     }
-#else
-    IM_ASSERT(info.pDynamicRendering == nullptr);
 #endif
     bd->Pipeline = ImGui_ImplVulkan_CreatePipeline(v->Device, v->Allocator, v->PipelineCache, v->RenderPass, v->MSAASamples, v->Subpass, pipeline_rendering_create_info);
 }
@@ -1297,14 +1289,14 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info)
     IM_ASSERT(info->MinImageCount >= 2);
     IM_ASSERT(info->ImageCount >= info->MinImageCount);
 
-    ImGui_ImplVulkan_InitInfo * v = &bd->VulkanInitInfo;
-    *v = *info;
+    bd->VulkanInitInfo = *info;
 
     VkPhysicalDeviceProperties properties;
     vkGetPhysicalDeviceProperties(info->PhysicalDevice, &properties);
     bd->NonCoherentAtomSize = properties.limits.nonCoherentAtomSize;
 
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
+    ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
     if (v->PipelineRenderingCreateInfo.pColorAttachmentFormats != NULL)
     {
         // Deep copy buffer to reduce error-rate for end user (#8282)
