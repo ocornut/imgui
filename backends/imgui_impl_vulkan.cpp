@@ -1102,19 +1102,18 @@ bool ImGui_ImplVulkan_CreateDeviceObjects()
     }
 
     // Create pipeline
-    const VkPipelineRenderingCreateInfoKHR* p_dynamic_rendering_create_info = nullptr;
+    if (v->RenderPass
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
-    if (v->UseDynamicRendering && v->PipelineRenderingCreateInfo.sType == VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR)
-        p_dynamic_rendering_create_info = &v->PipelineRenderingCreateInfo;
+        || (v->UseDynamicRendering && v->PipelineRenderingCreateInfo.sType == VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR)
 #endif
-    if (v->RenderPass || p_dynamic_rendering_create_info != nullptr)
+        )
     {
         ImGui_ImplVulkan_MainPipelineCreateInfo mp_info = {};
         mp_info.RenderPass = v->RenderPass;
         mp_info.Subpass = v->Subpass;
         mp_info.MSAASamples = v->MSAASamples;
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
-        mp_info.pDynamicRendering = p_dynamic_rendering_create_info;
+        mp_info.PipelineRenderingCreateInfo = v->PipelineRenderingCreateInfo;
 #endif
         ImGui_ImplVulkan_CreateMainPipeline(mp_info);
     }
@@ -1155,11 +1154,11 @@ void ImGui_ImplVulkan_CreateMainPipeline(const ImGui_ImplVulkan_MainPipelineCrea
     v->MSAASamples = info.MSAASamples;
     v->Subpass = info.Subpass;
 
-    VkPipelineRenderingCreateInfoKHR* pipeline_rendering_create_info = nullptr;
+    const VkPipelineRenderingCreateInfoKHR* pipeline_rendering_create_info = nullptr;
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
-    if (info.pDynamicRendering)
+    if (v->UseDynamicRendering)
     {
-        v->PipelineRenderingCreateInfo = *info.pDynamicRendering;
+        v->PipelineRenderingCreateInfo = info.PipelineRenderingCreateInfo;
         pipeline_rendering_create_info = &v->PipelineRenderingCreateInfo;
     }
 #endif
