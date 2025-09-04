@@ -906,21 +906,10 @@ static void ImGui_ImplVulkan_CreateShaderModules(VkDevice device, const VkAlloca
     }
 }
 
-struct ImGui_ImplVulkan_PipelineCreateInfo
-{
-    VkDevice                                        Device = VK_NULL_HANDLE;
-    const VkAllocationCallbacks*                    Allocator = nullptr;
-    VkPipelineCache                                 PipelineCache = VK_NULL_HANDLE;
-    VkRenderPass                                    RenderPass = VK_NULL_HANDLE;
-    uint32_t                                        Subpass = 0;
-    VkSampleCountFlagBits                           MSAASamples = {};
-    const ImGui_ImplVulkan_PipelineRenderingCreateInfo* pRenderingInfo = nullptr;
-};
-
-static VkPipeline ImGui_ImplVulkan_CreatePipeline(ImGui_ImplVulkan_PipelineCreateInfo const& pci)
+static VkPipeline ImGui_ImplVulkan_CreatePipeline(VkDevice device, const VkAllocationCallbacks* allocator, VkPipelineCache pipelineCache, VkRenderPass renderPass, VkSampleCountFlagBits MSAASamples, uint32_t subpass, const ImGui_ImplVulkan_PipelineRenderingCreateInfo* pipeline_rendering_create_info)
 {
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
-    ImGui_ImplVulkan_CreateShaderModules(pci.Device, pci.Allocator);
+    ImGui_ImplVulkan_CreateShaderModules(device, allocator);
 
     VkPipelineShaderStageCreateInfo stage[2] = {};
     stage[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -975,7 +964,7 @@ static VkPipeline ImGui_ImplVulkan_CreatePipeline(ImGui_ImplVulkan_PipelineCreat
 
     VkPipelineMultisampleStateCreateInfo ms_info = {};
     ms_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    ms_info.rasterizationSamples = (pci.MSAASamples != 0) ? pci.MSAASamples : VK_SAMPLE_COUNT_1_BIT;
+    ms_info.rasterizationSamples = (MSAASamples != 0) ? MSAASamples : VK_SAMPLE_COUNT_1_BIT;
 
     VkPipelineColorBlendAttachmentState color_attachment[1] = {};
     color_attachment[0].blendEnable = VK_TRUE;
@@ -1015,23 +1004,25 @@ static VkPipeline ImGui_ImplVulkan_CreatePipeline(ImGui_ImplVulkan_PipelineCreat
     info.pColorBlendState = &blend_info;
     info.pDynamicState = &dynamic_state;
     info.layout = bd->PipelineLayout;
-    info.renderPass = pci.RenderPass;
-    info.subpass = pci.Subpass;
+    info.renderPass = renderPass;
+    info.subpass = subpass;
 
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
     if (bd->VulkanInitInfo.UseDynamicRendering)
     {
-        IM_ASSERT(pci.pRenderingInfo && "PipelineRenderingCreateInfo must not be nullptr when using dynamic rendering");
-        IM_ASSERT(pci.pRenderingInfo->sType == VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR && "PipelineRenderingCreateInfo::sType must be VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR");
-        IM_ASSERT(pci.pRenderingInfo->pNext == nullptr && "PipelineRenderingCreateInfo::pNext must be nullptr");
-        info.pNext = pci.pRenderingInfo;
+        IM_ASSERT(pipeline_rendering_create_info && "PipelineRenderingCreateInfo must not be nullptr when using dynamic rendering");
+        IM_ASSERT(pipeline_rendering_create_info->sType == VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR && "PipelineRenderingCreateInfo::sType must be VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR");
+        IM_ASSERT(pipeline_rendering_create_info->pNext == nullptr && "PipelineRenderingCreateInfo::pNext must be nullptr");
+        info.pNext = pipeline_rendering_create_info;
         info.renderPass = VK_NULL_HANDLE; // Just make sure it's actually nullptr.
     }
+#else
+    IM_ASSERT(pipeline_rendering_create_info == nullptr);
 #endif
-    VkPipeline res;
-    VkResult err = vkCreateGraphicsPipelines(pci.Device, pci.PipelineCache, 1, &info, pci.Allocator, &res);
+    VkPipeline pipeline;
+    VkResult err = vkCreateGraphicsPipelines(device, pipelineCache, 1, &info, allocator, &pipeline);
     check_vk_result(err);
-    return res;
+    return pipeline;
 }
 
 bool ImGui_ImplVulkan_CreateDeviceObjects()
@@ -1170,25 +1161,17 @@ void ImGui_ImplVulkan_ReCreateMainPipeline(ImGui_ImplVulkan_MainPipelineCreateIn
     v->MSAASamples = info.MSAASamples;
     v->Subpass = info.Subpass;
 
+    ImGui_ImplVulkan_PipelineRenderingCreateInfo * pipeline_rendering_create_info = nullptr;
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
     if (info.pDynamicRendering)
     {
         v->PipelineRenderingCreateInfo = *info.pDynamicRendering;
+        pipeline_rendering_create_info = &v->PipelineRenderingCreateInfo;
     }
 #else
     IM_ASSERT(info.pDynamicRendering == nullptr);
 #endif
-
-    ImGui_ImplVulkan_PipelineCreateInfo pci;
-    pci.Device = v->Device;
-    pci.Allocator = v->Allocator;
-    pci.PipelineCache = v->PipelineCache;
-    pci.RenderPass = v->RenderPass;
-    pci.Subpass = v->Subpass;
-    pci.MSAASamples = v->MSAASamples;
-    pci.pRenderingInfo = info.pDynamicRendering;
-
-    bd->Pipeline = ImGui_ImplVulkan_CreatePipeline(pci);
+    bd->Pipeline = ImGui_ImplVulkan_CreatePipeline(v->Device, v->Allocator, v->PipelineCache, v->RenderPass, v->MSAASamples, v->Subpass, pipeline_rendering_create_info);
 }
 
 void    ImGui_ImplVulkan_DestroyDeviceObjects()
