@@ -29,6 +29,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2025-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2025-09-04: Vulkan: Added ImGui_ImplVulkan_CreateMainPipeline(). (#8110, #8111)
 //  2025-07-27: Vulkan: Fixed texture update corruption introduced on 2025-06-11. (#8801, #8755, #8840)
 //  2025-07-07: Vulkan: Fixed texture synchronization issue introduced on 2025-06-11. (#8772)
 //  2025-06-27: Vulkan: Fixed validation errors during texture upload/update by aligning upload size to 'nonCoherentAtomSize'. (#8743, #8744)
@@ -279,6 +280,7 @@ struct ImGui_ImplVulkan_Data
     VkShaderModule              ShaderModuleVert;
     VkShaderModule              ShaderModuleFrag;
     VkDescriptorPool            DescriptorPool;
+    ImVector<VkFormat>          PipelineRenderingCreateInfoColorAttachmentFormats; // Deep copy of format array
 
     // Texture management
     VkSampler                   TexSampler;
@@ -935,7 +937,11 @@ static void ImGui_ImplVulkan_CreateShaderModules(VkDevice device, const VkAlloca
     }
 }
 
-static void ImGui_ImplVulkan_CreatePipeline(VkDevice device, const VkAllocationCallbacks* allocator, VkPipelineCache pipelineCache, VkRenderPass renderPass, VkSampleCountFlagBits MSAASamples, VkPipeline* pipeline, uint32_t subpass)
+#if !defined(IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING) && !(defined(VK_VERSION_1_3) || defined(VK_KHR_dynamic_rendering))
+typedef void VkPipelineRenderingCreateInfoKHR;
+#endif
+
+static VkPipeline ImGui_ImplVulkan_CreatePipeline(VkDevice device, const VkAllocationCallbacks* allocator, VkPipelineCache pipelineCache, VkRenderPass renderPass, VkSampleCountFlagBits MSAASamples, uint32_t subpass, const VkPipelineRenderingCreateInfoKHR* pipeline_rendering_create_info)
 {
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
     ImGui_ImplVulkan_CreateShaderModules(device, allocator);
@@ -1039,15 +1045,19 @@ static void ImGui_ImplVulkan_CreatePipeline(VkDevice device, const VkAllocationC
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
     if (bd->VulkanInitInfo.UseDynamicRendering)
     {
-        IM_ASSERT(bd->VulkanInitInfo.PipelineRenderingCreateInfo.sType == VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR && "PipelineRenderingCreateInfo sType must be VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR");
-        IM_ASSERT(bd->VulkanInitInfo.PipelineRenderingCreateInfo.pNext == nullptr && "PipelineRenderingCreateInfo pNext must be nullptr");
-        info.pNext = &bd->VulkanInitInfo.PipelineRenderingCreateInfo;
+        IM_ASSERT(pipeline_rendering_create_info && "PipelineRenderingCreateInfo must not be nullptr when using dynamic rendering");
+        IM_ASSERT(pipeline_rendering_create_info->sType == VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR && "PipelineRenderingCreateInfo::sType must be VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR");
+        IM_ASSERT(pipeline_rendering_create_info->pNext == nullptr && "PipelineRenderingCreateInfo::pNext must be nullptr");
+        info.pNext = pipeline_rendering_create_info;
         info.renderPass = VK_NULL_HANDLE; // Just make sure it's actually nullptr.
     }
+#else
+    IM_ASSERT(pipeline_rendering_create_info == nullptr);
 #endif
-
-    VkResult err = vkCreateGraphicsPipelines(device, pipelineCache, 1, &info, allocator, pipeline);
+    VkPipeline pipeline;
+    VkResult err = vkCreateGraphicsPipelines(device, pipelineCache, 1, &info, allocator, &pipeline);
     check_vk_result(err);
+    return pipeline;
 }
 
 bool ImGui_ImplVulkan_CreateDeviceObjects()
@@ -1121,7 +1131,22 @@ bool ImGui_ImplVulkan_CreateDeviceObjects()
         check_vk_result(err);
     }
 
-    ImGui_ImplVulkan_CreatePipeline(v->Device, v->Allocator, v->PipelineCache, v->RenderPass, v->MSAASamples, &bd->Pipeline, v->Subpass);
+    // Create pipeline
+    if (v->RenderPass
+#ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
+        || (v->UseDynamicRendering && v->PipelineRenderingCreateInfo.sType == VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR)
+#endif
+        )
+    {
+        ImGui_ImplVulkan_MainPipelineCreateInfo mp_info = {};
+        mp_info.RenderPass = v->RenderPass;
+        mp_info.Subpass = v->Subpass;
+        mp_info.MSAASamples = v->MSAASamples;
+#ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
+        mp_info.PipelineRenderingCreateInfo = v->PipelineRenderingCreateInfo;
+#endif
+        ImGui_ImplVulkan_CreateMainPipeline(mp_info);
+    }
 
     // Create command pool/buffer for texture upload
     if (!bd->TexCommandPool)
@@ -1144,6 +1169,37 @@ bool ImGui_ImplVulkan_CreateDeviceObjects()
     }
 
     return true;
+}
+
+void ImGui_ImplVulkan_CreateMainPipeline(const ImGui_ImplVulkan_MainPipelineCreateInfo& info)
+{
+    ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
+    ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
+    if (bd->Pipeline)
+    {
+        vkDestroyPipeline(v->Device, bd->Pipeline, v->Allocator);
+        bd->Pipeline = VK_NULL_HANDLE;
+    }
+    v->RenderPass = info.RenderPass;
+    v->MSAASamples = info.MSAASamples;
+    v->Subpass = info.Subpass;
+
+    const VkPipelineRenderingCreateInfoKHR* pipeline_rendering_create_info = nullptr;
+#ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
+    if (v->UseDynamicRendering)
+    {
+        v->PipelineRenderingCreateInfo = info.PipelineRenderingCreateInfo;
+        pipeline_rendering_create_info = &v->PipelineRenderingCreateInfo;
+        if (v->PipelineRenderingCreateInfo.pColorAttachmentFormats != NULL)
+        {
+            // Deep copy buffer to reduce error-rate for end user (#8282)
+            bd->PipelineRenderingCreateInfoColorAttachmentFormats.resize((int)v->PipelineRenderingCreateInfo.colorAttachmentCount);
+            memcpy(bd->PipelineRenderingCreateInfoColorAttachmentFormats.Data, v->PipelineRenderingCreateInfo.pColorAttachmentFormats, (size_t)bd->PipelineRenderingCreateInfoColorAttachmentFormats.size_in_bytes());
+            v->PipelineRenderingCreateInfo.pColorAttachmentFormats = bd->PipelineRenderingCreateInfoColorAttachmentFormats.Data;
+        }
+    }
+#endif
+    bd->Pipeline = ImGui_ImplVulkan_CreatePipeline(v->Device, v->Allocator, v->PipelineCache, v->RenderPass, v->MSAASamples, v->Subpass, pipeline_rendering_create_info);
 }
 
 void    ImGui_ImplVulkan_DestroyDeviceObjects()
@@ -1270,25 +1326,12 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info)
         IM_ASSERT(info->DescriptorPoolSize > 0);
     IM_ASSERT(info->MinImageCount >= 2);
     IM_ASSERT(info->ImageCount >= info->MinImageCount);
-    if (info->UseDynamicRendering == false)
-        IM_ASSERT(info->RenderPass != VK_NULL_HANDLE);
 
     bd->VulkanInitInfo = *info;
 
     VkPhysicalDeviceProperties properties;
     vkGetPhysicalDeviceProperties(info->PhysicalDevice, &properties);
     bd->NonCoherentAtomSize = properties.limits.nonCoherentAtomSize;
-
-#ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
-    ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
-    if (v->PipelineRenderingCreateInfo.pColorAttachmentFormats != NULL)
-    {
-        // Deep copy buffer to reduce error-rate for end user (#8282)
-        VkFormat* formats_copy = (VkFormat*)IM_ALLOC(sizeof(VkFormat) * v->PipelineRenderingCreateInfo.colorAttachmentCount);
-        memcpy(formats_copy, v->PipelineRenderingCreateInfo.pColorAttachmentFormats, sizeof(VkFormat) * v->PipelineRenderingCreateInfo.colorAttachmentCount);
-        v->PipelineRenderingCreateInfo.pColorAttachmentFormats = formats_copy;
-    }
-#endif
 
     if (!ImGui_ImplVulkan_CreateDeviceObjects())
         IM_ASSERT(0 && "ImGui_ImplVulkan_CreateDeviceObjects() failed!"); // <- Can't be hit yet.
@@ -1310,9 +1353,6 @@ void ImGui_ImplVulkan_Shutdown()
 
     // First destroy objects in all viewports
     ImGui_ImplVulkan_DestroyDeviceObjects();
-#ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
-    IM_FREE((void*)const_cast<VkFormat*>(bd->VulkanInitInfo.PipelineRenderingCreateInfo.pColorAttachmentFormats));
-#endif
 
     // Manually delete main viewport render data in-case we haven't initialized for viewports
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();

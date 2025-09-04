@@ -4972,7 +4972,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         {
             if (flags & ImGuiInputTextFlags_EscapeClearsAll)
             {
-                if (buf[0] != 0)
+                if (state->TextA.Data[0] != 0)
                 {
                     revert_edit = true;
                 }
@@ -5064,14 +5064,14 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             if (flags & ImGuiInputTextFlags_EscapeClearsAll)
             {
                 // Clear input
-                IM_ASSERT(buf[0] != 0);
+                IM_ASSERT(state->TextA.Data[0] != 0);
                 apply_new_text = "";
                 apply_new_text_length = 0;
                 value_changed = true;
                 IMSTB_TEXTEDIT_CHARTYPE empty_string;
                 stb_textedit_replace(state, state->Stb, &empty_string, 0);
             }
-            else if (strcmp(buf, state->TextToRevertTo.Data) != 0)
+            else if (strcmp(state->TextA.Data, state->TextToRevertTo.Data) != 0)
             {
                 apply_new_text = state->TextToRevertTo.Data;
                 apply_new_text_length = state->TextToRevertTo.Size - 1;

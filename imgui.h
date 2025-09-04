@@ -29,7 +29,7 @@
 // Library Version
 // (Integer encoded as XYYZZ for use in #if preprocessor conditionals, e.g. '#if IMGUI_VERSION_NUM >= 12345')
 #define IMGUI_VERSION       "1.92.3 WIP"
-#define IMGUI_VERSION_NUM   19224
+#define IMGUI_VERSION_NUM   19225
 #define IMGUI_HAS_TABLE             // Added BeginTable() - from IMGUI_VERSION_NUM >= 18000
 #define IMGUI_HAS_TEXTURES          // Added ImGuiBackendFlags_RendererHasTextures - from IMGUI_VERSION_NUM >= 19198
 #define IMGUI_HAS_VIEWPORT          // In 'docking' WIP branch.
@@ -102,8 +102,10 @@ Index of this file:
 #define IMGUI_CHECKVERSION()        ImGui::DebugCheckVersionAndDataLayout(IMGUI_VERSION, sizeof(ImGuiIO), sizeof(ImGuiStyle), sizeof(ImVec2), sizeof(ImVec4), sizeof(ImDrawVert), sizeof(ImDrawIdx))
 
 // Helper Macros - IM_FMTARGS, IM_FMTLIST: Apply printf-style warnings to our formatting functions.
-// (MSVC provides an equivalent mechanism via SAL Annotations but it would require the macros in a different
-//  location. e.g. #include <sal.h> + void myprintf(_Printf_format_string_ const char* format, ...))
+// (MSVC provides an equivalent mechanism via SAL Annotations but it requires the macros in a different
+//  location. e.g. #include <sal.h> + void myprintf(_Printf_format_string_ const char* format, ...),
+//  and only works when using Code Analysis, rather than just normal compiling).
+// (see https://github.com/ocornut/imgui/issues/8871 for a patch to enable this for MSVC's Code Analysis)
 #if !defined(IMGUI_USE_STB_SPRINTF) && defined(__MINGW32__) && !defined(__clang__)
 #define IM_FMTARGS(FMT)             __attribute__((format(gnu_printf, FMT, FMT+1)))
 #define IM_FMTLIST(FMT)             __attribute__((format(gnu_printf, FMT, 0)))
