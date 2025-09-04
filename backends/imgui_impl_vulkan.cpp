@@ -1997,7 +1997,24 @@ static void ImGui_ImplVulkan_CreateWindow(ImGuiViewport* viewport)
 
     // Create pipeline (shared by all secondary viewports)
     if (bd->PipelineForViewports == VK_NULL_HANDLE)
-        ImGui_ImplVulkan_CreatePipeline(v->Device, v->Allocator, VK_NULL_HANDLE, wd->RenderPass, VK_SAMPLE_COUNT_1_BIT, &bd->PipelineForViewports, 0);
+    {
+        VkPipelineRenderingCreateInfoKHR* p_rendering_info = nullptr;
+#ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
+        VkPipelineRenderingCreateInfoKHR rendering_info = {};
+        if (wd->UseDynamicRendering)
+        {
+            rendering_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+            rendering_info.pNext = nullptr;
+            rendering_info.viewMask = 0;
+            rendering_info.colorAttachmentCount = 1;
+            rendering_info.pColorAttachmentFormats = &wd->SurfaceFormat.format;
+            rendering_info.depthAttachmentFormat = VK_FORMAT_UNDEFINED;
+            rendering_info.stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
+            p_rendering_info = &rendering_info;
+        }
+#endif
+        bd->PipelineForViewports = ImGui_ImplVulkan_CreatePipeline(v->Device, v->Allocator, VK_NULL_HANDLE, wd->UseDynamicRendering ? VK_NULL_HANDLE : wd->RenderPass, VK_SAMPLE_COUNT_1_BIT, 0, p_rendering_info);
+    }
 }
 
 static void ImGui_ImplVulkan_DestroyWindow(ImGuiViewport* viewport)
