@@ -5354,17 +5354,8 @@ static inline const char* CalcWordWrapNextLineStartA(const char* text, const cha
 // FIXME: Much possible improvements (don't cut things like "word !", "word!!!" but cut within "word,,,,", more sensible support for punctuations, support for Unicode punctuations, etc.)
 const char* ImFont::CalcWordWrapPosition(float size, const char* text, const char* text_end, float wrap_width)
 {
-    // For references, possible wrap point marked with ^
-    //  "aaa bbb, ccc,ddd. eee   fff. ggg!"
-    //      ^    ^    ^   ^   ^__    ^    ^
-
-    // List of hardcoded separators: .,;!?'"
-
-    // Skip extra blanks after a line returns (that includes not counting them in width computation)
-    // e.g. "Hello    world" --> "Hello" "World"
-
-    // Cut words that cannot possibly fit within one line.
-    // e.g.: "The tropical fish" with ~5 characters worth of width --> "The tr" "opical" "fish"
+    // Refactored word wrapping method detects wrapping points by looking for at most 3 consecutive characters.
+    // (Currently only 2.)
 
     ImFontBaked* baked = GetFontBaked(size);
     const float scale = size / baked->Size;
@@ -5375,87 +5366,91 @@ const char* ImFont::CalcWordWrapPosition(float size, const char* text, const cha
     wrap_width /= scale; // We work with unscaled widths to avoid scaling every characters
 
     const char* word_end = text;
-    const char* prev_word_end = NULL;
-    bool inside_word = true;
 
-    const char* s = text;
+    const char* prev_s = NULL;
+    const char* s = NULL;
+    const char* next_s = text;
+    unsigned int prev_c = 0;
+    unsigned int c = 0;
+    unsigned int next_c;
+#define IM_ADVANCE_WORD() \
+do {\
+    word_end = s; \
+    line_width += word_width + blank_width; \
+    word_width = blank_width = 0.0f;\
+} while (0)
     IM_ASSERT(text_end != NULL);
     while (s < text_end)
     {
-        unsigned int c = (unsigned int)*s;
-        const char* next_s;
-        if (c < 0x80)
-            next_s = s + 1;
+        // prev_s is the END of prev_c, which actually points to c
+        // same for s and next_s.
+        prev_s = s;
+        s = next_s;
+        prev_c = c;
+        c = next_c;
+        next_c = (unsigned int)*next_s;
+        if (next_c < 0x80)
+            next_s = next_s + 1;
         else
-            next_s = s + ImTextCharFromUtf8(&c, s, text_end);
+            next_s = next_s + ImTextCharFromUtf8(&next_c, next_s, text_end);
+        if (next_s > text_end)
+            next_c = 0;
 
-        if (c < 32)
+        if (prev_s == NULL) {
+            continue;
+        }
+        if (c < 0x20)
         {
             if (c == '\n')
             {
                 line_width = word_width = blank_width = 0.0f;
-                inside_word = true;
-                s = next_s;
                 continue;
             }
             if (c == '\r')
-            {
-                s = next_s;
                 continue;
-            }
-        }
 
+        }
         // Optimized inline version of 'float char_width = GetCharAdvance((ImWchar)c);'
         float char_width = (c < (unsigned int)baked->IndexAdvanceX.Size) ? baked->IndexAdvanceX.Data[c] : -1.0f;
         if (char_width < 0.0f)
             char_width = BuildLoadGlyphGetAdvanceOrFallback(baked, c);
-
         if (ImCharIsBlankW(c))
-        {
-            if (inside_word)
-            {
-                line_width += blank_width;
-                blank_width = 0.0f;
-                word_end = s;
-            }
             blank_width += char_width;
-            inside_word = false;
-        }
         else
         {
-            word_width += char_width;
-            if (inside_word)
-            {
-                word_end = next_s;
-            }
-            else
-            {
-                prev_word_end = word_end;
-                line_width += word_width + blank_width;
-                word_width = blank_width = 0.0f;
-            }
-
-            // Allow wrapping after punctuation.
-            inside_word = (c != '.' && c != ',' && c != ';' && c != '!' && c != '?' && c != '\"' && c != 0x3001 && c != 0x3002);
+            word_width += char_width + blank_width;
+            blank_width = 0.0f;
         }
-
         // We ignore blank width at the end of the line (they can be skipped)
         if (line_width + word_width > wrap_width)
         {
             // Words that cannot possibly fit within an entire line will be cut anywhere.
             if (word_width < wrap_width)
-                s = prev_word_end ? prev_word_end : word_end;
+                s = word_end;
+            else
+                s = prev_s;
             break;
         }
 
-        s = next_s;
+        if (!next_c) {
+            IM_ADVANCE_WORD();
+        }
+        else if (c && next_c)
+        {
+            if (prev_c >= '0' && prev_c <= '9' && next_c >= '0' && next_c <= '9' && !ImCharIsLineBreakableW(c))
+                continue;
+            if (ImCharIsLineBreakableW(next_c) && !ImCharIsHeadProhibited(next_c) && !ImCharIsTailProhibited(c))
+                IM_ADVANCE_WORD();
+            if ((ImCharIsHeadProhibited(c) || ImCharIsLineBreakableW(c)) && !ImCharIsHeadProhibited(next_c))
+                IM_ADVANCE_WORD();
+            }
     }
-
+#undef IM_ADVANCE_WORD
     // Wrap_width is too small to fit anything. Force displaying 1 character to minimize the height discontinuity.
     // +1 may not be a character start point in UTF-8 but it's ok because caller loops use (text >= word_wrap_eol).
     if (s == text && text < text_end)
         return s + ImTextCountUtf8BytesFromChar(s, text_end);
-    return s;
+    return s > text_end ? text_end : s;
 }
 
 ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, const char* text_begin, const char* text_end, const char** out_remaining)
@@ -5481,7 +5476,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
             // Calculate how far we can render. Requires two passes on the string data but keeps the code simple and not intrusive for what's essentially an uncommon feature.
             if (!word_wrap_eol)
                 word_wrap_eol = CalcWordWrapPosition(size, s, text_end, wrap_width - line_width);
-
+            IM_ASSERT(word_wrap_eol <= text_end);
             if (s >= word_wrap_eol)
             {
                 if (text_size.x < line_width)
@@ -5489,7 +5484,6 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
                 text_size.y += line_height;
                 line_width = 0.0f;
                 word_wrap_eol = NULL;
-                s = CalcWordWrapNextLineStartA(s, text_end); // Wrapping skips upcoming blanks
                 continue;
             }
         }
