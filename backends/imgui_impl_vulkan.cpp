@@ -257,6 +257,7 @@ struct ImGui_ImplVulkan_Data
     VkShaderModule              ShaderModuleVert;
     VkShaderModule              ShaderModuleFrag;
     VkDescriptorPool            DescriptorPool;
+    ImVector<VkFormat>          PipelineRenderingCreateInfoColorAttachmentFormats; // Deep copy of format array
 
     // Texture management
     VkSampler                   TexSampler;
@@ -1160,6 +1161,13 @@ void ImGui_ImplVulkan_CreateMainPipeline(const ImGui_ImplVulkan_MainPipelineCrea
     {
         v->PipelineRenderingCreateInfo = info.PipelineRenderingCreateInfo;
         pipeline_rendering_create_info = &v->PipelineRenderingCreateInfo;
+        if (v->PipelineRenderingCreateInfo.pColorAttachmentFormats != NULL)
+        {
+            // Deep copy buffer to reduce error-rate for end user (#8282)
+            bd->PipelineRenderingCreateInfoColorAttachmentFormats.resize((int)v->PipelineRenderingCreateInfo.colorAttachmentCount);
+            memcpy(bd->PipelineRenderingCreateInfoColorAttachmentFormats.Data, v->PipelineRenderingCreateInfo.pColorAttachmentFormats, (size_t)bd->PipelineRenderingCreateInfoColorAttachmentFormats.size_in_bytes());
+            v->PipelineRenderingCreateInfo.pColorAttachmentFormats = bd->PipelineRenderingCreateInfoColorAttachmentFormats.Data;
+        }
     }
 #endif
     bd->Pipeline = ImGui_ImplVulkan_CreatePipeline(v->Device, v->Allocator, v->PipelineCache, v->RenderPass, v->MSAASamples, v->Subpass, pipeline_rendering_create_info);
@@ -1294,17 +1302,6 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info)
     vkGetPhysicalDeviceProperties(info->PhysicalDevice, &properties);
     bd->NonCoherentAtomSize = properties.limits.nonCoherentAtomSize;
 
-#ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
-    ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
-    if (v->PipelineRenderingCreateInfo.pColorAttachmentFormats != NULL)
-    {
-        // Deep copy buffer to reduce error-rate for end user (#8282)
-        VkFormat* formats_copy = (VkFormat*)IM_ALLOC(sizeof(VkFormat) * v->PipelineRenderingCreateInfo.colorAttachmentCount);
-        memcpy(formats_copy, v->PipelineRenderingCreateInfo.pColorAttachmentFormats, sizeof(VkFormat) * v->PipelineRenderingCreateInfo.colorAttachmentCount);
-        v->PipelineRenderingCreateInfo.pColorAttachmentFormats = formats_copy;
-    }
-#endif
-
     if (!ImGui_ImplVulkan_CreateDeviceObjects())
         IM_ASSERT(0 && "ImGui_ImplVulkan_CreateDeviceObjects() failed!"); // <- Can't be hit yet.
 
@@ -1318,9 +1315,6 @@ void ImGui_ImplVulkan_Shutdown()
     ImGuiIO& io = ImGui::GetIO();
 
     ImGui_ImplVulkan_DestroyDeviceObjects();
-#ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
-    IM_FREE((void*)const_cast<VkFormat*>(bd->VulkanInitInfo.PipelineRenderingCreateInfo.pColorAttachmentFormats));
-#endif
 
     io.BackendRendererName = nullptr;
     io.BackendRendererUserData = nullptr;
