@@ -82,20 +82,18 @@ struct ImGui_ImplVulkan_InitInfo
     uint32_t                        QueueFamily;
     VkQueue                         Queue;
     VkDescriptorPool                DescriptorPool;             // See requirements in note above; ignored if using DescriptorPoolSize > 0
-    VkRenderPass                    RenderPass;                 // Ignored if using dynamic rendering
+    uint32_t                        DescriptorPoolSize;         // Optional: set to create internal descriptor pool automatically instead of using DescriptorPool.
     uint32_t                        MinImageCount;              // >= 2
     uint32_t                        ImageCount;                 // >= MinImageCount
+    VkPipelineCache                 PipelineCache;              // Optional
+
+    // Pipeline
+    VkRenderPass                    RenderPass;                 // Ignored if using dynamic rendering
+    uint32_t                        Subpass;
     VkSampleCountFlagBits           MSAASamples;                // 0 defaults to VK_SAMPLE_COUNT_1_BIT
 
-    // (Optional)
-    VkPipelineCache                 PipelineCache;
-    uint32_t                        Subpass;
-
-    // (Optional) Set to create internal descriptor pool instead of using DescriptorPool
-    uint32_t                        DescriptorPoolSize;
-
     // (Optional) Dynamic Rendering
-    // Need to explicitly enable VK_KHR_dynamic_rendering extension to use this, even for Vulkan 1.3.
+    // Need to explicitly enable VK_KHR_dynamic_rendering extension to use this, even for Vulkan 1.3 + setup PipelineRenderingCreateInfo.
     bool                            UseDynamicRendering;
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
     VkPipelineRenderingCreateInfoKHR PipelineRenderingCreateInfo;   // Optional, valid if .sType == VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR
