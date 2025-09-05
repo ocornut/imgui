@@ -200,7 +200,7 @@ typedef void		(*uSynergySleepFunc)(uSynergyCookie cookie, int timeMs);
 @brief Get time function
 
 This function is called when uSynergy needs to know the current time. This is used to determine when timeouts
-have occured. The time base should be a cyclic millisecond time value.
+have occurred. The time base should be a cyclic millisecond time value.
 
 @returns			Time value in milliseconds
 **/
@@ -336,7 +336,7 @@ typedef struct
 	uSynergyJoystickCallback		m_joystickCallback;								/* Callback for joystick events */
 	uSynergyClipboardCallback		m_clipboardCallback;							/* Callback for clipboard events */
 
-	/* State data, used internall by client, initialized by uSynergyInit() */
+	/* State data, used internally by client, initialized by uSynergyInit() */
 	uSynergyBool					m_connected;									/* Is our socket connected? */
 	uSynergyBool					m_hasReceivedHello;								/* Have we received a 'Hello' from the server? */
 	uSynergyBool					m_isCaptured;									/* Is Synergy active (i.e. this client is receiving input messages?) */

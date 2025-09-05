@@ -11,9 +11,10 @@ int main(int, char**)
     ImGuiIO& io = ImGui::GetIO();
 
     // Build atlas
-    unsigned char* tex_pixels = nullptr;
-    int tex_w, tex_h;
-    io.Fonts->GetTexDataAsRGBA32(&tex_pixels, &tex_w, &tex_h);
+    //unsigned char* tex_pixels = nullptr;
+    //int tex_w, tex_h;
+    //io.Fonts->GetTexDataAsRGBA32(&tex_pixels, &tex_w, &tex_h);
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;
 
     for (int n = 0; n < 20; n++)
     {
