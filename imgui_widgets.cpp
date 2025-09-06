@@ -4403,7 +4403,7 @@ static bool InputTextFilterCharacter(ImGuiContext* ctx, unsigned int* p_char, Im
             if (c == '.' || c == ',')
                 c = c_decimal_point;
 
-        // Full-width -> half-width conversion for numeric fields (https://en.wikipedia.org/wiki/Halfwidth_and_Fullwidth_Forms_(Unicode_block)
+        // Full-width -> half-width conversion for numeric fields: https://en.wikipedia.org/wiki/Halfwidth_and_Fullwidth_Forms_(Unicode_block)
         // While this is mostly convenient, this has the side-effect for uninformed users accidentally inputting full-width characters that they may
         // scratch their head as to why it works in numerical fields vs in generic text fields it would require support in the font.
         if (flags & (ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_CharsScientific | ImGuiInputTextFlags_CharsHexadecimal))
@@ -8370,7 +8370,7 @@ void ImGuiSelectionBasicStorage::ApplyRequests(ImGuiMultiSelectIO* ms_io)
     // - Optimized select can append unsorted, then sort in a second pass. Optimized unselect can clear in-place then compact in a second pass.
     // - A more optimal version wouldn't even use ImGuiStorage but directly a ImVector<ImGuiID> to reduce bandwidth, but this is a reasonable trade off to reuse code.
     // - There are many ways this could be better optimized. The worse case scenario being: using BoxSelect2d in a grid, box-select scrolling down while wiggling
-    //   left and right: it affects coarse clipping + can emit multiple SetRange with 1 item each.)
+    //   left and right: it affects coarse clipping + can emit multiple SetRange with 1 item each.
     // FIXME-OPT: For each block of consecutive SetRange request:
     // - add all requests to a sorted list, store ID, selected, offset in ImGuiStorage.
     // - rewrite sorted storage a single time.
@@ -9085,7 +9085,7 @@ bool ImGui::BeginMenuEx(const char* label, const char* icon, bool enabled)
     {
         // Menu inside a regular/vertical menu
         // (In a typical menu window where all items are BeginMenu() or MenuItem() calls, extra_w will always be 0.0f.
-        //  Only when they are other items sticking out we're going to add spacing, yet only register minimum width into the layout system.
+        //  Only when they are other items sticking out we're going to add spacing, yet only register minimum width into the layout system.)
         popup_pos = ImVec2(pos.x, pos.y - style.WindowPadding.y);
         float icon_w = (icon && icon[0]) ? CalcTextSize(icon, NULL).x : 0.0f;
         float checkmark_w = IM_TRUNC(g.FontSize * 1.20f);
@@ -9292,7 +9292,7 @@ bool ImGui::MenuItemEx(const char* label, const char* icon, const char* shortcut
     {
         // Menu item inside a vertical menu
         // (In a typical menu window where all items are BeginMenu() or MenuItem() calls, extra_w will always be 0.0f.
-        //  Only when they are other items sticking out we're going to add spacing, yet only register minimum width into the layout system.
+        //  Only when they are other items sticking out we're going to add spacing, yet only register minimum width into the layout system.)
         float icon_w = (icon && icon[0]) ? CalcTextSize(icon, NULL).x : 0.0f;
         float shortcut_w = (shortcut && shortcut[0]) ? CalcTextSize(shortcut, NULL).x : 0.0f;
         float checkmark_w = IM_TRUNC(g.FontSize * 1.20f);
