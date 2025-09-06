@@ -124,7 +124,7 @@ struct ImGui_ImplVulkan_MainPipelineCreateInfo
     VkPipelineRenderingCreateInfoKHR PipelineRenderingCreateInfo;   // Optional, valid if .sType == VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR
 #endif
 };
-IMGUI_IMPL_API void             ImGui_ImplVulkan_CreateMainPipeline(const ImGui_ImplVulkan_MainPipelineCreateInfo& info); // (render_pass xor (p_dynamic_rendering && p_dynamic_rendering is correct (sType and pNext))
+IMGUI_IMPL_API void             ImGui_ImplVulkan_CreateMainPipeline(const ImGui_ImplVulkan_MainPipelineCreateInfo& info); // (render_pass xor (p_dynamic_rendering && p_dynamic_rendering is correct (sType and pNext)))
 
 // (Advanced) Use e.g. if you need to precisely control the timing of texture updates (e.g. for staged rendering), by setting ImDrawData::Textures = NULL to handle this manually.
 IMGUI_IMPL_API void             ImGui_ImplVulkan_UpdateTexture(ImTextureData* tex);
@@ -163,12 +163,12 @@ struct ImGui_ImplVulkan_RenderState
 //
 // Your engine/app will likely _already_ have code to setup all that stuff (swap chain,
 // render pass, frame buffers, etc.). You may read this code if you are curious, but
-// it is recommended you use you own custom tailored code to do equivalent work.
+// it is recommended you use your own custom tailored code to do equivalent work.
 //
 // We don't provide a strong guarantee that we won't change those functions API.
 //
 // The ImGui_ImplVulkanH_XXX functions should NOT interact with any of the state used
-// by the regular ImGui_ImplVulkan_XXX functions).
+// by the regular ImGui_ImplVulkan_XXX functions.
 //-------------------------------------------------------------------------
 
 struct ImGui_ImplVulkanH_Frame;

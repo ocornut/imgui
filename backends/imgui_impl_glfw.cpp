@@ -594,7 +594,7 @@ void ImGui_ImplGlfw_RestoreCallbacks(GLFWwindow* window)
     bd->PrevUserCallbackMonitor = nullptr;
 }
 
-// Set to 'true' to enable chaining installed callbacks for all windows (including secondary viewports created by backends or by user.
+// Set to 'true' to enable chaining installed callbacks for all windows (including secondary viewports created by backends or by user).
 // This is 'false' by default meaning we only chain callbacks for the main viewport.
 // We cannot set this to 'true' by default because user callbacks code may be not testing the 'window' parameter of their callback.
 // If you set this to 'true' your user callback code will need to make sure you are testing the 'window' parameter.
