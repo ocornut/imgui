@@ -85,7 +85,7 @@ static ImGui_ImplSDLGPU3_Data* ImGui_ImplSDLGPU3_GetBackendData()
 static void ImGui_ImplSDLGPU3_SetupRenderState(ImDrawData* draw_data, ImGui_ImplSDLGPU3_RenderState* render_state, SDL_GPUGraphicsPipeline* pipeline, SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_pass, ImGui_ImplSDLGPU3_FrameData* fd, uint32_t fb_width, uint32_t fb_height)
 {
     ImGui_ImplSDLGPU3_Data* bd = ImGui_ImplSDLGPU3_GetBackendData();
-    render_state->SamplerCurrent = render_state->SamplerCurrent = bd->TexSampler;
+    render_state->SamplerCurrent = bd->TexSampler;
 
     // Bind graphics pipeline
     SDL_BindGPUGraphicsPipeline(render_pass, pipeline);
