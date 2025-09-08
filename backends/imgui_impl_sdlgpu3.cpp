@@ -62,6 +62,7 @@ struct ImGui_ImplSDLGPU3_Data
     SDL_GPUShader*               FragmentShader         = nullptr;
     SDL_GPUGraphicsPipeline*     Pipeline               = nullptr;
     SDL_GPUSampler*              TexSamplerLinear       = nullptr;
+    SDL_GPUSampler*              TexSamplerNearest      = nullptr;
     SDL_GPUTransferBuffer*       TexTransferBuffer      = nullptr;
     uint32_t                     TexTransferBufferSize  = 0;
 
@@ -236,7 +237,8 @@ void ImGui_ImplSDLGPU3_RenderDrawData(ImDrawData* draw_data, SDL_GPUCommandBuffe
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     ImGui_ImplSDLGPU3_RenderState render_state;
     render_state.Device = bd->InitInfo.Device;
-    render_state.SamplerDefault = render_state.SamplerCurrent = bd->TexSamplerLinear;
+    render_state.SamplerLinear = render_state.SamplerCurrent = bd->TexSamplerLinear;
+    render_state.SamplerNearest = bd->TexSamplerNearest;
     platform_io.Renderer_RenderState = &render_state;
 
     ImGui_ImplSDLGPU3_SetupRenderState(draw_data, &render_state, pipeline, command_buffer, render_pass, fd, fb_width, fb_height);
@@ -592,9 +594,14 @@ void ImGui_ImplSDLGPU3_CreateDeviceObjects()
         sampler_info.enable_anisotropy = false;
         sampler_info.max_anisotropy = 1.0f;
         sampler_info.enable_compare = false;
-
         bd->TexSamplerLinear = SDL_CreateGPUSampler(v->Device, &sampler_info);
         IM_ASSERT(bd->TexSamplerLinear != nullptr && "Failed to create sampler, call SDL_GetError() for more information");
+
+        sampler_info.min_filter = SDL_GPU_FILTER_NEAREST;
+        sampler_info.mag_filter = SDL_GPU_FILTER_NEAREST;
+        sampler_info.mipmap_mode = SDL_GPU_SAMPLERMIPMAPMODE_NEAREST;
+        bd->TexSamplerNearest = SDL_CreateGPUSampler(v->Device, &sampler_info);
+        IM_ASSERT(bd->TexSamplerNearest != nullptr && "Failed to create sampler, call SDL_GetError() for more information");
     }
 
     ImGui_ImplSDLGPU3_CreateGraphicsPipeline();

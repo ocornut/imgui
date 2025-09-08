@@ -44,7 +44,8 @@ struct ImGui_ImplDX11_RenderState
 {
     ID3D11Device*           Device;
     ID3D11DeviceContext*    DeviceContext;
-    ID3D11SamplerState*     SamplerDefault;
+    ID3D11SamplerState*     SamplerLinear;
+    ID3D11SamplerState*     SamplerNearest;
     ID3D11Buffer*           VertexConstantBuffer;
 };
 
