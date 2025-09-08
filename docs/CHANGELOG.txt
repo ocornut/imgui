@@ -71,6 +71,7 @@ Other Changes:
   unmoved. We revert back to move to the end of line in this situation.
 - DrawList: fixed CloneOutput() unnecessarily taking a copy of the ImDrawListSharedData
   pointer, which could to issue when deleting the cloned list. (#8894, #1860)
+- DrawList: made AddCallback() assert when passing a null callback.
 - Debug Tools: ID Stack Tool: fixed using fixed-size buffers preventing long identifiers
   from being displayed in the tool. (#8905, #4631)
 - Debug Tools: ID Stack Tool: when ### is used, uncontributing prefix before the ###
