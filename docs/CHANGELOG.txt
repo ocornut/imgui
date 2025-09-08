@@ -183,6 +183,7 @@ Other Changes:
   to play nice with -fsanitize=undefined. (#8874) [@i25e]
 - CI: Added SDL3 builds to MacOS and Windows. (#8819, #8778) [@scribam]
 - CI: Updated Windows CI to use a more recent SDL2. (#8819, #8778) [@scribam]
+- CI: Updates Windows CI to use a more recent VulkanSDK. (#8925, #8778) [@yaz0r]
 - Examples: SDL3+Metal: added SDL3+Metal example. (#8827, #8825) [@shi-yan]
 - Examples: SDL3+SDL_GPU: use SDL_WaitAndAcquireGPUSwapchainTexture() instead
   of SDL_AcquireGPUSwapchainTexture(). (#8830) [@itsdanott]
@@ -385,7 +386,7 @@ Breaking changes:
   to 4096 but that limit isn't necessary anymore, and Renderer_TextureMaxWidth covers this)
   However you may set TexMinWidth = TexMaxWidth for the same effect.
 - Fonts: if you create and manage ImFontAtlas instances yourself (instead of relying on
-  ImGuiContext to create one, you'll need to call ImFontAtlasUpdateNewFrame() yourself.
+  ImGuiContext to create one), you'll need to call ImFontAtlasUpdateNewFrame() yourself.
   An assert will trigger if you don't.
 - Fonts: obsoleted ImGui::SetWindowFontScale() which is not useful anymore. Prefer using
   PushFont(NULL, style.FontSizeBase * factor) or to manipulate other scaling factors.
@@ -1243,7 +1244,7 @@ Breaking changes:
     allows casting any pointer/integer type without warning:
     - May warn:     ImGui::Image((void*)MyTextureData, ...);
     - May warn:     ImGui::Image((void*)(intptr_t)MyTextureData, ...);
-    - Won't warn:   ImGui::Image((ImTextureID)(intptr_t)MyTextureData), ...);
+    - Won't warn:   ImGui::Image((ImTextureID)(intptr_t)MyTextureData, ...);
   - Note that you can always define ImTextureID to be your own high-level structures
     (with dedicated constructors and extra render parameters) if you like.
 - IO: moved ImGuiConfigFlags_NavEnableSetMousePos to standalone io.ConfigNavMoveSetMousePos bool.
@@ -5053,7 +5054,7 @@ Breaking Changes:
   - ShowTestWindow()                    -> use ShowDemoWindow()
   - IsRootWindowFocused()               -> use IsWindowFocused(ImGuiFocusedFlags_RootWindow)
   - IsRootWindowOrAnyChildFocused()     -> use IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)
-  - SetNextWindowContentWidth(w)        -> use SetNextWindowContentSize(ImVec2(w, 0.0f)
+  - SetNextWindowContentWidth(w)        -> use SetNextWindowContentSize(ImVec2(w, 0.0f))
   - GetItemsLineHeightWithSpacing()     -> use GetFrameHeightWithSpacing()
   - ImGuiCol_ChildWindowBg              -> use ImGuiCol_ChildBg
   - ImGuiStyleVar_ChildWindowRounding   -> use ImGuiStyleVar_ChildRounding

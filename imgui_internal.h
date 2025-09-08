@@ -77,8 +77,8 @@ Index of this file:
 #ifdef _MSC_VER
 #pragma warning (push)
 #pragma warning (disable: 4251)     // class 'xxx' needs to have dll-interface to be used by clients of struct 'xxx' // when IMGUI_API is set to__declspec(dllexport)
-#pragma warning (disable: 26812)    // The enum type 'xxx' is unscoped. Prefer 'enum class' over 'enum' (Enum.3). [MSVC Static Analyzer)
 #pragma warning (disable: 26495)    // [Static Analyzer] Variable 'XXX' is uninitialized. Always initialize a member variable (type.6).
+#pragma warning (disable: 26812)    // [Static Analyzer] The enum type 'xxx' is unscoped. Prefer 'enum class' over 'enum' (Enum.3).
 #if defined(_MSC_VER) && _MSC_VER >= 1922 // MSVC 2019 16.2 or later
 #pragma warning (disable: 5054)     // operator '|': deprecated between enumerations of different types
 #endif
@@ -199,6 +199,7 @@ typedef int ImGuiDataAuthority;         // -> enum ImGuiDataAuthority_      // E
 typedef int ImGuiLayoutType;            // -> enum ImGuiLayoutType_         // Enum: Horizontal or vertical
 
 // Flags
+typedef int ImDrawTextFlags;            // -> enum ImDrawTextFlags_         // Flags: for ImTextCalcWordWrapPositionEx()
 typedef int ImGuiActivateFlags;         // -> enum ImGuiActivateFlags_      // Flags: for navigation/focus function (will be for ActivateItem() later)
 typedef int ImGuiDebugLogFlags;         // -> enum ImGuiDebugLogFlags_      // Flags: for ShowDebugLogWindow(), g.DebugLogFlags
 typedef int ImGuiFocusRequestFlags;     // -> enum ImGuiFocusRequestFlags_  // Flags: for FocusWindow()
@@ -439,6 +440,18 @@ IMGUI_API int           ImTextCountUtf8BytesFromChar(const char* in_text, const 
 IMGUI_API int           ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in_text_end);                        // return number of bytes to express string in UTF-8
 IMGUI_API const char*   ImTextFindPreviousUtf8Codepoint(const char* in_text_start, const char* in_text_curr);                   // return previous UTF-8 code-point.
 IMGUI_API int           ImTextCountLines(const char* in_text, const char* in_text_end);                                         // return number of lines taken by text. trailing carriage return doesn't count as an extra line.
+
+// Helpers: High-level text functions (DO NOT USE!!! THIS IS A MINIMAL SUBSET OF LARGER UPCOMING CHANGES)
+enum ImDrawTextFlags_
+{
+    ImDrawTextFlags_None                = 0,
+    ImDrawTextFlags_CpuFineClip         = 1 << 0,    // Must be == 1/true for legacy with 'bool cpu_fine_clip' arg to RenderText()
+    ImDrawTextFlags_WrapKeepBlanks      = 1 << 1,
+    ImDrawTextFlags_StopOnNewLine       = 1 << 2,
+};
+IMGUI_API ImVec2        ImFontCalcTextSizeEx(ImFont* font, float size, float max_width, float wrap_width, const char* text_begin, const char* text_end_display, const char* text_end, const char** out_remaining, ImVec2* out_offset, ImDrawTextFlags flags);
+IMGUI_API const char*   ImFontCalcWordWrapPositionEx(ImFont* font, float size, const char* text, const char* text_end, float wrap_width, ImDrawTextFlags flags = 0);
+IMGUI_API const char*   ImTextCalcWordWrapNextLineStart(const char* text, const char* text_end, ImDrawTextFlags flags = 0); // trim trailing space and find beginning of next line
 
 // Helpers: File System
 #ifdef IMGUI_DISABLE_FILE_FUNCTIONS
@@ -1013,6 +1026,15 @@ enum ImGuiHoveredFlagsPrivate_
 // Extend ImGuiInputTextFlags_
 enum ImGuiInputTextFlagsPrivate_
 {
+    // [Experimental]
+    // Word-wrapping caveats:
+    // - Not well tested yet. Please report any incorrect cursor movement, selection behavior etc. bug to https://github.com/ocornut/imgui/issues/3237.
+    // - With our current design it is _much_ slower than a regular text field. Editing a <50K buffer will generally be ok, but editing a 1MB buffer will waste meaningful amount of CPU.
+    //   We are likely to not make the feature public until this is fixed (which requires bigger changes to InputText will be be generally desirable for this and other features)
+    // - Wrapping of long words/sections (e.g. words that are larger than available width) is currently visually not pleasing.
+    // - Vertical scrollbar is currently always visible.
+    ImGuiInputTextFlags_WordWrap            = 1 << 24,  // InputTextMultine(): wrap lines that are too long. (Ref #3237, #952, #1062)
+
     // [Internal]
     ImGuiInputTextFlags_Multiline           = 1 << 26,  // For internal use by InputTextMultiline()
     ImGuiInputTextFlags_MergedItem          = 1 << 27,  // For internal use by TempInputText(), will skip calling ItemAdd(). Require bounding-box to strictly match.
@@ -1232,11 +1254,15 @@ struct IMGUI_API ImGuiInputTextState
     ImVector<char>          CallbackTextBackup;     // temporary storage for callback to support automatic reconcile of undo-stack
     int                     BufCapacity;            // end-user buffer capacity (include zero terminator)
     ImVec2                  Scroll;                 // horizontal offset (managed manually) + vertical scrolling (pulled from child window's own Scroll.y)
+    int                     LineCount;              // last line count (solely for debugging)
+    float                   WrapWidth;              // word-wrapping width
     float                   CursorAnim;             // timer for cursor blink, reset on every user action so the cursor reappears immediately
     bool                    CursorFollow;           // set when we want scrolling to follow the current cursor position (not always!)
+    bool                    CursorCenterY;          // set when we want scrolling to be centered over the cursor position (while resizing a word-wrapping field)
     bool                    SelectedAllMouseLock;   // after a double-click to select all, we ignore further mouse drags to update selection
     bool                    Edited;                 // edited this frame
     bool                    WantReloadUserBuf;      // force a reload of user buf so it may be modified externally. may be automatic in future version.
+    ImS8                    LastMoveDirectionLR;    // ImGuiDir_Left or ImGuiDir_Right. track last movement direction so when cursor cross over a word-wrapping boundaries we can display it on either line depending on last move.s
     int                     ReloadSelectionStart;
     int                     ReloadSelectionEnd;
 
@@ -1246,6 +1272,7 @@ struct IMGUI_API ImGuiInputTextState
     void        ClearFreeMemory()           { TextA.clear(); TextToRevertTo.clear(); }
     void        OnKeyPressed(int key);      // Cannot be inline because we call in code in stb_textedit.h implementation
     void        OnCharPressed(unsigned int c);
+    float       GetPreferredOffsetX() const;
 
     // Cursor & Selection
     void        CursorAnimReset();

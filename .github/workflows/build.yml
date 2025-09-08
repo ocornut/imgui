@@ -30,14 +30,25 @@ jobs:
           Invoke-WebRequest -Uri "https://www.libsdl.org/release/SDL2-devel-2.32.8-VC.zip" -OutFile "SDL2-devel-2.32.8-VC.zip"
           Expand-Archive -Path SDL2-devel-2.32.8-VC.zip
           echo "SDL2_DIR=$(pwd)\SDL2-devel-2.32.8-VC\SDL2-2.32.8\" >>${env:GITHUB_ENV}
-          
+
           Invoke-WebRequest -Uri "https://www.libsdl.org/release/SDL3-devel-3.2.18-VC.zip" -OutFile "SDL3-devel-3.2.18-VC.zip"
           Expand-Archive -Path SDL3-devel-3.2.18-VC.zip
           echo "SDL3_DIR=$(pwd)\SDL3-devel-3.2.18-VC\SDL3-3.2.18\" >>${env:GITHUB_ENV}
 
-          Invoke-WebRequest -Uri "https://github.com/ocornut/imgui/files/3789205/vulkan-sdk-1.1.121.2.zip" -OutFile vulkan-sdk-1.1.121.2.zip
-          Expand-Archive -Path vulkan-sdk-1.1.121.2.zip
-          echo "VULKAN_SDK=$(pwd)\vulkan-sdk-1.1.121.2\" >>${env:GITHUB_ENV}
+          # VulkanSDK (retrieve minimal bits of the SDK from git)
+          $vulkanVersion = "1.4.326"
+          # 1. Get the vulkan headers, we will treat that folder as the sdk folder to avoid having to copy headers around
+          Invoke-WebRequest -Uri "https://github.com/KhronosGroup/Vulkan-Headers/archive/refs/tags/v$($vulkanVersion).zip" -OutFile Vulkan-Headers-$($vulkanVersion).zip
+          Expand-Archive -Path Vulkan-Headers-$($vulkanVersion).zip
+          echo "VULKAN_SDK=$(pwd)\Vulkan-Headers-$($vulkanVersion)\Vulkan-Headers-$($vulkanVersion)" >>${env:GITHUB_ENV}
+          # 2. Get and build the vulkan loader source code (UPDATE_DEPS=On will make it automatically fetch its dependencies)
+          Invoke-WebRequest -Uri "https://github.com/KhronosGroup/Vulkan-Loader/archive/refs/tags/v$($vulkanVersion).zip" -OutFile Vulkan-Loader-$($vulkanVersion).zip
+          Expand-Archive -Path Vulkan-Loader-$($vulkanVersion).zip
+          cmake -S Vulkan-Loader-$($vulkanVersion)\Vulkan-Loader-$($vulkanVersion) -B VulkanLoader-build -D UPDATE_DEPS=On
+          cmake --build VulkanLoader-build
+          # 3. Copy the built lib/dll to the expected place
+          mkdir Vulkan-Headers-$($vulkanVersion)\Vulkan-Headers-$($vulkanVersion)\Lib
+          copy VulkanLoader-build\loader\Debug\vulkan-1.* Vulkan-Headers-$($vulkanVersion)\Vulkan-Headers-$($vulkanVersion)\Lib\
 
       - name: Fix Projects
         shell: powershell
