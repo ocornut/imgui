@@ -7348,6 +7348,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
 
     bool hovered, held;
     bool pressed = ButtonBehavior(bb, id, &hovered, &held, button_flags);
+    bool auto_selected = false;
 
     // Multi-selection support (footer)
     if (is_multi_select)
@@ -7365,7 +7366,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
         //   The multi-select API aim to fix those issues, e.g. may be replaced with a BeginSelection() API.
         if ((flags & ImGuiSelectableFlags_SelectOnNav) && g.NavJustMovedToId != 0 && g.NavJustMovedToFocusScopeId == g.CurrentFocusScopeId)
             if (g.NavJustMovedToId == id)
-                selected = pressed = true;
+                selected = pressed = auto_selected = true;
     }
 
     // Update NavId when clicking or when Hovering (this doesn't happen on most widgets), so navigation can be resumed with keyboard/gamepad
@@ -7416,8 +7417,9 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
         RenderTextClipped(pos, ImVec2(ImMin(pos.x + size.x, window->WorkRect.Max.x), pos.y + size.y), label, NULL, &label_size, style.SelectableTextAlign, &bb);
 
     // Automatically close popups
-    if (pressed && (window->Flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiSelectableFlags_NoAutoClosePopups) && (g.LastItemData.ItemFlags & ImGuiItemFlags_AutoClosePopups))
-        CloseCurrentPopup();
+    if (pressed && !auto_selected && (window->Flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiSelectableFlags_NoAutoClosePopups) && (g.LastItemData.ItemFlags & ImGuiItemFlags_AutoClosePopups))
+        if (!(flags & ImGuiSelectableFlags_SelectOnNav) || g.NavJustMovedToId != id)
+            CloseCurrentPopup();
 
     if (disabled_item && !disabled_global)
         EndDisabled();
