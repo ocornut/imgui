@@ -182,7 +182,8 @@ static void SetupVulkan(ImVector<const char*> instance_extensions)
     {
         VkDescriptorPoolSize pool_sizes[] =
         {
-            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE },
+            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_POOL_SIZE },
+            { VK_DESCRIPTOR_TYPE_SAMPLER, IMGUI_IMPL_VULKAN_MINIMUM_SAMPLER_POOL_SIZE },
         };
         VkDescriptorPoolCreateInfo pool_info = {};
         pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -435,6 +436,12 @@ int main(int, char**)
     bool show_another_window = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
+    //int my_image_width = 0;
+    //int my_image_height = 0;
+    //GLuint my_image_texture = 0;
+    //bool ret = LoadTextureFromFile("../../MyImage01.jpg", &my_image_texture, &my_image_width, &my_image_height);
+    //IM_ASSERT(ret);
+
     // Main loop
     bool done = false;
     while (!done)
@@ -456,6 +463,16 @@ int main(int, char**)
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
+
+        //ImGui::Begin("SDL_GPU Texture Test");
+        //ImGui::Text("pointer = %p", &my_texture);
+        //ImGui::Text("size = %d x %d", my_image_width, my_image_height);
+        //ImGui::Image((ImTextureID)(intptr_t)my_texture, ImVec2((float)my_image_width * 3, (float)my_image_height * 3));
+        //ImGui::SameLine();
+        //ImGui::GetWindowDrawList()->AddCallback(ImDrawCallback_SetSamplerNearest, NULL);
+        //ImGui::Image((ImTextureID)(intptr_t)my_texture, ImVec2((float)my_image_width * 3, (float)my_image_height * 3));
+        //ImGui::GetWindowDrawList()->AddCallback(ImDrawCallback_SetSamplerLinear, NULL);
+        //ImGui::End();
 
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
         if (show_demo_window)

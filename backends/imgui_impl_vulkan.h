@@ -78,7 +78,8 @@
 #endif
 
 // Backend uses a small number of descriptors per font atlas + as many as additional calls done to ImGui_ImplVulkan_AddTexture().
-#define IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE   (8)     // Minimum per atlas
+#define IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_POOL_SIZE   (8)     // Minimum per atlas
+#define IMGUI_IMPL_VULKAN_MINIMUM_SAMPLER_POOL_SIZE   (2)     // Minimum for linear + nearest
 
 // Specify settings to create pipeline and swapchain
 struct ImGui_ImplVulkan_PipelineInfo
@@ -155,7 +156,7 @@ IMGUI_IMPL_API void             ImGui_ImplVulkan_UpdateTexture(ImTextureData* te
 // Register a texture (VkDescriptorSet == ImTextureID)
 // FIXME: This is experimental in the sense that we are unsure how to best design/tackle this problem
 // Please post to https://github.com/ocornut/imgui/pull/914 if you have suggestions.
-IMGUI_IMPL_API VkDescriptorSet  ImGui_ImplVulkan_AddTexture(VkSampler sampler, VkImageView image_view, VkImageLayout image_layout);
+IMGUI_IMPL_API VkDescriptorSet  ImGui_ImplVulkan_AddTexture(VkImageView image_view, VkImageLayout image_layout);
 IMGUI_IMPL_API void             ImGui_ImplVulkan_RemoveTexture(VkDescriptorSet descriptor_set);
 
 // Optional: load Vulkan functions with a custom function loader
