@@ -69,6 +69,8 @@ Other Changes:
 - InputText: revert a change in 1.79 where pressing Down or PageDown on the last line
   of a multi-line buffer without a trailing carriage return would keep the cursor
   unmoved. We revert back to move to the end of line in this situation.
+- Selectable: added ImGuiSelectableFlags_SelectOnNav to auto-select an item when
+  moved into (automatic when in a BeginMultiSelect() block).
 - DrawList: fixed CloneOutput() unnecessarily taking a copy of the ImDrawListSharedData
   pointer, which could to issue when deleting the cloned list. (#8894, #1860)
 - DrawList: made AddCallback() assert when passing a null callback.

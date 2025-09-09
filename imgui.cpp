@@ -15757,6 +15757,7 @@ static void Platform_SetImeDataFn_DefaultImpl(ImGuiContext*, ImGuiViewport*, ImG
 // - DebugNodeWindowSettings() [Internal]
 // - DebugNodeWindowsList() [Internal]
 // - DebugNodeWindowsListByBeginStackParent() [Internal]
+// - ShowFontSelector()
 //-----------------------------------------------------------------------------
 
 #if !defined(IMGUI_DISABLE_DEMO_WINDOWS) || !defined(IMGUI_DISABLE_DEBUG_TOOLS)
