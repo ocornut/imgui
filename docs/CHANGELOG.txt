@@ -80,6 +80,8 @@ Other Changes:
   is now skipped. (#8904, #4631)
 - Debug Tools: ID Stack Tool: added option to hex-encode non-ASCII characters in
   output path. (#8904, #4631)
+- Demo: tweaked ShowFontSelector() and ShowStyleSelector() to update selection
+  while navigating and to not close popup automatically.
 - Examples: Android: Android+OpenGL3: update Gradle project (#8888, #8878) [@scribam]
 - Backends: SDL_GPU: Added ImGui_ImplSDLGPU3_InitInfo::SwapchainComposition and
   PresentMode to configure how secondary viewports are created. Currently only used
