@@ -8224,17 +8224,18 @@ void ImGui::ShowAboutWindow(bool* p_open)
 //-----------------------------------------------------------------------------
 
 // Demo helper function to select among default colors. See ShowStyleEditor() for more advanced options.
-// Here we use the simplified Combo() api that packs items into a single literal string.
-// Useful for quick combo boxes where the choices are known locally.
 bool ImGui::ShowStyleSelector(const char* label)
 {
+    // FIXME: This is a bit tricky to get right as style are functions, they don't register a name nor the fact that one is active.
+    // So we keep track of last active one among our limited selection.
     static int style_idx = -1;
     const char* style_names[] = { "Dark", "Light", "Classic" };
     bool ret = false;
     if (ImGui::BeginCombo(label, (style_idx >= 0 && style_idx < IM_ARRAYSIZE(style_names)) ? style_names[style_idx] : ""))
     {
         for (int n = 0; n < IM_ARRAYSIZE(style_names); n++)
-            if (ImGui::Selectable(style_names[n], style_idx == n, ImGuiSelectableFlags_SelectOnNav | ImGuiSelectableFlags_NoAutoClosePopups))
+        {
+            if (ImGui::Selectable(style_names[n], style_idx == n, ImGuiSelectableFlags_SelectOnNav))
             {
                 style_idx = n;
                 ret = true;
@@ -8245,6 +8246,9 @@ bool ImGui::ShowStyleSelector(const char* label)
                 case 2: ImGui::StyleColorsClassic(); break;
                 }
             }
+            else if (style_idx == n)
+                ImGui::SetItemDefaultFocus();
+        }
         ImGui::EndCombo();
     }
     return ret;
