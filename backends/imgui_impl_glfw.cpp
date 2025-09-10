@@ -32,6 +32,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2025-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2025-09-10: [Docking] Improve multi-viewport behavior in tiling WMs on X11 via the ImGui_ImplGlfw_SetWindowFloating() function. Note: using GLFW backend on Linux/BSD etc. requires linking with -lX11. (#8884, #8474, #8289)
 //  2025-07-08: Made ImGui_ImplGlfw_GetContentScaleForWindow(), ImGui_ImplGlfw_GetContentScaleForMonitor() helpers return 1.0f on Emscripten and Android platforms, matching macOS logic. (#8742, #8733)
 //  2025-06-18: Added support for multiple Dear ImGui contexts. (#8676, #8239, #8069)
 //  2025-06-11: Added ImGui_ImplGlfw_GetContentScaleForWindow(GLFWwindow* window) and ImGui_ImplGlfw_GetContentScaleForMonitor(GLFWmonitor* monitor) helper to facilitate making DPI-aware apps.
@@ -121,14 +122,13 @@
 #define GLFW_EXPOSE_NATIVE_WIN32
 #endif
 #include <GLFW/glfw3native.h>   // for glfwGetWin32Window()
-#endif
-#ifdef __APPLE__
+#elif defined(__APPLE__)
 #ifndef GLFW_EXPOSE_NATIVE_COCOA
 #define GLFW_EXPOSE_NATIVE_COCOA
 #endif
 #include <GLFW/glfw3native.h>   // for glfwGetCocoaWindow()
 #elif !defined(__EMSCRIPTEN__)
-// Freedesktop(Linux, BSD, etc)
+// Freedesktop (Linux, BSD, etc)
 #ifndef GLFW_EXPOSE_NATIVE_X11
 #define GLFW_EXPOSE_NATIVE_X11
 #include <X11/Xatom.h>
@@ -183,7 +183,7 @@
 #define GLFW_HAS_GETERROR               (GLFW_VERSION_COMBINED >= 3300) // 3.3+ glfwGetError()
 #define GLFW_HAS_GETPLATFORM            (GLFW_VERSION_COMBINED >= 3400) // 3.4+ glfwGetPlatform()
 
-// Map GLFWWindow* to ImGuiContext*. 
+// Map GLFWWindow* to ImGuiContext*.
 // - Would be simpler if we could use glfwSetWindowUserPointer()/glfwGetWindowUserPointer(), but this is a single and shared resource.
 // - Would be simpler if we could use e.g. std::map<> as well. But we don't.
 // - This is not particularly optimized as we expect size to be small and queries to be rare.
@@ -1200,7 +1200,8 @@ static void ImGui_ImplGlfw_WindowSizeCallback(GLFWwindow* window, int, int)
     }
 }
 
-#if !defined(__APPLE__) && !defined(_WIN32) && !defined(__EMSCRIPTEN__) && (GLFW_VERSION_MAJOR > 3 || (GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 4)) 
+#if !defined(__APPLE__) && !defined(_WIN32) && !defined(__EMSCRIPTEN__) && GLFW_HAS_GETPLATFORM
+#define IMGUI_GLFW_HAS_SETWINDOWFLOATING
 static void ImGui_ImplGlfw_SetWindowFloating(GLFWwindow* window)
 {
 #ifdef GLFW_EXPOSE_NATIVE_X11
@@ -1208,21 +1209,20 @@ static void ImGui_ImplGlfw_SetWindowFloating(GLFWwindow* window)
     {
         Display* display = glfwGetX11Display();
         Window xwindow = glfwGetX11Window(window);
-
         Atom wm_type = XInternAtom(display, "_NET_WM_WINDOW_TYPE", False);
         Atom wm_type_dialog = XInternAtom(display, "_NET_WM_WINDOW_TYPE_DIALOG", False);
-        XChangeProperty(display, xwindow, wm_type, XA_ATOM, 32,
-                      PropModeReplace, (unsigned char*)&wm_type_dialog, 1);
-
+        XChangeProperty(display, xwindow, wm_type, XA_ATOM, 32, PropModeReplace, (unsigned char*)&wm_type_dialog, 1);
         XSetWindowAttributes attrs;
         attrs.override_redirect = False;
         XChangeWindowAttributes(display, xwindow, CWOverrideRedirect, &attrs);
-
         XFlush(display);
     }
-#endif
+#endif // GLFW_EXPOSE_NATIVE_X11
+#ifdef GLFW_EXPOSE_NATIVE_WAYLAND
+    // FIXME: Help needed, see #8884, #8474 for discussions about this.
+#endif // GLFW_EXPOSE_NATIVE_X11
 }
-#endif
+#endif // IMGUI_GLFW_HAS_SETWINDOWFLOATING
 
 static void ImGui_ImplGlfw_CreateWindow(ImGuiViewport* viewport)
 {
@@ -1251,7 +1251,7 @@ static void ImGui_ImplGlfw_CreateWindow(ImGuiViewport* viewport)
     vd->WindowOwned = true;
     ImGui_ImplGlfw_ContextMap_Add(vd->Window, bd->Context);
     viewport->PlatformHandle = (void*)vd->Window;
-#if !defined(__APPLE__) && !defined(_WIN31) && !defined(__EMSCRIPTEN__) && (GLFW_VERSION_MAJOR > 3 || (GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 4))
+#ifdef IMGUI_GLFW_HAS_SETWINDOWFLOATING
     ImGui_ImplGlfw_SetWindowFloating(vd->Window);
 #endif
 #ifdef _WIN32

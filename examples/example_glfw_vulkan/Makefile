@@ -33,7 +33,7 @@ LIBS =
 
 ifeq ($(UNAME_S), Linux) #LINUX
 	ECHO_MESSAGE = "Linux"
-	LIBS += $(LINUX_GL_LIBS) `pkg-config --static --libs glfw3 vulkan`
+	LIBS += $(LINUX_GL_LIBS) -lX11 `pkg-config --static --libs glfw3 vulkan`
 
 	CXXFLAGS += `pkg-config --cflags glfw3 vulkan`
 	CFLAGS = $(CXXFLAGS)

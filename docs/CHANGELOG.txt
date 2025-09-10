@@ -94,6 +94,12 @@ Other Changes:
 - Backends: Vulkan: added ImGui_ImplVulkan_CreateMainPipeline() to recreate pipeline
   without reinitializing backend. (#8110, #8111) [@SuperRonan]
 
+Docking+Viewports Branch:
+
+- Backends: GLFW: improve multi-viewport behavior in tiling WMs on X11.
+  Note: using GLFW backend on Linux/BSD etc. requires linking with `-lX11`.
+  (#8884, #8474, #8289) [@Ikos3k, @Madman10K]
+
 
 -----------------------------------------------------------------------
  VERSION 1.92.2b (Released 2025-08-13)
