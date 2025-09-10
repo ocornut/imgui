@@ -85,6 +85,8 @@ Other Changes:
   is now skipped. (#8904, #4631)
 - Debug Tools: ID Stack Tool: added option to hex-encode non-ASCII characters in
   output path. (#8904, #4631)
+- Debug Tools: Fixed assertion failure when opening a combo box while using
+  io.ConfigDebugBeginReturnValueOnce/ConfigDebugBeginReturnValueLoop. (#8931) [@harrymander]
 - Demo: tweaked ShowFontSelector() and ShowStyleSelector() to update selection
   while navigating and to not close popup automatically.
 - Examples: Android: Android+OpenGL3: update Gradle project (#8888, #8878) [@scribam]
