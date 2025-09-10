@@ -9557,6 +9557,19 @@ static ImGuiPtrOrIndex GetTabBarRefFromTabBar(ImGuiTabBar* tab_bar)
     return ImGuiPtrOrIndex(tab_bar);
 }
 
+ImGuiTabBar* ImGui::TabBarFindByID(ImGuiID id)
+{
+    ImGuiContext& g = *GImGui;
+    return g.TabBars.GetByKey(id);
+}
+
+// Remove TabBar data (currently only used by TestEngine)
+void    ImGui::TabBarRemove(ImGuiTabBar* tab_bar)
+{
+    ImGuiContext& g = *GImGui;
+    g.TabBars.Remove(tab_bar->ID, tab_bar);
+}
+
 bool    ImGui::BeginTabBar(const char* str_id, ImGuiTabBarFlags flags)
 {
     ImGuiContext& g = *GImGui;
