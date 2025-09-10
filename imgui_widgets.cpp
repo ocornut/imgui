@@ -2032,7 +2032,8 @@ bool ImGui::BeginComboPopup(ImGuiID popup_id, const ImRect& bb, ImGuiComboFlags 
     if (!ret)
     {
         EndPopup();
-        IM_ASSERT(0);   // This should never happen as we tested for IsPopupOpen() above
+        // Begin will only return false when ConfigDebugBeginReturnValueOnce is true and opening for the first time
+        IM_ASSERT(g.IO.ConfigDebugBeginReturnValueOnce);
         return false;
     }
     g.BeginComboDepth++;
