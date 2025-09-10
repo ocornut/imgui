@@ -75,7 +75,7 @@ struct ImGui_ImplDX10_Data
     ID3D10InputLayout*          pInputLayout;
     ID3D10Buffer*               pVertexConstantBuffer;
     ID3D10PixelShader*          pPixelShader;
-    ID3D10SamplerState*         pFontSampler;
+    ID3D10SamplerState*         pTexSamplerLinear;
     ID3D10RasterizerState*      pRasterizerState;
     ID3D10BlendState*           pBlendState;
     ID3D10DepthStencilState*    pDepthStencilState;
@@ -146,7 +146,7 @@ static void ImGui_ImplDX10_SetupRenderState(ImDrawData* draw_data, ID3D10Device*
     device->VSSetShader(bd->pVertexShader);
     device->VSSetConstantBuffers(0, 1, &bd->pVertexConstantBuffer);
     device->PSSetShader(bd->pPixelShader);
-    device->PSSetSamplers(0, 1, &bd->pFontSampler);
+    device->PSSetSamplers(0, 1, &bd->pTexSamplerLinear);
     device->GSSetShader(nullptr);
 
     // Setup render state
@@ -263,7 +263,7 @@ void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     ImGui_ImplDX10_RenderState render_state;
     render_state.Device = bd->pd3dDevice;
-    render_state.SamplerDefault = bd->pFontSampler;
+    render_state.SamplerDefault = bd->pTexSamplerLinear;
     render_state.VertexConstantBuffer = bd->pVertexConstantBuffer;
     platform_io.Renderer_RenderState = &render_state;
 
@@ -569,7 +569,7 @@ bool    ImGui_ImplDX10_CreateDeviceObjects()
         desc.ComparisonFunc = D3D10_COMPARISON_ALWAYS;
         desc.MinLOD = 0.f;
         desc.MaxLOD = 0.f;
-        bd->pd3dDevice->CreateSamplerState(&desc, &bd->pFontSampler);
+        bd->pd3dDevice->CreateSamplerState(&desc, &bd->pTexSamplerLinear);
     }
 
     return true;
@@ -585,7 +585,7 @@ void    ImGui_ImplDX10_InvalidateDeviceObjects()
     for (ImTextureData* tex : ImGui::GetPlatformIO().Textures)
         if (tex->RefCount == 1)
             ImGui_ImplDX10_DestroyTexture(tex);
-    if (bd->pFontSampler)           { bd->pFontSampler->Release(); bd->pFontSampler = nullptr; }
+    if (bd->pTexSamplerLinear)      { bd->pTexSamplerLinear->Release(); bd->pTexSamplerLinear = nullptr; }
     if (bd->pIB)                    { bd->pIB->Release(); bd->pIB = nullptr; }
     if (bd->pVB)                    { bd->pVB->Release(); bd->pVB = nullptr; }
     if (bd->pBlendState)            { bd->pBlendState->Release(); bd->pBlendState = nullptr; }

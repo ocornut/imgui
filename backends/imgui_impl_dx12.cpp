@@ -98,7 +98,10 @@ struct ImGui_ImplDX12_Data
     DXGI_FORMAT                 DSVFormat;
     ID3D12DescriptorHeap*       pd3dSrvDescHeap;
     UINT                        numFramesInFlight;
-    ImGui_ImplDX12_Texture      FontTexture;
+
+    ImGui_ImplDX12_RenderBuffers* pFrameResources;
+    UINT                        frameIndex;
+
     bool                        LegacySingleDescriptorUsed;
 
     ImGui_ImplDX12_Data()       { memset((void*)this, 0, sizeof(*this)); }
@@ -655,26 +658,26 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
         param[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
         // Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling.
-        D3D12_STATIC_SAMPLER_DESC staticSampler = {};
-        staticSampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-        staticSampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-        staticSampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-        staticSampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-        staticSampler.MipLODBias = 0.f;
-        staticSampler.MaxAnisotropy = 0;
-        staticSampler.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-        staticSampler.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
-        staticSampler.MinLOD = 0.f;
-        staticSampler.MaxLOD = D3D12_FLOAT32_MAX;
-        staticSampler.ShaderRegister = 0;
-        staticSampler.RegisterSpace = 0;
-        staticSampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+        D3D12_STATIC_SAMPLER_DESC staticSampler[1] = {};
+        staticSampler[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+        staticSampler[0].AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+        staticSampler[0].AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+        staticSampler[0].AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+        staticSampler[0].MipLODBias = 0.f;
+        staticSampler[0].MaxAnisotropy = 0;
+        staticSampler[0].ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+        staticSampler[0].BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+        staticSampler[0].MinLOD = 0.f;
+        staticSampler[0].MaxLOD = D3D12_FLOAT32_MAX;
+        staticSampler[0].ShaderRegister = 0;
+        staticSampler[0].RegisterSpace = 0;
+        staticSampler[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
         D3D12_ROOT_SIGNATURE_DESC desc = {};
         desc.NumParameters = _countof(param);
         desc.pParameters = param;
         desc.NumStaticSamplers = 1;
-        desc.pStaticSamplers = &staticSampler;
+        desc.pStaticSamplers = &staticSampler[0];
         desc.Flags =
             D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
             D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
