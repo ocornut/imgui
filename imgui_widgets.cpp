@@ -7366,7 +7366,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
         //   - (2) usage will fail with clipped items
         //   The multi-select API aim to fix those issues, e.g. may be replaced with a BeginSelection() API.
         if ((flags & ImGuiSelectableFlags_SelectOnNav) && g.NavJustMovedToId != 0 && g.NavJustMovedToFocusScopeId == g.CurrentFocusScopeId)
-            if (g.NavJustMovedToId == id)
+            if (g.NavJustMovedToId == id && (g.NavJustMovedToKeyMods & ImGuiMod_Ctrl) == 0)
                 selected = pressed = auto_selected = true;
     }
 
@@ -7419,8 +7419,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
 
     // Automatically close popups
     if (pressed && !auto_selected && (window->Flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiSelectableFlags_NoAutoClosePopups) && (g.LastItemData.ItemFlags & ImGuiItemFlags_AutoClosePopups))
-        if (!(flags & ImGuiSelectableFlags_SelectOnNav) || g.NavJustMovedToId != id)
-            CloseCurrentPopup();
+        CloseCurrentPopup();
 
     if (disabled_item && !disabled_global)
         EndDisabled();

@@ -1341,7 +1341,7 @@ enum ImGuiSelectableFlags_
     ImGuiSelectableFlags_Disabled           = 1 << 3,   // Cannot be selected, display grayed out text
     ImGuiSelectableFlags_AllowOverlap       = 1 << 4,   // (WIP) Hit testing to allow subsequent widgets to overlap this one
     ImGuiSelectableFlags_Highlight          = 1 << 5,   // Make the item be displayed as if it is hovered
-    ImGuiSelectableFlags_SelectOnNav        = 1 << 6,   // Auto-select when moved into. Automatic when in a BeginMultiSelect() block.
+    ImGuiSelectableFlags_SelectOnNav        = 1 << 6,   // Auto-select when moved into, unless Ctrl is held. Automatic when in a BeginMultiSelect() block.
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     ImGuiSelectableFlags_DontClosePopups    = ImGuiSelectableFlags_NoAutoClosePopups,   // Renamed in 1.91.0

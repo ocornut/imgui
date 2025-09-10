@@ -73,7 +73,7 @@ Other Changes:
   on InputTextMultiline() fields with ImGuiInputTextFlags_AllowTabInput, since
   they normally inhibit activation to allow tabbing through multiple items. (#8928)
 - Selectable: added ImGuiSelectableFlags_SelectOnNav to auto-select an item when
-  moved into (automatic when in a BeginMultiSelect() block).
+  moved into, unless Ctrl is held. (automatic when in a BeginMultiSelect() block).
 - TabBar: fixed an issue were forcefully selecting a tab using internal API would
   be ignored on first/appearing frame before tabs are submitted (#8929, #6681)
 - DrawList: fixed CloneOutput() unnecessarily taking a copy of the ImDrawListSharedData
