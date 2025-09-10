@@ -9908,7 +9908,8 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
     tab_bar->TabsNames.Buf.resize(0);
 
     // If we have lost the selected tab, select the next most recently active one
-    if (found_selected_tab_id == false)
+    const bool tab_bar_appearing = (tab_bar->PrevFrameVisible + 1 < g.FrameCount);
+    if (found_selected_tab_id == false && !tab_bar_appearing)
         tab_bar->SelectedTabId = 0;
     if (tab_bar->SelectedTabId == 0 && tab_bar->NextSelectedTabId == 0 && most_recently_selected_tab != NULL)
         scroll_to_tab_id = tab_bar->SelectedTabId = most_recently_selected_tab->ID;

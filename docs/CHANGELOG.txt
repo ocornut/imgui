@@ -71,6 +71,8 @@ Other Changes:
   unmoved. We revert back to move to the end of line in this situation.
 - Selectable: added ImGuiSelectableFlags_SelectOnNav to auto-select an item when
   moved into (automatic when in a BeginMultiSelect() block).
+- TabBar: fixed an issue were forcefully selecting a tab using internal API would
+  be ignored on first/appearing frame before tabs are submitted (#8929, #6681)
 - DrawList: fixed CloneOutput() unnecessarily taking a copy of the ImDrawListSharedData
   pointer, which could to issue when deleting the cloned list. (#8894, #1860)
 - DrawList: made AddCallback() assert when passing a null callback.
