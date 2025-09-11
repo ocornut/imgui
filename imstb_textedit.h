@@ -1154,7 +1154,7 @@ retry:
 #endif
       case STB_TEXTEDIT_K_LINEEND: {
          stb_textedit_clamp(str, state);
-         stb_textedit_move_to_first(state);
+         stb_textedit_move_to_last(str, state);
          state->cursor = STB_TEXTEDIT_MOVELINEEND(str, state, state->cursor);
          state->has_preferred_x = 0;
          break;

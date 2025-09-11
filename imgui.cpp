@@ -3137,19 +3137,21 @@ void ImGuiTextBuffer::appendfv(const char* fmt, va_list args)
     va_end(args_copy);
 }
 
+IM_MSVC_RUNTIME_CHECKS_OFF
 void ImGuiTextIndex::append(const char* base, int old_size, int new_size)
 {
     IM_ASSERT(old_size >= 0 && new_size >= old_size && new_size >= EndOffset);
     if (old_size == new_size)
         return;
     if (EndOffset == 0 || base[EndOffset - 1] == '\n')
-        LineOffsets.push_back(EndOffset);
+        Offsets.push_back(EndOffset);
     const char* base_end = base + new_size;
     for (const char* p = base + old_size; (p = (const char*)ImMemchr(p, '\n', base_end - p)) != 0; )
         if (++p < base_end) // Don't push a trailing offset on last \n
-            LineOffsets.push_back((int)(intptr_t)(p - base));
+            Offsets.push_back((int)(intptr_t)(p - base));
     EndOffset = ImMax(EndOffset, new_size);
 }
+IM_MSVC_RUNTIME_CHECKS_RESTORE
 
 //-----------------------------------------------------------------------------
 // [SECTION] ImGuiListClipper
@@ -3475,6 +3477,13 @@ bool ImGuiListClipper::Step()
         End();
     }
     return ret;
+}
+
+// Generic helper, equivalent to old ImGui::CalcListClipping() but statelesss
+void ImGui::CalcClipRectVisibleItemsY(const ImRect& clip_rect, const ImVec2& pos, float items_height, int* out_visible_start, int* out_visible_end)
+{
+    *out_visible_start = ImMax((int)((clip_rect.Min.y - pos.y) / items_height), 0);
+    *out_visible_end = ImMax((int)ImCeil((clip_rect.Max.y - pos.y) / items_height), *out_visible_start);
 }
 
 //-----------------------------------------------------------------------------
@@ -4473,6 +4482,7 @@ void ImGui::Shutdown()
     g.ClipboardHandlerData.clear();
     g.MenusIdSubmittedThisFrame.clear();
     g.InputTextState.ClearFreeMemory();
+    g.InputTextLineIndex.clear();
     g.InputTextDeactivatedState.ClearFreeMemory();
 
     g.SettingsWindows.clear();
@@ -4593,6 +4603,7 @@ void ImGui::GcCompactTransientMiscBuffers()
     ImGuiContext& g = *GImGui;
     g.ItemFlagsStack.clear();
     g.GroupStack.clear();
+    g.InputTextLineIndex.clear();
     g.MultiSelectTempDataStacked = 0;
     g.MultiSelectTempData.clear_destruct();
     TableGcCompactSettings();
@@ -23752,7 +23763,7 @@ void ImGui::ShowFontSelector(const char* label)
         for (ImFont* font : io.Fonts->Fonts)
         {
             PushID((void*)font);
-            if (Selectable(font->GetDebugName(), font == font_current, ImGuiSelectableFlags_SelectOnNav | ImGuiSelectableFlags_NoAutoClosePopups))
+            if (Selectable(font->GetDebugName(), font == font_current, ImGuiSelectableFlags_SelectOnNav))
                 io.FontDefault = font;
             if (font == font_current)
                 SetItemDefaultFocus();
