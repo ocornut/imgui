@@ -69,6 +69,8 @@ Other Changes:
 - InputText: revert a change in 1.79 where pressing Down or PageDown on the last line
   of a multi-line buffer without a trailing carriage return would keep the cursor
   unmoved. We revert back to move to the end of line in this situation.
+- InputText: fixed pressing End (without Shift) in a multi-line selection from
+  mistakenly moving cursor based on selection start.
 - Focus, InputText: fixed an issue where SetKeyboardFocusHere() did not work
   on InputTextMultiline() fields with ImGuiInputTextFlags_AllowTabInput, since
   they normally inhibit activation to allow tabbing through multiple items. (#8928)
