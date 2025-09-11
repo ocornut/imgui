@@ -5439,7 +5439,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             }
             else
             {
-                state->Scroll.y = 0.0f;
+                state->Scroll.x = 0.0f;
             }
 
             // Vertical scroll
