@@ -4536,30 +4536,44 @@ static int* ImLowerBound(int* in_begin, int* in_end, int v)
 
 // FIXME-WORDWRAP: Bundle some of this into ImGuiTextIndex and/or extract as a different tool?
 // 'max_output_buffer_size' happens to be a meaningful optimization to avoid writing the full line_index when not necessarily needed (e.g. very large buffer, scrolled up, inactive)
-static int InputTextLineIndexBuild(ImGuiInputTextFlags flags, ImGuiTextIndex* line_index, const char* buf, const char* buf_end, float wrap_width, int max_output_buffer_size)
+static int InputTextLineIndexBuild(ImGuiInputTextFlags flags, ImGuiTextIndex* line_index, const char* buf, const char* buf_end, float wrap_width, int max_output_buffer_size, const char** out_buf_end)
 {
     ImGuiContext& g = *GImGui;
     int size = 0;
+    const char* s;
     if (flags & ImGuiInputTextFlags_WordWrap)
     {
-        for (const char* s = buf; s < buf_end; )
+        for (s = buf; s < buf_end; s = (*s == '\n') ? s + 1 : s)
         {
             if (size++ <= max_output_buffer_size)
                 line_index->Offsets.push_back((int)(s - buf));
             s = ImFontCalcWordWrapPositionEx(g.Font, g.FontSize, s, buf_end, wrap_width, ImDrawTextFlags_WrapKeepBlanks);
-            s = (*s == '\n') ? s + 1 : s;
         }
     }
-    else
+    else if (buf_end != NULL)
     {
-        for (const char* s = buf; s < buf_end; )
+        for (s = buf; s < buf_end; s = s ? s + 1 : buf_end)
         {
             if (size++ <= max_output_buffer_size)
                 line_index->Offsets.push_back((int)(s - buf));
             s = (const char*)ImMemchr(s, '\n', buf_end - s);
-            s = s ? s + 1 : buf_end;
         }
     }
+    else
+    {
+        const char* s_eol;
+        for (s = buf; ; s = s_eol + 1)
+        {
+            if (size++ <= max_output_buffer_size)
+                line_index->Offsets.push_back((int)(s - buf));
+            if ((s_eol = strchr(s, '\n')) != NULL)
+                continue;
+            s += strlen(s);
+            break;
+        }
+    }
+    if (out_buf_end != NULL)
+        *out_buf_end = buf_end = s;
     if (size == 0)
     {
         line_index->Offsets.push_back(0);
@@ -5367,8 +5381,10 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     {
         if (render_cursor || render_selection || g.ActiveId == id)
             buf_display_end = buf_display + state->TextLen; //-V595
+        else if (is_multiline && !is_wordwrap)
+            buf_display_end = NULL; // Inactive multi-line: end of buffer will be output by InputTextLineIndexBuild() special strchr() path.
         else
-            buf_display_end = buf_display + ImStrlen(buf_display); // FIXME-OPT: For multi-line path this would optimally be folded into the InputTextLineIndex build below.
+            buf_display_end = buf_display + ImStrlen(buf_display);
     }
 
     // Calculate visibility
@@ -5379,10 +5395,10 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     // Build line index for easy data access (makes code below simpler and faster)
     ImGuiTextIndex* line_index = &g.InputTextLineIndex;
     line_index->Offsets.resize(0);
-    line_index->EndOffset = (int)(buf_display_end - buf_display);
     int line_count = 1;
     if (is_multiline)
-        line_count = InputTextLineIndexBuild(flags, line_index, buf_display, buf_display_end, wrap_width, (render_cursor && state && state->CursorFollow) ? INT_MAX : line_visible_n1 + 1);
+        line_count = InputTextLineIndexBuild(flags, line_index, buf_display, buf_display_end, wrap_width, (render_cursor && state && state->CursorFollow) ? INT_MAX : line_visible_n1 + 1, buf_display_end ? NULL : &buf_display_end);
+    line_index->EndOffset = (int)(buf_display_end - buf_display);
     line_visible_n1 = ImMin(line_visible_n1, line_count);
 
     // Store text height (we don't need width)
