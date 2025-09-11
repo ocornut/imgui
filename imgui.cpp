@@ -3080,11 +3080,11 @@ void ImGuiTextIndex::append(const char* base, int old_size, int new_size)
     if (old_size == new_size)
         return;
     if (EndOffset == 0 || base[EndOffset - 1] == '\n')
-        LineOffsets.push_back(EndOffset);
+        Offsets.push_back(EndOffset);
     const char* base_end = base + new_size;
     for (const char* p = base + old_size; (p = (const char*)ImMemchr(p, '\n', base_end - p)) != 0; )
         if (++p < base_end) // Don't push a trailing offset on last \n
-            LineOffsets.push_back((int)(intptr_t)(p - base));
+            Offsets.push_back((int)(intptr_t)(p - base));
     EndOffset = ImMax(EndOffset, new_size);
 }
 

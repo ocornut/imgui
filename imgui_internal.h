@@ -804,13 +804,13 @@ struct ImChunkStream
 // Maintain a line index for a text buffer. This is a strong candidate to be moved into the public API.
 struct ImGuiTextIndex
 {
-    ImVector<int>   LineOffsets;
+    ImVector<int>   Offsets;
     int             EndOffset = 0;                          // Because we don't own text buffer we need to maintain EndOffset (may bake in LineOffsets?)
 
-    void            clear()                                 { LineOffsets.clear(); EndOffset = 0; }
-    int             size()                                  { return LineOffsets.Size; }
-    const char*     get_line_begin(const char* base, int n) { return base + LineOffsets[n]; }
-    const char*     get_line_end(const char* base, int n)   { return base + (n + 1 < LineOffsets.Size ? (LineOffsets[n + 1] - 1) : EndOffset); }
+    void            clear()                                 { Offsets.clear(); EndOffset = 0; }
+    int             size()                                  { return Offsets.Size; }
+    const char*     get_line_begin(const char* base, int n) { return base + Offsets[n]; }
+    const char*     get_line_end(const char* base, int n)   { return base + (n + 1 < Offsets.Size ? (Offsets[n + 1] - 1) : EndOffset); }
     void            append(const char* base, int old_size, int new_size);
 };
 
