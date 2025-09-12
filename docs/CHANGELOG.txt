@@ -55,6 +55,18 @@ Other Changes:
 - Nav: fixed Ctrl+Tab window appearing as empty when the sole active and focused
   window has the ImGuiWindowFlags_NoNavFocus flag. (#8914)
 - Bullet: fixed tesselation amount which looked out of place in very large sizes.
+- InputText: added ImGuiInputTextFlags_WordWrap flag to word-wrap multi-line buffers.
+  (#3237, #952, #1062, #7363)
+  - This is marked as beta because not being tested enough.
+    Please report any incorrect cursor movement, selection behavior etc. bug to #3237.
+  - Vertical scrollbar is made always visible.
+  - Wrapping points are not ideal. Wrapping of long words/sections (e.g. words
+    larger than total available width) may be particularly unpleasing.
+  - It is currently much slower than regular text fields.
+    - Ballpark estimate of cost on my 2019 desktop PC:
+      For a 100 KB text buffer: +~0.3 ms/+~1.0 ms (Optimized vs Debug builds).
+    - The CPU cost is very roughly proportional to text length, so a 10 KB buffer
+      should cost about ten times less.
 - InputText, InputInt, InputFloat: fixed an issue where using Escape to revert
   would not write back the reverted value during the IsItemDeactivatedAfterEdit()
   frame if the provided input buffer doesn't store temporary edits.

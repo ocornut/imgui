@@ -87,7 +87,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - input text multi-line: line numbers? status bar? (follow up on #200)
  - input text multi-line: behave better when user changes input buffer while editing is active (even though it is illegal behavior). namely, the change of buffer can create a scrollbar glitch (#725)
  - input text multi-line: better horizontal scrolling support (#383, #1224)
- - input text multi-line: single call to AddText() should be coarse clipped on InputTextEx() end.
  - input number: optional range min/max for Input*() functions
  - input number: holding [-]/[+] buttons could increase the step speed non-linearly (or user-controlled)
  - input number: use mouse wheel to step up/down

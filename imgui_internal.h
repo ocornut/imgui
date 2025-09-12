@@ -1015,15 +1015,6 @@ enum ImGuiHoveredFlagsPrivate_
 // Extend ImGuiInputTextFlags_
 enum ImGuiInputTextFlagsPrivate_
 {
-    // [Experimental]
-    // Word-wrapping caveats:
-    // - Not well tested yet. Please report any incorrect cursor movement, selection behavior etc. bug to https://github.com/ocornut/imgui/issues/3237.
-    // - With our current design it is _much_ slower than a regular text field. Editing a <50K buffer will generally be ok, but editing a 1MB buffer will waste meaningful amount of CPU.
-    //   We are likely to not make the feature public until this is fixed (which requires bigger changes to InputText will be be generally desirable for this and other features)
-    // - Wrapping of long words/sections (e.g. words that are larger than available width) is currently visually not pleasing.
-    // - Vertical scrollbar is currently always visible.
-    ImGuiInputTextFlags_WordWrap            = 1 << 24,  // InputTextMultine(): wrap lines that are too long. (Ref #3237, #952, #1062)
-
     // [Internal]
     ImGuiInputTextFlags_Multiline           = 1 << 26,  // For internal use by InputTextMultiline()
     ImGuiInputTextFlags_MergedItem          = 1 << 27,  // For internal use by TempInputText(), will skip calling ItemAdd(). Require bounding-box to strictly match.
