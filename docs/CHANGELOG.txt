@@ -93,6 +93,7 @@ Other Changes:
   io.ConfigDebugBeginReturnValueOnce/ConfigDebugBeginReturnValueLoop. (#8931) [@harrymander]
 - Demo: tweaked ShowFontSelector() and ShowStyleSelector() to update selection
   while navigating and to not close popup automatically.
+- CI: Updates Windows CI to use a more recent VulkanSDK. (#8925, #8778) [@yaz0r]
 - Examples: Android: Android+OpenGL3: update Gradle project (#8888, #8878) [@scribam]
 - Backends: SDL_GPU: Added ImGui_ImplSDLGPU3_InitInfo::SwapchainComposition and
   PresentMode to configure how secondary viewports are created. Currently only used
@@ -193,7 +194,6 @@ Other Changes:
   to play nice with -fsanitize=undefined. (#8874) [@i25e]
 - CI: Added SDL3 builds to MacOS and Windows. (#8819, #8778) [@scribam]
 - CI: Updated Windows CI to use a more recent SDL2. (#8819, #8778) [@scribam]
-- CI: Updates Windows CI to use a more recent VulkanSDK. (#8925, #8778) [@yaz0r]
 - Examples: SDL3+Metal: added SDL3+Metal example. (#8827, #8825) [@shi-yan]
 - Examples: SDL3+SDL_GPU: use SDL_WaitAndAcquireGPUSwapchainTexture() instead
   of SDL_AcquireGPUSwapchainTexture(). (#8830) [@itsdanott]
