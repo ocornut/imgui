@@ -102,6 +102,9 @@ Other Changes:
 
 Docking+Viewports Branch:
 
+- DPI: Fixed obsoleted ImGuiConfigFlags_DpiEnableScaleFonts/_DpiEnableScaleViewports
+  names from setting the equivalent io.ConfigDpiScaleFonts/io.ConfigDpiScaleViewports
+  flag correctly (regression in 1.92).
 - Backends: GLFW: improve multi-viewport behavior in tiling WMs on X11.
   Note: using GLFW backend on Linux/BSD etc. requires linking with `-lX11`.
   (#8884, #8474, #8289, #2117) [@Ikos3k, @Madman10K]

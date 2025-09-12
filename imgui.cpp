@@ -412,6 +412,7 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
                          - TL;DR; if the assert triggers, you can add a Dummy({0,0}) call to validate extending parent boundaries.
  - 2025/06/11 (1.92.0) - Renamed/moved ImGuiConfigFlags_DpiEnableScaleFonts -> bool io.ConfigDpiScaleFonts.
                        - Renamed/moved ImGuiConfigFlags_DpiEnableScaleViewports -> bool io.ConfigDpiScaleViewports. **Neither of those flags are very useful in current code. They will be useful once we merge font changes.**
+                         [there was a bug on 2025/06/12: when using the old config flags names, they were not imported correctly into the new ones, fixed on 2025/09/12]
  - 2025/06/11 (1.92.0) - THIS VERSION CONTAINS THE LARGEST AMOUNT OF BREAKING CHANGES SINCE 2015! I TRIED REALLY HARD TO KEEP THEM TO A MINIMUM, REDUCE THE AMOUNT OF INTERFERENCES, BUT INEVITABLY SOME USERS WILL BE AFFECTED.
                          IN ORDER TO HELP US IMPROVE THE TRANSITION PROCESS, INCL. DOCUMENTATION AND COMMENTS, PLEASE REPORT **ANY** DOUBT, CONFUSION, QUESTIONS, FEEDBACK TO: https://github.com/ocornut/imgui/issues/
                          As part of the plan to reduce impact of API breaking changes, several unfinished changes/features/refactors related to font and text systems and scaling will be part of subsequent releases (1.92.1+).
@@ -11342,12 +11343,12 @@ static void ImGui::ErrorCheckNewFrameSanityChecks()
     }
     if (g.IO.ConfigFlags & ImGuiConfigFlags_DpiEnableScaleFonts)
     {
-        g.IO.ConfigDpiScaleFonts = false;
+        g.IO.ConfigDpiScaleFonts = true;
         g.IO.ConfigFlags &= ~ImGuiConfigFlags_DpiEnableScaleFonts;
     }
     if (g.IO.ConfigFlags & ImGuiConfigFlags_DpiEnableScaleViewports)
     {
-        g.IO.ConfigDpiScaleViewports = false;
+        g.IO.ConfigDpiScaleViewports = true;
         g.IO.ConfigFlags &= ~ImGuiConfigFlags_DpiEnableScaleViewports;
     }
 
