@@ -558,7 +558,7 @@ jobs:
       run: xcodebuild -project examples/example_apple_opengl2/example_apple_opengl2.xcodeproj -target example_osx_opengl2
 
   iOS:
-    runs-on: macos-latest
+    runs-on: macos-14
     steps:
     - uses: actions/checkout@v4
 
