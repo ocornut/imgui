@@ -4594,7 +4594,7 @@ static ImVec2 InputTextLineIndexGetPosOffset(ImGuiContext& g, ImGuiInputTextStat
     int* it_end = line_index->Offsets.end();
     const int* it = ImLowerBound(it_begin, it_end, cursor_n);
     if (it > it_begin)
-        if (it == it_end || *it != cursor_n || (cursor_ptr[-1] != '\n' && cursor_ptr[-1] != 0 && state != NULL && state->LastMoveDirectionLR == ImGuiDir_Right))
+        if (it == it_end || *it != cursor_n || (state->WrapWidth > 0.0f && cursor_ptr[-1] != '\n' && cursor_ptr[-1] != 0 && state != NULL && state->LastMoveDirectionLR == ImGuiDir_Right))
             it--;
 
     const int line_no = (it == it_begin) ? 0 : line_index->Offsets.index_from_ptr(it);
