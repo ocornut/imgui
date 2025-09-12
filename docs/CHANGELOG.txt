@@ -102,6 +102,11 @@ Other Changes:
 
 Docking+Viewports Branch:
 
+- DPI: fixed io.ConfigDpiScaleFonts from ever working since 1.92 (the irony
+  being that it is when it started to make sense!). As a reminder, the option
+  automatically copy the _current_ viewport DpiScale to style.FontScaleDpi.
+  This is why we separated the style.FontScaleMain and style.FontScaleDpi scaling
+  factor, as the later is meant to be overwritten. (#8832, #8465)
 - DPI: Fixed obsoleted ImGuiConfigFlags_DpiEnableScaleFonts/_DpiEnableScaleViewports
   names from setting the equivalent io.ConfigDpiScaleFonts/io.ConfigDpiScaleViewports
   flag correctly (regression in 1.92).
