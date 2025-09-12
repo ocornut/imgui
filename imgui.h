@@ -29,7 +29,7 @@
 // Library Version
 // (Integer encoded as XYYZZ for use in #if preprocessor conditionals, e.g. '#if IMGUI_VERSION_NUM >= 12345')
 #define IMGUI_VERSION       "1.92.3 WIP"
-#define IMGUI_VERSION_NUM   19227
+#define IMGUI_VERSION_NUM   19228
 #define IMGUI_HAS_TABLE             // Added BeginTable() - from IMGUI_VERSION_NUM >= 18000
 #define IMGUI_HAS_TEXTURES          // Added ImGuiBackendFlags_RendererHasTextures - from IMGUI_VERSION_NUM >= 19198
 #define IMGUI_HAS_VIEWPORT          // In 'docking' WIP branch.
@@ -1306,8 +1306,8 @@ enum ImGuiInputTextFlags_
 
     // Multi-line Word-Wrapping [BETA]
     // - Not well tested yet. Please report any incorrect cursor movement, selection behavior etc. bug to https://github.com/ocornut/imgui/issues/3237.
-    // - Vertical scrollbar is made always visible.
-    // - Wrapping points are not ideal. Wrapping of long words/sections (e.g. words larger than total available width) may be particularly unpleasing.
+    // - Wrapping style is not ideal. Wrapping of long words/sections (e.g. words larger than total available width) may be particularly unpleasing.
+    // - Wrapping width needs to always account for the possibility of a vertical scrollbar.
     // - It is much slower than regular text fields.
     //   Ballpark estimate of cost on my 2019 desktop PC: for a 100 KB text buffer: +~0.3 ms (Optimized) / +~1.0 ms (Debug build).
     //   The CPU cost is very roughly proportional to text length, so a 10 KB buffer should cost about ten times less.
