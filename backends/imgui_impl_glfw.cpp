@@ -137,6 +137,7 @@
 #define GLFW_EXPOSE_NATIVE_WAYLAND
 #endif
 #include <GLFW/glfw3native.h>   // for getting the X11/Wayland window
+#undef Status                   // X11 headers are leaking this.
 #endif
 #ifndef _WIN32
 #include <unistd.h>             // for usleep()
