@@ -1,8 +1,6 @@
 name: build
 
 on:
-  push:
-  pull_request:
   workflow_run:
     workflows:
       - manual
