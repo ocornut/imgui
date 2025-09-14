@@ -1,4 +1,4 @@
-name: build
+name: build-windows-vulkan-artifact
 
 on:
   workflow_run:
