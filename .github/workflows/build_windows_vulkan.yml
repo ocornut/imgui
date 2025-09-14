@@ -1,14 +1,6 @@
 name: build-windows-vulkan-artifact
 
-on:
-  workflow_run:
-    workflows:
-      - manual
-    branches:
-      - master
-      - docking
-    types:
-      - requested
+on: workflow_dispatch
 
 jobs:
   Windows:
