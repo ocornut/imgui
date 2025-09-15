@@ -110,10 +110,12 @@
 #ifndef GLFW_EXPOSE_NATIVE_WIN32    // for glfwGetWin32Window()
 #define GLFW_EXPOSE_NATIVE_WIN32
 #endif
+#include <GLFW/glfw3native.h>
 #elif defined(__APPLE__)
 #ifndef GLFW_EXPOSE_NATIVE_COCOA    // for glfwGetCocoaWindow()
 #define GLFW_EXPOSE_NATIVE_COCOA
 #endif
+#include <GLFW/glfw3native.h>
 #elif !defined(__EMSCRIPTEN__)
 #ifndef GLFW_EXPOSE_NATIVE_X11      // for glfwGetX11Window() on Freedesktop (Linux, BSD, etc.)
 #define GLFW_EXPOSE_NATIVE_X11
@@ -121,8 +123,8 @@
 #ifndef GLFW_EXPOSE_NATIVE_WAYLAND
 #define GLFW_EXPOSE_NATIVE_WAYLAND
 #endif
-#endif
 #include <GLFW/glfw3native.h>
+#endif
 #undef Status                   // X11 headers are leaking this.
 #ifndef _WIN32
 #include <unistd.h>             // for usleep()
