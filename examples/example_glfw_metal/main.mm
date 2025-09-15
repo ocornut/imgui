@@ -61,7 +61,7 @@ int main(int, char**)
 
     // Create window with graphics context
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    GLFWwindow* window = glfwCreateWindow(1280, 720, "Dear ImGui GLFW+Metal example", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(1280, 800, "Dear ImGui GLFW+Metal example", nullptr, nullptr);
     if (window == nullptr)
         return 1;
 

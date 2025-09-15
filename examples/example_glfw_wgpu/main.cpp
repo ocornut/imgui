@@ -37,7 +37,7 @@ static WGPUSurface       wgpu_surface = nullptr;
 static WGPUTextureFormat wgpu_preferred_fmt = WGPUTextureFormat_RGBA8Unorm;
 static WGPUSwapChain     wgpu_swap_chain = nullptr;
 static int               wgpu_swap_chain_width = 1280;
-static int               wgpu_swap_chain_height = 720;
+static int               wgpu_swap_chain_height = 800;
 
 // Forward declarations
 static bool InitWGPU(GLFWwindow* window);
