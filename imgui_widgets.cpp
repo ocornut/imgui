@@ -5180,7 +5180,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                 apply_new_text = "";
                 apply_new_text_length = 0;
                 value_changed = true;
-                IMSTB_TEXTEDIT_CHARTYPE empty_string;
+                char empty_string = 0;
                 stb_textedit_replace(state, state->Stb, &empty_string, 0);
             }
             else if (strcmp(state->TextA.Data, state->TextToRevertTo.Data) != 0)
