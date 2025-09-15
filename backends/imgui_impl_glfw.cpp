@@ -104,20 +104,25 @@
 
 // GLFW
 #include <GLFW/glfw3.h>
-
 #ifdef _WIN32
 #undef APIENTRY
-#ifndef GLFW_EXPOSE_NATIVE_WIN32
+#ifndef GLFW_EXPOSE_NATIVE_WIN32    // for glfwGetWin32Window()
 #define GLFW_EXPOSE_NATIVE_WIN32
 #endif
-#include <GLFW/glfw3native.h>   // for glfwGetWin32Window()
-#endif
-#ifdef __APPLE__
-#ifndef GLFW_EXPOSE_NATIVE_COCOA
+#elif defined(__APPLE__)
+#ifndef GLFW_EXPOSE_NATIVE_COCOA    // for glfwGetCocoaWindow()
 #define GLFW_EXPOSE_NATIVE_COCOA
 #endif
-#include <GLFW/glfw3native.h>   // for glfwGetCocoaWindow()
+#elif !defined(__EMSCRIPTEN__)
+#ifndef GLFW_EXPOSE_NATIVE_X11      // for glfwGetX11Window() on Freedesktop (Linux, BSD, etc.)
+#define GLFW_EXPOSE_NATIVE_X11
 #endif
+#ifndef GLFW_EXPOSE_NATIVE_WAYLAND
+#define GLFW_EXPOSE_NATIVE_WAYLAND
+#endif
+#endif
+#include <GLFW/glfw3native.h>
+#undef Status                   // X11 headers are leaking this.
 #ifndef _WIN32
 #include <unistd.h>             // for usleep()
 #endif
@@ -144,8 +149,14 @@
 #define GLFW_HAS_GAMEPAD_API            (GLFW_VERSION_COMBINED >= 3300) // 3.3+ glfwGetGamepadState() new api
 #define GLFW_HAS_GETKEYNAME             (GLFW_VERSION_COMBINED >= 3200) // 3.2+ glfwGetKeyName()
 #define GLFW_HAS_GETERROR               (GLFW_VERSION_COMBINED >= 3300) // 3.3+ glfwGetError()
+#define GLFW_HAS_GETPLATFORM            (GLFW_VERSION_COMBINED >= 3400) // 3.4+ glfwGetPlatform()
+#if defined(__linux__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
+#define GLFW_HAS_X11_OR_WAYLAND          1
+#else
+#define GLFW_HAS_X11_OR_WAYLAND          0
+#endif
 
-// Map GLFWWindow* to ImGuiContext*. 
+// Map GLFWWindow* to ImGuiContext*.
 // - Would be simpler if we could use glfwSetWindowUserPointer()/glfwGetWindowUserPointer(), but this is a single and shared resource.
 // - Would be simpler if we could use e.g. std::map<> as well. But we don't.
 // - This is not particularly optimized as we expect size to be small and queries to be rare.
@@ -155,14 +166,14 @@ static void ImGui_ImplGlfw_ContextMap_Add(GLFWwindow* window, ImGuiContext* ctx)
 static void ImGui_ImplGlfw_ContextMap_Remove(GLFWwindow* window)                 { for (ImGui_ImplGlfw_WindowToContext& entry : g_ContextMap) if (entry.Window == window) { g_ContextMap.erase_unsorted(&entry); return; } }
 static ImGuiContext* ImGui_ImplGlfw_ContextMap_Get(GLFWwindow* window)           { for (ImGui_ImplGlfw_WindowToContext& entry : g_ContextMap) if (entry.Window == window) return entry.Context; return nullptr; }
 
-// GLFW data
 enum GlfwClientApi
 {
-    GlfwClientApi_Unknown,
     GlfwClientApi_OpenGL,
     GlfwClientApi_Vulkan,
+    GlfwClientApi_Unknown,  // Anything else fits here.
 };
 
+// GLFW data
 struct ImGui_ImplGlfw_Data
 {
     ImGuiContext*           Context;
@@ -172,6 +183,7 @@ struct ImGui_ImplGlfw_Data
     GLFWwindow*             MouseWindow;
     GLFWcursor*             MouseCursors[ImGuiMouseCursor_COUNT];
     ImVec2                  LastValidMousePos;
+    bool                    IsWayland;
     bool                    InstalledCallbacks;
     bool                    CallbacksChainForAllWindows;
     char                    BackendPlatformName[32];
@@ -216,6 +228,23 @@ static ImGui_ImplGlfw_Data* ImGui_ImplGlfw_GetBackendData(GLFWwindow* window)
 }
 
 // Functions
+static bool ImGui_ImplGlfw_IsWayland()
+{
+#if GLFW_HAS_X11_OR_WAYLAND
+    return false;
+#elif GLFW_HAS_GETPLATFORM
+    return glfwGetPlatform() == GLFW_PLATFORM_WAYLAND;
+#else
+    const char* version = glfwGetVersionString();
+    if (strstr(version, "Wayland") == NULL) // e.g. Ubuntu 22.04 ships with GLFW 3.3.6 compiled without Wayland
+        return false;
+#ifdef GLFW_EXPOSE_NATIVE_X11
+    if (glfwGetX11Display() != NULL)
+        return false;
+#endif
+    return true;
+#endif
+}
 
 // Not static to allow third-party code to use that if they want to (but undocumented)
 ImGuiKey ImGui_ImplGlfw_KeyToImGuiKey(int keycode, int scancode);
@@ -365,7 +394,6 @@ static bool ImGui_ImplGlfw_ShouldChainCallback(ImGui_ImplGlfw_Data* bd, GLFWwind
 void ImGui_ImplGlfw_MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
 {
     ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData(window);
-
     if (bd->PrevUserCallbackMousebutton != nullptr && ImGui_ImplGlfw_ShouldChainCallback(bd, window))
         bd->PrevUserCallbackMousebutton(window, button, action, mods);
 
@@ -630,6 +658,7 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     bd->Context = ImGui::GetCurrentContext();
     bd->Window = window;
     bd->Time = 0.0;
+    bd->IsWayland = ImGui_ImplGlfw_IsWayland();
     ImGui_ImplGlfw_ContextMap_Add(window, bd->Context);
 
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
