@@ -108,6 +108,9 @@ Other Changes:
 - CI: Updates Windows CI to use a more recent VulkanSDK. (#8925, #8778) [@yaz0r]
 - Examples: Android: Android+OpenGL3: update Gradle project (#8888, #8878) [@scribam]
 - Examples: GLFW+OpenGL2, GLFW+Vulkan: Fixed not applying content scale. (#8921, #8756)
+- Backends: SDL3: use SDL_GetWindowDisplayScale() on Mac to obtain DisplayFrameBufferScale,
+  fixing incorrect values during resolution changes e.g. going fullscreen.
+  (#8703, #4414) [@jclounge]
 - Backends: SDL_GPU: Added ImGui_ImplSDLGPU3_InitInfo::SwapchainComposition and
   PresentMode to configure how secondary viewports are created. Currently only used
   multi-viewport mode. (#8892) [@PTSVU]

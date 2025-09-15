@@ -20,6 +20,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2025-09-15: Use SDL_GetWindowDisplayScale() on Mac to output DisplayFrameBufferScale. The function is more reliable during resolution changes e.g. going fullscreen. (#8703, #4414)
 //  2025-06-27: IME: avoid calling SDL_StartTextInput() again if already active. (#8727)
 //  2025-04-22: IME: honor ImGuiPlatformImeData->WantTextInput as an alternative way to call SDL_StartTextInput(), without IME being necessarily visible.
 //  2025-04-09: Don't attempt to call SDL_CaptureMouse() on drivers where we don't call SDL_GetGlobalMouseState(). (#8561)
@@ -778,15 +779,24 @@ static void ImGui_ImplSDL3_UpdateGamepads()
 static void ImGui_ImplSDL3_GetWindowSizeAndFramebufferScale(SDL_Window* window, ImVec2* out_size, ImVec2* out_framebuffer_scale)
 {
     int w, h;
-    int display_w, display_h;
     SDL_GetWindowSize(window, &w, &h);
     if (SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED)
         w = h = 0;
+
+#if defined(__APPLE__)
+    float fb_scale_x = SDL_GetWindowDisplayScale(window); // Seems more reliable during resolution change (#8703)
+    float fb_scale_y = fb_scale_x;
+#else
+    int display_w, display_h;
     SDL_GetWindowSizeInPixels(window, &display_w, &display_h);
+    float fb_scale_x = (w > 0) ? (float)display_w / w : 1.0f;
+    float fb_scale_y = (h > 0) ? (float)display_h / h : 1.0f;
+#endif
+
     if (out_size != nullptr)
         *out_size = ImVec2((float)w, (float)h);
     if (out_framebuffer_scale != nullptr)
-        *out_framebuffer_scale = (w > 0 && h > 0) ? ImVec2((float)display_w / w, (float)display_h / h) : ImVec2(1.0f, 1.0f);
+        *out_framebuffer_scale = ImVec2(fb_scale_x, fb_scale_y);
 }
 
 void ImGui_ImplSDL3_NewFrame()
