@@ -107,7 +107,8 @@ Other Changes:
   while navigating and to not close popup automatically.
 - CI: Updates Windows CI to use a more recent VulkanSDK. (#8925, #8778) [@yaz0r]
 - Examples: Android: Android+OpenGL3: update Gradle project (#8888, #8878) [@scribam]
-- Examples: GLFW+OpenGL2, GLFW+Vulkan: Fixed not applying content scale. (#8921, #8756)
+- Examples: GLFW+OpenGL2, GLFW+Vulkan, GLFW+Metal, Win32+Vulkan: Fixed not applying
+  content scale consistently with other examples. (#8921, #8756)
 - Backends: SDL3: use SDL_GetWindowDisplayScale() on Mac to obtain DisplayFrameBufferScale,
   fixing incorrect values during resolution changes e.g. going fullscreen.
   (#8703, #4414) [@jclounge]
