@@ -29,6 +29,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2025-09-15: Content Scales always reported as 1.0 on Wayland. FramebufferScale are always reported as 1.0 on X11. (#8920, #8921)
 //  2025-07-08: Made ImGui_ImplGlfw_GetContentScaleForWindow(), ImGui_ImplGlfw_GetContentScaleForMonitor() helpers return 1.0f on Emscripten and Android platforms, matching macOS logic. (#8742, #8733)
 //  2025-06-18: Added support for multiple Dear ImGui contexts. (#8676, #8239, #8069)
 //  2025-06-11: Added ImGui_ImplGlfw_GetContentScaleForWindow(GLFWwindow* window) and ImGui_ImplGlfw_GetContentScaleForMonitor(GLFWmonitor* monitor) helper to facilitate making DPI-aware apps.
@@ -906,6 +907,11 @@ static void ImGui_ImplGlfw_UpdateGamepads()
 // - Some accessibility applications are declaring virtual monitors with a DPI of 0.0f, see #7902. We preserve this value for caller to handle.
 float ImGui_ImplGlfw_GetContentScaleForWindow(GLFWwindow* window)
 {
+#if GLFW_HAS_X11_OR_WAYLAND
+    if (ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData(window))
+        if (bd->IsWayland)
+            return 1.0f;
+#endif
 #if GLFW_HAS_PER_MONITOR_DPI && !(defined(__APPLE__) || defined(__EMSCRIPTEN__) || defined(__ANDROID__))
     float x_scale, y_scale;
     glfwGetWindowContentScale(window, &x_scale, &y_scale);
@@ -918,6 +924,10 @@ float ImGui_ImplGlfw_GetContentScaleForWindow(GLFWwindow* window)
 
 float ImGui_ImplGlfw_GetContentScaleForMonitor(GLFWmonitor* monitor)
 {
+#if GLFW_HAS_X11_OR_WAYLAND
+    if (ImGui_ImplGlfw_IsWayland()) // We can't access our bd->IsWayland cache for a monitor.
+        return 1.0f;
+#endif
 #if GLFW_HAS_PER_MONITOR_DPI && !(defined(__APPLE__) || defined(__EMSCRIPTEN__) || defined(__ANDROID__))
     float x_scale, y_scale;
     glfwGetMonitorContentScale(monitor, &x_scale, &y_scale);
@@ -934,10 +944,17 @@ static void ImGui_ImplGlfw_GetWindowSizeAndFramebufferScale(GLFWwindow* window, 
     int display_w, display_h;
     glfwGetWindowSize(window, &w, &h);
     glfwGetFramebufferSize(window, &display_w, &display_h);
+    float fb_scale_x = (w > 0) ? (float)display_w / w : 1.0f;
+    float fb_scale_y = (h > 0) ? (float)display_h / h : 1.0f;
+#if GLFW_HAS_X11_OR_WAYLAND
+    ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData(window);
+    if (!bd->IsWayland)
+        fb_scale_x = fb_scale_y = 1.0f;
+#endif
     if (out_size != nullptr)
         *out_size = ImVec2((float)w, (float)h);
     if (out_framebuffer_scale != nullptr)
-        *out_framebuffer_scale = (w > 0 && h > 0) ? ImVec2((float)display_w / (float)w, (float)display_h / (float)h) : ImVec2(1.0f, 1.0f);
+        *out_framebuffer_scale = ImVec2(fb_scale_x, fb_scale_y);
 }
 
 void ImGui_ImplGlfw_NewFrame()
