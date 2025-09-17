@@ -17833,7 +17833,7 @@ void ImGui::ShowIDStackToolWindow(bool* p_open)
 
     Text("- Path \"%s\"", tool->ResultTempBuf.c_str());
 #ifdef IMGUI_ENABLE_TEST_ENGINE
-    Text("- Label \"%s\"", tool->QueryId ? ImGuiTestEngine_FindItemDebugLabel(&g, tool->QueryId) : "");
+    Text("- Label \"%s\"", tool->QueryMainId ? ImGuiTestEngine_FindItemDebugLabel(&g, tool->QueryMainId) : "");
 #endif
 
     Separator();
