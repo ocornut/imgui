@@ -36,27 +36,27 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.92.3 WIP (In Progress)
+ VERSION 1.92.3 (Released 2025-09-17)
 -----------------------------------------------------------------------
 
-Breaking Changes:
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.92.3
 
 Other Changes:
 
-- Scrollbar, Style: added configurable style.ScrollbarPadding value and corresponding
-  ImGuiStyleVar_ScrollbarPadding enum, instead of hardcoded computed default. (#8895)
-- Fonts: fixed an assertion failure when a rectangle entry has been reused
-  1024 times (e.g. due to constant change of font types). (#8906) [@cfillion]
 - Fonts: fixed merging a font and specifying a font target in DstFont
   that's not the last added font (regression in 1.92). (#8912)
+- Fonts: fixed an assertion failure when a rectangle entry has been reused
+  1024 times (e.g. due to constant change of font size). (#8906) [@cfillion]
 - Clipper, Tables: added ImGuiListClipperFlags_NoSetTableRowCounters as a way to
   disable the assumption that 1 clipper item == 1 table row, which breaks when
   e.g. using clipper with ItemsHeight=1 in order to clip in pixel units. (#8886)
+- Scrollbar, Style: added configurable style.ScrollbarPadding value and corresponding
+  ImGuiStyleVar_ScrollbarPadding enum, instead of an hard-coded computed default. (#8895)
 - Nav: fixed Ctrl+Tab window appearing as empty when the sole active and focused
   window has the ImGuiWindowFlags_NoNavFocus flag. (#8914)
 - Nav: fixed a crash that could occur when opening a popup following the processing
   of a global shortcut while no windows were focused.
-- Bullet: fixed tesselation amount which looked out of place in very large sizes.
+- Bullet: fixed tessellation which looked out of place in very large sizes.
 - InputText: added ImGuiInputTextFlags_WordWrap flag to word-wrap multi-line buffers.
   (#3237, #952, #1062, #7363). Current caveats:
   - This is marked as beta because not being tested enough.
@@ -64,7 +64,7 @@ Other Changes:
   - Wrapping style is not ideal. Wrapping of long words/sections (e.g. words
     larger than total available width) may be particularly unpleasing.
   - Wrapping width needs to always account for the possibility of a vertical scrollbar.
-  - It is currently much slower than regular text fields.
+  - It is currently much slower than regular text fields:
     - Ballpark estimate of cost on my 2019 desktop PC:
       For a 100 KB text buffer: +~0.3 ms/+~1.0 ms (Optimized vs Debug builds).
     - The CPU cost is very roughly proportional to text length, so a 10 KB buffer
