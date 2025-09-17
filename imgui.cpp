@@ -17662,6 +17662,7 @@ void ImGui::UpdateDebugToolStackQueries()
 
     // Clear hook when id stack tool is not visible
     g.DebugHookIdInfoId = 0;
+    tool->QueryHookActive = false;
     if (g.FrameCount != tool->LastActiveFrame + 1)
         return;
 
@@ -17687,11 +17688,15 @@ void ImGui::UpdateDebugToolStackQueries()
     // Update hook
     stack_level = tool->StackLevel;
     if (stack_level == -1)
+    {
         g.DebugHookIdInfoId = query_main_id;
+        tool->QueryHookActive = true;
+    }
     else if (stack_level >= 0 && stack_level < tool->Results.Size)
     {
         g.DebugHookIdInfoId = tool->Results[stack_level].ID;
         tool->Results[stack_level].QueryFrameCount++;
+        tool->QueryHookActive = true;
     }
 }
 
@@ -17701,11 +17706,17 @@ void ImGui::DebugHookIdInfo(ImGuiID id, ImGuiDataType data_type, const void* dat
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
     ImGuiIDStackTool* tool = &g.DebugIDStackTool;
+    if (tool->QueryHookActive == false)
+    {
+        IM_ASSERT(id == 0);
+        return;
+    }
 
     // Step 0: stack query
     // This assumes that the ID was computed with the current ID stack, which tends to be the case for our widget.
     if (tool->StackLevel == -1)
     {
+        IM_ASSERT(tool->Results.Size == 0);
         tool->StackLevel++;
         tool->Results.resize(window->IDStack.Size + 1, ImGuiStackLevelInfo());
         for (int n = 0; n < window->IDStack.Size + 1; n++)
