@@ -104,7 +104,7 @@
 
 -(void)loadView
 {
-    self.view = [[MTKView alloc] initWithFrame:CGRectMake(0, 0, 1200, 720)];
+    self.view = [[MTKView alloc] initWithFrame:CGRectMake(0, 0, 1200, 800)];
 }
 
 -(void)viewDidLoad

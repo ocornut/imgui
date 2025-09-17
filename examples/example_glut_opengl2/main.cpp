@@ -48,7 +48,7 @@ int main(int argc, char** argv)
     glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_GLUTMAINLOOP_RETURNS);
 #endif
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_MULTISAMPLE);
-    glutInitWindowSize(1280, 720);
+    glutInitWindowSize(1280, 800);
     glutCreateWindow("Dear ImGui GLUT+OpenGL2 Example");
 
     // Setup GLUT display function

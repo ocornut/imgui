@@ -36,25 +36,27 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.92.3 WIP (In Progress)
+ VERSION 1.92.3 (Released 2025-09-17)
 -----------------------------------------------------------------------
 
-Breaking Changes:
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.92.3
 
 Other Changes:
 
-- Scrollbar, Style: added configurable style.ScrollbarPadding value and corresponding
-  ImGuiStyleVar_ScrollbarPadding enum, instead of hardcoded computed default. (#8895)
-- Fonts: fixed an assertion failure when a rectangle entry has been reused
-  1024 times (e.g. due to constant change of font types). (#8906) [@cfillion]
 - Fonts: fixed merging a font and specifying a font target in DstFont
   that's not the last added font (regression in 1.92). (#8912)
+- Fonts: fixed an assertion failure when a rectangle entry has been reused
+  1024 times (e.g. due to constant change of font size). (#8906) [@cfillion]
 - Clipper, Tables: added ImGuiListClipperFlags_NoSetTableRowCounters as a way to
   disable the assumption that 1 clipper item == 1 table row, which breaks when
   e.g. using clipper with ItemsHeight=1 in order to clip in pixel units. (#8886)
+- Scrollbar, Style: added configurable style.ScrollbarPadding value and corresponding
+  ImGuiStyleVar_ScrollbarPadding enum, instead of an hard-coded computed default. (#8895)
 - Nav: fixed Ctrl+Tab window appearing as empty when the sole active and focused
   window has the ImGuiWindowFlags_NoNavFocus flag. (#8914)
-- Bullet: fixed tesselation amount which looked out of place in very large sizes.
+- Nav: fixed a crash that could occur when opening a popup following the processing
+  of a global shortcut while no windows were focused.
+- Bullet: fixed tessellation which looked out of place in very large sizes.
 - InputText: added ImGuiInputTextFlags_WordWrap flag to word-wrap multi-line buffers.
   (#3237, #952, #1062, #7363). Current caveats:
   - This is marked as beta because not being tested enough.
@@ -62,7 +64,7 @@ Other Changes:
   - Wrapping style is not ideal. Wrapping of long words/sections (e.g. words
     larger than total available width) may be particularly unpleasing.
   - Wrapping width needs to always account for the possibility of a vertical scrollbar.
-  - It is currently much slower than regular text fields.
+  - It is currently much slower than regular text fields:
     - Ballpark estimate of cost on my 2019 desktop PC:
       For a 100 KB text buffer: +~0.3 ms/+~1.0 ms (Optimized vs Debug builds).
     - The CPU cost is very roughly proportional to text length, so a 10 KB buffer
@@ -101,12 +103,25 @@ Other Changes:
   is now skipped. (#8904, #4631)
 - Debug Tools: ID Stack Tool: added option to hex-encode non-ASCII characters in
   output path. (#8904, #4631)
+- Debug Tools: ID Stack Tool: fixed a crash when using PushOverrideID(0) during
+  a query. (#8937, #4631)
 - Debug Tools: Fixed assertion failure when opening a combo box while using
   io.ConfigDebugBeginReturnValueOnce/ConfigDebugBeginReturnValueLoop. (#8931) [@harrymander]
 - Demo: tweaked ShowFontSelector() and ShowStyleSelector() to update selection
   while navigating and to not close popup automatically.
 - CI: Updates Windows CI to use a more recent VulkanSDK. (#8925, #8778) [@yaz0r]
 - Examples: Android: Android+OpenGL3: update Gradle project (#8888, #8878) [@scribam]
+- Examples: GLFW+OpenGL2, GLFW+Vulkan, GLFW+Metal, Win32+Vulkan: Fixed not applying
+  content scale consistently with other examples. (#8921, #8756)
+- Backends: GLFW: distinguish X11 vs Wayland to fix various scaling issues.
+  (#8920, #8921) [@TheBrokenRail, @pthom, @ocornut]
+  - window/monitor content scales are always reported as 1.0 on Wayland.
+  - framebuffer scales are always reported as 1.0 on X11.
+- Backends: SDL2: window/monitor content scales are always reported as 1.0 on Wayland.
+  (#8920, #8921) [@TheBrokenRail, @pthom, @ocornut]
+- Backends: SDL3: use SDL_GetWindowDisplayScale() on Mac to obtain DisplayFrameBufferScale,
+  fixing incorrect values during resolution changes e.g. going fullscreen.
+  (#8703, #4414) [@jclounge]
 - Backends: SDL_GPU: Added ImGui_ImplSDLGPU3_InitInfo::SwapchainComposition and
   PresentMode to configure how secondary viewports are created. Currently only used
   multi-viewport mode. (#8892) [@PTSVU]
@@ -781,8 +796,8 @@ Docking+Viewports Branch:
 - Viewports: fixed handling of simultaneous move + resize (e.g. toggling maximized)
   when ImGuiConfigFlags_DpiEnableScaleViewports is enabled.
 - Backends: Win32: Viewports: fixed an issue when closing a window from
-  the OS close button (with io.ConfigViewportsNoDecoration=false) while 
-  user code is discarding the 'bool *p_open=false output' from Begin(). 
+  the OS close button (with io.ConfigViewportsNoDecoration=false) while
+  user code is discarding the 'bool *p_open=false output' from Begin().
   Because we allowed the Win32 window to close early, Windows destroyed
   it and our imgui window became not visible even though user code was
   still submitting it. (#8670)
@@ -933,7 +948,7 @@ Other changes:
   with asserts enabled. (#8452)
 - Backends: SDL2, SDL3: Using SDL_OpenURL() in platform_io.Platform_OpenInShellFn
   handler. (#7660) [@achabense]
-- Backends: SDL2, SDL3: Use display bounds when SDL_GetDisplayUsableBounds() 
+- Backends: SDL2, SDL3: Use display bounds when SDL_GetDisplayUsableBounds()
   fails or return a zero size. (#8415, #3457)
 - Backends: SDL2, SDL3, Win32, Allegro5: Added support for ImGuiMouseCursor_Wait
   and ImGuiMouseCursor_Progress cursors.
@@ -961,9 +976,9 @@ Docking+Viewports Branch:
 
 - Docking: Removed legacy assert preventing to call DockBuilderSplitNode() on an existing
   split node. This makes using DockBuilder a little more flexible and bearable! (#8472) [@MegaMech]
-- Viewports: fixed an issue where in certain cases, a window repositioning leading 
-  to a monitor change could have the window incorrectly get clamped within the boundaries 
-  of its previous monitor. Would happen e.g. when loading .ini data during runtime. (#8484) 
+- Viewports: fixed an issue where in certain cases, a window repositioning leading
+  to a monitor change could have the window incorrectly get clamped within the boundaries
+  of its previous monitor. Would happen e.g. when loading .ini data during runtime. (#8484)
 - Viewports: fixed an assert when a window load settings with a position outside
   monitor bounds, when there are multiple monitors. (#8393, #8385) [@gaborodriguez]
 - Viewports + Backends: Win32: Fixed setting title bar text when application

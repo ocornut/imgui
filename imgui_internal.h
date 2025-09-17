@@ -1,4 +1,4 @@
-// dear imgui, v1.92.3 WIP
+// dear imgui, v1.92.3
 // (internal structures/api)
 
 // You may use this file to debug, understand or extend Dear ImGui features but we don't provide any guarantee of forward compatibility.
@@ -2319,15 +2319,16 @@ struct ImGuiIDStackTool
 {
     int                     LastActiveFrame;
     int                     StackLevel;                 // -1: query stack and resize Results, >= 0: individual stack level
-    ImGuiID                 QueryId;                    // ID to query details for
+    ImGuiID                 QueryMainId;                // ID to query details for
     ImVector<ImGuiStackLevelInfo> Results;
+    bool                    QueryHookActive;            // Used to disambiguate the case where DebugHookIdInfoId == 0 which is valid.
     bool                    OptHexEncodeNonAsciiChars;
     bool                    OptCopyToClipboardOnCtrlC;
     float                   CopyToClipboardLastTime;
     ImGuiTextBuffer         ResultPathsBuf;
     ImGuiTextBuffer         ResultTempBuf;
 
-    ImGuiIDStackTool()      { memset(this, 0, sizeof(*this)); OptHexEncodeNonAsciiChars = true; CopyToClipboardLastTime = -FLT_MAX; }
+    ImGuiIDStackTool()      { memset(this, 0, sizeof(*this)); LastActiveFrame = -1; OptHexEncodeNonAsciiChars = true; CopyToClipboardLastTime = -FLT_MAX; }
 };
 
 //-----------------------------------------------------------------------------
@@ -2412,7 +2413,7 @@ struct ImGuiContext
 
     // Item/widgets state and tracking information
     ImGuiID                 DebugDrawIdConflictsId;             // Set when we detect multiple items with the same identifier
-    ImGuiID                 DebugHookIdInfo;                    // Will call core hooks: DebugHookIdInfo() from GetID functions, used by ID Stack Tool [next HoveredId/ActiveId to not pull in an extra cache-line]
+    ImGuiID                 DebugHookIdInfoId;                  // Will call core hooks: DebugHookIdInfo() from GetID functions, used by ID Stack Tool [next HoveredId/ActiveId to not pull in an extra cache-line]
     ImGuiID                 HoveredId;                          // Hovered widget, filled during the frame
     ImGuiID                 HoveredIdPreviousFrame;
     int                     HoveredIdPreviousFrameItemCount;    // Count numbers of items using the same ID as last frame's hovered id
