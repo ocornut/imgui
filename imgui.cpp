@@ -13431,7 +13431,7 @@ static ImVec2 ImGui::NavCalcPreferredRefPos()
         ImRect ref_rect;
         if (activated_shortcut)
             ref_rect = g.LastItemData.NavRect;
-        else
+        else if (window != NULL)
             ref_rect = WindowRectRelToAbs(window, window->NavRectRel[g.NavLayer]);
 
         // Take account of upcoming scrolling (maybe set mouse pos should be done in EndFrame?)
