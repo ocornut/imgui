@@ -54,6 +54,8 @@ Other Changes:
   e.g. using clipper with ItemsHeight=1 in order to clip in pixel units. (#8886)
 - Nav: fixed Ctrl+Tab window appearing as empty when the sole active and focused
   window has the ImGuiWindowFlags_NoNavFocus flag. (#8914)
+- Nav: fixed a crash that could occur when opening a popup following the processing
+  of a global shortcut while no windows were focused.
 - Bullet: fixed tesselation amount which looked out of place in very large sizes.
 - InputText: added ImGuiInputTextFlags_WordWrap flag to word-wrap multi-line buffers.
   (#3237, #952, #1062, #7363). Current caveats:
