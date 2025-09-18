@@ -68,6 +68,8 @@ Docking+Viewports Branch:
 - Viewports: DestroyContext() does not call DestroyPlatformWindows() anymore at
   it assumed to be unnecessary as backensd should have done it and we check that
   backends have been shutdown since 1.90.4. Changed into asserts. (#7175, #8945)
+- Backends: Vulkan: Added ImGui_ImplVulkanH_GetWindowDataFromViewport() accessor/helper.
+  (#8946, #8940) [@olivier-gerard]
 
 
 -----------------------------------------------------------------------
