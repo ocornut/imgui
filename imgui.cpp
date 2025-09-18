@@ -14149,8 +14149,10 @@ static ImVec2 ImGui::NavCalcPreferredRefPos()
             ref_rect.Translate(window->Scroll - next_scroll);
         }
         ImVec2 pos = ImVec2(ref_rect.Min.x + ImMin(g.Style.FramePadding.x * 4, ref_rect.GetWidth()), ref_rect.Max.y - ImMin(g.Style.FramePadding.y, ref_rect.GetHeight()));
-        ImGuiViewport* viewport = window->Viewport;
-        return ImTrunc(ImClamp(pos, viewport->Pos, viewport->Pos + viewport->Size)); // ImTrunc() is important because non-integer mouse position application in backend might be lossy and result in undesirable non-zero delta.
+        if (window != NULL)
+            if (ImGuiViewport* viewport = window->Viewport)
+                pos = ImClamp(pos, viewport->Pos, viewport->Pos + viewport->Size);
+        return ImTrunc(pos); // ImTrunc() is important because non-integer mouse position application in backend might be lossy and result in undesirable non-zero delta.
     }
 }
 
