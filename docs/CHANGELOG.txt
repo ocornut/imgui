@@ -36,6 +36,21 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
+ VERSION 1.92.4 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Breaking Changes:
+
+Other Changes:
+
+Docking+Viewports Branch:
+
+- Nav: fixed a crash that could occur when opening a popup following the processing
+  of a global shortcut while no windows were focused (the fix done in 1.92.3 was
+  incomplete for docking branch).
+
+
+-----------------------------------------------------------------------
  VERSION 1.92.3 (Released 2025-09-17)
 -----------------------------------------------------------------------
 
