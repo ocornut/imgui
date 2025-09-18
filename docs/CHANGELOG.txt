@@ -43,6 +43,12 @@ Breaking Changes:
 
 Other Changes:
 
+- IO: added ImGuiPlatformIO::ClearPlatformHandlers(), ClearRendererHandlers()
+  helpers to null all handlers. (#8945, #2769)
+- Backends: all backends call ImGuiPlatformIO::ClearPlatformHandlers() and
+  ClearRendererHandlers() on shutdown, so as not to leave function pointers
+  which may be dangling when using backend in e.g. DLL. (#8945, #2769)
+
 
 -----------------------------------------------------------------------
  VERSION 1.92.3 (Released 2025-09-17)
