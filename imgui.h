@@ -4219,6 +4219,13 @@ struct ImGuiPlatformIO
     // Viewports list (the list is updated by calling ImGui::EndFrame or ImGui::Render)
     // (in the future we will attempt to organize this feature to remove the need for a "main viewport")
     ImVector<ImGuiViewport*>        Viewports;          // Main viewports, followed by all secondary viewports.
+
+    //------------------------------------------------------------------
+    // Functions
+    //------------------------------------------------------------------
+
+    void    ClearPlatformHandlers();    // Clear all Platform_XXX fields. Typically called on Platform Backend shutdown.
+    void    ClearRendererHandlers();    // Clear all Renderer_XXX fields. Typically called on Renderer Backend shutdown.
 };
 
 // (Optional) This is required when enabling multi-viewport. Represent the bounds of each connected monitor/display and their DPI.

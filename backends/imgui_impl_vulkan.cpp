@@ -29,6 +29,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2025-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2025-09-18: Call platform_io.ClearRendererHandlers() on shutdown.
 //  2025-09-04: Vulkan: Added ImGui_ImplVulkan_CreateMainPipeline(). (#8110, #8111)
 //  2025-07-27: Vulkan: Fixed texture update corruption introduced on 2025-06-11. (#8801, #8755, #8840)
 //  2025-07-07: Vulkan: Fixed texture synchronization issue introduced on 2025-06-11. (#8772)
@@ -1352,6 +1353,7 @@ void ImGui_ImplVulkan_Shutdown()
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
     IM_ASSERT(bd != nullptr && "No renderer backend to shutdown, or already shutdown?");
     ImGuiIO& io = ImGui::GetIO();
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
 
     // First destroy objects in all viewports
     ImGui_ImplVulkan_DestroyDeviceObjects();
@@ -1368,6 +1370,7 @@ void ImGui_ImplVulkan_Shutdown()
     io.BackendRendererName = nullptr;
     io.BackendRendererUserData = nullptr;
     io.BackendFlags &= ~(ImGuiBackendFlags_RendererHasVtxOffset | ImGuiBackendFlags_RendererHasTextures | ImGuiBackendFlags_RendererHasViewports);
+    platform_io.ClearRendererHandlers();
     IM_DELETE(bd);
 }
 

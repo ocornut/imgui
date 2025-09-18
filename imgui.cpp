@@ -16224,6 +16224,23 @@ void ImGui::LocalizeRegisterEntries(const ImGuiLocEntry* entries, int count)
 // - DestroyPlatformWindows()
 //-----------------------------------------------------------------------------
 
+void ImGuiPlatformIO::ClearPlatformHandlers()
+{
+    Platform_GetClipboardTextFn = NULL;
+    Platform_SetClipboardTextFn = NULL;
+    Platform_ClipboardUserData = NULL;
+    Platform_OpenInShellFn = NULL;
+    Platform_OpenInShellUserData = NULL;
+    Platform_SetImeDataFn = NULL;
+    Platform_ImeUserData = NULL;
+}
+
+void ImGuiPlatformIO::ClearRendererHandlers()
+{
+    Renderer_TextureMaxWidth = Renderer_TextureMaxHeight = 0;
+    Renderer_RenderState = NULL;
+}
+
 ImGuiViewport* ImGui::GetMainViewport()
 {
     ImGuiContext& g = *GImGui;
