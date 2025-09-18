@@ -48,6 +48,9 @@ Docking+Viewports Branch:
 - Nav: fixed a crash that could occur when opening a popup following the processing
   of a global shortcut while no windows were focused (the fix done in 1.92.3 was
   incomplete for docking branch).
+- Viewports: DestroyContext() does not call DestroyPlatformWindows() anymore at
+  it assumed to be unnecessary as backensd should have done it and we check that
+  backends have been shutdown since 1.90.4. Changed into asserts. (#7175, #8945)
 
 
 -----------------------------------------------------------------------

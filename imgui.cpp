@@ -4415,6 +4415,11 @@ void ImGui::Shutdown()
     ImGuiContext& g = *GImGui;
     IM_ASSERT_USER_ERROR(g.IO.BackendPlatformUserData == NULL, "Forgot to shutdown Platform backend?");
     IM_ASSERT_USER_ERROR(g.IO.BackendRendererUserData == NULL, "Forgot to shutdown Renderer backend?");
+    for (ImGuiViewportP* viewport : g.Viewports)
+    {
+        IM_UNUSED(viewport);
+        IM_ASSERT_USER_ERROR(viewport->RendererUserData == NULL && viewport->PlatformUserData == NULL && viewport->PlatformHandle == NULL, "Backend or app forgot to call DestroyPlatformWindows()?");
+    }
 
     // The fonts atlas can be used prior to calling NewFrame(), so we clear it even if g.Initialized is FALSE (which would happen if we never called NewFrame)
     for (ImFontAtlas* atlas : g.FontAtlases)
@@ -4435,9 +4440,6 @@ void ImGui::Shutdown()
     // Save settings (unless we haven't attempted to load them: CreateContext/DestroyContext without a call to NewFrame shouldn't save an empty file)
     if (g.SettingsLoaded && g.IO.IniFilename != NULL)
         SaveIniSettingsToDisk(g.IO.IniFilename);
-
-    // Destroy platform windows
-    DestroyPlatformWindows();
 
     // Shutdown extensions
     DockContextShutdown(&g);
