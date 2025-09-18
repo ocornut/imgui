@@ -202,8 +202,8 @@ struct VERTEX_CONSTANT_BUFFER_DX12
 };
 
 // Forward Declarations
-static void ImGui_ImplDX12_InitPlatformInterface();
-static void ImGui_ImplDX12_ShutdownPlatformInterface();
+static void ImGui_ImplDX12_InitMultiViewportSupport();
+static void ImGui_ImplDX12_ShutdownMultiViewportSupport();
 
 // Functions
 static void ImGui_ImplDX12_SetupRenderState(ImDrawData* draw_data, ID3D12GraphicsCommandList* command_list, ImGui_ImplDX12_RenderBuffers* fr)
@@ -932,7 +932,7 @@ bool ImGui_ImplDX12_Init(ImGui_ImplDX12_InitInfo* init_info)
     io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;  // We can create multi-viewports on the Renderer side (optional)
 
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-        ImGui_ImplDX12_InitPlatformInterface();
+        ImGui_ImplDX12_InitMultiViewportSupport();
 
     // Create a dummy ImGui_ImplDX12_ViewportData holder for the main viewport,
     // Since this is created and managed by the application, we will only use the ->Resources[] fields.
@@ -996,7 +996,7 @@ void ImGui_ImplDX12_Shutdown()
     }
 
     // Clean up windows and device objects
-    ImGui_ImplDX12_ShutdownPlatformInterface();
+    ImGui_ImplDX12_ShutdownMultiViewportSupport();
     ImGui_ImplDX12_InvalidateDeviceObjects();
 
     io.BackendRendererName = nullptr;
@@ -1240,7 +1240,7 @@ static void ImGui_ImplDX12_SwapBuffers(ImGuiViewport* viewport, void*)
         ::SwitchToThread();
 }
 
-void ImGui_ImplDX12_InitPlatformInterface()
+void ImGui_ImplDX12_InitMultiViewportSupport()
 {
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     platform_io.Renderer_CreateWindow = ImGui_ImplDX12_CreateWindow;
@@ -1250,7 +1250,7 @@ void ImGui_ImplDX12_InitPlatformInterface()
     platform_io.Renderer_SwapBuffers = ImGui_ImplDX12_SwapBuffers;
 }
 
-void ImGui_ImplDX12_ShutdownPlatformInterface()
+void ImGui_ImplDX12_ShutdownMultiViewportSupport()
 {
     ImGui::DestroyPlatformWindows();
 }
