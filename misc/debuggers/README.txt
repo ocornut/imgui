@@ -14,3 +14,7 @@ imgui.natvis
     With this, types like ImVector<> will be displayed nicely in the debugger.
     (read comments inside file for details)
 
+imgui_lldb.py
+    LLDB: synthetic children provider and summaries for Dear ImGui types.
+    With this, types like ImVector<> will be displayed nicely in the debugger.
+    (read comments inside file for details)
