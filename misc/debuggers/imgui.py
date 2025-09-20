@@ -89,6 +89,26 @@ class ImRectSummary(object):
 
 		return f"Min=({minX}, {minY}) Max=({maxX}, {maxY}) Size=({maxX - minX}, {maxY - minY})"
 
+def get_active_enum_flags(valobj):
+	flag_set = set()
+
+	enum_name = valobj.GetType().GetName() + "_"
+	enum_type = valobj.GetTarget().FindFirstType(enum_name)
+
+	if not enum_type.IsValid():
+		return flag_set
+
+	enum_members = enum_type.GetEnumMembers()
+	value = valobj.GetValueAsUnsigned()
+
+	for i in range(0, enum_members.GetSize()):
+		member = enum_members.GetTypeEnumMemberAtIndex(i)
+
+		if value & member.GetValueAsUnsigned():
+			flag_set.add(member.GetName().removeprefix(enum_name))
+
+	return flag_set
+
 class ImGuiWindowSummary(object):
 	def __init__(self, valobj, internal_dict):
 		self.valobj = valobj
@@ -103,11 +123,11 @@ class ImGuiWindowSummary(object):
 		was_active = self.valobj.GetChildMemberWithName("WasActive").GetValueAsUnsigned() != 0
 		hidden = self.valobj.GetChildMemberWithName("Hidden") != 0
 
-		flags = self.valobj.GetChildMemberWithName("Flags").GetValueAsUnsigned()
+		flags = get_active_enum_flags(self.valobj.GetChildMemberWithName("Flags"))
 
 		active = 1 if  active or was_active else 0
-		child = 1 if flags & 0x01000000 else 0
-		popup = 1 if flags & 0x04000000 else 0
+		child = 1 if "ChildWindow" in flags else 0
+		popup = 1 if "Popup" in flags else 0
 		hidden = 1 if hidden else 0
 
 		return f"Name {name} Active {active} Child {child} Popup {popup} Hidden {hidden}"
