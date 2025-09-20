@@ -1,0 +1,22 @@
+name: build-windows-vulkan-libs
+
+on: workflow_dispatch
+
+jobs:
+  Windows:
+    runs-on: windows-2025
+    env:
+      VULKAN_TAG: 1.4.326
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Vulkan libs
+        shell: powershell
+        run: .github/workflows/build_windows_vulkan_libs.ps1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vulkan_windows_libs_${{ env.VULKAN_TAG }}
+          path: vulkanArtifact
+          overwrite: 'true'
+          
