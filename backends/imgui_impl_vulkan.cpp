@@ -509,20 +509,20 @@ static void ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, VkPipeline 
 #ifdef IMGUI_IMPL_VULKAN_HAS_PUSH_DESCRIPTOR
 static void ImGui_ImplVulkan_PushTextureDescriptor(VkCommandBuffer command_buffer, VkImageView view, VkSampler sampler, VkPipelineLayout pipeline_layout)
 {
-    VkDescriptorImageInfo imageInfo = {};
-    imageInfo.sampler = sampler;
-    imageInfo.imageView = view;
-    imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    VkDescriptorImageInfo image_info = {};
+    image_info.sampler = sampler;
+    image_info.imageView = view;
+    image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-    VkWriteDescriptorSet writeDescSet = {};
-    writeDescSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    writeDescSet.dstSet = VK_NULL_HANDLE;
-    writeDescSet.dstBinding = 0;
-    writeDescSet.descriptorCount = 1;
-    writeDescSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    writeDescSet.pImageInfo = &imageInfo;
+    VkWriteDescriptorSet write_desc_set = {};
+    write_desc_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write_desc_set.dstSet = VK_NULL_HANDLE;
+    write_desc_set.dstBinding = 0;
+    write_desc_set.descriptorCount = 1;
+    write_desc_set.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    write_desc_set.pImageInfo = &image_info;
 
-    VkWriteDescriptorSet writes[] = { writeDescSet };
+    VkWriteDescriptorSet writes[] = { write_desc_set };
     ImGuiImplVulkanFuncs_vkCmdPushDescriptorSetKHR(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, writes);
 }
 #endif
