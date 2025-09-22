@@ -1,3 +1,8 @@
+# This is current meant to be run manually, occasionally:
+# - Run then zip the contents of vulkanArtifact/ into e.g. vulkan_windows_libs_1.4.326
+# - Upload as an attachment to https://github.com/ocornut/imgui/pull/8925 then change filename in build.yml
+# - There is a build_windows_vulkan_libs.yml in commit history that we removed thinking this is run so rarely we don't need to pollute CI UI with it.
+
 # Set default vulkan version if none provided
 if (-not $env:VULKAN_TAG) { $env:VULKAN_TAG = "1.4.326" }
 

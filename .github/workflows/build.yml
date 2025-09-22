@@ -24,6 +24,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The VulkanSDK libs for Windows is manually generated using build_windows_vulkan_libs.ps1 + attached to issue #8925.
+      # (we have a .yml workflow in commit history if it becomes ever useful to create this on CI too)
       - name: Install Dependencies
         shell: powershell
         run: |
@@ -35,9 +37,9 @@ jobs:
           Expand-Archive -Path SDL3-devel-3.2.18-VC.zip
           echo "SDL3_DIR=$(pwd)\SDL3-devel-3.2.18-VC\SDL3-3.2.18\" >>${env:GITHUB_ENV}
 
-          Invoke-WebRequest -Uri "https://github.com/ocornut/imgui/files/3789205/vulkan-sdk-1.1.121.2.zip" -OutFile vulkan-sdk-1.1.121.2.zip
-          Expand-Archive -Path vulkan-sdk-1.1.121.2.zip
-          echo "VULKAN_SDK=$(pwd)\vulkan-sdk-1.1.121.2\" >>${env:GITHUB_ENV}
+          Invoke-WebRequest -Uri "https://github.com/user-attachments/files/22464296/vulkan_windows_libs_1.4.326.zip" -OutFile vulkan_windows_libs_1.4.326.zip
+          Expand-Archive -Path vulkan_windows_libs_1.4.326.zip
+          echo "VULKAN_SDK=$(pwd)\vulkan_windows_libs_1.4.326\" >>${env:GITHUB_ENV}
 
       - name: Fix Projects
         shell: powershell
