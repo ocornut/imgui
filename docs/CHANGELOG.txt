@@ -52,6 +52,8 @@ Other Changes:
 - Backends: all backends call ImGuiPlatformIO::ClearPlatformHandlers() and
   ClearRendererHandlers() on shutdown, so as not to leave function pointers
   which may be dangling when using backend in e.g. DLL. (#8945, #2769)
+- Backends: OpenGL3: fixed GL loader to work on Haiku OS which does not support
+  `RTLD_NOLOAD`. (#8952) [@Xottab-DUTY]
 
 
 -----------------------------------------------------------------------
