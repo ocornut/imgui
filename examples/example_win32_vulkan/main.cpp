@@ -1,4 +1,4 @@
-// Dear ImGui: standalone example application for Win32 + Vulkan
+// Dear ImGui: standalone example application for Windows API + Vulkan
 
 // Learn about Dear ImGui:
 // - FAQ                  https://dearimgui.com/faq

@@ -53,7 +53,10 @@ Other Changes:
   ClearRendererHandlers() on shutdown, so as not to leave function pointers
   which may be dangling when using backend in e.g. DLL. (#8945, #2769)
 - Backends: OpenGL3: fixed GL loader to work on Haiku OS which does not support
-  `RTLD_NOLOAD`. (#8952) [@Xottab-DUTY]
+  `RTLD_NOLOAD`. (#8952) [@Xottab-DUTY, @threedeyes]
+- Examples: SDL2+DirectX11: Try WARP software driver if hardware driver is
+  not available. (#5924, #5562)
+- Examples: SDL3+DirectX11: Added SDL3+DirectX11 example. (#8956, #8957) [@tomaz82]
 
 
 -----------------------------------------------------------------------

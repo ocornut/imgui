@@ -149,8 +149,12 @@ SDL2 (Win32, Mac, Linux, etc.) + Vulkan example. <BR>
 This is quite long and tedious, because: Vulkan. <BR>
 For this example, the main.cpp file exceptionally use helpers function from imgui_impl_vulkan.h/cpp.
 
+[example_sdl3_directx11/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl3_directx11/) <BR>
+SDL3 + DirectX11 examples, Windows only. <BR>
+= main.cpp + imgui_impl_sdl3.cpp + imgui_impl_dx11.cpp <BR>
+
 [example_sdl3_metal/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl3_metal/) <BR>
-SDL3 + Metal example (Mac). <BR>
+SDL3 + Metal example, Mac only. <BR>
 = main.cpp + imgui_impl_sdl3.cpp + imgui_impl_metal.mm <BR>
 
 [example_sdl3_opengl3/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl3_opengl3/) <BR>
