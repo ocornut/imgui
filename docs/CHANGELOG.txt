@@ -41,6 +41,11 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
+- Viewports: for consistency with other config flags, renamed
+     io.ConfigViewportPlatformFocusSetsImGuiFocus
+  to io.ConfigViewportsPlatformFocusSetsImGuiFocus. (#6299, #6462)
+  It was really a typo in the first place, and introduced in 1.92.2.s
+
 Other Changes:
 
 - IO: added ImGuiPlatformIO::ClearPlatformHandlers(), ClearRendererHandlers()
