@@ -16326,6 +16326,15 @@ static bool ImGui::GetWindowAlwaysWantOwnViewport(ImGuiWindow* window)
     return false;
 }
 
+
+// Heuristic, see #8948: depends on how backends handle OS-level parenting.
+static bool IsViewportAbove(ImGuiViewportP* potential_above, ImGuiViewportP* potential_below)
+{
+    if (potential_above->LastFocusedStampCount > potential_below->LastFocusedStampCount || potential_above->ParentViewportId == potential_below->ID) // FIXME: Should follow the ParentViewportId list.
+        return true;
+    return false;
+}
+
 static bool ImGui::UpdateTryMergeWindowIntoHostViewport(ImGuiWindow* window, ImGuiViewportP* viewport)
 {
     ImGuiContext& g = *GImGui;
@@ -16340,14 +16349,12 @@ static bool ImGui::UpdateTryMergeWindowIntoHostViewport(ImGuiWindow* window, ImG
     if (GetWindowAlwaysWantOwnViewport(window))
         return false;
 
-    // FIXME: Can't use g.WindowsFocusOrder[] for root windows only as we care about Z order. If we maintained a DisplayOrder along with FocusOrder we could..
-    for (ImGuiWindow* window_behind : g.Windows)
+    for (ImGuiViewportP* viewport_2 : g.Viewports)
     {
-        if (window_behind == window)
-            break;
-        if (window_behind->WasActive && window_behind->ViewportOwned && !(window_behind->Flags & ImGuiWindowFlags_ChildWindow))
-            if (window_behind->Viewport->GetMainRect().Overlaps(window->Rect()))
-                return false;
+        if (viewport_2 == viewport || viewport_2 == window->Viewport)
+            continue;
+        if (IsViewportAbove(viewport_2, viewport) && viewport_2->GetMainRect().Overlaps(window->Rect()))
+            return false;
     }
 
     // Move to the existing viewport, Move child/hosted windows as well (FIXME-OPT: iterate child)
