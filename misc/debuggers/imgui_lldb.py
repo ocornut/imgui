@@ -1,4 +1,6 @@
-# This file implements synthetic children providers and summaries for various ImGui types for LLDB. 
+# This file implements synthetic children providers and summaries for various Dear ImGui types for LLDB.
+# LLDB is used by Xcode, Android Studio, and may be used from VS Code, C++Builder, CLion, Eclipse etc.
+
 #
 # Useful links/documentation related to the feature:
 # - https://lldb.llvm.org/use/variable.html#summary-strings
