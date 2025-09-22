@@ -54,11 +54,12 @@ Docking+Viewports Branch:
 - Nav: fixed a crash that could occur when opening a popup following the processing
   of a global shortcut while no windows were focused (the fix done in 1.92.3 was
   incomplete for docking branch).
+- Viewports: changed default value of io.ConfigViewportsNoDefaultParent to true. (#8948)
 - Viewports: fixed an issue inferring Z-order when attempting to merge a viewport
   back in the the main/hosting viewport. (#8948)
   Note that for GLFW/SDL2/OSX backends, which do not support honoring ParentViewportID.
-  setting io.ConfigViewportsNoDefaultParent=true will align imgui's expectation with
-  what the backend does.
+  setting io.ConfigViewportsNoDefaultParent=true will align imgui's expectation
+  with what the backend does.
 - Viewports: DestroyContext() does not call DestroyPlatformWindows() anymore at
   it assumed to be unnecessary as backensd should have done it and we check that
   backends have been shutdown since 1.90.4. Changed into asserts. (#7175, #8945)

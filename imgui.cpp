@@ -1575,7 +1575,7 @@ ImGuiIO::ImGuiIO()
     ConfigViewportsNoAutoMerge = false;
     ConfigViewportsNoTaskBarIcon = false;
     ConfigViewportsNoDecoration = true;
-    ConfigViewportsNoDefaultParent = false;
+    ConfigViewportsNoDefaultParent = true;
     ConfigViewportPlatformFocusSetsImGuiFocus = true;
 
     // Miscellaneous options
