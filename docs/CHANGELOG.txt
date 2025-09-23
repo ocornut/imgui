@@ -59,6 +59,8 @@ Docking+Viewports Branch:
 - Nav: fixed a crash that could occur when opening a popup following the processing
   of a global shortcut while no windows were focused (the fix done in 1.92.3 was
   incomplete for docking branch).
+- Viewports: fixed a bug where ImGuiWindowFlags_NoBringToFrontOnFocus would effectivey
+  be ignored when windows first appear and viewports are enabled. (#7008) [@jshofmann]
 - Viewports: changed default value of io.ConfigViewportsNoDefaultParent to true. (#8948)
 - Viewports: fixed an issue inferring Z-order when attempting to merge a viewport
   back in the the main/hosting viewport. (#8948)
