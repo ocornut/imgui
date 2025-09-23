@@ -43,6 +43,9 @@ Breaking Changes:
 
 Other Changes:
 
+- Windows: added lower-right resize grip on child windows using both
+  ImGuiChildFlags_ResizeX and ImGuiChildFlags_ResizeY flags. (#8501) [@aleksijuvani]
+  The grip is not visible before hovering to reduce clutter.
 - IO: added ImGuiPlatformIO::ClearPlatformHandlers(), ClearRendererHandlers()
   helpers to null all handlers. (#8945, #2769)
 - Misc: Debuggers: added type formatters for the LLDB debuggers (e.g. Xcode,
