@@ -822,7 +822,6 @@ void ImGui_ImplGlfw_Shutdown()
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
 
     ImGui_ImplGlfw_ShutdownMultiViewportSupport();
-
     if (bd->InstalledCallbacks)
         ImGui_ImplGlfw_RestoreCallbacks(bd->Window);
 #ifdef EMSCRIPTEN_USE_EMBEDDED_GLFW3

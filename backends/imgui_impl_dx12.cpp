@@ -997,7 +997,6 @@ void ImGui_ImplDX12_Shutdown()
         main_viewport->RendererUserData = nullptr;
     }
 
-    // Clean up windows and device objects
     ImGui_ImplDX12_ShutdownMultiViewportSupport();
     ImGui_ImplDX12_InvalidateDeviceObjects();
 
