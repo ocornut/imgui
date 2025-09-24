@@ -349,7 +349,7 @@ int main(int, char**)
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD))
     {
         printf("Error: SDL_Init(): %s\n", SDL_GetError());
-        return -1;
+        return 1;
     }
 
     // Create window with Vulkan graphics context
@@ -359,7 +359,7 @@ int main(int, char**)
     if (window == nullptr)
     {
         printf("Error: SDL_CreateWindow(): %s\n", SDL_GetError());
-        return -1;
+        return 1;
     }
 
     ImVector<const char*> extensions;
