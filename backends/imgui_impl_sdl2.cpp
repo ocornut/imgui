@@ -674,15 +674,18 @@ static void ImGui_ImplSDL2_UpdateMouseData()
         if (io.WantSetMousePos)
             SDL_WarpMouseInWindow(bd->Window, (int)io.MousePos.x, (int)io.MousePos.y);
 
-        // (Optional) Fallback to provide mouse position when focused (SDL_MOUSEMOTION already provides this when hovered or captured)
+        // (Optional) Fallback to provide unclamped mouse position when focused (SDL_MOUSEMOTION already provides this when hovered or captured)
         const bool is_relative_mouse_mode = SDL_GetRelativeMouseMode() != 0;
         if (bd->MouseCanUseGlobalState && bd->MouseButtonsDown == 0 && !is_relative_mouse_mode)
         {
             // Single-viewport mode: mouse position in client window coordinates (io.MousePos is (0,0) when the mouse is on the upper-left corner of the app window)
-            int window_x, window_y, mouse_x_global, mouse_y_global;
-            SDL_GetGlobalMouseState(&mouse_x_global, &mouse_y_global);
-            SDL_GetWindowPosition(bd->Window, &window_x, &window_y);
-            io.AddMousePosEvent((float)(mouse_x_global - window_x), (float)(mouse_y_global - window_y));
+            int mouse_x, mouse_y;
+            int window_x, window_y;
+            SDL_GetGlobalMouseState(&mouse_x, &mouse_y);
+            SDL_GetWindowPosition(focused_window, &window_x, &window_y);
+            mouse_x -= window_x;
+            mouse_y -= window_y;
+            io.AddMousePosEvent((float)mouse_x, (float)mouse_y);
         }
     }
 }
