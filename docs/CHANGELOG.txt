@@ -57,6 +57,10 @@ Other Changes:
   which may be dangling when using backend in e.g. DLL. (#8945, #2769)
 - Backends: OpenGL3: fixed GL loader to work on Haiku OS which does not support
   `RTLD_NOLOAD`. (#8952) [@Xottab-DUTY, @threedeyes]
+- Backends: SDL2,SDL3: avoid using the SDL_GetGlobalMouseState() path when one of our
+  window is hovered, as the event data is reliable and enough in this case.
+  - Fix mouse coordinates issue in fullscreen apps with macOS notch. (#7919, #7786)
+  - Better perf on X11 as querying global position requires a round trip to X11 server.
 - Backends: Win32: minor optimization not submitting gamepad io again if
   XInput's dwPacketNumber has not changed. (#8556) [@MidTerm-CN]
 - Examples: SDL2+DirectX11: Try WARP software driver if hardware driver is

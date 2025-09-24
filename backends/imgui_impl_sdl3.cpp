@@ -20,6 +20,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2025-09-24: Skip using the SDL_GetGlobalMouseState() state when one of our window is hovered, as the SDL_EVENT_MOUSE_MOTION data is reliable. Fix macOS notch mouse coordinates issue in fullscreen mode + better perf on X11. (#7919, #7786)
 //  2025-09-18: Call platform_io.ClearPlatformHandlers() on shutdown.
 //  2025-09-15: Use SDL_GetWindowDisplayScale() on Mac to output DisplayFrameBufferScale. The function is more reliable during resolution changes e.g. going fullscreen. (#8703, #4414)
 //  2025-06-27: IME: avoid calling SDL_StartTextInput() again if already active. (#8727)
@@ -636,9 +637,10 @@ static void ImGui_ImplSDL3_UpdateMouseData()
         if (io.WantSetMousePos)
             SDL_WarpMouseInWindow(bd->Window, io.MousePos.x, io.MousePos.y);
 
-        // (Optional) Fallback to provide unclamped mouse position when focused (SDL_EVENT_MOUSE_MOTION already provides this when hovered or captured)
+        // (Optional) Fallback to provide unclamped mouse position when focused but not hovered (SDL_EVENT_MOUSE_MOTION already provides this when hovered or captured)
+        SDL_Window* hovered_window = SDL_GetMouseFocus();
         const bool is_relative_mouse_mode = SDL_GetWindowRelativeMouseMode(bd->Window);
-        if (bd->MouseCanUseGlobalState && bd->MouseButtonsDown == 0 && !is_relative_mouse_mode)
+        if (hovered_window == NULL && bd->MouseCanUseGlobalState && bd->MouseButtonsDown == 0 && !is_relative_mouse_mode)
         {
             // Single-viewport mode: mouse position in client window coordinates (io.MousePos is (0,0) when the mouse is on the upper-left corner of the app window)
             float mouse_x, mouse_y;
