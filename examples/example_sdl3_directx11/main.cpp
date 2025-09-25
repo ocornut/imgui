@@ -251,6 +251,13 @@ bool CreateDeviceD3D(HWND hWnd)
     if (res != S_OK)
         return false;
 
+    // Disable DXGI's default Alt+Enter fullscreen behavior.
+    // - You are free to leave this enabled, but it will not work properly with multiple viewports.
+    // - This must be done for all windows associated to the device. Our DX11 backend does this automatically for secondary viewports that it creates.
+    IDXGIFactory* pSwapChainFactory;
+    if (SUCCEEDED(g_pSwapChain->GetParent(IID_PPV_ARGS(&pSwapChainFactory))))
+        pSwapChainFactory->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER);
+
     CreateRenderTarget();
     return true;
 }

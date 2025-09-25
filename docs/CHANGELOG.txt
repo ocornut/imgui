@@ -92,6 +92,9 @@ Docking+Viewports Branch:
   viewports managed by the backend. (#4350) [@PathogenDavid]
 - Backends: Vulkan: Added ImGui_ImplVulkanH_GetWindowDataFromViewport() accessor/helper.
   (#8946, #8940) [@olivier-gerard]
+- Examples: DX10, DX11: Disabled DXGI's Alt+Enter default behavior in examples.
+  Applications are free to leave this enabled, but it does not work properly with
+  multiple viewports. (#4350) [@PathogenDavid]
 
 
 -----------------------------------------------------------------------
