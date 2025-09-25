@@ -61,6 +61,9 @@
 #if defined(VK_VERSION_1_3) || defined(VK_KHR_dynamic_rendering)
 #define IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
 #endif
+#if defined(VK_VERSION_1_1) || defined(VK_KHR_push_descriptor)
+#define IMGUI_IMPL_VULKAN_HAS_PUSH_DESCRIPTOR
+#endif
 
 // Backend uses a small number of descriptors per font atlas + as many as additional calls done to ImGui_ImplVulkan_AddTexture().
 #define IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE   (8)     // Minimum per atlas
@@ -71,6 +74,7 @@
 //   - A VkDescriptorPool should be created with VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
 //     and must contain a pool size large enough to hold a small number of VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER descriptors.
 //   - As an convenience, by setting DescriptorPoolSize > 0 the backend will create one for you.
+//   - When using push descriptor, pool functionality is disabled.
 // - About dynamic rendering:
 //   - When using dynamic rendering, set UseDynamicRendering=true and fill PipelineRenderingCreateInfo structure.
 struct ImGui_ImplVulkan_InitInfo
@@ -91,6 +95,10 @@ struct ImGui_ImplVulkan_InitInfo
     VkRenderPass                    RenderPass;                 // Ignored if using dynamic rendering
     uint32_t                        Subpass;
     VkSampleCountFlagBits           MSAASamples;                // 0 defaults to VK_SAMPLE_COUNT_1_BIT
+
+    // (Optional) Push Descriptors
+    // Need to explicitly enable VK_KHR_push_descriptor extension to use this before Vulkan 1.4.
+    bool                            UsePushDescriptor;
 
     // (Optional) Dynamic Rendering
     // Need to explicitly enable VK_KHR_dynamic_rendering extension to use this, even for Vulkan 1.3 + setup PipelineRenderingCreateInfo.
