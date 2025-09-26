@@ -98,6 +98,9 @@ struct ImGui_ImplDX12_Data
     DXGI_FORMAT                 RTVFormat;
     DXGI_FORMAT                 DSVFormat;
     ID3D12DescriptorHeap*       pd3dSrvDescHeap;
+    ID3D12Fence*                Fence;
+    UINT64                      FenceLastSignaledValue;
+    HANDLE                      FenceEvent;
     UINT                        numFramesInFlight;
 
     ImGui_ImplDX12_RenderBuffers* pFrameResources;
@@ -144,9 +147,6 @@ struct ImGui_ImplDX12_ViewportData
     ID3D12DescriptorHeap*           RtvDescHeap;
     IDXGISwapChain3*                SwapChain;
     HANDLE                          SwapChainWaitableObject;
-    ID3D12Fence*                    Fence;
-    UINT64                          FenceLastSignaledValue;
-    HANDLE                          FenceEvent;
     UINT                            NumFramesInFlight;
     ImGui_ImplDX12_FrameContext*    FrameCtx;
 
@@ -161,9 +161,6 @@ struct ImGui_ImplDX12_ViewportData
         RtvDescHeap = nullptr;
         SwapChain = nullptr;
         SwapChainWaitableObject = nullptr;
-        Fence = nullptr;
-        FenceLastSignaledValue = 0;
-        FenceEvent = nullptr;
         NumFramesInFlight = num_frames_in_flight;
         FrameCtx = new ImGui_ImplDX12_FrameContext[NumFramesInFlight];
         FrameIndex = 0;
@@ -188,8 +185,6 @@ struct ImGui_ImplDX12_ViewportData
         IM_ASSERT(RtvDescHeap == nullptr);
         IM_ASSERT(SwapChain == nullptr);
         IM_ASSERT(SwapChainWaitableObject == nullptr);
-        IM_ASSERT(Fence == nullptr);
-        IM_ASSERT(FenceEvent == nullptr);
 
         for (UINT i = 0; i < NumFramesInFlight; ++i)
         {
@@ -540,14 +535,6 @@ void ImGui_ImplDX12_UpdateTexture(ImTextureData* tex)
             D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&uploadBuffer));
         IM_ASSERT(SUCCEEDED(hr));
 
-        // Create temporary command list and execute immediately
-        ID3D12Fence* fence = nullptr;
-        hr = bd->pd3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
-        IM_ASSERT(SUCCEEDED(hr));
-
-        HANDLE event = ::CreateEvent(0, 0, 0, 0);
-        IM_ASSERT(event != nullptr);
-
         // FIXME-OPT: Create once and reuse?
         ID3D12CommandAllocator* cmdAlloc = nullptr;
         hr = bd->pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&cmdAlloc));
@@ -611,20 +598,18 @@ void ImGui_ImplDX12_UpdateTexture(ImTextureData* tex)
 
         ID3D12CommandQueue* cmdQueue = bd->pCommandQueue;
         cmdQueue->ExecuteCommandLists(1, (ID3D12CommandList* const*)&cmdList);
-        hr = cmdQueue->Signal(fence, 1);
+        hr = cmdQueue->Signal(bd->Fence, ++bd->FenceLastSignaledValue);
         IM_ASSERT(SUCCEEDED(hr));
 
         // FIXME-OPT: Suboptimal?
         // - To remove this may need to create NumFramesInFlight x ImGui_ImplDX12_FrameContext in backend data (mimick docking version)
         // - Store per-frame in flight: upload buffer?
         // - Where do cmdList and cmdAlloc fit?
-        fence->SetEventOnCompletion(1, event);
-        ::WaitForSingleObject(event, INFINITE);
+        bd->Fence->SetEventOnCompletion(bd->FenceLastSignaledValue, bd->FenceEvent);
+        ::WaitForSingleObject(bd->FenceEvent, INFINITE);
 
         cmdList->Release();
         cmdAlloc->Release();
-        ::CloseHandle(event);
-        fence->Release();
         uploadBuffer->Release();
         tex->SetStatus(ImTextureStatus_OK);
     }
@@ -862,6 +847,13 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
     if (result_pipeline_state != S_OK)
         return false;
 
+    // Create fence.
+    HRESULT res = bd->pd3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&bd->Fence));
+    IM_ASSERT(res == S_OK);
+
+    bd->FenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+    IM_ASSERT(bd->FenceEvent != nullptr);
+
     return true;
 }
 
@@ -883,6 +875,9 @@ void    ImGui_ImplDX12_InvalidateDeviceObjects()
     bd->commandQueueOwned = false;
     SafeRelease(bd->pRootSignature);
     SafeRelease(bd->pPipelineState);
+    SafeRelease(bd->Fence);
+    CloseHandle(bd->FenceEvent);
+    bd->FenceEvent = nullptr;
 
     // Destroy all textures
     for (ImTextureData* tex : ImGui::GetPlatformIO().Textures)
@@ -1057,13 +1052,6 @@ static void ImGui_ImplDX12_CreateWindow(ImGuiViewport* viewport)
     IM_ASSERT(res == S_OK);
     vd->CommandList->Close();
 
-    // Create fence.
-    res = bd->pd3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&vd->Fence));
-    IM_ASSERT(res == S_OK);
-
-    vd->FenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-    IM_ASSERT(vd->FenceEvent != nullptr);
-
     // Create swap chain
     // FIXME-VIEWPORT: May want to copy/inherit swap chain settings from the user/application.
     DXGI_SWAP_CHAIN_DESC1 sd1;
@@ -1136,22 +1124,24 @@ static void ImGui_ImplDX12_CreateWindow(ImGuiViewport* viewport)
 
 static void ImGui_WaitForPendingOperations(ImGui_ImplDX12_ViewportData* vd)
 {
-    HRESULT hr = vd->CommandQueue->Signal(vd->Fence, ++vd->FenceLastSignaledValue);
+    ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
+    HRESULT hr = vd->CommandQueue->Signal(bd->Fence, ++bd->FenceLastSignaledValue);
     IM_ASSERT(hr == S_OK);
 
-    hr = vd->Fence->SetEventOnCompletion(vd->FenceLastSignaledValue, vd->FenceEvent);
+    hr = bd->Fence->SetEventOnCompletion(bd->FenceLastSignaledValue, bd->FenceEvent);
     IM_ASSERT(hr == S_OK);
-    ::WaitForSingleObject(vd->FenceEvent, INFINITE);
+    ::WaitForSingleObject(bd->FenceEvent, INFINITE);
 }
 
 static ImGui_ImplDX12_FrameContext* ImGui_WaitForNextFrameContext(ImGui_ImplDX12_ViewportData* vd)
 {
+    ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
     ImGui_ImplDX12_FrameContext* frame_context = &vd->FrameCtx[vd->FrameIndex % vd->NumFramesInFlight];
-    if (vd->Fence->GetCompletedValue() < frame_context->FenceValue)
+    if (bd->Fence->GetCompletedValue() < frame_context->FenceValue)
     {
-        HRESULT hr = vd->Fence->SetEventOnCompletion(frame_context->FenceValue, vd->FenceEvent);
+        HRESULT hr = bd->Fence->SetEventOnCompletion(frame_context->FenceValue, bd->FenceEvent);
         IM_ASSERT(hr == S_OK);
-        HANDLE waitableObjects[] = { vd->SwapChainWaitableObject, vd->FenceEvent };
+        HANDLE waitableObjects[] = { vd->SwapChainWaitableObject, bd->FenceEvent };
         ::WaitForMultipleObjects(2, waitableObjects, TRUE, INFINITE);
     }
     else
@@ -1174,9 +1164,6 @@ static void ImGui_ImplDX12_DestroyWindow(ImGuiViewport* viewport)
         SafeRelease(vd->CommandList);
         SafeRelease(vd->SwapChain);
         SafeRelease(vd->RtvDescHeap);
-        SafeRelease(vd->Fence);
-        ::CloseHandle(vd->FenceEvent);
-        vd->FenceEvent = nullptr;
 
         for (UINT i = 0; i < bd->numFramesInFlight; i++)
         {
@@ -1250,9 +1237,9 @@ static void ImGui_ImplDX12_RenderWindow(ImGuiViewport* viewport, void*)
 
     vd->CommandQueue->ExecuteCommandLists(1, (ID3D12CommandList* const*)&cmd_list);
 
-    HRESULT hr = vd->CommandQueue->Signal(vd->Fence, ++vd->FenceLastSignaledValue);
+    HRESULT hr = vd->CommandQueue->Signal(bd->Fence, ++bd->FenceLastSignaledValue);
     IM_ASSERT(hr == S_OK);
-    frame_context->FenceValue = vd->FenceLastSignaledValue;
+    frame_context->FenceValue = bd->FenceLastSignaledValue;
 }
 
 static void ImGui_ImplDX12_SwapBuffers(ImGuiViewport* viewport, void*)
