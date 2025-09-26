@@ -20,7 +20,8 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2025-09-27: DirectX12: Reuse a command list and allocator for texture uploads instead of recreating them each time.
+//  2025-09-29: DirectX12: Rework synchronization logic. (#8961)
+//  2025-09-29: DirectX12: Reuse a command list and allocator for texture uploads instead of recreating them each time.
 //  2025-09-18: Call platform_io.ClearRendererHandlers() on shutdown.
 //  2025-06-19: Fixed build on MinGW. (#8702, #4594)
 //  2025-06-11: DirectX12: Added support for ImGuiBackendFlags_RendererHasTextures, for dynamic font atlas.
@@ -96,6 +97,9 @@ struct ImGui_ImplDX12_Data
     DXGI_FORMAT                 RTVFormat;
     DXGI_FORMAT                 DSVFormat;
     ID3D12DescriptorHeap*       pd3dSrvDescHeap;
+    ID3D12Fence*                Fence;
+    UINT64                      FenceLastSignaledValue;
+    HANDLE                      FenceEvent;
     UINT                        numFramesInFlight;
 
     ID3D12CommandAllocator*     pTexCmdAllocator;
@@ -458,13 +462,6 @@ void ImGui_ImplDX12_UpdateTexture(ImTextureData* tex)
             D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&uploadBuffer));
         IM_ASSERT(SUCCEEDED(hr));
 
-        ID3D12Fence* fence = nullptr;
-        hr = bd->pd3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
-        IM_ASSERT(SUCCEEDED(hr));
-
-        HANDLE event = ::CreateEvent(0, 0, 0, 0);
-        IM_ASSERT(event != nullptr);
-
         bd->pTexCmdAllocator->Reset();
         bd->pTexCmdList->Reset(bd->pTexCmdAllocator, nullptr);
         ID3D12GraphicsCommandList* cmdList = bd->pTexCmdList;
@@ -522,18 +519,16 @@ void ImGui_ImplDX12_UpdateTexture(ImTextureData* tex)
 
         ID3D12CommandQueue* cmdQueue = bd->pCommandQueue;
         cmdQueue->ExecuteCommandLists(1, (ID3D12CommandList* const*)&cmdList);
-        hr = cmdQueue->Signal(fence, 1);
+        hr = cmdQueue->Signal(bd->Fence, ++bd->FenceLastSignaledValue);
         IM_ASSERT(SUCCEEDED(hr));
 
         // FIXME-OPT: Suboptimal?
         // - To remove this may need to create NumFramesInFlight x ImGui_ImplDX12_FrameContext in backend data (mimick docking version)
         // - Store per-frame in flight: upload buffer?
         // - Where do cmdList and cmdAlloc fit?
-        fence->SetEventOnCompletion(1, event);
-        ::WaitForSingleObject(event, INFINITE);
+        bd->Fence->SetEventOnCompletion(bd->FenceLastSignaledValue, bd->FenceEvent);
+        ::WaitForSingleObject(bd->FenceEvent, INFINITE);
 
-        ::CloseHandle(event);
-        fence->Release();
         uploadBuffer->Release();
         tex->SetStatus(ImTextureStatus_OK);
     }
@@ -779,6 +774,12 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
     hr = bd->pTexCmdList->Close();
     IM_ASSERT(SUCCEEDED(hr));
 
+    // Create fence.
+    hr = bd->pd3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&bd->Fence));
+    IM_ASSERT(hr == S_OK);
+    bd->FenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+    IM_ASSERT(bd->FenceEvent != nullptr);
+
     return true;
 }
 
@@ -795,6 +796,9 @@ void    ImGui_ImplDX12_InvalidateDeviceObjects()
     SafeRelease(bd->pPipelineState);
     SafeRelease(bd->pTexCmdList);
     SafeRelease(bd->pTexCmdAllocator);
+    SafeRelease(bd->Fence);
+    CloseHandle(bd->FenceEvent);
+    bd->FenceEvent = nullptr;
 
     // Destroy all textures
     for (ImTextureData* tex : ImGui::GetPlatformIO().Textures)
