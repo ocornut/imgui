@@ -73,6 +73,8 @@ Other Changes:
 - Backends: all backends call ImGuiPlatformIO::ClearPlatformHandlers() and
   ClearRendererHandlers() on shutdown, so as not to leave function pointers
   which may be dangling when using backend in e.g. DLL. (#8945, #2769)
+- Backends: DirectX12: reuse a command list and allocator for texture uploads instead
+  of recreating them each time. (#8963, #8465) [@RT2Code]
 - Backends: OpenGL3: fixed GL loader to work on Haiku OS which does not support
   `RTLD_NOLOAD`. (#8952) [@Xottab-DUTY, @threedeyes]
 - Backends: SDL2,SDL3: avoid using the SDL_GetGlobalMouseState() path when one of our
