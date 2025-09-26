@@ -27,6 +27,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2025-09-26: *BREAKING CHANGE*: renamed ImGui_ImplVulkan_MainPipelineCreateInfo to ImGui_ImplVulkan_PipelineInfo. Introduced very recently so shouldn't affect many users.
 //  2025-09-26: *BREAKING CHANGE*: helper ImGui_ImplVulkanH_CreateOrResizeWindow() added a VkImageUsageFlags image_usage` argument, default to VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT if 0.
 //  2025-09-26: Vulkan: Added a way to customize shaders by filling ImGui_ImplVulkan_InitInfo::CustomShaderVertCreateInfo/CustomShaderFragCreateInfo. (#8585)
 //  2025-09-18: Call platform_io.ClearRendererHandlers() on shutdown.
@@ -1114,7 +1115,7 @@ bool ImGui_ImplVulkan_CreateDeviceObjects()
 #endif
     if (create_main_pipeline)
     {
-        ImGui_ImplVulkan_MainPipelineCreateInfo mp_info = {};
+        ImGui_ImplVulkan_PipelineInfo mp_info = {};
         mp_info.RenderPass = v->RenderPass;
         mp_info.Subpass = v->Subpass;
         mp_info.MSAASamples = v->MSAASamples;
@@ -1147,7 +1148,7 @@ bool ImGui_ImplVulkan_CreateDeviceObjects()
     return true;
 }
 
-void ImGui_ImplVulkan_CreateMainPipeline(const ImGui_ImplVulkan_MainPipelineCreateInfo& info)
+void ImGui_ImplVulkan_CreateMainPipeline(const ImGui_ImplVulkan_PipelineInfo& info)
 {
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
     ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;

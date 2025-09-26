@@ -41,6 +41,9 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
+- Backends: Vulkan: renamed ImGui_ImplVulkan_MainPipelineCreateInfo --> ImGui_ImplVulkan_PipelineInfo
+  (introduced very recently and only used by `ImGui_ImplVulkan_CreateMainPipeline()`
+  so it should not affect many users). (#8110, #8111)
 - Backends: Vulkan: helper ImGui_ImplVulkanH_CreateOrResizeWindow() added a
   `VkImageUsageFlags image_usage` argument.
   It was previously hardcoded to `VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT` and defaults
