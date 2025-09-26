@@ -41,6 +41,13 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
+- Backends: Vulkan: moved some fields in ImGui_ImplVulkan_InitInfo:
+    init_info.RenderPass  --> init_info.PipelineInfoMain.RenderPass
+    init_info.Subpass     --> init_info.PipelineInfoMain.Subpass
+    init_info.MSAASamples --> init_info.PipelineInfoMain.MSAASamples
+    init_info.PipelineRenderingCreateInfo --> init_info.PipelineInfoMain.PipelineRenderingCreateInfo
+  It makes things more consistent and was desirable to introduce new settings for
+  secondary viewports. (#8946, #8110, #8111, #8686) [@ocornut, @SuperRonan, @sylmroz]
 - Backends: Vulkan: renamed ImGui_ImplVulkan_MainPipelineCreateInfo --> ImGui_ImplVulkan_PipelineInfo
   (introduced very recently and only used by `ImGui_ImplVulkan_CreateMainPipeline()`
   so it should not affect many users). (#8110, #8111)
