@@ -1001,22 +1001,22 @@ static VkPipeline ImGui_ImplVulkan_CreatePipeline(VkDevice device, const VkAlloc
     dynamic_state.dynamicStateCount = (uint32_t)IM_ARRAYSIZE(dynamic_states);
     dynamic_state.pDynamicStates = dynamic_states;
 
-    VkGraphicsPipelineCreateInfo info = {};
-    info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    info.flags = bd->PipelineCreateFlags;
-    info.stageCount = 2;
-    info.pStages = stage;
-    info.pVertexInputState = &vertex_info;
-    info.pInputAssemblyState = &ia_info;
-    info.pViewportState = &viewport_info;
-    info.pRasterizationState = &raster_info;
-    info.pMultisampleState = &ms_info;
-    info.pDepthStencilState = &depth_info;
-    info.pColorBlendState = &blend_info;
-    info.pDynamicState = &dynamic_state;
-    info.layout = bd->PipelineLayout;
-    info.renderPass = renderPass;
-    info.subpass = subpass;
+    VkGraphicsPipelineCreateInfo create_info = {};
+    create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    create_info.flags = bd->PipelineCreateFlags;
+    create_info.stageCount = 2;
+    create_info.pStages = stage;
+    create_info.pVertexInputState = &vertex_info;
+    create_info.pInputAssemblyState = &ia_info;
+    create_info.pViewportState = &viewport_info;
+    create_info.pRasterizationState = &raster_info;
+    create_info.pMultisampleState = &ms_info;
+    create_info.pDepthStencilState = &depth_info;
+    create_info.pColorBlendState = &blend_info;
+    create_info.pDynamicState = &dynamic_state;
+    create_info.layout = bd->PipelineLayout;
+    create_info.renderPass = renderPass;
+    create_info.subpass = subpass;
 
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
     if (bd->VulkanInitInfo.UseDynamicRendering)
@@ -1024,14 +1024,14 @@ static VkPipeline ImGui_ImplVulkan_CreatePipeline(VkDevice device, const VkAlloc
         IM_ASSERT(pipeline_rendering_create_info && "PipelineRenderingCreateInfo must not be nullptr when using dynamic rendering");
         IM_ASSERT(pipeline_rendering_create_info->sType == VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR && "PipelineRenderingCreateInfo::sType must be VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR");
         IM_ASSERT(pipeline_rendering_create_info->pNext == nullptr && "PipelineRenderingCreateInfo::pNext must be nullptr");
-        info.pNext = pipeline_rendering_create_info;
-        info.renderPass = VK_NULL_HANDLE; // Just make sure it's actually nullptr.
+        create_info.pNext = pipeline_rendering_create_info;
+        create_info.renderPass = VK_NULL_HANDLE; // Just make sure it's actually nullptr.
     }
 #else
     IM_ASSERT(pipeline_rendering_create_info == nullptr);
 #endif
     VkPipeline pipeline;
-    VkResult err = vkCreateGraphicsPipelines(device, pipelineCache, 1, &info, allocator, &pipeline);
+    VkResult err = vkCreateGraphicsPipelines(device, pipelineCache, 1, &create_info, allocator, &pipeline);
     check_vk_result(err);
     return pipeline;
 }
@@ -1108,11 +1108,11 @@ bool ImGui_ImplVulkan_CreateDeviceObjects()
     }
 
     // Create pipeline
-    if (v->RenderPass
+    bool create_main_pipeline = (v->RenderPass != VK_NULL_HANDLE);
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
-        || (v->UseDynamicRendering && v->PipelineRenderingCreateInfo.sType == VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR)
+    create_main_pipeline |= (v->UseDynamicRendering && v->PipelineRenderingCreateInfo.sType == VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR);
 #endif
-        )
+    if (create_main_pipeline)
     {
         ImGui_ImplVulkan_MainPipelineCreateInfo mp_info = {};
         mp_info.RenderPass = v->RenderPass;
@@ -1292,6 +1292,7 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info)
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
     io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;   // We can honor ImGuiPlatformIO::Textures[] requests during render.
 
+    // Sanity checks
     IM_ASSERT(info->Instance != VK_NULL_HANDLE);
     IM_ASSERT(info->PhysicalDevice != VK_NULL_HANDLE);
     IM_ASSERT(info->Device != VK_NULL_HANDLE);
