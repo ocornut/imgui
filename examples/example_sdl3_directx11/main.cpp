@@ -34,7 +34,7 @@ int main(int, char**)
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD))
     {
         printf("Error: SDL_Init(): %s\n", SDL_GetError());
-        return -1;
+        return 1;
     }
 
     // Setup window
@@ -44,7 +44,7 @@ int main(int, char**)
     if (window == nullptr)
     {
         printf("Error: SDL_CreateWindow(): %s\n", SDL_GetError());
-        return -1;
+        return 1;
     }
 
     SDL_PropertiesID props = SDL_GetWindowProperties(window);
@@ -54,7 +54,7 @@ int main(int, char**)
     if (!CreateDeviceD3D(hwnd))
     {
         CleanupDeviceD3D();
-        return -1;
+        return 1;
     }
 
     SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
