@@ -104,6 +104,10 @@ struct ImGui_ImplDX12_Data
 
     bool                        LegacySingleDescriptorUsed;
 
+    // Texture management
+    ID3D12CommandAllocator*     cmdAlloc;
+    ID3D12GraphicsCommandList*  cmdList;
+
     ImGui_ImplDX12_Data()       { memset((void*)this, 0, sizeof(*this)); }
 };
 
@@ -528,13 +532,11 @@ void ImGui_ImplDX12_UpdateTexture(ImTextureData* tex)
         props.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
         props.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
 
-        // FIXME-OPT: Can upload buffer be reused?
         ID3D12Resource* uploadBuffer = nullptr;
         HRESULT hr = bd->pd3dDevice->CreateCommittedResource(&props, D3D12_HEAP_FLAG_NONE, &desc,
             D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&uploadBuffer));
         IM_ASSERT(SUCCEEDED(hr));
 
-        // Create temporary command list and execute immediately
         ID3D12Fence* fence = nullptr;
         hr = bd->pd3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
         IM_ASSERT(SUCCEEDED(hr));
@@ -542,15 +544,8 @@ void ImGui_ImplDX12_UpdateTexture(ImTextureData* tex)
         HANDLE event = ::CreateEvent(0, 0, 0, 0);
         IM_ASSERT(event != nullptr);
 
-        // FIXME-OPT: Create once and reuse?
-        ID3D12CommandAllocator* cmdAlloc = nullptr;
-        hr = bd->pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&cmdAlloc));
-        IM_ASSERT(SUCCEEDED(hr));
-
-        // FIXME-OPT: Can be use the one from user? (pass ID3D12GraphicsCommandList* to ImGui_ImplDX12_UpdateTextures)
-        ID3D12GraphicsCommandList* cmdList = nullptr;
-        hr = bd->pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, cmdAlloc, nullptr, IID_PPV_ARGS(&cmdList));
-        IM_ASSERT(SUCCEEDED(hr));
+        bd->cmdAlloc->Reset();
+        bd->cmdList->Reset(bd->cmdAlloc, nullptr);
 
         // Copy to upload buffer
         void* mapped = nullptr;
@@ -570,7 +565,7 @@ void ImGui_ImplDX12_UpdateTexture(ImTextureData* tex)
             barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
             barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
             barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
-            cmdList->ResourceBarrier(1, &barrier);
+            bd->cmdList->ResourceBarrier(1, &barrier);
         }
 
         D3D12_TEXTURE_COPY_LOCATION srcLocation = {};
@@ -587,7 +582,7 @@ void ImGui_ImplDX12_UpdateTexture(ImTextureData* tex)
             dstLocation.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
             dstLocation.SubresourceIndex = 0;
         }
-        cmdList->CopyTextureRegion(&dstLocation, upload_x, upload_y, 0, &srcLocation, nullptr);
+        bd->cmdList->CopyTextureRegion(&dstLocation, upload_x, upload_y, 0, &srcLocation, nullptr);
 
         {
             D3D12_RESOURCE_BARRIER barrier = {};
@@ -597,14 +592,14 @@ void ImGui_ImplDX12_UpdateTexture(ImTextureData* tex)
             barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
             barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
             barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-            cmdList->ResourceBarrier(1, &barrier);
+            bd->cmdList->ResourceBarrier(1, &barrier);
         }
 
-        hr = cmdList->Close();
+        hr = bd->cmdList->Close();
         IM_ASSERT(SUCCEEDED(hr));
 
         ID3D12CommandQueue* cmdQueue = bd->pCommandQueue;
-        cmdQueue->ExecuteCommandLists(1, (ID3D12CommandList* const*)&cmdList);
+        cmdQueue->ExecuteCommandLists(1, (ID3D12CommandList* const*)&bd->cmdList);
         hr = cmdQueue->Signal(fence, 1);
         IM_ASSERT(SUCCEEDED(hr));
 
@@ -615,8 +610,6 @@ void ImGui_ImplDX12_UpdateTexture(ImTextureData* tex)
         fence->SetEventOnCompletion(1, event);
         ::WaitForSingleObject(event, INFINITE);
 
-        cmdList->Release();
-        cmdAlloc->Release();
         ::CloseHandle(event);
         fence->Release();
         uploadBuffer->Release();
@@ -856,6 +849,14 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
     if (result_pipeline_state != S_OK)
         return false;
 
+    HRESULT hr = bd->pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&bd->cmdAlloc));
+    IM_ASSERT(SUCCEEDED(hr));
+
+    hr = bd->pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, bd->cmdAlloc, nullptr, IID_PPV_ARGS(&bd->cmdList));
+    IM_ASSERT(SUCCEEDED(hr));
+    hr = bd->cmdList->Close();
+    IM_ASSERT(SUCCEEDED(hr));
+
     return true;
 }
 
@@ -877,6 +878,8 @@ void    ImGui_ImplDX12_InvalidateDeviceObjects()
     bd->commandQueueOwned = false;
     SafeRelease(bd->pRootSignature);
     SafeRelease(bd->pPipelineState);
+    SafeRelease(bd->cmdList);
+    SafeRelease(bd->cmdAlloc);
 
     // Destroy all textures
     for (ImTextureData* tex : ImGui::GetPlatformIO().Textures)
