@@ -91,6 +91,7 @@ Other Changes:
 - Examples: SDL2+DirectX11: Try WARP software driver if hardware driver is
   not available. (#5924, #5562)
 - Examples: SDL3+DirectX11: Added SDL3+DirectX11 example. (#8956, #8957) [@tomaz82]
+- Examples: Win32+DirectX12: Rework synchronization logic. (#8961) [@RT2Code]
 - Examples: made examples's main.cpp consistent with returning 1 on error.
 
 
