@@ -24,6 +24,7 @@
 // (minor and older changes stripped away, please see git history for details)
 //  2025-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
 //  2025-09-27: DirectX12: Reuse the command list and allocator for texture uploads instead of recreating them each time.
+//  2025-09-18: Call platform_io.ClearRendererHandlers() on shutdown.
 //  2025-06-19: Fixed build on MinGW. (#8702, #4594)
 //  2025-06-11: DirectX12: Added support for ImGuiBackendFlags_RendererHasTextures, for dynamic font atlas.
 //  2025-05-07: DirectX12: Honor draw_data->FramebufferScale to allow for custom backends and experiment using it (consistently with other renderer backends, even though in normal condition it is not set under Windows).
@@ -207,8 +208,8 @@ struct VERTEX_CONSTANT_BUFFER_DX12
 };
 
 // Forward Declarations
-static void ImGui_ImplDX12_InitPlatformInterface();
-static void ImGui_ImplDX12_ShutdownPlatformInterface();
+static void ImGui_ImplDX12_InitMultiViewportSupport();
+static void ImGui_ImplDX12_ShutdownMultiViewportSupport();
 
 // Functions
 static void ImGui_ImplDX12_SetupRenderState(ImDrawData* draw_data, ID3D12GraphicsCommandList* command_list, ImGui_ImplDX12_RenderBuffers* fr)
@@ -936,7 +937,7 @@ bool ImGui_ImplDX12_Init(ImGui_ImplDX12_InitInfo* init_info)
     io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;  // We can create multi-viewports on the Renderer side (optional)
 
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-        ImGui_ImplDX12_InitPlatformInterface();
+        ImGui_ImplDX12_InitMultiViewportSupport();
 
     // Create a dummy ImGui_ImplDX12_ViewportData holder for the main viewport,
     // Since this is created and managed by the application, we will only use the ->Resources[] fields.
@@ -987,6 +988,7 @@ void ImGui_ImplDX12_Shutdown()
     ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
     IM_ASSERT(bd != nullptr && "No renderer backend to shutdown, or already shutdown?");
     ImGuiIO& io = ImGui::GetIO();
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
 
     // Manually delete main viewport render resources in-case we haven't initialized for viewports
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
@@ -999,13 +1001,13 @@ void ImGui_ImplDX12_Shutdown()
         main_viewport->RendererUserData = nullptr;
     }
 
-    // Clean up windows and device objects
-    ImGui_ImplDX12_ShutdownPlatformInterface();
+    ImGui_ImplDX12_ShutdownMultiViewportSupport();
     ImGui_ImplDX12_InvalidateDeviceObjects();
 
     io.BackendRendererName = nullptr;
     io.BackendRendererUserData = nullptr;
     io.BackendFlags &= ~(ImGuiBackendFlags_RendererHasVtxOffset | ImGuiBackendFlags_RendererHasTextures | ImGuiBackendFlags_RendererHasViewports);
+    platform_io.ClearRendererHandlers();
     IM_DELETE(bd);
 }
 
@@ -1088,6 +1090,8 @@ static void ImGui_ImplDX12_CreateWindow(ImGuiViewport* viewport)
 
     IDXGISwapChain1* swap_chain = nullptr;
     res = dxgi_factory->CreateSwapChainForHwnd(vd->CommandQueue, hwnd, &sd1, nullptr, nullptr, &swap_chain);
+    IM_ASSERT(res == S_OK);
+    res = dxgi_factory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER | DXGI_MWA_NO_WINDOW_CHANGES); // Disable e.g. Alt+Enter
     IM_ASSERT(res == S_OK);
 
     dxgi_factory->Release();
@@ -1244,7 +1248,7 @@ static void ImGui_ImplDX12_SwapBuffers(ImGuiViewport* viewport, void*)
         ::SwitchToThread();
 }
 
-void ImGui_ImplDX12_InitPlatformInterface()
+void ImGui_ImplDX12_InitMultiViewportSupport()
 {
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     platform_io.Renderer_CreateWindow = ImGui_ImplDX12_CreateWindow;
@@ -1254,7 +1258,7 @@ void ImGui_ImplDX12_InitPlatformInterface()
     platform_io.Renderer_SwapBuffers = ImGui_ImplDX12_SwapBuffers;
 }
 
-void ImGui_ImplDX12_ShutdownPlatformInterface()
+void ImGui_ImplDX12_ShutdownMultiViewportSupport()
 {
     ImGui::DestroyPlatformWindows();
 }

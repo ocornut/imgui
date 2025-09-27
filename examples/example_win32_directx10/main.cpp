@@ -1,4 +1,4 @@
-// Dear ImGui: standalone example application for DirectX 10
+// Dear ImGui: standalone example application for Windows API + DirectX 10
 
 // Learn about Dear ImGui:
 // - FAQ                  https://dearimgui.com/faq
@@ -240,6 +240,13 @@ bool CreateDeviceD3D(HWND hWnd)
         res = D3D10CreateDeviceAndSwapChain(nullptr, D3D10_DRIVER_TYPE_WARP, nullptr, createDeviceFlags, D3D10_SDK_VERSION, &sd, &g_pSwapChain, &g_pd3dDevice);
     if (res != S_OK)
         return false;
+
+    // Disable DXGI's default Alt+Enter fullscreen behavior.
+    // - You are free to leave this enabled, but it will not work properly with multiple viewports.
+    // - This must be done for all windows associated to the device. Our DX11 backend does this automatically for secondary viewports that it creates.
+    IDXGIFactory* pSwapChainFactory;
+    if (SUCCEEDED(g_pSwapChain->GetParent(IID_PPV_ARGS(&pSwapChainFactory))))
+        pSwapChainFactory->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER);
 
     CreateRenderTarget();
     return true;
