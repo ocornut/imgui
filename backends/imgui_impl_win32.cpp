@@ -23,6 +23,8 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2025-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2025-09-23: Inputs: Minor optimization not submitting gamepad input if packet number has not changed.
+//  2025-09-18: Call platform_io.ClearPlatformHandlers() on shutdown.
 //  2025-06-02: [Docking] WM_DPICHANGED also apply io.ConfigDpiScaleViewports for main viewport instead of letting it be done by application code.
 //  2025-04-30: Inputs: Fixed an issue where externally losing mouse capture (due to e.g. focus loss) would fail to claim it again the next subsequent click. (#8594)
 //  2025-03-26: [Docking] Viewports: fixed an issue when closing a window from the OS close button (with io.ConfigViewportsNoDecoration = false) while user code was discarding the 'bool* p_open = false' output from Begin(). Because we allowed the Win32 window to close early, Windows destroyed it and our imgui window became not visible even though user code was still submitting it.
@@ -137,6 +139,7 @@ struct ImGui_ImplWin32_Data
     HMODULE                     XInputDLL;
     PFN_XInputGetCapabilities   XInputGetCapabilities;
     PFN_XInputGetState          XInputGetState;
+    DWORD                       XInputPacketNumber;
 #endif
 
     ImGui_ImplWin32_Data()      { memset((void*)this, 0, sizeof(*this)); }
@@ -245,6 +248,7 @@ void    ImGui_ImplWin32_Shutdown()
     ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
     IM_ASSERT(bd != nullptr && "No platform backend to shutdown, or already shutdown?");
     ImGuiIO& io = ImGui::GetIO();
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
 
     ::SetPropA(bd->hWnd, "IMGUI_CONTEXT", nullptr);
     ImGui_ImplWin32_ShutdownMultiViewportSupport();
@@ -258,6 +262,7 @@ void    ImGui_ImplWin32_Shutdown()
     io.BackendPlatformName = nullptr;
     io.BackendPlatformUserData = nullptr;
     io.BackendFlags &= ~(ImGuiBackendFlags_HasMouseCursors | ImGuiBackendFlags_HasSetMousePos | ImGuiBackendFlags_HasGamepad | ImGuiBackendFlags_PlatformHasViewports | ImGuiBackendFlags_HasMouseHoveredViewport);
+    platform_io.ClearPlatformHandlers();
     IM_DELETE(bd);
 }
 
@@ -415,6 +420,9 @@ static void ImGui_ImplWin32_UpdateGamepads(ImGuiIO& io)
     if (!bd->HasGamepad || bd->XInputGetState == nullptr || bd->XInputGetState(0, &xinput_state) != ERROR_SUCCESS)
         return;
     io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
+    if (bd->XInputPacketNumber != 0 && bd->XInputPacketNumber == xinput_state.dwPacketNumber)
+        return;
+    bd->XInputPacketNumber = xinput_state.dwPacketNumber;
 
     #define IM_SATURATE(V)                      (V < 0.0f ? 0.0f : V > 1.0f ? 1.0f : V)
     #define MAP_BUTTON(KEY_NO, BUTTON_ENUM)     { io.AddKeyEvent(KEY_NO, (gamepad.wButtons & BUTTON_ENUM) != 0); }

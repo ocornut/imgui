@@ -36,6 +36,95 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
+ VERSION 1.92.4 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Breaking Changes:
+
+- Viewports: for consistency with other config flags, renamed
+     io.ConfigViewportPlatformFocusSetsImGuiFocus
+  to io.ConfigViewportsPlatformFocusSetsImGuiFocus. (#6299, #6462)
+  It was really a typo in the first place, and introduced in 1.92.2.
+- Backends: Vulkan: moved some fields in ImGui_ImplVulkan_InitInfo:
+    init_info.RenderPass  --> init_info.PipelineInfoMain.RenderPass
+    init_info.Subpass     --> init_info.PipelineInfoMain.Subpass
+    init_info.MSAASamples --> init_info.PipelineInfoMain.MSAASamples
+    init_info.PipelineRenderingCreateInfo --> init_info.PipelineInfoMain.PipelineRenderingCreateInfo
+  It makes things more consistent and was desirable to introduce new settings for
+  secondary viewports. (#8946, #8110, #8111, #8686) [@ocornut, @SuperRonan, @sylmroz]
+- Backends: Vulkan: renamed ImGui_ImplVulkan_MainPipelineCreateInfo --> ImGui_ImplVulkan_PipelineInfo
+  (introduced very recently and only used by `ImGui_ImplVulkan_CreateMainPipeline()`
+  so it should not affect many users). (#8110, #8111)
+- Backends: Vulkan: helper ImGui_ImplVulkanH_CreateOrResizeWindow() added a
+  `VkImageUsageFlags image_usage` argument.
+  It was previously hardcoded to `VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT` and defaults
+  to that when the value is 0. In theory the function is an internal helper but
+  since it's used by our examples some may have used it. (#8946, #8111, #8686)
+
+Other Changes:
+
+- Windows: added lower-right resize grip on child windows using both
+  ImGuiChildFlags_ResizeX and ImGuiChildFlags_ResizeY flags. (#8501) [@aleksijuvani]
+  The grip is not visible before hovering to reduce clutter.
+- IO: added ImGuiPlatformIO::ClearPlatformHandlers(), ClearRendererHandlers()
+  helpers to null all handlers. (#8945, #2769)
+- Misc: Debuggers: added type formatters for the LLDB debuggers (e.g. Xcode,
+  Android Studio & more) to provide nicer display for ImVec2, ImVec4, ImVector etc.
+  See misc/debuggers/ for details. (#8950) [@mentlerd]
+- CI: Updates Windows CI scripts to generate/use VulkanSDK. (#8925, #8778) [@yaz0r]
+- Backends: all backends call ImGuiPlatformIO::ClearPlatformHandlers() and
+  ClearRendererHandlers() on shutdown, so as not to leave function pointers
+  which may be dangling when using backend in e.g. DLL. (#8945, #2769)
+- Backends: OpenGL3: fixed GL loader to work on Haiku OS which does not support
+  `RTLD_NOLOAD`. (#8952) [@Xottab-DUTY, @threedeyes]
+- Backends: SDL2,SDL3: avoid using the SDL_GetGlobalMouseState() path when one of our
+  window is hovered, as the event data is reliable and enough in this case.
+  - Fix mouse coordinates issue in fullscreen apps with macOS notch. (#7919, #7786)
+    - Essentially a working for SDL3 bug which will be fixed in SDL 3.3.0.
+  - Better perf on X11 as querying global position requires a round trip to X11 server.
+- Backends: Win32: minor optimization not submitting gamepad io again if
+  XInput's dwPacketNumber has not changed. (#8556) [@MidTerm-CN]
+- Backends: Vulkan: added a way to specify custom shaders by filling init fields
+  CustomShaderVertCreateInfo and CustomShaderFragCreateInfo. (#8585, #8271) [@johan0A]
+- Examples: SDL2+DirectX11: Try WARP software driver if hardware driver is
+  not available. (#5924, #5562)
+- Examples: SDL3+DirectX11: Added SDL3+DirectX11 example. (#8956, #8957) [@tomaz82]
+- Examples: made examples's main.cpp consistent with returning 1 on error.
+
+Docking+Viewports Branch:
+
+- Nav: fixed a crash that could occur when opening a popup following the processing
+  of a global shortcut while no windows were focused (the fix done in 1.92.3 was
+  incomplete for docking branch).
+- Viewports: fixed a bug where ImGuiWindowFlags_NoBringToFrontOnFocus would effectivey
+  be ignored when windows first appear and viewports are enabled. (#7008) [@jshofmann]
+- Viewports: changed default value of io.ConfigViewportsNoDefaultParent to true. (#8948)
+- Viewports: fixed an issue inferring Z-order when attempting to merge a viewport
+  back in the the main/hosting viewport. (#8948)
+  Note that for GLFW/SDL2/OSX backends, which do not support honoring ParentViewportID.
+  setting io.ConfigViewportsNoDefaultParent=true will align imgui's expectation
+  with what the backend does.
+- Viewports: DestroyContext() does not call DestroyPlatformWindows() anymore at
+  it assumed to be unnecessary as backensd should have done it and we check that
+  backends have been shutdown since 1.90.4. Changed into asserts. (#7175, #8945)
+- Backends: DX10, DX11, DX12: Disabled DXGI's Alt+Enter default behavior on secondary
+  viewports managed by the backend. (#4350) [@PathogenDavid]
+- Backends: Vulkan: Added a way to configure secondary viewport pipelinen creation
+  by setting init_info.PipelineInfoForViewports fields. (#8946, #8110, #8111, #8686)
+- Backends: Vulkan: Added a way to configure secondary viewport swapchain VkImageUsageFlags
+  to e.g. capture rendering. (#8946, #8940) [@olivier-gerard, @ocornut]
+  Usage example:
+    `init_info.PipelineInfoForViewports.SwapChainImageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;`
+- Backends: Vulkan: pipeline created for secondary viewport automatically match
+  surface format. (#8686) [@sylmroz]
+- Backends: Vulkan: Added ImGui_ImplVulkanH_GetWindowDataFromViewport() accessor/helper.
+  (#8946, #8940) [@olivier-gerard]
+- Examples: DX10, DX11: Disabled DXGI's Alt+Enter default behavior in examples.
+  Applications are free to leave this enabled, but it does not work properly with
+  multiple viewports. (#4350) [@PathogenDavid]
+
+
+-----------------------------------------------------------------------
  VERSION 1.92.3 (Released 2025-09-17)
 -----------------------------------------------------------------------
 

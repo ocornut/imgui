@@ -24,6 +24,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The VulkanSDK libs for Windows is manually generated using build_windows_vulkan_libs.ps1 + attached to issue #8925.
+      # (we have a .yml workflow in commit history if it becomes ever useful to create this on CI too)
       - name: Install Dependencies
         shell: powershell
         run: |
@@ -35,20 +37,9 @@ jobs:
           Expand-Archive -Path SDL3-devel-3.2.18-VC.zip
           echo "SDL3_DIR=$(pwd)\SDL3-devel-3.2.18-VC\SDL3-3.2.18\" >>${env:GITHUB_ENV}
 
-          # VulkanSDK (retrieve minimal bits of the SDK from git)
-          $vulkanVersion = "1.4.326"
-          # 1. Get the vulkan headers, we will treat that folder as the sdk folder to avoid having to copy headers around
-          Invoke-WebRequest -Uri "https://github.com/KhronosGroup/Vulkan-Headers/archive/refs/tags/v$($vulkanVersion).zip" -OutFile Vulkan-Headers-$($vulkanVersion).zip
-          Expand-Archive -Path Vulkan-Headers-$($vulkanVersion).zip
-          echo "VULKAN_SDK=$(pwd)\Vulkan-Headers-$($vulkanVersion)\Vulkan-Headers-$($vulkanVersion)" >>${env:GITHUB_ENV}
-          # 2. Get and build the vulkan loader source code (UPDATE_DEPS=On will make it automatically fetch its dependencies)
-          Invoke-WebRequest -Uri "https://github.com/KhronosGroup/Vulkan-Loader/archive/refs/tags/v$($vulkanVersion).zip" -OutFile Vulkan-Loader-$($vulkanVersion).zip
-          Expand-Archive -Path Vulkan-Loader-$($vulkanVersion).zip
-          cmake -S Vulkan-Loader-$($vulkanVersion)\Vulkan-Loader-$($vulkanVersion) -B VulkanLoader-build -D UPDATE_DEPS=On
-          cmake --build VulkanLoader-build
-          # 3. Copy the built lib/dll to the expected place
-          mkdir Vulkan-Headers-$($vulkanVersion)\Vulkan-Headers-$($vulkanVersion)\Lib
-          copy VulkanLoader-build\loader\Debug\vulkan-1.* Vulkan-Headers-$($vulkanVersion)\Vulkan-Headers-$($vulkanVersion)\Lib\
+          Invoke-WebRequest -Uri "https://github.com/user-attachments/files/22464296/vulkan_windows_libs_1.4.326.zip" -OutFile vulkan_windows_libs_1.4.326.zip
+          Expand-Archive -Path vulkan_windows_libs_1.4.326.zip
+          echo "VULKAN_SDK=$(pwd)\vulkan_windows_libs_1.4.326\" >>${env:GITHUB_ENV}
 
       - name: Fix Projects
         shell: powershell

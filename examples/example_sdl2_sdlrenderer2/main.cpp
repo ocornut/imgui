@@ -33,7 +33,7 @@ int main(int, char**)
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
     {
         printf("Error: %s\n", SDL_GetError());
-        return -1;
+        return 1;
     }
 
     // From 2.0.18: Enable native IME.
@@ -48,13 +48,13 @@ int main(int, char**)
     if (window == nullptr)
     {
         printf("Error: SDL_CreateWindow(): %s\n", SDL_GetError());
-        return -1;
+        return 1;
     }
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
     if (renderer == nullptr)
     {
         SDL_Log("Error creating SDL_Renderer!");
-        return -1;
+        return 1;
     }
     //SDL_RendererInfo info;
     //SDL_GetRendererInfo(renderer, &info);

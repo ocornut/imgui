@@ -12,8 +12,8 @@
 //  [X] Platform: IME support.
 //  [x] Platform: Multi-viewport / platform windows.
 // Missing features or Issues:
-//  [ ] Multi-viewport: Window size not correctly reported when enabling io.ConfigViewportsNoDecoration
-//  [ ] Multi-viewport: ParentViewportID not honored, and so io.ConfigViewportsNoDefaultParent has no effect (minor).
+//  [ ] Platform: Multi-viewport: Window size not correctly reported when enabling io.ConfigViewportsNoDecoration
+//  [ ] Platform: Multi-viewport: viewport->ParentViewportID is ignored, and therefore io.ConfigViewportsNoDefaultParent has no effect either.
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.

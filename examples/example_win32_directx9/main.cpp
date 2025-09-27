@@ -1,4 +1,4 @@
-// Dear ImGui: standalone example application for DirectX 9
+// Dear ImGui: standalone example application for Windows API + DirectX 9
 
 // Learn about Dear ImGui:
 // - FAQ                  https://dearimgui.com/faq
