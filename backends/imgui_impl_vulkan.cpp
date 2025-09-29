@@ -1322,8 +1322,6 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info)
         IM_ASSERT(info->DescriptorPoolSize > 0);
     if (info->UseDynamicRendering)
         IM_ASSERT(info->PipelineInfoMain.RenderPass == VK_NULL_HANDLE && info->PipelineInfoForViewports.RenderPass == VK_NULL_HANDLE);
-    else if (info->PipelineInfoForViewports.RenderPass == NULL)
-        info->PipelineInfoForViewports.RenderPass = info->PipelineInfoMain.RenderPass;
 
     bd->VulkanInitInfo = *info;
 
@@ -2014,7 +2012,7 @@ static void ImGui_ImplVulkan_CreateWindow(ImGuiViewport* viewport)
         }
         else
         {
-            IM_ASSERT(pipeline_info->RenderPass != VK_NULL_HANDLE && "Did you set ImGui_ImplVulkan_InitInfo::PipelineInfoForViewports.RenderPass?"); // Since 1.92.4 it is required.
+            pipeline_info->RenderPass = wd->RenderPass;
         }
 #endif
         bd->PipelineForViewports = ImGui_ImplVulkan_CreatePipeline(v->Device, v->Allocator, VK_NULL_HANDLE, &v->PipelineInfoForViewports);
