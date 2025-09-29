@@ -28,6 +28,11 @@
 #ifndef IMGUI_DISABLE
 
 #include <webgpu/webgpu.h>
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
+#include <webgpu/webgpu_cpp.h>  // for wgpu::Device, wgpu::DeviceLostReason, wgpu::ErrorType used by validation layer callbacks.
+#elif !defined(__EMSCRIPTEN__)
+#include <webgpu/wgpu.h>        // WGPULogLevel
+#endif
 
 // Initialization data, for ImGui_ImplWGPU_Init()
 struct ImGui_ImplWGPU_InitInfo
@@ -67,5 +72,15 @@ struct ImGui_ImplWGPU_RenderState
     WGPUDevice                  Device;
     WGPURenderPassEncoder       RenderPassEncoder;
 };
+
+// (Optional) WebGPU Helpers
+bool    ImGui_ImplWGPU_CheckSurfaceTextureOptimalStatus_Helper(WGPUSurfaceGetCurrentTextureStatus status);                      // Check if the status of surface texture is optimal
+void    ImGui_ImplWGPU_PrintAdapterInfo_Helper(const WGPUAdapter& adapter);
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)     // DAWN both Native / EMSCRIPTEN
+void    ImGui_ImplWGPU_DAWN_DeviceLostCallback_Helper(const wgpu::Device&, wgpu::DeviceLostReason reason, wgpu::StringView msg);// DAWN Validation Layer callback: reason for device loss
+void    ImGui_ImplWGPU_DAWN_ErrorCallback_Helper(const wgpu::Device&, wgpu::ErrorType type, wgpu::StringView msg);              // DAWN Validation Layer callback: print error type
+#elif !defined(__EMSCRIPTEN__)                  // WGPU-Native
+void    ImGui_ImplWGPU_WGPU_LogCallback_Helper(WGPULogLevel level, WGPUStringView msg, void* userdata);                         // WGPU-Native log callback: print information based on request level.
+#endif
 
 #endif // #ifndef IMGUI_DISABLE
