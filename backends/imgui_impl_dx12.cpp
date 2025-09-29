@@ -24,7 +24,8 @@
 // (minor and older changes stripped away, please see git history for details)
 //  2025-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
 //  2025-09-29: DirectX12: Rework synchronization logic. (#8961)
-//  2025-09-29: DirectX12: Reuse a command list and allocator for texture uploads instead of recreating them each time.
+//  2025-09-29: DirectX12: Enable swapchain tearing to eliminate viewports framerate throttling. (#8965)
+//  2025-09-29: DirectX12: Reuse a command list and allocator for texture uploads instead of recreating them each time. (#8963)
 //  2025-09-18: Call platform_io.ClearRendererHandlers() on shutdown.
 //  2025-06-19: Fixed build on MinGW. (#8702, #4594)
 //  2025-06-11: DirectX12: Added support for ImGuiBackendFlags_RendererHasTextures, for dynamic font atlas.
@@ -62,7 +63,7 @@
 
 // DirectX
 #include <d3d12.h>
-#include <dxgi1_4.h>
+#include <dxgi1_5.h>
 #include <d3dcompiler.h>
 #ifdef _MSC_VER
 #pragma comment(lib, "d3dcompiler") // Automatically link with d3dcompiler.lib as we are using D3DCompile() below.
@@ -92,6 +93,7 @@ struct ImGui_ImplDX12_Texture
 struct ImGui_ImplDX12_Data
 {
     ImGui_ImplDX12_InitInfo     InitInfo;
+    IDXGIFactory5*              pdxgiFactory;
     ID3D12Device*               pd3dDevice;
     ID3D12RootSignature*        pRootSignature;
     ID3D12PipelineState*        pPipelineState;
@@ -104,14 +106,14 @@ struct ImGui_ImplDX12_Data
     UINT64                      FenceLastSignaledValue;
     HANDLE                      FenceEvent;
     UINT                        numFramesInFlight;
+    bool                        tearingSupport;
+    bool                        LegacySingleDescriptorUsed;
 
     ID3D12CommandAllocator*     pTexCmdAllocator;
     ID3D12GraphicsCommandList*  pTexCmdList;
 
     ImGui_ImplDX12_RenderBuffers* pFrameResources;
     UINT                        frameIndex;
-
-    bool                        LegacySingleDescriptorUsed;
 
     ImGui_ImplDX12_Data()       { memset((void*)this, 0, sizeof(*this)); }
 };
@@ -623,6 +625,13 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
     if (bd->pPipelineState)
         ImGui_ImplDX12_InvalidateDeviceObjects();
 
+    HRESULT hr = ::CreateDXGIFactory1(IID_PPV_ARGS(&bd->pdxgiFactory));
+    IM_ASSERT(hr == S_OK);
+
+    BOOL allow_tearing = FALSE;
+    bd->pdxgiFactory->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allow_tearing, sizeof(allow_tearing));
+    bd->tearingSupport = (allow_tearing == TRUE);
+
     // Create the root signature
     {
         D3D12_DESCRIPTOR_RANGE descRange = {};
@@ -845,7 +854,7 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
         return false;
 
     // Create command allocator and command list for ImGui_ImplDX12_UpdateTexture()
-    HRESULT hr = bd->pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&bd->pTexCmdAllocator));
+    hr = bd->pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&bd->pTexCmdAllocator));
     IM_ASSERT(SUCCEEDED(hr));
     hr = bd->pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, bd->pTexCmdAllocator, nullptr, IID_PPV_ARGS(&bd->pTexCmdList));
     IM_ASSERT(SUCCEEDED(hr));
@@ -874,6 +883,7 @@ void    ImGui_ImplDX12_InvalidateDeviceObjects()
     if (!bd || !bd->pd3dDevice)
         return;
 
+    SafeRelease(bd->pdxgiFactory);
     if (bd->commandQueueOwned)
         SafeRelease(bd->pCommandQueue);
     bd->commandQueueOwned = false;
@@ -931,6 +941,7 @@ bool ImGui_ImplDX12_Init(ImGui_ImplDX12_InitInfo* init_info)
     bd->DSVFormat = init_info->DSVFormat;
     bd->numFramesInFlight = init_info->NumFramesInFlight;
     bd->pd3dSrvDescHeap = init_info->SrvDescriptorHeap;
+    bd->tearingSupport = false;
 
     io.BackendRendererUserData = (void*)bd;
     io.BackendRendererName = "imgui_impl_dx12";
@@ -1074,17 +1085,14 @@ static void ImGui_ImplDX12_CreateWindow(ImGuiViewport* viewport)
     sd1.Stereo = FALSE;
     sd1.Flags = DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
 
-    IDXGIFactory4* dxgi_factory = nullptr;
-    res = ::CreateDXGIFactory1(IID_PPV_ARGS(&dxgi_factory));
-    IM_ASSERT(res == S_OK);
+    if (bd->tearingSupport)
+        sd1.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
 
     IDXGISwapChain1* swap_chain = nullptr;
-    res = dxgi_factory->CreateSwapChainForHwnd(vd->CommandQueue, hwnd, &sd1, nullptr, nullptr, &swap_chain);
+    res = bd->pdxgiFactory->CreateSwapChainForHwnd(vd->CommandQueue, hwnd, &sd1, nullptr, nullptr, &swap_chain);
     IM_ASSERT(res == S_OK);
-    res = dxgi_factory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER | DXGI_MWA_NO_WINDOW_CHANGES); // Disable e.g. Alt+Enter
+    res = bd->pdxgiFactory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER | DXGI_MWA_NO_WINDOW_CHANGES); // Disable e.g. Alt+Enter
     IM_ASSERT(res == S_OK);
-
-    dxgi_factory->Release();
 
     // Or swapChain.As(&mSwapChain)
     IM_ASSERT(vd->SwapChain == nullptr);
@@ -1197,7 +1205,9 @@ static void ImGui_ImplDX12_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
     if (vd->SwapChain)
     {
         ID3D12Resource* back_buffer = nullptr;
-        vd->SwapChain->ResizeBuffers(0, (UINT)size.x, (UINT)size.y, DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT);
+        DXGI_SWAP_CHAIN_DESC1 desc = {};
+        vd->SwapChain->GetDesc1(&desc);
+        vd->SwapChain->ResizeBuffers(0, (UINT)size.x, (UINT)size.y, desc.Format, desc.Flags);
         for (UINT i = 0; i < bd->numFramesInFlight; i++)
         {
             vd->SwapChain->GetBuffer(i, IID_PPV_ARGS(&back_buffer));
@@ -1251,9 +1261,10 @@ static void ImGui_ImplDX12_RenderWindow(ImGuiViewport* viewport, void*)
 
 static void ImGui_ImplDX12_SwapBuffers(ImGuiViewport* viewport, void*)
 {
+    ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
     ImGui_ImplDX12_ViewportData* vd = (ImGui_ImplDX12_ViewportData*)viewport->RendererUserData;
 
-    vd->SwapChain->Present(0, 0);
+    vd->SwapChain->Present(0, bd->tearingSupport ? DXGI_PRESENT_ALLOW_TEARING : 0);
     vd->FrameIndex++;
 }
 
