@@ -77,6 +77,7 @@ Other Changes:
   of recreating them each time. (#8963, #8465) [@RT2Code]
 - Backends: DirectX12: Rework synchronization logic. (#8961) [@RT2Code]
   (presumably fixes old hard-to-repro crash issues such as #3463, #5018)
+- Backends: DirectX12: Enable swapchain tearing if available. (#8965) [@RT2Code]
 - Backends: OpenGL3: fixed GL loader to work on Haiku OS which does not support
   `RTLD_NOLOAD`. (#8952) [@Xottab-DUTY, @threedeyes]
 - Backends: GLFW: fixed build on platform that are neither Windows, macOS or

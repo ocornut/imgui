@@ -21,7 +21,8 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2025-09-29: DirectX12: Rework synchronization logic. (#8961)
-//  2025-09-29: DirectX12: Reuse a command list and allocator for texture uploads instead of recreating them each time.
+//  2025-09-29: DirectX12: Enable swapchain tearing to eliminate viewports framerate throttling. (#8965)
+//  2025-09-29: DirectX12: Reuse a command list and allocator for texture uploads instead of recreating them each time. (#8963)
 //  2025-09-18: Call platform_io.ClearRendererHandlers() on shutdown.
 //  2025-06-19: Fixed build on MinGW. (#8702, #4594)
 //  2025-06-11: DirectX12: Added support for ImGuiBackendFlags_RendererHasTextures, for dynamic font atlas.
@@ -59,7 +60,7 @@
 
 // DirectX
 #include <d3d12.h>
-#include <dxgi1_4.h>
+#include <dxgi1_5.h>
 #include <d3dcompiler.h>
 #ifdef _MSC_VER
 #pragma comment(lib, "d3dcompiler") // Automatically link with d3dcompiler.lib as we are using D3DCompile() below.
@@ -89,6 +90,7 @@ struct ImGui_ImplDX12_Texture
 struct ImGui_ImplDX12_Data
 {
     ImGui_ImplDX12_InitInfo     InitInfo;
+    IDXGIFactory5*              pdxgiFactory;
     ID3D12Device*               pd3dDevice;
     ID3D12RootSignature*        pRootSignature;
     ID3D12PipelineState*        pPipelineState;
@@ -101,14 +103,14 @@ struct ImGui_ImplDX12_Data
     UINT64                      FenceLastSignaledValue;
     HANDLE                      FenceEvent;
     UINT                        numFramesInFlight;
+    bool                        tearingSupport;
+    bool                        LegacySingleDescriptorUsed;
 
     ID3D12CommandAllocator*     pTexCmdAllocator;
     ID3D12GraphicsCommandList*  pTexCmdList;
 
     ImGui_ImplDX12_RenderBuffers* pFrameResources;
     UINT                        frameIndex;
-
-    bool                        LegacySingleDescriptorUsed;
 
     ImGui_ImplDX12_Data()       { memset((void*)this, 0, sizeof(*this)); }
 };
@@ -545,6 +547,13 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
     if (bd->pPipelineState)
         ImGui_ImplDX12_InvalidateDeviceObjects();
 
+    HRESULT hr = ::CreateDXGIFactory1(IID_PPV_ARGS(&bd->pdxgiFactory));
+    IM_ASSERT(hr == S_OK);
+
+    BOOL allow_tearing = FALSE;
+    bd->pdxgiFactory->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allow_tearing, sizeof(allow_tearing));
+    bd->tearingSupport = (allow_tearing == TRUE);
+
     // Create the root signature
     {
         D3D12_DESCRIPTOR_RANGE descRange = {};
@@ -767,7 +776,7 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
         return false;
 
     // Create command allocator and command list for ImGui_ImplDX12_UpdateTexture()
-    HRESULT hr = bd->pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&bd->pTexCmdAllocator));
+    hr = bd->pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&bd->pTexCmdAllocator));
     IM_ASSERT(SUCCEEDED(hr));
     hr = bd->pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, bd->pTexCmdAllocator, nullptr, IID_PPV_ARGS(&bd->pTexCmdList));
     IM_ASSERT(SUCCEEDED(hr));
@@ -789,6 +798,7 @@ void    ImGui_ImplDX12_InvalidateDeviceObjects()
     if (!bd || !bd->pd3dDevice)
         return;
 
+    SafeRelease(bd->pdxgiFactory);
     if (bd->commandQueueOwned)
         SafeRelease(bd->pCommandQueue);
     bd->commandQueueOwned = false;
@@ -853,6 +863,7 @@ bool ImGui_ImplDX12_Init(ImGui_ImplDX12_InitInfo* init_info)
     bd->DSVFormat = init_info->DSVFormat;
     bd->numFramesInFlight = init_info->NumFramesInFlight;
     bd->pd3dSrvDescHeap = init_info->SrvDescriptorHeap;
+    bd->tearingSupport = false;
 
     io.BackendRendererUserData = (void*)bd;
     io.BackendRendererName = "imgui_impl_dx12";
