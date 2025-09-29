@@ -23,13 +23,18 @@ The resulting binary will be found at one of the following locations:
  1. Install Emscripten SDK following the instructions: https://emscripten.org/docs/getting_started/downloads.html
  2. Install Ninja build system
  3. `emcmake cmake -G Ninja -B build`
+    - (optional) `-DIMGUI_EMSCRIPTEN_WEBGPU_FLAG="--use-port=path/to/emdawnwebgpu_package/emdawnwebgpu.port.py"`, see below
  4. `cmake --build build`
- 
-To run:
- - `emrun build/index.html`
 
-or
- - `python -m http.server`  then open WGPU browser with url: `http://localhost:8000/build`
+#### Sync Emscripten with latest Google Dawn:
+If you want to sync Emscripten with latest DAWN release it's necessary to download the `port-emdawnwgpu-package` (released daily by Google) here:
+https://github.com/google/dawn/releases
+Unpack it in your preferred folder and to replace the step 3 with: 
+
+3. `emcmake cmake -DIMGUI_EMSCRIPTEN_WEBGPU_FLAG="--use-port=path/to/emdawnwebgpu_package/emdawnwebgpu.port.py" -G Ninja -B build`
+
+**N.B.**
+For the WASM code produced by Emscripten to work correctly, it will also be necessary to have the "corresponding" (or newer) version of Google Canary (nightly build for developers) that includes the latest changes
 
 
 ### Using makefile 
