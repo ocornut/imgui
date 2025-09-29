@@ -420,7 +420,9 @@ static bool InitWGPU(void* window)
     // Google DAWN backend: Adapter and Device acquisition, Surface creation
 #if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
     wgpu::InstanceDescriptor instanceDescriptor  = {};
-    instanceDescriptor.capabilities.timedWaitAnyEnable = true;
+    static constexpr wgpu::InstanceFeatureName timedWaitAny = wgpu::InstanceFeatureName::TimedWaitAny;
+    instanceDescriptor.requiredFeatureCount = 1;
+    instanceDescriptor.requiredFeatures = &timedWaitAny;
     wgpu::Instance instance = wgpu::CreateInstance(&instanceDescriptor);
 
     wgpu::Adapter adapter { GetAdapter(instance) };
