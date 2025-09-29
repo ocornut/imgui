@@ -56,10 +56,10 @@ Breaking Changes:
   (introduced very recently and only used by `ImGui_ImplVulkan_CreateMainPipeline()`
   so it should not affect many users). (#8110, #8111)
 - Backends: Vulkan: helper ImGui_ImplVulkanH_CreateOrResizeWindow() added a
-  `VkImageUsageFlags image_usage` argument.
-  It was previously hardcoded to `VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT` and defaults
-  to that when the value is 0. In theory the function is an internal helper but
-  since it's used by our examples some may have used it. (#8946, #8111, #8686)
+  `VkImageUsageFlags image_usage` argument to specific extra flags for calls to
+  vkCreateSwapchainKHR() done for secondary viewports. We automatically add
+  `VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT`. In theory the function is an internal
+  helper but since it's used by our examples some may have used it. (#8946, #8111, #8686)
 
 Other Changes:
 
