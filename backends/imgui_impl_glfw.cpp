@@ -117,7 +117,8 @@
 #define GLFW_EXPOSE_NATIVE_COCOA
 #endif
 #include <GLFW/glfw3native.h>
-#elif !defined(__EMSCRIPTEN__)
+#elif !defined(__EMSCRIPTEN__) &&\
+  (defined(unix) || defined(__unix) || defined(__unix__) || defined(__linux__) || defined(__linux) || defined(linux))
 #ifndef GLFW_EXPOSE_NATIVE_X11      // for glfwGetX11Window() on Freedesktop (Linux, BSD, etc.)
 #define GLFW_EXPOSE_NATIVE_X11
 #endif
