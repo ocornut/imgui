@@ -93,6 +93,7 @@ struct ImGui_ImplDX12_Texture
 struct ImGui_ImplDX12_Data
 {
     ImGui_ImplDX12_InitInfo     InitInfo;
+    IDXGIFactory5*              pdxgiFactory;
     ID3D12Device*               pd3dDevice;
     ID3D12RootSignature*        pRootSignature;
     ID3D12PipelineState*        pPipelineState;
@@ -625,6 +626,13 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
     if (bd->pPipelineState)
         ImGui_ImplDX12_InvalidateDeviceObjects();
 
+    HRESULT hr = ::CreateDXGIFactory1(IID_PPV_ARGS(&bd->pdxgiFactory));
+    IM_ASSERT(hr == S_OK);
+
+    BOOL allow_tearing = FALSE;
+    bd->pdxgiFactory->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allow_tearing, sizeof(allow_tearing));
+    bd->tearingSupport = (allow_tearing == TRUE);
+
     // Create the root signature
     {
         D3D12_DESCRIPTOR_RANGE descRange = {};
@@ -847,7 +855,7 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
         return false;
 
     // Create command allocator and command list for ImGui_ImplDX12_UpdateTexture()
-    HRESULT hr = bd->pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&bd->pTexCmdAllocator));
+    hr = bd->pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&bd->pTexCmdAllocator));
     IM_ASSERT(SUCCEEDED(hr));
     hr = bd->pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, bd->pTexCmdAllocator, nullptr, IID_PPV_ARGS(&bd->pTexCmdList));
     IM_ASSERT(SUCCEEDED(hr));
@@ -876,6 +884,7 @@ void    ImGui_ImplDX12_InvalidateDeviceObjects()
     if (!bd || !bd->pd3dDevice)
         return;
 
+    SafeRelease(bd->pdxgiFactory);
     if (bd->commandQueueOwned)
         SafeRelease(bd->pCommandQueue);
     bd->commandQueueOwned = false;
@@ -1077,23 +1086,14 @@ static void ImGui_ImplDX12_CreateWindow(ImGuiViewport* viewport)
     sd1.Stereo = FALSE;
     sd1.Flags = DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
 
-    IDXGIFactory5* dxgi_factory = nullptr;
-    res = ::CreateDXGIFactory1(IID_PPV_ARGS(&dxgi_factory));
-    IM_ASSERT(res == S_OK);
-
-    BOOL allow_tearing = FALSE;
-    dxgi_factory->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allow_tearing, sizeof(allow_tearing));
-    bd->tearingSupport = (allow_tearing == TRUE);
     if (bd->tearingSupport)
         sd1.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
 
     IDXGISwapChain1* swap_chain = nullptr;
-    res = dxgi_factory->CreateSwapChainForHwnd(vd->CommandQueue, hwnd, &sd1, nullptr, nullptr, &swap_chain);
+    res = bd->pdxgiFactory->CreateSwapChainForHwnd(vd->CommandQueue, hwnd, &sd1, nullptr, nullptr, &swap_chain);
     IM_ASSERT(res == S_OK);
-    res = dxgi_factory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER | DXGI_MWA_NO_WINDOW_CHANGES); // Disable e.g. Alt+Enter
+    res = bd->pdxgiFactory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER | DXGI_MWA_NO_WINDOW_CHANGES); // Disable e.g. Alt+Enter
     IM_ASSERT(res == S_OK);
-
-    dxgi_factory->Release();
 
     // Or swapChain.As(&mSwapChain)
     IM_ASSERT(vd->SwapChain == nullptr);
