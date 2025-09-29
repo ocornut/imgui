@@ -20,23 +20,23 @@ The resulting binary will be found at one of the following locations:
   * build/example_sdl2_wgpu[.exe]
 
 #### Building for Emscripten:
-At current date (Jul/2025) there is no official support for SDL3 in EMSCRIPTEN, and its use in EMSCRIPTEN is also in the experimental phase.
-To use SDL3 with EMSCRIPTEN you need to download the SDL3 repository (source code) and build the libraries for EMSCRIPTEN following the official page: 
-https://wiki.libsdl.org/SDL3/README-emscripten#building-sdlemscripten
-
-- the SDL3 library will be built in `your_SDL3_folder/build`
-
  1. Install Emscripten SDK following the instructions: https://emscripten.org/docs/getting_started/downloads.html
  2. Install Ninja build system
- 3. `emcmake cmake -DIMGUI_SDL3_EMSCRIPTEN_DIR=your_SDL3_folder -G Ninja -B build`
+ 3. `emcmake cmake -G Ninja -B build`
+    - (optional) `-DIMGUI_EMSCRIPTEN_WEBGPU_FLAG="--use-port=path/to/emdawnwebgpu_package/emdawnwebgpu.port.py"`, see below
  4. `cmake --build build`
 
-To run:
- - `emrun build/index.html`
+#### Sync Emscripten with latest Google Dawn:
+If you want to sync Emscripten with latest DAWN release it's necessary to download the `port-emdawnwgpu-package` (released daily by Google) here:
+https://github.com/google/dawn/releases
+Unpack it in your preferred folder and to replace the step 3 with: 
 
-or
- - `python -m http.server`  then open WGPU browser with url: `http://localhost:8000/build`
- 
+3. `emcmake cmake -DIMGUI_EMSCRIPTEN_WEBGPU_FLAG="--use-port=path/to/emdawnwebgpu_package/emdawnwebgpu.port.py" -G Ninja -B build`
+
+**N.B.**
+For the WASM code produced by Emscripten to work correctly, it will also be necessary to have the "corresponding" (or newer) version of Google Canary (nightly build for developers) that includes the latest changes
+
+
 ### Using makefile 
 
 - You need to install Emscripten from https://emscripten.org/docs/getting_started/downloads.html, and have the environment variables set, as described in https://emscripten.org/docs/getting_started/downloads.html#installation-instructions
