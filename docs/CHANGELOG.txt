@@ -66,6 +66,8 @@ Other Changes:
 - Windows: added lower-right resize grip on child windows using both
   ImGuiChildFlags_ResizeX and ImGuiChildFlags_ResizeY flags. (#8501) [@aleksijuvani]
   The grip is not visible before hovering to reduce clutter.
+- InputText: fixed single-line InputText() not applying fine character clipping
+  properly (regression in 1.92.3). (#8967) [@Cyphall]
 - IO: added ImGuiPlatformIO::ClearPlatformHandlers(), ClearRendererHandlers()
   helpers to null all handlers. (#8945, #2769)
 - Misc: Debuggers: added type formatters for the LLDB debuggers (e.g. Xcode,
@@ -75,8 +77,13 @@ Other Changes:
 - Backends: all backends call ImGuiPlatformIO::ClearPlatformHandlers() and
   ClearRendererHandlers() on shutdown, so as not to leave function pointers
   which may be dangling when using backend in e.g. DLL. (#8945, #2769)
+- Backends: DirectX12: reuse a command list and allocator for texture uploads instead
+  of recreating them each time. (#8963, #8465) [@RT2Code]
+- Backends: DirectX12: Rework synchronization logic. (#8961) [@RT2Code]
 - Backends: OpenGL3: fixed GL loader to work on Haiku OS which does not support
   `RTLD_NOLOAD`. (#8952) [@Xottab-DUTY, @threedeyes]
+- Backends: GLFW: fixed build on platform that are neither Windows, macOS or
+  known Unixes (Regression in 1.92.3). (#8969, #8920, #8921) [@oktonion]
 - Backends: SDL2,SDL3: avoid using the SDL_GetGlobalMouseState() path when one of our
   window is hovered, as the event data is reliable and enough in this case.
   - Fix mouse coordinates issue in fullscreen apps with macOS notch. (#7919, #7786)
@@ -89,6 +96,7 @@ Other Changes:
 - Examples: SDL2+DirectX11: Try WARP software driver if hardware driver is
   not available. (#5924, #5562)
 - Examples: SDL3+DirectX11: Added SDL3+DirectX11 example. (#8956, #8957) [@tomaz82]
+- Examples: Win32+DirectX12: Rework synchronization logic. (#8961) [@RT2Code]
 - Examples: made examples's main.cpp consistent with returning 1 on error.
 
 Docking+Viewports Branch:
