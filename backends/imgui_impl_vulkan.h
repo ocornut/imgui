@@ -69,8 +69,10 @@
 // Specify settings to create pipeline and swapchain
 struct ImGui_ImplVulkan_PipelineInfo
 {
-    // For Main and Secondary viewports
+    // For Main viewport only
     VkRenderPass                    RenderPass;                     // Ignored if using dynamic rendering
+
+    // For Main and Secondary viewports
     uint32_t                        Subpass;                        //
     VkSampleCountFlagBits           MSAASamples = {};               // 0 defaults to VK_SAMPLE_COUNT_1_BIT
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
@@ -78,7 +80,7 @@ struct ImGui_ImplVulkan_PipelineInfo
 #endif
 
     // For Secondary viewports only (created/managed by backend)
-    VkImageUsageFlags               SwapChainImageUsage;            // 0 defaults to VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT. Add e.g. VK_IMAGE_USAGE_TRANSFER_SRC_BIT if you need to capture from viewports.
+    VkImageUsageFlags               SwapChainImageUsage;            // Extra flags for vkCreateSwapchainKHR() calls for secondary viewports. We automatically add VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT. You can add e.g. VK_IMAGE_USAGE_TRANSFER_SRC_BIT if you need to capture from viewports.
 };
 
 // Initialization data, for ImGui_ImplVulkan_Init()
