@@ -47,7 +47,6 @@ static VkDescriptorPool         g_DescriptorPool = VK_NULL_HANDLE;
 static ImGui_ImplVulkanH_Window g_MainWindowData;
 static uint32_t                 g_MinImageCount = 2;
 static bool                     g_SwapChainRebuild = false;
-static VkImageUsageFlags        g_SwapChainImageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
 static void check_vk_result(VkResult err)
 {
@@ -229,7 +228,7 @@ static void SetupVulkanWindow(ImGui_ImplVulkanH_Window* wd, VkSurfaceKHR surface
 
     // Create SwapChain, RenderPass, Framebuffer, etc.
     IM_ASSERT(g_MinImageCount >= 2);
-    ImGui_ImplVulkanH_CreateOrResizeWindow(g_Instance, g_PhysicalDevice, g_Device, wd, g_QueueFamily, g_Allocator, width, height, g_MinImageCount, g_SwapChainImageUsage);
+    ImGui_ImplVulkanH_CreateOrResizeWindow(g_Instance, g_PhysicalDevice, g_Device, wd, g_QueueFamily, g_Allocator, width, height, g_MinImageCount, 0);
 }
 
 static void CleanupVulkan()
@@ -550,7 +549,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             if (fb_width > 0 && fb_height > 0 && (g_SwapChainRebuild || g_MainWindowData.Width != fb_width || g_MainWindowData.Height != fb_height))
             {
                 ImGui_ImplVulkan_SetMinImageCount(g_MinImageCount);
-                ImGui_ImplVulkanH_CreateOrResizeWindow(g_Instance, g_PhysicalDevice, g_Device, &g_MainWindowData, g_QueueFamily, g_Allocator, fb_width, fb_height, g_MinImageCount, g_SwapChainImageUsage);
+                ImGui_ImplVulkanH_CreateOrResizeWindow(g_Instance, g_PhysicalDevice, g_Device, &g_MainWindowData, g_QueueFamily, g_Allocator, fb_width, fb_height, g_MinImageCount, 0);
                 g_MainWindowData.FrameIndex = 0;
                 g_SwapChainRebuild = false;
             }

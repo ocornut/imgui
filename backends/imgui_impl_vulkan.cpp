@@ -1634,7 +1634,7 @@ void ImGui_ImplVulkanH_CreateWindowSwapChain(VkPhysicalDevice physical_device, V
         info.imageFormat = wd->SurfaceFormat.format;
         info.imageColorSpace = wd->SurfaceFormat.colorSpace;
         info.imageArrayLayers = 1;
-        info.imageUsage = (image_usage != 0) ? image_usage : VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | image_usage;
         info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;           // Assume that graphics family == present family
         info.preTransform = (cap.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR : cap.currentTransform;
         info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
