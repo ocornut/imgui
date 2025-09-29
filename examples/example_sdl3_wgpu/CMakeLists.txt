@@ -17,27 +17,20 @@
 #   * build/example_sdl3_wgpu[.exe]
 
 # Building for Emscripten:
-# At current date (jun/2025) there is no official support for SDL3 in EMSCRIPTEN,
-# and its use in EMSCRIPTEN is also in the experimental phase.
-# To use SDL3 with EMSCRIPTEN you need to download the SDL3 repository (source code)
-# and build the libraries for EMSCRIPTEN following the official page:
-# https://wiki.libsdl.org/SDL3/README-emscripten#building-sdlemscripten
-#
-# the SDL3 library will be built in `your_SDL3_folder/build`
-#
 #  1. Install Emscripten SDK following the instructions: https://emscripten.org/docs/getting_started/downloads.html
 #  2. Install Ninja build system
-#  3. emcmake cmake -DIMGUI_SDL3_EMSCRIPTEN_DIR=your_SDL3_folder -G Ninja -B build
-#  3. cmake --build build
-#  4. emrun build/index.html
+#  3. emcmake cmake -G Ninja -B build
+#       (optional) -DIMGUI_EMSCRIPTEN_WEBGPU_FLAG="--use-port=path/to/emdawnwebgpu_package/emdawnwebgpu.port.py", see ReadMe.md
+#  4. cmake --build build
+#  5. emrun build/index.html
 
-cmake_minimum_required(VERSION 3.10.2)
+cmake_minimum_required(VERSION 3.22) # Dawn requires CMake >= 3.22
 project(imgui_example_sdl3_wgpu C CXX)
 
 set(IMGUI_EXECUTABLE example_sdl3_wgpu)
 
 if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Debug CACHE STRING "" FORCE)
+    set(CMAKE_BUILD_TYPE Debug CACHE STRING "" FORCE)
 endif()
 
 set(CMAKE_CXX_STANDARD 17) # Dawn requires C++17
@@ -47,110 +40,110 @@ set(IMGUI_DIR ../../)
 
 # ImGui example commons source files
 set(IMGUI_EXAMPLE_SOURCE_FILES
-    main.cpp
-    # backend files
-    ${IMGUI_DIR}/backends/imgui_impl_sdl3.cpp
-    ${IMGUI_DIR}/backends/imgui_impl_wgpu.cpp
-    # Dear ImGui files
-    ${IMGUI_DIR}/imgui.cpp
-    ${IMGUI_DIR}/imgui_draw.cpp
-    ${IMGUI_DIR}/imgui_demo.cpp
-    ${IMGUI_DIR}/imgui_tables.cpp
-    ${IMGUI_DIR}/imgui_widgets.cpp)
+        main.cpp
+        # backend files
+        ${IMGUI_DIR}/backends/imgui_impl_sdl3.cpp
+        ${IMGUI_DIR}/backends/imgui_impl_wgpu.cpp
+        # Dear ImGui files
+        ${IMGUI_DIR}/imgui.cpp
+        ${IMGUI_DIR}/imgui_draw.cpp
+        ${IMGUI_DIR}/imgui_demo.cpp
+        ${IMGUI_DIR}/imgui_tables.cpp
+        ${IMGUI_DIR}/imgui_widgets.cpp)
 
-# Libraries
 if(EMSCRIPTEN)
+    if(EMSCRIPTEN_VERSION VERSION_LESS "4.0.15")
+        message(FATAL_ERROR "Using Emscripten with SDL3 needs Emscripten version >= 4.0.15")
+    endif()
+    if(NOT IMGUI_EMSCRIPTEN_WEBGPU_FLAG) # if IMGUI_EMSCRIPTEN_WEBGPU_FLAG not used, set by current EMSCRIPTEN version
+        if(EMSCRIPTEN_VERSION VERSION_GREATER_EQUAL "4.0.10")
+            set(IMGUI_EMSCRIPTEN_WEBGPU_FLAG "--use-port=emdawnwebgpu" CACHE STRING "Choose between --use-port=emdawnwebgpu (Dawn implementation of EMSCRIPTEN) and -sUSE_WEBGPU=1 (WGPU implementation of EMSCRIPTEN, deprecated in 4.0.10): default to --use-port=emdawnwebgpu for EMSCRIPTEN >= 4.0.10")
+        else()
+            set(IMGUI_EMSCRIPTEN_WEBGPU_FLAG "-sUSE_WEBGPU=1" CACHE STRING "Use -sUSE_WEBGPU=1 for EMSCRIPTEN WGPU implementation")
+        endif()
+    else() # if IMGUI_EMSCRIPTEN_WEBGPU_FLAG used, check correct version
+        if(EMSCRIPTEN_VERSION VERSION_LESS "4.0.10" AND "${IMGUI_EMSCRIPTEN_WEBGPU_FLAG}" MATCHES "emdawnwebgpu")
+            # it's necessary EMSCRIPTEN >= v4.0.10 (although "--use-port=path/to/emdawnwebgpu.port.py" is supported/tested from v4.0.8)
+            message(FATAL_ERROR "emdawnwebgpu needs EMSCRIPTEN version >= 4.0.10")
+        endif()
+    endif()
 
-  if(EMSCRIPTEN_VERSION VERSION_GREATER_EQUAL "4.0.10")
-    set(IMGUI_EMSCRIPTEN_WEBGPU_FLAG "--use-port=emdawnwebgpu" CACHE STRING "Choose between --use-port=emdawnwebgpu (Dawn implementation of EMSCRIPTEN) and -sUSE_WEBGPU=1 (WGPU implementation of EMSCRIPTEN, deprecated in 4.0.10): default to --use-port=emdawnwebgpu for EMSCRIPTEN >= 4.0.10")
-  else()
-    set(IMGUI_EMSCRIPTEN_WEBGPU_FLAG "-sUSE_WEBGPU=1" CACHE STRING "Use -sUSE_WEBGPU=1 for EMSCRIPTEN WGPU implementation" FORCE)
-  endif()
-
-  add_compile_options(-sDISABLE_EXCEPTION_CATCHING=1 -DIMGUI_DISABLE_FILE_FUNCTIONS=1)
-else()
+    add_compile_options(-sDISABLE_EXCEPTION_CATCHING=1 -DIMGUI_DISABLE_FILE_FUNCTIONS=1)
+else() # Native/Desktop build
     find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3)
 
-  # if it's Native/Desktop build, IMGUI_DAWN_DIR or IMGUI_WGPU_DIR must be specified
-  if (NOT IMGUI_DAWN_DIR AND NOT IMGUI_WGPU_DIR)
-    message(FATAL_ERROR "Please specify the Dawn or WGPU base directory")
-  endif()
-
-  # IMGUI_DAWN_DIR and IMGUI_WGPU_DIR both cannot be set
-  if (IMGUI_DAWN_DIR AND IMGUI_WGPU_DIR)
-    message(FATAL_ERROR "Please specify only one of Dawn / WGPU base directory")
-  endif()
-
-  if(APPLE)
-    set_source_files_properties(${IMGUI_DIR}/backends/imgui_impl_sdl3.cpp PROPERTIES COMPILE_FLAGS "-x objective-c++")
-    set(OS_LIBRARIES "-framework CoreFoundation -framework QuartzCore -framework Metal -framework MetalKit -framework Cocoa")
-  endif()
-
-  # Native DAWN build settings
-  if(IMGUI_DAWN_DIR)
-    # Dawn wgpu desktop
-    set(DAWN_FETCH_DEPENDENCIES ON)
-    set(IMGUI_DAWN_DIR CACHE PATH "Path to Dawn repository")
-    if (NOT IMGUI_DAWN_DIR)
-      message(FATAL_ERROR "Please specify the Dawn repository by setting IMGUI_DAWN_DIR")
+    if(NOT IMGUI_DAWN_DIR AND NOT IMGUI_WGPU_DIR) # if it's Native/Desktop build, IMGUI_DAWN_DIR or IMGUI_WGPU_DIR must be specified
+        message(FATAL_ERROR "Please specify the Dawn or WGPU base directory")
     endif()
 
-    # disable buildin GLFW in DAWN when we use SDL2 / SDL3
-    option(DAWN_USE_GLFW OFF)
-    
-    option(DAWN_FETCH_DEPENDENCIES "Use fetch_dawn_dependencies.py as an alternative to using depot_tools" ON)
-
-    # Dawn builds many things by default - disable things we don't need
-    option(DAWN_BUILD_SAMPLES "Enables building Dawn's samples" OFF)
-    option(TINT_BUILD_CMD_TOOLS "Build the Tint command line tools" OFF)
-    option(TINT_BUILD_DOCS "Build documentation" OFF)
-    option(TINT_BUILD_TESTS "Build tests" OFF)
-    if (NOT APPLE)
-      option(TINT_BUILD_MSL_WRITER "Build the MSL output writer" OFF)
-    endif()
-    if(WIN32)
-      option(TINT_BUILD_SPV_READER "Build the SPIR-V input reader" OFF)
-      option(TINT_BUILD_WGSL_READER "Build the WGSL input reader" ON)
-      option(TINT_BUILD_GLSL_WRITER "Build the GLSL output writer" OFF)
-      option(TINT_BUILD_GLSL_VALIDATOR "Build the GLSL output validator" OFF)
-      option(TINT_BUILD_SPV_WRITER "Build the SPIR-V output writer" OFF)
-      option(TINT_BUILD_WGSL_WRITER "Build the WGSL output writer" ON)
-    endif()
-    # check if WAYLAND is the current Session Type and enable DAWN_USE_WAYLAND Wayland option @compile time
-    # You can override this using: cmake -DDAWN_USE_WAYLAND=X (X = ON | OFF)
-    if(LINUX)
-      if ($ENV{XDG_SESSION_TYPE} MATCHES wayland)
-        option(DAWN_USE_WAYLAND "Enable support for Wayland surface" ON)
-      endif()
+    if(IMGUI_DAWN_DIR AND IMGUI_WGPU_DIR) # both IMGUI_DAWN_DIR and IMGUI_WGPU_DIR cannot be set
+        message(FATAL_ERROR "Please specify only one between Dawn / WGPU base directory")
     endif()
 
-    add_subdirectory("${IMGUI_DAWN_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/dawn" EXCLUDE_FROM_ALL)
-
-    set(LIBRARIES webgpu_dawn webgpu_cpp ${OS_LIBRARIES})
-  else()
-    # Native WGPU build settings
-
-    set(WGPU_NATIVE_LIB_DIR ${IMGUI_WGPU_DIR}/lib)
-    find_library(WGPU_LIBRARY NAMES libwgpu_native.a wgpu_native.lib wgpu_native
-                 HINTS ${WGPU_NATIVE_LIB_DIR} REQUIRED)
-    if (WIN32)
-      set(OS_LIBRARIES d3dcompiler ws2_32 userenv bcrypt ntdll opengl32 Propsys RuntimeObject)
-    elseif(UNIX AND NOT APPLE)
-      set(OS_LIBRARIES "-lm -ldl")
+    if(APPLE) # Add SDL3 module to get Surface, with libs and file property for MacOS build
+        set_source_files_properties(${IMGUI_DIR}/backends/imgui_impl_sdl3.cpp PROPERTIES COMPILE_FLAGS "-x objective-c++")
+        set(OS_LIBRARIES "-framework CoreFoundation -framework QuartzCore -framework Metal -framework MetalKit -framework Cocoa")
     endif()
 
-    set(LIBRARIES ${WGPU_LIBRARY} ${OS_LIBRARIES})
+    if(IMGUI_DAWN_DIR) # DAWN-Native build options
+        set(IMGUI_DAWN_DIR CACHE PATH "Path to Dawn repository")
+        if(NOT IMGUI_DAWN_DIR)
+            message(FATAL_ERROR "Please specify the Dawn repository by setting IMGUI_DAWN_DIR")
+        endif()
 
-  endif()
+        option(DAWN_USE_GLFW OFF) # disable buildin GLFW in DAWN when we use SDL2 / SDL3
+
+        option(DAWN_FETCH_DEPENDENCIES "Use fetch_dawn_dependencies.py as an alternative to using depot_tools" ON)
+        set(DAWN_BUILD_MONOLITHIC_LIBRARY "STATIC" CACHE STRING "Build monolithic library: SHARED, STATIC, or OFF.")
+
+        # Dawn builds many things by default - disable things we don't need
+        option(DAWN_BUILD_SAMPLES "Enables building Dawn's samples" OFF)
+        option(TINT_BUILD_CMD_TOOLS "Build the Tint command line tools" OFF)
+        option(TINT_BUILD_DOCS "Build documentation" OFF)
+        option(TINT_BUILD_TESTS "Build tests" OFF)
+        if(NOT APPLE)
+            option(TINT_BUILD_MSL_WRITER "Build the MSL output writer" OFF)
+        endif()
+        if(WIN32)
+            option(DAWN_FORCE_SYSTEM_COMPONENT_LOAD "Allow system component fallback" ON)
+            option(TINT_BUILD_SPV_READER "Build the SPIR-V input reader" OFF)
+            option(TINT_BUILD_WGSL_READER "Build the WGSL input reader" ON)
+            option(TINT_BUILD_GLSL_WRITER "Build the GLSL output writer" OFF)
+            option(TINT_BUILD_GLSL_VALIDATOR "Build the GLSL output validator" OFF)
+            option(TINT_BUILD_SPV_WRITER "Build the SPIR-V output writer" ON)
+            option(TINT_BUILD_WGSL_WRITER "Build the WGSL output writer" ON)
+        endif()
+        # check if WAYLAND is the current Session Type and enable DAWN_USE_WAYLAND Wayland option @compile time
+        # You can override this using: cmake -DDAWN_USE_WAYLAND=X (X = ON | OFF)
+        if(LINUX)
+            if($ENV{XDG_SESSION_TYPE} MATCHES wayland)
+                option(DAWN_USE_WAYLAND "Enable support for Wayland surface" ON)
+            endif()
+        endif()
+
+        add_subdirectory("${IMGUI_DAWN_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/dawn" EXCLUDE_FROM_ALL)
+
+        set(LIBRARIES webgpu_dawn ${OS_LIBRARIES})
+    else() # WGPU-Native build options
+
+        set(WGPU_NATIVE_LIB_DIR ${IMGUI_WGPU_DIR}/lib)
+        find_library(WGPU_LIBRARY NAMES libwgpu_native.a wgpu_native.lib wgpu_native HINTS ${WGPU_NATIVE_LIB_DIR} REQUIRED)
+        if(WIN32)
+            set(OS_LIBRARIES d3dcompiler ws2_32 userenv bcrypt ntdll opengl32 Propsys RuntimeObject)
+        elseif(UNIX AND NOT APPLE)
+            set(OS_LIBRARIES "-lm -ldl")
+        endif()
+
+        set(LIBRARIES ${WGPU_LIBRARY} ${OS_LIBRARIES})
+    endif()
 endif()
 
 add_executable(${IMGUI_EXECUTABLE} ${IMGUI_EXAMPLE_SOURCE_FILES})
 
 target_include_directories(${IMGUI_EXECUTABLE} PUBLIC
-  ${IMGUI_DIR}
-  ${IMGUI_DIR}/backends
-  ${SDL3_INCLUDE_DIRS}
-
+        ${IMGUI_DIR}
+        ${IMGUI_DIR}/backends
+        ${SDL3_INCLUDE_DIRS}
 )
 
 target_compile_definitions(${IMGUI_EXECUTABLE} PUBLIC "IMGUI_EXAMPLE_SDL3_WGPU")
@@ -163,52 +156,37 @@ target_compile_definitions(${IMGUI_EXECUTABLE} PUBLIC "IMGUI_EXAMPLE_SDL3_WGPU")
 #     if IMGUI_DAWN_DIR is valid --> IMGUI_IMPL_WEBGPU_BACKEND_DAWN enabled
 #     if IMGUI_WGPU_DIR is valid --> IMGUI_IMPL_WEBGPU_BACKEND_WGPU enabled
 
-# Native settings
-IF(NOT EMSCRIPTEN)
-  target_link_libraries(${IMGUI_EXECUTABLE} PUBLIC ${LIBRARIES} SDL3::SDL3)
+if(NOT EMSCRIPTEN) # WegGPU-Native settings
+    if(IMGUI_DAWN_DIR)
+        target_compile_definitions(${IMGUI_EXECUTABLE} PUBLIC "IMGUI_IMPL_WEBGPU_BACKEND_DAWN")
+    else()
+        target_compile_definitions(${IMGUI_EXECUTABLE} PUBLIC "IMGUI_IMPL_WEBGPU_BACKEND_WGPU")
+        target_include_directories(${IMGUI_EXECUTABLE} PUBLIC ${IMGUI_WGPU_DIR}/include)
+    endif()
 
-  if(IMGUI_DAWN_DIR)
-    target_compile_definitions(${IMGUI_EXECUTABLE} PUBLIC "IMGUI_IMPL_WEBGPU_BACKEND_DAWN")
-  else()
-    target_compile_definitions(${IMGUI_EXECUTABLE} PUBLIC "IMGUI_IMPL_WEBGPU_BACKEND_WGPU")
-    target_include_directories(${IMGUI_EXECUTABLE} PUBLIC ${IMGUI_WGPU_DIR}/include)
-  endif()
-# Emscripten settings
-else()
-  set(CMAKE_EXECUTABLE_SUFFIX ".html")
+    target_link_libraries(${IMGUI_EXECUTABLE} INTERFACE webgpu_cpp  PUBLIC ${LIBRARIES} SDL3::SDL3)
+else() # Emscripten settings
+    set(CMAKE_EXECUTABLE_SUFFIX ".html")
 
-  if(NOT IMGUI_SDL3_EMSCRIPTEN_DIR)
-    message(FATAL_ERROR "aaaaa")
-  else()
-    target_include_directories(${IMGUI_EXECUTABLE} PUBLIC ${IMGUI_SDL3_EMSCRIPTEN_DIR}/include)
-    find_library(SDL_EMS_LIBRARY NAMES libSDL3.a libSDL3.lib libSDL3 SDL3.a SDL3.lib SDL3
-                 PATHS ${IMGUI_SDL3_EMSCRIPTEN_DIR}/build REQUIRED NO_CMAKE_FIND_ROOT_PATH)
-    target_link_libraries(${IMGUI_EXECUTABLE} PUBLIC ${SDL_EMS_LIBRARY})
-  endif()
+    if("${IMGUI_EMSCRIPTEN_WEBGPU_FLAG}" MATCHES "emdawnwebgpu")
+        target_compile_options(${IMGUI_EXECUTABLE} PUBLIC "${IMGUI_EMSCRIPTEN_WEBGPU_FLAG}")
+        target_compile_definitions(${IMGUI_EXECUTABLE} PUBLIC "IMGUI_IMPL_WEBGPU_BACKEND_DAWN")
+    else()
+        target_compile_definitions(${IMGUI_EXECUTABLE} PUBLIC "IMGUI_IMPL_WEBGPU_BACKEND_WGPU")
+    endif()
+    message(STATUS "Using ${IMGUI_EMSCRIPTEN_WEBGPU_FLAG} WebGPU implementation")
 
-  if("${IMGUI_EMSCRIPTEN_WEBGPU_FLAG}" STREQUAL "--use-port=emdawnwebgpu")
-    target_compile_options(${IMGUI_EXECUTABLE} PUBLIC "${IMGUI_EMSCRIPTEN_WEBGPU_FLAG}")
-    target_compile_definitions(${IMGUI_EXECUTABLE} PUBLIC "IMGUI_IMPL_WEBGPU_BACKEND_DAWN")
-  else()
-    target_compile_definitions(${IMGUI_EXECUTABLE} PUBLIC "IMGUI_IMPL_WEBGPU_BACKEND_WGPU")
-  endif()
-  message(STATUS "Using ${IMGUI_EMSCRIPTEN_WEBGPU_FLAG} WebGPU implementation")
-
-
-  target_compile_options(${IMGUI_EXECUTABLE} PUBLIC "-sUSE_SDL=2" )
-  target_link_options(${IMGUI_EXECUTABLE} PRIVATE
-    "${IMGUI_EMSCRIPTEN_WEBGPU_FLAG}"
-    #"-sUSE_SDL=3"  # There is currently no official support internally at emscripten
-    "-sWASM=1"
-    "-sASYNCIFY=1"
-    "-sALLOW_MEMORY_GROWTH=1"
-    "-sNO_EXIT_RUNTIME=0"
-    "-sASSERTIONS=1"
-    "-sDISABLE_EXCEPTION_CATCHING=1"
-    #"-sNO_FILESYSTEM=1"  # sdl3 integrates a filesystem, you need to disable it at SDL3 build time
-    "--shell-file=${CMAKE_CURRENT_LIST_DIR}/../libs/emscripten/shell_minimal.html"
-  )
-  set_target_properties(${IMGUI_EXECUTABLE} PROPERTIES OUTPUT_NAME "index")
+    target_compile_options(${IMGUI_EXECUTABLE} PUBLIC "-sUSE_SDL=3")
+    target_link_options(${IMGUI_EXECUTABLE} PRIVATE
+            "${IMGUI_EMSCRIPTEN_WEBGPU_FLAG}"
+            "-sUSE_SDL=3"
+            "-sWASM=1"
+            "-sASYNCIFY=1"
+            "-sALLOW_MEMORY_GROWTH=1"
+            "-sNO_EXIT_RUNTIME=0"
+            "-sASSERTIONS=1"
+            "-sDISABLE_EXCEPTION_CATCHING=1"
+            "--shell-file=${CMAKE_CURRENT_LIST_DIR}/../libs/emscripten/shell_minimal.html"
+    )
+    set_target_properties(${IMGUI_EXECUTABLE} PROPERTIES OUTPUT_NAME "index")
 endif()
-
-file(WRITE ${CMAKE_SOURCE_DIR}/.idea/.name ${PROJECT_NAME}) # used to rename a Project in clion (run once)
