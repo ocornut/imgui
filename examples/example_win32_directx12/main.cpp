@@ -92,7 +92,7 @@ static ID3D12Fence*                 g_fence = nullptr;
 static HANDLE                       g_fenceEvent = nullptr;
 static UINT64                       g_fenceLastSignaledValue = 0;
 static IDXGISwapChain3*             g_pSwapChain = nullptr;
-static bool                         g_tearingSupport = false;
+static bool                         g_SwapChainTearingSupport = false;
 static bool                         g_SwapChainOccluded = false;
 static HANDLE                       g_hSwapChainWaitableObject = nullptr;
 static ID3D12Resource*              g_mainRenderTargetResource[APP_NUM_BACK_BUFFERS] = {};
@@ -309,7 +309,7 @@ int main(int, char**)
 
         // Present
         HRESULT hr = g_pSwapChain->Present(1, 0);   // Present with vsync
-        //HRESULT hr = g_pSwapChain->Present(0, g_tearingSupport ? DXGI_PRESENT_ALLOW_TEARING : 0); // Present without vsync
+        //HRESULT hr = g_pSwapChain->Present(0, g_SwapChainTearingSupport ? DXGI_PRESENT_ALLOW_TEARING : 0); // Present without vsync
         g_SwapChainOccluded = (hr == DXGI_STATUS_OCCLUDED);
         g_frameIndex++;
     }
@@ -435,8 +435,8 @@ bool CreateDeviceD3D(HWND hWnd)
 
         BOOL allow_tearing = FALSE;
         dxgiFactory->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allow_tearing, sizeof(allow_tearing));
-        g_tearingSupport = (allow_tearing == TRUE);
-        if (g_tearingSupport)
+        g_SwapChainTearingSupport = (allow_tearing == TRUE);
+        if (g_SwapChainTearingSupport)
             sd.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
 
         if (dxgiFactory->CreateSwapChainForHwnd(g_pd3dCommandQueue, hWnd, &sd, nullptr, nullptr, &swapChain1) != S_OK)
@@ -444,7 +444,7 @@ bool CreateDeviceD3D(HWND hWnd)
         if (swapChain1->QueryInterface(IID_PPV_ARGS(&g_pSwapChain)) != S_OK)
             return false;
 
-        if (g_tearingSupport)
+        if (g_SwapChainTearingSupport)
             dxgiFactory->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER);
 
         swapChain1->Release();
