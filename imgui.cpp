@@ -16337,10 +16337,23 @@ static bool ImGui::GetWindowAlwaysWantOwnViewport(ImGuiWindow* window)
 
 
 // Heuristic, see #8948: depends on how backends handle OS-level parenting.
-// FIXME-VIEWPORTS: if ImGuiBackendFlags_HasParentViewportId if set, we should consider ->ParentViewportId as primary source of truth.
 static bool IsViewportAbove(ImGuiViewportP* potential_above, ImGuiViewportP* potential_below)
 {
-    if (potential_above->LastFocusedStampCount > potential_below->LastFocusedStampCount || potential_above->ParentViewportId == potential_below->ID) // FIXME: Should follow the ParentViewportId list.
+    // If ImGuiBackendFlags_HasParentViewportId if set, ->ParentViewport chain should be accurate.
+    ImGuiContext& g = *GImGui;
+    if (g.IO.BackendFlags & ImGuiBackendFlags_HasParentViewportId)
+    {
+        for (ImGuiViewport* v = potential_above; v != NULL && v->ParentViewport; v = v->ParentViewport)
+            if (v->ParentViewport == potential_below)
+                return true;
+    }
+    else
+    {
+        if (potential_above->ParentViewport == potential_below)
+            return true;
+    }
+
+    if (potential_above->LastFocusedStampCount > potential_below->LastFocusedStampCount)
         return true;
     return false;
 }
