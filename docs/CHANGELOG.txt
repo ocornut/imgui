@@ -105,6 +105,11 @@ Docking+Viewports Branch:
 - Nav: fixed a crash that could occur when opening a popup following the processing
   of a global shortcut while no windows were focused (the fix done in 1.92.3 was
   incomplete for docking branch).
+- Viewports: added ImGuiBackendFlags_HasParentViewportId backend flag for
+  backend to specify if it can honor the viewport->ParentViewportId value by
+  applying the corresponding parent/child relation at the Platform level. (#8948)
+  - SDL3, Win32 backends: supported.
+  - SDL2, GLFW, OSX backends: unsupported.
 - Viewports: fixed a bug where ImGuiWindowFlags_NoBringToFrontOnFocus would effectivey
   be ignored when windows first appear and viewports are enabled. (#7008) [@jshofmann]
 - Viewports: changed default value of io.ConfigViewportsNoDefaultParent to true. (#8948)
