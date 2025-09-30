@@ -16337,6 +16337,7 @@ static bool ImGui::GetWindowAlwaysWantOwnViewport(ImGuiWindow* window)
 
 
 // Heuristic, see #8948: depends on how backends handle OS-level parenting.
+// FIXME-VIEWPORTS: if ImGuiBackendFlags_HasParentViewportId if set, we should consider ->ParentViewportId as primary source of truth.
 static bool IsViewportAbove(ImGuiViewportP* potential_above, ImGuiViewportP* potential_below)
 {
     if (potential_above->LastFocusedStampCount > potential_below->LastFocusedStampCount || potential_above->ParentViewportId == potential_below->ID) // FIXME: Should follow the ParentViewportId list.
@@ -16362,8 +16363,9 @@ static bool ImGui::UpdateTryMergeWindowIntoHostViewport(ImGuiWindow* window, ImG
     {
         if (viewport_2 == viewport || viewport_2 == window->Viewport)
             continue;
-        if (IsViewportAbove(viewport_2, viewport) && viewport_2->GetMainRect().Overlaps(window->Rect()))
-            return false;
+        if (viewport_2->GetMainRect().Overlaps(window->Rect()))
+            if (IsViewportAbove(viewport_2, viewport) && !IsViewportAbove(viewport_2, window->Viewport))
+                return false;
     }
 
     // Move to the existing viewport, Move child/hosted windows as well (FIXME-OPT: iterate child)
