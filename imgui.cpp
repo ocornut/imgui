@@ -17023,11 +17023,22 @@ void ImGui::WindowSyncOwnedViewport(ImGuiWindow* window, ImGuiWindow* parent_win
     // Update parent viewport ID
     // (the !IsFallbackWindow test mimic the one done in WindowSelectViewport())
     if (window->WindowClass.ParentViewportId != (ImGuiID)-1)
+    {
+        ImGuiID old_parent_viewport_id = window->Viewport->ParentViewportId;
         window->Viewport->ParentViewportId = window->WindowClass.ParentViewportId;
+        if (window->Viewport->ParentViewportId != old_parent_viewport_id)
+            window->Viewport->ParentViewport = FindViewportByID(window->Viewport->ParentViewportId);
+    }
     else if ((window_flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) && parent_window_in_stack && (!parent_window_in_stack->IsFallbackWindow || parent_window_in_stack->WasActive))
+    {
+        window->Viewport->ParentViewport = parent_window_in_stack->Viewport;
         window->Viewport->ParentViewportId = parent_window_in_stack->Viewport->ID;
+    }
     else
+    {
+        window->Viewport->ParentViewport = g.IO.ConfigViewportsNoDefaultParent ? NULL : GetMainViewport();
         window->Viewport->ParentViewportId = g.IO.ConfigViewportsNoDefaultParent ? 0 : IMGUI_VIEWPORT_DEFAULT_ID;
+    }
 }
 
 // Called by user at the end of the main loop, after EndFrame()

@@ -1008,14 +1008,13 @@ struct ImGui_ImplSDL3_ViewportData
     ~ImGui_ImplSDL3_ViewportData()  { IM_ASSERT(Window == nullptr && GLContext == nullptr); }
 };
 
-static SDL_Window* ImGui_ImplSDL3_GetSDLWindowFromViewportID(ImGuiID viewport_id)
+static SDL_Window* ImGui_ImplSDL3_GetSDLWindowFromViewport(ImGuiViewport* viewport)
 {
-    if (viewport_id != 0)
-        if (ImGuiViewport* viewport = ImGui::FindViewportByID(viewport_id))
-        {
-            SDL_WindowID window_id = (SDL_WindowID)(intptr_t)viewport->PlatformHandle;
-            return SDL_GetWindowFromID(window_id);
-        }
+    if (viewport != nullptr)
+    {
+        SDL_WindowID window_id = (SDL_WindowID)(intptr_t)viewport->PlatformHandle;
+        return SDL_GetWindowFromID(window_id);
+    }
     return nullptr;
 }
 
@@ -1025,7 +1024,7 @@ static void ImGui_ImplSDL3_CreateWindow(ImGuiViewport* viewport)
     ImGui_ImplSDL3_ViewportData* vd = IM_NEW(ImGui_ImplSDL3_ViewportData)();
     viewport->PlatformUserData = vd;
 
-    vd->ParentWindow = ImGui_ImplSDL3_GetSDLWindowFromViewportID(viewport->ParentViewportId);
+    vd->ParentWindow = ImGui_ImplSDL3_GetSDLWindowFromViewport(viewport->ParentViewport);
 
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     ImGui_ImplSDL3_ViewportData* main_viewport_data = (ImGui_ImplSDL3_ViewportData*)main_viewport->PlatformUserData;
@@ -1114,7 +1113,7 @@ static void ImGui_ImplSDL3_UpdateWindow(ImGuiViewport* viewport)
 #ifndef __APPLE__ // On Mac, SDL3 Parenting appears to prevent viewport from appearing in another monitor
     // Update SDL3 parent if it changed _after_ creation.
     // This is for advanced apps that are manipulating ParentViewportID manually.
-    SDL_Window* new_parent = ImGui_ImplSDL3_GetSDLWindowFromViewportID(viewport->ParentViewportId);
+    SDL_Window* new_parent = ImGui_ImplSDL3_GetSDLWindowFromViewport(viewport->ParentViewport);
     if (new_parent != vd->ParentWindow)
     {
         vd->ParentWindow = new_parent;
