@@ -69,6 +69,9 @@ Other Changes:
 - Misc: Debuggers: added type formatters for the LLDB debuggers (e.g. Xcode,
   Android Studio & more) to provide nicer display for ImVec2, ImVec4, ImVector etc.
   See misc/debuggers/ for details. (#8950) [@mentlerd]
+- Textures: fixed a crash if a texture marked as _WantDestroy by a backend after
+  it had already been destroyed. This would typically happen when calling backend's
+  ImGui_ImplXXXX_InvalidateDeviceObjects() helpers twice in a row. (#8977, #8811)
 - Textures: fixed an issue preventing multi-contexts sharing a ImFontAtlas from
   being possible to destroy in any order.
 - Textures: fixed not updating ImTextureData's RefCount when destroying a context
