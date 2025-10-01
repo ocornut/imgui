@@ -91,6 +91,35 @@ class ImRectSummary(object):
 
 		return f"Min=({minX}, {minY}) Max=({maxX}, {maxY}) Size=({maxX - minX}, {maxY - minY})"
 
+class ImStrvSummary(object):
+	def __init__(self, valobj, internal_dict):
+		self.valobj = valobj
+
+	def update(self):
+		pass
+
+	def get_summary(self):
+		begin = self.valobj.GetChildMemberWithName("Begin").GetValueAsUnsigned()
+		end = self.valobj.GetChildMemberWithName("End").GetValueAsUnsigned()
+
+		if begin == 0:
+			return "<null>"
+
+		if end < begin:
+			return "<invalid>"
+
+		error = lldb.SBError()
+		data = self.valobj.GetProcess().ReadMemory(begin, end - begin, error)
+
+		if not error.Success():
+			return "<failed to read memory>"
+
+		# Turn the byte sequence into utf-8, escape non-printables
+		data = data.decode("utf-8", errors="backslashreplace")
+		data = repr(data)[1:-1]
+
+		return f'"{data}"'
+
 def get_active_enum_flags(valobj):
 	flag_set = set()
 
@@ -187,3 +216,4 @@ def __lldb_init_module(debugger, internal_dict):
 	add_summary("^ImVec4$", "x=${var.x} y=${var.y} z=${var.z} w=${var.w}")
 	add_summary("^ImRect$", ImRectSummary)
 	add_summary("^ImGuiWindow$", ImGuiWindowSummary)
+	add_summary("^ImStrv", ImStrvSummary)
