@@ -596,7 +596,7 @@ void    ImGui_ImplDX11_InvalidateDeviceObjects()
         if (tex->RefCount == 1)
             ImGui_ImplDX11_DestroyTexture(tex);
 
-    if (bd->pTexSamplerLinear)    { bd->pTexSamplerLinear->Release(); bd->pTexSamplerLinear = nullptr; }
+    if (bd->pTexSamplerLinear)      { bd->pTexSamplerLinear->Release(); bd->pTexSamplerLinear = nullptr; }
     if (bd->pIB)                    { bd->pIB->Release(); bd->pIB = nullptr; }
     if (bd->pVB)                    { bd->pVB->Release(); bd->pVB = nullptr; }
     if (bd->pBlendState)            { bd->pBlendState->Release(); bd->pBlendState = nullptr; }

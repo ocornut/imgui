@@ -71,6 +71,9 @@ Other Changes:
   See misc/debuggers/ for details. (#8950) [@mentlerd]
 - Textures: fixed an issue preventing multi-contexts sharing a ImFontAtlas from
   being possible to destroy in any order.
+- Textures: fixed not updating ImTextureData's RefCount when destroying a context
+  using a shared ImFontAtlas, leading standard backends to not properly free
+  texture resources. (#8975) [@icrashstuff]
 - CI: Updates Windows CI scripts to generate/use VulkanSDK. (#8925, #8778) [@yaz0r]
 - Backends: all backends call ImGuiPlatformIO::ClearPlatformHandlers() and
   ClearRendererHandlers() on shutdown, so as not to leave function pointers
