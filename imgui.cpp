@@ -4326,7 +4326,7 @@ void ImGui::Shutdown()
     for (ImFontAtlas* atlas : g.FontAtlases)
     {
         UnregisterFontAtlas(atlas);
-        if (atlas->OwnerContext == &g)
+        if (atlas->RefCount == 0)
         {
             atlas->Locked = false;
             IM_DELETE(atlas);
