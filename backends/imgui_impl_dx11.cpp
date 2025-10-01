@@ -349,18 +349,18 @@ void ImGui_ImplDX11_RenderDrawData(ImDrawData* draw_data)
 
 static void ImGui_ImplDX11_DestroyTexture(ImTextureData* tex)
 {
-    ImGui_ImplDX11_Texture* backend_tex = (ImGui_ImplDX11_Texture*)tex->BackendUserData;
-    if (backend_tex == nullptr)
-        return;
-    IM_ASSERT(backend_tex->pTextureView == (ID3D11ShaderResourceView*)(intptr_t)tex->TexID);
-    backend_tex->pTextureView->Release();
-    backend_tex->pTexture->Release();
-    IM_DELETE(backend_tex);
+    if (ImGui_ImplDX11_Texture* backend_tex = (ImGui_ImplDX11_Texture*)tex->BackendUserData)
+    {
+        IM_ASSERT(backend_tex->pTextureView == (ID3D11ShaderResourceView*)(intptr_t)tex->TexID);
+        backend_tex->pTextureView->Release();
+        backend_tex->pTexture->Release();
+        IM_DELETE(backend_tex);
 
-    // Clear identifiers and mark as destroyed (in order to allow e.g. calling InvalidateDeviceObjects while running)
-    tex->SetTexID(ImTextureID_Invalid);
+        // Clear identifiers and mark as destroyed (in order to allow e.g. calling InvalidateDeviceObjects while running)
+        tex->SetTexID(ImTextureID_Invalid);
+        tex->BackendUserData = nullptr;
+    }
     tex->SetStatus(ImTextureStatus_Destroyed);
-    tex->BackendUserData = nullptr;
 }
 
 void ImGui_ImplDX11_UpdateTexture(ImTextureData* tex)
@@ -604,7 +604,7 @@ void    ImGui_ImplDX11_InvalidateDeviceObjects()
         if (tex->RefCount == 1)
             ImGui_ImplDX11_DestroyTexture(tex);
 
-    if (bd->pTexSamplerLinear)    { bd->pTexSamplerLinear->Release(); bd->pTexSamplerLinear = nullptr; }
+    if (bd->pTexSamplerLinear)      { bd->pTexSamplerLinear->Release(); bd->pTexSamplerLinear = nullptr; }
     if (bd->pIB)                    { bd->pIB->Release(); bd->pIB = nullptr; }
     if (bd->pVB)                    { bd->pVB->Release(); bd->pVB = nullptr; }
     if (bd->pBlendState)            { bd->pBlendState->Release(); bd->pBlendState = nullptr; }

@@ -4426,7 +4426,7 @@ void ImGui::Shutdown()
     for (ImFontAtlas* atlas : g.FontAtlases)
     {
         UnregisterFontAtlas(atlas);
-        if (atlas->OwnerContext == &g)
+        if (atlas->RefCount == 0)
         {
             atlas->Locked = false;
             IM_DELETE(atlas);
@@ -9461,6 +9461,8 @@ void ImGui::RegisterFontAtlas(ImFontAtlas* atlas)
     atlas->RefCount++;
     g.FontAtlases.push_back(atlas);
     ImFontAtlasAddDrawListSharedData(atlas, &g.DrawListSharedData);
+    for (ImTextureData* tex : atlas->TexList)
+        tex->RefCount = (unsigned short)atlas->RefCount;
 }
 
 void ImGui::UnregisterFontAtlas(ImFontAtlas* atlas)
@@ -9470,6 +9472,8 @@ void ImGui::UnregisterFontAtlas(ImFontAtlas* atlas)
     ImFontAtlasRemoveDrawListSharedData(atlas, &g.DrawListSharedData);
     g.FontAtlases.find_erase(atlas);
     atlas->RefCount--;
+    for (ImTextureData* tex : atlas->TexList)
+        tex->RefCount = (unsigned short)atlas->RefCount;
 }
 
 // Use ImDrawList::_SetTexture(), making our shared g.FontStack[] authoritative against window-local ImDrawList.
