@@ -431,14 +431,14 @@ void ImGui_ImplDX9_UpdateTexture(ImTextureData* tex)
     }
     else if (tex->Status == ImTextureStatus_WantDestroy)
     {
-        LPDIRECT3DTEXTURE9 backend_tex = (LPDIRECT3DTEXTURE9)tex->TexID;
-        if (backend_tex == nullptr)
-            return;
-        IM_ASSERT(tex->TexID == (ImTextureID)(intptr_t)backend_tex);
-        backend_tex->Release();
+        if (LPDIRECT3DTEXTURE9 backend_tex = (LPDIRECT3DTEXTURE9)tex->TexID)
+        {
+            IM_ASSERT(tex->TexID == (ImTextureID)(intptr_t)backend_tex);
+            backend_tex->Release();
 
-        // Clear identifiers and mark as destroyed (in order to allow e.g. calling InvalidateDeviceObjects while running)
-        tex->SetTexID(ImTextureID_Invalid);
+            // Clear identifiers and mark as destroyed (in order to allow e.g. calling InvalidateDeviceObjects while running)
+            tex->SetTexID(ImTextureID_Invalid);
+        }
         tex->SetStatus(ImTextureStatus_Destroyed);
     }
 }

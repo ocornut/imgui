@@ -345,21 +345,21 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandL
 
 static void ImGui_ImplDX12_DestroyTexture(ImTextureData* tex)
 {
-    ImGui_ImplDX12_Texture* backend_tex = (ImGui_ImplDX12_Texture*)tex->BackendUserData;
-    if (backend_tex == nullptr)
-        return;
-    IM_ASSERT(backend_tex->hFontSrvGpuDescHandle.ptr == (UINT64)tex->TexID);
-    ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
-    bd->InitInfo.SrvDescriptorFreeFn(&bd->InitInfo, backend_tex->hFontSrvCpuDescHandle, backend_tex->hFontSrvGpuDescHandle);
-    SafeRelease(backend_tex->pTextureResource);
-    backend_tex->hFontSrvCpuDescHandle.ptr = 0;
-    backend_tex->hFontSrvGpuDescHandle.ptr = 0;
-    IM_DELETE(backend_tex);
+    if (ImGui_ImplDX12_Texture* backend_tex = (ImGui_ImplDX12_Texture*)tex->BackendUserData)
+    {
+        IM_ASSERT(backend_tex->hFontSrvGpuDescHandle.ptr == (UINT64)tex->TexID);
+        ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
+        bd->InitInfo.SrvDescriptorFreeFn(&bd->InitInfo, backend_tex->hFontSrvCpuDescHandle, backend_tex->hFontSrvGpuDescHandle);
+        SafeRelease(backend_tex->pTextureResource);
+        backend_tex->hFontSrvCpuDescHandle.ptr = 0;
+        backend_tex->hFontSrvGpuDescHandle.ptr = 0;
+        IM_DELETE(backend_tex);
 
-    // Clear identifiers and mark as destroyed (in order to allow e.g. calling InvalidateDeviceObjects while running)
-    tex->SetTexID(ImTextureID_Invalid);
+        // Clear identifiers and mark as destroyed (in order to allow e.g. calling InvalidateDeviceObjects while running)
+        tex->SetTexID(ImTextureID_Invalid);
+        tex->BackendUserData = nullptr;
+    }
     tex->SetStatus(ImTextureStatus_Destroyed);
-    tex->BackendUserData = nullptr;
 }
 
 void ImGui_ImplDX12_UpdateTexture(ImTextureData* tex)

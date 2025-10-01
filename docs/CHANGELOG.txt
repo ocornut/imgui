@@ -99,6 +99,9 @@ Other Changes:
   XInput's dwPacketNumber has not changed. (#8556) [@MidTerm-CN]
 - Backends: Vulkan: added a way to specify custom shaders by filling init fields
   CustomShaderVertCreateInfo and CustomShaderFragCreateInfo. (#8585, #8271) [@johan0A]
+- Backends: DX9,DX10,DX11,DX12,Metal,Vulkan,WGPU,SDLRenderer2,SDLRenderer3:
+  ensure that a texture in _WantDestroy state always turn to _Destroyed even
+  if your underlying graphics data was already destroyed.
 - Examples: SDL2+DirectX11: Try WARP software driver if hardware driver is
   not available. (#5924, #5562)
 - Examples: SDL3+DirectX11: Added SDL3+DirectX11 example. (#8956, #8957) [@tomaz82]

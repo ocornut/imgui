@@ -283,10 +283,8 @@ void ImGui_ImplSDLRenderer3_UpdateTexture(ImTextureData* tex)
     }
     else if (tex->Status == ImTextureStatus_WantDestroy)
     {
-        SDL_Texture* sdl_texture = (SDL_Texture*)(intptr_t)tex->TexID;
-        if (sdl_texture == nullptr)
-            return;
-        SDL_DestroyTexture(sdl_texture);
+        if (SDL_Texture* sdl_texture = (SDL_Texture*)(intptr_t)tex->TexID)
+            SDL_DestroyTexture(sdl_texture);
 
         // Clear identifiers and mark as destroyed (in order to allow e.g. calling InvalidateDeviceObjects while running)
         tex->SetTexID(ImTextureID_Invalid);

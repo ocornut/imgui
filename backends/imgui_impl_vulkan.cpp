@@ -663,22 +663,22 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
 
 static void ImGui_ImplVulkan_DestroyTexture(ImTextureData* tex)
 {
-    ImGui_ImplVulkan_Texture* backend_tex = (ImGui_ImplVulkan_Texture*)tex->BackendUserData;
-    if (backend_tex == nullptr)
-        return;
-    IM_ASSERT(backend_tex->DescriptorSet == (VkDescriptorSet)tex->TexID);
-    ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
-    ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
-    ImGui_ImplVulkan_RemoveTexture(backend_tex->DescriptorSet);
-    vkDestroyImageView(v->Device, backend_tex->ImageView, v->Allocator);
-    vkDestroyImage(v->Device, backend_tex->Image, v->Allocator);
-    vkFreeMemory(v->Device, backend_tex->Memory, v->Allocator);
-    IM_DELETE(backend_tex);
+    if (ImGui_ImplVulkan_Texture* backend_tex = (ImGui_ImplVulkan_Texture*)tex->BackendUserData)
+    {
+        IM_ASSERT(backend_tex->DescriptorSet == (VkDescriptorSet)tex->TexID);
+        ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
+        ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
+        ImGui_ImplVulkan_RemoveTexture(backend_tex->DescriptorSet);
+        vkDestroyImageView(v->Device, backend_tex->ImageView, v->Allocator);
+        vkDestroyImage(v->Device, backend_tex->Image, v->Allocator);
+        vkFreeMemory(v->Device, backend_tex->Memory, v->Allocator);
+        IM_DELETE(backend_tex);
 
-    // Clear identifiers and mark as destroyed (in order to allow e.g. calling InvalidateDeviceObjects while running)
-    tex->SetTexID(ImTextureID_Invalid);
+        // Clear identifiers and mark as destroyed (in order to allow e.g. calling InvalidateDeviceObjects while running)
+        tex->SetTexID(ImTextureID_Invalid);
+        tex->BackendUserData = nullptr;
+    }
     tex->SetStatus(ImTextureStatus_Destroyed);
-    tex->BackendUserData = nullptr;
 }
 
 void ImGui_ImplVulkan_UpdateTexture(ImTextureData* tex)

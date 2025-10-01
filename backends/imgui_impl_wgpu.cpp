@@ -533,19 +533,18 @@ void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder 
 
 static void ImGui_ImplWGPU_DestroyTexture(ImTextureData* tex)
 {
-    ImGui_ImplWGPU_Texture* backend_tex = (ImGui_ImplWGPU_Texture*)tex->BackendUserData;
-    if (backend_tex == nullptr)
-        return;
+    if (ImGui_ImplWGPU_Texture* backend_tex = (ImGui_ImplWGPU_Texture*)tex->BackendUserData)
+    {
+        IM_ASSERT(backend_tex->TextureView == (WGPUTextureView)(intptr_t)tex->TexID);
+        wgpuTextureViewRelease(backend_tex->TextureView);
+        wgpuTextureRelease(backend_tex->Texture);
+        IM_DELETE(backend_tex);
 
-    IM_ASSERT(backend_tex->TextureView == (WGPUTextureView)(intptr_t)tex->TexID);
-    wgpuTextureViewRelease(backend_tex->TextureView);
-    wgpuTextureRelease(backend_tex->Texture);
-    IM_DELETE(backend_tex);
-
-    // Clear identifiers and mark as destroyed (in order to allow e.g. calling InvalidateDeviceObjects while running)
-    tex->SetTexID(ImTextureID_Invalid);
+        // Clear identifiers and mark as destroyed (in order to allow e.g. calling InvalidateDeviceObjects while running)
+        tex->SetTexID(ImTextureID_Invalid);
+        tex->BackendUserData = nullptr;
+    }
     tex->SetStatus(ImTextureStatus_Destroyed);
-    tex->BackendUserData = nullptr;
 }
 
 void ImGui_ImplWGPU_UpdateTexture(ImTextureData* tex)

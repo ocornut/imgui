@@ -325,18 +325,18 @@ void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
 
 static void ImGui_ImplDX10_DestroyTexture(ImTextureData* tex)
 {
-    ImGui_ImplDX10_Texture* backend_tex = (ImGui_ImplDX10_Texture*)tex->BackendUserData;
-    if (backend_tex == nullptr)
-        return;
-    IM_ASSERT(backend_tex->pTextureView == (ID3D10ShaderResourceView*)(intptr_t)tex->TexID);
-    backend_tex->pTexture->Release();
-    backend_tex->pTextureView->Release();
-    IM_DELETE(backend_tex);
+    if (ImGui_ImplDX10_Texture* backend_tex = (ImGui_ImplDX10_Texture*)tex->BackendUserData)
+    {
+        IM_ASSERT(backend_tex->pTextureView == (ID3D10ShaderResourceView*)(intptr_t)tex->TexID);
+        backend_tex->pTextureView->Release();
+        backend_tex->pTexture->Release();
+        IM_DELETE(backend_tex);
 
-    // Clear identifiers and mark as destroyed (in order to allow e.g. calling InvalidateDeviceObjects while running)
-    tex->SetTexID(ImTextureID_Invalid);
+        // Clear identifiers and mark as destroyed (in order to allow e.g. calling InvalidateDeviceObjects while running)
+        tex->SetTexID(ImTextureID_Invalid);
+        tex->BackendUserData = nullptr;
+    }
     tex->SetStatus(ImTextureStatus_Destroyed);
-    tex->BackendUserData = nullptr;
 }
 
 void ImGui_ImplDX10_UpdateTexture(ImTextureData* tex)
