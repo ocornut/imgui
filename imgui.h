@@ -1789,7 +1789,7 @@ enum ImGuiBackendFlags_
     ImGuiBackendFlags_RendererHasViewports  = 1 << 10,  // Backend Renderer supports multiple viewports.
     ImGuiBackendFlags_PlatformHasViewports  = 1 << 11,  // Backend Platform supports multiple viewports.
     ImGuiBackendFlags_HasMouseHoveredViewport=1 << 12,  // Backend Platform supports calling io.AddMouseViewportEvent() with the viewport under the mouse. IF POSSIBLE, ignore viewports with the ImGuiViewportFlags_NoInputs flag (Win32 backend, GLFW 3.30+ backend can do this, SDL backend cannot). If this cannot be done, Dear ImGui needs to use a flawed heuristic to find the viewport under.
-    ImGuiBackendFlags_HasParentViewportId   = 1 << 13,  // Backend Platform supports honoring viewport->ParentViewportId value, by applying the corresponding parent/child relation at the Platform level.
+    ImGuiBackendFlags_HasParentViewport     = 1 << 13,  // Backend Platform supports honoring viewport->ParentViewport/ParentViewportId value, by applying the corresponding parent/child relation at the Platform level.
 };
 
 // Enumeration for PushStyleColor() / PopStyleColor()
@@ -4046,7 +4046,7 @@ struct ImGuiViewport
     ImVec2              WorkSize;               // Work Area: Size of the viewport minus task bars, menu bars, status bars (<= Size)
     float               DpiScale;               // 1.0f = 96 DPI = No extra scale.
     ImGuiID             ParentViewportId;       // (Advanced) 0: no parent. Instruct the platform backend to setup a parent/child relationship between platform windows.
-    ImGuiViewport*      ParentViewport;         // (Advanced) == ImGui::FindViewportByID(ParentViewportId)
+    ImGuiViewport*      ParentViewport;         // (Advanced) Direct shortcut to ImGui::FindViewportByID(ParentViewportId). NULL: no parent.
     ImDrawData*         DrawData;               // The ImDrawData corresponding to this viewport. Valid after Render() and until the next call to NewFrame().
 
     // Platform/Backend Dependent Data

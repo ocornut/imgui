@@ -534,7 +534,7 @@ static bool ImGui_ImplSDL3_Init(SDL_Window* window, SDL_Renderer* renderer, void
     io.BackendPlatformName = bd->BackendPlatformName;
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;           // We can honor GetMouseCursor() values (optional)
     io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;            // We can honor io.WantSetMousePos requests (optional, rarely used)
-    // (ImGuiBackendFlags_PlatformHasViewports and ImGuiBackendFlags_HasParentViewportId may be set just below)
+    // (ImGuiBackendFlags_PlatformHasViewports and ImGuiBackendFlags_HasParentViewport may be set just below)
     // (ImGuiBackendFlags_HasMouseHoveredViewport is set dynamically in our _NewFrame function)
 
     bd->Window = window;
@@ -563,7 +563,7 @@ static bool ImGui_ImplSDL3_Init(SDL_Window* window, SDL_Renderer* renderer, void
     if (bd->MouseCanUseGlobalState)
     {
         io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;  // We can create multi-viewports on the Platform side (optional)
-        io.BackendFlags |= ImGuiBackendFlags_HasParentViewportId;   // We can honor viewport->ParentViewportId by applying the corresponding parent/child relationship at platform levle (optional)
+        io.BackendFlags |= ImGuiBackendFlags_HasParentViewport;     // We can honor viewport->ParentViewportId by applying the corresponding parent/child relationship at platform level (optional)
     }
 
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
@@ -679,7 +679,7 @@ void ImGui_ImplSDL3_Shutdown()
 
     io.BackendPlatformName = nullptr;
     io.BackendPlatformUserData = nullptr;
-    io.BackendFlags &= ~(ImGuiBackendFlags_HasMouseCursors | ImGuiBackendFlags_HasSetMousePos | ImGuiBackendFlags_HasGamepad | ImGuiBackendFlags_PlatformHasViewports | ImGuiBackendFlags_HasMouseHoveredViewport | ImGuiBackendFlags_HasParentViewportId);
+    io.BackendFlags &= ~(ImGuiBackendFlags_HasMouseCursors | ImGuiBackendFlags_HasSetMousePos | ImGuiBackendFlags_HasGamepad | ImGuiBackendFlags_PlatformHasViewports | ImGuiBackendFlags_HasMouseHoveredViewport | ImGuiBackendFlags_HasParentViewport);
     platform_io.ClearPlatformHandlers();
     IM_DELETE(bd);
 }

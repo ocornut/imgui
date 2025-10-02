@@ -16343,9 +16343,9 @@ static bool ImGui::GetWindowAlwaysWantOwnViewport(ImGuiWindow* window)
 // Heuristic, see #8948: depends on how backends handle OS-level parenting.
 static bool IsViewportAbove(ImGuiViewportP* potential_above, ImGuiViewportP* potential_below)
 {
-    // If ImGuiBackendFlags_HasParentViewportId if set, ->ParentViewport chain should be accurate.
+    // If ImGuiBackendFlags_HasParentViewport if set, ->ParentViewport chain should be accurate.
     ImGuiContext& g = *GImGui;
-    if (g.IO.BackendFlags & ImGuiBackendFlags_HasParentViewportId)
+    if (g.IO.BackendFlags & ImGuiBackendFlags_HasParentViewport)
     {
         for (ImGuiViewport* v = potential_above; v != NULL && v->ParentViewport; v = v->ParentViewport)
             if (v->ParentViewport == potential_below)
