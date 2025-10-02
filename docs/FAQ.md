@@ -80,8 +80,8 @@ or view this file with any Markdown viewer.
 
 Here's a very simplified comparaison between the approach taked by Dear ImGui vs traditional toolkits:
 
-| Dear ImGui | Qt/Gtk/WPF.. |
-|----------------------------|--------------------------|
+| Dear ImGui | Qt/Gtk/WPF... |
+|--------------------------|--------------------------|
 | UI fully issued on every update. | UI issued once then later modified. |
 | UI layout is fully dynamic and can change at any time.<BR>UI is generally emitted programmatically, which empower changes and reflecting a dynamic set of data. | UI layout is mostly static.<BR>UI may be emitted programmatically or from data created by offline tools. UI need extra code to evolve, which is often tedious and error-prone if it needs to be reflect dynamic data and systems. |
 | Application can submit UI based on arbitrary logic and then forget about it. | Application needs more bookkeeping of UI elements. |
@@ -92,7 +92,7 @@ Here's a very simplified comparaison between the approach taked by Dear ImGui vs
 | API is simple and easy to learn. In particular, doing simple things is very easy. | API is more complex and specialized. |
 | API is generally low-level (raw language types). | API are higher-level (more abstractions, advanced language features). |
 | Less fancy look and feel. | Standard look and feel. |
-| Compile yourself. Easy to debug, hack, modify. | Mostly use precompiled librairies. Compiling and modifying is daunting if not impossible. |
+| Compile yourself. Easy to debug, hack, modify, study. | Mostly use precompiled librairies. Compiling, modifying or studying is daunting if not impossible. |
 | Run on every platforms. | Run on limited desktop platforms. |
 
 Idiomatic Dear ImGui code:
@@ -113,7 +113,7 @@ slider->SetRange(0.0f, 1.0f);
 slider->BindData<float>(&m_MyValue);
 parent->Add(slider);
 ```
-This is only meant to give you a intuitive feeling of the main differences, but everything goes deeper than that.
+This is only meant to give you a intuitive feeling of the main differences, but pros & cons goes deeper than that.
 
 Some of those properties are typically associated to the umbrella term "IMGUI", but the term has no simple and well-agreed definition. There are many erroneous statements and misunderstanding with what IMGUI means. It is partly caused by the fact that most popular IMGUI implementations (including Dear ImGui) have originated from game industry needs and have targetted very specific use cases, causing people to conflate IMGUI properties with what a specific library does. However, it is perfectly possible to implement an IMGUI library that would have very different properties than e.g. Dear ImGui. My take on defining what an IMGUI is:
 
