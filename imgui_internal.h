@@ -2755,6 +2755,9 @@ struct ImGuiContext
     ImGuiContext(ImFontAtlas* shared_font_atlas);
 };
 
+struct ImGuiLayout;
+struct ImGuiLayoutItem;
+
 //-----------------------------------------------------------------------------
 // [SECTION] ImGuiWindowTempData, ImGuiWindow
 //-----------------------------------------------------------------------------
@@ -2764,6 +2767,12 @@ struct ImGuiContext
 // (This doesn't need a constructor because we zero-clear it as part of ImGuiWindow and all frame-temporary data are setup on Begin)
 struct IMGUI_API ImGuiWindowTempData
 {
+    // Changes for node graph:
+    ImGuiStorage            Layouts;
+    ImVector<ImGuiLayout*>  LayoutStack;
+    ImGuiLayout*            CurrentLayout;
+    ImGuiLayoutItem*        CurrentLayoutItem;
+
     // Layout
     ImVec2                  CursorPos;              // Current emitting position, in absolute coordinates.
     ImVec2                  CursorPosPrevLine;

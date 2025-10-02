@@ -2324,6 +2324,9 @@ IM_MSVC_RUNTIME_CHECKS_RESTORE
 
 struct ImGuiStyle
 {
+    // Additions for node graph
+    float       LayoutAlign;
+
     // Font scaling
     // - recap: ImGui::GetFontSize() == FontSizeBase * (FontScaleMain * FontScaleDpi * other_scaling_factors)
     float       FontSizeBase;               // Current base font size before external global factors are applied. Use PushFont(NULL, size) to modify. Use ImGui::GetFontSize() to obtain scaled value.
