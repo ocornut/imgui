@@ -1055,6 +1055,7 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
       associated with it.
 
  Q: What is this library called?
+ Q: What is the difference between Dear ImGui and traditional UI toolkits?
  Q: Which version should I get?
  >> This library is called "Dear ImGui", please don't call it "ImGui" :)
  >> See https://www.dearimgui.com/faq for details.

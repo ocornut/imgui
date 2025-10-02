@@ -85,6 +85,8 @@ Other Changes:
 - Backends: all backends call ImGuiPlatformIO::ClearPlatformHandlers() and
   ClearRendererHandlers() on shutdown, so as not to leave function pointers
   which may be dangling when using backend in e.g. DLL. (#8945, #2769)
+- Docs: updated FAQ with new "What is the difference between Dear ImGui and
+  traditional UI toolkits?" entry. (#8862)
 - Backends: DirectX12: reuse a command list and allocator for texture uploads instead
   of recreating them each time. (#8963, #8465) [@RT2Code]
 - Backends: DirectX12: Rework synchronization logic. (#8961) [@RT2Code]
