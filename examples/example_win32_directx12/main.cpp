@@ -94,6 +94,8 @@ static UINT64                       g_fenceLastSignaledValue = 0;
 static IDXGISwapChain3*             g_pSwapChain = nullptr;
 static bool                         g_SwapChainTearingSupport = false;
 static bool                         g_SwapChainOccluded = false;
+static bool                         g_SwapChainFullscreenState = false;
+static RECT                         g_WindowRect = {};
 static HANDLE                       g_hSwapChainWaitableObject = nullptr;
 static ID3D12Resource*              g_mainRenderTargetResource[APP_NUM_BACK_BUFFERS] = {};
 static D3D12_CPU_DESCRIPTOR_HANDLE  g_mainRenderTargetDescriptor[APP_NUM_BACK_BUFFERS] = {};
@@ -523,6 +525,46 @@ FrameContext* WaitForNextFrameContext()
     return frame_context;
 }
 
+void ToggleFullscreen(HWND hWnd)
+{
+    if (g_SwapChainTearingSupport)
+    {
+        if (g_SwapChainFullscreenState)
+        {
+            // Restore the window's attributes and size.
+            RECT rect = g_WindowRect;
+            ::SetWindowLong(hWnd, GWL_STYLE, WS_OVERLAPPEDWINDOW);
+            ::SetWindowPos(hWnd, HWND_NOTOPMOST, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, SWP_FRAMECHANGED | SWP_NOACTIVATE);
+            ::ShowWindow(hWnd, SW_NORMAL);
+        }
+        else
+        {
+            // Save the old window rect so we can restore it when exiting fullscreen mode.
+            // Make the window borderless so that the client area can fill the screen.
+            ::GetWindowRect(hWnd, &g_WindowRect);
+            ::SetWindowLong(hWnd, GWL_STYLE, WS_OVERLAPPEDWINDOW & ~(WS_CAPTION | WS_MAXIMIZEBOX | WS_MINIMIZEBOX | WS_SYSMENU | WS_THICKFRAME));
+
+            // Get the settings of the display on which the app's window is currently displayed
+            IDXGIOutput* output = nullptr;
+            DXGI_OUTPUT_DESC output_desc;
+            if (FAILED(g_pSwapChain->GetContainingOutput(&output)) || FAILED(output->GetDesc(&output_desc)))
+                return;
+            RECT rect = output_desc.DesktopCoordinates;
+            output->Release();
+
+            // Set new rectangle
+            ::SetWindowPos(hWnd, HWND_TOPMOST, rect.left, rect.top, rect.right, rect.bottom, SWP_FRAMECHANGED | SWP_NOACTIVATE);
+            ::ShowWindow(hWnd, SW_MAXIMIZE);
+        }
+    }
+    else
+    {
+        if (FAILED(g_pSwapChain->SetFullscreenState(!g_SwapChainFullscreenState, nullptr)))
+            return;
+    }
+    g_SwapChainFullscreenState = !g_SwapChainFullscreenState;
+}
+
 // Forward declare message handler from imgui_impl_win32.cpp
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -549,6 +591,13 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             CreateRenderTarget();
         }
         return 0;
+    case WM_SYSKEYDOWN:
+        if (wParam == VK_RETURN && (GetKeyState(VK_MENU) & 0x8000)) // ALT + Enter
+        {
+            ToggleFullscreen(hWnd);
+            return 0;
+        }
+        break;
     case WM_SYSCOMMAND:
         if ((wParam & 0xfff0) == SC_KEYMENU) // Disable ALT application menu
             return 0;
