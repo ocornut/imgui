@@ -13,6 +13,7 @@ or view this file with any Markdown viewer.
 :---------------------------------------------------------- |
 | [Where is the documentation?](#q-where-is-the-documentation) |
 | [What is this library called?](#q-what-is-this-library-called) |
+| [What is the difference between Dear ImGui and traditional UI toolkits?](#q-what-is-the-difference-between-dear-imgui-and-traditional-ui-toolkits) |
 | [Which version should I get?](#q-which-version-should-i-get) |
 | **Q&A: Integration** |
 | **[How to get started?](#q-how-to-get-started)** |
@@ -70,6 +71,60 @@ or view this file with any Markdown viewer.
 **This library is called Dear ImGui**. Please refer to it as Dear ImGui (not ImGui, not IMGUI).
 
 (The library misleadingly started its life in 2014 as "ImGui" due to the fact that I didn't give it a proper name when I released 1.0, and had no particular expectation that it would take off. However, the term IMGUI (immediate-mode graphical user interface) was coined before and is being used in variety of other situations e.g. Unity uses it own implementation of the IMGUI paradigm. To reduce the ambiguity without affecting existing code bases, I have decided in December 2015 a fully qualified name "Dear ImGui" for this library.
+
+##### [Return to Index](#index)
+
+---
+
+### Q: What is the difference between Dear ImGui and traditional UI toolkits?
+
+Here's a very simplified comparison between the approach taken by Dear ImGui vs traditional toolkits:
+
+| Dear ImGui | Qt/GTK/WPF... |
+|--------------------------|--------------------------|
+| UI fully issued on every update. | UI issued once then later modified. |
+| UI layout is fully dynamic and can change at any time.<BR>UI is generally emitted programmatically, which empowers reflecting a dynamic set of data. | UI layout is mostly static.<BR>UI may be emitted programmatically or from data created by offline tools. UI need extra code to evolve, which is often tedious and error-prone if it needs to be reflecting dynamic data and systems. |
+| Application can submit UI based on arbitrary logic and then forget about it. | Application needs more bookkeeping of UI elements. |
+| UI library stores minimal amounts of data. At one point in time, it typically doesn't know or remember which other widgets are displayed and which widgets are coming next. As a result, certain layout features (alignment, resizing) are not as easy to implement or require ad-hoc code. | UI library stores entire widgets tree and state. UI library can use this retained data to easily layout things. |
+| UI code may be added anywhere.<BR>You can even create UI to edit a local variable! | UI code needs to be added in dedicated spots. |
+| UI layout/logic/action/data bindings are all nearby in the code. | UI layout/logic/action/data bindings in distinct functions, files or formats. |
+| Data is naturally always synchronized. | Use callback/signal/slot for synchronizing data (error-prone). |
+| API is simple and easy to learn. In particular, doing basic things is very easy. | API is more complex and specialized. |
+| API is low-level (raw language types). | API are higher-level (more abstractions, advanced language features). |
+| Less fancy look and feel. | Standard look and feel. |
+| Compile yourself. Easy to debug, hack, modify, study. | Mostly use precompiled libraries. Compiling, modifying or studying is daunting if not impossible. |
+| Run on every platform. | Run on limited desktop platforms. |
+
+Idiomatic Dear ImGui code:
+```cpp
+if (ImGui::Button("Save"))
+    MySaveFunction();
+
+ImGui::SliderFloat("Slider", &m_MyValue, 0.0f, 1.0f);
+```
+Idiomatic code with traditional toolkit:
+```cpp
+UiButton* button = new UiButton("Save");
+button->OnClick = &MySaveFunction;
+parent->Add(button);
+
+UiSlider* slider = new UiSlider("Slider");
+slider->SetRange(0.0f, 1.0f);
+slider->BindData<float>(&m_MyValue);
+parent->Add(slider);
+```
+This is only meant to give you a intuitive feeling of the main differences, but pros & cons go deeper than that.
+
+Some of those properties are typically associated to the umbrella term "IMGUI", but the term has no simple and well-agreed definition. There are many erroneous statements and misunderstandings with what IMGUI means. It is partly caused by the fact that most popular IMGUI implementations (including Dear ImGui) have originated from game industry needs and have targeted specific use cases, causing people to conflate IMGUI properties with what a specific library does. However, it is perfectly possible to implement an IMGUI library that would have very different properties than e.g. Dear ImGui. My take on defining what an IMGUI is:
+
+**IMGUI refers to the API: literally the interface between the application and the UI system.**
+- An IMGUI API favors the application code owning its data and being the single source of truth for it.
+- An IMGUI API tries to minimize the application having to retain/manage data related to the UI system.
+- An IMGUI API tries to minimize the UI system having to retain/manage data related to the application.
+- Synchronization between application data and UI data is natural and less error-prone.
+
+**IMGUI does NOT refer to the implementation. Whatever happens inside the UI library code doesn't matter.**
+<BR>Also see: [Links to many articles about the IMGUI paradigm](https://github.com/ocornut/imgui/wiki/#about-the-imgui-paradigm).
 
 ##### [Return to Index](#index)
 

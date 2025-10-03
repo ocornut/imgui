@@ -1070,6 +1070,7 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
       associated with it.
 
  Q: What is this library called?
+ Q: What is the difference between Dear ImGui and traditional UI toolkits?
  Q: Which version should I get?
  >> This library is called "Dear ImGui", please don't call it "ImGui" :)
  >> See https://www.dearimgui.com/faq for details.
@@ -4244,6 +4245,7 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     DragDropSourceFrameCount = -1;
     DragDropMouseButton = -1;
     DragDropTargetId = 0;
+    DragDropTargetFullViewport = 0;
     DragDropAcceptFlags = ImGuiDragDropFlags_None;
     DragDropAcceptIdCurrRectSurface = 0.0f;
     DragDropAcceptIdPrev = DragDropAcceptIdCurr = 0;
@@ -15444,6 +15446,31 @@ bool ImGui::BeginDragDropTargetCustom(const ImRect& bb, ImGuiID id)
     g.DragDropTargetRect = bb;
     g.DragDropTargetClipRect = window->ClipRect; // May want to be overridden by user depending on use case?
     g.DragDropTargetId = id;
+    g.DragDropTargetFullViewport = 0;
+    g.DragDropWithinTarget = true;
+    return true;
+}
+
+// Typical usage would be:
+//   if (!ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
+//       if (ImGui::BeginDragDropTargetViewport(ImGui::GetMainViewport(), NULL))
+// But we are leaving the hover test to the caller for maximum flexibility.
+bool ImGui::BeginDragDropTargetViewport(ImGuiViewport* viewport, const ImRect* p_bb)
+{
+    ImGuiContext& g = *GImGui;
+    if (!g.DragDropActive)
+        return false;
+
+    ImRect bb = p_bb ? *p_bb : ((ImGuiViewportP*)viewport)->GetWorkRect();
+    ImGuiID id = viewport->ID;
+    if (!IsMouseHoveringRect(bb.Min, bb.Max, false) || (id == g.DragDropPayload.SourceId))
+        return false;
+
+    IM_ASSERT(g.DragDropWithinTarget == false && g.DragDropWithinSource == false); // Can't nest BeginDragDropSource() and BeginDragDropTarget()
+    g.DragDropTargetRect = bb;
+    g.DragDropTargetClipRect = bb;
+    g.DragDropTargetId = id;
+    g.DragDropTargetFullViewport = id;
     g.DragDropWithinTarget = true;
     return true;
 }
@@ -15514,8 +15541,17 @@ const ImGuiPayload* ImGui::AcceptDragDropPayload(const char* type, ImGuiDragDrop
     // Render default drop visuals
     payload.Preview = was_accepted_previously;
     flags |= (g.DragDropSourceFlags & ImGuiDragDropFlags_AcceptNoDrawDefaultRect); // Source can also inhibit the preview (useful for external sources that live for 1 frame)
-    if (!(flags & ImGuiDragDropFlags_AcceptNoDrawDefaultRect) && payload.Preview)
-        RenderDragDropTargetRect(r, g.DragDropTargetClipRect);
+    const bool draw_target_rect = payload.Preview && !(flags & ImGuiDragDropFlags_AcceptNoDrawDefaultRect);
+    if (draw_target_rect && g.DragDropTargetFullViewport != 0)
+    {
+        ImRect bb = g.DragDropTargetRect;
+        bb.Expand(-3.5f);
+        RenderDragDropTargetRectEx(GetForegroundDrawList(), bb);
+    }
+    else if (draw_target_rect)
+    {
+        RenderDragDropTargetRectForItem(r);
+    }
 
     g.DragDropAcceptFrameCount = g.FrameCount;
     if ((g.DragDropSourceFlags & ImGuiDragDropFlags_SourceExtern) && g.DragDropMouseButton == -1)
@@ -15531,19 +15567,24 @@ const ImGuiPayload* ImGui::AcceptDragDropPayload(const char* type, ImGuiDragDrop
 }
 
 // FIXME-STYLE FIXME-DRAGDROP: Settle on a proper default visuals for drop target.
-void ImGui::RenderDragDropTargetRect(const ImRect& bb, const ImRect& item_clip_rect)
+void ImGui::RenderDragDropTargetRectForItem(const ImRect& bb)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
     ImRect bb_display = bb;
-    bb_display.ClipWith(item_clip_rect); // Clip THEN expand so we have a way to visualize that target is not entirely visible.
+    bb_display.ClipWith(g.DragDropTargetClipRect); // Clip THEN expand so we have a way to visualize that target is not entirely visible.
     bb_display.Expand(3.5f);
     bool push_clip_rect = !window->ClipRect.Contains(bb_display);
     if (push_clip_rect)
         window->DrawList->PushClipRectFullScreen();
-    window->DrawList->AddRect(bb_display.Min, bb_display.Max, GetColorU32(ImGuiCol_DragDropTarget), 0.0f, 0, 2.0f); // FIXME-DPI
+    RenderDragDropTargetRectEx(window->DrawList, bb_display);
     if (push_clip_rect)
         window->DrawList->PopClipRect();
+}
+
+void ImGui::RenderDragDropTargetRectEx(ImDrawList* draw_list, const ImRect& bb)
+{
+    draw_list->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_DragDropTarget), 0.0f, 0, 2.0f); // FIXME-DPI
 }
 
 const ImGuiPayload* ImGui::GetDragDropPayload()
