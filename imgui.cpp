@@ -15463,7 +15463,7 @@ bool ImGui::BeginDragDropTargetViewport(ImGuiViewport* viewport, const ImRect* p
 
     ImRect bb = p_bb ? *p_bb : ((ImGuiViewportP*)viewport)->GetWorkRect();
     ImGuiID id = viewport->ID;
-    if (!IsMouseHoveringRect(bb.Min, bb.Max, false) || (id == g.DragDropPayload.SourceId))
+    if (g.MouseViewport != viewport || !IsMouseHoveringRect(bb.Min, bb.Max, false) || (id == g.DragDropPayload.SourceId))
         return false;
 
     IM_ASSERT(g.DragDropWithinTarget == false && g.DragDropWithinSource == false); // Can't nest BeginDragDropSource() and BeginDragDropTarget()
@@ -15544,9 +15544,11 @@ const ImGuiPayload* ImGui::AcceptDragDropPayload(const char* type, ImGuiDragDrop
     const bool draw_target_rect = payload.Preview && !(flags & ImGuiDragDropFlags_AcceptNoDrawDefaultRect);
     if (draw_target_rect && g.DragDropTargetFullViewport != 0)
     {
+        ImGuiViewport* viewport = FindViewportByID(g.DragDropTargetFullViewport);
+        IM_ASSERT(viewport != NULL);
         ImRect bb = g.DragDropTargetRect;
         bb.Expand(-3.5f);
-        RenderDragDropTargetRectEx(GetForegroundDrawList(), bb);
+        RenderDragDropTargetRectEx(GetForegroundDrawList(viewport), bb);
     }
     else if (draw_target_rect)
     {
