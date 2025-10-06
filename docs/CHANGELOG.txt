@@ -64,6 +64,8 @@ Other Changes:
   The grip is not visible before hovering to reduce clutter.
 - InputText: fixed single-line InputText() not applying fine character clipping
   properly (regression in 1.92.3). (#8967) [@Cyphall]
+- Style: added ImGuiCol_UnsavedMarker, color of the unsaved document marker when
+  using ImGuiWindowFlags_UnsavedDocument/ImGuiTabItemFlags_UnsavedDocument. (#8983)
 - IO: added ImGuiPlatformIO::ClearPlatformHandlers(), ClearRendererHandlers()
   helpers to null all handlers. (#8945, #2769)
 - Misc: Debuggers: added type formatters for the LLDB debuggers (e.g. Xcode,
