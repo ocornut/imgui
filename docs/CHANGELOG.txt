@@ -68,9 +68,6 @@ Other Changes:
   using ImGuiWindowFlags_UnsavedDocument/ImGuiTabItemFlags_UnsavedDocument. (#8983)
 - IO: added ImGuiPlatformIO::ClearPlatformHandlers(), ClearRendererHandlers()
   helpers to null all handlers. (#8945, #2769)
-- Misc: Debuggers: added type formatters for the LLDB debuggers (e.g. Xcode,
-  Android Studio & more) to provide nicer display for ImVec2, ImVec4, ImVector etc.
-  See misc/debuggers/ for details. (#8950) [@mentlerd]
 - Textures: fixed a crash if texture status is set to _WantDestroy by a backend after
   it had already been destroyed. This would typically happen when calling backend's
   ImGui_ImplXXXX_InvalidateDeviceObjects() helpers twice in a row. (#8977, #8811)
@@ -83,12 +80,16 @@ Other Changes:
 - Textures: fixed not updating ImTextureData's RefCount when destroying a context
   using a shared ImFontAtlas, leading standard backends to not properly free
   texture resources. (#8975) [@icrashstuff]
-- CI: Updates Windows CI scripts to generate/use VulkanSDK. (#8925, #8778) [@yaz0r]
+- Demo: fixed layout issue in "Layout & Scrolling -> Scrolling" section.
+- Misc: Debuggers: added type formatters for the LLDB debuggers (e.g. Xcode,
+  Android Studio & more) to provide nicer display for ImVec2, ImVec4, ImVector etc.
+  See misc/debuggers/ for details. (#8950) [@mentlerd]
+- CI: updated Windows CI scripts to generate/use VulkanSDK. (#8925, #8778) [@yaz0r]
+- Docs: updated FAQ with new "What is the difference between Dear ImGui and
+  traditional UI toolkits?" entry. (#8862)
 - Backends: all backends call ImGuiPlatformIO::ClearPlatformHandlers() and
   ClearRendererHandlers() on shutdown, so as not to leave function pointers
   which may be dangling when using backend in e.g. DLL. (#8945, #2769)
-- Docs: updated FAQ with new "What is the difference between Dear ImGui and
-  traditional UI toolkits?" entry. (#8862)
 - Backends: DirectX12: reuse a command list and allocator for texture uploads instead
   of recreating them each time. (#8963, #8465) [@RT2Code]
 - Backends: DirectX12: Rework synchronization logic. (#8961) [@RT2Code]
