@@ -75,7 +75,7 @@
 // Backend uses a small number of descriptors per font atlas + as many as additional calls done to ImGui_ImplVulkan_AddTexture().
 #define IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE   (8)     // Minimum per atlas
 
-// Specify settings to create pipeline and swapchain
+// Specify settings to create pipeline
 struct ImGui_ImplVulkan_PipelineInfo
 {
     // For Main viewport only
@@ -87,8 +87,13 @@ struct ImGui_ImplVulkan_PipelineInfo
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
     VkPipelineRenderingCreateInfoKHR PipelineRenderingCreateInfo;   // Optional, valid if .sType == VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR
 #endif
+};
 
-    // For Secondary viewports only (created/managed by backend)
+struct ImGui_ImplVulkan_SecondaryViewportsInfo
+{
+    // Ignored if .format == VK_FORMAT_UNDEFINED
+    VkSurfaceFormatKHR              DesiredFormat;
+
     VkImageUsageFlags               SwapChainImageUsage;            // Extra flags for vkCreateSwapchainKHR() calls for secondary viewports. We automatically add VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT. You can add e.g. VK_IMAGE_USAGE_TRANSFER_SRC_BIT if you need to capture from viewports.
 };
 
@@ -116,7 +121,6 @@ struct ImGui_ImplVulkan_InitInfo
 
     // Pipeline
     ImGui_ImplVulkan_PipelineInfo   PipelineInfoMain;           // Infos for Main Viewport (created by app/user)
-    ImGui_ImplVulkan_PipelineInfo   PipelineInfoForViewports;   // Infos for Secondary Viewports (created by backend)
     //VkRenderPass                  RenderPass;                 // --> Since 2025/09/26: set 'PipelineInfoMain.RenderPass' instead
     //uint32_t                      Subpass;                    // --> Since 2025/09/26: set 'PipelineInfoMain.Subpass' instead
     //VkSampleCountFlagBits         MSAASamples;                // --> Since 2025/09/26: set 'PipelineInfoMain.MSAASamples' instead
@@ -125,6 +129,9 @@ struct ImGui_ImplVulkan_InitInfo
     // (Optional) Dynamic Rendering
     // Need to explicitly enable VK_KHR_dynamic_rendering extension to use this, even for Vulkan 1.3 + setup PipelineInfoMain.PipelineRenderingCreateInfo and PipelineInfoViewports.PipelineRenderingCreateInfo.
     bool                            UseDynamicRendering;
+
+    // Optional
+    ImGui_ImplVulkan_SecondaryViewportsInfo SecondaryViewportsInfo;
 
     // (Optional) Allocation, Debugging
     const VkAllocationCallbacks*    Allocator;
