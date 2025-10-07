@@ -296,6 +296,7 @@ struct ImGui_ImplVulkan_Data
     ImGui_ImplVulkan_WindowRenderBuffers MainWindowRenderBuffers;
 
     // Viewports common data
+    VkSurfaceFormatKHR          ViewportsFormat;        // Common for all viewports, may differ from VulkanInitInfo.SecondaryViewportsInfo.DesiredFormat
     // Filled during ImGui_ImplVulkan_PrepareViewportsRendering() based on ViewportsFormat and VulkanInitInfo->SecondaryViewportsInfo
     ImGui_ImplVulkan_PipelineInfo PipelineInfoForViewports;
     VkPipeline                  PipelineForViewports;   // pipeline for secondary viewports (created by backend)
@@ -1219,8 +1220,15 @@ void    ImGui_ImplVulkan_DestroyDeviceObjects()
     if (bd->DescriptorSetLayout)  { vkDestroyDescriptorSetLayout(v->Device, bd->DescriptorSetLayout, v->Allocator); bd->DescriptorSetLayout = VK_NULL_HANDLE; }
     if (bd->PipelineLayout)       { vkDestroyPipelineLayout(v->Device, bd->PipelineLayout, v->Allocator); bd->PipelineLayout = VK_NULL_HANDLE; }
     if (bd->Pipeline)             { vkDestroyPipeline(v->Device, bd->Pipeline, v->Allocator); bd->Pipeline = VK_NULL_HANDLE; }
-    if (bd->PipelineForViewports) { vkDestroyPipeline(v->Device, bd->PipelineForViewports, v->Allocator); bd->PipelineForViewports = VK_NULL_HANDLE; }
     if (bd->DescriptorPool)       { vkDestroyDescriptorPool(v->Device, bd->DescriptorPool, v->Allocator); bd->DescriptorPool = VK_NULL_HANDLE; }
+
+    // Destroy viewports common objects
+    if (bd->PipelineForViewports) { vkDestroyPipeline(v->Device, bd->PipelineForViewports, v->Allocator); bd->PipelineForViewports = VK_NULL_HANDLE; }
+    if (bd->PipelineInfoForViewports.RenderPass)
+    {
+        vkDestroyRenderPass(v->Device, bd->PipelineInfoForViewports.RenderPass, v->Allocator);
+        bd->PipelineInfoForViewports.RenderPass = VK_NULL_HANDLE;
+    }
 }
 
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
@@ -1980,6 +1988,51 @@ static void ImGui_ImplVulkan_SelectPresentMode(ImGuiViewport* viewport)
     //printf("[vulkan] Secondary window selected PresentMode = %d\n", wd->PresentMode);
 }
 
+// Prepare common viewports rendering objects.
+// Requires a sample surface (assuming any viewport surface behaves the same).
+// - Select a surface format
+// - Create the common RenderPass and Pipeline
+static void ImGui_ImplVulkan_PrepareViewportsRendering(VkSurfaceKHR surface)
+{
+    ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
+    ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
+
+    // Select Surface Format
+    ImGui_ImplVulkan_PipelineInfo* pipeline_info = &bd->PipelineInfoForViewports;
+    const VkFormat requestSurfaceImageFormats[] = { v->SecondaryViewportsInfo.DesiredFormat.format, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_B8G8R8_UNORM, VK_FORMAT_R8G8B8_UNORM };
+    int requestSurfaceImageFormatsCount = IM_ARRAYSIZE(requestSurfaceImageFormats);
+    const VkFormat* pRequestSurfaceImageFormats = requestSurfaceImageFormats;
+    if (pRequestSurfaceImageFormats[0] == VK_FORMAT_UNDEFINED)
+    {
+        ++pRequestSurfaceImageFormats;
+        --requestSurfaceImageFormatsCount;
+    }
+
+    const VkColorSpaceKHR requestSurfaceColorSpace = v->SecondaryViewportsInfo.DesiredFormat.colorSpace;
+    bd->ViewportsFormat = ImGui_ImplVulkanH_SelectSurfaceFormat(v->PhysicalDevice, surface, pRequestSurfaceImageFormats, requestSurfaceImageFormatsCount, requestSurfaceColorSpace);
+
+    // Create pipeline (shared by all secondary viewports)
+    if (bd->PipelineForViewports == VK_NULL_HANDLE)
+    {
+#ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
+        if (v->UseDynamicRendering)
+        {
+            pipeline_info->PipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+            pipeline_info->PipelineRenderingCreateInfo.colorAttachmentCount = 1;
+            pipeline_info->PipelineRenderingCreateInfo.pColorAttachmentFormats = &bd->ViewportsFormat.format;
+        }
+#endif
+        else
+        {
+            // Create a reference RenderPass (needed for the Pipeline creation)
+            // Viewports will create their own RenderPass, compatible with this one (same format, different clear option)
+            pipeline_info->RenderPass = ImGui_ImplVulkanH_CreateRenderPass(v->Device, v->Allocator, bd->ViewportsFormat.format, true);
+            pipeline_info->Subpass = 0;
+        }
+        bd->PipelineForViewports = ImGui_ImplVulkan_CreatePipeline(v->Device, v->Allocator, VK_NULL_HANDLE, pipeline_info);
+    }
+}
+
 static void ImGui_ImplVulkan_CreateWindow(ImGuiViewport* viewport)
 {
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
@@ -2002,46 +2055,20 @@ static void ImGui_ImplVulkan_CreateWindow(ImGuiViewport* viewport)
         return;
     }
 
-    // Select Surface Format
-    ImGui_ImplVulkan_PipelineInfo* pipeline_info = &bd->PipelineInfoForViewports;
-    const VkFormat requestSurfaceImageFormats[] = { v->SecondaryViewportsInfo.DesiredFormat.format, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_B8G8R8_UNORM, VK_FORMAT_R8G8B8_UNORM };
-    int requestSurfaceImageFormatsCount = IM_ARRAYSIZE(requestSurfaceImageFormats);
-    const VkFormat* pRequestSurfaceImageFormats = requestSurfaceImageFormats;
-    if (pRequestSurfaceImageFormats[0] == VK_FORMAT_UNDEFINED)
-    {
-        ++pRequestSurfaceImageFormats;
-        --requestSurfaceImageFormatsCount;
-    }
-
-    const VkColorSpaceKHR requestSurfaceColorSpace = v->SecondaryViewportsInfo.DesiredFormat.colorSpace;
-    wd->SurfaceFormat = ImGui_ImplVulkanH_SelectSurfaceFormat(v->PhysicalDevice, wd->Surface, pRequestSurfaceImageFormats, requestSurfaceImageFormatsCount, requestSurfaceColorSpace);
-
     // Select Present Mode
     ImGui_ImplVulkan_SelectPresentMode(viewport);
+
+    if (bd->ViewportsFormat.format == VK_FORMAT_UNDEFINED)
+    {
+        ImGui_ImplVulkan_PrepareViewportsRendering(wd->Surface);
+    }
+    wd->SurfaceFormat = bd->ViewportsFormat;
 
     // Create SwapChain, RenderPass, Framebuffer, etc.
     wd->ClearEnable = (viewport->Flags & ImGuiViewportFlags_NoRendererClear) ? false : true;
     wd->UseDynamicRendering = v->UseDynamicRendering;
     ImGui_ImplVulkanH_CreateOrResizeWindow(v->Instance, v->PhysicalDevice, v->Device, wd, v->QueueFamily, v->Allocator, (int)viewport->Size.x, (int)viewport->Size.y, v->MinImageCount, v->SecondaryViewportsInfo.SwapChainImageUsage);
     vd->WindowOwned = true;
-
-    // Create pipeline (shared by all secondary viewports)
-    if (bd->PipelineForViewports == VK_NULL_HANDLE)
-    {
-#ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
-        if (wd->UseDynamicRendering)
-        {
-            pipeline_info->PipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
-            pipeline_info->PipelineRenderingCreateInfo.colorAttachmentCount = 1;
-            pipeline_info->PipelineRenderingCreateInfo.pColorAttachmentFormats = &wd->SurfaceFormat.format;
-        }
-        else
-        {
-            pipeline_info->RenderPass = wd->RenderPass;
-        }
-#endif
-        bd->PipelineForViewports = ImGui_ImplVulkan_CreatePipeline(v->Device, v->Allocator, VK_NULL_HANDLE, pipeline_info);
-    }
 }
 
 static void ImGui_ImplVulkan_DestroyWindow(ImGuiViewport* viewport)
