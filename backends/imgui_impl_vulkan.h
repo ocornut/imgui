@@ -93,6 +93,9 @@ struct ImGui_ImplVulkan_SecondaryViewportsInfo
 {
     // Ignored if .format == VK_FORMAT_UNDEFINED
     VkSurfaceFormatKHR              DesiredFormat;
+    // Ignored if set to VK_PRESENT_MODE_MAX_ENUM_KHR
+    // Warning: The default zero initialized value is VK_PRESENT_MODE_IMMEDIATE_KHR!
+    VkPresentModeKHR                DesiredPresentMode;
 
     VkImageUsageFlags               SwapChainImageUsage;            // Extra flags for vkCreateSwapchainKHR() calls for secondary viewports. We automatically add VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT. You can add e.g. VK_IMAGE_USAGE_TRANSFER_SRC_BIT if you need to capture from viewports.
 };
