@@ -20,7 +20,7 @@
 
 // This example doesn't compile with Emscripten yet! Awaiting SDL3 support.
 #ifdef __EMSCRIPTEN__
-#include "../libs/emscripten/emscripten_mainloop_stub.h"
+#include "emscripten_mainloop_stub.h"
 #endif
 
 // Main code
