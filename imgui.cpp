@@ -16424,8 +16424,9 @@ static bool ImGui::UpdateTryMergeWindowIntoHostViewport(ImGuiWindow* window, ImG
         if (viewport_2 == viewport || viewport_2 == window->Viewport)
             continue;
         if (viewport_2->GetMainRect().Overlaps(window->Rect()))
-            if (IsViewportAbove(viewport_2, viewport) && !IsViewportAbove(viewport_2, window->Viewport))
-                return false;
+            if (IsViewportAbove(viewport_2, viewport))
+                if (window->Viewport == NULL || !IsViewportAbove(viewport_2, window->Viewport))
+                    return false;
     }
 
     // Move to the existing viewport, Move child/hosted windows as well (FIXME-OPT: iterate child)
