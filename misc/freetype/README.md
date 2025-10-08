@@ -7,7 +7,7 @@ Build font atlases using FreeType instead of stb_truetype (which is the default 
 
 1. Get latest FreeType binaries or build yourself (under Windows you may use vcpkg with `vcpkg install freetype --triplet=x64-windows`, `vcpkg integrate install`).
 2. Add imgui_freetype.h/cpp alongside your project files.
-3. Add `#define IMGUI_ENABLE_FREETYPE` in your [imconfig.h](https://github.com/ocornut/imgui/blob/master/imconfig.h) file
+3. Add `#define IMGUI_ENABLE_FREETYPE` in your [imconfig.h](https://github.com/ocornut/imgui/blob/master/imconfig.h) file to make Dear ImGui automatically use the imgui_freetype loader. If your copy Dear ImGui is precompiled, you can always enable imgui_freetype by calling ImFontAtlas::SetFontLoader().
 
 ### About Gamma Correct Blending
 
