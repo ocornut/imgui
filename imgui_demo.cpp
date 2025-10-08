@@ -4804,7 +4804,7 @@ static void DemoWindowLayout()
         ImGui::SameLine();
         scroll_to_off |= ImGui::Button("Scroll Offset");
 
-        bool scroll_to_pos = ImGui::DragFloat("##pos", &scroll_to_pos_px, 1.00f, -10, FLT_MAX, "X/Y = %.0f px");;
+        bool scroll_to_pos = ImGui::DragFloat("##pos", &scroll_to_pos_px, 1.00f, -10, FLT_MAX, "X/Y = %.0f px");
         ImGui::SameLine();
         scroll_to_pos |= ImGui::Button("Scroll To Pos");
         ImGui::PopItemWidth();

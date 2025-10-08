@@ -64,6 +64,11 @@ Other Changes:
   The grip is not visible before hovering to reduce clutter.
 - InputText: fixed single-line InputText() not applying fine character clipping
   properly (regression in 1.92.3). (#8967) [@Cyphall]
+- InputText: fixed an infinite loop error happening if a custom input text
+  callback modifies/clear BufTextLen before calling InsertChars().
+  (regression from 1.92.3). Note that this never really worked correctly, but
+  previously it would only temporary wreck cursor position, and since 1.92.3 it
+  would go in an infinite loop. (#8994, #3237)
 - Style: added ImGuiCol_UnsavedMarker, color of the unsaved document marker when
   using ImGuiWindowFlags_UnsavedDocument/ImGuiTabItemFlags_UnsavedDocument. (#8983)
 - IO: added ImGuiPlatformIO::ClearPlatformHandlers(), ClearRendererHandlers()
