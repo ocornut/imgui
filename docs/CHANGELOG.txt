@@ -35,6 +35,15 @@ HOW TO UPDATE?
   and API updates have been a little more frequent lately. They are documented below and in imgui.cpp and should not affect all users.
 - Please report any issue!
 
+PR BRANCH #8381
+
+- Backends: GLFW: added helpers for native/desktop WebGPU applications
+  to create surfaces on Dawn/WGPU-Native: (#8381, #8831) [@brutpitt]
+  - ImGui_ImplGLFW_CreateWGPUSurface(), WGPU-Native only.
+  Functions are only available and compiled when defining either of
+  IMGUI_IMPL_WEBGPU_BACKEND_WGPU or IMGUI_IMPL_WEBGPU_BACKEND_DAWN.
+
+
 -----------------------------------------------------------------------
  VERSION 1.92.4 WIP (In Progress)
 -----------------------------------------------------------------------
