@@ -66,5 +66,10 @@ IMGUI_IMPL_API void     ImGui_ImplGlfw_Sleep(int milliseconds);
 IMGUI_IMPL_API float    ImGui_ImplGlfw_GetContentScaleForWindow(GLFWwindow* window);
 IMGUI_IMPL_API float    ImGui_ImplGlfw_GetContentScaleForMonitor(GLFWmonitor* monitor);
 
+// WebGPU helpers for native/desktop applications (only used in WGPU-Native, as DAWN-Native already has a function).
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) && !defined(__EMSCRIPTEN__)
+#include <webgpu/webgpu.h>
+WGPUSurface             ImGui_ImplGLFW_CreateWGPUSurface(WGPUInstance instance, GLFWwindow* window);
+#endif
 
 #endif // #ifndef IMGUI_DISABLE
