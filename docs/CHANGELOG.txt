@@ -142,6 +142,8 @@ Docking+Viewports Branch:
   backends have been shutdown since 1.90.4. Changed into asserts. (#7175, #8945)
 - Backends: DX10, DX11, DX12: Disabled DXGI's Alt+Enter default behavior on secondary
   viewports managed by the backend. (#4350) [@PathogenDavid]
+- Backends: DX10, DX11: avoid ImGui_ImplXXXX_SwapBuffers() handlers for secondary
+  viewports crashing if SwapChain could not be created.
 - Backends: Vulkan: Added a way to configure secondary viewport pipelinen creation
   by setting init_info.PipelineInfoForViewports fields. (#8946, #8110, #8111, #8686)
 - Backends: Vulkan: Added a way to configure secondary viewport swapchain VkImageUsageFlags
