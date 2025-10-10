@@ -134,7 +134,7 @@
 #endif
 #include <GLFW/glfw3native.h>
 #elif GLFW_HAS_X11_OR_WAYLAND
-#ifndef GLFW_EXPOSE_NATIVE_X11      // for glfwGetX11Display(), glfwGetX11Window() on Freedesktop (Linux, BSD, etc.)
+#if !defined(GLFW_EXPOSE_NATIVE_X11) && !defined(IMGUI_NO_EXPOSE_X11)      // for glfwGetX11Display(), glfwGetX11Window() on Freedesktop (Linux, BSD, etc.)
 #define GLFW_EXPOSE_NATIVE_X11
 #include <X11/Xatom.h>
 #endif
