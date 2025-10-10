@@ -112,9 +112,6 @@ struct ImGui_ImplDX12_Data
     ID3D12CommandAllocator*     pTexCmdAllocator;
     ID3D12GraphicsCommandList*  pTexCmdList;
 
-    ImGui_ImplDX12_RenderBuffers* pFrameResources;
-    UINT                        frameIndex;
-
     ImGui_ImplDX12_Data()       { memset((void*)this, 0, sizeof(*this)); }
 };
 
