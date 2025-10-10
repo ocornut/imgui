@@ -111,6 +111,9 @@ struct ImGui_ImplDX12_Data
 
     ID3D12CommandAllocator*     pTexCmdAllocator;
     ID3D12GraphicsCommandList*  pTexCmdList;
+    ID3D12Resource*             pUploadBuffer;
+    UINT                        pUploadSize;
+    void*                       pMapped;
 
     ImGui_ImplDX12_RenderBuffers* pFrameResources;
     UINT                        frameIndex;
@@ -516,44 +519,53 @@ void ImGui_ImplDX12_UpdateTexture(ImTextureData* tex)
         UINT upload_pitch_dst = (upload_pitch_src + D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1u) & ~(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1u);
         UINT upload_size = upload_pitch_dst * upload_h;
 
-        D3D12_RESOURCE_DESC desc;
-        ZeroMemory(&desc, sizeof(desc));
-        desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-        desc.Alignment = 0;
-        desc.Width = upload_size;
-        desc.Height = 1;
-        desc.DepthOrArraySize = 1;
-        desc.MipLevels = 1;
-        desc.Format = DXGI_FORMAT_UNKNOWN;
-        desc.SampleDesc.Count = 1;
-        desc.SampleDesc.Quality = 0;
-        desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-        desc.Flags = D3D12_RESOURCE_FLAG_NONE;
+        if (bd->pUploadBuffer == nullptr || upload_size > bd->pUploadSize)
+        {
+            if (bd->pMapped)
+            {
+                D3D12_RANGE range = { 0, bd->pUploadSize };
+                bd->pUploadBuffer->Unmap(0, &range);
+                bd->pMapped = nullptr;
+            }
+            SafeRelease(bd->pUploadBuffer);
 
-        D3D12_HEAP_PROPERTIES props;
-        memset(&props, 0, sizeof(D3D12_HEAP_PROPERTIES));
-        props.Type = D3D12_HEAP_TYPE_UPLOAD;
-        props.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-        props.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+            D3D12_RESOURCE_DESC desc;
+            ZeroMemory(&desc, sizeof(desc));
+            desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+            desc.Alignment = 0;
+            desc.Width = upload_size;
+            desc.Height = 1;
+            desc.DepthOrArraySize = 1;
+            desc.MipLevels = 1;
+            desc.Format = DXGI_FORMAT_UNKNOWN;
+            desc.SampleDesc.Count = 1;
+            desc.SampleDesc.Quality = 0;
+            desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+            desc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
-        // FIXME-OPT: Could upload buffer be kept around, reused, and grown only when needed? Would that be worth it?
-        ID3D12Resource* uploadBuffer = nullptr;
-        HRESULT hr = bd->pd3dDevice->CreateCommittedResource(&props, D3D12_HEAP_FLAG_NONE, &desc,
-            D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&uploadBuffer));
-        IM_ASSERT(SUCCEEDED(hr));
+            D3D12_HEAP_PROPERTIES props;
+            memset(&props, 0, sizeof(D3D12_HEAP_PROPERTIES));
+            props.Type = D3D12_HEAP_TYPE_UPLOAD;
+            props.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+            props.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+
+            HRESULT hr = bd->pd3dDevice->CreateCommittedResource(&props, D3D12_HEAP_FLAG_NONE, &desc,
+                D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&bd->pUploadBuffer));
+            IM_ASSERT(SUCCEEDED(hr));
+
+            D3D12_RANGE range = {0, upload_size};
+            hr = bd->pUploadBuffer->Map(0, &range, &bd->pMapped);
+            IM_ASSERT(SUCCEEDED(hr));
+            bd->pUploadSize = upload_size;
+        }
 
         bd->pTexCmdAllocator->Reset();
         bd->pTexCmdList->Reset(bd->pTexCmdAllocator, nullptr);
         ID3D12GraphicsCommandList* cmdList = bd->pTexCmdList;
 
         // Copy to upload buffer
-        void* mapped = nullptr;
-        D3D12_RANGE range = { 0, upload_size };
-        hr = uploadBuffer->Map(0, &range, &mapped);
-        IM_ASSERT(SUCCEEDED(hr));
         for (int y = 0; y < upload_h; y++)
-            memcpy((void*)((uintptr_t)mapped + y * upload_pitch_dst), tex->GetPixelsAt(upload_x, upload_y + y), upload_pitch_src);
-        uploadBuffer->Unmap(0, &range);
+            memcpy((void*)((uintptr_t)bd->pMapped + y * upload_pitch_dst), tex->GetPixelsAt(upload_x, upload_y + y), upload_pitch_src);
 
         if (need_barrier_before_copy)
         {
@@ -570,7 +582,7 @@ void ImGui_ImplDX12_UpdateTexture(ImTextureData* tex)
         D3D12_TEXTURE_COPY_LOCATION srcLocation = {};
         D3D12_TEXTURE_COPY_LOCATION dstLocation = {};
         {
-            srcLocation.pResource = uploadBuffer;
+            srcLocation.pResource = bd->pUploadBuffer;
             srcLocation.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
             srcLocation.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
             srcLocation.PlacedFootprint.Footprint.Width = upload_w;
@@ -594,7 +606,7 @@ void ImGui_ImplDX12_UpdateTexture(ImTextureData* tex)
             cmdList->ResourceBarrier(1, &barrier);
         }
 
-        hr = cmdList->Close();
+        HRESULT hr = cmdList->Close();
         IM_ASSERT(SUCCEEDED(hr));
 
         ID3D12CommandQueue* cmdQueue = bd->pCommandQueue;
@@ -609,7 +621,6 @@ void ImGui_ImplDX12_UpdateTexture(ImTextureData* tex)
         bd->Fence->SetEventOnCompletion(bd->FenceLastSignaledValue, bd->FenceEvent);
         ::WaitForSingleObject(bd->FenceEvent, INFINITE);
 
-        uploadBuffer->Release();
         tex->SetStatus(ImTextureStatus_OK);
     }
 
@@ -889,6 +900,13 @@ void    ImGui_ImplDX12_InvalidateDeviceObjects()
     bd->commandQueueOwned = false;
     SafeRelease(bd->pRootSignature);
     SafeRelease(bd->pPipelineState);
+    if (bd->pMapped)
+    {
+        D3D12_RANGE range = {0, bd->pUploadSize};
+        bd->pUploadBuffer->Unmap(0, &range);
+        bd->pMapped = nullptr;
+    }
+    SafeRelease(bd->pUploadBuffer);
     SafeRelease(bd->pTexCmdList);
     SafeRelease(bd->pTexCmdAllocator);
     SafeRelease(bd->Fence);
