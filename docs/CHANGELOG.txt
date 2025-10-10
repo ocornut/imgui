@@ -36,42 +36,907 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.92.0 WIP (In Progress)
+ VERSION 1.92.4 WIP (In Progress)
 -----------------------------------------------------------------------
 
-Breaking changes:
+Breaking Changes:
 
-- Backends: SDL3: Fixed casing typo in function name: (#8509, #8163, #7998, #7988) [@puugz]
-  - Imgui_ImplSDLGPU3_PrepareDrawData() -> ImGui_ImplSDLGPU3_PrepareDrawData()
+- Viewports: for consistency with other config flags, renamed
+     io.ConfigViewportPlatformFocusSetsImGuiFocus
+  to io.ConfigViewportsPlatformFocusSetsImGuiFocus. (#6299, #6462)
+  It was really a typo in the first place, and introduced in 1.92.2.
+- Backends: Vulkan: moved some fields in ImGui_ImplVulkan_InitInfo:
+    init_info.RenderPass  --> init_info.PipelineInfoMain.RenderPass
+    init_info.Subpass     --> init_info.PipelineInfoMain.Subpass
+    init_info.MSAASamples --> init_info.PipelineInfoMain.MSAASamples
+    init_info.PipelineRenderingCreateInfo --> init_info.PipelineInfoMain.PipelineRenderingCreateInfo
+  It makes things more consistent and was desirable to introduce new settings for
+  secondary viewports. (#8946, #8110, #8111, #8686) [@ocornut, @SuperRonan, @sylmroz]
+- Backends: Vulkan: renamed ImGui_ImplVulkan_MainPipelineCreateInfo --> ImGui_ImplVulkan_PipelineInfo
+  (introduced very recently and only used by `ImGui_ImplVulkan_CreateMainPipeline()`
+  so it should not affect many users). (#8110, #8111)
+- Backends: Vulkan: helper ImGui_ImplVulkanH_CreateOrResizeWindow() added a
+  `VkImageUsageFlags image_usage` argument to specific extra flags for calls to
+  vkCreateSwapchainKHR() done for secondary viewports. We automatically add
+  `VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT`. In theory the function is an internal
+  helper but since it's used by our examples some may have used it. (#8946, #8111, #8686)
 
-Other changes:
+Other Changes:
 
-- IO: variations in analog-only components of gamepad events do not interfere
-  with trickling of mouse position events (#4921, #8508)
-- Windows: fixed SetNextWindowCollapsed()/SetWindowCollapsed() breaking
-  codepath that preserve last contents size when collapsed, resulting in
-  programmatically uncollapsing auto-sizing windows having them flicker size
-  for a frame. (#7691) [@achabense]
-- Nav: fixed assertion when holding gamepad FaceLeft/West button to open
-  CTRL+Tab windowing + pressing a keyboard key. (#8525)
-- Error Handling: added better error report and recovery for extraneous
-  EndPopup() call. (#1651, #8499)
-- Style, InputText: added ImGuiCol_InputTextCursor to configure color of
-  the InputText cursor/caret. (#7031)
-- Misc: added extra operators to ImVec4 in IMGUI_DEFINE_MATH_OPERATORS block. (#8510) [@gan74]
-- Backends: SDL2, SDL3, OSX: Fill gamepad inputs and set ImGuiBackendFlags_HasGamepad
-  regardless of ImGuiConfigFlags_NavEnableGamepad being set. (#8508)
-- Backends: SDL3: Update for SDL3 api changes: revert SDL_GetClipboardText()
-  memory ownership change. (#8530, #7801) [@Green-Sky]
+- Windows: added lower-right resize grip on child windows using both
+  ImGuiChildFlags_ResizeX and ImGuiChildFlags_ResizeY flags. (#8501) [@aleksijuvani]
+  The grip is not visible before hovering to reduce clutter.
+- InputText: fixed single-line InputText() not applying fine character clipping
+  properly (regression in 1.92.3). (#8967) [@Cyphall]
+- IO: added ImGuiPlatformIO::ClearPlatformHandlers(), ClearRendererHandlers()
+  helpers to null all handlers. (#8945, #2769)
+- Misc: Debuggers: added type formatters for the LLDB debuggers (e.g. Xcode,
+  Android Studio & more) to provide nicer display for ImVec2, ImVec4, ImVector etc.
+  See misc/debuggers/ for details. (#8950) [@mentlerd]
+- Textures: fixed a crash if texture status is set to _WantDestroy by a backend after
+  it had already been destroyed. This would typically happen when calling backend's
+  ImGui_ImplXXXX_InvalidateDeviceObjects() helpers twice in a row. (#8977, #8811)
+- Textures: allowed backend to destroy texture while inside the NewFrame/EndFrame
+  scope. Basically if a backend decide to destroy a texture that we didn't request
+  to destroy (for e.g. freeing resources) the texture is immediately set to
+  a _WantCreate status again. (#8811)
+- Textures: fixed an issue preventing multi-contexts sharing a ImFontAtlas from
+  being possible to destroy in any order.
+- Textures: fixed not updating ImTextureData's RefCount when destroying a context
+  using a shared ImFontAtlas, leading standard backends to not properly free
+  texture resources. (#8975) [@icrashstuff]
+- CI: Updates Windows CI scripts to generate/use VulkanSDK. (#8925, #8778) [@yaz0r]
+- Backends: all backends call ImGuiPlatformIO::ClearPlatformHandlers() and
+  ClearRendererHandlers() on shutdown, so as not to leave function pointers
+  which may be dangling when using backend in e.g. DLL. (#8945, #2769)
+- Docs: updated FAQ with new "What is the difference between Dear ImGui and
+  traditional UI toolkits?" entry. (#8862)
+- Backends: DirectX12: reuse a command list and allocator for texture uploads instead
+  of recreating them each time. (#8963, #8465) [@RT2Code]
+- Backends: DirectX12: Rework synchronization logic. (#8961) [@RT2Code]
+  (presumably fixes old hard-to-repro crash issues such as #3463, #5018)
+- Backends: DirectX12: Enable swapchain tearing if available. (#8965) [@RT2Code]
+- Backends: OpenGL3: fixed GL loader to work on Haiku OS which does not support
+  `RTLD_NOLOAD`. (#8952) [@Xottab-DUTY, @threedeyes]
+- Backends: GLFW: fixed build on platform that are neither Windows, macOS or
+  known Unixes (Regression in 1.92.3). (#8969, #8920, #8921) [@oktonion]
+- Backends: SDL2,SDL3: avoid using the SDL_GetGlobalMouseState() path when one of our
+  window is hovered, as the event data is reliable and enough in this case.
+  - Fix mouse coordinates issue in fullscreen apps with macOS notch. (#7919, #7786)
+    - Essentially a working for SDL3 bug which will be fixed in SDL 3.3.0.
+  - Better perf on X11 as querying global position requires a round trip to X11 server.
+- Backends: Win32: minor optimization not submitting gamepad io again if
+  XInput's dwPacketNumber has not changed. (#8556) [@MidTerm-CN]
+- Backends: Vulkan: added a way to specify custom shaders by filling init fields
+  CustomShaderVertCreateInfo and CustomShaderFragCreateInfo. (#8585, #8271) [@johan0A]
+- Backends: DX9,DX10,DX11,DX12,Metal,Vulkan,WGPU,SDLRenderer2,SDLRenderer3:
+  ensure that a texture in _WantDestroy state always turn to _Destroyed even
+  if your underlying graphics data was already destroyed. (#8977)
+- Examples: SDL2+DirectX11: Try WARP software driver if hardware driver is
+  not available. (#5924, #5562)
+- Examples: SDL3+DirectX11: Added SDL3+DirectX11 example. (#8956, #8957) [@tomaz82]
+- Examples: Win32+DirectX12: Rework synchronization logic. (#8961) [@RT2Code]
+- Examples: made examples's main.cpp consistent with returning 1 on error.
 
 Docking+Viewports Branch:
 
-- Backends: Win32: Viewports: fixed an issue when closing a window from 
-  the OS close button (with io.ConfigViewportsNoDecoration=false) while 
-  user code is discarding the 'bool *p_open=false output' from Begin(). 
+- Nav: fixed a crash that could occur when opening a popup following the processing
+  of a global shortcut while no windows were focused (the fix done in 1.92.3 was
+  incomplete for docking branch).
+- Viewports: added ImGuiBackendFlags_HasParentViewport backend flag for
+  backend to specify if it can honor the viewport->ParentViewportId value by
+  applying the corresponding parent/child relation at the Platform level. (#8948)
+  - SDL3, Win32 backends: supported.
+  - SDL2, GLFW, OSX backends: unsupported.
+- Viewports: fixed a bug where ImGuiWindowFlags_NoBringToFrontOnFocus would effectivey
+  be ignored when windows first appear and viewports are enabled. (#7008) [@jshofmann]
+- Viewports: changed default value of io.ConfigViewportsNoDefaultParent to true. (#8948)
+- Viewports: fixed an issue inferring Z-order when attempting to merge a viewport
+  back in the the main/hosting viewport. (#8948)
+  Note that for GLFW/SDL2/OSX backends, which do not support honoring ParentViewportID.
+  setting io.ConfigViewportsNoDefaultParent=true will align imgui's expectation
+  with what the backend does.
+- Viewports: storing `ImGuiViewport* ParentViewport` pointer along with ParentViewportID.
+- Viewports: DestroyContext() does not call DestroyPlatformWindows() anymore at
+  it assumed to be unnecessary as backensd should have done it and we check that
+  backends have been shutdown since 1.90.4. Changed into asserts. (#7175, #8945)
+- Backends: DX10, DX11, DX12: Disabled DXGI's Alt+Enter default behavior on secondary
+  viewports managed by the backend. (#4350) [@PathogenDavid]
+- Backends: Vulkan: Added a way to configure secondary viewport pipelinen creation
+  by setting init_info.PipelineInfoForViewports fields. (#8946, #8110, #8111, #8686)
+- Backends: Vulkan: Added a way to configure secondary viewport swapchain VkImageUsageFlags
+  to e.g. capture rendering. (#8946, #8940) [@olivier-gerard, @ocornut]
+  Usage example:
+    `init_info.PipelineInfoForViewports.SwapChainImageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;`
+- Backends: Vulkan: pipeline created for secondary viewport automatically match
+  surface format. (#8686) [@sylmroz]
+- Backends: Vulkan: Added ImGui_ImplVulkanH_GetWindowDataFromViewport() accessor/helper.
+  (#8946, #8940) [@olivier-gerard]
+- Examples: DX10, DX11: Disabled DXGI's Alt+Enter default behavior in examples.
+  Applications are free to leave this enabled, but it does not work properly with
+  multiple viewports. (#4350) [@PathogenDavid]
+
+
+-----------------------------------------------------------------------
+ VERSION 1.92.3 (Released 2025-09-17)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.92.3
+
+Other Changes:
+
+- Fonts: fixed merging a font and specifying a font target in DstFont
+  that's not the last added font (regression in 1.92). (#8912)
+- Fonts: fixed an assertion failure when a rectangle entry has been reused
+  1024 times (e.g. due to constant change of font size). (#8906) [@cfillion]
+- Clipper, Tables: added ImGuiListClipperFlags_NoSetTableRowCounters as a way to
+  disable the assumption that 1 clipper item == 1 table row, which breaks when
+  e.g. using clipper with ItemsHeight=1 in order to clip in pixel units. (#8886)
+- Scrollbar, Style: added configurable style.ScrollbarPadding value and corresponding
+  ImGuiStyleVar_ScrollbarPadding enum, instead of an hard-coded computed default. (#8895)
+- Nav: fixed Ctrl+Tab window appearing as empty when the sole active and focused
+  window has the ImGuiWindowFlags_NoNavFocus flag. (#8914)
+- Nav: fixed a crash that could occur when opening a popup following the processing
+  of a global shortcut while no windows were focused.
+- Bullet: fixed tessellation which looked out of place in very large sizes.
+- InputText: added ImGuiInputTextFlags_WordWrap flag to word-wrap multi-line buffers.
+  (#3237, #952, #1062, #7363). Current caveats:
+  - This is marked as beta because not being tested enough.
+    Please report any incorrect cursor movement, selection behavior etc. bug to #3237.
+  - Wrapping style is not ideal. Wrapping of long words/sections (e.g. words
+    larger than total available width) may be particularly unpleasing.
+  - Wrapping width needs to always account for the possibility of a vertical scrollbar.
+  - It is currently much slower than regular text fields:
+    - Ballpark estimate of cost on my 2019 desktop PC:
+      For a 100 KB text buffer: +~0.3 ms/+~1.0 ms (Optimized vs Debug builds).
+    - The CPU cost is very roughly proportional to text length, so a 10 KB buffer
+      should cost about ten times less.
+- InputText, InputInt, InputFloat: fixed an issue where using Escape to revert
+  would not write back the reverted value during the IsItemDeactivatedAfterEdit()
+  frame if the provided input buffer doesn't store temporary edits.
+  (regression in 1.91.7) (#8915, #8273)
+- InputText: fixed an issue where using Escape with ImGuiInputTextFlags_EscapeClearsAll
+  would not write back the cleared value during the IsItemDeactivatedAfterEdit()
+  frame if the provided input buffer doesn't store temporary edits. (#8915, #8273)
+- InputText: allow passing an empty string with buf_size==0. (#8907)
+  In theory the buffer size should always account for a zero-terminator, but idioms
+  such as using InputTextMultiline() with ImGuiInputTextFlags_ReadOnly to display
+  a text blob are facilitated by allowing this.
+- InputText: refactored internals to simplify and optimizing rendering of selection.
+  Very large selection (e.g. 1 MB) now take less overhead.
+- InputText: revert a change in 1.79 where pressing Down or PageDown on the last line
+  of a multi-line buffer without a trailing carriage return would keep the cursor
+  unmoved. We revert back to move to the end of line in this situation.
+- InputText: fixed pressing End (without Shift) in a multi-line selection from
+  mistakenly moving cursor based on selection start.
+- Focus, InputText: fixed an issue where SetKeyboardFocusHere() did not work
+  on InputTextMultiline() fields with ImGuiInputTextFlags_AllowTabInput, since
+  they normally inhibit activation to allow tabbing through multiple items. (#8928)
+- Selectable: added ImGuiSelectableFlags_SelectOnNav to auto-select an item when
+  moved into, unless Ctrl is held. (automatic when in a BeginMultiSelect() block).
+- TabBar: fixed an issue were forcefully selecting a tab using internal API would
+  be ignored on first/appearing frame before tabs are submitted (#8929, #6681)
+- DrawList: fixed CloneOutput() unnecessarily taking a copy of the ImDrawListSharedData
+  pointer, which could to issue when deleting the cloned list. (#8894, #1860)
+- DrawList: made AddCallback() assert when passing a null callback.
+- Debug Tools: ID Stack Tool: fixed using fixed-size buffers preventing long identifiers
+  from being displayed in the tool. (#8905, #4631)
+- Debug Tools: ID Stack Tool: when ### is used, uncontributing prefix before the ###
+  is now skipped. (#8904, #4631)
+- Debug Tools: ID Stack Tool: added option to hex-encode non-ASCII characters in
+  output path. (#8904, #4631)
+- Debug Tools: ID Stack Tool: fixed a crash when using PushOverrideID(0) during
+  a query. (#8937, #4631)
+- Debug Tools: Fixed assertion failure when opening a combo box while using
+  io.ConfigDebugBeginReturnValueOnce/ConfigDebugBeginReturnValueLoop. (#8931) [@harrymander]
+- Demo: tweaked ShowFontSelector() and ShowStyleSelector() to update selection
+  while navigating and to not close popup automatically.
+- CI: Updates Windows CI to use a more recent VulkanSDK. (#8925, #8778) [@yaz0r]
+- Examples: Android: Android+OpenGL3: update Gradle project (#8888, #8878) [@scribam]
+- Examples: GLFW+OpenGL2, GLFW+Vulkan, GLFW+Metal, Win32+Vulkan: Fixed not applying
+  content scale consistently with other examples. (#8921, #8756)
+- Backends: GLFW: distinguish X11 vs Wayland to fix various scaling issues.
+  (#8920, #8921) [@TheBrokenRail, @pthom, @ocornut]
+  - window/monitor content scales are always reported as 1.0 on Wayland.
+  - framebuffer scales are always reported as 1.0 on X11.
+- Backends: SDL2: window/monitor content scales are always reported as 1.0 on Wayland.
+  (#8920, #8921) [@TheBrokenRail, @pthom, @ocornut]
+- Backends: SDL3: use SDL_GetWindowDisplayScale() on Mac to obtain DisplayFrameBufferScale,
+  fixing incorrect values during resolution changes e.g. going fullscreen.
+  (#8703, #4414) [@jclounge]
+- Backends: SDL_GPU: Added ImGui_ImplSDLGPU3_InitInfo::SwapchainComposition and
+  PresentMode to configure how secondary viewports are created. Currently only used
+  multi-viewport mode. (#8892) [@PTSVU]
+- Backends: Vulkan: added ImGui_ImplVulkan_CreateMainPipeline() to recreate pipeline
+  without reinitializing backend. (#8110, #8111) [@SuperRonan]
+
+Docking+Viewports Branch:
+
+- DPI: fixed io.ConfigDpiScaleFonts from ever working since 1.92 (the irony
+  being that it is when it started to make sense!). As a reminder, the option
+  automatically copy the _current_ viewport DpiScale to style.FontScaleDpi.
+  This is why we separated the style.FontScaleMain and style.FontScaleDpi scaling
+  factor, as the later is meant to be overwritten. (#8832, #8465)
+- DPI: Fixed obsoleted ImGuiConfigFlags_DpiEnableScaleFonts/_DpiEnableScaleViewports
+  names from setting the equivalent io.ConfigDpiScaleFonts/io.ConfigDpiScaleViewports
+  flag correctly (regression in 1.92).
+- Docking, Style: added style.DockingNodeHasCloseButton option to hide the
+  Close Button attached to each docking node. (#8933)
+- Backends: GLFW: improve multi-viewport behavior in tiling WMs on X11.
+  Note: using GLFW backend on Linux/BSD etc. requires linking with `-lX11`.
+  (#8884, #8474, #8289, #2117) [@Ikos3k, @Madman10K]
+
+
+-----------------------------------------------------------------------
+ VERSION 1.92.2b (Released 2025-08-13)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.92.2b
+
+Changes:
+
+- Fixed IsItemHovered() failing on disabled items and items that have no
+  identifier (e.g. Text() calls) when holding mouse button. (#8877, #8883)
+  [Regression in 1.92.2].
+- Made IsItemHovered() on holding mouse button down on disabled items not
+  leak between items when the window cannot be moved.
+- Backends: Allegro5: Fixed texture format setup which didn't work on all
+  setups/drivers. (#8770, #8465)
+- Backends: Allegro5: Added ImGui_ImplAllegro5_SetDisplay() function to
+  change current ALLEGRO_DISPLAY, as Allegro applications often need to do that.
+- Backends: Allegro5: Fixed missing support for ImGuiKey_PrintScreen
+  under Windows, as raw Allegro 5 does not receive it.
+
+Docking+Viewports Branch:
+
+- Fixed a bug where closing a viewport using OS facility (e.g. ALT+F4, Close Button)
+  would erroneously close all windows located in the viewport, even ones docked
+  into nested dockspaces. Only top-most windows should be closed. (#8887) [@lailoken]
+
+
+-----------------------------------------------------------------------
+ VERSION 1.92.2 (Released 2025-08-11)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.92.2
+
+Breaking Changes:
+
+- Tabs: Renamed ImGuiTabBarFlags_FittingPolicyResizeDown to ImGuiTabBarFlags_FittingPolicyShrink.
+  Kept inline redirection enum (will obsolete). (#261, #351)
+- Backends: SDL_GPU3: changed ImTextureID type from SDL_GPUTextureSamplerBinding* to SDL_GPUTexture*,
+  which is more natural and easier for user to manage. If you need to change the current sampler,
+  you can access the ImGui_ImplSDLGPU3_RenderState struct. (#8866, #8163, #7998, #7988)
+
+Other Changes:
+
+- Fixed an old inconsistency between IsItemHovered() and internal hovering check,
+  where IsItemHovered() would return true to mouse was first clicked on the
+  background of a non-moveable window then moved over the item or button.
+  Note that while it is consistent with other logic, there is a possibility
+  that some third-party code may accidentally relied on this. One can always use
+  ImGuiHoveredFlags_AllowWhenBlockedByActiveItem to bypass the active id check.
+  (#8877) [@achabense, @ocornut]
+- Fonts: fixed an issue when a font using MergeMode has a reference size
+  specified but the target font doesn't. Usually either all fonts should
+  have a reference size (only required when specifying e.g. GlyphOffset),
+  or none should have a reference size.
+- Fonts: fixed a crash when changing texture format when using a legacy
+  backend. Most commonly would happen when calling GetTexDataAsRGBA32()
+  then immediately calling GetTexDataAsAlpha8(). (#8824)
+- Windows: fixed an issue where resizable child windows would emit border
+  logic when hidden/non-visible (e.g. when in a docked window that is not
+  selected), impacting code not checking for BeginChild() return value. (#8815)
+- Textures: Fixed support for `#define ImTextureID_Invalid` to non-zero value:
+  ImFontAtlas() was incorrectly cleared with zeroes. (#8860, #8745) [@cfillion]
+- Tables: fixed TableGetRowIndex() which never correctly worked when using
+  a clipper (it exists for consistency but is almost never used, as it is
+  often more convenient to use index in caller-code, whereas TableGetRowIndex()
+  includes header rows).
+- Tables: fixed imgui_internal.h's TableGetHoveredRow() the same way. (#7350, #6588, #6250)
+- Tabs: added new fitting policy ImGuiTabBarFlags_FittingPolicyMixed
+  and made it the default. This policy shrink tab width down to a given amount,
+  and then beyond that it enable scrolling buttons. (#3421, #8800)
+- Tabs: added style.TabMinWidthShrink, ImGuiStyleVar_TabMinWidthShrink to
+  control the width to shrink to in ImGuiTabBarFlags_FittingPolicyMixed mode.
+  (#3421, #8800).
+- Tabs: when scrolling is enabled, track selected tabs when resizing down
+  parent container. This does not prevent to horizontally scroll it out of
+  view during normal operations. (#3421, #8800)
+- Tabs: added style.TabMinWidthBase, ImGuiStyleVar_TabMinWidthBase to control
+  the base minimum width of a tab (default to 1.0f). This is the size before
+  any potential shrinking is applied.
+- Tabs: fixed tab bar underline not drawing below scroll buttons, when
+  they are enabled (minor regression from 1.90). (#6820, #4859, #5022, #5239)
+- Tabs: made scrolling buttons never keyboard/gamepad navigation candidates.
+- Nav, Tables: fixed navigation within scrolling tables when item boundaries
+  goes beyond columns limits. The fix done in 1.89.6 didn't work correctly
+  on scrolling windows. (#8816, #2221)
+- Nav: fixed a bug where ImGuiKey_NavGamepadMenu (==ImGuiKey_GamepadFaceLeft)
+  button couldn't toggle between main and menu layers while navigating a Modal
+  window. (#8834)
+- Error Handling: minor improvements to error handling for TableGetSortSpecs()
+  and TableSetBgColor() calls. (#1651, #8499)
+- Misc: fixed building with IMGUI_DISABLE_DEBUG_TOOLS only. (#8796)
+- Misc: fixed building with IMGUI_DISABLE_STB_TRUETYPE_IMPLEMENTATION. (#8794)
+- Misc: removed more redundant inline static linkage from imgui_internal.h to
+  facilitate using in C++ modules. (#8813, #8682, #8358) [@stripe2933]
+- Misc: ImVector: skip memcpy in operator= if `Data` isn't initialized in order
+  to play nice with -fsanitize=undefined. (#8874) [@i25e]
+- CI: Added SDL3 builds to MacOS and Windows. (#8819, #8778) [@scribam]
+- CI: Updated Windows CI to use a more recent SDL2. (#8819, #8778) [@scribam]
+- Examples: SDL3+Metal: added SDL3+Metal example. (#8827, #8825) [@shi-yan]
+- Examples: SDL3+SDL_GPU: use SDL_WaitAndAcquireGPUSwapchainTexture() instead
+  of SDL_AcquireGPUSwapchainTexture(). (#8830) [@itsdanott]
+- Examples: SDL3+SDL_GPU: use SDL_GPU_PRESENTMODE_VSYNC present mode.
+- Backends: OpenGL3: add and call embedded loader shutdown in ImGui_ImplOpenGL3_Shutdown()
+  to facilitate multiple init/shutdown cycles in same process. (#8792) [@tim-rex]
+- Backends: OpenGL2, OpenGL3: set GL_UNPACK_ALIGNMENT to 1 before updating
+  textures. (#8802) [@Daandelange]
+- Backends: SDL_GPU3: expose current SDL_GPUSampler* in the ImGui_ImplSDLGPU3_RenderState
+  struct. (#8866, #8163, #7998, #7988)
+- Backends: Vulkan: Fixed texture update corruption introduced in 1.92.0,
+  affecting some drivers/setups. (#8801, #8755, #8840) [@Retro52, @Miolith]
+- Backends: Vulkan: Avoid calling vkCmdBindDescriptorSets() when texture
+  has not changed. (#8666) [@micb25]
+
+Docking+Viewports Branch:
+
+- Windows, Viewport: fixed an issue where interrupting a viewport move with
+  e.g. a ClearActiveID() call would leave the dragged viewport with the
+  normally temporary ImGuiViewportFlags_NoInputs flag, preventing further
+  interactions with the viewport. (#5324) (thanks @mdelaharpe)
+- Viewports: added io.ConfigViewportPlatformFocusSetsImGuiFocus to opt-out
+  of focusing imgui windows When a platform window is focused (e.g. using Alt+Tab,
+  clicking Platform Title Bar). In principle this is better enabled but we
+  provide an opt-out because some Linux window managers tend to eagerly focus
+  windows (on e.g. mouse hover, or even on a simple window pos/size change).
+  (#6299, #6462)
+
+
+-----------------------------------------------------------------------
+ VERSION 1.92.1 (Released 2025-07-09)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.92.1
+
+Changes:
+
+- Fonts: added ImFontAtlas::SetFontLoader() to dynamically change font
+  loader at runtime without using internal API. (#8752, #8465)
+- Fonts: fixed a bug where dynamically changing font loader would lose
+  the Fallback and Ellipsis glyphs under some circumstance. (#8763)
+- Fonts: for large size fonts, layout/size calculation only load glyphs metrics.
+  Actual glyphs are renderer+packed when used by drawing functions. (#8758, #8465)
+- Fonts: set a maximum font size of 512.0f at ImGui:: API level to reduce
+  edge cases (e.g. out of memory errors). ImDrawList:: API doesn't have the
+  constraint. (#8758)
+- Fonts: Restore ImFontConfig::FontNo being a 32-bits value as this is needed
+  to pass full range of information into e.g. FreeType's face_index, as higher
+  bits are used from FreeType 2.6.1. (#8775) [@Valakor]
+  (the field has been erroneously reduced from 32-bits to 8-bit in 1.92.0)
+- Fonts, Tables: fixed PushFont() having no effect when called after submitting
+  a hidden column. (#8865)
+- Textures: Fixed support for `#define ImTextureID_Invalid` to non-zero value:
+  ImTextureData() was incorrectly cleared with zeroes. (#8745) [@rachit7645]
+- Demo: Added "Text -> Font Size" demo section. (#8738) [@Demonese]
+- CI: Fixed dllimport/dllexport tests. (#8757) [@AidanSun05]
+- CI: Updated to use latest Windows image + VS2022.
+- Debug Tools: added IMGUI_DEBUG_HIGHLIGHT_ALL_ID_CONFLICTS to detect
+  id conflicts _before_ hovering. This is very slow and should only be used
+  temporarily. (#8651, #7961, #7669)
+- Examples: GLFW+OpenGL3, GLFW+WGPU: Emscripten Makefiles uses GLFW port
+  'contrib.glfw3' which offers better HiDPI support. (#8742) [@pthom]
+- Backends: GLFW, SDL2 made ImGui_ImplGLFW_GetContentScaleXXX() and
+  ImGui_ImplSDL2_GetContentScaleXXXX() helpers return 1.0f on Emscripten
+  and Android platforms, matching macOS logic. (#8742, #8733) [@pthom]
+- Backends: SDL3: avoid calling SDL_StartTextInput() again if already active.
+  (fixes e.g.: an issue on iOS where the keyboard animation will popup every
+  time the user types a key + probably other things) (#8727) [@morrazzzz]
+- Backends: OSX: added ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress
+  mouse cursor support. (#8739) [@cfillion]
+- Backends: Allegro5: fixed texture update broken on some platforms where
+  ALLEGRO_LOCK_WRITEONLY needed all texels to be rewritten. (#8770)
+- Backends: Vulkan: use nonCoherentAtomSize to align upload_size, fixing
+  validation error on some setups. (#8743, #8744) [@tquante]
+- Backends: Vulkan: fixed texture synchronization issue introduced in 1.92.0,
+  leading to validation layers reacting. (#8772) [@Majora320]
+
+Docking+Viewports Branch:
+
+- Backends: OSX: Fixed multi-viewport handling broken in 1.92.0. (#8644, #8777) [@cfillion]
+
+
+-----------------------------------------------------------------------
+ VERSION 1.92.0 (Released 2025-06-25)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.92.0
+
+THIS VERSION CONTAINS THE LARGEST AMOUNT OF BREAKING CHANGES SINCE 2015!
+I TRIED REALLY HARD TO KEEP THEM TO A MINIMUM, REDUCE THE AMOUNT OF INTERFERENCE,
+BUT INEVITABLY SOME USERS OR THIRD-PARTY EXTENSIONS WILL BE AFFECTED.
+
+For instructions to upgrade your custom backend:
+--> See https://github.com/ocornut/imgui/blob/master/docs/BACKENDS.md
+
+IN ORDER TO HELP US IMPROVE THE TRANSITION PROCESS, INCL. DOCUMENTATION AND COMMENTS,
+PLEASE REPORT **ANY** DOUBT, CONFUSION, QUESTIONS, FEEDBACK TO:
+    https://github.com/ocornut/imgui/issues/
+If you are using custom widgets, internals or third-party extension that are somehow
+breaking and aren't obvious how to solve, please post in Issues so we can gather
+data and share solutions that may help others.
+
+As part of the plan to reduce impact of API breaking changes, several unfinished
+changes/features/refactors related to font and text systems and scaling will be
+part of subsequent releases (1.92.1+).
+
+If you are updating from an old version, and expecting a massive or difficult update,
+consider first updating to 1.91.9 to reduce the amount of changes.
+
+Breaking changes:
+
+- Fonts: **IMPORTANT**: if your app was solving the OSX/iOS Retina screen specific
+  logical vs display scale problem by setting io.DisplayFramebufferScale (e.g. to 2.0f)
+  + setting io.FontGlobalScale (e.g. to 1.0f/2.0f) + loading fonts at scaled sizes (e.g. size X * 2.0f):
+    - This WILL NOT map correctly to the new system! Because font will rasterize as requested size.
+    - With a legacy backend (< 1.92):
+      - Instead of setting io.FontGlobalScale = 1.0f/N -> set ImFontCfg::RasterizerDensity = N.
+      - This already worked before, but is now pretty much required.
+    - With a new backend (1.92+),
+      - This should be all automatic.
+      - FramebufferScale is automatically used to set current font RasterizerDensity.
+      - FramebufferScale is a per-viewport property provided by backend through the
+        Platform_GetWindowFramebufferScale() handler in 'docking' branch.
+- Fonts: **IMPORTANT** on Font Sizing:
+   - Before 1.92, fonts were of a single size. They can now be dynamically sized.
+   - PushFont() API now has a REQUIRED size parameter.
+       void PushFont(ImFont* font) --> void PushFont(ImFont* font, float size);
+       - PushFont(font, 0.0f)                       // Change font and keep current size
+       - PushFont(NULL, 20.0f)                      // Keep font and change current size
+       - PushFont(font, 20.0f)                      // Change font and set size to 20.0f
+       - PushFont(font, style.FontSizeBase * 2.0f)  // Change font and set size to be twice bigger than current size.
+       - PushFont(font, font->LegacySize)           // Change font and set size to size passed to AddFontXXX() function. Same as pre-1.92 behavior, for fixed size fonts.
+   - To use old behavior use 'ImGui::PushFont(font, font->LegacySize)' at call site.
+     We intentionally didn't add a default parameter because it would make the long-term
+     transition more difficult.
+   - Kept inline redirection font. Will obsolete.
+   - Global scale factors may be applied over the provided size.
+     This is why it is called 'FontSizeBase' in the style structure.
+   - Global scale factors are: 'style.FontScaleMain', 'style.FontScaleDpi' and maybe more.
+   - ImFont::FontSize was removed and does not make sense anymore.
+   - ImFont::LegacySize is the size passed to AddFont().
+   - Removed support for old PushFont(NULL) which was a shortcut for "revert to default font".
+     `PushFont(NULL, some_size)` now keeps current change and changes size.
+   - Renamed/moved 'io.FontGlobalScale' to 'style.FontScaleMain'.
+- Fonts: **IMPORTANT** on Font Merging:
+  - When searching for a glyph in multiple merged fonts: we search for the FIRST font source
+    which contains the desired glyph. Because the user doesn't need to provide glyph ranges
+    any more, it is possible that a glyph that you expected to fetch from a secondary/merged
+    icon font may be erroneously fetched from the primary font.
+  - We added `ImFontConfig::GlyphExcludeRanges[]` to specify ranges to exclude from a given font source:
+        // Add Font Source 1 but ignore ICON_MIN_FA..ICON_MAX_FA range
+        static ImWchar exclude_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
+        ImFontConfig cfg1;
+        cfg1.GlyphExcludeRanges = exclude_ranges;
+        io.Fonts->AddFontFromFileTTF("segoeui.ttf", 0.0f, &cfg1);
+        // Add Font Source 2, which expects to use the range above
+        ImFontConfig cfg2;
+        cfg2.MergeMode = true;
+        io.Fonts->AddFontFromFileTTF("FontAwesome4.ttf", 0.0f, &cfg2);
+    - You can use `Metrics/Debugger->Fonts->Font->Input Glyphs Overlap Detection Tool` to
+      see list of glyphs available in multiple font sources. This can facilitate understanding
+      which font input is providing which glyph.
+- Fonts: **IMPORTANT** on Thread Safety:
+  - A few functions such as font->CalcTextSizeA() were by sheer luck (== accidentally)
+    thread-safe even thou we had never provided that guarantee before. They are
+    definitively not thread-safe anymore as new glyphs may be loaded.
+
+- Textures:
+  - All API functions taking a 'ImTextureID' parameter are now taking a 'ImTextureRef':
+    - ImTextureRef ais  small composite structure which may be constructed from a ImTextureID.
+      (or constructed from a ImTextureData* which represent a texture which will generally
+      be ready by the time of rendering).
+    - Affected functions are:
+      - ImGui::Image(), ImGui::ImageWithBg(), ImGui::ImageButton(),
+      - ImDrawList::AddImage(), ImDrawList::AddImageQuad(), ImDrawList::AddImageRounded().
+    - We suggest that C users and any higher-level language bindings generators may
+      facilitate converting this in some way, aka emulating the trivial C++ constructor.
+- Fonts: obsoleted ImFontAtlas::GetTexDataAsRGBA32(), GetTexDataAsAlpha8(), Build(), SetTexID()
+  and IsBuilt() functions. The new protocol for backends to handle textures doesn't need them.
+  Kept redirection functions (will obsolete).
+   - A majority of old backends should still work with new code (behaving like they did before).
+   - For instructions to upgrade your custom backend:
+     https://github.com/ocornut/imgui/blob/master/docs/BACKENDS.md
+   - Calling ImFontAtlas::Build() before initializing new backends will erroneously trigger
+     preloading all glyphs. Will be detected with an assertion after the backend is initialized.
+- Fonts: ImFontConfig::OversampleH/OversampleV default to automatic (== 0)
+  since v1.91.8. It is quite important you keep it automatic until we decide if we want
+  to provide a way to express finer policy, otherwise you will likely waste texture space
+  when using large glyphs. Note that the imgui_freetype backend doesn't use and does not
+  need oversampling.
+- Fonts: specifying glyph ranges is now unnecessary.
+  - The value of ImFontConfig::GlyphRanges[] is only useful for legacy backends.
+  - All GetGlyphRangesXXXX() functions are now marked obsolete:
+    - GetGlyphRangesDefault(), GetGlyphRangesGreek(), GetGlyphRangesKorean(),
+      GetGlyphRangesJapanese(), GetGlyphRangesChineseSimplifiedCommon(),
+      GetGlyphRangesChineseFull(), GetGlyphRangesCyrillic(),
+      GetGlyphRangesThai(), GetGlyphRangesVietnamese().
+- Fonts: removed ImFontAtlas::TexDesiredWidth to enforce a texture width. (#327)
+  (it vaguely made sense with the old system as if unspecified textures width maxed up
+  to 4096 but that limit isn't necessary anymore, and Renderer_TextureMaxWidth covers this)
+  However you may set TexMinWidth = TexMaxWidth for the same effect.
+- Fonts: if you create and manage ImFontAtlas instances yourself (instead of relying on
+  ImGuiContext to create one), you'll need to call ImFontAtlasUpdateNewFrame() yourself.
+  An assert will trigger if you don't.
+- Fonts: obsoleted ImGui::SetWindowFontScale() which is not useful anymore. Prefer using
+  PushFont(NULL, style.FontSizeBase * factor) or to manipulate other scaling factors.
+- Fonts: obsoleted ImFont::Scale which is not useful anymore.
+- Fonts: changed ImFont::CalcWordWrapPositionA() to ImFont::CalcWordWrapPosition():
+   - old: const char* CalcWordWrapPositionA(float scale, const char* text, ....);
+   - new: const char* CalcWordWrapPosition (float size,  const char* text, ....);
+  The leading 'float scale' parameters was changed to 'float size'.
+  This was necessary as 'scale' is assuming a unique font size.
+  Kept inline redirection function assuming using font->LegacySize.
+- Fonts: generally reworked Internals of ImFontAtlas and ImFont.
+  While in theory a vast majority of users shouldn't be affected, some use cases or
+  extensions might be. Among other things:
+    - ImDrawCmd::TextureId has been changed to ImDrawCmd::TexRef.
+    - ImFontAtlas::TexID has been changed to ImFontAtlas::TexRef.
+    - ImFontAtlas::ConfigData[] has been renamed to ImFontAtlas::Sources[].
+    - ImFont::ConfigData[], ConfigDataCount has been renamed to Sources[], SourceCount.
+    - Each ImFont has a number of ImFontBaked instances corresponding to actively used
+      sizes. ImFont::GetFontBaked(size) retrieves the one for a given size.
+    - Fields moved from ImFont to ImFontBaked:
+      - ImFont::IndexAdvanceX[]       -> ImFontBaked::IndexAdvanceX[]
+      - ImFont::Glyphs[]              -> ImFontBaked::Glyphs[]
+      - ImFont::Ascent, Descent       -> ImFontBaked::Ascent, Descent
+      - ImFont::FindGlyph()           -> ImFontBaked::FindGlyph()
+      - ImFont::FindGlyphNoFallback() -> ImFontBaked::FindGlyphNoFallback()
+      - ImFont::GetCharAdvance()      -> ImFontBaked::GetCharAdvance()
+      - Widget code may use ImGui::GetFontBaked() instead of ImGui::GetFont() to
+        access font data for current font at current font size.
+        (and you may use font->GetFontBaked(size) to access it for any other size.)
+            g.Font      == ImGui::GetFont()
+            g.FontSize  == ImGui::GetFontSize()
+            g.FontBaked == ImGui::GetFontBaked() == ImGui::GetFont()->GetFontBaked(ImGui::GetFontSize())
+    - Fields moved from ImFontAtlas to ImTextureData
+      - ImFontAtlas->TexWidth         -> ImFontAtlas->TexData->Width
+      - ImFontAtlas->TexHeight        -> ImFontAtlas->TexData->Height
+      - ImFontAtlas->TexPixelsAlpha8  -> ImFontAtlas->TexData->GetPixels() (when ImFontAtlas::TexDesiredFormat == ImTextureFormat_Alpha8)
+      - ImFontAtlas->TexPixelsRGBA32  -> ImFontAtlas->TexData->GetPixels() (when ImFontAtlas::TexDesiredFormat == ImTextureFormat_RGBA32)
+  Please report if you are affected!
+- Fonts: (users of imgui_freetype)
+  - renamed ImFontAtlas::FontBuilderFlags to ImFontAtlas::FontLoaderFlags.
+  - renamed ImFontConfig::FontBuilderFlags to ImFontConfig::FontLoaderFlags.
+  - renamed ImGuiFreeTypeBuilderFlags to ImGuiFreeTypeLoaderFlags.
+  - if you used runtime imgui_freetype selection rather than the default compile-time
+    option provided by IMGUI_ENABLE_FREETYPE:
+     - renamed/reworked ImFontBuilderIO into ImFontLoader,
+     - renamed ImGuiFreeType::GetBuilderForFreeType() to ImGuiFreeType::GetFontLoader()
+       - old:  io.Fonts->FontBuilderIO = ImGuiFreeType::GetBuilderForFreeType()
+       - new:  io.Fonts->FontLoader = ImGuiFreeType::GetFontLoader()
+- DrawList: Renamed ImDrawList::PushTextureID()/PopTextureID() to PushTexture()/PopTexture().
+- Fonts: (users of custom rectangles)
+  - Renamed AddCustomRectRegular() to AddCustomRect(). (#8466)
+  - Added GetCustomRect() as a replacement for GetCustomRectByIndex() + CalcCustomRectUV(). (#8466)
+  - The output type of GetCustomRect() is now ImFontAtlasRect, which include UV coordinates.
+      - ImFontAtlasCustomRect::X      --> ImFontAtlasRect::x
+      - ImFontAtlasCustomRect::Y      --> ImFontAtlasRect::y
+      - ImFontAtlasCustomRect::Width  --> ImFontAtlasRect::w
+      - ImFontAtlasCustomRect::Height --> ImFontAtlasRect::h
+    Before:
+        const ImFontAtlasCustomRect* r = atlas->GetCustomRectByIndex(custom_rect_id);
+        ImVec2 uv0, uv1;
+        atlas->GetCustomRectUV(r, &uv0, &uv1);
+        ImGui::Image(atlas->TexRef, ImVec2(r->w, r->h), uv0, uv1);
+    After:
+        ImFontAtlasRect r;
+        atlas->GetCustomRect(custom_rect_id, &r);
+        ImGui::Image(atlas->TexRef, ImVec2(r.w, r.h), r.uv0, r.uv1);
+    We added a redirecting typedef but haven't attempted to magically redirect
+    the field names, as this API is rarely used and the fix is simple.
+  - Obsoleted AddCustomRectFontGlyph() as the API does not make sense for scalable fonts:
+    - Kept existing function which uses the font "default size" (Sources[0]->LegacySize).
+    - Added a helper AddCustomRectFontGlyphForSize() which is immediately marked obsolete,
+      but can facilitate transitioning old code.
+    - Prefer adding a font source (ImFontConfig) using a custom/procedural loader.
+- Backends: removed ImGui_ImplXXXX_CreateFontsTexture()/ImGui_ImplXXXX_DestroyFontsTexture()
+  for all backends that had them. They should not be necessary any more.
+   - removed ImGui_ImplMetal_CreateFontsTexture(), ImGui_ImplMetal_DestroyFontsTexture().
+   - removed ImGui_ImplOpenGL2_CreateFontsTexture(), ImGui_ImplOpenGL2_DestroyFontsTexture().
+   - removed ImGui_ImplOpenGL3_CreateFontsTexture(), ImGui_ImplOpenGL3_DestroyFontsTexture().
+   - removed ImGui_ImplSDLGPU3_CreateFontsTexture(), ImGui_ImplSDLGPU3_DestroyFontsTexture().
+   - removed ImGui_ImplSDLRenderer2_CreateFontsTexture(), ImGui_ImplSDLRenderer2_DestroyFontsTexture().
+   - removed ImGui_ImplSDLRenderer3_CreateFontsTexture(), ImGui_ImplSDLRenderer3_DestroyFontsTexture().
+   - removed ImGui_ImplVulkan_CreateFontsTexture(), ImGui_ImplVulkan_DestroyFontsTexture().
+- Layout: commented out legacy ErrorCheckUsingSetCursorPosToExtendParentBoundaries() fallback
+  obsoleted in 1.89 (August 2022) which allowed a SetCursorPos()/SetCursorScreenPos() call WITHOUT AN ITEM
+  to extend parent window/cell boundaries. Replaced with assert/tooltip that would already happens if
+  previously using IMGUI_DISABLE_OBSOLETE_FUNCTIONS. (#5548, #4510, #3355, #1760, #1490, #4152, #150)
+  - Incorrect way to make a window content size 200x200:
+      Begin(...) + SetCursorScreenPos(GetCursorScreenPos() + ImVec2(200,200)) + End();
+  - Correct ways to make a window content size 200x200:
+      Begin(...) + SetCursorScreenPos(GetCursorScreenPos() + ImVec2(200,200)) + Dummy(ImVec2(0,0)) + End();
+      Begin(...) + Dummy(ImVec2(200,200)) + End();
+  - TL;DR; if the assert triggers, you can add a Dummy({0,0}) call to validate extending parent boundaries.
+- TreeNode: renamed ImGuiTreeNodeFlags_NavLeftJumpsBackHere to ImGuiTreeNodeFlags_NavLeftJumpsToParent
+  for clarity. Kept inline redirection enum (will obsolete). (#1079, #8639)
+- Commented out PushAllowKeyboardFocus()/PopAllowKeyboardFocus() which was obsoleted
+  in 1.89.4 (March 2023). (#3092)
+   - PushAllowKeyboardFocus(bool tab_stop) --> PushItemFlag(ImGuiItemFlags_NoTabStop, !tab_stop);
+   - PopAllowKeyboardFocus()               --> PopItemFlag().
+- Commented out ImGuiListClipper::ForceDisplayRangeByIndices() which was obsoleted
+  in 1.89.6 (June 2023).
+   - ForceDisplayRangeByIndices()          --> IncludeItemsByIndex()
+- Backends: SDL3: Fixed casing typo in function name: (#8509, #8163, #7998, #7988) [@puugz]
+   - Imgui_ImplSDLGPU3_PrepareDrawData() --> ImGui_ImplSDLGPU3_PrepareDrawData()
+- Internals: RenderTextEllipsis() function removed the 'float clip_max_x' parameter directly
+  preceding 'float ellipsis_max_x'. Values were identical for a vast majority of users. (#8387)
+- [Docking] renamed/moved ImGuiConfigFlags_DpiEnableScaleFonts     -> bool io.ConfigDpiScaleFonts.
+- [Docking] renamed/moved ImGuiConfigFlags_DpiEnableScaleViewports -> bool io.ConfigDpiScaleViewports.
+  **Neither of those flags are very useful in current code. They will be useful once we merge font changes.**
+
+Non-breaking Fonts/Textures related changes:
+
+- Textures: added partial texture update protocol. (#8465, #3761)
+  - The Renderer Backend needs to set io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures
+    and handle texture updates requests.
+  - New structs: ImTextureData, ImTextureRect.
+  - New enums: ImTextureStatus, ImTextureFormat.
+  - During its ImGui_ImplXXXX_RenderDrawData() call, the backend can now access a texture list
+    in ImDrawData::Textures[]. Textures may have four distinct states:
+    - ImTextureStatus_WantCreate: requesting backend to create a texture.
+    - ImTextureStatus_WantUpdates: requesting backend to copy given blocks from the CPU side
+       copy of the texture to your graphics pipeline.
+       A 'tex->Updates[]' list of update is provided as well as a single 'tex->UpdatesRect' bounding box.
+    - ImTextureStatus_WantDestroy: requesting backend to destroy the texture.
+       - A 'int UnusedFrames' value is provided to conveniently defer destroying.
+       - Backend is generally free to destroy textures whenever they like.
+    - ImTextureStatus_OK: nothing to do.
+  - Almost all standard backends have been updated to support this.
+  - Backends have allowed to destroy textures at any time if they desire so.
+    A list is available in platform_io.Textures[] for this purpose and for backend shutdown.
+  - Both stb_truetype and FreeType backends have been updated to work with the new
+    system, and they now share more code than before.
+  - Added '#define IMGUI_HAS_TEXTURES' to facilitate compile-time checks for third-party
+    extensions until this is merged with a definitive version number to check.
+- Fonts: font backend/loader may easily be changed dynamically, allowing users to compare
+  rasterizers outputs and features. imgui_freetype is generally beneficial.
+- Fonts: ImFontAtlas::AddFontXXX() functions may be called at any time during the frame.
+- Fonts: ImFontAtlas::AddFontXXX() can fail more gracefully if error handling is configured
+  to not assert (this will be better exposed via future font flags).
+- Fonts: added style.FontScaleBase scaling factor (previously called io.FontGlobalScale).
+- Fonts: added style.FontScaleDpi scaling factor. This is designed to be be changed on
+  per-monitor/per-viewport basis, which `io.ConfigDpiScaleFonts` does automatically.
+  (which is why it is separate from FontScaleBase).
+- Fonts: added optional font_size parameter to ImGui::PushFont() function.
+- Fonts: added ImFontAtlas::RemoveFont() function.
+- Fonts: added ImFontAtlas::CompactCache() function.
+- Fonts: added ImFontAtlas::TexDesiredFormat field (default to ImTextureFormat_RGBA32,
+  can be changed to ImTextureFormat_Alpha8).
+- Fonts: added ImFontAtlas::TexMinWidth, TexMinHeight, TexMaxWidth, TexMaxHeight fields.
+- Fonts: added ImFontConfig::PixelSnapV to align scaled GlyphOffset.y to pixel boundaries.
+- Fonts: added ImFontConfig::GlyphExcludeRanges[], which behave similarly to
+  ImFontConfig::GlyphRanges[], but has the opposite meaning. It is tailored to situations
+  where merged fonts have overlapping characters.
+- Fonts: added "Input Glyphs Overlap Detection Tool" which dumps a list of glyphs
+  provided by merged sources, which may help setting up a GlyphExcludeRanges[] filter.
+- Fonts: added ImFontAtlas::FontBackendName (which is surfaced in the "About Dear ImGui"
+  window and other locations).
+- Fonts: added ImFontFlags (currently needs to be passed through ImFontConfig until
+  we revamp font loading API):
+   - ImFontFlags_NoLoadError: disable erroring/assert when calling AddFontXXX()
+     with missing file/data. Calling code is expected to check AddFontXXX() return value.
+   - ImFontFlags_NoLoadGlyphs: disable loading new glyphs.
+   - ImFontFlags_LockBakedSizes: disable loading new baked sizes, disable garbage
+     collecting current ones. e.g. if you want to lock a font to a single size.
+- Fonts: the general design has changed toward meaning that a ImFont doesn't have
+  have a specific size: it may be bound and drawn with any size.
+   - We store ImFontBaked structures internally, which are a cache of information
+     for a given size being drawn. You should not need to deal with ImFontBaked directly.
+   - ImFontBaked structures may be cleaned up between frames when unused, pointers
+     to them are only valid for the current frame.
+   - Added ImFontBaked::IsGlyphLoaded() function.
+- Fonts: Custom Rect packing has generally been reworked. (#8107, #7962, #1282)
+  - ImFontAtlas::AddCustomRect() (previously AddCustomRectRegular()/AddCustomRectFontGlyph())
+    functions will immediately return a packed rectangle identifier, and you can write your
+    pixels immediately - previously had to wait for Build() to be called.
+    This is also the case when using a legacy backend.
+  - Custom packed rectangles may be moved during a texture change, aka practically anytime.
+    Always refer to latest uvs/position returned by GetCustomRect().
+  - AddCustomRect() returns ImFontAtlasRectId_Invalid on failure.
+  - Added ImFontAtlas::RemoveCustomRect() function.
+  - GetCustomRect() can safely return false and not crash when passed an invalid or removed id.
+- Fonts: texture is now stored in a single format CPU side (save ~25% when using RGBA).
+- Fonts: changing current font to one from a different atlas is supported. (#8080)
+- Fonts: automatic baking of an "..." ellipsis works better with monospace fonts.
+- Fonts: each ImFontConfig font source may provide a custom backend/loader.
+- Fonts: added platform_io.Renderer_TextureMaxWidth/Renderer_TextureMaxHeight fields
+  for Renderer Backend to specify if there is a maximum accepted texture size (not yet used).
+- Fonts: added compile-time overridable '#define ImTextureID_Invalid 0' if you need 0
+  to be a valid low-level texture identifier.
+- Fonts: reworked text ellipsis logic to ensure a "..." is always displayed instead
+  of a single character. (#7024)
+- Fonts: word-wrapping code handle ideographic comma & full stop (U+3001, U+3002). (#8540)
+- Fonts: fixed CalcWordWrapPosition() fallback when width is too small to wrap:
+  would use a +1 offset instead of advancing to the next UTF-8 codepoint. (#8540)
+- Debug Tools: Fonts section: add font preview, add "Remove" button, add "Load all glyphs"
+  button, add selection to change font backend when both are compiled in.
+- Renderer Backends:
+  - Backends: DX9/DX10/DX11/DX12, Vulkan, OpenGL2/3, Metal, SDLGPU3, SDLRenderer2/3, WebGPU, Allegro5:
+    - Added ImGuiBackendFlags_RendererHasTextures support for all backends. (#8465, #3761, #3471)
+      [@ocornut, @ShironekoBen, @thedmd]
+    - Added ImGui_ImplXXXX_UpdateTexture(ImTextureData* tex) functions for all backends.
+      Available if you want to start uploading textures right after ImGui::Render() and without
+      waiting for the call to ImGui_ImplXXXX_RenderDrawData(). Also useful if you use a staged or
+      multi-threaded rendering schemes, where you might want to set ImDrawData::Textures = NULL. (#8597, #1860)
+- Special thanks for fonts/texture related feedback to: @thedmd, @ShironekoBen, @rodrigorc,
+  @pathogendavid, @itamago, @rokups, @DucaRii, @Aarkham, @cyfewlp.
+
+Other Changes:
+
+- IO: variations in analog-only components of gamepad events do not interfere
+  with trickling of mouse position events (#4921, #8508)
+- Windows: fixed SetNextWindowCollapsed()/SetWindowCollapsed() bypassing the
+  codepath that preserve last contents size when collapsed, resulting in
+  programmatically uncollapsing auto-sizing windows having them flicker size
+  for a frame. (#7691) [@achabense]
+- Windows: clicking on a window close button doesn't claim focus and bring to front. (#8683)
+- Windows: loosened code to allow hovering of resize grips, borders, and table
+  borders while hovering a sibling child window, so that the code in master matches
+  one in docking (they accidentally diverged). (#8554)
+- Windows: BeginChild(): fixed being unable to combine manual resize on one axis
+  and automatic resize on the other axis. (#8690)
+  e.g. neither ImGuiChildFlags_ResizeX | ImGuiChildFlags_AutoResizeY
+            or ImGuiChildFlags_ResizeY | ImGuiChildFlags_AutoResizeX worked before.
+- TreeNode: added experimental flags to draw tree hierarchy outlines linking
+  parent and tree nodes: (#2920)
+  - ImGuiTreeNodeFlags_DrawLinesNone: No lines drawn (default value in style.TreeLinesFlags).
+  - ImGuiTreeNodeFlags_DrawLinesFull: Horizontal lines to child nodes. Vertical line drawn down to TreePop() position: cover full contents.
+  - ImGuiTreeNodeFlags_DrawLinesToNodes: Horizontal lines to child nodes. Vertical line drawn down to bottom-most child node.
+  - Added style.TreeLinesFlags which stores the default setting,
+    which may be overridden in individual TreeNode() calls.
+  - Added style.TreeLinesSize (default to 1.0f).
+  - Added style.TreeLinesRadius (default to 0.0f).
+  - Added ImGuiCol_TreeLines (in default styles this is the same as ImGuiCol_Border).
+  - Caveats:
+    - Tree nodes may be used in many creative ways (manually positioning openable
+      nodes in unusual ways, using indent to create tree-looking structures, etc.)
+      and the feature may not accurately represent them in every cases.
+    - The feature adds a little cost as extra data needs to be stored.
+      (ImGuiTreeNodeFlags_DrawLinesToNodes is slower than ImGuiTreeNodeFlags_DrawLinesFull
+      which may be meaningful on very large trees, as it needs to record bottom-most
+      Y position even for clipped nodes).
+    - The feature is unlikely to ever work properly when using a coarse clipper
+      such as ImGuiListClipper.
+- TreeNode: fixed incorrect clipping of arrow/bullet when using ImGuiTreeNodeFlags_SpanAllColumns.
+- InputText: fixed cursor positioning issue using up/down keys near end of lines while
+  editing non-ASCII text. (Regression from 1.91.2) (#8635, #7925)
+- InputText: fixed a buffer overrun that could happen when using dynamically resizing
+  buffers (e.g. imgui_stdlib.cpp for std::string, or ImGuiInputTextFlags_CallbackRezize)
+  and programmatically making an insertion. (#8689) [@ocornut, @m9710797]
+- Tables: fixed TableHeader() eager vertical clipping of text which may be noticeable
+  with FramePadding.y was too small. (#6236)
+- Tables: fixed an assert when combining Tables, Frozen Rows, Clipper and BeginMultiSelect()
+  in a certain order. (#8595, #8250)
+- Tabs: fixes small issues with how "..." ellipsis moved depending on visibility
+  of Close Button or Unsaved Document marker. (#8387)
+- Tooltips: tooltips have a maximum size corresponding to host display/monitor size,
+  which mitigates edge case issues in multi-viewport scenarios where abnormally large
+  windows (e.g. determined programmatically) can lead to renderer backend trying to
+  create abnormally large framebuffers.
+- TextLinkOpenURL(): added bool return value on click. (#8645, #8451, #7660)
+- Scroll: fixed contents size, scrollbar visibility and scrolling resetting issues
+  with abnormally large contents ranges. (#3609, #8215)
+- Clipper: some mitigation/improvements for abnormally large contents ranges. (#3609, #8215)
+- Nav: fixed assertion when holding gamepad FaceLeft/West button to open
+  CTRL+Tab windowing + pressing a keyboard key. (#8525)
+- Nav: fixed scroll fallback (when there are no interactive widgets to jump to) not
+  being enabled on windows with menu or title bar.
+- Nav: fixed an issue handling PageUp/PageDown on windows with abnormally large contents
+  range which could lead to clipper requesting very large ranges.
+- Error Handling: added better error report and recovery for extraneous
+  EndPopup() call. (#1651, #8499)
+- Error Handling: added better error report and recovery when calling EndFrame()
+  or Render() without NewFrame(). Was previously only an assert.
+- Style, InputText: added ImGuiCol_InputTextCursor to configure color of
+  the InputText cursor/caret. (#7031)
+- Platform IME: added ImGuiPlatformImeData::ViewportId info (backported from Docking branch).
+- Platform IME: added ImGuiPlatformImeData::WantTextInput which might set independently
+  of WantVisible. This is set in the same structure because activating text input generally
+  requires providing a window to the backend. (#8584, #6341)
+- DrawList: Fixed a regression from 1.91.1 where a Begin()/PushFont()/AddImage() sequence
+  would not restore the correct atlas Texture Identifier when the PushFont() call used
+  a font from a different atlas. (#8694, caused by #3224, #3875, #6398, #7903)
+- Misc: added extra operators to ImVec4 in IMGUI_DEFINE_MATH_OPERATORS block. (#8510) [@gan74]
+- Misc: removed static linkage from operators to facilitate using in C++ modules. (#8682, #8358) [@johmani]
+- Demo: changed default framed item width to use Min(GetFontSize() * 12, GetContentRegionAvail().x * 0.40f).
+- Renderer Backends:
+  - Backends: SDLGPU3: Fixed creating atlas texture earlier than other backends, preventing
+    to load fonts between the Init and NewFrames calls.
+  - Backends: SDLGPU3: Made ImGui_ImplSDLGPU3_PrepareDrawData() reuse GPU Transfer Buffers which
+    were unusually slow to recreate every frame. Much faster now. (#8534) [@ocornut, @TheMode]
+  - Backends: SDLGPU3: added support for ImDrawCallback_ResetRenderState. (#8599)
+  - Backends: OpenGL3: made GLES 3.20 contexts not access GL_CONTEXT_PROFILE_MASK nor
+    GL_PRIMITIVE_RESTART. (#8664) [@DyXel]
+  - Backends: DirectX12: Fixed build on MinGW. (#8702, #4594) [@playday3008]
+  - Backends: DirectX10, DirectX11, DirectX12: Honor FramebufferScale to allow for custom
+    platform backends and experiments using it (consistently with other renderer backends,
+    even though in normal condition it is not set under Windows). (#8412) [@WSSDude]
+  - Backends: Vulkan: Deep-copy ImGui_ImplVulkan_InitInfo::PipelineRenderingCreateInfo's
+    pColorAttachmentFormats buffer when set, in order to reduce common user-error of
+    specifying a pointer to data that gets out of scope. (#8282)
+  - Backends: Vulkan: Load dynamic rendering functions using vkGetDeviceProcAddr()
+    + try both non-KHR and KHR versions. (#8600, #8326, #8365) [@ChrisTom-94]
+  - Backends: Vulkan: fixed validation errors in window create/resize helpers used by examples
+    and by multi-viewports implementation, which would typically trigger errors while detaching
+    secondary viewports. (#8600, #8176) [@ChrisTom-94]
+- Platform Backends:
+  - Backends: GLFW: added ImGui_ImplGlfw_GetContentScaleForMonitor(), ImGui_ImplGlfw_GetContentScaleForWindow()
+    helpers. They are wrappers to glfwGetMonitorContentScale()/glfwGetWindowContentScale(), with compile-time
+    GLFW version checks + returning 1.0f on Apple platform.
+  - Backends: GLFW: Added support for multiple Dear ImGui contexts. (#8676, #8239, #8069)
+  - Backends: SDL2: added ImGui_ImplSDL2_GetDpiScaleForDisplay() and ImGui_ImplSDL2_GetContentScaleForWindow()
+    helpers. They are wrappers to SDL_GetDisplayDPI(), with compile-time SDL version checks + returning 1.0f
+    on Apple platforms. SDL3 already does this by default.
+  - Backends: Win32: Fixed an issue where externally losing mouse capture (due to e.g. focus loss)
+    would fail to claim it again the next subsequent click. (#8594)
+  - Backends: SDL2, SDL3, OSX: Fill gamepad inputs and set ImGuiBackendFlags_HasGamepad
+    regardless of ImGuiConfigFlags_NavEnableGamepad being set. (#8508)
+  - Backends: SDL2, SDL3: don't attempt to call SDL_CaptureMouse() on drivers where we don't
+    call SDL_GetGlobalMouseState(). This is specifically for Wayland but we currently use
+    the same white-list as SDL_GetGlobalMouseState(). (#8561) [@vs49688]
+  - Backends: GLFW, SDL2, SDL3: include GLFW/SDL version number in io.BackendPlatformName.
+  - Backends: SDL3: Update for SDL3 api changes: revert SDL_GetClipboardText()
+    memory ownership change. (#8530, #7801) [@Green-Sky]
+  - Backends: SDL3: honor ImGuiPlatformImeData::WantTextInput as an alternative
+    way to call SDL_StartTextInput(), without IME being necessarily visible. (#8584)
+  - Backends: SDL3: fixed pulling SDL_PROP_WINDOW_COCOA_WINDOW_POINTER into
+    viewport->PlatformHandleRaw. (#8725, #8726) [@eertbleyen]
+  - Backends: OSX: ImGui_ImplOSX_HandleEvent() only process event for window containing
+    our view. (#8644) [@BingoXuan]
+- Examples:
+  - Examples: Made many examples DPI aware by default.
+    The single-viewport is basically:
+     - Query monitor DPI scale. Helpers are provided in some backends.
+     - Call style.ScaleAllSizes() and set style.FontScaleDpi with this factor.
+    Multi-viewport applications may set both of those flags:
+     - io.ConfigDpiScaleFonts = true;
+     - io.ConfigDpiScaleViewports = true;
+    Which will scale fonts but NOT style padding/spacings/thicknesses yet.
+  - Examples: Apple+Metal, Apple+OpenGL: add Makefile (CLion opens them nicely). (#8637) [@pthom]
+  - Examples: DirectX12+Win32: also test for IsIconic() for sleeping since we don't seem to
+    get a DXGI_STATUS_OCCLUDED signal when minimized. (#8603) [@dooann]
+
+Docking+Viewports Branch:
+
+- Viewports: added per-viewport FramebufferScale for Retina display multi-monitor support.
+  Backend must provide platform_io.platform_io.Platform_GetWindowFramebufferScale handler.
+  This effectively fixes clipping/rendering on multi-monitors with varying Retina scale.
+  (#1065, #1542, #1676, #1786, #2826, #3757, #5081, #5580, #5592, #6465, #7273, #7779 etc.)
+- Viewports: fixed handling of simultaneous move + resize (e.g. toggling maximized)
+  when ImGuiConfigFlags_DpiEnableScaleViewports is enabled.
+- Backends: Win32: Viewports: fixed an issue when closing a window from
+  the OS close button (with io.ConfigViewportsNoDecoration=false) while
+  user code is discarding the 'bool *p_open=false output' from Begin().
   Because we allowed the Win32 window to close early, Windows destroyed
   it and our imgui window became not visible even though user code was
-  still submitting it.
+  still submitting it. (#8670)
+- Backends: Win32: Viewports: handle WM_DPICHANGED in backend when
+  ImGuiConfigFlags_DpiEnableScaleViewports is enabled.
+- Backends: GLFW, SDL2, SDL3, Apple: provide Platform_GetWindowFramebufferScale handler,
+  (#1065, #1542, #1676, #1786, #2826, #3757, #5081, #5580, #5592, #6465, #7273, #7779 etc.)
+- Backends: SDLGPU3 for SDL3: added multi-viewport support. (#8573) [@Lekoopapaul]
+- Backends: SDL2, SDL3: revert updating monitors and work areas info every
+  frame. Only do it on Windows to detect task-bar resize until we get an
+  adequate event for it. (#8415, #8558)
+- Backends: SDL3: macOS: Fixed secondary-viewports not appearing on a different
+  monitor than the main viewport. Because SDL_SetWindowParent() seems to restrict it.
+- Backends: GLFW: Disable multi-viewports under Wayland (require GLFW 3.4). (#8587)
+- Backends: GLFW: Fixed an issue where Win32 specific WndProc hook was not installed
+  for all GLFW version, preventing mouse vs touch detection from working on
+  secondary viewports.
 
 
 -----------------------------------------------------------------------
@@ -178,6 +1043,7 @@ Other changes:
 - Debug Tools: Added io.ConfigDebugHighlightIdConflictsShowItemPicker (defaults to true)
   to allow disabled Item Picker suggestion in user facing builds. (#7961, #7669)
 - Debug Tools: Tweaked layout of ID Stack Tool and always display full path. (#4631)
+- imgui_freetype: update lunasvg API to support v3.0+. (#8656, #6842, #6591) [@moretromain]
 - Misc: Various zealous warning fixes for newer version of Clang.
 - Misc: Added ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress mouse cursors
   (busy/wait/hourglass shape, with or without an arrow cursor).
@@ -204,7 +1070,7 @@ Other changes:
   with asserts enabled. (#8452)
 - Backends: SDL2, SDL3: Using SDL_OpenURL() in platform_io.Platform_OpenInShellFn
   handler. (#7660) [@achabense]
-- Backends: SDL2, SDL3: Use display bounds when SDL_GetDisplayUsableBounds() 
+- Backends: SDL2, SDL3: Use display bounds when SDL_GetDisplayUsableBounds()
   fails or return a zero size. (#8415, #3457)
 - Backends: SDL2, SDL3, Win32, Allegro5: Added support for ImGuiMouseCursor_Wait
   and ImGuiMouseCursor_Progress cursors.
@@ -232,9 +1098,9 @@ Docking+Viewports Branch:
 
 - Docking: Removed legacy assert preventing to call DockBuilderSplitNode() on an existing
   split node. This makes using DockBuilder a little more flexible and bearable! (#8472) [@MegaMech]
-- Viewports: fixed an issue where in certain cases, a window repositioning leading 
-  to a monitor change could have the window incorrectly get clamped within the boundaries 
-  of its previous monitor. Would happen e.g. when loading .ini data during runtime. (#8484) 
+- Viewports: fixed an issue where in certain cases, a window repositioning leading
+  to a monitor change could have the window incorrectly get clamped within the boundaries
+  of its previous monitor. Would happen e.g. when loading .ini data during runtime. (#8484)
 - Viewports: fixed an assert when a window load settings with a position outside
   monitor bounds, when there are multiple monitors. (#8393, #8385) [@gaborodriguez]
 - Viewports + Backends: Win32: Fixed setting title bar text when application
@@ -559,7 +1425,7 @@ Breaking changes:
     allows casting any pointer/integer type without warning:
     - May warn:     ImGui::Image((void*)MyTextureData, ...);
     - May warn:     ImGui::Image((void*)(intptr_t)MyTextureData, ...);
-    - Won't warn:   ImGui::Image((ImTextureID)(intptr_t)MyTextureData), ...);
+    - Won't warn:   ImGui::Image((ImTextureID)(intptr_t)MyTextureData, ...);
   - Note that you can always define ImTextureID to be your own high-level structures
     (with dedicated constructors and extra render parameters) if you like.
 - IO: moved ImGuiConfigFlags_NavEnableSetMousePos to standalone io.ConfigNavMoveSetMousePos bool.
@@ -581,7 +1447,7 @@ Other changes:
      - Set io.ConfigNavCursorVisibleAuto = true (default) to enable automatic toggling
        of cursor visibility (mouse click hide the cursor, arrow keys makes it visible).
      - Set io.ConfigNavCursorVisibleAlways to keep cursor always visible.
-  - Nav: added NavSetCursorVisible(bool visible) function to manipulate visibility of
+  - Nav: added SetNavCursorVisible(bool visible) function to manipulate visibility of
     navigation cursor (e.g. set default state, or after some actions). (#1074, #2048, #7237, #8059)
   - Nav: added io.ConfigNavEscapeClearFocusItem and io.ConfigNavEscapeClearFocusWindow to change
     how pressing Escape affects navigation. (#8059, #2048, #1074, #3200)
@@ -4369,7 +5235,7 @@ Breaking Changes:
   - ShowTestWindow()                    -> use ShowDemoWindow()
   - IsRootWindowFocused()               -> use IsWindowFocused(ImGuiFocusedFlags_RootWindow)
   - IsRootWindowOrAnyChildFocused()     -> use IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)
-  - SetNextWindowContentWidth(w)        -> use SetNextWindowContentSize(ImVec2(w, 0.0f)
+  - SetNextWindowContentWidth(w)        -> use SetNextWindowContentSize(ImVec2(w, 0.0f))
   - GetItemsLineHeightWithSpacing()     -> use GetFrameHeightWithSpacing()
   - ImGuiCol_ChildWindowBg              -> use ImGuiCol_ChildBg
   - ImGuiStyleVar_ChildWindowRounding   -> use ImGuiStyleVar_ChildRounding

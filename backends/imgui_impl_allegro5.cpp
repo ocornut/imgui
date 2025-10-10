@@ -2,7 +2,8 @@
 // (Info: Allegro 5 is a cross-platform general purpose library for handling windows, inputs, graphics, etc.)
 
 // Implemented features:
-//  [X] Renderer: User texture binding. Use 'ALLEGRO_BITMAP*' as ImTextureID. Read the FAQ about ImTextureID!
+//  [X] Renderer: User texture binding. Use 'ALLEGRO_BITMAP*' as texture identifier. Read the FAQ about ImTextureID/ImTextureRef!
+//  [X] Renderer: Texture updates support for dynamic font atlas (ImGuiBackendFlags_RendererHasTextures).
 //  [X] Platform: Keyboard support. Since 1.87 we are using the io.AddKeyEvent() function. Pass ImGuiKey values to all key functions e.g. ImGui::IsKeyPressed(ImGuiKey_Space). [Legacy ALLEGRO_KEY_* values are obsolete since 1.87 and not supported since 1.91.5]
 //  [X] Platform: Clipboard support (from Allegro 5.1.12).
 //  [X] Platform: Mouse cursor shape and visibility (ImGuiBackendFlags_HasMouseCursors). Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'.
@@ -21,6 +22,11 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2025-09-18: Call platform_io.ClearRendererHandlers() and platform_io.ClearPlatformHandlers() on shutdown.
+//  2025-08-12: Inputs: fixed missing support for ImGuiKey_PrintScreen under Windows, as raw Allegro 5 does not receive it.
+//  2025-08-12: Added ImGui_ImplAllegro5_SetDisplay() function to change current ALLEGRO_DISPLAY, as Allegro applications often need to do that.
+//  2025-07-07: Fixed texture update broken on some platforms where ALLEGRO_LOCK_WRITEONLY needed all texels to be rewritten.
+//  2025-06-11: Added support for ImGuiBackendFlags_RendererHasTextures, for dynamic font atlas. Removed ImGui_ImplSDLGPU3_CreateFontsTexture() and ImGui_ImplSDLGPU3_DestroyFontsTexture().
 //  2025-02-18: Added ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress mouse cursor support.
 //  2025-01-06: Avoid calling al_set_mouse_cursor() repeatedly since it appears to leak on on X11 (#8256).
 //  2024-08-22: moved some OS/backend related function pointers from ImGuiIO to ImGuiPlatformIO:
@@ -138,6 +144,13 @@ void ImGui_ImplAllegro5_RenderDrawData(ImDrawData* draw_data)
     if (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f)
         return;
 
+    // Catch up with texture updates. Most of the times, the list will have 1 element with an OK status, aka nothing to do.
+    // (This almost always points to ImGui::GetPlatformIO().Textures[] but is part of ImDrawData to allow overriding or disabling texture updates).
+    if (draw_data->Textures != nullptr)
+        for (ImTextureData* tex : *draw_data->Textures)
+            if (tex->Status != ImTextureStatus_OK)
+                ImGui_ImplAllegro5_UpdateTexture(tex);
+
     // Backup Allegro state that will be modified
     ImGui_ImplAllegro5_Data* bd = ImGui_ImplAllegro5_GetBackendData();
     ALLEGRO_TRANSFORM last_transform = *al_get_current_transform();
@@ -151,10 +164,8 @@ void ImGui_ImplAllegro5_RenderDrawData(ImDrawData* draw_data)
     ImGui_ImplAllegro5_SetupRenderState(draw_data);
 
     // Render command lists
-    for (int n = 0; n < draw_data->CmdListsCount; n++)
+    for (const ImDrawList* draw_list : draw_data->CmdLists)
     {
-        const ImDrawList* draw_list = draw_data->CmdLists[n];
-
         ImVector<ImDrawVertAllegro>& vertices = bd->BufVertices;
 #if ALLEGRO_HAS_DRAW_INDEXED_PRIM
         vertices.resize(draw_list->VtxBuffer.Size);
@@ -233,43 +244,7 @@ void ImGui_ImplAllegro5_RenderDrawData(ImDrawData* draw_data)
 
 bool ImGui_ImplAllegro5_CreateDeviceObjects()
 {
-    // Build texture atlas
     ImGui_ImplAllegro5_Data* bd = ImGui_ImplAllegro5_GetBackendData();
-    ImGuiIO& io = ImGui::GetIO();
-    unsigned char* pixels;
-    int width, height;
-    io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
-
-    // Create texture
-    // (Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling)
-    int flags = al_get_new_bitmap_flags();
-    int fmt = al_get_new_bitmap_format();
-    al_set_new_bitmap_flags(ALLEGRO_MEMORY_BITMAP | ALLEGRO_MIN_LINEAR | ALLEGRO_MAG_LINEAR);
-    al_set_new_bitmap_format(ALLEGRO_PIXEL_FORMAT_ABGR_8888_LE);
-    ALLEGRO_BITMAP* img = al_create_bitmap(width, height);
-    al_set_new_bitmap_flags(flags);
-    al_set_new_bitmap_format(fmt);
-    if (!img)
-        return false;
-
-    ALLEGRO_LOCKED_REGION* locked_img = al_lock_bitmap(img, al_get_bitmap_format(img), ALLEGRO_LOCK_WRITEONLY);
-    if (!locked_img)
-    {
-        al_destroy_bitmap(img);
-        return false;
-    }
-    memcpy(locked_img->data, pixels, sizeof(int) * width * height);
-    al_unlock_bitmap(img);
-
-    // Convert software texture to hardware texture.
-    ALLEGRO_BITMAP* cloned_img = al_clone_bitmap(img);
-    al_destroy_bitmap(img);
-    if (!cloned_img)
-        return false;
-
-    // Store our identifier
-    io.Fonts->SetTexID((ImTextureID)(intptr_t)cloned_img);
-    bd->Texture = cloned_img;
 
     // Create an invisible mouse cursor
     // Because al_hide_mouse_cursor() seems to mess up with the actual inputs..
@@ -280,16 +255,82 @@ bool ImGui_ImplAllegro5_CreateDeviceObjects()
     return true;
 }
 
+void ImGui_ImplAllegro5_UpdateTexture(ImTextureData* tex)
+{
+    if (tex->Status == ImTextureStatus_WantCreate)
+    {
+        // Create and upload new texture to graphics system
+        //IMGUI_DEBUG_LOG("UpdateTexture #%03d: WantCreate %dx%d\n", tex->UniqueID, tex->Width, tex->Height);
+        IM_ASSERT(tex->TexID == ImTextureID_Invalid && tex->BackendUserData == nullptr);
+        IM_ASSERT(tex->Format == ImTextureFormat_RGBA32);
+
+        // Create texture
+        // (Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling)
+        const int new_bitmap_flags = al_get_new_bitmap_flags();
+        int new_bitmap_format = al_get_new_bitmap_format();
+        al_set_new_bitmap_flags(ALLEGRO_MEMORY_BITMAP | ALLEGRO_MIN_LINEAR | ALLEGRO_MAG_LINEAR);
+        al_set_new_bitmap_format(ALLEGRO_PIXEL_FORMAT_ABGR_8888_LE);
+        ALLEGRO_BITMAP* cpu_bitmap = al_create_bitmap(tex->Width, tex->Height);
+        IM_ASSERT(cpu_bitmap != nullptr && "Backend failed to create texture!");
+
+        // Upload pixels
+        ALLEGRO_LOCKED_REGION* locked_region = al_lock_bitmap(cpu_bitmap, al_get_bitmap_format(cpu_bitmap), ALLEGRO_LOCK_WRITEONLY);
+        IM_ASSERT(locked_region != nullptr && "Backend failed to create texture!");
+        memcpy(locked_region->data, tex->GetPixels(), tex->GetSizeInBytes());
+        al_unlock_bitmap(cpu_bitmap);
+
+        // Convert software texture to hardware texture.
+        al_set_new_bitmap_flags(ALLEGRO_VIDEO_BITMAP);
+        al_set_new_bitmap_format(ALLEGRO_PIXEL_FORMAT_ANY_32_WITH_ALPHA);
+        ALLEGRO_BITMAP* gpu_bitmap = al_clone_bitmap(cpu_bitmap);
+        al_destroy_bitmap(cpu_bitmap);
+        IM_ASSERT(gpu_bitmap != nullptr && "Backend failed to create texture!");
+
+        al_set_new_bitmap_flags(new_bitmap_flags);
+        al_set_new_bitmap_format(new_bitmap_format);
+
+        // Store identifiers
+        tex->SetTexID((ImTextureID)(intptr_t)gpu_bitmap);
+        tex->SetStatus(ImTextureStatus_OK);
+    }
+    else if (tex->Status == ImTextureStatus_WantUpdates)
+    {
+        // Update selected blocks. We only ever write to textures regions which have never been used before!
+        // This backend choose to use tex->Updates[] but you can use tex->UpdateRect to upload a single region.
+        ImTextureRect r = tex->UpdateRect; // Bounding box encompassing all individual updates
+        ALLEGRO_BITMAP* gpu_bitmap = (ALLEGRO_BITMAP*)(intptr_t)tex->TexID;
+        ALLEGRO_LOCKED_REGION* locked_region = al_lock_bitmap_region(gpu_bitmap, r.x, r.y, r.w, r.h, al_get_bitmap_format(gpu_bitmap), ALLEGRO_LOCK_WRITEONLY);
+        IM_ASSERT(locked_region && "Backend failed to update texture!");
+        for (int y = 0; y < r.h; y++)
+            memcpy((unsigned char*)locked_region->data + locked_region->pitch * y, tex->GetPixelsAt(r.x, r.y + y), r.w * tex->BytesPerPixel); // dst, src, block pitch
+        al_unlock_bitmap(gpu_bitmap);
+        tex->SetStatus(ImTextureStatus_OK);
+    }
+    else if (tex->Status == ImTextureStatus_WantDestroy)
+    {
+        ALLEGRO_BITMAP* backend_tex = (ALLEGRO_BITMAP*)(intptr_t)tex->TexID;
+        if (backend_tex)
+            al_destroy_bitmap(backend_tex);
+
+        // Clear identifiers and mark as destroyed (in order to allow e.g. calling InvalidateDeviceObjects while running)
+        tex->SetTexID(ImTextureID_Invalid);
+        tex->SetStatus(ImTextureStatus_Destroyed);
+    }
+}
+
 void ImGui_ImplAllegro5_InvalidateDeviceObjects()
 {
-    ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplAllegro5_Data* bd = ImGui_ImplAllegro5_GetBackendData();
-    if (bd->Texture)
-    {
-        io.Fonts->SetTexID(0);
-        al_destroy_bitmap(bd->Texture);
-        bd->Texture = nullptr;
-    }
+
+    // Destroy all textures
+    for (ImTextureData* tex : ImGui::GetPlatformIO().Textures)
+        if (tex->RefCount == 1)
+        {
+            tex->SetStatus(ImTextureStatus_WantDestroy);
+            ImGui_ImplAllegro5_UpdateTexture(tex);
+        }
+
+    // Destroy mouse cursor
     if (bd->MouseCursorInvisible)
     {
         al_destroy_mouse_cursor(bd->MouseCursorInvisible);
@@ -440,21 +481,11 @@ bool ImGui_ImplAllegro5_Init(ALLEGRO_DISPLAY* display)
     io.BackendPlatformUserData = (void*)bd;
     io.BackendPlatformName = io.BackendRendererName = "imgui_impl_allegro5";
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;       // We can honor GetMouseCursor() values (optional)
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;   // We can honor ImGuiPlatformIO::Textures[] requests during render.
 
-    bd->Display = display;
     bd->LastCursor = ALLEGRO_SYSTEM_MOUSE_CURSOR_NONE;
 
-    // Create custom vertex declaration.
-    // Unfortunately Allegro doesn't support 32-bit packed colors so we have to convert them to 4 floats.
-    // We still use a custom declaration to use 'ALLEGRO_PRIM_TEX_COORD' instead of 'ALLEGRO_PRIM_TEX_COORD_PIXEL' else we can't do a reliable conversion.
-    ALLEGRO_VERTEX_ELEMENT elems[] =
-    {
-        { ALLEGRO_PRIM_POSITION, ALLEGRO_PRIM_FLOAT_2, offsetof(ImDrawVertAllegro, pos) },
-        { ALLEGRO_PRIM_TEX_COORD, ALLEGRO_PRIM_FLOAT_2, offsetof(ImDrawVertAllegro, uv) },
-        { ALLEGRO_PRIM_COLOR_ATTR, 0, offsetof(ImDrawVertAllegro, col) },
-        { 0, 0, 0 }
-    };
-    bd->VertexDecl = al_create_vertex_decl(elems, sizeof(ImDrawVertAllegro));
+    ImGui_ImplAllegro5_SetDisplay(display);
 
 #if ALLEGRO_HAS_CLIPBOARD
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
@@ -470,6 +501,7 @@ void ImGui_ImplAllegro5_Shutdown()
     ImGui_ImplAllegro5_Data* bd = ImGui_ImplAllegro5_GetBackendData();
     IM_ASSERT(bd != nullptr && "No platform backend to shutdown, or already shutdown?");
     ImGuiIO& io = ImGui::GetIO();
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
 
     ImGui_ImplAllegro5_InvalidateDeviceObjects();
     if (bd->VertexDecl)
@@ -479,8 +511,37 @@ void ImGui_ImplAllegro5_Shutdown()
 
     io.BackendPlatformName = io.BackendRendererName = nullptr;
     io.BackendPlatformUserData = nullptr;
-    io.BackendFlags &= ~ImGuiBackendFlags_HasMouseCursors;
+    io.BackendFlags &= ~(ImGuiBackendFlags_HasMouseCursors | ImGuiBackendFlags_RendererHasTextures);
+    platform_io.ClearRendererHandlers();
+    platform_io.ClearPlatformHandlers();
     IM_DELETE(bd);
+}
+
+void ImGui_ImplAllegro5_SetDisplay(ALLEGRO_DISPLAY* display)
+{
+    ImGui_ImplAllegro5_Data* bd = ImGui_ImplAllegro5_GetBackendData();
+    bd->Display = display;
+
+    if (bd->VertexDecl)
+    {
+        al_destroy_vertex_decl(bd->VertexDecl);
+        bd->VertexDecl = NULL;
+    }
+
+    if (bd->Display && !bd->VertexDecl)
+    {
+        // Create custom vertex declaration.
+        // Unfortunately Allegro doesn't support 32-bits packed colors so we have to convert them to 4 floats.
+        // We still use a custom declaration to use 'ALLEGRO_PRIM_TEX_COORD' instead of 'ALLEGRO_PRIM_TEX_COORD_PIXEL' else we can't do a reliable conversion.
+        ALLEGRO_VERTEX_ELEMENT elems[] =
+        {
+            { ALLEGRO_PRIM_POSITION, ALLEGRO_PRIM_FLOAT_2, offsetof(ImDrawVertAllegro, pos) },
+            { ALLEGRO_PRIM_TEX_COORD, ALLEGRO_PRIM_FLOAT_2, offsetof(ImDrawVertAllegro, uv) },
+            { ALLEGRO_PRIM_COLOR_ATTR, 0, offsetof(ImDrawVertAllegro, col) },
+            { 0, 0, 0 }
+        };
+        bd->VertexDecl = al_create_vertex_decl(elems, sizeof(ImDrawVertAllegro));
+    }
 }
 
 // ev->keyboard.modifiers seems always zero so using that...
@@ -609,12 +670,11 @@ void ImGui_ImplAllegro5_NewFrame()
     ImGui_ImplAllegro5_Data* bd = ImGui_ImplAllegro5_GetBackendData();
     IM_ASSERT(bd != nullptr && "Context or backend not initialized! Did you call ImGui_ImplAllegro5_Init()?");
 
-    if (!bd->Texture)
+    if (!bd->MouseCursorInvisible)
         ImGui_ImplAllegro5_CreateDeviceObjects();
 
-    ImGuiIO& io = ImGui::GetIO();
-
     // Setup display size (every frame to accommodate for window resizing)
+    ImGuiIO& io = ImGui::GetIO();
     int w, h;
     w = al_get_display_width(bd->Display);
     h = al_get_display_height(bd->Display);
@@ -624,6 +684,11 @@ void ImGui_ImplAllegro5_NewFrame()
     double current_time = al_get_time();
     io.DeltaTime = bd->Time > 0.0 ? (float)(current_time - bd->Time) : (float)(1.0f / 60.0f);
     bd->Time = current_time;
+
+    // Allegro 5 doesn't receive PrintScreen under Windows
+#ifdef _WIN32
+    io.AddKeyEvent(ImGuiKey_PrintScreen, (::GetAsyncKeyState(VK_SNAPSHOT) & 0x8000) != 0);
+#endif
 
     // Setup mouse cursor shape
     ImGui_ImplAllegro5_UpdateMouseCursor();

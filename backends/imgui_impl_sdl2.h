@@ -12,7 +12,7 @@
 //  [X] Platform: Multi-viewport support (multiple windows). Enable with 'io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable'.
 // Missing features or Issues:
 //  [ ] Platform: Multi-viewport: Minimized windows seems to break mouse wheel events (at least under Windows).
-//  [ ] Platform: Multi-viewport: ParentViewportID not honored, and so io.ConfigViewportsNoDefaultParent has no effect (minor).
+//  [ ] Platform: Multi-viewport: Missing ImGuiBackendFlags_HasParentViewport support. The viewport->ParentViewportID field is ignored, and therefore io.ConfigViewportsNoDefaultParent has no effect either.
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
@@ -41,6 +41,10 @@ IMGUI_IMPL_API bool     ImGui_ImplSDL2_InitForOther(SDL_Window* window);
 IMGUI_IMPL_API void     ImGui_ImplSDL2_Shutdown();
 IMGUI_IMPL_API void     ImGui_ImplSDL2_NewFrame();
 IMGUI_IMPL_API bool     ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event);
+
+// DPI-related helpers (optional)
+IMGUI_IMPL_API float    ImGui_ImplSDL2_GetContentScaleForWindow(SDL_Window* window);
+IMGUI_IMPL_API float    ImGui_ImplSDL2_GetContentScaleForDisplay(int display_index);
 
 // Gamepad selection automatically starts in AutoFirst mode, picking first available SDL_Gamepad. You may override this.
 // When using manual mode, caller is responsible for opening/closing gamepad.

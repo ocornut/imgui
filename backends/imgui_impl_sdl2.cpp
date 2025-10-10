@@ -13,7 +13,7 @@
 //  [X] Platform: Multi-viewport support (multiple windows). Enable with 'io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable'.
 // Missing features or Issues:
 //  [ ] Platform: Multi-viewport: Minimized windows seems to break mouse wheel events (at least under Windows).
-//  [ ] Platform: Multi-viewport: ParentViewportID not honored, and so io.ConfigViewportsNoDefaultParent has no effect (minor).
+//  [ ] Platform: Multi-viewport: Missing ImGuiBackendFlags_HasParentViewport support. The viewport->ParentViewportID field is ignored, and therefore io.ConfigViewportsNoDefaultParent has no effect either.
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
@@ -26,6 +26,14 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2025-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2025-09-24: Skip using the SDL_GetGlobalMouseState() state when one of our window is hovered, as the SDL_MOUSEMOTION data is reliable. Fix macOS notch mouse coordinates issue in fullscreen mode + better perf on X11. (#7919, #7786)
+//  2025-09-18: Call platform_io.ClearPlatformHandlers() on shutdown.
+//  2025-09-15: Content Scales are always reported as 1.0 on Wayland. (#8921)
+//  2025-07-08: Made ImGui_ImplSDL2_GetContentScaleForWindow(), ImGui_ImplSDL2_GetContentScaleForDisplay() helpers return 1.0f on Emscripten and Android platforms, matching macOS logic. (#8742, #8733)
+//  2025-06-11: Added ImGui_ImplSDL2_GetContentScaleForWindow(SDL_Window* window) and ImGui_ImplSDL2_GetContentScaleForDisplay(int display_index) helper to facilitate making DPI-aware apps.
+//  2025-05-15: [Docking] Add Platform_GetWindowFramebufferScale() handler, to allow varying Retina display density on multiple monitors.
+//  2025-04-09: [Docking] Revert update monitors and work areas information every frame. Only do it on Windows. (#8415, #8558)
+//  2025-04-09: Don't attempt to call SDL_CaptureMouse() on drivers where we don't call SDL_GetGlobalMouseState(). (#8561)
 //  2025-03-21: Fill gamepad inputs and set ImGuiBackendFlags_HasGamepad regardless of ImGuiConfigFlags_NavEnableGamepad being set.
 //  2025-03-10: When dealing with OEM keys, use scancodes instead of translated keycodes to choose ImGuiKey values. (#7136, #7201, #7206, #7306, #7670, #7672, #8468)
 //  2025-02-26: Only start SDL_CaptureMouse() when mouse is being dragged, to mitigate issues with e.g.Linux debuggers not claiming capture back. (#6410, #3650)
@@ -109,6 +117,7 @@
 // Clang warnings with -Weverything
 #if defined(__clang__)
 #pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wold-style-cast"                 // warning: use of old-style cast
 #pragma clang diagnostic ignored "-Wimplicit-int-float-conversion"  // warning: implicit conversion from 'xxx' to 'float' may lose precision
 #endif
 
@@ -116,12 +125,14 @@
 // (the multi-viewports feature requires SDL features supported from SDL 2.0.4+. SDL 2.0.5+ is highly recommended)
 #include <SDL.h>
 #include <SDL_syswm.h>
+#include <stdio.h>              // for snprintf()
 #ifdef __APPLE__
 #include <TargetConditionals.h>
 #endif
 #ifdef __EMSCRIPTEN__
 #include <emscripten/em_js.h>
 #endif
+#undef Status // X11 headers are leaking this.
 
 #if SDL_VERSION_ATLEAST(2,0,4) && !defined(__EMSCRIPTEN__) && !defined(__ANDROID__) && !(defined(__APPLE__) && TARGET_OS_IOS) && !defined(__amigaos4__)
 #define SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE    1
@@ -150,7 +161,9 @@ struct ImGui_ImplSDL2_Data
     SDL_Renderer*           Renderer;
     Uint64                  Time;
     char*                   ClipboardTextData;
+    char                    BackendPlatformName[48];
     bool                    UseVulkan;
+    bool                    WantUpdateMonitors;
 
     // Mouse handling
     Uint32                  MouseWindowID;
@@ -159,6 +172,7 @@ struct ImGui_ImplSDL2_Data
     SDL_Cursor*             MouseLastCursor;
     int                     MouseLastLeaveFrame;
     bool                    MouseCanUseGlobalState;
+    bool                    MouseCanUseCapture;
     bool                    MouseCanReportHoveredViewport;  // This is hard to use/unreliable on SDL so we'll set ImGuiBackendFlags_HasMouseHoveredViewport dynamically based on state.
 
     // Gamepad handling
@@ -449,16 +463,26 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
         case SDL_KEYDOWN:
         case SDL_KEYUP:
         {
-            if (ImGui_ImplSDL2_GetViewportForWindowID(event->key.windowID) == nullptr)
+            ImGuiViewport* viewport = ImGui_ImplSDL2_GetViewportForWindowID(event->key.windowID);
+            if (viewport == nullptr)
                 return false;
+            //IMGUI_DEBUG_LOG("SDL_KEY%s : key=0x%08X ('%s'), scancode=%d ('%s'), mod=%X, windowID=%d, viewport=%08X\n",
+            //    (event->type == SDL_KEYDOWN) ? "DOWN" : "UP  ", event->key.keysym.sym, SDL_GetKeyName(event->key.keysym.sym), event->key.keysym.scancode, SDL_GetScancodeName(event->key.keysym.scancode), event->key.keysym.mod, event->key.windowID, viewport ? viewport->ID : 0);
             ImGui_ImplSDL2_UpdateKeyModifiers((SDL_Keymod)event->key.keysym.mod);
-            //IMGUI_DEBUG_LOG("SDL_KEY_%s : key=%d ('%s'), scancode=%d ('%s'), mod=%X\n",
-            //    (event->type == SDL_KEYDOWN) ? "DOWN" : "UP  ", event->key.keysym.sym, SDL_GetKeyName(event->key.keysym.sym), event->key.keysym.scancode, SDL_GetScancodeName(event->key.keysym.scancode), event->key.keysym.mod);
             ImGuiKey key = ImGui_ImplSDL2_KeyEventToImGuiKey(event->key.keysym.sym, event->key.keysym.scancode);
             io.AddKeyEvent(key, (event->type == SDL_KEYDOWN));
-            io.SetKeyEventNativeData(key, event->key.keysym.sym, event->key.keysym.scancode, event->key.keysym.scancode); // To support legacy indexing (<1.87 user code). Legacy backend uses SDLK_*** as indices to IsKeyXXX() functions.
+            io.SetKeyEventNativeData(key, (int)event->key.keysym.sym, (int)event->key.keysym.scancode, (int)event->key.keysym.scancode); // To support legacy indexing (<1.87 user code). Legacy backend uses SDLK_*** as indices to IsKeyXXX() functions.
             return true;
         }
+#if SDL_HAS_DISPLAY_EVENT
+        case SDL_DISPLAYEVENT:
+        {
+            // 2.0.26 has SDL_DISPLAYEVENT_CONNECTED/SDL_DISPLAYEVENT_DISCONNECTED/SDL_DISPLAYEVENT_ORIENTATION,
+            // so change of DPI/Scaling are not reflected in this event. (SDL3 has it)
+            bd->WantUpdateMonitors = true;
+            return true;
+        }
+#endif
         case SDL_WINDOWEVENT:
         {
             ImGuiViewport* viewport = ImGui_ImplSDL2_GetViewportForWindowID(event->window.windowID);
@@ -478,15 +502,17 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
             }
             if (window_event == SDL_WINDOWEVENT_LEAVE)
                 bd->MouseLastLeaveFrame = ImGui::GetFrameCount() + 1;
+            //if (window_event == SDL_WINDOWEVENT_FOCUS_GAINED) { IMGUI_DEBUG_LOG("SDL_WINDOWEVENT_FOCUS_GAINED: windowId %d, viewport: %08X\n", event->window.windowID, viewport ? viewport->ID : 0); }
+            //if (window_event == SDL_WINDOWEVENT_FOCUS_LOST) { IMGUI_DEBUG_LOG("SDL_WINDOWEVENT_FOCUS_LOST: windowId %d, viewport: %08X\n", event->window.windowID, viewport ? viewport->ID : 0); }
             if (window_event == SDL_WINDOWEVENT_FOCUS_GAINED)
                 io.AddFocusEvent(true);
-            else if (window_event == SDL_WINDOWEVENT_FOCUS_LOST)
+            if (window_event == SDL_WINDOWEVENT_FOCUS_LOST)
                 io.AddFocusEvent(false);
-            else if (window_event == SDL_WINDOWEVENT_CLOSE)
+            if (window_event == SDL_WINDOWEVENT_CLOSE)
                 viewport->PlatformRequestClose = true;
-            else if (window_event == SDL_WINDOWEVENT_MOVED)
+            if (window_event == SDL_WINDOWEVENT_MOVED)
                 viewport->PlatformRequestMove = true;
-            else if (window_event == SDL_WINDOWEVENT_RESIZED)
+            if (window_event == SDL_WINDOWEVENT_RESIZED)
                 viewport->PlatformRequestResize = true;
             return true;
         }
@@ -496,6 +522,8 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
             bd->WantUpdateGamepadsList = true;
             return true;
         }
+        default:
+            break;
     }
     return false;
 }
@@ -509,26 +537,23 @@ static bool ImGui_ImplSDL2_Init(SDL_Window* window, SDL_Renderer* renderer, void
     ImGuiIO& io = ImGui::GetIO();
     IMGUI_CHECKVERSION();
     IM_ASSERT(io.BackendPlatformUserData == nullptr && "Already initialized a platform backend!");
+    //SDL_SetHint(SDL_HINT_EVENT_LOGGING, "2");
 
-    // Check and store if we are on a SDL backend that supports global mouse position
-    // ("wayland" and "rpi" don't support it, but we chose to use a white-list instead of a black-list)
-    bool mouse_can_use_global_state = false;
-#if SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE
-    const char* sdl_backend = SDL_GetCurrentVideoDriver();
-    const char* global_mouse_whitelist[] = { "windows", "cocoa", "x11", "DIVE", "VMAN" };
-    for (int n = 0; n < IM_ARRAYSIZE(global_mouse_whitelist); n++)
-        if (strncmp(sdl_backend, global_mouse_whitelist[n], strlen(global_mouse_whitelist[n])) == 0)
-            mouse_can_use_global_state = true;
-#endif
+    // Obtain compiled and runtime versions
+    SDL_version ver_compiled;
+    SDL_version ver_runtime;
+    SDL_VERSION(&ver_compiled);
+    SDL_GetVersion(&ver_runtime);
 
     // Setup backend capabilities flags
     ImGui_ImplSDL2_Data* bd = IM_NEW(ImGui_ImplSDL2_Data)();
+    snprintf(bd->BackendPlatformName, sizeof(bd->BackendPlatformName), "imgui_impl_sdl2 (%u.%u.%u, %u.%u.%u)",
+        ver_compiled.major, ver_compiled.minor, ver_compiled.patch, ver_runtime.major, ver_runtime.minor, ver_runtime.patch);
     io.BackendPlatformUserData = (void*)bd;
-    io.BackendPlatformName = "imgui_impl_sdl2";
+    io.BackendPlatformName = bd->BackendPlatformName;
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;           // We can honor GetMouseCursor() values (optional)
     io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;            // We can honor io.WantSetMousePos requests (optional, rarely used)
-    if (mouse_can_use_global_state)
-        io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;  // We can create multi-viewports on the Platform side (optional)
+    // (ImGuiBackendFlags_PlatformHasViewports may be set just below)
 
     bd->Window = window;
     bd->WindowID = SDL_GetWindowID(window);
@@ -536,12 +561,25 @@ static bool ImGui_ImplSDL2_Init(SDL_Window* window, SDL_Renderer* renderer, void
 
     // SDL on Linux/OSX doesn't report events for unfocused windows (see https://github.com/ocornut/imgui/issues/4960)
     // We will use 'MouseCanReportHoveredViewport' to set 'ImGuiBackendFlags_HasMouseHoveredViewport' dynamically each frame.
-    bd->MouseCanUseGlobalState = mouse_can_use_global_state;
 #ifndef __APPLE__
     bd->MouseCanReportHoveredViewport = bd->MouseCanUseGlobalState;
 #else
     bd->MouseCanReportHoveredViewport = false;
 #endif
+
+    // Check and store if we are on a SDL backend that supports SDL_GetGlobalMouseState() and SDL_CaptureMouse()
+    // ("wayland" and "rpi" don't support it, but we chose to use a white-list instead of a black-list)
+    bd->MouseCanUseGlobalState = false;
+    bd->MouseCanUseCapture = false;
+#if SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE
+    const char* sdl_backend = SDL_GetCurrentVideoDriver();
+    const char* capture_and_global_state_whitelist[] = { "windows", "cocoa", "x11", "DIVE", "VMAN" };
+    for (const char* item : capture_and_global_state_whitelist)
+        if (strncmp(sdl_backend, item, strlen(item)) == 0)
+            bd->MouseCanUseGlobalState = bd->MouseCanUseCapture = true;
+#endif
+    if (bd->MouseCanUseGlobalState)
+        io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;  // We can create multi-viewports on the Platform side (optional)
 
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     platform_io.Platform_SetClipboardTextFn = ImGui_ImplSDL2_SetClipboardText;
@@ -666,9 +704,9 @@ void ImGui_ImplSDL2_Shutdown()
     ImGui_ImplSDL2_Data* bd = ImGui_ImplSDL2_GetBackendData();
     IM_ASSERT(bd != nullptr && "No platform backend to shutdown, or already shutdown?");
     ImGuiIO& io = ImGui::GetIO();
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
 
     ImGui_ImplSDL2_ShutdownMultiViewportSupport();
-
     if (bd->ClipboardTextData)
         SDL_free(bd->ClipboardTextData);
     for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_COUNT; cursor_n++)
@@ -678,6 +716,7 @@ void ImGui_ImplSDL2_Shutdown()
     io.BackendPlatformName = nullptr;
     io.BackendPlatformUserData = nullptr;
     io.BackendFlags &= ~(ImGuiBackendFlags_HasMouseCursors | ImGuiBackendFlags_HasSetMousePos | ImGuiBackendFlags_HasGamepad | ImGuiBackendFlags_PlatformHasViewports | ImGuiBackendFlags_HasMouseHoveredViewport);
+    platform_io.ClearPlatformHandlers();
     IM_DELETE(bd);
 }
 
@@ -690,12 +729,15 @@ static void ImGui_ImplSDL2_UpdateMouseData()
     // We forward mouse input when hovered or captured (via SDL_MOUSEMOTION) or when focused (below)
 #if SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE
     // - SDL_CaptureMouse() let the OS know e.g. that our drags can extend outside of parent boundaries (we want updated position) and shouldn't trigger other operations outside.
-    // - Debuggers under Linux tends to leave captured mouse on break, which may be very inconvenient, so to migitate the issue we wait until mouse has moved to begin capture.
-    bool want_capture = false;
-    for (int button_n = 0; button_n < ImGuiMouseButton_COUNT && !want_capture; button_n++)
-        if (ImGui::IsMouseDragging(button_n, 1.0f))
-            want_capture = true;
-    SDL_CaptureMouse(want_capture ? SDL_TRUE : SDL_FALSE);
+    // - Debuggers under Linux tends to leave captured mouse on break, which may be very inconvenient, so to mitigate the issue we wait until mouse has moved to begin capture.
+    if (bd->MouseCanUseCapture)
+    {
+        bool want_capture = false;
+        for (int button_n = 0; button_n < ImGuiMouseButton_COUNT && !want_capture; button_n++)
+            if (ImGui::IsMouseDragging(button_n, 1.0f))
+                want_capture = true;
+        SDL_CaptureMouse(want_capture ? SDL_TRUE : SDL_FALSE);
+    }
 
     SDL_Window* focused_window = SDL_GetKeyboardFocus();
     const bool is_app_focused = (focused_window && (bd->Window == focused_window || ImGui_ImplSDL2_GetViewportForWindowID(SDL_GetWindowID(focused_window)) != NULL));
@@ -717,13 +759,16 @@ static void ImGui_ImplSDL2_UpdateMouseData()
                 SDL_WarpMouseInWindow(bd->Window, (int)io.MousePos.x, (int)io.MousePos.y);
         }
 
-        // (Optional) Fallback to provide mouse position when focused (SDL_MOUSEMOTION already provides this when hovered or captured)
+        // (Optional) Fallback to provide unclamped mouse position when focused but not hovered (SDL_MOUSEMOTION already provides this when hovered or captured)
+        // Note that SDL_GetGlobalMouseState() is in theory slow on X11, but this only runs on rather specific cases. If a problem we may provide a way to opt-out this feature.
+        SDL_Window* hovered_window = SDL_GetMouseFocus();
         const bool is_relative_mouse_mode = SDL_GetRelativeMouseMode() != 0;
-        if (bd->MouseCanUseGlobalState && bd->MouseButtonsDown == 0 && !is_relative_mouse_mode)
+        if (hovered_window == NULL && bd->MouseCanUseGlobalState && bd->MouseButtonsDown == 0 && !is_relative_mouse_mode)
         {
             // Single-viewport mode: mouse position in client window coordinates (io.MousePos is (0,0) when the mouse is on the upper-left corner of the app window)
             // Multi-viewport mode: mouse position in OS absolute coordinates (io.MousePos is (0,0) when the mouse is on the upper-left of the primary monitor)
-            int mouse_x, mouse_y, window_x, window_y;
+            int mouse_x, mouse_y;
+            int window_x, window_y;
             SDL_GetGlobalMouseState(&mouse_x, &mouse_y);
             if (!(io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable))
             {
@@ -775,6 +820,30 @@ static void ImGui_ImplSDL2_UpdateMouseCursor()
         }
         SDL_ShowCursor(SDL_TRUE);
     }
+}
+
+// - On Windows the process needs to be marked DPI-aware!! SDL2 doesn't do it by default. You can call ::SetProcessDPIAware() or call ImGui_ImplWin32_EnableDpiAwareness() from Win32 backend.
+// - Apple platforms use FramebufferScale so we always return 1.0f.
+// - Some accessibility applications are declaring virtual monitors with a DPI of 0.0f, see #7902. We preserve this value for caller to handle.
+float ImGui_ImplSDL2_GetContentScaleForWindow(SDL_Window* window)
+{
+    return ImGui_ImplSDL2_GetContentScaleForDisplay(SDL_GetWindowDisplayIndex(window));
+}
+
+float ImGui_ImplSDL2_GetContentScaleForDisplay(int display_index)
+{
+    const char* sdl_driver = SDL_GetCurrentVideoDriver();
+    if (sdl_driver && strcmp(sdl_driver, "wayland") == 0)
+        return 1.0f;
+#if SDL_HAS_PER_MONITOR_DPI
+#if !defined(__APPLE__) && !defined(__EMSCRIPTEN__) && !defined(__ANDROID__)
+    float dpi = 0.0f;
+    if (SDL_GetDisplayDPI(display_index, &dpi, nullptr, nullptr) == 0)
+        return dpi / 96.0f;
+#endif
+#endif
+    IM_UNUSED(display_index);
+    return 1.0f;
 }
 
 static void ImGui_ImplSDL2_CloseGamepads()
@@ -882,8 +951,10 @@ static void ImGui_ImplSDL2_UpdateGamepads()
 // FIXME: Note that doesn't update with DPI/Scaling change only as SDL2 doesn't have an event for it (SDL3 has).
 static void ImGui_ImplSDL2_UpdateMonitors()
 {
+    ImGui_ImplSDL2_Data* bd = ImGui_ImplSDL2_GetBackendData();
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     platform_io.Monitors.resize(0);
+    bd->WantUpdateMonitors = false;
     int display_count = SDL_GetNumVideoDisplays();
     for (int n = 0; n < display_count; n++)
     {
@@ -900,20 +971,34 @@ static void ImGui_ImplSDL2_UpdateMonitors()
             monitor.WorkSize = ImVec2((float)r.w, (float)r.h);
         }
 #endif
-#if SDL_HAS_PER_MONITOR_DPI
-        // FIXME-VIEWPORT: On MacOS SDL reports actual monitor DPI scale, ignoring OS configuration. We may want to set
-        //  DpiScale to cocoa_window.backingScaleFactor here.
-        float dpi = 0.0f;
-        if (!SDL_GetDisplayDPI(n, &dpi, nullptr, nullptr))
-        {
-            if (dpi <= 0.0f)
-                continue; // Some accessibility applications are declaring virtual monitors with a DPI of 0, see #7902.
-            monitor.DpiScale = dpi / 96.0f;
-        }
-#endif
+        float dpi_scale = ImGui_ImplSDL2_GetContentScaleForDisplay(n);
+        if (dpi_scale <= 0.0f)
+            continue; // Some accessibility applications are declaring virtual monitors with a DPI of 0, see #7902.
+        monitor.DpiScale = dpi_scale;
         monitor.PlatformHandle = (void*)(intptr_t)n;
         platform_io.Monitors.push_back(monitor);
     }
+}
+
+static void ImGui_ImplSDL2_GetWindowSizeAndFramebufferScale(SDL_Window* window, SDL_Renderer* renderer, ImVec2* out_size, ImVec2* out_framebuffer_scale)
+{
+    int w, h;
+    int display_w, display_h;
+    SDL_GetWindowSize(window, &w, &h);
+    if (SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED)
+        w = h = 0;
+    if (renderer != nullptr)
+        SDL_GetRendererOutputSize(renderer, &display_w, &display_h);
+#if SDL_HAS_VULKAN
+    else if (SDL_GetWindowFlags(window) & SDL_WINDOW_VULKAN)
+        SDL_Vulkan_GetDrawableSize(window, &display_w, &display_h);
+#endif
+    else
+        SDL_GL_GetDrawableSize(window, &display_w, &display_h);
+    if (out_size != nullptr)
+        *out_size = ImVec2((float)w, (float)h);
+    if (out_framebuffer_scale != nullptr)
+        *out_framebuffer_scale = (w > 0 && h > 0) ? ImVec2((float)display_w / w, (float)display_h / h) : ImVec2(1.0f, 1.0f);
 }
 
 void ImGui_ImplSDL2_NewFrame()
@@ -922,26 +1007,15 @@ void ImGui_ImplSDL2_NewFrame()
     IM_ASSERT(bd != nullptr && "Context or backend not initialized! Did you call ImGui_ImplSDL2_Init()?");
     ImGuiIO& io = ImGui::GetIO();
 
-    // Setup display size (every frame to accommodate for window resizing)
-    int w, h;
-    int display_w, display_h;
-    SDL_GetWindowSize(bd->Window, &w, &h);
-    if (SDL_GetWindowFlags(bd->Window) & SDL_WINDOW_MINIMIZED)
-        w = h = 0;
-    if (bd->Renderer != nullptr)
-        SDL_GetRendererOutputSize(bd->Renderer, &display_w, &display_h);
-#if SDL_HAS_VULKAN
-    else if (SDL_GetWindowFlags(bd->Window) & SDL_WINDOW_VULKAN)
-        SDL_Vulkan_GetDrawableSize(bd->Window, &display_w, &display_h);
-#endif
-    else
-        SDL_GL_GetDrawableSize(bd->Window, &display_w, &display_h);
-    io.DisplaySize = ImVec2((float)w, (float)h);
-    if (w > 0 && h > 0)
-        io.DisplayFramebufferScale = ImVec2((float)display_w / w, (float)display_h / h);
+    // Setup main viewport size (every frame to accommodate for window resizing)
+    ImGui_ImplSDL2_GetWindowSizeAndFramebufferScale(bd->Window, bd->Renderer, &io.DisplaySize, &io.DisplayFramebufferScale);
 
     // Update monitors
-    ImGui_ImplSDL2_UpdateMonitors();
+#ifdef WIN32
+    bd->WantUpdateMonitors = true; // Keep polling under Windows to handle changes of work area when resizing task-bar (#8415)
+#endif
+    if (bd->WantUpdateMonitors)
+        ImGui_ImplSDL2_UpdateMonitors();
 
     // Setup time step (we don't use SDL_GetTicks() because it is using millisecond resolution)
     // (Accept SDL_GetPerformanceCounter() not returning a monotonically increasing value. Happens in VMs and Emscripten, see #6189, #6114, #3644)
@@ -1065,7 +1139,7 @@ static void ImGui_ImplSDL2_DestroyWindow(ImGuiViewport* viewport)
 static void ImGui_ImplSDL2_ShowWindow(ImGuiViewport* viewport)
 {
     ImGui_ImplSDL2_ViewportData* vd = (ImGui_ImplSDL2_ViewportData*)viewport->PlatformUserData;
-#if defined(_WIN32) && !(defined(WINAPI_FAMILY) && (WINAPI_FAMILY == WINAPI_FAMILY_APP || WINAPI_FAMILY == WINAPI_FAMILY_GAMES))
+#if defined(_WIN32) && !(defined(WINAPI_FAMILY) && ((defined(WINAPI_FAMILY_APP) && WINAPI_FAMILY == WINAPI_FAMILY_APP) || (defined(WINAPI_FAMILY_GAMES) && WINAPI_FAMILY == WINAPI_FAMILY_GAMES)))
     HWND hwnd = (HWND)viewport->PlatformHandleRaw;
 
     // SDL hack: Hide icon from task bar
@@ -1118,6 +1192,15 @@ static void ImGui_ImplSDL2_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 {
     ImGui_ImplSDL2_ViewportData* vd = (ImGui_ImplSDL2_ViewportData*)viewport->PlatformUserData;
     SDL_SetWindowSize(vd->Window, (int)size.x, (int)size.y);
+}
+
+static ImVec2 ImGui_ImplSDL2_GetWindowFramebufferScale(ImGuiViewport* viewport)
+{
+    // FIXME: SDL_Renderer does not support multi-viewport.
+    ImGui_ImplSDL2_ViewportData* vd = (ImGui_ImplSDL2_ViewportData*)viewport->PlatformUserData;
+    ImVec2 framebuffer_scale;
+    ImGui_ImplSDL2_GetWindowSizeAndFramebufferScale(vd->Window, nullptr, nullptr, &framebuffer_scale);
+    return framebuffer_scale;
 }
 
 static void ImGui_ImplSDL2_SetWindowTitle(ImGuiViewport* viewport, const char* title)
@@ -1193,6 +1276,7 @@ static void ImGui_ImplSDL2_InitMultiViewportSupport(SDL_Window* window, void* sd
     platform_io.Platform_GetWindowPos = ImGui_ImplSDL2_GetWindowPos;
     platform_io.Platform_SetWindowSize = ImGui_ImplSDL2_SetWindowSize;
     platform_io.Platform_GetWindowSize = ImGui_ImplSDL2_GetWindowSize;
+    platform_io.Platform_GetWindowFramebufferScale = ImGui_ImplSDL2_GetWindowFramebufferScale;
     platform_io.Platform_SetWindowFocus = ImGui_ImplSDL2_SetWindowFocus;
     platform_io.Platform_GetWindowFocus = ImGui_ImplSDL2_GetWindowFocus;
     platform_io.Platform_GetWindowMinimized = ImGui_ImplSDL2_GetWindowMinimized;

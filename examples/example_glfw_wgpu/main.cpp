@@ -37,7 +37,7 @@ static WGPUSurface       wgpu_surface = nullptr;
 static WGPUTextureFormat wgpu_preferred_fmt = WGPUTextureFormat_RGBA8Unorm;
 static WGPUSwapChain     wgpu_swap_chain = nullptr;
 static int               wgpu_swap_chain_width = 1280;
-static int               wgpu_swap_chain_height = 720;
+static int               wgpu_swap_chain_height = 800;
 
 // Forward declarations
 static bool InitWGPU(GLFWwindow* window);
@@ -115,19 +115,19 @@ int main(int, char**)
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
     // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
     // - If the file cannot be loaded, the function will return a nullptr. Please handle those errors in your application (e.g. use an assertion, or display an error and quit).
-    // - The fonts will be rasterized at a given size (w/ oversampling) and stored into a texture when calling ImFontAtlas::Build()/GetTexDataAsXXXX(), which ImGui_ImplXXXX_NewFrame below will call.
     // - Use '#define IMGUI_ENABLE_FREETYPE' in your imconfig file to use Freetype for higher quality font rendering.
-    // - Read 'docs/FONTS.md' for more instructions and details.
+    // - Read 'docs/FONTS.md' for more instructions and details. If you like the default font but want it to scale better, consider using the 'ProggyVector' from the same author!
     // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
     // - Emscripten allows preloading a file or folder to be accessible at runtime. See Makefile for details.
     //io.Fonts->AddFontDefault();
+    //style.FontSizeBase = 20.0f;
 #ifndef IMGUI_DISABLE_FILE_FUNCTIONS
-    //io.Fonts->AddFontFromFileTTF("fonts/segoeui.ttf", 18.0f);
-    //io.Fonts->AddFontFromFileTTF("fonts/DroidSans.ttf", 16.0f);
-    //io.Fonts->AddFontFromFileTTF("fonts/Roboto-Medium.ttf", 16.0f);
-    //io.Fonts->AddFontFromFileTTF("fonts/Cousine-Regular.ttf", 15.0f);
-    //io.Fonts->AddFontFromFileTTF("fonts/ProggyTiny.ttf", 10.0f);
-    //ImFont* font = io.Fonts->AddFontFromFileTTF("fonts/ArialUni.ttf", 18.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
+    //io.Fonts->AddFontFromFileTTF("fonts/segoeui.ttf");
+    //io.Fonts->AddFontFromFileTTF("fonts/DroidSans.ttf");
+    //io.Fonts->AddFontFromFileTTF("fonts/Roboto-Medium.ttf");
+    //io.Fonts->AddFontFromFileTTF("fonts/Cousine-Regular.ttf");
+    //io.Fonts->AddFontFromFileTTF("fonts/ProggyTiny.ttf");
+    //ImFont* font = io.Fonts->AddFontFromFileTTF("fonts/ArialUni.ttf");
     //IM_ASSERT(font != nullptr);
 #endif
 

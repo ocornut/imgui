@@ -36,6 +36,7 @@ find_package(Vulkan REQUIRED)
   #NAMES vulkan vulkan-1)
 #set(LIBRARIES "glfw;${VULKAN_LIBRARY}")
 set(LIBRARIES "glfw;Vulkan::Vulkan")
+# FIXME: Linux needs linking with "X11" as well?
 
 # Use vulkan headers from glfw:
 include_directories(${GLFW_DIR}/deps)

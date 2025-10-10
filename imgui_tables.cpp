@@ -1,4 +1,4 @@
-// dear imgui, v1.92.0 WIP
+// dear imgui, v1.92.4 WIP
 // (tables and columns code)
 
 /*
@@ -437,7 +437,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
         if (table->InnerWindow->SkipItems && outer_window_is_measuring_size)
             table->InnerWindow->SkipItems = false;
 
-        // When using multiple instances, ensure they have the same amount of horizontal decorations (aka vertical scrollbar) so stretched columns can be aligned)
+        // When using multiple instances, ensure they have the same amount of horizontal decorations (aka vertical scrollbar) so stretched columns can be aligned
         if (instance_no == 0)
         {
             table->HasScrollbarYPrev = table->HasScrollbarYCurr;
@@ -451,6 +451,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
         // But at this point we do NOT have a correct value for .Max.y (unless a height has been explicitly passed in). It will only be updated in EndTable().
         table->WorkRect = table->OuterRect = table->InnerRect = outer_rect;
         table->HasScrollbarYPrev = table->HasScrollbarYCurr = false;
+        table->InnerWindow->DC.TreeDepth++; // This is designed to always linking ImGuiTreeNodeFlags_DrawLines linking accross a table
     }
 
     // Push a standardized ID for both child-using and not-child-using tables
@@ -541,7 +542,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
 
     // Make table current
     g.CurrentTable = table;
-    outer_window->DC.NavIsScrollPushableX = false; // Shortcut for NavUpdateCurrentWindowIsScrollPushableX();
+    inner_window->DC.NavIsScrollPushableX = false; // Shortcut for NavUpdateCurrentWindowIsScrollPushableX();
     outer_window->DC.CurrentTableIdx = table_idx;
     if (inner_window != outer_window) // So EndChild() within the inner window can restore the table properly.
         inner_window->DC.CurrentTableIdx = table_idx;
@@ -1250,7 +1251,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
 
     // [Part 11] Default context menu
     // - To append to this menu: you can call TableBeginContextMenuPopup()/.../EndPopup().
-    // - To modify or replace this: set table->IsContextPopupNoDefaultContents = true, then call TableBeginContextMenuPopup()/.../EndPopup().
+    // - To modify or replace this: set table->DisableDefaultContextMenu = true, then call TableBeginContextMenuPopup()/.../EndPopup().
     // - You may call TableDrawDefaultContextMenu() with selected flags to display specific sections of the default menu,
     //   e.g. TableDrawDefaultContextMenu(table, table->Flags & ~ImGuiTableFlags_Hideable) will display everything EXCEPT columns visibility options.
     if (table->DisableDefaultContextMenu == false && TableBeginContextMenuPopup(table))
@@ -1510,6 +1511,7 @@ void    ImGui::EndTable()
     }
     else
     {
+        table->InnerWindow->DC.TreeDepth--;
         ItemSize(table->OuterRect.GetSize());
         ItemAdd(table->OuterRect, 0);
     }
@@ -1823,6 +1825,11 @@ void ImGui::TableSetBgColor(ImGuiTableBgTarget target, ImU32 color, int column_n
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
     IM_ASSERT(target != ImGuiTableBgTarget_None);
+    if (table == NULL)
+    {
+        IM_ASSERT_USER_ERROR(table != NULL, "Call should only be done while in BeginTable() scope!");
+        return;
+    }
 
     if (color == IM_COL32_DISABLE)
         color = 0;
@@ -1951,7 +1958,10 @@ void ImGui::TableEndRow(ImGuiTable* table)
     IM_ASSERT(table->IsInsideRow);
 
     if (table->CurrentColumn != -1)
+    {
         TableEndCell(table);
+        table->CurrentColumn = -1;
+    }
 
     // Logging
     if (g.LogEnabled)
@@ -2044,10 +2054,11 @@ void ImGui::TableEndRow(ImGuiTable* table)
     }
 
     // End frozen rows (when we are past the last frozen row line, teleport cursor and alter clipping rectangle)
-    // We need to do that in TableEndRow() instead of TableBeginRow() so the list clipper can mark end of row and
-    // get the new cursor position.
+    // - We need to do that in TableEndRow() instead of TableBeginRow() so the list clipper can mark
+    //   end of row and get the new cursor position.
     if (unfreeze_rows_request)
     {
+        IM_ASSERT(table->FreezeRowsRequest > 0);
         for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
             table->Columns[column_n].NavLayerCurrent = table->NavLayer;
         const float y0 = ImMax(table->RowPosY2 + 1, table->InnerClipRect.Min.y);
@@ -2191,6 +2202,7 @@ void ImGui::TableBeginCell(ImGuiTable* table, int column_n)
         g.LastItemData.StatusFlags = 0;
     }
 
+    // Also see TablePushColumnChannel()
     if (table->Flags & ImGuiTableFlags_NoClip)
     {
         // FIXME: if we end up drawing all borders/bg in EndTable, could remove this and just assert that channel hasn't changed.
@@ -2464,10 +2476,38 @@ void ImGui::TablePopBackgroundChannel()
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
     ImGuiTable* table = g.CurrentTable;
-    ImGuiTableColumn* column = &table->Columns[table->CurrentColumn];
 
     // Optimization: avoid PopClipRect() + SetCurrentChannel()
     SetWindowClipRectBeforeSetChannel(window, table->HostBackupInnerClipRect);
+    table->DrawSplitter->SetCurrentChannel(window->DrawList, table->Columns[table->CurrentColumn].DrawChannelCurrent);
+}
+
+// Also see TableBeginCell()
+void ImGui::TablePushColumnChannel(int column_n)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiTable* table = g.CurrentTable;
+
+    // Optimization: avoid SetCurrentChannel() + PushClipRect()
+    if (table->Flags & ImGuiTableFlags_NoClip)
+        return;
+    ImGuiWindow* window = g.CurrentWindow;
+    const ImGuiTableColumn* column = &table->Columns[column_n];
+    SetWindowClipRectBeforeSetChannel(window, column->ClipRect);
+    table->DrawSplitter->SetCurrentChannel(window->DrawList, column->DrawChannelCurrent);
+}
+
+void ImGui::TablePopColumnChannel()
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiTable* table = g.CurrentTable;
+
+    // Optimization: avoid PopClipRect() + SetCurrentChannel()
+    if ((table->Flags & ImGuiTableFlags_NoClip) || (table->CurrentColumn == -1)) // Calling TreePop() after TableNextRow() is supported.
+        return;
+    ImGuiWindow* window = g.CurrentWindow;
+    const ImGuiTableColumn* column = &table->Columns[table->CurrentColumn];
+    SetWindowClipRectBeforeSetChannel(window, column->ClipRect);
     table->DrawSplitter->SetCurrentChannel(window->DrawList, column->DrawChannelCurrent);
 }
 
@@ -2778,8 +2818,13 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
                 continue;
 
             // Draw in outer window so right-most column won't be clipped
-            // Always draw full height border when being resized/hovered, or on the delimitation of frozen column scrolling.
-            float draw_y2 = (is_hovered || is_resized || is_frozen_separator || (table->Flags & (ImGuiTableFlags_NoBordersInBody | ImGuiTableFlags_NoBordersInBodyUntilResize)) == 0) ? draw_y2_body : draw_y2_head;
+            float draw_y2 = draw_y2_head;
+            if (is_frozen_separator)
+                draw_y2 = draw_y2_body;
+            else if ((table->Flags & ImGuiTableFlags_NoBordersInBodyUntilResize) != 0 && (is_hovered || is_resized))
+                draw_y2 = draw_y2_body;
+            else if ((table->Flags & (ImGuiTableFlags_NoBordersInBodyUntilResize | ImGuiTableFlags_NoBordersInBody)) == 0)
+                draw_y2 = draw_y2_body;
             if (draw_y2 > draw_y1)
                 inner_drawlist->AddLine(ImVec2(column->MaxX, draw_y1), ImVec2(column->MaxX, draw_y2), TableGetColumnBorderCol(table, order_n, column_n), border_size);
         }
@@ -2842,9 +2887,7 @@ ImGuiTableSortSpecs* ImGui::TableGetSortSpecs()
 {
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
-    IM_ASSERT(table != NULL);
-
-    if (!(table->Flags & ImGuiTableFlags_Sortable))
+    if (table == NULL || !(table->Flags & ImGuiTableFlags_Sortable))
         return NULL;
 
     // Require layout (in case TableHeadersRow() hasn't been called) as it may alter IsSortSpecsDirty in some paths.
@@ -3244,7 +3287,7 @@ void ImGui::TableHeader(const char* label)
     // Render clipped label. Clipping here ensure that in the majority of situations, all our header cells will
     // be merged into a single draw call.
     //window->DrawList->AddCircleFilled(ImVec2(ellipsis_max, label_pos.y), 40, IM_COL32_WHITE);
-    RenderTextEllipsis(window->DrawList, label_pos, ImVec2(ellipsis_max, label_pos.y + label_height + g.Style.FramePadding.y), ellipsis_max, ellipsis_max, label, label_end, &label_size);
+    RenderTextEllipsis(window->DrawList, label_pos, ImVec2(ellipsis_max, bb.Max.y), ellipsis_max, label, label_end, &label_size);
 
     const bool text_clipped = label_size.x > (ellipsis_max - label_pos.x);
     if (text_clipped && hovered && g.ActiveId == 0)
@@ -3341,7 +3384,7 @@ void ImGui::TableAngledHeadersRowEx(ImGuiID row_id, float angle, float max_label
     ButtonBehavior(row_r, row_id, NULL, NULL);
     KeepAliveID(row_id);
 
-    const float ascent_scaled = g.Font->Ascent * g.FontScale; // FIXME: Standardize those scaling factors better
+    const float ascent_scaled = g.FontBaked->Ascent * g.FontBakedScale; // FIXME: Standardize those scaling factors better
     const float line_off_for_ascent_x = (ImMax((g.FontSize - ascent_scaled) * 0.5f, 0.0f) / -sin_a) * (flip_label ? -1.0f : 1.0f);
     const ImVec2 padding = g.Style.CellPadding; // We will always use swapped component
     const ImVec2 align = g.Style.TableAngledHeadersTextAlign;
@@ -3396,7 +3439,7 @@ void ImGui::TableAngledHeadersRowEx(ImGuiID row_id, float angle, float max_label
                     ImRect clip_r(window->ClipRect.Min, window->ClipRect.Min + ImVec2(clip_width, clip_height));
                     int vtx_idx_begin = draw_list->_VtxCurrentIdx;
                     PushStyleColor(ImGuiCol_Text, request->TextColor);
-                    RenderTextEllipsis(draw_list, clip_r.Min, clip_r.Max, clip_r.Max.x, clip_r.Max.x, label_name, label_name_eol, &label_size);
+                    RenderTextEllipsis(draw_list, clip_r.Min, clip_r.Max, clip_r.Max.x, label_name, label_name_eol, &label_size);
                     PopStyleColor();
                     int vtx_idx_end = draw_list->_VtxCurrentIdx;
 
@@ -3905,7 +3948,7 @@ void ImGui::TableSettingsAddSettingsHandler()
 // - TableGcCompactSettings() [Internal]
 //-------------------------------------------------------------------------
 
-// Remove Table (currently only used by TestEngine)
+// Remove Table data (currently only used by TestEngine)
 void ImGui::TableRemove(ImGuiTable* table)
 {
     //IMGUI_DEBUG_PRINT("TableRemove() id=0x%08X\n", table->ID);
