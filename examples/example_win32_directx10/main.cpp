@@ -17,6 +17,7 @@
 static ID3D10Device*            g_pd3dDevice = nullptr;
 static IDXGISwapChain*          g_pSwapChain = nullptr;
 static bool                     g_SwapChainOccluded = false;
+static bool                     g_SwapChainFullscreenState = false;
 static UINT                     g_ResizeWidth = 0, g_ResizeHeight = 0;
 static ID3D10RenderTargetView*  g_mainRenderTargetView = nullptr;
 
@@ -272,6 +273,13 @@ void CleanupRenderTarget()
     if (g_mainRenderTargetView) { g_mainRenderTargetView->Release(); g_mainRenderTargetView = nullptr; }
 }
 
+void ToggleFullscreen()
+{
+    if (FAILED(g_pSwapChain->SetFullscreenState(!g_SwapChainFullscreenState, nullptr)))
+        return;
+    g_SwapChainFullscreenState = !g_SwapChainFullscreenState;
+}
+
 // Forward declare message handler from imgui_impl_win32.cpp
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -293,6 +301,13 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         g_ResizeWidth = (UINT)LOWORD(lParam); // Queue resize
         g_ResizeHeight = (UINT)HIWORD(lParam);
         return 0;
+    case WM_SYSKEYDOWN:
+        if (wParam == VK_RETURN && (GetKeyState(VK_MENU) & 0x8000)) // ALT + Enter
+        {
+            ToggleFullscreen();
+            return 0;
+        }
+        break;
     case WM_SYSCOMMAND:
         if ((wParam & 0xfff0) == SC_KEYMENU) // Disable ALT application menu
             return 0;
