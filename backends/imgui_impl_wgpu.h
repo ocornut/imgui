@@ -34,7 +34,7 @@
 // Initialization data, for ImGui_ImplWGPU_Init()
 struct ImGui_ImplWGPU_InitInfo
 {
-    WGPUDevice              Device;
+    WGPUDevice              Device = nullptr;
     int                     NumFramesInFlight = 3;
     WGPUTextureFormat       RenderTargetFormat = WGPUTextureFormat_Undefined;
     WGPUTextureFormat       DepthStencilFormat = WGPUTextureFormat_Undefined;

@@ -1578,12 +1578,12 @@ struct ImGuiKeyRoutingData
 {
     ImGuiKeyRoutingIndex            NextEntryIndex;
     ImU16                           Mods;               // Technically we'd only need 4-bits but for simplify we store ImGuiMod_ values which need 16-bits.
-    ImU8                            RoutingCurrScore;   // [DEBUG] For debug display
-    ImU8                            RoutingNextScore;   // Lower is better (0: perfect score)
+    ImU16                           RoutingCurrScore;   // [DEBUG] For debug display
+    ImU16                           RoutingNextScore;   // Lower is better (0: perfect score)
     ImGuiID                         RoutingCurr;
     ImGuiID                         RoutingNext;
 
-    ImGuiKeyRoutingData()           { NextEntryIndex = -1; Mods = 0; RoutingCurrScore = RoutingNextScore = 255; RoutingCurr = RoutingNext = ImGuiKeyOwner_NoOwner; }
+    ImGuiKeyRoutingData()           { NextEntryIndex = -1; Mods = 0; RoutingCurrScore = RoutingNextScore = 0; RoutingCurr = RoutingNext = ImGuiKeyOwner_NoOwner; }
 };
 
 // Routing table: maintain a desired owner for each possible key-chord (key + mods), and setup owner in NewFrame() when mods are matching.
@@ -2511,7 +2511,7 @@ struct ImGuiContext
     float                   NavHighlightActivatedTimer;
     ImGuiID                 NavNextActivateId;                  // Set by ActivateItemByID(), queued until next frame.
     ImGuiActivateFlags      NavNextActivateFlags;
-    ImGuiInputSource        NavInputSource;                     // Keyboard or Gamepad mode? THIS CAN ONLY BE ImGuiInputSource_Keyboard or ImGuiInputSource_Mouse
+    ImGuiInputSource        NavInputSource;                     // Keyboard or Gamepad mode? THIS CAN ONLY BE ImGuiInputSource_Keyboard or ImGuiInputSource_Gamepad
     ImGuiSelectionUserData  NavLastValidSelectionUserData;      // Last valid data passed to SetNextItemSelectionUser(), or -1. For current window. Not reset when focusing an item that doesn't have selection data.
     ImS8                    NavCursorHideFrames;
     //ImGuiID               NavActivateInputId;                 // Removed in 1.89.4 (July 2023). This is now part of g.NavActivateId and sets g.NavActivateFlags |= ImGuiActivateFlags_PreferInput. See commit c9a53aa74, issue #5606.
@@ -2691,7 +2691,7 @@ struct ImGuiContext
     ImGuiWindow*            LogWindow;
     ImFileHandle            LogFile;                            // If != NULL log to stdout/ file
     ImGuiTextBuffer         LogBuffer;                          // Accumulation buffer when log to clipboard. This is pointer so our GImGui static constructor doesn't call heap allocators.
-    const char*             LogNextPrefix;
+    const char*             LogNextPrefix;                      // See comment in LogSetNextTextDecoration(): doesn't copy underlying data, use carefully!
     const char*             LogNextSuffix;
     float                   LogLinePosY;
     bool                    LogLineFirstItem;
@@ -4219,7 +4219,7 @@ extern const char*  ImGuiTestEngine_FindItemDebugLabel(ImGuiContext* ctx, ImGuiI
 #define IMGUI_TEST_ENGINE_ITEM_INFO(_ID,_LABEL,_FLAGS)      if (g.TestEngineHookItems) ImGuiTestEngineHook_ItemInfo(&g, _ID, _LABEL, _FLAGS)    // Register item label and status flags (optional)
 #define IMGUI_TEST_ENGINE_LOG(_FMT,...)                     ImGuiTestEngineHook_Log(&g, _FMT, __VA_ARGS__)                                      // Custom log entry from user land into test log
 #else
-#define IMGUI_TEST_ENGINE_ITEM_ADD(_BB,_ID)                 ((void)0)
+#define IMGUI_TEST_ENGINE_ITEM_ADD(_ID,_BB,_ITEM_DATA)      ((void)0)
 #define IMGUI_TEST_ENGINE_ITEM_INFO(_ID,_LABEL,_FLAGS)      ((void)g)
 #endif
 

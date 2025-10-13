@@ -3767,6 +3767,7 @@ const char* ImGui::GetStyleColorName(ImGuiCol idx)
     case ImGuiCol_TextSelectedBg: return "TextSelectedBg";
     case ImGuiCol_TreeLines: return "TreeLines";
     case ImGuiCol_DragDropTarget: return "DragDropTarget";
+    case ImGuiCol_UnsavedMarker: return "UnsavedMarker";
     case ImGuiCol_NavCursor: return "NavCursor";
     case ImGuiCol_NavWindowingHighlight: return "NavWindowingHighlight";
     case ImGuiCol_NavWindowingDimBg: return "NavWindowingDimBg";
@@ -7551,7 +7552,7 @@ void ImGui::RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& titl
         marker_pos.y = (layout_r.Min.y + layout_r.Max.y) * 0.5f;
         if (marker_pos.x > layout_r.Min.x)
         {
-            RenderBullet(window->DrawList, marker_pos, GetColorU32(ImGuiCol_Text));
+            RenderBullet(window->DrawList, marker_pos, GetColorU32(ImGuiCol_UnsavedMarker));
             clip_r.Max.x = ImMin(clip_r.Max.x, marker_pos.x - (int)(marker_size_x * 0.5f));
         }
     }
@@ -7572,7 +7573,7 @@ void ImGui::UpdateWindowParentAndRootLinks(ImGuiWindow* window, ImGuiWindowFlags
     }
     if (parent_window && (flags & ImGuiWindowFlags_Popup))
         window->RootWindowPopupTree = parent_window->RootWindowPopupTree;
-    if (parent_window && !(flags & ImGuiWindowFlags_Modal) && (flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Popup))) // FIXME: simply use _NoTitleBar ?
+    if (parent_window && !(flags & ImGuiWindowFlags_Modal) && (flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip))) // FIXME: simply use _NoTitleBar ?
         window->RootWindowForTitleBarHighlight = parent_window->RootWindowForTitleBarHighlight;
     while (window->RootWindowForNav->ChildFlags & ImGuiChildFlags_NavFlattened)
     {
@@ -7717,7 +7718,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
     // Parent window is latched only on the first call to Begin() of the frame, so further append-calls can be done from a different window stack
     ImGuiWindow* parent_window_in_stack = (window->DockIsActive && window->DockNode->HostWindow) ? window->DockNode->HostWindow : g.CurrentWindowStack.empty() ? NULL : g.CurrentWindowStack.back().Window;
-    ImGuiWindow* parent_window = first_begin_of_the_frame ? ((flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Popup)) ? parent_window_in_stack : NULL) : window->ParentWindow;
+    ImGuiWindow* parent_window = first_begin_of_the_frame ? ((flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) ? parent_window_in_stack : NULL) : window->ParentWindow;
     IM_ASSERT(parent_window != NULL || !(flags & ImGuiWindowFlags_ChildWindow));
 
     // We allow window memory to be compacted so recreate the base stack when needed.
@@ -9997,7 +9998,7 @@ static void ImGui::UpdateKeyRoutingTable(ImGuiKeyRoutingTable* rt)
             routing_entry->RoutingCurrScore = routing_entry->RoutingNextScore;
             routing_entry->RoutingCurr = routing_entry->RoutingNext; // Update entry
             routing_entry->RoutingNext = ImGuiKeyOwner_NoOwner;
-            routing_entry->RoutingNextScore = 255;
+            routing_entry->RoutingNextScore = 0;
             if (routing_entry->RoutingCurr == ImGuiKeyOwner_NoOwner)
                 continue;
             rt->EntriesNext.push_back(*routing_entry); // Write alive ones into new buffer
@@ -10066,23 +10067,24 @@ ImGuiKeyRoutingData* ImGui::GetShortcutRoutingData(ImGuiKeyChord key_chord)
     return routing_data;
 }
 
-// Current score encoding (lower is highest priority):
-//  -   0: ImGuiInputFlags_RouteGlobal | ImGuiInputFlags_RouteOverActive
-//  -   1: ImGuiInputFlags_ActiveItem or ImGuiInputFlags_RouteFocused (if item active)
-//  -   2: ImGuiInputFlags_RouteGlobal | ImGuiInputFlags_RouteOverFocused
-//  -  3+: ImGuiInputFlags_RouteFocused (if window in focus-stack)
-//  - 254: ImGuiInputFlags_RouteGlobal
-//  - 255: never route
+// Current score encoding
+//  -        0: Never route
+//  -        1: ImGuiInputFlags_RouteGlobal    (lower priority)
+//  - 100..199: ImGuiInputFlags_RouteFocused   (if window in focus-stack)
+//         200: ImGuiInputFlags_RouteGlobal  | ImGuiInputFlags_RouteOverFocused
+//         300: ImGuiInputFlags_RouteActive or ImGuiInputFlags_RouteFocused (if item active)
+//         400: ImGuiInputFlags_RouteGlobal  | ImGuiInputFlags_RouteOverActive
+//  - 500..599: ImGuiInputFlags_RouteFocused | ImGuiInputFlags_RouteOverActive (if window in focus-stack) (higher priority)
 // 'flags' should include an explicit routing policy
 static int CalcRoutingScore(ImGuiID focus_scope_id, ImGuiID owner_id, ImGuiInputFlags flags)
 {
     ImGuiContext& g = *GImGui;
     if (flags & ImGuiInputFlags_RouteFocused)
     {
-        // ActiveID gets top priority
+        // ActiveID gets high priority
         // (we don't check g.ActiveIdUsingAllKeys here. Routing is applied but if input ownership is tested later it may discard it)
         if (owner_id != 0 && g.ActiveId == owner_id)
-            return 1;
+            return 300;
 
         // Score based on distance to focused window (lower is better)
         // Assuming both windows are submitting a routing request,
@@ -10092,25 +10094,32 @@ static int CalcRoutingScore(ImGuiID focus_scope_id, ImGuiID owner_id, ImGuiInput
         // - When Window/ChildB is focused -> Window scores 4 (best), Window/ChildB doesn't have a score.
         // This essentially follow the window->ParentWindowForFocusRoute chain.
         if (focus_scope_id == 0)
-            return 255;
+            return 0;
         for (int index_in_focus_path = 0; index_in_focus_path < g.NavFocusRoute.Size; index_in_focus_path++)
             if (g.NavFocusRoute.Data[index_in_focus_path].ID == focus_scope_id)
-                return 3 + index_in_focus_path;
-        return 255;
+            {
+                if (flags & ImGuiInputFlags_RouteOverActive) // && g.ActiveId != 0 && g.ActiveId != owner_id)
+                    return 599 - index_in_focus_path;
+                else
+                    return 199 - index_in_focus_path;
+            }
+        return 0;
     }
     else if (flags & ImGuiInputFlags_RouteActive)
     {
         if (owner_id != 0 && g.ActiveId == owner_id)
-            return 1;
-        return 255;
+            return 300;
+        return 0;
     }
     else if (flags & ImGuiInputFlags_RouteGlobal)
     {
         if (flags & ImGuiInputFlags_RouteOverActive)
-            return 0;
+            return 400;
+        if (owner_id != 0 && g.ActiveId == owner_id)
+            return 300;
         if (flags & ImGuiInputFlags_RouteOverFocused)
-            return 2;
-        return 254;
+            return 200;
+        return 1;
     }
     IM_ASSERT(0);
     return 0;
@@ -10150,8 +10159,10 @@ bool ImGui::SetShortcutRouting(ImGuiKeyChord key_chord, ImGuiInputFlags flags, I
     else
         IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiInputFlags_RouteTypeMask_)); // Check that only 1 routing flag is used
     IM_ASSERT(owner_id != ImGuiKeyOwner_Any && owner_id != ImGuiKeyOwner_NoOwner);
-    if (flags & (ImGuiInputFlags_RouteOverFocused | ImGuiInputFlags_RouteOverActive | ImGuiInputFlags_RouteUnlessBgFocused))
+    if (flags & (ImGuiInputFlags_RouteOverFocused | ImGuiInputFlags_RouteUnlessBgFocused))
         IM_ASSERT(flags & ImGuiInputFlags_RouteGlobal);
+    if (flags & ImGuiInputFlags_RouteOverActive)
+        IM_ASSERT(flags & (ImGuiInputFlags_RouteGlobal | ImGuiInputFlags_RouteFocused));
 
     // Add ImGuiMod_XXXX when a corresponding ImGuiKey_LeftXXX/ImGuiKey_RightXXX is specified.
     key_chord = FixupKeyChord(key_chord);
@@ -10206,17 +10217,17 @@ bool ImGui::SetShortcutRouting(ImGuiKeyChord key_chord, ImGuiInputFlags flags, I
 
     const int score = CalcRoutingScore(focus_scope_id, owner_id, flags);
     IMGUI_DEBUG_LOG_INPUTROUTING("SetShortcutRouting(%s, flags=%04X, owner_id=0x%08X) -> score %d\n", GetKeyChordName(key_chord), flags, owner_id, score);
-    if (score == 255)
+    if (score == 0)
         return false;
 
     // Submit routing for NEXT frame (assuming score is sufficient)
-    // FIXME: Could expose a way to use a "serve last" policy for same score resolution (using <= instead of <).
+    // FIXME: Could expose a way to use a "serve last" policy for same score resolution (using >= instead of >).
     ImGuiKeyRoutingData* routing_data = GetShortcutRoutingData(key_chord);
-    //const bool set_route = (flags & ImGuiInputFlags_ServeLast) ? (score <= routing_data->RoutingNextScore) : (score < routing_data->RoutingNextScore);
-    if (score < routing_data->RoutingNextScore)
+    //const bool set_route = (flags & ImGuiInputFlags_ServeLast) ? (score >= routing_data->RoutingNextScore) : (score > routing_data->RoutingNextScore);
+    if (score > routing_data->RoutingNextScore)
     {
         routing_data->RoutingNext = owner_id;
-        routing_data->RoutingNextScore = (ImU8)score;
+        routing_data->RoutingNextScore = (ImU16)score;
     }
 
     // Return routing state for CURRENT frame

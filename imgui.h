@@ -29,7 +29,7 @@
 // Library Version
 // (Integer encoded as XYYZZ for use in #if preprocessor conditionals, e.g. '#if IMGUI_VERSION_NUM >= 12345')
 #define IMGUI_VERSION       "1.92.4 WIP"
-#define IMGUI_VERSION_NUM   19234
+#define IMGUI_VERSION_NUM   19236
 #define IMGUI_HAS_TABLE             // Added BeginTable() - from IMGUI_VERSION_NUM >= 18000
 #define IMGUI_HAS_TEXTURES          // Added ImGuiBackendFlags_RendererHasTextures - from IMGUI_VERSION_NUM >= 19198
 #define IMGUI_HAS_VIEWPORT          // In 'docking' WIP branch.
@@ -1851,6 +1851,7 @@ enum ImGuiCol_
     ImGuiCol_TextSelectedBg,        // Selected text inside an InputText
     ImGuiCol_TreeLines,             // Tree node hierarchy outlines when using ImGuiTreeNodeFlags_DrawLines
     ImGuiCol_DragDropTarget,        // Rectangle highlighting a drop target
+    ImGuiCol_UnsavedMarker,         // Unsaved Document marker (in window title and tabs)
     ImGuiCol_NavCursor,             // Color of keyboard/gamepad navigation cursor/rectangle, when visible
     ImGuiCol_NavWindowingHighlight, // Highlight window when using CTRL+TAB
     ImGuiCol_NavWindowingDimBg,     // Darken/colorize entire screen behind the CTRL+TAB window list, when active
