@@ -156,11 +156,11 @@ Docking+Viewports Branch:
   incomplete for docking branch).
 - Viewports:
   - Added ImGuiBackendFlags_HasParentViewport backend flag for
-    backend to specify if it can honor the viewport->ParentViewportId value by
-    applying the corresponding parent/child relation at the Platform level. (#8948)
+    backend to specify if it can honor the `viewport->ParentViewport`/`ParentViewportId`
+    value by applying the corresponding parent/child relation at the Platform level. (#8948)
     - SDL3, Win32 backends: supported.
     - SDL2, GLFW, OSX backends: unsupported.
-  - Fixed a bug where ImGuiWindowFlags_NoBringToFrontOnFocus would effectivey
+  - Fixed a bug where ImGuiWindowFlags_NoBringToFrontOnFocus would effectively
     be ignored when windows first appear and viewports are enabled. (#7008) [@jshofmann]
   - Changed default value of io.ConfigViewportsNoDefaultParent to true. (#8948)
   - Fixed an issue inferring Z-order when attempting to merge a viewport
@@ -169,8 +169,8 @@ Docking+Viewports Branch:
     Setting io.ConfigViewportsNoDefaultParent=true will align imgui's expectation
     with what the backend does.
   - Storing `ImGuiViewport* ParentViewport` pointer along with ParentViewportID.
-  - DestroyContext() does not call DestroyPlatformWindows() anymore at it is
-    assumed to be unnecessary as backends should have done it and we check that
+  - ImGui::DestroyContext() does not call DestroyPlatformWindows() anymore at it
+    is assumed to be unnecessary as backends should have done it and we check that
     backends have been shutdown since 1.90.4. Changed into asserts. (#7175, #8945)
 - Backends:
   - DirectX10, DirectX11, DirectX12: Disabled DXGI's Alt+Enter default behavior on
@@ -188,7 +188,7 @@ Docking+Viewports Branch:
 - Docs: improve docking API comments and demo. (#9000)
 - Examples: DX10, DX11: Disabled DXGI's Alt+Enter default behavior in examples.
   Applications are free to leave this enabled, but it does not work properly with
-  multiple viewports. (#4350) [@PathogenDavid]
+  multiple viewports. (#4350, #8979) [@PathogenDavid]
 
 
 -----------------------------------------------------------------------
