@@ -36,8 +36,10 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.92.4 WIP (In Progress)
+ VERSION 1.92.4 (Released 2025-10-14)
 -----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.92.4
 
 Breaking Changes:
 
@@ -85,13 +87,13 @@ Other Changes:
     previously it would only temporary wreck cursor position, and since 1.92.3 it
     would go in an infinite loop. (#8994, #3237)
 - Textures:
-  - Fixed a crash if texture status is set to _WantDestroy by a backend after
-    it had already been destroyed. This would typically happen when calling backend's
+  - Fixed a crash if texture status is set to ImTextureStatus_WantDestroy by a backend
+    after it had already been destroyed. This would typically happen when calling
     ImGui_ImplXXXX_InvalidateDeviceObjects() helpers twice in a row. (#8977, #8811)
   - Allowed backend to destroy texture while inside the NewFrame/EndFrame
     scope. Basically if a backend decide to destroy a texture that we didn't request
     to destroy (for e.g. freeing resources) the texture is immediately set to
-    a _WantCreate status again. (#8811)
+    a ImTextureStatus_WantCreate status again. (#8811)
   - Fixed an issue preventing multi-contexts sharing a ImFontAtlas from
     being possible to destroy in any order.
   - Fixed not updating ImTextureData's RefCount when destroying a context
@@ -130,8 +132,9 @@ Other Changes:
   - Vulkan: added a way to specify custom shaders by filling init fields
     CustomShaderVertCreateInfo and CustomShaderFragCreateInfo. (#8585, #8271) [@johan0A]
   - DX9,DX10,DX11,DX12,Metal,Vulkan,WGPU,SDLRenderer2,SDLRenderer3:
-    ensure that a texture in _WantDestroy state always turn to _Destroyed even
-    if your underlying graphics data was already destroyed. (#8977)
+    ensure that a texture in ImTextureStatus_WantDestroy state always turn to
+    ImTextureStatus_Destroyed even if your underlying graphics data was already
+    destroyed. (#8977)
 - Examples:
   - SDL2+DirectX11: Try WARP software driver if hardware driver is
     not available. (#5924, #5562)
