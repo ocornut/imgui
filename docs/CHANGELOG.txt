@@ -140,7 +140,10 @@ Other Changes:
 
 Docking+Viewports Branch:
 
-- Nav: fixed a crash that could occur when opening a popup following the processing
+- Nav, Docking, Selection: Fixed tab change from reinitializing navigation state,
+  which would erroneously clear selection when using ImGuiSelectableFlags_SelectOnNav
+  or clear multi-selection when not using ImGuiMultiSelectFlags_NoAutoSelect. (#8997)
+- Nav: Fixed a crash that could occur when opening a popup following the processing
   of a global shortcut while no windows were focused (the fix done in 1.92.3 was
   incomplete for docking branch).
 - Viewports:

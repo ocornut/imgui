@@ -14953,7 +14953,7 @@ static void ImGui::NavUpdateWindowingApplyFocus(ImGuiWindow* apply_focus_window)
         FocusWindow(apply_focus_window, ImGuiFocusRequestFlags_RestoreFocusedChild);
         IM_ASSERT(g.NavWindow != NULL);
         apply_focus_window = g.NavWindow;
-        if (apply_focus_window->NavLastIds[0] == 0)
+        if (apply_focus_window->NavLastIds[0] == 0) // FIXME: This is the equivalent of the 'if (g.NavId == 0) { NavInitWindow() }' in DockNodeUpdateTabBar().
             NavInitWindow(apply_focus_window, false);
 
         // If the window has ONLY a menu layer (no main layer), select it directly
@@ -19366,7 +19366,8 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
             if (tab->Window)
             {
                 FocusWindow(tab->Window);
-                NavInitWindow(tab->Window, false);
+                if (g.NavId == 0) // only init if FocusWindow() didn't restore anything.
+                    NavInitWindow(tab->Window, false);
             }
 
     EndTabBar();
