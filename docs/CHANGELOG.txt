@@ -42,9 +42,11 @@ HOW TO UPDATE?
 Breaking Changes:
 
 - Backends:
-  - TreeNode, Selectable: commented out legacy names obsoleted in 1.89.7 (July 2023):
-      ImGuiTreeNodeFlags_AllowItemOverlap   --> ImGuiTreeNodeFlags_AllowOverlap
-      ImGuiSelectableFlags_AllowItemOverlap --> ImGuiSelectableFlags_AllowOverlap
+  - TreeNode, Selectable, Clipper: commented out legacy names obsoleted in
+    1.89.7 (July 2023) and 1.89.9 (Sept 2023):
+      ImGuiTreeNodeFlags_AllowItemOverlap       --> ImGuiTreeNodeFlags_AllowOverlap
+      ImGuiSelectableFlags_AllowItemOverlap     --> ImGuiSelectableFlags_AllowOverlap
+      ImGuiListClipper::IncludeRangeByIndices() --> ImGuiListClipper::IncludeItemsByIndex()
   - Vulkan: moved some fields in ImGui_ImplVulkan_InitInfo:
       init_info.RenderPass  --> init_info.PipelineInfoMain.RenderPass
       init_info.Subpass     --> init_info.PipelineInfoMain.Subpass
