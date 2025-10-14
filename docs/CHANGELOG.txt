@@ -93,6 +93,7 @@ Other Changes:
     using a shared ImFontAtlas, leading standard backends to not properly
     free texture resources. (#8975) [@icrashstuff]
 - Demo: fixed layout issue in "Layout & Scrolling -> Scrolling" section.
+- Misc: Relaxed internal assert in MarkItemEdited() to allow for more use cases. (#8997)
 - Misc: Debuggers: added type formatters for the LLDB debuggers (e.g. Xcode,
   Android Studio & more) to provide nicer display for ImVec2, ImVec4, ImVector etc.
   See misc/debuggers/ for details. (#8950) [@mentlerd]
