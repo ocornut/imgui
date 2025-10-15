@@ -5485,7 +5485,8 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
 
             const char* text_selected_begin = buf_display + ImMin(state->Stb->select_start, state->Stb->select_end);
             const char* text_selected_end = buf_display + ImMax(state->Stb->select_start, state->Stb->select_end);
-            for (int line_n = line_visible_n0; line_n < line_visible_n1; line_n++)
+            int line_n_max = ImMin(line_visible_n1, line_index->Offsets.Size); // We may not have offsets for all the lines if the text was scrolled this frame
+            for (int line_n = line_visible_n0; line_n < line_n_max; line_n++)
             {
                 const char* p = line_index->get_line_begin(buf_display, line_n);
                 const char* p_eol = line_index->get_line_end(buf_display, line_n);
