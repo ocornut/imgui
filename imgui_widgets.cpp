@@ -5401,7 +5401,12 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     line_index->Offsets.resize(0);
     int line_count = 1;
     if (is_multiline)
-        line_count = InputTextLineIndexBuild(flags, line_index, buf_display, buf_display_end, wrap_width, (render_cursor && state && state->CursorFollow) ? INT_MAX : line_visible_n1 + 1, buf_display_end ? NULL : &buf_display_end);
+    {
+        // If scrolling is expected to change build full index.
+        // FIXME-OPT: Could append to index when new value of line_visible_n1 becomes bigger, see second call to CalcClipRectVisibleItemsY() below.
+        bool will_scroll_y = state && ((state->CursorFollow && render_cursor) || (state->CursorCenterY && (render_cursor || render_selection)));
+        line_count = InputTextLineIndexBuild(flags, line_index, buf_display, buf_display_end, wrap_width, will_scroll_y ? INT_MAX : line_visible_n1 + 1, buf_display_end ? NULL : &buf_display_end);
+    }
     line_index->EndOffset = (int)(buf_display_end - buf_display);
     line_visible_n1 = ImMin(line_visible_n1, line_count);
 

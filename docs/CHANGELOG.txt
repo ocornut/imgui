@@ -47,6 +47,10 @@ Other Changes:
   result in temporarily incorrect state, which would lead to bugs to side effects
   in various locations, e.g. GetContentRegionAvail() calls or using clipper. (#9005)
   EndTable() was mistakenly restoring a wrong current table.
+- InputTextMultiline: fixed a crash when using ImGuiInputTextFlags_WordWrap and
+  resizing the parent window while keeping the multi-line field active (which is
+  most typically achieved when resizing programmatically or via a docking layout
+  reacting to a platform window resize). (#3237, #9007) [@anton-kl, @ocornut]
 
 
 -----------------------------------------------------------------------
