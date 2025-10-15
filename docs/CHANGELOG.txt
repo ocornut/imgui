@@ -43,6 +43,11 @@ Breaking Changes:
 
 Other Changes:
 
+- Tables: fixed a bug where nesting BeginTable()->Begin()->BeginTable() would
+  result in temporarily incorrect state, which would lead to bugs to side effects
+  in various locations, e.g. GetContentRegionAvail() calls or using clipper. (#9005)
+  EndTable() was mistakenly restoring a wrong current table.
+
 
 -----------------------------------------------------------------------
  VERSION 1.92.4 (Released 2025-10-14)
