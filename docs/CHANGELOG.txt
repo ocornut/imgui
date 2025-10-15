@@ -53,6 +53,8 @@ Other Changes:
   resizing the parent window while keeping the multi-line field active (which is
   most typically achieved when resizing programmatically or via a docking layout
   reacting to a platform window resize). (#3237, #9007) [@anton-kl, @ocornut]
+- Backends: Vulkan: added IMGUI_IMPL_VULKAN_VOLK_FILENAME to configure path to
+  Volk (default to "volk.h"). (#9008, #7722, #6582, #4854) [@mwlasiuk]
 - Backends: WebGPU: update to compile with Dawn and Emscripten's 4.0.10+
   '--use-port=emdawnwebgpu' ports. (#8381, #8898) [@brutpitt, @trbabb]
   When using Emscripten 4.0.10+, backend now defaults to IMGUI_IMPL_WEBGPU_BACKEND_DAWN

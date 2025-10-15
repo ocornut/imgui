@@ -41,9 +41,14 @@
 // If you have no idea what this is, leave it alone!
 //#define IMGUI_IMPL_VULKAN_NO_PROTOTYPES
 
-// Convenience support for Volk
+// [Configuration] Convenience support for Volk
 // (you can also technically use IMGUI_IMPL_VULKAN_NO_PROTOTYPES + wrap Volk via ImGui_ImplVulkan_LoadFunctions().)
+// (When using Volk from directory outside your include directories list you can specify full path to the volk.h header,
+//  for example when using Volk from VulkanSDK and using include_directories(${Vulkan_INCLUDE_DIRS})' from 'find_package(Vulkan REQUIRED)')
 //#define IMGUI_IMPL_VULKAN_USE_VOLK
+//#define IMGUI_IMPL_VULKAN_VOLK_FILENAME    <Volk/volk.h>
+//#define IMGUI_IMPL_VULKAN_VOLK_FILENAME    <volk.h>       // Default
+// Reminder: make those changes in your imconfig.h file, not here!
 
 #if defined(IMGUI_IMPL_VULKAN_NO_PROTOTYPES) && !defined(VK_NO_PROTOTYPES)
 #define VK_NO_PROTOTYPES
@@ -54,7 +59,11 @@
 
 // Vulkan includes
 #ifdef IMGUI_IMPL_VULKAN_USE_VOLK
+#ifdef IMGUI_IMPL_VULKAN_VOLK_FILENAME
+#include IMGUI_IMPL_VULKAN_VOLK_FILENAME
+#else
 #include <volk.h>
+#endif
 #else
 #include <vulkan/vulkan.h>
 #endif

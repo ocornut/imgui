@@ -27,6 +27,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2025-10-15: Vulkan: Added IMGUI_IMPL_VULKAN_VOLK_FILENAME to configure path to volk.h header. (#9008)
 //  2025-09-26: *BREAKING CHANGE*: moved some fields in ImGui_ImplVulkan_InitInfo: init_info.RenderPass --> init_info.PipelineInfoMain.RenderPass, init_info.Subpass --> init_info.PipelineInfoMain.Subpass, init_info.MSAASamples --> init_info.PipelineInfoMain.MSAASamples, init_info.PipelineRenderingCreateInfo --> init_info.PipelineInfoMain.PipelineRenderingCreateInfo.
 //  2025-09-26: *BREAKING CHANGE*: renamed ImGui_ImplVulkan_MainPipelineCreateInfo to ImGui_ImplVulkan_PipelineInfo. Introduced very recently so shouldn't affect many users.
 //  2025-09-26: *BREAKING CHANGE*: helper ImGui_ImplVulkanH_CreateOrResizeWindow() added a VkImageUsageFlags image_usage` argument, default to VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT if 0.
