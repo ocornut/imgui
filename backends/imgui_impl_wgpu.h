@@ -1,11 +1,14 @@
 // dear imgui: Renderer for WebGPU
-// This needs to be used along with a Platform Binding (e.g. GLFW)
-// (Please note that WebGPU is currently experimental, will not run on non-beta browsers, and may break.)
+// This needs to be used along with a Platform Binding (e.g. GLFW, SDL2, SDL3)
+// (Please note that WebGPU is a recent API, may not be supported by all browser, and its ecosystem is generally a mess)
 
-// Important note to dawn and/or wgpu users: when targeting native platforms (i.e. NOT emscripten),
-// one of IMGUI_IMPL_WEBGPU_BACKEND_DAWN or IMGUI_IMPL_WEBGPU_BACKEND_WGPU must be provided.
+// When targeting native platforms:
+//  - One of IMGUI_IMPL_WEBGPU_BACKEND_DAWN or IMGUI_IMPL_WEBGPU_BACKEND_WGPU *must* be provided.
+// When targeting Emscripten:
+//  - We now defaults to IMGUI_IMPL_WEBGPU_BACKEND_DAWN is Emscripten version is 4.0.10+, which correspond to using Emscripten '--use-port=emdawnwebgpu'.
+//  - We can still define IMGUI_IMPL_WEBGPU_BACKEND_WGPU to use Emscripten '-s USE_WEBGPU=1' which is marked as obsolete by Emscripten.
 // Add #define to your imconfig.h file, or as a compilation flag in your build system.
-// This requirement will be removed once WebGPU stabilizes and backends converge on a unified interface.
+// This requirement may be removed once WebGPU stabilizes and backends converge on a unified interface.
 //#define IMGUI_IMPL_WEBGPU_BACKEND_DAWN
 //#define IMGUI_IMPL_WEBGPU_BACKEND_WGPU
 
@@ -26,6 +29,16 @@
 #pragma once
 #include "imgui.h"          // IMGUI_IMPL_API
 #ifndef IMGUI_DISABLE
+
+// Setup Emscripten default if not specified.
+#if defined(__EMSCRIPTEN__) && !defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) && !defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
+#include <emscripten/version.h>
+#if (__EMSCRIPTEN_major__ >= 4) && (__EMSCRIPTEN_minor__ >= 0) && (__EMSCRIPTEN_tiny__ >= 10)
+#define IMGUI_IMPL_WEBGPU_BACKEND_DAWN
+#else
+#define IMGUI_IMPL_WEBGPU_BACKEND_WGPU
+#endif
+#endif
 
 #include <webgpu/webgpu.h>
 

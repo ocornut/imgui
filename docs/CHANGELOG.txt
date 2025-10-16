@@ -53,6 +53,11 @@ Other Changes:
   resizing the parent window while keeping the multi-line field active (which is
   most typically achieved when resizing programmatically or via a docking layout
   reacting to a platform window resize). (#3237, #9007) [@anton-kl, @ocornut]
+- Backends: WebGPU: update to compile with Dawn and Emscripten's 4.0.10+
+  '--use-port=emdawnwebgpu' ports. (#8381, #8898) [@brutpitt, @trbabb]
+  When using Emscripten 4.0.10+, backend now defaults to IMGUI_IMPL_WEBGPU_BACKEND_DAWN
+  instead of IMGUI_IMPL_WEBGPU_BACKEND_WGPU, if neither are specified.
+  (note: examples application were not updated yet)
 
 
 -----------------------------------------------------------------------
