@@ -251,6 +251,7 @@ bool CreateDeviceD3D(HWND hWnd)
     IDXGIFactory* pSwapChainFactory;
     if (SUCCEEDED(g_pSwapChain->GetParent(IID_PPV_ARGS(&pSwapChainFactory))))
         pSwapChainFactory->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER);
+    pSwapChainFactory->Release();
 
     CreateRenderTarget();
     return true;
