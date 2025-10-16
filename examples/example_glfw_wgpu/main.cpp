@@ -27,17 +27,16 @@
 #include <webgpu/webgpu_cpp.h>
 
 // Data
-static WGPUInstance      wgpu_instance = nullptr;
-static WGPUDevice        wgpu_device = nullptr;
-static WGPUSurface       wgpu_surface = nullptr;
-static WGPUTextureFormat wgpu_preferred_fmt = WGPUTextureFormat_RGBA8Unorm;
-static WGPUSwapChain     wgpu_swap_chain = nullptr;
-static int               wgpu_surface_width = 1280;
-static int               wgpu_surface_height = 800;
+static WGPUInstance             wgpu_instance = nullptr;
+static WGPUDevice               wgpu_device = nullptr;
+static WGPUSurface              wgpu_surface = nullptr;
+static WGPUTextureFormat        wgpu_preferred_fmt = WGPUTextureFormat_RGBA8Unorm;
+static WGPUSwapChain            wgpu_swap_chain = nullptr;
+static int                      wgpu_surface_width = 1280;
+static int                      wgpu_surface_height = 800;
 
 // Forward declarations
 static bool InitWGPU(GLFWwindow* window);
-static void ResizeSurface(int width, int height);
 
 static void glfw_error_callback(int error, const char* description)
 {
@@ -56,6 +55,21 @@ static void wgpu_error_callback(WGPUErrorType error_type, const char* message, v
     default:                        error_type_lbl = "Unknown";
     }
     printf("%s error: %s\n", error_type_lbl, message);
+}
+
+static void ResizeSurface(int width, int height)
+{
+    if (wgpu_swap_chain)
+        wgpuSwapChainRelease(wgpu_swap_chain);
+    wgpu_surface_width = width;
+    wgpu_surface_height = height;
+    WGPUSwapChainDescriptor swap_chain_desc = {};
+    swap_chain_desc.usage = WGPUTextureUsage_RenderAttachment;
+    swap_chain_desc.format = wgpu_preferred_fmt;
+    swap_chain_desc.width = width;
+    swap_chain_desc.height = height;
+    swap_chain_desc.presentMode = WGPUPresentMode_Fifo;
+    wgpu_swap_chain = wgpuDeviceCreateSwapChain(wgpu_device, wgpu_surface, &swap_chain_desc);
 }
 
 // Main code
@@ -166,7 +180,7 @@ int main(int, char**)
         glfwGetFramebufferSize((GLFWwindow*)window, &width, &height);
         if (width != wgpu_surface_width || height != wgpu_surface_height)
         {
-            ImGui_ImplWGPU_InvalidateDeviceObjects();
+            ImGui_ImplWGPU_InvalidateDeviceObjects(); // FIXME-OPT: Why doing this? This seems unnecessary and unoptimal.
             ResizeSurface(width, height);
             ImGui_ImplWGPU_CreateDeviceObjects();
         }
@@ -275,21 +289,21 @@ static WGPUAdapter RequestAdapter(WGPUInstance instance)
     auto onAdapterRequestEnded = [](WGPURequestAdapterStatus status, WGPUAdapter adapter, const char* message, void* pUserData)
     {
         if (status == WGPURequestAdapterStatus_Success)
-            *(WGPUAdapter*)(pUserData) = adapter;
+            *(WGPUAdapter*)pUserData = adapter;
         else
             printf("Could not get WebGPU adapter: %s\n", message);
-};
+    };
     WGPUAdapter adapter;
     wgpuInstanceRequestAdapter(instance, nullptr, onAdapterRequestEnded, (void*)&adapter);
     return adapter;
 }
 
-static WGPUDevice RequestDevice(WGPUAdapter& adapter)
+static WGPUDevice RequestDevice(WGPUAdapter adapter)
 {
     auto onDeviceRequestEnded = [](WGPURequestDeviceStatus status, WGPUDevice device, const char* message, void* pUserData)
     {
         if (status == WGPURequestDeviceStatus_Success)
-            *(WGPUDevice*)(pUserData) = device;
+            *(WGPUDevice*)pUserData = device;
         else
             printf("Could not get WebGPU device: %s\n", message);
     };
@@ -307,14 +321,7 @@ static bool InitWGPU(GLFWwindow* window)
     wgpu_device = emscripten_webgpu_get_device();
     if (!wgpu_device)
         return false;
-#else
-    WGPUAdapter adapter = RequestAdapter(instance.Get());
-    if (!adapter)
-        return false;
-    wgpu_device = RequestDevice(adapter);
-#endif
 
-#ifdef __EMSCRIPTEN__
     wgpu::SurfaceDescriptorFromCanvasHTMLSelector canvas_desc = {};
     canvas_desc.selector = "#canvas";
     wgpu::SurfaceDescriptor surface_desc = {};
@@ -324,6 +331,11 @@ static bool InitWGPU(GLFWwindow* window)
     wgpu::Adapter adapter = {};
     wgpu_preferred_fmt = (WGPUTextureFormat)surface.GetPreferredFormat(adapter);
 #else
+    WGPUAdapter adapter = RequestAdapter(instance.Get());
+    if (!adapter)
+        return false;
+    wgpu_device = RequestDevice(adapter);
+
     wgpu::Surface surface = wgpu::glfw::CreateSurfaceForWindow(instance, window);
     if (!surface)
         return false;
@@ -335,21 +347,5 @@ static bool InitWGPU(GLFWwindow* window)
     wgpu_surface = surface.MoveToCHandle();
 
     wgpuDeviceSetUncapturedErrorCallback(wgpu_device, wgpu_error_callback, nullptr);
-
     return true;
-}
-
-static void ResizeSurface(int width, int height)
-{
-    if (wgpu_swap_chain)
-        wgpuSwapChainRelease(wgpu_swap_chain);
-    wgpu_surface_width = width;
-    wgpu_surface_height = height;
-    WGPUSwapChainDescriptor swap_chain_desc = {};
-    swap_chain_desc.usage = WGPUTextureUsage_RenderAttachment;
-    swap_chain_desc.format = wgpu_preferred_fmt;
-    swap_chain_desc.width = width;
-    swap_chain_desc.height = height;
-    swap_chain_desc.presentMode = WGPUPresentMode_Fifo;
-    wgpu_swap_chain = wgpuDeviceCreateSwapChain(wgpu_device, wgpu_surface, &swap_chain_desc);
 }

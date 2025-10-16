@@ -48,7 +48,7 @@ int main(int, char**)
     }
 
     SDL_PropertiesID props = SDL_GetWindowProperties(window);
-    HWND hwnd = (HWND)SDL_GetPointerProperty(props, SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
+    HWND hwnd = (HWND)SDL_GetPointerProperty(props, SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr);
 
     // Initialize Direct3D
     if (!CreateDeviceD3D(hwnd))
