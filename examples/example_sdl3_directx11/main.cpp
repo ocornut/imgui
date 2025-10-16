@@ -256,8 +256,10 @@ bool CreateDeviceD3D(HWND hWnd)
     // - This must be done for all windows associated to the device. Our DX11 backend does this automatically for secondary viewports that it creates.
     IDXGIFactory* pSwapChainFactory;
     if (SUCCEEDED(g_pSwapChain->GetParent(IID_PPV_ARGS(&pSwapChainFactory))))
+    {
         pSwapChainFactory->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER);
-    pSwapChainFactory->Release();
+        pSwapChainFactory->Release();
+    }
 
     CreateRenderTarget();
     return true;
