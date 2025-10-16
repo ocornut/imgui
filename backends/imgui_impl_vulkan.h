@@ -45,9 +45,9 @@
 // (you can also technically use IMGUI_IMPL_VULKAN_NO_PROTOTYPES + wrap Volk via ImGui_ImplVulkan_LoadFunctions().)
 //#define IMGUI_IMPL_VULKAN_USE_VOLK
 
-// When using Volk from VulkanSDK (include directories provided via 'include_directories(${Vulkan_INCLUDE_DIRS})' from 'find_package(Vulkan REQUIRED)')
-// you might want ImGui to use VulkanSDK convention of <lib_include_dir>/<lib_header>.h ...
-//#define IMGUI_IMPL_VULKAN_VOLK_USE_VOLK_DIRECTORY
+// When using Volk from directory outside your include directories list you can specify full path to volk.h header
+// for example when using Volk from VulkanSDK and using include_directories(${Vulkan_INCLUDE_DIRS})' from 'find_package(Vulkan REQUIRED)')
+//#define IMGUI_IMPL_VULKAN_VOLK_FILENAME
 
 #if defined(IMGUI_IMPL_VULKAN_NO_PROTOTYPES) && !defined(VK_NO_PROTOTYPES)
 #define VK_NO_PROTOTYPES
@@ -58,8 +58,8 @@
 
 // Vulkan includes
 #ifdef IMGUI_IMPL_VULKAN_USE_VOLK
-#ifdef IMGUI_IMPL_VULKAN_VOLK_USE_VOLK_DIRECTORY
-#include <Volk/volk.h>
+#ifdef IMGUI_IMPL_VULKAN_VOLK_FILENAME
+#include IMGUI_IMPL_VULKAN_VOLK_FILENAME
 #else
 #include <volk.h>
 #endif
