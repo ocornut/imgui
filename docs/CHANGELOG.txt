@@ -39,6 +39,28 @@ HOW TO UPDATE?
  VERSION 1.92.5 WIP (In Progress)
 -----------------------------------------------------------------------
 
+Breaking Changes:
+
+Other Changes:
+
+- Tables: fixed a bug where nesting BeginTable()->Begin()->BeginTable() would
+  result in temporarily incorrect state, which would lead to bugs to side effects
+  in various locations, e.g. GetContentRegionAvail() calls or using clipper. (#9005)
+  EndTable() was mistakenly restoring a wrong current table.
+- InputText: avoid continuously overwriting ownership of ImGuiKey_Enter/_KeypadEnter
+  keys in order to allow e.g. external Shortcut override behavior. (#9004)
+- InputTextMultiline: fixed a crash when using ImGuiInputTextFlags_WordWrap and
+  resizing the parent window while keeping the multi-line field active (which is
+  most typically achieved when resizing programmatically or via a docking layout
+  reacting to a platform window resize). (#3237, #9007) [@anton-kl, @ocornut]
+- Backends: Vulkan: added IMGUI_IMPL_VULKAN_VOLK_FILENAME to configure path to
+  Volk (default to "volk.h"). (#9008, #7722, #6582, #4854) [@mwlasiuk]
+- Backends: WebGPU: update to compile with Dawn and Emscripten's 4.0.10+
+  '--use-port=emdawnwebgpu' ports. (#8381, #8898) [@brutpitt, @trbabb]
+  When using Emscripten 4.0.10+, backend now defaults to IMGUI_IMPL_WEBGPU_BACKEND_DAWN
+  instead of IMGUI_IMPL_WEBGPU_BACKEND_WGPU, if neither are specified.
+  (note: examples application were not updated yet)
+
 Docking+Viewports Branch:
 
 - Examples: SDL2+DX11, SDL3+DX11, Win32+DX10, Win32+DX11: fixed one resource
