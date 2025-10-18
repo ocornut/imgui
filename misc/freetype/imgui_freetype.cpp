@@ -435,19 +435,30 @@ static bool ImGui_ImplFreeType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig* s
 
     FT_New_Size(bd_font_data->FtFace, &bd_baked_data->FtSize);
     FT_Activate_Size(bd_baked_data->FtSize);
-
-    // Vuhdo 2017: "I'm not sure how to deal with font sizes properly. As far as I understand, currently ImGui assumes that the 'pixel_height'
-    // is a maximum height of an any given glyph, i.e. it's the sum of font's ascender and descender. Seems strange to me.
-    // FT_Set_Pixel_Sizes() doesn't seem to get us the same result."
-    // (FT_Set_Pixel_Sizes() essentially calls FT_Request_Size() with FT_SIZE_REQUEST_TYPE_NOMINAL)
     const float rasterizer_density = src->RasterizerDensity * baked->RasterizerDensity;
-    FT_Size_RequestRec req;
-    req.type = (bd_font_data->UserFlags & ImGuiFreeTypeLoaderFlags_Bitmap) ? FT_SIZE_REQUEST_TYPE_NOMINAL : FT_SIZE_REQUEST_TYPE_REAL_DIM;
-    req.width = 0;
-    req.height = (uint32_t)(size * 64 * rasterizer_density);
-    req.horiResolution = 0;
-    req.vertResolution = 0;
-    FT_Request_Size(bd_font_data->FtFace, &req);
+    if ( // fixed sized bitmaps
+        ((bd_font_data->FtFace->face_flags & FT_FACE_FLAG_FIXED_SIZES) != 0) &&
+        ((bd_font_data->UserFlags & ImGuiFreeTypeLoaderFlags_Bitmap) != 0) &&
+        ((bd_font_data->FtFace->face_flags & FT_FACE_FLAG_SCALABLE) == 0)
+    ) {
+        // loop over sizes and pick the closest, larger (or better equal) size
+
+        // HACK: choose first
+        FT_Select_Size(bd_font_data->FtFace, 0);
+    } else {
+        // Vuhdo 2017: "I'm not sure how to deal with font sizes properly. As far as I understand, currently ImGui assumes that the 'pixel_height'
+        // is a maximum height of an any given glyph, i.e. it's the sum of font's ascender and descender. Seems strange to me.
+        // FT_Set_Pixel_Sizes() doesn't seem to get us the same result."
+        // (FT_Set_Pixel_Sizes() essentially calls FT_Request_Size() with FT_SIZE_REQUEST_TYPE_NOMINAL)
+
+        FT_Size_RequestRec req;
+        req.type = (bd_font_data->UserFlags & ImGuiFreeTypeLoaderFlags_Bitmap) ? FT_SIZE_REQUEST_TYPE_NOMINAL : FT_SIZE_REQUEST_TYPE_REAL_DIM;
+        req.width = 0;
+        req.height = (uint32_t)(size * 64 * rasterizer_density);
+        req.horiResolution = 0;
+        req.vertResolution = 0;
+        FT_Request_Size(bd_font_data->FtFace, &req);
+    }
 
     // Output
     if (src->MergeMode == false)
@@ -496,7 +507,16 @@ static bool ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConf
 
     FT_Face face = bd_font_data->FtFace;
     FT_GlyphSlot slot = face->glyph;
-    const float rasterizer_density = src->RasterizerDensity * baked->RasterizerDensity;
+    float bitmap_density = 1.f;
+    if (
+        ((face->face_flags & FT_FACE_FLAG_FIXED_SIZES) != 0) &&
+        ((bd_font_data->UserFlags & ImGuiFreeTypeLoaderFlags_Bitmap) != 0) &&
+        ((face->face_flags & FT_FACE_FLAG_SCALABLE) == 0)
+    ) {
+        // scale fixed size bitmap to target size
+        bitmap_density = float(bd_font_data->FtFace->size->metrics.y_ppem) / baked->Size;
+    }
+    const float rasterizer_density = src->RasterizerDensity * baked->RasterizerDensity * bitmap_density;
 
     // Load metrics only mode
     const float advance_x = (slot->advance.x / FT_SCALEFACTOR) / rasterizer_density;
