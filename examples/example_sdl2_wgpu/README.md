@@ -36,6 +36,7 @@ Unpack it in your preferred folder and to replace the step 3 with:
 **N.B.**
 For the WASM code produced by Emscripten to work correctly, it will also be necessary to have the "corresponding" (or newer) version of Google Canary (nightly build for developers) that includes the latest changes
 
+
 ### Using makefile 
 
 - You need to install Emscripten from https://emscripten.org/docs/getting_started/downloads.html, and have the environment variables set, as described in https://emscripten.org/docs/getting_started/downloads.html#installation-instructions

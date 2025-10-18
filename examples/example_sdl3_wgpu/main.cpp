@@ -1,4 +1,4 @@
-// Dear ImGui: standalone example application for GLFW + WebGPU
+// Dear ImGui: standalone example application for using SDL3 + WebGPU
 // - Emscripten is supported for publishing on web. See https://emscripten.org.
 // - Dawn is used as a WebGPU implementation on desktop.
 
@@ -8,12 +8,13 @@
 // - Documentation        https://dearimgui.com/docs (same as your local docs/ folder).
 // - Introduction, links and more at the top of imgui.cpp
 
+
 #include "imgui.h"
-#include "imgui_impl_glfw.h"
+#include "imgui_impl_sdl3.h"
 #include "imgui_impl_wgpu.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <GLFW/glfw3.h>
+#include <SDL3/SDL.h>
 
 // This example can also compile and run with Emscripten! See 'Makefile.emscripten' for details.
 #ifdef __EMSCRIPTEN__
@@ -22,67 +23,56 @@
 #if defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
 #include <emscripten/html5_webgpu.h>
 #endif
-#include <webgpu/webgpu.h>
-#include <webgpu/webgpu_cpp.h>
 #include "../libs/emscripten/emscripten_mainloop_stub.h"
-#else
-#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
-#include <webgpu/webgpu_glfw.h>
 #endif
+
+#include <webgpu/webgpu.h>
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
+#include <webgpu/webgpu_cpp.h>
 #endif
 
 // Data
-static WGPUInstance             wgpu_instance = nullptr;
-static WGPUDevice               wgpu_device = nullptr;
-static WGPUSurface              wgpu_surface = nullptr;
-static WGPUQueue                wgpu_queue = nullptr;
-static WGPUSurfaceConfiguration wgpu_surface_configuration = {};
-static int                      wgpu_surface_width = 1280;
-static int                      wgpu_surface_height = 800;
+WGPUInstance             wgpu_instance = nullptr;
+WGPUDevice               wgpu_device = nullptr;
+WGPUSurface              wgpu_surface = nullptr;
+WGPUQueue                wgpu_queue = nullptr;
+WGPUSurfaceConfiguration wgpu_surface_configuration = {};
+int                      wgpu_surface_width = 1280;
+int                      wgpu_surface_height = 800;
 
 // Forward declarations
-static bool InitWGPU(GLFWwindow* window);
+static bool InitWGPU(SDL_Window* window);
 
-static void glfw_error_callback(int error, const char* description)
+void ResizeSurface(int width, int height)
 {
-    printf("GLFW Error %d: %s\n", error, description);
-}
-
-static void ResizeSurface(int width, int height)
-{
-    wgpu_surface_configuration.width = wgpu_surface_width = width;
+    wgpu_surface_configuration.width  = wgpu_surface_width  = width;
     wgpu_surface_configuration.height = wgpu_surface_height = height;
-    wgpuSurfaceConfigure(wgpu_surface, &wgpu_surface_configuration);
+    wgpuSurfaceConfigure( wgpu_surface, (WGPUSurfaceConfiguration*)&wgpu_surface_configuration );
 }
 
 // Main code
 int main(int, char**)
 {
-    glfwSetErrorCallback(glfw_error_callback);
-    if (!glfwInit())
-        return 1;
-
-    // Make sure GLFW does not initialize any graphics context.
-    // This needs to be done explicitly later.
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-
-    // Create window
-    float main_scale = ImGui_ImplGlfw_GetContentScaleForMonitor(glfwGetPrimaryMonitor()); // Valid on GLFW 3.3+ only
-    wgpu_surface_width *= main_scale;
-    wgpu_surface_height *= main_scale;
-    GLFWwindow* window = glfwCreateWindow(wgpu_surface_width, wgpu_surface_height, "Dear ImGui GLFW+WebGPU example", nullptr, nullptr);
-    if (window == nullptr)
-        return 1;
-
-    // Initialize the WebGPU environment
-    if (!InitWGPU(window))
+    // Setup SDL
+    // [If using SDL_MAIN_USE_CALLBACKS: all code below until the main loop starts would likely be your SDL_AppInit() function]
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD))
     {
-        glfwDestroyWindow(window);
-        glfwTerminate();
+        printf("Error: SDL_Init(): %s\n", SDL_GetError());
         return 1;
     }
 
-    glfwShowWindow(window);
+    // Create SDL window graphics context
+    float main_scale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
+    SDL_WindowFlags window_flags = SDL_WINDOW_RESIZABLE;
+    SDL_Window* window = SDL_CreateWindow("Dear ImGui SDL3+WebGPU example", wgpu_surface_width, wgpu_surface_height, window_flags);
+    if (window == nullptr)
+    {
+        printf("Error: SDL_CreateWindow(): %s\n", SDL_GetError());
+        return 1;
+    }
+
+    // Initialize WGPU
+    InitWGPU(window);
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -101,10 +91,8 @@ int main(int, char**)
     style.FontScaleDpi = main_scale;        // Set initial font scale. (using io.ConfigDpiScaleFonts=true makes this unnecessary. We leave both here for documentation purpose)
 
     // Setup Platform/Renderer backends
-    ImGui_ImplGlfw_InitForOther(window, true);
-#ifdef __EMSCRIPTEN__
-    ImGui_ImplGlfw_InstallEmscriptenCallbacks(window, "#canvas");
-#endif
+    ImGui_ImplSDL3_InitForOther(window);
+
     ImGui_ImplWGPU_InitInfo init_info;
     init_info.Device = wgpu_device;
     init_info.NumFramesInFlight = 3;
@@ -123,11 +111,11 @@ int main(int, char**)
     //style.FontSizeBase = 20.0f;
     //io.Fonts->AddFontDefault();
 #ifndef IMGUI_DISABLE_FILE_FUNCTIONS
-    //io.Fonts->AddFontFromFileTTF("fonts/segoeui.ttf");
-    //io.Fonts->AddFontFromFileTTF("fonts/DroidSans.ttf");
-    //io.Fonts->AddFontFromFileTTF("fonts/Roboto-Medium.ttf");
-    //io.Fonts->AddFontFromFileTTF("fonts/Cousine-Regular.ttf");
-    //ImFont* font = io.Fonts->AddFontFromFileTTF("fonts/ArialUni.ttf");
+    //io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf");
+    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf");
+    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf");
+    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf");
+    //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf");
     //IM_ASSERT(font != nullptr);
 #endif
 
@@ -137,13 +125,14 @@ int main(int, char**)
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
     // Main loop
+    bool done = false;
 #ifdef __EMSCRIPTEN__
     // For an Emscripten build we are disabling file-system access, so let's not attempt to do a fopen() of the imgui.ini file.
     // You may manually call LoadIniSettingsFromMemory() to load settings from your own storage.
     io.IniFilename = nullptr;
     EMSCRIPTEN_MAINLOOP_BEGIN
 #else
-    while (!glfwWindowShouldClose(window))
+    while (!done)
 #endif
     {
         // Poll and handle events (inputs, window resize, etc.)
@@ -151,19 +140,24 @@ int main(int, char**)
         // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
         // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
         // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
-        glfwPollEvents();
-        if (glfwGetWindowAttrib(window, GLFW_ICONIFIED) != 0)
+        // [If using SDL_MAIN_USE_CALLBACKS: call ImGui_ImplSDL3_ProcessEvent() from your SDL_AppEvent() function]
+        SDL_Event event;
+        while (SDL_PollEvent(&event))
         {
-            ImGui_ImplGlfw_Sleep(10);
-            continue;
+            ImGui_ImplSDL3_ProcessEvent(&event);
+            if (event.type == SDL_EVENT_QUIT)
+                done = true;
+            if (event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED && event.window.windowID == SDL_GetWindowID(window))
+                done = true;
         }
 
+        // [If using SDL_MAIN_USE_CALLBACKS: all code below would likely be your SDL_AppIterate() function]
         // React to changes in screen size
         int width, height;
-        glfwGetFramebufferSize((GLFWwindow*)window, &width, &height);
+        SDL_GetWindowSize(window, &width, &height);
         if (width != wgpu_surface_width || height != wgpu_surface_height)
         {
-            ImGui_ImplWGPU_InvalidateDeviceObjects(); // FIXME-OPT: Why doing this? This seems unnecessary and unoptimal.
+            ImGui_ImplWGPU_InvalidateDeviceObjects(); // FIXME-WGPU: Why doing this? this will recreate all font textures etc.
             ResizeSurface(width, height);
             ImGui_ImplWGPU_CreateDeviceObjects();
         }
@@ -183,7 +177,7 @@ int main(int, char**)
 
         // Start the Dear ImGui frame
         ImGui_ImplWGPU_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
+        ImGui_ImplSDL3_NewFrame();
         ImGui::NewFrame();
 
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
@@ -228,7 +222,7 @@ int main(int, char**)
 
         WGPUTextureViewDescriptor view_desc = {};
         view_desc.format = wgpu_surface_configuration.format;
-        view_desc.dimension = WGPUTextureViewDimension_2D ;
+        view_desc.dimension = WGPUTextureViewDimension_2D;
         view_desc.mipLevelCount = WGPU_MIP_LEVEL_COUNT_UNDEFINED;
         view_desc.arrayLayerCount = WGPU_ARRAY_LAYER_COUNT_UNDEFINED;
         view_desc.aspect = WGPUTextureAspect_All;
@@ -275,8 +269,9 @@ int main(int, char**)
 #endif
 
     // Cleanup
+    // [If using SDL_MAIN_USE_CALLBACKS: all code below would likely be your SDL_AppQuit() function]
     ImGui_ImplWGPU_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
+    ImGui_ImplSDL3_Shutdown();
     ImGui::DestroyContext();
 
     wgpuSurfaceUnconfigure(wgpu_surface);
@@ -285,8 +280,8 @@ int main(int, char**)
     wgpuDeviceRelease(wgpu_device);
     wgpuInstanceRelease(wgpu_instance);
 
-    glfwDestroyWindow(window);
-    glfwTerminate();
+    SDL_DestroyWindow(window);
+    SDL_Quit();
 
     return 0;
 }
@@ -361,7 +356,7 @@ static void handle_request_adapter(WGPURequestAdapterStatus status, WGPUAdapter 
     }
     else
     {
-        printf("Request_adapter status=%#.8x message=%.*s\n", status, (int) message.length, message.data);
+        printf("Request_adapter status=%#.8x message=%.*s\n", status, (int)message.length, message.data);
     }
 }
 
@@ -374,7 +369,7 @@ static void handle_request_device(WGPURequestDeviceStatus status, WGPUDevice dev
     }
     else
     {
-        printf("Request_device status=%#.8x message=%.*s\n", status, (int) message.length, message.data);
+        printf("Request_device status=%#.8x message=%.*s\n", status, (int message.length, message.data);
     }
 }
 
@@ -408,7 +403,7 @@ static WGPUDevice RequestDevice(WGPUAdapter& adapter)
 #endif // __EMSCRIPTEN__
 #endif // IMGUI_IMPL_WEBGPU_BACKEND_WGPU
 
-static bool InitWGPU(GLFWwindow* window)
+static bool InitWGPU(SDL_Window* window)
 {
     WGPUTextureFormat preferred_fmt = WGPUTextureFormat_Undefined;  // acquired from SurfaceCapabilities
 
@@ -418,7 +413,7 @@ static bool InitWGPU(GLFWwindow* window)
     static constexpr wgpu::InstanceFeatureName timedWaitAny = wgpu::InstanceFeatureName::TimedWaitAny;
     instance_desc.requiredFeatureCount = 1;
     instance_desc.requiredFeatures = &timedWaitAny;
-    static wgpu::Instance instance = wgpu::CreateInstance(&instance_desc);
+    wgpu::Instance instance = wgpu::CreateInstance(&instance_desc);
 
     wgpu::Adapter adapter { RequestAdapter(instance) };
     wgpu_device = RequestDevice(instance, adapter);
@@ -432,7 +427,7 @@ static bool InitWGPU(GLFWwindow* window)
     surface_desc.nextInChain = &canvas_desc;
     wgpu::Surface surface = instance.CreateSurface(&surface_desc);
 #else
-    wgpu::Surface surface = wgpu::glfw::CreateSurfaceForWindow(instance, window);
+    wgpu::Surface surface = ImGui_ImplSDL3_CreateWGPUSurface(instance.Get(), window);
 #endif
     if (!surface)
         return false;
@@ -454,7 +449,7 @@ static bool InitWGPU(GLFWwindow* window)
     getAdapterAndDeviceViaJS();
 
     wgpu_device = emscripten_webgpu_get_device();
-    IM_ASSERT(wgpu_device != nullptr && "Error creating the Device");
+    assert(wgpu_device != nullptr && "Error creating the Device");
 
     WGPUSurfaceDescriptorFromCanvasHTMLSelector html_surface_desc = {};
     html_surface_desc.chain.sType = WGPUSType_SurfaceDescriptorFromCanvasHTMLSelector;
@@ -474,7 +469,7 @@ static bool InitWGPU(GLFWwindow* window)
     wgpu_device = RequestDevice(adapter);
 
     // Create the surface.
-    wgpu_surface = ImGui_ImplGLFW_CreateWGPUSurface(wgpu_instance, window);
+    wgpu_surface = ImGui_ImplSDL3_CreateWGPUSurface(wgpu_instance, window);
     if (!wgpu_surface)
         return false;
 

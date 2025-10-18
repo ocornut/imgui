@@ -20,6 +20,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2025-10-09: Added ImGui_ImplSDL3_CreateWGPUSurface() helper for native/desktop WebGPU applications. Requires IMGUI_IMPL_WEBGPU_BACKEND_WGPU or IMGUI_IMPL_WEBGPU_BACKEND_DAWN define.
 //  2025-09-24: Skip using the SDL_GetGlobalMouseState() state when one of our window is hovered, as the SDL_EVENT_MOUSE_MOTION data is reliable. Fix macOS notch mouse coordinates issue in fullscreen mode + better perf on X11. (#7919, #7786)
 //  2025-09-18: Call platform_io.ClearPlatformHandlers() on shutdown.
 //  2025-09-15: Use SDL_GetWindowDisplayScale() on Mac to output DisplayFrameBufferScale. The function is more reliable during resolution changes e.g. going fullscreen. (#8703, #4414)
@@ -838,6 +839,91 @@ void ImGui_ImplSDL3_NewFrame()
     // Update game controllers (if enabled and available)
     ImGui_ImplSDL3_UpdateGamepads();
 }
+
+// SDL3 helper to create a WebGPU surface (exclusively!) for Native/Desktop applications: available only together with WebGPU/WGPU backend
+// As of today (Oct 2025) there is no "official" support in SDL3 to create a surface for WebGPU backend
+// This stub uses "low level" SDL3 calls to acquire information from a specific Window Manager.
+// Currently supported platforms: Windows / Linux (X11 and Wayland) / MacOS. Not necessary nor available with EMSCRIPTEN.
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) || defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) && !defined(__EMSCRIPTEN__)
+
+#if defined(SDL_PLATFORM_MACOS)
+// MacOS specific: is necessary to compile with "-x objective-c++" flags
+// (e.g. using cmake: set_source_files_properties(${IMGUI_DIR}/backends/imgui_impl_sdl3.cpp PROPERTIES COMPILE_FLAGS "-x objective-c++") )
+#include <Cocoa/Cocoa.h>
+#include <QuartzCore/CAMetalLayer.h>
+#elif defined(SDL_PLATFORM_WIN32)
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN 1
+#endif
+#include <windows.h>
+#endif
+
+WGPUSurface ImGui_ImplSDL3_CreateWGPUSurface(WGPUInstance instance, SDL_Window* window)
+{
+    SDL_PropertiesID propertiesID = SDL_GetWindowProperties(window);
+    WGPUSurfaceDescriptor surface_descriptor = {};
+    WGPUSurface surface = {};
+#if defined(SDL_PLATFORM_MACOS)
+    {
+        id metal_layer = NULL;
+        NSWindow* ns_window = (__bridge NSWindow*)SDL_GetPointerProperty(propertiesID, SDL_PROP_WINDOW_COCOA_WINDOW_POINTER, NULL);
+        if (!ns_window)
+            return NULL;
+        [ns_window.contentView setWantsLayer : YES];
+        metal_layer = [CAMetalLayer layer];
+        [ns_window.contentView setLayer : metal_layer];
+        WGPUSurfaceSourceMetalLayer surface_src_metal = {};
+        surface_src_metal.chain.sType = WGPUSType_SurfaceSourceMetalLayer;
+        surface_src_metal.layer = metal_layer;
+        surface_descriptor.nextInChain = &surface_src_metal.chain;
+        surface = wgpuInstanceCreateSurface(instance, &surface_descriptor);
+    }
+#elif defined(SDL_PLATFORM_LINUX)
+    if (SDL_strcmp(SDL_GetCurrentVideoDriver(), "wayland") == 0)
+    {
+        void* w_display = SDL_GetPointerProperty(propertiesID, SDL_PROP_WINDOW_WAYLAND_DISPLAY_POINTER, NULL);
+        void* w_surface = SDL_GetPointerProperty(propertiesID, SDL_PROP_WINDOW_WAYLAND_SURFACE_POINTER, NULL);
+        if (!w_display || !w_surface)
+            return NULL;
+        WGPUSurfaceSourceWaylandSurface surface_src_wayland = {};
+        surface_src_wayland.chain.sType = WGPUSType_SurfaceSourceWaylandSurface;
+        surface_src_wayland.display = w_display;
+        surface_src_wayland.surface = w_surface;
+        surface_descriptor.nextInChain = &surface_src_wayland.chain;
+        surface = wgpuInstanceCreateSurface(instance, &surface_descriptor);
+    }
+    else if (!SDL_strcmp(SDL_GetCurrentVideoDriver(), "x11"))
+    {
+        void* x_display = SDL_GetPointerProperty(propertiesID, SDL_PROP_WINDOW_X11_DISPLAY_POINTER, NULL);
+        uint64_t x_window = SDL_GetNumberProperty(propertiesID, SDL_PROP_WINDOW_X11_WINDOW_NUMBER, 0);
+        if (!x_display || !x_window)
+            return NULL;
+        WGPUSurfaceSourceXlibWindow surface_src_xlib = {};
+        surface_src_xlib.chain.sType = WGPUSType_SurfaceSourceXlibWindow;
+        surface_src_xlib.display = x_display;
+        surface_src_xlib.window = x_window;
+        surface_descriptor.nextInChain = &surface_src_xlib.chain;
+        surface = wgpuInstanceCreateSurface(instance, &surface_descriptor);
+    }
+#elif defined(SDL_PLATFORM_WIN32)
+    {
+        HWND hwnd = (HWND)SDL_GetPointerProperty(propertiesID, SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
+        if (!hwnd)
+            return NULL;
+        HINSTANCE hinstance = ::GetModuleHandle(NULL);
+        WGPUSurfaceSourceWindowsHWND surface_src_hwnd = {};
+        surface_src_hwnd.chain.sType = WGPUSType_SurfaceSourceWindowsHWND;
+        surface_src_hwnd.hinstance = hinstance;
+        surface_src_hwnd.hwnd = hwnd;
+        surface_descriptor.nextInChain = &surface_src_hwnd.chain;
+        surface = wgpuInstanceCreateSurface(instance, &surface_descriptor);
+    }
+#else
+#error "Unsupported WebGPU native platform!"
+#endif
+    return surface;
+}
+#endif // defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) || defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) && !defined(__EMSCRIPTEN__)
 
 //-----------------------------------------------------------------------------
 
