@@ -23,6 +23,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2025-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2025-10-23: [Docking] DirectX12: Fixed an issue in synchronization logic improving rendering throughput for secondary viewports. (#8961, #9025)
 //  2025-10-11: DirectX12: Reuse texture upload buffer and grow it only when necessary. (#9002)
 //  2025-09-29: DirectX12: Rework synchronization logic. (#8961)
 //  2025-09-29: DirectX12: Enable swapchain tearing to eliminate viewports framerate throttling. (#8965)
@@ -294,8 +295,8 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandL
     // FIXME: We are assuming that this only gets called once per frame!
     ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
     ImGui_ImplDX12_ViewportData* vd = (ImGui_ImplDX12_ViewportData*)draw_data->OwnerViewport->RendererUserData;
-    vd->FrameIndex++;
     ImGui_ImplDX12_RenderBuffers* fr = &vd->FrameRenderBuffers[vd->FrameIndex % bd->numFramesInFlight];
+    vd->FrameIndex++;
 
     // Create and grow vertex/index buffers if needed
     if (fr->VertexBuffer == nullptr || fr->VertexBufferSize < draw_data->TotalVtxCount)
@@ -1280,7 +1281,6 @@ static void ImGui_ImplDX12_SwapBuffers(ImGuiViewport* viewport, void*)
     ImGui_ImplDX12_ViewportData* vd = (ImGui_ImplDX12_ViewportData*)viewport->RendererUserData;
 
     vd->SwapChain->Present(0, bd->tearingSupport ? DXGI_PRESENT_ALLOW_TEARING : 0);
-    vd->FrameIndex++;
 }
 
 void ImGui_ImplDX12_InitMultiViewportSupport()

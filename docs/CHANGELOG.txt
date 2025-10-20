@@ -63,8 +63,12 @@ Other Changes:
 
 Docking+Viewports Branch:
 
-- Examples: SDL2+DX11, SDL3+DX11, Win32+DX10, Win32+DX11: fixed one resource
-  leak from the use of MakeWindowAssociation() in 1.92.4. (#9010, #4350) [@o-3-o]
+- Examples:
+  - SDL2+DX11, SDL3+DX11, Win32+DX10, Win32+DX11: fixed one resource leak
+    from the use of MakeWindowAssociation() in 1.92.4. (#9010, #4350) [@o-3-o]
+- Backends:
+  - DirectX12: Fixed an issue in synchronization logic improving rendering
+    throughput for secondary viewports. (#9025, #8961)
 
 
 -----------------------------------------------------------------------
