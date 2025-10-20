@@ -126,9 +126,6 @@
 #ifndef GLFW_EXPOSE_NATIVE_X11      // for glfwGetX11Display(), glfwGetX11Window() on Freedesktop (Linux, BSD, etc.)
 #define GLFW_EXPOSE_NATIVE_X11
 #endif
-#ifndef GLFW_EXPOSE_NATIVE_WAYLAND
-#define GLFW_EXPOSE_NATIVE_WAYLAND
-#endif
 #include <GLFW/glfw3native.h>
 #endif
 #undef Status                   // X11 headers are leaking this.
