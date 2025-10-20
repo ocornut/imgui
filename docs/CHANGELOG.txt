@@ -53,6 +53,9 @@ Other Changes:
   resizing the parent window while keeping the multi-line field active (which is
   most typically achieved when resizing programmatically or via a docking layout
   reacting to a platform window resize). (#3237, #9007) [@anton-kl, @ocornut]
+- MultiSelect: added ImGuiMultiSelectFlags_NoSelectOnRightClick to disable default
+  right-click processing, which selects item on mouse down and is designed for
+  context-menus. (#8200, #9015)
 - Backends: Vulkan: added IMGUI_IMPL_VULKAN_VOLK_FILENAME to configure path to
   Volk (default to "volk.h"). (#9008, #7722, #6582, #4854) [@mwlasiuk]
 - Backends: WebGPU: update to compile with Dawn and Emscripten's 4.0.10+
