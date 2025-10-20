@@ -294,8 +294,8 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandL
     // FIXME: We are assuming that this only gets called once per frame!
     ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
     ImGui_ImplDX12_ViewportData* vd = (ImGui_ImplDX12_ViewportData*)draw_data->OwnerViewport->RendererUserData;
-    vd->FrameIndex++;
     ImGui_ImplDX12_RenderBuffers* fr = &vd->FrameRenderBuffers[vd->FrameIndex % bd->numFramesInFlight];
+    vd->FrameIndex++;
 
     // Create and grow vertex/index buffers if needed
     if (fr->VertexBuffer == nullptr || fr->VertexBufferSize < draw_data->TotalVtxCount)
