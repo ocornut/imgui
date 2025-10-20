@@ -12,6 +12,9 @@
 #include <d3d12.h>
 #include <dxgi1_5.h>
 #include <tchar.h>
+#include <stdio.h>
+#include <comdef.h>
+#include <string>
 
 #ifdef _DEBUG
 #define DX12_ENABLE_DEBUG_LAYER
@@ -98,10 +101,24 @@ static HANDLE                       g_hSwapChainWaitableObject = nullptr;
 static ID3D12Resource*              g_mainRenderTargetResource[APP_NUM_BACK_BUFFERS] = {};
 static D3D12_CPU_DESCRIPTOR_HANDLE  g_mainRenderTargetDescriptor[APP_NUM_BACK_BUFFERS] = {};
 
+static void check_hr_result(HRESULT hr)
+{
+    if (SUCCEEDED(hr))
+        return;
+    _com_error err(hr);
+    const wchar_t* wmsg = err.ErrorMessage();
+    int size_needed = WideCharToMultiByte(CP_UTF8, 0, wmsg, -1, nullptr, 0, nullptr, nullptr);
+    std::string msg(size_needed, 0);
+    WideCharToMultiByte(CP_UTF8, 0, wmsg, -1, &msg.front(), size_needed, nullptr, nullptr);
+    fprintf(stderr, "[d3d12] Error: HRESULT = %s\n", msg.c_str());
+    if (FAILED(hr))
+        abort();
+}
+
 // Forward declarations of helper functions
-bool CreateDeviceD3D(HWND hWnd);
+HRESULT CreateDeviceD3D(HWND hWnd);
 void CleanupDeviceD3D();
-void CreateRenderTarget();
+HRESULT CreateRenderTarget();
 void CleanupRenderTarget();
 void WaitForPendingOperations();
 FrameContext* WaitForNextFrameContext();
@@ -120,11 +137,12 @@ int main(int, char**)
     HWND hwnd = ::CreateWindowW(wc.lpszClassName, L"Dear ImGui DirectX12 Example", WS_OVERLAPPEDWINDOW, 100, 100, (int)(1280 * main_scale), (int)(800 * main_scale), nullptr, nullptr, wc.hInstance, nullptr);
 
     // Initialize Direct3D
-    if (!CreateDeviceD3D(hwnd))
+    HRESULT hr = CreateDeviceD3D(hwnd);
+    if (FAILED(hr))
     {
         CleanupDeviceD3D();
         ::UnregisterClassW(wc.lpszClassName, wc.hInstance);
-        return 1;
+        check_hr_result(hr);
     }
 
     // Show the window
@@ -174,6 +192,7 @@ int main(int, char**)
     init_info.SrvDescriptorHeap = g_pd3dSrvDescHeap;
     init_info.SrvDescriptorAllocFn = [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu_handle) { return g_pd3dSrvDescHeapAlloc.Alloc(out_cpu_handle, out_gpu_handle); };
     init_info.SrvDescriptorFreeFn = [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle)            { return g_pd3dSrvDescHeapAlloc.Free(cpu_handle, gpu_handle); };
+    init_info.CheckHrResultFn = check_hr_result;
     ImGui_ImplDX12_Init(&init_info);
 
     // Before 1.91.6: our signature was using a single descriptor. From 1.92, specifying SrvDescriptorAllocFn/SrvDescriptorFreeFn will be required to benefit from new features.
@@ -272,7 +291,8 @@ int main(int, char**)
 
         FrameContext* frameCtx = WaitForNextFrameContext();
         UINT backBufferIdx = g_pSwapChain->GetCurrentBackBufferIndex();
-        frameCtx->CommandAllocator->Reset();
+        hr = frameCtx->CommandAllocator->Reset();
+        check_hr_result(hr);
 
         D3D12_RESOURCE_BARRIER barrier = {};
         barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -281,7 +301,8 @@ int main(int, char**)
         barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
         barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
         barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_RENDER_TARGET;
-        g_pd3dCommandList->Reset(frameCtx->CommandAllocator, nullptr);
+        hr = g_pd3dCommandList->Reset(frameCtx->CommandAllocator, nullptr);
+        check_hr_result(hr);
         g_pd3dCommandList->ResourceBarrier(1, &barrier);
 
         // Render Dear ImGui graphics
@@ -293,7 +314,8 @@ int main(int, char**)
         barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
         barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_PRESENT;
         g_pd3dCommandList->ResourceBarrier(1, &barrier);
-        g_pd3dCommandList->Close();
+        hr = g_pd3dCommandList->Close();
+        check_hr_result(hr);
 
         g_pd3dCommandQueue->ExecuteCommandLists(1, (ID3D12CommandList* const*)&g_pd3dCommandList);
 
@@ -304,12 +326,14 @@ int main(int, char**)
             ImGui::RenderPlatformWindowsDefault();
         }
 
-        g_pd3dCommandQueue->Signal(g_fence, ++g_fenceLastSignaledValue);
+        hr = g_pd3dCommandQueue->Signal(g_fence, ++g_fenceLastSignaledValue);
+        check_hr_result(hr);
         frameCtx->FenceValue = g_fenceLastSignaledValue;
 
         // Present
-        HRESULT hr = g_pSwapChain->Present(1, 0);   // Present with vsync
-        //HRESULT hr = g_pSwapChain->Present(0, g_SwapChainTearingSupport ? DXGI_PRESENT_ALLOW_TEARING : 0); // Present without vsync
+        hr = g_pSwapChain->Present(1, 0);   // Present with vsync
+        //hr = g_pSwapChain->Present(0, g_SwapChainTearingSupport ? DXGI_PRESENT_ALLOW_TEARING : 0); // Present without vsync
+        check_hr_result(hr);
         g_SwapChainOccluded = (hr == DXGI_STATUS_OCCLUDED);
         g_frameIndex++;
     }
@@ -329,7 +353,7 @@ int main(int, char**)
 }
 
 // Helper functions
-bool CreateDeviceD3D(HWND hWnd)
+HRESULT CreateDeviceD3D(HWND hWnd)
 {
     // Setup swap chain
     DXGI_SWAP_CHAIN_DESC1 sd;
@@ -358,15 +382,18 @@ bool CreateDeviceD3D(HWND hWnd)
 
     // Create device
     D3D_FEATURE_LEVEL featureLevel = D3D_FEATURE_LEVEL_11_0;
-    if (D3D12CreateDevice(nullptr, featureLevel, IID_PPV_ARGS(&g_pd3dDevice)) != S_OK)
-        return false;
+    HRESULT hr = D3D12CreateDevice(nullptr, featureLevel, IID_PPV_ARGS(&g_pd3dDevice));
+    if (FAILED(hr))
+        return hr;
 
     // [DEBUG] Setup debug interface to break on any warnings/errors
 #ifdef DX12_ENABLE_DEBUG_LAYER
     if (pdx12Debug != nullptr)
     {
         ID3D12InfoQueue* pInfoQueue = nullptr;
-        g_pd3dDevice->QueryInterface(IID_PPV_ARGS(&pInfoQueue));
+        hr = g_pd3dDevice->QueryInterface(IID_PPV_ARGS(&pInfoQueue));
+        if (FAILED(hr))
+            return hr;
         pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, true);
         pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
         pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, true);
@@ -381,8 +408,9 @@ bool CreateDeviceD3D(HWND hWnd)
         desc.NumDescriptors = APP_NUM_BACK_BUFFERS;
         desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
         desc.NodeMask = 1;
-        if (g_pd3dDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&g_pd3dRtvDescHeap)) != S_OK)
-            return false;
+        hr = g_pd3dDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&g_pd3dRtvDescHeap));
+        if (FAILED(hr))
+            return hr;
 
         SIZE_T rtvDescriptorSize = g_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
         D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = g_pd3dRtvDescHeap->GetCPUDescriptorHandleForHeapStart();
@@ -398,8 +426,9 @@ bool CreateDeviceD3D(HWND hWnd)
         desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
         desc.NumDescriptors = APP_SRV_HEAP_SIZE;
         desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-        if (g_pd3dDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&g_pd3dSrvDescHeap)) != S_OK)
-            return false;
+        hr = g_pd3dDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&g_pd3dSrvDescHeap));
+        if (FAILED(hr))
+            return hr;
         g_pd3dSrvDescHeapAlloc.Create(g_pd3dDevice, g_pd3dSrvDescHeap);
     }
 
@@ -408,52 +437,74 @@ bool CreateDeviceD3D(HWND hWnd)
         desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
         desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
         desc.NodeMask = 1;
-        if (g_pd3dDevice->CreateCommandQueue(&desc, IID_PPV_ARGS(&g_pd3dCommandQueue)) != S_OK)
-            return false;
+        hr = g_pd3dDevice->CreateCommandQueue(&desc, IID_PPV_ARGS(&g_pd3dCommandQueue));
+        if (FAILED(hr))
+            return hr;
     }
 
     for (UINT i = 0; i < APP_NUM_FRAMES_IN_FLIGHT; i++)
-        if (g_pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&g_frameContext[i].CommandAllocator)) != S_OK)
-            return false;
+    {
+        hr = g_pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&g_frameContext[i].CommandAllocator));
+        if (FAILED(hr))
+            return hr;
+    }
 
-    if (g_pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, g_frameContext[0].CommandAllocator, nullptr, IID_PPV_ARGS(&g_pd3dCommandList)) != S_OK ||
-        g_pd3dCommandList->Close() != S_OK)
-        return false;
+    hr = g_pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, g_frameContext[0].CommandAllocator, nullptr, IID_PPV_ARGS(&g_pd3dCommandList));
+    if (FAILED(hr))
+        return hr;
+    hr = g_pd3dCommandList->Close();
+    if (FAILED(hr))
+        return hr;
 
-    if (g_pd3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&g_fence)) != S_OK)
-        return false;
+    hr = g_pd3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&g_fence));
+    if (FAILED(hr))
+        return hr;
 
     g_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
     if (g_fenceEvent == nullptr)
-        return false;
+        return E_FAIL;
 
     {
         IDXGIFactory5* dxgiFactory = nullptr;
         IDXGISwapChain1* swapChain1 = nullptr;
-        if (CreateDXGIFactory1(IID_PPV_ARGS(&dxgiFactory)) != S_OK)
-            return false;
+        hr = CreateDXGIFactory1(IID_PPV_ARGS(&dxgiFactory));
+        if (FAILED(hr))
+            return hr;
 
         BOOL allow_tearing = FALSE;
-        dxgiFactory->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allow_tearing, sizeof(allow_tearing));
+        hr = dxgiFactory->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allow_tearing, sizeof(allow_tearing));
+        if (FAILED(hr))
+            return hr;
         g_SwapChainTearingSupport = (allow_tearing == TRUE);
         if (g_SwapChainTearingSupport)
             sd.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
 
-        if (dxgiFactory->CreateSwapChainForHwnd(g_pd3dCommandQueue, hWnd, &sd, nullptr, nullptr, &swapChain1) != S_OK)
-            return false;
-        if (swapChain1->QueryInterface(IID_PPV_ARGS(&g_pSwapChain)) != S_OK)
-            return false;
+        hr = dxgiFactory->CreateSwapChainForHwnd(g_pd3dCommandQueue, hWnd, &sd, nullptr, nullptr, &swapChain1);
+        if (FAILED(hr))
+            return hr;
+        hr = swapChain1->QueryInterface(IID_PPV_ARGS(&g_pSwapChain));
+            if (FAILED(hr))
+                return hr;
         if (g_SwapChainTearingSupport)
-            dxgiFactory->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER);
+        {
+            hr = dxgiFactory->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER);
+            if (FAILED(hr))
+                return hr;
+        }
 
         swapChain1->Release();
         dxgiFactory->Release();
-        g_pSwapChain->SetMaximumFrameLatency(APP_NUM_BACK_BUFFERS);
+        hr = g_pSwapChain->SetMaximumFrameLatency(APP_NUM_BACK_BUFFERS);
+        if (FAILED(hr))
+            return hr;
         g_hSwapChainWaitableObject = g_pSwapChain->GetFrameLatencyWaitableObject();
     }
 
-    CreateRenderTarget();
-    return true;
+    hr = CreateRenderTarget();
+    if (FAILED(hr))
+        return hr;
+
+    return S_OK;
 }
 
 void CleanupDeviceD3D()
@@ -481,15 +532,18 @@ void CleanupDeviceD3D()
 #endif
 }
 
-void CreateRenderTarget()
+HRESULT CreateRenderTarget()
 {
     for (UINT i = 0; i < APP_NUM_BACK_BUFFERS; i++)
     {
         ID3D12Resource* pBackBuffer = nullptr;
-        g_pSwapChain->GetBuffer(i, IID_PPV_ARGS(&pBackBuffer));
+        HRESULT hr = g_pSwapChain->GetBuffer(i, IID_PPV_ARGS(&pBackBuffer));
+        if (FAILED(hr))
+            return hr;
         g_pd3dDevice->CreateRenderTargetView(pBackBuffer, nullptr, g_mainRenderTargetDescriptor[i]);
         g_mainRenderTargetResource[i] = pBackBuffer;
     }
+    return S_OK;
 }
 
 void CleanupRenderTarget()
@@ -502,9 +556,11 @@ void CleanupRenderTarget()
 
 void WaitForPendingOperations()
 {
-    g_pd3dCommandQueue->Signal(g_fence, ++g_fenceLastSignaledValue);
+    HRESULT hr = g_pd3dCommandQueue->Signal(g_fence, ++g_fenceLastSignaledValue);
+    check_hr_result(hr);
 
-    g_fence->SetEventOnCompletion(g_fenceLastSignaledValue, g_fenceEvent);
+    hr = g_fence->SetEventOnCompletion(g_fenceLastSignaledValue, g_fenceEvent);
+    check_hr_result(hr);
     ::WaitForSingleObject(g_fenceEvent, INFINITE);
 }
 
@@ -513,7 +569,8 @@ FrameContext* WaitForNextFrameContext()
     FrameContext* frame_context = &g_frameContext[g_frameIndex % APP_NUM_FRAMES_IN_FLIGHT];
     if (g_fence->GetCompletedValue() < frame_context->FenceValue)
     {
-        g_fence->SetEventOnCompletion(frame_context->FenceValue, g_fenceEvent);
+        HRESULT hr = g_fence->SetEventOnCompletion(frame_context->FenceValue, g_fenceEvent);
+        check_hr_result(hr);
         HANDLE waitableObjects[] = { g_hSwapChainWaitableObject, g_fenceEvent };
         ::WaitForMultipleObjects(2, waitableObjects, TRUE, INFINITE);
     }
@@ -543,10 +600,12 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         {
             CleanupRenderTarget();
             DXGI_SWAP_CHAIN_DESC1 desc = {};
-            g_pSwapChain->GetDesc1(&desc);
-            HRESULT result = g_pSwapChain->ResizeBuffers(0, (UINT)LOWORD(lParam), (UINT)HIWORD(lParam), desc.Format, desc.Flags);
-            assert(SUCCEEDED(result) && "Failed to resize swapchain.");
-            CreateRenderTarget();
+            HRESULT hr = g_pSwapChain->GetDesc1(&desc);
+            check_hr_result(hr);
+            hr = g_pSwapChain->ResizeBuffers(0, (UINT)LOWORD(lParam), (UINT)HIWORD(lParam), desc.Format, desc.Flags);
+            check_hr_result(hr);
+            hr = CreateRenderTarget();
+            check_hr_result(hr);
         }
         return 0;
     case WM_SYSCOMMAND:

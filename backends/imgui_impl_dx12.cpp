@@ -23,6 +23,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2025-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2025-10-20: DirectX12: Let user specifies an optional custom error handling function by setting ImGui_ImplDX12_InitInfo::CheckHrResultFn.
 //  2025-10-11: DirectX12: Reuse texture upload buffer and grow it only when necessary. (#9002)
 //  2025-09-29: DirectX12: Rework synchronization logic. (#8961)
 //  2025-09-29: DirectX12: Enable swapchain tearing to eliminate viewports framerate throttling. (#8965)
@@ -210,6 +211,16 @@ struct VERTEX_CONSTANT_BUFFER_DX12
     float   mvp[4][4];
 };
 
+static void check_hr_result(HRESULT hr)
+{
+    ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
+    if (!bd)
+        return;
+    ImGui_ImplDX12_InitInfo* v = &bd->InitInfo;
+    if (v->CheckHrResultFn)
+        v->CheckHrResultFn(hr);
+}
+
 // Forward Declarations
 static void ImGui_ImplDX12_InitMultiViewportSupport();
 static void ImGui_ImplDX12_ShutdownMultiViewportSupport();
@@ -316,8 +327,8 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandL
         desc.SampleDesc.Count = 1;
         desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
         desc.Flags = D3D12_RESOURCE_FLAG_NONE;
-        if (bd->pd3dDevice->CreateCommittedResource(&props, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&fr->VertexBuffer)) < 0)
-            return;
+        HRESULT hr = bd->pd3dDevice->CreateCommittedResource(&props, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&fr->VertexBuffer));
+        check_hr_result(hr);
     }
     if (fr->IndexBuffer == nullptr || fr->IndexBufferSize < draw_data->TotalIdxCount)
     {
@@ -337,18 +348,18 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandL
         desc.SampleDesc.Count = 1;
         desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
         desc.Flags = D3D12_RESOURCE_FLAG_NONE;
-        if (bd->pd3dDevice->CreateCommittedResource(&props, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&fr->IndexBuffer)) < 0)
-            return;
+        HRESULT hr = bd->pd3dDevice->CreateCommittedResource(&props, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&fr->IndexBuffer));
+        check_hr_result(hr);
     }
 
     // Upload vertex/index data into a single contiguous GPU buffer
     // During Map() we specify a null read range (as per DX12 API, this is informational and for tooling only)
     void* vtx_resource, *idx_resource;
     D3D12_RANGE range = { 0, 0 };
-    if (fr->VertexBuffer->Map(0, &range, &vtx_resource) != S_OK)
-        return;
-    if (fr->IndexBuffer->Map(0, &range, &idx_resource) != S_OK)
-        return;
+    HRESULT hr = fr->VertexBuffer->Map(0, &range, &vtx_resource);
+    check_hr_result(hr);
+    hr = fr->IndexBuffer->Map(0, &range, &idx_resource);
+    check_hr_result(hr);
     ImDrawVert* vtx_dst = (ImDrawVert*)vtx_resource;
     ImDrawIdx* idx_dst = (ImDrawIdx*)idx_resource;
     for (const ImDrawList* draw_list : draw_data->CmdLists)
@@ -475,8 +486,9 @@ void ImGui_ImplDX12_UpdateTexture(ImTextureData* tex)
         desc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
         ID3D12Resource* pTexture = nullptr;
-        bd->pd3dDevice->CreateCommittedResource(&props, D3D12_HEAP_FLAG_NONE, &desc,
+        HRESULT hr = bd->pd3dDevice->CreateCommittedResource(&props, D3D12_HEAP_FLAG_NONE, &desc,
             D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&pTexture));
+        check_hr_result(hr);
 
         // Create SRV
         D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
@@ -549,16 +561,18 @@ void ImGui_ImplDX12_UpdateTexture(ImTextureData* tex)
 
             HRESULT hr = bd->pd3dDevice->CreateCommittedResource(&props, D3D12_HEAP_FLAG_NONE, &desc,
                 D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&bd->pTexUploadBuffer));
-            IM_ASSERT(SUCCEEDED(hr));
+            check_hr_result(hr);
 
             D3D12_RANGE range = {0, upload_size};
             hr = bd->pTexUploadBuffer->Map(0, &range, &bd->pTexUploadBufferMapped);
-            IM_ASSERT(SUCCEEDED(hr));
+            check_hr_result(hr);
             bd->pTexUploadBufferSize = upload_size;
         }
 
-        bd->pTexCmdAllocator->Reset();
-        bd->pTexCmdList->Reset(bd->pTexCmdAllocator, nullptr);
+        HRESULT hr = bd->pTexCmdAllocator->Reset();
+        check_hr_result(hr);
+        hr = bd->pTexCmdList->Reset(bd->pTexCmdAllocator, nullptr);
+        check_hr_result(hr);
         ID3D12GraphicsCommandList* cmdList = bd->pTexCmdList;
 
         // Copy to upload buffer
@@ -604,18 +618,19 @@ void ImGui_ImplDX12_UpdateTexture(ImTextureData* tex)
             cmdList->ResourceBarrier(1, &barrier);
         }
 
-        HRESULT hr = cmdList->Close();
-        IM_ASSERT(SUCCEEDED(hr));
+        hr = cmdList->Close();
+        check_hr_result(hr);
         ID3D12CommandQueue* cmdQueue = bd->pCommandQueue;
         cmdQueue->ExecuteCommandLists(1, (ID3D12CommandList* const*)&cmdList);
         hr = cmdQueue->Signal(bd->Fence, ++bd->FenceLastSignaledValue);
-        IM_ASSERT(SUCCEEDED(hr));
+        check_hr_result(hr);
 
         // FIXME-OPT: Suboptimal?
         // - To remove this may need to create NumFramesInFlight x ImGui_ImplDX12_FrameContext in backend data (mimick docking version)
         // - Store per-frame in flight: upload buffer?
         // - Where do cmdList and cmdAlloc fit?
-        bd->Fence->SetEventOnCompletion(bd->FenceLastSignaledValue, bd->FenceEvent);
+        hr = bd->Fence->SetEventOnCompletion(bd->FenceLastSignaledValue, bd->FenceEvent);
+        check_hr_result(hr);
         ::WaitForSingleObject(bd->FenceEvent, INFINITE);
 
         tex->SetStatus(ImTextureStatus_OK);
@@ -634,10 +649,11 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
         ImGui_ImplDX12_InvalidateDeviceObjects();
 
     HRESULT hr = ::CreateDXGIFactory1(IID_PPV_ARGS(&bd->pdxgiFactory));
-    IM_ASSERT(hr == S_OK);
+    check_hr_result(hr);
 
     BOOL allow_tearing = FALSE;
-    bd->pdxgiFactory->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allow_tearing, sizeof(allow_tearing));
+    hr = bd->pdxgiFactory->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allow_tearing, sizeof(allow_tearing));
+    check_hr_result(hr);
     bd->tearingSupport = (allow_tearing == TRUE);
 
     // Create the root signature
@@ -719,7 +735,8 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
         if (D3D12SerializeRootSignatureFn(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &blob, nullptr) != S_OK)
             return false;
 
-        bd->pd3dDevice->CreateRootSignature(0, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&bd->pRootSignature));
+        hr = bd->pd3dDevice->CreateRootSignature(0, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&bd->pRootSignature));
+        check_hr_result(hr);
         blob->Release();
     }
 
@@ -773,8 +790,8 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
               return output;\
             }";
 
-        if (FAILED(D3DCompile(vertexShader, strlen(vertexShader), nullptr, nullptr, nullptr, "main", "vs_5_0", 0, 0, &vertexShaderBlob, nullptr)))
-            return false; // NB: Pass ID3DBlob* pErrorBlob to D3DCompile() to get error showing in (const char*)pErrorBlob->GetBufferPointer(). Make sure to Release() the blob!
+        hr = D3DCompile(vertexShader, strlen(vertexShader), nullptr, nullptr, nullptr, "main", "vs_5_0", 0, 0, &vertexShaderBlob, nullptr);
+        check_hr_result(hr); // NB: Pass ID3DBlob* pErrorBlob to D3DCompile() to get error showing in (const char*)pErrorBlob->GetBufferPointer(). Make sure to Release() the blob!
         psoDesc.VS = { vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize() };
 
         // Create the input layout
@@ -805,10 +822,11 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
               return out_col; \
             }";
 
-        if (FAILED(D3DCompile(pixelShader, strlen(pixelShader), nullptr, nullptr, nullptr, "main", "ps_5_0", 0, 0, &pixelShaderBlob, nullptr)))
+        hr = D3DCompile(pixelShader, strlen(pixelShader), nullptr, nullptr, nullptr, "main", "ps_5_0", 0, 0, &pixelShaderBlob, nullptr);
+        if (FAILED(hr))
         {
             vertexShaderBlob->Release();
-            return false; // NB: Pass ID3DBlob* pErrorBlob to D3DCompile() to get error showing in (const char*)pErrorBlob->GetBufferPointer(). Make sure to Release() the blob!
+            check_hr_result(hr); // NB: Pass ID3DBlob* pErrorBlob to D3DCompile() to get error showing in (const char*)pErrorBlob->GetBufferPointer(). Make sure to Release() the blob!
         }
         psoDesc.PS = { pixelShaderBlob->GetBufferPointer(), pixelShaderBlob->GetBufferSize() };
     }
@@ -855,23 +873,22 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
         desc.BackFace = desc.FrontFace;
     }
 
-    HRESULT result_pipeline_state = bd->pd3dDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&bd->pPipelineState));
+    hr = bd->pd3dDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&bd->pPipelineState));
     vertexShaderBlob->Release();
     pixelShaderBlob->Release();
-    if (result_pipeline_state != S_OK)
-        return false;
+    check_hr_result(hr);
 
     // Create command allocator and command list for ImGui_ImplDX12_UpdateTexture()
     hr = bd->pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&bd->pTexCmdAllocator));
-    IM_ASSERT(SUCCEEDED(hr));
+    check_hr_result(hr);
     hr = bd->pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, bd->pTexCmdAllocator, nullptr, IID_PPV_ARGS(&bd->pTexCmdList));
-    IM_ASSERT(SUCCEEDED(hr));
+    check_hr_result(hr);
     hr = bd->pTexCmdList->Close();
-    IM_ASSERT(SUCCEEDED(hr));
+    check_hr_result(hr);
 
     // Create fence.
     hr = bd->pd3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&bd->Fence));
-    IM_ASSERT(hr == S_OK);
+    check_hr_result(hr);
     bd->FenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
     IM_ASSERT(bd->FenceEvent != nullptr);
 
@@ -999,7 +1016,7 @@ bool ImGui_ImplDX12_Init(ID3D12Device* device, int num_frames_in_flight, DXGI_FO
     queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
     queueDesc.NodeMask = 1;
     HRESULT hr = device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&init_info.CommandQueue));
-    IM_ASSERT(SUCCEEDED(hr));
+    check_hr_result(hr);
 
     bool ret = ImGui_ImplDX12_Init(&init_info);
     ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
@@ -1071,17 +1088,18 @@ static void ImGui_ImplDX12_CreateWindow(ImGuiViewport* viewport)
     vd->CommandQueue = bd->pCommandQueue;
 
     // Create command allocator.
-    HRESULT res = S_OK;
+    HRESULT hr = S_OK;
     for (UINT i = 0; i < bd->numFramesInFlight; ++i)
     {
-        res = bd->pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&vd->FrameCtx[i].CommandAllocator));
-        IM_ASSERT(res == S_OK);
+        hr = bd->pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&vd->FrameCtx[i].CommandAllocator));
+        check_hr_result(hr);
     }
 
     // Create command list.
-    res = bd->pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, vd->FrameCtx[0].CommandAllocator, nullptr, IID_PPV_ARGS(&vd->CommandList));
-    IM_ASSERT(res == S_OK);
-    vd->CommandList->Close();
+    hr = bd->pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, vd->FrameCtx[0].CommandAllocator, nullptr, IID_PPV_ARGS(&vd->CommandList));
+    check_hr_result(hr);
+    hr = vd->CommandList->Close();
+    check_hr_result(hr);
 
     // Create swap chain
     // FIXME-VIEWPORT: May want to copy/inherit swap chain settings from the user/application.
@@ -1104,14 +1122,15 @@ static void ImGui_ImplDX12_CreateWindow(ImGuiViewport* viewport)
         sd1.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
 
     IDXGISwapChain1* swap_chain = nullptr;
-    res = bd->pdxgiFactory->CreateSwapChainForHwnd(vd->CommandQueue, hwnd, &sd1, nullptr, nullptr, &swap_chain);
-    IM_ASSERT(res == S_OK);
-    res = bd->pdxgiFactory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER | DXGI_MWA_NO_WINDOW_CHANGES); // Disable e.g. Alt+Enter
-    IM_ASSERT(res == S_OK);
+    hr = bd->pdxgiFactory->CreateSwapChainForHwnd(vd->CommandQueue, hwnd, &sd1, nullptr, nullptr, &swap_chain);
+    check_hr_result(hr);
+    hr = bd->pdxgiFactory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER | DXGI_MWA_NO_WINDOW_CHANGES); // Disable e.g. Alt+Enter
+    check_hr_result(hr);
 
     // Or swapChain.As(&mSwapChain)
     IM_ASSERT(vd->SwapChain == nullptr);
-    swap_chain->QueryInterface(IID_PPV_ARGS(&vd->SwapChain));
+    hr = swap_chain->QueryInterface(IID_PPV_ARGS(&vd->SwapChain));
+    check_hr_result(hr);
     swap_chain->Release();
 
     // Create the render targets and waitable object
@@ -1123,8 +1142,8 @@ static void ImGui_ImplDX12_CreateWindow(ImGuiViewport* viewport)
         desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
         desc.NodeMask = 1;
 
-        HRESULT hr = bd->pd3dDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&vd->RtvDescHeap));
-        IM_ASSERT(hr == S_OK);
+        hr = bd->pd3dDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&vd->RtvDescHeap));
+        check_hr_result(hr);
 
         SIZE_T rtv_descriptor_size = bd->pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
         D3D12_CPU_DESCRIPTOR_HANDLE rtv_handle = vd->RtvDescHeap->GetCPUDescriptorHandleForHeapStart();
@@ -1138,13 +1157,14 @@ static void ImGui_ImplDX12_CreateWindow(ImGuiViewport* viewport)
         for (UINT i = 0; i < bd->numFramesInFlight; i++)
         {
             IM_ASSERT(vd->FrameCtx[i].RenderTarget == nullptr);
-            vd->SwapChain->GetBuffer(i, IID_PPV_ARGS(&back_buffer));
+            hr = vd->SwapChain->GetBuffer(i, IID_PPV_ARGS(&back_buffer));
+            check_hr_result(hr);
             bd->pd3dDevice->CreateRenderTargetView(back_buffer, nullptr, vd->FrameCtx[i].RenderTargetCpuDescriptors);
             vd->FrameCtx[i].RenderTarget = back_buffer;
         }
 
         hr = vd->SwapChain->SetMaximumFrameLatency(bd->numFramesInFlight);
-        IM_ASSERT(hr == S_OK);
+        check_hr_result(hr);
         vd->SwapChainWaitableObject = vd->SwapChain->GetFrameLatencyWaitableObject();
     }
 
@@ -1156,10 +1176,10 @@ static void ImGui_WaitForPendingOperations(ImGui_ImplDX12_ViewportData* vd)
 {
     ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
     HRESULT hr = vd->CommandQueue->Signal(bd->Fence, ++bd->FenceLastSignaledValue);
-    IM_ASSERT(hr == S_OK);
+    check_hr_result(hr);
 
     hr = bd->Fence->SetEventOnCompletion(bd->FenceLastSignaledValue, bd->FenceEvent);
-    IM_ASSERT(hr == S_OK);
+    check_hr_result(hr);
     ::WaitForSingleObject(bd->FenceEvent, INFINITE);
 }
 
@@ -1170,7 +1190,7 @@ static ImGui_ImplDX12_FrameContext* ImGui_WaitForNextFrameContext(ImGui_ImplDX12
     if (bd->Fence->GetCompletedValue() < frame_context->FenceValue)
     {
         HRESULT hr = bd->Fence->SetEventOnCompletion(frame_context->FenceValue, bd->FenceEvent);
-        IM_ASSERT(hr == S_OK);
+        check_hr_result(hr);
         HANDLE waitableObjects[] = { vd->SwapChainWaitableObject, bd->FenceEvent };
         ::WaitForMultipleObjects(2, waitableObjects, TRUE, INFINITE);
     }
@@ -1221,11 +1241,14 @@ static void ImGui_ImplDX12_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
     {
         ID3D12Resource* back_buffer = nullptr;
         DXGI_SWAP_CHAIN_DESC1 desc = {};
-        vd->SwapChain->GetDesc1(&desc);
-        vd->SwapChain->ResizeBuffers(0, (UINT)size.x, (UINT)size.y, desc.Format, desc.Flags);
+        HRESULT hr = vd->SwapChain->GetDesc1(&desc);
+        check_hr_result(hr);
+        hr = vd->SwapChain->ResizeBuffers(0, (UINT)size.x, (UINT)size.y, desc.Format, desc.Flags);
+        check_hr_result(hr);
         for (UINT i = 0; i < bd->numFramesInFlight; i++)
         {
-            vd->SwapChain->GetBuffer(i, IID_PPV_ARGS(&back_buffer));
+            hr = vd->SwapChain->GetBuffer(i, IID_PPV_ARGS(&back_buffer));
+            check_hr_result(hr);
             bd->pd3dDevice->CreateRenderTargetView(back_buffer, nullptr, vd->FrameCtx[i].RenderTargetCpuDescriptors);
             vd->FrameCtx[i].RenderTarget = back_buffer;
         }
@@ -1252,8 +1275,10 @@ static void ImGui_ImplDX12_RenderWindow(ImGuiViewport* viewport, void*)
     // Draw
     ID3D12GraphicsCommandList* cmd_list = vd->CommandList;
 
-    frame_context->CommandAllocator->Reset();
-    cmd_list->Reset(frame_context->CommandAllocator, nullptr);
+    HRESULT hr = frame_context->CommandAllocator->Reset();
+    check_hr_result(hr);
+    hr = cmd_list->Reset(frame_context->CommandAllocator, nullptr);
+    check_hr_result(hr);
     cmd_list->ResourceBarrier(1, &barrier);
     cmd_list->OMSetRenderTargets(1, &vd->FrameCtx[back_buffer_idx].RenderTargetCpuDescriptors, FALSE, nullptr);
     if (!(viewport->Flags & ImGuiViewportFlags_NoRendererClear))
@@ -1265,12 +1290,13 @@ static void ImGui_ImplDX12_RenderWindow(ImGuiViewport* viewport, void*)
     barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
     barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
     cmd_list->ResourceBarrier(1, &barrier);
-    cmd_list->Close();
+    hr = cmd_list->Close();
+    check_hr_result(hr);
 
     vd->CommandQueue->ExecuteCommandLists(1, (ID3D12CommandList* const*)&cmd_list);
 
-    HRESULT hr = vd->CommandQueue->Signal(bd->Fence, ++bd->FenceLastSignaledValue);
-    IM_ASSERT(hr == S_OK);
+    hr = vd->CommandQueue->Signal(bd->Fence, ++bd->FenceLastSignaledValue);
+    check_hr_result(hr);
     frame_context->FenceValue = bd->FenceLastSignaledValue;
 }
 
@@ -1279,7 +1305,8 @@ static void ImGui_ImplDX12_SwapBuffers(ImGuiViewport* viewport, void*)
     ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
     ImGui_ImplDX12_ViewportData* vd = (ImGui_ImplDX12_ViewportData*)viewport->RendererUserData;
 
-    vd->SwapChain->Present(0, bd->tearingSupport ? DXGI_PRESENT_ALLOW_TEARING : 0);
+    HRESULT hr = vd->SwapChain->Present(0, bd->tearingSupport ? DXGI_PRESENT_ALLOW_TEARING : 0);
+    check_hr_result(hr);
     vd->FrameIndex++;
 }
 
