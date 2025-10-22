@@ -45,6 +45,9 @@ struct ImGui_ImplDX12_InitInfo
     D3D12_GPU_DESCRIPTOR_HANDLE LegacySingleSrvGpuDescriptor;
 #endif
 
+    // (Optional) Debugging
+    void                        (*CheckHrResultFn)(HRESULT hr);
+
     ImGui_ImplDX12_InitInfo()   { memset((void*)this, 0, sizeof(*this)); }
 };
 
