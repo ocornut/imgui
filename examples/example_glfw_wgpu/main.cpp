@@ -179,11 +179,7 @@ int main(int, char**)
         int width, height;
         glfwGetFramebufferSize((GLFWwindow*)window, &width, &height);
         if (width != wgpu_surface_width || height != wgpu_surface_height)
-        {
-            ImGui_ImplWGPU_InvalidateDeviceObjects(); // FIXME-OPT: Why doing this? This seems unnecessary and unoptimal.
             ResizeSurface(width, height);
-            ImGui_ImplWGPU_CreateDeviceObjects();
-        }
 
         // Start the Dear ImGui frame
         ImGui_ImplWGPU_NewFrame();
