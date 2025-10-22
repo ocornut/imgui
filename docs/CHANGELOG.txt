@@ -58,6 +58,8 @@ Other Changes:
   context-menus. (#8200, #9015)
 - Backends: GLFW: fixed building on Linux platforms where Wayland headers
   are not available. (#9024, #8969, #8921, #8920) [@jagot] 
+- Backends: SDL3: fixed Platform_OpenInShellFn() return value (the return value
+  was unused in core but might be used by a direct caller). (#9027) [@achabense]
 - Backends: Vulkan: added IMGUI_IMPL_VULKAN_VOLK_FILENAME to configure path to
   Volk (default to "volk.h"). (#9008, #7722, #6582, #4854) [@mwlasiuk]
 - Backends: WebGPU: update to compile with Dawn and Emscripten's 4.0.10+
