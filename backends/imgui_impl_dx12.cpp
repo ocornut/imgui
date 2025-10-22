@@ -1280,7 +1280,6 @@ static void ImGui_ImplDX12_SwapBuffers(ImGuiViewport* viewport, void*)
     ImGui_ImplDX12_ViewportData* vd = (ImGui_ImplDX12_ViewportData*)viewport->RendererUserData;
 
     vd->SwapChain->Present(0, bd->tearingSupport ? DXGI_PRESENT_ALLOW_TEARING : 0);
-    vd->FrameIndex++;
 }
 
 void ImGui_ImplDX12_InitMultiViewportSupport()
