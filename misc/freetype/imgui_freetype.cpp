@@ -108,7 +108,7 @@ static FT_Error ImGuiLunasvgPortPresetSlot(FT_GlyphSlot slot, FT_Bool cache, FT_
 //-------------------------------------------------------------------------
 
 #define FT_CEIL(X)      (((X + 63) & -64) / 64) // From SDL_ttf: Handy routines for converting from fixed point
-#define FT_SCALEFACTOR  64.0f
+#define FT_SCALEFACTOR  64.0f                   // For converting from/to 26.6 factionals
 
 // Glyph metrics:
 // --------------
@@ -432,19 +432,58 @@ static bool ImGui_ImplFreeType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig* s
 
     FT_New_Size(bd_font_data->FtFace, &bd_baked_data->FtSize);
     FT_Activate_Size(bd_baked_data->FtSize);
-
-    // Vuhdo 2017: "I'm not sure how to deal with font sizes properly. As far as I understand, currently ImGui assumes that the 'pixel_height'
-    // is a maximum height of an any given glyph, i.e. it's the sum of font's ascender and descender. Seems strange to me.
-    // FT_Set_Pixel_Sizes() doesn't seem to get us the same result."
-    // (FT_Set_Pixel_Sizes() essentially calls FT_Request_Size() with FT_SIZE_REQUEST_TYPE_NOMINAL)
     const float rasterizer_density = src->RasterizerDensity * baked->RasterizerDensity;
-    FT_Size_RequestRec req;
-    req.type = (bd_font_data->UserFlags & ImGuiFreeTypeLoaderFlags_Bitmap) ? FT_SIZE_REQUEST_TYPE_NOMINAL : FT_SIZE_REQUEST_TYPE_REAL_DIM;
-    req.width = 0;
-    req.height = (uint32_t)(size * 64 * rasterizer_density);
-    req.horiResolution = 0;
-    req.vertResolution = 0;
-    FT_Request_Size(bd_font_data->FtFace, &req);
+    if (((bd_font_data->FtFace->face_flags & FT_FACE_FLAG_FIXED_SIZES) != 0) && ((bd_font_data->FtFace->face_flags & FT_FACE_FLAG_SCALABLE) == 0) && ((bd_font_data->UserFlags & ImGuiFreeTypeLoaderFlags_Bitmap) != 0))
+    {
+        IM_ASSERT(bd_font_data->FtFace->num_fixed_sizes > 0);
+
+        // Loop over sizes and pick the closest, larger (or better equal) size.
+        int best_index = 0;
+        float best_height = bd_font_data->FtFace->available_sizes[best_index].y_ppem / FT_SCALEFACTOR;
+        for (int i = 1; i < bd_font_data->FtFace->num_fixed_sizes; i++)
+        {
+            const float cur_height = bd_font_data->FtFace->available_sizes[i].y_ppem / FT_SCALEFACTOR;
+            // TODO: is this overkill?
+            // TODO: is-float-close with epsilon param would be nice, maybe
+            if (ImFabs(cur_height - size) < 0.001f)
+            {
+                best_index = i;
+                break;
+            }
+            else if (cur_height < size)
+            {
+                if (best_height < cur_height)
+                {
+                    best_index = i;
+                    best_height = cur_height;
+                }
+            }
+            else
+            {
+                if (best_height > cur_height)
+                {
+                    best_index = i;
+                    best_height = cur_height;
+                }
+            }
+        }
+        FT_Select_Size(bd_font_data->FtFace, best_index);
+    }
+    else
+    {
+        // Vuhdo 2017: "I'm not sure how to deal with font sizes properly. As far as I understand, currently ImGui assumes that the 'pixel_height'
+        // is a maximum height of an any given glyph, i.e. it's the sum of font's ascender and descender. Seems strange to me.
+        // FT_Set_Pixel_Sizes() doesn't seem to get us the same result."
+        // (FT_Set_Pixel_Sizes() essentially calls FT_Request_Size() with FT_SIZE_REQUEST_TYPE_NOMINAL)
+
+        FT_Size_RequestRec req;
+        req.type = (bd_font_data->UserFlags & ImGuiFreeTypeLoaderFlags_Bitmap) ? FT_SIZE_REQUEST_TYPE_NOMINAL : FT_SIZE_REQUEST_TYPE_REAL_DIM;
+        req.width = 0;
+        req.height = (uint32_t)(size * FT_SCALEFACTOR * rasterizer_density);
+        req.horiResolution = 0;
+        req.vertResolution = 0;
+        FT_Request_Size(bd_font_data->FtFace, &req);
+    }
 
     // Output
     if (src->MergeMode == false)
@@ -494,9 +533,21 @@ static bool ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConf
     FT_Face face = bd_font_data->FtFace;
     FT_GlyphSlot slot = face->glyph;
     const float rasterizer_density = src->RasterizerDensity * baked->RasterizerDensity;
+    float bitmap_x_scale = 1.f;
+    float bitmap_y_scale = 1.f;
+    if (((face->face_flags & FT_FACE_FLAG_FIXED_SIZES) != 0) && ((face->face_flags & FT_FACE_FLAG_SCALABLE) == 0) && ((bd_font_data->UserFlags & ImGuiFreeTypeLoaderFlags_Bitmap) != 0))
+    {
+        // TODO: what if this just means invisible?
+        IM_ASSERT(bd_font_data->FtFace->size->metrics.x_ppem > 0);
+        IM_ASSERT(bd_font_data->FtFace->size->metrics.y_ppem > 0);
+
+        // Scale fixed size bitmap to target size
+        bitmap_x_scale = baked->Size / bd_font_data->FtFace->size->metrics.x_ppem;
+        bitmap_y_scale = baked->Size / bd_font_data->FtFace->size->metrics.y_ppem;
+    }
 
     // Load metrics only mode
-    const float advance_x = (slot->advance.x / FT_SCALEFACTOR) / rasterizer_density;
+    const float advance_x = ((slot->advance.x / FT_SCALEFACTOR) * bitmap_x_scale) / rasterizer_density;
     if (out_advance_x != NULL)
     {
         IM_ASSERT(out_glyph == NULL);
@@ -511,9 +562,9 @@ static bool ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConf
     if (error != 0 || ft_bitmap == nullptr)
         return false;
 
-    const int w = (int)ft_bitmap->width;
-    const int h = (int)ft_bitmap->rows;
-    const bool is_visible = (w != 0 && h != 0);
+    const int bitmap_w = (int)ft_bitmap->width;
+    const int bitmap_h = (int)ft_bitmap->rows;
+    const bool is_visible = (bitmap_w != 0 && bitmap_h != 0);
 
     // Prepare glyph
     out_glyph->Codepoint = codepoint;
@@ -522,6 +573,11 @@ static bool ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConf
     // Pack and retrieve position inside texture atlas
     if (is_visible)
     {
+        const int w = (int)ImFloor(bitmap_w * bitmap_x_scale);
+        const int h = (int)ImFloor(bitmap_h * bitmap_y_scale);
+        IM_ASSERT(!((h < bitmap_h && w > bitmap_w) || (h > bitmap_h && w < bitmap_w))); // Can't up AND downscale at the same time // TODO: or can we?
+        const bool down_scaling = h < bitmap_h || w < bitmap_w;
+
         ImFontAtlasRectId pack_id = ImFontAtlasPackAddRect(atlas, w, h);
         if (pack_id == ImFontAtlasRectId_Invalid)
         {
@@ -531,10 +587,35 @@ static bool ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConf
         }
         ImTextureRect* r = ImFontAtlasPackGetRect(atlas, pack_id);
 
-        // Render pixels to our temporary buffer
-        atlas->Builder->TempBuffer.resize(w * h * 4);
+        // Render pixels to our temporary buffer, while making sure we have space for an extra copy used during downscaling.
+        atlas->Builder->TempBuffer.resize(((down_scaling ? bitmap_w * bitmap_h : 0) + w * h) * 4);
         uint32_t* temp_buffer = (uint32_t*)atlas->Builder->TempBuffer.Data;
-        ImGui_ImplFreeType_BlitGlyph(ft_bitmap, temp_buffer, w);
+        // Blit (and convert) into the first bm_w * bm_h * 4 bytes.
+        ImGui_ImplFreeType_BlitGlyph(ft_bitmap, temp_buffer, bitmap_w);
+
+        if (down_scaling)
+        {
+            uint32_t* dst_buffer = temp_buffer + bitmap_w * bitmap_h;
+            // Perform downscale, from temp_buffer (bitmap_w * bitmap_h) to dst_buffer (w * h)
+
+#if 1
+            // Point Sampling / Nearest Neighbor
+            for (int y = 0; y < h; y++)
+            {
+                const int bitmap_y = ImFloor(((y + 0.5f) * bitmap_h) / h);
+                for (int x = 0; x < w; x++)
+                {
+                    const int bitmap_x = ImFloor(((x + 0.5f) * bitmap_w) / w);
+                    dst_buffer[y * w + x] = temp_buffer[bitmap_y * bitmap_w + bitmap_x];
+                }
+            }
+#else
+            // TODO: box scaling
+#endif
+
+            // Redirect to downscaled part of the buffer
+            temp_buffer = dst_buffer;
+        }
 
         const float ref_size = baked->OwnerFont->Sources[0]->SizePixels;
         const float offsets_scale = (ref_size != 0.0f) ? (baked->Size / ref_size) : 1.0f;
@@ -544,8 +625,8 @@ static bool ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConf
         float recip_v = 1.0f / rasterizer_density;
 
         // Register glyph
-        float glyph_off_x = (float)face->glyph->bitmap_left;
-        float glyph_off_y = (float)-face->glyph->bitmap_top;
+        float glyph_off_x = ImFloor((float)face->glyph->bitmap_left * bitmap_x_scale);
+        float glyph_off_y = ImFloor((float)-face->glyph->bitmap_top * bitmap_y_scale);
         out_glyph->X0 = glyph_off_x * recip_h + font_off_x;
         out_glyph->Y0 = glyph_off_y * recip_v + font_off_y;
         out_glyph->X1 = (glyph_off_x + w) * recip_h + font_off_x;
