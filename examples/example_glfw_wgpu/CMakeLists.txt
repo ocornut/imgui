@@ -151,6 +151,13 @@ target_include_directories(${IMGUI_EXECUTABLE} PUBLIC
 
 target_compile_definitions(${IMGUI_EXECUTABLE} PUBLIC "IMGUI_EXAMPLE_GLFW_WGPU")
 
+# compiler option only for IMGUI_EXAMPLE_SOURCE_FILES
+if (MSVC)
+    target_compile_options(${IMGUI_EXECUTABLE} PUBLIC /W4) # warning level 4
+else()
+    target_compile_options(${IMGUI_EXECUTABLE} PUBLIC -Wall) # -Wextra -Wpedantic
+endif()
+
 # In this example IMGUI_IMPL_WEBGPU_BACKEND_DAWN / IMGUI_IMPL_WEBGPU_BACKEND_WGPU internal define is set according to:
 #   EMSCRIPTEN: by used FLAG
 #     --use-port=emdawnwebgpu --> IMGUI_IMPL_WEBGPU_BACKEND_DAWN defined
@@ -160,6 +167,7 @@ target_compile_definitions(${IMGUI_EXECUTABLE} PUBLIC "IMGUI_EXAMPLE_GLFW_WGPU")
 #     if IMGUI_WGPU_DIR is valid --> IMGUI_IMPL_WEBGPU_BACKEND_WGPU defined
 
 if(NOT EMSCRIPTEN) # WegGPU-Native settings
+    # Set IMGUI_IMPL_WEBGPU_BACKEND_XXXX based on the SDK (directory) used
     if(IMGUI_DAWN_DIR)
         target_compile_definitions(${IMGUI_EXECUTABLE} PUBLIC "IMGUI_IMPL_WEBGPU_BACKEND_DAWN")
     else()

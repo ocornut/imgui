@@ -145,6 +145,13 @@ target_include_directories(${IMGUI_EXECUTABLE} PUBLIC
 
 target_compile_definitions(${IMGUI_EXECUTABLE} PUBLIC "IMGUI_EXAMPLE_SDL2_WGPU")
 
+# compiler option only for IMGUI_EXAMPLE_SOURCE_FILES
+if (MSVC)
+    target_compile_options(${IMGUI_EXECUTABLE} PUBLIC /W4) # warning level 4
+else()
+    target_compile_options(${IMGUI_EXECUTABLE} PUBLIC -Wall) # -Wextra -Wpedantic
+endif()
+
 # IMGUI_IMPL_WEBGPU_BACKEND_DAWN/WGPU internal define is set according to:
 #   EMSCRIPTEN: by used FLAG
 #     --use-port=emdawnwebgpu --> IMGUI_IMPL_WEBGPU_BACKEND_DAWN enabled (+EMSCRIPTEN)

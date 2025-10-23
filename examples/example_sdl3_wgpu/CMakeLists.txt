@@ -125,7 +125,6 @@ else() # Native/Desktop build
 
         set(LIBRARIES webgpu_dawn ${OS_LIBRARIES})
     else() # WGPU-Native build options
-
         set(WGPU_NATIVE_LIB_DIR ${IMGUI_WGPU_DIR}/lib)
         find_library(WGPU_LIBRARY NAMES libwgpu_native.a wgpu_native.lib wgpu_native HINTS ${WGPU_NATIVE_LIB_DIR} REQUIRED)
         if(WIN32)
@@ -147,6 +146,13 @@ target_include_directories(${IMGUI_EXECUTABLE} PUBLIC
 )
 
 target_compile_definitions(${IMGUI_EXECUTABLE} PUBLIC "IMGUI_EXAMPLE_SDL3_WGPU")
+
+# Enable warning level compiler option only for IMGUI_EXAMPLE_SOURCE_FILES
+if (MSVC)
+    target_compile_options(${IMGUI_EXECUTABLE} PUBLIC /W4) # warning level 4
+else()
+    target_compile_options(${IMGUI_EXECUTABLE} PUBLIC -Wall) # -Wextra -Wpedantic
+endif()
 
 # IMGUI_IMPL_WEBGPU_BACKEND_DAWN/WGPU internal define is set according to:
 #   EMSCRIPTEN: by used FLAG
