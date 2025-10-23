@@ -4142,21 +4142,21 @@ static void STB_TEXTEDIT_DELETECHARS(ImGuiInputTextState* obj, int pos, int n)
     obj->TextLen -= n;
 }
 
-static bool STB_TEXTEDIT_INSERTCHARS(ImGuiInputTextState* obj, int pos, const char* new_text, int new_text_len)
+static int STB_TEXTEDIT_INSERTCHARS(ImGuiInputTextState* obj, int pos, const char* new_text, int new_text_len)
 {
     const bool is_resizable = (obj->Flags & ImGuiInputTextFlags_CallbackResize) != 0;
     const int text_len = obj->TextLen;
     IM_ASSERT(pos <= text_len);
 
     if (!is_resizable && (new_text_len + obj->TextLen + 1 > obj->BufCapacity))
-        return false;
+        return 0;
 
     // Grow internal buffer if needed
     IM_ASSERT(obj->TextSrc == obj->TextA.Data);
     if (new_text_len + text_len + 1 > obj->TextA.Size)
     {
         if (!is_resizable)
-            return false;
+            return 0;
         obj->TextA.resize(text_len + ImClamp(new_text_len, 32, ImMax(256, new_text_len)) + 1);
         obj->TextSrc = obj->TextA.Data;
     }
@@ -4170,7 +4170,7 @@ static bool STB_TEXTEDIT_INSERTCHARS(ImGuiInputTextState* obj, int pos, const ch
     obj->TextLen += new_text_len;
     obj->TextA[obj->TextLen] = '\0';
 
-    return true;
+    return new_text_len;
 }
 
 // We don't use an enum so we can build even with conflicting symbols (if another user of stb_textedit.h leak their STB_TEXTEDIT_K_* symbols)
