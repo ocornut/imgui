@@ -49,6 +49,8 @@ Other Changes:
   EndTable() was mistakenly restoring a wrong current table.
 - InputText: avoid continuously overwriting ownership of ImGuiKey_Enter/_KeypadEnter
   keys in order to allow e.g. external Shortcut override behavior. (#9004)
+- InputText: when using a callback to reduce/manipulate the value of BufTextLen,
+  we do not require anymore that CursorPos be clamped by user code. (#9029)
 - InputTextMultiline: fixed a crash when using ImGuiInputTextFlags_WordWrap and
   resizing the parent window while keeping the multi-line field active (which is
   most typically achieved when resizing programmatically or via a docking layout
