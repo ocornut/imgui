@@ -950,36 +950,31 @@ bool ImGui_ImplWGPU_CheckSurfaceTextureOptimalStatus(WGPUSurfaceGetCurrentTextur
 
 
 #if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
-// DAWN Validation Layer callback: reason for device loss
-void ImGui_ImplWGPU_DAWN_DeviceLostCallback_Helper(const wgpu::Device&, wgpu::DeviceLostReason reason, wgpu::StringView msg)
+// Error type
+const char* ImGui_ImplWGPU_GetErrorTypeName(WGPUErrorType type)
 {
-    const char* reason_name = "";
-    switch (reason)
-    {
-    case wgpu::DeviceLostReason::Unknown:           reason_name = "Unknown";         break;
-    case wgpu::DeviceLostReason::Destroyed:         reason_name = "Destroyed";       break;
-    case wgpu::DeviceLostReason::CallbackCancelled: reason_name = "InstanceDropped"; break;
-    case wgpu::DeviceLostReason::FailedCreation:    reason_name = "FailedCreation";  break;
-    default:                                        reason_name = "UNREACHABLE";     break;
-    }
-    fprintf(stderr, "%s device message: %s\n", reason_name, msg.data);
-}
-
-// DAWN Validation Layer callback: print error type
-void ImGui_ImplWGPU_DAWN_ErrorCallback_Helper(const wgpu::Device&, wgpu::ErrorType type, wgpu::StringView msg)
-{
-    const char* error_type_name = "";
     switch (type)
     {
-    case wgpu::ErrorType::Validation:  error_type_name = "Validation";      break;
-    case wgpu::ErrorType::OutOfMemory: error_type_name = "Out of memory";   break;
-    case wgpu::ErrorType::Unknown:     error_type_name = "Unknown";         break;
-    case wgpu::ErrorType::Internal:    error_type_name = "Internal";        break;
-    default:                           error_type_name = "UNREACHABLE";     break;
+    case WGPUErrorType_Validation: return "Validation";
+    case WGPUErrorType_OutOfMemory: return "Out of memory";
+    case WGPUErrorType_Unknown: return "Unknown";
+    case WGPUErrorType_Internal: return "Internal";
+    default: return "Unknown";
     }
-    fprintf(stderr, "%s error: %s\n", error_type_name, msg.data);
 }
 
+// Reason for device loss
+const char* ImGui_ImplWGPU_GetDeviceLostName(WGPUDeviceLostReason type)
+{
+    switch (type)
+    {
+    case WGPUDeviceLostReason_Unknown: return "Unknown";
+    case WGPUDeviceLostReason_Destroyed: return "Destroyed";
+    case WGPUDeviceLostReason_CallbackCancelled: return "InstanceDropped";
+    case WGPUDeviceLostReason_FailedCreation: return "FailedCreation";
+    default: return "Unknown";
+    }
+}
 #elif !defined(__EMSCRIPTEN__)
 
 // WGPU-Native LOG callback: print information based on request level
@@ -1003,10 +998,16 @@ void ImGui_ImplWGPU_PrintAdapterInfo(const WGPUAdapter& adapter)
 {
     WGPUAdapterInfo info = {};
     wgpuAdapterGetInfo(adapter, &info);
-#ifndef __EMSCRIPTEN__
-    printf("Using: \"%.*s - %.*s\"\n", (int)info.device.length, info.device.data, (int)info.description.length, info.description.data);
-#endif
-    printf("BackendType (%u)\n", info.backendType);
+
+    printf("description: \"%.*s\"\n", (int) info.description.length, info.description.data);
+    printf("vendor: \"%.*s\"\n", (int) info.vendor.length, info.vendor.data);
+    printf("architecture: \"%.*s\"\n", (int) info.architecture.length, info.architecture.data);
+    printf("device: \"%.*s\"\n", (int) info.device.length, info.device.data);
+    printf("backendType: %u\n", info.backendType);
+    printf("adapterType: %u\n", info.adapterType);
+    printf("vendorID: %x\n", info.vendorID);
+    printf("deviceID: %x\n", info.deviceID);
+
     wgpuAdapterInfoFreeMembers(info);
 }
 
