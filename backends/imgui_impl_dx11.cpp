@@ -51,6 +51,7 @@
 // DirectX
 #include <stdio.h>
 #include <d3d11.h>
+#include <dxgi1_5.h>
 #include <d3dcompiler.h>
 #ifdef _MSC_VER
 #pragma comment(lib, "d3dcompiler") // Automatically link with d3dcompiler.lib as we are using D3DCompile() below.
@@ -73,7 +74,8 @@ struct ImGui_ImplDX11_Data
 {
     ID3D11Device*               pd3dDevice;
     ID3D11DeviceContext*        pd3dDeviceContext;
-    IDXGIFactory*               pFactory;
+    IDXGIFactory5*              pFactory;
+    bool                        tearingSupport;
     ID3D11Buffer*               pVB;
     ID3D11Buffer*               pIB;
     ID3D11VertexShader*         pVertexShader;
@@ -86,7 +88,7 @@ struct ImGui_ImplDX11_Data
     ID3D11DepthStencilState*    pDepthStencilState;
     int                         VertexBufferSize;
     int                         IndexBufferSize;
-    ImVector<DXGI_SWAP_CHAIN_DESC> SwapChainDescsForViewports;
+    ImVector<DXGI_SWAP_CHAIN_DESC1> SwapChainDescsForViewports;
 
     ImGui_ImplDX11_Data()       { memset((void*)this, 0, sizeof(*this)); VertexBufferSize = 5000; IndexBufferSize = 10000; }
 };
@@ -433,6 +435,10 @@ bool    ImGui_ImplDX11_CreateDeviceObjects()
         return false;
     ImGui_ImplDX11_InvalidateDeviceObjects();
 
+    BOOL allow_tearing = FALSE;
+    bd->pFactory->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allow_tearing, sizeof(allow_tearing));
+    bd->tearingSupport = (allow_tearing == TRUE);
+
     // By using D3DCompile() from <d3dcompiler.h> / d3dcompiler.lib, we introduce a dependency to a given version of d3dcompiler_XX.dll (see D3DCOMPILER_DLL_A)
     // If you would like to use this DX11 sample code but remove this dependency you can:
     //  1) compile once, save the compiled shader blobs into a file or source code and pass them to CreateVertexShader()/CreatePixelShader() [preferred solution]
@@ -636,7 +642,7 @@ bool    ImGui_ImplDX11_Init(ID3D11Device* device, ID3D11DeviceContext* device_co
     // Get factory from device
     IDXGIDevice* pDXGIDevice = nullptr;
     IDXGIAdapter* pDXGIAdapter = nullptr;
-    IDXGIFactory* pFactory = nullptr;
+    IDXGIFactory5* pFactory = nullptr;
 
     if (device->QueryInterface(IID_PPV_ARGS(&pDXGIDevice)) == S_OK)
         if (pDXGIDevice->GetParent(IID_PPV_ARGS(&pDXGIAdapter)) == S_OK)
@@ -645,6 +651,7 @@ bool    ImGui_ImplDX11_Init(ID3D11Device* device, ID3D11DeviceContext* device_co
                 bd->pd3dDevice = device;
                 bd->pd3dDeviceContext = device_context;
                 bd->pFactory = pFactory;
+                bd->tearingSupport = false;
             }
     if (pDXGIDevice) pDXGIDevice->Release();
     if (pDXGIAdapter) pDXGIAdapter->Release();
@@ -695,7 +702,7 @@ void ImGui_ImplDX11_NewFrame()
 // Helper structure we store in the void* RendererUserData field of each ImGuiViewport to easily retrieve our backend data.
 struct ImGui_ImplDX11_ViewportData
 {
-    IDXGISwapChain*                 SwapChain;
+    IDXGISwapChain1*                SwapChain;
     ID3D11RenderTargetView*         RTView;
 
     ImGui_ImplDX11_ViewportData()   { SwapChain = nullptr; RTView = nullptr; }
@@ -704,12 +711,12 @@ struct ImGui_ImplDX11_ViewportData
 
 // Multi-Viewports: configure templates used when creating swapchains for secondary viewports. Will try them in order.
 // This is intentionally not declared in the .h file yet, so you will need to copy this declaration:
-void ImGui_ImplDX11_SetSwapChainDescs(const DXGI_SWAP_CHAIN_DESC* desc_templates, int desc_templates_count);
-void ImGui_ImplDX11_SetSwapChainDescs(const DXGI_SWAP_CHAIN_DESC* desc_templates, int desc_templates_count)
+void ImGui_ImplDX11_SetSwapChainDescs(const DXGI_SWAP_CHAIN_DESC1* desc_templates, int desc_templates_count);
+void ImGui_ImplDX11_SetSwapChainDescs(const DXGI_SWAP_CHAIN_DESC1* desc_templates, int desc_templates_count)
 {
     ImGui_ImplDX11_Data* bd = ImGui_ImplDX11_GetBackendData();
     bd->SwapChainDescsForViewports.resize(desc_templates_count);
-    memcpy(bd->SwapChainDescsForViewports.Data, desc_templates, sizeof(DXGI_SWAP_CHAIN_DESC));
+    memcpy(bd->SwapChainDescsForViewports.Data, desc_templates, sizeof(DXGI_SWAP_CHAIN_DESC1));
 }
 
 static void ImGui_ImplDX11_CreateWindow(ImGuiViewport* viewport)
@@ -726,14 +733,17 @@ static void ImGui_ImplDX11_CreateWindow(ImGuiViewport* viewport)
 
     // Create swap chain
     HRESULT hr = DXGI_ERROR_UNSUPPORTED;
-    for (const DXGI_SWAP_CHAIN_DESC& sd_template : bd->SwapChainDescsForViewports)
+    for (const DXGI_SWAP_CHAIN_DESC1& sd_template : bd->SwapChainDescsForViewports)
     {
-        IM_ASSERT(sd_template.BufferDesc.Width == 0 && sd_template.BufferDesc.Height == 0 && sd_template.OutputWindow == nullptr);
-        DXGI_SWAP_CHAIN_DESC sd = sd_template;
-        sd.BufferDesc.Width = (UINT)viewport->Size.x;
-        sd.BufferDesc.Height = (UINT)viewport->Size.y;
-        sd.OutputWindow = hwnd;
-        hr = bd->pFactory->CreateSwapChain(bd->pd3dDevice, &sd, &vd->SwapChain);
+        IM_ASSERT(sd_template.Width == 0 && sd_template.Height == 0);
+        DXGI_SWAP_CHAIN_DESC1 sd = sd_template;
+        sd.Width = (UINT)viewport->Size.x;
+        sd.Height = (UINT)viewport->Size.y;
+
+        if (bd->tearingSupport)
+            sd.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+
+        hr = bd->pFactory->CreateSwapChainForHwnd(bd->pd3dDevice, hwnd, &sd, nullptr, nullptr, &vd->SwapChain);
         if (SUCCEEDED(hr))
             break;
     }
@@ -778,7 +788,9 @@ static void ImGui_ImplDX11_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
     if (vd->SwapChain)
     {
         ID3D11Texture2D* pBackBuffer = nullptr;
-        vd->SwapChain->ResizeBuffers(0, (UINT)size.x, (UINT)size.y, DXGI_FORMAT_UNKNOWN, 0);
+        DXGI_SWAP_CHAIN_DESC1 desc = {};
+        vd->SwapChain->GetDesc1(&desc);
+        vd->SwapChain->ResizeBuffers(0, (UINT)size.x, (UINT)size.y, DXGI_FORMAT_UNKNOWN, desc.Flags);
         vd->SwapChain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
         if (pBackBuffer == nullptr) { fprintf(stderr, "ImGui_ImplDX11_SetWindowSize() failed creating buffers.\n"); return; }
         bd->pd3dDevice->CreateRenderTargetView(pBackBuffer, nullptr, &vd->RTView);
@@ -799,9 +811,10 @@ static void ImGui_ImplDX11_RenderWindow(ImGuiViewport* viewport, void*)
 
 static void ImGui_ImplDX11_SwapBuffers(ImGuiViewport* viewport, void*)
 {
+    ImGui_ImplDX11_Data* bd = ImGui_ImplDX11_GetBackendData();
     ImGui_ImplDX11_ViewportData* vd = (ImGui_ImplDX11_ViewportData*)viewport->RendererUserData;
     if (vd->SwapChain)
-        vd->SwapChain->Present(0, 0); // Present without vsync
+        vd->SwapChain->Present(0, bd->tearingSupport ? DXGI_PRESENT_ALLOW_TEARING : 0); // Present without vsync
 }
 
 static void ImGui_ImplDX11_InitMultiViewportSupport()
@@ -814,15 +827,14 @@ static void ImGui_ImplDX11_InitMultiViewportSupport()
     platform_io.Renderer_SwapBuffers = ImGui_ImplDX11_SwapBuffers;
 
     // Default swapchain format
-    DXGI_SWAP_CHAIN_DESC sd;
+    DXGI_SWAP_CHAIN_DESC1 sd;
     ZeroMemory(&sd, sizeof(sd));
-    sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    sd.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     sd.SampleDesc.Count = 1;
     sd.SampleDesc.Quality = 0;
     sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    sd.BufferCount = 1;
-    sd.Windowed = TRUE;
-    sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+    sd.BufferCount = 2;
+    sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
     sd.Flags = 0;
     ImGui_ImplDX11_SetSwapChainDescs(&sd, 1);
 }
