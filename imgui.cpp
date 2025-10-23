@@ -11518,6 +11518,7 @@ void ImGui::BeginGroup()
     group_data.BackupActiveIdIsAlive = g.ActiveIdIsAlive;
     group_data.BackupHoveredIdIsAlive = g.HoveredId != 0;
     group_data.BackupIsSameLine = window->DC.IsSameLine;
+    group_data.BackupActiveIdHasBeenEditedThisFrame = g.ActiveIdHasBeenEditedThisFrame;
     group_data.BackupDeactivatedIdIsAlive = g.DeactivatedItemData.IsAlive;
     group_data.EmitItem = true;
 
@@ -11582,7 +11583,7 @@ void ImGui::EndGroup()
         g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_HoveredWindow;
 
     // Forward Edited flag
-    if (group_contains_curr_active_id && g.ActiveIdHasBeenEditedThisFrame)
+    if (g.ActiveIdHasBeenEditedThisFrame && !group_data.BackupActiveIdHasBeenEditedThisFrame)
         g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_Edited;
 
     // Forward Deactivated flag
