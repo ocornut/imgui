@@ -332,6 +332,7 @@ int main(int, char**)
 bool CreateDeviceD3D(HWND hWnd)
 {
     // Setup swap chain
+    // This is a basic setup. Optimally could handle fullscreen mode differently. See #8979 for suggestions.
     DXGI_SWAP_CHAIN_DESC1 sd;
     {
         ZeroMemory(&sd, sizeof(sd));
@@ -545,7 +546,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             DXGI_SWAP_CHAIN_DESC1 desc = {};
             g_pSwapChain->GetDesc1(&desc);
             HRESULT result = g_pSwapChain->ResizeBuffers(0, (UINT)LOWORD(lParam), (UINT)HIWORD(lParam), desc.Format, desc.Flags);
-            assert(SUCCEEDED(result) && "Failed to resize swapchain.");
+            IM_ASSERT(SUCCEEDED(result) && "Failed to resize swapchain.");
             CreateRenderTarget();
         }
         return 0;
