@@ -47,6 +47,8 @@ Other Changes:
   result in temporarily incorrect state, which would lead to bugs to side effects
   in various locations, e.g. GetContentRegionAvail() calls or using clipper. (#9005)
   EndTable() was mistakenly restoring a wrong current table.
+- InputText: when buffer is not resizable, trying to paste contents that
+  cannot fit will now truncate text instead of ignoring the paste. (#9029)
 - InputText: avoid continuously overwriting ownership of ImGuiKey_Enter/_KeypadEnter
   keys in order to allow e.g. external Shortcut override behavior. (#9004)
 - InputText: when using a callback to reduce/manipulate the value of BufTextLen,
