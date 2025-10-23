@@ -313,8 +313,12 @@ static WGPUDevice RequestDevice(wgpu::Instance& instance, wgpu::Adapter& adapter
 {
     // Set device callback functions
     wgpu::DeviceDescriptor device_desc;
-    device_desc.SetDeviceLostCallback(wgpu::CallbackMode::AllowSpontaneous, ImGui_ImplWGPU_DAWN_DeviceLostCallback_Helper);
-    device_desc.SetUncapturedErrorCallback(ImGui_ImplWGPU_DAWN_ErrorCallback_Helper);
+    device_desc.SetDeviceLostCallback(wgpu::CallbackMode::AllowSpontaneous,
+        [](const wgpu::Device&, wgpu::DeviceLostReason type, wgpu::StringView msg) { fprintf(stderr, "%s error: %s\n", ImGui_ImplWGPU_GetDeviceLostName((WGPUDeviceLostReason)type), msg.data); }
+    );
+    device_desc.SetUncapturedErrorCallback(
+        [](const wgpu::Device&, wgpu::ErrorType type, wgpu::StringView msg) { fprintf(stderr, "%s error: %s\n", ImGui_ImplWGPU_GetErrorTypeName((WGPUErrorType)type), msg.data); }
+    );
 
     wgpu::Device acquired_device;
     auto onRequestDevice = [&](wgpu::RequestDeviceStatus status, wgpu::Device local_device, wgpu::StringView message)
@@ -413,7 +417,7 @@ static bool InitWGPU(SDL_Window* window)
     instance_desc.requiredFeatures = &timedWaitAny;
     wgpu::Instance instance = wgpu::CreateInstance(&instance_desc);
 
-    wgpu::Adapter adapter { RequestAdapter(instance) };
+    wgpu::Adapter adapter = RequestAdapter(instance);
     wgpu_device = RequestDevice(instance, adapter);
 
     // Create the surface.
@@ -463,7 +467,7 @@ static bool InitWGPU(SDL_Window* window)
     wgpuSetLogCallback(ImGui_ImplWGPU_WGPU_LogCallback_Helper, nullptr);
     wgpuSetLogLevel(WGPULogLevel_Warn);
 
-    static WGPUAdapter adapter = RequestAdapter(wgpu_instance);
+    WGPUAdapter adapter = RequestAdapter(wgpu_instance);
     wgpu_device = RequestDevice(adapter);
 
     // Create the surface.
