@@ -887,8 +887,9 @@ static void DemoWindowWidgetsBasic()
         ImGui::SeparatorText("Inputs");
 
         {
-            // To wire InputText() with std::string or any other custom string type,
-            // see the "Text Input > Resize Callback" section of this demo, and the misc/cpp/imgui_stdlib.h file.
+            // If you want to use InputText() with std::string or any custom dynamic string type:
+            // - For std::string: use the wrapper in misc/cpp/imgui_stdlib.h/.cpp
+            // - Otherwise, see the 'Dear ImGui Demo->Widgets->Text Input->Resize Callback' for using ImGuiInputTextFlags_CallbackResize.
             IMGUI_DEMO_MARKER("Widgets/Basic/InputText");
             static char str0[128] = "Hello, world!";
             ImGui::InputText("input text", str0, IM_ARRAYSIZE(str0));
@@ -3696,8 +3697,10 @@ static void DemoWindowWidgetsTextInput()
         IMGUI_DEMO_MARKER("Widgets/Text Input/Multi-line Text Input");
         if (ImGui::TreeNode("Multi-line Text Input"))
         {
-            // Note: we are using a fixed-sized buffer for simplicity here. See ImGuiInputTextFlags_CallbackResize
-            // and the code in misc/cpp/imgui_stdlib.h for how to setup InputText() for dynamically resizing strings.
+            // WE ARE USING A FIXED-SIZE BUFFER FOR SIMPLICITY HERE.
+            // If you want to use InputText() with std::string or any custom dynamic string type:
+            // - For std::string: use the wrapper in misc/cpp/imgui_stdlib.h/.cpp
+            // - Otherwise, see the 'Dear ImGui Demo->Widgets->Text Input->Resize Callback' for using ImGuiInputTextFlags_CallbackResize.
             static char text[1024 * 16] =
                 "/*\n"
                 " The Pentium F00F bug, shorthand for F0 0F C7 C8,\n"
