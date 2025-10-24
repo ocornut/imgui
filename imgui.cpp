@@ -5198,26 +5198,28 @@ void ImGui::UpdateMouseMovingWindowEndFrame()
     if (g.NavWindow && g.NavWindow->Appearing)
         return;
 
+    ImGuiWindow* hovered_window = g.HoveredWindow;
+
     // Click on empty space to focus window and start moving
     // (after we're done with all our widgets)
     if (g.IO.MouseClicked[0])
     {
         // Handle the edge case of a popup being closed while clicking in its empty space.
         // If we try to focus it, FocusWindow() > ClosePopupsOverWindow() will accidentally close any parent popups because they are not linked together any more.
-        ImGuiWindow* root_window = g.HoveredWindow ? g.HoveredWindow->RootWindow : NULL;
-        const bool is_closed_popup = root_window && (root_window->Flags & ImGuiWindowFlags_Popup) && !IsPopupOpen(root_window->PopupId, ImGuiPopupFlags_AnyPopupLevel);
+        ImGuiWindow* hovered_root = hovered_window ? hovered_window->RootWindow : NULL;
+        const bool is_closed_popup = hovered_root && (hovered_root->Flags & ImGuiWindowFlags_Popup) && !IsPopupOpen(hovered_root->PopupId, ImGuiPopupFlags_AnyPopupLevel);
 
-        if (root_window != NULL && !is_closed_popup)
+        if (hovered_window != NULL && !is_closed_popup)
         {
-            StartMouseMovingWindow(g.HoveredWindow); //-V595
+            StartMouseMovingWindow(hovered_window); //-V595
 
-            // FIXME: In principal we might be able to call StopMouseMovingWindow() below.
+            // FIXME: In principle we might be able to call StopMouseMovingWindow() below.
             // Please note how StartMouseMovingWindow() and StopMouseMovingWindow() and not entirely symetrical, at the later doesn't clear ActiveId.
 
             // Cancel moving if clicked outside of title bar
             if (g.IO.ConfigWindowsMoveFromTitleBarOnly)
-                if (!(root_window->Flags & ImGuiWindowFlags_NoTitleBar))
-                    if (!root_window->TitleBarRect().Contains(g.IO.MouseClickedPos[0]))
+                if (!(hovered_root->Flags & ImGuiWindowFlags_NoTitleBar))
+                    if (!hovered_root->TitleBarRect().Contains(g.IO.MouseClickedPos[0]))
                         g.MovingWindow = NULL;
 
             // Cancel moving if clicked over an item which was disabled or inhibited by popups
@@ -5228,7 +5230,7 @@ void ImGui::UpdateMouseMovingWindowEndFrame()
                 g.ActiveIdDisabledId = g.HoveredId;
             }
         }
-        else if (root_window == NULL && g.NavWindow != NULL)
+        else if (hovered_window == NULL && g.NavWindow != NULL)
         {
             // Clicking on void disable focus
             FocusWindow(NULL, ImGuiFocusRequestFlags_UnlessBelowModal);
@@ -5243,8 +5245,8 @@ void ImGui::UpdateMouseMovingWindowEndFrame()
         // Find the top-most window between HoveredWindow and the top-most Modal Window.
         // This is where we can trim the popup stack.
         ImGuiWindow* modal = GetTopMostPopupModal();
-        bool hovered_window_above_modal = g.HoveredWindow && (modal == NULL || IsWindowAbove(g.HoveredWindow, modal));
-        ClosePopupsOverWindow(hovered_window_above_modal ? g.HoveredWindow : modal, true);
+        bool hovered_window_above_modal = hovered_window && (modal == NULL || IsWindowAbove(hovered_window, modal));
+        ClosePopupsOverWindow(hovered_window_above_modal ? hovered_window : modal, true);
     }
 }
 
