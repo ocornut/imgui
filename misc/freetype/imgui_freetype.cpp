@@ -511,6 +511,72 @@ static void ImGui_ImplFreeType_FontBakedDestroy(ImFontAtlas* atlas, ImFontConfig
     bd_baked_data->~ImGui_ImplFreeType_FontSrcBakedData(); // ~IM_PLACEMENT_DELETE()
 }
 
+static void DownscaleBitmap(uint32_t* dst, const int dst_w, const int dst_h, uint32_t* src, const int src_w, const int src_h) {
+    IM_ASSERT(dst_w <= src_w && dst_h <= src_h); // TODO: check if this is required
+
+#if 0
+    // Point Sampling / Nearest Neighbor
+    for (int y = 0; y < dst_h; y++)
+    {
+        const int src_y = ImFloor(((y + 0.5f) * src_h) / dst_h);
+        for (int x = 0; x < dst_w; x++)
+        {
+            const int src_x = ImFloor(((x + 0.5f) * src_w) / dst_w);
+            dst[y * dst_w + x] = src[src_y * src_w + src_x];
+        }
+    }
+#else
+    // Box sampling - Imagine projecting the new, smaller pixels onto the larger source, covering multiple pixel.
+    for (int y = 0; y < dst_h; y++)
+    {
+        for (int x = 0; x < dst_w; x++)
+        {
+            // We perform a weighted mean.
+            ImVec4 color;
+            float weight_sum = 0.f;
+
+            // Walk from upper edge to bottom edge (vertical)
+            const float edge_up = ((float)y * src_h) / dst_h;
+            const float edge_down = ((y + 1.f) * src_h) / dst_h;
+            for (float frac_pos_y = edge_up; frac_pos_y < edge_down;)
+            {
+                const int src_y = (int)ImFloor(frac_pos_y); IM_ASSERT(src_y < src_h);
+                const float frac_y = 1.f - (frac_pos_y - src_y);
+
+                // Walk from left edge to right edge (horizontal)
+                const float edge_left = ((float)x * src_w) / dst_w;
+                const float edge_right = ((x + 1.f) * src_w) / dst_w;
+                for (float frac_pos_x = edge_left; frac_pos_x < edge_right;)
+                {
+                    const int src_x = (int)ImFloor(frac_pos_x); IM_ASSERT(src_x < src_w);
+                    const float frac_x = 1.f - (frac_pos_x - src_x);
+
+                    const float src_pixel_weight = frac_x * frac_y;
+
+                    const ImVec4 pixel_color = ImGui::ColorConvertU32ToFloat4(src[src_y * src_w + src_x]);
+                    color.x += pixel_color.x * src_pixel_weight;
+                    color.y += pixel_color.y * src_pixel_weight;
+                    color.z += pixel_color.z * src_pixel_weight;
+                    color.w += pixel_color.w * src_pixel_weight;
+                    weight_sum += src_pixel_weight;
+
+                    frac_pos_x += frac_x;
+                }
+
+                frac_pos_y += frac_y;
+            }
+
+            color.x /= weight_sum;
+            color.y /= weight_sum;
+            color.z /= weight_sum;
+            color.w /= weight_sum;
+
+            dst[y * dst_w + x] = ImGui::ColorConvertFloat4ToU32(color);
+        }
+    }
+#endif
+}
+
 static bool ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void* loader_data_for_baked_src, ImWchar codepoint, ImFontGlyph* out_glyph, float* out_advance_x)
 {
     ImGui_ImplFreeType_FontSrcData* bd_font_data = (ImGui_ImplFreeType_FontSrcData*)src->FontLoaderData;
@@ -596,22 +662,9 @@ static bool ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConf
         if (down_scaling)
         {
             uint32_t* dst_buffer = temp_buffer + bitmap_w * bitmap_h;
-            // Perform downscale, from temp_buffer (bitmap_w * bitmap_h) to dst_buffer (w * h)
 
-#if 1
-            // Point Sampling / Nearest Neighbor
-            for (int y = 0; y < h; y++)
-            {
-                const int bitmap_y = ImFloor(((y + 0.5f) * bitmap_h) / h);
-                for (int x = 0; x < w; x++)
-                {
-                    const int bitmap_x = ImFloor(((x + 0.5f) * bitmap_w) / w);
-                    dst_buffer[y * w + x] = temp_buffer[bitmap_y * bitmap_w + bitmap_x];
-                }
-            }
-#else
-            // TODO: box scaling
-#endif
+            // Perform downscale, from temp_buffer (bitmap_w * bitmap_h) to dst_buffer (w * h)
+            DownscaleBitmap(dst_buffer, w, h, temp_buffer, bitmap_w, bitmap_h);
 
             // Redirect to downscaled part of the buffer
             temp_buffer = dst_buffer;
