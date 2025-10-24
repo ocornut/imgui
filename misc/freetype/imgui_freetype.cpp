@@ -573,8 +573,8 @@ static bool ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConf
     // Pack and retrieve position inside texture atlas
     if (is_visible)
     {
-        const int w = (int)ImFloor(bitmap_w * bitmap_x_scale);
-        const int h = (int)ImFloor(bitmap_h * bitmap_y_scale);
+        const int w = (int)ImCeil(bitmap_w * bitmap_x_scale);
+        const int h = (int)ImCeil(bitmap_h * bitmap_y_scale);
         IM_ASSERT(!((h < bitmap_h && w > bitmap_w) || (h > bitmap_h && w < bitmap_w))); // Can't up AND downscale at the same time // TODO: or can we?
         const bool down_scaling = h < bitmap_h || w < bitmap_w;
 
@@ -625,8 +625,8 @@ static bool ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConf
         float recip_v = 1.0f / rasterizer_density;
 
         // Register glyph
-        float glyph_off_x = ImFloor((float)face->glyph->bitmap_left * bitmap_x_scale);
-        float glyph_off_y = ImFloor((float)-face->glyph->bitmap_top * bitmap_y_scale);
+        float glyph_off_x = ImCeil((float)face->glyph->bitmap_left * bitmap_x_scale);
+        float glyph_off_y = ImCeil((float)-face->glyph->bitmap_top * bitmap_y_scale);
         out_glyph->X0 = glyph_off_x * recip_h + font_off_x;
         out_glyph->Y0 = glyph_off_y * recip_v + font_off_y;
         out_glyph->X1 = (glyph_off_x + w) * recip_h + font_off_x;
