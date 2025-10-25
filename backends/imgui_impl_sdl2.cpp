@@ -21,6 +21,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2025-10-09: Added ImGui_ImplSDL2_CreateWGPUSurface() helper for native/desktop WebGPU applications. Requires IMGUI_IMPL_WEBGPU_BACKEND_WGPU or IMGUI_IMPL_WEBGPU_BACKEND_DAWN define.
 //  2025-09-24: Skip using the SDL_GetGlobalMouseState() state when one of our window is hovered, as the SDL_MOUSEMOTION data is reliable. Fix macOS notch mouse coordinates issue in fullscreen mode + better perf on X11. (#7919, #7786)
 //  2025-09-18: Call platform_io.ClearPlatformHandlers() on shutdown.
 //  2025-09-15: Content Scales are always reported as 1.0 on Wayland. (#8921)
@@ -898,6 +899,79 @@ void ImGui_ImplSDL2_NewFrame()
     // Update game controllers (if enabled and available)
     ImGui_ImplSDL2_UpdateGamepads();
 }
+
+// SDL2 helper to create a WebGPU surface (exclusively!) for Native/Desktop applications: available only together with WebGPU/WGPU backend
+// As of today (Oct 2025) there is no "official" support in SDL2 to create a surface for WebGPU backend.
+// This stub uses "low level" SDL2 calls to acquire information from a specific Window Manager.
+// Currently supported platforms: Windows / Linux (X11 and Wayland) / MacOS. Not necessary nor available with EMSCRIPTEN.
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) || defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) && !defined(__EMSCRIPTEN__)
+
+#ifdef SDL_VIDEO_DRIVER_COCOA
+// MacOS specific: is necessary to compile with "-x objective-c++" flags
+// (e.g. using cmake: set_source_files_properties(${IMGUI_DIR}/backends/imgui_impl_sdl2.cpp PROPERTIES COMPILE_FLAGS "-x objective-c++") )
+#include <Cocoa/Cocoa.h>
+#include <QuartzCore/CAMetalLayer.h>
+#endif
+
+WGPUSurface ImGui_ImplSDL2_CreateWGPUSurface(WGPUInstance instance, SDL_Window* window)
+{
+    SDL_SysWMinfo sysWMInfo;
+    SDL_VERSION(&sysWMInfo.version);
+    SDL_GetWindowWMInfo(window, &sysWMInfo);
+    WGPUSurfaceDescriptor surface_descriptor = {};
+    WGPUChainedStruct chained_struct = {};
+    WGPUSurface surface = {};
+#if defined(SDL_VIDEO_DRIVER_COCOA)
+    {
+        id metal_layer = [CAMetalLayer layer];
+        NSWindow* ns_window = sysWMInfo.info.cocoa.window;
+        [ns_window.contentView setWantsLayer : YES] ;
+        [ns_window.contentView setLayer : metal_layer] ;
+        chained_struct.sType = WGPUSType_SurfaceSourceMetalLayer;
+        WGPUSurfaceSourceMetalLayer surface_src_metal = {};
+        surface_src_metal.chain = chained_struct;
+        surface_src_metal.layer = metal_layer;
+        surface_descriptor.nextInChain = &surface_src_metal.chain;
+        surface = wgpuInstanceCreateSurface(instance, &surface_descriptor);
+    }
+#elif defined(SDL_VIDEO_DRIVER_WAYLAND) || defined(SDL_VIDEO_DRIVER_X11)
+    const char* sdl_driver = SDL_GetCurrentVideoDriver();
+    if (sdl_driver && strcmp(sdl_driver, "wayland") == 0)
+    {
+        chained_struct.sType = WGPUSType_SurfaceSourceWaylandSurface;
+        WGPUSurfaceSourceWaylandSurface surface_src_wayland = {};
+        surface_src_wayland.chain = chained_struct;
+        surface_src_wayland.display = sysWMInfo.info.wl.display;
+        surface_src_wayland.surface = sysWMInfo.info.wl.surface;
+        surface_descriptor.nextInChain = &surface_src_wayland.chain;
+        surface = wgpuInstanceCreateSurface(instance, &surface_descriptor);
+    }
+    else
+    {
+        chained_struct.sType = WGPUSType_SurfaceSourceXlibWindow;
+        WGPUSurfaceSourceXlibWindow surface_src_xlib = {};
+        surface_src_xlib.chain = chained_struct;
+        surface_src_xlib.display = sysWMInfo.info.x11.display;
+        surface_src_xlib.window = sysWMInfo.info.x11.window;
+        surface_descriptor.nextInChain = &surface_src_xlib.chain;
+        surface = wgpuInstanceCreateSurface(instance, &surface_descriptor);
+    }
+#elif defined(SDL_VIDEO_DRIVER_WINDOWS)
+    {
+        chained_struct.sType = WGPUSType_SurfaceSourceWindowsHWND;
+        WGPUSurfaceSourceWindowsHWND surface_src_hwnd = {};
+        surface_src_hwnd.chain = chained_struct;
+        surface_src_hwnd.hinstance = sysWMInfo.info.win.hinstance;
+        surface_src_hwnd.hwnd = sysWMInfo.info.win.window;
+        surface_descriptor.nextInChain = &surface_src_hwnd.chain;
+        surface = wgpuInstanceCreateSurface(instance, &surface_descriptor);
+    }
+#else
+#error "Unsupported WebGPU native platform!"
+#endif
+    return surface;
+}
+#endif // #if defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) || defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) && !defined(__EMSCRIPTEN__)
 
 //-----------------------------------------------------------------------------
 

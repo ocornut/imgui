@@ -66,6 +66,9 @@
 #include <limits.h>
 #include <webgpu/webgpu.h>
 
+#include <stdio.h>
+#include <stdlib.h>
+
 #ifdef IMGUI_IMPL_WEBGPU_BACKEND_DAWN
 // Dawn renamed WGPUProgrammableStageDescriptor to WGPUComputeState (see: https://github.com/webgpu-native/webgpu-headers/pull/413)
 // Using type alias until WGPU adopts the same naming convention (#8369)
@@ -273,7 +276,7 @@ static WGPUProgrammableStageDescriptor ImGui_ImplWGPU_CreateShaderModule(const c
 #endif
 
     WGPUShaderModuleDescriptor desc = {};
-    desc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgsl_desc);
+    desc.nextInChain = (WGPUChainedStruct*)&wgsl_desc;
 
     WGPUProgrammableStageDescriptor stage_desc = {};
     stage_desc.module = wgpuDeviceCreateShaderModule(bd->wgpuDevice, &desc);
@@ -913,6 +916,99 @@ void ImGui_ImplWGPU_NewFrame()
     if (!bd->pipelineState)
         if (!ImGui_ImplWGPU_CreateDeviceObjects())
             IM_ASSERT(0 && "ImGui_ImplWGPU_CreateDeviceObjects() failed!");
+}
+
+//-----------------------------------------------------------------------------
+// WebGPU Helpers
+//-----------------------------------------------------------------------------
+
+// Check if the status of surface texture is optimal. If false, it is necessary to reconfigure the surface texture.
+// FIXME: Can abort on unrecoverable errors.
+bool ImGui_ImplWGPU_CheckSurfaceTextureOptimalStatus(WGPUSurfaceGetCurrentTextureStatus status)
+{
+    switch (status)
+    {
+#if defined(__EMSCRIPTEN__) && !defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
+        case WGPUSurfaceGetCurrentTextureStatus_Success:
+            return true;
+#else
+        case WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal:
+            return true;
+        case WGPUSurfaceGetCurrentTextureStatus_SuccessSuboptimal:
+            return false;
+#endif
+        case WGPUSurfaceGetCurrentTextureStatus_Timeout:
+        case WGPUSurfaceGetCurrentTextureStatus_Outdated:
+        case WGPUSurfaceGetCurrentTextureStatus_Lost:
+            return false;
+        default:
+            fprintf(stderr, "Unexpected Error Check Surface Texture status=%#.8x\n", status);
+            IM_ASSERT(0);
+            return false;
+    }
+}
+
+
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
+// Error type
+const char* ImGui_ImplWGPU_GetErrorTypeName(WGPUErrorType type)
+{
+    switch (type)
+    {
+    case WGPUErrorType_Validation: return "Validation";
+    case WGPUErrorType_OutOfMemory: return "Out of memory";
+    case WGPUErrorType_Unknown: return "Unknown";
+    case WGPUErrorType_Internal: return "Internal";
+    default: return "Unknown";
+    }
+}
+
+// Reason for device loss
+const char* ImGui_ImplWGPU_GetDeviceLostName(WGPUDeviceLostReason type)
+{
+    switch (type)
+    {
+    case WGPUDeviceLostReason_Unknown: return "Unknown";
+    case WGPUDeviceLostReason_Destroyed: return "Destroyed";
+    case WGPUDeviceLostReason_CallbackCancelled: return "InstanceDropped";
+    case WGPUDeviceLostReason_FailedCreation: return "FailedCreation";
+    default: return "Unknown";
+    }
+}
+#elif !defined(__EMSCRIPTEN__)
+
+// WGPU-Native LOG callback: print information based on request level
+void ImGui_ImplWGPU_WGPU_LogCallback_Helper(WGPULogLevel level, WGPUStringView msg, void* userdata)
+{
+    const char* level_str = "";
+    switch (level)
+    {
+    case WGPULogLevel_Error: level_str = "error"; break;
+    case WGPULogLevel_Warn:  level_str = "warn";  break;
+    case WGPULogLevel_Info:  level_str = "info";  break;
+    case WGPULogLevel_Debug: level_str = "debug"; break;
+    case WGPULogLevel_Trace: level_str = "trace"; break;
+    default:                 level_str = "unknown"; break;
+    }
+    fprintf(stderr, "[wgpu] [%s] %.*s\n", level_str, (int)msg.length, msg.data);
+}
+#endif
+
+void ImGui_ImplWGPU_PrintAdapterInfo(const WGPUAdapter& adapter)
+{
+    WGPUAdapterInfo info = {};
+    wgpuAdapterGetInfo(adapter, &info);
+
+    printf("description: \"%.*s\"\n", (int) info.description.length, info.description.data);
+    printf("vendor: \"%.*s\"\n", (int) info.vendor.length, info.vendor.data);
+    printf("architecture: \"%.*s\"\n", (int) info.architecture.length, info.architecture.data);
+    printf("device: \"%.*s\"\n", (int) info.device.length, info.device.data);
+    printf("backendType: %u\n", info.backendType);
+    printf("adapterType: %u\n", info.adapterType);
+    printf("vendorID: %x\n", info.vendorID);
+    printf("deviceID: %x\n", info.deviceID);
+
+    wgpuAdapterInfoFreeMembers(info);
 }
 
 //-----------------------------------------------------------------------------

@@ -37,12 +37,12 @@ EMS += -s DISABLE_EXCEPTION_CATCHING=1 --use-port=contrib.glfw3
 LDFLAGS += -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s NO_EXIT_RUNTIME=0 -s ASSERTIONS=1
 
 # (1) Using legacy WebGPU implementation (Emscripten < 4.0.10)
-EMS += -DIMGUI_IMPL_WEBGPU_BACKEND_WGPU
-LDFLAGS += -s USE_WEBGPU=1
+#EMS += -DIMGUI_IMPL_WEBGPU_BACKEND_WGPU
+#LDFLAGS += -s USE_WEBGPU=1
 
-# or (2) Using newer Dawn-based WebGPU port (Emscripten >= 4.0.10) (UNSUPPORTED YET)
-#EMS += --use-port=emdawnwebgpu
-#LDFLAGS += --use-port=emdawnwebgpu
+# or (2) Using newer Dawn-based WebGPU port (Emscripten >= 4.0.10)
+EMS += --use-port=emdawnwebgpu
+LDFLAGS += --use-port=emdawnwebgpu
 
 # Build as single file (binary text encoded in .html file)
 #LDFLAGS += -sSINGLE_FILE

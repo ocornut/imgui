@@ -29,6 +29,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2025-10-09: Added ImGui_ImplGLFW_CreateWGPUSurface() helper for native/desktop WebGPU applications. Requires IMGUI_IMPL_WEBGPU_BACKEND_WGPU define.
 //  2025-09-18: Call platform_io.ClearPlatformHandlers() on shutdown.
 //  2025-09-15: Content Scales are always reported as 1.0 on Wayland. FramebufferScale are always reported as 1.0 on X11. (#8920, #8921)
 //  2025-07-08: Made ImGui_ImplGlfw_GetContentScaleForWindow(), ImGui_ImplGlfw_GetContentScaleForMonitor() helpers return 1.0f on Emscripten and Android platforms, matching macOS logic. (#8742, #8733)
@@ -1045,6 +1046,82 @@ void ImGui_ImplGlfw_InstallEmscriptenCallbacks(GLFWwindow* window, const char* c
   emscripten_glfw_make_canvas_resizable(window, "window", nullptr);
 }
 #endif // #ifdef EMSCRIPTEN_USE_PORT_CONTRIB_GLFW3
+
+// GLFW helper to create a WebGPU surface, used only in WGPU-Native. DAWN-Native already has a built-in function
+// As of today (Oct 2025) there is no "official" support in GLFW to create a surface for WebGPU backend
+// This stub uses "low level" GLFW calls to acquire information from a specific Window Manager.
+// Currently supported platforms: Windows / Linux (X11 and Wayland) / MacOS. Not necessary nor available with EMSCRIPTEN.
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) && !defined(__EMSCRIPTEN__)
+
+#if defined(GLFW_EXPOSE_NATIVE_COCOA) && defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
+// MacOS specific: need to compile with "-x objective-c++" flags
+// (e.g. using cmake: set_source_files_properties(${IMGUI_DIR}/backends/imgui_impl_glfw.cpp PROPERTIES COMPILE_FLAGS "-x objective-c++") )
+#include <Foundation/Foundation.h>
+#include <QuartzCore/CAMetalLayer.h>
+#endif
+
+WGPUSurface ImGui_ImplGLFW_CreateWGPUSurface(WGPUInstance instance, GLFWwindow* window)
+{
+    WGPUSurfaceDescriptor surface_descriptor = {};
+    WGPUChainedStruct chained_struct = {};
+    WGPUSurface surface = {};
+#if defined(GLFW_EXPOSE_NATIVE_COCOA)
+    {
+        id metal_layer = NULL;
+        NSWindow* ns_window = glfwGetCocoaWindow(window);
+        [ns_window.contentView setWantsLayer:YES];
+        metal_layer = [CAMetalLayer layer];
+        [ns_window.contentView setLayer:metal_layer];
+        chained_struct.sType = WGPUSType_SurfaceSourceMetalLayer;
+        WGPUSurfaceSourceMetalLayer surface_src_metal = {};
+        surface_src_metal.chain = chained_struct;
+        surface_src_metal.layer = metal_layer;
+        surface_descriptor.nextInChain = &surface_src_metal.chain;
+        surface = wgpuInstanceCreateSurface(instance, &surface_descriptor);
+    }
+#elif defined(GLFW_EXPOSE_NATIVE_WAYLAND) && defined(GLFW_EXPOSE_NATIVE_X11)
+    if (glfwGetPlatform() == GLFW_PLATFORM_X11)
+    {
+        Display* x11_display = glfwGetX11Display();
+        Window x11_window = glfwGetX11Window(window);
+        chained_struct.sType = WGPUSType_SurfaceSourceXlibWindow;
+        WGPUSurfaceSourceXlibWindow surface_src_xlib = {};
+        surface_src_xlib.chain = chained_struct;
+        surface_src_xlib.display = x11_display;
+        surface_src_xlib.window = x11_window;
+        surface_descriptor.nextInChain = &surface_src_xlib.chain;
+        surface = wgpuInstanceCreateSurface(instance, &surface_descriptor);
+    }
+    if (glfwGetPlatform() == GLFW_PLATFORM_WAYLAND)
+    {
+        struct wl_display* wayland_display = glfwGetWaylandDisplay();
+        struct wl_surface* wayland_surface = glfwGetWaylandWindow(window);
+        chained_struct.sType = WGPUSType_SurfaceSourceWaylandSurface;
+        WGPUSurfaceSourceWaylandSurface surface_src_wayland = {};
+        surface_src_wayland.chain = chained_struct;
+        surface_src_wayland.display = wayland_display;
+        surface_src_wayland.surface = wayland_surface;
+        surface_descriptor.nextInChain = &surface_src_wayland.chain;
+        surface = wgpuInstanceCreateSurface(instance, &surface_descriptor);
+    }
+#elif defined(GLFW_EXPOSE_NATIVE_WIN32)
+    {
+        HWND hwnd = glfwGetWin32Window(window);
+        HINSTANCE hinstance = ::GetModuleHandle(NULL);
+        chained_struct.sType = WGPUSType_SurfaceSourceWindowsHWND;
+        WGPUSurfaceSourceWindowsHWND surface_src_hwnd = {};
+        surface_src_hwnd.chain = chained_struct;
+        surface_src_hwnd.hinstance = hinstance;
+        surface_src_hwnd.hwnd = hwnd;
+        surface_descriptor.nextInChain = &surface_src_hwnd.chain;
+        surface = wgpuInstanceCreateSurface(instance, &surface_descriptor);
+    }
+#elif
+#error "Unsupported WebGPU native platform!"
+#endif
+    return surface;
+}
+#endif // #if defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) && !defined(__EMSCRIPTEN__)
 
 //-----------------------------------------------------------------------------
 
