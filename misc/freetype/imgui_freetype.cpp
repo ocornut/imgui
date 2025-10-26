@@ -448,6 +448,7 @@ static bool ImGui_ImplFreeType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig* s
             if (ImFabs(cur_height - size) < 0.001f)
             {
                 best_index = i;
+                best_height = cur_height;
                 break;
             }
             else if (cur_height < size)
@@ -460,7 +461,7 @@ static bool ImGui_ImplFreeType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig* s
             }
             else
             {
-                if (best_height > cur_height)
+                if (best_height < size && best_height < cur_height)
                 {
                     best_index = i;
                     best_height = cur_height;
