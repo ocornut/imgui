@@ -511,9 +511,8 @@ static void ImGui_ImplFreeType_FontBakedDestroy(ImFontAtlas* atlas, ImFontConfig
     bd_baked_data->~ImGui_ImplFreeType_FontSrcBakedData(); // ~IM_PLACEMENT_DELETE()
 }
 
-static void DownscaleBitmap(uint32_t* dst, const int dst_w, const int dst_h, uint32_t* src, const int src_w, const int src_h) {
-    IM_ASSERT(dst_w <= src_w && dst_h <= src_h); // TODO: check if this is required
-
+static void RescaleBitmap(uint32_t* dst, const int dst_w, const int dst_h, uint32_t* src, const int src_w, const int src_h)
+{
 #if 0
     // Point Sampling / Nearest Neighbor
     for (int y = 0; y < dst_h; y++)
@@ -641,8 +640,7 @@ static bool ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConf
     {
         const int w = (int)ImCeil(bitmap_w * bitmap_x_scale);
         const int h = (int)ImCeil(bitmap_h * bitmap_y_scale);
-        IM_ASSERT(!((h < bitmap_h && w > bitmap_w) || (h > bitmap_h && w < bitmap_w))); // Can't up AND downscale at the same time // TODO: or can we?
-        const bool down_scaling = h < bitmap_h || w < bitmap_w;
+        const bool rescaling = h != bitmap_h || w != bitmap_w;
 
         ImFontAtlasRectId pack_id = ImFontAtlasPackAddRect(atlas, w, h);
         if (pack_id == ImFontAtlasRectId_Invalid)
@@ -653,20 +651,20 @@ static bool ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConf
         }
         ImTextureRect* r = ImFontAtlasPackGetRect(atlas, pack_id);
 
-        // Render pixels to our temporary buffer, while making sure we have space for an extra copy used during downscaling.
-        atlas->Builder->TempBuffer.resize(((down_scaling ? bitmap_w * bitmap_h : 0) + w * h) * 4);
+        // Render pixels to our temporary buffer, while making sure we have space for an extra copy used during rescaling.
+        atlas->Builder->TempBuffer.resize(((rescaling ? bitmap_w * bitmap_h : 0) + w * h) * 4);
         uint32_t* temp_buffer = (uint32_t*)atlas->Builder->TempBuffer.Data;
-        // Blit (and convert) into the first bm_w * bm_h * 4 bytes.
+        // Blit (and convert) into the first bitmap_w * bitmap_h * 4 bytes.
         ImGui_ImplFreeType_BlitGlyph(ft_bitmap, temp_buffer, bitmap_w);
 
-        if (down_scaling)
+        if (rescaling)
         {
             uint32_t* dst_buffer = temp_buffer + bitmap_w * bitmap_h;
 
-            // Perform downscale, from temp_buffer (bitmap_w * bitmap_h) to dst_buffer (w * h)
-            DownscaleBitmap(dst_buffer, w, h, temp_buffer, bitmap_w, bitmap_h);
+            // Perform rescale, from temp_buffer (bitmap_w * bitmap_h) to dst_buffer (w * h)
+            RescaleBitmap(dst_buffer, w, h, temp_buffer, bitmap_w, bitmap_h);
 
-            // Redirect to downscaled part of the buffer
+            // Redirect to rescaled part of the buffer
             temp_buffer = dst_buffer;
         }
 
