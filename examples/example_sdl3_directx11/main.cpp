@@ -48,7 +48,7 @@ int main(int, char**)
     }
 
     SDL_PropertiesID props = SDL_GetWindowProperties(window);
-    HWND hwnd = (HWND)SDL_GetPointerProperty(props, SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
+    HWND hwnd = (HWND)SDL_GetPointerProperty(props, SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr);
 
     // Initialize Direct3D
     if (!CreateDeviceD3D(hwnd))
@@ -225,6 +225,7 @@ int main(int, char**)
 bool CreateDeviceD3D(HWND hWnd)
 {
     // Setup swap chain
+    // This is a basic setup. Optimally could use e.g. DXGI_SWAP_EFFECT_FLIP_DISCARD and handle fullscreen mode differently. See #8979 for suggestions.
     DXGI_SWAP_CHAIN_DESC sd;
     ZeroMemory(&sd, sizeof(sd));
     sd.BufferCount = 2;
@@ -256,7 +257,10 @@ bool CreateDeviceD3D(HWND hWnd)
     // - This must be done for all windows associated to the device. Our DX11 backend does this automatically for secondary viewports that it creates.
     IDXGIFactory* pSwapChainFactory;
     if (SUCCEEDED(g_pSwapChain->GetParent(IID_PPV_ARGS(&pSwapChainFactory))))
+    {
         pSwapChainFactory->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER);
+        pSwapChainFactory->Release();
+    }
 
     CreateRenderTarget();
     return true;

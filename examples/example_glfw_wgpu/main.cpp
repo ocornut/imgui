@@ -1,4 +1,4 @@
-// Dear ImGui: standalone example application for using GLFW + WebGPU
+// Dear ImGui: standalone example application for GLFW + WebGPU
 // - Emscripten is supported for publishing on web. See https://emscripten.org.
 // - Dawn is used as a WebGPU implementation on desktop.
 
@@ -12,36 +12,31 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_wgpu.h"
 #include <stdio.h>
+#include <GLFW/glfw3.h>
 
+// This example can also compile and run with Emscripten! See 'Makefile.emscripten' for details.
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #include <emscripten/html5.h>
 #include <emscripten/html5_webgpu.h>
+#include "../libs/emscripten/emscripten_mainloop_stub.h"
 #else
 #include <webgpu/webgpu_glfw.h>
 #endif
-
-#include <GLFW/glfw3.h>
 #include <webgpu/webgpu.h>
 #include <webgpu/webgpu_cpp.h>
 
-// This example can also compile and run with Emscripten! See 'Makefile.emscripten' for details.
-#ifdef __EMSCRIPTEN__
-#include "../libs/emscripten/emscripten_mainloop_stub.h"
-#endif
-
-// Global WebGPU required states
-static WGPUInstance      wgpu_instance = nullptr;
-static WGPUDevice        wgpu_device = nullptr;
-static WGPUSurface       wgpu_surface = nullptr;
-static WGPUTextureFormat wgpu_preferred_fmt = WGPUTextureFormat_RGBA8Unorm;
-static WGPUSwapChain     wgpu_swap_chain = nullptr;
-static int               wgpu_swap_chain_width = 1280;
-static int               wgpu_swap_chain_height = 800;
+// Data
+static WGPUInstance             wgpu_instance = nullptr;
+static WGPUDevice               wgpu_device = nullptr;
+static WGPUSurface              wgpu_surface = nullptr;
+static WGPUTextureFormat        wgpu_preferred_fmt = WGPUTextureFormat_RGBA8Unorm;
+static WGPUSwapChain            wgpu_swap_chain = nullptr;
+static int                      wgpu_surface_width = 1280;
+static int                      wgpu_surface_height = 800;
 
 // Forward declarations
 static bool InitWGPU(GLFWwindow* window);
-static void CreateSwapChain(int width, int height);
 
 static void glfw_error_callback(int error, const char* description)
 {
@@ -62,6 +57,21 @@ static void wgpu_error_callback(WGPUErrorType error_type, const char* message, v
     printf("%s error: %s\n", error_type_lbl, message);
 }
 
+static void ResizeSurface(int width, int height)
+{
+    if (wgpu_swap_chain)
+        wgpuSwapChainRelease(wgpu_swap_chain);
+    wgpu_surface_width = width;
+    wgpu_surface_height = height;
+    WGPUSwapChainDescriptor swap_chain_desc = {};
+    swap_chain_desc.usage = WGPUTextureUsage_RenderAttachment;
+    swap_chain_desc.format = wgpu_preferred_fmt;
+    swap_chain_desc.width = width;
+    swap_chain_desc.height = height;
+    swap_chain_desc.presentMode = WGPUPresentMode_Fifo;
+    wgpu_swap_chain = wgpuDeviceCreateSwapChain(wgpu_device, wgpu_surface, &swap_chain_desc);
+}
+
 // Main code
 int main(int, char**)
 {
@@ -72,19 +82,23 @@ int main(int, char**)
     // Make sure GLFW does not initialize any graphics context.
     // This needs to be done explicitly later.
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    GLFWwindow* window = glfwCreateWindow(wgpu_swap_chain_width, wgpu_swap_chain_height, "Dear ImGui GLFW+WebGPU example", nullptr, nullptr);
+
+    // Create window
+    float main_scale = ImGui_ImplGlfw_GetContentScaleForMonitor(glfwGetPrimaryMonitor()); // Valid on GLFW 3.3+ only
+    wgpu_surface_width *= main_scale;
+    wgpu_surface_height *= main_scale;
+    GLFWwindow* window = glfwCreateWindow(wgpu_surface_width, wgpu_surface_height, "Dear ImGui GLFW+WebGPU example", nullptr, nullptr);
     if (window == nullptr)
         return 1;
 
     // Initialize the WebGPU environment
     if (!InitWGPU(window))
     {
-        if (window)
-            glfwDestroyWindow(window);
+        glfwDestroyWindow(window);
         glfwTerminate();
         return 1;
     }
-    CreateSwapChain(wgpu_swap_chain_width, wgpu_swap_chain_height);
+    ResizeSurface(wgpu_surface_width, wgpu_surface_height);
     glfwShowWindow(window);
 
     // Setup Dear ImGui context
@@ -98,6 +112,11 @@ int main(int, char**)
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsLight();
+
+    // Setup scaling
+    ImGuiStyle& style = ImGui::GetStyle();
+    style.ScaleAllSizes(main_scale);        // Bake a fixed style scale. (until we have a solution for dynamic style scaling, changing this requires resetting Style + calling this again)
+    style.FontScaleDpi = main_scale;        // Set initial font scale. (using io.ConfigDpiScaleFonts=true makes this unnecessary. We leave both here for documentation purpose)
 
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOther(window, true);
@@ -118,15 +137,14 @@ int main(int, char**)
     // - Use '#define IMGUI_ENABLE_FREETYPE' in your imconfig file to use Freetype for higher quality font rendering.
     // - Read 'docs/FONTS.md' for more instructions and details. If you like the default font but want it to scale better, consider using the 'ProggyVector' from the same author!
     // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
-    // - Emscripten allows preloading a file or folder to be accessible at runtime. See Makefile for details.
-    //io.Fonts->AddFontDefault();
+    // - Our Emscripten build process allows embedding fonts to be accessible at runtime from the "fonts/" folder. See Makefile.emscripten for details.
     //style.FontSizeBase = 20.0f;
+    //io.Fonts->AddFontDefault();
 #ifndef IMGUI_DISABLE_FILE_FUNCTIONS
     //io.Fonts->AddFontFromFileTTF("fonts/segoeui.ttf");
     //io.Fonts->AddFontFromFileTTF("fonts/DroidSans.ttf");
     //io.Fonts->AddFontFromFileTTF("fonts/Roboto-Medium.ttf");
     //io.Fonts->AddFontFromFileTTF("fonts/Cousine-Regular.ttf");
-    //io.Fonts->AddFontFromFileTTF("fonts/ProggyTiny.ttf");
     //ImFont* font = io.Fonts->AddFontFromFileTTF("fonts/ArialUni.ttf");
     //IM_ASSERT(font != nullptr);
 #endif
@@ -161,12 +179,8 @@ int main(int, char**)
         // React to changes in screen size
         int width, height;
         glfwGetFramebufferSize((GLFWwindow*)window, &width, &height);
-        if (width != wgpu_swap_chain_width || height != wgpu_swap_chain_height)
-        {
-            ImGui_ImplWGPU_InvalidateDeviceObjects();
-            CreateSwapChain(width, height);
-            ImGui_ImplWGPU_CreateDeviceObjects();
-        }
+        if (width != wgpu_surface_width || height != wgpu_surface_height)
+            ResizeSurface(width, height);
 
         // Start the Dear ImGui frame
         ImGui_ImplWGPU_NewFrame();
@@ -239,8 +253,8 @@ int main(int, char**)
 
         WGPUCommandBufferDescriptor cmd_buffer_desc = {};
         WGPUCommandBuffer cmd_buffer = wgpuCommandEncoderFinish(encoder, &cmd_buffer_desc);
-        WGPUQueue queue = wgpuDeviceGetQueue(wgpu_device);
-        wgpuQueueSubmit(queue, 1, &cmd_buffer);
+        WGPUQueue wgpu_queue = wgpuDeviceGetQueue(wgpu_device);
+        wgpuQueueSubmit(wgpu_queue, 1, &cmd_buffer);
 
 #ifndef __EMSCRIPTEN__
         wgpuSwapChainPresent(wgpu_swap_chain);
@@ -272,21 +286,21 @@ static WGPUAdapter RequestAdapter(WGPUInstance instance)
     auto onAdapterRequestEnded = [](WGPURequestAdapterStatus status, WGPUAdapter adapter, const char* message, void* pUserData)
     {
         if (status == WGPURequestAdapterStatus_Success)
-            *(WGPUAdapter*)(pUserData) = adapter;
+            *(WGPUAdapter*)pUserData = adapter;
         else
             printf("Could not get WebGPU adapter: %s\n", message);
-};
+    };
     WGPUAdapter adapter;
     wgpuInstanceRequestAdapter(instance, nullptr, onAdapterRequestEnded, (void*)&adapter);
     return adapter;
 }
 
-static WGPUDevice RequestDevice(WGPUAdapter& adapter)
+static WGPUDevice RequestDevice(WGPUAdapter adapter)
 {
     auto onDeviceRequestEnded = [](WGPURequestDeviceStatus status, WGPUDevice device, const char* message, void* pUserData)
     {
         if (status == WGPURequestDeviceStatus_Success)
-            *(WGPUDevice*)(pUserData) = device;
+            *(WGPUDevice*)pUserData = device;
         else
             printf("Could not get WebGPU device: %s\n", message);
     };
@@ -304,48 +318,31 @@ static bool InitWGPU(GLFWwindow* window)
     wgpu_device = emscripten_webgpu_get_device();
     if (!wgpu_device)
         return false;
-#else
-    WGPUAdapter adapter = RequestAdapter(instance.Get());
-    if (!adapter)
-        return false;
-    wgpu_device = RequestDevice(adapter);
-#endif
 
-#ifdef __EMSCRIPTEN__
-    wgpu::SurfaceDescriptorFromCanvasHTMLSelector html_surface_desc = {};
-    html_surface_desc.selector = "#canvas";
+    wgpu::SurfaceDescriptorFromCanvasHTMLSelector canvas_desc = {};
+    canvas_desc.selector = "#canvas";
     wgpu::SurfaceDescriptor surface_desc = {};
-    surface_desc.nextInChain = &html_surface_desc;
+    surface_desc.nextInChain = &canvas_desc;
     wgpu::Surface surface = instance.CreateSurface(&surface_desc);
 
     wgpu::Adapter adapter = {};
     wgpu_preferred_fmt = (WGPUTextureFormat)surface.GetPreferredFormat(adapter);
 #else
+    WGPUAdapter adapter = RequestAdapter(instance.Get());
+    if (!adapter)
+        return false;
+    wgpu_device = RequestDevice(adapter);
+
     wgpu::Surface surface = wgpu::glfw::CreateSurfaceForWindow(instance, window);
     if (!surface)
         return false;
     wgpu_preferred_fmt = WGPUTextureFormat_BGRA8Unorm;
 #endif
 
+    // Moving Dawn objects into WGPU handles
     wgpu_instance = instance.MoveToCHandle();
     wgpu_surface = surface.MoveToCHandle();
 
     wgpuDeviceSetUncapturedErrorCallback(wgpu_device, wgpu_error_callback, nullptr);
-
     return true;
-}
-
-static void CreateSwapChain(int width, int height)
-{
-    if (wgpu_swap_chain)
-        wgpuSwapChainRelease(wgpu_swap_chain);
-    wgpu_swap_chain_width = width;
-    wgpu_swap_chain_height = height;
-    WGPUSwapChainDescriptor swap_chain_desc = {};
-    swap_chain_desc.usage = WGPUTextureUsage_RenderAttachment;
-    swap_chain_desc.format = wgpu_preferred_fmt;
-    swap_chain_desc.width = width;
-    swap_chain_desc.height = height;
-    swap_chain_desc.presentMode = WGPUPresentMode_Fifo;
-    wgpu_swap_chain = wgpuDeviceCreateSwapChain(wgpu_device, wgpu_surface, &swap_chain_desc);
 }

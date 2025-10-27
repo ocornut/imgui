@@ -1,4 +1,4 @@
-// dear imgui, v1.92.4 WIP
+// dear imgui, v1.92.5 WIP
 // (tables and columns code)
 
 /*
@@ -464,6 +464,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     table->HostIndentX = inner_window->DC.Indent.x;
     table->HostClipRect = inner_window->ClipRect;
     table->HostSkipItems = inner_window->SkipItems;
+    temp_data->WindowID = inner_window->ID;
     temp_data->HostBackupWorkRect = inner_window->WorkRect;
     temp_data->HostBackupParentWorkRect = inner_window->ParentWorkRect;
     temp_data->HostBackupColumnsOffset = outer_window->DC.ColumnsOffset;
@@ -1366,7 +1367,7 @@ void    ImGui::EndTable()
     ImGuiWindow* inner_window = table->InnerWindow;
     ImGuiWindow* outer_window = table->OuterWindow;
     ImGuiTableTempData* temp_data = table->TempData;
-    IM_ASSERT(inner_window == g.CurrentWindow);
+    IM_ASSERT(inner_window == g.CurrentWindow && inner_window->ID == temp_data->WindowID);
     IM_ASSERT(outer_window == inner_window || outer_window == inner_window->ParentWindow);
 
     if (table->IsInsideRow)
@@ -1559,7 +1560,7 @@ void    ImGui::EndTable()
     IM_ASSERT(g.CurrentWindow == outer_window && g.CurrentTable == table);
     IM_ASSERT(g.TablesTempDataStacked > 0);
     temp_data = (--g.TablesTempDataStacked > 0) ? &g.TablesTempData[g.TablesTempDataStacked - 1] : NULL;
-    g.CurrentTable = temp_data ? g.Tables.GetByIndex(temp_data->TableIndex) : NULL;
+    g.CurrentTable = temp_data && (temp_data->WindowID == outer_window->ID) ? g.Tables.GetByIndex(temp_data->TableIndex) : NULL;
     if (g.CurrentTable)
     {
         g.CurrentTable->TempData = temp_data;

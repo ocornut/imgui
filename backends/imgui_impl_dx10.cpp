@@ -770,7 +770,8 @@ static void ImGui_ImplDX10_RenderViewport(ImGuiViewport* viewport, void*)
 static void ImGui_ImplDX10_SwapBuffers(ImGuiViewport* viewport, void*)
 {
     ImGui_ImplDX10_ViewportData* vd = (ImGui_ImplDX10_ViewportData*)viewport->RendererUserData;
-    vd->SwapChain->Present(0, 0); // Present without vsync
+    if (vd->SwapChain)
+        vd->SwapChain->Present(0, 0); // Present without vsync
 }
 
 void ImGui_ImplDX10_InitMultiViewportSupport()
