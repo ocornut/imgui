@@ -76,6 +76,9 @@ Other Changes:
     When using Emscripten 4.0.10+, backend now defaults to IMGUI_IMPL_WEBGPU_BACKEND_DAWN
     instead of IMGUI_IMPL_WEBGPU_BACKEND_WGPU, if neither are specified.
     (note: examples application were not updated yet)
+  - Win32: Revert 1.92.4 change of comparing dwPacketNumber, which prevents
+    refreshing accurate gamepad info after focus-out + io.ClearInputsKey(). (#8556)
+
 - Examples:
   - GLFW+WebGPU: removed unnecessary ImGui_ImplWGPU_InvalidateDeviceObjects() call
     during surface resize. (#8381)
