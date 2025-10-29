@@ -64,6 +64,8 @@ Other Changes:
   triggered by some widgets e.g. Checkbox(), Selectable() and many others, which
   cleared ActiveId at the same time as editing. (#9028)
   Note that IsItemDeactivatedAfterEdit() was not affected, only IsItemEdited).
+- Debug Tools: fixed DebugTextEncoding() potentially reading out of bounds
+  if provided a trailing truncated UTF-8 sequence.
 - Backends:
   - GLFW: fixed building on Linux platforms where Wayland headers
     are not available. (#9024, #8969, #8921, #8920) [@jagot]
@@ -78,7 +80,6 @@ Other Changes:
     (note: examples application were not updated yet)
   - Win32: Revert 1.92.4 change of comparing dwPacketNumber, which prevents
     refreshing accurate gamepad info after focus-out + io.ClearInputKeys(). (#8556)
-
 - Examples:
   - GLFW+WebGPU: removed unnecessary ImGui_ImplWGPU_InvalidateDeviceObjects() call
     during surface resize. (#8381)
