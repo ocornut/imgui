@@ -2663,15 +2663,27 @@ int ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in_text_e
     return bytes_count;
 }
 
-const char* ImTextFindPreviousUtf8Codepoint(const char* in_text_start, const char* in_text_curr)
+const char* ImTextFindPreviousUtf8Codepoint(const char* in_text_start, const char* in_p)
 {
-    while (in_text_curr > in_text_start)
+    while (in_p > in_text_start)
     {
-        in_text_curr--;
-        if ((*in_text_curr & 0xC0) != 0x80)
-            return in_text_curr;
+        in_p--;
+        if ((*in_p & 0xC0) != 0x80)
+            return in_p;
     }
     return in_text_start;
+}
+
+const char* ImTextFindValidUtf8CodepointEnd(const char* in_text_start, const char* in_text_end, const char* in_p)
+{
+    if (in_text_start == in_p)
+        return in_text_start;
+    const char* prev = ImTextFindPreviousUtf8Codepoint(in_text_start, in_p);
+    unsigned int prev_c;
+    int prev_c_len = ImTextCharFromUtf8(&prev_c, prev, in_text_end);
+    if (prev_c != IM_UNICODE_CODEPOINT_INVALID && prev_c_len <= (int)(in_p - prev))
+        return in_p;
+    return prev;
 }
 
 int ImTextCountLines(const char* in_text, const char* in_text_end)

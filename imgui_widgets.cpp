@@ -4155,7 +4155,7 @@ static int STB_TEXTEDIT_INSERTCHARS(ImGuiInputTextState* obj, int pos, const cha
     // We support partial insertion (with a mod in stb_textedit.h)
     const int avail = obj->BufCapacity - 1 - obj->TextLen;
     if (!is_resizable && new_text_len > avail)
-        new_text_len = 0; // avail
+        new_text_len = (int)(ImTextFindValidUtf8CodepointEnd(new_text, new_text + new_text_len, new_text + avail) - new_text); // Truncate to closest UTF-8 codepoint. Alternative: return 0 to cancel insertion.
     if (new_text_len == 0)
         return 0;
 
@@ -4314,7 +4314,7 @@ void ImGuiInputTextCallbackData::InsertChars(int pos, const char* new_text, cons
     // We support partial insertion (with a mod in stb_textedit.h)
     const int avail = BufSize - 1 - BufTextLen;
     if (!is_resizable && new_text_len > avail)
-        new_text_len = 0; // avail
+        new_text_len = (int)(ImTextFindValidUtf8CodepointEnd(new_text, new_text + new_text_len, new_text + avail) - new_text); // Truncate to closest UTF-8 codepoint. Alternative: return 0 to cancel insertion.
     if (new_text_len == 0)
         return;
 
