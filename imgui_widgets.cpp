@@ -675,6 +675,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
 
     // Keyboard/Gamepad navigation handling
     // We report navigated and navigation-activated items as hovered but we don't set g.HoveredId to not interfere with mouse.
+    if ((item_flags & ImGuiItemFlags_Disabled) == 0)
     {
         if (g.NavId == id && g.NavCursorVisible && g.NavHighlightItemUnderNav)
             if (!(flags & ImGuiButtonFlags_NoHoveredOnFocus))
@@ -756,7 +757,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     }
 
     // Activation highlight (this may be a remote activation)
-    if (g.NavHighlightActivatedId == id)
+    if (g.NavHighlightActivatedId == id && (item_flags & ImGuiItemFlags_Disabled) == 0)
         hovered = true;
 
     if (out_hovered) *out_hovered = hovered;
