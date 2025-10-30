@@ -67,6 +67,9 @@ Other Changes:
   triggered by some widgets e.g. Checkbox(), Selectable() and many others, which
   cleared ActiveId at the same time as editing. (#9028)
   Note that IsItemDeactivatedAfterEdit() was not affected, only IsItemEdited).
+- Demo: About Box: emit infos to convey when IM_ASSERT() macro is disabled,
+  - so users don't miss out on programming errors being reported.
+  - so it is included in config/build info submitted in new GitHub Issues.
 - Debug Tools: fixed DebugTextEncoding() potentially reading out of bounds
   if provided a trailing truncated UTF-8 sequence.
 - Backends:
