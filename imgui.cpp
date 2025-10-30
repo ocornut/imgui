@@ -1687,14 +1687,15 @@ void ImGuiIO::AddInputCharacterUTF16(ImWchar16 c)
     AddInputCharacter((unsigned)cp);
 }
 
-void ImGuiIO::AddInputCharactersUTF8(const char* utf8_chars)
+void ImGuiIO::AddInputCharactersUTF8(const char* str)
 {
     if (!AppAcceptingEvents)
         return;
-    while (*utf8_chars != 0)
+    const char* str_end = str + strlen(str);
+    while (*str != 0)
     {
         unsigned int c = 0;
-        utf8_chars += ImTextCharFromUtf8(&c, utf8_chars, NULL);
+        str += ImTextCharFromUtf8(&c, str, str_end);
         AddInputCharacter(c);
     }
 }
@@ -2568,6 +2569,7 @@ int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* 
     int len = lengths[*(const unsigned char*)in_text >> 3];
     int wanted = len + (len ? 0 : 1);
 
+    // IMPORTANT: if in_text_end == NULL it assume we have enough space!
     if (in_text_end == NULL)
         in_text_end = in_text + wanted; // Max length, nulls will be taken into account.
 
@@ -2727,15 +2729,27 @@ int ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in_text_e
     return bytes_count;
 }
 
-const char* ImTextFindPreviousUtf8Codepoint(const char* in_text_start, const char* in_text_curr)
+const char* ImTextFindPreviousUtf8Codepoint(const char* in_text_start, const char* in_p)
 {
-    while (in_text_curr > in_text_start)
+    while (in_p > in_text_start)
     {
-        in_text_curr--;
-        if ((*in_text_curr & 0xC0) != 0x80)
-            return in_text_curr;
+        in_p--;
+        if ((*in_p & 0xC0) != 0x80)
+            return in_p;
     }
     return in_text_start;
+}
+
+const char* ImTextFindValidUtf8CodepointEnd(const char* in_text_start, const char* in_text_end, const char* in_p)
+{
+    if (in_text_start == in_p)
+        return in_text_start;
+    const char* prev = ImTextFindPreviousUtf8Codepoint(in_text_start, in_p);
+    unsigned int prev_c;
+    int prev_c_len = ImTextCharFromUtf8(&prev_c, prev, in_text_end);
+    if (prev_c != IM_UNICODE_CODEPOINT_INVALID && prev_c_len <= (int)(in_p - prev))
+        return in_p;
+    return prev;
 }
 
 int ImTextCountLines(const char* in_text, const char* in_text_end)
@@ -4120,6 +4134,12 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     InputTextState.Ctx = this;
 
     Initialized = false;
+    WithinFrameScope = WithinFrameScopeWithImplicitWindow = false;
+    TestEngineHookItems = false;
+    FrameCount = 0;
+    FrameCountEnded = FrameCountPlatformEnded = FrameCountRendered = -1;
+    Time = 0.0f;
+    memset(ContextName, 0, sizeof(ContextName));
     ConfigFlagsCurrFrame = ConfigFlagsLastFrame = ImGuiConfigFlags_None;
 
     Font = NULL;
@@ -4129,15 +4149,8 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     IO.Fonts = shared_font_atlas ? shared_font_atlas : IM_NEW(ImFontAtlas)();
     if (shared_font_atlas == NULL)
         IO.Fonts->OwnerContext = this;
-    Time = 0.0f;
-    FrameCount = 0;
-    FrameCountEnded = FrameCountPlatformEnded = FrameCountRendered = -1;
     WithinEndChildID = 0;
-    WithinFrameScope = WithinFrameScopeWithImplicitWindow = false;
-    GcCompactAll = false;
-    TestEngineHookItems = false;
     TestEngine = NULL;
-    memset(ContextName, 0, sizeof(ContextName));
 
     InputEventsNextMouseSource = ImGuiMouseSource_Mouse;
     InputEventsNextEventId = 1;
@@ -4172,10 +4185,10 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     ActiveIdHasBeenEditedThisFrame = false;
     ActiveIdFromShortcut = false;
     ActiveIdClickOffset = ImVec2(-1, -1);
-    ActiveIdWindow = NULL;
     ActiveIdSource = ImGuiInputSource_None;
-    ActiveIdDisabledId = 0;
+    ActiveIdWindow = NULL;
     ActiveIdMouseButton = -1;
+    ActiveIdDisabledId = 0;
     ActiveIdPreviousFrame = 0;
     memset(&DeactivatedItemData, 0, sizeof(DeactivatedItemData));
     memset(&ActiveIdValueOnActivation, 0, sizeof(ActiveIdValueOnActivation));
@@ -4190,6 +4203,7 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     CurrentFocusScopeId = 0;
     CurrentItemFlags = ImGuiItemFlags_None;
     DebugShowGroupRects = false;
+    GcCompactAll = false;
 
     CurrentViewport = NULL;
     MouseViewport = MouseLastHoveredViewport = NULL;
@@ -4306,12 +4320,12 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     memset(LocalizationTable, 0, sizeof(LocalizationTable));
 
     LogEnabled = false;
+    LogLineFirstItem = false;
     LogFlags = ImGuiLogFlags_None;
     LogWindow = NULL;
     LogNextPrefix = LogNextSuffix = NULL;
     LogFile = NULL;
     LogLinePosY = FLT_MAX;
-    LogLineFirstItem = false;
     LogDepthRef = 0;
     LogDepthToExpand = LogDepthToExpandDefault = 2;
 
@@ -4564,8 +4578,8 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* ctx, const char* name) : DrawListInst(NUL
     TabId = GetID("#TAB");
     ScrollTarget = ImVec2(FLT_MAX, FLT_MAX);
     ScrollTargetCenterRatio = ImVec2(0.5f, 0.5f);
-    AutoFitFramesX = AutoFitFramesY = -1;
     AutoPosLastDirection = ImGuiDir_None;
+    AutoFitFramesX = AutoFitFramesY = -1;
     SetWindowPosAllowFlags = SetWindowSizeAllowFlags = SetWindowCollapsedAllowFlags = SetWindowDockAllowFlags = 0;
     SetWindowPosVal = SetWindowPosPivot = ImVec2(FLT_MAX, FLT_MAX);
     LastFrameActive = -1;
@@ -5363,26 +5377,28 @@ void ImGui::UpdateMouseMovingWindowEndFrame()
     if (g.NavWindow && g.NavWindow->Appearing)
         return;
 
+    ImGuiWindow* hovered_window = g.HoveredWindow;
+
     // Click on empty space to focus window and start moving
     // (after we're done with all our widgets, so e.g. clicking on docking tab-bar which have set HoveredId already and not get us here!)
     if (g.IO.MouseClicked[0])
     {
         // Handle the edge case of a popup being closed while clicking in its empty space.
         // If we try to focus it, FocusWindow() > ClosePopupsOverWindow() will accidentally close any parent popups because they are not linked together any more.
-        ImGuiWindow* root_window = g.HoveredWindow ? g.HoveredWindow->RootWindow : NULL;
-        const bool is_closed_popup = root_window && (root_window->Flags & ImGuiWindowFlags_Popup) && !IsPopupOpen(root_window->PopupId, ImGuiPopupFlags_AnyPopupLevel);
+        ImGuiWindow* hovered_root = hovered_window ? hovered_window->RootWindow : NULL;
+        const bool is_closed_popup = hovered_root && (hovered_root->Flags & ImGuiWindowFlags_Popup) && !IsPopupOpen(hovered_root->PopupId, ImGuiPopupFlags_AnyPopupLevel);
 
-        if (root_window != NULL && !is_closed_popup)
+        if (hovered_window != NULL && !is_closed_popup)
         {
-            StartMouseMovingWindow(g.HoveredWindow); //-V595
+            StartMouseMovingWindow(hovered_window); //-V595
 
-            // FIXME: In principal we might be able to call StopMouseMovingWindow() below.
+            // FIXME: In principle we might be able to call StopMouseMovingWindow() below.
             // Please note how StartMouseMovingWindow() and StopMouseMovingWindow() and not entirely symetrical, at the later doesn't clear ActiveId.
 
             // Cancel moving if clicked outside of title bar
-            if (g.IO.ConfigWindowsMoveFromTitleBarOnly)
-                if (!(root_window->Flags & ImGuiWindowFlags_NoTitleBar) || root_window->DockIsActive)
-                    if (!root_window->TitleBarRect().Contains(g.IO.MouseClickedPos[0]))
+            if ((hovered_window->BgClickFlags & ImGuiWindowBgClickFlags_Move) == 0) // set by io.ConfigWindowsMoveFromTitleBarOnly
+                if (!(hovered_root->Flags & ImGuiWindowFlags_NoTitleBar) || hovered_root->DockIsActive)
+                    if (!hovered_root->TitleBarRect().Contains(g.IO.MouseClickedPos[0]))
                         g.MovingWindow = NULL;
 
             // Cancel moving if clicked over an item which was disabled or inhibited by popups
@@ -5393,7 +5409,7 @@ void ImGui::UpdateMouseMovingWindowEndFrame()
                 g.ActiveIdDisabledId = g.HoveredId;
             }
         }
-        else if (root_window == NULL && g.NavWindow != NULL)
+        else if (hovered_window == NULL && g.NavWindow != NULL)
         {
             // Clicking on void disable focus
             FocusWindow(NULL, ImGuiFocusRequestFlags_UnlessBelowModal);
@@ -5408,8 +5424,8 @@ void ImGui::UpdateMouseMovingWindowEndFrame()
         // Find the top-most window between HoveredWindow and the top-most Modal Window.
         // This is where we can trim the popup stack.
         ImGuiWindow* modal = GetTopMostPopupModal();
-        bool hovered_window_above_modal = g.HoveredWindow && (modal == NULL || IsWindowAbove(g.HoveredWindow, modal));
-        ClosePopupsOverWindow(hovered_window_above_modal ? g.HoveredWindow : modal, true);
+        bool hovered_window_above_modal = hovered_window && (modal == NULL || IsWindowAbove(hovered_window, modal));
+        ClosePopupsOverWindow(hovered_window_above_modal ? hovered_window : modal, true);
     }
 }
 
@@ -7076,7 +7092,7 @@ static int ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& si
     const float grip_hover_outer_size = g.WindowsBorderHoverPadding;
 
     ImRect clamp_rect = visibility_rect;
-    const bool window_move_from_title_bar = g.IO.ConfigWindowsMoveFromTitleBarOnly && !(window->Flags & ImGuiWindowFlags_NoTitleBar);
+    const bool window_move_from_title_bar = !(window->BgClickFlags & ImGuiWindowBgClickFlags_Move) && !(window->Flags & ImGuiWindowFlags_NoTitleBar);
     if (window_move_from_title_bar)
         clamp_rect.Min.y -= window->TitleBarHeight;
 
@@ -7275,11 +7291,11 @@ static int ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& si
 
 static inline void ClampWindowPos(ImGuiWindow* window, const ImRect& visibility_rect)
 {
-    ImGuiContext& g = *GImGui;
     ImVec2 size_for_clamping = window->Size;
-    if (g.IO.ConfigWindowsMoveFromTitleBarOnly && window->DockNodeAsHost)
+    const bool move_from_title_bar_only = (window->BgClickFlags & ImGuiWindowBgClickFlags_Move) == 0;
+    if (move_from_title_bar_only && window->DockNodeAsHost)
         size_for_clamping.y = ImGui::GetFrameHeight(); // Not using window->TitleBarHeight() as DockNodeAsHost will report 0.0f here.
-    else if (g.IO.ConfigWindowsMoveFromTitleBarOnly && !(window->Flags & ImGuiWindowFlags_NoTitleBar))
+    else if (move_from_title_bar_only && !(window->Flags & ImGuiWindowFlags_NoTitleBar))
         size_for_clamping.y = window->TitleBarHeight;
     window->Pos = ImClamp(window->Pos, visibility_rect.Min - size_for_clamping, visibility_rect.Max);
 }
@@ -8461,6 +8477,11 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                     if ((window == window->RootWindowDockTree) && !(window->Flags & ImGuiWindowFlags_DockNodeHost))
                         BeginDockableDragDropTarget(window);
         }
+
+        // Set default BgClickFlags
+        // This is set at the end of this function, so UpdateManualResize()/ClampWindowPos() may use last-frame value if overriden by user code.
+        // FIXME: The general intent is that we will later expose config options to default to enable scrolling + select scrolling mouse button.
+        window->BgClickFlags = g.IO.ConfigWindowsMoveFromTitleBarOnly ? ImGuiWindowBgClickFlags_None : ImGuiWindowBgClickFlags_Move;
 
         // We fill last item data based on Title Bar/Tab, in order for IsItemHovered() and IsItemActive() to be usable after Begin().
         // This is useful to allow creating context menus on title bar only, etc.
@@ -21716,10 +21737,11 @@ void ImGui::DebugTextEncoding(const char* str)
     TableSetupColumn("Glyph");
     TableSetupColumn("Codepoint");
     TableHeadersRow();
+    const char* str_end = str + strlen(str); // As we may receive malformed UTF-8, pass an explicit end instead of relying on ImTextCharFromUtf8() assuming enough space.
     for (const char* p = str; *p != 0; )
     {
         unsigned int c;
-        const int c_utf8_len = ImTextCharFromUtf8(&c, p, NULL);
+        const int c_utf8_len = ImTextCharFromUtf8(&c, p, str_end);
         TableNextColumn();
         Text("%d", (int)(p - str));
         TableNextColumn();

@@ -47,8 +47,11 @@ Other Changes:
   result in temporarily incorrect state, which would lead to bugs to side effects
   in various locations, e.g. GetContentRegionAvail() calls or using clipper. (#9005)
   EndTable() was mistakenly restoring a wrong current table.
+- Disabled: fixed a bug when a previously enabled item that got nav focus
+  and then turns disabled could still be activated using keyboard. (#9036)
 - InputText: when buffer is not resizable, trying to paste contents that
-  cannot fit will now truncate text instead of ignoring the paste. (#9029)
+  cannot fit will now truncate text to nearest UTF-8 codepoint boundaries,
+  instead of completely ignoring the paste. (#9029)
 - InputText: avoid continuously overwriting ownership of ImGuiKey_Enter/_KeypadEnter
   keys in order to allow e.g. external Shortcut override behavior. (#9004)
 - InputText: when using a callback to reduce/manipulate the value of BufTextLen,
@@ -64,6 +67,11 @@ Other Changes:
   triggered by some widgets e.g. Checkbox(), Selectable() and many others, which
   cleared ActiveId at the same time as editing. (#9028)
   Note that IsItemDeactivatedAfterEdit() was not affected, only IsItemEdited).
+- Demo: About Box: emit infos to convey when IM_ASSERT() macro is disabled,
+  - so users don't miss out on programming errors being reported.
+  - so it is included in config/build info submitted in new GitHub Issues.
+- Debug Tools: fixed DebugTextEncoding() potentially reading out of bounds
+  if provided a trailing truncated UTF-8 sequence.
 - Backends:
   - GLFW: fixed building on Linux platforms where Wayland headers
     are not available. (#9024, #8969, #8921, #8920) [@jagot]
@@ -76,6 +84,8 @@ Other Changes:
     When using Emscripten 4.0.10+, backend now defaults to IMGUI_IMPL_WEBGPU_BACKEND_DAWN
     instead of IMGUI_IMPL_WEBGPU_BACKEND_WGPU, if neither are specified.
     (note: examples application were not updated yet)
+  - Win32: Revert 1.92.4 change of comparing dwPacketNumber, which prevents
+    refreshing accurate gamepad info after focus-out + io.ClearInputKeys(). (#8556)
 - Examples:
   - GLFW+WebGPU: removed unnecessary ImGui_ImplWGPU_InvalidateDeviceObjects() call
     during surface resize. (#8381)
