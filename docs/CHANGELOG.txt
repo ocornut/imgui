@@ -102,6 +102,8 @@ Other Changes:
     latest Dawn-Native and WGPU-Native. (#8381, #8567, #8191, #7435) [@brutpitt]
   - GLFW+WebGPU: removed unnecessary ImGui_ImplWGPU_InvalidateDeviceObjects() call
     during surface resize. (#8381)
+  - SDL2+WebGPU: added new example (Emscripten + native Dawn/WGPU). (#8381) [@brutpitt]
+  - SDL3+WebGPU: added new example (Emscripten + native Dawn/WGPU). (#8381) [@brutpitt]
 
 
 -----------------------------------------------------------------------
