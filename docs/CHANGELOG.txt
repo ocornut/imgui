@@ -82,6 +82,9 @@ Other Changes:
     was unused in core but might be used by a direct caller). (#9027) [@achabense]
   - Vulkan: added IMGUI_IMPL_VULKAN_VOLK_FILENAME to configure path to
     Volk (default to "volk.h"). (#9008, #7722, #6582, #4854) [@mwlasiuk]
+  - WebGPU: added various internal/optional helpers to wrap some of the
+    Dawn/WGPU/Emscripten debacle quirks: (#8381) [@brutpitt]
+     - ImGui_ImplWGPU_CreateWGPUSurfaceHelper().
   - WebGPU: update to compile with Dawn and Emscripten's 4.0.10+
     '--use-port=emdawnwebgpu' ports. (#8381, #8898) [@brutpitt, @trbabb]
     When using Emscripten 4.0.10+, backend now defaults to IMGUI_IMPL_WEBGPU_BACKEND_DAWN
