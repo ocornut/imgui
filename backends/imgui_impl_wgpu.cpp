@@ -51,6 +51,9 @@
 
 #ifndef IMGUI_DISABLE
 #include "imgui_impl_wgpu.h"
+#include <limits.h>
+#include <stdio.h>
+#include <webgpu/webgpu.h>
 
 // One of IMGUI_IMPL_WEBGPU_BACKEND_DAWN or IMGUI_IMPL_WEBGPU_BACKEND_WGPU must be provided. See imgui_impl_wgpu.h for more details.
 #if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) == defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
@@ -62,9 +65,6 @@
 #if defined(__EMSCRIPTEN__) && defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
 #define IMGUI_IMPL_WEBGPU_BACKEND_WGPU_EMSCRIPTEN
 #endif
-
-#include <limits.h>
-#include <webgpu/webgpu.h>
 
 #ifdef IMGUI_IMPL_WEBGPU_BACKEND_DAWN
 // Dawn renamed WGPUProgrammableStageDescriptor to WGPUComputeState (see: https://github.com/webgpu-native/webgpu-headers/pull/413)
@@ -919,6 +919,102 @@ void ImGui_ImplWGPU_NewFrame()
 // Internal Helpers
 // Those are currently used by our example applications.
 //-------------------------------------------------------------------------
+
+bool ImGui_ImplWGPU_IsSurfaceStatusError(WGPUSurfaceGetCurrentTextureStatus status)
+{
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
+    return (status == WGPUSurfaceGetCurrentTextureStatus_Error);
+#else
+    return (status == WGPUSurfaceGetCurrentTextureStatus_OutOfMemory || status == WGPUSurfaceGetCurrentTextureStatus_DeviceLost);
+#endif
+}
+
+bool ImGui_ImplWGPU_IsSurfaceStatusSubOptimal(WGPUSurfaceGetCurrentTextureStatus status)
+{
+#if defined(__EMSCRIPTEN__) && !defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
+    return (status == WGPUSurfaceGetCurrentTextureStatus_Timeout || status == WGPUSurfaceGetCurrentTextureStatus_Outdated || status == WGPUSurfaceGetCurrentTextureStatus_Lost);
+#else
+    return (status == WGPUSurfaceGetCurrentTextureStatus_Timeout || status == WGPUSurfaceGetCurrentTextureStatus_Outdated || status == WGPUSurfaceGetCurrentTextureStatus_Lost || status == WGPUSurfaceGetCurrentTextureStatus_SuccessSuboptimal);
+#endif
+}
+
+// Helpers to obtain a string
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
+const char* ImGui_ImplWGPU_GetErrorTypeName(WGPUErrorType type)
+{
+    switch (type)
+    {
+    case WGPUErrorType_Validation: return "Validation";
+    case WGPUErrorType_OutOfMemory: return "OutOfMemory";
+    case WGPUErrorType_Unknown: return "Unknown";
+    case WGPUErrorType_Internal: return "Internal";
+    default: return "Unknown";
+    }
+}
+const char* ImGui_ImplWGPU_GetDeviceLostReasonName(WGPUDeviceLostReason type)
+{
+    switch (type)
+    {
+    case WGPUDeviceLostReason_Unknown: return "Unknown";
+    case WGPUDeviceLostReason_Destroyed: return "Destroyed";
+    case WGPUDeviceLostReason_CallbackCancelled: return "CallbackCancelled";
+    case WGPUDeviceLostReason_FailedCreation: return "FailedCreation";
+    default: return "Unknown";
+    }
+}
+#elif !defined(__EMSCRIPTEN__)
+const char* ImGui_ImplWGPU_GetLogLevelName(WGPULogLevel level)
+{
+    switch (level)
+    {
+    case WGPULogLevel_Error: return "Error"; 
+    case WGPULogLevel_Warn: return "Warn";
+    case WGPULogLevel_Info: return "Info";
+    case WGPULogLevel_Debug: return "Debug";
+    case WGPULogLevel_Trace: return "Trace";
+    default: return "Unknown";
+    }
+}
+#endif
+
+const char* ImGui_ImplWGPU_GetBackendTypeName(WGPUBackendType type)
+{
+    switch (type)
+    {
+    case WGPUBackendType_WebGPU: return "WebGPU";
+    case WGPUBackendType_D3D11: return "D3D11";
+    case WGPUBackendType_D3D12: return "D3D12";
+    case WGPUBackendType_Metal: return "Metal";
+    case WGPUBackendType_Vulkan: return "Vulkan";
+    case WGPUBackendType_OpenGL: return "OpenGL";
+    case WGPUBackendType_OpenGLES: return "OpenGLES";
+    default: return "Unknown";
+    }
+}
+
+const char* ImGui_ImplWGPU_GetAdapterTypeName(WGPUAdapterType type)
+{
+    switch (type)
+    {
+    case WGPUAdapterType_DiscreteGPU: return "DiscreteGPU";
+    case WGPUAdapterType_IntegratedGPU: return "IntegratedGPU";
+    case WGPUAdapterType_CPU: return "CPU";
+    default: return "Unknown";
+    }
+}
+
+void ImGui_ImplWGPU_DebugPrintAdapterInfo(const WGPUAdapter& adapter)
+{
+    WGPUAdapterInfo info = {};
+    wgpuAdapterGetInfo(adapter, &info);
+    printf("description: \"%.*s\"\n", (int)info.description.length, info.description.data);
+    printf("vendor: \"%.*s\", vendorID: %x\n", (int)info.vendor.length, info.vendor.data, info.vendorID);
+    printf("architecture: \"%.*s\"\n", (int) info.architecture.length, info.architecture.data);
+    printf("device: \"%.*s\", deviceID: %x\n", (int)info.device.length, info.device.data, info.deviceID);
+    printf("backendType: \"%s\"\n", ImGui_ImplWGPU_GetBackendTypeName(info.backendType));
+    printf("adapterType: \"%s\"\n", ImGui_ImplWGPU_GetAdapterTypeName(info.adapterType));
+    wgpuAdapterInfoFreeMembers(info);
+}
 
 #if defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) || defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) && !defined(__EMSCRIPTEN__)
 

@@ -41,6 +41,11 @@
 #endif
 
 #include <webgpu/webgpu.h>
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
+#include <webgpu/webgpu_cpp.h>  // for wgpu::Device, wgpu::DeviceLostReason, wgpu::ErrorType used by validation layer callbacks.
+#elif !defined(__EMSCRIPTEN__)
+#include <webgpu/wgpu.h>        // WGPULogLevel
+#endif
 
 // Initialization data, for ImGui_ImplWGPU_Init()
 struct ImGui_ImplWGPU_InitInfo
@@ -85,6 +90,21 @@ struct ImGui_ImplWGPU_RenderState
 // Internal Helpers
 // Those are currently used by our example applications.
 //-------------------------------------------------------------------------
+
+// (Optional) Helper to wrap some of the Dawn/WGPU/Emscripten quirks
+bool        ImGui_ImplWGPU_IsSurfaceStatusError(WGPUSurfaceGetCurrentTextureStatus status);
+bool        ImGui_ImplWGPU_IsSurfaceStatusSubOptimal(WGPUSurfaceGetCurrentTextureStatus status);    // Return whether the texture is suboptimal and may need to be recreated.
+
+// (Optional) Helper for debugging/logging
+void        ImGui_ImplWGPU_DebugPrintAdapterInfo(const WGPUAdapter& adapter);
+const char* ImGui_ImplWGPU_GetBackendTypeName(WGPUBackendType type);
+const char* ImGui_ImplWGPU_GetAdapterTypeName(WGPUAdapterType type);
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
+const char* ImGui_ImplWGPU_GetDeviceLostReasonName(WGPUDeviceLostReason type);
+const char* ImGui_ImplWGPU_GetErrorTypeName(WGPUErrorType type);
+#elif defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) && !defined(__EMSCRIPTEN__)
+const char* ImGui_ImplWGPU_GetLogLevelName(WGPULogLevel level);
+#endif
 
 // (Optional) Helper to create a surface on macOS/Wayland/X11/Window
 #if defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) || defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) && !defined(__EMSCRIPTEN__)
