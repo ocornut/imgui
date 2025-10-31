@@ -273,7 +273,7 @@ static WGPUProgrammableStageDescriptor ImGui_ImplWGPU_CreateShaderModule(const c
 #endif
 
     WGPUShaderModuleDescriptor desc = {};
-    desc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgsl_desc);
+    desc.nextInChain = (WGPUChainedStruct*)&wgsl_desc;
 
     WGPUProgrammableStageDescriptor stage_desc = {};
     stage_desc.module = wgpuDeviceCreateShaderModule(bd->wgpuDevice, &desc);
@@ -914,6 +914,77 @@ void ImGui_ImplWGPU_NewFrame()
         if (!ImGui_ImplWGPU_CreateDeviceObjects())
             IM_ASSERT(0 && "ImGui_ImplWGPU_CreateDeviceObjects() failed!");
 }
+
+//-------------------------------------------------------------------------
+// Internal Helpers
+// Those are currently used by our example applications.
+//-------------------------------------------------------------------------
+
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) || defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) && !defined(__EMSCRIPTEN__)
+
+#if defined(__APPLE__)
+// MacOS specific: is necessary to compile with "-x objective-c++" flags
+// (e.g. using cmake: set_source_files_properties(${IMGUI_DIR}/backends/imgui_impl_wgpu.cpp PROPERTIES COMPILE_FLAGS "-x objective-c++") )
+#include <Cocoa/Cocoa.h>
+#include <QuartzCore/CAMetalLayer.h>
+#endif
+
+WGPUSurface ImGui_ImplWGPU_CreateWGPUSurfaceHelper(ImGui_ImplWGPU_CreateSurfaceInfo* info)
+{
+    WGPUSurfaceDescriptor surface_descriptor = {};
+    WGPUSurface surface = {};
+#if defined(__APPLE__)
+    if (strcmp(info->System, "cocoa") == 0)
+    {
+        IM_ASSERT(info->RawWindow != nullptr);
+        NSWindow* ns_window = (NSWindow*)info->RawWindow;
+        id metal_layer = [CAMetalLayer layer];
+        [ns_window.contentView setWantsLayer : YES] ;
+        [ns_window.contentView setLayer : metal_layer] ;
+        WGPUSurfaceSourceMetalLayer surface_src_metal = {};
+        surface_src_metal.chain.sType = WGPUSType_SurfaceSourceMetalLayer;
+        surface_src_metal.layer = metal_layer;
+        surface_descriptor.nextInChain = &surface_src_metal.chain;
+        surface = wgpuInstanceCreateSurface(info->Instance, &surface_descriptor);
+    }
+#elif defined(__linux__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
+    if (strcmp(info->System, "wayland") == 0)
+    {
+        IM_ASSERT(info->RawDisplay != nullptr && info->RawSurface != nullptr);
+        WGPUSurfaceSourceWaylandSurface surface_src_wayland = {};
+        surface_src_wayland.chain.sType = WGPUSType_SurfaceSourceWaylandSurface;
+        surface_src_wayland.display = info->RawDisplay;
+        surface_src_wayland.surface = info->RawSurface;
+        surface_descriptor.nextInChain = &surface_src_wayland.chain;
+        surface = wgpuInstanceCreateSurface(info->Instance, &surface_descriptor);
+    }
+    else if (strcmp(info->System, "x11") == 0)
+    {
+        IM_ASSERT(info->RawDisplay != nullptr && info->RawWindow != nullptr);
+        WGPUSurfaceSourceXlibWindow surface_src_xlib = {};
+        surface_src_xlib.chain.sType = WGPUSType_SurfaceSourceXlibWindow;
+        surface_src_xlib.display = info->RawDisplay;
+        surface_src_xlib.window = (uint64_t)info->RawWindow;
+        surface_descriptor.nextInChain = &surface_src_xlib.chain;
+        surface = wgpuInstanceCreateSurface(info->Instance, &surface_descriptor);
+    }
+#elif defined(_WIN32)
+    if (strcmp(info->System, "win32") == 0)
+    {
+        IM_ASSERT(info->RawWindow != nullptr && info->RawInstance != nullptr);
+        WGPUSurfaceSourceWindowsHWND surface_src_hwnd = {};
+        surface_src_hwnd.chain.sType = WGPUSType_SurfaceSourceWindowsHWND;
+        surface_src_hwnd.hinstance = info->RawInstance;
+        surface_src_hwnd.hwnd = info->RawWindow;
+        surface_descriptor.nextInChain = &surface_src_hwnd.chain;
+        surface = wgpuInstanceCreateSurface(info->Instance, &surface_descriptor);
+    }
+#else
+#error "Unsupported WebGPU native platform!"
+#endif
+    return surface;
+}
+#endif
 
 //-----------------------------------------------------------------------------
 
