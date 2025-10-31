@@ -16,7 +16,7 @@
 //   ImGui::InputText("my string", &my_string);
 // }
 
-// See more C++ related extension (fmt, RAII, syntaxis sugar) on Wiki:
+// See more C++ related extension (fmt, RAII, syntactic sugar) on Wiki:
 //   https://github.com/ocornut/imgui/wiki/Useful-Extensions#cness
 
 #include "imgui.h"
