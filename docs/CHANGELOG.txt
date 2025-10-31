@@ -85,6 +85,11 @@ Other Changes:
   - WebGPU: added various internal/optional helpers to wrap some of the
     Dawn/WGPU/Emscripten debacle quirks: (#8381) [@brutpitt]
      - ImGui_ImplWGPU_CreateWGPUSurfaceHelper().
+     - ImGui_ImplWGPU_IsSurfaceStatusError(), ImGui_ImplWGPU_IsSurfaceStatusSubOptimal().
+     - ImGui_ImplWGPU_DebugPrintAdapterInfo(),
+     - ImGui_ImplWGPU_GetBackendTypeName(), ImGui_ImplWGPU_GetAdapterTypeName(),
+       ImGui_ImplWGPU_GetDeviceLostReasonName(), ImGui_ImplWGPU_GetErrorTypeName(),
+       ImGui_ImplWGPU_GetLogLevelName().
   - WebGPU: update to compile with Dawn and Emscripten's 4.0.10+
     '--use-port=emdawnwebgpu' ports. (#8381, #8898) [@brutpitt, @trbabb]
     When using Emscripten 4.0.10+, backend now defaults to IMGUI_IMPL_WEBGPU_BACKEND_DAWN
