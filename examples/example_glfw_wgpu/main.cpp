@@ -40,7 +40,8 @@ static int                      wgpu_surface_width = 1280;
 static int                      wgpu_surface_height = 800;
 
 // Forward declarations
-static bool InitWGPU(GLFWwindow* window);
+static bool         InitWGPU(GLFWwindow* window);
+static WGPUSurface  CreateWGPUSurface(const WGPUInstance& instance, GLFWwindow* window);
 
 static void glfw_error_callback(int error, const char* description)
 {
@@ -290,80 +291,6 @@ int main(int, char**)
     return 0;
 }
 
-// GLFW helper to create a WebGPU surface, used only in WGPU-Native. DAWN-Native already has a built-in function
-// As of today (2025/10) there is no "official" support in GLFW to create a surface for WebGPU backend
-// This stub uses "low level" GLFW calls to acquire information from a specific Window Manager.
-// Currently supported platforms: Windows / Linux (X11 and Wayland) / MacOS. Not necessary nor available with EMSCRIPTEN.
-#if !defined(__EMSCRIPTEN__) && (defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) || defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN))
-
-#if defined(__linux__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
-#define GLFW_HAS_X11_OR_WAYLAND     1
-#else
-#define GLFW_HAS_X11_OR_WAYLAND     0
-#endif
-#ifdef _WIN32
-#undef APIENTRY
-#ifndef GLFW_EXPOSE_NATIVE_WIN32    // for glfwGetWin32Window()
-#define GLFW_EXPOSE_NATIVE_WIN32
-#endif
-#elif defined(__APPLE__)
-#ifndef GLFW_EXPOSE_NATIVE_COCOA    // for glfwGetCocoaWindow()
-#define GLFW_EXPOSE_NATIVE_COCOA
-#endif
-#elif GLFW_HAS_X11_OR_WAYLAND
-#ifndef GLFW_EXPOSE_NATIVE_X11      // for glfwGetX11Display(), glfwGetX11Window() on Freedesktop (Linux, BSD, etc.)
-#define GLFW_EXPOSE_NATIVE_X11
-#endif
-#ifndef GLFW_EXPOSE_NATIVE_WAYLAND
-#if defined(__has_include) && __has_include(<wayland-client.h>)
-#define GLFW_EXPOSE_NATIVE_WAYLAND
-#endif
-#endif
-#endif
-#include <GLFW/glfw3native.h>
-#undef Status                       // X11 headers are leaking this.
-#undef Success                      // X11 headers are leaking this.
-
-WGPUSurface CreateWGPUSurface(const WGPUInstance& instance, GLFWwindow* window)
-{
-    ImGui_ImplWGPU_CreateSurfaceInfo create_info = {};
-    create_info.Instance = instance;
-#if defined(GLFW_EXPOSE_NATIVE_COCOA)
-    {
-        create_info.System = "cocoa";
-        create_info.RawWindow = (void*)glfwGetCocoaWindow(window);
-        return ImGui_ImplWGPU_CreateWGPUSurfaceHelper(&create_info);
-    }
-#elif defined(GLFW_EXPOSE_NATIVE_WAYLAND)
-    if (glfwGetPlatform() == GLFW_PLATFORM_WAYLAND)
-    {
-        create_info.System = "wayland";
-        create_info.RawDisplay = (void*)glfwGetWaylandDisplay();
-        create_info.RawSurface = (void*)glfwGetWaylandWindow(window);
-        return ImGui_ImplWGPU_CreateWGPUSurfaceHelper(&create_info);
-    }
-#elif defined(GLFW_EXPOSE_NATIVE_X11)
-    if (glfwGetPlatform() == GLFW_PLATFORM_X11)
-    {
-        create_info.System = "x11";
-        create_info.RawWindow = (void*)glfwGetX11Window(window);
-        create_info.RawDisplay = (void*)glfwGetX11Display();
-        return ImGui_ImplWGPU_CreateWGPUSurfaceHelper(&create_info);
-    }
-#elif defined(GLFW_EXPOSE_NATIVE_WIN32)
-    {
-        create_info.System = "win32";
-        create_info.RawWindow = (void*)glfwGetWin32Window(window);
-        create_info.RawInstance = (void*)::GetModuleHandle(NULL);
-        return ImGui_ImplWGPU_CreateWGPUSurfaceHelper(&create_info);
-    }
-#else
-#error "Unsupported WebGPU native platform!"
-#endif
-    return nullptr;
-}
-#endif
-
 #if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
 static WGPUAdapter RequestAdapter(wgpu::Instance& instance)
 {
@@ -574,3 +501,76 @@ static bool InitWGPU(GLFWwindow* window)
 
     return true;
 }
+
+// GLFW helper to create a WebGPU surface, used only in WGPU-Native. DAWN-Native already has a built-in function
+// As of today (2025/10) there is no "official" support in GLFW to create a surface for WebGPU backend
+// This stub uses "low level" GLFW calls to acquire information from a specific Window Manager.
+// Currently supported platforms: Windows / Linux (X11 and Wayland) / MacOS. Not necessary nor available with EMSCRIPTEN.
+#if !defined(__EMSCRIPTEN__) && (defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) || defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN))
+
+#if defined(__linux__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
+#define GLFW_HAS_X11_OR_WAYLAND     1
+#else
+#define GLFW_HAS_X11_OR_WAYLAND     0
+#endif
+#ifdef _WIN32
+#undef APIENTRY
+#ifndef GLFW_EXPOSE_NATIVE_WIN32    // for glfwGetWin32Window()
+#define GLFW_EXPOSE_NATIVE_WIN32
+#endif
+#elif defined(__APPLE__)
+#ifndef GLFW_EXPOSE_NATIVE_COCOA    // for glfwGetCocoaWindow()
+#define GLFW_EXPOSE_NATIVE_COCOA
+#endif
+#elif GLFW_HAS_X11_OR_WAYLAND
+#ifndef GLFW_EXPOSE_NATIVE_X11      // for glfwGetX11Display(), glfwGetX11Window() on Freedesktop (Linux, BSD, etc.)
+#define GLFW_EXPOSE_NATIVE_X11
+#endif
+#ifndef GLFW_EXPOSE_NATIVE_WAYLAND
+#if defined(__has_include) && __has_include(<wayland-client.h>)
+#define GLFW_EXPOSE_NATIVE_WAYLAND
+#endif
+#endif
+#endif
+#include <GLFW/glfw3native.h>
+#undef Status                       // X11 headers are leaking this and also 'Success', 'Always', 'None', all used in DAWN api. Add #undef if necessary.
+
+WGPUSurface CreateWGPUSurface(const WGPUInstance& instance, GLFWwindow* window)
+{
+    ImGui_ImplWGPU_CreateSurfaceInfo create_info = {};
+    create_info.Instance = instance;
+#if defined(GLFW_EXPOSE_NATIVE_COCOA)
+    {
+        create_info.System = "cocoa";
+        create_info.RawWindow = (void*)glfwGetCocoaWindow(window);
+        return ImGui_ImplWGPU_CreateWGPUSurfaceHelper(&create_info);
+    }
+#elif defined(GLFW_EXPOSE_NATIVE_WAYLAND)
+    if (glfwGetPlatform() == GLFW_PLATFORM_WAYLAND)
+    {
+        create_info.System = "wayland";
+        create_info.RawDisplay = (void*)glfwGetWaylandDisplay();
+        create_info.RawSurface = (void*)glfwGetWaylandWindow(window);
+        return ImGui_ImplWGPU_CreateWGPUSurfaceHelper(&create_info);
+    }
+#elif defined(GLFW_EXPOSE_NATIVE_X11)
+    if (glfwGetPlatform() == GLFW_PLATFORM_X11)
+    {
+        create_info.System = "x11";
+        create_info.RawWindow = (void*)glfwGetX11Window(window);
+        create_info.RawDisplay = (void*)glfwGetX11Display();
+        return ImGui_ImplWGPU_CreateWGPUSurfaceHelper(&create_info);
+    }
+#elif defined(GLFW_EXPOSE_NATIVE_WIN32)
+    {
+        create_info.System = "win32";
+        create_info.RawWindow = (void*)glfwGetWin32Window(window);
+        create_info.RawInstance = (void*)::GetModuleHandle(NULL);
+        return ImGui_ImplWGPU_CreateWGPUSurfaceHelper(&create_info);
+    }
+#else
+#error "Unsupported WebGPU native platform!"
+#endif
+    return nullptr;
+}
+#endif

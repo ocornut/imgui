@@ -24,7 +24,6 @@
 #include "../libs/emscripten/emscripten_mainloop_stub.h"
 #endif
 
-#include <webgpu/webgpu.h>
 #if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
 #include <webgpu/webgpu_cpp.h>
 #endif
@@ -40,6 +39,7 @@ static int                      wgpu_surface_height = 800;
 
 // Forward declarations
 static bool InitWGPU(SDL_Window* window);
+WGPUSurface CreateWGPUSurface(const WGPUInstance& instance, SDL_Window* window);
 
 static void ResizeSurface(int width, int height)
 {
@@ -275,60 +275,6 @@ int main(int, char**)
     return 0;
 }
 
-// SDL2 helper to create a WebGPU surface (exclusively!) for Native/Desktop applications: available only together with WebGPU/WGPU backend
-// As of today (2025/10/31) there is no "official" support in SDL2 to create a surface for WebGPU backend.
-// This stub uses "low level" SDL2 calls to acquire information from a specific Window Manager.
-// Currently supported platforms: Windows / Linux (X11 and Wayland) / MacOS. Not necessary nor available with EMSCRIPTEN.
-#if !defined(__EMSCRIPTEN__) && (defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) || defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN))
-
-#include <SDL_syswm.h>
-#undef Status   // X11 headers are leaking this.
-#undef Success  // X11 headers are leaking this.
-
-WGPUSurface CreateWGPUSurface(const WGPUInstance& instance, SDL_Window* window)
-{
-    SDL_SysWMinfo sysWMInfo;
-    SDL_VERSION(&sysWMInfo.version);
-    SDL_GetWindowWMInfo(window, &sysWMInfo);
-
-    ImGui_ImplWGPU_CreateSurfaceInfo create_info = {};
-    create_info.Instance = instance;
-#if defined(SDL_VIDEO_DRIVER_COCOA)
-    {
-        create_info.System = "cocoa";
-        create_info.RawWindow = (void*)sysWMInfo.info.cocoa.window;
-        return ImGui_ImplWGPU_CreateWGPUSurfaceHelper(&create_info);
-    }
-#elif defined(SDL_VIDEO_DRIVER_WAYLAND) || defined(SDL_VIDEO_DRIVER_X11)
-    const char* sdl_driver = SDL_GetCurrentVideoDriver();
-    if (sdl_driver && strcmp(sdl_driver, "wayland") == 0)
-    {
-        create_info.System = "wayland";
-        create_info.RawDisplay = (void*)sysWMInfo.info.wl.display;
-        create_info.RawSurface = (void*)sysWMInfo.info.wl.surface;
-        return ImGui_ImplWGPU_CreateWGPUSurfaceHelper(&create_info);
-    }
-    else
-    {
-        create_info.System = "x11";
-        create_info.RawWindow = (void*)sysWMInfo.info.x11.window;
-        create_info.RawDisplay = (void*)sysWMInfo.info.x11.display;
-        return ImGui_ImplWGPU_CreateWGPUSurfaceHelper(&create_info);
-    }
-#elif defined(SDL_VIDEO_DRIVER_WINDOWS)
-    {
-        create_info.System = "win32";
-        create_info.RawWindow = (void*)sysWMInfo.info.win.window;
-        create_info.RawInstance = (void*)sysWMInfo.info.win.hinstance;
-        return ImGui_ImplWGPU_CreateWGPUSurfaceHelper(&create_info);
-    }
-#else
-#error "Unsupported WebGPU native platform!"
-#endif
-    return nullptr;
-}
-#endif
-
 #if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
 static WGPUAdapter RequestAdapter(wgpu::Instance& instance)
 {
@@ -540,3 +486,56 @@ static bool InitWGPU(SDL_Window* window)
 
     return true;
 }
+
+// SDL2 helper to create a WebGPU surface (exclusively!) for Native/Desktop applications: available only together with WebGPU/WGPU backend
+// As of today (2025/10/31) there is no "official" support in SDL2 to create a surface for WebGPU backend.
+// This stub uses "low level" SDL2 calls to acquire information from a specific Window Manager.
+// Currently supported platforms: Windows / Linux (X11 and Wayland) / MacOS. Not necessary nor available with EMSCRIPTEN.
+#if !defined(__EMSCRIPTEN__) && (defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) || defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN))
+
+#include <SDL_syswm.h>
+#undef Status           // X11 headers are leaking this and also 'Success', 'Always', 'None', all used in DAWN api. Add #undef if necessary.
+
+WGPUSurface CreateWGPUSurface(const WGPUInstance& instance, SDL_Window* window)
+{
+    SDL_SysWMinfo sysWMInfo;
+    SDL_VERSION(&sysWMInfo.version);
+    SDL_GetWindowWMInfo(window, &sysWMInfo);
+
+    ImGui_ImplWGPU_CreateSurfaceInfo create_info = {};
+    create_info.Instance = instance;
+#if defined(SDL_VIDEO_DRIVER_COCOA)
+    {
+        create_info.System = "cocoa";
+        create_info.RawWindow = (void*)sysWMInfo.info.cocoa.window;
+        return ImGui_ImplWGPU_CreateWGPUSurfaceHelper(&create_info);
+    }
+#elif defined(SDL_VIDEO_DRIVER_WAYLAND) || defined(SDL_VIDEO_DRIVER_X11)
+    const char* sdl_driver = SDL_GetCurrentVideoDriver();
+    if (sdl_driver && strcmp(sdl_driver, "wayland") == 0)
+    {
+        create_info.System = "wayland";
+        create_info.RawDisplay = (void*)sysWMInfo.info.wl.display;
+        create_info.RawSurface = (void*)sysWMInfo.info.wl.surface;
+        return ImGui_ImplWGPU_CreateWGPUSurfaceHelper(&create_info);
+    }
+    else
+    {
+        create_info.System = "x11";
+        create_info.RawWindow = (void*)sysWMInfo.info.x11.window;
+        create_info.RawDisplay = (void*)sysWMInfo.info.x11.display;
+        return ImGui_ImplWGPU_CreateWGPUSurfaceHelper(&create_info);
+    }
+#elif defined(SDL_VIDEO_DRIVER_WINDOWS)
+    {
+        create_info.System = "win32";
+        create_info.RawWindow = (void*)sysWMInfo.info.win.window;
+        create_info.RawInstance = (void*)sysWMInfo.info.win.hinstance;
+        return ImGui_ImplWGPU_CreateWGPUSurfaceHelper(&create_info);
+    }
+#else
+#error "Unsupported WebGPU native platform!"
+#endif
+    return nullptr;
+}
+#endif
