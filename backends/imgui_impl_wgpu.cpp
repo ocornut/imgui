@@ -53,7 +53,6 @@
 #include "imgui_impl_wgpu.h"
 #include <limits.h>
 #include <stdio.h>
-#include <webgpu/webgpu.h>
 
 // One of IMGUI_IMPL_WEBGPU_BACKEND_DAWN or IMGUI_IMPL_WEBGPU_BACKEND_WGPU must be provided. See imgui_impl_wgpu.h for more details.
 #if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) == defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)

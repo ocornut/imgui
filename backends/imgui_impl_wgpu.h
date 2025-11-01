@@ -41,9 +41,7 @@
 #endif
 
 #include <webgpu/webgpu.h>
-#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
-#include <webgpu/webgpu_cpp.h>  // for wgpu::Device, wgpu::DeviceLostReason, wgpu::ErrorType used by validation layer callbacks.
-#elif !defined(__EMSCRIPTEN__)
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) && !defined(__EMSCRIPTEN__)
 #include <webgpu/wgpu.h>        // WGPULogLevel
 #endif
 
