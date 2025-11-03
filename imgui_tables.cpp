@@ -4028,9 +4028,9 @@ void ImGui::DebugNodeTable(ImGuiTable* table)
     bool open = TreeNode(table, "Table 0x%08X (%d columns, in '%s')%s", table->ID, table->ColumnsCount, table->OuterWindow->Name, is_active ? "" : " *Inactive*");
     if (!is_active) { PopStyleColor(); }
     if (IsItemHovered())
-        GetForegroundDrawList()->AddRect(table->OuterRect.Min, table->OuterRect.Max, IM_COL32(255, 255, 0, 255));
+        GetForegroundDrawList(table->OuterWindow)->AddRect(table->OuterRect.Min, table->OuterRect.Max, IM_COL32(255, 255, 0, 255));
     if (IsItemVisible() && table->HoveredColumnBody != -1)
-        GetForegroundDrawList()->AddRect(GetItemRectMin(), GetItemRectMax(), IM_COL32(255, 255, 0, 255));
+        GetForegroundDrawList(table->OuterWindow)->AddRect(GetItemRectMin(), GetItemRectMax(), IM_COL32(255, 255, 0, 255));
     if (!open)
         return;
     if (table->InstanceCurrent > 0)
@@ -4084,7 +4084,7 @@ void ImGui::DebugNodeTable(ImGuiTable* table)
         if (IsItemHovered())
         {
             ImRect r(column->MinX, table->OuterRect.Min.y, column->MaxX, table->OuterRect.Max.y);
-            GetForegroundDrawList()->AddRect(r.Min, r.Max, IM_COL32(255, 255, 0, 255));
+            GetForegroundDrawList(table->OuterWindow)->AddRect(r.Min, r.Max, IM_COL32(255, 255, 0, 255));
         }
     }
     if (ImGuiTableSettings* settings = TableGetBoundSettings(table))

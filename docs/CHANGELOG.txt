@@ -76,8 +76,11 @@ Other Changes:
 - Demo: About Box: emit infos to convey when IM_ASSERT() macro is disabled,
   - so users don't miss out on programming errors being reported.
   - so it is included in config/build info submitted in new GitHub Issues.
-- Debug Tools: fixed DebugTextEncoding() potentially reading out of bounds
-  if provided a trailing truncated UTF-8 sequence.
+- Debug Tools:
+   - Fixed DebugTextEncoding() potentially reading out of bounds when
+     provided a trailing truncated UTF-8 sequence.
+   - Metrics: fixed table and columns rect highlight from display when
+     debug/metrics window is not in the same viewport as the table.
 - Backends:
   - GLFW: fixed building on Linux platforms where Wayland headers
     are not available. (#9024, #8969, #8921, #8920) [@jagot]
