@@ -22,13 +22,12 @@
 #if defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
 #include <emscripten/html5_webgpu.h>
 #endif
-#include <webgpu/webgpu.h>
-#include <webgpu/webgpu_cpp.h>
 #include "../libs/emscripten/emscripten_mainloop_stub.h"
-#else
-#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
-#include <webgpu/webgpu_glfw.h>
 #endif
+
+#include <webgpu/webgpu.h>
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
+#include <webgpu/webgpu_cpp.h>
 #endif
 
 // Data
@@ -323,6 +322,7 @@ int main(int, char**)
 #endif
 #include <GLFW/glfw3native.h>
 #undef Status                       // X11 headers are leaking this.
+#undef Success                      // X11 headers are leaking this.
 
 WGPUSurface CreateWGPUSurface(const WGPUInstance& instance, GLFWwindow* window)
 {

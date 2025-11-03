@@ -30,13 +30,13 @@
 #endif
 
 // Data
-WGPUInstance             wgpu_instance = nullptr;
-WGPUDevice               wgpu_device = nullptr;
-WGPUSurface              wgpu_surface = nullptr;
-WGPUQueue                wgpu_queue = nullptr;
-WGPUSurfaceConfiguration wgpu_surface_configuration = {};
-int                      wgpu_surface_width = 1280;
-int                      wgpu_surface_height = 800;
+static WGPUInstance             wgpu_instance = nullptr;
+static WGPUDevice               wgpu_device = nullptr;
+static WGPUSurface              wgpu_surface = nullptr;
+static WGPUQueue                wgpu_queue = nullptr;
+static WGPUSurfaceConfiguration wgpu_surface_configuration = {};
+static int                      wgpu_surface_width = 1280;
+static int                      wgpu_surface_height = 800;
 
 // Forward declarations
 static bool InitWGPU(SDL_Window* window);
@@ -282,6 +282,9 @@ int main(int, char**)
 #if !defined(__EMSCRIPTEN__) && (defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) || defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN))
 
 #include <SDL_syswm.h>
+#undef Status   // X11 headers are leaking this.
+#undef Success  // X11 headers are leaking this.
+
 WGPUSurface CreateWGPUSurface(const WGPUInstance& instance, SDL_Window* window)
 {
     SDL_SysWMinfo sysWMInfo;

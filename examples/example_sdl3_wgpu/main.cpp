@@ -32,18 +32,18 @@
 #endif
 
 // Data
-WGPUInstance             wgpu_instance = nullptr;
-WGPUDevice               wgpu_device = nullptr;
-WGPUSurface              wgpu_surface = nullptr;
-WGPUQueue                wgpu_queue = nullptr;
-WGPUSurfaceConfiguration wgpu_surface_configuration = {};
-int                      wgpu_surface_width = 1280;
-int                      wgpu_surface_height = 800;
+static WGPUInstance             wgpu_instance = nullptr;
+static WGPUDevice               wgpu_device = nullptr;
+static WGPUSurface              wgpu_surface = nullptr;
+static WGPUQueue                wgpu_queue = nullptr;
+static WGPUSurfaceConfiguration wgpu_surface_configuration = {};
+static int                      wgpu_surface_width = 1280;
+static int                      wgpu_surface_height = 800;
 
 // Forward declarations
 static bool InitWGPU(SDL_Window* window);
 
-void ResizeSurface(int width, int height)
+static void ResizeSurface(int width, int height)
 {
     wgpu_surface_configuration.width  = wgpu_surface_width  = width;
     wgpu_surface_configuration.height = wgpu_surface_height = height;
