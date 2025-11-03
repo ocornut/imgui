@@ -6701,31 +6701,34 @@ static void CalcResizePosSizeFromAnyCorner(ImGuiWindow* window, const ImVec2& co
 // Data for resizing from resize grip / corner
 struct ImGuiResizeGripDef
 {
-    ImVec2  CornerPosN;
-    ImVec2  InnerDir;
-    int     AngleMin12, AngleMax12;
+    ImVec2      CornerPosN;
+    ImVec2      InnerDir;
+    int         AngleMin12, AngleMax12;
+    ImDrawFlags BorderDrawFlag;
 };
 static const ImGuiResizeGripDef resize_grip_def[4] =
 {
-    { ImVec2(1, 1), ImVec2(-1, -1), 0, 3 },  // Lower-right
-    { ImVec2(0, 1), ImVec2(+1, -1), 3, 6 },  // Lower-left
-    { ImVec2(0, 0), ImVec2(+1, +1), 6, 9 },  // Upper-left (Unused)
-    { ImVec2(1, 0), ImVec2(-1, +1), 9, 12 }  // Upper-right (Unused)
+    { ImVec2(1, 1), ImVec2(-1, -1), 0, 3, ImDrawFlags_RoundCornersBottomRight },  // Lower-right
+    { ImVec2(0, 1), ImVec2(+1, -1), 3, 6, ImDrawFlags_RoundCornersBottomLeft  },  // Lower-left
+    { ImVec2(0, 0), ImVec2(+1, +1), 6, 9, ImDrawFlags_RoundCornersTopLeft     },  // Upper-left (Unused)
+    { ImVec2(1, 0), ImVec2(-1, +1), 9, 12,ImDrawFlags_RoundCornersTopRight    }  // Upper-right (Unused)
 };
 
 // Data for resizing from borders
 struct ImGuiResizeBorderDef
 {
-    ImVec2  InnerDir;               // Normal toward inside
-    ImVec2  SegmentN1, SegmentN2;   // End positions, normalized (0,0: upper left)
-    float   OuterAngle;             // Angle toward outside
+    ImVec2      InnerDir;               // Normal toward inside
+    ImVec2      SegmentN1, SegmentN2;   // End positions, normalized (0,0: upper left)
+    float       OuterAngle;             // Angle toward outside
+    ImDrawFlags FirstCornerFlag;
+    ImDrawFlags SecondCornerFlag;
 };
 static const ImGuiResizeBorderDef resize_border_def[4] =
 {
-    { ImVec2(+1, 0), ImVec2(0, 1), ImVec2(0, 0), IM_PI * 1.00f }, // Left
-    { ImVec2(-1, 0), ImVec2(1, 0), ImVec2(1, 1), IM_PI * 0.00f }, // Right
-    { ImVec2(0, +1), ImVec2(0, 0), ImVec2(1, 0), IM_PI * 1.50f }, // Up
-    { ImVec2(0, -1), ImVec2(1, 1), ImVec2(0, 1), IM_PI * 0.50f }  // Down
+    { ImVec2(+1, 0), ImVec2(0, 1), ImVec2(0, 0), IM_PI * 1.00f, ImDrawFlags_RoundCornersBottomLeft, ImDrawFlags_RoundCornersTopLeft }, // Left
+    { ImVec2(-1, 0), ImVec2(1, 0), ImVec2(1, 1), IM_PI * 0.00f, ImDrawFlags_RoundCornersTopRight,   ImDrawFlags_RoundCornersBottomRight}, // Right
+    { ImVec2(0, +1), ImVec2(0, 0), ImVec2(1, 0), IM_PI * 1.50f, ImDrawFlags_RoundCornersTopLeft,    ImDrawFlags_RoundCornersTopRight   }, // Up
+    { ImVec2(0, -1), ImVec2(1, 1), ImVec2(0, 1), IM_PI * 0.50f, ImDrawFlags_RoundCornersBottomRight,ImDrawFlags_RoundCornersBottomLeft} // Down
 };
 
 static ImRect GetResizeBorderRect(ImGuiWindow* window, int border_n, float perp_padding, float thickness)
@@ -6977,13 +6980,41 @@ static inline void ClampWindowPos(ImGuiWindow* window, const ImRect& visibility_
     window->Pos = ImClamp(window->Pos, visibility_rect.Min - size_for_clamping, visibility_rect.Max);
 }
 
-static void RenderWindowOuterSingleBorder(ImGuiWindow* window, int border_n, ImU32 border_col, float border_size)
+static void RenderWindowOuterSingleBorder(ImGuiWindow* window, int border_n, ImU32 border_col, float border_size, ImDrawFlags border_draw_flags)
 {
     const ImGuiResizeBorderDef& def = resize_border_def[border_n];
     const float rounding = window->WindowRounding;
+    const ImRect border = GetResizeBorderRect(window, border_n, 0.f, 0.0f);
     const ImRect border_r = GetResizeBorderRect(window, border_n, rounding, 0.0f);
-    window->DrawList->PathArcTo(ImLerp(border_r.Min, border_r.Max, def.SegmentN1) + ImVec2(0.5f, 0.5f) + def.InnerDir * rounding, rounding, def.OuterAngle - IM_PI * 0.25f, def.OuterAngle);
-    window->DrawList->PathArcTo(ImLerp(border_r.Min, border_r.Max, def.SegmentN2) + ImVec2(0.5f, 0.5f) + def.InnerDir * rounding, rounding, def.OuterAngle, def.OuterAngle + IM_PI * 0.25f);
+
+    float arc0_rounding;
+    float arc1_rounding;
+    ImRect arc0_border;
+    ImRect arc1_border;
+    if (def.FirstCornerFlag & border_draw_flags)
+    {
+        arc0_rounding = rounding;
+        arc0_border = border_r;
+    }
+    else
+    {
+        arc0_rounding = 0.f;
+        arc0_border = border;
+    }
+
+    if (def.SecondCornerFlag & border_draw_flags)
+    {
+        arc1_rounding = rounding;
+        arc1_border = border_r;
+    }
+    else
+    {
+        arc1_rounding = 0.f;
+        arc1_border = border;
+    }
+    
+    window->DrawList->PathArcTo(ImLerp(arc0_border.Min, arc0_border.Max, def.SegmentN1) + ImVec2(0.5f, 0.5f) + def.InnerDir * arc0_rounding, arc0_rounding, def.OuterAngle - IM_PI * 0.25f, def.OuterAngle);
+    window->DrawList->PathArcTo(ImLerp(arc1_border.Min, arc1_border.Max, def.SegmentN2) + ImVec2(0.5f, 0.5f) + def.InnerDir * arc1_rounding, arc1_rounding, def.OuterAngle, def.OuterAngle + IM_PI * 0.25f);
     window->DrawList->PathStroke(border_col, ImDrawFlags_None, border_size);
 }
 
@@ -6993,19 +7024,19 @@ static void ImGui::RenderWindowOuterBorders(ImGuiWindow* window)
     const float border_size = window->WindowBorderSize;
     const ImU32 border_col = GetColorU32(ImGuiCol_Border);
     if (border_size > 0.0f && (window->Flags & ImGuiWindowFlags_NoBackground) == 0)
-        window->DrawList->AddRect(window->Pos, window->Pos + window->Size, border_col, window->WindowRounding, 0, window->WindowBorderSize);
+        window->DrawList->AddRect(window->Pos, window->Pos + window->Size, border_col, window->WindowRounding, window->BorderDrawFlags, window->WindowBorderSize);
     else if (border_size > 0.0f)
     {
         if (window->ChildFlags & ImGuiChildFlags_ResizeX) // Similar code as 'resize_border_mask' computation in UpdateWindowManualResize() but we specifically only always draw explicit child resize border.
-            RenderWindowOuterSingleBorder(window, 1, border_col, border_size);
+            RenderWindowOuterSingleBorder(window, 1, border_col, border_size, window->BorderDrawFlags);
         if (window->ChildFlags & ImGuiChildFlags_ResizeY)
-            RenderWindowOuterSingleBorder(window, 3, border_col, border_size);
+            RenderWindowOuterSingleBorder(window, 3, border_col, border_size, window->BorderDrawFlags);
     }
     if (window->ResizeBorderHovered != -1 || window->ResizeBorderHeld != -1)
     {
         const int border_n = (window->ResizeBorderHeld != -1) ? window->ResizeBorderHeld : window->ResizeBorderHovered;
         const ImU32 border_col_resizing = GetColorU32((window->ResizeBorderHeld != -1) ? ImGuiCol_SeparatorActive : ImGuiCol_SeparatorHovered);
-        RenderWindowOuterSingleBorder(window, border_n, border_col_resizing, ImMax(2.0f, window->WindowBorderSize)); // Thicker than usual
+        RenderWindowOuterSingleBorder(window, border_n, border_col_resizing, ImMax(2.0f, window->WindowBorderSize), window->BorderDrawFlags); // Thicker than usual
     }
     if (g.Style.FrameBorderSize > 0 && !(window->Flags & ImGuiWindowFlags_NoTitleBar))
     {
@@ -7055,14 +7086,26 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
             }
             if (override_alpha)
                 bg_col = (bg_col & ~IM_COL32_A_MASK) | (IM_F32_TO_INT8_SAT(alpha) << IM_COL32_A_SHIFT);
-            window->DrawList->AddRectFilled(window->Pos + ImVec2(0, window->TitleBarHeight), window->Pos + window->Size, bg_col, window_rounding, (flags & ImGuiWindowFlags_NoTitleBar) ? 0 : ImDrawFlags_RoundCornersBottom);
+
+            ImDrawFlags border_draw_flags = window->BorderDrawFlags;
+            if (!(flags & ImGuiWindowFlags_NoTitleBar))
+                border_draw_flags &= ~ImDrawFlags_RoundCornersTop;
+            if (!(border_draw_flags & ImDrawFlags_RoundCornersAll))
+                border_draw_flags = ImDrawFlags_RoundCornersNone;
+            window->DrawList->AddRectFilled(window->Pos + ImVec2(0, window->TitleBarHeight), window->Pos + window->Size, bg_col, window_rounding, border_draw_flags);
         }
+
+        ImDrawFlags top_border_draw_flags = window->BorderDrawFlags;
+        if (top_border_draw_flags & ImDrawFlags_RoundCornersTop)
+            top_border_draw_flags = top_border_draw_flags & ImDrawFlags_RoundCornersTop;
+        else
+            top_border_draw_flags = ImDrawFlags_RoundCornersNone;
 
         // Title bar
         if (!(flags & ImGuiWindowFlags_NoTitleBar))
         {
             ImU32 title_bar_col = GetColorU32(title_bar_is_highlight ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg);
-            window->DrawList->AddRectFilled(title_bar_rect.Min, title_bar_rect.Max, title_bar_col, window_rounding, ImDrawFlags_RoundCornersTop);
+            window->DrawList->AddRectFilled(title_bar_rect.Min, title_bar_rect.Max, title_bar_col, window_rounding, top_border_draw_flags);
         }
 
         // Menu bar
@@ -7070,7 +7113,7 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
         {
             ImRect menu_bar_rect = window->MenuBarRect();
             menu_bar_rect.ClipWith(window->Rect());  // Soft clipping, in particular child window don't have minimum size covering the menu bar so this is useful for them.
-            window->DrawList->AddRectFilled(menu_bar_rect.Min, menu_bar_rect.Max, GetColorU32(ImGuiCol_MenuBarBg), (flags & ImGuiWindowFlags_NoTitleBar) ? window_rounding : 0.0f, ImDrawFlags_RoundCornersTop);
+            window->DrawList->AddRectFilled(menu_bar_rect.Min, menu_bar_rect.Max, GetColorU32(ImGuiCol_MenuBarBg), (flags & ImGuiWindowFlags_NoTitleBar) ? window_rounding : 0.0f, top_border_draw_flags);
             if (style.FrameBorderSize > 0.0f && menu_bar_rect.Max.y < window->Pos.y + window->Size.y)
                 window->DrawList->AddLine(menu_bar_rect.GetBL() + ImVec2(window_border_size * 0.5f, 0.0f), menu_bar_rect.GetBR() - ImVec2(window_border_size * 0.5f, 0.0f), GetColorU32(ImGuiCol_Border), style.FrameBorderSize);
         }
@@ -7094,7 +7137,13 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
                 const float border_inner = IM_ROUND(window_border_size * 0.5f);
                 window->DrawList->PathLineTo(corner + grip.InnerDir * ((resize_grip_n & 1) ? ImVec2(border_inner, resize_grip_draw_size) : ImVec2(resize_grip_draw_size, border_inner)));
                 window->DrawList->PathLineTo(corner + grip.InnerDir * ((resize_grip_n & 1) ? ImVec2(resize_grip_draw_size, border_inner) : ImVec2(border_inner, resize_grip_draw_size)));
-                window->DrawList->PathArcToFast(ImVec2(corner.x + grip.InnerDir.x * (window_rounding + border_inner), corner.y + grip.InnerDir.y * (window_rounding + border_inner)), window_rounding, grip.AngleMin12, grip.AngleMax12);
+
+                float rounding;
+                if (window->BorderDrawFlags & grip.BorderDrawFlag)
+                    rounding = window_rounding;
+                else
+                    rounding = 0.f;
+                window->DrawList->PathArcToFast(ImVec2(corner.x + grip.InnerDir.x * (rounding + border_inner), corner.y + grip.InnerDir.y * (rounding + border_inner)), rounding, grip.AngleMin12, grip.AngleMax12);
                 window->DrawList->PathFillConvex(col);
             }
         }
@@ -7416,6 +7465,10 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         SetWindowCollapsed(window, g.NextWindowData.CollapsedVal, g.NextWindowData.CollapsedCond);
     if (g.NextWindowData.HasFlags & ImGuiNextWindowDataFlags_HasFocus)
         FocusWindow(window);
+    if (g.NextWindowData.HasFlags & ImGuiNextWindowDataFlags_HasBorderDrawFlags)
+        window->BorderDrawFlags = g.NextWindowData.BorderDrawFlags;
+    else
+        window->BorderDrawFlags = ImDrawFlags_RoundCornersAll;
     if (window->Appearing)
         SetWindowConditionAllowFlags(window, ImGuiCond_Appearing, false);
 
@@ -8548,6 +8601,13 @@ void ImGui::SetNextWindowRefreshPolicy(ImGuiWindowRefreshFlags flags)
     ImGuiContext& g = *GImGui;
     g.NextWindowData.HasFlags |= ImGuiNextWindowDataFlags_HasRefreshPolicy;
     g.NextWindowData.RefreshFlagsVal = flags;
+}
+
+void ImGui::SetNextWindowBorderDrawFlags(ImDrawFlags flags)
+{
+    ImGuiContext& g = *GImGui;
+    g.NextWindowData.HasFlags |= ImGuiNextWindowDataFlags_HasBorderDrawFlags;
+    g.NextWindowData.BorderDrawFlags = (flags & ImDrawFlags_RoundCornersAll) ? (flags & ImDrawFlags_RoundCornersAll) : ImDrawFlags_RoundCornersNone;
 }
 
 ImDrawList* ImGui::GetWindowDrawList()

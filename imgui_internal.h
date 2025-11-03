@@ -1303,7 +1303,7 @@ enum ImGuiNextWindowDataFlags_
     ImGuiNextWindowDataFlags_HasWindowFlags           = 1 << 8,
     ImGuiNextWindowDataFlags_HasChildFlags            = 1 << 9,
     ImGuiNextWindowDataFlags_HasRefreshPolicy         = 1 << 10,
-    ImGuiNextWindowDataFlags_HasWindowBorderDrawFlags = 1 << 11,
+    ImGuiNextWindowDataFlags_HasBorderDrawFlags       = 1 << 11,
 };
 
 // Storage for SetNexWindow** functions
@@ -1329,6 +1329,7 @@ struct ImGuiNextWindowData
     float                       BgAlphaVal;             // Override background alpha
     ImVec2                      MenuBarOffsetMinVal;    // (Always on) This is not exposed publicly, so we don't clear it and it doesn't have a corresponding flag (could we? for consistency?)
     ImGuiWindowRefreshFlags     RefreshFlagsVal;
+    ImDrawFlags                 BorderDrawFlags;
 
     ImGuiNextWindowData()       { memset(this, 0, sizeof(*this)); }
     inline void ClearFlags()    { HasFlags = ImGuiNextWindowDataFlags_None; }
@@ -2616,6 +2617,7 @@ struct IMGUI_API ImGuiWindow
     ImGuiID                 ID;                                 // == ImHashStr(Name)
     ImGuiWindowFlags        Flags;                              // See enum ImGuiWindowFlags_
     ImGuiChildFlags         ChildFlags;                         // Set when window is a child window. See enum ImGuiChildFlags_
+    ImDrawFlags             BorderDrawFlags;                    // Set when ImGuiNextWindowDataFlags_HasBorderDrawFlags is set, ImDrawFlags_RoundCornersAll otherwise
     ImGuiViewportP*         Viewport;                           // Always set in Begin(). Inactive windows may have a NULL value here if their viewport was discarded.
     ImVec2                  Pos;                                // Position (always rounded-up to nearest pixel)
     ImVec2                  Size;                               // Current size (==SizeFull or collapsed title bar size)
