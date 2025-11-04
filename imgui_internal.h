@@ -2546,6 +2546,7 @@ struct ImGuiContext
     char                    TempKeychordName[64];
 
     ImGuiContext(ImFontAtlas* shared_font_atlas);
+    ~ImGuiContext();
 };
 
 //-----------------------------------------------------------------------------
