@@ -86,6 +86,8 @@ Other Changes:
     are not available. (#9024, #8969, #8921, #8920) [@jagot]
   - SDL3: fixed Platform_OpenInShellFn() return value (the return value
     was unused in core but might be used by a direct caller). (#9027) [@achabense]
+  - SDL3: fixed an issue with missing characters events when an already active text
+    field changes viewports. (#9054)
   - Vulkan: added IMGUI_IMPL_VULKAN_VOLK_FILENAME to configure path to
     Volk (default to "volk.h"). (#9008, #7722, #6582, #4854) [@mwlasiuk]
   - WebGPU: added various internal/optional helpers to wrap some of the
