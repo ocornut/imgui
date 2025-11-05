@@ -1450,6 +1450,9 @@ ImGuiStyle::ImGuiStyle()
     AntiAliasedFill             = true;             // Enable anti-aliased filled shapes (rounded rectangles, circles, etc.).
     CurveTessellationTol        = 1.25f;            // Tessellation tolerance when using PathBezierCurveTo() without a specific number of segments. Decrease for highly tessellated curves (higher quality, more polygons), increase to reduce quality.
     CircleTessellationMaxError  = 0.30f;            // Maximum error (in pixels) allowed when using AddCircle()/AddCircleFilled() or drawing rounded corner rectangles with no explicit segment count specified. Decrease for higher quality but more geometry.
+    DragDropTargetRectRounding  = 0.0f;             // Corner radius of the drag-drop hover frame
+    DragDropTargetRectLineThickness = 2.0f;         // Thickness of the drop-drop hover frame lines
+    DragDropTargetRectExpansionSize = 3.5f;         // The size in which the drag-drop hover rect will expand over the target
 
     // Behaviors
     HoverStationaryDelay        = 0.15f;            // Delay for IsItemHovered(ImGuiHoveredFlags_Stationary). Time required to consider mouse stationary.
@@ -3711,6 +3714,7 @@ const char* ImGui::GetStyleColorName(ImGuiCol idx)
     case ImGuiCol_TextSelectedBg: return "TextSelectedBg";
     case ImGuiCol_TreeLines: return "TreeLines";
     case ImGuiCol_DragDropTarget: return "DragDropTarget";
+    case ImGuiCol_DragDropTargetBg: return "DragDropTargetBg";
     case ImGuiCol_UnsavedMarker: return "UnsavedMarker";
     case ImGuiCol_NavCursor: return "NavCursor";
     case ImGuiCol_NavWindowingHighlight: return "NavWindowingHighlight";
@@ -14893,7 +14897,7 @@ void ImGui::RenderDragDropTargetRectForItem(const ImRect& bb)
     ImGuiWindow* window = g.CurrentWindow;
     ImRect bb_display = bb;
     bb_display.ClipWith(g.DragDropTargetClipRect); // Clip THEN expand so we have a way to visualize that target is not entirely visible.
-    bb_display.Expand(3.5f);
+    bb_display.Expand(g.Style.DragDropTargetRectExpansionSize);
     bool push_clip_rect = !window->ClipRect.Contains(bb_display);
     if (push_clip_rect)
         window->DrawList->PushClipRectFullScreen();
@@ -14904,7 +14908,13 @@ void ImGui::RenderDragDropTargetRectForItem(const ImRect& bb)
 
 void ImGui::RenderDragDropTargetRectEx(ImDrawList* draw_list, const ImRect& bb)
 {
-    draw_list->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_DragDropTarget), 0.0f, 0, 2.0f); // FIXME-DPI
+    ImGuiContext& g = *GImGui;
+
+    const ImVec4& color_bg = GetStyleColorVec4(ImGuiCol_DragDropTargetBg);
+    if (color_bg.w > 0.0f)
+        draw_list->AddRectFilled(bb.Min, bb.Max, GetColorU32(color_bg), g.Style.DragDropTargetRectRounding, 0);
+
+    draw_list->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_DragDropTarget), g.Style.DragDropTargetRectRounding, 0, g.Style.DragDropTargetRectLineThickness); // FIXME-DPI
 }
 
 const ImGuiPayload* ImGui::GetDragDropPayload()
