@@ -1,14 +1,14 @@
 // dear imgui: Platform Backend for GLFW
 // This needs to be used along with a Renderer (e.g. OpenGL3, Vulkan, WebGPU..)
 // (Info: GLFW is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan graphics context creation, etc.)
-// (Requires: GLFW 3.1+. Prefer GLFW 3.3+ or GLFW 3.4+ for full feature support.)
+// (Requires: GLFW 3.0+. Prefer GLFW 3.3+/3.4+ for full feature support.)
 
 // Implemented features:
 //  [X] Platform: Clipboard support.
 //  [X] Platform: Mouse support. Can discriminate Mouse/TouchScreen/Pen (Windows only).
 //  [X] Platform: Keyboard support. Since 1.87 we are using the io.AddKeyEvent() function. Pass ImGuiKey values to all key functions e.g. ImGui::IsKeyPressed(ImGuiKey_Space). [Legacy GLFW_KEY_* values are obsolete since 1.87 and not supported since 1.91.5]
 //  [X] Platform: Gamepad support. Enable with 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad'.
-//  [X] Platform: Mouse cursor shape and visibility (ImGuiBackendFlags_HasMouseCursors). Resizing cursors requires GLFW 3.4+! Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'.
+//  [X] Platform: Mouse cursor shape and visibility (ImGuiBackendFlags_HasMouseCursors) with GLFW 3.1+. Resizing cursors requires GLFW 3.4+! Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'.
 //  [X] Multiple Dear ImGui contexts support.
 // Missing features or Issues:
 //  [ ] Touch events are only correctly identified as Touch on Windows. This create issues with some interactions. GLFW doesn't provide a way to identify touch inputs from mouse inputs, we cannot call io.AddMouseSourceEvent() to identify the source. We provide a Windows-specific workaround.
@@ -29,6 +29,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2025-11-06: Lower minimum requirement to GLFW 3.0. Though a recent version e.g GLFW 3.4 is highly recommended.
 //  2025-09-18: Call platform_io.ClearPlatformHandlers() on shutdown.
 //  2025-09-15: Content Scales are always reported as 1.0 on Wayland. FramebufferScale are always reported as 1.0 on X11. (#8920, #8921)
 //  2025-07-08: Made ImGui_ImplGlfw_GetContentScaleForWindow(), ImGui_ImplGlfw_GetContentScaleForMonitor() helpers return 1.0f on Emscripten and Android platforms, matching macOS logic. (#8742, #8733)
@@ -152,6 +153,7 @@
 #else
 #define GLFW_HAS_NEW_CURSORS            (0)
 #endif
+#define GLFW_HAS_CREATECURSOR           (GLFW_VERSION_COMBINED >= 3100) // 3.1+ glfwCreateCursor()
 #define GLFW_HAS_GAMEPAD_API            (GLFW_VERSION_COMBINED >= 3300) // 3.3+ glfwGetGamepadState() new api
 #define GLFW_HAS_GETKEYNAME             (GLFW_VERSION_COMBINED >= 3200) // 3.2+ glfwGetKeyName()
 #define GLFW_HAS_GETERROR               (GLFW_VERSION_COMBINED >= 3300) // 3.3+ glfwGetError()
@@ -182,7 +184,9 @@ struct ImGui_ImplGlfw_Data
     GlfwClientApi           ClientApi;
     double                  Time;
     GLFWwindow*             MouseWindow;
+#if GLFW_HAS_CREATECURSOR
     GLFWcursor*             MouseCursors[ImGuiMouseCursor_COUNT];
+#endif
     ImVec2                  LastValidMousePos;
     bool                    IsWayland;
     bool                    InstalledCallbacks;
@@ -653,7 +657,9 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     snprintf(bd->BackendPlatformName, sizeof(bd->BackendPlatformName), "imgui_impl_glfw (%d)", GLFW_VERSION_COMBINED);
     io.BackendPlatformUserData = (void*)bd;
     io.BackendPlatformName = bd->BackendPlatformName;
+#if GLFW_HAS_CREATECURSOR
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;         // We can honor GetMouseCursor() values (optional)
+#endif
     io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
 
     bd->Context = ImGui::GetCurrentContext();
@@ -679,6 +685,7 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     // (By design, on X11 cursors are user configurable and some cursors may be missing. When a cursor doesn't exist,
     // GLFW will emit an error which will often be printed by the app, so we temporarily disable error reporting.
     // Missing cursors will return nullptr and our _UpdateMouseCursor() function will use the Arrow cursor instead.)
+#if GLFW_HAS_CREATECURSOR
     GLFWerrorfun prev_error_callback = glfwSetErrorCallback(nullptr);
     bd->MouseCursors[ImGuiMouseCursor_Arrow] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
     bd->MouseCursors[ImGuiMouseCursor_TextInput] = glfwCreateStandardCursor(GLFW_IBEAM_CURSOR);
@@ -697,6 +704,7 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     bd->MouseCursors[ImGuiMouseCursor_NotAllowed] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
 #endif
     glfwSetErrorCallback(prev_error_callback);
+#endif
 #if GLFW_HAS_GETERROR && !defined(__EMSCRIPTEN__) // Eat errors (see #5908)
     (void)glfwGetError(nullptr);
 #endif
@@ -775,10 +783,10 @@ void ImGui_ImplGlfw_Shutdown()
     if (bd->CanvasSelector)
         emscripten_set_wheel_callback(bd->CanvasSelector, nullptr, false, nullptr);
 #endif
-
+#if GLFW_HAS_CREATECURSOR
     for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_COUNT; cursor_n++)
         glfwDestroyCursor(bd->MouseCursors[cursor_n]);
-
+#endif
     // Windows: restore our WndProc hook
 #ifdef _WIN32
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
@@ -846,7 +854,9 @@ static void ImGui_ImplGlfw_UpdateMouseCursor()
         {
             // Show OS mouse cursor
             // FIXME-PLATFORM: Unfocused windows seems to fail changing the mouse cursor with GLFW 3.2, but 3.3 works here.
+#if GLFW_HAS_CREATECURSOR
             glfwSetCursor(window, bd->MouseCursors[imgui_cursor] ? bd->MouseCursors[imgui_cursor] : bd->MouseCursors[ImGuiMouseCursor_Arrow]);
+#endif
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         }
     }
