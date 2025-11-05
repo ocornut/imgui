@@ -1776,7 +1776,8 @@ enum ImGuiCol_
     ImGuiCol_TextLink,              // Hyperlink color
     ImGuiCol_TextSelectedBg,        // Selected text inside an InputText
     ImGuiCol_TreeLines,             // Tree node hierarchy outlines when using ImGuiTreeNodeFlags_DrawLines
-    ImGuiCol_DragDropTarget,        // Rectangle highlighting a drop target
+    ImGuiCol_DragDropTarget,        // Rectangle border highlighting a drop target
+    ImGuiCol_DragDropTargetBg,      // Rectangle background highlighting a drop target
     ImGuiCol_UnsavedMarker,         // Unsaved Document marker (in window title and tabs)
     ImGuiCol_NavCursor,             // Color of keyboard/gamepad navigation cursor/rectangle, when visible
     ImGuiCol_NavWindowingHighlight, // Highlight window when using CTRL+TAB
@@ -2322,6 +2323,9 @@ struct ImGuiStyle
     bool        AntiAliasedFill;            // Enable anti-aliased edges around filled shapes (rounded rectangles, circles, etc.). Disable if you are really tight on CPU/GPU. Latched at the beginning of the frame (copied to ImDrawList).
     float       CurveTessellationTol;       // Tessellation tolerance when using PathBezierCurveTo() without a specific number of segments. Decrease for highly tessellated curves (higher quality, more polygons), increase to reduce quality.
     float       CircleTessellationMaxError; // Maximum error (in pixels) allowed when using AddCircle()/AddCircleFilled() or drawing rounded corner rectangles with no explicit segment count specified. Decrease for higher quality but more geometry.
+    float       DragDropTargetRectRounding; // Corner radius of the drag-drop target rect
+    float       DragDropTargetRectLineThickness; // Thickness of the drop-drop target rect lines
+    float       DragDropTargetRectExpansionSize; // The size in which the drag-drop target rect will expand over the target
 
     // Colors
     ImVec4      Colors[ImGuiCol_COUNT];
