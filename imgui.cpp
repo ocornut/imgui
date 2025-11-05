@@ -16356,11 +16356,11 @@ ImGuiViewport* ImGui::GetMainViewport()
 }
 
 // FIXME: This leaks access to viewports not listed in PlatformIO.Viewports[]. Problematic? (#4236)
-ImGuiViewport* ImGui::FindViewportByID(ImGuiID id)
+ImGuiViewport* ImGui::FindViewportByID(ImGuiID viewport_id)
 {
     ImGuiContext& g = *GImGui;
     for (ImGuiViewportP* viewport : g.Viewports)
-        if (viewport->ID == id)
+        if (viewport->ID == viewport_id)
             return viewport;
     return NULL;
 }
