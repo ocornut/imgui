@@ -156,6 +156,7 @@
 #define GLFW_HAS_GETKEYNAME             (GLFW_VERSION_COMBINED >= 3200) // 3.2+ glfwGetKeyName()
 #define GLFW_HAS_GETERROR               (GLFW_VERSION_COMBINED >= 3300) // 3.3+ glfwGetError()
 #define GLFW_HAS_GETPLATFORM            (GLFW_VERSION_COMBINED >= 3400) // 3.4+ glfwGetPlatform()
+#define GLFW_HAS_CREATECURSOR           (GLFW_VERSION_COMBINED >= 3100) // 3.1+ glfwCreateCursor()
 
 // Map GLFWWindow* to ImGuiContext*.
 // - Would be simpler if we could use glfwSetWindowUserPointer()/glfwGetWindowUserPointer(), but this is a single and shared resource.
@@ -182,7 +183,9 @@ struct ImGui_ImplGlfw_Data
     GlfwClientApi           ClientApi;
     double                  Time;
     GLFWwindow*             MouseWindow;
+#if GLFW_HAS_CREATECURSOR
     GLFWcursor*             MouseCursors[ImGuiMouseCursor_COUNT];
+#endif
     ImVec2                  LastValidMousePos;
     bool                    IsWayland;
     bool                    InstalledCallbacks;
@@ -679,6 +682,7 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     // (By design, on X11 cursors are user configurable and some cursors may be missing. When a cursor doesn't exist,
     // GLFW will emit an error which will often be printed by the app, so we temporarily disable error reporting.
     // Missing cursors will return nullptr and our _UpdateMouseCursor() function will use the Arrow cursor instead.)
+#if GLFW_HAS_CREATECURSOR
     GLFWerrorfun prev_error_callback = glfwSetErrorCallback(nullptr);
     bd->MouseCursors[ImGuiMouseCursor_Arrow] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
     bd->MouseCursors[ImGuiMouseCursor_TextInput] = glfwCreateStandardCursor(GLFW_IBEAM_CURSOR);
@@ -697,6 +701,7 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     bd->MouseCursors[ImGuiMouseCursor_NotAllowed] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
 #endif
     glfwSetErrorCallback(prev_error_callback);
+#endif
 #if GLFW_HAS_GETERROR && !defined(__EMSCRIPTEN__) // Eat errors (see #5908)
     (void)glfwGetError(nullptr);
 #endif
@@ -775,10 +780,10 @@ void ImGui_ImplGlfw_Shutdown()
     if (bd->CanvasSelector)
         emscripten_set_wheel_callback(bd->CanvasSelector, nullptr, false, nullptr);
 #endif
-
+#if GLFW_HAS_CREATECURSOR
     for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_COUNT; cursor_n++)
         glfwDestroyCursor(bd->MouseCursors[cursor_n]);
-
+#endif
     // Windows: restore our WndProc hook
 #ifdef _WIN32
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
@@ -846,7 +851,9 @@ static void ImGui_ImplGlfw_UpdateMouseCursor()
         {
             // Show OS mouse cursor
             // FIXME-PLATFORM: Unfocused windows seems to fail changing the mouse cursor with GLFW 3.2, but 3.3 works here.
+#if GLFW_HAS_CREATECURSOR
             glfwSetCursor(window, bd->MouseCursors[imgui_cursor] ? bd->MouseCursors[imgui_cursor] : bd->MouseCursors[ImGuiMouseCursor_Arrow]);
+#endif
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         }
     }
