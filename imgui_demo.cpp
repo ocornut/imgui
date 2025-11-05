@@ -7115,7 +7115,7 @@ static void DemoWindowTables()
         // [2.3] Right-click in columns to open another custom popup
         HelpMarker(
             "Demonstrate mixing table context menu (over header), item context button (over button) "
-            "and custom per-colunm context menu (over column body).");
+            "and custom per-column context menu (over column body).");
         ImGuiTableFlags flags2 = ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_Borders;
         if (ImGui::BeginTable("table_context_menu_2", COLUMNS_COUNT, flags2))
         {
@@ -8284,7 +8284,7 @@ void ImGui::ShowAboutWindow(bool* p_open)
         // - 16 is > strlen("((void)(_EXPR))") which we suggested in our imconfig.h template as a possible way to disable.
         int assert_runs_expression = 0;
         IM_ASSERT(++assert_runs_expression);
-        int assert_expand_len = (int)strlen(IM_STRINGIFY(IM_ASSERT(true)));
+        int assert_expand_len = (int)strlen(IM_STRINGIFY((IM_ASSERT(true))));
         bool assert_maybe_disabled = (!assert_runs_expression || assert_expand_len <= 16);
         ImGui::Text("IM_ASSERT: runs expression: %s. expand size: %s%s",
             assert_runs_expression ? "OK" : "KO", (assert_expand_len > 16) ? "OK" : "KO", assert_maybe_disabled ? " (MAYBE DISABLED?!)" : "");

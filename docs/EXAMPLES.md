@@ -72,7 +72,7 @@ OSX + OpenGL2 example. <BR>
  You may prefer to use the GLFW Or SDL backends, which will also support Windows and Linux.)
 
 [example_glfw_wgpu/](https://github.com/ocornut/imgui/blob/master/examples/example_glfw_wgpu/) <BR>
-GLFW + WebGPU example. Supports Emscripten (web) or Dawn (desktop) <BR>
+GLFW + WebGPU example. Supports Emscripten (web), Dawn (native), WGPU (native). <BR>
 = main.cpp + imgui_impl_glfw.cpp + imgui_impl_wgpu.cpp
 Note that the 'example_glfw_opengl3' and 'example_sdl2_opengl3' examples also supports Emscripten!
 
@@ -149,6 +149,11 @@ SDL2 (Win32, Mac, Linux, etc.) + Vulkan example. <BR>
 This is quite long and tedious, because: Vulkan. <BR>
 For this example, the main.cpp file exceptionally use helpers function from imgui_impl_vulkan.h/cpp.
 
+[example_sdl2_wgpu/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl2_wgpu/) <BR>
+SDL2 + WebGPU example. Supports Emscripten (web), Dawn (native), WGPU (native). <BR>
+= main.cpp + imgui_impl_sdl2.cpp + imgui_impl_wgpu.cpp
+(note that the 'example_sdl2_opengl3' example also supports Emscripten!)
+
 [example_sdl3_directx11/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl3_directx11/) <BR>
 SDL3 + DirectX11 examples, Windows only. <BR>
 = main.cpp + imgui_impl_sdl3.cpp + imgui_impl_dx11.cpp <BR>
@@ -176,6 +181,11 @@ SDL3 (Win32, Mac, Linux, etc.) + Vulkan example. <BR>
 = main.cpp + imgui_impl_sdl3.cpp + imgui_impl_vulkan.cpp <BR>
 This is quite long and tedious, because: Vulkan. <BR>
 For this example, the main.cpp file exceptionally use helpers function from imgui_impl_vulkan.h/cpp.
+
+[example_sdl3_wgpu/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl3_wgpu/) <BR>
+SDL3 + WebGPU example. Supports Emscripten (web), Dawn (native), WGPU (native). <BR>
+= main.cpp + imgui_impl_sdl3.cpp + imgui_impl_wgpu.cpp
+(note that the 'example_sdl3_opengl3' example also supports Emscripten!)
 
 [example_win32_directx9/](https://github.com/ocornut/imgui/blob/master/examples/example_win32_directx9/) <BR>
 DirectX9 example, Windows only. <BR>
