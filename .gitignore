@@ -12,6 +12,7 @@ imgui*.ini
 examples/*/Debug/*
 examples/*/Release/*
 examples/*/x64/*
+examples/*.tmp
 
 ## Visual Studio artifacts
 .vs

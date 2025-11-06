@@ -41,6 +41,24 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
+ - Keys: commented out legacy names which were obsoleted in 1.89.0 (August 2022).
+   - ImGuiKey_ModCtrl  --> ImGuiMod_Ctrl
+   - ImGuiKey_ModShift --> ImGuiMod_Shift
+   - ImGuiKey_ModAlt   --> ImGuiMod_Alt
+   - ImGuiKey_ModSuper --> ImGuiMod_Super
+ - IO: commented out legacy io.ClearInputCharacters() obsoleted in 1.89.8 (Aug 2023).
+   Using io.ClearInputKeys() is enough.
+ - BeginChild: commented out legacy names which were obsoleted in 1.90.0 (Nov 2023),
+   1.90.9 (July 2024), 1.91.1 (August 2024). (#462, #7687)
+   - ImGuiChildFlags_Border                  --> ImGuiChildFlags_Borders
+   - ImGuiWindowFlags_NavFlattened           --> ImGuiChildFlags_NavFlattened (moved to ImGuiChildFlags).
+   - ImGuiWindowFlags_AlwaysUseWindowPadding --> ImGuiChildFlags_AlwaysUseWindowPadding (moved to ImGuiChildFlags).
+   So:
+   - BeginChild(name, size, 0, ImGuiWindowFlags_NavFlattened)           --> BeginChild(name, size, ImGuiChildFlags_NavFlattened, 0)
+   - BeginChild(name, size, 0, ImGuiWindowFlags_AlwaysUseWindowPadding) --> BeginChild(name, size, ImGuiChildFlags_AlwaysUseWindowPadding, 0)
+ - Commented out legacy SetItemAllowOverlap() obsoleted in 1.89.7: this never worked right.
+   Use SetNextItemAllowOverlap() _before_ item instead.
+
 Other Changes:
 
 - Tables: fixed a bug where nesting BeginTable()->Begin()->BeginTable() would
@@ -50,6 +68,9 @@ Other Changes:
 - Tables: Angled headers: fixed an auto-resize feedback loop that could
   affect tables with empty non-resizing columns using angled headers, making
   them typically flicker back and forth between +0 and +1 pixels.
+- Windows: io.ConfigWindowsMoveFromTitleBarOnly is latched during Begin(),
+  effectively allowing to change the value on a per-window basis (although
+  there is a better internal mechanism for it).
 - Disabled: fixed a bug when a previously enabled item that got nav focus
   and then turns disabled could still be activated using keyboard. (#9036)
 - InputText: when buffer is not resizable, trying to paste contents that
@@ -73,6 +94,12 @@ Other Changes:
   triggered by some widgets e.g. Checkbox(), Selectable() and many others, which
   cleared ActiveId at the same time as editing. (#9028)
   Note that IsItemDeactivatedAfterEdit() was not affected, only IsItemEdited).
+- Drag and Drop:
+  - Added ImGuiDragDropFlags_AcceptDrawAsHovered to make accepting item render
+    as hovered, which can allow using e.g. Button() as drop target. (#8632)
+  - Style: added ImGuiCol_DragDropTargetBg, style.DragDropTargetRounding,
+    style.DragDropTargetBorderSize and style.DragDropTargetPadding to configure
+    the drop target highlight. (#9056) [@aaronkirkham]
 - Demo: About Box: emit infos to convey when IM_ASSERT() macro is disabled,
   - so users don't miss out on programming errors being reported.
   - so it is included in config/build info submitted in new GitHub Issues.
@@ -84,6 +111,8 @@ Other Changes:
 - Backends:
   - GLFW: fixed building on Linux platforms where Wayland headers
     are not available. (#9024, #8969, #8921, #8920) [@jagot]
+  - GLFW: lower minimum requirement from GLFW 3.1 to GLFW 3.0. Though
+    a recent version e.g GLFW 3.4 is highly recommended! (#9055) [@Clownacy]
   - SDL3: fixed Platform_OpenInShellFn() return value (the return value
     was unused in core but might be used by a direct caller). (#9027) [@achabense]
   - SDL3: fixed an issue with missing characters events when an already active text
