@@ -2309,6 +2309,9 @@ struct ImGuiStyle
     ImGuiTreeNodeFlags TreeLinesFlags;      // Default way to draw lines connecting TreeNode hierarchy. ImGuiTreeNodeFlags_DrawLinesNone or ImGuiTreeNodeFlags_DrawLinesFull or ImGuiTreeNodeFlags_DrawLinesToNodes.
     float       TreeLinesSize;              // Thickness of outlines when using ImGuiTreeNodeFlags_DrawLines.
     float       TreeLinesRounding;          // Radius of lines connecting child nodes to the vertical line.
+    float       DragDropTargetRounding;     // Radius of the drag and drop target frame.
+    float       DragDropTargetBorderSize;   // Thickness of the drag and drop target border.
+    float       DragDropTargetPadding;      // Size to expand the drag and drop target from actual target item size.
     ImGuiDir    ColorButtonPosition;        // Side of the color button in the ColorEdit4 widget (left/right). Defaults to ImGuiDir_Right.
     ImVec2      ButtonTextAlign;            // Alignment of button text when button is larger than text. Defaults to (0.5f, 0.5f) (centered).
     ImVec2      SelectableTextAlign;        // Alignment of selectable text. Defaults to (0.0f, 0.0f) (top-left aligned). It's generally important to keep this left-aligned if you want to lay multiple items on a same line.
@@ -2323,9 +2326,6 @@ struct ImGuiStyle
     bool        AntiAliasedFill;            // Enable anti-aliased edges around filled shapes (rounded rectangles, circles, etc.). Disable if you are really tight on CPU/GPU. Latched at the beginning of the frame (copied to ImDrawList).
     float       CurveTessellationTol;       // Tessellation tolerance when using PathBezierCurveTo() without a specific number of segments. Decrease for highly tessellated curves (higher quality, more polygons), increase to reduce quality.
     float       CircleTessellationMaxError; // Maximum error (in pixels) allowed when using AddCircle()/AddCircleFilled() or drawing rounded corner rectangles with no explicit segment count specified. Decrease for higher quality but more geometry.
-    float       DragDropTargetRectRounding; // Corner radius of the drag-drop target rect
-    float       DragDropTargetRectLineThickness; // Thickness of the drop-drop target rect lines
-    float       DragDropTargetRectExpansionSize; // The size in which the drag-drop target rect will expand over the target
 
     // Colors
     ImVec4      Colors[ImGuiCol_COUNT];

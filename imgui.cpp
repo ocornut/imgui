@@ -1436,6 +1436,9 @@ ImGuiStyle::ImGuiStyle()
     TreeLinesFlags              = ImGuiTreeNodeFlags_DrawLinesNone;
     TreeLinesSize               = 1.0f;             // Thickness of outlines when using ImGuiTreeNodeFlags_DrawLines.
     TreeLinesRounding           = 0.0f;             // Radius of lines connecting child nodes to the vertical line.
+    DragDropTargetRounding      = 0.0f;             // Radius of the drag and drop target frame.
+    DragDropTargetBorderSize    = 2.0f;             // Thickness of the drag and drop target border.
+    DragDropTargetPadding       = 3.0f;             // Size to expand the drag and drop target from actual target item size.
     ColorButtonPosition         = ImGuiDir_Right;   // Side of the color button in the ColorEdit4 widget (left/right). Defaults to ImGuiDir_Right.
     ButtonTextAlign             = ImVec2(0.5f,0.5f);// Alignment of button text when button is larger than text.
     SelectableTextAlign         = ImVec2(0.0f,0.0f);// Alignment of selectable text. Defaults to (0.0f, 0.0f) (top-left aligned). It's generally important to keep this left-aligned if you want to lay multiple items on a same line.
@@ -1450,9 +1453,6 @@ ImGuiStyle::ImGuiStyle()
     AntiAliasedFill             = true;             // Enable anti-aliased filled shapes (rounded rectangles, circles, etc.).
     CurveTessellationTol        = 1.25f;            // Tessellation tolerance when using PathBezierCurveTo() without a specific number of segments. Decrease for highly tessellated curves (higher quality, more polygons), increase to reduce quality.
     CircleTessellationMaxError  = 0.30f;            // Maximum error (in pixels) allowed when using AddCircle()/AddCircleFilled() or drawing rounded corner rectangles with no explicit segment count specified. Decrease for higher quality but more geometry.
-    DragDropTargetRectRounding  = 0.0f;             // Corner radius of the drag-drop hover frame
-    DragDropTargetRectLineThickness = 2.0f;         // Thickness of the drop-drop hover frame lines
-    DragDropTargetRectExpansionSize = 3.5f;         // The size in which the drag-drop hover rect will expand over the target
 
     // Behaviors
     HoverStationaryDelay        = 0.15f;            // Delay for IsItemHovered(ImGuiHoveredFlags_Stationary). Time required to consider mouse stationary.
@@ -1503,6 +1503,9 @@ void ImGuiStyle::ScaleAllSizes(float scale_factor)
     TabCloseButtonMinWidthUnselected = (TabCloseButtonMinWidthUnselected > 0.0f && TabCloseButtonMinWidthUnselected != FLT_MAX) ? ImTrunc(TabCloseButtonMinWidthUnselected * scale_factor) : TabCloseButtonMinWidthUnselected;
     TabBarOverlineSize = ImTrunc(TabBarOverlineSize * scale_factor);
     TreeLinesRounding = ImTrunc(TreeLinesRounding * scale_factor);
+    DragDropTargetRounding = ImTrunc(DragDropTargetRounding * scale_factor);
+    DragDropTargetBorderSize = ImTrunc(DragDropTargetBorderSize * scale_factor);
+    DragDropTargetPadding = ImTrunc(DragDropTargetPadding * scale_factor);
     SeparatorTextPadding = ImTrunc(SeparatorTextPadding * scale_factor);
     DisplayWindowPadding = ImTrunc(DisplayWindowPadding * scale_factor);
     DisplaySafeAreaPadding = ImTrunc(DisplaySafeAreaPadding * scale_factor);
@@ -14897,7 +14900,7 @@ void ImGui::RenderDragDropTargetRectForItem(const ImRect& bb)
     ImGuiWindow* window = g.CurrentWindow;
     ImRect bb_display = bb;
     bb_display.ClipWith(g.DragDropTargetClipRect); // Clip THEN expand so we have a way to visualize that target is not entirely visible.
-    bb_display.Expand(g.Style.DragDropTargetRectExpansionSize);
+    bb_display.Expand(g.Style.DragDropTargetPadding);
     bool push_clip_rect = !window->ClipRect.Contains(bb_display);
     if (push_clip_rect)
         window->DrawList->PushClipRectFullScreen();
@@ -14909,12 +14912,8 @@ void ImGui::RenderDragDropTargetRectForItem(const ImRect& bb)
 void ImGui::RenderDragDropTargetRectEx(ImDrawList* draw_list, const ImRect& bb)
 {
     ImGuiContext& g = *GImGui;
-
-    const ImVec4& color_bg = GetStyleColorVec4(ImGuiCol_DragDropTargetBg);
-    if (color_bg.w > 0.0f)
-        draw_list->AddRectFilled(bb.Min, bb.Max, GetColorU32(color_bg), g.Style.DragDropTargetRectRounding, 0);
-
-    draw_list->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_DragDropTarget), g.Style.DragDropTargetRectRounding, 0, g.Style.DragDropTargetRectLineThickness); // FIXME-DPI
+    draw_list->AddRectFilled(bb.Min, bb.Max, GetColorU32(ImGuiCol_DragDropTargetBg), g.Style.DragDropTargetRounding, 0);
+    draw_list->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_DragDropTarget), g.Style.DragDropTargetRounding, 0, g.Style.DragDropTargetBorderSize);
 }
 
 const ImGuiPayload* ImGui::GetDragDropPayload()
