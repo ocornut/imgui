@@ -94,9 +94,12 @@ Other Changes:
   triggered by some widgets e.g. Checkbox(), Selectable() and many others, which
   cleared ActiveId at the same time as editing. (#9028)
   Note that IsItemDeactivatedAfterEdit() was not affected, only IsItemEdited).
-- Style, Drag and Drop: added ImGuiCol_DragDropTargetBg, style.DragDropTargetRounding,
-  style.DragDropTargetBorderSize and style.DragDropTargetPadding to configure
-  the drop target highlight. (#9056) [@aaronkirkham]
+- Drag and Drop:
+  - Added ImGuiDragDropFlags_AcceptDrawAsHovered to make accepting item render
+    as hovered, which can allow using e.g. Button() as drop target. (#8632)
+  - Style: added ImGuiCol_DragDropTargetBg, style.DragDropTargetRounding,
+    style.DragDropTargetBorderSize and style.DragDropTargetPadding to configure
+    the drop target highlight. (#9056) [@aaronkirkham]
 - Demo: About Box: emit infos to convey when IM_ASSERT() macro is disabled,
   - so users don't miss out on programming errors being reported.
   - so it is included in config/build info submitted in new GitHub Issues.
