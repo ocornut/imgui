@@ -56,6 +56,8 @@ Breaking Changes:
    So:
    - BeginChild(name, size, 0, ImGuiWindowFlags_NavFlattened)           --> BeginChild(name, size, ImGuiChildFlags_NavFlattened, 0)
    - BeginChild(name, size, 0, ImGuiWindowFlags_AlwaysUseWindowPadding) --> BeginChild(name, size, ImGuiChildFlags_AlwaysUseWindowPadding, 0)
+ - Commented out legacy SetItemAllowOverlap() obsoleted in 1.89.7: this never worked right.
+   Use SetNextItemAllowOverlap() _before_ item instead.
 
 Other Changes:
 
