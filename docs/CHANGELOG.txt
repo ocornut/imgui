@@ -41,6 +41,15 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
+ - BeginChild: commented out legacy names which were obsoleted in 1.90.0 (Nov 2023),
+   1.90.9 (July 2024), 1.91.1 (August 2024). (#462, #7687)
+   - ImGuiChildFlags_Border                  --> ImGuiChildFlags_Borders
+   - ImGuiWindowFlags_NavFlattened           --> ImGuiChildFlags_NavFlattened (moved to ImGuiChildFlags).
+   - ImGuiWindowFlags_AlwaysUseWindowPadding --> ImGuiChildFlags_AlwaysUseWindowPadding (moved to ImGuiChildFlags).
+   So:
+   - BeginChild(name, size, 0, ImGuiWindowFlags_NavFlattened)           --> BeginChild(name, size, ImGuiChildFlags_NavFlattened, 0)
+   - BeginChild(name, size, 0, ImGuiWindowFlags_AlwaysUseWindowPadding) --> BeginChild(name, size, ImGuiChildFlags_AlwaysUseWindowPadding, 0)
+
 Other Changes:
 
 - Tables: fixed a bug where nesting BeginTable()->Begin()->BeginTable() would
