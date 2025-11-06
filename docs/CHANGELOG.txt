@@ -46,6 +46,8 @@ Breaking Changes:
    - ImGuiKey_ModShift --> ImGuiMod_Shift
    - ImGuiKey_ModAlt   --> ImGuiMod_Alt
    - ImGuiKey_ModSuper --> ImGuiMod_Super
+ - IO: commented out legacy io.ClearInputCharacters() obsoleted in 1.89.8 (Aug 2023).
+   Using io.ClearInputKeys() is enough.
  - BeginChild: commented out legacy names which were obsoleted in 1.90.0 (Nov 2023),
    1.90.9 (July 2024), 1.91.1 (August 2024). (#462, #7687)
    - ImGuiChildFlags_Border                  --> ImGuiChildFlags_Borders
