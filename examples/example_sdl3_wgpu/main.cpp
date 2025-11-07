@@ -502,7 +502,7 @@ static bool InitWGPU(SDL_Window* window)
 // As of today (2025/10) there is no "official" support in SDL3 to create a surface for WebGPU backend
 // This stub uses "low level" SDL3 calls to acquire information from a specific Window Manager.
 // Currently supported platforms: Windows / Linux (X11 and Wayland) / MacOS. Not necessary nor available with EMSCRIPTEN.
-#if !defined(__EMSCRIPTEN__) && (defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) || defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN))
+#ifndef __EMSCRIPTEN__
 
 #if defined(SDL_PLATFORM_WIN32)
 #ifndef WIN32_LEAN_AND_MEAN
@@ -550,4 +550,4 @@ static WGPUSurface CreateWGPUSurface(const WGPUInstance& instance, SDL_Window* w
 #endif
     return nullptr;
 }
-#endif
+#endif // #ifndef __EMSCRIPTEN__

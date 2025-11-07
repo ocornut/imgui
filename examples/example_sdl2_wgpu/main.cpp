@@ -491,7 +491,7 @@ static bool InitWGPU(SDL_Window* window)
 // As of today (2025/10/31) there is no "official" support in SDL2 to create a surface for WebGPU backend.
 // This stub uses "low level" SDL2 calls to acquire information from a specific Window Manager.
 // Currently supported platforms: Windows / Linux (X11 and Wayland) / MacOS. Not necessary nor available with EMSCRIPTEN.
-#if !defined(__EMSCRIPTEN__) && (defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) || defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN))
+#ifndef __EMSCRIPTEN__
 
 #include <SDL_syswm.h>
 #undef Status           // X11 headers are leaking this and also 'Success', 'Always', 'None', all used in DAWN api. Add #undef if necessary.
@@ -538,4 +538,4 @@ WGPUSurface CreateWGPUSurface(const WGPUInstance& instance, SDL_Window* window)
 #endif
     return nullptr;
 }
-#endif
+#endif // #ifndef __EMSCRIPTEN__

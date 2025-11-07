@@ -1015,7 +1015,7 @@ void ImGui_ImplWGPU_DebugPrintAdapterInfo(const WGPUAdapter& adapter)
     wgpuAdapterInfoFreeMembers(info);
 }
 
-#if defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) || defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) && !defined(__EMSCRIPTEN__)
+#ifndef __EMSCRIPTEN__
 
 #if defined(__APPLE__)
 // MacOS specific: is necessary to compile with "-x objective-c++" flags
@@ -1079,7 +1079,7 @@ WGPUSurface ImGui_ImplWGPU_CreateWGPUSurfaceHelper(ImGui_ImplWGPU_CreateSurfaceI
 #endif
     return surface;
 }
-#endif
+#endif // #ifndef __EMSCRIPTEN__
 
 //-----------------------------------------------------------------------------
 

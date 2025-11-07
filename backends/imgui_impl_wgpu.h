@@ -105,7 +105,7 @@ const char* ImGui_ImplWGPU_GetLogLevelName(WGPULogLevel level);
 #endif
 
 // (Optional) Helper to create a surface on macOS/Wayland/X11/Window
-#if defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) || defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) && !defined(__EMSCRIPTEN__)
+#ifndef __EMSCRIPTEN__
 struct ImGui_ImplWGPU_CreateSurfaceInfo
 {
     WGPUInstance    Instance;
@@ -116,6 +116,6 @@ struct ImGui_ImplWGPU_CreateSurfaceInfo
     void*           RawInstance; // 0         | 0           | 0         | HINSTANCE
 };
 WGPUSurface ImGui_ImplWGPU_CreateWGPUSurfaceHelper(ImGui_ImplWGPU_CreateSurfaceInfo* info);
-#endif
+#endif // #ifndef __EMSCRIPTEN__
 
 #endif // #ifndef IMGUI_DISABLE
