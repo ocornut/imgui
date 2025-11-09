@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.15)
 project(imgui)
 
 option(IMGUI_IMPL_WIN32 "Enable ImGui Win32 implementation" ON)
+option(IMGUI_IMPL_GLFW "Enable ImGui GLFW implementation" ON)
 option(IMGUI_IMPL_OPENGL2 "Enable ImGui OpenGL2 implementation" ON)
 option(IMGUI_IMPL_OPENGL3 "Enable ImGui OpenGL3 implementation" ON)
 option(IMGUI_IMPL_DX9 "Enable ImGui DirectX9 implementation" ON)

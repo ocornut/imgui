@@ -23,7 +23,13 @@ if(IMGUI_IMPL_WIN32)
 add_backend(win32)
 endif()
 
+if(IMGUI_IMPL_GLFW)
+add_backend(glfw)
+endif()
+
 if(OpenGL_FOUND)
+
+
 
 if(IMGUI_IMPL_OPENGL2)
 add_backend(opengl2)
