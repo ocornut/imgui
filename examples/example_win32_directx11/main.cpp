@@ -1,4 +1,4 @@
-// Dear ImGui: standalone example application for DirectX 11
+// Dear ImGui: standalone example application for Windows API + DirectX 11
 
 // Learn about Dear ImGui:
 // - FAQ                  https://dearimgui.com/faq

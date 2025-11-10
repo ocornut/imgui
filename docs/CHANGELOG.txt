@@ -36,6 +36,114 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
+ VERSION 1.92.4 (Released 2025-10-14)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.92.4
+
+Breaking Changes:
+
+- Backends:
+  - TreeNode, Selectable, Clipper: commented out legacy names obsoleted in
+    1.89.7 (July 2023) and 1.89.9 (Sept 2023):
+      ImGuiTreeNodeFlags_AllowItemOverlap       --> ImGuiTreeNodeFlags_AllowOverlap
+      ImGuiSelectableFlags_AllowItemOverlap     --> ImGuiSelectableFlags_AllowOverlap
+      ImGuiListClipper::IncludeRangeByIndices() --> ImGuiListClipper::IncludeItemsByIndex()
+  - Vulkan: moved some fields in ImGui_ImplVulkan_InitInfo:
+      init_info.RenderPass  --> init_info.PipelineInfoMain.RenderPass
+      init_info.Subpass     --> init_info.PipelineInfoMain.Subpass
+      init_info.MSAASamples --> init_info.PipelineInfoMain.MSAASamples
+      init_info.PipelineRenderingCreateInfo --> init_info.PipelineInfoMain.PipelineRenderingCreateInfo
+    It makes things more consistent and was desirable to introduce new settings for
+    secondary viewports. (#8946, #8110, #8111, #8686) [@ocornut, @SuperRonan, @sylmroz]
+  - Vulkan: renamed ImGui_ImplVulkan_MainPipelineCreateInfo --> ImGui_ImplVulkan_PipelineInfo
+    (introduced very recently and only used by `ImGui_ImplVulkan_CreateMainPipeline()`
+    so it should not affect many users). (#8110, #8111)
+  - Vulkan: helper ImGui_ImplVulkanH_CreateOrResizeWindow() added a
+    `VkImageUsageFlags image_usage` argument.
+    It was previously hardcoded to `VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT` and defaults
+    to that when the value is 0. In theory the function is an internal helper but
+    since it's used by our examples some may have used it. (#8946, #8111, #8686)
+
+Other Changes:
+
+- Windows: added lower-right resize grip on child windows using both
+  ImGuiChildFlags_ResizeX and ImGuiChildFlags_ResizeY flags. (#8501) [@aleksijuvani]
+  The grip is not visible before hovering to reduce clutter.
+- Style: added ImGuiCol_UnsavedMarker, color of the unsaved document marker when
+  using ImGuiWindowFlags_UnsavedDocument/ImGuiTabItemFlags_UnsavedDocument. (#8983)
+- IO: added ImGuiPlatformIO::ClearPlatformHandlers(), ClearRendererHandlers()
+  helpers to null all handlers. (#8945, #2769)
+- Inputs:
+  - Shortcuts: added support for combining ImGuiInputFlags_RouteFocused
+    (which is the default route) with ImGuiInputFlags_RouteOverActive, allowing
+    to steal shortcuts from active item without using global routing. (#9004)
+- InputText:
+  - Fixed single-line InputText() not applying fine character clipping
+    properly (regression in 1.92.3). (#8967) [@Cyphall]
+  - Fixed an infinite loop error happening if a custom input text
+    callback modifies/clear BufTextLen before calling InsertChars().
+    (regression from 1.92.3). Note that this never really worked correctly, but
+    previously it would only temporary wreck cursor position, and since 1.92.3 it
+    would go in an infinite loop. (#8994, #3237)
+- Textures:
+  - Fixed a crash if texture status is set to ImTextureStatus_WantDestroy by a backend
+    after it had already been destroyed. This would typically happen when calling
+    ImGui_ImplXXXX_InvalidateDeviceObjects() helpers twice in a row. (#8977, #8811)
+  - Allowed backend to destroy texture while inside the NewFrame/EndFrame
+    scope. Basically if a backend decide to destroy a texture that we didn't request
+    to destroy (for e.g. freeing resources) the texture is immediately set to
+    a ImTextureStatus_WantCreate status again. (#8811)
+  - Fixed an issue preventing multi-contexts sharing a ImFontAtlas from
+    being possible to destroy in any order.
+  - Fixed not updating ImTextureData's RefCount when destroying a context
+    using a shared ImFontAtlas, leading standard backends to not properly
+    free texture resources. (#8975) [@icrashstuff]
+- Demo: fixed layout issue in "Layout & Scrolling -> Scrolling" section.
+- Misc: Relaxed internal assert in MarkItemEdited() to allow for more use cases. (#8997)
+- Misc: Debuggers: added type formatters for the LLDB debuggers (e.g. Xcode,
+  Android Studio & more) to provide nicer display for ImVec2, ImVec4, ImVector etc.
+  See misc/debuggers/ for details. (#8950) [@mentlerd]
+- CI: updated Windows CI scripts to generate/use VulkanSDK. (#8925, #8778) [@yaz0r]
+- Docs: updated FAQ with new "What is the difference between Dear ImGui and
+  traditional UI toolkits?" entry. (#8862)
+- Backends:
+  - All backends call ImGuiPlatformIO::ClearPlatformHandlers() and
+    ClearRendererHandlers() on shutdown, so as not to leave function pointers
+    which may be dangling when using backend in e.g. DLL. (#8945, #2769)
+  - DirectX12: reuse a command list and allocator for texture uploads instead
+    of recreating them each time. (#8963, #8465) [@RT2Code]
+  - DirectX12: Rework synchronization logic. (#8961) [@RT2Code]
+    (presumably fixes old hard-to-repro crash issues such as #3463, #5018)
+  - DirectX12: Reuse texture upload buffer and grow it only when
+    necessary. (#9002) [@RT2Code]
+  - DirectX12: Enable swapchain tearing if available. (#8965) [@RT2Code]
+  - OpenGL3: fixed GL loader to work on Haiku OS which does not support
+    `RTLD_NOLOAD`. (#8952) [@Xottab-DUTY, @threedeyes]
+  - GLFW: fixed build on platform that are neither Windows, macOS or
+    known Unixes (Regression in 1.92.3). (#8969, #8920, #8921) [@oktonion]
+  - SDL2,SDL3: avoid using the SDL_GetGlobalMouseState() path when one of our
+    window is hovered, as the event data is reliable and enough in this case.
+    - Fix mouse coordinates issue in fullscreen apps with macOS notch. (#7919, #7786)
+      - Essentially a workaround for SDL3 bug which will be fixed in SDL 3.3.0.
+    - Better perf on X11 as querying global position requires a round trip to X11 server.
+  - Win32: minor optimization not submitting gamepad io again if
+    XInput's dwPacketNumber has not changed. (#8556) [@MidTerm-CN]
+  - Vulkan: added a way to specify custom shaders by filling init fields
+    CustomShaderVertCreateInfo and CustomShaderFragCreateInfo. (#8585, #8271) [@johan0A]
+  - DX9,DX10,DX11,DX12,Metal,Vulkan,WGPU,SDLRenderer2,SDLRenderer3:
+    ensure that a texture in ImTextureStatus_WantDestroy state always turn to
+    ImTextureStatus_Destroyed even if your underlying graphics data was already
+    destroyed. (#8977)
+- Examples:
+  - SDL2+DirectX11: Try WARP software driver if hardware driver is
+    not available. (#5924, #5562)
+  - SDL3+DirectX11: Added SDL3+DirectX11 example. (#8956, #8957) [@tomaz82]
+  - Win32+DirectX12: Rework synchronization logic. (#8961) [@RT2Code]
+  - Made examples's main.cpp consistent with returning 1 on error.
+
+
+-----------------------------------------------------------------------
  VERSION 1.92.3 (Released 2025-09-17)
 -----------------------------------------------------------------------
 
