@@ -71,6 +71,8 @@ Other Changes:
 - Windows: io.ConfigWindowsMoveFromTitleBarOnly is latched during Begin(),
   effectively allowing to change the value on a per-window basis (although
   there is a better internal mechanism for it).
+- Windows: fixed single-axis auto-sizing (via double-clicking a border) to
+  take account of remaining scrollbar on the other axis. (#9060)
 - Disabled: fixed a bug when a previously enabled item that got nav focus
   and then turns disabled could still be activated using keyboard. (#9036)
 - InputText: when buffer is not resizable, trying to paste contents that
