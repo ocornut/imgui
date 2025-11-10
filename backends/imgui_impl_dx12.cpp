@@ -1158,7 +1158,7 @@ static void ImGui_ImplDX12_CreateWindow(ImGuiViewport* viewport)
             vd->BackBuffer[i].RenderTarget = back_buffer;
         }
 
-        hr = vd->SwapChain->SetMaximumFrameLatency(bd->numBackbuffer);
+        hr = vd->SwapChain->SetMaximumFrameLatency(bd->numFramesInFlight);
         IM_ASSERT(hr == S_OK);
         vd->SwapChainWaitableObject = vd->SwapChain->GetFrameLatencyWaitableObject();
     }

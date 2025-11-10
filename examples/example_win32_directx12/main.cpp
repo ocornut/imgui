@@ -450,7 +450,7 @@ bool CreateDeviceD3D(HWND hWnd)
 
         swapChain1->Release();
         dxgiFactory->Release();
-        g_pSwapChain->SetMaximumFrameLatency(APP_NUM_BACK_BUFFERS);
+        g_pSwapChain->SetMaximumFrameLatency(APP_NUM_FRAMES_IN_FLIGHT);
         g_hSwapChainWaitableObject = g_pSwapChain->GetFrameLatencyWaitableObject();
     }
 
