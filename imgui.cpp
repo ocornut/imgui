@@ -6968,8 +6968,8 @@ static int ImGui::UpdateWindowManualResize(ImGuiWindow* window, int* border_hove
     }
 
     // Apply back modified position/size to window
-    const ImVec2 curr_pos = window->Pos;
-    const ImVec2 curr_size = window->SizeFull;
+    const ImVec2 old_pos = window->Pos;
+    const ImVec2 old_size = window->SizeFull;
     if (size_target.x != FLT_MAX && (window->Size.x != size_target.x || window->SizeFull.x != size_target.x))
         window->Size.x = window->SizeFull.x = size_target.x;
     if (size_target.y != FLT_MAX && (window->Size.y != size_target.y || window->SizeFull.y != size_target.y))
@@ -6978,7 +6978,7 @@ static int ImGui::UpdateWindowManualResize(ImGuiWindow* window, int* border_hove
         window->Pos.x = ImTrunc(pos_target.x);
     if (pos_target.y != FLT_MAX && window->Pos.y != ImTrunc(pos_target.y))
         window->Pos.y = ImTrunc(pos_target.y);
-    if (curr_pos.x != window->Pos.x || curr_pos.y != window->Pos.y || curr_size.x != window->SizeFull.x || curr_size.y != window->SizeFull.y)
+    if (old_pos.x != window->Pos.x || old_pos.y != window->Pos.y || old_size.x != window->SizeFull.x || old_size.y != window->SizeFull.y)
         MarkIniSettingsDirty(window);
 
     // Recalculate next expected border expected coordinates
@@ -7579,6 +7579,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         // Calculate auto-fit size, handle automatic resize
         const ImVec2 size_auto_fit = CalcWindowAutoFitSize(window, window->ContentSizeIdeal, ~0);
+        const ImVec2 old_size = window->SizeFull;
         if ((flags & ImGuiWindowFlags_AlwaysAutoResize) && !window->Collapsed)
         {
             // Using SetNextWindowSize() overrides ImGuiWindowFlags_AlwaysAutoResize, so it can be used on tooltips/popups, etc.
@@ -7607,9 +7608,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 window->SizeFull.y = window->AutoFitOnlyGrows ? ImMax(window->SizeFull.y, size_auto_fit.y) : size_auto_fit.y;
                 use_current_size_for_scrollbar_y = true;
             }
-            if (!window->Collapsed)
-                MarkIniSettingsDirty(window);
         }
+        if (old_size.x != window->SizeFull.x || old_size.y != window->SizeFull.y)
+            MarkIniSettingsDirty(window);
 
         // Apply minimum/maximum window size constraints and final size
         window->SizeFull = CalcWindowSizeAfterConstraint(window, window->SizeFull);
@@ -10220,8 +10221,9 @@ void ImGui::UpdateMouseWheel()
         {
             const ImVec2 offset = window->Size * (1.0f - scale) * (g.IO.MousePos - window->Pos) / window->Size;
             SetWindowPos(window, window->Pos + offset, 0);
-            window->Size = ImTrunc(window->Size * scale);
+            window->Size = ImTrunc(window->Size * scale); // FIXME: Legacy-ish code, call SetWindowSize()?
             window->SizeFull = ImTrunc(window->SizeFull * scale);
+            MarkIniSettingsDirty(window);
         }
         return;
     }
