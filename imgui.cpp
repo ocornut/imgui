@@ -7585,7 +7585,12 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         const bool size_auto_fit_y_always = !window_size_y_set_by_api && (flags & ImGuiWindowFlags_AlwaysAutoResize) && !window->Collapsed;
         const bool size_auto_fit_x_current = !window_size_x_set_by_api && (window->AutoFitFramesX > 0);
         const bool size_auto_fit_y_current = !window_size_y_set_by_api && (window->AutoFitFramesY > 0);
-        const ImVec2 size_auto_fit = CalcWindowAutoFitSize(window, window->ContentSizeIdeal, ~0);
+        int size_auto_fit_mask = 0;
+        if (size_auto_fit_x_always || size_auto_fit_x_current)
+            size_auto_fit_mask |= (1 << ImGuiAxis_X);
+        if (size_auto_fit_y_always || size_auto_fit_y_current)
+            size_auto_fit_mask |= (1 << ImGuiAxis_Y);
+        const ImVec2 size_auto_fit = CalcWindowAutoFitSize(window, window->ContentSizeIdeal, size_auto_fit_mask);
 
         const ImVec2 old_size = window->SizeFull;
         if (size_auto_fit_x_always || size_auto_fit_x_current)

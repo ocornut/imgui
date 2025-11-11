@@ -72,8 +72,9 @@ Other Changes:
   - Config flag io.ConfigWindowsMoveFromTitleBarOnly is now latched during
     Begin(), effectively allowing to change the value on a per-window basis.
     (although there is a better internal mechanism for it).
-  - Fixed single-axis auto-sizing (via double-clicking a border) to
-    take account of remaining scrollbar on the other axis. (#9060)
+  - Fixed single-axis auto-sizing (via double-clicking a border or passing
+    0.0f on one axis of SetNextWindowSize() call) to take account of remaining
+    scrollbar on the other axis. (#9060)
   - Fixed an issue where repeated calls to SetNextWindowSize() using 0.0f
     to auto-size on a given axis would keep marking ini settings as dirty.
 - Disabled: fixed a bug when a previously enabled item that got nav focus
