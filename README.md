@@ -1,5 +1,6 @@
 # _Truly_ Bloat free ImGUI with only GLFW + Vulkan/GL3 backend
 ## Also fixed GLFW window wayland mouse position scaling bug on HiDPI screens
+## On wayland, you must define `IMGUI_IMPL_GLFW_DISABLE_X11` before compiling ImGUI
 ### NOTE: you might want to change `glfwGetPrimaryMonitor()`
 
 ```diff
