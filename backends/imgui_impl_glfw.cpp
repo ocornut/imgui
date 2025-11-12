@@ -1,4 +1,5 @@
 // dear imgui: Platform Backend for GLFW
+// clang-format off
 // This needs to be used along with a Renderer (e.g. OpenGL3, Vulkan, WebGPU..)
 // (Info: GLFW is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan graphics context creation, etc.)
 // (Requires: GLFW 3.0+. Prefer GLFW 3.3+/3.4+ for full feature support.)
@@ -1348,7 +1349,7 @@ static void ImGui_ImplGlfw_WindowSizeCallback(GLFWwindow* window, int, int)
 #define IMGUI_GLFW_HAS_SETWINDOWFLOATING
 static void ImGui_ImplGlfw_SetWindowFloating(ImGui_ImplGlfw_Data* bd, GLFWwindow* window)
 {
-#ifdef GLFW_EXPOSE_NATIVE_X11
+#if defined(GLFW_EXPOSE_NATIVE_X11) && !defined(IMGUI_IMPL_GLFW_DISABLE_X11)
     if (glfwGetPlatform() == GLFW_PLATFORM_X11)
     {
         Display* display = glfwGetX11Display();
