@@ -591,8 +591,12 @@ void ImGui_ImplGlfw_CursorPosCallback(GLFWwindow* window, double x, double y)
         x += window_x;
         y += window_y;
     }
-    io.AddMousePosEvent((float)x, (float)y);
-    bd->LastValidMousePos = ImVec2((float)x, (float)y);
+
+    float xscale, yscale;
+    glfwGetMonitorContentScale(glfwGetPrimaryMonitor(), &xscale, &yscale);
+
+    io.AddMousePosEvent(static_cast<float>(x) / xscale, static_cast<float>(y) / yscale);
+    bd->LastValidMousePos = ImVec2(static_cast<float>(x) / xscale, static_cast<float>(y) / yscale);
 }
 
 // Workaround: X11 seems to send spurious Leave/Enter events which would make us lose our position,
