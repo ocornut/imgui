@@ -2090,6 +2090,7 @@ enum ImGuiWindowDockStyleCol
     ImGuiWindowDockStyleCol_TabDimmed,
     ImGuiWindowDockStyleCol_TabDimmedSelected,
     ImGuiWindowDockStyleCol_TabDimmedSelectedOverline,
+    ImGuiWindowDockStyleCol_UnsavedMarker,
     ImGuiWindowDockStyleCol_COUNT
 };
 
