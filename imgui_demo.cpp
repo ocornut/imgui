@@ -59,9 +59,9 @@
 //   Because we can't assume anything about your support of maths operators, we cannot use them in imgui_demo.cpp.
 
 // Navigating this file:
-// - In Visual Studio: CTRL+comma ("Edit.GoToAll") can follow symbols inside comments, whereas CTRL+F12 ("Edit.GoToImplementation") cannot.
-// - In Visual Studio w/ Visual Assist installed: ALT+G ("VAssistX.GoToImplementation") can also follow symbols inside comments.
-// - In VS Code, CLion, etc.: CTRL+click can follow symbols inside comments.
+// - In Visual Studio: Ctrl+Comma ("Edit.GoToAll") can follow symbols inside comments, whereas Ctrl+F12 ("Edit.GoToImplementation") cannot.
+// - In Visual Studio w/ Visual Assist installed: Alt+G ("VAssistX.GoToImplementation") can also follow symbols inside comments.
+// - In VS Code, CLion, etc.: Ctrl+Click can follow symbols inside comments.
 // - You can search/grep for all sections listed in the index to find the section.
 
 /*
@@ -510,7 +510,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::SameLine(); HelpMarker("Enable resizing of windows from their edges and from the lower-left corner.\nThis requires ImGuiBackendFlags_HasMouseCursors for better mouse cursor feedback.");
             ImGui::Checkbox("io.ConfigWindowsMoveFromTitleBarOnly", &io.ConfigWindowsMoveFromTitleBarOnly);
             ImGui::Checkbox("io.ConfigWindowsCopyContentsWithCtrlC", &io.ConfigWindowsCopyContentsWithCtrlC); // [EXPERIMENTAL]
-            ImGui::SameLine(); HelpMarker("*EXPERIMENTAL* CTRL+C copy the contents of focused window into the clipboard.\n\nExperimental because:\n- (1) has known issues with nested Begin/End pairs.\n- (2) text output quality varies.\n- (3) text output is in submission order rather than spatial order.");
+            ImGui::SameLine(); HelpMarker("*EXPERIMENTAL* Ctrl+C copy the contents of focused window into the clipboard.\n\nExperimental because:\n- (1) has known issues with nested Begin/End pairs.\n- (2) text output quality varies.\n- (3) text output is in submission order rather than spatial order.");
             ImGui::Checkbox("io.ConfigScrollbarScrollByPage", &io.ConfigScrollbarScrollByPage);
             ImGui::SameLine(); HelpMarker("Enable scrolling page by page when clicking outside the scrollbar grab.\nWhen disabled, always scroll to clicked location.\nWhen enabled, Shift+Click scrolls to clicked location.");
 
@@ -895,12 +895,12 @@ static void DemoWindowWidgetsBasic()
             ImGui::InputText("input text", str0, IM_ARRAYSIZE(str0));
             ImGui::SameLine(); HelpMarker(
                 "USER:\n"
-                "Hold SHIFT or use mouse to select text.\n"
-                "CTRL+Left/Right to word jump.\n"
-                "CTRL+A or Double-Click to select all.\n"
-                "CTRL+X,CTRL+C,CTRL+V for clipboard.\n"
-                "CTRL+Z to undo, CTRL+Y/CTRL+SHIFT+Z to redo.\n"
-                "ESCAPE to revert.\n\n"
+                "Hold Shift or use mouse to select text.\n"
+                "Ctrl+Left/Right to word jump.\n"
+                "Ctrl+A or Double-Click to select all.\n"
+                "Ctrl+X,Ctrl+C,Ctrl+V for clipboard.\n"
+                "Ctrl+Z to undo, Ctrl+Y/Ctrl+Shift+Z to redo.\n"
+                "Escape to revert.\n\n"
                 "PROGRAMMER:\n"
                 "You can use the ImGuiInputTextFlags_CallbackResize facility if you need to wire InputText() "
                 "to a dynamic string type. See misc/cpp/imgui_stdlib.h for an example (this is not demonstrated "
@@ -937,8 +937,8 @@ static void DemoWindowWidgetsBasic()
             ImGui::DragInt("drag int", &i1, 1);
             ImGui::SameLine(); HelpMarker(
                 "Click and drag to edit value.\n"
-                "Hold SHIFT/ALT for faster/slower edit.\n"
-                "Double-click or CTRL+click to input value.");
+                "Hold Shift/Alt for faster/slower edit.\n"
+                "Double-Click or Ctrl+Click to input value.");
             ImGui::DragInt("drag int 0..100", &i2, 1, 0, 100, "%d%%", ImGuiSliderFlags_AlwaysClamp);
             ImGui::DragInt("drag int wrap 100..200", &i3, 1, 100, 200, "%d", ImGuiSliderFlags_WrapAround);
 
@@ -954,7 +954,7 @@ static void DemoWindowWidgetsBasic()
             IMGUI_DEMO_MARKER("Widgets/Basic/SliderInt, SliderFloat");
             static int i1 = 0;
             ImGui::SliderInt("slider int", &i1, -1, 3);
-            ImGui::SameLine(); HelpMarker("CTRL+click to input value.");
+            ImGui::SameLine(); HelpMarker("Ctrl+Click to input value.");
 
             static float f1 = 0.123f, f2 = 0.0f;
             ImGui::SliderFloat("slider float", &f1, 0.0f, 1.0f, "ratio = %.3f");
@@ -972,7 +972,7 @@ static void DemoWindowWidgetsBasic()
             static int elem = Element_Fire;
             const char* elems_names[Element_COUNT] = { "Fire", "Earth", "Air", "Water" };
             const char* elem_name = (elem >= 0 && elem < Element_COUNT) ? elems_names[elem] : "Unknown";
-            ImGui::SliderInt("slider enum", &elem, 0, Element_COUNT - 1, elem_name); // Use ImGuiSliderFlags_NoInput flag to disable CTRL+Click here.
+            ImGui::SliderInt("slider enum", &elem, 0, Element_COUNT - 1, elem_name); // Use ImGuiSliderFlags_NoInput flag to disable Ctrl+Click here.
             ImGui::SameLine(); HelpMarker("Using the format string parameter to display a name instead of the underlying integer.");
         }
 
@@ -986,8 +986,8 @@ static void DemoWindowWidgetsBasic()
             ImGui::SameLine(); HelpMarker(
                 "Click on the color square to open a color picker.\n"
                 "Click and hold to use drag and drop.\n"
-                "Right-click on the color square to show options.\n"
-                "CTRL+click on individual component to input value.\n");
+                "Right-Click on the color square to show options.\n"
+                "Ctrl+Click on individual component to input value.\n");
 
             ImGui::ColorEdit4("color 2", col2);
         }
@@ -1105,7 +1105,7 @@ static void DemoWindowWidgetsColorAndPickers()
         ImGui::Text("Color widget:");
         ImGui::SameLine(); HelpMarker(
             "Click on the color square to open a color picker.\n"
-            "CTRL+click on individual component to input value.\n");
+            "Ctrl+Click on individual component to input value.\n");
         ImGui::ColorEdit3("MyColor##1", (float*)&color, base_flags);
 
         IMGUI_DEMO_MARKER("Widgets/Color/ColorEdit (HSV, with Alpha)");
@@ -1437,7 +1437,7 @@ static void DemoWindowWidgetsDataTypes()
         ImGui::Checkbox("Clamp integers to 0..50", &drag_clamp);
         ImGui::SameLine(); HelpMarker(
             "As with every widget in dear imgui, we never modify values unless there is a user interaction.\n"
-            "You can override the clamping limits by using CTRL+Click to input a value.");
+            "You can override the clamping limits by using Ctrl+Click to input a value.");
         ImGui::DragScalar("drag s8",        ImGuiDataType_S8,     &s8_v,  drag_speed, drag_clamp ? &s8_zero  : NULL, drag_clamp ? &s8_fifty  : NULL);
         ImGui::DragScalar("drag u8",        ImGuiDataType_U8,     &u8_v,  drag_speed, drag_clamp ? &u8_zero  : NULL, drag_clamp ? &u8_fifty  : NULL, "%u ms");
         ImGui::DragScalar("drag s16",       ImGuiDataType_S16,    &s16_v, drag_speed, drag_clamp ? &s16_zero : NULL, drag_clamp ? &s16_fifty : NULL);
@@ -1697,7 +1697,7 @@ static void DemoWindowWidgetsDragsAndSliders()
         static ImGuiSliderFlags flags = ImGuiSliderFlags_None;
         ImGui::CheckboxFlags("ImGuiSliderFlags_AlwaysClamp", &flags, ImGuiSliderFlags_AlwaysClamp);
         ImGui::CheckboxFlags("ImGuiSliderFlags_ClampOnInput", &flags, ImGuiSliderFlags_ClampOnInput);
-        ImGui::SameLine(); HelpMarker("Clamp value to min/max bounds when input manually with CTRL+Click. By default CTRL+Click allows going out of bounds.");
+        ImGui::SameLine(); HelpMarker("Clamp value to min/max bounds when input manually with Ctrl+Click. By default Ctrl+Click allows going out of bounds.");
         ImGui::CheckboxFlags("ImGuiSliderFlags_ClampZeroRange", &flags, ImGuiSliderFlags_ClampZeroRange);
         ImGui::SameLine(); HelpMarker("Clamp even if min==max==0.0f. Otherwise DragXXX functions don't clamp.");
         ImGui::CheckboxFlags("ImGuiSliderFlags_Logarithmic", &flags, ImGuiSliderFlags_Logarithmic);
@@ -1705,7 +1705,7 @@ static void DemoWindowWidgetsDragsAndSliders()
         ImGui::CheckboxFlags("ImGuiSliderFlags_NoRoundToFormat", &flags, ImGuiSliderFlags_NoRoundToFormat);
         ImGui::SameLine(); HelpMarker("Disable rounding underlying value to match precision of the format string (e.g. %.3f values are rounded to those 3 digits).");
         ImGui::CheckboxFlags("ImGuiSliderFlags_NoInput", &flags, ImGuiSliderFlags_NoInput);
-        ImGui::SameLine(); HelpMarker("Disable CTRL+Click or Enter key allowing to input text directly into the widget.");
+        ImGui::SameLine(); HelpMarker("Disable Ctrl+Click or Enter key allowing to input text directly into the widget.");
         ImGui::CheckboxFlags("ImGuiSliderFlags_NoSpeedTweaks", &flags, ImGuiSliderFlags_NoSpeedTweaks);
         ImGui::SameLine(); HelpMarker("Disable keyboard modifiers altering tweak speed. Useful if you want to alter tweak speed yourself based on your own logic.");
         ImGui::CheckboxFlags("ImGuiSliderFlags_WrapAround", &flags, ImGuiSliderFlags_WrapAround);
@@ -2668,11 +2668,11 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
         }
 
         // Demonstrate implementation a most-basic form of multi-selection manually
-        // This doesn't support the SHIFT modifier which requires BeginMultiSelect()!
+        // This doesn't support the Shift modifier which requires BeginMultiSelect()!
         IMGUI_DEMO_MARKER("Widgets/Selection State/Multi-Select (manual/simplified, without BeginMultiSelect)");
         if (ImGui::TreeNode("Multi-Select (manual/simplified, without BeginMultiSelect)"))
         {
-            HelpMarker("Hold CTRL and click to select multiple items.");
+            HelpMarker("Hold Ctrl and Click to select multiple items.");
             static bool selection[5] = { false, false, false, false, false };
             for (int n = 0; n < 5; n++)
             {
@@ -2680,7 +2680,7 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
                 sprintf(buf, "Object %d", n);
                 if (ImGui::Selectable(buf, selection[n]))
                 {
-                    if (!ImGui::GetIO().KeyCtrl) // Clear selection when CTRL is not held
+                    if (!ImGui::GetIO().KeyCtrl) // Clear selection when Ctrl is not held
                         memset(selection, 0, sizeof(selection));
                     selection[n] ^= 1; // Toggle current item
                 }
@@ -2689,7 +2689,7 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
         }
 
         // Demonstrate handling proper multi-selection using the BeginMultiSelect/EndMultiSelect API.
-        // SHIFT+Click w/ CTRL and other standard features are supported.
+        // Shift+Click w/ Ctrl and other standard features are supported.
         // We use the ImGuiSelectionBasicStorage helper which you may freely reimplement.
         IMGUI_DEMO_MARKER("Widgets/Selection State/Multi-Select");
         if (ImGui::TreeNode("Multi-Select"))
@@ -2698,7 +2698,7 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
             ImGui::BulletText("Keyboard navigation (arrows, page up/down, home/end, space).");
             ImGui::BulletText("Ctrl modifier to preserve and toggle selection.");
             ImGui::BulletText("Shift modifier for range selection.");
-            ImGui::BulletText("CTRL+A to select all.");
+            ImGui::BulletText("Ctrl+A to select all.");
             ImGui::BulletText("Escape to clear selection.");
             ImGui::BulletText("Click and drag to box-select.");
             ImGui::Text("Tip: Use 'Demo->Tools->Debug Log->Selection' to see selection requests as they happen.");
@@ -4072,7 +4072,7 @@ static void DemoWindowWidgetsTreeNodes()
         {
             HelpMarker(
                 "This is a more typical looking tree with selectable nodes.\n"
-                "Click to select, CTRL+Click to toggle, click on arrows or double-click to open.");
+                "Click to select, Ctrl+Click to toggle, click on arrows or double-click to open.");
             static ImGuiTreeNodeFlags base_flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAvailWidth;
             static bool align_label_with_current_x_position = false;
             static bool test_drag_and_drop = false;
@@ -4159,7 +4159,7 @@ static void DemoWindowWidgetsTreeNodes()
                 // Update selection state
                 // (process outside of tree loop to avoid visual inconsistencies during the clicking frame)
                 if (ImGui::GetIO().KeyCtrl)
-                    selection_mask ^= (1 << node_clicked);          // CTRL+click to toggle
+                    selection_mask ^= (1 << node_clicked);          // Ctrl+Click to toggle
                 else //if (!(selection_mask & (1 << node_clicked))) // Depending on selection behavior you want, may want to preserve selection when clicking on item that is part of the selection
                     selection_mask = (1 << node_clicked);           // Click to single-select
             }
@@ -5466,7 +5466,7 @@ static void DemoWindowPopups()
         ImGui::TextWrapped("Below we are testing adding menu items to a regular window. It's rather unusual but should work!");
         ImGui::Separator();
 
-        ImGui::MenuItem("Menu item", "CTRL+M");
+        ImGui::MenuItem("Menu item", "Ctrl+M");
         if (ImGui::BeginMenu("Menu inside a regular window"))
         {
             ShowExampleMenuFile();
@@ -7897,16 +7897,16 @@ static void DemoWindowInputs()
             ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(1.0f, 0.0f, 1.0f, 0.1f));
 
             ImGui::BeginChild("WindowA", ImVec2(-FLT_MIN, line_height * 14), true);
-            ImGui::Text("Press CTRL+A and see who receives it!");
+            ImGui::Text("Press Ctrl+A and see who receives it!");
             ImGui::Separator();
 
-            // 1: Window polling for CTRL+A
+            // 1: Window polling for Ctrl+A
             ImGui::Text("(in WindowA)");
             ImGui::Text("IsWindowFocused: %d, Shortcut: %s", ImGui::IsWindowFocused(), ImGui::Shortcut(key_chord, flags) ? "PRESSED" : "...");
 
-            // 2: InputText also polling for CTRL+A: it always uses _RouteFocused internally (gets priority when active)
+            // 2: InputText also polling for Ctrl+A: it always uses _RouteFocused internally (gets priority when active)
             // (Commented because the owner-aware version of Shortcut() is still in imgui_internal.h)
-            //char str[16] = "Press CTRL+A";
+            //char str[16] = "Press Ctrl+A";
             //ImGui::Spacing();
             //ImGui::InputText("InputTextB", str, IM_ARRAYSIZE(str), ImGuiInputTextFlags_ReadOnly);
             //ImGuiID item_id = ImGui::GetItemID();
@@ -7919,7 +7919,7 @@ static void DemoWindowInputs()
             ImGui::Text("IsWindowFocused: %d", ImGui::IsWindowFocused());
             ImGui::EndChild();
 
-            // 4: Child window polling for CTRL+A. It is deeper than WindowA and gets priority when focused.
+            // 4: Child window polling for Ctrl+A. It is deeper than WindowA and gets priority when focused.
             ImGui::BeginChild("ChildE", ImVec2(-FLT_MIN, line_height * 4), true);
             ImGui::Text("(in ChildE: using same Shortcut)");
             ImGui::Text("IsWindowFocused: %d, Shortcut: %s", ImGui::IsWindowFocused(), ImGui::Shortcut(key_chord, flags) ? "PRESSED" : "...");
@@ -7976,7 +7976,7 @@ static void DemoWindowInputs()
         IMGUI_DEMO_MARKER("Inputs & Focus/Tabbing");
         if (ImGui::TreeNode("Tabbing"))
         {
-            ImGui::Text("Use TAB/SHIFT+TAB to cycle through keyboard editable fields.");
+            ImGui::Text("Use Tab/Shift+Tab to cycle through keyboard editable fields.");
             static char buf[32] = "hello";
             ImGui::InputText("1", buf, IM_ARRAYSIZE(buf));
             ImGui::InputText("2", buf, IM_ARRAYSIZE(buf));
@@ -8539,7 +8539,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             ShowFontAtlas(atlas);
 
             // Post-baking font scaling. Note that this is NOT the nice way of scaling fonts, read below.
-            // (we enforce hard clamping manually as by default DragFloat/SliderFloat allows CTRL+Click text to get out of bounds).
+            // (we enforce hard clamping manually as by default DragFloat/SliderFloat allows Ctrl+Click text to get out of bounds).
             /*
             SeparatorText("Legacy Scaling");
             const float MIN_SCALE = 0.3f;
@@ -8643,18 +8643,18 @@ void ImGui::ShowUserGuide()
     BulletText(
         "Click and drag on lower corner to resize window\n"
         "(double-click to auto fit window to its contents).");
-    BulletText("CTRL+Click on a slider or drag box to input value as text.");
-    BulletText("TAB/SHIFT+TAB to cycle through keyboard editable fields.");
-    BulletText("CTRL+Tab to select a window.");
+    BulletText("Ctrl+Click on a slider or drag box to input value as text.");
+    BulletText("Tab/Shift+Tab to cycle through keyboard editable fields.");
+    BulletText("Ctrl+Tab to select a window.");
     if (io.FontAllowUserScaling)
-        BulletText("CTRL+Mouse Wheel to zoom window contents.");
+        BulletText("Ctrl+Mouse Wheel to zoom window contents.");
     BulletText("While inputting text:\n");
     Indent();
-    BulletText("CTRL+Left/Right to word jump.");
-    BulletText("CTRL+A or double-click to select all.");
-    BulletText("CTRL+X/C/V to use clipboard cut/copy/paste.");
-    BulletText("CTRL+Z to undo, CTRL+Y/CTRL+SHIFT+Z to redo.");
-    BulletText("ESCAPE to revert.");
+    BulletText("Ctrl+Left/Right to word jump.");
+    BulletText("Ctrl+A or double-click to select all.");
+    BulletText("Ctrl+X/C/V to use clipboard cut/copy/paste.");
+    BulletText("Ctrl+Z to undo, Ctrl+Y/Ctrl+Shift+Z to redo.");
+    BulletText("Escape to revert.");
     Unindent();
     BulletText("With keyboard navigation enabled:");
     Indent();
@@ -8688,12 +8688,12 @@ static void ShowExampleAppMainMenuBar()
         }
         if (ImGui::BeginMenu("Edit"))
         {
-            if (ImGui::MenuItem("Undo", "CTRL+Z")) {}
-            if (ImGui::MenuItem("Redo", "CTRL+Y", false, false)) {} // Disabled item
+            if (ImGui::MenuItem("Undo", "Ctrl+Z")) {}
+            if (ImGui::MenuItem("Redo", "Ctrl+Y", false, false)) {} // Disabled item
             ImGui::Separator();
-            if (ImGui::MenuItem("Cut", "CTRL+X")) {}
-            if (ImGui::MenuItem("Copy", "CTRL+C")) {}
-            if (ImGui::MenuItem("Paste", "CTRL+V")) {}
+            if (ImGui::MenuItem("Cut", "Ctrl+X")) {}
+            if (ImGui::MenuItem("Copy", "Ctrl+C")) {}
+            if (ImGui::MenuItem("Paste", "Ctrl+V")) {}
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
@@ -9698,7 +9698,7 @@ static void ShowExampleAppConstrainedResize(bool* p_open)
         }
         else
         {
-            ImGui::Text("(Hold SHIFT to display a dummy viewport)");
+            ImGui::Text("(Hold Shift to display a dummy viewport)");
             if (ImGui::Button("Set 200x200")) { ImGui::SetWindowSize(ImVec2(200, 200)); } ImGui::SameLine();
             if (ImGui::Button("Set 500x500")) { ImGui::SetWindowSize(ImVec2(500, 500)); } ImGui::SameLine();
             if (ImGui::Button("Set 800x200")) { ImGui::SetWindowSize(ImVec2(800, 200)); }
@@ -10635,7 +10635,7 @@ struct ExampleAssetsBrowser
 
                 ImGui::SeparatorText("Layout");
                 ImGui::SliderFloat("Icon Size", &IconSize, 16.0f, 128.0f, "%.0f");
-                ImGui::SameLine(); HelpMarker("Use CTRL+Wheel to zoom");
+                ImGui::SameLine(); HelpMarker("Use Ctrl+Wheel to zoom");
                 ImGui::SliderInt("Icon Spacing", &IconSpacing, 0, 32);
                 ImGui::SliderInt("Icon Hit Spacing", &IconHitSpacing, 0, 32);
                 ImGui::Checkbox("Stretch Spacing", &StretchSpacing);
@@ -10827,7 +10827,7 @@ struct ExampleAssetsBrowser
             if (want_delete)
                 Selection.ApplyDeletionPostLoop(ms_io, Items, item_curr_idx_to_focus);
 
-            // Zooming with CTRL+Wheel
+            // Zooming with Ctrl+Wheel
             if (ImGui::IsWindowAppearing())
                 ZoomWheelAccum = 0.0f;
             if (ImGui::IsWindowHovered() && io.MouseWheel != 0.0f && ImGui::IsKeyDown(ImGuiMod_Ctrl) && ImGui::IsAnyItemActive() == false)

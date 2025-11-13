@@ -100,6 +100,8 @@ Other Changes:
   triggered by some widgets e.g. Checkbox(), Selectable() and many others, which
   cleared ActiveId at the same time as editing. (#9028)
   Note that IsItemDeactivatedAfterEdit() was not affected, only IsItemEdited).
+- Misc: standardized casing of keyboard mods in comments and demo, showing
+  as e.g. "Ctrl" instead of "CTRL".
 - Drag and Drop:
   - Added ImGuiDragDropFlags_AcceptDrawAsHovered to make accepting item render
     as hovered, which can allow using e.g. Button() as drop target. (#8632)

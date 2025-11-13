@@ -2701,7 +2701,7 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data,
     bool temp_input_is_active = temp_input_allowed && TempInputIsActive(id);
     if (!temp_input_is_active)
     {
-        // Tabbing or CTRL+click on Drag turns it into an InputText
+        // Tabbing or Ctrl+Click on Drag turns it into an InputText
         const bool clicked = hovered && IsMouseClicked(0, ImGuiInputFlags_None, id);
         const bool double_clicked = (hovered && g.IO.MouseClickedCount[0] == 2 && TestKeyOwner(ImGuiKey_MouseLeft, id));
         const bool make_active = (clicked || double_clicked || g.NavActivateId == id);
@@ -2735,7 +2735,7 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data,
 
     if (temp_input_is_active)
     {
-        // Only clamp CTRL+Click input when ImGuiSliderFlags_ClampOnInput is set (generally via ImGuiSliderFlags_AlwaysClamp)
+        // Only clamp Ctrl+Click input when ImGuiSliderFlags_ClampOnInput is set (generally via ImGuiSliderFlags_AlwaysClamp)
         bool clamp_enabled = false;
         if ((flags & ImGuiSliderFlags_ClampOnInput) && (p_min != NULL || p_max != NULL))
         {
@@ -3305,7 +3305,7 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* p_dat
     bool temp_input_is_active = temp_input_allowed && TempInputIsActive(id);
     if (!temp_input_is_active)
     {
-        // Tabbing or CTRL+click on Slider turns it into an input box
+        // Tabbing or Ctrl+Click on Slider turns it into an input box
         const bool clicked = hovered && IsMouseClicked(0, ImGuiInputFlags_None, id);
         const bool make_active = (clicked || g.NavActivateId == id);
         if (make_active && clicked)
@@ -3329,7 +3329,7 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* p_dat
 
     if (temp_input_is_active)
     {
-        // Only clamp CTRL+Click input when ImGuiSliderFlags_ClampOnInput is set (generally via ImGuiSliderFlags_AlwaysClamp)
+        // Only clamp Ctrl+Click input when ImGuiSliderFlags_ClampOnInput is set (generally via ImGuiSliderFlags_AlwaysClamp)
         const bool clamp_enabled = (flags & ImGuiSliderFlags_ClampOnInput) != 0;
         return TempInputScalar(frame_bb, id, label, data_type, p_data, format, clamp_enabled ? p_min : NULL, clamp_enabled ? p_max : NULL);
     }
@@ -3666,7 +3666,7 @@ int ImParseFormatPrecision(const char* fmt, int default_precision)
     return (precision == INT_MAX) ? default_precision : precision;
 }
 
-// Create text input in place of another active widget (e.g. used when doing a CTRL+Click on drag/slider widgets)
+// Create text input in place of another active widget (e.g. used when doing a Ctrl+Click on drag/slider widgets)
 // FIXME: Facilitate using this in variety of other situations.
 // FIXME: Among other things, setting ImGuiItemFlags_AllowDuplicateId in LastItemData is currently correct but
 // the expected relationship between TempInputXXX functions and LastItemData is a little fishy.
@@ -3692,7 +3692,7 @@ bool ImGui::TempInputText(const ImRect& bb, ImGuiID id, const char* label, char*
 }
 
 // Note that Drag/Slider functions are only forwarding the min/max values clamping values if the ImGuiSliderFlags_AlwaysClamp flag is set!
-// This is intended: this way we allow CTRL+Click manual input to set a value out of bounds, for maximum flexibility.
+// This is intended: this way we allow Ctrl+Click manual input to set a value out of bounds, for maximum flexibility.
 // However this may not be ideal for all uses, as some user code may break on out of bound values.
 bool ImGui::TempInputScalar(const ImRect& bb, ImGuiID id, const char* label, ImGuiDataType data_type, void* p_data, const char* format, const void* p_clamp_min, const void* p_clamp_max)
 {
@@ -4012,7 +4012,7 @@ static bool ImCharIsSeparatorW(unsigned int c)
 
 static int is_word_boundary_from_right(ImGuiInputTextState* obj, int idx)
 {
-    // When ImGuiInputTextFlags_Password is set, we don't want actions such as CTRL+Arrow to leak the fact that underlying data are blanks or separators.
+    // When ImGuiInputTextFlags_Password is set, we don't want actions such as Ctrl+Arrow to leak the fact that underlying data are blanks or separators.
     if ((obj->Flags & ImGuiInputTextFlags_Password) || idx <= 0)
         return 0;
 
@@ -4928,7 +4928,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             if ((multiclick_count % 2) == 0)
             {
                 // Double-click: Select word
-                // We always use the "Mac" word advance for double-click select vs CTRL+Right which use the platform dependent variant:
+                // We always use the "Mac" word advance for double-click select vs Ctrl+Right which use the platform dependent variant:
                 // FIXME: There are likely many ways to improve this behavior, but there's no "right" behavior (depends on use-case, software, OS)
                 const bool is_bol = (state->Stb->cursor == 0) || ImStb::STB_TEXTEDIT_GETCHAR(state, state->Stb->cursor - 1) == '\n';
                 if (STB_TEXT_HAS_SELECTION(state->Stb) || !is_bol)
@@ -4997,7 +4997,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         }
 
         // Process regular text input (before we check for Return because using some IME will effectively send a Return?)
-        // We ignore CTRL inputs, but need to allow ALT+CTRL as some keyboards (e.g. German) use AltGR (which _is_ Alt+Ctrl) to input certain characters.
+        // We ignore Ctrl inputs, but need to allow Alt+Ctrl as some keyboards (e.g. German) use AltGR (which _is_ Alt+Ctrl) to input certain characters.
         const bool ignore_char_inputs = (io.KeyCtrl && !io.KeyAlt) || (is_osx && io.KeyCtrl);
         if (io.InputQueueCharacters.Size > 0)
         {
@@ -5030,7 +5030,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         const bool is_wordmove_key_down = is_osx ? io.KeyAlt : io.KeyCtrl;                     // OS X style: Text editing cursor movement using Alt instead of Ctrl
         const bool is_startend_key_down = is_osx && io.KeyCtrl && !io.KeySuper && !io.KeyAlt;  // OS X style: Line/Text Start and End using Cmd+Arrows instead of Home/End
 
-        // Using Shortcut() with ImGuiInputFlags_RouteFocused (default policy) to allow routing operations for other code (e.g. calling window trying to use CTRL+A and CTRL+B: former would be handled by InputText)
+        // Using Shortcut() with ImGuiInputFlags_RouteFocused (default policy) to allow routing operations for other code (e.g. calling window trying to use Ctrl+A and Ctrl+B: former would be handled by InputText)
         // Otherwise we could simply assume that we own the keys as we are active.
         const ImGuiInputFlags f_repeat = ImGuiInputFlags_Repeat;
         const bool is_cut   = (Shortcut(ImGuiMod_Ctrl | ImGuiKey_X, f_repeat, id) || Shortcut(ImGuiMod_Shift | ImGuiKey_Delete, f_repeat, id)) && !is_readonly && !is_password && (!is_multiline || state->HasSelection());
@@ -5208,7 +5208,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                 apply_new_text_length = state->TextToRevertTo.Size - 1;
 
                 // Restore initial value. Only return true if restoring to the initial value changes the current buffer contents.
-                // Push records into the undo stack so we can CTRL+Z the revert operation itself
+                // Push records into the undo stack so we can Ctrl+Z the revert operation itself
                 value_changed = true;
                 stb_textedit_replace(state, state->Stb, state->TextToRevertTo.Data, state->TextToRevertTo.Size - 1);
             }
@@ -5708,7 +5708,7 @@ static void ColorEditRestoreHS(const float* col, float* H, float* S, float* V)
 
 // Edit colors components (each component in 0.0f..1.0f range).
 // See enum ImGuiColorEditFlags_ for available options. e.g. Only access 3 floats if ImGuiColorEditFlags_NoAlpha flag is set.
-// With typical options: Left-click on color square to open color picker. Right-click to open option menu. CTRL+Click over input fields to edit them and TAB to go to next item.
+// With typical options: Left-click on color square to open color picker. Right-click to open option menu. Ctrl+Click over input fields to edit them and TAB to go to next item.
 bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flags)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -7948,7 +7948,7 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, int sel
                 }
         }
 
-        // Shortcut: Select all (CTRL+A)
+        // Shortcut: Select all (Ctrl+A)
         if (!(flags & ImGuiMultiSelectFlags_SingleSelect) && !(flags & ImGuiMultiSelectFlags_NoSelectAll))
             if (Shortcut(ImGuiMod_Ctrl | ImGuiKey_A))
                 request_select_all = true;
@@ -8093,7 +8093,7 @@ void ImGui::MultiSelectItemHeader(ImGuiID id, bool* p_selected, ImGuiButtonFlags
         if (ms->LoopRequestSetAll != -1)
             selected = (ms->LoopRequestSetAll == 1);
 
-        // When using SHIFT+Nav: because it can incur scrolling we cannot afford a frame of lag with the selection highlight (otherwise scrolling would happen before selection)
+        // When using Shift+Nav: because it can incur scrolling we cannot afford a frame of lag with the selection highlight (otherwise scrolling would happen before selection)
         // For this to work, we need someone to set 'RangeSrcPassedBy = true' at some point (either clipper either SetNextItemSelectionUserData() function)
         if (ms->IsKeyboardSetRange)
         {
@@ -8124,7 +8124,7 @@ void ImGui::MultiSelectItemHeader(ImGuiID id, bool* p_selected, ImGuiButtonFlags
 
     // Alter button behavior flags
     // To handle drag and drop of multiple items we need to avoid clearing selection on click.
-    // Enabling this test makes actions using CTRL+SHIFT delay their effect on MouseUp which is annoying, but it allows drag and drop of multiple items.
+    // Enabling this test makes actions using Ctrl+Shift delay their effect on MouseUp which is annoying, but it allows drag and drop of multiple items.
     if (p_button_flags != NULL)
     {
         ImGuiButtonFlags button_flags = *p_button_flags;
@@ -8323,7 +8323,7 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
         MultiSelectAddSetRange(ms, range_selected, range_direction, storage->RangeSrcItem, item_data);
     }
 
-    // Update/store the selection state of the Source item (used by CTRL+SHIFT, when Source is unselected we perform a range unselect)
+    // Update/store the selection state of the Source item (used by Ctrl+Shift, when Source is unselected we perform a range unselect)
     if (storage->RangeSrcItem == item_data)
         storage->RangeSelected = selected ? 1 : 0;
 
@@ -8537,7 +8537,7 @@ void ImGuiSelectionBasicStorage::ApplyRequests(ImGuiMultiSelectIO* ms_io)
             else
             {
                 // Append insertion + single sort likely be faster.
-                // Use req.RangeDirection to set order field so that shift+clicking from 1 to 5 is different than shift+clicking from 5 to 1
+                // Use req.RangeDirection to set order field so that Shift+Clicking from 1 to 5 is different than Shift+Clicking from 5 to 1
                 const int size_before_amends = _Storage.Data.Size;
                 int selection_order = _SelectionOrder + ((req.RangeDirection < 0) ? selection_changes - 1 : 0);
                 for (int idx = (int)req.RangeFirstItem; idx <= (int)req.RangeLastItem; idx++, selection_order += req.RangeDirection)
@@ -10464,7 +10464,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     }
 
     // Lock visibility
-    // (Note: tab_contents_visible != tab_selected... because CTRL+TAB operations may preview some tabs without selecting them!)
+    // (Note: tab_contents_visible != tab_selected... because Ctrl+Tab operations may preview some tabs without selecting them!)
     bool tab_contents_visible = (tab_bar->VisibleTabId == id);
     if (tab_contents_visible)
         tab_bar->VisibleTabWasSubmitted = true;
