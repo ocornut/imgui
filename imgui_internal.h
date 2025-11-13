@@ -2125,7 +2125,7 @@ struct ImGuiStackLevelInfo
     ImS8                    DataType;                   // ImGuiDataType
     int                     DescOffset;                 // -1 or offset into parent's ResultPathsBuf
 
-    ImGuiStackLevelInfo()   { memset(this, 0, sizeof(*this)); DescOffset = -1; }
+    ImGuiStackLevelInfo()   { memset(this, 0, sizeof(*this)); DataType = -1; DescOffset = -1; }
 };
 
 // State for ID Stack tool queries

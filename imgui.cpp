@@ -17892,7 +17892,8 @@ void ImGui::DebugHookIdInfo(ImGuiID id, ImGuiDataType data_type, const void* dat
         tool->ResultPathsBuf.append(result, result_end + 1); // Include zero terminator
     }
     info->QuerySuccess = true;
-    info->DataType = (ImS8)data_type;
+    if (info->DataType == -1)
+        info->DataType = (ImS8)data_type;
 }
 
 static int StackToolFormatLevelInfo(ImGuiIDStackTool* tool, int n, bool format_for_ui, char* buf, size_t buf_size)
