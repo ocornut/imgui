@@ -2140,7 +2140,7 @@ struct ImGuiIDStackTool
     bool                    OptCopyToClipboardOnCtrlC;
     float                   CopyToClipboardLastTime;
     ImGuiTextBuffer         ResultPathsBuf;
-    ImGuiTextBuffer         ResultTempBuf;
+    ImGuiTextBuffer         ResultFullPathBuf;
 
     ImGuiIDStackTool()      { memset(this, 0, sizeof(*this)); LastActiveFrame = -1; OptHexEncodeNonAsciiChars = true; CopyToClipboardLastTime = -FLT_MAX; }
 };
