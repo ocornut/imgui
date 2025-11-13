@@ -1965,13 +1965,25 @@ static void ImGui_ImplVulkan_CreateWindow(ImGuiViewport* viewport)
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     VkResult err = (VkResult)platform_io.Platform_CreateVkSurface(viewport, (ImU64)v->Instance, (const void*)v->Allocator, (ImU64*)&wd->Surface);
     check_vk_result(err);
+    
+    // Check if surface creation failed
+    if (err != VK_SUCCESS || wd->Surface == VK_NULL_HANDLE)
+    {
+        // Surface creation failed, clean up and return
+        IM_DELETE(vd);
+        viewport->RendererUserData = nullptr;
+        return;
+    }
 
     // Check for WSI support
     VkBool32 res;
     vkGetPhysicalDeviceSurfaceSupportKHR(v->PhysicalDevice, v->QueueFamily, wd->Surface, &res);
     if (res != VK_TRUE)
     {
-        IM_ASSERT(0); // Error: no WSI support on physical device
+        // Error: no WSI support on physical device, clean up and return
+        vkDestroySurfaceKHR(v->Instance, wd->Surface, v->Allocator);
+        IM_DELETE(vd);
+        viewport->RendererUserData = nullptr;
         return;
     }
 
@@ -2050,6 +2062,8 @@ static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport, void*)
 {
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
     ImGui_ImplVulkan_ViewportData* vd = (ImGui_ImplVulkan_ViewportData*)viewport->RendererUserData;
+    if (vd == nullptr) // Window creation failed, skip rendering
+        return;
     ImGui_ImplVulkanH_Window* wd = &vd->Window;
     ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
     VkResult err;
@@ -2197,6 +2211,8 @@ static void ImGui_ImplVulkan_SwapBuffers(ImGuiViewport* viewport, void*)
 {
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
     ImGui_ImplVulkan_ViewportData* vd = (ImGui_ImplVulkan_ViewportData*)viewport->RendererUserData;
+    if (vd == nullptr) // Window creation failed, skip swap
+        return;
     ImGui_ImplVulkanH_Window* wd = &vd->Window;
     ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
 
