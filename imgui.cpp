@@ -19767,7 +19767,9 @@ static void ImGui::DockNodePreviewDockRender(ImGuiWindow* host_window, ImGuiDock
             tab_pos.x += tab_size.x + g.Style.ItemInnerSpacing.x;
             const ImU32 overlay_col_text = GetColorU32(payload_window->DockStyle.Colors[ImGuiWindowDockStyleCol_Text]);
             const ImU32 overlay_col_tabs = GetColorU32(payload_window->DockStyle.Colors[ImGuiWindowDockStyleCol_TabSelected]);
+            const ImU32 overlay_col_unsaved_marker = GetColorU32(payload_window->DockStyle.Colors[ImGuiWindowDockStyleCol_UnsavedMarker]);
             PushStyleColor(ImGuiCol_Text, overlay_col_text);
+            PushStyleColor(ImGuiCol_UnsavedMarker, overlay_col_unsaved_marker);
             for (int overlay_n = 0; overlay_n < overlay_draw_lists_count; overlay_n++)
             {
                 ImGuiTabItemFlags tab_flags = (payload_window->Flags & ImGuiWindowFlags_UnsavedDocument) ? ImGuiTabItemFlags_UnsavedDocument : 0;
@@ -19778,7 +19780,7 @@ static void ImGui::DockNodePreviewDockRender(ImGuiWindow* host_window, ImGuiDock
                 if (!tab_bar_rect.Contains(tab_bb))
                     overlay_draw_lists[overlay_n]->PopClipRect();
             }
-            PopStyleColor();
+            PopStyleColor(2);
         }
     }
 
