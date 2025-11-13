@@ -158,6 +158,7 @@ Docking+Viewports Branch:
 - Backends:
   - DirectX12: Fixed an issue in synchronization logic improving rendering
     throughput for secondary viewports. (#9025, #8961)
+  - Vulkan: handle viewport surface creation failure without crashing. (#9068) [@zentia]
 
 
 -----------------------------------------------------------------------
