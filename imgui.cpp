@@ -14721,6 +14721,44 @@ void ImGui::EndDragDropSource()
 }
 
 // Use 'cond' to choose to submit payload on drag start or every frame
+bool ImGui::AddDragDropPayload(const char* type, const void* data, size_t data_size)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiPayload& payload = g.DragDropPayload;
+
+    IM_ASSERT(type != NULL);
+    IM_ASSERT(ImStrlen(type) < IM_ARRAYSIZE(ImGuiPayloadItem::DataType) && "Payload type can be at most 32 characters long");
+    IM_ASSERT((data != NULL && data_size > 0) || (data == NULL && data_size == 0));
+    IM_ASSERT(payload.SourceId != 0); // Not called between BeginDragDropSource() and EndDragDropSource()
+    IM_ASSERT(payload.DataFrameCount != -1); // SetDragDropPayload() must be called first
+
+    // Create new payload item
+    ImGuiPayloadItem item;
+    ImStrncpy(item.DataType, type, IM_ARRAYSIZE(item.DataType));
+    
+    // Copy data
+    if (data_size > 0)
+    {
+        // Store in heap
+        void* item_data = g.DragDropPayloadBufHeap.Data + g.DragDropPayloadBufHeap.Size;
+        g.DragDropPayloadBufHeap.resize(g.DragDropPayloadBufHeap.Size + (int)data_size);
+        memcpy(item_data, data, data_size);
+        item.Data = item_data;
+        item.DataSize = (int)data_size;
+    }
+    else
+    {
+        item.Data = NULL;
+        item.DataSize = 0;
+    }
+    
+    // Add item to payload
+    payload.Items.push_back(item);
+
+    // Return whether the payload has been accepted
+    return (g.DragDropAcceptFrameCount == g.FrameCount) || (g.DragDropAcceptFrameCount == g.FrameCount - 1);
+}
+
 bool ImGui::SetDragDropPayload(const char* type, const void* data, size_t data_size, ImGuiCond cond)
 {
     ImGuiContext& g = *GImGui;
@@ -14729,35 +14767,39 @@ bool ImGui::SetDragDropPayload(const char* type, const void* data, size_t data_s
         cond = ImGuiCond_Always;
 
     IM_ASSERT(type != NULL);
-    IM_ASSERT(ImStrlen(type) < IM_ARRAYSIZE(payload.DataType) && "Payload type can be at most 32 characters long");
+    IM_ASSERT(ImStrlen(type) < IM_ARRAYSIZE(ImGuiPayloadItem::DataType) && "Payload type can be at most 32 characters long");
     IM_ASSERT((data != NULL && data_size > 0) || (data == NULL && data_size == 0));
     IM_ASSERT(cond == ImGuiCond_Always || cond == ImGuiCond_Once);
     IM_ASSERT(payload.SourceId != 0); // Not called between BeginDragDropSource() and EndDragDropSource()
 
     if (cond == ImGuiCond_Always || payload.DataFrameCount == -1)
     {
-        // Copy payload
-        ImStrncpy(payload.DataType, type, IM_ARRAYSIZE(payload.DataType));
+        // Clear existing payload items
+        payload.Items.clear();
         g.DragDropPayloadBufHeap.resize(0);
-        if (data_size > sizeof(g.DragDropPayloadBufLocal))
+        
+        // Create first payload item
+        ImGuiPayloadItem item;
+        ImStrncpy(item.DataType, type, IM_ARRAYSIZE(item.DataType));
+        
+        // Copy data
+        if (data_size > 0)
         {
             // Store in heap
             g.DragDropPayloadBufHeap.resize((int)data_size);
-            payload.Data = g.DragDropPayloadBufHeap.Data;
-            memcpy(payload.Data, data, data_size);
-        }
-        else if (data_size > 0)
-        {
-            // Store locally
-            memset(&g.DragDropPayloadBufLocal, 0, sizeof(g.DragDropPayloadBufLocal));
-            payload.Data = g.DragDropPayloadBufLocal;
-            memcpy(payload.Data, data, data_size);
+            item.Data = g.DragDropPayloadBufHeap.Data;
+            memcpy(item.Data, data, data_size);
+            item.DataSize = (int)data_size;
         }
         else
         {
-            payload.Data = NULL;
+            item.Data = NULL;
+            item.DataSize = 0;
         }
-        payload.DataSize = (int)data_size;
+        
+        // Add item to payload and set as current for backward compatibility
+        payload.Items.push_back(item);
+        payload.CurrentItem = &payload.Items[0];
     }
     payload.DataFrameCount = g.FrameCount;
 
@@ -14891,6 +14933,13 @@ const ImGuiPayload* ImGui::AcceptDragDropPayload(const char* type, ImGuiDragDrop
     {
         RenderDragDropTargetRectForItem(r);
     }
+
+    // Set current item for backward compatibility
+    payload.CurrentItem = NULL;
+    if (type != NULL)
+        payload.CurrentItem = payload.GetItemByType(type);
+    else if (!payload.Items.empty())
+        payload.CurrentItem = &payload.Items[0];
 
     g.DragDropAcceptFrameCount = g.FrameCount;
     if ((g.DragDropSourceFlags & ImGuiDragDropFlags_SourceExtern) && g.DragDropMouseButton == -1)

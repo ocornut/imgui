@@ -799,6 +799,51 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandlerEx(HWND hwnd, UINT msg, WPA
             bd->WantUpdateHasGamepad = true;
 #endif
         return 0;
+
+    case WM_DROPFILES:
+    {
+        // Process dropped files
+        HDROP hDrop = (HDROP)wParam;
+        UINT fileCount = ::DragQueryFile(hDrop, 0xFFFFFFFF, nullptr, 0);
+        
+        // Start drag and drop operation with external source flag
+        ImGuiContext* ctx = ImGui::GetCurrentContext();
+        if (ctx != nullptr)
+        {
+            ImGuiPayload& payload = ctx->DragDropPayload;
+            if (!payload.SourceId)
+            {
+                // Begin drag drop source with external flag
+                ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceExtern);
+                
+                // Add payload for each dropped file
+                for (UINT i = 0; i < fileCount; i++)
+                {
+                    // Get file path
+                    wchar_t filePath[MAX_PATH];
+                    ::DragQueryFile(hDrop, i, filePath, MAX_PATH);
+                    
+                    // Convert to UTF-8
+                    int utf8Length = ::WideCharToMultiByte(CP_UTF8, 0, filePath, -1, nullptr, 0, nullptr, nullptr);
+                    if (utf8Length > 0)
+                    {
+                        std::vector<char> utf8FilePath(utf8Length);
+                        ::WideCharToMultiByte(CP_UTF8, 0, filePath, -1, utf8FilePath.data(), utf8Length, nullptr, nullptr);
+                        
+                        // Add payload item with file path
+                        ImGui::AddDragDropPayload("DND_FILE_PATH", utf8FilePath.data(), utf8FilePath.size() - 1);
+                    }
+                }
+                
+                // End drag drop source
+                ImGui::EndDragDropSource();
+            }
+        }
+        
+        // Release drop handle
+        ::DragFinish(hDrop);
+        return 0;
+    }
     }
     return 0;
 }
@@ -960,6 +1005,12 @@ void ImGui_ImplWin32_EnableAlphaCompositing(void* hwnd)
         bb.dwFlags = DWM_BB_ENABLE;
         ::DwmEnableBlurBehindWindow((HWND)hwnd, &bb);
     }
+}
+
+void ImGui_ImplWin32_EnableDragDropAcceptFiles(void* hwnd, bool enabled)
+{
+    IM_ASSERT(hwnd != NULL);
+    ::DragAcceptFiles((HWND)hwnd, enabled ? TRUE : FALSE);
 }
 
 //---------------------------------------------------------------------------------------------------------

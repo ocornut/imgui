@@ -967,11 +967,13 @@ namespace ImGui
     // - An item can be both drag source and drop target.
     IMGUI_API bool          BeginDragDropSource(ImGuiDragDropFlags flags = 0);                                      // call after submitting an item which may be dragged. when this return true, you can call SetDragDropPayload() + EndDragDropSource()
     IMGUI_API bool          SetDragDropPayload(const char* type, const void* data, size_t sz, ImGuiCond cond = 0);  // type is a user defined string of maximum 32 characters. Strings starting with '_' are reserved for dear imgui internal types. Data is copied and held by imgui. Return true when payload has been accepted.
+    IMGUI_API bool          AddDragDropPayload(const char* type, const void* data, size_t sz);  // Add another payload item to the current drag and drop operation. Return true when payload has been accepted.
     IMGUI_API void          EndDragDropSource();                                                                    // only call EndDragDropSource() if BeginDragDropSource() returns true!
     IMGUI_API bool                  BeginDragDropTarget();                                                          // call after submitting an item that may receive a payload. If this returns true, you can call AcceptDragDropPayload() + EndDragDropTarget()
     IMGUI_API const ImGuiPayload*   AcceptDragDropPayload(const char* type, ImGuiDragDropFlags flags = 0);          // accept contents of a given type. If ImGuiDragDropFlags_AcceptBeforeDelivery is set you can peek into the payload before the mouse button is released.
     IMGUI_API void                  EndDragDropTarget();                                                            // only call EndDragDropTarget() if BeginDragDropTarget() returns true!
     IMGUI_API const ImGuiPayload*   GetDragDropPayload();                                                           // peek directly into the current payload from anywhere. returns NULL when drag and drop is finished or inactive. use ImGuiPayload::IsDataType() to test for the payload type.
+    IMGUI_API bool                  AddDragDropPayload(const char* type, const void* data, size_t sz);  // Add another payload item to the current drag and drop operation. Return true when payload has been accepted.
 
     // Disabling [BETA API]
     // - Disable all user interactions and dim items visuals (applying style.DisabledAlpha over current colors)
@@ -2658,26 +2660,42 @@ struct ImGuiSizeCallbackData
     ImVec2  DesiredSize;    // Read-write.  Desired size, based on user's mouse position. Write to this field to restrain resizing.
 };
 
+// Data payload item for Drag and Drop operations
+struct ImGuiPayloadItem
+{
+    void*           Data;               // Data (copied and owned by dear imgui)
+    int             DataSize;           // Data size
+    char            DataType[32 + 1];   // Data type tag (short user-supplied string, 32 characters max)
+
+    ImGuiPayloadItem() { Clear(); }
+    void Clear() { Data = NULL; DataSize = 0; memset(DataType, 0, sizeof(DataType)); }
+    bool IsDataType(const char* type) const { return strcmp(type, DataType) == 0; }
+};
+
 // Data payload for Drag and Drop operations: AcceptDragDropPayload(), GetDragDropPayload()
 struct ImGuiPayload
 {
     // Members
-    void*           Data;               // Data (copied and owned by dear imgui)
-    int             DataSize;           // Data size
+    ImVector<ImGuiPayloadItem> Items;    // Multiple payload items
+    const ImGuiPayloadItem* CurrentItem;  // Current item for backward compatibility
 
     // [Internal]
     ImGuiID         SourceId;           // Source item id
     ImGuiID         SourceParentId;     // Source parent id (if available)
     int             DataFrameCount;     // Data timestamp
-    char            DataType[32 + 1];   // Data type tag (short user-supplied string, 32 characters max)
     bool            Preview;            // Set when AcceptDragDropPayload() was called and mouse has been hovering the target item (nb: handle overlapping drag targets)
     bool            Delivery;           // Set when AcceptDragDropPayload() was called and mouse button is released over the target item.
 
     ImGuiPayload()  { Clear(); }
-    void Clear()    { SourceId = SourceParentId = 0; Data = NULL; DataSize = 0; memset(DataType, 0, sizeof(DataType)); DataFrameCount = -1; Preview = Delivery = false; }
-    bool IsDataType(const char* type) const { return DataFrameCount != -1 && strcmp(type, DataType) == 0; }
+    void Clear()    { SourceId = SourceParentId = 0; Items.clear(); CurrentItem = NULL; DataFrameCount = -1; Preview = Delivery = false; }
+    bool IsDataType(const char* type) const { for (int i = 0; i < Items.Size; i++) if (Items[i].IsDataType(type)) return true; return false; }
+    const ImGuiPayloadItem* GetItemByType(const char* type) const { for (int i = 0; i < Items.Size; i++) if (Items[i].IsDataType(type)) return &Items[i]; return NULL; }
     bool IsPreview() const                  { return Preview; }
     bool IsDelivery() const                 { return Delivery; }
+    // Backward compatibility
+    const void* GetData() const { return CurrentItem ? CurrentItem->Data : NULL; }
+    int GetDataSize() const { return CurrentItem ? CurrentItem->DataSize : 0; }
+    const char* GetDataType() const { return CurrentItem ? CurrentItem->DataType : NULL; }
 };
 
 //-----------------------------------------------------------------------------
