@@ -11033,8 +11033,7 @@ void ImGui::ErrorCheckEndFrameFinalizeErrorTooltip()
             Text("(Hold CTRL to ");
         }
         SameLine(0.0f, 0.0f);
-        if (SmallButton("Open FAQ->About ID Stack System") && g.PlatformIO.Platform_OpenInShellFn != NULL)
-            g.PlatformIO.Platform_OpenInShellFn(&g, "https://github.com/ocornut/imgui/blob/master/docs/FAQ.md#qa-usage");
+        TextLinkOpenURL("Read FAQ \"About ID Stack System\"", "https://github.com/ocornut/imgui/blob/master/docs/FAQ.md#qa-usage");
         SameLine(0.0f, 0.0f);
         Text(")");
         EndErrorTooltip();
