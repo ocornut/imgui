@@ -2120,28 +2120,34 @@ struct ImGuiMetricsConfig
 struct ImGuiStackLevelInfo
 {
     ImGuiID                 ID;
-    ImS8                    QueryFrameCount;            // >= 1: Query in progress
-    bool                    QuerySuccess;               // Obtained result from DebugHookIdInfo()
+    ImS8                    QueryFrameCount;            // >= 1: Sub-query in progress
+    bool                    QuerySuccess;               // Sub-query obtained result from DebugHookIdInfo()
     ImS8                    DataType;                   // ImGuiDataType
-    int                     DescOffset;                 // -1 or offset into parent's ResultPathsBuf
+    int                     DescOffset;                 // -1 or offset into parent's ResultsPathsBuf
 
     ImGuiStackLevelInfo()   { memset(this, 0, sizeof(*this)); DataType = -1; DescOffset = -1; }
+};
+
+struct ImGuiDebugItemPathQuery
+{
+    ImGuiID                 MainID;                     // ID to query details for.
+    bool                    Active;                     // Used to disambiguate the case when ID == 0 and e.g. some code calls PushOverrideID(0).
+    bool                    Complete;                   // All sub-queries are finished (some may have failed).
+    ImS8                    Step;                       // -1: query stack + init Results, >= 0: filling individual stack level.
+    ImVector<ImGuiStackLevelInfo> Results;
+    ImGuiTextBuffer         ResultsDescBuf;
+    ImGuiTextBuffer         ResultPathBuf;
+
+    ImGuiDebugItemPathQuery() { memset(this, 0, sizeof(*this)); }
 };
 
 // State for ID Stack tool queries
 struct ImGuiIDStackTool
 {
-    int                     LastActiveFrame;
-    int                     StackLevel;                 // -1: query stack and resize Results, >= 0: individual stack level.
-    ImGuiID                 QueryMainId;                // ID to query details for.
-    ImVector<ImGuiStackLevelInfo> Results;
-    bool                    ResultsComplete;            // All sub-query have succeeeded, result is complete.
-    bool                    QueryHookActive;            // Used to disambiguate the case where DebugHookIdInfoId == 0 which is valid.
     bool                    OptHexEncodeNonAsciiChars;
     bool                    OptCopyToClipboardOnCtrlC;
+    int                     LastActiveFrame;
     float                   CopyToClipboardLastTime;
-    ImGuiTextBuffer         ResultPathsBuf;
-    ImGuiTextBuffer         ResultFullPathBuf;
 
     ImGuiIDStackTool()      { memset(this, 0, sizeof(*this)); LastActiveFrame = -1; OptHexEncodeNonAsciiChars = true; CopyToClipboardLastTime = -FLT_MAX; }
 };
@@ -2529,6 +2535,7 @@ struct ImGuiContext
     float                   DebugFlashStyleColorTime;
     ImVec4                  DebugFlashStyleColorBackup;
     ImGuiMetricsConfig      DebugMetricsConfig;
+    ImGuiDebugItemPathQuery DebugItemPathQuery;
     ImGuiIDStackTool        DebugIDStackTool;
     ImGuiDebugAllocInfo     DebugAllocInfo;
 #if defined(IMGUI_DEBUG_HIGHLIGHT_ALL_ID_CONFLICTS) && !defined(IMGUI_DISABLE_DEBUG_TOOLS)
