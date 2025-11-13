@@ -2132,9 +2132,10 @@ struct ImGuiStackLevelInfo
 struct ImGuiIDStackTool
 {
     int                     LastActiveFrame;
-    int                     StackLevel;                 // -1: query stack and resize Results, >= 0: individual stack level
-    ImGuiID                 QueryMainId;                // ID to query details for
+    int                     StackLevel;                 // -1: query stack and resize Results, >= 0: individual stack level.
+    ImGuiID                 QueryMainId;                // ID to query details for.
     ImVector<ImGuiStackLevelInfo> Results;
+    bool                    ResultsComplete;            // All sub-query have succeeeded, result is complete.
     bool                    QueryHookActive;            // Used to disambiguate the case where DebugHookIdInfoId == 0 which is valid.
     bool                    OptHexEncodeNonAsciiChars;
     bool                    OptCopyToClipboardOnCtrlC;

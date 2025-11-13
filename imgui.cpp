@@ -17819,9 +17819,10 @@ void ImGui::UpdateDebugToolStackQueries()
     if (stack_level >= 0 && stack_level < tool->Results.Size)
         if (tool->Results[stack_level].QuerySuccess || tool->Results[stack_level].QueryFrameCount > 2)
             tool->StackLevel++;
-
-    // Update hook
     stack_level = tool->StackLevel;
+
+    // Update status and hook
+    tool->ResultsComplete = (stack_level == tool->Results.Size);
     if (stack_level == -1)
     {
         g.DebugHookIdInfoId = query_main_id;
@@ -17972,7 +17973,7 @@ void ImGui::ShowIDStackToolWindow(bool* p_open)
         SetClipboardText(result_path);
     }
 
-    Text("- Path \"%s\"", result_path);
+    Text("- Path \"%s\"", tool->ResultsComplete ? result_path : "");
 #ifdef IMGUI_ENABLE_TEST_ENGINE
     Text("- Label \"%s\"", tool->QueryMainId ? ImGuiTestEngine_FindItemDebugLabel(&g, tool->QueryMainId) : "");
 #endif
