@@ -79,17 +79,21 @@ Other Changes:
     to auto-size on a given axis would keep marking ini settings as dirty.
 - Disabled: fixed a bug when a previously enabled item that got nav focus
   and then turns disabled could still be activated using keyboard. (#9036)
-- InputText: when buffer is not resizable, trying to paste contents that
-  cannot fit will now truncate text to nearest UTF-8 codepoint boundaries,
-  instead of completely ignoring the paste. (#9029)
-- InputText: avoid continuously overwriting ownership of ImGuiKey_Enter/_KeypadEnter
-  keys in order to allow e.g. external Shortcut override behavior. (#9004)
-- InputText: when using a callback to reduce/manipulate the value of BufTextLen,
-  we do not require anymore that CursorPos be clamped by user code. (#9029)
-- InputTextMultiline: fixed a crash when using ImGuiInputTextFlags_WordWrap and
-  resizing the parent window while keeping the multi-line field active (which is
-  most typically achieved when resizing programmatically or via a docking layout
-  reacting to a platform window resize). (#3237, #9007) [@anton-kl, @ocornut]
+- InputText:
+  - When buffer is not resizable, trying to paste contents that cannot
+    fit will now truncate text to nearest UTF-8 codepoint boundaries,
+    instead of completely ignoring the paste. (#9029)
+  - Avoid continuously overwriting ownership of ImGuiKey_Enter/_KeypadEnter
+    keys in order to allow e.g. external Shortcut override behavior. (#9004)
+  - When using a callback to reduce/manipulate the value of BufTextLen,
+    we do not require anymore that CursorPos be clamped by user code. (#9029)
+  - InputTextMultiline: fixed a crash when using ImGuiInputTextFlags_WordWrap and
+    resizing the parent window while keeping the multi-line field active (which is
+    most typically achieved when resizing programmatically or via a docking layout
+    reacting to a platform window resize). (#3237, #9007) [@anton-kl, @ocornut]
+- Fonts:
+  - Calling ImFontAtlas::Clear() mid-frame without re-adding a font will
+    lead to a more explicit crash.
 - Textures:
   - Fixed an issue preventing multi-contexts from using each others' fonts
     if context 2 runs after context 1's Render() function. (#9039)

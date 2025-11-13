@@ -3638,7 +3638,7 @@ struct ImFontAtlas
     IMGUI_API ImFont*           AddFontFromMemoryCompressedBase85TTF(const char* compressed_font_data_base85, float size_pixels = 0.0f, const ImFontConfig* font_cfg = NULL, const ImWchar* glyph_ranges = NULL);              // 'compressed_font_data_base85' still owned by caller. Compress with binary_to_compressed_c.cpp with -base85 parameter.
     IMGUI_API void              RemoveFont(ImFont* font);
 
-    IMGUI_API void              Clear();                    // Clear everything (input fonts, output glyphs/textures)
+    IMGUI_API void              Clear();                    // Clear everything (input fonts, output glyphs/textures).
     IMGUI_API void              CompactCache();             // Compact cached glyphs and texture.
     IMGUI_API void              SetFontLoader(const ImFontLoader* font_loader); // Change font loader at runtime.
 
