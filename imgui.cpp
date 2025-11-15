@@ -17894,7 +17894,7 @@ static void ImGui::DockContextPruneUnusedSettingsNodes(ImGuiContext* ctx)
         bool remove = false;
         remove |= (data->CountWindows == 1 && settings->ParentNodeId == 0 && data->CountChildNodes == 0 && !(settings->Flags & ImGuiDockNodeFlags_CentralNode));  // Floating root node with only 1 window
         remove |= (data->CountWindows == 0 && settings->ParentNodeId == 0 && data->CountChildNodes == 0); // Leaf nodes with 0 window
-        remove |= (data_root->CountChildWindows == 0);
+        remove |= (data_root == NULL || data_root->CountChildWindows == 0);
         if (remove)
         {
             IMGUI_DEBUG_LOG_DOCKING("[docking] DockContextPruneUnusedSettingsNodes: Prune 0x%08X\n", settings->ID);
@@ -17907,11 +17907,17 @@ static void ImGui::DockContextPruneUnusedSettingsNodes(ImGuiContext* ctx)
 static void ImGui::DockContextBuildNodesFromSettings(ImGuiContext* ctx, ImGuiDockNodeSettings* node_settings_array, int node_settings_count)
 {
     // Build nodes
+    ImGuiContext& g = *ctx; IM_UNUSED(g);
     for (int node_n = 0; node_n < node_settings_count; node_n++)
     {
         ImGuiDockNodeSettings* settings = &node_settings_array[node_n];
         if (settings->ID == 0)
             continue;
+        if (DockContextFindNodeByID(ctx, settings->ID) != NULL)
+        {
+            IMGUI_DEBUG_LOG_DOCKING("[docking] DockContextBuildNodesFromSettings: skip duplicate node 0x%08X\n", settings->ID);
+            continue;
+        }
         ImGuiDockNode* node = DockContextAddNode(ctx, settings->ID);
         node->ParentNode = settings->ParentNodeId ? DockContextFindNodeByID(ctx, settings->ParentNodeId) : NULL;
         node->Pos = ImVec2(settings->Pos.x, settings->Pos.y);
