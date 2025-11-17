@@ -109,9 +109,11 @@ Note that GLUT/FreeGLUT is largely obsolete software, prefer using GLFW or SDL.
 
 [example_null/](https://github.com/ocornut/imgui/blob/master/examples/example_null/) <BR>
 Null example, compile and link imgui, create context, run headless with no inputs and no graphics output. <BR>
-= main.cpp <BR>
+= main.cpp + imgui_impl_null.cpp<BR>
 This is used to quickly test compilation of core imgui files in as many setups as possible.
 Because this application doesn't create a window nor a graphic context, there's no graphics output.
+Please note that imgui_impl_null itself is a rather empty backend. We provide it for consistency but
+it is similarly easy to create a skeleton application without the null backend.
 
 [example_sdl2_directx11/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl2_directx11/) <BR>
 SDL2 + DirectX11 example, Windows only. <BR>

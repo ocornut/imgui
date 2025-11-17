@@ -100,6 +100,7 @@ List of Renderer Backends:
 List of high-level Frameworks Backends (combining Platform + Renderer):
 
     imgui_impl_allegro5.cpp
+    imgui_impl_null.cpp
 
 Emscripten is also supported!
 The SDL2+GL, SDL3+GL, GLFW+GL and GLFW+WebGPU examples are all ready to build and run with Emscripten.

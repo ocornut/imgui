@@ -79,17 +79,21 @@ Other Changes:
     to auto-size on a given axis would keep marking ini settings as dirty.
 - Disabled: fixed a bug when a previously enabled item that got nav focus
   and then turns disabled could still be activated using keyboard. (#9036)
-- InputText: when buffer is not resizable, trying to paste contents that
-  cannot fit will now truncate text to nearest UTF-8 codepoint boundaries,
-  instead of completely ignoring the paste. (#9029)
-- InputText: avoid continuously overwriting ownership of ImGuiKey_Enter/_KeypadEnter
-  keys in order to allow e.g. external Shortcut override behavior. (#9004)
-- InputText: when using a callback to reduce/manipulate the value of BufTextLen,
-  we do not require anymore that CursorPos be clamped by user code. (#9029)
-- InputTextMultiline: fixed a crash when using ImGuiInputTextFlags_WordWrap and
-  resizing the parent window while keeping the multi-line field active (which is
-  most typically achieved when resizing programmatically or via a docking layout
-  reacting to a platform window resize). (#3237, #9007) [@anton-kl, @ocornut]
+- InputText:
+  - When buffer is not resizable, trying to paste contents that cannot
+    fit will now truncate text to nearest UTF-8 codepoint boundaries,
+    instead of completely ignoring the paste. (#9029)
+  - Avoid continuously overwriting ownership of ImGuiKey_Enter/_KeypadEnter
+    keys in order to allow e.g. external Shortcut override behavior. (#9004)
+  - When using a callback to reduce/manipulate the value of BufTextLen,
+    we do not require anymore that CursorPos be clamped by user code. (#9029)
+  - InputTextMultiline: fixed a crash when using ImGuiInputTextFlags_WordWrap and
+    resizing the parent window while keeping the multi-line field active (which is
+    most typically achieved when resizing programmatically or via a docking layout
+    reacting to a platform window resize). (#3237, #9007) [@anton-kl, @ocornut]
+- Fonts:
+  - Calling ImFontAtlas::Clear() mid-frame without re-adding a font will
+    lead to a more explicit crash.
 - Textures:
   - Fixed an issue preventing multi-contexts from using each others' fonts
     if context 2 runs after context 1's Render() function. (#9039)
@@ -100,6 +104,8 @@ Other Changes:
   triggered by some widgets e.g. Checkbox(), Selectable() and many others, which
   cleared ActiveId at the same time as editing. (#9028)
   Note that IsItemDeactivatedAfterEdit() was not affected, only IsItemEdited).
+- Misc: standardized casing of keyboard mods in comments and demo, showing
+  as e.g. "Ctrl" instead of "CTRL".
 - Drag and Drop:
   - Added ImGuiDragDropFlags_AcceptDrawAsHovered to make accepting item render
     as hovered, which can allow using e.g. Button() as drop target. (#8632)
@@ -115,10 +121,14 @@ Other Changes:
    - Metrics: fixed table and columns rect highlight from display when
      debug/metrics window is not in the same viewport as the table.
 - Backends:
+  - Null: added imgui_impl_null platform/renderer backend.
+    This is designed if you need to run e.g. context with no input or no ouput.
   - GLFW: fixed building on Linux platforms where Wayland headers
     are not available. (#9024, #8969, #8921, #8920) [@jagot]
   - GLFW: lower minimum requirement from GLFW 3.1 to GLFW 3.0. Though
     a recent version e.g GLFW 3.4 is highly recommended! (#9055) [@Clownacy]
+  - GLFW: fixed last `ImGui_ImplGlfw_Shutdown()` not immediately clearing the context
+    map, which would be detected by leak trackers. (#9075, #8676, #8239, #8069) [@erincatto]
   - SDL3: fixed Platform_OpenInShellFn() return value (the return value
     was unused in core but might be used by a direct caller). (#9027) [@achabense]
   - SDL3: fixed an issue with missing characters events when an already active text
