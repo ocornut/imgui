@@ -452,14 +452,33 @@ static void ImGui_ImplSDLGPU3_CreateShaders()
 #ifdef __APPLE__
     else
     {
-        vertex_shader_info.entrypoint = "main0";
-        vertex_shader_info.format = SDL_GPU_SHADERFORMAT_METALLIB;
-        vertex_shader_info.code = metallib_vertex;
-        vertex_shader_info.code_size = sizeof(metallib_vertex);
-        fragment_shader_info.entrypoint = "main0";
-        fragment_shader_info.format = SDL_GPU_SHADERFORMAT_METALLIB;
-        fragment_shader_info.code = metallib_fragment;
-        fragment_shader_info.code_size = sizeof(metallib_fragment);
+        #include <TargetConditionals.h>
+
+        #if TARGET_OS_OSX
+            /* macOS: using MSL source */
+            vertex_shader_info.entrypoint = "main0";
+            vertex_shader_info.format = SDL_GPU_SHADERFORMAT_MSL;
+            vertex_shader_info.code = msl_vertex;
+            vertex_shader_info.code_size = sizeof(msl_vertex);
+
+            fragment_shader_info.entrypoint = "main0";
+            fragment_shader_info.format = SDL_GPU_SHADERFORMAT_MSL;
+            fragment_shader_info.code = msl_fragment;
+            fragment_shader_info.code_size = sizeof(msl_fragment);
+
+        #elif TARGET_OS_IPHONE
+            /* iOS device: using metallib blobs */
+            vertex_shader_info.entrypoint = "main0";
+            vertex_shader_info.format = SDL_GPU_SHADERFORMAT_METALLIB;
+            vertex_shader_info.code = metallib_vertex;
+            vertex_shader_info.code_size = sizeof(metallib_vertex);
+
+            fragment_shader_info.entrypoint = "main0";
+            fragment_shader_info.format = SDL_GPU_SHADERFORMAT_METALLIB;
+            fragment_shader_info.code = metallib_fragment;
+            fragment_shader_info.code_size = sizeof(metallib_fragment);
+
+        #endif
     }
 #endif
     bd->VertexShader = SDL_CreateGPUShader(v->Device, &vertex_shader_info);
