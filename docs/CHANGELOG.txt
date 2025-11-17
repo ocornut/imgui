@@ -121,6 +121,8 @@ Other Changes:
    - Metrics: fixed table and columns rect highlight from display when
      debug/metrics window is not in the same viewport as the table.
 - Backends:
+  - Null: added imgui_impl_null platform/renderer backend.
+    This is designed if you need to run e.g. context with no input or no ouput.
   - GLFW: fixed building on Linux platforms where Wayland headers
     are not available. (#9024, #8969, #8921, #8920) [@jagot]
   - GLFW: lower minimum requirement from GLFW 3.1 to GLFW 3.0. Though

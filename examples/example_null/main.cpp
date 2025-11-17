@@ -3,24 +3,23 @@
 // This is useful to test building, but you cannot interact with anything here!
 #include "imgui.h"
 #include <stdio.h>
+#include "imgui_impl_null.h"
 
 int main(int, char**)
 {
     IMGUI_CHECKVERSION();
+
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
 
-    // Build atlas
-    //unsigned char* tex_pixels = nullptr;
-    //int tex_w, tex_h;
-    //io.Fonts->GetTexDataAsRGBA32(&tex_pixels, &tex_w, &tex_h);
-    io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;
+    ImGui_ImplNullPlatform_Init();
+    ImGui_ImplNullRender_Init();
 
     for (int n = 0; n < 20; n++)
     {
         printf("NewFrame() %d\n", n);
-        io.DisplaySize = ImVec2(1920, 1080);
-        io.DeltaTime = 1.0f / 60.0f;
+        ImGui_ImplNullPlatform_NewFrame();
+        ImGui_ImplNullRender_NewFrame();
         ImGui::NewFrame();
 
         static float f = 0.0f;
@@ -33,6 +32,8 @@ int main(int, char**)
     }
 
     printf("DestroyContext()\n");
+    ImGui_ImplNullRender_Shutdown();
+    ImGui_ImplNullPlatform_Shutdown();
     ImGui::DestroyContext();
     return 0;
 }
