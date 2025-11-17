@@ -1590,6 +1590,7 @@ ImGuiIO::ImGuiIO()
 
     // Docking options (when ImGuiConfigFlags_DockingEnable is set)
     ConfigDockingNoSplit = false;
+    ConfigDockingNoDockingOver = false;
     ConfigDockingWithShift = false;
     ConfigDockingAlwaysTabBar = false;
     ConfigDockingTransparentPayload = false;
@@ -19652,6 +19653,8 @@ static void ImGui::DockNodePreviewDockSetup(ImGuiWindow* host_window, ImGuiDockN
     ImGuiDockNodeFlags dst_node_flags = host_node ? host_node->MergedFlags : host_window->WindowClass.DockNodeFlagsOverrideSet;
     data->IsCenterAvailable = true;
     if (is_outer_docking)
+        data->IsCenterAvailable = false;
+    else if (g.IO.ConfigDockingNoDockingOver)
         data->IsCenterAvailable = false;
     else if (dst_node_flags & ImGuiDockNodeFlags_NoDockingOverMe)
         data->IsCenterAvailable = false;

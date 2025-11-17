@@ -533,6 +533,8 @@ void ImGui::ShowDemoWindow(bool* p_open)
                 ImGui::Indent();
                 ImGui::Checkbox("io.ConfigDockingNoSplit", &io.ConfigDockingNoSplit);
                 ImGui::SameLine(); HelpMarker("Simplified docking mode: disable window splitting, so docking is limited to merging multiple windows together into tab-bars.");
+                ImGui::Checkbox("io.ConfigDockingNoDockingOver", &io.ConfigDockingNoDockingOver);
+                ImGui::SameLine(); HelpMarker("Simplified docking mode: disable window merging into a same tab-bar, so docking is limited to splitting windows.");
                 ImGui::Checkbox("io.ConfigDockingWithShift", &io.ConfigDockingWithShift);
                 ImGui::SameLine(); HelpMarker("Enable docking when holding Shift only (allow to drop in wider space, reduce visual noise)");
                 ImGui::Checkbox("io.ConfigDockingAlwaysTabBar", &io.ConfigDockingAlwaysTabBar);
@@ -8313,6 +8315,7 @@ void ImGui::ShowAboutWindow(bool* p_open)
         if (io.ConfigViewportsNoDecoration)                             ImGui::Text("io.ConfigViewportsNoDecoration");
         if (io.ConfigViewportsNoDefaultParent)                          ImGui::Text("io.ConfigViewportsNoDefaultParent");
         if (io.ConfigDockingNoSplit)                                    ImGui::Text("io.ConfigDockingNoSplit");
+        if (io.ConfigDockingNoDockingOver)                              ImGui::Text("io.ConfigDockingNoDockingOver");
         if (io.ConfigDockingWithShift)                                  ImGui::Text("io.ConfigDockingWithShift");
         if (io.ConfigDockingAlwaysTabBar)                               ImGui::Text("io.ConfigDockingAlwaysTabBar");
         if (io.ConfigDockingTransparentPayload)                         ImGui::Text("io.ConfigDockingTransparentPayload");

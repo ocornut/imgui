@@ -164,6 +164,8 @@ Docking+Viewports Branch:
   by docked windows. (#8983, #9064)
 - Docking: fixed crash loading certain form of invalid .ini settings (e.g. nodes 
   referring to a missing parent, duplicate nodes id). (#9070)
+- Docking: added io.ConfigDockingNoDockingOver helper config flag to prevent
+  merging windows into a same tab-bar.
 - Examples:
   - SDL2+DX11, SDL3+DX11, Win32+DX10, Win32+DX11: fixed one resource leak
     from the use of MakeWindowAssociation() in 1.92.4. (#9010, #4350) [@o-3-o]
