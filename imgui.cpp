@@ -17853,6 +17853,11 @@ static void ImGui::DockContextPruneUnusedSettingsNodes(ImGuiContext* ctx)
     for (int settings_n = 0; settings_n < dc->NodesSettings.Size; settings_n++)
     {
         ImGuiDockNodeSettings* settings = &dc->NodesSettings[settings_n];
+        if (pool.GetByKey(settings->ID) != 0)
+        {
+            settings->ID = 0; // Duplicate
+            continue;
+        }
         ImGuiDockContextPruneNodeData* parent_data = settings->ParentNodeId ? pool.GetByKey(settings->ParentNodeId) : 0;
         pool.GetOrAddByKey(settings->ID)->RootId = parent_data ? parent_data->RootId : settings->ID;
         if (settings->ParentNodeId)
@@ -17889,7 +17894,8 @@ static void ImGui::DockContextPruneUnusedSettingsNodes(ImGuiContext* ctx)
         ImGuiDockContextPruneNodeData* data = pool.GetByKey(settings->ID);
         if (data == NULL || data->CountWindows > 1)
             continue;
-        ImGuiDockContextPruneNodeData* data_root = (data->RootId == settings->ID) ? data : pool.GetByKey(data->RootId);
+        ImGuiDockContextPruneNodeData* data_root = (settings->ID == data->RootId) ? data : pool.GetByKey(data->RootId);
+        ImGuiDockContextPruneNodeData* data_parent = settings->ParentNodeId ? pool.GetByKey(settings->ParentNodeId) : NULL;
 
         bool remove = false;
         remove |= (data->CountWindows == 1 && settings->ParentNodeId == 0 && data->CountChildNodes == 0 && !(settings->Flags & ImGuiDockNodeFlags_CentralNode));  // Floating root node with only 1 window
@@ -17899,6 +17905,12 @@ static void ImGui::DockContextPruneUnusedSettingsNodes(ImGuiContext* ctx)
         {
             IMGUI_DEBUG_LOG_DOCKING("[docking] DockContextPruneUnusedSettingsNodes: Prune 0x%08X\n", settings->ID);
             DockSettingsRemoveNodeReferences(&settings->ID, 1);
+            settings->ID = 0;
+        }
+        else if (data_parent && data_parent->CountChildNodes == 1)
+        {
+            IMGUI_DEBUG_LOG_DOCKING("[docking] DockContextPruneUnusedSettingsNodes: Merge 0x%08X->0X%08X\n", settings->ID, settings->ParentNodeId);
+            DockSettingsRenameNodeReferences(settings->ID, settings->ParentNodeId);
             settings->ID = 0;
         }
     }
