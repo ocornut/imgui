@@ -61,7 +61,7 @@ jobs:
           echo '#define IMGUI_IMPLEMENTATION'                    >> example_single_file.cpp
           echo '#include "misc/single_file/imgui_single_file.h"' >> example_single_file.cpp
           g++ -I. -Wall -Wformat -shared -o libimgui.dll -Wl,--out-implib,libimgui.a example_single_file.cpp -limm32
-          g++ -I. -Wall -Wformat -DIMGUI_API='__declspec(dllimport)' -o example_null.exe examples/example_null/main.cpp -L. -limgui
+          g++ -I. -Ibackends -Wall -Wformat -DIMGUI_API='__declspec(dllimport)' -o example_null.exe examples/example_null/main.cpp backends/imgui_impl_null.cpp -L. -limgui
           rm -f example_null.exe libimgui.* example_single_file.*
 
       - name: Build example_null (extra warnings, msvc 64-bit)
@@ -78,10 +78,11 @@ jobs:
 
           #define IMGUI_IMPLEMENTATION
           #include "misc/single_file/imgui_single_file.h"
+          #include "examples/backends/imgui_impl_null.cpp"
           #include "examples/example_null/main.cpp"
 
           EOF
-          g++ -I. -Wall -Wformat -o example_single_file.exe example_single_file.cpp -limm32
+          g++ -I. -Ibackends -Wall -Wformat -o example_single_file.exe example_single_file.cpp -limm32
 
       - name: Build example_null (with IMGUI_DISABLE_WIN32_FUNCTIONS)
         shell: bash
@@ -91,10 +92,11 @@ jobs:
           #define IMGUI_DISABLE_WIN32_FUNCTIONS
           #define IMGUI_IMPLEMENTATION
           #include "misc/single_file/imgui_single_file.h"
+          #include "examples/backends/imgui_impl_null.cpp"
           #include "examples/example_null/main.cpp"
 
           EOF
-          g++ -I. -Wall -Wformat -o example_single_file.exe example_single_file.cpp -limm32
+          g++ -I. -Ibackends -Wall -Wformat -o example_single_file.exe example_single_file.cpp -limm32
 
       - name: Build example_null (as DLL)
         shell: cmd
@@ -105,8 +107,8 @@ jobs:
           echo #define IMGUI_IMPLEMENTATION                    >> example_single_file.cpp
           echo #include "misc/single_file/imgui_single_file.h" >> example_single_file.cpp
 
-          cl.exe /D_USRDLL /D_WINDLL /I. example_single_file.cpp /LD /FeImGui.dll /link
-          cl.exe /DIMGUI_API=__declspec(dllimport) /I. ImGui.lib /Feexample_null.exe examples/example_null/main.cpp
+          cl.exe /D_USRDLL /D_WINDLL /I. /Ibackends example_single_file.cpp /LD /FeImGui.dll /link
+          cl.exe /DIMGUI_API=__declspec(dllimport) /I. ImGui.lib /Feexample_null.exe backends/imgui_impl_null.cpp examples/example_null/main.cpp
 
       # Win64 examples are more frequently compilted than the Win32 examples.
       # More of the Win32 examples requires 'workflow_run' to reduce waste.
@@ -294,6 +296,7 @@ jobs:
           #define IM_ASSERT(x)
           #define IMGUI_IMPLEMENTATION
           #include "misc/single_file/imgui_single_file.h"
+          #include "backends/imgui_impl_null.cpp"
           #include "examples/example_null/main.cpp"
 
           EOF
@@ -310,6 +313,7 @@ jobs:
 
         #define IMGUI_IMPLEMENTATION
         #include "misc/single_file/imgui_single_file.h"
+        #include "backends/imgui_impl_null.cpp"
         #include "examples/example_null/main.cpp"
 
         EOF
@@ -322,6 +326,7 @@ jobs:
         #define IMGUI_USE_WCHAR32
         #define IMGUI_IMPLEMENTATION
         #include "misc/single_file/imgui_single_file.h"
+        #include "backends/imgui_impl_null.cpp"
         #include "examples/example_null/main.cpp"
 
         EOF
@@ -335,6 +340,7 @@ jobs:
         #define ImDrawIdx unsigned int
         #define IMGUI_IMPLEMENTATION
         #include "misc/single_file/imgui_single_file.h"
+        #include "backends/imgui_impl_null.cpp"
         #include "examples/example_null/main.cpp"
 
         EOF
@@ -347,6 +353,7 @@ jobs:
         #define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
         #define IMGUI_IMPLEMENTATION
         #include "misc/single_file/imgui_single_file.h"
+        #include "backends/imgui_impl_null.cpp"
         #include "examples/example_null/main.cpp"
 
         EOF
@@ -359,6 +366,7 @@ jobs:
         #define IMGUI_DISABLE_OBSOLETE_KEYIO
         #define IMGUI_IMPLEMENTATION
         #include "misc/single_file/imgui_single_file.h"
+        #include "backends/imgui_impl_null.cpp"
         #include "examples/example_null/main.cpp"
 
         EOF
@@ -371,6 +379,7 @@ jobs:
         #define IMGUI_DISABLE_OBSOLETE_KEYIO
         #define IMGUI_IMPLEMENTATION
         #include "misc/single_file/imgui_single_file.h"
+        #include "backends/imgui_impl_null.cpp"
         #include "examples/example_null/main.cpp"
 
         EOF
@@ -384,6 +393,7 @@ jobs:
         #define IMGUI_DISABLE_DEBUG_TOOLS
         #define IMGUI_IMPLEMENTATION
         #include "misc/single_file/imgui_single_file.h"
+        #include "backends/imgui_impl_null.cpp"
         #include "examples/example_null/main.cpp"
 
         EOF
@@ -396,6 +406,7 @@ jobs:
         #define IMGUI_DISABLE_FILE_FUNCTIONS
         #define IMGUI_IMPLEMENTATION
         #include "misc/single_file/imgui_single_file.h"
+        #include "backends/imgui_impl_null.cpp"
         #include "examples/example_null/main.cpp"
 
         EOF
@@ -408,6 +419,7 @@ jobs:
         #define IMGUI_USE_BGRA_PACKED_COLOR
         #define IMGUI_IMPLEMENTATION
         #include "misc/single_file/imgui_single_file.h"
+        #include "backends/imgui_impl_null.cpp"
         #include "examples/example_null/main.cpp"
 
         EOF
@@ -428,6 +440,7 @@ jobs:
                 operator MyVec4() const { return MyVec4(x, y, z, w); }
         #define IMGUI_IMPLEMENTATION
         #include "misc/single_file/imgui_single_file.h"
+        #include "backends/imgui_impl_null.cpp"
         #include "examples/example_null/main.cpp"
 
         EOF
@@ -440,6 +453,7 @@ jobs:
         #define IMGUI_IMPLEMENTATION
         #define IMGUI_DISABLE_DEMO_WINDOWS
         #include "misc/single_file/imgui_single_file.h"
+        #include "backends/imgui_impl_null.cpp"
         #include "examples/example_null/main.cpp"
 
         EOF
@@ -452,6 +466,7 @@ jobs:
         #define IMGUI_IMPLEMENTATION
         #define IMGUI_DISABLE_DEMO_WINDOWS
         #include "misc/single_file/imgui_single_file.h"
+        #include "backends/imgui_impl_null.cpp"
         #include "examples/example_null/main.cpp"
 
         EOF
@@ -492,6 +507,7 @@ jobs:
 
         #define IMGUI_IMPLEMENTATION
         #include "misc/single_file/imgui_single_file.h"
+        #include "backends/imgui_impl_null.cpp"
         #include "examples/example_null/main.cpp"
 
         EOF
@@ -503,6 +519,7 @@ jobs:
 
         #define IMGUI_IMPLEMENTATION
         #include "misc/single_file/imgui_single_file.h"
+        #include "backends/imgui_impl_null.cpp"
         #include "examples/example_null/main.cpp"
 
         EOF
@@ -514,6 +531,7 @@ jobs:
 
         #define IMGUI_IMPLEMENTATION
         #include "misc/single_file/imgui_single_file.h"
+        #include "backends/imgui_impl_null.cpp"
         #include "examples/example_null/main.cpp"
 
         EOF

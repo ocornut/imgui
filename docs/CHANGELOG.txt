@@ -151,6 +151,8 @@ Other Changes:
   - Win32: Revert 1.92.4 change of comparing dwPacketNumber, which prevents
     refreshing accurate gamepad info after focus-out + io.ClearInputKeys(). (#8556)
 - Examples:
+  - Null: update examples_null to use imgui_impl_null (which is a bit overengineering
+    but somehow consistent).
   - GLFW+WebGPU: update example for latest specs, to work on Emscripten 4.0.10+,
     latest Dawn-Native and WGPU-Native. (#8381, #8567, #8191, #7435) [@brutpitt]
   - GLFW+WebGPU: removed unnecessary ImGui_ImplWGPU_InvalidateDeviceObjects() call
