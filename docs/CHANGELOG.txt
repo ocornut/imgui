@@ -94,6 +94,9 @@ Other Changes:
     resizing the parent window while keeping the multi-line field active (which is
     most typically achieved when resizing programmatically or via a docking layout
     reacting to a platform window resize). (#3237, #9007) [@anton-kl, @ocornut]
+- Nav:
+  - Clipper: fixed an issue when using up/down from an item outside of
+    visible bound and using the clipper. (#9079)
 - Fonts:
   - Calling ImFontAtlas::Clear() mid-frame without re-adding a font will
     lead to a more explicit crash.
