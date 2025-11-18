@@ -17,6 +17,11 @@
 #ifndef IMGUI_DISABLE
 #include "imgui_impl_null.h"
 
+// Clang/GCC warnings with -Weverything
+#if defined(__clang__)
+#pragma clang diagnostic ignored "-Wold-style-cast"         // warning: use of old-style cast                            // yes, they are more terse.
+#endif
+
 IMGUI_IMPL_API bool ImGui_ImplNull_Init()
 {
     ImGui_ImplNullPlatform_Init();
@@ -75,7 +80,7 @@ IMGUI_IMPL_API void ImGui_ImplNullRender_NewFrame()
 {
 }
 
-void ImGui_ImplNullRender_UpdateTexture(ImTextureData* tex)
+static void ImGui_ImplNullRender_UpdateTexture(ImTextureData* tex)
 {
     if (tex->Status == ImTextureStatus_WantCreate || tex->Status == ImTextureStatus_WantDestroy)
         tex->SetStatus(ImTextureStatus_OK);
