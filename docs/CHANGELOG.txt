@@ -87,6 +87,9 @@ Other Changes:
     keys in order to allow e.g. external Shortcut override behavior. (#9004)
   - When using a callback to reduce/manipulate the value of BufTextLen,
     we do not require anymore that CursorPos be clamped by user code. (#9029)
+  - Fixed an assert when using ImGuiInputTextFlags_ReadOnly and making
+    underlying contents shorter while text is selected. (#9069, #3237)
+    (regression from 1.92.3)
   - InputTextMultiline: fixed a crash when using ImGuiInputTextFlags_WordWrap and
     resizing the parent window while keeping the multi-line field active (which is
     most typically achieved when resizing programmatically or via a docking layout

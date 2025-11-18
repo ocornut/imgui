@@ -4762,8 +4762,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         state->TextLen = new_len;
         memcpy(state->TextA.Data, buf, state->TextLen + 1);
         state->Stb->select_start = state->ReloadSelectionStart;
-        state->Stb->cursor = state->Stb->select_end = state->ReloadSelectionEnd;
-        state->CursorClamp();
+        state->Stb->cursor = state->Stb->select_end = state->ReloadSelectionEnd; // will be clamped to bounds below
     }
     else if ((init_state && g.ActiveId != id) || init_changed_specs)
     {
@@ -4803,9 +4802,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
 
         // Recycle existing cursor/selection/undo stack but clamp position
         // Note a single mouse click will override the cursor/position immediately by calling stb_textedit_click handler.
-        if (recycle_state)
-            state->CursorClamp();
-        else
+        if (!recycle_state)
             stb_textedit_initialize_state(state->Stb, !is_multiline);
 
         if (!is_multiline)
@@ -4862,6 +4859,8 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         // Read-only mode always ever read from source buffer. Refresh TextLen when active.
         if (is_readonly && state != NULL)
             state->TextLen = (int)ImStrlen(buf);
+        if (state != NULL)
+            state->CursorClamp();
         //if (is_readonly && state != NULL)
         //    state->TextA.clear(); // Uncomment to facilitate debugging, but we otherwise prefer to keep/amortize th allocation.
     }
