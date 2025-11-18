@@ -87,10 +87,23 @@ Other Changes:
     keys in order to allow e.g. external Shortcut override behavior. (#9004)
   - When using a callback to reduce/manipulate the value of BufTextLen,
     we do not require anymore that CursorPos be clamped by user code. (#9029)
+  - Fixed an assert when using ImGuiInputTextFlags_ReadOnly and making
+    underlying contents shorter while text is selected. (#9069, #3237)
+    (regression from 1.92.3)
   - InputTextMultiline: fixed a crash when using ImGuiInputTextFlags_WordWrap and
     resizing the parent window while keeping the multi-line field active (which is
     most typically achieved when resizing programmatically or via a docking layout
     reacting to a platform window resize). (#3237, #9007) [@anton-kl, @ocornut]
+- Nav:
+  - Reworked PageUp/PageDown to pick same-page top/bottom page based
+    on inner rectangle rather than clipping rectangle, ensuring consistent
+    (but occasionally less practical) navigation result when a window is
+    partially out of screen. (#787)
+  - Improved/clarified behavior when requesting PageUp/PageDown from a
+    focused item which is outside of visible boundaries: now ends up one
+    page away from focused item. (#9079)
+  - Clipper: fixed an issue when using up/down from an item outside of
+    visible bound and using the clipper. (#9079)
 - Fonts:
   - Calling ImFontAtlas::Clear() mid-frame without re-adding a font will
     lead to a more explicit crash.
@@ -109,6 +122,8 @@ Other Changes:
 - Drag and Drop:
   - Added ImGuiDragDropFlags_AcceptDrawAsHovered to make accepting item render
     as hovered, which can allow using e.g. Button() as drop target. (#8632)
+  - Pressing Escape while carrying a payload automatically cancel the
+    active drag and drop. (#9071)
   - Style: added ImGuiCol_DragDropTargetBg, style.DragDropTargetRounding,
     style.DragDropTargetBorderSize and style.DragDropTargetPadding to configure
     the drop target highlight. (#9056) [@aaronkirkham]
@@ -151,6 +166,8 @@ Other Changes:
   - Win32: Revert 1.92.4 change of comparing dwPacketNumber, which prevents
     refreshing accurate gamepad info after focus-out + io.ClearInputKeys(). (#8556)
 - Examples:
+  - Null: update examples_null to use imgui_impl_null (which is a bit overengineering
+    but somehow consistent).
   - GLFW+WebGPU: update example for latest specs, to work on Emscripten 4.0.10+,
     latest Dawn-Native and WGPU-Native. (#8381, #8567, #8191, #7435) [@brutpitt]
   - GLFW+WebGPU: removed unnecessary ImGui_ImplWGPU_InvalidateDeviceObjects() call

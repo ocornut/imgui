@@ -151,7 +151,6 @@
     <ClInclude Include="..\..\imconfig.h" />
     <ClInclude Include="..\..\imgui.h" />
     <ClInclude Include="..\..\imgui_internal.h" />
-    <ClInclude Include="..\..\backends\imgui_impl_null.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\imgui.cpp" />

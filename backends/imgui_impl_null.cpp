@@ -17,46 +17,51 @@
 #ifndef IMGUI_DISABLE
 #include "imgui_impl_null.h"
 
-bool ImGui_ImplNull_Init()
+// Clang/GCC warnings with -Weverything
+#if defined(__clang__)
+#pragma clang diagnostic ignored "-Wold-style-cast"         // warning: use of old-style cast                            // yes, they are more terse.
+#endif
+
+IMGUI_IMPL_API bool ImGui_ImplNull_Init()
 {
     ImGui_ImplNullPlatform_Init();
     ImGui_ImplNullRender_Init();
     return true;
 }
 
-void ImGui_ImplNull_Shutdown()
+IMGUI_IMPL_API void ImGui_ImplNull_Shutdown()
 {
     ImGui_ImplNullRender_Shutdown();
     ImGui_ImplNullPlatform_Shutdown();
 }
 
-void ImGui_ImplNull_NewFrame()
+IMGUI_IMPL_API void ImGui_ImplNull_NewFrame()
 {
     ImGui_ImplNullPlatform_NewFrame();
     ImGui_ImplNullRender_NewFrame();
 }
 
-bool ImGui_ImplNullPlatform_Init()
+IMGUI_IMPL_API bool ImGui_ImplNullPlatform_Init()
 {
     ImGuiIO& io = ImGui::GetIO();
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;
     return true;
 }
 
-void ImGui_ImplNullPlatform_Shutdown()
+IMGUI_IMPL_API void ImGui_ImplNullPlatform_Shutdown()
 {
     ImGuiIO& io = ImGui::GetIO();
     io.BackendFlags &= ~ImGuiBackendFlags_HasMouseCursors;
 }
 
-void ImGui_ImplNullPlatform_NewFrame()
+IMGUI_IMPL_API void ImGui_ImplNullPlatform_NewFrame()
 {
     ImGuiIO& io = ImGui::GetIO();
     io.DisplaySize = ImVec2(1920, 1080);
     io.DeltaTime = 1.0f / 60.0f;
 }
 
-bool ImGui_ImplNullRender_Init()
+IMGUI_IMPL_API bool ImGui_ImplNullRender_Init()
 {
     ImGuiIO& io = ImGui::GetIO();
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
@@ -64,18 +69,18 @@ bool ImGui_ImplNullRender_Init()
     return true;
 }
 
-void ImGui_ImplNullRender_Shutdown()
+IMGUI_IMPL_API void ImGui_ImplNullRender_Shutdown()
 {
     ImGuiIO& io = ImGui::GetIO();
     io.BackendFlags &= ~ImGuiBackendFlags_RendererHasVtxOffset;
     io.BackendFlags &= ~ImGuiBackendFlags_RendererHasTextures;
 }
 
-void ImGui_ImplNullRender_NewFrame()
+IMGUI_IMPL_API void ImGui_ImplNullRender_NewFrame()
 {
 }
 
-void ImGui_ImplNullRender_UpdateTexture(ImTextureData* tex)
+static void ImGui_ImplNullRender_UpdateTexture(ImTextureData* tex)
 {
     if (tex->Status == ImTextureStatus_WantCreate || tex->Status == ImTextureStatus_WantDestroy)
         tex->SetStatus(ImTextureStatus_OK);
@@ -86,7 +91,7 @@ void ImGui_ImplNullRender_UpdateTexture(ImTextureData* tex)
     }
 }
 
-void ImGui_ImplNullRender_RenderDrawData(ImDrawData* draw_data)
+IMGUI_IMPL_API void ImGui_ImplNullRender_RenderDrawData(ImDrawData* draw_data)
 {
     if (draw_data->Textures != nullptr)
         for (ImTextureData* tex : *draw_data->Textures)

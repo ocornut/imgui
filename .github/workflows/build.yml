@@ -61,7 +61,7 @@ jobs:
           echo '#define IMGUI_IMPLEMENTATION'                    >> example_single_file.cpp
           echo '#include "misc/single_file/imgui_single_file.h"' >> example_single_file.cpp
           g++ -I. -Wall -Wformat -shared -o libimgui.dll -Wl,--out-implib,libimgui.a example_single_file.cpp -limm32
-          g++ -I. -Wall -Wformat -DIMGUI_API='__declspec(dllimport)' -o example_null.exe examples/example_null/main.cpp -L. -limgui
+          g++ -I. -Wall -Wformat -DIMGUI_API='__declspec(dllimport)' -DIMGUI_IMPL_API= -o example_null.exe examples/example_null/main.cpp -L. -limgui
           rm -f example_null.exe libimgui.* example_single_file.*
 
       - name: Build example_null (extra warnings, msvc 64-bit)
@@ -106,7 +106,7 @@ jobs:
           echo #include "misc/single_file/imgui_single_file.h" >> example_single_file.cpp
 
           cl.exe /D_USRDLL /D_WINDLL /I. example_single_file.cpp /LD /FeImGui.dll /link
-          cl.exe /DIMGUI_API=__declspec(dllimport) /I. ImGui.lib /Feexample_null.exe examples/example_null/main.cpp
+          cl.exe /DIMGUI_API=__declspec(dllimport) -DIMGUI_IMPL_API= /I. ImGui.lib /Feexample_null.exe examples/example_null/main.cpp
 
       # Win64 examples are more frequently compilted than the Win32 examples.
       # More of the Win32 examples requires 'workflow_run' to reduce waste.

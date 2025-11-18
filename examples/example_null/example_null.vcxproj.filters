@@ -18,9 +18,6 @@
     <ClInclude Include="..\..\imgui_internal.h">
       <Filter>imgui</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\backends\imgui_impl_null.h">
-      <Filter>sources</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\imgui.cpp">

@@ -351,7 +351,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
 
  - examples: window minimize, maximize (#583)
  - examples: provide a zero frame-rate/idle example.
- - examples: dx11/dx12: try to use new swapchain blit models (#2970)
+ - examples: dx11/dx12: try to use new swapchain blit models (#2970, #9031)
  - backends: report it better when not able to create texture?
  - backends: glfw: could go idle when minimized? if (glfwGetWindowAttrib(window, GLFW_ICONIFIED)) { glfwWaitEvents(); continue; } // issue: DeltaTime will be super high on resume, perhaps provide a way to let impl know (#440)
  - backends: opengl: rename imgui_impl_opengl2 to impl_opengl_legacy and imgui_impl_opengl3 to imgui_impl_opengl? (#1900)
