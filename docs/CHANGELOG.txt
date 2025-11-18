@@ -122,6 +122,8 @@ Other Changes:
 - Drag and Drop:
   - Added ImGuiDragDropFlags_AcceptDrawAsHovered to make accepting item render
     as hovered, which can allow using e.g. Button() as drop target. (#8632)
+  - Pressing Escape while carrying a payload automatically cancel the
+    active drag and drop. (#9071)
   - Style: added ImGuiCol_DragDropTargetBg, style.DragDropTargetRounding,
     style.DragDropTargetBorderSize and style.DragDropTargetPadding to configure
     the drop target highlight. (#9056) [@aaronkirkham]

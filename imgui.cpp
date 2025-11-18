@@ -5534,6 +5534,11 @@ void ImGui::NewFrame()
     g.DragDropWithinSource = false;
     g.DragDropWithinTarget = false;
     g.DragDropHoldJustPressedId = 0;
+    if (g.DragDropActive && IsKeyPressed(ImGuiKey_Escape, ImGuiInputFlags_None, g.ActiveId)) // Also works when g.ActiveId==0 (aka leftover payload in progress, no active id)
+    {
+        ClearActiveID();
+        ClearDragDrop();
+    }
     g.TooltipPreviousWindow = NULL;
 
     // Close popups on focus lost (currently wip/opt-in)
