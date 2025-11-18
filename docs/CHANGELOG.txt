@@ -99,6 +99,9 @@ Other Changes:
     on inner rectangle rather than clipping rectangle, ensuring consistent
     (but occasionally less practical) navigation result when a window is
     partially out of screen. (#787)
+  - Improved/clarified behavior when requesting PageUp/PageDown from a
+    focused item which is outside of visible boundaries: now ends up one
+    page away from focused item. (#9079)
   - Clipper: fixed an issue when using up/down from an item outside of
     visible bound and using the clipper. (#9079)
 - Fonts:
