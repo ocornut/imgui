@@ -95,6 +95,10 @@ Other Changes:
     most typically achieved when resizing programmatically or via a docking layout
     reacting to a platform window resize). (#3237, #9007) [@anton-kl, @ocornut]
 - Nav:
+  - Reworked PageUp/PageDown to pick same-page top/bottom page based
+    on inner rectangle rather than clipping rectangle, ensuring consistent
+    (but occasionally less practical) navigation result when a window is
+    partially out of screen. (#787)
   - Clipper: fixed an issue when using up/down from an item outside of
     visible bound and using the clipper. (#9079)
 - Fonts:
