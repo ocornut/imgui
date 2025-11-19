@@ -5323,7 +5323,7 @@ static void DemoWindowPopups()
                 if (ImGui::BeginPopupContextItem()) // <-- use last item id as popup id
                 {
                     selected = n;
-                    ImGui::Text("This a popup for \"%s\"!", names[n]);
+                    ImGui::Text("This is a popup for \"%s\"!", names[n]);
                     if (ImGui::Button("Close"))
                         ImGui::CloseCurrentPopup();
                     ImGui::EndPopup();
