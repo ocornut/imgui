@@ -1982,7 +1982,7 @@ static void ImGui_ImplVulkan_CreateWindow(ImGuiViewport* viewport)
         IM_DELETE(vd);
         return;
     }
-    viewport->RendererUserData = nullptr;
+    viewport->RendererUserData = vd;
 
     // Select Surface Format
     ImGui_ImplVulkan_PipelineInfo* pipeline_info = &v->PipelineInfoForViewports;
