@@ -5546,10 +5546,18 @@ void ImGui::NewFrame()
     g.DragDropWithinSource = false;
     g.DragDropWithinTarget = false;
     g.DragDropHoldJustPressedId = 0;
-    if (g.DragDropActive && IsKeyPressed(ImGuiKey_Escape, ImGuiInputFlags_None, g.ActiveId)) // Also works when g.ActiveId==0 (aka leftover payload in progress, no active id)
+    if (g.DragDropActive)
     {
-        ClearActiveID();
-        ClearDragDrop();
+        // Also works when g.ActiveId==0 (aka leftover payload in progress, no active id)
+        // You may disable this externally by hijacking the input route:
+        //  'if (GetDragDropPayload() != NULL) { Shortcut(ImGuiKey_Escape, ImGuiInputFlags_RouteGlobal | ImGuiInputFlags_RouteOverActive); }
+        // but you will not get a return value from Shortcut() due to ActiveIdUsingAllKeyboardKeys logic. You can however poll IsKeyPressed(ImGuiKey_Escape) afterwards.
+        ImGuiID owner_id = g.ActiveId ? g.ActiveId : ImHashStr("##DragDropCancelHandler");
+        if (Shortcut(ImGuiKey_Escape, ImGuiInputFlags_RouteGlobal, owner_id))
+        {
+            ClearActiveID();
+            ClearDragDrop();
+        }
     }
     g.TooltipPreviousWindow = NULL;
 
