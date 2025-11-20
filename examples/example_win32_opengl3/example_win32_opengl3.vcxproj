@@ -100,7 +100,8 @@
       <SubSystem>Console</SubSystem>
     </Link>
     <Manifest>
-      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
+      <EnableDpiAwareness>
+      </EnableDpiAwareness>
     </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -117,7 +118,8 @@
       <SubSystem>Console</SubSystem>
     </Link>
     <Manifest>
-      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
+      <EnableDpiAwareness>
+      </EnableDpiAwareness>
     </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -139,7 +141,8 @@
       <SubSystem>Console</SubSystem>
     </Link>
     <Manifest>
-      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
+      <EnableDpiAwareness>
+      </EnableDpiAwareness>
       <OutputManifestFile>
       </OutputManifestFile>
     </Manifest>
@@ -167,7 +170,8 @@
       <SubSystem>Console</SubSystem>
     </Link>
     <Manifest>
-      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
+      <EnableDpiAwareness>
+      </EnableDpiAwareness>
       <OutputManifestFile>
       </OutputManifestFile>
     </Manifest>

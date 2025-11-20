@@ -37,7 +37,7 @@ int main(int, char**)
 {
     // Make process DPI aware and obtain main monitor scale
     // https://learn.microsoft.com/en-us/windows/win32/hidpi/setting-the-default-dpi-awareness-for-a-process
-    // ImGui_ImplWin32_EnableDpiAwareness(); // This is already set in the manifest so the call will fail, but leaving it for completeness.
+    ImGui_ImplWin32_EnableDpiAwareness();
     float main_scale = ImGui_ImplWin32_GetDpiScaleForMonitor(::MonitorFromPoint(POINT{ 0, 0 }, MONITOR_DEFAULTTOPRIMARY));
 
     // Create application window
