@@ -175,6 +175,7 @@ Other Changes:
     during surface resize. (#8381)
   - SDL2+WebGPU: added new example (Emscripten + native Dawn/WGPU). (#8381) [@brutpitt]
   - SDL3+WebGPU: added new example (Emscripten + native Dawn/WGPU). (#8381) [@brutpitt]
+  - Win32+OpenGL3: enable DPI awareness. (#9083)
 
 
 -----------------------------------------------------------------------
