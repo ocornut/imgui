@@ -16,13 +16,21 @@ on:
       - requested
 
 jobs:
-  Windows:
+  Build-Windows:
     runs-on: windows-2025
+    name: Build - Windows
+
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}/imgui
+
     env:
       VS_PATH: C:\Program Files\Microsoft Visual Studio\2022\Enterprise\
       MSBUILD_PATH: C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+        with:
+          path: ${{ github.workspace }}/imgui
 
       # The VulkanSDK libs for Windows is manually generated using build_windows_vulkan_libs.ps1 + attached to issue #8925.
       # (we have a .yml workflow in commit history if it becomes ever useful to create this on CI too)
@@ -257,10 +265,18 @@ jobs:
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_win32_directx12/example_win32_directx12.vcxproj /p:Platform=x64 /p:Configuration=Release'
 
-  Linux:
+  Build-Linux:
     runs-on: ubuntu-latest
+    name: Build - Linux
+
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}/imgui
+
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
+      with:
+        path: ${{ github.workspace }}/imgui
 
     - name: Install Dependencies
       run: |
@@ -474,10 +490,18 @@ jobs:
     - name: Build with IMGUI_IMPL_VULKAN_NO_PROTOTYPES
       run: g++ -c -I. -std=c++11 -DIMGUI_IMPL_VULKAN_NO_PROTOTYPES=1 backends/imgui_impl_vulkan.cpp
 
-  MacOS:
+  Build-MacOS:
     runs-on: macos-latest
+    name: Build - MacOS
+
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}/imgui
+
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
+      with:
+        path: ${{ github.workspace }}/imgui
 
     - name: Install Dependencies
       run: |
@@ -548,20 +572,24 @@ jobs:
     - name: Build example_apple_opengl2
       run: xcodebuild -project examples/example_apple_opengl2/example_apple_opengl2.xcodeproj -target example_osx_opengl2
 
-  iOS:
+  Build-iOS:
     runs-on: macos-14
+    name: Build - iOS
+
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Build example_apple_metal
       run: |
         # Code signing is required, but we disable it because it is irrelevant for CI builds.
         xcodebuild -project examples/example_apple_metal/example_apple_metal.xcodeproj -target example_apple_metal_ios CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
 
-  Emscripten:
+  Build-Emscripten:
     runs-on: ubuntu-latest
+    name: Build - Emscripten
+
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Install Dependencies
       run: |
@@ -599,12 +627,148 @@ jobs:
         emcmake cmake -B build -DCMAKE_BUILD_TYPE=Release examples/example_glfw_wgpu
         cmake --build build
 
-  Android:
+  Build-Android:
     runs-on: ubuntu-latest
+    name: Build - Android
+
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Build example_android_opengl3
       run: |
         cd examples/example_android_opengl3/android
         gradle assembleDebug --stacktrace
+
+  Test-Windows:
+    runs-on: windows-2025
+    name: Test - Windows
+
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}/imgui
+
+    env:
+      MSBUILD_PATH: C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: ${{ github.workspace }}/imgui
+
+      - uses: actions/checkout@v5
+        continue-on-error: true
+        with:
+          fetch-depth: 1
+          repository: ocornut/imgui_test_engine
+          path: ${{ github.workspace }}/imgui_test_engine
+          submodules: true
+
+      - name: Fix Tests Projects
+        shell: powershell
+        working-directory: ${{ github.workspace }}/imgui_test_engine
+        run: |
+          # WARNING: This will need updating if toolset/sdk change in project files!
+          gci -recurse -filter "*.vcxproj" | ForEach-Object {
+            # Fix SDK and toolset for most samples.
+            (Get-Content $_.FullName) -Replace "<PlatformToolset>v110</PlatformToolset>","<PlatformToolset>v142</PlatformToolset>" | Set-Content -Path $_.FullName
+            (Get-Content $_.FullName) -Replace "<WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>","<WindowsTargetPlatformVersion>10.0.20348.0</WindowsTargetPlatformVersion>" | Set-Content -Path $_.FullName
+            # Fix SDK and toolset for samples that require newer SDK/toolset. At the moment it is only dx12.
+            (Get-Content $_.FullName) -Replace "<PlatformToolset>v140</PlatformToolset>","<PlatformToolset>v142</PlatformToolset>" | Set-Content -Path $_.FullName
+            (Get-Content $_.FullName) -Replace "<WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>","<WindowsTargetPlatformVersion>10.0.20348.0</WindowsTargetPlatformVersion>" | Set-Content -Path $_.FullName
+          }
+
+      - name: Build Tests
+        shell: cmd
+        working-directory: ${{ github.workspace }}/imgui_test_engine/imgui_test_suite
+        run: '"%MSBUILD_PATH%\MSBuild.exe" imgui_test_suite.vcxproj /p:Platform=x64 /p:Configuration=Release /p:ClFlags=/WX -maxcpucount:%NUMBER_OF_PROCESSORS%'
+
+      - name: Run Tests
+        working-directory: ${{ github.workspace }}/imgui_test_engine/imgui_test_suite
+        run: Release/imgui_test_suite.exe -nogui -nopause -v2 -ve4 tests
+
+      - name: Check for Docking
+        id: check_docking
+        shell: bash
+        working-directory: ${{ github.workspace }}/imgui
+        run: echo "has_dock=$(grep -q "#define IMGUI_HAS_DOCK" imgui.h && echo true || echo false)" >> $GITHUB_OUTPUT
+
+      - name: Run Viewport Tests
+        if: steps.check_docking.outputs.has_dock == 'true'
+        working-directory: ${{ github.workspace }}/imgui_test_engine/imgui_test_suite
+        run: Release/imgui_test_suite.exe -nogui -nopause -v2 -ve4 -viewport-mock viewport
+
+  Test-Linux:
+    runs-on: ubuntu-latest
+    name: Test - Linux
+
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}/imgui
+
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        path: ${{ github.workspace }}/imgui
+
+    - uses: actions/checkout@v5
+      with:
+        fetch-depth: 1
+        repository: ocornut/imgui_test_engine
+        path: ${{ github.workspace }}/imgui_test_engine
+        submodules: true
+
+    - name: Build Tests
+      working-directory: ${{ github.workspace }}/imgui_test_engine/imgui_test_suite
+      run: make -j$(nproc)
+
+    - name: Run Tests
+      working-directory: ${{ github.workspace }}/imgui_test_engine/imgui_test_suite
+      run: ./imgui_test_suite -nogui -nopause -v2 -ve4 tests
+
+    - name: Check for Docking
+      id: check_docking
+      working-directory: ${{ github.workspace }}/imgui
+      run: echo "has_dock=$(grep -q "#define IMGUI_HAS_DOCK" imgui.h && echo true || echo false)" >> $GITHUB_OUTPUT
+
+    - name: Run Viewport Tests
+      if: steps.check_docking.outputs.has_dock == 'true'
+      working-directory: ${{ github.workspace }}/imgui_test_engine/imgui_test_suite
+      run: ./imgui_test_suite -nogui -nopause -v2 -ve4 -viewport-mock viewport
+
+  Test-MacOS:
+    runs-on: macos-latest
+    name: Test - MacOS
+
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}/imgui
+
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        path: ${{ github.workspace }}/imgui
+
+    - uses: actions/checkout@v5
+      with:
+        fetch-depth: 1
+        repository: ocornut/imgui_test_engine
+        path: ${{ github.workspace }}/imgui_test_engine
+        submodules: true
+
+    - name: Build Tests
+      working-directory: ${{ github.workspace }}/imgui_test_engine/imgui_test_suite
+      run: make -j$(nproc)
+
+    - name: Run Tests
+      working-directory: ${{ github.workspace }}/imgui_test_engine/imgui_test_suite
+      run: ./imgui_test_suite -nogui -nopause -v2 -ve4 tests
+
+    - name: Check for Docking
+      id: check_docking
+      working-directory: ${{ github.workspace }}/imgui
+      run: echo "has_dock=$(grep -q "#define IMGUI_HAS_DOCK" imgui.h && echo true || echo false)" >> $GITHUB_OUTPUT
+
+    - name: Run Viewport Tests
+      if: steps.check_docking.outputs.has_dock == 'true'
+      working-directory: ${{ github.workspace }}/imgui_test_engine/imgui_test_suite
+      run: ./imgui_test_suite -nogui -nopause -v2 -ve4 -viewport-mock viewport

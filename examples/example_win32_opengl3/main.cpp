@@ -73,7 +73,7 @@ static void Hook_Renderer_SwapBuffers(ImGuiViewport* viewport, void*)
 int main(int, char**)
 {
     // Make process DPI aware and obtain main monitor scale
-    //ImGui_ImplWin32_EnableDpiAwareness(); // FIXME: This somehow doesn't work in the Win32+OpenGL example. Why?
+    ImGui_ImplWin32_EnableDpiAwareness();
     float main_scale = ImGui_ImplWin32_GetDpiScaleForMonitor(::MonitorFromPoint(POINT{ 0, 0 }, MONITOR_DEFAULTTOPRIMARY));
 
     // Create application window

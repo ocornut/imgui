@@ -1,4 +1,4 @@
-// dear imgui, v1.92.5 WIP
+// dear imgui, v1.92.5
 // (demo code)
 
 // Help:
@@ -5409,7 +5409,7 @@ static void DemoWindowPopups()
                 if (ImGui::BeginPopupContextItem()) // <-- use last item id as popup id
                 {
                     selected = n;
-                    ImGui::Text("This a popup for \"%s\"!", names[n]);
+                    ImGui::Text("This is a popup for \"%s\"!", names[n]);
                     if (ImGui::Button("Close"))
                         ImGui::CloseCurrentPopup();
                     ImGui::EndPopup();
@@ -8755,11 +8755,11 @@ void ImGui::ShowUserGuide()
     ImGuiIO& io = GetIO();
     BulletText("Double-click on title bar to collapse window.");
     BulletText(
-        "Click and drag on lower corner to resize window\n"
-        "(double-click to auto fit window to its contents).");
+        "Click and drag on lower corner or border to resize window.\n"
+        "(double-click to auto fit window to its contents)");
     BulletText("Ctrl+Click on a slider or drag box to input value as text.");
     BulletText("Tab/Shift+Tab to cycle through keyboard editable fields.");
-    BulletText("Ctrl+Tab to select a window.");
+    BulletText("Ctrl+Tab/Ctrl+Shift+Tab to focus windows.");
     if (io.FontAllowUserScaling)
         BulletText("Ctrl+Mouse Wheel to zoom window contents.");
     BulletText("While inputting text:\n");
@@ -8772,10 +8772,10 @@ void ImGui::ShowUserGuide()
     Unindent();
     BulletText("With keyboard navigation enabled:");
     Indent();
-    BulletText("Arrow keys to navigate.");
+    BulletText("Arrow keys or Home/End/PageUp/PageDown to navigate.");
     BulletText("Space to activate a widget.");
     BulletText("Return to input text into a widget.");
-    BulletText("Escape to deactivate a widget, close popup, exit child window.");
+    BulletText("Escape to deactivate a widget, close popup,\nexit a child window or the menu layer, clear focus.");
     BulletText("Alt to jump to the menu layer of a window.");
     Unindent();
 }
