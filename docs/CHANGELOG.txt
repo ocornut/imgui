@@ -36,8 +36,10 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.92.5 WIP (In Progress)
+ VERSION 1.92.5 (Released 2025-11-20)
 -----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.92.5
 
 Breaking Changes:
 
@@ -61,13 +63,6 @@ Breaking Changes:
 
 Other Changes:
 
-- Tables: fixed a bug where nesting BeginTable()->Begin()->BeginTable() would
-  result in temporarily incorrect state, which would lead to bugs to side effects
-  in various locations, e.g. GetContentRegionAvail() calls or using clipper. (#9005)
-  EndTable() was mistakenly restoring a wrong current table.
-- Tables: Angled headers: fixed an auto-resize feedback loop that could
-  affect tables with empty non-resizing columns using angled headers, making
-  them typically flicker back and forth between +0 and +1 pixels.
 - Windows:
   - Config flag io.ConfigWindowsMoveFromTitleBarOnly is now latched during
     Begin(), effectively allowing to change the value on a per-window basis.
@@ -77,6 +72,14 @@ Other Changes:
     scrollbar on the other axis. (#9060)
   - Fixed an issue where repeated calls to SetNextWindowSize() using 0.0f
     to auto-size on a given axis would keep marking ini settings as dirty.
+- Tables:
+  - Fixed a bug where nesting BeginTable()->Begin()->BeginTable() would
+    result in temporarily incorrect state, which would lead to bugs to side effects
+    in various locations, e.g. GetContentRegionAvail() calls or using clipper. (#9005)
+    EndTable() was mistakenly restoring a wrong current table.
+  - Angled headers: fixed an auto-resize feedback loop that could
+    affect tables with empty non-resizing columns using angled headers, making
+    them typically flicker back and forth between +0 and +1 pixels.
 - Disabled: fixed a bug when a previously enabled item that got nav focus
   and then turns disabled could still be activated using keyboard. (#9036)
 - InputText:
@@ -95,7 +98,7 @@ Other Changes:
     most typically achieved when resizing programmatically or via a docking layout
     reacting to a platform window resize). (#3237, #9007) [@anton-kl, @ocornut]
 - Nav:
-  - Reworked PageUp/PageDown to pick same-page top/bottom page based
+  - Reworked PageUp/PageDown logic to pick same-page top/bottom page based
     on inner rectangle rather than clipping rectangle, ensuring consistent
     (but occasionally less practical) navigation result when a window is
     partially out of screen. (#787)
@@ -116,7 +119,7 @@ Other Changes:
 - Groups: fixed an issue reporting IsItemEdited() signal after EndGroup() when
   triggered by some widgets e.g. Checkbox(), Selectable() and many others, which
   cleared ActiveId at the same time as editing. (#9028)
-  Note that IsItemDeactivatedAfterEdit() was not affected, only IsItemEdited).
+  Note that IsItemDeactivatedAfterEdit() was not affected, only IsItemEdited().
 - Misc: standardized casing of keyboard mods in comments and demo, showing
   as e.g. "Ctrl" instead of "CTRL".
 - CI: Added Dear ImGui Test Suite to CI builds. [@rokups]
@@ -137,7 +140,7 @@ Other Changes:
    - Metrics: fixed table and columns rect highlight from display when
      debug/metrics window is not in the same viewport as the table.
 - Backends:
-  - Null: added imgui_impl_null platform/renderer backend.
+  - NULL: added imgui_impl_null platform/renderer backend.
     This is designed if you need to run e.g. context with no input or no ouput.
   - GLFW: fixed building on Linux platforms where Wayland headers
     are not available. (#9024, #8969, #8921, #8920) [@jagot]
@@ -151,6 +154,10 @@ Other Changes:
     field changes viewports. (#9054)
   - Vulkan: added IMGUI_IMPL_VULKAN_VOLK_FILENAME to configure path to
     Volk (default to "volk.h"). (#9008, #7722, #6582, #4854) [@mwlasiuk]
+  - WebGPU: update to compile with Dawn and Emscripten's 4.0.10+
+    '--use-port=emdawnwebgpu' ports. (#8381, #8898, #7435) [@brutpitt, @trbabb]
+    When using Emscripten 4.0.10+, backend now defaults to IMGUI_IMPL_WEBGPU_BACKEND_DAWN
+    instead of IMGUI_IMPL_WEBGPU_BACKEND_WGPU, if neither are specified.
   - WebGPU: added various internal/optional helpers to wrap some of the
     Dawn/WGPU/Emscripten debacle quirks: (#8381) [@brutpitt]
      - ImGui_ImplWGPU_CreateWGPUSurfaceHelper().
@@ -159,15 +166,10 @@ Other Changes:
      - ImGui_ImplWGPU_GetBackendTypeName(), ImGui_ImplWGPU_GetAdapterTypeName(),
        ImGui_ImplWGPU_GetDeviceLostReasonName(), ImGui_ImplWGPU_GetErrorTypeName(),
        ImGui_ImplWGPU_GetLogLevelName().
-  - WebGPU: update to compile with Dawn and Emscripten's 4.0.10+
-    '--use-port=emdawnwebgpu' ports. (#8381, #8898, #7435) [@brutpitt, @trbabb]
-    When using Emscripten 4.0.10+, backend now defaults to IMGUI_IMPL_WEBGPU_BACKEND_DAWN
-    instead of IMGUI_IMPL_WEBGPU_BACKEND_WGPU, if neither are specified.
-    (note: examples application were not updated yet)
   - Win32: Revert 1.92.4 change of comparing dwPacketNumber, which prevents
     refreshing accurate gamepad info after focus-out + io.ClearInputKeys(). (#8556)
 - Examples:
-  - Null: update examples_null to use imgui_impl_null (which is a bit overengineering
+  - NULL: update examples_null to use imgui_impl_null (which is a bit overengineering
     but somehow consistent).
   - GLFW+WebGPU: update example for latest specs, to work on Emscripten 4.0.10+,
     latest Dawn-Native and WGPU-Native. (#8381, #8567, #8191, #7435) [@brutpitt]
