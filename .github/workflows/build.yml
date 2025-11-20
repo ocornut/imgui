@@ -16,13 +16,21 @@ on:
       - requested
 
 jobs:
-  Windows:
+  Build-Windows:
     runs-on: windows-2025
+    name: Build - Windows
+
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}/imgui
+
     env:
       VS_PATH: C:\Program Files\Microsoft Visual Studio\2022\Enterprise\
       MSBUILD_PATH: C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+        with:
+          path: ${{ github.workspace }}/imgui
 
       # The VulkanSDK libs for Windows is manually generated using build_windows_vulkan_libs.ps1 + attached to issue #8925.
       # (we have a .yml workflow in commit history if it becomes ever useful to create this on CI too)
@@ -257,10 +265,18 @@ jobs:
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_win32_directx12/example_win32_directx12.vcxproj /p:Platform=x64 /p:Configuration=Release'
 
-  Linux:
+  Build-Linux:
     runs-on: ubuntu-latest
+    name: Build - Linux
+
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}/imgui
+
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
+      with:
+        path: ${{ github.workspace }}/imgui
 
     - name: Install Dependencies
       run: |
@@ -474,10 +490,18 @@ jobs:
     - name: Build with IMGUI_IMPL_VULKAN_NO_PROTOTYPES
       run: g++ -c -I. -std=c++11 -DIMGUI_IMPL_VULKAN_NO_PROTOTYPES=1 backends/imgui_impl_vulkan.cpp
 
-  MacOS:
+  Build-MacOS:
     runs-on: macos-latest
+    name: Build - MacOS
+
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}/imgui
+
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
+      with:
+        path: ${{ github.workspace }}/imgui
 
     - name: Install Dependencies
       run: |
@@ -548,20 +572,24 @@ jobs:
     - name: Build example_apple_opengl2
       run: xcodebuild -project examples/example_apple_opengl2/example_apple_opengl2.xcodeproj -target example_osx_opengl2
 
-  iOS:
+  Build-iOS:
     runs-on: macos-14
+    name: Build - iOS
+
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Build example_apple_metal
       run: |
         # Code signing is required, but we disable it because it is irrelevant for CI builds.
         xcodebuild -project examples/example_apple_metal/example_apple_metal.xcodeproj -target example_apple_metal_ios CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
 
-  Emscripten:
+  Build-Emscripten:
     runs-on: ubuntu-latest
+    name: Build - Emscripten
+
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Install Dependencies
       run: |
@@ -599,10 +627,12 @@ jobs:
         emcmake cmake -B build -DCMAKE_BUILD_TYPE=Release examples/example_glfw_wgpu
         cmake --build build
 
-  Android:
+  Build-Android:
     runs-on: ubuntu-latest
+    name: Build - Android
+
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Build example_android_opengl3
       run: |
