@@ -119,6 +119,7 @@ Other Changes:
   Note that IsItemDeactivatedAfterEdit() was not affected, only IsItemEdited).
 - Misc: standardized casing of keyboard mods in comments and demo, showing
   as e.g. "Ctrl" instead of "CTRL".
+- CI: Added Dear ImGui Test Suite to CI builds. [@rokups]
 - Drag and Drop:
   - Added ImGuiDragDropFlags_AcceptDrawAsHovered to make accepting item render
     as hovered, which can allow using e.g. Button() as drop target. (#8632)
@@ -174,6 +175,7 @@ Other Changes:
     during surface resize. (#8381)
   - SDL2+WebGPU: added new example (Emscripten + native Dawn/WGPU). (#8381) [@brutpitt]
   - SDL3+WebGPU: added new example (Emscripten + native Dawn/WGPU). (#8381) [@brutpitt]
+  - Win32+OpenGL3: enable DPI awareness. (#9083)
 
 
 -----------------------------------------------------------------------
