@@ -30,13 +30,13 @@ static int              g_Height;
 // Forward declarations of helper functions
 bool CreateDeviceWGL(HWND hWnd, WGL_WindowData* data);
 void CleanupDeviceWGL(HWND hWnd, WGL_WindowData* data);
-void ResetDeviceWGL();
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 // Main code
 int main(int, char**)
 {
     // Make process DPI aware and obtain main monitor scale
+    // https://learn.microsoft.com/en-us/windows/win32/hidpi/setting-the-default-dpi-awareness-for-a-process
     ImGui_ImplWin32_EnableDpiAwareness();
     float main_scale = ImGui_ImplWin32_GetDpiScaleForMonitor(::MonitorFromPoint(POINT{ 0, 0 }, MONITOR_DEFAULTTOPRIMARY));
 
