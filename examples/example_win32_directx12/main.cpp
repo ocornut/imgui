@@ -351,6 +351,15 @@ bool CreateDeviceD3D(HWND hWnd)
         pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, true);
         pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
         pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, true);
+
+        // Disable breaking on this warning because of a suspected bug in the D3D12 SDK layer, see #9084 for details.
+        const int D3D12_MESSAGE_ID_FENCE_ZERO_WAIT_ = 1424; // not in all copies of d3d12sdklayers.h
+        D3D12_MESSAGE_ID disabledMessages[] = { (D3D12_MESSAGE_ID)D3D12_MESSAGE_ID_FENCE_ZERO_WAIT_ };
+        D3D12_INFO_QUEUE_FILTER filter = {};
+        filter.DenyList.NumIDs = 1;
+        filter.DenyList.pIDList = disabledMessages;
+        pInfoQueue->AddStorageFilterEntries(&filter);
+
         pInfoQueue->Release();
         pdx12Debug->Release();
     }
