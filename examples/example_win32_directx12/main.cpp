@@ -371,6 +371,16 @@ bool CreateDeviceD3D(HWND hWnd)
         pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, true);
         pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
         pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, true);
+
+        // Disable breaking on this warning because of a suspected bug in the D3D12 SDK layer, see https://github.com/ocornut/imgui/discussions/9084 for details.
+        D3D12_MESSAGE_ID disabledMessages[] = { D3D12_MESSAGE_ID_FENCE_ZERO_WAIT };
+
+        D3D12_INFO_QUEUE_FILTER filter = {};
+        filter.DenyList.NumIDs = 1;
+        filter.DenyList.pIDList = disabledMessages;
+
+        pInfoQueue->AddStorageFilterEntries(&filter);
+
         pInfoQueue->Release();
         pdx12Debug->Release();
     }
