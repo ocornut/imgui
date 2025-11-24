@@ -50,6 +50,10 @@ Other Changes:
   the oldest bug in Dear ImGui history (albeit for a rarely used feature)! (#9086)
 - Scrollbar: fixed a codepath leading to a divide-by-zero (which would not be
   noticeable by user but detected by sanitizers). (#9089) [@judicaelclair]
+- Backends:
+  - Vulkan: helper for creating a swapchain (used by examples and multi-viewports)
+    selects `VkSwapchainCreateInfoKHR`'s `compositeAlpha` value based on
+    `cap.supportedCompositeAlpha`. (#8784) [@FelixStach]
 
 
 -----------------------------------------------------------------------
