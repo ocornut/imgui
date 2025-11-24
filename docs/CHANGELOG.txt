@@ -1386,6 +1386,7 @@ Breaking changes:
 - Commented out pre-1.87 IO system (equivalent to using IMGUI_DISABLE_OBSOLETE_KEYIO or IMGUI_DISABLE_OBSOLETE_FUNCTIONS before).
   - io.KeyMap[] and io.KeysDown[] are removed (obsoleted February 2022). Use IsKeyDown() instead.
   - io.NavInputs[] and ImGuiNavInput are removed (obsoleted July 2022).
+  - GetKeyIndex() is removed (obsoleted March 2022). The indirection is now unnecessary.
   - Pre-1.87 backends are not supported:
     - backends need to call io.AddKeyEvent(), io.AddMouseEvent() instead of writing to io.KeysDown[], io.MouseDown[] fields.
     - backends need to call io.AddKeyAnalogEvent() for gamepad values instead of writing to io.NavInputs[] fields.
