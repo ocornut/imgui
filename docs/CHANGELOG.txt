@@ -43,6 +43,11 @@ Breaking Changes:
 
 Other Changes:
 
+- Fonts: fixed handling of `ImFontConfig::FontDataOwnedByAtlas = false` which
+  did erroneously make a copy of the font data, essentially defeating the purpose
+  of this flag and wasting memory.
+  Undetected since July 2015 and now spotted by @TellowKrinkle, this is perhaps
+  the oldest bug in Dear ImGui history (albeit for a rarely used feature)! (#9086)
 - Scrollbar: fixed a codepath leading to a divide-by-zero (which would not be
   noticeable by user but detected by sanitizers). (#9089) [@judicaelclair]
 
