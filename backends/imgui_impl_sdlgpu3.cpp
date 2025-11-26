@@ -22,6 +22,7 @@
 //   Calling the function is MANDATORY, otherwise the ImGui will not upload neither the vertex nor the index buffer for the GPU. See imgui_impl_sdlgpu3.cpp for more info.
 
 // CHANGELOG
+//  2025-11-26: Use MSL shaders on macOS to support macOS 10.14+ (instead of Metallib shaders requiring macOS 14+). Requires calling SDL_CreateGPUDevice() with SDL_GPU_SHADERFORMAT_MSL.
 //  2025-09-18: Call platform_io.ClearRendererHandlers() on shutdown.
 //  2025-08-20: Added ImGui_ImplSDLGPU3_InitInfo::SwapchainComposition and ImGui_ImplSDLGPU3_InitInfo::PresentMode to configure how secondary viewports are created.
 //  2025-08-08: *BREAKING* Changed ImTextureID type from SDL_GPUTextureSamplerBinding* to SDL_GPUTexture*, which is more natural and easier for user to manage. If you need to change the current sampler, you can access the ImGui_ImplSDLGPU3_RenderState struct. (#8866, #8163, #7998, #7988)
@@ -452,6 +453,19 @@ static void ImGui_ImplSDLGPU3_CreateShaders()
 #ifdef __APPLE__
     else
     {
+#include <TargetConditionals.h>
+#if TARGET_OS_OSX
+        // macOS: using MSL source
+        vertex_shader_info.entrypoint = "main0";
+        vertex_shader_info.format = SDL_GPU_SHADERFORMAT_MSL;
+        vertex_shader_info.code = msl_vertex;
+        vertex_shader_info.code_size = sizeof(msl_vertex);
+        fragment_shader_info.entrypoint = "main0";
+        fragment_shader_info.format = SDL_GPU_SHADERFORMAT_MSL;
+        fragment_shader_info.code = msl_fragment;
+        fragment_shader_info.code_size = sizeof(msl_fragment);
+#elif TARGET_OS_IPHONE
+        // iOS device: using metallib blobs
         vertex_shader_info.entrypoint = "main0";
         vertex_shader_info.format = SDL_GPU_SHADERFORMAT_METALLIB;
         vertex_shader_info.code = metallib_vertex;
@@ -460,6 +474,7 @@ static void ImGui_ImplSDLGPU3_CreateShaders()
         fragment_shader_info.format = SDL_GPU_SHADERFORMAT_METALLIB;
         fragment_shader_info.code = metallib_fragment;
         fragment_shader_info.code_size = sizeof(metallib_fragment);
+#endif
     }
 #endif
     bd->VertexShader = SDL_CreateGPUShader(v->Device, &vertex_shader_info);
