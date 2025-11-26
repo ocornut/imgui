@@ -3193,6 +3193,12 @@ namespace ImGui
     IMGUI_API void          Initialize();
     IMGUI_API void          Shutdown();    // Since 1.60 this is a _private_ function. You can call DestroyContext() to destroy the context created by CreateContext().
 
+    // Context name & generic context hooks
+    IMGUI_API void          SetContextName(ImGuiContext* ctx, const char* name);
+    IMGUI_API ImGuiID       AddContextHook(ImGuiContext* ctx, const ImGuiContextHook* hook);
+    IMGUI_API void          RemoveContextHook(ImGuiContext* ctx, ImGuiID hook_to_remove);
+    IMGUI_API void          CallContextHooks(ImGuiContext* ctx, ImGuiContextHookType type);
+
     // NewFrame
     IMGUI_API void          UpdateInputEvents(bool trickle_fast_inputs);
     IMGUI_API void          UpdateHoveredWindowAndCaptureFlags(const ImVec2& mouse_pos);
@@ -3201,11 +3207,6 @@ namespace ImGui
     IMGUI_API void          StopMouseMovingWindow();
     IMGUI_API void          UpdateMouseMovingWindowNewFrame();
     IMGUI_API void          UpdateMouseMovingWindowEndFrame();
-
-    // Generic context hooks
-    IMGUI_API ImGuiID       AddContextHook(ImGuiContext* context, const ImGuiContextHook* hook);
-    IMGUI_API void          RemoveContextHook(ImGuiContext* context, ImGuiID hook_to_remove);
-    IMGUI_API void          CallContextHooks(ImGuiContext* context, ImGuiContextHookType type);
 
     // Viewports
     IMGUI_API void          ScaleWindowsInViewport(ImGuiViewportP* viewport, float scale);

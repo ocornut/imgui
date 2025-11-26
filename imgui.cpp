@@ -4443,6 +4443,13 @@ void ImGui::Shutdown()
     g.Initialized = false;
 }
 
+// When using multiple context it can be helpful to give name a name.
+// (A) Will be visible in debugger, (B) Will be included in all IMGUI_DEBUG_LOG() calls, (C) Should be <= 15 characters long.
+void ImGui::SetContextName(ImGuiContext* ctx, const char* name)
+{
+    ImStrncpy(ctx->ContextName, name, IM_ARRAYSIZE(ctx->ContextName));
+}
+
 // No specific ordering/dependency support, will see as needed
 ImGuiID ImGui::AddContextHook(ImGuiContext* ctx, const ImGuiContextHook* hook)
 {
