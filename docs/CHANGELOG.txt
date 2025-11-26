@@ -61,6 +61,9 @@ Other Changes:
     selects `VkSwapchainCreateInfoKHR`'s `compositeAlpha` value based on
     `cap.supportedCompositeAlpha`, which seems to be required on some Android
      devices. (#8784) [@FelixStach]
+- Examples:
+   - Win32+DirectX12: ignore seemingly incorrect D3D12_MESSAGE_ID_FENCE_ZERO_WAIT
+     warning on startups on some setups. (#9084, #9093) [@RT2Code, @LeoGautheron]
 
 
 -----------------------------------------------------------------------

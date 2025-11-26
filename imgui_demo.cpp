@@ -6509,7 +6509,7 @@ static void DemoWindowTables()
             ImGui::TableNextColumn();
             ImGui::Text("A0 Row 0");
             {
-                float rows_height = TEXT_BASE_HEIGHT * 2;
+                float rows_height = (TEXT_BASE_HEIGHT * 2.0f) + (ImGui::GetStyle().CellPadding.y * 2.0f);
                 if (ImGui::BeginTable("table_nested2", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable))
                 {
                     ImGui::TableSetupColumn("B0");
@@ -6551,7 +6551,7 @@ static void DemoWindowTables()
         {
             for (int row = 0; row < 8; row++)
             {
-                float min_row_height = (float)(int)(TEXT_BASE_HEIGHT * 0.30f * row);
+                float min_row_height = (float)(int)(TEXT_BASE_HEIGHT * 0.30f * row + ImGui::GetStyle().CellPadding.y * 2.0f);
                 ImGui::TableNextRow(ImGuiTableRowFlags_None, min_row_height);
                 ImGui::TableNextColumn();
                 ImGui::Text("min_row_height = %.2f", min_row_height);
@@ -6655,9 +6655,10 @@ static void DemoWindowTables()
         ImGui::SameLine();
         if (ImGui::BeginTable("table3", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg, ImVec2(TEXT_BASE_WIDTH * 30, 0.0f)))
         {
+            const float rows_height = TEXT_BASE_HEIGHT * 1.5f + ImGui::GetStyle().CellPadding.y * 2.0f;
             for (int row = 0; row < 3; row++)
             {
-                ImGui::TableNextRow(0, TEXT_BASE_HEIGHT * 1.5f);
+                ImGui::TableNextRow(0, rows_height);
                 for (int column = 0; column < 3; column++)
                 {
                     ImGui::TableNextColumn();
