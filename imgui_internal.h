@@ -335,7 +335,6 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit context pointer
 #define IM_PRIu64   "llu"
 #define IM_PRIX64   "llX"
 #endif
-#define IM_TEXTUREID_TO_U64(_TEXID) ((ImU64)(intptr_t)(_TEXID))
 
 //-----------------------------------------------------------------------------
 // [SECTION] Generic helpers
@@ -3194,6 +3193,12 @@ namespace ImGui
     IMGUI_API void          Initialize();
     IMGUI_API void          Shutdown();    // Since 1.60 this is a _private_ function. You can call DestroyContext() to destroy the context created by CreateContext().
 
+    // Context name & generic context hooks
+    IMGUI_API void          SetContextName(ImGuiContext* ctx, const char* name);
+    IMGUI_API ImGuiID       AddContextHook(ImGuiContext* ctx, const ImGuiContextHook* hook);
+    IMGUI_API void          RemoveContextHook(ImGuiContext* ctx, ImGuiID hook_to_remove);
+    IMGUI_API void          CallContextHooks(ImGuiContext* ctx, ImGuiContextHookType type);
+
     // NewFrame
     IMGUI_API void          UpdateInputEvents(bool trickle_fast_inputs);
     IMGUI_API void          UpdateHoveredWindowAndCaptureFlags(const ImVec2& mouse_pos);
@@ -3202,11 +3207,6 @@ namespace ImGui
     IMGUI_API void          StopMouseMovingWindow();
     IMGUI_API void          UpdateMouseMovingWindowNewFrame();
     IMGUI_API void          UpdateMouseMovingWindowEndFrame();
-
-    // Generic context hooks
-    IMGUI_API ImGuiID       AddContextHook(ImGuiContext* context, const ImGuiContextHook* hook);
-    IMGUI_API void          RemoveContextHook(ImGuiContext* context, ImGuiID hook_to_remove);
-    IMGUI_API void          CallContextHooks(ImGuiContext* context, ImGuiContextHookType type);
 
     // Viewports
     IMGUI_API void          ScaleWindowsInViewport(ImGuiViewportP* viewport, float scale);
@@ -3697,6 +3697,7 @@ namespace ImGui
     IMGUI_API bool          DebugBreakButton(const char* label, const char* description_of_location);
     IMGUI_API void          DebugBreakButtonTooltip(bool keyboard_only, const char* description_of_location);
     IMGUI_API void          ShowFontAtlas(ImFontAtlas* atlas);
+    IMGUI_API ImU64         DebugTextureIDToU64(ImTextureID tex_id);
     IMGUI_API void          DebugHookIdInfo(ImGuiID id, ImGuiDataType data_type, const void* data_id, const void* data_id_end);
     IMGUI_API void          DebugNodeColumns(ImGuiOldColumns* columns);
     IMGUI_API void          DebugNodeDrawList(ImGuiWindow* window, ImGuiViewportP* viewport, const ImDrawList* draw_list, const char* label);

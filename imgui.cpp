@@ -4328,7 +4328,7 @@ void ImGui::Initialize()
     g.Viewports.push_back(viewport);
     g.TempBuffer.resize(1024 * 3 + 1, 0);
 
-    // Build KeysMayBeCharInput[] lookup table (1 bool per named key)
+    // Build KeysMayBeCharInput[] lookup table (1 bit per named key)
     for (ImGuiKey key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; key = (ImGuiKey)(key + 1))
         if ((key >= ImGuiKey_0 && key <= ImGuiKey_9) || (key >= ImGuiKey_A && key <= ImGuiKey_Z) || (key >= ImGuiKey_Keypad0 && key <= ImGuiKey_Keypad9)
             || key == ImGuiKey_Tab || key == ImGuiKey_Space || key == ImGuiKey_Apostrophe || key == ImGuiKey_Comma || key == ImGuiKey_Minus || key == ImGuiKey_Period
@@ -4441,6 +4441,13 @@ void ImGui::Shutdown()
     g.DebugLogIndex.clear();
 
     g.Initialized = false;
+}
+
+// When using multiple context it can be helpful to give name a name.
+// (A) Will be visible in debugger, (B) Will be included in all IMGUI_DEBUG_LOG() calls, (C) Should be <= 15 characters long.
+void ImGui::SetContextName(ImGuiContext* ctx, const char* name)
+{
+    ImStrncpy(ctx->ContextName, name, IM_ARRAYSIZE(ctx->ContextName));
 }
 
 // No specific ordering/dependency support, will see as needed
@@ -16121,23 +16128,21 @@ void ImGui::UpdateDebugToolFlashStyleColor()
         DebugFlashStyleColorStop();
 }
 
-static const char* FormatTextureIDForDebugDisplay(char* buf, int buf_size, ImTextureID tex_id)
+ImU64 ImGui::DebugTextureIDToU64(ImTextureID tex_id)
 {
-    union { void* ptr; int integer; } tex_id_opaque;
-    memcpy(&tex_id_opaque, &tex_id, ImMin(sizeof(void*), sizeof(tex_id)));
-    if (sizeof(tex_id) >= sizeof(void*))
-        ImFormatString(buf, buf_size, "0x%p", tex_id_opaque.ptr);
-    else
-        ImFormatString(buf, buf_size, "0x%04X", tex_id_opaque.integer);
-    return buf;
+    ImU64 v = 0;
+    memcpy(&v, &tex_id, ImMin(sizeof(ImU64), sizeof(ImTextureID)));
+    return v;
 }
 
 static const char* FormatTextureRefForDebugDisplay(char* buf, int buf_size, ImTextureRef tex_ref)
 {
+    char* buf_p = buf;
     char* buf_end = buf + buf_size;
     if (tex_ref._TexData != NULL)
-        buf += ImFormatString(buf, buf_end - buf, "#%03d: ", tex_ref._TexData->UniqueID);
-    return FormatTextureIDForDebugDisplay(buf, (int)(buf_end - buf), tex_ref.GetTexID()); // Calling TexRef::GetTexID() to avoid assert of cmd->GetTexID()
+        buf_p += ImFormatString(buf_p, buf_end - buf_p, "#%03d: ", tex_ref._TexData->UniqueID);
+    ImFormatString(buf_p, buf_end - buf_p, "0x%X", ImGui::DebugTextureIDToU64(tex_ref.GetTexID()));
+    return buf;
 }
 
 #ifdef IMGUI_ENABLE_FREETYPE
@@ -16323,9 +16328,9 @@ void ImGui::DebugNodeTexture(ImTextureData* tex, int int_id, const ImFontAtlasRe
         }
         PopStyleVar();
 
-        char texid_desc[30];
+        char texref_desc[30];
         Text("Status = %s (%d), Format = %s (%d), UseColors = %d", ImTextureDataGetStatusName(tex->Status), tex->Status, ImTextureDataGetFormatName(tex->Format), tex->Format, tex->UseColors);
-        Text("TexID = %s, BackendUserData = %p", FormatTextureRefForDebugDisplay(texid_desc, IM_ARRAYSIZE(texid_desc), tex->GetTexRef()), tex->BackendUserData);
+        Text("TexRef = %s, BackendUserData = %p", FormatTextureRefForDebugDisplay(texref_desc, IM_ARRAYSIZE(texref_desc), tex->GetTexRef()), tex->BackendUserData);
         TreePop();
     }
     PopID();

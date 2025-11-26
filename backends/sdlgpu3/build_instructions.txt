@@ -34,6 +34,8 @@ Instructions to rebuild imgui_impl_sdlgpu3_shaders.h
     xcrun -sdk macosx metallib -o vertex.metallib -c vertex.ir
     xcrun -sdk macosx metallib -o fragment.metallib -c fragment.ir
 
+    note: use .metal outputs for updating msl_vertex / msl_fragment variables, and use .metallib outputs for metallib_vertex / metallib_fragment variables
+
     Proceed to step 4
 
 

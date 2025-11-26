@@ -48,12 +48,19 @@ Other Changes:
   of this flag and wasting memory.
   Undetected since July 2015 and now spotted by @TellowKrinkle, this is perhaps
   the oldest bug in Dear ImGui history (albeit for a rarely used feature)! (#9086)
+- Textures:
+  - Fixed a building issue when ImTextureID is defined as a struct.
+  - Fixed displaying texture # in Metrics/Debugger window.
 - Scrollbar: fixed a codepath leading to a divide-by-zero (which would not be
   noticeable by user but detected by sanitizers). (#9089) [@judicaelclair]
 - Backends:
+  - SDL_GPU3: macOS version can use MSL shaders in order to support macOS 10.14+
+    (vs Metallib shaders requiring macOS 14+). Requires application calling
+    SDL_CreateGPUDevice() with SDL_GPU_SHADERFORMAT_MSL. (#9076) [@Niminem]
   - Vulkan: helper for creating a swapchain (used by examples and multi-viewports)
     selects `VkSwapchainCreateInfoKHR`'s `compositeAlpha` value based on
-    `cap.supportedCompositeAlpha`. (#8784) [@FelixStach]
+    `cap.supportedCompositeAlpha`, which seems to be required on some Android
+     devices. (#8784) [@FelixStach]
 
 
 -----------------------------------------------------------------------

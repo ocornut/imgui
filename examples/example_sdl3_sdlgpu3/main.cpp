@@ -47,7 +47,7 @@ int main(int, char**)
     SDL_ShowWindow(window);
 
     // Create GPU Device
-    SDL_GPUDevice* gpu_device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL | SDL_GPU_SHADERFORMAT_METALLIB,true,nullptr);
+    SDL_GPUDevice* gpu_device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL | SDL_GPU_SHADERFORMAT_MSL | SDL_GPU_SHADERFORMAT_METALLIB, true, nullptr);
     if (gpu_device == nullptr)
     {
         printf("Error: SDL_CreateGPUDevice(): %s\n", SDL_GetError());
