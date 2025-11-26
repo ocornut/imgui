@@ -39,9 +39,11 @@ Dear ImGui is particularly suited to integration in game engines (for tooling), 
 
 ### Usage
 
-**The core of Dear ImGui is self-contained within a few platform-agnostic files** which you can easily compile in your application/engine. They are all the files in the root folder of the repository (imgui*.cpp, imgui*.h). **No specific build process is required**. You can add the .cpp files into your existing project.
+**The core of Dear ImGui is self-contained within a few platform-agnostic files** which you can easily compile in your application/engine. They are all the files in the root folder of the repository (`imgui*.cpp`, `imgui*.h`). **No specific build process is required**: you can add all files into your existing project.
 
 **Backends for a variety of graphics API and rendering platforms** are provided in the [backends/](https://github.com/ocornut/imgui/tree/master/backends) folder, along with example applications in the [examples/](https://github.com/ocornut/imgui/tree/master/examples) folder. You may also create your own backend. Anywhere where you can render textured triangles, you can render Dear ImGui.
+
+C++20 users wishing to use a module may the use [stripe2933/imgui-module](https://github.com/stripe2933/imgui-module) third-party extension.
 
 See the [Getting Started & Integration](#getting-started--integration) section of this document for more details.
 

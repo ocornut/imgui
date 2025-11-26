@@ -56,7 +56,8 @@ Other Changes:
 - Backends:
   - Vulkan: helper for creating a swapchain (used by examples and multi-viewports)
     selects `VkSwapchainCreateInfoKHR`'s `compositeAlpha` value based on
-    `cap.supportedCompositeAlpha`. (#8784) [@FelixStach]
+    `cap.supportedCompositeAlpha`, which seems to be required on some Android
+     devices. (#8784) [@FelixStach]
 
 
 -----------------------------------------------------------------------
