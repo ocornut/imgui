@@ -16124,26 +16124,18 @@ void ImGui::UpdateDebugToolFlashStyleColor()
 ImU64 ImGui::DebugTextureIDToU64(ImTextureID tex_id)
 {
     ImU64 v = 0;
-    memcpy(&v, &tex_id, ImMin(sizeof(ImU64), sizeof(tex_id)));
+    memcpy(&v, &tex_id, ImMin(sizeof(ImU64), sizeof(ImTextureID)));
     return v;
-}
-
-static const char* FormatTextureIDForDebugDisplay(char* buf, int buf_size, ImTextureID tex_id)
-{
-    ImU64 v = ImGui::DebugTextureIDToU64(tex_id);
-    if (sizeof(tex_id) >= sizeof(void*))
-        ImFormatString(buf, buf_size, "0x%p", v);
-    else
-        ImFormatString(buf, buf_size, "0x%04X", v);
-    return buf;
 }
 
 static const char* FormatTextureRefForDebugDisplay(char* buf, int buf_size, ImTextureRef tex_ref)
 {
+    char* buf_p = buf;
     char* buf_end = buf + buf_size;
     if (tex_ref._TexData != NULL)
-        buf += ImFormatString(buf, buf_end - buf, "#%03d: ", tex_ref._TexData->UniqueID);
-    return FormatTextureIDForDebugDisplay(buf, (int)(buf_end - buf), tex_ref.GetTexID());
+        buf_p += ImFormatString(buf_p, buf_end - buf_p, "#%03d: ", tex_ref._TexData->UniqueID);
+    buf_p += ImFormatString(buf_p, buf_end - buf_p, "0x%X", ImGui::DebugTextureIDToU64(tex_ref.GetTexID()));
+    return buf;
 }
 
 #ifdef IMGUI_ENABLE_FREETYPE
