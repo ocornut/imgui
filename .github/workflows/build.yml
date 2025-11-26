@@ -343,12 +343,27 @@ jobs:
         EOF
         g++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
 
-    - name: Build example_null (with large ImDrawIdx + pointer ImTextureID)
+    - name: Build example_null (with large ImDrawIdx + custom ImTextureID)
       run: |
         cat > example_single_file.cpp <<'EOF'
 
         #define ImTextureID void*
         #define ImDrawIdx unsigned int
+        #define IMGUI_IMPLEMENTATION
+        #include "misc/single_file/imgui_single_file.h"
+        #include "examples/example_null/main.cpp"
+
+        EOF
+        g++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
+
+        cat > example_single_file.cpp <<'EOF'
+
+        // Test build ImTextureID defined as a struct
+        struct SomeType { int a = 0; int b = 0; };
+        #define ImTextureID SomeType
+        #define ImTextureID_Invalid SomeType()
+        inline bool operator==(const SomeType& lhs, const SomeType& rhs) { return lhs.a == rhs.a && lhs.b == rhs.b; }
+        inline bool operator!=(const SomeType& lhs, const SomeType& rhs) { return lhs.a != rhs.a || lhs.b != rhs.b; }
         #define IMGUI_IMPLEMENTATION
         #include "misc/single_file/imgui_single_file.h"
         #include "examples/example_null/main.cpp"

@@ -36,6 +36,30 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
+ VERSION 1.92.6 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Breaking Changes:
+
+Other Changes:
+
+- Fonts: fixed handling of `ImFontConfig::FontDataOwnedByAtlas = false` which
+  did erroneously make a copy of the font data, essentially defeating the purpose
+  of this flag and wasting memory.
+  Undetected since July 2015 and now spotted by @TellowKrinkle, this is perhaps
+  the oldest bug in Dear ImGui history (albeit for a rarely used feature)! (#9086)
+- Textures:
+  - Fixed a building issue when ImTextureID is defined as a struct.
+  - Fixed displaying texture # in Metrics/Debugger window.
+- Scrollbar: fixed a codepath leading to a divide-by-zero (which would not be
+  noticeable by user but detected by sanitizers). (#9089) [@judicaelclair]
+- Backends:
+  - Vulkan: helper for creating a swapchain (used by examples and multi-viewports)
+    selects `VkSwapchainCreateInfoKHR`'s `compositeAlpha` value based on
+    `cap.supportedCompositeAlpha`. (#8784) [@FelixStach]
+
+
+-----------------------------------------------------------------------
  VERSION 1.92.5 (Released 2025-11-20)
 -----------------------------------------------------------------------
 
@@ -1544,6 +1568,7 @@ Breaking changes:
 - Commented out pre-1.87 IO system (equivalent to using IMGUI_DISABLE_OBSOLETE_KEYIO or IMGUI_DISABLE_OBSOLETE_FUNCTIONS before).
   - io.KeyMap[] and io.KeysDown[] are removed (obsoleted February 2022). Use IsKeyDown() instead.
   - io.NavInputs[] and ImGuiNavInput are removed (obsoleted July 2022).
+  - GetKeyIndex() is removed (obsoleted March 2022). The indirection is now unnecessary.
   - Pre-1.87 backends are not supported:
     - backends need to call io.AddKeyEvent(), io.AddMouseEvent() instead of writing to io.KeysDown[], io.MouseDown[] fields.
     - backends need to call io.AddKeyAnalogEvent() for gamepad values instead of writing to io.NavInputs[] fields.
