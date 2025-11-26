@@ -54,9 +54,9 @@ Other Changes:
 - Scrollbar: fixed a codepath leading to a divide-by-zero (which would not be
   noticeable by user but detected by sanitizers). (#9089) [@judicaelclair]
 - Backends:
-  - SDL_GPU3: on macOS, use MSL shaders in order to support macOS 10.14+
-    (instead of Metallib shaders requiring macOS 14+). (#9076) [@Niminem]
-    Requires calling SDL_CreateGPUDevice() with SDL_GPU_SHADERFORMAT_MSL.
+  - SDL_GPU3: macOS version can use MSL shaders in order to support macOS 10.14+
+    (vs Metallib shaders requiring macOS 14+). Requires application calling
+    SDL_CreateGPUDevice() with SDL_GPU_SHADERFORMAT_MSL. (#9076) [@Niminem]
   - Vulkan: helper for creating a swapchain (used by examples and multi-viewports)
     selects `VkSwapchainCreateInfoKHR`'s `compositeAlpha` value based on
     `cap.supportedCompositeAlpha`, which seems to be required on some Android
