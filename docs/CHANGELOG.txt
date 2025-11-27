@@ -54,6 +54,10 @@ Other Changes:
 - Menus:
   - Fixed MenuItem() label position and BeginMenu() arrow/icon/popup positions,
     when used inside a line with a baseline offset.
+- TreeNode:
+  - Fixed highlight position when used inside a line with a large text baseline offset.
+    (never quite worked in this situation; but then most of the time the text
+    baseline offset ends up being zero or FramePadding.y for a given line).
 - Tables:
   - Fixed an issue where a very thin scrolling table would advance parent layout
     slightly differently depending on its visibility (caused by a mismatch

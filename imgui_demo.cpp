@@ -4086,6 +4086,7 @@ static void DemoWindowWidgetsTreeNodes()
             ImGui::CheckboxFlags("ImGuiTreeNodeFlags_SpanAllColumns", &base_flags, ImGuiTreeNodeFlags_SpanAllColumns); ImGui::SameLine(); HelpMarker("For use in Tables only.");
             ImGui::CheckboxFlags("ImGuiTreeNodeFlags_AllowOverlap", &base_flags, ImGuiTreeNodeFlags_AllowOverlap);
             ImGui::CheckboxFlags("ImGuiTreeNodeFlags_Framed", &base_flags, ImGuiTreeNodeFlags_Framed); ImGui::SameLine(); HelpMarker("Draw frame with background (e.g. for CollapsingHeader)");
+            ImGui::CheckboxFlags("ImGuiTreeNodeFlags_FramePadding", &base_flags, ImGuiTreeNodeFlags_FramePadding);
             ImGui::CheckboxFlags("ImGuiTreeNodeFlags_NavLeftJumpsToParent", &base_flags, ImGuiTreeNodeFlags_NavLeftJumpsToParent);
 
             HelpMarker("Default option for DrawLinesXXX is stored in style.TreeLinesFlags");
@@ -4750,7 +4751,7 @@ static void DemoWindowLayout()
             // Tree
             // (here the node appears after a button and has odd intent, so we use ImGuiTreeNodeFlags_DrawLinesNone to disable hierarchy outline)
             const float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
-            ImGui::Button("Button##1");
+            ImGui::Button("Button##1"); // Will make line higher
             ImGui::SameLine(0.0f, spacing);
             if (ImGui::TreeNodeEx("Node##1", ImGuiTreeNodeFlags_DrawLinesNone))
             {
@@ -4760,14 +4761,22 @@ static void DemoWindowLayout()
                 ImGui::TreePop();
             }
 
+            const float padding = (float)(int)(ImGui::GetFontSize() * 1.20f); // Large padding
+            ImGui::PushStyleVarY(ImGuiStyleVar_FramePadding, padding);
+            ImGui::Button("Button##2");
+            ImGui::PopStyleVar();
+            ImGui::SameLine(0.0f, spacing);
+            if (ImGui::TreeNodeEx("Node##2", ImGuiTreeNodeFlags_DrawLinesNone))
+                ImGui::TreePop();
+
             // Vertically align text node a bit lower so it'll be vertically centered with upcoming widget.
             // Otherwise you can use SmallButton() (smaller fit).
             ImGui::AlignTextToFramePadding();
 
             // Common mistake to avoid: if we want to SameLine after TreeNode we need to do it before we add
-            // other contents below the node.
-            bool node_open = ImGui::TreeNode("Node##2");
-            ImGui::SameLine(0.0f, spacing); ImGui::Button("Button##2");
+            // other contents "inside" the node.
+            bool node_open = ImGui::TreeNode("Node##3");
+            ImGui::SameLine(0.0f, spacing); ImGui::Button("Button##3");
             if (node_open)
             {
                 // Placeholder tree data
@@ -4777,13 +4786,13 @@ static void DemoWindowLayout()
             }
 
             // Bullet
-            ImGui::Button("Button##3");
+            ImGui::Button("Button##4");
             ImGui::SameLine(0.0f, spacing);
             ImGui::BulletText("Bullet text");
 
             ImGui::AlignTextToFramePadding();
             ImGui::BulletText("Node");
-            ImGui::SameLine(0.0f, spacing); ImGui::Button("Button##4");
+            ImGui::SameLine(0.0f, spacing); ImGui::Button("Button##5");
             ImGui::Unindent();
         }
 
