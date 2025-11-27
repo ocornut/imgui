@@ -2029,7 +2029,7 @@ bool ImTriangleContainsPoint(const ImVec2& a, const ImVec2& b, const ImVec2& c, 
     bool b1 = ((p.x - b.x) * (a.y - b.y) - (p.y - b.y) * (a.x - b.x)) < 0.0f;
     bool b2 = ((p.x - c.x) * (b.y - c.y) - (p.y - c.y) * (b.x - c.x)) < 0.0f;
     bool b3 = ((p.x - a.x) * (c.y - a.y) - (p.y - a.y) * (c.x - a.x)) < 0.0f;
-    return ((b1 == b2) && (b2 == b3));
+    return (b1 == b2) && (b2 == b3);
 }
 
 void ImTriangleBarycentricCoords(const ImVec2& a, const ImVec2& b, const ImVec2& c, const ImVec2& p, float& out_u, float& out_v, float& out_w)
@@ -3129,7 +3129,7 @@ IM_MSVC_RUNTIME_CHECKS_RESTORE
 static bool GetSkipItemForListClipping()
 {
     ImGuiContext& g = *GImGui;
-    return (g.CurrentTable ? g.CurrentTable->HostSkipItems : g.CurrentWindow->SkipItems);
+    return g.CurrentTable ? g.CurrentTable->HostSkipItems : g.CurrentWindow->SkipItems;
 }
 
 static void ImGuiListClipper_SortAndFuseRanges(ImVector<ImGuiListClipperRange>& ranges, int offset = 0)
@@ -5290,7 +5290,7 @@ void ImGui::UpdateMouseMovingWindowEndFrame()
 
 static bool IsWindowActiveAndVisible(ImGuiWindow* window)
 {
-    return (window->Active) && (!window->Hidden);
+    return window->Active && !window->Hidden;
 }
 
 // The reason this is exposed in imgui_internal.h is: on touch-based system that don't have hovering, we want to dispatch inputs to the right target (imgui vs imgui+app)
@@ -5692,7 +5692,7 @@ static int IMGUI_CDECL ChildWindowComparer(const void* lhs, const void* rhs)
         return d;
     if (int d = (a->Flags & ImGuiWindowFlags_Tooltip) - (b->Flags & ImGuiWindowFlags_Tooltip))
         return d;
-    return (a->BeginOrderWithinParent - b->BeginOrderWithinParent);
+    return a->BeginOrderWithinParent - b->BeginOrderWithinParent;
 }
 
 static void AddWindowToSortBuffer(ImVector<ImGuiWindow*>* out_sorted_windows, ImGuiWindow* window)
@@ -6168,7 +6168,7 @@ bool ImGui::IsItemDeactivated()
     ImGuiContext& g = *GImGui;
     if (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_HasDeactivated)
         return (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_Deactivated) != 0;
-    return (g.DeactivatedItemData.ID == g.LastItemData.ID && g.LastItemData.ID != 0 && g.DeactivatedItemData.ElapseFrame >= g.FrameCount);
+    return g.DeactivatedItemData.ID == g.LastItemData.ID && g.LastItemData.ID != 0 && g.DeactivatedItemData.ElapseFrame >= g.FrameCount;
 }
 
 bool ImGui::IsItemDeactivatedAfterEdit()
@@ -9394,7 +9394,7 @@ int ImGui::CalcTypematicRepeatAmount(float t0, float t1, float repeat_delay, flo
     if (t0 >= t1)
         return 0;
     if (repeat_rate <= 0.0f)
-        return (t0 < repeat_delay) && (t1 >= repeat_delay);
+        return t0 < repeat_delay && t1 >= repeat_delay;
     const int count_t0 = (t0 < repeat_delay) ? -1 : (int)((t0 - repeat_delay) / repeat_rate);
     const int count_t1 = (t1 < repeat_delay) ? -1 : (int)((t1 - repeat_delay) / repeat_rate);
     const int count = count_t1 - count_t0;
@@ -10513,7 +10513,7 @@ bool ImGui::TestKeyOwner(ImGuiKey key, ImGuiID owner_id)
 
     ImGuiKeyOwnerData* owner_data = GetKeyOwnerData(&g, key);
     if (owner_id == ImGuiKeyOwner_Any)
-        return (owner_data->LockThisFrame == false);
+        return owner_data->LockThisFrame == false;
 
     // Note: SetKeyOwner() sets OwnerCurr. It is not strictly required for most mouse routing overlap (because of ActiveId/HoveredId
     // are acting as filter before this has a chance to filter), but sane as soon as user tries to look into things.
@@ -12693,7 +12693,7 @@ bool ImGui::IsWindowFocused(ImGuiFocusedFlags flags)
     if (flags & ImGuiFocusedFlags_ChildWindows)
         return IsWindowChildOf(ref_window, cur_window, popup_hierarchy);
     else
-        return (ref_window == cur_window);
+        return ref_window == cur_window;
 }
 
 static int ImGui::FindWindowFocusIndex(ImGuiWindow* window)

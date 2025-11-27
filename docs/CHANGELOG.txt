@@ -51,6 +51,7 @@ Other Changes:
 - Textures:
   - Fixed a building issue when ImTextureID is defined as a struct.
   - Fixed displaying texture # in Metrics/Debugger window.
+- Menus: fixed MenuItem() label baseline when using inside a line with an offset.
 - Scrollbar: fixed a codepath leading to a divide-by-zero (which would not be
   noticeable by user but detected by sanitizers). (#9089) [@judicaelclair]
 - Backends:
@@ -61,6 +62,9 @@ Other Changes:
     selects `VkSwapchainCreateInfoKHR`'s `compositeAlpha` value based on
     `cap.supportedCompositeAlpha`, which seems to be required on some Android
      devices. (#8784) [@FelixStach]
+- Examples:
+   - Win32+DirectX12: ignore seemingly incorrect D3D12_MESSAGE_ID_FENCE_ZERO_WAIT
+     warning on startups on some setups. (#9084, #9093) [@RT2Code, @LeoGautheron]
 
 
 -----------------------------------------------------------------------
