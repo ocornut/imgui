@@ -51,6 +51,7 @@ Other Changes:
 - Textures:
   - Fixed a building issue when ImTextureID is defined as a struct.
   - Fixed displaying texture # in Metrics/Debugger window.
+- Menus: fixed MenuItem() label baseline when using inside a line with an offset.
 - Scrollbar: fixed a codepath leading to a divide-by-zero (which would not be
   noticeable by user but detected by sanitizers). (#9089) [@judicaelclair]
 - Backends:
