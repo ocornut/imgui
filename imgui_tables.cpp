@@ -1383,7 +1383,7 @@ void    ImGui::EndTable()
     inner_window->DC.PrevLineSize = temp_data->HostBackupPrevLineSize;
     inner_window->DC.CurrLineSize = temp_data->HostBackupCurrLineSize;
     inner_window->DC.CursorMaxPos = temp_data->HostBackupCursorMaxPos;
-    const float inner_content_max_y = table->RowPosY2;
+    const float inner_content_max_y = ImCeil(table->RowPosY2); // Rounding final position is important as we currently don't round row height ('Demo->Tables->Outer Size' demo uses non-integer heights)
     IM_ASSERT(table->RowPosY2 == inner_window->DC.CursorPos.y);
     if (inner_window != outer_window)
         inner_window->DC.CursorMaxPos.y = inner_content_max_y;

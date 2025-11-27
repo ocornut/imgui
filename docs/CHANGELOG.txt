@@ -58,6 +58,8 @@ Other Changes:
   - Fixed an issue where a very thin scrolling table would advance parent layout
     slightly differently depending on its visibility (caused by a mismatch
     between hard minimum window size and table minimum size).
+  - Fixed an issue where submitting non-integer row heights would eventually
+    advance table parent layout by +0/+1 depending on its visibility.
 - Scrollbar: fixed a codepath leading to a divide-by-zero (which would not be
   noticeable by user but detected by sanitizers). (#9089) [@judicaelclair]
 - Backends:
