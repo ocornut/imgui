@@ -8,40 +8,833 @@ module;
 export module ImGui;
 
 export {
-    // Scalar data types
-    using ::ImGuiID;
-    using ::ImS8;
-    using ::ImU8;
-    using ::ImS16;
-    using ::ImU16;
-    using ::ImS32;
-    using ::ImU32;
-    using ::ImS64;
-    using ::ImU64;
+    #ifdef IMGUI_DEFINE_MATH_OPERATORS
+    using ::operator+;
+    using ::operator-;
+    using ::operator*;
+    using ::operator/;
+    using ::operator+=;
+    using ::operator-=;
+    using ::operator*=;
+    using ::operator/=;
+    using ::operator==;
+    using ::operator!=;
+    #endif
 
-    // Forward declarations: ImDrawList, ImFontAtlas layer
+    // ----- Enums -----
+
+    using ::ImDrawFlags_;
+    using ::ImDrawFlags_None;
+    using ::ImDrawFlags_Closed;
+    using ::ImDrawFlags_RoundCornersTopLeft;
+    using ::ImDrawFlags_RoundCornersTopRight;
+    using ::ImDrawFlags_RoundCornersBottomLeft;
+    using ::ImDrawFlags_RoundCornersBottomRight;
+    using ::ImDrawFlags_RoundCornersNone;
+    using ::ImDrawFlags_RoundCornersTop;
+    using ::ImDrawFlags_RoundCornersBottom;
+    using ::ImDrawFlags_RoundCornersLeft;
+    using ::ImDrawFlags_RoundCornersRight;
+    using ::ImDrawFlags_RoundCornersAll;
+    using ::ImDrawFlags_RoundCornersDefault_;
+    using ::ImDrawFlags_RoundCornersMask_;
+
+    using ::ImDrawListFlags_;
+    using ::ImDrawListFlags_None;
+    using ::ImDrawListFlags_AntiAliasedLines;
+    using ::ImDrawListFlags_AntiAliasedLinesUseTex;
+    using ::ImDrawListFlags_AntiAliasedFill;
+    using ::ImDrawListFlags_AllowVtxOffset;
+
+    using ::ImFontAtlasFlags_;
+    using ::ImFontAtlasFlags_None;
+    using ::ImFontAtlasFlags_NoPowerOfTwoHeight;
+    using ::ImFontAtlasFlags_NoMouseCursors;
+    using ::ImFontAtlasFlags_NoBakedLines;
+
+    using ::ImFontFlags_;
+    using ::ImFontFlags_None;
+    using ::ImFontFlags_NoLoadError;
+    using ::ImFontFlags_NoLoadGlyphs;
+    using ::ImFontFlags_LockBakedSizes;
+
+    using ::ImGuiBackendFlags_;
+    using ::ImGuiBackendFlags_None;
+    using ::ImGuiBackendFlags_HasGamepad;
+    using ::ImGuiBackendFlags_HasMouseCursors;
+    using ::ImGuiBackendFlags_HasSetMousePos;
+    using ::ImGuiBackendFlags_RendererHasVtxOffset;
+    using ::ImGuiBackendFlags_RendererHasTextures;
+
+    using ::ImGuiButtonFlags_;
+    using ::ImGuiButtonFlags_None;
+    using ::ImGuiButtonFlags_MouseButtonLeft;
+    using ::ImGuiButtonFlags_MouseButtonRight;
+    using ::ImGuiButtonFlags_MouseButtonMiddle;
+    using ::ImGuiButtonFlags_MouseButtonMask_;
+    using ::ImGuiButtonFlags_EnableNav;
+
+    using ::ImGuiChildFlags_;
+    using ::ImGuiChildFlags_None;
+    using ::ImGuiChildFlags_Borders;
+    using ::ImGuiChildFlags_AlwaysUseWindowPadding;
+    using ::ImGuiChildFlags_ResizeX;
+    using ::ImGuiChildFlags_ResizeY;
+    using ::ImGuiChildFlags_AutoResizeX;
+    using ::ImGuiChildFlags_AutoResizeY;
+    using ::ImGuiChildFlags_AlwaysAutoResize;
+    using ::ImGuiChildFlags_FrameStyle;
+    using ::ImGuiChildFlags_NavFlattened;
+
+    using ::ImGuiCol_;
+    using ::ImGuiCol_Text;
+    using ::ImGuiCol_TextDisabled;
+    using ::ImGuiCol_WindowBg;
+    using ::ImGuiCol_ChildBg;
+    using ::ImGuiCol_PopupBg;
+    using ::ImGuiCol_Border;
+    using ::ImGuiCol_BorderShadow;
+    using ::ImGuiCol_FrameBg;
+    using ::ImGuiCol_FrameBgHovered;
+    using ::ImGuiCol_FrameBgActive;
+    using ::ImGuiCol_TitleBg;
+    using ::ImGuiCol_TitleBgActive;
+    using ::ImGuiCol_TitleBgCollapsed;
+    using ::ImGuiCol_MenuBarBg;
+    using ::ImGuiCol_ScrollbarBg;
+    using ::ImGuiCol_ScrollbarGrab;
+    using ::ImGuiCol_ScrollbarGrabHovered;
+    using ::ImGuiCol_ScrollbarGrabActive;
+    using ::ImGuiCol_CheckMark;
+    using ::ImGuiCol_SliderGrab;
+    using ::ImGuiCol_SliderGrabActive;
+    using ::ImGuiCol_Button;
+    using ::ImGuiCol_ButtonHovered;
+    using ::ImGuiCol_ButtonActive;
+    using ::ImGuiCol_Header;
+    using ::ImGuiCol_HeaderHovered;
+    using ::ImGuiCol_HeaderActive;
+    using ::ImGuiCol_Separator;
+    using ::ImGuiCol_SeparatorHovered;
+    using ::ImGuiCol_SeparatorActive;
+    using ::ImGuiCol_ResizeGrip;
+    using ::ImGuiCol_ResizeGripHovered;
+    using ::ImGuiCol_ResizeGripActive;
+    using ::ImGuiCol_InputTextCursor;
+    using ::ImGuiCol_TabHovered;
+    using ::ImGuiCol_Tab;
+    using ::ImGuiCol_TabSelected;
+    using ::ImGuiCol_TabSelectedOverline;
+    using ::ImGuiCol_TabDimmed;
+    using ::ImGuiCol_TabDimmedSelected;
+    using ::ImGuiCol_TabDimmedSelectedOverline;
+    using ::ImGuiCol_PlotLines;
+    using ::ImGuiCol_PlotLinesHovered;
+    using ::ImGuiCol_PlotHistogram;
+    using ::ImGuiCol_PlotHistogramHovered;
+    using ::ImGuiCol_TableHeaderBg;
+    using ::ImGuiCol_TableBorderStrong;
+    using ::ImGuiCol_TableBorderLight;
+    using ::ImGuiCol_TableRowBg;
+    using ::ImGuiCol_TableRowBgAlt;
+    using ::ImGuiCol_TextLink;
+    using ::ImGuiCol_TextSelectedBg;
+    using ::ImGuiCol_TreeLines;
+    using ::ImGuiCol_DragDropTarget;
+    using ::ImGuiCol_DragDropTargetBg;
+    using ::ImGuiCol_UnsavedMarker;
+    using ::ImGuiCol_NavCursor;
+    using ::ImGuiCol_NavWindowingHighlight;
+    using ::ImGuiCol_NavWindowingDimBg;
+    using ::ImGuiCol_ModalWindowDimBg;
+    using ::ImGuiCol_COUNT;
+
+    using ::ImGuiColorEditFlags_;
+    using ::ImGuiColorEditFlags_None;
+    using ::ImGuiColorEditFlags_NoAlpha;
+    using ::ImGuiColorEditFlags_NoPicker;
+    using ::ImGuiColorEditFlags_NoOptions;
+    using ::ImGuiColorEditFlags_NoSmallPreview;
+    using ::ImGuiColorEditFlags_NoInputs;
+    using ::ImGuiColorEditFlags_NoTooltip;
+    using ::ImGuiColorEditFlags_NoLabel;
+    using ::ImGuiColorEditFlags_NoSidePreview;
+    using ::ImGuiColorEditFlags_NoDragDrop;
+    using ::ImGuiColorEditFlags_NoBorder;
+    using ::ImGuiColorEditFlags_AlphaOpaque;
+    using ::ImGuiColorEditFlags_AlphaNoBg;
+    using ::ImGuiColorEditFlags_AlphaPreviewHalf;
+    using ::ImGuiColorEditFlags_AlphaBar;
+    using ::ImGuiColorEditFlags_HDR;
+    using ::ImGuiColorEditFlags_DisplayRGB;
+    using ::ImGuiColorEditFlags_DisplayHSV;
+    using ::ImGuiColorEditFlags_DisplayHex;
+    using ::ImGuiColorEditFlags_Uint8;
+    using ::ImGuiColorEditFlags_Float;
+    using ::ImGuiColorEditFlags_PickerHueBar;
+    using ::ImGuiColorEditFlags_PickerHueWheel;
+    using ::ImGuiColorEditFlags_InputRGB;
+    using ::ImGuiColorEditFlags_InputHSV;
+    using ::ImGuiColorEditFlags_DefaultOptions_;
+    using ::ImGuiColorEditFlags_AlphaMask_;
+    using ::ImGuiColorEditFlags_DisplayMask_;
+    using ::ImGuiColorEditFlags_DataTypeMask_;
+    using ::ImGuiColorEditFlags_PickerMask_;
+    using ::ImGuiColorEditFlags_InputMask_;
+
+    using ::ImGuiComboFlags_;
+    using ::ImGuiComboFlags_None;
+    using ::ImGuiComboFlags_PopupAlignLeft;
+    using ::ImGuiComboFlags_HeightSmall;
+    using ::ImGuiComboFlags_HeightRegular;
+    using ::ImGuiComboFlags_HeightLarge;
+    using ::ImGuiComboFlags_HeightLargest;
+    using ::ImGuiComboFlags_NoArrowButton;
+    using ::ImGuiComboFlags_NoPreview;
+    using ::ImGuiComboFlags_WidthFitPreview;
+    using ::ImGuiComboFlags_HeightMask_;
+
+    using ::ImGuiCond_;
+    using ::ImGuiCond_None;
+    using ::ImGuiCond_Always;
+    using ::ImGuiCond_Once;
+    using ::ImGuiCond_FirstUseEver;
+    using ::ImGuiCond_Appearing;
+
+    using ::ImGuiConfigFlags_;
+    using ::ImGuiConfigFlags_None;
+    using ::ImGuiConfigFlags_NavEnableKeyboard;
+    using ::ImGuiConfigFlags_NavEnableGamepad;
+    using ::ImGuiConfigFlags_NoMouse;
+    using ::ImGuiConfigFlags_NoMouseCursorChange;
+    using ::ImGuiConfigFlags_NoKeyboard;
+    // using ::ImGuiConfigFlags_DockingEnable;
+    // using ::ImGuiConfigFlags_ViewportsEnable;
+    using ::ImGuiConfigFlags_IsSRGB;
+    using ::ImGuiConfigFlags_IsTouchScreen;
+
+    using ::ImGuiDataType_;
+    using ::ImGuiDataType_S8;
+    using ::ImGuiDataType_U8;
+    using ::ImGuiDataType_S16;
+    using ::ImGuiDataType_U16;
+    using ::ImGuiDataType_S32;
+    using ::ImGuiDataType_U32;
+    using ::ImGuiDataType_S64;
+    using ::ImGuiDataType_U64;
+    using ::ImGuiDataType_Float;
+    using ::ImGuiDataType_Double;
+    using ::ImGuiDataType_Bool;
+    using ::ImGuiDataType_String;
+    using ::ImGuiDataType_COUNT;
+
+    using ::ImGuiDir;
+    using ::ImGuiDir_None;
+    using ::ImGuiDir_Left;
+    using ::ImGuiDir_Right;
+    using ::ImGuiDir_Up;
+    using ::ImGuiDir_Down;
+    using ::ImGuiDir_COUNT;
+
+    using ::ImGuiDragDropFlags_;
+    using ::ImGuiDragDropFlags_None;
+    using ::ImGuiDragDropFlags_SourceNoPreviewTooltip;
+    using ::ImGuiDragDropFlags_SourceNoDisableHover;
+    using ::ImGuiDragDropFlags_SourceNoHoldToOpenOthers;
+    using ::ImGuiDragDropFlags_SourceAllowNullID;
+    using ::ImGuiDragDropFlags_SourceExtern;
+    using ::ImGuiDragDropFlags_PayloadAutoExpire;
+    using ::ImGuiDragDropFlags_PayloadNoCrossContext;
+    using ::ImGuiDragDropFlags_PayloadNoCrossProcess;
+    using ::ImGuiDragDropFlags_AcceptBeforeDelivery;
+    using ::ImGuiDragDropFlags_AcceptNoDrawDefaultRect;
+    using ::ImGuiDragDropFlags_AcceptNoPreviewTooltip;
+    using ::ImGuiDragDropFlags_AcceptDrawAsHovered;
+    using ::ImGuiDragDropFlags_AcceptPeekOnly;
+
+    using ::ImGuiFocusedFlags_;
+    using ::ImGuiFocusedFlags_None;
+    using ::ImGuiFocusedFlags_ChildWindows;
+    using ::ImGuiFocusedFlags_RootWindow;
+    using ::ImGuiFocusedFlags_AnyWindow;
+    using ::ImGuiFocusedFlags_NoPopupHierarchy;
+    // using ::ImGuiFocusedFlags_DockHierarchy;
+    using ::ImGuiFocusedFlags_RootAndChildWindows;
+
+    using ::ImGuiHoveredFlags_;
+    using ::ImGuiHoveredFlags_None;
+    using ::ImGuiHoveredFlags_ChildWindows;
+    using ::ImGuiHoveredFlags_RootWindow;
+    using ::ImGuiHoveredFlags_AnyWindow;
+    using ::ImGuiHoveredFlags_NoPopupHierarchy;
+    // using ::ImGuiHoveredFlags_DockHierarchy;
+    using ::ImGuiHoveredFlags_AllowWhenBlockedByPopup;
+    // using ::ImGuiHoveredFlags_AllowWhenBlockedByModal;
+    using ::ImGuiHoveredFlags_AllowWhenBlockedByActiveItem;
+    using ::ImGuiHoveredFlags_AllowWhenOverlappedByItem;
+    using ::ImGuiHoveredFlags_AllowWhenOverlappedByWindow;
+    using ::ImGuiHoveredFlags_AllowWhenDisabled;
+    using ::ImGuiHoveredFlags_NoNavOverride;
+    using ::ImGuiHoveredFlags_AllowWhenOverlapped;
+    using ::ImGuiHoveredFlags_RectOnly;
+    using ::ImGuiHoveredFlags_RootAndChildWindows;
+    using ::ImGuiHoveredFlags_ForTooltip;
+    using ::ImGuiHoveredFlags_Stationary;
+    using ::ImGuiHoveredFlags_DelayNone;
+    using ::ImGuiHoveredFlags_DelayShort;
+    using ::ImGuiHoveredFlags_DelayNormal;
+    using ::ImGuiHoveredFlags_NoSharedDelay;
+
+    using ::ImGuiInputFlags_;
+    using ::ImGuiInputFlags_None;
+    using ::ImGuiInputFlags_Repeat;
+    using ::ImGuiInputFlags_RouteActive;
+    using ::ImGuiInputFlags_RouteFocused;
+    using ::ImGuiInputFlags_RouteGlobal;
+    using ::ImGuiInputFlags_RouteAlways;
+    using ::ImGuiInputFlags_RouteOverFocused;
+    using ::ImGuiInputFlags_RouteOverActive;
+    using ::ImGuiInputFlags_RouteUnlessBgFocused;
+    using ::ImGuiInputFlags_RouteFromRootWindow;
+    using ::ImGuiInputFlags_Tooltip;
+
+    using ::ImGuiInputTextFlags_;
+    using ::ImGuiInputTextFlags_None;
+    using ::ImGuiInputTextFlags_CharsDecimal;
+    using ::ImGuiInputTextFlags_CharsHexadecimal;
+    using ::ImGuiInputTextFlags_CharsScientific;
+    using ::ImGuiInputTextFlags_CharsUppercase;
+    using ::ImGuiInputTextFlags_CharsNoBlank;
+    using ::ImGuiInputTextFlags_AllowTabInput;
+    using ::ImGuiInputTextFlags_EnterReturnsTrue;
+    using ::ImGuiInputTextFlags_EscapeClearsAll;
+    using ::ImGuiInputTextFlags_CtrlEnterForNewLine;
+    using ::ImGuiInputTextFlags_ReadOnly;
+    using ::ImGuiInputTextFlags_Password;
+    using ::ImGuiInputTextFlags_AlwaysOverwrite;
+    using ::ImGuiInputTextFlags_AutoSelectAll;
+    using ::ImGuiInputTextFlags_ParseEmptyRefVal;
+    using ::ImGuiInputTextFlags_DisplayEmptyRefVal;
+    using ::ImGuiInputTextFlags_NoHorizontalScroll;
+    using ::ImGuiInputTextFlags_NoUndoRedo;
+    using ::ImGuiInputTextFlags_ElideLeft;
+    using ::ImGuiInputTextFlags_CallbackCompletion;
+    using ::ImGuiInputTextFlags_CallbackHistory;
+    using ::ImGuiInputTextFlags_CallbackAlways;
+    using ::ImGuiInputTextFlags_CallbackCharFilter;
+    using ::ImGuiInputTextFlags_CallbackResize;
+    using ::ImGuiInputTextFlags_CallbackEdit;
+    using ::ImGuiInputTextFlags_WordWrap;
+
+    using ::ImGuiItemFlags_;
+    using ::ImGuiItemFlags_None;
+    using ::ImGuiItemFlags_NoTabStop;
+    using ::ImGuiItemFlags_NoNav;
+    using ::ImGuiItemFlags_NoNavDefaultFocus;
+    using ::ImGuiItemFlags_ButtonRepeat;
+    using ::ImGuiItemFlags_AutoClosePopups;
+    using ::ImGuiItemFlags_AllowDuplicateId;
+
+    using ::ImGuiKey;
+    using ::ImGuiKey_None;
+    using ::ImGuiKey_NamedKey_BEGIN;
+    using ::ImGuiKey_Tab;
+    using ::ImGuiKey_LeftArrow;
+    using ::ImGuiKey_RightArrow;
+    using ::ImGuiKey_UpArrow;
+    using ::ImGuiKey_DownArrow;
+    using ::ImGuiKey_PageUp;
+    using ::ImGuiKey_PageDown;
+    using ::ImGuiKey_Home;
+    using ::ImGuiKey_End;
+    using ::ImGuiKey_Insert;
+    using ::ImGuiKey_Delete;
+    using ::ImGuiKey_Backspace;
+    using ::ImGuiKey_Space;
+    using ::ImGuiKey_Enter;
+    using ::ImGuiKey_Escape;
+    using ::ImGuiKey_LeftCtrl;
+    using ::ImGuiKey_LeftShift;
+    using ::ImGuiKey_LeftAlt;
+    using ::ImGuiKey_LeftSuper;
+    using ::ImGuiKey_RightCtrl;
+    using ::ImGuiKey_RightShift;
+    using ::ImGuiKey_RightAlt;
+    using ::ImGuiKey_RightSuper;
+    using ::ImGuiKey_Menu;
+    using ::ImGuiKey_0;
+    using ::ImGuiKey_1;
+    using ::ImGuiKey_2;
+    using ::ImGuiKey_3;
+    using ::ImGuiKey_4;
+    using ::ImGuiKey_5;
+    using ::ImGuiKey_6;
+    using ::ImGuiKey_7;
+    using ::ImGuiKey_8;
+    using ::ImGuiKey_9;
+    using ::ImGuiKey_A;
+    using ::ImGuiKey_B;
+    using ::ImGuiKey_C;
+    using ::ImGuiKey_D;
+    using ::ImGuiKey_E;
+    using ::ImGuiKey_F;
+    using ::ImGuiKey_G;
+    using ::ImGuiKey_H;
+    using ::ImGuiKey_I;
+    using ::ImGuiKey_J;
+    using ::ImGuiKey_K;
+    using ::ImGuiKey_L;
+    using ::ImGuiKey_M;
+    using ::ImGuiKey_N;
+    using ::ImGuiKey_O;
+    using ::ImGuiKey_P;
+    using ::ImGuiKey_Q;
+    using ::ImGuiKey_R;
+    using ::ImGuiKey_S;
+    using ::ImGuiKey_T;
+    using ::ImGuiKey_U;
+    using ::ImGuiKey_V;
+    using ::ImGuiKey_W;
+    using ::ImGuiKey_X;
+    using ::ImGuiKey_Y;
+    using ::ImGuiKey_Z;
+    using ::ImGuiKey_F1;
+    using ::ImGuiKey_F2;
+    using ::ImGuiKey_F3;
+    using ::ImGuiKey_F4;
+    using ::ImGuiKey_F5;
+    using ::ImGuiKey_F6;
+    using ::ImGuiKey_F7;
+    using ::ImGuiKey_F8;
+    using ::ImGuiKey_F9;
+    using ::ImGuiKey_F10;
+    using ::ImGuiKey_F11;
+    using ::ImGuiKey_F12;
+    using ::ImGuiKey_F13;
+    using ::ImGuiKey_F14;
+    using ::ImGuiKey_F15;
+    using ::ImGuiKey_F16;
+    using ::ImGuiKey_F17;
+    using ::ImGuiKey_F18;
+    using ::ImGuiKey_F19;
+    using ::ImGuiKey_F20;
+    using ::ImGuiKey_F21;
+    using ::ImGuiKey_F22;
+    using ::ImGuiKey_F23;
+    using ::ImGuiKey_F24;
+    using ::ImGuiKey_Apostrophe;
+    using ::ImGuiKey_Comma;
+    using ::ImGuiKey_Minus;
+    using ::ImGuiKey_Period;
+    using ::ImGuiKey_Slash;
+    using ::ImGuiKey_Semicolon;
+    using ::ImGuiKey_Equal;
+    using ::ImGuiKey_LeftBracket;
+    using ::ImGuiKey_Backslash;
+    using ::ImGuiKey_RightBracket;
+    using ::ImGuiKey_GraveAccent;
+    using ::ImGuiKey_CapsLock;
+    using ::ImGuiKey_ScrollLock;
+    using ::ImGuiKey_NumLock;
+    using ::ImGuiKey_PrintScreen;
+    using ::ImGuiKey_Pause;
+    using ::ImGuiKey_Keypad0;
+    using ::ImGuiKey_Keypad1;
+    using ::ImGuiKey_Keypad2;
+    using ::ImGuiKey_Keypad3;
+    using ::ImGuiKey_Keypad4;
+    using ::ImGuiKey_Keypad5;
+    using ::ImGuiKey_Keypad6;
+    using ::ImGuiKey_Keypad7;
+    using ::ImGuiKey_Keypad8;
+    using ::ImGuiKey_Keypad9;
+    using ::ImGuiKey_KeypadDecimal;
+    using ::ImGuiKey_KeypadDivide;
+    using ::ImGuiKey_KeypadMultiply;
+    using ::ImGuiKey_KeypadSubtract;
+    using ::ImGuiKey_KeypadAdd;
+    using ::ImGuiKey_KeypadEnter;
+    using ::ImGuiKey_KeypadEqual;
+    using ::ImGuiKey_AppBack;
+    using ::ImGuiKey_AppForward;
+    using ::ImGuiKey_Oem102;
+    using ::ImGuiKey_GamepadStart;
+    using ::ImGuiKey_GamepadBack;
+    using ::ImGuiKey_GamepadFaceLeft;
+    using ::ImGuiKey_GamepadFaceRight;
+    using ::ImGuiKey_GamepadFaceUp;
+    using ::ImGuiKey_GamepadFaceDown;
+    using ::ImGuiKey_GamepadDpadLeft;
+    using ::ImGuiKey_GamepadDpadRight;
+    using ::ImGuiKey_GamepadDpadUp;
+    using ::ImGuiKey_GamepadDpadDown;
+    using ::ImGuiKey_GamepadL1;
+    using ::ImGuiKey_GamepadR1;
+    using ::ImGuiKey_GamepadL2;
+    using ::ImGuiKey_GamepadR2;
+    using ::ImGuiKey_GamepadL3;
+    using ::ImGuiKey_GamepadR3;
+    using ::ImGuiKey_GamepadLStickLeft;
+    using ::ImGuiKey_GamepadLStickRight;
+    using ::ImGuiKey_GamepadLStickUp;
+    using ::ImGuiKey_GamepadLStickDown;
+    using ::ImGuiKey_GamepadRStickLeft;
+    using ::ImGuiKey_GamepadRStickRight;
+    using ::ImGuiKey_GamepadRStickUp;
+    using ::ImGuiKey_GamepadRStickDown;
+    using ::ImGuiKey_MouseLeft;
+    using ::ImGuiKey_MouseRight;
+    using ::ImGuiKey_MouseMiddle;
+    using ::ImGuiKey_MouseX1;
+    using ::ImGuiKey_MouseX2;
+    using ::ImGuiKey_MouseWheelX;
+    using ::ImGuiKey_MouseWheelY;
+    using ::ImGuiKey_ReservedForModCtrl;
+    using ::ImGuiKey_ReservedForModShift;
+    using ::ImGuiKey_ReservedForModAlt;
+    using ::ImGuiKey_ReservedForModSuper;
+    using ::ImGuiKey_NamedKey_END;
+    using ::ImGuiKey_NamedKey_COUNT;
+    using ::ImGuiMod_None;
+    using ::ImGuiMod_Ctrl;
+    using ::ImGuiMod_Shift;
+    using ::ImGuiMod_Alt;
+    using ::ImGuiMod_Super;
+    using ::ImGuiMod_Mask_;
+
+    using ::ImGuiListClipperFlags_;
+    using ::ImGuiListClipperFlags_None;
+    using ::ImGuiListClipperFlags_NoSetTableRowCounters;
+
+    using ::ImGuiMouseButton_;
+    using ::ImGuiMouseButton_Left;
+    using ::ImGuiMouseButton_Right;
+    using ::ImGuiMouseButton_Middle;
+    using ::ImGuiMouseButton_COUNT;
+
+    using ::ImGuiMouseCursor_;
+    using ::ImGuiMouseCursor_None;
+    using ::ImGuiMouseCursor_Arrow;
+    using ::ImGuiMouseCursor_TextInput;
+    using ::ImGuiMouseCursor_ResizeAll;
+    using ::ImGuiMouseCursor_ResizeNS;
+    using ::ImGuiMouseCursor_ResizeEW;
+    using ::ImGuiMouseCursor_ResizeNESW;
+    using ::ImGuiMouseCursor_ResizeNWSE;
+    using ::ImGuiMouseCursor_Hand;
+    using ::ImGuiMouseCursor_Wait;
+    using ::ImGuiMouseCursor_Progress;
+    using ::ImGuiMouseCursor_NotAllowed;
+    using ::ImGuiMouseCursor_COUNT;
+
+    using ::ImGuiMouseSource;
+    using ::ImGuiMouseSource_Mouse;
+    using ::ImGuiMouseSource_TouchScreen;
+    using ::ImGuiMouseSource_Pen;
+    using ::ImGuiMouseSource_COUNT;
+
+    using ::ImGuiMultiSelectFlags_;
+    using ::ImGuiMultiSelectFlags_None;
+    using ::ImGuiMultiSelectFlags_SingleSelect;
+    using ::ImGuiMultiSelectFlags_NoSelectAll;
+    using ::ImGuiMultiSelectFlags_NoRangeSelect;
+    using ::ImGuiMultiSelectFlags_NoAutoSelect;
+    using ::ImGuiMultiSelectFlags_NoAutoClear;
+    using ::ImGuiMultiSelectFlags_NoAutoClearOnReselect;
+    using ::ImGuiMultiSelectFlags_BoxSelect1d;
+    using ::ImGuiMultiSelectFlags_BoxSelect2d;
+    using ::ImGuiMultiSelectFlags_BoxSelectNoScroll;
+    using ::ImGuiMultiSelectFlags_ClearOnEscape;
+    using ::ImGuiMultiSelectFlags_ClearOnClickVoid;
+    using ::ImGuiMultiSelectFlags_ScopeWindow;
+    using ::ImGuiMultiSelectFlags_ScopeRect;
+    using ::ImGuiMultiSelectFlags_SelectOnClick;
+    using ::ImGuiMultiSelectFlags_SelectOnClickRelease;
+    using ::ImGuiMultiSelectFlags_NavWrapX;
+    using ::ImGuiMultiSelectFlags_NoSelectOnRightClick;
+
+    using ::ImGuiPopupFlags_;
+    using ::ImGuiPopupFlags_None;
+    using ::ImGuiPopupFlags_MouseButtonLeft;
+    using ::ImGuiPopupFlags_MouseButtonRight;
+    using ::ImGuiPopupFlags_MouseButtonMiddle;
+    using ::ImGuiPopupFlags_MouseButtonMask_;
+    using ::ImGuiPopupFlags_MouseButtonDefault_;
+    using ::ImGuiPopupFlags_NoReopen;
+    using ::ImGuiPopupFlags_NoOpenOverExistingPopup;
+    using ::ImGuiPopupFlags_NoOpenOverItems;
+    using ::ImGuiPopupFlags_AnyPopupId;
+    using ::ImGuiPopupFlags_AnyPopupLevel;
+    using ::ImGuiPopupFlags_AnyPopup;
+
+    using ::ImGuiSelectableFlags_;
+    using ::ImGuiSelectableFlags_None;
+    using ::ImGuiSelectableFlags_NoAutoClosePopups;
+    using ::ImGuiSelectableFlags_SpanAllColumns;
+    using ::ImGuiSelectableFlags_AllowDoubleClick;
+    using ::ImGuiSelectableFlags_Disabled;
+    using ::ImGuiSelectableFlags_AllowOverlap;
+    using ::ImGuiSelectableFlags_Highlight;
+    using ::ImGuiSelectableFlags_SelectOnNav;
+
+    using ::ImGuiSelectionRequestType;
+    using ::ImGuiSelectionRequestType_None;
+    using ::ImGuiSelectionRequestType_SetAll;
+    using ::ImGuiSelectionRequestType_SetRange;
+
+    using ::ImGuiSliderFlags_;
+    using ::ImGuiSliderFlags_None;
+    using ::ImGuiSliderFlags_Logarithmic;
+    using ::ImGuiSliderFlags_NoRoundToFormat;
+    using ::ImGuiSliderFlags_NoInput;
+    using ::ImGuiSliderFlags_WrapAround;
+    using ::ImGuiSliderFlags_ClampOnInput;
+    using ::ImGuiSliderFlags_ClampZeroRange;
+    using ::ImGuiSliderFlags_NoSpeedTweaks;
+    using ::ImGuiSliderFlags_AlwaysClamp;
+    using ::ImGuiSliderFlags_InvalidMask_;
+
+    using ::ImGuiSortDirection;
+    using ::ImGuiSortDirection_None;
+    using ::ImGuiSortDirection_Ascending;
+    using ::ImGuiSortDirection_Descending;
+
+    using ::ImGuiStyleVar_;
+    using ::ImGuiStyleVar_Alpha;
+    using ::ImGuiStyleVar_DisabledAlpha;
+    using ::ImGuiStyleVar_WindowPadding;
+    using ::ImGuiStyleVar_WindowRounding;
+    using ::ImGuiStyleVar_WindowBorderSize;
+    using ::ImGuiStyleVar_WindowMinSize;
+    using ::ImGuiStyleVar_WindowTitleAlign;
+    using ::ImGuiStyleVar_ChildRounding;
+    using ::ImGuiStyleVar_ChildBorderSize;
+    using ::ImGuiStyleVar_PopupRounding;
+    using ::ImGuiStyleVar_PopupBorderSize;
+    using ::ImGuiStyleVar_FramePadding;
+    using ::ImGuiStyleVar_FrameRounding;
+    using ::ImGuiStyleVar_FrameBorderSize;
+    using ::ImGuiStyleVar_ItemSpacing;
+    using ::ImGuiStyleVar_ItemInnerSpacing;
+    using ::ImGuiStyleVar_IndentSpacing;
+    using ::ImGuiStyleVar_CellPadding;
+    using ::ImGuiStyleVar_ScrollbarSize;
+    using ::ImGuiStyleVar_ScrollbarRounding;
+    using ::ImGuiStyleVar_ScrollbarPadding;
+    using ::ImGuiStyleVar_GrabMinSize;
+    using ::ImGuiStyleVar_GrabRounding;
+    using ::ImGuiStyleVar_ImageBorderSize;
+    using ::ImGuiStyleVar_TabRounding;
+    using ::ImGuiStyleVar_TabBorderSize;
+    using ::ImGuiStyleVar_TabMinWidthBase;
+    using ::ImGuiStyleVar_TabMinWidthShrink;
+    using ::ImGuiStyleVar_TabBarBorderSize;
+    using ::ImGuiStyleVar_TabBarOverlineSize;
+    using ::ImGuiStyleVar_TableAngledHeadersAngle;
+    using ::ImGuiStyleVar_TableAngledHeadersTextAlign;
+    using ::ImGuiStyleVar_TreeLinesSize;
+    using ::ImGuiStyleVar_TreeLinesRounding;
+    using ::ImGuiStyleVar_ButtonTextAlign;
+    using ::ImGuiStyleVar_SelectableTextAlign;
+    using ::ImGuiStyleVar_SeparatorTextBorderSize;
+    using ::ImGuiStyleVar_SeparatorTextAlign;
+    using ::ImGuiStyleVar_SeparatorTextPadding;
+    using ::ImGuiStyleVar_COUNT;
+
+    using ::ImGuiTabBarFlags_;
+    using ::ImGuiTabBarFlags_None;
+    using ::ImGuiTabBarFlags_Reorderable;
+    using ::ImGuiTabBarFlags_AutoSelectNewTabs;
+    using ::ImGuiTabBarFlags_TabListPopupButton;
+    using ::ImGuiTabBarFlags_NoCloseWithMiddleMouseButton;
+    using ::ImGuiTabBarFlags_NoTabListScrollingButtons;
+    using ::ImGuiTabBarFlags_NoTooltip;
+    using ::ImGuiTabBarFlags_DrawSelectedOverline;
+    using ::ImGuiTabBarFlags_FittingPolicyMixed;
+    using ::ImGuiTabBarFlags_FittingPolicyShrink;
+    using ::ImGuiTabBarFlags_FittingPolicyScroll;
+    using ::ImGuiTabBarFlags_FittingPolicyMask_;
+    using ::ImGuiTabBarFlags_FittingPolicyDefault_;
+
+    using ::ImGuiTabItemFlags_;
+    using ::ImGuiTabItemFlags_None;
+    using ::ImGuiTabItemFlags_UnsavedDocument;
+    using ::ImGuiTabItemFlags_SetSelected;
+    using ::ImGuiTabItemFlags_NoCloseWithMiddleMouseButton;
+    using ::ImGuiTabItemFlags_NoPushId;
+    using ::ImGuiTabItemFlags_NoTooltip;
+    using ::ImGuiTabItemFlags_NoReorder;
+    using ::ImGuiTabItemFlags_Leading;
+    using ::ImGuiTabItemFlags_Trailing;
+    using ::ImGuiTabItemFlags_NoAssumedClosure;
+
+    using ::ImGuiTableBgTarget_;
+    using ::ImGuiTableBgTarget_None;
+    using ::ImGuiTableBgTarget_RowBg0;
+    using ::ImGuiTableBgTarget_RowBg1;
+    using ::ImGuiTableBgTarget_CellBg;
+
+    using ::ImGuiTableColumnFlags_;
+    using ::ImGuiTableColumnFlags_None;
+    using ::ImGuiTableColumnFlags_Disabled;
+    using ::ImGuiTableColumnFlags_DefaultHide;
+    using ::ImGuiTableColumnFlags_DefaultSort;
+    using ::ImGuiTableColumnFlags_WidthStretch;
+    using ::ImGuiTableColumnFlags_WidthFixed;
+    using ::ImGuiTableColumnFlags_NoResize;
+    using ::ImGuiTableColumnFlags_NoReorder;
+    using ::ImGuiTableColumnFlags_NoHide;
+    using ::ImGuiTableColumnFlags_NoClip;
+    using ::ImGuiTableColumnFlags_NoSort;
+    using ::ImGuiTableColumnFlags_NoSortAscending;
+    using ::ImGuiTableColumnFlags_NoSortDescending;
+    using ::ImGuiTableColumnFlags_NoHeaderLabel;
+    using ::ImGuiTableColumnFlags_NoHeaderWidth;
+    using ::ImGuiTableColumnFlags_PreferSortAscending;
+    using ::ImGuiTableColumnFlags_PreferSortDescending;
+    using ::ImGuiTableColumnFlags_IndentEnable;
+    using ::ImGuiTableColumnFlags_IndentDisable;
+    using ::ImGuiTableColumnFlags_AngledHeader;
+    using ::ImGuiTableColumnFlags_IsEnabled;
+    using ::ImGuiTableColumnFlags_IsVisible;
+    using ::ImGuiTableColumnFlags_IsSorted;
+    using ::ImGuiTableColumnFlags_IsHovered;
+    using ::ImGuiTableColumnFlags_WidthMask_;
+    using ::ImGuiTableColumnFlags_IndentMask_;
+    using ::ImGuiTableColumnFlags_StatusMask_;
+    using ::ImGuiTableColumnFlags_NoDirectResize_;
+
+    using ::ImGuiTableFlags_;
+    using ::ImGuiTableFlags_None;
+    using ::ImGuiTableFlags_Resizable;
+    using ::ImGuiTableFlags_Reorderable;
+    using ::ImGuiTableFlags_Hideable;
+    using ::ImGuiTableFlags_Sortable;
+    using ::ImGuiTableFlags_NoSavedSettings;
+    using ::ImGuiTableFlags_ContextMenuInBody;
+    using ::ImGuiTableFlags_RowBg;
+    using ::ImGuiTableFlags_BordersInnerH;
+    using ::ImGuiTableFlags_BordersOuterH;
+    using ::ImGuiTableFlags_BordersInnerV;
+    using ::ImGuiTableFlags_BordersOuterV;
+    using ::ImGuiTableFlags_BordersH;
+    using ::ImGuiTableFlags_BordersV;
+    using ::ImGuiTableFlags_BordersInner;
+    using ::ImGuiTableFlags_BordersOuter;
+    using ::ImGuiTableFlags_Borders;
+    using ::ImGuiTableFlags_NoBordersInBody;
+    using ::ImGuiTableFlags_NoBordersInBodyUntilResize;
+    using ::ImGuiTableFlags_SizingFixedFit;
+    using ::ImGuiTableFlags_SizingFixedSame;
+    using ::ImGuiTableFlags_SizingStretchProp;
+    using ::ImGuiTableFlags_SizingStretchSame;
+    using ::ImGuiTableFlags_NoHostExtendX;
+    using ::ImGuiTableFlags_NoHostExtendY;
+    using ::ImGuiTableFlags_NoKeepColumnsVisible;
+    using ::ImGuiTableFlags_PreciseWidths;
+    using ::ImGuiTableFlags_NoClip;
+    using ::ImGuiTableFlags_PadOuterX;
+    using ::ImGuiTableFlags_NoPadOuterX;
+    using ::ImGuiTableFlags_NoPadInnerX;
+    using ::ImGuiTableFlags_ScrollX;
+    using ::ImGuiTableFlags_ScrollY;
+    using ::ImGuiTableFlags_SortMulti;
+    using ::ImGuiTableFlags_SortTristate;
+    using ::ImGuiTableFlags_HighlightHoveredColumn;
+    using ::ImGuiTableFlags_SizingMask_;
+
+    using ::ImGuiTableRowFlags_;
+    using ::ImGuiTableRowFlags_None;
+    using ::ImGuiTableRowFlags_Headers;
+
+    using ::ImGuiTreeNodeFlags_;
+    using ::ImGuiTreeNodeFlags_None;
+    using ::ImGuiTreeNodeFlags_Selected;
+    using ::ImGuiTreeNodeFlags_Framed;
+    using ::ImGuiTreeNodeFlags_AllowOverlap;
+    using ::ImGuiTreeNodeFlags_NoTreePushOnOpen;
+    using ::ImGuiTreeNodeFlags_NoAutoOpenOnLog;
+    using ::ImGuiTreeNodeFlags_DefaultOpen;
+    using ::ImGuiTreeNodeFlags_OpenOnDoubleClick;
+    using ::ImGuiTreeNodeFlags_OpenOnArrow;
+    using ::ImGuiTreeNodeFlags_Leaf;
+    using ::ImGuiTreeNodeFlags_Bullet;
+    using ::ImGuiTreeNodeFlags_FramePadding;
+    using ::ImGuiTreeNodeFlags_SpanAvailWidth;
+    using ::ImGuiTreeNodeFlags_SpanFullWidth;
+    using ::ImGuiTreeNodeFlags_SpanLabelWidth;
+    using ::ImGuiTreeNodeFlags_SpanAllColumns;
+    using ::ImGuiTreeNodeFlags_LabelSpanAllColumns;
+    using ::ImGuiTreeNodeFlags_NavLeftJumpsToParent;
+    using ::ImGuiTreeNodeFlags_CollapsingHeader;
+    using ::ImGuiTreeNodeFlags_DrawLinesNone;
+    using ::ImGuiTreeNodeFlags_DrawLinesFull;
+    using ::ImGuiTreeNodeFlags_DrawLinesToNodes;
+
+    using ::ImGuiViewportFlags_;
+    using ::ImGuiViewportFlags_None;
+    using ::ImGuiViewportFlags_IsPlatformWindow;
+    using ::ImGuiViewportFlags_IsPlatformMonitor;
+    using ::ImGuiViewportFlags_OwnedByApp;
+
+    using ::ImGuiWindowFlags_;
+    using ::ImGuiWindowFlags_None;
+    using ::ImGuiWindowFlags_NoTitleBar;
+    using ::ImGuiWindowFlags_NoResize;
+    using ::ImGuiWindowFlags_NoMove;
+    using ::ImGuiWindowFlags_NoScrollbar;
+    using ::ImGuiWindowFlags_NoScrollWithMouse;
+    using ::ImGuiWindowFlags_NoCollapse;
+    using ::ImGuiWindowFlags_AlwaysAutoResize;
+    using ::ImGuiWindowFlags_NoBackground;
+    using ::ImGuiWindowFlags_NoSavedSettings;
+    using ::ImGuiWindowFlags_NoMouseInputs;
+    using ::ImGuiWindowFlags_MenuBar;
+    using ::ImGuiWindowFlags_HorizontalScrollbar;
+    using ::ImGuiWindowFlags_NoFocusOnAppearing;
+    using ::ImGuiWindowFlags_NoBringToFrontOnFocus;
+    using ::ImGuiWindowFlags_AlwaysVerticalScrollbar;
+    using ::ImGuiWindowFlags_AlwaysHorizontalScrollbar;
+    using ::ImGuiWindowFlags_NoNavInputs;
+    using ::ImGuiWindowFlags_NoNavFocus;
+    using ::ImGuiWindowFlags_UnsavedDocument;
+    using ::ImGuiWindowFlags_NoNav;
+    using ::ImGuiWindowFlags_NoDecoration;
+    using ::ImGuiWindowFlags_NoInputs;
+    using ::ImGuiWindowFlags_ChildWindow;
+    using ::ImGuiWindowFlags_Tooltip;
+    using ::ImGuiWindowFlags_Popup;
+    using ::ImGuiWindowFlags_Modal;
+    using ::ImGuiWindowFlags_ChildMenu;
+
+    using ::ImTextureFormat;
+    using ::ImTextureFormat_RGBA32;
+    using ::ImTextureFormat_Alpha8;
+
+    using ::ImTextureStatus;
+    using ::ImTextureStatus_OK;
+    using ::ImTextureStatus_Destroyed;
+    using ::ImTextureStatus_WantCreate;
+    using ::ImTextureStatus_WantUpdates;
+    using ::ImTextureStatus_WantDestroy;
+
+    // ----- Structs -----
+
+    using ::ImColor;
     using ::ImDrawChannel;
     using ::ImDrawCmd;
+    using ::ImDrawCmdHeader;
     using ::ImDrawData;
     using ::ImDrawList;
-    using ::ImDrawListSharedData;
     using ::ImDrawListSplitter;
     using ::ImDrawVert;
     using ::ImFont;
     using ::ImFontAtlas;
-    using ::ImFontAtlasBuilder;
     using ::ImFontAtlasRect;
     using ::ImFontBaked;
     using ::ImFontConfig;
     using ::ImFontGlyph;
     using ::ImFontGlyphRangesBuilder;
-    using ::ImFontLoader;
-    using ::ImTextureData;
-    using ::ImTextureRect;
-    using ::ImColor;
-
-    // Forward declarations: ImGui layer
-    using ::ImGuiContext;
     using ::ImGuiIO;
     using ::ImGuiInputTextCallbackData;
     using ::ImGuiKeyData;
@@ -58,626 +851,449 @@ export {
     using ::ImGuiStorage;
     using ::ImGuiStoragePair;
     using ::ImGuiStyle;
-    using ::ImGuiTableSortSpecs;
     using ::ImGuiTableColumnSortSpecs;
+    using ::ImGuiTableSortSpecs;
     using ::ImGuiTextBuffer;
     using ::ImGuiTextFilter;
     using ::ImGuiViewport;
+    using ::ImTextureData;
+    using ::ImTextureRect;
+    using ::ImTextureRef;
+    using ::ImVec2;
+    using ::ImVec4;
+    using ::ImVector;
 
-    // Enumerations
-    using ::ImGuiDir;
-    using ::ImGuiKey;
-    using ::ImGuiMouseSource;
-    using ::ImGuiSortDirection;
-    using ::ImGuiCol;
-    using ::ImGuiCond;
-    using ::ImGuiDataType;
-    using ::ImGuiMouseButton;
-    using ::ImGuiMouseCursor;
-    using ::ImGuiStyleVar;
-    using ::ImGuiTableBgTarget;
+    // ----- Type aliases -----
 
-    // Flags
+    using ::ImDrawCallback;
     using ::ImDrawFlags;
+    using ::ImDrawIdx;
     using ::ImDrawListFlags;
     using ::ImDrawTextFlags;
-    using ::ImFontFlags;
     using ::ImFontAtlasFlags;
+    using ::ImFontAtlasRectId;
+    using ::ImFontFlags;
     using ::ImGuiBackendFlags;
     using ::ImGuiButtonFlags;
     using ::ImGuiChildFlags;
+    using ::ImGuiCol;
     using ::ImGuiColorEditFlags;
-    using ::ImGuiConfigFlags;
     using ::ImGuiComboFlags;
+    using ::ImGuiCond;
+    using ::ImGuiConfigFlags;
+    using ::ImGuiDataType;
     using ::ImGuiDragDropFlags;
     using ::ImGuiFocusedFlags;
     using ::ImGuiHoveredFlags;
+    using ::ImGuiID;
     using ::ImGuiInputFlags;
-    using ::ImGuiInputTextFlags;
+    using ::ImGuiInputTextCallback;
     using ::ImGuiInputTextFlags;
     using ::ImGuiItemFlags;
     using ::ImGuiKeyChord;
     using ::ImGuiListClipperFlags;
-    using ::ImGuiPopupFlags;
-    using ::ImGuiMultiSelectFlags;
-    using ::ImGuiSelectableFlags;
-    using ::ImGuiSliderFlags;
-    using ::ImGuiTabBarFlags;
-    using ::ImGuiTabItemFlags;
-    using ::ImGuiTableFlags;
-    using ::ImGuiTableColumnFlags;
-    using ::ImGuiTableRowFlags;
-    using ::ImGuiViewportFlags;
-    using ::ImGuiWindowFlags;
-
-    // Character types
-    using ::ImWchar32;
-    using ::ImWchar16;
-    using ::ImWchar;
-
-    // Multi-Selection item index or identifier when using BeginMultiSelect()
-    using ::ImGuiSelectionUserData;
-
-    // Callback and functions types
-    using ::ImGuiInputTextCallback;
-    using ::ImGuiSizeCallback;
     using ::ImGuiMemAllocFunc;
     using ::ImGuiMemFreeFunc;
-
-    // ImVec2
-    using ::ImVec2;
-
-    // ImVec4
-    using ::ImVec4;
-
-    // ImTextureID
-    #ifndef ImTextureID
+    using ::ImGuiMouseButton;
+    using ::ImGuiMouseCursor;
+    using ::ImGuiMultiSelectFlags;
+    using ::ImGuiPopupFlags;
+    using ::ImGuiSelectableFlags;
+    using ::ImGuiSelectionUserData;
+    using ::ImGuiSizeCallback;
+    using ::ImGuiSliderFlags;
+    using ::ImGuiStyleVar;
+    using ::ImGuiTabBarFlags;
+    using ::ImGuiTabItemFlags;
+    using ::ImGuiTableBgTarget;
+    using ::ImGuiTableColumnFlags;
+    using ::ImGuiTableFlags;
+    using ::ImGuiTableRowFlags;
+    using ::ImGuiTreeNodeFlags;
+    using ::ImGuiViewportFlags;
+    using ::ImGuiWindowFlags;
+    using ::ImS16;
+    using ::ImS32;
+    using ::ImS64;
+    using ::ImS8;
     using ::ImTextureID;
-    #endif
+    using ::ImU16;
+    using ::ImU32;
+    using ::ImU64;
+    using ::ImU8;
+    using ::ImWchar;
+    using ::ImWchar16;
+    using ::ImWchar32;
 
-    // ImTextureRef
-    using ::ImTextureRef;
+    // ----- Functions -----
 
-    // IM_MALLOC(), IM_FREE(), IM_NEW(), IM_PLACEMENT_NEW(), IM_DELETE()
-    using ::ImNewWrapper;
-    using ::operator new;
-    using ::operator delete;
-    constexpr void* IM_ALLOC(size_t _SIZE) {
-        return ImGui::MemAlloc(_SIZE);
+    namespace ImGui {
+        using ImGui::AcceptDragDropPayload;
+        using ImGui::AlignTextToFramePadding;
+        using ImGui::ArrowButton;
+        using ImGui::Begin;
+        using ImGui::BeginChild;
+        using ImGui::BeginCombo;
+        using ImGui::BeginDisabled;
+        using ImGui::BeginDragDropSource;
+        using ImGui::BeginDragDropTarget;
+        using ImGui::BeginGroup;
+        using ImGui::BeginItemTooltip;
+        using ImGui::BeginListBox;
+        using ImGui::BeginMainMenuBar;
+        using ImGui::BeginMenu;
+        using ImGui::BeginMenuBar;
+        using ImGui::BeginMultiSelect;
+        using ImGui::BeginPopup;
+        using ImGui::BeginPopupContextItem;
+        using ImGui::BeginPopupContextVoid;
+        using ImGui::BeginPopupContextWindow;
+        using ImGui::BeginPopupModal;
+        using ImGui::BeginTabBar;
+        using ImGui::BeginTabItem;
+        using ImGui::BeginTable;
+        using ImGui::BeginTooltip;
+        using ImGui::Bullet;
+        using ImGui::BulletText;
+        using ImGui::BulletTextV;
+        using ImGui::Button;
+        using ImGui::CalcItemWidth;
+        using ImGui::CalcTextSize;
+        using ImGui::Checkbox;
+        using ImGui::CheckboxFlags;
+        using ImGui::CloseCurrentPopup;
+        using ImGui::CollapsingHeader;
+        using ImGui::ColorButton;
+        using ImGui::ColorConvertFloat4ToU32;
+        using ImGui::ColorConvertHSVtoRGB;
+        using ImGui::ColorConvertRGBtoHSV;
+        using ImGui::ColorConvertU32ToFloat4;
+        using ImGui::ColorEdit3;
+        using ImGui::ColorEdit4;
+        using ImGui::ColorPicker3;
+        using ImGui::ColorPicker4;
+        using ImGui::Columns;
+        using ImGui::Combo;
+        using ImGui::CreateContext;
+        using ImGui::DebugCheckVersionAndDataLayout;
+        using ImGui::DebugFlashStyleColor;
+        using ImGui::DebugLog;
+        using ImGui::DebugLogV;
+        using ImGui::DebugStartItemPicker;
+        using ImGui::DebugTextEncoding;
+        using ImGui::DestroyContext;
+        using ImGui::DragFloat;
+        using ImGui::DragFloat2;
+        using ImGui::DragFloat3;
+        using ImGui::DragFloat4;
+        using ImGui::DragFloatRange2;
+        using ImGui::DragInt;
+        using ImGui::DragInt2;
+        using ImGui::DragInt3;
+        using ImGui::DragInt4;
+        using ImGui::DragIntRange2;
+        using ImGui::DragScalar;
+        using ImGui::DragScalarN;
+        using ImGui::Dummy;
+        using ImGui::End;
+        using ImGui::EndChild;
+        using ImGui::EndCombo;
+        using ImGui::EndDisabled;
+        using ImGui::EndDragDropSource;
+        using ImGui::EndDragDropTarget;
+        using ImGui::EndFrame;
+        using ImGui::EndGroup;
+        using ImGui::EndListBox;
+        using ImGui::EndMainMenuBar;
+        using ImGui::EndMenu;
+        using ImGui::EndMenuBar;
+        using ImGui::EndMultiSelect;
+        using ImGui::EndPopup;
+        using ImGui::EndTabBar;
+        using ImGui::EndTabItem;
+        using ImGui::EndTable;
+        using ImGui::EndTooltip;
+        using ImGui::GetAllocatorFunctions;
+        using ImGui::GetBackgroundDrawList;
+        using ImGui::GetClipboardText;
+        using ImGui::GetColorU32;
+        using ImGui::GetColumnIndex;
+        using ImGui::GetColumnOffset;
+        using ImGui::GetColumnWidth;
+        using ImGui::GetColumnsCount;
+        using ImGui::GetContentRegionAvail;
+        using ImGui::GetCurrentContext;
+        using ImGui::GetCursorPos;
+        using ImGui::GetCursorPosX;
+        using ImGui::GetCursorPosY;
+        using ImGui::GetCursorScreenPos;
+        using ImGui::GetCursorStartPos;
+        using ImGui::GetDragDropPayload;
+        using ImGui::GetDrawData;
+        using ImGui::GetDrawListSharedData;
+        using ImGui::GetFont;
+        using ImGui::GetFontBaked;
+        using ImGui::GetFontSize;
+        using ImGui::GetFontTexUvWhitePixel;
+        using ImGui::GetForegroundDrawList;
+        using ImGui::GetFrameCount;
+        using ImGui::GetFrameHeight;
+        using ImGui::GetFrameHeightWithSpacing;
+        using ImGui::GetID;
+        using ImGui::GetIO;
+        using ImGui::GetItemID;
+        using ImGui::GetItemRectMax;
+        using ImGui::GetItemRectMin;
+        using ImGui::GetItemRectSize;
+        using ImGui::GetKeyName;
+        using ImGui::GetKeyPressedAmount;
+        using ImGui::GetMainViewport;
+        using ImGui::GetMouseClickedCount;
+        using ImGui::GetMouseCursor;
+        using ImGui::GetMouseDragDelta;
+        using ImGui::GetMousePos;
+        using ImGui::GetMousePosOnOpeningCurrentPopup;
+        using ImGui::GetPlatformIO;
+        using ImGui::GetScrollMaxX;
+        using ImGui::GetScrollMaxY;
+        using ImGui::GetScrollX;
+        using ImGui::GetScrollY;
+        using ImGui::GetStateStorage;
+        using ImGui::GetStyle;
+        using ImGui::GetStyleColorName;
+        using ImGui::GetStyleColorVec4;
+        using ImGui::GetTextLineHeight;
+        using ImGui::GetTextLineHeightWithSpacing;
+        using ImGui::GetTime;
+        using ImGui::GetTreeNodeToLabelSpacing;
+        using ImGui::GetVersion;
+        using ImGui::GetWindowDrawList;
+        using ImGui::GetWindowHeight;
+        using ImGui::GetWindowPos;
+        using ImGui::GetWindowSize;
+        using ImGui::GetWindowWidth;
+        using ImGui::Image;
+        using ImGui::ImageButton;
+        using ImGui::ImageWithBg;
+        using ImGui::Indent;
+        using ImGui::InputDouble;
+        using ImGui::InputFloat;
+        using ImGui::InputFloat2;
+        using ImGui::InputFloat3;
+        using ImGui::InputFloat4;
+        using ImGui::InputInt;
+        using ImGui::InputInt2;
+        using ImGui::InputInt3;
+        using ImGui::InputInt4;
+        using ImGui::InputScalar;
+        using ImGui::InputScalarN;
+        using ImGui::InputText;
+        using ImGui::InputTextMultiline;
+        using ImGui::InputTextWithHint;
+        using ImGui::InvisibleButton;
+        using ImGui::IsAnyItemActive;
+        using ImGui::IsAnyItemFocused;
+        using ImGui::IsAnyItemHovered;
+        using ImGui::IsAnyMouseDown;
+        using ImGui::IsItemActivated;
+        using ImGui::IsItemActive;
+        using ImGui::IsItemClicked;
+        using ImGui::IsItemDeactivated;
+        using ImGui::IsItemDeactivatedAfterEdit;
+        using ImGui::IsItemEdited;
+        using ImGui::IsItemFocused;
+        using ImGui::IsItemHovered;
+        using ImGui::IsItemToggledOpen;
+        using ImGui::IsItemToggledSelection;
+        using ImGui::IsItemVisible;
+        using ImGui::IsKeyChordPressed;
+        using ImGui::IsKeyDown;
+        using ImGui::IsKeyPressed;
+        using ImGui::IsKeyReleased;
+        using ImGui::IsMouseClicked;
+        using ImGui::IsMouseDoubleClicked;
+        using ImGui::IsMouseDown;
+        using ImGui::IsMouseDragging;
+        using ImGui::IsMouseHoveringRect;
+        using ImGui::IsMousePosValid;
+        using ImGui::IsMouseReleased;
+        using ImGui::IsMouseReleasedWithDelay;
+        using ImGui::IsPopupOpen;
+        using ImGui::IsRectVisible;
+        using ImGui::IsWindowAppearing;
+        using ImGui::IsWindowCollapsed;
+        using ImGui::IsWindowFocused;
+        using ImGui::IsWindowHovered;
+        using ImGui::LabelText;
+        using ImGui::LabelTextV;
+        using ImGui::ListBox;
+        using ImGui::LoadIniSettingsFromDisk;
+        using ImGui::LoadIniSettingsFromMemory;
+        using ImGui::LogButtons;
+        using ImGui::LogFinish;
+        using ImGui::LogText;
+        using ImGui::LogTextV;
+        using ImGui::LogToClipboard;
+        using ImGui::LogToFile;
+        using ImGui::LogToTTY;
+        using ImGui::MemAlloc;
+        using ImGui::MemFree;
+        using ImGui::MenuItem;
+        using ImGui::NewFrame;
+        using ImGui::NewLine;
+        using ImGui::NextColumn;
+        using ImGui::OpenPopup;
+        using ImGui::OpenPopupOnItemClick;
+        using ImGui::PlotHistogram;
+        using ImGui::PlotLines;
+        using ImGui::PopClipRect;
+        using ImGui::PopFont;
+        using ImGui::PopID;
+        using ImGui::PopItemFlag;
+        using ImGui::PopItemWidth;
+        using ImGui::PopStyleColor;
+        using ImGui::PopStyleVar;
+        using ImGui::PopTextWrapPos;
+        using ImGui::ProgressBar;
+        using ImGui::PushClipRect;
+        using ImGui::PushFont;
+        using ImGui::PushID;
+        using ImGui::PushItemFlag;
+        using ImGui::PushItemWidth;
+        using ImGui::PushStyleColor;
+        using ImGui::PushStyleVar;
+        using ImGui::PushStyleVarX;
+        using ImGui::PushStyleVarY;
+        using ImGui::PushTextWrapPos;
+        using ImGui::RadioButton;
+        using ImGui::Render;
+        using ImGui::ResetMouseDragDelta;
+        using ImGui::SameLine;
+        using ImGui::SaveIniSettingsToDisk;
+        using ImGui::SaveIniSettingsToMemory;
+        using ImGui::Selectable;
+        using ImGui::Separator;
+        using ImGui::SeparatorText;
+        using ImGui::SetAllocatorFunctions;
+        using ImGui::SetClipboardText;
+        using ImGui::SetColorEditOptions;
+        using ImGui::SetColumnOffset;
+        using ImGui::SetColumnWidth;
+        using ImGui::SetCurrentContext;
+        using ImGui::SetCursorPos;
+        using ImGui::SetCursorPosX;
+        using ImGui::SetCursorPosY;
+        using ImGui::SetCursorScreenPos;
+        using ImGui::SetDragDropPayload;
+        using ImGui::SetItemDefaultFocus;
+        using ImGui::SetItemKeyOwner;
+        using ImGui::SetItemTooltip;
+        using ImGui::SetItemTooltipV;
+        using ImGui::SetKeyboardFocusHere;
+        using ImGui::SetMouseCursor;
+        using ImGui::SetNavCursorVisible;
+        using ImGui::SetNextFrameWantCaptureKeyboard;
+        using ImGui::SetNextFrameWantCaptureMouse;
+        using ImGui::SetNextItemAllowOverlap;
+        using ImGui::SetNextItemOpen;
+        using ImGui::SetNextItemSelectionUserData;
+        using ImGui::SetNextItemShortcut;
+        using ImGui::SetNextItemStorageID;
+        using ImGui::SetNextItemWidth;
+        using ImGui::SetNextWindowBgAlpha;
+        using ImGui::SetNextWindowCollapsed;
+        using ImGui::SetNextWindowContentSize;
+        using ImGui::SetNextWindowFocus;
+        using ImGui::SetNextWindowPos;
+        using ImGui::SetNextWindowScroll;
+        using ImGui::SetNextWindowSize;
+        using ImGui::SetNextWindowSizeConstraints;
+        using ImGui::SetScrollFromPosX;
+        using ImGui::SetScrollFromPosY;
+        using ImGui::SetScrollHereX;
+        using ImGui::SetScrollHereY;
+        using ImGui::SetScrollX;
+        using ImGui::SetScrollY;
+        using ImGui::SetStateStorage;
+        using ImGui::SetTabItemClosed;
+        using ImGui::SetTooltip;
+        using ImGui::SetTooltipV;
+        using ImGui::SetWindowCollapsed;
+        using ImGui::SetWindowFocus;
+        using ImGui::SetWindowPos;
+        using ImGui::SetWindowSize;
+        using ImGui::Shortcut;
+        using ImGui::ShowAboutWindow;
+        using ImGui::ShowDebugLogWindow;
+        using ImGui::ShowDemoWindow;
+        using ImGui::ShowFontSelector;
+        using ImGui::ShowIDStackToolWindow;
+        using ImGui::ShowMetricsWindow;
+        using ImGui::ShowStyleEditor;
+        using ImGui::ShowStyleSelector;
+        using ImGui::ShowUserGuide;
+        using ImGui::SliderAngle;
+        using ImGui::SliderFloat;
+        using ImGui::SliderFloat2;
+        using ImGui::SliderFloat3;
+        using ImGui::SliderFloat4;
+        using ImGui::SliderInt;
+        using ImGui::SliderInt2;
+        using ImGui::SliderInt3;
+        using ImGui::SliderInt4;
+        using ImGui::SliderScalar;
+        using ImGui::SliderScalarN;
+        using ImGui::SmallButton;
+        using ImGui::Spacing;
+        using ImGui::StyleColorsClassic;
+        using ImGui::StyleColorsDark;
+        using ImGui::StyleColorsLight;
+        using ImGui::TabItemButton;
+        using ImGui::TableAngledHeadersRow;
+        using ImGui::TableGetColumnCount;
+        using ImGui::TableGetColumnFlags;
+        using ImGui::TableGetColumnIndex;
+        using ImGui::TableGetColumnName;
+        using ImGui::TableGetHoveredColumn;
+        using ImGui::TableGetRowIndex;
+        using ImGui::TableGetSortSpecs;
+        using ImGui::TableHeader;
+        using ImGui::TableHeadersRow;
+        using ImGui::TableNextColumn;
+        using ImGui::TableNextRow;
+        using ImGui::TableSetBgColor;
+        using ImGui::TableSetColumnEnabled;
+        using ImGui::TableSetColumnIndex;
+        using ImGui::TableSetupColumn;
+        using ImGui::TableSetupScrollFreeze;
+        using ImGui::Text;
+        using ImGui::TextColored;
+        using ImGui::TextColoredV;
+        using ImGui::TextDisabled;
+        using ImGui::TextDisabledV;
+        using ImGui::TextLink;
+        using ImGui::TextLinkOpenURL;
+        using ImGui::TextUnformatted;
+        using ImGui::TextV;
+        using ImGui::TextWrapped;
+        using ImGui::TextWrappedV;
+        using ImGui::TreeNode;
+        using ImGui::TreeNodeEx;
+        using ImGui::TreeNodeExV;
+        using ImGui::TreeNodeV;
+        using ImGui::TreePop;
+        using ImGui::TreePush;
+        using ImGui::Unindent;
+        using ImGui::VSliderFloat;
+        using ImGui::VSliderInt;
+        using ImGui::VSliderScalar;
+        using ImGui::Value;
+
+        /**
+        * @brief Use this for the replacement of <tt>IMGUI_CHECKVERSION()</tt>.
+        */
+        constexpr void CheckVersion() {
+            IMGUI_CHECKVERSION();
+        };
     }
-    constexpr void IM_FREE(void* _PTR) {
-        ImGui::MemFree(_PTR);
-    }
-    using ::IM_DELETE;
-    using ::ImVector;
-}
-
-export namespace ImGui {
-    // Context creation and access
-    using ImGui::CreateContext;
-    using ImGui::DestroyContext;
-    using ImGui::GetCurrentContext;
-    using ImGui::SetCurrentContext;
-
-    // Main
-    using ImGui::GetIO;
-    using ImGui::GetPlatformIO;
-    using ImGui::GetStyle;
-    using ImGui::NewFrame;
-    using ImGui::EndFrame;
-    using ImGui::Render;
-    using ImGui::GetDrawData;
-
-    // Demo, Debug, Information
-    using ImGui::ShowDemoWindow;
-    using ImGui::ShowMetricsWindow;
-    using ImGui::ShowDebugLogWindow;
-    using ImGui::ShowIDStackToolWindow;
-    using ImGui::ShowAboutWindow;
-    using ImGui::ShowStyleEditor;
-    using ImGui::ShowStyleSelector;
-    using ImGui::ShowFontSelector;
-    using ImGui::ShowUserGuide;
-    using ImGui::GetVersion;
-
-    // Styles
-    using ImGui::StyleColorsDark;
-    using ImGui::StyleColorsLight;
-    using ImGui::StyleColorsClassic;
-
-    // Windows
-    using ImGui::Begin;
-    using ImGui::End;
-
-    // Child Windows
-    using ImGui::BeginChild;
-    using ImGui::EndChild;
-
-    // Windows Utilities
-    using ImGui::IsWindowAppearing;
-    using ImGui::IsWindowCollapsed;
-    using ImGui::IsWindowFocused;
-    using ImGui::IsWindowHovered;
-    using ImGui::GetWindowDrawList;
-    using ImGui::GetWindowPos;
-    using ImGui::GetWindowSize;
-    using ImGui::GetWindowWidth;
-    using ImGui::GetWindowHeight;
-
-    // Window manipulation
-    using ImGui::SetNextWindowPos;
-    using ImGui::SetNextWindowSize;
-    using ImGui::SetNextWindowSizeConstraints;
-    using ImGui::SetNextWindowContentSize;
-    using ImGui::SetNextWindowCollapsed;
-    using ImGui::SetNextWindowFocus;
-    using ImGui::SetNextWindowScroll;
-    using ImGui::SetNextWindowBgAlpha;
-    using ImGui::SetWindowPos;
-    using ImGui::SetWindowSize;
-    using ImGui::SetWindowCollapsed;
-    using ImGui::SetWindowFocus;
-
-    // Windows Scrolling
-    using ImGui::GetScrollX;
-    using ImGui::GetScrollY;
-    using ImGui::SetScrollX;
-    using ImGui::SetScrollY;
-    using ImGui::GetScrollMaxX;
-    using ImGui::GetScrollMaxY;
-    using ImGui::SetScrollHereX;
-    using ImGui::SetScrollHereY;
-    using ImGui::SetScrollFromPosX;
-    using ImGui::SetScrollFromPosY;
-
-    // Parameters stacks (font)
-    using ImGui::PushFont;
-    using ImGui::PopFont;
-    using ImGui::GetFont;
-    using ImGui::GetFontSize;
-    using ImGui::GetFontBaked;
-
-    // Parameters stacks (shared)
-    using ImGui::PushStyleColor;
-    using ImGui::PopStyleColor;
-    using ImGui::PushStyleVar;
-    using ImGui::PushStyleVarX;
-    using ImGui::PushStyleVarY;
-    using ImGui::PopStyleVar;
-    using ImGui::PushItemFlag;
-    using ImGui::PopItemFlag;
-
-    // Parameters stacks (current window)
-    using ImGui::PushItemWidth;
-    using ImGui::PopItemWidth;
-    using ImGui::SetNextItemWidth;
-    using ImGui::CalcItemWidth;
-    using ImGui::PushTextWrapPos;
-    using ImGui::PopTextWrapPos;
-
-    // Style read access
-    using ImGui::GetFontTexUvWhitePixel;
-    using ImGui::GetColorU32;
-    using ImGui::GetStyleColorVec4;
-
-    // Layout cursor positioning
-    using ImGui::GetCursorScreenPos;
-    using ImGui::SetCursorScreenPos;
-    using ImGui::GetContentRegionAvail;
-    using ImGui::GetCursorPos;
-    using ImGui::GetCursorPosX;
-    using ImGui::GetCursorPosY;
-    using ImGui::SetCursorPos;
-    using ImGui::SetCursorPosX;
-    using ImGui::SetCursorPosY;
-    using ImGui::GetCursorStartPos;
-
-    // Other layout functions
-    using ImGui::Separator;
-    using ImGui::SameLine;
-    using ImGui::NewLine;
-    using ImGui::Spacing;
-    using ImGui::Dummy;
-    using ImGui::Indent;
-    using ImGui::Unindent;
-    using ImGui::BeginGroup;
-    using ImGui::EndGroup;
-    using ImGui::AlignTextToFramePadding;
-    using ImGui::GetTextLineHeight;
-    using ImGui::GetTextLineHeightWithSpacing;
-    using ImGui::GetFrameHeight;
-    using ImGui::GetFrameHeightWithSpacing;
-
-    // ID stack/scopes
-    using ImGui::PushID;
-    using ImGui::PopID;
-    using ImGui::GetID;
-
-    // Widgets: Text
-    using ImGui::TextUnformatted;
-    using ImGui::Text;
-    using ImGui::TextV;
-    using ImGui::TextColored;
-    using ImGui::TextColoredV;
-    using ImGui::TextDisabled;
-    using ImGui::TextDisabledV;
-    using ImGui::TextWrapped;
-    using ImGui::TextWrappedV;
-    using ImGui::LabelText;
-    using ImGui::LabelTextV;
-    using ImGui::BulletText;
-    using ImGui::BulletTextV;
-    using ImGui::SeparatorText;
-
-    // Widgets: Main
-    using ImGui::Button;
-    using ImGui::SmallButton;
-    using ImGui::InvisibleButton;
-    using ImGui::ArrowButton;
-    using ImGui::Checkbox;
-    using ImGui::CheckboxFlags;
-    using ImGui::RadioButton;
-    using ImGui::ProgressBar;
-    using ImGui::Bullet;
-    using ImGui::TextLink;
-    using ImGui::TextLinkOpenURL;
-
-    // Widgets: Images
-    using ImGui::Image;
-    using ImGui::ImageWithBg;
-    using ImGui::ImageButton;
-
-    // Widgets: Combo Box (Dropdown)
-    using ImGui::BeginCombo;
-    using ImGui::EndCombo;
-    using ImGui::Combo;
-
-    // Widgets: Drag Sliders
-    using ImGui::DragFloat;
-    using ImGui::DragFloat2;
-    using ImGui::DragFloat3;
-    using ImGui::DragFloat4;
-    using ImGui::DragFloatRange2;
-    using ImGui::DragInt;
-    using ImGui::DragInt2;
-    using ImGui::DragInt3;
-    using ImGui::DragInt4;
-    using ImGui::DragIntRange2;
-    using ImGui::DragScalar;
-    using ImGui::DragScalarN;
-
-    // Widgets: Regular Sliders
-    using ImGui::SliderFloat;
-    using ImGui::SliderFloat2;
-    using ImGui::SliderFloat3;
-    using ImGui::SliderFloat4;
-    using ImGui::SliderAngle;
-    using ImGui::SliderInt;
-    using ImGui::SliderInt2;
-    using ImGui::SliderInt3;
-    using ImGui::SliderInt4;
-    using ImGui::SliderScalar;
-    using ImGui::SliderScalarN;
-    using ImGui::VSliderFloat;
-    using ImGui::VSliderInt;
-    using ImGui::VSliderScalar;
-
-    // Widgets: Input with Keyboard
-    using ImGui::InputText;
-    using ImGui::InputTextMultiline;
-    using ImGui::InputTextWithHint;
-    using ImGui::InputFloat;
-    using ImGui::InputFloat2;
-    using ImGui::InputFloat3;
-    using ImGui::InputFloat4;
-    using ImGui::InputInt;
-    using ImGui::InputInt2;
-    using ImGui::InputInt3;
-    using ImGui::InputInt4;
-    using ImGui::InputDouble;
-    using ImGui::InputScalar;
-    using ImGui::InputScalarN;
-
-    // Widgets: Color Editor/Picker
-    using ImGui::ColorEdit3;
-    using ImGui::ColorEdit4;
-    using ImGui::ColorPicker3;
-    using ImGui::ColorPicker4;
-    using ImGui::ColorButton;
-    using ImGui::SetColorEditOptions;
-
-    // Widgets: Trees
-    using ImGui::TreeNode;
-    using ImGui::TreeNodeV;
-    using ImGui::TreeNodeEx;
-    using ImGui::TreeNodeExV;
-    using ImGui::TreePush;
-    using ImGui::TreePop;
-    using ImGui::GetTreeNodeToLabelSpacing;
-    using ImGui::CollapsingHeader;
-    using ImGui::SetNextItemOpen;
-    using ImGui::SetNextItemStorageID;
-
-    // Widgets: Selectables
-    using ImGui::Selectable;
-
-    // Multi-selection system for Selectable(), Checkbox(), TreeNode() functions [BETA]
-    using ImGui::BeginMultiSelect;
-    using ImGui::EndMultiSelect;
-    using ImGui::SetNextItemSelectionUserData;
-    using ImGui::IsItemToggledSelection;
-
-    // Widgets: List Boxes
-    using ImGui::BeginListBox;
-    using ImGui::EndListBox;
-    using ImGui::ListBox;
-
-    // Widgets: Data Plotting
-    using ImGui::PlotLines;
-    using ImGui::PlotHistogram;
-
-    // Widgets: Value() Helpers.
-    using ImGui::Value;
-
-    // Widgets: Menus
-    using ImGui::BeginMenuBar;
-    using ImGui::EndMenuBar;
-    using ImGui::BeginMainMenuBar;
-    using ImGui::EndMainMenuBar;
-    using ImGui::BeginMenu;
-    using ImGui::EndMenu;
-    using ImGui::MenuItem;
-
-    // Tooltips
-    using ImGui::BeginTooltip;
-    using ImGui::EndTooltip;
-    using ImGui::SetTooltip;
-    using ImGui::SetTooltipV;
-
-    // Tooltips: helpers for showing a tooltip when hovering an item
-    using ImGui::BeginItemTooltip;
-    using ImGui::SetItemTooltip;
-    using ImGui::SetItemTooltipV;
-
-    // Popups, Modals
-    using ImGui::BeginPopup;
-    using ImGui::BeginPopupModal;
-    using ImGui::EndPopup;
-
-    // Popups: open/close functions
-    using ImGui::OpenPopup;
-    using ImGui::OpenPopupOnItemClick;
-    using ImGui::CloseCurrentPopup;
-
-    // Popups: open+begin combined functions helpers
-    using ImGui::BeginPopupContextItem;
-    using ImGui::BeginPopupContextWindow;
-    using ImGui::BeginPopupContextVoid;
-
-    // Popups: query functions
-    using ImGui::IsPopupOpen;
-
-    // Tables
-    using ImGui::BeginTable;
-    using ImGui::EndTable;
-    using ImGui::TableNextRow;
-    using ImGui::TableNextColumn;
-    using ImGui::TableSetColumnIndex;
-
-    // Tables: Headers & Columns declaration
-    using ImGui::TableSetupColumn;
-    using ImGui::TableSetupScrollFreeze;
-    using ImGui::TableHeader;
-    using ImGui::TableHeadersRow;
-    using ImGui::TableAngledHeadersRow;
-
-    // Tables: Sorting & Miscellaneous functions
-    using ImGui::TableGetSortSpecs;
-    using ImGui::TableGetColumnCount;
-    using ImGui::TableGetColumnIndex;
-    using ImGui::TableGetRowIndex;
-    using ImGui::TableGetColumnName;
-    using ImGui::TableGetColumnFlags;
-    using ImGui::TableSetColumnEnabled;
-    using ImGui::TableGetHoveredColumn;
-    using ImGui::TableSetBgColor;
-
-    // Legacy Columns API
-    using ImGui::Columns;
-    using ImGui::NextColumn;
-    using ImGui::GetColumnIndex;
-    using ImGui::GetColumnWidth;
-    using ImGui::SetColumnWidth;
-    using ImGui::GetColumnOffset;
-    using ImGui::SetColumnOffset;
-    using ImGui::GetColumnsCount;
-
-    // Tab Bars, Tabs
-    using ImGui::BeginTabBar;
-    using ImGui::EndTabBar;
-    using ImGui::BeginTabItem;
-    using ImGui::EndTabItem;
-    using ImGui::TabItemButton;
-    using ImGui::SetTabItemClosed;
-
-    // Logging/Capture
-    using ImGui::LogToTTY;
-    using ImGui::LogToFile;
-    using ImGui::LogToClipboard;
-    using ImGui::LogFinish;
-    using ImGui::LogButtons;
-    using ImGui::LogText;
-    using ImGui::LogTextV;
-
-    // Drag and Drop
-    using ImGui::BeginDragDropSource;
-    using ImGui::SetDragDropPayload;
-    using ImGui::EndDragDropSource;
-    using ImGui::BeginDragDropTarget;
-    using ImGui::AcceptDragDropPayload;
-    using ImGui::EndDragDropTarget;
-    using ImGui::GetDragDropPayload;
-
-    // Disabling [BETA API]
-    using ImGui::BeginDisabled;
-    using ImGui::EndDisabled;
-
-    // Clipping
-    using ImGui::PushClipRect;
-    using ImGui::PopClipRect;
-
-    // Focus, Activation
-    using ImGui::SetItemDefaultFocus;
-    using ImGui::SetKeyboardFocusHere;
-
-    // Keyboard/Gamepad Navigation
-    using ImGui::SetNavCursorVisible;
-
-    // Overlapping mode
-    using ImGui::SetNextItemAllowOverlap;
-
-    // Item/Widgets Utilities and Query Functions
-    using ImGui::IsItemHovered;
-    using ImGui::IsItemActive;
-    using ImGui::IsItemFocused;
-    using ImGui::IsItemClicked;
-    using ImGui::IsItemVisible;
-    using ImGui::IsItemEdited;
-    using ImGui::IsItemActivated;
-    using ImGui::IsItemDeactivated;
-    using ImGui::IsItemDeactivatedAfterEdit;
-    using ImGui::IsItemToggledOpen;
-    using ImGui::IsAnyItemHovered;
-    using ImGui::IsAnyItemActive;
-    using ImGui::IsAnyItemFocused;
-    using ImGui::GetItemID;
-    using ImGui::GetItemRectMin;
-    using ImGui::GetItemRectMax;
-    using ImGui::GetItemRectSize;
-
-    // Viewports
-    using ImGui::GetMainViewport;
-
-    // Background/Foreground Draw Lists
-    using ImGui::GetBackgroundDrawList;
-    using ImGui::GetForegroundDrawList;
-
-    // Miscellaneous Utilities
-    using ImGui::IsRectVisible;
-    using ImGui::GetTime;
-    using ImGui::GetFrameCount;
-    using ImGui::GetDrawListSharedData;
-    using ImGui::GetStyleColorName;
-    using ImGui::SetStateStorage;
-    using ImGui::GetStateStorage;
-
-    // Text Utilities
-    using ImGui::CalcTextSize;
-
-    // Color Utilities
-    using ImGui::ColorConvertU32ToFloat4;
-    using ImGui::ColorConvertFloat4ToU32;
-    using ImGui::ColorConvertRGBtoHSV;
-    using ImGui::ColorConvertHSVtoRGB;
-
-    // Inputs Utilities: Keyboard/Mouse/Gamepad
-    using ImGui::IsKeyDown;
-    using ImGui::IsKeyPressed;
-    using ImGui::IsKeyReleased;
-    using ImGui::IsKeyChordPressed;
-    using ImGui::GetKeyPressedAmount;
-    using ImGui::GetKeyName;
-    using ImGui::SetNextFrameWantCaptureKeyboard;
-
-    // Inputs Utilities: Shortcut Testing & Routing [BETA]
-    using ImGui::Shortcut;
-    using ImGui::SetNextItemShortcut;
-
-    // Inputs Utilities: Key/Input Ownership [BETA]
-    using ImGui::SetItemKeyOwner;
-
-    // Inputs Utilities: Mouse
-    using ImGui::IsMouseDown;
-    using ImGui::IsMouseClicked;
-    using ImGui::IsMouseReleased;
-    using ImGui::IsMouseDoubleClicked;
-    using ImGui::IsMouseReleasedWithDelay;
-    using ImGui::GetMouseClickedCount;
-    using ImGui::IsMouseHoveringRect;
-    using ImGui::IsMousePosValid;
-    using ImGui::IsAnyMouseDown;
-    using ImGui::GetMousePos;
-    using ImGui::GetMousePosOnOpeningCurrentPopup;
-    using ImGui::IsMouseDragging;
-    using ImGui::GetMouseDragDelta;
-    using ImGui::ResetMouseDragDelta;
-    using ImGui::GetMouseCursor;
-    using ImGui::SetMouseCursor;
-    using ImGui::SetNextFrameWantCaptureMouse;
-
-    // Clipboard Utilities
-    using ImGui::GetClipboardText;
-    using ImGui::SetClipboardText;
-
-    // Settings/.Ini Utilities
-    using ImGui::LoadIniSettingsFromDisk;
-    using ImGui::LoadIniSettingsFromMemory;
-    using ImGui::SaveIniSettingsToDisk;
-    using ImGui::SaveIniSettingsToMemory;
-
-    // Debug Utilities
-    using ImGui::DebugTextEncoding;
-    using ImGui::DebugFlashStyleColor;
-    using ImGui::DebugStartItemPicker;
-    using ImGui::DebugCheckVersionAndDataLayout;
-    #ifndef IMGUI_DISABLE_DEBUG_TOOLS
-    using ImGui::DebugLog;
-    using ImGui::DebugLogV;
-    #endif
-
-    // Memory Allocators
-    using ImGui::SetAllocatorFunctions;
-    using ImGui::GetAllocatorFunctions;
-    using ImGui::MemAlloc;
-    using ImGui::MemFree;
-}
-
-export {
-    using ::ImGuiWindowFlags_;
-    using ::ImGuiChildFlags_;
-    using ::ImGuiItemFlags_;
-    using ::ImGuiInputTextFlags_;
-    using ::ImGuiTreeNodeFlags_;
-    using ::ImGuiPopupFlags_;
-    using ::ImGuiSelectableFlags_;
-    using ::ImGuiComboFlags_;
-    using ::ImGuiTabBarFlags_;
-    using ::ImGuiTabItemFlags_;
-    using ::ImGuiFocusedFlags_;
-    using ::ImGuiHoveredFlags_;
-    using ::ImGuiDragDropFlags_;
-    using ::ImGuiDataType_;
-    using ::ImGuiInputFlags_;
-    using ::ImGuiConfigFlags_;
-    using ::ImGuiBackendFlags_;
-    using ::ImGuiCol_;
-    using ::ImGuiStyleVar_;
-    using ::ImGuiButtonFlags_;
-    using ::ImGuiColorEditFlags_;
-    using ::ImGuiSliderFlags_;
-    using ::ImGuiMouseButton_;
-    using ::ImGuiMouseCursor_;
-    using ::ImGuiCond_;
-    using ::ImGuiTableFlags_;
-    using ::ImGuiTableColumnFlags_;
-    using ::ImGuiTableRowFlags_;
-    using ::ImGuiTableBgTarget_;
-    using ::ImGuiListClipperFlags_;
-    using ::ImGuiMultiSelectFlags_;
-    using ::ImGuiSelectionRequestType;
-    using ::ImDrawFlags_;
-    using ::ImDrawListFlags_;
-    using ::ImFontAtlasFlags_;
-    using ::ImFontFlags_;
-    using ::ImGuiViewportFlags_;
 }
