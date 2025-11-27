@@ -3,12 +3,12 @@
 
 module;
 
+#define IMGUI_DEFINE_MATH_OPERATORS
 #include "imgui.h"
 
 export module ImGui;
 
 export {
-    #ifdef IMGUI_DEFINE_MATH_OPERATORS
     using ::operator+;
     using ::operator-;
     using ::operator*;
@@ -19,7 +19,6 @@ export {
     using ::operator/=;
     using ::operator==;
     using ::operator!=;
-    #endif
 
     // ----- Enums -----
 
