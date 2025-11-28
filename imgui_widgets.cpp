@@ -6776,7 +6776,6 @@ static void TreeNodeStoreStackData(ImGuiTreeNodeFlags flags, float x1)
         window->DC.TreeRecordsClippedNodesY2Mask |= (1 << window->DC.TreeDepth);
 }
 
-// When using public API, currently 'id == storage_id' is always true, but we separate the values to facilitate advanced user code doing storage queries outside of UI loop.
 bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* label, const char* label_end)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -6785,26 +6784,28 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
 
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
+
+    // When not framed, we vertically increase height up to typical framed widget height
     const bool display_frame = (flags & ImGuiTreeNodeFlags_Framed) != 0;
-    const ImVec2 padding = (display_frame || (flags & ImGuiTreeNodeFlags_FramePadding)) ? style.FramePadding : ImVec2(style.FramePadding.x, ImMin(window->DC.CurrLineTextBaseOffset, style.FramePadding.y));
+    const bool use_frame_padding = (display_frame || (flags & ImGuiTreeNodeFlags_FramePadding));
+    const ImVec2 padding = use_frame_padding ? style.FramePadding : ImVec2(style.FramePadding.x, ImMin(window->DC.CurrLineTextBaseOffset, style.FramePadding.y));
 
     if (!label_end)
         label_end = FindRenderedTextEnd(label);
     const ImVec2 label_size = CalcTextSize(label, label_end, false);
 
     const float text_offset_x = g.FontSize + (display_frame ? padding.x * 3 : padding.x * 2);   // Collapsing arrow width + Spacing
-    const float text_offset_y = ImMax(padding.y, window->DC.CurrLineTextBaseOffset);            // Latch before ItemSize changes it
+    const float text_offset_y = use_frame_padding ? ImMax(style.FramePadding.y, window->DC.CurrLineTextBaseOffset) : window->DC.CurrLineTextBaseOffset; // Latch before ItemSize changes it
     const float text_width = g.FontSize + label_size.x + padding.x * 2;                         // Include collapsing arrow
 
-    // We vertically grow up to current line height up the typical widget height.
-    const float frame_height = ImMax(ImMin(window->DC.CurrLineSize.y, g.FontSize + style.FramePadding.y * 2), label_size.y + padding.y * 2);
+    const float frame_height = label_size.y + padding.y * 2;
     const bool span_all_columns = (flags & ImGuiTreeNodeFlags_SpanAllColumns) != 0 && (g.CurrentTable != NULL);
     const bool span_all_columns_label = (flags & ImGuiTreeNodeFlags_LabelSpanAllColumns) != 0 && (g.CurrentTable != NULL);
     ImRect frame_bb;
     frame_bb.Min.x = span_all_columns ? window->ParentWorkRect.Min.x : (flags & ImGuiTreeNodeFlags_SpanFullWidth) ? window->WorkRect.Min.x : window->DC.CursorPos.x;
-    frame_bb.Min.y = window->DC.CursorPos.y;
+    frame_bb.Min.y = window->DC.CursorPos.y + (text_offset_y - padding.y);
     frame_bb.Max.x = span_all_columns ? window->ParentWorkRect.Max.x : (flags & ImGuiTreeNodeFlags_SpanLabelWidth) ? window->DC.CursorPos.x + text_width + padding.x : window->WorkRect.Max.x;
-    frame_bb.Max.y = window->DC.CursorPos.y + frame_height;
+    frame_bb.Max.y = window->DC.CursorPos.y + (text_offset_y - padding.y) + frame_height;
     if (display_frame)
     {
         const float outer_extend = IM_TRUNC(window->WindowPadding.x * 0.5f); // Framed header expand a little outside of current limits

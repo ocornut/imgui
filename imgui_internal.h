@@ -2561,6 +2561,8 @@ struct ImGuiContext
 // [SECTION] ImGuiWindowTempData, ImGuiWindow
 //-----------------------------------------------------------------------------
 
+#define IMGUI_WINDOW_HARD_MIN_SIZE 4.0f
+
 // Transient per-window data, reset at the beginning of the frame. This used to be called ImGuiDrawContext, hence the DC variable name in ImGuiWindow.
 // (That's theory, in practice the delimitation between ImGuiWindow and ImGuiWindowTempData is quite tenuous and could be reconsidered..)
 // (This doesn't need a constructor because we zero-clear it as part of ImGuiWindow and all frame-temporary data are setup on Begin)
