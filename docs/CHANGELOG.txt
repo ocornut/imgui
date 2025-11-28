@@ -77,6 +77,8 @@ Other Changes:
     selects `VkSwapchainCreateInfoKHR`'s `compositeAlpha` value based on
     `cap.supportedCompositeAlpha`, which seems to be required on some Android
      devices. (#8784) [@FelixStach]
+  - Win32: handle WM_IME_CHAR/WM_IME_COMPOSITION to support Unicode inputs on
+    MBCS (non-Unicode) Windows. (#9099, #3653, #5961) [@ulhc, @ocornut, @Othereum]
 - Examples:
    - Win32+DirectX12: ignore seemingly incorrect D3D12_MESSAGE_ID_FENCE_ZERO_WAIT
      warning on startups on some setups. (#9084, #9093) [@RT2Code, @LeoGautheron]
