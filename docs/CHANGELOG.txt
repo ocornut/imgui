@@ -58,6 +58,12 @@ Other Changes:
     selects `VkSwapchainCreateInfoKHR`'s `compositeAlpha` value based on
     `cap.supportedCompositeAlpha`. (#8784) [@FelixStach]
 
+Docking+Viewports Branch:
+
+- Backends:
+  - Win32: viewports created by backend forcefully direct messages to
+    DefWindowProcW() in order to support Unicode text input. (#9099, #3653, #5961) [@ulhc]
+
 
 -----------------------------------------------------------------------
  VERSION 1.92.5 (Released 2025-11-20)

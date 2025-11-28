@@ -1372,7 +1372,7 @@ static LRESULT CALLBACK ImGui_ImplWin32_WndProcHandler_PlatformWindow(HWND hWnd,
     // Allow secondary viewport WndProc to be called regardless of current context
     ImGuiContext* ctx = (ImGuiContext*)::GetPropA(hWnd, "IMGUI_CONTEXT");
     if (ctx == NULL)
-        return DefWindowProc(hWnd, msg, wParam, lParam); // unlike ImGui_ImplWin32_WndProcHandler() we are called directly by Windows, we can't just return 0.
+        return ::DefWindowProcW(hWnd, msg, wParam, lParam); // unlike ImGui_ImplWin32_WndProcHandler() we are called directly by Windows, we can't just return 0.
 
     ImGuiIO& io = ImGui::GetIO(ctx);
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO(ctx);
@@ -1407,7 +1407,7 @@ static LRESULT CALLBACK ImGui_ImplWin32_WndProcHandler_PlatformWindow(HWND hWnd,
         }
     }
     if (result == 0)
-        result = DefWindowProc(hWnd, msg, wParam, lParam);
+        result = ::DefWindowProcW(hWnd, msg, wParam, lParam);
     return result;
 }
 
