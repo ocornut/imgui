@@ -879,6 +879,21 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandlerEx(HWND hwnd, UINT msg, WPA
     case WM_INPUTLANGCHANGE:
         ImGui_ImplWin32_UpdateKeyboardCodePage(io);
         return 0;
+    case WM_IME_CHAR :
+        if (::IsWindowUnicode(hwnd) == FALSE)
+        {
+            unsigned short ch = (unsigned short)wParam;
+            if (::IsDBCSLeadByte(HIBYTE(wParam)))
+            {
+                ch = MAKEWORD(HIBYTE(wParam), LOBYTE(wParam));
+            }
+
+            wchar_t wch = 0;
+            ::MultiByteToWideChar(bd->KeyboardCodePage, MB_PRECOMPOSED, (char*)&ch, sizeof(ch), &wch, 1);
+            io.AddInputCharacterUTF16(wch);
+            return 1;
+        }
+        return 0;
     case WM_CHAR:
         if (::IsWindowUnicode(hwnd))
         {
@@ -1372,7 +1387,7 @@ static LRESULT CALLBACK ImGui_ImplWin32_WndProcHandler_PlatformWindow(HWND hWnd,
     // Allow secondary viewport WndProc to be called regardless of current context
     ImGuiContext* ctx = (ImGuiContext*)::GetPropA(hWnd, "IMGUI_CONTEXT");
     if (ctx == NULL)
-        return DefWindowProc(hWnd, msg, wParam, lParam); // unlike ImGui_ImplWin32_WndProcHandler() we are called directly by Windows, we can't just return 0.
+        return DefWindowProcW(hWnd, msg, wParam, lParam); // unlike ImGui_ImplWin32_WndProcHandler() we are called directly by Windows, we can't just return 0.
 
     ImGuiIO& io = ImGui::GetIO(ctx);
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO(ctx);
@@ -1407,7 +1422,7 @@ static LRESULT CALLBACK ImGui_ImplWin32_WndProcHandler_PlatformWindow(HWND hWnd,
         }
     }
     if (result == 0)
-        result = DefWindowProc(hWnd, msg, wParam, lParam);
+        result = DefWindowProcW(hWnd, msg, wParam, lParam);
     return result;
 }
 
