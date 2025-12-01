@@ -10332,11 +10332,12 @@ static const char* GetMouseSourceName(ImGuiMouseSource source)
 static void DebugPrintInputEvent(const char* prefix, const ImGuiInputEvent* e)
 {
     ImGuiContext& g = *GImGui;
+    char buf[5];
     if (e->Type == ImGuiInputEventType_MousePos)    { if (e->MousePos.PosX == -FLT_MAX && e->MousePos.PosY == -FLT_MAX) IMGUI_DEBUG_LOG_IO("[io] %s: MousePos (-FLT_MAX, -FLT_MAX)\n", prefix); else IMGUI_DEBUG_LOG_IO("[io] %s: MousePos (%.1f, %.1f) (%s)\n", prefix, e->MousePos.PosX, e->MousePos.PosY, GetMouseSourceName(e->MousePos.MouseSource)); return; }
     if (e->Type == ImGuiInputEventType_MouseButton) { IMGUI_DEBUG_LOG_IO("[io] %s: MouseButton %d %s (%s)\n", prefix, e->MouseButton.Button, e->MouseButton.Down ? "Down" : "Up", GetMouseSourceName(e->MouseButton.MouseSource)); return; }
     if (e->Type == ImGuiInputEventType_MouseWheel)  { IMGUI_DEBUG_LOG_IO("[io] %s: MouseWheel (%.3f, %.3f) (%s)\n", prefix, e->MouseWheel.WheelX, e->MouseWheel.WheelY, GetMouseSourceName(e->MouseWheel.MouseSource)); return; }
     if (e->Type == ImGuiInputEventType_Key)         { IMGUI_DEBUG_LOG_IO("[io] %s: Key \"%s\" %s\n", prefix, ImGui::GetKeyName(e->Key.Key), e->Key.Down ? "Down" : "Up"); return; }
-    if (e->Type == ImGuiInputEventType_Text)        { IMGUI_DEBUG_LOG_IO("[io] %s: Text: %c (U+%08X)\n", prefix, e->Text.Char, e->Text.Char); return; }
+    if (e->Type == ImGuiInputEventType_Text)        { ImTextCharToUtf8(buf, e->Text.Char); IMGUI_DEBUG_LOG_IO("[io] %s: Text: '%s' (U+%08X)\n", prefix, buf, e->Text.Char); return; }
     if (e->Type == ImGuiInputEventType_Focus)       { IMGUI_DEBUG_LOG_IO("[io] %s: AppFocused %d\n", prefix, e->AppFocused.Focused); return; }
 }
 #endif
