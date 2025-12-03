@@ -882,10 +882,10 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandlerEx(HWND hwnd, UINT msg, WPA
     case WM_IME_COMPOSITION:
     {
         // Handling WM_IME_COMPOSITION ensure that WM_IME_CHAR value is correct even for MBCS apps.
-        // (see #9099, #3653 and https://stackoverflow.com/questions/77450354 topics) 
+        // (see #9099, #3653 and https://stackoverflow.com/questions/77450354 topics)
         LRESULT result = ::DefWindowProc(hwnd, msg, wParam, lParam);
         return (lParam & GCS_RESULTSTR) ? 1 : result;
-    }    
+    }
     case WM_IME_CHAR :
         if (::IsWindowUnicode(hwnd) == FALSE)
         {
@@ -1158,8 +1158,8 @@ static void ImGui_ImplWin32_CreateWindow(ImGuiViewport* viewport)
     // Create window
     RECT rect = { (LONG)viewport->Pos.x, (LONG)viewport->Pos.y, (LONG)(viewport->Pos.x + viewport->Size.x), (LONG)(viewport->Pos.y + viewport->Size.y) };
     ::AdjustWindowRectEx(&rect, vd->DwStyle, FALSE, vd->DwExStyle);
-    vd->Hwnd = ::CreateWindowExW(
-        vd->DwExStyle, L"ImGui Platform", L"Untitled", vd->DwStyle,       // Style, class name, window name
+    vd->Hwnd = ::CreateWindowEx(
+        vd->DwExStyle, TEXT("ImGui Platform"), TEXT("Untitled"), vd->DwStyle,   // Style, class name, window name
         rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top,    // Window area
         vd->HwndParent, nullptr, ::GetModuleHandle(nullptr), nullptr);          // Owner window, Menu, Instance, Param
     vd->HwndOwned = true;
@@ -1391,7 +1391,7 @@ static LRESULT CALLBACK ImGui_ImplWin32_WndProcHandler_PlatformWindow(HWND hWnd,
     // Allow secondary viewport WndProc to be called regardless of current context
     ImGuiContext* ctx = (ImGuiContext*)::GetPropA(hWnd, "IMGUI_CONTEXT");
     if (ctx == NULL)
-        return DefWindowProcW(hWnd, msg, wParam, lParam); // unlike ImGui_ImplWin32_WndProcHandler() we are called directly by Windows, we can't just return 0.
+        return DefWindowProc(hWnd, msg, wParam, lParam); // unlike ImGui_ImplWin32_WndProcHandler() we are called directly by Windows, we can't just return 0.
 
     ImGuiIO& io = ImGui::GetIO(ctx);
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO(ctx);
@@ -1426,14 +1426,14 @@ static LRESULT CALLBACK ImGui_ImplWin32_WndProcHandler_PlatformWindow(HWND hWnd,
         }
     }
     if (result == 0)
-        result = DefWindowProcW(hWnd, msg, wParam, lParam);
+        result = DefWindowProc(hWnd, msg, wParam, lParam);
     return result;
 }
 
 static void ImGui_ImplWin32_InitMultiViewportSupport(bool platform_has_own_dc)
 {
-    WNDCLASSEXW wcex;
-    wcex.cbSize = sizeof(WNDCLASSEXW);
+    WNDCLASSEX wcex;
+    wcex.cbSize = sizeof(WNDCLASSEX);
     wcex.style = CS_HREDRAW | CS_VREDRAW | (platform_has_own_dc ? CS_OWNDC : 0);
     wcex.lpfnWndProc = ImGui_ImplWin32_WndProcHandler_PlatformWindow;
     wcex.cbClsExtra = 0;
@@ -1443,9 +1443,9 @@ static void ImGui_ImplWin32_InitMultiViewportSupport(bool platform_has_own_dc)
     wcex.hCursor = nullptr;
     wcex.hbrBackground = (HBRUSH)(COLOR_BACKGROUND + 1);
     wcex.lpszMenuName = nullptr;
-    wcex.lpszClassName = L"ImGui Platform";
+    wcex.lpszClassName = TEXT("ImGui Platform");
     wcex.hIconSm = nullptr;
-    ::RegisterClassExW(&wcex);
+    ::RegisterClassEx(&wcex);
 
     ImGui_ImplWin32_UpdateMonitors();
 
@@ -1479,7 +1479,7 @@ static void ImGui_ImplWin32_InitMultiViewportSupport(bool platform_has_own_dc)
 
 static void ImGui_ImplWin32_ShutdownMultiViewportSupport()
 {
-    ::UnregisterClassW(L"ImGui Platform", ::GetModuleHandle(nullptr));
+    ::UnregisterClass(TEXT("ImGui Platform"), ::GetModuleHandle(nullptr));
     ImGui::DestroyPlatformWindows();
 }
 
