@@ -879,15 +879,19 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandlerEx(HWND hwnd, UINT msg, WPA
     case WM_INPUTLANGCHANGE:
         ImGui_ImplWin32_UpdateKeyboardCodePage(io);
         return 0;
+    case WM_IME_COMPOSITION:
+    {
+        // Handling WM_IME_COMPOSITION ensure that WM_IME_CHAR value is correct even for MBCS apps.
+        // (see #9099, #3653 and https://stackoverflow.com/questions/77450354 topics) 
+        LRESULT result = ::DefWindowProc(hwnd, msg, wParam, lParam);
+        return (lParam & GCS_RESULTSTR) ? 1 : result;
+    }    
     case WM_IME_CHAR :
         if (::IsWindowUnicode(hwnd) == FALSE)
         {
             unsigned short ch = (unsigned short)wParam;
             if (::IsDBCSLeadByte(HIBYTE(wParam)))
-            {
                 ch = MAKEWORD(HIBYTE(wParam), LOBYTE(wParam));
-            }
-
             wchar_t wch = 0;
             ::MultiByteToWideChar(bd->KeyboardCodePage, MB_PRECOMPOSED, (char*)&ch, sizeof(ch), &wch, 1);
             io.AddInputCharacterUTF16(wch);
