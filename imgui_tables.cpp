@@ -335,7 +335,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     // - always performing the GetOrAddByKey() O(log N) query in g.Tables.Map[].
     const bool use_child_window = (flags & (ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY)) != 0;
     const ImVec2 avail_size = GetContentRegionAvail();
-    const ImVec2 actual_outer_size = ImTrunc(CalcItemSize(outer_size, ImMax(avail_size.x, 1.0f), use_child_window ? ImMax(avail_size.y, 1.0f) : 0.0f));
+    const ImVec2 actual_outer_size = ImTrunc(CalcItemSize(outer_size, ImMax(avail_size.x, IMGUI_WINDOW_HARD_MIN_SIZE), use_child_window ? ImMax(avail_size.y, IMGUI_WINDOW_HARD_MIN_SIZE) : 0.0f));
     const ImRect outer_rect(outer_window->DC.CursorPos, outer_window->DC.CursorPos + actual_outer_size);
     const bool outer_window_is_measuring_size = (outer_window->AutoFitFramesX > 0) || (outer_window->AutoFitFramesY > 0); // Doesn't apply to AlwaysAutoResize windows!
     if (use_child_window && IsClippedEx(outer_rect, 0) && !outer_window_is_measuring_size)
@@ -1383,7 +1383,7 @@ void    ImGui::EndTable()
     inner_window->DC.PrevLineSize = temp_data->HostBackupPrevLineSize;
     inner_window->DC.CurrLineSize = temp_data->HostBackupCurrLineSize;
     inner_window->DC.CursorMaxPos = temp_data->HostBackupCursorMaxPos;
-    const float inner_content_max_y = table->RowPosY2;
+    const float inner_content_max_y = ImCeil(table->RowPosY2); // Rounding final position is important as we currently don't round row height ('Demo->Tables->Outer Size' demo uses non-integer heights)
     IM_ASSERT(table->RowPosY2 == inner_window->DC.CursorPos.y);
     if (inner_window != outer_window)
         inner_window->DC.CursorMaxPos.y = inner_content_max_y;
@@ -2457,6 +2457,11 @@ void ImGui::TableUpdateColumnsWeightFromWidth(ImGuiTable* table)
 // - TableGetColumnBorderCol() [Internal]
 // - TableDrawBorders() [Internal]
 //-------------------------------------------------------------------------
+
+
+// FIXME: This could be abstracted and merged with PushColumnsBackground(), by creating a generic struct
+// with storage for backup cliprect + backup channel + storage for splitter pointer, new clip rect.
+// This would slightly simplify caller code.
 
 // Bg2 is used by Selectable (and possibly other widgets) to render to the background.
 // Unlike our Bg0/1 channel which we uses for RowBg/CellBg/Borders and where we guarantee all shapes to be CPU-clipped, the Bg2 channel being widgets-facing will rely on regular ClipRect.

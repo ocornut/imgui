@@ -188,7 +188,7 @@
 -(NSWindow*)window
 {
     if (_window != nil)
-        return (_window);
+        return _window;
 
     NSRect viewRect = NSMakeRect(100.0, 100.0, 100.0 + 1280.0, 100 + 800.0);
 
@@ -198,7 +198,7 @@
     [_window setOpaque:YES];
     [_window makeKeyAndOrderFront:NSApp];
 
-    return (_window);
+    return _window;
 }
 
 -(void)setupMenu

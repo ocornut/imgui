@@ -23,6 +23,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2025-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2025-12-03: Inputs: handle WM_IME_CHAR/WM_IME_COMPOSITION messages to support Unicode inputs on MBCS (non-Unicode) Windows. (#9099, #3653, #5961)
 //  2025-10-19: Inputs: Revert previous change to allow for io.ClearInputKeys() on focus-out not losing gamepad state.
 //  2025-09-23: Inputs: Minor optimization not submitting gamepad input if packet number has not changed.
 //  2025-09-18: Call platform_io.ClearPlatformHandlers() on shutdown.
@@ -889,8 +890,26 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandlerEx(HWND hwnd, UINT msg, WPA
         else
         {
             wchar_t wch = 0;
-            ::MultiByteToWideChar(bd->KeyboardCodePage, MB_PRECOMPOSED, (char*)&wParam, 1, &wch, 1);
+            ::MultiByteToWideChar(bd->KeyboardCodePage, MB_PRECOMPOSED, (char*)&wParam, 2, &wch, 1);
             io.AddInputCharacter(wch);
+        }
+        return 0;
+    case WM_IME_COMPOSITION:
+    {
+        // Handling WM_IME_COMPOSITION ensure that WM_IME_CHAR value is correct even for MBCS apps.
+        // (see #9099, #3653 and https://stackoverflow.com/questions/77450354 topics) 
+        LRESULT result = ::DefWindowProcW(hwnd, msg, wParam, lParam);
+        return (lParam & GCS_RESULTSTR) ? 1 : result;
+    }
+    case WM_IME_CHAR:
+        if (::IsWindowUnicode(hwnd) == FALSE)
+        {
+            if (::IsDBCSLeadByte(HIBYTE(wParam)))
+                wParam = (WPARAM)MAKEWORD(HIBYTE(wParam), LOBYTE(wParam));
+            wchar_t wch = 0;
+            ::MultiByteToWideChar(bd->KeyboardCodePage, MB_PRECOMPOSED, (char*)&wParam, 2, &wch, 1);
+            io.AddInputCharacterUTF16(wch);
+            return 1;
         }
         return 0;
     case WM_SETCURSOR:

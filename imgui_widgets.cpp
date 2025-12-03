@@ -1840,7 +1840,7 @@ static int IMGUI_CDECL ShrinkWidthItemComparer(const void* lhs, const void* rhs)
     const ImGuiShrinkWidthItem* b = (const ImGuiShrinkWidthItem*)rhs;
     if (int d = (int)(b->Width - a->Width))
         return d;
-    return (b->Index - a->Index);
+    return b->Index - a->Index;
 }
 
 // Shrink excess width from a set of item, by removing width from the larger items first.
@@ -6782,7 +6782,6 @@ static void TreeNodeStoreStackData(ImGuiTreeNodeFlags flags, float x1)
         window->DC.TreeRecordsClippedNodesY2Mask |= (1 << window->DC.TreeDepth);
 }
 
-// When using public API, currently 'id == storage_id' is always true, but we separate the values to facilitate advanced user code doing storage queries outside of UI loop.
 bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* label, const char* label_end)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -6791,26 +6790,28 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
 
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
+
+    // When not framed, we vertically increase height up to typical framed widget height
     const bool display_frame = (flags & ImGuiTreeNodeFlags_Framed) != 0;
-    const ImVec2 padding = (display_frame || (flags & ImGuiTreeNodeFlags_FramePadding)) ? style.FramePadding : ImVec2(style.FramePadding.x, ImMin(window->DC.CurrLineTextBaseOffset, style.FramePadding.y));
+    const bool use_frame_padding = (display_frame || (flags & ImGuiTreeNodeFlags_FramePadding));
+    const ImVec2 padding = use_frame_padding ? style.FramePadding : ImVec2(style.FramePadding.x, ImMin(window->DC.CurrLineTextBaseOffset, style.FramePadding.y));
 
     if (!label_end)
         label_end = FindRenderedTextEnd(label);
     const ImVec2 label_size = CalcTextSize(label, label_end, false);
 
     const float text_offset_x = g.FontSize + (display_frame ? padding.x * 3 : padding.x * 2);   // Collapsing arrow width + Spacing
-    const float text_offset_y = ImMax(padding.y, window->DC.CurrLineTextBaseOffset);            // Latch before ItemSize changes it
+    const float text_offset_y = use_frame_padding ? ImMax(style.FramePadding.y, window->DC.CurrLineTextBaseOffset) : window->DC.CurrLineTextBaseOffset; // Latch before ItemSize changes it
     const float text_width = g.FontSize + label_size.x + padding.x * 2;                         // Include collapsing arrow
 
-    // We vertically grow up to current line height up the typical widget height.
-    const float frame_height = ImMax(ImMin(window->DC.CurrLineSize.y, g.FontSize + style.FramePadding.y * 2), label_size.y + padding.y * 2);
+    const float frame_height = label_size.y + padding.y * 2;
     const bool span_all_columns = (flags & ImGuiTreeNodeFlags_SpanAllColumns) != 0 && (g.CurrentTable != NULL);
     const bool span_all_columns_label = (flags & ImGuiTreeNodeFlags_LabelSpanAllColumns) != 0 && (g.CurrentTable != NULL);
     ImRect frame_bb;
     frame_bb.Min.x = span_all_columns ? window->ParentWorkRect.Min.x : (flags & ImGuiTreeNodeFlags_SpanFullWidth) ? window->WorkRect.Min.x : window->DC.CursorPos.x;
-    frame_bb.Min.y = window->DC.CursorPos.y;
+    frame_bb.Min.y = window->DC.CursorPos.y + (text_offset_y - padding.y);
     frame_bb.Max.x = span_all_columns ? window->ParentWorkRect.Max.x : (flags & ImGuiTreeNodeFlags_SpanLabelWidth) ? window->DC.CursorPos.x + text_width + padding.x : window->WorkRect.Max.x;
-    frame_bb.Max.y = window->DC.CursorPos.y + frame_height;
+    frame_bb.Max.y = window->DC.CursorPos.y + (text_offset_y - padding.y) + frame_height;
     if (display_frame)
     {
         const float outer_extend = IM_TRUNC(window->WindowPadding.x * 0.5f); // Framed header expand a little outside of current limits
@@ -9203,7 +9204,8 @@ bool ImGui::BeginMenuEx(const char* label, const char* icon, bool enabled)
     // The reference position stored in popup_pos will be used by Begin() to find a suitable position for the child menu,
     // However the final position is going to be different! It is chosen by FindBestWindowPosForPopup().
     // e.g. Menus tend to overlap each other horizontally to amplify relative Z-ordering.
-    ImVec2 popup_pos, pos = window->DC.CursorPos;
+    ImVec2 popup_pos;
+    ImVec2 pos = window->DC.CursorPos;
     PushID(label);
     if (!enabled)
         BeginDisabled();
@@ -9217,34 +9219,34 @@ bool ImGui::BeginMenuEx(const char* label, const char* icon, bool enabled)
         // Menu inside a horizontal menu bar
         // Selectable extend their highlight by half ItemSpacing in each direction.
         // For ChildMenu, the popup position will be overwritten by the call to FindBestWindowPosForPopup() in Begin()
-        popup_pos = ImVec2(pos.x - 1.0f - IM_TRUNC(style.ItemSpacing.x * 0.5f), pos.y - style.FramePadding.y + window->MenuBarHeight);
         window->DC.CursorPos.x += IM_TRUNC(style.ItemSpacing.x * 0.5f);
         PushStyleVarX(ImGuiStyleVar_ItemSpacing, style.ItemSpacing.x * 2.0f);
         float w = label_size.x;
-        ImVec2 text_pos(window->DC.CursorPos.x + offsets->OffsetLabel, window->DC.CursorPos.y + window->DC.CurrLineTextBaseOffset);
+        ImVec2 text_pos(window->DC.CursorPos.x + offsets->OffsetLabel, pos.y + window->DC.CurrLineTextBaseOffset);
         pressed = Selectable("", menu_is_open, selectable_flags, ImVec2(w, label_size.y));
         LogSetNextTextDecoration("[", "]");
         RenderText(text_pos, label);
         PopStyleVar();
         window->DC.CursorPos.x += IM_TRUNC(style.ItemSpacing.x * (-1.0f + 0.5f)); // -1 spacing to compensate the spacing added when Selectable() did a SameLine(). It would also work to call SameLine() ourselves after the PopStyleVar().
+        popup_pos = ImVec2(pos.x - 1.0f - IM_TRUNC(style.ItemSpacing.x * 0.5f), text_pos.y - style.FramePadding.y + window->MenuBarHeight);
     }
     else
     {
         // Menu inside a regular/vertical menu
         // (In a typical menu window where all items are BeginMenu() or MenuItem() calls, extra_w will always be 0.0f.
         //  Only when they are other items sticking out we're going to add spacing, yet only register minimum width into the layout system.)
-        popup_pos = ImVec2(pos.x, pos.y - style.WindowPadding.y);
         float icon_w = (icon && icon[0]) ? CalcTextSize(icon, NULL).x : 0.0f;
         float checkmark_w = IM_TRUNC(g.FontSize * 1.20f);
         float min_w = window->DC.MenuColumns.DeclColumns(icon_w, label_size.x, 0.0f, checkmark_w); // Feedback to next frame
         float extra_w = ImMax(0.0f, GetContentRegionAvail().x - min_w);
-        ImVec2 text_pos(window->DC.CursorPos.x + offsets->OffsetLabel, window->DC.CursorPos.y + window->DC.CurrLineTextBaseOffset);
+        ImVec2 text_pos(window->DC.CursorPos.x, pos.y + window->DC.CurrLineTextBaseOffset);
         pressed = Selectable("", menu_is_open, selectable_flags | ImGuiSelectableFlags_SpanAvailWidth, ImVec2(min_w, label_size.y));
         LogSetNextTextDecoration("", ">");
-        RenderText(text_pos, label);
+        RenderText(ImVec2(text_pos.x + offsets->OffsetLabel, text_pos.y), label);
         if (icon_w > 0.0f)
-            RenderText(pos + ImVec2(offsets->OffsetIcon, 0.0f), icon);
-        RenderArrow(window->DrawList, pos + ImVec2(offsets->OffsetMark + extra_w + g.FontSize * 0.30f, 0.0f), GetColorU32(ImGuiCol_Text), ImGuiDir_Right);
+            RenderText(ImVec2(text_pos.x + offsets->OffsetIcon, text_pos.y), icon);
+        RenderArrow(window->DrawList, ImVec2(text_pos.x + offsets->OffsetMark + extra_w + g.FontSize * 0.30f, text_pos.y), GetColorU32(ImGuiCol_Text), ImGuiDir_Right);
+        popup_pos = ImVec2(pos.x, text_pos.y - style.WindowPadding.y);
     }
     if (!enabled)
         EndDisabled();
@@ -9445,21 +9447,22 @@ bool ImGui::MenuItemEx(const char* label, const char* icon, const char* shortcut
         float checkmark_w = IM_TRUNC(g.FontSize * 1.20f);
         float min_w = window->DC.MenuColumns.DeclColumns(icon_w, label_size.x, shortcut_w, checkmark_w); // Feedback for next frame
         float stretch_w = ImMax(0.0f, GetContentRegionAvail().x - min_w);
+        ImVec2 text_pos(pos.x, pos.y + window->DC.CurrLineTextBaseOffset);
         pressed = Selectable("", false, selectable_flags | ImGuiSelectableFlags_SpanAvailWidth, ImVec2(min_w, label_size.y));
         if (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_Visible)
         {
-            RenderText(pos + ImVec2(offsets->OffsetLabel, 0.0f), label);
+            RenderText(text_pos + ImVec2(offsets->OffsetLabel, 0.0f), label);
             if (icon_w > 0.0f)
-                RenderText(pos + ImVec2(offsets->OffsetIcon, 0.0f), icon);
+                RenderText(text_pos + ImVec2(offsets->OffsetIcon, 0.0f), icon);
             if (shortcut_w > 0.0f)
             {
                 PushStyleColor(ImGuiCol_Text, style.Colors[ImGuiCol_TextDisabled]);
                 LogSetNextTextDecoration("(", ")");
-                RenderText(pos + ImVec2(offsets->OffsetShortcut + stretch_w, 0.0f), shortcut, NULL, false);
+                RenderText(text_pos + ImVec2(offsets->OffsetShortcut + stretch_w, 0.0f), shortcut, NULL, false);
                 PopStyleColor();
             }
             if (selected)
-                RenderCheckMark(window->DrawList, pos + ImVec2(offsets->OffsetMark + stretch_w + g.FontSize * 0.40f, g.FontSize * 0.134f * 0.5f), GetColorU32(ImGuiCol_Text), g.FontSize * 0.866f);
+                RenderCheckMark(window->DrawList, text_pos + ImVec2(offsets->OffsetMark + stretch_w + g.FontSize * 0.40f, g.FontSize * 0.134f * 0.5f), GetColorU32(ImGuiCol_Text), g.FontSize * 0.866f);
         }
     }
     IMGUI_TEST_ENGINE_ITEM_INFO(g.LastItemData.ID, label, g.LastItemData.StatusFlags | ImGuiItemStatusFlags_Checkable | (selected ? ImGuiItemStatusFlags_Checked : 0));
