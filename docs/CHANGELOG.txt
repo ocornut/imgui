@@ -66,6 +66,9 @@ Other Changes:
     advance table parent layout by +0/+1 depending on its visibility.
 - Scrollbar: fixed a codepath leading to a divide-by-zero (which would not be
   noticeable by user but detected by sanitizers). (#9089) [@judicaelclair]
+- Debug Tools:
+  - Debug Log: fixed incorrectly printing characters in IO log when submitting
+    non-ASCII values to io.AddInputCharacter(). (#9099)
 - Backends:
   - SDL_GPU3: macOS version can use MSL shaders in order to support macOS 10.14+
     (vs Metallib shaders requiring macOS 14+). Requires application calling
