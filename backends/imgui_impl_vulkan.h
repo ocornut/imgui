@@ -75,7 +75,25 @@
 // Backend uses a small number of descriptors per font atlas + as many as additional calls done to ImGui_ImplVulkan_AddTexture().
 #define IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE   (8)     // Minimum per atlas
 
-// Specify settings to create pipeline and swapchain
+struct ImGui_ImplVulkan_CustomShadersInfo
+{
+    // (Optional) Customize default vertex/fragment shaders if not VK_NULL_HANDLE, otherwise we use defaults.
+    // - Shader inputs/outputs need to match ours.
+    // - Specialization used only if the relevant custom shader is provided
+    VkShaderModule CustomShaderVert;
+    VkSpecializationInfo* SpecializationInfoVert;
+    VkShaderModule CustomShaderFrag;
+    VkSpecializationInfo* SpecializationInfoFrag;
+
+    // Optional if any of the custom shaders is used
+
+    // The vertex shader already uses push constant range [0, 4 * sizeof(float)[
+    // If PushConstantSize is non zero, it will be registered at offset 4 * sizeof(float)
+    uint32_t PushConstantSize;
+    VkShaderStageFlags PushConstantStages;
+};
+
+// Specify settings to create the main rendering pipeline
 struct ImGui_ImplVulkan_PipelineInfo
 {
     // For Main viewport only
@@ -88,8 +106,27 @@ struct ImGui_ImplVulkan_PipelineInfo
     VkPipelineRenderingCreateInfoKHR PipelineRenderingCreateInfo;   // Optional, valid if .sType == VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR
 #endif
 
-    // For Secondary viewports only (created/managed by backend)
-    VkImageUsageFlags               SwapChainImageUsage;            // Extra flags for vkCreateSwapchainKHR() calls for secondary viewports. We automatically add VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT. You can add e.g. VK_IMAGE_USAGE_TRANSFER_SRC_BIT if you need to capture from viewports.
+    // Optional
+    ImGui_ImplVulkan_CustomShadersInfo CustomShadersInfo;
+};
+
+struct ImGui_ImplVulkan_SecondaryViewportsInfo
+{
+    // Ignored if .format == VK_FORMAT_UNDEFINED
+    VkSurfaceFormatKHR              DesiredFormat;
+    // Ignored if set to VK_PRESENT_MODE_MAX_ENUM_KHR
+    // The default zero initialized value is VK_PRESENT_MODE_IMMEDIATE_KHR!
+    VkPresentModeKHR                DesiredPresentMode;
+
+    // Extra flags for vkCreateSwapchainKHR() calls for secondary viewports. We automatically add VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT. You can add e.g. VK_IMAGE_USAGE_TRANSFER_SRC_BIT if you need to capture from viewports.
+    VkImageUsageFlags               SwapChainImageUsage;
+
+    // Optional
+    typedef ImGui_ImplVulkan_CustomShadersInfo (*GetCustomShaderCallback)(const void*, VkSurfaceFormatKHR);
+    // If provided, called back to optionaly provide viewports custom shaders based on their surface format
+    GetCustomShaderCallback         GetCustomShadersInfo;
+    // User data for GetCustomShaderCallback
+    const void*                     UserData;
 };
 
 // Initialization data, for ImGui_ImplVulkan_Init()
@@ -116,11 +153,12 @@ struct ImGui_ImplVulkan_InitInfo
 
     // Pipeline
     ImGui_ImplVulkan_PipelineInfo   PipelineInfoMain;           // Infos for Main Viewport (created by app/user)
-    ImGui_ImplVulkan_PipelineInfo   PipelineInfoForViewports;   // Infos for Secondary Viewports (created by backend)
     //VkRenderPass                  RenderPass;                 // --> Since 2025/09/26: set 'PipelineInfoMain.RenderPass' instead
     //uint32_t                      Subpass;                    // --> Since 2025/09/26: set 'PipelineInfoMain.Subpass' instead
     //VkSampleCountFlagBits         MSAASamples;                // --> Since 2025/09/26: set 'PipelineInfoMain.MSAASamples' instead
     //VkPipelineRenderingCreateInfoKHR PipelineRenderingCreateInfo; // Since 2025/09/26: set 'PipelineInfoMain.PipelineRenderingCreateInfo' instead
+    // (Optional) Secondary viewports init info
+    ImGui_ImplVulkan_SecondaryViewportsInfo SecondaryViewportsInfo;
 
     // (Optional) Dynamic Rendering
     // Need to explicitly enable VK_KHR_dynamic_rendering extension to use this, even for Vulkan 1.3 + setup PipelineInfoMain.PipelineRenderingCreateInfo and PipelineInfoViewports.PipelineRenderingCreateInfo.
@@ -130,25 +168,20 @@ struct ImGui_ImplVulkan_InitInfo
     const VkAllocationCallbacks*    Allocator;
     void                            (*CheckVkResultFn)(VkResult err);
     VkDeviceSize                    MinAllocationSize;          // Minimum allocation size. Set to 1024*1024 to satisfy zealous best practices validation layer and waste a little memory.
-
-    // (Optional) Customize default vertex/fragment shaders.
-    // - if .sType == VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO we use specified structs, otherwise we use defaults.
-    // - Shader inputs/outputs need to match ours. Code/data pointed to by the structure needs to survive for whole during of backend usage.
-    VkShaderModuleCreateInfo        CustomShaderVertCreateInfo;
-    VkShaderModuleCreateInfo        CustomShaderFragCreateInfo;
 };
 
 // Follow "Getting Started" link and check examples/ folder to learn about using backends!
 IMGUI_IMPL_API bool             ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info);
 IMGUI_IMPL_API void             ImGui_ImplVulkan_Shutdown();
 IMGUI_IMPL_API void             ImGui_ImplVulkan_NewFrame();
-IMGUI_IMPL_API void             ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer, VkPipeline pipeline = VK_NULL_HANDLE);
+IMGUI_IMPL_API void             ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer, VkPipeline pipeline = VK_NULL_HANDLE, VkPipelineLayout layout = VK_NULL_HANDLE);
 IMGUI_IMPL_API void             ImGui_ImplVulkan_SetMinImageCount(uint32_t min_image_count); // To override MinImageCount after initialization (e.g. if swap chain is recreated)
 
 // (Advanced) Use e.g. if you need to recreate pipeline without reinitializing the backend (see #8110, #8111)
 // The main window pipeline will be created by ImGui_ImplVulkan_Init() if possible (== RenderPass xor (UseDynamicRendering && PipelineRenderingCreateInfo->sType == VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR))
 // Else, the pipeline can be created, or re-created, using ImGui_ImplVulkan_CreateMainPipeline() before rendering.
 IMGUI_IMPL_API void             ImGui_ImplVulkan_CreateMainPipeline(const ImGui_ImplVulkan_PipelineInfo* info);
+IMGUI_IMPL_API VkPipelineLayout ImGui_ImplVulkan_GetMainPipelineLayout();
 
 // (Advanced) Use e.g. if you need to precisely control the timing of texture updates (e.g. for staged rendering), by setting ImDrawData::Textures = NULL to handle this manually.
 IMGUI_IMPL_API void             ImGui_ImplVulkan_UpdateTexture(ImTextureData* tex);
@@ -162,6 +195,10 @@ IMGUI_IMPL_API void             ImGui_ImplVulkan_RemoveTexture(VkDescriptorSet d
 // Optional: load Vulkan functions with a custom function loader
 // This is only useful with IMGUI_IMPL_VULKAN_NO_PROTOTYPES / VK_NO_PROTOTYPES
 IMGUI_IMPL_API bool             ImGui_ImplVulkan_LoadFunctions(uint32_t api_version, PFN_vkVoidFunction(*loader_func)(const char* function_name, void* user_data), void* user_data = nullptr);
+
+// (Advanced) If you want to control secondary viewports without reinitializing the backend
+// Secondary viewports equivalent of ImGui_ImplVulkan_CreateMainPipeline()
+IMGUI_IMPL_API void             ImGui_ImplVulkan_SetSecondaryViewportsOptions(const ImGui_ImplVulkan_SecondaryViewportsInfo* info);
 
 // [BETA] Selected render state data shared with callbacks.
 // This is temporarily stored in GetPlatformIO().Renderer_RenderState during the ImGui_ImplVulkan_RenderDrawData() call.
@@ -236,7 +273,9 @@ struct ImGui_ImplVulkanH_Window
     VkSwapchainKHR      Swapchain;
     VkSurfaceKHR        Surface;
     VkSurfaceFormatKHR  SurfaceFormat;
+    VkSurfaceFormatKHR  DesiredSurfaceFormat;
     VkPresentModeKHR    PresentMode;
+    VkPresentModeKHR    DesiredPresentMode;
     VkRenderPass        RenderPass;
     bool                UseDynamicRendering;
     bool                ClearEnable;
