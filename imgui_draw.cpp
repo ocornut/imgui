@@ -4596,10 +4596,7 @@ static bool ImGui_ImplStbTrueType_FontSrcInit(ImFontAtlas* atlas, ImFontConfig* 
     if (src->MergeMode && src->SizePixels == 0.0f)
         src->SizePixels = ref_size;
 
-    if (src->SizePixels >= 0.0f)
-        bd_font_data->ScaleFactor = stbtt_ScaleForPixelHeight(&bd_font_data->FontInfo, 1.0f);
-    else
-        bd_font_data->ScaleFactor = stbtt_ScaleForMappingEmToPixels(&bd_font_data->FontInfo, 1.0f);
+    bd_font_data->ScaleFactor = stbtt_ScaleForPixelHeight(&bd_font_data->FontInfo, 1.0f);
     if (src->MergeMode && src->SizePixels != 0.0f && ref_size != 0.0f)
         bd_font_data->ScaleFactor *= src->SizePixels / ref_size; // FIXME-NEWATLAS: Should tidy up that a bit
 
