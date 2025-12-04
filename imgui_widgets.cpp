@@ -1440,7 +1440,10 @@ void ImGui::ProgressBar(float fraction, const ImVec2& size_arg, const char* over
     // Render
     RenderFrame(bb.Min, bb.Max, GetColorU32(ImGuiCol_FrameBg), true, style.FrameRounding);
     bb.Expand(ImVec2(-style.FrameBorderSize, -style.FrameBorderSize));
-    RenderRectFilledRangeH(window->DrawList, bb, GetColorU32(ImGuiCol_PlotHistogram), fill_n0, fill_n1, style.FrameRounding);
+    float fill_x0 = ImLerp(bb.Min.x, bb.Max.x, fill_n0);
+    float fill_x1 = ImLerp(bb.Min.x, bb.Max.x, fill_n1);
+    if (fill_x0 < fill_x1)
+        RenderRectFilledInRangeH(window->DrawList, bb, GetColorU32(ImGuiCol_PlotHistogram), fill_x0, fill_x1, style.FrameRounding);
 
     // Default displaying the fraction as percentage string, but user can override it
     // Don't display text for indeterminate bars by default
@@ -1456,7 +1459,7 @@ void ImGui::ProgressBar(float fraction, const ImVec2& size_arg, const char* over
         ImVec2 overlay_size = CalcTextSize(overlay, NULL);
         if (overlay_size.x > 0.0f)
         {
-            float text_x = is_indeterminate ? (bb.Min.x + bb.Max.x - overlay_size.x) * 0.5f : ImLerp(bb.Min.x, bb.Max.x, fill_n1) + style.ItemSpacing.x;
+            float text_x = is_indeterminate ? (bb.Min.x + bb.Max.x - overlay_size.x) * 0.5f : fill_x1 + style.ItemSpacing.x;
             RenderTextClipped(ImVec2(ImClamp(text_x, bb.Min.x, bb.Max.x - overlay_size.x - style.ItemInnerSpacing.x), bb.Min.y), bb.Max, overlay, NULL, &overlay_size, ImVec2(0.0f, 0.5f), &bb);
         }
     }
