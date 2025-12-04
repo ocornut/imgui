@@ -5915,13 +5915,13 @@ static inline float ImAcos01(float x)
 // FIXME: Cleanup and move code to ImDrawList.
 // - Before 2025-12-04: RenderRectFilledRangeH()   with 'float x_start_norm, float x_end_norm` <- normalized
 // - After  2025-12-04: RenderRectFilledInRangeH() with 'float x1, float x2'                   <- absolute coords!!
-void ImGui::RenderRectFilledInRangeH(ImDrawList* draw_list, const ImRect& rect, ImU32 col, float x1, float x2, float rounding)
+void ImGui::RenderRectFilledInRangeH(ImDrawList* draw_list, const ImRect& rect, ImU32 col, float fill_x0, float fill_x1, float rounding)
 {
-    if (x1 == x2)
+    if (fill_x0 > fill_x1)
         return;
 
-    ImVec2 p0 = ImVec2(x1, rect.Min.y);
-    ImVec2 p1 = ImVec2(x2, rect.Max.y);
+    ImVec2 p0 = ImVec2(fill_x0, rect.Min.y);
+    ImVec2 p1 = ImVec2(fill_x1, rect.Max.y);
     if (rounding == 0.0f)
     {
         draw_list->AddRectFilled(p0, p1, col, 0.0f);
