@@ -43,11 +43,14 @@ Breaking Changes:
 
 Other Changes:
 
-- Fonts: fixed handling of `ImFontConfig::FontDataOwnedByAtlas = false` which
-  did erroneously make a copy of the font data, essentially defeating the purpose
-  of this flag and wasting memory.
-  Undetected since July 2015 and now spotted by @TellowKrinkle, this is perhaps
-  the oldest bug in Dear ImGui history (albeit for a rarely used feature)! (#9086)
+- Fonts:
+  - Fixed handling of `ImFontConfig::FontDataOwnedByAtlas = false` which
+    did erroneously make a copy of the font data, essentially defeating the purpose
+    of this flag and wasting memory.
+    Undetected since July 2015 and now spotted by @TellowKrinkle, this is perhaps
+    the oldest bug in Dear ImGui history (albeit for a rarely used feature)! (#9086)
+  - Fixed an issue related to EllipsisChar handling, while changing
+    font loader or font loader flags dynamically in Style->Fonts menus.
 - Textures:
   - Fixed a building issue when ImTextureID is defined as a struct.
   - Fixed displaying texture # in Metrics/Debugger window.
