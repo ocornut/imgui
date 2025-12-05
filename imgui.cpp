@@ -3925,16 +3925,13 @@ void ImGui::RenderFrameBorder(ImVec2 p_min, ImVec2 p_max, float rounding)
     }
 }
 
-// FIXME: Might move those to style if there is a real need.
-static const ImU32 GColorMarkers[4] = { IM_COL32(240,20,20,255), IM_COL32(20,240,20,255), IM_COL32(20,20,240,255), IM_COL32(140,140,140,255) };
-
-void ImGui::RenderColorComponentMarker(int component_idx, const ImRect& bb, float rounding)
+void ImGui::RenderColorComponentMarker(const ImRect& bb, ImU32 col, float rounding)
 {
-    if (!(component_idx >= 0 && component_idx < 4) || (bb.Min.x + 1 >= bb.Max.x))
+    if (bb.Min.x + 1 >= bb.Max.x)
         return;
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    RenderRectFilledInRangeH(window->DrawList, bb, GetColorU32(GColorMarkers[component_idx]), bb.Min.x, ImMin(bb.Min.x + g.Style.ColorMarkerSize, bb.Max.x), rounding);
+    RenderRectFilledInRangeH(window->DrawList, bb, col, bb.Min.x, ImMin(bb.Min.x + g.Style.ColorMarkerSize, bb.Max.x), rounding);
 }
 
 void ImGui::RenderNavCursor(const ImRect& bb, ImGuiID id, ImGuiNavRenderCursorFlags flags)
