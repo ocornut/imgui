@@ -64,6 +64,9 @@ Other Changes:
     between hard minimum window size and table minimum size).
   - Fixed an issue where submitting non-integer row heights would eventually
     advance table parent layout by +0/+1 depending on its visibility.
+- Text:
+  - Fixed low-level word-wrapping function reading from *text_end when passed
+    a string range. (#9107) [@achabense]
 - Scrollbar: fixed a codepath leading to a divide-by-zero (which would not be
   noticeable by user but detected by sanitizers). (#9089) [@judicaelclair]
 - Debug Tools:

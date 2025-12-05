@@ -5364,7 +5364,7 @@ const char* ImTextCalcWordWrapNextLineStart(const char* text, const char* text_e
     if ((flags & ImDrawTextFlags_WrapKeepBlanks) == 0)
         while (text < text_end && ImCharIsBlankA(*text))
             text++;
-    if (*text == '\n')
+    if (text < text_end && *text == '\n')
         text++;
     return text;
 }
