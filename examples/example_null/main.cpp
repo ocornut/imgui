@@ -9,6 +9,20 @@
 #include "../../backends/imgui_impl_null.h"
 #include "../../backends/imgui_impl_null.cpp"
 
+static void repro() {
+    assert(ImGui::CalcTextSize("a").x == 7);
+    char str[]{ 'a',' ','b',' ' };
+    char* str_end = str + sizeof(str);
+    // char xx = *str_end; // asan error.
+
+    ImGui::Begin("Test");
+    const int wrap_len = 7 * 2;
+    ImGui::PushTextWrapPos(wrap_len);
+    ImGui::TextUnformatted(str, str_end); // asan error.
+    ImGui::PopTextWrapPos();
+    ImGui::End();
+}
+
 int main(int, char**)
 {
     IMGUI_CHECKVERSION();
@@ -31,6 +45,8 @@ int main(int, char**)
         ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
         ImGui::ShowDemoWindow(nullptr);
+
+        repro();
 
         ImGui::Render();
     }
