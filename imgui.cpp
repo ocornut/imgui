@@ -15224,7 +15224,7 @@ void ImGui::LogButtons()
     const bool log_to_file = Button("Log To File"); SameLine();
     const bool log_to_clipboard = Button("Log To Clipboard"); SameLine();
     PushItemFlag(ImGuiItemFlags_NoTabStop, true);
-    SetNextItemWidth(80.0f);
+    SetNextItemWidth(CalcTextSize("999").x);
     SliderInt("Default Depth", &g.LogDepthToExpandDefault, 0, 9, NULL);
     PopItemFlag();
     PopID();
