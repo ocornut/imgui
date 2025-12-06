@@ -252,16 +252,7 @@ static void CleanupVulkanWindow()
 
 static void FrameRender(ImGui_ImplVulkanH_Window* wd, ImDrawData* draw_data)
 {
-    VkSemaphore image_acquired_semaphore  = wd->FrameSemaphores[wd->SemaphoreIndex].ImageAcquiredSemaphore;
-    VkSemaphore render_complete_semaphore = wd->FrameSemaphores[wd->SemaphoreIndex].RenderCompleteSemaphore;
-    VkResult err = vkAcquireNextImageKHR(g_Device, wd->Swapchain, UINT64_MAX, image_acquired_semaphore, VK_NULL_HANDLE, &wd->FrameIndex);
-    if (err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_SUBOPTIMAL_KHR)
-        g_SwapChainRebuild = true;
-    if (err == VK_ERROR_OUT_OF_DATE_KHR)
-        return;
-    if (err != VK_SUBOPTIMAL_KHR)
-        check_vk_result(err);
-
+    VkResult err;
     ImGui_ImplVulkanH_Frame* fd = &wd->Frames[wd->FrameIndex];
     {
         err = vkWaitForFences(g_Device, 1, &fd->Fence, VK_TRUE, UINT64_MAX);    // wait indefinitely instead of periodically checking
@@ -270,6 +261,16 @@ static void FrameRender(ImGui_ImplVulkanH_Window* wd, ImDrawData* draw_data)
         err = vkResetFences(g_Device, 1, &fd->Fence);
         check_vk_result(err);
     }
+
+    VkSemaphore image_acquired_semaphore  = wd->FrameSemaphores[wd->FrameIndex].ImageAcquiredSemaphore;
+    err = vkAcquireNextImageKHR(g_Device, wd->Swapchain, UINT64_MAX, image_acquired_semaphore, VK_NULL_HANDLE, &wd->ImageIndex);
+    if (err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_SUBOPTIMAL_KHR)
+        g_SwapChainRebuild = true;
+    if (err == VK_ERROR_OUT_OF_DATE_KHR)
+        return;
+    if (err != VK_SUBOPTIMAL_KHR)
+        check_vk_result(err);
+
     {
         err = vkResetCommandPool(g_Device, fd->CommandPool, 0);
         check_vk_result(err);
@@ -297,6 +298,7 @@ static void FrameRender(ImGui_ImplVulkanH_Window* wd, ImDrawData* draw_data)
     // Submit command buffer
     vkCmdEndRenderPass(fd->CommandBuffer);
     {
+        VkSemaphore render_complete_semaphore = wd->FrameSemaphores[wd->ImageIndex].RenderCompleteSemaphore;
         VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         VkSubmitInfo info = {};
         info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -319,14 +321,14 @@ static void FramePresent(ImGui_ImplVulkanH_Window* wd)
 {
     if (g_SwapChainRebuild)
         return;
-    VkSemaphore render_complete_semaphore = wd->FrameSemaphores[wd->SemaphoreIndex].RenderCompleteSemaphore;
+    VkSemaphore render_complete_semaphore = wd->FrameSemaphores[wd->ImageIndex].RenderCompleteSemaphore;
     VkPresentInfoKHR info = {};
     info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     info.waitSemaphoreCount = 1;
     info.pWaitSemaphores = &render_complete_semaphore;
     info.swapchainCount = 1;
     info.pSwapchains = &wd->Swapchain;
-    info.pImageIndices = &wd->FrameIndex;
+    info.pImageIndices = &wd->ImageIndex;
     VkResult err = vkQueuePresentKHR(g_Queue, &info);
     if (err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_SUBOPTIMAL_KHR)
         g_SwapChainRebuild = true;
@@ -334,7 +336,7 @@ static void FramePresent(ImGui_ImplVulkanH_Window* wd)
         return;
     if (err != VK_SUBOPTIMAL_KHR)
         check_vk_result(err);
-    wd->SemaphoreIndex = (wd->SemaphoreIndex + 1) % wd->SemaphoreCount; // Now we can use the next set of semaphores
+    wd->FrameIndex = (wd->FrameIndex + 1) % wd->ImageCount; // Swap frame
 }
 
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
