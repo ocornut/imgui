@@ -4363,6 +4363,8 @@ void ImGui::Initialize()
     RegisterFontAtlas(atlas);
 
     g.Initialized = true;
+
+    g.IO.SetNextRefresh(0, "context created");
 }
 
 // This function is merely here to free heap allocations.
@@ -4834,10 +4836,16 @@ bool ImGui::IsItemHovered(ImGuiHoveredFlags flags)
         // but once unlocked on a given item we also moving.
         //if (g.HoverDelayTimer >= delay && (g.HoverDelayTimer - g.IO.DeltaTime < delay || g.MouseStationaryTimer - g.IO.DeltaTime < g.Style.HoverStationaryDelay)) { IMGUI_DEBUG_LOG("HoverDelayTimer = %f/%f, MouseStationaryTimer = %f\n", g.HoverDelayTimer, delay, g.MouseStationaryTimer); }
         if ((flags & ImGuiHoveredFlags_Stationary) != 0 && g.HoverItemUnlockedStationaryId != hover_delay_id)
-            return false;
+        {
+           g.IO.SetNextRefresh(0, "HoverDelay start");
+           return false;
+        }
 
         if (g.HoverItemDelayTimer < delay)
-            return false;
+        {
+           g.IO.SetNextRefresh(delay- g.HoverItemDelayTimer, "HoverDelay continue");
+           return false;
+        }        
     }
 
     return true;
@@ -5416,6 +5424,9 @@ void ImGui::NewFrame()
 {
     IM_ASSERT(GImGui != NULL && "No current context. Did you call ImGui::CreateContext() and ImGui::SetCurrentContext() ?");
     ImGuiContext& g = *GImGui;
+
+    // set 'no need for refresh later' initially until one of the widgets tells otherwise
+    g.IO.ResetNextRefresh();
 
     // Remove pending delete hooks before frame start.
     // This deferred removal avoid issues of removal while iterating the hook vector
@@ -7193,7 +7204,10 @@ void ImGui::RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& titl
     // Collapse button (submitting first so it gets priority when choosing a navigation init fallback)
     if (has_collapse_button)
         if (CollapseButton(window->GetID("#COLLAPSE"), collapse_button_pos))
+        {
             window->WantCollapseToggle = true; // Defer actual collapsing to next frame as we are too far in the Begin() function
+            g.IO.SetNextRefresh(0, "window collapse toggled");
+        }
 
     // Close button
     if (has_close_button)
@@ -7518,13 +7532,15 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         // Hide new windows for one frame until they calculate their size
         if (window_just_created && (!window_size_x_set_by_api || !window_size_y_set_by_api))
+        {
             window->HiddenFramesCannotSkipItems = 1;
+        }
 
         // Hide popup/tooltip window when re-opening while we measure size (because we recycle the windows)
         // We reset Size/ContentSize for reappearing popups/tooltips early in this function, so further code won't be tempted to use the old size.
         if (window_just_activated_by_user && (flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) != 0)
         {
-            window->HiddenFramesCannotSkipItems = 1;
+            window->HiddenFramesCannotSkipItems = 1; 
             if (flags & ImGuiWindowFlags_AlwaysAutoResize)
             {
                 if (!window_size_x_set_by_api)
@@ -7534,6 +7550,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 window->ContentSize = window->ContentSizeIdeal = ImVec2(0.f, 0.f);
             }
         }
+
+        if (window->HiddenFramesCannotSkipItems|window->HiddenFramesCanSkipItems|window->HiddenFramesForRenderOnly) g.IO.SetNextRefresh(0, "Window hidden frame"); // don't delay rendering of new frame to get hidden frames working
 
         // SELECT VIEWPORT
         // FIXME-VIEWPORT: In the docking/viewport branch, this is the point where we select the current viewport (which may affect the style)
@@ -10480,7 +10498,10 @@ void ImGui::UpdateInputEvents(bool trickle_fast_inputs)
     if (event_n == g.InputEventsQueue.Size)
         g.InputEventsQueue.resize(0);
     else
+    {
         g.InputEventsQueue.erase(g.InputEventsQueue.Data, g.InputEventsQueue.Data + event_n);
+        g.IO.SetNextRefresh(0, "inputs queue drain");
+    }
 
     // Clear buttons state when focus is lost
     // - this is useful so e.g. releasing Alt after focus loss on Alt-Tab doesn't trigger the Alt menu toggle.
@@ -15845,7 +15866,7 @@ static void Platform_SetClipboardTextFn_DefaultImpl(ImGuiContext* ctx, const cha
 #ifdef _WIN32
 #include <shellapi.h>   // ShellExecuteA()
 #ifdef _MSC_VER
-#pragma comment(lib, "shell32")
+//#pragma comment(lib, "shell32")
 #endif
 static bool Platform_OpenInShellFn_DefaultImpl(ImGuiContext*, const char* path)
 {
@@ -15853,7 +15874,10 @@ static bool Platform_OpenInShellFn_DefaultImpl(ImGuiContext*, const char* path)
     ImVector<wchar_t> path_wbuf;
     path_wbuf.resize(path_wsize);
     ::MultiByteToWideChar(CP_UTF8, 0, path, -1, path_wbuf.Data, path_wsize);
-    return (INT_PTR)::ShellExecuteW(NULL, L"open", path_wbuf.Data, NULL, NULL, SW_SHOWDEFAULT) > 32;
+//    return (INT_PTR)::ShellExecuteW(NULL, L"open", path_wbuf.Data, NULL, NULL, SW_SHOWDEFAULT) > 32;
+   typedef decltype(&::ShellExecuteA) PFN_ShellExecuteA; static PFN_ShellExecuteA fShellExecuteA;
+   static HMODULE hshell32dll = [] { HMODULE h = LoadLibraryA("SHELL32.dll"); if (h) { atexit([]{ FreeLibrary(hshell32dll); }); fShellExecuteA = (PFN_ShellExecuteA) GetProcAddress(hshell32dll, "ShellExecuteA"); } return h; }();    
+   if (fShellExecuteA) return (INT_PTR)fShellExecuteA(NULL, "open", path, NULL, NULL, SW_SHOWDEFAULT) > 32; else return false;
 }
 #else
 #include <sys/wait.h>
@@ -15892,7 +15916,7 @@ static bool Platform_OpenInShellFn_DefaultImpl(ImGuiContext*, const char*) { ret
 
 #include <imm.h>
 #ifdef _MSC_VER
-#pragma comment(lib, "imm32")
+//#pragma comment(lib, "imm32")
 #endif
 
 static void Platform_SetImeDataFn_DefaultImpl(ImGuiContext*, ImGuiViewport* viewport, ImGuiPlatformImeData* data)
@@ -15902,20 +15926,36 @@ static void Platform_SetImeDataFn_DefaultImpl(ImGuiContext*, ImGuiViewport* view
     if (hwnd == 0)
         return;
 
+    typedef decltype(&::ImmGetContext) PFN_ImmGetContext; static PFN_ImmGetContext fImmGetContext;
+    typedef decltype(&::ImmSetCompositionWindow) PFN_ImmSetCompositionWindow; static PFN_ImmSetCompositionWindow fImmSetCompositionWindow;
+    typedef decltype(&::ImmSetCandidateWindow) PFN_ImmSetCandidateWindow; static PFN_ImmSetCandidateWindow fImmSetCandidateWindow;
+    typedef decltype(&::ImmReleaseContext) PFN_ImmReleaseContext; static PFN_ImmReleaseContext fImmReleaseContext;
+    static HMODULE himm32dll = []() { 
+			HMODULE h = LoadLibraryA("imm32.dll"); if (h) {
+         fImmGetContext = (PFN_ImmGetContext) GetProcAddress(himm32dll, "ImmGetContext");
+         fImmSetCompositionWindow = (PFN_ImmSetCompositionWindow) GetProcAddress(himm32dll, "ImmSetCompositionWindow");
+         fImmSetCandidateWindow = (PFN_ImmSetCandidateWindow) GetProcAddress(himm32dll, "ImmSetCandidateWindow");
+         fImmReleaseContext = (PFN_ImmReleaseContext) GetProcAddress(himm32dll, "ImmReleaseContext");
+         if (fImmGetContext && fImmSetCompositionWindow && fImmSetCandidateWindow && fImmReleaseContext) { atexit([]{ FreeLibrary(himm32dll); }); }
+         FreeLibrary(h);
+         h = nullptr;
+         } return h;}();
+
+    
     //::ImmAssociateContextEx(hwnd, NULL, data->WantVisible ? IACE_DEFAULT : 0);
-    if (HIMC himc = ::ImmGetContext(hwnd))
+    if (HIMC himc = himm32dll ? fImmGetContext(hwnd) : nullptr)
     {
         COMPOSITIONFORM composition_form = {};
         composition_form.ptCurrentPos.x = (LONG)data->InputPos.x;
         composition_form.ptCurrentPos.y = (LONG)data->InputPos.y;
         composition_form.dwStyle = CFS_FORCE_POSITION;
-        ::ImmSetCompositionWindow(himc, &composition_form);
+        fImmSetCompositionWindow(himc, &composition_form);
         CANDIDATEFORM candidate_form = {};
         candidate_form.dwStyle = CFS_CANDIDATEPOS;
         candidate_form.ptCurrentPos.x = (LONG)data->InputPos.x;
         candidate_form.ptCurrentPos.y = (LONG)data->InputPos.y;
-        ::ImmSetCandidateWindow(himc, &candidate_form);
-        ::ImmReleaseContext(hwnd, himc);
+        fImmSetCandidateWindow(himc, &candidate_form);
+        fImmReleaseContext(hwnd, himc);
     }
 }
 

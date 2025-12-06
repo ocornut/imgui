@@ -12,6 +12,8 @@
 #include <d3d12.h>
 #include <dxgi1_5.h>
 #include <tchar.h>
+#include <cstdio>
+#include <string>
 
 #ifdef _DEBUG
 #define DX12_ENABLE_DEBUG_LAYER
@@ -186,6 +188,9 @@ int main(int, char**)
     bool show_demo_window = true;
     bool show_another_window = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+    LARGE_INTEGER last_frame_time, timer_freq;
+    QueryPerformanceFrequency(&timer_freq);
+    QueryPerformanceCounter(&last_frame_time);
 
     // Main loop
     bool done = false;
@@ -193,6 +198,7 @@ int main(int, char**)
     {
         // Poll and handle messages (inputs, window resize, etc.)
         // See the WndProc() function below for our to dispatch events to the Win32 backend.
+#if 0
         MSG msg;
         while (::PeekMessage(&msg, nullptr, 0U, 0U, PM_REMOVE))
         {
@@ -201,6 +207,8 @@ int main(int, char**)
             if (msg.message == WM_QUIT)
                 done = true;
         }
+#endif
+
         if (done)
             break;
 
@@ -213,8 +221,17 @@ int main(int, char**)
         g_SwapChainOccluded = false;
 
         // Start the Dear ImGui frame
+        if (!ImGui_ImplWin32_NewFrame())
+           break;
+
+        LARGE_INTEGER t0; QueryPerformanceCounter(&t0);
+        auto refresh_reason = io.NextRefreshStack.Entries[0];// double refresh_delay = io.NextRefresh >= FLT_MAX ? 99.99f : io.NextRefresh;
+        
+
         ImGui_ImplDX12_NewFrame();
-        ImGui_ImplWin32_NewFrame();
+
+        LARGE_INTEGER t1; QueryPerformanceCounter(&t1);
+
         ImGui::NewFrame();
 
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
@@ -254,6 +271,8 @@ int main(int, char**)
             ImGui::End();
         }
 
+        LARGE_INTEGER t2; QueryPerformanceCounter(&t2);
+
         // Rendering
         ImGui::Render();
 
@@ -286,10 +305,32 @@ int main(int, char**)
         g_pd3dCommandQueue->Signal(g_fence, ++g_fenceLastSignaledValue);
         frameCtx->FenceValue = g_fenceLastSignaledValue;
 
+        LARGE_INTEGER t3; QueryPerformanceCounter(&t3);
+
         // Present
         HRESULT hr = g_pSwapChain->Present(1, 0);   // Present with vsync
         //HRESULT hr = g_pSwapChain->Present(0, g_SwapChainTearingSupport ? DXGI_PRESENT_ALLOW_TEARING : 0); // Present without vsync
         g_SwapChainOccluded = (hr == DXGI_STATUS_OCCLUDED);
+
+
+        LARGE_INTEGER t4; QueryPerformanceCounter(&t4);
+
+        double layout_time = double(t2.QuadPart-t1.QuadPart)/timer_freq.QuadPart;
+        double render_time = double((t1.QuadPart-t0.QuadPart) + (t3.QuadPart-t2.QuadPart)) / timer_freq.QuadPart;
+        double present_time = double(t4.QuadPart - t3.QuadPart) / timer_freq.QuadPart;
+        double sleep_time  = double(t0.QuadPart - last_frame_time.QuadPart) / timer_freq.QuadPart;
+
+        printf("ImGui #%i(%+6.3fs %ims(I%ims,R%ims,P%ims)), reason: %s (%0.2fs) ... %s", g_frameIndex, sleep_time, (int)round((layout_time + render_time)*1000.0), (int)round(layout_time * 1000.0), (int)round(render_time * 1000.0), (int)round(present_time * 1000.0), refresh_reason.reason, refresh_reason.delay, io.NextRefreshStack.Size ? "" : "\n");
+        if (io.NextRefreshStack.Size)
+        {
+           printf(" refresh stack:");
+          for (int i = 0; i < io.NextRefreshStack.Size; ++i)
+              printf("%c%s(+%0.2fs)", i == 0 ? ' ' : ',' ,io.NextRefreshStack.Entries[i].reason, io.NextRefreshStack.Entries[i].delay);
+          printf("\n");
+        }
+        
+
+        last_frame_time = t3;
         g_frameIndex++;
     }
 
@@ -438,7 +479,7 @@ bool CreateDeviceD3D(HWND hWnd)
 
         swapChain1->Release();
         dxgiFactory->Release();
-        g_pSwapChain->SetMaximumFrameLatency(APP_NUM_BACK_BUFFERS);
+        g_pSwapChain->SetMaximumFrameLatency(/*NUM_BACK_BUFFERS*/1);
         g_hSwapChainWaitableObject = g_pSwapChain->GetFrameLatencyWaitableObject();
     }
 
