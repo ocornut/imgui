@@ -215,16 +215,11 @@ struct ImGui_ImplVulkanH_Frame
 {
     VkCommandPool       CommandPool;
     VkCommandBuffer     CommandBuffer;
-    VkFence             Fence;
+    VkSemaphore         ImageAcquiredSemaphore;
+    VkFence             RenderFence;
     VkImage             Backbuffer;
     VkImageView         BackbufferView;
     VkFramebuffer       Framebuffer;
-};
-
-struct ImGui_ImplVulkanH_FrameSemaphores
-{
-    VkSemaphore         ImageAcquiredSemaphore;
-    VkSemaphore         RenderCompleteSemaphore;
 };
 
 // Helper structure to hold the data needed by one rendering context into one OS window
@@ -241,12 +236,11 @@ struct ImGui_ImplVulkanH_Window
     bool                UseDynamicRendering;
     bool                ClearEnable;
     VkClearValue        ClearValue;
-    uint32_t            FrameIndex;             // Current frame being rendered to (0 <= FrameIndex < FrameInFlightCount)
+    uint32_t            SwapchainImageIndex;    // Current swapchain image index being rendered to (0 <= SwapchainImageIndex < ImageCount)
     uint32_t            ImageCount;             // Number of simultaneous in-flight frames (returned by vkGetSwapchainImagesKHR, usually derived from min_image_count)
-    uint32_t            SemaphoreCount;         // Number of simultaneous in-flight frames + 1, to be able to use it in vkAcquireNextImageKHR
-    uint32_t            SemaphoreIndex;         // Current set of swapchain wait semaphores we're using (needs to be distinct from per frame data)
+    uint32_t            CurrentFrameIndex;      // Current frame-in-flight index
     ImVector<ImGui_ImplVulkanH_Frame>           Frames;
-    ImVector<ImGui_ImplVulkanH_FrameSemaphores> FrameSemaphores;
+    ImVector<VkSemaphore> RenderSemaphores;     // Semaphores to signal when rendering is done for each frame, indexed by SwapchainImageIndex to be sure the semaphore is safe to use again for that swapchain image.
 
     ImGui_ImplVulkanH_Window()
     {
