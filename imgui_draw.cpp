@@ -444,10 +444,13 @@ void ImDrawList::_SetDrawListSharedData(ImDrawListSharedData* data)
 // In the majority of cases, you would want to call PushClipRect() and PushTexture() after this.
 void ImDrawList::_ResetForNewFrame()
 {
-    // Verify that the ImDrawCmd fields we want to memcmp() are contiguous in memory.
+    // Verify that the ImDrawCmd fields we want to memcmp() are contiguous in memory to match ImDrawCmdHeader.
     IM_STATIC_ASSERT(offsetof(ImDrawCmd, ClipRect) == 0);
     IM_STATIC_ASSERT(offsetof(ImDrawCmd, TexRef) == sizeof(ImVec4));
     IM_STATIC_ASSERT(offsetof(ImDrawCmd, VtxOffset) == sizeof(ImVec4) + sizeof(ImTextureRef));
+    IM_STATIC_ASSERT(offsetof(ImDrawCmd, ClipRect) == offsetof(ImDrawCmdHeader, ClipRect));
+    IM_STATIC_ASSERT(offsetof(ImDrawCmd, TexRef) == offsetof(ImDrawCmdHeader, TexRef));
+    IM_STATIC_ASSERT(offsetof(ImDrawCmd, VtxOffset) == offsetof(ImDrawCmdHeader, VtxOffset));
     if (_Splitter._Count > 1)
         _Splitter.Merge(this);
 
@@ -3227,7 +3230,6 @@ void ImFontAtlasBuildNotifySetFont(ImFontAtlas* atlas, ImFont* old_font, ImFont*
 void ImFontAtlas::RemoveFont(ImFont* font)
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas!");
-    font->ClearOutputData();
 
     ImFontAtlasFontDestroyOutput(this, font);
     for (ImFontConfig* src : font->Sources)
@@ -5103,7 +5105,7 @@ void ImFont::ClearOutputData()
 {
     if (ImFontAtlas* atlas = OwnerAtlas)
         ImFontAtlasFontDiscardBakes(atlas, this, 0);
-    FallbackChar = EllipsisChar = 0;
+    //FallbackChar = EllipsisChar = 0;
     memset(Used8kPagesMap, 0, sizeof(Used8kPagesMap));
     LastBaked = NULL;
 }
@@ -5364,7 +5366,7 @@ const char* ImTextCalcWordWrapNextLineStart(const char* text, const char* text_e
     if ((flags & ImDrawTextFlags_WrapKeepBlanks) == 0)
         while (text < text_end && ImCharIsBlankA(*text))
             text++;
-    if (*text == '\n')
+    if (text < text_end && *text == '\n')
         text++;
     return text;
 }
