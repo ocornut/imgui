@@ -4736,6 +4736,11 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
 
     const bool input_requested_by_nav = (g.ActiveId != id) && ((g.NavActivateId == id) && ((g.NavActivateFlags & ImGuiActivateFlags_PreferInput) || (g.NavInputSource == ImGuiInputSource_Keyboard)));
 
+    // Check if this InputText should be reactivated (for ConfigInputTextEnterKeepActive)
+    const bool input_requested_by_reactivate = (g.InputTextReactivateID == id);
+    if (input_requested_by_reactivate)
+        g.InputTextReactivateID = 0; // Clear the flag
+
     const bool user_clicked = hovered && io.MouseClicked[0];
     const bool user_scroll_finish = is_multiline && state != NULL && g.ActiveId == 0 && g.ActiveIdPreviousFrame == GetWindowScrollbarID(draw_window, ImGuiAxis_Y);
     const bool user_scroll_active = is_multiline && state != NULL && g.ActiveId == GetWindowScrollbarID(draw_window, ImGuiAxis_Y);
@@ -4746,7 +4751,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
 
     const bool init_reload_from_user_buf = (state != NULL && state->WantReloadUserBuf);
     const bool init_changed_specs = (state != NULL && state->Stb->single_line != !is_multiline); // state != NULL means its our state.
-    const bool init_make_active = (user_clicked || user_scroll_finish || input_requested_by_nav);
+    const bool init_make_active = (user_clicked || user_scroll_finish || input_requested_by_nav || input_requested_by_reactivate);
     const bool init_state = (init_make_active || user_scroll_active);
     if (init_reload_from_user_buf)
     {
@@ -5082,7 +5087,12 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             {
                 validated = true;
                 if (io.ConfigInputTextEnterKeepActive && !is_multiline)
+                {
+                    // Deactivate for one frame to trigger IsItemDeactivatedAfterEdit(), then reactivate
                     state->SelectAll(); // No need to scroll
+                    clear_active_id = true;
+                    g.InputTextReactivateID = id; // Mark for reactivation on next frame
+                }
                 else
                     clear_active_id = true;
             }

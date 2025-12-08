@@ -4116,6 +4116,7 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     memset(&ActiveIdValueOnActivation, 0, sizeof(ActiveIdValueOnActivation));
     LastActiveId = 0;
     LastActiveIdTimer = 0.0f;
+    InputTextReactivateID = 0;
 
     LastKeyboardKeyPressTime = LastKeyModsChangeTime = LastKeyModsChangeFromNoneTime = -1.0;
 

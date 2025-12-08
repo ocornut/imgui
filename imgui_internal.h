@@ -2435,6 +2435,7 @@ struct ImGuiContext
     ImFontBaked             InputTextPasswordFontBackupBaked;
     ImFontFlags             InputTextPasswordFontBackupFlags;
     ImGuiID                 TempInputId;                        // Temporary text input when CTRL+clicking on a slider, etc.
+    ImGuiID                 InputTextReactivateID;              // ID of InputText to reactivate on next frame (for ConfigInputTextEnterKeepActive behavior)
     ImGuiDataTypeStorage    DataTypeZeroValue;                  // 0 for all data types
     int                     BeginMenuDepth;
     int                     BeginComboDepth;
