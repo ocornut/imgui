@@ -282,13 +282,20 @@ static void HelpMarker(const char* desc)
     }
 }
 
-// Helper to wire demo markers located in code to an interactive browser (e.g. imgui_manual)
-typedef void (*ImGuiDemoMarkerCallback)(const char* file, int line, const char* section, void* user_data);
-extern ImGuiDemoMarkerCallback      GImGuiDemoMarkerCallback;
-extern void*                        GImGuiDemoMarkerCallbackUserData;
-ImGuiDemoMarkerCallback             GImGuiDemoMarkerCallback = NULL;
-void*                               GImGuiDemoMarkerCallbackUserData = NULL;
-#define IMGUI_DEMO_MARKER(section)  do { if (GImGuiDemoMarkerCallback != NULL) GImGuiDemoMarkerCallback("imgui_demo.cpp", __LINE__, section, GImGuiDemoMarkerCallbackUserData); } while (0)
+//-----------------------------------------------------------------------------
+// Demo marker callback: allows interactive code browsers (e.g. imgui_manual) to link UI elements to their source code.
+//-----------------------------------------------------------------------------
+// Define globals
+ImGuiDemoMarkerCallback  GImGuiDemoMarkerCallback = NULL;
+void*                    GImGuiDemoMarkerCallbackUserData = NULL;
+// Implement IMGUI_DEMO_MARKER
+#define IMGUI_DEMO_MARKER(section)  do { if (GImGuiDemoMarkerCallback) GImGuiDemoMarkerCallback("imgui_demo", __LINE__, section, GImGuiDemoMarkerCallbackUserData); } while (0)
+// Other libraries demo may use the pattern below:
+//    #ifdef IMGUI_HAS_DEMO_MARKER_CALLBACK
+//    #define IMGUI_DEMO_MARKER(section)  do { if (GImGuiDemoMarkerCallback) GImGuiDemoMarkerCallback("library_demo", __LINE__, section, GImGuiDemoMarkerCallbackUserData); } while (0)
+//    #else
+//    #define IMGUI_DEMO_MARKER(section)
+//    #endif
 
 // Sneakily forward declare functions which aren't worth putting in public API yet
 namespace ImGui
@@ -659,7 +666,6 @@ void ImGui::ShowDemoWindow(bool* p_open)
 
 static void DemoWindowMenuBar(ImGuiDemoWindowData* demo_data)
 {
-    IMGUI_DEMO_MARKER("Menu");
     if (ImGui::BeginMenuBar())
     {
         if (ImGui::BeginMenu("Menu"))
