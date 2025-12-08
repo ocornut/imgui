@@ -67,6 +67,8 @@ Other Changes:
     between hard minimum window size and table minimum size).
   - Fixed an issue where submitting non-integer row heights would eventually
     advance table parent layout by +0/+1 depending on its visibility.
+  - Fixed losing stored display order when reducing column count or when .ini
+    data has missing or duplicate values. (#9108, #4046)
 - ColorEdit:
   - Added R/G/B/A color markers next to each component (enabled by default).
   - Added ImGuiColorEditFlags_NoColorMarkers to disable them.

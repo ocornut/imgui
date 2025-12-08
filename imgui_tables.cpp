@@ -566,7 +566,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     {
         // Attempt to preserve width on column count change (#4046)
         old_columns_to_preserve = table->Columns.Data;
-        old_columns_raw_data = table->RawData;
+        old_columns_raw_data = table->RawData; // Free at end of function
         table->RawData = NULL;
     }
     if (table->RawData == NULL)
@@ -592,7 +592,6 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
             ImGuiTableColumn* column = &table->Columns[n];
             if (old_columns_to_preserve && n < old_columns_count)
             {
-                // FIXME: We don't attempt to preserve column order in this path.
                 *column = old_columns_to_preserve[n];
             }
             else
@@ -602,8 +601,9 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
                 column->WidthAuto = width_auto;
                 column->IsPreserveWidthAuto = true; // Preserve WidthAuto when reinitializing a live table: not technically necessary but remove a visible flicker
                 column->IsEnabled = column->IsUserEnabled = column->IsUserEnabledNextFrame = true;
+                column->DisplayOrder = (ImGuiTableColumnIdx)n;
             }
-            column->DisplayOrder = table->DisplayOrderToIndex[n] = (ImGuiTableColumnIdx)n;
+            table->DisplayOrderToIndex[n] = column->DisplayOrder;
         }
     }
     if (old_columns_raw_data)
@@ -3792,7 +3792,6 @@ void ImGui::TableLoadSettings(ImGuiTable* table)
 
     // Serialize ImGuiTableSettings/ImGuiTableColumnSettings into ImGuiTable/ImGuiTableColumn
     ImGuiTableColumnSettings* column_settings = settings->GetColumnSettings();
-    ImU64 display_order_mask = 0;
     for (int data_n = 0; data_n < settings->ColumnsCount; data_n++, column_settings++)
     {
         int column_n = column_settings->Index;
@@ -3809,22 +3808,49 @@ void ImGui::TableLoadSettings(ImGuiTable* table)
         }
         if (settings->SaveFlags & ImGuiTableFlags_Reorderable)
             column->DisplayOrder = column_settings->DisplayOrder;
-        display_order_mask |= (ImU64)1 << column->DisplayOrder;
         if ((settings->SaveFlags & ImGuiTableFlags_Hideable) && column_settings->IsEnabled != -1)
             column->IsUserEnabled = column->IsUserEnabledNextFrame = column_settings->IsEnabled == 1;
         column->SortOrder = column_settings->SortOrder;
         column->SortDirection = column_settings->SortDirection;
     }
 
-    // Validate and fix invalid display order data
-    const ImU64 expected_display_order_mask = (settings->ColumnsCount == 64) ? ~0 : ((ImU64)1 << settings->ColumnsCount) - 1;
-    if (display_order_mask != expected_display_order_mask)
-        for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
-            table->Columns[column_n].DisplayOrder = (ImGuiTableColumnIdx)column_n;
-
-    // Rebuild index
+    // Fix display order and build index
+    if (settings->SaveFlags & ImGuiTableFlags_Reorderable)
+        TableFixDisplayOrder(table);
     for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
         table->DisplayOrderToIndex[table->Columns[column_n].DisplayOrder] = (ImGuiTableColumnIdx)column_n;
+}
+
+struct ImGuiTableFixDisplayOrderColumnData
+{
+    ImGuiTableColumnIdx     Idx;
+    ImGuiTable*             Table;  // This is unfortunate but we don't have userdata in qsort api.
+};
+
+// Sort by DisplayOrder and then Index
+static int IMGUI_CDECL TableFixDisplayOrderComparer(const void* lhs, const void* rhs)
+{
+    const ImGuiTable* table = ((const ImGuiTableFixDisplayOrderColumnData*)lhs)->Table;
+    const ImGuiTableColumnIdx lhs_idx = ((const ImGuiTableFixDisplayOrderColumnData*)lhs)->Idx;
+    const ImGuiTableColumnIdx rhs_idx = ((const ImGuiTableFixDisplayOrderColumnData*)rhs)->Idx;
+    const int order_delta = (table->Columns[lhs_idx].DisplayOrder - table->Columns[rhs_idx].DisplayOrder);
+    return (order_delta > 0) ? +1 : (order_delta < 0) ? -1 : (lhs_idx > rhs_idx) ? +1 : -1;
+}
+
+// Fix invalid display order data: compact values (0,1,3 -> 0,1,2); preserve relative order (0,3,1 -> 0,2,1); deduplicate (0,4,1,1 -> 0,3,1,2)
+void ImGui::TableFixDisplayOrder(ImGuiTable* table)
+{
+    ImGuiContext& g = *GImGui;
+    g.TempBuffer.reserve((int)(sizeof(ImGuiTableFixDisplayOrderColumnData) * table->ColumnsCount)); // FIXME: Maybe wrap those two lines as a helper.
+    ImGuiTableFixDisplayOrderColumnData* fdo_columns = (ImGuiTableFixDisplayOrderColumnData*)g.TempBuffer.Data;
+    for (int n = 0; n < table->ColumnsCount; n++)
+    {
+        fdo_columns[n].Idx = (ImGuiTableColumnIdx)n;
+        fdo_columns[n].Table = table;
+    }
+    ImQsort(fdo_columns, (size_t)table->ColumnsCount, sizeof(ImGuiTableFixDisplayOrderColumnData), TableFixDisplayOrderComparer);
+    for (int n = 0; n < table->ColumnsCount; n++)
+        table->Columns[fdo_columns[n].Idx].DisplayOrder = (ImGuiTableColumnIdx)n;
 }
 
 static void TableSettingsHandler_ClearAll(ImGuiContext* ctx, ImGuiSettingsHandler*)
