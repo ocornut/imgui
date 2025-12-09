@@ -185,6 +185,8 @@ Docking+Viewports Branch:
   gamepad/keyboard to move a window to another viewport. (#9053) [@lut0pia, @ocornut]
 - Fixed implicit/fallback "Debug" window from staying visible if once docked. (#9151)
 - Backends:
+  - GLFW: dynamically load X11 functions to avoid -lx11 linking requirement introduced
+    in 1.92.3. (#9116, #9109) [@ramenguy99]
   - SDL2, SDL3: adjust IME offset to match other backends and master branch. (#6071, #1953)
   - Win32: viewports created by backend forcefully direct messages to
     DefWindowProcW() in order to support Unicode text input. (#9099, #3653, #5961) [@ulhc]
