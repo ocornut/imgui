@@ -51,12 +51,57 @@ Other Changes:
 - Textures:
   - Fixed a building issue when ImTextureID is defined as a struct.
   - Fixed displaying texture # in Metrics/Debugger window.
+- Menus:
+  - Fixed MenuItem() label position and BeginMenu() arrow/icon/popup positions,
+    when used inside a line with a baseline offset.
+- TreeNode:
+  - Fixed highlight position when used inside a line with a large text baseline offset.
+    (never quite worked in this situation; but then most of the time the text
+    baseline offset ends up being zero or FramePadding.y for a given line).
+- Tables:
+  - Fixed an issue where a very thin scrolling table would advance parent layout
+    slightly differently depending on its visibility (caused by a mismatch
+    between hard minimum window size and table minimum size).
+  - Fixed an issue where submitting non-integer row heights would eventually
+    advance table parent layout by +0/+1 depending on its visibility.
+- ColorEdit:
+  - Added R/G/B/A color markers next to each component (enabled by default).
+  - Added ImGuiColorEditFlags_NoColorMarkers to disable them.
+  - Added style.ColorMarkerSize to configure width of color component markers.
+- Sliders, Drags:
+  - Added ImGuiSliderFlags_ColorMarkers to opt-in adding R/G/B/A color markers
+    next to each components, in multi-components functions.
+  - Added a way to select a specific marker color.
+- Text:
+  - Fixed low-level word-wrapping function reading from *text_end when passed
+    a string range. (#9107) [@achabense]
 - Scrollbar: fixed a codepath leading to a divide-by-zero (which would not be
   noticeable by user but detected by sanitizers). (#9089) [@judicaelclair]
+- Debug Tools:
+  - Debug Log: fixed incorrectly printing characters in IO log when submitting
+    non-ASCII values to io.AddInputCharacter(). (#9099)
+  - Debug Log: can output to debugger on Windows. (#5855)
 - Backends:
+  - SDL_GPU3: macOS version can use MSL shaders in order to support macOS 10.14+
+    (vs Metallib shaders requiring macOS 14+). Requires application calling
+    SDL_CreateGPUDevice() with SDL_GPU_SHADERFORMAT_MSL. (#9076) [@Niminem]
   - Vulkan: helper for creating a swapchain (used by examples and multi-viewports)
     selects `VkSwapchainCreateInfoKHR`'s `compositeAlpha` value based on
-    `cap.supportedCompositeAlpha`. (#8784) [@FelixStach]
+    `cap.supportedCompositeAlpha`, which seems to be required on some Android
+     devices. (#8784) [@FelixStach]
+  - Win32: handle WM_IME_CHAR/WM_IME_COMPOSITION to support Unicode inputs on
+    MBCS (non-Unicode) Windows. (#9099, #3653, #5961) [@ulhc, @ocornut, @Othereum]
+- Examples:
+   - Win32+DirectX12: ignore seemingly incorrect D3D12_MESSAGE_ID_FENCE_ZERO_WAIT
+     warning on startups on some setups. (#9084, #9093) [@RT2Code, @LeoGautheron]
+
+Docking+Viewports Branch:
+
+- Fixed an assert in background dimming code, which could trigger after using
+  gamepad/keyboard to move a window to another viewport. (#9053) [@lut0pia, @ocornut]
+- Backends:
+  - Win32: viewports created by backend forcefully direct messages to
+    DefWindowProcW() in order to support Unicode text input. (#9099, #3653, #5961) [@ulhc]
 
 
 -----------------------------------------------------------------------

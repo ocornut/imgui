@@ -450,10 +450,13 @@ void ImDrawList::_SetDrawListSharedData(ImDrawListSharedData* data)
 // In the majority of cases, you would want to call PushClipRect() and PushTexture() after this.
 void ImDrawList::_ResetForNewFrame()
 {
-    // Verify that the ImDrawCmd fields we want to memcmp() are contiguous in memory.
+    // Verify that the ImDrawCmd fields we want to memcmp() are contiguous in memory to match ImDrawCmdHeader.
     IM_STATIC_ASSERT(offsetof(ImDrawCmd, ClipRect) == 0);
     IM_STATIC_ASSERT(offsetof(ImDrawCmd, TexRef) == sizeof(ImVec4));
     IM_STATIC_ASSERT(offsetof(ImDrawCmd, VtxOffset) == sizeof(ImVec4) + sizeof(ImTextureRef));
+    IM_STATIC_ASSERT(offsetof(ImDrawCmd, ClipRect) == offsetof(ImDrawCmdHeader, ClipRect));
+    IM_STATIC_ASSERT(offsetof(ImDrawCmd, TexRef) == offsetof(ImDrawCmdHeader, TexRef));
+    IM_STATIC_ASSERT(offsetof(ImDrawCmd, VtxOffset) == offsetof(ImDrawCmdHeader, VtxOffset));
     if (_Splitter._Count > 1)
         _Splitter.Merge(this);
 
@@ -4602,10 +4605,7 @@ static bool ImGui_ImplStbTrueType_FontSrcInit(ImFontAtlas* atlas, ImFontConfig* 
     if (src->MergeMode && src->SizePixels == 0.0f)
         src->SizePixels = ref_size;
 
-    if (src->SizePixels >= 0.0f)
-        bd_font_data->ScaleFactor = stbtt_ScaleForPixelHeight(&bd_font_data->FontInfo, 1.0f);
-    else
-        bd_font_data->ScaleFactor = stbtt_ScaleForMappingEmToPixels(&bd_font_data->FontInfo, 1.0f);
+    bd_font_data->ScaleFactor = stbtt_ScaleForPixelHeight(&bd_font_data->FontInfo, 1.0f);
     if (src->MergeMode && src->SizePixels != 0.0f && ref_size != 0.0f)
         bd_font_data->ScaleFactor *= src->SizePixels / ref_size; // FIXME-NEWATLAS: Should tidy up that a bit
 
@@ -5373,7 +5373,7 @@ const char* ImTextCalcWordWrapNextLineStart(const char* text, const char* text_e
     if ((flags & ImDrawTextFlags_WrapKeepBlanks) == 0)
         while (text < text_end && ImCharIsBlankA(*text))
             text++;
-    if (*text == '\n')
+    if (text < text_end && *text == '\n')
         text++;
     return text;
 }
@@ -5840,7 +5840,7 @@ begin:
 // - RenderCheckMark()
 // - RenderArrowDockMenu()
 // - RenderArrowPointingAt()
-// - RenderRectFilledRangeH()
+// - RenderRectFilledInRangeH()
 // - RenderRectFilledWithHole()
 //-----------------------------------------------------------------------------
 // Function in need of a redesign (legacy mess)
@@ -5931,15 +5931,15 @@ static inline float ImAcos01(float x)
 }
 
 // FIXME: Cleanup and move code to ImDrawList.
-void ImGui::RenderRectFilledRangeH(ImDrawList* draw_list, const ImRect& rect, ImU32 col, float x_start_norm, float x_end_norm, float rounding)
+// - Before 2025-12-04: RenderRectFilledRangeH()   with 'float x_start_norm, float x_end_norm` <- normalized
+// - After  2025-12-04: RenderRectFilledInRangeH() with 'float x1, float x2'                   <- absolute coords!!
+void ImGui::RenderRectFilledInRangeH(ImDrawList* draw_list, const ImRect& rect, ImU32 col, float fill_x0, float fill_x1, float rounding)
 {
-    if (x_end_norm == x_start_norm)
+    if (fill_x0 > fill_x1)
         return;
-    if (x_start_norm > x_end_norm)
-        ImSwap(x_start_norm, x_end_norm);
 
-    ImVec2 p0 = ImVec2(ImLerp(rect.Min.x, rect.Max.x, x_start_norm), rect.Min.y);
-    ImVec2 p1 = ImVec2(ImLerp(rect.Min.x, rect.Max.x, x_end_norm), rect.Max.y);
+    ImVec2 p0 = ImVec2(fill_x0, rect.Min.y);
+    ImVec2 p1 = ImVec2(fill_x1, rect.Max.y);
     if (rounding == 0.0f)
     {
         draw_list->AddRectFilled(p0, p1, col, 0.0f);

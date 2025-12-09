@@ -1167,8 +1167,9 @@ static void DemoWindowWidgetsColorAndPickers()
         ImGui::CheckboxFlags("ImGuiColorEditFlags_AlphaOpaque", &base_flags, ImGuiColorEditFlags_AlphaOpaque);
         ImGui::CheckboxFlags("ImGuiColorEditFlags_AlphaNoBg", &base_flags, ImGuiColorEditFlags_AlphaNoBg);
         ImGui::CheckboxFlags("ImGuiColorEditFlags_AlphaPreviewHalf", &base_flags, ImGuiColorEditFlags_AlphaPreviewHalf);
-        ImGui::CheckboxFlags("ImGuiColorEditFlags_NoDragDrop", &base_flags, ImGuiColorEditFlags_NoDragDrop);
         ImGui::CheckboxFlags("ImGuiColorEditFlags_NoOptions", &base_flags, ImGuiColorEditFlags_NoOptions); ImGui::SameLine(); HelpMarker("Right-click on the individual color widget to show options.");
+        ImGui::CheckboxFlags("ImGuiColorEditFlags_NoDragDrop", &base_flags, ImGuiColorEditFlags_NoDragDrop);
+        ImGui::CheckboxFlags("ImGuiColorEditFlags_NoColorMarkers", &base_flags, ImGuiColorEditFlags_NoColorMarkers);
         ImGui::CheckboxFlags("ImGuiColorEditFlags_HDR", &base_flags, ImGuiColorEditFlags_HDR); ImGui::SameLine(); HelpMarker("Currently all this does is to lift the 0..1 limits on dragging widgets.");
 
         IMGUI_DEMO_MARKER("Widgets/Color/ColorEdit");
@@ -1781,9 +1782,12 @@ static void DemoWindowWidgetsDragsAndSliders()
         ImGui::SameLine(); HelpMarker("Disable keyboard modifiers altering tweak speed. Useful if you want to alter tweak speed yourself based on your own logic.");
         ImGui::CheckboxFlags("ImGuiSliderFlags_WrapAround", &flags, ImGuiSliderFlags_WrapAround);
         ImGui::SameLine(); HelpMarker("Enable wrapping around from max to min and from min to max (only supported by DragXXX() functions)");
+        ImGui::CheckboxFlags("ImGuiSliderFlags_ColorMarkers", &flags, ImGuiSliderFlags_ColorMarkers);
+        //ImGui::CheckboxFlags("ImGuiSliderFlags_ColorMarkersG", &flags, 1 << ImGuiSliderFlags_ColorMarkersIndexShift_); // Not explicitly documented but possible.
 
         // Drags
         static float drag_f = 0.5f;
+        static float drag_f4[4];
         static int drag_i = 50;
         ImGui::Text("Underlying float value: %f", drag_f);
         ImGui::DragFloat("DragFloat (0 -> 1)", &drag_f, 0.005f, 0.0f, 1.0f, "%.3f", flags);
@@ -1793,14 +1797,17 @@ static void DemoWindowWidgetsDragsAndSliders()
         //ImGui::DragFloat("DragFloat (0 -> 0)", &drag_f, 0.005f, 0.0f, 0.0f, "%.3f", flags);           // To test ClampZeroRange
         //ImGui::DragFloat("DragFloat (100 -> 100)", &drag_f, 0.005f, 100.0f, 100.0f, "%.3f", flags);
         ImGui::DragInt("DragInt (0 -> 100)", &drag_i, 0.5f, 0, 100, "%d", flags);
+        ImGui::DragFloat4("DragFloat4 (0 -> 1)", drag_f4, 0.005f, 0.0f, 1.0f, "%.3f", flags); // Multi-component item, mostly here to document the effect of ImGuiSliderFlags_ColorMarkers.
 
         // Sliders
         static float slider_f = 0.5f;
+        static float slider_f4[4];
         static int slider_i = 50;
-        const ImGuiSliderFlags flags_for_sliders = flags & ~ImGuiSliderFlags_WrapAround;
+        const ImGuiSliderFlags flags_for_sliders = (flags & ~ImGuiSliderFlags_WrapAround);
         ImGui::Text("Underlying float value: %f", slider_f);
         ImGui::SliderFloat("SliderFloat (0 -> 1)", &slider_f, 0.0f, 1.0f, "%.3f", flags_for_sliders);
         ImGui::SliderInt("SliderInt (0 -> 100)", &slider_i, 0, 100, "%d", flags_for_sliders);
+        ImGui::SliderFloat4("SliderFloat4 (0 -> 1)", slider_f4, 0.0f, 1.0f, "%.3f", flags); // Multi-component item, mostly here to document the effect of ImGuiSliderFlags_ColorMarkers.
 
         ImGui::TreePop();
     }
@@ -2116,10 +2123,12 @@ static void DemoWindowWidgetsProgressBars()
     if (ImGui::TreeNode("Progress Bars"))
     {
         // Animate a simple progress bar
-        static float progress = 0.0f, progress_dir = 1.0f;
-        progress += progress_dir * 0.4f * ImGui::GetIO().DeltaTime;
-        if (progress >= +1.1f) { progress = +1.1f; progress_dir *= -1.0f; }
-        if (progress <= -0.1f) { progress = -0.1f; progress_dir *= -1.0f; }
+        static float progress_accum = 0.0f, progress_dir = 1.0f;
+        progress_accum += progress_dir * 0.4f * ImGui::GetIO().DeltaTime;
+        if (progress_accum >= +1.1f) { progress_accum = +1.1f; progress_dir *= -1.0f; }
+        if (progress_accum <= -0.1f) { progress_accum = -0.1f; progress_dir *= -1.0f; }
+
+        const float progress = IM_CLAMP(progress_accum, 0.0f, 1.0f);
 
         // Typically we would use ImVec2(-1.0f,0.0f) or ImVec2(-FLT_MIN,0.0f) to use all available width,
         // or ImVec2(width,0.0f) for a specified width. ImVec2(0.0f,0.0f) uses ItemWidth.
@@ -2127,9 +2136,8 @@ static void DemoWindowWidgetsProgressBars()
         ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
         ImGui::Text("Progress Bar");
 
-        float progress_saturated = IM_CLAMP(progress, 0.0f, 1.0f);
         char buf[32];
-        sprintf(buf, "%d/%d", (int)(progress_saturated * 1753), 1753);
+        sprintf(buf, "%d/%d", (int)(progress * 1753), 1753);
         ImGui::ProgressBar(progress, ImVec2(0.f, 0.f), buf);
 
         // Pass an animated negative value, e.g. -1.0f * (float)ImGui::GetTime() is the recommended value.
@@ -2616,7 +2624,7 @@ struct ExampleDualListBox
     {
         const int* a = (const int*)lhs;
         const int* b = (const int*)rhs;
-        return (*a - *b);
+        return *a - *b;
     }
     void SortItems(int n)
     {
@@ -2949,7 +2957,7 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
 
             const int ITEMS_COUNT = 10000;
             ImGui::Text("Selection: %d/%d", selection.Size, ITEMS_COUNT);
-            if (ImGui::BeginTable("##Basket", 2, ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersOuter))
+            if (ImGui::BeginTable("##Basket", 2, ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersOuter, ImVec2(0.0f, ImGui::GetFontSize() * 20)))
             {
                 ImGui::TableSetupColumn("Object");
                 ImGui::TableSetupColumn("Action");
@@ -2970,6 +2978,7 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
                     {
                         ImGui::TableNextRow();
                         ImGui::TableNextColumn();
+                        ImGui::PushID(n);
                         char label[64];
                         sprintf(label, "Object %05d: %s", n, ExampleNames[n % IM_ARRAYSIZE(ExampleNames)]);
                         bool item_is_selected = selection.Contains((ImGuiID)n);
@@ -2977,6 +2986,7 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
                         ImGui::Selectable(label, item_is_selected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap);
                         ImGui::TableNextColumn();
                         ImGui::SmallButton("hello");
+                        ImGui::PopID();
                     }
                 }
 
@@ -4170,6 +4180,7 @@ static void DemoWindowWidgetsTreeNodes()
             ImGui::CheckboxFlags("ImGuiTreeNodeFlags_SpanAllColumns", &base_flags, ImGuiTreeNodeFlags_SpanAllColumns); ImGui::SameLine(); HelpMarker("For use in Tables only.");
             ImGui::CheckboxFlags("ImGuiTreeNodeFlags_AllowOverlap", &base_flags, ImGuiTreeNodeFlags_AllowOverlap);
             ImGui::CheckboxFlags("ImGuiTreeNodeFlags_Framed", &base_flags, ImGuiTreeNodeFlags_Framed); ImGui::SameLine(); HelpMarker("Draw frame with background (e.g. for CollapsingHeader)");
+            ImGui::CheckboxFlags("ImGuiTreeNodeFlags_FramePadding", &base_flags, ImGuiTreeNodeFlags_FramePadding);
             ImGui::CheckboxFlags("ImGuiTreeNodeFlags_NavLeftJumpsToParent", &base_flags, ImGuiTreeNodeFlags_NavLeftJumpsToParent);
 
             HelpMarker("Default option for DrawLinesXXX is stored in style.TreeLinesFlags");
@@ -4834,7 +4845,7 @@ static void DemoWindowLayout()
             // Tree
             // (here the node appears after a button and has odd intent, so we use ImGuiTreeNodeFlags_DrawLinesNone to disable hierarchy outline)
             const float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
-            ImGui::Button("Button##1");
+            ImGui::Button("Button##1"); // Will make line higher
             ImGui::SameLine(0.0f, spacing);
             if (ImGui::TreeNodeEx("Node##1", ImGuiTreeNodeFlags_DrawLinesNone))
             {
@@ -4844,14 +4855,22 @@ static void DemoWindowLayout()
                 ImGui::TreePop();
             }
 
+            const float padding = (float)(int)(ImGui::GetFontSize() * 1.20f); // Large padding
+            ImGui::PushStyleVarY(ImGuiStyleVar_FramePadding, padding);
+            ImGui::Button("Button##2");
+            ImGui::PopStyleVar();
+            ImGui::SameLine(0.0f, spacing);
+            if (ImGui::TreeNodeEx("Node##2", ImGuiTreeNodeFlags_DrawLinesNone))
+                ImGui::TreePop();
+
             // Vertically align text node a bit lower so it'll be vertically centered with upcoming widget.
             // Otherwise you can use SmallButton() (smaller fit).
             ImGui::AlignTextToFramePadding();
 
             // Common mistake to avoid: if we want to SameLine after TreeNode we need to do it before we add
-            // other contents below the node.
-            bool node_open = ImGui::TreeNode("Node##2");
-            ImGui::SameLine(0.0f, spacing); ImGui::Button("Button##2");
+            // other contents "inside" the node.
+            bool node_open = ImGui::TreeNode("Node##3");
+            ImGui::SameLine(0.0f, spacing); ImGui::Button("Button##3");
             if (node_open)
             {
                 // Placeholder tree data
@@ -4861,13 +4880,13 @@ static void DemoWindowLayout()
             }
 
             // Bullet
-            ImGui::Button("Button##3");
+            ImGui::Button("Button##4");
             ImGui::SameLine(0.0f, spacing);
             ImGui::BulletText("Bullet text");
 
             ImGui::AlignTextToFramePadding();
             ImGui::BulletText("Node");
-            ImGui::SameLine(0.0f, spacing); ImGui::Button("Button##4");
+            ImGui::SameLine(0.0f, spacing); ImGui::Button("Button##5");
             ImGui::Unindent();
         }
 
@@ -5631,7 +5650,7 @@ struct MyItem
         // qsort() is instable so always return a way to differentiate items.
         // Your own compare function may want to avoid fallback on implicit sort specs.
         // e.g. a Name compare if it wasn't already part of the sort specs.
-        return (a->ID - b->ID);
+        return a->ID - b->ID;
     }
 };
 const ImGuiTableSortSpecs* MyItem::s_current_sort_specs = NULL;
@@ -6595,7 +6614,7 @@ static void DemoWindowTables()
             ImGui::TableNextColumn();
             ImGui::Text("A0 Row 0");
             {
-                float rows_height = TEXT_BASE_HEIGHT * 2;
+                float rows_height = (TEXT_BASE_HEIGHT * 2.0f) + (ImGui::GetStyle().CellPadding.y * 2.0f);
                 if (ImGui::BeginTable("table_nested2", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable))
                 {
                     ImGui::TableSetupColumn("B0");
@@ -6637,7 +6656,7 @@ static void DemoWindowTables()
         {
             for (int row = 0; row < 8; row++)
             {
-                float min_row_height = (float)(int)(TEXT_BASE_HEIGHT * 0.30f * row);
+                float min_row_height = (float)(int)(TEXT_BASE_HEIGHT * 0.30f * row + ImGui::GetStyle().CellPadding.y * 2.0f);
                 ImGui::TableNextRow(ImGuiTableRowFlags_None, min_row_height);
                 ImGui::TableNextColumn();
                 ImGui::Text("min_row_height = %.2f", min_row_height);
@@ -6741,9 +6760,10 @@ static void DemoWindowTables()
         ImGui::SameLine();
         if (ImGui::BeginTable("table3", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg, ImVec2(TEXT_BASE_WIDTH * 30, 0.0f)))
         {
+            const float rows_height = TEXT_BASE_HEIGHT * 1.5f + ImGui::GetStyle().CellPadding.y * 2.0f;
             for (int row = 0; row < 3; row++)
             {
-                ImGui::TableNextRow(0, TEXT_BASE_HEIGHT * 1.5f);
+                ImGui::TableNextRow(0, rows_height);
                 for (int column = 0; column < 3; column++)
                 {
                     ImGui::TableNextColumn();
@@ -8540,6 +8560,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
                 style.WindowMenuButtonPosition = (ImGuiDir)(window_menu_button_position - 1);
 
             SeparatorText("Widgets");
+            SliderFloat("ColorMarkerSize", &style.ColorMarkerSize, 0.0f, 8.0f, "%.0f");
             Combo("ColorButtonPosition", (int*)&style.ColorButtonPosition, "Left\0Right\0");
             SliderFloat2("ButtonTextAlign", (float*)&style.ButtonTextAlign, 0.0f, 1.0f, "%.2f");
             SameLine(); HelpMarker("Alignment applies when a button is larger than its text content.");
@@ -10828,7 +10849,7 @@ struct ExampleAsset
             if (delta < 0)
                 return (sort_spec->SortDirection == ImGuiSortDirection_Ascending) ? -1 : +1;
         }
-        return ((int)a->ID - (int)b->ID);
+        return (int)a->ID - (int)b->ID;
     }
 };
 const ImGuiTableSortSpecs* ExampleAsset::s_current_sort_specs = NULL;

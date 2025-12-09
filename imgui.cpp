@@ -1482,6 +1482,7 @@ ImGuiStyle::ImGuiStyle()
     DragDropTargetRounding      = 0.0f;             // Radius of the drag and drop target frame.
     DragDropTargetBorderSize    = 2.0f;             // Thickness of the drag and drop target border.
     DragDropTargetPadding       = 3.0f;             // Size to expand the drag and drop target from actual target item size.
+    ColorMarkerSize             = 3.0f;             // Size of R/G/B/A color markers for ColorEdit4() and for Drags/Sliders when using ImGuiSliderFlags_ColorMarkers.
     ColorButtonPosition         = ImGuiDir_Right;   // Side of the color button in the ColorEdit4 widget (left/right). Defaults to ImGuiDir_Right.
     ButtonTextAlign             = ImVec2(0.5f,0.5f);// Alignment of button text when button is larger than text.
     SelectableTextAlign         = ImVec2(0.0f,0.0f);// Alignment of selectable text. Defaults to (0.0f, 0.0f) (top-left aligned). It's generally important to keep this left-aligned if you want to lay multiple items on a same line.
@@ -1551,6 +1552,7 @@ void ImGuiStyle::ScaleAllSizes(float scale_factor)
     DragDropTargetRounding = ImTrunc(DragDropTargetRounding * scale_factor);
     DragDropTargetBorderSize = ImTrunc(DragDropTargetBorderSize * scale_factor);
     DragDropTargetPadding = ImTrunc(DragDropTargetPadding * scale_factor);
+    ColorMarkerSize = ImTrunc(ColorMarkerSize * scale_factor);
     SeparatorTextPadding = ImTrunc(SeparatorTextPadding * scale_factor);
     DockingSeparatorSize = ImTrunc(DockingSeparatorSize * scale_factor);
     DisplayWindowPadding = ImTrunc(DisplayWindowPadding * scale_factor);
@@ -2096,7 +2098,7 @@ bool ImTriangleContainsPoint(const ImVec2& a, const ImVec2& b, const ImVec2& c, 
     bool b1 = ((p.x - b.x) * (a.y - b.y) - (p.y - b.y) * (a.x - b.x)) < 0.0f;
     bool b2 = ((p.x - c.x) * (b.y - c.y) - (p.y - c.y) * (b.x - c.x)) < 0.0f;
     bool b3 = ((p.x - a.x) * (c.y - a.y) - (p.y - a.y) * (c.x - a.x)) < 0.0f;
-    return ((b1 == b2) && (b2 == b3));
+    return (b1 == b2) && (b2 == b3);
 }
 
 void ImTriangleBarycentricCoords(const ImVec2& a, const ImVec2& b, const ImVec2& c, const ImVec2& p, float& out_u, float& out_v, float& out_w)
@@ -3196,7 +3198,7 @@ IM_MSVC_RUNTIME_CHECKS_RESTORE
 static bool GetSkipItemForListClipping()
 {
     ImGuiContext& g = *GImGui;
-    return (g.CurrentTable ? g.CurrentTable->HostSkipItems : g.CurrentWindow->SkipItems);
+    return g.CurrentTable ? g.CurrentTable->HostSkipItems : g.CurrentWindow->SkipItems;
 }
 
 static void ImGuiListClipper_SortAndFuseRanges(ImVector<ImGuiListClipperRange>& ranges, int offset = 0)
@@ -3998,6 +4000,18 @@ void ImGui::RenderFrameBorder(ImVec2 p_min, ImVec2 p_max, float rounding)
     }
 }
 
+// FIXME: Might move those to style if there is a real need.
+static const ImU32 GColorMarkers[4] = { IM_COL32(240,20,20,255), IM_COL32(20,240,20,255), IM_COL32(20,20,240,255), IM_COL32(140,140,140,255) };
+
+void ImGui::RenderColorComponentMarker(int component_idx, const ImRect& bb, float rounding)
+{
+    if (!(component_idx >= 0 && component_idx < 4) || (bb.Min.x + 1 >= bb.Max.x))
+        return;
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    RenderRectFilledInRangeH(window->DrawList, bb, GetColorU32(GColorMarkers[component_idx]), bb.Min.x, ImMin(bb.Min.x + g.Style.ColorMarkerSize, bb.Max.x), rounding);
+}
+
 void ImGui::RenderNavCursor(const ImRect& bb, ImGuiID id, ImGuiNavRenderCursorFlags flags)
 {
     ImGuiContext& g = *GImGui;
@@ -4421,7 +4435,7 @@ void ImGui::Initialize()
     g.ViewportCreatedCount++;
     g.PlatformIO.Viewports.push_back(g.Viewports[0]);
 
-    // Build KeysMayBeCharInput[] lookup table (1 bool per named key)
+    // Build KeysMayBeCharInput[] lookup table (1 bit per named key)
     for (ImGuiKey key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; key = (ImGuiKey)(key + 1))
         if ((key >= ImGuiKey_0 && key <= ImGuiKey_9) || (key >= ImGuiKey_A && key <= ImGuiKey_Z) || (key >= ImGuiKey_Keypad0 && key <= ImGuiKey_Keypad9)
             || key == ImGuiKey_Tab || key == ImGuiKey_Space || key == ImGuiKey_Apostrophe || key == ImGuiKey_Comma || key == ImGuiKey_Minus || key == ImGuiKey_Period
@@ -4545,6 +4559,13 @@ void ImGui::Shutdown()
     g.DebugLogIndex.clear();
 
     g.Initialized = false;
+}
+
+// When using multiple context it can be helpful to give name a name.
+// (A) Will be visible in debugger, (B) Will be included in all IMGUI_DEBUG_LOG() calls, (C) Should be <= 15 characters long.
+void ImGui::SetContextName(ImGuiContext* ctx, const char* name)
+{
+    ImStrncpy(ctx->ContextName, name, IM_ARRAYSIZE(ctx->ContextName));
 }
 
 // No specific ordering/dependency support, will see as needed
@@ -5472,7 +5493,7 @@ static void ScaleWindow(ImGuiWindow* window, float scale)
 
 static bool IsWindowActiveAndVisible(ImGuiWindow* window)
 {
-    return (window->Active) && (!window->Hidden);
+    return window->Active && !window->Hidden;
 }
 
 // The reason this is exposed in imgui_internal.h is: on touch-based system that don't have hovering, we want to dispatch inputs to the right target (imgui vs imgui+app)
@@ -5887,7 +5908,7 @@ static int IMGUI_CDECL ChildWindowComparer(const void* lhs, const void* rhs)
         return d;
     if (int d = (a->Flags & ImGuiWindowFlags_Tooltip) - (b->Flags & ImGuiWindowFlags_Tooltip))
         return d;
-    return (a->BeginOrderWithinParent - b->BeginOrderWithinParent);
+    return a->BeginOrderWithinParent - b->BeginOrderWithinParent;
 }
 
 static void AddWindowToSortBuffer(ImVector<ImGuiWindow*>* out_sorted_windows, ImGuiWindow* window)
@@ -6018,15 +6039,16 @@ static void ImGui::RenderDimmedBackgroundBehindWindow(ImGuiWindow* window, ImU32
     // Draw behind window by moving the draw command at the FRONT of the draw list
     {
         // Draw list have been trimmed already, hence the explicit recreation of a draw command if missing.
-        // FIXME: This is creating complication, might be simpler if we could inject a drawlist in drawdata at a given position and not attempt to manipulate ImDrawCmd order.
+        // FIXME: This is a little bit complicated, solely to avoid creating/injecting an extra drawlist in drawdata.
         ImDrawList* draw_list = window->RootWindowDockTree->DrawList;
         draw_list->ChannelsMerge();
         if (draw_list->CmdBuffer.Size == 0)
             draw_list->AddDrawCmd();
         draw_list->PushClipRect(viewport_rect.Min - ImVec2(1, 1), viewport_rect.Max + ImVec2(1, 1), false); // FIXME: Need to stricty ensure ImDrawCmd are not merged (ElemCount==6 checks below will verify that)
-        draw_list->AddRectFilled(viewport_rect.Min, viewport_rect.Max, col);
         ImDrawCmd cmd = draw_list->CmdBuffer.back();
-        IM_ASSERT(cmd.ElemCount == 6);
+        IM_ASSERT(cmd.ElemCount == 0);
+        draw_list->AddRectFilled(viewport_rect.Min, viewport_rect.Max, col);
+        cmd = draw_list->CmdBuffer.back();
         draw_list->CmdBuffer.pop_back();
         draw_list->CmdBuffer.push_front(cmd);
         draw_list->AddDrawCmd(); // We need to create a command as CmdBuffer.back().IdxOffset won't be correct if we append to same command.
@@ -6088,10 +6110,12 @@ static void ImGui::RenderDimmedBackgrounds()
     {
         // Draw dimming behind Ctrl+Tab target window and behind Ctrl+Tab UI window
         RenderDimmedBackgroundBehindWindow(g.NavWindowingTargetAnim, GetColorU32(ImGuiCol_NavWindowingDimBg, g.DimBgRatio));
-        if (g.NavWindowingListWindow != NULL && g.NavWindowingListWindow->Viewport && g.NavWindowingListWindow->Viewport != g.NavWindowingTargetAnim->Viewport)
-            RenderDimmedBackgroundBehindWindow(g.NavWindowingListWindow, GetColorU32(ImGuiCol_NavWindowingDimBg, g.DimBgRatio));
         viewports_already_dimmed[0] = g.NavWindowingTargetAnim->Viewport;
-        viewports_already_dimmed[1] = g.NavWindowingListWindow ? g.NavWindowingListWindow->Viewport : NULL;
+        if (g.NavWindowingListWindow != NULL && g.NavWindowingListWindow->Active && g.NavWindowingListWindow->Viewport && g.NavWindowingListWindow->Viewport != g.NavWindowingTargetAnim->Viewport)
+        {
+            RenderDimmedBackgroundBehindWindow(g.NavWindowingListWindow, GetColorU32(ImGuiCol_NavWindowingDimBg, g.DimBgRatio));
+            viewports_already_dimmed[1] = g.NavWindowingListWindow->Viewport;
+        }
 
         // Draw border around Ctrl+Tab target window
         ImGuiWindow* window = g.NavWindowingTargetAnim;
@@ -6434,7 +6458,7 @@ bool ImGui::IsItemDeactivated()
     ImGuiContext& g = *GImGui;
     if (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_HasDeactivated)
         return (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_Deactivated) != 0;
-    return (g.DeactivatedItemData.ID == g.LastItemData.ID && g.LastItemData.ID != 0 && g.DeactivatedItemData.ElapseFrame >= g.FrameCount);
+    return g.DeactivatedItemData.ID == g.LastItemData.ID && g.LastItemData.ID != 0 && g.DeactivatedItemData.ElapseFrame >= g.FrameCount;
 }
 
 bool ImGui::IsItemDeactivatedAfterEdit()
@@ -6880,13 +6904,13 @@ static inline ImVec2 CalcWindowMinSize(ImGuiWindow* window)
     ImVec2 size_min;
     if ((window->Flags & ImGuiWindowFlags_ChildWindow) && !(window->Flags & ImGuiWindowFlags_Popup))
     {
-        size_min.x = (window->ChildFlags & ImGuiChildFlags_ResizeX) ? g.Style.WindowMinSize.x : 4.0f;
-        size_min.y = (window->ChildFlags & ImGuiChildFlags_ResizeY) ? g.Style.WindowMinSize.y : 4.0f;
+        size_min.x = (window->ChildFlags & ImGuiChildFlags_ResizeX) ? g.Style.WindowMinSize.x : IMGUI_WINDOW_HARD_MIN_SIZE;
+        size_min.y = (window->ChildFlags & ImGuiChildFlags_ResizeY) ? g.Style.WindowMinSize.y : IMGUI_WINDOW_HARD_MIN_SIZE;
     }
     else
     {
-        size_min.x = ((window->Flags & ImGuiWindowFlags_AlwaysAutoResize) == 0) ? g.Style.WindowMinSize.x : 4.0f;
-        size_min.y = ((window->Flags & ImGuiWindowFlags_AlwaysAutoResize) == 0) ? g.Style.WindowMinSize.y : 4.0f;
+        size_min.x = ((window->Flags & ImGuiWindowFlags_AlwaysAutoResize) == 0) ? g.Style.WindowMinSize.x : IMGUI_WINDOW_HARD_MIN_SIZE;
+        size_min.y = ((window->Flags & ImGuiWindowFlags_AlwaysAutoResize) == 0) ? g.Style.WindowMinSize.y : IMGUI_WINDOW_HARD_MIN_SIZE;
     }
 
     // Reduce artifacts with very small windows
@@ -10008,7 +10032,7 @@ int ImGui::CalcTypematicRepeatAmount(float t0, float t1, float repeat_delay, flo
     if (t0 >= t1)
         return 0;
     if (repeat_rate <= 0.0f)
-        return (t0 < repeat_delay) && (t1 >= repeat_delay);
+        return t0 < repeat_delay && t1 >= repeat_delay;
     const int count_t0 = (t0 < repeat_delay) ? -1 : (int)((t0 - repeat_delay) / repeat_rate);
     const int count_t1 = (t1 < repeat_delay) ? -1 : (int)((t1 - repeat_delay) / repeat_rate);
     const int count = count_t1 - count_t0;
@@ -10951,12 +10975,13 @@ static const char* GetMouseSourceName(ImGuiMouseSource source)
 static void DebugPrintInputEvent(const char* prefix, const ImGuiInputEvent* e)
 {
     ImGuiContext& g = *GImGui;
+    char buf[5];
     if (e->Type == ImGuiInputEventType_MousePos)    { if (e->MousePos.PosX == -FLT_MAX && e->MousePos.PosY == -FLT_MAX) IMGUI_DEBUG_LOG_IO("[io] %s: MousePos (-FLT_MAX, -FLT_MAX)\n", prefix); else IMGUI_DEBUG_LOG_IO("[io] %s: MousePos (%.1f, %.1f) (%s)\n", prefix, e->MousePos.PosX, e->MousePos.PosY, GetMouseSourceName(e->MousePos.MouseSource)); return; }
     if (e->Type == ImGuiInputEventType_MouseButton) { IMGUI_DEBUG_LOG_IO("[io] %s: MouseButton %d %s (%s)\n", prefix, e->MouseButton.Button, e->MouseButton.Down ? "Down" : "Up", GetMouseSourceName(e->MouseButton.MouseSource)); return; }
     if (e->Type == ImGuiInputEventType_MouseWheel)  { IMGUI_DEBUG_LOG_IO("[io] %s: MouseWheel (%.3f, %.3f) (%s)\n", prefix, e->MouseWheel.WheelX, e->MouseWheel.WheelY, GetMouseSourceName(e->MouseWheel.MouseSource)); return; }
     if (e->Type == ImGuiInputEventType_MouseViewport){IMGUI_DEBUG_LOG_IO("[io] %s: MouseViewport (0x%08X)\n", prefix, e->MouseViewport.HoveredViewportID); return; }
     if (e->Type == ImGuiInputEventType_Key)         { IMGUI_DEBUG_LOG_IO("[io] %s: Key \"%s\" %s\n", prefix, ImGui::GetKeyName(e->Key.Key), e->Key.Down ? "Down" : "Up"); return; }
-    if (e->Type == ImGuiInputEventType_Text)        { IMGUI_DEBUG_LOG_IO("[io] %s: Text: %c (U+%08X)\n", prefix, e->Text.Char, e->Text.Char); return; }
+    if (e->Type == ImGuiInputEventType_Text)        { ImTextCharToUtf8(buf, e->Text.Char); IMGUI_DEBUG_LOG_IO("[io] %s: Text: '%s' (U+%08X)\n", prefix, buf, e->Text.Char); return; }
     if (e->Type == ImGuiInputEventType_Focus)       { IMGUI_DEBUG_LOG_IO("[io] %s: AppFocused %d\n", prefix, e->AppFocused.Focused); return; }
 }
 #endif
@@ -11137,7 +11162,7 @@ bool ImGui::TestKeyOwner(ImGuiKey key, ImGuiID owner_id)
 
     ImGuiKeyOwnerData* owner_data = GetKeyOwnerData(&g, key);
     if (owner_id == ImGuiKeyOwner_Any)
-        return (owner_data->LockThisFrame == false);
+        return owner_data->LockThisFrame == false;
 
     // Note: SetKeyOwner() sets OwnerCurr. It is not strictly required for most mouse routing overlap (because of ActiveId/HoveredId
     // are acting as filter before this has a chance to filter), but sane as soon as user tries to look into things.
@@ -13378,7 +13403,7 @@ bool ImGui::IsWindowFocused(ImGuiFocusedFlags flags)
     if (flags & ImGuiFocusedFlags_ChildWindows)
         return IsWindowChildOf(ref_window, cur_window, popup_hierarchy, dock_hierarchy);
     else
-        return (ref_window == cur_window);
+        return ref_window == cur_window;
 }
 
 static int ImGui::FindWindowFocusIndex(ImGuiWindow* window)
@@ -15270,13 +15295,12 @@ void ImGui::NavUpdateWindowingOverlay()
     if (g.NavWindowingTimer < NAV_WINDOWING_LIST_APPEAR_DELAY)
         return;
 
-    if (g.NavWindowingListWindow == NULL)
-        g.NavWindowingListWindow = FindWindowByName("##NavWindowingOverlay");
     const ImGuiViewport* viewport = /*g.NavWindow ? g.NavWindow->Viewport :*/ GetMainViewport();
     SetNextWindowSizeConstraints(ImVec2(viewport->Size.x * 0.20f, viewport->Size.y * 0.20f), ImVec2(FLT_MAX, FLT_MAX));
     SetNextWindowPos(viewport->GetCenter(), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
     PushStyleVar(ImGuiStyleVar_WindowPadding, g.Style.WindowPadding * 2.0f);
     Begin("##NavWindowingOverlay", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings);
+    g.NavWindowingListWindow = g.CurrentWindow;
     if (g.ContextName[0] != 0)
         SeparatorText(g.ContextName);
     for (int n = g.WindowsFocusOrder.Size - 1; n >= 0; n--)
@@ -23511,14 +23535,23 @@ void ImGui::DebugLogV(const char* fmt, va_list args)
         g.DebugLogBuf.appendf("[%05d] ", g.FrameCount);
     g.DebugLogBuf.appendfv(fmt, args);
     g.DebugLogIndex.append(g.DebugLogBuf.c_str(), old_size, g.DebugLogBuf.size());
+
+    const char* str = g.DebugLogBuf.begin() + old_size;
     if (g.DebugLogFlags & ImGuiDebugLogFlags_OutputToTTY)
-        IMGUI_DEBUG_PRINTF("%s", g.DebugLogBuf.begin() + old_size);
+        IMGUI_DEBUG_PRINTF("%s", str);
+#if defined(_WIN32) && !defined(IMGUI_DISABLE_WIN32_FUNCTIONS)
+    if (g.DebugLogFlags & ImGuiDebugLogFlags_OutputToDebugger)
+    {
+        ::OutputDebugStringA("[imgui] ");
+        ::OutputDebugStringA(str);
+    }
+#endif
 #ifdef IMGUI_ENABLE_TEST_ENGINE
     // IMGUI_TEST_ENGINE_LOG() adds a trailing \n automatically
     const int new_size = g.DebugLogBuf.size();
     const bool trailing_carriage_return = (g.DebugLogBuf[new_size - 1] == '\n');
     if (g.DebugLogFlags & ImGuiDebugLogFlags_OutputToTestEngine)
-        IMGUI_TEST_ENGINE_LOG("%.*s", new_size - old_size - (trailing_carriage_return ? 1 : 0), g.DebugLogBuf.begin() + old_size);
+        IMGUI_TEST_ENGINE_LOG("%.*s", new_size - old_size - (trailing_carriage_return ? 1 : 0), str);
 #endif
 }
 
@@ -23600,6 +23633,7 @@ void ImGui::ShowDebugLogWindow(bool* p_open)
     if (BeginPopup("Outputs"))
     {
         CheckboxFlags("OutputToTTY", &g.DebugLogFlags, ImGuiDebugLogFlags_OutputToTTY);
+        CheckboxFlags("OutputToDebugger", &g.DebugLogFlags, ImGuiDebugLogFlags_OutputToDebugger);
 #ifndef IMGUI_ENABLE_TEST_ENGINE
         BeginDisabled();
 #endif
