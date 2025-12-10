@@ -87,6 +87,8 @@ Other Changes:
     non-ASCII values to io.AddInputCharacter(). (#9099)
   - Debug Log: can output to debugger on Windows. (#5855)
 - Backends:
+  - GLFW: Avoid repeated glfwSetCursor()/glfwSetInputMode() calls when unnecessary.
+    Lowers overhead for very high framerates (e.g. 10k+ FPS). [@maxliani]
   - SDL_GPU3: macOS version can use MSL shaders in order to support macOS 10.14+
     (vs Metallib shaders requiring macOS 14+). Requires application calling
     SDL_CreateGPUDevice() with SDL_GPU_SHADERFORMAT_MSL. (#9076) [@Niminem]
