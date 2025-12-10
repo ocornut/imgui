@@ -89,6 +89,8 @@ Other Changes:
 - Backends:
   - GLFW: Avoid repeated glfwSetCursor()/glfwSetInputMode() calls when unnecessary.
     Lowers overhead for very high framerates (e.g. 10k+ FPS). [@maxliani]
+  - GLFW: Added IMGUI_IMPL_GLFW_DISABLE_X11 / IMGUI_IMPL_GLFW_DISABLE_WAYLAND to
+    forcefully disable either. (#9109, #9116)
   - SDL_GPU3: macOS version can use MSL shaders in order to support macOS 10.14+
     (vs Metallib shaders requiring macOS 14+). Requires application calling
     SDL_CreateGPUDevice() with SDL_GPU_SHADERFORMAT_MSL. (#9076) [@Niminem]

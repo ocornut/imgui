@@ -29,6 +29,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2025-12-12: Added IMGUI_IMPL_GLFW_DISABLE_X11 / IMGUI_IMPL_GLFW_DISABLE_WAYLAND to forcefully disable either.
 //  2025-12-10: Avoid repeated glfwSetCursor()/glfwSetInputMode() calls when unnecessary. Lowers overhead for very high framerates (e.g. 10k+ FPS).
 //  2025-11-06: Lower minimum requirement to GLFW 3.0. Though a recent version e.g GLFW 3.4 is highly recommended.
 //  2025-09-18: Call platform_io.ClearPlatformHandlers() on shutdown.
@@ -109,10 +110,15 @@
 #endif
 
 // GLFW
-#if defined(__linux__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
-#define GLFW_HAS_X11_OR_WAYLAND     1
+#if !defined(IMGUI_IMPL_GLFW_DISABLE_X11) && (defined(__linux__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__DragonFly__))
+#define GLFW_HAS_X11        1
 #else
-#define GLFW_HAS_X11_OR_WAYLAND     0
+#define GLFW_HAS_X11        0
+#endif
+#if !defined(IMGUI_IMPL_GLFW_DISABLE_WAYLAND) && (defined(__linux__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__DragonFly__))
+#define GLFW_HAS_WAYLAND    1
+#else
+#define GLFW_HAS_WAYLAND    0
 #endif
 #include <GLFW/glfw3.h>
 #ifdef _WIN32
@@ -126,7 +132,7 @@
 #define GLFW_EXPOSE_NATIVE_COCOA
 #endif
 #include <GLFW/glfw3native.h>
-#elif GLFW_HAS_X11_OR_WAYLAND
+#elif GLFW_HAS_X11
 #ifndef GLFW_EXPOSE_NATIVE_X11      // for glfwGetX11Display(), glfwGetX11Window() on Freedesktop (Linux, BSD, etc.)
 #define GLFW_EXPOSE_NATIVE_X11
 #endif
@@ -239,7 +245,7 @@ static ImGui_ImplGlfw_Data* ImGui_ImplGlfw_GetBackendData(GLFWwindow* window)
 // Functions
 static bool ImGui_ImplGlfw_IsWayland()
 {
-#if !GLFW_HAS_X11_OR_WAYLAND
+#if !GLFW_HAS_WAYLAND
     return false;
 #elif GLFW_HAS_GETPLATFORM
     return glfwGetPlatform() == GLFW_PLATFORM_WAYLAND;
@@ -933,7 +939,7 @@ static void ImGui_ImplGlfw_UpdateGamepads()
 // - Some accessibility applications are declaring virtual monitors with a DPI of 0.0f, see #7902. We preserve this value for caller to handle.
 float ImGui_ImplGlfw_GetContentScaleForWindow(GLFWwindow* window)
 {
-#if GLFW_HAS_X11_OR_WAYLAND
+#if GLFW_HAS_WAYLAND
     if (ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData(window))
         if (bd->IsWayland)
             return 1.0f;
@@ -950,7 +956,7 @@ float ImGui_ImplGlfw_GetContentScaleForWindow(GLFWwindow* window)
 
 float ImGui_ImplGlfw_GetContentScaleForMonitor(GLFWmonitor* monitor)
 {
-#if GLFW_HAS_X11_OR_WAYLAND
+#if GLFW_HAS_WAYLAND
     if (ImGui_ImplGlfw_IsWayland()) // We can't access our bd->IsWayland cache for a monitor.
         return 1.0f;
 #endif
@@ -972,7 +978,7 @@ static void ImGui_ImplGlfw_GetWindowSizeAndFramebufferScale(GLFWwindow* window, 
     glfwGetFramebufferSize(window, &display_w, &display_h);
     float fb_scale_x = (w > 0) ? (float)display_w / (float)w : 1.0f;
     float fb_scale_y = (h > 0) ? (float)display_h / (float)h : 1.0f;
-#if GLFW_HAS_X11_OR_WAYLAND
+#if GLFW_HAS_WAYLAND
     ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData(window);
     if (!bd->IsWayland)
         fb_scale_x = fb_scale_y = 1.0f;
