@@ -2905,6 +2905,7 @@ struct ImGuiTableColumn
     float                   StretchWeight;                  // Master width weight when (Flags & _WidthStretch). Often around ~1.0f initially.
     float                   InitStretchWeightOrWidth;       // Value passed to TableSetupColumn(). For Width it is a content width (_without padding_).
     ImRect                  ClipRect;                       // Clipping rectangle for the column
+    ImGuiID                 ID;                             // Hash of column name (ignoring top of ID stack), used for .ini persistance when available.
     ImGuiID                 UserID;                         // Optional, value passed to TableSetupColumn()
     float                   WorkMinX;                       // Contents region min ~(MinX + CellPaddingX + CellSpacingX1) == cursor start position when entering column
     float                   WorkMaxX;                       // Contents region max ~(MaxX - CellPaddingX - CellSpacingX2)
@@ -3140,18 +3141,18 @@ struct IMGUI_API ImGuiTableTempData
 struct ImGuiTableColumnSettings
 {
     float                   WidthOrWeight;
-    ImGuiID                 UserID;
+    ImGuiID                 ID;
     ImGuiTableColumnIdx     Index;
     ImGuiTableColumnIdx     DisplayOrder;
     ImGuiTableColumnIdx     SortOrder;
     ImU8                    SortDirection : 2;
-    ImS8                    IsEnabled : 2; // "Visible" in ini file
+    ImS8                    IsEnabled : 2;  // "Visible" in .ini file
     ImU8                    IsStretch : 1;
 
     ImGuiTableColumnSettings()
     {
         WidthOrWeight = 0.0f;
-        UserID = 0;
+        ID = 0;
         Index = -1;
         DisplayOrder = SortOrder = -1;
         SortDirection = ImGuiSortDirection_None;

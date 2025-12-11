@@ -1698,6 +1698,7 @@ void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, flo
     }
 
     TableSetupColumnFlags(table, column, flags);
+    column->ID = (label != NULL && label[0] != 0) ? ImHashStr(label) : 0;
     column->UserID = user_id;
     flags = column->Flags;
 
@@ -3811,6 +3812,7 @@ void ImGui::TableSaveSettings(ImGuiTable* table)
     for (int n = 0; n < table->ColumnsCount; n++, column++, column_settings++)
     {
         const float width_or_weight = (column->Flags & ImGuiTableColumnFlags_WidthStretch) ? column->StretchWeight : column->WidthRequest;
+        column_settings->ID = column->ID;
         column_settings->WidthOrWeight = width_or_weight;
         column_settings->Index = (ImGuiTableColumnIdx)n;
         column_settings->DisplayOrder = column->DisplayOrder;
@@ -3993,12 +3995,13 @@ static void TableSettingsHandler_ReadLine(ImGuiContext*, ImGuiSettingsHandler*, 
         char c = 0;
         ImGuiTableColumnSettings* column = settings->GetColumnSettings() + column_n;
         column->Index = (ImGuiTableColumnIdx)column_n;
-        if (sscanf(line, "UserID=0x%08X%n", (ImU32*)&n, &r)==1) { line = ImStrSkipBlank(line + r); column->UserID = (ImGuiID)n; }
+        if (sscanf(line, "UserID=0x%08X%n", (ImU32*)&n, &r)==1) { line = ImStrSkipBlank(line + r); } // FIXME-LEGACY: Removed 2025/11/12, was never properly set.
         if (sscanf(line, "Width=%d%n", &n, &r) == 1)            { line = ImStrSkipBlank(line + r); column->WidthOrWeight = (float)n; column->IsStretch = 0; settings->SaveFlags |= ImGuiTableFlags_Resizable; }
         if (sscanf(line, "Weight=%f%n", &f, &r) == 1)           { line = ImStrSkipBlank(line + r); column->WidthOrWeight = f; column->IsStretch = 1; settings->SaveFlags |= ImGuiTableFlags_Resizable; }
         if (sscanf(line, "Visible=%d%n", &n, &r) == 1)          { line = ImStrSkipBlank(line + r); column->IsEnabled = (ImU8)n; settings->SaveFlags |= ImGuiTableFlags_Hideable; }
         if (sscanf(line, "Order=%d%n", &n, &r) == 1)            { line = ImStrSkipBlank(line + r); column->DisplayOrder = (ImGuiTableColumnIdx)n; settings->SaveFlags |= ImGuiTableFlags_Reorderable; }
         if (sscanf(line, "Sort=%d%c%n", &n, &c, &r) == 2)       { line = ImStrSkipBlank(line + r); column->SortOrder = (ImGuiTableColumnIdx)n; column->SortDirection = (c == '^') ? ImGuiSortDirection_Descending : ImGuiSortDirection_Ascending; settings->SaveFlags |= ImGuiTableFlags_Sortable; }
+        if (sscanf(line, "ID=0x%08X%n", (ImU32*)&n, &r) == 1)   { line = ImStrSkipBlank(line + r); column->ID = (ImGuiID)n; }
     }
 }
 
@@ -4026,16 +4029,16 @@ static void TableSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandle
         for (int column_n = 0; column_n < settings->ColumnsCount; column_n++, column++)
         {
             // "Column 0  UserID=0x42AD2D21 Width=100 Visible=1 Order=0 Sort=0v"
-            bool save_column = column->UserID != 0 || save_size || save_visible || save_order || (save_sort && column->SortOrder != -1);
+            bool save_column = save_size || save_visible || save_order || (save_sort && column->SortOrder != -1);
             if (!save_column)
                 continue;
             buf->appendf("Column %-2d", column_n);
-            if (column->UserID != 0)                    { buf->appendf(" UserID=%08X", column->UserID); }
             if (save_size && column->IsStretch)         { buf->appendf(" Weight=%.4f", column->WidthOrWeight); }
             if (save_size && !column->IsStretch)        { buf->appendf(" Width=%d", (int)column->WidthOrWeight); }
             if (save_visible)                           { buf->appendf(" Visible=%d", column->IsEnabled); }
             if (save_order)                             { buf->appendf(" Order=%d", column->DisplayOrder); }
             if (save_sort && column->SortOrder != -1)   { buf->appendf(" Sort=%d%c", column->SortOrder, (column->SortDirection == ImGuiSortDirection_Ascending) ? 'v' : '^'); }
+            if (column->ID != 0)                        { buf->appendf(" ID=0x%08X", column->ID); }
             buf->append("\n");
         }
         buf->append("\n");
@@ -4121,6 +4124,7 @@ void ImGui::TableGcCompactSettings()
 // [SECTION] Tables: Debugging
 //-------------------------------------------------------------------------
 // - DebugNodeTable() [Internal]
+// - DebugNodeTableSettings() [Internal]
 //-------------------------------------------------------------------------
 
 #ifndef IMGUI_DISABLE_DEBUG_TOOLS
@@ -4219,10 +4223,10 @@ void ImGui::DebugNodeTableSettings(ImGuiTableSettings* settings)
     {
         ImGuiTableColumnSettings* column_settings = &settings->GetColumnSettings()[n];
         ImGuiSortDirection sort_dir = (column_settings->SortOrder != -1) ? (ImGuiSortDirection)column_settings->SortDirection : ImGuiSortDirection_None;
-        BulletText("Column %d Order %d SortOrder %d %s Vis %d %s %7.3f UserID 0x%08X",
+        BulletText("Column %d Order %d SortOrder %2d %s Vis %d %s %7.3f ID 0x%08X",
             n, column_settings->DisplayOrder, column_settings->SortOrder,
             (sort_dir == ImGuiSortDirection_Ascending) ? "Asc" : (sort_dir == ImGuiSortDirection_Descending) ? "Des" : "---",
-            column_settings->IsEnabled, column_settings->IsStretch ? "Weight" : "Width ", column_settings->WidthOrWeight, column_settings->UserID);
+            column_settings->IsEnabled, column_settings->IsStretch ? "Weight" : "Width ", column_settings->WidthOrWeight, column_settings->ID);
     }
     TreePop();
 }
