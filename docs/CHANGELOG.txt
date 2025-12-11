@@ -41,14 +41,21 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
+- Fonts: Fixed handling of `ImFontConfig::FontDataOwnedByAtlas = false` which
+  did erroneously make a copy of the font data, essentially defeating the purpose
+  of this flag and wasting memory (undetected since July 2015 and now spotted
+  by @TellowKrinkle, this is perhaps the oldest bug in Dear ImGui history,
+  albeit for a rarely used feature!) (#9086, #8465)
+  HOWEVER, fixing this bug is likely to surface bugs in user/app code:
+  - Prior to 1.92, font data only needs to be available during the atlas->AddFontXXX() call.
+  - Since 1.92, font data needs to available until atlas->RemoveFont(), or more typically
+    until a shutdown of the owning context or font atlas.
+  - The fact that handling of `FontDataOwnedByAtlas = false` was broken
+    bypassed the issue altogether.
+
 Other Changes:
 
 - Fonts:
-  - Fixed handling of `ImFontConfig::FontDataOwnedByAtlas = false` which
-    did erroneously make a copy of the font data, essentially defeating the purpose
-    of this flag and wasting memory.
-    Undetected since July 2015 and now spotted by @TellowKrinkle, this is perhaps
-    the oldest bug in Dear ImGui history (albeit for a rarely used feature)! (#9086)
   - Fixed an issue related to EllipsisChar handling, while changing
     font loader or font loader flags dynamically in Style->Fonts menus.
 - Textures:
@@ -87,6 +94,12 @@ Other Changes:
     non-ASCII values to io.AddInputCharacter(). (#9099)
   - Debug Log: can output to debugger on Windows. (#5855)
 - Backends:
+  - GLFW: Avoid repeated glfwSetCursor()/glfwSetInputMode() calls when unnecessary.
+    Lowers overhead for very high framerates (e.g. 10k+ FPS). [@maxliani]
+  - GLFW: Added IMGUI_IMPL_GLFW_DISABLE_X11 / IMGUI_IMPL_GLFW_DISABLE_WAYLAND to
+    forcefully disable either. (#9109, #9116)
+  - OpenGL3: Fixed embedded loader multiple init/shutdown cycles broken on some
+    platforms. (#8792, #9112)
   - SDL_GPU3: macOS version can use MSL shaders in order to support macOS 10.14+
     (vs Metallib shaders requiring macOS 14+). Requires application calling
     SDL_CreateGPUDevice() with SDL_GPU_SHADERFORMAT_MSL. (#9076) [@Niminem]
@@ -285,6 +298,8 @@ Other Changes:
   using ImGuiWindowFlags_UnsavedDocument/ImGuiTabItemFlags_UnsavedDocument. (#8983)
 - IO: added ImGuiPlatformIO::ClearPlatformHandlers(), ClearRendererHandlers()
   helpers to null all handlers. (#8945, #2769)
+- Tables: changed ImGuiTableFlags_NoBordersInBody behavior to not draw border in
+  body even when resizing. (#8893)
 - Inputs:
   - Shortcuts: added support for combining ImGuiInputFlags_RouteFocused
     (which is the default route) with ImGuiInputFlags_RouteOverActive, allowing

@@ -228,6 +228,7 @@ ImFontConfig font_cfg;
 font_cfg.FontDataOwnedByAtlas = false;
 ImFont* font = io.Fonts->AddFontFromMemoryTTF(data, data_size, size_pixels, &font_cfg);
 ```
+IMPORTANT: Since 1.92, when using `FontDataOwnedByAtlas = false`, font data needs to available until `atlas->RemoveFont()`, or more typically until a shutdown of the owning context or font atlas. It was not immediately noticeable in 1.92.0 due to a bug in handling `FontDataOwnedByAtlas = false`, which was fixed in 1.92.6.
 
 ##### [Return to Index](#index)
 
