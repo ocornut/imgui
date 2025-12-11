@@ -7506,11 +7506,11 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // Update stored window name when it changes (which can _only_ happen with the "###" operator, so the ID would stay unchanged).
         // The title bar always display the 'name' parameter, so we only update the string storage if it needs to be visible to the end-user elsewhere.
         bool window_title_visible_elsewhere = false;
-        if (g.NavWindowingListWindow != NULL && (flags & ImGuiWindowFlags_NoNavFocus) == 0)   // Window titles visible when using Ctrl+Tab
+        if (g.NavWindowingListWindow != NULL && g.NavWindowingListWindow->WasActive && (flags & ImGuiWindowFlags_NoNavFocus) == 0)   // Window titles visible when using Ctrl+Tab
             window_title_visible_elsewhere = true;
         if (flags & ImGuiWindowFlags_ChildMenu)
             window_title_visible_elsewhere = true;
-        if (window_title_visible_elsewhere && !window_just_created && strcmp(name, window->Name) != 0)
+        if ((window_title_visible_elsewhere || window_just_activated_by_user) && !window_just_created && strcmp(name, window->Name) != 0)
         {
             size_t buf_len = (size_t)window->NameBufLen;
             window->Name = ImStrdupcpy(window->Name, &buf_len, name);
