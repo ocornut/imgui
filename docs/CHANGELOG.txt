@@ -298,6 +298,8 @@ Other Changes:
   using ImGuiWindowFlags_UnsavedDocument/ImGuiTabItemFlags_UnsavedDocument. (#8983)
 - IO: added ImGuiPlatformIO::ClearPlatformHandlers(), ClearRendererHandlers()
   helpers to null all handlers. (#8945, #2769)
+- Tables: changed ImGuiTableFlags_NoBordersInBody behavior to not draw border in
+  body even when resizing. (#8893)
 - Inputs:
   - Shortcuts: added support for combining ImGuiInputFlags_RouteFocused
     (which is the default route) with ImGuiInputFlags_RouteOverActive, allowing
