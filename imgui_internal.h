@@ -2399,6 +2399,11 @@ struct ImGuiContext
     ImVector<unsigned char> DragDropPayloadBufHeap;             // We don't expose the ImVector<> directly, ImGuiPayload only holds pointer+size
     unsigned char           DragDropPayloadBufLocal[16];        // Local buffer for small payloads
 
+    // Reorder
+    ImGuiID                 ReorderScopeId;
+    ImRect                  ReorderItemRect;                    // Rect of item that initiated reorder operation
+    int                     ReorderResult;                      // Reorder response
+
     // Clipper
     int                             ClipperTempDataStacked;
     ImVector<ImGuiListClipperData>  ClipperTempData;
