@@ -278,16 +278,22 @@ struct ImGui_ImplVulkan_ViewportData
 // Vulkan data
 struct ImGui_ImplVulkan_Data
 {
+    struct CachedPipelineLayout
+    {
+        uint32_t                CustomPushConstantSize;
+        VkShaderStageFlags      CustomPushConstantStages;
+        VkPipelineLayout        Handle;
+    };
+
     ImGui_ImplVulkan_InitInfo   VulkanInitInfo;
     VkDeviceSize                BufferMemoryAlignment;
     VkDeviceSize                NonCoherentAtomSize;
     VkPipelineCreateFlags       PipelineCreateFlags;
     VkDescriptorSetLayout       DescriptorSetLayout;
-    VkPipelineLayout            PipelineLayout;
+    CachedPipelineLayout        PipelineLayout;
     VkPipeline                  Pipeline;               // pipeline for main render pass (created by app)
-    VkPipeline                  PipelineForViewports;   // pipeline for secondary viewports (created by backend)
-    VkShaderModule              ShaderModuleVert;
-    VkShaderModule              ShaderModuleFrag;
+    VkShaderModule              ShaderModuleVert;       // Default module, created by backend when needed and kept alive until shutdown
+    VkShaderModule              ShaderModuleFrag;       // Default module, created by backend when needed and kept alive until shutdown
     VkDescriptorPool            DescriptorPool;
     ImVector<VkFormat>          PipelineRenderingCreateInfoColorAttachmentFormats; // Deep copy of format array
 
@@ -298,6 +304,16 @@ struct ImGui_ImplVulkan_Data
 
     // Render buffers for main window
     ImGui_ImplVulkan_WindowRenderBuffers MainWindowRenderBuffers;
+
+    // Common secondary viewports data
+
+    // May differ from the init info's desired values
+    // .format == VK_FORMAT_UNDEFINED => We should call ImGui_ImplVulkan_PrepareViewportsRendering()
+    VkSurfaceFormatKHR          ViewportsFormat;
+    // Filled during ImGui_ImplVulkan_PrepareViewportsRendering() based on ViewportsFormat and VulkanInitInfo->SecondaryViewportsInfo
+    ImGui_ImplVulkan_PipelineInfo PipelineInfoForViewports;
+    CachedPipelineLayout        PipelineLayoutForViewports;
+    VkPipeline                  PipelineForViewports;   // Common pipeline for secondary viewports (created by backend)
 
     ImGui_ImplVulkan_Data()
     {
@@ -494,7 +510,7 @@ static void CreateOrResizeBuffer(VkBuffer& buffer, VkDeviceMemory& buffer_memory
     buffer_size = buffer_size_aligned;
 }
 
-static void ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, VkPipeline pipeline, VkCommandBuffer command_buffer, ImGui_ImplVulkan_FrameRenderBuffers* rb, int fb_width, int fb_height)
+static void ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, VkPipeline pipeline, VkPipelineLayout layout, VkCommandBuffer command_buffer, ImGui_ImplVulkan_FrameRenderBuffers* rb, int fb_width, int fb_height)
 {
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
 
@@ -533,13 +549,13 @@ static void ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, VkPipeline 
         float translate[2];
         translate[0] = -1.0f - draw_data->DisplayPos.x * scale[0];
         translate[1] = -1.0f - draw_data->DisplayPos.y * scale[1];
-        vkCmdPushConstants(command_buffer, bd->PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(float) * 0, sizeof(float) * 2, scale);
-        vkCmdPushConstants(command_buffer, bd->PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(float) * 2, sizeof(float) * 2, translate);
+        vkCmdPushConstants(command_buffer, layout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(float) * 0, sizeof(float) * 2, scale);
+        vkCmdPushConstants(command_buffer, layout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(float) * 2, sizeof(float) * 2, translate);
     }
 }
 
 // Render function
-void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer, VkPipeline pipeline)
+void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer, VkPipeline pipeline, VkPipelineLayout layout)
 {
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
     int fb_width = (int)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
@@ -558,6 +574,8 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
     ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
     if (pipeline == VK_NULL_HANDLE)
         pipeline = bd->Pipeline;
+    if (layout == VK_NULL_HANDLE)
+        layout = bd->PipelineLayout.Handle;
 
     // Allocate array to store enough vertex/index buffers. Each unique viewport gets its own storage.
     ImGui_ImplVulkan_ViewportData* viewport_renderer_data = (ImGui_ImplVulkan_ViewportData*)draw_data->OwnerViewport->RendererUserData;
@@ -612,14 +630,14 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
     }
 
     // Setup desired Vulkan state
-    ImGui_ImplVulkan_SetupRenderState(draw_data, pipeline, command_buffer, rb, fb_width, fb_height);
+    ImGui_ImplVulkan_SetupRenderState(draw_data, pipeline, layout, command_buffer, rb, fb_width, fb_height);
 
     // Setup render state structure (for callbacks and custom texture bindings)
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     ImGui_ImplVulkan_RenderState render_state;
     render_state.CommandBuffer = command_buffer;
     render_state.Pipeline = pipeline;
-    render_state.PipelineLayout = bd->PipelineLayout;
+    render_state.PipelineLayout = layout;
     platform_io.Renderer_RenderState = &render_state;
 
     // Will project scissor/clipping rectangles into framebuffer space
@@ -641,7 +659,7 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
                 // User callback, registered via ImDrawList::AddCallback()
                 // (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
                 if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
-                    ImGui_ImplVulkan_SetupRenderState(draw_data, pipeline, command_buffer, rb, fb_width, fb_height);
+                    ImGui_ImplVulkan_SetupRenderState(draw_data, pipeline, layout, command_buffer, rb, fb_width, fb_height);
                 else
                     pcmd->UserCallback(draw_list, pcmd);
                 last_desc_set = VK_NULL_HANDLE;
@@ -671,7 +689,7 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
                 // Bind DescriptorSet with font or user texture
                 VkDescriptorSet desc_set = (VkDescriptorSet)pcmd->GetTexID();
                 if (desc_set != last_desc_set)
-                    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 0, 1, &desc_set, 0, nullptr);
+                    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, &desc_set, 0, nullptr);
                 last_desc_set = desc_set;
 
                 // Draw
@@ -928,22 +946,20 @@ static void ImGui_ImplVulkan_CreateShaderModules(VkDevice device, const VkAlloca
     ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
     if (bd->ShaderModuleVert == VK_NULL_HANDLE)
     {
-        VkShaderModuleCreateInfo default_vert_info = {};
-        default_vert_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        default_vert_info.codeSize = sizeof(__glsl_shader_vert_spv);
-        default_vert_info.pCode = (uint32_t*)__glsl_shader_vert_spv;
-        VkShaderModuleCreateInfo* p_vert_info = (v->CustomShaderVertCreateInfo.sType == VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO) ? &v->CustomShaderVertCreateInfo : &default_vert_info;
-        VkResult err = vkCreateShaderModule(device, p_vert_info, allocator, &bd->ShaderModuleVert);
+        VkShaderModuleCreateInfo vert_info = {};
+        vert_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        vert_info.codeSize = sizeof(__glsl_shader_vert_spv);
+        vert_info.pCode = (uint32_t*)__glsl_shader_vert_spv;
+        VkResult err = vkCreateShaderModule(device, &vert_info, allocator, &bd->ShaderModuleVert);
         check_vk_result(err);
     }
     if (bd->ShaderModuleFrag == VK_NULL_HANDLE)
     {
-        VkShaderModuleCreateInfo default_frag_info = {};
-        default_frag_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        default_frag_info.codeSize = sizeof(__glsl_shader_frag_spv);
-        default_frag_info.pCode = (uint32_t*)__glsl_shader_frag_spv;
-        VkShaderModuleCreateInfo* p_frag_info = (v->CustomShaderFragCreateInfo.sType == VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO) ? &v->CustomShaderFragCreateInfo : &default_frag_info;
-        VkResult err = vkCreateShaderModule(device, p_frag_info, allocator, &bd->ShaderModuleFrag);
+        VkShaderModuleCreateInfo frag_info = {};
+        frag_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        frag_info.codeSize = sizeof(__glsl_shader_frag_spv);
+        frag_info.pCode = (uint32_t*)__glsl_shader_frag_spv;
+        VkResult err = vkCreateShaderModule(device, &frag_info, allocator, &bd->ShaderModuleFrag);
         check_vk_result(err);
     }
 }
@@ -952,20 +968,93 @@ static void ImGui_ImplVulkan_CreateShaderModules(VkDevice device, const VkAlloca
 typedef void VkPipelineRenderingCreateInfoKHR;
 #endif
 
-static VkPipeline ImGui_ImplVulkan_CreatePipeline(VkDevice device, const VkAllocationCallbacks* allocator, VkPipelineCache pipelineCache, const ImGui_ImplVulkan_PipelineInfo* info)
+template <class T>
+static T const& FirstValid(T const& a, T const& b)
+{
+    return a ? a : b;
+}
+
+static VkPipelineLayout ImGui_ImplVulkan_CreatePipelineLayout(uint32_t customPushConstantSize, VkShaderStageFlags customPushConstantStages)
 {
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
-    ImGui_ImplVulkan_CreateShaderModules(device, allocator);
+    ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
+
+    // Constants: we are using 'vec2 offset' and 'vec2 scale' instead of a full 3d projection matrix
+    
+    VkPipelineLayoutCreateInfo layout_info = {};
+
+    VkDescriptorSetLayout set_layout[1] = { bd->DescriptorSetLayout };
+    layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    layout_info.setLayoutCount = 1;
+    layout_info.pSetLayouts = set_layout;
+
+    VkPushConstantRange push_constants[2] = {};
+    layout_info.pPushConstantRanges = push_constants;
+
+    push_constants[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    push_constants[0].offset = sizeof(float) * 0;
+    push_constants[0].size = sizeof(float) * 4;
+    layout_info.pushConstantRangeCount = 1;
+
+    if (customPushConstantSize)
+    {
+        layout_info.pushConstantRangeCount = 2;
+        push_constants[1].stageFlags = customPushConstantStages;
+        push_constants[1].offset = push_constants[0].size;
+        push_constants[1].size = customPushConstantSize;
+    }
+
+    VkPipelineLayout res = VK_NULL_HANDLE;
+    VkResult err = vkCreatePipelineLayout(bd->VulkanInitInfo.Device, &layout_info, v->Allocator, &res);
+    check_vk_result(err);
+    return res;
+}
+
+static VkPipelineLayout ImGui_ImplVulkan_GetPipelineLayout(ImGui_ImplVulkan_Data::CachedPipelineLayout& cache, uint32_t customPushConstantSize, VkShaderStageFlags customPushConstantStages)
+{
+    if (cache.Handle != VK_NULL_HANDLE && (cache.CustomPushConstantSize != customPushConstantSize || cache.CustomPushConstantStages != customPushConstantStages))
+    {
+        ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
+        ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
+        vkDeviceWaitIdle(v->Device);
+        vkDestroyPipelineLayout(v->Device, cache.Handle, v->Allocator);
+        cache.Handle = VK_NULL_HANDLE;
+    }
+    if (!cache.Handle)
+    {
+        cache.CustomPushConstantSize = customPushConstantSize;
+        cache.CustomPushConstantStages = customPushConstantStages;
+        cache.Handle = ImGui_ImplVulkan_CreatePipelineLayout(customPushConstantSize, customPushConstantStages);
+    }
+    return cache.Handle;
+}
+
+static VkPipeline ImGui_ImplVulkan_CreatePipeline(VkDevice device, const VkAllocationCallbacks* allocator, VkPipelineCache pipelineCache, const ImGui_ImplVulkan_PipelineInfo* info, ImGui_ImplVulkan_Data::CachedPipelineLayout& pipelineLayout)
+{
+    ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
+
+    if (!info->CustomShadersInfo.CustomShaderVert || !info->CustomShadersInfo.CustomShaderFrag)
+    {
+        ImGui_ImplVulkan_CreateShaderModules(device, allocator);
+    }
 
     VkPipelineShaderStageCreateInfo stage[2] = {};
     stage[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     stage[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-    stage[0].module = bd->ShaderModuleVert;
+    stage[0].module = FirstValid(info->CustomShadersInfo.CustomShaderVert, bd->ShaderModuleVert);
     stage[0].pName = "main";
+    if (info->CustomShadersInfo.CustomShaderVert)
+    {
+        stage[0].pSpecializationInfo = info->CustomShadersInfo.SpecializationInfoVert;
+    }
     stage[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     stage[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    stage[1].module = bd->ShaderModuleFrag;
+    stage[1].module = FirstValid(info->CustomShadersInfo.CustomShaderFrag, bd->ShaderModuleFrag);
     stage[1].pName = "main";
+    if (info->CustomShadersInfo.CustomShaderFrag)
+    {
+        stage[1].pSpecializationInfo = info->CustomShadersInfo.SpecializationInfoFrag;
+    }
 
     VkVertexInputBindingDescription binding_desc[1] = {};
     binding_desc[0].stride = sizeof(ImDrawVert);
@@ -1049,7 +1138,7 @@ static VkPipeline ImGui_ImplVulkan_CreatePipeline(VkDevice device, const VkAlloc
     create_info.pDepthStencilState = &depth_info;
     create_info.pColorBlendState = &blend_info;
     create_info.pDynamicState = &dynamic_state;
-    create_info.layout = bd->PipelineLayout;
+    create_info.layout = ImGui_ImplVulkan_GetPipelineLayout(pipelineLayout, info->CustomShadersInfo.PushConstantSize, info->CustomShadersInfo.PushConstantStages);
     create_info.renderPass = info->RenderPass;
     create_info.subpass = info->Subpass;
 
@@ -1121,24 +1210,6 @@ bool ImGui_ImplVulkan_CreateDeviceObjects()
         check_vk_result(err);
     }
 
-    if (!bd->PipelineLayout)
-    {
-        // Constants: we are using 'vec2 offset' and 'vec2 scale' instead of a full 3d projection matrix
-        VkPushConstantRange push_constants[1] = {};
-        push_constants[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-        push_constants[0].offset = sizeof(float) * 0;
-        push_constants[0].size = sizeof(float) * 4;
-        VkDescriptorSetLayout set_layout[1] = { bd->DescriptorSetLayout };
-        VkPipelineLayoutCreateInfo layout_info = {};
-        layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        layout_info.setLayoutCount = 1;
-        layout_info.pSetLayouts = set_layout;
-        layout_info.pushConstantRangeCount = 1;
-        layout_info.pPushConstantRanges = push_constants;
-        err = vkCreatePipelineLayout(v->Device, &layout_info, v->Allocator, &bd->PipelineLayout);
-        check_vk_result(err);
-    }
-
     // Create pipeline
     bool create_main_pipeline = (v->PipelineInfoMain.RenderPass != VK_NULL_HANDLE);
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
@@ -1195,7 +1266,13 @@ void ImGui_ImplVulkan_CreateMainPipeline(const ImGui_ImplVulkan_PipelineInfo* pi
         pipeline_rendering_create_info->pColorAttachmentFormats = bd->PipelineRenderingCreateInfoColorAttachmentFormats.Data;
     }
 #endif
-    bd->Pipeline = ImGui_ImplVulkan_CreatePipeline(v->Device, v->Allocator, v->PipelineCache, pipeline_info);
+    bd->Pipeline = ImGui_ImplVulkan_CreatePipeline(v->Device, v->Allocator, v->PipelineCache, pipeline_info, bd->PipelineLayout);
+}
+
+VkPipelineLayout ImGui_ImplVulkan_GetMainPipelineLayout()
+{
+    ImGui_ImplVulkan_Data * bd = ImGui_ImplVulkan_GetBackendData();
+    return bd->PipelineLayout.Handle;
 }
 
 void    ImGui_ImplVulkan_DestroyDeviceObjects()
@@ -1215,9 +1292,11 @@ void    ImGui_ImplVulkan_DestroyDeviceObjects()
     if (bd->ShaderModuleVert)     { vkDestroyShaderModule(v->Device, bd->ShaderModuleVert, v->Allocator); bd->ShaderModuleVert = VK_NULL_HANDLE; }
     if (bd->ShaderModuleFrag)     { vkDestroyShaderModule(v->Device, bd->ShaderModuleFrag, v->Allocator); bd->ShaderModuleFrag = VK_NULL_HANDLE; }
     if (bd->DescriptorSetLayout)  { vkDestroyDescriptorSetLayout(v->Device, bd->DescriptorSetLayout, v->Allocator); bd->DescriptorSetLayout = VK_NULL_HANDLE; }
-    if (bd->PipelineLayout)       { vkDestroyPipelineLayout(v->Device, bd->PipelineLayout, v->Allocator); bd->PipelineLayout = VK_NULL_HANDLE; }
+    if (bd->PipelineLayout.Handle){ vkDestroyPipelineLayout(v->Device, bd->PipelineLayout.Handle, v->Allocator); bd->PipelineLayout.Handle = VK_NULL_HANDLE; }
     if (bd->Pipeline)             { vkDestroyPipeline(v->Device, bd->Pipeline, v->Allocator); bd->Pipeline = VK_NULL_HANDLE; }
+    if (bd->PipelineLayoutForViewports.Handle) { vkDestroyPipelineLayout(v->Device, bd->PipelineLayoutForViewports.Handle, v->Allocator); bd->PipelineLayoutForViewports.Handle = VK_NULL_HANDLE; }
     if (bd->PipelineForViewports) { vkDestroyPipeline(v->Device, bd->PipelineForViewports, v->Allocator); bd->PipelineForViewports = VK_NULL_HANDLE; }
+    if (bd->PipelineInfoForViewports.RenderPass) { vkDestroyRenderPass(v->Device, bd->PipelineInfoForViewports.RenderPass, v->Allocator); bd->PipelineInfoForViewports.RenderPass = VK_NULL_HANDLE; }
     if (bd->DescriptorPool)       { vkDestroyDescriptorPool(v->Device, bd->DescriptorPool, v->Allocator); bd->DescriptorPool = VK_NULL_HANDLE; }
 }
 
@@ -1280,6 +1359,24 @@ bool    ImGui_ImplVulkan_LoadFunctions(uint32_t api_version, PFN_vkVoidFunction(
     return true;
 }
 
+void ImGui_ImplVulkan_SanitizeCustomShadersInfo(ImGui_ImplVulkan_CustomShadersInfo & info)
+{
+    if (!info.CustomShaderVert)
+    {
+        info.PushConstantStages &= ~VK_SHADER_STAGE_VERTEX_BIT;
+        info.SpecializationInfoVert = nullptr;
+    }
+    if (!info.CustomShaderFrag)
+    {
+        info.PushConstantStages &= ~VK_SHADER_STAGE_FRAGMENT_BIT;
+        info.SpecializationInfoFrag = nullptr;
+    }
+    if (!info.CustomShaderVert && !info.CustomShaderFrag)
+    {
+        info.PushConstantSize = 0;
+    }
+}
+
 bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info)
 {
     IM_ASSERT(g_FunctionsLoaded && "Need to call ImGui_ImplVulkan_LoadFunctions() if IMGUI_IMPL_VULKAN_NO_PROTOTYPES or VK_NO_PROTOTYPES are set!");
@@ -1324,9 +1421,11 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info)
     else
         IM_ASSERT(info->DescriptorPoolSize > 0);
     if (info->UseDynamicRendering)
-        IM_ASSERT(info->PipelineInfoMain.RenderPass == VK_NULL_HANDLE && info->PipelineInfoForViewports.RenderPass == VK_NULL_HANDLE);
+        IM_ASSERT(info->PipelineInfoMain.RenderPass == VK_NULL_HANDLE);
 
     bd->VulkanInitInfo = *info;
+
+    ImGui_ImplVulkan_SanitizeCustomShadersInfo(bd->VulkanInitInfo.PipelineInfoMain.CustomShadersInfo);
 
     VkPhysicalDeviceProperties properties;
     vkGetPhysicalDeviceProperties(info->PhysicalDevice, &properties);
@@ -1455,6 +1554,16 @@ void ImGui_ImplVulkan_DestroyWindowRenderBuffers(VkDevice device, ImGui_ImplVulk
     buffers->FrameRenderBuffers.clear();
     buffers->Index = 0;
     buffers->Count = 0;
+}
+
+void ImGui_ImplVulkan_SetSecondaryViewportsOptions(const ImGui_ImplVulkan_SecondaryViewportsInfo* info)
+{
+    ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
+    ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
+
+    // Will trigger a call to ImGui_ImplVulkan_PrepareViewportsRendering()
+    bd->ViewportsFormat = {};
+    v->SecondaryViewportsInfo = *info;
 }
 
 //-------------------------------------------------------------------------
@@ -1646,6 +1755,45 @@ int ImGui_ImplVulkanH_GetMinImageCountFromPresentMode(VkPresentModeKHR present_m
     return 1;
 }
 
+VkRenderPass ImGui_ImplVulkanH_CreateRenderPass(VkDevice device, const VkAllocationCallbacks* allocator, VkFormat format, bool clear)
+{
+    VkAttachmentDescription attachment = {};
+    attachment.format = format;
+    attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    attachment.loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    VkAttachmentReference color_attachment = {};
+    color_attachment.attachment = 0;
+    color_attachment.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    VkSubpassDescription subpass = {};
+    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments = &color_attachment;
+    VkSubpassDependency dependency = {};
+    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependency.dstSubpass = 0;
+    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.srcAccessMask = 0;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    VkRenderPassCreateInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    info.attachmentCount = 1;
+    info.pAttachments = &attachment;
+    info.subpassCount = 1;
+    info.pSubpasses = &subpass;
+    info.dependencyCount = 1;
+    info.pDependencies = &dependency;
+    VkRenderPass res;
+    VkResult err = vkCreateRenderPass(device, &info, allocator, &res);
+    check_vk_result(err);
+    return res;
+}
+
 // Also destroy old swap chain and in-flight frames data, if any.
 void ImGui_ImplVulkanH_CreateWindowSwapChain(VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_Window* wd, const VkAllocationCallbacks* allocator, int w, int h, uint32_t min_image_count, VkImageUsageFlags image_usage)
 {
@@ -1734,43 +1882,7 @@ void ImGui_ImplVulkanH_CreateWindowSwapChain(VkPhysicalDevice physical_device, V
     // Create the Render Pass
     if (wd->UseDynamicRendering == false)
     {
-        VkAttachmentDescription attachment = {};
-        attachment.format = wd->SurfaceFormat.format;
-        attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-        attachment.loadOp = wd->ClearEnable ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-        VkAttachmentReference color_attachment = {};
-        color_attachment.attachment = 0;
-        color_attachment.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        VkSubpassDescription subpass = {};
-        subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass.colorAttachmentCount = 1;
-        subpass.pColorAttachments = &color_attachment;
-        VkSubpassDependency dependency = {};
-        dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-        dependency.dstSubpass = 0;
-        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.srcAccessMask = 0;
-        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        VkRenderPassCreateInfo info = {};
-        info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        info.attachmentCount = 1;
-        info.pAttachments = &attachment;
-        info.subpassCount = 1;
-        info.pSubpasses = &subpass;
-        info.dependencyCount = 1;
-        info.pDependencies = &dependency;
-        err = vkCreateRenderPass(device, &info, allocator, &wd->RenderPass);
-        check_vk_result(err);
-
-        // We do not create a pipeline by default as this is also used by examples' main.cpp,
-        // but secondary viewport in multi-viewport mode may want to create one with:
-        //ImGui_ImplVulkan_CreatePipeline(device, allocator, VK_NULL_HANDLE, wd->RenderPass, VK_SAMPLE_COUNT_1_BIT, &wd->Pipeline, v->Subpass);
+        wd->RenderPass = ImGui_ImplVulkanH_CreateRenderPass(device, allocator, wd->SurfaceFormat.format, wd->ClearEnable);
     }
 
     // Create The Image Views
@@ -1960,6 +2072,90 @@ ImGui_ImplVulkanH_Window* ImGui_ImplVulkanH_GetWindowDataFromViewport(ImGuiViewp
 // If you are new to dear imgui or creating a new binding for dear imgui, it is recommended that you completely ignore this section first..
 //--------------------------------------------------------------------------------------------------------
 
+// Prepare common viewports rendering objects.
+// Requires a sample surface (assuming any viewport surface behaves the same).
+// - Select a surface format
+// - Create the common RenderPass and Pipeline
+static void ImGui_ImplVulkan_PrepareViewportsRendering(VkSurfaceKHR surface)
+{
+    ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
+    ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
+
+    // Select Surface Format
+    const VkFormat request_surface_formats[] = { v->SecondaryViewportsInfo.DesiredFormat.format, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_B8G8R8_UNORM, VK_FORMAT_R8G8B8_UNORM };
+    const VkFormat* p_request_surface_formats = request_surface_formats;
+    uint32_t request_surface_formats_count = IM_ARRAYSIZE(request_surface_formats);
+    if (v->SecondaryViewportsInfo.DesiredFormat.format == VK_FORMAT_UNDEFINED)
+    {
+        ++p_request_surface_formats;
+        --request_surface_formats_count;
+    }
+    const VkColorSpaceKHR requestSurfaceColorSpace = v->SecondaryViewportsInfo.DesiredFormat.colorSpace;
+    bd->ViewportsFormat = ImGui_ImplVulkanH_SelectSurfaceFormat(v->PhysicalDevice, surface, p_request_surface_formats, request_surface_formats_count, requestSurfaceColorSpace);
+
+    ImGui_ImplVulkan_PipelineInfo* pipeline_info = &bd->PipelineInfoForViewports;
+    pipeline_info->MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+
+    if (v->UseDynamicRendering)
+    {
+#ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
+        pipeline_info->PipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+        pipeline_info->PipelineRenderingCreateInfo.colorAttachmentCount = 1;
+        pipeline_info->PipelineRenderingCreateInfo.pColorAttachmentFormats = &bd->ViewportsFormat.format;
+#endif
+    }
+    else
+    {
+        // Create a reference RenderPass
+        // Viewports will create their own RenderPass, compatible with this one (same format, different clear option)
+        if (pipeline_info->RenderPass)
+        {
+            vkDeviceWaitIdle(v->Device);
+            vkDestroyRenderPass(v->Device, pipeline_info->RenderPass, v->Allocator);
+        }
+        pipeline_info->RenderPass = ImGui_ImplVulkanH_CreateRenderPass(v->Device, v->Allocator, bd->ViewportsFormat.format, true);
+        pipeline_info->Subpass = 0;
+    }
+
+    if (v->SecondaryViewportsInfo.GetCustomShadersInfo)
+    {
+        pipeline_info->CustomShadersInfo = v->SecondaryViewportsInfo.GetCustomShadersInfo(v->SecondaryViewportsInfo.UserData, bd->ViewportsFormat);
+        ImGui_ImplVulkan_SanitizeCustomShadersInfo(pipeline_info->CustomShadersInfo);
+    }
+    else
+    {
+        memset(&pipeline_info->CustomShadersInfo, 0, sizeof(ImGui_ImplVulkan_CustomShadersInfo));
+    }
+    // Create pipeline (shared by all secondary viewports)
+    if (bd->PipelineForViewports)
+    {
+        vkDeviceWaitIdle(v->Device);
+        vkDestroyPipeline(v->Device, bd->PipelineForViewports, v->Allocator);
+    }
+    bd->PipelineForViewports = ImGui_ImplVulkan_CreatePipeline(v->Device, v->Allocator, VK_NULL_HANDLE, pipeline_info, bd->PipelineLayoutForViewports);
+}
+
+static void ImGui_ImplVulkan_SelectPresentMode(ImGuiViewport* viewport)
+{
+    ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
+    ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
+    ImGui_ImplVulkan_ViewportData* vd = (ImGui_ImplVulkan_ViewportData*)viewport->RendererUserData;
+    ImGui_ImplVulkanH_Window* wd = &vd->Window;
+
+    wd->DesiredPresentMode = v->SecondaryViewportsInfo.DesiredPresentMode;
+    // FIXME-VULKAN: Even thought mailbox seems to get us maximum framerate with a single window, it halves framerate with a second window etc. (w/ Nvidia and SDK 1.82.1)
+    VkPresentModeKHR present_modes[] = { wd->DesiredPresentMode, VK_PRESENT_MODE_MAILBOX_KHR, VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_FIFO_KHR };
+    const VkPresentModeKHR* p_present_modes = present_modes;
+    uint32_t present_modes_count = IM_ARRAYSIZE(present_modes);
+    if (wd->DesiredPresentMode == VK_PRESENT_MODE_MAX_ENUM_KHR)
+    {
+        ++p_present_modes;
+        --present_modes_count;
+    }
+    wd->PresentMode = ImGui_ImplVulkanH_SelectPresentMode(v->PhysicalDevice, wd->Surface, p_present_modes, present_modes_count);
+    //printf("[vulkan] Secondary window selected PresentMode = %d\n", wd->PresentMode);
+}
+
 static void ImGui_ImplVulkan_CreateWindow(ImGuiViewport* viewport)
 {
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
@@ -1990,49 +2186,21 @@ static void ImGui_ImplVulkan_CreateWindow(ImGuiViewport* viewport)
     }
     viewport->RendererUserData = vd;
 
-    // Select Surface Format
-    ImGui_ImplVulkan_PipelineInfo* pipeline_info = &v->PipelineInfoForViewports;
-    ImVector<VkFormat> requestSurfaceImageFormats;
-#ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
-    for (uint32_t n = 0; n < pipeline_info->PipelineRenderingCreateInfo.colorAttachmentCount; n++)
-        requestSurfaceImageFormats.push_back(pipeline_info->PipelineRenderingCreateInfo.pColorAttachmentFormats[n]);
-#endif
-    const VkFormat defaultFormats[] = { VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_B8G8R8_UNORM, VK_FORMAT_R8G8B8_UNORM };
-    for (VkFormat format : defaultFormats)
-        requestSurfaceImageFormats.push_back(format);
-
-    const VkColorSpaceKHR requestSurfaceColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
-    wd->SurfaceFormat = ImGui_ImplVulkanH_SelectSurfaceFormat(v->PhysicalDevice, wd->Surface, requestSurfaceImageFormats.Data, (size_t)requestSurfaceImageFormats.Size, requestSurfaceColorSpace);
+    if (bd->ViewportsFormat.format == VK_FORMAT_UNDEFINED)
+    {
+        ImGui_ImplVulkan_PrepareViewportsRendering(wd->Surface);
+    }
+    wd->SurfaceFormat = bd->ViewportsFormat;
+    wd->DesiredSurfaceFormat = v->SecondaryViewportsInfo.DesiredFormat;
 
     // Select Present Mode
-    // FIXME-VULKAN: Even thought mailbox seems to get us maximum framerate with a single window, it halves framerate with a second window etc. (w/ Nvidia and SDK 1.82.1)
-    VkPresentModeKHR present_modes[] = { VK_PRESENT_MODE_MAILBOX_KHR, VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_FIFO_KHR };
-    wd->PresentMode = ImGui_ImplVulkanH_SelectPresentMode(v->PhysicalDevice, wd->Surface, &present_modes[0], IM_ARRAYSIZE(present_modes));
-    //printf("[vulkan] Secondary window selected PresentMode = %d\n", wd->PresentMode);
+    ImGui_ImplVulkan_SelectPresentMode(viewport);
 
     // Create SwapChain, RenderPass, Framebuffer, etc.
     wd->ClearEnable = (viewport->Flags & ImGuiViewportFlags_NoRendererClear) ? false : true;
     wd->UseDynamicRendering = v->UseDynamicRendering;
-    ImGui_ImplVulkanH_CreateOrResizeWindow(v->Instance, v->PhysicalDevice, v->Device, wd, v->QueueFamily, v->Allocator, (int)viewport->Size.x, (int)viewport->Size.y, v->MinImageCount, pipeline_info->SwapChainImageUsage);
+    ImGui_ImplVulkanH_CreateOrResizeWindow(v->Instance, v->PhysicalDevice, v->Device, wd, v->QueueFamily, v->Allocator, (int)viewport->Size.x, (int)viewport->Size.y, v->MinImageCount, v->SecondaryViewportsInfo.SwapChainImageUsage);
     vd->WindowOwned = true;
-
-    // Create pipeline (shared by all secondary viewports)
-    if (bd->PipelineForViewports == VK_NULL_HANDLE)
-    {
-#ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
-        if (wd->UseDynamicRendering)
-        {
-            pipeline_info->PipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
-            pipeline_info->PipelineRenderingCreateInfo.colorAttachmentCount = 1;
-            pipeline_info->PipelineRenderingCreateInfo.pColorAttachmentFormats = &wd->SurfaceFormat.format;
-        }
-        else
-        {
-            pipeline_info->RenderPass = wd->RenderPass;
-        }
-#endif
-        bd->PipelineForViewports = ImGui_ImplVulkan_CreatePipeline(v->Device, v->Allocator, VK_NULL_HANDLE, &v->PipelineInfoForViewports);
-    }
 }
 
 static void ImGui_ImplVulkan_DestroyWindow(ImGuiViewport* viewport)
@@ -2058,10 +2226,10 @@ static void ImGui_ImplVulkan_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
         return;
     ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
     vd->Window.ClearEnable = (viewport->Flags & ImGuiViewportFlags_NoRendererClear) ? false : true;
-    ImGui_ImplVulkanH_CreateOrResizeWindow(v->Instance, v->PhysicalDevice, v->Device, &vd->Window, v->QueueFamily, v->Allocator, (int)size.x, (int)size.y, v->MinImageCount, v->PipelineInfoForViewports.SwapChainImageUsage);
+    ImGui_ImplVulkanH_CreateOrResizeWindow(v->Instance, v->PhysicalDevice, v->Device, &vd->Window, v->QueueFamily, v->Allocator, (int)size.x, (int)size.y, v->MinImageCount, v->SecondaryViewportsInfo.SwapChainImageUsage);
 }
 
-static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport, void*)
+static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport, void* custom_push_constant_data)
 {
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
     ImGui_ImplVulkan_ViewportData* vd = (ImGui_ImplVulkan_ViewportData*)viewport->RendererUserData;
@@ -2071,9 +2239,26 @@ static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport, void*)
     ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
     VkResult err;
 
-    if (vd->SwapChainNeedRebuild || vd->SwapChainSuboptimal)
+    bool create_or_resize = vd->SwapChainNeedRebuild || vd->SwapChainSuboptimal;
+    if (wd->DesiredPresentMode != v->SecondaryViewportsInfo.DesiredPresentMode)
     {
-        ImGui_ImplVulkanH_CreateOrResizeWindow(v->Instance, v->PhysicalDevice, v->Device, wd, v->QueueFamily, v->Allocator, (int)viewport->Size.x, (int)viewport->Size.y, v->MinImageCount, v->PipelineInfoForViewports.SwapChainImageUsage);
+        ImGui_ImplVulkan_SelectPresentMode(viewport);
+        create_or_resize |= true;
+    }
+
+    if (bd->ViewportsFormat.format == VK_FORMAT_UNDEFINED)
+    {
+        ImGui_ImplVulkan_PrepareViewportsRendering(wd->Surface);
+        create_or_resize |= true;
+    }
+
+    create_or_resize |= memcmp(&wd->DesiredSurfaceFormat, &v->SecondaryViewportsInfo.DesiredFormat, sizeof(VkSurfaceFormatKHR)) != 0;
+
+    if (create_or_resize)
+    {
+        wd->SurfaceFormat = bd->ViewportsFormat;
+        wd->DesiredSurfaceFormat = v->SecondaryViewportsInfo.DesiredFormat;
+        ImGui_ImplVulkanH_CreateOrResizeWindow(v->Instance, v->PhysicalDevice, v->Device, wd, v->QueueFamily, v->Allocator, (int)viewport->Size.x, (int)viewport->Size.y, v->MinImageCount, v->SecondaryViewportsInfo.SwapChainImageUsage);
         vd->SwapChainNeedRebuild = vd->SwapChainSuboptimal = false;
     }
 
@@ -2161,6 +2346,11 @@ static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport, void*)
             info.pClearValues = (viewport->Flags & ImGuiViewportFlags_NoRendererClear) ? nullptr : &wd->ClearValue;
             vkCmdBeginRenderPass(fd->CommandBuffer, &info, VK_SUBPASS_CONTENTS_INLINE);
         }
+    }
+
+    if (custom_push_constant_data && bd->PipelineInfoForViewports.CustomShadersInfo.PushConstantSize > 0)
+    {
+        vkCmdPushConstants(fd->CommandBuffer, bd->PipelineLayoutForViewports.Handle, bd->PipelineInfoForViewports.CustomShadersInfo.PushConstantStages, 4 * sizeof(float), bd->PipelineInfoForViewports.CustomShadersInfo.PushConstantSize, custom_push_constant_data);
     }
 
     ImGui_ImplVulkan_RenderDrawData(viewport->DrawData, fd->CommandBuffer, bd->PipelineForViewports);
