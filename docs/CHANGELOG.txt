@@ -46,7 +46,7 @@ Breaking Changes:
       Before: GetID("Hello###World") == GetID("###World") != GetID("World");
       Now:    GetID("Hello###World") == GetID("###World") == GetID("World");
   - This has the property of facilitating concatenating and manipulating
-    identifers using "###", and will allow fixing other dangling issues.
+    identifiers using "###", and will allow fixing other dangling issues.
   - This will invalidate hashes (stored in .ini data) for Tables and Windows
     that are using the "###" operators. (#713, #1698)
 - Fonts: Fixed handling of `ImFontConfig::FontDataOwnedByAtlas = false` which

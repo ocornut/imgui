@@ -394,6 +394,12 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
  When you are not sure about an old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2025/12/11 (1.92.6) - Hashing: handling of "###" operator to reset to seed within a string identifier doesn't include the "###" characters in the output hash anymore.
+                         - Before: GetID("Hello###World") == GetID("###World") != GetID("World");
+                         - Now:    GetID("Hello###World") == GetID("###World") == GetID("World");
+                         - This has the property of facilitating concatenating and manipulating identifiers using "###", and will allow fixing other dangling issues.
+                         - This will invalidate hashes (stored in .ini data) for Tables and Windows!
+    that are using the "###" operators. (#713, #1698)
  - 2025/11/24 (1.92.6) - Fonts: Fixed handling of `ImFontConfig::FontDataOwnedByAtlas = false` which did erroneously make a copy of the font data, essentially defeating the purpose of this flag and wasting memory.
                          (trivia: undetected since July 2015, this is perhaps the oldest bug in Dear ImGui history, albeit for a rarely used feature, see #9086)
                          HOWEVER, fixing this bug is likely to surface bugs in user code using `FontDataOwnedByAtlas = false`.
