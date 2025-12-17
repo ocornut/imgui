@@ -30,7 +30,7 @@
 // Library Version
 // (Integer encoded as XYYZZ for use in #if preprocessor conditionals, e.g. '#if IMGUI_VERSION_NUM >= 12345')
 #define IMGUI_VERSION       "1.92.6 WIP"
-#define IMGUI_VERSION_NUM   19255
+#define IMGUI_VERSION_NUM   19256
 #define IMGUI_HAS_TABLE             // Added BeginTable() - from IMGUI_VERSION_NUM >= 18000
 #define IMGUI_HAS_TEXTURES          // Added ImGuiBackendFlags_RendererHasTextures - from IMGUI_VERSION_NUM >= 19198
 
@@ -95,7 +95,7 @@ Index of this file:
 #include <assert.h>
 #define IM_ASSERT(_EXPR)            assert(_EXPR)                               // You can override the default assert handler by editing imconfig.h
 #endif
-#define IM_ARRAYSIZE(_ARR)          ((int)(sizeof(_ARR) / sizeof(*(_ARR))))     // Size of a static C-style array. Don't use on pointers!
+#define IM_COUNTOF(_ARR)            ((int)(sizeof(_ARR) / sizeof(*(_ARR))))     // Size of a static C-style array. Don't use on pointers!
 #define IM_UNUSED(_VAR)             ((void)(_VAR))                              // Used to silence "unused variable warnings". Often useful as asserts may be stripped out from final builds.
 #define IM_STRINGIFY_HELPER(_EXPR)  #_EXPR
 #define IM_STRINGIFY(_EXPR)         IM_STRINGIFY_HELPER(_EXPR)                  // Preprocessor idiom to stringify e.g. an integer or a macro.
@@ -4150,6 +4150,8 @@ typedef ImFontAtlasRect ImFontAtlasCustomRect;
 #define IM_OFFSETOF(_TYPE,_MEMBER)  offsetof(_TYPE, _MEMBER)    // OBSOLETED IN 1.90 (now using C++11 standard version)
 
 #endif // #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+
+#define IM_ARRAYSIZE                IM_COUNTOF                  // RENAMED IN 1.92.6: IM_ARRAYSIZE -> IM_COUNTOF
 
 // RENAMED IMGUI_DISABLE_METRICS_WINDOW > IMGUI_DISABLE_DEBUG_TOOLS in 1.88 (from June 2022)
 #ifdef IMGUI_DISABLE_METRICS_WINDOW

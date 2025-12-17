@@ -624,7 +624,7 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
             // (2) there exists a version of d3d12.dll for Windows 7 (D3D12On7) in one of the following directories.
             // See https://github.com/ocornut/imgui/pull/3696 for details.
             const char* localD3d12Paths[] = { ".\\d3d12.dll", ".\\d3d12on7\\d3d12.dll", ".\\12on7\\d3d12.dll" }; // A. current directory, B. used by some games, C. used in Microsoft D3D12On7 sample
-            for (int i = 0; i < IM_ARRAYSIZE(localD3d12Paths); i++)
+            for (int i = 0; i < IM_COUNTOF(localD3d12Paths); i++)
                 if ((d3d12_dll = ::LoadLibraryA(localD3d12Paths[i])) != nullptr)
                     break;
 

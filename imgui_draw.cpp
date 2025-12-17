@@ -391,9 +391,9 @@ ImDrawListSharedData::ImDrawListSharedData()
 {
     memset(this, 0, sizeof(*this));
     InitialFringeScale = 1.0f;
-    for (int i = 0; i < IM_ARRAYSIZE(ArcFastVtx); i++)
+    for (int i = 0; i < IM_COUNTOF(ArcFastVtx); i++)
     {
-        const float a = ((float)i * 2 * IM_PI) / (float)IM_ARRAYSIZE(ArcFastVtx);
+        const float a = ((float)i * 2 * IM_PI) / (float)IM_COUNTOF(ArcFastVtx);
         ArcFastVtx[i] = ImVec2(ImCos(a), ImSin(a));
     }
     ArcFastRadiusCutoff = IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC_R(IM_DRAWLIST_ARCFAST_SAMPLE_MAX, CircleSegmentMaxError);
@@ -411,7 +411,7 @@ void ImDrawListSharedData::SetCircleTessellationMaxError(float max_error)
 
     IM_ASSERT(max_error > 0.0f);
     CircleSegmentMaxError = max_error;
-    for (int i = 0; i < IM_ARRAYSIZE(CircleSegmentCounts); i++)
+    for (int i = 0; i < IM_COUNTOF(CircleSegmentCounts); i++)
     {
         const float radius = (float)i;
         CircleSegmentCounts[i] = (ImU8)((i > 0) ? IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, CircleSegmentMaxError) : IM_DRAWLIST_ARCFAST_SAMPLE_MAX);
@@ -646,7 +646,7 @@ int ImDrawList::_CalcCircleAutoSegmentCount(float radius) const
 {
     // Automatic segment count
     const int radius_idx = (int)(radius + 0.999999f); // ceil to never reduce accuracy
-    if (radius_idx >= 0 && radius_idx < IM_ARRAYSIZE(_Data->CircleSegmentCounts))
+    if (radius_idx >= 0 && radius_idx < IM_COUNTOF(_Data->CircleSegmentCounts))
         return _Data->CircleSegmentCounts[radius_idx]; // Use cached value
     else
         return IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, _Data->CircleSegmentMaxError);
@@ -3122,7 +3122,7 @@ ImFont* ImFontAtlas::AddFontDefault(const ImFontConfig* font_cfg_template)
     if (font_cfg.SizePixels <= 0.0f)
         font_cfg.SizePixels = 13.0f * 1.0f;
     if (font_cfg.Name[0] == '\0')
-        ImFormatString(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), "ProggyClean.ttf");
+        ImFormatString(font_cfg.Name, IM_COUNTOF(font_cfg.Name), "ProggyClean.ttf");
     font_cfg.EllipsisChar = (ImWchar)0x0085;
     font_cfg.GlyphOffset.y += 1.0f * IM_TRUNC(font_cfg.SizePixels / 13.0f);  // Add +1 offset per 13 units
 
@@ -3156,7 +3156,7 @@ ImFont* ImFontAtlas::AddFontFromFileTTF(const char* filename, float size_pixels,
         // Store a short copy of filename into into the font name for convenience
         const char* p;
         for (p = filename + ImStrlen(filename); p > filename && p[-1] != '/' && p[-1] != '\\'; p--) {}
-        ImFormatString(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), "%s", p);
+        ImFormatString(font_cfg.Name, IM_COUNTOF(font_cfg.Name), "%s", p);
     }
     return AddFontFromMemoryTTF(data, (int)data_size, size_pixels, &font_cfg, glyph_ranges);
 }
@@ -4005,7 +4005,7 @@ static void ImFontAtlasDebugWriteTexToDisk(ImTextureData* tex, const char* descr
 {
     ImGuiContext& g = *GImGui;
     char buf[128];
-    ImFormatString(buf, IM_ARRAYSIZE(buf), "[%05d] Texture #%03d - %s.png", g.FrameCount, tex->UniqueID, description);
+    ImFormatString(buf, IM_COUNTOF(buf), "[%05d] Texture #%03d - %s.png", g.FrameCount, tex->UniqueID, description);
     stbi_write_png(buf, tex->Width, tex->Height, tex->BytesPerPixel, tex->Pixels, tex->GetPitch()); // tex->BytesPerPixel is technically not component, but ok for the formats we support.
 }
 #endif
@@ -4885,11 +4885,11 @@ const ImWchar*  ImFontAtlas::GetGlyphRangesChineseSimplifiedCommon()
         0xFF00, 0xFFEF, // Half-width characters
         0xFFFD, 0xFFFD  // Invalid
     };
-    static ImWchar full_ranges[IM_ARRAYSIZE(base_ranges) + IM_ARRAYSIZE(accumulative_offsets_from_0x4E00) * 2 + 1] = { 0 };
+    static ImWchar full_ranges[IM_COUNTOF(base_ranges) + IM_COUNTOF(accumulative_offsets_from_0x4E00) * 2 + 1] = { 0 };
     if (!full_ranges[0])
     {
         memcpy(full_ranges, base_ranges, sizeof(base_ranges));
-        UnpackAccumulativeOffsetsIntoRanges(0x4E00, accumulative_offsets_from_0x4E00, IM_ARRAYSIZE(accumulative_offsets_from_0x4E00), full_ranges + IM_ARRAYSIZE(base_ranges));
+        UnpackAccumulativeOffsetsIntoRanges(0x4E00, accumulative_offsets_from_0x4E00, IM_COUNTOF(accumulative_offsets_from_0x4E00), full_ranges + IM_COUNTOF(base_ranges));
     }
     return &full_ranges[0];
 }
@@ -4975,11 +4975,11 @@ const ImWchar*  ImFontAtlas::GetGlyphRangesJapanese()
         0xFF00, 0xFFEF, // Half-width characters
         0xFFFD, 0xFFFD  // Invalid
     };
-    static ImWchar full_ranges[IM_ARRAYSIZE(base_ranges) + IM_ARRAYSIZE(accumulative_offsets_from_0x4E00)*2 + 1] = { 0 };
+    static ImWchar full_ranges[IM_COUNTOF(base_ranges) + IM_COUNTOF(accumulative_offsets_from_0x4E00)*2 + 1] = { 0 };
     if (!full_ranges[0])
     {
         memcpy(full_ranges, base_ranges, sizeof(base_ranges));
-        UnpackAccumulativeOffsetsIntoRanges(0x4E00, accumulative_offsets_from_0x4E00, IM_ARRAYSIZE(accumulative_offsets_from_0x4E00), full_ranges + IM_ARRAYSIZE(base_ranges));
+        UnpackAccumulativeOffsetsIntoRanges(0x4E00, accumulative_offsets_from_0x4E00, IM_COUNTOF(accumulative_offsets_from_0x4E00), full_ranges + IM_COUNTOF(base_ranges));
     }
     return &full_ranges[0];
 }

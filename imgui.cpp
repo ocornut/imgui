@@ -394,6 +394,7 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
  When you are not sure about an old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2025/12/17 (1.92.6) - Renamed helper macro IM_ARRAYSIZE() -> IM_COUNTOF(). Kept redirection/legacy name for now.
  - 2025/12/11 (1.92.6) - Hashing: handling of "###" operator to reset to seed within a string identifier doesn't include the "###" characters in the output hash anymore.
                          - Before: GetID("Hello###World") == GetID("###World") != GetID("World");
                          - Now:    GetID("Hello###World") == GetID("###World") == GetID("World");
@@ -1544,7 +1545,7 @@ ImGuiIO::ImGuiIO()
 {
     // Most fields are initialized with zero
     memset(this, 0, sizeof(*this));
-    IM_STATIC_ASSERT(IM_ARRAYSIZE(ImGuiIO::MouseDown) == ImGuiMouseButton_COUNT && IM_ARRAYSIZE(ImGuiIO::MouseClicked) == ImGuiMouseButton_COUNT);
+    IM_STATIC_ASSERT(IM_COUNTOF(ImGuiIO::MouseDown) == ImGuiMouseButton_COUNT && IM_COUNTOF(ImGuiIO::MouseClicked) == ImGuiMouseButton_COUNT);
 
     // Settings
     ConfigFlags = ImGuiConfigFlags_None;
@@ -1616,8 +1617,8 @@ ImGuiIO::ImGuiIO()
     MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
     MousePosPrev = ImVec2(-FLT_MAX, -FLT_MAX);
     MouseSource = ImGuiMouseSource_Mouse;
-    for (int i = 0; i < IM_ARRAYSIZE(MouseDownDuration); i++) MouseDownDuration[i] = MouseDownDurationPrev[i] = -1.0f;
-    for (int i = 0; i < IM_ARRAYSIZE(KeysData); i++) { KeysData[i].DownDuration = KeysData[i].DownDurationPrev = -1.0f; }
+    for (int i = 0; i < IM_COUNTOF(MouseDownDuration); i++) MouseDownDuration[i] = MouseDownDurationPrev[i] = -1.0f;
+    for (int i = 0; i < IM_COUNTOF(KeysData); i++) { KeysData[i].DownDuration = KeysData[i].DownDurationPrev = -1.0f; }
     AppAcceptingEvents = true;
 }
 
@@ -1725,7 +1726,7 @@ void ImGuiIO::ClearInputMouse()
         key_data->DownDurationPrev = -1.0f;
     }
     MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
-    for (int n = 0; n < IM_ARRAYSIZE(MouseDown); n++)
+    for (int n = 0; n < IM_COUNTOF(MouseDown); n++)
     {
         MouseDown[n] = false;
         MouseDownDuration[n] = MouseDownDurationPrev[n] = -1.0f;
@@ -2454,7 +2455,7 @@ ImFileHandle ImFileOpen(const char* filename, const char* mode)
     // We don't rely on current ImGuiContext as this is implied to be a helper function which doesn't depend on it (see #7314).
     wchar_t local_temp_stack[FILENAME_MAX];
     ImVector<wchar_t> local_temp_heap;
-    if (filename_wsize + mode_wsize > IM_ARRAYSIZE(local_temp_stack))
+    if (filename_wsize + mode_wsize > IM_COUNTOF(local_temp_stack))
         local_temp_heap.resize(filename_wsize + mode_wsize);
     wchar_t* filename_wbuf = local_temp_heap.Data ? local_temp_heap.Data : local_temp_stack;
     wchar_t* mode_wbuf = filename_wbuf + filename_wsize;
@@ -2969,7 +2970,7 @@ ImGuiTextFilter::ImGuiTextFilter(const char* default_filter) //-V1077
     CountGrep = 0;
     if (default_filter)
     {
-        ImStrncpy(InputBuf, default_filter, IM_ARRAYSIZE(InputBuf));
+        ImStrncpy(InputBuf, default_filter, IM_COUNTOF(InputBuf));
         Build();
     }
 }
@@ -2978,7 +2979,7 @@ bool ImGuiTextFilter::Draw(const char* label, float width)
 {
     if (width != 0.0f)
         ImGui::SetNextItemWidth(width);
-    bool value_changed = ImGui::InputText(label, InputBuf, IM_ARRAYSIZE(InputBuf));
+    bool value_changed = ImGui::InputText(label, InputBuf, IM_COUNTOF(InputBuf));
     if (value_changed)
         Build();
     return value_changed;
@@ -3602,7 +3603,7 @@ static const ImGuiStyleVarInfo GStyleVarsInfo[] =
 const ImGuiStyleVarInfo* ImGui::GetStyleVarInfo(ImGuiStyleVar idx)
 {
     IM_ASSERT(idx >= 0 && idx < ImGuiStyleVar_COUNT);
-    IM_STATIC_ASSERT(IM_ARRAYSIZE(GStyleVarsInfo) == ImGuiStyleVar_COUNT);
+    IM_STATIC_ASSERT(IM_COUNTOF(GStyleVarsInfo) == ImGuiStyleVar_COUNT);
     return &GStyleVarsInfo[idx];
 }
 
@@ -4343,7 +4344,7 @@ void ImGui::Initialize()
     TableSettingsAddSettingsHandler();
 
     // Setup default localization table
-    LocalizeRegisterEntries(GLocalizationEntriesEnUS, IM_ARRAYSIZE(GLocalizationEntriesEnUS));
+    LocalizeRegisterEntries(GLocalizationEntriesEnUS, IM_COUNTOF(GLocalizationEntriesEnUS));
 
     // Setup default ImGuiPlatformIO clipboard/IME handlers.
     g.PlatformIO.Platform_GetClipboardTextFn = Platform_GetClipboardTextFn_DefaultImpl;    // Platform dependent default implementations
@@ -4476,7 +4477,7 @@ void ImGui::Shutdown()
 // (A) Will be visible in debugger, (B) Will be included in all IMGUI_DEBUG_LOG() calls, (C) Should be <= 15 characters long.
 void ImGui::SetContextName(ImGuiContext* ctx, const char* name)
 {
-    ImStrncpy(ctx->ContextName, name, IM_ARRAYSIZE(ctx->ContextName));
+    ImStrncpy(ctx->ContextName, name, IM_COUNTOF(ctx->ContextName));
 }
 
 // No specific ordering/dependency support, will see as needed
@@ -5047,7 +5048,7 @@ void ImGui::DebugAllocHook(ImGuiDebugAllocInfo* info, int frame_count, void* ptr
     IM_UNUSED(ptr);
     if (entry->FrameCount != frame_count)
     {
-        info->LastEntriesIdx = (info->LastEntriesIdx + 1) % IM_ARRAYSIZE(info->LastEntriesBuf);
+        info->LastEntriesIdx = (info->LastEntriesIdx + 1) % IM_COUNTOF(info->LastEntriesBuf);
         entry = &info->LastEntriesBuf[info->LastEntriesIdx];
         entry->FrameCount = frame_count;
         entry->AllocCount = entry->FreeCount = 0;
@@ -5132,7 +5133,7 @@ static ImDrawList* GetViewportBgFgDrawList(ImGuiViewportP* viewport, size_t draw
 {
     // Create the draw list on demand, because they are not frequently used for all viewports
     ImGuiContext& g = *GImGui;
-    IM_ASSERT(drawlist_no < IM_ARRAYSIZE(viewport->BgFgDrawLists));
+    IM_ASSERT(drawlist_no < IM_COUNTOF(viewport->BgFgDrawLists));
     ImDrawList* draw_list = viewport->BgFgDrawLists[drawlist_no];
     if (draw_list == NULL)
     {
@@ -5355,7 +5356,7 @@ void ImGui::UpdateHoveredWindowAndCaptureFlags(const ImVec2& mouse_pos)
     const bool has_open_modal = (modal_window != NULL);
     int mouse_earliest_down = -1;
     bool mouse_any_down = false;
-    for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
+    for (int i = 0; i < IM_COUNTOF(io.MouseDown); i++)
     {
         if (io.MouseClicked[i])
         {
@@ -5458,8 +5459,8 @@ void ImGui::NewFrame()
     // Calculate frame-rate for the user, as a purely luxurious feature
     g.FramerateSecPerFrameAccum += g.IO.DeltaTime - g.FramerateSecPerFrame[g.FramerateSecPerFrameIdx];
     g.FramerateSecPerFrame[g.FramerateSecPerFrameIdx] = g.IO.DeltaTime;
-    g.FramerateSecPerFrameIdx = (g.FramerateSecPerFrameIdx + 1) % IM_ARRAYSIZE(g.FramerateSecPerFrame);
-    g.FramerateSecPerFrameCount = ImMin(g.FramerateSecPerFrameCount + 1, IM_ARRAYSIZE(g.FramerateSecPerFrame));
+    g.FramerateSecPerFrameIdx = (g.FramerateSecPerFrameIdx + 1) % IM_COUNTOF(g.FramerateSecPerFrame);
+    g.FramerateSecPerFrameCount = ImMin(g.FramerateSecPerFrameCount + 1, IM_COUNTOF(g.FramerateSecPerFrame));
     g.IO.Framerate = (g.FramerateSecPerFrameAccum > 0.0f) ? (1.0f / (g.FramerateSecPerFrameAccum / (float)g.FramerateSecPerFrameCount)) : FLT_MAX;
 
     // Process input queue (trickle as many events as possible), turn events into writes to IO structure
@@ -5768,10 +5769,10 @@ static void FlattenDrawDataIntoSingleLayer(ImDrawDataBuilder* builder)
 {
     int n = builder->Layers[0]->Size;
     int full_size = n;
-    for (int i = 1; i < IM_ARRAYSIZE(builder->Layers); i++)
+    for (int i = 1; i < IM_COUNTOF(builder->Layers); i++)
         full_size += builder->Layers[i]->Size;
     builder->Layers[0]->resize(full_size);
-    for (int layer_n = 1; layer_n < IM_ARRAYSIZE(builder->Layers); layer_n++)
+    for (int layer_n = 1; layer_n < IM_COUNTOF(builder->Layers); layer_n++)
     {
         ImVector<ImDrawList*>* layer = builder->Layers[layer_n];
         if (layer->empty())
@@ -6047,7 +6048,7 @@ void ImGui::Render()
         if (IsWindowActiveAndVisible(window) && (window->Flags & ImGuiWindowFlags_ChildWindow) == 0 && window != windows_to_render_top_most[0] && window != windows_to_render_top_most[1])
             AddRootWindowToDrawData(window);
     }
-    for (int n = 0; n < IM_ARRAYSIZE(windows_to_render_top_most); n++)
+    for (int n = 0; n < IM_COUNTOF(windows_to_render_top_most); n++)
         if (windows_to_render_top_most[n] && IsWindowActiveAndVisible(windows_to_render_top_most[n])) // NavWindowingTarget is always temporarily displayed as the top-most window
             AddRootWindowToDrawData(windows_to_render_top_most[n]);
 
@@ -9376,7 +9377,7 @@ static const char* const GKeyNames[] =
     "MouseLeft", "MouseRight", "MouseMiddle", "MouseX1", "MouseX2", "MouseWheelX", "MouseWheelY",
     "ModCtrl", "ModShift", "ModAlt", "ModSuper", // ReservedForModXXX are showing the ModXXX names.
 };
-IM_STATIC_ASSERT(ImGuiKey_NamedKey_COUNT == IM_ARRAYSIZE(GKeyNames));
+IM_STATIC_ASSERT(ImGuiKey_NamedKey_COUNT == IM_COUNTOF(GKeyNames));
 
 const char* ImGui::GetKeyName(ImGuiKey key)
 {
@@ -9400,7 +9401,7 @@ const char* ImGui::GetKeyChordName(ImGuiKeyChord key_chord)
     const ImGuiKey key = (ImGuiKey)(key_chord & ~ImGuiMod_Mask_);
     if (IsLRModKey(key))
         key_chord &= ~GetModForLRModKey(key); // Return "Ctrl+LeftShift" instead of "Ctrl+Shift+LeftShift"
-    ImFormatString(g.TempKeychordName, IM_ARRAYSIZE(g.TempKeychordName), "%s%s%s%s%s",
+    ImFormatString(g.TempKeychordName, IM_COUNTOF(g.TempKeychordName), "%s%s%s%s%s",
         (key_chord & ImGuiMod_Ctrl) ? "Ctrl+" : "",
         (key_chord & ImGuiMod_Shift) ? "Shift+" : "",
         (key_chord & ImGuiMod_Alt) ? "Alt+" : "",
@@ -9808,14 +9809,14 @@ bool ImGui::IsKeyReleased(ImGuiKey key, ImGuiID owner_id)
 bool ImGui::IsMouseDown(ImGuiMouseButton button)
 {
     ImGuiContext& g = *GImGui;
-    IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
+    IM_ASSERT(button >= 0 && button < IM_COUNTOF(g.IO.MouseDown));
     return g.IO.MouseDown[button] && TestKeyOwner(MouseButtonToKey(button), ImGuiKeyOwner_Any); // should be same as IsKeyDown(MouseButtonToKey(button), ImGuiKeyOwner_Any), but this allows legacy code hijacking the io.Mousedown[] array.
 }
 
 bool ImGui::IsMouseDown(ImGuiMouseButton button, ImGuiID owner_id)
 {
     ImGuiContext& g = *GImGui;
-    IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
+    IM_ASSERT(button >= 0 && button < IM_COUNTOF(g.IO.MouseDown));
     return g.IO.MouseDown[button] && TestKeyOwner(MouseButtonToKey(button), owner_id); // Should be same as IsKeyDown(MouseButtonToKey(button), owner_id), but this allows legacy code hijacking the io.Mousedown[] array.
 }
 
@@ -9827,7 +9828,7 @@ bool ImGui::IsMouseClicked(ImGuiMouseButton button, bool repeat)
 bool ImGui::IsMouseClicked(ImGuiMouseButton button, ImGuiInputFlags flags, ImGuiID owner_id)
 {
     ImGuiContext& g = *GImGui;
-    IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
+    IM_ASSERT(button >= 0 && button < IM_COUNTOF(g.IO.MouseDown));
     if (!g.IO.MouseDown[button]) // In theory this should already be encoded as (DownDuration < 0.0f), but testing this facilitates eating mechanism (until we finish work on key ownership)
         return false;
     const float t = g.IO.MouseDownDuration[button];
@@ -9849,14 +9850,14 @@ bool ImGui::IsMouseClicked(ImGuiMouseButton button, ImGuiInputFlags flags, ImGui
 bool ImGui::IsMouseReleased(ImGuiMouseButton button)
 {
     ImGuiContext& g = *GImGui;
-    IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
+    IM_ASSERT(button >= 0 && button < IM_COUNTOF(g.IO.MouseDown));
     return g.IO.MouseReleased[button] && TestKeyOwner(MouseButtonToKey(button), ImGuiKeyOwner_Any); // Should be same as IsKeyReleased(MouseButtonToKey(button), ImGuiKeyOwner_Any)
 }
 
 bool ImGui::IsMouseReleased(ImGuiMouseButton button, ImGuiID owner_id)
 {
     ImGuiContext& g = *GImGui;
-    IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
+    IM_ASSERT(button >= 0 && button < IM_COUNTOF(g.IO.MouseDown));
     return g.IO.MouseReleased[button] && TestKeyOwner(MouseButtonToKey(button), owner_id); // Should be same as IsKeyReleased(MouseButtonToKey(button), owner_id)
 }
 
@@ -9866,7 +9867,7 @@ bool ImGui::IsMouseReleased(ImGuiMouseButton button, ImGuiID owner_id)
 bool ImGui::IsMouseReleasedWithDelay(ImGuiMouseButton button, float delay)
 {
     ImGuiContext& g = *GImGui;
-    IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
+    IM_ASSERT(button >= 0 && button < IM_COUNTOF(g.IO.MouseDown));
     const float time_since_release = (float)(g.Time - g.IO.MouseReleasedTime[button]);
     return !IsMouseDown(button) && (time_since_release - g.IO.DeltaTime < delay) && (time_since_release >= delay);
 }
@@ -9874,21 +9875,21 @@ bool ImGui::IsMouseReleasedWithDelay(ImGuiMouseButton button, float delay)
 bool ImGui::IsMouseDoubleClicked(ImGuiMouseButton button)
 {
     ImGuiContext& g = *GImGui;
-    IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
+    IM_ASSERT(button >= 0 && button < IM_COUNTOF(g.IO.MouseDown));
     return g.IO.MouseClickedCount[button] == 2 && TestKeyOwner(MouseButtonToKey(button), ImGuiKeyOwner_Any);
 }
 
 bool ImGui::IsMouseDoubleClicked(ImGuiMouseButton button, ImGuiID owner_id)
 {
     ImGuiContext& g = *GImGui;
-    IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
+    IM_ASSERT(button >= 0 && button < IM_COUNTOF(g.IO.MouseDown));
     return g.IO.MouseClickedCount[button] == 2 && TestKeyOwner(MouseButtonToKey(button), owner_id);
 }
 
 int ImGui::GetMouseClickedCount(ImGuiMouseButton button)
 {
     ImGuiContext& g = *GImGui;
-    IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
+    IM_ASSERT(button >= 0 && button < IM_COUNTOF(g.IO.MouseDown));
     return g.IO.MouseClickedCount[button];
 }
 
@@ -9915,7 +9916,7 @@ bool ImGui::IsMouseHoveringRect(const ImVec2& r_min, const ImVec2& r_max, bool c
 bool ImGui::IsMouseDragPastThreshold(ImGuiMouseButton button, float lock_threshold)
 {
     ImGuiContext& g = *GImGui;
-    IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
+    IM_ASSERT(button >= 0 && button < IM_COUNTOF(g.IO.MouseDown));
     if (lock_threshold < 0.0f)
         lock_threshold = g.IO.MouseDragThreshold;
     return g.IO.MouseDragMaxDistanceSqr[button] >= lock_threshold * lock_threshold;
@@ -9924,7 +9925,7 @@ bool ImGui::IsMouseDragPastThreshold(ImGuiMouseButton button, float lock_thresho
 bool ImGui::IsMouseDragging(ImGuiMouseButton button, float lock_threshold)
 {
     ImGuiContext& g = *GImGui;
-    IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
+    IM_ASSERT(button >= 0 && button < IM_COUNTOF(g.IO.MouseDown));
     if (!g.IO.MouseDown[button])
         return false;
     return IsMouseDragPastThreshold(button, lock_threshold);
@@ -9971,7 +9972,7 @@ bool ImGui::IsMousePosValid(const ImVec2* mouse_pos)
 bool ImGui::IsAnyMouseDown()
 {
     ImGuiContext& g = *GImGui;
-    for (int n = 0; n < IM_ARRAYSIZE(g.IO.MouseDown); n++)
+    for (int n = 0; n < IM_COUNTOF(g.IO.MouseDown); n++)
         if (g.IO.MouseDown[n])
             return true;
     return false;
@@ -9983,7 +9984,7 @@ bool ImGui::IsAnyMouseDown()
 ImVec2 ImGui::GetMouseDragDelta(ImGuiMouseButton button, float lock_threshold)
 {
     ImGuiContext& g = *GImGui;
-    IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
+    IM_ASSERT(button >= 0 && button < IM_COUNTOF(g.IO.MouseDown));
     if (lock_threshold < 0.0f)
         lock_threshold = g.IO.MouseDragThreshold;
     if (g.IO.MouseDown[button] || g.IO.MouseReleased[button])
@@ -9996,7 +9997,7 @@ ImVec2 ImGui::GetMouseDragDelta(ImGuiMouseButton button, float lock_threshold)
 void ImGui::ResetMouseDragDelta(ImGuiMouseButton button)
 {
     ImGuiContext& g = *GImGui;
-    IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
+    IM_ASSERT(button >= 0 && button < IM_COUNTOF(g.IO.MouseDown));
     // NB: We don't need to reset g.IO.MouseDragMaxDistanceSqr
     g.IO.MouseClickedPos[button] = g.IO.MousePos;
 }
@@ -10139,7 +10140,7 @@ static void ImGui::UpdateMouseInputs()
     if (io.MouseDelta.x != 0.0f || io.MouseDelta.y != 0.0f)
         g.NavHighlightItemUnderNav = false;
 
-    for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
+    for (int i = 0; i < IM_COUNTOF(io.MouseDown); i++)
     {
         io.MouseClicked[i] = io.MouseDown[i] && io.MouseDownDuration[i] < 0.0f;
         io.MouseClickedCount[i] = 0; // Will be filled below
@@ -10346,7 +10347,7 @@ void ImGui::SetNextFrameWantCaptureMouse(bool want_capture_mouse)
 static const char* GetInputSourceName(ImGuiInputSource source)
 {
     const char* input_source_names[] = { "None", "Mouse", "Keyboard", "Gamepad" };
-    IM_ASSERT(IM_ARRAYSIZE(input_source_names) == ImGuiInputSource_COUNT);
+    IM_ASSERT(IM_COUNTOF(input_source_names) == ImGuiInputSource_COUNT);
     if (source < 0 || source >= ImGuiInputSource_COUNT)
         return "Unknown";
     return input_source_names[source];
@@ -10354,7 +10355,7 @@ static const char* GetInputSourceName(ImGuiInputSource source)
 static const char* GetMouseSourceName(ImGuiMouseSource source)
 {
     const char* mouse_source_names[] = { "Mouse", "TouchScreen", "Pen" };
-    IM_ASSERT(IM_ARRAYSIZE(mouse_source_names) == ImGuiMouseSource_COUNT);
+    IM_ASSERT(IM_COUNTOF(mouse_source_names) == ImGuiMouseSource_COUNT);
     if (source < 0 || source >= ImGuiMouseSource_COUNT)
         return "Unknown";
     return mouse_source_names[source];
@@ -11988,7 +11989,7 @@ bool ImGui::BeginTooltipEx(ImGuiTooltipFlags tooltip_flags, ImGuiWindowFlags ext
 
     const char* window_name_template = is_dragdrop_tooltip ? "##Tooltip_DragDrop_%02d" : "##Tooltip_%02d";
     char window_name[32];
-    ImFormatString(window_name, IM_ARRAYSIZE(window_name), window_name_template, g.TooltipOverrideCount);
+    ImFormatString(window_name, IM_COUNTOF(window_name), window_name_template, g.TooltipOverrideCount);
     ImGuiWindowFlags flags = ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize;
     Begin(window_name, NULL, flags | extra_window_flags);
     // 2023-03-09: Added bool return value to the API, but currently always returning true.
@@ -12344,7 +12345,7 @@ bool ImGui::BeginPopupEx(ImGuiID id, ImGuiWindowFlags extra_window_flags)
 
     char name[20];
     IM_ASSERT((extra_window_flags & ImGuiWindowFlags_ChildMenu) == 0); // Use BeginPopupMenuEx()
-    ImFormatString(name, IM_ARRAYSIZE(name), "##Popup_%08x", id); // No recycling, so we can close/open during the same frame
+    ImFormatString(name, IM_COUNTOF(name), "##Popup_%08x", id); // No recycling, so we can close/open during the same frame
 
     bool is_open = Begin(name, NULL, extra_window_flags | ImGuiWindowFlags_Popup);
     if (!is_open) // NB: Begin can return false when the popup is completely clipped (e.g. zero size display)
@@ -12364,7 +12365,7 @@ bool ImGui::BeginPopupMenuEx(ImGuiID id, const char* label, ImGuiWindowFlags ext
 
     char name[128];
     IM_ASSERT(extra_window_flags & ImGuiWindowFlags_ChildMenu);
-    ImFormatString(name, IM_ARRAYSIZE(name), "%s###Menu_%02d", label, g.BeginMenuDepth); // Recycle windows based on depth
+    ImFormatString(name, IM_COUNTOF(name), "%s###Menu_%02d", label, g.BeginMenuDepth); // Recycle windows based on depth
     bool is_open = Begin(name, NULL, extra_window_flags | ImGuiWindowFlags_Popup);
     if (!is_open) // NB: Begin can return false when the popup is completely clipped (e.g. zero size display)
         EndPopup();
@@ -13112,7 +13113,7 @@ static bool ImGui::NavScoreItem(ImGuiNavItemData* result, const ImRect& nav_bb)
     {
         if (quadrant == move_dir)
         {
-            ImFormatString(buf, IM_ARRAYSIZE(buf), "%.0f/%.0f", dist_box, dist_center);
+            ImFormatString(buf, IM_COUNTOF(buf), "%.0f/%.0f", dist_box, dist_center);
             ImDrawList* draw_list = GetForegroundDrawList(window);
             draw_list->AddRectFilled(cand.Min, cand.Max, IM_COL32(255, 0, 0, 80));
             draw_list->AddRectFilled(cand.Min, cand.Min + CalcTextSize(buf), IM_COL32(255, 0, 0, 200));
@@ -13123,7 +13124,7 @@ static bool ImGui::NavScoreItem(ImGuiNavItemData* result, const ImRect& nav_bb)
     const bool debug_tty = (g.IO.KeyCtrl && IsKeyPressed(ImGuiKey_Space));
     if (debug_hovering || debug_tty)
     {
-        ImFormatString(buf, IM_ARRAYSIZE(buf),
+        ImFormatString(buf, IM_COUNTOF(buf),
             "d-box    (%7.3f,%7.3f) -> %7.3f\nd-center (%7.3f,%7.3f) -> %7.3f\nd-axial  (%7.3f,%7.3f) -> %7.3f\nnav %c, quadrant %c",
             dbx, dby, dist_box, dcx, dcy, dist_center, dax, day, dist_axial, "-WENS"[move_dir+1], "-WENS"[quadrant+1]);
         if (debug_hovering)
@@ -14792,7 +14793,7 @@ bool ImGui::SetDragDropPayload(const char* type, const void* data, size_t data_s
         cond = ImGuiCond_Always;
 
     IM_ASSERT(type != NULL);
-    IM_ASSERT(ImStrlen(type) < IM_ARRAYSIZE(payload.DataType) && "Payload type can be at most 32 characters long");
+    IM_ASSERT(ImStrlen(type) < IM_COUNTOF(payload.DataType) && "Payload type can be at most 32 characters long");
     IM_ASSERT((data != NULL && data_size > 0) || (data == NULL && data_size == 0));
     IM_ASSERT(cond == ImGuiCond_Always || cond == ImGuiCond_Once);
     IM_ASSERT(payload.SourceId != 0); // Not called between BeginDragDropSource() and EndDragDropSource()
@@ -14800,7 +14801,7 @@ bool ImGui::SetDragDropPayload(const char* type, const void* data, size_t data_s
     if (cond == ImGuiCond_Always || payload.DataFrameCount == -1)
     {
         // Copy payload
-        ImStrncpy(payload.DataType, type, IM_ARRAYSIZE(payload.DataType));
+        ImStrncpy(payload.DataType, type, IM_COUNTOF(payload.DataType));
         g.DragDropPayloadBufHeap.resize(0);
         if (data_size > sizeof(g.DragDropPayloadBufLocal))
         {
@@ -16071,7 +16072,7 @@ void ImGui::DebugRenderKeyboardPreview(ImDrawList* draw_list)
     if (!IsItemVisible())
         return;
     draw_list->PushClipRect(board_min, board_max, true);
-    for (int n = 0; n < IM_ARRAYSIZE(keys_to_display); n++)
+    for (int n = 0; n < IM_COUNTOF(keys_to_display); n++)
     {
         const KeyLayoutData* key_data = &keys_to_display[n];
         ImVec2 key_min = ImVec2(start_pos.x + key_data->Col * key_step.x + key_data->Row * key_row_offset, start_pos.y + key_data->Row * key_step.y);
@@ -16360,7 +16361,7 @@ void ImGui::DebugNodeTexture(ImTextureData* tex, int int_id, const ImFontAtlasRe
 
         char texref_desc[30];
         Text("Status = %s (%d), Format = %s (%d), UseColors = %d", ImTextureDataGetStatusName(tex->Status), tex->Status, ImTextureDataGetFormatName(tex->Format), tex->Format, tex->UseColors);
-        Text("TexRef = %s, BackendUserData = %p", FormatTextureRefForDebugDisplay(texref_desc, IM_ARRAYSIZE(texref_desc), tex->GetTexRef()), tex->BackendUserData);
+        Text("TexRef = %s, BackendUserData = %p", FormatTextureRefForDebugDisplay(texref_desc, IM_COUNTOF(texref_desc), tex->GetTexRef()), tex->BackendUserData);
         TreePop();
     }
     PopID();
@@ -16515,7 +16516,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                         for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
                         {
                             ImRect r = Funcs::GetTableRect(table, rect_n, column_n);
-                            ImFormatString(buf, IM_ARRAYSIZE(buf), "(%6.1f,%6.1f) (%6.1f,%6.1f) Size (%6.1f,%6.1f) Col %d %s", r.Min.x, r.Min.y, r.Max.x, r.Max.y, r.GetWidth(), r.GetHeight(), column_n, trt_rects_names[rect_n]);
+                            ImFormatString(buf, IM_COUNTOF(buf), "(%6.1f,%6.1f) (%6.1f,%6.1f) Size (%6.1f,%6.1f) Col %d %s", r.Min.x, r.Min.y, r.Max.x, r.Max.y, r.GetWidth(), r.GetHeight(), column_n, trt_rects_names[rect_n]);
                             Selectable(buf);
                             if (IsItemHovered())
                                 GetForegroundDrawList(table->OuterWindow)->AddRect(r.Min - ImVec2(1, 1), r.Max + ImVec2(1, 1), IM_COL32(255, 255, 0, 255), 0.0f, 0, 2.0f);
@@ -16524,7 +16525,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                     else
                     {
                         ImRect r = Funcs::GetTableRect(table, rect_n, -1);
-                        ImFormatString(buf, IM_ARRAYSIZE(buf), "(%6.1f,%6.1f) (%6.1f,%6.1f) Size (%6.1f,%6.1f) %s", r.Min.x, r.Min.y, r.Max.x, r.Max.y, r.GetWidth(), r.GetHeight(), trt_rects_names[rect_n]);
+                        ImFormatString(buf, IM_COUNTOF(buf), "(%6.1f,%6.1f) (%6.1f,%6.1f) Size (%6.1f,%6.1f) %s", r.Min.x, r.Min.y, r.Max.x, r.Max.y, r.GetWidth(), r.GetHeight(), trt_rects_names[rect_n]);
                         Selectable(buf);
                         if (IsItemHovered())
                             GetForegroundDrawList(table->OuterWindow)->AddRect(r.Min - ImVec2(1, 1), r.Max + ImVec2(1, 1), IM_COL32(255, 255, 0, 255), 0.0f, 0, 2.0f);
@@ -16548,7 +16549,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         {
             static char buf[64] = "";
             SetNextItemWidth(-FLT_MIN);
-            InputText("##DebugTextEncodingBuf", buf, IM_ARRAYSIZE(buf));
+            InputText("##DebugTextEncodingBuf", buf, IM_COUNTOF(buf));
             if (buf[0] != 0)
                 DebugTextEncoding(buf);
         }
@@ -16742,7 +16743,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         Text("%d current allocations", info->TotalAllocCount - info->TotalFreeCount);
         if (SmallButton("GC now")) { g.GcCompactAll = true; }
         Text("Recent frames with allocations:");
-        int buf_size = IM_ARRAYSIZE(info->LastEntriesBuf);
+        int buf_size = IM_COUNTOF(info->LastEntriesBuf);
         for (int n = buf_size - 1; n >= 0; n--)
         {
             ImGuiDebugAllocEntry* entry = &info->LastEntriesBuf[(info->LastEntriesIdx - n + buf_size) % buf_size];
@@ -16779,7 +16780,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             else
                 Text("Mouse pos: <INVALID>");
             Text("Mouse delta: (%g, %g)", io.MouseDelta.x, io.MouseDelta.y);
-            int count = IM_ARRAYSIZE(io.MouseDown);
+            int count = IM_COUNTOF(io.MouseDown);
             Text("Mouse down:");     for (int i = 0; i < count; i++) if (IsMouseDown(i)) { SameLine(); Text("b%d (%.02f secs)", i, io.MouseDownDuration[i]); }
             Text("Mouse clicked:");  for (int i = 0; i < count; i++) if (IsMouseClicked(i)) { SameLine(); Text("b%d (%d)", i, io.MouseClickedCount[i]); }
             Text("Mouse released:"); for (int i = 0; i < count; i++) if (IsMouseReleased(i)) { SameLine(); Text("b%d", i); }
@@ -16910,7 +16911,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             if (cfg->ShowWindowsBeginOrder && !(window->Flags & ImGuiWindowFlags_ChildWindow))
             {
                 char buf[32];
-                ImFormatString(buf, IM_ARRAYSIZE(buf), "%d", window->BeginOrderWithinContext);
+                ImFormatString(buf, IM_COUNTOF(buf), "%d", window->BeginOrderWithinContext);
                 float font_size = GetFontSize();
                 draw_list->AddRectFilled(window->Pos, window->Pos + ImVec2(font_size, font_size), IM_COL32(200, 100, 100, 255));
                 draw_list->AddText(window->Pos, IM_COL32(255, 255, 255, 255), buf);
@@ -17061,9 +17062,9 @@ void ImGui::DebugNodeDrawList(ImGuiWindow* window, ImGuiViewportP* viewport, con
         }
 
         char texid_desc[30];
-        FormatTextureRefForDebugDisplay(texid_desc, IM_ARRAYSIZE(texid_desc), pcmd->TexRef);
+        FormatTextureRefForDebugDisplay(texid_desc, IM_COUNTOF(texid_desc), pcmd->TexRef);
         char buf[300];
-        ImFormatString(buf, IM_ARRAYSIZE(buf), "DrawCmd:%5d tris, Tex %s, ClipRect (%4.0f,%4.0f)-(%4.0f,%4.0f)",
+        ImFormatString(buf, IM_COUNTOF(buf), "DrawCmd:%5d tris, Tex %s, ClipRect (%4.0f,%4.0f)-(%4.0f,%4.0f)",
             pcmd->ElemCount / 3, texid_desc, pcmd->ClipRect.x, pcmd->ClipRect.y, pcmd->ClipRect.z, pcmd->ClipRect.w);
         bool pcmd_node_open = TreeNode((void*)(pcmd - draw_list->CmdBuffer.begin()), "%s", buf);
         if (IsItemHovered() && (cfg->ShowDrawCmdMesh || cfg->ShowDrawCmdBoundingBoxes) && fg_draw_list)
@@ -17085,7 +17086,7 @@ void ImGui::DebugNodeDrawList(ImGuiWindow* window, ImGuiViewportP* viewport, con
         }
 
         // Display vertex information summary. Hover to get all triangles drawn in wire-frame
-        ImFormatString(buf, IM_ARRAYSIZE(buf), "Mesh: ElemCount: %d, VtxOffset: +%d, IdxOffset: +%d, Area: ~%0.f px", pcmd->ElemCount, pcmd->VtxOffset, pcmd->IdxOffset, total_area);
+        ImFormatString(buf, IM_COUNTOF(buf), "Mesh: ElemCount: %d, VtxOffset: +%d, IdxOffset: +%d, Area: ~%0.f px", pcmd->ElemCount, pcmd->VtxOffset, pcmd->IdxOffset, total_area);
         Selectable(buf);
         if (IsItemHovered() && fg_draw_list)
             DebugNodeDrawCmdShowMeshAndBoundingBox(fg_draw_list, draw_list, pcmd, true, false);
@@ -17096,7 +17097,7 @@ void ImGui::DebugNodeDrawList(ImGuiWindow* window, ImGuiViewportP* viewport, con
         while (clipper.Step())
             for (int prim = clipper.DisplayStart, idx_i = pcmd->IdxOffset + clipper.DisplayStart * 3; prim < clipper.DisplayEnd; prim++)
             {
-                char* buf_p = buf, * buf_end = buf + IM_ARRAYSIZE(buf);
+                char* buf_p = buf, * buf_end = buf + IM_COUNTOF(buf);
                 ImVec2 triangle[3];
                 for (int n = 0; n < 3; n++, idx_i++)
                 {
@@ -17401,7 +17402,7 @@ void ImGui::DebugNodeTabBar(ImGuiTabBar* tab_bar, const char* label)
     // Standalone tab bars (not associated to docking/windows functionality) currently hold no discernible strings.
     char buf[256];
     char* p = buf;
-    const char* buf_end = buf + IM_ARRAYSIZE(buf);
+    const char* buf_end = buf + IM_COUNTOF(buf);
     const bool is_active = (tab_bar->PrevFrameVisible >= GetFrameCount() - 2);
     p += ImFormatString(p, buf_end - p, "%s 0x%08X (%d tabs)%s  {", label, tab_bar->ID, tab_bar->Tabs.Size, is_active ? "" : " *Inactive*");
     for (int tab_n = 0; tab_n < ImMin(tab_bar->Tabs.Size, 3); tab_n++)
@@ -17559,7 +17560,7 @@ void ImGui::DebugNodeWindowsListByBeginStackParent(ImGuiWindow** windows, int wi
         if (window->ParentWindowInBeginStack != parent_in_begin_stack)
             continue;
         char buf[20];
-        ImFormatString(buf, IM_ARRAYSIZE(buf), "[%04d] Window", window->BeginOrderWithinContext);
+        ImFormatString(buf, IM_COUNTOF(buf), "[%04d] Window", window->BeginOrderWithinContext);
         //BulletText("[%04d] Window '%s'", window->BeginOrderWithinContext, window->Name);
         DebugNodeWindow(window, buf);
         TreePush(buf);
@@ -17993,7 +17994,7 @@ static const char* DebugItemPathQuery_GetResultAsPath(ImGuiDebugItemPathQuery* q
     for (int stack_n = 0; stack_n < query->Results.Size; stack_n++)
     {
         char level_desc[256];
-        DebugItemPathQuery_FormatLevelInfo(query, stack_n, false, level_desc, IM_ARRAYSIZE(level_desc));
+        DebugItemPathQuery_FormatLevelInfo(query, stack_n, false, level_desc, IM_COUNTOF(level_desc));
         buf->append(stack_n == 0 ? "//" : "/");
         for (const char* p = level_desc; *p != 0; )
         {

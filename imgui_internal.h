@@ -1581,7 +1581,7 @@ struct ImGuiKeyRoutingTable
     ImVector<ImGuiKeyRoutingData>   EntriesNext;                    // Double-buffer to avoid reallocation (could use a shared buffer)
 
     ImGuiKeyRoutingTable()          { Clear(); }
-    void Clear()                    { for (int n = 0; n < IM_ARRAYSIZE(Index); n++) Index[n] = -1; Entries.clear(); EntriesNext.clear(); }
+    void Clear()                    { for (int n = 0; n < IM_COUNTOF(Index); n++) Index[n] = -1; Entries.clear(); EntriesNext.clear(); }
 };
 
 // This extends ImGuiKeyData but only for named keys (legacy keys don't support the new features)

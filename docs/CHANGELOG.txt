@@ -49,6 +49,7 @@ Breaking Changes:
     identifiers using "###", and will allow fixing other dangling issues.
   - This will invalidate hashes (stored in .ini data) for Tables and Windows
     that are using the "###" operators. (#713, #1698)
+- Renamed helper macro IM_ARRAYSIZE() -> IM_COUNTOF(). Kept redirection/legacy name.
 - Fonts: Fixed handling of `ImFontConfig::FontDataOwnedByAtlas = false` which
   did erroneously make a copy of the font data, essentially defeating the purpose
   of this flag and wasting memory (undetected since July 2015 and now spotted

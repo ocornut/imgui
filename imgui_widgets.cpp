@@ -1452,7 +1452,7 @@ void ImGui::ProgressBar(float fraction, const ImVec2& size_arg, const char* over
     {
         if (!overlay)
         {
-            ImFormatString(overlay_buf, IM_ARRAYSIZE(overlay_buf), "%.0f%%", fraction * 100 + 0.01f);
+            ImFormatString(overlay_buf, IM_COUNTOF(overlay_buf), "%.0f%%", fraction * 100 + 0.01f);
             overlay = overlay_buf;
         }
 
@@ -2019,7 +2019,7 @@ bool ImGui::BeginComboPopup(ImGuiID popup_id, const ImRect& bb, ImGuiComboFlags 
 
     // This is essentially a specialized version of BeginPopupEx()
     char name[16];
-    ImFormatString(name, IM_ARRAYSIZE(name), "##Combo_%02d", g.BeginComboDepth); // Recycle windows based on depth
+    ImFormatString(name, IM_COUNTOF(name), "##Combo_%02d", g.BeginComboDepth); // Recycle windows based on depth
 
     // Set position given a custom constraint (peak into expected window size so we can position it)
     // FIXME: This might be easier to express with an hypothetical SetNextWindowPosConstraints() function?
@@ -2265,7 +2265,7 @@ static const ImGuiDataTypeInfo GDataTypeInfo[] =
     { sizeof(bool),             "bool", "%d",   "%d"    },  // ImGuiDataType_Bool
     { 0,                        "char*","%s",   "%s"    },  // ImGuiDataType_String
 };
-IM_STATIC_ASSERT(IM_ARRAYSIZE(GDataTypeInfo) == ImGuiDataType_COUNT);
+IM_STATIC_ASSERT(IM_COUNTOF(GDataTypeInfo) == ImGuiDataType_COUNT);
 
 const ImGuiDataTypeInfo* ImGui::DataTypeGetInfo(ImGuiDataType data_type)
 {
@@ -2374,7 +2374,7 @@ bool ImGui::DataTypeApplyFromText(const char* buf, ImGuiDataType data_type, void
     if (data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double)
         format = type_info->ScanFmt;
     else
-        format = ImParseFormatSanitizeForScanning(format, format_sanitized, IM_ARRAYSIZE(format_sanitized));
+        format = ImParseFormatSanitizeForScanning(format, format_sanitized, IM_COUNTOF(format_sanitized));
 
     // Small types need a 32-bit buffer to receive the result from scanf()
     int v32 = 0;
@@ -2465,7 +2465,7 @@ static float GetMinimumStepAtDecimalPrecision(int decimal_precision)
     static const float min_steps[10] = { 1.0f, 0.1f, 0.01f, 0.001f, 0.0001f, 0.00001f, 0.000001f, 0.0000001f, 0.00000001f, 0.000000001f };
     if (decimal_precision < 0)
         return FLT_MIN;
-    return (decimal_precision < IM_ARRAYSIZE(min_steps)) ? min_steps[decimal_precision] : ImPow(10.0f, (float)-decimal_precision);
+    return (decimal_precision < IM_COUNTOF(min_steps)) ? min_steps[decimal_precision] : ImPow(10.0f, (float)-decimal_precision);
 }
 
 template<typename TYPE>
@@ -2479,12 +2479,12 @@ TYPE ImGui::RoundScalarWithFormatT(const char* format, ImGuiDataType data_type, 
 
     // Sanitize format
     char fmt_sanitized[32];
-    ImParseFormatSanitizeForPrinting(fmt_start, fmt_sanitized, IM_ARRAYSIZE(fmt_sanitized));
+    ImParseFormatSanitizeForPrinting(fmt_start, fmt_sanitized, IM_COUNTOF(fmt_sanitized));
     fmt_start = fmt_sanitized;
 
     // Format value with our rounding, and read back
     char v_str[64];
-    ImFormatString(v_str, IM_ARRAYSIZE(v_str), fmt_start, v);
+    ImFormatString(v_str, IM_COUNTOF(v_str), fmt_start, v);
     const char* p = v_str;
     while (*p == ' ')
         p++;
@@ -2774,7 +2774,7 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data,
 
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
     char value_buf[64];
-    const char* value_buf_end = value_buf + DataTypeFormatString(value_buf, IM_ARRAYSIZE(value_buf), data_type, p_data, format);
+    const char* value_buf_end = value_buf + DataTypeFormatString(value_buf, IM_COUNTOF(value_buf), data_type, p_data, format);
     if (g.LogEnabled)
         LogSetNextTextDecoration("{", "}");
     RenderTextClipped(frame_bb.Min, frame_bb.Max, value_buf, value_buf_end, NULL, ImVec2(0.5f, 0.5f));
@@ -3371,7 +3371,7 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* p_dat
 
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
     char value_buf[64];
-    const char* value_buf_end = value_buf + DataTypeFormatString(value_buf, IM_ARRAYSIZE(value_buf), data_type, p_data, format);
+    const char* value_buf_end = value_buf + DataTypeFormatString(value_buf, IM_COUNTOF(value_buf), data_type, p_data, format);
     if (g.LogEnabled)
         LogSetNextTextDecoration("{", "}");
     RenderTextClipped(frame_bb.Min, frame_bb.Max, value_buf, value_buf_end, NULL, ImVec2(0.5f, 0.5f));
@@ -3524,7 +3524,7 @@ bool ImGui::VSliderScalar(const char* label, const ImVec2& size, ImGuiDataType d
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
     // For the vertical slider we allow centered text to overlap the frame padding
     char value_buf[64];
-    const char* value_buf_end = value_buf + DataTypeFormatString(value_buf, IM_ARRAYSIZE(value_buf), data_type, p_data, format);
+    const char* value_buf_end = value_buf + DataTypeFormatString(value_buf, IM_COUNTOF(value_buf), data_type, p_data, format);
     RenderTextClipped(ImVec2(frame_bb.Min.x, frame_bb.Min.y + style.FramePadding.y), frame_bb.Max, value_buf, value_buf_end, NULL, ImVec2(0.5f, 0.0f));
     if (label_size.x > 0.0f)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label);
@@ -3724,16 +3724,16 @@ bool ImGui::TempInputScalar(const ImRect& bb, ImGuiID id, const char* label, ImG
     const ImGuiDataTypeInfo* type_info = DataTypeGetInfo(data_type);
     char fmt_buf[32];
     char data_buf[32];
-    format = ImParseFormatTrimDecorations(format, fmt_buf, IM_ARRAYSIZE(fmt_buf));
+    format = ImParseFormatTrimDecorations(format, fmt_buf, IM_COUNTOF(fmt_buf));
     if (format[0] == 0)
         format = type_info->PrintFmt;
-    DataTypeFormatString(data_buf, IM_ARRAYSIZE(data_buf), data_type, p_data, format);
+    DataTypeFormatString(data_buf, IM_COUNTOF(data_buf), data_type, p_data, format);
     ImStrTrimBlanks(data_buf);
 
     ImGuiInputTextFlags flags = ImGuiInputTextFlags_AutoSelectAll | (ImGuiInputTextFlags)ImGuiInputTextFlags_LocalizeDecimalPoint;
     g.LastItemData.ItemFlags |= ImGuiItemFlags_NoMarkEdited; // Because TempInputText() uses ImGuiInputTextFlags_MergedItem it doesn't submit a new item, so we poke LastItemData.
     bool value_changed = false;
-    if (TempInputText(bb, id, label, data_buf, IM_ARRAYSIZE(data_buf), flags))
+    if (TempInputText(bb, id, label, data_buf, IM_COUNTOF(data_buf), flags))
     {
         // Backup old value
         size_t data_type_size = type_info->Size;
@@ -3786,7 +3786,7 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* p_data
     if ((flags & ImGuiInputTextFlags_DisplayEmptyRefVal) && DataTypeCompare(data_type, p_data, p_data_default) == 0)
         buf[0] = 0;
     else
-        DataTypeFormatString(buf, IM_ARRAYSIZE(buf), data_type, p_data, format);
+        DataTypeFormatString(buf, IM_COUNTOF(buf), data_type, p_data, format);
 
     // Disable the MarkItemEdited() call in InputText but keep ImGuiItemStatusFlags_Edited.
     // We call MarkItemEdited() ourselves by comparing the actual data rather than the string.
@@ -3796,7 +3796,7 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* p_data
     bool value_changed = false;
     if (p_step == NULL)
     {
-        if (InputText(label, buf, IM_ARRAYSIZE(buf), flags))
+        if (InputText(label, buf, IM_COUNTOF(buf), flags))
             value_changed = DataTypeApplyFromText(buf, data_type, p_data, format, (flags & ImGuiInputTextFlags_ParseEmptyRefVal) ? p_data_default : NULL);
     }
     else
@@ -3806,7 +3806,7 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* p_data
         BeginGroup(); // The only purpose of the group here is to allow the caller to query item data e.g. IsItemActive()
         PushID(label);
         SetNextItemWidth(ImMax(1.0f, CalcItemWidth() - (button_size + style.ItemInnerSpacing.x) * 2));
-        if (InputText("", buf, IM_ARRAYSIZE(buf), flags)) // PushId(label) + "" gives us the expected ID from outside point of view
+        if (InputText("", buf, IM_COUNTOF(buf), flags)) // PushId(label) + "" gives us the expected ID from outside point of view
             value_changed = DataTypeApplyFromText(buf, data_type, p_data, format, (flags & ImGuiInputTextFlags_ParseEmptyRefVal) ? p_data_default : NULL);
         IMGUI_TEST_ENGINE_ITEM_INFO(g.LastItemData.ID, label, g.LastItemData.StatusFlags | ImGuiItemStatusFlags_Inputable);
 
@@ -5851,11 +5851,11 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
         // RGB Hexadecimal Input
         char buf[64];
         if (alpha)
-            ImFormatString(buf, IM_ARRAYSIZE(buf), "#%02X%02X%02X%02X", ImClamp(i[0], 0, 255), ImClamp(i[1], 0, 255), ImClamp(i[2], 0, 255), ImClamp(i[3], 0, 255));
+            ImFormatString(buf, IM_COUNTOF(buf), "#%02X%02X%02X%02X", ImClamp(i[0], 0, 255), ImClamp(i[1], 0, 255), ImClamp(i[2], 0, 255), ImClamp(i[3], 0, 255));
         else
-            ImFormatString(buf, IM_ARRAYSIZE(buf), "#%02X%02X%02X", ImClamp(i[0], 0, 255), ImClamp(i[1], 0, 255), ImClamp(i[2], 0, 255));
+            ImFormatString(buf, IM_COUNTOF(buf), "#%02X%02X%02X", ImClamp(i[0], 0, 255), ImClamp(i[1], 0, 255), ImClamp(i[2], 0, 255));
         SetNextItemWidth(w_inputs);
-        if (InputText("##Text", buf, IM_ARRAYSIZE(buf), ImGuiInputTextFlags_CharsUppercase))
+        if (InputText("##Text", buf, IM_COUNTOF(buf), ImGuiInputTextFlags_CharsUppercase))
         {
             value_changed = true;
             char* p = buf;
@@ -6549,18 +6549,18 @@ void ImGui::ColorEditOptionsPopup(const float* col, ImGuiColorEditFlags flags)
     {
         int cr = IM_F32_TO_INT8_SAT(col[0]), cg = IM_F32_TO_INT8_SAT(col[1]), cb = IM_F32_TO_INT8_SAT(col[2]), ca = (flags & ImGuiColorEditFlags_NoAlpha) ? 255 : IM_F32_TO_INT8_SAT(col[3]);
         char buf[64];
-        ImFormatString(buf, IM_ARRAYSIZE(buf), "(%.3ff, %.3ff, %.3ff, %.3ff)", col[0], col[1], col[2], (flags & ImGuiColorEditFlags_NoAlpha) ? 1.0f : col[3]);
+        ImFormatString(buf, IM_COUNTOF(buf), "(%.3ff, %.3ff, %.3ff, %.3ff)", col[0], col[1], col[2], (flags & ImGuiColorEditFlags_NoAlpha) ? 1.0f : col[3]);
         if (Selectable(buf))
             SetClipboardText(buf);
-        ImFormatString(buf, IM_ARRAYSIZE(buf), "(%d,%d,%d,%d)", cr, cg, cb, ca);
+        ImFormatString(buf, IM_COUNTOF(buf), "(%d,%d,%d,%d)", cr, cg, cb, ca);
         if (Selectable(buf))
             SetClipboardText(buf);
-        ImFormatString(buf, IM_ARRAYSIZE(buf), "#%02X%02X%02X", cr, cg, cb);
+        ImFormatString(buf, IM_COUNTOF(buf), "#%02X%02X%02X", cr, cg, cb);
         if (Selectable(buf))
             SetClipboardText(buf);
         if (!(flags & ImGuiColorEditFlags_NoAlpha))
         {
-            ImFormatString(buf, IM_ARRAYSIZE(buf), "#%02X%02X%02X%02X", cr, cg, cb, ca);
+            ImFormatString(buf, IM_COUNTOF(buf), "#%02X%02X%02X%02X", cr, cg, cb, ca);
             if (Selectable(buf))
                 SetClipboardText(buf);
         }
@@ -7513,7 +7513,7 @@ ImGuiTypingSelectRequest* ImGui::GetTypingSelectRequest(ImGuiTypingSelectFlags f
     }
 
     // Append to buffer
-    const int buffer_max_len = IM_ARRAYSIZE(data->SearchBuffer) - 1;
+    const int buffer_max_len = IM_COUNTOF(data->SearchBuffer) - 1;
     int buffer_len = (int)ImStrlen(data->SearchBuffer);
     bool select_request = false;
     for (ImWchar w : g.IO.InputQueueCharacters)
@@ -8913,7 +8913,7 @@ void ImGui::Value(const char* prefix, float v, const char* float_format)
     if (float_format)
     {
         char fmt[64];
-        ImFormatString(fmt, IM_ARRAYSIZE(fmt), "%%s: %s", float_format);
+        ImFormatString(fmt, IM_COUNTOF(fmt), "%%s: %s", float_format);
         Text(fmt, prefix, v);
     }
     else
@@ -8952,7 +8952,7 @@ void ImGuiMenuColumns::CalcNextTotalWidth(bool update_offsets)
 {
     ImU16 offset = 0;
     bool want_spacing = false;
-    for (int i = 0; i < IM_ARRAYSIZE(Widths); i++)
+    for (int i = 0; i < IM_COUNTOF(Widths); i++)
     {
         ImU16 width = Widths[i];
         if (want_spacing && width > 0)

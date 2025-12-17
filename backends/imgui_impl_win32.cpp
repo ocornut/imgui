@@ -197,7 +197,7 @@ static bool ImGui_ImplWin32_InitEx(void* hwnd, bool platform_has_own_dc)
         "xinput1_2.dll",   // DirectX SDK
         "xinput1_1.dll"    // DirectX SDK
     };
-    for (int n = 0; n < IM_ARRAYSIZE(xinput_dll_names); n++)
+    for (int n = 0; n < IM_COUNTOF(xinput_dll_names); n++)
         if (HMODULE dll = ::LoadLibraryA(xinput_dll_names[n]))
         {
             bd->XInputDLL = dll;
