@@ -974,6 +974,15 @@ namespace ImGui
     IMGUI_API void                  EndDragDropTarget();                                                            // only call EndDragDropTarget() if BeginDragDropTarget() returns true!
     IMGUI_API const ImGuiPayload*   GetDragDropPayload();                                                           // peek directly into the current payload from anywhere. returns NULL when drag and drop is finished or inactive. use ImGuiPayload::IsDataType() to test for the payload type.
 
+    // Reordering
+    // - Call after each item that can be reordered.
+    // - Returns -1/+1 if item should be swapped with the previous/next one, or 0 for no action.
+    // - Only items within current or specified id scope participate in item reorder.
+    // FIXME: "bool vertical" should be replaced with "ImGuiAxis axis", but ImGuiAxis is in imgui_internal.h
+    IMGUI_API int           ItemReorder(ImGuiID id, bool vertical);
+    IMGUI_API int           ItemReorder(const char* id, bool vertical);
+    IMGUI_API int           ItemReorder(bool vertical);
+
     // Disabling [BETA API]
     // - Disable all user interactions and dim items visuals (applying style.DisabledAlpha over current colors)
     // - Those can be nested but it cannot be used to enable an already disabled section (a single BeginDisabled(true) in the stack is enough to keep everything disabled)

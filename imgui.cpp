@@ -15009,6 +15009,55 @@ void ImGui::EndDragDropTarget()
 }
 
 //-----------------------------------------------------------------------------
+// [SECTION] REORDERING
+//-----------------------------------------------------------------------------
+
+int ImGui::ItemReorder(ImGuiID id, bool vertical)
+{
+    ImGuiContext& g = *GImGui;
+
+    if (!g.IO.MouseDown[0] && g.LastItemData.ID == g.ActiveIdPreviousFrame)
+    {
+        g.ReorderScopeId = 0;
+        g.ReorderResult = 0;
+    }
+    else if (g.ActiveId && g.ActiveId == g.LastItemData.ID)
+    {
+        g.ActiveIdAllowOverlap = true;  // Enable IsItemHovered() while current item is active
+        g.ReorderScopeId = id;
+        g.ReorderItemRect = g.LastItemData.Rect;
+        if (g.ReorderResult != 0)
+        {
+            int result = g.ReorderResult;
+            g.ReorderScopeId = 0;
+            g.ReorderResult = 0;
+            return result;
+        }
+    }
+    else if (g.IO.MouseDown[0] && IsItemHovered() && g.ReorderScopeId == id)
+    {
+        ImGuiAxis axis = (ImGuiAxis)vertical;
+        if (g.IO.MousePos[axis] > g.ReorderItemRect.Max[axis])
+            g.ReorderResult = +1;
+        else if (g.IO.MousePos[axis] < g.ReorderItemRect.Min[axis])
+            g.ReorderResult = -1;
+    }
+    return 0;
+}
+
+int ImGui::ItemReorder(const char* id, bool vertical)
+{
+    ImGuiContext& g = *GImGui;
+    return ItemReorder(g.CurrentWindow->GetID(id), vertical);
+}
+
+int ImGui::ItemReorder(bool vertical)
+{
+    ImGuiContext& g = *GImGui;
+    return ItemReorder(g.CurrentWindow->IDStack.back(), vertical);
+}
+
+//-----------------------------------------------------------------------------
 // [SECTION] LOGGING/CAPTURING
 //-----------------------------------------------------------------------------
 // All text output from the interface can be captured into tty/file/clipboard.

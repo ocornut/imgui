@@ -1681,6 +1681,54 @@ static void DemoWindowWidgetsDragAndDrop()
             ImGui::TreePop();
         }
 
+        IMGUI_DEMO_MARKER("Widgets/Drag and Drop/Drag to reorder items (api)");
+        if (ImGui::TreeNode("Drag to reorder items (api)"))
+        {
+            HelpMarker("Drag items to reorder them.");
+            static const char* item_names[] = { "Item One", "Item Two", "Item Three", "Item Four", "Item Five" };
+            static bool vertical = true;
+            ImGui::Checkbox("Vertical", &vertical);
+
+            int swap_n = 0;
+            int swap_d = 0;
+            for (int n = 0; n < IM_ARRAYSIZE(item_names); n++)
+            {
+                const char* item = item_names[n];
+                if (vertical)
+                {
+                    ImGui::Selectable(item);
+                }
+                else
+                {
+                    ImGui::Button(item);
+                    if (n + 1 < IM_ARRAYSIZE(item_names))
+                        ImGui::SameLine();
+                }
+
+                // Called after reorderable item. "SomeId" is optional in this simple example, but may be used to
+                // avoid mixing multiple distinct reorderable lists when they exist in same id scope.
+                if (int swap_direction = ImGui::ItemReorder("SomeId", vertical))
+                {
+                    swap_n = n;
+                    swap_d = swap_direction;
+                }
+            }
+
+            // Defer swap after rendering in order to avoid rendering glitches when items of different length are
+            // swapped in a horizontal list.
+            if (swap_d != 0)
+            {
+                const char* item = item_names[swap_n];
+                int next_n = swap_n + swap_d;
+                if (next_n >= 0 && next_n < IM_ARRAYSIZE(item_names))
+                {
+                    item_names[swap_n] = item_names[next_n];
+                    item_names[next_n] = item;
+                }
+            }
+            ImGui::TreePop();
+        }
+
         ImGui::TreePop();
     }
 }
