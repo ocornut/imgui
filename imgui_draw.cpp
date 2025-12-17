@@ -17,7 +17,7 @@ Index of this file:
 // [SECTION] ImFontAtlas: backend for stb_truetype
 // [SECTION] ImFontAtlas: glyph ranges helpers
 // [SECTION] ImFontGlyphRangesBuilder
-// [SECTION] ImFont
+// [SECTION] ImFontBaked, ImFont
 // [SECTION] ImGui Internal Render Helpers
 // [SECTION] Decompression code
 // [SECTION] Default font data (ProggyClean.ttf)
@@ -5068,7 +5068,7 @@ void ImFontGlyphRangesBuilder::BuildRanges(ImVector<ImWchar>* out_ranges)
 }
 
 //-----------------------------------------------------------------------------
-// [SECTION] ImFont
+// [SECTION] ImFontBaked, ImFont
 //-----------------------------------------------------------------------------
 
 ImFontBaked::ImFontBaked()
@@ -5371,6 +5371,12 @@ const char* ImTextCalcWordWrapNextLineStart(const char* text, const char* text_e
     return text;
 }
 
+// Character classification for word-wrapping logic
+enum
+{
+    ImWcharClass_Blank, ImWcharClass_Punct, ImWcharClass_Other
+};
+
 // Simple word-wrapping for English, not full-featured. Please submit failing cases!
 // This will return the next location to wrap from. If no wrapping if necessary, this will fast-forward to e.g. text_end.
 // FIXME: Much possible improvements (don't cut things like "word !", "word!!!" but cut within "word,,,,", more sensible support for punctuations, support for Unicode punctuations, etc.)
@@ -5392,16 +5398,20 @@ const char* ImFontCalcWordWrapPositionEx(ImFont* font, float size, const char* t
     const float scale = size / baked->Size;
 
     float line_width = 0.0f;
-    float word_width = 0.0f;
     float blank_width = 0.0f;
     wrap_width /= scale; // We work with unscaled widths to avoid scaling every characters
 
-    const char* word_end = text;
-    const char* prev_word_end = NULL;
-    bool inside_word = true;
-
     const char* s = text;
     IM_ASSERT(text_end != NULL);
+
+    int prev_type = ImWcharClass_Other;
+    const bool keep_blanks = (flags & ImDrawTextFlags_WrapKeepBlanks) != 0;
+
+    // Find next wrapping point
+    //const char* span_begin = s;
+    const char* span_end = s;
+    float span_width = 0.0f;
+
     while (s < text_end)
     {
         unsigned int c = (unsigned int)*s;
@@ -5417,7 +5427,7 @@ const char* ImFontCalcWordWrapPositionEx(ImFont* font, float size, const char* t
                 return s; // Direct return, skip "Wrap_width is too small to fit anything" path.
             if (c == '\r')
             {
-                s = next_s;
+                s = next_s; // Fast-skip
                 continue;
             }
         }
@@ -5427,46 +5437,56 @@ const char* ImFontCalcWordWrapPositionEx(ImFont* font, float size, const char* t
         if (char_width < 0.0f)
             char_width = BuildLoadGlyphGetAdvanceOrFallback(baked, c);
 
-        if (ImCharIsBlankW(c))
+        // Classify current character
+        int curr_type;
+        if (c == ' ' || c == '\t' || c == 0x3000) // Inline version of ImCharIsBlankW(c)
+            curr_type = ImWcharClass_Blank;
+        else if (c == '.' || c == ',' || c == ';' || c == '!' || c == '?' || c == '\"' || c == 0x3001 || c == 0x3002)
+            curr_type = ImWcharClass_Punct;
+        else
+            curr_type = ImWcharClass_Other;
+
+        if (curr_type == ImWcharClass_Blank)
         {
-            if (inside_word)
+            // End span: 'A ' or '. '
+            if (prev_type != ImWcharClass_Blank && !keep_blanks)
             {
-                line_width += blank_width;
-                blank_width = 0.0f;
-                word_end = s;
+                span_end = s;
+                line_width += span_width;
+                span_width = 0.0f;
             }
             blank_width += char_width;
-            inside_word = false;
         }
         else
         {
-            word_width += char_width;
-            if (inside_word)
+            // End span: '.X' unless X is a digit
+            if (prev_type == ImWcharClass_Punct && curr_type != ImWcharClass_Punct && !(c >= '0' && c <= '9'))
             {
-                word_end = next_s;
+                span_end = s;
+                line_width += span_width + blank_width;
+                span_width = blank_width = 0.0f;
             }
-            else
+            // End span: 'A ' or '. '
+            else if (prev_type == ImWcharClass_Blank && keep_blanks)
             {
-                prev_word_end = word_end;
-                line_width += word_width + blank_width;
-                if ((flags & ImDrawTextFlags_WrapKeepBlanks) && line_width <= wrap_width)
-                    prev_word_end = s;
-                word_width = blank_width = 0.0f;
+                span_end = s;
+                line_width += span_width + blank_width;
+                span_width = blank_width = 0.0f;
             }
-
-            // Allow wrapping after punctuation.
-            inside_word = (c != '.' && c != ',' && c != ';' && c != '!' && c != '?' && c != '\"' && c != 0x3001 && c != 0x3002);
+            span_width += char_width;
         }
 
-        // We ignore blank width at the end of the line (they can be skipped)
-        if (line_width + word_width > wrap_width)
+        if (span_width + blank_width + line_width > wrap_width)
         {
-            // Words that cannot possibly fit within an entire line will be cut anywhere.
-            if (word_width < wrap_width)
-                s = prev_word_end ? prev_word_end : word_end;
-            break;
+            if (span_width + blank_width > wrap_width)
+                break;
+            // FIXME: Narrow wrapping e.g. "A quick brown" -> "Quic|k br|own", would require knowing if span is going to be longer than wrap_width.
+            //if (span_width > wrap_width && !is_blank && !was_blank)
+            //    return s;
+            return span_end;
         }
 
+        prev_type = curr_type;
         s = next_s;
     }
 

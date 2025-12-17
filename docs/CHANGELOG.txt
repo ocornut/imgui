@@ -93,7 +93,12 @@ Other Changes:
   - Added ImGuiSliderFlags_ColorMarkers to opt-in adding R/G/B/A color markers
     next to each components, in multi-components functions.
   - Added a way to select a specific marker color.
-- Text:
+- Text, InputText:
+  - Reworked word-wrapping logic:
+    - Try to not wrap in the middle of contiguous punctuations. (#8139, #8439, #9094)
+    - Try to not wrap between a punctuation and a digit. (#8503)
+    - Inside InputTextMultiline() with _WordWrap: prefer keeping blanks at the
+      end of a line rather than at the beginning of next line. (#8990, #3237)
   - Fixed low-level word-wrapping function reading from *text_end when passed
     a string range. (#9107) [@achabense]
 - Scrollbar: fixed a codepath leading to a divide-by-zero (which would not be
