@@ -8263,12 +8263,13 @@ void ImGui::EndDisabledOverrideReenable()
     g.Style.Alpha = g.CurrentWindowStack.back().DisabledOverrideReenableAlphaBackup;
 }
 
-void ImGui::PushTextWrapPos(float wrap_pos_x)
+// ATTENTION THIS IS IN LEGACY LOCAL SPACE.
+void ImGui::PushTextWrapPos(float wrap_local_pos_x)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
     window->DC.TextWrapPosStack.push_back(window->DC.TextWrapPos);
-    window->DC.TextWrapPos = wrap_pos_x;
+    window->DC.TextWrapPos = wrap_local_pos_x;
 }
 
 void ImGui::PopTextWrapPos()
