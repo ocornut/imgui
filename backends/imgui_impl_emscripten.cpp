@@ -298,8 +298,6 @@ static bool ImGui_ImplEmscripten_FocusCallback(int type, const EmscriptenFocusEv
     return false;
 }
 
-#include <stdio.h>
-
 #ifdef IMGUI_IMPL_EMSCRIPTEN_ENABLE_CLIPBOARD
 static const char* ImGui_ImplEmscripten_GetClipboardText(ImGuiContext*)
 {
@@ -359,17 +357,22 @@ extern "C"
 
 #define IMGUI_IMPL_EMSCRIPTEN_POINTER_EVENT_HAS_POS 1
 #define IMGUI_IMPL_EMSCRIPTEN_POINTER_EVENT_HAS_BUTTON 2
-#define IMGUI_IMPL_EMSCRIPTEN_POINTER_EVENT_BUTTON_LEFT 4
-#define IMGUI_IMPL_EMSCRIPTEN_POINTER_EVENT_BUTTON_RIGHT 8
-#define IMGUI_IMPL_EMSCRIPTEN_POINTER_EVENT_BUTTON_MIDDLE 16
-#define IMGUI_IMPL_EMSCRIPTEN_POINTER_EVENT_BUTTON_MASK 28
+#define IMGUI_IMPL_EMSCRIPTEN_POINTER_EVENT_IS_PRIMARY 4
 
 EMSCRIPTEN_KEEPALIVE
-void ImGui_ImplEmscripten_PointerEvent(int type, int pointer_type, int flags, int x, int y, bool down)
+void ImGui_ImplEmscripten_PointerEvent(int type, int pointer_type, int flags, int x, int y, bool down, int button)
 {
+    if (!(flags & IMGUI_IMPL_EMSCRIPTEN_POINTER_EVENT_IS_PRIMARY))
+        return;
+
     ImGuiIO& io = ImGui::GetIO();
 
-    if (pointer_type >= 0 && pointer_type <= 2 && flags)
+    if (type == 5)
+    {
+        for (int i = 0; i < ImGuiMouseButton_COUNT; i++)
+            io.AddMouseButtonEvent((ImGuiMouseButton)i, false);
+    }
+    else if (pointer_type >= 0 && pointer_type <= 2)
     {
         ImGuiMouseSource source;
         switch (pointer_type)
@@ -383,7 +386,20 @@ void ImGui_ImplEmscripten_PointerEvent(int type, int pointer_type, int flags, in
         if (flags & IMGUI_IMPL_EMSCRIPTEN_POINTER_EVENT_HAS_POS)
             io.AddMousePosEvent((float)x, (float)y);
         if (flags & IMGUI_IMPL_EMSCRIPTEN_POINTER_EVENT_HAS_BUTTON)
-            io.AddMouseButtonEvent(ImGuiMouseButton_Left, down);
+        {
+            ImGuiMouseButton imgui_button = ImGuiMouseButton_COUNT;
+            switch (button)
+            {
+            case 0: imgui_button = ImGuiMouseButton_Left; break;
+            case 1: imgui_button = ImGuiMouseButton_Middle; break;
+            case 2: imgui_button = ImGuiMouseButton_Right; break;
+            case 3: imgui_button = 3; break;
+            case 4: imgui_button = 4; break;
+            }
+
+            if (imgui_button != ImGuiMouseButton_COUNT)
+                io.AddMouseButtonEvent(imgui_button, down);
+        }
     }
 }
 
@@ -392,23 +408,30 @@ void ImGui_ImplEmscripten_PointerEvent(int type, int pointer_type, int flags, in
 static void ImGui_ImplEmscripten_SetupPointerEvents(ImGui_ImplEmscripten_BackendData* bd)
 {
     EM_ASM({
-        const t = (name) => {
-            switch (name) {
+        function t(name)
+        {
+            switch (name)
+            {
             case "mouse": return 0;
             case "touch": return 1;
             case "pen": return 2;
             default: return -1;
             }
-        };
+        }
+
+        function p(ev)
+        {
+            return ev.isPrimary ? 4 : 0;
+        }
 
         const el = document.querySelector(UTF8ToString($0));
         const cb = Module['_ImGui_ImplEmscripten_PointerEvent'];
-        el.imguiHandlePointerDown = function(ev) { cb(0, t(ev.pointerType), 1 | 2, ev.clientX, ev.clientY, true) };
-        el.imguiHandlePointerUp = function(ev) { cb(1, t(ev.pointerType), 1 | 2, ev.clientX, ev.clientY, false) };
-        el.imguiHandlePointerMove = function(ev) { cb(2, t(ev.pointerType), 1, ev.clientX, ev.clientY, false) };
-        el.imguiHandlePointerCancel = function(ev) { cb(3, t(ev.pointerType), 2, 0, 0, false) };
-        el.imguiHandlePointerEnter = function(ev) { cb(4, t(ev.pointerType), 0, 0, 0, false) };
-        el.imguiHandlePointerLeave = function(ev) { cb(5, t(ev.pointerType), 0, 0, 0, false) };
+        el.imguiHandlePointerDown = function(ev) { cb(0, t(ev.pointerType), 1 | 2 | p(ev), ev.clientX, ev.clientY, true, ev.button); };
+        el.imguiHandlePointerUp = function(ev) { cb(1, t(ev.pointerType), 1 | 2 | p(ev), ev.clientX, ev.clientY, false, ev.button); };
+        el.imguiHandlePointerMove = function(ev) { cb(2, t(ev.pointerType), 1 | p(ev), ev.clientX, ev.clientY, false); };
+        el.imguiHandlePointerCancel = function(ev) { cb(3, t(ev.pointerType), 2 | p(ev), 0, 0, false, ev.button); };
+        el.imguiHandlePointerEnter = function(ev) { cb(4, t(ev.pointerType), 0 | p(ev), 0, 0, false, -1); };
+        el.imguiHandlePointerLeave = function(ev) { cb(5, t(ev.pointerType), 0 | p(ev), 0, 0, false, -1); };
 
         el.addEventListener('pointerdown', el.imguiHandlePointerDown);
         el.addEventListener('pointerup', el.imguiHandlePointerUp);
