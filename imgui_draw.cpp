@@ -5384,6 +5384,7 @@ void ImTextClassifierClear(ImU32* bits, unsigned int codepoint_min, unsigned int
 void ImTextClassifierSetCharClass(ImU32* bits, unsigned int codepoint_min, unsigned int codepoint_end, ImWcharClass char_class, unsigned int c)
 {
     IM_ASSERT(c >= codepoint_min && c < codepoint_end);
+    IM_UNUSED(codepoint_end);
     c -= codepoint_min;
     const ImU32 shift = (c & 15) << 1;
     bits[c >> 4] = (bits[c >> 4] & ~(0x03 << shift)) | (char_class << shift);
