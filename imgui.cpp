@@ -17586,7 +17586,7 @@ struct ImGuiDockPreviewData
     float           SplitRatio;
     ImRect          DropRectsDraw[ImGuiDir_COUNT + 1];  // May be slightly different from hit-testing drop rects used in DockNodeCalcDropRects()
 
-    ImGuiDockPreviewData() : FutureNode(0) { IsDropAllowed = IsCenterAvailable = IsSidesAvailable = IsSplitDirExplicit = false; SplitNode = NULL; SplitDir = ImGuiDir_None; SplitRatio = 0.f; for (int n = 0; n < IM_ARRAYSIZE(DropRectsDraw); n++) DropRectsDraw[n] = ImRect(+FLT_MAX, +FLT_MAX, -FLT_MAX, -FLT_MAX); }
+    ImGuiDockPreviewData() : FutureNode(0) { IsDropAllowed = IsCenterAvailable = IsSidesAvailable = IsSplitDirExplicit = false; SplitNode = NULL; SplitDir = ImGuiDir_None; SplitRatio = 0.f; for (int n = 0; n < IM_COUNTOF(DropRectsDraw); n++) DropRectsDraw[n] = ImRect(+FLT_MAX, +FLT_MAX, -FLT_MAX, -FLT_MAX); }
 };
 
 // Persistent Settings data, stored contiguously in SettingsNodes (sizeof() ~32 bytes)
@@ -17892,7 +17892,7 @@ static void ImGui::DockContextRemoveNode(ImGuiContext* ctx, ImGuiDockNode* node,
     }
     else
     {
-        for (int n = 0; parent_node && n < IM_ARRAYSIZE(parent_node->ChildNodes); n++)
+        for (int n = 0; parent_node && n < IM_COUNTOF(parent_node->ChildNodes); n++)
             if (parent_node->ChildNodes[n] == node)
                 node->ParentNode->ChildNodes[n] = NULL;
         dc->Nodes.SetVoidPtr(node->ID, NULL);
@@ -18024,7 +18024,7 @@ static void ImGui::DockContextBuildNodesFromSettings(ImGuiContext* ctx, ImGuiDoc
         // This is useful as the RootWindowForTitleBarHighlight links necessary to highlight the currently focused node requires node->HostWindow to be set.
         char host_window_title[20];
         ImGuiDockNode* root_node = DockNodeGetRootNode(node);
-        node->HostWindow = FindWindowByName(DockNodeGetHostWindowTitle(root_node, host_window_title, IM_ARRAYSIZE(host_window_title)));
+        node->HostWindow = FindWindowByName(DockNodeGetHostWindowTitle(root_node, host_window_title, IM_COUNTOF(host_window_title)));
     }
 }
 
@@ -18971,7 +18971,7 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
 
             // Begin into the host window
             char window_label[20];
-            DockNodeGetHostWindowTitle(node, window_label, IM_ARRAYSIZE(window_label));
+            DockNodeGetHostWindowTitle(node, window_label, IM_COUNTOF(window_label));
             ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_DockNodeHost;
             window_flags |= ImGuiWindowFlags_NoFocusOnAppearing;
             window_flags |= ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoCollapse;
@@ -20398,7 +20398,7 @@ ImGuiID ImGui::DockSpace(ImGuiID dockspace_id, const ImVec2& size_arg, ImGuiDock
     window_flags |= ImGuiWindowFlags_NoBackground;
 
     char title[256];
-    ImFormatString(title, IM_ARRAYSIZE(title), "%s/DockSpace_%08X", window->Name, dockspace_id);
+    ImFormatString(title, IM_COUNTOF(title), "%s/DockSpace_%08X", window->Name, dockspace_id);
 
     PushStyleVar(ImGuiStyleVar_ChildBorderSize, 0.0f);
     Begin(title, NULL, window_flags);
@@ -20460,7 +20460,7 @@ ImGuiID ImGui::DockSpaceOverViewport(ImGuiID dockspace_id, const ImGuiViewport* 
         host_window_flags |= ImGuiWindowFlags_NoMouseInputs;
 
     char label[32];
-    ImFormatString(label, IM_ARRAYSIZE(label), "WindowOverViewport_%08X", viewport->ID);
+    ImFormatString(label, IM_COUNTOF(label), "WindowOverViewport_%08X", viewport->ID);
 
     PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
     PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
@@ -20759,7 +20759,7 @@ static ImGuiDockNode* DockBuilderCopyNodeRec(ImGuiDockNode* src_node, ImGuiID ds
     out_node_remap_pairs->push_back(src_node->ID);
     out_node_remap_pairs->push_back(dst_node->ID);
 
-    for (int child_n = 0; child_n < IM_ARRAYSIZE(src_node->ChildNodes); child_n++)
+    for (int child_n = 0; child_n < IM_COUNTOF(src_node->ChildNodes); child_n++)
         if (src_node->ChildNodes[child_n])
         {
             dst_node->ChildNodes[child_n] = DockBuilderCopyNodeRec(src_node->ChildNodes[child_n], 0, out_node_remap_pairs);
@@ -22784,10 +22784,10 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         char* p = buf;
         ImGuiDockNode* node = g.DebugHoveredDockNode;
         ImDrawList* overlay_draw_list = node->HostWindow ? GetForegroundDrawList(node->HostWindow) : GetForegroundDrawList(GetMainViewport());
-        p += ImFormatString(p, buf + IM_ARRAYSIZE(buf) - p, "DockId: %X%s\n", node->ID, node->IsCentralNode() ? " *CentralNode*" : "");
-        p += ImFormatString(p, buf + IM_ARRAYSIZE(buf) - p, "WindowClass: %08X\n", node->WindowClass.ClassId);
-        p += ImFormatString(p, buf + IM_ARRAYSIZE(buf) - p, "Size: (%.0f, %.0f)\n", node->Size.x, node->Size.y);
-        p += ImFormatString(p, buf + IM_ARRAYSIZE(buf) - p, "SizeRef: (%.0f, %.0f)\n", node->SizeRef.x, node->SizeRef.y);
+        p += ImFormatString(p, buf + IM_COUNTOF(buf) - p, "DockId: %X%s\n", node->ID, node->IsCentralNode() ? " *CentralNode*" : "");
+        p += ImFormatString(p, buf + IM_COUNTOF(buf) - p, "WindowClass: %08X\n", node->WindowClass.ClassId);
+        p += ImFormatString(p, buf + IM_COUNTOF(buf) - p, "Size: (%.0f, %.0f)\n", node->Size.x, node->Size.y);
+        p += ImFormatString(p, buf + IM_COUNTOF(buf) - p, "SizeRef: (%.0f, %.0f)\n", node->SizeRef.x, node->SizeRef.y);
         int depth = DockNodeGetDepth(node);
         overlay_draw_list->AddRect(node->Pos + ImVec2(3, 3) * (float)depth, node->Pos + node->Size - ImVec2(3, 3) * (float)depth, IM_COL32(200, 100, 100, 255));
         ImVec2 pos = node->Pos + ImVec2(3, 3) * (float)depth;
