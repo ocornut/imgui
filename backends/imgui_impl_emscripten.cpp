@@ -34,6 +34,7 @@ struct ImGui_ImplEmscripten_BackendData
     int Height;
     ImGuiMouseCursor LastMouseCursor;
     int GamepadsCount;
+    int PressedButtons;
 };
 
 // Backend data stored in io.BackendPlatformUserData to allow support for multiple Dear ImGui contexts
@@ -360,12 +361,13 @@ extern "C"
 #define IMGUI_IMPL_EMSCRIPTEN_POINTER_EVENT_IS_PRIMARY 4
 
 EMSCRIPTEN_KEEPALIVE
-void ImGui_ImplEmscripten_PointerEvent(int type, int pointer_type, int flags, int x, int y, bool down, int button)
+void ImGui_ImplEmscripten_PointerEvent(int type, int pointer_type, int flags, int x, int y, int buttons)
 {
     if (!(flags & IMGUI_IMPL_EMSCRIPTEN_POINTER_EVENT_IS_PRIMARY))
         return;
 
     ImGuiIO& io = ImGui::GetIO();
+    ImGui_ImplEmscripten_BackendData* bd = ImGui_ImplEmscripten_GetBackendData(io);
 
     if (type == 5)
     {
@@ -387,20 +389,19 @@ void ImGui_ImplEmscripten_PointerEvent(int type, int pointer_type, int flags, in
             io.AddMousePosEvent((float)x, (float)y);
         if (flags & IMGUI_IMPL_EMSCRIPTEN_POINTER_EVENT_HAS_BUTTON)
         {
-            ImGuiMouseButton imgui_button = ImGuiMouseButton_COUNT;
-            switch (button)
-            {
-            case 0: imgui_button = ImGuiMouseButton_Left; break;
-            case 1: imgui_button = ImGuiMouseButton_Middle; break;
-            case 2: imgui_button = ImGuiMouseButton_Right; break;
-            case 3: imgui_button = 3; break;
-            case 4: imgui_button = 4; break;
-            }
-
-            if (imgui_button != ImGuiMouseButton_COUNT)
-                io.AddMouseButtonEvent(imgui_button, down);
+            // HACK: Browser executes pointerup/down only for single mouse button if multiple buttons were pressed at the same time
+            #define PROCESS_BUTTON(key, flag) if ((buttons & flag) != (bd->PressedButtons & flag)) { io.AddMouseButtonEvent(key, buttons & flag); }
+            PROCESS_BUTTON(ImGuiMouseButton_Left, 1);
+            PROCESS_BUTTON(ImGuiMouseButton_Right, 2);
+            PROCESS_BUTTON(ImGuiMouseButton_Middle, 4);
+            PROCESS_BUTTON(3, 8);
+            PROCESS_BUTTON(4, 16);
+            #undef PROCESS_BUTTON
         }
     }
+
+    if (type == 0 || type == 1 || type == 3)
+        bd->PressedButtons = buttons;
 }
 
 };
@@ -426,12 +427,12 @@ static void ImGui_ImplEmscripten_SetupPointerEvents(ImGui_ImplEmscripten_Backend
 
         const el = document.querySelector(UTF8ToString($0));
         const cb = Module['_ImGui_ImplEmscripten_PointerEvent'];
-        el.imguiHandlePointerDown = function(ev) { cb(0, t(ev.pointerType), 1 | 2 | p(ev), ev.clientX, ev.clientY, true, ev.button); };
-        el.imguiHandlePointerUp = function(ev) { cb(1, t(ev.pointerType), 1 | 2 | p(ev), ev.clientX, ev.clientY, false, ev.button); };
-        el.imguiHandlePointerMove = function(ev) { cb(2, t(ev.pointerType), 1 | p(ev), ev.clientX, ev.clientY, false); };
-        el.imguiHandlePointerCancel = function(ev) { cb(3, t(ev.pointerType), 2 | p(ev), 0, 0, false, ev.button); };
-        el.imguiHandlePointerEnter = function(ev) { cb(4, t(ev.pointerType), 0 | p(ev), 0, 0, false, -1); };
-        el.imguiHandlePointerLeave = function(ev) { cb(5, t(ev.pointerType), 0 | p(ev), 0, 0, false, -1); };
+        el.imguiHandlePointerDown = function(ev) { cb(0, t(ev.pointerType), 1 | 2 | p(ev), ev.clientX, ev.clientY, ev.buttons); };
+        el.imguiHandlePointerUp = function(ev) { cb(1, t(ev.pointerType), 1 | 2 | p(ev), ev.clientX, ev.clientY, ev.buttons); };
+        el.imguiHandlePointerMove = function(ev) { cb(2, t(ev.pointerType), 1 | p(ev), ev.clientX, ev.clientY, ev.buttons); };
+        el.imguiHandlePointerCancel = function(ev) { cb(3, t(ev.pointerType), 2 | p(ev), 0, 0, ev.buttons); };
+        el.imguiHandlePointerEnter = function(ev) { cb(4, t(ev.pointerType), 0 | p(ev), 0, 0, ev.buttons); };
+        el.imguiHandlePointerLeave = function(ev) { cb(5, t(ev.pointerType), 0 | p(ev), 0, 0, ev.buttons); };
 
         el.addEventListener('pointerdown', el.imguiHandlePointerDown);
         el.addEventListener('pointerup', el.imguiHandlePointerUp);
@@ -540,6 +541,7 @@ bool     ImGui_ImplEmscripten_Init(const char* target_id)
     bd->LastMouseCursor = ImGuiMouseCursor_COUNT;
     bd->ClipboardTextData = nullptr;
     bd->GamepadsCount = 0;
+    bd->PressedButtons = 0;
 
     size_t target_id_size = strlen(target_id);
     bd->TargetId = (char*)IM_ALLOC(target_id_size + 1);
