@@ -4234,6 +4234,10 @@ void ImFontAtlasBuildInit(ImFontAtlas* atlas)
     ImFontAtlasUpdateDrawListsSharedData(atlas);
 
     //atlas->TexIsBuilt = true;
+
+    // Lazily initialize char/text classifier
+    // FIXME: This could be practically anywhere, and should eventually be parameters to CalcTextSize/word-wrapping code, but there's no obvious spot now.
+    ImTextInitClassifiers();
 }
 
 // Destroy builder and all cached glyphs. Do not destroy actual fonts.
@@ -5371,22 +5375,62 @@ const char* ImTextCalcWordWrapNextLineStart(const char* text, const char* text_e
     return text;
 }
 
-// Character classification for word-wrapping logic
-enum
+void ImTextClassifierClear(ImU32* bits, unsigned int codepoint_min, unsigned int codepoint_end, ImWcharClass char_class)
 {
-    ImWcharClass_Blank, ImWcharClass_Punct, ImWcharClass_Other
-};
+    for (unsigned int c = codepoint_min; c < codepoint_end; c++)
+        ImTextClassifierSetCharClass(bits, codepoint_min, codepoint_end, char_class, c);
+}
+
+void ImTextClassifierSetCharClass(ImU32* bits, unsigned int codepoint_min, unsigned int codepoint_end, ImWcharClass char_class, unsigned int c)
+{
+    IM_ASSERT(c >= codepoint_min && c < codepoint_end);
+    c -= codepoint_min;
+    const ImU32 shift = (c & 15) << 1;
+    bits[c >> 4] = (bits[c >> 4] & ~(0x03 << shift)) | (char_class << shift);
+}
+
+void ImTextClassifierSetCharClassFromStr(ImU32* bits, unsigned int codepoint_min, unsigned int codepoint_end, ImWcharClass char_class, const char* s)
+{
+    const char* s_end = s + strlen(s);
+    while (*s)
+    {
+        unsigned int c;
+        s += ImTextCharFromUtf8(&c, s, s_end);
+        ImTextClassifierSetCharClass(bits, codepoint_min, codepoint_end, char_class, c);
+    }
+}
+
+#define ImTextClassifierGet(_BITS, _CHAR_OFFSET)    ((_BITS[(_CHAR_OFFSET) >> 4] >> (((_CHAR_OFFSET) & 15) << 1)) & 0x03)
+
+// 2-bit per character
+static ImU32 g_CharClassifierIsSeparator_0000_007f[128 / 16] = {};
+static ImU32 g_CharClassifierIsSeparator_3000_300f[ 16 / 16] = {};
+
+void ImTextInitClassifiers()
+{
+    if (ImTextClassifierGet(g_CharClassifierIsSeparator_0000_007f, ',') != 0)
+        return;
+
+    // List of hardcoded separators: .,;!?'"
+    // Making this dynamic given known ranges is trivial BUT requires us to standardize where you pass them as parameters. (#3002, #8503)
+    ImTextClassifierClear(g_CharClassifierIsSeparator_0000_007f, 0, 128, ImWcharClass_Other);
+    ImTextClassifierSetCharClassFromStr(g_CharClassifierIsSeparator_0000_007f, 0, 128, ImWcharClass_Blank, " \t");
+    ImTextClassifierSetCharClassFromStr(g_CharClassifierIsSeparator_0000_007f, 0, 128, ImWcharClass_Punct, ".,;!?\"");
+
+    ImTextClassifierClear(g_CharClassifierIsSeparator_3000_300f, 0x3000, 0x300F, ImWcharClass_Other);
+    ImTextClassifierSetCharClass(g_CharClassifierIsSeparator_3000_300f, 0x3000, 0x300F, ImWcharClass_Blank, 0x3000);
+    ImTextClassifierSetCharClass(g_CharClassifierIsSeparator_3000_300f, 0x3000, 0x300F, ImWcharClass_Punct, 0x3001);
+    ImTextClassifierSetCharClass(g_CharClassifierIsSeparator_3000_300f, 0x3000, 0x300F, ImWcharClass_Punct, 0x3002);
+}
 
 // Simple word-wrapping for English, not full-featured. Please submit failing cases!
 // This will return the next location to wrap from. If no wrapping if necessary, this will fast-forward to e.g. text_end.
-// FIXME: Much possible improvements (don't cut things like "word !", "word!!!" but cut within "word,,,,", more sensible support for punctuations, support for Unicode punctuations, etc.)
+// Refer to imgui_test_suite's "drawlist_text_wordwrap_1" for tests.
 const char* ImFontCalcWordWrapPositionEx(ImFont* font, float size, const char* text, const char* text_end, float wrap_width, ImDrawTextFlags flags)
 {
     // For references, possible wrap point marked with ^
     //  "aaa bbb, ccc,ddd. eee   fff. ggg!"
     //      ^    ^    ^   ^   ^__    ^    ^
-
-    // List of hardcoded separators: .,;!?'"
 
     // Skip extra blanks after a line returns (that includes not counting them in width computation)
     // e.g. "Hello    world" --> "Hello" "World"
@@ -5439,10 +5483,10 @@ const char* ImFontCalcWordWrapPositionEx(ImFont* font, float size, const char* t
 
         // Classify current character
         int curr_type;
-        if (c == ' ' || c == '\t' || c == 0x3000) // Inline version of ImCharIsBlankW(c)
-            curr_type = ImWcharClass_Blank;
-        else if (c == '.' || c == ',' || c == ';' || c == '!' || c == '?' || c == '\"' || c == 0x3001 || c == 0x3002)
-            curr_type = ImWcharClass_Punct;
+        if (c < 128)
+            curr_type = ImTextClassifierGet(g_CharClassifierIsSeparator_0000_007f, c);
+        else if (c >= 0x3000 && c < 0x3010)
+            curr_type = ImTextClassifierGet(g_CharClassifierIsSeparator_3000_300f, c & 15); //-V578
         else
             curr_type = ImWcharClass_Other;
 
@@ -5460,7 +5504,7 @@ const char* ImFontCalcWordWrapPositionEx(ImFont* font, float size, const char* t
         else
         {
             // End span: '.X' unless X is a digit
-            if (prev_type == ImWcharClass_Punct && curr_type != ImWcharClass_Punct && !(c >= '0' && c <= '9'))
+            if (prev_type == ImWcharClass_Punct && curr_type != ImWcharClass_Punct && !(c >= '0' && c <= '9')) // FIXME: Digit checks might be removed if allow custom separators (#8503)
             {
                 span_end = s;
                 line_width += span_width + blank_width;

@@ -441,6 +441,16 @@ IMGUI_API ImVec2        ImFontCalcTextSizeEx(ImFont* font, float size, float max
 IMGUI_API const char*   ImFontCalcWordWrapPositionEx(ImFont* font, float size, const char* text, const char* text_end, float wrap_width, ImDrawTextFlags flags = 0);
 IMGUI_API const char*   ImTextCalcWordWrapNextLineStart(const char* text, const char* text_end, ImDrawTextFlags flags = 0); // trim trailing space and find beginning of next line
 
+// Character classification for word-wrapping logic
+enum ImWcharClass
+{
+    ImWcharClass_Blank, ImWcharClass_Punct, ImWcharClass_Other
+};
+IMGUI_API void          ImTextInitClassifiers();
+IMGUI_API void          ImTextClassifierClear(ImU32* bits, unsigned int codepoint_min, unsigned int codepoint_end, ImWcharClass char_class);
+IMGUI_API void          ImTextClassifierSetCharClass(ImU32* bits, unsigned int codepoint_min, unsigned int codepoint_end, ImWcharClass char_class, unsigned int c);
+IMGUI_API void          ImTextClassifierSetCharClassFromStr(ImU32* bits, unsigned int codepoint_min, unsigned int codepoint_end, ImWcharClass char_class, const char* s);
+
 // Helpers: File System
 #ifdef IMGUI_DISABLE_FILE_FUNCTIONS
 #define IMGUI_DISABLE_DEFAULT_FILE_FUNCTIONS
