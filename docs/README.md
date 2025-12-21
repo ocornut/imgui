@@ -52,7 +52,7 @@ After Dear ImGui is set up in your application, you can use it from \_anywhere\_
 ImGui::Text("Hello, world %d", 123);
 if (ImGui::Button("Save"))
     MySaveFunction();
-ImGui::InputText("string", buf, IM_ARRAYSIZE(buf));
+ImGui::InputText("string", buf, IM_COUNTOF(buf));
 ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
 ```
 ![sample code output (dark, segoeui font, freetype)](https://user-images.githubusercontent.com/8225057/191050833-b7ecf528-bfae-4a9f-ac1b-f3d83437a2f4.png)

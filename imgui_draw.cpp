@@ -17,7 +17,7 @@ Index of this file:
 // [SECTION] ImFontAtlas: backend for stb_truetype
 // [SECTION] ImFontAtlas: glyph ranges helpers
 // [SECTION] ImFontGlyphRangesBuilder
-// [SECTION] ImFont
+// [SECTION] ImFontBaked, ImFont
 // [SECTION] ImGui Internal Render Helpers
 // [SECTION] Decompression code
 // [SECTION] Default font data (ProggyClean.ttf)
@@ -397,9 +397,9 @@ ImDrawListSharedData::ImDrawListSharedData()
 {
     memset(this, 0, sizeof(*this));
     InitialFringeScale = 1.0f;
-    for (int i = 0; i < IM_ARRAYSIZE(ArcFastVtx); i++)
+    for (int i = 0; i < IM_COUNTOF(ArcFastVtx); i++)
     {
-        const float a = ((float)i * 2 * IM_PI) / (float)IM_ARRAYSIZE(ArcFastVtx);
+        const float a = ((float)i * 2 * IM_PI) / (float)IM_COUNTOF(ArcFastVtx);
         ArcFastVtx[i] = ImVec2(ImCos(a), ImSin(a));
     }
     ArcFastRadiusCutoff = IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC_R(IM_DRAWLIST_ARCFAST_SAMPLE_MAX, CircleSegmentMaxError);
@@ -417,7 +417,7 @@ void ImDrawListSharedData::SetCircleTessellationMaxError(float max_error)
 
     IM_ASSERT(max_error > 0.0f);
     CircleSegmentMaxError = max_error;
-    for (int i = 0; i < IM_ARRAYSIZE(CircleSegmentCounts); i++)
+    for (int i = 0; i < IM_COUNTOF(CircleSegmentCounts); i++)
     {
         const float radius = (float)i;
         CircleSegmentCounts[i] = (ImU8)((i > 0) ? IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, CircleSegmentMaxError) : IM_DRAWLIST_ARCFAST_SAMPLE_MAX);
@@ -652,7 +652,7 @@ int ImDrawList::_CalcCircleAutoSegmentCount(float radius) const
 {
     // Automatic segment count
     const int radius_idx = (int)(radius + 0.999999f); // ceil to never reduce accuracy
-    if (radius_idx >= 0 && radius_idx < IM_ARRAYSIZE(_Data->CircleSegmentCounts))
+    if (radius_idx >= 0 && radius_idx < IM_COUNTOF(_Data->CircleSegmentCounts))
         return _Data->CircleSegmentCounts[radius_idx]; // Use cached value
     else
         return IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, _Data->CircleSegmentMaxError);
@@ -3128,7 +3128,7 @@ ImFont* ImFontAtlas::AddFontDefault(const ImFontConfig* font_cfg_template)
     if (font_cfg.SizePixels <= 0.0f)
         font_cfg.SizePixels = 13.0f * 1.0f;
     if (font_cfg.Name[0] == '\0')
-        ImFormatString(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), "ProggyClean.ttf");
+        ImFormatString(font_cfg.Name, IM_COUNTOF(font_cfg.Name), "ProggyClean.ttf");
     font_cfg.EllipsisChar = (ImWchar)0x0085;
     font_cfg.GlyphOffset.y += 1.0f * IM_TRUNC(font_cfg.SizePixels / 13.0f);  // Add +1 offset per 13 units
 
@@ -3162,7 +3162,7 @@ ImFont* ImFontAtlas::AddFontFromFileTTF(const char* filename, float size_pixels,
         // Store a short copy of filename into into the font name for convenience
         const char* p;
         for (p = filename + ImStrlen(filename); p > filename && p[-1] != '/' && p[-1] != '\\'; p--) {}
-        ImFormatString(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), "%s", p);
+        ImFormatString(font_cfg.Name, IM_COUNTOF(font_cfg.Name), "%s", p);
     }
     return AddFontFromMemoryTTF(data, (int)data_size, size_pixels, &font_cfg, glyph_ranges);
 }
@@ -4011,7 +4011,7 @@ static void ImFontAtlasDebugWriteTexToDisk(ImTextureData* tex, const char* descr
 {
     ImGuiContext& g = *GImGui;
     char buf[128];
-    ImFormatString(buf, IM_ARRAYSIZE(buf), "[%05d] Texture #%03d - %s.png", g.FrameCount, tex->UniqueID, description);
+    ImFormatString(buf, IM_COUNTOF(buf), "[%05d] Texture #%03d - %s.png", g.FrameCount, tex->UniqueID, description);
     stbi_write_png(buf, tex->Width, tex->Height, tex->BytesPerPixel, tex->Pixels, tex->GetPitch()); // tex->BytesPerPixel is technically not component, but ok for the formats we support.
 }
 #endif
@@ -4240,6 +4240,10 @@ void ImFontAtlasBuildInit(ImFontAtlas* atlas)
     ImFontAtlasUpdateDrawListsSharedData(atlas);
 
     //atlas->TexIsBuilt = true;
+
+    // Lazily initialize char/text classifier
+    // FIXME: This could be practically anywhere, and should eventually be parameters to CalcTextSize/word-wrapping code, but there's no obvious spot now.
+    ImTextInitClassifiers();
 }
 
 // Destroy builder and all cached glyphs. Do not destroy actual fonts.
@@ -4891,11 +4895,11 @@ const ImWchar*  ImFontAtlas::GetGlyphRangesChineseSimplifiedCommon()
         0xFF00, 0xFFEF, // Half-width characters
         0xFFFD, 0xFFFD  // Invalid
     };
-    static ImWchar full_ranges[IM_ARRAYSIZE(base_ranges) + IM_ARRAYSIZE(accumulative_offsets_from_0x4E00) * 2 + 1] = { 0 };
+    static ImWchar full_ranges[IM_COUNTOF(base_ranges) + IM_COUNTOF(accumulative_offsets_from_0x4E00) * 2 + 1] = { 0 };
     if (!full_ranges[0])
     {
         memcpy(full_ranges, base_ranges, sizeof(base_ranges));
-        UnpackAccumulativeOffsetsIntoRanges(0x4E00, accumulative_offsets_from_0x4E00, IM_ARRAYSIZE(accumulative_offsets_from_0x4E00), full_ranges + IM_ARRAYSIZE(base_ranges));
+        UnpackAccumulativeOffsetsIntoRanges(0x4E00, accumulative_offsets_from_0x4E00, IM_COUNTOF(accumulative_offsets_from_0x4E00), full_ranges + IM_COUNTOF(base_ranges));
     }
     return &full_ranges[0];
 }
@@ -4981,11 +4985,11 @@ const ImWchar*  ImFontAtlas::GetGlyphRangesJapanese()
         0xFF00, 0xFFEF, // Half-width characters
         0xFFFD, 0xFFFD  // Invalid
     };
-    static ImWchar full_ranges[IM_ARRAYSIZE(base_ranges) + IM_ARRAYSIZE(accumulative_offsets_from_0x4E00)*2 + 1] = { 0 };
+    static ImWchar full_ranges[IM_COUNTOF(base_ranges) + IM_COUNTOF(accumulative_offsets_from_0x4E00)*2 + 1] = { 0 };
     if (!full_ranges[0])
     {
         memcpy(full_ranges, base_ranges, sizeof(base_ranges));
-        UnpackAccumulativeOffsetsIntoRanges(0x4E00, accumulative_offsets_from_0x4E00, IM_ARRAYSIZE(accumulative_offsets_from_0x4E00), full_ranges + IM_ARRAYSIZE(base_ranges));
+        UnpackAccumulativeOffsetsIntoRanges(0x4E00, accumulative_offsets_from_0x4E00, IM_COUNTOF(accumulative_offsets_from_0x4E00), full_ranges + IM_COUNTOF(base_ranges));
     }
     return &full_ranges[0];
 }
@@ -5074,7 +5078,7 @@ void ImFontGlyphRangesBuilder::BuildRanges(ImVector<ImWchar>* out_ranges)
 }
 
 //-----------------------------------------------------------------------------
-// [SECTION] ImFont
+// [SECTION] ImFontBaked, ImFont
 //-----------------------------------------------------------------------------
 
 ImFontBaked::ImFontBaked()
@@ -5377,16 +5381,62 @@ const char* ImTextCalcWordWrapNextLineStart(const char* text, const char* text_e
     return text;
 }
 
+void ImTextClassifierClear(ImU32* bits, unsigned int codepoint_min, unsigned int codepoint_end, ImWcharClass char_class)
+{
+    for (unsigned int c = codepoint_min; c < codepoint_end; c++)
+        ImTextClassifierSetCharClass(bits, codepoint_min, codepoint_end, char_class, c);
+}
+
+void ImTextClassifierSetCharClass(ImU32* bits, unsigned int codepoint_min, unsigned int codepoint_end, ImWcharClass char_class, unsigned int c)
+{
+    IM_ASSERT(c >= codepoint_min && c < codepoint_end);
+    c -= codepoint_min;
+    const ImU32 shift = (c & 15) << 1;
+    bits[c >> 4] = (bits[c >> 4] & ~(0x03 << shift)) | (char_class << shift);
+}
+
+void ImTextClassifierSetCharClassFromStr(ImU32* bits, unsigned int codepoint_min, unsigned int codepoint_end, ImWcharClass char_class, const char* s)
+{
+    const char* s_end = s + strlen(s);
+    while (*s)
+    {
+        unsigned int c;
+        s += ImTextCharFromUtf8(&c, s, s_end);
+        ImTextClassifierSetCharClass(bits, codepoint_min, codepoint_end, char_class, c);
+    }
+}
+
+#define ImTextClassifierGet(_BITS, _CHAR_OFFSET)    ((_BITS[(_CHAR_OFFSET) >> 4] >> (((_CHAR_OFFSET) & 15) << 1)) & 0x03)
+
+// 2-bit per character
+static ImU32 g_CharClassifierIsSeparator_0000_007f[128 / 16] = {};
+static ImU32 g_CharClassifierIsSeparator_3000_300f[ 16 / 16] = {};
+
+void ImTextInitClassifiers()
+{
+    if (ImTextClassifierGet(g_CharClassifierIsSeparator_0000_007f, ',') != 0)
+        return;
+
+    // List of hardcoded separators: .,;!?'"
+    // Making this dynamic given known ranges is trivial BUT requires us to standardize where you pass them as parameters. (#3002, #8503)
+    ImTextClassifierClear(g_CharClassifierIsSeparator_0000_007f, 0, 128, ImWcharClass_Other);
+    ImTextClassifierSetCharClassFromStr(g_CharClassifierIsSeparator_0000_007f, 0, 128, ImWcharClass_Blank, " \t");
+    ImTextClassifierSetCharClassFromStr(g_CharClassifierIsSeparator_0000_007f, 0, 128, ImWcharClass_Punct, ".,;!?\"");
+
+    ImTextClassifierClear(g_CharClassifierIsSeparator_3000_300f, 0x3000, 0x300F, ImWcharClass_Other);
+    ImTextClassifierSetCharClass(g_CharClassifierIsSeparator_3000_300f, 0x3000, 0x300F, ImWcharClass_Blank, 0x3000);
+    ImTextClassifierSetCharClass(g_CharClassifierIsSeparator_3000_300f, 0x3000, 0x300F, ImWcharClass_Punct, 0x3001);
+    ImTextClassifierSetCharClass(g_CharClassifierIsSeparator_3000_300f, 0x3000, 0x300F, ImWcharClass_Punct, 0x3002);
+}
+
 // Simple word-wrapping for English, not full-featured. Please submit failing cases!
 // This will return the next location to wrap from. If no wrapping if necessary, this will fast-forward to e.g. text_end.
-// FIXME: Much possible improvements (don't cut things like "word !", "word!!!" but cut within "word,,,,", more sensible support for punctuations, support for Unicode punctuations, etc.)
+// Refer to imgui_test_suite's "drawlist_text_wordwrap_1" for tests.
 const char* ImFontCalcWordWrapPositionEx(ImFont* font, float size, const char* text, const char* text_end, float wrap_width, ImDrawTextFlags flags)
 {
     // For references, possible wrap point marked with ^
     //  "aaa bbb, ccc,ddd. eee   fff. ggg!"
     //      ^    ^    ^   ^   ^__    ^    ^
-
-    // List of hardcoded separators: .,;!?'"
 
     // Skip extra blanks after a line returns (that includes not counting them in width computation)
     // e.g. "Hello    world" --> "Hello" "World"
@@ -5398,16 +5448,20 @@ const char* ImFontCalcWordWrapPositionEx(ImFont* font, float size, const char* t
     const float scale = size / baked->Size;
 
     float line_width = 0.0f;
-    float word_width = 0.0f;
     float blank_width = 0.0f;
     wrap_width /= scale; // We work with unscaled widths to avoid scaling every characters
 
-    const char* word_end = text;
-    const char* prev_word_end = NULL;
-    bool inside_word = true;
-
     const char* s = text;
     IM_ASSERT(text_end != NULL);
+
+    int prev_type = ImWcharClass_Other;
+    const bool keep_blanks = (flags & ImDrawTextFlags_WrapKeepBlanks) != 0;
+
+    // Find next wrapping point
+    //const char* span_begin = s;
+    const char* span_end = s;
+    float span_width = 0.0f;
+
     while (s < text_end)
     {
         unsigned int c = (unsigned int)*s;
@@ -5423,7 +5477,7 @@ const char* ImFontCalcWordWrapPositionEx(ImFont* font, float size, const char* t
                 return s; // Direct return, skip "Wrap_width is too small to fit anything" path.
             if (c == '\r')
             {
-                s = next_s;
+                s = next_s; // Fast-skip
                 continue;
             }
         }
@@ -5433,46 +5487,56 @@ const char* ImFontCalcWordWrapPositionEx(ImFont* font, float size, const char* t
         if (char_width < 0.0f)
             char_width = BuildLoadGlyphGetAdvanceOrFallback(baked, c);
 
-        if (ImCharIsBlankW(c))
+        // Classify current character
+        int curr_type;
+        if (c < 128)
+            curr_type = ImTextClassifierGet(g_CharClassifierIsSeparator_0000_007f, c);
+        else if (c >= 0x3000 && c < 0x3010)
+            curr_type = ImTextClassifierGet(g_CharClassifierIsSeparator_3000_300f, c & 15); //-V578
+        else
+            curr_type = ImWcharClass_Other;
+
+        if (curr_type == ImWcharClass_Blank)
         {
-            if (inside_word)
+            // End span: 'A ' or '. '
+            if (prev_type != ImWcharClass_Blank && !keep_blanks)
             {
-                line_width += blank_width;
-                blank_width = 0.0f;
-                word_end = s;
+                span_end = s;
+                line_width += span_width;
+                span_width = 0.0f;
             }
             blank_width += char_width;
-            inside_word = false;
         }
         else
         {
-            word_width += char_width;
-            if (inside_word)
+            // End span: '.X' unless X is a digit
+            if (prev_type == ImWcharClass_Punct && curr_type != ImWcharClass_Punct && !(c >= '0' && c <= '9')) // FIXME: Digit checks might be removed if allow custom separators (#8503)
             {
-                word_end = next_s;
+                span_end = s;
+                line_width += span_width + blank_width;
+                span_width = blank_width = 0.0f;
             }
-            else
+            // End span: 'A ' or '. '
+            else if (prev_type == ImWcharClass_Blank && keep_blanks)
             {
-                prev_word_end = word_end;
-                line_width += word_width + blank_width;
-                if ((flags & ImDrawTextFlags_WrapKeepBlanks) && line_width <= wrap_width)
-                    prev_word_end = s;
-                word_width = blank_width = 0.0f;
+                span_end = s;
+                line_width += span_width + blank_width;
+                span_width = blank_width = 0.0f;
             }
-
-            // Allow wrapping after punctuation.
-            inside_word = (c != '.' && c != ',' && c != ';' && c != '!' && c != '?' && c != '\"' && c != 0x3001 && c != 0x3002);
+            span_width += char_width;
         }
 
-        // We ignore blank width at the end of the line (they can be skipped)
-        if (line_width + word_width > wrap_width)
+        if (span_width + blank_width + line_width > wrap_width)
         {
-            // Words that cannot possibly fit within an entire line will be cut anywhere.
-            if (word_width < wrap_width)
-                s = prev_word_end ? prev_word_end : word_end;
-            break;
+            if (span_width + blank_width > wrap_width)
+                break;
+            // FIXME: Narrow wrapping e.g. "A quick brown" -> "Quic|k br|own", would require knowing if span is going to be longer than wrap_width.
+            //if (span_width > wrap_width && !is_blank && !was_blank)
+            //    return s;
+            return span_end;
         }
 
+        prev_type = curr_type;
         s = next_s;
     }
 
