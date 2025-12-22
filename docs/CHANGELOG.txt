@@ -107,6 +107,8 @@ Other Changes:
     a string range. (#9107) [@achabense]
 - Scrollbar: fixed a codepath leading to a divide-by-zero (which would not be
   noticeable by user but detected by sanitizers). (#9089) [@judicaelclair]
+- Added GetItemFlags() in public API for consistency and to expose generic
+  flags of last submitted item. (#9127)
 - Debug Tools:
   - Debug Log: fixed incorrectly printing characters in IO log when submitting
     non-ASCII values to io.AddInputCharacter(). (#9099)
