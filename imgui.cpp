@@ -3761,7 +3761,7 @@ const char* ImGui::GetStyleColorName(ImGuiCol idx)
     case ImGuiCol_ChildBg: return "ChildBg";
     case ImGuiCol_PopupBg: return "PopupBg";
     case ImGuiCol_Border: return "Border";
-    case ImGuiCol_BorderSelected: return "BorderSelected";
+    case ImGuiCol_WindowBorderSelected: return "WindowBorderSelected";
     case ImGuiCol_BorderShadow: return "BorderShadow";
     case ImGuiCol_FrameBg: return "FrameBg";
     case ImGuiCol_FrameBgHovered: return "FrameBgHovered";
@@ -7550,7 +7550,7 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
         const float border_size = window->WindowBorderSize;
         if (border_size > 0.0f && title_bar_is_highlight && !(flags & ImGuiWindowFlags_NoTitleBar)) {
             if (!window->DockIsActive || window->DockNode->IsFocused) {
-                const ImU32 border_selected_col = GetColorU32(ImGuiCol_BorderSelected);
+                const ImU32 border_selected_col = GetColorU32(ImGuiCol_WindowBorderSelected);
                 RenderWindowOuterSingleBorder(window, 0, border_selected_col, border_size);
                 RenderWindowOuterSingleBorder(window, 1, border_selected_col, border_size);
                 RenderWindowOuterSingleBorder(window, 2, border_selected_col, border_size);
