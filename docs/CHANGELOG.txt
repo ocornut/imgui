@@ -67,6 +67,10 @@ Other Changes:
 - Fonts:
   - Fixed an issue related to EllipsisChar handling, while changing
     font loader or font loader flags dynamically in Style->Fonts menus.
+  - imgui_freetype: fixed overwriting ImFontConfig::PixelSnapH when hinting
+    is enabled, creating side-effects when later disabling hinting or
+    dynamically switching to stb_truetype rasterizer.
+  which would prevent
 - Textures:
   - Fixed a building issue when ImTextureID is defined as a struct.
   - Fixed displaying texture # in Metrics/Debugger window.
@@ -93,11 +97,18 @@ Other Changes:
   - Added ImGuiSliderFlags_ColorMarkers to opt-in adding R/G/B/A color markers
     next to each components, in multi-components functions.
   - Added a way to select a specific marker color.
-- Text:
+- Text, InputText:
+  - Reworked word-wrapping logic:
+    - Try to not wrap in the middle of contiguous punctuations. (#8139, #8439, #9094)
+    - Try to not wrap between a punctuation and a digit. (#8503)
+    - Inside InputTextMultiline() with _WordWrap: prefer keeping blanks at the
+      end of a line rather than at the beginning of next line. (#8990, #3237)
   - Fixed low-level word-wrapping function reading from *text_end when passed
     a string range. (#9107) [@achabense]
 - Scrollbar: fixed a codepath leading to a divide-by-zero (which would not be
   noticeable by user but detected by sanitizers). (#9089) [@judicaelclair]
+- Added GetItemFlags() in public API for consistency and to expose generic
+  flags of last submitted item. (#9127)
 - Debug Tools:
   - Debug Log: fixed incorrectly printing characters in IO log when submitting
     non-ASCII values to io.AddInputCharacter(). (#9099)
