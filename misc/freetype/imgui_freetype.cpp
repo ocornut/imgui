@@ -420,6 +420,7 @@ static bool ImGui_ImplFreeType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig* s
     float size = baked->Size;
     if (src->MergeMode && src->SizePixels != 0.0f)
         size *= (src->SizePixels / baked->OwnerFont->Sources[0]->SizePixels);
+    size *= src->ExtraSizeScale;
 
     ImGui_ImplFreeType_FontSrcData* bd_font_data = (ImGui_ImplFreeType_FontSrcData*)src->FontLoaderData;
     bd_font_data->BakedLastActivated = baked;

@@ -2418,6 +2418,7 @@ ImFontConfig::ImFontConfig()
     FontDataOwnedByAtlas = true;
     OversampleH = 0; // Auto == 1 or 2 depending on size
     OversampleV = 0; // Auto == 1
+    ExtraSizeScale = 1.0f;
     GlyphMaxAdvanceX = FLT_MAX;
     RasterizerMultiply = 1.0f;
     RasterizerDensity = 1.0f;
@@ -4612,6 +4613,7 @@ static bool ImGui_ImplStbTrueType_FontSrcInit(ImFontAtlas* atlas, ImFontConfig* 
     bd_font_data->ScaleFactor = stbtt_ScaleForPixelHeight(&bd_font_data->FontInfo, 1.0f);
     if (src->MergeMode && src->SizePixels != 0.0f && ref_size != 0.0f)
         bd_font_data->ScaleFactor *= src->SizePixels / ref_size; // FIXME-NEWATLAS: Should tidy up that a bit
+    bd_font_data->ScaleFactor *= src->ExtraSizeScale;
 
     return true;
 }

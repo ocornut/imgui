@@ -17236,6 +17236,9 @@ void ImGui::DebugNodeFont(ImFont* font)
         {
             const ImFontLoader* loader = src->FontLoader ? src->FontLoader : atlas->FontLoader;
             Text("Loader: '%s'", loader->Name ? loader->Name : "N/A");
+
+            //if (DragFloat("ExtraSizeScale", &src->ExtraSizeScale, 0.01f, 0.10f, 2.0f))
+            //    ImFontAtlasFontRebuildOutput(atlas, font);
 #ifdef IMGUI_ENABLE_FREETYPE
             if (loader->Name != NULL && strcmp(loader->Name, "FreeType") == 0)
             {
