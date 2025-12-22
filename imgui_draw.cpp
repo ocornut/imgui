@@ -3607,6 +3607,12 @@ void ImFontAtlasFontDestroyOutput(ImFontAtlas* atlas, ImFont* font)
     }
 }
 
+void ImFontAtlasFontRebuildOutput(ImFontAtlas* atlas, ImFont* font)
+{
+    ImFontAtlasFontDestroyOutput(atlas, font);
+    ImFontAtlasFontInitOutput(atlas, font);
+}
+
 //-----------------------------------------------------------------------------------------------------------------------------
 
 bool ImFontAtlasFontSourceInit(ImFontAtlas* atlas, ImFontConfig* src)
