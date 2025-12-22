@@ -3392,6 +3392,7 @@ void ImFontAtlasBuildMain(ImFontAtlas* atlas)
 
 void ImFontAtlasBuildGetOversampleFactors(ImFontConfig* src, ImFontBaked* baked, int* out_oversample_h, int* out_oversample_v)
 {
+    // (Only used by stb_truetype builder)
     // Automatically disable horizontal oversampling over size 36
     const float raster_size = baked->Size * baked->RasterizerDensity * src->RasterizerDensity;
     *out_oversample_h = (src->OversampleH != 0) ? src->OversampleH : (raster_size > 36.0f || src->PixelSnapH) ? 1 : 2;

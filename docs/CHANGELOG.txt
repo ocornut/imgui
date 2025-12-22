@@ -67,6 +67,10 @@ Other Changes:
 - Fonts:
   - Fixed an issue related to EllipsisChar handling, while changing
     font loader or font loader flags dynamically in Style->Fonts menus.
+  - imgui_freetype: fixed overwriting ImFontConfig::PixelSnapH when hinting
+    is enabled, creating side-effects when later disabling hinting or
+    dynamically switching to stb_truetype rasterizer.
+  which would prevent
 - Textures:
   - Fixed a building issue when ImTextureID is defined as a struct.
   - Fixed displaying texture # in Metrics/Debugger window.

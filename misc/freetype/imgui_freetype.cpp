@@ -153,7 +153,7 @@ struct ImGui_ImplFreeType_Data
 struct ImGui_ImplFreeType_FontSrcData
 {
     // Initialize from an external data buffer. Doesn't copy data, and you must ensure it stays valid up to this object lifetime.
-    bool                            InitFont(FT_Library ft_library, ImFontConfig* src, ImGuiFreeTypeLoaderFlags extra_user_flags);
+    bool                            InitFont(FT_Library ft_library, const ImFontConfig* src, ImGuiFreeTypeLoaderFlags extra_user_flags);
     void                            CloseFont();
     ImGui_ImplFreeType_FontSrcData()   { memset((void*)this, 0, sizeof(*this)); }
     ~ImGui_ImplFreeType_FontSrcData()  { CloseFont(); }
@@ -172,7 +172,7 @@ struct ImGui_ImplFreeType_FontSrcBakedData
     ImGui_ImplFreeType_FontSrcBakedData() { memset((void*)this, 0, sizeof(*this)); }
 };
 
-bool ImGui_ImplFreeType_FontSrcData::InitFont(FT_Library ft_library, ImFontConfig* src, ImGuiFreeTypeLoaderFlags extra_font_loader_flags)
+bool ImGui_ImplFreeType_FontSrcData::InitFont(FT_Library ft_library, const ImFontConfig* src, ImGuiFreeTypeLoaderFlags extra_font_loader_flags)
 {
     FT_Error error = FT_New_Memory_Face(ft_library, (const FT_Byte*)src->FontData, (FT_Long)src->FontDataSize, (FT_Long)src->FontNo, &FtFace);
     if (error != 0)
@@ -187,12 +187,8 @@ bool ImGui_ImplFreeType_FontSrcData::InitFont(FT_Library ft_library, ImFontConfi
     LoadFlags = 0;
     if ((UserFlags & ImGuiFreeTypeLoaderFlags_Bitmap) == 0)
         LoadFlags |= FT_LOAD_NO_BITMAP;
-
     if (UserFlags & ImGuiFreeTypeLoaderFlags_NoHinting)
         LoadFlags |= FT_LOAD_NO_HINTING;
-    else
-        src->PixelSnapH = true; // FIXME: A bit weird to do this this way.
-
     if (UserFlags & ImGuiFreeTypeLoaderFlags_NoAutoHint)
         LoadFlags |= FT_LOAD_NO_AUTOHINT;
     if (UserFlags & ImGuiFreeTypeLoaderFlags_ForceAutoHint)
@@ -543,7 +539,7 @@ static bool ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConf
         const float offsets_scale = (ref_size != 0.0f) ? (baked->Size / ref_size) : 1.0f;
         float font_off_x = (src->GlyphOffset.x * offsets_scale);
         float font_off_y = (src->GlyphOffset.y * offsets_scale) + baked->Ascent;
-        if (src->PixelSnapH) // Snap scaled offset. This is to mitigate backward compatibility issues for GlyphOffset, but a better design would be welcome.
+        if (src->PixelSnapH || (bd_font_data->UserFlags & ImGuiFreeTypeLoaderFlags_NoHinting) == 0) // Snap scaled offset. This is to mitigate backward compatibility issues for GlyphOffset, but a better design would be welcome.
             font_off_x = IM_ROUND(font_off_x);
         if (src->PixelSnapV)
             font_off_y = IM_ROUND(font_off_y);
