@@ -3121,11 +3121,11 @@ ImFont* ImFontAtlas::AddFontDefault(const ImFontConfig* font_cfg_template)
         font_cfg.PixelSnapH = true;
     }
     if (font_cfg.SizePixels <= 0.0f)
-        font_cfg.SizePixels = 13.0f * 1.0f;
+        font_cfg.SizePixels = 13.0f; // This only serves (1) as a reference for GlyphOffset.y setting and (2) as a default for pre-1.92 backend.
     if (font_cfg.Name[0] == '\0')
         ImFormatString(font_cfg.Name, IM_COUNTOF(font_cfg.Name), "ProggyClean.ttf");
     font_cfg.EllipsisChar = (ImWchar)0x0085;
-    font_cfg.GlyphOffset.y += 1.0f * IM_TRUNC(font_cfg.SizePixels / 13.0f);  // Add +1 offset per 13 units
+    font_cfg.GlyphOffset.y += 1.0f * (font_cfg.SizePixels / 13.0f); // Add +1 offset per 13 units
 
     int ttf_compressed_size = 0;
     const char* ttf_compressed = GetDefaultCompressedFontDataTTF(&ttf_compressed_size);
@@ -4721,12 +4721,8 @@ static bool ImGui_ImplStbTrueType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontC
 
         const float ref_size = baked->OwnerFont->Sources[0]->SizePixels;
         const float offsets_scale = (ref_size != 0.0f) ? (baked->Size / ref_size) : 1.0f;
-        float font_off_x = (src->GlyphOffset.x * offsets_scale);
-        float font_off_y = (src->GlyphOffset.y * offsets_scale);
-        if (src->PixelSnapH) // Snap scaled offset. This is to mitigate backward compatibility issues for GlyphOffset, but a better design would be welcome.
-            font_off_x = IM_ROUND(font_off_x);
-        if (src->PixelSnapV)
-            font_off_y = IM_ROUND(font_off_y);
+        float font_off_x = ImFloor(src->GlyphOffset.x * offsets_scale + 0.5f); // Snap scaled offset.
+        float font_off_y = ImFloor(src->GlyphOffset.y * offsets_scale + 0.5f);
         font_off_x += sub_x;
         font_off_y += sub_y + IM_ROUND(baked->Ascent);
         float recip_h = 1.0f / (oversample_h * rasterizer_density);

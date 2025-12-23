@@ -538,12 +538,8 @@ static bool ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConf
 
         const float ref_size = baked->OwnerFont->Sources[0]->SizePixels;
         const float offsets_scale = (ref_size != 0.0f) ? (baked->Size / ref_size) : 1.0f;
-        float font_off_x = (src->GlyphOffset.x * offsets_scale);
-        float font_off_y = (src->GlyphOffset.y * offsets_scale) + baked->Ascent;
-        if (src->PixelSnapH || (bd_font_data->UserFlags & ImGuiFreeTypeLoaderFlags_NoHinting) == 0) // Snap scaled offset. This is to mitigate backward compatibility issues for GlyphOffset, but a better design would be welcome.
-            font_off_x = IM_ROUND(font_off_x);
-        if (src->PixelSnapV)
-            font_off_y = IM_ROUND(font_off_y);
+        float font_off_x = ImFloor(src->GlyphOffset.x * offsets_scale + 0.5f); // Snap scaled offset.
+        float font_off_y = ImFloor(src->GlyphOffset.y * offsets_scale + 0.5f) + baked->Ascent;
         float recip_h = 1.0f / rasterizer_density;
         float recip_v = 1.0f / rasterizer_density;
 
