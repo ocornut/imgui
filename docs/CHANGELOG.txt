@@ -50,27 +50,46 @@ Breaking Changes:
   - This will invalidate hashes (stored in .ini data) for Tables and Windows
     that are using the "###" operators. (#713, #1698)
 - Renamed helper macro IM_ARRAYSIZE() -> IM_COUNTOF(). Kept redirection/legacy name.
-- Fonts: Fixed handling of `ImFontConfig::FontDataOwnedByAtlas = false` which
-  did erroneously make a copy of the font data, essentially defeating the purpose
-  of this flag and wasting memory (undetected since July 2015 and now spotted
-  by @TellowKrinkle, this is perhaps the oldest bug in Dear ImGui history,
-  albeit for a rarely used feature!) (#9086, #8465)
-  HOWEVER, fixing this bug is likely to surface bugs in user/app code:
-  - Prior to 1.92, font data only needs to be available during the atlas->AddFontXXX() call.
-  - Since 1.92, font data needs to available until atlas->RemoveFont(), or more typically
-    until a shutdown of the owning context or font atlas.
-  - The fact that handling of `FontDataOwnedByAtlas = false` was broken
-    bypassed the issue altogether.
+- Fonts:
+  - AddFontDefault() now automatically selects an embedded font between:
+    - AddFontDefaultVector(): new scalable font. Recommended at any higher size.
+    - AddFontDefaultBitmap(): classic pixel-clean font. Recommended at Size 13px with no scaling.
+    - The default selection is based on (style.FontSizeBase * FontScaleMain * FontScaleDpi)
+      reaching a small threshold. Prefer calling either based on your own logic.
+      And you can call AddFontDefaultBitmap() to ensure legacy behavior.
+  - Fixed handling of `ImFontConfig::FontDataOwnedByAtlas = false` which
+    did erroneously make a copy of the font data, essentially defeating the purpose
+    of this flag and wasting memory (undetected since July 2015 and now spotted
+    by @TellowKrinkle, this is perhaps the oldest bug in Dear ImGui history,
+    albeit for a rarely used feature!) (#9086, #8465)
+    HOWEVER, fixing this bug is likely to surface bugs in user/app code:
+    - Prior to 1.92, font data only needs to be available during the atlas->AddFontXXX() call.
+      Since 1.92, font data needs to available until atlas->RemoveFont(), or more typically
+      until a shutdown of the owning context or font atlas.
+    - The fact that handling of `FontDataOwnedByAtlas = false` was broken bypassed
+      the issue altogether.
+  - Removed ImFontConfig::PixelSnapV added in 1.92 which turns out is unnecessary
+    (and misdocumented). Post-rescale GlyphOffset is always rounded.
+
 
 Other Changes:
 
 - Fonts:
+  - Added AddFontDefaultVector(): a new embedded scalable font!
+    Based on ProggyVector by Tristan Grimmer, the same author as our good-old ProggyClean.
+    The font data was carefully subsetted, trimmed and compressed so the embedded
+    data is ~18 KB. Embedding a scalable default font ensures that Dear ImGui can
+    be easily and readily used in all contexts, even without file system access.
+    As always you can opt-out of the embedded font data if desired. A sizing tweak
+    was also applied to ensure the new font is a closer match to the classic font.
+  - AddFontDefault() now automatically selects an embedded font between
+    the classic pixel-looking one and the new scalable one.
   - Fixed an issue related to EllipsisChar handling, while changing
     font loader or font loader flags dynamically in Style->Fonts menus.
   - imgui_freetype: fixed overwriting ImFontConfig::PixelSnapH when hinting
     is enabled, creating side-effects when later disabling hinting or
     dynamically switching to stb_truetype rasterizer.
-  which would prevent
+  - Post rescale GlyphOffset is always rounded.
 - Textures:
   - Fixed a building issue when ImTextureID is defined as a struct.
   - Fixed displaying texture # in Metrics/Debugger window.

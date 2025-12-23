@@ -1,0 +1,17 @@
+# Usage: fontforge.exe -script ProggyVector-ExtractScript.txt
+Open("ProggyVector-Regular.ttf")
+SelectMore(0x20,0xFF)
+SelectMore(0x20AC) # Euro sign
+SelectInvert()
+DetachAndRemoveGlyphs()
+SelectAll()
+RemoveOverlap()
+Simplify()
+i=0
+while (i < 23)
+	SetTTFName(0x409,i,"")
+	i=i+1
+endloop
+SetFontNames(".",".",".",".",".",".")
+Generate("ProggyVector-minimal.ttf")
+# At this point you can use binary_to_compressed_c.exe -u8 ProggyVector-minimal.ttf proggy_vector_minimal_ttf
