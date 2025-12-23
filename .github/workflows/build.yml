@@ -525,7 +525,7 @@ jobs:
     - name: Build example_null (extra warnings, clang 64-bit)
       run: make -C examples/example_null WITH_EXTRA_WARNINGS=1
 
-    - name: Build example_null (single file build)
+    - name: Build macOS example_null (single file build)
       run: |
         cat > example_single_file.cpp <<'EOF'
 
@@ -536,7 +536,7 @@ jobs:
         EOF
         clang++ -I. -std=c++11 -Wall -Wformat -o example_single_file example_single_file.cpp
 
-    - name: Build example_null (single file build, c++20)
+    - name: Build macOS example_null (single file build, c++20)
       run: |
         cat > example_single_file.cpp <<'EOF'
 
@@ -547,7 +547,7 @@ jobs:
         EOF
         clang++ -I. -std=c++20 -Wall -Wformat -o example_single_file example_single_file.cpp
 
-    - name: Build example_null (without c++ runtime)
+    - name: Build macOS example_null (without c++ runtime)
       run: |
         cat > example_single_file.cpp <<'EOF'
 
@@ -558,34 +558,38 @@ jobs:
         EOF
         clang++ -I. -std=c++11 -Wall -Wformat -nodefaultlibs -fno-rtti -fno-exceptions -fno-threadsafe-statics -lc -lm -o example_single_file example_single_file.cpp
 
-    - name: Build example_glfw_opengl2
+    - name: Build macOS example_glfw_opengl2
       run: make -C examples/example_glfw_opengl2
+      if: github.event_name == 'workflow_run'
 
-    - name: Build example_glfw_opengl3
+    - name: Build macOS example_glfw_opengl3
       run: make -C examples/example_glfw_opengl3
       if: github.event_name == 'workflow_run'
 
-    - name: Build example_glfw_metal
+    - name: Build macOS example_glfw_metal
       run: make -C examples/example_glfw_metal
 
-    - name: Build example_sdl2_metal
+    - name: Build macOS example_sdl2_metal
       run: make -C examples/example_sdl2_metal
 
-    - name: Build example_sdl2_opengl2
+    - name: Build macOS example_sdl2_opengl2
       run: make -C examples/example_sdl2_opengl2
       if: github.event_name == 'workflow_run'
 
-    - name: Build example_sdl2_opengl3
+    - name: Build macOS example_sdl2_opengl3
       run: make -C examples/example_sdl2_opengl3
+      if: github.event_name == 'workflow_run'
 
-    - name: Build example_sdl3_opengl3
+    - name: Build macOS example_sdl3_opengl3
       run: make -C examples/example_sdl3_opengl3
 
-    - name: Build example_apple_metal
+    - name: Build macOS example_apple_metal
       run: xcodebuild -project examples/example_apple_metal/example_apple_metal.xcodeproj -target example_apple_metal_macos
+      if: github.event_name == 'workflow_run'
 
-    - name: Build example_apple_opengl2
+    - name: Build macOS example_apple_opengl2
       run: xcodebuild -project examples/example_apple_opengl2/example_apple_opengl2.xcodeproj -target example_osx_opengl2
+      if: github.event_name == 'workflow_run'
 
   Build-iOS:
     runs-on: macos-14
@@ -750,40 +754,40 @@ jobs:
       working-directory: ${{ github.workspace }}/imgui_test_engine/imgui_test_suite
       run: ./imgui_test_suite -nogui -nopause -v2 -ve4 -viewport-mock viewport
 
-  Test-MacOS:
-    runs-on: macos-latest
-    name: Test - MacOS
-
-    defaults:
-      run:
-        working-directory: ${{ github.workspace }}/imgui
-
-    steps:
-    - uses: actions/checkout@v5
-      with:
-        path: ${{ github.workspace }}/imgui
-
-    - uses: actions/checkout@v5
-      with:
-        fetch-depth: 1
-        repository: ocornut/imgui_test_engine
-        path: ${{ github.workspace }}/imgui_test_engine
-        submodules: true
-
-    - name: Build Tests
-      working-directory: ${{ github.workspace }}/imgui_test_engine/imgui_test_suite
-      run: make -j$(nproc)
-
-    - name: Run Tests
-      working-directory: ${{ github.workspace }}/imgui_test_engine/imgui_test_suite
-      run: ./imgui_test_suite -nogui -nopause -v2 -ve4 tests
-
-    - name: Check for Docking
-      id: check_docking
-      working-directory: ${{ github.workspace }}/imgui
-      run: echo "has_dock=$(grep -q "#define IMGUI_HAS_DOCK" imgui.h && echo true || echo false)" >> $GITHUB_OUTPUT
-
-    - name: Run Viewport Tests
-      if: steps.check_docking.outputs.has_dock == 'true'
-      working-directory: ${{ github.workspace }}/imgui_test_engine/imgui_test_suite
-      run: ./imgui_test_suite -nogui -nopause -v2 -ve4 -viewport-mock viewport
+#  Test-MacOS:
+#    runs-on: macos-latest
+#    name: Test - MacOS
+#
+#    defaults:
+#      run:
+#        working-directory: ${{ github.workspace }}/imgui
+#
+#    steps:
+#    - uses: actions/checkout@v5
+#      with:
+#        path: ${{ github.workspace }}/imgui
+#
+#    - uses: actions/checkout@v5
+#      with:
+#        fetch-depth: 1
+#        repository: ocornut/imgui_test_engine
+#        path: ${{ github.workspace }}/imgui_test_engine
+#        submodules: true
+#
+#    - name: Build Tests
+#      working-directory: ${{ github.workspace }}/imgui_test_engine/imgui_test_suite
+#      run: make -j$(nproc)
+#
+#    - name: Run Tests
+#      working-directory: ${{ github.workspace }}/imgui_test_engine/imgui_test_suite
+#      run: ./imgui_test_suite -nogui -nopause -v2 -ve4 tests
+#
+#    - name: Check for Docking
+#      id: check_docking
+#      working-directory: ${{ github.workspace }}/imgui
+#      run: echo "has_dock=$(grep -q "#define IMGUI_HAS_DOCK" imgui.h && echo true || echo false)" >> $GITHUB_OUTPUT
+#
+#    - name: Run Viewport Tests
+#      if: steps.check_docking.outputs.has_dock == 'true'
+#      working-directory: ${{ github.workspace }}/imgui_test_engine/imgui_test_suite
+#      run: ./imgui_test_suite -nogui -nopause -v2 -ve4 -viewport-mock viewport
