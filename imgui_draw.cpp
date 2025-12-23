@@ -2518,6 +2518,7 @@ void ImTextureData::DestroyPixels()
 //-----------------------------------------------------------------------------
 // - ImFontAtlas::AddFont()
 // - ImFontAtlas::AddFontDefault()
+// - ImFontAtlas::AddFontDefaultBitmap()
 // - ImFontAtlas::AddFontDefaultVector()
 // - ImFontAtlas::AddFontFromFileTTF()
 // - ImFontAtlas::AddFontFromMemoryTTF()
@@ -3112,9 +3113,26 @@ static const char* GetDefaultCompressedFontDataProggyClean(int* out_size);
 static const char* GetDefaultCompressedFontDataProggyVector(int* out_size);
 #endif
 
-// Load embedded ProggyClean.ttf at size 13, disable oversampling
-// If you want a similar font which may be better scaled, consider using ProggyVector from the same author!
-ImFont* ImFontAtlas::AddFontDefault(const ImFontConfig* font_cfg_template)
+// This duplicates some of the logic in UpdateFontsNewFrame() which is a bit chicken-and-eggy/tricky to extract due to variety of codepaths and possible initialization ordering.
+static float GetExpectedContextFontSize(ImGuiContext* ctx)
+{
+    return ((ctx->Style.FontSizeBase > 0.0f) ? ctx->Style.FontSizeBase : 13.0f) * ctx->Style.FontScaleMain * ctx->Style.FontScaleDpi;
+}
+
+// Legacy function with heuristic to select Pixel or Vector font.
+// The selection is based on (style.FontSizeBase * style.FontScaleMain * style.FontScaleDpi) reaching a small threshold at the time of adding the default font.
+// Prefer calling AddFontDefaultVector() or AddFontDefaultBitmap() based on your own logic.
+ImFont* ImFontAtlas::AddFontDefault(const ImFontConfig* font_cfg)
+{
+    if (OwnerContext == NULL || GetExpectedContextFontSize(OwnerContext) >= 16.0f)
+        return AddFontDefaultVector(font_cfg);
+    else
+        return AddFontDefaultBitmap(font_cfg);
+}
+
+// Load embedded ProggyClean.ttf. Default size 13, disable oversampling.
+// If you want a similar font which may be better scaled, consider using AddFontDefaultVector().
+ImFont* ImFontAtlas::AddFontDefaultBitmap(const ImFontConfig* font_cfg_template)
 {
 #ifndef IMGUI_DISABLE_DEFAULT_FONT
     ImFontConfig font_cfg = font_cfg_template ? *font_cfg_template : ImFontConfig();

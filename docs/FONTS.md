@@ -89,7 +89,10 @@ See [#8465](https://github.com/ocornut/imgui/issues/8465) for more details.
 
 ## How should I handle DPI in my application?
 
-See [FAQ entry](https://github.com/ocornut/imgui/blob/master/docs/FAQ.md#q-how-should-i-handle-dpi-in-my-application).
+Since 1.92, with an updated backend, you can set `style.FontScaleDpi = your_content_scale;` to scale all fonts.
+<BR>You can call  `style.ScaleAllSizes(xxx)` at init time or every frame at the beginning of your main loop to scale sizes/paddings.
+<BR>Since 1.92, with an updated backend, macOS style pixel/backing style scale is automatically handled.
+<BR>See [FAQ entry](https://github.com/ocornut/imgui/blob/master/docs/FAQ.md#q-how-should-i-handle-dpi-in-my-application) for more details.
 
 ##### [Return to Index](#index)
 
@@ -97,10 +100,22 @@ See [FAQ entry](https://github.com/ocornut/imgui/blob/master/docs/FAQ.md#q-how-s
 
 ## Fonts Loading Instructions
 
+**Select base size**
+```cpp
+ImGuiStyle& style = ImGui::GetStyle();
+style.FontSizeBase = 20.0f;
+```
+
 **Load default font:**
 ```cpp
 ImGuiIO& io = ImGui::GetIO();
-io.Fonts->AddFontDefault();
+io.Fonts->AddFontDefault();        // Load embedded font (auto-selected).
+```
+```cpp
+io.Fonts->AddFontDefaultVector();  // Load embedded scalable font.
+```
+```cpp
+io.Fonts->AddFontDefaultBitmap();  // Load embedded bitmap font (legacy).
 ```
 
 **Load .TTF/.OTF file with:**

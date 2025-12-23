@@ -658,22 +658,28 @@ Since 1.92 (June 2025) fonts may be dynamically used at any size.
 
 **Scaling fonts**
 
+Select default size:
+```cpp
+style.FontSizeBase = 20.0f;
+```
+Scale all fonts:
+```cpp
+style.FontScaleDpi = 2.0f;
+```
+
 To change font size:
 ```cpp
-ImGui::PushFont(NULL, 42.0f);
+ImGui::PushFont(NULL, 42.0f); // This will be multiplied by style.FontScaleDpi
 ```
 To change font and font size:
 ```cpp
 ImGui::PushFont(new_font, 42.0f);
 ```
-To scale all fonts:
-```cpp
-style.FontScaleDpi = 2.0f;
-```
+
 In `docking` branch or with multi-viewports:
 ```cpp
-io.ConfigDpiScaleFonts = true;          // [Experimental] Automatically overwrite style.FontScaleDpi in Begin() when Monitor DPI changes. This will scale fonts but _NOT_ scale sizes/padding for now.
-io.ConfigDpiScaleViewports = true;      // [Experimental] Scale Dear ImGui and Platform Windows when Monitor DPI changes.
+io.ConfigDpiScaleFonts = true;          // Automatically overwrite style.FontScaleDpi in Begin() when Monitor DPI changes. This will scale fonts but _NOT_ scale sizes/padding for now.
+io.ConfigDpiScaleViewports = true;      // Scale Dear ImGui and Platform Windows when Monitor DPI changes.
 ```
 
 **Scaling style** (paddings, spacings, thicknesses)
