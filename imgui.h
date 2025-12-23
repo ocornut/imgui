@@ -43,7 +43,7 @@ Index of this file:
 // [SECTION] Dear ImGui end-user API functions
 // [SECTION] Flags & Enumerations
 // [SECTION] Tables API flags and structures (ImGuiTableFlags, ImGuiTableColumnFlags, ImGuiTableRowFlags, ImGuiTableBgTarget, ImGuiTableSortSpecs, ImGuiTableColumnSortSpecs)
-// [SECTION] Helpers: Debug log, Memory allocations macros, ImVector<>, Unreachable
+// [SECTION] Helpers: Debug log, Memory allocations macros, ImVector<>
 // [SECTION] ImGuiStyle
 // [SECTION] ImGuiIO
 // [SECTION] Misc data structures (ImGuiInputTextCallbackData, ImGuiSizeCallbackData, ImGuiPayload)
@@ -2152,7 +2152,7 @@ struct ImGuiTableColumnSortSpecs
 };
 
 //-----------------------------------------------------------------------------
-// [SECTION] Helpers: Debug log, memory allocations macros, ImVector<>, Unreachable
+// [SECTION] Helpers: Debug log, memory allocations macros, ImVector<>
 //-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
@@ -2256,37 +2256,6 @@ struct ImVector
     inline int          index_from_ptr(const T* it) const   { IM_ASSERT(it >= Data && it < Data + Size); const ptrdiff_t off = it - Data; return (int)off; }
 };
 IM_MSVC_RUNTIME_CHECKS_RESTORE
-
-//-----------------------------------------------------------------------------
-// ImGui::Unreachable()
-// Provides an equivalent for std::unreachable() for C++<23. This signals to the compiler that a region is unreachable, allowing optimizations.
-//-----------------------------------------------------------------------------
-// If you are using C++>=23, use std::unreachable() in <utility>, and you may also define STD_UNREACHABLE_IS_AVAILABLE to substitute definitions.
-// Code is from: https://en.cppreference.com/w/cpp/utility/unreachable.html
-// Inclusion in the ImGUI namespace is chosen to avoid possible namespace collisions with stdlib >= 23.
-//-----------------------------------------------------------------------------
-namespace ImGui
-{
-//#define STD_UNREACHABLE_IS_AVAILABLE
-#ifdef STD_UNREACHABLE_IS_AVAILABLE 
-    #include <utility>
-    constexpr const auto Unreachable = ::std::unreachable;
-    #undef STD_UNREACHABLE_IS_AVAILABLE
-#else
-    [[noreturn]] inline void Unreachable()
-    {
-        // Uses compiler specific extensions if possible.
-        // Even if no extension is used, undefined behavior is still raised by
-        // an empty function body and the noreturn attribute.
-    #if defined(_MSC_VER) && !defined(__clang__) // MSVC
-        __assume(false);
-    #else // GCC, Clang
-        __builtin_unreachable();
-    #endif
-    }
-#endif
-    
-} // namespace ImGui
 
 //-----------------------------------------------------------------------------
 // [SECTION] ImGuiStyle
