@@ -76,7 +76,7 @@ Index of this file:
 // Includes
 #include <float.h>                  // FLT_MIN, FLT_MAX
 #include <stdarg.h>                 // va_list, va_start, va_end
-#include <stddef.h>                 // ptrdiff_t, NULL
+#include <stddef.h>                 // ptrdiff_t, NULL, offsetof
 #include <string.h>                 // memset, memmove, memcpy, strlen, strchr, strcpy, strcmp
 
 // Define attributes of all API symbols declarations (e.g. for DLL under Windows)
@@ -303,6 +303,8 @@ struct ImVec2
     IM_VEC2_CLASS_EXTRA     // Define additional constructors and implicit cast operators in imconfig.h to convert back and forth between your math types and ImVec2.
 #endif
 };
+static_assert(offsetof(ImVec2, y) - offsetof(ImVec2, x) == sizeof(float), "Cannot compile ImVec2 due to an alignment/padding violation.\
+    Please reply to (or start) the issue with your compiler version and flags at https://github.com/ocornut/imgui/issues.");
 
 // ImVec4: 4D vector used to store clipping rectangles, colors etc. [Compile-time configurable type]
 struct ImVec4
