@@ -287,7 +287,6 @@ typedef int     (*ImGuiInputTextCallback)(ImGuiInputTextCallbackData* data);    
 typedef void    (*ImGuiSizeCallback)(ImGuiSizeCallbackData* data);              // Callback function for ImGui::SetNextWindowSizeConstraints()
 typedef void*   (*ImGuiMemAllocFunc)(size_t sz, void* user_data);               // Function signature for ImGui::SetAllocatorFunctions()
 typedef void    (*ImGuiMemFreeFunc)(void* ptr, void* user_data);                // Function signature for ImGui::SetAllocatorFunctions()
-namespace ImGui { [[noreturn]] inline void Unreachable(); };                    // Function signature for ImGui::Unreachable()
 
 // ImVec2: 2D vector used to store positions, sizes etc. [Compile-time configurable type]
 // - This is a frequently used type in the API. Consider using IM_VEC2_CLASS_EXTRA to create implicit cast from/to our preferred type.
@@ -298,15 +297,8 @@ struct ImVec2
     float                                   x, y;
     constexpr ImVec2()                      : x(0.0f), y(0.0f) { }
     constexpr ImVec2(float _x, float _y)    : x(_x), y(_y) { }
-    #define SUBSCRIPT_OPERATION \
-        switch (idx % 2) {      \
-            case 0: return x;   \
-            case 1: return y;   \
-            default: ImGui::Unreachable();  /* Compiler hint: ensures optimization is taken and removes a false positive non-returning branch. */ \
-        };
-    float& operator[] (size_t idx) { SUBSCRIPT_OPERATION; }
-    float operator[] (size_t idx) const { SUBSCRIPT_OPERATION; }
-    #undef SUBSCRIPT_OPERATION
+    float& operator[] (size_t idx)          { IM_ASSERT(idx == 0 || idx == 1); return ((float*)(void*)(char*)this)[idx]; } // We very rarely use this [] operator, so the assert overhead is fine.
+    float  operator[] (size_t idx) const    { IM_ASSERT(idx == 0 || idx == 1); return ((const float*)(const void*)(const char*)this)[idx]; }
 #ifdef IM_VEC2_CLASS_EXTRA
     IM_VEC2_CLASS_EXTRA     // Define additional constructors and implicit cast operators in imconfig.h to convert back and forth between your math types and ImVec2.
 #endif
@@ -2271,7 +2263,7 @@ IM_MSVC_RUNTIME_CHECKS_RESTORE
 //-----------------------------------------------------------------------------
 // If you are using C++>=23, use std::unreachable() in <utility>, and you may also define STD_UNREACHABLE_IS_AVAILABLE to substitute definitions.
 // Code is from: https://en.cppreference.com/w/cpp/utility/unreachable.html
-// Inclusion in the ImGUI namespace is chosen to avoid possible namespace collisions.
+// Inclusion in the ImGUI namespace is chosen to avoid possible namespace collisions with stdlib >= 23.
 //-----------------------------------------------------------------------------
 namespace ImGui
 {
