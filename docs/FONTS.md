@@ -2,8 +2,9 @@ _(You may browse this at https://github.com/ocornut/imgui/blob/master/docs/FONTS
 
 ## Dear ImGui: Using Fonts
 
-The code in imgui.cpp embeds a copy of [ProggyClean.ttf](http://proggyfonts.net) (by Tristan Grimmer),
+The code in Dear ImGui embeds a copy of [ProggyClean.ttf](https://github.com/bluescan/proggyfonts) by Tristan Grimmer,
 a 13 pixels high, pixel-perfect font used by default. We embed it in the source code so you can use Dear ImGui without any file system access. ProggyClean does not scale smoothly, therefore it is recommended that you load your own file when using Dear ImGui in an application aiming to look nice and wanting to support multiple resolutions.
+The code in Dear ImGui embeds a partial copy of [ProggyVector.ttf](https://github.com/bluescan/proggyfonts) by Tristan Grimmer.
 
 You may also load external .TTF/.OTF files.
 In the [misc/fonts/](https://github.com/ocornut/imgui/tree/master/misc/fonts) folder you can find a few suggested fonts, provided as a convenience.
@@ -89,7 +90,10 @@ See [#8465](https://github.com/ocornut/imgui/issues/8465) for more details.
 
 ## How should I handle DPI in my application?
 
-See [FAQ entry](https://github.com/ocornut/imgui/blob/master/docs/FAQ.md#q-how-should-i-handle-dpi-in-my-application).
+Since 1.92, with an updated backend, you can set `style.FontScaleDpi = your_content_scale;` to scale all fonts.
+<BR>You can call  `style.ScaleAllSizes(xxx)` at init time or every frame at the beginning of your main loop to scale sizes/paddings.
+<BR>Since 1.92, with an updated backend, macOS style pixel/backing style scale is automatically handled.
+<BR>See [FAQ entry](https://github.com/ocornut/imgui/blob/master/docs/FAQ.md#q-how-should-i-handle-dpi-in-my-application) for more details.
 
 ##### [Return to Index](#index)
 
@@ -97,10 +101,22 @@ See [FAQ entry](https://github.com/ocornut/imgui/blob/master/docs/FAQ.md#q-how-s
 
 ## Fonts Loading Instructions
 
+**Select base size**
+```cpp
+ImGuiStyle& style = ImGui::GetStyle();
+style.FontSizeBase = 20.0f;
+```
+
 **Load default font:**
 ```cpp
 ImGuiIO& io = ImGui::GetIO();
-io.Fonts->AddFontDefault();
+io.Fonts->AddFontDefault();        // Load embedded font (auto-selected).
+```
+```cpp
+io.Fonts->AddFontDefaultVector();  // Load embedded scalable font.
+```
+```cpp
+io.Fonts->AddFontDefaultBitmap();  // Load embedded bitmap font (legacy).
 ```
 
 **Load .TTF/.OTF file with:**
@@ -557,12 +573,16 @@ Some fonts files are available in the `misc/fonts/` folder:
 **ProggyClean.ttf**, by Tristan Grimmer
 <br>MIT License
 <br>(recommended loading setting: Size = 13.0, GlyphOffset.y = +1)
-<br>http://www.proggyfonts.net/
+<br>https://github.com/bluescan/proggyfonts
 
 **ProggyTiny.ttf**, by Tristan Grimmer
 <br>MIT License
 <br>(recommended loading setting: Size = 10.0, GlyphOffset.y = +1)
-<br>http://www.proggyfonts.net/
+<br>https://github.com/bluescan/proggyfonts
+
+**ProggyVector.ttf**, by Tristan Grimmer, Source Foundry Authors
+<BR>MIT License
+<BR>https://github.com/bluescan/proggyfonts
 
 **Karla-Regular.ttf**, by Jonathan Pinhorn
 <br>SIL OPEN FONT LICENSE Version 1.1
@@ -590,12 +610,8 @@ Some fonts files are available in the `misc/fonts/` folder:
 
 <img width="1172" height="715" alt="image" src="https://github.com/user-attachments/assets/c9702534-4877-41c9-ae0d-252933c26ced" />
 
-Pixel Perfect:
-- Proggy Fonts, by Tristan Grimmer http://www.proggyfonts.net or http://upperboundsinteractive.com/fonts.php
-- Sweet16, Sweet16 Mono, by Martin Sedlak (Latin + Supplemental + Extended A) https://github.com/kmar/Sweet16Font (also include an .inl file to use directly in dear imgui.)
-
-Regular:
-- ProggyVector if you want the old school Dear ImGui font to scale: https://github.com/bluescan/proggyfonts
+- Proggy Fonts, by Tristan Grimmer https://github.com/bluescan/proggyfonts
+- Sweet16, Sweet16 Mono, by Martin Sedlak (Latin + Supplemental + Extended A) https://github.com/kmar/Sweet16Font
 - Google Noto Mono Fonts: https://www.google.com/get/noto/
 - Typefaces for source code beautification: https://github.com/chrissimpkins/codeface
 - Programmation fonts: http://s9w.github.io/font_compare/
