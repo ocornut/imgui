@@ -10,14 +10,70 @@
 static SDL_Surface* g_TargetSurface = nullptr;
 static SDL_Surface* g_FontSurface = nullptr;
 
-static inline void PutPixel(SDL_Surface* surface, int x, int y, Uint8 r, Uint8 g, Uint8 b, Uint8 a)
+static inline Uint32 GetPixel(SDL_Surface* s, int x, int y)
 {
-    if (x < 0 || y < 0 || x >= surface->w || y >= surface->h) return;
-    Uint32 pixel = SDL_MapRGBA(surface->format, r, g, b, a);
-    Uint8* pixels = (Uint8*)surface->pixels;
-    int pitch = surface->pitch;
-    Uint32* dst = (Uint32*)(pixels + y * pitch + x * 4);
-    *dst = pixel;
+    Uint8* p = (Uint8*)s->pixels + y * s->pitch + x * s->format->BytesPerPixel;
+    switch (s->format->BytesPerPixel)
+    {
+        case 1: return *p;
+        case 2: return *(Uint16*)p;
+        case 3:
+            if (SDL_BYTEORDER == SDL_BIG_ENDIAN)
+                return (p[0] << 16) | (p[1] << 8) | p[2];
+            else
+                return p[0] | (p[1] << 8) | (p[2] << 16);
+        case 4: return *(Uint32*)p;
+    }
+    return 0;
+}
+
+static inline void BlendPixel(SDL_Surface* s, int x, int y,
+                              Uint8 sr, Uint8 sg, Uint8 sb, Uint8 sa)
+{
+    if (!s || sa == 0) return;
+    if (x < 0 || y < 0 || x >= s->w || y >= s->h) return;
+
+    Uint32 dst_pix = GetPixel(s, x, y);
+
+    Uint8 dr, dg, db, da;
+    SDL_GetRGBA(dst_pix, s->format, &dr, &dg, &db, &da);
+
+    float src_a  = sa / 255.0f;
+    float dst_a  = da / 255.0f;
+    float out_a  = src_a + dst_a * (1.0f - src_a);
+
+    float out_r = (sr * src_a + dr * dst_a * (1.0f - src_a)) / (out_a > 0 ? out_a : 1.0f);
+    float out_g = (sg * src_a + dg * dst_a * (1.0f - src_a)) / (out_a > 0 ? out_a : 1.0f);
+    float out_b = (sb * src_a + db * dst_a * (1.0f - src_a)) / (out_a > 0 ? out_a : 1.0f);
+
+    Uint8 fr = (Uint8)std::clamp(out_r, 0.0f, 255.0f);
+    Uint8 fg = (Uint8)std::clamp(out_g, 0.0f, 255.0f);
+    Uint8 fb = (Uint8)std::clamp(out_b, 0.0f, 255.0f);
+    Uint8 fa = (Uint8)std::clamp(out_a * 255.0f, 0.0f, 255.0f);
+
+    Uint32 out_pix = SDL_MapRGBA(s->format, fr, fg, fb, fa);
+
+    Uint8* p = (Uint8*)s->pixels + y * s->pitch + x * s->format->BytesPerPixel;
+    switch (s->format->BytesPerPixel)
+    {
+        case 1: *p = (Uint8)out_pix; break;
+        case 2: *(Uint16*)p = (Uint16)out_pix; break;
+        case 3:
+            if (SDL_BYTEORDER == SDL_BIG_ENDIAN)
+            {
+                p[0] = (out_pix >> 16) & 0xFF;
+                p[1] = (out_pix >> 8)  & 0xFF;
+                p[2] =  out_pix        & 0xFF;
+            }
+            else
+            {
+                p[0] =  out_pix        & 0xFF;
+                p[1] = (out_pix >> 8)  & 0xFF;
+                p[2] = (out_pix >> 16) & 0xFF;
+            }
+            break;
+        case 4: *(Uint32*)p = out_pix; break;
+    }
 }
 
 static inline float Edge(const ImVec2& a, const ImVec2& b, float x, float y)
@@ -37,8 +93,9 @@ SDL_Surface* ImGui_ImplSDLSurface2_CreateFontAtlasSurface()
     if (!surf) return nullptr;
 
     SDL_LockSurface(surf);
-    memcpy(surf->pixels, pixels, width * height * 4);
+    std::memcpy(surf->pixels, pixels, width * height * 4);
     SDL_UnlockSurface(surf);
+    SDL_SetSurfaceBlendMode(surf, SDL_BLENDMODE_NONE);
     return surf;
 }
 
@@ -91,17 +148,20 @@ void ImGui_ImplSDLSurface2_RenderDrawData(ImDrawData* draw_data)
         for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
         {
             const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
-            if (pcmd->ElemCount == 0) { idx_offset += 0; continue; }
+            if (pcmd->ElemCount == 0)
+                continue;
 
-            ImVec2 clip_min = ImVec2((pcmd->ClipRect.x - display_pos.x) * fb_scale.x,
-                                     (pcmd->ClipRect.y - display_pos.y) * fb_scale.y);
-            ImVec2 clip_max = ImVec2((pcmd->ClipRect.z - display_pos.x) * fb_scale.x,
-                                     (pcmd->ClipRect.w - display_pos.y) * fb_scale.y);
+            ImVec2 clip_min = ImVec2(
+                (pcmd->ClipRect.x - display_pos.x) * fb_scale.x,
+                (pcmd->ClipRect.y - display_pos.y) * fb_scale.y);
+            ImVec2 clip_max = ImVec2(
+                (pcmd->ClipRect.z - display_pos.x) * fb_scale.x,
+                (pcmd->ClipRect.w - display_pos.y) * fb_scale.y);
 
-            int cx0 = (int)floor(clip_min.x);
-            int cy0 = (int)floor(clip_min.y);
-            int cx1 = (int)ceil(clip_max.x);
-            int cy1 = (int)ceil(clip_max.y);
+            int cx0 = (int)std::floor(clip_min.x);
+            int cy0 = (int)std::floor(clip_min.y);
+            int cx1 = (int)std::ceil (clip_max.x);
+            int cy1 = (int)std::ceil (clip_max.y);
 
             cx0 = std::max(cx0, 0);
             cy0 = std::max(cy0, 0);
@@ -114,11 +174,7 @@ void ImGui_ImplSDLSurface2_RenderDrawData(ImDrawData* draw_data)
                 continue;
             }
 
-            SDL_Rect srect;
-            srect.x = cx0;
-            srect.y = cy0;
-            srect.w = cx1 - cx0;
-            srect.h = cy1 - cy0;
+            SDL_Rect srect{ cx0, cy0, cx1 - cx0, cy1 - cy0 };
             SDL_SetClipRect(g_TargetSurface, &srect);
 
            SDL_Surface* tex = (SDL_Surface*)pcmd->GetTexID();
@@ -137,10 +193,10 @@ void ImGui_ImplSDLSurface2_RenderDrawData(ImDrawData* draw_data)
                 ImVec2 p1 = ImVec2((v1.pos.x - display_pos.x) * fb_scale.x, (v1.pos.y - display_pos.y) * fb_scale.y);
                 ImVec2 p2 = ImVec2((v2.pos.x - display_pos.x) * fb_scale.x, (v2.pos.y - display_pos.y) * fb_scale.y);
 
-                int minx = (int)floor(std::min(std::min(p0.x, p1.x), p2.x));
-                int miny = (int)floor(std::min(std::min(p0.y, p1.y), p2.y));
-                int maxx = (int)ceil(std::max(std::max(p0.x, p1.x), p2.x));
-                int maxy = (int)ceil(std::max(std::max(p0.y, p1.y), p2.y));
+                int minx = (int)std::floor(std::min({ p0.x, p1.x, p2.x }));
+                int miny = (int)std::floor(std::min({ p0.y, p1.y, p2.y }));
+                int maxx = (int)std::ceil (std::max({ p0.x, p1.x, p2.x }));
+                int maxy = (int)std::ceil (std::max({ p0.y, p1.y, p2.y }));
 
                 minx = std::max(minx, cx0);
                 miny = std::max(miny, cy0);
@@ -180,37 +236,36 @@ void ImGui_ImplSDLSurface2_RenderDrawData(ImDrawData* draw_data)
                         float b = w0 * c0[2] + w1 * c1[2] + w2 * c2[2];
                         float a = w0 * c0[3] + w1 * c1[3] + w2 * c2[3];
 
-                        Uint8 out_r = (Uint8)(std::min(1.0f, r) * 255.0f);
-                        Uint8 out_g = (Uint8)(std::min(1.0f, g) * 255.0f);
-                        Uint8 out_b = (Uint8)(std::min(1.0f, b) * 255.0f);
-                        Uint8 out_a = (Uint8)(std::min(1.0f, a) * 255.0f);
+                        Uint8 out_r = (Uint8)(std::clamp(r, 0.0f, 1.0f) * 255.0f);
+                        Uint8 out_g = (Uint8)(std::clamp(g, 0.0f, 1.0f) * 255.0f);
+                        Uint8 out_b = (Uint8)(std::clamp(b, 0.0f, 1.0f) * 255.0f);
+                        Uint8 out_a = (Uint8)(std::clamp(a, 0.0f, 1.0f) * 255.0f);
 
                         if (tex)
                         {
-                            ImVec2 uv0 = v0.uv; ImVec2 uv1 = v1.uv; ImVec2 uv2 = v2.uv;
+                            ImVec2 uv0 = v0.uv, uv1 = v1.uv, uv2 = v2.uv;
                             float u = w0 * uv0.x + w1 * uv1.x + w2 * uv2.x;
                             float v = w0 * uv0.y + w1 * uv1.y + w2 * uv2.y;
+
                             int tx = (int)(u * (tex->w - 1) + 0.5f);
                             int ty = (int)(v * (tex->h - 1) + 0.5f);
                             tx = std::clamp(tx, 0, tex->w - 1);
                             ty = std::clamp(ty, 0, tex->h - 1);
 
-                            Uint8* tpx = (Uint8*)tex->pixels + ty * tex->pitch + tx * 4;
-                            Uint8 tr = tpx[0];
-                            Uint8 tg = tpx[1];
-                            Uint8 tb = tpx[2];
-                            Uint8 ta = tpx[3];
+                            Uint32 tpx = GetPixel(tex, tx, ty);
+                            Uint8 tr, tg, tb, ta;
+                            SDL_GetRGBA(tpx, tex->format, &tr, &tg, &tb, &ta);
 
                             Uint8 final_r = (Uint8)((tr * out_r) / 255);
                             Uint8 final_g = (Uint8)((tg * out_g) / 255);
                             Uint8 final_b = (Uint8)((tb * out_b) / 255);
                             Uint8 final_a = (Uint8)((ta * out_a) / 255);
 
-                            PutPixel(g_TargetSurface, x, y, final_r, final_g, final_b, final_a);
+                            BlendPixel(g_TargetSurface, x, y, final_r, final_g, final_b, final_a);
                         }
                         else
                         {
-                            PutPixel(g_TargetSurface, x, y, out_r, out_g, out_b, out_a);
+                            BlendPixel(g_TargetSurface, x, y, out_r, out_g, out_b, out_a);
                         }
                     }
                 }
