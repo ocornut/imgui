@@ -33,26 +33,43 @@ static inline void BlendPixel(SDL_Surface* s, int x, int y,
     if (!s || sa == 0) return;
     if (x < 0 || y < 0 || x >= s->w || y >= s->h) return;
 
-    Uint32 dst_pix = GetPixel(s, x, y);
+    if (sa == 255)
+    {
+        Uint32 out_pix = SDL_MapRGBA(s->format, sr, sg, sb, sa);
+        Uint8* p = (Uint8*)s->pixels + y * s->pitch + x * s->format->BytesPerPixel;
+        switch (s->format->BytesPerPixel)
+        {
+            case 1: *p = (Uint8)out_pix; break;
+            case 2: *(Uint16*)p = (Uint16)out_pix; break;
+            case 3:
+                if (SDL_BYTEORDER == SDL_BIG_ENDIAN)
+                {
+                    p[0] = (out_pix >> 16) & 0xFF;
+                    p[1] = (out_pix >> 8)  & 0xFF;
+                    p[2] =  out_pix        & 0xFF;
+                }
+                else
+                {
+                    p[0] =  out_pix        & 0xFF;
+                    p[1] = (out_pix >> 8)  & 0xFF;
+                    p[2] = (out_pix >> 16) & 0xFF;
+                }
+                break;
+            case 4: *(Uint32*)p = out_pix; break;
+        }
+        return;
+    }
 
+    Uint32 dst_pix = GetPixel(s, x, y);
     Uint8 dr, dg, db, da;
     SDL_GetRGBA(dst_pix, s->format, &dr, &dg, &db, &da);
 
-    float src_a  = sa / 255.0f;
-    float dst_a  = da / 255.0f;
-    float out_a  = src_a + dst_a * (1.0f - src_a);
+    Uint8 out_r = (Uint8)((sr * sa + dr * (255 - sa)) / 255);
+    Uint8 out_g = (Uint8)((sg * sa + dg * (255 - sa)) / 255);
+    Uint8 out_b = (Uint8)((sb * sa + db * (255 - sa)) / 255);
+    Uint8 out_a = (Uint8)((sa + (da * (255 - sa)) / 255));
 
-    float out_r = (sr * src_a + dr * dst_a * (1.0f - src_a)) / (out_a > 0 ? out_a : 1.0f);
-    float out_g = (sg * src_a + dg * dst_a * (1.0f - src_a)) / (out_a > 0 ? out_a : 1.0f);
-    float out_b = (sb * src_a + db * dst_a * (1.0f - src_a)) / (out_a > 0 ? out_a : 1.0f);
-
-    Uint8 fr = (Uint8)std::clamp(out_r, 0.0f, 255.0f);
-    Uint8 fg = (Uint8)std::clamp(out_g, 0.0f, 255.0f);
-    Uint8 fb = (Uint8)std::clamp(out_b, 0.0f, 255.0f);
-    Uint8 fa = (Uint8)std::clamp(out_a * 255.0f, 0.0f, 255.0f);
-
-    Uint32 out_pix = SDL_MapRGBA(s->format, fr, fg, fb, fa);
-
+    Uint32 out_pix = SDL_MapRGBA(s->format, out_r, out_g, out_b, out_a);
     Uint8* p = (Uint8*)s->pixels + y * s->pitch + x * s->format->BytesPerPixel;
     switch (s->format->BytesPerPixel)
     {
@@ -103,10 +120,18 @@ bool ImGui_ImplSDLSurface2_Init(SDL_Surface* surface)
 {
     if (!surface) return false;
     g_TargetSurface = surface;
-
     g_FontSurface = ImGui_ImplSDLSurface2_CreateFontAtlasSurface();
     if (g_FontSurface)
     {
+        if (g_TargetSurface && g_FontSurface->format->format != g_TargetSurface->format->format)
+        {
+            SDL_Surface* converted = SDL_ConvertSurfaceFormat(g_FontSurface, g_TargetSurface->format->format, 0);
+            if (converted)
+            {
+                SDL_FreeSurface(g_FontSurface);
+                g_FontSurface = converted;
+            }
+        }
         ImGui::GetIO().Fonts->TexID = (ImTextureID)g_FontSurface;
     }
     return true;
