@@ -41,10 +41,12 @@ int main(int, char**)
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  
 
     ImGui::StyleColorsDark();
-
     ImGui_ImplSDL2_InitForSDLRenderer(window, nullptr);
+    ImGui_ImplSDL2_SetGamepadMode(ImGui_ImplSDL2_GamepadMode_AutoFirst, nullptr, 0);
     ImGui_ImplSDLSurface2_Init(framebuffer);
 
     bool show_demo_window = true;
