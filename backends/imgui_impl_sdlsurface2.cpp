@@ -119,6 +119,12 @@ SDL_Surface* ImGui_ImplSDLSurface2_CreateFontAtlasSurface()
 bool ImGui_ImplSDLSurface2_Init(SDL_Surface* surface)
 {
     if (!surface) return false;
+
+    ImGuiIO& io = ImGui::GetIO();
+    IM_ASSERT(io.BackendRendererName == nullptr && "Already initialized a renderer backend!");
+    io.BackendRendererName = "imgui_impl_sdlsurface2";
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures; 
+
     g_TargetSurface = surface;
     g_FontSurface = ImGui_ImplSDLSurface2_CreateFontAtlasSurface();
     if (g_FontSurface)
@@ -139,6 +145,10 @@ bool ImGui_ImplSDLSurface2_Init(SDL_Surface* surface)
 
 void ImGui_ImplSDLSurface2_Shutdown()
 {
+    ImGuiIO& io = ImGui::GetIO();
+    io.BackendRendererName = nullptr;
+    io.BackendFlags &= ~ImGuiBackendFlags_RendererHasTextures;
+
     ImGui::GetIO().Fonts->TexID = nullptr;
     if (g_FontSurface)
     {
