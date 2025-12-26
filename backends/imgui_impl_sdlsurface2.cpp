@@ -123,7 +123,6 @@ bool ImGui_ImplSDLSurface2_Init(SDL_Surface* surface)
     ImGuiIO& io = ImGui::GetIO();
     IM_ASSERT(io.BackendRendererName == nullptr && "Already initialized a renderer backend!");
     io.BackendRendererName = "imgui_impl_sdlsurface2";
-    io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures; 
 
     g_TargetSurface = surface;
     g_FontSurface = ImGui_ImplSDLSurface2_CreateFontAtlasSurface();
