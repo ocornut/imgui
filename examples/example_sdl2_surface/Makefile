@@ -1,55 +1,72 @@
-# Makefile for example_sdl2_surface
+#
+# Cross Platform Makefile (example_sdl2_surface)
+# Compatible with MSYS2/MINGW, Linux and macOS
+#
+# You will need SDL2 (http://www.libsdl.org):
+# Linux:  apt-get install libsdl2-dev
+# macOS:  brew install sdl2
+# MSYS2:  pacman -S mingw-w64-i686-SDL2
+#
 
-CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wformat
-
+#EXE = example_sdl2_surface
+EXE = example_sdl2_surface
 IMGUI_DIR = ../..
 SOURCES = main.cpp
 SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
-SOURCES += $(IMGUI_DIR)/backends/imgui_impl_sdl2.cpp
-SOURCES += $(IMGUI_DIR)/backends/imgui_impl_sdlsurface2.cpp
-
+SOURCES += $(IMGUI_DIR)/backends/imgui_impl_sdl2.cpp $(IMGUI_DIR)/backends/imgui_impl_sdlsurface2.cpp
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
-
 UNAME_S := $(shell uname -s)
 
-SDL_CFLAGS := $(shell pkg-config --cflags sdl2 2>/dev/null)
-SDL_LIBS := $(shell pkg-config --libs sdl2 2>/dev/null)
-EXEEXT :=
-RM = rm -f
+CXXFLAGS = -std=c++11 -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends
+CXXFLAGS += -g -Wall -Wformat
+LIBS =
 
-ifneq (,$(findstring MINGW,$(UNAME_S)))
-	INCLUDES = -I../.. -I../../backends -I/mingw64/include/SDL2
-	LIBS = -lmingw32 -lSDL2main -lSDL2 -lgdi32
-	EXEEXT = .exe
-	RM = del /Q
-else
-	ifeq ($(UNAME_S),Darwin)
-		ifeq ($(SDL_CFLAGS),)
-			SDL_CFLAGS = -F/Library/Frameworks -I/Library/Frameworks/SDL2.framework/Headers
-			SDL_LIBS = -F/Library/Frameworks -framework SDL2
-		endif
-	endif
+##---------------------------------------------------------------------
+## BUILD FLAGS PER PLATFORM
+##---------------------------------------------------------------------
 
-	INCLUDES = -I../.. -I../../backends $(SDL_CFLAGS)
-	LIBS = $(SDL_LIBS)
+ifeq ($(UNAME_S), Linux) #LINUX
+	ECHO_MESSAGE = "Linux"
+	LIBS += `sdl2-config --libs`
+
+	CXXFLAGS += `sdl2-config --cflags`
+	CFLAGS = $(CXXFLAGS)
 endif
 
-TARGET = example_sdl2_surface$(EXEEXT)
+ifeq ($(UNAME_S), Darwin) #APPLE
+	ECHO_MESSAGE = "Mac OS X"
+	LIBS += `sdl2-config --libs`
+	CXXFLAGS += `sdl2-config --cflags`
+	CXXFLAGS += -I/usr/local/include -I/opt/local/include
+	CFLAGS = $(CXXFLAGS)
+endif
+
+ifeq ($(OS), Windows_NT)
+	ECHO_MESSAGE = "MinGW"
+	LIBS += -lgdi32 `pkg-config --static --libs sdl2`
+
+	CXXFLAGS += `pkg-config --cflags sdl2`
+	CFLAGS = $(CXXFLAGS)
+endif
+
+##---------------------------------------------------------------------
+## BUILD RULES
+##---------------------------------------------------------------------
 
 %.o:%.cpp
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -c -o $@ $<
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 %.o:$(IMGUI_DIR)/%.cpp
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -c -o $@ $<
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 %.o:$(IMGUI_DIR)/backends/%.cpp
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -c -o $@ $<
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-all: $(TARGET)
+all: $(EXE)
+	@echo Build complete for $(ECHO_MESSAGE)
 
-$(TARGET): $(OBJS)
-	$(CXX) -o $@ $^ $(LIBS)
+$(EXE): $(OBJS)
+	$(CXX) -o $@ $^ $(CXXFLAGS) $(LIBS)
 
 clean:
-	$(RM) *.o $(TARGET)
+	rm -f $(EXE) $(OBJS)
