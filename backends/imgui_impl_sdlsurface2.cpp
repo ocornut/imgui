@@ -7,6 +7,16 @@
 #include <cstring>
 #include <algorithm>
 
+// No clamp in C++11 
+template<typename T>
+static inline T ImClamp(T v, T lo, T hi)
+{
+    if (v < lo) return lo;
+    if (v > hi) return hi;
+    return v;
+}
+
+
 static SDL_Surface* g_TargetSurface = nullptr;
 static SDL_Surface* g_FontSurface = nullptr;
 
@@ -270,10 +280,10 @@ void ImGui_ImplSDLSurface2_RenderDrawData(ImDrawData* draw_data)
                         float b = w0 * c0[2] + w1 * c1[2] + w2 * c2[2];
                         float a = w0 * c0[3] + w1 * c1[3] + w2 * c2[3];
 
-                        Uint8 out_r = (Uint8)(std::clamp(r, 0.0f, 1.0f) * 255.0f);
-                        Uint8 out_g = (Uint8)(std::clamp(g, 0.0f, 1.0f) * 255.0f);
-                        Uint8 out_b = (Uint8)(std::clamp(b, 0.0f, 1.0f) * 255.0f);
-                        Uint8 out_a = (Uint8)(std::clamp(a, 0.0f, 1.0f) * 255.0f);
+                        Uint8 out_r = (Uint8)(ImClamp(r, 0.0f, 1.0f) * 255.0f);
+                        Uint8 out_g = (Uint8)(ImClamp(g, 0.0f, 1.0f) * 255.0f);
+                        Uint8 out_b = (Uint8)(ImClamp(b, 0.0f, 1.0f) * 255.0f);
+                        Uint8 out_a = (Uint8)(ImClamp(a, 0.0f, 1.0f) * 255.0f);
 
                         if (tex)
                         {
@@ -283,8 +293,8 @@ void ImGui_ImplSDLSurface2_RenderDrawData(ImDrawData* draw_data)
 
                             int tx = (int)(u * (tex->w - 1) + 0.5f);
                             int ty = (int)(v * (tex->h - 1) + 0.5f);
-                            tx = std::clamp(tx, 0, tex->w - 1);
-                            ty = std::clamp(ty, 0, tex->h - 1);
+                            tx = ImClamp(tx, 0, tex->w - 1);
+                            ty = ImClamp(ty, 0, tex->h - 1);
 
                             Uint32 tpx = GetPixel(tex, tx, ty);
                             Uint8 tr, tg, tb, ta;
