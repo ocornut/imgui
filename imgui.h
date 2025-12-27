@@ -2538,6 +2538,53 @@ struct ImGuiIO
     int         MetricsRenderWindows;               // Number of visible windows
     int         MetricsActiveWindows;               // Number of active windows
     ImVec2      MouseDelta;                         // Mouse delta. Note that this is zero if either current or previous position are invalid (-FLT_MAX,-FLT_MAX), so a disappearing/reappearing mouse won't have a huge delta.
+    float       NextRefresh;                    // Optional: tells when should next render happen to see any change in results, 0 on init so that first draw goes through
+#if 1
+    struct NextRefreshStack_t
+    {
+      size_t      Size;
+      struct      NextRefreshEntry_t { float delay; char reason[64]; } Entries[16];
+    } NextRefreshStack;
+
+    void ResetNextRefresh() 
+    {
+       NextRefresh = FLT_MAX;
+       NextRefreshStack.Size = 0;
+       NextRefreshStack.Entries[0].reason[0]='\0';
+       NextRefreshStack.Entries[0].delay = FLT_MAX;
+    }
+    void SetNextRefresh(float pause_ms, const char* dbg_reason)
+    {
+        if (pause_ms <= NextRefresh)
+           NextRefresh = pause_ms;
+
+         auto* s = NextRefreshStack.Entries;
+         while (s != NextRefreshStack.Entries + NextRefreshStack.Size)
+         {
+            if (pause_ms <= s->delay)
+               break;
+            ++s;
+         }
+
+         if (s < NextRefreshStack.Entries + sizeof(NextRefreshStack.Entries) / sizeof(NextRefreshStack.Entries[0]))
+         {
+            size_t new_size = (NextRefreshStack.Size < sizeof(NextRefreshStack.Entries) / sizeof(NextRefreshStack.Entries[0]) ? NextRefreshStack.Size + 1 : sizeof(NextRefreshStack.Entries) / sizeof(NextRefreshStack.Entries[0]));
+            memmove(s + 1, s, sizeof(NextRefreshStack.Entries[0]) * (NextRefreshStack.Entries + new_size - 1 - s));
+            s->delay = pause_ms;
+#ifdef _MSC_VER
+            strncpy_s(s->reason, dbg_reason, sizeof(s->reason) / sizeof(char) - 1);
+#else
+            strncpy(s->reason, dbg_reason, sizeof(s->reason) / sizeof(char) - 1);
+#endif
+            NextRefreshStack.Size = new_size;
+         }      
+    }
+    //const char* GetNextRefreshReason() const { return NextRefresh_dbg; }
+#else
+    void ResetNextRefresh() { NextRefresh = FLT_MAX; }
+    void SetNextRefresh(float pause_ms, const char* /*dbg_line*/) { if (pause_ms <= NextRefresh) NextRefresh = pause_ms; }
+    const char* GetNextRefreshReason() const { return ""; }
+#endif
 
     //------------------------------------------------------------------
     // [Internal] Dear ImGui will maintain those fields. Forward compatibility not guaranteed!
