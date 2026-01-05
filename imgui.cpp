@@ -7786,10 +7786,12 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         SetWindowDock(window, g.NextWindowData.DockId, g.NextWindowData.DockCond);
     if (first_begin_of_the_frame)
     {
-        bool has_dock_node = (window->DockId != 0 || window->DockNode != NULL);
-        bool new_auto_dock_node = !has_dock_node && GetWindowAlwaysWantOwnTabBar(window);
-        bool dock_node_was_visible = window->DockNodeIsVisible;
-        bool dock_tab_was_visible = window->DockTabIsVisible;
+        const bool has_dock_node = (window->DockId != 0 || window->DockNode != NULL);
+        const bool new_auto_dock_node = !has_dock_node && GetWindowAlwaysWantOwnTabBar(window);
+        const bool dock_node_was_visible = window->DockNodeIsVisible;
+        const bool dock_tab_was_visible = window->DockTabIsVisible;
+        window->DockIsActive = window->DockNodeIsVisible = window->DockTabIsVisible = false;
+
         if (has_dock_node || new_auto_dock_node)
         {
             BeginDocked(window, p_open);
@@ -7806,10 +7808,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 window->Appearing = true;
                 SetWindowConditionAllowFlags(window, ImGuiCond_Appearing, true);
             }
-        }
-        else
-        {
-            window->DockIsActive = window->DockNodeIsVisible = window->DockTabIsVisible = false;
         }
     }
 
@@ -20990,9 +20988,6 @@ static void StoreDockStyleForWindow(ImGuiWindow* window)
 void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
 {
     ImGuiContext& g = *GImGui;
-
-    // Clear fields ahead so most early-out paths don't have to do it
-    window->DockIsActive = window->DockNodeIsVisible = window->DockTabIsVisible = false;
 
     // Specific extra processing for fallback window (#9151), could be in Begin() as well.
     if (window->IsFallbackWindow && !window->WasActive)
