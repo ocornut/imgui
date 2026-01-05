@@ -224,11 +224,11 @@ struct ImGui_ImplVulkanH_FrameSemaphores
 struct ImGui_ImplVulkanH_Window
 {
     // Input
+    bool                    UseDynamicRendering;
     VkSurfaceFormatKHR      SurfaceFormat;
     VkPresentModeKHR        PresentMode;
-    bool                    UseDynamicRendering;
-    bool                    ClearEnable;
-    VkClearValue            ClearValue;
+    VkAttachmentDescription AttachmentDesc;     // RenderPass creation: main attachment description.
+    VkClearValue            ClearValue;         // RenderPass creation: clear value when using VK_ATTACHMENT_LOAD_OP_CLEAR.
 
     // Internal
     int                     Width;              // Generally same as passed to ImGui_ImplVulkanH_CreateOrResizeWindow()
@@ -247,8 +247,19 @@ struct ImGui_ImplVulkanH_Window
     ImGui_ImplVulkanH_Window()
     {
         memset((void*)this, 0, sizeof(*this));
-        PresentMode = (VkPresentModeKHR)~0;     // Ensure we get an error if user doesn't set this.
-        ClearEnable = true;
+
+        // Parameters to create SwapChain
+        PresentMode = (VkPresentModeKHR)~0;             // Ensure we get an error if user doesn't set this.
+
+        // Parameters to create RenderPass
+        AttachmentDesc.format = VK_FORMAT_UNDEFINED;    // Will automatically use wd->SurfaceFormat.format.
+        AttachmentDesc.samples = VK_SAMPLE_COUNT_1_BIT;
+        AttachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        AttachmentDesc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        AttachmentDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        AttachmentDesc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        AttachmentDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        AttachmentDesc.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     }
 };
 
