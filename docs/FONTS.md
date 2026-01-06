@@ -3,10 +3,16 @@ _(You may browse this at https://github.com/ocornut/imgui/blob/master/docs/FONTS
 ## Dear ImGui: Using Fonts
 
 The code in Dear ImGui embeds a copy of [ProggyClean.ttf](https://github.com/bluescan/proggyfonts) by Tristan Grimmer,
-a 13 pixels high, pixel-perfect font used by default. We embed it in the source code so you can use Dear ImGui without any file system access. ProggyClean does not scale smoothly, therefore it is recommended that you load your own file when using Dear ImGui in an application aiming to look nice and wanting to support multiple resolutions.
-The code in Dear ImGui embeds a partial copy of [ProggyVector.ttf](https://github.com/bluescan/proggyfonts) by Tristan Grimmer.
+a 13 pixels high, pixel-perfect font used by default. ProggyClean does not scale very nicely.
 
-You may also load external .TTF/.OTF files.
+The code in Dear ImGui embeds a partial copy of [ProggyVector.ttf](https://github.com/bluescan/proggyfonts) by Tristan Grimmer and Source Foundry Authors,
+a font mimicking ProggyClean which does scale nicely.
+
+We embed fonts in the code so you can use Dear ImGui without any file system access.
+If you use either of those fonts in your shipping product you should include their license as part of your software (see below for links).
+If you don't use them you can set `IMGUI_DISABLE_DEFAULT_FONT` in your [imconfig.h](https://github.com/ocornut/imgui/blob/master/imconfig.h) file to ship binaries without the fonts and save about ~26 KB.
+
+You may also load external .TTF/.OTF files, see instructions on this page.
 In the [misc/fonts/](https://github.com/ocornut/imgui/tree/master/misc/fonts) folder you can find a few suggested fonts, provided as a convenience.
 
 **Also read the FAQ:** https://www.dearimgui.com/faq (there is a Fonts section!)
@@ -581,7 +587,7 @@ Some fonts files are available in the `misc/fonts/` folder:
 <br>https://github.com/bluescan/proggyfonts
 
 **ProggyVector.ttf**, by Tristan Grimmer, Source Foundry Authors
-<BR>MIT License
+<BR>MIT License + Bitstream Vera License
 <BR>https://github.com/bluescan/proggyfonts
 
 **Karla-Regular.ttf**, by Jonathan Pinhorn
