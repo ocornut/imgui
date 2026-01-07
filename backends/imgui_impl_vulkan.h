@@ -231,28 +231,42 @@ struct ImGui_ImplVulkanH_FrameSemaphores
 // (Used by example's main.cpp. Used by multi-viewport features. Probably NOT used by your own engine/app.)
 struct ImGui_ImplVulkanH_Window
 {
-    int                 Width;
-    int                 Height;
-    VkSwapchainKHR      Swapchain;
-    VkSurfaceKHR        Surface;
-    VkSurfaceFormatKHR  SurfaceFormat;
-    VkPresentModeKHR    PresentMode;
-    VkRenderPass        RenderPass;
-    bool                UseDynamicRendering;
-    bool                ClearEnable;
-    VkClearValue        ClearValue;
-    uint32_t            FrameIndex;             // Current frame being rendered to (0 <= FrameIndex < FrameInFlightCount)
-    uint32_t            ImageCount;             // Number of simultaneous in-flight frames (returned by vkGetSwapchainImagesKHR, usually derived from min_image_count)
-    uint32_t            SemaphoreCount;         // Number of simultaneous in-flight frames + 1, to be able to use it in vkAcquireNextImageKHR
-    uint32_t            SemaphoreIndex;         // Current set of swapchain wait semaphores we're using (needs to be distinct from per frame data)
+    // Input
+    bool                    UseDynamicRendering;
+    VkSurfaceFormatKHR      SurfaceFormat;
+    VkPresentModeKHR        PresentMode;
+    VkAttachmentDescription AttachmentDesc;     // RenderPass creation: main attachment description.
+    VkClearValue            ClearValue;         // RenderPass creation: clear value when using VK_ATTACHMENT_LOAD_OP_CLEAR.
+
+    // Internal
+    int                     Width;              // Generally same as passed to ImGui_ImplVulkanH_CreateOrResizeWindow()
+    int                     Height;
+    VkSwapchainKHR          Swapchain;
+    VkSurfaceKHR            Surface;
+    VkRenderPass            RenderPass;
+    uint32_t                FrameIndex;         // Current frame being rendered to (0 <= FrameIndex < FrameInFlightCount)
+    uint32_t                ImageCount;         // Number of simultaneous in-flight frames (returned by vkGetSwapchainImagesKHR, usually derived from min_image_count)
+    uint32_t                SemaphoreCount;     // Number of simultaneous in-flight frames + 1, to be able to use it in vkAcquireNextImageKHR
+    uint32_t                SemaphoreIndex;     // Current set of swapchain wait semaphores we're using (needs to be distinct from per frame data)
     ImVector<ImGui_ImplVulkanH_Frame>           Frames;
     ImVector<ImGui_ImplVulkanH_FrameSemaphores> FrameSemaphores;
 
     ImGui_ImplVulkanH_Window()
     {
         memset((void*)this, 0, sizeof(*this));
-        PresentMode = (VkPresentModeKHR)~0;     // Ensure we get an error if user doesn't set this.
-        ClearEnable = true;
+
+        // Parameters to create SwapChain
+        PresentMode = (VkPresentModeKHR)~0;             // Ensure we get an error if user doesn't set this.
+
+        // Parameters to create RenderPass
+        AttachmentDesc.format = VK_FORMAT_UNDEFINED;    // Will automatically use wd->SurfaceFormat.format.
+        AttachmentDesc.samples = VK_SAMPLE_COUNT_1_BIT;
+        AttachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        AttachmentDesc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        AttachmentDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        AttachmentDesc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        AttachmentDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        AttachmentDesc.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     }
 };
 
