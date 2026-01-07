@@ -3314,6 +3314,7 @@ namespace ImGui
     IMGUI_API ImGuiWindow*  FindBlockingModal(ImGuiWindow* window);
     IMGUI_API ImVec2        FindBestWindowPosForPopup(ImGuiWindow* window);
     IMGUI_API ImVec2        FindBestWindowPosForPopupEx(const ImVec2& ref_pos, const ImVec2& size, ImGuiDir* last_dir, const ImRect& r_outer, const ImRect& r_avoid, ImGuiPopupPositionPolicy policy);
+    IMGUI_API ImGuiMouseButton GetMouseButtonFromPopupFlags(ImGuiPopupFlags flags);
 
     // Tooltips
     IMGUI_API bool          BeginTooltipEx(ImGuiTooltipFlags tooltip_flags, ImGuiWindowFlags extra_window_flags);

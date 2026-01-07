@@ -394,6 +394,24 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
  When you are not sure about an old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2026/01/07 (1.92.6) - Popups: changed compile-time 'ImGuiPopupFlags popup_flags = 1' default value to be '= 0' for BeginPopupContextItem(), BeginPopupContextWindow(), BeginPopupContextVoid(), OpenPopupOnItemClick(). Default value has same meaning before and after.
+                         - Refer to GitHub topic #9157 if you have any question.
+                         - Before this version, those functions had a 'ImGuiPopupFlags popup_flags = 1' default value in their function signature.
+                           Explicitly passing a literal 0 meant ImGuiPopupFlags_MouseButtonLeft. The default literal 1 meant ImGuiPopupFlags_MouseButtonRight.
+                           This was introduced by a change on 2020/06/23 (1.77) while changing the signature from 'int mouse_button' to 'ImGuiPopupFlags popup_flags' and trying to preserve then-legacy behavior.
+                           We have now changed this behavior to cleanup a very old API quirk, facilitate use by bindings, and to remove the last and error-prone non-zero default value.
+                           Also because we deemed it extremely rare to use those helper functions with the Left mouse button! As using the LMB would generally be triggered via another widget, e.g. a Button() + a OpenPopup()/BeginPopup() call.
+                         - Before: The default = 1 means ImGuiPopupFlags_MouseButtonRight. Explicitly passing a literal 0 means ImGuiPopupFlags_MouseButtonLeft.
+                         - After:  The default = 0 means ImGuiPopupFlags_MouseButtonRight. Explicitly passing a literal 1 also means ImGuiPopupFlags_MouseButtonRight (if legacy behavior are enabled) or will assert (if legacy behavior are disabled).
+                         - TL;DR: if you don't want to use right mouse button for popups, always specify it explicitly using a named ImGuiPopupFlags_MouseButtonXXXX value.
+                         Recap:
+                         - BeginPopupContextItem("foo");                                         // Behavior unchanged (use Right button)
+                         - BeginPopupContextItem("foo", ImGuiPopupFlags_MouseButtonLeft);        // Behavior unchanged (use Left button)
+                         - BeginPopupContextItem("foo", ImGuiPopupFlags_MouseButtonLeft | xxx);  // Behavior unchanged (use Left button + flags)
+                         - BeginPopupContextItem("foo", ImGuiPopupFlags_MouseButtonRight | xxx); // Behavior unchanged (use Right button + flags)
+                         - BeginPopupContextItem("foo", 1);                                      // Behavior unchanged (as a courtesy we legacy interpret 1 as ImGuiPopupFlags_MouseButtonRight, will assert if disabling legacy behaviors.
+                         - BeginPopupContextItem("foo", 0);                                      // !! Behavior changed !! Was Left button. Now will defaults to Right button! --> Use ImGuiPopupFlags_MouseButtonLeft.
+                         - BeginPopupContextItem("foo", ImGuiPopupFlags_NoReopen);               // !! Behavior changed !! Was Left button + flags. Now will defaults to Right button! --> Use ImGuiPopupFlags_MouseButtonLeft | xxx.
  - 2025/12/23 (1.92.6) - Fonts:AddFontDefault() now automatically selects an embedded font between the new scalable AddFontDefaultVector() and the classic pixel-clean AddFontDefaultBitmap().
                          The default selection is based on (style.FontSizeBase * FontScaleMain * FontScaleDpi) reaching a small threshold. Prefer calling either based on your own logic. You can call AddFontDefaultBitmap() to ensure legacy behavior.
  - 2025/12/23 (1.92.6) - Fonts: removed ImFontConfig::PixelSnapV added in 1.92 which turns out is unnecessary (and misdocumented). Post-rescale GlyphOffset is always rounded.
@@ -12454,13 +12472,26 @@ void ImGui::EndPopup()
     g.WithinEndChildID = backup_within_end_child_id;
 }
 
+ImGuiMouseButton ImGui::GetMouseButtonFromPopupFlags(ImGuiPopupFlags flags)
+{
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    if ((flags & ImGuiPopupFlags_InvalidMask_) != 0) // 1,2 --> ImGuiMouseButton_Right, ImGuiMouseButton_Middle
+        return (flags & ImGuiPopupFlags_InvalidMask_);
+#else
+    IM_ASSERT((flags & ImGuiPopupFlags_InvalidMask_) == 0);
+#endif
+    if (flags & ImGuiPopupFlags_MouseButtonMask_)
+        return ((flags & ImGuiPopupFlags_MouseButtonMask_) >> ImGuiPopupFlags_MouseButtonShift_) - 1;
+    return ImGuiMouseButton_Right; // Default == 1
+}
+
 // Helper to open a popup if mouse button is released over the item
 // - This is essentially the same as BeginPopupContextItem() but without the trailing BeginPopup()
 void ImGui::OpenPopupOnItemClick(const char* str_id, ImGuiPopupFlags popup_flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    int mouse_button = (popup_flags & ImGuiPopupFlags_MouseButtonMask_);
+    ImGuiMouseButton mouse_button = GetMouseButtonFromPopupFlags(popup_flags);
     if (IsMouseReleased(mouse_button) && IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
     {
         ImGuiID id = str_id ? window->GetID(str_id) : g.LastItemData.ID;    // If user hasn't passed an ID, we can use the LastItemID. Using LastItemID as a Popup ID won't conflict!
@@ -12493,7 +12524,7 @@ bool ImGui::BeginPopupContextItem(const char* str_id, ImGuiPopupFlags popup_flag
         return false;
     ImGuiID id = str_id ? window->GetID(str_id) : g.LastItemData.ID;    // If user hasn't passed an ID, we can use the LastItemID. Using LastItemID as a Popup ID won't conflict!
     IM_ASSERT(id != 0);                                             // You cannot pass a NULL str_id if the last item has no identifier (e.g. a Text() item)
-    int mouse_button = (popup_flags & ImGuiPopupFlags_MouseButtonMask_);
+    ImGuiMouseButton mouse_button = GetMouseButtonFromPopupFlags(popup_flags);
     if (IsMouseReleased(mouse_button) && IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
         OpenPopupEx(id, popup_flags);
     return BeginPopupEx(id, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings);
@@ -12506,7 +12537,7 @@ bool ImGui::BeginPopupContextWindow(const char* str_id, ImGuiPopupFlags popup_fl
     if (!str_id)
         str_id = "window_context";
     ImGuiID id = window->GetID(str_id);
-    int mouse_button = (popup_flags & ImGuiPopupFlags_MouseButtonMask_);
+    ImGuiMouseButton mouse_button = GetMouseButtonFromPopupFlags(popup_flags);
     if (IsMouseReleased(mouse_button) && IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
         if (!(popup_flags & ImGuiPopupFlags_NoOpenOverItems) || !IsAnyItemHovered())
             OpenPopupEx(id, popup_flags);
@@ -12520,7 +12551,7 @@ bool ImGui::BeginPopupContextVoid(const char* str_id, ImGuiPopupFlags popup_flag
     if (!str_id)
         str_id = "void_context";
     ImGuiID id = window->GetID(str_id);
-    int mouse_button = (popup_flags & ImGuiPopupFlags_MouseButtonMask_);
+    ImGuiMouseButton mouse_button = GetMouseButtonFromPopupFlags(popup_flags);
     if (IsMouseReleased(mouse_button) && !IsWindowHovered(ImGuiHoveredFlags_AnyWindow))
         if (GetTopMostPopupModal() == NULL)
             OpenPopupEx(id, popup_flags);
