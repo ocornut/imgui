@@ -19,7 +19,7 @@
 //  2025-09-18: Call platform_io.ClearRendererHandlers() on shutdown.
 //  2025-06-11: Added support for ImGuiBackendFlags_RendererHasTextures, for dynamic font atlas. Removed ImGui_ImplMetal_CreateFontsTexture() and ImGui_ImplMetal_DestroyFontsTexture().
 //  2025-02-03: Metal: Crash fix. (#8367)
-//  2024-01-08: Metal: Fixed memory leaks when using metal-cpp (#8276, #8166) or when using multiple contexts (#7419).
+//  2025-01-08: Metal: Fixed memory leaks when using metal-cpp (#8276, #8166) or when using multiple contexts (#7419).
 //  2022-08-23: Metal: Update deprecated property 'sampleCount'->'rasterSampleCount'.
 //  2022-07-05: Metal: Add dispatch synchronization.
 //  2022-06-30: Metal: Use __bridge for ARC based systems.

@@ -140,7 +140,7 @@
 struct ImGui_ImplSDL2_Data
 {
     SDL_Window*             Window;
-    Uint32                  WindowID;
+    Uint32                  WindowID;       // Stored in ImGuiViewport::PlatformHandle. Use SDL_GetWindowFromID() to get SDL_Window* from Uint32 WindowID.
     SDL_Renderer*           Renderer;
     Uint64                  Time;
     char*                   ClipboardTextData;
@@ -368,7 +368,6 @@ static ImGuiViewport* ImGui_ImplSDL2_GetViewportForWindowID(Uint32 window_id)
 // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
 // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
 // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
-// If you have multiple SDL events and some of them are not meant to be used by dear imgui, you may need to filter events based on their windowID field.
 bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
 {
     ImGui_ImplSDL2_Data* bd = ImGui_ImplSDL2_GetBackendData();
@@ -462,7 +461,7 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
                 bd->MouseLastLeaveFrame = ImGui::GetFrameCount() + 1;
             if (window_event == SDL_WINDOWEVENT_FOCUS_GAINED)
                 io.AddFocusEvent(true);
-            else if (event->window.event == SDL_WINDOWEVENT_FOCUS_LOST)
+            if (window_event == SDL_WINDOWEVENT_FOCUS_LOST)
                 io.AddFocusEvent(false);
             return true;
         }
@@ -487,6 +486,7 @@ static bool ImGui_ImplSDL2_Init(SDL_Window* window, SDL_Renderer* renderer, void
     ImGuiIO& io = ImGui::GetIO();
     IMGUI_CHECKVERSION();
     IM_ASSERT(io.BackendPlatformUserData == nullptr && "Already initialized a platform backend!");
+    //SDL_SetHint(SDL_HINT_EVENT_LOGGING, "2");
 
     // Obtain compiled and runtime versions
     SDL_version ver_compiled;

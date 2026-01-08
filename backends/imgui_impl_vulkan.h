@@ -77,7 +77,6 @@
 // Specify settings to create pipeline and swapchain
 struct ImGui_ImplVulkan_PipelineInfo
 {
-    // For Main and Secondary viewports
     VkRenderPass                    RenderPass;                     // Ignored if using dynamic rendering
     uint32_t                        Subpass;                        //
     VkSampleCountFlagBits           MSAASamples = {};               // 0 defaults to VK_SAMPLE_COUNT_1_BIT

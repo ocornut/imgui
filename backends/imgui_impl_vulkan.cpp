@@ -261,7 +261,7 @@ struct ImGui_ImplVulkan_Data
     VkPipelineCreateFlags       PipelineCreateFlags;
     VkDescriptorSetLayout       DescriptorSetLayout;
     VkPipelineLayout            PipelineLayout;
-    VkPipeline                  Pipeline;
+    VkPipeline                  Pipeline;               // pipeline for main render pass (created by app)
     VkShaderModule              ShaderModuleVert;
     VkShaderModule              ShaderModuleFrag;
     VkDescriptorPool            DescriptorPool;
