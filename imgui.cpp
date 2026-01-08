@@ -4824,7 +4824,7 @@ bool ImGui::IsItemHovered(ImGuiHoveredFlags flags)
         // Test if another item is active (e.g. being dragged)
         const ImGuiID id = g.LastItemData.ID;
         if ((flags & ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) == 0)
-            if (g.ActiveId != 0 && g.ActiveId != id && !g.ActiveIdAllowOverlap)
+            if (g.ActiveId != 0 && g.ActiveId != id && !g.ActiveIdAllowOverlap && !g.ActiveIdFromShortcut)
             {
                 // When ActiveId == MoveId it means that either:
                 // - (1) user clicked on void _or_ an item with no id, which triggers moving window (ActiveId is set even when window has _NoMove flag)
@@ -13571,6 +13571,7 @@ static ImGuiInputSource ImGui::NavCalcPreferredRefPosSource()
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.NavWindow;
     const bool activated_shortcut = g.ActiveId != 0 && g.ActiveIdFromShortcut && g.ActiveId == g.LastItemData.ID;
+    //const bool activated_shortcut = false
 
     // Testing for !activated_shortcut here could in theory be removed if we decided that activating a remote shortcut altered one of the g.NavDisableXXX flag.
     if ((!g.NavCursorVisible || !g.NavHighlightItemUnderNav || !window) && !activated_shortcut)
@@ -13586,6 +13587,7 @@ static ImVec2 ImGui::NavCalcPreferredRefPos()
     ImGuiInputSource source = NavCalcPreferredRefPosSource();
 
     const bool activated_shortcut = g.ActiveId != 0 && g.ActiveIdFromShortcut && g.ActiveId == g.LastItemData.ID;
+    //const bool activated_shortcut = false
 
     if (source != ImGuiInputSource_Mouse && !activated_shortcut && window == NULL)
         source = ImGuiInputSource_Mouse;
