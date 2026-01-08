@@ -4848,6 +4848,8 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         SetActiveID(id, window);
         SetFocusID(id, window);
         FocusWindow(window);
+        if (input_requested_by_nav)
+            SetNavCursorVisibleAfterMove();
     }
     if (g.ActiveId == id)
     {

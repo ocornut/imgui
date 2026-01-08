@@ -150,6 +150,9 @@ Other Changes:
       end of a line rather than at the beginning of next line. (#8990, #3237)
   - Fixed low-level word-wrapping function reading from *text_end when passed
     a string range. (#9107) [@achabense]
+- Nav:
+  - Fixed remote/shortcut InputText() not teleporting mouse cursor when
+    nav cursor is visible and `io.ConfigNavMoveSetMousePos` is enabled.
 - Scrollbar: fixed a codepath leading to a divide-by-zero (which would not be
   noticeable by user but detected by sanitizers). (#9089) [@judicaelclair]
 - Added GetItemFlags() in public API for consistency and to expose generic
