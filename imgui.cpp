@@ -13055,7 +13055,7 @@ void ImGui::SetFocusID(ImGuiID id, ImGuiWindow* window)
     window->NavLastIds[nav_layer] = id;
     if (g.LastItemData.ID == id)
         window->NavRectRel[nav_layer] = WindowRectAbsToRel(window, g.LastItemData.NavRect);
-    if (g.NavId == g.ActiveId && g.ActiveIdIsAlive)
+    if (id == g.ActiveIdIsAlive)
         g.NavIdIsAlive = true;
 
     if (g.ActiveIdSource == ImGuiInputSource_Keyboard || g.ActiveIdSource == ImGuiInputSource_Gamepad)
