@@ -219,7 +219,7 @@ static void ImGui_ImplSDL2_PlatformSetImeData(ImGuiContext*, ImGuiViewport* view
     {
         SDL_Rect r;
         r.x = (int)(data->InputPos.x - viewport->Pos.x);
-        r.y = (int)(data->InputPos.y - viewport->Pos.y + data->InputLineHeight);
+        r.y = (int)(data->InputPos.y - viewport->Pos.y);
         r.w = 1;
         r.h = (int)data->InputLineHeight;
         SDL_SetTextInputRect(&r);
