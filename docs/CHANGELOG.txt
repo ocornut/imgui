@@ -157,9 +157,12 @@ Other Changes:
   noticeable by user but detected by sanitizers). (#9089) [@judicaelclair]
 - Added GetItemFlags() in public API for consistency and to expose generic
   flags of last submitted item. (#9127)
-- IsItemHovered() without ImGuiHoveredFlags_AllowWhenBlockedByActiveItem
-  doesn't filter out the signal when activated item is a shortcut remote activation;
-  (which mimicks what's done internally in the ItemHoverable() function). (#9138)
+- Shortcuts:
+  - IsItemHovered() without ImGuiHoveredFlags_AllowWhenBlockedByActiveItem
+    doesn't filter out the signal when activated item is a shortcut remote activation;
+    (which mimicks what's done internally in the ItemHoverable() function). (#9138)
+  - Fixed tooltip placement being affected for a frame when located over an item
+    activated by SetNextItemShortcut(). (#9138)
 - Debug Tools:
   - Debug Log: fixed incorrectly printing characters in IO log when submitting
     non-ASCII values to io.AddInputCharacter(). (#9099)
