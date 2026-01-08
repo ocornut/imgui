@@ -41,6 +41,12 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
+- Commented out legacy names obsoleted in 1.90 (Sept 2023):
+  - BeginChildFrame()     --> BeginChild() with ImGuiChildFlags_FrameStyle flag.
+  - EndChildFrame()       --> EndChild().
+  - ShowStackToolWindow() --> ShowIDStackToolWindow().
+  - IM_OFFSETOF()         --> offsetof().
+  - IM_FLOOR()            --> IM_TRUNC() [internal, for positive values only]
 - Hashing: handling of "###" operator to reset to seed within a string identifier
   doesn't include the "###" characters in the output hash anymore:
       Before: GetID("Hello###World") == GetID("###World") != GetID("World");

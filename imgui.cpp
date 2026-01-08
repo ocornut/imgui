@@ -394,6 +394,7 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
  When you are not sure about an old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2026/01/08 (1.92.6) - Commented out legacy names obsoleted in 1.90 (Sept 2023): 'BeginChildFrame()' --> 'BeginChild()' with 'ImGuiChildFlags_FrameStyle'. 'EndChildFrame()' --> 'EndChild()'. 'ShowStackToolWindow()' --> 'ShowIDStackToolWindow()'. 'IM_OFFSETOF()' --> 'offsetof()'.
  - 2026/01/07 (1.92.6) - Popups: changed compile-time 'ImGuiPopupFlags popup_flags = 1' default value to be '= 0' for BeginPopupContextItem(), BeginPopupContextWindow(), BeginPopupContextVoid(), OpenPopupOnItemClick(). Default value has same meaning before and after.
                          - Refer to GitHub topic #9157 if you have any question.
                          - Before this version, those functions had a 'ImGuiPopupFlags popup_flags = 1' default value in their function signature.
@@ -6386,10 +6387,8 @@ bool ImGui::BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, I
         IM_ASSERT((child_flags & (ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY)) != 0 && "Must use ImGuiChildFlags_AutoResizeX or ImGuiChildFlags_AutoResizeY with ImGuiChildFlags_AlwaysAutoResize!");
     }
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    //if (window_flags & ImGuiWindowFlags_AlwaysUseWindowPadding)
-    //    child_flags |= ImGuiChildFlags_AlwaysUseWindowPadding;
-    //if (window_flags & ImGuiWindowFlags_NavFlattened)
-    //    child_flags |= ImGuiChildFlags_NavFlattened;
+    //if (window_flags & ImGuiWindowFlags_AlwaysUseWindowPadding) { child_flags |= ImGuiChildFlags_AlwaysUseWindowPadding; }
+    //if (window_flags & ImGuiWindowFlags_NavFlattened) { child_flags |= ImGuiChildFlags_NavFlattened; }
 #endif
     if (child_flags & ImGuiChildFlags_AutoResizeX)
         child_flags &= ~ImGuiChildFlags_ResizeX;
