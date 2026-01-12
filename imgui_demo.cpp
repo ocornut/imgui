@@ -974,6 +974,13 @@ static void DemoWindowWidgetsBasic()
             const char* elem_name = (elem >= 0 && elem < Element_COUNT) ? elems_names[elem] : "Unknown";
             ImGui::SliderInt("slider enum", &elem, 0, Element_COUNT - 1, elem_name); // Use ImGuiSliderFlags_NoInput flag to disable Ctrl+Click here.
             ImGui::SameLine(); HelpMarker("Using the format string parameter to display a name instead of the underlying integer.");
+
+            IMGUI_DEMO_MARKER("Widgets/Basic/SliderFloatRange2, SliderIntRange2");
+            static float fmin = 0.25f, fmax = 0.75f;
+            static int imin = 25, imax = 75;
+            ImGui::SliderFloatRange2("range float", &fmin, &fmax, 0.0f, 1.0f);
+            ImGui::SliderIntRange2("range int", &imin, &imax, 0, 100);
+            ImGui::SameLine(); HelpMarker("Click and drag handles individually, or drag the bar between them to move both.");
         }
 
         ImGui::SeparatorText("Selectors/Pickers");
