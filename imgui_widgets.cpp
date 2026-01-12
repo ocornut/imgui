@@ -3486,6 +3486,28 @@ bool ImGui::SliderInt4(const char* label, int v[4], int v_min, int v_max, const 
 // Forward declaration for TempInput function used by SliderScalarRange2
 static bool TempInputScalarRange2(const ImRect& bb, ImGuiID id, const char* label, ImGuiDataType data_type, void* p_data_min, void* p_data_max, const char* format, const char* format_max, const void* p_clamp_min, const void* p_clamp_max, int selected_handle);
 
+// Helper to parse range format string "%.3f...%.3f" into separate min/max formats
+// Returns pointer to start of max format (after dots), or NULL if no separator found
+// Accepts any number of consecutive dots (2+) as separator
+static const char* ParseRangeFormatSeparator(const char* format)
+{
+    if (!format)
+        return NULL;
+    const char* p = format;
+    while (*p)
+    {
+        if (p[0] == '.' && p[1] == '.')
+        {
+            // Found at least "..", skip all consecutive dots
+            while (*p == '.')
+                p++;
+            return p;  // Return start of max format
+        }
+        p++;
+    }
+    return NULL;  // No separator found
+}
+
 template<typename TYPE, typename SIGNEDTYPE, typename FLOATTYPE>
 static bool SliderBehaviorRangeT(const ImRect& bb, ImGuiID id, ImGuiDataType data_type, TYPE* v_min_val, TYPE* v_max_val, TYPE v_min, TYPE v_max, const char* format, const char* format_max, ImGuiSliderFlags flags, ImRect* out_grab_bb_min, ImRect* out_grab_bb_max, int* p_handle, TYPE step)
 {
@@ -3554,8 +3576,11 @@ static bool SliderBehaviorRangeT(const ImRect& bb, ImGuiID id, ImGuiDataType dat
 
                     if (dist_min <= handle_threshold || dist_max <= handle_threshold)
                     {
-                        // Click near a handle
-                        *p_handle = (dist_min <= dist_max) ? 0 : 1;
+                        // Click near a handle - if handles overlap, use undetermined state (-2)
+                        if (ImAbs(grab_min_pos - grab_max_pos) < 1.0f)
+                            *p_handle = -2;  // Undetermined: will be resolved by drag direction
+                        else
+                            *p_handle = (dist_min <= dist_max) ? 0 : 1;
                     }
                     else if (click_pos > grab_min_pos && click_pos < grab_max_pos)
                     {
@@ -3612,6 +3637,19 @@ static bool SliderBehaviorRangeT(const ImRect& bb, ImGuiID id, ImGuiDataType dat
                         grab_min_pos = grab_pos_from_value(*v_min_val);
                         grab_max_pos = grab_pos_from_value(*v_max_val);
                     }
+                }
+                else if (*p_handle == -2)
+                {
+                    // Undetermined state (handles overlapping): resolve based on drag direction
+                    float delta = mouse_abs_pos - g.IO.MouseClickedPos[0][axis];
+                    if (ImAbs(delta) > 1.0f)
+                    {
+                        // Resolved: positive delta = max handle, negative = min handle (for X axis)
+                        *p_handle = (delta > 0.0f) ? 1 : 0;
+                        if (axis == ImGuiAxis_Y)
+                            *p_handle = 1 - *p_handle;  // Invert for Y axis
+                    }
+                    // Don't set value until resolved
                 }
                 else
                 {
@@ -3753,7 +3791,7 @@ static bool SliderBehaviorRange(const ImRect& bb, ImGuiID id, ImGuiDataType data
     }
 }
 
-bool ImGui::SliderScalarRange2(const char* label, ImGuiDataType data_type, void* p_v_min, void* p_v_max, const void* p_min, const void* p_max, const char* format, const char* format_max, ImGuiSliderFlags flags, const void* p_step)
+bool ImGui::SliderScalarRange2(const char* label, ImGuiDataType data_type, void* p_v_min, void* p_v_max, const void* p_min, const void* p_max, const char* format, ImGuiSliderFlags flags, const void* p_step)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -3773,11 +3811,49 @@ bool ImGui::SliderScalarRange2(const char* label, ImGuiDataType data_type, void*
     if (!ItemAdd(total_bb, id, &frame_bb, temp_input_allowed ? ImGuiItemFlags_Inputable : 0))
         return false;
 
-    // Default format
+    // Default format and parse "min...max" format string
     if (format == NULL)
         format = DataTypeGetInfo(data_type)->PrintFmt;
-    if (format_max == NULL)
-        format_max = format;
+
+    // Parse format string: "%.3f...%.3f" or "%.3f...%.3f (%.3f)" for range size display
+    char format_min_buf[64];
+    char format_max_buf[64];
+    const char* format_min = format;
+    const char* format_max = format;  // Default: same format for both
+    const char* format_range = NULL;  // Optional range size format
+    const char* separator = ParseRangeFormatSeparator(format);
+    if (separator)
+    {
+        // Copy min format (everything before the dots)
+        const char* dots = format;
+        while (dots < separator && !(dots[0] == '.' && dots[1] == '.'))
+            dots++;
+        size_t min_len = ImMin((size_t)(dots - format), sizeof(format_min_buf) - 1);
+        memcpy(format_min_buf, format, min_len);
+        format_min_buf[min_len] = '\0';
+        format_min = format_min_buf;
+
+        // Check for range size format: look for " (" or " [" followed by "%"
+        const char* range_start = separator;
+        while (*range_start && *range_start != '(' && *range_start != '[')
+            range_start++;
+        if (*range_start && strchr(range_start, '%'))
+        {
+            // Found range size format - copy max format (between separator and range_start)
+            size_t max_len = ImMin((size_t)(range_start - separator), sizeof(format_max_buf) - 1);
+            // Trim trailing spaces
+            while (max_len > 0 && separator[max_len - 1] == ' ')
+                max_len--;
+            memcpy(format_max_buf, separator, max_len);
+            format_max_buf[max_len] = '\0';
+            format_max = format_max_buf;
+            format_range = range_start;
+        }
+        else
+        {
+            format_max = separator;
+        }
+    }
 
     const bool hovered = ItemHoverable(frame_bb, id, g.LastItemData.ItemFlags);
 
@@ -3848,21 +3924,21 @@ bool ImGui::SliderScalarRange2(const char* label, ImGuiDataType data_type, void*
 
     if (temp_input_is_active)
     {
-        // Ctrl+Click text input: shows selected handle value, user can type "XXX...YYYY" to set both
-        return TempInputScalarRange2(frame_bb, id, label, data_type, p_v_min, p_v_max, format, format_max,
+        // Ctrl+Click text input: shows "min...max" format, user can type to set values
+        return TempInputScalarRange2(frame_bb, id, label, data_type, p_v_min, p_v_max, format_min, format_max,
             (flags & ImGuiSliderFlags_AlwaysClamp) ? p_min : NULL,
             (flags & ImGuiSliderFlags_AlwaysClamp) ? p_max : NULL,
             *p_handle);
     }
 
     // Frame
-    RenderNavHighlight(frame_bb, id);
+    RenderNavCursor(frame_bb, id);
     RenderFrame(frame_bb.Min, frame_bb.Max, GetColorU32(g.ActiveId == id ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg), true, style.FrameRounding);
 
     // Slider behavior
     ImRect grab_bb_min, grab_bb_max;
     int handle_int = *p_handle;
-    const bool value_changed = SliderBehaviorRange(frame_bb, id, data_type, p_v_min, p_v_max, p_min, p_max, format, format_max, flags, &grab_bb_min, &grab_bb_max, &handle_int, p_step);
+    const bool value_changed = SliderBehaviorRange(frame_bb, id, data_type, p_v_min, p_v_max, p_min, p_max, format_min, format_max, flags, &grab_bb_min, &grab_bb_max, &handle_int, p_step);
     *p_handle = (ImS8)handle_int;
     if (value_changed)
         MarkItemEdited(id);
@@ -3894,9 +3970,28 @@ bool ImGui::SliderScalarRange2(const char* label, ImGuiDataType data_type, void*
 
     // Display value
     char value_buf[128];
-    const char* value_buf_end = value_buf + DataTypeFormatString(value_buf, IM_ARRAYSIZE(value_buf), data_type, p_v_min, format);
+    const char* value_buf_end = value_buf + DataTypeFormatString(value_buf, IM_ARRAYSIZE(value_buf), data_type, p_v_min, format_min);
     value_buf_end += ImFormatString((char*)value_buf_end, (size_t)(value_buf + IM_ARRAYSIZE(value_buf) - value_buf_end), " - ");
     value_buf_end = value_buf_end + DataTypeFormatString((char*)value_buf_end, (size_t)(value_buf + IM_ARRAYSIZE(value_buf) - value_buf_end), data_type, p_v_max, format_max);
+
+    // Optionally display range size if format includes it
+    if (format_range)
+    {
+        // Calculate range size (max - min)
+        ImGuiDataTypeStorage range_size;
+        if (data_type == ImGuiDataType_Float)
+        {
+            float range = *(const float*)p_v_max - *(const float*)p_v_min;
+            memcpy(&range_size, &range, sizeof(float));
+        }
+        else if (data_type == ImGuiDataType_S32)
+        {
+            int range = *(const int*)p_v_max - *(const int*)p_v_min;
+            memcpy(&range_size, &range, sizeof(int));
+        }
+        value_buf_end += ImFormatString((char*)value_buf_end, (size_t)(value_buf + IM_ARRAYSIZE(value_buf) - value_buf_end), " ");
+        value_buf_end = value_buf_end + DataTypeFormatString((char*)value_buf_end, (size_t)(value_buf + IM_ARRAYSIZE(value_buf) - value_buf_end), data_type, &range_size, format_range);
+    }
     RenderTextClipped(frame_bb.Min, frame_bb.Max, value_buf, value_buf_end, NULL, ImVec2(0.5f, 0.5f));
 
     if (label_size.x > 0.0f)
@@ -3906,14 +4001,14 @@ bool ImGui::SliderScalarRange2(const char* label, ImGuiDataType data_type, void*
     return value_changed;
 }
 
-bool ImGui::SliderFloatRange2(const char* label, float* v_current_min, float* v_current_max, float v_min, float v_max, const char* format, const char* format_max, ImGuiSliderFlags flags, float step)
+bool ImGui::SliderFloatRange2(const char* label, float* v_current_min, float* v_current_max, float v_min, float v_max, const char* format, ImGuiSliderFlags flags, float step)
 {
-    return SliderScalarRange2(label, ImGuiDataType_Float, v_current_min, v_current_max, &v_min, &v_max, format, format_max, flags, step > 0.0f ? &step : NULL);
+    return SliderScalarRange2(label, ImGuiDataType_Float, v_current_min, v_current_max, &v_min, &v_max, format, flags, step > 0.0f ? &step : NULL);
 }
 
-bool ImGui::SliderIntRange2(const char* label, int* v_current_min, int* v_current_max, int v_min, int v_max, const char* format, const char* format_max, ImGuiSliderFlags flags, int step)
+bool ImGui::SliderIntRange2(const char* label, int* v_current_min, int* v_current_max, int v_min, int v_max, const char* format, ImGuiSliderFlags flags, int step)
 {
-    return SliderScalarRange2(label, ImGuiDataType_S32, v_current_min, v_current_max, &v_min, &v_max, format, format_max, flags, step > 0 ? &step : NULL);
+    return SliderScalarRange2(label, ImGuiDataType_S32, v_current_min, v_current_max, &v_min, &v_max, format, flags, step > 0 ? &step : NULL);
 }
 
 bool ImGui::VSliderScalar(const char* label, const ImVec2& size, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format, ImGuiSliderFlags flags)
@@ -4219,10 +4314,11 @@ static bool TempInputScalarRange2(const ImRect& bb, ImGuiID id, const char* labe
     if (format_max[0] == 0)
         format_max = format;
 
-    // Format initial value: just the selected handle's value (user can type "..." to edit both)
-    void* p_selected = (selected_handle == 0) ? p_data_min : p_data_max;
-    const char* selected_format = (selected_handle == 0) ? format : format_max;
-    ImGui::DataTypeFormatString(data_buf, IM_COUNTOF(data_buf), data_type, p_selected, selected_format);
+    // Format initial value: show "min...max" format by default
+    char* p = data_buf;
+    p += ImGui::DataTypeFormatString(p, IM_COUNTOF(data_buf), data_type, p_data_min, format);
+    p += ImFormatString(p, (size_t)(data_buf + IM_COUNTOF(data_buf) - p), "...");
+    p += ImGui::DataTypeFormatString(p, (size_t)(data_buf + IM_COUNTOF(data_buf) - p), data_type, p_data_max, format_max);
     ImStrTrimBlanks(data_buf);
 
     ImGuiInputTextFlags flags = ImGuiInputTextFlags_AutoSelectAll | (ImGuiInputTextFlags)ImGuiInputTextFlags_LocalizeDecimalPoint;
@@ -4236,11 +4332,30 @@ static bool TempInputScalarRange2(const ImRect& bb, ImGuiID id, const char* labe
         memcpy(&data_backup_min, p_data_min, data_type_size);
         memcpy(&data_backup_max, p_data_max, data_type_size);
 
-        // Look for "..." separator - if present, update both values
-        const char* separator = strstr(data_buf, "...");
+        // Look for separator: ".." (any number of dots) or " - "
+        const char* separator = NULL;
+        const char* separator_end = NULL;
+        for (const char* s = data_buf; *s; s++)
+        {
+            if (s[0] == '.' && s[1] == '.')
+            {
+                separator = s;
+                separator_end = s;
+                while (*separator_end == '.')
+                    separator_end++;
+                break;
+            }
+            if (s[0] == ' ' && s[1] == '-' && s[2] == ' ')
+            {
+                separator = s;
+                separator_end = s + 3;
+                break;
+            }
+        }
+
         if (separator)
         {
-            // Parse min value (before "...")
+            // Parse min value (before separator)
             char min_buf[32];
             size_t min_len = (size_t)(separator - data_buf);
             if (min_len >= IM_COUNTOF(min_buf))
@@ -4249,10 +4364,9 @@ static bool TempInputScalarRange2(const ImRect& bb, ImGuiID id, const char* labe
             min_buf[min_len] = 0;
             ImStrTrimBlanks(min_buf);
 
-            // Parse max value (after "...")
-            const char* max_str = separator + 3;
+            // Parse max value (after separator)
             char max_buf[32];
-            ImStrncpy(max_buf, max_str, IM_COUNTOF(max_buf));
+            ImStrncpy(max_buf, separator_end, IM_COUNTOF(max_buf));
             ImStrTrimBlanks(max_buf);
 
             // Apply values
@@ -4267,16 +4381,28 @@ static bool TempInputScalarRange2(const ImRect& bb, ImGuiID id, const char* labe
         }
         else
         {
-            // No separator - update only the selected handle
-            ImGui::DataTypeApplyFromText(data_buf, data_type, p_selected, selected_format, NULL);
-
-            // Ensure min <= max after update
-            if (ImGui::DataTypeCompare(data_type, p_data_min, p_data_max) > 0)
+            // No separator - update selected handle only, or both if bar was selected
+            if (selected_handle == -1)
             {
-                if (selected_handle == 0)
-                    memcpy(p_data_min, p_data_max, data_type_size);  // Clamp min to max
-                else
-                    memcpy(p_data_max, p_data_min, data_type_size);  // Clamp max to min
+                // Bar selected: set both to same value
+                ImGui::DataTypeApplyFromText(data_buf, data_type, p_data_min, format, NULL);
+                memcpy(p_data_max, p_data_min, data_type_size);
+            }
+            else
+            {
+                // Handle selected: update only that handle
+                void* p_target = (selected_handle == 0) ? p_data_min : p_data_max;
+                const char* target_format = (selected_handle == 0) ? format : format_max;
+                ImGui::DataTypeApplyFromText(data_buf, data_type, p_target, target_format, NULL);
+
+                // Ensure min <= max after update
+                if (ImGui::DataTypeCompare(data_type, p_data_min, p_data_max) > 0)
+                {
+                    if (selected_handle == 0)
+                        memcpy(p_data_min, p_data_max, data_type_size);  // Clamp min to max
+                    else
+                        memcpy(p_data_max, p_data_min, data_type_size);  // Clamp max to min
+                }
             }
         }
 

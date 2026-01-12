@@ -979,8 +979,9 @@ static void DemoWindowWidgetsBasic()
             static float fmin = 0.25f, fmax = 0.75f;
             static int imin = 25, imax = 75;
             ImGui::SliderFloatRange2("range float", &fmin, &fmax, 0.0f, 1.0f);
+            ImGui::SliderFloatRange2("range (size)", &fmin, &fmax, 0.0f, 1.0f, "%.2f...%.2f (%.2f)");
             ImGui::SliderIntRange2("range int", &imin, &imax, 0, 100);
-            ImGui::SameLine(); HelpMarker("Click and drag handles individually, or drag the bar between them to move both.");
+            ImGui::SameLine(); HelpMarker("Click and drag handles individually, or drag the bar between them to move both.\nCtrl+Click to input values. Use \"...\" or \" - \" as separator to set both.");
         }
 
         ImGui::SeparatorText("Selectors/Pickers");
