@@ -74,6 +74,8 @@ Breaking Changes:
       until a shutdown of the owning context or font atlas.
     - The fact that handling of `FontDataOwnedByAtlas = false` was broken bypassed
       the issue altogether.
+  - Fixed a crash when trying to use AddFont() with MergeMode=true on a font that
+    has already been rendered. (#9162) [@ocornut, @cyfewlp]
   - Removed ImFontConfig::PixelSnapV added in 1.92 which turns out is unnecessary
     (and misdocumented). Post-rescale GlyphOffset is always rounded.
  - Popups: changed compile-time 'ImGuiPopupFlags popup_flags = 1' default value to be '= 0' for

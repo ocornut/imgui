@@ -3049,6 +3049,7 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg_in)
     {
         IM_ASSERT(Fonts.Size > 0 && "Cannot use MergeMode for the first font"); // When using MergeMode make sure that a font has already been added before.
         font = font_cfg_in->DstFont ? font_cfg_in->DstFont : Fonts.back();
+        ImFontAtlasFontDiscardBakes(this, font, 0); // Need to discard bakes if the font was already used, because baked->FontLoaderDatas[] will change size. (#9162)
     }
 
     // Add to list
