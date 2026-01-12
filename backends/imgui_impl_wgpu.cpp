@@ -1078,7 +1078,7 @@ WGPUSurface ImGui_ImplWGPU_CreateWGPUSurfaceHelper(ImGui_ImplWGPU_CreateSurfaceI
         surface = wgpuInstanceCreateSurface(info->Instance, &surface_descriptor);
     }
 #else
-    fprintf(stderr, "'CreateWGPUSurfaceHelper' is not implemented for this platform\n");
+    IM_ASSERT(0 && "Unsupported WebGPU native platform!");
 #endif
     return surface;
 }
