@@ -3390,6 +3390,15 @@ bool ImGui::SliderScalarN(const char* label, ImGuiDataType data_type, void* v, i
     if (window->SkipItems)
         return false;
 
+    // Range slider mode: render 2 components as a single range slider
+    if (components == 2 && (flags & ImGuiSliderFlags_Range))
+    {
+        size_t type_size = GDataTypeInfo[data_type].Size;
+        void* v0 = v;
+        void* v1 = (void*)((char*)v + type_size);
+        return SliderScalarRange2(label, data_type, v0, v1, v_min, v_max, format, flags & ~ImGuiSliderFlags_Range);
+    }
+
     ImGuiContext& g = *GImGui;
     bool value_changed = false;
     BeginGroup();

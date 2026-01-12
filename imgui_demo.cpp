@@ -981,7 +981,10 @@ static void DemoWindowWidgetsBasic()
             ImGui::SliderFloatRange2("range float", &fmin, &fmax, 0.0f, 1.0f);
             ImGui::SliderFloatRange2("range (size)", &fmin, &fmax, 0.0f, 1.0f, "%.2f...%.2f (%.2f)");
             ImGui::SliderIntRange2("range int", &imin, &imax, 0, 100);
-            ImGui::SameLine(); HelpMarker("Click and drag handles individually, or drag the bar between them to move both.\nCtrl+Click to input values. Use \"...\" or \" - \" as separator to set both.");
+            // Alternative: use SliderFloat2 with ImGuiSliderFlags_Range
+            static float range_arr[2] = { 0.25f, 0.75f };
+            ImGui::SliderFloat2("range (flag)", range_arr, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_Range);
+            ImGui::SameLine(); HelpMarker("Click and drag handles individually, or drag the bar between them to move both.\nCtrl+Click to input values. Use \"...\" or \" - \" as separator to set both.\n\nRange sliders can also be created with SliderFloat2(..., ImGuiSliderFlags_Range).");
         }
 
         ImGui::SeparatorText("Selectors/Pickers");
