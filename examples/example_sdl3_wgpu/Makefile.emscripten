@@ -6,8 +6,8 @@
 # This Makefile assumes you have loaded emscripten's environment.
 # (On Windows, you may need to execute emsdk_env.bat or encmdprompt.bat ahead)
 #
-# Running `make` will produce three files:
-#  - web/index.html (current stored in the repository)
+# Running `make -f Makefile.emscripten` will produce three files:
+#  - web/index.html
 #  - web/index.js
 #  - web/index.wasm
 #
@@ -16,11 +16,11 @@
 CC = emcc
 CXX = em++
 WEB_DIR = web
-EXE = $(WEB_DIR)/index.js
+EXE = $(WEB_DIR)/index.html
 IMGUI_DIR = ../..
 SOURCES = main.cpp
 SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
-SOURCES += $(IMGUI_DIR)/backends/imgui_impl_glfw.cpp $(IMGUI_DIR)/backends/imgui_impl_wgpu.cpp
+SOURCES += $(IMGUI_DIR)/backends/imgui_impl_sdl3.cpp $(IMGUI_DIR)/backends/imgui_impl_wgpu.cpp
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 UNAME_S := $(shell uname -s)
 CPPFLAGS =
@@ -32,9 +32,24 @@ EMS =
 ##---------------------------------------------------------------------
 
 # ("EMS" options gets added to both CPPFLAGS and LDFLAGS, whereas some options are for linker only)
+EMS += -s USE_SDL=3
 EMS += -s DISABLE_EXCEPTION_CATCHING=1
-LDFLAGS += -s USE_GLFW=3 -s USE_WEBGPU=1
-LDFLAGS += -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s NO_EXIT_RUNTIME=0 -s ASSERTIONS=1
+LDFLAGS += -s WASM=1
+LDFLAGS += -s ALLOW_MEMORY_GROWTH=1
+LDFLAGS += -s ASYNCIFY=1
+LDFLAGS += -s NO_EXIT_RUNTIME=0
+LDFLAGS += -s ASSERTIONS=1
+
+# (1) Using legacy WebGPU implementation (Emscripten < 4.0.10)
+#EMS += -DIMGUI_IMPL_WEBGPU_BACKEND_WGPU
+#LDFLAGS += -s USE_WEBGPU=1
+
+# or (2) Using newer Dawn-based WebGPU port (Emscripten >= 4.0.10)
+EMS += --use-port=emdawnwebgpu
+LDFLAGS += --use-port=emdawnwebgpu
+
+# Build as single file (binary text encoded in .html file)
+#LDFLAGS += -sSINGLE_FILE
 
 # Emscripten allows preloading a file or folder to be accessible at runtime.
 # The Makefile for this example project suggests embedding the misc/fonts/ folder into our application, it will then be accessible as "/fonts"
@@ -56,7 +71,7 @@ endif
 CPPFLAGS += -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends
 #CPPFLAGS += -g
 CPPFLAGS += -Wall -Wformat -Os $(EMS)
-#LDFLAGS += --shell-file shell_minimal.html
+LDFLAGS += --shell-file ../libs/emscripten/shell_minimal.html
 LDFLAGS += $(EMS)
 
 ##---------------------------------------------------------------------

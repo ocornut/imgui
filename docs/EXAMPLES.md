@@ -3,7 +3,7 @@ _(You may browse this at https://github.com/ocornut/imgui/blob/master/docs/EXAMP
 ## Dear ImGui: Examples
 
 **The [examples/](https://github.com/ocornut/imgui/blob/master/examples) folder example applications (standalone, ready-to-build) for variety of
-platforms and graphics APIs.** They all use standard backends from the [backends/](https://github.com/ocornut/imgui/blob/master/backends) folder (see [BACKENDS.md](https://github.com/ocornut/imgui/blob/master/docs/BACKENDS.md)).
+platforms and graphics APIs.** They all use standard backends from the [backends/](https://github.com/ocornut/imgui/blob/master/backends) folder (see [docs/BACKENDS.md](https://github.com/ocornut/imgui/blob/master/docs/BACKENDS.md)).
 
 The purpose of Examples is to showcase integration with backends, let you try Dear ImGui, and guide you toward
 integrating Dear ImGui in your own application/game/engine.
@@ -35,46 +35,13 @@ At shutdown:
   call ImGui::DestroyContext()
 ```
 
-Example (using [backends/imgui_impl_win32.cpp](https://github.com/ocornut/imgui/blob/master/backends/imgui_impl_win32.cpp) + [backends/imgui_impl_dx11.cpp](https://github.com/ocornut/imgui/blob/master/backends/imgui_impl_dx11.cpp)):
+Main resource:
+- Read **[Getting Started](https://github.com/ocornut/imgui/wiki/Getting-Started) wiki guide** for detailed examples of how to integrate Dear ImGui in an existing application.
 
-```cpp
-// Create a Dear ImGui context, setup some options
-ImGui::CreateContext();
-ImGuiIO& io = ImGui::GetIO();
-io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable some options
-
-// Initialize Platform + Renderer backends (here: using imgui_impl_win32.cpp + imgui_impl_dx11.cpp)
-ImGui_ImplWin32_Init(my_hwnd);
-ImGui_ImplDX11_Init(my_d3d_device, my_d3d_device_context);
-
-// Application main loop
-while (true)
-{
-    // Beginning of frame: update Renderer + Platform backend, start Dear ImGui frame
-    ImGui_ImplDX11_NewFrame();
-    ImGui_ImplWin32_NewFrame();
-    ImGui::NewFrame();
-
-    // Any application code here
-    ImGui::Text("Hello, world!");
-
-    // End of frame: render Dear ImGui
-    ImGui::Render();
-    ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-
-    // Swap
-    g_pSwapChain->Present(1, 0);
-}
-
-// Shutdown
-ImGui_ImplDX11_Shutdown();
-ImGui_ImplWin32_Shutdown();
-ImGui::DestroyContext();
-```
-
-Please read 'PROGRAMMER GUIDE' in imgui.cpp for notes on how to setup Dear ImGui in your codebase.
-Please read the comments and instruction at the top of each file.
-Please read FAQ at https://www.dearimgui.com/faq
+Additional resources:
+- Read FAQ at https://www.dearimgui.com/faq
+- Read 'PROGRAMMER GUIDE' section in imgui.cpp.
+- Read the comments and instruction at the top of each file.
 
 If you are using any of the backends provided here, you can add the backends/imgui_impl_xxxx(.cpp,.h)
 files to your project and use as-in. Each imgui_impl_xxxx.cpp file comes with its own individual
@@ -91,7 +58,7 @@ Allegro 5 example. <BR>
 Android + OpenGL3 (ES) example. <BR>
 = main.cpp + imgui_impl_android.cpp + imgui_impl_opengl3.cpp
 
-[example_apple_metal/](https://github.com/ocornut/imgui/blob/master/examples/example_metal/) <BR>
+[example_apple_metal/](https://github.com/ocornut/imgui/tree/master/examples/example_apple_metal/) <BR>
 OSX & iOS + Metal example. <BR>
 = main.m + imgui_impl_osx.mm + imgui_impl_metal.mm <BR>
 It is based on the "cross-platform" game template provided with Xcode as of Xcode 9.
@@ -104,8 +71,8 @@ OSX + OpenGL2 example. <BR>
 (NB: imgui_impl_osx.mm is currently not as feature complete as other platforms backends.
  You may prefer to use the GLFW Or SDL backends, which will also support Windows and Linux.)
 
-[example_emscripten_wgpu/](https://github.com/ocornut/imgui/blob/master/examples/example_emscripten_wgpu/) <BR>
-Emcripten + GLFW + WebGPU example. <BR>
+[example_glfw_wgpu/](https://github.com/ocornut/imgui/blob/master/examples/example_glfw_wgpu/) <BR>
+GLFW + WebGPU example. Supports Emscripten (web), Dawn (native), WGPU (native). <BR>
 = main.cpp + imgui_impl_glfw.cpp + imgui_impl_wgpu.cpp
 Note that the 'example_glfw_opengl3' and 'example_sdl2_opengl3' examples also supports Emscripten!
 
@@ -126,7 +93,7 @@ state, and might confuse your GPU driver. One star, not recommended.
 GLFW (Win32, Mac, Linux) + OpenGL3+/ES2/ES3 example (modern, programmable pipeline). <BR>
 = main.cpp + imgui_impl_glfw.cpp + imgui_impl_opengl3.cpp <BR>
 This uses more modern GL calls and custom shaders.<BR>
-This support building with Emscripten and targetting WebGL.<BR>
+This support building with Emscripten and targeting WebGL.<BR>
 Prefer using that if you are using modern GL or WebGL in your application.
 
 [example_glfw_vulkan/](https://github.com/ocornut/imgui/blob/master/examples/example_glfw_vulkan/) <BR>
@@ -142,9 +109,11 @@ Note that GLUT/FreeGLUT is largely obsolete software, prefer using GLFW or SDL.
 
 [example_null/](https://github.com/ocornut/imgui/blob/master/examples/example_null/) <BR>
 Null example, compile and link imgui, create context, run headless with no inputs and no graphics output. <BR>
-= main.cpp <BR>
+= main.cpp + imgui_impl_null.cpp<BR>
 This is used to quickly test compilation of core imgui files in as many setups as possible.
 Because this application doesn't create a window nor a graphic context, there's no graphics output.
+Please note that imgui_impl_null itself is a rather empty backend. We provide it for consistency but
+it is similarly easy to create a skeleton application without the null backend.
 
 [example_sdl2_directx11/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl2_directx11/) <BR>
 SDL2 + DirectX11 example, Windows only. <BR>
@@ -168,12 +137,12 @@ state, and might confuse your GPU driver. One star, not recommended.
 SDL2 (Win32, Mac, Linux, etc.) + OpenGL3+/ES2/ES3 example. <BR>
 = main.cpp + imgui_impl_sdl2.cpp + imgui_impl_opengl3.cpp <BR>
 This uses more modern GL calls and custom shaders. <BR>
-This support building with Emscripten and targetting WebGL.<BR>
+This support building with Emscripten and targeting WebGL.<BR>
 Prefer using that if you are using modern GL or WebGL in your application.
 
 [example_sdl2_sdlrenderer2/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl2_sdlrenderer2/) <BR>
-SDL2 (Win32, Mac, Linux, etc.) + SDL_Renderer for SDL2 (most graphics backends are supported underneath) <BR>
-= main.cpp + imgui_impl_sdl2.cpp + imgui_impl_sdlrenderer.cpp <BR>
+SDL2 (Win32, Mac, Linux, etc.) + SDL_Renderer for SDL2 example.<BR>
+= main.cpp + imgui_impl_sdl2.cpp + imgui_impl_sdlrenderer2.cpp <BR>
 This requires SDL 2.0.18+ (released November 2021) <BR>
 
 [example_sdl2_vulkan/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl2_vulkan/) <BR>
@@ -181,6 +150,44 @@ SDL2 (Win32, Mac, Linux, etc.) + Vulkan example. <BR>
 = main.cpp + imgui_impl_sdl2.cpp + imgui_impl_vulkan.cpp <BR>
 This is quite long and tedious, because: Vulkan. <BR>
 For this example, the main.cpp file exceptionally use helpers function from imgui_impl_vulkan.h/cpp.
+
+[example_sdl2_wgpu/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl2_wgpu/) <BR>
+SDL2 + WebGPU example. Supports Emscripten (web), Dawn (native), WGPU (native). <BR>
+= main.cpp + imgui_impl_sdl2.cpp + imgui_impl_wgpu.cpp
+(note that the 'example_sdl2_opengl3' example also supports Emscripten!)
+
+[example_sdl3_directx11/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl3_directx11/) <BR>
+SDL3 + DirectX11 examples, Windows only. <BR>
+= main.cpp + imgui_impl_sdl3.cpp + imgui_impl_dx11.cpp <BR>
+
+[example_sdl3_metal/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl3_metal/) <BR>
+SDL3 + Metal example, Mac only. <BR>
+= main.cpp + imgui_impl_sdl3.cpp + imgui_impl_metal.mm <BR>
+
+[example_sdl3_opengl3/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl3_opengl3/) <BR>
+SDL3 (Win32, Mac, Linux, etc.) + OpenGL3+/ES2/ES3 example. <BR>
+= main.cpp + imgui_impl_sdl3.cpp + imgui_impl_opengl3.cpp <BR>
+This uses more modern GL calls and custom shaders. <BR>
+This support building with Emscripten and targeting WebGL.<BR>
+
+[example_sdl3_sdlgpu3/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl3_sdlgpu3/) <BR>
+SDL3 (Win32, Mac, Linux, etc.) + SDL_GPU for SDL3 example.<BR>
+= main.cpp + imgui_impl_sdl3.cpp + imgui_impl_sdlrenderer3.cpp <BR>
+
+[example_sdl3_sdlrenderer3/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl3_sdlrenderer3/) <BR>
+SDL3 (Win32, Mac, Linux, etc.) + SDL_Renderer for SDL3 example.<BR>
+= main.cpp + imgui_impl_sdl3.cpp + imgui_impl_sdlrenderer3.cpp <BR>
+
+[example_sdl3_vulkan/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl3_vulkan/) <BR>
+SDL3 (Win32, Mac, Linux, etc.) + Vulkan example. <BR>
+= main.cpp + imgui_impl_sdl3.cpp + imgui_impl_vulkan.cpp <BR>
+This is quite long and tedious, because: Vulkan. <BR>
+For this example, the main.cpp file exceptionally use helpers function from imgui_impl_vulkan.h/cpp.
+
+[example_sdl3_wgpu/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl3_wgpu/) <BR>
+SDL3 + WebGPU example. Supports Emscripten (web), Dawn (native), WGPU (native). <BR>
+= main.cpp + imgui_impl_sdl3.cpp + imgui_impl_wgpu.cpp
+(note that the 'example_sdl3_opengl3' example also supports Emscripten!)
 
 [example_win32_directx9/](https://github.com/ocornut/imgui/blob/master/examples/example_win32_directx9/) <BR>
 DirectX9 example, Windows only. <BR>
@@ -200,15 +207,19 @@ DirectX12 example, Windows only. <BR>
 This is quite long and tedious, because: DirectX12.
 
 [example_win32_opengl3/](https://github.com/ocornut/imgui/blob/master/examples/example_win32_opengl3/) <BR>
-Raw Windows + OpenGL3 + example (modern, programmable pipeline) <BR>
+Raw Windows + OpenGL3 example (modern, programmable pipeline) <BR>
 = main.cpp + imgui_impl_win32.cpp + imgui_impl_opengl3.cpp <BR>
+
+[example_win32_vulkan/](https://github.com/ocornut/imgui/blob/master/examples/example_win32_vulkan/) <BR>
+Raw Windows + Vulkan example <BR>
+= main.cpp + imgui_impl_win32.cpp + imgui_impl_vulkan.cpp <BR>
 
 
 ### Miscellaneous
 
 **Building**
 
-Unfortunately nowadays it is still tedious to create and maintain portable build files using external
+Unfortunately, nowadays it is still tedious to create and maintain portable build files using external
 libraries (the kind we're using here to create a window and render 3D triangles) without relying on
 third party software and build systems. For most examples here we choose to provide:
  - Makefiles for Linux/OSX
@@ -224,22 +235,22 @@ If you are interested in using Cmake to build and links examples, see:
 
 **About mouse cursor latency**
 
-Dear ImGui has no particular extra lag for most behaviors,
+Dear ImGui does not introduce significant extra lag for most behaviors,
 e.g. the last value passed to 'io.AddMousePosEvent()' before NewFrame() will result in windows being moved
 to the right spot at the time of EndFrame()/Render(). At 60 FPS your experience should be pleasant.
 
-However, consider that OS mouse cursors are typically drawn through a very specific hardware accelerated
-path and will feel smoother than the majority of contents rendered via regular graphics API (including,
+However, consider that OS mouse cursors are typically rendered through a very specific hardware-accelerated
+path, which makes them feel smoother than the majority of content rendered via regular graphics API (including,
 but not limited to Dear ImGui windows). Because UI rendering and interaction happens on the same plane
 as the mouse, that disconnect may be jarring to particularly sensitive users.
 You may experiment with enabling the io.MouseDrawCursor flag to request Dear ImGui to draw a mouse cursor
 using the regular graphics API, to help you visualize the difference between a "hardware" cursor and a
 regularly rendered software cursor.
-However, rendering a mouse cursor at 60 FPS will feel sluggish so you likely won't want to enable that at
+However, rendering a mouse cursor at 60 FPS will feel sluggish, so you likely won't want to enable that at
 all times. It might be beneficial for the user experience to switch to a software rendered cursor _only_
 when an interactive drag is in progress.
 
-Note that some setup or GPU drivers are likely to be causing extra display lag depending on their settings.
-If you feel that dragging windows feels laggy and you are not sure what the cause is: try to build a simple
-drawing a flat 2D shape directly under the mouse cursor!
+Note that some setup configurations or GPU drivers may introduce additional display lag depending on their settings.
+If you notice that dragging windows is laggy and you are not sure what the cause is: try drawing a simple
+2D shape directly under the mouse cursor to help identify the issue!
 

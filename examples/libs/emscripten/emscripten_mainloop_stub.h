@@ -17,20 +17,21 @@
 // - So the next logical step was to refactor all examples to follow that layout of using a "main loop" function.
 //   This worked, but it made us lose all the nice things we had...
 
-// Since only about 3 examples really need to run with Emscripten, here's our solution:
+// Since only about 4 examples really need to run with Emscripten, here's our solution:
 // - Use some weird macros and capturing lambda to turn a loop in main() into a function.
 // - Hide all that crap in this file so it doesn't make our examples unusually ugly.
 //   As a stance and principle of Dear ImGui development we don't use C++ headers and we don't
 //   want to suggest to the newcomer that we would ever use C++ headers as this would affect
 //   the initial judgment of many of our target audience.
 // - Technique is based on this idea: https://github.com/ocornut/imgui/pull/2492/
+// - The do { } while (0) is to allow our code calling continue in the main loop.
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #include <functional>
 static std::function<void()>            MainLoopForEmscriptenP;
 static void MainLoopForEmscripten()     { MainLoopForEmscriptenP(); }
-#define EMSCRIPTEN_MAINLOOP_BEGIN       MainLoopForEmscriptenP = [&]()
-#define EMSCRIPTEN_MAINLOOP_END         ; emscripten_set_main_loop(MainLoopForEmscripten, 0, true)
+#define EMSCRIPTEN_MAINLOOP_BEGIN       MainLoopForEmscriptenP = [&]() { do
+#define EMSCRIPTEN_MAINLOOP_END         while (0); }; emscripten_set_main_loop(MainLoopForEmscripten, 0, true)
 #else
 #define EMSCRIPTEN_MAINLOOP_BEGIN
 #define EMSCRIPTEN_MAINLOOP_END

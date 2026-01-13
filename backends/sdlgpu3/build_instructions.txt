@@ -1,0 +1,42 @@
+
+Instructions to rebuild imgui_impl_sdlgpu3_shaders.h
+(You don't need to copy this folder if you are using the backend as-is)
+
+1) Compile the raw shader files to SPIRV:
+
+    glslc -o vertex.spv -c shader.vert
+    glslc -o fragment.spv -c shader.frag
+
+
+2) Build SDL_shadercross (https://github.com/libsdl-org/SDL_shadercross)
+
+
+3-A) Compiling for the Vulkan Driver:
+
+    Nothing to do, you just need the previous vertex.spv/fragment.spv, proceed to step 4
+
+
+3-B) Compiling for the DirectX 12 Driver:
+
+    ./shadercross vertex.spv -s SPIRV -d DXBC -t vertex -e main -o vertex.dxbc
+    ./shadercross fragment.spv -s SPIRV -d DXBC -t fragment -e main -o fragment.dxbc
+
+    Proceed to step 4
+
+
+3-C) Compiling for Metal (On windows you'll need the Metal Developer Tools for Windows, on linux you might use wine, but I never tested it):
+
+    ./shadercross vertex.spv -s SPIRV -d MSL -t vertex -e main -o vertex.metal
+    ./shadercross fragment.spv -s SPIRV -d MSL -t fragment -e main -o fragment.metal
+
+    xcrun -sdk macosx metal -o vertex.ir -c vertex.metal
+    xcrun -sdk macosx metal -o fragment.ir -c fragment.metal
+    xcrun -sdk macosx metallib -o vertex.metallib -c vertex.ir
+    xcrun -sdk macosx metallib -o fragment.metallib -c fragment.ir
+
+    note: use .metal outputs for updating msl_vertex / msl_fragment variables, and use .metallib outputs for metallib_vertex / metallib_fragment variables
+
+    Proceed to step 4
+
+
+4) Use a tool like https://notisrac.github.io/FileToCArray/ or misc/fonts/binary_to_compressed_c.cpp in imgui repository to convert the file to a uint8_t array.
