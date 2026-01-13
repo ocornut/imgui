@@ -163,6 +163,8 @@ Other Changes:
     nav cursor is visible and `io.ConfigNavMoveSetMousePos` is enabled.
 - Scrollbar: fixed a codepath leading to a divide-by-zero (which would not be
   noticeable by user but detected by sanitizers). (#9089) [@judicaelclair]
+- InvisibleButton: allow calling with size (0,0) to fit to available content 
+  size. (#9166, #7623)
 - Added GetItemFlags() in public API for consistency and to expose generic
   flags of last submitted item. (#9127)
 - Shortcuts:
