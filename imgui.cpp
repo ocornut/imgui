@@ -12455,7 +12455,7 @@ void ImGui::EndPopup()
     ImGuiWindow* window = g.CurrentWindow;
     if ((window->Flags & ImGuiWindowFlags_Popup) == 0 || g.BeginPopupStack.Size == 0)
     {
-        IM_ASSERT_USER_ERROR(0, "Calling EndPopup() too many times or in wrong window!");
+        IM_ASSERT_USER_ERROR(0, "Calling EndPopup() in wrong window!");
         return;
     }
 

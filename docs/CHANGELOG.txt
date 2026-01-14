@@ -173,6 +173,8 @@ Other Changes:
     (which mimicks what's done internally in the ItemHoverable() function). (#9138)
   - Fixed tooltip placement being affected for a frame when located over an item
     activated by SetNextItemShortcut(). (#9138)
+- Error Handling:
+  - Improve error handling and recovery for EndMenu()/EndCombo(). (#1651, #9165, #8499)
 - Debug Tools:
   - Debug Log: fixed incorrectly printing characters in IO log when submitting
     non-ASCII values to io.AddInputCharacter(). (#9099)

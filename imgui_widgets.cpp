@@ -2053,8 +2053,15 @@ bool ImGui::BeginComboPopup(ImGuiID popup_id, const ImRect& bb, ImGuiComboFlags 
 void ImGui::EndCombo()
 {
     ImGuiContext& g = *GImGui;
-    EndPopup();
     g.BeginComboDepth--;
+    char name[16];
+    ImFormatString(name, IM_COUNTOF(name), "##Combo_%02d", g.BeginComboDepth); // FIXME: Move those to helpers?
+    if (strcmp(g.CurrentWindow->Name, name) != 0)
+    {
+        IM_ASSERT_USER_ERROR(0, "Calling EndCombo() in wrong window!");
+        return;
+    }
+    EndPopup();
 }
 
 // Call directly after the BeginCombo/EndCombo block. The preview is designed to only host non-interactive elements
@@ -9399,7 +9406,12 @@ void ImGui::EndMenu()
     // Nav: When a left move request our menu failed, close ourselves.
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    IM_ASSERT(window->Flags & ImGuiWindowFlags_Popup);  // Mismatched BeginMenu()/EndMenu() calls
+
+    if ((window->Flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_ChildMenu)) != (ImGuiWindowFlags_Popup | ImGuiWindowFlags_ChildMenu))
+    {
+        IM_ASSERT_USER_ERROR(0, "Calling EndMenu() in wrong window!");
+        return;
+    }
     ImGuiWindow* parent_window = window->ParentWindow;  // Should always be != NULL is we passed assert.
     if (window->BeginCount == window->BeginCountPreviousFrame)
         if (g.NavMoveDir == ImGuiDir_Left && NavMoveRequestButNoResultYet())
@@ -10343,7 +10355,7 @@ bool    ImGui::BeginTabItem(const char* label, bool* p_open, ImGuiTabItemFlags f
     ImGuiTabBar* tab_bar = g.CurrentTabBar;
     if (tab_bar == NULL)
     {
-        IM_ASSERT_USER_ERROR(tab_bar, "Needs to be called between BeginTabBar() and EndTabBar()!");
+        IM_ASSERT_USER_ERROR(tab_bar != NULL, "Needs to be called between BeginTabBar() and EndTabBar()!");
         return false;
     }
     IM_ASSERT((flags & ImGuiTabItemFlags_Button) == 0); // BeginTabItem() Can't be used with button flags, use TabItemButton() instead!
