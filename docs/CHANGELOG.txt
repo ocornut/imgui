@@ -167,6 +167,9 @@ Other Changes:
   size. (#9166, #7623)
 - Added GetItemFlags() in public API for consistency and to expose generic
   flags of last submitted item. (#9127)
+- Images:
+  - Added style.ImageRounding, ImGuiStyleVar_ImageRounding to configure
+    rounding of Image() widgets. (#2942, #845)
 - Shortcuts:
   - IsItemHovered() without ImGuiHoveredFlags_AllowWhenBlockedByActiveItem
     doesn't filter out the signal when activated item is a shortcut remote activation;
