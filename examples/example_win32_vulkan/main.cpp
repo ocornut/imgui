@@ -201,11 +201,9 @@ static void SetupVulkan(ImVector<const char*> instance_extensions)
 // Your real engine/app may not use them.
 static void SetupVulkanWindow(ImGui_ImplVulkanH_Window* wd, VkSurfaceKHR surface, int width, int height)
 {
-    wd->Surface = surface;
-
     // Check for WSI support
     VkBool32 res;
-    vkGetPhysicalDeviceSurfaceSupportKHR(g_PhysicalDevice, g_QueueFamily, wd->Surface, &res);
+    vkGetPhysicalDeviceSurfaceSupportKHR(g_PhysicalDevice, g_QueueFamily, surface, &res);
     if (res != VK_TRUE)
     {
         fprintf(stderr, "Error no WSI support on physical device 0\n");
@@ -215,6 +213,7 @@ static void SetupVulkanWindow(ImGui_ImplVulkanH_Window* wd, VkSurfaceKHR surface
     // Select Surface Format
     const VkFormat requestSurfaceImageFormat[] = { VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_B8G8R8_UNORM, VK_FORMAT_R8G8B8_UNORM };
     const VkColorSpaceKHR requestSurfaceColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
+    wd->Surface = surface;
     wd->SurfaceFormat = ImGui_ImplVulkanH_SelectSurfaceFormat(g_PhysicalDevice, wd->Surface, requestSurfaceImageFormat, (size_t)IM_COUNTOF(requestSurfaceImageFormat), requestSurfaceColorSpace);
 
     // Select Present Mode
@@ -245,9 +244,10 @@ static void CleanupVulkan()
     vkDestroyInstance(g_Instance, g_Allocator);
 }
 
-static void CleanupVulkanWindow()
+static void CleanupVulkanWindow(ImGui_ImplVulkanH_Window* wd)
 {
-    ImGui_ImplVulkanH_DestroyWindow(g_Instance, g_Device, &g_MainWindowData, g_Allocator);
+    ImGui_ImplVulkanH_DestroyWindow(g_Instance, g_Device, wd, g_Allocator);
+    vkDestroySurfaceKHR(g_Instance, wd->Surface, g_Allocator);
 }
 
 static void FrameRender(ImGui_ImplVulkanH_Window* wd, ImDrawData* draw_data)
@@ -516,7 +516,7 @@ int main(int, char**)
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
 
-    CleanupVulkanWindow();
+    CleanupVulkanWindow(&g_MainWindowData);
     CleanupVulkan();
 
     ::DestroyWindow(hwnd);

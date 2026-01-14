@@ -105,6 +105,10 @@ Breaking Changes:
    - BeginPopupContextItem("foo", 1);                                      // Behavior unchanged (as a courtesy we legacy interpret 1 as ImGuiPopupFlags_MouseButtonRight, will assert if disabling legacy behaviors.
    - BeginPopupContextItem("foo", 0);                                      // !! Behavior changed !! Was Left button. Now will defaults to Right button! --> Use ImGuiPopupFlags_MouseButtonLeft.
    - BeginPopupContextItem("foo", ImGuiPopupFlags_NoReopen);               // !! Behavior changed !! Was Left button + flags. Now will defaults to Right button! --> Use ImGuiPopupFlags_MouseButtonLeft | xxx.
+- Backends:
+  - Vulkan: optional ImGui_ImplVulkanH_DestroyWindow() helper used by our example
+    code does not call vkDestroySurfaceKHR(): because surface is created by caller
+    of ImGui_ImplVulkanH_CreateOrResizeWindow(), it is more consistent. (#9163)
 
 Other Changes:
 

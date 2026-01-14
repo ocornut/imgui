@@ -171,6 +171,7 @@ struct ImGui_ImplVulkan_RenderState
 // Used by example's main.cpp. Used by multi-viewport features. PROBABLY NOT used by your own engine/app.
 //
 // You probably do NOT need to use or care about those functions.
+// WE DO NOT PROVIDE STRONG GUARANTEES OF BACKWARD/FORWARD COMPATIBILITY.
 // Those functions only exist because:
 //   1) they facilitate the readability and maintenance of the multiple main.cpp examples files.
 //   2) the multi-viewport / platform window implementation needs them internally.
@@ -180,8 +181,6 @@ struct ImGui_ImplVulkan_RenderState
 // Your engine/app will likely _already_ have code to setup all that stuff (swap chain,
 // render pass, frame buffers, etc.). You may read this code if you are curious, but
 // it is recommended you use your own custom tailored code to do equivalent work.
-//
-// We don't provide a strong guarantee that we won't change those functions API.
 //
 // The ImGui_ImplVulkanH_XXX functions should NOT interact with any of the state used
 // by the regular ImGui_ImplVulkan_XXX functions.
@@ -224,6 +223,7 @@ struct ImGui_ImplVulkanH_Window
 {
     // Input
     bool                    UseDynamicRendering;
+    VkSurfaceKHR            Surface;            // Surface created and destroyed by caller.
     VkSurfaceFormatKHR      SurfaceFormat;
     VkPresentModeKHR        PresentMode;
     VkAttachmentDescription AttachmentDesc;     // RenderPass creation: main attachment description.
@@ -233,7 +233,6 @@ struct ImGui_ImplVulkanH_Window
     int                     Width;              // Generally same as passed to ImGui_ImplVulkanH_CreateOrResizeWindow()
     int                     Height;
     VkSwapchainKHR          Swapchain;
-    VkSurfaceKHR            Surface;
     VkRenderPass            RenderPass;
     VkPipeline              Pipeline;           // The window pipeline may uses a different VkRenderPass than the one passed in ImGui_ImplVulkan_InitInfo
     uint32_t                FrameIndex;         // Current frame being rendered to (0 <= FrameIndex < FrameInFlightCount)
