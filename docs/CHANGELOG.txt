@@ -170,6 +170,8 @@ Other Changes:
 - Images:
   - Added style.ImageRounding, ImGuiStyleVar_ImageRounding to configure
     rounding of Image() widgets. (#2942, #845)
+  - ImageButton() doesn't use a clamped style.FrameRounding value but instead
+    adjust inner image rounding when FramePadding > FrameRounding. (#2942, #845)
 - Shortcuts:
   - IsItemHovered() without ImGuiHoveredFlags_AllowWhenBlockedByActiveItem
     doesn't filter out the signal when activated item is a shortcut remote activation;
