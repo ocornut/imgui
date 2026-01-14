@@ -17137,7 +17137,7 @@ static void ImGui::WindowSelectViewport(ImGuiWindow* window)
             bool use_mouse_ref = (!g.NavCursorVisible || !g.NavHighlightItemUnderNav || !g.NavWindow);
             bool mouse_valid = IsMousePosValid(&mouse_ref);
             if ((window->Appearing || (flags & (ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_ChildMenu))) && (!use_mouse_ref || mouse_valid))
-                window->ViewportAllowPlatformMonitorExtend = FindPlatformMonitorForPos((use_mouse_ref && mouse_valid) ? mouse_ref : NavCalcPreferredRefPos());
+                window->ViewportAllowPlatformMonitorExtend = FindPlatformMonitorForPos((use_mouse_ref && mouse_valid) ? mouse_ref : NavCalcPreferredRefPos(window->Flags));
             else
                 window->ViewportAllowPlatformMonitorExtend = window->Viewport->PlatformMonitor;
         }

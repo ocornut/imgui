@@ -2044,7 +2044,10 @@ static void ImGui_ImplVulkan_DestroyWindow(ImGuiViewport* viewport)
     {
         ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
         if (vd->WindowOwned)
+        {
             ImGui_ImplVulkanH_DestroyWindow(v->Instance, v->Device, &vd->Window, v->Allocator);
+            vkDestroySurfaceKHR(v->Instance, vd->Window.Surface, v->Allocator);
+        }
         ImGui_ImplVulkan_DestroyWindowRenderBuffers(v->Device, &vd->RenderBuffers, v->Allocator);
         IM_DELETE(vd);
     }
