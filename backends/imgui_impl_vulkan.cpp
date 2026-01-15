@@ -1156,7 +1156,7 @@ void ImGui_ImplVulkan_CreateMainPipeline(const ImGui_ImplVulkan_PipelineInfo* pi
 
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
     VkPipelineRenderingCreateInfoKHR* pipeline_rendering_create_info = &pipeline_info->PipelineRenderingCreateInfo;
-    if (v->UseDynamicRendering && pipeline_rendering_create_info->pColorAttachmentFormats != NULL)
+    if (v->UseDynamicRendering && pipeline_rendering_create_info->pColorAttachmentFormats != nullptr)
     {
         // Deep copy buffer to reduce error-rate for end user (#8282)
         ImVector<VkFormat> formats;
