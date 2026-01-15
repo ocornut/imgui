@@ -21,6 +21,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-01-15: Changed GetClipboardText() handler to return nullptr on error aka clipboard contents is not text. Consistent with other backends. (#9168)
 //  2025-09-24: Skip using the SDL_GetGlobalMouseState() state when one of our window is hovered, as the SDL_MOUSEMOTION data is reliable. Fix macOS notch mouse coordinates issue in fullscreen mode + better perf on X11. (#7919, #7786)
 //  2025-09-18: Call platform_io.ClearPlatformHandlers() on shutdown.
 //  2025-09-15: Content Scales are always reported as 1.0 on Wayland. (#8921)
@@ -178,7 +179,10 @@ static const char* ImGui_ImplSDL2_GetClipboardText(ImGuiContext*)
     ImGui_ImplSDL2_Data* bd = ImGui_ImplSDL2_GetBackendData();
     if (bd->ClipboardTextData)
         SDL_free(bd->ClipboardTextData);
-    bd->ClipboardTextData = SDL_GetClipboardText();
+    if (SDL_HasClipboardText())
+        bd->ClipboardTextData = SDL_GetClipboardText();
+    else
+        bd->ClipboardTextData = nullptr;
     return bd->ClipboardTextData;
 }
 

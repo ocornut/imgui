@@ -20,6 +20,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-01-15: Changed GetClipboardText() handler to return nullptr on error aka clipboard contents is not text. Consistent with other backends. (#9168)
 //  2025-11-05: Fixed an issue with missing characters events when an already active text field changes viewports. (#9054)
 //  2025-10-22: Fixed Platform_OpenInShellFn() return value (unused in core).
 //  2025-09-24: Skip using the SDL_GetGlobalMouseState() state when one of our window is hovered, as the SDL_EVENT_MOUSE_MOTION data is reliable. Fix macOS notch mouse coordinates issue in fullscreen mode + better perf on X11. (#7919, #7786)
@@ -151,7 +152,10 @@ static const char* ImGui_ImplSDL3_GetClipboardText(ImGuiContext*)
     ImGui_ImplSDL3_Data* bd = ImGui_ImplSDL3_GetBackendData();
     if (bd->ClipboardTextData)
         SDL_free(bd->ClipboardTextData);
-    bd->ClipboardTextData = SDL_GetClipboardText();
+    if (SDL_HasClipboardText())
+        bd->ClipboardTextData = SDL_GetClipboardText();
+    else
+        bd->ClipboardTextData = nullptr;
     return bd->ClipboardTextData;
 }
 

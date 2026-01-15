@@ -195,6 +195,8 @@ Other Changes:
     forcefully disable either. (#9109, #9116)
   - OpenGL3: Fixed embedded loader multiple init/shutdown cycles broken on some
     platforms. (#8792, #9112)
+  - SDL2, SDL3: changed GetClipboardText() handler to return NULL on error aka
+    clipboard contents is not text. Consistent with other backends. (#9168)
   - SDL_GPU3: macOS version can use MSL shaders in order to support macOS 10.14+
     (vs Metallib shaders requiring macOS 14+). Requires application calling
     SDL_CreateGPUDevice() with SDL_GPU_SHADERFORMAT_MSL. (#9076) [@Niminem]

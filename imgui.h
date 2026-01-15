@@ -3956,7 +3956,7 @@ struct ImGuiPlatformIO
 
     // Optional: Access OS clipboard
     // (default to use native Win32 clipboard on Windows, otherwise uses a private clipboard. Override to access OS clipboard on other architectures)
-    const char* (*Platform_GetClipboardTextFn)(ImGuiContext* ctx);
+    const char* (*Platform_GetClipboardTextFn)(ImGuiContext* ctx);                      // Should return NULL on failure (e.g. clipboard data is not text).
     void        (*Platform_SetClipboardTextFn)(ImGuiContext* ctx, const char* text);
     void*       Platform_ClipboardUserData;
 
