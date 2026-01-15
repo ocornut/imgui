@@ -72,7 +72,7 @@ IMGUI_IMPL_API void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURen
 IMGUI_IMPL_API bool ImGui_ImplWGPU_CreateDeviceObjects();
 IMGUI_IMPL_API void ImGui_ImplWGPU_InvalidateDeviceObjects();
 
-// (Advanced) Use e.g. if you need to precisely control the timing of texture updates (e.g. for staged rendering), by setting ImDrawData::Textures = NULL to handle this manually.
+// (Advanced) Use e.g. if you need to precisely control the timing of texture updates (e.g. for staged rendering), by setting ImDrawData::Textures = nullptr to handle this manually.
 IMGUI_IMPL_API void ImGui_ImplWGPU_UpdateTexture(ImTextureData* tex);
 
 // [BETA] Selected render state data shared with callbacks.

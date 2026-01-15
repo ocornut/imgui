@@ -77,7 +77,6 @@
 // Specify settings to create pipeline and swapchain
 struct ImGui_ImplVulkan_PipelineInfo
 {
-    // For Main and Secondary viewports
     VkRenderPass                    RenderPass;                     // Ignored if using dynamic rendering
     uint32_t                        Subpass;                        //
     VkSampleCountFlagBits           MSAASamples = {};               // 0 defaults to VK_SAMPLE_COUNT_1_BIT
@@ -143,7 +142,7 @@ IMGUI_IMPL_API void             ImGui_ImplVulkan_SetMinImageCount(uint32_t min_i
 // Else, the pipeline can be created, or re-created, using ImGui_ImplVulkan_CreateMainPipeline() before rendering.
 IMGUI_IMPL_API void             ImGui_ImplVulkan_CreateMainPipeline(const ImGui_ImplVulkan_PipelineInfo* info);
 
-// (Advanced) Use e.g. if you need to precisely control the timing of texture updates (e.g. for staged rendering), by setting ImDrawData::Textures = NULL to handle this manually.
+// (Advanced) Use e.g. if you need to precisely control the timing of texture updates (e.g. for staged rendering), by setting ImDrawData::Textures = nullptr to handle this manually.
 IMGUI_IMPL_API void             ImGui_ImplVulkan_UpdateTexture(ImTextureData* tex);
 
 // Register a texture (VkDescriptorSet == ImTextureID)
@@ -172,6 +171,7 @@ struct ImGui_ImplVulkan_RenderState
 // Used by example's main.cpp. Used by multi-viewport features. PROBABLY NOT used by your own engine/app.
 //
 // You probably do NOT need to use or care about those functions.
+// WE DO NOT PROVIDE STRONG GUARANTEES OF BACKWARD/FORWARD COMPATIBILITY.
 // Those functions only exist because:
 //   1) they facilitate the readability and maintenance of the multiple main.cpp examples files.
 //   2) the multi-viewport / platform window implementation needs them internally.
@@ -181,8 +181,6 @@ struct ImGui_ImplVulkan_RenderState
 // Your engine/app will likely _already_ have code to setup all that stuff (swap chain,
 // render pass, frame buffers, etc.). You may read this code if you are curious, but
 // it is recommended you use your own custom tailored code to do equivalent work.
-//
-// We don't provide a strong guarantee that we won't change those functions API.
 //
 // The ImGui_ImplVulkanH_XXX functions should NOT interact with any of the state used
 // by the regular ImGui_ImplVulkan_XXX functions.
@@ -223,29 +221,43 @@ struct ImGui_ImplVulkanH_FrameSemaphores
 // (Used by example's main.cpp. Used by multi-viewport features. Probably NOT used by your own engine/app.)
 struct ImGui_ImplVulkanH_Window
 {
-    int                 Width;
-    int                 Height;
-    VkSwapchainKHR      Swapchain;
-    VkSurfaceKHR        Surface;
-    VkSurfaceFormatKHR  SurfaceFormat;
-    VkPresentModeKHR    PresentMode;
-    VkRenderPass        RenderPass;
-    VkPipeline          Pipeline;               // The window pipeline may uses a different VkRenderPass than the one passed in ImGui_ImplVulkan_InitInfo
-    bool                UseDynamicRendering;
-    bool                ClearEnable;
-    VkClearValue        ClearValue;
-    uint32_t            FrameIndex;             // Current frame being rendered to (0 <= FrameIndex < FrameInFlightCount)
-    uint32_t            ImageCount;             // Number of simultaneous in-flight frames (returned by vkGetSwapchainImagesKHR, usually derived from min_image_count)
-    uint32_t            SemaphoreCount;         // Number of simultaneous in-flight frames + 1, to be able to use it in vkAcquireNextImageKHR
-    uint32_t            SemaphoreIndex;         // Current set of swapchain wait semaphores we're using (needs to be distinct from per frame data)
+    // Input
+    bool                    UseDynamicRendering;
+    VkSurfaceKHR            Surface;            // Surface created and destroyed by caller.
+    VkSurfaceFormatKHR      SurfaceFormat;
+    VkPresentModeKHR        PresentMode;
+    VkAttachmentDescription AttachmentDesc;     // RenderPass creation: main attachment description.
+    VkClearValue            ClearValue;         // RenderPass creation: clear value when using VK_ATTACHMENT_LOAD_OP_CLEAR.
+
+    // Internal
+    int                     Width;              // Generally same as passed to ImGui_ImplVulkanH_CreateOrResizeWindow()
+    int                     Height;
+    VkSwapchainKHR          Swapchain;
+    VkRenderPass            RenderPass;
+    VkPipeline              Pipeline;           // The window pipeline may uses a different VkRenderPass than the one passed in ImGui_ImplVulkan_InitInfo
+    uint32_t                FrameIndex;         // Current frame being rendered to (0 <= FrameIndex < FrameInFlightCount)
+    uint32_t                ImageCount;         // Number of simultaneous in-flight frames (returned by vkGetSwapchainImagesKHR, usually derived from min_image_count)
+    uint32_t                SemaphoreCount;     // Number of simultaneous in-flight frames + 1, to be able to use it in vkAcquireNextImageKHR
+    uint32_t                SemaphoreIndex;     // Current set of swapchain wait semaphores we're using (needs to be distinct from per frame data)
     ImVector<ImGui_ImplVulkanH_Frame>           Frames;
     ImVector<ImGui_ImplVulkanH_FrameSemaphores> FrameSemaphores;
 
     ImGui_ImplVulkanH_Window()
     {
         memset((void*)this, 0, sizeof(*this));
-        PresentMode = (VkPresentModeKHR)~0;     // Ensure we get an error if user doesn't set this.
-        ClearEnable = true;
+
+        // Parameters to create SwapChain
+        PresentMode = (VkPresentModeKHR)~0;             // Ensure we get an error if user doesn't set this.
+
+        // Parameters to create RenderPass
+        AttachmentDesc.format = VK_FORMAT_UNDEFINED;    // Will automatically use wd->SurfaceFormat.format.
+        AttachmentDesc.samples = VK_SAMPLE_COUNT_1_BIT;
+        AttachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        AttachmentDesc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        AttachmentDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        AttachmentDesc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        AttachmentDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        AttachmentDesc.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     }
 };
 

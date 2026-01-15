@@ -148,9 +148,11 @@ static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view);
     NSWindow* window = view.window;
     if (!window)
         return;
-    NSRect contentRect = [window contentRectForFrameRect:window.frame];
-    NSRect rect = NSMakeRect(_posX, contentRect.size.height - _posY, 0, 0);
-    _imeRect = [window convertRectToScreen:rect];
+    {
+        NSRect contentRect = [window contentRectForFrameRect:window.frame];
+        NSRect rect = NSMakeRect(_posX, contentRect.size.height - _posY, 0, 0);
+        _imeRect = [window convertRectToScreen:rect];
+    }
 }
 
 - (void)viewDidMoveToWindow
@@ -629,9 +631,9 @@ void ImGui_ImplOSX_NewFrame(NSView* view)
     // Setup display size
     if (view)
     {
-        const float dpi = (float)[view.window backingScaleFactor];
+        const float fb_scale = (float)[view.window backingScaleFactor];
         io.DisplaySize = ImVec2((float)view.bounds.size.width, (float)view.bounds.size.height);
-        io.DisplayFramebufferScale = ImVec2(dpi, dpi);
+        io.DisplayFramebufferScale = ImVec2(fb_scale, fb_scale);
     }
 
     // Setup time step
