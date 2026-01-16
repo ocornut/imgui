@@ -16555,6 +16555,7 @@ static bool ImGui::GetWindowAlwaysWantOwnViewport(ImGuiWindow* window)
 
 
 // Heuristic, see #8948: depends on how backends handle OS-level parenting.
+// Due to how parent viewport stack is layed out, note that IsViewportAbove(a,b) isn't always the same as !IsViewportAbove(b,a).
 static bool IsViewportAbove(ImGuiViewportP* potential_above, ImGuiViewportP* potential_below)
 {
     // If ImGuiBackendFlags_HasParentViewport if set, ->ParentViewport chain should be accurate.
@@ -16597,7 +16598,7 @@ static bool ImGui::UpdateTryMergeWindowIntoHostViewport(ImGuiWindow* window, ImG
             continue;
         if (viewport_obstructing->GetMainRect().Overlaps(window->Rect()))
             if (IsViewportAbove(viewport_obstructing, viewport_dst))
-                if (viewport_src == NULL || !IsViewportAbove(viewport_obstructing, viewport_src))
+                if (viewport_src == NULL || IsViewportAbove(viewport_src, viewport_obstructing))
                     return false; // viewport_obstructing is between viewport_src and viewport_dst -> Cannot merge.
     }
 
