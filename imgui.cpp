@@ -16576,37 +16576,37 @@ static bool IsViewportAbove(ImGuiViewportP* potential_above, ImGuiViewportP* pot
     return false;
 }
 
-static bool ImGui::UpdateTryMergeWindowIntoHostViewport(ImGuiWindow* window, ImGuiViewportP* viewport)
+static bool ImGui::UpdateTryMergeWindowIntoHostViewport(ImGuiWindow* window, ImGuiViewportP* viewport_dst)
 {
     ImGuiContext& g = *GImGui;
-    if (window->Viewport == viewport)
+    ImGuiViewportP* viewport_src = window->Viewport; // Current viewport
+    if (viewport_src == viewport_dst)
         return false;
-    if ((viewport->Flags & ImGuiViewportFlags_CanHostOtherWindows) == 0)
+    if ((viewport_dst->Flags & ImGuiViewportFlags_CanHostOtherWindows) == 0)
         return false;
-    if ((viewport->Flags & ImGuiViewportFlags_IsMinimized) != 0)
+    if ((viewport_dst->Flags & ImGuiViewportFlags_IsMinimized) != 0)
         return false;
-    if (!viewport->GetMainRect().Contains(window->Rect()))
+    if (!viewport_dst->GetMainRect().Contains(window->Rect()))
         return false;
     if (GetWindowAlwaysWantOwnViewport(window))
         return false;
 
-    for (ImGuiViewportP* viewport_2 : g.Viewports)
+    for (ImGuiViewportP* viewport_obstructing : g.Viewports)
     {
-        if (viewport_2 == viewport || viewport_2 == window->Viewport)
+        if (viewport_obstructing == viewport_src || viewport_obstructing == viewport_dst)
             continue;
-        if (viewport_2->GetMainRect().Overlaps(window->Rect()))
-            if (IsViewportAbove(viewport_2, viewport))
-                if (window->Viewport == NULL || !IsViewportAbove(viewport_2, window->Viewport))
-                    return false;
+        if (viewport_obstructing->GetMainRect().Overlaps(window->Rect()))
+            if (IsViewportAbove(viewport_obstructing, viewport_dst))
+                if (viewport_src == NULL || !IsViewportAbove(viewport_obstructing, viewport_src))
+                    return false; // viewport_obstructing is between viewport_src and viewport_dst -> Cannot merge.
     }
 
     // Move to the existing viewport, Move child/hosted windows as well (FIXME-OPT: iterate child)
-    ImGuiViewportP* old_viewport = window->Viewport;
     if (window->ViewportOwned)
         for (int n = 0; n < g.Windows.Size; n++)
-            if (g.Windows[n]->Viewport == old_viewport)
-                SetWindowViewport(g.Windows[n], viewport);
-    SetWindowViewport(window, viewport);
+            if (g.Windows[n]->Viewport == viewport_src)
+                SetWindowViewport(g.Windows[n], viewport_dst);
+    SetWindowViewport(window, viewport_dst);
     if ((window->Flags & ImGuiWindowFlags_NoBringToFrontOnFocus) == 0)
         BringWindowToDisplayFront(window);
 
