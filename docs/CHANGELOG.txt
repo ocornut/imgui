@@ -223,6 +223,9 @@ Docking+Viewports Branch:
   - SDL2, SDL3: adjust IME offset to match other backends and master branch. (#6071, #1953)
   - Win32: viewports created by backend forcefully direct messages to
     DefWindowProcW() in order to support Unicode text input. (#9099, #3653, #5961) [@ulhc]
+  - Win32: fixed an issue from 1.90.5 where newly appearing windows that are not parented
+    to the main viewport didn't have their task bar icon appear before the window was
+    explicitely refocused. (#7354, #8669)
 
 
 -----------------------------------------------------------------------

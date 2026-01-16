@@ -23,6 +23,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2025-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2026-01-26: [Docking] Fixed an issue from 1.90.5 where newly appearing windows that are not parented to the main viewport don't have task bar icon appear before the windows was explicited refocused. (#7354, #8669)
 //  2025-12-03: Inputs: handle WM_IME_CHAR/WM_IME_COMPOSITION messages to support Unicode inputs on MBCS (non-Unicode) Windows. (#9099, #3653, #5961)
 //  2025-10-19: Inputs: Revert previous change to allow for io.ClearInputKeys() on focus-out not losing gamepad state.
 //  2025-09-23: Inputs: Minor optimization not submitting gamepad input if packet number has not changed.
@@ -1194,9 +1195,10 @@ static void ImGui_ImplWin32_ShowWindow(ImGuiViewport* viewport)
     ImGui_ImplWin32_ViewportData* vd = (ImGui_ImplWin32_ViewportData*)viewport->PlatformUserData;
     IM_ASSERT(vd->Hwnd != 0);
 
-    // ShowParent() also brings parent to front, which is not always desirable,
-    // so we temporarily disable parenting. (#7354)
-    if (vd->HwndParent != NULL)
+    // ShowParent() even with SW_SHOWNA also brings parent to front, which is not always desirable,
+    // so we temporarily disable parenting. (#7354, #8669)
+    bool avoid_bringing_parent_to_front = vd->HwndParent != NULL && (viewport->Flags & (ImGuiViewportFlags_NoFocusOnAppearing | ImGuiViewportFlags_NoTaskBarIcon)) != 0;
+    if (avoid_bringing_parent_to_front)
         ::SetWindowLongPtr(vd->Hwnd, GWLP_HWNDPARENT, (LONG_PTR)nullptr);
 
     if (viewport->Flags & ImGuiViewportFlags_NoFocusOnAppearing)
@@ -1205,7 +1207,7 @@ static void ImGui_ImplWin32_ShowWindow(ImGuiViewport* viewport)
         ::ShowWindow(vd->Hwnd, SW_SHOW);
 
     // Restore
-    if (vd->HwndParent != NULL)
+    if (avoid_bringing_parent_to_front)
         ::SetWindowLongPtr(vd->Hwnd, GWLP_HWNDPARENT, (LONG_PTR)vd->HwndParent);
 }
 
