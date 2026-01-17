@@ -166,6 +166,7 @@ int main(int, char**)
     ImGui_ImplDX12_InitInfo init_info = {};
     init_info.Device = g_pd3dDevice;
     init_info.CommandQueue = g_pd3dCommandQueue;
+    init_info.NumBackBuffer = APP_NUM_BACK_BUFFERS;
     init_info.NumFramesInFlight = APP_NUM_FRAMES_IN_FLIGHT;
     init_info.RTVFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
     init_info.DSVFormat = DXGI_FORMAT_UNKNOWN;
@@ -460,7 +461,7 @@ bool CreateDeviceD3D(HWND hWnd)
 
         swapChain1->Release();
         dxgiFactory->Release();
-        g_pSwapChain->SetMaximumFrameLatency(APP_NUM_BACK_BUFFERS);
+        g_pSwapChain->SetMaximumFrameLatency(APP_NUM_FRAMES_IN_FLIGHT);
         g_hSwapChainWaitableObject = g_pSwapChain->GetFrameLatencyWaitableObject();
     }
 
