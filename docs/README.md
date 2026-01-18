@@ -209,7 +209,7 @@ Dear ImGui is using software and services provided free of charge for open sourc
 Credits
 -------
 
-Developed by [Omar Cornut](https://www.miracleworld.net) and every direct or indirect [contributors](https://github.com/ocornut/imgui/graphs/contributors) to the GitHub. The early version of this library was developed with the support of [Media Molecule](https://www.mediamolecule.com) and first used internally on the game [Tearaway](https://tearaway.mediamolecule.com) (PS Vita).
+Developed by [Omar Cornut](https://www.miracleworld.net) and every direct or indirect [contributors](https://github.com/ocornut/imgui/graphs/contributors) to the GitHub. The early version of this library was developed with the support of [Media Molecule](https://www.mediamolecule.com) and first used internally on the game [Tearaway](https://youtu.be/w0oxBviRGlU) (PS Vita).
 
 Recurring contributors include Rokas Kupstys [@rokups](https://github.com/rokups) (2020-2022): a good portion of work on automation system and regression tests now available in [Dear ImGui Test Engine](https://github.com/ocornut/imgui_test_engine).
 
