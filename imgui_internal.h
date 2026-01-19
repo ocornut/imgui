@@ -2056,7 +2056,9 @@ struct ImGuiLocEntry
 // - See 'Demo->Configuration->Error Handling' and ImGuiIO definitions for details on error handling.
 // - Read https://github.com/ocornut/imgui/wiki/Error-Handling for details on error handling.
 #ifndef IM_ASSERT_USER_ERROR
-#define IM_ASSERT_USER_ERROR(_EXPR,_MSG)    do { if (!(_EXPR) && ImGui::ErrorLog(_MSG)) { IM_ASSERT((_EXPR) && _MSG); } } while (0)    // Recoverable User Error
+#define IM_ASSERT_USER_ERROR(_EXPR,_MSG)            do { if (!(_EXPR)) { if (ImGui::ErrorLog(_MSG)) { IM_ASSERT((_EXPR) && _MSG); } } } while (0)               // Recoverable User Error
+#define IM_ASSERT_USER_ERROR_RET(_EXPR,_MSG)        do { if (!(_EXPR)) { if (ImGui::ErrorLog(_MSG)) { IM_ASSERT((_EXPR) && _MSG); } return; } } while (0)       // Recoverable User Error
+#define IM_ASSERT_USER_ERROR_RETV(_EXPR,_RETV,_MSG) do { if (!(_EXPR)) { if (ImGui::ErrorLog(_MSG)) { IM_ASSERT((_EXPR) && _MSG); } return _RETV; } } while (0) // Recoverable User Error
 #endif
 
 // The error callback is currently not public, as it is expected that only advanced users will rely on it.

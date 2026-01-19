@@ -2065,10 +2065,7 @@ void ImGui::EndCombo()
     char name[16];
     ImFormatString(name, IM_COUNTOF(name), "##Combo_%02d", g.BeginComboDepth); // FIXME: Move those to helpers?
     if (strcmp(g.CurrentWindow->Name, name) != 0)
-    {
-        IM_ASSERT_USER_ERROR(0, "Calling EndCombo() in wrong window!");
-        return;
-    }
+        IM_ASSERT_USER_ERROR_RET(0, "Calling EndCombo() in wrong window!");
     EndPopup();
 }
 
@@ -9150,11 +9147,7 @@ bool ImGui::BeginMainMenuBar()
 void ImGui::EndMainMenuBar()
 {
     ImGuiContext& g = *GImGui;
-    if (!g.CurrentWindow->DC.MenuBarAppending)
-    {
-        IM_ASSERT_USER_ERROR(0, "Calling EndMainMenuBar() not from a menu-bar!"); // Not technically testing that it is the main menu bar
-        return;
-    }
+    IM_ASSERT_USER_ERROR_RET(g.CurrentWindow->DC.MenuBarAppending, "Calling EndMainMenuBar() not from a menu-bar!"); // Not technically testing that it is the main menu bar
 
     EndMenuBar();
     g.CurrentWindow->Flags |= ImGuiWindowFlags_NoSavedSettings; // Restore _NoSavedSettings (#8356)
@@ -9414,12 +9407,8 @@ void ImGui::EndMenu()
     // Nav: When a left move request our menu failed, close ourselves.
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
+    IM_ASSERT_USER_ERROR_RET((window->Flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_ChildMenu)) == (ImGuiWindowFlags_Popup | ImGuiWindowFlags_ChildMenu), "Calling EndMenu() in wrong window!");
 
-    if ((window->Flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_ChildMenu)) != (ImGuiWindowFlags_Popup | ImGuiWindowFlags_ChildMenu))
-    {
-        IM_ASSERT_USER_ERROR(0, "Calling EndMenu() in wrong window!");
-        return;
-    }
     ImGuiWindow* parent_window = window->ParentWindow;  // Should always be != NULL is we passed assert.
     if (window->BeginCount == window->BeginCountPreviousFrame)
         if (g.NavMoveDir == ImGuiDir_Left && NavMoveRequestButNoResultYet())
@@ -9716,11 +9705,7 @@ void    ImGui::EndTabBar()
         return;
 
     ImGuiTabBar* tab_bar = g.CurrentTabBar;
-    if (tab_bar == NULL)
-    {
-        IM_ASSERT_USER_ERROR(tab_bar != NULL, "Mismatched BeginTabBar()/EndTabBar()!");
-        return;
-    }
+    IM_ASSERT_USER_ERROR_RET(tab_bar != NULL, "Mismatched BeginTabBar()/EndTabBar()!");
 
     // Fallback in case no TabItem have been submitted
     if (tab_bar->WantLayout)
@@ -10361,11 +10346,7 @@ bool    ImGui::BeginTabItem(const char* label, bool* p_open, ImGuiTabItemFlags f
         return false;
 
     ImGuiTabBar* tab_bar = g.CurrentTabBar;
-    if (tab_bar == NULL)
-    {
-        IM_ASSERT_USER_ERROR(tab_bar != NULL, "Needs to be called between BeginTabBar() and EndTabBar()!");
-        return false;
-    }
+    IM_ASSERT_USER_ERROR_RETV(tab_bar != NULL, false, "Needs to be called between BeginTabBar() and EndTabBar()!");
     IM_ASSERT((flags & ImGuiTabItemFlags_Button) == 0); // BeginTabItem() Can't be used with button flags, use TabItemButton() instead!
 
     bool ret = TabItemEx(tab_bar, label, p_open, flags, NULL);
@@ -10385,11 +10366,7 @@ void    ImGui::EndTabItem()
         return;
 
     ImGuiTabBar* tab_bar = g.CurrentTabBar;
-    if (tab_bar == NULL)
-    {
-        IM_ASSERT_USER_ERROR(tab_bar != NULL, "Needs to be called between BeginTabBar() and EndTabBar()!");
-        return;
-    }
+    IM_ASSERT_USER_ERROR_RET(tab_bar != NULL, "Needs to be called between BeginTabBar() and EndTabBar()!");
     IM_ASSERT(tab_bar->LastTabItemIdx >= 0);
     ImGuiTabItem* tab = &tab_bar->Tabs[tab_bar->LastTabItemIdx];
     if (!(tab->Flags & ImGuiTabItemFlags_NoPushId))
@@ -10404,11 +10381,7 @@ bool    ImGui::TabItemButton(const char* label, ImGuiTabItemFlags flags)
         return false;
 
     ImGuiTabBar* tab_bar = g.CurrentTabBar;
-    if (tab_bar == NULL)
-    {
-        IM_ASSERT_USER_ERROR(tab_bar != NULL, "Needs to be called between BeginTabBar() and EndTabBar()!");
-        return false;
-    }
+    IM_ASSERT_USER_ERROR_RETV(tab_bar != NULL, false, "Needs to be called between BeginTabBar() and EndTabBar()!");
     return TabItemEx(tab_bar, label, NULL, flags | ImGuiTabItemFlags_Button | ImGuiTabItemFlags_NoReorder, NULL);
 }
 
@@ -10420,11 +10393,7 @@ void    ImGui::TabItemSpacing(const char* str_id, ImGuiTabItemFlags flags, float
         return;
 
     ImGuiTabBar* tab_bar = g.CurrentTabBar;
-    if (tab_bar == NULL)
-    {
-        IM_ASSERT_USER_ERROR(tab_bar != NULL, "Needs to be called between BeginTabBar() and EndTabBar()!");
-        return;
-    }
+    IM_ASSERT_USER_ERROR_RET(tab_bar != NULL, "Needs to be called between BeginTabBar() and EndTabBar()!");
     SetNextItemWidth(width);
     TabItemEx(tab_bar, str_id, NULL, flags | ImGuiTabItemFlags_Button | ImGuiTabItemFlags_NoReorder | ImGuiTabItemFlags_Invisible, NULL);
 }
