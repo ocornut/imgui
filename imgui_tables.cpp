@@ -1606,11 +1606,11 @@ void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, flo
         IM_ASSERT_USER_ERROR(table != NULL, "Call should only be done while in BeginTable() scope!");
         return;
     }
-    IM_ASSERT(table->IsLayoutLocked == false && "Need to call TableSetupColumn() before first row!");
+    IM_ASSERT(table->IsLayoutLocked == false && "TableSetupColumn(): need to call before first row!");
     IM_ASSERT((flags & ImGuiTableColumnFlags_StatusMask_) == 0 && "Illegal to pass StatusMask values to TableSetupColumn()");
     if (table->DeclColumnsCount >= table->ColumnsCount)
     {
-        IM_ASSERT_USER_ERROR(table->DeclColumnsCount < table->ColumnsCount, "Called TableSetupColumn() too many times!");
+        IM_ASSERT_USER_ERROR(table->DeclColumnsCount < table->ColumnsCount, "TableSetupColumn(): called too many times!");
         return;
     }
 
@@ -1620,7 +1620,10 @@ void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, flo
     // Assert when passing a width or weight if policy is entirely left to default, to avoid storing width into weight and vice-versa.
     // Give a grace to users of ImGuiTableFlags_ScrollX.
     if (table->IsDefaultSizingPolicy && (flags & ImGuiTableColumnFlags_WidthMask_) == 0 && (flags & ImGuiTableFlags_ScrollX) == 0)
-        IM_ASSERT(init_width_or_weight <= 0.0f && "Can only specify width/weight if sizing policy is set explicitly in either Table or Column.");
+    {
+        IM_ASSERT_USER_ERROR(init_width_or_weight <= 0.0f, "TableSetupColumn(): can only specify width/weight if sizing policy is set explicitly in either Table or Column.");
+        return;
+    }
 
     // When passing a width automatically enforce WidthFixed policy
     // (whereas TableSetupColumnFlags would default to WidthAuto if table is not resizable)

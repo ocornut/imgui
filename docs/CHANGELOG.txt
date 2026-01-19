@@ -184,6 +184,7 @@ Other Changes:
     activated by SetNextItemShortcut(). (#9138)
 - Error Handling:
   - Improve error handling and recovery for EndMenu()/EndCombo(). (#1651, #9165, #8499)
+  - Improve error handling and recovery for TableSetupColumn().
 - Debug Tools:
   - Debug Log: fixed incorrectly printing characters in IO log when submitting
     non-ASCII values to io.AddInputCharacter(). (#9099)
