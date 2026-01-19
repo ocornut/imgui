@@ -8258,8 +8258,8 @@ void ImGui::BeginDisabledOverrideReenable()
 void ImGui::EndDisabledOverrideReenable()
 {
     ImGuiContext& g = *GImGui;
-    g.DisabledStackSize--;
     IM_ASSERT(g.DisabledStackSize > 0);
+    g.DisabledStackSize--;
     g.ItemFlagsStack.pop_back();
     g.CurrentItemFlags = g.ItemFlagsStack.back();
     g.Style.Alpha = g.CurrentWindowStack.back().DisabledOverrideReenableAlphaBackup;
