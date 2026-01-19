@@ -187,33 +187,33 @@ Other Changes:
   - Improve error handling and recovery for TableSetupColumn().
 - Debug Tools:
   - Debug Log: fixed incorrectly printing characters in IO log when submitting
-    non-ASCII values to io.AddInputCharacter(). (#9099)
+    non-ASCII values to `io.AddInputCharacter()`. (#9099)
   - Debug Log: can output to debugger on Windows. (#5855)
 - Backends:
-  - DirectX10: added 'SamplerNearest' in ImGui_ImplDX10_RenderState.
-    (+renamed 'SamplerDefault' to 'SamplerLinear', which was tagged as beta API)
-  - DirectX11: added 'SamplerNearest' in ImGui_ImplDX11_RenderState.
-    (+renamed 'SamplerDefault' to 'SamplerLinear', which was tagged as beta API)
-  - GLFW: Avoid repeated glfwSetCursor()/glfwSetInputMode() calls when unnecessary.
+  - DirectX10: added `SamplerNearest` in `ImGui_ImplDX10_RenderState`.
+    (+renamed `SamplerDefault` to `SamplerLinear`, which was tagged as beta API)
+  - DirectX11: added `SamplerNearest` in ImGui_ImplDX11_RenderState.
+    (+renamed `SamplerDefault` to `SamplerLinear`, which was tagged as beta API)
+  - GLFW: Avoid repeated `glfwSetCursor()` / `glfwSetInputMode()` unnecessary calls.
     Lowers overhead for very high framerates (e.g. 10k+ FPS). [@maxliani]
   - GLFW: Added IMGUI_IMPL_GLFW_DISABLE_X11 / IMGUI_IMPL_GLFW_DISABLE_WAYLAND to
     forcefully disable either. (#9109, #9116)
   - OpenGL3: Fixed embedded loader multiple init/shutdown cycles broken on some
     platforms. (#8792, #9112)
-  - SDL2, SDL3: changed GetClipboardText() handler to return NULL on error aka
+  - SDL2, SDL3: changed `GetClipboardText()` handler to return NULL on error aka
     clipboard contents is not text. Consistent with other backends. (#9168)
-  - SDL_GPU3: added 'TexSamplerNearest' in ImGui_ImplSDLGPU3_RenderState.
+  - SDL_GPU3: added `SamplerNearest` in `ImGui_ImplSDLGPU3_RenderState`.
   - SDL_GPU3: macOS version can use MSL shaders in order to support macOS 10.14+
     (vs Metallib shaders requiring macOS 14+). Requires application calling
-    SDL_CreateGPUDevice() with SDL_GPU_SHADERFORMAT_MSL. (#9076) [@Niminem]
+    `SDL_CreateGPUDevice()` with `SDL_GPU_SHADERFORMAT_MSL`. (#9076) [@Niminem]
   - Vulkan: helper for creating a swapchain (used by examples and multi-viewports)
     selects `VkSwapchainCreateInfoKHR`'s `compositeAlpha` value based on
     `cap.supportedCompositeAlpha`, which seems to be required on some Android
      devices. (#8784) [@FelixStach]
-  - Win32: handle WM_IME_CHAR/WM_IME_COMPOSITION to support Unicode inputs on
+  - Win32: handle `WM_IME_CHAR`/`WM_IME_COMPOSITION` to support Unicode inputs on
     MBCS (non-Unicode) Windows. (#9099, #3653, #5961) [@ulhc, @ocornut, @Othereum]
 - Examples:
-   - Win32+DirectX12: ignore seemingly incorrect D3D12_MESSAGE_ID_FENCE_ZERO_WAIT
+   - Win32+DirectX12: ignore seemingly incorrect `D3D12_MESSAGE_ID_FENCE_ZERO_WAIT`
      warning on startups on some setups. (#9084, #9093) [@RT2Code, @LeoGautheron]
 
 
