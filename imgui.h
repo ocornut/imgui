@@ -1309,13 +1309,14 @@ enum ImGuiTreeNodeFlags_
     ImGuiTreeNodeFlags_LabelSpanAllColumns  = 1 << 15,  // Label will span all columns of its container table
     //ImGuiTreeNodeFlags_NoScrollOnOpen     = 1 << 16,  // FIXME: TODO: Disable automatic scroll on TreePop() if node got just open and contents is not visible
     ImGuiTreeNodeFlags_NavLeftJumpsToParent = 1 << 17,  // Nav: left arrow moves back to parent. This is processed in TreePop() when there's an unfulfilled Left nav request remaining.
+    ImGuiTreeNodeFlags_NoFrameOuterPadding  = 1 << 18,  // Don't apply outer padding on the header's frame so that it aligns with the contents.
     ImGuiTreeNodeFlags_CollapsingHeader     = ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_NoAutoOpenOnLog,
 
     // [EXPERIMENTAL] Draw lines connecting TreeNode hierarchy. Discuss in GitHub issue #2920.
     // Default value is pulled from style.TreeLinesFlags. May be overridden in TreeNode calls.
-    ImGuiTreeNodeFlags_DrawLinesNone        = 1 << 18,  // No lines drawn
-    ImGuiTreeNodeFlags_DrawLinesFull        = 1 << 19,  // Horizontal lines to child nodes. Vertical line drawn down to TreePop() position: cover full contents. Faster (for large trees).
-    ImGuiTreeNodeFlags_DrawLinesToNodes     = 1 << 20,  // Horizontal lines to child nodes. Vertical line drawn down to bottom-most child node. Slower (for large trees).
+    ImGuiTreeNodeFlags_DrawLinesNone        = 1 << 19,  // No lines drawn
+    ImGuiTreeNodeFlags_DrawLinesFull        = 1 << 20,  // Horizontal lines to child nodes. Vertical line drawn down to TreePop() position: cover full contents. Faster (for large trees).
+    ImGuiTreeNodeFlags_DrawLinesToNodes     = 1 << 21,  // Horizontal lines to child nodes. Vertical line drawn down to bottom-most child node. Slower (for large trees).
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     ImGuiTreeNodeFlags_NavLeftJumpsBackHere = ImGuiTreeNodeFlags_NavLeftJumpsToParent,  // Renamed in 1.92.0

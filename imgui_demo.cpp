@@ -1057,10 +1057,16 @@ static void DemoWindowWidgetsCollapsingHeaders()
     IMGUI_DEMO_MARKER("Widgets/Collapsing Headers");
     if (ImGui::TreeNode("Collapsing Headers"))
     {
+        static bool no_outer_padding = false;
+        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_None;
+        if (no_outer_padding)
+            flags |= ImGuiTreeNodeFlags_NoFrameOuterPadding;
+            
         static bool closable_group = true;
         ImGui::Checkbox("Show 2nd header", &closable_group);
-        if (ImGui::CollapsingHeader("Header", ImGuiTreeNodeFlags_None))
+        if (ImGui::CollapsingHeader("Header", flags))
         {
+            ImGui::Checkbox("Remove header outer padding", &no_outer_padding);
             ImGui::Text("IsItemHovered: %d", ImGui::IsItemHovered());
             for (int i = 0; i < 5; i++)
                 ImGui::Text("Some content %d", i);
@@ -4095,6 +4101,7 @@ static void DemoWindowWidgetsTreeNodes()
             ImGui::CheckboxFlags("ImGuiTreeNodeFlags_AllowOverlap", &base_flags, ImGuiTreeNodeFlags_AllowOverlap);
             ImGui::CheckboxFlags("ImGuiTreeNodeFlags_Framed", &base_flags, ImGuiTreeNodeFlags_Framed); ImGui::SameLine(); HelpMarker("Draw frame with background (e.g. for CollapsingHeader)");
             ImGui::CheckboxFlags("ImGuiTreeNodeFlags_FramePadding", &base_flags, ImGuiTreeNodeFlags_FramePadding);
+            ImGui::CheckboxFlags("ImGuiTreeNodeFlags_NoFrameOuterPadding", &base_flags, ImGuiTreeNodeFlags_NoFrameOuterPadding);
             ImGui::CheckboxFlags("ImGuiTreeNodeFlags_NavLeftJumpsToParent", &base_flags, ImGuiTreeNodeFlags_NavLeftJumpsToParent);
 
             HelpMarker("Default option for DrawLinesXXX is stored in style.TreeLinesFlags");
