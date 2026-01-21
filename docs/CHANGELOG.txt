@@ -154,6 +154,9 @@ Other Changes:
   - Added ImGuiSliderFlags_ColorMarkers to opt-in adding R/G/B/A color markers
     next to each components, in multi-components functions.
   - Added a way to select a specific marker color.
+- InputText:
+  - ImGuiInputTextCallbackData::SelectAll() also sets CursorPos to SelectionEnd.
+  - Added ImGuiInputTextCallbackData::SetSelection() helper.
 - Text, InputText:
   - Reworked word-wrapping logic:
     - Try to not wrap in the middle of contiguous punctuations. (#8139, #8439, #9094)
