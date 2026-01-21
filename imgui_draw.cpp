@@ -3035,6 +3035,7 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg_in)
         ImFontAtlasBuildInit(this);
 
     // Create new font
+    const bool is_first_font = (Fonts.Size == 0);
     ImFont* font;
     if (!font_cfg_in->MergeMode)
     {
@@ -3092,6 +3093,8 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg_in)
     }
     ImFontAtlasFontSourceAddToFont(this, font, font_cfg);
 
+    if (is_first_font)
+        ImFontAtlasBuildNotifySetFont(this, NULL, font);
     return font;
 }
 
@@ -3254,6 +3257,9 @@ void ImFontAtlasBuildNotifySetFont(ImFontAtlas* atlas, ImFont* old_font, ImFont*
             shared_data->Font = new_font;
         if (ImGuiContext* ctx = shared_data->Context)
         {
+            if (ctx->FrameCount == 0 && old_font == NULL) // While this should work either way, we save ourselves the bother / debugging confusion of running ImGui code so early when it is not needed. 
+                continue;
+
             if (ctx->IO.FontDefault == old_font)
                 ctx->IO.FontDefault = new_font;
             if (ctx->Font == old_font)

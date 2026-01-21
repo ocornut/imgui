@@ -128,6 +128,7 @@ Other Changes:
     is enabled, creating side-effects when later disabling hinting or
     dynamically switching to stb_truetype rasterizer.
   - Post rescale GlyphOffset is always rounded.
+  - Adding new fonts after removing all fonts mid-frame properly updates current state.
 - Textures:
   - Fixed a building issue when ImTextureID is defined as a struct.
   - Fixed displaying texture # in Metrics/Debugger window.
