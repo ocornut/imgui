@@ -4506,6 +4506,7 @@ static bool InputTextFilterCharacter(ImGuiContext* ctx, ImGuiInputTextState* sta
         callback_data.Flags = flags;
         callback_data.EventFlag = ImGuiInputTextFlags_CallbackCharFilter;
         callback_data.EventChar = (ImWchar)c;
+        callback_data.EventActivated = (g.ActiveId == state->ID && g.ActiveIdIsJustActivated);
         callback_data.UserData = user_data;
         if (callback(&callback_data) != 0)
             return false;
@@ -5302,6 +5303,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                     callback_data.ID = id;
                     callback_data.Flags = flags;
                     callback_data.EventFlag = event_flag;
+                    callback_data.EventActivated = (g.ActiveId == state->ID && g.ActiveIdIsJustActivated);
                     callback_data.UserData = callback_user_data;
 
                     // FIXME-OPT: Undo stack reconcile needs a backup of the data until we rework API, see #7925
@@ -5380,6 +5382,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             callback_data.ID = id;
             callback_data.Flags = flags;
             callback_data.EventFlag = ImGuiInputTextFlags_CallbackResize;
+            callback_data.EventActivated = (g.ActiveId == state->ID && g.ActiveIdIsJustActivated);
             callback_data.Buf = buf;
             callback_data.BufTextLen = apply_new_text_length;
             callback_data.BufSize = ImMax(buf_size, apply_new_text_length + 1);

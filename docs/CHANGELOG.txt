@@ -155,9 +155,9 @@ Other Changes:
     next to each components, in multi-components functions.
   - Added a way to select a specific marker color.
 - InputText:
-  - Made ImGuiInputTextCallbackData::SelectAll() also sets CursorPos to SelectionEnd.
-  - Added ImGuiInputTextCallbackData::SetSelection() helper.
-  - Added ImGuiInputTextCallbackData::ID field.
+  - ImGuiInputTextCallbackData: SelectAll() also sets CursorPos to SelectionEnd.
+  - ImGuiInputTextCallbackData: Added SetSelection() helper.
+  - ImGuiInputTextCallbackData: Added ID and EventActive helpers. (#9174)
 - Text, InputText:
   - Reworked word-wrapping logic:
     - Try to not wrap in the middle of contiguous punctuations. (#8139, #8439, #9094)
