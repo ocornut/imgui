@@ -10298,37 +10298,36 @@ static void ShowExampleAppCustomRendering(bool* p_open)
 // [SECTION] Example App: Docking, DockSpace / ShowExampleAppDockSpace()
 //-----------------------------------------------------------------------------
 
-// Demonstrate using DockSpace() to create an explicit docking node within an existing window, with various options.
+struct ImGuiDemoDockspaceArgs
+{
+    bool                IsFullscreen = true;
+    bool                KeepWindowPadding = false; // Keep WindowPadding to help understand that DockSpace() is a widget inside the window.
+    ImGuiDockNodeFlags  DockSpaceFlags  = ImGuiDockNodeFlags_None;
+};
+
 // THIS IS A DEMO FOR ADVANCED USAGE OF DockSpace().
-// MOST REGULAR APPLICATIONS WHO WANT TO ALLOW DOCKING WINDOWS ON THE EDGE OF YOUR SCREEN CAN SIMPLY USE:
-//    ImGui::NewFrame();
-//    ImGui::DockSpaceOverViewport(); // Create a dockspace in main viewport
+// MOST REGULAR APPLICATIONS WANTING TO ALLOW DOCKING WINDOWS ON THE EDGE OF YOUR SCREEN CAN SIMPLY USE:
+//    ImGui::NewFrame(); + ImGui::DockSpaceOverViewport();                                                   // Create a dockspace in main viewport
 // OR:
-//    ImGui::NewFrame();
-//    ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode); // Create a dockspace in main viewport, where central node is transparent.
+//    ImGui::NewFrame(); + ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode); // Create a dockspace in main viewport, where central node is transparent.
+// Demonstrate using DockSpace() to create an explicit docking node within an existing window, with various options.
 // Read https://github.com/ocornut/imgui/wiki/Docking for details.
 // The reasons we do not use DockSpaceOverViewport() in this demo is because:
-// - (1) we allow the host window to be floating/moveable instead of filling the viewport (when opt_fullscreen == false)
+// - (1) we allow the host window to be floating/moveable instead of filling the viewport (when args->IsFullscreen == false)
 //       which is mostly to showcase the idea that DockSpace() may be submitted anywhere.
-// - (2) we allow the host window to have padding (when opt_padding == true)
-// - (3) we expose many flags and need a way to have them visible.
-// - (4) we have a local menu bar in the host window (vs. you could use BeginMainMenuBar() + DockSpaceOverViewport()
-//       in your code, but we don't here because we allow the window to be floating)
-void ShowExampleAppDockSpace(bool* p_open)
+//       Also see 'Demo->Examples->Documents' for a less abstract version of this.
+// - (2) we allow the host window to have padding (when args->UsePadding == true)
+// - (3) we expose variety of other flags.
+static void ShowExampleAppDockSpaceAdvanced(ImGuiDemoDockspaceArgs* args, bool* p_open)
 {
-    // TL;DR; this demo is more complicated than what most users you would normally use.
-    // If we remove all options we are showcasing, this demo would become a simple call to ImGui::DockSpaceOverViewport() !!
-    // In this specific demo, we are not using DockSpaceOverViewport() because:
-
-    static bool opt_fullscreen = true;
-    static bool opt_padding = false;
-    static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
+    ImGuiDockNodeFlags dockspace_flags = args->DockSpaceFlags;
 
     // We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
     // because it would be confusing to have two docking targets within each others.
-    ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
-    if (opt_fullscreen)
+    ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDocking;
+    if (args->IsFullscreen)
     {
+        // Fullscreen dockspace: practically the same as calling DockSpaceOverViewport();
         const ImGuiViewport* viewport = ImGui::GetMainViewport();
         ImGui::SetNextWindowPos(viewport->WorkPos);
         ImGui::SetNextWindowSize(viewport->WorkSize);
@@ -10337,74 +10336,105 @@ void ShowExampleAppDockSpace(bool* p_open)
         ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
         window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
         window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+        window_flags |= ImGuiWindowFlags_NoBackground;
     }
     else
     {
+        // Floating dockspace
         dockspace_flags &= ~ImGuiDockNodeFlags_PassthruCentralNode;
     }
-
-    // When using ImGuiDockNodeFlags_PassthruCentralNode, DockSpace() will render our background
-    // and handle the pass-thru hole, so we ask Begin() to not render a background.
-    if (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
-        window_flags |= ImGuiWindowFlags_NoBackground;
 
     // Important: note that we proceed even if Begin() returns false (aka window is collapsed).
     // This is because we want to keep our DockSpace() active. If a DockSpace() is inactive,
     // all active windows docked into it will lose their parent and become undocked.
     // We cannot preserve the docking relationship between an active window and an inactive docking, otherwise
     // any change of dockspace/settings would lead to windows being stuck in limbo and never being visible.
-    if (!opt_padding)
+    if (!args->KeepWindowPadding)
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-    ImGui::Begin("DockSpace Demo", p_open, window_flags);
-    if (!opt_padding)
+    ImGui::Begin("Window with a DockSpace", p_open, window_flags);
+    if (!args->KeepWindowPadding)
         ImGui::PopStyleVar();
 
-    if (opt_fullscreen)
+    if (args->IsFullscreen)
         ImGui::PopStyleVar(2);
 
-    // Submit the DockSpace
-    // REMINDER: THIS IS A DEMO FOR ADVANCED USAGE OF DockSpace()!
-    // MOST REGULAR APPLICATIONS WILL SIMPLY WANT TO CALL DockSpaceOverViewport(). READ COMMENTS ABOVE.
-    ImGuiIO& io = ImGui::GetIO();
-    if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
-    {
-        ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
-        ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
-    }
+    // Submit the DockSpace widget inside our window
+    // - Note that the id here is different from the one used by DockSpaceOverViewport(), so docking state won't get transfered between "Basic" and "Advanced" demos.
+    // - If we made the ShowExampleAppDockSpaceBasic() calculate its own ID and pass it to DockSpaceOverViewport() the ID could easily match.
+    ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
+    ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
+
+    ImGui::End();
+}
+
+static void ShowExampleAppDockSpaceBasic(ImGuiDockNodeFlags flags)
+{
+    // Basic version which you can use in many apps:
+    // e.g:
+    //   ImGui::DockSpaceOverViewport();
+    // or:
+    //   ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode); // Central node will be transparent
+    // or:
+    //   ImGuiViewport* viewport = ImGui::GetMainViewport();
+    //   ImGui::DockSpaceOverViewport(0, viewport, ImGuiDockNodeFlags_None);
+
+    ImGui::DockSpaceOverViewport(0, nullptr, flags);
+}
+
+void ShowExampleAppDockSpace(bool* p_open)
+{
+    static int opt_demo_mode = 0;
+    static bool opt_demo_mode_changed = false;
+    static ImGuiDemoDockspaceArgs args;
+
+    if (opt_demo_mode == 0)
+        ShowExampleAppDockSpaceBasic(args.DockSpaceFlags);
     else
+        ShowExampleAppDockSpaceAdvanced(&args, p_open);
+
+    // Refocus our window to minimize perceived loss of focus when changing mode (caused by the fact that each use a different window, which would not happen in a real app)
+    if (opt_demo_mode_changed)
+        ImGui::SetNextWindowFocus();
+    ImGui::Begin("Examples: Dockspace", p_open, ImGuiWindowFlags_MenuBar);
+    opt_demo_mode_changed = false;
+    opt_demo_mode_changed |= ImGui::RadioButton("Basic demo mode", &opt_demo_mode, 0);
+    opt_demo_mode_changed |= ImGui::RadioButton("Advanced demo mode", &opt_demo_mode, 1);
+
+    ImGui::SeparatorText("Options");
+
+    if ((ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_DockingEnable) == 0)
     {
         ShowDockingDisabledMessage();
+    }
+    else if (opt_demo_mode == 0)
+    {
+        args.DockSpaceFlags &= ImGuiDockNodeFlags_PassthruCentralNode; // Allowed flags
+        ImGui::CheckboxFlags("Flag: PassthruCentralNode", &args.DockSpaceFlags, ImGuiDockNodeFlags_PassthruCentralNode);
+    }
+    else if (opt_demo_mode == 1)
+    {
+        ImGui::Checkbox("Fullscreen", &args.IsFullscreen);
+        ImGui::Checkbox("Keep Window Padding", &args.KeepWindowPadding);
+        ImGui::SameLine();
+        HelpMarker("This is mostly exposed to facilitate understanding that a DockSpace() is _inside_ a window.");
+        ImGui::BeginDisabled(args.IsFullscreen == false);
+        ImGui::CheckboxFlags("Flag: PassthruCentralNode",      &args.DockSpaceFlags, ImGuiDockNodeFlags_PassthruCentralNode);
+        ImGui::EndDisabled();
+        ImGui::CheckboxFlags("Flag: NoDockingOverCentralNode", &args.DockSpaceFlags, ImGuiDockNodeFlags_NoDockingOverCentralNode);
+        ImGui::CheckboxFlags("Flag: NoDockingSplit",           &args.DockSpaceFlags, ImGuiDockNodeFlags_NoDockingSplit);
+        ImGui::CheckboxFlags("Flag: NoUndocking",              &args.DockSpaceFlags, ImGuiDockNodeFlags_NoUndocking);
+        ImGui::CheckboxFlags("Flag: NoResize",                 &args.DockSpaceFlags, ImGuiDockNodeFlags_NoResize);
+        ImGui::CheckboxFlags("Flag: AutoHideTabBar",           &args.DockSpaceFlags, ImGuiDockNodeFlags_AutoHideTabBar);
     }
 
     // Show demo options and help
     if (ImGui::BeginMenuBar())
     {
-        if (ImGui::BeginMenu("Options"))
-        {
-            // Disabling fullscreen would allow the window to be moved to the front of other windows,
-            // which we can't undo at the moment without finer window depth/z control.
-            ImGui::MenuItem("Fullscreen", NULL, &opt_fullscreen);
-            ImGui::MenuItem("Padding", NULL, &opt_padding);
-            ImGui::Separator();
-
-            if (ImGui::MenuItem("Flag: NoDockingOverCentralNode", "", (dockspace_flags & ImGuiDockNodeFlags_NoDockingOverCentralNode) != 0)) { dockspace_flags ^= ImGuiDockNodeFlags_NoDockingOverCentralNode; }
-            if (ImGui::MenuItem("Flag: NoDockingSplit",         "", (dockspace_flags & ImGuiDockNodeFlags_NoDockingSplit) != 0))             { dockspace_flags ^= ImGuiDockNodeFlags_NoDockingSplit; }
-            if (ImGui::MenuItem("Flag: NoUndocking",            "", (dockspace_flags & ImGuiDockNodeFlags_NoUndocking) != 0))                { dockspace_flags ^= ImGuiDockNodeFlags_NoUndocking; }
-            if (ImGui::MenuItem("Flag: NoResize",               "", (dockspace_flags & ImGuiDockNodeFlags_NoResize) != 0))                   { dockspace_flags ^= ImGuiDockNodeFlags_NoResize; }
-            if (ImGui::MenuItem("Flag: AutoHideTabBar",         "", (dockspace_flags & ImGuiDockNodeFlags_AutoHideTabBar) != 0))             { dockspace_flags ^= ImGuiDockNodeFlags_AutoHideTabBar; }
-            if (ImGui::MenuItem("Flag: PassthruCentralNode",    "", (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode) != 0, opt_fullscreen)) { dockspace_flags ^= ImGuiDockNodeFlags_PassthruCentralNode; }
-            ImGui::Separator();
-
-            if (ImGui::MenuItem("Close", NULL, false, p_open != NULL))
-                *p_open = false;
-            ImGui::EndMenu();
-        }
         if (ImGui::BeginMenu("Help"))
         {
             ImGui::TextUnformatted(
-                "This demo has nothing to do with enabling docking!" "\n"
-                "This demo only demonstrate the use of ImGui::DockSpace() which allows you to manually\ncreate a docking node _within_ another window." "\n"
-                "Most application can simply call ImGui::DockSpaceOverViewport() and be done with it.");
+                "This demonstrates the use of ImGui::DockSpace() which allows you to manually\ncreate a docking node _within_ another window." "\n"
+                "The \"Basic\" version uses the ImGui::DockSpaceOverViewport() helper. Most applications can probably use this.");
             ImGui::Separator();
             ImGui::TextUnformatted("When docking is enabled, you can ALWAYS dock MOST window into another! Try it now!" "\n"
                 "- Drag from window title bar or their tab to dock/undock." "\n"

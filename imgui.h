@@ -965,19 +965,21 @@ namespace ImGui
     // Docking
     // - Read https://github.com/ocornut/imgui/wiki/Docking for details.
     // - Enable with io.ConfigFlags |= ImGuiConfigFlags_DockingEnable.
-    // - You can use most Docking facilities without calling any API. You don't necessarily need to call a DockSpaceXXX function to use Docking!
+    // - You can use many Docking facilities without calling any API.
     //   - Drag from window title bar or their tab to dock/undock. Hold SHIFT to disable docking.
     //   - Drag from window menu button (upper-left button) to undock an entire node (all windows).
     //   - When io.ConfigDockingWithShift == true, you instead need to hold SHIFT to enable docking.
+    // - DockSpaceOverViewport:
+    //   - This is a helper to create an invisible window covering a viewport, then submit a DockSpace() into it.
+    //   - Most applications can simply call DockSpaceOverViewport() once to allow docking windows into e.g. the edge of your screen.
+    //     e.g. ImGui::NewFrame(); ImGui::DockSpaceOverViewport();                                                   // Create a dockspace in main viewport.
+    //      or: ImGui::NewFrame(); ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode); // Create a dockspace in main viewport, central node is transparent.
     // - Dockspaces:
-    //   - If you want to dock windows into the edge of your screen, most application can simply call DockSpaceOverViewport():
-    //     e.g. ImGui::NewFrame(); then ImGui::DockSpaceOverViewport();  // Create a dockspace in main viewport.
-    //      or: ImGui::NewFrame(); then ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode);  // Create a dockspace in main viewport, where central node is transparent.
     //   - A dockspace is an explicit dock node within an existing window.
-    //   - DockSpaceOverViewport() basically creates an invisible window covering a viewport, and submit a DockSpace() into it.
     //   - IMPORTANT: Dockspaces need to be submitted _before_ any window they can host. Submit them early in your frame!
     //   - IMPORTANT: Dockspaces need to be kept alive if hidden, otherwise windows docked into it will be undocked.
     //     If you have e.g. multiple tabs with a dockspace inside each tab: submit the non-visible dockspaces with ImGuiDockNodeFlags_KeepAliveOnly.
+    //   - See 'Demo->Examples->Dockspace' or 'Demo->Examples->Documents' for more detailed demos.
     // - Programmatic docking:
     //   - There is no public API yet other than the very limited SetNextWindowDockID() function. Sorry for that!
     //   - Read https://github.com/ocornut/imgui/wiki/Docking for examples of how to use current internal API.
@@ -985,7 +987,7 @@ namespace ImGui
     IMGUI_API ImGuiID       DockSpaceOverViewport(ImGuiID dockspace_id = 0, const ImGuiViewport* viewport = NULL, ImGuiDockNodeFlags flags = 0, const ImGuiWindowClass* window_class = NULL);
     IMGUI_API void          SetNextWindowDockID(ImGuiID dock_id, ImGuiCond cond = 0);           // set next window dock id
     IMGUI_API void          SetNextWindowClass(const ImGuiWindowClass* window_class);           // set next window class (control docking compatibility + provide hints to platform backend via custom viewport flags and platform parent/child relationship)
-    IMGUI_API ImGuiID       GetWindowDockID();
+    IMGUI_API ImGuiID       GetWindowDockID();                                                  // get dock id of current window, or 0 if not associated to any docking node.
     IMGUI_API bool          IsWindowDocked();                                                   // is current window docked into another window?
 
     // Logging/Capture
