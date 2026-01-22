@@ -9010,7 +9010,7 @@ void ImGui::UpdateCurrentFontSize(float restore_font_size_after_scaling)
 
         // Global scale factors
         final_size *= g.Style.FontScaleMain;    // Main global scale factor
-        final_size *= g.Style.FontScaleDpi;     // Per-monitor/viewport DPI scale factor, automatically updated when io.ConfigDpiScaleFonts is enabled.
+        final_size *= g.Style.FontScaleDpi;     // Per-monitor/viewport DPI scale factor (in docking branch: automatically updated when io.ConfigDpiScaleFonts is enabled).
 
         // Window scale (mostly obsolete now)
         if (window != NULL)
