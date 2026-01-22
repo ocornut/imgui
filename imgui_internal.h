@@ -3223,6 +3223,7 @@ namespace ImGui
     IMGUI_API void          UpdateMouseMovingWindowEndFrame();
 
     // Viewports
+    inline ImGuiViewport*   GetWindowViewport() { return GetMainViewport(); } // For code consistency. This is public API in docking branch.
     IMGUI_API void          ScaleWindowsInViewport(ImGuiViewportP* viewport, float scale);
     IMGUI_API void          SetWindowViewport(ImGuiWindow* window, ImGuiViewportP* viewport);
 
