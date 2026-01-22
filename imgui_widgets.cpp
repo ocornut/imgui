@@ -9070,6 +9070,10 @@ void ImGui::EndMenuBar()
             NavMoveRequestForward(g.NavMoveDir, g.NavMoveClipDir, g.NavMoveFlags, g.NavMoveScrollFlags); // Repeat
         }
     }
+    else
+    {
+        NavMoveRequestTryWrapping(window, ImGuiNavMoveFlags_WrapX);
+    }
 
     PopClipRect();
     PopID();

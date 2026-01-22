@@ -13436,7 +13436,7 @@ void ImGui::NavMoveRequestTryWrapping(ImGuiWindow* window, ImGuiNavMoveFlags wra
 
     // In theory we should test for NavMoveRequestButNoResultYet() but there's no point doing it:
     // as NavEndFrame() will do the same test. It will end up calling NavUpdateCreateWrappingRequest().
-    if (g.NavWindow == window && g.NavMoveScoringItems && g.NavLayer == ImGuiNavLayer_Main)
+    if (g.NavWindow == window && g.NavMoveScoringItems && g.NavLayer == window->DC.NavLayerCurrent)
         g.NavMoveFlags = (g.NavMoveFlags & ~ImGuiNavMoveFlags_WrapMask_) | wrap_flags;
 }
 

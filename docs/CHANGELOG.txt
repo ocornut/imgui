@@ -135,6 +135,7 @@ Other Changes:
 - Menus:
   - Fixed MenuItem() label position and BeginMenu() arrow/icon/popup positions,
     when used inside a line with a baseline offset.
+  - Made navigation into menu-bar auto wrap on X axis. (#9178)
 - TreeNode:
   - Fixed highlight position when used inside a line with a large text baseline offset.
     (never quite worked in this situation; but then most of the time the text
