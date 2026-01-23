@@ -525,7 +525,7 @@ void ImGui_ImplAllegro5_SetDisplay(ALLEGRO_DISPLAY* display)
     if (bd->VertexDecl)
     {
         al_destroy_vertex_decl(bd->VertexDecl);
-        bd->VertexDecl = NULL;
+        bd->VertexDecl = nullptr;
     }
 
     if (bd->Display && !bd->VertexDecl)

@@ -33,7 +33,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2025-XX-XX: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2026-XX-XX: Added support for multiple windows via the ImGuiPlatformIO interface.
 //  2025-09-18: Call platform_io.ClearPlatformHandlers() on shutdown.
 //  2025-07-08: [Docking] Fixed multi-viewport handling broken on 2025-06-02. (#8644, #8777)
 //  2025-06-27: Added ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress mouse cursor support.

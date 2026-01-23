@@ -678,8 +678,8 @@ ImGui::PushFont(new_font, 42.0f);
 
 In `docking` branch or with multi-viewports:
 ```cpp
-io.ConfigDpiScaleFonts = true;          // Automatically overwrite style.FontScaleDpi in Begin() when Monitor DPI changes. This will scale fonts but _NOT_ scale sizes/padding for now.
-io.ConfigDpiScaleViewports = true;      // Scale Dear ImGui and Platform Windows when Monitor DPI changes.
+io.ConfigDpiScaleFonts = true;          // (Docking branch only) Automatically overwrite style.FontScaleDpi in Begin() when Monitor DPI changes. This will scale fonts but _NOT_ scale sizes/padding for now.
+io.ConfigDpiScaleViewports = true;      // (Docking branch only) Scale Dear ImGui and Platform Windows when Monitor DPI changes.
 ```
 
 **Scaling style** (paddings, spacings, thicknesses)

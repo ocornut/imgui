@@ -22,7 +22,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2025-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2026-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
 //  2025-10-23: [Docking] DirectX12: Fixed an issue in synchronization logic improving rendering throughput for secondary viewports. (#8961, #9025)
 //  2025-10-11: DirectX12: Reuse texture upload buffer and grow it only when necessary. (#9002)
 //  2025-09-29: DirectX12: Rework synchronization logic. (#8961)
@@ -97,8 +97,10 @@ struct ImGui_ImplDX12_Data
     ImGui_ImplDX12_InitInfo     InitInfo;
     IDXGIFactory5*              pdxgiFactory;
     ID3D12Device*               pd3dDevice;
-    ID3D12RootSignature*        pRootSignature;
-    ID3D12PipelineState*        pPipelineState;
+    ID3D12RootSignature*        pRootSignatureLinear;
+    ID3D12RootSignature*        pRootSignatureNearest;
+    ID3D12PipelineState*        pPipelineStateLinear;
+    ID3D12PipelineState*        pPipelineStateNearest;
     ID3D12CommandQueue*         pCommandQueue;
     bool                        commandQueueOwned;
     DXGI_FORMAT                 RTVFormat;
@@ -215,11 +217,27 @@ struct VERTEX_CONSTANT_BUFFER_DX12
 static void ImGui_ImplDX12_InitMultiViewportSupport();
 static void ImGui_ImplDX12_ShutdownMultiViewportSupport();
 
+// FIXME-WIP: Allow user to forward declare those two, for until we come up with a backend agnostic API to do this. (#9173)
+void ImGui_ImplDX12_SetupSamplerLinear(ID3D12GraphicsCommandList* command_list);
+void ImGui_ImplDX12_SetupSamplerNearest(ID3D12GraphicsCommandList* command_list);
+
 // Functions
-static void ImGui_ImplDX12_SetupRenderState(ImDrawData* draw_data, ID3D12GraphicsCommandList* command_list, ImGui_ImplDX12_RenderBuffers* fr)
+void ImGui_ImplDX12_SetupSamplerLinear(ID3D12GraphicsCommandList* command_list)
 {
     ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
+    command_list->SetPipelineState(bd->pPipelineStateLinear);
+    command_list->SetGraphicsRootSignature(bd->pRootSignatureLinear);
+}
 
+void ImGui_ImplDX12_SetupSamplerNearest(ID3D12GraphicsCommandList* command_list)
+{
+    ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
+    command_list->SetPipelineState(bd->pPipelineStateNearest);
+    command_list->SetGraphicsRootSignature(bd->pRootSignatureNearest);
+}
+
+static void ImGui_ImplDX12_SetupRenderState(ImDrawData* draw_data, ID3D12GraphicsCommandList* command_list, ImGui_ImplDX12_RenderBuffers* fr)
+{
     // Setup orthographic projection matrix into our constant buffer
     // Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right).
     VERTEX_CONSTANT_BUFFER_DX12 vertex_constant_buffer;
@@ -261,8 +279,7 @@ static void ImGui_ImplDX12_SetupRenderState(ImDrawData* draw_data, ID3D12Graphic
     ibv.Format = sizeof(ImDrawIdx) == 2 ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT;
     command_list->IASetIndexBuffer(&ibv);
     command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    command_list->SetPipelineState(bd->pPipelineState);
-    command_list->SetGraphicsRootSignature(bd->pRootSignature);
+    ImGui_ImplDX12_SetupSamplerLinear(command_list);
     command_list->SetGraphicsRoot32BitConstants(0, 16, &vertex_constant_buffer, 0);
 
     // Setup blend factor
@@ -631,7 +648,7 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
     ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
     if (!bd || !bd->pd3dDevice)
         return false;
-    if (bd->pPipelineState)
+    if (bd->pPipelineStateLinear)
         ImGui_ImplDX12_InvalidateDeviceObjects();
 
     HRESULT hr = ::CreateDXGIFactory1(IID_PPV_ARGS(&bd->pdxgiFactory));
@@ -720,7 +737,15 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
         if (D3D12SerializeRootSignatureFn(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &blob, nullptr) != S_OK)
             return false;
 
-        bd->pd3dDevice->CreateRootSignature(0, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&bd->pRootSignature));
+        bd->pd3dDevice->CreateRootSignature(0, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&bd->pRootSignatureLinear));
+        blob->Release();
+
+        // Root Signature for ImDrawCallback_SetSamplerNearest
+        staticSampler[0].Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+        if (D3D12SerializeRootSignatureFn(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &blob, nullptr) != S_OK)
+            return false;
+
+        bd->pd3dDevice->CreateRootSignature(0, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&bd->pRootSignatureNearest));
         blob->Release();
     }
 
@@ -733,7 +758,7 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
     D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
     psoDesc.NodeMask = 1;
     psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-    psoDesc.pRootSignature = bd->pRootSignature;
+    psoDesc.pRootSignature = bd->pRootSignatureLinear;
     psoDesc.SampleMask = UINT_MAX;
     psoDesc.NumRenderTargets = 1;
     psoDesc.RTVFormats[0] = bd->RTVFormat;
@@ -856,7 +881,18 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
         desc.BackFace = desc.FrontFace;
     }
 
-    HRESULT result_pipeline_state = bd->pd3dDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&bd->pPipelineState));
+    HRESULT result_pipeline_state = bd->pd3dDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&bd->pPipelineStateLinear));
+    if (result_pipeline_state != S_OK)
+    {
+        vertexShaderBlob->Release();
+        pixelShaderBlob->Release();
+        return false;
+    }
+
+    // Pipeline State for ImDrawCallback_SetSamplerNearest
+    psoDesc.pRootSignature = bd->pRootSignatureNearest;
+
+    result_pipeline_state = bd->pd3dDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&bd->pPipelineStateNearest));
     vertexShaderBlob->Release();
     pixelShaderBlob->Release();
     if (result_pipeline_state != S_OK)
@@ -896,8 +932,11 @@ void    ImGui_ImplDX12_InvalidateDeviceObjects()
     if (bd->commandQueueOwned)
         SafeRelease(bd->pCommandQueue);
     bd->commandQueueOwned = false;
-    SafeRelease(bd->pRootSignature);
-    SafeRelease(bd->pPipelineState);
+    SafeRelease(bd->pRootSignatureLinear);
+    SafeRelease(bd->pRootSignatureNearest);
+    SafeRelease(bd->pPipelineStateLinear);
+    SafeRelease(bd->pPipelineStateNearest);
+
     if (bd->pTexUploadBufferMapped)
     {
         D3D12_RANGE range = { 0, bd->pTexUploadBufferSize };
@@ -951,7 +990,7 @@ bool ImGui_ImplDX12_Init(ImGui_ImplDX12_InitInfo* init_info)
     init_info = &bd->InitInfo;
 
     bd->pd3dDevice = init_info->Device;
-    IM_ASSERT(init_info->CommandQueue != NULL);
+    IM_ASSERT(init_info->CommandQueue != nullptr);
     bd->pCommandQueue = init_info->CommandQueue;
     bd->RTVFormat = init_info->RTVFormat;
     bd->DSVFormat = init_info->DSVFormat;
@@ -1045,7 +1084,7 @@ void ImGui_ImplDX12_NewFrame()
     ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
     IM_ASSERT(bd != nullptr && "Context or backend not initialized! Did you call ImGui_ImplDX12_Init()?");
 
-    if (!bd->pPipelineState)
+    if (!bd->pPipelineStateLinear)
         if (!ImGui_ImplDX12_CreateDeviceObjects())
             IM_ASSERT(0 && "ImGui_ImplDX12_CreateDeviceObjects() failed!");
 }

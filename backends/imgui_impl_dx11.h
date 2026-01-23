@@ -35,7 +35,7 @@ IMGUI_IMPL_API void     ImGui_ImplDX11_RenderDrawData(ImDrawData* draw_data);
 IMGUI_IMPL_API bool     ImGui_ImplDX11_CreateDeviceObjects();
 IMGUI_IMPL_API void     ImGui_ImplDX11_InvalidateDeviceObjects();
 
-// (Advanced) Use e.g. if you need to precisely control the timing of texture updates (e.g. for staged rendering), by setting ImDrawData::Textures = NULL to handle this manually.
+// (Advanced) Use e.g. if you need to precisely control the timing of texture updates (e.g. for staged rendering), by setting ImDrawData::Textures = nullptr to handle this manually.
 IMGUI_IMPL_API void     ImGui_ImplDX11_UpdateTexture(ImTextureData* tex);
 
 // [BETA] Selected render state data shared with callbacks.
@@ -45,7 +45,8 @@ struct ImGui_ImplDX11_RenderState
 {
     ID3D11Device*           Device;
     ID3D11DeviceContext*    DeviceContext;
-    ID3D11SamplerState*     SamplerDefault;
+    ID3D11SamplerState*     SamplerLinear;
+    ID3D11SamplerState*     SamplerNearest;
     ID3D11Buffer*           VertexConstantBuffer;
 };
 

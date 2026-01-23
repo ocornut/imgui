@@ -26,7 +26,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2025-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2026-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
 //  2025-09-18: Call platform_io.ClearRendererHandlers() on shutdown.
 //  2025-07-15: OpenGL: Set GL_UNPACK_ALIGNMENT to 1 before updating textures. (#8802)
 //  2025-06-11: OpenGL: Added support for ImGuiBackendFlags_RendererHasTextures, for dynamic font atlas. Removed ImGui_ImplOpenGL2_CreateFontsTexture() and ImGui_ImplOpenGL2_DestroyFontsTexture().

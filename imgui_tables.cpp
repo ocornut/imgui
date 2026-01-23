@@ -1348,11 +1348,7 @@ void    ImGui::EndTable()
 {
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
-    if (table == NULL)
-    {
-        IM_ASSERT_USER_ERROR(table != NULL, "EndTable() call should only be done while in BeginTable() scope!");
-        return;
-    }
+    IM_ASSERT_USER_ERROR_RET(table != NULL, "EndTable() call should only be done while in BeginTable() scope!");
 
     // This assert would be very useful to catch a common error... unfortunately it would probably trigger in some
     // cases, and for consistency user may sometimes output empty tables (and still benefit from e.g. outer border)
@@ -1601,18 +1597,10 @@ void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, flo
 {
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
-    if (table == NULL)
-    {
-        IM_ASSERT_USER_ERROR(table != NULL, "Call should only be done while in BeginTable() scope!");
-        return;
-    }
-    IM_ASSERT(table->IsLayoutLocked == false && "Need to call TableSetupColumn() before first row!");
+    IM_ASSERT_USER_ERROR_RET(table != NULL, "Call should only be done while in BeginTable() scope!");
+    IM_ASSERT_USER_ERROR_RET(table->DeclColumnsCount < table->ColumnsCount, "TableSetupColumn(): called too many times!");
+    IM_ASSERT_USER_ERROR_RET(table->IsLayoutLocked == false, "TableSetupColumn(): need to call before first row!");
     IM_ASSERT((flags & ImGuiTableColumnFlags_StatusMask_) == 0 && "Illegal to pass StatusMask values to TableSetupColumn()");
-    if (table->DeclColumnsCount >= table->ColumnsCount)
-    {
-        IM_ASSERT_USER_ERROR(table->DeclColumnsCount < table->ColumnsCount, "Called TableSetupColumn() too many times!");
-        return;
-    }
 
     ImGuiTableColumn* column = &table->Columns[table->DeclColumnsCount];
     table->DeclColumnsCount++;
@@ -1620,7 +1608,7 @@ void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, flo
     // Assert when passing a width or weight if policy is entirely left to default, to avoid storing width into weight and vice-versa.
     // Give a grace to users of ImGuiTableFlags_ScrollX.
     if (table->IsDefaultSizingPolicy && (flags & ImGuiTableColumnFlags_WidthMask_) == 0 && (flags & ImGuiTableFlags_ScrollX) == 0)
-        IM_ASSERT(init_width_or_weight <= 0.0f && "Can only specify width/weight if sizing policy is set explicitly in either Table or Column.");
+        IM_ASSERT_USER_ERROR_RET(init_width_or_weight <= 0.0f, "TableSetupColumn(): can only specify width/weight if sizing policy is set explicitly in either Table or Column.");
 
     // When passing a width automatically enforce WidthFixed policy
     // (whereas TableSetupColumnFlags would default to WidthAuto if table is not resizable)
@@ -1662,12 +1650,8 @@ void ImGui::TableSetupScrollFreeze(int columns, int rows)
 {
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
-    if (table == NULL)
-    {
-        IM_ASSERT_USER_ERROR(table != NULL, "Call should only be done while in BeginTable() scope!");
-        return;
-    }
-    IM_ASSERT(table->IsLayoutLocked == false && "Need to call TableSetupColumn() before first row!");
+    IM_ASSERT_USER_ERROR_RET(table != NULL, "Call should only be done while in BeginTable() scope!");
+    IM_ASSERT(table->IsLayoutLocked == false && "TableSetupColumn(): need to call before first row!");
     IM_ASSERT(columns >= 0 && columns < IMGUI_TABLE_MAX_COLUMNS);
     IM_ASSERT(rows >= 0 && rows < 128); // Arbitrary limit
 
@@ -1743,11 +1727,7 @@ void ImGui::TableSetColumnEnabled(int column_n, bool enabled)
 {
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
-    if (table == NULL)
-    {
-        IM_ASSERT_USER_ERROR(table != NULL, "Call should only be done while in BeginTable() scope!");
-        return;
-    }
+    IM_ASSERT_USER_ERROR_RET(table != NULL, "Call should only be done while in BeginTable() scope!");
     IM_ASSERT(table->Flags & ImGuiTableFlags_Hideable); // See comments above
     if (column_n < 0)
         column_n = table->CurrentColumn;
@@ -1825,12 +1805,8 @@ void ImGui::TableSetBgColor(ImGuiTableBgTarget target, ImU32 color, int column_n
 {
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
+    IM_ASSERT_USER_ERROR_RET(table != NULL, "Call should only be done while in BeginTable() scope!");
     IM_ASSERT(target != ImGuiTableBgTarget_None);
-    if (table == NULL)
-    {
-        IM_ASSERT_USER_ERROR(table != NULL, "Call should only be done while in BeginTable() scope!");
-        return;
-    }
 
     if (color == IM_COL32_DISABLE)
         color = 0;
@@ -2128,11 +2104,7 @@ bool ImGui::TableSetColumnIndex(int column_n)
     {
         if (table->CurrentColumn != -1)
             TableEndCell(table);
-        if ((column_n >= 0 && column_n < table->ColumnsCount) == false)
-        {
-            IM_ASSERT_USER_ERROR(column_n >= 0 && column_n < table->ColumnsCount, "TableSetColumnIndex() invalid column index!");
-            return false;
-        }
+        IM_ASSERT_USER_ERROR_RETV(column_n >= 0 && column_n < table->ColumnsCount, false, "TableSetColumnIndex() invalid column index!");
         TableBeginCell(table, column_n);
     }
 
@@ -3118,11 +3090,7 @@ void ImGui::TableHeadersRow()
 {
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
-    if (table == NULL)
-    {
-        IM_ASSERT_USER_ERROR(table != NULL, "Call should only be done while in BeginTable() scope!");
-        return;
-    }
+    IM_ASSERT_USER_ERROR_RET(table != NULL, "Call should only be done while in BeginTable() scope!");
 
     // Call layout if not already done. This is automatically done by TableNextRow: we do it here _only_ to make
     // it easier to debug-step in TableUpdateLayout(). Your own version of this function doesn't need this.
@@ -3167,12 +3135,7 @@ void ImGui::TableHeader(const char* label)
         return;
 
     ImGuiTable* table = g.CurrentTable;
-    if (table == NULL)
-    {
-        IM_ASSERT_USER_ERROR(table != NULL, "Call should only be done while in BeginTable() scope!");
-        return;
-    }
-
+    IM_ASSERT_USER_ERROR_RET(table != NULL, "Call should only be done while in BeginTable() scope!");
     IM_ASSERT(table->CurrentColumn != -1);
     const int column_n = table->CurrentColumn;
     ImGuiTableColumn* column = &table->Columns[column_n];
@@ -3347,11 +3310,7 @@ void ImGui::TableAngledHeadersRowEx(ImGuiID row_id, float angle, float max_label
     ImGuiTable* table = g.CurrentTable;
     ImGuiWindow* window = g.CurrentWindow;
     ImDrawList* draw_list = window->DrawList;
-    if (table == NULL)
-    {
-        IM_ASSERT_USER_ERROR(table != NULL, "Call should only be done while in BeginTable() scope!");
-        return;
-    }
+    IM_ASSERT_USER_ERROR_RET(table != NULL, "Call should only be done while in BeginTable() scope!");
     IM_ASSERT(table->CurrentRow == -1 && "Must be first row");
 
     if (max_label_width == 0.0f)

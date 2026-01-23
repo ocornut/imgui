@@ -104,6 +104,7 @@ namespace IMGUI_STB_NAMESPACE
 #pragma warning (push)
 #pragma warning (disable: 4456)                             // declaration of 'xx' hides previous local declaration
 #pragma warning (disable: 6011)                             // (stb_rectpack) Dereferencing NULL pointer 'cur->next'.
+#pragma warning (disable: 5262)                             // (stb_truetype) implicit fall-through occurs here; are you missing a break statement? 
 #pragma warning (disable: 6385)                             // (stb_truetype) Reading invalid data from 'buffer':  the readable size is '_Old_3`kernel_width' bytes, but '3' bytes may be read.
 #pragma warning (disable: 28182)                            // (stb_rectpack) Dereferencing NULL pointer. 'cur' contains the same NULL value as 'cur->next' did.
 #endif
@@ -3041,6 +3042,7 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg_in)
         ImFontAtlasBuildInit(this);
 
     // Create new font
+    const bool is_first_font = (Fonts.Size == 0);
     ImFont* font;
     if (!font_cfg_in->MergeMode)
     {
@@ -3098,6 +3100,8 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg_in)
     }
     ImFontAtlasFontSourceAddToFont(this, font, font_cfg);
 
+    if (is_first_font)
+        ImFontAtlasBuildNotifySetFont(this, NULL, font);
     return font;
 }
 
@@ -3260,6 +3264,9 @@ void ImFontAtlasBuildNotifySetFont(ImFontAtlas* atlas, ImFont* old_font, ImFont*
             shared_data->Font = new_font;
         if (ImGuiContext* ctx = shared_data->Context)
         {
+            if (ctx->FrameCount == 0 && old_font == NULL) // While this should work either way, we save ourselves the bother / debugging confusion of running ImGui code so early when it is not needed. 
+                continue;
+
             if (ctx->IO.FontDefault == old_font)
                 ctx->IO.FontDefault = new_font;
             if (ctx->Font == old_font)

@@ -23,7 +23,8 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2025-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2026-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2026-01-15: Changed GetClipboardText() handler to return nullptr on error aka clipboard contents is not text. Consistent with other backends. (#9168)
 //  2025-11-05: Fixed an issue with missing characters events when an already active text field changes viewports. (#9054)
 //  2025-10-22: Fixed Platform_OpenInShellFn() return value (unused in core).
 //  2025-09-24: Skip using the SDL_GetGlobalMouseState() state when one of our window is hovered, as the SDL_EVENT_MOUSE_MOTION data is reliable. Fix macOS notch mouse coordinates issue in fullscreen mode + better perf on X11. (#7919, #7786)
@@ -167,7 +168,10 @@ static const char* ImGui_ImplSDL3_GetClipboardText(ImGuiContext*)
     ImGui_ImplSDL3_Data* bd = ImGui_ImplSDL3_GetBackendData();
     if (bd->ClipboardTextData)
         SDL_free(bd->ClipboardTextData);
-    bd->ClipboardTextData = SDL_GetClipboardText();
+    if (SDL_HasClipboardText())
+        bd->ClipboardTextData = SDL_GetClipboardText();
+    else
+        bd->ClipboardTextData = nullptr;
     return bd->ClipboardTextData;
 }
 
@@ -202,7 +206,7 @@ static void ImGui_ImplSDL3_UpdateIme()
         SDL_StopTextInput(bd->ImeWindow);
         bd->ImeWindow = nullptr;
     }
-    if ((!bd->ImeDirty && bd->ImeWindow == window) || (window == NULL))
+    if ((!bd->ImeDirty && bd->ImeWindow == window) || (window == nullptr))
         return;
 
     // Start/update current input
@@ -750,7 +754,7 @@ static void ImGui_ImplSDL3_UpdateMouseData()
         // Note that SDL_GetGlobalMouseState() is in theory slow on X11, but this only runs on rather specific cases. If a problem we may provide a way to opt-out this feature.
         SDL_Window* hovered_window = SDL_GetMouseFocus();
         const bool is_relative_mouse_mode = SDL_GetWindowRelativeMouseMode(bd->Window);
-        if (hovered_window == NULL && bd->MouseCanUseGlobalState && bd->MouseButtonsDown == 0 && !is_relative_mouse_mode)
+        if (hovered_window == nullptr && bd->MouseCanUseGlobalState && bd->MouseButtonsDown == 0 && !is_relative_mouse_mode)
         {
             // Single-viewport mode: mouse position in client window coordinates (io.MousePos is (0,0) when the mouse is on the upper-left corner of the app window)
             // Multi-viewport mode: mouse position in OS absolute coordinates (io.MousePos is (0,0) when the mouse is on the upper-left of the primary monitor)

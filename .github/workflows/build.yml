@@ -28,7 +28,7 @@ jobs:
       VS_PATH: C:\Program Files\Microsoft Visual Studio\2022\Enterprise\
       MSBUILD_PATH: C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           path: ${{ github.workspace }}/imgui
 
@@ -274,7 +274,7 @@ jobs:
         working-directory: ${{ github.workspace }}/imgui
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         path: ${{ github.workspace }}/imgui
 
@@ -514,7 +514,7 @@ jobs:
         working-directory: ${{ github.workspace }}/imgui
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         path: ${{ github.workspace }}/imgui
 
@@ -596,7 +596,7 @@ jobs:
     name: Build - iOS
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
 
     - name: Build example_apple_metal
       run: |
@@ -608,7 +608,7 @@ jobs:
     name: Build - Emscripten
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
 
     - name: Install Dependencies
       run: |
@@ -651,7 +651,7 @@ jobs:
     name: Build - Android
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
 
     - name: Build example_android_opengl3
       run: |
@@ -670,11 +670,11 @@ jobs:
       MSBUILD_PATH: C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           path: ${{ github.workspace }}/imgui
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         continue-on-error: true
         with:
           fetch-depth: 1
@@ -725,11 +725,11 @@ jobs:
         working-directory: ${{ github.workspace }}/imgui
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         path: ${{ github.workspace }}/imgui
 
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 1
         repository: ocornut/imgui_test_engine
@@ -763,11 +763,11 @@ jobs:
 #        working-directory: ${{ github.workspace }}/imgui
 #
 #    steps:
-#    - uses: actions/checkout@v5
+#    - uses: actions/checkout@v6
 #      with:
 #        path: ${{ github.workspace }}/imgui
 #
-#    - uses: actions/checkout@v5
+#    - uses: actions/checkout@v6
 #      with:
 #        fetch-depth: 1
 #        repository: ocornut/imgui_test_engine

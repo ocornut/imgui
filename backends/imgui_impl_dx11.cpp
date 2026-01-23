@@ -18,7 +18,8 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2025-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2026-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2026-01-19: DirectX11: Added 'SamplerNearest' in ImGui_ImplDX11_RenderState. Renamed 'SamplerDefault' to 'SamplerLinear'.
 //  2025-09-18: Call platform_io.ClearRendererHandlers() on shutdown.
 //  2025-06-11: DirectX11: Added support for ImGuiBackendFlags_RendererHasTextures, for dynamic font atlas.
 //  2025-05-07: DirectX11: Honor draw_data->FramebufferScale to allow for custom backends and experiment using it (consistently with other renderer backends, even though in normal condition it is not set under Windows).
@@ -81,6 +82,7 @@ struct ImGui_ImplDX11_Data
     ID3D11Buffer*               pVertexConstantBuffer;
     ID3D11PixelShader*          pPixelShader;
     ID3D11SamplerState*         pTexSamplerLinear;
+    ID3D11SamplerState*         pTexSamplerNearest;
     ID3D11RasterizerState*      pRasterizerState;
     ID3D11BlendState*           pBlendState;
     ID3D11DepthStencilState*    pDepthStencilState;
@@ -280,7 +282,8 @@ void ImGui_ImplDX11_RenderDrawData(ImDrawData* draw_data)
     ImGui_ImplDX11_RenderState render_state;
     render_state.Device = bd->pd3dDevice;
     render_state.DeviceContext = bd->pd3dDeviceContext;
-    render_state.SamplerDefault = bd->pTexSamplerLinear;
+    render_state.SamplerLinear = bd->pTexSamplerLinear;
+    render_state.SamplerNearest = bd->pTexSamplerNearest;
     render_state.VertexConstantBuffer = bd->pVertexConstantBuffer;
     platform_io.Renderer_RenderState = &render_state;
 
@@ -588,6 +591,8 @@ bool    ImGui_ImplDX11_CreateDeviceObjects()
         desc.MinLOD = 0.f;
         desc.MaxLOD = 0.f;
         bd->pd3dDevice->CreateSamplerState(&desc, &bd->pTexSamplerLinear);
+        desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+        bd->pd3dDevice->CreateSamplerState(&desc, &bd->pTexSamplerNearest);
     }
 
     return true;
@@ -605,6 +610,7 @@ void    ImGui_ImplDX11_InvalidateDeviceObjects()
             ImGui_ImplDX11_DestroyTexture(tex);
 
     if (bd->pTexSamplerLinear)      { bd->pTexSamplerLinear->Release(); bd->pTexSamplerLinear = nullptr; }
+    if (bd->pTexSamplerNearest)     { bd->pTexSamplerNearest->Release(); bd->pTexSamplerNearest = nullptr; }
     if (bd->pIB)                    { bd->pIB->Release(); bd->pIB = nullptr; }
     if (bd->pVB)                    { bd->pVB->Release(); bd->pVB = nullptr; }
     if (bd->pBlendState)            { bd->pBlendState->Release(); bd->pBlendState = nullptr; }

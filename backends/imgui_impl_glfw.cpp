@@ -31,7 +31,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2025-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2026-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
 //  2026-01-18: [Docking] Dynamically load X11 functions to avoid -lx11 linking requirement introduced on 2025-09-10.
 //  2025-12-12: Added IMGUI_IMPL_GLFW_DISABLE_X11 / IMGUI_IMPL_GLFW_DISABLE_WAYLAND to forcefully disable either.
 //  2025-12-10: Avoid repeated glfwSetCursor()/glfwSetInputMode() calls when unnecessary. Lowers overhead for very high framerates (e.g. 10k+ FPS).
@@ -307,10 +307,10 @@ static bool ImGui_ImplGlfw_IsWayland()
     return glfwGetPlatform() == GLFW_PLATFORM_WAYLAND;
 #else
     const char* version = glfwGetVersionString();
-    if (strstr(version, "Wayland") == NULL) // e.g. Ubuntu 22.04 ships with GLFW 3.3.6 compiled without Wayland
+    if (strstr(version, "Wayland") == nullptr) // e.g. Ubuntu 22.04 ships with GLFW 3.3.6 compiled without Wayland
         return false;
 #ifdef GLFW_EXPOSE_NATIVE_X11
-    if (glfwGetX11Display() != NULL)
+    if (glfwGetX11Display() != nullptr)
         return false;
 #endif
     return true;
