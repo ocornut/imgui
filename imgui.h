@@ -3527,6 +3527,26 @@ struct ImTextureData
 // [SECTION] Font API (ImFontConfig, ImFontGlyph, ImFontAtlasFlags, ImFontAtlas, ImFontGlyphRangesBuilder, ImFont)
 //-----------------------------------------------------------------------------
 
+// Helper macro to create OpenType axis tags (e.g., IM_FONT_TAG('w','g','h','t') for weight)
+#define IM_FONT_TAG(c1,c2,c3,c4) (((ImU32)(ImU8)(c1)<<24)|((ImU32)(ImU8)(c2)<<16)|((ImU32)(ImU8)(c3)<<8)|((ImU32)(ImU8)(c4)))
+
+// Variable font axis setting (for use with ImFontConfigVarAxes)
+struct ImFontConfigVarAxis
+{
+    ImU32   Tag;    // OpenType axis tag (use IM_FONT_TAG('w','g','h','t'), etc.)
+    float   Value;  // Axis value
+    ImFontConfigVarAxis()                           { memset(this, 0, sizeof(*this)); }
+    ImFontConfigVarAxis(ImU32 tag, float value)     { Tag = tag; Value = value; }
+};
+
+// Container for variable font axis settings (pointer + count pattern)
+struct ImFontConfigVarAxes
+{
+    const ImFontConfigVarAxis*  Axes;       // Pointer to axis array (data must persist as long as font is alive)
+    int                         AxesCount;  // Number of entries in Axes array
+    ImFontConfigVarAxes()                   { memset(this, 0, sizeof(*this)); }
+};
+
 // A font input/source (we may rename this to ImFontSource in the future)
 struct ImFontConfig
 {
@@ -3556,6 +3576,9 @@ struct ImFontConfig
     float           RasterizerMultiply;     // 1.0f     // Linearly brighten (>1.0f) or darken (<1.0f) font output. Brightening small fonts may be a good workaround to make them more readable. This is a silly thing we may remove in the future.
     float           RasterizerDensity;      // 1.0f     // [LEGACY: this only makes sense when ImGuiBackendFlags_RendererHasTextures is not supported] DPI scale multiplier for rasterization. Not altering other font metrics: makes it easy to swap between e.g. a 100% and a 400% fonts for a zooming display, or handle Retina screen. IMPORTANT: If you change this it is expected that you increase/decrease font scale roughly to the inverse of this, otherwise quality may look lowered.
     float           ExtraSizeScale;         // 1.0f     // Extra rasterizer scale over SizePixels.
+
+    // Variable font settings (requires FreeType loader)
+    ImFontConfigVarAxes VarAxes;            // {}       // [Variable fonts] Generic axis settings for any OpenType axis. Use IM_FONT_TAG() macro for tags.
 
     // [Internal]
     ImFontFlags     Flags;                  // Font flags (don't use just yet, will be exposed in upcoming 1.92.X updates)
