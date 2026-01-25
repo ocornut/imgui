@@ -32,6 +32,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2026-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2026-01-25: [Docking] Improve workarounds for cases where GLFW is unable to provide any reliable monitor info. Preserve existing monitor list when none of the new one is valid. (#9195, #7902, #5683)
 //  2026-01-18: [Docking] Dynamically load X11 functions to avoid -lx11 linking requirement introduced on 2025-09-10.
 //  2025-12-12: Added IMGUI_IMPL_GLFW_DISABLE_X11 / IMGUI_IMPL_GLFW_DISABLE_WAYLAND to forcefully disable either.
 //  2025-12-10: Avoid repeated glfwSetCursor()/glfwSetInputMode() calls when unnecessary. Lowers overhead for very high framerates (e.g. 10k+ FPS).
@@ -1071,13 +1072,10 @@ static void ImGui_ImplGlfw_UpdateGamepads()
 static void ImGui_ImplGlfw_UpdateMonitors()
 {
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
-
     int monitors_count = 0;
     GLFWmonitor** glfw_monitors = glfwGetMonitors(&monitors_count);
-    if (monitors_count == 0) // Preserve existing monitor list if there are none. Happens on macOS sleeping (#5683)
-        return;
 
-    platform_io.Monitors.resize(0);
+    bool updated_monitors = false;
     for (int n = 0; n < monitors_count; n++)
     {
         ImGuiPlatformMonitor monitor;
@@ -1086,6 +1084,8 @@ static void ImGui_ImplGlfw_UpdateMonitors()
         const GLFWvidmode* vid_mode = glfwGetVideoMode(glfw_monitors[n]);
         if (vid_mode == nullptr)
             continue; // Failed to get Video mode (e.g. Emscripten does not support this function)
+        if (vid_mode->width <= 0 || vid_mode->height <= 0)
+            continue; // Failed to query suitable monitor info (#9195)
         monitor.MainPos = monitor.WorkPos = ImVec2((float)x, (float)y);
         monitor.MainSize = monitor.WorkSize = ImVec2((float)vid_mode->width, (float)vid_mode->height);
 #if GLFW_HAS_MONITOR_WORK_AREA
@@ -1099,9 +1099,15 @@ static void ImGui_ImplGlfw_UpdateMonitors()
 #endif
         float scale = ImGui_ImplGlfw_GetContentScaleForMonitor(glfw_monitors[n]);
         if (scale == 0.0f)
-            continue; // Some accessibility applications are declaring virtual monitors with a DPI of 0, see #7902.
+            continue; // Some accessibility applications are declaring virtual monitors with a DPI of 0 (#7902)
         monitor.DpiScale = scale;
         monitor.PlatformHandle = (void*)glfw_monitors[n]; // [...] GLFW doc states: "guaranteed to be valid only until the monitor configuration changes"
+
+        // Preserve existing monitor list until a valid one is added.
+        // Happens on macOS sleeping (#5683) and seemingly occasionally on Windows (#9195)
+        if (!updated_monitors)
+            platform_io.Monitors.resize(0);
+        updated_monitors = false;
         platform_io.Monitors.push_back(monitor);
     }
 }

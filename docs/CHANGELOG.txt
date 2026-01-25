@@ -240,6 +240,8 @@ Docking+Viewports Branch:
 - Backends:
   - GLFW: dynamically load X11 functions to avoid -lx11 linking requirement introduced
     in 1.92.3. (#9116, #9109) [@ramenguy99]
+  - GLFW: improve workarounds for cases where GLFW is unable to provide reliable monitor 
+    info. Preserve existing monitor list when none of the new one is valid. (#9195, #7902, #5683)
   - SDL2, SDL3: adjust IME offset to match other backends and master branch. (#6071, #1953)
   - Win32: viewports created by backend forcefully direct messages to
     DefWindowProcW() in order to support Unicode text input. (#9099, #3653, #5961) [@ulhc]
