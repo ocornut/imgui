@@ -637,6 +637,7 @@ void ImGui_ImplSDLGPU3_DestroyDeviceObjects()
     if (bd->VertexShader)       { SDL_ReleaseGPUShader(v->Device, bd->VertexShader); bd->VertexShader = nullptr; }
     if (bd->FragmentShader)     { SDL_ReleaseGPUShader(v->Device, bd->FragmentShader); bd->FragmentShader = nullptr; }
     if (bd->TexSamplerLinear)   { SDL_ReleaseGPUSampler(v->Device, bd->TexSamplerLinear); bd->TexSamplerLinear = nullptr; }
+    if (bd->TexSamplerNearest)  { SDL_ReleaseGPUSampler(v->Device, bd->TexSamplerNearest); bd->TexSamplerNearest = nullptr; }
     if (bd->Pipeline)           { SDL_ReleaseGPUGraphicsPipeline(v->Device, bd->Pipeline); bd->Pipeline = nullptr; }
 }
 
