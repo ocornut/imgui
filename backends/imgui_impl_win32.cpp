@@ -127,6 +127,7 @@ struct ImGui_ImplWin32_Data
     HMODULE                     XInputDLL;
     PFN_XInputGetCapabilities   XInputGetCapabilities;
     PFN_XInputGetState          XInputGetState;
+    DWORD                       LastPacketNumber;
 #endif
 
     ImGui_ImplWin32_Data()      { memset((void*)this, 0, sizeof(*this)); }
@@ -357,6 +358,11 @@ static void ImGui_ImplWin32_UpdateGamepads(ImGuiIO& io)
     XINPUT_GAMEPAD& gamepad = xinput_state.Gamepad;
     if (!bd->HasGamepad || bd->XInputGetState == nullptr || bd->XInputGetState(0, &xinput_state) != ERROR_SUCCESS)
         return;
+
+    if (bd->LastPacketNumber == xinput_state.dwPacketNumber)
+        return;
+    bd->LastPacketNumber = xinput_state.dwPacketNumber;
+
     io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
 
     #define IM_SATURATE(V)                      (V < 0.0f ? 0.0f : V > 1.0f ? 1.0f : V)
