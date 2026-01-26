@@ -180,6 +180,8 @@ Other Changes:
   nesting a tooltip in a disabled block. (#9180, #7640) [@RegimantasSimkus]
 - Added GetItemFlags() in public API for consistency and to expose generic
   flags of last submitted item. (#9127)
+- Log/Capture: fixed erroneously injecting extra carriage returns in output
+  buffer when ItemSpacing.y > FramePadding.y + 1.
 - Images:
   - Added style.ImageRounding, ImGuiStyleVar_ImageRounding to configure
     rounding of Image() widgets. (#2942, #845)
