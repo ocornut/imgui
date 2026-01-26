@@ -2309,15 +2309,45 @@ static void DemoWindowWidgetsSelectables()
             ImGui::TreePop();
         }
 
-        IMGUI_DEMO_MARKER("Widgets/Selectables/Rendering more items on the same line");
-        if (ImGui::TreeNode("Rendering more items on the same line"))
+        IMGUI_DEMO_MARKER("Widgets/Selectables/Multiple items on the same line");
+        if (ImGui::TreeNode("Multiple items on the same line"))
         {
-            // (1) Using SetNextItemAllowOverlap()
-            // (2) Using the Selectable() override that takes "bool* p_selected" parameter, the bool value is toggled automatically.
-            static bool selected[3] = { false, false, false };
-            ImGui::SetNextItemAllowOverlap(); ImGui::Selectable("main.c", &selected[0]); ImGui::SameLine(); ImGui::SmallButton("Link 1");
-            ImGui::SetNextItemAllowOverlap(); ImGui::Selectable("Hello.cpp", &selected[1]); ImGui::SameLine(); ImGui::SmallButton("Link 2");
-            ImGui::SetNextItemAllowOverlap(); ImGui::Selectable("Hello.h", &selected[2]); ImGui::SameLine(); ImGui::SmallButton("Link 3");
+            // (1)
+            // - Using SetNextItemAllowOverlap()
+            // - Using the Selectable() override that takes "bool* p_selected" parameter, the bool value is toggled automatically.
+            {
+                static bool selected[3] = {};
+                ImGui::SetNextItemAllowOverlap(); ImGui::Selectable("main.c", &selected[0]); ImGui::SameLine(); ImGui::SmallButton("Link 1");
+                ImGui::SetNextItemAllowOverlap(); ImGui::Selectable("hello.cpp", &selected[1]); ImGui::SameLine(); ImGui::SmallButton("Link 2");
+                ImGui::SetNextItemAllowOverlap(); ImGui::Selectable("hello.h", &selected[2]); ImGui::SameLine(); ImGui::SmallButton("Link 3");
+            }
+
+            // (2)
+            // - Using ImGuiSelectableFlags_AllowOverlap is a shortcut for calling SetNextItemAllowOverlap()
+            // - No visible label, display contents inside the selectable bounds.
+            // - We don't maintain actual selection in this example to keep things simple.
+            ImGui::Spacing();
+            {
+                static bool checked[5] = {};
+                static int selected_n = 0;
+                const float color_marker_w = ImGui::CalcTextSize("x").x;
+                for (int n = 0; n < 5; n++)
+                {
+                    ImGui::PushID(n);
+                    ImGui::AlignTextToFramePadding();
+                    if (ImGui::Selectable("##selectable", selected_n == n, ImGuiSelectableFlags_AllowOverlap))
+                        selected_n = n;
+                    ImGui::SameLine(0, 0);
+                    ImGui::Checkbox("##check", &checked[n]);
+                    ImGui::SameLine();
+                    ImVec4 color((n & 1) ? 1.0f : 0.2f, (n & 2) ? 1.0f : 0.2f, 0.2f, 1.0f);
+                    ImGui::ColorButton("##color", color, ImGuiColorEditFlags_NoTooltip, ImVec2(color_marker_w, 0));
+                    ImGui::SameLine();
+                    ImGui::Text("Some label");
+                    ImGui::PopID();
+                }
+            }
+
             ImGui::TreePop();
         }
 
@@ -2368,13 +2398,14 @@ static void DemoWindowWidgetsSelectables()
             if (winning_state)
                 ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, ImVec2(0.5f + 0.5f * cosf(time * 2.0f), 0.5f + 0.5f * sinf(time * 3.0f)));
 
+            const float size = ImGui::CalcTextSize("Sailor").x;
             for (int y = 0; y < 4; y++)
                 for (int x = 0; x < 4; x++)
                 {
                     if (x > 0)
                         ImGui::SameLine();
                     ImGui::PushID(y * 4 + x);
-                    if (ImGui::Selectable("Sailor", selected[y][x] != 0, 0, ImVec2(50, 50)))
+                    if (ImGui::Selectable("Sailor", selected[y][x] != 0, 0, ImVec2(size, size)))
                     {
                         // Toggle clicked cell + toggle neighbors
                         selected[y][x] ^= 1;
@@ -2397,7 +2428,9 @@ static void DemoWindowWidgetsSelectables()
                 "By default, Selectables uses style.SelectableTextAlign but it can be overridden on a per-item "
                 "basis using PushStyleVar(). You'll probably want to always keep your default situation to "
                 "left-align otherwise it becomes difficult to layout multiple items on a same line");
+
             static bool selected[3 * 3] = { true, false, true, false, true, false, true, false, true };
+            const float size = ImGui::CalcTextSize("(1.0,1.0)").x;
             for (int y = 0; y < 3; y++)
             {
                 for (int x = 0; x < 3; x++)
@@ -2407,7 +2440,7 @@ static void DemoWindowWidgetsSelectables()
                     sprintf(name, "(%.1f,%.1f)", alignment.x, alignment.y);
                     if (x > 0) ImGui::SameLine();
                     ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, alignment);
-                    ImGui::Selectable(name, &selected[3 * y + x], ImGuiSelectableFlags_None, ImVec2(80, 80));
+                    ImGui::Selectable(name, &selected[3 * y + x], ImGuiSelectableFlags_None, ImVec2(size, size));
                     ImGui::PopStyleVar();
                 }
             }

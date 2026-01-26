@@ -198,6 +198,8 @@ Other Changes:
   - Debug Log: fixed incorrectly printing characters in IO log when submitting
     non-ASCII values to `io.AddInputCharacter()`. (#9099)
   - Debug Log: can output to debugger on Windows. (#5855)
+- Demo:
+  - Slightly improve Selectable() demos. (#9193)
 - Backends:
   - DirectX10: added `SamplerNearest` in `ImGui_ImplDX10_RenderState`.
     (+renamed `SamplerDefault` to `SamplerLinear`, which was tagged as beta API)
