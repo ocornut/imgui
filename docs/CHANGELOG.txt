@@ -229,6 +229,8 @@ Other Changes:
      devices. (#8784) [@FelixStach]
   - Win32: handle `WM_IME_CHAR`/`WM_IME_COMPOSITION` to support Unicode inputs on
     MBCS (non-Unicode) Windows. (#9099, #3653, #5961) [@ulhc, @ocornut, @Othereum]
+  - Win32: minor optimization not submitting gamepad input if packet number has not
+    changed (reworked previous 1.92.4). (#9202, #8556) [@AhmedSamyMousa, @MidTerm-CN]
 - Examples:
    - Win32+DirectX12: ignore seemingly incorrect `D3D12_MESSAGE_ID_FENCE_ZERO_WAIT`
      warning on startups on some setups. (#9084, #9093) [@RT2Code, @LeoGautheron]
