@@ -358,11 +358,11 @@ static void ImGui_ImplWin32_UpdateGamepads(ImGuiIO& io)
     XINPUT_GAMEPAD& gamepad = xinput_state.Gamepad;
     if (!bd->HasGamepad || bd->XInputGetState == nullptr || bd->XInputGetState(0, &xinput_state) != ERROR_SUCCESS)
         return;
-
+    
     if (bd->LastPacketNumber == xinput_state.dwPacketNumber)
         return;
     bd->LastPacketNumber = xinput_state.dwPacketNumber;
-
+    
     io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
 
     #define IM_SATURATE(V)                      (V < 0.0f ? 0.0f : V > 1.0f ? 1.0f : V)
@@ -777,6 +777,10 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandlerEx(HWND hwnd, UINT msg, WPA
     case WM_SETFOCUS:
     case WM_KILLFOCUS:
         io.AddFocusEvent(msg == WM_SETFOCUS);
+        #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
+        if (msg == WM_KILLFOCUS)
+            bd->LastPacketNumber = (DWORD)-1;
+        #endif
         return 0;
     case WM_INPUTLANGCHANGE:
         ImGui_ImplWin32_UpdateKeyboardCodePage(io);
