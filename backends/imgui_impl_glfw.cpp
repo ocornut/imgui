@@ -1107,7 +1107,7 @@ static void ImGui_ImplGlfw_UpdateMonitors()
         // Happens on macOS sleeping (#5683) and seemingly occasionally on Windows (#9195)
         if (!updated_monitors)
             platform_io.Monitors.resize(0);
-        updated_monitors = false;
+        updated_monitors = true;
         platform_io.Monitors.push_back(monitor);
     }
 }
