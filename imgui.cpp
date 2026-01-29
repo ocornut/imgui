@@ -5365,7 +5365,7 @@ void ImGui::StopMouseMovingWindow()
         // Try to merge the window back into the main viewport.
         // This works because MouseViewport should be != MovingWindow->Viewport on release (as per code in UpdateViewports)
         if (g.ConfigFlagsCurrFrame & ImGuiConfigFlags_ViewportsEnable)
-            UpdateTryMergeWindowIntoHostViewport(window, g.MouseViewport);
+            UpdateTryMergeWindowIntoHostViewport(window->RootWindowDockTree, g.MouseViewport);
 
         // Restore the mouse viewport so that we don't hover the viewport _under_ the moved window during the frame we released the mouse button.
         if (!IsDragDropPayloadBeingAccepted())
@@ -16553,6 +16553,7 @@ static bool IsViewportAbove(ImGuiViewportP* potential_above, ImGuiViewportP* pot
 static bool ImGui::UpdateTryMergeWindowIntoHostViewport(ImGuiWindow* window, ImGuiViewportP* viewport_dst)
 {
     ImGuiContext& g = *GImGui;
+    IM_ASSERT(window == window->RootWindowDockTree);
     ImGuiViewportP* viewport_src = window->Viewport; // Current viewport
     if (viewport_src == viewport_dst)
         return false;
@@ -16576,6 +16577,7 @@ static bool ImGui::UpdateTryMergeWindowIntoHostViewport(ImGuiWindow* window, ImG
     }
 
     // Move to the existing viewport, Move child/hosted windows as well (FIXME-OPT: iterate child)
+    IMGUI_DEBUG_LOG_VIEWPORT("[viewport] Window '%s' merge into Viewport 0X%08X\n", window->Name, viewport_dst->ID);
     if (window->ViewportOwned)
         for (int n = 0; n < g.Windows.Size; n++)
             if (g.Windows[n]->Viewport == viewport_src)

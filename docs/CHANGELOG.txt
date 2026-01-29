@@ -245,6 +245,10 @@ Docking+Viewports Branch:
   - Demo: rework 'Dockspace' demo to increase clarity and put more emphasis on the
     basic path of simply calling `DockSpaceOverViewport()`.
 - Viewports:
+  - Fixed a regression in 1.92.4 where partially moving a floating docking node
+    with horizontal/vertical split over the main viewport would set the window in
+    an invalid state in some situations, making user unable to further interact
+    with the window.
   - Fixed a regression in 1.92.4 which could cause combos/popups window from
     appearing under their parent viewport if their geometry overlapped the main
     viewport. (#8948, #9172, #9131, #9128)
