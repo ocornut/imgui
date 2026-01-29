@@ -238,6 +238,9 @@ Other Changes:
 Docking+Viewports Branch:
 
 - Docking:
+  - Fixed various rendering issues and ability to have rounded floating dock nodes.
+    (#6993, #6151) - please note that rounding is still disabled on standalone
+    viewports.
   - Fixed implicit/fallback "Debug" window from staying visible if once docked. (#9151)
   - Demo: rework 'Dockspace' demo to increase clarity and put more emphasis on the
     basic path of simply calling `DockSpaceOverViewport()`.
