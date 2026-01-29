@@ -7330,7 +7330,7 @@ static int ImGui::UpdateWindowManualResize(ImGuiWindow* window, int* border_hove
         if (nav_resize_dir.x != 0.0f || nav_resize_dir.y != 0.0f)
         {
             const float NAV_RESIZE_SPEED = 600.0f;
-            const float resize_step = NAV_RESIZE_SPEED * g.IO.DeltaTime * ImMin(g.IO.DisplayFramebufferScale.x, g.IO.DisplayFramebufferScale.y);
+            const float resize_step = NAV_RESIZE_SPEED * g.IO.DeltaTime * GetScale();
             g.NavWindowingAccumDeltaSize += nav_resize_dir * resize_step;
             g.NavWindowingAccumDeltaSize = ImMax(g.NavWindowingAccumDeltaSize, clamp_rect.Min - window->Pos - window->Size); // We need Pos+Size >= clmap_rect.Min, so Size >= clmap_rect.Min - Pos, so size_delta >= clmap_rect.Min - window->Pos - window->Size
             g.NavWindowingToggleLayer = false;
@@ -7486,10 +7486,12 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
                 bg_col = 0;
             if (bg_col & IM_COL32_A_MASK)
             {
+                ImRect bg_rect(window->Pos + ImVec2(0, window->TitleBarHeight), window->Pos + window->Size);
+                ImDrawFlags bg_rounding_flags = (flags & ImGuiWindowFlags_NoTitleBar) ? 0 : ImDrawFlags_RoundCornersBottom;
                 ImDrawList* bg_draw_list = window->DockIsActive ? window->DockNode->HostWindow->DrawList : window->DrawList;
                 if (window->DockIsActive)
                     bg_draw_list->ChannelsSetCurrent(DOCKING_HOST_DRAW_CHANNEL_BG);
-                bg_draw_list->AddRectFilled(window->Pos + ImVec2(0, window->TitleBarHeight), window->Pos + window->Size, bg_col, window_rounding, (flags & ImGuiWindowFlags_NoTitleBar) ? 0 : ImDrawFlags_RoundCornersBottom);
+                bg_draw_list->AddRectFilled(bg_rect.Min, bg_rect.Max, bg_col, window_rounding, bg_rounding_flags);
                 if (window->DockIsActive)
                     bg_draw_list->ChannelsSetCurrent(DOCKING_HOST_DRAW_CHANNEL_FG);
             }
@@ -11121,6 +11123,8 @@ void ImGui::UpdateInputEvents(bool trickle_fast_inputs)
 #endif
 
     // Remaining events will be processed on the next frame
+    // FIXME-MULTITHREADING: io.AddKeyEvent() etc. calls are mostly thread-safe apart from the fact they push to this
+    // queue which may be resized here. Could potentially rework this to narrow down the section needing a mutex? (#5772)
     if (event_n == g.InputEventsQueue.Size)
         g.InputEventsQueue.resize(0);
     else
@@ -13477,6 +13481,7 @@ void ImGui::BringWindowToFocusFront(ImGuiWindow* window)
 }
 
 // Note technically focus related but rather adjacent and close to BringWindowToFocusFront()
+// FIXME-FOCUS: Could opt-in/opt-out enable modal check like in FocusWindow().
 void ImGui::BringWindowToDisplayFront(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
@@ -15245,7 +15250,7 @@ static void ImGui::NavUpdateWindowing()
         if (nav_move_dir.x != 0.0f || nav_move_dir.y != 0.0f)
         {
             const float NAV_MOVE_SPEED = 800.0f;
-            const float move_step = NAV_MOVE_SPEED * io.DeltaTime * ImMin(io.DisplayFramebufferScale.x, io.DisplayFramebufferScale.y);
+            const float move_step = NAV_MOVE_SPEED * io.DeltaTime * GetScale();
             g.NavWindowingAccumDeltaPos += nav_move_dir * move_step;
             g.NavHighlightItemUnderNav = true;
             ImVec2 accum_floored = ImTrunc(g.NavWindowingAccumDeltaPos);
@@ -15800,7 +15805,7 @@ void ImGui::LogRenderedText(const ImVec2* ref_pos, const char* text, const char*
     if (!text_end)
         text_end = FindRenderedTextEnd(text, text_end);
 
-    const bool log_new_line = ref_pos && (ref_pos->y > g.LogLinePosY + g.Style.FramePadding.y + 1);
+    const bool log_new_line = ref_pos && (ref_pos->y > g.LogLinePosY + ImMax(g.Style.FramePadding.y, g.Style.ItemSpacing.y) + 1);
     if (ref_pos)
         g.LogLinePosY = ref_pos->y;
     if (log_new_line)

@@ -172,6 +172,10 @@ Other Changes:
   - Fixed remote/shortcut InputText() not teleporting mouse cursor when
     nav cursor is visible and `io.ConfigNavMoveSetMousePos` is enabled.
   - Fixed a looping/wrapping issue when done in menu layer. (#9178)
+  - Fixed speed scale for resizing/moving with keyboard/gamepad. We incorrectly
+    used io.DisplayFramebufferScale (very old code), effectively making those
+    actions faster on macOS/iOS retina screens.
+    (changed this to use a style scale factor that's not fully formalized yet)
 - Scrollbar: fixed a codepath leading to a divide-by-zero (which would not be
   noticeable by user but detected by sanitizers). (#9089) [@judicaelclair]
 - InvisibleButton: allow calling with size (0,0) to fit to available content 
@@ -180,6 +184,8 @@ Other Changes:
   nesting a tooltip in a disabled block. (#9180, #7640) [@RegimantasSimkus]
 - Added GetItemFlags() in public API for consistency and to expose generic
   flags of last submitted item. (#9127)
+- Log/Capture: fixed erroneously injecting extra carriage returns in output
+  buffer when ItemSpacing.y > FramePadding.y + 1.
 - Images:
   - Added style.ImageRounding, ImGuiStyleVar_ImageRounding to configure
     rounding of Image() widgets. (#2942, #845)
@@ -198,6 +204,8 @@ Other Changes:
   - Debug Log: fixed incorrectly printing characters in IO log when submitting
     non-ASCII values to `io.AddInputCharacter()`. (#9099)
   - Debug Log: can output to debugger on Windows. (#5855)
+- Demo:
+  - Slightly improve Selectable() demos. (#9193)
 - Backends:
   - DirectX10: added `SamplerNearest` in `ImGui_ImplDX10_RenderState`.
     (+renamed `SamplerDefault` to `SamplerLinear`, which was tagged as beta API)
@@ -221,6 +229,8 @@ Other Changes:
      devices. (#8784) [@FelixStach]
   - Win32: handle `WM_IME_CHAR`/`WM_IME_COMPOSITION` to support Unicode inputs on
     MBCS (non-Unicode) Windows. (#9099, #3653, #5961) [@ulhc, @ocornut, @Othereum]
+  - Win32: minor optimization not submitting gamepad input if packet number has not
+    changed (reworked previous 1.92.4). (#9202, #8556) [@AhmedSamyMousa, @MidTerm-CN]
 - Examples:
    - Win32+DirectX12: ignore seemingly incorrect `D3D12_MESSAGE_ID_FENCE_ZERO_WAIT`
      warning on startups on some setups. (#9084, #9093) [@RT2Code, @LeoGautheron]
