@@ -9659,7 +9659,7 @@ bool    ImGui::BeginTabBarEx(ImGuiTabBar* tab_bar, const ImRect& tab_bar_bb, ImG
         return false;
 
     IM_ASSERT(tab_bar->ID != 0);
-    if ((flags & ImGuiTabBarFlags_DockNode) == 0)
+    if ((flags & ImGuiTabBarFlags_DockNode) == 0) // Already done
         PushOverrideID(tab_bar->ID);
 
     // Add to stack
@@ -9742,7 +9742,7 @@ void    ImGui::EndTabBar()
         window->DC.CursorPos = tab_bar->BackupCursorPos;
 
     tab_bar->LastTabItemIdx = -1;
-    if ((tab_bar->Flags & ImGuiTabBarFlags_DockNode) == 0)
+    if ((tab_bar->Flags & ImGuiTabBarFlags_DockNode) == 0) // Already done
         PopID();
 
     g.CurrentTabBarStack.pop_back();

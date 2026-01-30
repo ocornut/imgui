@@ -19406,7 +19406,7 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
     tab_bar_flags |= ImGuiTabBarFlags_DrawSelectedOverline;
     if (!host_window->Collapsed && is_focused)
         tab_bar_flags |= ImGuiTabBarFlags_IsFocused;
-    tab_bar->ID = GetID("#TabBar");
+    tab_bar->ID = node->ID;// GetID("#TabBar");
     tab_bar->SeparatorMinX = node->Pos.x + host_window->WindowBorderSize; // Separator cover the whole node width
     tab_bar->SeparatorMaxX = node->Pos.x + node->Size.x - host_window->WindowBorderSize;
     BeginTabBarEx(tab_bar, tab_bar_rect, tab_bar_flags);
