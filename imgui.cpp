@@ -17631,6 +17631,7 @@ namespace ImGui
     // ImGuiDockContext
     static ImGuiDockNode*   DockContextAddNode(ImGuiContext* ctx, ImGuiID id);
     static void             DockContextRemoveNode(ImGuiContext* ctx, ImGuiDockNode* node, bool merge_sibling_into_parent_node);
+    static void             DockContextDeleteNode(ImGuiContext* ctx, ImGuiDockNode* node);
     static void             DockContextQueueNotifyRemovedNode(ImGuiContext* ctx, ImGuiDockNode* node);
     static void             DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req);
     static void             DockContextPruneUnusedSettingsNodes(ImGuiContext* ctx);
@@ -17736,7 +17737,7 @@ void ImGui::DockContextShutdown(ImGuiContext* ctx)
     ImGuiDockContext* dc = &ctx->DockContext;
     for (int n = 0; n < dc->Nodes.Data.Size; n++)
         if (ImGuiDockNode* node = (ImGuiDockNode*)dc->Nodes.Data[n].val_p)
-            IM_DELETE(node);
+            DockContextDeleteNode(ctx, node);
 }
 
 void ImGui::DockContextClearNodes(ImGuiContext* ctx, ImGuiID root_id, bool clear_settings_refs)
@@ -17889,7 +17890,6 @@ static ImGuiDockNode* ImGui::DockContextAddNode(ImGuiContext* ctx, ImGuiID id)
 static void ImGui::DockContextRemoveNode(ImGuiContext* ctx, ImGuiDockNode* node, bool merge_sibling_into_parent_node)
 {
     ImGuiContext& g = *ctx;
-    ImGuiDockContext* dc = &ctx->DockContext;
 
     IMGUI_DEBUG_LOG_DOCKING("[docking] DockContextRemoveNode 0x%08X\n", node->ID);
     IM_ASSERT(DockContextFindNodeByID(ctx, node->ID) == node);
@@ -17912,9 +17912,19 @@ static void ImGui::DockContextRemoveNode(ImGuiContext* ctx, ImGuiDockNode* node,
         for (int n = 0; parent_node && n < IM_COUNTOF(parent_node->ChildNodes); n++)
             if (parent_node->ChildNodes[n] == node)
                 node->ParentNode->ChildNodes[n] = NULL;
-        dc->Nodes.SetVoidPtr(node->ID, NULL);
-        IM_DELETE(node);
+        DockContextDeleteNode(ctx, node);
     }
+}
+
+// Raw-ish delete
+static void ImGui::DockContextDeleteNode(ImGuiContext* ctx, ImGuiDockNode* node)
+{
+    ImGuiDockContext* dc = &ctx->DockContext;
+    if (node->TabBar)
+        IM_DELETE(node->TabBar);
+    node->TabBar = NULL;
+    dc->Nodes.SetVoidPtr(node->ID, NULL);
+    IM_DELETE(node);
 }
 
 static int IMGUI_CDECL DockNodeComparerDepthMostFirst(const void* lhs, const void* rhs)
@@ -18411,8 +18421,7 @@ ImGuiDockNode::ImGuiDockNode(ImGuiID id)
 
 ImGuiDockNode::~ImGuiDockNode()
 {
-    IM_DELETE(TabBar);
-    TabBar = NULL;
+    IM_ASSERT(TabBar == NULL);
     ChildNodes[0] = ChildNodes[1] = NULL;
 }
 
@@ -20021,15 +20030,9 @@ void ImGui::DockNodeTreeMerge(ImGuiContext* ctx, ImGuiDockNode* parent_node, ImG
     parent_node->UpdateMergedFlags();
 
     if (child_0)
-    {
-        ctx->DockContext.Nodes.SetVoidPtr(child_0->ID, NULL);
-        IM_DELETE(child_0);
-    }
+        DockContextDeleteNode(ctx, child_0);
     if (child_1)
-    {
-        ctx->DockContext.Nodes.SetVoidPtr(child_1->ID, NULL);
-        IM_DELETE(child_1);
-    }
+        DockContextDeleteNode(ctx, child_1);
 }
 
 // Update Pos/Size for a node hierarchy (don't affect child Windows yet)
