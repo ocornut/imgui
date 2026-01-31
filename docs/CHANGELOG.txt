@@ -201,6 +201,8 @@ Other Changes:
   flags of last submitted item. (#9127)
 - Log/Capture: fixed erroneously injecting extra carriage returns in output
   buffer when ItemSpacing.y > FramePadding.y + 1.
+- Misc: fixed build on ARM64/ARM64EC targets trying to use SSE/immintrin.h.
+  (#9209, #5943, #4091) [@navvyswethgraphics]
 - Images:
   - Added style.ImageRounding, ImGuiStyleVar_ImageRounding to configure
     rounding of Image() widgets. (#2942, #845)
