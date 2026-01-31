@@ -59,18 +59,43 @@ Index of this file:
 #include <math.h>       // sqrtf, fabsf, fmodf, powf, floorf, ceilf, cosf, sinf
 #include <limits.h>     // INT_MIN, INT_MAX
 
-// Enable SSE intrinsics if available
-#if (defined __SSE__ || defined __x86_64__ || defined _M_X64 || (defined(_M_IX86_FP) && (_M_IX86_FP >= 1))) && !defined(IMGUI_DISABLE_SSE)
+// Include compiler-specific intrinsics header 
+#if !defined(IMGUI_DISABLE_SIMD)
+#if defined(_MSC_VER)
+#include <intrin.h>
+#elif defined(__GNUC__) || defined(__clang__)
+#include <x86intrin.h>
+#endif
+#endif
+
+// Enable SIMD x86-64 intrinsics if available
+#if (defined __x86_64__ || defined _M_X64) && !defined(IMGUI_DISABLE_SIMD)
+#if (defined __SSE__  || (defined(_M_IX86_FP) && (_M_IX86_FP >= 1))) && !defined(IMGUI_DISABLE_SSE)
 #define IMGUI_ENABLE_SSE
-#include <immintrin.h>
-#if (defined __AVX__ || defined __SSE4_2__)
+#endif
+#if defined (__SSE4_2__) && !defined(IMGUI_DISABLE_SSE4_2)
 #define IMGUI_ENABLE_SSE4_2
-#include <nmmintrin.h>
+#endif
+#if (defined __AVX__) && !defined(IMGUI_DISABLE_AVX)
+#define IMGUI_ENABLE_AVX
+#endif
+#if (defined __AVX2__) && !defined(IMGUI_DISABLE_AVX2)
+#define IMGUI_ENABLE_AVX2
 #endif
 #endif
+
 // Emscripten has partial SSE 4.2 support where _mm_crc32_u32 is not available. See https://emscripten.org/docs/porting/simd.html#id11 and #8213
 #if defined(IMGUI_ENABLE_SSE4_2) && !defined(IMGUI_USE_LEGACY_CRC32_ADLER) && !defined(__EMSCRIPTEN__)
 #define IMGUI_ENABLE_SSE4_2_CRC
+#endif
+
+// Only AVX2 supports integer and byte instructions for 256-bit registers. Implementation this on AVX1 is not possible.
+#if defined(IMGUI_ENABLE_AVX2)
+#define IMGUI_ENABLE_AVX2_IMSTRLEN
+#define IMGUI_ENABLE_AVX2_IMMEMCHR
+#elif defined(IMGUI_ENABLE_AVX) || defined(IMGUI_ENABLE_SSE)
+#define IMGUI_ENABLE_SSE_IMSTRLEN
+#define IMGUI_ENABLE_SSE_IMMEMCHR
 #endif
 
 // Visual Studio warnings
@@ -382,8 +407,8 @@ inline int              ImUpperPowerOfTwo(int v)            { v--; v |= v >> 1; 
 inline unsigned int     ImCountSetBits(unsigned int v)      { unsigned int count = 0; while (v > 0) { v = v & (v - 1); count++; } return count; }
 
 // Helpers: String
-#define ImStrlen strlen
-#define ImMemchr memchr
+IMGUI_API size_t        ImStrlen(const char* str);                                          // Compute the length of a null-terminated string.
+IMGUI_API const void*   ImMemchr(const void* buf, int val, size_t count);                   // Find first occurrence of 'val' in buffer given length.
 IMGUI_API int           ImStricmp(const char* str1, const char* str2);                      // Case insensitive compare.
 IMGUI_API int           ImStrnicmp(const char* str1, const char* str2, size_t count);       // Case insensitive compare to a certain count.
 IMGUI_API void          ImStrncpy(char* dst, const char* src, size_t count);                // Copy to a certain count and always zero terminate (strncpy doesn't).
