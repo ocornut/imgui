@@ -999,11 +999,13 @@ static VkPipeline ImGui_ImplVulkan_CreatePipeline(VkDevice device, const VkAlloc
     blend_info.attachmentCount = 1;
     blend_info.pAttachments = color_attachment;
 
-    VkDynamicState dynamic_states[2] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+    ImVector<VkDynamicState> dynamic_states = info->ExtraDynamicStates;
+    dynamic_states.push_back(VK_DYNAMIC_STATE_VIEWPORT);
+    dynamic_states.push_back(VK_DYNAMIC_STATE_SCISSOR);
     VkPipelineDynamicStateCreateInfo dynamic_state = {};
     dynamic_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    dynamic_state.dynamicStateCount = (uint32_t)IM_COUNTOF(dynamic_states);
-    dynamic_state.pDynamicStates = dynamic_states;
+    dynamic_state.dynamicStateCount = dynamic_states.size();
+    dynamic_state.pDynamicStates = dynamic_states.begin();
 
     VkGraphicsPipelineCreateInfo create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
