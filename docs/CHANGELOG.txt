@@ -102,6 +102,8 @@ Other Changes:
   - Emscripten: fixed minor rendering issues with our HTML shell. (#9281) [@ypujante]
     - hidden small blue outline when canvas is focused on Chrome.
     - hidden scrollbar in Firefox.
+  - Vulkan: added ImGui_ImplVulkan_PipelineInfo::ExtraDynamicStates[] to allow specifying
+    extra dynamic states to add when creating the VkPipeline. (#9211) [@DziubanMaciej]
   - WebGPU: fixed undefined behaviors in example code for requesting adapter
     and device. (#9246, #9256) [@r-lyeh]
   - GLFW/SDL2/SDL3+WebGPU: removed suport for Emscripten <4.0.10. (#9281) [@ypujante]
