@@ -179,6 +179,7 @@ Other Changes:
     used io.DisplayFramebufferScale (very old code), effectively making those
     actions faster on macOS/iOS retina screens.
     (changed this to use a style scale factor that's not fully formalized yet)
+  - Fixed an UBSan warning when using in a ListClipper region . (#9160)
 - Scrollbar: fixed a codepath leading to a divide-by-zero (which would not be
   noticeable by user but detected by sanitizers). (#9089) [@judicaelclair]
 - InvisibleButton: allow calling with size (0,0) to fit to available content 
