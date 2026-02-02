@@ -78,6 +78,9 @@ Breaking Changes:
     has already been rendered. (#9162) [@ocornut, @cyfewlp]
   - Removed ImFontConfig::PixelSnapV added in 1.92 which turns out is unnecessary
     (and misdocumented). Post-rescale GlyphOffset is always rounded.
+  - Fixed an issue where using PushFont() from the implicit/fallback "Debug" window when
+    its recorded state is collapsed would incorrectly early out. This would break e.g. using
+    direct draw-list calls such as GetForegroundDrawList() with current font. (#9210, #8865)
  - Popups: changed compile-time 'ImGuiPopupFlags popup_flags = 1' default value to be '= 0' for
    BeginPopupContextItem(), BeginPopupContextWindow(), BeginPopupContextVoid(), OpenPopupOnItemClick().
    The default value has same meaning before and after. (#9157, #9146)
