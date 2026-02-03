@@ -3972,6 +3972,9 @@ void ImGui::RenderNavCursor(const ImRect& bb, ImGuiID id, ImGuiNavRenderCursorFl
         return;
     if (id == g.LastItemData.ID && (g.LastItemData.ItemFlags & ImGuiItemFlags_NoNav))
         return;
+
+    // We don't early out on 'window->Flags & ImGuiWindowFlags_NoNavInputs' because it would be inconsistent with
+    // other code directly checking NavCursorVisible. Instead we aim for NavCursorVisible to always be false.
     ImGuiWindow* window = g.CurrentWindow;
     if (window->DC.NavHideHighlightOneFrame)
         return;
@@ -12953,7 +12956,9 @@ void ImGui::FocusTopMostWindowUnderOne(ImGuiWindow* under_this_window, ImGuiWind
 void ImGui::SetNavCursorVisible(bool visible)
 {
     ImGuiContext& g = *GImGui;
-    if (g.IO.ConfigNavCursorVisibleAlways)
+    if (g.NavWindow && (g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs))
+        visible = false;
+    else if (g.IO.ConfigNavCursorVisibleAlways)
         visible = true;
     g.NavCursorVisible = visible;
 }
@@ -12962,7 +12967,9 @@ void ImGui::SetNavCursorVisible(bool visible)
 void ImGui::SetNavCursorVisibleAfterMove()
 {
     ImGuiContext& g = *GImGui;
-    if (g.IO.ConfigNavCursorVisibleAuto)
+    if (g.NavWindow && (g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs))
+        g.NavCursorVisible = false;
+    else if (g.IO.ConfigNavCursorVisibleAuto)
         g.NavCursorVisible = true;
     g.NavHighlightItemUnderNav = g.NavMousePosDirty = true;
 }
@@ -13906,7 +13913,7 @@ void ImGui::NavUpdateCreateMoveRequest()
         IMGUI_DEBUG_LOG_NAV("[nav] NavInitRequest: from move, window \"%s\", layer=%d\n", window ? window->Name : "<NULL>", g.NavLayer);
         g.NavInitRequest = g.NavInitRequestFromMove = true;
         g.NavInitResult.ID = 0;
-        if (g.IO.ConfigNavCursorVisibleAuto)
+        if (g.IO.ConfigNavCursorVisibleAuto) // NO check for _NoNavInputs here as we assume MoveRequests cannot be created.
             g.NavCursorVisible = true;
     }
 
