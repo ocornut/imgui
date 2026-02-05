@@ -116,15 +116,23 @@ Breaking Changes:
 Other Changes:
 
 - Fonts:
-  - Added AddFontDefaultVector(): a new embedded scalable font!
-    Based on ProggyVector by Tristan Grimmer, the same author as our good-old ProggyClean.
-    The font data was carefully subsetted, trimmed and compressed so the embedded
-    data is ~18 KB. Embedding a scalable default font ensures that Dear ImGui can
-    be easily and readily used in all contexts, even without file system access.
-    As always you can opt-out of the embedded font data if desired. A sizing tweak
-    was also applied to ensure the new font is a closer match to the classic font.
+  - Added AddFontDefaultVector(): a new embedded monospace scalable font: ProggyForever!
+    From https://github.com/ocornut/proggyforever:
+      "ProggyForever is an MIT-licensed partial reimplementation of the ProggyVector
+       font (originally by Tristan Grimmer), which itself is a vector-based
+       reinterpretation of the ProggyClean bitmap font that happily served as
+       Dear ImGui default font for over 10 years." [...]
+      "I commissioned Thiebault Courot to recreate this, applied various minor tweaks
+       and fixes, and reworked his editing pipeline toward shipping FontForge source
+       files so we can allow and track future changes."
+    - TL;DR; there was no strictly MIT-licensed matching font. We made it!
+    - The font data was carefully subsetted, trimmed and compressed so the embedded
+      data is ~14 KB. Embedding a scalable default font ensures that Dear ImGui can
+      be easily and readily used in all contexts, even without file system access.
+    - As always you can opt-out of the embedded font data if desired.
   - AddFontDefault() now automatically selects an embedded font between
     the classic pixel-looking one and the new scalable one.
+    Prefer calling AddFontDefaultVector() or AddFontDefaultBitmap() explicitely.
   - Fixed an issue related to EllipsisChar handling, while changing
     font loader or font loader flags dynamically in Style->Fonts menus.
   - imgui_freetype: fixed overwriting ImFontConfig::PixelSnapH when hinting
