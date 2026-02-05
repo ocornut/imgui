@@ -4699,7 +4699,7 @@ static bool ImGui_ImplStbTrueType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig
     {
         // FIXME-NEWFONTS: reevaluate how to use sizing metrics
         // FIXME-NEWFONTS: make use of line gap value
-        float scale_for_layout = bd_font_data->ScaleFactor * baked->Size;
+        float scale_for_layout = bd_font_data->ScaleFactor * baked->Size / src->ExtraSizeScale;
         int unscaled_ascent, unscaled_descent, unscaled_line_gap;
         stbtt_GetFontVMetrics(&bd_font_data->FontInfo, &unscaled_ascent, &unscaled_descent, &unscaled_line_gap);
         baked->Ascent = ImCeil(unscaled_ascent * scale_for_layout);
