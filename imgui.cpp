@@ -7557,7 +7557,7 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
         else
         {
             // BeginPopup/BeginMenu
-            is_window_selected &= g.OpenPopupStack.back().Window == window;
+            is_window_selected &= g.OpenPopupStack.back().Window == window && g.WindowsFocusOrder.back() == window->RootWindow;
         }
         // When docked, only show selected border if the dock node is focused
         is_window_selected &= (!window->DockIsActive || window->DockNode->IsFocused);
