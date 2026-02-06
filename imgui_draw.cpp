@@ -3695,7 +3695,7 @@ void ImFontAtlasFontDestroySourceData(ImFontAtlas* atlas, ImFontConfig* src)
     IM_UNUSED(atlas);
     // IF YOU GET A CRASH IN THE IM_FREE() CALL HERE AND USED AddFontFromMemoryTTF():
     // - DUE TO LEGACY REASON AddFontFromMemoryTTF() TRANSFERS MEMORY OWNERSHIP BY DEFAULT.
-    // - IT WILL THEREFORE CRASH WHEN PASSED DATA WHICH MAY NOT BE FREEED BY IMGUI.
+    // - IT WILL THEREFORE CRASH WHEN PASSED DATA WHICH MAY NOT BE FREED BY IMGUI.
     // - USE `ImFontConfig font_cfg; font_cfg.FontDataOwnedByAtlas = false; io.Fonts->AddFontFromMemoryTTF(....., &cfg);` to disable passing ownership/
     // WE WILL ADDRESS THIS IN A FUTURE REWORK OF THE API.
     if (src->FontDataOwnedByAtlas)

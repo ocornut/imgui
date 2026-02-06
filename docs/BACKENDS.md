@@ -337,7 +337,7 @@ void MyImGuiBackend_UpdateTexture(ImTextureData* tex)
     {
         // Create texture based on tex->Width, tex->Height.
         // - Most backends only support tex->Format == ImTextureFormat_RGBA32.
-        // - Backends for particularly memory constrainted platforms may support tex->Format == ImTextureFormat_Alpha8.
+        // - Backends for particularly memory constrained platforms may support tex->Format == ImTextureFormat_Alpha8.
 
         // Upload all texture pixels
         // - Read from our CPU-side copy of the texture and copy to your graphics API.

@@ -95,7 +95,7 @@ else() # Native/Desktop build
         else()
             set(IMGUI_DAWN_DIR CACHE PATH "Path to Dawn repository")
 
-            option(DAWN_USE_GLFW OFF) # disable buildin GLFW in DAWN when we use SDL2 / SDL3
+            option(DAWN_USE_GLFW OFF) # disable builtin GLFW in DAWN when we use SDL2 / SDL3
 
             option(DAWN_FETCH_DEPENDENCIES "Use fetch_dawn_dependencies.py as an alternative to using depot_tools" ON)
             set(DAWN_BUILD_MONOLITHIC_LIBRARY "STATIC" CACHE STRING "Build monolithic library: SHARED, STATIC, or OFF.")
