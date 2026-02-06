@@ -7210,6 +7210,8 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
     window->SkipItems = false;
     window->DC.NavLayerCurrent = ImGuiNavLayer_Menu;
 
+    const bool enable_labeled_border_background_hack = true;
+
     // Draw window + handle manual resize
     // As we highlight the title bar when want_focus is set, multiple reappearing windows will have their title bar highlighted on their reappearing frame.
     const float window_rounding = window->WindowRounding;
@@ -7241,6 +7243,14 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
             if (bg_col & IM_COL32_A_MASK)
             {
                 ImRect bg_rect = GetWindowBorderRect(window);
+                if (enable_labeled_border_background_hack && WindowUsesLabeledBorder(window) && window->WindowBorderSize == 1.0f)
+                {
+                    // Hack: The border of the window is centered on the edge of the rect, with the size equaly spread both sides of the edge.
+                    // But if the border is 1px wide, the background should not overlap the border (it looks better).
+                    // -> Reduce the backgroud rect to be inside the boders in this case.
+                    bg_rect.Min += ImVec2(1, 1);
+                    bg_rect.Max -= ImVec2(1, 1);
+                }
                 ImDrawFlags bg_rounding_flags = (flags & ImGuiWindowFlags_NoTitleBar) ? 0 : ImDrawFlags_RoundCornersBottom;
                 ImDrawList* bg_draw_list = window->DrawList;
                 bg_draw_list->AddRectFilled(bg_rect.Min, bg_rect.Max, bg_col, window_rounding, bg_rounding_flags);
@@ -7260,6 +7270,11 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
             ImRect menu_bar_rect = window->MenuBarRect();
             menu_bar_rect.ClipWith(window->Rect());  // Soft clipping, in particular child window don't have minimum size covering the menu bar so this is useful for them.
             menu_bar_rect.Min.y -= (window->TitleBarHeight - window->BorderDecoOffset);
+            if (enable_labeled_border_background_hack && WindowUsesLabeledBorder(window) && window->WindowBorderSize == 1.0f)
+            {
+                // See background Hack above
+                menu_bar_rect.Min.y += 1;
+            }
             window->DrawList->AddRectFilled(menu_bar_rect.Min, menu_bar_rect.Max, GetColorU32(ImGuiCol_MenuBarBg), (flags & ImGuiWindowFlags_NoTitleBar) ? window_rounding : 0.0f, ImDrawFlags_RoundCornersTop);
             if (style.FrameBorderSize > 0.0f && menu_bar_rect.Max.y < window->Pos.y + window->Size.y)
                 window->DrawList->AddLine(menu_bar_rect.GetBL() + ImVec2(window_border_size * 0.5f, 0.0f), menu_bar_rect.GetBR() - ImVec2(window_border_size * 0.5f, 0.0f), GetColorU32(ImGuiCol_Border), style.FrameBorderSize);
