@@ -89,7 +89,7 @@ Once the procedure for the specific builder is generated, the build command is *
 ---
 
 ### CMake useful options
-#### Generator types (alternative to **ninja** bulder):
+#### Generator types (alternative to **ninja** builder):
 - `-G Ninja` to build with __ninja__ builder
 - `-G "Unix Makefiles"` to build with __make__ builder
 - `-G "Visual Studio 17 2022" -A x64` to create a VS 2022 solution (.sln) file, Windows only 

@@ -346,7 +346,7 @@ Other Changes:
      debug/metrics window is not in the same viewport as the table.
 - Backends:
   - NULL: added imgui_impl_null platform/renderer backend.
-    This is designed if you need to run e.g. context with no input or no ouput.
+    This is designed if you need to run e.g. context with no input or no output.
   - GLFW: fixed building on Linux platforms where Wayland headers
     are not available. (#9024, #8969, #8921, #8920) [@jagot]
   - GLFW: lower minimum requirement from GLFW 3.1 to GLFW 3.0. Though
@@ -828,7 +828,7 @@ Breaking changes:
       which font input is providing which glyph.
 - Fonts: **IMPORTANT** on Thread Safety:
   - A few functions such as font->CalcTextSizeA() were by sheer luck (== accidentally)
-    thread-safe even thou we had never provided that guarantee before. They are
+    thread-safe even though we had never provided that guarantee before. They are
     definitively not thread-safe anymore as new glyphs may be loaded.
 
 - Textures:

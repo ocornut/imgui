@@ -3815,7 +3815,7 @@ struct ImFontBaked
     unsigned int                MetricsTotalSurface:26;// 3  // out // Total surface in pixels to get an idea of the font rasterization/texture cost (not exact, we approximate the cost of padding between glyphs)
     unsigned int                WantDestroy:1;         // 0  //     // Queued for destroy
     unsigned int                LoadNoFallback:1;      // 0  //     // Disable loading fallback in lower-level calls.
-    unsigned int                LoadNoRenderOnLayout:1;// 0  //     // Enable a two-steps mode where CalcTextSize() calls will load AdvanceX *without* rendering/packing glyphs. Only advantagous if you know that the glyph is unlikely to actually be rendered, otherwise it is slower because we'd do one query on the first CalcTextSize and one query on the first Draw.
+    unsigned int                LoadNoRenderOnLayout:1;// 0  //     // Enable a two-steps mode where CalcTextSize() calls will load AdvanceX *without* rendering/packing glyphs. Only advantageous if you know that the glyph is unlikely to actually be rendered, otherwise it is slower because we'd do one query on the first CalcTextSize and one query on the first Draw.
     int                         LastUsedFrame;         // 4  //     // Record of that time this was bounds
     ImGuiID                     BakedId;            // 4     //     // Unique ID for this baked storage
     ImFont*                     OwnerFont;          // 4-8   // in  // Parent font
