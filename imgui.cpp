@@ -6366,7 +6366,7 @@ bool ImGui::BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, I
     IM_ASSERT(id != 0);
 
     // Sanity check as it is likely that some user will accidentally pass ImGuiWindowFlags into the ImGuiChildFlags argument.
-    const ImGuiChildFlags ImGuiChildFlags_SupportedMask_ = ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding | ImGuiChildFlags_ResizeX | ImGuiChildFlags_ResizeY | ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AlwaysAutoResize | ImGuiChildFlags_FrameStyle | ImGuiChildFlags_NavFlattened;
+    const ImGuiChildFlags ImGuiChildFlags_SupportedMask_ = ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding | ImGuiChildFlags_ResizeX | ImGuiChildFlags_ResizeY | ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AlwaysAutoResize | ImGuiChildFlags_FrameStyle | ImGuiChildFlags_NavFlattened | ImGuiChildFlags_TopLabel;
     IM_UNUSED(ImGuiChildFlags_SupportedMask_);
     IM_ASSERT((child_flags & ~ImGuiChildFlags_SupportedMask_) == 0 && "Illegal ImGuiChildFlags value. Did you pass ImGuiWindowFlags values instead of ImGuiChildFlags?");
     IM_ASSERT((window_flags & ImGuiWindowFlags_AlwaysAutoResize) == 0 && "Cannot specify ImGuiWindowFlags_AlwaysAutoResize for BeginChild(). Use ImGuiChildFlags_AlwaysAutoResize!");
@@ -6374,6 +6374,10 @@ bool ImGui::BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, I
     {
         IM_ASSERT((child_flags & (ImGuiChildFlags_ResizeX | ImGuiChildFlags_ResizeY)) == 0 && "Cannot use ImGuiChildFlags_ResizeX or ImGuiChildFlags_ResizeY with ImGuiChildFlags_AlwaysAutoResize!");
         IM_ASSERT((child_flags & (ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY)) != 0 && "Must use ImGuiChildFlags_AutoResizeX or ImGuiChildFlags_AutoResizeY with ImGuiChildFlags_AlwaysAutoResize!");
+    }
+    if (child_flags & ImGuiChildFlags_TopLabel)
+    {
+        IM_ASSERT((!!name || (ImStrlen(name) > 0)) && "Cannot use ImGuiChildFlags_TopLabel without a name");
     }
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     //if (window_flags & ImGuiWindowFlags_AlwaysUseWindowPadding) { child_flags |= ImGuiChildFlags_AlwaysUseWindowPadding; }
@@ -6400,7 +6404,13 @@ bool ImGui::BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, I
         PushStyleVar(ImGuiStyleVar_ChildBorderSize, g.Style.FrameBorderSize);
         PushStyleVar(ImGuiStyleVar_WindowPadding, g.Style.FramePadding);
         child_flags |= ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding;
+        child_flags &= ~ImGuiChildFlags_TopLabel;
         window_flags |= ImGuiWindowFlags_NoMove;
+    }
+
+    if (child_flags & ImGuiChildFlags_TopLabel && !(child_flags & ImGuiChildFlags_Borders))
+    {
+        child_flags &= ~ImGuiChildFlags_TopLabel;
     }
 
     // Forward size
@@ -6442,10 +6452,20 @@ bool ImGui::BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, I
     /*if (name && parent_window->IDStack.back() == parent_window->ID)
         ImFormatStringToTempBuffer(&temp_window_name, NULL, "%s/%s", parent_window->Name, name); // May omit ID if in root of ID stack
     else*/
+    int labelOffset = 0;
+    int labelLen = 0;
     if (name)
+    {
         ImFormatStringToTempBuffer(&temp_window_name, NULL, "%s/%s_%08X", parent_window->Name, name, id);
+        labelLen = static_cast<int>(FindRenderedTextEnd(name) - name);
+        if (labelLen)
+        {
+            labelOffset = static_cast<int>(ImStrlen(parent_window->Name) + 1); // len of "%s/" % parent_window-Name
+        }
+    }
     else
         ImFormatStringToTempBuffer(&temp_window_name, NULL, "%s/%08X", parent_window->Name, id);
+
 
     // Set style
     const float backup_border_size = g.Style.ChildBorderSize;
@@ -6465,6 +6485,10 @@ bool ImGui::BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, I
 
     ImGuiWindow* child_window = g.CurrentWindow;
     child_window->ChildId = id;
+
+    // Problem: this only has an effect next frame! So for the first frame, an empty label is used
+    child_window->LabelOffset = labelOffset;
+    child_window->LabelLen = labelLen;
 
     // Set the cursor to handle case where the user called SetNextWindowPos()+BeginChild() manually.
     // While this is not really documented/defined, it seems that the expected thing to do.
@@ -6535,6 +6559,23 @@ void ImGui::EndChild()
 
     g.WithinEndChildID = backup_within_end_child_id;
     g.LogLinePosY = -FLT_MAX; // To enforce a carriage return
+}
+
+static inline bool WindowUsesLabeledBorder(const ImGuiWindow* window)
+{
+    bool res = false;
+    res |= (((window->Flags & ImGuiWindowFlags_ChildWindow) == ImGuiWindowFlags_ChildWindow) && ((window->ChildFlags & ImGuiChildFlags_TopLabel) == ImGuiChildFlags_TopLabel));
+    return res;
+}
+
+static inline ImRect GetWindowBorderRect(const ImGuiWindow* window)
+{
+    ImRect res = window->Rect();
+    if (WindowUsesLabeledBorder(window))
+    {
+        res.Min.y = ImMin(res.Min.y + window->BorderDecoOffset, res.Max.y);
+    }
+    return res;
 }
 
 static void SetWindowConditionAllowFlags(ImGuiWindow* window, ImGuiCond flags, bool enabled)
@@ -7060,14 +7101,58 @@ static inline void ClampWindowPos(ImGuiWindow* window, const ImRect& visibility_
     window->Pos = ImClamp(window->Pos, visibility_rect.Min - size_for_clamping, visibility_rect.Max);
 }
 
-static void RenderWindowOuterSingleBorder(ImGuiWindow* window, int border_n, ImU32 border_col, float border_size)
+static inline void RenderLabeledFrame(ImDrawList* draw_list, const char* label, const char* label_end, ImRect const& frame_rect, ImU32 col, float thickness, float rounding, ImVec2 label_align, ImVec2 padding = ImVec2(0, 0), ImVec2 spacing = ImVec2(1, 1), float extra_w = 0)
+{
+    if (!label_end) label_end = ImGui::FindRenderedTextEnd(label);
+    ImVec2 label_size = ImGui::CalcTextSize(label, label_end, true);
+    float padding2 = ImMax(padding.x, rounding);
+    float frame_width = frame_rect.GetWidth();
+    float label_avail_w = ImMax(0.0f, frame_width - padding2 * 2.0f);
+    const ImVec2 label_pos = frame_rect.GetTL() + ImVec2(padding2 + ImMax(0.0f, label_avail_w - label_size.x - extra_w) * label_align.x, padding.y);
+    ImRect rect = frame_rect;
+    rect.Min.y += padding.y + ImFloor(label_align.y * label_size.y);
+
+    // Draw frame rect, with a space for the label
+    if((col & IM_COL32_A_MASK) != 0)
+    {
+        rect.Min += ImVec2(0.50f, 0.50f);
+        if (draw_list->Flags & ImDrawListFlags_AntiAliasedLines)
+            rect.Max -= ImVec2(0.50f, 0.50f);
+        else
+            rect.Max -= ImVec2(0.49f, 0.49f); // Better looking lower-right corner and rounded non-AA shapes.
+        float label_left = label_pos.x - spacing.x;
+        float label_right = label_pos.x + label_size.x + spacing.x + extra_w;
+        if (label_right < (rect.GetTR().x - rounding))
+            draw_list->PathLineTo(ImVec2(label_right, rect.GetTR().y));
+        if (rounding < 0.5f)
+        {
+            draw_list->PathLineTo(rect.GetTR());
+            draw_list->PathLineTo(rect.GetBR());
+            draw_list->PathLineTo(rect.GetBL());
+            draw_list->PathLineTo(rect.GetTL());
+        }
+        else
+        {
+            draw_list->PathArcToFast(rect.GetTR() + ImVec2(-rounding, +rounding), rounding, 9, 12);
+            draw_list->PathArcToFast(rect.GetBR() + ImVec2(-rounding, -rounding), rounding, 0, 3);
+            draw_list->PathArcToFast(rect.GetBL() + ImVec2(+rounding, -rounding), rounding, 3, 6);
+            draw_list->PathArcToFast(rect.GetTL() + ImVec2(+rounding, +rounding), rounding, 6, 9);
+        }
+        if (label_left > (rect.GetTL().x + rounding))
+            draw_list->PathLineTo(ImVec2(label_left, rect.GetTL().y));
+        draw_list->PathStroke(col, ImDrawFlags_None, thickness);
+    }
+
+    ImGui::RenderTextEllipsis(draw_list, label_pos, ImVec2(frame_rect.Max.x, label_pos.y + label_size.y + ImMax(1.0f, spacing.y)), frame_rect.Max.x, label, label_end, &label_size);
+}
+
+static void RenderWindowOuterSingleBorder(ImDrawList* draw_list, ImRect const& window_rect, int border_n, ImU32 border_col, float border_size, float rounding)
 {
     const ImGuiResizeBorderDef& def = resize_border_def[border_n];
-    const float rounding = window->WindowRounding;
-    const ImRect border_r = GetResizeBorderRect(window, border_n, rounding, 0.0f);
-    window->DrawList->PathArcTo(ImLerp(border_r.Min, border_r.Max, def.SegmentN1) + ImVec2(0.5f, 0.5f) + def.InnerDir * rounding, rounding, def.OuterAngle - IM_PI * 0.25f, def.OuterAngle);
-    window->DrawList->PathArcTo(ImLerp(border_r.Min, border_r.Max, def.SegmentN2) + ImVec2(0.5f, 0.5f) + def.InnerDir * rounding, rounding, def.OuterAngle, def.OuterAngle + IM_PI * 0.25f);
-    window->DrawList->PathStroke(border_col, ImDrawFlags_None, border_size);
+    ImRect border_r = GetResizeBorderRect(window_rect, border_n, rounding, 0.0f);
+    draw_list->PathArcTo(ImLerp(border_r.Min, border_r.Max, def.SegmentN1) + ImVec2(0.5f, 0.5f) + def.InnerDir * rounding, rounding, def.OuterAngle - IM_PI * 0.25f, def.OuterAngle);
+    draw_list->PathArcTo(ImLerp(border_r.Min, border_r.Max, def.SegmentN2) + ImVec2(0.5f, 0.5f) + def.InnerDir * rounding, rounding, def.OuterAngle, def.OuterAngle + IM_PI * 0.25f);
+    draw_list->PathStroke(border_col, ImDrawFlags_None, border_size);
 }
 
 static void ImGui::RenderWindowOuterBorders(ImGuiWindow* window)
@@ -7075,20 +7160,35 @@ static void ImGui::RenderWindowOuterBorders(ImGuiWindow* window)
     ImGuiContext& g = *GImGui;
     const float border_size = window->WindowBorderSize;
     const ImU32 border_col = GetColorU32(ImGuiCol_Border);
+    ImRect window_rect = GetWindowBorderRect(window);
     if (border_size > 0.0f && (window->Flags & ImGuiWindowFlags_NoBackground) == 0)
-        window->DrawList->AddRect(window->Pos, window->Pos + window->Size, border_col, window->WindowRounding, 0, window->WindowBorderSize);
+    {
+        if (WindowUsesLabeledBorder(window))
+        {
+            ImVec2 label_align = g.Style.SeparatorTextAlign;
+            ImVec2 padding = ImVec2(g.Style.SeparatorTextPadding.x, g.Style.FramePadding.y);
+            ImVec2 spacing = g.Style.ItemSpacing;
+            const char* label = window->Name + window->LabelOffset;
+            const char* label_end = label + window->LabelLen;
+            RenderLabeledFrame(window->DrawList, label, label_end, window->Rect(), border_col, window->WindowBorderSize, window->WindowRounding, label_align, padding, spacing);
+        }
+        else
+        {
+            window->DrawList->AddRect(window_rect.Min, window_rect.Max, border_col, window->WindowRounding, 0, window->WindowBorderSize);
+        }
+    }
     else if (border_size > 0.0f)
     {
         if (window->ChildFlags & ImGuiChildFlags_ResizeX) // Similar code as 'resize_border_mask' computation in UpdateWindowManualResize() but we specifically only always draw explicit child resize border.
-            RenderWindowOuterSingleBorder(window, 1, border_col, border_size);
+            RenderWindowOuterSingleBorder(window->DrawList, window_rect, 1, border_col, border_size, window->WindowRounding);
         if (window->ChildFlags & ImGuiChildFlags_ResizeY)
-            RenderWindowOuterSingleBorder(window, 3, border_col, border_size);
+            RenderWindowOuterSingleBorder(window->DrawList, window_rect, 3, border_col, border_size, window->WindowRounding);
     }
     if (window->ResizeBorderHovered != -1 || window->ResizeBorderHeld != -1)
     {
         const int border_n = (window->ResizeBorderHeld != -1) ? window->ResizeBorderHeld : window->ResizeBorderHovered;
         const ImU32 border_col_resizing = GetColorU32((window->ResizeBorderHeld != -1) ? ImGuiCol_SeparatorActive : ImGuiCol_SeparatorHovered);
-        RenderWindowOuterSingleBorder(window, border_n, border_col_resizing, ImMax(2.0f, window->WindowBorderSize)); // Thicker than usual
+        RenderWindowOuterSingleBorder(window->DrawList, window_rect, border_n, border_col_resizing, ImMax(2.0f, window->WindowBorderSize), window->WindowRounding); // Thicker than usual
     }
     if (g.Style.FrameBorderSize > 0 && !(window->Flags & ImGuiWindowFlags_NoTitleBar))
     {
@@ -7140,7 +7240,7 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
                 bg_col = (bg_col & ~IM_COL32_A_MASK) | (IM_F32_TO_INT8_SAT(alpha) << IM_COL32_A_SHIFT);
             if (bg_col & IM_COL32_A_MASK)
             {
-                ImRect bg_rect(window->Pos + ImVec2(0, window->TitleBarHeight), window->Pos + window->Size);
+                ImRect bg_rect = GetWindowBorderRect(window);
                 ImDrawFlags bg_rounding_flags = (flags & ImGuiWindowFlags_NoTitleBar) ? 0 : ImDrawFlags_RoundCornersBottom;
                 ImDrawList* bg_draw_list = window->DrawList;
                 bg_draw_list->AddRectFilled(bg_rect.Min, bg_rect.Max, bg_col, window_rounding, bg_rounding_flags);
@@ -7159,6 +7259,7 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
         {
             ImRect menu_bar_rect = window->MenuBarRect();
             menu_bar_rect.ClipWith(window->Rect());  // Soft clipping, in particular child window don't have minimum size covering the menu bar so this is useful for them.
+            menu_bar_rect.Min.y -= (window->TitleBarHeight - window->BorderDecoOffset);
             window->DrawList->AddRectFilled(menu_bar_rect.Min, menu_bar_rect.Max, GetColorU32(ImGuiCol_MenuBarBg), (flags & ImGuiWindowFlags_NoTitleBar) ? window_rounding : 0.0f, ImDrawFlags_RoundCornersTop);
             if (style.FrameBorderSize > 0.0f && menu_bar_rect.Max.y < window->Pos.y + window->Size.y)
                 window->DrawList->AddLine(menu_bar_rect.GetBL() + ImVec2(window_border_size * 0.5f, 0.0f), menu_bar_rect.GetBR() - ImVec2(window_border_size * 0.5f, 0.0f), GetColorU32(ImGuiCol_Border), style.FrameBorderSize);
@@ -7641,8 +7742,18 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // Outer Decoration Sizes
         // (we need to clear ScrollbarSize immediately as CalcWindowAutoFitSize() needs it and can be called from other locations).
         const ImVec2 scrollbar_sizes_from_last_frame = window->ScrollbarSizes;
+        window->BorderDecoOffset = 0.0f;
         window->DecoOuterSizeX1 = 0.0f;
         window->DecoOuterSizeX2 = 0.0f;
+        if (WindowUsesLabeledBorder(window))
+        {
+            const float padding = g.Style.FramePadding.y;
+            const float align = g.Style.SeparatorTextAlign.y;
+            const float f = g.FontSize;
+            // To Render the window background (in RenderWindowDecorations())under the top border, which is lowered by the align
+            window->TitleBarHeight += (padding * 2 + f);
+            window->BorderDecoOffset = (padding + ImFloor(f * align));
+        }
         window->DecoOuterSizeY1 = window->TitleBarHeight + window->MenuBarHeight;
         window->DecoOuterSizeY2 = 0.0f;
         window->ScrollbarSizes = ImVec2(0.0f, 0.0f);
