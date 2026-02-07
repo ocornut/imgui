@@ -126,10 +126,12 @@ struct ImGui_ImplSDL3_Data
     bool                    MouseCanUseGlobalState;
     bool                    MouseCanUseCapture;
 
+#ifndef IMGUI_IMPL_SDL3_DISABLE_GAMEPAD
     // Gamepad handling
     ImVector<SDL_Gamepad*>      Gamepads;
     ImGui_ImplSDL3_GamepadMode  GamepadMode;
     bool                        WantUpdateGamepadsList;
+#endif
 
     ImGui_ImplSDL3_Data()   { memset((void*)this, 0, sizeof(*this)); }
 };
@@ -469,12 +471,14 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
             io.AddFocusEvent(event->type == SDL_EVENT_WINDOW_FOCUS_GAINED);
             return true;
         }
+#ifndef IMGUI_IMPL_SDL3_DISABLE_GAMEPAD
         case SDL_EVENT_GAMEPAD_ADDED:
         case SDL_EVENT_GAMEPAD_REMOVED:
         {
             bd->WantUpdateGamepadsList = true;
             return true;
         }
+#endif
         default:
             break;
     }
@@ -533,9 +537,11 @@ static bool ImGui_ImplSDL3_Init(SDL_Window* window, SDL_Renderer* renderer, void
     platform_io.Platform_SetImeDataFn = ImGui_ImplSDL3_PlatformSetImeData;
     platform_io.Platform_OpenInShellFn = [](ImGuiContext*, const char* url) { return SDL_OpenURL(url); };
 
+#ifndef IMGUI_IMPL_SDL3_DISABLE_GAMEPAD
     // Gamepad handling
     bd->GamepadMode = ImGui_ImplSDL3_GamepadMode_AutoFirst;
     bd->WantUpdateGamepadsList = true;
+#endif
 
     // Load mouse cursors
     bd->MouseCursors[ImGuiMouseCursor_Arrow] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_DEFAULT);
@@ -607,7 +613,9 @@ bool ImGui_ImplSDL3_InitForOther(SDL_Window* window)
     return ImGui_ImplSDL3_Init(window, nullptr, nullptr);
 }
 
+#ifndef IMGUI_IMPL_SDL3_DISABLE_GAMEPAD
 static void ImGui_ImplSDL3_CloseGamepads();
+#endif
 
 void ImGui_ImplSDL3_Shutdown()
 {
@@ -620,7 +628,9 @@ void ImGui_ImplSDL3_Shutdown()
         SDL_free(bd->ClipboardTextData);
     for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_COUNT; cursor_n++)
         SDL_DestroyCursor(bd->MouseCursors[cursor_n]);
+#ifndef IMGUI_IMPL_SDL3_DISABLE_GAMEPAD
     ImGui_ImplSDL3_CloseGamepads();
+#endif
 
     io.BackendPlatformName = nullptr;
     io.BackendPlatformUserData = nullptr;
@@ -703,6 +713,7 @@ static void ImGui_ImplSDL3_UpdateMouseCursor()
     }
 }
 
+#ifndef IMGUI_IMPL_SDL3_DISABLE_GAMEPAD
 static void ImGui_ImplSDL3_CloseGamepads()
 {
     ImGui_ImplSDL3_Data* bd = ImGui_ImplSDL3_GetBackendData();
@@ -805,6 +816,7 @@ static void ImGui_ImplSDL3_UpdateGamepads()
     ImGui_ImplSDL3_UpdateGamepadAnalog(bd, io, ImGuiKey_GamepadRStickUp,    SDL_GAMEPAD_AXIS_RIGHTY, -thumb_dead_zone, -32768);
     ImGui_ImplSDL3_UpdateGamepadAnalog(bd, io, ImGuiKey_GamepadRStickDown,  SDL_GAMEPAD_AXIS_RIGHTY, +thumb_dead_zone, +32767);
 }
+#endif
 
 static void ImGui_ImplSDL3_GetWindowSizeAndFramebufferScale(SDL_Window* window, ImVec2* out_size, ImVec2* out_framebuffer_scale)
 {
@@ -858,8 +870,10 @@ void ImGui_ImplSDL3_NewFrame()
     ImGui_ImplSDL3_UpdateMouseCursor();
     ImGui_ImplSDL3_UpdateIme();
 
+#ifndef IMGUI_IMPL_SDL3_DISABLE_GAMEPAD
     // Update game controllers (if enabled and available)
     ImGui_ImplSDL3_UpdateGamepads();
+#endif
 }
 
 //-----------------------------------------------------------------------------
