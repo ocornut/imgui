@@ -1251,6 +1251,8 @@ struct IMGUI_API ImGuiInputTextState
     ImS8                    LastMoveDirectionLR;    // ImGuiDir_Left or ImGuiDir_Right. track last movement direction so when cursor cross over a word-wrapping boundaries we can display it on either line depending on last move.s
     int                     ReloadSelectionStart;
     int                     ReloadSelectionEnd;
+    int                     SelectionClicks;        // double/triple-click word/line selection mode.
+    int                     SelectionOrigin;        // char-index/cursor-position under the mouse click that started current selection.
 
     ImGuiInputTextState();
     ~ImGuiInputTextState();
