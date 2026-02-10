@@ -498,7 +498,7 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
                              io.Fonts->AddFontFromFileTTF("FontAwesome4.ttf", 0.0f, &cfg2);
                          - You can use `Metrics/Debugger->Fonts->Font->Input Glyphs Overlap Detection Tool` to see list of glyphs available in multiple font sources. This can facilitate understanding which font input is providing which glyph.
                        - Fonts: **IMPORTANT** on Thread Safety:
-                          - A few functions such as font->CalcTextSizeA() were, by sheer luck (== accidentally) thread-safe even thou we had never provided that guarantee. They are definitively not thread-safe anymore as new glyphs may be loaded.
+                          - A few functions such as font->CalcTextSizeA() were, by sheer luck (== accidentally) thread-safe even though we had never provided that guarantee. They are definitively not thread-safe anymore as new glyphs may be loaded.
                        - Fonts: ImFont::FontSize was removed and does not make sense anymore. ImFont::LegacySize is the size passed to AddFont().
                        - Fonts: Removed support for PushFont(NULL) which was a shortcut for "default font".
                        - Fonts: Renamed/moved 'io.FontGlobalScale' to 'style.FontScaleMain'.
@@ -1496,7 +1496,7 @@ ImGuiStyle::ImGuiStyle()
     ColumnsMinSpacing           = 6.0f;             // Minimum horizontal spacing between two columns. Preferably > (FramePadding.x + 1).
     ScrollbarSize               = 14.0f;            // Width of the vertical scrollbar, Height of the horizontal scrollbar
     ScrollbarRounding           = 9.0f;             // Radius of grab corners rounding for scrollbar
-    ScrollbarPadding            = 2.0f;             // Padding of scrollbar grab within its frame (same for both axises)
+    ScrollbarPadding            = 2.0f;             // Padding of scrollbar grab within its frame (same for both axes)
     GrabMinSize                 = 12.0f;            // Minimum width/height of a grab box for slider/scrollbar
     GrabRounding                = 0.0f;             // Radius of grabs corners rounding. Set to 0.0f to have rectangular slider grabs.
     LogSliderDeadzone           = 4.0f;             // The size in pixels of the dead-zone around zero on logarithmic sliders that cross zero.
@@ -3466,7 +3466,8 @@ static bool ImGuiListClipper_StepInternal(ImGuiListClipper* clipper)
             if (is_nav_request)
             {
                 data->Ranges.push_back(ImGuiListClipperRange::FromPositions(g.NavScoringRect.Min.y, g.NavScoringRect.Max.y, nav_off_min, nav_off_max));
-                data->Ranges.push_back(ImGuiListClipperRange::FromPositions(g.NavScoringNoClipRect.Min.y, g.NavScoringNoClipRect.Max.y, nav_off_min, nav_off_max));
+                if (!g.NavScoringNoClipRect.IsInverted())
+                    data->Ranges.push_back(ImGuiListClipperRange::FromPositions(g.NavScoringNoClipRect.Min.y, g.NavScoringNoClipRect.Max.y, nav_off_min, nav_off_max));
             }
             if (is_nav_request && (g.NavMoveFlags & ImGuiNavMoveFlags_IsTabbing) && g.NavTabbingDir == -1)
                 data->Ranges.push_back(ImGuiListClipperRange::FromIndices(clipper->ItemsCount - 1, clipper->ItemsCount));
@@ -4046,6 +4047,9 @@ void ImGui::RenderNavCursor(const ImRect& bb, ImGuiID id, ImGuiNavRenderCursorFl
         return;
     if (id == g.LastItemData.ID && (g.LastItemData.ItemFlags & ImGuiItemFlags_NoNav))
         return;
+
+    // We don't early out on 'window->Flags & ImGuiWindowFlags_NoNavInputs' because it would be inconsistent with
+    // other code directly checking NavCursorVisible. Instead we aim for NavCursorVisible to always be false.
     ImGuiWindow* window = g.CurrentWindow;
     if (window->DC.NavHideHighlightOneFrame)
         return;
@@ -4675,13 +4679,13 @@ static void SetCurrentWindow(ImGuiWindow* window)
     g.CurrentTable = window && window->DC.CurrentTableIdx != -1 ? g.Tables.GetByIndex(window->DC.CurrentTableIdx) : NULL;
     if (window)
     {
-        bool backup_skip_items = window->SkipItems;
-        window->SkipItems = false;
         if (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures)
         {
             ImGuiViewport* viewport = window->Viewport;
             g.FontRasterizerDensity = (viewport->FramebufferScale.x != 0.0f) ? viewport->FramebufferScale.x : g.IO.DisplayFramebufferScale.x; // == SetFontRasterizerDensity()
         }
+        const bool backup_skip_items = window->SkipItems;
+        window->SkipItems = false;
         ImGui::UpdateCurrentFontSize(0.0f);
         window->SkipItems = backup_skip_items;
         ImGui::NavUpdateCurrentWindowIsScrollPushableX();
@@ -5350,7 +5354,7 @@ void ImGui::StartMouseMovingWindowOrNode(ImGuiWindow* window, ImGuiDockNode* nod
         StartMouseMovingWindow(window);
 }
 
-// This is not 100% symetric with StartMouseMovingWindow().
+// This is not 100% symmetric with StartMouseMovingWindow().
 // We do NOT clear ActiveID, because:
 // - It would lead to rather confusing recursive code paths. Caller can call ClearActiveID() if desired.
 // - Some code intentionally cancel moving but keep the ActiveID to lock inputs (e.g. code path taken when clicking a disabled item).
@@ -5458,7 +5462,7 @@ void ImGui::UpdateMouseMovingWindowEndFrame()
             StartMouseMovingWindow(hovered_window); //-V595
 
             // FIXME: In principle we might be able to call StopMouseMovingWindow() below.
-            // Please note how StartMouseMovingWindow() and StopMouseMovingWindow() and not entirely symetrical, at the later doesn't clear ActiveId.
+            // Please note how StartMouseMovingWindow() and StopMouseMovingWindow() and not entirely symmetrical, at the later doesn't clear ActiveId.
 
             // Cancel moving if clicked outside of title bar
             if ((hovered_window->BgClickFlags & ImGuiWindowBgClickFlags_Move) == 0) // set by io.ConfigWindowsMoveFromTitleBarOnly
@@ -7006,7 +7010,7 @@ static ImVec2 CalcWindowAutoFitSize(ImGuiWindow* window, const ImVec2& size_cont
     size_desired[ImGuiAxis_Y] = (axis_mask & 2) ? size_contents.y + size_pad.y + decoration_h_without_scrollbars : window->Size.y;
 
     // Determine maximum window size
-    // Child windows are layed within their parent (unless they are also popups/menus) and thus have no restriction
+    // Child windows are laid within their parent (unless they are also popups/menus) and thus have no restriction
     ImVec2 size_max = ImVec2(FLT_MAX, FLT_MAX);
     if ((window->Flags & ImGuiWindowFlags_ChildWindow) == 0 || (window->Flags & ImGuiWindowFlags_Popup) != 0)
     {
@@ -8572,7 +8576,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         }
 
         // Set default BgClickFlags
-        // This is set at the end of this function, so UpdateWindowManualResize()/ClampWindowPos() may use last-frame value if overriden by user code.
+        // This is set at the end of this function, so UpdateWindowManualResize()/ClampWindowPos() may use last-frame value if overridden by user code.
         // FIXME: The general intent is that we will later expose config options to default to enable scrolling + select scrolling mouse button.
         window->BgClickFlags = (flags & ImGuiWindowFlags_ChildWindow) ? parent_window->BgClickFlags : (g.IO.ConfigWindowsMoveFromTitleBarOnly ? ImGuiWindowBgClickFlags_None : ImGuiWindowBgClickFlags_Move);
 
@@ -9629,16 +9633,6 @@ void ImGui::UpdateCurrentFontSize(float restore_font_size_after_scaling)
 
     g.Style.FontSizeBase = g.FontSizeBase;
 
-    // Early out to avoid hidden window keeping bakes referenced and out of GC reach.
-    // However this would leave a pretty subtle and damning error surface area if g.FontBaked was mismatching.
-    // FIXME: perhaps g.FontSize should be updated?
-    if (window != NULL && window->SkipItems)
-    {
-        ImGuiTable* table = g.CurrentTable;
-        if (table == NULL || (table->CurrentColumn != -1 && table->Columns[table->CurrentColumn].IsSkipItems == false)) // See 8465#issuecomment-2951509561 and #8865. Ideally the SkipItems=true in tables would be amended with extra data.
-            return;
-    }
-
     // Restoring is pretty much only used by PopFont()
     float final_size = (restore_font_size_after_scaling > 0.0f) ? restore_font_size_after_scaling : 0.0f;
     if (final_size == 0.0f)
@@ -9668,10 +9662,24 @@ void ImGui::UpdateCurrentFontSize(float restore_font_size_after_scaling)
     final_size = ImClamp(final_size, 1.0f, IMGUI_FONT_SIZE_MAX);
     if (g.Font != NULL && (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures))
         g.Font->CurrentRasterizerDensity = g.FontRasterizerDensity;
+
     g.FontSize = final_size;
+    g.DrawListSharedData.FontSize = g.FontSize;
+
+    // Early out to avoid hidden window keeping bakes referenced and out of GC reach.
+    // - However this leave a pretty subtle and damning error surface area if g.FontBaked was mismatching.
+    //   Probably needs to be reevaluated into e.g. setting g.FontBaked = nullptr to mark it as dirty.
+    // - Note that 'PushFont(); Begin(); End(); PopFont()' from within any collapsed window is not compromised, because Begin() calls SetCurrentWindow()->...->UpdateCurrentSize()
+    if (window != NULL && window->SkipItems)
+    {
+        ImGuiTable* table = g.CurrentTable;
+        const bool allow_early_out = table == NULL || (table->CurrentColumn != -1 && table->Columns[table->CurrentColumn].IsSkipItems == false); // See 8465#issuecomment-2951509561 and #8865. Ideally the SkipItems=true in tables would be amended with extra data.
+        if (allow_early_out)
+            return;
+    }
+
     g.FontBaked = (g.Font != NULL && window != NULL) ? g.Font->GetFontBaked(final_size) : NULL;
     g.FontBakedScale = (g.Font != NULL && window != NULL) ? (g.FontSize / g.FontBaked->Size) : 0.0f;
-    g.DrawListSharedData.FontSize = g.FontSize;
     g.DrawListSharedData.FontScale = g.FontBakedScale;
 }
 
@@ -13663,7 +13671,9 @@ void ImGui::FocusTopMostWindowUnderOne(ImGuiWindow* under_this_window, ImGuiWind
 void ImGui::SetNavCursorVisible(bool visible)
 {
     ImGuiContext& g = *GImGui;
-    if (g.IO.ConfigNavCursorVisibleAlways)
+    if (g.NavWindow && (g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs))
+        visible = false;
+    else if (g.IO.ConfigNavCursorVisibleAlways)
         visible = true;
     g.NavCursorVisible = visible;
 }
@@ -13672,7 +13682,9 @@ void ImGui::SetNavCursorVisible(bool visible)
 void ImGui::SetNavCursorVisibleAfterMove()
 {
     ImGuiContext& g = *GImGui;
-    if (g.IO.ConfigNavCursorVisibleAuto)
+    if (g.NavWindow && (g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs))
+        g.NavCursorVisible = false;
+    else if (g.IO.ConfigNavCursorVisibleAuto)
         g.NavCursorVisible = true;
     g.NavHighlightItemUnderNav = g.NavMousePosDirty = true;
 }
@@ -14622,7 +14634,7 @@ void ImGui::NavUpdateCreateMoveRequest()
         IMGUI_DEBUG_LOG_NAV("[nav] NavInitRequest: from move, window \"%s\", layer=%d\n", window ? window->Name : "<NULL>", g.NavLayer);
         g.NavInitRequest = g.NavInitRequestFromMove = true;
         g.NavInitResult.ID = 0;
-        if (g.IO.ConfigNavCursorVisibleAuto)
+        if (g.IO.ConfigNavCursorVisibleAuto) // NO check for _NoNavInputs here as we assume MoveRequests cannot be created.
             g.NavCursorVisible = true;
     }
 
@@ -23245,7 +23257,7 @@ void ImGui::DebugNodeFont(ImFont* font)
         ImFontBaked* baked = &atlas->Builder->BakedPool[baked_n];
         if (baked->OwnerFont != font)
             continue;
-        PushID(baked_n);
+        PushID(baked->BakedId);
         if (TreeNode("Glyphs", "Baked at { %.2fpx, d.%.2f }: %d glyphs%s", baked->Size, baked->RasterizerDensity, baked->Glyphs.Size, (baked->LastUsedFrame < atlas->Builder->FrameCount - 1) ? " *Unused*" : ""))
         {
             if (SmallButton("Load all"))

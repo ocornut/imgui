@@ -699,7 +699,7 @@ void ImGui::TableBeginApplyRequests(ImGuiTable* table)
     }
 
     // Handle reordering request
-    // Note: we don't clear ReorderColumn after handling the request.
+    // Note: we don't clear ReorderColumn after handling the request (FIXME: clarify why or add a test).
     if (table->InstanceCurrent == 0)
     {
         if (table->HeldHeaderColumn == -1 && table->ReorderColumn != -1)
@@ -711,24 +711,12 @@ void ImGui::TableBeginApplyRequests(ImGuiTable* table)
             // In the configuration below, moving C to the right of E will lead to:
             //    ... C [D] E  --->  ... [D] E  C   (Column name/index)
             //    ... 2  3  4        ...  2  3  4   (Display order)
-            const int reorder_dir = table->ReorderColumnDir;
-            IM_ASSERT(reorder_dir == -1 || reorder_dir == +1);
+            IM_ASSERT(table->ReorderColumnDir == -1 || table->ReorderColumnDir == +1);
             IM_ASSERT(table->Flags & ImGuiTableFlags_Reorderable);
             ImGuiTableColumn* src_column = &table->Columns[table->ReorderColumn];
-            ImGuiTableColumn* dst_column = &table->Columns[(reorder_dir == -1) ? src_column->PrevEnabledColumn : src_column->NextEnabledColumn];
-            IM_UNUSED(dst_column);
-            const int src_order = src_column->DisplayOrder;
-            const int dst_order = dst_column->DisplayOrder;
-            src_column->DisplayOrder = (ImGuiTableColumnIdx)dst_order;
-            for (int order_n = src_order + reorder_dir; order_n != dst_order + reorder_dir; order_n += reorder_dir)
-                table->Columns[table->DisplayOrderToIndex[order_n]].DisplayOrder -= (ImGuiTableColumnIdx)reorder_dir;
-            IM_ASSERT(dst_column->DisplayOrder == dst_order - reorder_dir);
-
-            // Display order is stored in both columns->IndexDisplayOrder and table->DisplayOrder[]. Rebuild later from the former.
-            for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
-                table->DisplayOrderToIndex[table->Columns[column_n].DisplayOrder] = (ImGuiTableColumnIdx)column_n;
+            ImGuiTableColumn* dst_column = &table->Columns[(table->ReorderColumnDir < 0) ? src_column->PrevEnabledColumn : src_column->NextEnabledColumn];
+            TableSetColumnDisplayOrder(table, table->ReorderColumn, dst_column->DisplayOrder);
             table->ReorderColumnDir = 0;
-            table->IsSettingsDirty = true;
         }
     }
 
@@ -740,6 +728,31 @@ void ImGui::TableBeginApplyRequests(ImGuiTable* table)
         table->IsResetDisplayOrderRequest = false;
         table->IsSettingsDirty = true;
     }
+}
+
+// Note that TableSetupScrollFreeze() enforce a display order range for frozen columns.
+// So reordering a column across the frozen column barrier is illegal and will be undone.
+void ImGui::TableSetColumnDisplayOrder(ImGuiTable* table, int column_n, int dst_order)
+{
+    IM_ASSERT(column_n >= 0 && column_n < table->ColumnsCount);
+    IM_ASSERT(dst_order >= 0 && dst_order < table->ColumnsCount);
+
+    ImGuiTableColumn* src_column = &table->Columns[column_n];
+    const int src_order = src_column->DisplayOrder;
+    if (src_order == dst_order)
+        return;
+    const int reorder_dir = (dst_order < src_order) ? -1 : +1;
+
+    src_column->DisplayOrder = (ImGuiTableColumnIdx)dst_order;
+    for (int order_n = src_order + reorder_dir; order_n != dst_order + reorder_dir; order_n += reorder_dir)
+        table->Columns[table->DisplayOrderToIndex[order_n]].DisplayOrder -= (ImGuiTableColumnIdx)reorder_dir;
+    //IM_ASSERT(dst_column->DisplayOrder == dst_order - reorder_dir);
+
+    // Display order is stored in both columns->IndexDisplayOrder and table->DisplayOrder[]. Rebuild later from the former.
+    // FIXME-OPT: If this is called multiple times we'd effectively have a O(N^2) thing going on.
+    for (int n = 0; n < table->ColumnsCount; n++)
+        table->DisplayOrderToIndex[table->Columns[n].DisplayOrder] = (ImGuiTableColumnIdx)n;
+    table->IsSettingsDirty = true;
 }
 
 // Adjust flags: default width mode + stretch columns are not allowed when auto extending

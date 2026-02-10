@@ -102,7 +102,7 @@ else() # Native/Desktop build
             option(DAWN_FETCH_DEPENDENCIES "Use fetch_dawn_dependencies.py as an alternative to using depot_tools" ON)
             set(DAWN_BUILD_MONOLITHIC_LIBRARY "STATIC" CACHE STRING "Build monolithic library: SHARED, STATIC, or OFF.")
 
-            option(DAWN_USE_GLFW OFF) # disable buildin GLFW in DAWN when we use SDL2 / SDL3
+            option(DAWN_USE_GLFW OFF) # disable builtin GLFW in DAWN when we use SDL2 / SDL3
 
             # Dawn builds many things by default - disable things we don't need
             option(DAWN_BUILD_SAMPLES "Enables building Dawn's samples" OFF)

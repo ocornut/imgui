@@ -8002,6 +8002,11 @@ static void DemoWindowInputs()
             ImGui::CheckboxFlags("ImGuiInputFlags_Repeat", &route_options, ImGuiInputFlags_Repeat);
             ImGui::RadioButton("ImGuiInputFlags_RouteActive", &route_type, ImGuiInputFlags_RouteActive);
             ImGui::RadioButton("ImGuiInputFlags_RouteFocused (default)", &route_type, ImGuiInputFlags_RouteFocused);
+            ImGui::Indent();
+            ImGui::BeginDisabled(route_type != ImGuiInputFlags_RouteFocused);
+            ImGui::CheckboxFlags("ImGuiInputFlags_RouteOverActive##0", &route_options, ImGuiInputFlags_RouteOverActive);
+            ImGui::EndDisabled();
+            ImGui::Unindent();
             ImGui::RadioButton("ImGuiInputFlags_RouteGlobal", &route_type, ImGuiInputFlags_RouteGlobal);
             ImGui::Indent();
             ImGui::BeginDisabled(route_type != ImGuiInputFlags_RouteGlobal);

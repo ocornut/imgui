@@ -32,6 +32,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2026-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2026-02-10: Try to set IMGUI_IMPL_GLFW_DISABLE_X11 / IMGUI_IMPL_GLFW_DISABLE_WAYLAND automatically if corresponding headers are not accessible. (#9225)
 //  2026-01-25: [Docking] Improve workarounds for cases where GLFW is unable to provide any reliable monitor info. Preserve existing monitor list when none of the new one is valid. (#9195, #7902, #5683)
 //  2026-01-18: [Docking] Dynamically load X11 functions to avoid -lx11 linking requirement introduced on 2025-09-10.
 //  2025-12-12: Added IMGUI_IMPL_GLFW_DISABLE_X11 / IMGUI_IMPL_GLFW_DISABLE_WAYLAND to forcefully disable either.
@@ -120,6 +121,15 @@
 #pragma clang diagnostic ignored "-Wglobal-constructors"    // warning: declaration requires a global destructor         // similar to above, not sure what the exact difference is.
 #elif defined(__GNUC__)
 #pragma GCC diagnostic ignored "-Wfloat-equal"              // warning: comparing floating-point with '==' or '!=' is unsafe
+#endif
+
+#if defined(__has_include)
+#if !__has_include(<X11/Xlib.h>) || !__has_include(<X11/extensions/Xrandr.h>)
+#define IMGUI_IMPL_GLFW_DISABLE_X11
+#endif
+#if !__has_include(<wayland-client.h>)
+#define IMGUI_IMPL_GLFW_DISABLE_WAYLAND
+#endif
 #endif
 
 // GLFW

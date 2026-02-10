@@ -78,6 +78,9 @@ Breaking Changes:
     has already been rendered. (#9162) [@ocornut, @cyfewlp]
   - Removed ImFontConfig::PixelSnapV added in 1.92 which turns out is unnecessary
     (and misdocumented). Post-rescale GlyphOffset is always rounded.
+  - Fixed an issue where using PushFont() from the implicit/fallback "Debug" window when
+    its recorded state is collapsed would incorrectly early out. This would break e.g. using
+    direct draw-list calls such as GetForegroundDrawList() with current font. (#9210, #8865)
  - Popups: changed compile-time 'ImGuiPopupFlags popup_flags = 1' default value to be '= 0' for
    BeginPopupContextItem(), BeginPopupContextWindow(), BeginPopupContextVoid(), OpenPopupOnItemClick().
    The default value has same meaning before and after. (#9157, #9146)
@@ -176,6 +179,7 @@ Other Changes:
     used io.DisplayFramebufferScale (very old code), effectively making those
     actions faster on macOS/iOS retina screens.
     (changed this to use a style scale factor that's not fully formalized yet)
+  - Fixed an UBSan warning when using in a ListClipper region . (#9160)
 - Scrollbar: fixed a codepath leading to a divide-by-zero (which would not be
   noticeable by user but detected by sanitizers). (#9089) [@judicaelclair]
 - InvisibleButton: allow calling with size (0,0) to fit to available content 
@@ -215,6 +219,7 @@ Other Changes:
     Lowers overhead for very high framerates (e.g. 10k+ FPS). [@maxliani]
   - GLFW: Added IMGUI_IMPL_GLFW_DISABLE_X11 / IMGUI_IMPL_GLFW_DISABLE_WAYLAND to
     forcefully disable either. (#9109, #9116)
+    Try to set them automatically if headers are not accessible. (#9225)
   - OpenGL3: Fixed embedded loader multiple init/shutdown cycles broken on some
     platforms. (#8792, #9112)
   - SDL2, SDL3: changed `GetClipboardText()` handler to return NULL on error aka
@@ -373,7 +378,7 @@ Other Changes:
      debug/metrics window is not in the same viewport as the table.
 - Backends:
   - NULL: added imgui_impl_null platform/renderer backend.
-    This is designed if you need to run e.g. context with no input or no ouput.
+    This is designed if you need to run e.g. context with no input or no output.
   - GLFW: fixed building on Linux platforms where Wayland headers
     are not available. (#9024, #8969, #8921, #8920) [@jagot]
   - GLFW: lower minimum requirement from GLFW 3.1 to GLFW 3.0. Though
@@ -958,7 +963,7 @@ Breaking changes:
       which font input is providing which glyph.
 - Fonts: **IMPORTANT** on Thread Safety:
   - A few functions such as font->CalcTextSizeA() were by sheer luck (== accidentally)
-    thread-safe even thou we had never provided that guarantee before. They are
+    thread-safe even though we had never provided that guarantee before. They are
     definitively not thread-safe anymore as new glyphs may be loaded.
 
 - Textures:
