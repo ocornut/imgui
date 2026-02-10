@@ -3543,6 +3543,7 @@ namespace ImGui
     IMGUI_API float         TableCalcMaxColumnWidth(const ImGuiTable* table, int column_n);
     IMGUI_API void          TableSetColumnWidthAutoSingle(ImGuiTable* table, int column_n);
     IMGUI_API void          TableSetColumnWidthAutoAll(ImGuiTable* table);
+    IMGUI_API void          TableSetColumnDisplayOrder(ImGuiTable* table, int column_n, int dst_order);
     IMGUI_API void          TableRemove(ImGuiTable* table);
     IMGUI_API void          TableGcCompactTransientBuffers(ImGuiTable* table);
     IMGUI_API void          TableGcCompactTransientBuffers(ImGuiTableTempData* table);
