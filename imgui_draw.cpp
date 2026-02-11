@@ -3175,7 +3175,7 @@ ImFont* ImFontAtlas::AddFontDefaultVector(const ImFontConfig* font_cfg_template)
     if (font_cfg.Name[0] == '\0')
         ImFormatString(font_cfg.Name, IM_COUNTOF(font_cfg.Name), "ProggyVector.ttf");
     font_cfg.ExtraSizeScale = 1.140f; // Match ProggyClean
-    font_cfg.GlyphOffset.y += -0.5f * (font_cfg.SizePixels / 13.0f); // Closer match ProggyClean + avoid descenders going too high (with current code).
+    font_cfg.GlyphOffset.y += 1.0f * (font_cfg.SizePixels / 13.0f); // Closer match ProggyClean + avoid descenders going too high (with current code).
 
     int ttf_compressed_size = 0;
     const char* ttf_compressed = GetDefaultCompressedFontDataProggyVector(&ttf_compressed_size);
@@ -4699,7 +4699,7 @@ static bool ImGui_ImplStbTrueType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig
     {
         // FIXME-NEWFONTS: reevaluate how to use sizing metrics
         // FIXME-NEWFONTS: make use of line gap value
-        float scale_for_layout = bd_font_data->ScaleFactor * baked->Size;
+        const float scale_for_layout = bd_font_data->ScaleFactor * baked->Size / src->ExtraSizeScale;
         int unscaled_ascent, unscaled_descent, unscaled_line_gap;
         stbtt_GetFontVMetrics(&bd_font_data->FontInfo, &unscaled_ascent, &unscaled_descent, &unscaled_line_gap);
         baked->Ascent = ImCeil(unscaled_ascent * scale_for_layout);
