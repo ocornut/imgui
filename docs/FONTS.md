@@ -116,13 +116,13 @@ style.FontSizeBase = 20.0f;
 **Load default font:**
 ```cpp
 ImGuiIO& io = ImGui::GetIO();
-io.Fonts->AddFontDefault();        // Load embedded font (auto-selected).
-```
-```cpp
 io.Fonts->AddFontDefaultVector();  // Load embedded scalable font.
 ```
 ```cpp
 io.Fonts->AddFontDefaultBitmap();  // Load embedded bitmap font (legacy).
+```
+```cpp
+io.Fonts->AddFontDefault();        // Load embedded font (legacy: auto-selected between the two above).
 ```
 
 **Load .TTF/.OTF file with:**
