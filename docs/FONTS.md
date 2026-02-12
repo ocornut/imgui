@@ -5,12 +5,15 @@ _(You may browse this at https://github.com/ocornut/imgui/blob/master/docs/FONTS
 The code in Dear ImGui embeds a copy of [ProggyClean.ttf](https://github.com/bluescan/proggyfonts) by Tristan Grimmer,
 a 13 pixels high, pixel-perfect font used by default. ProggyClean does not scale very nicely.
 
-The code in Dear ImGui embeds a partial copy of [ProggyVector.ttf](https://github.com/bluescan/proggyfonts) by Tristan Grimmer and Source Foundry Authors,
-a font mimicking ProggyClean which does scale nicely.
+The code in Dear ImGui embeds a partial copy of [ProggyForever.ttf](https://github.com/ocornut/proggyforever) by Disco Hello & Tristan Grimmer,
+a new font mimicking ProggyClean which does scale nicely.
 
 We embed fonts in the code so you can use Dear ImGui without any file system access.
-If you use either of those fonts in your shipping product you should include their license as part of your software (see below for links).
 If you don't use them you can set `IMGUI_DISABLE_DEFAULT_FONT` in your [imconfig.h](https://github.com/ocornut/imgui/blob/master/imconfig.h) file to ship binaries without the fonts and save about ~26 KB.
+
+Calling io.Fonts->AddFontDefaultBitmap() loads ProggyClean.
+Calling io.Fonts->AddFontDefaultVector() loads ProggyForever.
+Calling io.Fonts->AddFontDefault() selects one based on the expected default font size (when `style.FontSizeBase * style.FontScaleMain * style.FontSizeDpi >= 15` we use ProggyForever).
 
 You may also load external .TTF/.OTF files, see instructions on this page.
 In the [misc/fonts/](https://github.com/ocornut/imgui/tree/master/misc/fonts) folder you can find a few suggested fonts, provided as a convenience.
@@ -116,13 +119,13 @@ style.FontSizeBase = 20.0f;
 **Load default font:**
 ```cpp
 ImGuiIO& io = ImGui::GetIO();
-io.Fonts->AddFontDefault();        // Load embedded font (auto-selected).
-```
-```cpp
 io.Fonts->AddFontDefaultVector();  // Load embedded scalable font.
 ```
 ```cpp
 io.Fonts->AddFontDefaultBitmap();  // Load embedded bitmap font (legacy).
+```
+```cpp
+io.Fonts->AddFontDefault();        // Load embedded font (legacy: auto-selected between the two above).
 ```
 
 **Load .TTF/.OTF file with:**
@@ -561,7 +564,20 @@ You can use the `UTF-8 Encoding viewer` in `Metrics/Debugger` to verify the cont
 
 ## Credits/Licenses For Fonts Included In Repository
 
-Some fonts files are available in the `misc/fonts/` folder:
+Embedded in source code:
+
+**ProggyClean.ttf**, by Tristan Grimmer
+<br>MIT License
+<br>(recommended loading setting: Size = 13.0, GlyphOffset.y = +1, PixelSnapH = true)
+<br>https://github.com/bluescan/proggyfonts
+
+**ProggyForever.ttf**, by Disco Hello, Tristan Grimmer
+<BR>MIT License
+<BR>https://github.com/ocornut/proggyforever
+
+Extra fonts files are available in the `misc/fonts/` folder.
+Compared to 2014 when they were first introduced, we now have better font support and we embed ProggyForever.
+I believe all the files here are unnecessary nowadays. You can find font yourself. They might eventually be removed.
 
 **Roboto-Medium.ttf**, by Christian Robetson
 <br>Apache License 2.0
@@ -576,19 +592,10 @@ Some fonts files are available in the `misc/fonts/` folder:
 <br>Apache License 2.0
 <br>https://www.fontsquirrel.com/fonts/droid-sans
 
-**ProggyClean.ttf**, by Tristan Grimmer
-<br>MIT License
-<br>(recommended loading setting: Size = 13.0, GlyphOffset.y = +1)
-<br>https://github.com/bluescan/proggyfonts
-
 **ProggyTiny.ttf**, by Tristan Grimmer
 <br>MIT License
 <br>(recommended loading setting: Size = 10.0, GlyphOffset.y = +1)
 <br>https://github.com/bluescan/proggyfonts
-
-**ProggyVector.ttf**, by Tristan Grimmer, Source Foundry Authors
-<BR>MIT License + Bitstream Vera License
-<BR>https://github.com/bluescan/proggyfonts
 
 **Karla-Regular.ttf**, by Jonathan Pinhorn
 <br>SIL OPEN FONT LICENSE Version 1.1
