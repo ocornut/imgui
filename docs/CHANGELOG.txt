@@ -235,6 +235,20 @@ Other Changes:
     platforms. (#8792, #9112)
   - SDL2, SDL3: changed `GetClipboardText()` handler to return NULL on error aka
     clipboard contents is not text. Consistent with other backends. (#9168)
+  - SDL2, SDL3: systems other than X11 are back to starting mouse capture on mouse down
+    (reverts 1.91.9 change). Only X11 requires waiting for a drag by default (not ideal,
+    but a better default for X11 users). Waiting for a drag to start mouse capture leads to
+    input drops when dragging after clicking on the edge of a window.
+    (#3650, #6410, #9235, #3956, #3835)
+  - SDL2, SDL3: added ImGui_ImplSDL2_SetMouseCaptureMode()/ImGui_ImplSDL3_SetMouseCaptureMode()
+    function for X11 users to disable mouse capturing/grabbing. (#3650, #6410, #9235, #3956, #3835)
+    - When attached to a debugger may want to call:
+      - `ImGui_ImplSDL3_SetMouseCaptureMode(ImGui_ImplSDL3_MouseCaptureMode_Disabled);`
+    - But you can also configure your system or debugger to automatically release
+      mouse grab when crashing/breaking in debugger, e.g.
+      - console: `setxkbmap -option grab:break_actions && xdotool key XF86Ungrab`
+      - or use a GDB script to capture SDL_CaptureMouse(false). See #3650.
+    - On platforms other than X11 this is unnecessary.
   - SDL_GPU3: added `SamplerNearest` in `ImGui_ImplSDLGPU3_RenderState`.
   - SDL_GPU3: macOS version can use MSL shaders in order to support macOS 10.14+
     (vs Metallib shaders requiring macOS 14+). Requires application calling
