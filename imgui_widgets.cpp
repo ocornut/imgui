@@ -4251,7 +4251,7 @@ static void stb_textedit_replace(ImGuiInputTextState* str, STB_TexteditState* st
 // We added an extra indirection where 'Stb' is heap-allocated, in order facilitate the work of bindings generators.
 ImGuiInputTextState::ImGuiInputTextState()
 {
-    memset(this, 0, sizeof(*this));
+    memset((void*)this, 0, sizeof(*this));
     Stb = IM_NEW(ImStbTexteditState);
     memset(Stb, 0, sizeof(*Stb));
 }
@@ -4301,7 +4301,7 @@ void ImGuiInputTextState::ReloadUserBufAndMoveToEnd()       { WantReloadUserBuf 
 
 ImGuiInputTextCallbackData::ImGuiInputTextCallbackData()
 {
-    memset(this, 0, sizeof(*this));
+    memset((void*)this, 0, sizeof(*this));
 }
 
 // Public API to manipulate UTF-8 text from within a callback.
@@ -9548,7 +9548,7 @@ struct ImGuiTabBarSection
     float               WidthAfterShrinkMinWidth;
     float               Spacing;                // Horizontal spacing at the end of the section.
 
-    ImGuiTabBarSection() { memset(this, 0, sizeof(*this)); }
+    ImGuiTabBarSection() { memset((void*)this, 0, sizeof(*this)); }
 };
 
 namespace ImGui
@@ -9564,7 +9564,7 @@ namespace ImGui
 
 ImGuiTabBar::ImGuiTabBar()
 {
-    memset(this, 0, sizeof(*this));
+    memset((void*)this, 0, sizeof(*this));
     CurrFrameVisible = PrevFrameVisible = -1;
     LastTabItemIdx = -1;
 }
