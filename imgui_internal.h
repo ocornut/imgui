@@ -2115,7 +2115,7 @@ struct ImGuiDockContext
     ImVector<ImGuiDockRequest>      Requests;
     ImVector<ImGuiDockNodeSettings> NodesSettings;
     bool                            WantFullRebuild;
-    ImGuiDockContext()              { memset(this, 0, sizeof(*this)); }
+    ImGuiDockContext()              { memset((void*)this, 0, sizeof(*this)); }
 };
 
 #endif // #ifdef IMGUI_HAS_DOCK
