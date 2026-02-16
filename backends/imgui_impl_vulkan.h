@@ -50,6 +50,12 @@
 //#define IMGUI_IMPL_VULKAN_VOLK_FILENAME    <volk.h>       // Default
 // Reminder: make those changes in your imconfig.h file, not here!
 
+// Clang/GCC warnings with -Weverything
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wold-style-cast" // warning: use of old-style cast
+#endif
+
 #if defined(IMGUI_IMPL_VULKAN_NO_PROTOTYPES) && !defined(VK_NO_PROTOTYPES)
 #define VK_NO_PROTOTYPES
 #endif
@@ -260,5 +266,9 @@ struct ImGui_ImplVulkanH_Window
         AttachmentDesc.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     }
 };
+
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 
 #endif // #ifndef IMGUI_DISABLE

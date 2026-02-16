@@ -24,6 +24,12 @@
 #include <dxgiformat.h> // DXGI_FORMAT
 #include <d3d12.h>      // D3D12_CPU_DESCRIPTOR_HANDLE
 
+// Clang/GCC warnings with -Weverything
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wold-style-cast" // warning: use of old-style cast
+#endif
+
 // Initialization data, for ImGui_ImplDX12_Init()
 struct ImGui_ImplDX12_InitInfo
 {
@@ -75,5 +81,9 @@ struct ImGui_ImplDX12_RenderState
     ID3D12Device*               Device;
     ID3D12GraphicsCommandList*  CommandList;
 };
+
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 
 #endif // #ifndef IMGUI_DISABLE

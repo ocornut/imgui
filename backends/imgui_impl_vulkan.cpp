@@ -116,6 +116,14 @@
 #pragma warning (disable: 4127) // condition expression is constant
 #endif
 
+// Clang/GCC warnings with -Weverything
+#if defined(__clang__)
+#pragma clang diagnostic ignored "-Wold-style-cast"                 // warning: use of old-style cast
+#pragma clang diagnostic ignored "-Wsign-conversion"                // warning: implicit conversion changes signedness
+#pragma clang diagnostic ignored "-Wimplicit-int-float-conversion"  // warning: implicit conversion from 'xxx' to 'float' may lose precision
+#pragma clang diagnostic ignored "-Wcast-function-type"             // warning: cast between incompatible function types (for loader)
+#endif
+
 // Forward Declarations
 struct ImGui_ImplVulkan_FrameRenderBuffers;
 struct ImGui_ImplVulkan_WindowRenderBuffers;
