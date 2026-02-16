@@ -40,8 +40,8 @@ static int                      wgpu_surface_width = 1280;
 static int                      wgpu_surface_height = 800;
 
 // Forward declarations
-static bool         InitWGPU(SDL_Window* window);
-static WGPUSurface  CreateWGPUSurface(const WGPUInstance& instance, SDL_Window* window);
+static bool InitWGPU(SDL_Window* window);
+WGPUSurface CreateWGPUSurface(const WGPUInstance& instance, SDL_Window* window);
 
 static void ResizeSurface(int width, int height)
 {

@@ -259,6 +259,7 @@ Other Changes:
     selects `VkSwapchainCreateInfoKHR`'s `compositeAlpha` value based on
     `cap.supportedCompositeAlpha`, which seems to be required on some Android
      devices. (#8784) [@FelixStach]
+  - WebGPU: fixes for Emscripten 5.0.0 (note: our examples currently don't build with 5.0.1).
   - Win32: handle `WM_IME_CHAR`/`WM_IME_COMPOSITION` to support Unicode inputs on
     MBCS (non-Unicode) Windows. (#9099, #3653, #5961) [@ulhc, @ocornut, @Othereum]
   - Win32: minor optimization not submitting gamepad input if packet number has not

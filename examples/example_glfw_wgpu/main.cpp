@@ -40,8 +40,8 @@ static int                      wgpu_surface_width = 1280;
 static int                      wgpu_surface_height = 800;
 
 // Forward declarations
-static bool         InitWGPU(GLFWwindow* window);
-static WGPUSurface  CreateWGPUSurface(const WGPUInstance& instance, GLFWwindow* window);
+static bool InitWGPU(GLFWwindow* window);
+WGPUSurface CreateWGPUSurface(const WGPUInstance& instance, GLFWwindow* window);
 
 static void glfw_error_callback(int error, const char* description)
 {
@@ -408,7 +408,7 @@ static WGPUDevice RequestDevice(WGPUAdapter& adapter)
 #endif // __EMSCRIPTEN__
 #endif // IMGUI_IMPL_WEBGPU_BACKEND_WGPU
 
-static bool InitWGPU(GLFWwindow* window)
+bool InitWGPU(GLFWwindow* window)
 {
     WGPUTextureFormat preferred_fmt = WGPUTextureFormat_Undefined;  // acquired from SurfaceCapabilities
 
