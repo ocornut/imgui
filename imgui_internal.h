@@ -708,7 +708,7 @@ struct ImSpanAllocator
     int     Offsets[CHUNKS];
     int     Sizes[CHUNKS];
 
-    ImSpanAllocator()                               { memset(this, 0, sizeof(*this)); }
+    ImSpanAllocator()                               { memset((void*)this, 0, sizeof(*this)); }
     inline void  Reserve(int n, size_t sz, int a=4) { IM_ASSERT(n == CurrIdx && n < CHUNKS); CurrOff = IM_MEMALIGN(CurrOff, a); Offsets[n] = CurrOff; Sizes[n] = (int)sz; CurrIdx++; CurrOff += (int)sz; }
     inline int   GetArenaSizeInBytes()              { return CurrOff; }
     inline void  SetArenaBasePtr(void* base_ptr)    { BasePtr = (char*)base_ptr; }
@@ -889,7 +889,7 @@ struct ImDrawDataBuilder
     ImVector<ImDrawList*>*  Layers[2];      // Pointers to global layers for: regular, tooltip. LayersP[0] is owned by DrawData.
     ImVector<ImDrawList*>   LayerData1;
 
-    ImDrawDataBuilder()                     { memset(this, 0, sizeof(*this)); }
+    ImDrawDataBuilder()                     { memset((void*)this, 0, sizeof(*this)); }
 };
 
 struct ImFontStackData
@@ -1164,7 +1164,7 @@ struct IMGUI_API ImGuiComboPreviewData
     float           BackupPrevLineTextBaseOffset;
     ImGuiLayoutType BackupLayout;
 
-    ImGuiComboPreviewData() { memset(this, 0, sizeof(*this)); }
+    ImGuiComboPreviewData() { memset((void*)this, 0, sizeof(*this)); }
 };
 
 // Stacked storage data for BeginGroup()/EndGroup()
@@ -1198,7 +1198,7 @@ struct IMGUI_API ImGuiMenuColumns
     ImU16       OffsetMark;
     ImU16       Widths[4];          // Width of:   Icon, Label, Shortcut, Mark  (accumulators for current frame)
 
-    ImGuiMenuColumns() { memset(this, 0, sizeof(*this)); }
+    ImGuiMenuColumns() { memset((void*)this, 0, sizeof(*this)); }
     void        Update(float spacing, bool window_reappearing);
     float       DeclColumns(float w_icon, float w_label, float w_shortcut, float w_mark);
     void        CalcNextTotalWidth(bool update_offsets);
@@ -1210,7 +1210,7 @@ struct IMGUI_API ImGuiInputTextDeactivatedState
     ImGuiID            ID;              // widget id owning the text state (which just got deactivated)
     ImVector<char>     TextA;           // text buffer
 
-    ImGuiInputTextDeactivatedState()    { memset(this, 0, sizeof(*this)); }
+    ImGuiInputTextDeactivatedState()    { memset((void*)this, 0, sizeof(*this)); }
     void    ClearFreeMemory()           { ID = 0; TextA.clear(); }
 };
 
@@ -1336,7 +1336,7 @@ struct ImGuiNextWindowData
     ImVec2                      MenuBarOffsetMinVal;    // (Always on) This is not exposed publicly, so we don't clear it and it doesn't have a corresponding flag (could we? for consistency?)
     ImGuiWindowRefreshFlags     RefreshFlagsVal;
 
-    ImGuiNextWindowData()       { memset(this, 0, sizeof(*this)); }
+    ImGuiNextWindowData()       { memset((void*)this, 0, sizeof(*this)); }
     inline void ClearFlags()    { HasFlags = ImGuiNextWindowDataFlags_None; }
 };
 
@@ -1368,7 +1368,7 @@ struct ImGuiNextItemData
     ImGuiID                     StorageId;          // Set by SetNextItemStorageID()
     ImU32                       ColorMarker;        // Set by SetNextItemColorMarker(). Not exposed yet, supported by DragScalar,SliderScalar and for ImGuiSliderFlags_ColorMarkers.
 
-    ImGuiNextItemData()         { memset(this, 0, sizeof(*this)); SelectionUserData = -1; }
+    ImGuiNextItemData()         { memset((void*)this, 0, sizeof(*this)); SelectionUserData = -1; }
     inline void ClearFlags()    { HasFlags = ImGuiNextItemDataFlags_None; ItemFlags = ImGuiItemFlags_None; } // Also cleared manually by ItemAdd()!
 };
 
@@ -1385,7 +1385,7 @@ struct ImGuiLastItemData
     ImRect                  ClipRect;           // Clip rectangle at the time of submitting item. ONLY VALID IF (StatusFlags & ImGuiItemStatusFlags_HasClipRect) is set..
     ImGuiKeyChord           Shortcut;           // Shortcut at the time of submitting item. ONLY VALID IF (StatusFlags & ImGuiItemStatusFlags_HasShortcut) is set..
 
-    ImGuiLastItemData()     { memset(this, 0, sizeof(*this)); }
+    ImGuiLastItemData()     { memset((void*)this, 0, sizeof(*this)); }
 };
 
 // Store data emitted by TreeNode() for usage by TreePop()
@@ -1418,7 +1418,7 @@ struct IMGUI_API ImGuiErrorRecoveryState
     short   SizeOfBeginPopupStack;
     short   SizeOfDisabledStack;
 
-    ImGuiErrorRecoveryState() { memset(this, 0, sizeof(*this)); }
+    ImGuiErrorRecoveryState() { memset((void*)this, 0, sizeof(*this)); }
 };
 
 // Data saved for each window pushed into the stack
@@ -1479,7 +1479,7 @@ struct ImGuiPopupData
     ImVec2              OpenPopupPos;   // Set on OpenPopup(), preferred popup position (typically == OpenMousePos when using mouse)
     ImVec2              OpenMousePos;   // Set on OpenPopup(), copy of mouse position at the time of opening popup
 
-    ImGuiPopupData()    { memset(this, 0, sizeof(*this)); ParentNavLayer = OpenFrameCount = -1; }
+    ImGuiPopupData()    { memset((void*)this, 0, sizeof(*this)); ParentNavLayer = OpenFrameCount = -1; }
 };
 
 //-----------------------------------------------------------------------------
@@ -1557,7 +1557,7 @@ struct ImGuiInputEvent
     };
     bool                            AddedByTestEngine;
 
-    ImGuiInputEvent() { memset(this, 0, sizeof(*this)); }
+    ImGuiInputEvent() { memset((void*)this, 0, sizeof(*this)); }
 };
 
 // Input function taking an 'ImGuiID owner_id' argument defaults to (ImGuiKeyOwner_Any == 0) aka don't test ownership, which matches legacy behavior.
@@ -1672,7 +1672,7 @@ struct ImGuiListClipperData
     int                             ItemsFrozen;
     ImVector<ImGuiListClipperRange> Ranges;
 
-    ImGuiListClipperData()          { memset(this, 0, sizeof(*this)); }
+    ImGuiListClipperData()          { memset((void*)this, 0, sizeof(*this)); }
     void                            Reset(ImGuiListClipper* clipper) { ListClipper = clipper; StepNo = ItemsFrozen = 0; Ranges.resize(0); }
 };
 
@@ -1807,7 +1807,7 @@ struct IMGUI_API ImGuiTypingSelectState
     float           LastRequestTime = 0.0f;
     bool            SingleCharModeLock = false; // After a certain single char repeat count we lock into SingleCharMode. Two benefits: 1) buffer never fill, 2) we can provide an immediate SingleChar mode without timer elapsing.
 
-    ImGuiTypingSelectState() { memset(this, 0, sizeof(*this)); }
+    ImGuiTypingSelectState() { memset((void*)this, 0, sizeof(*this)); }
     void            Clear()  { SearchBuffer[0] = 0; SingleCharModeLock = false; } // We preserve remaining data for easier debugging
 };
 
@@ -1843,7 +1843,7 @@ struct ImGuiOldColumnData
     ImGuiOldColumnFlags Flags;                  // Not exposed
     ImRect              ClipRect;
 
-    ImGuiOldColumnData() { memset(this, 0, sizeof(*this)); }
+    ImGuiOldColumnData() { memset((void*)this, 0, sizeof(*this)); }
 };
 
 struct ImGuiOldColumns
@@ -1864,7 +1864,7 @@ struct ImGuiOldColumns
     ImVector<ImGuiOldColumnData> Columns;
     ImDrawListSplitter  Splitter;
 
-    ImGuiOldColumns()   { memset(this, 0, sizeof(*this)); }
+    ImGuiOldColumns()   { memset((void*)this, 0, sizeof(*this)); }
 };
 
 //-----------------------------------------------------------------------------
@@ -1892,7 +1892,7 @@ struct ImGuiBoxSelectState
     ImRect                  BoxSelectRectPrev;  // Selection rectangle in absolute coordinates (derived every frame from BoxSelectStartPosRel and MousePos)
     ImRect                  BoxSelectRectCurr;
 
-    ImGuiBoxSelectState()   { memset(this, 0, sizeof(*this)); }
+    ImGuiBoxSelectState()   { memset((void*)this, 0, sizeof(*this)); }
 };
 
 //-----------------------------------------------------------------------------
@@ -2003,7 +2003,7 @@ struct ImGuiWindowSettings
     bool        WantApply;      // Set when loaded from .ini data (to enable merging/loading .ini data into an already running context)
     bool        WantDelete;     // Set to invalidate/delete the settings entry
 
-    ImGuiWindowSettings()       { memset(this, 0, sizeof(*this)); }
+    ImGuiWindowSettings()       { memset((void*)this, 0, sizeof(*this)); }
     char* GetName()             { return (char*)(this + 1); }
 };
 
@@ -2019,7 +2019,7 @@ struct ImGuiSettingsHandler
     void        (*WriteAllFn)(ImGuiContext* ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* out_buf);      // Write: Output every entries into 'out_buf'
     void*       UserData;
 
-    ImGuiSettingsHandler() { memset(this, 0, sizeof(*this)); }
+    ImGuiSettingsHandler() { memset((void*)this, 0, sizeof(*this)); }
 };
 
 //-----------------------------------------------------------------------------
@@ -2108,7 +2108,7 @@ struct ImGuiDebugAllocInfo
     ImS16       LastEntriesIdx;             // Current index in buffer
     ImGuiDebugAllocEntry LastEntriesBuf[6]; // Track last 6 frames that had allocations
 
-    ImGuiDebugAllocInfo() { memset(this, 0, sizeof(*this)); }
+    ImGuiDebugAllocInfo() { memset((void*)this, 0, sizeof(*this)); }
 };
 
 struct ImGuiMetricsConfig
@@ -2137,7 +2137,7 @@ struct ImGuiStackLevelInfo
     ImS8                    DataType;                   // ImGuiDataType
     int                     DescOffset;                 // -1 or offset into parent's ResultsPathsBuf
 
-    ImGuiStackLevelInfo()   { memset(this, 0, sizeof(*this)); DataType = -1; DescOffset = -1; }
+    ImGuiStackLevelInfo()   { memset((void*)this, 0, sizeof(*this)); DataType = -1; DescOffset = -1; }
 };
 
 struct ImGuiDebugItemPathQuery
@@ -2150,7 +2150,7 @@ struct ImGuiDebugItemPathQuery
     ImGuiTextBuffer         ResultsDescBuf;
     ImGuiTextBuffer         ResultPathBuf;
 
-    ImGuiDebugItemPathQuery() { memset(this, 0, sizeof(*this)); }
+    ImGuiDebugItemPathQuery() { memset((void*)this, 0, sizeof(*this)); }
 };
 
 // State for ID Stack tool queries
@@ -2161,7 +2161,7 @@ struct ImGuiIDStackTool
     int                     LastActiveFrame;
     float                   CopyToClipboardLastTime;
 
-    ImGuiIDStackTool()      { memset(this, 0, sizeof(*this)); LastActiveFrame = -1; OptHexEncodeNonAsciiChars = true; CopyToClipboardLastTime = -FLT_MAX; }
+    ImGuiIDStackTool()      { memset((void*)this, 0, sizeof(*this)); LastActiveFrame = -1; OptHexEncodeNonAsciiChars = true; CopyToClipboardLastTime = -FLT_MAX; }
 };
 
 //-----------------------------------------------------------------------------
@@ -2179,7 +2179,7 @@ struct ImGuiContextHook
     ImGuiContextHookCallback    Callback;
     void*                       UserData;
 
-    ImGuiContextHook()          { memset(this, 0, sizeof(*this)); }
+    ImGuiContextHook()          { memset((void*)this, 0, sizeof(*this)); }
 };
 
 //-----------------------------------------------------------------------------
@@ -2806,7 +2806,7 @@ struct ImGuiTabItem
     ImS16               IndexDuringLayout;      // Index only used during TabBarLayout(). Tabs gets reordered so 'Tabs[n].IndexDuringLayout == n' but may mismatch during additions.
     bool                WantClose;              // Marked as closed by SetTabItemClosed()
 
-    ImGuiTabItem()      { memset(this, 0, sizeof(*this)); LastFrameVisible = LastFrameSelected = -1; RequestedWidth = -1.0f; NameOffset = -1; BeginOrder = IndexDuringLayout = -1; }
+    ImGuiTabItem()      { memset((void*)this, 0, sizeof(*this)); LastFrameVisible = LastFrameSelected = -1; RequestedWidth = -1.0f; NameOffset = -1; BeginOrder = IndexDuringLayout = -1; }
 };
 
 // Storage for a tab bar (sizeof() 160 bytes)
@@ -2911,7 +2911,7 @@ struct ImGuiTableColumn
 
     ImGuiTableColumn()
     {
-        memset(this, 0, sizeof(*this));
+        memset((void*)this, 0, sizeof(*this));
         StretchWeight = WidthRequest = -1.0f;
         NameOffset = -1;
         DisplayOrder = IndexWithinEnabledSet = -1;
@@ -3072,7 +3072,7 @@ struct IMGUI_API ImGuiTable
     bool                        MemoryCompacted;
     bool                        HostSkipItems;              // Backup of InnerWindow->SkipItem at the end of BeginTable(), because we will overwrite InnerWindow->SkipItem on a per-column basis
 
-    ImGuiTable()                { memset(this, 0, sizeof(*this)); LastFrameActive = -1; }
+    ImGuiTable()                { memset((void*)this, 0, sizeof(*this)); LastFrameActive = -1; }
     ~ImGuiTable()               { IM_FREE(RawData); }
 };
 
@@ -3101,7 +3101,7 @@ struct IMGUI_API ImGuiTableTempData
     float                       HostBackupItemWidth;        // Backup of OuterWindow->DC.ItemWidth at the end of BeginTable()
     int                         HostBackupItemWidthStackSize;//Backup of OuterWindow->DC.ItemWidthStack.Size at the end of BeginTable()
 
-    ImGuiTableTempData()        { memset(this, 0, sizeof(*this)); LastTimeActive = -1.0f; }
+    ImGuiTableTempData()        { memset((void*)this, 0, sizeof(*this)); LastTimeActive = -1.0f; }
 };
 
 // sizeof() ~ 16
@@ -3138,7 +3138,7 @@ struct ImGuiTableSettings
     ImGuiTableColumnIdx         ColumnsCountMax;        // Maximum number of columns this settings instance can store, we can recycle a settings instance with lower number of columns but not higher
     bool                        WantApply;              // Set when loaded from .ini data (to enable merging/loading .ini data into an already running context)
 
-    ImGuiTableSettings()        { memset(this, 0, sizeof(*this)); }
+    ImGuiTableSettings()        { memset((void*)this, 0, sizeof(*this)); }
     ImGuiTableColumnSettings*   GetColumnSettings()     { return (ImGuiTableColumnSettings*)(this + 1); }
 };
 
@@ -3789,7 +3789,7 @@ struct ImFontLoader
     // FIXME: At this point the two other types of buffers may be managed by core to be consistent?
     size_t          FontBakedSrcLoaderDataSize;
 
-    ImFontLoader()  { memset(this, 0, sizeof(*this)); }
+    ImFontLoader()  { memset((void*)this, 0, sizeof(*this)); }
 };
 
 #ifdef IMGUI_ENABLE_STB_TRUETYPE
@@ -3886,7 +3886,7 @@ struct ImFontAtlasBuilder
     ImFontAtlasRectId           PackIdMouseCursors;     // White pixel + mouse cursors. Also happen to be fallback in case of packing failure.
     ImFontAtlasRectId           PackIdLinesTexData;
 
-    ImFontAtlasBuilder()        { memset(this, 0, sizeof(*this)); FrameCount = -1; RectsIndexFreeListStart = -1; PackIdMouseCursors = PackIdLinesTexData = -1; }
+    ImFontAtlasBuilder()        { memset((void*)this, 0, sizeof(*this)); FrameCount = -1; RectsIndexFreeListStart = -1; PackIdMouseCursors = PackIdLinesTexData = -1; }
 };
 
 IMGUI_API void              ImFontAtlasBuildInit(ImFontAtlas* atlas);

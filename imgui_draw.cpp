@@ -392,7 +392,7 @@ void ImGui::StyleColorsLight(ImGuiStyle* dst)
 
 ImDrawListSharedData::ImDrawListSharedData()
 {
-    memset(this, 0, sizeof(*this));
+    memset((void*)this, 0, sizeof(*this));
     InitialFringeScale = 1.0f;
     for (int i = 0; i < IM_COUNTOF(ArcFastVtx); i++)
     {
@@ -424,7 +424,7 @@ void ImDrawListSharedData::SetCircleTessellationMaxError(float max_error)
 
 ImDrawList::ImDrawList(ImDrawListSharedData* shared_data)
 {
-    memset(this, 0, sizeof(*this));
+    memset((void*)this, 0, sizeof(*this));
     _SetDrawListSharedData(shared_data);
 }
 
@@ -2417,7 +2417,7 @@ void ImGui::ShadeVertsTransformPos(ImDrawList* draw_list, int vert_start_idx, in
 // FIXME-NEWATLAS: Oversample specification could be more dynamic. For now, favoring automatic selection.
 ImFontConfig::ImFontConfig()
 {
-    memset(this, 0, sizeof(*this));
+    memset((void*)this, 0, sizeof(*this));
     FontDataOwnedByAtlas = true;
     OversampleH = 0; // Auto == 1 or 2 depending on size
     OversampleV = 0; // Auto == 1
@@ -2641,7 +2641,7 @@ static const ImVec2 FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[ImGuiMouseCursor_COUNT][3
 
 ImFontAtlas::ImFontAtlas()
 {
-    memset(this, 0, sizeof(*this));
+    memset((void*)this, 0, sizeof(*this));
     TexDesiredFormat = ImTextureFormat_RGBA32;
     TexGlyphPadding = 1;
     TexMinWidth = 512;
@@ -5134,7 +5134,7 @@ void ImFontGlyphRangesBuilder::BuildRanges(ImVector<ImWchar>* out_ranges)
 
 ImFontBaked::ImFontBaked()
 {
-    memset(this, 0, sizeof(*this));
+    memset((void*)this, 0, sizeof(*this));
     FallbackGlyphIndex = -1;
 }
 
@@ -5151,7 +5151,7 @@ void ImFontBaked::ClearOutputData()
 
 ImFont::ImFont()
 {
-    memset(this, 0, sizeof(*this));
+    memset((void*)this, 0, sizeof(*this));
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     Scale = 1.0f;
 #endif

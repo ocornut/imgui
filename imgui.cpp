@@ -1568,7 +1568,7 @@ void ImGuiStyle::ScaleAllSizes(float scale_factor)
 ImGuiIO::ImGuiIO()
 {
     // Most fields are initialized with zero
-    memset(this, 0, sizeof(*this));
+    memset((void*)this, 0, sizeof(*this));
     IM_STATIC_ASSERT(IM_COUNTOF(ImGuiIO::MouseDown) == ImGuiMouseButton_COUNT && IM_COUNTOF(ImGuiIO::MouseClicked) == ImGuiMouseButton_COUNT);
 
     // Settings
@@ -1974,7 +1974,7 @@ void ImGuiIO::AddFocusEvent(bool focused)
 ImGuiPlatformIO::ImGuiPlatformIO()
 {
     // Most fields are initialized with zero
-    memset(this, 0, sizeof(*this));
+    memset((void*)this, 0, sizeof(*this));
     Platform_LocaleDecimalPoint = '.';
 }
 
@@ -3231,7 +3231,7 @@ static void ImGuiListClipper_SeekCursorAndSetupPrevLine(ImGuiListClipper* clippe
 
 ImGuiListClipper::ImGuiListClipper()
 {
-    memset(this, 0, sizeof(*this));
+    memset((void*)this, 0, sizeof(*this));
 }
 
 ImGuiListClipper::~ImGuiListClipper()
@@ -4525,7 +4525,7 @@ void ImGui::CallContextHooks(ImGuiContext* ctx, ImGuiContextHookType hook_type)
 // ImGuiWindow is mostly a dumb struct. It merely has a constructor and a few helper methods
 ImGuiWindow::ImGuiWindow(ImGuiContext* ctx, const char* name) : DrawListInst(NULL)
 {
-    memset(this, 0, sizeof(*this));
+    memset((void*)this, 0, sizeof(*this));
     Ctx = ctx;
     Name = ImStrdup(name);
     NameBufLen = (int)ImStrlen(name) + 1;
