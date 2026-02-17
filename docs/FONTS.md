@@ -11,8 +11,8 @@ a new font mimicking ProggyClean which does scale nicely.
 We embed fonts in the code so you can use Dear ImGui without any file system access.
 If you don't use them you can set `IMGUI_DISABLE_DEFAULT_FONT` in your [imconfig.h](https://github.com/ocornut/imgui/blob/master/imconfig.h) file to ship binaries without the fonts and save about ~26 KB.
 
-Calling io.Fonts->AddFontDefaultBitmap() loads ProggyClean.
 Calling io.Fonts->AddFontDefaultVector() loads ProggyForever.
+Calling io.Fonts->AddFontDefaultBitmap() loads ProggyClean.
 Calling io.Fonts->AddFontDefault() selects one based on the expected default font size (when `style.FontSizeBase * style.FontScaleMain * style.FontSizeDpi >= 15` we use ProggyForever).
 
 You may also load external .TTF/.OTF files, see instructions on this page.
@@ -170,7 +170,7 @@ ImFont* font = io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, &config);
 🆕 **Since 1.92, with an up to date backend: specifying glyph ranges is unnecessary.**
 ```cpp
 // Load a first font
-ImFont* font = io.Fonts->AddFontDefault();
+ImFont* font = io.Fonts->AddFontDefaultVector();
 ImFontConfig config;
 config.MergeMode = true;
 io.Fonts->AddFontFromFileTTF("DroidSans.ttf", 0.0f, &config);           // Merge into first font to add e.g. Asian characters
@@ -294,7 +294,7 @@ Example Setup:
 // Merge icons into default tool font
 #include "IconsFontAwesome.h"
 ImGuiIO& io = ImGui::GetIO();
-io.Fonts->AddFontDefault();
+io.Fonts->AddFontDefaultVector();
 ImFontConfig config;
 config.MergeMode = true;
 config.GlyphMinAdvanceX = 13.0f; // Use if you want to make the icon monospaced
@@ -451,7 +451,7 @@ As an alternative to rendering colorful glyphs using imgui_freetype with `ImGuiF
 #### Pseudo-code:
 ```cpp
 // Add font, then register two custom 13x13 rectangles mapped to glyph 'a' and 'b' of this font
-ImFont* font = io.Fonts->AddFontDefault();
+ImFont* font = io.Fonts->AddFontDefaultVector();
 int rect_ids[2];
 rect_ids[0] = io.Fonts->AddCustomRectFontGlyph(font, 'a', 13, 13, 13+1);
 rect_ids[1] = io.Fonts->AddCustomRectFontGlyph(font, 'b', 13, 13, 13+1);
