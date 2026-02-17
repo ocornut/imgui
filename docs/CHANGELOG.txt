@@ -168,6 +168,8 @@ Other Changes:
     next to each components, in multi-components functions.
   - Added a way to select a specific marker color.
 - InputText:
+  - InputTextMultiline(): fixed a minor bug where Shift+Wheel would allow a small
+    horizontal scroll offset when there should be none. (#9249)
   - ImGuiInputTextCallbackData: SelectAll() also sets CursorPos to SelectionEnd.
   - ImGuiInputTextCallbackData: Added SetSelection() helper.
   - ImGuiInputTextCallbackData: Added ID and EventActive helpers. (#9174)
