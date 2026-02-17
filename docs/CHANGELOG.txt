@@ -36,35 +36,24 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.92.6 WIP (In Progress)
+ VERSION 1.92.6 (2026-02-17)
 -----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.92.6
 
 Breaking Changes:
 
-- Commented out legacy names obsoleted in 1.90 (Sept 2023):
-  - BeginChildFrame()     --> BeginChild() with ImGuiChildFlags_FrameStyle flag.
-  - EndChildFrame()       --> EndChild().
-  - ShowStackToolWindow() --> ShowIDStackToolWindow().
-  - IM_OFFSETOF()         --> offsetof().
-  - IM_FLOOR()            --> IM_TRUNC() [internal, for positive values only]
-- Hashing: handling of "###" operator to reset to seed within a string identifier
-  doesn't include the "###" characters in the output hash anymore:
-      Before: GetID("Hello###World") == GetID("###World") != GetID("World");
-      Now:    GetID("Hello###World") == GetID("###World") == GetID("World");
-  - This has the property of facilitating concatenating and manipulating
-    identifiers using "###", and will allow fixing other dangling issues.
-  - This will invalidate hashes (stored in .ini data) for Tables and Windows
-    that are using the "###" operators. (#713, #1698)
-- Renamed helper macro IM_ARRAYSIZE() -> IM_COUNTOF(). Kept redirection/legacy name.
 - Fonts:
   - AddFontDefault() now automatically selects an embedded font between:
-    - AddFontDefaultVector(): new scalable font. Recommended at any higher size.
     - AddFontDefaultBitmap(): classic pixel-clean font. Recommended at Size 13px with no scaling.
+    - AddFontDefaultVector(): new scalable font. Recommended at any higher size.
     - The default selection is based on (style.FontSizeBase * FontScaleMain * FontScaleDpi)
-      reaching a small threshold. Prefer calling either based on your own logic.
-      And you can call AddFontDefaultBitmap() to ensure legacy behavior.
-  - Fixed handling of `ImFontConfig::FontDataOwnedByAtlas = false` which
-    did erroneously make a copy of the font data, essentially defeating the purpose
+      reaching a small threshold, but old codebases may not set any of them properly.
+      As as a result, it is likely that old codebase may still default to AddFontDefaultBitmap().
+    - Prefer explicitly calling either of them based on your own logic!
+      You can call AddFontDefaultBitmap() to ensure legacy behavior.
+  - Fixed handling of `ImFontConfig::FontDataOwnedByAtlas = false` which did
+    erroneously make a copy of the font data, essentially defeating the purpose
     of this flag and wasting memory (undetected since July 2015 and now spotted
     by @TellowKrinkle, this is perhaps the oldest bug in Dear ImGui history,
     albeit for a rarely used feature!) (#9086, #8465)
@@ -74,13 +63,8 @@ Breaking Changes:
       until a shutdown of the owning context or font atlas.
     - The fact that handling of `FontDataOwnedByAtlas = false` was broken bypassed
       the issue altogether.
-  - Fixed a crash when trying to use AddFont() with MergeMode=true on a font that
-    has already been rendered. (#9162) [@ocornut, @cyfewlp]
   - Removed ImFontConfig::PixelSnapV added in 1.92 which turns out is unnecessary
     (and misdocumented). Post-rescale GlyphOffset is always rounded.
-  - Fixed an issue where using PushFont() from the implicit/fallback "Debug" window when
-    its recorded state is collapsed would incorrectly early out. This would break e.g. using
-    direct draw-list calls such as GetForegroundDrawList() with current font. (#9210, #8865)
  - Popups: changed compile-time 'ImGuiPopupFlags popup_flags = 1' default value to be '= 0' for
    BeginPopupContextItem(), BeginPopupContextWindow(), BeginPopupContextVoid(), OpenPopupOnItemClick().
    The default value has same meaning before and after. (#9157, #9146)
@@ -91,8 +75,8 @@ Breaking Changes:
    - We have now changed this behavior to: cleanup a very old API quirk, facilitate use by
      bindings, and to remove the last and error-prone non-zero default value. Also because we
      deemed it extremely rare to use those helper functions with the Left mouse button!
-     As using the LMB would generally be triggered via another widget, e.g. a Button() +
-     a OpenPopup()/BeginPopup() call.
+     As using the LMB would generally be triggered via another widget,
+     e.g. a Button() + a OpenPopup()/BeginPopup() call.
    - Before: The default = 1 means ImGuiPopupFlags_MouseButtonRight.
              Explicitly passing a literal 0 means ImGuiPopupFlags_MouseButtonLeft.
    - After:  The default = 0 means ImGuiPopupFlags_MouseButtonRight.
@@ -108,6 +92,21 @@ Breaking Changes:
    - BeginPopupContextItem("foo", 1);                                      // Behavior unchanged (as a courtesy we legacy interpret 1 as ImGuiPopupFlags_MouseButtonRight, will assert if disabling legacy behaviors.
    - BeginPopupContextItem("foo", 0);                                      // !! Behavior changed !! Was Left button. Now will defaults to Right button! --> Use ImGuiPopupFlags_MouseButtonLeft.
    - BeginPopupContextItem("foo", ImGuiPopupFlags_NoReopen);               // !! Behavior changed !! Was Left button + flags. Now will defaults to Right button! --> Use ImGuiPopupFlags_MouseButtonLeft | xxx.
+- Commented out legacy names obsoleted in 1.90 (Sept 2023):
+  - BeginChildFrame()     --> BeginChild() with ImGuiChildFlags_FrameStyle flag.
+  - EndChildFrame()       --> EndChild().
+  - ShowStackToolWindow() --> ShowIDStackToolWindow().
+  - IM_OFFSETOF()         --> offsetof().
+  - IM_FLOOR()            --> IM_TRUNC() [internal, for positive values only]
+- Hashing: handling of "###" operator to reset to seed within a string identifier
+  doesn't include the "###" characters in the output hash anymore:
+      Before: `GetID("Hello###World") == GetID("###World") != GetID("World")`
+      After:  `GetID("Hello###World") == GetID("###World") == GetID("World")`
+  - This has the property of facilitating concatenating and manipulating
+    identifiers using "###", and will allow fixing other dangling issues.
+  - This will invalidate hashes (stored in .ini data) for Tables and Windows
+    that are using the "###" operators. (#713, #1698)
+- Renamed helper macro IM_ARRAYSIZE() -> IM_COUNTOF(). Kept redirection/legacy name.
 - Backends:
   - Vulkan: optional ImGui_ImplVulkanH_DestroyWindow() helper used by our example
     code does not call vkDestroySurfaceKHR(): because surface is created by caller
@@ -116,7 +115,7 @@ Breaking Changes:
 Other Changes:
 
 - Fonts:
-  - Added AddFontDefaultVector(): a new embedded monospace scalable font: ProggyForever!
+  - Added `AddFontDefaultVector()`: a new embedded monospace scalable font: ProggyForever!
     From https://github.com/ocornut/proggyforever:
       "ProggyForever is an MIT-licensed partial reimplementation of the ProggyVector
        font (originally by Tristan Grimmer), which itself is a vector-based
@@ -130,27 +129,33 @@ Other Changes:
       data is ~14 KB. Embedding a scalable default font ensures that Dear ImGui can
       be easily and readily used in all contexts, even without file system access.
     - As always you can opt-out of the embedded font data if desired.
-  - AddFontDefault() now automatically selects an embedded font between
+  - `AddFontDefault()` now automatically selects an embedded font between
     the classic pixel-looking one and the new scalable one.
-    Prefer calling AddFontDefaultVector() or AddFontDefaultBitmap() explicitely.
-  - Fixed an issue related to EllipsisChar handling, while changing
+    Prefer calling `AddFontDefaultVector()` or `AddFontDefaultBitmap()` explicitely.
+  - Fixed a crash when trying to use `AddFont()` with `MergeMode==true` on a font that
+    has already been rendered. (#9162) [@ocornut, @cyfewlp]
+  - Fixed an issue where using `PushFont()` from the implicit/fallback "Debug" window
+    when its recorded state is collapsed would incorrectly early out. This would break
+    e.g. using direct draw-list calls such as GetForegroundDrawList() with current font.
+    (#9210, #8865)
+  - Fixed an issue related to `EllipsisChar` handling, while changing
     font loader or font loader flags dynamically in Style->Fonts menus.
-  - imgui_freetype: fixed overwriting ImFontConfig::PixelSnapH when hinting
+  - imgui_freetype: fixed overwriting `ImFontConfig::PixelSnapH` when hinting
     is enabled, creating side-effects when later disabling hinting or
     dynamically switching to stb_truetype rasterizer.
-  - Post rescale GlyphOffset is always rounded.
+  - Post rescale `ImFontConfig::GlyphOffset` is always rounded.
   - Adding new fonts after removing all fonts mid-frame properly updates current state.
 - Textures:
-  - Fixed a building issue when ImTextureID is defined as a struct.
+  - Fixed a building issue when `ImTextureID` is defined as a struct.
   - Fixed displaying texture # in Metrics/Debugger window.
 - Menus:
-  - Fixed MenuItem() label position and BeginMenu() arrow/icon/popup positions,
+  - Fixed `MenuItem()` label position and `BeginMenu()` arrow/icon/popup positions,
     when used inside a line with a baseline offset.
   - Made navigation into menu-bar auto wrap on X axis. (#9178)
 - TreeNode:
   - Fixed highlight position when used inside a line with a large text baseline offset.
     (never quite worked in this situation; but then most of the time the text
-    baseline offset ends up being zero or FramePadding.y for a given line).
+    baseline offset ends up being zero or `FramePadding.y` for a given line).
 - Tables:
   - Fixed an issue where a very thin scrolling table would advance parent layout
     slightly differently depending on its visibility (caused by a mismatch
@@ -161,66 +166,71 @@ Other Changes:
     data has missing or duplicate values. (#9108, #4046)
 - ColorEdit:
   - Added R/G/B/A color markers next to each component (enabled by default).
-  - Added ImGuiColorEditFlags_NoColorMarkers to disable them.
-  - Added style.ColorMarkerSize to configure width of color component markers.
+  - Added `ImGuiColorEditFlags_NoColorMarkers` to disable them.
+  - Added `style.ColorMarkerSize` to configure width of color component markers.
 - Sliders, Drags:
-  - Added ImGuiSliderFlags_ColorMarkers to opt-in adding R/G/B/A color markers
+  - Added `ImGuiSliderFlags_ColorMarkers` to opt-in adding R/G/B/A color markers
     next to each components, in multi-components functions.
   - Added a way to select a specific marker color.
 - InputText:
-  - ImGuiInputTextCallbackData: SelectAll() also sets CursorPos to SelectionEnd.
-  - ImGuiInputTextCallbackData: Added SetSelection() helper.
-  - ImGuiInputTextCallbackData: Added ID and EventActive helpers. (#9174)
+  - InputTextMultiline(): fixed a minor bug where Shift+Wheel would allow a small
+    horizontal scroll offset when there should be none. (#9249)
+  - ImGuiInputTextCallbackData: `SelectAll()` also sets `CursorPos` to `SelectionEnd`.
+  - ImGuiInputTextCallbackData: Added `SetSelection()` helper.
+  - ImGuiInputTextCallbackData: Added `ID` and `EventActivated` members. (#9174)
 - Text, InputText:
   - Reworked word-wrapping logic:
     - Try to not wrap in the middle of contiguous punctuations. (#8139, #8439, #9094)
     - Try to not wrap between a punctuation and a digit. (#8503)
-    - Inside InputTextMultiline() with _WordWrap: prefer keeping blanks at the
-      end of a line rather than at the beginning of next line. (#8990, #3237)
-  - Fixed low-level word-wrapping function reading from *text_end when passed
+    - Inside `InputTextMultiline()` with WordWrap enabled: prefer keeping blanks at
+      the end of a line rather than at the beginning of next line. (#8990, #3237)
+  - Fixed low-level word-wrapping function reading from `*text_end` when passed
     a string range. (#9107) [@achabense]
-  - Changed RenderTextEllipsis() logic to not trim trailing blanks before
+  - Changed `RenderTextEllipsis()` logic to not trim trailing blanks before
     the ellipsis, making ellipsis position more consistent and not arbitrary
     hiding the possibility of multiple blanks. (#9229)
 - Nav:
   - Fixed remote/shortcut InputText() not teleporting mouse cursor when
     nav cursor is visible and `io.ConfigNavMoveSetMousePos` is enabled.
-  - Fixed a looping/wrapping issue when done in menu layer. (#9178)
+  - Fixed a looping/wrapping issue when used in menu layer. (#9178)
   - Fixed speed scale for resizing/moving with keyboard/gamepad. We incorrectly
-    used io.DisplayFramebufferScale (very old code), effectively making those
-    actions faster on macOS/iOS retina screens.
+    used `io.DisplayFramebufferScale` as a scaling factor (very old code),
+    effectively making those actions faster on macOS/iOS retina screens.
     (changed this to use a style scale factor that's not fully formalized yet)
-  - Fixed an UBSan warning when using in a ListClipper region . (#9160)
+  - Fixed an UBSan warning when using in a `ImGuiListClipper` region . (#9160)
 - Scrollbar: fixed a codepath leading to a divide-by-zero (which would not be
   noticeable by user but detected by sanitizers). (#9089) [@judicaelclair]
 - InvisibleButton: allow calling with size (0,0) to fit to available content 
   size. (#9166, #7623)
-- Tooltips, Disabled: fixed EndDisabledOverrideReenable() assertion when
+- Tooltips, Disabled: fixed `EndDisabledOverrideReenable()` assertion when
   nesting a tooltip in a disabled block. (#9180, #7640) [@RegimantasSimkus]
-- Added GetItemFlags() in public API for consistency and to expose generic
+- Added `GetItemFlags()` in public API for consistency and to expose generic
   flags of last submitted item. (#9127)
-- Log/Capture: fixed erroneously injecting extra carriage returns in output
-  buffer when ItemSpacing.y > FramePadding.y + 1.
+- Misc: fixed build on ARM64/ARM64EC targets trying to use SSE/immintrin.h.
+  (#9209, #5943, #4091) [@navvyswethgraphics]
+- Log/Capture:
+  - Fixed erroneously injecting extra carriage returns in output text buffer
+    when `ItemSpacing.y` > `FramePadding.y + 1` while emitting items.
 - Images:
-  - Added style.ImageRounding, ImGuiStyleVar_ImageRounding to configure
-    rounding of Image() widgets. (#2942, #845)
-  - ImageButton() doesn't use a clamped style.FrameRounding value but instead
-    adjust inner image rounding when FramePadding > FrameRounding. (#2942, #845)
+  - Added `style.ImageRounding`, `ImGuiStyleVar_ImageRounding `to configure
+    rounding of `Image()` widgets. (#2942, #845)
+  - `ImageButton()` doesn't use a clamped `style.FrameRounding` value but instead
+    adjust inner image rounding when `FramePadding > `FrameRounding`. (#2942, #845)
 - Shortcuts:
-  - IsItemHovered() without ImGuiHoveredFlags_AllowWhenBlockedByActiveItem
+  - IsItemHovered() without `ImGuiHoveredFlags_AllowWhenBlockedByActiveItem`
     doesn't filter out the signal when activated item is a shortcut remote activation;
-    (which mimicks what's done internally in the ItemHoverable() function). (#9138)
+    (which mimicks what's done internally in the `ItemHoverable()` function). (#9138)
   - Fixed tooltip placement being affected for a frame when located over an item
-    activated by SetNextItemShortcut(). (#9138)
+    activated by `SetNextItemShortcut()`. (#9138)
 - Error Handling:
-  - Improve error handling and recovery for EndMenu()/EndCombo(). (#1651, #9165, #8499)
-  - Improve error handling and recovery for TableSetupColumn().
+  - Improved error handling and recovery for `EndMenu()`/`EndCombo()`. (#1651, #9165, #8499)
+  - Improved error handling and recovery for `TableSetupColumn()`.
 - Debug Tools:
   - Debug Log: fixed incorrectly printing characters in IO log when submitting
     non-ASCII values to `io.AddInputCharacter()`. (#9099)
-  - Debug Log: can output to debugger on Windows. (#5855)
+  - Debug Log: can output to debugger on Windows via Win32 `OutputDebugString()` (#5855)
 - Demo:
-  - Slightly improve Selectable() demos. (#9193)
+  - Slightly improve `Selectable()` demos. (#9193)
 - Backends:
   - DirectX10: added `SamplerNearest` in `ImGui_ImplDX10_RenderState`.
     (+renamed `SamplerDefault` to `SamplerLinear`, which was tagged as beta API)
@@ -228,13 +238,27 @@ Other Changes:
     (+renamed `SamplerDefault` to `SamplerLinear`, which was tagged as beta API)
   - GLFW: Avoid repeated `glfwSetCursor()` / `glfwSetInputMode()` unnecessary calls.
     Lowers overhead for very high framerates (e.g. 10k+ FPS). [@maxliani]
-  - GLFW: Added IMGUI_IMPL_GLFW_DISABLE_X11 / IMGUI_IMPL_GLFW_DISABLE_WAYLAND to
+  - GLFW: Added `IMGUI_IMPL_GLFW_DISABLE_X11` / `IMGUI_IMPL_GLFW_DISABLE_WAYLAND` to
     forcefully disable either. (#9109, #9116)
     Try to set them automatically if headers are not accessible. (#9225)
   - OpenGL3: Fixed embedded loader multiple init/shutdown cycles broken on some
     platforms. (#8792, #9112)
   - SDL2, SDL3: changed `GetClipboardText()` handler to return NULL on error aka
     clipboard contents is not text. Consistent with other backends. (#9168)
+  - SDL2, SDL3: systems other than X11 are back to starting mouse capture on mouse down
+    (reverts 1.91.9 change). Only X11 requires waiting for a drag by default (not ideal,
+    but a better default for X11 users). Waiting for a drag to start mouse capture leads to
+    input drops when dragging after clicking on the edge of a window.
+    (#3650, #6410, #9235, #3956, #3835)
+  - SDL2, SDL3: added `ImGui_ImplSDL2_SetMouseCaptureMode()`/`ImGui_ImplSDL3_SetMouseCaptureMode()`
+    function for X11 users to disable mouse capturing/grabbing. (#3650, #6410, #9235, #3956, #3835)
+    - When attached to a debugger may want to call:
+      - `ImGui_ImplSDL3_SetMouseCaptureMode(ImGui_ImplSDL3_MouseCaptureMode_Disabled);`
+    - But you can also configure your system or debugger to automatically release
+      mouse grab when crashing/breaking in debugger, e.g.
+      - console: `setxkbmap -option grab:break_actions && xdotool key XF86Ungrab`
+      - or use a GDB script to call SDL_CaptureMouse(false). See #3650.
+    - On platforms other than X11 this is unnecessary.
   - SDL_GPU3: added `SamplerNearest` in `ImGui_ImplSDLGPU3_RenderState`.
   - SDL_GPU3: macOS version can use MSL shaders in order to support macOS 10.14+
     (vs Metallib shaders requiring macOS 14+). Requires application calling
@@ -243,6 +267,7 @@ Other Changes:
     selects `VkSwapchainCreateInfoKHR`'s `compositeAlpha` value based on
     `cap.supportedCompositeAlpha`, which seems to be required on some Android
      devices. (#8784) [@FelixStach]
+  - WebGPU: fixes for Emscripten 5.0.0 (note: current examples do not build with 5.0.1).
   - Win32: handle `WM_IME_CHAR`/`WM_IME_COMPOSITION` to support Unicode inputs on
     MBCS (non-Unicode) Windows. (#9099, #3653, #5961) [@ulhc, @ocornut, @Othereum]
   - Win32: minor optimization not submitting gamepad input if packet number has not
@@ -271,16 +296,16 @@ Docking+Viewports Branch:
   - Fixed an assert in background dimming code, which could trigger after using
     gamepad/keyboard to move a window to another viewport. (#9053) [@lut0pia, @ocornut]
 - Backends:
-  - GLFW: dynamically load X11 functions to avoid -lx11 linking requirement introduced
+  - GLFW: dynamically load X11 functions to avoid `-lx11` linking requirement introduced
     in 1.92.3. (#9116, #9109) [@ramenguy99]
   - GLFW: improve workarounds for cases where GLFW is unable to provide reliable monitor 
     info. Preserve existing monitor list when none of the new one is valid. (#9195, #7902, #5683)
   - SDL2, SDL3: adjust IME offset to match other backends and master branch. (#6071, #1953)
   - Win32: viewports created by backend forcefully direct messages to
-    DefWindowProcW() in order to support Unicode text input. (#9099, #3653, #5961) [@ulhc]
+    `DefWindowProcW()` in order to support Unicode text input. (#9099, #3653, #5961) [@ulhc]
   - Win32: fixed an issue from 1.90.5 where newly appearing windows that are not parented
     to the main viewport didn't have their task bar icon appear before the window was
-    explicitely refocused. (#7354, #8669)
+    explicitly refocused. (#7354, #8669)
 
 
 -----------------------------------------------------------------------
