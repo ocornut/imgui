@@ -290,6 +290,14 @@ ImGuiDemoMarkerCallback             GImGuiDemoMarkerCallback = NULL;
 void*                               GImGuiDemoMarkerCallbackUserData = NULL;
 #define IMGUI_DEMO_MARKER(section)  do { if (GImGuiDemoMarkerCallback != NULL) GImGuiDemoMarkerCallback("imgui_demo.cpp", __LINE__, section, GImGuiDemoMarkerCallbackUserData); } while (0)
 
+// Sneakily forward declare functions which aren't worth putting in public API yet
+namespace ImGui
+{
+    IMGUI_API void ShowFontAtlas(ImFontAtlas* atlas);
+    IMGUI_API bool TreeNodeGetOpen(ImGuiID storage_id);
+    IMGUI_API void TreeNodeSetOpen(ImGuiID storage_id, bool is_open);
+}
+
 //-----------------------------------------------------------------------------
 // [SECTION] Demo Window / ShowDemoWindow()
 //-----------------------------------------------------------------------------
@@ -1746,9 +1754,6 @@ static void DemoWindowWidgetsDragsAndSliders()
 // [SECTION] DemoWindowWidgetsFonts()
 //-----------------------------------------------------------------------------
 
-// Forward declare ShowFontAtlas() which isn't worth putting in public API yet
-namespace ImGui { IMGUI_API void ShowFontAtlas(ImFontAtlas* atlas); }
-
 static void DemoWindowWidgetsFonts()
 {
     IMGUI_DEMO_MARKER("Widgets/Fonts");
@@ -3079,16 +3084,6 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
                     }
                 }
 
-                static bool TreeNodeGetOpen(ExampleTreeNode* node)
-                {
-                    return ImGui::GetStateStorage()->GetBool((ImGuiID)node->UID);
-                }
-
-                static void TreeNodeSetOpen(ExampleTreeNode* node, bool open)
-                {
-                    ImGui::GetStateStorage()->SetBool((ImGuiID)node->UID, open);
-                }
-
                 // When closing a node: 1) close and unselect all child nodes, 2) select parent if any child was selected.
                 // FIXME: This is currently handled by user logic but I'm hoping to eventually provide tree node
                 // features to do this automatically, e.g. a ImGuiTreeNodeFlags_AutoCloseChildNodes etc.
@@ -3096,11 +3091,11 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
                 {
                     // Recursive close (the test for depth == 0 is because we call this on a node that was just closed!)
                     int unselected_count = selection->Contains((ImGuiID)node->UID) ? 1 : 0;
-                    if (depth == 0 || TreeNodeGetOpen(node))
+                    if (depth == 0 || ImGui::TreeNodeGetOpen((ImGuiID)node->UID))
                     {
                         for (ExampleTreeNode* child : node->Childs)
                             unselected_count += TreeCloseAndUnselectChildNodes(child, selection, depth + 1);
-                        TreeNodeSetOpen(node, false);
+                        ImGui::TreeNodeSetOpen((ImGuiID)node->UID, false);
                     }
 
                     // Select root node if any of its child was selected, otherwise unselect
@@ -3134,7 +3129,7 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
                 {
                     if (node->Parent != NULL) // Root node isn't visible nor selectable in our scheme
                         selection->SetItemSelected((ImGuiID)node->UID, selected);
-                    if (node->Parent == NULL || TreeNodeGetOpen(node))
+                    if (node->Parent == NULL || ImGui::TreeNodeGetOpen((ImGuiID)node->UID))
                         for (ExampleTreeNode* child : node->Childs)
                             TreeSetAllInOpenNodes(child, selection, selected);
                 }
@@ -3154,7 +3149,7 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
                         return NULL;
 
                     // Recurse into childs. Query storage to tell if the node is open.
-                    if (curr_node->Childs.Size > 0 && TreeNodeGetOpen(curr_node))
+                    if (curr_node->Childs.Size > 0 && ImGui::TreeNodeGetOpen((ImGuiID)curr_node->UID))
                         return curr_node->Childs[0];
 
                     // Next sibling, then into our own parent
@@ -9463,7 +9458,7 @@ struct ExampleAppPropertyEditor
                 Filter.Build();
             ImGui::PopItemFlag();
 
-            if (ImGui::BeginTable("##bg", 1, ImGuiTableFlags_RowBg))
+            if (ImGui::BeginTable("##list", 1, ImGuiTableFlags_RowBg))
             {
                 for (ExampleTreeNode* node : root_node->Childs)
                     if (Filter.PassFilter(node->Name)) // Filter root node
