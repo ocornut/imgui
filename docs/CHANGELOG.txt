@@ -43,6 +43,8 @@ Breaking Changes:
 
 Other Changes:
 
+- Clipper: clear DisplayStart/DisplayEnd fields when Step() returns false.
+
 
 -----------------------------------------------------------------------
  VERSION 1.92.6 (2026-02-17)
