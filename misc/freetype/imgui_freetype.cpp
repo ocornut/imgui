@@ -443,8 +443,8 @@ static bool ImGui_ImplFreeType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig* s
         for (int i = 1; i < bd_font_data->FtFace->num_fixed_sizes; i++)
         {
             const float cur_height = bd_font_data->FtFace->available_sizes[i].y_ppem / FT_SCALEFACTOR;
-            // TODO: is this overkill?
-            // TODO: is-float-close with epsilon param would be nice, maybe
+            // FIXME: is this overkill?
+            // FIXME: is-float-close with epsilon param would be nice, maybe
             if (ImFabs(cur_height - size) < 0.001f)
             {
                 best_index = i;
@@ -533,23 +533,23 @@ static void RescaleBitmap(uint32_t* dst, const int dst_w, const int dst_h, uint3
         {
             // We perform a weighted mean.
             ImVec4 color;
-            float weight_sum = 0.f;
+            float weight_sum = 0.0f;
 
             // Walk from upper edge to bottom edge (vertical)
             const float edge_up = ((float)y * src_h) / dst_h;
-            const float edge_down = ((y + 1.f) * src_h) / dst_h;
+            const float edge_down = ((y + 1.0f) * src_h) / dst_h;
             for (float frac_pos_y = edge_up; frac_pos_y < edge_down;)
             {
                 const int src_y = (int)ImFloor(frac_pos_y); IM_ASSERT(src_y < src_h);
-                const float frac_y = 1.f - (frac_pos_y - src_y);
+                const float frac_y = 1.0f - (frac_pos_y - src_y);
 
                 // Walk from left edge to right edge (horizontal)
                 const float edge_left = ((float)x * src_w) / dst_w;
-                const float edge_right = ((x + 1.f) * src_w) / dst_w;
+                const float edge_right = ((x + 1.0f) * src_w) / dst_w;
                 for (float frac_pos_x = edge_left; frac_pos_x < edge_right;)
                 {
                     const int src_x = (int)ImFloor(frac_pos_x); IM_ASSERT(src_x < src_w);
-                    const float frac_x = 1.f - (frac_pos_x - src_x);
+                    const float frac_x = 1.0f - (frac_pos_x - src_x);
 
                     const float src_pixel_weight = frac_x * frac_y;
 
@@ -599,11 +599,11 @@ static bool ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConf
     FT_Face face = bd_font_data->FtFace;
     FT_GlyphSlot slot = face->glyph;
     const float rasterizer_density = src->RasterizerDensity * baked->RasterizerDensity;
-    float bitmap_x_scale = 1.f;
-    float bitmap_y_scale = 1.f;
+    float bitmap_x_scale = 1.0f;
+    float bitmap_y_scale = 1.0f;
     if (((face->face_flags & FT_FACE_FLAG_FIXED_SIZES) != 0) && ((face->face_flags & FT_FACE_FLAG_SCALABLE) == 0) && ((bd_font_data->UserFlags & ImGuiFreeTypeLoaderFlags_Bitmap) != 0))
     {
-        // TODO: what if this just means invisible?
+        // FIXME: what if this just means invisible?
         IM_ASSERT(bd_font_data->FtFace->size->metrics.x_ppem > 0);
         IM_ASSERT(bd_font_data->FtFace->size->metrics.y_ppem > 0);
 
