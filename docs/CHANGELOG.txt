@@ -36,6 +36,19 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
+ VERSION 1.92.7 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Docking+Viewports Branch:
+
+- Viewports:
+  - Fixed an issue where the implicit "Debug" window would erroneously be targetted for
+    mouse inputs while hidden if (1) the implicit "Debug" window was used in a previous
+    session  and moved to a secondary viewport and (2) the Platform Backend does not
+    support the ImGuiBackendFlags_HasMouseHoveredViewport feature. (#9254)
+
+
+-----------------------------------------------------------------------
  VERSION 1.92.6 (2026-02-17)
 -----------------------------------------------------------------------
 
