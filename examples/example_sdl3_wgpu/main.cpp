@@ -513,7 +513,7 @@ static bool InitWGPU(SDL_Window* window)
 #include <windows.h>
 #endif
 
-static WGPUSurface CreateWGPUSurface(const WGPUInstance& instance, SDL_Window* window)
+WGPUSurface CreateWGPUSurface(const WGPUInstance& instance, SDL_Window* window)
 {
     SDL_PropertiesID propertiesID = SDL_GetWindowProperties(window);
 
