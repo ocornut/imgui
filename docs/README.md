@@ -55,8 +55,8 @@ if (ImGui::Button("Save"))
 ImGui::InputText("string", buf, IM_COUNTOF(buf));
 ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
 ```
-![sample code output (dark, segoeui font, freetype)](https://user-images.githubusercontent.com/8225057/191050833-b7ecf528-bfae-4a9f-ac1b-f3d83437a2f4.png)
-![sample code output (light, segoeui font, freetype)](https://user-images.githubusercontent.com/8225057/191050838-8742efd4-504d-4334-a9a2-e756d15bc2ab.png)
+<img width="412" height="236" alt="sample code output (dark)" src="https://github.com/user-attachments/assets/f075e2b0-98de-4be8-acb4-99ba0c9966cd" />
+<img width="412" height="236" alt="sample code output (light)" src="https://github.com/user-attachments/assets/32b838df-6378-498b-84a8-9a79ee6264a7" />
 
 ```cpp
 // Create a window called "My First Tool", with a menu bar.
@@ -90,7 +90,7 @@ for (int n = 0; n < 50; n++)
 ImGui::EndChild();
 ImGui::End();
 ```
-![my_first_tool_v188](https://user-images.githubusercontent.com/8225057/191055698-690a5651-458f-4856-b5a9-e8cc95c543e2.gif)
+![my_first_tool_v192 6](https://github.com/user-attachments/assets/6c76658c-302f-403b-af26-d517e2bfb0d4)
 
 Dear ImGui allows you to **create elaborate tools** as well as very short-lived ones. On the extreme side of short-livedness: using the Edit&Continue (hot code reload) feature of modern compilers you can add a few widgets to tweak variables while your application is running, and remove the code a minute later! Dear ImGui is not just for tweaking values. You can use it to trace a running algorithm by just emitting text commands. You can use it along with your own reflection data to browse your dataset live. You can use it to expose the internals of a subsystem in your engine, to create a logger, an inspection tool, a profiler, a debugger, an entire game-making editor/framework, etc.
 
@@ -116,6 +116,19 @@ Calling the `ImGui::ShowDemoWindow()` function will create a demo window showcas
 You should be able to build the examples from sources. If you don't, let us know! If you want to have a quick look at some Dear ImGui features, you can download Windows binaries of the demo app here:
 - [imgui-demo-binaries-20250625.zip](https://www.dearimgui.com/binaries/imgui-demo-binaries-20250625.zip) (Windows, 1.92.0, built 2025/06/25, master) or [older binaries](https://www.dearimgui.com/binaries).
 
+### Gallery
+
+Examples projects using Dear ImGui: [Tracy](https://github.com/wolfpld/tracy) (profiler), [ImHex](https://github.com/WerWolv/ImHex) (hex editor/data analysis), [RemedyBG](https://remedybg.itch.io/remedybg) (debugger) and [hundreds of others](https://github.com/ocornut/imgui/wiki/Software-using-Dear-ImGui).
+
+For more user-submitted screenshots of projects using Dear ImGui, check out the [Gallery Threads](https://github.com/ocornut/imgui/issues?q=label%3Agallery)!
+
+For a list of third-party widgets and extensions, check out the [Useful Extensions/Widgets](https://github.com/ocornut/imgui/wiki/Useful-Extensions) wiki page.
+
+|  |  |
+|--|--|
+| Custom engine [erhe](https://github.com/tksuoran/erhe) (docking branch)<BR>[![erhe](https://user-images.githubusercontent.com/8225057/190203358-6988b846-0686-480e-8663-1311fbd18abd.jpg)](https://user-images.githubusercontent.com/994606/147875067-a848991e-2ad2-4fd3-bf71-4aeb8a547bcf.png) | Custom engine for [Wonder Boy: The Dragon's Trap](http://www.TheDragonsTrap.com) (2017)<BR>[![the dragon's trap](https://user-images.githubusercontent.com/8225057/190203379-57fcb80e-4aec-4fec-959e-17ddd3cd71e5.jpg)](https://cloud.githubusercontent.com/assets/8225057/20628927/33e14cac-b329-11e6-80f6-9524e93b048a.png) |
+| Custom engine (untitled)<BR>[![editor white](https://user-images.githubusercontent.com/8225057/190203393-c5ac9f22-b900-4d1e-bfeb-6027c63e3d92.jpg)](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v160/editor_white.png) | Tracy Profiler ([github](https://github.com/wolfpld/tracy))<BR>[![tracy profiler](https://user-images.githubusercontent.com/8225057/190203401-7b595f6e-607c-44d3-97ea-4c2673244dfb.jpg)](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v176/tracy_profiler.png) |
+
 ### Getting Started & Integration
 
 See the [Getting Started](https://github.com/ocornut/imgui/wiki/Getting-Started) guide for details.
@@ -138,23 +151,12 @@ Officially maintained backends (in repository):
 - Frameworks: AGS/Adventure Game Studio, Amethyst, Blender, bsf, Cinder, Cocos2d-x, Defold, Diligent Engine, Ebiten, Flexium, GML/Game Maker Studio, GLEQ, Godot, GTK3, Irrlicht Engine, JUCE, LÖVE+LUA, Mach Engine, Magnum, Marmalade, Monogame, NanoRT, nCine, Nim Game Lib, Nintendo 3DS/Switch/WiiU (homebrew), Ogre, openFrameworks, OSG/OpenSceneGraph, Orx, Photoshop, px_render, Qt/QtDirect3D, raylib, SFML, Sokol, Unity, Unreal Engine 4/5, UWP, vtk, VulkanHpp, VulkanSceneGraph, Win32 GDI, WxWidgets.
 - Many bindings are auto-generated (by good old [cimgui](https://github.com/cimgui/cimgui) or our newer [dear_bindings](https://github.com/dearimgui/dear_bindings)), you can use their metadata output to generate bindings for other languages.
 
+<img width="878" height="220" alt="Useful extensions" src="https://github.com/user-attachments/assets/e6b0aa7c-bf53-41c5-ac69-bea3098b1dee" />
+
 [Useful Extensions/Widgets](https://github.com/ocornut/imgui/wiki/Useful-Extensions) wiki page:
 - Automation/testing, Text editors, node editors, timeline editors, plotting, software renderers, remote network access, memory editors, gizmos, etc. Notable and well supported extensions include [ImPlot](https://github.com/epezent/implot) and [Dear ImGui Test Engine](https://github.com/ocornut/imgui_test_engine).
 
 Also see [Wiki](https://github.com/ocornut/imgui/wiki) for more links and ideas.
-
-### Gallery
-
-Examples projects using Dear ImGui: [Tracy](https://github.com/wolfpld/tracy) (profiler), [ImHex](https://github.com/WerWolv/ImHex) (hex editor/data analysis), [RemedyBG](https://remedybg.itch.io/remedybg) (debugger) and [hundreds of others](https://github.com/ocornut/imgui/wiki/Software-using-Dear-ImGui).
-
-For more user-submitted screenshots of projects using Dear ImGui, check out the [Gallery Threads](https://github.com/ocornut/imgui/issues?q=label%3Agallery)!
-
-For a list of third-party widgets and extensions, check out the [Useful Extensions/Widgets](https://github.com/ocornut/imgui/wiki/Useful-Extensions) wiki page.
-
-|  |  |
-|--|--|
-| Custom engine [erhe](https://github.com/tksuoran/erhe) (docking branch)<BR>[![erhe](https://user-images.githubusercontent.com/8225057/190203358-6988b846-0686-480e-8663-1311fbd18abd.jpg)](https://user-images.githubusercontent.com/994606/147875067-a848991e-2ad2-4fd3-bf71-4aeb8a547bcf.png) | Custom engine for [Wonder Boy: The Dragon's Trap](http://www.TheDragonsTrap.com) (2017)<BR>[![the dragon's trap](https://user-images.githubusercontent.com/8225057/190203379-57fcb80e-4aec-4fec-959e-17ddd3cd71e5.jpg)](https://cloud.githubusercontent.com/assets/8225057/20628927/33e14cac-b329-11e6-80f6-9524e93b048a.png) |
-| Custom engine (untitled)<BR>[![editor white](https://user-images.githubusercontent.com/8225057/190203393-c5ac9f22-b900-4d1e-bfeb-6027c63e3d92.jpg)](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v160/editor_white.png) | Tracy Profiler ([github](https://github.com/wolfpld/tracy))<BR>[![tracy profiler](https://user-images.githubusercontent.com/8225057/190203401-7b595f6e-607c-44d3-97ea-4c2673244dfb.jpg)](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v176/tracy_profiler.png) |
 
 ### Support, Frequently Asked Questions (FAQ)
 

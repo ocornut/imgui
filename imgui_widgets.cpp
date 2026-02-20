@@ -1,4 +1,4 @@
-// dear imgui, v1.92.6
+// dear imgui, v1.92.7 WIP
 // (widgets code)
 
 /*
@@ -6733,6 +6733,8 @@ bool ImGui::TreeNodeExV(const void* ptr_id, ImGuiTreeNodeFlags flags, const char
     return TreeNodeBehavior(id, flags, label, label_end);
 }
 
+// The reason those two functions are not yet in public API is because I would like to design a more feature-full and generic API for this.
+// They are otherwise function (cc: #3823, #9251, #7553, #6754, #5423, #2958, #2079, #1947, #1131, #722)
 bool ImGui::TreeNodeGetOpen(ImGuiID storage_id)
 {
     ImGuiContext& g = *GImGui;
@@ -6740,15 +6742,16 @@ bool ImGui::TreeNodeGetOpen(ImGuiID storage_id)
     return storage->GetInt(storage_id, 0) != 0;
 }
 
-void ImGui::TreeNodeSetOpen(ImGuiID storage_id, bool open)
+void ImGui::TreeNodeSetOpen(ImGuiID storage_id, bool is_open)
 {
     ImGuiContext& g = *GImGui;
     ImGuiStorage* storage = g.CurrentWindow->DC.StateStorage;
-    storage->SetInt(storage_id, open ? 1 : 0);
+    storage->SetInt(storage_id, is_open ? 1 : 0);
 }
 
 bool ImGui::TreeNodeUpdateNextOpen(ImGuiID storage_id, ImGuiTreeNodeFlags flags)
 {
+    // Leaf node always open a new tree/id scope. If you never use it, add ImGuiTreeNodeFlags_NoTreePushOnOpen.
     if (flags & ImGuiTreeNodeFlags_Leaf)
         return true;
 

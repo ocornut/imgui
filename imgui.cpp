@@ -1,4 +1,4 @@
-// dear imgui, v1.92.6
+// dear imgui, v1.92.7 WIP
 // (main code and documentation)
 
 // Help:
@@ -1560,11 +1560,15 @@ void ImGuiStyle::ScaleAllSizes(float scale_factor)
     _MainScale *= scale_factor;
     WindowPadding = ImTrunc(WindowPadding * scale_factor);
     WindowRounding = ImTrunc(WindowRounding * scale_factor);
+    WindowBorderSize = ImTrunc(WindowBorderSize * scale_factor);
     WindowMinSize = ImTrunc(WindowMinSize * scale_factor);
     WindowBorderHoverPadding = ImTrunc(WindowBorderHoverPadding * scale_factor);
     ChildRounding = ImTrunc(ChildRounding * scale_factor);
+    ChildBorderSize = ImTrunc(ChildBorderSize * scale_factor);
     PopupRounding = ImTrunc(PopupRounding * scale_factor);
+    PopupBorderSize = ImTrunc(PopupBorderSize * scale_factor);
     FramePadding = ImTrunc(FramePadding * scale_factor);
+    FrameBorderSize = ImTrunc(FrameBorderSize * scale_factor);
     FrameRounding = ImTrunc(FrameRounding * scale_factor);
     ItemSpacing = ImTrunc(ItemSpacing * scale_factor);
     ItemInnerSpacing = ImTrunc(ItemInnerSpacing * scale_factor);
@@ -1581,17 +1585,21 @@ void ImGuiStyle::ScaleAllSizes(float scale_factor)
     ImageRounding = ImTrunc(ImageRounding * scale_factor);
     ImageBorderSize = ImTrunc(ImageBorderSize * scale_factor);
     TabRounding = ImTrunc(TabRounding * scale_factor);
+    TabBorderSize = ImTrunc(TabBorderSize * scale_factor);
     TabMinWidthBase = ImTrunc(TabMinWidthBase * scale_factor);
     TabMinWidthShrink = ImTrunc(TabMinWidthShrink * scale_factor);
     TabCloseButtonMinWidthSelected = (TabCloseButtonMinWidthSelected > 0.0f && TabCloseButtonMinWidthSelected != FLT_MAX) ? ImTrunc(TabCloseButtonMinWidthSelected * scale_factor) : TabCloseButtonMinWidthSelected;
     TabCloseButtonMinWidthUnselected = (TabCloseButtonMinWidthUnselected > 0.0f && TabCloseButtonMinWidthUnselected != FLT_MAX) ? ImTrunc(TabCloseButtonMinWidthUnselected * scale_factor) : TabCloseButtonMinWidthUnselected;
+    TabBarBorderSize = ImTrunc(TabBarBorderSize * scale_factor);
     TabBarOverlineSize = ImTrunc(TabBarOverlineSize * scale_factor);
+    TreeLinesSize = ImTrunc(TreeLinesSize * scale_factor);
     TreeLinesRounding = ImTrunc(TreeLinesRounding * scale_factor);
     DragDropTargetRounding = ImTrunc(DragDropTargetRounding * scale_factor);
     DragDropTargetBorderSize = ImTrunc(DragDropTargetBorderSize * scale_factor);
     DragDropTargetPadding = ImTrunc(DragDropTargetPadding * scale_factor);
     ColorMarkerSize = ImTrunc(ColorMarkerSize * scale_factor);
     SeparatorTextPadding = ImTrunc(SeparatorTextPadding * scale_factor);
+    SeparatorTextBorderSize = ImTrunc(SeparatorTextBorderSize * scale_factor);
     DockingSeparatorSize = ImTrunc(DockingSeparatorSize * scale_factor);
     DisplayWindowPadding = ImTrunc(DisplayWindowPadding * scale_factor);
     DisplaySafeAreaPadding = ImTrunc(DisplaySafeAreaPadding * scale_factor);
@@ -3356,6 +3364,7 @@ void ImGuiListClipper::End()
         }
         TempData = NULL;
     }
+    DisplayStart = DisplayEnd = ItemsCount; // Clear this so code which may be reused past last Step() won't trip on a non-empty range.
     ItemsCount = -1;
 }
 
