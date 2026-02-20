@@ -45,6 +45,9 @@ Other Changes:
 
 - Style: border sizes are now scaled (and rounded) by ScaleAllSizes().
 - Clipper: clear DisplayStart/DisplayEnd fields when Step() returns false.
+- Examples:
+  - WGPU: fixed undefined behaviors in example code for requesting adapter
+    and device. (#9246, #9256) [@r-lyeh]
 
 
 -----------------------------------------------------------------------
