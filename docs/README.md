@@ -55,8 +55,8 @@ if (ImGui::Button("Save"))
 ImGui::InputText("string", buf, IM_COUNTOF(buf));
 ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
 ```
-<img width="488" height="278" alt="sample code output (dark)" src="https://github.com/user-attachments/assets/8b409d41-7aba-4881-aef2-30082dbf0b90" />
-<img width="488" height="278" alt="sample code output (light)" src="https://github.com/user-attachments/assets/3d4cece2-32c3-4f0d-b8e0-6cb1fe6fade4" />
+<img width="412" height="236" alt="sample code output (dark)" src="https://github.com/user-attachments/assets/f075e2b0-98de-4be8-acb4-99ba0c9966cd" />
+<img width="412" height="236" alt="sample code output (light)" src="https://github.com/user-attachments/assets/32b838df-6378-498b-84a8-9a79ee6264a7" />
 
 ```cpp
 // Create a window called "My First Tool", with a menu bar.
@@ -90,7 +90,7 @@ for (int n = 0; n < 50; n++)
 ImGui::EndChild();
 ImGui::End();
 ```
-![my_first_tool_v188](https://user-images.githubusercontent.com/8225057/191055698-690a5651-458f-4856-b5a9-e8cc95c543e2.gif)
+![my_first_tool_v192 6](https://github.com/user-attachments/assets/6c76658c-302f-403b-af26-d517e2bfb0d4)
 
 Dear ImGui allows you to **create elaborate tools** as well as very short-lived ones. On the extreme side of short-livedness: using the Edit&Continue (hot code reload) feature of modern compilers you can add a few widgets to tweak variables while your application is running, and remove the code a minute later! Dear ImGui is not just for tweaking values. You can use it to trace a running algorithm by just emitting text commands. You can use it along with your own reflection data to browse your dataset live. You can use it to expose the internals of a subsystem in your engine, to create a logger, an inspection tool, a profiler, a debugger, an entire game-making editor/framework, etc.
 
