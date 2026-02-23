@@ -740,7 +740,7 @@ struct ExampleTreeNode
     int                         UID = 0;
     ExampleTreeNode*            Parent = NULL;
     ImVector<ExampleTreeNode*>  Childs;
-    unsigned short              IndexInParent = 0;  // Maintaining this allows us to implement linear traversal more easily
+    int                         IndexInParent = 0;  // Maintaining this allows us to implement linear traversal more easily
 
     // Leaf Data
     bool                        HasData = false;    // All leaves have data
@@ -774,7 +774,7 @@ static ExampleTreeNode* ExampleTree_CreateNode(const char* name, int uid, Exampl
     snprintf(node->Name, IM_COUNTOF(node->Name), "%s", name);
     node->UID = uid;
     node->Parent = parent;
-    node->IndexInParent = parent ? (unsigned short)parent->Childs.Size : 0;
+    node->IndexInParent = parent ? parent->Childs.Size : 0;
     if (parent)
         parent->Childs.push_back(node);
     return node;
@@ -788,18 +788,25 @@ static void ExampleTree_DestroyNode(ExampleTreeNode* node)
 }
 
 // Create example tree data
-// (this allocates _many_ more times than most other code in all of Dear ImGui or others demo)
+// (warning: this can allocates MANY MANY more times than other code in all of Dear ImGui + demo combined)
+// (a real application managing one million nodes would likely store its tree data differently)
 static ExampleTreeNode* ExampleTree_CreateDemoTree()
 {
-    static const char* root_names[] = { "Apple", "Banana", "Cherry", "Kiwi", "Mango", "Orange", "Pear", "Pineapple", "Strawberry", "Watermelon" };
+    //     20 root nodes ->    211 total nodes,   ~261 allocs.
+    //   1000 root nodes ->   ~11K total nodes,   ~14K allocs.
+    //  10000 root nodes ->  ~123K total nodes,  ~154K allocs.
+    // 100000 root nodes -> ~1338K total nodes, ~1666K allocs.
+    const int ROOT_ITEMS_COUNT = 20;
+
+    static const char* category_names[] = { "Apple", "Banana", "Cherry", "Kiwi", "Mango", "Orange", "Pear", "Pineapple", "Strawberry", "Watermelon" };
+    const int category_count = IM_COUNTOF(category_names);
     const size_t NAME_MAX_LEN = sizeof(ExampleTreeNode::Name);
     char name_buf[NAME_MAX_LEN];
     int uid = 0;
     ExampleTreeNode* node_L0 = ExampleTree_CreateNode("<ROOT>", ++uid, NULL);
-    const int root_items_multiplier = 2;
-    for (int idx_L0 = 0; idx_L0 < IM_COUNTOF(root_names) * root_items_multiplier; idx_L0++)
+    for (int idx_L0 = 0; idx_L0 < ROOT_ITEMS_COUNT; idx_L0++)
     {
-        snprintf(name_buf, IM_COUNTOF(name_buf), "%s %d", root_names[idx_L0 / root_items_multiplier], idx_L0 % root_items_multiplier);
+        snprintf(name_buf, IM_COUNTOF(name_buf), "%s %d", category_names[idx_L0 / (ROOT_ITEMS_COUNT / category_count)], idx_L0 % (ROOT_ITEMS_COUNT / category_count));
         ExampleTreeNode* node_L1 = ExampleTree_CreateNode(name_buf, ++uid, node_L0);
         const int number_of_childs = (int)strlen(node_L1->Name);
         for (int idx_L1 = 0; idx_L1 < number_of_childs; idx_L1++)
@@ -9449,18 +9456,16 @@ struct ExampleAppPropertyEditor
         // - Currently using a table to benefit from RowBg feature
         if (ImGui::BeginChild("##tree", ImVec2(300, 0), ImGuiChildFlags_ResizeX | ImGuiChildFlags_Borders | ImGuiChildFlags_NavFlattened))
         {
+            ImGui::PushItemFlag(ImGuiItemFlags_NoNavDefaultFocus, true);
             ImGui::SetNextItemWidth(-FLT_MIN);
             ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_F, ImGuiInputFlags_Tooltip);
-            ImGui::PushItemFlag(ImGuiItemFlags_NoNavDefaultFocus, true);
             if (ImGui::InputTextWithHint("##Filter", "incl,-excl", Filter.InputBuf, IM_COUNTOF(Filter.InputBuf), ImGuiInputTextFlags_EscapeClearsAll))
                 Filter.Build();
             ImGui::PopItemFlag();
 
             if (ImGui::BeginTable("##list", 1, ImGuiTableFlags_RowBg))
             {
-                for (ExampleTreeNode* node : root_node->Childs)
-                    if (Filter.PassFilter(node->Name)) // Filter root node
-                        DrawTreeNode(node);
+                DrawTree(root_node);
                 ImGui::EndTable();
             }
         }
@@ -9533,28 +9538,38 @@ struct ExampleAppPropertyEditor
         ImGui::EndGroup();
     }
 
+    // Custom search filter
+    // - Here we apply on root node only.
+    // - This does a stristr which is pretty heavy. In a real large-scale app you would likely store a filtered list which in turns would be trivial to linearize.
+    void DrawTree(ExampleTreeNode* node)
+    {
+        for (ExampleTreeNode* child : node->Childs)
+            if (Filter.PassFilter(child->Name)) // Filter root node
+                DrawTreeNode(child);
+    }
+
     void DrawTreeNode(ExampleTreeNode* node)
     {
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
         ImGui::PushID(node->UID);
         ImGuiTreeNodeFlags tree_flags = ImGuiTreeNodeFlags_None;
-        tree_flags |= ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;// Standard opening mode as we are likely to want to add selection afterwards
+        tree_flags |= ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick; // Standard opening mode as we are likely to want to add selection afterwards
         tree_flags |= ImGuiTreeNodeFlags_NavLeftJumpsToParent;  // Left arrow support
         tree_flags |= ImGuiTreeNodeFlags_SpanFullWidth;         // Span full width for easier mouse reach
         tree_flags |= ImGuiTreeNodeFlags_DrawLinesToNodes;      // Always draw hierarchy outlines
         if (node == SelectedNode)
-            tree_flags |= ImGuiTreeNodeFlags_Selected;
+            tree_flags |= ImGuiTreeNodeFlags_Selected;          // Draw selection highlight
         if (node->Childs.Size == 0)
             tree_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_Bullet;
         if (node->DataMyBool == false)
             ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
-        bool node_open = ImGui::TreeNodeEx("", tree_flags, "%s", node->Name);
+        bool is_open = ImGui::TreeNodeEx("", tree_flags, "%s", node->Name);
         if (node->DataMyBool == false)
             ImGui::PopStyleColor();
         if (ImGui::IsItemFocused())
             SelectedNode = node;
-        if (node_open)
+        if (is_open)
         {
             for (ExampleTreeNode* child : node->Childs)
                 DrawTreeNode(child);
