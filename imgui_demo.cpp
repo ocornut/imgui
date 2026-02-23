@@ -294,7 +294,6 @@ void*                               GImGuiDemoMarkerCallbackUserData = NULL;
 namespace ImGui
 {
     IMGUI_API void ShowFontAtlas(ImFontAtlas* atlas);
-    IMGUI_API bool TreeNodeGetOpen(ImGuiID storage_id);
     IMGUI_API void TreeNodeSetOpen(ImGuiID storage_id, bool is_open);
 }
 

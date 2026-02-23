@@ -756,6 +756,7 @@ namespace ImGui
     IMGUI_API bool          CollapsingHeader(const char* label, bool* p_visible, ImGuiTreeNodeFlags flags = 0); // when 'p_visible != NULL': if '*p_visible==true' display an additional small close button on upper right of the header which will set the bool to false when clicked, if '*p_visible==false' don't display the header.
     IMGUI_API void          SetNextItemOpen(bool is_open, ImGuiCond cond = 0);                  // set next TreeNode/CollapsingHeader open state.
     IMGUI_API void          SetNextItemStorageID(ImGuiID storage_id);                           // set id to use for open/close storage (default to same as item id).
+    IMGUI_API bool          TreeNodeGetOpen(ImGuiID storage_id);                                // retrieve tree node open/close state.
 
     // Widgets: Selectables
     // - A selectable highlights when hovered, and can display another color when selected.

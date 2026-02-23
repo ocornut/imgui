@@ -49,6 +49,10 @@ Breaking Changes:
 
 Other Changes:
 
+- TreeNode:
+   - Moved TreeNodeGetOpen() helper to public API. I was hesitant to make this public
+     because I intend to provide a more generic and feature-full version, but in the meanwhile
+     this will do. (#3823, #9251, #7553, #6754, #5423, #2958, #2079, #1947, #1131, #722)
 - Style: border sizes are now scaled (and rounded) by ScaleAllSizes().
 - Clipper:
   - Clear `DisplayStart`/`DisplayEnd` fields when `Step()` returns false.
