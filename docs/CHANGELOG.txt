@@ -53,6 +53,10 @@ Other Changes:
    - Moved TreeNodeGetOpen() helper to public API. I was hesitant to make this public
      because I intend to provide a more generic and feature-full version, but in the meanwhile
      this will do. (#3823, #9251, #7553, #6754, #5423, #2958, #2079, #1947, #1131, #722)
+   - In 'Demo->Property Editor' demonstrate a way to perform tree clipping by fast-forwarding
+     through non-visible chunks. (#3823, #9251, #6990, #6042)
+     Using SetNextItemStorageID() + TreeNodeGetOpen() makes this notably easier than
+     it was prior to 1.91.
 - Style: border sizes are now scaled (and rounded) by ScaleAllSizes().
 - Clipper:
   - Clear `DisplayStart`/`DisplayEnd` fields when `Step()` returns false.
