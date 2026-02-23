@@ -61,6 +61,7 @@ Other Changes:
   - Shift+Enter in multi-line editor always adds a new line, regardless of
     ImGuiInputTextFlags_CtrlEnterForNewLine being set or not. (#9239)
 - Style: border sizes are now scaled (and rounded) by ScaleAllSizes().
+- Demo: fixed IMGUI_DEMO_MARKER locations for examples applets. (#9261, #3689) [@pthom]
 - Clipper:
   - Clear `DisplayStart`/`DisplayEnd` fields when `Step()` returns false.
   - Added `UserIndex` helper storage. This is solely a convenience for cases where

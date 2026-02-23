@@ -656,7 +656,6 @@ void ImGui::ShowDemoWindow(bool* p_open)
 
 static void DemoWindowMenuBar(ImGuiDemoWindowData* demo_data)
 {
-    IMGUI_DEMO_MARKER("Menu");
     if (ImGui::BeginMenuBar())
     {
         if (ImGui::BeginMenu("Menu"))
@@ -8753,11 +8752,13 @@ static void ShowExampleAppMainMenuBar()
     {
         if (ImGui::BeginMenu("File"))
         {
+            IMGUI_DEMO_MARKER("Menu/File");
             ShowExampleMenuFile();
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Edit"))
         {
+            IMGUI_DEMO_MARKER("Menu/Edit");
             if (ImGui::MenuItem("Undo", "Ctrl+Z")) {}
             if (ImGui::MenuItem("Redo", "Ctrl+Y", false, false)) {} // Disabled item
             ImGui::Separator();
@@ -8872,7 +8873,6 @@ struct ExampleAppConsole
 
     ExampleAppConsole()
     {
-        IMGUI_DEMO_MARKER("Examples/Console");
         ClearLog();
         memset(InputBuf, 0, sizeof(InputBuf));
         HistoryPos = -1;
@@ -8926,6 +8926,7 @@ struct ExampleAppConsole
             ImGui::End();
             return;
         }
+        IMGUI_DEMO_MARKER("Examples/Console");
 
         // As a specific feature guaranteed by the library, after calling Begin() the last Item represent the title bar.
         // So e.g. IsItemHovered() will return true when hovering the title bar.
@@ -9461,6 +9462,8 @@ struct ExampleAppPropertyEditor
 
     void Draw(ExampleTreeNode* root_node)
     {
+        IMGUI_DEMO_MARKER("Examples/Property editor");
+
         // Left side: draw tree
         // - Currently using a table to benefit from RowBg feature
         // - Our tree node are all of equal height, facilitating the use of a clipper.
@@ -9847,9 +9850,9 @@ static void ShowExampleAppConstrainedResize(bool* p_open)
     const bool window_open = ImGui::Begin("Example: Constrained Resize", p_open, window_flags);
     if (!window_padding)
         ImGui::PopStyleVar();
+    IMGUI_DEMO_MARKER("Examples/Constrained Resizing window");
     if (window_open)
     {
-        IMGUI_DEMO_MARKER("Examples/Constrained Resizing window");
         if (ImGui::GetIO().KeyShift)
         {
             // Display a dummy viewport (in your real app you would likely use ImageButton() to display a texture)
@@ -9912,7 +9915,7 @@ static void ShowExampleAppSimpleOverlay(bool* p_open)
     ImGui::SetNextWindowBgAlpha(0.35f); // Transparent background
     if (ImGui::Begin("Example: Simple overlay", p_open, window_flags))
     {
-        IMGUI_DEMO_MARKER("Examples/Simple Overlay");
+        IMGUI_DEMO_MARKER("Examples/Simple overlay"); // Scroll up to the beginning of this function to see overlay flags
         ImGui::Text("Simple overlay\n" "(right-click to change position)");
         ImGui::Separator();
         if (ImGui::IsMousePosValid())
@@ -9952,6 +9955,7 @@ static void ShowExampleAppFullscreen(bool* p_open)
 
     if (ImGui::Begin("Example: Fullscreen window", p_open, flags))
     {
+        IMGUI_DEMO_MARKER("Examples/Fullscreen window");
         ImGui::Checkbox("Use work area instead of main area", &use_work_area);
         ImGui::SameLine();
         HelpMarker("Main Area = entire viewport,\nWork Area = entire viewport minus sections used by the main menu bars, task bars etc.\n\nEnable the main-menu bar in Examples menu to see the difference.");
@@ -9988,12 +9992,13 @@ static void ShowExampleAppWindowTitles(bool*)
     // Using "##" to display same title but have unique identifier.
     ImGui::SetNextWindowPos(ImVec2(base_pos.x + 100, base_pos.y + 100), ImGuiCond_FirstUseEver);
     ImGui::Begin("Same title as another window##1");
-    IMGUI_DEMO_MARKER("Examples/Manipulating window titles");
+    IMGUI_DEMO_MARKER("Examples/Manipulating window titles##1");
     ImGui::Text("This is window 1.\nMy title is the same as window 2, but my identifier is unique.");
     ImGui::End();
 
     ImGui::SetNextWindowPos(ImVec2(base_pos.x + 100, base_pos.y + 200), ImGuiCond_FirstUseEver);
     ImGui::Begin("Same title as another window##2");
+    IMGUI_DEMO_MARKER("Examples/Manipulating window titles##2");;
     ImGui::Text("This is window 2.\nMy title is the same as window 1, but my identifier is unique.");
     ImGui::End();
 
@@ -10002,6 +10007,7 @@ static void ShowExampleAppWindowTitles(bool*)
     sprintf(buf, "Animated title %c %d###AnimatedTitle", "|/-\\"[(int)(ImGui::GetTime() / 0.25f) & 3], ImGui::GetFrameCount());
     ImGui::SetNextWindowPos(ImVec2(base_pos.x + 100, base_pos.y + 300), ImGuiCond_FirstUseEver);
     ImGui::Begin(buf);
+    IMGUI_DEMO_MARKER("Examples/Manipulating window titles##3");
     ImGui::Text("This window has a changing title.");
     ImGui::End();
 }
@@ -10026,7 +10032,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
         ImGui::End();
         return;
     }
-    IMGUI_DEMO_MARKER("Examples/Custom Rendering");
+    IMGUI_DEMO_MARKER("Examples/Custom rendering");
 
     // Tip: If you do a lot of custom rendering, you probably want to use your own geometrical types and benefit of
     // overloaded operators, etc. Define IM_VEC2_CLASS_EXTRA in imconfig.h to create implicit conversions between your
@@ -10037,6 +10043,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
     {
         if (ImGui::BeginTabItem("Primitives"))
         {
+            IMGUI_DEMO_MARKER("Examples/Custom rendering/Primitives");
             ImGui::PushItemWidth(-ImGui::GetFontSize() * 15);
             ImDrawList* draw_list = ImGui::GetWindowDrawList();
 
@@ -10164,6 +10171,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
 
         if (ImGui::BeginTabItem("Canvas"))
         {
+            IMGUI_DEMO_MARKER("Examples/Custom rendering/Canvas");
             static ImVector<ImVec2> points;
             static ImVec2 scrolling(0.0f, 0.0f);
             static bool opt_enable_grid = true;
@@ -10261,6 +10269,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
 
         if (ImGui::BeginTabItem("BG/FG draw lists"))
         {
+            IMGUI_DEMO_MARKER("Examples/Custom rendering/BG & FG draw lists");
             static bool draw_bg = true;
             static bool draw_fg = true;
             ImGui::Checkbox("Draw in Background draw list", &draw_bg);
@@ -10282,6 +10291,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
         // but you can also instantiate your own ImDrawListSplitter if you need to nest them.
         if (ImGui::BeginTabItem("Draw Channels"))
         {
+            IMGUI_DEMO_MARKER("Examples/Custom rendering/Draw Channels");
             ImDrawList* draw_list = ImGui::GetWindowDrawList();
             {
                 ImGui::Text("Blue shape is drawn first: appears in back");
@@ -10454,6 +10464,7 @@ void ShowExampleAppDocuments(bool* p_open)
         ImGui::End();
         return;
     }
+    IMGUI_DEMO_MARKER("Examples/Documents");
 
     // Menu
     if (ImGui::BeginMenuBar())
@@ -10763,6 +10774,7 @@ struct ExampleAssetsBrowser
             ImGui::End();
             return;
         }
+        IMGUI_DEMO_MARKER("Examples/Assets Browser");
 
         // Menu bar
         if (ImGui::BeginMenuBar())
