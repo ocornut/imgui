@@ -41,6 +41,12 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
+ - Combo(), ListBox(): commented out legacy signatures which were obsoleted in 1.90
+   (Nov 2023), when the getter callback type was changed from:
+      getter type:   bool (*getter)(void* user_data, int idx, const char** out_text)
+   To:
+      getter type:   const char* (*getter)(void* user_data, int idx)
+
 Other Changes:
 
 - Style: border sizes are now scaled (and rounded) by ScaleAllSizes().

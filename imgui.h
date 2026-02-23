@@ -4047,12 +4047,11 @@ namespace ImGui
     IMGUI_API ImVec2    GetContentRegionMax();                                  // Content boundaries max (e.g. window boundaries including scrolling, or current column boundaries). You should never need this. Always use GetCursorScreenPos() and GetContentRegionAvail()!
     IMGUI_API ImVec2    GetWindowContentRegionMin();                            // Content boundaries min for the window (roughly (0,0)-Scroll), in window-local coordinates. You should never need this. Always use GetCursorScreenPos() and GetContentRegionAvail()!
     IMGUI_API ImVec2    GetWindowContentRegionMax();                            // Content boundaries max for the window (roughly (0,0)+Size-Scroll), in window-local coordinates. You should never need this. Always use GetCursorScreenPos() and GetContentRegionAvail()!
-    // OBSOLETED in 1.90.0 (from September 2023)
-    IMGUI_API bool      Combo(const char* label, int* current_item, bool (*old_callback)(void* user_data, int idx, const char** out_text), void* user_data, int items_count, int popup_max_height_in_items = -1);
-    IMGUI_API bool      ListBox(const char* label, int* current_item, bool (*old_callback)(void* user_data, int idx, const char** out_text), void* user_data, int items_count, int height_in_items = -1);
 
     // Some of the older obsolete names along with their replacement (commented out so they are not reported in IDE)
     // OBSOLETED in 1.90.0 (from September 2023)
+    //IMGUI_API bool      Combo(const char* label, int* current_item, bool (*old_callback)(void* user_data, int idx, const char** out_text), void* user_data, int items_count, int popup_max_height_in_items = -1); // Getter signature changed. See 2023/09/15 and 2026/02/27 commits.
+    //IMGUI_API bool      ListBox(const char* label, int* current_item, bool (*old_callback)(void* user_data, int idx, const char** out_text), void* user_data, int items_count, int height_in_items = -1);         // Getter signature changed. See 2023/09/15 and 2026/02/27 commits.
     //inline bool         BeginChild(const char* str_id, const ImVec2& size_arg, bool borders, ImGuiWindowFlags window_flags) { return BeginChild(str_id, size_arg, borders ? ImGuiChildFlags_Borders : ImGuiChildFlags_None, window_flags); } // Unnecessary as true == ImGuiChildFlags_Borders
     //inline bool         BeginChild(ImGuiID id, const ImVec2& size_arg, bool borders, ImGuiWindowFlags window_flags)         { return BeginChild(id, size_arg, borders ? ImGuiChildFlags_Borders : ImGuiChildFlags_None, window_flags);     } // Unnecessary as true == ImGuiChildFlags_Borders
     //inline bool         BeginChildFrame(ImGuiID id, const ImVec2& size, ImGuiWindowFlags flags = 0) { return BeginChild(id, size, ImGuiChildFlags_FrameStyle, flags); }
