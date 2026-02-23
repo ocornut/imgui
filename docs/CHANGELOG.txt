@@ -50,7 +50,10 @@ Breaking Changes:
 Other Changes:
 
 - Style: border sizes are now scaled (and rounded) by ScaleAllSizes().
-- Clipper: clear DisplayStart/DisplayEnd fields when Step() returns false.
+- Clipper:
+  - Clear `DisplayStart`/`DisplayEnd` fields when `Step()` returns false.
+  - Added `UserIndex` helper storage. This is solely a convenience for cases where
+    you may want to carry an index around.
 - Examples:
   - Emscripten: added `tabindex=-1` to canvas in our shell_minimal.htm. Without it,
     the canvas was not focusable in the DOM, which in turn make some backends
