@@ -131,8 +131,8 @@ static void CreateOrResizeBuffers(SDL_GPUBuffer** buffer, SDL_GPUTransferBuffer*
     ImGui_ImplSDLGPU3_Data* bd = ImGui_ImplSDLGPU3_GetBackendData();
     ImGui_ImplSDLGPU3_InitInfo* v = &bd->InitInfo;
 
-    // FIXME-OPT: Not optimal, but this is fairly rarely called.
-    SDL_WaitForGPUIdle(v->Device);
+    // Note: There is no need for calling SDL_WaitForGPUIdle here.
+    // SDL3 will handle deferred buffer deletion automatically.
     SDL_ReleaseGPUBuffer(v->Device, *buffer);
     SDL_ReleaseGPUTransferBuffer(v->Device, *transferbuffer);
 
