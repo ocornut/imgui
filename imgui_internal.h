@@ -3650,7 +3650,6 @@ namespace ImGui
     IMGUI_API void          TreeNodeDrawLineToChildNode(const ImVec2& target_pos);
     IMGUI_API void          TreeNodeDrawLineToTreePop(const ImGuiTreeNodeStackData* data);
     IMGUI_API void          TreePushOverrideID(ImGuiID id);
-    IMGUI_API bool          TreeNodeGetOpen(ImGuiID storage_id);
     IMGUI_API void          TreeNodeSetOpen(ImGuiID storage_id, bool open);
     IMGUI_API bool          TreeNodeUpdateNextOpen(ImGuiID storage_id, ImGuiTreeNodeFlags flags);   // Return open state. Consume previous SetNextItemOpen() data, if any. May return true when logging.
 
