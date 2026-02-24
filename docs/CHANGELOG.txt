@@ -57,6 +57,9 @@ Other Changes:
      through non-visible chunks. (#3823, #9251, #6990, #6042)
      Using SetNextItemStorageID() + TreeNodeGetOpen() makes this notably easier than
      it was prior to 1.91.
+- InputText:
+  - Shift+Enter in multi-line editor always adds a new line, regardless of
+    ImGuiInputTextFlags_CtrlEnterForNewLine being set or not. (#9239)
 - Style: border sizes are now scaled (and rounded) by ScaleAllSizes().
 - Clipper:
   - Clear `DisplayStart`/`DisplayEnd` fields when `Step()` returns false.
