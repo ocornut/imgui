@@ -66,6 +66,8 @@ Other Changes:
   - Added `UserIndex` helper storage. This is solely a convenience for cases where
     you may want to carry an index around.
 - Backends:
+  - SDLGPU3: removed unnecessary call to SDL_WaitForGPUIdle when releasing
+    vertex/index buffers. (#9262) [@jaenis]
   - WebGPU: fixed version check for Emscripten 5.0.0+.
 - Examples:
   - Emscripten: added `tabindex=-1` to canvas in our shell_minimal.htm. Without it,
