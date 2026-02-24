@@ -35,7 +35,7 @@
 #include <emscripten/version.h>
 
 #ifdef __EMSCRIPTEN_MAJOR__
-#if (__EMSCRIPTEN_MAJOR__ >= 4) && (__EMSCRIPTEN_MINOR__ >= 0) && (__EMSCRIPTEN_TINY__ >= 10)
+#if (__EMSCRIPTEN_MAJOR__ >= 5) || ((__EMSCRIPTEN_MAJOR__ >= 4) && (__EMSCRIPTEN_MINOR__ >= 0) && (__EMSCRIPTEN_TINY__ >= 10))
 #define IMGUI_IMPL_WEBGPU_BACKEND_DAWN
 #else
 #define IMGUI_IMPL_WEBGPU_BACKEND_WGPU
