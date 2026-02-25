@@ -24,6 +24,7 @@
 
 // CHANGELOG
 //  2026-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2026-02-25: Removed unnecessary call to SDL_WaitForGPUIdle when releasing vertex/index buffers. (#9262)
 //  2025-11-26: macOS version can use MSL shaders in order to support macOS 10.14+ (vs Metallib shaders requiring macOS 14+). Requires calling SDL_CreateGPUDevice() with SDL_GPU_SHADERFORMAT_MSL.
 //  2025-09-18: Call platform_io.ClearRendererHandlers() on shutdown.
 //  2025-08-20: Added ImGui_ImplSDLGPU3_InitInfo::SwapchainComposition and ImGui_ImplSDLGPU3_InitInfo::PresentMode to configure how secondary viewports are created.
@@ -133,8 +134,7 @@ static void CreateOrResizeBuffers(SDL_GPUBuffer** buffer, SDL_GPUTransferBuffer*
     ImGui_ImplSDLGPU3_Data* bd = ImGui_ImplSDLGPU3_GetBackendData();
     ImGui_ImplSDLGPU3_InitInfo* v = &bd->InitInfo;
 
-    // FIXME-OPT: Not optimal, but this is fairly rarely called.
-    SDL_WaitForGPUIdle(v->Device);
+    // There is no need for calling SDL_WaitForGPUIdle here, as SDL3 will handle deferred buffer deletion automatically.
     SDL_ReleaseGPUBuffer(v->Device, *buffer);
     SDL_ReleaseGPUTransferBuffer(v->Device, *transferbuffer);
 

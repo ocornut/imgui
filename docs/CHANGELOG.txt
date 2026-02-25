@@ -41,11 +41,39 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
+ - Combo(), ListBox(): commented out legacy signatures which were obsoleted in 1.90
+   (Nov 2023), when the getter callback type was changed from:
+      getter type:   bool (*getter)(void* user_data, int idx, const char** out_text)
+   To:
+      getter type:   const char* (*getter)(void* user_data, int idx)
+
 Other Changes:
 
+- TreeNode:
+   - Moved TreeNodeGetOpen() helper to public API. I was hesitant to make this public
+     because I intend to provide a more generic and feature-full version, but in the meanwhile
+     this will do. (#3823, #9251, #7553, #6754, #5423, #2958, #2079, #1947, #1131, #722)
+   - In 'Demo->Property Editor' demonstrate a way to perform tree clipping by fast-forwarding
+     through non-visible chunks. (#3823, #9251, #6990, #6042)
+     Using SetNextItemStorageID() + TreeNodeGetOpen() makes this notably easier than
+     it was prior to 1.91.
+- InputText:
+  - Shift+Enter in multi-line editor always adds a new line, regardless of
+    ImGuiInputTextFlags_CtrlEnterForNewLine being set or not. (#9239)
 - Style: border sizes are now scaled (and rounded) by ScaleAllSizes().
-- Clipper: clear DisplayStart/DisplayEnd fields when Step() returns false.
+- Demo: fixed IMGUI_DEMO_MARKER locations for examples applets. (#9261, #3689) [@pthom]
+- Clipper:
+  - Clear `DisplayStart`/`DisplayEnd` fields when `Step()` returns false.
+  - Added `UserIndex` helper storage. This is solely a convenience for cases where
+    you may want to carry an index around.
+- Backends:
+  - SDLGPU3: removed unnecessary call to SDL_WaitForGPUIdle when releasing
+    vertex/index buffers. (#9262) [@jaenis]
+  - WebGPU: fixed version check for Emscripten 5.0.0+.
 - Examples:
+  - Emscripten: added `tabindex=-1` to canvas in our shell_minimal.htm. Without it,
+    the canvas was not focusable in the DOM, which in turn make some backends
+    (e.g. pongasoft/emscripten-glfw) not receive focus loss events. (#9259) [@pthom]
   - WGPU: fixed undefined behaviors in example code for requesting adapter
     and device. (#9246, #9256) [@r-lyeh]
 
