@@ -12,7 +12,7 @@
 
 // How to easily locate code?
 // - Use Tools->Item Picker to debug break in code by clicking any widgets: https://github.com/ocornut/imgui/wiki/Debug-Tools
-// - Browse an online version the demo with code linked to hovered widgets: https://pthom.github.io/imgui_manual_online/manual/imgui_manual.html
+// - Browse an online version the demo with code linked to hovered widgets: https://pthom.github.io/imgui_manual
 // - Find a visible string and search for it in the code!
 
 //---------------------------------------------------
@@ -443,6 +443,9 @@ void ImGui::ShowDemoWindow(bool* p_open)
         ImGui::BulletText("The \"Examples\" menu above leads to more demo contents.");
         ImGui::BulletText("The \"Tools\" menu above gives access to: About Box, Style Editor,\n"
                           "and Metrics/Debugger (general purpose Dear ImGui debugging tool).");
+        ImGui::BulletText("Web demo (w/ source code browser): ");
+        ImGui::SameLine(0, 0);
+        ImGui::TextLinkOpenURL("https://pthom.github.io/imgui_manual");
 
         ImGui::SeparatorText("PROGRAMMER GUIDE:");
         ImGui::BulletText("See the ShowDemoWindow() code in imgui_demo.cpp. <- you are here!");
