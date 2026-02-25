@@ -283,12 +283,10 @@ static void HelpMarker(const char* desc)
 }
 
 // Helper to wire demo markers located in code to an interactive browser (e.g. imgui_manual)
-typedef void (*ImGuiDemoMarkerCallback)(const char* file, int line, const char* section, void* user_data);
-extern ImGuiDemoMarkerCallback      GImGuiDemoMarkerCallback;
-extern void*                        GImGuiDemoMarkerCallbackUserData;
-ImGuiDemoMarkerCallback             GImGuiDemoMarkerCallback = NULL;
-void*                               GImGuiDemoMarkerCallbackUserData = NULL;
-#define IMGUI_DEMO_MARKER(section)  do { if (GImGuiDemoMarkerCallback != NULL) GImGuiDemoMarkerCallback("imgui_demo.cpp", __LINE__, section, GImGuiDemoMarkerCallbackUserData); } while (0)
+#if IMGUI_VERSION_NUM >= 19263
+namespace ImGui { extern IMGUI_API void DemoMarker(const char* file, int line, const char* section); };
+#define IMGUI_DEMO_MARKER(section)  do { ImGui::DemoMarker("imgui_demo.cpp", __LINE__, section); } while (0)
+#endif
 
 // Sneakily forward declare functions which aren't worth putting in public API yet
 namespace ImGui

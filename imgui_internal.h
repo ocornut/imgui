@@ -2182,6 +2182,8 @@ struct ImGuiContextHook
     ImGuiContextHook()          { memset((void*)this, 0, sizeof(*this)); }
 };
 
+typedef void (*ImGuiDemoMarkerCallback)(const char* file, int line, const char* section);
+
 //-----------------------------------------------------------------------------
 // [SECTION] ImGuiContext (main Dear ImGui context)
 //-----------------------------------------------------------------------------
@@ -2504,8 +2506,11 @@ struct ImGuiContext
     ImVector<ImGuiSettingsHandler>      SettingsHandlers;       // List of .ini settings handlers
     ImChunkStream<ImGuiWindowSettings>  SettingsWindows;        // ImGuiWindow .ini settings entries
     ImChunkStream<ImGuiTableSettings>   SettingsTables;         // ImGuiTable .ini settings entries
+
+    // Hooks
     ImVector<ImGuiContextHook>          Hooks;                  // Hooks for extensions (e.g. test engine)
     ImGuiID                             HookIdNext;             // Next available HookId
+    ImGuiDemoMarkerCallback             DemoMarkerCallback;
 
     // Localization
     const char*             LocalizationTable[ImGuiLocKey_COUNT];
@@ -3710,6 +3715,9 @@ namespace ImGui
     IMGUI_API void          ErrorCheckEndFrameFinalizeErrorTooltip();
     IMGUI_API bool          BeginErrorTooltip();
     IMGUI_API void          EndErrorTooltip();
+
+    // Demo Doc Marker for e.g. imgui_manual
+    IMGUI_API void          DemoMarker(const char* file, int line, const char* section);
 
     // Debug Tools
     IMGUI_API void          DebugAllocHook(ImGuiDebugAllocInfo* info, int frame_count, void* ptr, size_t size); // size >= 0 : alloc, size = -1 : free

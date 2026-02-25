@@ -4293,6 +4293,7 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     SettingsLoaded = false;
     SettingsDirtyTimer = 0.0f;
     HookIdNext = 0;
+    DemoMarkerCallback = NULL;
 
     memset(LocalizationTable, 0, sizeof(LocalizationTable));
 
@@ -5060,6 +5061,13 @@ void ImGui::MemFree(void* ptr)
             DebugAllocHook(&ctx->DebugAllocInfo, ctx->FrameCount, ptr, (size_t)-1);
 #endif
     return (*GImAllocatorFreeFunc)(ptr, GImAllocatorUserData);
+}
+
+void ImGui::DemoMarker(const char* file, int line, const char* section)
+{
+    ImGuiContext& g = *GImGui;
+    if (g.DemoMarkerCallback != NULL)
+        g.DemoMarkerCallback(file, line, section);
 }
 
 // We record the number of allocation in recent frames, as a way to audit/sanitize our guiding principles of "no allocations on idle/repeating frames"
