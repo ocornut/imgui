@@ -1664,9 +1664,13 @@ void ImGui::SeparatorEx(ImGuiSeparatorFlags flags, float thickness)
 
         // We don't provide our width to the layout so that it doesn't get feed back into AutoFit
         // FIXME: This prevents ->CursorMaxPos based bounding box evaluation from working (e.g. TableEndCell)
-        const float thickness_for_layout = (thickness == 1.0f) ? 0.0f : thickness; // FIXME: See 1.70/1.71 Separator() change: makes legacy 1-px separator not affect layout yet. Should change.
+
+        // Between 1.71 and 1.92.7, we maintained a hack where a 1.0f thin Separator() would not impact layout.
+        // This was mostly chosen to allow backward compatibility with user's code assuming zero-height when calculating height for layout (e.g. bottom alignment of a status bar).
+        // In order to handle scaling we need to scale separator thickness and it would not makes sense to have a disparity depending on height.
+        ////float thickness_for_layout = (thickness == 1.0f) ? 0.0f : thickness; // FIXME: See 1.70/1.71 Separator() change: makes legacy 1-px separator not affect layout yet. Should change.
         const ImRect bb(ImVec2(x1, window->DC.CursorPos.y), ImVec2(x2, window->DC.CursorPos.y + thickness));
-        ItemSize(ImVec2(0.0f, thickness_for_layout));
+        ItemSize(ImVec2(0.0f, thickness));
 
         if (ItemAdd(bb, 0))
         {
@@ -1692,14 +1696,13 @@ void ImGui::Separator()
         return;
 
     // Those flags should eventually be configurable by the user
-    // FIXME: We cannot g.Style.SeparatorTextBorderSize for thickness as it relates to SeparatorText() which is a decorated separator, not defaulting to 1.0f.
     ImGuiSeparatorFlags flags = (window->DC.LayoutType == ImGuiLayoutType_Horizontal) ? ImGuiSeparatorFlags_Vertical : ImGuiSeparatorFlags_Horizontal;
 
     // Only applies to legacy Columns() api as they relied on Separator() a lot.
     if (window->DC.CurrentColumns)
         flags |= ImGuiSeparatorFlags_SpanAllColumns;
 
-    SeparatorEx(flags, 1.0f);
+    SeparatorEx(flags, g.Style.SeparatorSize);
 }
 
 void ImGui::SeparatorTextEx(ImGuiID id, const char* label, const char* label_end, float extra_w)

@@ -41,6 +41,18 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
+ - Separator(): fixed a legacy quirk where Separator() was submitting a zero-height
+   item for layout purpose, even though it draws a 1-pixel separator.
+   The fix could affect code e.g. computing height from multiple widgets in order to
+   allocate vertical space for a footer or multi-line status bar. (#2657, #9263)
+   The "Console" example had such a bug:
+      float footer_height = style.ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
+      BeginChild("ScrollingRegion", { 0, -footer_height });
+   Should be:
+      float footer_height = style.ItemSpacing.y + style.SeparatorSize + ImGui::GetFrameHeightWithSpacing();
+      BeginChild("ScrollingRegion", { 0, -footer_height });
+   When such idiom was used and assuming zero-height Separator, it is likely that
+   in 1.92.7 the resulting window will have unexpected 1 pixel scrolling range.
  - Combo(), ListBox(): commented out legacy signatures which were obsoleted in 1.90
    (Nov 2023), when the getter callback type was changed from:
       getter type:   bool (*getter)(void* user_data, int idx, const char** out_text)
@@ -67,7 +79,8 @@ Other Changes:
     - InputText Caret/cursor thickness. (#7031)
     - CloseButton() thickness.
     - TextLink() underline thickness.
-    - ColorButton() border.
+    - ColorButton() border thickness.
+    - Separator() thickness, via scaling newly added style.SeparatorSize. (#2657, #9263)
 - Demo: fixed IMGUI_DEMO_MARKER locations for examples applets. (#9261, #3689) [@pthom]
 - Clipper:
   - Clear `DisplayStart`/`DisplayEnd` fields when `Step()` returns false.
