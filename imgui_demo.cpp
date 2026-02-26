@@ -10003,7 +10003,7 @@ static void ShowExampleAppWindowTitles(bool*)
 
     ImGui::SetNextWindowPos(ImVec2(base_pos.x + 100, base_pos.y + 200), ImGuiCond_FirstUseEver);
     ImGui::Begin("Same title as another window##2");
-    IMGUI_DEMO_MARKER("Examples/Manipulating window titles##2");;
+    IMGUI_DEMO_MARKER("Examples/Manipulating window titles##2");
     ImGui::Text("This is window 2.\nMy title is the same as window 1, but my identifier is unique.");
     ImGui::End();
 
