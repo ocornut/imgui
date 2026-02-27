@@ -437,7 +437,9 @@ namespace ImGui
     //    such as BeginMenu/EndMenu, BeginPopup/EndPopup, etc. where the EndXXX call should only be called if the corresponding
     //    BeginXXX function returned true. Begin and BeginChild are the only odd ones out. Will be fixed in a future update.]
     // - Note that the bottom of window stack always contains a window called "Debug".
+    // - DrawOverlappingDecorators() is only needed if the window was created with the ImGuiWindowFlags_UserDrawnOverlappingDecorators flag
     IMGUI_API bool          Begin(const char* name, bool* p_open = NULL, ImGuiWindowFlags flags = 0);
+    IMGUI_API void          DrawOverlappingDecorators();
     IMGUI_API void          End();
 
     // Child Windows
@@ -1229,6 +1231,7 @@ enum ImGuiWindowFlags_
     ImGuiWindowFlags_NoNavFocus             = 1 << 17,  // No focusing toward this window with keyboard/gamepad navigation (e.g. skipped by Ctrl+Tab)
     ImGuiWindowFlags_UnsavedDocument        = 1 << 18,  // Display a dot next to the title. When used in a tab/docking context, tab is selected when clicking the X + closure is not assumed (will wait for user to stop submitting the tab). Otherwise closure is assumed when pressing the X, so if you keep submitting the tab may reappear at end of tab bar.
     ImGuiWindowFlags_NoDocking              = 1 << 19,  // Disable docking of this window
+    ImGuiWindowFlags_UserDrawnOverlappingDecorators=1<<20, // Draw docking unhide tab bar (small triangle in the corner) and resize grips when user calls DrawOverlappingDecorators()
     ImGuiWindowFlags_NoNav                  = ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoNavFocus,
     ImGuiWindowFlags_NoDecoration           = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse,
     ImGuiWindowFlags_NoInputs               = ImGuiWindowFlags_NoMouseInputs | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoNavFocus,

@@ -7562,8 +7562,15 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
 
             // FIXME-DOCK: Ideally we'd use ImGuiCol_TitleBgActive/ImGuiCol_TitleBg here, but neither is guaranteed to be visible enough at this sort of size..
             ImU32 col = GetColorU32(((held && hovered) || (node->IsFocused && !hovered)) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
-            window->DrawList->AddTriangleFilled(p, p + ImVec2(unhide_sz_draw, 0.0f), p + ImVec2(0.0f, unhide_sz_draw), col);
+            ImVec2 p2 = p + ImVec2(unhide_sz_draw, 0.0f);
+            ImVec2 p3 = p + ImVec2(0.0f, unhide_sz_draw);
+            if (flags & ImGuiWindowFlags_UserDrawnOverlappingDecorators)
+                window->Decorator.DockingTabBar.Fill(p, p2, p3, col);
+            else
+                window->DrawList->AddTriangleFilled(p, p2, p3, col);
         }
+        else if (flags & ImGuiWindowFlags_UserDrawnOverlappingDecorators)
+            window->Decorator.DockingTabBar.Reset();
 
         // Scrollbars
         if (window->ScrollbarX)
@@ -7582,12 +7589,31 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
                 const ImGuiResizeGripDef& grip = resize_grip_def[resize_grip_n];
                 const ImVec2 corner = ImLerp(window->Pos, window->Pos + window->Size, grip.CornerPosN);
                 const float border_inner = IM_ROUND(window_border_size * 0.5f);
-                window->DrawList->PathLineTo(corner + grip.InnerDir * ((resize_grip_n & 1) ? ImVec2(border_inner, resize_grip_draw_size) : ImVec2(resize_grip_draw_size, border_inner)));
-                window->DrawList->PathLineTo(corner + grip.InnerDir * ((resize_grip_n & 1) ? ImVec2(resize_grip_draw_size, border_inner) : ImVec2(border_inner, resize_grip_draw_size)));
-                window->DrawList->PathArcToFast(ImVec2(corner.x + grip.InnerDir.x * (window_rounding + border_inner), corner.y + grip.InnerDir.y * (window_rounding + border_inner)), window_rounding, grip.AngleMin12, grip.AngleMax12);
-                window->DrawList->PathFillConvex(col);
+                ImVec2 p1 = corner + grip.InnerDir * ((resize_grip_n & 1) ? ImVec2(border_inner, resize_grip_draw_size) : ImVec2(resize_grip_draw_size, border_inner));
+                ImVec2 p2 = corner + grip.InnerDir * ((resize_grip_n & 1) ? ImVec2(resize_grip_draw_size, border_inner) : ImVec2(border_inner, resize_grip_draw_size));
+                ImVec2 pc = ImVec2(corner.x + grip.InnerDir.x * (window_rounding + border_inner), corner.y + grip.InnerDir.y * (window_rounding + border_inner));
+                float r = window_rounding;
+                int a1 = grip.AngleMin12;
+                int a2 = grip.AngleMax12;
+                if (flags & ImGuiWindowFlags_UserDrawnOverlappingDecorators)
+                {
+                    window->Decorator.ResizeGrip[resize_grip_n].Fill(p1, p2, pc, r, a1, a2, col);
+                }
+                else
+                {
+                    window->DrawList->PathLineTo(p1);
+                    window->DrawList->PathLineTo(p2);
+                    window->DrawList->PathArcToFast(pc, r, a1, a2);
+                    window->DrawList->PathFillConvex(col);
+                }
             }
+            if (flags & ImGuiWindowFlags_UserDrawnOverlappingDecorators)
+                for (int resize_grip_n = resize_grip_count; resize_grip_n < 4; resize_grip_n++)
+                    window->Decorator.ResizeGrip[resize_grip_n].Reset();
         }
+        else if (flags & ImGuiWindowFlags_UserDrawnOverlappingDecorators)
+            for (int resize_grip_n = 0; resize_grip_n < 4; resize_grip_n++)
+                    window->Decorator.ResizeGrip[resize_grip_n].Reset();
 
         // Borders (for dock node host they will be rendered over after the tab bar)
         if (handle_borders_and_resize_grips && !window->DockNodeAsHost)
@@ -8726,6 +8752,36 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 #endif
 
     return !window->SkipItems;
+}
+
+// In case of ImGuiWindowFlags_UserDrawnOverlappingDecorators 
+//   the Begin() call does not draw the docking unhide tab bar (small triangle in the corner) and resize grips
+//   but saves them to the window->Decorator structure
+void ImGui::DrawOverlappingDecorators()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+
+    IM_ASSERT_USER_ERROR(window != NULL, "Call this function beween Begin() and End()");
+
+    int flags = window->Flags;
+
+    IM_ASSERT_USER_ERROR(flags & ImGuiWindowFlags_UserDrawnOverlappingDecorators, "Only call this function for windows with ImGuiWindowFlags_UserDrawnOverlappingDecorators set");
+
+    if (window->Decorator.DockingTabBar.IsDrawing)
+    {
+        ImGuiDecoratorDockingTabBar& dt = window->Decorator.DockingTabBar;
+        window->DrawList->AddTriangleFilled(dt.P1, dt.P2, dt.P3, dt.Col);
+    }
+
+    for (int resize_grip_n = 0; resize_grip_n < 4; resize_grip_n++)
+        if (window->Decorator.ResizeGrip[resize_grip_n].IsDrawing)
+        {
+            ImGuiDecoratorResizeGrip& rg = window->Decorator.ResizeGrip[resize_grip_n];
+            window->DrawList->PathLineTo(rg.P1);
+            window->DrawList->PathLineTo(rg.P2);
+            window->DrawList->PathArcToFast(rg.Pc, rg.R, rg.A1, rg.A2);
+            window->DrawList->PathFillConvex(rg.Col);
+        }
 }
 
 void ImGui::End()

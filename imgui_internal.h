@@ -2855,6 +2855,41 @@ struct IMGUI_API ImGuiWindowTempData
     ImVector<float>         TextWrapPosStack;       // Store text wrap pos to restore (attention: .back() is not == TextWrapPos)
 };
 
+// Overlapping decorators for ImGuiWindowFlags_UserDrawnOverlappingDecorators, docking unhide tab bar (small triangle in the corner)
+struct IMGUI_API ImGuiDecoratorDockingTabBar
+{
+    bool   IsDrawing;                               // Is this gui element being drawn in this frame
+    ImVec2 P1;                                      // window->DrawList->AddTriangleFilled p1
+    ImVec2 P2;                                      // window->DrawList->AddTriangleFilled p2
+    ImVec2 P3;                                      // window->DrawList->AddTriangleFilled p3
+    ImU32  Col;                                     // window->DrawList->AddTriangleFilled col
+
+    void Fill(ImVec2 p1, ImVec2 p2, ImVec2 p3, ImU32 col) { IsDrawing = true; P1 = p1; P2 = p2; P3 = p3; Col = col; }
+    void Reset()                                          { IsDrawing = false; }
+};
+
+// Overlapping decorators for ImGuiWindowFlags_UserDrawnOverlappingDecorators, resize grips
+struct IMGUI_API ImGuiDecoratorResizeGrip
+{
+    bool   IsDrawing;                               // Is this gui element being drawn in this frame
+    ImVec2 P1;                                      // window->DrawList->PathLineTo 1st call pos
+    ImVec2 P2;                                      // window->DrawList->PathLineTo 2nd call pos
+    ImVec2 Pc;                                      // window->DrawList->PathArcToFast center
+    float  R;                                       // window->DrawList->PathArcToFast radius
+    int    A1;                                      // window->DrawList->PathArcToFast a_min_of_12
+    int    A2;                                      // window->DrawList->PathArcToFast a_max_of_12
+    ImU32  Col;                                     // window->DrawList->PathFillConvex col
+
+    void Fill(ImVec2 p1, ImVec2 p2, ImVec2 pc, float r, int a1, int a2, ImU32 col) { IsDrawing = true; P1 = p1; P2 = p2; Pc = pc; R = r; A1 = a1; A2 = a2; Col = col; }
+    void Reset()                                                                   { IsDrawing = false; }
+};
+
+struct IMGUI_API ImGuiDecorator
+{
+    ImGuiDecoratorDockingTabBar DockingTabBar;
+    ImGuiDecoratorResizeGrip    ResizeGrip[4];
+};
+
 // Storage for one window
 struct IMGUI_API ImGuiWindow
 {
@@ -2932,6 +2967,7 @@ struct IMGUI_API ImGuiWindow
 
     ImVector<ImGuiID>       IDStack;                            // ID stack. ID are hashes seeded with the value at the top of the stack. (In theory this should be in the TempData structure)
     ImGuiWindowTempData     DC;                                 // Temporary per-window data, reset at the beginning of the frame. This used to be called ImGuiDrawContext, hence the "DC" variable name.
+    ImGuiDecorator          Decorator;                          // Temporary overlapping decorator data for ImGuiWindowFlags_UserDrawnOverlappingDecorators
 
     // The best way to understand what those rectangles are is to use the 'Metrics->Tools->Show Windows Rectangles' viewer.
     // The main 'OuterRect', omitted as a field, is window->Rect().
