@@ -729,6 +729,11 @@ static void ImGui_ImplOpenGL3_DestroyTexture(ImTextureData* tex)
 
 void ImGui_ImplOpenGL3_UpdateTexture(ImTextureData* tex)
 {
+    if (tex->Status == ImTextureStatus_WantDestroy && tex->UnusedFrames > 0) {
+        ImGui_ImplOpenGL3_DestroyTexture(tex);
+        return;
+    }
+
     // FIXME: Consider backing up and restoring
     if (tex->Status == ImTextureStatus_WantCreate || tex->Status == ImTextureStatus_WantUpdates)
     {
@@ -776,6 +781,15 @@ void ImGui_ImplOpenGL3_UpdateTexture(ImTextureData* tex)
         GL_CALL(glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture));
 
         GLuint gl_tex_id = (GLuint)(intptr_t)tex->TexID;
+
+        GLint is_texture = 0;
+        glGetIntegerv(GL_TEXTURE_BINDING_2D, &is_texture);
+        if (!glIsTexture(gl_tex_id)) {
+            // Texture was destroyed, mark for recreation
+            tex->SetStatus(ImTextureStatus_WantCreate);
+            return;
+        }
+
         GL_CALL(glBindTexture(GL_TEXTURE_2D, gl_tex_id));
 #if GL_UNPACK_ROW_LENGTH // Not on WebGL/ES
         GL_CALL(glPixelStorei(GL_UNPACK_ROW_LENGTH, tex->Width));
@@ -799,8 +813,6 @@ void ImGui_ImplOpenGL3_UpdateTexture(ImTextureData* tex)
         tex->SetStatus(ImTextureStatus_OK);
         GL_CALL(glBindTexture(GL_TEXTURE_2D, last_texture)); // Restore state
     }
-    else if (tex->Status == ImTextureStatus_WantDestroy && tex->UnusedFrames > 0)
-        ImGui_ImplOpenGL3_DestroyTexture(tex);
 }
 
 // If you get an error please report on github. You may try different GL context version or GLSL version. See GL<>GLSL version table at the top of this file.
