@@ -48,6 +48,8 @@
 #include FT_GLYPH_H             // <freetype/ftglyph.h>
 #include FT_SIZES_H             // <freetype/ftsizes.h>
 #include FT_SYNTHESIS_H         // <freetype/ftsynth.h>
+#include FT_MULTIPLE_MASTERS_H  // <freetype/ftmm.h>
+#include FT_TRUETYPE_TABLES_H   // <freetype/tttables.h>
 
 // Handle LunaSVG and PlutoSVG
 #if defined(IMGUI_ENABLE_FREETYPE_LUNASVG) && defined(IMGUI_ENABLE_FREETYPE_PLUTOSVG)
@@ -433,6 +435,38 @@ static bool ImGui_ImplFreeType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig* s
     FT_New_Size(bd_font_data->FtFace, &bd_baked_data->FtSize);
     FT_Activate_Size(bd_baked_data->FtSize);
 
+    // Variable font axis support - configure design BEFORE size request
+    FT_MM_Var* mm_var = nullptr;
+    if (FT_Get_MM_Var(bd_font_data->FtFace, &mm_var) == 0 && mm_var != nullptr)
+    {
+        FT_Fixed* coords = (FT_Fixed*)IM_ALLOC(mm_var->num_axis * sizeof(FT_Fixed));
+        // Initialize to font's default values (not current values which may be cached)
+        for (FT_UInt i = 0; i < mm_var->num_axis; i++)
+            coords[i] = mm_var->axis[i].def;
+
+        // Helper to clamp and set axis value
+        auto SetAxis = [&](FT_UInt i, float value) {
+            float axis_min = (float)mm_var->axis[i].minimum / 65536.0f;
+            float axis_max = (float)mm_var->axis[i].maximum / 65536.0f;
+            if (value < axis_min) value = axis_min;
+            if (value > axis_max) value = axis_max;
+            coords[i] = (FT_Fixed)(value * 65536.0f);
+        };
+
+        // Apply axis settings from VarAxes (user-provided values override font defaults)
+        for (FT_UInt i = 0; i < mm_var->num_axis; i++)
+        {
+            FT_ULong tag = mm_var->axis[i].tag;
+            for (int j = 0; j < src->VarAxes.AxesCount; j++)
+                if (tag == (FT_ULong)src->VarAxes.Axes[j].Tag)
+                    SetAxis(i, src->VarAxes.Axes[j].Value);
+        }
+
+        FT_Set_Var_Design_Coordinates(bd_font_data->FtFace, mm_var->num_axis, coords);
+        IM_FREE(coords);
+        FT_Done_MM_Var(bd_font_data->FtFace->glyph->library, mm_var);
+    }
+
     // Vuhdo 2017: "I'm not sure how to deal with font sizes properly. As far as I understand, currently ImGui assumes that the 'pixel_height'
     // is a maximum height of an any given glyph, i.e. it's the sum of font's ascender and descender. Seems strange to me.
     // FT_Set_Pixel_Sizes() doesn't seem to get us the same result."
@@ -604,6 +638,66 @@ bool ImGuiFreeType::DebugEditFontLoaderFlags(unsigned int* p_font_loader_flags)
     edited |= ImGui::CheckboxFlags("LoadColor",    p_font_loader_flags, ImGuiFreeTypeLoaderFlags_LoadColor);
     edited |= ImGui::CheckboxFlags("Bitmap",       p_font_loader_flags, ImGuiFreeTypeLoaderFlags_Bitmap);
     return edited;
+}
+
+int ImGuiFreeType::GetFontAxes(const char* filename, ImFontVarAxisInfo* out_axes, int max_axes)
+{
+    // Initialize FreeType library (temporary, just for this query)
+    FT_Library ft_library;
+    if (FT_Init_FreeType(&ft_library) != 0)
+        return -1;
+
+    // Load font face
+    FT_Face ft_face;
+    if (FT_New_Face(ft_library, filename, 0, &ft_face) != 0)
+    {
+        FT_Done_FreeType(ft_library);
+        return -1;
+    }
+
+    // Query variable font axes
+    int result = 0;
+    FT_MM_Var* mm_var = nullptr;
+    if (FT_Get_MM_Var(ft_face, &mm_var) == 0 && mm_var != nullptr)
+    {
+        result = (int)mm_var->num_axis;
+
+        // Fill output array if provided
+        if (out_axes != nullptr)
+        {
+            int count = (result < max_axes) ? result : max_axes;
+            for (int i = 0; i < count; i++)
+            {
+                const FT_Var_Axis& axis = mm_var->axis[i];
+                out_axes[i].Tag = (ImU32)axis.tag;
+                out_axes[i].Minimum = (float)axis.minimum / 65536.0f;
+                out_axes[i].Default = (float)axis.def / 65536.0f;
+                out_axes[i].Maximum = (float)axis.maximum / 65536.0f;
+
+                // Copy axis name (FreeType provides null-terminated string)
+                if (axis.name)
+                {
+                    size_t len = strlen(axis.name);
+                    if (len >= sizeof(out_axes[i].Name))
+                        len = sizeof(out_axes[i].Name) - 1;
+                    memcpy(out_axes[i].Name, axis.name, len);
+                    out_axes[i].Name[len] = '\0';
+                }
+                else
+                {
+                    out_axes[i].Name[0] = '\0';
+                }
+            }
+        }
+
+        FT_Done_MM_Var(ft_library, mm_var);
+    }
+
+    // Cleanup
+    FT_Done_Face(ft_face);
+    FT_Done_FreeType(ft_library);
+
+    return result;
 }
 
 #ifdef IMGUI_ENABLE_FREETYPE_LUNASVG
