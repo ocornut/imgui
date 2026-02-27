@@ -19049,13 +19049,28 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
             node->Size = host_window->Size;
 
             // We set ImGuiWindowFlags_NoFocusOnAppearing because we don't want the host window to take full focus (e.g. steal NavWindow)
-            // But we still it bring it to the front of display. There's no way to choose this precise behavior via window flags.
-            // One simple case to ponder if: window A has a toggle to create windows B/C/D. Dock B/C/D together, clear the toggle and enable it again.
+            // But we still bring it to the front of display unless all appearing windows have ImGuiWindowFlags_NoFocusOnAppearing set. If none of the
+            // windows wants initial focus, the host will not be brought to the front. There's no way to choose this precise behavior via window flags.
+            // One simple case to ponder is: window A has a toggle to create windows B/C/D. Dock B/C/D together, clear the toggle and enable it again.
             // When reappearing B/C/D will request focus and be moved to the top of the display pile, but they are not linked to the dock host window
             // during the frame they appear. The dock host window would keep its old display order, and the sorting in EndFrame would move B/C/D back
             // after the dock host window, losing their top-most status.
             if (node->HostWindow->Appearing)
-                BringWindowToDisplayFront(node->HostWindow);
+            {
+                // If any of the appearing windows wants focus or any of the other windows currently has the focus, bring the host window to front.
+                // In addition to appearing windows, this handles all cases where one or multiple windows are manually docked.
+                for (ImGuiWindow* window : node->Windows)
+                    if (window->Appearing ? !(window->Flags & ImGuiWindowFlags_NoFocusOnAppearing) : (window == g.NavWindow))
+                    {
+                        BringWindowToDisplayFront(node->HostWindow);
+                        break;
+                    }
+
+                // If the host window was not brought to the front, bring it behind the reference window to preserve its display order.
+                // This neatly handles all remaining cases of programmatically docking windows into the host window.
+                if (node->HostWindow != g.Windows.back() && ref_window)
+                    BringWindowToDisplayBehind(node->HostWindow, ref_window);
+            }
 
             node->AuthorityForPos = node->AuthorityForSize = node->AuthorityForViewport = ImGuiDataAuthority_Auto;
         }
