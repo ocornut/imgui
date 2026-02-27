@@ -134,7 +134,14 @@ Index of this file:
 #include <ctype.h>          // toupper
 #include <limits.h>         // INT_MIN, INT_MAX
 #include <math.h>           // sqrtf, powf, cosf, sinf, floorf, ceilf
+#ifdef IMGUI_USE_STB_SPRINTF
+#include "stb_sprintf.h"
+#define sprintf stbsp_sprintf
+#define snprintf stbsp_snprintf
+#define vsnprintf stbsp_vsnprintf
+#else
 #include <stdio.h>          // vsnprintf, sscanf, printf
+#endif
 #include <stdlib.h>         // NULL, malloc, free, atoi
 #include <stdint.h>         // intptr_t
 #if !defined(_MSC_VER) || _MSC_VER >= 1800
