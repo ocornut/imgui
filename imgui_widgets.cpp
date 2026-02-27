@@ -4936,6 +4936,9 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             const int multiclick_count = (io.MouseClickedCount[0] - 2);
             if ((multiclick_count % 2) == 0)
             {
+                state->SelectionClicks = 2;
+                state->SelectionOrigin = state->Stb->cursor;
+
                 // Double-click: Select word
                 // We always use the "Mac" word advance for double-click select vs Ctrl+Right which use the platform dependent variant:
                 // FIXME: There are likely many ways to improve this behavior, but there's no "right" behavior (depends on use-case, software, OS)
@@ -4951,6 +4954,10 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             }
             else
             {
+                // No line-selection mode for single line, fallback to word selection
+                state->SelectionClicks = is_multiline ? 3 : 2;
+                state->SelectionOrigin = state->Stb->cursor;
+
                 // Triple-click: Select line
                 const bool is_eol = ImStb::STB_TEXTEDIT_GETCHAR(state, state->Stb->cursor) == '\n';
                 state->WrapWidth = 0.0f; // Temporarily disable wrapping so we use real line start.
@@ -4980,12 +4987,57 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         }
         else if (io.MouseDown[0] && !state->SelectedAllMouseLock && (io.MouseDelta.x != 0.0f || io.MouseDelta.y != 0.0f))
         {
-            stb_textedit_drag(state, state->Stb, mouse_x, mouse_y);
+            if (state->SelectionClicks >= 2)
+            {
+                // Double/Triple-click + drag incremental word/line selection
+                int origin = state->SelectionOrigin;
+                int drag = ImStb::stb_text_locate_coord(state, mouse_x, mouse_y);
+
+                const bool swap = drag < origin;
+
+                if (swap)
+                    ImSwap(drag, origin);
+
+                if (state->SelectionClicks == 2)
+                {
+                    const bool move_left = !ImStb::is_word_boundary_from_right(state, origin);
+                    state->Stb->select_start = move_left ? ImStb::STB_TEXTEDIT_MOVEWORDLEFT_IMPL(state, origin) : origin;
+
+                    const bool move_right = !ImStb::is_word_boundary_from_left(state, drag);
+                    state->Stb->select_end = move_right ? ImStb::STB_TEXTEDIT_MOVEWORDRIGHT_MAC(state, drag) : drag;
+                }
+                else if (state->SelectionClicks == 3)
+                {
+                    while (origin > 0 && ImStb::STB_TEXTEDIT_GETCHAR(state, origin - 1) != ImStb::STB_TEXTEDIT_NEWLINE)
+                        --origin;
+
+                    int length = ImStb::STB_TEXTEDIT_STRINGLEN(state);
+                    while (drag < length && ImStb::STB_TEXTEDIT_GETCHAR(state, drag) != ImStb::STB_TEXTEDIT_NEWLINE)
+                        ++drag;
+                    if (drag != length)
+                        ++drag;
+
+                    state->Stb->select_start = origin;
+                    state->Stb->select_end = drag;
+                }
+
+                if (swap)
+                    ImSwap(state->Stb->select_start, state->Stb->select_end);
+
+                state->Stb->cursor = state->Stb->select_end;
+            }
+            else
+            {
+                stb_textedit_drag(state, state->Stb, mouse_x, mouse_y);
+            }
             state->CursorAnimReset();
             state->CursorFollow = true;
         }
         if (state->SelectedAllMouseLock && !io.MouseDown[0])
             state->SelectedAllMouseLock = false;
+        // End ongoing multi-click selection on mouse-up or selection text replace
+        if (state->SelectionClicks >= 2 && !(io.MouseDown[0] && state->HasSelection()))
+            state->SelectionClicks = 0;
 
         // We expect backends to emit a Tab key but some also emit a Tab character which we ignore (#2467, #1336)
         // (For Tab and Enter: Win32/SFML/Allegro are sending both keys and chars, GLFW and SDL are only sending keys. For Space they all send all threes)
