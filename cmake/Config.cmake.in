@@ -1,0 +1,6 @@
+set(IMGUI_VERSION "@IMGUI_VERSION@")
+
+@PACKAGE_INIT@
+include("${CMAKE_CURRENT_LIST_DIR}/imguiTargets.cmake")
+
+check_required_components(imgui)
