@@ -9114,9 +9114,11 @@ bool ImGui::BeginMainMenuBar()
     ImGuiContext& g = *GImGui;
     ImGuiViewportP* viewport = (ImGuiViewportP*)(void*)GetMainViewport();
 
-    // Notify of viewport change so GetFrameHeight() can be accurate in case of DPI change
+    // Notify of viewport change and refresh font size so GetFrameHeight() can be accurate in case of DPI change
     SetCurrentViewport(NULL, viewport);
-
+    float font_scale = (g.IO.ConfigFlags & ImGuiConfigFlags_DpiEnableScaleFonts) ? viewport->DpiScale : 1.0f;
+    g.FontSize = g.FontBaseSize * font_scale;
+    
     // For the main menu bar, which cannot be moved, we honor g.Style.DisplaySafeAreaPadding to ensure text can be visible on a TV set.
     // FIXME: This could be generalized as an opt-in way to clamp window->DC.CursorStartPos to avoid SafeArea?
     // FIXME: Consider removing support for safe area down the line... it's messy. Nowadays consoles have support for TV calibration in OS settings.
