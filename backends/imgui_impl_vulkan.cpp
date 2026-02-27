@@ -446,10 +446,19 @@ static void CreateOrResizeBuffer(VkBuffer& buffer, VkDeviceMemory& buffer_memory
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
     ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
     VkResult err;
-    if (buffer != VK_NULL_HANDLE)
-        vkDestroyBuffer(v->Device, buffer, v->Allocator);
-    if (buffer_memory != VK_NULL_HANDLE)
-        vkFreeMemory(v->Device, buffer_memory, v->Allocator);
+
+    // Destroy resources if they existed already
+    if (buffer != VK_NULL_HANDLE || buffer_memory != VK_NULL_HANDLE)
+    {
+        //sync device to avoid deleting buffers that might be used by the gpu in a command list.
+        err = vkDeviceWaitIdle(v->Device);
+        check_vk_result(err);
+
+        if (buffer != VK_NULL_HANDLE)
+            vkDestroyBuffer(v->Device, buffer, v->Allocator);
+        if (buffer_memory != VK_NULL_HANDLE)
+            vkFreeMemory(v->Device, buffer_memory, v->Allocator);
+    }
 
     VkDeviceSize buffer_size_aligned = AlignBufferSize(IM_MAX(v->MinAllocationSize, new_size), bd->BufferMemoryAlignment);
     VkBufferCreateInfo buffer_info = {};
