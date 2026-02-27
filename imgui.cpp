@@ -6734,6 +6734,19 @@ static ImVec2 CalcWindowAutoFitSize(ImGuiWindow* window, const ImVec2& size_cont
     size_desired[ImGuiAxis_X] = (axis_mask & 1) ? size_contents.x + size_pad.x + decoration_w_without_scrollbars : window->Size.x;
     size_desired[ImGuiAxis_Y] = (axis_mask & 2) ? size_contents.y + size_pad.y + decoration_h_without_scrollbars : window->Size.y;
 
+    if ((window->Flags & ImGuiWindowFlags_NoTitleBar) == 0)
+    {
+        // Content may be shorter than title. In that case, make sure we auto resize based on title to not clip it off.
+        ImVec2 title_size = ImGui::CalcTextSize(window->Name, NULL, true);
+        title_size.x += style.FramePadding.x * 2.0f;
+
+        float collapse_button_width = (window->Flags & ImGuiWindowFlags_NoCollapse) == 0 ? (g.FontSize + style.FramePadding.x * 2.0f) : 0.0f;
+        float close_button_width = window->HasCloseButton ? (g.FontSize + style.FramePadding.x * 2.0f) : 0.0f;
+
+        float min_title_width = title_size.x + collapse_button_width + close_button_width;
+        size_desired.x = ImMax(size_desired.x, min_title_width + style.WindowPadding.x * 2.0f);
+    }
+    
     // Determine maximum window size
     // Child windows are laid within their parent (unless they are also popups/menus) and thus have no restriction
     ImVec2 size_max = ((window->Flags & ImGuiWindowFlags_ChildWindow) && !(window->Flags & ImGuiWindowFlags_Popup)) ? ImVec2(FLT_MAX, FLT_MAX) : ImGui::GetMainViewport()->WorkSize - style.DisplaySafeAreaPadding * 2.0f;
