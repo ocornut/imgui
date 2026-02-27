@@ -9803,11 +9803,33 @@ static void ShowExampleAppConstrainedResize(bool* p_open)
         static void AspectRatio(ImGuiSizeCallbackData* data)
         {
             float aspect_ratio = *(float*)data->UserData;
-            data->DesiredSize.y = (float)(int)(data->DesiredSize.x / aspect_ratio);
+            int current_cursor = ImGui::GetMouseCursor();
+            if(current_cursor == ImGuiMouseCursor_ResizeNWSE || current_cursor == ImGuiMouseCursor_ResizeNESW)
+            {
+				if(aspect_ratio > data->DesiredSize.x / data->DesiredSize.y)
+					data->DesiredSize.x = aspect_ratio * data->DesiredSize.y;
+				else
+					data->DesiredSize.y = data->DesiredSize.x / aspect_ratio;
+			}
+			else if(current_cursor == ImGuiMouseCursor_ResizeNS)
+				data->DesiredSize.x = aspect_ratio * data->DesiredSize.y;
+			else if(current_cursor == ImGuiMouseCursor_ResizeEW)
+				data->DesiredSize.y = data->DesiredSize.x / aspect_ratio;
         }
         static void Square(ImGuiSizeCallbackData* data)
         {
-            data->DesiredSize.x = data->DesiredSize.y = IM_MAX(data->DesiredSize.x, data->DesiredSize.y);
+            int current_cursor = ImGui::GetMouseCursor();
+            if(current_cursor == ImGuiMouseCursor_ResizeNWSE || current_cursor == ImGuiMouseCursor_ResizeNESW)
+            {
+				if(1.f > data->DesiredSize.x / data->DesiredSize.y)
+					data->DesiredSize.x = data->DesiredSize.y;
+				else
+					data->DesiredSize.y = data->DesiredSize.x;
+			}
+			else if(current_cursor == ImGuiMouseCursor_ResizeNS)
+				data->DesiredSize.x = data->DesiredSize.y;
+			else if(current_cursor == ImGuiMouseCursor_ResizeEW)
+				data->DesiredSize.y = data->DesiredSize.x;
         }
         static void Step(ImGuiSizeCallbackData* data)
         {
