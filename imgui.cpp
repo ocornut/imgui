@@ -3791,6 +3791,7 @@ const char* ImGui::GetStyleColorName(ImGuiCol idx)
     case ImGuiCol_ChildBg: return "ChildBg";
     case ImGuiCol_PopupBg: return "PopupBg";
     case ImGuiCol_Border: return "Border";
+    case ImGuiCol_WindowBorderSelected: return "WindowBorderSelected";
     case ImGuiCol_BorderShadow: return "BorderShadow";
     case ImGuiCol_FrameBg: return "FrameBg";
     case ImGuiCol_FrameBgHovered: return "FrameBgHovered";
@@ -7592,6 +7593,30 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
         // Borders (for dock node host they will be rendered over after the tab bar)
         if (handle_borders_and_resize_grips && !window->DockNodeAsHost)
             RenderWindowOuterBorders(window);
+
+        // Selected border
+        const float border_size = window->WindowBorderSize;
+        bool is_window_selected = border_size > 0.0f;
+        if (!(window->Flags & (ImGuiWindowFlags_ChildMenu | ImGuiWindowFlags_Popup)))
+        {
+            // Regular window
+            is_window_selected &= g.WindowsFocusOrder.back() == window;
+        }
+        else
+        {
+            // BeginPopup/BeginMenu
+            is_window_selected &= g.OpenPopupStack.back().Window == window && g.WindowsFocusOrder.back() == window->RootWindow;
+        }
+        // When docked, only show selected border if the dock node is focused
+        is_window_selected &= (!window->DockIsActive || window->DockNode->IsFocused);
+        if (is_window_selected)
+        {
+            const ImU32 border_selected_col = GetColorU32(ImGuiCol_WindowBorderSelected);
+            RenderWindowOuterSingleBorder(window, 0, border_selected_col, border_size);
+            RenderWindowOuterSingleBorder(window, 1, border_selected_col, border_size);
+            RenderWindowOuterSingleBorder(window, 2, border_selected_col, border_size);
+            RenderWindowOuterSingleBorder(window, 3, border_selected_col, border_size);
+        }
     }
     window->DC.NavLayerCurrent = ImGuiNavLayer_Main;
 }
