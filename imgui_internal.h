@@ -3948,6 +3948,7 @@ IMGUI_API void              ImFontAtlasUpdateDrawListsTextures(ImFontAtlas* atla
 IMGUI_API void              ImFontAtlasUpdateDrawListsSharedData(ImFontAtlas* atlas);
 
 IMGUI_API void              ImFontAtlasTextureBlockConvert(const unsigned char* src_pixels, ImTextureFormat src_fmt, int src_pitch, unsigned char* dst_pixels, ImTextureFormat dst_fmt, int dst_pitch, int w, int h);
+IMGUI_API void              ImFontAtlasTextureBlockResize(const ImU32* src_pixels, const int src_w, const int src_h, ImU32* dst_pixels, const int dst_w, const int dst_h);
 IMGUI_API void              ImFontAtlasTextureBlockPostProcess(ImFontAtlasPostProcessData* data);
 IMGUI_API void              ImFontAtlasTextureBlockPostProcessMultiply(ImFontAtlasPostProcessData* data, float multiply_factor);
 IMGUI_API void              ImFontAtlasTextureBlockFill(ImTextureData* dst_tex, int dst_x, int dst_y, int w, int h, ImU32 col);
