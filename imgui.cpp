@@ -3035,6 +3035,16 @@ bool ImGuiTextFilter::Draw(const char* label, float width)
     return value_changed;
 }
 
+bool ImGuiTextFilter::DrawWithHint(const char* label, const char* hint, float width)
+{
+    if (width != 0.0f)
+        ImGui::SetNextItemWidth(width);
+    bool value_changed = ImGui::InputTextWithHint(label, hint, InputBuf, IM_ARRAYSIZE(InputBuf));
+    if (value_changed)
+        Build();
+    return value_changed;
+}
+
 void ImGuiTextFilter::ImGuiTextRange::split(char separator, ImVector<ImGuiTextRange>* out) const
 {
     out->resize(0);
