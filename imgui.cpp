@@ -5739,7 +5739,7 @@ void ImGui::NewFrame()
     // This fallback is particularly important as it prevents ImGui:: calls from crashing.
     g.WithinFrameScopeWithImplicitWindow = true;
     SetNextWindowSize(ImVec2(400, 400), ImGuiCond_FirstUseEver);
-    Begin("Debug##Default");
+    Begin("Debug##Default", NULL, ImGuiWindowFlags_NoFocusOnAppearing);
     IM_ASSERT(g.CurrentWindow->IsFallbackWindow == true);
 
     // Store stack sizes
