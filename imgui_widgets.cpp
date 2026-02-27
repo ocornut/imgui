@@ -802,7 +802,14 @@ bool ImGui::ButtonEx(const char* label, const ImVec2& size_arg, ImGuiButtonFlags
 
     if (g.LogEnabled)
         LogSetNextTextDecoration("[", "]");
+
+    if (hovered)
+        ImGui::PushStyleColor(ImGuiCol_Text, g.Style.Colors[held ? ImGuiCol_TextButtonActive : ImGuiCol_TextButtonHover]);
+
     RenderTextClipped(bb.Min + style.FramePadding, bb.Max - style.FramePadding, label, NULL, &label_size, style.ButtonTextAlign, &bb);
+
+    if (hovered)
+        ImGui::PopStyleColor();
 
     // Automatically close popups
     //if (pressed && !(flags & ImGuiButtonFlags_DontClosePopups) && (window->Flags & ImGuiWindowFlags_Popup))

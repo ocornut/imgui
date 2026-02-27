@@ -3729,6 +3729,8 @@ const char* ImGui::GetStyleColorName(ImGuiCol idx)
     {
     case ImGuiCol_Text: return "Text";
     case ImGuiCol_TextDisabled: return "TextDisabled";
+    case ImGuiCol_TextButtonHover: return "TextButtonHover";
+    case ImGuiCol_TextButtonActive: return "TextButtonActive";
     case ImGuiCol_WindowBg: return "WindowBg";
     case ImGuiCol_ChildBg: return "ChildBg";
     case ImGuiCol_PopupBg: return "PopupBg";
