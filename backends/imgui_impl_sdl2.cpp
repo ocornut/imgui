@@ -870,7 +870,13 @@ static void ImGui_ImplSDL2_GetWindowSizeAndFramebufferScale(SDL_Window* window, 
 {
     int w, h;
     int display_w, display_h;
-    SDL_GetWindowSize(window, &w, &h);
+
+    SDL_RenderGetLogicalSize(renderer, &w, &h);
+    if (w == 0 || h == 0)
+    { // GetLogicalSize returns 0, 0 when it is unset
+        SDL_GetWindowSize(window, &w, &h);
+    }
+
     if (SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED)
         w = h = 0;
     if (renderer != nullptr)
