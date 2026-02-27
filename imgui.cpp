@@ -19286,7 +19286,7 @@ static bool IsDockNodeTitleBarHighlighted(ImGuiDockNode* node, ImGuiDockNode* ro
     {
         // FIXME: This could all be backed in RootWindowForTitleBarHighlight? Probably need to reorganize for both dock nodes + other RootWindowForTitleBarHighlight users (not-node)
         ImGuiWindow* parent_window = g.NavWindow->RootWindow;
-        while (parent_window->Flags & ImGuiWindowFlags_ChildMenu)
+        while (parent_window->Flags & (ImGuiWindowFlags_ChildMenu|ImGuiWindowFlags_Popup) && !(parent_window->Flags & ImGuiWindowFlags_Modal))
             parent_window = parent_window->ParentWindow->RootWindow;
         ImGuiDockNode* start_parent_node = parent_window->DockNodeAsHost ? parent_window->DockNodeAsHost : parent_window->DockNode;
         for (ImGuiDockNode* parent_node = start_parent_node; parent_node != NULL; parent_node = parent_node->HostWindow ? parent_node->HostWindow->RootWindow->DockNode : NULL)
