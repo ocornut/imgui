@@ -7230,6 +7230,8 @@ void ImGui::RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& titl
 
     const bool has_close_button = (p_open != NULL);
     const bool has_collapse_button = !(flags & ImGuiWindowFlags_NoCollapse) && (style.WindowMenuButtonPosition != ImGuiDir_None);
+    const bool has_minimize_button = flags & ImGuiWindowFlags_Minimize;
+    const bool has_maximize_button = flags & ImGuiWindowFlags_Maximize;
 
     // Close & Collapse button are on the Menu NavLayer and don't default focus (unless there's nothing else on that layer)
     // FIXME-NAV: Might want (or not?) to set the equivalent of ImGuiButtonFlags_NoNavFocus so that mouse clicks on standard title bar items don't necessarily set nav/keyboard ref?
@@ -7243,10 +7245,22 @@ void ImGui::RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& titl
     float pad_r = style.FramePadding.x;
     float button_sz = g.FontSize;
     ImVec2 close_button_pos;
+    ImVec2 minimize_button_pos;
+    ImVec2 maximize_button_pos;
     ImVec2 collapse_button_pos;
     if (has_close_button)
     {
         close_button_pos = ImVec2(title_bar_rect.Max.x - pad_r - button_sz, title_bar_rect.Min.y + style.FramePadding.y);
+        pad_r += button_sz + style.ItemInnerSpacing.x;
+    }
+    if (has_maximize) 
+    {
+        maximize_button_pos = ImVec2(title_bar_rect.Max.x - pad_r - button_sz, title_bar_rect.Min.y + style.FramePadding.y);
+        pad_r += button_sz + style.ItemInnerSpacing.x;
+    }
+    if (has_minimize)
+    {
+    	minimize_button_pos = ImVec2(title_bar_rect.Max.x - pad_r - button_sz, title_bar_rect.Min.y + style.FramePadding.y);
         pad_r += button_sz + style.ItemInnerSpacing.x;
     }
     if (has_collapse_button && style.WindowMenuButtonPosition == ImGuiDir_Right)
@@ -7273,6 +7287,20 @@ void ImGui::RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& titl
         if (CloseButton(window->GetID("#CLOSE"), close_button_pos))
             *p_open = false;
         g.CurrentItemFlags = backup_item_flags;
+    }
+
+    // Maximize button
+    if (has_maximize_button) {
+        if (CloseButton(window->GetID("#MAXIMIZE"), maximize_button_pos, window->Maximized)) {
+            window->WantMaximizeToggle = true;
+        }
+    }
+    
+    // Minimize button
+    if (has_minimize_button) {
+        if (CloseButton(window->GetID("#MINIMIZE"), minimize_button_pos, window->Minimized)) {
+            window->WantMinimizeToggle = true;
+        }
     }
 
     window->DC.NavLayerCurrent = ImGuiNavLayer_Main;
@@ -7661,6 +7689,26 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             window->Collapsed = false;
         }
         window->WantCollapseToggle = false;
+
+        if (flags & ImGuiWindowFlags_Maximize) {
+            if (window->WantMaximizeToggle) {
+                window->Maximized = !window->Maximized;
+                MarkIniSettingsDirty(window);
+            }
+        } else {
+            window->Maximized = false;
+        }
+        window->WantMaximizeToggle = false;
+        
+        if (flags & ImGuiWindowFlags_Minimize) {
+            if (window->WantMinimizeToggle) {
+                window->Minimized = !window->Minimized;
+                MarkIniSettingsDirty(window);
+            }
+        } else {
+            window->Minimized = false;
+        }
+        window->WantMinimizeToggle = false;
 
         // SIZE
 
@@ -8581,6 +8629,18 @@ bool ImGui::IsWindowCollapsed()
 {
     ImGuiWindow* window = GetCurrentWindowRead();
     return window->Collapsed;
+}
+
+bool ImGui::IsWindowMinimized()
+{
+    ImGuiWindow* window = GetCurrentWindowRead();
+    return window->Minimized;
+}
+
+bool ImGui::IsWindowMaximized()
+{
+    ImGuiWindow* window = GetCurrentWindowRead();
+    return window->Maximized;
 }
 
 bool ImGui::IsWindowAppearing()
