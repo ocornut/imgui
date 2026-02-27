@@ -2773,10 +2773,13 @@ struct ImGuiTextBuffer
 struct ImGuiStoragePair
 {
     ImGuiID     key;
-    union       { int val_i; float val_f; void* val_p; };
+    union       { int val_i; float val_f; void* val_p; ImS64 val_s64; ImU64 val_u64; double val_d; };
     ImGuiStoragePair(ImGuiID _key, int _val)    { key = _key; val_i = _val; }
     ImGuiStoragePair(ImGuiID _key, float _val)  { key = _key; val_f = _val; }
     ImGuiStoragePair(ImGuiID _key, void* _val)  { key = _key; val_p = _val; }
+    ImGuiStoragePair(ImGuiID _key, ImS64 _val)  { key = _key; val_s64 = _val; }
+    ImGuiStoragePair(ImGuiID _key, ImU64 _val)  { key = _key; val_u64 = _val; }
+    ImGuiStoragePair(ImGuiID _key, double _val) { key = _key; val_d = _val; }
 };
 
 // Helper: Key->Value storage
@@ -2804,6 +2807,12 @@ struct ImGuiStorage
     IMGUI_API void      SetFloat(ImGuiID key, float val);
     IMGUI_API void*     GetVoidPtr(ImGuiID key) const; // default_val is NULL
     IMGUI_API void      SetVoidPtr(ImGuiID key, void* val);
+    IMGUI_API ImS64     GetInt64(ImGuiID key, ImS64 default_val = 0) const;
+    IMGUI_API void      SetInt64(ImGuiID key, ImS64 val);
+    IMGUI_API ImU64     GetUint64(ImGuiID key, ImU64 default_val = 0) const;
+    IMGUI_API void      SetUint64(ImGuiID key, ImU64 val);
+    IMGUI_API double    GetDouble(ImGuiID key, double default_val = 0.0f) const;
+    IMGUI_API void      SetDouble(ImGuiID key, double val);
 
     // - Get***Ref() functions finds pair, insert on demand if missing, return pointer. Useful if you intend to do Get+Set.
     // - References are only valid until a new value is added to the storage. Calling a Set***() function or a Get***Ref() function invalidates the pointer.
@@ -2813,6 +2822,9 @@ struct ImGuiStorage
     IMGUI_API bool*     GetBoolRef(ImGuiID key, bool default_val = false);
     IMGUI_API float*    GetFloatRef(ImGuiID key, float default_val = 0.0f);
     IMGUI_API void**    GetVoidPtrRef(ImGuiID key, void* default_val = NULL);
+    IMGUI_API ImS64*    GetInt64Ref(ImGuiID key, ImS64 default_val = 0);
+    IMGUI_API ImU64*    GetUint64Ref(ImGuiID key, ImU64 default_val = 0);
+    IMGUI_API double*   GetDoubleRef(ImGuiID key, double default_val = 0);
 
     // Advanced: for quicker full rebuild of a storage (instead of an incremental one), you may add all your contents and then sort once.
     IMGUI_API void      BuildSortByKey();

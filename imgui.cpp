@@ -2939,6 +2939,30 @@ void* ImGuiStorage::GetVoidPtr(ImGuiID key) const
     return it->val_p;
 }
 
+ImS64 ImGuiStorage::GetInt64(ImGuiID key, ImS64 default_val) const
+{
+    ImGuiStoragePair* it = ImLowerBound(const_cast<ImGuiStoragePair*>(Data.Data), const_cast<ImGuiStoragePair*>(Data.Data + Data.Size), key);
+    if (it == Data.Data + Data.Size || it->key != key)
+        return default_val;
+    return it->val_s64;
+}
+
+ImU64 ImGuiStorage::GetUint64(ImGuiID key, ImU64 default_val) const
+{
+    ImGuiStoragePair* it = ImLowerBound(const_cast<ImGuiStoragePair*>(Data.Data), const_cast<ImGuiStoragePair*>(Data.Data + Data.Size), key);
+    if (it == Data.Data + Data.Size || it->key != key)
+        return default_val;
+    return it->val_u64;
+}
+
+double ImGuiStorage::GetDouble(ImGuiID key, double default_val) const
+{
+    ImGuiStoragePair* it = ImLowerBound(const_cast<ImGuiStoragePair*>(Data.Data), const_cast<ImGuiStoragePair*>(Data.Data + Data.Size), key);
+    if (it == Data.Data + Data.Size || it->key != key)
+        return default_val;
+    return it->val_d;
+}
+
 // References are only valid until a new value is added to the storage. Calling a Set***() function or a Get***Ref() function invalidates the pointer.
 int* ImGuiStorage::GetIntRef(ImGuiID key, int default_val)
 {
@@ -2967,6 +2991,30 @@ void** ImGuiStorage::GetVoidPtrRef(ImGuiID key, void* default_val)
     if (it == Data.Data + Data.Size || it->key != key)
         it = Data.insert(it, ImGuiStoragePair(key, default_val));
     return &it->val_p;
+}
+
+ImS64* ImGuiStorage::GetInt64Ref(ImGuiID key, ImS64 default_val)
+{
+    ImGuiStoragePair* it = ImLowerBound(Data.Data, Data.Data + Data.Size, key);
+    if (it == Data.Data + Data.Size || it->key != key)
+        it = Data.insert(it, ImGuiStoragePair(key, default_val));
+    return &it->val_s64;
+}
+
+ImU64* ImGuiStorage::GetUint64Ref(ImGuiID key, ImU64 default_val)
+{
+    ImGuiStoragePair* it = ImLowerBound(Data.Data, Data.Data + Data.Size, key);
+    if (it == Data.Data + Data.Size || it->key != key)
+        it = Data.insert(it, ImGuiStoragePair(key, default_val));
+    return &it->val_u64;
+}
+
+double* ImGuiStorage::GetDoubleRef(ImGuiID key, double default_val)
+{
+    ImGuiStoragePair* it = ImLowerBound(Data.Data, Data.Data + Data.Size, key);
+    if (it == Data.Data + Data.Size || it->key != key)
+        it = Data.insert(it, ImGuiStoragePair(key, default_val));
+    return &it->val_d;
 }
 
 // FIXME-OPT: Need a way to reuse the result of lower_bound when doing GetInt()/SetInt() - not too bad because it only happens on explicit interaction (maximum one a frame)
@@ -3000,6 +3048,33 @@ void ImGuiStorage::SetVoidPtr(ImGuiID key, void* val)
         Data.insert(it, ImGuiStoragePair(key, val));
     else
         it->val_p = val;
+}
+
+void ImGuiStorage::SetInt64(ImGuiID key, ImS64 val)
+{
+    ImGuiStoragePair* it = ImLowerBound(Data.Data, Data.Data + Data.Size, key);
+    if (it == Data.Data + Data.Size || it->key != key)
+        Data.insert(it, ImGuiStoragePair(key, val));
+    else
+        it->val_s64 = val;
+}
+
+void ImGuiStorage::SetUint64(ImGuiID key, ImU64 val)
+{
+    ImGuiStoragePair* it = ImLowerBound(Data.Data, Data.Data + Data.Size, key);
+    if (it == Data.Data + Data.Size || it->key != key)
+        Data.insert(it, ImGuiStoragePair(key, val));
+    else
+        it->val_u64 = val;
+}
+
+void ImGuiStorage::SetDouble(ImGuiID key, double val)
+{
+    ImGuiStoragePair* it = ImLowerBound(Data.Data, Data.Data + Data.Size, key);
+    if (it == Data.Data + Data.Size || it->key != key)
+        Data.insert(it, ImGuiStoragePair(key, val));
+    else
+        it->val_d = val;
 }
 
 void ImGuiStorage::SetAllInt(int v)
