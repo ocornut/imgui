@@ -306,6 +306,7 @@ static ImGui_ImplGlfw_Data* ImGui_ImplGlfw_GetBackendData(GLFWwindow* window)
 
 // Forward Declarations
 static void ImGui_ImplGlfw_UpdateMonitors();
+static void ImGui_ImplGlfw_UpdateViewports();
 static void ImGui_ImplGlfw_InitMultiViewportSupport();
 static void ImGui_ImplGlfw_ShutdownMultiViewportSupport();
 
@@ -1196,6 +1197,7 @@ void ImGui_ImplGlfw_NewFrame()
     bd->Time = current_time;
 
     bd->MouseIgnoreButtonUp = false;
+	ImGui_ImplGlfw_UpdateViewports();
     ImGui_ImplGlfw_UpdateMouseData();
     ImGui_ImplGlfw_UpdateMouseCursor();
 
@@ -1277,6 +1279,7 @@ struct ImGui_ImplGlfw_ViewportData
 {
     GLFWwindow* Window;             // Stored in ImGuiViewport::PlatformHandle
     bool        WindowOwned;
+	bool 		PlatformRequestResizeNextFrame;
     int         IgnoreWindowPosEventFrame;
     int         IgnoreWindowSizeEventFrame;
 #ifdef _WIN32
@@ -1286,6 +1289,25 @@ struct ImGui_ImplGlfw_ViewportData
     ImGui_ImplGlfw_ViewportData()  { memset((void*)this, 0, sizeof(*this)); IgnoreWindowSizeEventFrame = IgnoreWindowPosEventFrame = -1; }
     ~ImGui_ImplGlfw_ViewportData() { IM_ASSERT(Window == nullptr); }
 };
+
+static void ImGui_ImplGlfw_UpdateViewports()
+{
+	ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+	for (int n = 0; n < platform_io.Viewports.Size; n++)
+	{
+		ImGuiViewport* viewport = platform_io.Viewports[n];
+		if (ImGui_ImplGlfw_ViewportData* vd = (ImGui_ImplGlfw_ViewportData*)viewport->PlatformUserData){
+			if(vd->PlatformRequestResizeNextFrame){
+				// The previous frame's windowSizeCallback was invoked when glfwSetWindowPos was used, not triggered by glfwPollEvent.
+				// At this point, some critical operations that depend on PlatformRequestResize have already been completed.
+				// The PlatformRequestResize flag is cleared at the end of the frame,
+				// so we delay the operation to the current frame to ensure that the PlatformRequestResize behavior is fully completed.
+				viewport->PlatformRequestResize = true;
+				vd->PlatformRequestResizeNextFrame = false;
+			}
+		}
+	}
+}
 
 static void ImGui_ImplGlfw_WindowCloseCallback(GLFWwindow* window)
 {
@@ -1324,6 +1346,15 @@ static void ImGui_ImplGlfw_WindowSizeCallback(GLFWwindow* window, int, int)
             //data->IgnoreWindowSizeEventFrame = -1;
             if (ignore_event)
                 return;
+
+			bool delay_to_next_frame = (ImGui::GetFrameCount() <= vd->IgnoreWindowPosEventFrame + 1);
+
+			if(delay_to_next_frame){
+				// glfwSetWindowPos and glfwSetWindowSizeCallback are called in the same frame
+				// we should not process the resize event in this frame
+				vd->PlatformRequestResizeNextFrame = true;
+				return;
+			}
         }
         viewport->PlatformRequestResize = true;
     }
