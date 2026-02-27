@@ -3373,6 +3373,15 @@ bool ImGui::SliderScalarN(const char* label, ImGuiDataType data_type, void* v, i
     if (window->SkipItems)
         return false;
 
+    // Range slider mode: render 2 components as a single range slider
+    if (components == 2 && (flags & ImGuiSliderFlags_Range))
+    {
+        size_t type_size = GDataTypeInfo[data_type].Size;
+        void* v0 = v;
+        void* v1 = (void*)((char*)v + type_size);
+        return SliderScalarRange2(label, data_type, v0, v1, v_min, v_max, format, flags & ~ImGuiSliderFlags_Range);
+    }
+
     ImGuiContext& g = *GImGui;
     bool value_changed = false;
     BeginGroup();
@@ -3453,6 +3462,545 @@ bool ImGui::SliderInt3(const char* label, int v[3], int v_min, int v_max, const 
 bool ImGui::SliderInt4(const char* label, int v[4], int v_min, int v_max, const char* format, ImGuiSliderFlags flags)
 {
     return SliderScalarN(label, ImGuiDataType_S32, v, 4, &v_min, &v_max, format, flags);
+}
+
+// Visual range slider with two grab handles and colored fill between them
+//-------------------------------------------------------------------------
+// [SECTION] Widgets: SliderScalarRange2, SliderFloatRange2, SliderIntRange2
+//-------------------------------------------------------------------------
+// - SliderBehaviorRangeT<>() [Internal]
+// - SliderBehaviorRange() [Internal]
+// - SliderScalarRange2()
+// - SliderFloatRange2()
+// - SliderIntRange2()
+//-------------------------------------------------------------------------
+
+// Forward declaration for TempInput function used by SliderScalarRange2
+static bool TempInputScalarRange2(const ImRect& bb, ImGuiID id, const char* label, ImGuiDataType data_type, void* p_data_min, void* p_data_max, const char* format, const char* format_max, const void* p_clamp_min, const void* p_clamp_max, int selected_handle);
+
+// Helper to parse range format string "%.3f...%.3f" into separate min/max formats
+// Returns pointer to start of max format (after dots), or NULL if no separator found
+// Accepts any number of consecutive dots (2+) as separator
+static const char* ParseRangeFormatSeparator(const char* format)
+{
+    if (!format)
+        return NULL;
+    const char* p = format;
+    while (*p)
+    {
+        if (p[0] == '.' && p[1] == '.')
+        {
+            // Found at least "..", skip all consecutive dots
+            while (*p == '.')
+                p++;
+            return p;  // Return start of max format
+        }
+        p++;
+    }
+    return NULL;  // No separator found
+}
+
+template<typename TYPE, typename SIGNEDTYPE, typename FLOATTYPE>
+static bool SliderBehaviorRangeT(const ImRect& bb, ImGuiID id, ImGuiDataType data_type, TYPE* v_min_val, TYPE* v_max_val, TYPE v_min, TYPE v_max, const char* format, const char* format_max, ImGuiSliderFlags flags, ImRect* out_grab_bb_min, ImRect* out_grab_bb_max, int* p_handle, TYPE step)
+{
+    ImGuiContext& g = *GImGui;
+    const ImGuiStyle& style = g.Style;
+
+    const ImGuiAxis axis = (flags & ImGuiSliderFlags_Vertical) ? ImGuiAxis_Y : ImGuiAxis_X;
+    const bool is_logarithmic = (flags & ImGuiSliderFlags_Logarithmic) != 0;
+    const bool is_floating_point = (data_type == ImGuiDataType_Float) || (data_type == ImGuiDataType_Double);
+    const FLOATTYPE v_range_f = (FLOATTYPE)(v_min < v_max ? v_max - v_min : v_min - v_max);
+
+    // Calculate slider geometry
+    const float grab_padding = 2.0f;
+    const float slider_sz = (bb.Max[axis] - bb.Min[axis]) - grab_padding * 2.0f;
+    float grab_sz = style.GrabMinSize;
+    if (!is_floating_point && v_range_f >= 0)
+        grab_sz = ImMax(slider_sz / (float)((FLOATTYPE)(v_range_f) + 1), style.GrabMinSize);
+    grab_sz = ImMin(grab_sz, slider_sz * 0.4f);  // Cap at 40% for range sliders
+    const float slider_usable_sz = slider_sz - grab_sz;
+    const float slider_usable_pos_min = bb.Min[axis] + grab_padding + grab_sz * 0.5f;
+    const float slider_usable_pos_max = bb.Max[axis] - grab_padding - grab_sz * 0.5f;
+
+    float logarithmic_zero_epsilon = 0.0f;
+    float zero_deadzone_halfsize = 0.0f;
+    if (is_logarithmic)
+    {
+        const int decimal_precision = is_floating_point ? ImParseFormatPrecision(format, 3) : 1;
+        logarithmic_zero_epsilon = ImPow(0.1f, (float)decimal_precision);
+        zero_deadzone_halfsize = (style.LogSliderDeadzone * 0.5f) / ImMax(slider_usable_sz, 1.0f);
+    }
+
+    // Helper to get grab position from value
+    auto grab_pos_from_value = [&](TYPE v) {
+        float t = ImGui::ScaleRatioFromValueT<TYPE, SIGNEDTYPE, FLOATTYPE>(data_type, v, v_min, v_max, is_logarithmic, logarithmic_zero_epsilon, zero_deadzone_halfsize);
+        if (axis == ImGuiAxis_Y) t = 1.0f - t;
+        return ImLerp(slider_usable_pos_min, slider_usable_pos_max, t);
+    };
+
+    float grab_min_pos = grab_pos_from_value(*v_min_val);
+    float grab_max_pos = grab_pos_from_value(*v_max_val);
+
+    bool value_changed = false;
+
+    if (g.ActiveId == id)
+    {
+        bool set_new_value = false;
+        float clicked_t = 0.0f;
+
+        if (g.ActiveIdSource == ImGuiInputSource_Mouse)
+        {
+            if (!g.IO.MouseDown[0])
+            {
+                ImGui::ClearActiveID();
+            }
+            else
+            {
+                const float mouse_abs_pos = g.IO.MousePos[axis];
+
+                // On first click, determine which handle or bar based on proximity
+                if (g.ActiveIdIsJustActivated)
+                {
+                    const float click_pos = g.IO.MouseClickedPos[0][axis];
+                    float dist_min = ImAbs(click_pos - grab_min_pos);
+                    float dist_max = ImAbs(click_pos - grab_max_pos);
+                    float handle_threshold = grab_sz * 0.75f;
+
+                    if (dist_min <= handle_threshold || dist_max <= handle_threshold)
+                    {
+                        // Click near a handle - if handles overlap, use undetermined state (-2)
+                        if (ImAbs(grab_min_pos - grab_max_pos) < 1.0f)
+                            *p_handle = -2;  // Undetermined: will be resolved by drag direction
+                        else
+                            *p_handle = (dist_min <= dist_max) ? 0 : 1;
+                    }
+                    else if (click_pos > grab_min_pos && click_pos < grab_max_pos)
+                    {
+                        // Click on bar between handles - enable bar dragging
+                        *p_handle = -1;
+                        g.SliderGrabClickOffset = click_pos - (grab_min_pos + grab_max_pos) * 0.5f;
+                    }
+                    else
+                    {
+                        // Click outside range - pick nearest handle
+                        *p_handle = (dist_min < dist_max) ? 0 : 1;
+                    }
+                }
+
+                if (*p_handle == -1)
+                {
+                    // Bar dragging: move both handles together
+                    float bar_center = mouse_abs_pos - g.SliderGrabClickOffset;
+                    float half_range = (grab_max_pos - grab_min_pos) * 0.5f;
+                    float new_min_pos = bar_center - half_range;
+                    float new_max_pos = bar_center + half_range;
+
+                    // Clamp to slider bounds
+                    if (new_min_pos < slider_usable_pos_min)
+                    {
+                        new_min_pos = slider_usable_pos_min;
+                        new_max_pos = new_min_pos + (grab_max_pos - grab_min_pos);
+                    }
+                    if (new_max_pos > slider_usable_pos_max)
+                    {
+                        new_max_pos = slider_usable_pos_max;
+                        new_min_pos = new_max_pos - (grab_max_pos - grab_min_pos);
+                    }
+
+                    // Convert positions to values
+                    float t_min_new = (slider_usable_sz > 0.0f) ? ImSaturate((new_min_pos - slider_usable_pos_min) / slider_usable_sz) : 0.0f;
+                    float t_max_new = (slider_usable_sz > 0.0f) ? ImSaturate((new_max_pos - slider_usable_pos_min) / slider_usable_sz) : 0.0f;
+                    if (axis == ImGuiAxis_Y) { t_min_new = 1.0f - t_min_new; t_max_new = 1.0f - t_max_new; }
+
+                    TYPE new_v_min = ImGui::ScaleValueFromRatioT<TYPE, SIGNEDTYPE, FLOATTYPE>(data_type, t_min_new, v_min, v_max, is_logarithmic, logarithmic_zero_epsilon, zero_deadzone_halfsize);
+                    TYPE new_v_max = ImGui::ScaleValueFromRatioT<TYPE, SIGNEDTYPE, FLOATTYPE>(data_type, t_max_new, v_min, v_max, is_logarithmic, logarithmic_zero_epsilon, zero_deadzone_halfsize);
+
+                    if (is_floating_point && !(flags & ImGuiSliderFlags_NoRoundToFormat))
+                    {
+                        new_v_min = ImGui::RoundScalarWithFormatT<TYPE>(format, data_type, new_v_min);
+                        new_v_max = ImGui::RoundScalarWithFormatT<TYPE>(format_max, data_type, new_v_max);
+                    }
+
+                    if (*v_min_val != new_v_min || *v_max_val != new_v_max)
+                    {
+                        *v_min_val = new_v_min;
+                        *v_max_val = new_v_max;
+                        value_changed = true;
+                        grab_min_pos = grab_pos_from_value(*v_min_val);
+                        grab_max_pos = grab_pos_from_value(*v_max_val);
+                    }
+                }
+                else if (*p_handle == -2)
+                {
+                    // Undetermined state (handles overlapping): resolve based on drag direction
+                    float delta = mouse_abs_pos - g.IO.MouseClickedPos[0][axis];
+                    if (ImAbs(delta) > 1.0f)
+                    {
+                        // Resolved: positive delta = max handle, negative = min handle (for X axis)
+                        *p_handle = (delta > 0.0f) ? 1 : 0;
+                        if (axis == ImGuiAxis_Y)
+                            *p_handle = 1 - *p_handle;  // Invert for Y axis
+                    }
+                    // Don't set value until resolved
+                }
+                else
+                {
+                    // Single handle dragging
+                    if (slider_usable_sz > 0.0f)
+                        clicked_t = ImSaturate((mouse_abs_pos - slider_usable_pos_min) / slider_usable_sz);
+                    if (axis == ImGuiAxis_Y)
+                        clicked_t = 1.0f - clicked_t;
+                    set_new_value = true;
+                }
+            }
+        }
+        else if (g.ActiveIdSource == ImGuiInputSource_Keyboard || g.ActiveIdSource == ImGuiInputSource_Gamepad)
+        {
+            if (g.ActiveIdIsJustActivated)
+            {
+                g.SliderCurrentAccum = 0.0f;
+                g.SliderCurrentAccumDirty = false;
+            }
+
+            // Up/Down switches handles, Left/Right adjusts value
+            const ImGuiAxis switch_axis = (axis == ImGuiAxis_X) ? ImGuiAxis_Y : ImGuiAxis_X;
+            if (float switch_delta = ImGui::GetNavTweakPressedAmount(switch_axis))
+                *p_handle = (switch_delta > 0.0f) ? 1 : 0;
+
+            float input_delta = (axis == ImGuiAxis_X) ? ImGui::GetNavTweakPressedAmount(axis) : -ImGui::GetNavTweakPressedAmount(axis);
+            if (input_delta != 0.0f)
+            {
+                const bool tweak_slow = ImGui::IsKeyDown((g.NavInputSource == ImGuiInputSource_Gamepad) ? ImGuiKey_NavGamepadTweakSlow : ImGuiKey_NavKeyboardTweakSlow);
+                const bool tweak_fast = ImGui::IsKeyDown((g.NavInputSource == ImGuiInputSource_Gamepad) ? ImGuiKey_NavGamepadTweakFast : ImGuiKey_NavKeyboardTweakFast);
+                const int decimal_precision = is_floating_point ? ImParseFormatPrecision(format, 3) : 0;
+
+                if (decimal_precision > 0)
+                    input_delta /= tweak_slow ? 1000.0f : 100.0f;
+                else if ((v_range_f >= -100.0f && v_range_f <= 100.0f && v_range_f != 0.0f) || tweak_slow)
+                    input_delta = ((input_delta < 0.0f) ? -1.0f : +1.0f) / (float)v_range_f;
+                else
+                    input_delta /= 100.0f;
+                if (tweak_fast)
+                    input_delta *= 10.0f;
+
+                g.SliderCurrentAccum += input_delta;
+                g.SliderCurrentAccumDirty = true;
+            }
+
+            if (g.NavActivatePressedId == id && !g.ActiveIdIsJustActivated)
+                ImGui::ClearActiveID();
+            else if (g.SliderCurrentAccumDirty)
+            {
+                TYPE* active_val = (*p_handle == 0) ? v_min_val : v_max_val;
+                clicked_t = ImGui::ScaleRatioFromValueT<TYPE, SIGNEDTYPE, FLOATTYPE>(data_type, *active_val, v_min, v_max, is_logarithmic, logarithmic_zero_epsilon, zero_deadzone_halfsize);
+
+                float delta = g.SliderCurrentAccum;
+                if ((clicked_t >= 1.0f && delta > 0.0f) || (clicked_t <= 0.0f && delta < 0.0f))
+                {
+                    g.SliderCurrentAccum = 0.0f;
+                }
+                else
+                {
+                    set_new_value = true;
+                    float old_clicked_t = clicked_t;
+                    clicked_t = ImSaturate(clicked_t + delta);
+                    TYPE v_new = ImGui::ScaleValueFromRatioT<TYPE, SIGNEDTYPE, FLOATTYPE>(data_type, clicked_t, v_min, v_max, is_logarithmic, logarithmic_zero_epsilon, zero_deadzone_halfsize);
+                    if (is_floating_point && !(flags & ImGuiSliderFlags_NoRoundToFormat))
+                        v_new = ImGui::RoundScalarWithFormatT<TYPE>((*p_handle == 0) ? format : format_max, data_type, v_new);
+                    float new_clicked_t = ImGui::ScaleRatioFromValueT<TYPE, SIGNEDTYPE, FLOATTYPE>(data_type, v_new, v_min, v_max, is_logarithmic, logarithmic_zero_epsilon, zero_deadzone_halfsize);
+                    g.SliderCurrentAccum -= (delta > 0) ? ImMin(new_clicked_t - old_clicked_t, delta) : ImMax(new_clicked_t - old_clicked_t, delta);
+                }
+                g.SliderCurrentAccumDirty = false;
+            }
+        }
+
+        if (set_new_value && ((g.LastItemData.ItemFlags & ImGuiItemFlags_ReadOnly) || (flags & ImGuiSliderFlags_ReadOnly)))
+            set_new_value = false;
+
+        if (set_new_value)
+        {
+            TYPE v_new = ImGui::ScaleValueFromRatioT<TYPE, SIGNEDTYPE, FLOATTYPE>(data_type, clicked_t, v_min, v_max, is_logarithmic, logarithmic_zero_epsilon, zero_deadzone_halfsize);
+            if (is_floating_point && !(flags & ImGuiSliderFlags_NoRoundToFormat))
+                v_new = ImGui::RoundScalarWithFormatT<TYPE>((*p_handle == 0) ? format : format_max, data_type, v_new);
+
+            // Apply step snapping if step > 0
+            if (step > (TYPE)0)
+            {
+                if (is_floating_point)
+                    v_new = (TYPE)(ImFloor(((FLOATTYPE)(v_new - v_min) / (FLOATTYPE)step) + (FLOATTYPE)0.5) * (FLOATTYPE)step) + v_min;
+                else
+                    v_new = (TYPE)(((v_new - v_min + step / (TYPE)2) / step) * step) + v_min;
+            }
+
+            // Clamp each handle against the other
+            if (*p_handle == 0)
+                v_new = ImMin(v_new, *v_max_val);
+            else
+                v_new = ImMax(v_new, *v_min_val);
+
+            TYPE* target = (*p_handle == 0) ? v_min_val : v_max_val;
+            if (*target != v_new)
+            {
+                *target = v_new;
+                value_changed = true;
+            }
+        }
+    }
+
+    // Output grab bounding boxes
+    grab_min_pos = grab_pos_from_value(*v_min_val);
+    grab_max_pos = grab_pos_from_value(*v_max_val);
+
+    if (slider_sz < 1.0f)
+    {
+        *out_grab_bb_min = *out_grab_bb_max = ImRect(bb.Min, bb.Min);
+    }
+    else if (axis == ImGuiAxis_X)
+    {
+        *out_grab_bb_min = ImRect(grab_min_pos - grab_sz * 0.5f, bb.Min.y + grab_padding, grab_min_pos + grab_sz * 0.5f, bb.Max.y - grab_padding);
+        *out_grab_bb_max = ImRect(grab_max_pos - grab_sz * 0.5f, bb.Min.y + grab_padding, grab_max_pos + grab_sz * 0.5f, bb.Max.y - grab_padding);
+    }
+    else
+    {
+        *out_grab_bb_min = ImRect(bb.Min.x + grab_padding, grab_min_pos - grab_sz * 0.5f, bb.Max.x - grab_padding, grab_min_pos + grab_sz * 0.5f);
+        *out_grab_bb_max = ImRect(bb.Min.x + grab_padding, grab_max_pos - grab_sz * 0.5f, bb.Max.x - grab_padding, grab_max_pos + grab_sz * 0.5f);
+    }
+
+    return value_changed;
+}
+
+static bool SliderBehaviorRange(const ImRect& bb, ImGuiID id, ImGuiDataType data_type, void* p_v_min, void* p_v_max, const void* p_min, const void* p_max, const char* format, const char* format_max, ImGuiSliderFlags flags, ImRect* out_grab_bb_min, ImRect* out_grab_bb_max, int* p_handle, const void* p_step)
+{
+    switch (data_type)
+    {
+    case ImGuiDataType_S32:
+        return SliderBehaviorRangeT<ImS32, ImS32, float>(bb, id, data_type, (ImS32*)p_v_min, (ImS32*)p_v_max, *(const ImS32*)p_min, *(const ImS32*)p_max, format, format_max, flags, out_grab_bb_min, out_grab_bb_max, p_handle, p_step ? *(const ImS32*)p_step : 0);
+    case ImGuiDataType_Float:
+        return SliderBehaviorRangeT<float, float, float>(bb, id, data_type, (float*)p_v_min, (float*)p_v_max, *(const float*)p_min, *(const float*)p_max, format, format_max, flags, out_grab_bb_min, out_grab_bb_max, p_handle, p_step ? *(const float*)p_step : 0.0f);
+    default:
+        IM_ASSERT(0 && "Unsupported data type");
+        return false;
+    }
+}
+
+bool ImGui::SliderScalarRange2(const char* label, ImGuiDataType data_type, void* p_v_min, void* p_v_max, const void* p_min, const void* p_max, const char* format, ImGuiSliderFlags flags, const void* p_step)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    ImGuiContext& g = *GImGui;
+    const ImGuiStyle& style = g.Style;
+    const ImGuiID id = window->GetID(label);
+    const float w = CalcItemWidth();
+
+    const ImVec2 label_size = CalcTextSize(label, NULL, true);
+    const ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w, label_size.y + style.FramePadding.y * 2.0f));
+    const ImRect total_bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0.0f));
+
+    const bool temp_input_allowed = (flags & ImGuiSliderFlags_NoInput) == 0;
+    ItemSize(total_bb, style.FramePadding.y);
+    if (!ItemAdd(total_bb, id, &frame_bb, temp_input_allowed ? ImGuiItemFlags_Inputable : 0))
+        return false;
+
+    // Default format and parse "min...max" format string
+    if (format == NULL)
+        format = DataTypeGetInfo(data_type)->PrintFmt;
+
+    // Parse format string: "%.3f...%.3f" or "%.3f...%.3f (%.3f)" for range size display
+    char format_min_buf[64];
+    char format_max_buf[64];
+    const char* format_min = format;
+    const char* format_max = format;  // Default: same format for both
+    const char* format_range = NULL;  // Optional range size format
+    const char* separator = ParseRangeFormatSeparator(format);
+    if (separator)
+    {
+        // Copy min format (everything before the dots)
+        const char* dots = format;
+        while (dots < separator && !(dots[0] == '.' && dots[1] == '.'))
+            dots++;
+        size_t min_len = ImMin((size_t)(dots - format), sizeof(format_min_buf) - 1);
+        memcpy(format_min_buf, format, min_len);
+        format_min_buf[min_len] = '\0';
+        format_min = format_min_buf;
+
+        // Check for range size format: look for " (" or " [" followed by "%"
+        const char* range_start = separator;
+        while (*range_start && *range_start != '(' && *range_start != '[')
+            range_start++;
+        if (*range_start && strchr(range_start, '%'))
+        {
+            // Found range size format - copy max format (between separator and range_start)
+            size_t max_len = ImMin((size_t)(range_start - separator), sizeof(format_max_buf) - 1);
+            // Trim trailing spaces
+            while (max_len > 0 && separator[max_len - 1] == ' ')
+                max_len--;
+            memcpy(format_max_buf, separator, max_len);
+            format_max_buf[max_len] = '\0';
+            format_max = format_max_buf;
+            format_range = range_start;
+        }
+        else
+        {
+            format_max = separator;
+        }
+    }
+
+    const bool hovered = ItemHoverable(frame_bb, id, g.LastItemData.ItemFlags);
+
+    // Calculate handle positions for hover detection
+    const float grab_padding = 2.0f;
+    const float slider_sz = frame_bb.GetWidth() - grab_padding * 2.0f;
+    double v_min_d = (data_type == ImGuiDataType_Float) ? (double)*(float*)p_v_min : (double)*(int*)p_v_min;
+    double v_max_d = (data_type == ImGuiDataType_Float) ? (double)*(float*)p_v_max : (double)*(int*)p_v_max;
+    double range_min = (data_type == ImGuiDataType_Float) ? (double)*(float*)p_min : (double)*(int*)p_min;
+    double range_max = (data_type == ImGuiDataType_Float) ? (double)*(float*)p_max : (double)*(int*)p_max;
+    double range = (range_max > range_min) ? (range_max - range_min) : 1.0;
+    float t_min = (float)ImClamp((v_min_d - range_min) / range, 0.0, 1.0);
+    float t_max = (float)ImClamp((v_max_d - range_min) / range, 0.0, 1.0);
+    float grab_sz = ImMin(style.GrabMinSize, slider_sz * 0.4f);
+    float usable = slider_sz - grab_sz;
+    float pos_min = frame_bb.Min.x + grab_padding + grab_sz * 0.5f + t_min * usable;
+    float pos_max = frame_bb.Min.x + grab_padding + grab_sz * 0.5f + t_max * usable;
+
+    // Determine hovered handle (0=min, 1=max, -1=bar between handles)
+    int hovered_handle = -1;
+    if (hovered)
+    {
+        float mouse_x = g.IO.MousePos.x;
+        float dist_min = ImAbs(mouse_x - pos_min);
+        float dist_max = ImAbs(mouse_x - pos_max);
+        float handle_threshold = grab_sz * 0.75f;
+
+        if (dist_min <= handle_threshold || dist_max <= handle_threshold)
+            hovered_handle = (dist_min <= dist_max) ? 0 : 1;
+        else if (mouse_x > pos_min && mouse_x < pos_max)
+            hovered_handle = -1;  // Bar region
+        else
+            hovered_handle = (dist_min < dist_max) ? 0 : 1;  // Outside, pick nearest
+    }
+
+    // Use context struct for active handle tracking (only valid when this widget is active)
+    ImS8* p_handle = &g.SliderRangeActiveHandle;
+
+    // Ctrl+Click for text input
+    bool temp_input_is_active = temp_input_allowed && TempInputIsActive(id);
+    if (!temp_input_is_active)
+    {
+        const bool clicked = hovered && IsMouseClicked(0, ImGuiInputFlags_None, id);
+        const bool make_active = (clicked || g.NavActivateId == id);
+        if (make_active && clicked)
+            SetKeyOwner(ImGuiKey_MouseLeft, id);
+
+        if (make_active && temp_input_allowed)
+        {
+            // Determine which handle for Ctrl+Click (use hovered_handle calculated above)
+            if (clicked)
+                *p_handle = (hovered_handle >= 0) ? (ImS8)hovered_handle : 0;
+            if ((clicked && g.IO.KeyCtrl) || (g.NavActivateId == id && (g.NavActivateFlags & ImGuiActivateFlags_PreferInput)))
+                temp_input_is_active = true;
+        }
+
+        if (make_active && !temp_input_is_active)
+        {
+            // Reset handle when THIS widget becomes active (not for all non-active widgets)
+            if (g.ActiveId != id)
+                *p_handle = (hovered_handle >= 0) ? (ImS8)hovered_handle : 0;
+            SetActiveID(id, window);
+            SetFocusID(id, window);
+            FocusWindow(window);
+            g.ActiveIdUsingNavDirMask |= (1 << ImGuiDir_Left) | (1 << ImGuiDir_Right) | (1 << ImGuiDir_Up) | (1 << ImGuiDir_Down);
+        }
+    }
+
+    if (temp_input_is_active)
+    {
+        // Ctrl+Click text input: shows "min...max" format, user can type to set values
+        return TempInputScalarRange2(frame_bb, id, label, data_type, p_v_min, p_v_max, format_min, format_max,
+            (flags & ImGuiSliderFlags_AlwaysClamp) ? p_min : NULL,
+            (flags & ImGuiSliderFlags_AlwaysClamp) ? p_max : NULL,
+            *p_handle);
+    }
+
+    // Frame
+    RenderNavCursor(frame_bb, id);
+    RenderFrame(frame_bb.Min, frame_bb.Max, GetColorU32(g.ActiveId == id ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg), true, style.FrameRounding);
+
+    // Slider behavior
+    ImRect grab_bb_min, grab_bb_max;
+    int handle_int = *p_handle;
+    const bool value_changed = SliderBehaviorRange(frame_bb, id, data_type, p_v_min, p_v_max, p_min, p_max, format_min, format_max, flags, &grab_bb_min, &grab_bb_max, &handle_int, p_step);
+    *p_handle = (ImS8)handle_int;
+    if (value_changed)
+        MarkItemEdited(id);
+
+    // Render grabs with hover/active highlighting
+    const bool is_active = (g.ActiveId == id);
+
+    // Render range fill (bar between handles)
+    if (grab_bb_max.Min.x > grab_bb_min.Min.x)
+    {
+        bool bar_active = is_active && (*p_handle == -1);
+        bool bar_hovered = hovered && !is_active && hovered_handle == -1;
+        float bar_alpha = bar_active ? 0.7f : bar_hovered ? 0.6f : 0.4f;
+        ImU32 bar_col = GetColorU32(ImGuiCol_SliderGrab, bar_alpha);
+        window->DrawList->AddRectFilled(grab_bb_min.Min, grab_bb_max.Max, bar_col, style.GrabRounding);
+    }
+
+    // Min handle: active if dragging it, hovered if mouse near it
+    bool min_active = is_active && (*p_handle == 0);
+    bool min_hovered = hovered && !is_active && hovered_handle == 0;
+    ImU32 min_col = GetColorU32((min_active || min_hovered) ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab);
+    window->DrawList->AddRectFilled(grab_bb_min.Min, grab_bb_min.Max, min_col, style.GrabRounding);
+
+    // Max handle: active if dragging it, hovered if mouse near it
+    bool max_active = is_active && (*p_handle == 1);
+    bool max_hovered = hovered && !is_active && hovered_handle == 1;
+    ImU32 max_col = GetColorU32((max_active || max_hovered) ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab);
+    window->DrawList->AddRectFilled(grab_bb_max.Min, grab_bb_max.Max, max_col, style.GrabRounding);
+
+    // Display value
+    char value_buf[128];
+    const char* value_buf_end = value_buf + DataTypeFormatString(value_buf, IM_ARRAYSIZE(value_buf), data_type, p_v_min, format_min);
+    value_buf_end += ImFormatString((char*)value_buf_end, (size_t)(value_buf + IM_ARRAYSIZE(value_buf) - value_buf_end), " - ");
+    value_buf_end = value_buf_end + DataTypeFormatString((char*)value_buf_end, (size_t)(value_buf + IM_ARRAYSIZE(value_buf) - value_buf_end), data_type, p_v_max, format_max);
+
+    // Optionally display range size if format includes it
+    if (format_range)
+    {
+        // Calculate range size (max - min)
+        ImGuiDataTypeStorage range_size;
+        if (data_type == ImGuiDataType_Float)
+        {
+            float range = *(const float*)p_v_max - *(const float*)p_v_min;
+            memcpy(&range_size, &range, sizeof(float));
+        }
+        else if (data_type == ImGuiDataType_S32)
+        {
+            int range = *(const int*)p_v_max - *(const int*)p_v_min;
+            memcpy(&range_size, &range, sizeof(int));
+        }
+        value_buf_end += ImFormatString((char*)value_buf_end, (size_t)(value_buf + IM_ARRAYSIZE(value_buf) - value_buf_end), " ");
+        value_buf_end = value_buf_end + DataTypeFormatString((char*)value_buf_end, (size_t)(value_buf + IM_ARRAYSIZE(value_buf) - value_buf_end), data_type, &range_size, format_range);
+    }
+    RenderTextClipped(frame_bb.Min, frame_bb.Max, value_buf, value_buf_end, NULL, ImVec2(0.5f, 0.5f));
+
+    if (label_size.x > 0.0f)
+        RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label);
+
+    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags | (temp_input_allowed ? ImGuiItemStatusFlags_Inputable : 0));
+    return value_changed;
+}
+
+bool ImGui::SliderFloatRange2(const char* label, float* v_current_min, float* v_current_max, float v_min, float v_max, const char* format, ImGuiSliderFlags flags, float step)
+{
+    return SliderScalarRange2(label, ImGuiDataType_Float, v_current_min, v_current_max, &v_min, &v_max, format, flags, step > 0.0f ? &step : NULL);
+}
+
+bool ImGui::SliderIntRange2(const char* label, int* v_current_min, int* v_current_max, int v_min, int v_max, const char* format, ImGuiSliderFlags flags, int step)
+{
+    return SliderScalarRange2(label, ImGuiDataType_S32, v_current_min, v_current_max, &v_min, &v_max, format, flags, step > 0 ? &step : NULL);
 }
 
 bool ImGui::VSliderScalar(const char* label, const ImVec2& size, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format, ImGuiSliderFlags flags)
@@ -3737,6 +4285,132 @@ bool ImGui::TempInputScalar(const ImRect& bb, ImGuiID id, const char* label, ImG
     bool value_changed = memcmp(&data_backup, p_data, data_type_size) != 0;
     if (value_changed)
         MarkItemEdited(id);
+    return value_changed;
+}
+
+// TempInput for range widgets: click on handle edits that value, user can type "XXX...YYYY" to set both
+static bool TempInputScalarRange2(const ImRect& bb, ImGuiID id, const char* label, ImGuiDataType data_type, void* p_data_min, void* p_data_max, const char* format, const char* format_max, const void* p_clamp_min, const void* p_clamp_max, int selected_handle)
+{
+    ImGuiContext& g = *GImGui;
+    const ImGuiDataTypeInfo* type_info = ImGui::DataTypeGetInfo(data_type);
+    char fmt_buf[32];
+    char fmt_buf_max[32];
+    char data_buf[64];
+
+    // Parse formats
+    format = ImParseFormatTrimDecorations(format, fmt_buf, IM_COUNTOF(fmt_buf));
+    format_max = ImParseFormatTrimDecorations(format_max, fmt_buf_max, IM_COUNTOF(fmt_buf_max));
+    if (format[0] == 0)
+        format = type_info->PrintFmt;
+    if (format_max[0] == 0)
+        format_max = format;
+
+    // Format initial value: show "min...max" format by default
+    char* p = data_buf;
+    p += ImGui::DataTypeFormatString(p, IM_COUNTOF(data_buf), data_type, p_data_min, format);
+    p += ImFormatString(p, (size_t)(data_buf + IM_COUNTOF(data_buf) - p), "...");
+    p += ImGui::DataTypeFormatString(p, (size_t)(data_buf + IM_COUNTOF(data_buf) - p), data_type, p_data_max, format_max);
+    ImStrTrimBlanks(data_buf);
+
+    ImGuiInputTextFlags flags = ImGuiInputTextFlags_AutoSelectAll | (ImGuiInputTextFlags)ImGuiInputTextFlags_LocalizeDecimalPoint;
+    g.LastItemData.ItemFlags |= ImGuiItemFlags_NoMarkEdited;
+    bool value_changed = false;
+    if (ImGui::TempInputText(bb, id, label, data_buf, IM_COUNTOF(data_buf), flags))
+    {
+        // Backup old values
+        size_t data_type_size = type_info->Size;
+        ImGuiDataTypeStorage data_backup_min, data_backup_max;
+        memcpy(&data_backup_min, p_data_min, data_type_size);
+        memcpy(&data_backup_max, p_data_max, data_type_size);
+
+        // Look for separator: ".." (any number of dots) or " - "
+        const char* separator = NULL;
+        const char* separator_end = NULL;
+        for (const char* s = data_buf; *s; s++)
+        {
+            if (s[0] == '.' && s[1] == '.')
+            {
+                separator = s;
+                separator_end = s;
+                while (*separator_end == '.')
+                    separator_end++;
+                break;
+            }
+            if (s[0] == ' ' && s[1] == '-' && s[2] == ' ')
+            {
+                separator = s;
+                separator_end = s + 3;
+                break;
+            }
+        }
+
+        if (separator)
+        {
+            // Parse min value (before separator)
+            char min_buf[32];
+            size_t min_len = (size_t)(separator - data_buf);
+            if (min_len >= IM_COUNTOF(min_buf))
+                min_len = IM_COUNTOF(min_buf) - 1;
+            memcpy(min_buf, data_buf, min_len);
+            min_buf[min_len] = 0;
+            ImStrTrimBlanks(min_buf);
+
+            // Parse max value (after separator)
+            char max_buf[32];
+            ImStrncpy(max_buf, separator_end, IM_COUNTOF(max_buf));
+            ImStrTrimBlanks(max_buf);
+
+            // Apply values
+            if (min_buf[0])
+                ImGui::DataTypeApplyFromText(min_buf, data_type, p_data_min, format, NULL);
+            if (max_buf[0])
+                ImGui::DataTypeApplyFromText(max_buf, data_type, p_data_max, format_max, NULL);
+
+            // Ensure min <= max
+            if (ImGui::DataTypeCompare(data_type, p_data_min, p_data_max) > 0)
+                memcpy(p_data_max, p_data_min, data_type_size);
+        }
+        else
+        {
+            // No separator - update selected handle only, or both if bar was selected
+            if (selected_handle == -1)
+            {
+                // Bar selected: set both to same value
+                ImGui::DataTypeApplyFromText(data_buf, data_type, p_data_min, format, NULL);
+                memcpy(p_data_max, p_data_min, data_type_size);
+            }
+            else
+            {
+                // Handle selected: update only that handle
+                void* p_target = (selected_handle == 0) ? p_data_min : p_data_max;
+                const char* target_format = (selected_handle == 0) ? format : format_max;
+                ImGui::DataTypeApplyFromText(data_buf, data_type, p_target, target_format, NULL);
+
+                // Ensure min <= max after update
+                if (ImGui::DataTypeCompare(data_type, p_data_min, p_data_max) > 0)
+                {
+                    if (selected_handle == 0)
+                        memcpy(p_data_min, p_data_max, data_type_size);  // Clamp min to max
+                    else
+                        memcpy(p_data_max, p_data_min, data_type_size);  // Clamp max to min
+                }
+            }
+        }
+
+        // Clamp values to range bounds
+        if (p_clamp_min || p_clamp_max)
+        {
+            ImGui::DataTypeClamp(data_type, p_data_min, p_clamp_min, p_clamp_max);
+            ImGui::DataTypeClamp(data_type, p_data_max, p_clamp_min, p_clamp_max);
+        }
+
+        // Only mark as edited if values changed
+        g.LastItemData.ItemFlags &= ~ImGuiItemFlags_NoMarkEdited;
+        value_changed = memcmp(&data_backup_min, p_data_min, data_type_size) != 0 ||
+                        memcmp(&data_backup_max, p_data_max, data_type_size) != 0;
+        if (value_changed)
+            ImGui::MarkItemEdited(id);
+    }
     return value_changed;
 }
 
