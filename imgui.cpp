@@ -16954,7 +16954,6 @@ static void ImGui::UpdateViewportsEndFrame()
     g.Viewports[0]->ClearRequestFlags(); // Clear main viewport flags because UpdatePlatformWindows() won't do it and may not even be called
 }
 
-// FIXME: We should ideally refactor the system to call this every frame (we currently don't)
 ImGuiViewportP* ImGui::AddUpdateViewport(ImGuiWindow* window, ImGuiID id, const ImVec2& pos, const ImVec2& size, ImGuiViewportFlags flags)
 {
     ImGuiContext& g = *GImGui;
@@ -16972,7 +16971,12 @@ ImGuiViewportP* ImGui::AddUpdateViewport(ImGuiWindow* window, ImGuiID id, const 
             flags |= ImGuiViewportFlags_NoFocusOnAppearing;
     }
 
-    ImGuiViewportP* viewport = (ImGuiViewportP*)FindViewportByID(id);
+    ImGuiViewportP* viewport;
+    if (window && window->Viewport && window->Viewport->ID == id)
+        viewport = window->Viewport;
+    else
+        viewport = (ImGuiViewportP*)FindViewportByID(id);
+
     if (viewport)
     {
         // Always update for main viewport as we are already pulling correct platform pos/size (see #4900)
@@ -17121,18 +17125,14 @@ static void ImGui::WindowSelectViewport(ImGuiWindow* window)
     {
         window->Viewport = AddUpdateViewport(window, window->ID, window->Pos, window->Size, ImGuiViewportFlags_None);
     }
-    else if (g.MovingWindow && g.MovingWindow->RootWindowDockTree == window && IsMousePosValid())
+    else if (window->Viewport && window->Viewport->Window == window)
     {
-        if (window->Viewport != NULL && window->Viewport->Window == window)
-            window->Viewport = AddUpdateViewport(window, window->ID, window->Pos, window->Size, ImGuiViewportFlags_None);
-    }
-    else
-    {
+        window->Viewport = AddUpdateViewport(window, window->ID, window->Pos, window->Size, ImGuiViewportFlags_None);
+
         // Merge into host viewport?
         // We cannot test window->ViewportOwned as it set lower in the function.
         // Testing (g.ActiveId == 0 || g.ActiveIdAllowOverlap) to avoid merging during a short-term widget interaction. Main intent was to avoid during resize (see #4212)
-        bool try_to_merge_into_host_viewport = (window->Viewport && window == window->Viewport->Window && (g.ActiveId == 0 || g.ActiveIdAllowOverlap));
-        if (try_to_merge_into_host_viewport)
+        if (!g.MovingWindow || g.MovingWindow->RootWindowDockTree != window || !IsMousePosValid() || g.ActiveId == 0 || g.ActiveIdAllowOverlap)
             UpdateTryMergeWindowIntoHostViewports(window);
     }
 
