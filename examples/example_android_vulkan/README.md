@@ -1,12 +1,13 @@
 # Android Vulkan + Dear ImGui Example
 
-A standalone Android application that renders [Dear ImGui](https://github.com/ocornut/imgui) using the Vulkan graphics API via `NativeActivity`. No Java/Kotlin code required — pure C++.
+A standalone Android application that renders [Dear ImGui](https://github.com/ocornut/imgui) using the Vulkan graphics API. It is built natively in C++ via `NativeActivity`, alongside a minimal Java subclass to handle OS-level features like the virtual keyboard and clipboard.
 
 ![ImGui Demo](https://img.shields.io/badge/ImGui-1.92.6-blue) ![Vulkan](https://img.shields.io/badge/Vulkan-1.0-red) ![Android](https://img.shields.io/badge/Android-API%2026+-green)
 
 ## Features
 
-- **Pure native** — `NativeActivity` with `android_native_app_glue`, no Java layer
+- **Native focus** — `NativeActivity` with `android_native_app_glue` to handle the main loop purely in C++.
+- **Keyboard & Clipboard** — Includes a minimal `MainActivity.java` subclass to provide JNI hooks for the Android soft keyboard and native `ClipboardManager`.
 - **Vulkan rendering** — Instance, Device, Swapchain, RenderPass all managed via ImGui helpers
 - **Touch input** — `imgui_impl_android.h` handles multi-touch natively
 - **Orientation handling** — Swapchain auto-rebuilds on rotation
@@ -27,7 +28,9 @@ A standalone Android application that renders [Dear ImGui](https://github.com/oc
 
 ```
 app/src/main/
-├── AndroidManifest.xml          ← NativeActivity config
+├── AndroidManifest.xml          ← Configured to use MainActivity
+├── java/imgui/example/android/
+│   └── MainActivity.java        ← Minimal NativeActivity subclass for Keyboard & Clipboard JNI
 └── cpp/
     ├── CMakeLists.txt           ← Build config (links imgui + vulkan)
     ├── main.cpp                 ← Entry point: lifecycle (Init, MainLoopStep, Shutdown)
@@ -90,7 +93,8 @@ All ImGui widgets work out of the box: windows, buttons, sliders, checkboxes, co
 | --------------------- | ----------------------------------------------- |
 | `menu.h`              | UI widgets — add buttons, sliders, windows      |
 | `vulkan_helper.h`     | Vulkan settings (present mode, min image count) |
-| `main.cpp`            | App lifecycle, ImGui style/scaling              |
+| `main.cpp`            | App lifecycle, ImGui style/scaling, JNI calls   |
+| `MainActivity.java`   | Android soft keyboard and clipboard handling    |
 | `AndroidManifest.xml` | App name, permissions, orientation              |
 
 ## License
