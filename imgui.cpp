@@ -12496,7 +12496,11 @@ void ImGui::OpenPopupOnItemClick(const char* str_id, ImGuiPopupFlags popup_flags
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
     ImGuiMouseButton mouse_button = GetMouseButtonFromPopupFlags(popup_flags);
-    if (IsMouseReleased(mouse_button) && IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
+    bool isMouseInvocation = IsMouseReleased(mouse_button) && IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup);
+    bool isKeyboardInvocation = false;
+    if ((g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard) && IsItemFocused())
+        isKeyboardInvocation = IsKeyReleased(ImGuiKey_Menu) || (IsKeyReleased(ImGuiKey_F10) && g.IO.KeyShift);
+    if (isKeyboardInvocation || isMouseInvocation)
     {
         ImGuiID id = str_id ? window->GetID(str_id) : g.LastItemData.ID;    // If user hasn't passed an ID, we can use the LastItemID. Using LastItemID as a Popup ID won't conflict!
         IM_ASSERT(id != 0);                                             // You cannot pass a NULL str_id if the last item has no identifier (e.g. a Text() item)
@@ -12529,7 +12533,11 @@ bool ImGui::BeginPopupContextItem(const char* str_id, ImGuiPopupFlags popup_flag
     ImGuiID id = str_id ? window->GetID(str_id) : g.LastItemData.ID;    // If user hasn't passed an ID, we can use the LastItemID. Using LastItemID as a Popup ID won't conflict!
     IM_ASSERT(id != 0);                                             // You cannot pass a NULL str_id if the last item has no identifier (e.g. a Text() item)
     ImGuiMouseButton mouse_button = GetMouseButtonFromPopupFlags(popup_flags);
-    if (IsMouseReleased(mouse_button) && IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
+    bool isMouseInvocation = IsMouseReleased(mouse_button) && IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup);
+    bool isKeyboardInvocation = false;
+    if ((g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard) && IsItemFocused())
+        isKeyboardInvocation = IsKeyReleased(ImGuiKey_Menu) || (IsKeyReleased(ImGuiKey_F10) && g.IO.KeyShift);
+    if (isKeyboardInvocation || isMouseInvocation)
         OpenPopupEx(id, popup_flags);
     return BeginPopupEx(id, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings);
 }
@@ -12542,8 +12550,12 @@ bool ImGui::BeginPopupContextWindow(const char* str_id, ImGuiPopupFlags popup_fl
         str_id = "window_context";
     ImGuiID id = window->GetID(str_id);
     ImGuiMouseButton mouse_button = GetMouseButtonFromPopupFlags(popup_flags);
-    if (IsMouseReleased(mouse_button) && IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
-        if (!(popup_flags & ImGuiPopupFlags_NoOpenOverItems) || !IsAnyItemHovered())
+    bool isMouseInvocation = IsMouseReleased(mouse_button) && IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup);
+    bool isKeyboardInvocation = false;
+    if ((g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard) && IsWindowFocused())
+        isKeyboardInvocation = IsKeyReleased(ImGuiKey_Menu) || (IsKeyReleased(ImGuiKey_F10) && g.IO.KeyShift);
+    if (isMouseInvocation || isKeyboardInvocation)
+        if (!(popup_flags & ImGuiPopupFlags_NoOpenOverItems) || !IsAnyItemHovered() || isKeyboardInvocation)
             OpenPopupEx(id, popup_flags);
     return BeginPopupEx(id, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings);
 }
