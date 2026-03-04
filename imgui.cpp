@@ -1486,6 +1486,7 @@ ImGuiStyle::ImGuiStyle()
     ScrollbarPadding            = 2.0f;             // Padding of scrollbar grab within its frame (same for both axes)
     GrabMinSize                 = 12.0f;            // Minimum width/height of a grab box for slider/scrollbar
     GrabRounding                = 0.0f;             // Radius of grabs corners rounding. Set to 0.0f to have rectangular slider grabs.
+    SliderThickness             = 1.0f;             // Thickness of slider background frame. From 0.0f to 1.0f
     LogSliderDeadzone           = 4.0f;             // The size in pixels of the dead-zone around zero on logarithmic sliders that cross zero.
     ImageRounding               = 0.0f;             // Rounding of Image() calls.
     ImageBorderSize             = 0.0f;             // Thickness of border around tabs.
@@ -1566,6 +1567,7 @@ void ImGuiStyle::ScaleAllSizes(float scale_factor)
     ScrollbarPadding = ImTrunc(ScrollbarPadding * scale_factor);
     GrabMinSize = ImTrunc(GrabMinSize * scale_factor);
     GrabRounding = ImTrunc(GrabRounding * scale_factor);
+    SliderThickness = ImTrunc(SliderThickness * scale_factor);
     LogSliderDeadzone = ImTrunc(LogSliderDeadzone * scale_factor);
     ImageRounding = ImTrunc(ImageRounding * scale_factor);
     ImageBorderSize = ImTrunc(ImageBorderSize * scale_factor);
@@ -3634,6 +3636,7 @@ static const ImGuiStyleVarInfo GStyleVarsInfo[] =
     { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, ScrollbarPadding) },          // ImGuiStyleVar_ScrollbarPadding
     { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, GrabMinSize) },               // ImGuiStyleVar_GrabMinSize
     { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, GrabRounding) },              // ImGuiStyleVar_GrabRounding
+    { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, SliderThickness) },           // ImGuiStyleVar_SliderThickness
     { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, ImageRounding) },             // ImGuiStyleVar_ImageRounding
     { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, ImageBorderSize) },           // ImGuiStyleVar_ImageBorderSize
     { 1, ImGuiDataType_Float, (ImU32)offsetof(ImGuiStyle, TabRounding) },               // ImGuiStyleVar_TabRounding
