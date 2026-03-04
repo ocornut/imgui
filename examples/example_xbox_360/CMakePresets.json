@@ -1,0 +1,39 @@
+{
+    "version": 6,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 23
+    },
+    "configurePresets": [
+        {
+            "name": "x360-debug",
+            "displayName": "Xbox 360 Debug",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/../../build/debug",
+            "toolchainFile": "${sourceDir}/.cmake/XDKToolchain.cmake",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "x360-release",
+            "displayName": "Xbox 360 Release",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/../../build/release",
+            "toolchainFile": "${sourceDir}/.cmake/XDKToolchain.cmake",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "x360-debug",
+            "configurePreset": "x360-debug"
+        },
+        {
+            "name": "x360-release",
+            "configurePreset": "x360-release"
+        }
+    ]
+}
