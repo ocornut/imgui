@@ -2598,9 +2598,11 @@ void ImGui::TableMergeDrawChannels(ImGuiTable* table)
     // Track which groups we are going to attempt to merge, and which channels goes into each group.
     struct MergeGroup
     {
-        ImRect          ClipRect;
-        int             ChannelsCount = 0;
-        ImBitArrayPtr   ChannelsMask = NULL;
+        ImRect                 ClipRect;
+        int                    ChannelsCount IMGUI_DEFAULT(0);
+        ImBitArrayPtr          ChannelsMask  IMGUI_DEFAULT(NULL);
+
+        IMGUI_NO_CXX11_ZERO_CTOR(MergeGroup);
     };
     int merge_group_mask = 0x00;
     MergeGroup merge_groups[4];

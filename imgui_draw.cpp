@@ -1828,11 +1828,16 @@ struct ImTriangulatorNode
 
 struct ImTriangulatorNodeSpan
 {
-    ImTriangulatorNode**    Data = NULL;
-    int                     Size = 0;
+    ImTriangulatorNode**    Data IMGUI_DEFAULT(NULL);
+    int                     Size IMGUI_DEFAULT(0);
 
     void    push_back(ImTriangulatorNode* node) { Data[Size++] = node; }
     void    find_erase_unsorted(int idx)        { for (int i = Size - 1; i >= 0; i--) if (Data[i]->Index == idx) { Data[i] = Data[Size - 1]; Size--; return; } }
+
+    IMGUI_NO_CXX11_CTOR(ImTriangulatorNodeSpan,
+        Data(NULL),
+        Size(0)
+    );
 };
 
 struct ImTriangulator
@@ -1852,10 +1857,15 @@ struct ImTriangulator
     void    ReclassifyNode(ImTriangulatorNode* node);
 
     // Internal members
-    int                     _TrianglesLeft = 0;
-    ImTriangulatorNode*     _Nodes = NULL;
-    ImTriangulatorNodeSpan  _Ears;
-    ImTriangulatorNodeSpan  _Reflexes;
+    int                         _TrianglesLeft   IMGUI_DEFAULT(0);
+    ImTriangulatorNode*         _Nodes           IMGUI_DEFAULT(NULL);
+    ImTriangulatorNodeSpan      _Ears;
+    ImTriangulatorNodeSpan      _Reflexes;
+
+    IMGUI_NO_CXX11_CTOR(ImTriangulator,
+        _TrianglesLeft(0),
+        _Nodes(NULL)
+    );
 };
 
 // Distribute storage for nodes, ears and reflexes.
@@ -2303,9 +2313,11 @@ void ImGui::AddDrawListToDrawDataEx(ImDrawData* draw_data, ImVector<ImDrawList*>
 
     // Resolve callback data pointers
     if (draw_list->_CallbacksDataBuf.Size > 0)
-        for (ImDrawCmd& cmd : draw_list->CmdBuffer)
+        IM_FOREACH(ImDrawCmd& cmd , draw_list->CmdBuffer)
+        {
             if (cmd.UserCallback != NULL && cmd.UserCallbackDataOffset != -1 && cmd.UserCallbackDataSize > 0)
                 cmd.UserCallbackData = draw_list->_CallbacksDataBuf.Data + cmd.UserCallbackDataOffset;
+        }
 
     // Add to output list + records state in ImDrawData
     out_list->push_back(draw_list);
@@ -2326,7 +2338,7 @@ void ImDrawData::DeIndexAllBuffers()
 {
     ImVector<ImDrawVert> new_vtx_buffer;
     TotalVtxCount = TotalIdxCount = 0;
-    for (ImDrawList* draw_list : CmdLists)
+    IM_FOREACH(ImDrawList* draw_list, CmdLists)
     {
         if (draw_list->IdxBuffer.empty())
             continue;
@@ -2344,9 +2356,13 @@ void ImDrawData::DeIndexAllBuffers()
 // or if there is a difference between your window resolution and framebuffer resolution.
 void ImDrawData::ScaleClipRects(const ImVec2& fb_scale)
 {
-    for (ImDrawList* draw_list : CmdLists)
-        for (ImDrawCmd& cmd : draw_list->CmdBuffer)
+    IM_FOREACH(ImDrawList* draw_list , CmdLists)
+    {
+        IM_FOREACH (ImDrawCmd& cmd, (draw_list->CmdBuffer))
+        {
             cmd.ClipRect = ImVec4(cmd.ClipRect.x * fb_scale.x, cmd.ClipRect.y * fb_scale.y, cmd.ClipRect.z * fb_scale.x, cmd.ClipRect.w * fb_scale.y);
+        }
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -2688,12 +2704,11 @@ void ImFontAtlas::SetFontLoader(const ImFontLoader* font_loader)
 void ImFontAtlas::ClearInputData()
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas!");
-
-    for (ImFont* font : Fonts)
+    IM_FOREACH(ImFont* font , Fonts)
         ImFontAtlasFontDestroyOutput(this, font);
-    for (ImFontConfig& font_cfg : Sources)
+    IM_FOREACH(ImFontConfig& font_cfg , Sources)
         ImFontAtlasFontDestroySourceData(this, &font_cfg);
-    for (ImFont* font : Fonts)
+    IM_FOREACH(ImFont* font , Fonts)
     {
         // When clearing this we lose access to the font name and other information used to build the font.
         font->Sources.clear();
@@ -2707,7 +2722,7 @@ void ImFontAtlas::ClearTexData()
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas!");
     IM_ASSERT(RendererHasTextures == false && "Not supported for dynamic atlases, but you may call Clear().");
-    for (ImTextureData* tex : TexList)
+    IM_FOREACH(ImTextureData* tex , TexList)
         tex->DestroyPixels();
     //Locked = true; // Hoped to be able to lock this down but some reload patterns may not be happy with it.
 }
@@ -2716,13 +2731,13 @@ void ImFontAtlas::ClearFonts()
 {
     // FIXME-NEWATLAS: Illegal to remove currently bound font.
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas!");
-    for (ImFont* font : Fonts)
+    IM_FOREACH(ImFont* font , Fonts)
         ImFontAtlasBuildNotifySetFont(this, font, NULL);
     ImFontAtlasBuildDestroy(this);
     ClearInputData();
     Fonts.clear_delete();
     TexIsBuilt = false;
-    for (ImDrawListSharedData* shared_data : DrawListSharedDatas)
+    IM_FOREACH(ImDrawListSharedData* shared_data , DrawListSharedDatas)
         if (shared_data->FontAtlas == this)
         {
             shared_data->Font = NULL;
@@ -2737,7 +2752,7 @@ static void ImFontAtlasBuildUpdateRendererHasTexturesFromContext(ImFontAtlas* at
     //   time of an early call to Build(), it would be impossible for us to tell if the backend supports texture update.
     // - Without this hack, we would have quite a pitfall as many legacy codebases have an early call to Build().
     //   Whereas conversely, the portion of people using ImDrawList without ImGui is expected to be pathologically rare.
-    for (ImDrawListSharedData* shared_data : atlas->DrawListSharedDatas)
+    IM_FOREACH(ImDrawListSharedData* shared_data , atlas->DrawListSharedDatas)
         if (ImGuiContext* imgui_ctx = shared_data->Context)
         {
             atlas->RendererHasTextures = (imgui_ctx->IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures) != 0;
@@ -2771,7 +2786,7 @@ void ImFontAtlasUpdateNewFrame(ImFontAtlas* atlas, int frame_count, bool rendere
     // We also rely on ImFontBaked* pointers never crossing frames.
     ImFontAtlasBuilder* builder = atlas->Builder;
     builder->FrameCount = frame_count;
-    for (ImFont* font : atlas->Fonts)
+    IM_FOREACH(ImFont* font , atlas->Fonts)
         font->LastBaked = NULL;
 
     // Garbage collect BakedPool
@@ -3252,7 +3267,7 @@ ImFont* ImFontAtlas::AddFontFromMemoryCompressedBase85TTF(const char* compressed
 // We allow old_font == new_font which forces updating all values (e.g. sizes)
 void ImFontAtlasBuildNotifySetFont(ImFontAtlas* atlas, ImFont* old_font, ImFont* new_font)
 {
-    for (ImDrawListSharedData* shared_data : atlas->DrawListSharedDatas)
+    IM_FOREACH(ImDrawListSharedData* shared_data , atlas->DrawListSharedDatas)
     {
         if (shared_data->Font == old_font)
             shared_data->Font = new_font;
@@ -3273,7 +3288,7 @@ void ImFontAtlasBuildNotifySetFont(ImFontAtlas* atlas, ImFont* old_font, ImFont*
                 if (need_bind_ctx)
                     ImGui::SetCurrentContext(curr_ctx);
             }
-            for (ImFontStackData& font_stack_data : ctx->FontStack)
+            IM_FOREACH(ImFontStackData& font_stack_data , ctx->FontStack)
                 if (font_stack_data.Font == old_font)
                     font_stack_data.Font = new_font;
         }
@@ -3285,7 +3300,7 @@ void ImFontAtlas::RemoveFont(ImFont* font)
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas!");
 
     ImFontAtlasFontDestroyOutput(this, font);
-    for (ImFontConfig* src : font->Sources)
+    IM_FOREACH(ImFontConfig* src , font->Sources)
         ImFontAtlasFontDestroySourceData(this, src);
     for (int src_n = 0; src_n < Sources.Size; src_n++)
         if (Sources[src_n].DstFont == font)
@@ -3460,7 +3475,7 @@ void ImFontAtlasBuildSetupFontLoader(ImFontAtlas* atlas, const ImFontLoader* fon
         return;
     IM_ASSERT(!atlas->Locked && "Cannot modify a locked ImFontAtlas!");
 
-    for (ImFont* font : atlas->Fonts)
+    IM_FOREACH(ImFont* font , atlas->Fonts)
         ImFontAtlasFontDestroyOutput(atlas, font);
     if (atlas->Builder && atlas->FontLoader && atlas->FontLoader->LoaderShutdown)
         atlas->FontLoader->LoaderShutdown(atlas);
@@ -3471,10 +3486,10 @@ void ImFontAtlasBuildSetupFontLoader(ImFontAtlas* atlas, const ImFontLoader* fon
 
     if (atlas->Builder && atlas->FontLoader && atlas->FontLoader->LoaderInit)
         atlas->FontLoader->LoaderInit(atlas);
-    for (ImFont* font : atlas->Fonts)
+    IM_FOREACH(ImFont* font , atlas->Fonts)
         ImFontAtlasFontInitOutput(atlas, font);
-    for (ImFont* font : atlas->Fonts)
-        for (ImFontConfig* src : font->Sources)
+    IM_FOREACH(ImFont* font , atlas->Fonts)
+        IM_FOREACH(ImFontConfig* src , font->Sources)
             ImFontAtlasFontSourceAddToFont(atlas, font, src);
 }
 
@@ -3483,14 +3498,14 @@ void ImFontAtlasBuildSetupFontLoader(ImFontAtlas* atlas, const ImFontLoader* fon
 void ImFontAtlasBuildLegacyPreloadAllGlyphRanges(ImFontAtlas* atlas)
 {
     atlas->Builder->PreloadedAllGlyphsRanges = true;
-    for (ImFont* font : atlas->Fonts)
+    IM_FOREACH(ImFont* font , atlas->Fonts)
     {
         ImFontBaked* baked = font->GetFontBaked(font->LegacySize);
         if (font->FallbackChar != 0)
             baked->FindGlyph(font->FallbackChar);
         if (font->EllipsisChar != 0)
             baked->FindGlyph(font->EllipsisChar);
-        for (ImFontConfig* src : font->Sources)
+        IM_FOREACH(ImFontConfig* src , font->Sources)
         {
             const ImWchar* ranges = src->GlyphRanges ? src->GlyphRanges : atlas->GetGlyphRangesDefault();
             for (; ranges[0]; ranges += 2)
@@ -3503,9 +3518,9 @@ void ImFontAtlasBuildLegacyPreloadAllGlyphRanges(ImFontAtlas* atlas)
 // FIXME: May make ImFont::Sources a ImSpan<> and move ownership to ImFontAtlas
 void ImFontAtlasBuildUpdatePointers(ImFontAtlas* atlas)
 {
-    for (ImFont* font : atlas->Fonts)
+    IM_FOREACH(ImFont* font , atlas->Fonts)
         font->Sources.resize(0);
-    for (ImFontConfig& src : atlas->Sources)
+    IM_FOREACH(ImFontConfig& src , atlas->Sources)
         src.DstFont->Sources.push_back(&src);
 }
 
@@ -3641,7 +3656,7 @@ static void ImFontAtlasBuildUpdateLinesTexData(ImFontAtlas* atlas)
 bool ImFontAtlasFontInitOutput(ImFontAtlas* atlas, ImFont* font)
 {
     bool ret = true;
-    for (ImFontConfig* src : font->Sources)
+    IM_FOREACH(ImFontConfig* src , font->Sources)
         if (!ImFontAtlasFontSourceInit(atlas, src))
             ret = false;
     IM_ASSERT(ret); // Unclear how to react to this meaningfully. Assume that result will be same as initial AddFont() call.
@@ -3652,7 +3667,7 @@ bool ImFontAtlasFontInitOutput(ImFontAtlas* atlas, ImFont* font)
 void ImFontAtlasFontDestroyOutput(ImFontAtlas* atlas, ImFont* font)
 {
     font->ClearOutputData();
-    for (ImFontConfig* src : font->Sources)
+    IM_FOREACH(ImFontConfig* src , font->Sources)
     {
         const ImFontLoader* loader = src->FontLoader ? src->FontLoader : atlas->FontLoader;
         if (loader && loader->FontSrcDestroy != NULL)
@@ -3726,7 +3741,11 @@ static ImFontGlyph* ImFontAtlasBuildSetupFontBakedEllipsis(ImFontAtlas* atlas, I
     ImFontAtlasRectId pack_id = ImFontAtlasPackAddRect(atlas, (dot_r->w * 3 + dot_spacing * 2), dot_r->h);
     ImTextureRect* r = ImFontAtlasPackGetRect(atlas, pack_id);
 
+#ifdef IMGUI_NO_CXX11
+    ImFontGlyph glyph_in;
+#else
     ImFontGlyph glyph_in = {};
+#endif
     ImFontGlyph* glyph = &glyph_in;
     glyph->Codepoint = font->EllipsisChar;
     glyph->AdvanceX = ImMax(dot_glyph->AdvanceX, dot_glyph->X0 + dot_step * 3.0f - dot_spacing); // FIXME: Slightly odd for normally mono-space fonts but since this is used for trailing contents.
@@ -3800,7 +3819,7 @@ void ImFontAtlasBuildSetupFontSpecialGlyphs(ImFontAtlas* atlas, ImFont* font, Im
     // Find Fallback character. Actual glyph loaded in GetFontBaked().
     const ImWchar fallback_chars[] = { font->FallbackChar, (ImWchar)IM_UNICODE_CODEPOINT_INVALID, (ImWchar)'?', (ImWchar)' ' };
     if (font->FallbackChar == 0)
-        for (ImWchar candidate_char : fallback_chars)
+        IM_FOREACH(ImWchar candidate_char , fallback_chars)
             if (candidate_char != 0 && font->IsGlyphInFont(candidate_char))
             {
                 font->FallbackChar = (ImWchar)candidate_char;
@@ -3812,7 +3831,7 @@ void ImFontAtlasBuildSetupFontSpecialGlyphs(ImFontAtlas* atlas, ImFont* font, Im
     // FIXME: Note that 0x2026 is rarely included in our font ranges. Because of this we are more likely to use three individual dots.
     const ImWchar ellipsis_chars[] = { src->EllipsisChar, (ImWchar)0x2026, (ImWchar)0x0085 };
     if (font->EllipsisChar == 0)
-        for (ImWchar candidate_char : ellipsis_chars)
+        IM_FOREACH(ImWchar candidate_char , ellipsis_chars)
             if (candidate_char != 0 && font->IsGlyphInFont(candidate_char))
             {
                 font->EllipsisChar = candidate_char;
@@ -3852,14 +3871,14 @@ ImFontBaked* ImFontAtlasBakedAdd(ImFontAtlas* atlas, ImFont* font, float font_si
 
     // Initialize backend data
     size_t loader_data_size = 0;
-    for (ImFontConfig* src : font->Sources) // Cannot easily be cached as we allow changing backend
+    IM_FOREACH(ImFontConfig* src , font->Sources) // Cannot easily be cached as we allow changing backend
     {
         const ImFontLoader* loader = src->FontLoader ? src->FontLoader : atlas->FontLoader;
         loader_data_size += loader->FontBakedSrcLoaderDataSize;
     }
     baked->FontLoaderDatas = (loader_data_size > 0) ? IM_ALLOC(loader_data_size) : NULL;
     char* loader_data_p = (char*)baked->FontLoaderDatas;
-    for (ImFontConfig* src : font->Sources)
+    IM_FOREACH(ImFontConfig* src , font->Sources)
     {
         const ImFontLoader* loader = src->FontLoader ? src->FontLoader : atlas->FontLoader;
         if (loader->FontBakedInit)
@@ -3905,12 +3924,12 @@ void ImFontAtlasBakedDiscard(ImFontAtlas* atlas, ImFont* font, ImFontBaked* bake
     ImFontAtlasBuilder* builder = atlas->Builder;
     IMGUI_DEBUG_LOG_FONT("[font] Discard baked %.2f for \"%s\"\n", baked->Size, font->GetDebugName());
 
-    for (ImFontGlyph& glyph : baked->Glyphs)
+    IM_FOREACH(ImFontGlyph& glyph , baked->Glyphs)
         if (glyph.PackId != ImFontAtlasRectId_Invalid)
             ImFontAtlasPackDiscardRect(atlas, glyph.PackId);
 
     char* loader_data_p = (char*)baked->FontLoaderDatas;
-    for (ImFontConfig* src : font->Sources)
+    IM_FOREACH(ImFontConfig* src , font->Sources)
     {
         const ImFontLoader* loader = src->FontLoader ? src->FontLoader : atlas->FontLoader;
         if (loader->FontBakedDestroy)
@@ -3975,13 +3994,13 @@ void ImFontAtlasRemoveDrawListSharedData(ImFontAtlas* atlas, ImDrawListSharedDat
 // Update texture identifier in all active draw lists
 void ImFontAtlasUpdateDrawListsTextures(ImFontAtlas* atlas, ImTextureRef old_tex, ImTextureRef new_tex)
 {
-    for (ImDrawListSharedData* shared_data : atlas->DrawListSharedDatas)
+    IM_FOREACH(ImDrawListSharedData* shared_data , atlas->DrawListSharedDatas)
     {
         // If Context 2 uses font owned by Context 1 which already called EndFrame()/Render(), we don't want to mess with draw commands for Context 1
         if (shared_data->Context && !shared_data->Context->WithinFrameScope)
             continue;
 
-        for (ImDrawList* draw_list : shared_data->DrawLists)
+        IM_FOREACH(ImDrawList* draw_list , shared_data->DrawLists)
         {
             // Replace in command-buffer
             // (there is not need to replace in ImDrawListSplitter: current channel is in ImDrawList's CmdBuffer[],
@@ -3990,7 +4009,7 @@ void ImFontAtlasUpdateDrawListsTextures(ImFontAtlas* atlas, ImTextureRef old_tex
                 draw_list->_SetTexture(new_tex);
 
             // Replace in stack
-            for (ImTextureRef& stacked_tex : draw_list->_TextureStack)
+            IM_FOREACH(ImTextureRef& stacked_tex , draw_list->_TextureStack)
                 if (stacked_tex == old_tex)
                     stacked_tex = new_tex;
         }
@@ -4001,7 +4020,7 @@ void ImFontAtlasUpdateDrawListsTextures(ImFontAtlas* atlas, ImTextureRef old_tex
 // FIXME-NEWATLAS FIXME-OPT: Doesn't seem necessary to update for all, only one bound to current context?
 void ImFontAtlasUpdateDrawListsSharedData(ImFontAtlas* atlas)
 {
-    for (ImDrawListSharedData* shared_data : atlas->DrawListSharedDatas)
+    IM_FOREACH(ImDrawListSharedData* shared_data , atlas->DrawListSharedDatas)
         if (shared_data->FontAtlas == atlas)
         {
             shared_data->TexUvWhitePixel = atlas->TexUvWhitePixel;
@@ -4093,7 +4112,7 @@ void ImFontAtlasTextureRepack(ImFontAtlas* atlas, int w, int h)
     ImVector<ImFontAtlasRectEntry> old_index = builder->RectsIndex;
     old_rects.swap(builder->Rects);
 
-    for (ImFontAtlasRectEntry& index_entry : builder->RectsIndex)
+    IM_FOREACH(ImFontAtlasRectEntry& index_entry , builder->RectsIndex)
     {
         if (index_entry.IsUsed == false)
             continue;
@@ -4123,7 +4142,7 @@ void ImFontAtlasTextureRepack(ImFontAtlas* atlas, int w, int h)
 
     // Patch glyphs UV
     for (int baked_n = 0; baked_n < builder->BakedPool.Size; baked_n++)
-        for (ImFontGlyph& glyph : builder->BakedPool[baked_n].Glyphs)
+        IM_FOREACH(ImFontGlyph& glyph , builder->BakedPool[baked_n].Glyphs)
             if (glyph.PackId != ImFontAtlasRectId_Invalid)
             {
                 ImTextureRect* r = ImFontAtlasPackGetRect(atlas, glyph.PackId);
@@ -4229,10 +4248,10 @@ void ImFontAtlasBuildClear(ImFontAtlas* atlas)
     ImFontAtlasBuildDestroy(atlas);
     ImFontAtlasTextureAdd(atlas, new_tex_size.x, new_tex_size.y);
     ImFontAtlasBuildInit(atlas);
-    for (ImFontConfig& src : atlas->Sources)
+    IM_FOREACH(ImFontConfig& src , atlas->Sources)
         ImFontAtlasFontSourceInit(atlas, &src);
-    for (ImFont* font : atlas->Fonts)
-        for (ImFontConfig* src : font->Sources)
+    IM_FOREACH(ImFont* font , atlas->Fonts)
+        IM_FOREACH(ImFontConfig* src , font->Sources)
             ImFontAtlasFontSourceAddToFont(atlas, font, src);
 }
 
@@ -4303,7 +4322,7 @@ void ImFontAtlasBuildInit(ImFontAtlas* atlas)
 // Destroy builder and all cached glyphs. Do not destroy actual fonts.
 void ImFontAtlasBuildDestroy(ImFontAtlas* atlas)
 {
-    for (ImFont* font : atlas->Fonts)
+    IM_FOREACH(ImFont* font , atlas->Fonts)
         ImFontAtlasFontDestroyOutput(atlas, font);
     if (atlas->Builder && atlas->FontLoader && atlas->FontLoader->LoaderShutdown)
     {
@@ -4524,7 +4543,7 @@ static ImFontGlyph* ImFontBaked_BuildLoadGlyph(ImFontBaked* baked, ImWchar codep
     // Call backend
     char* loader_user_data_p = (char*)baked->FontLoaderDatas;
     int src_n = 0;
-    for (ImFontConfig* src : font->Sources)
+    IM_FOREACH(ImFontConfig* src , font->Sources)
     {
         const ImFontLoader* loader = src->FontLoader ? src->FontLoader : atlas->FontLoader;
         if (!src->GlyphExcludeRanges || ImFontAtlasBuildAcceptCodepointForSource(src, codepoint))
@@ -4597,7 +4616,7 @@ void ImFontAtlasDebugLogTextureRequests(ImFontAtlas* atlas)
     // [DEBUG] Log texture update requests
     ImGuiContext& g = *GImGui;
     IM_UNUSED(g);
-    for (ImTextureData* tex : atlas->TexList)
+    IM_FOREACH(ImTextureData* tex , atlas->TexList)
     {
         if ((g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures) == 0)
             IM_ASSERT(tex->Updates.Size == 0);
@@ -4608,7 +4627,7 @@ void ImFontAtlasDebugLogTextureRequests(ImFontAtlas* atlas)
         else if (tex->Status == ImTextureStatus_WantUpdates)
         {
             IMGUI_DEBUG_LOG_FONT("[font] Texture #%03d: update %d regions, texid=0x%" IM_PRIX64 ", backend_data=0x%" IM_PRIX64 "\n", tex->UniqueID, tex->Updates.Size, ImGui::DebugTextureIDToU64(tex->TexID), (ImU64)(intptr_t)tex->BackendUserData);
-            for (const ImTextureRect& r : tex->Updates)
+            IM_FOREACH(const ImTextureRect& r , tex->Updates)
             {
                 IM_UNUSED(r);
                 IM_ASSERT(r.x >= 0 && r.y >= 0);
@@ -5329,7 +5348,7 @@ bool ImFont::IsGlyphInFont(ImWchar c)
 {
     ImFontAtlas* atlas = OwnerAtlas;
     ImFontAtlas_FontHookRemapCodepoint(atlas, this, &c);
-    for (ImFontConfig* src : Sources)
+    IM_FOREACH(ImFontConfig* src , Sources)
     {
         const ImFontLoader* loader = src->FontLoader ? src->FontLoader : atlas->FontLoader;
         if (loader->FontSrcContainsGlyph != NULL && loader->FontSrcContainsGlyph(atlas, src, c))

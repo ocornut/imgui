@@ -372,7 +372,7 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
 
         // Update textures
         ImDrawData* draw_data = ImGui::GetDrawData();
-        for (ImTextureData* tex : *draw_data->Textures)
+        IM_FOREACH(ImTextureData* tex , *draw_data->Textures)
             if (tex->Status != ImTextureStatus_OK)
                 MyImGuiBackend_UpdateTexture(tex);
 
@@ -1231,7 +1231,17 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
-#ifndef __MINGW32__
+#if defined(_XBOX)
+#include <xtl.h>
+#ifndef CF_UNICODETEXT
+#define CF_UNICODETEXT 0
+#endif
+inline BOOL   OpenClipboard(HWND)                { return FALSE; }
+inline BOOL   CloseClipboard()                   { return FALSE; }
+inline BOOL   EmptyClipboard()                   { return FALSE; }
+inline HANDLE SetClipboardData(UINT, HANDLE)     { return NULL;  }
+inline HANDLE GetClipboardData(UINT)             { return NULL;  }
+#elif defined(__MINGW32__)
 #include <Windows.h>        // _wfopen, OpenClipboard
 #else
 #include <windows.h>
@@ -3060,7 +3070,7 @@ void ImGuiTextFilter::Build()
     input_range.split(',', &Filters);
 
     CountGrep = 0;
-    for (ImGuiTextRange& f : Filters)
+    IM_FOREACH(ImGuiTextRange& f , Filters)
     {
         while (f.b < f.e && ImCharIsBlankA(f.b[0]))
             f.b++;
@@ -3081,7 +3091,7 @@ bool ImGuiTextFilter::PassFilter(const char* text, const char* text_end) const
     if (text == NULL)
         text = text_end = "";
 
-    for (const ImGuiTextRange& f : Filters)
+    IM_FOREACH(const ImGuiTextRange& f , Filters)
     {
         if (f.b == f.e)
             continue;
@@ -3463,7 +3473,7 @@ static bool ImGuiListClipper_StepInternal(ImGuiListClipper* clipper)
         // - Very important: when a starting position is after our maximum item, we set Min to (ItemsCount - 1). This allows us to handle most forms of wrapping.
         // - Due to how Selectable extra padding they tend to be "unaligned" with exact unit in the item list,
         //   which with the flooring/ceiling tend to lead to 2 items instead of one being submitted.
-        for (ImGuiListClipperRange& range : data->Ranges)
+        IM_FOREACH(ImGuiListClipperRange& range , data->Ranges)
             if (range.PosToIndexConvert)
             {
                 int m1 = (int)(((double)range.Min - window->DC.CursorPos.y - data->LossynessOffset) / clipper->ItemsHeight);
@@ -4028,7 +4038,7 @@ void ImGui::RenderMouseCursor(ImVec2 base_pos, float base_scale, ImGuiMouseCurso
     if (mouse_cursor <= ImGuiMouseCursor_None || mouse_cursor >= ImGuiMouseCursor_COUNT) // We intentionally accept out of bound values.
         mouse_cursor = ImGuiMouseCursor_Arrow;
     ImFontAtlas* font_atlas = g.DrawListSharedData.FontAtlas;
-    for (ImGuiViewportP* viewport : g.Viewports)
+    IM_FOREACH(ImGuiViewportP* viewport , g.Viewports)
     {
         // We scale cursor with current viewport/monitor, however Windows 10 for its own hardware cursor seems to be using a different scale factor.
         ImVec2 offset, size, uv[4];
@@ -4429,7 +4439,7 @@ void ImGui::Shutdown()
     IM_ASSERT_USER_ERROR(g.IO.BackendRendererUserData == NULL, "Forgot to shutdown Renderer backend?");
 
     // The fonts atlas can be used prior to calling NewFrame(), so we clear it even if g.Initialized is FALSE (which would happen if we never called NewFrame)
-    for (ImFontAtlas* atlas : g.FontAtlases)
+    IM_FOREACH(ImFontAtlas* atlas , g.FontAtlases)
     {
         UnregisterFontAtlas(atlas);
         if (atlas->RefCount == 0)
@@ -4532,7 +4542,7 @@ void ImGui::RemoveContextHook(ImGuiContext* ctx, ImGuiID hook_id)
 {
     ImGuiContext& g = *ctx;
     IM_ASSERT(hook_id != 0);
-    for (ImGuiContextHook& hook : g.Hooks)
+    IM_FOREACH(ImGuiContextHook& hook , g.Hooks)
         if (hook.HookId == hook_id)
             hook.Type = ImGuiContextHookType_PendingRemoval_;
 }
@@ -4542,7 +4552,7 @@ void ImGui::RemoveContextHook(ImGuiContext* ctx, ImGuiID hook_id)
 void ImGui::CallContextHooks(ImGuiContext* ctx, ImGuiContextHookType hook_type)
 {
     ImGuiContext& g = *ctx;
-    for (ImGuiContextHook& hook : g.Hooks)
+    IM_FOREACH(ImGuiContextHook& hook , g.Hooks)
         if (hook.Type == hook_type)
             hook.Callback(&g, &hook);
 }
@@ -4616,7 +4626,7 @@ void ImGui::GcCompactTransientMiscBuffers()
     g.MultiSelectTempDataStacked = 0;
     g.MultiSelectTempData.clear_destruct();
     TableGcCompactSettings();
-    for (ImFontAtlas* atlas : g.FontAtlases)
+    IM_FOREACH(ImFontAtlas* atlas , g.FontAtlases)
         atlas->CompactCache();
 }
 
@@ -5459,7 +5469,7 @@ static void SetupDrawListSharedData()
 {
     ImGuiContext& g = *GImGui;
     ImRect virtual_space(FLT_MAX, FLT_MAX, -FLT_MAX, -FLT_MAX);
-    for (ImGuiViewportP* viewport : g.Viewports)
+    IM_FOREACH(ImGuiViewportP* viewport , g.Viewports)
         virtual_space.Add(viewport->GetMainRect());
     g.DrawListSharedData.ClipRectFullscreen = virtual_space.ToVec4();
     g.DrawListSharedData.CurveTessellationTol = g.Style.CurveTessellationTol;
@@ -5525,7 +5535,7 @@ void ImGui::NewFrame()
     g.WithinFrameScope = true;
 
     // Mark rendering data as invalid to prevent user who may have a handle on it to use it.
-    for (ImGuiViewportP* viewport : g.Viewports)
+    IM_FOREACH(ImGuiViewportP* viewport , g.Viewports)
         viewport->DrawDataP.Valid = false;
 
     // Drag and drop keep the source ID alive so even if the source disappear our state is consistent
@@ -5655,7 +5665,7 @@ void ImGui::NewFrame()
     // Mark all windows as not visible and compact unused memory.
     IM_ASSERT(g.WindowsFocusOrder.Size <= g.Windows.Size);
     const float memory_compact_start_time = (g.GcCompactAll || g.IO.ConfigMemoryCompactTimer < 0.0f) ? FLT_MAX : (float)g.Time - g.IO.ConfigMemoryCompactTimer;
-    for (ImGuiWindow* window : g.Windows)
+    IM_FOREACH(ImGuiWindow* window , g.Windows)
     {
         window->WasActive = window->Active;
         window->Active = false;
@@ -5696,7 +5706,7 @@ void ImGui::NewFrame()
     for (int i = 0; i < g.TablesLastTimeActive.Size; i++)
         if (g.TablesLastTimeActive[i] >= 0.0f && g.TablesLastTimeActive[i] < memory_compact_start_time)
             TableGcCompactTransientBuffers(g.Tables.GetByIndex(i));
-    for (ImGuiTableTempData& table_temp_data : g.TablesTempData)
+    IM_FOREACH(ImGuiTableTempData& table_temp_data , g.TablesTempData)
         if (table_temp_data.LastTimeActive >= 0.0f && table_temp_data.LastTimeActive < memory_compact_start_time)
             TableGcCompactTransientBuffers(&table_temp_data);
     if (g.GcCompactAll)
@@ -5794,7 +5804,7 @@ static void AddWindowToDrawData(ImGuiWindow* window, int layer)
     if (window->DrawList->_Splitter._Count > 1)
         window->DrawList->ChannelsMerge(); // Merge if user forgot to merge back. Also required in Docking branch for ImGuiWindowFlags_DockNodeHost windows.
     ImGui::AddDrawListToDrawDataEx(&viewport->DrawDataP, viewport->DrawDataBuilder.Layers[layer], window->DrawList);
-    for (ImGuiWindow* child : window->DC.ChildWindows)
+    IM_FOREACH(ImGuiWindow* child , window->DC.ChildWindows)
         if (IsWindowActiveAndVisible(child)) // Clipped children may have been marked not active
             AddWindowToDrawData(child, layer);
 }
@@ -6024,7 +6034,7 @@ void ImGui::EndFrame()
     // We cannot do that on FocusWindow() because children may not exist yet
     g.WindowsTempSortBuffer.resize(0);
     g.WindowsTempSortBuffer.reserve(g.Windows.Size);
-    for (ImGuiWindow* window : g.Windows)
+    IM_FOREACH(ImGuiWindow* window , g.Windows)
     {
         if (window->Active && (window->Flags & ImGuiWindowFlags_ChildWindow))       // if a child is active its parent will add it
             continue;
@@ -6039,7 +6049,7 @@ void ImGui::EndFrame()
     UpdateTexturesEndFrame();
 
     // Unlock font atlas
-    for (ImFontAtlas* atlas : g.FontAtlases)
+    IM_FOREACH(ImFontAtlas* atlas , g.FontAtlases)
         atlas->Locked = false;
 
     // Clear Input data for next frame
@@ -6069,7 +6079,7 @@ void ImGui::Render()
     CallContextHooks(&g, ImGuiContextHookType_RenderPre);
 
     // Add background ImDrawList (for each active viewport)
-    for (ImGuiViewportP* viewport : g.Viewports)
+    IM_FOREACH(ImGuiViewportP* viewport , g.Viewports)
     {
         InitViewportDrawData(viewport);
         if (viewport->BgFgDrawLists[0] != NULL)
@@ -6083,7 +6093,7 @@ void ImGui::Render()
     ImGuiWindow* windows_to_render_top_most[2];
     windows_to_render_top_most[0] = (g.NavWindowingTarget && !(g.NavWindowingTarget->Flags & ImGuiWindowFlags_NoBringToFrontOnFocus)) ? g.NavWindowingTarget->RootWindow : NULL;
     windows_to_render_top_most[1] = (g.NavWindowingTarget ? g.NavWindowingListWindow : NULL);
-    for (ImGuiWindow* window : g.Windows)
+    IM_FOREACH(ImGuiWindow* window , g.Windows)
     {
         IM_MSVC_WARNING_SUPPRESS(6011); // Static Analysis false positive "warning C6011: Dereferencing NULL pointer 'window'"
         if (IsWindowActiveAndVisible(window) && (window->Flags & ImGuiWindowFlags_ChildWindow) == 0 && window != windows_to_render_top_most[0] && window != windows_to_render_top_most[1])
@@ -6099,7 +6109,7 @@ void ImGui::Render()
 
     // Setup ImDrawData structures for end-user
     g.IO.MetricsRenderVertices = g.IO.MetricsRenderIndices = 0;
-    for (ImGuiViewportP* viewport : g.Viewports)
+    IM_FOREACH(ImGuiViewportP* viewport , g.Viewports)
     {
         FlattenDrawDataIntoSingleLayer(&viewport->DrawDataBuilder);
 
@@ -6110,7 +6120,7 @@ void ImGui::Render()
         // We call _PopUnusedDrawCmd() last thing, as RenderDimmedBackgrounds() rely on a valid command being there (especially in docking branch).
         ImDrawData* draw_data = &viewport->DrawDataP;
         IM_ASSERT(draw_data->CmdLists.Size == draw_data->CmdListsCount);
-        for (ImDrawList* draw_list : draw_data->CmdLists)
+        IM_FOREACH(ImDrawList* draw_list , draw_data->CmdLists)
             draw_list->_PopUnusedDrawCmd();
 
         g.IO.MetricsRenderVertices += draw_data->TotalVtxCount;
@@ -6119,7 +6129,7 @@ void ImGui::Render()
 
 #ifndef IMGUI_DISABLE_DEBUG_TOOLS
     if (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures)
-        for (ImFontAtlas* atlas : g.FontAtlases)
+        IM_FOREACH(ImFontAtlas* atlas , g.FontAtlases)
             ImFontAtlasDebugLogTextureRequests(atlas);
 #endif
 
@@ -7361,7 +7371,7 @@ void ImGui::UpdateWindowSkipRefresh(ImGuiWindow* window)
 static void SetWindowActiveForSkipRefresh(ImGuiWindow* window)
 {
     window->Active = true;
-    for (ImGuiWindow* child : window->DC.ChildWindows)
+    IM_FOREACH(ImGuiWindow* child , window->DC.ChildWindows)
         if (!child->Hidden)
         {
             child->Active = child->SkipRefresh = true;
@@ -8742,13 +8752,29 @@ void ImGui::SetNavFocusScope(ImGuiID focus_scope_id)
             g.NavFocusRoute.push_back(g.FocusScopeStack.Data[n]);
     }
     else if (focus_scope_id == g.NavWindow->NavRootFocusScopeId)
+    {
+#ifdef IMGUI_NO_CXX11
+        ImGuiFocusScopeData focus_data = { focus_scope_id, g.NavWindow->ID };
+        g.NavFocusRoute.push_back(focus_data);
+#else
         g.NavFocusRoute.push_back({ focus_scope_id, g.NavWindow->ID });
+#endif
+    }
     else
+    {
         return;
+    }
 
     // Then follow on manually set ParentWindowForFocusRoute field (#6798)
     for (ImGuiWindow* window = g.NavWindow->ParentWindowForFocusRoute; window != NULL; window = window->ParentWindowForFocusRoute)
+    {
+#ifdef IMGUI_NO_CXX11
+        ImGuiFocusScopeData focus_data = { window->NavRootFocusScopeId, window->ID };
+        g.NavFocusRoute.push_back(focus_data);
+#else
         g.NavFocusRoute.push_back({ window->NavRootFocusScopeId, window->ID });
+#endif
+    }
     IM_ASSERT(g.NavFocusRoute.Size < 100); // Maximum depth is technically 251 as per CalcRoutingScore(): 254 - 3
 }
 
@@ -8882,7 +8908,7 @@ static void ImGui::UpdateTexturesNewFrame()
     // Cannot update every atlases based on atlas's FrameCount < g.FrameCount, because an atlas may be shared by multiple contexts with different frame count.
     ImGuiContext& g = *GImGui;
     const bool has_textures = (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures) != 0;
-    for (ImFontAtlas* atlas : g.FontAtlases)
+    IM_FOREACH(ImFontAtlas* atlas , g.FontAtlases)
     {
         if (atlas->OwnerContext == &g)
         {
@@ -8905,15 +8931,15 @@ static void ImGui::UpdateTexturesEndFrame()
 {
     ImGuiContext& g = *GImGui;
     g.PlatformIO.Textures.resize(0);
-    for (ImFontAtlas* atlas : g.FontAtlases)
-        for (ImTextureData* tex : atlas->TexList)
+    IM_FOREACH(ImFontAtlas* atlas , g.FontAtlases)
+        IM_FOREACH(ImTextureData* tex , atlas->TexList)
         {
             // We provide this information so backends can decide whether to destroy textures.
             // This means in practice that if N imgui contexts are created with a shared atlas, we assume all of them have a backend initialized.
             tex->RefCount = (unsigned short)atlas->RefCount;
             g.PlatformIO.Textures.push_back(tex);
         }
-    for (ImTextureData* tex : g.UserTextures)
+    IM_FOREACH(ImTextureData* tex , g.UserTextures)
         g.PlatformIO.Textures.push_back(tex);
 }
 
@@ -8921,7 +8947,7 @@ void ImGui::UpdateFontsNewFrame()
 {
     ImGuiContext& g = *GImGui;
     if ((g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures) == 0)
-        for (ImFontAtlas* atlas : g.FontAtlases)
+        IM_FOREACH(ImFontAtlas* atlas , g.FontAtlases)
             atlas->Locked = true;
 
     if (g.Style._NextFrameFontSizeBase != 0.0f)
@@ -8983,7 +9009,7 @@ void ImGui::RegisterFontAtlas(ImFontAtlas* atlas)
     atlas->RefCount++;
     g.FontAtlases.push_back(atlas);
     ImFontAtlasAddDrawListSharedData(atlas, &g.DrawListSharedData);
-    for (ImTextureData* tex : atlas->TexList)
+    IM_FOREACH(ImTextureData* tex , atlas->TexList)
         tex->RefCount = (unsigned short)atlas->RefCount;
 }
 
@@ -8994,7 +9020,7 @@ void ImGui::UnregisterFontAtlas(ImFontAtlas* atlas)
     ImFontAtlasRemoveDrawListSharedData(atlas, &g.DrawListSharedData);
     g.FontAtlases.find_erase(atlas);
     atlas->RefCount--;
-    for (ImTextureData* tex : atlas->TexList)
+    IM_FOREACH(ImTextureData* tex , atlas->TexList)
         tex->RefCount = (unsigned short)atlas->RefCount;
 }
 
@@ -9106,7 +9132,12 @@ void ImGui::PushFont(ImFont* font, float font_size_base)
     IM_ASSERT(font != NULL);
     IM_ASSERT(font_size_base >= 0.0f);
 
+#ifdef IMGUI_NO_CXX11
+    ImFontStackData font_data = { g.Font, g.FontSizeBase, g.FontSize };
+    g.FontStack.push_back(font_data);
+#else
     g.FontStack.push_back({ g.Font, g.FontSizeBase, g.FontSize });
+#endif
     if (font_size_base == 0.0f)
         font_size_base = g.FontSizeBase; // Keep current font size
     SetCurrentFont(font, font_size_base, 0.0f);
@@ -10826,6 +10857,13 @@ void ImGui::ErrorCheckUsingSetCursorPosToExtendParentBoundaries()
     //window->DC.CursorMaxPos = ImMax(window->DC.CursorMaxPos, window->DC.CursorPos);
 }
 
+#ifdef IMGUI_NO_CXX11
+    static const char* ImGui_GetClipboardText(ImGuiContext* ctx) 
+        { return ctx->IO.GetClipboardTextFn(ctx->IO.ClipboardUserData); }
+    static void ImGui_SetClipboardText(ImGuiContext* ctx, const char* text) 
+        { return ctx->IO.SetClipboardTextFn(ctx->IO.ClipboardUserData, text); }
+#endif
+
 static void ImGui::ErrorCheckNewFrameSanityChecks()
 {
     ImGuiContext& g = *GImGui;
@@ -10880,11 +10918,23 @@ static void ImGui::ErrorCheckNewFrameSanityChecks()
         g.IO.ConfigFlags &= ~ImGuiConfigFlags_NavNoCaptureKeyboard;
     }
 
+#ifdef IMGUI_NO_CXX11
+    if (g.IO.GetClipboardTextFn != NULL && 
+            (g.PlatformIO.Platform_GetClipboardTextFn == NULL || 
+            g.PlatformIO.Platform_GetClipboardTextFn == Platform_GetClipboardTextFn_DefaultImpl))
+        g.PlatformIO.Platform_GetClipboardTextFn = ImGui_GetClipboardText;
+    if (g.IO.SetClipboardTextFn != NULL && 
+            (g.PlatformIO.Platform_SetClipboardTextFn == NULL || 
+            g.PlatformIO.Platform_SetClipboardTextFn == Platform_SetClipboardTextFn_DefaultImpl))
+        g.PlatformIO.Platform_SetClipboardTextFn = ImGui_SetClipboardText;    
+#else
     // Remap legacy clipboard handlers (OBSOLETED in 1.91.1, August 2024)
     if (g.IO.GetClipboardTextFn != NULL && (g.PlatformIO.Platform_GetClipboardTextFn == NULL || g.PlatformIO.Platform_GetClipboardTextFn == Platform_GetClipboardTextFn_DefaultImpl))
         g.PlatformIO.Platform_GetClipboardTextFn = [](ImGuiContext* ctx) { return ctx->IO.GetClipboardTextFn(ctx->IO.ClipboardUserData); };
     if (g.IO.SetClipboardTextFn != NULL && (g.PlatformIO.Platform_SetClipboardTextFn == NULL || g.PlatformIO.Platform_SetClipboardTextFn == Platform_SetClipboardTextFn_DefaultImpl))
         g.PlatformIO.Platform_SetClipboardTextFn = [](ImGuiContext* ctx, const char* text) { return ctx->IO.SetClipboardTextFn(ctx->IO.ClipboardUserData, text); };
+#endif
+
 #endif
 }
 
@@ -12162,7 +12212,7 @@ ImGuiWindow* ImGui::FindBlockingModal(ImGuiWindow* window)
         return NULL;
 
     // Find a modal that has common parent with specified window. Specified window should be positioned behind that modal.
-    for (ImGuiPopupData& popup_data : g.OpenPopupStack)
+    IM_FOREACH(ImGuiPopupData& popup_data , g.OpenPopupStack)
     {
         ImGuiWindow* popup_window = popup_data.Window;
         if (popup_window == NULL || !(popup_window->Flags & ImGuiWindowFlags_Modal))
@@ -13670,13 +13720,13 @@ static void ImGui::NavUpdate()
     const bool nav_gamepad_active = (io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) != 0 && (io.BackendFlags & ImGuiBackendFlags_HasGamepad) != 0;
     const ImGuiKey nav_gamepad_keys_to_change_source[] = { ImGuiKey_GamepadFaceRight, ImGuiKey_GamepadFaceLeft, ImGuiKey_GamepadFaceUp, ImGuiKey_GamepadFaceDown, ImGuiKey_GamepadDpadRight, ImGuiKey_GamepadDpadLeft, ImGuiKey_GamepadDpadUp, ImGuiKey_GamepadDpadDown };
     if (nav_gamepad_active)
-        for (ImGuiKey key : nav_gamepad_keys_to_change_source)
+        IM_FOREACH(ImGuiKey key , nav_gamepad_keys_to_change_source)
             if (IsKeyDown(key))
                 g.NavInputSource = ImGuiInputSource_Gamepad;
     const bool nav_keyboard_active = (io.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard) != 0;
     const ImGuiKey nav_keyboard_keys_to_change_source[] = { ImGuiKey_Space, ImGuiKey_Enter, ImGuiKey_Escape, ImGuiKey_RightArrow, ImGuiKey_LeftArrow, ImGuiKey_UpArrow, ImGuiKey_DownArrow };
     if (nav_keyboard_active)
-        for (ImGuiKey key : nav_keyboard_keys_to_change_source)
+        IM_FOREACH(ImGuiKey key , nav_keyboard_keys_to_change_source)
             if (IsKeyDown(key))
                 g.NavInputSource = ImGuiInputSource_Keyboard;
 
@@ -14532,7 +14582,7 @@ static void ImGui::NavUpdateWindowing()
     const ImGuiKey windowing_toggle_keys[] = { ImGuiKey_LeftAlt, ImGuiKey_RightAlt };
     bool windowing_toggle_layer_start = false;
     if (g.NavWindow != NULL && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs))
-        for (ImGuiKey windowing_toggle_key : windowing_toggle_keys)
+        IM_FOREACH(ImGuiKey windowing_toggle_key , windowing_toggle_keys)
             if (nav_keyboard_active && IsKeyPressed(windowing_toggle_key, 0, ImGuiKeyOwner_NoOwner))
             {
                 windowing_toggle_layer_start = true;
@@ -15395,7 +15445,7 @@ ImGuiSettingsHandler* ImGui::FindSettingsHandler(const char* type_name)
 {
     ImGuiContext& g = *GImGui;
     const ImGuiID type_hash = ImHashStr(type_name);
-    for (ImGuiSettingsHandler& handler : g.SettingsHandlers)
+    IM_FOREACH(ImGuiSettingsHandler& handler , g.SettingsHandlers)
         if (handler.TypeHash == type_hash)
             return &handler;
     return NULL;
@@ -15406,7 +15456,7 @@ void ImGui::ClearIniSettings()
 {
     ImGuiContext& g = *GImGui;
     g.SettingsIniData.clear();
-    for (ImGuiSettingsHandler& handler : g.SettingsHandlers)
+    IM_FOREACH(ImGuiSettingsHandler& handler , g.SettingsHandlers)
         if (handler.ClearAllFn != NULL)
             handler.ClearAllFn(&g, &handler);
 }
@@ -15443,7 +15493,7 @@ void ImGui::LoadIniSettingsFromMemory(const char* ini_data, size_t ini_size)
 
     // Call pre-read handlers
     // Some types will clear their data (e.g. dock information) some types will allow merge/override (window)
-    for (ImGuiSettingsHandler& handler : g.SettingsHandlers)
+    IM_FOREACH(ImGuiSettingsHandler& handler , g.SettingsHandlers)
         if (handler.ReadInitFn != NULL)
             handler.ReadInitFn(&g, &handler);
 
@@ -15489,7 +15539,7 @@ void ImGui::LoadIniSettingsFromMemory(const char* ini_data, size_t ini_size)
     memcpy(buf, ini_data, ini_size);
 
     // Call post-read handlers
-    for (ImGuiSettingsHandler& handler : g.SettingsHandlers)
+    IM_FOREACH(ImGuiSettingsHandler& handler , g.SettingsHandlers)
         if (handler.ApplyAllFn != NULL)
             handler.ApplyAllFn(&g, &handler);
 }
@@ -15517,7 +15567,7 @@ const char* ImGui::SaveIniSettingsToMemory(size_t* out_size)
     g.SettingsDirtyTimer = 0.0f;
     g.SettingsIniData.Buf.resize(0);
     g.SettingsIniData.Buf.push_back(0);
-    for (ImGuiSettingsHandler& handler : g.SettingsHandlers)
+    IM_FOREACH(ImGuiSettingsHandler& handler , g.SettingsHandlers)
         handler.WriteAllFn(&g, &handler, &g.SettingsIniData);
     if (out_size)
         *out_size = (size_t)g.SettingsIniData.size();
@@ -15580,7 +15630,7 @@ void ImGui::ClearWindowSettings(const char* name)
 static void WindowSettingsHandler_ClearAll(ImGuiContext* ctx, ImGuiSettingsHandler*)
 {
     ImGuiContext& g = *ctx;
-    for (ImGuiWindow* window : g.Windows)
+    IM_FOREACH(ImGuiWindow* window, g.Windows)
         window->SettingsOffset = -1;
     g.SettingsWindows.clear();
 }
@@ -15627,7 +15677,7 @@ static void WindowSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandl
     // Gather data from windows that were active during this session
     // (if a window wasn't opened in this session we preserve its settings)
     ImGuiContext& g = *ctx;
-    for (ImGuiWindow* window : g.Windows)
+    IM_FOREACH(ImGuiWindow* window , g.Windows)
     {
         if (window->Flags & ImGuiWindowFlags_NoSavedSettings)
             continue;
@@ -15732,7 +15782,7 @@ static void ScaleWindow(ImGuiWindow* window, float scale)
 void ImGui::ScaleWindowsInViewport(ImGuiViewportP* viewport, float scale)
 {
     ImGuiContext& g = *GImGui;
-    for (ImGuiWindow* window : g.Windows)
+    IM_FOREACH(ImGuiWindow* window , g.Windows)
         if (window->Viewport == viewport)
             ScaleWindow(window, scale);
 }
@@ -15752,7 +15802,7 @@ static void ImGui::UpdateViewportsNewFrame()
     main_viewport->FramebufferScale = g.IO.DisplayFramebufferScale;
     IM_ASSERT(main_viewport->FramebufferScale.x > 0.0f && main_viewport->FramebufferScale.y > 0.0f);
 
-    for (ImGuiViewportP* viewport : g.Viewports)
+    IM_FOREACH(ImGuiViewportP* viewport , g.Viewports)
     {
         // Lock down space taken by menu bars and status bars
         // Setup initial value for functions like BeginMainMenuBar(), DockSpaceOverViewport() etc.
@@ -15780,7 +15830,7 @@ static void ImGui::UpdateViewportsNewFrame()
 
 #if defined(_WIN32) && !defined(IMGUI_DISABLE_WIN32_FUNCTIONS) && !defined(IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCTIONS)
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(_XBOX)
 #pragma comment(lib, "user32")
 #pragma comment(lib, "kernel32")
 #endif
@@ -15919,18 +15969,25 @@ static void Platform_SetClipboardTextFn_DefaultImpl(ImGuiContext* ctx, const cha
 #endif // #ifndef IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS
 
 #ifndef IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS
-#ifdef _WIN32
-#include <shellapi.h>   // ShellExecuteA()
-#ifdef _MSC_VER
-#pragma comment(lib, "shell32")
+#if defined(_WIN32) || defined(_XBOX)
+#ifndef _XBOX
+    #include <shellapi.h>   // ShellExecuteA()
+    #ifdef _MSC_VER
+    #pragma comment(lib, "shell32")
+    #endif
 #endif
 static bool Platform_OpenInShellFn_DefaultImpl(ImGuiContext*, const char* path)
 {
+#ifndef _XBOX
     const int path_wsize = ::MultiByteToWideChar(CP_UTF8, 0, path, -1, NULL, 0);
     ImVector<wchar_t> path_wbuf;
     path_wbuf.resize(path_wsize);
     ::MultiByteToWideChar(CP_UTF8, 0, path, -1, path_wbuf.Data, path_wsize);
     return (INT_PTR)::ShellExecuteW(NULL, L"open", path_wbuf.Data, NULL, NULL, SW_SHOWDEFAULT) > 32;
+#else
+    // TODO:
+    return false;
+#endif
 }
 #else
 #include <sys/wait.h>
@@ -15967,13 +16024,16 @@ static bool Platform_OpenInShellFn_DefaultImpl(ImGuiContext*, const char*) { ret
 // Win32 API IME support (for Asian languages, etc.)
 #if defined(_WIN32) && !defined(IMGUI_DISABLE_WIN32_FUNCTIONS) && !defined(IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS)
 
+#ifndef _XBOX
 #include <imm.h>
 #ifdef _MSC_VER
 #pragma comment(lib, "imm32")
 #endif
+#endif
 
 static void Platform_SetImeDataFn_DefaultImpl(ImGuiContext*, ImGuiViewport* viewport, ImGuiPlatformImeData* data)
 {
+#ifndef _XBOX
     // Notify OS Input Method Editor of text input position
     HWND hwnd = (HWND)viewport->PlatformHandleRaw;
     if (hwnd == 0)
@@ -15994,6 +16054,7 @@ static void Platform_SetImeDataFn_DefaultImpl(ImGuiContext*, ImGuiViewport* view
         ::ImmSetCandidateWindow(himc, &candidate_form);
         ::ImmReleaseContext(hwnd, himc);
     }
+#endif
 }
 
 #else
@@ -16057,7 +16118,7 @@ void ImGui::DebugRenderViewportThumbnail(ImDrawList* draw_list, ImGuiViewportP* 
     ImVec2 off = bb.Min - viewport->Pos * scale;
     float alpha_mul = 1.0f;
     window->DrawList->AddRectFilled(bb.Min, bb.Max, GetColorU32(ImGuiCol_Border, alpha_mul * 0.40f));
-    for (ImGuiWindow* thumb_window : g.Windows)
+    IM_FOREACH(ImGuiWindow* thumb_window , g.Windows)
     {
         if (!thumb_window->WasActive || (thumb_window->Flags & ImGuiWindowFlags_ChildWindow))
             continue;
@@ -16090,7 +16151,7 @@ static void RenderViewportsThumbnails()
     ImVec2 off = p - bb_full.Min * SCALE;
 
     // Draw viewports
-    for (ImGuiViewportP* viewport : g.Viewports)
+    IM_FOREACH(ImGuiViewportP* viewport , g.Viewports)
     {
         ImRect viewport_draw_bb(off + (viewport->Pos) * SCALE, off + (viewport->Pos + viewport->Size) * SCALE);
         ImGui::DebugRenderViewportThumbnail(window->DrawList, viewport, viewport_draw_bb);
@@ -16303,10 +16364,10 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
             Text("Shared FreeType Loader Flags:  0x%08X", loader_flags);
             if (ImGuiFreeType::DebugEditFontLoaderFlags(&loader_flags))
             {
-                for (ImFont* font : atlas->Fonts)
+                IM_FOREACH(ImFont* font , atlas->Fonts)
                     ImFontAtlasFontDestroyOutput(atlas, font);
                 atlas->FontLoaderFlags = loader_flags;
-                for (ImFont* font : atlas->Fonts)
+                IM_FOREACH(ImFont* font , atlas->Fonts)
                     ImFontAtlasFontInitOutput(atlas, font);
             }
         }
@@ -16321,7 +16382,7 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
     }
 
     // Font list
-    for (ImFont* font : atlas->Fonts)
+    IM_FOREACH(ImFont* font , atlas->Fonts)
     {
         PushID(font);
         DebugNodeFont(font);
@@ -16357,11 +16418,15 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
         PushStyleVar(ImGuiStyleVar_ImageBorderSize, 1.0f);
         if (BeginTable("##table", 2, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY, ImVec2(0.0f, GetTextLineHeightWithSpacing() * 12)))
         {
-            for (const ImFontAtlasRectEntry& entry : atlas->Builder->RectsIndex)
+            IM_FOREACH(const ImFontAtlasRectEntry& entry , atlas->Builder->RectsIndex)
                 if (entry.IsUsed)
                 {
                     ImFontAtlasRectId id = ImFontAtlasRectId_Make(atlas->Builder->RectsIndex.index_from_ptr(&entry), entry.Generation);
+#ifdef IMGUI_NO_CXX11
+                    ImFontAtlasRect r;
+#else
                     ImFontAtlasRect r = {};
+#endif
                     atlas->GetCustomRect(id, &r);
                     const char* buf;
                     ImFormatStringToTempBuffer(&buf, NULL, "ID:%08X, used:%d, { w:%3d, h:%3d } { x:%4d, y:%4d }", id, entry.IsUsed, r.w, r.h, r.x, r.y);
@@ -16625,7 +16690,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             // Here we display windows in their submitted order/hierarchy, however note that the Begin stack doesn't constitute a Parent<>Child relationship!
             ImVector<ImGuiWindow*>& temp_buffer = g.WindowsTempSortBuffer;
             temp_buffer.resize(0);
-            for (ImGuiWindow* window : g.Windows)
+            IM_FOREACH(ImGuiWindow* window , g.Windows)
                 if (window->LastFrameActive + 1 >= g.FrameCount)
                     temp_buffer.push_back(window);
             struct Func { static int IMGUI_CDECL WindowComparerByBeginOrder(const void* lhs, const void* rhs) { return ((int)(*(const ImGuiWindow* const *)lhs)->BeginOrderWithinContext - (*(const ImGuiWindow* const*)rhs)->BeginOrderWithinContext); } };
@@ -16639,14 +16704,14 @@ void ImGui::ShowMetricsWindow(bool* p_open)
 
     // DrawLists
     int drawlist_count = 0;
-    for (ImGuiViewportP* viewport : g.Viewports)
+    IM_FOREACH(ImGuiViewportP* viewport , g.Viewports)
         drawlist_count += viewport->DrawDataP.CmdLists.Size;
     if (TreeNode("DrawLists", "DrawLists (%d)", drawlist_count))
     {
         Checkbox("Show ImDrawCmd mesh when hovering", &cfg->ShowDrawCmdMesh);
         Checkbox("Show ImDrawCmd bounding boxes when hovering", &cfg->ShowDrawCmdBoundingBoxes);
-        for (ImGuiViewportP* viewport : g.Viewports)
-            for (ImDrawList* draw_list : viewport->DrawDataP.CmdLists)
+        IM_FOREACH(ImGuiViewportP* viewport , g.Viewports)
+            IM_FOREACH(ImDrawList* draw_list , viewport->DrawDataP.CmdLists)
                 DebugNodeDrawList(NULL, viewport, draw_list, "DrawList");
         TreePop();
     }
@@ -16662,13 +16727,13 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         }
         cfg->HighlightViewportID = 0;
 
-        for (ImGuiViewportP* viewport : g.Viewports)
+        IM_FOREACH(ImGuiViewportP* viewport , g.Viewports)
             DebugNodeViewport(viewport);
         TreePop();
     }
 
     // Details for Fonts
-    for (ImFontAtlas* atlas : g.FontAtlases)
+    IM_FOREACH(ImFontAtlas* atlas , g.FontAtlases)
         if (TreeNode((void*)atlas, "Fonts (%d), Textures (%d)", atlas->Fonts.Size, atlas->TexList.Size))
         {
             ShowFontAtlas(atlas);
@@ -16678,7 +16743,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     // Details for Popups
     if (TreeNode("Popups", "Popups (%d)", g.OpenPopupStack.Size))
     {
-        for (const ImGuiPopupData& popup_data : g.OpenPopupStack)
+        IM_FOREACH(const ImGuiPopupData& popup_data , g.OpenPopupStack)
         {
             // As it's difficult to interact with tree nodes while popups are open, we display everything inline.
             ImGuiWindow* window = popup_data.Window;
@@ -16764,7 +16829,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         Text("SettingsDirtyTimer %.2f", g.SettingsDirtyTimer);
         if (TreeNode("SettingsHandlers", "Settings handlers: (%d)", g.SettingsHandlers.Size))
         {
-            for (ImGuiSettingsHandler& handler : g.SettingsHandlers)
+            IM_FOREACH(ImGuiSettingsHandler& handler , g.SettingsHandlers)
                 BulletText("\"%s\"", handler.TypeName);
             TreePop();
         }
@@ -16955,7 +17020,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     // Overlay: Display windows Rectangles and Begin Order
     if (cfg->ShowWindowsRects || cfg->ShowWindowsBeginOrder)
     {
-        for (ImGuiWindow* window : g.Windows)
+        IM_FOREACH(ImGuiWindow* window , g.Windows)
         {
             if (!window->WasActive)
                 continue;
@@ -17077,7 +17142,7 @@ void ImGui::DebugNodeColumns(ImGuiOldColumns* columns)
     if (!TreeNode((void*)(uintptr_t)columns->ID, "Columns Id: 0x%08X, Count: %d, Flags: 0x%04X", columns->ID, columns->Count, columns->Flags))
         return;
     BulletText("Width: %.1f (MinX: %.1f, MaxX: %.1f)", columns->OffMaxX - columns->OffMinX, columns->OffMinX, columns->OffMaxX);
-    for (ImGuiOldColumnData& column : columns->Columns)
+    IM_FOREACH(ImGuiOldColumnData& column , columns->Columns)
         BulletText("Column %02d: OffsetNorm %.3f (= %.1f px)", (int)columns->Columns.index_from_ptr(&column), column.OffsetNorm, GetColumnOffsetFromNorm(columns, column.OffsetNorm));
     TreePop();
 }
@@ -17448,7 +17513,7 @@ void ImGui::DebugNodeStorage(ImGuiStorage* storage, const char* label)
 {
     if (!TreeNode(label, "%s: %d entries, %d bytes", label, storage->Data.Size, storage->Data.size_in_bytes()))
         return;
-    for (const ImGuiStoragePair& p : storage->Data)
+    IM_FOREACH(const ImGuiStoragePair& p , storage->Data)
     {
         BulletText("Key 0x%08X Value { i: %d }", p.key, p.val_i); // Important: we currently don't store a type, real value may not be integer.
         DebugLocateItemOnHover(p.key);
@@ -17514,7 +17579,7 @@ void ImGui::DebugNodeViewport(ImGuiViewportP* viewport)
             (flags & ImGuiViewportFlags_IsPlatformWindow)  ? " IsPlatformWindow"  : "",
             (flags & ImGuiViewportFlags_IsPlatformMonitor) ? " IsPlatformMonitor" : "",
             (flags & ImGuiViewportFlags_OwnedByApp)        ? " OwnedByApp"        : "");
-        for (ImDrawList* draw_list : viewport->DrawDataP.CmdLists)
+        IM_FOREACH(ImDrawList* draw_list , viewport->DrawDataP.CmdLists)
             DebugNodeDrawList(NULL, viewport, draw_list, "DrawList");
         TreePop();
     }
@@ -17580,7 +17645,7 @@ void ImGui::DebugNodeWindow(ImGuiWindow* window, const char* label)
     if (window->DC.ChildWindows.Size > 0)           { DebugNodeWindowsList(&window->DC.ChildWindows, "ChildWindows"); }
     if (window->ColumnsStorage.Size > 0 && TreeNode("Columns", "Columns sets (%d)", window->ColumnsStorage.Size))
     {
-        for (ImGuiOldColumns& columns : window->ColumnsStorage)
+        IM_FOREACH(ImGuiOldColumns& columns , window->ColumnsStorage)
             DebugNodeColumns(&columns);
         TreePop();
     }
@@ -18171,7 +18236,7 @@ void ImGui::ShowFontSelector(const char* label)
     ImFont* font_current = GetFont();
     if (BeginCombo(label, font_current->GetDebugName()))
     {
-        for (ImFont* font : io.Fonts->Fonts)
+        IM_FOREACH(ImFont* font , io.Fonts->Fonts)
         {
             PushID((void*)font);
             if (Selectable(font->GetDebugName(), font == font_current, ImGuiSelectableFlags_SelectOnNav))

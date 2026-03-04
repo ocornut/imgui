@@ -152,6 +152,68 @@ Index of this file:
 #pragma GCC diagnostic ignored "-Wclass-memaccess"                  // [__GNUC__ >= 8] warning: 'memset/memcpy' clearing/writing an object of type 'xxxx' with no trivial copy-assignment; use assignment or value-initialization instead
 #endif
 
+#if defined(_MSC_VER) && _MSC_VER < 1700
+    #ifndef IMGUI_NO_CXX11
+        #define IMGUI_NO_CXX11 1
+    #endif
+    #if IMGUI_NO_CXX11 == 0
+        #undef IMGUI_NO_CXX11
+    #endif
+#endif
+
+#ifdef IMGUI_NO_CXX11 
+    //// COMPAT layer for CXX03 before CXX11 features
+
+    // constexpr not available
+    #define constexpr
+
+    // Macro for enum underlying type (enum <name> : <type>)
+    #define IMGUI_ENUM_TYPE(T)
+
+    template<typename T, int N>
+    inline int ImCollectionSize(const T (&arr)[N])
+    {
+        return N;
+    };
+
+    template<typename T>
+    struct ImVector;
+
+    template<typename T>
+    inline int ImCollectionSize(const ImVector<T>& vec)
+    {
+        return vec.Size;
+    };
+
+    #define IM_FOREACH(VarDecl, Collection)\
+        for (int\
+                _imgui_n = ImCollectionSize(Collection),\
+                _imgui_i = 0;\
+            _imgui_i < _imgui_n;\
+            ++_imgui_i)\
+            if (bool _once = true)\
+                for (VarDecl = (Collection)[_imgui_i]; _once; _once = false)
+
+    #define IMGUI_NO_CXX11_ZERO_CTOR(TypeName) \
+            TypeName() { memset(this, 0, sizeof(*this)); }
+    // Default ctor initializer since CXX<11 doesn't support static initializers
+    #define IMGUI_NO_CXX11_CTOR(TypeName, ...)  TypeName() : __VA_ARGS__ {}
+    // Wrapper for static initializers for CXX<11
+    #define IMGUI_DEFAULT(Value)
+
+#else
+    #define IMGUI_ENUM_TYPE(T) : T
+
+    #define IM_FOREACH(Var, Collection) \
+        for (auto& Var : Collection)
+        
+    template<typename T> using ImDef = T;  // alias
+    
+    #define IMGUI_NO_CXX11_ZERO_CTOR(TypeName)
+    #define IMGUI_NO_CXX11_CTOR(TypeName, ...)
+    #define IMGUI_DEFAULT(Value) = Value
+#endif
+
 //-----------------------------------------------------------------------------
 // [SECTION] Forward declarations and basic types
 //-----------------------------------------------------------------------------
@@ -218,10 +280,10 @@ struct ImGuiViewport;               // A Platform Window (always only one in 'ma
 //   - In Visual Studio: Ctrl+Comma ("Edit.GoToAll") can follow symbols inside comments, whereas Ctrl+F12 ("Edit.GoToImplementation") cannot.
 //   - In Visual Studio w/ Visual Assist installed: Alt+G ("VAssistX.GoToImplementation") can also follow symbols inside comments.
 //   - In VS Code, CLion, etc.: Ctrl+Click can follow symbols inside comments.
-enum ImGuiDir : int;                // -> enum ImGuiDir              // Enum: A cardinal direction (Left, Right, Up, Down)
-enum ImGuiKey : int;                // -> enum ImGuiKey              // Enum: A key identifier (ImGuiKey_XXX or ImGuiMod_XXX value)
-enum ImGuiMouseSource : int;        // -> enum ImGuiMouseSource      // Enum; A mouse input source identifier (Mouse, TouchScreen, Pen)
-enum ImGuiSortDirection : ImU8;     // -> enum ImGuiSortDirection    // Enum: A sorting direction (ascending or descending)
+enum ImGuiDir IMGUI_ENUM_TYPE(int);                // -> enum ImGuiDir              // Enum: A cardinal direction (Left, Right, Up, Down)
+enum ImGuiKey IMGUI_ENUM_TYPE(int);                // -> enum ImGuiKey              // Enum: A key identifier (ImGuiKey_XXX or ImGuiMod_XXX value)
+enum ImGuiMouseSource IMGUI_ENUM_TYPE(int);        // -> enum ImGuiMouseSource      // Enum; A mouse input source identifier (Mouse, TouchScreen, Pen)
+enum ImGuiSortDirection IMGUI_ENUM_TYPE(ImU8);     // -> enum ImGuiSortDirection    // Enum: A sorting direction (ascending or descending)
 typedef int ImGuiCol;               // -> enum ImGuiCol_             // Enum: A color identifier for styling
 typedef int ImGuiCond;              // -> enum ImGuiCond_            // Enum: A condition for many Set*() functions
 typedef int ImGuiDataType;          // -> enum ImGuiDataType_        // Enum: A primary data type
@@ -3753,7 +3815,7 @@ struct ImFontAtlas
     // Output
     // - Because textures are dynamically created/resized, the current texture identifier may changed at *ANY TIME* during the frame.
     // - This should not affect you as you can always use the latest value. But note that any precomputed UV coordinates are only valid for the current TexRef.
-#ifdef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+#if defined(IMGUI_DISABLE_OBSOLETE_FUNCTIONS) || defined(IMGUI_NO_CXX11)
     ImTextureRef                TexRef;             // Latest texture identifier == TexData->GetTexRef().
 #else
     union { ImTextureRef TexRef; ImTextureRef TexID; }; // Latest texture identifier == TexData->GetTexRef(). // RENAMED TexID to TexRef in 1.92.0.

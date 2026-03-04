@@ -60,6 +60,9 @@ Index of this file:
 #include <limits.h>     // INT_MIN, INT_MAX
 
 // Enable SSE intrinsics if available
+#if defined(_XBOX) && !defined IMGUI_DISABLE_SSE
+#define IMGUI_DISABLE_SSE
+#endif
 #if (defined __SSE__ || defined __x86_64__ || defined _M_X64 || (defined(_M_IX86_FP) && (_M_IX86_FP >= 1))) && !defined(IMGUI_DISABLE_SSE) && !defined(_M_ARM64) && !defined(_M_ARM64EC)
 #define IMGUI_ENABLE_SSE
 #include <immintrin.h>
@@ -190,7 +193,7 @@ struct ImGuiWindowSettings;         // Storage for a window .ini settings (we ke
 
 // Enumerations
 // Use your programming IDE "Go to definition" facility on the names of the center columns to find the actual flags/enum lists.
-enum ImGuiLocKey : int;                 // -> enum ImGuiLocKey              // Enum: a localization entry for translation.
+enum ImGuiLocKey IMGUI_ENUM_TYPE(int);                 // -> enum ImGuiLocKey              // Enum: a localization entry for translation.
 typedef int ImGuiLayoutType;            // -> enum ImGuiLayoutType_         // Enum: Horizontal or vertical
 
 // Flags
@@ -725,12 +728,19 @@ struct ImSpanAllocator
 template<typename T, int BLOCKSIZE>
 struct ImStableVector
 {
-    int                 Size = 0;
-    int                 Capacity = 0;
-    ImVector<T*>        Blocks;
+    int      Size      IMGUI_DEFAULT(0);
+    int      Capacity  IMGUI_DEFAULT(0);
+    ImVector<T*>    Blocks;
 
     // Functions
-    inline ~ImStableVector()                        { for (T* block : Blocks) IM_FREE(block); }
+    inline ~ImStableVector()                        
+    { 
+#ifdef IMGUI_NO_CXX11
+        for (int i = 0; i < Blocks.Size; i++) IM_FREE(Blocks[i]);
+#else
+        for (T* block : Blocks) IM_FREE(block);
+#endif
+    }
 
     inline void         clear()                     { Size = Capacity = 0; Blocks.clear_delete(); }
     inline void         resize(int new_size)        { if (new_size > Capacity) reserve(new_size); Size = new_size; }
@@ -811,14 +821,18 @@ struct ImChunkStream
 // Maintain a line index for a text buffer. This is a strong candidate to be moved into the public API.
 struct ImGuiTextIndex
 {
-    ImVector<int>   Offsets;
-    int             EndOffset = 0;                          // Because we don't own text buffer we need to maintain EndOffset (may bake in LineOffsets?)
+    ImVector<int>          Offsets;
+    int                    EndOffset IMGUI_DEFAULT(0);              // Because we don't own text buffer we need to maintain EndOffset (may bake in LineOffsets?)
 
-    void            clear()                                 { Offsets.clear(); EndOffset = 0; }
-    int             size()                                  { return Offsets.Size; }
-    const char*     get_line_begin(const char* base, int n) { return base + (Offsets.Size != 0 ? Offsets[n] : 0); }
-    const char*     get_line_end(const char* base, int n)   { return base + (n + 1 < Offsets.Size ? (Offsets[n + 1] - 1) : EndOffset); }
-    void            append(const char* base, int old_size, int new_size);
+    void                   clear()                                  { Offsets.clear(); EndOffset = 0; }
+    int                    size()                                   { return Offsets.Size; }
+    const char*            get_line_begin(const char* base, int n)  { return base + (Offsets.Size != 0 ? Offsets[n] : 0); }
+    const char*            get_line_end(const char* base, int n)    { return base + (n + 1 < Offsets.Size ? (Offsets[n + 1] - 1) : EndOffset); }
+    void                   append(const char* base, int old_size, int new_size);
+
+    IMGUI_NO_CXX11_CTOR(ImGuiTextIndex,
+        EndOffset(0)
+    );
 };
 
 // Helper: ImGuiStorage
@@ -1800,12 +1814,12 @@ struct IMGUI_API ImGuiTypingSelectRequest
 // Storage for GetTypingSelectRequest()
 struct IMGUI_API ImGuiTypingSelectState
 {
-    ImGuiTypingSelectRequest Request;           // User-facing data
-    char            SearchBuffer[64];           // Search buffer: no need to make dynamic as this search is very transient.
-    ImGuiID         FocusScope;
-    int             LastRequestFrame = 0;
-    float           LastRequestTime = 0.0f;
-    bool            SingleCharModeLock = false; // After a certain single char repeat count we lock into SingleCharMode. Two benefits: 1) buffer never fill, 2) we can provide an immediate SingleChar mode without timer elapsing.
+    ImGuiTypingSelectRequest Request;   // User-facing data
+    char                     SearchBuffer[64];   // Search buffer: no need to make dynamic as this search is very transient.
+    ImGuiID                  FocusScope;
+    int                      LastRequestFrame    IMGUI_DEFAULT(0);
+    float                    LastRequestTime     IMGUI_DEFAULT(0.0f);
+    bool                     SingleCharModeLock  IMGUI_DEFAULT(false); // After a certain single char repeat count we lock into SingleCharMode. Two benefits: 1) buffer never fill, 2) we can provide an immediate SingleChar mode without timer elapsing.
 
     ImGuiTypingSelectState() { memset((void*)this, 0, sizeof(*this)); }
     void            Clear()  { SearchBuffer[0] = 0; SingleCharModeLock = false; } // We preserve remaining data for easier debugging
@@ -2113,20 +2127,37 @@ struct ImGuiDebugAllocInfo
 
 struct ImGuiMetricsConfig
 {
-    bool        ShowDebugLog = false;
-    bool        ShowIDStackTool = false;
-    bool        ShowWindowsRects = false;
-    bool        ShowWindowsBeginOrder = false;
-    bool        ShowTablesRects = false;
-    bool        ShowDrawCmdMesh = true;
-    bool        ShowDrawCmdBoundingBoxes = true;
-    bool        ShowTextEncodingViewer = false;
-    bool        ShowTextureUsedRect = false;
-    int         ShowWindowsRectsType = -1;
-    int         ShowTablesRectsType = -1;
-    int         HighlightMonitorIdx = -1;
-    ImGuiID     HighlightViewportID = 0;
-    bool        ShowFontPreview = true;
+    bool        ShowDebugLog              IMGUI_DEFAULT(false);
+    bool        ShowIDStackTool           IMGUI_DEFAULT(false);
+    bool        ShowWindowsRects          IMGUI_DEFAULT(false);
+    bool        ShowWindowsBeginOrder     IMGUI_DEFAULT(false);
+    bool        ShowTablesRects           IMGUI_DEFAULT(false);
+    bool        ShowDrawCmdMesh           IMGUI_DEFAULT(true);
+    bool        ShowDrawCmdBoundingBoxes  IMGUI_DEFAULT(true);
+    bool        ShowTextEncodingViewer    IMGUI_DEFAULT(false);
+    bool        ShowTextureUsedRect       IMGUI_DEFAULT(false);
+    int         ShowWindowsRectsType      IMGUI_DEFAULT(-1);
+    int         ShowTablesRectsType       IMGUI_DEFAULT(-1);
+    int         HighlightMonitorIdx       IMGUI_DEFAULT(-1);
+    ImGuiID     HighlightViewportID       IMGUI_DEFAULT(0);
+    bool        ShowFontPreview           IMGUI_DEFAULT(true);
+
+    IMGUI_NO_CXX11_CTOR(ImGuiMetricsConfig,
+        ShowDebugLog(false),
+        ShowIDStackTool(false),
+        ShowWindowsRects(false),
+        ShowWindowsBeginOrder(false),
+        ShowTablesRects(false),
+        ShowDrawCmdMesh(true),
+        ShowDrawCmdBoundingBoxes(true),
+        ShowTextEncodingViewer(false),
+        ShowTextureUsedRect(false),
+        ShowWindowsRectsType(-1),
+        ShowTablesRectsType(-1),
+        HighlightMonitorIdx(-1),
+        HighlightViewportID(0),
+        ShowFontPreview(true)
+    );
 };
 
 struct ImGuiStackLevelInfo

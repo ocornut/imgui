@@ -4008,10 +4008,9 @@ static bool ImCharIsSeparatorW(unsigned int c)
         '[', 0x300C, ']', 0x300D, '|', 0xFF5C, '!', 0xFF01, '\\', 0xFFE5, '/', 0x30FB, 0xFF0F,
         '\n', '\r',
     };
-    for (unsigned int separator : separator_list)
+    IM_FOREACH(unsigned int separator , separator_list)
         if (c == separator)
             return true;
-    return false;
 }
 
 static int is_word_boundary_from_right(ImGuiInputTextState* obj, int idx)
@@ -4842,8 +4841,13 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         // Declare some inputs, the other are registered and polled via Shortcut() routing system.
         // FIXME: The reason we don't use Shortcut() is we would need a routing flag to specify multiple mods, or to all mods combination into individual shortcuts.
         const ImGuiKey always_owned_keys[] = { ImGuiKey_LeftArrow, ImGuiKey_RightArrow, ImGuiKey_Delete, ImGuiKey_Backspace, ImGuiKey_Home, ImGuiKey_End };
+#ifdef IMGUI_NO_CXX11
+        for (size_t i = 0; i < IM_ARRAYSIZE(always_owned_keys); i++)
+            SetKeyOwner(always_owned_keys[i], id);
+#else
         for (ImGuiKey key : always_owned_keys)
             SetKeyOwner(key, id);
+#endif
         if (user_clicked)
             SetKeyOwner(ImGuiKey_MouseLeft, id);
         g.ActiveIdUsingNavDirMask |= (1 << ImGuiDir_Left) | (1 << ImGuiDir_Right);
@@ -7513,7 +7517,7 @@ ImGuiTypingSelectRequest* ImGui::GetTypingSelectRequest(ImGuiTypingSelectFlags f
     const int buffer_max_len = IM_COUNTOF(data->SearchBuffer) - 1;
     int buffer_len = (int)ImStrlen(data->SearchBuffer);
     bool select_request = false;
-    for (ImWchar w : g.IO.InputQueueCharacters)
+    IM_FOREACH(ImWchar w , g.IO.InputQueueCharacters)
     {
         const int w_len = ImTextCountUtf8BytesFromStr(&w, &w + 1);
         if (w < 32 || (buffer_len == 0 && ImCharIsBlankW(w)) || (buffer_len + w_len > buffer_max_len)) // Ignore leading blanks
@@ -7836,10 +7840,12 @@ static void DebugLogMultiSelectRequests(const char* function, const ImGuiMultiSe
 {
     ImGuiContext& g = *GImGui;
     IM_UNUSED(function);
-    for (const ImGuiSelectionRequest& req : io->Requests)
+    IM_FOREACH (const ImGuiSelectionRequest& req, io->Requests)
     {
-        if (req.Type == ImGuiSelectionRequestType_SetAll)    IMGUI_DEBUG_LOG_SELECTION("[selection] %s: Request: SetAll %d (= %s)\n", function, req.Selected, req.Selected ? "SelectAll" : "Clear");
-        if (req.Type == ImGuiSelectionRequestType_SetRange)  IMGUI_DEBUG_LOG_SELECTION("[selection] %s: Request: SetRange %" IM_PRId64 "..%" IM_PRId64 " (0x%" IM_PRIX64 "..0x%" IM_PRIX64 ") = %d (dir %d)\n", function, req.RangeFirstItem, req.RangeLastItem, req.RangeFirstItem, req.RangeLastItem, req.Selected, req.RangeDirection);
+        if (req.Type == ImGuiSelectionRequestType_SetAll)
+            IMGUI_DEBUG_LOG_SELECTION("[selection] %s: Request: SetAll %d (= %s)\n", function, req.Selected, req.Selected ? "SelectAll" : "Clear");
+        if (req.Type == ImGuiSelectionRequestType_SetRange)  
+            IMGUI_DEBUG_LOG_SELECTION("[selection] %s: Request: SetRange %" IM_PRId64 "..%" IM_PRId64 " (0x%" IM_PRIX64 "..0x%" IM_PRIX64 ") = %d (dir %d)\n", function, req.RangeFirstItem, req.RangeLastItem, req.RangeFirstItem, req.RangeLastItem, req.Selected, req.RangeDirection);
     }
 }
 
@@ -8414,12 +8420,21 @@ void ImGui::DebugNodeMultiSelectState(ImGuiMultiSelectState* storage)
 // - ImGuiSelectionExternalStorage
 //-------------------------------------------------------------------------
 
+#ifdef IMGUI_NO_CXX11
+    static ImGuiID ImGui_AdapterIndexToStorageId(ImGuiSelectionBasicStorage*, int idx) 
+        { return (ImGuiID)idx;  }
+#endif
+
 ImGuiSelectionBasicStorage::ImGuiSelectionBasicStorage()
 {
     Size = 0;
     PreserveOrder = false;
     UserData = NULL;
+#ifdef IMGUI_NO_CXX11
+    AdapterIndexToStorageId = ImGui_AdapterIndexToStorageId;
+#else
     AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage*, int idx) { return (ImGuiID)idx; };
+#endif
     _SelectionOrder = 1; // Always >0
 }
 
@@ -8533,7 +8548,7 @@ void ImGuiSelectionBasicStorage::ApplyRequests(ImGuiMultiSelectIO* ms_io)
     // FIXME-OPT: For each block of consecutive SetRange request:
     // - add all requests to a sorted list, store ID, selected, offset in ImGuiStorage.
     // - rewrite sorted storage a single time.
-    for (ImGuiSelectionRequest& req : ms_io->Requests)
+    IM_FOREACH(ImGuiSelectionRequest& req , ms_io->Requests)
     {
         if (req.Type == ImGuiSelectionRequestType_SetAll)
         {
@@ -8588,7 +8603,7 @@ ImGuiSelectionExternalStorage::ImGuiSelectionExternalStorage()
 void ImGuiSelectionExternalStorage::ApplyRequests(ImGuiMultiSelectIO* ms_io)
 {
     IM_ASSERT(AdapterSetItemSelected);
-    for (ImGuiSelectionRequest& req : ms_io->Requests)
+    IM_FOREACH(ImGuiSelectionRequest& req , ms_io->Requests)
     {
         if (req.Type == ImGuiSelectionRequestType_SetAll)
             for (int idx = 0; idx < ms_io->ItemsCount; idx++)
