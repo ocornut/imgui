@@ -33,20 +33,7 @@
 // Setup Emscripten default if not specified.
 #if defined(__EMSCRIPTEN__) && !defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) && !defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
 #include <emscripten/version.h>
-
-#ifdef __EMSCRIPTEN_MAJOR__
-#if (__EMSCRIPTEN_MAJOR__ >= 5) || ((__EMSCRIPTEN_MAJOR__ >= 4) && (__EMSCRIPTEN_MINOR__ >= 0) && (__EMSCRIPTEN_TINY__ >= 10))
 #define IMGUI_IMPL_WEBGPU_BACKEND_DAWN
-#else
-#define IMGUI_IMPL_WEBGPU_BACKEND_WGPU
-#endif
-#else
-#if (__EMSCRIPTEN_major__ >= 4) && (__EMSCRIPTEN_minor__ >= 0) && (__EMSCRIPTEN_tiny__ >= 10)
-#define IMGUI_IMPL_WEBGPU_BACKEND_DAWN
-#else
-#define IMGUI_IMPL_WEBGPU_BACKEND_WGPU
-#endif
-#endif
 #endif
 
 #include <webgpu/webgpu.h>

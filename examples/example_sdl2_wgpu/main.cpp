@@ -18,9 +18,6 @@
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #include <emscripten/html5.h>
-#if defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
-#include <emscripten/html5_webgpu.h>
-#endif
 #include "../libs/emscripten/emscripten_mainloop_stub.h"
 #endif
 
