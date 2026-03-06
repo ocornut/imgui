@@ -3351,10 +3351,12 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* p_dat
     // Draw frame
     const ImU32 frame_col = GetColorU32(g.ActiveId == id ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg);
     RenderNavCursor(frame_bb, id);
-    RenderFrame(frame_bb.Min, frame_bb.Max, frame_col, false, style.FrameRounding);
+    const float frame_thickness = frame_bb.Max.y - frame_bb.Min.y;
+    const ImRect bg_frame_bb(ImVec2(frame_bb.Min.x, frame_bb.Min.y + frame_thickness / 2 - style.SliderThickness * frame_thickness / 2), ImVec2(frame_bb.Max.x, frame_bb.Max.y - frame_thickness / 2 + style.SliderThickness * frame_thickness / 2));
+    RenderFrame(bg_frame_bb.Min, bg_frame_bb.Max, frame_col, false, style.FrameRounding);
     if (color_marker != 0 && style.ColorMarkerSize > 0.0f)
         RenderColorComponentMarker(frame_bb, GetColorU32(color_marker), style.FrameRounding);
-    RenderFrameBorder(frame_bb.Min, frame_bb.Max, g.Style.FrameRounding);
+    RenderFrameBorder(bg_frame_bb.Min, bg_frame_bb.Max, g.Style.FrameRounding);
 
     // Slider behavior
     ImRect grab_bb;
@@ -3506,7 +3508,9 @@ bool ImGui::VSliderScalar(const char* label, const ImVec2& size, ImGuiDataType d
     // Draw frame
     const ImU32 frame_col = GetColorU32(g.ActiveId == id ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg);
     RenderNavCursor(frame_bb, id);
-    RenderFrame(frame_bb.Min, frame_bb.Max, frame_col, true, g.Style.FrameRounding);
+    const float frame_thickness = frame_bb.Max.x - frame_bb.Min.x;
+    const ImRect bg_frame_bb(ImVec2(frame_bb.Min.x + frame_thickness / 2 - style.SliderThickness * frame_thickness / 2, frame_bb.Min.y), ImVec2(frame_bb.Max.x - frame_thickness / 2 + style.SliderThickness * frame_thickness / 2, frame_bb.Max.y));
+    RenderFrame(bg_frame_bb.Min, bg_frame_bb.Max, frame_col, true, g.Style.FrameRounding);
 
     // Slider behavior
     ImRect grab_bb;
