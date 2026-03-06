@@ -81,11 +81,15 @@ Other Changes:
     - TextLink() underline thickness.
     - ColorButton() border thickness.
     - Separator() thickness, via scaling newly added style.SeparatorSize. (#2657, #9263)
-- Demo: fixed IMGUI_DEMO_MARKER locations for examples applets. (#9261, #3689) [@pthom]
 - Clipper:
   - Clear `DisplayStart`/`DisplayEnd` fields when `Step()` returns false.
   - Added `UserIndex` helper storage. This is solely a convenience for cases where
     you may want to carry an index around.
+- Scrollbar:
+  - Implemented a custom tweak to extend hit-testing bounding box when window is sitting
+    at the edge of a viewport (e.g. fullscreen or docked window), so that e.g. mouse the
+    mouse at the extreme of the screen will reach the scrollbar. (#9276)
+- Demo: fixed IMGUI_DEMO_MARKER locations for examples applets. (#9261, #3689) [@pthom]
 - Backends:
   - SDLGPU3: removed unnecessary call to SDL_WaitForGPUIdle when releasing
     vertex/index buffers. (#9262) [@jaenis]
