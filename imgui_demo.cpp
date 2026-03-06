@@ -4366,8 +4366,10 @@ static void DemoWindowLayout()
         HelpMarker("Use child windows to begin into a self-contained independent scrolling/clipping regions within a host window.");
         static bool disable_mouse_wheel = false;
         static bool disable_menu = false;
+        static bool enable_top_label = false;
         ImGui::Checkbox("Disable Mouse Wheel", &disable_mouse_wheel);
         ImGui::Checkbox("Disable Menu", &disable_menu);
+        ImGui::Checkbox("Enable Top Label", &enable_top_label);
 
         // Child 1: no border, enable horizontal scrollbar
         {
@@ -4385,12 +4387,15 @@ static void DemoWindowLayout()
         // Child 2: rounded border
         {
             ImGuiWindowFlags window_flags = ImGuiWindowFlags_None;
+            ImGuiChildFlags child_flags = ImGuiChildFlags_None;
             if (disable_mouse_wheel)
                 window_flags |= ImGuiWindowFlags_NoScrollWithMouse;
             if (!disable_menu)
                 window_flags |= ImGuiWindowFlags_MenuBar;
+            if(enable_top_label)
+                child_flags |= ImGuiChildFlags_TopLabel;
             ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 5.0f);
-            ImGui::BeginChild("ChildR", ImVec2(0, 260), ImGuiChildFlags_Borders, window_flags);
+            ImGui::BeginChild("ChildR", ImVec2(0, 260), ImGuiChildFlags_Borders | child_flags, window_flags);
             if (!disable_menu && ImGui::BeginMenuBar())
             {
                 if (ImGui::BeginMenu("Menu"))
@@ -4471,6 +4476,7 @@ static void DemoWindowLayout()
             ImGui::SameLine(); HelpMarker("Style the child window like a framed item: use FrameBg, FrameRounding, FrameBorderSize, FramePadding instead of ChildBg, ChildRounding, ChildBorderSize, WindowPadding.");
             if (child_flags & ImGuiChildFlags_FrameStyle)
                 override_bg_color = false;
+            ImGui::CheckboxFlags("ImGuiChildFlags_TopLabel", &child_flags, ImGuiChildFlags_TopLabel);
 
             ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (float)offset_x);
             if (override_bg_color)
