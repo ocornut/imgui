@@ -40,8 +40,8 @@ static int                      wgpu_surface_width = 1280;
 static int                      wgpu_surface_height = 800;
 
 // Forward declarations
-static bool InitWGPU(GLFWwindow* window);
-WGPUSurface CreateWGPUSurface(const WGPUInstance& instance, GLFWwindow* window);
+static bool         InitWGPU(GLFWwindow* window);
+static WGPUSurface  CreateWGPUSurface(const WGPUInstance& instance, GLFWwindow* window);
 
 static void glfw_error_callback(int error, const char* description)
 {
@@ -343,7 +343,7 @@ static WGPUDevice RequestDevice(wgpu::Instance& instance, wgpu::Adapter& adapter
     IM_ASSERT(acquired_device != nullptr && waitStatusDevice == wgpu::WaitStatus::Success && "Error on Device request");
     return acquired_device.MoveToCHandle();
 }
-#elif defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
+#elif defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) || defined(IMGUI_IMPL_WEBGPU_BACKEND_WGVK)
 #ifdef __EMSCRIPTEN__
 // Adapter and device initialization via JS
 EM_ASYNC_JS( void, getAdapterAndDeviceViaJS, (),
@@ -414,7 +414,7 @@ static WGPUDevice RequestDevice(WGPUInstance& instance, WGPUAdapter& adapter)
 #endif // __EMSCRIPTEN__
 #endif // IMGUI_IMPL_WEBGPU_BACKEND_WGPU
 
-bool InitWGPU(GLFWwindow* window)
+static bool InitWGPU(GLFWwindow* window)
 {
     WGPUTextureFormat preferred_fmt = WGPUTextureFormat_Undefined;  // acquired from SurfaceCapabilities
 
@@ -454,7 +454,7 @@ bool InitWGPU(GLFWwindow* window)
     preferred_fmt = surface_capabilities.formats[0];
 
     // WGPU backend: Adapter and Device acquisition, Surface creation
-#elif defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
+#elif defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) || defined(IMGUI_IMPL_WEBGPU_BACKEND_WGVK)
     WGPUInstanceDescriptor instanceDesc = {};
     WGPUInstanceFeatureName timedWaitAny = WGPUInstanceFeatureName_TimedWaitAny;
     instanceDesc.requiredFeatureCount = 1;
@@ -478,10 +478,13 @@ bool InitWGPU(GLFWwindow* window)
     wgpu_surface = wgpuInstanceCreateSurface(wgpu_instance, &surface_desc);
     preferred_fmt = wgpuSurfaceGetPreferredFormat(wgpu_surface, {} /* adapter */);
 #else // __EMSCRIPTEN__
+
+#if !defined(IMGUI_IMPL_WEBGPU_BACKEND_WGVK)
     wgpuSetLogCallback(
         [](WGPULogLevel level, WGPUStringView msg, void* userdata) { fprintf(stderr, "%s: %.*s\n", ImGui_ImplWGPU_GetLogLevelName(level), (int)msg.length, msg.data); }, nullptr
     );
     wgpuSetLogLevel(WGPULogLevel_Warn);
+#endif
 
     WGPUAdapter adapter = RequestAdapter(wgpu_instance);
     ImGui_ImplWGPU_DebugPrintAdapterInfo(adapter);
@@ -547,7 +550,7 @@ bool InitWGPU(GLFWwindow* window)
 #include <GLFW/glfw3native.h>
 #undef Status                       // X11 headers are leaking this and also 'Success', 'Always', 'None', all used in DAWN api. Add #undef if necessary.
 
-WGPUSurface CreateWGPUSurface(const WGPUInstance& instance, GLFWwindow* window)
+static WGPUSurface CreateWGPUSurface(const WGPUInstance& instance, GLFWwindow* window)
 {
     ImGui_ImplWGPU_CreateSurfaceInfo create_info = {};
     create_info.Instance = instance;
