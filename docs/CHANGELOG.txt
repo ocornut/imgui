@@ -84,6 +84,9 @@ Docking+Viewports Branch:
     mouse inputs while hidden if (1) the implicit "Debug" window was used in a previous
     session  and moved to a secondary viewport and (2) the Platform Backend does not
     support the ImGuiBackendFlags_HasMouseHoveredViewport feature. (#9254)
+  - Backends: SDL2, SDL3: fixed an issue dated 2025/04/09 (1.92 WIP) where a refactor
+    and a merge caused ImGuiBackendFlags_HasMouseHoveredViewport to never be set, causing
+    foreign windows to be ignored when deciding of hovered viewport. (#9284) [@ravencgg]
 
 
 -----------------------------------------------------------------------
