@@ -3717,7 +3717,7 @@ namespace ImGui
     IMGUI_API bool          BeginErrorTooltip();
     IMGUI_API void          EndErrorTooltip();
 
-    // Demo Doc Marker for e.g. imgui_manual
+    // Demo Doc Marker for e.g. imgui_explorer
     IMGUI_API void          DemoMarker(const char* file, int line, const char* section);
 
     // Debug Tools

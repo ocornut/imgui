@@ -110,7 +110,7 @@ Reading the changelogs is a good way to keep up to date with the things Dear ImG
 ### Demo
 
 Calling the `ImGui::ShowDemoWindow()` function will create a demo window showcasing a variety of features and examples. The code is always available for reference in `imgui_demo.cpp`. 
-- [Web version of the demo](https://pthom.github.io/imgui_manual_online/manual/imgui_manual.html) w/ source code browser, courtesy of [@pthom](https://github.com/pthom).
+- [imgui_explorer](https://pthom.github.io/imgui_explorer): Web version of the demo w/ source code browser, courtesy of [@pthom](https://github.com/pthom).
 
 You should be able to build the examples from sources. If you don't, let us know! If you want to have a quick look at some Dear ImGui features, you can download Windows binaries of the demo app here:
 - [imgui-demo-binaries-20260225.zip](https://www.dearimgui.com/binaries/imgui-demo-binaries-20260225.zip) (Windows, 1.92.6, built 2026/02/25, master) or [older binaries](https://www.dearimgui.com/binaries).

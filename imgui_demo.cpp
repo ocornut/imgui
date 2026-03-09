@@ -12,7 +12,7 @@
 
 // How to easily locate code?
 // - Use Tools->Item Picker to debug break in code by clicking any widgets: https://github.com/ocornut/imgui/wiki/Debug-Tools
-// - Browse an online version the demo with code linked to hovered widgets: https://pthom.github.io/imgui_manual
+// - Browse pthom's online imgui_explorer: web version the demo w/ source code browser: https://pthom.github.io/imgui_explorer
 // - Find a visible string and search for it in the code!
 
 //---------------------------------------------------
@@ -282,7 +282,7 @@ static void HelpMarker(const char* desc)
     }
 }
 
-// Helper to wire demo markers located in code to an interactive browser (e.g. imgui_manual)
+// Helper to wire demo markers located in code to an interactive browser (e.g. https://pthom.github.io/imgui_explorer)
 #if IMGUI_VERSION_NUM >= 19263
 namespace ImGui { extern IMGUI_API void DemoMarker(const char* file, int line, const char* section); };
 #define IMGUI_DEMO_MARKER(section)  do { ImGui::DemoMarker("imgui_demo.cpp", __LINE__, section); } while (0)
@@ -445,7 +445,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
                           "and Metrics/Debugger (general purpose Dear ImGui debugging tool).");
         ImGui::BulletText("Web demo (w/ source code browser): ");
         ImGui::SameLine(0, 0);
-        ImGui::TextLinkOpenURL("https://pthom.github.io/imgui_manual");
+        ImGui::TextLinkOpenURL("https://pthom.github.io/imgui_explorer");
 
         ImGui::SeparatorText("PROGRAMMER GUIDE:");
         ImGui::BulletText("See the ShowDemoWindow() code in imgui_demo.cpp. <- you are here!");
