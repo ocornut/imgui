@@ -40,8 +40,8 @@ static int                      wgpu_surface_width = 1280;
 static int                      wgpu_surface_height = 800;
 
 // Forward declarations
-static bool InitWGPU(SDL_Window* window);
-WGPUSurface CreateWGPUSurface(const WGPUInstance& instance, SDL_Window* window);
+static bool         InitWGPU(SDL_Window* window);
+static WGPUSurface  CreateWGPUSurface(const WGPUInstance& instance, SDL_Window* window);
 
 static void ResizeSurface(int width, int height)
 {
@@ -338,7 +338,7 @@ static WGPUDevice RequestDevice(wgpu::Instance& instance, wgpu::Adapter& adapter
     IM_ASSERT(acquired_device != nullptr && waitStatusDevice == wgpu::WaitStatus::Success && "Error on Device request");
     return acquired_device.MoveToCHandle();
 }
-#elif defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
+#elif defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) || defined(IMGUI_IMPL_WEBGPU_BACKEND_WGVK)
 #ifdef __EMSCRIPTEN__
 // Adapter and device initialization via JS
 EM_ASYNC_JS( void, getAdapterAndDeviceViaJS, (),
@@ -450,7 +450,7 @@ static bool InitWGPU(SDL_Window* window)
     preferred_fmt = surface_capabilities.formats[0];
 
     // WGPU backend: Adapter and Device acquisition, Surface creation
-#elif defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
+#elif defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) || defined(IMGUI_IMPL_WEBGPU_BACKEND_WGVK)
     WGPUInstanceDescriptor instanceDesc = {};
     WGPUInstanceFeatureName timedWaitAny = WGPUInstanceFeatureName_TimedWaitAny;
     instanceDesc.requiredFeatureCount = 1;
@@ -474,10 +474,13 @@ static bool InitWGPU(SDL_Window* window)
     wgpu_surface = wgpuInstanceCreateSurface(wgpu_instance, &surface_desc);
     preferred_fmt = wgpuSurfaceGetPreferredFormat(wgpu_surface, {} /* adapter */);
 #else // __EMSCRIPTEN__
+
+#if !defined(IMGUI_IMPL_WEBGPU_BACKEND_WGVK)
     wgpuSetLogCallback(
         [](WGPULogLevel level, WGPUStringView msg, void* userdata) { fprintf(stderr, "%s: %.*s\n", ImGui_ImplWGPU_GetLogLevelName(level), (int)msg.length, msg.data); }, nullptr
     );
     wgpuSetLogLevel(WGPULogLevel_Warn);
+#endif
 
     WGPUAdapter adapter = RequestAdapter(wgpu_instance);
     ImGui_ImplWGPU_DebugPrintAdapterInfo(adapter);
@@ -523,7 +526,7 @@ static bool InitWGPU(SDL_Window* window)
 #include <windows.h>
 #endif
 
-WGPUSurface CreateWGPUSurface(const WGPUInstance& instance, SDL_Window* window)
+static WGPUSurface CreateWGPUSurface(const WGPUInstance& instance, SDL_Window* window)
 {
     SDL_PropertiesID propertiesID = SDL_GetWindowProperties(window);
 
