@@ -2685,7 +2685,7 @@ static bool TempInputIsClampEnabled(ImGuiSliderFlags flags, ImGuiDataType data_t
             return ImGui::DataTypeIsZero(data_type, p_min) ? ((flags & ImGuiSliderFlags_ClampZeroRange) != 0) : true;
     }
     return false;
-};
+}
 
 // Note: p_data, p_min and p_max are _pointers_ to a memory address holding the data. For a Drag widget, p_min and p_max are optional.
 // Read code of e.g. DragFloat(), DragInt() etc. or examples in 'Demo->Widgets->Data Types' to understand how to use this function directly.

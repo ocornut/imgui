@@ -284,7 +284,7 @@ static void HelpMarker(const char* desc)
 
 // Helper to wire demo markers located in code to an interactive browser (e.g. https://pthom.github.io/imgui_explorer)
 #if IMGUI_VERSION_NUM >= 19263
-namespace ImGui { extern IMGUI_API void DemoMarker(const char* file, int line, const char* section); };
+namespace ImGui { extern IMGUI_API void DemoMarker(const char* file, int line, const char* section); }
 #define IMGUI_DEMO_MARKER(section)  do { ImGui::DemoMarker("imgui_demo.cpp", __LINE__, section); } while (0)
 #endif
 
@@ -1726,7 +1726,6 @@ static void DemoWindowWidgetsDragsAndSliders()
         ImGui::CheckboxFlags("ImGuiSliderFlags_WrapAround", &flags, ImGuiSliderFlags_WrapAround);
         ImGui::SameLine(); HelpMarker("Enable wrapping around from max to min and from min to max (only supported by DragXXX() functions)");
         ImGui::CheckboxFlags("ImGuiSliderFlags_ColorMarkers", &flags, ImGuiSliderFlags_ColorMarkers);
-        //ImGui::CheckboxFlags("ImGuiSliderFlags_ColorMarkersG", &flags, 1 << ImGuiSliderFlags_ColorMarkersIndexShift_); // Not explicitly documented but possible.
 
         // Drags
         static float drag_f = 0.5f;
@@ -1942,29 +1941,32 @@ static void DemoWindowWidgetsMultiComponents()
         static float vec4f[4] = { 0.10f, 0.20f, 0.30f, 0.44f };
         static int vec4i[4] = { 1, 5, 100, 255 };
 
+        static ImGuiSliderFlags flags = 0;
+        ImGui::CheckboxFlags("ImGuiSliderFlags_ColorMarkers", &flags, ImGuiSliderFlags_ColorMarkers); // Only passing this to Drag/Sliders
+
         ImGui::SeparatorText("2-wide");
         ImGui::InputFloat2("input float2", vec4f);
-        ImGui::DragFloat2("drag float2", vec4f, 0.01f, 0.0f, 1.0f);
-        ImGui::SliderFloat2("slider float2", vec4f, 0.0f, 1.0f);
         ImGui::InputInt2("input int2", vec4i);
-        ImGui::DragInt2("drag int2", vec4i, 1, 0, 255);
-        ImGui::SliderInt2("slider int2", vec4i, 0, 255);
+        ImGui::DragFloat2("drag float2", vec4f, 0.01f, 0.0f, 1.0f, NULL, flags);
+        ImGui::DragInt2("drag int2", vec4i, 1, 0, 255, NULL, flags);
+        ImGui::SliderFloat2("slider float2", vec4f, 0.0f, 1.0f, NULL, flags);
+        ImGui::SliderInt2("slider int2", vec4i, 0, 255, NULL, flags);
 
         ImGui::SeparatorText("3-wide");
         ImGui::InputFloat3("input float3", vec4f);
-        ImGui::DragFloat3("drag float3", vec4f, 0.01f, 0.0f, 1.0f);
-        ImGui::SliderFloat3("slider float3", vec4f, 0.0f, 1.0f);
         ImGui::InputInt3("input int3", vec4i);
-        ImGui::DragInt3("drag int3", vec4i, 1, 0, 255);
-        ImGui::SliderInt3("slider int3", vec4i, 0, 255);
+        ImGui::DragFloat3("drag float3", vec4f, 0.01f, 0.0f, 1.0f, NULL, flags);
+        ImGui::DragInt3("drag int3", vec4i, 1, 0, 255, NULL, flags);
+        ImGui::SliderFloat3("slider float3", vec4f, 0.0f, 1.0f, NULL, flags);
+        ImGui::SliderInt3("slider int3", vec4i, 0, 255, NULL, flags);
 
         ImGui::SeparatorText("4-wide");
         ImGui::InputFloat4("input float4", vec4f);
-        ImGui::DragFloat4("drag float4", vec4f, 0.01f, 0.0f, 1.0f);
-        ImGui::SliderFloat4("slider float4", vec4f, 0.0f, 1.0f);
         ImGui::InputInt4("input int4", vec4i);
-        ImGui::DragInt4("drag int4", vec4i, 1, 0, 255);
-        ImGui::SliderInt4("slider int4", vec4i, 0, 255);
+        ImGui::DragFloat4("drag float4", vec4f, 0.01f, 0.0f, 1.0f, NULL, flags);
+        ImGui::DragInt4("drag int4", vec4i, 1, 0, 255, NULL, flags);
+        ImGui::SliderFloat4("slider float4", vec4f, 0.0f, 1.0f, NULL, flags);
+        ImGui::SliderInt4("slider int4", vec4i, 0, 255, NULL, flags);
 
         ImGui::SeparatorText("Ranges");
         static float begin = 10, end = 90;
