@@ -60,9 +60,10 @@ For the WASM code produced by Emscripten to work correctly, it will also be nece
 CMake checks the EMSCRIPEN version then:
    - if EMS >= 4.0.10 uses `--use-port=emdawnwebgpu` flag to build  
       - it set `IMGUI_IMPL_WEBGPU_BACKEND_DAWN` compiler define 
-   - if EMS < 4.0.10 the build aborts (`-sUSE_WEBGPU=1` is no longer supported in ImGui)
+   - if EMS < 4.0.10 the build aborts (`-sUSE_WEBGPU=1` is no longer supported by our examples and our WGPU backend
 
 #### Generate Emscripten using external WebGPU library (emdawnwebgpu_pkg)
+
 - `emcmake cmake -G Ninja -DIMGUI_EMSCRIPTEN_WEBGPU_FLAG="--use-port=path_to_emdawnwebgpu_pkg" -B where_to_build_dir`
    - it set `IMGUI_IMPL_WEBGPU_BACKEND_DAWN` compiler define 
    - *To use external WebGPU library it's necessary to have EMS >= 4.0.10 or the minimum requirements specified by the package:*
