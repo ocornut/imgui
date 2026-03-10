@@ -295,7 +295,6 @@ struct ImGui_ImplVulkan_Data
     VkDescriptorSetLayout       DescriptorSetLayout;
     VkPipelineLayout            PipelineLayout;
     VkPipeline                  Pipeline;               // pipeline for main render pass (created by app)
-    VkPipeline                  PipelineForViewports;   // pipeline for secondary viewports (created by backend)
     VkShaderModule              ShaderModuleVert;
     VkShaderModule              ShaderModuleFrag;
     VkDescriptorPool            DescriptorPool;
@@ -308,6 +307,13 @@ struct ImGui_ImplVulkan_Data
 
     // Render buffers for main window
     ImGui_ImplVulkan_WindowRenderBuffers MainWindowRenderBuffers;
+
+    // Viewports common data
+    VkSurfaceFormatKHR          ViewportsFormat;        // Common for all viewports, may differ from VulkanInitInfo.SecondaryViewportsInfo.DesiredFormat
+    // Filled during ImGui_ImplVulkan_PrepareViewportsRendering() based on ViewportsFormat and VulkanInitInfo->SecondaryViewportsInfo
+    ImGui_ImplVulkan_PipelineInfo PipelineInfoForViewports;
+    VkPipeline                  PipelineForViewports;   // pipeline for secondary viewports (created by backend)
+
 
     ImGui_ImplVulkan_Data()
     {
@@ -1227,8 +1233,15 @@ void    ImGui_ImplVulkan_DestroyDeviceObjects()
     if (bd->DescriptorSetLayout)  { vkDestroyDescriptorSetLayout(v->Device, bd->DescriptorSetLayout, v->Allocator); bd->DescriptorSetLayout = VK_NULL_HANDLE; }
     if (bd->PipelineLayout)       { vkDestroyPipelineLayout(v->Device, bd->PipelineLayout, v->Allocator); bd->PipelineLayout = VK_NULL_HANDLE; }
     if (bd->Pipeline)             { vkDestroyPipeline(v->Device, bd->Pipeline, v->Allocator); bd->Pipeline = VK_NULL_HANDLE; }
-    if (bd->PipelineForViewports) { vkDestroyPipeline(v->Device, bd->PipelineForViewports, v->Allocator); bd->PipelineForViewports = VK_NULL_HANDLE; }
     if (bd->DescriptorPool)       { vkDestroyDescriptorPool(v->Device, bd->DescriptorPool, v->Allocator); bd->DescriptorPool = VK_NULL_HANDLE; }
+
+    // Destroy viewports common objects
+    if (bd->PipelineForViewports) { vkDestroyPipeline(v->Device, bd->PipelineForViewports, v->Allocator); bd->PipelineForViewports = VK_NULL_HANDLE; }
+    if (bd->PipelineInfoForViewports.RenderPass)
+    {
+        vkDestroyRenderPass(v->Device, bd->PipelineInfoForViewports.RenderPass, v->Allocator);
+        bd->PipelineInfoForViewports.RenderPass = VK_NULL_HANDLE;
+    }
 }
 
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
@@ -1334,7 +1347,7 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info)
     else
         IM_ASSERT(info->DescriptorPoolSize > 0);
     if (info->UseDynamicRendering)
-        IM_ASSERT(info->PipelineInfoMain.RenderPass == VK_NULL_HANDLE && info->PipelineInfoForViewports.RenderPass == VK_NULL_HANDLE);
+        IM_ASSERT(info->PipelineInfoMain.RenderPass == VK_NULL_HANDLE);
 
     bd->VulkanInitInfo = *info;
 
@@ -1656,6 +1669,36 @@ int ImGui_ImplVulkanH_GetMinImageCountFromPresentMode(VkPresentModeKHR present_m
     return 1;
 }
 
+VkRenderPass ImGui_ImplVulkanH_CreateRenderPass(VkDevice device, const VkAllocationCallbacks* allocator, VkAttachmentDescription const& attachment)
+{
+    VkAttachmentReference color_attachment = {};
+    color_attachment.attachment = 0;
+    color_attachment.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    VkSubpassDescription subpass = {};
+    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments = &color_attachment;
+    VkSubpassDependency dependency = {};
+    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependency.dstSubpass = 0;
+    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.srcAccessMask = 0;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    VkRenderPassCreateInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    info.attachmentCount = 1;
+    info.pAttachments = &attachment;
+    info.subpassCount = 1;
+    info.pSubpasses = &subpass;
+    info.dependencyCount = 1;
+    info.pDependencies = &dependency;
+    VkRenderPass res;
+    VkResult err = vkCreateRenderPass(device, &info, allocator, &res);
+    check_vk_result(err);
+    return res;
+}
+
 // Also destroy old swap chain and in-flight frames data, if any.
 void ImGui_ImplVulkanH_CreateWindowSwapChain(VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_Window* wd, const VkAllocationCallbacks* allocator, int w, int h, uint32_t min_image_count, VkImageUsageFlags image_usage)
 {
@@ -1747,34 +1790,7 @@ void ImGui_ImplVulkanH_CreateWindowSwapChain(VkPhysicalDevice physical_device, V
         VkAttachmentDescription attachment = wd->AttachmentDesc;
         if (attachment.format == VK_FORMAT_UNDEFINED)
             attachment.format = wd->SurfaceFormat.format;
-        VkAttachmentReference color_attachment = {};
-        color_attachment.attachment = 0;
-        color_attachment.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        VkSubpassDescription subpass = {};
-        subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass.colorAttachmentCount = 1;
-        subpass.pColorAttachments = &color_attachment;
-        VkSubpassDependency dependency = {};
-        dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-        dependency.dstSubpass = 0;
-        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.srcAccessMask = 0;
-        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        VkRenderPassCreateInfo info = {};
-        info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        info.attachmentCount = 1;
-        info.pAttachments = &attachment;
-        info.subpassCount = 1;
-        info.pSubpasses = &subpass;
-        info.dependencyCount = 1;
-        info.pDependencies = &dependency;
-        err = vkCreateRenderPass(device, &info, allocator, &wd->RenderPass);
-        check_vk_result(err);
-
-        // We do not create a pipeline by default as this is also used by examples' main.cpp,
-        // but secondary viewport in multi-viewport mode may want to create one with:
-        //ImGui_ImplVulkan_CreatePipeline(device, allocator, VK_NULL_HANDLE, wd->RenderPass, VK_SAMPLE_COUNT_1_BIT, &wd->Pipeline, v->Subpass);
+        wd->RenderPass = ImGui_ImplVulkanH_CreateRenderPass(device, allocator, attachment);
     }
 
     // Create The Image Views
@@ -1969,6 +1985,81 @@ ImGui_ImplVulkanH_Window* ImGui_ImplVulkanH_GetWindowDataFromViewport(ImGuiViewp
 // If you are new to dear imgui or creating a new binding for dear imgui, it is recommended that you completely ignore this section first..
 //--------------------------------------------------------------------------------------------------------
 
+static void ImGui_ImplVulkan_SelectPresentMode(ImGuiViewport* viewport)
+{
+    ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
+    ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
+    ImGui_ImplVulkan_ViewportData* vd = (ImGui_ImplVulkan_ViewportData*)viewport->RendererUserData;
+    ImGui_ImplVulkanH_Window* wd = &vd->Window;
+
+    // FIXME-VULKAN: Even thought mailbox seems to get us maximum framerate with a single window, it halves framerate with a second window etc. (w/ Nvidia and SDK 1.82.1)
+    const VkPresentModeKHR presentModes[] = { v->SecondaryViewportsInfo.DesiredPresentMode, VK_PRESENT_MODE_MAILBOX_KHR, VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_FIFO_KHR };
+    int presentModesCount = IM_COUNTOF(presentModes);
+    const VkPresentModeKHR* pPresentModes = presentModes;
+    if (pPresentModes[0] == VK_PRESENT_MODE_MAX_ENUM_KHR)
+    {
+        ++pPresentModes;
+        --presentModesCount;
+    }
+    wd->PresentMode = ImGui_ImplVulkanH_SelectPresentMode(v->PhysicalDevice, wd->Surface, presentModes, presentModesCount);
+    //printf("[vulkan] Secondary window selected PresentMode = %d\n", wd->PresentMode);
+}
+
+// Prepare common viewports rendering objects.
+// Requires a sample surface (assuming any viewport surface behaves the same).
+// - Select a surface format
+// - Create the common RenderPass and Pipeline
+static void ImGui_ImplVulkan_PrepareViewportsRendering(VkSurfaceKHR surface)
+{
+    ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
+    ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
+
+    // Select Surface Format
+    ImGui_ImplVulkan_PipelineInfo* pipeline_info = &bd->PipelineInfoForViewports;
+    const VkFormat requestSurfaceImageFormats[] = { v->SecondaryViewportsInfo.DesiredFormat.format, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_B8G8R8_UNORM, VK_FORMAT_R8G8B8_UNORM };
+    int requestSurfaceImageFormatsCount = IM_COUNTOF(requestSurfaceImageFormats);
+    const VkFormat* pRequestSurfaceImageFormats = requestSurfaceImageFormats;
+    if (pRequestSurfaceImageFormats[0] == VK_FORMAT_UNDEFINED)
+    {
+        ++pRequestSurfaceImageFormats;
+        --requestSurfaceImageFormatsCount;
+    }
+
+    const VkColorSpaceKHR requestSurfaceColorSpace = v->SecondaryViewportsInfo.DesiredFormat.colorSpace;
+    bd->ViewportsFormat = ImGui_ImplVulkanH_SelectSurfaceFormat(v->PhysicalDevice, surface, pRequestSurfaceImageFormats, requestSurfaceImageFormatsCount, requestSurfaceColorSpace);
+
+    // Create pipeline (shared by all secondary viewports)
+    if (bd->PipelineForViewports == VK_NULL_HANDLE)
+    {
+#ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
+        if (v->UseDynamicRendering)
+        {
+            pipeline_info->PipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+            pipeline_info->PipelineRenderingCreateInfo.colorAttachmentCount = 1;
+            pipeline_info->PipelineRenderingCreateInfo.pColorAttachmentFormats = &bd->ViewportsFormat.format;
+        }
+#endif
+        else
+        {
+            // Create a reference RenderPass (needed for the Pipeline creation)
+            // Viewports will create their own RenderPass, compatible with this one (same format, different clear option)
+            VkAttachmentDescription attachment = {};
+            attachment.format = bd->ViewportsFormat.format;
+            attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+            attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+            attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+            attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+            attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+            pipeline_info->RenderPass = ImGui_ImplVulkanH_CreateRenderPass(v->Device, v->Allocator, attachment);
+            pipeline_info->Subpass = 0;
+        }
+        bd->PipelineForViewports = ImGui_ImplVulkan_CreatePipeline(v->Device, v->Allocator, VK_NULL_HANDLE, pipeline_info);
+    }
+}
+
 static void ImGui_ImplVulkan_CreateWindow(ImGuiViewport* viewport)
 {
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
@@ -1999,49 +2090,20 @@ static void ImGui_ImplVulkan_CreateWindow(ImGuiViewport* viewport)
     }
     viewport->RendererUserData = vd;
 
-    // Select Surface Format
-    ImGui_ImplVulkan_PipelineInfo* pipeline_info = &v->PipelineInfoForViewports;
-    ImVector<VkFormat> requestSurfaceImageFormats;
-#ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
-    for (uint32_t n = 0; n < pipeline_info->PipelineRenderingCreateInfo.colorAttachmentCount; n++)
-        requestSurfaceImageFormats.push_back(pipeline_info->PipelineRenderingCreateInfo.pColorAttachmentFormats[n]);
-#endif
-    const VkFormat defaultFormats[] = { VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_B8G8R8_UNORM, VK_FORMAT_R8G8B8_UNORM };
-    for (VkFormat format : defaultFormats)
-        requestSurfaceImageFormats.push_back(format);
-
-    const VkColorSpaceKHR requestSurfaceColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
-    wd->SurfaceFormat = ImGui_ImplVulkanH_SelectSurfaceFormat(v->PhysicalDevice, wd->Surface, requestSurfaceImageFormats.Data, (size_t)requestSurfaceImageFormats.Size, requestSurfaceColorSpace);
-
     // Select Present Mode
-    // FIXME-VULKAN: Even thought mailbox seems to get us maximum framerate with a single window, it halves framerate with a second window etc. (w/ Nvidia and SDK 1.82.1)
-    VkPresentModeKHR present_modes[] = { VK_PRESENT_MODE_MAILBOX_KHR, VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_FIFO_KHR };
-    wd->PresentMode = ImGui_ImplVulkanH_SelectPresentMode(v->PhysicalDevice, wd->Surface, &present_modes[0], IM_COUNTOF(present_modes));
-    //printf("[vulkan] Secondary window selected PresentMode = %d\n", wd->PresentMode);
+    ImGui_ImplVulkan_SelectPresentMode(viewport);
+
+    if (bd->ViewportsFormat.format == VK_FORMAT_UNDEFINED)
+    {
+        ImGui_ImplVulkan_PrepareViewportsRendering(wd->Surface);
+    }
+    wd->SurfaceFormat = bd->ViewportsFormat;
 
     // Create SwapChain, RenderPass, Framebuffer, etc.
     wd->UseDynamicRendering = v->UseDynamicRendering;
     wd->AttachmentDesc.loadOp = (viewport->Flags & ImGuiViewportFlags_NoRendererClear) ? VK_ATTACHMENT_LOAD_OP_DONT_CARE : VK_ATTACHMENT_LOAD_OP_CLEAR;
-    ImGui_ImplVulkanH_CreateOrResizeWindow(v->Instance, v->PhysicalDevice, v->Device, wd, v->QueueFamily, v->Allocator, (int)viewport->Size.x, (int)viewport->Size.y, v->MinImageCount, pipeline_info->SwapChainImageUsage);
+    ImGui_ImplVulkanH_CreateOrResizeWindow(v->Instance, v->PhysicalDevice, v->Device, wd, v->QueueFamily, v->Allocator, (int)viewport->Size.x, (int)viewport->Size.y, v->MinImageCount, v->SecondaryViewportsInfo.SwapChainImageUsage);
     vd->WindowOwned = true;
-
-    // Create pipeline (shared by all secondary viewports)
-    if (bd->PipelineForViewports == VK_NULL_HANDLE)
-    {
-#ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
-        if (wd->UseDynamicRendering)
-        {
-            pipeline_info->PipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
-            pipeline_info->PipelineRenderingCreateInfo.colorAttachmentCount = 1;
-            pipeline_info->PipelineRenderingCreateInfo.pColorAttachmentFormats = &wd->SurfaceFormat.format;
-        }
-        else
-        {
-            pipeline_info->RenderPass = wd->RenderPass;
-        }
-#endif
-        bd->PipelineForViewports = ImGui_ImplVulkan_CreatePipeline(v->Device, v->Allocator, VK_NULL_HANDLE, &v->PipelineInfoForViewports);
-    }
 }
 
 static void ImGui_ImplVulkan_DestroyWindow(ImGuiViewport* viewport)
@@ -2071,7 +2133,7 @@ static void ImGui_ImplVulkan_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
     ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
     ImGui_ImplVulkanH_Window* wd = &vd->Window;
     wd->AttachmentDesc.loadOp = (viewport->Flags & ImGuiViewportFlags_NoRendererClear) ? VK_ATTACHMENT_LOAD_OP_DONT_CARE : VK_ATTACHMENT_LOAD_OP_CLEAR;
-    ImGui_ImplVulkanH_CreateOrResizeWindow(v->Instance, v->PhysicalDevice, v->Device, &vd->Window, v->QueueFamily, v->Allocator, (int)size.x, (int)size.y, v->MinImageCount, v->PipelineInfoForViewports.SwapChainImageUsage);
+    ImGui_ImplVulkanH_CreateOrResizeWindow(v->Instance, v->PhysicalDevice, v->Device, &vd->Window, v->QueueFamily, v->Allocator, (int)size.x, (int)size.y, v->MinImageCount, v->SecondaryViewportsInfo.SwapChainImageUsage);
 }
 
 static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport, void*)
@@ -2086,7 +2148,7 @@ static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport, void*)
 
     if (vd->SwapChainNeedRebuild || vd->SwapChainSuboptimal)
     {
-        ImGui_ImplVulkanH_CreateOrResizeWindow(v->Instance, v->PhysicalDevice, v->Device, wd, v->QueueFamily, v->Allocator, (int)viewport->Size.x, (int)viewport->Size.y, v->MinImageCount, v->PipelineInfoForViewports.SwapChainImageUsage);
+        ImGui_ImplVulkanH_CreateOrResizeWindow(v->Instance, v->PhysicalDevice, v->Device, wd, v->QueueFamily, v->Allocator, (int)viewport->Size.x, (int)viewport->Size.y, v->MinImageCount, v->SecondaryViewportsInfo.SwapChainImageUsage);
         vd->SwapChainNeedRebuild = vd->SwapChainSuboptimal = false;
     }
 
