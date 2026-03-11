@@ -72,6 +72,9 @@ Other Changes:
 - InputText:
   - Shift+Enter in multi-line editor always adds a new line, regardless of
     ImGuiInputTextFlags_CtrlEnterForNewLine being set or not. (#9239)
+  - Reworked io.ConfigInputTextEnterKeepActive mode so that pressing Enter will
+    deactivate/reactivate the item in order for e.g. IsItemDeactivatedAfterEdit()
+    signals to be emitted the same way regardless of that setting. (#9001, #9115)
 - Style:
   - Border sizes are now scaled (and rounded) by ScaleAllSizes().
   - When using large values with ScallAllSizes(), the following items thickness
