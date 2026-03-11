@@ -4281,7 +4281,7 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     MouseStationaryTimer = 0.0f;
 
     InputTextPasswordFontBackupFlags = ImFontFlags_None;
-    InputTextReactivateID = 0;
+    InputTextReactivateId = 0;
     TempInputId = 0;
     memset(&DataTypeZeroValue, 0, sizeof(DataTypeZeroValue));
     BeginMenuDepth = BeginComboDepth = 0;
@@ -5573,6 +5573,8 @@ void ImGui::NewFrame()
     g.ActiveIdIsJustActivated = false;
     if (g.TempInputId != 0 && g.ActiveId != g.TempInputId)
         g.TempInputId = 0;
+    if (g.InputTextReactivateId != 0 && g.InputTextReactivateId != g.DeactivatedItemData.ID)
+        g.InputTextReactivateId = 0;
     if (g.ActiveId == 0)
     {
         g.ActiveIdUsingNavDirMask = 0x00;
