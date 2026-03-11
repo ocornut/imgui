@@ -4281,6 +4281,7 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     MouseStationaryTimer = 0.0f;
 
     InputTextPasswordFontBackupFlags = ImFontFlags_None;
+    InputTextReactivateID = 0;
     TempInputId = 0;
     memset(&DataTypeZeroValue, 0, sizeof(DataTypeZeroValue));
     BeginMenuDepth = BeginComboDepth = 0;
