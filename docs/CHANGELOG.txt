@@ -41,6 +41,18 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
+ - Separator(): fixed a legacy quirk where Separator() was submitting a zero-height
+   item for layout purpose, even though it draws a 1-pixel separator.
+   The fix could affect code e.g. computing height from multiple widgets in order to
+   allocate vertical space for a footer or multi-line status bar. (#2657, #9263)
+   The "Console" example had such a bug:
+      float footer_height = style.ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
+      BeginChild("ScrollingRegion", { 0, -footer_height });
+   Should be:
+      float footer_height = style.ItemSpacing.y + style.SeparatorSize + ImGui::GetFrameHeightWithSpacing();
+      BeginChild("ScrollingRegion", { 0, -footer_height });
+   When such idiom was used and assuming zero-height Separator, it is likely that
+   in 1.92.7 the resulting window will have unexpected 1 pixel scrolling range.
  - Combo(), ListBox(): commented out legacy signatures which were obsoleted in 1.90
    (Nov 2023), when the getter callback type was changed from:
       getter type:   bool (*getter)(void* user_data, int idx, const char** out_text)
@@ -60,22 +72,44 @@ Other Changes:
 - InputText:
   - Shift+Enter in multi-line editor always adds a new line, regardless of
     ImGuiInputTextFlags_CtrlEnterForNewLine being set or not. (#9239)
-- Style: border sizes are now scaled (and rounded) by ScaleAllSizes().
-- Demo: fixed IMGUI_DEMO_MARKER locations for examples applets. (#9261, #3689) [@pthom]
+  - Reworked io.ConfigInputTextEnterKeepActive mode so that pressing Enter will
+    deactivate/reactivate the item in order for e.g. IsItemDeactivatedAfterEdit()
+    signals to be emitted the same way regardless of that setting. (#9001, #9115)
+- Style:
+  - Border sizes are now scaled (and rounded) by ScaleAllSizes().
+  - When using large values with ScallAllSizes(), the following items thickness
+    are scaled to integer amounts:
+    - InputText Caret/cursor thickness. (#7031)
+    - CloseButton() thickness.
+    - TextLink() underline thickness.
+    - ColorButton() border thickness.
+    - Separator() thickness, via scaling newly added style.SeparatorSize. (#2657, #9263)
 - Clipper:
   - Clear `DisplayStart`/`DisplayEnd` fields when `Step()` returns false.
   - Added `UserIndex` helper storage. This is solely a convenience for cases where
     you may want to carry an index around.
+- Scrollbar:
+  - Implemented a custom tweak to extend hit-testing bounding box when window is sitting
+    at the edge of a viewport (e.g. fullscreen or docked window), so that e.g. mouse the
+    mouse at the extreme of the screen will reach the scrollbar. (#9276)
+- Demo: fixed IMGUI_DEMO_MARKER locations for examples applets. (#9261, #3689) [@pthom]
 - Backends:
   - SDLGPU3: removed unnecessary call to SDL_WaitForGPUIdle when releasing
     vertex/index buffers. (#9262) [@jaenis]
   - WebGPU: fixed version check for Emscripten 5.0.0+.
+  - WebGPU: removed support for Emscripten <4.0.10. (#9281) [@ypujante]
 - Examples:
   - Emscripten: added `tabindex=-1` to canvas in our shell_minimal.htm. Without it,
     the canvas was not focusable in the DOM, which in turn make some backends
     (e.g. pongasoft/emscripten-glfw) not receive focus loss events. (#9259) [@pthom]
-  - WGPU: fixed undefined behaviors in example code for requesting adapter
+  - Emscripten: fixed minor rendering issues with our HTML shell. (#9281) [@ypujante]
+    - hidden small blue outline when canvas is focused on Chrome.
+    - hidden scrollbar in Firefox.
+  - Vulkan: added ImGui_ImplVulkan_PipelineInfo::ExtraDynamicStates[] to allow specifying
+    extra dynamic states to add when creating the VkPipeline. (#9211) [@DziubanMaciej]
+  - WebGPU: fixed undefined behaviors in example code for requesting adapter
     and device. (#9246, #9256) [@r-lyeh]
+  - GLFW/SDL2/SDL3+WebGPU: removed suport for Emscripten <4.0.10. (#9281) [@ypujante]
 
 Docking+Viewports Branch:
 

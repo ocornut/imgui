@@ -90,6 +90,7 @@ struct ImGui_ImplVulkan_PipelineInfo
     // For Main and Secondary viewports
     uint32_t                        Subpass;                        //
     VkSampleCountFlagBits           MSAASamples = {};               // 0 defaults to VK_SAMPLE_COUNT_1_BIT
+    ImVector<VkDynamicState>        ExtraDynamicStates;             // Optional, allows to insert more dynamic states into our VkPipeline
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
     VkPipelineRenderingCreateInfoKHR PipelineRenderingCreateInfo;   // Optional, valid if .sType == VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR
 #endif

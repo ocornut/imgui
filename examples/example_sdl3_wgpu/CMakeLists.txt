@@ -55,18 +55,8 @@ if(EMSCRIPTEN)
     if(EMSCRIPTEN_VERSION VERSION_LESS "4.0.15")
         message(FATAL_ERROR "Using Emscripten with SDL3 needs Emscripten version >= 4.0.15")
     endif()
-    if(NOT IMGUI_EMSCRIPTEN_WEBGPU_FLAG) # if IMGUI_EMSCRIPTEN_WEBGPU_FLAG not used, set by current EMSCRIPTEN version
-        if(EMSCRIPTEN_VERSION VERSION_GREATER_EQUAL "4.0.10")
-            set(IMGUI_EMSCRIPTEN_WEBGPU_FLAG "--use-port=emdawnwebgpu" CACHE STRING "Choose between --use-port=emdawnwebgpu (Dawn implementation of EMSCRIPTEN) and -sUSE_WEBGPU=1 (WGPU implementation of EMSCRIPTEN, deprecated in 4.0.10): default to --use-port=emdawnwebgpu for EMSCRIPTEN >= 4.0.10")
-        else()
-            set(IMGUI_EMSCRIPTEN_WEBGPU_FLAG "-sUSE_WEBGPU=1" CACHE STRING "Use -sUSE_WEBGPU=1 for EMSCRIPTEN WGPU implementation")
-        endif()
-    else() # if IMGUI_EMSCRIPTEN_WEBGPU_FLAG used, check correct version
-        if(EMSCRIPTEN_VERSION VERSION_LESS "4.0.10" AND "${IMGUI_EMSCRIPTEN_WEBGPU_FLAG}" MATCHES "emdawnwebgpu")
-            # it's necessary EMSCRIPTEN >= v4.0.10 (although "--use-port=path/to/emdawnwebgpu.port.py" is supported/tested from v4.0.8)
-            message(FATAL_ERROR "emdawnwebgpu needs EMSCRIPTEN version >= 4.0.10")
-        endif()
-    endif()
+    # emdawnwebgpu was introduced in 4.0.10 so, due to the prior requirement, this will work
+    set(IMGUI_EMSCRIPTEN_WEBGPU_FLAG "--use-port=emdawnwebgpu" CACHE STRING "Default to --use-port=emdawnwebgpu. You can override to provide your own local port.")
 
     add_compile_options(-sDISABLE_EXCEPTION_CATCHING=1 -DIMGUI_DISABLE_FILE_FUNCTIONS=1)
 else() # Native/Desktop build
@@ -162,7 +152,6 @@ endif()
 # IMGUI_IMPL_WEBGPU_BACKEND_DAWN/WGPU internal define is set according to:
 #   EMSCRIPTEN: by used FLAG
 #     --use-port=emdawnwebgpu --> IMGUI_IMPL_WEBGPU_BACKEND_DAWN enabled (+EMSCRIPTEN)
-#     -sUSE_WEBGPU=1          --> IMGUI_IMPL_WEBGPU_BACKEND_WGPU enabled (+EMSCRIPTEN)
 #   NATIVE: by used SDK installation directory
 #     if IMGUI_DAWN_DIR is valid --> IMGUI_IMPL_WEBGPU_BACKEND_DAWN enabled
 #     if IMGUI_WGPU_DIR is valid --> IMGUI_IMPL_WEBGPU_BACKEND_WGPU enabled
@@ -182,12 +171,8 @@ if(NOT EMSCRIPTEN) # WegGPU-Native settings
 else() # Emscripten settings
     set(CMAKE_EXECUTABLE_SUFFIX ".html")
 
-    if("${IMGUI_EMSCRIPTEN_WEBGPU_FLAG}" MATCHES "emdawnwebgpu")
-        target_compile_options(${IMGUI_EXECUTABLE} PUBLIC "${IMGUI_EMSCRIPTEN_WEBGPU_FLAG}")
-        target_compile_definitions(${IMGUI_EXECUTABLE} PUBLIC "IMGUI_IMPL_WEBGPU_BACKEND_DAWN")
-    else()
-        target_compile_definitions(${IMGUI_EXECUTABLE} PUBLIC "IMGUI_IMPL_WEBGPU_BACKEND_WGPU")
-    endif()
+    target_compile_options(${IMGUI_EXECUTABLE} PUBLIC "${IMGUI_EMSCRIPTEN_WEBGPU_FLAG}")
+    target_compile_definitions(${IMGUI_EXECUTABLE} PUBLIC "IMGUI_IMPL_WEBGPU_BACKEND_DAWN")
     message(STATUS "Using ${IMGUI_EMSCRIPTEN_WEBGPU_FLAG} WebGPU implementation")
 
     target_compile_options(${IMGUI_EXECUTABLE} PUBLIC "-sUSE_SDL=3")

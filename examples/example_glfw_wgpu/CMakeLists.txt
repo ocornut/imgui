@@ -52,23 +52,15 @@ set(IMGUI_EXAMPLE_SOURCE_FILES
 )
 
 if(EMSCRIPTEN)
-    if(NOT IMGUI_EMSCRIPTEN_WEBGPU_FLAG) # if IMGUI_EMSCRIPTEN_WEBGPU_FLAG not used, set by current EMSCRIPTEN version
-        if(EMSCRIPTEN_VERSION VERSION_GREATER_EQUAL "4.0.10")
-            set(IMGUI_EMSCRIPTEN_WEBGPU_FLAG "--use-port=emdawnwebgpu" CACHE STRING "Choose between --use-port=emdawnwebgpu (Dawn implementation of EMSCRIPTEN) and -sUSE_WEBGPU=1 (WGPU implementation of EMSCRIPTEN, deprecated in 4.0.10): default to --use-port=emdawnwebgpu for EMSCRIPTEN >= 4.0.10")
-        else()
-            set(IMGUI_EMSCRIPTEN_WEBGPU_FLAG "-sUSE_WEBGPU=1" CACHE STRING "Use -sUSE_WEBGPU=1 for EMSCRIPTEN WGPU implementation")
-        endif()
-    else() # if IMGUI_EMSCRIPTEN_WEBGPU_FLAG used, check correct version
-        if(EMSCRIPTEN_VERSION VERSION_LESS "4.0.10" AND "${IMGUI_EMSCRIPTEN_WEBGPU_FLAG}" MATCHES "emdawnwebgpu")
-            # it's necessary EMSCRIPTEN >= v4.0.10 (although "--use-port=path/to/emdawnwebgpu.port.py" is supported/tested from v4.0.8)
-            message(FATAL_ERROR "emdawnwebgpu needs EMSCRIPTEN version >= 4.0.10")
-        endif()
+    if(EMSCRIPTEN_VERSION VERSION_GREATER_EQUAL "4.0.10")
+        set(IMGUI_EMSCRIPTEN_WEBGPU_FLAG "--use-port=emdawnwebgpu" CACHE STRING "Default to --use-port=emdawnwebgpu. You can override to provide your own local port.")
+    else()
+        message(FATAL_ERROR "emdawnwebgpu needs EMSCRIPTEN version >= 4.0.10")
     endif()
 
-    if(EMSCRIPTEN_VERSION VERSION_GREATER_EQUAL "3.1.57")
+    if(NOT IMGUI_EMSCRIPTEN_GLFW3)
+        # Defaults to contrib.glfw3 because Emscripten version is > 3.1.57
         set(IMGUI_EMSCRIPTEN_GLFW3 "--use-port=contrib.glfw3" CACHE STRING "Choose between --use-port=contrib.glfw3 and -sUSE_GLFW=3 for GLFW implementation (default to --use-port=contrib.glfw3)")
-    else() # cannot use contrib.glfw3 prior to 3.1.57
-        set(IMGUI_EMSCRIPTEN_GLFW3 "-sUSE_GLFW=3" CACHE STRING "Use -sUSE_GLFW=3 for GLFW implementation" FORCE)
     endif()
 
     set(LIBRARIES glfw)
@@ -165,7 +157,6 @@ endif()
 # In this example IMGUI_IMPL_WEBGPU_BACKEND_DAWN / IMGUI_IMPL_WEBGPU_BACKEND_WGPU internal define is set according to:
 #   EMSCRIPTEN: by used FLAG
 #     --use-port=emdawnwebgpu --> IMGUI_IMPL_WEBGPU_BACKEND_DAWN defined
-#     -sUSE_WEBGPU=1          --> IMGUI_IMPL_WEBGPU_BACKEND_WGPU defined
 #   NATIVE: by used SDK installation directory
 #     if IMGUI_DAWN_DIR is valid --> IMGUI_IMPL_WEBGPU_BACKEND_DAWN defined
 #     if IMGUI_WGPU_DIR is valid --> IMGUI_IMPL_WEBGPU_BACKEND_WGPU defined
@@ -191,12 +182,8 @@ else() # Emscripten settings
     endif()
     message(STATUS "Using ${IMGUI_EMSCRIPTEN_GLFW3} GLFW implementation")
 
-    if("${IMGUI_EMSCRIPTEN_WEBGPU_FLAG}" MATCHES "emdawnwebgpu")
-        target_compile_options(${IMGUI_EXECUTABLE} PUBLIC "${IMGUI_EMSCRIPTEN_WEBGPU_FLAG}")
-        target_compile_definitions(${IMGUI_EXECUTABLE} PUBLIC "IMGUI_IMPL_WEBGPU_BACKEND_DAWN")
-    else()
-        target_compile_definitions(${IMGUI_EXECUTABLE} PUBLIC "IMGUI_IMPL_WEBGPU_BACKEND_WGPU")
-    endif()
+    target_compile_options(${IMGUI_EXECUTABLE} PUBLIC "${IMGUI_EMSCRIPTEN_WEBGPU_FLAG}")
+    target_compile_definitions(${IMGUI_EXECUTABLE} PUBLIC "IMGUI_IMPL_WEBGPU_BACKEND_DAWN")
     message(STATUS "Using ${IMGUI_EMSCRIPTEN_WEBGPU_FLAG} WebGPU implementation")
 
     target_link_options(${IMGUI_EXECUTABLE} PRIVATE
