@@ -5,7 +5,8 @@
 // When targeting native platforms:
 //  - One of IMGUI_IMPL_WEBGPU_BACKEND_DAWN or IMGUI_IMPL_WEBGPU_BACKEND_WGPU *must* be provided.
 // When targeting Emscripten:
-//  - We now defaults to IMGUI_IMPL_WEBGPU_BACKEND_DAWN is Emscripten version is 4.0.10+, which correspond to using Emscripten '--use-port=emdawnwebgpu'.
+//  - We now defaults to IMGUI_IMPL_WEBGPU_BACKEND_DAWN and requires Emscripten 4.0.10+, which correspond to using Emscripten '--use-port=emdawnwebgpu'.
+//  - Emscripten < 4.0.10 is not supported anymore (old '-sUSE_WEBGPU=1' option).
 //  - We can still define IMGUI_IMPL_WEBGPU_BACKEND_WGPU to use Emscripten '-s USE_WEBGPU=1' which is marked as obsolete by Emscripten.
 // Add #define to your imconfig.h file, or as a compilation flag in your build system.
 // This requirement may be removed once WebGPU stabilizes and backends converge on a unified interface.
@@ -33,11 +34,7 @@
 // Setup Emscripten default if not specified.
 #if defined(__EMSCRIPTEN__) && !defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) && !defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
 #include <emscripten/version.h>
-#if (__EMSCRIPTEN_major__ >= 4) && (__EMSCRIPTEN_minor__ >= 0) && (__EMSCRIPTEN_tiny__ >= 10)
 #define IMGUI_IMPL_WEBGPU_BACKEND_DAWN
-#else
-#define IMGUI_IMPL_WEBGPU_BACKEND_WGPU
-#endif
 #endif
 
 #include <webgpu/webgpu.h>
@@ -100,7 +97,7 @@ const char* ImGui_ImplWGPU_GetAdapterTypeName(WGPUAdapterType type);
 #if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
 const char* ImGui_ImplWGPU_GetDeviceLostReasonName(WGPUDeviceLostReason type);
 const char* ImGui_ImplWGPU_GetErrorTypeName(WGPUErrorType type);
-#elif defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) && !defined(__EMSCRIPTEN__)
+#elif defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
 const char* ImGui_ImplWGPU_GetLogLevelName(WGPULogLevel level);
 #endif
 

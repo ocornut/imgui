@@ -57,7 +57,8 @@ IMGUI_IMPL_API void     ImGui_ImplSDLGPU3_UpdateTexture(ImTextureData* tex);
 struct ImGui_ImplSDLGPU3_RenderState
 {
     SDL_GPUDevice*      Device;
-    SDL_GPUSampler*     SamplerDefault;     // Default sampler (bilinear filtering)
+    SDL_GPUSampler*     SamplerLinear;      // Bilinear filtering sampler
+    SDL_GPUSampler*     SamplerNearest;     // Nearest/point filtering sampler
     SDL_GPUSampler*     SamplerCurrent;     // Current sampler (may be changed by callback)
 };
 

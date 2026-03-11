@@ -22,6 +22,7 @@
 //   Calling the function is MANDATORY, otherwise the ImGui will not upload neither the vertex nor the index buffer for the GPU. See imgui_impl_sdlgpu3.cpp for more info.
 
 // CHANGELOG
+//  2026-02-25: Removed unnecessary call to SDL_WaitForGPUIdle when releasing vertex/index buffers. (#9262)
 //  2025-11-26: macOS version can use MSL shaders in order to support macOS 10.14+ (vs Metallib shaders requiring macOS 14+). Requires calling SDL_CreateGPUDevice() with SDL_GPU_SHADERFORMAT_MSL.
 //  2025-09-18: Call platform_io.ClearRendererHandlers() on shutdown.
 //  2025-08-20: Added ImGui_ImplSDLGPU3_InitInfo::SwapchainComposition and ImGui_ImplSDLGPU3_InitInfo::PresentMode to configure how secondary viewports are created.
@@ -62,6 +63,7 @@ struct ImGui_ImplSDLGPU3_Data
     SDL_GPUShader*               FragmentShader         = nullptr;
     SDL_GPUGraphicsPipeline*     Pipeline               = nullptr;
     SDL_GPUSampler*              TexSamplerLinear       = nullptr;
+    SDL_GPUSampler*              TexSamplerNearest      = nullptr;
     SDL_GPUTransferBuffer*       TexTransferBuffer      = nullptr;
     uint32_t                     TexTransferBufferSize  = 0;
 
@@ -130,8 +132,7 @@ static void CreateOrResizeBuffers(SDL_GPUBuffer** buffer, SDL_GPUTransferBuffer*
     ImGui_ImplSDLGPU3_Data* bd = ImGui_ImplSDLGPU3_GetBackendData();
     ImGui_ImplSDLGPU3_InitInfo* v = &bd->InitInfo;
 
-    // FIXME-OPT: Not optimal, but this is fairly rarely called.
-    SDL_WaitForGPUIdle(v->Device);
+    // There is no need for calling SDL_WaitForGPUIdle here, as SDL3 will handle deferred buffer deletion automatically.
     SDL_ReleaseGPUBuffer(v->Device, *buffer);
     SDL_ReleaseGPUTransferBuffer(v->Device, *transferbuffer);
 
@@ -236,7 +237,8 @@ void ImGui_ImplSDLGPU3_RenderDrawData(ImDrawData* draw_data, SDL_GPUCommandBuffe
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     ImGui_ImplSDLGPU3_RenderState render_state;
     render_state.Device = bd->InitInfo.Device;
-    render_state.SamplerDefault = render_state.SamplerCurrent = bd->TexSamplerLinear;
+    render_state.SamplerLinear = render_state.SamplerCurrent = bd->TexSamplerLinear;
+    render_state.SamplerNearest = bd->TexSamplerNearest;
     platform_io.Renderer_RenderState = &render_state;
 
     ImGui_ImplSDLGPU3_SetupRenderState(draw_data, &render_state, pipeline, command_buffer, render_pass, fd, fb_width, fb_height);
@@ -592,9 +594,14 @@ void ImGui_ImplSDLGPU3_CreateDeviceObjects()
         sampler_info.enable_anisotropy = false;
         sampler_info.max_anisotropy = 1.0f;
         sampler_info.enable_compare = false;
-
         bd->TexSamplerLinear = SDL_CreateGPUSampler(v->Device, &sampler_info);
         IM_ASSERT(bd->TexSamplerLinear != nullptr && "Failed to create sampler, call SDL_GetError() for more information");
+
+        sampler_info.min_filter = SDL_GPU_FILTER_NEAREST;
+        sampler_info.mag_filter = SDL_GPU_FILTER_NEAREST;
+        sampler_info.mipmap_mode = SDL_GPU_SAMPLERMIPMAPMODE_NEAREST;
+        bd->TexSamplerNearest = SDL_CreateGPUSampler(v->Device, &sampler_info);
+        IM_ASSERT(bd->TexSamplerNearest != nullptr && "Failed to create sampler, call SDL_GetError() for more information");
     }
 
     ImGui_ImplSDLGPU3_CreateGraphicsPipeline();
@@ -630,6 +637,7 @@ void ImGui_ImplSDLGPU3_DestroyDeviceObjects()
     if (bd->VertexShader)       { SDL_ReleaseGPUShader(v->Device, bd->VertexShader); bd->VertexShader = nullptr; }
     if (bd->FragmentShader)     { SDL_ReleaseGPUShader(v->Device, bd->FragmentShader); bd->FragmentShader = nullptr; }
     if (bd->TexSamplerLinear)   { SDL_ReleaseGPUSampler(v->Device, bd->TexSamplerLinear); bd->TexSamplerLinear = nullptr; }
+    if (bd->TexSamplerNearest)  { SDL_ReleaseGPUSampler(v->Device, bd->TexSamplerNearest); bd->TexSamplerNearest = nullptr; }
     if (bd->Pipeline)           { SDL_ReleaseGPUGraphicsPipeline(v->Device, bd->Pipeline); bd->Pipeline = nullptr; }
 }
 
