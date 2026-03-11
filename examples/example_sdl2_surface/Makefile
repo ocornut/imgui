@@ -8,7 +8,6 @@
 # MSYS2:  pacman -S mingw-w64-i686-SDL2
 #
 
-#EXE = example_sdl2_surface
 EXE = example_sdl2_surface
 IMGUI_DIR = ../..
 SOURCES = main.cpp

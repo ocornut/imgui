@@ -29,6 +29,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "example_win32_opengl3", "ex
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "example_sdl2_sdlrenderer2", "example_sdl2_sdlrenderer2\example_sdl2_sdlrenderer2.vcxproj", "{0C0B2BEA-311F-473C-9652-87923EF639E3}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "example_sdl2_surface", "example_sdl2_surface\example_sdl2_surface.vcxproj", "{47525E56-7D05-474E-A455-64C5BBFFC029}"
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "example_sdl3_opengl3", "example_sdl3_opengl3\example_sdl3_opengl3.vcxproj", "{84AAA301-84FE-428B-9E3E-817BC8123C0C}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "example_sdl3_sdlrenderer3", "example_sdl3_sdlrenderer3\example_sdl3_sdlrenderer3.vcxproj", "{C0290D21-3AD2-4A35-ABBC-A2F5F48326DA}"
@@ -155,6 +157,14 @@ Global
 		{0C0B2BEA-311F-473C-9652-87923EF639E3}.Release|Win32.Build.0 = Release|Win32
 		{0C0B2BEA-311F-473C-9652-87923EF639E3}.Release|x64.ActiveCfg = Release|x64
 		{0C0B2BEA-311F-473C-9652-87923EF639E3}.Release|x64.Build.0 = Release|x64
+		{47525E56-7D05-474E-A455-64C5BBFFC029}.Debug|Win32.ActiveCfg = Debug|Win32
+		{47525E56-7D05-474E-A455-64C5BBFFC029}.Debug|Win32.Build.0 = Debug|Win32
+		{47525E56-7D05-474E-A455-64C5BBFFC029}.Debug|x64.ActiveCfg = Debug|x64
+		{47525E56-7D05-474E-A455-64C5BBFFC029}.Debug|x64.Build.0 = Debug|x64
+		{47525E56-7D05-474E-A455-64C5BBFFC029}.Release|Win32.ActiveCfg = Release|Win32
+		{47525E56-7D05-474E-A455-64C5BBFFC029}.Release|Win32.Build.0 = Release|Win32
+		{47525E56-7D05-474E-A455-64C5BBFFC029}.Release|x64.ActiveCfg = Release|x64
+		{47525E56-7D05-474E-A455-64C5BBFFC029}.Release|x64.Build.0 = Release|x64
 		{84AAA301-84FE-428B-9E3E-817BC8123C0C}.Debug|Win32.ActiveCfg = Debug|Win32
 		{84AAA301-84FE-428B-9E3E-817BC8123C0C}.Debug|Win32.Build.0 = Debug|Win32
 		{84AAA301-84FE-428B-9E3E-817BC8123C0C}.Debug|x64.ActiveCfg = Debug|x64
