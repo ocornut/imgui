@@ -5985,10 +5985,14 @@ void ImGui::EndFrame()
     }
     g.WantTextInputNextFrame = ime_data->WantTextInput ? 1 : 0;
 
-    // Hide implicit/fallback "Debug" window if it hasn't been used
+    // Hide and unfocus implicit/fallback "Debug" window if it hasn't been used
     g.WithinFrameScopeWithImplicitWindow = false;
-    if (g.CurrentWindow && !g.CurrentWindow->WriteAccessed)
+    if (g.CurrentWindow && g.CurrentWindow->IsFallbackWindow && g.CurrentWindow->WriteAccessed == false)
+    {
         g.CurrentWindow->Active = false;
+        if (g.NavWindow && g.NavWindow->RootWindow == g.CurrentWindow)
+            FocusWindow(NULL);
+    }
     End();
 
     // Update navigation: Ctrl+Tab, wrap-around requests
