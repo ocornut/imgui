@@ -325,6 +325,12 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit context pointer
 
 // Format specifiers, printing 64-bit hasn't been decently standardized...
 // In a real application you should be using PRId64 and PRIu64 from <inttypes.h> (non-windows) and on Windows define them yourself.
+#ifndef IMGUI_DISABLE_STDINT_EXACT_BIT_WIDTH_INTEGER
+#include <inttypes.h>
+#define IM_PRId64   PRId64
+#define IM_PRIu64   PRIu64
+#define IM_PRIX64   PRIX64
+#else
 #if defined(_MSC_VER) && !defined(__clang__)
 #define IM_PRId64   "I64d"
 #define IM_PRIu64   "I64u"
@@ -333,6 +339,7 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit context pointer
 #define IM_PRId64   "lld"
 #define IM_PRIu64   "llu"
 #define IM_PRIX64   "llX"
+#endif
 #endif
 
 //-----------------------------------------------------------------------------
