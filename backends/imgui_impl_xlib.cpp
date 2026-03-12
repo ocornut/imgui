@@ -32,9 +32,6 @@
 #include <X11/Xutil.h>
 #include <X11/keysym.h>
 #include <X11/XF86keysym.h>
-#include <X11/XKBlib.h> // XkbKeycodeToKeysym
-#include <X11/extensions/XInput2.h>
-#include <X11/extensions/XI2.h>
 #include <X11/cursorfont.h>
 
 #include <time.h> // clock_gettime()
@@ -52,7 +49,7 @@ struct ImGui_ImplXlib_Data
     Window          Win;
     int             Xi2Opcode;
     XIM             IM;
-    XIC             IC;    
+    XIC             IC;
     timespec        Time;
     int             MouseButtonsDown;
     Cursor          MouseCursors[ImGuiMouseCursor_COUNT];
@@ -90,10 +87,10 @@ static ImGui_ImplXlib_Data* ImGui_ImplXlib_GetBackendData()
 static const char* ImGui_ImplXlib_GetClipboardText(void*)
 {
     ImGui_ImplXlib_Data* bd = ImGui_ImplXlib_GetBackendData();
-    
-    // Get the window that holds the selection 
+
+    // Get the window that holds the selection
     Window owner = XGetSelectionOwner(bd->Dpy, bd->XA_CLIPBOARD);
-    
+
     if (owner == None)
     {
         if (bd->ClipboardTextData)
@@ -113,7 +110,7 @@ static const char* ImGui_ImplXlib_GetClipboardText(void*)
             free (bd->ClipboardTextData);
             bd->ClipboardTextData = nullptr;
         }
-        
+
         /* Request that the selection owner copy the data to our window */
         owner = bd->Win;
         XConvertSelection(bd->Dpy, bd->XA_CLIPBOARD, bd->XA_MIME[1], bd->XA_SELECTION, owner, CurrentTime);
@@ -155,7 +152,7 @@ static void ImGui_ImplXlib_SetClipboardText(void*, const char* text)
 
     if (bd->ClipboardTextData)
         free(bd->ClipboardTextData);
-    
+
     bd->ClipboardTextData = strdup(text);
     XSetSelectionOwner(bd->Dpy, bd->XA_CLIPBOARD, bd->Win, CurrentTime);
 }
@@ -287,13 +284,38 @@ static ImGuiKey ImGui_ImplXlib_KeySymToImGuiKey(KeySym keysym)
     return ImGuiKey_None;
 }
 
-static void ImGui_ImplXlib_UpdateKeyModifiers(unsigned int xlib_key_mods)
+static bool ImGui_ImplXlib_UpdateKeyModifiers(ImGuiKey ks, bool down)
 {
     ImGuiIO& io = ImGui::GetIO();
-    io.AddKeyEvent(ImGuiMod_Ctrl, (xlib_key_mods & ControlMask) != 0);
-    io.AddKeyEvent(ImGuiMod_Shift, (xlib_key_mods & ShiftMask) != 0);
-    io.AddKeyEvent(ImGuiMod_Alt, (xlib_key_mods & Mod1Mask) != 0);
-    io.AddKeyEvent(ImGuiMod_Super, (xlib_key_mods & Mod4Mask) != 0);
+    switch (ks)
+    {
+        case ImGuiKey_LeftCtrl:
+        case ImGuiKey_RightCtrl:
+        {
+            io.AddKeyEvent(ImGuiMod_Ctrl, down);
+            return 1;
+        }
+        case ImGuiKey_LeftAlt:
+        case ImGuiKey_RightAlt:
+        {
+            io.AddKeyEvent(ImGuiMod_Alt, down);
+            return 1;
+        }
+        case ImGuiKey_LeftShift:
+        case ImGuiKey_RightShift:
+        {
+            io.AddKeyEvent(ImGuiMod_Shift, down);
+            return 1;
+        }
+        case ImGuiKey_LeftSuper:
+        case ImGuiKey_RightSuper:
+        {
+            io.AddKeyEvent(ImGuiMod_Super, down);
+            return 1;
+        }
+        default:
+            return 0;
+    }
 }
 
 // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
@@ -301,68 +323,44 @@ static void ImGui_ImplXlib_UpdateKeyModifiers(unsigned int xlib_key_mods)
 // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
 // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
 // If you have multiple events and some of them are not meant to be used by dear imgui, you may need to filter events based on their windowID field.
-bool ImGui_ImplXlib_ProcessEvent(XEvent* event)
-{
+bool ImGui_ImplXlib_ProcessEvent(XEvent* event) {
     ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplXlib_Data* bd = ImGui_ImplXlib_GetBackendData();
-
     // Needed for Xim events
     if (XFilterEvent(event, None) == True)
         return true;
-    
     switch (event->type)
     {
-        case GenericEvent:
+        case ButtonPress:
+        case ButtonRelease:
         {
-            XGenericEventCookie *cookie = (XGenericEventCookie*)&event->xcookie;
-            if (cookie->extension == bd->Xi2Opcode && XGetEventData(event->xcookie.display, cookie))
-            {
-                XIDeviceEvent *dev = (XIDeviceEvent*)cookie->data;                
-                switch (cookie->evtype)
-                {
-                    case XI_Motion:
-                    {
-                        ImVec2 mouse_pos((float)dev->event_x, (float)dev->event_y);
-                        io.AddMouseSourceEvent(ImGuiMouseSource_Mouse);
-                        io.AddMousePosEvent(mouse_pos.x, mouse_pos.y);
-                        return true;
-                    }
-                    case XI_ButtonPress:
-                    case XI_ButtonRelease:
-                    {
-                        if (dev->detail >= Button1 && dev->detail <= Button3)
-                        {
-                            int mouse_button = -1;
-                            if (dev->detail == Button1) { mouse_button = 0; }
-                            if (dev->detail == Button2) { mouse_button = 1; }
-                            if (dev->detail == Button3) { mouse_button = 2; }
-                            
-                            io.AddMouseSourceEvent(ImGuiMouseSource_Mouse);
-                            io.AddMouseButtonEvent(mouse_button, (cookie->evtype == XI_ButtonPress));
-                            bd->MouseButtonsDown = (cookie->evtype == XI_ButtonPress) ? (bd->MouseButtonsDown | (1 << mouse_button)) : (bd->MouseButtonsDown & ~(1 << mouse_button));
-                            return true;
-                        }
-                        else if (dev->detail == Button4 || dev->detail == Button5)
-                        {
-                            float wheel_y = (dev->detail == Button4) ? 1.0f : -1.0f;
-                            io.AddMouseSourceEvent(ImGuiMouseSource_Mouse);
-                            io.AddMouseWheelEvent(0, wheel_y);
-                            return true;
-                        }
-                    }
-                }
-            }
-            XFreeEventData(event->xcookie.display, cookie);
-            return false;
+              unsigned int btn = event->xbutton.button;
+              if (btn >= Button1 && btn <= Button3)
+              {
+                  int mouse_button = -1;
+                  if (btn == Button1) { mouse_button = 0; }
+                  if (btn == Button2) { mouse_button = 1; }
+                  if (btn == Button3) { mouse_button = 2; }
+                  io.AddMouseSourceEvent(ImGuiMouseSource_Mouse);
+                  io.AddMouseButtonEvent(mouse_button, (event->type == ButtonPress));
+                  bd->MouseButtonsDown = (event->type == ButtonPress) ? (bd->MouseButtonsDown | (1 << mouse_button)) : (bd->MouseButtonsDown & ~(1 << mouse_button));
+                  return true;
+              }
+              else if ((btn == Button4 || btn == Button5) && event->type == ButtonPress)
+              {
+                  float wheel_y = (event->xbutton.button == Button4) ? 1.0f : -1.0f;
+                  io.AddMouseSourceEvent(ImGuiMouseSource_Mouse);
+                  io.AddMouseWheelEvent(0, wheel_y);
+                  return true;
+              }
         }
         case KeyPress:
         case KeyRelease:
         {
-            ImGui_ImplXlib_UpdateKeyModifiers(event->xkey.state);
-            KeySym ks = XkbKeycodeToKeysym(event->xkey.display, event->xkey.keycode, 0, 0);
+            KeySym ks = XLookupKeysym(&event->xkey, 0);
             ImGuiKey key = ImGui_ImplXlib_KeySymToImGuiKey(ks);
+            ImGui_ImplXlib_UpdateKeyModifiers(key, event->type == KeyPress);
             io.AddKeyEvent(key, (event->type == KeyPress));
-
             char text[64];
             Status status = 0;
 #ifdef X_HAVE_UTF8_STRING
@@ -370,7 +368,7 @@ bool ImGui_ImplXlib_ProcessEvent(XEvent* event)
                 int size = Xutf8LookupString(bd->IC, &event->xkey, text, sizeof(text), NULL, &status);
                 // Don't post text for unprintable characters
                 unsigned char c = text[0];
-                if ((size > 0) && (c > '\x20') && (c != '\x7f'))
+                if ((size > 0) && (c >= '\x20') && (c != '\x7f'))
                     io.AddInputCharactersUTF8(text);
             }
             else
@@ -381,7 +379,7 @@ bool ImGui_ImplXlib_ProcessEvent(XEvent* event)
                 if (event->type == KeyPress && text[0]) {
                     // Don't post text for unprintable characters
                     unsigned char c = text[0];
-                    if ((size > 0) && (c > '\x20') && (c != '\x7f'))
+                    if ((size > 0) && (c >= '\x20') && (c != '\x7f'))
                         io.AddInputCharacter(c);
                 }
             }
@@ -391,7 +389,7 @@ bool ImGui_ImplXlib_ProcessEvent(XEvent* event)
         case FocusOut:
         {
             io.AddFocusEvent(event->type == FocusIn);
-            
+
 #ifdef X_HAVE_UTF8_STRING
             if (bd->IC) {
                 if (event->type == FocusIn)
@@ -410,7 +408,7 @@ bool ImGui_ImplXlib_ProcessEvent(XEvent* event)
         case SelectionRequest:
         {
             const XSelectionRequestEvent *req = &event->xselectionrequest;
-                
+
             XEvent sevent;
             sevent.xany.type = SelectionNotify;
             sevent.xselection.selection = req->selection;
@@ -439,7 +437,7 @@ bool ImGui_ImplXlib_ProcessEvent(XEvent* event)
                         (unsigned char*)bd->ClipboardTextData, strlen(bd->ClipboardTextData));
                         sevent.xselection.property = req->property;
                         sevent.xselection.target = req->target;
-                        
+
                     break;
                 }
             }
@@ -489,29 +487,7 @@ bool ImGui_ImplXlib_Init(Display* display, Window window)
     }
 
     // Select keyboard/focus events
-    XSelectInput(display, window, KeyPressMask | KeyReleaseMask | FocusChangeMask);
-
-    // Setup XInput for mouse inputs
-    int xi2_opcode, xi2_event, xi2_error;
-    Bool ret = XQueryExtension(display, "XInputExtension", &xi2_opcode, &xi2_event, &xi2_error);
-
-    IM_ASSERT(ret == True && "Could not load XInputExtension!");
-
-    bd->Xi2Opcode = xi2_opcode;
-
-    XIEventMask xi2_eventmask = {};
-    static unsigned char xi2_mask[XIMaskLen(XI_LASTEVENT)] = {};
-
-    XISetMask(xi2_mask, XI_Motion);
-    XISetMask(xi2_mask, XI_ButtonPress);
-    XISetMask(xi2_mask, XI_ButtonRelease);
-
-    xi2_eventmask.deviceid = XIAllMasterDevices;
-    xi2_eventmask.mask_len = sizeof(xi2_mask);
-    xi2_eventmask.mask = xi2_mask;
-
-    XISelectEvents(display, window, &xi2_eventmask, 1);
-
+    XSelectInput(display, window, KeyPressMask | KeyReleaseMask | FocusChangeMask | ButtonPressMask | ButtonReleaseMask | StructureNotifyMask);
     // Setup XIM
 #ifdef X_HAVE_UTF8_STRING
     XSetLocaleModifiers("");
@@ -540,7 +516,7 @@ void ImGui_ImplXlib_Shutdown()
     ImGuiIO& io = ImGui::GetIO();
 
     if (bd->IC)
-        XDestroyIC(bd->IC); 
+        XDestroyIC(bd->IC);
     if (bd->ClipboardTextData)
         free(bd->ClipboardTextData);
     for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_COUNT; cursor_n++)
@@ -557,27 +533,21 @@ static void ImGui_ImplXlib_UpdateMouseData()
 {
     ImGui_ImplXlib_Data* bd = ImGui_ImplXlib_GetBackendData();
     ImGuiIO& io = ImGui::GetIO();
-
     Window focus;
     int revert;
     XGetInputFocus(bd->Dpy, &focus, &revert);
     bool is_app_focused = (focus == bd->Win);
-    if (is_app_focused)
-    {
-        // (Optional) Set OS mouse position from Dear ImGui if requested (rarely used, only when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
-        if (io.WantSetMousePos)
-            XWarpPointer(bd->Dpy, None, bd->Win, 0, 0, 0, 0, (int)io.MousePos.x, (int)io.MousePos.y);
+    if (!is_app_focused)
+        return;
+    // (Optional) Set OS mouse position from Dear ImGui if requested (rarely used, only when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
+    if (io.WantSetMousePos)
+        XWarpPointer(bd->Dpy, None, bd->Win, 0, 0, 0, 0, (int)io.MousePos.x, (int)io.MousePos.y);
+    int window_x, window_y, mouse_x_global, mouse_y_global;
+    Window root, child;
+    unsigned int mask;
+    if (XQueryPointer(bd->Dpy, bd->Win, &root, &child, &mouse_x_global, &mouse_y_global, &window_x, &window_y, &mask))
+        io.AddMousePosEvent((float)(window_x), (float)(window_y));
 
-        // (Optional) Fallback to provide mouse position when focused (XI_Motion already provides this when hovered or captured)
-        // if (bd->MouseButtonsDown == 0)
-        // {
-        //     int window_x, window_y, mouse_x_global, mouse_y_global;
-        //     Window root, child;
-        //     unsigned int mask;
-        //     if (True == XQueryPointer(bd->Dpy, bd->Win, &root, &child, &mouse_x_global, &mouse_y_global, &window_x, &window_y, &mask))
-        //         io.AddMousePosEvent((float)(mouse_x_global - window_x), (float)(mouse_y_global - window_y));
-        // }
-    }
 }
 
 static void ImGui_ImplXlib_UpdateMouseCursor()
@@ -610,7 +580,6 @@ void ImGui_ImplXlib_NewFrame()
     ImGui_ImplXlib_Data* bd = ImGui_ImplXlib_GetBackendData();
     IM_ASSERT(bd != nullptr && "Did you call ImGui_ImplXlib_Init()?");
     ImGuiIO& io = ImGui::GetIO();
-
     // Setup display size (every frame to accommodate for window resizing)
     int x, y;
     unsigned int w = 0, h = 0, border_width, depth;
@@ -628,13 +597,13 @@ void ImGui_ImplXlib_NewFrame()
         current_time.tv_sec = bd->Time.tv_sec;
         current_time.tv_nsec = bd->Time.tv_nsec + 1;
     }
-    
+
     if (bd->Time.tv_sec > 0 || bd->Time.tv_nsec > 0)
         io.DeltaTime = (float)(current_time.tv_sec - bd->Time.tv_sec) + (float)((double)(current_time.tv_nsec - bd->Time.tv_nsec) / 1000000000.0f);
     else
         io.DeltaTime = (float)(1.0f / 60.0f);
     bd->Time = current_time;
-    
+
     ImGui_ImplXlib_UpdateMouseData();
     ImGui_ImplXlib_UpdateMouseCursor();
 }
