@@ -12507,7 +12507,7 @@ bool ImGui::IsPopupOpenRequestForItem(ImGuiPopupFlags popup_flags, ImGuiID id)
     ImGuiMouseButton mouse_button = GetMouseButtonFromPopupFlags(popup_flags);
     if (IsMouseReleased(mouse_button) && IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
         return true;
-    if (g.NavOpenContextMenuItemId == id && IsItemFocused())
+    if (g.NavOpenContextMenuItemId == id && (IsItemFocused() || id == g.CurrentWindow->MoveId))
         return true;
     return false;
 }
@@ -14251,6 +14251,11 @@ static void ImGui::NavUpdateContextMenuRequest()
         return;
     g.NavOpenContextMenuItemId = g.NavId;
     g.NavOpenContextMenuWindowId = g.NavWindow->ID;
+
+    // Allow triggering for Begin()..BeginPopupContextItem(). A possible alternative would be to use g.NavLayer == ImGuiNavLayer_Menu.
+    if (g.NavId == g.NavWindow->GetID("#CLOSE") || g.NavId == g.NavWindow->GetID("#COLLAPSE"))
+        g.NavOpenContextMenuItemId = g.NavWindow->MoveId;
+
     g.NavInputSource = ImGuiInputSource_Keyboard;
     SetNavCursorVisibleAfterMove();
 }
