@@ -1358,6 +1358,7 @@ static void             NavUpdateWindowing();
 static void             NavUpdateWindowingApplyFocus(ImGuiWindow* window);
 static void             NavUpdateWindowingOverlay();
 static void             NavUpdateCancelRequest();
+static void             NavUpdateContextMenuRequest();
 static void             NavUpdateCreateMoveRequest();
 static void             NavUpdateCreateTabbingRequest();
 static float            NavUpdatePageUpPageDown();
@@ -4215,6 +4216,7 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     NavWindow = NULL;
     NavFocusScopeId = NavActivateId = NavActivateDownId = NavActivatePressedId = 0;
     NavLayer = ImGuiNavLayer_Main;
+    NavOpenContextMenuItemId = NavOpenContextMenuWindowId = 0;
     NavNextActivateId = 0;
     NavActivateFlags = NavNextActivateFlags = ImGuiActivateFlags_None;
     NavHighlightActivatedId = 0;
@@ -12505,38 +12507,21 @@ bool ImGui::IsPopupOpenRequestForItem(ImGuiPopupFlags popup_flags, ImGuiID id)
     ImGuiMouseButton mouse_button = GetMouseButtonFromPopupFlags(popup_flags);
     if (IsMouseReleased(mouse_button) && IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
         return true;
-
-    if (g.NavId == id && g.NavId != 0) // == IsItemFocused()
-        if (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard)
-           if (Shortcut(ImGuiKey_F10 | ImGuiMod_Shift) || IsKeyReleased(ImGuiKey_Menu, ImGuiKeyOwner_NoOwner))
-           {
-               g.NavInputSource = ImGuiInputSource_Keyboard;
-               SetNavCursorVisibleAfterMove();
-               return true;
-           }
-
+    if (g.NavOpenContextMenuItemId == id && IsItemFocused())
+        return true;
     return false;
 }
 
-bool ImGui::IsPopupOpenRequestForWindow(ImGuiPopupFlags popup_flags, ImGuiID id)
+bool ImGui::IsPopupOpenRequestForWindow(ImGuiPopupFlags popup_flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiMouseButton mouse_button = GetMouseButtonFromPopupFlags(popup_flags);
     if (IsMouseReleased(mouse_button) && IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
         if (!(popup_flags & ImGuiPopupFlags_NoOpenOverItems) || !IsAnyItemHovered())
             return true;
-
-    // FIXME-NAV: How to meaningful support ImGuiPopupFlags_NoOpenOverItems with keyboard?
-    if (g.CurrentWindow->ID == id && g.NavWindow != NULL)
-        if (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard)
-            if (IsWindowChildOf(g.NavWindow, g.CurrentWindow, false))
-                if (Shortcut(ImGuiKey_F10 | ImGuiMod_Shift) || IsKeyReleased(ImGuiKey_Menu, ImGuiKeyOwner_NoOwner))
-                {
-                    g.NavInputSource = ImGuiInputSource_Keyboard;
-                    SetNavCursorVisibleAfterMove();
-                    return true;
-                }
-
+    if (g.NavOpenContextMenuWindowId && g.CurrentWindow->ID)
+        if (IsWindowChildOf(g.NavWindow, g.CurrentWindow, false)) // This enable ordering to be used to disambiguate item vs window (#8803)
+            return true;
     return false;
 }
 
@@ -12590,7 +12575,7 @@ bool ImGui::BeginPopupContextWindow(const char* str_id, ImGuiPopupFlags popup_fl
     if (!str_id)
         str_id = "window_context";
     ImGuiID id = window->GetID(str_id);
-    if (IsPopupOpenRequestForWindow(popup_flags, window->ID))
+    if (IsPopupOpenRequestForWindow(popup_flags))
         OpenPopupEx(id, popup_flags);
     return BeginPopupEx(id, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings);
 }
@@ -13768,6 +13753,7 @@ static void ImGui::NavUpdate()
 
     // Process NavCancel input (to close a popup, get back to parent, clear focus)
     NavUpdateCancelRequest();
+    NavUpdateContextMenuRequest();
 
     // Process manual activation request
     g.NavActivateId = g.NavActivateDownId = g.NavActivatePressedId = 0;
@@ -14250,6 +14236,23 @@ static void ImGui::NavUpdateCancelRequest()
         if (g.IO.ConfigNavEscapeClearFocusWindow)
             FocusWindow(NULL);
     }
+}
+
+static void ImGui::NavUpdateContextMenuRequest()
+{
+    ImGuiContext& g = *GImGui;
+    g.NavOpenContextMenuItemId = g.NavOpenContextMenuWindowId = 0;
+    const bool nav_keyboard_active = (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard) != 0;
+    if (!nav_keyboard_active || g.NavWindow == NULL)
+        return;
+
+    const bool request = IsKeyReleased(ImGuiKey_Menu, ImGuiKeyOwner_NoOwner) || (IsKeyPressed(ImGuiKey_F10, ImGuiInputFlags_None, ImGuiKeyOwner_NoOwner) && g.IO.KeyMods == ImGuiMod_Shift);
+    if (!request)
+        return;
+    g.NavOpenContextMenuItemId = g.NavId;
+    g.NavOpenContextMenuWindowId = g.NavWindow->ID;
+    g.NavInputSource = ImGuiInputSource_Keyboard;
+    SetNavCursorVisibleAfterMove();
 }
 
 // Handle PageUp/PageDown/Home/End keys
