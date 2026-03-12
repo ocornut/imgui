@@ -3331,6 +3331,8 @@ namespace ImGui
     IMGUI_API ImVec2        FindBestWindowPosForPopup(ImGuiWindow* window);
     IMGUI_API ImVec2        FindBestWindowPosForPopupEx(const ImVec2& ref_pos, const ImVec2& size, ImGuiDir* last_dir, const ImRect& r_outer, const ImRect& r_avoid, ImGuiPopupPositionPolicy policy);
     IMGUI_API ImGuiMouseButton GetMouseButtonFromPopupFlags(ImGuiPopupFlags flags);
+    IMGUI_API bool          IsPopupOpenRequestForItem(ImGuiPopupFlags flags, ImGuiID id);
+    IMGUI_API bool          IsPopupOpenRequestForWindow(ImGuiPopupFlags flags, ImGuiID id);
 
     // Tooltips
     IMGUI_API bool          BeginTooltipEx(ImGuiTooltipFlags tooltip_flags, ImGuiWindowFlags extra_window_flags);

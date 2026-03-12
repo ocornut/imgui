@@ -90,6 +90,10 @@ Other Changes:
     - TextLink() underline thickness.
     - ColorButton() border thickness.
     - Separator() thickness, via scaling newly added style.SeparatorSize. (#2657, #9263)
+- Nav:
+  - Popups: Shift+F10 or Menu key can now open popups menus when using
+    BeginPopupContextItem(), BeginPopupContextWindow() or OpenPopupOnItemClick().
+    (#8803, #9270) [@exelix11, @ocornut]
 - Clipper:
   - Clear `DisplayStart`/`DisplayEnd` fields when `Step()` returns false.
   - Added `UserIndex` helper storage. This is solely a convenience for cases where

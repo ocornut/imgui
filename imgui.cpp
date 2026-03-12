@@ -167,6 +167,7 @@ CODE
      - Home, End                    Scroll to top, scroll to bottom.
      - Alt                          Toggle between scrolling layer and menu layer.
      - Ctrl+Tab then Ctrl+Arrows    Move window. Hold Shift to resize instead of moving.
+     - Menu or Shift+F10            Open context menu.
    - Output when ImGuiConfigFlags_NavEnableKeyboard set,
      - io.WantCaptureKeyboard flag is set when keyboard is claimed.
      - io.NavActive: true when a window is focused and it doesn't have the ImGuiWindowFlags_NoNavInputs flag set.
@@ -12498,21 +12499,57 @@ ImGuiMouseButton ImGui::GetMouseButtonFromPopupFlags(ImGuiPopupFlags flags)
     return ImGuiMouseButton_Right; // Default == 1
 }
 
+bool ImGui::IsPopupOpenRequestForItem(ImGuiPopupFlags popup_flags, ImGuiID id)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiMouseButton mouse_button = GetMouseButtonFromPopupFlags(popup_flags);
+    if (IsMouseReleased(mouse_button) && IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
+        return true;
+
+    if (g.NavId == id && g.NavId != 0) // == IsItemFocused()
+        if (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard)
+           if (Shortcut(ImGuiKey_F10 | ImGuiMod_Shift) || IsKeyReleased(ImGuiKey_Menu, ImGuiKeyOwner_NoOwner))
+           {
+               g.NavInputSource = ImGuiInputSource_Keyboard;
+               SetNavCursorVisibleAfterMove();
+               return true;
+           }
+
+    return false;
+}
+
+bool ImGui::IsPopupOpenRequestForWindow(ImGuiPopupFlags popup_flags, ImGuiID id)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiMouseButton mouse_button = GetMouseButtonFromPopupFlags(popup_flags);
+    if (IsMouseReleased(mouse_button) && IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
+        if (!(popup_flags & ImGuiPopupFlags_NoOpenOverItems) || !IsAnyItemHovered())
+            return true;
+
+    // FIXME-NAV: How to meaningful support ImGuiPopupFlags_NoOpenOverItems with keyboard?
+    if (g.CurrentWindow->ID == id && g.NavWindow != NULL)
+        if (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard)
+            if (IsWindowChildOf(g.NavWindow, g.CurrentWindow, false))
+                if (Shortcut(ImGuiKey_F10 | ImGuiMod_Shift) || IsKeyReleased(ImGuiKey_Menu, ImGuiKeyOwner_NoOwner))
+                {
+                    g.NavInputSource = ImGuiInputSource_Keyboard;
+                    SetNavCursorVisibleAfterMove();
+                    return true;
+                }
+
+    return false;
+}
+
 // Helper to open a popup if mouse button is released over the item
 // - This is essentially the same as BeginPopupContextItem() but without the trailing BeginPopup()
 void ImGui::OpenPopupOnItemClick(const char* str_id, ImGuiPopupFlags popup_flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    ImGuiMouseButton mouse_button = GetMouseButtonFromPopupFlags(popup_flags);
-    bool isMouseInvocation = IsMouseReleased(mouse_button) && IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup);
-    bool isKeyboardInvocation = false;
-    if ((g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard) && IsItemFocused())
-        isKeyboardInvocation = IsKeyReleased(ImGuiKey_Menu) || (IsKeyReleased(ImGuiKey_F10) && g.IO.KeyShift);
-    if (isKeyboardInvocation || isMouseInvocation)
+    if (IsPopupOpenRequestForItem(popup_flags, g.LastItemData.ID))
     {
-        ImGuiID id = str_id ? window->GetID(str_id) : g.LastItemData.ID;    // If user hasn't passed an ID, we can use the LastItemID. Using LastItemID as a Popup ID won't conflict!
-        IM_ASSERT(id != 0);                                             // You cannot pass a NULL str_id if the last item has no identifier (e.g. a Text() item)
+        ImGuiID id = str_id ? window->GetID(str_id) : g.LastItemData.ID; // If user hasn't passed an ID, we can use the LastItemID. Using LastItemID as a Popup ID won't conflict!
+        IM_ASSERT(id != 0);                                              // You cannot pass a NULL str_id if the last item has no identifier (e.g. a Text() item)
         OpenPopupEx(id, popup_flags);
     }
 }
@@ -12539,14 +12576,9 @@ bool ImGui::BeginPopupContextItem(const char* str_id, ImGuiPopupFlags popup_flag
     ImGuiWindow* window = g.CurrentWindow;
     if (window->SkipItems)
         return false;
-    ImGuiID id = str_id ? window->GetID(str_id) : g.LastItemData.ID;    // If user hasn't passed an ID, we can use the LastItemID. Using LastItemID as a Popup ID won't conflict!
-    IM_ASSERT(id != 0);                                             // You cannot pass a NULL str_id if the last item has no identifier (e.g. a Text() item)
-    ImGuiMouseButton mouse_button = GetMouseButtonFromPopupFlags(popup_flags);
-    bool isMouseInvocation = IsMouseReleased(mouse_button) && IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup);
-    bool isKeyboardInvocation = false;
-    if ((g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard) && IsItemFocused())
-        isKeyboardInvocation = IsKeyReleased(ImGuiKey_Menu) || (IsKeyReleased(ImGuiKey_F10) && g.IO.KeyShift);
-    if (isKeyboardInvocation || isMouseInvocation)
+    ImGuiID id = str_id ? window->GetID(str_id) : g.LastItemData.ID; // If user hasn't passed an ID, we can use the LastItem ID. Using LastItem ID as a Popup ID won't conflict!
+    IM_ASSERT(id != 0);                                              // You cannot pass a NULL str_id if the last item has no identifier (e.g. a Text() item)
+    if (IsPopupOpenRequestForItem(popup_flags, g.LastItemData.ID))
         OpenPopupEx(id, popup_flags);
     return BeginPopupEx(id, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings);
 }
@@ -12558,14 +12590,8 @@ bool ImGui::BeginPopupContextWindow(const char* str_id, ImGuiPopupFlags popup_fl
     if (!str_id)
         str_id = "window_context";
     ImGuiID id = window->GetID(str_id);
-    ImGuiMouseButton mouse_button = GetMouseButtonFromPopupFlags(popup_flags);
-    bool isMouseInvocation = IsMouseReleased(mouse_button) && IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup);
-    bool isKeyboardInvocation = false;
-    if ((g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard) && IsWindowFocused())
-        isKeyboardInvocation = IsKeyReleased(ImGuiKey_Menu) || (IsKeyReleased(ImGuiKey_F10) && g.IO.KeyShift);
-    if (isMouseInvocation || isKeyboardInvocation)
-        if (!(popup_flags & ImGuiPopupFlags_NoOpenOverItems) || !IsAnyItemHovered() || isKeyboardInvocation)
-            OpenPopupEx(id, popup_flags);
+    if (IsPopupOpenRequestForWindow(popup_flags, window->ID))
+        OpenPopupEx(id, popup_flags);
     return BeginPopupEx(id, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings);
 }
 

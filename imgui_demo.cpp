@@ -8738,6 +8738,7 @@ void ImGui::ShowUserGuide()
     BulletText("Return to input text into a widget.");
     BulletText("Escape to deactivate a widget, close popup,\nexit a child window or the menu layer, clear focus.");
     BulletText("Alt to jump to the menu layer of a window.");
+    BulletText("Menu or Shift+F10 to open a context menu.");
     Unindent();
 }
 
