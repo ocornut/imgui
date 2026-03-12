@@ -30,7 +30,7 @@
 // Library Version
 // (Integer encoded as XYYZZ for use in #if preprocessor conditionals, e.g. '#if IMGUI_VERSION_NUM >= 12345')
 #define IMGUI_VERSION       "1.92.7 WIP"
-#define IMGUI_VERSION_NUM   19264
+#define IMGUI_VERSION_NUM   19265
 #define IMGUI_HAS_TABLE             // Added BeginTable() - from IMGUI_VERSION_NUM >= 18000
 #define IMGUI_HAS_TEXTURES          // Added ImGuiBackendFlags_RendererHasTextures - from IMGUI_VERSION_NUM >= 19198
 
@@ -340,9 +340,11 @@ IM_MSVC_RUNTIME_CHECKS_RESTORE
 typedef ImU64 ImTextureID;      // Default: store up to 64-bits (any pointer or integer). A majority of backends are ok with that.
 #endif
 
-// Define this if you need 0 to be a valid ImTextureID for your backend.
+// Define this if you need to change the invalid value for your backend.
+// - in v1.92.7 (2025/03/12): we changed default value from 0 to -1 as it is a better default, which supports storing offsets/indices.
+// - If this is causing problem with your custom ImTextureID definition, you can add '#define ImTextureID_Invalid' to your imconfig + please report this to GitHub.
 #ifndef ImTextureID_Invalid
-#define ImTextureID_Invalid     ((ImTextureID)0)
+#define ImTextureID_Invalid     ((ImTextureID)-1)
 #endif
 
 // ImTextureRef = higher-level identifier for a texture. Store a ImTextureID _or_ a ImTextureData*.
@@ -3906,8 +3908,10 @@ inline ImTextureID ImTextureRef::GetTexID() const
 // Using an indirection to avoid patching ImDrawCmd after a SetTexID() call (but this could be an alternative solution too)
 inline ImTextureID ImDrawCmd::GetTexID() const
 {
-    // If you are getting this assert: A renderer backend with support for ImGuiBackendFlags_RendererHasTextures (1.92)
-    // must iterate and handle ImTextureData requests stored in ImDrawData::Textures[].
+    // If you are getting this assert with ImTextureID_Invalid == 0 and your ImTextureID is used to store an index:
+    // - You can add '#define ImTextureID_Invalid ((ImTextureID)-1)' in your imconfig file.
+    // If you are getting this assert with a renderer backend with support for ImGuiBackendFlags_RendererHasTextures (1.92+):
+    // - You must correctly iterate and handle ImTextureData requests stored in ImDrawData::Textures[]. See docs/BACKENDS.md.
     ImTextureID tex_id = TexRef._TexData ? TexRef._TexData->TexID : TexRef._TexID; // == TexRef.GetTexID() above.
     if (TexRef._TexData != NULL)
         IM_ASSERT(tex_id != ImTextureID_Invalid && "ImDrawCmd is referring to ImTextureData that wasn't uploaded to graphics system. Backend must call ImTextureData::SetTexID() after handling ImTextureStatus_WantCreate request!");

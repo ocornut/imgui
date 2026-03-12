@@ -41,6 +41,12 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
+ - Changed default ImTextureID_Invalid value to -1 instead of 0 if not #define-d.
+    (#9293, #8745, #8465, #7090)
+   - It seems like a better default since it will work with backends storing
+     indices or memory offsets inside ImTextureID, where 0 might be a valid value.
+   - If this is causing problem with e.g your custom ImTextureID definition, you can
+     add '#define ImTextureID_Invalid 0' to your imconfig.h + PLEASE report this to GitHub.
  - Separator(): fixed a legacy quirk where Separator() was submitting a zero-height
    item for layout purpose, even though it draws a 1-pixel separator.
    The fix could affect code e.g. computing height from multiple widgets in order to

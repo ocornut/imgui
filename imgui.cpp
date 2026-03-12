@@ -394,6 +394,9 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
  When you are not sure about an old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2026/03/12 (1.92.7) - Changed default ImTextureID_Invalid to -1 instead of 0 if not #define-d. (#9293, #8745, #8465, #7090)
+                         It seems like a better default since it will work with backends storing indices or memory offsets inside ImTextureID, where 0 might be a valid value.
+                         If this is causing problem with e.g. your custom ImTextureID definition, you can add '#define ImTextureID_Invalid 0' to your imconfig.h + PLEASE report this to GitHub.
  - 2026/02/26 (1.92.7) - Separator: fixed a legacy quirk where Separator() was submitting a zero-height item for layout purpose, even though it draws a 1-pixel separator.
                          The fix could affect code e.g. computing height from multiple widgets in order to allocate vertical space for a footer or multi-line status bar. (#2657, #9263)
                          The "Console" example had such a bug:
@@ -402,8 +405,7 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
                          Should be:
                             float footer_height = style.ItemSpacing.y + style.SeparatorSize + ImGui::GetFrameHeightWithSpacing();
                             BeginChild("ScrollingRegion", { 0, -footer_height });
-   When such idiom was used and assuming zero-height Separator, it is likely that
-   in 1.92.7 the resulting window will have unexpected 1 pixel scrolling range.
+                         When such idiom was used and assuming zero-height Separator, it is likely that in 1.92.7 the resulting window will have unexpected 1 pixel scrolling range.
  - 2026/02/23 (1.92.7) - Commented out legacy signature for Combo(), ListBox(), signatures which were obsoleted in 1.90 (Nov 2023), when the getter callback type was changed.
                          - Old getter type:   bool (*getter)(void* user_data, int idx, const char** out_text)   // Set label + return bool. False replaced label with placeholder.
                          - New getter type:   const char* (*getter)(void* user_data, int idx)                   // Return label or NULL/empty label if missing
