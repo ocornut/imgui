@@ -14252,10 +14252,13 @@ static void ImGui::NavUpdateContextMenuRequest()
     ImGuiContext& g = *GImGui;
     g.NavOpenContextMenuItemId = g.NavOpenContextMenuWindowId = 0;
     const bool nav_keyboard_active = (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard) != 0;
-    if (!nav_keyboard_active || g.NavWindow == NULL)
+    const bool nav_gamepad_active = (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard) != 0;
+    if ((!nav_keyboard_active && !nav_gamepad_active) || g.NavWindow == NULL)
         return;
 
-    const bool request = IsKeyReleased(ImGuiKey_Menu, ImGuiKeyOwner_NoOwner) || (IsKeyPressed(ImGuiKey_F10, ImGuiInputFlags_None, ImGuiKeyOwner_NoOwner) && g.IO.KeyMods == ImGuiMod_Shift);
+    bool request = false;
+    request |= nav_keyboard_active && (IsKeyReleased(ImGuiKey_Menu, ImGuiKeyOwner_NoOwner) || (IsKeyPressed(ImGuiKey_F10, ImGuiInputFlags_None, ImGuiKeyOwner_NoOwner) && g.IO.KeyMods == ImGuiMod_Shift));
+    request |= nav_gamepad_active && IsKeyPressed(ImGuiKey_NavGamepadContextMenu, ImGuiInputFlags_None, ImGuiKeyOwner_NoOwner);
     if (!request)
         return;
     g.NavOpenContextMenuItemId = g.NavId;

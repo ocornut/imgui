@@ -103,6 +103,7 @@ Other Changes:
   - Popups: Shift+F10 or Menu key can now open popups menus when using
     BeginPopupContextItem(), BeginPopupContextWindow() or OpenPopupOnItemClick().
     (#8803, #9270) [@exelix11, @ocornut]
+  - Popups: pressing North button (PS4/PS5 triangle, SwitchX, Xbox Y) also open popups menus.
 - Clipper:
   - Clear `DisplayStart`/`DisplayEnd` fields when `Step()` returns false.
   - Added `UserIndex` helper storage. This is solely a convenience for cases where

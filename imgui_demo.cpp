@@ -8731,7 +8731,7 @@ void ImGui::ShowUserGuide()
     BulletText("Ctrl+Z to undo, Ctrl+Y/Ctrl+Shift+Z to redo.");
     BulletText("Escape to revert.");
     Unindent();
-    BulletText("With keyboard navigation enabled:");
+    BulletText("With Keyboard controls enabled:");
     Indent();
     BulletText("Arrow keys or Home/End/PageUp/PageDown to navigate.");
     BulletText("Space to activate a widget.");
@@ -8739,6 +8739,15 @@ void ImGui::ShowUserGuide()
     BulletText("Escape to deactivate a widget, close popup,\nexit a child window or the menu layer, clear focus.");
     BulletText("Alt to jump to the menu layer of a window.");
     BulletText("Menu or Shift+F10 to open a context menu.");
+    Unindent();
+    BulletText("With Gamepad controls enabled:");
+    Indent();
+    BulletText("D-Pad: Navigate / Tweak / Resize (in Windowing mode).");
+    BulletText("%s Face button: Activate / Open / Toggle. Hold: activate with text input.", io.ConfigNavSwapGamepadButtons ? "East" : "South");
+    BulletText("%s Face button: Cancel / Close / Exit.", io.ConfigNavSwapGamepadButtons ? "South" : "East");
+    BulletText("West Face button: Toggle Menu. Hold for Windowing mode (Focus/Move/Resize windows).");
+    BulletText("North Face button: Open Context Menu.");
+    BulletText("L1/R1: Tweak Slower/Faster, Focus Previous/Next (in Windowing Mode).");
     Unindent();
 }
 
