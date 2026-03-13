@@ -95,6 +95,11 @@ Other Changes:
     - ColorButton() border thickness.
     - Separator() thickness, via scaling newly added style.SeparatorSize. (#2657, #9263)
 - Nav:
+  - Changed Gamepad mapping for "Activate with Text Input" action: (#8803, #787)
+    - Previously: press North button (PS4/PS5 triangle, Switch X, Xbox Y).
+    - Now: long press (hold) Activate button (PS4/PS5 cross, Switch B, Xbox A) for ~0.60 secs.
+    This is rarely used, somehow easier to discover, and frees a button for other uses.
+    See updated Gamepad Control Sheets: https://www.dearimgui.com/controls_sheets
   - Popups: Shift+F10 or Menu key can now open popups menus when using
     BeginPopupContextItem(), BeginPopupContextWindow() or OpenPopupOnItemClick().
     (#8803, #9270) [@exelix11, @ocornut]
