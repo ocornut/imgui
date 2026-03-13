@@ -100,6 +100,7 @@ Other Changes:
     - Now: long press (hold) Activate button (PS4/PS5 cross, Switch B, Xbox A) for ~0.60 secs.
     This is rarely used, somehow easier to discover, and frees a button for other uses.
     See updated Gamepad Control Sheets: https://www.dearimgui.com/controls_sheets
+  - Short Gamepad Activation press on InputText() always activate with Text Input mode.
   - Popups: Shift+F10 or Menu key can now open popups menus when using
     BeginPopupContextItem(), BeginPopupContextWindow() or OpenPopupOnItemClick().
     (#8803, #9270) [@exelix11, @ocornut]
