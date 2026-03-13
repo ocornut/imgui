@@ -53,7 +53,7 @@ int main(int, char**)
 
     // Create window with graphics context
     float main_scale = ImGui_ImplSDL2_GetContentScaleForDisplay(0);
-    SDL_WindowFlags window_flags = SDL_WINDOW_RESIZABLE;
+    SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
     SDL_Window* window = SDL_CreateWindow("Dear ImGui SDL2+WebGPU example", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, wgpu_surface_width, wgpu_surface_height, window_flags);
     if (window == nullptr)
     {
@@ -143,7 +143,7 @@ int main(int, char**)
 
         // React to changes in screen size
         int width, height;
-        SDL_GetWindowSize(window, &width, &height);
+        SDL_GetWindowSizeInPixels(window, &width, &height);
         if (width != wgpu_surface_width || height != wgpu_surface_height)
             ResizeSurface(width, height);
 
