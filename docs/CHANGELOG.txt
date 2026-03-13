@@ -41,6 +41,16 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
+ - Changed default ImTextureID_Invalid value to -1 instead of 0 if not #define-d.
+    (#9293, #8745, #8465, #7090)
+   - It seems like a better default since it will work with backends storing
+     indices or memory offsets inside ImTextureID, where 0 might be a valid value.
+   - If this is causing problem with e.g your custom ImTextureID definition, you can
+     add '#define ImTextureID_Invalid 0' to your imconfig.h + PLEASE report this to GitHub.
+   - If you have hardcoded e.g. 'if (tex_id == 0)' checks they should be updated.
+     e.g. OpenGL2, OpenGL3 and SDLRenderer3 backends incorrectly had 'IM_ASSERT(tex->TexID == 0)'
+     lines which were replaced with 'IM_ASSERT(tex->TexID == ImTextureID_Invalid)'.
+     If you have copied or forked backends consider fixing locally. (#9295)
  - Separator(): fixed a legacy quirk where Separator() was submitting a zero-height
    item for layout purpose, even though it draws a 1-pixel separator.
    The fix could affect code e.g. computing height from multiple widgets in order to
@@ -75,6 +85,8 @@ Other Changes:
   - Reworked io.ConfigInputTextEnterKeepActive mode so that pressing Enter will
     deactivate/reactivate the item in order for e.g. IsItemDeactivatedAfterEdit()
     signals to be emitted the same way regardless of that setting. (#9001, #9115)
+  - Fixed a glitch when using ImGuiInputTextFlags_ElideLeft where the local x offset
+    would be incorrect during the deactivation frame. (#9298)
 - Style:
   - Border sizes are now scaled (and rounded) by ScaleAllSizes().
   - When using large values with ScallAllSizes(), the following items thickness
@@ -84,6 +96,17 @@ Other Changes:
     - TextLink() underline thickness.
     - ColorButton() border thickness.
     - Separator() thickness, via scaling newly added style.SeparatorSize. (#2657, #9263)
+- Nav:
+  - Changed Gamepad mapping for "Activate with Text Input" action: (#8803, #787)
+    - Previously: press North button (PS4/PS5 triangle, Switch X, Xbox Y).
+    - Now: long press (hold) Activate button (PS4/PS5 cross, Switch B, Xbox A) for ~0.60 secs.
+    This is rarely used, somehow easier to discover, and frees a button for other uses.
+    See updated Gamepad Control Sheets: https://www.dearimgui.com/controls_sheets
+  - Short Gamepad Activation press on InputText() always activate with Text Input mode.
+  - Popups: Shift+F10 or Menu key can now open popups menus when using
+    BeginPopupContextItem(), BeginPopupContextWindow() or OpenPopupOnItemClick().
+    (#8803, #9270) [@exelix11, @ocornut]
+  - Popups: pressing North button (PS4/PS5 triangle, SwitchX, Xbox Y) also open popups menus.
 - Clipper:
   - Clear `DisplayStart`/`DisplayEnd` fields when `Step()` returns false.
   - Added `UserIndex` helper storage. This is solely a convenience for cases where
@@ -92,6 +115,8 @@ Other Changes:
   - Implemented a custom tweak to extend hit-testing bounding box when window is sitting
     at the edge of a viewport (e.g. fullscreen or docked window), so that e.g. mouse the
     mouse at the extreme of the screen will reach the scrollbar. (#9276)
+- Focus: fixed fallback "Debug" window temporarily taking focus and setting io.WantCaptureKeyboard
+  for one frame on e.g. application boot if no other windows are submitted. (#9243)
 - Demo: fixed IMGUI_DEMO_MARKER locations for examples applets. (#9261, #3689) [@pthom]
 - Backends:
   - SDLGPU3: removed unnecessary call to SDL_WaitForGPUIdle when releasing
@@ -107,8 +132,11 @@ Other Changes:
     - hidden scrollbar in Firefox.
   - Vulkan: added ImGui_ImplVulkan_PipelineInfo::ExtraDynamicStates[] to allow specifying
     extra dynamic states to add when creating the VkPipeline. (#9211) [@DziubanMaciej]
+  - Vulkan: ImGui_ImplVulkan_AddTexture() skips updating descriptor_set if failing
+    to allocate one. (#8677) [@micb25]
   - WebGPU: fixed undefined behaviors in example code for requesting adapter
     and device. (#9246, #9256) [@r-lyeh]
+  - SDL2+WebGPU: fixed hi-dpi handling. (#9300) [@ypujante]
   - GLFW/SDL2/SDL3+WebGPU: removed suport for Emscripten <4.0.10. (#9281) [@ypujante]
 
 Docking+Viewports Branch:
