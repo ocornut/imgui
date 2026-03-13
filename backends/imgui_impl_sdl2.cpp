@@ -580,6 +580,11 @@ static bool ImGui_ImplSDL2_Init(SDL_Window* window, SDL_Renderer* renderer, void
     SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
 #endif
 
+    // From 2.0.4: A hint that specifies whether certain IMEs should handle text editing internally instead of sending SDL_EVENT_TEXT_EDITING events.
+#ifdef SDL_HINT_IME_INTERNAL_EDITING
+    SDL_SetHint(SDL_HINT_IME_INTERNAL_EDITING, "1");
+#endif
+
     // From 2.0.18: Enable native IME.
     // IMPORTANT: This is used at the time of SDL_CreateWindow() so this will only affects secondary windows, if any.
     // For the main window to be affected, your application needs to call this manually before calling SDL_CreateWindow().
