@@ -5568,7 +5568,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     }
 
     // Find render position for right alignment (single-line only)
-    if (g.ActiveId != id && flags & ImGuiInputTextFlags_ElideLeft)
+    if (g.ActiveId != id && (flags & ImGuiInputTextFlags_ElideLeft) && !render_cursor && !render_selection)
         draw_pos.x = ImMin(draw_pos.x, frame_bb.Max.x - CalcTextSize(buf_display, NULL).x - style.FramePadding.x);
     //draw_scroll.x = state->Scroll.x; // Preserve scroll when inactive?
 

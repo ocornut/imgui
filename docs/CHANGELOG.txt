@@ -85,6 +85,8 @@ Other Changes:
   - Reworked io.ConfigInputTextEnterKeepActive mode so that pressing Enter will
     deactivate/reactivate the item in order for e.g. IsItemDeactivatedAfterEdit()
     signals to be emitted the same way regardless of that setting. (#9001, #9115)
+  - Fixed a glitch when using ImGuiInputTextFlags_ElideLeft where the local x offset
+    would be incorrect during the deactivation frame. (#9298)
 - Style:
   - Border sizes are now scaled (and rounded) by ScaleAllSizes().
   - When using large values with ScallAllSizes(), the following items thickness
