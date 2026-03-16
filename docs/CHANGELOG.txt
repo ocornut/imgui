@@ -115,6 +115,9 @@ Other Changes:
   - Implemented a custom tweak to extend hit-testing bounding box when window is sitting
     at the edge of a viewport (e.g. fullscreen or docked window), so that e.g. mouse the
     mouse at the extreme of the screen will reach the scrollbar. (#9276)
+- Button:
+  - Moved ImGuiButtonFlags_AllowOverlap from imgui_internal.h to imgui.h,
+    as a convenience for when using e.g. InvisibleButton().
 - Focus: fixed fallback "Debug" window temporarily taking focus and setting io.WantCaptureKeyboard
   for one frame on e.g. application boot if no other windows are submitted. (#9243)
 - Demo: fixed IMGUI_DEMO_MARKER locations for examples applets. (#9261, #3689) [@pthom]
