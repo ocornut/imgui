@@ -5217,7 +5217,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         render_selection |= state->HasSelection() && (RENDER_SELECTION_WHEN_INACTIVE || render_cursor);
     }
 
-    // Process callbacks and apply result back to user's buffer.
+    // Process revert and user callbacks
     const char* apply_new_text = NULL;
     int apply_new_text_length = 0;
     if (g.ActiveId == id)
@@ -5247,110 +5247,99 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             }
         }
 
-        // FIXME-OPT: We always reapply the live buffer back to the input buffer before clearing ActiveId,
-        // even though strictly speaking it wasn't modified on this frame. Should mark dirty state from the stb_textedit callbacks.
-        // If we do that, need to ensure that as special case, 'validated == true' also writes back.
-        // This also allows the user to use InputText() without maintaining any user-side storage.
-        // (please note that if you use this property along ImGuiInputTextFlags_CallbackResize you can end up with your temporary string object
-        // unnecessarily allocating once a frame, either store your string data, either if you don't then don't use ImGuiInputTextFlags_CallbackResize).
-        const bool apply_edit_back_to_user_buffer = true;// !revert_edit || (validated && (flags & ImGuiInputTextFlags_EnterReturnsTrue) != 0);
-        if (apply_edit_back_to_user_buffer)
+        // User callback
+        if ((flags & (ImGuiInputTextFlags_CallbackCompletion | ImGuiInputTextFlags_CallbackHistory | ImGuiInputTextFlags_CallbackEdit | ImGuiInputTextFlags_CallbackAlways)) != 0)
         {
-            // Apply current edited text immediately.
-            // Note that as soon as the input box is active, the in-widget value gets priority over any underlying modification of the input buffer
+            IM_ASSERT(callback != NULL);
 
-            // User callback
-            if ((flags & (ImGuiInputTextFlags_CallbackCompletion | ImGuiInputTextFlags_CallbackHistory | ImGuiInputTextFlags_CallbackEdit | ImGuiInputTextFlags_CallbackAlways)) != 0)
+            // The reason we specify the usage semantic (Completion/History) is that Completion needs to disable keyboard TABBING at the moment.
+            ImGuiInputTextFlags event_flag = 0;
+            ImGuiKey event_key = ImGuiKey_None;
+            if ((flags & ImGuiInputTextFlags_CallbackCompletion) != 0 && Shortcut(ImGuiKey_Tab, 0, id))
             {
-                IM_ASSERT(callback != NULL);
-
-                // The reason we specify the usage semantic (Completion/History) is that Completion needs to disable keyboard TABBING at the moment.
-                ImGuiInputTextFlags event_flag = 0;
-                ImGuiKey event_key = ImGuiKey_None;
-                if ((flags & ImGuiInputTextFlags_CallbackCompletion) != 0 && Shortcut(ImGuiKey_Tab, 0, id))
-                {
-                    event_flag = ImGuiInputTextFlags_CallbackCompletion;
-                    event_key = ImGuiKey_Tab;
-                }
-                else if ((flags & ImGuiInputTextFlags_CallbackHistory) != 0 && IsKeyPressed(ImGuiKey_UpArrow))
-                {
-                    event_flag = ImGuiInputTextFlags_CallbackHistory;
-                    event_key = ImGuiKey_UpArrow;
-                }
-                else if ((flags & ImGuiInputTextFlags_CallbackHistory) != 0 && IsKeyPressed(ImGuiKey_DownArrow))
-                {
-                    event_flag = ImGuiInputTextFlags_CallbackHistory;
-                    event_key = ImGuiKey_DownArrow;
-                }
-                else if ((flags & ImGuiInputTextFlags_CallbackEdit) && state->Edited)
-                {
-                    event_flag = ImGuiInputTextFlags_CallbackEdit;
-                }
-                else if (flags & ImGuiInputTextFlags_CallbackAlways)
-                {
-                    event_flag = ImGuiInputTextFlags_CallbackAlways;
-                }
-
-                if (event_flag)
-                {
-                    ImGuiInputTextCallbackData callback_data;
-                    callback_data.Ctx = &g;
-                    callback_data.ID = id;
-                    callback_data.Flags = flags;
-                    callback_data.EventFlag = event_flag;
-                    callback_data.EventActivated = (g.ActiveId == state->ID && g.ActiveIdIsJustActivated);
-                    callback_data.UserData = callback_user_data;
-
-                    // FIXME-OPT: Undo stack reconcile needs a backup of the data until we rework API, see #7925
-                    char* callback_buf = is_readonly ? buf : state->TextA.Data;
-                    IM_ASSERT(callback_buf == state->TextSrc);
-                    state->CallbackTextBackup.resize(state->TextLen + 1);
-                    memcpy(state->CallbackTextBackup.Data, callback_buf, state->TextLen + 1);
-
-                    callback_data.EventKey = event_key;
-                    callback_data.Buf = callback_buf;
-                    callback_data.BufTextLen = state->TextLen;
-                    callback_data.BufSize = state->BufCapacity;
-                    callback_data.BufDirty = false;
-                    callback_data.CursorPos = state->Stb->cursor;
-                    callback_data.SelectionStart = state->Stb->select_start;
-                    callback_data.SelectionEnd = state->Stb->select_end;
-
-                    // Call user code
-                    callback(&callback_data);
-
-                    // Read back what user may have modified
-                    callback_buf = is_readonly ? buf : state->TextA.Data; // Pointer may have been invalidated by a resize callback
-                    IM_ASSERT(callback_data.Buf == callback_buf);         // Invalid to modify those fields
-                    IM_ASSERT(callback_data.BufSize == state->BufCapacity);
-                    IM_ASSERT(callback_data.Flags == flags);
-                    if (callback_data.BufDirty || callback_data.CursorPos != state->Stb->cursor)
-                        state->CursorFollow = true;
-                    state->Stb->cursor = ImClamp(callback_data.CursorPos, 0, callback_data.BufTextLen);
-                    state->Stb->select_start = ImClamp(callback_data.SelectionStart, 0, callback_data.BufTextLen);
-                    state->Stb->select_end = ImClamp(callback_data.SelectionEnd, 0, callback_data.BufTextLen);
-                    if (callback_data.BufDirty)
-                    {
-                        // Callback may update buffer and thus set buf_dirty even in read-only mode.
-                        IM_ASSERT(callback_data.BufTextLen == (int)ImStrlen(callback_data.Buf)); // You need to maintain BufTextLen if you change the text!
-                        InputTextReconcileUndoState(state, state->CallbackTextBackup.Data, state->CallbackTextBackup.Size - 1, callback_data.Buf, callback_data.BufTextLen);
-                        state->TextLen = callback_data.BufTextLen;  // Assume correct length and valid UTF-8 from user, saves us an extra strlen()
-                        state->CursorAnimReset();
-                    }
-                }
+                event_flag = ImGuiInputTextFlags_CallbackCompletion;
+                event_key = ImGuiKey_Tab;
+            }
+            else if ((flags & ImGuiInputTextFlags_CallbackHistory) != 0 && IsKeyPressed(ImGuiKey_UpArrow))
+            {
+                event_flag = ImGuiInputTextFlags_CallbackHistory;
+                event_key = ImGuiKey_UpArrow;
+            }
+            else if ((flags & ImGuiInputTextFlags_CallbackHistory) != 0 && IsKeyPressed(ImGuiKey_DownArrow))
+            {
+                event_flag = ImGuiInputTextFlags_CallbackHistory;
+                event_key = ImGuiKey_DownArrow;
+            }
+            else if ((flags & ImGuiInputTextFlags_CallbackEdit) && state->Edited)
+            {
+                event_flag = ImGuiInputTextFlags_CallbackEdit;
+            }
+            else if (flags & ImGuiInputTextFlags_CallbackAlways)
+            {
+                event_flag = ImGuiInputTextFlags_CallbackAlways;
             }
 
-            // Will copy result string if modified
-            if (!is_readonly && strcmp(state->TextSrc, buf) != 0)
+            if (event_flag)
             {
-                apply_new_text = state->TextSrc;
-                apply_new_text_length = state->TextLen;
-                value_changed = true;
+                ImGuiInputTextCallbackData callback_data;
+                callback_data.Ctx = &g;
+                callback_data.ID = id;
+                callback_data.Flags = flags;
+                callback_data.EventFlag = event_flag;
+                callback_data.EventActivated = (g.ActiveId == state->ID && g.ActiveIdIsJustActivated);
+                callback_data.UserData = callback_user_data;
+
+                // FIXME-OPT: Undo stack reconcile needs a backup of the data until we rework API, see #7925
+                char* callback_buf = is_readonly ? buf : state->TextA.Data;
+                IM_ASSERT(callback_buf == state->TextSrc);
+                state->CallbackTextBackup.resize(state->TextLen + 1);
+                memcpy(state->CallbackTextBackup.Data, callback_buf, state->TextLen + 1);
+
+                callback_data.EventKey = event_key;
+                callback_data.Buf = callback_buf;
+                callback_data.BufTextLen = state->TextLen;
+                callback_data.BufSize = state->BufCapacity;
+                callback_data.BufDirty = false;
+                callback_data.CursorPos = state->Stb->cursor;
+                callback_data.SelectionStart = state->Stb->select_start;
+                callback_data.SelectionEnd = state->Stb->select_end;
+
+                // Call user code
+                callback(&callback_data);
+
+                // Read back what user may have modified
+                callback_buf = is_readonly ? buf : state->TextA.Data; // Pointer may have been invalidated by a resize callback
+                IM_ASSERT(callback_data.Buf == callback_buf);         // Invalid to modify those fields
+                IM_ASSERT(callback_data.BufSize == state->BufCapacity);
+                IM_ASSERT(callback_data.Flags == flags);
+                if (callback_data.BufDirty || callback_data.CursorPos != state->Stb->cursor)
+                    state->CursorFollow = true;
+                state->Stb->cursor = ImClamp(callback_data.CursorPos, 0, callback_data.BufTextLen);
+                state->Stb->select_start = ImClamp(callback_data.SelectionStart, 0, callback_data.BufTextLen);
+                state->Stb->select_end = ImClamp(callback_data.SelectionEnd, 0, callback_data.BufTextLen);
+                if (callback_data.BufDirty)
+                {
+                    // Callback may update buffer and thus set buf_dirty even in read-only mode.
+                    IM_ASSERT(callback_data.BufTextLen == (int)ImStrlen(callback_data.Buf)); // You need to maintain BufTextLen if you change the text!
+                    InputTextReconcileUndoState(state, state->CallbackTextBackup.Data, state->CallbackTextBackup.Size - 1, callback_data.Buf, callback_data.BufTextLen);
+                    state->TextLen = callback_data.BufTextLen;  // Assume correct length and valid UTF-8 from user, saves us an extra strlen()
+                    state->CursorAnimReset();
+                }
             }
+        }
+
+        // Will copy result string if modified.
+        // FIXME-OPT: Could mark dirty state from the stb_textedit callbacks
+        if (!is_readonly && strcmp(state->TextSrc, buf) != 0)
+        {
+            apply_new_text = state->TextSrc;
+            apply_new_text_length = state->TextLen;
+            value_changed = true;
         }
     }
 
     // Handle reapplying final data on deactivation (see InputTextDeactivateHook() for details)
+    // This is used when e.g. losing focus or tabbing out into another InputText() which may already be using the temp buffer.
     if (g.InputTextDeactivatedState.ID == id)
     {
         if (g.ActiveId != id && IsItemDeactivatedAfterEdit() && !is_readonly && strcmp(g.InputTextDeactivatedState.TextA.Data, buf) != 0)
@@ -5363,12 +5352,14 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         g.InputTextDeactivatedState.ID = 0;
     }
 
-    // Copy result to user buffer. This can currently only happen when (g.ActiveId == id)
+    // Write back result to user buffer. This can currently only happen when (g.ActiveId == id) or when just deactivated.
+    // - As soon as the InputText() is active, our stored in-widget value gets priority over any underlying modification of the user buffer.
+    // - Make sure we always reapply the live buffer back to the input/user buffer before clearing ActiveId, even thought strictly speaking
+    //   it was not modified on this frame. This allows the user to use InputText() without maintaining any user-side storage.
+    //   (PS: if you use this property together with ImGuiInputTextFlags_CallbackResize, you are at the risk of recreating a temporary
+    //    allocated/string object every frame. Which in the grand scheme of scheme is nothing, but isn't dear imgui vibe).
     if (apply_new_text != NULL)
     {
-        //// We cannot test for 'backup_current_text_length != apply_new_text_length' here because we have no guarantee that the size
-        //// of our owned buffer matches the size of the string object held by the user, and by design we allow InputText() to be used
-        //// without any storage on user's side.
         IM_ASSERT(apply_new_text_length >= 0);
         if (is_resizable)
         {

@@ -1258,6 +1258,7 @@ struct IMGUI_API ImGuiInputTextState
     void        OnKeyPressed(int key);      // Cannot be inline because we call in code in stb_textedit.h implementation
     void        OnCharPressed(unsigned int c);
     float       GetPreferredOffsetX() const;
+    const char* GetText()                   { return TextA.Data ? TextA.Data : ""; }
 
     // Cursor & Selection
     void        CursorAnimReset();
