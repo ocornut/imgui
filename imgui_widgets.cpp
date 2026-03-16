@@ -3789,24 +3789,30 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* p_data
     g.NextItemData.ItemFlags |= ImGuiItemFlags_NoMarkEdited;
     flags |= ImGuiInputTextFlags_AutoSelectAll | (ImGuiInputTextFlags)ImGuiInputTextFlags_LocalizeDecimalPoint;
 
-    bool value_changed = false;
-    if (p_step == NULL)
+    const bool has_step_buttons = (p_step != NULL);
+    const float button_size = has_step_buttons ? GetFrameHeight() : 0.0f;
+    bool ret;
+    if (has_step_buttons)
     {
-        if (InputText(label, buf, IM_COUNTOF(buf), flags))
-            value_changed = DataTypeApplyFromText(buf, data_type, p_data, format, (flags & ImGuiInputTextFlags_ParseEmptyRefVal) ? p_data_default : NULL);
-    }
-    else
-    {
-        const float button_size = GetFrameHeight();
-
+        // With Step Buttons
         BeginGroup(); // The only purpose of the group here is to allow the caller to query item data e.g. IsItemActive()
         PushID(label);
         SetNextItemWidth(ImMax(1.0f, CalcItemWidth() - (button_size + style.ItemInnerSpacing.x) * 2));
-        if (InputText("", buf, IM_COUNTOF(buf), flags)) // PushId(label) + "" gives us the expected ID from outside point of view
-            value_changed = DataTypeApplyFromText(buf, data_type, p_data, format, (flags & ImGuiInputTextFlags_ParseEmptyRefVal) ? p_data_default : NULL);
+        ret = InputText("", buf, IM_COUNTOF(buf), flags); // PushID(label) + "" gives us the expected ID from outside point of view
         IMGUI_TEST_ENGINE_ITEM_INFO(g.LastItemData.ID, label, g.LastItemData.StatusFlags | ImGuiItemStatusFlags_Inputable);
+    }
+    else
+    {
+        // Without Step Buttons
+        ret = InputText(label, buf, IM_COUNTOF(buf), flags);
+    }
 
-        // Step buttons
+    // Apply
+    bool value_changed = ret ? DataTypeApplyFromText(buf, data_type, p_data, format, (flags & ImGuiInputTextFlags_ParseEmptyRefVal) ? p_data_default : NULL) : false;
+
+    // Step buttons
+    if (has_step_buttons)
+    {
         const ImVec2 backup_frame_padding = style.FramePadding;
         style.FramePadding.x = style.FramePadding.y;
         if (flags & ImGuiInputTextFlags_ReadOnly)
