@@ -123,7 +123,9 @@ Other Changes:
 - Memory:
   - Discard/GC of ImDrawList buffers for unused windows favor restoring them to
     ~Size*1.05 instead of Capacity when awakening again. Facilitate releasing ImDrawList
-    buffers after unusual usage spike. (#9303).
+    buffers after unusual usage spike. (#9303)
+  - Fixed GetForegroundDrawList()/GetBackgroundDrawList() per-viewport buffers not being
+    collected when unused for io.ConfigMemoryCompactTimer amount of time. (#9303)
 - Demo: fixed IMGUI_DEMO_MARKER locations for examples applets. (#9261, #3689) [@pthom]
 - Backends:
   - SDLGPU3: removed unnecessary call to SDL_WaitForGPUIdle when releasing

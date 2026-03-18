@@ -5198,12 +5198,12 @@ static ImDrawList* GetViewportBgFgDrawList(ImGuiViewportP* viewport, size_t draw
     }
 
     // Our ImDrawList system requires that there is always a command
-    if (viewport->BgFgDrawListsLastFrame[drawlist_no] != g.FrameCount)
+    if (viewport->BgFgDrawListsLastTimeActive[drawlist_no] != (float)g.Time)
     {
         draw_list->_ResetForNewFrame();
         draw_list->PushTexture(g.IO.Fonts->TexRef);
         draw_list->PushClipRect(viewport->Pos, viewport->Pos + viewport->Size, false);
-        viewport->BgFgDrawListsLastFrame[drawlist_no] = g.FrameCount;
+        viewport->BgFgDrawListsLastTimeActive[drawlist_no] = (float)g.Time;
     }
     return draw_list;
 }
@@ -6089,7 +6089,7 @@ void ImGui::Render()
     for (ImGuiViewportP* viewport : g.Viewports)
     {
         InitViewportDrawData(viewport);
-        if (viewport->BgFgDrawLists[0] != NULL)
+        if (viewport->BgFgDrawLists[0] != NULL && viewport->BgFgDrawListsLastTimeActive[0] == (float)g.Time)
             AddDrawListToDrawDataEx(&viewport->DrawDataP, viewport->DrawDataBuilder.Layers[0], GetBackgroundDrawList(viewport));
     }
 
@@ -6121,7 +6121,7 @@ void ImGui::Render()
         FlattenDrawDataIntoSingleLayer(&viewport->DrawDataBuilder);
 
         // Add foreground ImDrawList (for each active viewport)
-        if (viewport->BgFgDrawLists[1] != NULL)
+        if (viewport->BgFgDrawLists[1] != NULL && viewport->BgFgDrawListsLastTimeActive[1] == (float)g.Time)
             AddDrawListToDrawDataEx(&viewport->DrawDataP, viewport->DrawDataBuilder.Layers[0], GetForegroundDrawList(viewport));
 
         // We call _PopUnusedDrawCmd() last thing, as RenderDimmedBackgrounds() rely on a valid command being there (especially in docking branch).
@@ -15821,6 +15821,7 @@ static void ImGui::UpdateViewportsNewFrame()
     main_viewport->FramebufferScale = g.IO.DisplayFramebufferScale;
     IM_ASSERT(main_viewport->FramebufferScale.x > 0.0f && main_viewport->FramebufferScale.y > 0.0f);
 
+    const float memory_compact_start_time = (g.GcCompactAll || g.IO.ConfigMemoryCompactTimer < 0.0f) ? FLT_MAX : (float)g.Time - g.IO.ConfigMemoryCompactTimer;
     for (ImGuiViewportP* viewport : g.Viewports)
     {
         // Lock down space taken by menu bars and status bars
@@ -15829,6 +15830,14 @@ static void ImGui::UpdateViewportsNewFrame()
         viewport->WorkInsetMax = viewport->BuildWorkInsetMax;
         viewport->BuildWorkInsetMin = viewport->BuildWorkInsetMax = ImVec2(0.0f, 0.0f);
         viewport->UpdateWorkRect();
+
+        // Garbage collect transient buffers of recently BG/FG drawlists
+        for (int n = 0; n < IM_COUNTOF(viewport->BgFgDrawLists); n++)
+            if (viewport->BgFgDrawListsLastTimeActive[n] < memory_compact_start_time && viewport->BgFgDrawLists[n] != NULL)
+            {
+                IM_DELETE(viewport->BgFgDrawLists[n]);
+                viewport->BgFgDrawLists[n] = NULL;
+            }
     }
 }
 
@@ -16867,6 +16876,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     {
         ImGuiDebugAllocInfo* info = &g.DebugAllocInfo;
         Text("%d current allocations", info->TotalAllocCount - info->TotalFreeCount);
+        Text("Releasing selected unused buffers after: %.2f secs", g.IO.ConfigMemoryCompactTimer);
         if (SmallButton("GC now")) { g.GcCompactAll = true; }
         Text("Recent frames with allocations:");
         int buf_size = IM_COUNTOF(info->LastEntriesBuf);
