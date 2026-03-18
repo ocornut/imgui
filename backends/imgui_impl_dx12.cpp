@@ -88,6 +88,14 @@ struct ImGui_ImplDX12_Texture
     ImGui_ImplDX12_Texture()    { memset((void*)this, 0, sizeof(*this)); }
 };
 
+struct ImGui_ImplDX12_DeferredReleaseResource
+{
+    ID3D12Resource*             Resource;
+    UINT                        ReleaseFrameIndex;
+
+    ImGui_ImplDX12_DeferredReleaseResource() { memset((void*)this, 0, sizeof(*this)); }
+};
+
 struct ImGui_ImplDX12_Data
 {
     ImGui_ImplDX12_InitInfo     InitInfo;
@@ -117,6 +125,7 @@ struct ImGui_ImplDX12_Data
 
     ImGui_ImplDX12_RenderBuffers* pFrameResources;
     UINT                        frameIndex;
+    ImVector<ImGui_ImplDX12_DeferredReleaseResource> DeferredReleaseQueue;
 
     ImGui_ImplDX12_Data()       { memset((void*)this, 0, sizeof(*this)); }
 };
@@ -220,6 +229,47 @@ static inline void SafeRelease(T*& res)
     res = nullptr;
 }
 
+static void ImGui_ImplDX12_DeferReleaseResource(ID3D12Resource*& resource, UINT release_frame_index)
+{
+    if (resource == nullptr)
+        return;
+
+    ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
+    IM_ASSERT(bd != nullptr);
+
+    ImGui_ImplDX12_DeferredReleaseResource deferred_release{};
+    deferred_release.Resource = resource;
+    deferred_release.ReleaseFrameIndex = release_frame_index;
+    bd->DeferredReleaseQueue.push_back(deferred_release);
+    resource = nullptr;
+}
+
+static void ImGui_ImplDX12_ProcessDeferredReleaseQueue(ImGui_ImplDX12_Data* bd, UINT current_frame_index)
+{
+    int write_index = 0;
+    for (int read_index = 0; read_index < bd->DeferredReleaseQueue.Size; read_index++)
+    {
+        ImGui_ImplDX12_DeferredReleaseResource& deferred_release = bd->DeferredReleaseQueue[read_index];
+        if (deferred_release.ReleaseFrameIndex <= current_frame_index)
+        {
+            SafeRelease(deferred_release.Resource);
+            continue;
+        }
+
+        if (write_index != read_index)
+            bd->DeferredReleaseQueue[write_index] = deferred_release;
+        write_index++;
+    }
+    bd->DeferredReleaseQueue.resize(write_index);
+}
+
+static void ImGui_ImplDX12_ReleaseAllDeferredResources(ImGui_ImplDX12_Data* bd)
+{
+    for (int i = 0; i < bd->DeferredReleaseQueue.Size; i++)
+        SafeRelease(bd->DeferredReleaseQueue[i].Resource);
+    bd->DeferredReleaseQueue.clear();
+}
+
 // Render function
 void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandList* command_list)
 {
@@ -237,12 +287,13 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandL
     // FIXME: We are assuming that this only gets called once per frame!
     ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
     bd->frameIndex = bd->frameIndex + 1;
+    ImGui_ImplDX12_ProcessDeferredReleaseQueue(bd, bd->frameIndex);
     ImGui_ImplDX12_RenderBuffers* fr = &bd->pFrameResources[bd->frameIndex % bd->numFramesInFlight];
 
     // Create and grow vertex/index buffers if needed
     if (fr->VertexBuffer == nullptr || fr->VertexBufferSize < draw_data->TotalVtxCount)
     {
-        SafeRelease(fr->VertexBuffer);
+        ImGui_ImplDX12_DeferReleaseResource(fr->VertexBuffer, bd->frameIndex + bd->numFramesInFlight);
         fr->VertexBufferSize = draw_data->TotalVtxCount + 5000;
         D3D12_HEAP_PROPERTIES props = {};
         props.Type = D3D12_HEAP_TYPE_UPLOAD;
@@ -263,7 +314,7 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandL
     }
     if (fr->IndexBuffer == nullptr || fr->IndexBufferSize < draw_data->TotalIdxCount)
     {
-        SafeRelease(fr->IndexBuffer);
+        ImGui_ImplDX12_DeferReleaseResource(fr->IndexBuffer, bd->frameIndex + bd->numFramesInFlight);
         fr->IndexBufferSize = draw_data->TotalIdxCount + 10000;
         D3D12_HEAP_PROPERTIES props = {};
         props.Type = D3D12_HEAP_TYPE_UPLOAD;
@@ -845,6 +896,7 @@ void    ImGui_ImplDX12_InvalidateDeviceObjects()
     if (!bd || !bd->pd3dDevice)
         return;
 
+    ImGui_ImplDX12_ReleaseAllDeferredResources(bd);
     SafeRelease(bd->pdxgiFactory);
     if (bd->commandQueueOwned)
         SafeRelease(bd->pCommandQueue);
