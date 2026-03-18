@@ -89,6 +89,9 @@ Other Changes:
     would be incorrect during the deactivation frame. (#9298)
   - Fixed a crash introduced in 1.92.6 when handling ImGuiInputTextFlags_CallbackResize
     in certain situations. (#9174)
+  - InputTextMultiline: fixed an issue introduced in 1.92.3 where line count calculated
+    for vertical scrollbar range would be +1 when the widget is inactive, word-wrap is
+    disabled and the text buffer ends with '\n'.
 - Style:
   - Border sizes are now scaled (and rounded) by ScaleAllSizes().
   - When using large values with ScallAllSizes(), the following items thickness

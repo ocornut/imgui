@@ -4588,6 +4588,7 @@ static int InputTextLineIndexBuild(ImGuiInputTextFlags flags, ImGuiTextIndex* li
     ImGuiContext& g = *GImGui;
     int size = 0;
     const char* s;
+    bool trailing_line_already_counted = false;
     if (flags & ImGuiInputTextFlags_WordWrap)
     {
         for (s = buf; s < buf_end; s = (*s == '\n') ? s + 1 : s)
@@ -4608,6 +4609,7 @@ static int InputTextLineIndexBuild(ImGuiInputTextFlags flags, ImGuiTextIndex* li
     }
     else
     {
+        // Inactive path: we don't know buf_end ahead of time.
         const char* s_eol;
         for (s = buf; ; s = s_eol + 1)
         {
@@ -4616,6 +4618,7 @@ static int InputTextLineIndexBuild(ImGuiInputTextFlags flags, ImGuiTextIndex* li
             if ((s_eol = strchr(s, '\n')) != NULL)
                 continue;
             s += strlen(s);
+            trailing_line_already_counted = true;
             break;
         }
     }
@@ -4626,7 +4629,7 @@ static int InputTextLineIndexBuild(ImGuiInputTextFlags flags, ImGuiTextIndex* li
         line_index->Offsets.push_back(0);
         size++;
     }
-    if (buf_end > buf && buf_end[-1] == '\n' && size <= max_output_buffer_size)
+    if (buf_end > buf && buf_end[-1] == '\n' && size <= max_output_buffer_size && !trailing_line_already_counted)
     {
         line_index->Offsets.push_back((int)(buf_end - buf));
         size++;
