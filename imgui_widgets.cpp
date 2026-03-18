@@ -4402,6 +4402,7 @@ void ImGui::PopPasswordFont()
 // Return false to discard a character.
 static bool InputTextFilterCharacter(ImGuiContext* ctx, ImGuiInputTextState* state, unsigned int* p_char, ImGuiInputTextCallback callback, void* user_data, bool input_source_is_clipboard)
 {
+    IM_ASSERT(state != NULL);
     unsigned int c = *p_char;
     ImGuiInputTextFlags flags = state->Flags;
 
@@ -4497,7 +4498,7 @@ static bool InputTextFilterCharacter(ImGuiContext* ctx, ImGuiInputTextState* sta
         callback_data.Flags = flags;
         callback_data.EventFlag = ImGuiInputTextFlags_CallbackCharFilter;
         callback_data.EventChar = (ImWchar)c;
-        callback_data.EventActivated = (state && g.ActiveId == state->ID && g.ActiveIdIsJustActivated);
+        callback_data.EventActivated = (g.ActiveId == state->ID && g.ActiveIdIsJustActivated);
         callback_data.UserData = user_data;
         if (callback(&callback_data) != 0)
             return false;
@@ -5286,7 +5287,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                 callback_data.ID = id;
                 callback_data.Flags = flags;
                 callback_data.EventFlag = event_flag;
-                callback_data.EventActivated = (state && g.ActiveId == state->ID && g.ActiveIdIsJustActivated);
+                callback_data.EventActivated = (g.ActiveId == state->ID && g.ActiveIdIsJustActivated);
                 callback_data.UserData = callback_user_data;
 
                 // FIXME-OPT: Undo stack reconcile needs a backup of the data until we rework API, see #7925
