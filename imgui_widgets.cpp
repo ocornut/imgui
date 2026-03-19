@@ -5532,7 +5532,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         if (render_selection)
         {
             const ImU32 bg_color = GetColorU32(ImGuiCol_TextSelectedBg, render_cursor ? 1.0f : 0.6f); // FIXME: current code flow mandate that render_cursor is always true here, we are leaving the transparent one for tests.
-            const float bg_offy_up = is_multiline ? 0.0f : -1.0f;    // FIXME: those offsets should be part of the style? they don't play so well with multi-line selection.
+            const float bg_offy_up = is_multiline ? 0.0f : -1.0f; // FIXME-DPI: those offsets should be part of the style? they don't play so well with multi-line selection.
             const float bg_offy_dn = is_multiline ? 0.0f : 2.0f;
             const float bg_eol_width = IM_TRUNC(g.FontBaked->GetCharAdvance((ImWchar)' ') * 0.50f); // So we can see selected empty lines
 
@@ -5561,7 +5561,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                 rect.Min.y = draw_pos.y - draw_scroll.y + line_n * g.FontSize;
                 rect.Max.x = rect.Min.x + rect_width;
                 rect.Max.y = rect.Min.y + bg_offy_dn + g.FontSize;
-                rect.Min.y -= bg_offy_up;
+                rect.Min.y += bg_offy_up;
                 rect.ClipWith(clip_rect);
                 draw_window->DrawList->AddRectFilled(rect.Min, rect.Max, bg_color);
             }
