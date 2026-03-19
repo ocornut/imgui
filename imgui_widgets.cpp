@@ -8170,7 +8170,7 @@ void ImGui::MultiSelectItemHeader(ImGuiID id, bool* p_selected, ImGuiButtonFlags
     {
         ImGuiButtonFlags button_flags = *p_button_flags;
         button_flags |= ImGuiButtonFlags_NoHoveredOnFocus;
-        button_flags &= ~(ImGuiButtonFlags_PressedOnClickRelease | ImGuiButtonFlags_PressedOnClickRelease);
+        button_flags &= ~(ImGuiButtonFlags_PressedOnClick | ImGuiButtonFlags_PressedOnClickRelease);
         if (ms->Flags & ImGuiMultiSelectFlags_SelectOnClickAlways)
             button_flags |= ImGuiButtonFlags_PressedOnClick;
         else if (ms->Flags & ImGuiMultiSelectFlags_SelectOnClickRelease)
