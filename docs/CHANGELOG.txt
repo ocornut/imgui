@@ -53,7 +53,7 @@ Breaking Changes:
       BeginChild("ScrollingRegion", { 0, -footer_height });
    When such idiom was used and assuming zero-height Separator, it is likely that
    in 1.92.7 the resulting window will have unexpected 1 pixel scrolling range.
- - MultiSelect: renamed ImGuiMultiSelectFlags_SelectOnClick to ImGuiMultiSelectFlags_SelectOnAuto.
+ - Multi-Select: renamed ImGuiMultiSelectFlags_SelectOnClick to ImGuiMultiSelectFlags_SelectOnAuto.
    Kept inline redirection enum (will obsolete).
  - Combo(), ListBox(): commented out legacy signatures which were obsoleted in 1.90
    (Nov 2023), when the getter callback type was changed from:
@@ -105,6 +105,10 @@ Other Changes:
     BeginPopupContextItem(), BeginPopupContextWindow() or OpenPopupOnItemClick().
     (#8803, #9270) [@exelix11, @ocornut]
   - Popups: pressing North button (PS4/PS5 triangle, SwitchX, Xbox Y) also open popups menus.
+- Multi-Select:
+  - Added ImGuiMultiSelectFlags_SelectOnClickAlways mode (rarely used).
+    This prevents Drag and Drop of multiple items, but it allows to start a new Box-Selection
+    from inside an existing selection (Excel style). (#9307, #1861)
 - Clipper:
   - Clear `DisplayStart`/`DisplayEnd` fields when `Step()` returns false.
   - Added `UserIndex` helper storage. This is solely a convenience for cases where
