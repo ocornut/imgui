@@ -268,7 +268,7 @@ void ImGui_ImplSDLRenderer2_UpdateTexture(ImTextureData* tex)
     }
     else if (tex->Status == ImTextureStatus_WantDestroy)
     {
-        if (tex->ID != ImTextureID_Invalid)
+        if (tex->TexID != ImTextureID_Invalid)
             if (SDL_Texture* sdl_texture = (SDL_Texture*)(intptr_t)tex->TexID)
                 SDL_DestroyTexture(sdl_texture);
 
