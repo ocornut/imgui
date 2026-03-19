@@ -3241,10 +3241,10 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
                     flags &= ~ImGuiMultiSelectFlags_ScopeRect;
                 if (ImGui::CheckboxFlags("ImGuiMultiSelectFlags_ScopeRect", &flags, ImGuiMultiSelectFlags_ScopeRect) && (flags & ImGuiMultiSelectFlags_ScopeRect))
                     flags &= ~ImGuiMultiSelectFlags_ScopeWindow;
-                if (ImGui::CheckboxFlags("ImGuiMultiSelectFlags_SelectOnClick", &flags, ImGuiMultiSelectFlags_SelectOnClick) && (flags & ImGuiMultiSelectFlags_SelectOnClick))
-                    flags &= ~ImGuiMultiSelectFlags_SelectOnClickRelease;
-                if (ImGui::CheckboxFlags("ImGuiMultiSelectFlags_SelectOnClickRelease", &flags, ImGuiMultiSelectFlags_SelectOnClickRelease) && (flags & ImGuiMultiSelectFlags_SelectOnClickRelease))
-                    flags &= ~ImGuiMultiSelectFlags_SelectOnClick;
+                if (ImGui::CheckboxFlags("ImGuiMultiSelectFlags_SelectOnAuto", &flags, ImGuiMultiSelectFlags_SelectOnAuto))
+                    flags &= ~(ImGuiMultiSelectFlags_SelectOnMask_ ^ ImGuiMultiSelectFlags_SelectOnAuto);
+                if (ImGui::CheckboxFlags("ImGuiMultiSelectFlags_SelectOnClickRelease", &flags, ImGuiMultiSelectFlags_SelectOnClickRelease))
+                    flags &= ~(ImGuiMultiSelectFlags_SelectOnMask_ ^ ImGuiMultiSelectFlags_SelectOnClickRelease);
                 ImGui::SameLine(); HelpMarker("Allow dragging an unselected item without altering selection.");
                 ImGui::TreePop();
             }

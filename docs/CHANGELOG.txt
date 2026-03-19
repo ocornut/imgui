@@ -53,6 +53,8 @@ Breaking Changes:
       BeginChild("ScrollingRegion", { 0, -footer_height });
    When such idiom was used and assuming zero-height Separator, it is likely that
    in 1.92.7 the resulting window will have unexpected 1 pixel scrolling range.
+ - MultiSelect: renamed ImGuiMultiSelectFlags_SelectOnClick to ImGuiMultiSelectFlags_SelectOnAuto.
+   Kept inline redirection enum (will obsolete).
  - Combo(), ListBox(): commented out legacy signatures which were obsoleted in 1.90
    (Nov 2023), when the getter callback type was changed from:
       getter type:   bool (*getter)(void* user_data, int idx, const char** out_text)
