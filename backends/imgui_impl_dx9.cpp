@@ -432,7 +432,7 @@ void ImGui_ImplDX9_UpdateTexture(ImTextureData* tex)
     }
     else if (tex->Status == ImTextureStatus_WantDestroy)
     {
-        if (tex->ID != ImTextureID_Invalid)
+        if (tex->TexID != ImTextureID_Invalid)
             if (LPDIRECT3DTEXTURE9 backend_tex = (LPDIRECT3DTEXTURE9)tex->TexID)
             {
                 IM_ASSERT(tex->TexID == (ImTextureID)(intptr_t)backend_tex);
