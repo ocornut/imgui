@@ -17,6 +17,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-03-19: Fixed issue in ImGui_ImplDX9_UpdateTexture() if ImTextureID_Invalid is defined to be != 0, which became the default since 2026-03-12. (#9295, #9310)
 //  2025-09-18: Call platform_io.ClearRendererHandlers() on shutdown.
 //  2025-06-11: DirectX9: Added support for ImGuiBackendFlags_RendererHasTextures, for dynamic font atlas.
 //  2024-10-07: DirectX9: Changed default texture sampler to Clamp instead of Repeat/Wrap.
@@ -431,14 +432,15 @@ void ImGui_ImplDX9_UpdateTexture(ImTextureData* tex)
     }
     else if (tex->Status == ImTextureStatus_WantDestroy)
     {
-        if (LPDIRECT3DTEXTURE9 backend_tex = (LPDIRECT3DTEXTURE9)tex->TexID)
-        {
-            IM_ASSERT(tex->TexID == (ImTextureID)(intptr_t)backend_tex);
-            backend_tex->Release();
+        if (tex->ID != ImTextureID_Invalid)
+            if (LPDIRECT3DTEXTURE9 backend_tex = (LPDIRECT3DTEXTURE9)tex->TexID)
+            {
+                IM_ASSERT(tex->TexID == (ImTextureID)(intptr_t)backend_tex);
+                backend_tex->Release();
 
-            // Clear identifiers and mark as destroyed (in order to allow e.g. calling InvalidateDeviceObjects while running)
-            tex->SetTexID(ImTextureID_Invalid);
-        }
+                // Clear identifiers and mark as destroyed (in order to allow e.g. calling InvalidateDeviceObjects while running)
+                tex->SetTexID(ImTextureID_Invalid);
+            }
         tex->SetStatus(ImTextureStatus_Destroyed);
     }
 }
