@@ -137,6 +137,11 @@ Other Changes:
   - Fixed GetForegroundDrawList()/GetBackgroundDrawList() per-viewport buffers not being
     collected when unused for io.ConfigMemoryCompactTimer amount of time. (#9303)
 - Demo: fixed IMGUI_DEMO_MARKER locations for examples applets. (#9261, #3689) [@pthom]
+- Internals:
+  - ButtonBehavior: fixed internal/low-level ImGuiButtonFlags_PressedOnRelease
+    (as well as equivalent ImGuiSelectableFlags_SelectOnRelease for Selectable) from
+    not taking current active id. ImGuiButtonFlags_NoHoldingActiveID allows that.
+    This was pretty sure only used internally by MenuItem().
 - Backends:
   - DirectX9, OpenGL2, OpenGL3, Metal, SDLGPU3, SDLRenderer2, SDLRenderer3: fixed easy-to-fix
     issues in code assuming ImTextureID_Invalid is always defined to 0. (#9295, #9310)
