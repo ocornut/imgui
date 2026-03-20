@@ -3574,8 +3574,9 @@ void ImGui::TableDrawDefaultContextMenu(ImGuiTable* table, ImGuiTableFlags flags
         want_separator = true;
 
         PushItemFlag(ImGuiItemFlags_AutoClosePopups, false);
-        for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
+        for (int order_n = 0; order_n < table->ColumnsCount; order_n++)
         {
+            const int column_n = table->DisplayOrderToIndex[order_n];
             ImGuiTableColumn* column = &table->Columns[column_n];
             if (column->Flags & ImGuiTableColumnFlags_Disabled)
                 continue;
