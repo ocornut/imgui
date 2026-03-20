@@ -4731,6 +4731,11 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         draw_window->DC.NavLayersActiveMaskNext |= (1 << draw_window->DC.NavLayerCurrent); // This is to ensure that EndChild() will display a navigation highlight so we can "enter" into it.
         draw_window->DC.CursorPos += style.FramePadding;
         inner_size.x -= draw_window->ScrollbarSizes.x;
+
+        // FIXME: Could this be a ImGuiChildFlags to affect the SetLastItemDataForWindow() call?
+        g.LastItemData.ID = id;
+        g.LastItemData.ItemFlags = item_data_backup.ItemFlags;
+        g.LastItemData.StatusFlags = item_data_backup.StatusFlags;
     }
     else
     {

@@ -88,6 +88,10 @@ Other Changes:
     large amount of text.
   - InputTextMultiline: avoid going through reactivation code and fixed losing revert value
     when activating scrollbar.
+  - InputTextMultiline: fixed an issue where edit buffer wouldn't be reapplied to back
+    buffer on the IsItemDeactivatedAfterEdit() frame. This could create issues when
+    using the idiom of not applying edits before IsItemDeactivatedAfterEdit().
+    (#9308, #8915, #8273)
 - Style:
   - Border sizes are now scaled (and rounded) by ScaleAllSizes().
   - When using large values with ScallAllSizes(), the following items thickness
