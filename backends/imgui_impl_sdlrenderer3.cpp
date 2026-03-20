@@ -26,6 +26,7 @@
 // - Introduction, links and more at the top of imgui.cpp
 
 // CHANGELOG
+//  2026-03-12: Fixed invalid assert in ImGui_ImplSDLRenderer3_UpdateTexture() if ImTextureID_Invalid is defined to be != 0, which became the default since 2026-03-12. (#9295)
 //  2025-09-18: Call platform_io.ClearRendererHandlers() on shutdown.
 //  2025-06-11: Added support for ImGuiBackendFlags_RendererHasTextures, for dynamic font atlas. Removed ImGui_ImplSDLRenderer3_CreateFontsTexture() and ImGui_ImplSDLRenderer3_DestroyFontsTexture().
 //  2025-01-18: Use endian-dependent RGBA32 texture format, to match SDL_Color.
@@ -285,8 +286,9 @@ void ImGui_ImplSDLRenderer3_UpdateTexture(ImTextureData* tex)
     }
     else if (tex->Status == ImTextureStatus_WantDestroy)
     {
-        if (SDL_Texture* sdl_texture = (SDL_Texture*)(intptr_t)tex->TexID)
-            SDL_DestroyTexture(sdl_texture);
+        if (tex->TexID != ImTextureID_Invalid)
+            if (SDL_Texture* sdl_texture = (SDL_Texture*)(intptr_t)tex->TexID)
+                SDL_DestroyTexture(sdl_texture);
 
         // Clear identifiers and mark as destroyed (in order to allow e.g. calling InvalidateDeviceObjects while running)
         tex->SetTexID(ImTextureID_Invalid);

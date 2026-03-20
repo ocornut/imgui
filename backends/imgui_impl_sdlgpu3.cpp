@@ -24,6 +24,7 @@
 
 // CHANGELOG
 //  2026-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2026-03-19: Fixed issue in ImGui_ImplSDLGPU3_DestroyTexture() if ImTextureID_Invalid is defined to be != 0, which became the default since 2026-03-12. (#9295, #9310)
 //  2026-02-25: Removed unnecessary call to SDL_WaitForGPUIdle when releasing vertex/index buffers. (#9262)
 //  2025-11-26: macOS version can use MSL shaders in order to support macOS 10.14+ (vs Metallib shaders requiring macOS 14+). Requires calling SDL_CreateGPUDevice() with SDL_GPU_SHADERFORMAT_MSL.
 //  2025-09-18: Call platform_io.ClearRendererHandlers() on shutdown.
@@ -312,8 +313,9 @@ void ImGui_ImplSDLGPU3_RenderDrawData(ImDrawData* draw_data, SDL_GPUCommandBuffe
 static void ImGui_ImplSDLGPU3_DestroyTexture(ImTextureData* tex)
 {
     ImGui_ImplSDLGPU3_Data* bd = ImGui_ImplSDLGPU3_GetBackendData();
-    if (SDL_GPUTexture* raw_tex = (SDL_GPUTexture*)(intptr_t)tex->GetTexID())
-        SDL_ReleaseGPUTexture(bd->InitInfo.Device, raw_tex);
+    if (tex->GetTexID() != ImTextureID_Invalid)
+        if (SDL_GPUTexture* raw_tex = (SDL_GPUTexture*)(intptr_t)tex->GetTexID())
+            SDL_ReleaseGPUTexture(bd->InitInfo.Device, raw_tex);
 
     // Clear identifiers and mark as destroyed (in order to allow e.g. calling InvalidateDeviceObjects while running)
     tex->SetTexID(ImTextureID_Invalid);

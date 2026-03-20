@@ -41,16 +41,6 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
- - Changed default ImTextureID_Invalid value to -1 instead of 0 if not #define-d.
-    (#9293, #8745, #8465, #7090)
-   - It seems like a better default since it will work with backends storing
-     indices or memory offsets inside ImTextureID, where 0 might be a valid value.
-   - If this is causing problem with e.g your custom ImTextureID definition, you can
-     add '#define ImTextureID_Invalid 0' to your imconfig.h + PLEASE report this to GitHub.
-   - If you have hardcoded e.g. 'if (tex_id == 0)' checks they should be updated.
-     e.g. OpenGL2, OpenGL3 and SDLRenderer3 backends incorrectly had 'IM_ASSERT(tex->TexID == 0)'
-     lines which were replaced with 'IM_ASSERT(tex->TexID == ImTextureID_Invalid)'.
-     If you have copied or forked backends consider fixing locally. (#9295)
  - Separator(): fixed a legacy quirk where Separator() was submitting a zero-height
    item for layout purpose, even though it draws a 1-pixel separator.
    The fix could affect code e.g. computing height from multiple widgets in order to
@@ -63,6 +53,8 @@ Breaking Changes:
       BeginChild("ScrollingRegion", { 0, -footer_height });
    When such idiom was used and assuming zero-height Separator, it is likely that
    in 1.92.7 the resulting window will have unexpected 1 pixel scrolling range.
+ - Multi-Select: renamed ImGuiMultiSelectFlags_SelectOnClick to ImGuiMultiSelectFlags_SelectOnAuto.
+   Kept inline redirection enum (will obsolete).
  - Combo(), ListBox(): commented out legacy signatures which were obsoleted in 1.90
    (Nov 2023), when the getter callback type was changed from:
       getter type:   bool (*getter)(void* user_data, int idx, const char** out_text)
@@ -87,6 +79,19 @@ Other Changes:
     signals to be emitted the same way regardless of that setting. (#9001, #9115)
   - Fixed a glitch when using ImGuiInputTextFlags_ElideLeft where the local x offset
     would be incorrect during the deactivation frame. (#9298)
+  - Fixed a crash introduced in 1.92.6 when handling ImGuiInputTextFlags_CallbackResize
+    in certain situations. (#9174)
+  - Fixed selection highlight Y1 offset being very slightly off (since 1.92.3). (#9311) [@v-ein]
+  - InputTextMultiline: fixed an issue introduced in 1.92.3 where line count calculated
+    for vertical scrollbar range would be +1 when the widget is inactive, word-wrap is
+    disabled and the text buffer ends with '\n'. Fixed a similar issue related to clipping
+    large amount of text.
+  - InputTextMultiline: avoid going through reactivation code and fixed losing revert value
+    when activating scrollbar.
+  - InputTextMultiline: fixed an issue where edit buffer wouldn't be reapplied to back
+    buffer on the IsItemDeactivatedAfterEdit() frame. This could create issues when
+    using the idiom of not applying edits before IsItemDeactivatedAfterEdit().
+    (#9308, #8915, #8273)
 - Style:
   - Border sizes are now scaled (and rounded) by ScaleAllSizes().
   - When using large values with ScallAllSizes(), the following items thickness
@@ -107,6 +112,10 @@ Other Changes:
     BeginPopupContextItem(), BeginPopupContextWindow() or OpenPopupOnItemClick().
     (#8803, #9270) [@exelix11, @ocornut]
   - Popups: pressing North button (PS4/PS5 triangle, SwitchX, Xbox Y) also open popups menus.
+- Multi-Select:
+  - Added ImGuiMultiSelectFlags_SelectOnClickAlways mode (rarely used).
+    This prevents Drag and Drop of multiple items, but it allows to start a new Box-Selection
+    from inside an existing selection (Excel style). (#9307, #1861)
 - Clipper:
   - Clear `DisplayStart`/`DisplayEnd` fields when `Step()` returns false.
   - Added `UserIndex` helper storage. This is solely a convenience for cases where
@@ -115,10 +124,22 @@ Other Changes:
   - Implemented a custom tweak to extend hit-testing bounding box when window is sitting
     at the edge of a viewport (e.g. fullscreen or docked window), so that e.g. mouse the
     mouse at the extreme of the screen will reach the scrollbar. (#9276)
+  - Fixed an issue which could lead initial click to move the current scroll by a pixel.
+- Button:
+  - Moved ImGuiButtonFlags_AllowOverlap from imgui_internal.h to imgui.h,
+    as a convenience for when using e.g. InvisibleButton().
 - Focus: fixed fallback "Debug" window temporarily taking focus and setting io.WantCaptureKeyboard
   for one frame on e.g. application boot if no other windows are submitted. (#9243)
+- Memory:
+  - Discard/GC of ImDrawList buffers for unused windows favor restoring them to
+    ~Size*1.05 instead of Capacity when awakening again. Facilitate releasing ImDrawList
+    buffers after unusual usage spike. (#9303)
+  - Fixed GetForegroundDrawList()/GetBackgroundDrawList() per-viewport buffers not being
+    collected when unused for io.ConfigMemoryCompactTimer amount of time. (#9303)
 - Demo: fixed IMGUI_DEMO_MARKER locations for examples applets. (#9261, #3689) [@pthom]
 - Backends:
+  - DirectX9, OpenGL2, OpenGL3, Metal, SDLGPU3, SDLRenderer2, SDLRenderer3: fixed easy-to-fix
+    issues in code assuming ImTextureID_Invalid is always defined to 0. (#9295, #9310)
   - SDLGPU3: removed unnecessary call to SDL_WaitForGPUIdle when releasing
     vertex/index buffers. (#9262) [@jaenis]
   - WebGPU: fixed version check for Emscripten 5.0.0+.
