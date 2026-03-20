@@ -326,7 +326,7 @@ static WGPUDevice RequestDevice(wgpu::Instance& instance, wgpu::Adapter& adapter
     IM_ASSERT(acquired_device != nullptr && waitStatusDevice == wgpu::WaitStatus::Success && "Error on Device request");
     return acquired_device.MoveToCHandle();
 }
-#elif defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
+#elif defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) || defined(IMGUI_IMPL_WEBGPU_BACKEND_WGVK)
 static void handle_request_adapter(WGPURequestAdapterStatus status, WGPUAdapter adapter, WGPUStringView message, void* userdata1, void* userdata2)
 {
     IM_UNUSED(userdata2);
@@ -428,17 +428,19 @@ static bool InitWGPU(SDL_Window* window)
     preferred_fmt = surface_capabilities.formats[0];
 
     // WGPU backend: Adapter and Device acquisition, Surface creation
-#elif defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
+#elif defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) ||  defined(IMGUI_IMPL_WEBGPU_BACKEND_WGVK)
     WGPUInstanceDescriptor instanceDesc = {};
     WGPUInstanceFeatureName timedWaitAny = WGPUInstanceFeatureName_TimedWaitAny;
     instanceDesc.requiredFeatureCount = 1;
     instanceDesc.requiredFeatures = &timedWaitAny;
     wgpu_instance = wgpuCreateInstance(&instanceDesc);
 
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
     wgpuSetLogCallback(
         [](WGPULogLevel level, WGPUStringView msg, void* userdata) { fprintf(stderr, "%s: %.*s\n", ImGui_ImplWGPU_GetLogLevelName(level), (int)msg.length, msg.data); }, nullptr
     );
     wgpuSetLogLevel(WGPULogLevel_Warn);
+#endif
 
     WGPUAdapter adapter = RequestAdapter(wgpu_instance);
     ImGui_ImplWGPU_DebugPrintAdapterInfo(adapter);
