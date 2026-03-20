@@ -4770,8 +4770,9 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     const bool input_requested_by_nav = (g.ActiveId != id) && (g.NavActivateId == id);
     const bool input_requested_by_reactivate = (g.InputTextReactivateId == id); // for io.ConfigInputTextEnterKeepActive
     const bool user_clicked = hovered && io.MouseClicked[0];
-    const bool user_scroll_finish = is_multiline && state != NULL && g.ActiveId == 0 && g.ActiveIdPreviousFrame == GetWindowScrollbarID(draw_window, ImGuiAxis_Y);
-    const bool user_scroll_active = is_multiline && state != NULL && g.ActiveId == GetWindowScrollbarID(draw_window, ImGuiAxis_Y);
+    const ImGuiID scrollbar_id = (is_multiline && state != NULL) ? GetWindowScrollbarID(draw_window, ImGuiAxis_Y) : 0;
+    const bool user_scroll_finish = is_multiline && state != NULL && g.ActiveId == 0 && g.ActiveIdPreviousFrame == scrollbar_id;
+    const bool user_scroll_active = is_multiline && state != NULL && g.ActiveId == scrollbar_id;
     bool clear_active_id = false;
     bool select_all = false;
 
@@ -4780,7 +4781,6 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     const bool init_reload_from_user_buf = (state != NULL && state->WantReloadUserBuf);
     const bool init_changed_specs = (state != NULL && state->Stb->single_line != !is_multiline); // state != NULL means its our state.
     const bool init_make_active = (user_clicked || user_scroll_finish || input_requested_by_nav || input_requested_by_reactivate);
-    const bool init_state = (init_make_active || user_scroll_active);
     if (init_reload_from_user_buf)
     {
         int new_len = (int)ImStrlen(buf);
@@ -4793,7 +4793,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         state->Stb->select_start = state->ReloadSelectionStart;
         state->Stb->cursor = state->Stb->select_end = state->ReloadSelectionEnd; // will be clamped to bounds below
     }
-    else if ((init_state && g.ActiveId != id) || init_changed_specs)
+    else if ((init_make_active && g.ActiveId != id) || init_changed_specs)
     {
         // Access state even if we don't own it yet.
         state = &g.InputTextState;
@@ -4903,7 +4903,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         ClearActiveID();
 
     // Release focus when we click outside
-    if (g.ActiveId == id && io.MouseClicked[0] && !init_state && !init_make_active) //-V560
+    if (g.ActiveId == id && io.MouseClicked[0] && !init_make_active) //-V560
         clear_active_id = true;
 
     // Lock the decision of whether we are going to take the path displaying the cursor or selection
