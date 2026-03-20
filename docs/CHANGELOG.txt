@@ -124,6 +124,7 @@ Other Changes:
   - Implemented a custom tweak to extend hit-testing bounding box when window is sitting
     at the edge of a viewport (e.g. fullscreen or docked window), so that e.g. mouse the
     mouse at the extreme of the screen will reach the scrollbar. (#9276)
+  - Fixed an issue which could lead initial click to move the current scroll by a pixel.
 - Button:
   - Moved ImGuiButtonFlags_AllowOverlap from imgui_internal.h to imgui.h,
     as a convenience for when using e.g. InvisibleButton().
