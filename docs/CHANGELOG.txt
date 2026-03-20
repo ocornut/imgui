@@ -86,7 +86,8 @@ Other Changes:
     for vertical scrollbar range would be +1 when the widget is inactive, word-wrap is
     disabled and the text buffer ends with '\n'. Fixed a similar issue related to clipping
     large amount of text.
-  - InputTextMultiline: avoid going through reactivation code when activating scrollbar.
+  - InputTextMultiline: avoid going through reactivation code and fixed losing revert value
+    when activating scrollbar.
 - Style:
   - Border sizes are now scaled (and rounded) by ScaleAllSizes().
   - When using large values with ScallAllSizes(), the following items thickness
