@@ -84,7 +84,8 @@ Other Changes:
   - Fixed selection highlight Y1 offset being very slightly off (since 1.92.3). (#9311) [@v-ein]
   - InputTextMultiline: fixed an issue introduced in 1.92.3 where line count calculated
     for vertical scrollbar range would be +1 when the widget is inactive, word-wrap is
-    disabled and the text buffer ends with '\n'.
+    disabled and the text buffer ends with '\n'. Fixed a similar issue related to clipping
+    large amount of text.
 - Style:
   - Border sizes are now scaled (and rounded) by ScaleAllSizes().
   - When using large values with ScallAllSizes(), the following items thickness

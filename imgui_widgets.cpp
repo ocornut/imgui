@@ -4629,11 +4629,8 @@ static int InputTextLineIndexBuild(ImGuiInputTextFlags flags, ImGuiTextIndex* li
         line_index->Offsets.push_back(0);
         size++;
     }
-    if (buf_end > buf && buf_end[-1] == '\n' && size <= max_output_buffer_size && !trailing_line_already_counted)
-    {
+    if (buf_end > buf && buf_end[-1] == '\n' && !trailing_line_already_counted && size++ <= max_output_buffer_size)
         line_index->Offsets.push_back((int)(buf_end - buf));
-        size++;
-    }
     return size;
 }
 
