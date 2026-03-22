@@ -15,6 +15,7 @@
 #include <GL/glxext.h>
 
 // Main code
+void ImGui_ImplXlib_SetRendererCtx(GLXContext ctx);
 int main(int, char**)
 {
     // Setup Xlib
@@ -59,7 +60,7 @@ int main(int, char**)
     window_attribs.colormap = XCreateColormap(display, RootWindow(display, screen_id), visual->visual, AllocNone);
     Window window = XCreateWindow(display, RootWindow(display, screen_id), 0, 0, 1280, 720, 0, visual->depth, InputOutput, visual->visual, CWBackPixel | CWColormap | CWBorderPixel, &window_attribs);
 
-    // Handle window closing
+   // Handle window closing
     Atom wmDeleteMessage = XInternAtom(display, "WM_DELETE_WINDOW", False);
     XSetWMProtocols(display, window, &wmDeleteMessage, 1);
 
@@ -92,7 +93,6 @@ int main(int, char**)
 #endif
 
     GLXContext glx_context = glXCreateContextAttribsARB(display, fbc[0], 0, True, context_attribs);
-
     if (glx_context == 0) {
         printf("Error: Could not create GLX context\n");
         XCloseDisplay(display);
@@ -107,6 +107,8 @@ int main(int, char**)
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
@@ -115,6 +117,11 @@ int main(int, char**)
     // Setup Platform/Renderer backends
     ImGui_ImplXlib_Init(display, window);
     ImGui_ImplOpenGL3_Init(glsl_version);
+    ImGui_ImplXlib_SetRendererCtx(glx_context);
+
+    GLXWindow wctx = glXCreateWindow(ImGui_ImplXlib_GetBackendData()->Dpy, fbc[0], window, context_attribs);
+    ImGui_ImplXlib_Data* bd = ImGui_ImplXlib_GetBackendData();
+    glXMakeCurrent(bd->Dpy, wctx, (GLXContext)bd->RendererCtx);
 
     // Load Fonts
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
@@ -152,7 +159,7 @@ int main(int, char**)
             XEvent event;
             XNextEvent(display, &event);
             ImGui_ImplXlib_ProcessEvent(&event);
-            
+
             if (event.type == ClientMessage && event.xclient.window == window && (Atom)event.xclient.data.l[0] == wmDeleteMessage)
                 done = true;
         }
@@ -162,6 +169,7 @@ int main(int, char**)
         ImGui_ImplXlib_NewFrame();
         ImGui::NewFrame();
 
+        ImGui::DockSpaceOverViewport();
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
         if (show_demo_window)
             ImGui::ShowDemoWindow(&show_demo_window);
@@ -170,6 +178,7 @@ int main(int, char**)
         {
             static float f = 0.0f;
             static int counter = 0;
+            static char text[512] = {0};
 
             ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
 
@@ -179,6 +188,8 @@ int main(int, char**)
 
             ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
             ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+
+            ImGui::InputText("input text", text, 512);
 
             if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
                 counter++;
@@ -198,14 +209,16 @@ int main(int, char**)
                 show_another_window = false;
             ImGui::End();
         }
-
         // Rendering
         ImGui::Render();
-        glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
-        glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
-        glClear(GL_COLOR_BUFFER_BIT);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-        glXSwapBuffers(display, window);
+        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+            ImGui::UpdatePlatformWindows();
+            ImGui::RenderPlatformWindowsDefault();
+            ImGui_ImplXlib_Data* bd = ImGui_ImplXlib_GetBackendData();
+            glXMakeCurrent(bd->Dpy, wctx, (GLXContext)bd->RendererCtx);
+        }
+        glXSwapBuffers(display, wctx);
     }
 
     // Cleanup

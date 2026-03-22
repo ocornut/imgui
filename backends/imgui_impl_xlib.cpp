@@ -6,6 +6,7 @@
 //  [X] Platform: Mouse support.
 //  [X] Platform: Keyboard support.
 //  [X] Platform: Mouse cursor shape and visibility. Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'.
+//  [X] Platform: Multi-viewport support (multiple windows). Enable with 'io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable'.
 // Issues:
 //  [ ] Platform: Missing touchscreen support.
 //  [ ] Platform: Missing gamepad support.
@@ -25,11 +26,15 @@
 #include "imgui.h"
 #ifndef IMGUI_DISABLE
 #include "imgui_impl_xlib.h"
+#include "stdio.h"
 
 // Xlib
 #include <X11/X.h>
+#include <X11/Xatom.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <GL/glx.h>
+#include <X11/extensions/Xrandr.h>
 #include <X11/keysym.h>
 #include <X11/XF86keysym.h>
 #include <X11/cursorfont.h>
@@ -43,27 +48,37 @@
 #endif
 
 // Xlib Data
-struct ImGui_ImplXlib_Data
-{
-    Display*        Dpy;
-    Window          Win;
-    int             Xi2Opcode;
-    XIM             IM;
-    XIC             IC;
-    timespec        Time;
-    int             MouseButtonsDown;
-    Cursor          MouseCursors[ImGuiMouseCursor_COUNT];
-    Cursor          LastMouseCursor;
-    char*           ClipboardTextData;
-    bool            SelectionWaiting;
-    Atom            XA_CLIPBOARD;
-    Atom            XA_SELECTION;
-    Atom            XA_TARGETS;
-    Atom            XA_INCR;
-    Atom*           XA_MIME;
-    unsigned int    MimeCount;
+//struct ImGui_ImplXlib_Data
+//{
+//    Display*        Dpy;
+//    Window          Win;
+//    int             Xi2Opcode;
+//    XIM             IM;
+//    XIC             IC;
+//    timespec        Time;
+//    int             MouseButtonsDown;
+//    Cursor          MouseCursors[ImGuiMouseCursor_COUNT];
+//    Cursor          LastMouseCursor;
+//    char*           ClipboardTextData;
+//    bool            SelectionWaiting;
+//    bool            WantUpdateMonitors;
+//    Atom            XA_CLIPBOARD;
+//    Atom            XA_SELECTION;
+//    Atom            XA_TARGETS;
+//    Atom            XA_INCR;
+//    Atom*           XA_MIME;
+//    void*           RendererCtx;
+//    unsigned int    MimeCount;
+//
+//    ImGui_ImplXlib_Data()   { memset((void*)this, 0, sizeof(*this)); }
+//};
 
-    ImGui_ImplXlib_Data()   { memset((void*)this, 0, sizeof(*this)); }
+struct ImGui_ImplXlib_ViewportData {
+    Window Handle;
+    Window ParentHandle;
+    bool   Owned;
+
+    ImGui_ImplXlib_ViewportData() {memset(this, 0, sizeof(ImGui_ImplXlib_ViewportData));};
 };
 
 static const char *text_mime_types[] = {
@@ -78,12 +93,18 @@ static const char *text_mime_types[] = {
 // It is STRONGLY preferred that you use docking branch with multi-viewports (== single Dear ImGui context + multiple windows) instead of multiple Dear ImGui contexts.
 // FIXME: multi-context support is not well tested and probably dysfunctional in this backend.
 // FIXME: some shared resources (mouse cursor shape, gamepad) are mishandled when using multi-context.
-static ImGui_ImplXlib_Data* ImGui_ImplXlib_GetBackendData()
+ImGui_ImplXlib_Data* ImGui_ImplXlib_GetBackendData()
 {
     return ImGui::GetCurrentContext() ? (ImGui_ImplXlib_Data*)ImGui::GetIO().BackendPlatformUserData : nullptr;
 }
 
 // Functions
+
+static Window ImGui_ImplXlib_GetHandleFromViewport(ImGuiViewport* viewport)
+{
+     return viewport ? (Window)viewport->PlatformHandle : 0;
+}
+
 static const char* ImGui_ImplXlib_GetClipboardText(void*)
 {
     ImGui_ImplXlib_Data* bd = ImGui_ImplXlib_GetBackendData();
@@ -318,12 +339,167 @@ static bool ImGui_ImplXlib_UpdateKeyModifiers(ImGuiKey ks, bool down)
     }
 }
 
+static ImGuiViewport* ImGui_ImplXlib_FindViewportByPlatformHandle(void* win)
+{
+    ImGuiPlatformIO& io = ImGui::GetPlatformIO();
+    for (ImGuiViewport* vp : io.Viewports) {
+        if (vp->PlatformHandle == win)
+            return vp;
+    }
+    return 0;
+}
+
+
+static void Imgui_ImplXlib_ShowWindow(ImGuiViewport* viewport)
+{
+    ImGui_ImplXlib_Data* bd = ImGui_ImplXlib_GetBackendData();
+    XMapWindow(bd->Dpy, (Window)viewport->PlatformHandleRaw);
+}
+
+static void ImGui_ImplXlib_DestroyWindow(ImGuiViewport* viewport)
+{
+    ImGui_ImplXlib_Data* bd = ImGui_ImplXlib_GetBackendData();
+    ImGui_ImplXlib_ViewportData* vd = (ImGui_ImplXlib_ViewportData*)viewport->PlatformUserData;
+    if (!vd) return;
+    //TODO::There is Release Capture in win32 backend, look that up
+    XDestroyWindow(bd->Dpy, (Window)viewport->PlatformHandleRaw);
+    IM_DELETE(vd);
+    viewport->PlatformUserData = 0;
+    viewport->PlatformHandle = 0;
+}
+
+static void ImGui_ImplXlib_SetWindowPos(ImGuiViewport* viewport, ImVec2 pos)
+{
+   ImGui_ImplXlib_Data* bd = ImGui_ImplXlib_GetBackendData();
+   XMoveWindow(bd->Dpy, (Window)viewport->PlatformHandle, pos.x, pos.y);
+   XFlush(bd->Dpy);
+}
+
+static ImVec2 ImGui_ImplXlib_GetWindowPos(ImGuiViewport* viewport) {
+    ImGui_ImplXlib_Data* bd = ImGui_ImplXlib_GetBackendData();
+    XWindowAttributes attribs;
+    XGetWindowAttributes(bd->Dpy, (Window)viewport->PlatformHandle, &attribs);
+    return {(float)attribs.x, (float)(attribs.y)};
+}
+
+static void ImGui_ImplXlib_SetWindowSize(ImGuiViewport* viewport, ImVec2 size) {
+    ImGui_ImplXlib_Data* bd = ImGui_ImplXlib_GetBackendData();
+    XResizeWindow(bd->Dpy, (Window)viewport->PlatformHandle, size.x, size.y);
+    XFlush(bd->Dpy);
+}
+
+static ImVec2 ImGui_ImplXlib_GetWindowSize(ImGuiViewport* viewport)
+{
+    ImGui_ImplXlib_Data* bd = ImGui_ImplXlib_GetBackendData();
+    XWindowAttributes attribs;
+    XGetWindowAttributes(bd->Dpy, (Window)viewport->PlatformHandle, &attribs);
+    return {(float)attribs.width, (float)attribs.height};
+}
+
+
+//https://stackoverflow.com/questions/2858263/how-do-i-bring-a-processes-window-to-the-foreground-on-x-windows-c
+static void ImGui_ImplXlib_BringToTop(Window window)
+{
+    ImGui_ImplXlib_Data* bd = ImGui_ImplXlib_GetBackendData();
+    XEvent event = { 0 };
+    event.xclient.type = ClientMessage;
+    event.xclient.serial = 0;
+    event.xclient.send_event = True;
+    event.xclient.message_type = XInternAtom(bd->Dpy, "_NET_ACTIVE_WINDOW", False);
+    event.xclient.window = window;
+    event.xclient.format = 32;
+    XSendEvent(bd->Dpy, DefaultRootWindow(bd->Dpy), False, SubstructureRedirectMask | SubstructureNotifyMask, &event );
+    XMapRaised(bd->Dpy, window);
+}
+
+static void ImGui_ImplXlib_SetWindowFocus(ImGuiViewport* viewport)
+{
+    ImGui_ImplXlib_Data* bd = ImGui_ImplXlib_GetBackendData();
+    ImGui_ImplXlib_BringToTop((Window)viewport->PlatformHandle);
+    XSetInputFocus(bd->Dpy, (Window)viewport->PlatformHandle, RevertToNone, CurrentTime);
+    XFlush(bd->Dpy);
+}
+
+static bool ImGui_ImplXlib_GetWindowFocus(ImGuiViewport* viewport)
+{
+    ImGui_ImplXlib_Data* bd = ImGui_ImplXlib_GetBackendData();
+    int rev;
+    Window win;
+    XGetInputFocus(bd->Dpy, &win, &rev);
+    return win == (Window)viewport->PlatformHandle;
+}
+
+static bool ImGui_ImplXlib_GetWindowMinimized(ImGuiViewport* viewport)
+{
+    ImVec2 size = ImGui_ImplXlib_GetWindowSize(viewport);
+    return size.x == 0 && size.y == 0;
+}
+
+static void ImGui_ImplXlib_SetWindowTitle(ImGuiViewport* viewport, const char* title)
+{
+    ImGui_ImplXlib_Data* bd = ImGui_ImplXlib_GetBackendData();
+    XStoreName(bd->Dpy, (Window)viewport->PlatformHandle, title);
+}
+
+static void ImGui_ImplXlib_SetWindowAlpha(ImGuiViewport* viewport, float alpha)
+{
+    return;
+}
+
+static void ImGui_ImplXlib_UpdateWindow(ImGuiViewport* viewport)
+{
+    ImGui_ImplXlib_ViewportData* vd = (ImGui_ImplXlib_ViewportData*)viewport->PlatformUserData;
+    ImGui_ImplXlib_Data* bd = ImGui_ImplXlib_GetBackendData();
+
+    Window new_parent = ImGui_ImplXlib_GetHandleFromViewport(viewport->ParentViewport);
+    if (new_parent != vd->ParentHandle) {
+        vd->ParentHandle = new_parent;
+        XSetTransientForHint(bd->Dpy, (Window)vd->Handle, new_parent);
+    }
+}
+
+static float ImGui_ImplXlib_GetWindowDpiScale(ImGuiViewport* viewport)
+{
+    return 1.0;
+}
+
+static void ImGui_ImplXlib_OnChangedViewport(ImGuiViewport* viewport)
+{
+    return;
+}
+
+static void ImGui_ImplXlib_UpdateMonitors()
+{
+    ImGui_ImplXlib_Data* bd = ImGui_ImplXlib_GetBackendData();
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    int count = 0;
+    XRRMonitorInfo* monitors = XRRGetMonitors(bd->Dpy, DefaultRootWindow(bd->Dpy), 0, &count);
+    platform_io.Monitors.resize(count);
+    ImVec2 p = {0.0f,0.0f};
+    for (int i = 0; i < count; ++i)
+    {
+        platform_io.Monitors[i].DpiScale = 1.0f;
+        platform_io.Monitors[i].PlatformHandle = (void*)monitors[i].name;
+        platform_io.Monitors[i].MainPos = p;
+        platform_io.Monitors[i].MainSize= ImVec2(monitors[i].width, monitors[i].height);
+        platform_io.Monitors[i].WorkPos = p;
+        platform_io.Monitors[i].WorkSize = ImVec2(monitors[i].width, monitors[i].height);
+        p.x += monitors[i].width;
+    }
+    XRRFreeMonitors(monitors);
+    bd->WantUpdateMonitors = 0;
+}
+
+
+
+
 // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
 // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
 // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
 // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
 // If you have multiple events and some of them are not meant to be used by dear imgui, you may need to filter events based on their windowID field.
-bool ImGui_ImplXlib_ProcessEvent(XEvent* event) {
+bool ImGui_ImplXlib_ProcessEvent(XEvent* event)
+{
     ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplXlib_Data* bd = ImGui_ImplXlib_GetBackendData();
     // Needed for Xim events
@@ -384,6 +560,15 @@ bool ImGui_ImplXlib_ProcessEvent(XEvent* event) {
                 }
             }
             return true;
+        }
+        case ConfigureNotify:
+        {
+           ImGuiViewport* vp = ImGui_ImplXlib_FindViewportByPlatformHandle((void*)event->xconfigure.window);
+           if (!vp)
+               return false;
+           vp->PlatformRequestResize = 1;
+           vp->PlatformRequestMove = 1;
+           return true;
         }
         case FocusIn:
         case FocusOut:
@@ -454,6 +639,161 @@ bool ImGui_ImplXlib_ProcessEvent(XEvent* event) {
     return false;
 }
 
+static int fbAttribs[] = {
+    GLX_X_RENDERABLE,
+	True,
+	GLX_DRAWABLE_TYPE,
+	GLX_WINDOW_BIT,
+	GLX_RENDER_TYPE,
+	GLX_RGBA_BIT,
+	GLX_X_VISUAL_TYPE,
+	GLX_TRUE_COLOR,
+	GLX_RED_SIZE,
+	8,
+	GLX_GREEN_SIZE,
+	8,
+	GLX_BLUE_SIZE,
+	8,
+	GLX_ALPHA_SIZE,
+	8,
+	GLX_DEPTH_SIZE,
+	24,
+	GLX_STENCIL_SIZE,
+	8,
+	GLX_DOUBLEBUFFER,
+	True,
+	None
+};
+
+static void ImGui_ImplXlib_CreateWindow(ImGuiViewport* viewport)
+{
+    ImGui_ImplXlib_Data* bd = ImGui_ImplXlib_GetBackendData();
+    ImGui_ImplXlib_ViewportData* vd = IM_NEW(ImGui_ImplXlib_ViewportData);
+    Window root = DefaultRootWindow(bd->Dpy);
+    vd->ParentHandle = ImGui_ImplXlib_GetHandleFromViewport(viewport->ParentViewport);
+    viewport->PlatformUserData = vd;
+    XSetWindowAttributes winAttribs;
+    winAttribs.colormap =  CopyFromParent;
+
+    winAttribs.event_mask = KeyPressMask | KeyReleaseMask | FocusChangeMask | ButtonPressMask | ButtonReleaseMask | StructureNotifyMask;
+    winAttribs.event_mask |= PointerMotionMask | EnterWindowMask | LeaveWindowMask | FocusChangeMask;
+//	winAttribs.event_mask = ExposureMask | KeyPressMask | StructureNotifyMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask;
+    //--------------------------
+        int count = 0;
+        GLXFBConfig* fbConfings = glXChooseFBConfig(bd->Dpy, DefaultScreen(bd->Dpy), fbAttribs, &count);
+        GLXFBConfig fb_conf = fbConfings[0];
+        XFree(fbConfings);
+        XVisualInfo* vi = glXGetVisualFromFBConfig(bd->Dpy, fb_conf);
+        Colormap cmap = XCreateColormap(bd->Dpy, root, vi->visual, AllocNone);
+        winAttribs.colormap   = cmap;
+    //--------------------------
+
+    vd->Handle = XCreateWindow(bd->Dpy, root, viewport->Pos.x, viewport->Pos.y,
+                                viewport->Size.x, viewport->Size.y, 0, vi->depth, InputOutput, vi->visual, CWColormap | CWEventMask,
+                                &winAttribs);
+    if (viewport->ParentViewport)
+        XSetTransientForHint(bd->Dpy, (Window)vd->Handle, (Window)viewport->ParentViewport->PlatformHandle);
+
+    XSetWindowBackground(bd->Dpy, (Window)vd->Handle, 0x0);
+
+    Atom state = XInternAtom(bd->Dpy, "_NET_WM_STATE", False);
+    Atom type = XInternAtom(bd->Dpy, "_NET_WM_WINDOW_TYPE", False);
+    Atom taskbarBehaviour = XInternAtom(bd->Dpy, "_NET_WM_STATE_SKIP_TASKBAR", False);
+    Atom dock = XInternAtom(bd->Dpy, "_NET_WM_WINDOW_TYPE_DOCK", False);
+    XChangeProperty(bd->Dpy, (Window)vd->Handle, type, XA_ATOM, 32, PropModeReplace, (unsigned char*)&dock, 1);
+    XChangeProperty(bd->Dpy, (Window)vd->Handle, state, XA_ATOM, 32, PropModeReplace, (unsigned char*)&taskbarBehaviour, 1);
+
+    vd->Owned = 1;
+    viewport->PlatformHandle = (void*)vd->Handle;
+    viewport->PlatformHandleRaw = (void*)vd->Handle;
+    viewport->PlatformRequestResize = 0;
+}
+
+void ImGui_ImplXlib_OpenGLRendererCreate(ImGuiViewport* viewport) {
+    ImGui_ImplXlib_Data* bd = ImGui_ImplXlib_GetBackendData();
+
+    int count = 0;
+    GLXFBConfig* fbConfings = glXChooseFBConfig(bd->Dpy, DefaultScreen(bd->Dpy), fbAttribs, &count);
+    GLXFBConfig fb_conf = fbConfings[0];
+    XFree(fbConfings);
+    GLXWindow* win = IM_NEW(GLXWindow);
+    *win = glXCreateWindow(bd->Dpy, fb_conf, (Window)viewport->PlatformHandle, 0);
+    viewport->RendererUserData = win;
+}
+
+static void ImGui_ImplXlib_OpenGLRendererDestroy(ImGuiViewport* viewport) {
+
+    ImGui_ImplXlib_Data* bd = ImGui_ImplXlib_GetBackendData();
+    if (!viewport->RendererUserData)
+        return;
+    GLXWindow* win = (GLXWindow*)viewport->RendererUserData;
+    glXDestroyWindow(bd->Dpy, *win);
+    viewport->RendererUserData = 0;
+    IM_DELETE(win);
+}
+
+static void ImGui_ImplXlib_OpenGLRendererSwapBuffers(ImGuiViewport* viewport, void* render_arg) {
+    ImGui_ImplXlib_Data* bd = ImGui_ImplXlib_GetBackendData();
+    GLXWindow* win = (GLXWindow*)viewport->RendererUserData;
+    if (!win)
+        return;
+//    glViewport(0, 0, (int)200, 200);
+//    glClearColor(1.0,1.0,0.0,1.0);
+//    glClear(GL_COLOR_BUFFER_BIT);
+    glXSwapBuffers(bd->Dpy, *win);
+}
+
+
+void ImGui_ImplXlib_SetRendererCtx(GLXContext ctx) {
+    ImGui_ImplXlib_Data* bd = ImGui_ImplXlib_GetBackendData();
+    bd->RendererCtx = ctx;
+}
+
+static void ImGui_ImplXlib_OpenGLRendererRender(ImGuiViewport* viewport, void*) {
+    ImGui_ImplXlib_Data* bd = ImGui_ImplXlib_GetBackendData();
+    GLXWindow* win = (GLXWindow*)viewport->RendererUserData;
+    glXMakeCurrent(bd->Dpy, *win, (GLXContext)bd->RendererCtx);
+}
+
+void ImGui_ImplXlib_InitOpenGLRenderer() {
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    platform_io.Renderer_CreateWindow = ImGui_ImplXlib_OpenGLRendererCreate;
+    platform_io.Renderer_DestroyWindow = ImGui_ImplXlib_OpenGLRendererDestroy;
+    platform_io.Renderer_SwapBuffers = ImGui_ImplXlib_OpenGLRendererSwapBuffers;
+    platform_io.Platform_RenderWindow = ImGui_ImplXlib_OpenGLRendererRender;
+}
+
+void ImGui_ImplXlib_InitMultiViewportSupport() {
+    ImGui_ImplXlib_UpdateMonitors();
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    ImGui_ImplXlib_Data* bd = ImGui_ImplXlib_GetBackendData();
+    ImGuiViewport* main_viewport = ImGui::GetMainViewport();
+
+    platform_io.Platform_CreateWindow = ImGui_ImplXlib_CreateWindow;
+    platform_io.Platform_DestroyWindow = ImGui_ImplXlib_DestroyWindow;
+    platform_io.Platform_ShowWindow = Imgui_ImplXlib_ShowWindow;
+    platform_io.Platform_SetWindowPos = ImGui_ImplXlib_SetWindowPos;
+    platform_io.Platform_GetWindowPos = ImGui_ImplXlib_GetWindowPos;
+    platform_io.Platform_SetWindowSize = ImGui_ImplXlib_SetWindowSize;
+    platform_io.Platform_GetWindowSize = ImGui_ImplXlib_GetWindowSize;
+    platform_io.Platform_SetWindowFocus = ImGui_ImplXlib_SetWindowFocus;
+    platform_io.Platform_GetWindowFocus = ImGui_ImplXlib_GetWindowFocus;
+    platform_io.Platform_GetWindowMinimized = ImGui_ImplXlib_GetWindowMinimized;
+    platform_io.Platform_SetWindowTitle = ImGui_ImplXlib_SetWindowTitle;
+    platform_io.Platform_SetWindowAlpha = ImGui_ImplXlib_SetWindowAlpha;
+    platform_io.Platform_UpdateWindow = ImGui_ImplXlib_UpdateWindow;
+    platform_io.Platform_GetWindowDpiScale = ImGui_ImplXlib_GetWindowDpiScale; // FIXME-DPI
+    platform_io.Platform_OnChangedViewport = ImGui_ImplXlib_OnChangedViewport; // FIXME-DPI
+
+    ImGui_ImplXlib_ViewportData* vd = IM_NEW(ImGui_ImplXlib_ViewportData);
+    vd->Handle = bd->Win;
+    vd->ParentHandle = 0;
+    vd->Owned = 0;
+    main_viewport->PlatformUserData = vd;
+
+    ImGui_ImplXlib_InitOpenGLRenderer();
+}
+
 bool ImGui_ImplXlib_Init(Display* display, Window window)
 {
     ImGuiIO& io = ImGui::GetIO();
@@ -465,6 +805,10 @@ bool ImGui_ImplXlib_Init(Display* display, Window window)
     io.BackendPlatformName = "imgui_impl_xlib";
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;       // We can honor GetMouseCursor() values (optional)
     io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;        // We can honor io.WantSetMousePos requests (optional, rarely used)
+
+    io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;    // We can create multi-viewports on the Platform side (optional)
+    io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport; // We can call io.AddMouseViewportEvent() with correct data (optional)
+    io.BackendFlags |= ImGuiBackendFlags_HasParentViewport;       // We can honor viewport->ParentViewportId by applying the corresponding parent/child relationship at platform levle (optional)
 
     bd->Dpy = display;
     bd->Win = window;
@@ -487,7 +831,9 @@ bool ImGui_ImplXlib_Init(Display* display, Window window)
     }
 
     // Select keyboard/focus events
-    XSelectInput(display, window, KeyPressMask | KeyReleaseMask | FocusChangeMask | ButtonPressMask | ButtonReleaseMask | StructureNotifyMask);
+    long mask = KeyPressMask | KeyReleaseMask | FocusChangeMask | ButtonPressMask | ButtonReleaseMask | StructureNotifyMask;
+    mask |= PointerMotionMask | EnterWindowMask | LeaveWindowMask | FocusChangeMask;
+    XSelectInput(display, window, mask);
     // Setup XIM
 #ifdef X_HAVE_UTF8_STRING
     XSetLocaleModifiers("");
@@ -506,9 +852,18 @@ bool ImGui_ImplXlib_Init(Display* display, Window window)
     bd->MouseCursors[ImGuiMouseCursor_Hand] = XCreateFontCursor(display, XC_hand2);
     bd->MouseCursors[ImGuiMouseCursor_NotAllowed] = XCreateFontCursor(display, XC_pirate);
 
+    ImGuiViewport* main_viewport = ImGui::GetMainViewport();
+    main_viewport->PlatformHandle = (void*)bd->Win;
+    main_viewport->PlatformHandleRaw = (void*)bd->Win;
+
+    ImGui_ImplXlib_InitMultiViewportSupport();
     return true;
 }
 
+static void ImGui_ImplWin32_ShutdownMultiViewportSupport()
+{
+    ImGui::DestroyPlatformWindows();
+}
 void ImGui_ImplXlib_Shutdown()
 {
     ImGui_ImplXlib_Data* bd = ImGui_ImplXlib_GetBackendData();
@@ -523,45 +878,116 @@ void ImGui_ImplXlib_Shutdown()
         XFreeCursor(bd->Dpy, bd->MouseCursors[cursor_n]);
     bd->LastMouseCursor = 0;
 
+    ImGui_ImplWin32_ShutdownMultiViewportSupport();
+
     io.BackendPlatformName = nullptr;
     io.BackendPlatformUserData = nullptr;
     io.BackendFlags &= ~(ImGuiBackendFlags_HasMouseCursors | ImGuiBackendFlags_HasSetMousePos);
     IM_DELETE(bd);
 }
 
+
+static Window ImGui_ImplXlib_FindTopMostHovered(int x, int y)
+{
+    Window root;
+    Window parent;
+    Window* tree;
+    Window ret;
+    XWindowAttributes attribs;
+    int diffx;
+    int diffy;
+    unsigned int count;
+    int i;
+    ImGui_ImplXlib_Data* bd = ImGui_ImplXlib_GetBackendData();
+    if (!XQueryTree(bd->Dpy, DefaultRootWindow(bd->Dpy), &root, &parent, &tree, &count) || !count)
+        return 0;
+    ret = 0;
+    for (i = count-1; i >= 0; --i)
+    {
+        XGetWindowAttributes(bd->Dpy, tree[i], &attribs);
+        diffx = x - attribs.x;
+        diffy = y - attribs.y;
+        if (attribs.map_state == IsViewable && diffx > 0 && diffx < attribs.width && diffy > 0 && diffy < attribs.height)
+        {
+            ret = tree[i];
+            break;
+        }
+    }
+    XFree(tree);
+    return ret;
+}
+
+
+static Window ImGui_ImplXlib_FindFocusedWindow()
+{
+    ImGui_ImplXlib_Data* bd = ImGui_ImplXlib_GetBackendData();
+    ImGuiPlatformIO& pio = ImGui::GetPlatformIO();
+    Window focused;
+    int revert;
+    XGetInputFocus(bd->Dpy, &focused, &revert);
+    for (ImGuiViewport* vp : pio.Viewports) {
+        if ((Window)vp->PlatformHandle == focused)
+            return focused;
+    }
+    return 0;
+}
+
 static void ImGui_ImplXlib_UpdateMouseData()
 {
     ImGui_ImplXlib_Data* bd = ImGui_ImplXlib_GetBackendData();
     ImGuiIO& io = ImGui::GetIO();
-    Window focus;
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    int i;
+    Window focused;
     int revert;
-    XGetInputFocus(bd->Dpy, &focus, &revert);
-    bool is_app_focused = (focus == bd->Win);
-    if (!is_app_focused)
-        return;
-    // (Optional) Set OS mouse position from Dear ImGui if requested (rarely used, only when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
-    if (io.WantSetMousePos)
-        XWarpPointer(bd->Dpy, None, bd->Win, 0, 0, 0, 0, (int)io.MousePos.x, (int)io.MousePos.y);
+    XGetInputFocus(bd->Dpy, &focused, &revert);
+    bool is_app_focused = 0;
+    for (i = 0; i < platform_io.Viewports.size(); ++i) {
+        if (focused != (Window)platform_io.Viewports[i]->PlatformHandle)
+            continue;
+        is_app_focused = 1;
+        break;
+    }
     int window_x, window_y, mouse_x_global, mouse_y_global;
-    Window root, child;
+    Window root, child, hovered;
+    ImGuiViewport* vp;
     unsigned int mask;
-    if (XQueryPointer(bd->Dpy, bd->Win, &root, &child, &mouse_x_global, &mouse_y_global, &window_x, &window_y, &mask))
-        io.AddMousePosEvent((float)(window_x), (float)(window_y));
 
+    XQueryPointer(bd->Dpy, is_app_focused ? focused : DefaultRootWindow(bd->Dpy), &root, &child, &mouse_x_global, &mouse_y_global, &window_x, &window_y, &mask);
+    if (is_app_focused)
+    {
+        XQueryPointer(bd->Dpy, focused, &root, &child, &mouse_x_global, &mouse_y_global, &window_x, &window_y, &mask);
+        // (Optional) Set OS mouse position from Dear ImGui if requested (rarely used, only when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
+        if (io.WantSetMousePos)
+            XWarpPointer(bd->Dpy, None, focused, 0, 0, 0, 0, (int)io.MousePos.x, (int)io.MousePos.y);
+        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+            io.AddMousePosEvent(mouse_x_global, mouse_y_global);
+        else
+            io.AddMousePosEvent(window_x, window_y);
+    }
+    hovered = ImGui_ImplXlib_FindTopMostHovered(mouse_x_global, mouse_y_global);
+    if (hovered)
+    {
+        vp = ImGui_ImplXlib_FindViewportByPlatformHandle((void*)hovered);
+        if (vp)
+            io.AddMouseViewportEvent(vp->ID);
+    }
 }
 
 static void ImGui_ImplXlib_UpdateMouseCursor()
 {
     ImGuiIO& io = ImGui::GetIO();
+    ImGui_ImplXlib_Data* bd = ImGui_ImplXlib_GetBackendData();
+    Window focused = io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable ? ImGui_ImplXlib_FindFocusedWindow() : bd->Win;
+    if (!focused)
+        return;
     if (io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange)
         return;
-    ImGui_ImplXlib_Data* bd = ImGui_ImplXlib_GetBackendData();
-
     ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
     if (io.MouseDrawCursor || imgui_cursor == ImGuiMouseCursor_None)
     {
         // Hide OS mouse cursor if imgui is drawing it or if it wants no cursor
-        XUndefineCursor(bd->Dpy, bd->Win);
+        XUndefineCursor(bd->Dpy, focused);
     }
     else
     {
@@ -569,7 +995,7 @@ static void ImGui_ImplXlib_UpdateMouseCursor()
         Cursor expected_cursor = bd->MouseCursors[imgui_cursor] ? bd->MouseCursors[imgui_cursor] : bd->MouseCursors[ImGuiMouseCursor_Arrow];
         if (bd->LastMouseCursor != expected_cursor)
         {
-            XDefineCursor(bd->Dpy, bd->Win, expected_cursor);
+            XDefineCursor(bd->Dpy, focused, expected_cursor);
             bd->LastMouseCursor = expected_cursor;
         }
     }
@@ -585,6 +1011,9 @@ void ImGui_ImplXlib_NewFrame()
     unsigned int w = 0, h = 0, border_width, depth;
     Window root;
     XGetGeometry(bd->Dpy, bd->Win, &root, &x, &y, &w, &h, &border_width, &depth);
+    if (bd->WantUpdateMonitors) {
+       ImGui_ImplXlib_UpdateMonitors();
+    }
 
     io.DisplaySize = ImVec2((float)w, (float)h);
 

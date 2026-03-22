@@ -19,7 +19,7 @@ OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 
 CXXFLAGS = -std=c++11 -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends
 CXXFLAGS += -g -Wall -Wformat
-LIBS = -ldl -lGL -lX11 -lXi
+LIBS = -ldl -lGL -lX11 -lXi -lXrandr
 
 ##---------------------------------------------------------------------
 ## OPENGL ES

@@ -30,4 +30,32 @@ IMGUI_IMPL_API void     ImGui_ImplXlib_Shutdown();
 IMGUI_IMPL_API void     ImGui_ImplXlib_NewFrame();
 IMGUI_IMPL_API bool     ImGui_ImplXlib_ProcessEvent(XEvent* event);
 
+struct ImGui_ImplXlib_Data
+{
+    Display*        Dpy;
+    Window          Win;
+    int             Xi2Opcode;
+    XIM             IM;
+    XIC             IC;
+    timespec        Time;
+    int             MouseButtonsDown;
+    Cursor          MouseCursors[ImGuiMouseCursor_COUNT];
+    Cursor          LastMouseCursor;
+    char*           ClipboardTextData;
+    bool            SelectionWaiting;
+    bool            WantUpdateMonitors;
+    Atom            XA_CLIPBOARD;
+    Atom            XA_SELECTION;
+    Atom            XA_TARGETS;
+    Atom            XA_INCR;
+    Atom*           XA_MIME;
+    void*           RendererCtx;
+    unsigned int    MimeCount;
+
+    ImGui_ImplXlib_Data()   { memset((void*)this, 0, sizeof(*this)); }
+};
+
+ImGui_ImplXlib_Data* ImGui_ImplXlib_GetBackendData();
+void ImGui_ImplXlib_InitMultiViewportSupport();
+
 #endif // #ifndef IMGUI_DISABLE
