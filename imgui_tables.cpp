@@ -1692,6 +1692,7 @@ void ImGui::TableSetupScrollFreeze(int columns, int rows)
         {
             ImSwap(table->Columns[table->DisplayOrderToIndex[order_n]].DisplayOrder, table->Columns[table->DisplayOrderToIndex[column_n]].DisplayOrder);
             ImSwap(table->DisplayOrderToIndex[order_n], table->DisplayOrderToIndex[column_n]);
+            table->IsSettingsDirty = true;
         }
     }
 }
