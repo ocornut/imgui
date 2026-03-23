@@ -3283,7 +3283,7 @@ void ImGui::TableHeader(const char* label)
         SetItemTooltip("%.*s", (int)(label_end - label), label);
 
     // We don't use BeginPopupContextItem() because we want the popup to stay up even after the column is hidden
-    if (IsMouseReleased(1) && IsItemHovered())
+    if (IsPopupOpenRequestForItem(ImGuiPopupFlags_None, id))
         TableOpenContextMenu(column_n);
 }
 
