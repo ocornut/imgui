@@ -25,7 +25,7 @@ or view this file with any Markdown viewer.
 | [I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around...](#q-i-integrated-dear-imgui-in-my-engine-and-some-elements-are-clipping-or-disappearing-when-i-move-windows-around) |
 | [I integrated Dear ImGui in my engine and some elements are displaying outside their expected windows boundaries...](#q-i-integrated-dear-imgui-in-my-engine-and-some-elements-are-displaying-outside-their-expected-windows-boundaries) |
 | **Q&A: Usage** |
-| **[About the ID Stack system..<br>Why is my widget not reacting when I click on it?<br>Why is the wrong widget reacting when I click on one?<br>How can I have widgets with an empty label?<br>How can I have multiple widgets with the same label?<br>How can I have multiple windows with the same label?](#q-about-the-id-stack-system)** |
+| **[About the ID Stack system...](#q-about-the-id-stack-system)**<br>**[How can I have multiple widgets with the same label?](#q-how-can-i-have-multiple-widgets-with-the-same-label) (using `##` or `PushID()`)**<br>**[How can I have widgets with an empty label?](#q-how-can-i-have-widgets-with-an-empty-label) (using `##`)**<br>**[How can I animate the label of an existing widget?](#q-how-can-i-change-the-label-of-an-existing-widget) (using `###`)**<br>**[General description of the label and ID Stack system.](#general-description-of-the-label-and-id-stack-system)** |
 | [How can I display an image?](#q-how-can-i-display-an-image)<br>[What are ImTextureID/ImTextureRef?](#q-what-are-imtextureidimtextureref)|
 | [How can I use maths operators with ImVec2?](#q-how-can-i-use-maths-operators-with-imvec2) |
 | [How can I use my own maths types instead of ImVec2/ImVec4?](#q-how-can-i-use-my-own-maths-types-instead-of-imvec2imvec4) |
@@ -263,15 +263,19 @@ ctx->RSSetScissorRects(1, &r);
 
 # Q&A: Usage
 
-### Q: About the ID Stack system...
-### Q: Why is my widget not reacting when I click on it?
-### Q: Why is the wrong widget reacting when I click on one?
-### Q: How can I have widgets with an empty label?
-### Q: How can I have multiple widgets with the same label?
-### Q: How can I have multiple windows with the same label?
+## Q: About the ID Stack system...
 
 **USING THE SAME LABEL+ID IS THE MOST COMMON USER MISTAKE!**
 <br>**USING AN EMPTY LABEL IS THE SAME AS USING THE SAME LABEL AS YOUR PARENT WIDGET!**
+<br>Read the questions in this section for a more general understand of how labels and ID works in Dear ImGui.
+
+TL;DR;
+- Widgets labels are also used to compute Widgets unique identifiers.
+- Unique identifiers are hashes of the label + of the parent scope (e.g. parent window or parent tree node labels).
+- You can use `PushID()` to append to the identifier without making it visible.
+- You can use `"##something"` in a label to append to the identifier without making it visible.
+- You can use `"###something"` in a label to make the identifier ignore the visible part.
+
 <table>
 <tr>
 <td><img src="https://github.com/user-attachments/assets/776a8315-1164-4178-9a8c-df52e0ff28aa"></td>
@@ -302,16 +306,99 @@ ImGui::End();
 </tr>
 </table>
 
-A primer on labels and the ID Stack...
+### Q: How can I have multiple widgets with the same label?
+
+A. When widgets are in a same scope and finite, you can use a `"##something"` suffix which will be part of the identifier but not visible as a label.
+
+```cpp
+Button("Play");        // Label = "Play",   ID = hash of ("MyWindow", "Play")
+Button("Play##foo1");  // Label = "Play",   ID = hash of ("MyWindow", "Play##foo1")  // Different from other buttons
+Button("Play##foo2");  // Label = "Play",   ID = hash of ("MyWindow", "Play##foo2")  // Different from other buttons
+```
+
+B. More generally, e.g. in loops, you can use `PushID()/PopID()` to push a prefix which will be part of the identifier.
+
+```cpp
+// Using PushID() with a string
+for (int i = 0; i < 100; i++)
+{
+  MyObject* obj = Objects[i];
+  PushID(obj->Name);
+  Button("Click");     // Label = "Click",  ID = hash of ("Window", obj->Name, "Click")
+  PopID();
+}
+```
+
+```cpp
+// Using PushID() with an index
+for (int i = 0; i < 100; i++)
+{
+  PushID(i);
+  Button("Click");     // Label = "Click",  ID = hash of ("Window", i, "Click")
+  PopID();
+}
+```
+
+### Q: How can I have widgets with an empty label?
+
+If you want to completely hide the label, but still need an ID:
+
+```cpp
+Checkbox("##On", &b);  // Label = "",       ID = hash of (..., "##On")   // No visible label, just a checkbox!
+```
+##### [Return to Index](#index)
+
+### Q: How can I make a label dynamic?
+
+Dear ImGui is very dynamic so you can submit different widgets every frame.
+However, in order to preserve widget state (eg. which tree node is open; which button is focused) the library internaly refers to their unique ID.
+
+Occasionally you might want to change a label while preserving a constant ID. This allows you to change/animate labels while persisting associated state.
+For example, you may want to include varying information in a window title bar or button label.
+
+Using "###" exclude the preceeding part from ID computation:
+```cpp
+Button("Hello###ID");   // Label = "Enable",   ID = hash of (..., "ID")
+Button("World###ID");   // Label = "Disable",  ID = hash of (..., "ID")  // Same ID, different label
+```
+Using a same ID ensure that associated related e.g. weither the widget is focused, won't be lost when the label changes.
+
+<table>
+<tr>
+<td><img src="https://github.com/user-attachments/assets/2bf18756-e122-498d-bbd4-5c44bb1018d5"></td>
+<td>
+<pre lang="cpp">
+// Window label has animating FPS counter
+// Window ID stays the same = hash of "MyGame"
+char buf[128];
+sprintf(buf, "My game (%.1f FPS)###MyGame", io.Framerate);
+ImGui::Begin(buf);
+&nbsp;
+// Label changes between "Enable" and "Disable"
+// ID stays the same = hash of ("MyGame", "MyButton")
+if (ImGui::Button(enabled ? "Disable###MyButton" : "Enable###MyButton", { -FLT_MIN, 0.0f }))
+    enabled = !enabled;
+&nbsp;
+ImGui::End();
+</pre>
+</td>
+</tr>
+</table>
+
+(Hint: I'd suggest wrapping sprintf in something more compact to use, e.g. [ocornut/Str](https://github.com/ocornut/Str) for what I personally use).
+
+##### [Return to Index](#index)
+
+### General description of the label and ID Stack system
 
 Dear ImGui internally needs to uniquely identify UI elements.
-Elements that are typically not clickable (such as calls to the Text functions) don't need an ID.
-Interactive widgets (such as calls to Button buttons) need a unique ID.
+Elements that are typically not clickable (such as calls to Text() functions) don't need an ID.
+Interactive widgets (such as calls to Button() functions) need a unique ID.
 
 **Unique IDs are used internally to track active widgets and occasionally associate state to widgets.<BR>
 Unique IDs are implicitly built from the hash of multiple elements that identify the "path" to the UI element.**
 
-Since Dear ImGui 1.85, you can use `Demo>Tools>ID Stack Tool` or call `ImGui::ShowIDStackToolWindow()`. The tool display intermediate values leading to the creation of a unique ID, making things easier to debug and understand.
+You can use `Demo>Tools>ID Stack Tool` or call `ImGui::ShowIDStackToolWindow()`. The tool display intermediate values leading to the creation of a unique ID, making things easier to debug and understand.
 
 ![Stack tool](https://user-images.githubusercontent.com/8225057/136235657-a0ea5665-dcd1-423f-9be6-dc3f8ced8f12.png)
 
@@ -365,20 +452,7 @@ Button("Play##foo2");  // Label = "Play",   ID = hash of ("MyWindow", "Play##foo
 Button("##foo");       // Label = "",       ID = hash of ("MyWindow", "##foo")       // Different from window
 End();
 ```
-- If you want to completely hide the label, but still need an ID:
-```cpp
-Checkbox("##On", &b);  // Label = "",       ID = hash of (..., "##On")   // No visible label, just a checkbox!
-```
-- Occasionally/rarely you might want to change a label while preserving a constant ID. This allows
-you to animate labels. For example, you may want to include varying information in a window title bar,
-but windows are uniquely identified by their ID. Use "###" to pass a label that isn't part of ID:
-```cpp
-Button("Hello###ID");  // Label = "Hello",  ID = hash of (..., "###ID")
-Button("World###ID");  // Label = "World",  ID = hash of (..., "###ID")  // Same ID, different label
 
-sprintf(buf, "My game (%f FPS)###MyGame", fps);
-Begin(buf);            // Variable title,   ID = hash of "MyGame"
-```
 - Solving ID conflict in a more general manner:
 Use `PushID()` / `PopID()` to create scopes and manipulate the ID stack, as to avoid ID conflicts
 within the same window. This is the most convenient way of distinguishing ID when iterating and
