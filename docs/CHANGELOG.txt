@@ -152,6 +152,10 @@ Other Changes:
     vertex/index buffers. (#9262) [@jaenis]
   - WebGPU: fixed version check for Emscripten 5.0.0+.
   - WebGPU: removed support for Emscripten <4.0.10. (#9281) [@ypujante]
+  - WebGPU: added support for WGVK native backend via IMGUI_IMPL_WEBGPU_BACKEND_WGVK,
+    using SPIRV shaders if WGSL is not available. (#9316, #9246, #9257) [@r-lyeh]
+    (WGVK is a lightweight alternative to Dawn or WGPU for native applications,
+    which is easier to build/setup, see: https://github.com/manuel5975p/WGVK)
 - Examples:
   - Emscripten: added `tabindex=-1` to canvas in our shell_minimal.htm. Without it,
     the canvas was not focusable in the DOM, which in turn make some backends

@@ -20,6 +20,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-03-25: Added support for WGVK native backend via IMGUI_IMPL_WEBGPU_BACKEND_WGVK define, with SPIRV shaders if WGSL is not available. (#9316, #9246, #9257)
 //  2026-03-09: Removed support for Emscripten < 4.0.10. (#9281)
 //  2025-10-16: Update to compile with Dawn and Emscripten's 4.0.10+ '--use-port=emdawnwebgpu' ports. (#8381, #8898)
 //  2025-09-18: Call platform_io.ClearRendererHandlers() on shutdown.
@@ -309,7 +310,7 @@ static void SafeRelease(FrameResources& res)
     SafeRelease(res.VertexBufferHost);
 }
 
-static WGPUProgrammableStageDescriptor ImGui_ImplWGPU_CreateShaderModule(const char* wgsl_source)
+static WGPUProgrammableStageDescriptor ImGui_ImplWGPU_CreateShaderModuleWGSL(const char* wgsl_source)
 {
     ImGui_ImplWGPU_Data* bd = ImGui_ImplWGPU_GetBackendData();
 
@@ -327,7 +328,7 @@ static WGPUProgrammableStageDescriptor ImGui_ImplWGPU_CreateShaderModule(const c
     return stage_desc;
 }
 
-static WGPUProgrammableStageDescriptor ImGui_ImplWGPU_CreateShaderModule(const void* spirv_binary, size_t spirv_length)
+static WGPUProgrammableStageDescriptor ImGui_ImplWGPU_CreateShaderModuleSPIRV(const void* spirv_binary, size_t spirv_length)
 {
     ImGui_ImplWGPU_Data* bd = ImGui_ImplWGPU_GetBackendData();
 
@@ -738,8 +739,8 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     graphics_pipeline_desc.layout = wgpuDeviceCreatePipelineLayout(bd->wgpuDevice, &layout_desc);
 
     // Create the vertex shader
-    WGPUProgrammableStageDescriptor vertex_shader_desc = ImGui_ImplWGPU_CreateShaderModule(__shader_vert_wgsl);
-    if (!vertex_shader_desc.module) vertex_shader_desc = ImGui_ImplWGPU_CreateShaderModule(__shader_vert_spirv, sizeof(__shader_vert_spirv));
+    WGPUProgrammableStageDescriptor vertex_shader_desc = ImGui_ImplWGPU_CreateShaderModuleWGSL(__shader_vert_wgsl);
+    if (!vertex_shader_desc.module) vertex_shader_desc = ImGui_ImplWGPU_CreateShaderModuleSPIRV(__shader_vert_spirv, sizeof(__shader_vert_spirv));
     graphics_pipeline_desc.vertex.module = vertex_shader_desc.module;
     graphics_pipeline_desc.vertex.entryPoint = vertex_shader_desc.entryPoint;
 
@@ -767,8 +768,8 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     graphics_pipeline_desc.vertex.buffers = buffer_layouts;
 
     // Create the pixel shader
-    WGPUProgrammableStageDescriptor pixel_shader_desc = ImGui_ImplWGPU_CreateShaderModule(__shader_frag_wgsl);
-    if (!pixel_shader_desc.module)  pixel_shader_desc = ImGui_ImplWGPU_CreateShaderModule(__shader_frag_spirv, sizeof(__shader_frag_spirv));
+    WGPUProgrammableStageDescriptor pixel_shader_desc = ImGui_ImplWGPU_CreateShaderModuleWGSL(__shader_frag_wgsl);
+    if (!pixel_shader_desc.module)  pixel_shader_desc = ImGui_ImplWGPU_CreateShaderModuleSPIRV(__shader_frag_spirv, sizeof(__shader_frag_spirv));
 
     // Create the blending setup
     WGPUBlendState blend_state = {};
