@@ -754,10 +754,9 @@ void ImGui::TableQueueSetColumnDisplayOrder(ImGuiTable* table, int src_order, in
     ImGuiTableColumn* dst_column = &table->Columns[table->DisplayOrderToIndex[dst_order]];
     if ((src_column->Flags | dst_column->Flags) & ImGuiTableColumnFlags_NoReorder) // FIXME: Perform a sweep test?
         return;
-    int src_i = (src_column->IndexWithinEnabledSet != -1) ? src_column->IndexWithinEnabledSet : table->Columns.index_from_ptr(src_column); // FIXME: Hidden columns don't count into the FreezeColumns count, so what to do here is ill-defined. For now we use regular index.
-    int dst_i = (dst_column->IndexWithinEnabledSet != -1) ? dst_column->IndexWithinEnabledSet : table->Columns.index_from_ptr(dst_column);
-    if ((src_i < table->FreezeColumnsRequest) != (dst_i < table->FreezeColumnsRequest))
-        return;
+    if (src_column->IsUserEnabled)
+        if ((src_order < table->LeftMostUnfrozenOrder) != (dst_order < table->LeftMostUnfrozenOrder))
+            return;
     table->ReorderColumnSrcOrder = (ImGuiTableColumnIdx)src_order;
     table->ReorderColumnDstOrder = (ImGuiTableColumnIdx)dst_order;
 }
@@ -833,6 +832,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     ImBitArrayClearAllBits(table->EnabledMaskByIndex, table->ColumnsCount);
     ImBitArrayClearAllBits(table->EnabledMaskByDisplayOrder, table->ColumnsCount);
     table->LeftMostEnabledColumn = -1;
+    table->LeftMostUnfrozenOrder = -1;
     table->MinColumnWidth = ImMax(1.0f, g.Style.FramePadding.x * 1.0f); // g.Style.ColumnsMinSpacing; // FIXME-TABLE
 
     // [Part 1] Apply/lock Enabled and Order states. Calculate auto/ideal width for columns. Count fixed/stretch columns.
@@ -896,6 +896,8 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         else
             table->LeftMostEnabledColumn = (ImGuiTableColumnIdx)column_n;
         column->IndexWithinEnabledSet = table->ColumnsEnabledCount++;
+        if (table->ColumnsEnabledCount == table->FreezeColumnsRequest)
+            table->LeftMostUnfrozenOrder = (ImGuiTableColumnIdx)(order_n + 1);
         ImBitArraySetBit(table->EnabledMaskByIndex, column_n);
         ImBitArraySetBit(table->EnabledMaskByDisplayOrder, column->DisplayOrder);
         prev_visible_column_idx = column_n;
@@ -929,6 +931,8 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     if ((table->Flags & ImGuiTableFlags_Sortable) && table->SortSpecsCount == 0 && !(table->Flags & ImGuiTableFlags_SortTristate))
         table->IsSortSpecsDirty = true;
     table->RightMostEnabledColumn = (ImGuiTableColumnIdx)prev_visible_column_idx;
+    if (table->LeftMostUnfrozenOrder == -1)
+        table->LeftMostUnfrozenOrder = table->ColumnsEnabledCount;
     IM_ASSERT(table->LeftMostEnabledColumn >= 0 && table->RightMostEnabledColumn >= 0);
 
     // [Part 2] Disable child window clipping while fitting columns. This is not strictly necessary but makes it possible to avoid
