@@ -11108,6 +11108,8 @@ bool    ImGui::ErrorLog(const char* msg)
     return g.IO.ConfigErrorRecoveryEnableAssert;
 }
 
+// Display an error tooltip when same ID as HoveredId was submitted multiple times.
+// See code in ItemHoverable() for an explanation of why we associate this error to HoveredId + code drawing of rectangles over individual items instances.
 void ImGui::ErrorCheckEndFrameFinalizeErrorTooltip()
 {
 #ifndef IMGUI_DISABLE_DEBUG_TOOLS
