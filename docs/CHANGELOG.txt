@@ -170,6 +170,8 @@ Docking+Viewports Branch:
   - Backends: SDL2, SDL3: fixed an issue dated 2025/04/09 (1.92 WIP) where a refactor
     and a merge caused ImGuiBackendFlags_HasMouseHoveredViewport to never be set, causing
     foreign windows to be ignored when deciding of hovered viewport. (#9284) [@ravencgg]
+  - Backends: SDL3: use SDL_HAS_EVENT_DISPLAY_USABLE_BOUNDS_CHANGED (SDL 3.4.0+) when
+    available to avoid refreshing monitor work area every frame on Windows. (#8415)
 
 
 -----------------------------------------------------------------------

@@ -24,6 +24,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2026-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2026-03-25: [Docking] Use SDL_HAS_EVENT_DISPLAY_USABLE_BOUNDS_CHANGED (SDL 3.4.0+) when available to avoid refreshing monitor work area every frame on Windows. (#8415)
 //  2026-03-09: [Docking] Fixed an issue dated 2025/04/09 (1.92 WIP) where a refactor+merge caused ImGuiBackendFlags_HasMouseHoveredViewport to never be set, causing foreign windows to be ignored when deciding of hovered viewport. (#9284)
 //  2026-02-13: Inputs: systems other than X11 are back to starting mouse capture on mouse down (reverts 2025-02-26 change). Only X11 requires waiting for a drag by default (not ideal, but a better default for X11 users). Added ImGui_ImplSDL3_SetMouseCaptureMode() for X11 debugger users. (#3650, #6410, #9235)
 //  2026-01-15: Changed GetClipboardText() handler to return nullptr on error aka clipboard contents is not text. Consistent with other backends. (#9168)
@@ -105,6 +106,7 @@
 #else
 #define SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE    0
 #endif
+#define SDL_HAS_EVENT_DISPLAY_USABLE_BOUNDS_CHANGED     SDL_VERSION_ATLEAST(3,4,0)
 
 // FIXME-LEGACY: remove when SDL 3.1.3 preview is released.
 #ifndef SDLK_APOSTROPHE
@@ -475,6 +477,9 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
         case SDL_EVENT_DISPLAY_REMOVED:
         case SDL_EVENT_DISPLAY_MOVED:
         case SDL_EVENT_DISPLAY_CONTENT_SCALE_CHANGED:
+#if SDL_HAS_EVENT_DISPLAY_USABLE_BOUNDS_CHANGED
+        case SDL_EVENT_DISPLAY_USABLE_BOUNDS_CHANGED:
+#endif
         {
             bd->WantUpdateMonitors = true;
             return true;
@@ -997,7 +1002,7 @@ void ImGui_ImplSDL3_NewFrame()
     ImGui_ImplSDL3_GetWindowSizeAndFramebufferScale(bd->Window, &io.DisplaySize, &io.DisplayFramebufferScale);
 
     // Update monitors
-#ifdef WIN32
+#if defined(WIN32) && !SDL_HAS_EVENT_DISPLAY_USABLE_BOUNDS_CHANGED
     bd->WantUpdateMonitors = true; // Keep polling under Windows to handle changes of work area when resizing task-bar (#8415)
 #endif
     if (bd->WantUpdateMonitors)
