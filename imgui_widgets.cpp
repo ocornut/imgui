@@ -3696,7 +3696,7 @@ int ImParseFormatPrecision(const char* fmt, int default_precision)
 // Create text input in place of another active widget (e.g. used when doing a Ctrl+Click on drag/slider widgets)
 // - This must be submitted right after the item it is overlaying.
 // FIXME: Facilitate using this in variety of other situations.
-bool ImGui::TempInputText(const ImRect& bb, ImGuiID id, const char* label, char* buf, int buf_size, ImGuiInputTextFlags flags)
+bool ImGui::TempInputText(const ImRect& bb, ImGuiID id, const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data)
 {
     // On the first frame, g.TempInputTextId == 0, then on subsequent frames it becomes == id.
     // We clear ActiveID on the first frame to allow the InputText() taking it back.
@@ -3710,7 +3710,7 @@ bool ImGui::TempInputText(const ImRect& bb, ImGuiID id, const char* label, char*
     ImVec2 backup_pos = window->DC.CursorPos;
     window->DC.CursorPos = bb.Min;
     g.LastItemData.ItemFlags |= ImGuiItemFlags_AllowDuplicateId; // Using ImGuiInputTextFlags_MergedItem above will skip ItemAdd() so we poke here.
-    bool value_changed = InputTextEx(label, NULL, buf, buf_size, bb.GetSize(), flags | ImGuiInputTextFlags_TempInput | ImGuiInputTextFlags_AutoSelectAll);
+    bool value_changed = InputTextEx(label, NULL, buf, (int)buf_size, bb.GetSize(), flags | ImGuiInputTextFlags_TempInput | ImGuiInputTextFlags_AutoSelectAll, callback, user_data);
     KeepAliveID(id); // Not done because of ImGuiInputTextFlags_TempInput
     if (init)
     {
