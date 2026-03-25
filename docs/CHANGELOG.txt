@@ -170,7 +170,8 @@ Other Changes:
   - WebGPU: fixed undefined behaviors in example code for requesting adapter
     and device. (#9246, #9256) [@r-lyeh]
   - SDL2+WebGPU: fixed hi-dpi handling. (#9300) [@ypujante]
-  - GLFW/SDL2/SDL3+WebGPU: removed suport for Emscripten <4.0.10. (#9281) [@ypujante]
+  - GLFW/SDL2/SDL3+WebGPU: added support for WGVK. (#9316, #9246, #9257) [@r-lyeh, @ocornut]
+  - GLFW/SDL2/SDL3+WebGPU: removed support for Emscripten <4.0.10. (#9281) [@ypujante]
 
 
 -----------------------------------------------------------------------
