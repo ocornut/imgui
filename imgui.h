@@ -1195,6 +1195,10 @@ IM_MSVC_RUNTIME_CHECKS_OFF
     inline IM_FMTLIST(3) bool    TreeNodeExV(const char* str_id, ImGuiTreeNodeFlags flags, const char* fmt, va_list args) { return TreeNodeEx(ImStrv(str_id), flags, fmt, args); }
     inline               void    TreePush(const char* str_id)                                                             { TreePush(ImStrv(str_id)); }
 IM_MSVC_RUNTIME_CHECKS_RESTORE
+
+    // Detect misuses (#9321)
+    // FIXME-IMSTR: Validate that syntax is ok for our minimum target.
+    ImVec2 CalcTextSize(ImStrv, const char*, bool hide_text_after_double_hash = false, float wrap_width = -1.0f) = delete;
 }
 
 //-----------------------------------------------------------------------------
