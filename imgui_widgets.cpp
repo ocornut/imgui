@@ -1510,10 +1510,10 @@ bool ImGui::TextLink(ImStrv label)
 
     ImGuiContext& g = *GImGui;
     const ImGuiID id = window->GetID(label);
-    const char* label_end = FindRenderedTextEnd(label);
+    label.End = FindRenderedTextEnd(label);
 
     ImVec2 pos(window->DC.CursorPos.x, window->DC.CursorPos.y + window->DC.CurrLineTextBaseOffset);
-    ImVec2 size = CalcTextSize(label.Begin, label_end, true);
+    ImVec2 size = CalcTextSize(label, true);
     ImRect bb(pos, pos + size);
     ItemSize(size, 0.0f);
     if (!ItemAdd(bb, id))
@@ -1547,7 +1547,7 @@ bool ImGui::TextLink(ImStrv label)
     window->DrawList->AddLine(ImVec2(bb.Min.x, line_y), ImVec2(bb.Max.x, line_y), GetColorU32(line_colf), 1.0f * (float)(int)g.Style._MainScale); // FIXME-TEXT: Underline mode // FIXME-DPI
 
     PushStyleColor(ImGuiCol_Text, GetColorU32(text_colf));
-    RenderText(bb.Min, label.Begin, label_end);
+    RenderText(bb.Min, label);
     PopStyleColor();
 
     IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags);
@@ -5588,14 +5588,14 @@ bool ImGui::InputTextEx(ImStrv label, ImStrv hint, char* buf, int buf_size, cons
 
                 float rect_width = 0.0f;
                 if (line_selected_begin < line_selected_end)
-                    rect_width += CalcTextSize(line_selected_begin, line_selected_end).x;
+                    rect_width += CalcTextSize(ImStrv(line_selected_begin, line_selected_end)).x;
                 if (text_selected_begin <= p_eol && text_selected_end > p_eol && !p_eol_is_wrap)
                     rect_width += bg_eol_width; // So we can see selected empty lines
                 if (rect_width == 0.0f)
                     continue;
 
                 ImRect rect;
-                rect.Min.x = draw_pos.x - draw_scroll.x + CalcTextSize(p, line_selected_begin).x;
+                rect.Min.x = draw_pos.x - draw_scroll.x + CalcTextSize(ImStrv(p, line_selected_begin)).x;
                 rect.Min.y = draw_pos.y - draw_scroll.y + line_n * g.FontSize;
                 rect.Max.x = rect.Min.x + rect_width;
                 rect.Max.y = rect.Min.y + bg_offy_dn + g.FontSize;
@@ -5608,7 +5608,7 @@ bool ImGui::InputTextEx(ImStrv label, ImStrv hint, char* buf, int buf_size, cons
 
     // Find render position for right alignment (single-line only)
     if (g.ActiveId != id && (flags & ImGuiInputTextFlags_ElideLeft) && !render_cursor && !render_selection)
-        draw_pos.x = ImMin(draw_pos.x, frame_bb.Max.x - CalcTextSize(buf_display, NULL).x - style.FramePadding.x);
+        draw_pos.x = ImMin(draw_pos.x, frame_bb.Max.x - CalcTextSize(buf_display).x - style.FramePadding.x);
     //draw_scroll.x = state->Scroll.x; // Preserve scroll when inactive?
 
     // Render text
