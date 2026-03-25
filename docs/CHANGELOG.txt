@@ -145,6 +145,9 @@ Other Changes:
 - Backends:
   - DirectX9, OpenGL2, OpenGL3, Metal, SDLGPU3, SDLRenderer2, SDLRenderer3: fixed easy-to-fix
     issues in code assuming ImTextureID_Invalid is always defined to 0. (#9295, #9310)
+  - GLFW: mouse cursor is properly restored if changed by user app/code while using
+    glfwSetInputMode(..., GLFW_CURSOR_DISABLED) or ImGuiConfigFlags_NoMouseCursorChange.
+    Amend optimization done in 1.92.6.
   - SDLGPU3: removed unnecessary call to SDL_WaitForGPUIdle when releasing
     vertex/index buffers. (#9262) [@jaenis]
   - WebGPU: fixed version check for Emscripten 5.0.0+.
