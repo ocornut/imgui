@@ -16539,6 +16539,12 @@ void ImGui::LocalizeRegisterEntries(const ImGuiLocEntry* entries, int count)
 // - DestroyPlatformWindows()
 //-----------------------------------------------------------------------------
 
+const char* ImGuiViewport::GetDebugName() const
+{
+    const ImGuiViewportP* viewport = (const ImGuiViewportP*)this;
+    return viewport->Window ? viewport->Window->Name : "n/a";
+}
+
 void ImGuiPlatformIO::ClearPlatformHandlers()
 {
     Platform_GetClipboardTextFn = NULL;
