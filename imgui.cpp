@@ -1603,6 +1603,7 @@ ImGuiIO::ImGuiIO()
     // Settings
     ConfigFlags = ImGuiConfigFlags_None;
     BackendFlags = ImGuiBackendFlags_None;
+    DisplayPos = ImVec2(0.f, 0.f);
     DisplaySize = ImVec2(-1.0f, -1.0f);
     DeltaTime = 1.0f / 60.0f;
     IniSavingRate = 5.0f;
@@ -10865,6 +10866,7 @@ static void ImGui::ErrorCheckNewFrameSanityChecks()
     IM_ASSERT(g.Initialized);
     IM_ASSERT((g.IO.DeltaTime > 0.0f || g.FrameCount == 0)              && "Need a positive DeltaTime!");
     IM_ASSERT((g.FrameCount == 0 || g.FrameCountEnded == g.FrameCount)  && "Forgot to call Render() or EndFrame() at the end of the previous frame?");
+    IM_ASSERT(g.IO.DisplayPos.x >= 0.f && g.IO.DisplayPos.y >= 0.f      && "Invalid DisplayPos value!");
     IM_ASSERT(g.IO.DisplaySize.x >= 0.0f && g.IO.DisplaySize.y >= 0.0f  && "Invalid DisplaySize value!");
     IM_ASSERT(g.Style.CurveTessellationTol > 0.0f                       && "Invalid style setting!");
     IM_ASSERT(g.Style.CircleTessellationMaxError > 0.0f                 && "Invalid style setting!");
@@ -15816,7 +15818,7 @@ static void ImGui::UpdateViewportsNewFrame()
     // FIXME-VIEWPORT: Size is driven by backend/user code for backward-compatibility but we should aim to make this more consistent.
     ImGuiViewportP* main_viewport = g.Viewports[0];
     main_viewport->Flags = ImGuiViewportFlags_IsPlatformWindow | ImGuiViewportFlags_OwnedByApp;
-    main_viewport->Pos = ImVec2(0.0f, 0.0f);
+    main_viewport->Pos = g.IO.DisplayPos;
     main_viewport->Size = g.IO.DisplaySize;
     main_viewport->FramebufferScale = g.IO.DisplayFramebufferScale;
     IM_ASSERT(main_viewport->FramebufferScale.x > 0.0f && main_viewport->FramebufferScale.y > 0.0f);

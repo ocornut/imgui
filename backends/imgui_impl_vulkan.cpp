@@ -495,28 +495,28 @@ static void ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, VkPipeline 
     }
 
     // Setup viewport:
-    {
-        VkViewport viewport;
-        viewport.x = 0;
-        viewport.y = 0;
-        viewport.width = (float)fb_width;
-        viewport.height = (float)fb_height;
-        viewport.minDepth = 0.0f;
-        viewport.maxDepth = 1.0f;
-        vkCmdSetViewport(command_buffer, 0, 1, &viewport);
-    }
+    
+    VkViewport viewport;
+    viewport.x = draw_data->OwnerViewport->Pos.x;
+    viewport.y = draw_data->OwnerViewport->Pos.y;
+    viewport.width = (float)fb_width;
+    viewport.height = (float)fb_height;
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+    
 
     // Setup scale and translation:
     // Our visible imgui space lies from draw_data->DisplayPps (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayPos is (0,0) for single viewport apps.
     {
-        float scale[2];
-        scale[0] = 2.0f / draw_data->DisplaySize.x;
-        scale[1] = 2.0f / draw_data->DisplaySize.y;
-        float translate[2];
-        translate[0] = -1.0f - draw_data->DisplayPos.x * scale[0];
-        translate[1] = -1.0f - draw_data->DisplayPos.y * scale[1];
-        vkCmdPushConstants(command_buffer, bd->PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(float) * 0, sizeof(float) * 2, scale);
-        vkCmdPushConstants(command_buffer, bd->PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(float) * 2, sizeof(float) * 2, translate);
+        float scale_translate[4];
+        //first two are scale
+        scale_translate[0] = 2.0f / viewport.width;
+        scale_translate[1] = 2.0f / viewport.height;
+        //second two are translate
+        scale_translate[2] = -1.0f - draw_data->DisplayPos.x * scale_translate[0];
+        scale_translate[3] = -1.0f - draw_data->DisplayPos.y * scale_translate[1];
+        vkCmdPushConstants(command_buffer, bd->PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(float) * 4, scale_translate);
     }
 }
 
@@ -524,8 +524,10 @@ static void ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, VkPipeline 
 void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer, VkPipeline pipeline)
 {
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
-    int fb_width = (int)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
-    int fb_height = (int)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
+    int fb_width = (int)((draw_data->DisplaySize.x) * draw_data->FramebufferScale.x);
+    int fb_height = (int)((draw_data->DisplaySize.y) * draw_data->FramebufferScale.y);
+    //int fb_width = (int)((draw_data->DisplaySize.x - draw_data->DisplayPos.x) * draw_data->FramebufferScale.x);
+    //int fb_height = (int)((draw_data->DisplaySize.y - draw_data->DisplayPos.y) * draw_data->FramebufferScale.y);
     if (fb_width <= 0 || fb_height <= 0)
         return;
 
@@ -629,7 +631,7 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
             else
             {
                 // Project scissor/clipping rectangles into framebuffer space
-                ImVec2 clip_min((pcmd->ClipRect.x - clip_off.x) * clip_scale.x, (pcmd->ClipRect.y - clip_off.y) * clip_scale.y);
+                ImVec2 clip_min((pcmd->ClipRect.x/* - clip_off.x*/) * clip_scale.x, (pcmd->ClipRect.y/* - clip_off.y*/) * clip_scale.y);
                 ImVec2 clip_max((pcmd->ClipRect.z - clip_off.x) * clip_scale.x, (pcmd->ClipRect.w - clip_off.y) * clip_scale.y);
 
                 // Clamp to viewport as vkCmdSetScissor() won't accept values that are off bounds
@@ -637,15 +639,15 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
                 if (clip_min.y < 0.0f) { clip_min.y = 0.0f; }
                 if (clip_max.x > fb_width) { clip_max.x = (float)fb_width; }
                 if (clip_max.y > fb_height) { clip_max.y = (float)fb_height; }
-                if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)
-                    continue;
+                //if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)
+                //    continue;
 
                 // Apply scissor/clipping rectangle
                 VkRect2D scissor;
                 scissor.offset.x = (int32_t)(clip_min.x);
                 scissor.offset.y = (int32_t)(clip_min.y);
-                scissor.extent.width = (uint32_t)(clip_max.x - clip_min.x);
-                scissor.extent.height = (uint32_t)(clip_max.y - clip_min.y);
+                scissor.extent.width = (uint32_t)(clip_max.x);
+                scissor.extent.height = (uint32_t)(clip_max.y);
                 vkCmdSetScissor(command_buffer, 0, 1, &scissor);
 
                 // Bind DescriptorSet with font or user texture
