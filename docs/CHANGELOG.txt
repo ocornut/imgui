@@ -172,6 +172,9 @@ Docking+Viewports Branch:
     foreign windows to be ignored when deciding of hovered viewport. (#9284) [@ravencgg]
   - Backends: SDL3: use SDL_HAS_EVENT_DISPLAY_USABLE_BOUNDS_CHANGED (SDL 3.4.0+) when
     available to avoid refreshing monitor work area every frame on Windows. (#8415)
+  - Backends: Win32: fixed setting/getting correct size when viewports have OS decorations
+    enabled (e.g. io.ConfigViewportsNoDecoration = false) and process is running in
+    Per-Monitor V2 DPI mode. (#8897) [@lailoken]
 
 
 -----------------------------------------------------------------------

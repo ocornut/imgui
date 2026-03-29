@@ -23,21 +23,22 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2026-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2026-03-31: [Viewports] Fixed setting/getting size when viewports have OS decorations (e.g. io.ConfigViewportsNoDecoration = false) and process is running in Per-Monitor V2 DPI mode. (#8897)
 //  2026-01-28: Inputs: Minor optimization not submitting gamepad input if packet number has not changed (reworked from 2025-09-23 attempt). (#9202, #8556)
-//  2026-01-26: [Docking] Fixed an issue from 1.90.5 where newly appearing windows that are not parented to the main viewport don't have task bar icon appear before the windows was explicited refocused. (#7354, #8669)
+//  2026-01-26: [Viewports] Fixed an issue from 1.90.5 where newly appearing windows that are not parented to the main viewport don't have task bar icon appear before the windows was explicited refocused. (#7354, #8669)
 //  2025-12-03: Inputs: handle WM_IME_CHAR/WM_IME_COMPOSITION messages to support Unicode inputs on MBCS (non-Unicode) Windows. (#9099, #3653, #5961)
 //  2025-10-19: Inputs: Revert previous change to allow for io.ClearInputKeys() on focus-out not losing gamepad state.
 //  2025-09-23: Inputs: Minor optimization not submitting gamepad input if packet number has not changed.
 //  2025-09-18: Call platform_io.ClearPlatformHandlers() on shutdown.
-//  2025-06-02: [Docking] WM_DPICHANGED also apply io.ConfigDpiScaleViewports for main viewport instead of letting it be done by application code.
+//  2025-06-02: [Viewports] WM_DPICHANGED also apply io.ConfigDpiScaleViewports for main viewport instead of letting it be done by application code.
 //  2025-04-30: Inputs: Fixed an issue where externally losing mouse capture (due to e.g. focus loss) would fail to claim it again the next subsequent click. (#8594)
-//  2025-03-26: [Docking] Viewports: fixed an issue when closing a window from the OS close button (with io.ConfigViewportsNoDecoration = false) while user code was discarding the 'bool* p_open = false' output from Begin(). Because we allowed the Win32 window to close early, Windows destroyed it and our imgui window became not visible even though user code was still submitting it.
+//  2025-03-26: [Viewports] Viewports: fixed an issue when closing a window from the OS close button (with io.ConfigViewportsNoDecoration = false) while user code was discarding the 'bool* p_open = false' output from Begin(). Because we allowed the Win32 window to close early, Windows destroyed it and our imgui window became not visible even though user code was still submitting it.
 //  2025-03-10: When dealing with OEM keys, use scancodes instead of translated keycodes to choose ImGuiKey values. (#7136, #7201, #7206, #7306, #7670, #7672, #8468)
-//  2025-02-21: [Docking] WM_SETTINGCHANGE's SPI_SETWORKAREA message also triggers a refresh of monitor list. (#8415)
+//  2025-02-21: [Viewports] WM_SETTINGCHANGE's SPI_SETWORKAREA message also triggers a refresh of monitor list. (#8415)
 //  2025-02-18: Added ImGuiMouseCursor_Wait and ImGuiMouseCursor_Progress mouse cursor support.
-//  2024-11-21: [Docking] Fixed a crash when multiple processes are running with multi-viewports, caused by misusage of GetProp(). (#8162, #8069)
-//  2024-10-28: [Docking] Rely on property stored inside HWND to retrieve context/viewport, should facilitate attempt to use this for parallel contexts. (#8069)
-//  2024-09-16: [Docking] Inputs: fixed an issue where a viewport destroyed while clicking would hog mouse tracking and temporary lead to incorrect update of HoveredWindow. (#7971)
+//  2024-11-21: [Viewports] Fixed a crash when multiple processes are running with multi-viewports, caused by misusage of GetProp(). (#8162, #8069)
+//  2024-10-28: [Viewports] Rely on property stored inside HWND to retrieve context/viewport, should facilitate attempt to use this for parallel contexts. (#8069)
+//  2024-09-16: [Viewports] Inputs: fixed an issue where a viewport destroyed while clicking would hog mouse tracking and temporary lead to incorrect update of HoveredWindow. (#7971)
 //  2024-07-08: Inputs: Fixed ImGuiMod_Super being mapped to VK_APPS instead of VK_LWIN||VK_RWIN. (#7768)
 //  2023-10-05: Inputs: Added support for extra ImGuiKey values: F13 to F24 function keys, app back/forward keys.
 //  2023-09-25: Inputs: Synthesize key-down event on key-up for VK_SNAPSHOT / ImGuiKey_PrintScreen as Windows doesn't emit it (same behavior as GLFW/SDL).
@@ -108,6 +109,7 @@
 typedef DWORD(WINAPI* PFN_XInputGetCapabilities)(DWORD, DWORD, XINPUT_CAPABILITIES*);
 typedef DWORD(WINAPI* PFN_XInputGetState)(DWORD, XINPUT_STATE*);
 #endif
+typedef BOOL(WINAPI* PFN_AdjustWindowRectExForDpi)(LPRECT, DWORD, BOOL, DWORD, UINT);
 
 // Clang/GCC warnings with -Weverything
 #if defined(__clang__)
@@ -136,6 +138,7 @@ struct ImGui_ImplWin32_Data
     ImGuiMouseCursor            LastMouseCursor;
     UINT32                      KeyboardCodePage;
     bool                        WantUpdateMonitors;
+    PFN_AdjustWindowRectExForDpi AdjustWindowRectExForDpi;
 
 #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
     bool                        HasGamepad;
@@ -212,6 +215,9 @@ static bool ImGui_ImplWin32_InitEx(void* hwnd, bool platform_has_own_dc)
     // So as we store a pointer in IMGUI_CONTEXT we need to make sure we only call GetPropA() on windows owned by our process.
     ::SetPropA(bd->hWnd, "IMGUI_CONTEXT", ImGui::GetCurrentContext());
     ImGui_ImplWin32_InitMultiViewportSupport(platform_has_own_dc);
+
+    if (HINSTANCE user32_dll = ::GetModuleHandleA("user32.dll"))
+        bd->AdjustWindowRectExForDpi = (PFN_AdjustWindowRectExForDpi)::GetProcAddress(user32_dll, "AdjustWindowRectExForDpi");
 
     // Dynamically load XInput library
 #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
@@ -941,6 +947,7 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandlerEx(HWND hwnd, UINT msg, WPA
         return 0;
     case WM_DPICHANGED:
     {
+        // FIXME-DPI: see SDL3's WM_GETDPISCALEDSIZE handler.
         const RECT* suggested_rect = (RECT*)lParam;
         if (io.ConfigDpiScaleViewports)
             ::SetWindowPos(hwnd, nullptr, suggested_rect->left, suggested_rect->top, suggested_rect->right - suggested_rect->left, suggested_rect->bottom - suggested_rect->top, SWP_NOZORDER | SWP_NOACTIVATE);
@@ -1155,6 +1162,18 @@ static HWND ImGui_ImplWin32_GetHwndFromViewport(ImGuiViewport* viewport)
     return nullptr;
 }
 
+static void ImGui_ImplWin32_AdjustWindowRect(ImGuiViewport* viewport, RECT* rect, DWORD style, DWORD ex_style)
+{
+    ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
+    if (bd->AdjustWindowRectExForDpi)
+    {
+        UINT dpi = (UINT)(viewport->DpiScale * 96.0f + 0.5f);
+        if (dpi != 0 && bd->AdjustWindowRectExForDpi(rect, style, FALSE, ex_style, dpi))
+            return;
+    }
+    ::AdjustWindowRectEx(rect, style, FALSE, ex_style);
+}
+
 static void ImGui_ImplWin32_CreateWindow(ImGuiViewport* viewport)
 {
     ImGui_ImplWin32_ViewportData* vd = IM_NEW(ImGui_ImplWin32_ViewportData)();
@@ -1166,7 +1185,7 @@ static void ImGui_ImplWin32_CreateWindow(ImGuiViewport* viewport)
 
     // Create window
     RECT rect = { (LONG)viewport->Pos.x, (LONG)viewport->Pos.y, (LONG)(viewport->Pos.x + viewport->Size.x), (LONG)(viewport->Pos.y + viewport->Size.y) };
-    ::AdjustWindowRectEx(&rect, vd->DwStyle, FALSE, vd->DwExStyle);
+    ImGui_ImplWin32_AdjustWindowRect(viewport, &rect, vd->DwStyle, vd->DwExStyle);
     vd->Hwnd = ::CreateWindowExW(
         vd->DwExStyle, L"ImGui Platform", L"Untitled", vd->DwStyle,       // Style, class name, window name
         rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top,    // Window area
@@ -1259,7 +1278,7 @@ static void ImGui_ImplWin32_UpdateWindow(ImGuiViewport* viewport)
         ::SetWindowLong(vd->Hwnd, GWL_STYLE, vd->DwStyle);
         ::SetWindowLong(vd->Hwnd, GWL_EXSTYLE, vd->DwExStyle);
         RECT rect = { (LONG)viewport->Pos.x, (LONG)viewport->Pos.y, (LONG)(viewport->Pos.x + viewport->Size.x), (LONG)(viewport->Pos.y + viewport->Size.y) };
-        ::AdjustWindowRectEx(&rect, vd->DwStyle, FALSE, vd->DwExStyle); // Client to Screen
+        ImGui_ImplWin32_AdjustWindowRect(viewport, &rect, vd->DwStyle, vd->DwExStyle); // Client to Screen
         ::SetWindowPos(vd->Hwnd, insert_after, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, swp_flag | SWP_NOACTIVATE | SWP_FRAMECHANGED);
         ::ShowWindow(vd->Hwnd, SW_SHOWNA); // This is necessary when we alter the style
         viewport->PlatformRequestMove = viewport->PlatformRequestResize = true;
@@ -1289,7 +1308,7 @@ static void ImGui_ImplWin32_SetWindowPos(ImGuiViewport* viewport, ImVec2 pos)
     RECT rect = { (LONG)pos.x, (LONG)pos.y, (LONG)pos.x, (LONG)pos.y };
     if (viewport->Flags & ImGuiViewportFlags_OwnedByApp)
         ImGui_ImplWin32_UpdateWin32StyleFromWindow(viewport); // Not our window, poll style before using
-    ::AdjustWindowRectEx(&rect, vd->DwStyle, FALSE, vd->DwExStyle);
+    ImGui_ImplWin32_AdjustWindowRect(viewport, &rect, vd->DwStyle, vd->DwExStyle);
     ::SetWindowPos(vd->Hwnd, nullptr, rect.left, rect.top, 0, 0, SWP_NOZORDER | SWP_NOSIZE | SWP_NOACTIVATE);
 }
 
@@ -1309,7 +1328,7 @@ static void ImGui_ImplWin32_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
     RECT rect = { 0, 0, (LONG)size.x, (LONG)size.y };
     if (viewport->Flags & ImGuiViewportFlags_OwnedByApp)
         ImGui_ImplWin32_UpdateWin32StyleFromWindow(viewport); // Not our window, poll style before using
-    ::AdjustWindowRectEx(&rect, vd->DwStyle, FALSE, vd->DwExStyle); // Client to Screen
+    ImGui_ImplWin32_AdjustWindowRect(viewport, &rect, vd->DwStyle, vd->DwExStyle); // Client to Screen
     ::SetWindowPos(vd->Hwnd, nullptr, 0, 0, rect.right - rect.left, rect.bottom - rect.top, SWP_NOZORDER | SWP_NOMOVE | SWP_NOACTIVATE);
 }
 
