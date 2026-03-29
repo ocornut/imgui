@@ -130,6 +130,9 @@ Other Changes:
     as a convenience for when using e.g. InvisibleButton().
 - Focus: fixed fallback "Debug" window temporarily taking focus and setting io.WantCaptureKeyboard
   for one frame on e.g. application boot if no other windows are submitted. (#9243)
+- DrawList:
+  - PathArcTo(): fixed erroneous segment count for pathologically small arcs on large 
+    circles. (#9331, #9313) [@thedmd, @epajarre]
 - Memory:
   - Discard/GC of ImDrawList buffers for unused windows favor restoring them to
     ~Size*1.05 instead of Capacity when awakening again. Facilitate releasing ImDrawList
