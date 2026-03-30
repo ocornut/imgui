@@ -629,21 +629,34 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
             else
             {
                 // Project scissor/clipping rectangles into framebuffer space
-                ImVec2 clip_min(pcmd->ClipRect.x * clip_scale.x, pcmd->ClipRect.y * clip_scale.y);
-                ImVec2 clip_max((pcmd->ClipRect.z - clip_off.x) * clip_scale.x, (pcmd->ClipRect.w - clip_off.y) * clip_scale.y);
+                //x and y are the position/offset, z and w are the size/extent
+                ImVec4 framebuffer_scissor_rect(
+                    pcmd->ClipRect.x * clip_scale.x, 
+                    pcmd->ClipRect.y * clip_scale.y,
+                    (pcmd->ClipRect.z - clip_off.x) * clip_scale.x,
+                    (pcmd->ClipRect.w - clip_off.y) * clip_scale.y
+                );
 
                 // Clamp to viewport as vkCmdSetScissor() won't accept values that are off bounds
-                if (clip_min.x < 0.0f) { clip_min.x = 0.0f; }
-                if (clip_min.y < 0.0f) { clip_min.y = 0.0f; }
-                if (clip_max.x > fb_width) { clip_max.x = (float)fb_width; }
-                if (clip_max.y > fb_height) { clip_max.y = (float)fb_height; }
+                if (framebuffer_scissor_rect.x < 0.0f) { framebuffer_scissor_rect.x = 0.0f; }
+                if (framebuffer_scissor_rect.y < 0.0f) { framebuffer_scissor_rect.y = 0.0f; }
+                const float fb_rect_right = framebuffer_scissor_rect.x + framebuffer_scissor_rect.z;
+                const float fb_rect_bottom = framebuffer_scissor_rect.y + framebuffer_scissor_rect.w;
+                if (fb_rect_right > fb_width) { framebuffer_scissor_rect.z = (float)fb_width - framebuffer_scissor_rect.x; }
+                if (fb_rect_bottom > fb_height) { framebuffer_scissor_rect.w = (float)fb_height - framebuffer_scissor_rect.y; }
+                if(framebuffer_scissor_rect.z <= 0.f || framebuffer_scissor_rect.w <= 0.f){
+                    continue;
+                }
+                if(framebuffer_scissor_rect.x >= fb_width || framebuffer_scissor_rect.y >= fb_height){
+                    continue;
+                }
 
                 // Apply scissor/clipping rectangle
                 VkRect2D scissor;
-                scissor.offset.x = (int32_t)(clip_min.x);
-                scissor.offset.y = (int32_t)(clip_min.y);
-                scissor.extent.width = uint32_t(clip_max.x);
-                scissor.extent.height = uint32_t(clip_max.y);
+                scissor.offset.x = (int32_t)(framebuffer_scissor_rect.x);
+                scissor.offset.y = (int32_t)(framebuffer_scissor_rect.y);
+                scissor.extent.width = uint32_t(framebuffer_scissor_rect.z);
+                scissor.extent.height = uint32_t(framebuffer_scissor_rect.w);
                 vkCmdSetScissor(command_buffer, 0, 1, &scissor);
 
                 // Bind DescriptorSet with font or user texture
