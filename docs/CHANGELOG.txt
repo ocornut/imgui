@@ -120,6 +120,8 @@ Other Changes:
   - Clear `DisplayStart`/`DisplayEnd` fields when `Step()` returns false.
   - Added `UserIndex` helper storage. This is solely a convenience for cases where
     you may want to carry an index around.
+  - Always pulls current context on `ImGuiListClipper::Begin()`, consistent with public
+    API design, and avoids issues with clipper instances outliving contexts. (#9324, #5856)
 - Scrollbar:
   - Implemented a custom tweak to extend hit-testing bounding box when window is sitting
     at the edge of a viewport (e.g. fullscreen or docked window), so that e.g. mouse the
