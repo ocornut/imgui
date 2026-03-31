@@ -60,7 +60,7 @@ enum class cursor
     copy,                                                                       // cursor next to a smaller folder icon with a plus sign - Something is to be copied.
     move,                                                                       // plus sign made of two thin lines, with small arrows facing out - Something is to be moved.
     no_drop,                                                                    // cursor next to circle with a line through it - An item may not be dropped at the current location.
-    not_allowed,                                                                // Circle with a line through it - The requested action will not be carried out.
+    not_allowed,                                                                // circle with a line through it - The requested action will not be carried out.
     grab,                                                                       // fully opened hand - Something can be grabbed (dragged to be moved).
     grabbing,                                                                   // closed hand - Something is being grabbed (dragged to be moved).
 
@@ -86,7 +86,7 @@ enum class cursor
     zoom_out,
 
     // Special invalid value
-    invalid = std::numeric_limits<int>::max()
+    invalid
 };
 
 void set(cursor new_cursor);                                                    // set a new cursor from a cursor enum
