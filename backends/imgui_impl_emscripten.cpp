@@ -526,11 +526,11 @@ void set(char const* new_cursor)
 
 namespace {
 
-IM_STATIC_ASSERT(static_cast<int>(ImGuiKey_Z) == static_cast<int>(ImGuiKey_A) + 25);
-IM_STATIC_ASSERT(static_cast<int>(ImGuiKey_9) == static_cast<int>(ImGuiKey_0) + 9);
-IM_STATIC_ASSERT(static_cast<int>(ImGuiKey_F12) == static_cast<int>(ImGuiKey_F1) + 11);
-IM_STATIC_ASSERT(static_cast<int>(ImGuiKey_F24) == static_cast<int>(ImGuiKey_F1) + 23);
-IM_STATIC_ASSERT(static_cast<int>(ImGuiKey_Keypad9) == static_cast<int>(ImGuiKey_Keypad0) + 9);
+static_assert(static_cast<int>(ImGuiKey_Z) == static_cast<int>(ImGuiKey_A) + 25, "");
+static_assert(static_cast<int>(ImGuiKey_9) == static_cast<int>(ImGuiKey_0) + 9, "");
+static_assert(static_cast<int>(ImGuiKey_F12) == static_cast<int>(ImGuiKey_F1) + 11, "");
+static_assert(static_cast<int>(ImGuiKey_F24) == static_cast<int>(ImGuiKey_F1) + 23, "");
+static_assert(static_cast<int>(ImGuiKey_Keypad9) == static_cast<int>(ImGuiKey_Keypad0) + 9, "");
 
 constexpr ImGuiMouseButton translate_mousebutton(unsigned short emscripten_button)
 {
