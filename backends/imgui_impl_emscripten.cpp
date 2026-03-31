@@ -90,9 +90,8 @@ enum class cursor
 };
 
 void set(cursor new_cursor);                                                    // set a new cursor from a cursor enum
-std::string get_string();                                                       // read the current cursor setting as a string
-void unset();                                                                   // clear the current cursor setting
-void set(std::string const& new_cursor);                                        // set the cursor from an arbitrary string
+char* get_string();                                                             // read the current cursor setting as an owned string, caller must free()
+void set(char const* new_cursor);                                               // set the cursor from an arbitrary string
 
 } // namespace emscripten_browser_cursor_internal
 
@@ -101,10 +100,11 @@ namespace {
 struct ImGui_ImplEmscripten_Data
 {
     emscripten_browser_cursor_internal::cursor CurrentCursor;
-    std::optional<std::string> CursorToRestore;
+    char* CursorToRestore;
 
     ImGui_ImplEmscripten_Data()
         : CurrentCursor{emscripten_browser_cursor_internal::cursor::invalid}
+        , CursorToRestore{nullptr}
     {
     }
 };
@@ -372,6 +372,12 @@ void ImGui_ImplEmscripten_Shutdown()
     emscripten_set_focusout_callback(  EMSCRIPTEN_EVENT_TARGET_WINDOW,   nullptr, false, nullptr);
     // TODO: touch events
 
+    if (bd->CursorToRestore != nullptr)
+    {
+        emscripten_browser_cursor_internal::set(bd->CursorToRestore);           // restore the previous cursor state if imgui still owns the cursor on shutdown
+        free(bd->CursorToRestore);
+    }
+
     ImGuiIO& io{ImGui::GetIO()};
     io.BackendPlatformName = nullptr;
     io.BackendPlatformUserData = nullptr;
@@ -393,7 +399,7 @@ void update_cursor(ImGui_ImplEmscripten_Data* bd)
     // Sync any cursor changes due to ImGui to the browser's cursor
     if (ImGui::GetIO().WantCaptureMouse)                                        // mouse is hovering over the gui
     {
-        if (!bd->CursorToRestore)
+        if (bd->CursorToRestore == nullptr)
         {
             bd->CursorToRestore = emscripten_browser_cursor_internal::get_string(); // back up the existing cursor state when entering the imgui capture space
         }
@@ -434,10 +440,11 @@ void update_cursor(ImGui_ImplEmscripten_Data* bd)
     }
     else                                                                        // mouse is away from the gui, hovering over some other part of the viewport
     {
-        if (bd->CursorToRestore)
+        if (bd->CursorToRestore != nullptr)
         {
-            emscripten_browser_cursor_internal::set(*bd->CursorToRestore);      // restore the previous cursor state when leaving the imgui capture space
-            bd->CursorToRestore = std::nullopt;
+            emscripten_browser_cursor_internal::set(bd->CursorToRestore);       // restore the previous cursor state when leaving the imgui capture space
+            free(bd->CursorToRestore);
+            bd->CursorToRestore = nullptr;
             bd->CurrentCursor = emscripten_browser_cursor_internal::cursor::invalid; // select an unused value for current cursor to force a set next time set_cursor_if_necessary is called
         }
     }
@@ -457,15 +464,12 @@ void ImGui_ImplEmscripten_NewFrame()
 namespace emscripten_browser_cursor_internal
 {
 
-std::string get_string()
+char* get_string()
 {
-    // Return the current cursor setting as a string
-    char* cursor_str_ptr{reinterpret_cast<char*>(EM_ASM_PTR(
+    // Return the current cursor setting as a newly-allocated string, caller must free it.
+    return reinterpret_cast<char*>(EM_ASM_PTR(
         return stringToNewUTF8(document.body.style.cursor);
-    ))};
-    std::string const cursor_str{cursor_str_ptr};
-    free(cursor_str_ptr);
-    return cursor_str;
+    ));
 }
 
 void set(cursor new_cursor)
@@ -508,12 +512,12 @@ void set(cursor new_cursor)
     }
 }
 
-void set(std::string const& new_cursor)
+void set(char const* new_cursor)
 {
     // Set the cursor from an arbitrary string
     EM_ASM({
         document.body.style.cursor = UTF8ToString($0);
-    }, new_cursor.c_str());
+    }, new_cursor);
 }
 
 } // namespace emscripten_browser_cursor_internal
