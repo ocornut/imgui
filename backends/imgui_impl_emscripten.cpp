@@ -248,14 +248,6 @@ void unset();                                                                   
 
 // Browser cursor helper implementation
 
-bool is_set()
-{
-    // Returns whether the cursor is currently set
-    return EM_ASM_INT(
-        return !(!document.body.style.cursor || document.body.style.cursor.length === 0 );
-    );
-}
-
 std::string get_string()
 {
     // Return the current cursor setting as a string
@@ -273,6 +265,9 @@ void set(cursor new_cursor)
     // Note, implementations omitted for cursors not used by imgui.  For full implementation, use https://github.com/Armchair-Software/emscripten-browser-cursor
     switch (new_cursor)
     {
+    case cursor::none:
+        EM_ASM(document.body.style.cursor = 'none';);
+        break;
     case cursor::cursor_default:
     default:
         EM_ASM(document.body.style.cursor = 'default';);
@@ -345,13 +340,16 @@ void update_cursor(ImGui_ImplEmscripten_Data* bd)
     // Sync any cursor changes due to ImGui to the browser's cursor
     if (ImGui::GetIO().WantCaptureMouse)                                        // mouse is hovering over the gui
     {
-        if (!bd->CursorToRestore && emscripten_browser_cursor_internal::is_set())
+        if (!bd->CursorToRestore)
         {
-            bd->CursorToRestore = emscripten_browser_cursor_internal::get_string(); // back up the existing cursor when entering the imgui capture space
+            bd->CursorToRestore = emscripten_browser_cursor_internal::get_string(); // back up the existing cursor state when entering the imgui capture space
         }
 
         switch (ImGui::GetMouseCursor())
         {
+        case ImGuiMouseCursor_None:
+            set_cursor_if_necessary(bd->CurrentCursor, emscripten_browser_cursor_internal::cursor::none);
+            break;
         case ImGuiMouseCursor_Arrow:
             set_cursor_if_necessary(bd->CurrentCursor, emscripten_browser_cursor_internal::cursor::cursor_default);
             break;
@@ -385,7 +383,7 @@ void update_cursor(ImGui_ImplEmscripten_Data* bd)
     {
         if (bd->CursorToRestore)
         {
-            emscripten_browser_cursor_internal::set(*bd->CursorToRestore);      // restore the previous cursor when leaving the imgui capture space
+            emscripten_browser_cursor_internal::set(*bd->CursorToRestore);      // restore the previous cursor state when leaving the imgui capture space
             bd->CursorToRestore = std::nullopt;
             bd->CurrentCursor = emscripten_browser_cursor_internal::cursor::invalid; // select an unused value for current cursor to force a set next time set_cursor_if_necessary is called
         }
