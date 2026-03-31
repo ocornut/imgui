@@ -40,6 +40,10 @@
 #error The imgui_impl_emscripten backend requires Emscripten.
 #endif
 
+// Controls how many device pixels Dear ImGui should target per Dear ImGui pixel.
+// Default 1.0f gives 1:1 device-pixel rendering. Set before Init() if you want a different scaling policy.
+extern IMGUI_IMPL_API float ImGui_ImplEmscripten_TargetDevicePixelRatio;
+
 // Initialise the Emscripten backend, setting input callbacks.  This should be called after ImGui::CreateContext();
 IMGUI_IMPL_API void ImGui_ImplEmscripten_Init();
 
