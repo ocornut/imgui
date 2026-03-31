@@ -13,18 +13,20 @@ or view this file with any Markdown viewer.
 :---------------------------------------------------------- |
 | [Where is the documentation?](#q-where-is-the-documentation) |
 | [What is this library called?](#q-what-is-this-library-called) |
+| [What is the difference between Dear ImGui and traditional UI toolkits?](#q-what-is-the-difference-between-dear-imgui-and-traditional-ui-toolkits) |
 | [Which version should I get?](#q-which-version-should-i-get) |
 | **Q&A: Integration** |
 | **[How to get started?](#q-how-to-get-started)** |
 | **[How can I tell whether to dispatch mouse/keyboard to Dear ImGui or my application?](#q-how-can-i-tell-whether-to-dispatch-mousekeyboard-to-dear-imgui-or-my-application)** |
 | [How can I enable keyboard or gamepad controls?](#q-how-can-i-enable-keyboard-or-gamepad-controls) |
 | [How can I use this on a machine without mouse, keyboard or screen? (input share, remote display)](#q-how-can-i-use-this-on-a-machine-without-mouse-keyboard-or-screen-input-share-remote-display) |
+| [How can I create my own backend?](#q-how-can-i-create-my-own-backend)
 | [I integrated Dear ImGui in my engine and little squares are showing instead of text...](#q-i-integrated-dear-imgui-in-my-engine-and-little-squares-are-showing-instead-of-text) |
 | [I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around...](#q-i-integrated-dear-imgui-in-my-engine-and-some-elements-are-clipping-or-disappearing-when-i-move-windows-around) |
 | [I integrated Dear ImGui in my engine and some elements are displaying outside their expected windows boundaries...](#q-i-integrated-dear-imgui-in-my-engine-and-some-elements-are-displaying-outside-their-expected-windows-boundaries) |
 | **Q&A: Usage** |
-| **[About the ID Stack system..<br>Why is my widget not reacting when I click on it?<br>Why is the wrong widget reacting when I click on one?<br>How can I have widgets with an empty label?<br>How can I have multiple widgets with the same label?<br>How can I have multiple windows with the same label?](#q-about-the-id-stack-system)** |
-| [How can I display an image? What is ImTextureID, how does it work?](#q-how-can-i-display-an-image-what-is-imtextureid-how-does-it-work)|
+| **[About the ID Stack system...](#q-about-the-id-stack-system)**<br>**[How can I have multiple widgets with the same label?](#q-how-can-i-have-multiple-widgets-with-the-same-label) (using `##` or `PushID()`)**<br>**[How can I have widgets with an empty label?](#q-how-can-i-have-widgets-with-an-empty-label) (using `##`)**<br>**[How can I animate the label of an existing widget?](#q-how-can-i-change-the-label-of-an-existing-widget) (using `###`)**<br>**[General description of the label and ID Stack system.](#general-description-of-the-label-and-id-stack-system)** |
+| [How can I display an image?](#q-how-can-i-display-an-image)<br>[What are ImTextureID/ImTextureRef?](#q-what-are-imtextureidimtextureref)|
 | [How can I use maths operators with ImVec2?](#q-how-can-i-use-maths-operators-with-imvec2) |
 | [How can I use my own maths types instead of ImVec2/ImVec4?](#q-how-can-i-use-my-own-maths-types-instead-of-imvec2imvec4) |
 | [How can I interact with standard C++ types (such as std::string and std::vector)?](#q-how-can-i-interact-with-standard-c-types-such-as-stdstring-and-stdvector) |
@@ -53,6 +55,7 @@ or view this file with any Markdown viewer.
 - Handy [Getting Started](https://github.com/ocornut/imgui/wiki/Getting-Started) guide to integrate Dear ImGui in an existing application.
 - 20+ standalone example applications using e.g. OpenGL/DirectX are provided in the [examples/](https://github.com/ocornut/imgui/blob/master/examples/) folder to explain how to integrate Dear ImGui with your own engine/application. You can run those applications and explore them.
 - See demo code in [imgui_demo.cpp](https://github.com/ocornut/imgui/blob/master/imgui_demo.cpp) and particularly the `ImGui::ShowDemoWindow()` function. The demo covers most features of Dear ImGui, so you can read the code and see its output.
+- See pthom's online [imgui_explorer](https://pthom.github.io/imgui_explorer) which is a web version of the demo with a source code browser.
 - See documentation: [Backends](https://github.com/ocornut/imgui/blob/master/docs/BACKENDS.md), [Examples](https://github.com/ocornut/imgui/blob/master/docs/EXAMPLES.md), [Fonts](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md).
 - See documentation and comments at the top of [imgui.cpp](https://github.com/ocornut/imgui/blob/master/imgui.cpp) + general API comments in [imgui.h](https://github.com/ocornut/imgui/blob/master/imgui.h).
 - The [Glossary](https://github.com/ocornut/imgui/wiki/Glossary) page may be useful.
@@ -69,6 +72,60 @@ or view this file with any Markdown viewer.
 **This library is called Dear ImGui**. Please refer to it as Dear ImGui (not ImGui, not IMGUI).
 
 (The library misleadingly started its life in 2014 as "ImGui" due to the fact that I didn't give it a proper name when I released 1.0, and had no particular expectation that it would take off. However, the term IMGUI (immediate-mode graphical user interface) was coined before and is being used in variety of other situations e.g. Unity uses it own implementation of the IMGUI paradigm. To reduce the ambiguity without affecting existing code bases, I have decided in December 2015 a fully qualified name "Dear ImGui" for this library.
+
+##### [Return to Index](#index)
+
+---
+
+### Q: What is the difference between Dear ImGui and traditional UI toolkits?
+
+Here's a very simplified comparison between the approach taken by Dear ImGui vs traditional toolkits:
+
+| Dear ImGui | Qt/GTK/WPF... |
+|--------------------------|--------------------------|
+| UI fully issued on every update. | UI issued once then later modified. |
+| UI layout is fully dynamic and can change at any time.<BR>UI is generally emitted programmatically, which empowers reflecting a dynamic set of data. | UI layout is mostly static.<BR>UI may be emitted programmatically or from data created by offline tools. UI need extra code to evolve, which is often tedious and error-prone if it needs to be reflecting dynamic data and systems. |
+| Application can submit UI based on arbitrary logic and then forget about it. | Application needs more bookkeeping of UI elements. |
+| UI library stores minimal amounts of data. At one point in time, it typically doesn't know or remember which other widgets are displayed and which widgets are coming next. As a result, certain layout features (alignment, resizing) are not as easy to implement or require ad-hoc code. | UI library stores entire widgets tree and state. UI library can use this retained data to easily layout things. |
+| UI code may be added anywhere.<BR>You can even create UI to edit a local variable! | UI code needs to be added in dedicated spots. |
+| UI layout/logic/action/data bindings are all nearby in the code. | UI layout/logic/action/data bindings in distinct functions, files or formats. |
+| Data is naturally always synchronized. | Use callback/signal/slot for synchronizing data (error-prone). |
+| API is simple and easy to learn. In particular, doing basic things is very easy. | API is more complex and specialized. |
+| API is low-level (raw language types). | API are higher-level (more abstractions, advanced language features). |
+| Less fancy look and feel. | Standard look and feel. |
+| Compile yourself. Easy to debug, hack, modify, study. | Mostly use precompiled libraries. Compiling, modifying or studying is daunting if not impossible. |
+| Run on every platform. | Run on limited desktop platforms. |
+
+Idiomatic Dear ImGui code:
+```cpp
+if (ImGui::Button("Save"))
+    MySaveFunction();
+
+ImGui::SliderFloat("Slider", &m_MyValue, 0.0f, 1.0f);
+```
+Idiomatic code with traditional toolkit:
+```cpp
+UiButton* button = new UiButton("Save");
+button->OnClick = &MySaveFunction;
+parent->Add(button);
+
+UiSlider* slider = new UiSlider("Slider");
+slider->SetRange(0.0f, 1.0f);
+slider->BindData<float>(&m_MyValue);
+parent->Add(slider);
+```
+This is only meant to give you a intuitive feeling of the main differences, but pros & cons go deeper than that.
+
+Some of those properties are typically associated to the umbrella term "IMGUI", but the term has no simple and well-agreed definition. There are many erroneous statements and misunderstandings with what IMGUI means. It is partly caused by the fact that most popular IMGUI implementations (including Dear ImGui) have originated from game industry needs and have targeted specific use cases, causing people to conflate IMGUI properties with what a specific library does. However, it is perfectly possible to implement an IMGUI library that would have very different properties than e.g. Dear ImGui. My take on defining what an IMGUI is:
+
+**IMGUI refers to the API: literally the interface between the application and the UI system.**
+- An IMGUI API favors the application code owning its data and being the single source of truth for it.
+- An IMGUI API tries to minimize the application having to retain/manage data related to the UI system.
+- An IMGUI API tries to minimize the UI system having to retain/manage data related to the application.
+- Synchronization between application data and UI data is natural and less error-prone.
+
+**IMGUI does NOT refer to the implementation. Whatever happens inside the UI library code doesn't matter.**
+<BR>Also see: [Links to many articles about the IMGUI paradigm](https://github.com/ocornut/imgui/wiki/#about-the-imgui-paradigm).
 
 ##### [Return to Index](#index)
 
@@ -92,8 +149,8 @@ Many projects are using this branch and it is kept in sync with master regularly
 ### Q: How to get started?
 
 Read [Getting Started](https://github.com/ocornut/imgui/wiki/Getting-Started). <BR>
-Read [EXAMPLES.md](https://github.com/ocornut/imgui/blob/master/docs/EXAMPLES.md). <BR>
-Read [BACKENDS.md](https://github.com/ocornut/imgui/blob/master/docs/BACKENDS.md). <BR>
+Read [docs/EXAMPLES.md](https://github.com/ocornut/imgui/blob/master/docs/EXAMPLES.md). <BR>
+Read [docs/BACKENDS.md](https://github.com/ocornut/imgui/blob/master/docs/BACKENDS.md). <BR>
 Read `PROGRAMMER GUIDE` section of [imgui.cpp](https://github.com/ocornut/imgui/blob/master/imgui.cpp). <BR>
 The [Wiki](https://github.com/ocornut/imgui/wiki) is a hub to many resources and links.
 
@@ -159,9 +216,18 @@ Console SDK also sometimes provide equivalent tooling or wrapper for Synergy-lik
 
 ---
 
+### Q: How can I create my own backend?
+- See [docs/BACKENDS.md](https://github.com/ocornut/imgui/blob/master/docs/BACKENDS.md).
+- See Documentation at the top of imgui.cpp.
+
+##### [Return to Index](#index)
+
+---
+
 ### Q: I integrated Dear ImGui in my engine and little squares are showing instead of text...
 Your renderer backend is not using the font texture correctly or it hasn't been uploaded to the GPU.
-- If this happens using the standard backends: A) have you modified the font atlas after `ImGui_ImplXXX_NewFrame()`? B) maybe the texture failed to upload, which **can if your texture atlas is too big**. Also see [docs/FONTS.md](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md).
+- If this happens using standard backends (before 1.92): A) have you modified the font atlas after `ImGui_ImplXXX_NewFrame()`? B) maybe the texture failed to upload, which **can if your texture atlas is too big**. Also see [docs/FONTS.md](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md).
+- If this happens using standard backends (after 1.92): please report.
 - If this happens with a custom backend: make sure you have uploaded the font texture to the GPU, that all shaders are rendering states are setup properly (e.g. texture is bound). Compare your code to existing backends and use a graphics debugger such as [RenderDoc](https://renderdoc.org) to debug your rendering states.
 
 ##### [Return to Index](#index)
@@ -197,15 +263,19 @@ ctx->RSSetScissorRects(1, &r);
 
 # Q&A: Usage
 
-### Q: About the ID Stack system...
-### Q: Why is my widget not reacting when I click on it?
-### Q: Why is the wrong widget reacting when I click on one?
-### Q: How can I have widgets with an empty label?
-### Q: How can I have multiple widgets with the same label?
-### Q: How can I have multiple windows with the same label?
+## Q: About the ID Stack system...
 
 **USING THE SAME LABEL+ID IS THE MOST COMMON USER MISTAKE!**
 <br>**USING AN EMPTY LABEL IS THE SAME AS USING THE SAME LABEL AS YOUR PARENT WIDGET!**
+<br>Read the questions in this section for a more general understand of how labels and ID works in Dear ImGui.
+
+TL;DR;
+- Widgets labels are also used to compute Widgets unique identifiers.
+- Unique identifiers are hashes of the label + of the parent scope (e.g. parent window or parent tree node labels).
+- You can use `PushID()` to append to the identifier without making it visible.
+- You can use `"##something"` in a label to append to the identifier without making it visible.
+- You can use `"###something"` in a label to make the identifier ignore the visible part.
+
 <table>
 <tr>
 <td><img src="https://github.com/user-attachments/assets/776a8315-1164-4178-9a8c-df52e0ff28aa"></td>
@@ -233,19 +303,102 @@ for (int n = 0; n < 3; n++)
 ImGui::End();
 </pre>
 </td>
-</tr>    
+</tr>
 </table>
 
-A primer on labels and the ID Stack...
+### Q: How can I have multiple widgets with the same label?
+
+A. When widgets are in a same scope and finite, you can use a `"##something"` suffix which will be part of the identifier but not visible as a label.
+
+```cpp
+Button("Play");        // Label = "Play",   ID = hash of ("MyWindow", "Play")
+Button("Play##foo1");  // Label = "Play",   ID = hash of ("MyWindow", "Play##foo1")  // Different from other buttons
+Button("Play##foo2");  // Label = "Play",   ID = hash of ("MyWindow", "Play##foo2")  // Different from other buttons
+```
+
+B. More generally, e.g. in loops, you can use `PushID()/PopID()` to push a prefix which will be part of the identifier.
+
+```cpp
+// Using PushID() with a string
+for (int i = 0; i < 100; i++)
+{
+  MyObject* obj = Objects[i];
+  PushID(obj->Name);
+  Button("Click");     // Label = "Click",  ID = hash of ("Window", obj->Name, "Click")
+  PopID();
+}
+```
+
+```cpp
+// Using PushID() with an index
+for (int i = 0; i < 100; i++)
+{
+  PushID(i);
+  Button("Click");     // Label = "Click",  ID = hash of ("Window", i, "Click")
+  PopID();
+}
+```
+
+### Q: How can I have widgets with an empty label?
+
+If you want to completely hide the label, but still need an ID:
+
+```cpp
+Checkbox("##On", &b);  // Label = "",       ID = hash of (..., "##On")   // No visible label, just a checkbox!
+```
+##### [Return to Index](#index)
+
+### Q: How can I make a label dynamic?
+
+Dear ImGui is very dynamic so you can submit different widgets every frame.
+However, in order to preserve widget state (eg. which tree node is open; which button is focused) the library internaly refers to their unique ID.
+
+Occasionally you might want to change a label while preserving a constant ID. This allows you to change/animate labels while persisting associated state.
+For example, you may want to include varying information in a window title bar or button label.
+
+Using "###" exclude the preceeding part from ID computation:
+```cpp
+Button("Hello###ID");   // Label = "Enable",   ID = hash of (..., "ID")
+Button("World###ID");   // Label = "Disable",  ID = hash of (..., "ID")  // Same ID, different label
+```
+Using a same ID ensure that associated related e.g. weither the widget is focused, won't be lost when the label changes.
+
+<table>
+<tr>
+<td><img src="https://github.com/user-attachments/assets/2bf18756-e122-498d-bbd4-5c44bb1018d5"></td>
+<td>
+<pre lang="cpp">
+// Window label has animating FPS counter
+// Window ID stays the same = hash of "MyGame"
+char buf[128];
+sprintf(buf, "My game (%.1f FPS)###MyGame", io.Framerate);
+ImGui::Begin(buf);
+&nbsp;
+// Label changes between "Enable" and "Disable"
+// ID stays the same = hash of ("MyGame", "MyButton")
+if (ImGui::Button(enabled ? "Disable###MyButton" : "Enable###MyButton", { -FLT_MIN, 0.0f }))
+    enabled = !enabled;
+&nbsp;
+ImGui::End();
+</pre>
+</td>
+</tr>
+</table>
+
+(Hint: I'd suggest wrapping sprintf in something more compact to use, e.g. [ocornut/Str](https://github.com/ocornut/Str) for what I personally use).
+
+##### [Return to Index](#index)
+
+### General description of the label and ID Stack system
 
 Dear ImGui internally needs to uniquely identify UI elements.
-Elements that are typically not clickable (such as calls to the Text functions) don't need an ID.
-Interactive widgets (such as calls to Button buttons) need a unique ID.
+Elements that are typically not clickable (such as calls to Text() functions) don't need an ID.
+Interactive widgets (such as calls to Button() functions) need a unique ID.
 
 **Unique IDs are used internally to track active widgets and occasionally associate state to widgets.<BR>
 Unique IDs are implicitly built from the hash of multiple elements that identify the "path" to the UI element.**
 
-Since Dear ImGui 1.85, you can use `Demo>Tools>ID Stack Tool` or call `ImGui::ShowIDStackToolWindow()`. The tool display intermediate values leading to the creation of a unique ID, making things easier to debug and understand.
+You can use `Demo>Tools>ID Stack Tool` or call `ImGui::ShowIDStackToolWindow()`. The tool display intermediate values leading to the creation of a unique ID, making things easier to debug and understand.
 
 ![Stack tool](https://user-images.githubusercontent.com/8225057/136235657-a0ea5665-dcd1-423f-9be6-dc3f8ced8f12.png)
 
@@ -299,20 +452,7 @@ Button("Play##foo2");  // Label = "Play",   ID = hash of ("MyWindow", "Play##foo
 Button("##foo");       // Label = "",       ID = hash of ("MyWindow", "##foo")       // Different from window
 End();
 ```
-- If you want to completely hide the label, but still need an ID:
-```cpp
-Checkbox("##On", &b);  // Label = "",       ID = hash of (..., "##On")   // No visible label, just a checkbox!
-```
-- Occasionally/rarely you might want to change a label while preserving a constant ID. This allows
-you to animate labels. For example, you may want to include varying information in a window title bar,
-but windows are uniquely identified by their ID. Use "###" to pass a label that isn't part of ID:
-```cpp
-Button("Hello###ID");  // Label = "Hello",  ID = hash of (..., "###ID")
-Button("World###ID");  // Label = "World",  ID = hash of (..., "###ID")  // Same ID, different label
 
-sprintf(buf, "My game (%f FPS)###MyGame", fps);
-Begin(buf);            // Variable title,   ID = hash of "MyGame"
-```
 - Solving ID conflict in a more general manner:
 Use `PushID()` / `PopID()` to create scopes and manipulate the ID stack, as to avoid ID conflicts
 within the same window. This is the most convenient way of distinguishing ID when iterating and
@@ -375,23 +515,73 @@ node open/closed state differently. See what makes more sense in your situation!
 
 ---
 
-### Q: How can I display an image? What is ImTextureID, how does it work?
+### Q: How can I display an image?
+### Q: What are ImTextureID/ImTextureRef?
 
-Short explanation:
-- Refer to [Image Loading and Displaying Examples](https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples) on the [Wiki](https://github.com/ocornut/imgui/wiki).
+**Short explanation:**
 - You may use functions such as `ImGui::Image()`, `ImGui::ImageButton()` or lower-level `ImDrawList::AddImage()` to emit draw calls that will use your own textures.
+- To load and display your own textures, refer to [Image Loading and Displaying Examples](https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples) on the [Wiki](https://github.com/ocornut/imgui/wiki).
 - Actual textures are identified in a way that is up to the user/engine. Those identifiers are stored and passed as an opaque ImTextureID value.
 - By default ImTextureID can store up to 64-bits. You may `#define` it to a custom type/structure if you need.
 - Loading image files from the disk and turning them into a texture is not within the scope of Dear ImGui (for a good reason), but the examples linked above may be useful references.
+
+**Details:**
+
+1.92 introduced `ImTextureRef` in June 2025.
+- All drawing functions using `ImTextureID` were changed to use `ImTextureRef`.
+- You can trivially create a `ImTextureRef` from a `ImTextureID`.
+- **If you use Image functions with textures that you have loaded/created yourself, you will mostly likely only ever store/manipulate `ImTextureID` and then pass them as `ImTextureRef`.**
+- You only NEED to manipulate `ImTextureRef` when dealing with textures managed by the backend itself, aka mainly the atlas texture for now.
+- We intentionally do not provide an implicit `ImTextureRef` -> `ImTextureID` cast operator because it is technically lossy to convert ImTextureRef to ImTextureID before rendering.
+
+**ImTextureID = backend specific, low-level identifier for a texture uploaded in GPU/graphics system.**
+```cpp
+#ifndef ImTextureID
+typedef ImU64 ImTextureID;  // Default: store up to 64-bits (any pointer or integer). A majority of backends are ok with that.
+#endif
+```
+- When a Rendered Backend creates a texture, it store its native identifier into a ImTextureID value (e.g. Used by DX11 backend to a `ID3D11ShaderResourceView*`; Used by OpenGL backends to store `GLuint`; Used by SDLGPU backend to store a `SDL_GPUTextureSamplerBinding*`, etc.).
+- User may submit their own textures to e.g. `ImGui::Image()` function by passing this value.
+- During the rendering loop, the Renderer Backend retrieve the ImTextureID, which stored inside a ImTextureRef, which is stored inside ImDrawCmd.
+- Compile-time type configuration:
+  - To use something other than a 64-bit value: add '#define ImTextureID MyTextureType*' in your imconfig.h file.
+  - This can be whatever to you want it to be! read the FAQ entry about textures for details.
+  - You may decide to store a higher-level structure containing texture, sampler, shader etc. with various constructors if you like. You will need to implement ==/!= operators.
+
+**ImTextureRef = higher-level identifier for a texture.**
+```cpp
+// Store a ImTextureID _or_ a ImTextureData*.
+struct ImTextureRef
+{
+    ImTextureRef()                          { _TexData = NULL; _TexID = ImTextureID_Invalid; }
+    ImTextureRef(ImTextureID tex_id)        { _TexData = NULL; _TexID = tex_id; }
+    inline ImTextureID  GetTexID() const    { return _TexData ? _TexData->TexID : _TexID; }
+
+    // Members (either are set, never both!)
+    ImTextureData*      _TexData;           //      A texture, generally owned by a ImFontAtlas. Will convert to ImTextureID during render loop, after texture has been uploaded.
+    ImTextureID         _TexID;             // _OR_ Low-level backend texture identifier, if already uploaded or created by user/app. Generally provided to e.g. ImGui::Image() calls.
+};
+```
+- The identifier is valid even before the texture has been uploaded to the GPU/graphics system.
+- This is what gets passed to functions such as `ImGui::Image()`, `ImDrawList::AddImage()`.
+- This is what gets stored in draw commands (`ImDrawCmd`) to identify a texture during rendering.
+ - When a texture is created by user code (e.g. custom images), we directly store the low-level `ImTextureID`.
+   - Because of this, when displaying your own texture you are likely to ever only manage ImTextureID values on your side.
+ - When a texture is created by the backend, we store a `ImTextureData*` which becomes an indirection to extract the `ImTextureID` value during rendering, after texture upload has happened.
+ - To create a `ImTextureRef` from a `ImTextureData*` you can use `ImTextureData::GetTexRef()`.
+   We intentionally do not provide an `ImTextureRef` constructor for this: we don't expect this to be frequently useful to the end-user, and it would be erroneously called by many legacy code.
+ - There is no constructor to create a `ImTextureRef` from a `ImTextureData*` as we don't expect this to be useful to the end-user, and it would be erroneously called by many legacy code.
+ - If you want to bind the current atlas when using custom rectangles, you can use `io.Fonts->TexRef`.
+ - Binding generators for languages such as C (which don't have constructors), should provide a helper, e.g. `inline ImTextureRef ImTextureRefFromID(ImTextureID tex_id) { ImTextureRef tex_ref = { ._TexData = NULL, .TexID = tex_id }; return tex_ref; }`
 
 **Please read documentations or tutorials on your graphics API to understand how to display textures on the screen before moving onward.**
 
 Long explanation:
 - Dear ImGui's job is to create "meshes", defined in a renderer-agnostic format made of draw commands and vertices. At the end of the frame, those meshes (ImDrawList) will be displayed by your rendering function. They are made up of textured polygons and the code to render them is generally fairly short (a few dozen lines). In the examples/ folder, we provide functions for popular graphics APIs (OpenGL, DirectX, etc.).
 - Each rendering function decides on a data type to represent "textures". The concept of what is a "texture" is entirely tied to your underlying engine/graphics API.
- We carry the information to identify a "texture" in the ImTextureID type.
+We carry the information to identify a "texture" in the ImTextureID type, which itself tends to be stored inside a ImTextureRef.
 ImTextureID default to ImU64 aka 8 bytes worth of data: just enough to store one pointer or integer of your choice.
-Dear ImGui doesn't know or understand what you are storing in ImTextureID, it merely passes ImTextureID values until they reach your rendering function.
+Dear ImGui doesn't know or understand what you are storing in ImTextureID, it merely passes values until they reach your rendering function.
 - In the [examples/](https://github.com/ocornut/imgui/tree/master/examples) backends, for each graphics API we decided on a type that is likely to be a good representation for specifying an image from the end-user perspective. This is what the _examples_ rendering functions are using:
 ```cpp
 OpenGL:
@@ -539,30 +729,56 @@ ImGui::End();
 
 ### Q: How should I handle DPI in my application?
 
-The short answer is: obtain the desired DPI scale, load your fonts resized with that scale (always round down fonts size to the nearest integer), and scale your Style structure accordingly using `style.ScaleAllSizes()`.
+Since 1.92 (June 2025) fonts may be dynamically used at any size.
 
-Your application may want to detect DPI change and reload the fonts and reset style between frames.
+**Scaling fonts**
 
-Your ui code  should avoid using hardcoded constants for size and positioning. Prefer to express values as multiple of reference values such as `ImGui::GetFontSize()` or `ImGui::GetFrameHeight()`. So e.g. instead of seeing a hardcoded height of 500 for a given item/window, you may want to use `30*ImGui::GetFontSize()` instead.
+Select default size:
+```cpp
+style.FontSizeBase = 20.0f;
+```
+Scale all fonts:
+```cpp
+style.FontScaleDpi = 2.0f;
+```
 
-Down the line Dear ImGui will provide a variety of standardized reference values to facilitate using this.
+To change font size:
+```cpp
+ImGui::PushFont(NULL, 42.0f); // This will be multiplied by style.FontScaleDpi
+```
+To change font and font size:
+```cpp
+ImGui::PushFont(new_font, 42.0f);
+```
 
-Applications in the `examples/` folder are not DPI aware partly because they are unable to load a custom font from the file-system (may change that in the future).
+In `docking` branch or with multi-viewports:
+```cpp
+io.ConfigDpiScaleFonts = true;          // (Docking branch only) Automatically overwrite style.FontScaleDpi in Begin() when Monitor DPI changes. This will scale fonts but _NOT_ scale sizes/padding for now.
+io.ConfigDpiScaleViewports = true;      // (Docking branch only) Scale Dear ImGui and Platform Windows when Monitor DPI changes.
+```
 
-The reason DPI is not auto-magically solved in stock examples is that we don't yet have a satisfying solution for the "multi-dpi" problem (using the `docking` branch: when multiple viewport windows are over multiple monitors using different DPI scales). The current way to handle this on the application side is:
-- Create and maintain one font atlas per active DPI scale (e.g. by iterating `platform_io.Monitors[]` before `NewFrame()`).
-- Hook `platform_io.OnChangedViewport()` to detect when a `Begin()` call makes a Dear ImGui window change monitor (and therefore DPI).
-- In the hook: swap atlas, swap style with correctly sized one, and remap the current font from one atlas to the other (you may need to maintain a remapping table of your fonts at varying DPI scales).
+**Scaling style** (paddings, spacings, thicknesses)
 
-This approach is relatively easy and functional but comes with two issues:
-- It's not possibly to reliably size or position a window ahead of `Begin()` without knowing on which monitor it'll land.
-- Style override may be lost during the `Begin()` call crossing monitor boundaries. You may need to do some custom scaling mumbo-jumbo if you want your `OnChangedViewport()` handler to preserve style overrides.
+This is still massively work in progress, expect turbulence.
+Style values are currently not easily scalable dynamically.
+For single viewport application you can call once:
+```cpp
+style.ScaleAllSizes(factor); // call once!
+```
+If you need to change the scaling factor, it is currently most practical to reset the style and call this again with a new value.
 
-Please note that if you are not using multi-viewports with multi-monitors using different DPI scales, you can ignore that and use the simpler technique recommended at the top.
+Your UI code should avoid using hardcoded constants for size and positioning. Prefer to express values as multiple of reference values such as `ImGui::GetFontSize()` or `ImGui::GetFrameHeight()`. So e.g. instead of seeing a hardcoded height of 500 for a given item/window, you may want to use `30*ImGui::GetFontSize()` instead.
 
-On Windows, in addition to scaling the font size (make sure to round to an integer) and using `style.ScaleAllSizes()`, you will need to inform Windows that your application is DPI aware. If this is not done, Windows will scale the application window and the UI text will be blurry. Potential solutions to indicate DPI awareness on Windows are:
+Down the line Dear ImGui will provide a variety of standardized reference values to facilitate using this. This is expected to happen during subsequent 1.92.x releases.
 
-- For SDL: the flag `SDL_WINDOW_ALLOW_HIGHDPI` needs to be passed to `SDL_CreateWindow()``.
+Applications in the `examples/` folder are partly DPI aware but they are unable to load a custom font from the file-system, so they look ugly (may change that in the future).
+
+The reason DPI is not auto-magically solved in stock examples is that we don't yet have a satisfying solution for the "multi-dpi" problem (using the `docking` branch: when multiple viewport windows are over multiple monitors using different DPI scales) specifically for the `ImGuiStyle` structure. Fonts are however now perfectly scalable.
+
+**On Windows, you need to inform Windows that your application is DPI aware!**
+If this is not done, Windows will scale the application window and the UI text will be blurry. Potential solutions to indicate DPI awareness on Windows are:
+- For SDL2: the flag `SDL_WINDOW_ALLOW_HIGHDPI` needs to be passed to `SDL_CreateWindow()` + call `::SetProcessDPIAware()`.
+- For SDL3: the flag `SDL_WINDOW_HIGH_PIXEL_DENSITY` needs to be passed to `SDL_CreateWindow()`.
 - For GLFW: this is done automatically.
 - For other Windows projects with other backends, or wrapper projects:
   - We provide a `ImGui_ImplWin32_EnableDpiAwareness()` helper method in the Win32 backend.
@@ -614,9 +830,12 @@ Use the font atlas to pack them into a single texture. Read [docs/FONTS.md](http
 ---
 
 ### Q: How can I display and input non-Latin characters such as Chinese, Japanese, Korean, Cyrillic?
-When loading a font, pass custom Unicode ranges to specify the glyphs to load.
 
+Since 1.92 (June 2025) and with an updated backend, it is not necessary to specify glyph ranges at all.
+
+Before 1.92, when loading a font, pass custom Unicode ranges to specify the glyphs to load.
 ```cpp
+// [BEFORE 1.92]
 // Add default Japanese ranges
 io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels, nullptr, io.Fonts->GetGlyphRangesJapanese());
 
@@ -640,8 +859,8 @@ Text input: it is up to your application to pass the right character code by cal
 The applications in examples/ are doing that.
 Windows: you can use the WM_CHAR or WM_UNICHAR or WM_IME_CHAR message (depending if your app is built using Unicode or MultiByte mode).
 You may also use `MultiByteToWideChar()` or `ToUnicode()` to retrieve Unicode codepoints from MultiByte characters or keyboard state.
-Windows: if your language is relying on an Input Method Editor (IME), you can write your HWND to ImGui::GetMainViewport()->PlatformHandleRaw
-for the default implementation of GetPlatformIO().Platform_SetImeDataFn() to set your Microsoft IME position correctly.
+Windows: if your language is relying on an Input Method Editor (IME), you can write your HWND to `ImGui::GetMainViewport()->PlatformHandleRaw`
+for the default implementation of `GetPlatformIO().Platform_SetImeDataFn()` to set your Microsoft IME position correctly.
 
 ##### [Return to Index](#index)
 
@@ -666,7 +885,7 @@ You may take a look at:
 
 Yes. People have written game editors, data browsers, debuggers, profilers, and all sorts of non-trivial tools with the library. In my experience, the simplicity of the API is very empowering. Your UI runs close to your live data. Make the tools always-on and everybody in the team will be inclined to create new tools (as opposed to more "offline" UI toolkits where only a fraction of your team effectively creates tools). The list of sponsors below is also an indicator that serious game teams have been using the library.
 
-Dear ImGui is very programmer centric and the immediate-mode GUI paradigm might require you to readjust some habits before you can realize its full potential. Dear ImGui is about making things that are simple, efficient, and powerful.
+Dear ImGui is very programmer-centric and the immediate-mode GUI paradigm might require you to readjust some habits before you can realize its full potential. Dear ImGui is about making things that are simple, efficient, and powerful.
 
 Dear ImGui is built to be efficient and scalable toward the needs for AAA-quality applications running all day. The IMGUI paradigm offers different opportunities for optimization than the more typical RMGUI paradigm.
 

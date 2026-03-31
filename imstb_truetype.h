@@ -886,7 +886,7 @@ STBTT_DEF unsigned char *stbtt_GetCodepointBitmap(const stbtt_fontinfo *info, fl
 // xoff/yoff are the offset it pixel space from the glyph origin to the top-left of the bitmap
 
 STBTT_DEF unsigned char *stbtt_GetCodepointBitmapSubpixel(const stbtt_fontinfo *info, float scale_x, float scale_y, float shift_x, float shift_y, int codepoint, int *width, int *height, int *xoff, int *yoff);
-// the same as stbtt_GetCodepoitnBitmap, but you can specify a subpixel
+// the same as stbtt_GetCodepointBitmap, but you can specify a subpixel
 // shift for the character
 
 STBTT_DEF void stbtt_MakeCodepointBitmap(const stbtt_fontinfo *info, unsigned char *output, int out_w, int out_h, int out_stride, float scale_x, float scale_y, int codepoint);
@@ -4516,8 +4516,8 @@ static int stbtt__compute_crossings_x(float x, float y, int nverts, stbtt_vertex
             q2[0] = (float)x2;
             q2[1] = (float)y2;
             if (equal(q0,q1) || equal(q1,q2)) {
-               x0 = (int)verts[i-1].x;
-               y0 = (int)verts[i-1].y;
+               x0 = (int)verts[i-1].x; //-V1048
+               y0 = (int)verts[i-1].y; //-V1048
                x1 = (int)verts[i  ].x;
                y1 = (int)verts[i  ].y;
                if (y > STBTT_min(y0,y1) && y < STBTT_max(y0,y1) && x > STBTT_min(x0,x1)) {

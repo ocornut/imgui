@@ -32,8 +32,12 @@ EMS =
 ##---------------------------------------------------------------------
 
 # ("EMS" options gets added to both CPPFLAGS and LDFLAGS, whereas some options are for linker only)
-EMS += -s DISABLE_EXCEPTION_CATCHING=1
-LDFLAGS += -s USE_GLFW=3 -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s NO_EXIT_RUNTIME=0 -s ASSERTIONS=1
+# Note: For glfw, we use emscripten-glfw port (contrib.glfw3) instead of ('-s USE_GLFW=3' in LDFLAGS) to get a better support for High DPI displays.
+EMS += -s DISABLE_EXCEPTION_CATCHING=1 --use-port=contrib.glfw3
+LDFLAGS += -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s NO_EXIT_RUNTIME=0 -s ASSERTIONS=1
+
+# Build as single file (binary text encoded in .html file)
+#LDFLAGS += -sSINGLE_FILE
 
 # Uncomment next line to fix possible rendering bugs with Emscripten version older then 1.39.0 (https://github.com/ocornut/imgui/issues/2877)
 #EMS += -s BINARYEN_TRAP_MODE=clamp

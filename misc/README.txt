@@ -4,8 +4,8 @@ misc/cpp/
   This is also an example of how you may wrap your own similar types.
 
 misc/debuggers/
-  Helper files for popular debuggers.
-  With the .natvis file, types like ImVector<> will be displayed nicely in Visual Studio debugger.
+  Helper files for popular debuggers (Visual Studio, GDB, LLDB).
+  e.g. With the .natvis file, types like ImVector<> will be displayed nicely in Visual Studio debugger.
 
 misc/fonts/
   Fonts loading/merging instructions (e.g. How to handle glyph ranges, how to merge icons fonts).

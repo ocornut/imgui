@@ -166,7 +166,9 @@ typedef khronos_uint8_t GLubyte;
 #define GL_SCISSOR_BOX                    0x0C10
 #define GL_SCISSOR_TEST                   0x0C11
 #define GL_UNPACK_ROW_LENGTH              0x0CF2
+#define GL_UNPACK_ALIGNMENT               0x0CF5
 #define GL_PACK_ALIGNMENT                 0x0D05
+#define GL_MAX_TEXTURE_SIZE               0x0D33
 #define GL_TEXTURE_2D                     0x0DE1
 #define GL_UNSIGNED_BYTE                  0x1401
 #define GL_UNSIGNED_SHORT                 0x1403
@@ -178,6 +180,7 @@ typedef khronos_uint8_t GLubyte;
 #define GL_RENDERER                       0x1F01
 #define GL_VERSION                        0x1F02
 #define GL_EXTENSIONS                     0x1F03
+#define GL_NEAREST                        0x2600
 #define GL_LINEAR                         0x2601
 #define GL_TEXTURE_MAG_FILTER             0x2800
 #define GL_TEXTURE_MIN_FILTER             0x2801
@@ -224,11 +227,13 @@ typedef khronos_float_t GLclampf;
 typedef double GLclampd;
 #define GL_TEXTURE_BINDING_2D             0x8069
 typedef void (APIENTRYP PFNGLDRAWELEMENTSPROC) (GLenum mode, GLsizei count, GLenum type, const void *indices);
+typedef void (APIENTRYP PFNGLTEXSUBIMAGE2DPROC) (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const void *pixels);
 typedef void (APIENTRYP PFNGLBINDTEXTUREPROC) (GLenum target, GLuint texture);
 typedef void (APIENTRYP PFNGLDELETETEXTURESPROC) (GLsizei n, const GLuint *textures);
 typedef void (APIENTRYP PFNGLGENTEXTURESPROC) (GLsizei n, GLuint *textures);
 #ifdef GL_GLEXT_PROTOTYPES
 GLAPI void APIENTRY glDrawElements (GLenum mode, GLsizei count, GLenum type, const void *indices);
+GLAPI void APIENTRY glTexSubImage2D (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const void *pixels);
 GLAPI void APIENTRY glBindTexture (GLenum target, GLuint texture);
 GLAPI void APIENTRY glDeleteTextures (GLsizei n, const GLuint *textures);
 GLAPI void APIENTRY glGenTextures (GLsizei n, GLuint *textures);
@@ -396,9 +401,15 @@ GLAPI void APIENTRY glDrawElementsBaseVertex (GLenum mode, GLsizei count, GLenum
 #ifndef GL_VERSION_3_3
 #define GL_VERSION_3_3 1
 #define GL_SAMPLER_BINDING                0x8919
+typedef void (APIENTRYP PFNGLGENSAMPLERSPROC) (GLsizei count, GLuint *samplers);
+typedef void (APIENTRYP PFNGLDELETESAMPLERSPROC) (GLsizei count, const GLuint *samplers);
 typedef void (APIENTRYP PFNGLBINDSAMPLERPROC) (GLuint unit, GLuint sampler);
+typedef void (APIENTRYP PFNGLSAMPLERPARAMETERIPROC) (GLuint sampler, GLenum pname, GLint param);
 #ifdef GL_GLEXT_PROTOTYPES
+GLAPI void APIENTRY glGenSamplers (GLsizei count, GLuint *samplers);
+GLAPI void APIENTRY glDeleteSamplers (GLsizei count, const GLuint *samplers);
 GLAPI void APIENTRY glBindSampler (GLuint unit, GLuint sampler);
+GLAPI void APIENTRY glSamplerParameteri (GLuint sampler, GLenum pname, GLint param);
 #endif
 #endif /* GL_VERSION_3_3 */
 #ifndef GL_VERSION_4_1
@@ -473,12 +484,13 @@ typedef GL3WglProc (*GL3WGetProcAddressProc)(const char *proc);
 /* gl3w api */
 GL3W_API int imgl3wInit(void);
 GL3W_API int imgl3wInit2(GL3WGetProcAddressProc proc);
+GL3W_API void imgl3wShutdown(void);
 GL3W_API int imgl3wIsSupported(int major, int minor);
 GL3W_API GL3WglProc imgl3wGetProcAddress(const char *proc);
 
 /* gl3w internal state */
 union ImGL3WProcs {
-    GL3WglProc ptr[59];
+    GL3WglProc ptr[63];
     struct {
         PFNGLACTIVETEXTUREPROC            ActiveTexture;
         PFNGLATTACHSHADERPROC             AttachShader;
@@ -498,6 +510,7 @@ union ImGL3WProcs {
         PFNGLCREATESHADERPROC             CreateShader;
         PFNGLDELETEBUFFERSPROC            DeleteBuffers;
         PFNGLDELETEPROGRAMPROC            DeleteProgram;
+        PFNGLDELETESAMPLERSPROC           DeleteSamplers;
         PFNGLDELETESHADERPROC             DeleteShader;
         PFNGLDELETETEXTURESPROC           DeleteTextures;
         PFNGLDELETEVERTEXARRAYSPROC       DeleteVertexArrays;
@@ -510,6 +523,7 @@ union ImGL3WProcs {
         PFNGLENABLEVERTEXATTRIBARRAYPROC  EnableVertexAttribArray;
         PFNGLFLUSHPROC                    Flush;
         PFNGLGENBUFFERSPROC               GenBuffers;
+        PFNGLGENSAMPLERSPROC              GenSamplers;
         PFNGLGENTEXTURESPROC              GenTextures;
         PFNGLGENVERTEXARRAYSPROC          GenVertexArrays;
         PFNGLGETATTRIBLOCATIONPROC        GetAttribLocation;
@@ -530,10 +544,12 @@ union ImGL3WProcs {
         PFNGLPIXELSTOREIPROC              PixelStorei;
         PFNGLPOLYGONMODEPROC              PolygonMode;
         PFNGLREADPIXELSPROC               ReadPixels;
+        PFNGLSAMPLERPARAMETERIPROC        SamplerParameteri;
         PFNGLSCISSORPROC                  Scissor;
         PFNGLSHADERSOURCEPROC             ShaderSource;
         PFNGLTEXIMAGE2DPROC               TexImage2D;
         PFNGLTEXPARAMETERIPROC            TexParameteri;
+        PFNGLTEXSUBIMAGE2DPROC            TexSubImage2D;
         PFNGLUNIFORM1IPROC                Uniform1i;
         PFNGLUNIFORMMATRIX4FVPROC         UniformMatrix4fv;
         PFNGLUSEPROGRAMPROC               UseProgram;
@@ -563,6 +579,7 @@ GL3W_API extern union ImGL3WProcs imgl3wProcs;
 #define glCreateShader                    imgl3wProcs.gl.CreateShader
 #define glDeleteBuffers                   imgl3wProcs.gl.DeleteBuffers
 #define glDeleteProgram                   imgl3wProcs.gl.DeleteProgram
+#define glDeleteSamplers                  imgl3wProcs.gl.DeleteSamplers
 #define glDeleteShader                    imgl3wProcs.gl.DeleteShader
 #define glDeleteTextures                  imgl3wProcs.gl.DeleteTextures
 #define glDeleteVertexArrays              imgl3wProcs.gl.DeleteVertexArrays
@@ -575,6 +592,7 @@ GL3W_API extern union ImGL3WProcs imgl3wProcs;
 #define glEnableVertexAttribArray         imgl3wProcs.gl.EnableVertexAttribArray
 #define glFlush                           imgl3wProcs.gl.Flush
 #define glGenBuffers                      imgl3wProcs.gl.GenBuffers
+#define glGenSamplers                     imgl3wProcs.gl.GenSamplers
 #define glGenTextures                     imgl3wProcs.gl.GenTextures
 #define glGenVertexArrays                 imgl3wProcs.gl.GenVertexArrays
 #define glGetAttribLocation               imgl3wProcs.gl.GetAttribLocation
@@ -595,10 +613,12 @@ GL3W_API extern union ImGL3WProcs imgl3wProcs;
 #define glPixelStorei                     imgl3wProcs.gl.PixelStorei
 #define glPolygonMode                     imgl3wProcs.gl.PolygonMode
 #define glReadPixels                      imgl3wProcs.gl.ReadPixels
+#define glSamplerParameteri               imgl3wProcs.gl.SamplerParameteri
 #define glScissor                         imgl3wProcs.gl.Scissor
 #define glShaderSource                    imgl3wProcs.gl.ShaderSource
 #define glTexImage2D                      imgl3wProcs.gl.TexImage2D
 #define glTexParameteri                   imgl3wProcs.gl.TexParameteri
+#define glTexSubImage2D                   imgl3wProcs.gl.TexSubImage2D
 #define glUniform1i                       imgl3wProcs.gl.Uniform1i
 #define glUniformMatrix4fv                imgl3wProcs.gl.UniformMatrix4fv
 #define glUseProgram                      imgl3wProcs.gl.UseProgram
@@ -626,7 +646,7 @@ extern "C" {
 #endif
 #include <windows.h>
 
-static HMODULE libgl;
+static HMODULE libgl = NULL;
 typedef PROC(__stdcall* GL3WglGetProcAddr)(LPCSTR);
 static GL3WglGetProcAddr wgl_get_proc_address;
 
@@ -639,7 +659,7 @@ static int open_libgl(void)
     return GL3W_OK;
 }
 
-static void close_libgl(void) { FreeLibrary(libgl); }
+static void close_libgl(void) { FreeLibrary(libgl); libgl = NULL; }
 static GL3WglProc get_proc(const char *proc)
 {
     GL3WglProc res;
@@ -651,7 +671,7 @@ static GL3WglProc get_proc(const char *proc)
 #elif defined(__APPLE__)
 #include <dlfcn.h>
 
-static void *libgl;
+static void *libgl = NULL;
 static int open_libgl(void)
 {
     libgl = dlopen("/System/Library/Frameworks/OpenGL.framework/OpenGL", RTLD_LAZY | RTLD_LOCAL);
@@ -660,7 +680,7 @@ static int open_libgl(void)
     return GL3W_OK;
 }
 
-static void close_libgl(void) { dlclose(libgl); }
+static void close_libgl(void) { dlclose(libgl); libgl = NULL; }
 
 static GL3WglProc get_proc(const char *proc)
 {
@@ -694,7 +714,11 @@ static void close_libgl(void)
 
 static int is_library_loaded(const char* name, void** lib)
 {
+#if defined(__HAIKU__)
+    *lib = NULL; // no support for RTLD_NOLOAD on Haiku.
+#else
     *lib = dlopen(name, RTLD_LAZY | RTLD_LOCAL | RTLD_NOLOAD);
+#endif
     return *lib != NULL;
 }
 
@@ -812,6 +836,7 @@ static int parse_version(void)
 }
 
 static void load_procs(GL3WGetProcAddressProc proc);
+static void clear_procs();
 
 int imgl3wInit(void)
 {
@@ -826,6 +851,12 @@ int imgl3wInit2(GL3WGetProcAddressProc proc)
 {
     load_procs(proc);
     return parse_version();
+}
+
+void imgl3wShutdown(void)
+{
+    close_libgl();
+    clear_procs();
 }
 
 int imgl3wIsSupported(int major, int minor)
@@ -858,6 +889,7 @@ static const char *proc_names[] = {
     "glCreateShader",
     "glDeleteBuffers",
     "glDeleteProgram",
+    "glDeleteSamplers",
     "glDeleteShader",
     "glDeleteTextures",
     "glDeleteVertexArrays",
@@ -870,6 +902,7 @@ static const char *proc_names[] = {
     "glEnableVertexAttribArray",
     "glFlush",
     "glGenBuffers",
+    "glGenSamplers",
     "glGenTextures",
     "glGenVertexArrays",
     "glGetAttribLocation",
@@ -890,10 +923,12 @@ static const char *proc_names[] = {
     "glPixelStorei",
     "glPolygonMode",
     "glReadPixels",
+    "glSamplerParameteri",
     "glScissor",
     "glShaderSource",
     "glTexImage2D",
     "glTexParameteri",
+    "glTexSubImage2D",
     "glUniform1i",
     "glUniformMatrix4fv",
     "glUseProgram",
@@ -908,6 +943,13 @@ static void load_procs(GL3WGetProcAddressProc proc)
     size_t i;
     for (i = 0; i < GL3W_ARRAY_SIZE(proc_names); i++)
         imgl3wProcs.ptr[i] = proc(proc_names[i]);
+}
+
+static void clear_procs()
+{
+    size_t i;
+    for (i = 0; i < GL3W_ARRAY_SIZE(proc_names); i++)
+        imgl3wProcs.ptr[i] = nullptr;
 }
 
 #ifdef __cplusplus

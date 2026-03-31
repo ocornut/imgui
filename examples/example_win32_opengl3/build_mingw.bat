@@ -1,4 +1,4 @@
-@REM Build for MINGW64 or 32 from MSYS2. 
+@REM Build for MINGW64 or 32 from MSYS2.
 @set OUT_DIR=Debug
 @set OUT_EXE=example_win32_opengl3
 @set INCLUDES=-I../.. -I../../backends
