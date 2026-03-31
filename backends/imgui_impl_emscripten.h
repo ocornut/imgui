@@ -3,7 +3,7 @@
 // This is a platform back-end, similar to and offering an alternative to imgui_impl_glfw.
 // The intended use-case is for applications built with Emscripten, running in the browser, but *not* using GLFW.
 // It uses Emscripten's HTML5 interface to tie callbacks to imgui input, handling window resizing,
-// focus, cursor, keyboard input, touch, gamepad devices etc.  It does not attempt to handle rendering.
+// focus, cursor, keyboard input, etc.  It does not attempt to handle rendering.
 //
 // A note about GLFW on Emscripten: Emscripten includes its own GLFW implementation, which wraps browser HTML5 callbacks to provide the standard GLFW input interface.  So there are two levels of indirection.
 // This backend removes the middleman for input, providing a more efficient direct interface between Emscripten's functionality and imgui input.
