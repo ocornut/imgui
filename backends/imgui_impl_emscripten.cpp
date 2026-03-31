@@ -4,6 +4,8 @@
 //
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-03-31: Emscripten: Reworked KeyboardEvent.code translation to avoid std::unordered_map and added BrowserBack/Forward and F13-F24 mappings.
+//  2026-03-31: Emscripten: Moved cursor state into backend userdata and replaced cursor restore storage with owned C strings.
 //  2024-12-09: Inputs: Added special handling for modifier keys to also generate modifier key events.
 //  2024-12-08: Inputs: Prevent "Delete" key from getting printed in text input.
 //  2024-12-06: Inputs: Added special handling for Tab and Enter event capture.
