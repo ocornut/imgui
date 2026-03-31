@@ -641,6 +641,8 @@ void ImGui_ImplEmscripten_Shutdown()
     emscripten_set_keyup_callback(     EMSCRIPTEN_EVENT_TARGET_WINDOW,   nullptr, false, nullptr);
     emscripten_set_keypress_callback(  EMSCRIPTEN_EVENT_TARGET_WINDOW,   nullptr, false, nullptr);
     emscripten_set_resize_callback(    EMSCRIPTEN_EVENT_TARGET_WINDOW,   nullptr, false, nullptr);
+    emscripten_set_blur_callback(      EMSCRIPTEN_EVENT_TARGET_WINDOW,   nullptr, false, nullptr);
+    emscripten_set_focus_callback(     EMSCRIPTEN_EVENT_TARGET_WINDOW,   nullptr, false, nullptr);
     emscripten_set_focusin_callback(   EMSCRIPTEN_EVENT_TARGET_WINDOW,   nullptr, false, nullptr);
     emscripten_set_focusout_callback(  EMSCRIPTEN_EVENT_TARGET_WINDOW,   nullptr, false, nullptr);
     // TODO: touch events
