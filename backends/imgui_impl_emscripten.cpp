@@ -817,8 +817,7 @@ ImGuiKey translate_key(char const* emscripten_key)
             switch (emscripten_key[3])
             {
             case 'a': return ImGuiKey_RightSuper;                               // "MetaRight"
-            default:
-                // return ImGuiKey_None;                                          // "MediaStop"
+            // default: return ImGuiKey_None;                                     // "MediaStop"
             }
             break;
         // case 11: return ImGuiKey_None;                                         // "MediaSelect"
