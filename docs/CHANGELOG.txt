@@ -120,6 +120,8 @@ Other Changes:
   - Clear `DisplayStart`/`DisplayEnd` fields when `Step()` returns false.
   - Added `UserIndex` helper storage. This is solely a convenience for cases where
     you may want to carry an index around.
+  - Always pulls current context on `ImGuiListClipper::Begin()`, consistent with public
+    API design, and avoids issues with clipper instances outliving contexts. (#9324, #5856)
 - Scrollbar:
   - Implemented a custom tweak to extend hit-testing bounding box when window is sitting
     at the edge of a viewport (e.g. fullscreen or docked window), so that e.g. mouse the
@@ -130,6 +132,9 @@ Other Changes:
     as a convenience for when using e.g. InvisibleButton().
 - Focus: fixed fallback "Debug" window temporarily taking focus and setting io.WantCaptureKeyboard
   for one frame on e.g. application boot if no other windows are submitted. (#9243)
+- DrawList:
+  - PathArcTo(): fixed erroneous segment count for pathologically small arcs on large 
+    circles. (#9331, #9313) [@thedmd, @epajarre]
 - Memory:
   - Discard/GC of ImDrawList buffers for unused windows favor restoring them to
     ~Size*1.05 instead of Capacity when awakening again. Facilitate releasing ImDrawList
@@ -137,13 +142,26 @@ Other Changes:
   - Fixed GetForegroundDrawList()/GetBackgroundDrawList() per-viewport buffers not being
     collected when unused for io.ConfigMemoryCompactTimer amount of time. (#9303)
 - Demo: fixed IMGUI_DEMO_MARKER locations for examples applets. (#9261, #3689) [@pthom]
+- Misc: added missing ImVec2/ImVec4 operators. (#9339, #8258) [@dkosmari, @ArashPartow]
+- Internals:
+  - ButtonBehavior: fixed internal/low-level ImGuiButtonFlags_PressedOnRelease
+    (as well as equivalent ImGuiSelectableFlags_SelectOnRelease for Selectable) from
+    not taking current active id. ImGuiButtonFlags_NoHoldingActiveID allows that.
+    This was pretty sure only used internally by MenuItem().
 - Backends:
   - DirectX9, OpenGL2, OpenGL3, Metal, SDLGPU3, SDLRenderer2, SDLRenderer3: fixed easy-to-fix
     issues in code assuming ImTextureID_Invalid is always defined to 0. (#9295, #9310)
+  - GLFW: mouse cursor is properly restored if changed by user app/code while using
+    glfwSetInputMode(..., GLFW_CURSOR_DISABLED) or ImGuiConfigFlags_NoMouseCursorChange.
+    Amend optimization done in 1.92.6.
   - SDLGPU3: removed unnecessary call to SDL_WaitForGPUIdle when releasing
     vertex/index buffers. (#9262) [@jaenis]
   - WebGPU: fixed version check for Emscripten 5.0.0+.
   - WebGPU: removed support for Emscripten <4.0.10. (#9281) [@ypujante]
+  - WebGPU: added support for WGVK native backend via IMGUI_IMPL_WEBGPU_BACKEND_WGVK,
+    using SPIRV shaders if WGSL is not available. (#9316, #9246, #9257) [@r-lyeh]
+    (WGVK is a lightweight alternative to Dawn or WGPU for native applications,
+    which is easier to build/setup, see: https://github.com/manuel5975p/WGVK)
 - Examples:
   - Emscripten: added `tabindex=-1` to canvas in our shell_minimal.htm. Without it,
     the canvas was not focusable in the DOM, which in turn make some backends
@@ -158,7 +176,8 @@ Other Changes:
   - WebGPU: fixed undefined behaviors in example code for requesting adapter
     and device. (#9246, #9256) [@r-lyeh]
   - SDL2+WebGPU: fixed hi-dpi handling. (#9300) [@ypujante]
-  - GLFW/SDL2/SDL3+WebGPU: removed suport for Emscripten <4.0.10. (#9281) [@ypujante]
+  - GLFW/SDL2/SDL3+WebGPU: added support for WGVK. (#9316, #9246, #9257) [@r-lyeh, @ocornut]
+  - GLFW/SDL2/SDL3+WebGPU: removed support for Emscripten <4.0.10. (#9281) [@ypujante]
 
 Docking+Viewports Branch:
 

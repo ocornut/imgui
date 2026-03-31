@@ -53,6 +53,8 @@ int main(int, char**)
 
     // Create window with graphics context
     float main_scale = ImGui_ImplSDL2_GetContentScaleForDisplay(0);
+    wgpu_surface_width = (int)(wgpu_surface_width * main_scale);
+    wgpu_surface_height = (int)(wgpu_surface_height * main_scale);
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
     SDL_Window* window = SDL_CreateWindow("Dear ImGui SDL2+WebGPU example", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, wgpu_surface_width, wgpu_surface_height, window_flags);
     if (window == nullptr)
@@ -324,9 +326,10 @@ static WGPUDevice RequestDevice(wgpu::Instance& instance, wgpu::Adapter& adapter
     IM_ASSERT(acquired_device != nullptr && waitStatusDevice == wgpu::WaitStatus::Success && "Error on Device request");
     return acquired_device.MoveToCHandle();
 }
-#elif defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
+#elif defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) || defined(IMGUI_IMPL_WEBGPU_BACKEND_WGVK)
 static void handle_request_adapter(WGPURequestAdapterStatus status, WGPUAdapter adapter, WGPUStringView message, void* userdata1, void* userdata2)
 {
+    IM_UNUSED(userdata2);
     if (status == WGPURequestAdapterStatus_Success)
     {
         WGPUAdapter* extAdapter = (WGPUAdapter*)userdata1;
@@ -340,6 +343,7 @@ static void handle_request_adapter(WGPURequestAdapterStatus status, WGPUAdapter 
 
 static void handle_request_device(WGPURequestDeviceStatus status, WGPUDevice device, WGPUStringView message, void* userdata1, void* userdata2)
 {
+    IM_UNUSED(userdata2);
     if (status == WGPURequestDeviceStatus_Success)
     {
         WGPUDevice* extDevice = (WGPUDevice*)userdata1;
@@ -424,17 +428,19 @@ static bool InitWGPU(SDL_Window* window)
     preferred_fmt = surface_capabilities.formats[0];
 
     // WGPU backend: Adapter and Device acquisition, Surface creation
-#elif defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
+#elif defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) ||  defined(IMGUI_IMPL_WEBGPU_BACKEND_WGVK)
     WGPUInstanceDescriptor instanceDesc = {};
     WGPUInstanceFeatureName timedWaitAny = WGPUInstanceFeatureName_TimedWaitAny;
     instanceDesc.requiredFeatureCount = 1;
     instanceDesc.requiredFeatures = &timedWaitAny;
     wgpu_instance = wgpuCreateInstance(&instanceDesc);
 
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
     wgpuSetLogCallback(
         [](WGPULogLevel level, WGPUStringView msg, void* userdata) { fprintf(stderr, "%s: %.*s\n", ImGui_ImplWGPU_GetLogLevelName(level), (int)msg.length, msg.data); }, nullptr
     );
     wgpuSetLogLevel(WGPULogLevel_Warn);
+#endif
 
     WGPUAdapter adapter = RequestAdapter(wgpu_instance);
     ImGui_ImplWGPU_DebugPrintAdapterInfo(adapter);
@@ -514,7 +520,7 @@ WGPUSurface CreateWGPUSurface(const WGPUInstance& instance, SDL_Window* window)
     }
 #else
 #error "Unsupported WebGPU native platform!"
-#endif
     return nullptr;
+#endif
 }
 #endif // #ifndef __EMSCRIPTEN__
