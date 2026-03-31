@@ -165,7 +165,8 @@ ImGuiKey translate_key(char const* emscripten_key) __attribute__((__const__));
 ImGuiKey translate_key(char const* emscripten_key)
 {
     // Translate an emscripten-provided browser string describing a keycode to an imgui key code
-    if (auto it{key_translate_lookup.find(emscripten_key)}; it != key_translate_lookup.end())
+    const std::unordered_map<std::string, ImGuiKey>::const_iterator it{key_translate_lookup.find(emscripten_key)};
+    if (it != key_translate_lookup.end())
     {
         return it->second;
     }
@@ -259,7 +260,7 @@ bool is_set()
 std::string get_string()
 {
     // Return the current cursor setting as a string
-    auto cursor_str_ptr{reinterpret_cast<char*>(EM_ASM_PTR(
+    char* cursor_str_ptr{reinterpret_cast<char*>(EM_ASM_PTR(
         return stringToNewUTF8(document.body.style.cursor);
     ))};
     std::string const cursor_str{cursor_str_ptr};
@@ -316,17 +317,18 @@ void set(std::string const &new_cursor)
 
 namespace {
 
+void set_cursor_if_necessary(emscripten_browser_cursor_internal::cursor& current_cursor, emscripten_browser_cursor_internal::cursor new_cursor)
+{
+    if (new_cursor == current_cursor) return;                                   // don't do anything if the current cursor is already set
+    current_cursor = new_cursor;
+    emscripten_browser_cursor_internal::set(new_cursor);
+}
+
 void update_cursor()
 {
     // Sync any cursor changes due to ImGui to the browser's cursor
     static emscripten_browser_cursor_internal::cursor current_cursor{emscripten_browser_cursor_internal::cursor::invalid};
     static std::optional<std::string> cursor_to_restore;
-
-    auto set_cursor_if_necessary{[&](emscripten_browser_cursor_internal::cursor new_cursor) {
-        if (new_cursor == current_cursor) return;                               // don't do anything if the current cursor is already set
-        current_cursor = new_cursor;
-        emscripten_browser_cursor_internal::set(new_cursor);
-    }};
 
     if (ImGui::GetIO().WantCaptureMouse)                                        // mouse is hovering over the gui
     {
@@ -338,31 +340,31 @@ void update_cursor()
         switch (ImGui::GetMouseCursor())
         {
         case ImGuiMouseCursor_Arrow:
-            set_cursor_if_necessary(emscripten_browser_cursor_internal::cursor::cursor_default);
+            set_cursor_if_necessary(current_cursor, emscripten_browser_cursor_internal::cursor::cursor_default);
             break;
         case ImGuiMouseCursor_TextInput:                                        // When hovering over InputText, etc.
-            set_cursor_if_necessary(emscripten_browser_cursor_internal::cursor::text);
+            set_cursor_if_necessary(current_cursor, emscripten_browser_cursor_internal::cursor::text);
             break;
         case ImGuiMouseCursor_ResizeAll:                                        // (Unused by Dear ImGui functions)
-            set_cursor_if_necessary(emscripten_browser_cursor_internal::cursor::move);
+            set_cursor_if_necessary(current_cursor, emscripten_browser_cursor_internal::cursor::move);
             break;
         case ImGuiMouseCursor_ResizeNS:                                         // When hovering over a horizontal border
-            set_cursor_if_necessary(emscripten_browser_cursor_internal::cursor::ns_resize);
+            set_cursor_if_necessary(current_cursor, emscripten_browser_cursor_internal::cursor::ns_resize);
             break;
         case ImGuiMouseCursor_ResizeEW:                                         // When hovering over a vertical border or a column
-            set_cursor_if_necessary(emscripten_browser_cursor_internal::cursor::ew_resize);
+            set_cursor_if_necessary(current_cursor, emscripten_browser_cursor_internal::cursor::ew_resize);
             break;
         case ImGuiMouseCursor_ResizeNESW:                                       // When hovering over the bottom-left corner of a window
-            set_cursor_if_necessary(emscripten_browser_cursor_internal::cursor::nesw_resize);
+            set_cursor_if_necessary(current_cursor, emscripten_browser_cursor_internal::cursor::nesw_resize);
             break;
         case ImGuiMouseCursor_ResizeNWSE:                                       // When hovering over the bottom-right corner of a window
-            set_cursor_if_necessary(emscripten_browser_cursor_internal::cursor::nwse_resize);
+            set_cursor_if_necessary(current_cursor, emscripten_browser_cursor_internal::cursor::nwse_resize);
             break;
         case ImGuiMouseCursor_Hand:                                             // (Unused by Dear ImGui functions. Use for e.g. hyperlinks)
-            set_cursor_if_necessary(emscripten_browser_cursor_internal::cursor::pointer);
+            set_cursor_if_necessary(current_cursor, emscripten_browser_cursor_internal::cursor::pointer);
             break;
         case ImGuiMouseCursor_NotAllowed:                                       // When hovering something with disallowed interaction. Usually a crossed circle.
-            set_cursor_if_necessary(emscripten_browser_cursor_internal::cursor::not_allowed);
+            set_cursor_if_necessary(current_cursor, emscripten_browser_cursor_internal::cursor::not_allowed);
             break;
         }
     }
@@ -382,13 +384,13 @@ void update_cursor()
 void ImGui_ImplEmscripten_Init()
 {
     // Initialise the Emscripten backend, setting input callbacks
-    auto &imgui_io{ImGui::GetIO()};
-    imgui_io.BackendPlatformName = "imgui_impl_emscripten";
-    imgui_io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;
+    ImGuiIO& io{ImGui::GetIO()};
+    io.BackendPlatformName = "imgui_impl_emscripten";
+    io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;
 
     // set up initial display size values
-    imgui_io.DisplaySize.x = emscripten::val::global("window")["innerWidth"].as<float>();
-    imgui_io.DisplaySize.y = emscripten::val::global("window")["innerHeight"].as<float>();
+    io.DisplaySize.x = emscripten::val::global("window")["innerWidth"].as<float>();
+    io.DisplaySize.y = emscripten::val::global("window")["innerHeight"].as<float>();
 
     emscripten_set_mousemove_callback(
         EMSCRIPTEN_EVENT_TARGET_WINDOW,                                         // target
@@ -437,9 +439,9 @@ void ImGui_ImplEmscripten_Init()
         nullptr,                                                                // userData
         false,                                                                  // useCapture
         [](int /*event_type*/, EmscriptenMouseEvent const */*mouse_event*/, void */*data*/) { // callback, event_type == EMSCRIPTEN_EVENT_MOUSELEAVE
-            auto &imgui_io{ImGui::GetIO()};
-            imgui_io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);                      // cursor is not in the window
-            imgui_io.ClearInputKeys();                                          // clear pending input keys on mouse exit
+            ImGuiIO& io{ImGui::GetIO()};
+            io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);                            // cursor is not in the window
+            io.ClearInputKeys();                                                // clear pending input keys on mouse exit
             return true;                                                        // the event was consumed
         }
     );
@@ -474,33 +476,33 @@ void ImGui_ImplEmscripten_Init()
         nullptr,                                                                // userData
         false,                                                                  // useCapture
         [](int /*event_type*/, EmscriptenKeyboardEvent const *key_event, void */*data*/) { // callback, event_type == EMSCRIPTEN_EVENT_KEYDOWN
-            auto const key{translate_key(key_event->code)};
-            auto &imgui_io{ImGui::GetIO()};
-            imgui_io.AddKeyEvent(key, true);
+            const ImGuiKey key{translate_key(key_event->code)};
+            ImGuiIO& io{ImGui::GetIO()};
+            io.AddKeyEvent(key, true);
             switch (key)                                                        // special cases for certain key events
             {
             case ImGuiKey_LeftCtrl:                                             // additional events for modifier keys
             case ImGuiKey_RightCtrl:
-                imgui_io.AddKeyEvent(ImGuiMod_Ctrl, true);
+                io.AddKeyEvent(ImGuiMod_Ctrl, true);
                 break;
             case ImGuiKey_LeftShift:
             case ImGuiKey_RightShift:
-                imgui_io.AddKeyEvent(ImGuiMod_Shift, true);
+                io.AddKeyEvent(ImGuiMod_Shift, true);
                 break;
             case ImGuiKey_LeftAlt:
             case ImGuiKey_RightAlt:
-                imgui_io.AddKeyEvent(ImGuiMod_Alt, true);
+                io.AddKeyEvent(ImGuiMod_Alt, true);
                 break;
             case ImGuiKey_LeftSuper:
             case ImGuiKey_RightSuper:
-                imgui_io.AddKeyEvent(ImGuiMod_Super, true);
+                io.AddKeyEvent(ImGuiMod_Super, true);
                 break;
             // TODO: case ImGuiKey_Menu: do we want to do anything with this?
             case ImGuiKey_Tab:                                                  // consuming tab prevents the user tabbing to other parts of the browser interface outside the window content
-                return imgui_io.WantCaptureKeyboard;                            // the event was consumed only if imgui wants to capture the keyboard
+                return io.WantCaptureKeyboard;                                  // the event was consumed only if imgui wants to capture the keyboard
             case ImGuiKey_Enter:                                                // consuming enter prevents the word "Enter" appearing in text input via the keypress callback
             case ImGuiKey_Delete:                                               // consuming enter prevents the word "Delete" appearing in text input via the keypress callback
-                return imgui_io.WantTextInput;                                  // the event was consumed only if we're currently accepting text input
+                return io.WantTextInput;                                        // the event was consumed only if we're currently accepting text input
             default:
                 break;
             }
@@ -512,26 +514,26 @@ void ImGui_ImplEmscripten_Init()
         nullptr,                                                                // userData
         false,                                                                  // useCapture
         [](int /*event_type*/, EmscriptenKeyboardEvent const *key_event, void */*data*/) { // callback, event_type == EMSCRIPTEN_EVENT_KEYUP
-            auto const key{translate_key(key_event->code)};
-            auto &imgui_io{ImGui::GetIO()};
-            imgui_io.AddKeyEvent(key, false);
+            const ImGuiKey key{translate_key(key_event->code)};
+            ImGuiIO& io{ImGui::GetIO()};
+            io.AddKeyEvent(key, false);
             switch (key)                                                        // special cases for certain key events
             {
             case ImGuiKey_LeftCtrl:                                             // additional events for modifier keys
             case ImGuiKey_RightCtrl:
-                imgui_io.AddKeyEvent(ImGuiMod_Ctrl, false);
+                io.AddKeyEvent(ImGuiMod_Ctrl, false);
                 break;
             case ImGuiKey_LeftShift:
             case ImGuiKey_RightShift:
-                imgui_io.AddKeyEvent(ImGuiMod_Shift, false);
+                io.AddKeyEvent(ImGuiMod_Shift, false);
                 break;
             case ImGuiKey_LeftAlt:
             case ImGuiKey_RightAlt:
-                imgui_io.AddKeyEvent(ImGuiMod_Alt, false);
+                io.AddKeyEvent(ImGuiMod_Alt, false);
                 break;
             case ImGuiKey_LeftSuper:
             case ImGuiKey_RightSuper:
-                imgui_io.AddKeyEvent(ImGuiMod_Super, false);
+                io.AddKeyEvent(ImGuiMod_Super, false);
                 break;
             default:
                 break;
@@ -544,9 +546,9 @@ void ImGui_ImplEmscripten_Init()
         nullptr,                                                                // userData
         false,                                                                  // useCapture
         [](int /*event_type*/, EmscriptenKeyboardEvent const *key_event, void */*data*/) { // callback, event_type == EMSCRIPTEN_EVENT_KEYPRESS
-            auto &imgui_io{ImGui::GetIO()};
-            imgui_io.AddInputCharactersUTF8(key_event->key);
-            return imgui_io.WantCaptureKeyboard;                                // the event was consumed only if imgui wants to capture the keyboard
+            ImGuiIO& io{ImGui::GetIO()};
+            io.AddInputCharactersUTF8(key_event->key);
+            return io.WantCaptureKeyboard;                                      // the event was consumed only if imgui wants to capture the keyboard
         }
     );
     emscripten_set_resize_callback(
@@ -554,9 +556,9 @@ void ImGui_ImplEmscripten_Init()
         nullptr,                                                                // userData
         false,                                                                  // useCapture
         [](int /*event_type*/, EmscriptenUiEvent const *event, void */*data*/) { // event_type == EMSCRIPTEN_EVENT_RESIZE
-            auto &imgui_io{ImGui::GetIO()};
-            imgui_io.DisplaySize.x = static_cast<float>(event->windowInnerWidth);
-            imgui_io.DisplaySize.y = static_cast<float>(event->windowInnerHeight);
+            ImGuiIO& io{ImGui::GetIO()};
+            io.DisplaySize.x = static_cast<float>(event->windowInnerWidth);
+            io.DisplaySize.y = static_cast<float>(event->windowInnerHeight);
             return true;                                                        // the event was consumed
         }
     );
@@ -565,9 +567,9 @@ void ImGui_ImplEmscripten_Init()
         nullptr,                                                                // userData
         false,                                                                  // useCapture
         [](int /*event_type*/, EmscriptenFocusEvent const */*event*/, void */*data*/) { // event_type == EMSCRIPTEN_EVENT_BLUR
-            auto &imgui_io{ImGui::GetIO()};
-            imgui_io.AddFocusEvent(false);
-            imgui_io.ClearInputKeys();                                          // clear pending input keys on focus gain
+            ImGuiIO& io{ImGui::GetIO()};
+            io.AddFocusEvent(false);
+            io.ClearInputKeys();                                                // clear pending input keys on focus gain
             return true;                                                        // the event was consumed
         }
     );
@@ -576,9 +578,9 @@ void ImGui_ImplEmscripten_Init()
         nullptr,                                                                // userData
         false,                                                                  // useCapture
         [](int /*event_type*/, EmscriptenFocusEvent const */*event*/, void */*data*/) { // event_type == EMSCRIPTEN_EVENT_FOCUS
-            auto &imgui_io{ImGui::GetIO()};
-            imgui_io.AddFocusEvent(true);
-            imgui_io.ClearInputKeys();                                          // clear pending input keys on focus loss - for example if you press tab to cycle to another part of the UI
+            ImGuiIO& io{ImGui::GetIO()};
+            io.AddFocusEvent(true);
+            io.ClearInputKeys();                                                // clear pending input keys on focus loss - for example if you press tab to cycle to another part of the UI
             return true;                                                        // the event was consumed
         }
     );
@@ -587,9 +589,9 @@ void ImGui_ImplEmscripten_Init()
         nullptr,                                                                // userData
         false,                                                                  // useCapture
         [](int /*event_type*/, EmscriptenFocusEvent const */*event*/, void */*data*/) { // event_type == EMSCRIPTEN_EVENT_FOCUSIN
-            auto &imgui_io{ImGui::GetIO()};
-            imgui_io.AddFocusEvent(true);
-            imgui_io.ClearInputKeys();                                          // clear pending input keys on focus gain
+            ImGuiIO& io{ImGui::GetIO()};
+            io.AddFocusEvent(true);
+            io.ClearInputKeys();                                                // clear pending input keys on focus gain
             return true;                                                        // the event was consumed
         }
     );
@@ -598,9 +600,9 @@ void ImGui_ImplEmscripten_Init()
         nullptr,                                                                // userData
         false,                                                                  // useCapture
         [](int /*event_type*/, EmscriptenFocusEvent const */*event*/, void */*data*/) { // event_type == EMSCRIPTEN_EVENT_FOCUSOUT
-            auto &imgui_io{ImGui::GetIO()};
-            imgui_io.AddFocusEvent(false);
-            imgui_io.ClearInputKeys();                                          // clear pending input keys on focus loss - for example if you press tab to cycle to another part of the UI
+            ImGuiIO& io{ImGui::GetIO()};
+            io.AddFocusEvent(false);
+            io.ClearInputKeys();                                                // clear pending input keys on focus loss - for example if you press tab to cycle to another part of the UI
             return true;                                                        // the event was consumed
         }
     );
@@ -625,10 +627,10 @@ void ImGui_ImplEmscripten_Shutdown()
     emscripten_set_focusout_callback(  EMSCRIPTEN_EVENT_TARGET_WINDOW,   nullptr, false, nullptr);
     // TODO: touch events
 
-    auto &imgui_io{ImGui::GetIO()};
-    imgui_io.BackendPlatformName = nullptr;
-    imgui_io.BackendPlatformUserData = nullptr;
-    imgui_io.BackendFlags &= ~ImGuiBackendFlags_HasMouseCursors;
+    ImGuiIO& io{ImGui::GetIO()};
+    io.BackendPlatformName = nullptr;
+    io.BackendPlatformUserData = nullptr;
+    io.BackendFlags &= ~ImGuiBackendFlags_HasMouseCursors;
 }
 
 void ImGui_ImplEmscripten_NewFrame()
