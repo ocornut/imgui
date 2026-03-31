@@ -147,7 +147,6 @@ static const std::unordered_map<std::string, ImGuiKey> key_translate_lookup{
     {"F4",                   ImGuiKey_F4},
     {"F5",                   ImGuiKey_F5},
     {"F6",                   ImGuiKey_F6},
-    {"F6",                   ImGuiKey_F6},
     {"F7",                   ImGuiKey_F7},
     {"F8",                   ImGuiKey_F8},
     {"F9",                   ImGuiKey_F9},
