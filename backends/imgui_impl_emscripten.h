@@ -45,6 +45,6 @@ void ImGui_ImplEmscripten_Init();
 // Note also there is no obligation to ever call this, as there is not necessarily any such concept as "shutting down" when running in the browser, and we have no resources to release.  The user can just close the tab.
 void ImGui_ImplEmscripten_Shutdown();
 
-// Call every frame to update polled input events, i.e. gamepads, and update imgui's cursors.
-// If you aren't using gamepad input to control imgui, and you're not using browser native cursor rendering (i.e. if imgui is rendering cursors internally), you don't need to call this.
+// Call every frame to synchronize Dear ImGui's cursor state with the browser's native cursors.
+// If you are not using browser native cursor rendering (i.e. if Dear ImGui is rendering cursors internally), you don't need to call this.
 void ImGui_ImplEmscripten_NewFrame();
