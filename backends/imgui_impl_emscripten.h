@@ -34,7 +34,7 @@
 #pragma once
 
 #ifndef __EMSCRIPTEN__
-#error The imgui_impl_emscripten backend reqiuires Emscripten.
+#error The imgui_impl_emscripten backend requires Emscripten.
 #endif
 
 // Initialise the Emscripten backend, setting input callbacks.  This should be called after ImGui::CreateContext();
