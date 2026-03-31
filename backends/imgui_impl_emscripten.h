@@ -12,8 +12,6 @@
 // In that case, this backend replaces all non-rendering-related functionality from GLFW, making it possible to avoid depending on GLFW altogether.
 //
 // For native cursor rendering, this includes a cut-down implementation of the Emscripten Browser Cursor library: https://github.com/Armchair-Software/emscripten-browser-cursor
-//
-// Copyright 2024 Eugene Hopkinson
 
 // Supported features:
 // - Keyboard input

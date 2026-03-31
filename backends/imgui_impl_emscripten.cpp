@@ -2,8 +2,6 @@
 //
 // See documentation in imgui_impl_emscripten.h.
 //
-// Copyright 2024 Eugene Hopkinson
-//
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2024-12-09: Inputs: Added special handling for modifier keys to also generate modifier key events.
@@ -11,7 +9,7 @@
 //  2024-12-06: Inputs: Added special handling for Tab and Enter event capture.
 //  2024-12-06: Inputs: Handle blur and focus events correctly, focusin and focusout aren't enough.
 //  2024-12-06: Emscripten: Don't use devicePixelRatio as it's not needed with WebGPU.
-//  2024-11-22: Initial version.
+//  2024-11-22: Initial version by Eugene Hopkinson. (#8178)
 
 #include "imgui.h"
 #ifndef IMGUI_DISABLE
