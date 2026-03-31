@@ -244,68 +244,9 @@ enum class cursor
 };
 
 void set(cursor new_cursor);                                                    // set a new cursor from a cursor enum
+std::string get_string();                                                       // read the current cursor setting as a string
 void unset();                                                                   // clear the current cursor setting
-
-// Browser cursor helper implementation
-
-std::string get_string()
-{
-    // Return the current cursor setting as a string
-    char* cursor_str_ptr{reinterpret_cast<char*>(EM_ASM_PTR(
-        return stringToNewUTF8(document.body.style.cursor);
-    ))};
-    std::string const cursor_str{cursor_str_ptr};
-    free(cursor_str_ptr);
-    return cursor_str;
-}
-
-void set(cursor new_cursor)
-{
-    // Set the cursor according to the given enum
-    // Note, implementations omitted for cursors not used by imgui.  For full implementation, use https://github.com/Armchair-Software/emscripten-browser-cursor
-    switch (new_cursor)
-    {
-    case cursor::none:
-        EM_ASM(document.body.style.cursor = 'none';);
-        break;
-    case cursor::cursor_default:
-    default:
-        EM_ASM(document.body.style.cursor = 'default';);
-        break;
-    case cursor::pointer:
-        EM_ASM(document.body.style.cursor = 'pointer';);
-        break;
-    case cursor::text:
-        EM_ASM(document.body.style.cursor = 'text';);
-        break;
-    case cursor::move:
-        EM_ASM(document.body.style.cursor = 'move';);
-        break;
-    case cursor::not_allowed:
-        EM_ASM(document.body.style.cursor = 'not-allowed';);
-        break;
-    case cursor::ew_resize:
-        EM_ASM(document.body.style.cursor = 'ew-resize';);
-        break;
-    case cursor::ns_resize:
-        EM_ASM(document.body.style.cursor = 'ns-resize';);
-        break;
-    case cursor::nesw_resize:
-        EM_ASM(document.body.style.cursor = 'nesw-resize';);
-        break;
-    case cursor::nwse_resize:
-        EM_ASM(document.body.style.cursor = 'nwse-resize';);
-        break;
-    }
-}
-
-void set(std::string const& new_cursor)
-{
-    // Set the cursor from an arbitrary string
-    EM_ASM({
-        document.body.style.cursor = UTF8ToString($0);
-    }, new_cursor.c_str());
-}
+void set(std::string const& new_cursor);                                        // set the cursor from an arbitrary string
 
 } // namespace emscripten_browser_cursor_internal
 
@@ -663,4 +604,67 @@ void ImGui_ImplEmscripten_NewFrame()
     update_cursor(bd);
 }
 
+namespace emscripten_browser_cursor_internal
+{
+
+std::string get_string()
+{
+    // Return the current cursor setting as a string
+    char* cursor_str_ptr{reinterpret_cast<char*>(EM_ASM_PTR(
+        return stringToNewUTF8(document.body.style.cursor);
+    ))};
+    std::string const cursor_str{cursor_str_ptr};
+    free(cursor_str_ptr);
+    return cursor_str;
+}
+
+void set(cursor new_cursor)
+{
+    // Set the cursor according to the given enum
+    // Note, implementations omitted for cursors not used by imgui.  For full implementation, use https://github.com/Armchair-Software/emscripten-browser-cursor
+    switch (new_cursor)
+    {
+    case cursor::none:
+        EM_ASM(document.body.style.cursor = 'none';);
+        break;
+    case cursor::cursor_default:
+    default:
+        EM_ASM(document.body.style.cursor = 'default';);
+        break;
+    case cursor::pointer:
+        EM_ASM(document.body.style.cursor = 'pointer';);
+        break;
+    case cursor::text:
+        EM_ASM(document.body.style.cursor = 'text';);
+        break;
+    case cursor::move:
+        EM_ASM(document.body.style.cursor = 'move';);
+        break;
+    case cursor::not_allowed:
+        EM_ASM(document.body.style.cursor = 'not-allowed';);
+        break;
+    case cursor::ew_resize:
+        EM_ASM(document.body.style.cursor = 'ew-resize';);
+        break;
+    case cursor::ns_resize:
+        EM_ASM(document.body.style.cursor = 'ns-resize';);
+        break;
+    case cursor::nesw_resize:
+        EM_ASM(document.body.style.cursor = 'nesw-resize';);
+        break;
+    case cursor::nwse_resize:
+        EM_ASM(document.body.style.cursor = 'nwse-resize';);
+        break;
+    }
+}
+
+void set(std::string const& new_cursor)
+{
+    // Set the cursor from an arbitrary string
+    EM_ASM({
+        document.body.style.cursor = UTF8ToString($0);
+    }, new_cursor.c_str());
+}
+
+} // namespace emscripten_browser_cursor_internal
 #endif // IMGUI_DISABLE
