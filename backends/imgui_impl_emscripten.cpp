@@ -19,7 +19,6 @@
 #include "imgui_impl_emscripten.h"
 #include <emscripten.h>
 #include <emscripten/html5.h>
-#include <emscripten/val.h>
 #include <string.h>
 
 namespace {
@@ -131,8 +130,8 @@ void ImGui_ImplEmscripten_Init()
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;
 
     // set up initial display size values
-    io.DisplaySize.x = emscripten::val::global("window")["innerWidth"].as<float>();
-    io.DisplaySize.y = emscripten::val::global("window")["innerHeight"].as<float>();
+    io.DisplaySize.x = static_cast<float>(EM_ASM_INT(return window.innerWidth;));
+    io.DisplaySize.y = static_cast<float>(EM_ASM_INT(return window.innerHeight;));
 
     emscripten_set_mousemove_callback(
         EMSCRIPTEN_EVENT_TARGET_WINDOW,                                         // target
