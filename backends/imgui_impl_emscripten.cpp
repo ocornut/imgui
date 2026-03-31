@@ -187,7 +187,7 @@ constexpr ImGuiMouseButton translate_mousebutton(unsigned short emscripten_butto
 namespace emscripten_browser_cursor_internal
 {
 
-// Browser cursor helpers
+// Browser cursor helpers, adapted from https://github.com/Armchair-Software/emscripten-browser-cursor
 
 enum class cursor
 {
@@ -312,7 +312,7 @@ void set(std::string const &new_cursor)
     }, new_cursor.c_str());
 }
 
-} // namespace emscripten_browser_cursor
+} // namespace emscripten_browser_cursor_internal
 
 namespace {
 
