@@ -586,7 +586,7 @@ void ImGui_ImplEmscripten_Init()
         [](int /*event_type*/, EmscriptenFocusEvent const* /*event*/, void* /*data*/) { // event_type == EMSCRIPTEN_EVENT_BLUR
             ImGuiIO& io{ImGui::GetIO()};
             io.AddFocusEvent(false);
-            io.ClearInputKeys();                                                // clear pending input keys on focus gain
+            io.ClearInputKeys();                                                // clear pending input keys on focus loss
             return true;                                                        // the event was consumed
         }
     );
@@ -597,7 +597,7 @@ void ImGui_ImplEmscripten_Init()
         [](int /*event_type*/, EmscriptenFocusEvent const* /*event*/, void* /*data*/) { // event_type == EMSCRIPTEN_EVENT_FOCUS
             ImGuiIO& io{ImGui::GetIO()};
             io.AddFocusEvent(true);
-            io.ClearInputKeys();                                                // clear pending input keys on focus loss - for example if you press tab to cycle to another part of the UI
+            io.ClearInputKeys();                                                // clear pending input keys on focus gain - for example if you press tab to cycle back into the browser window
             return true;                                                        // the event was consumed
         }
     );
