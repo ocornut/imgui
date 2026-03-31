@@ -100,11 +100,13 @@ namespace {
 
 struct ImGui_ImplEmscripten_Data
 {
+    float DevicePixelRatio;
     emscripten_browser_cursor_internal::cursor CurrentCursor;
     char* CursorToRestore;
 
     ImGui_ImplEmscripten_Data()
-        : CurrentCursor{emscripten_browser_cursor_internal::cursor::invalid}
+        : DevicePixelRatio{1.0f}
+        , CurrentCursor{emscripten_browser_cursor_internal::cursor::invalid}
         , CursorToRestore{nullptr}
     {
     }
@@ -130,17 +132,21 @@ void ImGui_ImplEmscripten_Init()
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;
 
     // set up initial display size values
-    io.DisplaySize.x = static_cast<float>(EM_ASM_INT(return window.innerWidth;));
-    io.DisplaySize.y = static_cast<float>(EM_ASM_INT(return window.innerHeight;));
+    bd->DevicePixelRatio = static_cast<float>(emscripten_get_device_pixel_ratio());
+    io.DisplaySize.x = static_cast<float>(EM_ASM_INT(return window.innerWidth;)) * bd->DevicePixelRatio;
+    io.DisplaySize.y = static_cast<float>(EM_ASM_INT(return window.innerHeight;)) * bd->DevicePixelRatio;
+    io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
 
     emscripten_set_mousemove_callback(
         EMSCRIPTEN_EVENT_TARGET_WINDOW,                                         // target
         nullptr,                                                                // userData
         false,                                                                  // useCapture
         [](int /*event_type*/, EmscriptenMouseEvent const* mouse_event, void* /*data*/) { // callback, event_type == EMSCRIPTEN_EVENT_MOUSEMOVE
+            ImGui_ImplEmscripten_Data* bd{ImGui_ImplEmscripten_GetBackendData()};
+            float const device_pixel_ratio{bd ? bd->DevicePixelRatio : 1.0f};
             ImGui::GetIO().AddMousePosEvent(
-                static_cast<float>(mouse_event->clientX),
-                static_cast<float>(mouse_event->clientY)
+                static_cast<float>(mouse_event->clientX) * device_pixel_ratio,
+                static_cast<float>(mouse_event->clientY) * device_pixel_ratio
             );
             return true;                                                        // the event was consumed
         }
@@ -168,9 +174,11 @@ void ImGui_ImplEmscripten_Init()
         nullptr,                                                                // userData
         false,                                                                  // useCapture
         [](int /*event_type*/, EmscriptenMouseEvent const* mouse_event, void* /*data*/) { // callback, event_type == EMSCRIPTEN_EVENT_MOUSEENTER
+            ImGui_ImplEmscripten_Data* bd{ImGui_ImplEmscripten_GetBackendData()};
+            float const device_pixel_ratio{bd ? bd->DevicePixelRatio : 1.0f};
             ImGui::GetIO().AddMousePosEvent(
-                static_cast<float>(mouse_event->clientX),
-                static_cast<float>(mouse_event->clientY)
+                static_cast<float>(mouse_event->clientX) * device_pixel_ratio,
+                static_cast<float>(mouse_event->clientY) * device_pixel_ratio
             );
             return true;                                                        // the event was consumed
         }
@@ -298,8 +306,12 @@ void ImGui_ImplEmscripten_Init()
         false,                                                                  // useCapture
         [](int /*event_type*/, EmscriptenUiEvent const* event, void* /*data*/) { // event_type == EMSCRIPTEN_EVENT_RESIZE
             ImGuiIO& io{ImGui::GetIO()};
-            io.DisplaySize.x = static_cast<float>(event->windowInnerWidth);
-            io.DisplaySize.y = static_cast<float>(event->windowInnerHeight);
+            ImGui_ImplEmscripten_Data* bd{ImGui_ImplEmscripten_GetBackendData()};
+            float const device_pixel_ratio{static_cast<float>(emscripten_get_device_pixel_ratio())};
+            if (bd != nullptr) bd->DevicePixelRatio = device_pixel_ratio;
+            io.DisplaySize.x = static_cast<float>(event->windowInnerWidth) * device_pixel_ratio;
+            io.DisplaySize.y = static_cast<float>(event->windowInnerHeight) * device_pixel_ratio;
+            io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
             return true;                                                        // the event was consumed
         }
     );
