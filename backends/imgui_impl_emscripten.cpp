@@ -179,7 +179,7 @@ constexpr ImGuiMouseButton translate_mousebutton(unsigned short emscripten_butto
     // Translate an emscripten-provided integer describing a mouse button to an imgui mouse button
     if (emscripten_button == 1) return ImGuiMouseButton_Middle;                 // 1 = middle mouse button
     if (emscripten_button == 2) return ImGuiMouseButton_Right;                  // 2 = right mouse button
-    if (emscripten_button > ImGuiMouseButton_COUNT) return ImGuiMouseButton_Middle; // treat any weird clicks on unexpected buttons (button 6 upwards) as middle mouse
+    if (emscripten_button >= ImGuiMouseButton_COUNT) return ImGuiMouseButton_Middle; // treat any weird clicks on unexpected buttons (button 6 upwards) as middle mouse
     return emscripten_button;                                                   // any other button translates 1:1
 }
 
