@@ -160,7 +160,7 @@ static const std::unordered_map<std::string, ImGuiKey> key_translate_lookup{
     {"Pause",                ImGuiKey_Pause},
 };
 
-ImGuiKey translate_key(char const* emscripten_key) __attribute__((__const__));
+ImGuiKey translate_key(char const* emscripten_key) __attribute__((__pure__));
 ImGuiKey translate_key(char const* emscripten_key)
 {
     // Translate an emscripten-provided browser string describing a keycode to an imgui key code
