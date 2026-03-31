@@ -18,169 +18,15 @@
 #include <emscripten.h>
 #include <emscripten/html5.h>
 #include <emscripten/val.h>
+#include <string.h>
 
 namespace {
 
-// A map of HTML5 key names to imgui keys
-static const std::unordered_map<std::string, ImGuiKey> key_translate_lookup{
-    // main character keys
-    {"Backquote",            ImGuiKey_GraveAccent},
-    {"Backslash",            ImGuiKey_Backslash},
-    {"BracketLeft",          ImGuiKey_LeftBracket},
-    {"BracketRight",         ImGuiKey_RightBracket},
-    {"Comma",                ImGuiKey_Comma},
-    {"Digit0",               ImGuiKey_0},
-    {"Digit1",               ImGuiKey_1},
-    {"Digit2",               ImGuiKey_2},
-    {"Digit3",               ImGuiKey_3},
-    {"Digit4",               ImGuiKey_4},
-    {"Digit5",               ImGuiKey_5},
-    {"Digit6",               ImGuiKey_6},
-    {"Digit7",               ImGuiKey_7},
-    {"Digit8",               ImGuiKey_8},
-    {"Digit9",               ImGuiKey_9},
-    {"Equal",                ImGuiKey_Equal},
-    {"IntlBackslash",        ImGuiKey_Backslash},                               // Mapping to generic backslash
-    {"IntlRo",               ImGuiKey_Slash},                                   // Closest match for non-standard layouts
-    {"IntlYen",              ImGuiKey_Backslash},                               // Closest match for non-standard layouts
-    {"KeyA",                 ImGuiKey_A},
-    {"KeyB",                 ImGuiKey_B},
-    {"KeyC",                 ImGuiKey_C},
-    {"KeyD",                 ImGuiKey_D},
-    {"KeyE",                 ImGuiKey_E},
-    {"KeyF",                 ImGuiKey_F},
-    {"KeyG",                 ImGuiKey_G},
-    {"KeyH",                 ImGuiKey_H},
-    {"KeyI",                 ImGuiKey_I},
-    {"KeyJ",                 ImGuiKey_J},
-    {"KeyK",                 ImGuiKey_K},
-    {"KeyL",                 ImGuiKey_L},
-    {"KeyM",                 ImGuiKey_M},
-    {"KeyN",                 ImGuiKey_N},
-    {"KeyO",                 ImGuiKey_O},
-    {"KeyP",                 ImGuiKey_P},
-    {"KeyQ",                 ImGuiKey_Q},
-    {"KeyR",                 ImGuiKey_R},
-    {"KeyS",                 ImGuiKey_S},
-    {"KeyT",                 ImGuiKey_T},
-    {"KeyU",                 ImGuiKey_U},
-    {"KeyV",                 ImGuiKey_V},
-    {"KeyW",                 ImGuiKey_W},
-    {"KeyX",                 ImGuiKey_X},
-    {"KeyY",                 ImGuiKey_Y},
-    {"KeyZ",                 ImGuiKey_Z},
-    {"Minus",                ImGuiKey_Minus},
-    {"Period",               ImGuiKey_Period},
-    {"Quote",                ImGuiKey_Apostrophe},
-    {"Semicolon",            ImGuiKey_Semicolon},
-    {"Slash",                ImGuiKey_Slash},
+// W3C UI Events KeyboardEvent.code translation helpers
 
-    // control keys
-    {"AltLeft",              ImGuiKey_LeftAlt},
-    {"AltRight",             ImGuiKey_RightAlt},
-    {"Backspace",            ImGuiKey_Backspace},
-    {"CapsLock",             ImGuiKey_CapsLock},
-    {"ContextMenu",          ImGuiKey_Menu},
-    {"ControlLeft",          ImGuiKey_LeftCtrl},
-    {"ControlRight",         ImGuiKey_RightCtrl},
-    {"Enter",                ImGuiKey_Enter},
-    {"MetaLeft",             ImGuiKey_LeftSuper},
-    {"MetaRight",            ImGuiKey_RightSuper},
-    {"ShiftLeft",            ImGuiKey_LeftShift},
-    {"ShiftRight",           ImGuiKey_RightShift},
-    {"Space",                ImGuiKey_Space},
-    {"Tab",                  ImGuiKey_Tab},
-
-    // navigation key group
-    {"Delete",               ImGuiKey_Delete},
-    {"End",                  ImGuiKey_End},
-    //{"Help",                 ImGuiKey_PrintScreen},                             // Best approximation
-    {"Home",                 ImGuiKey_Home},
-    {"Insert",               ImGuiKey_Insert},
-    {"PageDown",             ImGuiKey_PageDown},
-    {"PageUp",               ImGuiKey_PageUp},
-
-    // arrow key group
-    {"ArrowDown",            ImGuiKey_DownArrow},
-    {"ArrowLeft",            ImGuiKey_LeftArrow},
-    {"ArrowRight",           ImGuiKey_RightArrow},
-    {"ArrowUp",              ImGuiKey_UpArrow},
-
-    // number pad group
-    {"NumLock",              ImGuiKey_NumLock},
-    {"Numpad0",              ImGuiKey_Keypad0},
-    {"Numpad1",              ImGuiKey_Keypad1},
-    {"Numpad2",              ImGuiKey_Keypad2},
-    {"Numpad3",              ImGuiKey_Keypad3},
-    {"Numpad4",              ImGuiKey_Keypad4},
-    {"Numpad5",              ImGuiKey_Keypad5},
-    {"Numpad6",              ImGuiKey_Keypad6},
-    {"Numpad7",              ImGuiKey_Keypad7},
-    {"Numpad8",              ImGuiKey_Keypad8},
-    {"Numpad9",              ImGuiKey_Keypad9},
-    {"NumpadAdd",            ImGuiKey_KeypadAdd},
-    {"NumpadBackspace",      ImGuiKey_Backspace},                               // No direct mapping; backspace functionality
-    //{"NumpadClear",          ImGuiKey_KeypadClear},                             // Custom-defined if needed
-    //{"NumpadClearEntry",     ImGuiKey_KeypadClear},                             // Custom-defined if needed
-    {"NumpadComma",          ImGuiKey_KeypadDecimal},                           // Closest match
-    {"NumpadDecimal",        ImGuiKey_KeypadDecimal},
-    {"NumpadDivide",         ImGuiKey_KeypadDivide},
-    {"NumpadEnter",          ImGuiKey_KeypadEnter},
-    {"NumpadEqual",          ImGuiKey_KeypadEqual},
-    {"NumpadHash",           ImGuiKey_Backslash},                               // Mapped to # on UK keyboard
-    //{"NumpadMemoryAdd",      ImGuiKey_None},                                    // No defined mapping
-    //{"NumpadMemoryClear",    ImGuiKey_None},                                    // No defined mapping
-    //{"NumpadMemoryRecall",   ImGuiKey_None},                                    // No defined mapping
-    //{"NumpadMemoryStore",    ImGuiKey_None},                                    // No defined mapping
-    //{"NumpadMemorySubtract", ImGuiKey_None},                                    // No defined mapping
-    {"NumpadMultiply",       ImGuiKey_KeypadMultiply},
-    {"NumpadParenLeft",      ImGuiKey_LeftBracket},                             // Closest available
-    {"NumpadParenRight",     ImGuiKey_RightBracket},                            // Closest available
-    {"NumpadStar",           ImGuiKey_KeypadMultiply},                          // Same as multiply
-    {"NumpadSubtract",       ImGuiKey_KeypadSubtract},
-
-    // top row key groups
-    {"Escape",               ImGuiKey_Escape},
-    {"F1",                   ImGuiKey_F1},
-    {"F2",                   ImGuiKey_F2},
-    {"F3",                   ImGuiKey_F3},
-    {"F4",                   ImGuiKey_F4},
-    {"F5",                   ImGuiKey_F5},
-    {"F6",                   ImGuiKey_F6},
-    {"F7",                   ImGuiKey_F7},
-    {"F8",                   ImGuiKey_F8},
-    {"F9",                   ImGuiKey_F9},
-    {"F10",                  ImGuiKey_F10},
-    {"F11",                  ImGuiKey_F11},
-    {"F12",                  ImGuiKey_F12},
-    //{"Fn",                   ImGuiKey_None},                                    // No direct mapping
-    //{"FnLock",               ImGuiKey_None},                                    // No direct mapping
-    {"PrintScreen",          ImGuiKey_PrintScreen},
-    {"ScrollLock",           ImGuiKey_ScrollLock},
-    {"Pause",                ImGuiKey_Pause},
-};
-
+ImGuiKey translate_numpad_key(char const* emscripten_key, size_t key_len) __attribute__((__pure__));
 ImGuiKey translate_key(char const* emscripten_key) __attribute__((__pure__));
-ImGuiKey translate_key(char const* emscripten_key)
-{
-    // Translate an emscripten-provided browser string describing a keycode to an imgui key code
-    const std::unordered_map<std::string, ImGuiKey>::const_iterator it{key_translate_lookup.find(emscripten_key)};
-    if (it != key_translate_lookup.end())
-    {
-        return it->second;
-    }
-    return ImGuiKey_None;
-}
-
 constexpr ImGuiMouseButton translate_mousebutton(unsigned short emscripten_button) __attribute__((__const__));
-constexpr ImGuiMouseButton translate_mousebutton(unsigned short emscripten_button)
-{
-    // Translate an emscripten-provided integer describing a mouse button to an imgui mouse button
-    if (emscripten_button == 1) return ImGuiMouseButton_Middle;                 // 1 = middle mouse button
-    if (emscripten_button == 2) return ImGuiMouseButton_Right;                  // 2 = right mouse button
-    if (emscripten_button >= ImGuiMouseButton_COUNT) return ImGuiMouseButton_Middle; // treat any weird clicks on unexpected buttons (button 6 upwards) as middle mouse
-    return emscripten_button;                                                   // any other button translates 1:1
-}
 
 } // anonymous namespace
 
@@ -671,4 +517,388 @@ void set(std::string const& new_cursor)
 }
 
 } // namespace emscripten_browser_cursor_internal
+
+namespace {
+
+IM_STATIC_ASSERT(static_cast<int>(ImGuiKey_Z) == static_cast<int>(ImGuiKey_A) + 25);
+IM_STATIC_ASSERT(static_cast<int>(ImGuiKey_9) == static_cast<int>(ImGuiKey_0) + 9);
+IM_STATIC_ASSERT(static_cast<int>(ImGuiKey_F12) == static_cast<int>(ImGuiKey_F1) + 11);
+IM_STATIC_ASSERT(static_cast<int>(ImGuiKey_F24) == static_cast<int>(ImGuiKey_F1) + 23);
+IM_STATIC_ASSERT(static_cast<int>(ImGuiKey_Keypad9) == static_cast<int>(ImGuiKey_Keypad0) + 9);
+
+constexpr ImGuiMouseButton translate_mousebutton(unsigned short emscripten_button)
+{
+    // Translate an emscripten-provided integer describing a mouse button to an imgui mouse button
+    if (emscripten_button == 1) return ImGuiMouseButton_Middle;                 // 1 = middle mouse button
+    if (emscripten_button == 2) return ImGuiMouseButton_Right;                  // 2 = right mouse button
+    if (emscripten_button >= ImGuiMouseButton_COUNT) return ImGuiMouseButton_Middle; // treat any weird clicks on unexpected buttons (button 6 upwards) as middle mouse
+    return emscripten_button;                                                   // any other button translates 1:1
+}
+
+ImGuiKey translate_numpad_key(char const* emscripten_key, size_t key_len)
+{
+    // W3C UI Events, "Numpad section" code values.
+    // These optional W3C numpad codes currently have no ImGuiKey equivalent:
+    // "NumpadClear", "NumpadClearEntry", "NumpadMemoryAdd", "NumpadMemoryClear",
+    // "NumpadMemoryRecall", "NumpadMemoryStore", "NumpadMemorySubtract"
+    switch (emscripten_key[6])
+    {
+    case 'A': return ImGuiKey_KeypadAdd;                                        // "NumpadAdd"
+    case 'B': return ImGuiKey_Backspace;                                        // "NumpadBackspace": closest editing equivalent
+    case 'C':
+        switch (key_len)
+        {
+        case 11:
+            if (emscripten_key[7] == 'o') return ImGuiKey_KeypadDecimal;        // "NumpadComma": Dear ImGui only exposes KeypadDecimal
+            // if (emscripten_key[7] == 'l') return ImGuiKey_None;                // "NumpadClear"
+            break;
+        // case 16: return ImGuiKey_None;                                         // "NumpadClearEntry"
+        }
+        break;
+    case 'D':
+        switch (key_len)
+        {
+        case 12: return ImGuiKey_KeypadDivide;                                  // "NumpadDivide"
+        case 13: return ImGuiKey_KeypadDecimal;                                 // "NumpadDecimal"
+        }
+        break;
+    case 'E':
+        switch (emscripten_key[7])
+        {
+        case 'n': return ImGuiKey_KeypadEnter;                                  // "NumpadEnter"
+        case 'q': return ImGuiKey_KeypadEqual;                                  // "NumpadEqual"
+        }
+        break;
+    case 'H': return ImGuiKey_Backslash;                                        // "NumpadHash": closest printable equivalent for telephone-style '#'
+    case 'M':
+        switch (key_len)
+        {
+        case 14: return ImGuiKey_KeypadMultiply;                                // "NumpadMultiply"
+        // case 15: return ImGuiKey_None;                                         // "NumpadMemoryAdd"
+        case 17:
+            // switch (emscripten_key[12])
+            // {
+            // case 'C': return ImGuiKey_None;                                    // "NumpadMemoryClear"
+            // case 'S': return ImGuiKey_None;                                    // "NumpadMemoryStore"
+            // }
+            break;
+        // case 18: return ImGuiKey_None;                                         // "NumpadMemoryRecall"
+        }
+        break;
+    case 'P':
+        switch (key_len)
+        {
+        case 15: return ImGuiKey_LeftBracket;                                   // "NumpadParenLeft": closest available bracket key
+        case 16: return ImGuiKey_RightBracket;                                  // "NumpadParenRight": closest available bracket key
+        }
+        break;
+    case 'S':
+        switch (key_len)
+        {
+        case 10: return ImGuiKey_KeypadMultiply;                                // "NumpadStar": phone/remote '*' behaves like keypad multiply
+        case 14: return ImGuiKey_KeypadSubtract;                                // "NumpadSubtract"
+        // case 20: return ImGuiKey_None;                                         // "NumpadMemorySubtract"
+        }
+        break;
+    default: return static_cast<ImGuiKey>(ImGuiKey_Keypad0 + (emscripten_key[6] - '0')); // Remaining canonical "Numpad..." codes here are "Numpad0" .. "Numpad9"
+    }
+    return ImGuiKey_None;
+}
+
+ImGuiKey translate_key(char const* emscripten_key)
+{
+    // Translate a W3C KeyboardEvent.code string into an ImGuiKey.
+    // Canonical references: W3C UI Events code tables, with MDN used for browser quirks/aliases.
+    if (emscripten_key == nullptr || emscripten_key[0] == '\0') return ImGuiKey_None;
+
+    size_t const key_len{strlen(emscripten_key)};
+
+    switch (emscripten_key[0])
+    {
+    case 'A':
+        switch (key_len)
+        {
+        // case 5:
+        //     switch (emscripten_key[1])
+        //     {
+        //     case 'b': return ImGuiKey_None;                                    // "Abort"
+        //     case 'g': return ImGuiKey_None;                                    // "Again"
+        //     }
+        //     break;
+        case 7:
+            switch (emscripten_key[1])
+            {
+            case 'l': return ImGuiKey_LeftAlt;                                  // "AltLeft"
+            case 'r': return ImGuiKey_UpArrow;                                  // "ArrowUp"
+            }
+            break;
+        case 8: return ImGuiKey_RightAlt;                                       // "AltRight"
+        case 9:
+            switch (emscripten_key[5])
+            {
+            case 'D': return ImGuiKey_DownArrow;                                // "ArrowDown"
+            case 'L': return ImGuiKey_LeftArrow;                                // "ArrowLeft"
+            }
+            break;
+        case 10: return ImGuiKey_RightArrow;                                    // "ArrowRight"
+        // case 13: return ImGuiKey_None;                                         // "AudioVolumeUp"
+        // case 15:
+        //     switch (emscripten_key[11])
+        //     {
+        //     case 'D': return ImGuiKey_None;                                    // "AudioVolumeDown"
+        //     case 'M': return ImGuiKey_None;                                    // "AudioVolumeMute"
+        //     }
+        //     break;
+        }
+        break;
+    case 'B':
+        switch (key_len)
+        {
+        case 9:
+            switch (emscripten_key[4])
+            {
+            case 'q': return ImGuiKey_GraveAccent;                              // "Backquote"
+            case 's':
+                if (emscripten_key[5] == 'l') return ImGuiKey_Backslash;        // "Backslash": W3C uses this for both US \| and the UK #~ key tucked under Enter
+                if (emscripten_key[5] == 'p') return ImGuiKey_Backspace;        // "Backspace"
+                break;
+            }
+            break;
+        case 11:
+            if (emscripten_key[3] == 'c') return ImGuiKey_LeftBracket;          // "BracketLeft"
+            switch (emscripten_key[7])
+            {
+            case 'B': return ImGuiKey_AppBack;                                  // "BrowserBack": pass through even in browser hosts so the embedding app can decide
+            // case 'H': return ImGuiKey_None;                                    // "BrowserHome"
+            // case 'S': return ImGuiKey_None;                                    // "BrowserStop"
+            }
+            break;
+        case 12: return ImGuiKey_RightBracket;                                  // "BracketRight"
+        // case 13: return ImGuiKey_None;                                         // "BrowserSearch"
+        case 14:
+            switch (emscripten_key[7])
+            {
+            case 'F': return ImGuiKey_AppForward;                               // "BrowserForward": pass through even in browser hosts so the embedding app can decide
+            // case 'R': return ImGuiKey_None;                                    // "BrowserRefresh"
+            }
+            break;
+        // case 16: return ImGuiKey_None;                                         // "BrowserFavorites"
+        }
+        break;
+    case 'C':
+        switch (key_len)
+        {
+        // case 3: return ImGuiKey_None;                                          // "Cut"
+        // case 4: return ImGuiKey_None;                                          // "Copy"
+        case 5: return ImGuiKey_Comma;                                          // "Comma"
+        // case 7: return ImGuiKey_None;                                          // "Convert"
+        case 8: return ImGuiKey_CapsLock;                                       // "CapsLock"
+        case 11:
+            switch (emscripten_key[4])
+            {
+            case 'e': return ImGuiKey_Menu;                                     // "ContextMenu"
+            case 'r': return ImGuiKey_LeftCtrl;                                 // "ControlLeft"
+            }
+            break;
+        case 12: return ImGuiKey_RightCtrl;                                     // "ControlRight"
+        }
+        break;
+    case 'D':
+        if (key_len == 6)
+        {
+            if (emscripten_key[1] == 'e') return ImGuiKey_Delete;               // "Delete"
+            else return static_cast<ImGuiKey>(ImGuiKey_0 + (emscripten_key[5] - '0')); // "Digit0" .. "Digit9"
+        }
+        break;
+    case 'E':
+        switch (key_len)
+        {
+        case 3: return ImGuiKey_End;                                            // "End"
+        case 5:
+            switch (emscripten_key[1])
+            {
+            case 'n': return ImGuiKey_Enter;                                    // "Enter"
+            case 'q': return ImGuiKey_Equal;                                    // "Equal"
+            // case 'j': return ImGuiKey_None;                                    // "Eject"
+            }
+            break;
+        case 6: return ImGuiKey_Escape;                                         // "Escape"
+        }
+        break;
+    case 'F':
+        switch (key_len)
+        {
+        case 2:
+            if (emscripten_key[1] == 'n') return ImGuiKey_None;                 // "Fn": no ImGuiKey equivalent
+            else return static_cast<ImGuiKey>(ImGuiKey_F1 + (emscripten_key[1] - '1')); // "F1" .. "F9"
+        case 3:
+            if (emscripten_key[1] == '1') return static_cast<ImGuiKey>(ImGuiKey_F10 + (emscripten_key[2] - '0')); // "F10" .. "F19"
+            else return static_cast<ImGuiKey>(ImGuiKey_F20 + (emscripten_key[2] - '0')); // "F20" .. "F24"
+        // case 4: return ImGuiKey_None;                                          // "Find"
+        // case 6: return ImGuiKey_None;                                          // "FnLock"
+        }
+        break;
+    case 'H':
+        switch (key_len)
+        {
+        case 4:
+            switch (emscripten_key[1])
+            {
+            case 'o': return ImGuiKey_Home;                                     // "Home"
+            // case 'e': return ImGuiKey_None;                                    // "Help"
+            }
+            break;
+        // case 5: return ImGuiKey_None;                                          // "Hyper"
+        // case 8: return ImGuiKey_None;                                          // "Hiragana"
+        }
+        break;
+    case 'I':
+        switch (key_len)
+        {
+        case 6:
+            switch (emscripten_key[2])
+            {
+            case 's': return ImGuiKey_Insert;                                   // "Insert"
+            case 't': return ImGuiKey_Slash;                                    // "IntlRo": closest printable equivalent
+            }
+            break;
+        case 7: return ImGuiKey_Backslash;                                      // "IntlYen": closest printable equivalent
+        case 13: return ImGuiKey_Backslash;                                     // "IntlBackslash": preserve original behavior and map to generic backslash
+        }
+        break;
+    case 'K':
+        switch (key_len)
+        {
+        case 4: return static_cast<ImGuiKey>(ImGuiKey_A + (emscripten_key[3] - 'A')); // "KeyA" .. "KeyZ"
+        // case 8:
+        //     switch (emscripten_key[2])
+        //     {
+        //     case 'n': return ImGuiKey_None;                                    // "KanaMode"
+        //     default: return ImGuiKey_None;                                     // "Katakana"
+        //     }
+        }
+        break;
+    // case 'L':
+    //     switch (key_len)
+    //     {
+    //     case 5:
+    //         switch (emscripten_key[4])
+    //         {
+    //         case '1': return ImGuiKey_None;                                    // "Lang1"
+    //         case '2': return ImGuiKey_None;                                    // "Lang2"
+    //         }
+    //         break;
+    //     case 10:
+    //         switch (emscripten_key[6])
+    //         {
+    //         case 'A':
+    //             switch (emscripten_key[9])
+    //             {
+    //             case '1': return ImGuiKey_None;                                // "LaunchApp1"
+    //             case '2': return ImGuiKey_None;                                // "LaunchApp2"
+    //             }
+    //             break;
+    //         case 'M': return ImGuiKey_None;                                    // "LaunchMail"
+    //         }
+    //         break;
+    //     }
+    case 'M':
+        switch (key_len)
+        {
+        case 5: return ImGuiKey_Minus;                                          // "Minus"
+        case 8: return ImGuiKey_LeftSuper;                                      // "MetaLeft"
+        case 9:
+            switch (emscripten_key[3])
+            {
+            case 'a': return ImGuiKey_RightSuper;                               // "MetaRight"
+            default:
+                // return ImGuiKey_None;                                          // "MediaStop"
+            }
+            break;
+        // case 11: return ImGuiKey_None;                                         // "MediaSelect"
+        // case 14:
+        //     switch (emscripten_key[10])
+        //     {
+        //     case 'N': return ImGuiKey_None;                                    // "MediaTrackNext"
+        //     default: return ImGuiKey_None;                                     // "MediaPlayPause"
+        //     }
+        // case 18: return ImGuiKey_None;                                         // "MediaTrackPrevious"
+        }
+        break;
+    case 'N':
+        if (emscripten_key[3] == 'p')
+        {
+            ImGuiKey const numpad_key{translate_numpad_key(emscripten_key, key_len)};
+            if (numpad_key != ImGuiKey_None) return numpad_key;
+        }
+        if (key_len == 7) return ImGuiKey_NumLock;                              // "NumLock"
+        // if (key_len == 10) return ImGuiKey_None;                               // "NonConvert"
+        break;
+    // case 'O': return ImGuiKey_None;                                            // "Open"
+    case 'P':
+        switch (key_len)
+        {
+        case 5:
+            if (emscripten_key[2] == 'u') return ImGuiKey_Pause;                // "Pause"
+            // if (emscripten_key[2] == 's') return ImGuiKey_None;                // "Paste"
+            // if (emscripten_key[1] == 'o') return ImGuiKey_None;                // "Power"
+            // if (emscripten_key[1] == 'r') return ImGuiKey_None;                // "Props"
+            break;
+        case 6:
+            switch (emscripten_key[1])
+            {
+            case 'a': return ImGuiKey_PageUp;                                   // "PageUp"
+            case 'e': return ImGuiKey_Period;                                   // "Period"
+            }
+            break;
+        case 8: return ImGuiKey_PageDown;                                       // "PageDown"
+        case 11: return ImGuiKey_PrintScreen;                                   // "PrintScreen"
+        }
+        break;
+    case 'Q': return ImGuiKey_Apostrophe;                                       // "Quote"
+    // case 'R': return ImGuiKey_None;                                            // "Resume"
+    case 'S':
+        switch (key_len)
+        {
+        case 5:
+            if (emscripten_key[2] == 'a') return ImGuiKey_Slash;                // "Slash"
+            if (emscripten_key[1] == 'p') return ImGuiKey_Space;                // "Space"
+            // if (emscripten_key[2] == 'e') return ImGuiKey_None;                // "Sleep"
+            // if (emscripten_key[1] == 'u') return ImGuiKey_None;                // "Super"
+            break;
+        // case 6: return ImGuiKey_None;                                          // "Select"
+        // case 7: return ImGuiKey_None;                                          // "Suspend"
+        case 9:
+            switch (emscripten_key[1])
+            {
+            case 'e': return ImGuiKey_Semicolon;                                // "Semicolon"
+            case 'h': return ImGuiKey_LeftShift;                                // "ShiftLeft"
+            }
+            break;
+        case 10:
+            switch (emscripten_key[1])
+            {
+            case 'c': return ImGuiKey_ScrollLock;                               // "ScrollLock"
+            case 'h': return ImGuiKey_RightShift;                               // "ShiftRight"
+            }
+            break;
+        }
+        break;
+    case 'T':
+        if (key_len == 3) return ImGuiKey_Tab;                                  // "Tab"
+        // if (key_len == 5) return ImGuiKey_None;                                // "Turbo"
+        break;
+    // case 'U':
+    //     switch (key_len)
+    //     {
+    //     case 4: return ImGuiKey_None;                                          // "Undo"
+    //     case 12: return ImGuiKey_None;                                         // "Unidentified"
+    //     }
+    // case 'W': return ImGuiKey_None;                                            // "WakeUp"
+    }
+    return ImGuiKey_None;
+}
+
+} // anonymous namespace
+
 #endif // IMGUI_DISABLE
