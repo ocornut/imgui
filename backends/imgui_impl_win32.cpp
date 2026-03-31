@@ -126,6 +126,7 @@ typedef BOOL(WINAPI* PFN_AdjustWindowRectExForDpi)(LPRECT, DWORD, BOOL, DWORD, U
 static void ImGui_ImplWin32_InitMultiViewportSupport(bool platform_has_own_dc);
 static void ImGui_ImplWin32_ShutdownMultiViewportSupport();
 static void ImGui_ImplWin32_UpdateMonitors();
+static bool ImGui_ImplWin32_IsDpiAwarenessPerMonitorAwareV2();
 
 struct ImGui_ImplWin32_Data
 {
@@ -138,6 +139,7 @@ struct ImGui_ImplWin32_Data
     ImGuiMouseCursor            LastMouseCursor;
     UINT32                      KeyboardCodePage;
     bool                        WantUpdateMonitors;
+    bool                        IsPerMonitorDpiAwareV2;
     PFN_AdjustWindowRectExForDpi AdjustWindowRectExForDpi;
 
 #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
@@ -218,6 +220,7 @@ static bool ImGui_ImplWin32_InitEx(void* hwnd, bool platform_has_own_dc)
 
     if (HINSTANCE user32_dll = ::GetModuleHandleA("user32.dll"))
         bd->AdjustWindowRectExForDpi = (PFN_AdjustWindowRectExForDpi)::GetProcAddress(user32_dll, "AdjustWindowRectExForDpi");
+    bd->IsPerMonitorDpiAwareV2 = ImGui_ImplWin32_IsDpiAwarenessPerMonitorAwareV2();
 
     // Dynamically load XInput library
 #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
@@ -1010,9 +1013,11 @@ DECLARE_HANDLE(DPI_AWARENESS_CONTEXT);
 #ifndef DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
 #define DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 (DPI_AWARENESS_CONTEXT)-4
 #endif
-typedef HRESULT(WINAPI* PFN_SetProcessDpiAwareness)(PROCESS_DPI_AWARENESS);                     // Shcore.lib + dll, Windows 8.1+
-typedef HRESULT(WINAPI* PFN_GetDpiForMonitor)(HMONITOR, MONITOR_DPI_TYPE, UINT*, UINT*);        // Shcore.lib + dll, Windows 8.1+
-typedef DPI_AWARENESS_CONTEXT(WINAPI* PFN_SetThreadDpiAwarenessContext)(DPI_AWARENESS_CONTEXT); // User32.lib + dll, Windows 10 v1607+ (Creators Update)
+typedef HRESULT(WINAPI* PFN_SetProcessDpiAwareness)(PROCESS_DPI_AWARENESS);                             // Shcore.lib + dll, Windows 8.1+
+typedef HRESULT(WINAPI* PFN_GetDpiForMonitor)(HMONITOR, MONITOR_DPI_TYPE, UINT*, UINT*);                // Shcore.lib + dll, Windows 8.1+
+typedef DPI_AWARENESS_CONTEXT(WINAPI* PFN_SetThreadDpiAwarenessContext)(DPI_AWARENESS_CONTEXT);         // User32.lib + dll, Windows 10 v1607+ (Creators Update)
+typedef DPI_AWARENESS_CONTEXT(WINAPI* PFN_GetThreadDpiAwarenessContext)();                              // "
+typedef BOOL(WINAPI* PFN_AreDpiAwarenessContextsEqual)(DPI_AWARENESS_CONTEXT, DPI_AWARENESS_CONTEXT);   // "
 
 // Helper function to enable DPI awareness without setting up a manifest
 void ImGui_ImplWin32_EnableDpiAwareness()
@@ -1042,6 +1047,18 @@ void ImGui_ImplWin32_EnableDpiAwareness()
 #if _WIN32_WINNT >= 0x0600
     ::SetProcessDPIAware();
 #endif
+}
+
+static bool ImGui_ImplWin32_IsDpiAwarenessPerMonitorAwareV2()
+{
+    if (!_IsWindows10OrGreater())
+        return false;
+    static HINSTANCE user32_dll = ::GetModuleHandleA("user32.dll");
+    PFN_GetThreadDpiAwarenessContext GetThreadDpiAwarenessContextFn = (PFN_GetThreadDpiAwarenessContext)::GetProcAddress(user32_dll, "GetThreadDpiAwarenessContext");
+    PFN_AreDpiAwarenessContextsEqual AreDpiAwarenessContextsEqualFn = (PFN_AreDpiAwarenessContextsEqual)::GetProcAddress(user32_dll, "AreDpiAwarenessContextsEqual");
+    if (GetThreadDpiAwarenessContextFn && AreDpiAwarenessContextsEqualFn)
+        return AreDpiAwarenessContextsEqualFn(GetThreadDpiAwarenessContextFn(), DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2) != 0;
+    return false;
 }
 
 #if defined(_MSC_VER) && !defined(NOGDI)
@@ -1165,7 +1182,7 @@ static HWND ImGui_ImplWin32_GetHwndFromViewport(ImGuiViewport* viewport)
 static void ImGui_ImplWin32_AdjustWindowRect(ImGuiViewport* viewport, RECT* rect, DWORD style, DWORD ex_style)
 {
     ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
-    if (bd->AdjustWindowRectExForDpi)
+    if (bd->AdjustWindowRectExForDpi && bd->IsPerMonitorDpiAwareV2)
     {
         UINT dpi = (UINT)(viewport->DpiScale * 96.0f + 0.5f);
         if (dpi != 0 && bd->AdjustWindowRectExForDpi(rect, style, FALSE, ex_style, dpi))
