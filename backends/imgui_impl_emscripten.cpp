@@ -14,7 +14,7 @@
 
 namespace {
 
-/// A map of HTML5 key names to imgui keys
+// A map of HTML5 key names to imgui keys
 static const std::unordered_map<std::string, ImGuiKey> key_translate_lookup{
   // main character keys
   {"Backquote",            ImGuiKey_GraveAccent},
@@ -156,7 +156,7 @@ static const std::unordered_map<std::string, ImGuiKey> key_translate_lookup{
 
 ImGuiKey translate_key(char const* emscripten_key) __attribute__((__const__));
 ImGuiKey translate_key(char const* emscripten_key) {
-  /// Translate an emscripten-provided browser string describing a keycode to an imgui key code
+  // Translate an emscripten-provided browser string describing a keycode to an imgui key code
   if(auto it{key_translate_lookup.find(emscripten_key)}; it != key_translate_lookup.end()) {
     return it->second;
   }
@@ -165,7 +165,7 @@ ImGuiKey translate_key(char const* emscripten_key) {
 
 constexpr ImGuiMouseButton translate_mousebutton(unsigned short emscripten_button) __attribute__((__const__));
 constexpr ImGuiMouseButton translate_mousebutton(unsigned short emscripten_button) {
-  /// Translate an emscripten-provided integer describing a mouse button to an imgui mouse button
+  // Translate an emscripten-provided integer describing a mouse button to an imgui mouse button
   if(emscripten_button == 1) return ImGuiMouseButton_Middle;                    // 1 = middle mouse button
   if(emscripten_button == 2) return ImGuiMouseButton_Right;                     // 2 = right mouse button
   if(emscripten_button > ImGuiMouseButton_COUNT) return ImGuiMouseButton_Middle; // treat any weird clicks on unexpected buttons (button 6 upwards) as middle mouse
@@ -176,7 +176,7 @@ constexpr ImGuiMouseButton translate_mousebutton(unsigned short emscripten_butto
 
 namespace emscripten_browser_cursor_internal {
 
-////////////////////////////////// Interface ///////////////////////////////////
+// Browser cursor helpers
 
 enum class cursor {
   // General
@@ -234,17 +234,17 @@ enum class cursor {
 void set(cursor new_cursor);                                                    // set a new cursor from a cursor enum
 void unset();                                                                   // clear the current cursor setting
 
-//////////////////////////////// Implementation ////////////////////////////////
+// Browser cursor helper implementation
 
 bool is_set() {
-  /// Returns whether the cursor is currently set
+  // Returns whether the cursor is currently set
   return EM_ASM_INT(
     return !(!document.body.style.cursor || document.body.style.cursor.length === 0 );
   );
 }
 
 std::string get_string() {
-  /// Return the current cursor setting as a string
+  // Return the current cursor setting as a string
   auto cursor_str_ptr{reinterpret_cast<char*>(EM_ASM_PTR(
     return stringToNewUTF8(document.body.style.cursor);
   ))};
@@ -254,7 +254,7 @@ std::string get_string() {
 }
 
 void set(cursor new_cursor) {
-  /// Set the cursor according to the given enum
+  // Set the cursor according to the given enum
   // Note, implementations omitted for cursors not used by imgui.  For full implementation, use https://github.com/Armchair-Software/emscripten-browser-cursor
   switch(new_cursor) {
   case cursor::cursor_default:
@@ -289,7 +289,7 @@ void set(cursor new_cursor) {
 }
 
 void set(std::string const &new_cursor) {
-  /// Set the cursor from an arbitrary string
+  // Set the cursor from an arbitrary string
   EM_ASM({
     document.body.style.cursor = UTF8ToString($0);
   }, new_cursor.c_str());
@@ -300,7 +300,7 @@ void set(std::string const &new_cursor) {
 namespace {
 
 void update_cursor() {
-  /// Sync any cursor changes due to ImGUI to the browser's cursor
+  // Sync any cursor changes due to ImGui to the browser's cursor
   static emscripten_browser_cursor_internal::cursor current_cursor{emscripten_browser_cursor_internal::cursor::invalid};
   static std::optional<std::string> cursor_to_restore;
 
@@ -356,7 +356,7 @@ void update_cursor() {
 } // anonymous namespace
 
 void ImGui_ImplEmscripten_Init() {
-  /// Initialise the Emscripten backend, setting input callbacks
+  // Initialise the Emscripten backend, setting input callbacks
   auto &imgui_io{ImGui::GetIO()};
   imgui_io.BackendPlatformName = "imgui_impl_emscripten";
   imgui_io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;
@@ -581,7 +581,7 @@ void ImGui_ImplEmscripten_Init() {
 }
 
 void ImGui_ImplEmscripten_Shutdown() {
-  /// Unset any callbacks set by Init
+  // Unset any callbacks set by Init
   emscripten_set_mousemove_callback( EMSCRIPTEN_EVENT_TARGET_WINDOW,   nullptr, false, nullptr);
   emscripten_set_mousedown_callback( EMSCRIPTEN_EVENT_TARGET_WINDOW,   nullptr, false, nullptr);
   emscripten_set_mouseup_callback(   EMSCRIPTEN_EVENT_TARGET_WINDOW,   nullptr, false, nullptr);
@@ -603,7 +603,7 @@ void ImGui_ImplEmscripten_Shutdown() {
 }
 
 void ImGui_ImplEmscripten_NewFrame() {
-  /// Update any state that needs to be polled
+  // Update any state that needs to be polled
   update_cursor();
 }
 

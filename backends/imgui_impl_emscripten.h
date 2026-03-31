@@ -39,14 +39,14 @@
   #error The imgui_impl_emscripten backend reqiuires Emscripten.
 #endif
 
-/// Initialise the Emscripten backend, setting input callbacks.  This should be called after ImGui::CreateContext();
+// Initialise the Emscripten backend, setting input callbacks.  This should be called after ImGui::CreateContext();
 void ImGui_ImplEmscripten_Init();
 
-/// Shut down the Emscripten backend.  This unsets all Emscripten input callbacks set by Init.
-/// Note it'll also unset any Emscripten input callbacks set elsewhere in the program!
-/// Note also there is no obligation to ever call this, as there is not necessarily any such concept as "shutting down" when running in the browser, and we have no resources to release.  The user can just close the tab.
+// Shut down the Emscripten backend.  This unsets all Emscripten input callbacks set by Init.
+// Note it'll also unset any Emscripten input callbacks set elsewhere in the program!
+// Note also there is no obligation to ever call this, as there is not necessarily any such concept as "shutting down" when running in the browser, and we have no resources to release.  The user can just close the tab.
 void ImGui_ImplEmscripten_Shutdown();
 
-/// Call every frame to update polled input events, i.e. gamepads, and update imgui's cursors.
-/// If you aren't using gamepad input to control imgui, and you're not using browser native cursor rendering (i.e. if imgui is rendering cursors internally), you don't need to call this.
+// Call every frame to update polled input events, i.e. gamepads, and update imgui's cursors.
+// If you aren't using gamepad input to control imgui, and you're not using browser native cursor rendering (i.e. if imgui is rendering cursors internally), you don't need to call this.
 void ImGui_ImplEmscripten_NewFrame();
