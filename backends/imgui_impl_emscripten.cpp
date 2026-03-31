@@ -162,30 +162,35 @@ static const std::unordered_map<std::string, ImGuiKey> key_translate_lookup{
 };
 
 ImGuiKey translate_key(char const* emscripten_key) __attribute__((__const__));
-ImGuiKey translate_key(char const* emscripten_key) {
+ImGuiKey translate_key(char const* emscripten_key)
+{
     // Translate an emscripten-provided browser string describing a keycode to an imgui key code
-    if(auto it{key_translate_lookup.find(emscripten_key)}; it != key_translate_lookup.end()) {
+    if (auto it{key_translate_lookup.find(emscripten_key)}; it != key_translate_lookup.end())
+    {
         return it->second;
     }
     return ImGuiKey_None;
 }
 
 constexpr ImGuiMouseButton translate_mousebutton(unsigned short emscripten_button) __attribute__((__const__));
-constexpr ImGuiMouseButton translate_mousebutton(unsigned short emscripten_button) {
+constexpr ImGuiMouseButton translate_mousebutton(unsigned short emscripten_button)
+{
     // Translate an emscripten-provided integer describing a mouse button to an imgui mouse button
-    if(emscripten_button == 1) return ImGuiMouseButton_Middle;                  // 1 = middle mouse button
-    if(emscripten_button == 2) return ImGuiMouseButton_Right;                   // 2 = right mouse button
-    if(emscripten_button > ImGuiMouseButton_COUNT) return ImGuiMouseButton_Middle; // treat any weird clicks on unexpected buttons (button 6 upwards) as middle mouse
+    if (emscripten_button == 1) return ImGuiMouseButton_Middle;                 // 1 = middle mouse button
+    if (emscripten_button == 2) return ImGuiMouseButton_Right;                  // 2 = right mouse button
+    if (emscripten_button > ImGuiMouseButton_COUNT) return ImGuiMouseButton_Middle; // treat any weird clicks on unexpected buttons (button 6 upwards) as middle mouse
     return emscripten_button;                                                   // any other button translates 1:1
 }
 
 } // anonymous namespace
 
-namespace emscripten_browser_cursor_internal {
+namespace emscripten_browser_cursor_internal
+{
 
 // Browser cursor helpers
 
-enum class cursor {
+enum class cursor
+{
     // General
     cursor_auto,                                                                // The UA will determine the cursor to display based on the current context. E.g., equivalent to text when hovering text.
     cursor_default,                                                             // The platform-dependent default cursor. Typically an arrow.
@@ -243,14 +248,16 @@ void unset();                                                                   
 
 // Browser cursor helper implementation
 
-bool is_set() {
+bool is_set()
+{
     // Returns whether the cursor is currently set
     return EM_ASM_INT(
         return !(!document.body.style.cursor || document.body.style.cursor.length === 0 );
     );
 }
 
-std::string get_string() {
+std::string get_string()
+{
     // Return the current cursor setting as a string
     auto cursor_str_ptr{reinterpret_cast<char*>(EM_ASM_PTR(
         return stringToNewUTF8(document.body.style.cursor);
@@ -260,10 +267,12 @@ std::string get_string() {
     return cursor_str;
 }
 
-void set(cursor new_cursor) {
+void set(cursor new_cursor)
+{
     // Set the cursor according to the given enum
     // Note, implementations omitted for cursors not used by imgui.  For full implementation, use https://github.com/Armchair-Software/emscripten-browser-cursor
-    switch(new_cursor) {
+    switch (new_cursor)
+    {
     case cursor::cursor_default:
     default:
         EM_ASM(document.body.style.cursor = 'default';);
@@ -295,7 +304,8 @@ void set(cursor new_cursor) {
     }
 }
 
-void set(std::string const &new_cursor) {
+void set(std::string const &new_cursor)
+{
     // Set the cursor from an arbitrary string
     EM_ASM({
         document.body.style.cursor = UTF8ToString($0);
@@ -306,23 +316,27 @@ void set(std::string const &new_cursor) {
 
 namespace {
 
-void update_cursor() {
+void update_cursor()
+{
     // Sync any cursor changes due to ImGui to the browser's cursor
     static emscripten_browser_cursor_internal::cursor current_cursor{emscripten_browser_cursor_internal::cursor::invalid};
     static std::optional<std::string> cursor_to_restore;
 
-    auto set_cursor_if_necessary{[&](emscripten_browser_cursor_internal::cursor new_cursor){
-        if(new_cursor == current_cursor) return;                                // don't do anything if the current cursor is already set
+    auto set_cursor_if_necessary{[&](emscripten_browser_cursor_internal::cursor new_cursor) {
+        if (new_cursor == current_cursor) return;                               // don't do anything if the current cursor is already set
         current_cursor = new_cursor;
         emscripten_browser_cursor_internal::set(new_cursor);
     }};
 
-    if(ImGui::GetIO().WantCaptureMouse) {                                       // mouse is hovering over the gui
-        if(!cursor_to_restore && emscripten_browser_cursor_internal::is_set()) {
+    if (ImGui::GetIO().WantCaptureMouse)                                        // mouse is hovering over the gui
+    {
+        if (!cursor_to_restore && emscripten_browser_cursor_internal::is_set())
+        {
             cursor_to_restore = emscripten_browser_cursor_internal::get_string(); // back up the existing cursor when entering the imgui capture space
         }
 
-        switch(ImGui::GetMouseCursor()) {
+        switch (ImGui::GetMouseCursor())
+        {
         case ImGuiMouseCursor_Arrow:
             set_cursor_if_necessary(emscripten_browser_cursor_internal::cursor::cursor_default);
             break;
@@ -351,8 +365,11 @@ void update_cursor() {
             set_cursor_if_necessary(emscripten_browser_cursor_internal::cursor::not_allowed);
             break;
         }
-    } else {                                                                    // mouse is away from the gui, hovering over some other part of the viewport
-        if(cursor_to_restore) {
+    }
+    else                                                                        // mouse is away from the gui, hovering over some other part of the viewport
+    {
+        if (cursor_to_restore)
+        {
             emscripten_browser_cursor_internal::set(*cursor_to_restore);        // restore the previous cursor when leaving the imgui capture space
             cursor_to_restore = std::nullopt;
             current_cursor = emscripten_browser_cursor_internal::cursor::invalid; // select an unused value for current cursor to force a set next time set_cursor_if_necessary is called
@@ -362,7 +379,8 @@ void update_cursor() {
 
 } // anonymous namespace
 
-void ImGui_ImplEmscripten_Init() {
+void ImGui_ImplEmscripten_Init()
+{
     // Initialise the Emscripten backend, setting input callbacks
     auto &imgui_io{ImGui::GetIO()};
     imgui_io.BackendPlatformName = "imgui_impl_emscripten";
@@ -376,7 +394,7 @@ void ImGui_ImplEmscripten_Init() {
         EMSCRIPTEN_EVENT_TARGET_WINDOW,                                         // target
         nullptr,                                                                // userData
         false,                                                                  // useCapture
-        [](int /*event_type*/, EmscriptenMouseEvent const *mouse_event, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_MOUSEMOVE
+        [](int /*event_type*/, EmscriptenMouseEvent const *mouse_event, void */*data*/) { // callback, event_type == EMSCRIPTEN_EVENT_MOUSEMOVE
             ImGui::GetIO().AddMousePosEvent(
                 static_cast<float>(mouse_event->clientX),
                 static_cast<float>(mouse_event->clientY)
@@ -388,7 +406,7 @@ void ImGui_ImplEmscripten_Init() {
         EMSCRIPTEN_EVENT_TARGET_WINDOW,                                         // target
         nullptr,                                                                // userData
         false,                                                                  // useCapture
-        [](int /*event_type*/, EmscriptenMouseEvent const *mouse_event, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_MOUSEDOWN
+        [](int /*event_type*/, EmscriptenMouseEvent const *mouse_event, void */*data*/) { // callback, event_type == EMSCRIPTEN_EVENT_MOUSEDOWN
             ImGui::GetIO().AddMouseButtonEvent(translate_mousebutton(mouse_event->button), true); // translated button, down
             return true;                                                        // the event was consumed
         }
@@ -397,7 +415,7 @@ void ImGui_ImplEmscripten_Init() {
         EMSCRIPTEN_EVENT_TARGET_WINDOW,                                         // target
         nullptr,                                                                // userData
         false,                                                                  // useCapture
-        [](int /*event_type*/, EmscriptenMouseEvent const *mouse_event, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_MOUSEUP
+        [](int /*event_type*/, EmscriptenMouseEvent const *mouse_event, void */*data*/) { // callback, event_type == EMSCRIPTEN_EVENT_MOUSEUP
             ImGui::GetIO().AddMouseButtonEvent(translate_mousebutton(mouse_event->button), false); // translated button, up
             return true;                                                        // the event was consumed
         }
@@ -406,7 +424,7 @@ void ImGui_ImplEmscripten_Init() {
         EMSCRIPTEN_EVENT_TARGET_DOCUMENT,                                       // target - WINDOW doesn't produce mouseenter events
         nullptr,                                                                // userData
         false,                                                                  // useCapture
-        [](int /*event_type*/, EmscriptenMouseEvent const *mouse_event, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_MOUSEENTER
+        [](int /*event_type*/, EmscriptenMouseEvent const *mouse_event, void */*data*/) { // callback, event_type == EMSCRIPTEN_EVENT_MOUSEENTER
             ImGui::GetIO().AddMousePosEvent(
                 static_cast<float>(mouse_event->clientX),
                 static_cast<float>(mouse_event->clientY)
@@ -418,7 +436,7 @@ void ImGui_ImplEmscripten_Init() {
         EMSCRIPTEN_EVENT_TARGET_DOCUMENT,                                       // target - WINDOW doesn't produce mouseenter events
         nullptr,                                                                // userData
         false,                                                                  // useCapture
-        [](int /*event_type*/, EmscriptenMouseEvent const */*mouse_event*/, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_MOUSELEAVE
+        [](int /*event_type*/, EmscriptenMouseEvent const */*mouse_event*/, void */*data*/) { // callback, event_type == EMSCRIPTEN_EVENT_MOUSELEAVE
             auto &imgui_io{ImGui::GetIO()};
             imgui_io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);                      // cursor is not in the window
             imgui_io.ClearInputKeys();                                          // clear pending input keys on mouse exit
@@ -429,9 +447,10 @@ void ImGui_ImplEmscripten_Init() {
         EMSCRIPTEN_EVENT_TARGET_WINDOW,                                         // target
         nullptr,                                                                // userData
         false,                                                                  // useCapture
-        [](int /*event_type*/, EmscriptenWheelEvent const *wheel_event, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_WHEEL
+        [](int /*event_type*/, EmscriptenWheelEvent const *wheel_event, void */*data*/) { // callback, event_type == EMSCRIPTEN_EVENT_WHEEL
             float scale{1.0f};
-            switch(wheel_event->deltaMode) {
+            switch (wheel_event->deltaMode)
+            {
             case DOM_DELTA_PIXEL:                                               // scrolling in pixels
                 scale = 1.0f / 100.0f;
                 break;
@@ -454,11 +473,12 @@ void ImGui_ImplEmscripten_Init() {
         EMSCRIPTEN_EVENT_TARGET_WINDOW,                                         // target
         nullptr,                                                                // userData
         false,                                                                  // useCapture
-        [](int /*event_type*/, EmscriptenKeyboardEvent const *key_event, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_KEYDOWN
+        [](int /*event_type*/, EmscriptenKeyboardEvent const *key_event, void */*data*/) { // callback, event_type == EMSCRIPTEN_EVENT_KEYDOWN
             auto const key{translate_key(key_event->code)};
             auto &imgui_io{ImGui::GetIO()};
             imgui_io.AddKeyEvent(key, true);
-            switch(key) {                                                       // special cases for certain key events
+            switch (key)                                                        // special cases for certain key events
+            {
             case ImGuiKey_LeftCtrl:                                             // additional events for modifier keys
             case ImGuiKey_RightCtrl:
                 imgui_io.AddKeyEvent(ImGuiMod_Ctrl, true);
@@ -491,11 +511,12 @@ void ImGui_ImplEmscripten_Init() {
         EMSCRIPTEN_EVENT_TARGET_WINDOW,                                         // target
         nullptr,                                                                // userData
         false,                                                                  // useCapture
-        [](int /*event_type*/, EmscriptenKeyboardEvent const *key_event, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_KEYUP
+        [](int /*event_type*/, EmscriptenKeyboardEvent const *key_event, void */*data*/) { // callback, event_type == EMSCRIPTEN_EVENT_KEYUP
             auto const key{translate_key(key_event->code)};
             auto &imgui_io{ImGui::GetIO()};
             imgui_io.AddKeyEvent(key, false);
-            switch(key) {                                                       // special cases for certain key events
+            switch (key)                                                        // special cases for certain key events
+            {
             case ImGuiKey_LeftCtrl:                                             // additional events for modifier keys
             case ImGuiKey_RightCtrl:
                 imgui_io.AddKeyEvent(ImGuiMod_Ctrl, false);
@@ -522,7 +543,7 @@ void ImGui_ImplEmscripten_Init() {
         EMSCRIPTEN_EVENT_TARGET_WINDOW,                                         // target
         nullptr,                                                                // userData
         false,                                                                  // useCapture
-        [](int /*event_type*/, EmscriptenKeyboardEvent const *key_event, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_KEYPRESS
+        [](int /*event_type*/, EmscriptenKeyboardEvent const *key_event, void */*data*/) { // callback, event_type == EMSCRIPTEN_EVENT_KEYPRESS
             auto &imgui_io{ImGui::GetIO()};
             imgui_io.AddInputCharactersUTF8(key_event->key);
             return imgui_io.WantCaptureKeyboard;                                // the event was consumed only if imgui wants to capture the keyboard
@@ -587,7 +608,8 @@ void ImGui_ImplEmscripten_Init() {
     // TODO: touch events
 }
 
-void ImGui_ImplEmscripten_Shutdown() {
+void ImGui_ImplEmscripten_Shutdown()
+{
     // Unset any callbacks set by Init
     emscripten_set_mousemove_callback( EMSCRIPTEN_EVENT_TARGET_WINDOW,   nullptr, false, nullptr);
     emscripten_set_mousedown_callback( EMSCRIPTEN_EVENT_TARGET_WINDOW,   nullptr, false, nullptr);
@@ -609,7 +631,8 @@ void ImGui_ImplEmscripten_Shutdown() {
     imgui_io.BackendFlags &= ~ImGuiBackendFlags_HasMouseCursors;
 }
 
-void ImGui_ImplEmscripten_NewFrame() {
+void ImGui_ImplEmscripten_NewFrame()
+{
     // Update any state that needs to be polled
     update_cursor();
 }
