@@ -550,6 +550,18 @@ void ImGui::ShowDemoWindow(bool* p_open)
             if (!io.ConfigErrorRecoveryEnableAssert && !io.ConfigErrorRecoveryEnableDebugLog && !io.ConfigErrorRecoveryEnableTooltip)
                 io.ConfigErrorRecoveryEnableAssert = io.ConfigErrorRecoveryEnableDebugLog = io.ConfigErrorRecoveryEnableTooltip = true;
 
+            ImGui::SeparatorText("Dragging and scrolling");
+            ImGui::Checkbox("io.ConfigDragScroll", &io.ConfigDragScroll);
+            ImGui::SameLine(); HelpMarker("Enable drag-to-scroll interactions.");
+            ImGui::PushItemWidth(-ImGui::GetContentRegionAvail().x * 0.5f);
+            ImGui::DragFloat("io.MouseDragThreshold", &io.MouseDragThreshold, 0.5f, 0.0f, 100.0f, "%.0f");
+            ImGui::SameLine(); HelpMarker("Distance threshold before considering we are dragging.");
+            ImGui::DragFloat("io.DragScrollDecel", &io.DragScrollDecel, 10.0f, 0.0f, 10000.0f, "%.0f");
+            ImGui::SameLine(); HelpMarker("How much of the scroll speed decelerates, in pixels per second.");
+            ImGui::DragFloat("io.DragScrollMinSpeed", &io.DragScrollMinSpeed, 1.0f, 0.0f, 1000.0f, "%.0f");
+            ImGui::SameLine(); HelpMarker("Minimum kinetic scroll speed, in pixels per second, before the scroll is stopped.");
+            ImGui::PopItemWidth();
+
             // Also read: https://github.com/ocornut/imgui/wiki/Debug-Tools
             ImGui::SeparatorText("Debug");
             ImGui::Checkbox("io.ConfigDebugIsDebuggerPresent", &io.ConfigDebugIsDebuggerPresent);
