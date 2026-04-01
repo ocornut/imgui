@@ -760,7 +760,7 @@ void ImGui::TableQueueSetColumnDisplayOrder(ImGuiTable* table, int column_n, int
     for (int order_n = src_order; (src_order < dst_order && order_n <= dst_order) || (dst_order < src_order && order_n >= dst_order); order_n += reorder_dir)
         if (table->Columns[table->DisplayOrderToIndex[order_n]].Flags & ImGuiTableColumnFlags_NoReorder)
             return;
-    table->ReorderColumn = (ImGuiTableColumnIdx)src_order;
+    table->ReorderColumn = (ImGuiTableColumnIdx)column_n;
     table->ReorderColumnDstOrder = (ImGuiTableColumnIdx)dst_order;
 }
 
