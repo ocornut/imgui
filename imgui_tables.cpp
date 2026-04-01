@@ -3511,6 +3511,36 @@ bool ImGui::TableBeginContextMenuPopup(ImGuiTable* table)
     return false;
 }
 
+// FIXME: Copied from MenuItem() for the purpose of being able to pass _SelectOnRelease (#9312)
+static bool MenuItemForColumnReorder(const char* label, bool selected, bool enabled)
+{
+    using namespace ImGui;
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+
+    ImVec2 label_size = CalcTextSize(label, NULL, true);
+    ImGuiMenuColumns* offsets = &window->DC.MenuColumns;
+    float checkmark_w = IM_TRUNC(g.FontSize * 1.20f);
+    float min_w = offsets->DeclColumns(0.0f, label_size.x, 0.0f, checkmark_w); // Feedback for next frame
+    float stretch_w = ImMax(0.0f, GetContentRegionAvail().x - min_w);
+    ImVec2 text_pos(window->DC.CursorPos.x, window->DC.CursorPos.y + window->DC.CurrLineTextBaseOffset);
+
+    ImGuiID id = GetID(label);
+    ImGuiSelectableFlags selectable_flags = ImGuiSelectableFlags_SelectOnRelease | ImGuiSelectableFlags_SpanAvailWidth;
+    if (g.ActiveId == id)
+        selectable_flags |= ImGuiSelectableFlags_Highlight; // Stays highlighted while dragging.
+    const bool has_been_moved = (g.ActiveId == id) && g.ActiveIdHasBeenEditedBefore; // But disable toggling once moved.
+
+    BeginDisabled(!enabled); // Don't use ImGuiSelectableFlags_Disabled so that Check mark is also affected.
+    bool ret = Selectable(label, false, selectable_flags, ImVec2(min_w, label_size.y)) && !has_been_moved; // Can't use IsMouseDragging(0) as button is released already.
+    if ((g.LastItemData.StatusFlags & ImGuiItemStatusFlags_Visible) && selected)
+        RenderCheckMark(window->DrawList, text_pos + ImVec2(offsets->OffsetMark + stretch_w + g.FontSize * 0.40f, g.FontSize * 0.134f * 0.5f), GetColorU32(ImGuiCol_Text), g.FontSize * 0.866f);
+    EndDisabled();
+
+    IMGUI_TEST_ENGINE_ITEM_INFO(g.LastItemData.ID, label, g.LastItemData.StatusFlags | ImGuiItemStatusFlags_Checkable | (selected ? ImGuiItemStatusFlags_Checked : 0));
+    return ret;
+}
+
 // Output context menu into current window (generally a popup)
 // FIXME-TABLE: Ideally this should be writable by the user. Full programmatic access to that data?
 // Sections to display are pulled from 'flags_for_section_to_display', which is typically == table->Flags.
@@ -3586,6 +3616,12 @@ void ImGui::TableDrawDefaultContextMenu(ImGuiTable* table, ImGuiTableFlags flags
             Separator();
         want_separator = true;
 
+        // While reordering: we calculate min/max allowed range once here so we can avoid a O(N log N) in the loop (because the query itself does a sweep scan).
+        // This assume that reordering constraints output a single range, otherwise would need to either call TableGetMaxDisplayOrderAllowed() for each item below, or cache this once per frame into columns.
+        const bool is_reordering = (g.ActiveId != 0 && g.ActiveIdWindow == g.CurrentWindow && table->ReorderColumn != -1 && g.ActiveIdHasBeenEditedBefore); // FIXME: This is a bit of a hack.
+        const int reorder_src_order = is_reordering ? table->Columns[table->ReorderColumn].DisplayOrder : -1;
+        const int reorder_min_order = is_reordering ? TableGetMaxDisplayOrderAllowed(table, reorder_src_order, 0) : 0;
+        const int reorder_max_order = is_reordering ? TableGetMaxDisplayOrderAllowed(table, reorder_src_order, table->ColumnsCount - 1) : table->ColumnsCount - 1;
         PushItemFlag(ImGuiItemFlags_AutoClosePopups, false);
         for (int order_n = 0; order_n < table->ColumnsCount; order_n++)
         {
@@ -3602,8 +3638,25 @@ void ImGui::TableDrawDefaultContextMenu(ImGuiTable* table, ImGuiTableFlags flags
             bool menu_item_enabled = (column->Flags & ImGuiTableColumnFlags_NoHide) ? false : true;
             if (column->IsUserEnabled && table->ColumnsEnabledCount <= 1)
                 menu_item_enabled = false;
-            if (MenuItem(name, NULL, column->IsUserEnabled, menu_item_enabled))
+            if (is_reordering && (column->DisplayOrder < reorder_min_order || column->DisplayOrder > reorder_max_order))
+                menu_item_enabled = false;
+            if (MenuItemForColumnReorder(name, column->IsUserEnabled, menu_item_enabled))
                 column->IsUserEnabledNextFrame = !column->IsUserEnabled;
+
+            // Drag to reorder
+            // FIXME: It is currently not possible to reorder columns marked with ImGuiTableColumnFlags_NoHide.
+            if (IsItemActive() && IsMouseDragging(0) && g.ActiveIdSource == ImGuiInputSource_Mouse && (table->Flags & ImGuiTableFlags_Reorderable))
+            {
+                g.ActiveIdHasBeenEditedBefore = true; // Disable toggle in MenuItemForColumnReorder() + start dimming to display allowed reorder targets.
+                table->ReorderColumn = (ImGuiTableColumnIdx)column_n;
+                if (!IsItemHovered())
+                {
+                    int reorder_dir = (g.IO.MousePos.y < (g.LastItemData.Rect.Min.y + g.LastItemData.Rect.Max.y) * 0.5f) ? -1 : +1;
+                    float reorder_amount = (reorder_dir < 0 ? g.LastItemData.Rect.Min.y - g.IO.MousePos.y : g.IO.MousePos.y - g.LastItemData.Rect.Max.y) / g.LastItemData.Rect.GetHeight();
+                    int dst_order = column->DisplayOrder + (int)ImCeil(reorder_amount) * reorder_dir; // Estimated target order, will be validated and clamped.
+                    TableQueueSetColumnDisplayOrder(table, column_n, dst_order);
+                }
+            }
         }
         PopItemFlag();
     }

@@ -93,6 +93,7 @@ Other Changes:
     using the idiom of not applying edits before IsItemDeactivatedAfterEdit().
     (#9308, #8915, #8273)
 - Tables:
+  - Allow reordering columns by dragging them in the context menu. (#9312)
   - Context menu now presents columns in display order. (#9312)
   - Fixed and clarified the behavior of using TableSetupScrollFreeze() with columns>1,
     and where some of the columns within that range were Hidable.
