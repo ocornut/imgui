@@ -745,24 +745,37 @@ void ImGui::TableSetColumnDisplayOrder(ImGuiTable* table, int column_n, int dst_
     table->IsSettingsDirty = true;
 }
 
-// Reorder requested by user interaction.
-void ImGui::TableQueueSetColumnDisplayOrder(ImGuiTable* table, int column_n, int dst_order)
+static int TableGetMaxDisplayOrderAllowed(ImGuiTable* table, int src_order, int dst_order)
 {
-    ImGuiTableColumn* src_column = &table->Columns[column_n];
-    int src_order = src_column->DisplayOrder;
+    dst_order = ImClamp(dst_order, 0, table->ColumnsCount - 1);
+    if (src_order == dst_order)
+        return dst_order;
 
-    // Verify that we don't cross the frozen column limit.
+    // Cannot cross over the frozen column limit when interactively reordering.
     // TableSetupScrollFreeze() enforce a display order range for frozen columns. Reordering across the frozen column barrier is illegal and will be undone.
-    if (src_column->IsUserEnabled && (src_order < table->FreezeColumnsRequest) != (dst_order < table->FreezeColumnsRequest))
-        return;
+    if (table->FreezeColumnsRequest > 0)
+        dst_order = (src_order < table->FreezeColumnsRequest) ? ImMin(dst_order, (int)table->FreezeColumnsRequest - 1) : ImMax(dst_order, (int)table->FreezeColumnsRequest);
 
-    // Verify that we don't reorder columns with the ImGuiTableColumnFlags_NoReorder flag, nor cross through them.
+    // Cannot cross over a column with the ImGuiTableColumnFlags_NoReorder flag.
     int reorder_dir = (src_order < dst_order) ? +1 : -1;
     for (int order_n = src_order; (src_order < dst_order && order_n <= dst_order) || (dst_order < src_order && order_n >= dst_order); order_n += reorder_dir)
         if (table->Columns[table->DisplayOrderToIndex[order_n]].Flags & ImGuiTableColumnFlags_NoReorder)
-            return;
+        {
+            dst_order = (order_n == src_order) ? src_order : order_n - reorder_dir;
+            break;
+        }
+    return dst_order;
+}
+
+// Reorder requested by user interaction.
+void ImGui::TableQueueSetColumnDisplayOrder(ImGuiTable* table, int column_n, int dst_order)
+{
+    const int src_order = table->Columns[column_n].DisplayOrder;
     table->ReorderColumn = (ImGuiTableColumnIdx)column_n;
-    table->ReorderColumnDstOrder = (ImGuiTableColumnIdx)dst_order;
+    table->ReorderColumnDstOrder = (ImGuiTableColumnIdx)-1;
+    dst_order = TableGetMaxDisplayOrderAllowed(table, src_order, dst_order);
+    if (dst_order != src_order)
+        table->ReorderColumnDstOrder = (ImGuiTableColumnIdx)dst_order;
 }
 
 // Adjust flags: default width mode + stretch columns are not allowed when auto extending
