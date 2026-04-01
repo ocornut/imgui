@@ -743,19 +743,20 @@ void ImGui::TableSetColumnDisplayOrder(ImGuiTable* table, int src_order, int dst
     table->IsSettingsDirty = true;
 }
 
-// Reorder requested by user indirection needs to verify
-// - That we don't reorder columns with the ImGuiTableColumnFlags_NoReorder flag.
-// - That we don't cross the frozen column limit.
-//   (that TableSetupScrollFreeze() enforce a display order range for frozen columns.
-//    so reordering a column across the frozen column barrier is illegal and will be undone.)
+// Reorder requested by user interaction.
 void ImGui::TableQueueSetColumnDisplayOrder(ImGuiTable* table, int src_order, int dst_order)
 {
     ImGuiTableColumn* src_column = &table->Columns[table->DisplayOrderToIndex[src_order]];
-    ImGuiTableColumn* dst_column = &table->Columns[table->DisplayOrderToIndex[dst_order]];
-    if ((src_column->Flags | dst_column->Flags) & ImGuiTableColumnFlags_NoReorder) // FIXME: Perform a sweep test?
+
+    // Verify that we don't cross the frozen column limit.
+    // TableSetupScrollFreeze() enforce a display order range for frozen columns. Reordering across the frozen column barrier is illegal and will be undone.
+    if (src_column->IsUserEnabled && (src_order < table->LeftMostUnfrozenOrder) != (dst_order < table->LeftMostUnfrozenOrder))
         return;
-    if (src_column->IsUserEnabled)
-        if ((src_order < table->LeftMostUnfrozenOrder) != (dst_order < table->LeftMostUnfrozenOrder))
+
+    // Verify that we don't reorder columns with the ImGuiTableColumnFlags_NoReorder flag, nor cross through them.
+    int reorder_dir = (src_order < dst_order) ? +1 : -1;
+    for (int order_n = src_order; (src_order < dst_order && order_n <= dst_order) || (dst_order < src_order && order_n >= dst_order); order_n += reorder_dir)
+        if (table->Columns[table->DisplayOrderToIndex[order_n]].Flags & ImGuiTableColumnFlags_NoReorder)
             return;
     table->ReorderColumnSrcOrder = (ImGuiTableColumnIdx)src_order;
     table->ReorderColumnDstOrder = (ImGuiTableColumnIdx)dst_order;
