@@ -3513,17 +3513,17 @@ void ImGui::TableDrawDefaultContextMenu(ImGuiTable* table, ImGuiTableFlags flags
         return;
 
     bool want_separator = false;
-    const int column_n = (table->ContextPopupColumn >= 0 && table->ContextPopupColumn < table->ColumnsCount) ? table->ContextPopupColumn : -1;
-    ImGuiTableColumn* column = (column_n != -1) ? &table->Columns[column_n] : NULL;
+    const int context_column_n = (table->ContextPopupColumn >= 0 && table->ContextPopupColumn < table->ColumnsCount) ? table->ContextPopupColumn : -1;
+    ImGuiTableColumn* context_column = (context_column_n != -1) ? &table->Columns[context_column_n] : NULL;
 
     // Sizing
     if (flags_for_section_to_display & ImGuiTableFlags_Resizable)
     {
-        if (column != NULL)
+        if (context_column != NULL)
         {
-            const bool can_resize = !(column->Flags & ImGuiTableColumnFlags_NoResize) && column->IsEnabled;
+            const bool can_resize = !(context_column->Flags & ImGuiTableColumnFlags_NoResize) && context_column->IsEnabled;
             if (MenuItem(LocalizeGetMsg(ImGuiLocKey_TableSizeOne), NULL, false, can_resize)) // "###SizeOne"
-                TableSetColumnWidthAutoSingle(table, column_n);
+                TableSetColumnWidthAutoSingle(table, context_column_n);
         }
 
         const char* size_all_desc;
@@ -3573,22 +3573,22 @@ void ImGui::TableDrawDefaultContextMenu(ImGuiTable* table, ImGuiTableFlags flags
         want_separator = true;
 
         PushItemFlag(ImGuiItemFlags_AutoClosePopups, false);
-        for (int other_column_n = 0; other_column_n < table->ColumnsCount; other_column_n++)
+        for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
         {
-            ImGuiTableColumn* other_column = &table->Columns[other_column_n];
-            if (other_column->Flags & ImGuiTableColumnFlags_Disabled)
+            ImGuiTableColumn* column = &table->Columns[column_n];
+            if (column->Flags & ImGuiTableColumnFlags_Disabled)
                 continue;
 
-            const char* name = TableGetColumnName(table, other_column_n);
+            const char* name = TableGetColumnName(table, column_n);
             if (name == NULL || name[0] == 0)
                 name = "<Unknown>";
 
             // Make sure we can't hide the last active column
-            bool menu_item_active = (other_column->Flags & ImGuiTableColumnFlags_NoHide) ? false : true;
-            if (other_column->IsUserEnabled && table->ColumnsEnabledCount <= 1)
+            bool menu_item_active = (column->Flags & ImGuiTableColumnFlags_NoHide) ? false : true;
+            if (column->IsUserEnabled && table->ColumnsEnabledCount <= 1)
                 menu_item_active = false;
-            if (MenuItem(name, NULL, other_column->IsUserEnabled, menu_item_active))
-                other_column->IsUserEnabledNextFrame = !other_column->IsUserEnabled;
+            if (MenuItem(name, NULL, column->IsUserEnabled, menu_item_active))
+                column->IsUserEnabledNextFrame = !column->IsUserEnabled;
         }
         PopItemFlag();
     }
