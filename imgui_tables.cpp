@@ -753,7 +753,7 @@ void ImGui::TableQueueSetColumnDisplayOrder(ImGuiTable* table, int column_n, int
 
     // Verify that we don't cross the frozen column limit.
     // TableSetupScrollFreeze() enforce a display order range for frozen columns. Reordering across the frozen column barrier is illegal and will be undone.
-    if (src_column->IsUserEnabled && (src_order < table->LeftMostUnfrozenOrder) != (dst_order < table->LeftMostUnfrozenOrder))
+    if (src_column->IsUserEnabled && (src_order < table->FreezeColumnsRequest) != (dst_order < table->FreezeColumnsRequest))
         return;
 
     // Verify that we don't reorder columns with the ImGuiTableColumnFlags_NoReorder flag, nor cross through them.
@@ -836,7 +836,6 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     ImBitArrayClearAllBits(table->EnabledMaskByIndex, table->ColumnsCount);
     ImBitArrayClearAllBits(table->EnabledMaskByDisplayOrder, table->ColumnsCount);
     table->LeftMostEnabledColumn = -1;
-    table->LeftMostUnfrozenOrder = -1;
     table->MinColumnWidth = ImMax(1.0f, g.Style.FramePadding.x * 1.0f); // g.Style.ColumnsMinSpacing; // FIXME-TABLE
 
     // [Part 1] Apply/lock Enabled and Order states. Calculate auto/ideal width for columns. Count fixed/stretch columns.
@@ -900,8 +899,6 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         else
             table->LeftMostEnabledColumn = (ImGuiTableColumnIdx)column_n;
         column->IndexWithinEnabledSet = table->ColumnsEnabledCount++;
-        if (table->ColumnsEnabledCount == table->FreezeColumnsRequest)
-            table->LeftMostUnfrozenOrder = (ImGuiTableColumnIdx)(order_n + 1);
         ImBitArraySetBit(table->EnabledMaskByIndex, column_n);
         ImBitArraySetBit(table->EnabledMaskByDisplayOrder, column->DisplayOrder);
         prev_visible_column_idx = column_n;
@@ -935,8 +932,6 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     if ((table->Flags & ImGuiTableFlags_Sortable) && table->SortSpecsCount == 0 && !(table->Flags & ImGuiTableFlags_SortTristate))
         table->IsSortSpecsDirty = true;
     table->RightMostEnabledColumn = (ImGuiTableColumnIdx)prev_visible_column_idx;
-    if (table->LeftMostUnfrozenOrder == -1)
-        table->LeftMostUnfrozenOrder = table->ColumnsEnabledCount;
     IM_ASSERT(table->LeftMostEnabledColumn >= 0 && table->RightMostEnabledColumn >= 0);
 
     // [Part 2] Disable child window clipping while fitting columns. This is not strictly necessary but makes it possible to avoid
@@ -1077,7 +1072,6 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
 
     // [Part 6] Setup final position, offset, skip/clip states and clipping rectangles, detect hovered column
     // Process columns in their visible orders as we are comparing the visible order and adjusting host_clip_rect while looping.
-    int visible_n = 0;
     bool has_at_least_one_column_requesting_output = false;
     bool offset_x_frozen = (table->FreezeColumnsCount > 0);
     float offset_x = ((table->FreezeColumnsCount > 0) ? table->OuterRect.Min.x : work_rect.Min.x) + table->OuterPaddingX - table->CellSpacingX1;
@@ -1092,7 +1086,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         // Initial nav layer: using FreezeRowsCount, NOT FreezeRowsRequest, so Header line changes layer when frozen
         column->NavLayerCurrent = (ImS8)(table->FreezeRowsCount > 0 ? ImGuiNavLayer_Menu : (ImGuiNavLayer)table->NavLayer);
 
-        if (offset_x_frozen && table->FreezeColumnsCount == visible_n)
+        if (offset_x_frozen && table->FreezeColumnsCount == column_n)
         {
             offset_x += work_rect.Min.x - table->OuterRect.Min.x;
             offset_x_frozen = false;
@@ -1212,11 +1206,10 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
             column->CannotSkipItemsQueue >>= 1;
         }
 
-        if (visible_n < table->FreezeColumnsCount)
+        if (column_n < table->FreezeColumnsCount)
             host_clip_rect.Min.x = ImClamp(column->MaxX + TABLE_BORDER_SIZE, host_clip_rect.Min.x, host_clip_rect.Max.x);
 
         offset_x += column->WidthGiven + table->CellSpacingX1 + table->CellSpacingX2 + table->CellPaddingX * 2.0f;
-        visible_n++;
     }
 
     // In case the table is visible (e.g. decorations) but all columns clipped, we keep a column visible.
@@ -1297,7 +1290,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
 
     // [Part 13] Setup inner window decoration size (for scrolling / nav tracking to properly take account of frozen rows/columns)
     if (table->FreezeColumnsRequest > 0)
-        table->InnerWindow->DecoInnerSizeX1 = table->Columns[table->DisplayOrderToIndex[table->FreezeColumnsRequest - 1]].MaxX - table->OuterRect.Min.x;
+        table->InnerWindow->DecoInnerSizeX1 = table->Columns[table->DisplayOrderToIndex[table->FreezeColumnsRequest - 1]].MaxX - table->OuterRect.Min.x; // FIXME-FROZEN
     if (table->FreezeRowsRequest > 0)
         table->InnerWindow->DecoInnerSizeY1 = table_instance->LastFrozenHeight;
     table_instance->LastFrozenHeight = 0.0f;
@@ -3362,13 +3355,14 @@ void ImGui::TableAngledHeadersRowEx(ImGuiID row_id, float angle, float max_label
     const ImVec2 header_angled_vector = unit_right * (row_height / -sin_a); // vector from bottom-left to top-left, and from bottom-right to top-right
 
     // Declare row, override and draw our own background
+    // FIXME-TABLE: Generally broken when overlapping frozen columns limit.
     TableNextRow(ImGuiTableRowFlags_Headers, row_height);
     TableNextColumn();
     const ImRect row_r(table->WorkRect.Min.x, table->BgClipRect.Min.y, table->WorkRect.Max.x, table->RowPosY2);
     table->DrawSplitter->SetCurrentChannel(draw_list, TABLE_DRAW_CHANNEL_BG0);
     float clip_rect_min_x = table->BgClipRect.Min.x;
     if (table->FreezeColumnsCount > 0)
-        clip_rect_min_x = ImMax(clip_rect_min_x, table->Columns[table->FreezeColumnsCount - 1].MaxX);
+        clip_rect_min_x = ImMax(clip_rect_min_x, table->Columns[table->DisplayOrderToIndex[table->FreezeColumnsCount - 1]].MaxX);
     TableSetBgColor(ImGuiTableBgTarget_RowBg0, 0); // Cancel
     PushClipRect(table->BgClipRect.Min, table->BgClipRect.Max, false); // Span all columns
     draw_list->AddRectFilled(ImVec2(table->BgClipRect.Min.x, row_r.Min.y), ImVec2(table->BgClipRect.Max.x, row_r.Max.y), GetColorU32(ImGuiCol_TableHeaderBg, 0.25f)); // FIXME-STYLE: Change row background with an arbitrary color.

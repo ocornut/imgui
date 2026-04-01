@@ -93,6 +93,15 @@ Other Changes:
     using the idiom of not applying edits before IsItemDeactivatedAfterEdit().
     (#9308, #8915, #8273)
 - Tables:
+  - Fixed and clarified the behavior of using TableSetupScrollFreeze() with columns>1,
+    and where some of the columns within that range were Hidable.
+    - Before: TableSetupScrollFreeze(N, 0) made the first N _visible_ columns
+              part of the scroll freeze. So if you intentionally hide columns <N
+              the scroll freeze area would encompass the subsequent right columns.
+    - After:  TableSetupScrollFreeze(N, 0) makes the first N _declared_ columns
+              part of the scroll freeze. So if you intentionally hide columns <N
+              the scroll freeze area will cover less columns.
+    - This is generally more sane and logical.
   - Fixed dragging a header to reorder outside of visible bounds (due to horizontal scrolling)
     from losing active id.
   - Angled Headers: angled section for column being reordered via the regular headers
