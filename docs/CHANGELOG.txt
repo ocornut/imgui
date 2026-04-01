@@ -92,6 +92,9 @@ Other Changes:
     buffer on the IsItemDeactivatedAfterEdit() frame. This could create issues when
     using the idiom of not applying edits before IsItemDeactivatedAfterEdit().
     (#9308, #8915, #8273)
+- Tables:
+  - Fixed dragging a header to reorder outside of visible bounds (due to horizontal scrolling)
+    from losing active id.
 - Style:
   - Border sizes are now scaled (and rounded) by ScaleAllSizes().
   - When using large values with ScallAllSizes(), the following items thickness
