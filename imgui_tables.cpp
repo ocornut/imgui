@@ -585,7 +585,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
         table->IsSettingsDirty = true; // Records itself into .ini file even when in default state (#7934)
         table->InstanceInteracted = -1;
         table->ContextPopupColumn = -1;
-        table->ReorderColumnSrcOrder = table->ResizedColumn = table->LastResizedColumn = -1;
+        table->ReorderColumn = table->ReorderColumnDstOrder = table->ResizedColumn = table->LastResizedColumn = -1;
         table->AutoFitSingleColumn = -1;
         table->HoveredColumnBody = table->HoveredColumnBorder = -1;
         for (int n = 0; n < columns_count; n++)
@@ -703,9 +703,9 @@ void ImGui::TableBeginApplyRequests(ImGuiTable* table)
     if (table->InstanceCurrent == 0)
     {
         table->HeldHeaderColumn = -1;
-        if (table->ReorderColumnSrcOrder != -1 && table->ReorderColumnDstOrder != -1)
+        if (table->ReorderColumn != -1 && table->ReorderColumnDstOrder != -1)
         {
-            TableSetColumnDisplayOrder(table, table->ReorderColumnSrcOrder, table->ReorderColumnDstOrder);
+            TableSetColumnDisplayOrder(table, table->ReorderColumn, table->ReorderColumnDstOrder);
             table->ReorderColumnDstOrder = -1;
         }
     }
@@ -721,16 +721,17 @@ void ImGui::TableBeginApplyRequests(ImGuiTable* table)
 }
 
 // Apply immediately. See TableQueueSetColumnDisplayOrder() for additional checks/constraints.
-void ImGui::TableSetColumnDisplayOrder(ImGuiTable* table, int src_order, int dst_order)
+void ImGui::TableSetColumnDisplayOrder(ImGuiTable* table, int column_n, int dst_order)
 {
-    IM_ASSERT(src_order >= 0 && src_order < table->ColumnsCount);
+    IM_ASSERT(column_n >= 0 && column_n < table->ColumnsCount);
     IM_ASSERT(dst_order >= 0 && dst_order < table->ColumnsCount);
 
+    ImGuiTableColumn* src_column = &table->Columns[column_n];
+    const int src_order = src_column->DisplayOrder;
     if (src_order == dst_order)
         return;
     const int reorder_dir = (dst_order < src_order) ? -1 : +1;
 
-    ImGuiTableColumn* src_column = &table->Columns[table->DisplayOrderToIndex[src_order]];
     src_column->DisplayOrder = (ImGuiTableColumnIdx)dst_order;
     for (int order_n = src_order + reorder_dir; order_n != dst_order + reorder_dir; order_n += reorder_dir)
         table->Columns[table->DisplayOrderToIndex[order_n]].DisplayOrder -= (ImGuiTableColumnIdx)reorder_dir;
@@ -744,9 +745,10 @@ void ImGui::TableSetColumnDisplayOrder(ImGuiTable* table, int src_order, int dst
 }
 
 // Reorder requested by user interaction.
-void ImGui::TableQueueSetColumnDisplayOrder(ImGuiTable* table, int src_order, int dst_order)
+void ImGui::TableQueueSetColumnDisplayOrder(ImGuiTable* table, int column_n, int dst_order)
 {
-    ImGuiTableColumn* src_column = &table->Columns[table->DisplayOrderToIndex[src_order]];
+    ImGuiTableColumn* src_column = &table->Columns[column_n];
+    int src_order = src_column->DisplayOrder;
 
     // Verify that we don't cross the frozen column limit.
     // TableSetupScrollFreeze() enforce a display order range for frozen columns. Reordering across the frozen column barrier is illegal and will be undone.
@@ -758,7 +760,7 @@ void ImGui::TableQueueSetColumnDisplayOrder(ImGuiTable* table, int src_order, in
     for (int order_n = src_order; (src_order < dst_order && order_n <= dst_order) || (dst_order < src_order && order_n >= dst_order); order_n += reorder_dir)
         if (table->Columns[table->DisplayOrderToIndex[order_n]].Flags & ImGuiTableColumnFlags_NoReorder)
             return;
-    table->ReorderColumnSrcOrder = (ImGuiTableColumnIdx)src_order;
+    table->ReorderColumn = (ImGuiTableColumnIdx)src_order;
     table->ReorderColumnDstOrder = (ImGuiTableColumnIdx)dst_order;
 }
 
@@ -3246,10 +3248,10 @@ void ImGui::TableHeader(const char* label)
         table->InstanceInteracted = table->InstanceCurrent;
         if (g.IO.MouseDelta.x < 0.0f && g.IO.MousePos.x < cell_r.Min.x)
             if (ImGuiTableColumn* prev_column = (column->PrevEnabledColumn != -1) ? &table->Columns[column->PrevEnabledColumn] : NULL)
-                TableQueueSetColumnDisplayOrder(table, column->DisplayOrder, prev_column->DisplayOrder);
+                TableQueueSetColumnDisplayOrder(table, column_n, prev_column->DisplayOrder);
         if (g.IO.MouseDelta.x > 0.0f && g.IO.MousePos.x > cell_r.Max.x)
             if (ImGuiTableColumn* next_column = (column->NextEnabledColumn != -1) ? &table->Columns[column->NextEnabledColumn] : NULL)
-                TableQueueSetColumnDisplayOrder(table, column->DisplayOrder, next_column->DisplayOrder);
+                TableQueueSetColumnDisplayOrder(table, column_n, next_column->DisplayOrder);
     }
 
     // Sort order arrow
@@ -3271,7 +3273,7 @@ void ImGui::TableHeader(const char* label)
         }
 
         // Handle clicking on column header to adjust Sort Order
-        if (pressed && table->ReorderColumnSrcOrder != column->DisplayOrder)
+        if (pressed && table->ReorderColumn != column_n)
         {
             ImGuiSortDirection sort_direction = TableGetColumnNextSortDirection(column);
             TableSetColumnSortDirection(column_n, sort_direction, g.IO.KeyShift);
@@ -4062,7 +4064,7 @@ void ImGui::DebugNodeTable(ImGuiTable* table)
     BulletText("ColumnsGivenWidth: %.1f, ColumnsAutoFitWidth: %.1f, InnerWidth: %.1f%s", table->ColumnsGivenWidth, table->ColumnsAutoFitWidth, table->InnerWidth, table->InnerWidth == 0.0f ? " (auto)" : "");
     BulletText("CellPaddingX: %.1f, CellSpacingX: %.1f/%.1f, OuterPaddingX: %.1f", table->CellPaddingX, table->CellSpacingX1, table->CellSpacingX2, table->OuterPaddingX);
     BulletText("HoveredColumnBody: %d, HoveredColumnBorder: %d", table->HoveredColumnBody, table->HoveredColumnBorder);
-    BulletText("ResizedColumn: %d, HeldHeaderColumn: %d, ReorderColumn Orders: %d->%d", table->ResizedColumn, table->HeldHeaderColumn, table->ReorderColumnSrcOrder, table->ReorderColumnDstOrder);
+    BulletText("ResizedColumn: %d, HeldHeaderColumn: %d, ReorderColumn: %d", table->ResizedColumn, table->HeldHeaderColumn, table->ReorderColumn);
     for (int n = 0; n < table->InstanceCurrent + 1; n++)
     {
         ImGuiTableInstanceData* table_instance = TableGetInstanceData(table, n);
