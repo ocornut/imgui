@@ -3044,7 +3044,7 @@ struct IMGUI_API ImGuiTable
     ImGuiTableColumnIdx         ResizedColumn;              // Index of column being resized. Reset when InstanceCurrent==0.
     ImGuiTableColumnIdx         LastResizedColumn;          // Index of column being resized from previous frame.
     ImGuiTableColumnIdx         HeldHeaderColumn;           // Index of column header being held.
-    ImGuiTableColumnIdx         ReorderColumn;              // Index of column being reordered. (not cleared)
+    ImGuiTableColumnIdx         ReorderColumnSrcOrder;      // Display order of column being reordered. (not cleared)
     ImGuiTableColumnIdx         ReorderColumnDstOrder;      // Requested display order of column being reordered.
     ImGuiTableColumnIdx         LeftMostEnabledColumn;      // Index of left-most non-hidden column.
     ImGuiTableColumnIdx         RightMostEnabledColumn;     // Index of right-most non-hidden column.
@@ -3559,8 +3559,8 @@ namespace ImGui
     IMGUI_API float         TableCalcMaxColumnWidth(const ImGuiTable* table, int column_n);
     IMGUI_API void          TableSetColumnWidthAutoSingle(ImGuiTable* table, int column_n);
     IMGUI_API void          TableSetColumnWidthAutoAll(ImGuiTable* table);
-    IMGUI_API void          TableSetColumnDisplayOrder(ImGuiTable* table, int column_n, int dst_order);
-    IMGUI_API void          TableQueueSetColumnDisplayOrder(ImGuiTable* table, int column_n, int dst_order);
+    IMGUI_API void          TableSetColumnDisplayOrder(ImGuiTable* table, int src_order, int dst_order);
+    IMGUI_API void          TableQueueSetColumnDisplayOrder(ImGuiTable* table, int src_order, int dst_order);
     IMGUI_API void          TableRemove(ImGuiTable* table);
     IMGUI_API void          TableGcCompactTransientBuffers(ImGuiTable* table);
     IMGUI_API void          TableGcCompactTransientBuffers(ImGuiTableTempData* table);
