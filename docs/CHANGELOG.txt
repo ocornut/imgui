@@ -95,6 +95,8 @@ Other Changes:
 - Tables:
   - Fixed dragging a header to reorder outside of visible bounds (due to horizontal scrolling)
     from losing active id.
+  - Angled Headers: angled section for column being reordered via the regular headers
+    stays highlighted during reordering.
 - Style:
   - Border sizes are now scaled (and rounded) by ScaleAllSizes().
   - When using large values with ScallAllSizes(), the following items thickness
