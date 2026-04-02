@@ -425,6 +425,12 @@ void update_cursor(ImGui_ImplEmscripten_Data* bd)
     ImGuiIO& io{ImGui::GetIO()};
     if (io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange) return;
 
+    if (io.MouseDrawCursor)                                                     // hide the cursor for the entire window if imgui is handling cursor drawing - not just when imgui wants to capture the mouse
+    {
+        set_cursor_if_necessary(bd->CurrentCursor, emscripten_browser_cursor_internal::cursor::none);
+        return;
+    }
+
     if (io.WantCaptureMouse)                                                    // mouse is hovering over the gui
     {
         if (bd->CursorToRestore == nullptr)
