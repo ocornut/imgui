@@ -12,7 +12,7 @@
 //  2024-12-08: Inputs: Prevent "Delete" key from getting printed in text input.
 //  2024-12-06: Inputs: Added special handling for Tab and Enter event capture.
 //  2024-12-06: Inputs: Handle blur and focus events correctly, focusin and focusout aren't enough.
-//  2024-12-06: Emscripten: Don't use devicePixelRatio as it's not needed with WebGPU.
+//  2024-12-06: Emscripten: Don't rely on devicePixelRatio for WebGPU framebuffer sizing; CSS->ImGui scaling may still use it.
 //  2024-11-22: Initial version by Eugene Hopkinson. (#8178)
 
 #include "imgui.h"
