@@ -8175,6 +8175,7 @@ void ImGui::ShowAboutWindow(bool* p_open)
         if (copy_to_clipboard)
         {
             ImGui::LogToClipboard();
+            ImGui::LogText("// (Copy from the next line. Keep the ``` markers for formatting.)\n");
             ImGui::LogText("```cpp\n"); // Back quotes will make text appears without formatting when pasting on GitHub
         }
 
