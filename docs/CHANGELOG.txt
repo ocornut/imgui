@@ -97,12 +97,12 @@ Other Changes:
   - Context menu now presents columns in display order. (#9312)
   - Fixed and clarified the behavior of using TableSetupScrollFreeze() with columns>1,
     and where some of the columns within that range were Hidable.
-    - Before: TableSetupScrollFreeze(N, 0) made the first N _visible_ columns
-              part of the scroll freeze. So if you intentionally hide columns <N
-              the scroll freeze area would encompass the subsequent right columns.
-    - After:  TableSetupScrollFreeze(N, 0) makes the first N _declared_ columns
-              part of the scroll freeze. So if you intentionally hide columns <N
-              the scroll freeze area will cover less columns.
+    - Before: TableSetupScrollFreeze(N, 0): include the N left-most visible columns as
+              part of the scroll freeze. So if you intentionally hide columns <N, the scroll
+              freeze area would start covering the subsequent/following columns (N+1) etc.
+    - After:  TableSetupScrollFreeze(N, 0): include the N left-most columns (regardless of visibility),
+              as part of the scroll freeze. So if you intentionally hide columns <N, the scroll
+              freeze area will cover less columns.
     - This is generally more sane and logical.
   - Fixed dragging a header to reorder outside of visible bounds (due to horizontal scrolling)
     from losing active id.

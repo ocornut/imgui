@@ -1695,19 +1695,6 @@ void ImGui::TableSetupScrollFreeze(int columns, int rows)
     table->FreezeRowsRequest = (table->Flags & ImGuiTableFlags_ScrollY) ? (ImGuiTableColumnIdx)rows : 0;
     table->FreezeRowsCount = (table->InnerWindow->Scroll.y != 0.0f) ? table->FreezeRowsRequest : 0;
     table->IsUnfrozenRows = (table->FreezeRowsCount == 0); // Make sure this is set before TableUpdateLayout() so ImGuiListClipper can benefit from it.b
-
-    // Ensure frozen columns are ordered in their section. We still allow multiple frozen columns to be reordered.
-    // FIXME-TABLE: This work for preserving 2143 into 21|43. How about 4321 turning into 21|43? (preserve relative order in each section)
-    for (int column_n = 0; column_n < table->FreezeColumnsRequest; column_n++)
-    {
-        int order_n = table->DisplayOrderToIndex[column_n];
-        if (order_n != column_n && order_n >= table->FreezeColumnsRequest)
-        {
-            ImSwap(table->Columns[table->DisplayOrderToIndex[order_n]].DisplayOrder, table->Columns[table->DisplayOrderToIndex[column_n]].DisplayOrder);
-            ImSwap(table->DisplayOrderToIndex[order_n], table->DisplayOrderToIndex[column_n]);
-            table->IsSettingsDirty = true;
-        }
-    }
 }
 
 //-----------------------------------------------------------------------------
