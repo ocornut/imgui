@@ -228,11 +228,12 @@ void ImGui_ImplEmscripten_Init()
                 break;
             }
             // TODO: make scrolling speeds configurable
-            ImGui::GetIO().AddMouseWheelEvent(
+            ImGuiIO& io{ImGui::GetIO()};
+            io.AddMouseWheelEvent(
                 -static_cast<float>(wheel_event->deltaX) * scale,
                 -static_cast<float>(wheel_event->deltaY) * scale
             );
-            return false;                                                       // the event was not consumed
+            return io.WantCaptureMouse;                                         // consume the event when imgui wants to capture mouse input
         }
     );
     emscripten_set_keydown_callback(
