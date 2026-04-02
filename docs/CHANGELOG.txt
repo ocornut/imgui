@@ -109,6 +109,8 @@ Other Changes:
   - Angled Headers: angled section for column being reordered via the regular headers
     stays highlighted during reordering.
 - Style:
+  - Fonts: fixed an issue introduced in 1.92.6 where style.FontBaseSize would be
+    cleared during the first frame if no fonts was explicitely added before.
   - Border sizes are now scaled (and rounded) by ScaleAllSizes().
   - When using large values with ScallAllSizes(), the following items thickness
     are scaled to integer amounts:
