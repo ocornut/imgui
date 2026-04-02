@@ -699,7 +699,7 @@ void ImGui::TableBeginApplyRequests(ImGuiTable* table)
     }
 
     // Handle reordering request
-    // Note: we don't clear ReorderColumn after handling the request (FIXME: clarify why or add a test).
+    //// Note: we don't clear ReorderColumn after handling the request (FIXME: clarify why or add a test).
     if (table->InstanceCurrent == 0)
     {
         table->LastHeldHeaderColumn = table->HeldHeaderColumn;
@@ -709,6 +709,13 @@ void ImGui::TableBeginApplyRequests(ImGuiTable* table)
             TableSetColumnDisplayOrder(table, table->ReorderColumn, table->ReorderColumnDstOrder);
             table->ReorderColumnDstOrder = -1;
         }
+
+        // Release
+        ImGuiContext& g = *GImGui;
+        if (g.ActiveId == 0) // FIXME: Need to revisit. See 38f5e5a.
+            table->ReorderColumn = -1;
+        //if (table->HeldHeaderColumn == -1 && table->ReorderColumn != -1)
+        //    table->ReorderColumn = -1;
     }
 
     // Handle display order reset request
