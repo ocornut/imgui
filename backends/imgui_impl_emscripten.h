@@ -49,7 +49,8 @@ IMGUI_IMPL_API void ImGui_ImplEmscripten_Init();
 
 // Shut down the Emscripten backend.  This unsets all Emscripten input callbacks set by Init.
 // Note it'll also unset any Emscripten input callbacks set elsewhere in the program!
-// Note also there is no obligation to ever call this, as there is not necessarily any such concept as "shutting down" when running in the browser, and we have no resources to release.  The user can just close the tab.
+// Note also there is no obligation to ever call this, unless you intend to reset the backend (i.e. with ImGui::DestroyContext()).
+// Otherwise, there is not necessarily any such concept as "shutting down" when running in the browser, and we have no resources to release.  The user can just close the tab, so you don't need to worry about exiting cleanly.
 IMGUI_IMPL_API void ImGui_ImplEmscripten_Shutdown();
 
 // Call every frame to synchronize Dear ImGui's cursor state with the browser's native cursors.
