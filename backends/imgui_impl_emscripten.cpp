@@ -4,8 +4,9 @@
 //
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-04-02: Inputs: Replaced custom KeyboardEvent.code parser with ImHashStr()/ImGuiStorage lookup to match Dear ImGui backend style.
 //  2026-03-31: Emscripten: Added configurable TargetDevicePixelRatio to control how browser device pixels map to Dear ImGui pixels.
-//  2026-03-31: Emscripten: Reworked KeyboardEvent.code translation to avoid std::unordered_map and added BrowserBack/Forward and F13-F24 mappings.
+//  2026-03-31: Inputs: Added BrowserBack/Forward and F13-F24 key mappings.
 //  2026-03-31: Emscripten: Moved cursor state into backend userdata and replaced cursor restore storage with owned C strings.
 //  2024-12-09: Inputs: Added special handling for modifier keys to also generate modifier key events.
 //  2024-12-08: Inputs: Prevent "Delete" key from getting printed in text input.
@@ -20,7 +21,8 @@
 #include "imgui_impl_emscripten.h"
 #include <emscripten.h>
 #include <emscripten/html5.h>
-#include <string.h>
+
+extern ImGuiID ImHashStr(char const* data, size_t data_size = 0, ImGuiID seed = 0); // Declared in imgui_internal.h.
 
 float ImGui_ImplEmscripten_TargetDevicePixelRatio{1.0f};
 
@@ -28,8 +30,7 @@ namespace {
 
 // W3C UI Events KeyboardEvent.code translation helpers
 
-ImGuiKey translate_numpad_key(char const* emscripten_key, size_t key_len) __attribute__((__pure__));
-ImGuiKey translate_key(char const* emscripten_key) __attribute__((__pure__));
+ImGuiKey translate_key(char const* emscripten_key);
 constexpr ImGuiMouseButton translate_mousebutton(unsigned short emscripten_button) __attribute__((__const__));
 
 } // anonymous namespace
@@ -547,12 +548,6 @@ void set(char const* new_cursor)
 
 namespace {
 
-static_assert(static_cast<int>(ImGuiKey_Z) == static_cast<int>(ImGuiKey_A) + 25, "");
-static_assert(static_cast<int>(ImGuiKey_9) == static_cast<int>(ImGuiKey_0) + 9, "");
-static_assert(static_cast<int>(ImGuiKey_F12) == static_cast<int>(ImGuiKey_F1) + 11, "");
-static_assert(static_cast<int>(ImGuiKey_F24) == static_cast<int>(ImGuiKey_F1) + 23, "");
-static_assert(static_cast<int>(ImGuiKey_Keypad9) == static_cast<int>(ImGuiKey_Keypad0) + 9, "");
-
 constexpr ImGuiMouseButton translate_mousebutton(unsigned short emscripten_button)
 {
     // Translate an emscripten-provided integer describing a mouse button to an imgui mouse button
@@ -562,367 +557,228 @@ constexpr ImGuiMouseButton translate_mousebutton(unsigned short emscripten_butto
     return emscripten_button;                                                   // any other button translates 1:1
 }
 
-ImGuiKey translate_numpad_key(char const* emscripten_key, size_t key_len)
+ImGuiStorage const& get_key_translation_storage()
 {
-    // W3C UI Events, "Numpad section" code values.
-    // These optional W3C numpad codes currently have no ImGuiKey equivalent:
-    // "NumpadClear", "NumpadClearEntry", "NumpadMemoryAdd", "NumpadMemoryClear",
-    // "NumpadMemoryRecall", "NumpadMemoryStore", "NumpadMemorySubtract"
-    switch (emscripten_key[6])
-    {
-    case 'A': return ImGuiKey_KeypadAdd;                                        // "NumpadAdd"
-    case 'B': return ImGuiKey_Backspace;                                        // "NumpadBackspace": closest editing equivalent
-    case 'C':
-        switch (key_len)
-        {
-        case 11:
-            if (emscripten_key[7] == 'o') return ImGuiKey_KeypadDecimal;        // "NumpadComma": Dear ImGui only exposes KeypadDecimal
-            // if (emscripten_key[7] == 'l') return ImGuiKey_None;                // "NumpadClear"
-            break;
-        // case 16: return ImGuiKey_None;                                         // "NumpadClearEntry"
-        }
-        break;
-    case 'D':
-        switch (key_len)
-        {
-        case 12: return ImGuiKey_KeypadDivide;                                  // "NumpadDivide"
-        case 13: return ImGuiKey_KeypadDecimal;                                 // "NumpadDecimal"
-        }
-        break;
-    case 'E':
-        switch (emscripten_key[7])
-        {
-        case 'n': return ImGuiKey_KeypadEnter;                                  // "NumpadEnter"
-        case 'q': return ImGuiKey_KeypadEqual;                                  // "NumpadEqual"
-        }
-        break;
-    case 'H': return ImGuiKey_Backslash;                                        // "NumpadHash": closest printable equivalent for telephone-style '#'
-    case 'M':
-        switch (key_len)
-        {
-        case 14: return ImGuiKey_KeypadMultiply;                                // "NumpadMultiply"
-        // case 15: return ImGuiKey_None;                                         // "NumpadMemoryAdd"
-        case 17:
-            // switch (emscripten_key[12])
-            // {
-            // case 'C': return ImGuiKey_None;                                    // "NumpadMemoryClear"
-            // case 'S': return ImGuiKey_None;                                    // "NumpadMemoryStore"
-            // }
-            break;
-        // case 18: return ImGuiKey_None;                                         // "NumpadMemoryRecall"
-        }
-        break;
-    case 'P':
-        switch (key_len)
-        {
-        case 15: return ImGuiKey_LeftBracket;                                   // "NumpadParenLeft": closest available bracket key
-        case 16: return ImGuiKey_RightBracket;                                  // "NumpadParenRight": closest available bracket key
-        }
-        break;
-    case 'S':
-        switch (key_len)
-        {
-        case 10: return ImGuiKey_KeypadMultiply;                                // "NumpadStar": phone/remote '*' behaves like keypad multiply
-        case 14: return ImGuiKey_KeypadSubtract;                                // "NumpadSubtract"
-        // case 20: return ImGuiKey_None;                                         // "NumpadMemorySubtract"
-        }
-        break;
-    default: return static_cast<ImGuiKey>(ImGuiKey_Keypad0 + (emscripten_key[6] - '0')); // Remaining canonical "Numpad..." codes here are "Numpad0" .. "Numpad9"
-    }
-    return ImGuiKey_None;
+    static ImGuiStorage storage;
+    static bool is_initialized{false};
+    if (is_initialized) return storage;
+    is_initialized = true;
+    storage.Data.reserve(128);
+
+    // main character keys
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Backquote"),          ImGuiKey_GraveAccent));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Backslash"),          ImGuiKey_Backslash));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("BracketLeft"),        ImGuiKey_LeftBracket));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("BracketRight"),       ImGuiKey_RightBracket));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Comma"),              ImGuiKey_Comma));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Digit0"),             ImGuiKey_0));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Digit1"),             ImGuiKey_1));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Digit2"),             ImGuiKey_2));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Digit3"),             ImGuiKey_3));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Digit4"),             ImGuiKey_4));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Digit5"),             ImGuiKey_5));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Digit6"),             ImGuiKey_6));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Digit7"),             ImGuiKey_7));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Digit8"),             ImGuiKey_8));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Digit9"),             ImGuiKey_9));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Equal"),              ImGuiKey_Equal));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("IntlBackslash"),      ImGuiKey_Backslash)); // Mapping to generic backslash
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("IntlRo"),             ImGuiKey_Slash)); // Closest match for non-standard layouts
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("IntlYen"),            ImGuiKey_Backslash)); // Closest match for non-standard layouts
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyA"),               ImGuiKey_A));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyB"),               ImGuiKey_B));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyC"),               ImGuiKey_C));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyD"),               ImGuiKey_D));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyE"),               ImGuiKey_E));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyF"),               ImGuiKey_F));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyG"),               ImGuiKey_G));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyH"),               ImGuiKey_H));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyI"),               ImGuiKey_I));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyJ"),               ImGuiKey_J));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyK"),               ImGuiKey_K));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyL"),               ImGuiKey_L));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyM"),               ImGuiKey_M));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyN"),               ImGuiKey_N));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyO"),               ImGuiKey_O));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyP"),               ImGuiKey_P));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyQ"),               ImGuiKey_Q));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyR"),               ImGuiKey_R));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyS"),               ImGuiKey_S));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyT"),               ImGuiKey_T));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyU"),               ImGuiKey_U));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyV"),               ImGuiKey_V));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyW"),               ImGuiKey_W));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyX"),               ImGuiKey_X));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyY"),               ImGuiKey_Y));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyZ"),               ImGuiKey_Z));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Minus"),              ImGuiKey_Minus));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Period"),             ImGuiKey_Period));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Quote"),              ImGuiKey_Apostrophe));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Semicolon"),          ImGuiKey_Semicolon));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Slash"),              ImGuiKey_Slash));
+
+    // control keys
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("AltLeft"),            ImGuiKey_LeftAlt));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("AltRight"),           ImGuiKey_RightAlt));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Backspace"),          ImGuiKey_Backspace));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("CapsLock"),           ImGuiKey_CapsLock));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("ContextMenu"),        ImGuiKey_Menu));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("ControlLeft"),        ImGuiKey_LeftCtrl));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("ControlRight"),       ImGuiKey_RightCtrl));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Enter"),              ImGuiKey_Enter));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("MetaLeft"),           ImGuiKey_LeftSuper));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("MetaRight"),          ImGuiKey_RightSuper));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("ShiftLeft"),          ImGuiKey_LeftShift));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("ShiftRight"),         ImGuiKey_RightShift));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Space"),              ImGuiKey_Space));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Tab"),                ImGuiKey_Tab));
+
+    // navigation key group
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Delete"),             ImGuiKey_Delete));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("End"),                ImGuiKey_End));
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Help"),               ImGuiKey_PrintScreen)); // Best approximation
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Home"),               ImGuiKey_Home));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Insert"),             ImGuiKey_Insert));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("PageDown"),           ImGuiKey_PageDown));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("PageUp"),             ImGuiKey_PageUp));
+
+    // arrow key group
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("ArrowDown"),          ImGuiKey_DownArrow));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("ArrowLeft"),          ImGuiKey_LeftArrow));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("ArrowRight"),         ImGuiKey_RightArrow));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("ArrowUp"),            ImGuiKey_UpArrow));
+
+    // browser key group
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("BrowserBack"),        ImGuiKey_AppBack)); // Pass through so the embedding app can decide
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("BrowserFavorites"),   ImGuiKey_None)); // No direct mapping
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("BrowserForward"),     ImGuiKey_AppForward)); // Pass through so the embedding app can decide
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("BrowserHome"),        ImGuiKey_None)); // No direct mapping
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("BrowserRefresh"),     ImGuiKey_None)); // No direct mapping
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("BrowserSearch"),      ImGuiKey_None)); // No direct mapping
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("BrowserStop"),        ImGuiKey_None)); // No direct mapping
+
+    // number pad group
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumLock"),            ImGuiKey_NumLock));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Numpad0"),            ImGuiKey_Keypad0));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Numpad1"),            ImGuiKey_Keypad1));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Numpad2"),            ImGuiKey_Keypad2));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Numpad3"),            ImGuiKey_Keypad3));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Numpad4"),            ImGuiKey_Keypad4));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Numpad5"),            ImGuiKey_Keypad5));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Numpad6"),            ImGuiKey_Keypad6));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Numpad7"),            ImGuiKey_Keypad7));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Numpad8"),            ImGuiKey_Keypad8));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Numpad9"),            ImGuiKey_Keypad9));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadAdd"),          ImGuiKey_KeypadAdd));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadBackspace"),    ImGuiKey_Backspace)); // No direct mapping; backspace functionality
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadClear"),        ImGuiKey_None)); // No defined Dear ImGui mapping
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadClearEntry"),   ImGuiKey_None)); // No defined Dear ImGui mapping
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadComma"),        ImGuiKey_KeypadDecimal)); // Closest match
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadDecimal"),      ImGuiKey_KeypadDecimal));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadDivide"),       ImGuiKey_KeypadDivide));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadEnter"),        ImGuiKey_KeypadEnter));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadEqual"),        ImGuiKey_KeypadEqual));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadHash"),         ImGuiKey_Backslash)); // Mapped to generic backslash for telephone-style '#'
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadMemoryAdd"),    ImGuiKey_None)); // No defined mapping
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadMemoryClear"),  ImGuiKey_None)); // No defined mapping
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadMemoryRecall"), ImGuiKey_None)); // No defined mapping
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadMemoryStore"),  ImGuiKey_None)); // No defined mapping
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadMemorySubtract"), ImGuiKey_None)); // No defined mapping
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadMultiply"),     ImGuiKey_KeypadMultiply));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadParenLeft"),    ImGuiKey_LeftBracket)); // Closest available
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadParenRight"),   ImGuiKey_RightBracket)); // Closest available
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadStar"),         ImGuiKey_KeypadMultiply)); // Same as multiply
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadSubtract"),     ImGuiKey_KeypadSubtract));
+
+    // top row key group
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Escape"),             ImGuiKey_Escape));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F1"),                 ImGuiKey_F1));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F2"),                 ImGuiKey_F2));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F3"),                 ImGuiKey_F3));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F4"),                 ImGuiKey_F4));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F5"),                 ImGuiKey_F5));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F6"),                 ImGuiKey_F6));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F7"),                 ImGuiKey_F7));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F8"),                 ImGuiKey_F8));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F9"),                 ImGuiKey_F9));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F10"),                ImGuiKey_F10));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F11"),                ImGuiKey_F11));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F12"),                ImGuiKey_F12));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F13"),                ImGuiKey_F13));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F14"),                ImGuiKey_F14));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F15"),                ImGuiKey_F15));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F16"),                ImGuiKey_F16));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F17"),                ImGuiKey_F17));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F18"),                ImGuiKey_F18));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F19"),                ImGuiKey_F19));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F20"),                ImGuiKey_F20));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F21"),                ImGuiKey_F21));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F22"),                ImGuiKey_F22));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F23"),                ImGuiKey_F23));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F24"),                ImGuiKey_F24));
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Fn"),                 ImGuiKey_None)); // No direct mapping
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("FnLock"),             ImGuiKey_None)); // No direct mapping
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("PrintScreen"),        ImGuiKey_PrintScreen));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("ScrollLock"),         ImGuiKey_ScrollLock));
+    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Pause"),              ImGuiKey_Pause));
+
+    // clipboard/editing keys without direct mapping
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Abort"),              ImGuiKey_None));
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Again"),              ImGuiKey_None));
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Convert"),            ImGuiKey_None));
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Copy"),               ImGuiKey_None));
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Cut"),                ImGuiKey_None));
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Find"),               ImGuiKey_None));
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Open"),               ImGuiKey_None));
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Paste"),              ImGuiKey_None));
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Props"),              ImGuiKey_None));
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Resume"),             ImGuiKey_None));
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Select"),             ImGuiKey_None));
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Undo"),               ImGuiKey_None));
+
+    // IME and international keys without direct mapping
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Hiragana"),           ImGuiKey_None));
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("KanaMode"),           ImGuiKey_None));
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Katakana"),           ImGuiKey_None));
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Lang1"),              ImGuiKey_None));
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Lang2"),              ImGuiKey_None));
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("NonConvert"),         ImGuiKey_None));
+
+    // media and launcher keys without direct mapping
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("AudioVolumeDown"),    ImGuiKey_None));
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("AudioVolumeMute"),    ImGuiKey_None));
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("AudioVolumeUp"),      ImGuiKey_None));
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("LaunchApp1"),         ImGuiKey_None));
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("LaunchApp2"),         ImGuiKey_None));
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("LaunchMail"),         ImGuiKey_None));
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("MediaPlayPause"),     ImGuiKey_None));
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("MediaSelect"),        ImGuiKey_None));
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("MediaStop"),          ImGuiKey_None));
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("MediaTrackNext"),     ImGuiKey_None));
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("MediaTrackPrevious"), ImGuiKey_None));
+
+    // system keys without direct mapping
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Eject"),              ImGuiKey_None));
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Hyper"),              ImGuiKey_None));
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Power"),              ImGuiKey_None));
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Sleep"),              ImGuiKey_None));
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Super"),              ImGuiKey_None));
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Suspend"),            ImGuiKey_None));
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Turbo"),              ImGuiKey_None));
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Unidentified"),       ImGuiKey_None));
+    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("WakeUp"),             ImGuiKey_None));
+
+    storage.BuildSortByKey();
+    return storage;
 }
 
 ImGuiKey translate_key(char const* emscripten_key)
 {
     // Translate a W3C KeyboardEvent.code string into an ImGuiKey.
-    // Canonical references: W3C UI Events code tables, with MDN used for browser quirks/aliases.
     if (emscripten_key == nullptr || emscripten_key[0] == '\0') return ImGuiKey_None;
 
-    size_t const key_len{strlen(emscripten_key)};
-
-    switch (emscripten_key[0])
-    {
-    case 'A':
-        switch (key_len)
-        {
-        // case 5:
-        //     switch (emscripten_key[1])
-        //     {
-        //     case 'b': return ImGuiKey_None;                                    // "Abort"
-        //     case 'g': return ImGuiKey_None;                                    // "Again"
-        //     }
-        //     break;
-        case 7:
-            switch (emscripten_key[1])
-            {
-            case 'l': return ImGuiKey_LeftAlt;                                  // "AltLeft"
-            case 'r': return ImGuiKey_UpArrow;                                  // "ArrowUp"
-            }
-            break;
-        case 8: return ImGuiKey_RightAlt;                                       // "AltRight"
-        case 9:
-            switch (emscripten_key[5])
-            {
-            case 'D': return ImGuiKey_DownArrow;                                // "ArrowDown"
-            case 'L': return ImGuiKey_LeftArrow;                                // "ArrowLeft"
-            }
-            break;
-        case 10: return ImGuiKey_RightArrow;                                    // "ArrowRight"
-        // case 13: return ImGuiKey_None;                                         // "AudioVolumeUp"
-        // case 15:
-        //     switch (emscripten_key[11])
-        //     {
-        //     case 'D': return ImGuiKey_None;                                    // "AudioVolumeDown"
-        //     case 'M': return ImGuiKey_None;                                    // "AudioVolumeMute"
-        //     }
-        //     break;
-        }
-        break;
-    case 'B':
-        switch (key_len)
-        {
-        case 9:
-            switch (emscripten_key[4])
-            {
-            case 'q': return ImGuiKey_GraveAccent;                              // "Backquote"
-            case 's':
-                if (emscripten_key[5] == 'l') return ImGuiKey_Backslash;        // "Backslash": W3C uses this for both US \| and the UK #~ key tucked under Enter
-                if (emscripten_key[5] == 'p') return ImGuiKey_Backspace;        // "Backspace"
-                break;
-            }
-            break;
-        case 11:
-            if (emscripten_key[3] == 'c') return ImGuiKey_LeftBracket;          // "BracketLeft"
-            switch (emscripten_key[7])
-            {
-            case 'B': return ImGuiKey_AppBack;                                  // "BrowserBack": pass through even in browser hosts so the embedding app can decide
-            // case 'H': return ImGuiKey_None;                                    // "BrowserHome"
-            // case 'S': return ImGuiKey_None;                                    // "BrowserStop"
-            }
-            break;
-        case 12: return ImGuiKey_RightBracket;                                  // "BracketRight"
-        // case 13: return ImGuiKey_None;                                         // "BrowserSearch"
-        case 14:
-            switch (emscripten_key[7])
-            {
-            case 'F': return ImGuiKey_AppForward;                               // "BrowserForward": pass through even in browser hosts so the embedding app can decide
-            // case 'R': return ImGuiKey_None;                                    // "BrowserRefresh"
-            }
-            break;
-        // case 16: return ImGuiKey_None;                                         // "BrowserFavorites"
-        }
-        break;
-    case 'C':
-        switch (key_len)
-        {
-        // case 3: return ImGuiKey_None;                                          // "Cut"
-        // case 4: return ImGuiKey_None;                                          // "Copy"
-        case 5: return ImGuiKey_Comma;                                          // "Comma"
-        // case 7: return ImGuiKey_None;                                          // "Convert"
-        case 8: return ImGuiKey_CapsLock;                                       // "CapsLock"
-        case 11:
-            switch (emscripten_key[4])
-            {
-            case 'e': return ImGuiKey_Menu;                                     // "ContextMenu"
-            case 'r': return ImGuiKey_LeftCtrl;                                 // "ControlLeft"
-            }
-            break;
-        case 12: return ImGuiKey_RightCtrl;                                     // "ControlRight"
-        }
-        break;
-    case 'D':
-        if (key_len == 6)
-        {
-            if (emscripten_key[1] == 'e') return ImGuiKey_Delete;               // "Delete"
-            else return static_cast<ImGuiKey>(ImGuiKey_0 + (emscripten_key[5] - '0')); // "Digit0" .. "Digit9"
-        }
-        break;
-    case 'E':
-        switch (key_len)
-        {
-        case 3: return ImGuiKey_End;                                            // "End"
-        case 5:
-            switch (emscripten_key[1])
-            {
-            case 'n': return ImGuiKey_Enter;                                    // "Enter"
-            case 'q': return ImGuiKey_Equal;                                    // "Equal"
-            // case 'j': return ImGuiKey_None;                                    // "Eject"
-            }
-            break;
-        case 6: return ImGuiKey_Escape;                                         // "Escape"
-        }
-        break;
-    case 'F':
-        switch (key_len)
-        {
-        case 2:
-            if (emscripten_key[1] == 'n') return ImGuiKey_None;                 // "Fn": no ImGuiKey equivalent
-            else return static_cast<ImGuiKey>(ImGuiKey_F1 + (emscripten_key[1] - '1')); // "F1" .. "F9"
-        case 3:
-            if (emscripten_key[1] == '1') return static_cast<ImGuiKey>(ImGuiKey_F10 + (emscripten_key[2] - '0')); // "F10" .. "F19"
-            else return static_cast<ImGuiKey>(ImGuiKey_F20 + (emscripten_key[2] - '0')); // "F20" .. "F24"
-        // case 4: return ImGuiKey_None;                                          // "Find"
-        // case 6: return ImGuiKey_None;                                          // "FnLock"
-        }
-        break;
-    case 'H':
-        switch (key_len)
-        {
-        case 4:
-            switch (emscripten_key[1])
-            {
-            case 'o': return ImGuiKey_Home;                                     // "Home"
-            // case 'e': return ImGuiKey_None;                                    // "Help"
-            }
-            break;
-        // case 5: return ImGuiKey_None;                                          // "Hyper"
-        // case 8: return ImGuiKey_None;                                          // "Hiragana"
-        }
-        break;
-    case 'I':
-        switch (key_len)
-        {
-        case 6:
-            switch (emscripten_key[2])
-            {
-            case 's': return ImGuiKey_Insert;                                   // "Insert"
-            case 't': return ImGuiKey_Slash;                                    // "IntlRo": closest printable equivalent
-            }
-            break;
-        case 7: return ImGuiKey_Backslash;                                      // "IntlYen": closest printable equivalent
-        case 13: return ImGuiKey_Backslash;                                     // "IntlBackslash": preserve original behavior and map to generic backslash
-        }
-        break;
-    case 'K':
-        switch (key_len)
-        {
-        case 4: return static_cast<ImGuiKey>(ImGuiKey_A + (emscripten_key[3] - 'A')); // "KeyA" .. "KeyZ"
-        // case 8:
-        //     switch (emscripten_key[2])
-        //     {
-        //     case 'n': return ImGuiKey_None;                                    // "KanaMode"
-        //     default: return ImGuiKey_None;                                     // "Katakana"
-        //     }
-        }
-        break;
-    // case 'L':
-    //     switch (key_len)
-    //     {
-    //     case 5:
-    //         switch (emscripten_key[4])
-    //         {
-    //         case '1': return ImGuiKey_None;                                    // "Lang1"
-    //         case '2': return ImGuiKey_None;                                    // "Lang2"
-    //         }
-    //         break;
-    //     case 10:
-    //         switch (emscripten_key[6])
-    //         {
-    //         case 'A':
-    //             switch (emscripten_key[9])
-    //             {
-    //             case '1': return ImGuiKey_None;                                // "LaunchApp1"
-    //             case '2': return ImGuiKey_None;                                // "LaunchApp2"
-    //             }
-    //             break;
-    //         case 'M': return ImGuiKey_None;                                    // "LaunchMail"
-    //         }
-    //         break;
-    //     }
-    case 'M':
-        switch (key_len)
-        {
-        case 5: return ImGuiKey_Minus;                                          // "Minus"
-        case 8: return ImGuiKey_LeftSuper;                                      // "MetaLeft"
-        case 9:
-            switch (emscripten_key[3])
-            {
-            case 'a': return ImGuiKey_RightSuper;                               // "MetaRight"
-            // default: return ImGuiKey_None;                                     // "MediaStop"
-            }
-            break;
-        // case 11: return ImGuiKey_None;                                         // "MediaSelect"
-        // case 14:
-        //     switch (emscripten_key[10])
-        //     {
-        //     case 'N': return ImGuiKey_None;                                    // "MediaTrackNext"
-        //     default: return ImGuiKey_None;                                     // "MediaPlayPause"
-        //     }
-        // case 18: return ImGuiKey_None;                                         // "MediaTrackPrevious"
-        }
-        break;
-    case 'N':
-        if (emscripten_key[3] == 'p')
-        {
-            ImGuiKey const numpad_key{translate_numpad_key(emscripten_key, key_len)};
-            if (numpad_key != ImGuiKey_None) return numpad_key;
-        }
-        if (key_len == 7) return ImGuiKey_NumLock;                              // "NumLock"
-        // if (key_len == 10) return ImGuiKey_None;                               // "NonConvert"
-        break;
-    // case 'O': return ImGuiKey_None;                                            // "Open"
-    case 'P':
-        switch (key_len)
-        {
-        case 5:
-            if (emscripten_key[2] == 'u') return ImGuiKey_Pause;                // "Pause"
-            // if (emscripten_key[2] == 's') return ImGuiKey_None;                // "Paste"
-            // if (emscripten_key[1] == 'o') return ImGuiKey_None;                // "Power"
-            // if (emscripten_key[1] == 'r') return ImGuiKey_None;                // "Props"
-            break;
-        case 6:
-            switch (emscripten_key[1])
-            {
-            case 'a': return ImGuiKey_PageUp;                                   // "PageUp"
-            case 'e': return ImGuiKey_Period;                                   // "Period"
-            }
-            break;
-        case 8: return ImGuiKey_PageDown;                                       // "PageDown"
-        case 11: return ImGuiKey_PrintScreen;                                   // "PrintScreen"
-        }
-        break;
-    case 'Q': return ImGuiKey_Apostrophe;                                       // "Quote"
-    // case 'R': return ImGuiKey_None;                                            // "Resume"
-    case 'S':
-        switch (key_len)
-        {
-        case 5:
-            if (emscripten_key[2] == 'a') return ImGuiKey_Slash;                // "Slash"
-            if (emscripten_key[1] == 'p') return ImGuiKey_Space;                // "Space"
-            // if (emscripten_key[2] == 'e') return ImGuiKey_None;                // "Sleep"
-            // if (emscripten_key[1] == 'u') return ImGuiKey_None;                // "Super"
-            break;
-        // case 6: return ImGuiKey_None;                                          // "Select"
-        // case 7: return ImGuiKey_None;                                          // "Suspend"
-        case 9:
-            switch (emscripten_key[1])
-            {
-            case 'e': return ImGuiKey_Semicolon;                                // "Semicolon"
-            case 'h': return ImGuiKey_LeftShift;                                // "ShiftLeft"
-            }
-            break;
-        case 10:
-            switch (emscripten_key[1])
-            {
-            case 'c': return ImGuiKey_ScrollLock;                               // "ScrollLock"
-            case 'h': return ImGuiKey_RightShift;                               // "ShiftRight"
-            }
-            break;
-        }
-        break;
-    case 'T':
-        if (key_len == 3) return ImGuiKey_Tab;                                  // "Tab"
-        // if (key_len == 5) return ImGuiKey_None;                                // "Turbo"
-        break;
-    // case 'U':
-    //     switch (key_len)
-    //     {
-    //     case 4: return ImGuiKey_None;                                          // "Undo"
-    //     case 12: return ImGuiKey_None;                                         // "Unidentified"
-    //     }
-    // case 'W': return ImGuiKey_None;                                            // "WakeUp"
-    }
-    return ImGuiKey_None;
+    ImGuiStorage const& storage{get_key_translation_storage()};
+    return static_cast<ImGuiKey>(storage.GetInt(ImHashStr(emscripten_key), ImGuiKey_None));
 }
 
 } // anonymous namespace
