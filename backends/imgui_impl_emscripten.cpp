@@ -422,7 +422,10 @@ void set_cursor_if_necessary(emscripten_browser_cursor_internal::cursor& current
 void update_cursor(ImGui_ImplEmscripten_Data* bd)
 {
     // Sync any cursor changes due to ImGui to the browser's cursor
-    if (ImGui::GetIO().WantCaptureMouse)                                        // mouse is hovering over the gui
+    ImGuiIO& io{ImGui::GetIO()};
+    if (io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange) return;
+
+    if (io.WantCaptureMouse)                                                    // mouse is hovering over the gui
     {
         if (bd->CursorToRestore == nullptr)
         {
