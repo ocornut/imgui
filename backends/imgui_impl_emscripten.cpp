@@ -108,6 +108,7 @@ struct ImGui_ImplEmscripten_Data
     emscripten_browser_cursor_internal::cursor CurrentCursor{emscripten_browser_cursor_internal::cursor::invalid};
     char* CursorToRestore{nullptr};
     bool LastMouseDrawCursor{false};
+    bool LastNoMouseCursorChange{false};
 };
 
 float get_target_device_pixel_ratio()
@@ -436,19 +437,28 @@ void update_cursor(ImGui_ImplEmscripten_Data* bd)
     ImGuiIO& io{ImGui::GetIO()};
     if (io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange)
     {
+        if (!bd->LastNoMouseCursorChange)
+        {
+            free(bd->CursorToRestore);
+            bd->CursorToRestore = nullptr;
+            bd->CurrentCursor = emscripten_browser_cursor_internal::cursor::invalid;
+            bd->LastMouseDrawCursor = false;
+            bd->LastNoMouseCursorChange = true;
+        }
         return;
     }
+    bd->LastNoMouseCursorChange = false;
 
     if (io.MouseDrawCursor)
     {
-        if(bd->LastMouseDrawCursor) return;
+        if (bd->LastMouseDrawCursor) return;
 
         set_cursor_if_necessary(bd, emscripten_browser_cursor_internal::cursor::none); // hide the cursor for the entire window if imgui is handling cursor drawing - not just when imgui wants to capture the mouse
         bd->LastMouseDrawCursor = true;
     }
     else
     {
-        if(bd->LastMouseDrawCursor)
+        if (bd->LastMouseDrawCursor)
         {
             restore_cursor_if_necessary(bd);
             bd->LastMouseDrawCursor = false;
