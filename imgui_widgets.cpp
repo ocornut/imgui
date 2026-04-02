@@ -3722,8 +3722,9 @@ bool ImGui::TempInputText(const ImRect& bb, ImGuiID id, const char* label, char*
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
 
-    const bool init = (g.TempInputId != id);
-    if (init)
+    const bool is_deactivated = (g.InputTextDeactivatedState.ID == id);
+    const bool is_active = (g.TempInputId == id);
+    if (!is_active && !is_deactivated)
         ClearActiveID();
 
     ImVec2 backup_pos = window->DC.CursorPos;
@@ -3731,13 +3732,13 @@ bool ImGui::TempInputText(const ImRect& bb, ImGuiID id, const char* label, char*
     g.LastItemData.ItemFlags |= ImGuiItemFlags_AllowDuplicateId; // Using ImGuiInputTextFlags_MergedItem above will skip ItemAdd() so we poke here.
     bool value_changed = InputTextEx(label, NULL, buf, (int)buf_size, bb.GetSize(), flags | ImGuiInputTextFlags_TempInput | ImGuiInputTextFlags_AutoSelectAll, callback, user_data);
     KeepAliveID(id); // Not done because of ImGuiInputTextFlags_TempInput
-    if (init)
+    if (!is_active && !is_deactivated)
     {
         // First frame we started displaying the InputText widget, we expect it to take the active id.
         IM_ASSERT(g.ActiveId == id);
         g.TempInputId = g.ActiveId;
     }
-    if (g.ActiveId != id)
+    if (is_active && g.ActiveId != id)
         g.TempInputId = 0;
     window->DC.CursorPos = backup_pos;
     return value_changed;
@@ -3841,8 +3842,23 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* p_data
     }
 
     // Apply
-    bool input_edited = (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_EditedInternal) != 0; // We would be using 'ret' if ImGuiInputTextFlags_EnterReturnsTrue was not involved.
-    bool value_changed = input_edited ? DataTypeApplyFromText(buf, data_type, p_data, format, (flags & ImGuiInputTextFlags_ParseEmptyRefVal) ? p_data_default : NULL) : false;
+    bool value_changed = false;
+    if (g.LastItemData.ItemFlags & ImGuiItemFlags_LiveEdit)
+    {
+        bool input_edited = (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_EditedInternal) != 0; // We would be using 'ret' if ImGuiInputTextFlags_EnterReturnsTrue was not involved.
+        if (input_edited)
+            value_changed = DataTypeApplyFromText(buf, data_type, p_data, format, (flags & ImGuiInputTextFlags_ParseEmptyRefVal) ? p_data_default : NULL);
+    }
+    else
+    {
+        //g.LastItemData.StatusFlags &= ~ImGuiItemStatusFlags_Edited;
+        if (g.DeactivatedItemData.ID == g.LastItemData.ID)
+        {
+            //g.DeactivatedItemData.HasBeenEditedBefore = false; // Will be set below by MarkItemEdited()
+            //if (IsItemDeactivated()) // Should be unnecessary
+            value_changed = DataTypeApplyFromText(buf, data_type, p_data, format, (flags & ImGuiInputTextFlags_ParseEmptyRefVal) ? p_data_default : NULL);
+        }
+    }
 
     // Step buttons
     if (has_step_buttons)
@@ -4584,7 +4600,7 @@ void ImGui::InputTextDeactivateHook(ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
     ImGuiInputTextState* state = &g.InputTextState;
-    if (id == 0 || state->ID != id)
+    if (id == 0 || state->ID != id || g.ActiveId != id)
         return;
     if (!state->EditedBefore)
         return;
@@ -4820,7 +4836,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     const bool user_clicked = hovered && io.MouseClicked[0];
     const bool input_requested_by_nav = (g.ActiveId != id) && (g.NavActivateId == id);
     const bool input_requested_by_reactivate = (g.InputTextReactivateId == id); // for io.ConfigInputTextEnterKeepActive
-    const bool input_requested_by_user = (user_clicked) || (g.ActiveId == 0 && (flags & ImGuiInputTextFlags_TempInput));
+    const bool input_requested_by_user = (user_clicked) || (g.ActiveId == 0 && (flags & ImGuiInputTextFlags_TempInput) && g.InputTextDeactivatedState.ID != id);
     const ImGuiID scrollbar_id = (is_multiline && state != NULL) ? GetWindowScrollbarID(draw_window, ImGuiAxis_Y) : 0;
     const bool user_scroll_finish = is_multiline && state != NULL && g.ActiveId == 0 && g.ActiveIdPreviousFrame == scrollbar_id;
     const bool user_scroll_active = is_multiline && state != NULL && g.ActiveId == scrollbar_id;
@@ -4852,7 +4868,8 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         state->CursorAnimReset();
 
         // Backup state of deactivating item so they'll have a chance to do a write to output buffer on the same frame they report IsItemDeactivatedAfterEdit (#4714)
-        InputTextDeactivateHook(state->ID);
+        if (state->ID != id && state->ID == g.ActiveId && (init_make_active && g.ActiveId != id))
+            InputTextDeactivateHook(state->ID); // <-- this is essentially an earlier call to what SetActiveID() would do below.
 
         // Take a copy of the initial buffer value.
         // From the moment we focused we are normally ignoring the content of 'buf' (unless we are in read-only mode)
@@ -5389,13 +5406,27 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             }
         }
 
-        // Will copy result string if modified.
+        // Write back result string if modified.
         // FIXME-OPT: Could mark dirty state from the stb_textedit callbacks
-        if (!is_readonly && strcmp(state->TextSrc, buf) != 0)
+        if (!is_readonly)
         {
-            apply_new_text = state->TextSrc;
-            apply_new_text_length = state->TextLen;
-            value_changed = true;
+            if (g.LastItemData.ItemFlags & ImGuiItemFlags_LiveEdit)
+            {
+                // Apply when modified
+                if (strcmp(state->TextSrc, buf) != 0)
+                {
+                    apply_new_text = state->TextSrc;
+                    apply_new_text_length = state->TextLen;
+                    value_changed = true;
+                }
+            }
+            else
+            {
+                // Apply on validation/deactivation, otherwise cancel out previous apply attempts (e.g. revert)
+                value_changed = ((validated || clear_active_id || revert_edit) && strcmp(state->TextSrc, buf) != 0);
+                apply_new_text = value_changed ? state->TextSrc : NULL;
+                apply_new_text_length = value_changed ? state->TextLen : 0;
+            }
         }
     }
 
@@ -5403,14 +5434,15 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     // This is used when e.g. losing focus or tabbing out into another InputText() which may already be using the temp buffer.
     if (g.InputTextDeactivatedState.ID == id)
     {
-        // The state only exists after an Edit. More-over we cannot use IsItemDeactivatedAfterEdit().
-        if (g.ActiveId != id && IsItemDeactivated() && !is_readonly && strcmp(g.InputTextDeactivatedState.TextA.Data, buf) != 0)
-        {
-            apply_new_text = g.InputTextDeactivatedState.TextA.Data;
-            apply_new_text_length = g.InputTextDeactivatedState.TextA.Size - 1;
-            value_changed = true;
-            //IMGUI_DEBUG_LOG("InputText(): apply Deactivated data for 0x%08X: \"%.*s\".\n", id, apply_new_text_length, apply_new_text);
-        }
+        // The state only exists after an Edit. IsItemDeactivatedAfterEdit() is not valid in every code path (see "widgets_inputtext_status_noliveedit" test).
+        if ((g.ActiveId != id && IsItemDeactivated()) || (g.ActiveId == id && (flags & ImGuiInputTextFlags_TempInput)))
+            if (!is_readonly && strcmp(g.InputTextDeactivatedState.TextA.Data, buf) != 0)
+            {
+                apply_new_text = g.InputTextDeactivatedState.TextA.Data;
+                apply_new_text_length = g.InputTextDeactivatedState.TextA.Size - 1;
+                value_changed = true;
+                //IMGUI_DEBUG_LOG("InputText(): apply Deactivated data for 0x%08X: \"%.*s\".\n", id, apply_new_text_length, apply_new_text);
+            }
         g.InputTextDeactivatedState.ID = 0;
     }
 

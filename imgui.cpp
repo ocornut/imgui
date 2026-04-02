@@ -4833,6 +4833,7 @@ void ImGui::MarkItemEdited(ImGuiID id)
     // ActiveId might have been released by the time we call this (as in the typical press/release button behavior) but still need to fill the data.
     ImGuiContext& g = *GImGui;
 
+    //IM_ASSERT(g.LastItemData.ID == id); // Failing cases include: "widgets_inputtext_scrolling", "widgets_inputtext_multiline_status", "widgets_selectable_input" = case of e.g TempInputText() overlayed manually with different ID (#2718)
     g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_EditedInternal;
     if (g.LastItemData.ItemFlags & ImGuiItemFlags_NoMarkEdited)
         return;
@@ -4843,14 +4844,14 @@ void ImGui::MarkItemEdited(ImGuiID id)
         // FIXME: Can't we fully rely on LastItemData yet?
         g.ActiveIdHasBeenEditedThisFrame = true;
         g.ActiveIdHasBeenEditedBefore = true;
-        if (g.DeactivatedItemData.ID == id)
-            g.DeactivatedItemData.HasBeenEditedBefore = true;
     }
+    if (g.DeactivatedItemData.ID == id)
+        g.DeactivatedItemData.HasBeenEditedBefore = true;
 
     // We accept a MarkItemEdited() on drag and drop targets (see https://github.com/ocornut/imgui/issues/1875#issuecomment-978243343)
     // We accept 'ActiveIdPreviousFrame == id' for InputText() returning an edit after it has been taken ActiveId away (#4714)
     // FIXME: This assert is getting a bit meaningless over time. It helped detect some unusual use cases but eventually it is becoming an unnecessary restriction.
-    IM_ASSERT(g.DragDropActive || g.ActiveId == id || g.ActiveId == 0 || g.ActiveIdPreviousFrame == id || g.NavJustMovedToId || (g.CurrentMultiSelect != NULL && g.BoxSelectState.IsActive));
+    IM_ASSERT(g.DragDropActive || g.ActiveId == id || g.ActiveId == 0 || g.DeactivatedItemData.ID == id || g.ActiveIdPreviousFrame == id || g.NavJustMovedToId || (g.CurrentMultiSelect != NULL && g.BoxSelectState.IsActive));
 }
 
 bool ImGui::IsWindowContentHoverable(ImGuiWindow* window, ImGuiHoveredFlags flags)

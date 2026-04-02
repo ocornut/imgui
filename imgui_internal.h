@@ -1006,7 +1006,7 @@ enum ImGuiItemFlagsPrivate_
     ImGuiItemFlags_HasSelectionUserData     = 1 << 21, // false     // Set by SetNextItemSelectionUserData()
     ImGuiItemFlags_IsMultiSelect            = 1 << 22, // false     // Set by SetNextItemSelectionUserData()
 
-    ImGuiItemFlags_Default_                 = ImGuiItemFlags_AutoClosePopups,    // Please don't change, use PushItemFlag() instead.
+    ImGuiItemFlags_Default_                 = ImGuiItemFlags_AutoClosePopups | ImGuiItemFlags_LiveEdit,    // Please don't change, use PushItemFlag() instead.
 
     // Obsolete
     //ImGuiItemFlags_SelectableDontClosePopup = !ImGuiItemFlags_AutoClosePopups, // Can't have a redirect as we inverted the behavior
@@ -3799,7 +3799,7 @@ namespace ImGui
     IMGUI_API void          InputTextDeactivateHook(ImGuiID id);
     IMGUI_API bool          TempInputText(const ImRect& bb, ImGuiID id, const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = NULL, void* user_data = NULL);
     IMGUI_API bool          TempInputScalar(const ImRect& bb, ImGuiID id, const char* label, ImGuiDataType data_type, void* p_data, const char* format, const void* p_clamp_min = NULL, const void* p_clamp_max = NULL);
-    inline bool             TempInputIsActive(ImGuiID id)       { ImGuiContext& g = *GImGui; return g.ActiveId == id && g.TempInputId == id; }
+    inline bool             TempInputIsActive(ImGuiID id)       { ImGuiContext& g = *GImGui; return (g.TempInputId == id && g.ActiveId == id) || (g.InputTextDeactivatedState.ID == id); }
     inline ImGuiInputTextState* GetInputTextState(ImGuiID id)   { ImGuiContext& g = *GImGui; return (id != 0 && g.InputTextState.ID == id) ? &g.InputTextState : NULL; } // Get input text state if active
     IMGUI_API void          SetNextItemRefVal(ImGuiDataType data_type, void* p_data);
     inline bool             IsItemActiveAsInputText() { ImGuiContext& g = *GImGui; return g.ActiveId != 0 && g.ActiveId == g.LastItemData.ID && g.InputTextState.ID == g.LastItemData.ID; } // This may be useful to apply workaround that a based on distinguish whenever an item is active as a text input field.
