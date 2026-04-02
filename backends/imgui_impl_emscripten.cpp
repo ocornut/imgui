@@ -412,10 +412,20 @@ void ImGui_ImplEmscripten_Shutdown()
 
 namespace {
 
-void set_cursor_if_necessary(emscripten_browser_cursor_internal::cursor& current_cursor, emscripten_browser_cursor_internal::cursor new_cursor)
+void restore_cursor_if_necessary(ImGui_ImplEmscripten_Data* bd)
 {
-    if (new_cursor == current_cursor) return;                                   // don't do anything if the current cursor is already set
-    current_cursor = new_cursor;
+    if (bd->CursorToRestore == nullptr) return;
+    emscripten_browser_cursor_internal::set(bd->CursorToRestore);               // restore the previous cursor state when leaving imgui cursor ownership
+    free(bd->CursorToRestore);
+    bd->CursorToRestore = nullptr;
+    bd->CurrentCursor = emscripten_browser_cursor_internal::cursor::invalid;    // select an unused value for current cursor to force a set next time
+}
+
+void set_cursor_if_necessary(ImGui_ImplEmscripten_Data* bd, emscripten_browser_cursor_internal::cursor new_cursor)
+{
+    if (new_cursor == bd->CurrentCursor) return;                                // don't do anything if the current cursor is already set
+    if (bd->CursorToRestore == nullptr) bd->CursorToRestore = emscripten_browser_cursor_internal::get_string(); // back up the existing cursor state when first taking cursor ownership
+    bd->CurrentCursor = new_cursor;
     emscripten_browser_cursor_internal::set(new_cursor);
 }
 
@@ -423,64 +433,57 @@ void update_cursor(ImGui_ImplEmscripten_Data* bd)
 {
     // Sync any cursor changes due to ImGui to the browser's cursor
     ImGuiIO& io{ImGui::GetIO()};
-    if (io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange) return;
+    if (io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange)
+    {
+        restore_cursor_if_necessary(bd);
+        return;
+    }
 
     if (io.MouseDrawCursor)                                                     // hide the cursor for the entire window if imgui is handling cursor drawing - not just when imgui wants to capture the mouse
     {
-        set_cursor_if_necessary(bd->CurrentCursor, emscripten_browser_cursor_internal::cursor::none);
+        set_cursor_if_necessary(bd, emscripten_browser_cursor_internal::cursor::none);
         return;
     }
 
     if (io.WantCaptureMouse)                                                    // mouse is hovering over the gui
     {
-        if (bd->CursorToRestore == nullptr)
-        {
-            bd->CursorToRestore = emscripten_browser_cursor_internal::get_string(); // back up the existing cursor state when entering the imgui capture space
-        }
-
         switch (ImGui::GetMouseCursor())
         {
         case ImGuiMouseCursor_None:
-            set_cursor_if_necessary(bd->CurrentCursor, emscripten_browser_cursor_internal::cursor::none);
+            set_cursor_if_necessary(bd, emscripten_browser_cursor_internal::cursor::none);
             break;
         case ImGuiMouseCursor_Arrow:
-            set_cursor_if_necessary(bd->CurrentCursor, emscripten_browser_cursor_internal::cursor::cursor_default);
+            set_cursor_if_necessary(bd, emscripten_browser_cursor_internal::cursor::cursor_default);
             break;
         case ImGuiMouseCursor_TextInput:                                        // When hovering over InputText, etc.
-            set_cursor_if_necessary(bd->CurrentCursor, emscripten_browser_cursor_internal::cursor::text);
+            set_cursor_if_necessary(bd, emscripten_browser_cursor_internal::cursor::text);
             break;
         case ImGuiMouseCursor_ResizeAll:                                        // (Unused by Dear ImGui functions)
-            set_cursor_if_necessary(bd->CurrentCursor, emscripten_browser_cursor_internal::cursor::move);
+            set_cursor_if_necessary(bd, emscripten_browser_cursor_internal::cursor::move);
             break;
         case ImGuiMouseCursor_ResizeNS:                                         // When hovering over a horizontal border
-            set_cursor_if_necessary(bd->CurrentCursor, emscripten_browser_cursor_internal::cursor::ns_resize);
+            set_cursor_if_necessary(bd, emscripten_browser_cursor_internal::cursor::ns_resize);
             break;
         case ImGuiMouseCursor_ResizeEW:                                         // When hovering over a vertical border or a column
-            set_cursor_if_necessary(bd->CurrentCursor, emscripten_browser_cursor_internal::cursor::ew_resize);
+            set_cursor_if_necessary(bd, emscripten_browser_cursor_internal::cursor::ew_resize);
             break;
         case ImGuiMouseCursor_ResizeNESW:                                       // When hovering over the bottom-left corner of a window
-            set_cursor_if_necessary(bd->CurrentCursor, emscripten_browser_cursor_internal::cursor::nesw_resize);
+            set_cursor_if_necessary(bd, emscripten_browser_cursor_internal::cursor::nesw_resize);
             break;
         case ImGuiMouseCursor_ResizeNWSE:                                       // When hovering over the bottom-right corner of a window
-            set_cursor_if_necessary(bd->CurrentCursor, emscripten_browser_cursor_internal::cursor::nwse_resize);
+            set_cursor_if_necessary(bd, emscripten_browser_cursor_internal::cursor::nwse_resize);
             break;
         case ImGuiMouseCursor_Hand:                                             // (Unused by Dear ImGui functions. Use for e.g. hyperlinks)
-            set_cursor_if_necessary(bd->CurrentCursor, emscripten_browser_cursor_internal::cursor::pointer);
+            set_cursor_if_necessary(bd, emscripten_browser_cursor_internal::cursor::pointer);
             break;
         case ImGuiMouseCursor_NotAllowed:                                       // When hovering something with disallowed interaction. Usually a crossed circle.
-            set_cursor_if_necessary(bd->CurrentCursor, emscripten_browser_cursor_internal::cursor::not_allowed);
+            set_cursor_if_necessary(bd, emscripten_browser_cursor_internal::cursor::not_allowed);
             break;
         }
     }
     else                                                                        // mouse is away from the gui, hovering over some other part of the viewport
     {
-        if (bd->CursorToRestore != nullptr)
-        {
-            emscripten_browser_cursor_internal::set(bd->CursorToRestore);       // restore the previous cursor state when leaving the imgui capture space
-            free(bd->CursorToRestore);
-            bd->CursorToRestore = nullptr;
-            bd->CurrentCursor = emscripten_browser_cursor_internal::cursor::invalid; // select an unused value for current cursor to force a set next time set_cursor_if_necessary is called
-        }
+        restore_cursor_if_necessary(bd);
     }
 }
 
