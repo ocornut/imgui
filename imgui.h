@@ -1838,6 +1838,8 @@ enum ImGuiStyleVar_
     ImGuiStyleVar_ScrollbarSize,            // float     ScrollbarSize
     ImGuiStyleVar_ScrollbarRounding,        // float     ScrollbarRounding
     ImGuiStyleVar_ScrollbarPadding,         // float     ScrollbarPadding
+    ImGuiStyleVar_SliderThickness,          // float     SliderThickness
+    ImGuiStyleVar_SliderContrast,           // float     SliderContrast
     ImGuiStyleVar_GrabMinSize,              // float     GrabMinSize
     ImGuiStyleVar_GrabRounding,             // float     GrabRounding
     ImGuiStyleVar_ImageRounding,            // float     ImageRounding
@@ -2312,6 +2314,8 @@ struct ImGuiStyle
     float       ScrollbarPadding;           // Padding of scrollbar grab within its frame (same for both axes).
     float       GrabMinSize;                // Minimum width/height of a grab box for slider/scrollbar.
     float       GrabRounding;               // Radius of grabs corners rounding. Set to 0.0f to have rectangular slider grabs.
+    float       SliderThickness;            // Thickness of sliders. Can be set between 0.0f (rectangle width is null) and 1.0f (full rectangle is drawn), 
+    float       SliderContrast;             // Contrast between the left and right sides of the slider track. 
     float       LogSliderDeadzone;          // The size in pixels of the dead-zone around zero on logarithmic sliders that cross zero.
     float       ImageRounding;              // Rounding of Image() calls.
     float       ImageBorderSize;            // Thickness of border around Image() calls.
