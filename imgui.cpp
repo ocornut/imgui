@@ -5686,6 +5686,8 @@ void ImGui::NewFrame()
     if (g.DeactivatedItemData.ElapseFrame < g.FrameCount)
         g.DeactivatedItemData.ID = 0;
     g.DeactivatedItemData.IsAlive = false;
+    if (g.InputTextDeactivatedState.ElapseFrame < g.FrameCount)
+        g.InputTextDeactivatedState.ID = 0;
 
     // Record when we have been stationary as this state is preserved while over same item.
     // FIXME: The way this is expressed means user cannot alter HoverStationaryDelay during the frame to use varying values.

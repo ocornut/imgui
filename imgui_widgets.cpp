@@ -4586,8 +4586,11 @@ void ImGui::InputTextDeactivateHook(ImGuiID id)
     ImGuiInputTextState* state = &g.InputTextState;
     if (id == 0 || state->ID != id)
         return;
+    if (!state->EditedBefore)
+        return;
     //IMGUI_DEBUG_LOG_ACTIVEID("InputTextDeactivateHook() id = 0x%08X\n", id);
     g.InputTextDeactivatedState.ID = state->ID;
+    g.InputTextDeactivatedState.ElapseFrame = g.FrameCount + 1;
     if (state->Flags & ImGuiInputTextFlags_ReadOnly)
     {
         g.InputTextDeactivatedState.TextA.resize(0); // In theory this data won't be used, but clear to be neat.
@@ -5380,6 +5383,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                     IM_ASSERT(callback_data.BufTextLen == (int)ImStrlen(callback_data.Buf)); // You need to maintain BufTextLen if you change the text!
                     InputTextReconcileUndoState(state, state->CallbackTextBackup.Data, state->CallbackTextBackup.Size - 1, callback_data.Buf, callback_data.BufTextLen);
                     state->TextLen = callback_data.BufTextLen;  // Assume correct length and valid UTF-8 from user, saves us an extra strlen()
+                    state->EditedBefore = state->EditedThisFrame = true;
                     state->CursorAnimReset();
                 }
             }
@@ -5399,7 +5403,8 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     // This is used when e.g. losing focus or tabbing out into another InputText() which may already be using the temp buffer.
     if (g.InputTextDeactivatedState.ID == id)
     {
-        if (g.ActiveId != id && IsItemDeactivatedAfterEdit() && !is_readonly && strcmp(g.InputTextDeactivatedState.TextA.Data, buf) != 0)
+        // The state only exists after an Edit. More-over we cannot use IsItemDeactivatedAfterEdit().
+        if (g.ActiveId != id && IsItemDeactivated() && !is_readonly && strcmp(g.InputTextDeactivatedState.TextA.Data, buf) != 0)
         {
             apply_new_text = g.InputTextDeactivatedState.TextA.Data;
             apply_new_text_length = g.InputTextDeactivatedState.TextA.Size - 1;
@@ -5445,7 +5450,11 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     // Release active ID at the end of the function (so e.g. pressing Return still does a final application of the value)
     // Otherwise request text input ahead for next frame.
     if (g.ActiveId == id && clear_active_id)
+    {
+        state->ID = 0; // To avoid InputTextDeactivateHook() unnecessarily running, which wouldn't be harmful but wasteful.
         ClearActiveID();
+        state->ID = id;
+    }
 
     // Render frame
     if (!is_multiline)

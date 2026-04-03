@@ -1239,10 +1239,11 @@ struct IMGUI_API ImGuiMenuColumns
 struct IMGUI_API ImGuiInputTextDeactivatedState
 {
     ImGuiID            ID;              // widget id owning the text state (which just got deactivated)
+    int                ElapseFrame;
     ImVector<char>     TextA;           // text buffer
 
     ImGuiInputTextDeactivatedState()    { memset((void*)this, 0, sizeof(*this)); }
-    void    ClearFreeMemory()           { ID = 0; TextA.clear(); }
+    void    ClearFreeMemory()           { ID = 0; ElapseFrame = 0; TextA.clear(); }
 };
 
 // Forward declare imstb_textedit.h structure + make its main configuration define accessible
