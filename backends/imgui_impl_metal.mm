@@ -215,8 +215,7 @@ static void ImGui_ImplMetal_SetupRenderState(ImDrawData* draw_data, id<MTLComman
 
     [commandEncoder setRenderPipelineState:renderPipelineState];
 
-    [commandEncoder setVertexBuffer:vertexBuffer.buffer offset:0 atIndex:0];
-    [commandEncoder setVertexBufferOffset:vertexBufferOffset atIndex:0];
+    [commandEncoder setVertexBuffer:vertexBuffer.buffer offset:vertexBufferOffset atIndex:0];
 }
 
 // Metal Render function.
