@@ -43,6 +43,10 @@ Breaking Changes:
 
 Other Changes:
 
+- InputText:
+  - InputTextMultiline: fixed an issue processing deactivation logic when an active
+    multi-line edit is clipped due to being out of view.
+
 
 -----------------------------------------------------------------------
  VERSION 1.92.7 (Released 2026-04-02)
