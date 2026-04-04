@@ -2,8 +2,8 @@ name: Android NDK Build
 
 on:
   push:
-    branches: [ "master", "main" ]  # 当你提交代码到这些分支时触发
-  workflow_dispatch:              # 允许你在 Actions 页面手动点击运行
+    branches: [ "master", "main" ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -23,7 +23,7 @@ jobs:
         uses: nttld/setup-ndk@v1
         id: setup-ndk
         with:
-          ndk-version: r26b # 建议使用稳定版本
+          ndk-version: r26b
 
       - name: Build with CMake
         run: |
@@ -38,5 +38,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: JKMenu-Library
-          path: build/*.so # 这里的路径根据你 CMakeLists.txt 生成的输出位置调整
+          name: JKMenu-Package
+          path: |
+            build/libJKMenu.so
+            build/jk_injector
