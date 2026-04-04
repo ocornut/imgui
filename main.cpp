@@ -34,16 +34,15 @@ void DrawImGuiMenu() {
     if (!g_ShowMenu) return;
 
     ImGui::SetNextWindowSize(ImVec2(400, 350), ImGuiCond_FirstUseEver);
-    ImGui::Begin("JKMenu - SGame Debug", &g_ShowMenu);
+    ImGui::Begin("JKMenu - SGame Final Debug", &g_ShowMenu);
 
     ImGui::Text("Device: OnePlus Pad Pro 2");
-    ImGui::Text("Status: Hook Active");
+    ImGui::Text("Status: Rendering...");
     ImGui::Text("Screen: %dx%d", g_Width, g_Height);
     ImGui::Separator();
 
-    if (ImGui::Button("功能开关 1")) {
-        LOGI("Feature 1 Toggled");
-    }
+    static float f = 0.0f;
+    ImGui::SliderFloat("测试滑块", &f, 0.0f, 1.0f);
 
     if (ImGui::Button("隐藏菜单")) {
         g_ShowMenu = false;
@@ -52,13 +51,15 @@ void DrawImGuiMenu() {
     ImGui::End();
 }
 
-// Hook 后的渲染函数
-EGLBoolean hooked_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
+// 统一渲染入口
+void PerformRender(EGLDisplay dpy, EGLSurface surface) {
     if (!g_Initialized) {
-        LOGI("Hooked eglSwapBuffers called for the first time!");
+        LOGI("Hooked Swap triggered! Initializing ImGui...");
         
         eglQuerySurface(dpy, surface, EGL_WIDTH, &g_Width);
         eglQuerySurface(dpy, surface, EGL_HEIGHT, &g_Height);
+
+        if (g_Width <= 0 || g_Height <= 0) return;
 
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
@@ -67,57 +68,57 @@ EGLBoolean hooked_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         if (ImGui_ImplOpenGL3_Init("#version 300 es")) {
             g_Initialized = true;
             LOGI("ImGui Renderer Initialized: %dx%d", g_Width, g_Height);
-        } else {
-            LOGE("ImGui Renderer Initialization FAILED!");
         }
     }
 
-    // 开始新帧
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui::NewFrame();
+    if (g_Initialized) {
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui::NewFrame();
+        DrawImGuiMenu();
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    }
+}
 
-    DrawImGuiMenu();
-
-    ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
+// Hook 后的 eglSwapBuffers
+EGLBoolean hooked_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
+    PerformRender(dpy, surface);
     return orig_eglSwapBuffers(dpy, surface);
 }
 
-// 注入后的初始化线程
+// 尝试 Hook 王者荣耀内部可能使用的其它渲染函数名
 void* hack_thread(void*) {
-    LOGI("SO Loaded! Hack thread started.");
+    LOGI("SO Loaded! Searching for render symbols...");
     
-    // 增加等待时间，确保游戏引擎初始化完成
+    // 等待更久一点，确保 libGLESv2/libEGL 加载完全
     sleep(10);
 
-    // 尝试寻找 eglSwapBuffers
-    void* target = DobbySymbolResolver("libEGL.so", "eglSwapBuffers");
-    if (!target) {
-        // 备选方案：尝试直接从当前进程获取地址
-        target = dlsym(RTLD_DEFAULT, "eglSwapBuffers");
+    // 尝试多个可能的 Hook 点
+    const char* symbols[] = {"eglSwapBuffers", "nw_main_swap_buffers"};
+    void* target = nullptr;
+
+    for (int i = 0; i < 2; i++) {
+        target = DobbySymbolResolver("libEGL.so", symbols[i]);
+        if (!target) target = DobbySymbolResolver("libGLESv2.so", symbols[i]);
+        if (!target) target = dlsym(RTLD_DEFAULT, symbols[i]);
+
+        if (target) {
+            LOGI("Found target %s at: %p", symbols[i], target);
+            DobbyHook(target, (dobby_dummy_func_t)hooked_eglSwapBuffers, (dobby_dummy_func_t*)&orig_eglSwapBuffers);
+            if (orig_eglSwapBuffers) {
+                LOGI("Hooked %s Successfully!", symbols[i]);
+                // 如果 Hook 成功一个点，可以根据需要决定是否继续搜
+            }
+        }
     }
 
-    if (target) {
-        LOGI("Target eglSwapBuffers found at: %p, starting hook...", target);
-        
-        DobbyHook(target, 
-                  (dobby_dummy_func_t)hooked_eglSwapBuffers, 
-                  (dobby_dummy_func_t*)&orig_eglSwapBuffers);
-        
-        if (orig_eglSwapBuffers) {
-            LOGI("Dobby Hook Applied Successfully!");
-        } else {
-            LOGE("Dobby Hook Failed to apply!");
-        }
-    } else {
-        LOGE("CRITICAL: eglSwapBuffers not found in libEGL.so or RTLD_DEFAULT");
+    if (!orig_eglSwapBuffers) {
+        LOGE("Failed to hook any render function. Checking if Vulkan is used...");
     }
 
     return nullptr;
 }
 
-// .so 加载时的入口点
 void __attribute__((constructor)) init() {
     pthread_t t;
     pthread_create(&t, nullptr, hack_thread, nullptr);
