@@ -1,71 +1,93 @@
-#include <jni.h>
-#include <dlfcn.h>
-#include <android/input.h>
-#include <cstdio>      // 修复 snprintf 的关键头文件
-#include <cstring>     // 备用，处理字符串常用
+#include <android/log.h>
 #include "imgui.h"
 
-// --- 诊断变量 ---
-static bool g_InputHooked = false;
-static char g_DiagnosticMsg[256] = "尚未检测...";
+// 定义日志宏，方便在 PC 端通过 adb logcat -s IMG_DEBUG 查看
+#define LOG_TAG "IMG_DEBUG"
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 
-// 检查注入器是否 Hook 了安卓输入队列
-void CheckInputHookStatus() {
-    // 尝试打开系统库
-    void* handle = dlopen("libandroid.so", RTLD_LAZY);
-    if (handle) {
-        // 获取输入事件获取函数的地址
-        void* addr = dlsym(handle, "AInputQueue_getEvent");
-        if (addr) {
-            unsigned char* ptr = (unsigned char*)addr;
-            
-            // 常见的 Hook 检测逻辑：检查函数开头是否被修改为跳转指令 (0x50 0x00 这种只是示例)
-            // 实际上大多数移动端 Hook 框架会修改前 4 或 8 个字节
-            if (ptr[0] != 0x50) { // 如果字节码发生了变化
-                 g_InputHooked = true;
-                 snprintf(g_DiagnosticMsg, 256, "状态: 检测到 Hook (输入可能已重定向)");
-            } else {
-                 g_InputHooked = false;
-                 snprintf(g_DiagnosticMsg, 256, "状态: 原生函数 (未发现 Hook 迹象)");
-            }
-        }
-        dlclose(handle);
-    } else {
-        snprintf(g_DiagnosticMsg, 256, "错误: 无法加载 libandroid.so");
+// 模拟全局状态
+bool g_ShowDebugWindow = true;
+
+/**
+ * 核心功能：处理 Android 原生输入事件并传递给 ImGui
+ * 你需要确保你的 AInputQueue 或者 dispatchTouchEvent 正在调用此逻辑
+ */
+void HandleAndroidInput(int action, float x, float y) {
+    ImGuiIO& io = ImGui::GetIO();
+    
+    // 更新坐标
+    io.MousePos = ImVec2(x, y);
+
+    // 更新点击状态
+    if (action == 0) { // AMOTION_EVENT_ACTION_DOWN
+        io.MouseDown[0] = true;
+        LOGI("Touch DOWN at: x=%.1f, y=%.1f", x, y);
+    } 
+    else if (action == 1) { // AMOTION_EVENT_ACTION_UP
+        io.MouseDown[0] = false;
+        LOGI("Touch UP at: x=%.1f, y=%.1f", x, y);
+    }
+    else if (action == 2) { // AMOTION_EVENT_ACTION_MOVE
+        // Move 事件通常不需要设置 MouseDown，只需更新坐标
     }
 }
 
-// 在 ImGui 渲染循环中调用此函数
-void DrawInputDebugger() {
-    ImGui::SetNextWindowSize(ImVec2(400, 300), ImGuiCond_FirstUseEver);
-    ImGui::Begin("输入注入诊断面板", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
-    
-    // 状态显示
-    if (g_InputHooked) {
-        ImGui::TextColored(ImVec4(0, 1, 0, 1), "%s", g_DiagnosticMsg);
-    } else {
-        ImGui::TextColored(ImVec4(1, 0, 0, 1), "%s", g_DiagnosticMsg);
-    }
-    
-    ImGui::Separator();
-    
-    // 实时数据流监控
+/**
+ * 核心功能：每帧调用的 UI 渲染函数
+ * 请将此函数放入你的渲染循环中
+ */
+void RenderImGuiFrame() {
     ImGuiIO& io = ImGui::GetIO();
-    ImGui::Text("ImGui 坐标: (%.1f, %.1f)", io.MousePos.x, io.MousePos.y);
-    ImGui::Text("左键按下状态: %s", io.MouseDown[0] ? "TRUE" : "FALSE");
+
+    // 1. 设置窗口样式 (可选，为了更好看)
+    ImGui::SetNextWindowSize(ImVec2(400, 300), ImGuiCond_FirstUseEver);
     
-    ImGui::Spacing();
-    
-    if (ImGui::Button("点击测试按钮", ImVec2(-1, 60))) {
-        snprintf(g_DiagnosticMsg, 256, "恭喜：点击事件已成功传达到 ImGui！");
-    }
-    
-    if (!g_InputHooked) {
+    // 2. 开始渲染调试窗口
+    // 注意：这里使用纯英文，避免截图中的 ?? 乱码问题
+    if (ImGui::Begin("INPUT DEBUGGER v1.0", &g_ShowDebugWindow)) {
+        
+        ImGui::Text("Device: OnePlus Pad (Testing)");
         ImGui::Separator();
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0.5f, 0, 1));
-        ImGui::TextWrapped("提示：如果点击没反应，请确认你的 .cpp 项目中存在对 AInputQueue_getEvent 的 Hook。没有这个 Hook，系统点击就不会发给菜单。");
-        ImGui::PopStyleColor();
+
+        // --- 坐标实时显示 ---
+        // 如果你手指在屏幕上移动，这两个数字必须跳动
+        ImGui::TextColored(ImVec4(0, 1, 0, 1), "Real-time Mouse Position:");
+        ImGui::BulletText("X: %.1f", io.MousePos.x);
+        ImGui::BulletText("Y: %.1f", io.MousePos.y);
+
+        ImGui::Spacing();
+
+        // --- 点击状态显示 ---
+        // 按下时显示红色 "PRESSED"，松开时显示灰色 "IDLE"
+        ImGui::Text("Touch Status: ");
+        ImGui::SameLine();
+        if (io.MouseDown[0]) {
+            ImGui::TextColored(ImVec4(1, 0, 0, 1), "PRESSED");
+        } else {
+            ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1), "IDLE");
+        }
+
+        ImGui::Separator();
+
+        // --- 功能测试按钮 ---
+        // 这是一个物理检测：如果坐标对，但点不动这个按钮，说明 io.MouseDown 没传对
+        if (ImGui::Button("TEST CLICK FEEDBACK", ImVec2(-1, 80))) {
+            LOGI("Button Clicked via ImGui!");
+        }
+
+        if (ImGui::Button("RESET COORDINATES", ImVec2(-1, 40))) {
+            io.MousePos = ImVec2(-1, -1);
+        }
+
+        ImGui::Spacing();
+        ImGui::TextDisabled("Check Logcat with: adb logcat -s %s", LOG_TAG);
     }
-    
     ImGui::End();
 }
+
+/**
+ * 简易说明：
+ * 1. 如果窗口里的 X/Y 始终是 0 或者固定值，说明 HandleAndroidInput 没被触发。
+ * 2. 如果 X/Y 在动，但按钮点不下去，说明 io.MouseDown[0] 的赋值逻辑有问题。
+ * 3. 请确保 RenderImGuiFrame 在你的绘图指令（DrawData）之前执行。
+ */
