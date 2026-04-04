@@ -33,9 +33,11 @@ void DrawImGuiMenu() {
     if (!g_ShowMenu) return;
 
     ImGui::SetNextWindowSize(ImVec2(400, 350), ImGuiCond_FirstUseEver);
-    ImGui::Begin("JKMenu - com.tencent.tmgp.sgame", &g_ShowMenu);
+    // 菜单标题显示为王者荣耀
+    ImGui::Begin("JKMenu - SGame Special", &g_ShowMenu);
 
     ImGui::Text("Device: OnePlus Pad Pro 2");
+    ImGui::Text("Target: com.tencent.tmgp.sgame");
     ImGui::Text("Screen: %dx%d", g_Width, g_Height);
     ImGui::Separator();
 
