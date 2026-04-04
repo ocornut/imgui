@@ -12,13 +12,10 @@
 #include <android/log.h>
 
 #define LOG_TAG "JKInjector"
-#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
-#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
-/**
- * Find process ID by package name
- */
-pid_t find_pid(const char* process_name) {
+// Find process ID for SGame (Honor of Kings)
+pid_t find_sgame_pid() {
+    const char* process_name = "com.tencent.tmgp.sgame";
     DIR* dir = opendir("/proc");
     if (!dir) return -1;
     struct dirent* entry;
@@ -30,7 +27,8 @@ pid_t find_pid(const char* process_name) {
         FILE* f = fopen(path, "r");
         if (f) {
             if (fgets(cmdline, sizeof(cmdline), f)) {
-                if (strcmp(cmdline, process_name) == 0) {
+                // Use strstr for fuzzy matching to handle trailing spaces or arguments
+                if (strstr(cmdline, process_name)) {
                     fclose(f);
                     closedir(dir);
                     return (pid_t)pid;
@@ -43,10 +41,8 @@ pid_t find_pid(const char* process_name) {
     return -1;
 }
 
-/**
- * Get module base address in remote process
- */
-uintptr_t get_module_base(pid_t pid, const char* module_name) {
+// Get module base address in remote process memory
+uintptr_t get_remote_module_base(pid_t pid, const char* module_name) {
     char path[256];
     char line[512];
     uintptr_t base = 0;
@@ -63,41 +59,34 @@ uintptr_t get_module_base(pid_t pid, const char* module_name) {
     return base;
 }
 
-/**
- * Core Injection Logic using PTRACE
- */
-int inject_so(pid_t pid, const char* so_path) {
+// Core PTRACE injection logic
+int run_injection(pid_t pid, const char* so_path) {
     printf("[+] Target PID: %d\n", pid);
     
-    // 1. Attach to process
+    // 1. Attach to the process
     if (ptrace(PTRACE_ATTACH, pid, NULL, NULL) < 0) {
-        perror("[-] PTRACE_ATTACH failed");
+        perror("[-] PTRACE_ATTACH failed. Ensure SELinux is permissive (setenforce 0)");
         return -1;
     }
     waitpid(pid, NULL, WUNTRACED);
-    printf("[+] Attached successfully\n");
 
-    // 2. Backup registers
+    // 2. Backup current registers
     struct user_pt_regs regs, old_regs;
     struct iovec iov = { .iov_base = &regs, .iov_len = sizeof(regs) };
     ptrace(PTRACE_GETREGSET, pid, NT_PRSTATUS, &iov);
     memcpy(&old_regs, &regs, sizeof(regs));
 
-    // 3. Locate remote dlopen (via linker64)
-    uintptr_t local_linker = get_module_base(getpid(), "linker64");
-    uintptr_t remote_linker = get_module_base(pid, "linker64");
-    
-    // Modern Android uses __loader_dlopen inside linker64
+    // 3. Find remote dlopen address in linker64
+    uintptr_t local_linker = get_remote_module_base(getpid(), "linker64");
+    uintptr_t remote_linker = get_remote_module_base(pid, "linker64");
     uintptr_t local_dlopen = (uintptr_t)dlsym(RTLD_DEFAULT, "__loader_dlopen");
-    if (!local_dlopen) {
-        local_dlopen = (uintptr_t)dlsym(RTLD_DEFAULT, "dlopen");
-    }
+    if (!local_dlopen) local_dlopen = (uintptr_t)dlsym(RTLD_DEFAULT, "dlopen");
     
     uintptr_t remote_dlopen = local_dlopen - local_linker + remote_linker;
-    printf("[+] Calculated remote dlopen: %p\n", (void*)remote_dlopen);
+    printf("[+] Remote dlopen located at: %p\n", (void*)remote_dlopen);
 
-    // 4. Write SO path to remote stack
-    uintptr_t sp = regs.sp - 512; // Buffer area
+    // 4. Write SO path into remote stack space
+    uintptr_t sp = regs.sp - 512; 
     size_t path_len = strlen(so_path) + 1;
     for (size_t i = 0; i < path_len; i += 8) {
         long data = 0;
@@ -105,47 +94,46 @@ int inject_so(pid_t pid, const char* so_path) {
         ptrace(PTRACE_POKETEXT, pid, sp + i, (void*)data);
     }
 
-    // 5. Hijack registers to call dlopen(path, RTLD_NOW)
-    // ARM64 calling convention: x0 = arg0, x1 = arg1, pc = func, x30 = LR
-    regs.regs[0] = sp;                // x0: const char *filename
-    regs.regs[1] = RTLD_NOW;          // x1: int flag
-    regs.regs[30] = 0;                // LR: Return to null to trigger stop
-    regs.pc = remote_dlopen;          // PC: Jump to dlopen
+    // 5. Setup registers for dlopen(path, RTLD_NOW) call
+    // x0 = path, x1 = flag, x30 = LR (Return Address), pc = function address
+    regs.regs[0] = sp;
+    regs.regs[1] = RTLD_NOW;
+    regs.regs[30] = 0; // Return to NULL will trigger a stop
+    regs.pc = remote_dlopen;
 
     ptrace(PTRACE_SETREGSET, pid, NT_PRSTATUS, &iov);
 
-    // 6. Resume and wait for finish
+    // 6. Resume execution to trigger dlopen
     ptrace(PTRACE_CONT, pid, NULL, NULL);
     waitpid(pid, NULL, WUNTRACED);
 
-    // 7. Restore registers and detach
+    // 7. Restore original registers and detach
     iov.iov_base = &old_regs;
     ptrace(PTRACE_SETREGSET, pid, NT_PRSTATUS, &iov);
     ptrace(PTRACE_DETACH, pid, NULL, NULL);
     
-    printf("[+] Injection cycle finished.\n");
     return 0;
 }
 
 int main(int argc, char* argv[]) {
-    const char* target_pkg = "com.tencent.jkchess";
-    const char* so_to_inject = "/data/local/tmp/libJKMenu.so";
+    // Default SO path (ensure this matches your deployment)
+    const char* so_path = "/data/local/tmp/libJKMenu.so";
 
     if (getuid() != 0) {
-        printf("[!] Please run as ROOT (su)\n");
+        printf("[!] Error: Root access required.\n");
         return 1;
     }
 
-    pid_t target_pid = find_pid(target_pkg);
-    if (target_pid == -1) {
-        printf("[-] Target %s not found. Open the game first.\n", target_pkg);
+    pid_t pid = find_sgame_pid();
+    if (pid == -1) {
+        printf("[-] Error: SGame (com.tencent.tmgp.sgame) not running.\n");
         return 1;
     }
 
-    if (inject_so(target_pid, so_to_inject) == 0) {
-        printf("[*] Done. Check the game screen for ImGui menu.\n");
+    if (run_injection(pid, so_path) == 0) {
+        printf("[*] Success: Injection command sent to SGame.\n");
     } else {
-        printf("[!] Failed to inject.\n");
+        printf("[!] Error: Injection process failed.\n");
     }
     
     return 0;
