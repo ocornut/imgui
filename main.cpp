@@ -21,11 +21,15 @@
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
-// 原始函数指针存储
+// --- 原始函数指针存储 ---
 typedef EGLBoolean (*eglSwapBuffers_t)(EGLDisplay dpy, EGLSurface surface);
 eglSwapBuffers_t orig_eglSwapBuffers = nullptr;
 
-// 全局状态
+// Vulkan 相关的简单定义 (用于寻找符号)
+typedef void* (*vkQueuePresentKHR_t)(void* queue, const void* pPresentInfo);
+vkQueuePresentKHR_t orig_vkQueuePresentKHR = nullptr;
+
+// --- 全局状态 ---
 bool g_Initialized = false;
 bool g_ShowMenu = true;
 int g_Width = 0;
@@ -36,15 +40,15 @@ void DrawImGuiMenu() {
     if (!g_ShowMenu) return;
 
     ImGui::SetNextWindowSize(ImVec2(400, 350), ImGuiCond_FirstUseEver);
-    ImGui::Begin("JKMenu - SGame Multi-Hook", &g_ShowMenu);
+    ImGui::Begin("JKMenu - Dual Renderer Support", &g_ShowMenu);
 
     ImGui::Text("Device: OnePlus Pad Pro 2");
-    ImGui::Text("Target: com.tencent.tmgp.sgame");
+    ImGui::Text("Target: com.tencent.jkchess");
     ImGui::Text("Screen: %dx%d", g_Width, g_Height);
     ImGui::Separator();
 
     static float f = 0.5f;
-    ImGui::SliderFloat("Menu Scale", &f, 0.1f, 2.0f);
+    ImGui::SliderFloat("Scale", &f, 0.1f, 2.0f);
 
     if (ImGui::Button("Hide Menu")) {
         g_ShowMenu = false;
@@ -53,23 +57,20 @@ void DrawImGuiMenu() {
     ImGui::End();
 }
 
-// 核心渲染执行器
-void PerformRender(EGLDisplay dpy, EGLSurface surface) {
+// OpenGL 渲染执行器
+void PerformRenderGLES(EGLDisplay dpy, EGLSurface surface) {
     if (!g_Initialized) {
-        LOGI("SUCCESS! A Hooked Render function was triggered.");
-        
+        LOGI("SUCCESS! OpenGL Render function triggered.");
         eglQuerySurface(dpy, surface, EGL_WIDTH, &g_Width);
         eglQuerySurface(dpy, surface, EGL_HEIGHT, &g_Height);
-
         if (g_Width <= 0 || g_Height <= 0) return;
 
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
         io.DisplaySize = ImVec2((float)g_Width, (float)g_Height);
-
         if (ImGui_ImplOpenGL3_Init("#version 300 es")) {
             g_Initialized = true;
-            LOGI("ImGui Initialized: %dx%d", g_Width, g_Height);
+            LOGI("ImGui GLES Initialized: %dx%d", g_Width, g_Height);
         }
     }
 
@@ -82,47 +83,48 @@ void PerformRender(EGLDisplay dpy, EGLSurface surface) {
     }
 }
 
-// Hook 回调函数 (通用)
-EGLBoolean hooked_universal_swap(EGLDisplay dpy, EGLSurface surface) {
-    PerformRender(dpy, surface);
+// Hook 回调: OpenGL
+EGLBoolean hooked_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
+    PerformRenderGLES(dpy, surface);
     return orig_eglSwapBuffers(dpy, surface);
 }
 
-// 动态全量 Hook 逻辑
+// Hook 回调: Vulkan (仅做日志记录，提醒用户切换模式)
+void* hooked_vkQueuePresentKHR(void* queue, const void* pPresentInfo) {
+    static bool logged_vk = false;
+    if (!logged_vk) {
+        LOGI("DETECTED: Game is using Vulkan Renderer! ImGui GLES will NOT show.");
+        LOGI("Please disable 'High Frame Rate' or 'Ultra Graphics' in game settings.");
+        logged_vk = true;
+    }
+    return orig_vkQueuePresentKHR(queue, pPresentInfo);
+}
+
+// 动态搜索并 Hook
 void* hack_thread(void*) {
-    LOGI("SO Loaded! Waiting for engine to settle...");
+    LOGI("SO Loaded! Waiting 10s for engine...");
     sleep(10);
 
-    // 王者荣耀/金铲铲等腾讯游戏可能使用的渲染函数候选名单
-    const char* symbol_list[] = {
-        "eglSwapBuffers",           // 标准 EGL
-        "nw_main_swap_buffers",     // 腾讯常用渲染 Hook 点
-        "GameCanvas_SwapBuffers",   // 部分引擎私有实现
-        "_Z22nw_main_swap_buffersP10EGLDisplayP10EGLSurface" // 混淆后的符号名
-    };
-
-    void* target = nullptr;
-
-    for (const char* sym : symbol_list) {
-        // 尝试从不同的库寻找
-        target = DobbySymbolResolver("libEGL.so", sym);
-        if (!target) target = DobbySymbolResolver("libGLESv2.so", sym);
-        if (!target) target = DobbySymbolResolver("libunity.so", sym); // 针对 Unity 游戏
+    // 1. Hook OpenGL (主要渲染器)
+    const char* gles_syms[] = {"eglSwapBuffers", "nw_main_swap_buffers"};
+    for (const char* sym : gles_syms) {
+        void* target = DobbySymbolResolver("libEGL.so", sym);
         if (!target) target = dlsym(RTLD_DEFAULT, sym);
-
         if (target) {
-            LOGI("Found potential render target: %s at %p", sym, target);
-            DobbyHook(target, (dobby_dummy_func_t)hooked_universal_swap, (dobby_dummy_func_t*)&orig_eglSwapBuffers);
-            if (orig_eglSwapBuffers) {
-                LOGI("Successfully hooked: %s", sym);
-                // 只要成功 Hook 到了一个，通常就不需要再 Hook 其他的了
-                // 但如果游戏有多个渲染管线，可以继续
-            }
+            LOGI("Found GLES target: %s at %p", sym, target);
+            DobbyHook(target, (dobby_dummy_func_t)hooked_eglSwapBuffers, (dobby_dummy_func_t*)&orig_eglSwapBuffers);
         }
     }
 
-    if (!orig_eglSwapBuffers) {
-        LOGE("CRITICAL: Failed to find ANY render function. Game might be using Vulkan.");
+    // 2. Hook Vulkan (用于监测)
+    void* vk_target = DobbySymbolResolver("libvulkan.so", "vkQueuePresentKHR");
+    if (vk_target) {
+        LOGI("Found Vulkan target: vkQueuePresentKHR at %p", vk_target);
+        DobbyHook(vk_target, (dobby_dummy_func_t)hooked_vkQueuePresentKHR, (dobby_dummy_func_t*)&orig_vkQueuePresentKHR);
+    }
+
+    if (!orig_eglSwapBuffers && !orig_vkQueuePresentKHR) {
+        LOGE("CRITICAL: No render symbols found at all.");
     }
 
     return nullptr;
