@@ -13,7 +13,7 @@
 
 #define LOG_TAG "JKInjector"
 
-// Find process ID for SGame (Honor of Kings)
+// 查找王者荣耀进程 PID
 pid_t find_sgame_pid() {
     const char* process_name = "com.tencent.tmgp.sgame";
     DIR* dir = opendir("/proc");
@@ -27,7 +27,6 @@ pid_t find_sgame_pid() {
         FILE* f = fopen(path, "r");
         if (f) {
             if (fgets(cmdline, sizeof(cmdline), f)) {
-                // Use strstr for fuzzy matching to handle trailing spaces or arguments
                 if (strstr(cmdline, process_name)) {
                     fclose(f);
                     closedir(dir);
@@ -41,7 +40,7 @@ pid_t find_sgame_pid() {
     return -1;
 }
 
-// Get module base address in remote process memory
+// 获取远程模块基址
 uintptr_t get_remote_module_base(pid_t pid, const char* module_name) {
     char path[256];
     char line[512];
@@ -59,24 +58,24 @@ uintptr_t get_remote_module_base(pid_t pid, const char* module_name) {
     return base;
 }
 
-// Core PTRACE injection logic
+// 核心 PTRACE 注入逻辑
 int run_injection(pid_t pid, const char* so_path) {
     printf("[+] Target PID: %d\n", pid);
     
-    // 1. Attach to the process
+    // 1. 附加进程
     if (ptrace(PTRACE_ATTACH, pid, NULL, NULL) < 0) {
-        perror("[-] PTRACE_ATTACH failed. Ensure SELinux is permissive (setenforce 0)");
+        perror("[-] PTRACE_ATTACH failed");
         return -1;
     }
     waitpid(pid, NULL, WUNTRACED);
 
-    // 2. Backup current registers
+    // 2. 备份寄存器
     struct user_pt_regs regs, old_regs;
     struct iovec iov = { .iov_base = &regs, .iov_len = sizeof(regs) };
     ptrace(PTRACE_GETREGSET, pid, NT_PRSTATUS, &iov);
     memcpy(&old_regs, &regs, sizeof(regs));
 
-    // 3. Find remote dlopen address in linker64
+    // 3. 定位远程 dlopen
     uintptr_t local_linker = get_remote_module_base(getpid(), "linker64");
     uintptr_t remote_linker = get_remote_module_base(pid, "linker64");
     uintptr_t local_dlopen = (uintptr_t)dlsym(RTLD_DEFAULT, "__loader_dlopen");
@@ -85,7 +84,7 @@ int run_injection(pid_t pid, const char* so_path) {
     uintptr_t remote_dlopen = local_dlopen - local_linker + remote_linker;
     printf("[+] Remote dlopen located at: %p\n", (void*)remote_dlopen);
 
-    // 4. Write SO path into remote stack space
+    // 4. 在远程栈写入 SO 路径
     uintptr_t sp = regs.sp - 512; 
     size_t path_len = strlen(so_path) + 1;
     for (size_t i = 0; i < path_len; i += 8) {
@@ -94,29 +93,39 @@ int run_injection(pid_t pid, const char* so_path) {
         ptrace(PTRACE_POKETEXT, pid, sp + i, (void*)data);
     }
 
-    // 5. Setup registers for dlopen(path, RTLD_NOW) call
-    // x0 = path, x1 = flag, x30 = LR (Return Address), pc = function address
-    regs.regs[0] = sp;
-    regs.regs[1] = RTLD_NOW;
-    regs.regs[30] = 0; // Return to NULL will trigger a stop
-    regs.pc = remote_dlopen;
+    // 5. 设置寄存器以调用 dlopen
+    regs.regs[0] = sp;                // x0: path
+    regs.regs[1] = RTLD_NOW;          // x1: mode
+    regs.regs[30] = 0;                // LR: 0 会触发 SIGSEGV 从而停止
+    regs.pc = remote_dlopen;          // PC: 跳转到 dlopen
 
     ptrace(PTRACE_SETREGSET, pid, NT_PRSTATUS, &iov);
 
-    // 6. Resume execution to trigger dlopen
+    // 6. 执行并等待
     ptrace(PTRACE_CONT, pid, NULL, NULL);
-    waitpid(pid, NULL, WUNTRACED);
+    int status;
+    waitpid(pid, &status, WUNTRACED);
 
-    // 7. Restore original registers and detach
+    // 检查执行后的结果寄存器 x0 (dlopen 的返回值)
+    struct user_pt_regs post_regs;
+    struct iovec post_iov = { .iov_base = &post_regs, .iov_len = sizeof(post_regs) };
+    ptrace(PTRACE_GETREGSET, pid, NT_PRSTATUS, &post_iov);
+    
+    if (post_regs.regs[0] == 0) {
+        printf("[-] Error: dlopen returned NULL. Check Logcat for details.\n");
+    } else {
+        printf("[+] Success: SO handle returned: %p\n", (void*)post_regs.regs[0]);
+    }
+
+    // 7. 恢复寄存器并分离
     iov.iov_base = &old_regs;
     ptrace(PTRACE_SETREGSET, pid, NT_PRSTATUS, &iov);
     ptrace(PTRACE_DETACH, pid, NULL, NULL);
     
-    return 0;
+    return (post_regs.regs[0] == 0) ? -1 : 0;
 }
 
 int main(int argc, char* argv[]) {
-    // Default SO path (ensure this matches your deployment)
     const char* so_path = "/data/local/tmp/libJKMenu.so";
 
     if (getuid() != 0) {
@@ -131,9 +140,9 @@ int main(int argc, char* argv[]) {
     }
 
     if (run_injection(pid, so_path) == 0) {
-        printf("[*] Success: Injection command sent to SGame.\n");
+        printf("[*] Injection confirmed. Use 'logcat -s JKMenu' to see menu logs.\n");
     } else {
-        printf("[!] Error: Injection process failed.\n");
+        printf("[!] Injection failed. Possible SELinux or Path issue.\n");
     }
     
     return 0;
