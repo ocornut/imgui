@@ -136,7 +136,8 @@ CODE
    - Click [X]:                     Close a window, available when 'bool* p_open' is passed to ImGui::Begin().
    - Click ^, Double-Click title:   Collapse window.
    - Drag on corner/border:         Resize window (double-click to auto fit window to its contents).
-   - Drag on any empty space:       Move window (unless io.ConfigWindowsMoveFromTitleBarOnly = true).
+   - Drag on any empty space:       Move window (unless io.ConfigWindowsMoveFromTitleBarOnly = true)
+   - Drag inside window:            Scroll contents (when io.ConfigDragScroll = true) unless drag move is possible.
    - Left-click outside popup:      Close popup stack (right-click over underlying popup: Partially close popup stack).
 
  - TEXT EDITOR
@@ -6376,16 +6377,18 @@ void ImGui::SetActiveIdUsingAllKeyboardKeys()
 // Walk up the window hierarchy (up to a root window) until a scrollable window is found.
 static ImGuiWindow* FindScrollableWindow(ImGuiWindow* win)
 {
-    while (win)
+    for (ImGuiWindow* target = win; target; target = target->ParentWindow)
     {
-        if (win->ScrollMax.x > 0 || win->ScrollMax.y > 0)
-            break;
-        // If win is a root window, and still not scrollable, give up.
-        if (win->RootWindow == win)
+        const bool mouse_inputs_forbidden = target->Flags & ImGuiWindowFlags_NoMouseInputs;
+        const bool mouse_scroll_forbidden = target->Flags & ImGuiWindowFlags_NoScrollWithMouse;
+        const bool is_scrollable = target->ScrollMax.x > 0 || target->ScrollMax.y > 0;
+        if (!mouse_inputs_forbidden && !mouse_scroll_forbidden && is_scrollable)
+            return target;
+        // Stop if target is a root window.
+        if (target->ParentWindow == target)
             return NULL;
-        win = win->ParentWindow;
     }
-    return win;
+    return NULL;
 }
 
 void ImGui::HandleDragScroll()
@@ -6421,22 +6424,37 @@ void ImGui::HandleDragScroll()
         return;
     }
 
-    // Forget DragScrollWindow if it was garbage-collected.
-    if (g.DragScrollWindow && g.DragScrollWindow->MemoryCompacted)
-        g.DragScrollWindow = NULL;
-
-    // Bail out if DragScrollWindow is movable from dragging its content.
-    if (g.DragScrollWindow && (g.DragScrollWindow->BgClickFlags & ImGuiWindowBgClickFlags_Move))
+    if (g.DragScrollWindow)
     {
-        g.DragScrollWindow = NULL;
-        return;
-    }
+        // Bail out if it was garbage-collected.
+        if (g.DragScrollWindow->MemoryCompacted)
+        {
+            g.DragScrollWindow = NULL;
+            return;
+        }
 
-    // Bail out if window is not hoverable, like when there's a modal on top.
-    if (g.DragScrollWindow && !IsWindowContentHoverable(g.DragScrollWindow))
-    {
-        g.DragScrollWindow = NULL;
-        return;
+        // Bail out if the window is collapsed.
+        if (g.DragScrollWindow->Collapsed)
+        {
+            g.DragScrollWindow = NULL;
+            return;
+        }
+
+        // Bail out when drag move conflicts with drag scroll.
+        const bool is_movable = !(g.DragScrollWindow->Flags & ImGuiWindowFlags_NoMove);
+        const bool is_drag_movable = g.DragScrollWindow->BgClickFlags & ImGuiWindowBgClickFlags_Move;
+        if (is_movable && is_drag_movable)
+        {
+            g.DragScrollWindow = NULL;
+            return;
+        }
+
+        // Bail out if window content is not hoverable (e.g. modal on top.)
+        if (!IsWindowContentHoverable(g.DragScrollWindow))
+        {
+            g.DragScrollWindow = NULL;
+            return;
+        }
     }
 
     if (IsMouseDown(io.DragScrollButton))
