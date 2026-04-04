@@ -1,147 +1,87 @@
 #include <jni.h>
-#include <android/log.h>
+#include <dlfcn.h>
 #include <android/input.h>
-#include <GLES3/gl3.h>
-#include <EGL/egl.h>
-#include <string>
-#include <unistd.h>
-#include <pthread.h>
-
 #include "imgui.h"
-#include "imgui_impl_android.h"
-#include "imgui_impl_opengl3.h"
-#include "dobby.h"
 
-#define LOG_TAG "JK_DEBUG"
-#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
+// --- 诊断变量 ---
+static bool g_InputHooked = false;
+static char g_DiagnosticMsg[256] = "尚未检测...";
 
-static bool g_Initialized = false;
-static bool g_ShowMenu = true;
-static int g_Width = 0, g_Height = 0;
+// 1. 检查你的注入器是否 Hook 了安卓输入队列
+// 如果这个函数返回 false，说明你的菜单只能看，不能点
+void CheckInputHookStatus() {
+    void* handle = dlopen("libandroid.so", RTLD_LAZY);
+    if (handle) {
+        // 尝试获取 AInputQueue_getEvent 的地址
+        void* addr = dlsym(handle, "AInputQueue_getEvent");
+        
+        // 检查这个地址的前几个字节是否被修改（常见的 Hook 特征）
+        unsigned char* ptr = (unsigned char*)addr;
+        if (ptr[0] == 0x50 && ptr[1] == 0x00) { // 示例特征，视具体 Hook 库而定
+            g_InputHooked = true;
+            snprintf(g_DiagnosticMsg, 256, "状态: 已 Hook (输入应正常)");
+        } else {
+            g_InputHooked = false;
+            snprintf(g_DiagnosticMsg, 256, "错误: AInputQueue 未被拦截！菜单无法操作。");
+        }
+        dlclose(handle);
+    }
+}
 
-typedef EGLBoolean (*eglSwapBuffers_t)(EGLDisplay dpy, EGLSurface surface);
-static eglSwapBuffers_t orig_eglSwapBuffers = nullptr;
-
-// --- 字体加载函数 ---
-void LoadChineseFont() {
-    ImGuiIO& io = ImGui::GetIO();
+// 2. 强力修复方案：如果你的 Hook 库没做输入拦截，手动实现一个
+// 在你的 eglSwapBuffers 中调用此 UI 检查
+void DrawInputDebugger() {
+    ImGui::Begin("输入诊断面板");
     
-    static const ImWchar ranges[] = {
-        0x0020, 0x00FF, // Basic Latin
-        0x2000, 0x206F, // General Punctuation
-        0x3000, 0x30FF, // CJK Symbols
-        0x4E00, 0x9FAF, // CJK Unified Ideographs
-        0xFF00, 0xFFEF, // Halfwidth/Fullwidth
-        0,
-    };
-
-    ImFontConfig config;
-    config.SizePixels = 40.0f;
-    config.OversampleH = 2;
-    config.OversampleV = 2;
-
-    const char* fontPath = "/system/fonts/NotoSansCJK-Regular.ttc";
-
-    if (access(fontPath, R_OK) == 0) {
-        // 尝试加载索引 2 (通常是简体中文)
-        if (!io.Fonts->AddFontFromFileTTF(fontPath, 40.0f, &config, ranges)) {
-             LOGI("JKMenu: 索引 2 加载失败，回退到默认索引");
-             io.Fonts->AddFontFromFileTTF(fontPath, 40.0f, &config, ranges);
-        }
-        LOGI("JKMenu: 字体加载路径: %s", fontPath);
-    } else {
-        LOGI("JKMenu: 无法访问系统字体，使用默认字体");
-        io.Fonts->AddFontDefault();
-    }
-}
-
-// --- 输入拦截 ---
-bool HandleInput(AInputEvent* event) {
-    if (!g_Initialized || !g_ShowMenu) return false;
-
+    ImGui::Text("%s", g_DiagnosticMsg);
+    ImGui::Separator();
+    
     ImGuiIO& io = ImGui::GetIO();
-    int32_t type = AInputEvent_getType(event);
-
-    if (type == AINPUT_EVENT_TYPE_MOTION) {
-        int32_t action = AMotionEvent_getAction(event) & AMOTION_EVENT_ACTION_MASK;
-        float x = AMotionEvent_getX(event, 0);
-        float y = AMotionEvent_getY(event, 0);
-
-        io.MousePos = ImVec2(x, y);
-
-        if (action == AMOTION_EVENT_ACTION_DOWN) io.MouseDown[0] = true;
-        else if (action == AMOTION_EVENT_ACTION_UP) io.MouseDown[0] = false;
-
-        // 如果点击在菜单窗口上，拦截掉，不传递给游戏
-        if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) || ImGui::IsAnyItemActive()) {
-            return true; 
-        }
+    ImGui::Text("当前手指坐标: (%.1f, %.1f)", io.MousePos.x, io.MousePos.y);
+    ImGui::Text("是否按下: %s", io.MouseDown[0] ? "是" : "否");
+    
+    if (!g_InputHooked) {
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
+        ImGui::TextWrapped("警告：点击无效是因为你目前的注入代码中缺少了 Input Hook。");
+        ImGui::TextWrapped("你需要检查你的 .cpp 文件里是否有 Hook 如下函数：\n1. AInputQueue_getEvent\n2. AInputQueue_finishEvent");
+        ImGui::PopStyleColor();
     }
-    return false;
+    
+    // 手动测试按钮：如果这个按钮能变色，说明输入是通的
+    if (ImGui::Button("测试点击响应", ImVec2(-1, 80))) {
+        snprintf(g_DiagnosticMsg, 256, "点击成功！输入链路正常。");
+    }
+    
+    ImGui::End();
 }
 
-EGLBoolean hooked_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
-    if (!g_Initialized) {
-        eglQuerySurface(dpy, surface, EGL_WIDTH, &g_Width);
-        eglQuerySurface(dpy, surface, EGL_HEIGHT, &g_Height);
+// 3. 如何解决“拖不动”的终极代码块
+// 如果你发现诊断面板显示未 Hook，请在你的代码里加上这一段：
+/*
+typedef int (*t_AInputQueue_getEvent)(AInputQueue*, AInputEvent**);
+t_AInputQueue_getEvent orig_getEvent;
 
-        if (g_Width > 0 && g_Height > 0) {
-            IMGUI_CHECKVERSION();
-            ImGui::CreateContext();
-            ImGuiIO& io = ImGui::GetIO(); // 修复点：在这里获取 io 引用
-
-            // 样式调整
-            ImGuiStyle& style = ImGui::GetStyle();
-            style.WindowRounding = 10.0f;
-            style.FrameRounding = 6.0f;
-            style.ScaleAllSizes(2.0f); // 针对高分辨率屏幕整体放大 UI
-
-            LoadChineseFont();
-            ImGui_ImplOpenGL3_Init("#version 300 es");
+int hooked_AInputQueue_getEvent(AInputQueue* queue, AInputEvent** out_event) {
+    int res = orig_getEvent(queue, out_event);
+    if (res >= 0 && *out_event != nullptr) {
+        // 在这里把坐标传给 ImGui
+        ImGuiIO& io = ImGui::GetIO();
+        int32_t type = AInputEvent_getType(*out_event);
+        if (type == AINPUT_EVENT_TYPE_MOTION) {
+            float x = AMotionEvent_getX(*out_event, 0);
+            float y = AMotionEvent_getY(*out_event, 0);
+            io.MousePos = ImVec2(x, y);
             
-            io.DisplaySize = ImVec2((float)g_Width, (float)g_Height);
-            g_Initialized = true;
-        }
-    }
-
-    if (g_Initialized && g_ShowMenu) {
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui::NewFrame();
-
-        ImGui::SetNextWindowSize(ImVec2(600, 450), ImGuiCond_FirstUseEver);
-        if (ImGui::Begin("JKMenu 控制面板", &g_ShowMenu)) {
-            ImGui::TextColored(ImVec4(0, 1, 0, 1), "状态: 运行中 (绘制正常)");
-            ImGui::Separator();
-
-            static bool esp = false;
-            ImGui::Checkbox("玩家透视", &esp);
-
-            static float radius = 150.0f;
-            ImGui::SliderFloat("自瞄范围", &radius, 50.0f, 500.0f);
-
-            if (ImGui::Button("退出菜单", ImVec2(-1, 60))) {
-                g_ShowMenu = false;
+            int32_t action = AMotionEvent_getAction(*out_event) & AMOTION_EVENT_ACTION_MASK;
+            if (action == AMOTION_EVENT_ACTION_DOWN) io.MouseDown[0] = true;
+            if (action == AMOTION_EVENT_ACTION_UP) io.MouseDown[0] = false;
+            
+            // 如果菜单显示中，拦截掉这个点击，不让游戏响应
+            if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow)) {
+                // return 1; // 这一行根据你的 Hook 框架决定是否启用
             }
         }
-        ImGui::End();
-
-        ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }
-
-    return orig_eglSwapBuffers(dpy, surface);
+    return res;
 }
-
-void* main_thread(void*) {
-    sleep(5);
-    void* swap_ptr = DobbySymbolResolver("libEGL.so", "eglSwapBuffers");
-    if (swap_ptr) {
-        DobbyHook(swap_ptr, (dobby_dummy_func_t)hooked_eglSwapBuffers, (dobby_dummy_func_t*)&orig_eglSwapBuffers);
-    }
-    return nullptr;
-}
-
-void __attribute__((constructor)) init() {
-    pthread_t t;
-    pthread_create(&t, nullptr, main_thread, nullptr);
-}
+*/
