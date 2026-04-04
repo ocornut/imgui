@@ -1,4 +1,4 @@
-// dear imgui, v1.92.7 WIP
+// dear imgui, v1.92.8 WIP
 // (drawing and font code)
 
 /*
@@ -3258,7 +3258,9 @@ void ImFontAtlasBuildNotifySetFont(ImFontAtlas* atlas, ImFont* old_font, ImFont*
             shared_data->Font = new_font;
         if (ImGuiContext* ctx = shared_data->Context)
         {
-            if (ctx->FrameCount == 0 && old_font == NULL) // While this should work either way, we save ourselves the bother / debugging confusion of running ImGui code so early when it is not needed. 
+            // While this should work either way, we save ourselves the bother / debugging confusion of running ImGui code so early when it is not needed.
+            // Also fixes erroneously rewriting style.FontSizeBase during init if adding default fonts.
+            if (old_font == NULL && ctx->Font == NULL && ctx->FontSizeBase == 0.0f)
                 continue;
 
             if (ctx->IO.FontDefault == old_font)

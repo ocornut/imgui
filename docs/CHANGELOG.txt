@@ -36,12 +36,30 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.92.7 WIP (In Progress)
+ VERSION 1.92.8 WIP (In Progress)
 -----------------------------------------------------------------------
 
 Breaking Changes:
 
- - Separator(): fixed a legacy quirk where Separator() was submitting a zero-height
+Other Changes:
+
+- InputText:
+  - InputTextMultiline: fixed an issue processing deactivation logic when an active
+    multi-line edit is clipped due to being out of view.
+- Backends:
+  - Metal: avoid redundant vertex buffer bind in SetupRenderState, which leads
+    to validation issue. (#9343) [@Hunam6]
+
+
+-----------------------------------------------------------------------
+ VERSION 1.92.7 (Released 2026-04-02)
+-----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.92.7
+
+Breaking Changes:
+
+ - Separator: fixed a legacy quirk where `Separator()` was submitting a zero-height
    item for layout purpose, even though it draws a 1-pixel separator.
    The fix could affect code e.g. computing height from multiple widgets in order to
    allocate vertical space for a footer or multi-line status bar. (#2657, #9263)
@@ -53,18 +71,18 @@ Breaking Changes:
       BeginChild("ScrollingRegion", { 0, -footer_height });
    When such idiom was used and assuming zero-height Separator, it is likely that
    in 1.92.7 the resulting window will have unexpected 1 pixel scrolling range.
- - Multi-Select: renamed ImGuiMultiSelectFlags_SelectOnClick to ImGuiMultiSelectFlags_SelectOnAuto.
+ - Multi-Select: renamed `ImGuiMultiSelectFlags_SelectOnClick` to `ImGuiMultiSelectFlags_SelectOnAuto`.
    Kept inline redirection enum (will obsolete).
  - Combo(), ListBox(): commented out legacy signatures which were obsoleted in 1.90
    (Nov 2023), when the getter callback type was changed from:
-      getter type:   bool (*getter)(void* user_data, int idx, const char** out_text)
+      bool (*getter)(void* user_data, int idx, const char** out_text)
    To:
-      getter type:   const char* (*getter)(void* user_data, int idx)
+      const char* (*getter)(void* user_data, int idx)
 
 Other Changes:
 
 - TreeNode:
-   - Moved TreeNodeGetOpen() helper to public API. I was hesitant to make this public
+   - Moved `TreeNodeGetOpen()` helper to public API. I was hesitant to make this public
      because I intend to provide a more generic and feature-full version, but in the meanwhile
      this will do. (#3823, #9251, #7553, #6754, #5423, #2958, #2079, #1947, #1131, #722)
    - In 'Demo->Property Editor' demonstrate a way to perform tree clipping by fast-forwarding
@@ -73,13 +91,13 @@ Other Changes:
      it was prior to 1.91.
 - InputText:
   - Shift+Enter in multi-line editor always adds a new line, regardless of
-    ImGuiInputTextFlags_CtrlEnterForNewLine being set or not. (#9239)
-  - Reworked io.ConfigInputTextEnterKeepActive mode so that pressing Enter will
-    deactivate/reactivate the item in order for e.g. IsItemDeactivatedAfterEdit()
+    `ImGuiInputTextFlags_CtrlEnterForNewLine` being set or not. (#9239)
+  - Reworked `io.ConfigInputTextEnterKeepActive` mode so that pressing Enter will
+    deactivate/reactivate the item in order for e.g. `IsItemDeactivatedAfterEdit()`
     signals to be emitted the same way regardless of that setting. (#9001, #9115)
-  - Fixed a glitch when using ImGuiInputTextFlags_ElideLeft where the local x offset
+  - Fixed a glitch when using `ImGuiInputTextFlags_ElideLeft` where the local x offset
     would be incorrect during the deactivation frame. (#9298)
-  - Fixed a crash introduced in 1.92.6 when handling ImGuiInputTextFlags_CallbackResize
+  - Fixed a crash introduced in 1.92.6 when handling `ImGuiInputTextFlags_CallbackResize`
     in certain situations. (#9174)
   - Fixed selection highlight Y1 offset being very slightly off (since 1.92.3). (#9311) [@v-ein]
   - InputTextMultiline: fixed an issue introduced in 1.92.3 where line count calculated
@@ -89,31 +107,49 @@ Other Changes:
   - InputTextMultiline: avoid going through reactivation code and fixed losing revert value
     when activating scrollbar.
   - InputTextMultiline: fixed an issue where edit buffer wouldn't be reapplied to back
-    buffer on the IsItemDeactivatedAfterEdit() frame. This could create issues when
-    using the idiom of not applying edits before IsItemDeactivatedAfterEdit().
+    buffer on the `IsItemDeactivatedAfterEdit()` frame. This could create issues when
+    using the idiom of not applying edits before `IsItemDeactivatedAfterEdit()`.
     (#9308, #8915, #8273)
+- Tables:
+  - Allow reordering columns by dragging them in the context menu. (#9312)
+  - Context menu now presents columns in display order. (#9312)
+  - Fixed and clarified the behavior of using `TableSetupScrollFreeze()` with columns>1,
+    and where some of the columns within that range were Hidable.
+    - Before: `TableSetupScrollFreeze(N, 0)`: include the N left-most visible columns as
+              part of the scroll freeze. So if you intentionally hide columns <N, the scroll
+              freeze area would start covering the subsequent/following columns (N+1) etc.
+    - After:  `TableSetupScrollFreeze(N, 0)`: include the N left-most columns (regardless of visibility),
+              as part of the scroll freeze. So if you intentionally hide columns <N, the scroll
+              freeze area will cover less columns.
+    - This is generally more sane and logical.
+  - Fixed dragging a header to reorder outside of visible bounds (due to horizontal scrolling)
+    from losing active id.
+  - Angled Headers: angled section for column being reordered via the regular headers
+    stays highlighted during reordering.
 - Style:
-  - Border sizes are now scaled (and rounded) by ScaleAllSizes().
-  - When using large values with ScallAllSizes(), the following items thickness
+  - Fonts: fixed an issue introduced in 1.92.6 where `style.FontBaseSize` would be
+    cleared during the first frame if no fonts was explicitly added before.
+  - Border sizes are now scaled (and rounded) by `ScaleAllSizes()`.
+  - When using large values with `ScallAllSizes()`, the following items thickness
     are scaled to integer amounts:
-    - InputText Caret/cursor thickness. (#7031)
-    - CloseButton() thickness.
-    - TextLink() underline thickness.
-    - ColorButton() border thickness.
-    - Separator() thickness, via scaling newly added style.SeparatorSize. (#2657, #9263)
+    - `InputText()` caret/cursor thickness. (#7031)
+    - `CloseButton()` thickness.
+    - `TextLink()` underline thickness.
+    - `ColorButton()` border thickness.
+    - `Separator()` thickness, via scaling newly added `style.SeparatorSize`. (#2657, #9263)
 - Nav:
+  - Popups: Shift+F10 or Menu key can now open popups menus when using
+    `BeginPopupContextItem()`, `BeginPopupContextWindow()` or `OpenPopupOnItemClick()`.
+    (#8803, #9270) [@exelix11, @ocornut]
   - Changed Gamepad mapping for "Activate with Text Input" action: (#8803, #787)
     - Previously: press North button (PS4/PS5 triangle, Switch X, Xbox Y).
     - Now: long press (hold) Activate button (PS4/PS5 cross, Switch B, Xbox A) for ~0.60 secs.
     This is rarely used, somehow easier to discover, and frees a button for other uses.
     See updated Gamepad Control Sheets: https://www.dearimgui.com/controls_sheets
   - Short Gamepad Activation press on InputText() always activate with Text Input mode.
-  - Popups: Shift+F10 or Menu key can now open popups menus when using
-    BeginPopupContextItem(), BeginPopupContextWindow() or OpenPopupOnItemClick().
-    (#8803, #9270) [@exelix11, @ocornut]
   - Popups: pressing North button (PS4/PS5 triangle, SwitchX, Xbox Y) also open popups menus.
 - Multi-Select:
-  - Added ImGuiMultiSelectFlags_SelectOnClickAlways mode (rarely used).
+  - Added `ImGuiMultiSelectFlags_SelectOnClickAlways` mode (rarely used).
     This prevents Drag and Drop of multiple items, but it allows to start a new Box-Selection
     from inside an existing selection (Excel style). (#9307, #1861)
 - Clipper:
@@ -128,9 +164,9 @@ Other Changes:
     mouse at the extreme of the screen will reach the scrollbar. (#9276)
   - Fixed an issue which could lead initial click to move the current scroll by a pixel.
 - Button:
-  - Moved ImGuiButtonFlags_AllowOverlap from imgui_internal.h to imgui.h,
-    as a convenience for when using e.g. InvisibleButton().
-- Focus: fixed fallback "Debug" window temporarily taking focus and setting io.WantCaptureKeyboard
+  - Moved `ImGuiButtonFlags_AllowOverlap` from imgui_internal.h to imgui.h,
+    as a convenience for when using e.g. `InvisibleButton()`.
+- Focus: fixed fallback "Debug" window temporarily taking focus and setting `io.WantCaptureKeyboard`
   for one frame on e.g. application boot if no other windows are submitted. (#9243)
 - DrawList:
   - PathArcTo(): fixed erroneous segment count for pathologically small arcs on large 
@@ -139,25 +175,26 @@ Other Changes:
   - Discard/GC of ImDrawList buffers for unused windows favor restoring them to
     ~Size*1.05 instead of Capacity when awakening again. Facilitate releasing ImDrawList
     buffers after unusual usage spike. (#9303)
-  - Fixed GetForegroundDrawList()/GetBackgroundDrawList() per-viewport buffers not being
-    collected when unused for io.ConfigMemoryCompactTimer amount of time. (#9303)
-- Demo: fixed IMGUI_DEMO_MARKER locations for examples applets. (#9261, #3689) [@pthom]
+  - Fixed `GetForegroundDrawList()`/`GetBackgroundDrawList()` per-viewport buffers not being
+    collected when unused for `io.ConfigMemoryCompactTimer` amount of time. (#9303)
+- Demo: fixed `IMGUI_DEMO_MARKER` locations for examples applets. (#9261, #3689) [@pthom]
+- Misc: added missing ImVec2/ImVec4 operators. (#9339, #8258) [@dkosmari, @ArashPartow]
 - Internals:
-  - ButtonBehavior: fixed internal/low-level ImGuiButtonFlags_PressedOnRelease
-    (as well as equivalent ImGuiSelectableFlags_SelectOnRelease for Selectable) from
-    not taking current active id. ImGuiButtonFlags_NoHoldingActiveID allows that.
-    This was pretty sure only used internally by MenuItem().
+  - ButtonBehavior: fixed internal/low-level `ImGuiButtonFlags_PressedOnRelease`
+    (as well as equivalent `ImGuiSelectableFlags_SelectOnRelease` for Selectable) from
+    not taking current active id. `ImGuiButtonFlags_NoHoldingActiveID` allows that.
+    This was only used internally by MenuItem().
 - Backends:
   - DirectX9, OpenGL2, OpenGL3, Metal, SDLGPU3, SDLRenderer2, SDLRenderer3: fixed easy-to-fix
     issues in code assuming ImTextureID_Invalid is always defined to 0. (#9295, #9310)
   - GLFW: mouse cursor is properly restored if changed by user app/code while using
-    glfwSetInputMode(..., GLFW_CURSOR_DISABLED) or ImGuiConfigFlags_NoMouseCursorChange.
+    `glfwSetInputMode(..., GLFW_CURSOR_DISABLED)` or `ImGuiConfigFlags_NoMouseCursorChange`.
     Amend optimization done in 1.92.6.
-  - SDLGPU3: removed unnecessary call to SDL_WaitForGPUIdle when releasing
+  - SDLGPU3: removed unnecessary call to `SDL_WaitForGPUIdle()` when releasing
     vertex/index buffers. (#9262) [@jaenis]
   - WebGPU: fixed version check for Emscripten 5.0.0+.
   - WebGPU: removed support for Emscripten <4.0.10. (#9281) [@ypujante]
-  - WebGPU: added support for WGVK native backend via IMGUI_IMPL_WEBGPU_BACKEND_WGVK,
+  - WebGPU: added support for WGVK native backend via `IMGUI_IMPL_WEBGPU_BACKEND_WGVK`,
     using SPIRV shaders if WGSL is not available. (#9316, #9246, #9257) [@r-lyeh]
     (WGVK is a lightweight alternative to Dawn or WGPU for native applications,
     which is easier to build/setup, see: https://github.com/manuel5975p/WGVK)
@@ -168,9 +205,9 @@ Other Changes:
   - Emscripten: fixed minor rendering issues with our HTML shell. (#9281) [@ypujante]
     - hidden small blue outline when canvas is focused on Chrome.
     - hidden scrollbar in Firefox.
-  - Vulkan: added ImGui_ImplVulkan_PipelineInfo::ExtraDynamicStates[] to allow specifying
+  - Vulkan: added `ImGui_ImplVulkan_PipelineInfo::ExtraDynamicStates[]` to allow specifying
     extra dynamic states to add when creating the VkPipeline. (#9211) [@DziubanMaciej]
-  - Vulkan: ImGui_ImplVulkan_AddTexture() skips updating descriptor_set if failing
+  - Vulkan: `ImGui_ImplVulkan_AddTexture()` skips updating descriptor_set if failing
     to allocate one. (#8677) [@micb25]
   - WebGPU: fixed undefined behaviors in example code for requesting adapter
     and device. (#9246, #9256) [@r-lyeh]
