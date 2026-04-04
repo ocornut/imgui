@@ -6404,7 +6404,7 @@ void ImGui::HandleDragScroll()
     }
 
     // Bail out if a widget is performing a drag action.
-    if (g.DragAction)
+    if (IsDragAction())
     {
         g.DragScrollWindow = NULL;
         return;
@@ -7141,7 +7141,7 @@ static int ImGui::UpdateWindowManualResize(ImGuiWindow* window, int* border_hove
             ImVec2 corner_target = g.IO.MousePos - g.ActiveIdClickOffset + ImLerp(def.InnerDir * grip_hover_outer_size, def.InnerDir * -grip_hover_inner_size, def.CornerPosN); // Corner of the window corresponding to our corner grip
             corner_target = ImClamp(corner_target, clamp_min, clamp_max);
             CalcResizePosSizeFromAnyCorner(window, corner_target, def.CornerPosN, &pos_target, &size_target);
-            g.DragAction = true;
+            SetDragAction();
         }
 
         // Only lower-left grip is visible before hovering/activating
@@ -7223,7 +7223,7 @@ static int ImGui::UpdateWindowManualResize(ImGuiWindow* window, int* border_hove
             border_target = ImClamp(border_target, clamp_min, clamp_max);
             if (!ignore_resize) {
                 CalcResizePosSizeFromAnyCorner(window, border_target, ImMin(def.SegmentN1, def.SegmentN2), &pos_target, &size_target);
-                g.DragAction = true;
+                SetDragAction();
             }
         }
         if (hovered)

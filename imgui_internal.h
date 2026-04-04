@@ -3415,6 +3415,8 @@ namespace ImGui
     IMGUI_API void          SetActiveIdUsingAllKeyboardKeys();
     inline bool             IsActiveIdUsingNavDir(ImGuiDir dir)                         { ImGuiContext& g = *GImGui; return (g.ActiveIdUsingNavDirMask & (1 << dir)) != 0; }
 
+    inline void             SetDragAction(bool state = true)                            { ImGuiContext& g = *GImGui; g.DragAction = state; } // Set to true when a widget is using a mouse drag interaction.
+    inline bool             IsDragAction()                                              { ImGuiContext& g = *GImGui; return g.DragAction; } // Query if a widget is using a mouse drag interaction.
     IMGUI_API void          HandleDragScroll();
 
     // [EXPERIMENTAL] Low-Level: Key/Input Ownership
