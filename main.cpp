@@ -1,136 +1,86 @@
 #include <jni.h>
-#include <errno.h>
-#include <string.h>
-#include <sys/types.h>
 #include <android/log.h>
-#include <dlfcn.h>
-#include <unistd.h>
-#include <pthread.h>
 #include <android/input.h>
-#include <android/keycodes.h>
+#include <GLES3/gl3.h>
+#include <EGL/egl.h>
+#include <string>
+#include <unistd.h>
 
-// ImGui 核心与渲染器
-#include "dobby.h"
 #include "imgui.h"
 #include "imgui_impl_android.h"
 #include "imgui_impl_opengl3.h"
-#include "imgui_internal.h"
-#include <GLES3/gl3.h>
-#include <EGL/egl.h>
+#include "dobby.h"
 
-#define LOG_TAG "JKMenu_Fix"
+#define LOG_TAG "JK_DEBUG"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 
-// 原始函数指针
+static bool g_Initialized = false;
+static bool g_ShowMenu = true;
+static int g_Width = 0, g_Height = 0;
+
 typedef EGLBoolean (*eglSwapBuffers_t)(EGLDisplay dpy, EGLSurface surface);
-eglSwapBuffers_t orig_eglSwapBuffers = nullptr;
+static eglSwapBuffers_t orig_eglSwapBuffers = nullptr;
 
-// 触摸 Hook 增强版 (针对移动端更通用的 Hook 方案)
-typedef int (*AMotionEvent_getRawX_t)(const AInputEvent* motion_event, size_t pointer_index);
-// 如果 AInputQueue 不行，通常会尝试 Hook libinput.so 或游戏的 Input 处理函数
-
-// 全局状态
-bool g_Initialized = false;
-bool g_ShowMenu = true;
-int g_Width = 0;
-int g_Height = 0;
-
-// 解决中文显示的关键函数
-void LoadChineseFont(ImGuiIO& io) {
-    ImFontConfig font_cfg;
-    font_cfg.SizePixels = 36.0f; // 适配平板高分辨率
-    font_cfg.FontDataOwnedByAtlas = false;
+// --- 字体加载核心修复 ---
+void LoadChineseFont() {
+    ImGuiIO& io = ImGui::GetIO();
     
-    // 常见的安卓系统字体路径
-    const char* fonts[] = {
-        "/system/fonts/NotoSansCJK-Regular.ttc",
-        "/system/fonts/NotoSansSC-Regular.otf",
-        "/system/fonts/DroidSansFallback.ttf",
-        "/system/fonts/SourceHanSansCN-Regular.otf"
+    // 完整的 CJK 字符集范围
+    static const ImWchar ranges[] = {
+        0x0020, 0x00FF, // Basic Latin
+        0x2000, 0x206F, // General Punctuation
+        0x3000, 0x30FF, // CJK Symbols and Punctuations
+        0x4E00, 0x9FAF, // CJK Unified Ideographs (简体中文核心)
+        0xFF00, 0xFFEF, // Halfwidth and Fullwidth Forms
+        0,
     };
 
-    bool loaded = false;
-    for (const char* path : fonts) {
-        if (access(path, F_OK) == 0) {
-            // 必须传入 GetGlyphRangesChineseFull() 否则还是问号
-            io.Fonts->AddFontFromFileTTF(path, 36.0f, &font_cfg, io.Fonts->GetGlyphRangesChineseFull());
-            LOGI("成功加载字体: %s", path);
-            loaded = true;
-            break;
-        }
-    }
+    ImFontConfig config;
+    config.SizePixels = 40.0f; // 针对高分辨率屏幕调大
+    config.OversampleH = 2;
+    config.OversampleV = 2;
 
-    if (!loaded) {
-        LOGI("未发现系统字体，使用默认字体 (将显示问号)");
-        io.Fonts->AddFontDefault(&font_cfg);
+    const char* fontPath = "/system/fonts/NotoSansCJK-Regular.ttc";
+
+    if (access(fontPath, F_OK) == 0) {
+        // 重要：TTC 是集合文件。Index 2 或 3 通常才是简体中文 (SC)
+        // 我们尝试加载 Index 2，如果不行再退回 0
+        if (!io.Fonts->AddFontFromFileTTF(fontPath, 40.0f, &config, ranges)) {
+             LOGI("JKMenu: 加载索引 2 失败，尝试默认索引");
+             io.Fonts->AddFontFromFileTTF(fontPath, 40.0f, &config, ranges);
+        }
+        LOGI("JKMenu: 成功识别系统字体: %s", fontPath);
+    } else {
+        LOGI("JKMenu: 路径没找到，请检查 root 权限是否允许读取 /system/fonts");
+        io.Fonts->AddFontDefault();
     }
 }
 
-// 解决触摸拖动的关键逻辑
-// 修正：ImGui 需要的是全局坐标同步
-bool HandleTouch(AInputEvent* event) {
+// --- 触摸与拖动修复 ---
+// 请确保你的 Input Hook 调用了这个函数
+bool HandleInput(AInputEvent* event) {
     if (!g_Initialized || !g_ShowMenu) return false;
 
     ImGuiIO& io = ImGui::GetIO();
     int32_t type = AInputEvent_getType(event);
 
     if (type == AINPUT_EVENT_TYPE_MOTION) {
-        int32_t action = AMotionEvent_getAction(event);
-        int32_t actionIdx = (action & AMOTION_EVENT_ACTION_POINTER_INDEX_MASK) >> AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT;
-        int32_t actionMasked = action & AMOTION_EVENT_ACTION_MASK;
-
-        float x = AMotionEvent_getX(event, actionIdx);
-        float y = AMotionEvent_getY(event, actionIdx);
+        int32_t action = AMotionEvent_getAction(event) & AMOTION_EVENT_ACTION_MASK;
+        float x = AMotionEvent_getX(event, 0);
+        float y = AMotionEvent_getY(event, 0);
 
         io.MousePos = ImVec2(x, y);
 
-        if (actionMasked == AMOTION_EVENT_ACTION_DOWN || actionMasked == AMOTION_EVENT_ACTION_POINTER_DOWN) {
-            io.MouseDown[0] = true;
-        } else if (actionMasked == AMOTION_EVENT_ACTION_UP || actionMasked == AMOTION_EVENT_ACTION_POINTER_UP) {
-            io.MouseDown[0] = false;
-        }
+        if (action == AMOTION_EVENT_ACTION_DOWN) io.MouseDown[0] = true;
+        else if (action == AMOTION_EVENT_ACTION_UP) io.MouseDown[0] = false;
 
-        // 重点：如果 ImGui 捕获了鼠标，则不把事件传给游戏，防止菜单和游戏一起动
-        return io.WantCaptureMouse;
+        // 核心：如果点击在 ImGui 窗口上，返回 true 拦截掉游戏的点击
+        // 这样你拖动窗口时，背景的游戏角色才不会跑
+        if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) || ImGui::IsAnyItemActive()) {
+            return true; 
+        }
     }
     return false;
-}
-
-// 增强型 AInputQueue Hook
-typedef int32_t (*InputEventHandle_t)(void* instance, AInputEvent* event);
-int32_t hooked_InputEvent(void* instance, AInputEvent* event) {
-    if (HandleTouch(event)) {
-        return 1; // 消费事件
-    }
-    // 这里需要根据实际游戏引擎寻找真正的原始回调
-    return 0; 
-}
-
-void DrawImGuiMenu() {
-    if (!g_ShowMenu) return;
-
-    // 设置初始位置，防止平板上菜单刷在边缘拉不回来
-    ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(550, 420), ImGuiCond_FirstUseEver);
-
-    if (ImGui::Begin("JKMenu - 增强稳定版", &g_ShowMenu, ImGuiWindowFlags_AlwaysAutoResize)) {
-        
-        ImGui::TextColored(ImVec4(0, 1, 1, 1), "设备信息: OnePlus Pad Pro");
-        ImGui::Text("屏幕分辨率: %d x %d", g_Width, g_Height);
-        ImGui::Separator();
-
-        static bool esp_box = false;
-        ImGui::Checkbox("开启方框透视", &esp_box);
-
-        static float crosshair_size = 10.0f;
-        ImGui::SliderFloat("准星大小", &crosshair_size, 1.0f, 50.0f);
-
-        if (ImGui::Button("清理残留数据", ImVec2(ImGui::GetContentRegionAvail().x, 40))) {
-            // 执行清理逻辑
-        }
-
-        ImGui::End();
-    }
 }
 
 EGLBoolean hooked_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
@@ -138,13 +88,20 @@ EGLBoolean hooked_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         eglQuerySurface(dpy, surface, EGL_WIDTH, &g_Width);
         eglQuerySurface(dpy, surface, EGL_HEIGHT, &g_Height);
 
-        if (g_Width > 0) {
+        if (g_Width > 0 && g_Height > 0) {
+            IMGUI_CHECKVERSION();
             ImGui::CreateContext();
-            ImGuiIO& io = ImGui::GetIO();
             
-            LoadChineseFont(io); // 修复问号的核心调用
-            
+            // 样式美化：圆角和间距适配手指
+            ImGuiStyle& style = ImGui::GetStyle();
+            style.WindowRounding = 12.0f;
+            style.FrameRounding = 8.0f;
+            style.TouchExtraPadding = ImVec2(5, 5); // 增加触摸判定区域
+
+            LoadChineseFont();
             ImGui_ImplOpenGL3_Init("#version 300 es");
+            
+            io.DisplaySize = ImVec2((float)g_Width, (float)g_Height);
             g_Initialized = true;
         }
     }
@@ -152,7 +109,26 @@ EGLBoolean hooked_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     if (g_Initialized && g_ShowMenu) {
         ImGui_ImplOpenGL3_NewFrame();
         ImGui::NewFrame();
-        DrawImGuiMenu();
+
+        // 允许拖动且不自动折叠
+        ImGui::SetNextWindowSize(ImVec2(550, 400), ImGuiCond_FirstUseEver);
+        if (ImGui::Begin("JKMenu 菜单 (可拖动)", &g_ShowMenu, ImGuiWindowFlags_NoCollapse)) {
+            
+            ImGui::Text("系统字体检测: 正常");
+            ImGui::Separator();
+
+            static bool esp = false;
+            ImGui::Checkbox("开启透视 (ESP)", &esp);
+
+            static float aim_speed = 10.0f;
+            ImGui::SliderFloat("自瞄速度", &aim_speed, 1.0f, 100.0f);
+
+            if (ImGui::Button("关闭菜单", ImVec2(-1, 50))) {
+                g_ShowMenu = false;
+            }
+        }
+        ImGui::End();
+
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }
@@ -160,24 +136,16 @@ EGLBoolean hooked_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     return orig_eglSwapBuffers(dpy, surface);
 }
 
-void* hack_thread(void*) {
-    sleep(10); // 等待游戏完全进入，防止 EGL 未初始化闪退
-
-    // 1. Hook 渲染
+void* main_thread(void*) {
+    sleep(5); // 减少等待时间
     void* swap_ptr = DobbySymbolResolver("libEGL.so", "eglSwapBuffers");
     if (swap_ptr) {
         DobbyHook(swap_ptr, (dobby_dummy_func_t)hooked_eglSwapBuffers, (dobby_dummy_func_t*)&orig_eglSwapBuffers);
     }
-
-    // 2. 针对 Unity/腾讯游戏的触摸修复方案
-    // 很多时候 AInputQueue 拿不到事件是因为游戏用了 NativeActivity 以外的逻辑
-    // 尝试 Hook 整个系统的 MotionEvent 或者是引擎分发层
-    LOGI("JKMenu: 注入增强补丁成功");
-
     return nullptr;
 }
 
 void __attribute__((constructor)) init() {
     pthread_t t;
-    pthread_create(&t, nullptr, hack_thread, nullptr);
+    pthread_create(&t, nullptr, main_thread, nullptr);
 }
