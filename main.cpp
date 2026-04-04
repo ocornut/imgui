@@ -5,6 +5,7 @@
 #include <EGL/egl.h>
 #include <string>
 #include <unistd.h>
+#include <pthread.h>
 
 #include "imgui.h"
 #include "imgui_impl_android.h"
@@ -21,43 +22,40 @@ static int g_Width = 0, g_Height = 0;
 typedef EGLBoolean (*eglSwapBuffers_t)(EGLDisplay dpy, EGLSurface surface);
 static eglSwapBuffers_t orig_eglSwapBuffers = nullptr;
 
-// --- 字体加载核心修复 ---
+// --- 字体加载函数 ---
 void LoadChineseFont() {
     ImGuiIO& io = ImGui::GetIO();
     
-    // 完整的 CJK 字符集范围
     static const ImWchar ranges[] = {
         0x0020, 0x00FF, // Basic Latin
         0x2000, 0x206F, // General Punctuation
-        0x3000, 0x30FF, // CJK Symbols and Punctuations
-        0x4E00, 0x9FAF, // CJK Unified Ideographs (简体中文核心)
-        0xFF00, 0xFFEF, // Halfwidth and Fullwidth Forms
+        0x3000, 0x30FF, // CJK Symbols
+        0x4E00, 0x9FAF, // CJK Unified Ideographs
+        0xFF00, 0xFFEF, // Halfwidth/Fullwidth
         0,
     };
 
     ImFontConfig config;
-    config.SizePixels = 40.0f; // 针对高分辨率屏幕调大
+    config.SizePixels = 40.0f;
     config.OversampleH = 2;
     config.OversampleV = 2;
 
     const char* fontPath = "/system/fonts/NotoSansCJK-Regular.ttc";
 
-    if (access(fontPath, F_OK) == 0) {
-        // 重要：TTC 是集合文件。Index 2 或 3 通常才是简体中文 (SC)
-        // 我们尝试加载 Index 2，如果不行再退回 0
+    if (access(fontPath, R_OK) == 0) {
+        // 尝试加载索引 2 (通常是简体中文)
         if (!io.Fonts->AddFontFromFileTTF(fontPath, 40.0f, &config, ranges)) {
-             LOGI("JKMenu: 加载索引 2 失败，尝试默认索引");
+             LOGI("JKMenu: 索引 2 加载失败，回退到默认索引");
              io.Fonts->AddFontFromFileTTF(fontPath, 40.0f, &config, ranges);
         }
-        LOGI("JKMenu: 成功识别系统字体: %s", fontPath);
+        LOGI("JKMenu: 字体加载路径: %s", fontPath);
     } else {
-        LOGI("JKMenu: 路径没找到，请检查 root 权限是否允许读取 /system/fonts");
+        LOGI("JKMenu: 无法访问系统字体，使用默认字体");
         io.Fonts->AddFontDefault();
     }
 }
 
-// --- 触摸与拖动修复 ---
-// 请确保你的 Input Hook 调用了这个函数
+// --- 输入拦截 ---
 bool HandleInput(AInputEvent* event) {
     if (!g_Initialized || !g_ShowMenu) return false;
 
@@ -74,8 +72,7 @@ bool HandleInput(AInputEvent* event) {
         if (action == AMOTION_EVENT_ACTION_DOWN) io.MouseDown[0] = true;
         else if (action == AMOTION_EVENT_ACTION_UP) io.MouseDown[0] = false;
 
-        // 核心：如果点击在 ImGui 窗口上，返回 true 拦截掉游戏的点击
-        // 这样你拖动窗口时，背景的游戏角色才不会跑
+        // 如果点击在菜单窗口上，拦截掉，不传递给游戏
         if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) || ImGui::IsAnyItemActive()) {
             return true; 
         }
@@ -91,12 +88,13 @@ EGLBoolean hooked_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         if (g_Width > 0 && g_Height > 0) {
             IMGUI_CHECKVERSION();
             ImGui::CreateContext();
-            
-            // 样式美化：圆角和间距适配手指
+            ImGuiIO& io = ImGui::GetIO(); // 修复点：在这里获取 io 引用
+
+            // 样式调整
             ImGuiStyle& style = ImGui::GetStyle();
-            style.WindowRounding = 12.0f;
-            style.FrameRounding = 8.0f;
-            style.TouchExtraPadding = ImVec2(5, 5); // 增加触摸判定区域
+            style.WindowRounding = 10.0f;
+            style.FrameRounding = 6.0f;
+            style.ScaleAllSizes(2.0f); // 针对高分辨率屏幕整体放大 UI
 
             LoadChineseFont();
             ImGui_ImplOpenGL3_Init("#version 300 es");
@@ -110,20 +108,18 @@ EGLBoolean hooked_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         ImGui_ImplOpenGL3_NewFrame();
         ImGui::NewFrame();
 
-        // 允许拖动且不自动折叠
-        ImGui::SetNextWindowSize(ImVec2(550, 400), ImGuiCond_FirstUseEver);
-        if (ImGui::Begin("JKMenu 菜单 (可拖动)", &g_ShowMenu, ImGuiWindowFlags_NoCollapse)) {
-            
-            ImGui::Text("系统字体检测: 正常");
+        ImGui::SetNextWindowSize(ImVec2(600, 450), ImGuiCond_FirstUseEver);
+        if (ImGui::Begin("JKMenu 控制面板", &g_ShowMenu)) {
+            ImGui::TextColored(ImVec4(0, 1, 0, 1), "状态: 运行中 (绘制正常)");
             ImGui::Separator();
 
             static bool esp = false;
-            ImGui::Checkbox("开启透视 (ESP)", &esp);
+            ImGui::Checkbox("玩家透视", &esp);
 
-            static float aim_speed = 10.0f;
-            ImGui::SliderFloat("自瞄速度", &aim_speed, 1.0f, 100.0f);
+            static float radius = 150.0f;
+            ImGui::SliderFloat("自瞄范围", &radius, 50.0f, 500.0f);
 
-            if (ImGui::Button("关闭菜单", ImVec2(-1, 50))) {
+            if (ImGui::Button("退出菜单", ImVec2(-1, 60))) {
                 g_ShowMenu = false;
             }
         }
@@ -137,7 +133,7 @@ EGLBoolean hooked_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 }
 
 void* main_thread(void*) {
-    sleep(5); // 减少等待时间
+    sleep(5);
     void* swap_ptr = DobbySymbolResolver("libEGL.so", "eglSwapBuffers");
     if (swap_ptr) {
         DobbyHook(swap_ptr, (dobby_dummy_func_t)hooked_eglSwapBuffers, (dobby_dummy_func_t*)&orig_eglSwapBuffers);
