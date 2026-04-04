@@ -2885,6 +2885,71 @@ void ImFontAtlasTextureBlockConvert(const unsigned char* src_pixels, ImTextureFo
     }
 }
 
+void ImFontAtlasTextureBlockResize(const ImU32* src_pixels, const int src_w, const int src_h, ImU32* dst_pixels, const int dst_w, const int dst_h)
+{
+#if 0
+    // Point Sampling / Nearest Neighbor
+    for (int y = 0; y < dst_h; y++)
+    {
+        const int src_y = ImFloor(((y + 0.5f) * src_h) / dst_h);
+        for (int x = 0; x < dst_w; x++)
+        {
+            const int src_x = ImFloor(((x + 0.5f) * src_w) / dst_w);
+            dst_pixels[y * dst_w + x] = src_pixels[src_y * src_w + src_x];
+        }
+    }
+#else
+    // Box sampling - Imagine projecting the new, smaller pixels onto the larger source, covering multiple pixel.
+    for (int y = 0; y < dst_h; y++)
+    {
+        for (int x = 0; x < dst_w; x++)
+        {
+            // We perform a weighted mean.
+            ImVec4 color;
+            float weight_sum = 0.0f;
+
+            // Walk from upper edge to bottom edge (vertical)
+            const float edge_up = ((float)y * src_h) / dst_h;
+            const float edge_down = ((y + 1.0f) * src_h) / dst_h;
+            for (float frac_pos_y = edge_up; frac_pos_y < edge_down;)
+            {
+                const int src_y = (int)ImFloor(frac_pos_y); IM_ASSERT(src_y < src_h);
+                const float frac_y = 1.0f - (frac_pos_y - src_y);
+
+                // Walk from left edge to right edge (horizontal)
+                const float edge_left = ((float)x * src_w) / dst_w;
+                const float edge_right = ((x + 1.0f) * src_w) / dst_w;
+                for (float frac_pos_x = edge_left; frac_pos_x < edge_right;)
+                {
+                    const int src_x = (int)ImFloor(frac_pos_x); IM_ASSERT(src_x < src_w);
+                    const float frac_x = 1.0f - (frac_pos_x - src_x);
+
+                    const float src_pixel_weight = frac_x * frac_y;
+
+                    const ImVec4 pixel_color = ImGui::ColorConvertU32ToFloat4(src_pixels[src_y * src_w + src_x]);
+                    color.x += pixel_color.x * src_pixel_weight;
+                    color.y += pixel_color.y * src_pixel_weight;
+                    color.z += pixel_color.z * src_pixel_weight;
+                    color.w += pixel_color.w * src_pixel_weight;
+                    weight_sum += src_pixel_weight;
+
+                    frac_pos_x += frac_x;
+                }
+
+                frac_pos_y += frac_y;
+            }
+
+            color.x /= weight_sum;
+            color.y /= weight_sum;
+            color.z /= weight_sum;
+            color.w /= weight_sum;
+
+            dst_pixels[y * dst_w + x] = ImGui::ColorConvertFloat4ToU32(color);
+        }
+    }
+#endif
+}
+
 // Source buffer may be written to (used for in-place mods).
 // Post-process hooks may eventually be added here.
 void ImFontAtlasTextureBlockPostProcess(ImFontAtlasPostProcessData* data)
