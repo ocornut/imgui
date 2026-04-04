@@ -17,6 +17,7 @@
 
 #define LOG_TAG "JKMenu"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
+#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
 // 原始函数指针存储
 typedef EGLBoolean (*eglSwapBuffers_t)(EGLDisplay dpy, EGLSurface surface);
@@ -33,11 +34,10 @@ void DrawImGuiMenu() {
     if (!g_ShowMenu) return;
 
     ImGui::SetNextWindowSize(ImVec2(400, 350), ImGuiCond_FirstUseEver);
-    // 菜单标题显示为王者荣耀
-    ImGui::Begin("JKMenu - SGame Special", &g_ShowMenu);
+    ImGui::Begin("JKMenu - SGame Debug", &g_ShowMenu);
 
     ImGui::Text("Device: OnePlus Pad Pro 2");
-    ImGui::Text("Target: com.tencent.tmgp.sgame");
+    ImGui::Text("Status: Hook Active");
     ImGui::Text("Screen: %dx%d", g_Width, g_Height);
     ImGui::Separator();
 
@@ -55,32 +55,29 @@ void DrawImGuiMenu() {
 // Hook 后的渲染函数
 EGLBoolean hooked_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     if (!g_Initialized) {
-        // 获取当前 Surface 的宽高
+        LOGI("Hooked eglSwapBuffers called for the first time!");
+        
         eglQuerySurface(dpy, surface, EGL_WIDTH, &g_Width);
         eglQuerySurface(dpy, surface, EGL_HEIGHT, &g_Height);
 
-        // 初始化 ImGui 上下文
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
-        
-        // 设置显示大小
         io.DisplaySize = ImVec2((float)g_Width, (float)g_Height);
 
-        // 初始化后端
-        ImGui_ImplOpenGL3_Init("#version 300 es");
-        
-        g_Initialized = true;
-        LOGI("ImGui Initialized Successfully for SGame");
+        if (ImGui_ImplOpenGL3_Init("#version 300 es")) {
+            g_Initialized = true;
+            LOGI("ImGui Renderer Initialized: %dx%d", g_Width, g_Height);
+        } else {
+            LOGE("ImGui Renderer Initialization FAILED!");
+        }
     }
 
     // 开始新帧
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
 
-    // 绘制 UI
     DrawImGuiMenu();
 
-    // 渲染输出
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
@@ -89,24 +86,32 @@ EGLBoolean hooked_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 
 // 注入后的初始化线程
 void* hack_thread(void*) {
-    LOGI("Hack Thread Started");
+    LOGI("SO Loaded! Hack thread started.");
     
-    // 等待游戏加载 libEGL.so
-    sleep(5);
+    // 增加等待时间，确保游戏引擎初始化完成
+    sleep(10);
 
-    // 使用 Dobby 寻找目标函数地址
+    // 尝试寻找 eglSwapBuffers
     void* target = DobbySymbolResolver("libEGL.so", "eglSwapBuffers");
+    if (!target) {
+        // 备选方案：尝试直接从当前进程获取地址
+        target = dlsym(RTLD_DEFAULT, "eglSwapBuffers");
+    }
+
     if (target) {
-        LOGI("Found eglSwapBuffers at: %p", target);
+        LOGI("Target eglSwapBuffers found at: %p, starting hook...", target);
         
-        // 执行 Inline Hook
         DobbyHook(target, 
                   (dobby_dummy_func_t)hooked_eglSwapBuffers, 
                   (dobby_dummy_func_t*)&orig_eglSwapBuffers);
         
-        LOGI("Dobby Hook Applied");
+        if (orig_eglSwapBuffers) {
+            LOGI("Dobby Hook Applied Successfully!");
+        } else {
+            LOGE("Dobby Hook Failed to apply!");
+        }
     } else {
-        LOGI("Failed to find target function");
+        LOGE("CRITICAL: eglSwapBuffers not found in libEGL.so or RTLD_DEFAULT");
     }
 
     return nullptr;
