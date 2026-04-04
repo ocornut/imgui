@@ -33,7 +33,7 @@ void DrawImGuiMenu() {
     if (!g_ShowMenu) return;
 
     ImGui::SetNextWindowSize(ImVec2(400, 350), ImGuiCond_FirstUseEver);
-    ImGui::Begin("JKMenu - com.tencent.jkchess", &g_ShowMenu);
+    ImGui::Begin("JKMenu - com.tencent.tmgp.sgame", &g_ShowMenu);
 
     ImGui::Text("Device: OnePlus Pad Pro 2");
     ImGui::Text("Screen: %dx%d", g_Width, g_Height);
@@ -61,14 +61,14 @@ EGLBoolean hooked_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
         
-        // 修正之前的错误：直接使用 ImVec2 赋值
+        // 设置显示大小
         io.DisplaySize = ImVec2((float)g_Width, (float)g_Height);
 
         // 初始化后端
         ImGui_ImplOpenGL3_Init("#version 300 es");
         
         g_Initialized = true;
-        LOGI("ImGui Initialized Successfully");
+        LOGI("ImGui Initialized Successfully for SGame");
     }
 
     // 开始新帧
@@ -89,7 +89,7 @@ EGLBoolean hooked_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 void* hack_thread(void*) {
     LOGI("Hack Thread Started");
     
-    // 等待游戏加载 libEGL.so (由于 JSHook 注入较早，可能需要等待)
+    // 等待游戏加载 libEGL.so
     sleep(5);
 
     // 使用 Dobby 寻找目标函数地址
