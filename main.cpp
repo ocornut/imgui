@@ -6,22 +6,28 @@
 #include <dlfcn.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <android/input.h>
+#include <android/keycodes.h>
 
 // ImGui 核心与渲染器
 #include "dobby.h"
 #include "imgui.h"
 #include "imgui_impl_android.h"
 #include "imgui_impl_opengl3.h"
+#include "imgui_internal.h"
 #include <GLES3/gl3.h>
 #include <EGL/egl.h>
 
 #define LOG_TAG "JKMenu"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
-#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
 // 原始函数指针
 typedef EGLBoolean (*eglSwapBuffers_t)(EGLDisplay dpy, EGLSurface surface);
 eglSwapBuffers_t orig_eglSwapBuffers = nullptr;
+
+// 触摸 Hook 相关 (针对 Android Native 注入)
+typedef int (*InputEvent_t)(void* event);
+InputEvent_t orig_InputEvent = nullptr;
 
 // 全局状态
 bool g_Initialized = false;
@@ -29,37 +35,66 @@ bool g_ShowMenu = true;
 int g_Width = 0;
 int g_Height = 0;
 
+// 处理触摸事件
+void HandleInput(void* event) {
+    if (!g_Initialized) return;
+    
+    ImGuiIO& io = ImGui::GetIO();
+    int32_t type = AInputEvent_getType((AInputEvent*)event);
+    
+    if (type == AINPUT_EVENT_TYPE_MOTION) {
+        int32_t action = AMotionEvent_getAction((AInputEvent*)event) & AMOTION_EVENT_ACTION_MASK;
+        float x = AMotionEvent_getX((AInputEvent*)event, 0);
+        float y = AMotionEvent_getY((AInputEvent*)event, 0);
+        
+        io.MousePos = ImVec2(x, y);
+        
+        if (action == AMOTION_EVENT_ACTION_DOWN) io.MouseDown[0] = true;
+        else if (action == AMOTION_EVENT_ACTION_UP) io.MouseDown[0] = false;
+        
+        // 如果菜单显示，截断触摸，不让点击穿透到游戏
+        if (g_ShowMenu && ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow)) {
+            // 这里根据实际情况处理是否消费事件
+        }
+    }
+}
+
+// Hook 触摸事件 (尝试拦截 InputEvent)
+int hooked_InputEvent(void* event) {
+    HandleInput(event);
+    return orig_InputEvent(event);
+}
+
 // 菜单绘制内容
 void DrawImGuiMenu() {
     if (!g_ShowMenu) return;
 
-    ImGui::SetNextWindowSize(ImVec2(450, 400), ImGuiCond_FirstUseEver);
-    ImGui::Begin("JKMenu - OpenGL Mode", &g_ShowMenu);
+    ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
+    ImGui::Begin("JKMenu - SGame Test", &g_ShowMenu);
 
-    ImGui::Text("Device: OnePlus Pad Pro 2");
-    ImGui::Text("Package: com.tencent.jkchess");
-    ImGui::Text("Screen: %dx%d", g_Width, g_Height);
+    ImGui::Text("设备: OnePlus Pad Pro 2");
+    ImGui::Text("包名: com.tencent.jkchess");
+    ImGui::Text("分辨率: %dx%d", g_Width, g_Height);
     ImGui::Separator();
 
     static bool feature1 = false;
-    ImGui::Checkbox("显示射线", &feature1);
+    ImGui::Checkbox("功能开关 1", &feature1);
     
     static float menu_scale = 1.0f;
-    ImGui::SliderFloat("菜单缩放", &menu_scale, 0.5f, 2.0f);
+    if (ImGui::SliderFloat("菜单大小", &menu_scale, 0.5f, 2.0f)) {
+        ImGui::GetIO().FontGlobalScale = 2.0f * menu_scale;
+    }
 
-    if (ImGui::Button("隐藏菜单 (需重启注入显示)")) {
+    if (ImGui::Button("退出菜单")) {
         g_ShowMenu = false;
     }
 
     ImGui::End();
 }
 
-// 核心 Hook 函数
+// 核心渲染 Hook
 EGLBoolean hooked_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     if (!g_Initialized) {
-        LOGI("SUCCESS: OpenGL Render triggered via eglSwapBuffers!");
-        
-        // 获取实际渲染表面的宽高
         eglQuerySurface(dpy, surface, EGL_WIDTH, &g_Width);
         eglQuerySurface(dpy, surface, EGL_HEIGHT, &g_Height);
 
@@ -67,13 +102,18 @@ EGLBoolean hooked_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
             ImGui::CreateContext();
             ImGuiIO& io = ImGui::GetIO();
             
-            // 针对高分辨率平板优化字体大小
-            io.FontGlobalScale = 2.5f; 
+            // 解决中文乱码：加载字体 (Android 环境建议加载默认字体)
+            ImFontConfig font_cfg;
+            font_cfg.SizePixels = 24.0f;
+            io.Fonts->AddFontDefault(&font_cfg);
+            // 注意：要显示中文，通常需要加载字库文件，这里先通过 io.IniFilename 尝试初始化环境
+            
             io.DisplaySize = ImVec2((float)g_Width, (float)g_Height);
+            io.FontGlobalScale = 2.5f; 
 
             if (ImGui_ImplOpenGL3_Init("#version 300 es")) {
                 g_Initialized = true;
-                LOGI("ImGui Initialized Successfully!");
+                LOGI("ImGui GLES Initialized!");
             }
         }
     }
@@ -81,9 +121,7 @@ EGLBoolean hooked_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     if (g_Initialized) {
         ImGui_ImplOpenGL3_NewFrame();
         ImGui::NewFrame();
-
         DrawImGuiMenu();
-
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }
@@ -91,39 +129,27 @@ EGLBoolean hooked_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     return orig_eglSwapBuffers(dpy, surface);
 }
 
-// 注入后的初始化线程
 void* hack_thread(void*) {
-    LOGI("SO Loaded! Waiting for Game Engine...");
-    
-    // 等待游戏加载，金铲铲这类游戏建议等 10-15 秒
+    LOGI("SO Loaded! Start Hooking...");
     sleep(12);
 
-    // 尝试寻找 Hook 点
-    // 1. 标准 EGL 函数
-    void* target = DobbySymbolResolver("libEGL.so", "eglSwapBuffers");
-    
-    // 2. 如果标准没搜到，尝试搜腾讯私有渲染函数
-    if (!target) {
-        target = dlsym(RTLD_DEFAULT, "nw_main_swap_buffers");
+    // 1. Hook 渲染
+    void* swap_ptr = DobbySymbolResolver("libEGL.so", "eglSwapBuffers");
+    if (swap_ptr) {
+        DobbyHook(swap_ptr, (dobby_dummy_func_t)hooked_eglSwapBuffers, (dobby_dummy_func_t*)&orig_eglSwapBuffers);
     }
 
-    if (target) {
-        LOGI("Found render target at %p, applying DobbyHook...", target);
-        DobbyHook(target, 
-                  (dobby_dummy_func_t)hooked_eglSwapBuffers, 
-                  (dobby_dummy_func_t*)&orig_eglSwapBuffers);
-        
-        if (orig_eglSwapBuffers) {
-            LOGI("Dobby Hook Applied Successfully!");
-        }
-    } else {
-        LOGE("CRITICAL: No render function found. Is the game still in Vulkan mode?");
+    // 2. Hook 触摸 (寻找 Input 模块，这在不同 Android 版本可能不同)
+    // 尝试拦截 libinput.so 或相关处理函数
+    void* input_ptr = DobbySymbolResolver("libandroid.so", "AInputQueue_getEvent");
+    if (input_ptr) {
+        LOGI("Found Input Queue hook point.");
+        // 注意：触摸 Hook 通常比渲染复杂，需要根据游戏具体使用的 Input 库来定
     }
 
     return nullptr;
 }
 
-// 构造函数：SO 加载时自动运行
 void __attribute__((constructor)) init() {
     pthread_t t;
     pthread_create(&t, nullptr, hack_thread, nullptr);
