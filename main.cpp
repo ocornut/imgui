@@ -1,6 +1,7 @@
 #include <jni.h>
 #include <dlfcn.h>
 #include <pthread.h>
+#include <unistd.h>     // 修复 sleep 报错的关键头文件
 #include <android/log.h>
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
@@ -9,7 +10,7 @@
 // 引入 Dobby Hook 库
 #include "dobby.h"
 
-// 引入 ImGui
+// 引入 ImGui 核心与后端
 #include "imgui.h"
 #include "imgui_impl_android.h"
 #include "imgui_impl_opengl3.h"
@@ -23,15 +24,6 @@
 static bool g_Initialized = false;
 static bool g_VulkanMode  = false;
 
-// Vulkan 偷取到的上下文
-struct {
-    VkInstance       Instance       = VK_NULL_HANDLE;
-    VkPhysicalDevice PhysicalDevice = VK_NULL_HANDLE;
-    VkDevice         Device         = VK_NULL_HANDLE;
-    VkQueue          Queue          = VK_NULL_HANDLE;
-    uint32_t         QueueFamily    = 0;
-} g_VulkanCtx;
-
 // --- 原函数指针备份 ---
 typedef EGLBoolean (*eglSwapBuffers_t)(EGLDisplay, EGLSurface);
 static eglSwapBuffers_t old_eglSwapBuffers = nullptr;
@@ -43,27 +35,29 @@ static vkQueueSubmit_t old_vkQueueSubmit = nullptr;
 void DrawJKMenu() {
     if (!ImGui::GetCurrentContext()) return;
 
-    // 这里处理你的功能逻辑，比如读取 com.tencent.jkchess 的内存偏移
+    // 这里是你的菜单 UI 逻辑
     ImGui::Begin("JKMenu v1.0", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
-    ImGui::Text("Render: %s", g_VulkanMode ? "Vulkan (Adreno)" : "OpenGL ES 3.0");
+    ImGui::Text("Render Mode: %s", g_VulkanMode ? "Vulkan (Adreno)" : "OpenGL ES 3.0");
     ImGui::Separator();
     
-    static bool test_check = false;
-    ImGui::Checkbox("示例功能开关", &test_check);
+    static bool show_esp = false;
+    ImGui::Checkbox("显示射线 (ESP)", &show_esp);
     
-    if (ImGui::Button("清理日志")) {
-        LOGI("用户点击了清理按钮");
+    if (ImGui::Button("强制卸载菜单")) {
+        LOGI("用户请求卸载...");
     }
     
     ImGui::End();
 }
 
-// --- OpenGL Hook 实现 (兼容模式用) ---
+// --- OpenGL Hook 实现 ---
 EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surf) {
     if (!g_Initialized) {
-        LOGI("正在初始化 OpenGL ImGui...");
+        LOGI(">>> 正在初始化 OpenGL 渲染后端...");
         ImGui::CreateContext();
-        ImGui_ImplAndroid_Init(nullptr); // 实际项目中需传入 NativeWindow
+        // 初始化 Android 平台后端
+        ImGui_ImplAndroid_Init(nullptr); 
+        // 初始化 OpenGL3 后端
         ImGui_ImplOpenGL3_Init("#version 300 es");
         g_Initialized = true;
     }
@@ -80,13 +74,11 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surf) {
     return old_eglSwapBuffers(dpy, surf);
 }
 
-// --- Vulkan Hook 实现 (普通模式用) ---
+// --- Vulkan Hook 实现 (探测占位) ---
 VkResult hook_vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo* pSubmits, VkFence fence) {
-    // Vulkan 模式下的逻辑更复杂，通常建议在兼容模式稳定后再深入
-    // 这里仅做环境记录，防止崩溃
+    // 如果检测到是 Vulkan 模式，建议先打印日志，确认 Hook 是否生效
     if (!g_Initialized) {
-        LOGI("检测到 Vulkan 提交，当前为普通模式运行。");
-        // 注意：Vulkan 的 ImGui 需要大量的 DescriptorPool 初始化，建议先引导用户用兼容模式
+        LOGI(">>> 发现游戏正在使用 Vulkan 渲染，请切换至【兼容模式】使用菜单。");
         g_Initialized = true; 
     }
     return old_vkQueueSubmit(queue, submitCount, pSubmits, fence);
@@ -94,37 +86,39 @@ VkResult hook_vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitI
 
 // --- 核心探测与 Hook 线程 ---
 void* init_thread(void*) {
-    LOGI("JKMenu 线程已启动，等待游戏渲染模块加载...");
-    sleep(5); // 等待游戏初始化完成
+    LOGI("JKMenu 核心线程启动，等待系统环境稳定...");
+    
+    // 给游戏一点启动时间，防止在加载库时发生冲突
+    sleep(5); 
 
-    // 1. 优先检查是否为 Vulkan (普通模式)
+    // 1. 探测 Vulkan 驱动 (针对 Adreno GPU)
     void* vulkan_handle = dlopen("vulkan.adreno.so", RTLD_NOLOAD);
     if (vulkan_handle) {
-        g_VulkanMode = true;
-        LOGI(">>> 发现 Vulkan 驱动，尝试挂载普通模式 Hook...");
-        
-        // 使用你之前日志里的高通特有符号
+        LOGI("检测到 Adreno Vulkan 驱动，尝试定位提交函数...");
+        // 使用之前日志抓取到的特定符号
         void* vk_submit = dlsym(vulkan_handle, "_ZN11qglinternal13vkQueueSubmitEP9VkQueue_TjPK12VkSubmitInfoP9VkFence_T");
         if (vk_submit) {
+            g_VulkanMode = true;
             DobbyHook(vk_submit, (void*)hook_vkQueueSubmit, (void**)&old_vkQueueSubmit);
-            LOGI("Vulkan Hook 成功！");
+            LOGI("Vulkan Hook 成功挂载！");
         }
     } 
     
-    // 2. 无论是否发现 Vulkan，都 Hook EGL (兼容模式)
-    // 因为用户可能随时在游戏设置里切换
+    // 2. 探测 OpenGL 环境 (libEGL.so)
+    // 无论是否是 Vulkan 模式，都挂载 EGL，这样切换模式后能立刻生效
     void* egl_addr = DobbySymbolResolver("libEGL.so", "eglSwapBuffers");
     if (egl_addr) {
         DobbyHook(egl_addr, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
-        LOGI("OpenGL (兼容模式) Hook 成功！");
+        LOGI("OpenGL (兼容模式) Hook 成功挂载！");
     }
 
+    LOGI("探测完成，JKMenu 运行中。");
     return nullptr;
 }
 
 // --- JNI 入口 ---
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
-    LOGI("JKMenu .so 已成功注入进程: com.tencent.jkchess");
+    LOGI("libJKMenu.so 已加载。包名: com.tencent.jkchess");
     pthread_t tid;
     pthread_create(&tid, nullptr, init_thread, nullptr);
     return JNI_VERSION_1_6;
