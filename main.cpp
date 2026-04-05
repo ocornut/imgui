@@ -45,7 +45,7 @@ uintptr_t get_module_base(const char* name) {
     return base;
 }
 
-// --- 极端 GL 状态保护 (针对 Android 15 深度优化) ---
+// --- 终极 GL 状态保护 (针对重度 3D 游戏闪退修复) ---
 struct GLStateBackup {
     GLint last_program;
     GLint last_texture;
@@ -55,8 +55,6 @@ struct GLStateBackup {
     GLint last_vertex_array;
     GLint last_viewport[4];
     GLint last_scissor_box[4];
-    GLint last_pixel_unpack_buffer;
-    GLint last_current_vertex_attrib_enabled[8]; // 至少保护前8个属性
     GLboolean last_enable_blend;
     GLboolean last_enable_cull_face;
     GLboolean last_enable_depth_test;
@@ -69,7 +67,6 @@ struct GLStateBackup {
         glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &last_array_buffer);
         glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &last_element_array_buffer);
         glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vertex_array);
-        glGetIntegerv(GL_PIXEL_UNPACK_BUFFER_BINDING, &last_pixel_unpack_buffer);
         glGetIntegerv(GL_VIEWPORT, last_viewport);
         glGetIntegerv(GL_SCISSOR_BOX, last_scissor_box);
         
@@ -77,26 +74,16 @@ struct GLStateBackup {
         last_enable_cull_face = glIsEnabled(GL_CULL_FACE);
         last_enable_depth_test = glIsEnabled(GL_DEPTH_TEST);
         last_enable_scissor_test = glIsEnabled(GL_SCISSOR_TEST);
-
-        for (int i = 0; i < 8; i++) {
-            glGetVertexAttribiv(i, GL_VERTEX_ATTRIB_ARRAY_ENABLED, &last_current_vertex_attrib_enabled[i]);
-        }
     }
 
     void Restore() {
         glUseProgram(last_program);
         glActiveTexture(last_active_texture);
         glBindTexture(GL_TEXTURE_2D, last_texture);
-        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, last_pixel_unpack_buffer);
         glBindVertexArray(last_vertex_array);
         glBindBuffer(GL_ARRAY_BUFFER, last_array_buffer);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, last_element_array_buffer);
         
-        for (int i = 0; i < 8; i++) {
-            if (last_current_vertex_attrib_enabled[i]) glEnableVertexAttribArray(i);
-            else glDisableVertexAttribArray(i);
-        }
-
         if (last_enable_blend) glEnable(GL_BLEND); else glDisable(GL_BLEND);
         if (last_enable_cull_face) glEnable(GL_CULL_FACE); else glDisable(GL_CULL_FACE);
         if (last_enable_depth_test) glEnable(GL_DEPTH_TEST); else glDisable(GL_DEPTH_TEST);
@@ -117,29 +104,27 @@ void DrawImGui(int width, int height) {
     GLStateBackup gl_state;
     gl_state.Backup();
 
-    // 核心修复：在 ImGui 渲染前清空干扰状态
+    // 核心：强制重置顶点属性，防止 ImGui 的绘制指令受到游戏原有 VAO 的干扰
+    for (int i = 0; i < 8; i++) glDisableVertexAttribArray(i);
     glBindVertexArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
 
     ImGui::SetNextWindowPos(ImVec2(width * 0.1f, height * 0.1f), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(550, 420), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(500, 350), ImGuiCond_FirstUseEver);
 
-    if (ImGui::Begin("JKMenu v4.3 - Zero Conflict", &g_ShowMenu)) {
-        ImGui::TextColored(ImVec4(0, 1, 0, 1), "Safe Pipeline: ACTIVE");
-        ImGui::Text("Screen: %d x %d", width, height);
+    if (ImGui::Begin("JKMenu v4.4 - Ultra Stability", &g_ShowMenu)) {
+        ImGui::TextColored(ImVec4(1, 1, 0, 1), "Safe Mode: Enabled");
+        ImGui::Text("FPS: %.1f", io.Framerate);
         ImGui::Separator();
         
         static bool esp = false;
         ImGui::Checkbox("Enemy ESP", &esp);
-        static float dist = 300.0f;
-        ImGui::SliderFloat("Render Distance", &dist, 10.0f, 1000.0f);
-
-        if (ImGui::Button("Close Menu")) g_ShowMenu = false;
+        
+        if (ImGui::Button("Hide Menu")) g_ShowMenu = false;
     }
     ImGui::End();
 
@@ -150,6 +135,7 @@ void DrawImGui(int width, int height) {
 }
 
 EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
+    // 互斥锁防止重入，Android 15 高刷屏幕必备
     if (pthread_mutex_trylock(&g_CtxMutex) != 0) {
         return old_eglSwapBuffers(dpy, surface);
     }
@@ -165,11 +151,7 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         io.IniFilename = nullptr;
         io.DisplaySize = ImVec2((float)width, (float)height);
 
-        // 预构建字体纹理
-        unsigned char* pixels;
-        int fw, fh;
-        io.Fonts->GetTexDataAsRGBA32(&pixels, &fw, &fh);
-
+        // 初始化 Backend 时不指定版本，让 ImGui 自动检测
         if (ImGui_ImplOpenGL3_Init("#version 300 es")) {
             g_Initialized = true;
             LOGI("Safe ImGui Init Success at %dx%d", width, height);
