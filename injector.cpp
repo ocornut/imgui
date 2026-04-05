@@ -13,24 +13,26 @@
 
 #define LOG_TAG "JKInjector"
 
-// 查找王者荣耀进程 PID
-pid_t find_sgame_pid() {
-    const char* process_name = "com.tencent.tmgp.sgame";
+// 修改点1: 匹配你的正确包名
+const char* TARGET_PROCESS = "com.tencent.jkchess"; 
+const char* SO_PATH = "/data/local/tmp/libJKMenu.so";
+
+pid_t find_target_pid() {
     DIR* dir = opendir("/proc");
     if (!dir) return -1;
     struct dirent* entry;
     while ((entry = readdir(dir))) {
-        size_t pid = atoi(entry->d_name);
+        pid_t pid = atoi(entry->d_name);
         if (pid <= 0) continue;
         char path[256], cmdline[256];
-        snprintf(path, sizeof(path), "/proc/%zu/cmdline", pid);
+        snprintf(path, sizeof(path), "/proc/%d/cmdline", pid);
         FILE* f = fopen(path, "r");
         if (f) {
             if (fgets(cmdline, sizeof(cmdline), f)) {
-                if (strstr(cmdline, process_name)) {
+                if (strcmp(cmdline, TARGET_PROCESS) == 0 || strstr(cmdline, TARGET_PROCESS)) {
                     fclose(f);
                     closedir(dir);
-                    return (pid_t)pid;
+                    return pid;
                 }
             }
             fclose(f);
@@ -40,10 +42,8 @@ pid_t find_sgame_pid() {
     return -1;
 }
 
-// 获取远程模块基址
 uintptr_t get_remote_module_base(pid_t pid, const char* module_name) {
-    char path[256];
-    char line[512];
+    char path[256], line[512];
     uintptr_t base = 0;
     snprintf(path, sizeof(path), "/proc/%d/maps", pid);
     FILE* f = fopen(path, "r");
@@ -58,34 +58,36 @@ uintptr_t get_remote_module_base(pid_t pid, const char* module_name) {
     return base;
 }
 
-// 核心 PTRACE 注入逻辑
 int run_injection(pid_t pid, const char* so_path) {
-    printf("[+] Target PID: %d\n", pid);
+    printf("[+] Injecting into PID: %d\n", pid);
     
-    // 1. 附加进程
     if (ptrace(PTRACE_ATTACH, pid, NULL, NULL) < 0) {
-        perror("[-] PTRACE_ATTACH failed");
+        perror("[-] Attach failed");
         return -1;
     }
     waitpid(pid, NULL, WUNTRACED);
 
-    // 2. 备份寄存器
     struct user_pt_regs regs, old_regs;
     struct iovec iov = { .iov_base = &regs, .iov_len = sizeof(regs) };
     ptrace(PTRACE_GETREGSET, pid, NT_PRSTATUS, &iov);
     memcpy(&old_regs, &regs, sizeof(regs));
 
-    // 3. 定位远程 dlopen
+    // 修改点2: 更可靠的 dlopen 定位逻辑
     uintptr_t local_linker = get_remote_module_base(getpid(), "linker64");
     uintptr_t remote_linker = get_remote_module_base(pid, "linker64");
+    
+    // 优先找 __loader_dlopen
     uintptr_t local_dlopen = (uintptr_t)dlsym(RTLD_DEFAULT, "__loader_dlopen");
-    if (!local_dlopen) local_dlopen = (uintptr_t)dlsym(RTLD_DEFAULT, "dlopen");
+    if (!local_dlopen) {
+        void* handle = dlopen("libdl.so", RTLD_NOW);
+        local_dlopen = (uintptr_t)dlsym(handle, "dlopen");
+    }
     
     uintptr_t remote_dlopen = local_dlopen - local_linker + remote_linker;
-    printf("[+] Remote dlopen located at: %p\n", (void*)remote_dlopen);
+    printf("[+] Remote dlopen: %p\n", (void*)remote_dlopen);
 
-    // 4. 在远程栈写入 SO 路径
-    uintptr_t sp = regs.sp - 512; 
+    // 修改点3: SP 必须 16 字节对齐
+    uintptr_t sp = (regs.sp - 512) & ~0xF; 
     size_t path_len = strlen(so_path) + 1;
     for (size_t i = 0; i < path_len; i += 8) {
         long data = 0;
@@ -93,31 +95,28 @@ int run_injection(pid_t pid, const char* so_path) {
         ptrace(PTRACE_POKETEXT, pid, sp + i, (void*)data);
     }
 
-    // 5. 设置寄存器以调用 dlopen
-    regs.regs[0] = sp;                // x0: path
-    regs.regs[1] = RTLD_NOW;          // x1: mode
-    regs.regs[30] = 0;                // LR: 0 会触发 SIGSEGV 从而停止
-    regs.pc = remote_dlopen;          // PC: 跳转到 dlopen
+    // 修改点4: 使用 RTLD_GLOBAL | RTLD_NOW (通常是 2 | 256)
+    regs.regs[0] = sp;                  // x0: so_path
+    regs.regs[1] = 2 | 256;             // x1: mode (RTLD_NOW | RTLD_GLOBAL)
+    regs.regs[30] = 0;                  // LR: set to 0 to trigger crash after return
+    regs.pc = remote_dlopen;
 
     ptrace(PTRACE_SETREGSET, pid, NT_PRSTATUS, &iov);
-
-    // 6. 执行并等待
     ptrace(PTRACE_CONT, pid, NULL, NULL);
+    
     int status;
     waitpid(pid, &status, WUNTRACED);
 
-    // 检查执行后的结果寄存器 x0 (dlopen 的返回值)
     struct user_pt_regs post_regs;
     struct iovec post_iov = { .iov_base = &post_regs, .iov_len = sizeof(post_regs) };
     ptrace(PTRACE_GETREGSET, pid, NT_PRSTATUS, &post_iov);
     
     if (post_regs.regs[0] == 0) {
-        printf("[-] Error: dlopen returned NULL. Check Logcat for details.\n");
+        printf("[-] dlopen returned NULL! Check Logcat.\n");
     } else {
-        printf("[+] Success: SO handle returned: %p\n", (void*)post_regs.regs[0]);
+        printf("[+] SUCCESS! Handle: %p\n", (void*)post_regs.regs[0]);
     }
 
-    // 7. 恢复寄存器并分离
     iov.iov_base = &old_regs;
     ptrace(PTRACE_SETREGSET, pid, NT_PRSTATUS, &iov);
     ptrace(PTRACE_DETACH, pid, NULL, NULL);
@@ -125,25 +124,18 @@ int run_injection(pid_t pid, const char* so_path) {
     return (post_regs.regs[0] == 0) ? -1 : 0;
 }
 
-int main(int argc, char* argv[]) {
-    const char* so_path = "/data/local/tmp/libJKMenu.so";
-
+int main() {
     if (getuid() != 0) {
-        printf("[!] Error: Root access required.\n");
+        printf("[-] Need Root!\n");
         return 1;
     }
 
-    pid_t pid = find_sgame_pid();
+    pid_t pid = find_target_pid();
     if (pid == -1) {
-        printf("[-] Error: SGame (com.tencent.tmgp.sgame) not running.\n");
+        printf("[-] %s not found.\n", TARGET_PROCESS);
         return 1;
     }
 
-    if (run_injection(pid, so_path) == 0) {
-        printf("[*] Injection confirmed. Use 'logcat -s JKMenu' to see menu logs.\n");
-    } else {
-        printf("[!] Injection failed. Possible SELinux or Path issue.\n");
-    }
-    
-    return 0;
+    // 提示：注入前最好执行 su -c "setenforce 0"
+    return run_injection(pid, SO_PATH);
 }
