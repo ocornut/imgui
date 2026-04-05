@@ -1,39 +1,42 @@
 cmake_minimum_required(VERSION 3.10)
 
 # 项目名称
-project("MyModMenu")
+project("AndKittyImGuiMod")
 
-# 设置 C++ 标准
+# C++ 17 标准支持
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# 包含头文件目录 (假设你的头文件在 include 和 imgui 目录下)
+# 1. 包含路径
+# 由于源码都在根目录，直接包含根目录和 backends 子目录
 include_directories(
-    include
-    imgui
-    imgui/backends
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/backends
 )
 
-# 查找库文件 (Dobby 静态库)
-# 注意：在 GitHub Action 中，我们会把库放在指定的路径
-link_directories(${CMAKE_SOURCE_DIR}/libs/${ANDROID_ABI})
+# 2. 库查找路径
+# 确保 libdobby.a 放在根目录，或者在 build.yml 中指定的路径
+link_directories(${CMAKE_SOURCE_DIR})
 
-# 定义源文件
+# 3. 定义源文件
+# 包含 ImGui 核心、backends 适配层以及你的入口文件 main.cpp
 set(SOURCE_FILES
     main.cpp
-    imgui/imgui.cpp
-    imgui/imgui_draw.cpp
-    imgui/imgui_widgets.cpp
-    imgui/imgui_tables.cpp
-    imgui/backends/imgui_impl_android.cpp
-    imgui/backends/imgui_impl_opengl3.cpp
+    imgui.cpp
+    imgui_draw.cpp
+    imgui_widgets.cpp
+    imgui_tables.cpp
+    imgui_demo.cpp
+    backends/imgui_impl_android.cpp
+    backends/imgui_impl_opengl3.cpp
 )
 
-# 生成共享库 (.so)
+# 4. 生成共享库 (.so)
 add_library(MyMenu SHARED ${SOURCE_FILES})
 
-# 链接依赖项
-# dobby 为静态库，log, GLESv3, EGL, android 为系统库
+# 5. 链接依赖库
+# dobby: 静态库 (libdobby.a)
+# log, GLESv3, EGL, android: Android 系统内置库
 target_link_libraries(MyMenu
     dobby
     log
