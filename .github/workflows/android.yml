@@ -20,9 +20,9 @@
 #define RTLD_DEFAULT ((void *) 0LL)
 #endif
 
-// 目标包名
+// 目标包名 (王者荣耀)
 const char* TARGET_PKG = "com.tencent.tmgp.sgame"; 
-// 注入路径
+// 注入路径 (确保 libJKMenu.so 已经用 adb push 到这里)
 const char* LIB_PATH = "/data/local/tmp/libJKMenu.so";
 
 pid_t find_pid_by_name(const char* package_name) {
@@ -52,25 +52,27 @@ int main() {
         return 1; 
     }
 
+    // 1. 附加到进程
     if (ptrace(PTRACE_ATTACH, pid, NULL, NULL) < 0) { 
         perror("[-] Attach failed"); 
         return 1; 
     }
     waitpid(pid, NULL, WUNTRACED);
 
+    // 2. 获取寄存器 (ARM64)
     struct user_pt_regs regs;
     struct iovec iov;
     iov.iov_base = &regs;
     iov.iov_len = sizeof(regs);
     
-    // 使用强制类型转换确保兼容性
+    // 修正：将 NT_PRSTATUS 转换为 void* 以匹配 ptrace 签名
     if (ptrace(PTRACE_GETREGSET, pid, (void*)(uintptr_t)NT_PRSTATUS, &iov) < 0) {
         perror("[-] PTRACE_GETREGSET failed");
         ptrace(PTRACE_DETACH, pid, NULL, NULL);
         return 1;
     }
 
-    // 获取远程 dlopen
+    // 3. 定位远程 dlopen
     uintptr_t remote_dlopen = (uintptr_t)dlsym(RTLD_DEFAULT, "__loader_dlopen"); 
     if (!remote_dlopen) {
         remote_dlopen = (uintptr_t)dlsym(RTLD_DEFAULT, "dlopen");
@@ -82,7 +84,7 @@ int main() {
         return 1;
     }
 
-    // 写入 SO 路径
+    // 4. 准备调用：将 SO 路径写入远程栈
     uintptr_t sp = (regs.sp - 512) & ~0xF; 
     size_t len = strlen(LIB_PATH) + 1;
     for (size_t i = 0; i < len; i += 8) {
@@ -91,11 +93,15 @@ int main() {
         ptrace(PTRACE_POKETEXT, pid, sp + i, (void*)data);
     }
 
+    // 5. 设置寄存器执行 dlopen(path, RTLD_NOW)
     regs.regs[0] = sp;  // x0: path
     regs.regs[1] = 2;   // x1: RTLD_NOW
     regs.pc = remote_dlopen;
     
+    // 修正：将 NT_PRSTATUS 转换为 void* 以匹配 ptrace 签名
     ptrace(PTRACE_SETREGSET, pid, (void*)(uintptr_t)NT_PRSTATUS, &iov);
+
+    // 6. 恢复并分离
     ptrace(PTRACE_DETACH, pid, NULL, NULL);
 
     printf("[+] Successfully sent injection request to PID %d\n", pid);
