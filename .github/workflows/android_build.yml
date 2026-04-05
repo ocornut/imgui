@@ -19,7 +19,7 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # 确保安装了 Ninja 构建工具，Android NDK 编译推荐用这个
+      # 安装 Ninja 构建工具
       - name: Install Ninja
         run: sudo apt-get install ninja-build
 
@@ -27,7 +27,7 @@ jobs:
         uses: nttld/setup-ndk@v1
         id: setup-ndk
         with:
-          ndk-version: r26b # r26b 对 Vulkan 支持很好
+          ndk-version: r26b
 
       - name: Build with CMake
         run: |
@@ -38,13 +38,13 @@ jobs:
             -DANDROID_ABI=arm64-v8a \
             -DANDROID_PLATFORM=android-26 \
             -DCMAKE_BUILD_TYPE=Release \
-            -DANDROID_STL=c++_shared
-          ninja # 使用 ninja 代替 make，效率更高
+            -DANDROID_STL=c++_static   # <--- 关键修改：强制静态链接 C++ 运行时
+          ninja
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: JKMenu-Package
           path: |
-            build/libJKMenu.so
+            build/JKMenu.so
             build/jk_injector
