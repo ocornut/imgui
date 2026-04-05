@@ -1,49 +1,103 @@
-name: Android NDK Build
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/ptrace.h>
+#include <sys/wait.h>
+#include <sys/user.h>
+#include <dirent.h>
+#include <dlfcn.h>
+#include <sys/uio.h>
+#include <elf.h>
 
-on:
-  push:
-    branches: [ "master", "main" ]
-  workflow_dispatch:
+// --- 强制定义 NDK 缺失的宏，防止编译器报错 ---
+#ifndef NT_PRSTATUS
+#define NT_PRSTATUS 1
+#endif
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
+#ifndef RTLD_DEFAULT
+#define RTLD_DEFAULT ((void *) 0LL)
+#endif
 
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+// 目标包名
+const char* TARGET_PKG = "com.tencent.tmgp.sgame"; 
+// 注入路径
+const char* LIB_PATH = "/data/local/tmp/libJKMenu.so";
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
+pid_t find_pid_by_name(const char* package_name) {
+    DIR* dir = opendir("/proc");
+    if (!dir) return -1;
+    struct dirent* entry;
+    while ((entry = readdir(dir))) {
+        pid_t pid = atoi(entry->d_name);
+        if (pid <= 0) continue;
+        char path[256], cmd[256];
+        snprintf(path, sizeof(path), "/proc/%d/cmdline", pid);
+        FILE* f = fopen(path, "r");
+        if (f) {
+            if (fgets(cmd, sizeof(cmd), f) && strstr(cmd, package_name)) {
+                fclose(f); closedir(dir); return pid;
+            }
+            fclose(f);
+        }
+    }
+    closedir(dir); return -1;
+}
 
-      - name: Install Ninja
-        run: sudo apt-get install ninja-build
+int main() {
+    pid_t pid = find_pid_by_name(TARGET_PKG);
+    if (pid == -1) { 
+        printf("[-] Target process %s not found!\n", TARGET_PKG); 
+        return 1; 
+    }
 
-      - name: Setup Android NDK
-        uses: nttld/setup-ndk@v1
-        id: setup-ndk
-        with:
-          ndk-version: r26b
+    if (ptrace(PTRACE_ATTACH, pid, NULL, NULL) < 0) { 
+        perror("[-] Attach failed"); 
+        return 1; 
+    }
+    waitpid(pid, NULL, WUNTRACED);
 
-      - name: Build with CMake
-        run: |
-          mkdir -p build && cd build
-          cmake .. \
-            -GNinja \
-            -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake \
-            -DANDROID_ABI=arm64-v8a \
-            -DANDROID_PLATFORM=android-26 \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DANDROID_STL=c++_static
-          ninja
+    struct user_pt_regs regs;
+    struct iovec iov;
+    iov.iov_base = &regs;
+    iov.iov_len = sizeof(regs);
+    
+    // 使用强制类型转换确保兼容性
+    if (ptrace(PTRACE_GETREGSET, pid, (void*)(uintptr_t)NT_PRSTATUS, &iov) < 0) {
+        perror("[-] PTRACE_GETREGSET failed");
+        ptrace(PTRACE_DETACH, pid, NULL, NULL);
+        return 1;
+    }
 
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: JKMenu-Package
-          path: |
-            build/libJKMenu.so
-            build/jk_injector
+    // 获取远程 dlopen
+    uintptr_t remote_dlopen = (uintptr_t)dlsym(RTLD_DEFAULT, "__loader_dlopen"); 
+    if (!remote_dlopen) {
+        remote_dlopen = (uintptr_t)dlsym(RTLD_DEFAULT, "dlopen");
+    }
+
+    if (!remote_dlopen) {
+        printf("[-] Failed to locate dlopen symbols.\n");
+        ptrace(PTRACE_DETACH, pid, NULL, NULL);
+        return 1;
+    }
+
+    // 写入 SO 路径
+    uintptr_t sp = (regs.sp - 512) & ~0xF; 
+    size_t len = strlen(LIB_PATH) + 1;
+    for (size_t i = 0; i < len; i += 8) {
+        long data = 0;
+        memcpy(&data, LIB_PATH + i, (len - i) < 8 ? (len - i) : 8);
+        ptrace(PTRACE_POKETEXT, pid, sp + i, (void*)data);
+    }
+
+    regs.regs[0] = sp;  // x0: path
+    regs.regs[1] = 2;   // x1: RTLD_NOW
+    regs.pc = remote_dlopen;
+    
+    ptrace(PTRACE_SETREGSET, pid, (void*)(uintptr_t)NT_PRSTATUS, &iov);
+    ptrace(PTRACE_DETACH, pid, NULL, NULL);
+
+    printf("[+] Successfully sent injection request to PID %d\n", pid);
+    return 0;
+}
