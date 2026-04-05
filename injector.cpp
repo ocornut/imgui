@@ -18,8 +18,8 @@
 #endif
 
 // --- 配置区 ---
-// 根据你的要求，包名已设为 com.tencent.jkchess
-const char* TARGET_PKG = "com.tencent.jkchess"; 
+// 王者荣耀官方包名
+const char* TARGET_PKG = "com.tencent.tmgp.sgame"; 
 const char* LIB_PATH   = "/data/1/libJKMenu.so";
 
 uintptr_t get_module_base(pid_t pid, const char* module_name) {
@@ -73,15 +73,24 @@ pid_t find_pid(const char* pkg) {
 }
 
 int main() {
-    printf("[*] JKMenu Injector v3.1 (Wait Signal Mode)\n");
+    printf("[*] JKMenu Injector v3.3 (Target: %s)\n", TARGET_PKG);
     
     pid_t pid = find_pid(TARGET_PKG);
-    if (pid == -1) { printf("[-] Target %s not found!\n", TARGET_PKG); return 1; }
+    if (pid == -1) { 
+        printf("[-] Target %s not found!\n", TARGET_PKG); 
+        return 1; 
+    }
 
     uintptr_t dlopen_addr = get_remote_dlopen(pid);
-    if (!dlopen_addr) return 1;
+    if (!dlopen_addr) {
+        printf("[-] Could not find dlopen address.\n");
+        return 1;
+    }
 
-    if (ptrace(PTRACE_ATTACH, pid, NULL, NULL) < 0) { perror("[-] Attach"); return 1; }
+    if (ptrace(PTRACE_ATTACH, pid, NULL, NULL) < 0) { 
+        perror("[-] Attach failed"); 
+        return 1; 
+    }
     waitpid(pid, NULL, WUNTRACED);
 
     struct user_pt_regs regs, old_regs;
@@ -89,16 +98,16 @@ int main() {
     ptrace(PTRACE_GETREGSET, pid, (void*)(uintptr_t)NT_PRSTATUS, &iov);
     memcpy(&old_regs, &regs, sizeof(regs));
 
-    // 1. 在栈上准备空间 (路径 + 返回地址断点)
+    // 1. 准备陷阱空间
     uintptr_t sp_base = (regs.sp - 512) & ~0xF;
-    uintptr_t brk_addr = sp_base;       // 断点指令位置
-    uintptr_t path_addr = sp_base + 8;  // 路径字符串位置
+    uintptr_t brk_addr = sp_base;
+    uintptr_t path_addr = sp_base + 16;
 
-    // 写入 AArch64 断点指令: brk #0 (0xd4200000)
+    // 写入断点
     uint32_t brk_ins = 0xd4200000;
     ptrace(PTRACE_POKETEXT, pid, (void*)brk_addr, (void*)(uintptr_t)brk_ins);
 
-    // 写入 SO 路径
+    // 写入路径
     size_t len = strlen(LIB_PATH) + 1;
     for (size_t i = 0; i < len; i += 8) {
         long data = 0;
@@ -106,25 +115,25 @@ int main() {
         ptrace(PTRACE_POKETEXT, pid, (void*)(path_addr + i), (void*)data);
     }
 
-    // 2. 调用远程 dlopen
-    regs.regs[0] = path_addr;     // x0 = path
-    regs.regs[1] = 2;             // x1 = RTLD_NOW
-    regs.pc = dlopen_addr;        
-    regs.regs[30] = brk_addr;      // LR 指向断点，dlopen 跑完会停在 brk_addr
+    // 2. 执行注入
+    regs.regs[0] = path_addr;
+    regs.regs[1] = 2; // RTLD_NOW
+    regs.pc = dlopen_addr;
+    regs.regs[30] = brk_addr;
 
     ptrace(PTRACE_SETREGSET, pid, (void*)(uintptr_t)NT_PRSTATUS, &iov);
+    printf("[*] Calling dlopen at: %p\n", (void*)dlopen_addr);
     ptrace(PTRACE_CONT, pid, NULL, NULL);
 
-    // 3. 关键：等待 dlopen 真正跑完并触发断点信号
+    // 3. 捕获信号
     int status;
     waitpid(pid, &status, WUNTRACED);
-
     if (WIFSTOPPED(status)) {
-        printf("[+] dlopen triggered signal: %d\n", WSTOPSIG(status));
+        printf("[+] Caught signal: %d (dlopen return hit)\n", WSTOPSIG(status));
     }
 
-    // 4. 恢复现场并分离
-    printf("[+] Restoring state...\n");
+    // 4. 恢复并退出
+    printf("[*] Restoring and detaching...\n");
     ptrace(PTRACE_SETREGSET, pid, (void*)(uintptr_t)NT_PRSTATUS, (struct iovec *)&old_regs);
     ptrace(PTRACE_DETACH, pid, NULL, NULL);
     
