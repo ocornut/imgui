@@ -18,7 +18,8 @@
 #endif
 
 // --- 配置区 ---
-const char* TARGET_PKG = "com.tencent.tmgp.sgame"; 
+// 根据你的要求，包名已设为 com.tencent.jkchess
+const char* TARGET_PKG = "com.tencent.jkchess"; 
 const char* LIB_PATH   = "/data/1/libJKMenu.so";
 
 uintptr_t get_module_base(pid_t pid, const char* module_name) {
@@ -72,10 +73,10 @@ pid_t find_pid(const char* pkg) {
 }
 
 int main() {
-    printf("[*] JKMenu Injector v3.0 (BRK Trap Mode)\n");
+    printf("[*] JKMenu Injector v3.1 (Wait Signal Mode)\n");
     
     pid_t pid = find_pid(TARGET_PKG);
-    if (pid == -1) { printf("[-] Target not found!\n"); return 1; }
+    if (pid == -1) { printf("[-] Target %s not found!\n", TARGET_PKG); return 1; }
 
     uintptr_t dlopen_addr = get_remote_dlopen(pid);
     if (!dlopen_addr) return 1;
@@ -88,10 +89,10 @@ int main() {
     ptrace(PTRACE_GETREGSET, pid, (void*)(uintptr_t)NT_PRSTATUS, &iov);
     memcpy(&old_regs, &regs, sizeof(regs));
 
-    // 1. 准备栈空间：写入 SO 路径和断点指令
+    // 1. 在栈上准备空间 (路径 + 返回地址断点)
     uintptr_t sp_base = (regs.sp - 512) & ~0xF;
-    uintptr_t brk_addr = sp_base;             // 断点指令位置
-    uintptr_t path_addr = sp_base + 8;        // 路径字符串位置
+    uintptr_t brk_addr = sp_base;       // 断点指令位置
+    uintptr_t path_addr = sp_base + 8;  // 路径字符串位置
 
     // 写入 AArch64 断点指令: brk #0 (0xd4200000)
     uint32_t brk_ins = 0xd4200000;
@@ -105,32 +106,28 @@ int main() {
         ptrace(PTRACE_POKETEXT, pid, (void*)(path_addr + i), (void*)data);
     }
 
-    // 2. 设置寄存器：调用 dlopen(path, RTLD_NOW)
+    // 2. 调用远程 dlopen
     regs.regs[0] = path_addr;     // x0 = path
     regs.regs[1] = 2;             // x1 = RTLD_NOW
-    regs.pc = dlopen_addr;        // pc = dlopen
-    regs.regs[30] = brk_addr;     // lr = 断点地址 (执行完跳到这里)
+    regs.pc = dlopen_addr;        
+    regs.regs[30] = brk_addr;      // LR 指向断点，dlopen 跑完会停在 brk_addr
 
     ptrace(PTRACE_SETREGSET, pid, (void*)(uintptr_t)NT_PRSTATUS, &iov);
-    
-    printf("[*] Executing remote dlopen...\n");
     ptrace(PTRACE_CONT, pid, NULL, NULL);
 
-    // 3. 等待断点信号 (SIGTRAP)
+    // 3. 关键：等待 dlopen 真正跑完并触发断点信号
     int status;
     waitpid(pid, &status, WUNTRACED);
 
-    if (WIFSTOPPED(status) && (WSTOPSIG(status) == SIGTRAP || WSTOPSIG(status) == SIGILL)) {
-        printf("[+] dlopen call finished successfully.\n");
-    } else {
-        printf("[!] Warning: Process stopped with signal %d\n", WSTOPSIG(status));
+    if (WIFSTOPPED(status)) {
+        printf("[+] dlopen triggered signal: %d\n", WSTOPSIG(status));
     }
 
-    // 4. 彻底恢复原始现场
-    printf("[+] Restoring registers and detaching...\n");
+    // 4. 恢复现场并分离
+    printf("[+] Restoring state...\n");
     ptrace(PTRACE_SETREGSET, pid, (void*)(uintptr_t)NT_PRSTATUS, (struct iovec *)&old_regs);
     ptrace(PTRACE_DETACH, pid, NULL, NULL);
     
-    printf("[+] Injection Complete!\n");
+    printf("[+] Done!\n");
     return 0;
 }
