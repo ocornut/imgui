@@ -13,10 +13,10 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4 # 升级到 v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4 # 升级到 v4
         with:
           java-version: '17'
           distribution: 'temurin'
@@ -25,13 +25,12 @@ jobs:
         uses: nttld/setup-ndk@v1
         id: setup-ndk
         with:
-          ndk-version: r25c # NDK r25c 稳定版
+          ndk-version: r25c
 
       - name: Create Build Directory
         run: mkdir -p build
 
       - name: Configure CMake
-        # 注意：这里会寻找根目录下的 CMakeLists.txt
         run: |
           cmake -S . -B build \
             -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake \
@@ -43,8 +42,8 @@ jobs:
         run: cmake --build build --config Release
 
       - name: Upload Artifact
-        # 编译完成后，将生成的 .so 文件作为产物上传
-        uses: actions/upload-artifact@v3
+        # 修复点：升级到 v4 以解决弃用报错
+        uses: actions/upload-artifact@v4
         with:
           name: MyMenu-So-File
           path: build/libMyMenu.so
