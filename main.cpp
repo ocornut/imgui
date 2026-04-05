@@ -23,6 +23,7 @@
 // --- 全局变量 ---
 bool g_Initialized = false;
 bool g_ShowMenu = true;
+int g_FrameCount = 0; // 帧计数器
 pthread_mutex_t g_CtxMutex = PTHREAD_MUTEX_INITIALIZER;
 EGLBoolean (*old_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surface) = nullptr;
 
@@ -55,6 +56,7 @@ struct GLStateBackup {
     GLint last_vertex_array;
     GLint last_viewport[4];
     GLint last_scissor_box[4];
+    GLint last_fbo; // 新增 FBO 保护
     GLboolean last_enable_blend;
     GLboolean last_enable_cull_face;
     GLboolean last_enable_depth_test;
@@ -69,6 +71,7 @@ struct GLStateBackup {
         glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vertex_array);
         glGetIntegerv(GL_VIEWPORT, last_viewport);
         glGetIntegerv(GL_SCISSOR_BOX, last_scissor_box);
+        glGetIntegerv(GL_FRAMEBUFFER_BINDING, &last_fbo); // 记录当前 FBO
         
         last_enable_blend = glIsEnabled(GL_BLEND);
         last_enable_cull_face = glIsEnabled(GL_CULL_FACE);
@@ -77,6 +80,7 @@ struct GLStateBackup {
     }
 
     void Restore() {
+        glBindFramebuffer(GL_FRAMEBUFFER, last_fbo); // 恢复 FBO
         glUseProgram(last_program);
         glActiveTexture(last_active_texture);
         glBindTexture(GL_TEXTURE_2D, last_texture);
@@ -104,11 +108,12 @@ void DrawImGui(int width, int height) {
     GLStateBackup gl_state;
     gl_state.Backup();
 
-    // 核心：强制重置顶点属性，防止 ImGui 的绘制指令受到游戏原有 VAO 的干扰
-    for (int i = 0; i < 8; i++) glDisableVertexAttribArray(i);
+    // 关键修复：强制解绑 FBO 和 VAO
+    glBindFramebuffer(GL_FRAMEBUFFER, 0); 
     glBindVertexArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    for (int i = 0; i < 8; i++) glDisableVertexAttribArray(i);
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
@@ -116,14 +121,12 @@ void DrawImGui(int width, int height) {
     ImGui::SetNextWindowPos(ImVec2(width * 0.1f, height * 0.1f), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(500, 350), ImGuiCond_FirstUseEver);
 
-    if (ImGui::Begin("JKMenu v4.4 - Ultra Stability", &g_ShowMenu)) {
-        ImGui::TextColored(ImVec4(1, 1, 0, 1), "Safe Mode: Enabled");
+    if (ImGui::Begin("JKMenu v4.5 - Stable Mode", &g_ShowMenu)) {
+        ImGui::Text("Frames Observed: %d", g_FrameCount);
         ImGui::Text("FPS: %.1f", io.Framerate);
         ImGui::Separator();
-        
         static bool esp = false;
-        ImGui::Checkbox("Enemy ESP", &esp);
-        
+        ImGui::Checkbox("Enemy ESP Overlay", &esp);
         if (ImGui::Button("Hide Menu")) g_ShowMenu = false;
     }
     ImGui::End();
@@ -135,26 +138,27 @@ void DrawImGui(int width, int height) {
 }
 
 EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
-    // 互斥锁防止重入，Android 15 高刷屏幕必备
     if (pthread_mutex_trylock(&g_CtxMutex) != 0) {
         return old_eglSwapBuffers(dpy, surface);
     }
     
+    g_FrameCount++;
+
     EGLint width, height;
     eglQuerySurface(dpy, surface, EGL_WIDTH, &width);
     eglQuerySurface(dpy, surface, EGL_HEIGHT, &height);
 
-    if (!g_Initialized && width > 0 && height > 0) {
+    // 延迟初始化：等到第 120 帧再开始（约 2 秒后），确保游戏环境绝对稳定
+    if (!g_Initialized && g_FrameCount > 120 && width > 0 && height > 0) {
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
         io.IniFilename = nullptr;
         io.DisplaySize = ImVec2((float)width, (float)height);
 
-        // 初始化 Backend 时不指定版本，让 ImGui 自动检测
         if (ImGui_ImplOpenGL3_Init("#version 300 es")) {
             g_Initialized = true;
-            LOGI("Safe ImGui Init Success at %dx%d", width, height);
+            LOGI("Safe ImGui Init Success at %dx%d (Frame: %d)", width, height, g_FrameCount);
         }
     }
 
@@ -189,8 +193,8 @@ void* init_thread(void*) {
     if (egl_handle) {
         void* sym_egl = dlsym(egl_handle, "eglSwapBuffers");
         if (sym_egl) {
-            int ret = DobbyHook(sym_egl, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
-            LOGI("eglSwapBuffers Hook applied (Result: %d)", ret);
+            DobbyHook(sym_egl, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
+            LOGI("eglSwapBuffers Hook applied.");
         }
         dlclose(egl_handle);
     }
@@ -198,7 +202,7 @@ void* init_thread(void*) {
     void* sym_input = dlsym(RTLD_DEFAULT, "AInputEvent_getType");
     if (sym_input) {
         DobbyHook(sym_input, (void*)hook_AInputEvent_getType, (void**)&old_AInputEvent_getType);
-        LOGI("AInputEvent_getType Hook applied (Result: 0)");
+        LOGI("AInputEvent_getType Hook applied.");
     }
 
     return nullptr;
