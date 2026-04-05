@@ -10,19 +10,14 @@
 #include <dlfcn.h>
 #include <sys/uio.h>
 #include <elf.h>
+#include <stdint.h>
 
-// --- 强制定义 NDK 缺失的宏，防止编译器报错 ---
 #ifndef NT_PRSTATUS
 #define NT_PRSTATUS 1
 #endif
 
-#ifndef RTLD_DEFAULT
-#define RTLD_DEFAULT ((void *) 0LL)
-#endif
-
-// 目标包名 (王者荣耀)
+// 保持你提供的包名和路径
 const char* TARGET_PKG = "com.tencent.tmgp.sgame"; 
-// 注入路径 (确保 libJKMenu.so 已经用 adb push 到这里)
 const char* LIB_PATH = "/data/local/tmp/libJKMenu.so";
 
 pid_t find_pid_by_name(const char* package_name) {
@@ -45,6 +40,18 @@ pid_t find_pid_by_name(const char* package_name) {
     closedir(dir); return -1;
 }
 
+// 封装一个写入工具
+int ptrace_write_mem(pid_t pid, uintptr_t addr, const void* data, size_t size) {
+    size_t i;
+    long val;
+    for (i = 0; i < size; i += sizeof(long)) {
+        val = 0;
+        memcpy(&val, (uint8_t*)data + i, (size - i) < sizeof(long) ? (size - i) : sizeof(long));
+        if (ptrace(PTRACE_POKETEXT, pid, addr + i, (void*)val) < 0) return -1;
+    }
+    return 0;
+}
+
 int main() {
     pid_t pid = find_pid_by_name(TARGET_PKG);
     if (pid == -1) { 
@@ -52,58 +59,60 @@ int main() {
         return 1; 
     }
 
-    // 1. 附加到进程
+    // 1. 附加
     if (ptrace(PTRACE_ATTACH, pid, NULL, NULL) < 0) { 
         perror("[-] Attach failed"); 
         return 1; 
     }
     waitpid(pid, NULL, WUNTRACED);
 
-    // 2. 获取寄存器 (ARM64)
-    struct user_pt_regs regs;
+    // 2. 获取并备份原始寄存器
+    struct user_pt_regs regs, old_regs;
     struct iovec iov;
     iov.iov_base = &regs;
     iov.iov_len = sizeof(regs);
     
-    // 修正：将 NT_PRSTATUS 转换为 void* 以匹配 ptrace 签名
     if (ptrace(PTRACE_GETREGSET, pid, (void*)(uintptr_t)NT_PRSTATUS, &iov) < 0) {
         perror("[-] PTRACE_GETREGSET failed");
-        ptrace(PTRACE_DETACH, pid, NULL, NULL);
-        return 1;
+        goto end;
+    }
+    memcpy(&old_regs, &regs, sizeof(regs));
+
+    // 3. 获取 dlopen 地址 (在 Android N+ 通常是 __loader_dlopen)
+    void* handle = dlopen("libdl.so", RTLD_LAZY);
+    uintptr_t dlopen_addr = (uintptr_t)dlsym(handle, "__loader_dlopen");
+    if (!dlopen_addr) dlopen_addr = (uintptr_t)dlsym(handle, "dlopen");
+    dlclose(handle);
+
+    if (!dlopen_addr) {
+        printf("[-] dlopen not found!\n");
+        goto end;
     }
 
-    // 3. 定位远程 dlopen
-    uintptr_t remote_dlopen = (uintptr_t)dlsym(RTLD_DEFAULT, "__loader_dlopen"); 
-    if (!remote_dlopen) {
-        remote_dlopen = (uintptr_t)dlsym(RTLD_DEFAULT, "dlopen");
-    }
+    // 4. 将 SO 路径写入栈空间 (sp 下方 512 字节相对安全)
+    uintptr_t remote_path_addr = (regs.sp - 512) & ~0xF;
+    ptrace_write_mem(pid, remote_path_addr, LIB_PATH, strlen(LIB_PATH) + 1);
 
-    if (!remote_dlopen) {
-        printf("[-] Failed to locate dlopen symbols.\n");
-        ptrace(PTRACE_DETACH, pid, NULL, NULL);
-        return 1;
-    }
+    // 5. 设置调用参数
+    regs.regs[0] = remote_path_addr; // x0: filename
+    regs.regs[1] = 2;                // x1: flags (RTLD_NOW)
+    regs.regs[30] = 0;               // lr: 设置为0，执行完会崩掉，方便我们 capture
+    regs.pc = dlopen_addr;           // pc: 跳转执行
 
-    // 4. 准备调用：将 SO 路径写入远程栈
-    uintptr_t sp = (regs.sp - 512) & ~0xF; 
-    size_t len = strlen(LIB_PATH) + 1;
-    for (size_t i = 0; i < len; i += 8) {
-        long data = 0;
-        memcpy(&data, LIB_PATH + i, (len - i) < 8 ? (len - i) : 8);
-        ptrace(PTRACE_POKETEXT, pid, sp + i, (void*)data);
-    }
-
-    // 5. 设置寄存器执行 dlopen(path, RTLD_NOW)
-    regs.regs[0] = sp;  // x0: path
-    regs.regs[1] = 2;   // x1: RTLD_NOW
-    regs.pc = remote_dlopen;
-    
-    // 修正：将 NT_PRSTATUS 转换为 void* 以匹配 ptrace 签名
     ptrace(PTRACE_SETREGSET, pid, (void*)(uintptr_t)NT_PRSTATUS, &iov);
 
-    // 6. 恢复并分离
-    ptrace(PTRACE_DETACH, pid, NULL, NULL);
+    // 6. 执行并等待
+    ptrace(PTRACE_CONT, pid, NULL, NULL);
+    int status;
+    waitpid(pid, &status, WUNTRACED); // 等待 SIGSEGV
 
-    printf("[+] Successfully sent injection request to PID %d\n", pid);
+    // 7. 恢复原始寄存器，让进程像没事发生一样继续运行
+    iov.iov_base = &old_regs;
+    ptrace(PTRACE_SETREGSET, pid, (void*)(uintptr_t)NT_PRSTATUS, &iov);
+
+    printf("[+] Injection successful on PID %d\n", pid);
+
+end:
+    ptrace(PTRACE_DETACH, pid, NULL, NULL);
     return 0;
 }
