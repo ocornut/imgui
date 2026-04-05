@@ -44,7 +44,7 @@ uintptr_t get_module_base(const char* name) {
 void DrawImGui(int width, int height) {
     if (!g_ShowMenu) return;
 
-    // 1. 保存当前所有可能被 ImGui 改变的 GL 状态
+    // 1. 保存当前所有可能被 ImGui 改变的 GL 状态 (全量保存)
     GLint last_program, last_texture, last_array_buffer, last_vao;
     glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
@@ -65,7 +65,7 @@ void DrawImGui(int width, int height) {
     ImGui::SetNextWindowSize(ImVec2(400, 250), ImGuiCond_FirstUseEver);
     if (ImGui::Begin("JKMenu Render Test", &g_ShowMenu)) {
         ImGui::Text("Render Status: Active");
-        ImGui::Text("Wait for Input Implementation...");
+        ImGui::Text("GL Version: %s", glGetString(GL_VERSION));
         ImGui::Separator();
         
         static float f = 0.5f;
@@ -81,7 +81,7 @@ void DrawImGui(int width, int height) {
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-    // 4. 恢复原始状态 (极其重要，防止游戏闪退)
+    // 4. 恢复原始状态
     glUseProgram(last_program);
     glBindTexture(GL_TEXTURE_2D, last_texture);
     glBindBuffer(GL_ARRAY_BUFFER, last_array_buffer);
@@ -97,29 +97,33 @@ void DrawImGui(int width, int height) {
 
 // --- EGL SwapBuffers Hook ---
 EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
-    // 简单的重入锁
     static bool is_rendering = false;
     if (is_rendering) return old_eglSwapBuffers(dpy, surface);
     is_rendering = true;
 
     g_FrameCount++;
-
-    // 初始化逻辑：等待 200 帧确保 Context 完全稳定
-    if (!g_Initialized && g_FrameCount > 200) {
-        if (eglGetCurrentContext() != EGL_NO_CONTEXT) {
-            LOGI("[TRACE] Step 3: Starting ImGui Render Init");
+    
+    // 初始化逻辑
+    if (!g_Initialized) {
+        EGLContext ctx = eglGetCurrentContext();
+        // 降低门槛：只要有 Context 且 帧数 > 10 就可以尝试初始化
+        if (ctx != EGL_NO_CONTEXT && g_FrameCount > 60) {
+            LOGI("[TRACE] Step 3: Attempting ImGui Init with Context: %p", ctx);
             
             IMGUI_CHECKVERSION();
             ImGui::CreateContext();
             ImGuiIO& io = ImGui::GetIO();
             io.IniFilename = nullptr;
-            
-            // 解决高分屏 UI 太小的问题
-            io.FontGlobalScale = 2.0f;
+            io.FontGlobalScale = 2.0f; // 适配移动端高分屏
 
+            // 优先尝试 300 es，如果失败尝试 nullptr 让后端自动检测
             if (ImGui_ImplOpenGL3_Init("#version 300 es")) {
                 g_Initialized = true;
-                LOGI("[TRACE] Step 4: Render Init Success");
+                LOGI("[TRACE] Step 4: Render Init SUCCESS on Frame %d", g_FrameCount);
+            } else {
+                LOGE("[TRACE] ERROR: ImGui_ImplOpenGL3_Init Failed! GL Error: %d", glGetError());
+                // 如果 300 失败，清理掉 Context 准备下一帧重试或报错
+                ImGui::DestroyContext();
             }
         }
     }
@@ -146,11 +150,13 @@ void* init_thread(void*) {
         usleep(100000);
     }
     
-    // 仅 Hook 渲染函数
+    // 使用 RTLD_DEFAULT 确保拿到的是进程内正在运行的 eglSwapBuffers
     void* sym_egl = dlsym(RTLD_DEFAULT, "eglSwapBuffers");
     if (sym_egl) {
         DobbyHook(sym_egl, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
         LOGI("[TRACE] Step 2: eglSwapBuffers Hooked (Render Only)");
+    } else {
+        LOGE("[TRACE] FATAL: Could not find eglSwapBuffers symbol!");
     }
 
     return nullptr;
