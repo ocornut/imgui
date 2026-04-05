@@ -1,15 +1,15 @@
 cmake_minimum_required(VERSION 3.10)
 project(JKMenu)
 
-# 1. 强制使用静态 C++ 运行时，解决 "library libc++_shared.so not found" 报错
+# 强制静态链接 C++ 运行时，解决 libc++_shared.so 缺失问题
 set(ANDROID_STL c++_static)
 set(CMAKE_CXX_STANDARD 17)
 
-# 2. 包含路径
+# 包含路径
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/backends)
 
-# 3. ImGui 源文件 (包含 Vulkan 和 OpenGL3 后端)
+# ImGui 源文件列表
 set(IMGUI_SRCS
     imgui.cpp
     imgui_draw.cpp
@@ -20,13 +20,17 @@ set(IMGUI_SRCS
     backends/imgui_impl_vulkan.cpp
 )
 
-# 4. 生成插件 libJKMenu.so
+# 目标一：生成注入器 (优先编译，确保它先生成)
+add_executable(jk_injector injector.cpp)
+target_link_libraries(jk_injector log)
+
+# 目标二：生成插件 libJKMenu.so
 add_library(JKMenu SHARED
     main.cpp
     ${IMGUI_SRCS}
 )
 
-# 链接 Dobby 和 系统库
+# 链接必要的库
 target_link_libraries(JKMenu
     ${CMAKE_CURRENT_SOURCE_DIR}/libdobby.a
     android
@@ -36,10 +40,6 @@ target_link_libraries(JKMenu
     log
 )
 
-# 5. 生成注入器 jk_injector
-add_executable(jk_injector injector.cpp)
-target_link_libraries(jk_injector log)
-
-# 6. 属性设置
-set_target_properties(JKMenu PROPERTIES OUTPUT_NAME "JKMenu")
+# 统一输出名称
 set_target_properties(jk_injector PROPERTIES OUTPUT_NAME "jk_injector")
+set_target_properties(JKMenu PROPERTIES OUTPUT_NAME "JKMenu")
