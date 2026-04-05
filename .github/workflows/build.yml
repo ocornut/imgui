@@ -1,17 +1,14 @@
-name: Android CI
+name: Build Android SO
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ main, master ]
   pull_request:
-    branches: [ "main", "master" ]
+    branches: [ main, master ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        abi: [arm64-v8a, armeabi-v7a]
     steps:
     - uses: actions/checkout@v4
       with:
@@ -26,23 +23,23 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
 
-    - name: Setup Android NDK
+    - name: Setup NDK
       run: |
         echo "y" | sudo ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --install "ndk;25.1.8937393"
 
-    - name: Configure CMake for ${{ matrix.abi }}
+    - name: Configure CMake (arm64-v8a)
       run: |
-        cmake -B build_${{ matrix.abi }} \
+        cmake -B build \
           -DCMAKE_TOOLCHAIN_FILE=${ANDROID_HOME}/ndk/25.1.8937393/build/cmake/android.toolchain.cmake \
-          -DANDROID_ABI=${{ matrix.abi }} \
+          -DANDROID_ABI=arm64-v8a \
           -DANDROID_PLATFORM=android-24 \
           -DCMAKE_BUILD_TYPE=Release
 
-    - name: Build for ${{ matrix.abi }}
-      run: cmake --build build_${{ matrix.abi }} --config Release
+    - name: Build
+      run: cmake --build build --config Release
 
-    - name: Upload SO for ${{ matrix.abi }}
+    - name: Upload SO
       uses: actions/upload-artifact@v4
       with:
-        name: libmodmenu_${{ matrix.abi }}
-        path: build_${{ matrix.abi }}/libmodmenu.so
+        name: libmodmenu_arm64-v8a
+        path: build/libmodmenu.so
