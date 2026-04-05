@@ -15,22 +15,23 @@
 #define NT_PRSTATUS 1
 #endif
 
-// 目标包名
+// 目标包名 (根据你的配置)
 const char* TARGET_PKG = "com.tencent.tmgp.sgame"; 
 // 注入库路径
 const char* LIB_PATH = "/data/1/libJKMenu.so";
 
-// 获取进程中模块的基地址
+// 获取进程中模块的基地址，增加对 APEX 路径的兼容
 uintptr_t get_module_base(pid_t pid, const char* module_name) {
     FILE* fp;
     uintptr_t addr = 0;
-    char filename[32];
+    char filename[64];
     char line[1024];
     snprintf(filename, sizeof(filename), "/proc/%d/maps", pid);
     fp = fopen(filename, "r");
     if (fp) {
         while (fgets(line, sizeof(line), fp)) {
-            if (strstr(line, module_name)) {
+            // 搜索包含 linker 的路径并确保是可执行段 (r-xp)
+            if (strstr(line, module_name) && strstr(line, "r-xp")) {
                 addr = strtoull(line, NULL, 16);
                 break;
             }
@@ -40,43 +41,52 @@ uintptr_t get_module_base(pid_t pid, const char* module_name) {
     return addr;
 }
 
-// 获取远程进程中 linker 函数的绝对地址
+// 寻找 dlopen 地址的核心逻辑
 uintptr_t get_remote_dlopen(pid_t pid) {
     uintptr_t local_linker = 0;
     uintptr_t remote_linker = 0;
-    const char* linker_path = NULL;
 
-    // 尝试定位 64位 或 32位 linker
-    if ((local_linker = get_module_base(getpid(), "linker64"))) {
-        remote_linker = get_module_base(pid, "linker64");
-        linker_path = "/system/bin/linker64";
-    } else if ((local_linker = get_module_base(getpid(), "linker"))) {
-        remote_linker = get_module_base(pid, "linker");
-        linker_path = "/system/bin/linker";
+    // 适配 Android 10+ 的 APEX 路径和常规路径
+    const char* linker_paths[] = {
+        "bin/linker64",
+        "bin/linker",
+        "/apex/com.android.runtime/bin/linker64",
+        "/apex/com.android.runtime/bin/linker"
+    };
+
+    for (int i = 0; i < 4; i++) {
+        local_linker = get_module_base(getpid(), linker_paths[i]);
+        remote_linker = get_module_base(pid, linker_paths[i]);
+        if (local_linker && remote_linker) {
+            printf("[+] Found Linker at: %s\n", linker_paths[i]);
+            break;
+        }
     }
 
     if (!local_linker || !remote_linker) {
-        printf("[-] Could not locate linker in maps.\n");
+        printf("[-] Error: Local Linker: %lx, Remote Linker: %lx\n", (long)local_linker, (long)remote_linker);
         return 0;
     }
 
-    // 优先寻找 __loader_dlopen (Android 8+)
-    void* handle = dlopen(linker_path, RTLD_LAZY);
-    if (!handle) return 0;
+    // 获取本地 __loader_dlopen 地址 (Android 8.0+)
+    void* local_func = dlsym(RTLD_DEFAULT, "__loader_dlopen");
+    if (!local_func) {
+        local_func = dlsym(RTLD_DEFAULT, "dlopen");
+    }
     
-    void* local_func = dlsym(handle, "__loader_dlopen");
-    if (!local_func) local_func = dlsym(handle, "dlopen");
-    
-    // 终极回退方案：如果 dlsym 被拦截，直接取当前进程 dlopen 的内存地址
+    // 终极保底：直接使用本地 dlopen 函数指针
     if (!local_func) {
         local_func = (void*)dlopen;
     }
-    
-    dlclose(handle);
 
-    // 计算偏移并应用到远程基址
     uintptr_t offset = (uintptr_t)local_func - local_linker;
-    return remote_linker + offset;
+    uintptr_t remote_addr = remote_linker + offset;
+
+    printf("[+] Local Linker Base: %lx\n", (long)local_linker);
+    printf("[+] Remote Linker Base: %lx\n", (long)remote_linker);
+    printf("[+] Function Offset: %lx\n", (long)offset);
+
+    return remote_addr;
 }
 
 pid_t find_pid(const char* pkg) {
@@ -100,22 +110,22 @@ pid_t find_pid(const char* pkg) {
 }
 
 int main() {
-    printf("[*] Starting injector...\n");
+    printf("[*] JKMenu Injector Starting...\n");
     pid_t pid = find_pid(TARGET_PKG);
     if (pid == -1) { 
         printf("[-] Target process %s not found!\n", TARGET_PKG); 
         return 1; 
     }
-    printf("[+] Found PID: %d\n", pid);
+    printf("[+] Found Target PID: %d\n", pid);
 
     uintptr_t dlopen_addr = get_remote_dlopen(pid);
     if (!dlopen_addr) {
-        printf("[-] Failed to calculate dlopen address!\n");
+        printf("[-] Critical: Failed to calculate dlopen address!\n");
         return 1;
     }
-    printf("[+] Remote dlopen address: %lx\n", (long)dlopen_addr);
+    printf("[+] Calculated Remote dlopen: %lx\n", (long)dlopen_addr);
 
-    // 1. Attach 目标进程
+    // --- Ptrace 注入开始 ---
     if (ptrace(PTRACE_ATTACH, pid, NULL, NULL) < 0) {
         perror("[-] Attach failed");
         return 1;
@@ -131,7 +141,7 @@ int main() {
         return 1;
     }
 
-    // 2. 在栈上写入 .so 路径 (SP - 512 字节安全区)
+    // 准备栈空间存放路径
     uintptr_t sp = (regs.sp - 512) & ~0xF;
     size_t len = strlen(LIB_PATH) + 1;
     for (size_t i = 0; i < len; i += 8) {
@@ -140,12 +150,11 @@ int main() {
         ptrace(PTRACE_POKETEXT, pid, (void*)(sp + i), (void*)data);
     }
 
-    // 3. 修改寄存器模拟函数调用
-    // AArch64 调用约定: X0 = 第一个参数, X1 = 第二个参数, PC = 函数地址
-    regs.regs[0] = sp;       // 参数 1: SO 路径
-    regs.regs[1] = 2;        // 参数 2: RTLD_NOW
-    regs.pc = dlopen_addr;   // 跳转执行
-    regs.regs[30] = 0;       // LR = 0, 函数返回时会崩溃并被 ptrace 捕获
+    // 设置寄存器 (AArch64)
+    regs.regs[0] = sp;       // x0: .so path
+    regs.regs[1] = 2;        // x1: RTLD_NOW
+    regs.pc = dlopen_addr;   // pc: call dlopen
+    regs.regs[30] = 0;       // lr: exit on return
 
     if (ptrace(PTRACE_SETREGSET, pid, (void*)(uintptr_t)NT_PRSTATUS, &iov) < 0) {
         perror("[-] Set regs failed");
@@ -153,12 +162,14 @@ int main() {
         return 1;
     }
 
-    // 4. 继续运行并脱离
-    printf("[*] Triggering dlopen in target...\n");
+    printf("[*] Triggering remote load...\n");
     ptrace(PTRACE_CONT, pid, NULL, NULL);
+    
+    // 给系统加载 SO 留一点缓冲时间
     usleep(500000); 
 
     ptrace(PTRACE_DETACH, pid, NULL, NULL);
-    printf("[+] Injection cycle finished.\n");
+    printf("[+] Injection Done. Check logcat for 'libJKMenu' results.\n");
+
     return 0;
 }
