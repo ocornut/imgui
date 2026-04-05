@@ -1,4 +1,4 @@
-name: Build Android SO
+name: Build Android SO and Injector
 
 on:
   push:
@@ -9,10 +9,12 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        abi: [arm64-v8a, armeabi-v7a]  # 编译两种主流架构
+
     steps:
     - uses: actions/checkout@v4
-      with:
-        submodules: false   # 你没有子模块，无需递归
 
     - name: Set up JDK 17
       uses: actions/setup-java@v4
@@ -27,19 +29,34 @@ jobs:
       run: |
         echo "y" | sudo ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --install "ndk;25.1.8937393"
 
-    - name: Configure CMake for arm64-v8a
+    # ========== 1. 编译 libmodmenu.so ==========
+    - name: Configure CMake for ${{ matrix.abi }}
       run: |
-        cmake -B build \
+        cmake -B build_so \
           -DCMAKE_TOOLCHAIN_FILE=${ANDROID_HOME}/ndk/25.1.8937393/build/cmake/android.toolchain.cmake \
-          -DANDROID_ABI=arm64-v8a \
+          -DANDROID_ABI=${{ matrix.abi }} \
           -DANDROID_PLATFORM=android-24 \
           -DCMAKE_BUILD_TYPE=Release
 
-    - name: Build
-      run: cmake --build build --config Release
+    - name: Build libmodmenu.so for ${{ matrix.abi }}
+      run: cmake --build build_so --config Release
 
-    - name: Upload SO
+    # ========== 2. 编译注入器 xinjector ==========
+    - name: Build xinjector for ${{ matrix.abi }}
+      run: |
+        mkdir -p build_injector && cd build_injector
+        cmake -DCMAKE_TOOLCHAIN_FILE=${ANDROID_HOME}/ndk/25.1.8937393/build/cmake/android.toolchain.cmake \
+              -DANDROID_ABI=${{ matrix.abi }} \
+              -DANDROID_PLATFORM=android-24 \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DBUILD_INJECTOR=ON ..   # 新增标识，用于区分注入器与 so 的编译
+        cmake --build . --config Release
+
+    # ========== 3. 上传所有编译产物 ==========
+    - name: Upload artifacts for ${{ matrix.abi }}
       uses: actions/upload-artifact@v4
       with:
-        name: libmodmenu_arm64-v8a
-        path: build/libmodmenu.so
+        name: build-${{ matrix.abi }}
+        path: |
+          build_so/libmodmenu.so
+          build_injector/xinjector
