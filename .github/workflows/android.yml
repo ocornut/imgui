@@ -1,5 +1,4 @@
 name: Android NDK Build
-
 on:
   push:
     branches: [ "master", "main" ]
@@ -8,42 +7,33 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
       - name: Set up JDK 17
-        uses: actions/setup-java@v4  # <--- 这里之前误写成了 uses/setup-java
+        uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-
       - name: Install Ninja
         run: sudo apt-get install ninja-build
-
-      - name: Setup Android NDK
-        uses: nttld/setup-ndk@v1
+      - uses: nttld/setup-ndk@v1
         id: setup-ndk
         with:
           ndk-version: r26b
-
-      - name: Build with CMake
+      - name: Build
         run: |
-          mkdir -p build && cd build
-          cmake .. \
-            -GNinja \
+          mkdir build && cd build
+          cmake .. -GNinja \
             -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake \
             -DANDROID_ABI=arm64-v8a \
             -DANDROID_PLATFORM=android-26 \
             -DCMAKE_BUILD_TYPE=Release \
             -DANDROID_STL=c++_static
           ninja
-
-      - name: Upload Artifacts
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: JKMenu-Package
+          name: JKMenu-SGame-Package
           path: |
             build/libJKMenu.so
             build/jk_injector
