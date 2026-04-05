@@ -15,12 +15,12 @@
 #define NT_PRSTATUS 1
 #endif
 
-// 目标包名 (根据你的配置)
+// 目标包名
 const char* TARGET_PKG = "com.tencent.tmgp.sgame"; 
 // 注入库路径
 const char* LIB_PATH = "/data/1/libJKMenu.so";
 
-// 获取进程中模块的基地址，增加对 APEX 路径的兼容
+// 更加强力的模块基址获取函数
 uintptr_t get_module_base(pid_t pid, const char* module_name) {
     FILE* fp;
     uintptr_t addr = 0;
@@ -30,9 +30,13 @@ uintptr_t get_module_base(pid_t pid, const char* module_name) {
     fp = fopen(filename, "r");
     if (fp) {
         while (fgets(line, sizeof(line), fp)) {
-            // 搜索包含 linker 的路径并确保是可执行段 (r-xp)
-            if (strstr(line, module_name) && strstr(line, "r-xp")) {
+            // 只要包含 linker 关键字且是该段的起始地址（通常第一条是基址）
+            if (strstr(line, module_name)) {
                 addr = strtoull(line, NULL, 16);
+                // 打印调试信息，看看实际匹配到了什么
+                if (pid == getpid()) {
+                    printf("[DEBUG] Local Map Match: %s", line);
+                }
                 break;
             }
         }
@@ -46,29 +50,28 @@ uintptr_t get_remote_dlopen(pid_t pid) {
     uintptr_t local_linker = 0;
     uintptr_t remote_linker = 0;
 
-    // 适配 Android 10+ 的 APEX 路径和常规路径
-    const char* linker_paths[] = {
-        "bin/linker64",
-        "bin/linker",
-        "/apex/com.android.runtime/bin/linker64",
-        "/apex/com.android.runtime/bin/linker"
+    // 扩大搜索范围，尝试匹配各种可能的 linker 名称
+    const char* linker_keywords[] = {
+        "linker64",
+        "linker",
+        "com.android.runtime" // 适配某些 APEX 路径
     };
 
-    for (int i = 0; i < 4; i++) {
-        local_linker = get_module_base(getpid(), linker_paths[i]);
-        remote_linker = get_module_base(pid, linker_paths[i]);
+    for (int i = 0; i < 3; i++) {
+        local_linker = get_module_base(getpid(), linker_keywords[i]);
+        remote_linker = get_module_base(pid, linker_keywords[i]);
         if (local_linker && remote_linker) {
-            printf("[+] Found Linker at: %s\n", linker_paths[i]);
+            printf("[+] Linked found via keyword: %s\n", linker_keywords[i]);
             break;
         }
     }
 
     if (!local_linker || !remote_linker) {
-        printf("[-] Error: Local Linker: %lx, Remote Linker: %lx\n", (long)local_linker, (long)remote_linker);
+        printf("[-] Error: Local Linker Base: %lx, Remote Linker Base: %lx\n", (long)local_linker, (long)remote_linker);
         return 0;
     }
 
-    // 获取本地 __loader_dlopen 地址 (Android 8.0+)
+    // 获取本地 __loader_dlopen 地址
     void* local_func = dlsym(RTLD_DEFAULT, "__loader_dlopen");
     if (!local_func) {
         local_func = dlsym(RTLD_DEFAULT, "dlopen");
@@ -84,7 +87,7 @@ uintptr_t get_remote_dlopen(pid_t pid) {
 
     printf("[+] Local Linker Base: %lx\n", (long)local_linker);
     printf("[+] Remote Linker Base: %lx\n", (long)remote_linker);
-    printf("[+] Function Offset: %lx\n", (long)offset);
+    printf("[+] Function Offset: %lx, Remote Addr: %lx\n", (long)offset, (long)remote_addr);
 
     return remote_addr;
 }
@@ -123,25 +126,18 @@ int main() {
         printf("[-] Critical: Failed to calculate dlopen address!\n");
         return 1;
     }
-    printf("[+] Calculated Remote dlopen: %lx\n", (long)dlopen_addr);
 
-    // --- Ptrace 注入开始 ---
+    // --- Ptrace 注入 ---
     if (ptrace(PTRACE_ATTACH, pid, NULL, NULL) < 0) {
         perror("[-] Attach failed");
         return 1;
     }
-    printf("[*] Waiting for process to stop...\n");
     waitpid(pid, NULL, WUNTRACED);
 
     struct user_pt_regs regs;
     struct iovec iov = { .iov_base = &regs, .iov_len = sizeof(regs) };
-    if (ptrace(PTRACE_GETREGSET, pid, (void*)(uintptr_t)NT_PRSTATUS, &iov) < 0) {
-        perror("[-] Get regs failed");
-        ptrace(PTRACE_DETACH, pid, NULL, NULL);
-        return 1;
-    }
+    ptrace(PTRACE_GETREGSET, pid, (void*)(uintptr_t)NT_PRSTATUS, &iov);
 
-    // 准备栈空间存放路径
     uintptr_t sp = (regs.sp - 512) & ~0xF;
     size_t len = strlen(LIB_PATH) + 1;
     for (size_t i = 0; i < len; i += 8) {
@@ -150,26 +146,18 @@ int main() {
         ptrace(PTRACE_POKETEXT, pid, (void*)(sp + i), (void*)data);
     }
 
-    // 设置寄存器 (AArch64)
-    regs.regs[0] = sp;       // x0: .so path
-    regs.regs[1] = 2;        // x1: RTLD_NOW
-    regs.pc = dlopen_addr;   // pc: call dlopen
-    regs.regs[30] = 0;       // lr: exit on return
+    regs.regs[0] = sp;       
+    regs.regs[1] = 2;        
+    regs.pc = dlopen_addr;   
+    regs.regs[30] = 0;       
 
-    if (ptrace(PTRACE_SETREGSET, pid, (void*)(uintptr_t)NT_PRSTATUS, &iov) < 0) {
-        perror("[-] Set regs failed");
-        ptrace(PTRACE_DETACH, pid, NULL, NULL);
-        return 1;
-    }
-
+    ptrace(PTRACE_SETREGSET, pid, (void*)(uintptr_t)NT_PRSTATUS, &iov);
     printf("[*] Triggering remote load...\n");
     ptrace(PTRACE_CONT, pid, NULL, NULL);
     
-    // 给系统加载 SO 留一点缓冲时间
     usleep(500000); 
-
     ptrace(PTRACE_DETACH, pid, NULL, NULL);
-    printf("[+] Injection Done. Check logcat for 'libJKMenu' results.\n");
+    printf("[+] Injection Done.\n");
 
     return 0;
 }
