@@ -15,11 +15,11 @@ include_directories(
 )
 
 # 2. 库查找路径
-# 确保 libdobby.a 放在根目录，或者在 build.yml 中指定的路径
+# 确保 libdobby.a 放在根目录
 link_directories(${CMAKE_SOURCE_DIR})
 
 # 3. 定义源文件
-# 包含 ImGui 核心、backends 适配层以及你的入口文件 main.cpp
+# 修复：移除 imgui/ 前缀，因为源码就在根目录
 set(SOURCE_FILES
     main.cpp
     imgui.cpp
