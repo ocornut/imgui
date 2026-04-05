@@ -2,10 +2,10 @@ name: Android Arm64 Build
 
 on:
   push:
-    branches: [ main ]
-  pull_request: 
-    branches: [ main ]
-  workflow_dispatch:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch: # 允许在 Actions 页面手动点击运行
 
 jobs:
   build:
@@ -25,12 +25,13 @@ jobs:
         uses: nttld/setup-ndk@v1
         id: setup-ndk
         with:
-          ndk-version: r25c
+          ndk-version: r25c # NDK r25c 稳定版
 
       - name: Create Build Directory
         run: mkdir -p build
 
       - name: Configure CMake
+        # 注意：这里会寻找根目录下的 CMakeLists.txt
         run: |
           cmake -S . -B build \
             -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake \
@@ -42,6 +43,7 @@ jobs:
         run: cmake --build build --config Release
 
       - name: Upload Artifact
+        # 编译完成后，将生成的 .so 文件作为产物上传
         uses: actions/upload-artifact@v3
         with:
           name: MyMenu-So-File
