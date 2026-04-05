@@ -23,7 +23,7 @@
 // --- 全局变量 ---
 bool g_Initialized = false;
 bool g_ShowMenu = true;
-int g_FrameCount = 0; // 帧计数器
+int g_FrameCount = 0;
 pthread_mutex_t g_CtxMutex = PTHREAD_MUTEX_INITIALIZER;
 EGLBoolean (*old_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surface) = nullptr;
 
@@ -46,21 +46,11 @@ uintptr_t get_module_base(const char* name) {
     return base;
 }
 
-// --- 终极 GL 状态保护 (针对重度 3D 游戏闪退修复) ---
+// --- 增强版 GL 状态保护 ---
 struct GLStateBackup {
-    GLint last_program;
-    GLint last_texture;
-    GLint last_active_texture;
-    GLint last_array_buffer;
-    GLint last_element_array_buffer;
-    GLint last_vertex_array;
-    GLint last_viewport[4];
-    GLint last_scissor_box[4];
-    GLint last_fbo; // 新增 FBO 保护
-    GLboolean last_enable_blend;
-    GLboolean last_enable_cull_face;
-    GLboolean last_enable_depth_test;
-    GLboolean last_enable_scissor_test;
+    GLint last_program, last_texture, last_active_texture, last_array_buffer, last_element_array_buffer;
+    GLint last_vertex_array, last_fbo, last_viewport[4], last_scissor_box[4];
+    GLboolean last_enable_blend, last_enable_cull_face, last_enable_depth_test, last_enable_scissor_test;
 
     void Backup() {
         glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
@@ -69,10 +59,9 @@ struct GLStateBackup {
         glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &last_array_buffer);
         glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &last_element_array_buffer);
         glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vertex_array);
+        glGetIntegerv(GL_FRAMEBUFFER_BINDING, &last_fbo);
         glGetIntegerv(GL_VIEWPORT, last_viewport);
         glGetIntegerv(GL_SCISSOR_BOX, last_scissor_box);
-        glGetIntegerv(GL_FRAMEBUFFER_BINDING, &last_fbo); // 记录当前 FBO
-        
         last_enable_blend = glIsEnabled(GL_BLEND);
         last_enable_cull_face = glIsEnabled(GL_CULL_FACE);
         last_enable_depth_test = glIsEnabled(GL_DEPTH_TEST);
@@ -80,19 +69,17 @@ struct GLStateBackup {
     }
 
     void Restore() {
-        glBindFramebuffer(GL_FRAMEBUFFER, last_fbo); // 恢复 FBO
         glUseProgram(last_program);
+        glBindFramebuffer(GL_FRAMEBUFFER, last_fbo);
         glActiveTexture(last_active_texture);
         glBindTexture(GL_TEXTURE_2D, last_texture);
         glBindVertexArray(last_vertex_array);
         glBindBuffer(GL_ARRAY_BUFFER, last_array_buffer);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, last_element_array_buffer);
-        
         if (last_enable_blend) glEnable(GL_BLEND); else glDisable(GL_BLEND);
         if (last_enable_cull_face) glEnable(GL_CULL_FACE); else glDisable(GL_CULL_FACE);
         if (last_enable_depth_test) glEnable(GL_DEPTH_TEST); else glDisable(GL_DEPTH_TEST);
         if (last_enable_scissor_test) glEnable(GL_SCISSOR_TEST); else glDisable(GL_SCISSOR_TEST);
-        
         glViewport(last_viewport[0], last_viewport[1], last_viewport[2], last_viewport[3]);
         glScissor(last_scissor_box[0], last_scissor_box[1], last_scissor_box[2], last_scissor_box[3]);
     }
@@ -101,32 +88,33 @@ struct GLStateBackup {
 void DrawImGui(int width, int height) {
     if (!g_ShowMenu) return;
 
-    ImGuiIO& io = ImGui::GetIO();
-    io.MousePos = ImVec2(g_Touch.x, g_Touch.y);
-    io.MouseDown[0] = g_Touch.down;
-
     GLStateBackup gl_state;
     gl_state.Backup();
 
-    // 关键修复：强制解绑 FBO 和 VAO
+    // 核心保护：强制切断与游戏原有渲染管线的所有联系
     glBindFramebuffer(GL_FRAMEBUFFER, 0); 
     glBindVertexArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    glDisable(GL_SCISSOR_TEST); // 防止 ImGui 窗口被游戏的裁剪区域切掉
     for (int i = 0; i < 8; i++) glDisableVertexAttribArray(i);
+
+    ImGuiIO& io = ImGui::GetIO();
+    io.MousePos = ImVec2(g_Touch.x, g_Touch.y);
+    io.MouseDown[0] = g_Touch.down;
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
 
-    ImGui::SetNextWindowPos(ImVec2(width * 0.1f, height * 0.1f), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(500, 350), ImGuiCond_FirstUseEver);
 
-    if (ImGui::Begin("JKMenu v4.5 - Stable Mode", &g_ShowMenu)) {
-        ImGui::Text("Frames Observed: %d", g_FrameCount);
-        ImGui::Text("FPS: %.1f", io.Framerate);
+    if (ImGui::Begin("JKMenu v4.6 - Android 15 Master", &g_ShowMenu)) {
+        ImGui::TextColored(ImVec4(0, 1, 0, 1), "Safe Rendering Enabled");
+        ImGui::Text("Frames: %d | FPS: %.1f", g_FrameCount, io.Framerate);
         ImGui::Separator();
         static bool esp = false;
-        ImGui::Checkbox("Enemy ESP Overlay", &esp);
+        ImGui::Checkbox("Enemy ESP", &esp);
         if (ImGui::Button("Hide Menu")) g_ShowMenu = false;
     }
     ImGui::End();
@@ -148,8 +136,8 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     eglQuerySurface(dpy, surface, EGL_WIDTH, &width);
     eglQuerySurface(dpy, surface, EGL_HEIGHT, &height);
 
-    // 延迟初始化：等到第 120 帧再开始（约 2 秒后），确保游戏环境绝对稳定
-    if (!g_Initialized && g_FrameCount > 120 && width > 0 && height > 0) {
+    // 增加延迟，确保游戏已经完全进入稳定渲染循环
+    if (!g_Initialized && g_FrameCount > 200 && width > 0 && height > 0) {
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
@@ -158,7 +146,7 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 
         if (ImGui_ImplOpenGL3_Init("#version 300 es")) {
             g_Initialized = true;
-            LOGI("Safe ImGui Init Success at %dx%d (Frame: %d)", width, height, g_FrameCount);
+            LOGI("ImGui Context Initialized (Frame: %d)", g_FrameCount);
         }
     }
 
@@ -204,7 +192,6 @@ void* init_thread(void*) {
         DobbyHook(sym_input, (void*)hook_AInputEvent_getType, (void**)&old_AInputEvent_getType);
         LOGI("AInputEvent_getType Hook applied.");
     }
-
     return nullptr;
 }
 
