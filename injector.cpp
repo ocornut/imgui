@@ -20,8 +20,6 @@ const char* LIB_PATH = "/data/1/libJKMenu.so";
 
 // 改进的符号查找：直接读取 /proc/self/maps 找到 linker 基址
 uintptr_t get_remote_func(pid_t pid, const char* func_name) {
-    // 尝试在当前进程寻找 linker 暴露的符号地址
-    // Android 10+ 的 dlopen 实际上是调用了 __loader_dlopen
     void* handle = dlopen("linker64", RTLD_LAZY);
     if (!handle) handle = dlopen("linker", RTLD_LAZY);
     if (!handle) return 0;
@@ -77,20 +75,23 @@ int main() {
     printf("[*] Waiting for process to stop...\n");
     waitpid(pid, NULL, WUNTRACED);
 
-    // 2. Get Regs
+    // 预先声明变量，防止 goto 跳过初始化报错
     struct user_pt_regs regs;
-    struct iovec iov = { .iov_base = &regs, .iov_len = sizeof(regs) };
+    struct iovec iov;
+    uintptr_t sp;
+    size_t len;
+
+    // 2. Get Regs
+    iov.iov_base = &regs;
+    iov.iov_len = sizeof(regs);
     if (ptrace(PTRACE_GETREGSET, pid, (void*)(uintptr_t)NT_PRSTATUS, &iov) < 0) {
         perror("[-] Get regs failed");
         goto detach;
     }
 
-    // 保存旧寄存器，以便恢复（防止游戏崩溃）
-    struct user_pt_regs old_regs = regs;
-
     // 3. Write Path to Stack
-    uintptr_t sp = (regs.sp - 512) & ~0xF;
-    size_t len = strlen(LIB_PATH) + 1;
+    sp = (regs.sp - 512) & ~0xF;
+    len = strlen(LIB_PATH) + 1;
     for (size_t i = 0; i < len; i += 8) {
         long data = 0;
         memcpy(&data, LIB_PATH + i, (len - i) < 8 ? (len - i) : 8);
@@ -101,8 +102,7 @@ int main() {
     regs.regs[0] = sp;   
     regs.regs[1] = 2;    
     regs.pc = dlopen_addr;
-    // 设置 LR 为 0，让它跑完触发 SIGSEGV 停止，或者设置一个无效地址
-    regs.regs[30] = 0; 
+    regs.regs[30] = 0; // 设置返回地址为0，触发停止
 
     if (ptrace(PTRACE_SETREGSET, pid, (void*)(uintptr_t)NT_PRSTATUS, &iov) < 0) {
         perror("[-] Set regs failed");
@@ -112,7 +112,6 @@ int main() {
     // 5. 让它跑起来执行 dlopen
     printf("[*] Executing remote dlopen...\n");
     ptrace(PTRACE_CONT, pid, NULL, NULL);
-    // 这里其实可以稍微 sleep 一下，给 dlopen 运行的时间
     usleep(500000); 
 
     printf("[+] Injection cycle complete.\n");
