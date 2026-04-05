@@ -1,109 +1,119 @@
-#include <imgui.h>
-#include <imgui_impl_opengl3.h>
-#include <imgui_impl_android.h>
-#include <GLES3/gl3.h>
-#include <EGL/egl.h>
-#include <dobby.h>
+#include <jni.h>
+#include <thread>
+#include <chrono>
 #include <dlfcn.h>
-#include "memory_utils.h"
+#include <android/native_window.h>
+#include <EGL/egl.h>
+#include <GLES3/gl3.h>
+#include <android/log.h>
+#include "dobby.h"
+#include "imgui.h"
+#include "backends/imgui_impl_android.h"
+#include "backends/imgui_impl_opengl3.h"
 
-// --- 全局变量与原始函数指针 ---
-using T_eglSwapBuffers = EGLBoolean (*)(EGLDisplay, EGLSurface);
-T_eglSwapBuffers orig_eglSwapBuffers = nullptr;
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "ModMenu", __VA_ARGS__)
 
-bool g_Initialized = false;
-bool g_ShowMenu = true;
+// 全局变量
+static ANativeWindow* g_AndroidWindow = nullptr;
+static bool g_ImGuiReady = false;
+static int g_GlWidth = 0;
+static int g_GlHeight = 0;
 
-// --- 渲染状态备份 (王者荣耀专项优化：深度还原) ---
-void Hook_eglSwapBuffers(EGLDisplay display, EGLSurface surface) {
-    if (!g_Initialized) {
-        // 1. 初始化 ImGui 上下文
-        ImGui::CreateContext();
-        ImGuiIO& io = ImGui::GetIO();
-        io.IniFilename = nullptr; // 不保存配置文件，防止被游戏扫描到
-        
-        // 2. 初始化后台渲染器 (王者荣耀使用 GLES3)
-        ImGui_ImplOpenGL3_Init("#version 300 es");
-        
-        g_Initialized = true;
+// 原始 eglSwapBuffers 函数指针类型定义
+typedef EGLBoolean (*eglSwapBuffers_t)(EGLDisplay dpy, EGLSurface surface);
+eglSwapBuffers_t original_eglSwapBuffers = nullptr;
+
+// ==================== ImGui 菜单绘制 ====================
+void RenderImGui() {
+    if (!g_ImGuiReady) return;
+
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplAndroid_NewFrame();
+    ImGui::NewFrame();
+
+    // 在这里绘制你的菜单内容
+    ImGui::Begin("Mod Menu");
+    ImGui::Text("Injected via eglSwapBuffers Hook");
+    ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
+    if (ImGui::Button("Click me")) {
+        LOGI("Button clicked!");
     }
+    ImGui::End();
 
-    if (g_ShowMenu) {
-        // --- [核心：全状态备份] 学习自高级 Hook 逻辑 ---
-        GLint last_program, last_vertex_array, last_array_buffer, last_element_array_buffer;
-        GLint last_viewport[4];
-        GLint last_scissor_box[4];
-        
-        glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
-        glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vertex_array);
-        glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &last_array_buffer);
-        glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &last_element_array_buffer);
-        glGetIntegerv(GL_VIEWPORT, last_viewport);
-        glGetIntegerv(GL_SCISSOR_BOX, last_scissor_box);
-
-        // 备份关键能力开关
-        GLboolean last_enable_blend = glIsEnabled(GL_BLEND);
-        GLboolean last_enable_cull_face = glIsEnabled(GL_CULL_FACE);
-        GLboolean last_enable_depth_test = glIsEnabled(GL_DEPTH_TEST);
-        GLboolean last_enable_scissor_test = glIsEnabled(GL_SCISSOR_TEST);
-
-        // --- 开始 ImGui 帧 ---
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui::NewFrame();
-
-        // 绘制王者荣耀专属风格菜单
-        ImGui::SetNextWindowSize(ImVec2(400, 320), ImGuiCond_FirstUseEver);
-        if (ImGui::Begin("JKInternal - SGame (王者荣耀)", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-            ImGui::TextColored(ImVec4(1, 1, 0, 1), "渲染注入成功: libEGL.so -> eglSwapBuffers");
-            ImGui::Separator();
-            
-            static bool esp_box = false;
-            static bool esp_line = false;
-            ImGui::Checkbox("英雄方框", &esp_box);
-            ImGui::SameLine();
-            ImGui::Checkbox("英雄射线", &esp_line);
-
-            static float draw_color[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
-            ImGui::ColorEdit4("绘制颜色", draw_color);
-
-            ImGui::Separator();
-            if (ImGui::Button("隐藏菜单 (按音量键恢复-未实现)")) {
-                g_ShowMenu = false;
-            }
-        }
-        ImGui::End();
-
-        // --- 渲染 ImGui ---
-        ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-        // --- [核心：全状态还原] 让游戏管线无感知 ---
-        glUseProgram(last_program);
-        glBindVertexArray(last_vertex_array);
-        glBindBuffer(GL_ARRAY_BUFFER, last_array_buffer);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, last_element_array_buffer);
-        glViewport(last_viewport[0], last_viewport[1], (GLsizei)last_viewport[2], (GLsizei)last_viewport[3]);
-        glScissor(last_scissor_box[0], last_scissor_box[1], (GLsizei)last_scissor_box[2], (GLsizei)last_scissor_box[3]);
-
-        if (last_enable_blend) glEnable(GL_BLEND); else glDisable(GL_BLEND);
-        if (last_enable_cull_face) glEnable(GL_CULL_FACE); else glDisable(GL_CULL_FACE);
-        if (last_enable_depth_test) glEnable(GL_DEPTH_TEST); else glDisable(GL_DEPTH_TEST);
-        if (last_enable_scissor_test) glEnable(GL_SCISSOR_TEST); else glDisable(GL_SCISSOR_TEST);
-    }
-
-    // 调用原始函数指针，完成屏幕交换
-    orig_eglSwapBuffers(display, surface);
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-// --- 注入入口 ---
-__attribute__((constructor))
-void MainEntry() {
-    // 动态获取 eglSwapBuffers 地址并进行 Dobby Hook
-    void* handle = dlopen("libEGL.so", RTLD_LAZY);
-    if (handle) {
-        void* target = dlsym(handle, "eglSwapBuffers");
-        if (target) {
-            DobbyHook(target, (void*)Hook_eglSwapBuffers, (void**)&orig_eglSwapBuffers);
+// ==================== Hook 函数 ====================
+EGLBoolean hooked_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
+    // 延迟初始化 ImGui（只执行一次）
+    static bool initialized = false;
+    if (!initialized && g_AndroidWindow != nullptr) {
+        // 获取 EGL 上下文信息
+        eglQuerySurface(dpy, surface, EGL_WIDTH, &g_GlWidth);
+        eglQuerySurface(dpy, surface, EGL_HEIGHT, &g_GlHeight);
+
+        // 初始化 ImGui
+        IMGUI_CHECKVERSION();
+        ImGui::CreateContext();
+        ImGui_ImplAndroid_Init(g_AndroidWindow);
+        ImGui_ImplOpenGL3_Init("#version 300 es");
+        ImGui::StyleColorsDark();
+
+        initialized = true;
+        g_ImGuiReady = true;
+        LOGI("ImGui initialized successfully! Width: %d, Height: %d", g_GlWidth, g_GlHeight);
+    }
+
+    // 执行 ImGui 绘制
+    if (g_ImGuiReady) {
+        RenderImGui();
+    }
+
+    // 调用原函数，保证游戏画面正常显示
+    return original_eglSwapBuffers(dpy, surface);
+}
+
+// ==================== 安装 Hook ====================
+void InstallHook() {
+    void* libegl = dlopen("libEGL.so", RTLD_LAZY);
+    if (!libegl) {
+        LOGI("Failed to load libEGL.so");
+        return;
+    }
+    void* func = dlsym(libegl, "eglSwapBuffers");
+    if (func) {
+        DobbyHook(func, (void*)hooked_eglSwapBuffers, (void**)&original_eglSwapBuffers);
+        LOGI("Dobby hook installed on eglSwapBuffers");
+    }
+    dlclose(libegl);
+}
+
+// ==================== 等待 libEGL 加载并 Hook ====================
+void SetupHooksThread() {
+    LOGI("SetupHooksThread started, waiting for libEGL.so...");
+    while (true) {
+        if (dlopen("libEGL.so", RTLD_LAZY | RTLD_NOLOAD)) {
+            LOGI("libEGL.so found, installing hook...");
+            InstallHook();
+            break;
         }
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+}
+
+// ==================== so 入口 ====================
+__attribute__((constructor))
+void Init() {
+    LOGI("libmodmenu.so loaded!");
+    std::thread(SetupHooksThread).detach();
+}
+
+// ==================== JNI 函数，用于从 Java 层传递 ANativeWindow ====================
+extern "C" JNIEXPORT void JNICALL
+Java_com_yourpackage_ModMenu_setNativeWindow(JNIEnv* env, jobject thiz, jobject surface) {
+    if (surface != nullptr) {
+        g_AndroidWindow = ANativeWindow_fromSurface(env, surface);
+        LOGI("Native window received from Java layer");
     }
 }
