@@ -15,18 +15,55 @@
 #define NT_PRSTATUS 1
 #endif
 
+// 目标包名
 const char* TARGET_PKG = "com.tencent.tmgp.sgame"; 
+// 注入库路径
 const char* LIB_PATH = "/data/1/libJKMenu.so";
 
-// 改进的符号查找：直接读取 /proc/self/maps 找到 linker 基址
-uintptr_t get_remote_func(pid_t pid, const char* func_name) {
-    void* handle = dlopen("linker64", RTLD_LAZY);
-    if (!handle) handle = dlopen("linker", RTLD_LAZY);
+// 获取远程进程中模块的基地址
+uintptr_t get_module_base(pid_t pid, const char* module_name) {
+    FILE* fp;
+    uintptr_t addr = 0;
+    char filename[32];
+    char line[1024];
+    snprintf(filename, sizeof(filename), "/proc/%d/maps", pid);
+    fp = fopen(filename, "r");
+    if (fp) {
+        while (fgets(line, sizeof(line), fp)) {
+            if (strstr(line, module_name)) {
+                addr = strtoull(line, NULL, 16);
+                break;
+            }
+        }
+        fclose(fp);
+    }
+    return addr;
+}
+
+// 获取远程进程中 linker 函数的绝对地址
+uintptr_t get_remote_dlopen(pid_t pid) {
+    const char* linker_path = "/system/bin/linker64";
+    uintptr_t local_linker = get_module_base(getpid(), "linker64");
+    uintptr_t remote_linker = get_module_base(pid, "linker64");
+    
+    if (!local_linker || !remote_linker) {
+        linker_path = "/system/bin/linker";
+        local_linker = get_module_base(getpid(), "linker");
+        remote_linker = get_module_base(pid, "linker");
+    }
+
+    // 尝试寻找 __loader_dlopen
+    void* handle = dlopen(linker_path, RTLD_LAZY);
     if (!handle) return 0;
     
-    uintptr_t addr = (uintptr_t)dlsym(handle, func_name);
+    void* local_func = dlsym(handle, "__loader_dlopen");
+    if (!local_func) local_func = dlsym(handle, "dlopen");
     dlclose(handle);
-    return addr;
+
+    if (!local_func) return 0;
+
+    // 计算偏移并应用到远程基址
+    return remote_linker + ((uintptr_t)local_func - local_linker);
 }
 
 pid_t find_pid(const char* pkg) {
@@ -58,66 +95,45 @@ int main() {
     }
     printf("[+] Found PID: %d\n", pid);
 
-    uintptr_t dlopen_addr = get_remote_func(pid, "__loader_dlopen");
-    if (!dlopen_addr) dlopen_addr = get_remote_func(pid, "dlopen");
-
+    uintptr_t dlopen_addr = get_remote_dlopen(pid);
     if (!dlopen_addr) {
-        printf("[-] Could not find dlopen address!\n");
+        printf("[-] Failed to calculate dlopen address!\n");
         return 1;
     }
-    printf("[+] Remote dlopen: %lx\n", (long)dlopen_addr);
+    printf("[+] Remote dlopen address: %lx\n", (long)dlopen_addr);
 
-    // 1. Attach
     if (ptrace(PTRACE_ATTACH, pid, NULL, NULL) < 0) {
         perror("[-] Attach failed");
         return 1;
     }
-    printf("[*] Waiting for process to stop...\n");
     waitpid(pid, NULL, WUNTRACED);
 
-    // 预先声明变量，防止 goto 跳过初始化报错
     struct user_pt_regs regs;
-    struct iovec iov;
-    uintptr_t sp;
-    size_t len;
-
-    // 2. Get Regs
-    iov.iov_base = &regs;
-    iov.iov_len = sizeof(regs);
+    struct iovec iov = { .iov_base = &regs, .iov_len = sizeof(regs) };
     if (ptrace(PTRACE_GETREGSET, pid, (void*)(uintptr_t)NT_PRSTATUS, &iov) < 0) {
         perror("[-] Get regs failed");
-        goto detach;
+        ptrace(PTRACE_DETACH, pid, NULL, NULL);
+        return 1;
     }
 
-    // 3. Write Path to Stack
-    sp = (regs.sp - 512) & ~0xF;
-    len = strlen(LIB_PATH) + 1;
+    uintptr_t sp = (regs.sp - 512) & ~0xF;
+    size_t len = strlen(LIB_PATH) + 1;
     for (size_t i = 0; i < len; i += 8) {
         long data = 0;
         memcpy(&data, LIB_PATH + i, (len - i) < 8 ? (len - i) : 8);
         ptrace(PTRACE_POKETEXT, pid, (void*)(sp + i), (void*)data);
     }
 
-    // 4. Call dlopen(path, RTLD_NOW)
     regs.regs[0] = sp;   
     regs.regs[1] = 2;    
     regs.pc = dlopen_addr;
-    regs.regs[30] = 0; // 设置返回地址为0，触发停止
+    regs.regs[30] = 0; 
 
-    if (ptrace(PTRACE_SETREGSET, pid, (void*)(uintptr_t)NT_PRSTATUS, &iov) < 0) {
-        perror("[-] Set regs failed");
-        goto detach;
-    }
-
-    // 5. 让它跑起来执行 dlopen
-    printf("[*] Executing remote dlopen...\n");
+    ptrace(PTRACE_SETREGSET, pid, (void*)(uintptr_t)NT_PRSTATUS, &iov);
     ptrace(PTRACE_CONT, pid, NULL, NULL);
     usleep(500000); 
 
-    printf("[+] Injection cycle complete.\n");
-
-detach:
     ptrace(PTRACE_DETACH, pid, NULL, NULL);
-    printf("[+] Done.\n");
+    printf("[+] Injection cycle finished.\n");
     return 0;
 }
