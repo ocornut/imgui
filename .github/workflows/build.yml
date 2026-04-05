@@ -12,7 +12,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        submodules: 'recursive'
+        submodules: false   # 你没有子模块，无需递归
 
     - name: Set up JDK 17
       uses: actions/setup-java@v4
@@ -27,7 +27,7 @@ jobs:
       run: |
         echo "y" | sudo ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --install "ndk;25.1.8937393"
 
-    - name: Configure CMake (arm64-v8a)
+    - name: Configure CMake for arm64-v8a
       run: |
         cmake -B build \
           -DCMAKE_TOOLCHAIN_FILE=${ANDROID_HOME}/ndk/25.1.8937393/build/cmake/android.toolchain.cmake \
