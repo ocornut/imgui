@@ -1,118 +1,49 @@
-#define _GNU_SOURCE
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/ptrace.h>
-#include <sys/wait.h>
-#include <sys/user.h>
-#include <dirent.h>
-#include <dlfcn.h>
-#include <sys/uio.h>
-#include <elf.h>
-#include <stdint.h>
+name: Android NDK Build
 
-#ifndef NT_PRSTATUS
-#define NT_PRSTATUS 1
-#endif
+on:
+  push:
+    branches: [ "master", "main" ]
+  workflow_dispatch:
 
-// 保持你提供的包名和路径
-const char* TARGET_PKG = "com.tencent.tmgp.sgame"; 
-const char* LIB_PATH = "/data/local/tmp/libJKMenu.so";
+jobs:
+  build:
+    runs-on: ubuntu-latest
 
-pid_t find_pid_by_name(const char* package_name) {
-    DIR* dir = opendir("/proc");
-    if (!dir) return -1;
-    struct dirent* entry;
-    while ((entry = readdir(dir))) {
-        pid_t pid = atoi(entry->d_name);
-        if (pid <= 0) continue;
-        char path[256], cmd[256];
-        snprintf(path, sizeof(path), "/proc/%d/cmdline", pid);
-        FILE* f = fopen(path, "r");
-        if (f) {
-            if (fgets(cmd, sizeof(cmd), f) && strstr(cmd, package_name)) {
-                fclose(f); closedir(dir); return pid;
-            }
-            fclose(f);
-        }
-    }
-    closedir(dir); return -1;
-}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-// 封装一个写入工具
-int ptrace_write_mem(pid_t pid, uintptr_t addr, const void* data, size_t size) {
-    size_t i;
-    long val;
-    for (i = 0; i < size; i += sizeof(long)) {
-        val = 0;
-        memcpy(&val, (uint8_t*)data + i, (size - i) < sizeof(long) ? (size - i) : sizeof(long));
-        if (ptrace(PTRACE_POKETEXT, pid, addr + i, (void*)val) < 0) return -1;
-    }
-    return 0;
-}
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
 
-int main() {
-    pid_t pid = find_pid_by_name(TARGET_PKG);
-    if (pid == -1) { 
-        printf("[-] Target process %s not found!\n", TARGET_PKG); 
-        return 1; 
-    }
+      - name: Install Ninja
+        run: sudo apt-get install ninja-build
 
-    // 1. 附加
-    if (ptrace(PTRACE_ATTACH, pid, NULL, NULL) < 0) { 
-        perror("[-] Attach failed"); 
-        return 1; 
-    }
-    waitpid(pid, NULL, WUNTRACED);
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r26b
 
-    // 2. 获取并备份原始寄存器
-    struct user_pt_regs regs, old_regs;
-    struct iovec iov;
-    iov.iov_base = &regs;
-    iov.iov_len = sizeof(regs);
-    
-    if (ptrace(PTRACE_GETREGSET, pid, (void*)(uintptr_t)NT_PRSTATUS, &iov) < 0) {
-        perror("[-] PTRACE_GETREGSET failed");
-        goto end;
-    }
-    memcpy(&old_regs, &regs, sizeof(regs));
+      - name: Build with CMake
+        run: |
+          mkdir -p build && cd build
+          cmake .. \
+            -GNinja \
+            -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake \
+            -DANDROID_ABI=arm64-v8a \
+            -DANDROID_PLATFORM=android-26 \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DANDROID_STL=c++_static
+          ninja
 
-    // 3. 获取 dlopen 地址 (在 Android N+ 通常是 __loader_dlopen)
-    void* handle = dlopen("libdl.so", RTLD_LAZY);
-    uintptr_t dlopen_addr = (uintptr_t)dlsym(handle, "__loader_dlopen");
-    if (!dlopen_addr) dlopen_addr = (uintptr_t)dlsym(handle, "dlopen");
-    dlclose(handle);
-
-    if (!dlopen_addr) {
-        printf("[-] dlopen not found!\n");
-        goto end;
-    }
-
-    // 4. 将 SO 路径写入栈空间 (sp 下方 512 字节相对安全)
-    uintptr_t remote_path_addr = (regs.sp - 512) & ~0xF;
-    ptrace_write_mem(pid, remote_path_addr, LIB_PATH, strlen(LIB_PATH) + 1);
-
-    // 5. 设置调用参数
-    regs.regs[0] = remote_path_addr; // x0: filename
-    regs.regs[1] = 2;                // x1: flags (RTLD_NOW)
-    regs.regs[30] = 0;               // lr: 设置为0，执行完会崩掉，方便我们 capture
-    regs.pc = dlopen_addr;           // pc: 跳转执行
-
-    ptrace(PTRACE_SETREGSET, pid, (void*)(uintptr_t)NT_PRSTATUS, &iov);
-
-    // 6. 执行并等待
-    ptrace(PTRACE_CONT, pid, NULL, NULL);
-    int status;
-    waitpid(pid, &status, WUNTRACED); // 等待 SIGSEGV
-
-    // 7. 恢复原始寄存器，让进程像没事发生一样继续运行
-    iov.iov_base = &old_regs;
-    ptrace(PTRACE_SETREGSET, pid, (void*)(uintptr_t)NT_PRSTATUS, &iov);
-
-    printf("[+] Injection successful on PID %d\n", pid);
-
-end:
-    ptrace(PTRACE_DETACH, pid, NULL, NULL);
-    return 0;
-}
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: JKMenu-Package
+          path: |
+            build/libJKMenu.so
+            build/jk_injector
