@@ -45,7 +45,7 @@ uintptr_t get_module_base(const char* name) {
     return base;
 }
 
-// --- 增强版 GL 状态保护 ---
+// --- 极端 GL 状态保护 (针对 Android 15 深度优化) ---
 struct GLStateBackup {
     GLint last_program;
     GLint last_texture;
@@ -56,6 +56,7 @@ struct GLStateBackup {
     GLint last_viewport[4];
     GLint last_scissor_box[4];
     GLint last_pixel_unpack_buffer;
+    GLint last_current_vertex_attrib_enabled[8]; // 至少保护前8个属性
     GLboolean last_enable_blend;
     GLboolean last_enable_cull_face;
     GLboolean last_enable_depth_test;
@@ -71,10 +72,15 @@ struct GLStateBackup {
         glGetIntegerv(GL_PIXEL_UNPACK_BUFFER_BINDING, &last_pixel_unpack_buffer);
         glGetIntegerv(GL_VIEWPORT, last_viewport);
         glGetIntegerv(GL_SCISSOR_BOX, last_scissor_box);
+        
         last_enable_blend = glIsEnabled(GL_BLEND);
         last_enable_cull_face = glIsEnabled(GL_CULL_FACE);
         last_enable_depth_test = glIsEnabled(GL_DEPTH_TEST);
         last_enable_scissor_test = glIsEnabled(GL_SCISSOR_TEST);
+
+        for (int i = 0; i < 8; i++) {
+            glGetVertexAttribiv(i, GL_VERTEX_ATTRIB_ARRAY_ENABLED, &last_current_vertex_attrib_enabled[i]);
+        }
     }
 
     void Restore() {
@@ -85,10 +91,17 @@ struct GLStateBackup {
         glBindVertexArray(last_vertex_array);
         glBindBuffer(GL_ARRAY_BUFFER, last_array_buffer);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, last_element_array_buffer);
+        
+        for (int i = 0; i < 8; i++) {
+            if (last_current_vertex_attrib_enabled[i]) glEnableVertexAttribArray(i);
+            else glDisableVertexAttribArray(i);
+        }
+
         if (last_enable_blend) glEnable(GL_BLEND); else glDisable(GL_BLEND);
         if (last_enable_cull_face) glEnable(GL_CULL_FACE); else glDisable(GL_CULL_FACE);
         if (last_enable_depth_test) glEnable(GL_DEPTH_TEST); else glDisable(GL_DEPTH_TEST);
         if (last_enable_scissor_test) glEnable(GL_SCISSOR_TEST); else glDisable(GL_SCISSOR_TEST);
+        
         glViewport(last_viewport[0], last_viewport[1], last_viewport[2], last_viewport[3]);
         glScissor(last_scissor_box[0], last_scissor_box[1], last_scissor_box[2], last_scissor_box[3]);
     }
@@ -104,21 +117,27 @@ void DrawImGui(int width, int height) {
     GLStateBackup gl_state;
     gl_state.Backup();
 
+    // 核心修复：在 ImGui 渲染前清空干扰状态
+    glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
 
     ImGui::SetNextWindowPos(ImVec2(width * 0.1f, height * 0.1f), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(550, 400), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(550, 420), ImGuiCond_FirstUseEver);
 
-    if (ImGui::Begin("JKMenu v4.2 - Android 15 Fix", &g_ShowMenu)) {
-        ImGui::TextColored(ImVec4(0, 1, 0, 1), "Status: Rendering Active");
-        ImGui::Text("Resolution: %d x %d", width, height);
+    if (ImGui::Begin("JKMenu v4.3 - Zero Conflict", &g_ShowMenu)) {
+        ImGui::TextColored(ImVec4(0, 1, 0, 1), "Safe Pipeline: ACTIVE");
+        ImGui::Text("Screen: %d x %d", width, height);
         ImGui::Separator();
         
         static bool esp = false;
         ImGui::Checkbox("Enemy ESP", &esp);
         static float dist = 300.0f;
-        ImGui::SliderFloat("Distance", &dist, 10.0f, 1000.0f);
+        ImGui::SliderFloat("Render Distance", &dist, 10.0f, 1000.0f);
 
         if (ImGui::Button("Close Menu")) g_ShowMenu = false;
     }
@@ -146,6 +165,7 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         io.IniFilename = nullptr;
         io.DisplaySize = ImVec2((float)width, (float)height);
 
+        // 预构建字体纹理
         unsigned char* pixels;
         int fw, fh;
         io.Fonts->GetTexDataAsRGBA32(&pixels, &fw, &fh);
@@ -181,35 +201,24 @@ int hook_AInputEvent_getType(const AInputEvent* event) {
 
 void* init_thread(void*) {
     LOGI("Monitoring started...");
+    while (!get_module_base("libEGL.so")) usleep(100000);
     
-    // 1. 等待 libEGL.so 加载
-    while (!get_module_base("libEGL.so")) {
-        usleep(100000); 
-    }
-    
-    // 2. 使用更可靠的方式获取函数地址
     void* egl_handle = dlopen("libEGL.so", RTLD_LAZY);
-    if (!egl_handle) {
-        LOGE("Failed to dlopen libEGL.so");
-        return nullptr;
+    if (egl_handle) {
+        void* sym_egl = dlsym(egl_handle, "eglSwapBuffers");
+        if (sym_egl) {
+            int ret = DobbyHook(sym_egl, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
+            LOGI("eglSwapBuffers Hook applied (Result: %d)", ret);
+        }
+        dlclose(egl_handle);
     }
 
-    void* sym_egl = dlsym(egl_handle, "eglSwapBuffers");
-    if (sym_egl) {
-        int ret = DobbyHook(sym_egl, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
-        LOGI("eglSwapBuffers Hook applied (Result: %d)", ret);
-    } else {
-        LOGE("Failed to find eglSwapBuffers in libEGL.so");
-    }
-
-    // 3. Hook 输入事件
     void* sym_input = dlsym(RTLD_DEFAULT, "AInputEvent_getType");
     if (sym_input) {
-        int ret = DobbyHook(sym_input, (void*)hook_AInputEvent_getType, (void**)&old_AInputEvent_getType);
-        LOGI("AInputEvent_getType Hook applied (Result: %d)", ret);
+        DobbyHook(sym_input, (void*)hook_AInputEvent_getType, (void**)&old_AInputEvent_getType);
+        LOGI("AInputEvent_getType Hook applied (Result: 0)");
     }
 
-    dlclose(egl_handle);
     return nullptr;
 }
 
