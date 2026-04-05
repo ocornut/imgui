@@ -3,9 +3,9 @@ name: Android Arm64 Build
 on:
   push:
     branches: [ main ]
-  pull_request:
+  pull_request: 
     branches: [ main ]
-  workflow_dispatch: # 支持手动触发编译
+  workflow_dispatch:
 
 jobs:
   build:
@@ -14,8 +14,6 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
-        with:
-          submodules: recursive # 如果你有 git 子模块
 
       - name: Set up JDK 17
         uses: actions/setup-java@v3
@@ -27,7 +25,7 @@ jobs:
         uses: nttld/setup-ndk@v1
         id: setup-ndk
         with:
-          ndk-version: r25c # 推荐使用的 NDK 版本
+          ndk-version: r25c
 
       - name: Create Build Directory
         run: mkdir -p build
