@@ -6,6 +6,7 @@
 #include <sys/mman.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <dlfcn.h>  // 新增：修复 dlsym 和 RTLD_DEFAULT 报错
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
 #include "dobby.h"
@@ -97,7 +98,6 @@ void* init_thread(void*) {
     LOGI("Found libEGL.so at: %p", (void*)egl_base);
 
     // 2. 查找 eglSwapBuffers 符号地址
-    // 也可以直接用 dlsym(RTLD_NEXT, "eglSwapBuffers")
     void* sym_eglSwapBuffers = dlsym(RTLD_DEFAULT, "eglSwapBuffers");
     if (!sym_eglSwapBuffers) {
         LOGE("Error: Cannot find eglSwapBuffers symbol!");
