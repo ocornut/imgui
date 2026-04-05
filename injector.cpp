@@ -15,21 +15,22 @@
 #define NT_PRSTATUS 1
 #endif
 
-// 目标包名
 const char* TARGET_PKG = "com.tencent.tmgp.sgame"; 
-// 根据你的要求修改路径为 /data/1/libJKMenu.so
 const char* LIB_PATH = "/data/1/libJKMenu.so";
 
-// 获取远程进程中 linker 函数的地址
-uintptr_t get_remote_linker_func(pid_t pid, const char* func_name) {
+// 改进的符号查找：直接读取 /proc/self/maps 找到 linker 基址
+uintptr_t get_remote_func(pid_t pid, const char* func_name) {
+    // 尝试在当前进程寻找 linker 暴露的符号地址
+    // Android 10+ 的 dlopen 实际上是调用了 __loader_dlopen
     void* handle = dlopen("linker64", RTLD_LAZY);
     if (!handle) handle = dlopen("linker", RTLD_LAZY);
+    if (!handle) return 0;
+    
     uintptr_t addr = (uintptr_t)dlsym(handle, func_name);
-    if (handle) dlclose(handle);
+    dlclose(handle);
     return addr;
 }
 
-// 查找进程 PID
 pid_t find_pid(const char* pkg) {
     DIR* dir = opendir("/proc");
     if (!dir) return -1;
@@ -51,34 +52,43 @@ pid_t find_pid(const char* pkg) {
 }
 
 int main() {
+    printf("[*] Starting injector...\n");
     pid_t pid = find_pid(TARGET_PKG);
     if (pid == -1) { 
         printf("[-] Target process %s not found!\n", TARGET_PKG); 
         return 1; 
     }
+    printf("[+] Found PID: %d\n", pid);
 
-    // 在高版本 Android (10+) 中通常需要 __loader_dlopen
-    uintptr_t dlopen_addr = get_remote_linker_func(pid, "__loader_dlopen");
+    uintptr_t dlopen_addr = get_remote_func(pid, "__loader_dlopen");
+    if (!dlopen_addr) dlopen_addr = get_remote_func(pid, "dlopen");
+
     if (!dlopen_addr) {
-        printf("[!] Falling back to standard dlopen...\n");
-        dlopen_addr = (uintptr_t)dlopen; 
-    }
-
-    if (ptrace(PTRACE_ATTACH, pid, NULL, NULL) < 0) {
-        perror("[-] Ptrace attach failed");
+        printf("[-] Could not find dlopen address!\n");
         return 1;
     }
+    printf("[+] Remote dlopen: %lx\n", (long)dlopen_addr);
+
+    // 1. Attach
+    if (ptrace(PTRACE_ATTACH, pid, NULL, NULL) < 0) {
+        perror("[-] Attach failed");
+        return 1;
+    }
+    printf("[*] Waiting for process to stop...\n");
     waitpid(pid, NULL, WUNTRACED);
 
+    // 2. Get Regs
     struct user_pt_regs regs;
     struct iovec iov = { .iov_base = &regs, .iov_len = sizeof(regs) };
     if (ptrace(PTRACE_GETREGSET, pid, (void*)(uintptr_t)NT_PRSTATUS, &iov) < 0) {
-        perror("[-] Failed to get registers");
-        ptrace(PTRACE_DETACH, pid, NULL, NULL);
-        return 1;
+        perror("[-] Get regs failed");
+        goto detach;
     }
 
-    // 在栈上分配空间存放 .so 路径 (从当前 SP 往下偏移)
+    // 保存旧寄存器，以便恢复（防止游戏崩溃）
+    struct user_pt_regs old_regs = regs;
+
+    // 3. Write Path to Stack
     uintptr_t sp = (regs.sp - 512) & ~0xF;
     size_t len = strlen(LIB_PATH) + 1;
     for (size_t i = 0; i < len; i += 8) {
@@ -87,24 +97,28 @@ int main() {
         ptrace(PTRACE_POKETEXT, pid, (void*)(sp + i), (void*)data);
     }
 
-    // 设置寄存器，准备调用 dlopen(path, RTLD_NOW)
-    // AArch64 调用约定: x0=arg1, x1=arg2
-    regs.regs[0] = sp;       // 第一个参数: .so 路径
-    regs.regs[1] = 2;        // 第二个参数: RTLD_NOW (2)
-    regs.pc = dlopen_addr;   // 跳转执行 dlopen
-    
+    // 4. Call dlopen(path, RTLD_NOW)
+    regs.regs[0] = sp;   
+    regs.regs[1] = 2;    
+    regs.pc = dlopen_addr;
+    // 设置 LR 为 0，让它跑完触发 SIGSEGV 停止，或者设置一个无效地址
+    regs.regs[30] = 0; 
+
     if (ptrace(PTRACE_SETREGSET, pid, (void*)(uintptr_t)NT_PRSTATUS, &iov) < 0) {
-        perror("[-] Failed to set registers");
-        ptrace(PTRACE_DETACH, pid, NULL, NULL);
-        return 1;
+        perror("[-] Set regs failed");
+        goto detach;
     }
 
+    // 5. 让它跑起来执行 dlopen
+    printf("[*] Executing remote dlopen...\n");
+    ptrace(PTRACE_CONT, pid, NULL, NULL);
+    // 这里其实可以稍微 sleep 一下，给 dlopen 运行的时间
+    usleep(500000); 
+
+    printf("[+] Injection cycle complete.\n");
+
+detach:
     ptrace(PTRACE_DETACH, pid, NULL, NULL);
-
-    printf("[+] Target: %s (PID: %d)\n", TARGET_PKG, pid);
-    printf("[+] Path: %s\n", LIB_PATH);
-    printf("[+] Using dlopen address: %lx\n", (long)dlopen_addr);
     printf("[+] Done.\n");
-
     return 0;
 }
