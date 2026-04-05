@@ -6,7 +6,7 @@
 #include <sys/mman.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <dlfcn.h>  // 新增：修复 dlsym 和 RTLD_DEFAULT 报错
+#include <dlfcn.h>
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
 #include "dobby.h"
@@ -41,21 +41,26 @@ uintptr_t get_module_base(const char* name) {
 }
 
 // --- ImGui 绘制逻辑 ---
-void DrawImGui() {
+void DrawImGui(int width, int height) {
     if (!g_ShowMenu) return;
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplAndroid_NewFrame();
     ImGui::NewFrame();
 
-    ImGui::SetNextWindowSize(ImVec2(400, 300), ImGuiCond_FirstUseEver);
-    if (ImGui::Begin("JKMenu v3.0 - Android 15 Stable", &g_ShowMenu)) {
-        ImGui::Text("Hello, SGame Player!");
+    // 强制设置一个显眼的窗口位置和大小
+    ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
+
+    if (ImGui::Begin("JKMenu v3.5 - Android 15", &g_ShowMenu)) {
+        ImGui::TextColored(ImVec4(1, 1, 0, 1), "Injection Status: SUCCESS");
+        ImGui::Text("Screen Res: %d x %d", width, height);
         ImGui::Separator();
-        static bool cheat1 = false;
-        ImGui::Checkbox("Enable ESP", &cheat1);
         
-        if (ImGui::Button("Close Menu")) {
+        static bool esp = false;
+        ImGui::Checkbox("Enemy ESP (Test)", &esp);
+        
+        if (ImGui::Button("Hide Menu")) {
             g_ShowMenu = false;
         }
     }
@@ -67,21 +72,35 @@ void DrawImGui() {
 
 // --- Hook 后的 eglSwapBuffers ---
 EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
+    // 获取当前屏幕分辨率，用于设置 ImGui 视口
+    EGLint width, height;
+    eglQuerySurface(dpy, surface, EGL_WIDTH, &width);
+    eglQuerySurface(dpy, surface, EGL_HEIGHT, &height);
+
     if (!g_Initialized) {
-        // 初始化 ImGui 上下文
+        LOGI("Initializing ImGui inside eglSwapBuffers (Viewport: %dx%d)", width, height);
+        
+        IMGUI_CHECKVERSION();
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
-        io.IniFilename = nullptr; // 不保存配置文件
+        io.IniFilename = nullptr;
+        io.DisplaySize = ImVec2((float)width, (float)height);
+
+        // 核心修复：Android 环境下必须手动处理字体，或者使用默认字体
+        ImGui::StyleColorsDark();
         
-        ImGui_ImplAndroid_Init(nullptr); // 王者荣耀通常不需要窗口句柄
+        // 初始化后端
+        ImGui_ImplAndroid_Init(nullptr); 
         ImGui_ImplOpenGL3_Init("#version 300 es");
         
-        ImGui::StyleColorsDark();
         g_Initialized = true;
-        LOGI("ImGui Initialized inside eglSwapBuffers.");
     }
 
-    DrawImGui();
+    // 更新屏幕尺寸（处理转屏）
+    ImGui::GetIO().DisplaySize = ImVec2((float)width, (float)height);
+
+    // 开始绘制
+    DrawImGui(width, height);
 
     return old_eglSwapBuffers(dpy, surface);
 }
@@ -89,7 +108,7 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 void* init_thread(void*) {
     LOGI("Thread started, entering monitoring loop...");
 
-    // 1. 等待 libEGL.so 加载（渲染菜单必须 Hook 它）
+    // 1. 等待 libEGL.so
     uintptr_t egl_base = 0;
     while (egl_base == 0) {
         egl_base = get_module_base("libEGL.so");
@@ -97,7 +116,7 @@ void* init_thread(void*) {
     }
     LOGI("Found libEGL.so at: %p", (void*)egl_base);
 
-    // 2. 查找 eglSwapBuffers 符号地址
+    // 2. 查找符号
     void* sym_eglSwapBuffers = dlsym(RTLD_DEFAULT, "eglSwapBuffers");
     if (!sym_eglSwapBuffers) {
         LOGE("Error: Cannot find eglSwapBuffers symbol!");
