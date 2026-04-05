@@ -110,8 +110,8 @@ void DrawImGui(int width, int height) {
     ImGui::SetNextWindowPos(ImVec2(width * 0.1f, height * 0.1f), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(550, 400), ImGuiCond_FirstUseEver);
 
-    if (ImGui::Begin("JKMenu v4.1 - Android 15 Pro", &g_ShowMenu)) {
-        ImGui::TextColored(ImVec4(0, 1, 0, 1), "Rendering Thread: STABLE");
+    if (ImGui::Begin("JKMenu v4.2 - Android 15 Fix", &g_ShowMenu)) {
+        ImGui::TextColored(ImVec4(0, 1, 0, 1), "Status: Rendering Active");
         ImGui::Text("Resolution: %d x %d", width, height);
         ImGui::Separator();
         
@@ -146,7 +146,6 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         io.IniFilename = nullptr;
         io.DisplaySize = ImVec2((float)width, (float)height);
 
-        // 核心：强制构建字体纹理以防绘制空数据
         unsigned char* pixels;
         int fw, fh;
         io.Fonts->GetTexDataAsRGBA32(&pixels, &fw, &fh);
@@ -182,18 +181,35 @@ int hook_AInputEvent_getType(const AInputEvent* event) {
 
 void* init_thread(void*) {
     LOGI("Monitoring started...");
-    while (!get_module_base("libEGL.so")) sleep(1);
     
-    // 给系统留出符号解析时间
-    usleep(500000); 
+    // 1. 等待 libEGL.so 加载
+    while (!get_module_base("libEGL.so")) {
+        usleep(100000); 
+    }
+    
+    // 2. 使用更可靠的方式获取函数地址
+    void* egl_handle = dlopen("libEGL.so", RTLD_LAZY);
+    if (!egl_handle) {
+        LOGE("Failed to dlopen libEGL.so");
+        return nullptr;
+    }
 
-    void* sym_egl = dlsym(RTLD_DEFAULT, "eglSwapBuffers");
-    if (sym_egl) DobbyHook(sym_egl, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
+    void* sym_egl = dlsym(egl_handle, "eglSwapBuffers");
+    if (sym_egl) {
+        int ret = DobbyHook(sym_egl, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
+        LOGI("eglSwapBuffers Hook applied (Result: %d)", ret);
+    } else {
+        LOGE("Failed to find eglSwapBuffers in libEGL.so");
+    }
 
+    // 3. Hook 输入事件
     void* sym_input = dlsym(RTLD_DEFAULT, "AInputEvent_getType");
-    if (sym_input) DobbyHook(sym_input, (void*)hook_AInputEvent_getType, (void**)&old_AInputEvent_getType);
+    if (sym_input) {
+        int ret = DobbyHook(sym_input, (void*)hook_AInputEvent_getType, (void**)&old_AInputEvent_getType);
+        LOGI("AInputEvent_getType Hook applied (Result: %d)", ret);
+    }
 
-    LOGI("All hooks applied.");
+    dlclose(egl_handle);
     return nullptr;
 }
 
