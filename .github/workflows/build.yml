@@ -14,12 +14,11 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: uses/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      # 安装 Ninja 构建工具
       - name: Install Ninja
         run: sudo apt-get install ninja-build
 
@@ -38,7 +37,7 @@ jobs:
             -DANDROID_ABI=arm64-v8a \
             -DANDROID_PLATFORM=android-26 \
             -DCMAKE_BUILD_TYPE=Release \
-            -DANDROID_STL=c++_static   # <--- 关键修改：强制静态链接 C++ 运行时
+            -DANDROID_STL=c++_static
           ninja
 
       - name: Upload Artifacts
@@ -46,5 +45,5 @@ jobs:
         with:
           name: JKMenu-Package
           path: |
-            build/JKMenu.so
+            build/libJKMenu.so
             build/jk_injector
