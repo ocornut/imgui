@@ -4,13 +4,25 @@
 #include <android/log.h>
 #include <string.h>
 #include <sys/mman.h>
-#include <stdio.h>  // 新增：修复 FILE, fopen 报错
-#include <stdlib.h> // 新增：修复 strtoull 报错
+#include <stdio.h>
+#include <stdlib.h>
+#include <EGL/egl.h>
+#include <GLES3/gl3.h>
 #include "dobby.h"
+
+// ImGui 包含
+#include "imgui.h"
+#include "backends/imgui_impl_android.h"
+#include "backends/imgui_impl_opengl3.h"
 
 #define TAG "JKMenu_SGame"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
+
+// --- 全局变量 ---
+bool g_Initialized = false;
+bool g_ShowMenu = true;
+EGLBoolean (*old_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surface) = nullptr;
 
 // 获取模块基址
 uintptr_t get_module_base(const char* name) {
@@ -27,45 +39,82 @@ uintptr_t get_module_base(const char* name) {
     return base;
 }
 
+// --- ImGui 绘制逻辑 ---
+void DrawImGui() {
+    if (!g_ShowMenu) return;
+
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplAndroid_NewFrame();
+    ImGui::NewFrame();
+
+    ImGui::SetNextWindowSize(ImVec2(400, 300), ImGuiCond_FirstUseEver);
+    if (ImGui::Begin("JKMenu v3.0 - Android 15 Stable", &g_ShowMenu)) {
+        ImGui::Text("Hello, SGame Player!");
+        ImGui::Separator();
+        static bool cheat1 = false;
+        ImGui::Checkbox("Enable ESP", &cheat1);
+        
+        if (ImGui::Button("Close Menu")) {
+            g_ShowMenu = false;
+        }
+    }
+    ImGui::End();
+
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
+// --- Hook 后的 eglSwapBuffers ---
+EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
+    if (!g_Initialized) {
+        // 初始化 ImGui 上下文
+        ImGui::CreateContext();
+        ImGuiIO& io = ImGui::GetIO();
+        io.IniFilename = nullptr; // 不保存配置文件
+        
+        ImGui_ImplAndroid_Init(nullptr); // 王者荣耀通常不需要窗口句柄
+        ImGui_ImplOpenGL3_Init("#version 300 es");
+        
+        ImGui::StyleColorsDark();
+        g_Initialized = true;
+        LOGI("ImGui Initialized inside eglSwapBuffers.");
+    }
+
+    DrawImGui();
+
+    return old_eglSwapBuffers(dpy, surface);
+}
+
 void* init_thread(void*) {
     LOGI("Thread started, entering monitoring loop...");
 
-    uintptr_t game_base = 0;
-    int retry = 0;
-
-    // 王者荣耀核心库通常是 libGameCore.so 或 Unity 环境下的 libunity.so
-    // 我们先循环检测，直到库加载完成
-    while (game_base == 0 && retry < 60) {
-        game_base = get_module_base("libGameCore.so"); 
-        if (game_base == 0) {
-            game_base = get_module_base("libunity.so"); // 兼容性检测
-        }
-        
-        if (game_base == 0) {
-            if (retry % 5 == 0) LOGI("Waiting for game libraries... (retry %d)", retry);
-            sleep(1);
-            retry++;
-        }
+    // 1. 等待 libEGL.so 加载（渲染菜单必须 Hook 它）
+    uintptr_t egl_base = 0;
+    while (egl_base == 0) {
+        egl_base = get_module_base("libEGL.so");
+        if (egl_base == 0) sleep(1);
     }
+    LOGI("Found libEGL.so at: %p", (void*)egl_base);
 
-    if (game_base == 0) {
-        LOGE("Error: Game core library not found after 60s.");
+    // 2. 查找 eglSwapBuffers 符号地址
+    // 也可以直接用 dlsym(RTLD_NEXT, "eglSwapBuffers")
+    void* sym_eglSwapBuffers = dlsym(RTLD_DEFAULT, "eglSwapBuffers");
+    if (!sym_eglSwapBuffers) {
+        LOGE("Error: Cannot find eglSwapBuffers symbol!");
         return nullptr;
     }
 
-    LOGI("Found game base at: %p", (void*)game_base);
+    // 3. 执行 Hook
+    LOGI("Hooking eglSwapBuffers at %p", sym_eglSwapBuffers);
+    DobbyHook(sym_eglSwapBuffers, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
 
-    // TODO: 在此处添加你的 DobbyHook 逻辑
-    // 例如: DobbyHook((void*)(game_base + 0x123456), (void*)new_func, (void**)&orig_func);
-
-    LOGI("All initialization steps completed.");
+    LOGI("Hook applied. Waiting for frame render...");
     return nullptr;
 }
 
 __attribute__((constructor))
 void _init() {
     pthread_t tid;
-    // 使用分离模式创建线程，确保不会阻塞游戏进程
     pthread_create(&tid, nullptr, init_thread, nullptr);
     pthread_detach(tid);
 }
