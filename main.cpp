@@ -45,7 +45,7 @@ uintptr_t get_module_base(const char* name) {
     return base;
 }
 
-// --- 安全的 GL 状态保护 ---
+// --- 增强版 GL 状态保护 (修复闪退关键) ---
 struct GLStateBackup {
     GLint last_program;
     GLint last_texture;
@@ -54,6 +54,14 @@ struct GLStateBackup {
     GLint last_element_array_buffer;
     GLint last_vertex_array;
     GLint last_viewport[4];
+    GLint last_scissor_box[4];
+    GLint last_blend_src_rgb;
+    GLint last_blend_dst_rgb;
+    GLint last_blend_src_alpha;
+    GLint last_blend_dst_alpha;
+    GLint last_blend_equation_rgb;
+    GLint last_blend_equation_alpha;
+    GLint last_pixel_unpack_buffer; // 修复纹理上传冲突
     GLboolean last_enable_blend;
     GLboolean last_enable_cull_face;
     GLboolean last_enable_depth_test;
@@ -66,7 +74,17 @@ struct GLStateBackup {
         glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &last_array_buffer);
         glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &last_element_array_buffer);
         glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vertex_array);
+        glGetIntegerv(GL_PIXEL_UNPACK_BUFFER_BINDING, &last_pixel_unpack_buffer);
         glGetIntegerv(GL_VIEWPORT, last_viewport);
+        glGetIntegerv(GL_SCISSOR_BOX, last_scissor_box);
+        
+        glGetIntegerv(GL_BLEND_SRC_RGB, &last_blend_src_rgb);
+        glGetIntegerv(GL_BLEND_DST_RGB, &last_blend_dst_rgb);
+        glGetIntegerv(GL_BLEND_SRC_ALPHA, &last_blend_src_alpha);
+        glGetIntegerv(GL_BLEND_DST_ALPHA, &last_blend_dst_alpha);
+        glGetIntegerv(GL_BLEND_EQUATION_RGB, &last_blend_equation_rgb);
+        glGetIntegerv(GL_BLEND_EQUATION_ALPHA, &last_blend_equation_alpha);
+
         last_enable_blend = glIsEnabled(GL_BLEND);
         last_enable_cull_face = glIsEnabled(GL_CULL_FACE);
         last_enable_depth_test = glIsEnabled(GL_DEPTH_TEST);
@@ -77,14 +95,21 @@ struct GLStateBackup {
         glUseProgram(last_program);
         glActiveTexture(last_active_texture);
         glBindTexture(GL_TEXTURE_2D, last_texture);
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, last_pixel_unpack_buffer);
         glBindVertexArray(last_vertex_array);
         glBindBuffer(GL_ARRAY_BUFFER, last_array_buffer);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, last_element_array_buffer);
-        glViewport(last_viewport[0], last_viewport[1], last_viewport[2], last_viewport[3]);
+        
+        glBlendEquationSeparate(last_blend_equation_rgb, last_blend_equation_alpha);
+        glBlendFuncSeparate(last_blend_src_rgb, last_blend_dst_rgb, last_blend_src_alpha, last_blend_dst_alpha);
+        
         if (last_enable_blend) glEnable(GL_BLEND); else glDisable(GL_BLEND);
         if (last_enable_cull_face) glEnable(GL_CULL_FACE); else glDisable(GL_CULL_FACE);
         if (last_enable_depth_test) glEnable(GL_DEPTH_TEST); else glDisable(GL_DEPTH_TEST);
         if (last_enable_scissor_test) glEnable(GL_SCISSOR_TEST); else glDisable(GL_SCISSOR_TEST);
+        
+        glViewport(last_viewport[0], last_viewport[1], last_viewport[2], last_viewport[3]);
+        glScissor(last_scissor_box[0], last_scissor_box[1], last_scissor_box[2], last_scissor_box[3]);
     }
 };
 
@@ -95,58 +120,64 @@ void DrawImGui(int width, int height) {
     io.MousePos = ImVec2(g_Touch.x, g_Touch.y);
     io.MouseDown[0] = g_Touch.down;
 
-    // 状态保护开始
+    // 严苛状态保护开始
     GLStateBackup gl_state;
     gl_state.Backup();
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
 
-    ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
+    // 设置初始窗口位置，防止因为 io.DisplaySize 突变导致窗口飞出屏幕
+    ImGui::SetNextWindowPos(ImVec2(width * 0.1f, height * 0.1f), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(550, 400), ImGuiCond_FirstUseEver);
 
-    if (ImGui::Begin("JKMenu v3.9 - Android 15 Fix", &g_ShowMenu)) {
-        ImGui::TextColored(ImVec4(0, 1, 0, 1), "Safe Render Active");
-        ImGui::Text("Res: %dx%d | Touch: %.1f,%.1f", width, height, g_Touch.x, g_Touch.y);
+    if (ImGui::Begin("JKMenu v4.0 - Android 15 Hyper-Stable", &g_ShowMenu)) {
+        ImGui::TextColored(ImVec4(0, 1, 0, 1), "Safe Render Pipeline: ACTIVE");
+        ImGui::Text("Viewport: %dx%d", width, height);
         ImGui::Separator();
         
         static bool esp = false;
-        ImGui::Checkbox("ESP Overlay", &esp);
-        static float f = 0.0f;
-        ImGui::SliderFloat("FOV", &f, 0.0f, 180.0f);
+        ImGui::Checkbox("Enable ESP Overlay", &esp);
+        
+        static float fov = 90.0f;
+        ImGui::SliderFloat("Camera FOV", &fov, 60.0f, 140.0f);
 
-        if (ImGui::Button("Hide")) g_ShowMenu = false;
+        if (ImGui::Button("Minimize Menu")) g_ShowMenu = false;
     }
     ImGui::End();
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-    // 状态保护结束
+    // 严苛状态保护结束
     gl_state.Restore();
 }
 
 EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
-    pthread_mutex_lock(&g_CtxMutex);
+    // 互斥锁保护，防止多线程渲染干扰
+    if (pthread_mutex_trylock(&g_CtxMutex) != 0) {
+        return old_eglSwapBuffers(dpy, surface);
+    }
     
     EGLint width, height;
     eglQuerySurface(dpy, surface, EGL_WIDTH, &width);
     eglQuerySurface(dpy, surface, EGL_HEIGHT, &height);
 
-    if (!g_Initialized && width > 0) {
+    if (!g_Initialized && width > 0 && height > 0) {
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
         io.IniFilename = nullptr;
         io.DisplaySize = ImVec2((float)width, (float)height);
 
+        // 核心修复：强制使用可预测的 GLSL 版本
         if (ImGui_ImplOpenGL3_Init("#version 300 es")) {
             g_Initialized = true;
-            LOGI("Safe ImGui Init Success.");
+            LOGI("Safe ImGui Init Success at %dx%d", width, height);
         }
     }
 
-    if (g_Initialized && width > 0 && height > 0) {
+    if (g_Initialized && width > 10 && height > 10) {
         ImGui::GetIO().DisplaySize = ImVec2((float)width, (float)height);
         DrawImGui(width, height);
     }
@@ -172,13 +203,22 @@ int hook_AInputEvent_getType(const AInputEvent* event) {
 
 void* init_thread(void*) {
     LOGI("Monitoring started...");
+    
+    // 增加延迟，确保 libEGL 符号表完全就绪
     while (!get_module_base("libEGL.so")) sleep(1);
+    sleep(2); 
 
     void* sym_egl = dlsym(RTLD_DEFAULT, "eglSwapBuffers");
-    if (sym_egl) DobbyHook(sym_egl, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
+    if (sym_egl) {
+        LOGI("Hooking eglSwapBuffers at %p", sym_egl);
+        DobbyHook(sym_egl, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
+    }
 
     void* sym_input = dlsym(RTLD_DEFAULT, "AInputEvent_getType");
-    if (sym_input) DobbyHook(sym_input, (void*)hook_AInputEvent_getType, (void**)&old_AInputEvent_getType);
+    if (sym_input) {
+        LOGI("Hooking AInputEvent_getType at %p", sym_input);
+        DobbyHook(sym_input, (void*)hook_AInputEvent_getType, (void**)&old_AInputEvent_getType);
+    }
 
     return nullptr;
 }
