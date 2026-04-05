@@ -5,6 +5,7 @@
 #include <android/log.h>
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
+#include <dlfcn.h> // 修复：必须包含此头文件以使用 dlopen 和 dlsym
 
 #include "imgui.h"
 #include "imgui_impl_android.h"
@@ -88,6 +89,7 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surf) {
 
 // --- 渲染 Hook 查找 ---
 void setup_render_hook() {
+    // 显式使用动态链接库操作
     void* egl_handle = dlopen("libEGL.so", RTLD_LAZY);
     if (egl_handle) {
         void* target = dlsym(egl_handle, "eglSwapBuffers");
