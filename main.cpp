@@ -47,24 +47,32 @@ void DrawImGui(int width, int height) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
 
+    // 绘制一个调试背景，确保能看到渲染层
+    ImGui::GetForegroundDrawList()->AddRectFilled(
+        ImVec2(50, 50), ImVec2(250, 150), 
+        IM_COL32(255, 0, 0, 150) // 半透明红色矩形
+    );
+
     ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
 
-    if (ImGui::Begin("JKMenu v3.6 - Stable Build", &g_ShowMenu)) {
-        ImGui::TextColored(ImVec4(0, 1, 0, 1), "Status: Render Thread Active");
-        ImGui::Text("Viewport: %d x %d", width, height);
+    if (ImGui::Begin("JKMenu v3.7 - Render Test", &g_ShowMenu)) {
+        ImGui::TextColored(ImVec4(0, 1, 0, 1), "Status: Rendering");
+        ImGui::Text("Screen: %d x %d", width, height);
         ImGui::Separator();
         
-        static bool test_check = false;
-        ImGui::Checkbox("Test Feature", &test_check);
+        static bool cheat_esp = false;
+        ImGui::Checkbox("Enable ESP Test", &cheat_esp);
         
-        if (ImGui::Button("Hide Menu")) {
+        if (ImGui::Button("Close Menu")) {
             g_ShowMenu = false;
         }
     }
     ImGui::End();
 
     ImGui::Render();
+    
+    // 渲染前保存 GL 状态（可选，但安全）
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
@@ -77,26 +85,32 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     eglQuerySurface(dpy, surface, EGL_HEIGHT, &height);
 
     if (!g_Initialized) {
-        LOGI("Attempting ImGui Init (Viewport: %dx%d)", width, height);
+        LOGI("ImGui Initializing (Viewport: %dx%d)", width, height);
         
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
+        
+        // 关键：即使没有输入后端，也必须设置显示大小
         io.DisplaySize = ImVec2((float)width, (float)height);
         io.IniFilename = nullptr;
 
-        // 在 Hook 模式下，跳过 ImGui_ImplAndroid_Init
-        // 因为我们没有 NativeWindow，直接初始化渲染器后端
+        // 关键：构建默认字体图轴
+        unsigned char* pixels;
+        int font_w, font_h;
+        io.Fonts->GetTexDataAsRGBA32(&pixels, &font_w, &font_h);
+        
         if (ImGui_ImplOpenGL3_Init("#version 300 es")) {
             g_Initialized = true;
-            LOGI("ImGui Init Success.");
-        } else {
-            LOGE("ImGui_ImplOpenGL3_Init Failed!");
+            LOGI("ImGui Init Success at %dx%d", width, height);
         }
     }
 
-    if (g_Initialized) {
-        ImGui::GetIO().DisplaySize = ImVec2((float)width, (float)height);
+    if (g_Initialized && width > 0 && height > 0) {
+        ImGuiIO& io = ImGui::GetIO();
+        io.DisplaySize = ImVec2((float)width, (float)height);
+        
+        // 执行绘制
         DrawImGui(width, height);
     }
 
@@ -107,7 +121,6 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 void* init_thread(void*) {
     LOGI("Thread started, entering monitoring loop...");
 
-    // 等待 libEGL.so
     uintptr_t egl_base = 0;
     while (egl_base == 0) {
         egl_base = get_module_base("libEGL.so");
