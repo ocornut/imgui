@@ -1,4 +1,4 @@
-name: Build Android SO and Injector
+name: Build Android SO and Injector (arm64-v8a)
 
 on:
   push:
@@ -9,10 +9,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        abi: [arm64-v8a, armeabi-v7a]  # 编译两种主流架构
-
     steps:
     - uses: actions/checkout@v4
 
@@ -29,34 +25,21 @@ jobs:
       run: |
         echo "y" | sudo ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --install "ndk;25.1.8937393"
 
-    # ========== 1. 编译 libmodmenu.so ==========
-    - name: Configure CMake for ${{ matrix.abi }}
+    - name: Configure CMake for arm64-v8a
       run: |
-        cmake -B build_so \
+        cmake -B build \
           -DCMAKE_TOOLCHAIN_FILE=${ANDROID_HOME}/ndk/25.1.8937393/build/cmake/android.toolchain.cmake \
-          -DANDROID_ABI=${{ matrix.abi }} \
+          -DANDROID_ABI=arm64-v8a \
           -DANDROID_PLATFORM=android-24 \
           -DCMAKE_BUILD_TYPE=Release
 
-    - name: Build libmodmenu.so for ${{ matrix.abi }}
-      run: cmake --build build_so --config Release
+    - name: Build
+      run: cmake --build build --config Release
 
-    # ========== 2. 编译注入器 xinjector ==========
-    - name: Build xinjector for ${{ matrix.abi }}
-      run: |
-        mkdir -p build_injector && cd build_injector
-        cmake -DCMAKE_TOOLCHAIN_FILE=${ANDROID_HOME}/ndk/25.1.8937393/build/cmake/android.toolchain.cmake \
-              -DANDROID_ABI=${{ matrix.abi }} \
-              -DANDROID_PLATFORM=android-24 \
-              -DCMAKE_BUILD_TYPE=Release \
-              -DBUILD_INJECTOR=ON ..   # 新增标识，用于区分注入器与 so 的编译
-        cmake --build . --config Release
-
-    # ========== 3. 上传所有编译产物 ==========
-    - name: Upload artifacts for ${{ matrix.abi }}
+    - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: build-${{ matrix.abi }}
+        name: arm64-v8a
         path: |
-          build_so/libmodmenu.so
-          build_injector/xinjector
+          build/libmodmenu.so
+          build/injector
