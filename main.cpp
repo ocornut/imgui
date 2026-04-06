@@ -191,7 +191,6 @@ void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
     ImGui::SetNextWindowPos(ImVec2(w * 0.4f, 100), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(w * 0.55f, h * 0.8f), ImGuiCond_FirstUseEver);
     
-    // 确保不带 NoMove 标志
     if (ImGui::Begin("内存指针链实时诊断", nullptr, ImGuiWindowFlags_None)) {
         if (ImGui::CollapsingHeader("10进制偏移微调 (按 1 调节)", ImGuiTreeNodeFlags_DefaultOpen)) {
             std::lock_guard<std::mutex> lock(g_OffsetMutex);
@@ -227,11 +226,9 @@ void handle_android_event(AInputEvent* event) {
     if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
         int32_t action = AMotionEvent_getAction(event) & AMOTION_EVENT_ACTION_MASK;
         
-        // 使用 renderW/physW 进行比例换算
         float autoScaleX = (g_Touch.renderW > 0) ? (g_Touch.renderW / g_Touch.physW) : 1.0f;
         float autoScaleY = (g_Touch.renderH > 0) ? (g_Touch.renderH / g_Touch.physH) : 1.0f;
         
-        // 关键：实时更新 X/Y
         g_Touch.x = (AMotionEvent_getX(event, 0) * autoScaleX) + g_Touch.offsetX;
         g_Touch.y = (AMotionEvent_getY(event, 0) * autoScaleY) + g_Touch.offsetY;
 
@@ -261,7 +258,6 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         ImGui::CreateContext();
         ImGui_ImplOpenGL3_Init("#version 300 es");
         
-        // 加载字体逻辑
         ImGuiIO& io = ImGui::GetIO();
         const char* systemFonts[] = {
             "/system/fonts/SysSans-Hans-Regular.ttf",
@@ -287,19 +283,18 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     if (deviceScale < 1.0f) deviceScale = 1.0f;
     float finalScale = deviceScale * g_DynamicScale * g_UserUIScale; 
 
-    // --- UI 样式优化：加厚标题栏以便于拖动 ---
     static ImGuiStyle default_style = ImGui::GetStyle();
     ImGuiStyle& style = ImGui::GetStyle(); 
     style = default_style;
     style.ScaleAllSizes(1.2f * finalScale); 
     style.WindowRounding = 12.0f;
-    style.FramePadding = ImVec2(10, 10); // 加厚交互区域
-    style.TitleAlign = ImVec2(0.5f, 0.5f); // 标题居中
+    style.FramePadding = ImVec2(10, 10); 
+    // 修正：将 TitleAlign 修改为 WindowTitleAlign
+    style.WindowTitleAlign = ImVec2(0.5f, 0.5f); 
     io.FontGlobalScale = 1.2f * finalScale;
 
     ImGui_ImplOpenGL3_NewFrame(); ImGui::NewFrame();
     
-    // 准星调试圆点
     if (g_Touch.down.load()) ImGui::GetForegroundDrawList()->AddCircleFilled(io.MousePos, 22.0f, IM_COL32(0, 255, 0, 180));
 
     if (g_BaseWindowHeight == 0.0f) g_BaseWindowHeight = h * 0.45f; 
@@ -314,7 +309,6 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         if (ImGui::CollapsingHeader("校准与设置", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::SliderFloat("UI 缩放", &g_UserUIScale, 0.5f, 2.0f);
             
-            // 解决“拖不了”的核心：重置偏移
             ImGui::Text("当前触控偏移: X:%.1f Y:%.1f", g_Touch.offsetX, g_Touch.offsetY);
             if (ImGui::Button(" 重置所有偏移量 (RESET) ", ImVec2(-1, 0))) {
                 g_Touch.offsetX = 0;
