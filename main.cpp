@@ -16,7 +16,6 @@
 #include "dobby.h"
 #include <android/log.h>
 #include <android/input.h>
-#include <android/keycodes.h>
 
 #define LOG_TAG "AndKitty_Menu"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
@@ -36,35 +35,42 @@ struct {
 } g_TouchState = {0.0f, 0.0f, false};
 
 // --- 原函数指针 ---
-typedef int (*p_AInputQueue_getEvent)(AInputQueue* queue, AInputEvent** out_event);
-static p_AInputQueue_getEvent old_getEvent = nullptr;
+typedef float (*p_getRawX)(const AInputEvent* motion_event, size_t pointer_index);
+static p_getRawX old_getRawX = nullptr;
+
+typedef float (*p_getRawY)(const AInputEvent* motion_event, size_t pointer_index);
+static p_getRawY old_getRawY = nullptr;
+
+typedef int32_t (*p_getAction)(const AInputEvent* motion_event);
+static p_getAction old_getAction = nullptr;
 
 typedef EGLBoolean (*p_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surface);
 static p_eglSwapBuffers old_eglSwapBuffers = nullptr;
 
-// --- 【核心】底层输入拦截器 ---
-int hook_AInputQueue_getEvent(AInputQueue* queue, AInputEvent** out_event) {
-    int res = old_getEvent(queue, out_event);
-    if (res >= 0 && out_event != nullptr && *out_event != nullptr) {
-        AInputEvent* event = *out_event;
-        int type = AInputEvent_getType(event);
-        
-        if (type == AINPUT_EVENT_TYPE_MOTION) {
-            int action = AMotionEvent_getAction(event);
-            int action_code = action & AMOTION_EVENT_ACTION_MASK;
-            
-            // 记录第一个手指的坐标
-            g_TouchState.x = AMotionEvent_getX(event, 0);
-            g_TouchState.y = AMotionEvent_getY(event, 0);
+// --- 【核心】直接拦截系统坐标读取 ---
+// 无论游戏怎么绕，它最终必须调用这些函数来获取坐标
+float hook_getRawX(const AInputEvent* event, size_t index) {
+    float x = old_getRawX(event, index);
+    if (index == 0) g_TouchState.x = x;
+    return x;
+}
 
-            if (action_code == AMOTION_EVENT_ACTION_DOWN || action_code == AMOTION_EVENT_ACTION_POINTER_DOWN) {
-                g_TouchState.down = true;
-            } else if (action_code == AMOTION_EVENT_ACTION_UP || action_code == AMOTION_EVENT_ACTION_POINTER_UP || action_code == AMOTION_EVENT_ACTION_CANCEL) {
-                g_TouchState.down = false;
-            }
-        }
+float hook_getRawY(const AInputEvent* event, size_t index) {
+    float y = old_getRawY(event, index);
+    if (index == 0) g_TouchState.y = y;
+    return y;
+}
+
+int32_t hook_getAction(const AInputEvent* event) {
+    int32_t action = old_getAction(event);
+    int32_t code = action & AMOTION_EVENT_ACTION_MASK;
+    
+    if (code == AMOTION_EVENT_ACTION_DOWN || code == AMOTION_EVENT_ACTION_POINTER_DOWN) {
+        g_TouchState.down = true;
+    } else if (code == AMOTION_EVENT_ACTION_UP || code == AMOTION_EVENT_ACTION_POINTER_UP || code == AMOTION_EVENT_ACTION_CANCEL) {
+        g_TouchState.down = false;
     }
-    return res;
+    return action;
 }
 
 // --- 渲染逻辑 ---
@@ -82,7 +88,7 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         ImGui_ImplOpenGL3_Init("#version 300 es");
         ImGui::GetStyle().ScaleAllSizes(3.0f);
         g_Initialized = true;
-        LOGI("ImGui Init: %.fx%.f", g_ScreenWidth, g_ScreenHeight);
+        LOGI("ImGui Render Started: %.fx%.f", g_ScreenWidth, g_ScreenHeight);
     }
 
     ImGui_ImplOpenGL3_NewFrame();
@@ -92,22 +98,22 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         ImGuiIO& io = ImGui::GetIO();
         io.DisplaySize = ImVec2(g_ScreenWidth, g_ScreenHeight);
         
-        // 强制注入从 AInputQueue 拦截到的坐标
+        // 关键注入
         io.MousePos = ImVec2(g_TouchState.x, g_TouchState.y);
         io.MouseDown[0] = g_TouchState.down;
 
         ImGui::SetNextWindowSize(ImVec2(500, 450), ImGuiCond_FirstUseEver);
-        if (ImGui::Begin("AndKitty SGame Ultimate", &g_ShowMenu)) {
-            ImGui::TextColored(ImVec4(1, 1, 0, 1), "Input: AInputQueue Hooked");
+        if (ImGui::Begin("AndKitty SGame Final", &g_ShowMenu)) {
+            ImGui::TextColored(ImVec4(0, 1, 1, 1), "Input Mode: Raw System Hook");
             ImGui::Separator();
             
             ImGui::Text("Screen: %.0f x %.0f", g_ScreenWidth, g_ScreenHeight);
             ImGui::Text("Touch Pos: %.1f, %.1f", g_TouchState.x, g_TouchState.y);
-            ImGui::Text("Status: %s", g_TouchState.down ? "DOWN" : "UP");
+            ImGui::Text("Touch Down: %s", g_TouchState.down ? "YES" : "NO");
             
             ImGui::Separator();
-            static float speed = 5.0f;
-            ImGui::SliderFloat("Speed", &speed, 1.0f, 10.0f);
+            static bool esp = false;
+            ImGui::Checkbox("Enable Visuals", &esp);
             
             if (ImGui::Button("Close Menu")) g_ShowMenu = false;
         }
@@ -121,22 +127,28 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 
 // --- 初始化线程 ---
 void* init_thread(void*) {
-    LOGI("Plugin thread started. Waiting for libs...");
+    LOGI("New Input Strategy: Hooking AMotionEvent_getRaw...");
     
-    // 1. Hook SwapBuffers (渲染)
+    // 1. Hook 渲染
     void* egl = dlsym(RTLD_DEFAULT, "eglSwapBuffers");
     if (egl) DobbyHook(egl, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
 
-    // 2. Hook AInputQueue_getEvent (libandroid.so)
+    // 2. Hook libandroid.so 的底层坐标获取函数
     void* libandroid = dlopen("libandroid.so", RTLD_NOW);
     if (libandroid) {
-        void* getEvent = dlsym(libandroid, "AInputQueue_getEvent");
-        if (getEvent) {
-            DobbyHook(getEvent, (void*)hook_AInputQueue_getEvent, (void**)&old_getEvent);
-            LOGI("AInputQueue_getEvent Hooked at %p", getEvent);
-        } else {
-            LOGE("Failed to find AInputQueue_getEvent");
-        }
+        void* getX = dlsym(libandroid, "AMotionEvent_getRawX");
+        void* getY = dlsym(libandroid, "AMotionEvent_getRawY");
+        void* getAct = dlsym(libandroid, "AMotionEvent_getAction");
+
+        // 如果没有 getRawX (旧版本安卓)，尝试 getX
+        if (!getX) getX = dlsym(libandroid, "AMotionEvent_getX");
+        if (!getY) getY = dlsym(libandroid, "AMotionEvent_getY");
+
+        if (getX) DobbyHook(getX, (void*)hook_getRawX, (void**)&old_getRawX);
+        if (getY) DobbyHook(getY, (void*)hook_getRawY, (void**)&old_getRawY);
+        if (getAct) DobbyHook(getAct, (void*)hook_getAction, (void**)&old_getAction);
+
+        LOGI("Raw Hooks Result: X:%p Y:%p Act:%p", getX, getY, getAct);
     }
 
     return nullptr;
