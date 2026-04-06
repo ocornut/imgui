@@ -43,6 +43,8 @@ void handle_motion_event(void* event) {
 
     if (_getType && _getType(event) == AINPUT_EVENT_TYPE_MOTION) {
         int action = _getAction(event) & AMOTION_EVENT_ACTION_MASK;
+        
+        // 获取原始触摸点
         float x = _getX(event, 0);
         float y = _getY(event, 0);
 
@@ -66,24 +68,23 @@ int hook_InputConsumer_consume(void* instance, void* factory, bool consumeBatche
 
 // 渲染钩子
 EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
+    // 动态获取当前渲染表面的宽高（适配窗口化/分屏）
+    EGLint width, height;
+    eglQuerySurface(dpy, surface, EGL_WIDTH, &width);
+    eglQuerySurface(dpy, surface, EGL_HEIGHT, &height);
+
     if (!g_Initialized) {
-        EGLint width, height;
-        eglQuerySurface(dpy, surface, EGL_WIDTH, &width);
-        eglQuerySurface(dpy, surface, EGL_HEIGHT, &height);
-        
         ImGui::CreateContext();
-        ImGuiIO& io = ImGui::GetIO();
-        io.DisplaySize = ImVec2((float)width, (float)height);
-        io.ConfigFlags |= ImGuiConfigFlags_IsTouchScreen;
-        
-        ImGui::GetStyle().ScaleAllSizes(3.0f); 
         ImGui_ImplOpenGL3_Init("#version 300 es");
+        ImGui::GetStyle().ScaleAllSizes(3.0f); 
         g_Initialized = true;
-        LOGI("ImGui Full Init Success: %d x %d", width, height);
     }
 
     ImGuiIO& io = ImGui::GetIO();
-    // 强制同步坐标给 ImGui
+    // 每一帧都更新显示大小，防止窗口缩放导致坐标偏移
+    io.DisplaySize = ImVec2((float)width, (float)height);
+    
+    // 关键：将捕获的输入传递给 ImGui
     io.MousePos = ImVec2(g_TouchData.x, g_TouchData.y);
     io.MouseDown[0] = g_TouchData.down;
 
@@ -91,17 +92,17 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     ImGui::NewFrame();
 
     if (g_ShowMenu) {
-        ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(600, 450), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowPos(ImVec2(50, 50), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(width * 0.5f, height * 0.5f), ImGuiCond_FirstUseEver);
         
         if (ImGui::Begin("AndKitty Menu", &g_ShowMenu)) {
             ImGui::TextColored(ImVec4(0, 1, 0, 1), "Plugin Status: ACTIVE");
-            // 实时显示捕获到的坐标，方便调试
-            ImGui::Text("Captured Input: %.1f, %.1f (%s)", g_TouchData.x, g_TouchData.y, g_TouchData.down ? "DOWN" : "UP");
+            ImGui::Text("WinSize: %d x %d", width, height);
+            ImGui::Text("Touch: %.1f, %.1f (%s)", g_TouchData.x, g_TouchData.y, g_TouchData.down ? "DOWN" : "UP");
             ImGui::Separator();
             
             static bool test_check = true;
-            ImGui::Checkbox("Test Feature", &test_check);
+            ImGui::Checkbox("Feature Test", &test_check);
             
             if (ImGui::Button("Close Menu")) {
                 // g_ShowMenu = false;
@@ -117,10 +118,10 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 }
 
 void* init_thread(void*) {
-    LOGI("Plugin thread started. Waiting for game to stabilize...");
+    LOGI("Plugin thread started. Waiting 15s...");
     sleep(15); 
 
-    // 1. Hook eglSwapBuffers
+    // 1. Hook 渲染 (eglSwapBuffers)
     void* egl_addr = dlsym(RTLD_DEFAULT, "eglSwapBuffers");
     if (egl_addr) {
         DobbyHook(egl_addr, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
@@ -129,16 +130,12 @@ void* init_thread(void*) {
 
     // 2. 强力查找 libinput.so 的 consume 符号
     const char* consume_sym = "_ZN7android13InputConsumer7consumeEPNS_26InputEventFactoryInterfaceEblPjPPNS_10InputEventE";
-    
-    // 尝试直接获取地址 (某些环境下有效)
     void* consume_addr = DobbySymbolResolver("libinput.so", consume_sym);
 
     if (!consume_addr) {
-        // 如果 Dobby 找不到，尝试用 dlopen 显式加载
         void* hLibInput = dlopen("libinput.so", RTLD_NOW);
         if (hLibInput) {
             consume_addr = dlsym(hLibInput, consume_sym);
-            // 注意：此处不 dlclose，防止符号失效
         }
     }
 
