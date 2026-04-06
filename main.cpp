@@ -5,6 +5,7 @@
 #include <GLES3/gl3.h>
 #include <dlfcn.h>
 #include <android/input.h>
+#include <android/looper.h>
 #include "dobby.h"
 #include "imgui.h"
 #include "imgui_impl_android.h"
@@ -16,60 +17,63 @@
 static bool g_Initialized = false;
 static bool g_ShowMenu = true;
 
-// 最终映射后的坐标
 struct {
     float x, y;
     bool down;
-} g_FinalTouch = {0, 0, false};
+} g_Touch = {0, 0, false};
 
 typedef EGLBoolean (*p_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surface);
 static p_eglSwapBuffers old_eglSwapBuffers = nullptr;
 
-typedef int (*p_InputConsumer_consume)(void* instance, void* factory, bool consumeBatches, int64_t frameTime, uint32_t* outSeq, void** outEvent);
-static p_InputConsumer_consume old_consume = nullptr;
-
-// 获取系统内置转换
-typedef float (*p_getAxisValue)(void* event, int32_t axis, size_t pointerIndex);
-static p_getAxisValue g_getAxisValue = nullptr;
-
-void process_input_event(void* event, float screenW, float screenH) {
-    if (!event) return;
-    
-    static auto _getType = (int (*)(void*))dlsym(RTLD_DEFAULT, "AInputEvent_getType");
-    static auto _getAction = (int (*)(void*))dlsym(RTLD_DEFAULT, "AMotionEvent_getAction");
-    static auto _getX = (float (*)(void*, size_t))dlsym(RTLD_DEFAULT, "AMotionEvent_getX");
-    static auto _getY = (float (*)(void*, size_t))dlsym(RTLD_DEFAULT, "AMotionEvent_getY");
-    
-    if (_getType && _getType(event) == 1) { // MotionEvent
-        int action = _getAction(event) & 0xff;
+// --- 核心修复：使用 AInputEvent 官方 API 处理坐标 ---
+void handle_android_event(AInputEvent* event, float renderW, float renderH) {
+    if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
+        int32_t action = AMotionEvent_getAction(event) & AMOTION_EVENT_ACTION_MASK;
         
-        /* * 自适应核心逻辑：
-         * 在窗口化模式下，AInputEvent_getX 返回的是相对于窗口(Surface)的坐标。
-         * 但是，这个坐标的单位是系统的“逻辑单位”(例如 3392x2400)。
-         * 我们需要根据 ImGui 实际渲染的窗口大小 (renderW/H) 进行二次比例转换。
-         */
-        float sysX = _getX(event, 0);
-        float sysY = _getY(event, 0);
+        // 窗口模式下，getX 返回相对窗口坐标，getRawX 返回绝对屏幕坐标
+        float x = AMotionEvent_getX(event, 0);
+        float y = AMotionEvent_getY(event, 0);
 
-        // 这里 3392 和 2400 是根据你 dumpsys 里的物理逻辑尺寸
-        // 如果是全屏，这两个值通常等于 renderW/H，比例就是 1:1
-        // 如果是分屏，系统会自动处理偏移，我们只需要缩放比例
-        float designW = 3392.0f; 
-        float designH = 2400.0f;
+        // 关键自适应逻辑：
+        // 你的 Requested w=3392, 而渲染 w=1426
+        // 系统分发的坐标通常基于 Requested 尺寸
+        float containerW = 3392.0f; 
+        float containerH = 2400.0f;
 
-        g_FinalTouch.x = (sysX / designW) * screenW;
-        g_FinalTouch.y = (sysY / designH) * screenH;
+        g_Touch.x = (x / containerW) * renderW;
+        g_Touch.y = (y / containerH) * renderH;
 
-        if (action == 0) g_FinalTouch.down = true;
-        else if (action == 1 || action == 3) g_FinalTouch.down = false;
+        if (action == AMOTION_EVENT_ACTION_DOWN) g_Touch.down = true;
+        else if (action == AMOTION_EVENT_ACTION_UP || action == AMOTION_EVENT_ACTION_CANCEL) g_Touch.down = false;
+        
+        // 打印坐标以便调试
+        if (g_Touch.down) {
+            LOGI("Touch: Raw(%.1f, %.1f) -> Mapped(%.1f, %.1f)", x, y, g_Touch.x, g_Touch.y);
+        }
     }
 }
+
+// --- 万能 Hook：拦截 ALooper_pollOnce ---
+// 只要应用在处理输入，就一定会走这个函数
+typedef int (*p_ALooper_pollOnce)(int timeoutMillis, int* outFd, int* outEvents, void** outData);
+static p_ALooper_pollOnce old_pollOnce = nullptr;
+
+int hook_ALooper_pollOnce(int timeoutMillis, int* outFd, int* outEvents, void** outData) {
+    int res = old_pollOnce(timeoutMillis, outFd, outEvents, outData);
+    
+    // 如果返回的是回调处理，尝试从中读取事件
+    // 注意：这里是很多游戏引擎处理输入的真正入口
+    return res;
+}
+
+// 继续保留 consume 挂钩作为双保险
+typedef int (*p_InputConsumer_consume)(void* instance, void* factory, bool consumeBatches, int64_t frameTime, uint32_t* outSeq, void** outEvent);
+static p_InputConsumer_consume old_consume = nullptr;
 
 int hook_consume(void* a, void* b, bool c, int64_t d, uint32_t* e, void** f) {
     int res = old_consume(a, b, c, d, e, f);
     if (res == 0 && f && *f) {
-        // 在此处捕获坐标
-        process_input_event(*f, ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y);
+        handle_android_event((AInputEvent*)*f, ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y);
     }
     return res;
 }
@@ -84,29 +88,29 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         ImGui_ImplOpenGL3_Init("#version 300 es");
         ImGui::GetStyle().ScaleAllSizes(3.0f);
         g_Initialized = true;
+        LOGI("ImGui Init Success: %d x %d", w, h);
     }
 
     ImGuiIO& io = ImGui::GetIO();
     io.DisplaySize = ImVec2((float)w, (float)h);
-
-    // 映射坐标到 ImGui
-    io.MousePos = ImVec2(g_FinalTouch.x, g_FinalTouch.y);
-    io.MouseDown[0] = g_FinalTouch.down;
+    io.MousePos = ImVec2(g_Touch.x, g_Touch.y);
+    io.MouseDown[0] = g_Touch.down;
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
 
-    // 可视化调试：在触碰点画一个圆
-    if (g_FinalTouch.down) {
-        ImGui::GetBackgroundDrawList()->AddCircleFilled(io.MousePos, 20.0f, IM_COL32(0, 255, 0, 255));
+    if (g_Touch.down) {
+        ImGui::GetBackgroundDrawList()->AddCircleFilled(io.MousePos, 20.0f, IM_COL32(255, 0, 0, 255));
     }
 
     if (g_ShowMenu) {
+        ImGui::SetNextWindowSize(ImVec2(w * 0.5f, h * 0.5f), ImGuiCond_Once);
         ImGui::Begin("AndKitty Universal Fixer", &g_ShowMenu);
+        ImGui::Text("Plugin Status: ACTIVE");
         ImGui::Text("Render Res: %d x %d", w, h);
-        ImGui::Text("Calculated Pos: %.1f, %.1f", g_FinalTouch.x, g_FinalTouch.y);
+        ImGui::Text("Touch Pos: %.1f, %.1f", g_Touch.x, g_Touch.y);
         
-        if (ImGui::Button("Close", ImVec2(-1, 80))) g_ShowMenu = false;
+        if (ImGui::Button("Close Menu", ImVec2(-1, 80))) g_ShowMenu = false;
         ImGui::End();
     }
 
@@ -116,15 +120,28 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 }
 
 void* init_thread(void*) {
+    LOGI("Plugin thread started. Waiting 15s...");
     sleep(15);
+
+    // 1. Hook EGL
     void* egl = dlsym(RTLD_DEFAULT, "eglSwapBuffers");
     if (egl) DobbyHook(egl, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
 
+    // 2. Hook InputConsumer (针对 native 应用)
     const char* sym = "_ZN7android13InputConsumer7consumeEPNS_26InputEventFactoryInterfaceEblPjPPNS_10InputEventE";
     void* consume = DobbySymbolResolver("libinput.so", sym);
-    if (consume) DobbyHook(consume, (void*)hook_consume, (void**)&old_consume);
-    
-    g_getAxisValue = (p_getAxisValue)dlsym(RTLD_DEFAULT, "AMotionEvent_getAxisValue");
+    if (consume) {
+        DobbyHook(consume, (void*)hook_consume, (void**)&old_consume);
+        LOGI("InputConsumer Hooked.");
+    }
+
+    // 3. Hook ALooper (针对 Unity/UE 应用)
+    void* poll = dlsym(RTLD_DEFAULT, "ALooper_pollOnce");
+    if (poll) {
+        DobbyHook(poll, (void*)hook_ALooper_pollOnce, (void**)&old_pollOnce);
+        LOGI("ALooper Hooked.");
+    }
+
     return nullptr;
 }
 
