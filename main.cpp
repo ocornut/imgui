@@ -17,55 +17,59 @@
 static bool g_Initialized = false;
 static bool g_ShowMenu = true;
 
+// 状态追踪日志，用于在 UI 上显示
+static char g_HookStatus[256] = "Waiting...";
+
 typedef EGLBoolean (*p_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surface);
 static p_eglSwapBuffers old_eglSwapBuffers = nullptr;
 
-// --- 触摸同步逻辑 ---
+// --- 触摸数据结构 ---
+struct TouchState {
+    float x;
+    float y;
+    bool down;
+    int event_count; // 记录收到了多少次事件
+} g_Touch;
 
-void SyncImGuiInput(AInputEvent* event) {
-    if (!g_Initialized || !g_ShowMenu) return;
+// --- 核心 Hook 逻辑 ---
 
-    ImGuiIO& io = ImGui::GetIO();
-    int32_t type = AInputEvent_getType(event);
+typedef float (*p_AMotionEvent_getRawX)(const AInputEvent* motion_event, size_t pointer_index);
+static p_AMotionEvent_getRawX old_getRawX = nullptr;
 
-    if (type == AINPUT_EVENT_TYPE_MOTION) {
-        int32_t action = AMotionEvent_getAction(event);
-        int32_t action_code = action & AMOTION_EVENT_ACTION_MASK;
-        
-        float x = AMotionEvent_getX(event, 0);
-        float y = AMotionEvent_getY(event, 0);
-        io.MousePos = ImVec2(x, y);
+typedef float (*p_AMotionEvent_getRawY)(const AInputEvent* motion_event, size_t pointer_index);
+static p_AMotionEvent_getRawY old_getRawY = nullptr;
 
-        if (action_code == AMOTION_EVENT_ACTION_DOWN || action_code == AMOTION_EVENT_ACTION_POINTER_DOWN) {
-            io.MouseDown[0] = true;
-        } else if (action_code == AMOTION_EVENT_ACTION_UP || action_code == AMOTION_EVENT_ACTION_POINTER_UP || action_code == AMOTION_EVENT_ACTION_CANCEL) {
-            io.MouseDown[0] = false;
-        }
-    }
-}
+typedef int32_t (*p_AMotionEvent_getAction)(const AInputEvent* motion_event);
+static p_AMotionEvent_getAction old_getAction = nullptr;
 
-// --- Hook 1: AInputQueue (通用入口) ---
-typedef int32_t (*p_AInputQueue_getEvent)(AInputQueue* queue, AInputEvent** outEvent);
-static p_AInputQueue_getEvent old_AInputQueue_getEvent = nullptr;
-
-int32_t hook_AInputQueue_getEvent(AInputQueue* queue, AInputEvent** outEvent) {
-    int32_t res = old_AInputQueue_getEvent(queue, outEvent);
-    if (res >= 0 && outEvent && *outEvent) {
-        SyncImGuiInput(*outEvent);
-    }
-    return res;
-}
-
-// --- Hook 2: 直接 Hook AMotionEvent 获取函数 (防止 libunity.so 绕过 Queue) ---
-typedef float (*p_AMotionEvent_getX)(const AInputEvent* motion_event, size_t pointer_index);
-static p_AMotionEvent_getX old_getX = nullptr;
-
-float hook_AMotionEvent_getX(const AInputEvent* motion_event, size_t pointer_index) {
-    float x = old_getX(motion_event, pointer_index);
+float hook_AMotionEvent_getRawX(const AInputEvent* motion_event, size_t pointer_index) {
+    float x = old_getRawX(motion_event, pointer_index);
     if (g_ShowMenu && g_Initialized && pointer_index == 0) {
-        ImGui::GetIO().MousePos.x = x;
+        g_Touch.x = x;
+        g_Touch.event_count++;
     }
     return x;
+}
+
+float hook_AMotionEvent_getRawY(const AInputEvent* motion_event, size_t pointer_index) {
+    float y = old_getRawY(motion_event, pointer_index);
+    if (g_ShowMenu && g_Initialized && pointer_index == 0) {
+        g_Touch.y = y;
+    }
+    return y;
+}
+
+int32_t hook_AMotionEvent_getAction(const AInputEvent* motion_event) {
+    int32_t action = old_getAction(motion_event);
+    if (g_ShowMenu && g_Initialized) {
+        int32_t code = action & AMOTION_EVENT_ACTION_MASK;
+        if (code == AMOTION_EVENT_ACTION_DOWN || code == AMOTION_EVENT_ACTION_POINTER_DOWN) {
+            g_Touch.down = true;
+        } else if (code == AMOTION_EVENT_ACTION_UP || code == AMOTION_EVENT_ACTION_POINTER_UP || code == AMOTION_EVENT_ACTION_CANCEL) {
+            g_Touch.down = false;
+        }
+    }
+    return action;
 }
 
 // 渲染钩子
@@ -84,25 +88,33 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         
         ImGui_ImplOpenGL3_Init("#version 300 es");
         g_Initialized = true;
-        LOGI("ImGui Initialized for Unity SGame: %d x %d", width, height);
+        LOGI("ImGui Initialized successfully.");
     }
 
     if (g_ShowMenu) {
+        ImGuiIO& io = ImGui::GetIO();
+        io.MousePos = ImVec2(g_Touch.x, g_Touch.y);
+        io.MouseDown[0] = g_Touch.down;
+
         ImGui_ImplOpenGL3_NewFrame();
         ImGui::NewFrame();
 
         ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(550, 400), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(600, 450), ImGuiCond_FirstUseEver);
         
-        // 确保没有任何禁止移动的 Flag
-        if (ImGui::Begin("AndKitty SGame Unity", &g_ShowMenu)) {
-            ImGui::TextColored(ImVec4(0, 1, 1, 1), "Module: libunity.so Context");
+        if (ImGui::Begin("AndKitty SGame Debugger", &g_ShowMenu)) {
+            ImGui::TextColored(ImVec4(1, 1, 0, 1), "Hook Status: %s", g_HookStatus);
+            ImGui::Text("Touch Data: %s (%.1f, %.1f)", g_Touch.down ? "DOWN" : "UP", g_Touch.x, g_Touch.y);
+            ImGui::Text("Total Events Captured: %d", g_Touch.event_count);
+            
             ImGui::Separator();
             
-            static bool esp = false;
-            ImGui::Checkbox("ESP Enable", &esp);
-            
-            if (ImGui::Button("Close Menu")) g_ShowMenu = false;
+            if (ImGui::Button("Reset Touch State")) {
+                g_Touch.down = false;
+                g_Touch.event_count = 0;
+            }
+
+            ImGui::Checkbox("Menu Visible", &g_ShowMenu);
         }
         ImGui::End();
 
@@ -114,36 +126,44 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 }
 
 void* init_thread(void*) {
-    LOGI("Waiting for libunity.so and libandroid.so...");
+    LOGI("Init thread started. Target: libunity.so");
     
-    // 循环等待 libunity.so 加载完成，这对 Unity 游戏很重要
-    while (true) {
-        if (dlsym(RTLD_DEFAULT, "eglSwapBuffers") && dlopen("libunity.so", RTLD_NOLOAD)) {
+    // 持续检查模块加载情况
+    int retry = 0;
+    while (retry < 60) { // 最多等待 30 秒
+        if (dlopen("libunity.so", RTLD_NOLOAD)) {
+            LOGI("libunity.so found!");
             break;
         }
         usleep(500000);
+        retry++;
     }
-    sleep(5); // 额外等待确保引擎初始化
 
     // 1. Hook 渲染
     void* swap_addr = dlsym(RTLD_DEFAULT, "eglSwapBuffers");
-    DobbyHook(swap_addr, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
-
-    // 2. Hook 系统输入队列 (通用)
-    void* input_addr = dlsym(RTLD_DEFAULT, "AInputQueue_getEvent");
-    if (input_addr) {
-        DobbyHook(input_addr, (void*)hook_AInputQueue_getEvent, (void**)&old_AInputQueue_getEvent);
+    if (swap_addr) {
+        DobbyHook(swap_addr, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
+        LOGI("eglSwapBuffers Hooked.");
+    } else {
+        LOGI("FAILED to find eglSwapBuffers");
     }
 
-    // 3. 针对 Unity 的“强制同步”：Hook AMotionEvent_getX
-    // 很多版本的 Unity 直接调用这个函数获取坐标，Hook 这里可以强行同步 ImGui 坐标
-    void* getx_addr = dlsym(RTLD_DEFAULT, "AMotionEvent_getX");
-    if (getx_addr) {
-        LOGI("Hooking AMotionEvent_getX for Unity focus...");
-        DobbyHook(getx_addr, (void*)hook_AMotionEvent_getX, (void**)&old_getX);
+    // 2. Hook 触摸
+    void* getRawX_addr = dlsym(RTLD_DEFAULT, "AMotionEvent_getRawX");
+    void* getRawY_addr = dlsym(RTLD_DEFAULT, "AMotionEvent_getRawY");
+    void* getAction_addr = dlsym(RTLD_DEFAULT, "AMotionEvent_getAction");
+
+    if (getRawX_addr && getRawY_addr && getAction_addr) {
+        DobbyHook(getRawX_addr, (void*)hook_AMotionEvent_getRawX, (void**)&old_getRawX);
+        DobbyHook(getRawY_addr, (void*)hook_AMotionEvent_getRawY, (void**)&old_getRawY);
+        DobbyHook(getAction_addr, (void*)hook_AMotionEvent_getAction, (void**)&old_getAction);
+        snprintf(g_HookStatus, sizeof(g_HookStatus), "All Hooks OK (Unity Mode)");
+        LOGI("AMotionEvent Hooks applied successfully.");
+    } else {
+        snprintf(g_HookStatus, sizeof(g_HookStatus), "Hook FAILED: %p %p %p", getRawX_addr, getRawY_addr, getAction_addr);
+        LOGI("FAILED to find AMotionEvent symbols.");
     }
 
-    LOGI("Unity SGame Hooks Ready.");
     return nullptr;
 }
 
