@@ -35,13 +35,45 @@ struct {
     float physW = 3392.0f;
     float physH = 2400.0f;
     bool isSizeAutoDetected = false;
+    
+    // 手动触控偏移
+    float offsetX = 0.0f;
+    float offsetY = 0.0f;
 } g_Touch;
 
+// 缩放与 UI 控制
 static float g_DynamicScale = 1.0f;
 static float g_BaseWindowHeight = 0.0f; 
+static float g_UserUIScale = 1.0f; 
+
+// Hook 调试信息全局存储
+static uintptr_t g_GameBase = 0;
+static uintptr_t g_HookAddr_InitActor = 0;
+static uintptr_t g_HookAddr_ClearActor = 0;
 
 // =================================================================
-// 内核级安全读取 (文件描述符长期保持打开以提升性能)
+// 动态偏移量配置 (可在 UI 中实时修改)
+// =================================================================
+struct DynamicOffsets {
+    uint32_t x0_to_addr1    = 0x20;
+    uint32_t addr1_to_addr2 = 0x10;
+    uint32_t item_to_addr3  = 0x18;
+    uint32_t addr3_to_addr4 = 0x30;
+    uint32_t addr3_to_addr5 = 0x100;
+    uint32_t addr3_to_addr6 = 0x70;
+    
+    // 数据属性的偏移也可以视需要动态化，这里先固定常用的
+    uint32_t prop_gold  = 0x20;
+    uint32_t prop_hp    = 0x30;
+    uint32_t prop_maxhp = 0x32;
+    uint32_t prop_level = 0x50;
+};
+
+DynamicOffsets g_Offsets;
+std::mutex g_OffsetMutex;
+
+// =================================================================
+// 内核级安全读取
 // =================================================================
 static int g_MemFd = -1;
 
@@ -57,7 +89,7 @@ T SafeRead(uintptr_t address) {
 }
 
 // =================================================================
-// 核心架构升级：分离式快照数据结构 (Snapshot)
+// 分离式快照数据结构 (Snapshot)
 // =================================================================
 struct PlayerData {
     int hp = 0, maxHp = 0, mana = 0, gold = 0, level = 0;
@@ -65,7 +97,6 @@ struct PlayerData {
     float mapX = 0, mapY = 0;
 };
 
-// 完整的指针链快照（用于排错）
 struct DebugChain {
     uintptr_t baseX0 = 0;
     uintptr_t addr1 = 0;
@@ -75,59 +106,68 @@ struct DebugChain {
     } items[15];
 };
 
-// 全局快照包裹
 struct GameSnapshot {
     bool inMatch = false;
+    DynamicOffsets offsets; // 记录生成这份快照时使用的偏移
     DebugChain debug;
     std::vector<PlayerData> players;
 };
 
-// 线程间数据交换的核心锁
 std::mutex g_SnapshotMutex;
 GameSnapshot g_CurrentSnapshot; 
 std::atomic<uintptr_t> g_ActorManager{0};
 
 // =================================================================
-// 后台数据工人线程 (与渲染彻底解耦，永不卡死画面)
+// 后台数据工人线程 (热更新读取)
 // =================================================================
 void DataWorkerThread() {
     while (true) {
         GameSnapshot newSnap;
+        
+        // 读取最新的动态偏移
+        DynamicOffsets currOff;
+        {
+            std::lock_guard<std::mutex> lock(g_OffsetMutex);
+            currOff = g_Offsets;
+        }
+        newSnap.offsets = currOff;
+
         uintptr_t baseX0 = g_ActorManager.load();
         
         if (baseX0 != 0) {
             newSnap.inMatch = true;
             newSnap.debug.baseX0 = baseX0;
             
-            uintptr_t addr1 = SafeRead<uintptr_t>(baseX0 + 0x20);
+            // 按照最新的动态偏移进行抓取
+            uintptr_t addr1 = SafeRead<uintptr_t>(baseX0 + currOff.x0_to_addr1);
             newSnap.debug.addr1 = addr1;
             
             if (addr1) {
-                uintptr_t addr2 = SafeRead<uintptr_t>(addr1 + 0x10);
+                uintptr_t addr2 = SafeRead<uintptr_t>(addr1 + currOff.addr1_to_addr2);
                 newSnap.debug.addr2 = addr2;
                 
                 if (addr2) {
                     for (int i = 0; i < 15; ++i) { 
-                        uintptr_t item = SafeRead<uintptr_t>(addr2 + (i * 0x8));
+                        uintptr_t item = SafeRead<uintptr_t>(addr2 + (i * 0x8)); // 假设指针数组大小为 8 字节
                         newSnap.debug.items[i].base = item;
                         if (!item) continue;
 
-                        uintptr_t addr3 = SafeRead<uintptr_t>(item + 0x18);
+                        uintptr_t addr3 = SafeRead<uintptr_t>(item + currOff.item_to_addr3);
                         newSnap.debug.items[i].addr3 = addr3;
                         if (!addr3) continue;
 
                         PlayerData p;
                         
-                        uintptr_t addr4 = SafeRead<uintptr_t>(addr3 + 0x30);
+                        uintptr_t addr4 = SafeRead<uintptr_t>(addr3 + currOff.addr3_to_addr4);
                         newSnap.debug.items[i].addr4 = addr4;
                         if (addr4) {
-                            p.gold  = SafeRead<int32_t>(addr4 + 0x20);
-                            p.hp    = SafeRead<int32_t>(addr4 + 0x30);
-                            p.maxHp = SafeRead<int32_t>(addr4 + 0x32); 
-                            p.level = SafeRead<int32_t>(addr4 + 0x50);
+                            p.gold  = SafeRead<int32_t>(addr4 + currOff.prop_gold);
+                            p.hp    = SafeRead<int32_t>(addr4 + currOff.prop_hp);
+                            p.maxHp = SafeRead<int32_t>(addr4 + currOff.prop_maxhp); 
+                            p.level = SafeRead<int32_t>(addr4 + currOff.prop_level);
                         }
 
-                        uintptr_t addr5 = SafeRead<uintptr_t>(addr3 + 0x100);
+                        uintptr_t addr5 = SafeRead<uintptr_t>(addr3 + currOff.addr3_to_addr5);
                         newSnap.debug.items[i].addr5 = addr5;
                         if (addr5) {
                             p.worldX = SafeRead<float>(addr5 + 0x0);
@@ -136,13 +176,14 @@ void DataWorkerThread() {
                             p.mana   = SafeRead<int32_t>(addr5 + 0x28);
                         }
 
-                        uintptr_t addr6 = SafeRead<uintptr_t>(addr3 + 0x70);
+                        uintptr_t addr6 = SafeRead<uintptr_t>(addr3 + currOff.addr3_to_addr6);
                         newSnap.debug.items[i].addr6 = addr6;
                         if (addr6) {
                             p.mapX = SafeRead<float>(addr6 + 0x50);
                             p.mapY = SafeRead<float>(addr6 + 0x54);
                         }
 
+                        // 有效性过滤
                         if (p.maxHp > 0 && p.maxHp < 50000) {
                             newSnap.players.push_back(p);
                         }
@@ -151,13 +192,10 @@ void DataWorkerThread() {
             }
         }
         
-        // 安全交换快照
         {
             std::lock_guard<std::mutex> lock(g_SnapshotMutex);
             g_CurrentSnapshot = newSnap;
         }
-        
-        // 休眠 16ms 限制性能消耗 (约 60FPS 刷新率)
         std::this_thread::sleep_for(std::chrono::milliseconds(16));
     }
 }
@@ -193,22 +231,67 @@ void hook_ClearActor(void* x0) {
 }
 
 // =================================================================
-// 渲染循环与 UI 设计 (学习 2.txt)
+// 渲染循环与 UI 设计
 // =================================================================
 void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
     ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(w * 0.5f, h * 0.7f), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(w * 0.55f, h * 0.8f), ImGuiCond_FirstUseEver);
     
-    if (ImGui::Begin("Pointer Debugger (Find Breakpoints)")) {
-        ImGui::TextColored(ImVec4(1, 1, 0, 1), "Color Legend: Green = Valid | Red = Nullptr (Broken)");
+    if (ImGui::Begin("Pointer Debugger (实时指针诊断)")) {
+        
+        // --- 1. 运行时偏移量实时修改面板 (按钮微调版) ---
+        if (ImGui::CollapsingHeader("Live Offset Editor (手动调节偏移量)", ImGuiTreeNodeFlags_DefaultOpen)) {
+            std::lock_guard<std::mutex> lock(g_OffsetMutex);
+            ImGui::TextColored(ImVec4(1, 1, 0, 1), "注：点击下方按钮直接微调，步长为 10 进制");
+            ImGui::Separator();
+            
+            // 封装一个画大号加减按钮的 Lambda 表达式，改为 ±1, ±4, ±8 步长
+            auto drawOffsetBtn = [](const char* label, uint32_t& val) {
+                ImGui::PushID(&val);
+                // 显示十进制，同时也保留十六进制方便核对
+                ImGui::TextColored(ImVec4(0.5f, 0.8f, 1.0f, 1.0f), "%s  ->  当前: %d (0x%X)", label, val, val);
+                
+                // 防溢出保护的减法
+                if (ImGui::Button("-8")) { if (val >= 8) val -= 8; else val = 0; } ImGui::SameLine();
+                if (ImGui::Button("-4")) { if (val >= 4) val -= 4; else val = 0; } ImGui::SameLine();
+                if (ImGui::Button("-1")) { if (val >= 1) val -= 1; else val = 0; } ImGui::SameLine();
+                
+                // 加法
+                if (ImGui::Button("+1")) val += 1; ImGui::SameLine();
+                if (ImGui::Button("+4")) val += 4; ImGui::SameLine();
+                if (ImGui::Button("+8")) val += 8;
+                
+                ImGui::Separator();
+                ImGui::PopID();
+            };
+
+            // 绘制 6 个地址的加减调节器
+            drawOffsetBtn("X0 -> Addr1 (地址1)", g_Offsets.x0_to_addr1);
+            drawOffsetBtn("Addr1 -> Addr2 (英雄数组)", g_Offsets.addr1_to_addr2);
+            drawOffsetBtn("Hero Item -> Addr3", g_Offsets.item_to_addr3);
+            drawOffsetBtn("Addr3 -> Addr4 (血量属性)", g_Offsets.addr3_to_addr4);
+            drawOffsetBtn("Addr3 -> Addr5 (世界坐标)", g_Offsets.addr3_to_addr5);
+            drawOffsetBtn("Addr3 -> Addr6 (小地图)", g_Offsets.addr3_to_addr6);
+        }
+
+        ImGui::Separator();
+
+        // --- 2. 核心模块与 RVA 展示 ---
+        ImGui::TextColored(ImVec4(0, 1, 1, 1), "[Module] %s Base: 0x%lx", GAME_MODULE, g_GameBase);
+        ImGui::TextColored(ImVec4(0, 1, 1, 1), "[Hook 1] InitActorParams (RVA 0x73507bc) -> 实际地址: 0x%lx", g_HookAddr_InitActor);
+        ImGui::TextColored(ImVec4(0, 1, 1, 1), "[Hook 2] ClearActor      (RVA 0x734bc10) -> 实际地址: 0x%lx", g_HookAddr_ClearActor);
         ImGui::Separator();
         
-        const auto& d = snap.debug;
+        ImGui::TextColored(ImVec4(1, 1, 0, 1), "断点图例: 绿色 = 有效地址 | 红色 = 0x0 (请排查上方该级偏移是否正确)");
+        ImGui::Separator();
         
-        // 顶级基址展示
+        // --- 3. 动态实时断点树 (改为十进制显示) ---
+        const auto& d = snap.debug;
+        const auto& off = snap.offsets; // 渲染所用的正是当前这帧对应的偏移量
+        
         ImGui::TextColored(d.baseX0 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "[Base] InitActor x0: 0x%lx", d.baseX0);
-        ImGui::TextColored(d.addr1 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "  └─ [+0x20] Addr1: 0x%lx", d.addr1);
-        ImGui::TextColored(d.addr2 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "      └─ [+0x10] HeroArray: 0x%lx", d.addr2);
+        ImGui::TextColored(d.addr1 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "  └─ [+%d] Addr1: 0x%lx", off.x0_to_addr1, d.addr1);
+        ImGui::TextColored(d.addr2 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "      └─ [+%d] Addr2 (HeroArray): 0x%lx", off.addr1_to_addr2, d.addr2);
         
         ImGui::Separator();
         
@@ -217,27 +300,25 @@ void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
                 if (d.items[i].base == 0) continue; 
                 
                 char nodeName[64];
-                snprintf(nodeName, sizeof(nodeName), "Hero Array Index [%d] - Addr: 0x%lx", i, d.items[i].base);
+                snprintf(nodeName, sizeof(nodeName), "Hero Array Index [%d] - ItemAddr: 0x%lx", i, d.items[i].base);
                 
-                // 使用 TreeNode 仿造类似 CE 的内存层级视图
                 if (ImGui::TreeNodeEx(nodeName, ImGuiTreeNodeFlags_Framed)) {
-                    
                     ImGui::TextColored(d.items[i].addr3 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), 
-                                       "  └─ [+0x18] EntityData: 0x%lx", d.items[i].addr3);
+                                       "  └─ [+%d] Addr3 (EntityData): 0x%lx", off.item_to_addr3, d.items[i].addr3);
                     
                     if (d.items[i].addr3) {
                         ImGui::TextColored(d.items[i].addr4 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), 
-                                           "      ├─ [+0x30] Props Addr: 0x%lx", d.items[i].addr4);
+                                           "      ├─ [+%d] Addr4 (Props) : 0x%lx", off.addr3_to_addr4, d.items[i].addr4);
                         ImGui::TextColored(d.items[i].addr5 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), 
-                                           "      ├─ [+0x100] World Addr: 0x%lx", d.items[i].addr5);
+                                           "      ├─ [+%d] Addr5 (World) : 0x%lx", off.addr3_to_addr5, d.items[i].addr5);
                         ImGui::TextColored(d.items[i].addr6 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), 
-                                           "      └─ [+0x70] Radar Addr: 0x%lx", d.items[i].addr6);
+                                           "      └─ [+%d] Addr6 (Radar) : 0x%lx", off.addr3_to_addr6, d.items[i].addr6);
                     }
                     ImGui::TreePop();
                 }
             }
         } else {
-            ImGui::TextColored(ImVec4(1, 0, 0, 1), "Waiting for Hero Array to initialize...");
+            ImGui::TextColored(ImVec4(1, 0, 0, 1), "等待英雄数组初始化...");
         }
     }
     ImGui::End();
@@ -270,8 +351,9 @@ void handle_android_event(AInputEvent* event) {
         int32_t action = AMotionEvent_getAction(event) & AMOTION_EVENT_ACTION_MASK;
         float autoScaleX = g_Touch.renderW / g_Touch.physW;
         float autoScaleY = g_Touch.renderH / g_Touch.physH;
-        g_Touch.x = AMotionEvent_getX(event, 0) * autoScaleX;
-        g_Touch.y = AMotionEvent_getY(event, 0) * autoScaleY;
+        
+        g_Touch.x = (AMotionEvent_getX(event, 0) * autoScaleX) + g_Touch.offsetX;
+        g_Touch.y = (AMotionEvent_getY(event, 0) * autoScaleY) + g_Touch.offsetY;
 
         if (action == AMOTION_EVENT_ACTION_DOWN) g_Touch.down.store(true);
         else if (action == AMOTION_EVENT_ACTION_UP || action == AMOTION_EVENT_ACTION_CANCEL) g_Touch.down.store(false);
@@ -296,7 +378,6 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     g_Touch.renderW = (float)w;
     g_Touch.renderH = (float)h;
 
-    // 【核心】从后台线程窃取一张"快照"，渲染层永不参与真实内存读写
     GameSnapshot snapshot;
     {
         std::lock_guard<std::mutex> lock(g_SnapshotMutex);
@@ -316,7 +397,7 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 
     float deviceScale = (float)h / 1000.0f;
     if (deviceScale < 1.0f) deviceScale = 1.0f;
-    float finalScale = deviceScale * g_DynamicScale; 
+    float finalScale = deviceScale * g_DynamicScale * g_UserUIScale; 
 
     static ImGuiStyle default_style;
     static bool style_backed_up = false;
@@ -327,10 +408,10 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 
     ImGuiStyle& style = ImGui::GetStyle();
     style = default_style;
-    style.ScaleAllSizes(3.0f * finalScale);
+    style.ScaleAllSizes(1.2f * finalScale); 
     style.WindowRounding = 12.0f;
     style.WindowMinSize = ImVec2(100.0f, 100.0f); 
-    io.FontGlobalScale = 3.0f * finalScale;
+    io.FontGlobalScale = 1.2f * finalScale;
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
@@ -343,11 +424,10 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         g_BaseWindowHeight = h * 0.45f; 
     }
 
-    // 菜单展示
     ImGui::SetNextWindowPos(ImVec2(30, 30), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(w * 0.6f, g_BaseWindowHeight), ImGuiCond_FirstUseEver);
     
-    static bool show_pointer_debugger = false; 
+    static bool show_pointer_debugger = true; // 默认打开调试窗方便你排查
     static bool show_radar = true;
 
     if (ImGui::Begin("Game Inspector (Auto-Adaptive)")) {
@@ -356,6 +436,25 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         if (g_DynamicScale < 0.4f) g_DynamicScale = 0.4f;
         if (g_DynamicScale > 3.0f) g_DynamicScale = 3.0f;
 
+        if (ImGui::CollapsingHeader("Calibration Settings (菜单缩放与触控校准)")) {
+            ImGui::SliderFloat("UI Scale (菜单大小)", &g_UserUIScale, 0.5f, 2.5f, "%.2f");
+            
+            ImGui::Text("Touch Offset X: %.1f px", g_Touch.offsetX);
+            ImGui::SameLine();
+            if (ImGui::Button("-50##x")) g_Touch.offsetX -= 50; ImGui::SameLine();
+            if (ImGui::Button("-10##x")) g_Touch.offsetX -= 10; ImGui::SameLine();
+            if (ImGui::Button("+10##x")) g_Touch.offsetX += 10; ImGui::SameLine();
+            if (ImGui::Button("+50##x")) g_Touch.offsetX += 50;
+
+            ImGui::Text("Touch Offset Y: %.1f px", g_Touch.offsetY);
+            ImGui::SameLine();
+            if (ImGui::Button("-50##y")) g_Touch.offsetY -= 50; ImGui::SameLine();
+            if (ImGui::Button("-10##y")) g_Touch.offsetY -= 10; ImGui::SameLine();
+            if (ImGui::Button("+10##y")) g_Touch.offsetY += 10; ImGui::SameLine();
+            if (ImGui::Button("+50##y")) g_Touch.offsetY += 50;
+        }
+
+        ImGui::Separator();
         ImGui::Checkbox("Show Radar (小地图透视)", &show_radar);
         ImGui::SameLine();
         ImGui::Checkbox("Pointer Debugger (指针调试器)", &show_pointer_debugger);
@@ -373,7 +472,6 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
             ImGui::TableSetupColumn("Map Coord");
             ImGui::TableHeadersRow();
 
-            // 直接用 snapshot 的数据画图，0 消耗，0 崩溃风险
             for (const auto& p : snapshot.players) {
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn(); ImGui::Text("Lv.%d", p.level);
@@ -389,12 +487,10 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     }
     ImGui::End();
 
-    // 呼叫调试窗口
     if (show_pointer_debugger) {
         DrawPointerDebugger(snapshot, w, h);
     }
 
-    // 雷达绘制
     if (show_radar && snapshot.inMatch) {
         ImGui::SetNextWindowPos(ImVec2(w - 350, 30), ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSize(ImVec2(300, 300), ImGuiCond_FirstUseEver);
@@ -445,16 +541,23 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 void* DelayedHookThread(void*) {
     sleep(15); 
     
-    // 【核心】启动专门的后台查内存工人
     std::thread(DataWorkerThread).detach();
 
     uintptr_t gameBase = GetModuleBase(GAME_MODULE);
     if (!gameBase) {
         LOGE("未找到 %s", GAME_MODULE);
     } else {
-        DobbyHook((void*)(gameBase + 0x73507bc), (void*)hook_InitActorParams, (void**)&old_InitActorParams);
-        DobbyHook((void*)(gameBase + 0x734bc10), (void*)hook_ClearActor, (void**)&old_ClearActor);
-        LOGI("[*] 注入成功! 基址: %p", (void*)gameBase);
+        g_GameBase = gameBase;
+        g_HookAddr_InitActor = gameBase + 0x73507bc;
+        g_HookAddr_ClearActor = gameBase + 0x734bc10;
+
+        LOGI("[*] 准备 Hook InitActorParams, RVA: 0x73507bc, 绝对地址: 0x%lx", g_HookAddr_InitActor);
+        DobbyHook((void*)g_HookAddr_InitActor, (void*)hook_InitActorParams, (void**)&old_InitActorParams);
+        
+        LOGI("[*] 准备 Hook ClearActor, RVA: 0x734bc10, 绝对地址: 0x%lx", g_HookAddr_ClearActor);
+        DobbyHook((void*)g_HookAddr_ClearActor, (void*)hook_ClearActor, (void**)&old_ClearActor);
+        
+        LOGI("[*] 注入成功! 模块基址: %p", (void*)gameBase);
     }
 
     void* sym_egl = DobbySymbolResolver("libEGL.so", "eglSwapBuffers");
