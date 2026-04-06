@@ -5,6 +5,9 @@
 #include <GLES3/gl3.h>
 #include <dlfcn.h>
 #include <android/input.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
 #include "dobby.h"
 #include "imgui.h"
 #include "imgui_impl_android.h"
@@ -29,38 +32,30 @@ static p_eglSwapBuffers old_eglSwapBuffers = nullptr;
 typedef int (*p_InputConsumer_consume)(void* instance, void* factory, bool consumeBatches, int64_t frameTime, uint32_t* outSeq, void** outEvent);
 static p_InputConsumer_consume old_consume = nullptr;
 
-// --- 核心修复：直接读取 MotionEvent 内存 ---
-// Android MotionEvent 结构体在不同版本略有差异，但 getX(0) 通常位于固定偏移
+// 解析 MotionEvent 坐标
 void handle_motion_event(void* event) {
     if (!event) return;
 
     static auto _getType = (int (*)(void*))dlsym(RTLD_DEFAULT, "AInputEvent_getType");
     static auto _getAction = (int (*)(void*))dlsym(RTLD_DEFAULT, "AMotionEvent_getAction");
-    static auto _getPointerCount = (size_t (*)(void*))dlsym(RTLD_DEFAULT, "AMotionEvent_getPointerCount");
     static auto _getX = (float (*)(void*, size_t))dlsym(RTLD_DEFAULT, "AMotionEvent_getX");
     static auto _getY = (float (*)(void*, size_t))dlsym(RTLD_DEFAULT, "AMotionEvent_getY");
 
     if (_getType && _getType(event) == AINPUT_EVENT_TYPE_MOTION) {
         int action = _getAction(event) & AMOTION_EVENT_ACTION_MASK;
-        
-        // 获取第一根手指的坐标
         float x = _getX(event, 0);
         float y = _getY(event, 0);
 
         if (x >= 0 && y >= 0) {
             g_TouchData.x = x;
             g_TouchData.y = y;
-            if (action == AMOTION_EVENT_ACTION_DOWN) {
-                g_TouchData.down = true;
-            } else if (action == AMOTION_EVENT_ACTION_UP || action == AMOTION_EVENT_ACTION_CANCEL) {
-                g_TouchData.down = false;
-            }
-            // LOGI("Touch Catch: %.f, %.f, state: %d", x, y, g_TouchData.down);
+            if (action == AMOTION_EVENT_ACTION_DOWN) g_TouchData.down = true;
+            else if (action == AMOTION_EVENT_ACTION_UP || action == AMOTION_EVENT_ACTION_CANCEL) g_TouchData.down = false;
         }
     }
 }
 
-// 输入钩子
+// 输入钩子回调
 int hook_InputConsumer_consume(void* instance, void* factory, bool consumeBatches, int64_t frameTime, uint32_t* outSeq, void** outEvent) {
     int result = old_consume(instance, factory, consumeBatches, frameTime, outSeq, outEvent);
     if (result == 0 && outEvent && *outEvent) {
@@ -88,8 +83,7 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     }
 
     ImGuiIO& io = ImGui::GetIO();
-    
-    // 关键修复：同步坐标到 ImGui
+    // 强制同步坐标给 ImGui
     io.MousePos = ImVec2(g_TouchData.x, g_TouchData.y);
     io.MouseDown[0] = g_TouchData.down;
 
@@ -102,7 +96,8 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         
         if (ImGui::Begin("AndKitty Menu", &g_ShowMenu)) {
             ImGui::TextColored(ImVec4(0, 1, 0, 1), "Plugin Status: ACTIVE");
-            ImGui::Text("Input: %.1f, %.1f (%s)", g_TouchData.x, g_TouchData.y, g_TouchData.down ? "DOWN" : "UP");
+            // 实时显示捕获到的坐标，方便调试
+            ImGui::Text("Captured Input: %.1f, %.1f (%s)", g_TouchData.x, g_TouchData.y, g_TouchData.down ? "DOWN" : "UP");
             ImGui::Separator();
             
             static bool test_check = true;
@@ -122,8 +117,8 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 }
 
 void* init_thread(void*) {
-    LOGI("Plugin thread started. Waiting for libs...");
-    sleep(10); 
+    LOGI("Plugin thread started. Waiting for game to stabilize...");
+    sleep(15); 
 
     // 1. Hook eglSwapBuffers
     void* egl_addr = dlsym(RTLD_DEFAULT, "eglSwapBuffers");
@@ -132,15 +127,26 @@ void* init_thread(void*) {
         LOGI("eglSwapBuffers Hooked.");
     }
 
-    // 2. Hook InputConsumer::consume (符号来自你的日志)
+    // 2. 强力查找 libinput.so 的 consume 符号
     const char* consume_sym = "_ZN7android13InputConsumer7consumeEPNS_26InputEventFactoryInterfaceEblPjPPNS_10InputEventE";
-    void* consume_addr = dlsym(RTLD_DEFAULT, consume_sym);
     
+    // 尝试直接获取地址 (某些环境下有效)
+    void* consume_addr = DobbySymbolResolver("libinput.so", consume_sym);
+
+    if (!consume_addr) {
+        // 如果 Dobby 找不到，尝试用 dlopen 显式加载
+        void* hLibInput = dlopen("libinput.so", RTLD_NOW);
+        if (hLibInput) {
+            consume_addr = dlsym(hLibInput, consume_sym);
+            // 注意：此处不 dlclose，防止符号失效
+        }
+    }
+
     if (consume_addr) {
         DobbyHook(consume_addr, (void*)hook_InputConsumer_consume, (void**)&old_consume);
-        LOGI("AInputQueue_getEvent Hooked at %p", consume_addr);
+        LOGI("Input Consumer Hooked at %p", consume_addr);
     } else {
-        LOGI("Failed to find Input symbol!");
+        LOGI("CRITICAL ERROR: Failed to locate InputConsumer::consume!");
     }
 
     return nullptr;
