@@ -231,32 +231,28 @@ void hook_ClearActor(void* x0) {
 }
 
 // =================================================================
-// 渲染循环与 UI 设计
+// 渲染循环与 UI 设计 (全中文汉化)
 // =================================================================
 void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
     ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(w * 0.55f, h * 0.8f), ImGuiCond_FirstUseEver);
     
-    if (ImGui::Begin("Pointer Debugger (实时指针诊断)")) {
+    if (ImGui::Begin("指针断点诊断工具 (Pointer Debugger)")) {
         
-        // --- 1. 运行时偏移量实时修改面板 (按钮微调版) ---
-        if (ImGui::CollapsingHeader("Live Offset Editor (手动调节偏移量)", ImGuiTreeNodeFlags_DefaultOpen)) {
+        // --- 1. 运行时偏移量实时修改面板 ---
+        if (ImGui::CollapsingHeader("动态偏移修改器 (点击下方按钮调节)", ImGuiTreeNodeFlags_DefaultOpen)) {
             std::lock_guard<std::mutex> lock(g_OffsetMutex);
             ImGui::TextColored(ImVec4(1, 1, 0, 1), "注：点击下方按钮直接微调，步长为 10 进制");
             ImGui::Separator();
             
-            // 封装一个画大号加减按钮的 Lambda 表达式，改为 ±1, ±4, ±8 步长
             auto drawOffsetBtn = [](const char* label, uint32_t& val) {
                 ImGui::PushID(&val);
-                // 显示十进制，同时也保留十六进制方便核对
                 ImGui::TextColored(ImVec4(0.5f, 0.8f, 1.0f, 1.0f), "%s  ->  当前: %d (0x%X)", label, val, val);
                 
-                // 防溢出保护的减法
                 if (ImGui::Button("-8")) { if (val >= 8) val -= 8; else val = 0; } ImGui::SameLine();
                 if (ImGui::Button("-4")) { if (val >= 4) val -= 4; else val = 0; } ImGui::SameLine();
                 if (ImGui::Button("-1")) { if (val >= 1) val -= 1; else val = 0; } ImGui::SameLine();
                 
-                // 加法
                 if (ImGui::Button("+1")) val += 1; ImGui::SameLine();
                 if (ImGui::Button("+4")) val += 4; ImGui::SameLine();
                 if (ImGui::Button("+8")) val += 8;
@@ -265,10 +261,9 @@ void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
                 ImGui::PopID();
             };
 
-            // 绘制 6 个地址的加减调节器
             drawOffsetBtn("X0 -> Addr1 (地址1)", g_Offsets.x0_to_addr1);
             drawOffsetBtn("Addr1 -> Addr2 (英雄数组)", g_Offsets.addr1_to_addr2);
-            drawOffsetBtn("Hero Item -> Addr3", g_Offsets.item_to_addr3);
+            drawOffsetBtn("Hero Item -> Addr3 (实体数据)", g_Offsets.item_to_addr3);
             drawOffsetBtn("Addr3 -> Addr4 (血量属性)", g_Offsets.addr3_to_addr4);
             drawOffsetBtn("Addr3 -> Addr5 (世界坐标)", g_Offsets.addr3_to_addr5);
             drawOffsetBtn("Addr3 -> Addr6 (小地图)", g_Offsets.addr3_to_addr6);
@@ -277,21 +272,21 @@ void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
         ImGui::Separator();
 
         // --- 2. 核心模块与 RVA 展示 ---
-        ImGui::TextColored(ImVec4(0, 1, 1, 1), "[Module] %s Base: 0x%lx", GAME_MODULE, g_GameBase);
-        ImGui::TextColored(ImVec4(0, 1, 1, 1), "[Hook 1] InitActorParams (RVA 0x73507bc) -> 实际地址: 0x%lx", g_HookAddr_InitActor);
-        ImGui::TextColored(ImVec4(0, 1, 1, 1), "[Hook 2] ClearActor      (RVA 0x734bc10) -> 实际地址: 0x%lx", g_HookAddr_ClearActor);
+        ImGui::TextColored(ImVec4(0, 1, 1, 1), "[核心库] %s 基址: 0x%lx", GAME_MODULE, g_GameBase);
+        ImGui::TextColored(ImVec4(0, 1, 1, 1), "[Hook 1] InitActor (RVA 0x73507bc) -> 实际内存: 0x%lx", g_HookAddr_InitActor);
+        ImGui::TextColored(ImVec4(0, 1, 1, 1), "[Hook 2] ClearActor (RVA 0x734bc10) -> 实际内存: 0x%lx", g_HookAddr_ClearActor);
         ImGui::Separator();
         
-        ImGui::TextColored(ImVec4(1, 1, 0, 1), "断点图例: 绿色 = 有效地址 | 红色 = 0x0 (请排查上方该级偏移是否正确)");
+        ImGui::TextColored(ImVec4(1, 1, 0, 1), "断点图例: 绿色 = 读取成功 | 红色 = 0x0 (请排查上方该级偏移是否正确)");
         ImGui::Separator();
         
-        // --- 3. 动态实时断点树 (改为十进制显示) ---
+        // --- 3. 动态实时断点树 ---
         const auto& d = snap.debug;
-        const auto& off = snap.offsets; // 渲染所用的正是当前这帧对应的偏移量
+        const auto& off = snap.offsets;
         
-        ImGui::TextColored(d.baseX0 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "[Base] InitActor x0: 0x%lx", d.baseX0);
-        ImGui::TextColored(d.addr1 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "  └─ [+%d] Addr1: 0x%lx", off.x0_to_addr1, d.addr1);
-        ImGui::TextColored(d.addr2 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "      └─ [+%d] Addr2 (HeroArray): 0x%lx", off.addr1_to_addr2, d.addr2);
+        ImGui::TextColored(d.baseX0 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "[起点] InitActor x0: 0x%lx", d.baseX0);
+        ImGui::TextColored(d.addr1 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "  └─ [+%d] 地址 1: 0x%lx", off.x0_to_addr1, d.addr1);
+        ImGui::TextColored(d.addr2 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "      └─ [+%d] 英雄数组: 0x%lx", off.addr1_to_addr2, d.addr2);
         
         ImGui::Separator();
         
@@ -300,19 +295,19 @@ void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
                 if (d.items[i].base == 0) continue; 
                 
                 char nodeName[64];
-                snprintf(nodeName, sizeof(nodeName), "Hero Array Index [%d] - ItemAddr: 0x%lx", i, d.items[i].base);
+                snprintf(nodeName, sizeof(nodeName), "英雄数组序号 [%d] - 内存地址: 0x%lx", i, d.items[i].base);
                 
                 if (ImGui::TreeNodeEx(nodeName, ImGuiTreeNodeFlags_Framed)) {
                     ImGui::TextColored(d.items[i].addr3 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), 
-                                       "  └─ [+%d] Addr3 (EntityData): 0x%lx", off.item_to_addr3, d.items[i].addr3);
+                                       "  └─ [+%d] 实体数据: 0x%lx", off.item_to_addr3, d.items[i].addr3);
                     
                     if (d.items[i].addr3) {
                         ImGui::TextColored(d.items[i].addr4 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), 
-                                           "      ├─ [+%d] Addr4 (Props) : 0x%lx", off.addr3_to_addr4, d.items[i].addr4);
+                                           "      ├─ [+%d] 属性数据区: 0x%lx", off.addr3_to_addr4, d.items[i].addr4);
                         ImGui::TextColored(d.items[i].addr5 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), 
-                                           "      ├─ [+%d] Addr5 (World) : 0x%lx", off.addr3_to_addr5, d.items[i].addr5);
+                                           "      ├─ [+%d] 世界坐标区: 0x%lx", off.addr3_to_addr5, d.items[i].addr5);
                         ImGui::TextColored(d.items[i].addr6 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), 
-                                           "      └─ [+%d] Addr6 (Radar) : 0x%lx", off.addr3_to_addr6, d.items[i].addr6);
+                                           "      └─ [+%d] 雷达小地图区: 0x%lx", off.addr3_to_addr6, d.items[i].addr6);
                     }
                     ImGui::TreePop();
                 }
@@ -387,6 +382,22 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     if (!g_Initialized) {
         ImGui::CreateContext();
         ImGui_ImplOpenGL3_Init("#version 300 es");
+        
+        // 自动加载安卓系统自带的中文字体，解决全部变成问号的问题
+        ImGuiIO& io = ImGui::GetIO();
+        const char* fontPaths[] = {
+            "/system/fonts/NotoSansCJK-Regular.ttc",
+            "/system/fonts/NotoSansSC-Regular.otf",
+            "/system/fonts/DroidSansFallback.ttf",
+            "/system/fonts/Miui-Regular.ttf"
+        };
+        for (int i = 0; i < 4; ++i) {
+            if (access(fontPaths[i], F_OK) == 0) {
+                io.Fonts->AddFontFromFileTTF(fontPaths[i], 28.0f, NULL, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
+                break;
+            }
+        }
+        
         g_Initialized = true;
     }
 
@@ -427,26 +438,26 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     ImGui::SetNextWindowPos(ImVec2(30, 30), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(w * 0.6f, g_BaseWindowHeight), ImGuiCond_FirstUseEver);
     
-    static bool show_pointer_debugger = true; // 默认打开调试窗方便你排查
+    static bool show_pointer_debugger = true; 
     static bool show_radar = true;
 
-    if (ImGui::Begin("Game Inspector (Auto-Adaptive)")) {
+    if (ImGui::Begin("游戏全自动透视框架 (全中文适配版)")) {
         float currentHeight = ImGui::GetWindowHeight();
         g_DynamicScale = currentHeight / g_BaseWindowHeight;
         if (g_DynamicScale < 0.4f) g_DynamicScale = 0.4f;
         if (g_DynamicScale > 3.0f) g_DynamicScale = 3.0f;
 
-        if (ImGui::CollapsingHeader("Calibration Settings (菜单缩放与触控校准)")) {
-            ImGui::SliderFloat("UI Scale (菜单大小)", &g_UserUIScale, 0.5f, 2.5f, "%.2f");
+        if (ImGui::CollapsingHeader("基础设置与触控校准", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::SliderFloat("菜单缩放倍率", &g_UserUIScale, 0.5f, 2.5f, "%.2f");
             
-            ImGui::Text("Touch Offset X: %.1f px", g_Touch.offsetX);
+            ImGui::Text("触控准星偏移 X: %.1f 像素", g_Touch.offsetX);
             ImGui::SameLine();
             if (ImGui::Button("-50##x")) g_Touch.offsetX -= 50; ImGui::SameLine();
             if (ImGui::Button("-10##x")) g_Touch.offsetX -= 10; ImGui::SameLine();
             if (ImGui::Button("+10##x")) g_Touch.offsetX += 10; ImGui::SameLine();
             if (ImGui::Button("+50##x")) g_Touch.offsetX += 50;
 
-            ImGui::Text("Touch Offset Y: %.1f px", g_Touch.offsetY);
+            ImGui::Text("触控准星偏移 Y: %.1f 像素", g_Touch.offsetY);
             ImGui::SameLine();
             if (ImGui::Button("-50##y")) g_Touch.offsetY -= 50; ImGui::SameLine();
             if (ImGui::Button("-10##y")) g_Touch.offsetY -= 10; ImGui::SameLine();
@@ -455,21 +466,21 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         }
 
         ImGui::Separator();
-        ImGui::Checkbox("Show Radar (小地图透视)", &show_radar);
+        ImGui::Checkbox("显示小地图雷达", &show_radar);
         ImGui::SameLine();
-        ImGui::Checkbox("Pointer Debugger (指针调试器)", &show_pointer_debugger);
+        ImGui::Checkbox("打开指针断点排错器", &show_pointer_debugger);
         
         ImGui::Separator();
         
-        ImGui::TextColored(ImVec4(0, 1, 0, 1), "Game Status: %s", snapshot.inMatch ? "In Match (局内)" : "Waiting (大厅)");
-        ImGui::Text("Players Count: %d", (int)snapshot.players.size());
+        ImGui::TextColored(ImVec4(0, 1, 0, 1), "当前游戏状态: %s", snapshot.inMatch ? "对局中" : "大厅待命");
+        ImGui::Text("场上玩家总数: %d", (int)snapshot.players.size());
         
         if (ImGui::BeginTable("PlayersTable", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
-            ImGui::TableSetupColumn("Level");
-            ImGui::TableSetupColumn("HP / MaxHP");
-            ImGui::TableSetupColumn("Mana");
-            ImGui::TableSetupColumn("Gold");
-            ImGui::TableSetupColumn("Map Coord");
+            ImGui::TableSetupColumn("等级");
+            ImGui::TableSetupColumn("血量 / 最大血量");
+            ImGui::TableSetupColumn("蓝量");
+            ImGui::TableSetupColumn("金币");
+            ImGui::TableSetupColumn("小地图坐标");
             ImGui::TableHeadersRow();
 
             for (const auto& p : snapshot.players) {
