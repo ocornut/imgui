@@ -20,7 +20,8 @@
 #include "imgui_impl_opengl3.h"
 
 #define TAG "ZeroConfig_Drive"
-#define GAME_MODULE "libGameCore.so" 
+// 修改为目标模块 libil2cpp.so
+#define GAME_MODULE "libil2cpp.so" 
 
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
@@ -43,24 +44,26 @@ struct {
 
 static float g_DynamicScale = 1.0f;
 static float g_BaseWindowHeight = 0.0f; 
-static float g_UserUIScale = 1.0f; 
+static float g_UserUIScale = 1.2f; 
 
+// 调试统计
+static std::atomic<int> g_InitActorTriggerCount{0};
 static uintptr_t g_GameBase = 0;
 static uintptr_t g_HookAddr_InitActor = 0;
 static uintptr_t g_HookAddr_ClearActor = 0;
 
 struct DynamicOffsets {
-    uint32_t x0_to_addr1    = 0x20;
-    uint32_t addr1_to_addr2 = 0x10;
-    uint32_t item_to_addr3  = 0x18;
-    uint32_t addr3_to_addr4 = 0x30;
-    uint32_t addr3_to_addr5 = 0x100;
-    uint32_t addr3_to_addr6 = 0x70;
+    uint32_t x0_to_addr1    = 32;
+    uint32_t addr1_to_addr2 = 16;
+    uint32_t item_to_addr3  = 24;
+    uint32_t addr3_to_addr4 = 48;
+    uint32_t addr3_to_addr5 = 256;
+    uint32_t addr3_to_addr6 = 112;
     
-    uint32_t prop_gold  = 0x20;
-    uint32_t prop_hp    = 0x30;
-    uint32_t prop_maxhp = 0x32;
-    uint32_t prop_level = 0x50;
+    uint32_t prop_gold  = 32;
+    uint32_t prop_hp    = 48;
+    uint32_t prop_maxhp = 50;
+    uint32_t prop_level = 80;
 };
 
 DynamicOffsets g_Offsets;
@@ -176,12 +179,15 @@ uintptr_t GetModuleBase(const char* module_name) {
 
 void (*old_InitActorParams)(void* x0, void* x1, void* x2, void* x3);
 void hook_InitActorParams(void* x0, void* x1, void* x2, void* x3) {
+    g_InitActorTriggerCount++;
+    LOGI("[TRIGGER] InitActorParams 被调用 (libil2cpp)! x0 = %p", x0);
     g_ActorManager.store((uintptr_t)x0);
     old_InitActorParams(x0, x1, x2, x3);
 }
 
 void (*old_ClearActor)(void* x0);
 void hook_ClearActor(void* x0) {
+    LOGI("[TRIGGER] ClearActor 被调用! 对局结束重置。");
     g_ActorManager.store(0);
     old_ClearActor(x0);
 }
@@ -189,14 +195,19 @@ void hook_ClearActor(void* x0) {
 void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
     ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(w * 0.55f, h * 0.8f), ImGuiCond_FirstUseEver);
-    if (ImGui::Begin("指针断点排错器 (Pointer Debugger)")) {
-        if (ImGui::CollapsingHeader("动态偏移修改面板 (十进制)", ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (ImGui::Begin("对局指针诊断 (IL2CPP Debugger)")) {
+        
+        ImGui::TextColored(ImVec4(1, 1, 0, 1), "函数触发次数: %d", g_InitActorTriggerCount.load());
+        if (g_InitActorTriggerCount == 0) {
+            ImGui::TextColored(ImVec4(1, 0.2f, 0.2f, 1), "状态: 等待进入对局 (尚未触发 Hook)");
+        }
+        ImGui::Separator();
+
+        if (ImGui::CollapsingHeader("偏移量微调面板", ImGuiTreeNodeFlags_DefaultOpen)) {
             std::lock_guard<std::mutex> lock(g_OffsetMutex);
             auto drawOffsetBtn = [](const char* label, uint32_t& val) {
                 ImGui::PushID(&val);
                 ImGui::TextColored(ImVec4(0.5f, 0.8f, 1.0f, 1.0f), "%s -> 当前: %d (0x%X)", label, val, val);
-                if (ImGui::Button("-8")) { if (val >= 8) val -= 8; else val = 0; } ImGui::SameLine();
-                if (ImGui::Button("-4")) { if (val >= 4) val -= 4; else val = 0; } ImGui::SameLine();
                 if (ImGui::Button("-1")) { if (val >= 1) val -= 1; else val = 0; } ImGui::SameLine();
                 if (ImGui::Button("+1")) val += 1; ImGui::SameLine();
                 if (ImGui::Button("+4")) val += 4; ImGui::SameLine();
@@ -204,34 +215,27 @@ void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
                 ImGui::Separator();
                 ImGui::PopID();
             };
-            drawOffsetBtn("地址1 (x0 + ?)", g_Offsets.x0_to_addr1);
-            drawOffsetBtn("英雄数组 (addr1 + ?)", g_Offsets.addr1_to_addr2);
+            drawOffsetBtn("基址偏移 (x0 + ?)", g_Offsets.x0_to_addr1);
+            drawOffsetBtn("数组偏移 (addr1 + ?)", g_Offsets.addr1_to_addr2);
             drawOffsetBtn("实体数据 (item + ?)", g_Offsets.item_to_addr3);
-            drawOffsetBtn("血量属性 (addr3 + ?)", g_Offsets.addr3_to_addr4);
-            drawOffsetBtn("坐标数据 (addr3 + ?)", g_Offsets.addr3_to_addr5);
-            drawOffsetBtn("雷达坐标 (addr3 + ?)", g_Offsets.addr3_to_addr6);
         }
         ImGui::Separator();
-        ImGui::TextColored(ImVec4(0, 1, 1, 1), "[核心库] %s 基址: 0x%lx", GAME_MODULE, g_GameBase);
-        ImGui::TextColored(ImVec4(0, 1, 1, 1), "[Hook 1] InitActor (RVA 0x73507bc) -> 0x%lx", g_HookAddr_InitActor);
-        ImGui::TextColored(ImVec4(0, 1, 1, 1), "[Hook 2] ClearActor (RVA 0x734bc10) -> 0x%lx", g_HookAddr_ClearActor);
+        ImGui::TextColored(ImVec4(0, 1, 1, 1), "[库基址] 0x%lx (libil2cpp)", g_GameBase);
+        ImGui::TextColored(ImVec4(0, 1, 1, 1), "[Hook点] 0x%lx", g_HookAddr_InitActor);
         ImGui::Separator();
+
         const auto& d = snap.debug;
         const auto& off = snap.offsets;
-        ImGui::TextColored(d.baseX0 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "[起点] InitActor x0: 0x%lx", d.baseX0);
-        ImGui::TextColored(d.addr1 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), " └─ [+%d] 地址 1: 0x%lx", off.x0_to_addr1, d.addr1);
-        ImGui::TextColored(d.addr2 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "     └─ [+%d] 英雄数组: 0x%lx", off.addr1_to_addr2, d.addr2);
+        ImGui::TextColored(d.baseX0 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "[X0] 基准地址: 0x%lx", d.baseX0);
+        ImGui::TextColored(d.addr1 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), " └─ [+%d] 层级 1: 0x%lx", off.x0_to_addr1, d.addr1);
+        ImGui::TextColored(d.addr2 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "     └─ [+%d] 实体数组: 0x%lx", off.addr1_to_addr2, d.addr2);
+        
         if (d.addr2 != 0) {
             for (int i = 0; i < 15; i++) {
                 if (d.items[i].base == 0) continue; 
-                char nodeName[64]; snprintf(nodeName, sizeof(nodeName), "数组序号 [%d] - 0x%lx", i, d.items[i].base);
+                char nodeName[64]; snprintf(nodeName, sizeof(nodeName), "玩家 [%d] - 0x%lx", i, d.items[i].base);
                 if (ImGui::TreeNodeEx(nodeName, ImGuiTreeNodeFlags_Framed)) {
-                    ImGui::TextColored(d.items[i].addr3 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), " └─ [+%d] 实体数据: 0x%lx", off.item_to_addr3, d.items[i].addr3);
-                    if (d.items[i].addr3) {
-                        ImGui::TextColored(d.items[i].addr4 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "     ├─ [+%d] 属性区: 0x%lx", off.addr3_to_addr4, d.items[i].addr4);
-                        ImGui::TextColored(d.items[i].addr5 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "     ├─ [+%d] 坐标区: 0x%lx", off.addr3_to_addr5, d.items[i].addr5);
-                        ImGui::TextColored(d.items[i].addr6 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "     └─ [+%d] 小地图: 0x%lx", off.addr3_to_addr6, d.items[i].addr6);
-                    }
+                    ImGui::TextColored(d.items[i].addr3 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), " └─ [+%d] 详细数据: 0x%lx", off.item_to_addr3, d.items[i].addr3);
                     ImGui::TreePop();
                 }
             }
@@ -242,40 +246,6 @@ void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
 
 typedef EGLBoolean (*p_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surface);
 static p_eglSwapBuffers old_eglSwapBuffers = nullptr;
-
-typedef int (*p_InputConsumer_consume)(void* instance, void* factory, bool consumeBatches, int64_t frameTime, uint32_t* outSeq, void** outEvent);
-static p_InputConsumer_consume old_consume = nullptr;
-
-void AutoFetchDeviceResolution() {
-    FILE* pipe = popen("wm size", "r");
-    if (!pipe) return;
-    char buffer[128];
-    while (fgets(buffer, sizeof(buffer), pipe) != NULL) {
-        int w = 0, h = 0;
-        if (sscanf(buffer, "Physical size: %dx%d", &w, &h) == 2 || sscanf(buffer, "Override size: %dx%d", &w, &h) == 2) {
-            g_Touch.physW = (float)std::max(w, h); g_Touch.physH = (float)std::min(w, h); g_Touch.isSizeAutoDetected = true;
-        }
-    }
-    pclose(pipe);
-}
-
-void handle_android_event(AInputEvent* event) {
-    if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
-        int32_t action = AMotionEvent_getAction(event) & AMOTION_EVENT_ACTION_MASK;
-        float autoScaleX = g_Touch.renderW / g_Touch.physW;
-        float autoScaleY = g_Touch.renderH / g_Touch.physH;
-        g_Touch.x = (AMotionEvent_getX(event, 0) * autoScaleX) + g_Touch.offsetX;
-        g_Touch.y = (AMotionEvent_getY(event, 0) * autoScaleY) + g_Touch.offsetY;
-        if (action == AMOTION_EVENT_ACTION_DOWN) g_Touch.down.store(true);
-        else if (action == AMOTION_EVENT_ACTION_UP || action == AMOTION_EVENT_ACTION_CANCEL) g_Touch.down.store(false);
-    }
-}
-
-int hook_consume(void* instance, void* factory, bool consumeBatches, int64_t frameTime, uint32_t* outSeq, void** outEvent) {
-    int res = old_consume(instance, factory, consumeBatches, frameTime, outSeq, outEvent);
-    if (res == 0 && outEvent && *outEvent) handle_android_event((AInputEvent*)(*outEvent));
-    return res;
-}
 
 EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     EGLint w, h; eglQuerySurface(dpy, surface, EGL_WIDTH, &w); eglQuerySurface(dpy, surface, EGL_HEIGHT, &h);
@@ -290,20 +260,17 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         ImGui_ImplOpenGL3_Init("#version 300 es");
         ImGuiIO& io = ImGui::GetIO();
         
-        // --- 核心修复：根据你的 fonts.xml 日志锁定 OPPO 系统字体 ---
-        const char* mySystemFonts[] = {
-            "/system/fonts/SysSans-Hans-Regular.ttf", // 你的日志里那个 OPPO Sans
-            "/system/fonts/NotoSansCJKjp-Regular.otc", // 你的日志里那个 Noto CJK
+        // 自动检测系统中的中文字体 (优先寻找 OPPO SysSans)
+        const char* systemFonts[] = {
+            "/system/fonts/SysSans-Hans-Regular.ttf",
+            "/system/fonts/NotoSansCJKjp-Regular.otc",
             "/system/fonts/NotoSansSC-Regular.otf",
             "/system/fonts/DroidSansFallback.ttf"
         };
         for (int i = 0; i < 4; i++) {
-            if (access(mySystemFonts[i], R_OK) == 0) {
-                // 加载中文字符范围，解决问号问题
-                io.Fonts->AddFontFromFileTTF(mySystemFonts[i], 32.0f, NULL, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
-                g_FontLoaded = true;
-                LOGI("[*] 成功锁定你的系统字体: %s", mySystemFonts[i]);
-                break;
+            if (access(systemFonts[i], R_OK) == 0) {
+                io.Fonts->AddFontFromFileTTF(systemFonts[i], 32.0f, NULL, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
+                g_FontLoaded = true; break;
             }
         }
         g_Initialized = true;
@@ -318,11 +285,9 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     if (deviceScale < 1.0f) deviceScale = 1.0f;
     float finalScale = deviceScale * g_DynamicScale * g_UserUIScale; 
 
-    static ImGuiStyle default_style = ImGui::GetStyle();
-    ImGuiStyle& style = ImGui::GetStyle(); style = default_style;
-    style.ScaleAllSizes(1.2f * finalScale); 
-    style.WindowRounding = 12.0f; style.WindowMinSize = ImVec2(100.0f, 100.0f); 
-    io.FontGlobalScale = 1.2f * finalScale;
+    ImGuiStyle& style = ImGui::GetStyle();
+    style.ScaleAllSizes(1.1f * finalScale); 
+    io.FontGlobalScale = 1.1f * finalScale;
 
     ImGui_ImplOpenGL3_NewFrame(); ImGui::NewFrame();
     if (g_Touch.down.load()) ImGui::GetForegroundDrawList()->AddCircleFilled(io.MousePos, 20.0f, IM_COL32(0, 255, 0, 200));
@@ -331,91 +296,47 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     ImGui::SetNextWindowPos(ImVec2(30, 30), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(w * 0.6f, g_BaseWindowHeight), ImGuiCond_FirstUseEver);
     
-    static bool show_pointer_debugger = true; static bool show_radar = true;
+    static bool show_pointer_debugger = true; 
 
-    if (ImGui::Begin("全自动游戏透视框架 (OPPO/适配版)")) {
-        if (!g_FontLoaded) ImGui::TextColored(ImVec4(1,0,0,1), "警告: 无法加载系统字库，将显示为问号!");
-        float currentHeight = ImGui::GetWindowHeight();
-        g_DynamicScale = currentHeight / g_BaseWindowHeight;
-        if (g_DynamicScale < 0.4f) g_DynamicScale = 0.4f;
-        if (g_DynamicScale > 3.0f) g_DynamicScale = 3.0f;
-
-        if (ImGui::CollapsingHeader("基础校准 (触控与缩放)")) {
-            ImGui::SliderFloat("菜单缩放", &g_UserUIScale, 0.5f, 2.0f);
-            ImGui::Text("坐标偏移 X:%.1f Y:%.1f", g_Touch.offsetX, g_Touch.offsetY);
-            if (ImGui::Button("-10##x")) g_Touch.offsetX -= 10; ImGui::SameLine();
-            if (ImGui::Button("+10##x")) g_Touch.offsetX += 10; ImGui::SameLine();
-            if (ImGui::Button("-10##y")) g_Touch.offsetY -= 10; ImGui::SameLine();
-            if (ImGui::Button("+10##y")) g_Touch.offsetY += 10;
-        }
+    if (ImGui::Begin("Unity/IL2CPP 数据诊断控制台")) {
+        if (!g_FontLoaded) ImGui::TextColored(ImVec4(1,0,0,1), "警告: 无法加载手机字库，请检查权限!");
+        ImGui::SliderFloat("菜单缩放", &g_UserUIScale, 0.5f, 2.0f);
+        ImGui::Checkbox("指针断点调试窗", &show_pointer_debugger);
         ImGui::Separator();
-        ImGui::Checkbox("雷达 (Radar)", &show_radar); ImGui::SameLine();
-        ImGui::Checkbox("指针断点调试", &show_pointer_debugger);
-        ImGui::Separator();
-        ImGui::TextColored(ImVec4(0, 1, 0, 1), "状态: %s", snapshot.inMatch ? "局内" : "大厅");
-        
-        if (ImGui::BeginTable("PlayersTable", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
-            ImGui::TableSetupColumn("等级"); ImGui::TableSetupColumn("血量");
-            ImGui::TableSetupColumn("蓝量"); ImGui::TableSetupColumn("金币");
-            ImGui::TableSetupColumn("雷达"); ImGui::TableHeadersRow();
-            for (const auto& p : snapshot.players) {
-                ImGui::TableNextRow();
-                ImGui::TableNextColumn(); ImGui::Text("Lv.%d", p.level);
-                ImGui::TableNextColumn(); ImGui::Text("%d/%d", p.hp, p.maxHp);
-                ImGui::TableNextColumn(); ImGui::Text("%d", p.mana);
-                ImGui::TableNextColumn(); ImGui::Text("%d", p.gold);
-                ImGui::TableNextColumn(); ImGui::Text("%.0f, %.0f", p.mapX, p.mapY);
-            }
-            ImGui::EndTable();
-        }
+        ImGui::TextColored(ImVec4(0, 1, 0, 1), "对局状态: %s", snapshot.inMatch ? "活跃对局中" : "大厅空闲");
+        ImGui::Text("英雄单位数量: %d", (int)snapshot.players.size());
     }
     ImGui::End();
 
     if (show_pointer_debugger) DrawPointerDebugger(snapshot, w, h);
-    if (show_radar && snapshot.inMatch) {
-        ImGui::SetNextWindowPos(ImVec2(w - 350, 30), ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(300, 300), ImGuiCond_FirstUseEver);
-        ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0.5f));
-        if (ImGui::Begin("Radar", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize)) {
-            ImVec2 p0 = ImGui::GetCursorScreenPos(); ImVec2 size = ImGui::GetContentRegionAvail();
-            ImDrawList* dl = ImGui::GetWindowDrawList();
-            dl->AddRect(p0, ImVec2(p0.x + size.x, p0.y + size.y), IM_COL32(255, 255, 255, 100));
-            for (const auto& p : snapshot.players) {
-                float nX = p.mapX / 10000.0f; float nY = p.mapY / 10000.0f;
-                float rX = p0.x + (nX * size.x); float rY = p0.y + size.y - (nY * size.y); 
-                if (nX > 0 && nX < 1 && nY > 0 && nY < 1) dl->AddCircleFilled(ImVec2(rX, rY), 5.0f * finalScale, IM_COL32(255, 0, 0, 255));
-            }
-        }
-        ImGui::End(); ImGui::PopStyleColor();
-    }
+
     ImGui::Render();
-    GLint v[4]; glGetIntegerv(GL_VIEWPORT, v); GLint d; glGetIntegerv(GL_DEPTH_TEST, &d);
+    GLint v[4]; glGetIntegerv(GL_VIEWPORT, v); 
     glDisable(GL_DEPTH_TEST); glViewport(0, 0, w, h); 
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-    glViewport(v[0], v[1], v[2], v[3]); if (d) glEnable(GL_DEPTH_TEST);
+    glViewport(v[0], v[1], v[2], v[3]);
     return old_eglSwapBuffers(dpy, surface);
 }
 
 void* DelayedHookThread(void*) {
-    // 1. 无延迟 Hook：渲染和输入必须秒挂，否则菜单出不来
+    // 渲染和输入立即挂钩，确保菜单秒弹
     void* egl = DobbySymbolResolver("libEGL.so", "eglSwapBuffers");
     if (egl) DobbyHook(egl, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
-    void* ins = DobbySymbolResolver("libinput.so", "_ZN7android13InputConsumer7consumeEPNS_26InputEventFactoryInterfaceEblPjPPNS_10InputEventE");
-    if (ins) DobbyHook(ins, (void*)hook_consume, (void**)&old_consume);
     
-    // 2. 启动数据线程
     std::thread(DataWorkerThread).detach();
 
-    // 3. 后台轮询：不卡主流程，慢慢等游戏库加载
+    // 在后台轮询等待 libil2cpp.so 加载
     while (true) {
         uintptr_t base = GetModuleBase(GAME_MODULE);
         if (base) {
             g_GameBase = base;
             g_HookAddr_InitActor = base + 0x73507bc;
-            g_HookAddr_ClearActor = base + 0x734bc10;
+            // 挂钩对局初始化函数
             DobbyHook((void*)g_HookAddr_InitActor, (void*)hook_InitActorParams, (void**)&old_InitActorParams);
-            DobbyHook((void*)g_HookAddr_ClearActor, (void*)hook_ClearActor, (void**)&old_ClearActor);
-            LOGI("[*] 核心 Hook 成功!"); break;
+            // 挂钩对局清理函数
+            DobbyHook((void*)(base + 0x734bc10), (void*)hook_ClearActor, (void**)&old_ClearActor);
+            LOGI("[*] libil2cpp.so 挂钩任务已完成!"); 
+            break;
         }
         sleep(1);
     }
