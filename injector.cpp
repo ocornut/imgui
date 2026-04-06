@@ -10,7 +10,11 @@
 #include <dirent.h>
 #include <unistd.h>
 #include <cstring>
-#include <elf.h>
+#include <android/log.h>
+
+#define TAG "AndKitty_Injector"
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
+#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
 
 using namespace std;
 
@@ -29,7 +33,7 @@ pid_t get_pid(const char* package_name) {
             char cmdline[256];
             fgets(cmdline, sizeof(cmdline), f);
             fclose(f);
-            if (strcmp(cmdline, package_name) == 0) {
+            if (strncmp(cmdline, package_name, strlen(package_name)) == 0) {
                 closedir(dir);
                 return pid;
             }
@@ -39,33 +43,34 @@ pid_t get_pid(const char* package_name) {
     return -1;
 }
 
-// 附加进程
-bool ptrace_attach(pid_t pid) {
-    if (ptrace(PTRACE_ATTACH, pid, NULL, NULL) < 0) return false;
-    waitpid(pid, NULL, WUNTRACED);
-    return true;
+// 获取远程基址
+uintptr_t get_module_base(pid_t pid, const char* module_name) {
+    char path[256];
+    snprintf(path, sizeof(path), "/proc/%d/maps", pid);
+    FILE* f = fopen(path, "r");
+    if (!f) return 0;
+    char line[512];
+    uintptr_t base = 0;
+    while (fgets(line, sizeof(line), f)) {
+        if (strstr(line, module_name)) {
+            base = strtoull(line, NULL, 16);
+            break;
+        }
+    }
+    fclose(f);
+    return base;
 }
 
-// 获取寄存器 (ARM64)
-bool get_regs(pid_t pid, struct user_pt_regs* regs) {
-    struct iovec iov;
-    iov.iov_base = regs;
-    iov.iov_len = sizeof(struct user_pt_regs);
-    if (ptrace(PTRACE_GETREGSET, pid, NT_PRSTATUS, &iov) < 0) return false;
-    return true;
+// 获取远程函数地址
+uintptr_t get_remote_addr(pid_t pid, const char* module_name, void* local_addr) {
+    uintptr_t local_base = get_module_base(getpid(), module_name);
+    uintptr_t remote_base = get_module_base(pid, module_name);
+    if (!local_base || !remote_base) return 0;
+    return remote_base + ((uintptr_t)local_addr - local_base);
 }
 
-// 设置寄存器 (ARM64)
-bool set_regs(pid_t pid, struct user_pt_regs* regs) {
-    struct iovec iov;
-    iov.iov_base = regs;
-    iov.iov_len = sizeof(struct user_pt_regs);
-    if (ptrace(PTRACE_SETREGSET, pid, NT_PRSTATUS, &iov) < 0) return false;
-    return true;
-}
-
-// 写入内存
-bool write_mem(pid_t pid, uint64_t addr, void* buf, size_t len) {
+// Ptrace 写内存
+bool ptrace_write(pid_t pid, uintptr_t addr, void* buf, size_t len) {
     size_t i;
     long* lbuf = (long*)buf;
     for (i = 0; i < len; i += sizeof(long)) {
@@ -74,36 +79,85 @@ bool write_mem(pid_t pid, uint64_t addr, void* buf, size_t len) {
     return true;
 }
 
-// 调用目标进程函数 (简化版原理演示)
-// 实际生产环境建议使用更复杂的 ShellCode 注入
+// Ptrace 调用远程函数 (ARM64)
+uint64_t ptrace_call(pid_t pid, uintptr_t func_addr, uint64_t* args, int nargs) {
+    struct user_pt_regs regs, old_regs;
+    struct iovec iov = {&regs, sizeof(struct user_pt_regs)};
+    ptrace(PTRACE_GETREGSET, pid, NT_PRSTATUS, &iov);
+    memcpy(&old_regs, &regs, sizeof(regs));
+
+    for (int i = 0; i < nargs && i < 8; i++) regs.regs[i] = args[i];
+    regs.regs[30] = 0; // LR 置零以便触发停止
+    regs.pc = func_addr;
+
+    iov.iov_base = &regs;
+    ptrace(PTRACE_SETREGSET, pid, NT_PRSTATUS, &iov);
+    ptrace(PTRACE_CONT, pid, NULL, NULL);
+    waitpid(pid, NULL, WUNTRACED);
+
+    ptrace(PTRACE_GETREGSET, pid, NT_PRSTATUS, &iov);
+    uint64_t res = regs.regs[0];
+    ptrace(PTRACE_SETREGSET, pid, NT_PRSTATUS, &old_regs);
+    return res;
+}
+
 int main(int argc, char** argv) {
     if (argc < 3) {
-        printf("用法: ./injector <包名> <SO绝对路径>\n");
+        printf("Usage: ./injector <package> <so_path>\n");
         return -1;
     }
 
     const char* pkg = argv[1];
     const char* so_path = argv[2];
 
+    LOGI("开始注入: %s -> %s", pkg, so_path);
+
     pid_t pid = get_pid(pkg);
     if (pid < 0) {
-        printf("错误: 找不到进程 %s\n", pkg);
+        LOGE("未找到进程 PID");
         return -1;
     }
 
-    printf("目标 PID: %d\n", pid);
-    if (!ptrace_attach(pid)) {
-        printf("错误: Ptrace 附加失败，请确保已执行 su\n");
+    if (ptrace(PTRACE_ATTACH, pid, NULL, NULL) < 0) {
+        LOGE("Ptrace Attach 失败: %s", strerror(errno));
+        return -1;
+    }
+    waitpid(pid, NULL, WUNTRACED);
+    LOGI("成功附加到 PID: %d", pid);
+
+    // 尝试从不同的库寻找 dlopen
+    uintptr_t remote_dlopen = get_remote_addr(pid, "libdl.so", (void*)dlopen);
+    if (!remote_dlopen) remote_dlopen = get_remote_addr(pid, "linker64", (void*)dlopen);
+
+    if (!remote_dlopen) {
+        LOGE("无法定位远程 dlopen 地址");
+        ptrace(PTRACE_DETACH, pid, NULL, NULL);
+        return -1;
+    }
+    LOGI("远程 dlopen 地址: %p", (void*)remote_dlopen);
+
+    struct user_pt_regs regs;
+    struct iovec iov = {&regs, sizeof(struct user_pt_regs)};
+    ptrace(PTRACE_GETREGSET, pid, NT_PRSTATUS, &iov);
+    uintptr_t remote_str_addr = regs.sp - 1024; // 在栈下方写入路径
+
+    if (!ptrace_write(pid, remote_str_addr, (void*)so_path, strlen(so_path) + 1)) {
+        LOGE("写入路径到远程内存失败");
+        ptrace(PTRACE_DETACH, pid, NULL, NULL);
         return -1;
     }
 
-    printf("已附加到进程，正在注入...\n");
-    // 这里通常需要查找远程进程的 dlopen 地址并执行
-    // 由于 Android linker 限制，手动注入 dlopen 极其复杂
-    // 我们建议使用现成的轻量级库如 KittyMemory 内部的注入逻辑
-    // 为了让你能立刻跑起来，你可以尝试下面的命令组合
-    
+    uint64_t args[2] = { remote_str_addr, RTLD_NOW };
+    LOGI("正在执行远程 dlopen...");
+    uint64_t handle = ptrace_call(pid, remote_dlopen, args, 2);
+
+    if (handle == 0) {
+        LOGE("注入失败: dlopen 返回 NULL (可能权限不足或路径错误)");
+    } else {
+        LOGI("注入成功! 句柄: %p", (void*)handle);
+    }
+
     ptrace(PTRACE_DETACH, pid, NULL, NULL);
-    printf("注入指令已发送 (Ptrace Detached)\n");
+    LOGI("已分离进程.");
     return 0;
 }
