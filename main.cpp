@@ -5,160 +5,138 @@
 #include <GLES3/gl3.h>
 #include <dlfcn.h>
 #include <android/input.h>
-#include <fcntl.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
 #include "dobby.h"
 #include "imgui.h"
 #include "imgui_impl_android.h"
 #include "imgui_impl_opengl3.h"
 
-#define TAG "AndKitty_Menu"
+#define TAG "AndKitty_Fixer"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
 
-// --- 状态存储 ---
 static bool g_Initialized = false;
 static bool g_ShowMenu = true;
 
 struct {
     float x, y;
     bool down;
-} g_TouchData = {0, 0, false};
+} g_RawTouch = {0, 0, false};
 
-// 坐标映射修正参数
-static float g_FixedScaleX = 1.0f;
-static float g_FixedScaleY = 1.0f;
-static bool g_SwapXY = false; // 是否需要旋转坐标
+// 校准参数 (根据你的截图初始设定)
+static float g_ScaleX = 0.594f; 
+static float g_ScaleY = 0.473f;
+static bool g_SwapXY = false;
+static bool g_FlipX = false;
+static bool g_FlipY = false;
 
-// --- 原函数指针 ---
 typedef EGLBoolean (*p_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surface);
 static p_eglSwapBuffers old_eglSwapBuffers = nullptr;
 
 typedef int (*p_InputConsumer_consume)(void* instance, void* factory, bool consumeBatches, int64_t frameTime, uint32_t* outSeq, void** outEvent);
 static p_InputConsumer_consume old_consume = nullptr;
 
-void handle_motion_event(void* event) {
+// 处理触摸事件
+void handle_event(void* event) {
     if (!event) return;
-
     static auto _getType = (int (*)(void*))dlsym(RTLD_DEFAULT, "AInputEvent_getType");
     static auto _getAction = (int (*)(void*))dlsym(RTLD_DEFAULT, "AMotionEvent_getAction");
     static auto _getX = (float (*)(void*, size_t))dlsym(RTLD_DEFAULT, "AMotionEvent_getX");
     static auto _getY = (float (*)(void*, size_t))dlsym(RTLD_DEFAULT, "AMotionEvent_getY");
 
-    if (_getType && _getType(event) == AINPUT_EVENT_TYPE_MOTION) {
-        int action = _getAction(event) & AMOTION_EVENT_ACTION_MASK;
-        g_TouchData.x = _getX(event, 0);
-        g_TouchData.y = _getY(event, 0);
-        
-        if (action == AMOTION_EVENT_ACTION_DOWN) g_TouchData.down = true;
-        else if (action == AMOTION_EVENT_ACTION_UP || action == AMOTION_EVENT_ACTION_CANCEL) g_TouchData.down = false;
+    if (_getType && _getType(event) == 1) {
+        int action = _getAction(event) & 0xff;
+        g_RawTouch.x = _getX(event, 0);
+        g_RawTouch.y = _getY(event, 0);
+        if (action == 0) g_RawTouch.down = true;
+        else if (action == 1 || action == 3) g_RawTouch.down = false;
     }
 }
 
-int hook_InputConsumer_consume(void* instance, void* factory, bool consumeBatches, int64_t frameTime, uint32_t* outSeq, void** outEvent) {
-    int result = old_consume(instance, factory, consumeBatches, frameTime, outSeq, outEvent);
-    if (result == 0 && outEvent && *outEvent) {
-        handle_motion_event(*outEvent);
-    }
-    return result;
+int hook_consume(void* a, void* b, bool c, int64_t d, uint32_t* e, void** f) {
+    int res = old_consume(a, b, c, d, e, f);
+    if (res == 0 && f && *f) handle_event(*f);
+    return res;
 }
 
 EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
-    EGLint width, height;
-    eglQuerySurface(dpy, surface, EGL_WIDTH, &width);
-    eglQuerySurface(dpy, surface, EGL_HEIGHT, &height);
+    EGLint w, h;
+    eglQuerySurface(dpy, surface, EGL_WIDTH, &w);
+    eglQuerySurface(dpy, surface, EGL_HEIGHT, &h);
 
     if (!g_Initialized) {
         ImGui::CreateContext();
         ImGui_ImplOpenGL3_Init("#version 300 es");
-        ImGui::GetStyle().ScaleAllSizes(3.0f); 
+        ImGui::GetStyle().ScaleAllSizes(3.0f);
         g_Initialized = true;
     }
 
     ImGuiIO& io = ImGui::GetIO();
-    io.DisplaySize = ImVec2((float)width, (float)height);
+    io.DisplaySize = ImVec2((float)w, (float)h);
+
+    // 计算映射后的坐标
+    float tx = g_RawTouch.x;
+    float ty = g_RawTouch.y;
+
+    if (g_SwapXY) { float tmp = tx; tx = ty; ty = tmp; }
     
-    // --- 核心修复逻辑：基于滑块和自动映射 ---
-    // 根据截图 18:55 的数据计算的初始值：
-    // 原始 X=1752 (其实是竖屏的 Y), 原始 Y=934 (其实是竖屏的 X)
-    // 渲染 W=1426, H=1008
-    static float sX = 0.81f; // 1426 / 1752 左右
-    static float sY = 1.07f; // 1008 / 934 左右
-    static bool flipX = false;
-    static bool flipY = false;
+    float mappedX = tx * g_ScaleX;
+    float mappedY = ty * g_ScaleY;
+    
+    if (g_FlipX) mappedX = (float)w - mappedX;
+    if (g_FlipY) mappedY = (float)h - mappedY;
 
-    float finalX = g_TouchData.x * sX;
-    float finalY = g_TouchData.y * sY;
-
-    if (g_SwapXY) {
-        finalX = g_TouchData.y * sX;
-        finalY = g_TouchData.x * sY;
-    }
-
-    io.MousePos = ImVec2(finalX, finalY);
-    io.MouseDown[0] = g_TouchData.down;
+    io.MousePos = ImVec2(mappedX, mappedY);
+    io.MouseDown[0] = g_RawTouch.down;
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
 
+    // 1. 在背景画一个“触摸指示器” (非常有用的调试工具)
+    if (g_RawTouch.down) {
+        ImGui::GetBackgroundDrawList()->AddCircleFilled(io.MousePos, 20.0f, IM_COL32(255, 0, 0, 255));
+        ImGui::GetBackgroundDrawList()->AddText(ImVec2(io.MousePos.x + 30, io.MousePos.y), IM_COL32(255, 255, 0, 255), "HERE");
+    }
+
     if (g_ShowMenu) {
-        ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(width * 0.9f, height * 0.9f), ImGuiCond_FirstUseEver);
+        ImGui::Begin("AndKitty Touch Calibrator", &g_ShowMenu);
+        ImGui::Text("Render: %dx%d", w, h);
+        ImGui::Text("Raw: %.1f, %.1f", g_RawTouch.x, g_RawTouch.y);
+        ImGui::Text("Mapped: %.1f, %.1f", mappedX, mappedY);
         
-        if (ImGui::Begin("AndKitty SGame Fixer", &g_ShowMenu)) {
-            ImGui::Text("Win: %dx%d | Raw: %.1f, %.1f", width, height, g_TouchData.x, g_TouchData.y);
-            ImGui::Text("Mapped: %.1f, %.1f", finalX, finalY);
-            ImGui::Separator();
-            
-            // 调试滑块
-            ImGui::Checkbox("Swap X/Y (旋转坐标轴)", &g_SwapXY);
-            ImGui::SliderFloat("Scale X (宽度映射)", &sX, 0.0f, 2.0f);
-            ImGui::SliderFloat("Scale Y (高度映射)", &sY, 0.0f, 2.0f);
-            
-            ImGui::Separator();
-            if (ImGui::Button("自动校准 (点这里后点击屏幕右下角)", ImVec2(-1, 80))) {
-                // 点击后请点一下游戏小窗口的最右下角
-                if (g_TouchData.x > 100 && g_TouchData.y > 100) {
-                   if (g_TouchData.x > g_TouchData.y) {
-                       sX = (float)width / g_TouchData.x;
-                       sY = (float)height / g_TouchData.y;
-                       g_SwapXY = false;
-                   } else {
-                       sX = (float)width / g_TouchData.y;
-                       sY = (float)height / g_TouchData.x;
-                       g_SwapXY = true;
-                   }
-                }
-            }
-            
-            ImGui::Separator();
-            static bool esp = false;
-            ImGui::Checkbox("Enable Feature", &esp);
-            if (ImGui::Button("Close Menu", ImVec2(200, 60))) { /* g_ShowMenu = false; */ }
+        ImGui::Separator();
+        ImGui::Checkbox("Swap X/Y (轴翻转)", &g_SwapXY);
+        ImGui::Checkbox("Flip X (镜像X)", &g_FlipX);
+        ImGui::Checkbox("Flip Y (镜像Y)", &g_FlipY);
+        
+        ImGui::SliderFloat("Scale X", &g_ScaleX, 0.0f, 3.0f);
+        ImGui::SliderFloat("Scale Y", &g_ScaleY, 0.0f, 3.0f);
+
+        if (ImGui::Button("Reset Parameters", ImVec2(-1, 60))) {
+            g_ScaleX = 1.0f; g_ScaleY = 1.0f; g_SwapXY = false;
         }
+
+        ImGui::Separator();
+        ImGui::TextColored(ImVec2(0, 1, 0), "Step: 滑动滑块，直到红点跟着手指走");
+        
+        if (ImGui::Button("Close Menu", ImVec2(-1, 60))) { g_ShowMenu = false; }
         ImGui::End();
     }
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
     return old_eglSwapBuffers(dpy, surface);
 }
 
 void* init_thread(void*) {
-    sleep(15); 
+    sleep(15);
+    void* egl = dlsym(RTLD_DEFAULT, "eglSwapBuffers");
+    if (egl) DobbyHook(egl, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
 
-    void* egl_addr = dlsym(RTLD_DEFAULT, "eglSwapBuffers");
-    if (egl_addr) DobbyHook(egl_addr, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
-
-    const char* consume_sym = "_ZN7android13InputConsumer7consumeEPNS_26InputEventFactoryInterfaceEblPjPPNS_10InputEventE";
-    void* consume_addr = DobbySymbolResolver("libinput.so", consume_sym);
-    if (consume_addr) DobbyHook(consume_addr, (void*)hook_InputConsumer_consume, (void**)&old_consume);
-
+    const char* sym = "_ZN7android13InputConsumer7consumeEPNS_26InputEventFactoryInterfaceEblPjPPNS_10InputEventE";
+    void* consume = DobbySymbolResolver("libinput.so", sym);
+    if (consume) DobbyHook(consume, (void*)hook_consume, (void**)&old_consume);
     return nullptr;
 }
 
 __attribute__((constructor)) void init_plugin() {
-    pthread_t t;
-    pthread_create(&t, nullptr, init_thread, nullptr);
+    pthread_t t; pthread_create(&t, nullptr, init_thread, nullptr);
 }
