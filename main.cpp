@@ -20,6 +20,7 @@
 
 #define LOG_TAG "AndKitty_Menu"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
+#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
 // --- 状态与坐标 ---
 static bool g_Initialized = false;
@@ -127,7 +128,6 @@ void* init_thread(void*) {
     if (egl) DobbyHook(egl, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
 
     // 2. Hook AInputQueue_getEvent (libandroid.so)
-    // 这是 Android NativeActivity 处理输入的最底层入口，无视 Unity 符号混淆
     void* libandroid = dlopen("libandroid.so", RTLD_NOW);
     if (libandroid) {
         void* getEvent = dlsym(libandroid, "AInputQueue_getEvent");
