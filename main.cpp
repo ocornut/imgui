@@ -31,6 +31,13 @@ struct {
     float autoOffsetY = 0.0f;
 } g_Touch = {0, 0, false};
 
+// 原始函数指针定义 (修复编译报错的关键)
+typedef EGLBoolean (*p_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surface);
+static p_eglSwapBuffers old_eglSwapBuffers = nullptr;
+
+typedef int (*p_InputConsumer_consume)(void* instance, void* factory, bool consumeBatches, int64_t frameTime, uint32_t* outSeq, void** outEvent);
+static p_InputConsumer_consume old_consume = nullptr;
+
 // 声明我们要用到的底层函数指针 (从 libandroid.so 或动态获取)
 typedef float (*p_AMotionEvent_getRawX)(const AInputEvent* motion_event, size_t pointer_index);
 typedef float (*p_AMotionEvent_getRawY)(const AInputEvent* motion_event, size_t pointer_index);
@@ -61,12 +68,7 @@ void handle_android_event(AInputEvent* event) {
             g_Touch.autoOffsetY = rawY - winY;
         }
 
-        /**
-         * 修正映射逻辑：
-         * 王者荣耀在分屏下，渲染分辨率(1426)和窗口大小并不一定完全等同。
-         * 我们直接信任 winX/winY，但需要处理 DPI 缩放。
-         * 如果发现点击偏离，是因为 ImGui 的 io.DisplaySize 与系统给出的 winX 坐标系单位不一致。
-         */
+        // 直接使用 winX/winY，因为在分屏模式下系统已经帮我们做好了初步的窗口映射
         g_Touch.x = winX; 
         g_Touch.y = winY;
 
@@ -79,9 +81,6 @@ void handle_android_event(AInputEvent* event) {
 }
 
 // Hook InputConsumer::consume
-typedef int (*p_InputConsumer_consume)(void* instance, void* factory, bool consumeBatches, int64_t frameTime, uint32_t* outSeq, void** outEvent);
-static p_InputConsumer_consume old_consume = nullptr;
-
 int hook_consume(void* a, void* b, bool c, int64_t d, uint32_t* e, void** f) {
     int res = old_consume(a, b, c, d, e, f);
     if (res == 0 && f && *f) {
@@ -94,6 +93,9 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     EGLint w, h;
     eglQuerySurface(dpy, surface, EGL_WIDTH, &w);
     eglQuerySurface(dpy, surface, EGL_HEIGHT, &h);
+    
+    if (w <= 0 || h <= 0) return old_eglSwapBuffers(dpy, surface);
+
     g_Touch.renderW = (float)w;
     g_Touch.renderH = (float)h;
 
@@ -101,7 +103,7 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         ImGui::CreateContext();
         ImGui_ImplOpenGL3_Init("#version 300 es");
         
-        // 根据高度动态适配 UI 大小，避免分屏下菜单太大或太小
+        // 根据高度动态适配 UI 大小
         float fontScale = (float)h / 1000.0f;
         if (fontScale < 1.0f) fontScale = 1.0f;
         ImGui::GetStyle().ScaleAllSizes(3.5f * fontScale);
@@ -123,8 +125,8 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         ImGui::GetForegroundDrawList()->AddCircleFilled(io.MousePos, 15.0f, IM_COL32(0, 255, 0, 255));
     }
 
-    ImGui::SetNextWindowPos(ImVec2(w * 0.1f, h * 0.1f), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(w * 0.7f, h * 0.5f), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowPos(ImVec2(50, 50), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(w * 0.7f, h * 0.6f), ImGuiCond_FirstUseEver);
     
     if (ImGui::Begin("AndKitty Dynamic Adaptive", nullptr, ImGuiWindowFlags_NoCollapse)) {
         ImGui::Text("Detected Offset: X=%.1f, Y=%.1f", g_Touch.autoOffsetX, g_Touch.autoOffsetY);
@@ -142,8 +144,13 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     }
 
     ImGui::Render();
+    
+    // 渲染保护
+    GLint last_depth;
+    glGetIntegerv(GL_DEPTH_TEST, &last_depth);
     glDisable(GL_DEPTH_TEST);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    if (last_depth) glEnable(GL_DEPTH_TEST);
 
     return old_eglSwapBuffers(dpy, surface);
 }
@@ -151,17 +158,24 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 void* init_thread(void*) {
     sleep(5); 
 
-    // 获取关键的 Raw 坐标函数，用于计算侧边栏偏移
+    // 获取关键的 Raw 坐标函数
     void* libandroid = dlopen("libandroid.so", RTLD_NOW);
     if (libandroid) {
         g_getRawX = (p_AMotionEvent_getRawX)dlsym(libandroid, "AMotionEvent_getRawX");
         g_getRawY = (p_AMotionEvent_getRawY)dlsym(libandroid, "AMotionEvent_getRawY");
     }
 
-    DobbyHook((void*)dlsym(RTLD_DEFAULT, "eglSwapBuffers"), (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
+    // Hook 渲染 (修复了 old_eglSwapBuffers 未定义的错误)
+    void* sym_egl = dlsym(RTLD_DEFAULT, "eglSwapBuffers");
+    if (sym_egl) {
+        DobbyHook(sym_egl, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
+    }
     
+    // Hook 输入 (libinput.so)
     void* consume_addr = DobbySymbolResolver("libinput.so", "_ZN7android13InputConsumer7consumeEPNS_26InputEventFactoryInterfaceEblPjPPNS_10InputEventE");
-    if (consume_addr) DobbyHook(consume_addr, (void*)hook_consume, (void**)&old_consume);
+    if (consume_addr) {
+        DobbyHook(consume_addr, (void*)hook_consume, (void**)&old_consume);
+    }
 
     return nullptr;
 }
