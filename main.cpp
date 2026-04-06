@@ -16,11 +16,9 @@ static bool g_Initialized = false;
 
 // --- MT 专用可视化校准结构 ---
 struct {
-    // 系统底层的真实数据
     float rawX = 0.0f;
     float rawY = 0.0f;
     
-    // 映射到 ImGui 的数据
     float mappedX = 0.0f;
     float mappedY = 0.0f;
     
@@ -29,9 +27,10 @@ struct {
     float renderW = 0.0f; 
     float renderH = 0.0f;
 
-    // 校准参数 (默认 1:1)
-    float scaleX = 1.0f;
-    float scaleY = 1.0f;
+    // 根据你的设备 3392x2400 与 1426x1008 计算出的完美黄金比例
+    float scaleX = 0.4204f; // 1426 / 3392
+    float scaleY = 0.4200f; // 1008 / 2400
+    
     float offsetX = 0.0f;
     float offsetY = 0.0f;
 } g_Touch;
@@ -46,16 +45,16 @@ void handle_android_event(AInputEvent* event) {
     if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
         int32_t action = AMotionEvent_getAction(event) & AMOTION_EVENT_ACTION_MASK;
         
-        // 1. 获取系统传来的绝对生肉坐标
         float currentRawX = AMotionEvent_getX(event, 0);
         float currentRawY = AMotionEvent_getY(event, 0);
         
         g_Touch.rawX = currentRawX;
         g_Touch.rawY = currentRawY;
 
-        // 2. 映射公式：(原始 + 偏移) * 缩放
-        g_Touch.mappedX = (currentRawX + g_Touch.offsetX) * g_Touch.scaleX;
-        g_Touch.mappedY = (currentRawY + g_Touch.offsetY) * g_Touch.scaleY;
+        // 核心公式修正：先计算比例，再加偏移。
+        // 这样一来，偏移量的单位就等于屏幕上的实际像素！
+        g_Touch.mappedX = (currentRawX * g_Touch.scaleX) + g_Touch.offsetX;
+        g_Touch.mappedY = (currentRawY * g_Touch.scaleY) + g_Touch.offsetY;
 
         if (action == AMOTION_EVENT_ACTION_DOWN) {
             g_Touch.down = true;
@@ -87,7 +86,6 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         ImGui::CreateContext();
         ImGui_ImplOpenGL3_Init("#version 300 es");
         
-        // 放大 UI 以防看不清或点不到
         float uiScale = (float)h / 1000.0f;
         if (uiScale < 1.0f) uiScale = 1.0f;
         ImGui::GetStyle().ScaleAllSizes(3.5f * uiScale);
@@ -104,53 +102,59 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
 
-    // 绘制准星（这代表游戏接收到的坐标）
+    // 绘制调试十字和红点
     if (g_Touch.down) {
         ImDrawList* draw = ImGui::GetForegroundDrawList();
-        draw->AddLine(ImVec2(0, g_Touch.mappedY), ImVec2(g_Touch.renderW, g_Touch.mappedY), IM_COL32(0, 255, 0, 255), 3.0f);
-        draw->AddLine(ImVec2(g_Touch.mappedX, 0), ImVec2(g_Touch.mappedX, g_Touch.renderH), IM_COL32(0, 255, 0, 255), 3.0f);
+        draw->AddLine(ImVec2(0, g_Touch.mappedY), ImVec2(g_Touch.renderW, g_Touch.mappedY), IM_COL32(0, 255, 0, 200), 3.0f);
+        draw->AddLine(ImVec2(g_Touch.mappedX, 0), ImVec2(g_Touch.mappedX, g_Touch.renderH), IM_COL32(0, 255, 0, 200), 3.0f);
         draw->AddCircleFilled(ImVec2(g_Touch.mappedX, g_Touch.mappedY), 25.0f, IM_COL32(255, 0, 0, 255));
     }
 
-    // --- 极简调试看板 ---
     ImGui::SetNextWindowPos(ImVec2(20, 20), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(w * 0.9f, h * 0.8f), ImGuiCond_FirstUseEver);
     
     if (ImGui::Begin("MT Visual Calibration", nullptr, ImGuiWindowFlags_NoCollapse)) {
         
-        // 第一步展示区：系统原生数据
-        ImGui::TextColored(ImVec4(1,1,0,1), "【1】看这里获取坐标 (Raw)");
-        ImGui::Text("系统原坐标 RAW X: %.1f", g_Touch.rawX);
-        ImGui::Text("系统原坐标 RAW Y: %.1f", g_Touch.rawY);
+        ImGui::TextColored(ImVec4(1,1,0,1), "【法则】随手指拖动而距离变化=调Scale | 距离固定偏=调Offset");
+        ImGui::Text("系统 RAW X: %.1f | Y: %.1f", g_Touch.rawX, g_Touch.rawY);
         ImGui::Separator();
         
-        // 大按钮调节区 (防止滑块点不准)
-        ImGui::TextColored(ImVec4(0,1,1,1), "【2】如果不准，用大按键调节");
-        ImGui::Text("当前 Offset X: %.1f", g_Touch.offsetX);
+        ImVec2 btnSize(140, 80); 
         
-        ImVec2 btnSize(140, 90); // 巨大按钮
-        if (ImGui::Button("-100 X", btnSize)) g_Touch.offsetX -= 100.0f; ImGui::SameLine();
-        if (ImGui::Button("-10 X", btnSize)) g_Touch.offsetX -= 10.0f; ImGui::SameLine();
-        if (ImGui::Button("+10 X", btnSize)) g_Touch.offsetX += 10.0f; ImGui::SameLine();
-        if (ImGui::Button("+100 X", btnSize)) g_Touch.offsetX += 100.0f;
-        
-        ImGui::Text("当前 Offset Y: %.1f", g_Touch.offsetY);
-        if (ImGui::Button("-100 Y", btnSize)) g_Touch.offsetY -= 100.0f; ImGui::SameLine();
-        if (ImGui::Button("-10 Y", btnSize)) g_Touch.offsetY -= 10.0f; ImGui::SameLine();
-        if (ImGui::Button("+10 Y", btnSize)) g_Touch.offsetY += 10.0f; ImGui::SameLine();
-        if (ImGui::Button("+100 Y", btnSize)) g_Touch.offsetY += 100.0f;
-        
-        ImGui::Separator();
-        ImGui::Text("当前 Scale X: %.3f | Scale Y: %.3f", g_Touch.scaleX, g_Touch.scaleY);
-        if (ImGui::Button("-0.1 SX", btnSize)) g_Touch.scaleX -= 0.1f; ImGui::SameLine();
-        if (ImGui::Button("+0.1 SX", btnSize)) g_Touch.scaleX += 0.1f; ImGui::SameLine();
-        if (ImGui::Button("-0.1 SY", btnSize)) g_Touch.scaleX -= 0.1f; ImGui::SameLine();
-        if (ImGui::Button("+0.1 SY", btnSize)) g_Touch.scaleX += 0.1f;
+        // 比例调节区（微调）
+        ImGui::TextColored(ImVec4(0,1,1,1), "【第一步】调比例 (让红点和手指移动速度一样)");
+        ImGui::Text("Scale X: %.4f", g_Touch.scaleX);
+        if (ImGui::Button("-0.01 SX", btnSize)) g_Touch.scaleX -= 0.01f; ImGui::SameLine();
+        if (ImGui::Button("+0.01 SX", btnSize)) g_Touch.scaleX += 0.01f; ImGui::SameLine();
+        if (ImGui::Button("-0.001 SX", btnSize)) g_Touch.scaleX -= 0.001f; ImGui::SameLine();
+        if (ImGui::Button("+0.001 SX", btnSize)) g_Touch.scaleX += 0.001f;
+
+        ImGui::Text("Scale Y: %.4f", g_Touch.scaleY);
+        if (ImGui::Button("-0.01 SY", btnSize)) g_Touch.scaleY -= 0.01f; ImGui::SameLine();
+        if (ImGui::Button("+0.01 SY", btnSize)) g_Touch.scaleY += 0.01f; ImGui::SameLine();
+        if (ImGui::Button("-0.001 SY", btnSize)) g_Touch.scaleY -= 0.001f; ImGui::SameLine();
+        if (ImGui::Button("+0.001 SY", btnSize)) g_Touch.scaleY += 0.001f;
 
         ImGui::Separator();
-        if (ImGui::Button("重置所有参数 (RESET)", ImVec2(-1, 100))) {
+        
+        // 偏移调节区（单位为像素）
+        ImGui::TextColored(ImVec4(0,1,1,1), "【第二步】调偏移 (让红点对准手指中心)");
+        ImGui::Text("Offset X: %.1f", g_Touch.offsetX);
+        if (ImGui::Button("-50 X", btnSize)) g_Touch.offsetX -= 50.0f; ImGui::SameLine();
+        if (ImGui::Button("-10 X", btnSize)) g_Touch.offsetX -= 10.0f; ImGui::SameLine();
+        if (ImGui::Button("+10 X", btnSize)) g_Touch.offsetX += 10.0f; ImGui::SameLine();
+        if (ImGui::Button("+50 X", btnSize)) g_Touch.offsetX += 50.0f;
+        
+        ImGui::Text("Offset Y: %.1f", g_Touch.offsetY);
+        if (ImGui::Button("-50 Y", btnSize)) g_Touch.offsetY -= 50.0f; ImGui::SameLine();
+        if (ImGui::Button("-10 Y", btnSize)) g_Touch.offsetY -= 10.0f; ImGui::SameLine();
+        if (ImGui::Button("+10 Y", btnSize)) g_Touch.offsetY += 10.0f; ImGui::SameLine();
+        if (ImGui::Button("+50 Y", btnSize)) g_Touch.offsetY += 50.0f;
+        
+        ImGui::Separator();
+        if (ImGui::Button("重置默认黄金比例", ImVec2(-1, 100))) {
             g_Touch.offsetX = 0; g_Touch.offsetY = 0;
-            g_Touch.scaleX = 1.0f; g_Touch.scaleY = 1.0f;
+            g_Touch.scaleX = 0.4204f; g_Touch.scaleY = 0.4200f;
         }
 
         ImGui::End();
