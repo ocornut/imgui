@@ -26,21 +26,35 @@ struct {
 typedef int32_t (*p_getPointerId)(const AInputEvent* motion_event, size_t pointer_index);
 static p_getPointerId old_getPointerId = nullptr;
 
+typedef float (*p_getRawX)(const AInputEvent* motion_event, size_t pointer_index);
+static p_getRawX old_getRawX = nullptr;
+
+typedef float (*p_getRawY)(const AInputEvent* motion_event, size_t pointer_index);
+static p_getRawY old_getRawY = nullptr;
+
 typedef EGLBoolean (*p_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surface);
 static p_eglSwapBuffers old_eglSwapBuffers = nullptr;
 
-// --- 【核心】极简拦截器 ---
-// 参考主流做法：Hook getPointerId 是获取 InputEvent 最稳妥的时机
+// --- 【核心】多重拦截逻辑 ---
+// 我们在游戏获取 PointerId 的那一刻，顺便把坐标存下来
 int32_t hook_getPointerId(const AInputEvent* event, size_t index) {
-    if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
+    if (event != nullptr && AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
         int32_t action = AMotionEvent_getAction(event) & AMOTION_EVENT_ACTION_MASK;
         
-        // 记录坐标和状态
-        g_Touch.x = AMotionEvent_getX(event, 0);
-        g_Touch.y = AMotionEvent_getY(event, 0);
+        // 尝试获取原始坐标
+        if (old_getRawX && old_getRawY) {
+            g_Touch.x = old_getRawX(event, 0);
+            g_Touch.y = old_getRawY(event, 0);
+        } else {
+            g_Touch.x = AMotionEvent_getX(event, 0);
+            g_Touch.y = AMotionEvent_getY(event, 0);
+        }
 
-        if (action == AMOTION_EVENT_ACTION_DOWN) g_Touch.down = true;
-        else if (action == AMOTION_EVENT_ACTION_UP || action == AMOTION_EVENT_ACTION_CANCEL) g_Touch.down = false;
+        if (action == AMOTION_EVENT_ACTION_DOWN || action == AMOTION_EVENT_ACTION_POINTER_DOWN) {
+            g_Touch.down = true;
+        } else if (action == AMOTION_EVENT_ACTION_UP || action == AMOTION_EVENT_ACTION_POINTER_UP || action == AMOTION_EVENT_ACTION_CANCEL) {
+            g_Touch.down = false;
+        }
     }
     return old_getPointerId(event, index);
 }
@@ -57,8 +71,9 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     if (!g_Initialized) {
         ImGui::CreateContext();
         ImGui_ImplOpenGL3_Init("#version 300 es");
-        ImGui::GetStyle().ScaleAllSizes(3.0f); // 适配高分屏
+        ImGui::GetStyle().ScaleAllSizes(3.0f);
         g_Initialized = true;
+        LOGI("ImGui Ready: %.fx%.f", g_Width, g_Height);
     }
 
     ImGui_ImplOpenGL3_NewFrame();
@@ -67,17 +82,20 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     if (g_ShowMenu) {
         ImGuiIO& io = ImGui::GetIO();
         io.DisplaySize = ImVec2(g_Width, g_Height);
+        
+        // 关键：将拦截到的坐标注入 ImGui
         io.MousePos = ImVec2(g_Touch.x, g_Touch.y);
         io.MouseDown[0] = g_Touch.down;
 
-        ImGui::SetNextWindowSize(ImVec2(550, 400), ImGuiCond_FirstUseEver);
-        if (ImGui::Begin("AndKitty SGame Lite", &g_ShowMenu)) {
-            ImGui::Text("Simple Input Mode Active");
+        ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
+        if (ImGui::Begin("AndKitty SGame Final", &g_ShowMenu)) {
+            ImGui::Text("Status: Input Hooked");
+            ImGui::Text("Touch Pos: %.1f, %.1f", g_Touch.x, g_Touch.y);
+            ImGui::Text("Action: %s", g_Touch.down ? "DOWN" : "UP");
             ImGui::Separator();
-            ImGui::Text("Touch: %.1f, %.1f (%s)", g_Touch.x, g_Touch.y, g_Touch.down ? "DOWN" : "UP");
             
-            static float f = 0.5f;
-            ImGui::SliderFloat("Value Test", &f, 0.0f, 1.0f);
+            static bool test = false;
+            ImGui::Checkbox("Function Test", &test);
             
             if (ImGui::Button("Hide Menu")) g_ShowMenu = false;
         }
@@ -90,16 +108,27 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 }
 
 void* init_thread(void*) {
-    // 渲染 Hook
+    // 1. 渲染 Hook
     void* egl = dlsym(RTLD_DEFAULT, "eglSwapBuffers");
     if (egl) DobbyHook(egl, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
 
-    // 输入 Hook: 锁定 libandroid.so 或直接从 RTLD_DEFAULT 找
-    // 绝大多数 Mod 使用 AMotionEvent_getPointerId 作为切入点
-    void* getPointerId = dlsym(RTLD_DEFAULT, "AMotionEvent_getPointerId");
-    if (getPointerId) {
-        DobbyHook(getPointerId, (void*)hook_getPointerId, (void**)&old_getPointerId);
-        LOGI("Simple Hook Applied: getPointerId");
+    // 2. 输入 Hook
+    void* libandroid = dlopen("libandroid.so", RTLD_NOW);
+    if (libandroid) {
+        void* getPointerId = dlsym(libandroid, "AMotionEvent_getPointerId");
+        void* getRawX = dlsym(libandroid, "AMotionEvent_getRawX");
+        void* getRawY = dlsym(libandroid, "AMotionEvent_getRawY");
+
+        // 如果找不到 getRawX，就找 getX
+        if (!getRawX) getRawX = dlsym(libandroid, "AMotionEvent_getX");
+        if (!getRawY) getRawY = dlsym(libandroid, "AMotionEvent_getY");
+
+        // 我们 Hook 这三个函数，但重点是 getPointerId
+        if (getPointerId) DobbyHook(getPointerId, (void*)hook_getPointerId, (void**)&old_getPointerId);
+        if (getRawX) old_getRawX = (p_getRawX)getRawX;
+        if (getRawY) old_getRawY = (p_getRawY)getRawY;
+
+        LOGI("Input Hooks Ready: PointerId:%p, RawX:%p", getPointerId, getRawX);
     }
 
     return nullptr;
