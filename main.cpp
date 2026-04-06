@@ -15,51 +15,60 @@
 
 static bool g_Initialized = false;
 
-// --- 高级自适应结构 ---
+// --- 动态自适应结构 (不写死偏移) ---
 struct {
     float x, y;          
     bool down;
-    // 你的物理分辨率 wm size: 2400 x 3392
-    float screenW = 2400.0f; 
-    float screenH = 3392.0f;
     
-    // 运行时检测到的渲染分辨率
-    float renderW = 1426.0f; 
-    float renderH = 1008.0f;
+    // 渲染区域的大小 (ImGui 绘制区域)
+    float renderW = 0.0f; 
+    float renderH = 0.0f;
 
-    // 偏移量（部分手机分屏会有黑边填充）
-    float offsetX = 0.0f;
-    float offsetY = 0.0f;
+    // 自动探测的参数
+    float autoScaleX = 1.0f;
+    float autoScaleY = 1.0f;
+    float autoOffsetX = 0.0f;
+    float autoOffsetY = 0.0f;
 } g_Touch = {0, 0, false};
 
-typedef EGLBoolean (*p_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surface);
-static p_eglSwapBuffers old_eglSwapBuffers = nullptr;
+// 声明我们要用到的底层函数指针 (从 libandroid.so 或动态获取)
+typedef float (*p_AMotionEvent_getRawX)(const AInputEvent* motion_event, size_t pointer_index);
+typedef float (*p_AMotionEvent_getRawY)(const AInputEvent* motion_event, size_t pointer_index);
+static p_AMotionEvent_getRawX g_getRawX = nullptr;
+static p_AMotionEvent_getRawY g_getRawY = nullptr;
 
-// 核心映射函数：解决“点不准”的根源
-void update_touch_position(float rawX, float rawY) {
-    // 逻辑：将物理坐标(0~2400)映射到渲染坐标(0~1426)
-    // 如果还是不准，通常是因为系统在分屏上方或左侧留了空隙
-    float scaleX = g_Touch.renderW / g_Touch.screenW;
-    float scaleY = g_Touch.renderH / g_Touch.screenH;
-
-    // 自动修正坐标：假设分屏是在屏幕顶部或左侧开始的
-    // 如果你的分屏是在屏幕中间，这个公式会通过 renderW/H 自动适配
-    g_Touch.x = (rawX * scaleX);
-    g_Touch.y = (rawY * scaleY);
-    
-    // 容错处理：防止坐标超出菜单边界
-    if(g_Touch.x < 0) g_Touch.x = 0;
-    if(g_Touch.y < 0) g_Touch.y = 0;
-}
-
+/**
+ * 终极自适应算法：
+ * getRawX() 返回手指在物理屏幕上的绝对位置 (0-2400)。
+ * getX() 返回手指在当前 Activity 窗口内的相对位置。
+ * 两者的差值就是侧边栏/状态栏导致的偏移量。
+ */
 void handle_android_event(AInputEvent* event) {
     if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
         int32_t action = AMotionEvent_getAction(event) & AMOTION_EVENT_ACTION_MASK;
         
-        float rx = AMotionEvent_getX(event, 0);
-        float ry = AMotionEvent_getY(event, 0);
+        // 1. 获取窗口内坐标 (如果是分屏，这里通常是相对于游戏窗口左上角的)
+        float winX = AMotionEvent_getX(event, 0);
+        float winY = AMotionEvent_getY(event, 0);
         
-        update_touch_position(rx, ry);
+        // 2. 尝试获取物理绝对坐标进行比对
+        if (g_getRawX && g_getRawY) {
+            float rawX = g_getRawX(event, 0);
+            float rawY = g_getRawY(event, 0);
+            
+            // 记录偏移：物理位置 - 窗口位置
+            g_Touch.autoOffsetX = rawX - winX;
+            g_Touch.autoOffsetY = rawY - winY;
+        }
+
+        /**
+         * 修正映射逻辑：
+         * 王者荣耀在分屏下，渲染分辨率(1426)和窗口大小并不一定完全等同。
+         * 我们直接信任 winX/winY，但需要处理 DPI 缩放。
+         * 如果发现点击偏离，是因为 ImGui 的 io.DisplaySize 与系统给出的 winX 坐标系单位不一致。
+         */
+        g_Touch.x = winX; 
+        g_Touch.y = winY;
 
         if (action == AMOTION_EVENT_ACTION_DOWN) {
             g_Touch.down = true;
@@ -81,28 +90,22 @@ int hook_consume(void* a, void* b, bool c, int64_t d, uint32_t* e, void** f) {
     return res;
 }
 
-// 渲染钩子
 EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     EGLint w, h;
     eglQuerySurface(dpy, surface, EGL_WIDTH, &w);
     eglQuerySurface(dpy, surface, EGL_HEIGHT, &h);
-
-    // 动态更新渲染尺寸
     g_Touch.renderW = (float)w;
     g_Touch.renderH = (float)h;
 
     if (!g_Initialized) {
-        LOGI("ImGui Init: %d x %d", w, h);
         ImGui::CreateContext();
         ImGui_ImplOpenGL3_Init("#version 300 es");
         
-        // 缩放适配：基于 1080p 标准缩放 UI
-        float base_scale = (float)w / 1080.0f;
-        if(base_scale < 1.0f) base_scale = 1.0f;
-        
-        ImGuiStyle& style = ImGui::GetStyle();
-        style.ScaleAllSizes(3.0f * base_scale);
-        ImGui::GetIO().FontGlobalScale = 3.0f * base_scale;
+        // 根据高度动态适配 UI 大小，避免分屏下菜单太大或太小
+        float fontScale = (float)h / 1000.0f;
+        if (fontScale < 1.0f) fontScale = 1.0f;
+        ImGui::GetStyle().ScaleAllSizes(3.5f * fontScale);
+        ImGui::GetIO().FontGlobalScale = 3.5f * fontScale;
         
         g_Initialized = true;
     }
@@ -115,60 +118,50 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
 
-    // --- 调试辅助线：帮你定位为什么不准 ---
+    // 指点探测 (绿色代表自动模式)
     if (g_Touch.down) {
-        // 画一个大十字架跟随映射后的坐标
-        ImDrawList* draw = ImGui::GetForegroundDrawList();
-        draw->AddLine(ImVec2(0, g_Touch.y), ImVec2(g_Touch.renderW, g_Touch.y), IM_COL32(255, 255, 0, 200), 2.0f);
-        draw->AddLine(ImVec2(g_Touch.x, 0), ImVec2(g_Touch.x, g_Touch.renderH), IM_COL32(255, 255, 0, 200), 2.0f);
+        ImGui::GetForegroundDrawList()->AddCircleFilled(io.MousePos, 15.0f, IM_COL32(0, 255, 0, 255));
     }
 
-    ImGui::SetNextWindowPos(ImVec2(50, 50), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(w * 0.8f, h * 0.5f), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowPos(ImVec2(w * 0.1f, h * 0.1f), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(w * 0.7f, h * 0.5f), ImGuiCond_FirstUseEver);
     
-    if (ImGui::Begin("AndKitty Auto-Fix", nullptr, ImGuiWindowFlags_NoCollapse)) {
-        ImGui::Text("Physical: 2400 x 3392");
-        ImGui::Text("Render: %.0f x %.0f", g_Touch.renderW, g_Touch.renderH);
+    if (ImGui::Begin("AndKitty Dynamic Adaptive", nullptr, ImGuiWindowFlags_NoCollapse)) {
+        ImGui::Text("Detected Offset: X=%.1f, Y=%.1f", g_Touch.autoOffsetX, g_Touch.autoOffsetY);
+        ImGui::Text("Render Area: %.0f x %.0f", g_Touch.renderW, g_Touch.renderH);
         ImGui::Separator();
         
-        // 显示当前计算出的缩放比，方便对比
-        ImGui::Text("Scale: X=%.3f, Y=%.3f", g_Touch.renderW/g_Touch.screenW, g_Touch.renderH/g_Touch.screenH);
-        ImGui::Text("Mouse: %.1f, %.1f", g_Touch.x, g_Touch.y);
-
-        if (ImGui::Button("Reset Menu", ImVec2(-1, 100))) {
-            ImGui::SetWindowPos(ImVec2(10, 10));
+        if (ImGui::Button("Reset Menu Position", ImVec2(-1, 80))) {
+            ImGui::SetWindowPos(ImVec2(100, 100));
         }
-
-        static bool test = false;
-        ImGui::Checkbox("Feature Toggle", &test);
+        
+        static bool feature_esp = true;
+        ImGui::Checkbox("ESP Player", &feature_esp);
         
         ImGui::End();
     }
 
     ImGui::Render();
-    
-    // GL 状态恢复
-    GLint last_depth;
-    glGetIntegerv(GL_DEPTH_TEST, &last_depth);
     glDisable(GL_DEPTH_TEST);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-    if (last_depth) glEnable(GL_DEPTH_TEST);
 
     return old_eglSwapBuffers(dpy, surface);
 }
 
 void* init_thread(void*) {
-    // 5秒延迟
     sleep(5); 
 
-    // Hook EGL
-    void* egl = dlsym(RTLD_DEFAULT, "eglSwapBuffers");
-    if (egl) DobbyHook(egl, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
+    // 获取关键的 Raw 坐标函数，用于计算侧边栏偏移
+    void* libandroid = dlopen("libandroid.so", RTLD_NOW);
+    if (libandroid) {
+        g_getRawX = (p_AMotionEvent_getRawX)dlsym(libandroid, "AMotionEvent_getRawX");
+        g_getRawY = (p_AMotionEvent_getRawY)dlsym(libandroid, "AMotionEvent_getRawY");
+    }
 
-    // Hook Input (libinput.so)
-    const char* sym = "_ZN7android13InputConsumer7consumeEPNS_26InputEventFactoryInterfaceEblPjPPNS_10InputEventE";
-    void* addr = DobbySymbolResolver("libinput.so", sym);
-    if (addr) DobbyHook(addr, (void*)hook_consume, (void**)&old_consume);
+    DobbyHook((void*)dlsym(RTLD_DEFAULT, "eglSwapBuffers"), (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
+    
+    void* consume_addr = DobbySymbolResolver("libinput.so", "_ZN7android13InputConsumer7consumeEPNS_26InputEventFactoryInterfaceEblPjPPNS_10InputEventE");
+    if (consume_addr) DobbyHook(consume_addr, (void*)hook_consume, (void**)&old_consume);
 
     return nullptr;
 }
