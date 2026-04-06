@@ -103,7 +103,6 @@ std::mutex g_SnapshotMutex;
 GameSnapshot g_CurrentSnapshot;
 std::atomic<uintptr_t> g_ActorManager{0};
 
-// 后台数据读取线程
 void DataWorkerThread() {
     while (true) {
         GameSnapshot newSnap;
@@ -187,25 +186,26 @@ uintptr_t GetModuleBase(const char* module_name) {
     return base;
 }
 
-// ======================== DobbyInstrument 回调 ========================
-#ifdef __aarch64__
-void instrument_InitActorParams(RegisterContext* ctx, void* userdata) {
-    uintptr_t x0 = ctx->general.x0;
-    if (x0 != 0) {
-        LOGI("[Instrument] InitActorParams x0 = %p", (void*)x0);
-        g_ActorManager.store(x0);
-    } else {
-        LOGI("[Instrument] InitActorParams called with x0 = 0");
+// ========== Hook 函数：单参数（匹配原函数） ==========
+void (*old_InitActorParams)(void* x0);
+void hook_InitActorParams(void* x0) {
+    LOGI("[Hook] InitActorParams called, x0 = %p", x0);
+    if (x0) {
+        g_ActorManager.store((uintptr_t)x0);
+        uintptr_t test = SafeRead<uintptr_t>((uintptr_t)x0 + g_Offsets.x0_to_addr1);
+        LOGI("[Hook] x0+0x%x = %p", g_Offsets.x0_to_addr1, (void*)test);
     }
+    old_InitActorParams(x0);
 }
 
-void instrument_ClearActor(RegisterContext* ctx, void* userdata) {
-    LOGI("[Instrument] ClearActor called, x0 = %p", (void*)ctx->general.x0);
+void (*old_ClearActor)(void* x0);
+void hook_ClearActor(void* x0) {
+    LOGI("[Hook] ClearActor called, x0 = %p", x0);
     g_ActorManager.store(0);
+    old_ClearActor(x0);
 }
-#endif
 
-// ======================== 原有 UI 绘制函数（保持不变）========================
+// ========== UI 绘制函数 ==========
 void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
     ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(w * 0.55f, h * 0.8f), ImGuiCond_FirstUseEver);
@@ -297,6 +297,7 @@ void handle_android_event(AInputEvent* event) {
 
 typedef int (*p_InputConsumer_consume)(void* instance, void* factory, bool consumeBatches, int64_t frameTime, uint32_t* outSeq, void** outEvent);
 static p_InputConsumer_consume old_consume = nullptr;
+
 int hook_consume(void* instance, void* factory, bool consumeBatches, int64_t frameTime, uint32_t* outSeq, void** outEvent) {
     int res = old_consume(instance, factory, consumeBatches, frameTime, outSeq, outEvent);
     if (res == 0 && outEvent && *outEvent) handle_android_event((AInputEvent*)(*outEvent));
@@ -446,33 +447,28 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     return old_eglSwapBuffers(dpy, surface);
 }
 
-// 延迟 Hook 线程
+// ========== 延迟初始化线程 ==========
 void* DelayedHookThread(void*) {
-    // 1. 立即 Hook 渲染和输入
     void* egl = DobbySymbolResolver("libEGL.so", "eglSwapBuffers");
     if (egl) DobbyHook(egl, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
     void* ins = DobbySymbolResolver("libinput.so", "_ZN7android13InputConsumer7consumeEPNS_26InputEventFactoryInterfaceEblPjPPNS_10InputEventE");
     if (ins) DobbyHook(ins, (void*)hook_consume, (void**)&old_consume);
 
-    // 2. 启动数据线程
     std::thread(DataWorkerThread).detach();
 
-    // 3. 等待 libil2cpp.so 加载，注册 DobbyInstrument
     while (true) {
         uintptr_t base = GetModuleBase(GAME_MODULE);
         if (base) {
             g_GameBase = base;
-            g_HookAddr_InitActor = base + 0x734cd54;   // 修正后的 InitActorParams 地址
+            g_HookAddr_InitActor = base + 0x734cd54;   // 修正后的地址
             g_HookAddr_ClearActor = base + 0x734bc10;
             LOGI("[*] libil2cpp.so base = 0x%lx", base);
             LOGI("[*] InitActor addr = 0x%lx", g_HookAddr_InitActor);
             LOGI("[*] ClearActor addr = 0x%lx", g_HookAddr_ClearActor);
 
-#ifdef __aarch64__
-            int ret1 = DobbyInstrument((void*)g_HookAddr_InitActor, instrument_InitActorParams);
-            int ret2 = DobbyInstrument((void*)g_HookAddr_ClearActor, instrument_ClearActor);
-            LOGI("[*] DobbyInstrument InitActor result: %d, ClearActor result: %d", ret1, ret2);
-#endif
+            int ret1 = DobbyHook((void*)g_HookAddr_InitActor, (void*)hook_InitActorParams, (void**)&old_InitActorParams);
+            int ret2 = DobbyHook((void*)g_HookAddr_ClearActor, (void*)hook_ClearActor, (void**)&old_ClearActor);
+            LOGI("[*] Hook InitActor result: %d, ClearActor result: %d", ret1, ret2);
             break;
         }
         sleep(1);
