@@ -132,8 +132,9 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 
     // --- 菜单 UI ---
     ImGui::SetNextWindowPos(ImVec2(30, 30), ImGuiCond_FirstUseEver);
-    // 增加 AlwaysAutoResize：窗口大小会自动贴合文字，再也不需要去拉右下角的三角缩放了
-    if (ImGui::Begin("Zero-Config Engine", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize)) {
+    
+    // 恢复右下角的拖拽缩放小三角 (移除了 AlwaysAutoResize 标志)
+    if (ImGui::Begin("Zero-Config Engine", nullptr, ImGuiWindowFlags_NoCollapse)) {
         
         ImGui::TextColored(ImVec4(0, 1, 1, 1), "[*] Auto-Adaptive Engine Active");
         ImGui::Separator();
