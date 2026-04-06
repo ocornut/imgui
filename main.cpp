@@ -15,6 +15,8 @@
 #include "imgui_impl_opengl3.h"
 #include "dobby.h"
 #include <android/log.h>
+#include <android/input.h>
+#include <android/keycodes.h>
 
 #define LOG_TAG "AndKitty_Menu"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
@@ -32,38 +34,36 @@ struct {
     bool down;
 } g_TouchState = {0.0f, 0.0f, false};
 
-// --- Unity 函数指针 ---
-typedef bool (*p_GetMouseButton)(int button);
-static p_GetMouseButton old_GetMouseButton = nullptr;
-
-typedef void* (*p_get_mousePosition)(void* outPos);
-static p_get_mousePosition old_get_mousePosition = nullptr;
+// --- 原函数指针 ---
+typedef int (*p_AInputQueue_getEvent)(AInputQueue* queue, AInputEvent** out_event);
+static p_AInputQueue_getEvent old_getEvent = nullptr;
 
 typedef EGLBoolean (*p_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surface);
 static p_eglSwapBuffers old_eglSwapBuffers = nullptr;
 
-// --- Hook 回调 ---
-bool hook_GetMouseButton(int button) {
-    if (old_GetMouseButton) {
-        bool res = old_GetMouseButton(button);
-        if (button == 0) g_TouchState.down = res;
-        return res;
-    }
-    return false;
-}
+// --- 【核心】底层输入拦截器 ---
+int hook_AInputQueue_getEvent(AInputQueue* queue, AInputEvent** out_event) {
+    int res = old_getEvent(queue, out_event);
+    if (res >= 0 && out_event != nullptr && *out_event != nullptr) {
+        AInputEvent* event = *out_event;
+        int type = AInputEvent_getType(event);
+        
+        if (type == AINPUT_EVENT_TYPE_MOTION) {
+            int action = AMotionEvent_getAction(event);
+            int action_code = action & AMOTION_EVENT_ACTION_MASK;
+            
+            // 记录第一个手指的坐标
+            g_TouchState.x = AMotionEvent_getX(event, 0);
+            g_TouchState.y = AMotionEvent_getY(event, 0);
 
-void* hook_get_mousePosition(void* outPos) {
-    if (old_get_mousePosition) {
-        void* res = old_get_mousePosition(outPos);
-        if (outPos) {
-            float* pos = (float*)outPos; 
-            g_TouchState.x = pos[0];
-            // 只有拿到屏幕高度后才进行 Y 轴翻转，否则先存原始值
-            g_TouchState.y = (g_ScreenHeight > 0) ? (g_ScreenHeight - pos[1]) : pos[1];
+            if (action_code == AMOTION_EVENT_ACTION_DOWN || action_code == AMOTION_EVENT_ACTION_POINTER_DOWN) {
+                g_TouchState.down = true;
+            } else if (action_code == AMOTION_EVENT_ACTION_UP || action_code == AMOTION_EVENT_ACTION_POINTER_UP || action_code == AMOTION_EVENT_ACTION_CANCEL) {
+                g_TouchState.down = false;
+            }
         }
-        return res;
     }
-    return outPos;
+    return res;
 }
 
 // --- 渲染逻辑 ---
@@ -78,18 +78,10 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 
     if (!g_Initialized) {
         ImGui::CreateContext();
-        ImGuiIO& io = ImGui::GetIO();
-        
-        // 针对移动端的优化设置
-        io.IniFilename = nullptr; 
-        ImGui::StyleColorsDark();
-        
         ImGui_ImplOpenGL3_Init("#version 300 es");
-        
-        // 字体缩放适配高分屏
         ImGui::GetStyle().ScaleAllSizes(3.0f);
         g_Initialized = true;
-        LOGI("ImGui Render Init Success: %.fx%.f", g_ScreenWidth, g_ScreenHeight);
+        LOGI("ImGui Init: %.fx%.f", g_ScreenWidth, g_ScreenHeight);
     }
 
     ImGui_ImplOpenGL3_NewFrame();
@@ -99,26 +91,22 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         ImGuiIO& io = ImGui::GetIO();
         io.DisplaySize = ImVec2(g_ScreenWidth, g_ScreenHeight);
         
-        // 关键：强制注入 Unity 捕获的坐标
+        // 强制注入从 AInputQueue 拦截到的坐标
         io.MousePos = ImVec2(g_TouchState.x, g_TouchState.y);
         io.MouseDown[0] = g_TouchState.down;
 
-        ImGui::SetNextWindowSize(ImVec2(550, 400), ImGuiCond_FirstUseEver);
-        if (ImGui::Begin("AndKitty SGame Debugger", &g_ShowMenu)) {
-            ImGui::TextColored(ImVec4(0, 1, 0, 1), "Input Mode: Unity Global Hook");
+        ImGui::SetNextWindowSize(ImVec2(500, 450), ImGuiCond_FirstUseEver);
+        if (ImGui::Begin("AndKitty SGame Ultimate", &g_ShowMenu)) {
+            ImGui::TextColored(ImVec4(1, 1, 0, 1), "Input: AInputQueue Hooked");
             ImGui::Separator();
             
             ImGui::Text("Screen: %.0f x %.0f", g_ScreenWidth, g_ScreenHeight);
             ImGui::Text("Touch Pos: %.1f, %.1f", g_TouchState.x, g_TouchState.y);
-            ImGui::Text("Touch Status: %s", g_TouchState.down ? "DOWN" : "UP");
+            ImGui::Text("Status: %s", g_TouchState.down ? "DOWN" : "UP");
             
             ImGui::Separator();
-            static bool esp = false;
-            ImGui::Checkbox("Enable ESP Line", &esp);
-
-            if (ImGui::Button("Reset Touch State")) {
-                g_TouchState.down = false;
-            }
+            static float speed = 5.0f;
+            ImGui::SliderFloat("Speed", &speed, 1.0f, 10.0f);
             
             if (ImGui::Button("Close Menu")) g_ShowMenu = false;
         }
@@ -130,61 +118,27 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     return old_eglSwapBuffers(dpy, surface);
 }
 
-// --- 自动搜索符号并 Hook ---
+// --- 初始化线程 ---
 void* init_thread(void*) {
-    LOGI("Plugin thread started. Waiting for libunity.so...");
+    LOGI("Plugin thread started. Waiting for libs...");
     
-    void* handle = nullptr;
-    while (!handle) {
-        handle = dlopen("libunity.so", RTLD_NOW);
-        if (!handle) usleep(500000);
-    }
-    LOGI("libunity.so found at %p", handle);
-
     // 1. Hook SwapBuffers (渲染)
     void* egl = dlsym(RTLD_DEFAULT, "eglSwapBuffers");
     if (egl) DobbyHook(egl, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
 
-    // 2. 尝试多种可能的 Unity 输入符号 (SGame 特化)
-    // 列表包含常见混淆名和标准名
-    const char* btn_syms[] = {
-        "_ZN5Unity5Input14GetMouseButtonEi", 
-        "UnityInputGetMouseButton",
-        "Input_GetMouseButton",
-        "_ZN11UnityEngine5Input14GetMouseButtonEi"
-    };
-
-    const char* pos_syms[] = {
-        "_ZN5Unity5Input17get_mousePositionEv",
-        "UnityInputGetMousePosition",
-        "Input_get_mousePosition",
-        "_ZN11UnityEngine5Input17get_mousePositionEv"
-    };
-
-    void* get_btn = nullptr;
-    void* get_pos = nullptr;
-
-    for (const char* s : btn_syms) {
-        get_btn = dlsym(handle, s);
-        if (get_btn) {
-            LOGI("Found MouseButton Sym: %s", s);
-            break;
+    // 2. Hook AInputQueue_getEvent (libandroid.so)
+    // 这是 Android NativeActivity 处理输入的最底层入口，无视 Unity 符号混淆
+    void* libandroid = dlopen("libandroid.so", RTLD_NOW);
+    if (libandroid) {
+        void* getEvent = dlsym(libandroid, "AInputQueue_getEvent");
+        if (getEvent) {
+            DobbyHook(getEvent, (void*)hook_AInputQueue_getEvent, (void**)&old_getEvent);
+            LOGI("AInputQueue_getEvent Hooked at %p", getEvent);
+        } else {
+            LOGE("Failed to find AInputQueue_getEvent");
         }
     }
 
-    for (const char* s : pos_syms) {
-        get_pos = dlsym(handle, s);
-        if (get_pos) {
-            LOGI("Found MousePosition Sym: %s", s);
-            break;
-        }
-    }
-
-    if (get_btn) DobbyHook(get_btn, (void*)hook_GetMouseButton, (void**)&old_GetMouseButton);
-    if (get_pos) DobbyHook(get_pos, (void*)hook_get_mousePosition, (void**)&old_get_mousePosition);
-
-    LOGI("Hooks Final Status - Render: %p, BTN: %p, POS: %p", egl, get_btn, get_pos);
-    
     return nullptr;
 }
 
