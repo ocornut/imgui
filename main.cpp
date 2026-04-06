@@ -16,7 +16,6 @@
 
 static bool g_Initialized = false;
 
-// --- 零配置全自动核心结构 ---
 struct {
     float x = 0.0f;
     float y = 0.0f;
@@ -30,9 +29,9 @@ struct {
     bool isSizeAutoDetected = false;
 } g_Touch;
 
-// --- 右下角无极缩放状态 ---
+// --- 修复截断：改用高度作为缩放基准 ---
 static float g_DynamicScale = 1.0f;
-static float g_BaseWindowWidth = 0.0f;
+static float g_BaseWindowHeight = 0.0f; // 变更为 Height
 
 typedef EGLBoolean (*p_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surface);
 static p_eglSwapBuffers old_eglSwapBuffers = nullptr;
@@ -107,12 +106,10 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     io.MousePos = ImVec2(g_Touch.x, g_Touch.y);
     io.MouseDown[0] = g_Touch.down;
 
-    // --- 核心：将窗口宽度转换为全局 UI 缩放倍率 ---
     float deviceScale = (float)h / 1000.0f;
     if (deviceScale < 1.0f) deviceScale = 1.0f;
-    float finalScale = deviceScale * g_DynamicScale; // 基础设备倍率 × 玩家拖拽倍率
+    float finalScale = deviceScale * g_DynamicScale; 
 
-    // 备份默认样式以供每一帧缩放克隆
     static ImGuiStyle default_style;
     static bool style_backed_up = false;
     if (!style_backed_up) {
@@ -120,12 +117,11 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         style_backed_up = true;
     }
 
-    // 每一帧应用等比缩放
     ImGuiStyle& style = ImGui::GetStyle();
     style = default_style;
     style.ScaleAllSizes(3.0f * finalScale);
     style.WindowRounding = 12.0f;
-    style.WindowMinSize = ImVec2(100.0f, 100.0f); // 保证缩放后依然能缩小回来
+    style.WindowMinSize = ImVec2(100.0f, 100.0f); 
     io.FontGlobalScale = 3.0f * finalScale;
 
     ImGui_ImplOpenGL3_NewFrame();
@@ -135,22 +131,22 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         ImGui::GetForegroundDrawList()->AddCircleFilled(io.MousePos, 20.0f, IM_COL32(0, 255, 0, 200));
     }
 
-    // 初始化基准窗口宽度 (屏幕宽度的 40%)
-    if (g_BaseWindowWidth == 0.0f) {
-        g_BaseWindowWidth = w * 0.4f; 
+    // 初始化基准高度，并给予极其宽裕的初始宽度，防止一开始就截断
+    if (g_BaseWindowHeight == 0.0f) {
+        g_BaseWindowHeight = h * 0.45f; 
     }
 
     ImGui::SetNextWindowPos(ImVec2(30, 30), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(g_BaseWindowWidth, h * 0.5f), ImGuiCond_FirstUseEver);
+    // 初始宽度设为屏幕的 70%，保证右侧绝对不会被遮挡
+    ImGui::SetNextWindowSize(ImVec2(w * 0.7f, g_BaseWindowHeight), ImGuiCond_FirstUseEver);
     
-    // 原生窗口（允许折叠，允许拖拽拉伸）
     if (ImGui::Begin("Zero-Config Engine")) {
         
-        // 【关键黑科技】：实时读取当前窗口的物理宽度，计算出缩放比例！
-        float currentWidth = ImGui::GetWindowWidth();
-        g_DynamicScale = currentWidth / g_BaseWindowWidth;
+        // 【关键修复】：只读取高度来计算缩放比例
+        // 这样你横向拉伸窗口时，只会增加显示面积，不会让字变大！
+        float currentHeight = ImGui::GetWindowHeight();
+        g_DynamicScale = currentHeight / g_BaseWindowHeight;
         
-        // 限制缩放极值，防止拉得太大卡死或者太小看不见
         if (g_DynamicScale < 0.4f) g_DynamicScale = 0.4f;
         if (g_DynamicScale > 3.0f) g_DynamicScale = 3.0f;
 
@@ -166,8 +162,8 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         }
         
         ImGui::Separator();
-        ImGui::TextColored(ImVec4(1, 1, 0, 1), "-> Drag bottom-right corner to Zoom UI!");
-        ImGui::TextColored(ImVec4(1, 1, 0, 1), "-> Double-click title bar to collapse.");
+        ImGui::TextColored(ImVec4(1, 1, 0, 1), "-> Drag RIGHT edge to show more text.");
+        ImGui::TextColored(ImVec4(1, 1, 0, 1), "-> Drag BOTTOM edge to ZOOM IN/OUT.");
         ImGui::Separator();
 
         static bool esp_enabled = true;
@@ -176,8 +172,6 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         static float test_slider = 50.0f;
         ImGui::SliderFloat("FOV Size", &test_slider, 0.0f, 100.0f);
     }
-    
-    // 将 End 放在 if 外面，彻底修复折叠报错问题
     ImGui::End();
 
     ImGui::Render();
