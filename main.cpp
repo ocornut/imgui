@@ -29,9 +29,9 @@ struct {
     bool isSizeAutoDetected = false;
 } g_Touch;
 
-// --- 修复截断：改用高度作为缩放基准 ---
+// 高度缩放基准
 static float g_DynamicScale = 1.0f;
-static float g_BaseWindowHeight = 0.0f; // 变更为 Height
+static float g_BaseWindowHeight = 0.0f; 
 
 typedef EGLBoolean (*p_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surface);
 static p_eglSwapBuffers old_eglSwapBuffers = nullptr;
@@ -77,10 +77,28 @@ void handle_android_event(AInputEvent* event) {
     }
 }
 
-int hook_consume(void* a, void* b, bool c, int64_t d, uint32_t* e, void** f) {
-    int res = old_consume(a, b, c, d, e, f);
-    if (res == 0 && f && *f) {
-        handle_android_event((AInputEvent*)*f);
+// =================================================================
+// 核心照抄区 1：完美触摸不穿透
+// =================================================================
+int hook_consume(void* instance, void* factory, bool consumeBatches, int64_t frameTime, uint32_t* outSeq, void** outEvent) {
+    // 1. 先让系统原函数去读取事件
+    int res = old_consume(instance, factory, consumeBatches, frameTime, outSeq, outEvent);
+    
+    if (res == 0 && outEvent && *outEvent) {
+        // 2. 我们先拿到事件并转换坐标给 ImGui
+        AInputEvent* event = (AInputEvent*)(*outEvent);
+        handle_android_event(event);
+        
+        // 3. 【防穿透绝杀】判断当前手指是否点在菜单上
+        if (g_Initialized && ImGui::GetCurrentContext() != nullptr) {
+            ImGuiIO& io = ImGui::GetIO();
+            if (io.WantCaptureMouse) {
+                // 如果点在菜单上，直接把底层传给游戏引擎的事件指针“没收”
+                *outEvent = nullptr; 
+                // 返回 -EWOULDBLOCK (-11)，欺骗安卓系统，让它以为当前队列为空！
+                return -11; 
+            }
+        }
     }
     return res;
 }
@@ -131,19 +149,15 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         ImGui::GetForegroundDrawList()->AddCircleFilled(io.MousePos, 20.0f, IM_COL32(0, 255, 0, 200));
     }
 
-    // 初始化基准高度，并给予极其宽裕的初始宽度，防止一开始就截断
     if (g_BaseWindowHeight == 0.0f) {
         g_BaseWindowHeight = h * 0.45f; 
     }
 
     ImGui::SetNextWindowPos(ImVec2(30, 30), ImGuiCond_FirstUseEver);
-    // 初始宽度设为屏幕的 70%，保证右侧绝对不会被遮挡
     ImGui::SetNextWindowSize(ImVec2(w * 0.7f, g_BaseWindowHeight), ImGuiCond_FirstUseEver);
     
     if (ImGui::Begin("Zero-Config Engine")) {
         
-        // 【关键修复】：只读取高度来计算缩放比例
-        // 这样你横向拉伸窗口时，只会增加显示面积，不会让字变大！
         float currentHeight = ImGui::GetWindowHeight();
         g_DynamicScale = currentHeight / g_BaseWindowHeight;
         
@@ -176,10 +190,27 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 
     ImGui::Render();
     
+    // =================================================================
+    // 核心照抄区 2：Viewport 渲染防污染机制
+    // =================================================================
+    // 备份游戏本身的 Viewport 和 深度测试状态
+    GLint last_viewport[4];
+    glGetIntegerv(GL_VIEWPORT, last_viewport);
     GLint last_depth;
     glGetIntegerv(GL_DEPTH_TEST, &last_depth);
+    
+    // 关闭深度测试，防止 UI 被游戏的 3D 模型遮挡
     glDisable(GL_DEPTH_TEST);
+    
+    // 强制把渲染视口设置到与我们的 DisplaySize 一致
+    // 这行就是 2.txt 里的：glViewport(0, 0, g_gl_width, g_gl_height);
+    glViewport(0, 0, w, h); 
+    
+    // 绘制 ImGui 数据
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    
+    // 完美复原游戏环境，游戏引擎就不会崩溃或画面扭曲
+    glViewport(last_viewport[0], last_viewport[1], last_viewport[2], last_viewport[3]);
     if (last_depth) glEnable(GL_DEPTH_TEST);
 
     return old_eglSwapBuffers(dpy, surface);
