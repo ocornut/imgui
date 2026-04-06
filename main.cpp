@@ -1,128 +1,92 @@
-#include <jni.h>
-#include <string>
-#include <thread>
+#include <pthread.h>
 #include <unistd.h>
+#include <iostream>
 #include <android/log.h>
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
-#include <dlfcn.h>
-
+#include "dobby.h"
 #include "imgui.h"
 #include "imgui_impl_android.h"
 #include "imgui_impl_opengl3.h"
-#include "dobby.h"
 
-#define KITTY_LOGI(...) __android_log_print(ANDROID_LOG_INFO, "AndKitty", __VA_ARGS__)
+#define TAG "AndKitty_Menu"
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
 
-// --- 全局状态 ---
+// 状态控制
 static bool g_Initialized = false;
 static bool g_ShowMenu = true;
-static int g_Width = 0;
-static int g_Height = 0;
 
-typedef EGLBoolean (*eglSwapBuffers_t)(EGLDisplay dpy, EGLSurface surf);
-static eglSwapBuffers_t orig_eglSwapBuffers = nullptr;
+// 原始函数指针
+typedef EGLBoolean (*p_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surface);
+p_eglSwapBuffers old_eglSwapBuffers = nullptr;
 
-// 渲染主函数
-void DrawImGuiMenu() {
+// 菜单渲染逻辑
+void DrawMenu() {
+    if (!g_ShowMenu) return;
+
+    ImGui::SetNextWindowSize(ImVec2(400, 300), ImGuiCond_FirstUseEver);
+    if (ImGui::Begin("AndKitty Mod Menu", &g_ShowMenu)) {
+        ImGui::Text("注入成功！");
+        ImGui::Separator();
+        static bool cheat1 = false;
+        ImGui::Checkbox("显示射线", &cheat1);
+        if (ImGui::Button("隐藏菜单")) {
+            g_ShowMenu = false;
+        }
+    }
+    ImGui::End();
+}
+
+// 钩子函数
+EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
+    if (!g_Initialized) {
+        LOGI("检测到渲染上下文，正在初始化 ImGui...");
+        ImGui::CreateContext();
+        ImGuiIO& io = ImGui::GetIO();
+        io.DisplaySize = ImVec2(2400, 1080); // 这里可以动态获取
+        
+        ImGui_ImplOpenGL3_Init("#version 300 es");
+        g_Initialized = true;
+        LOGI("ImGui 初始化完毕！");
+    }
+
     ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplAndroid_NewFrame();
     ImGui::NewFrame();
 
-    if (g_ShowMenu) {
-        ImGui::SetNextWindowSize(ImVec2(g_Width / 3.0f, g_Height / 2.0f), ImGuiCond_FirstUseEver);
-        if (ImGui::Begin("AndKitty Mod Menu", &g_ShowMenu)) {
-            ImGui::Text("Package: com.tencent.tmgp.sgame");
-            ImGui::Text("Display: %d x %d", g_Width, g_Height);
-            ImGui::Separator();
-            
-            static bool example_feature = false;
-            ImGui::Checkbox("Feature Test", &example_feature);
-            
-            if (ImGui::Button("Hide Menu")) {
-                g_ShowMenu = false;
-            }
-        }
-        ImGui::End();
-    }
+    DrawMenu();
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+    return old_eglSwapBuffers(dpy, surface);
 }
 
-// 核心 Hook 函数
-EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surf) {
-    // 状态保护：保存当前 GL 绑定，防止 ImGui 渲染干扰游戏逻辑
-    GLint last_program; glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
-    GLint last_buffer; glGetIntegerv(GL_ARRAY_BUFFER, &last_buffer);
+// 插件入口线程
+void* init_thread(void*) {
+    LOGI("插件线程已启动，等待 25 秒避开游戏自检...");
+    sleep(25); // 王者荣耀建议等待时间拉长，直到进入登录界面
 
-    if (!g_Initialized) {
-        eglQuerySurface(dpy, surf, EGL_WIDTH, &g_Width);
-        eglQuerySurface(dpy, surf, EGL_HEIGHT, &g_Height);
-
-        if (g_Width > 0 && g_Height > 0) {
-            IMGUI_CHECKVERSION();
-            ImGui::CreateContext();
-            ImGuiIO& io = ImGui::GetIO();
-            io.DisplaySize = ImVec2((float)g_Width, (float)g_Height);
-
-            ImGui_ImplAndroid_Init(nullptr);
-            ImGui_ImplOpenGL3_Init("#version 300 es");
-            ImGui::StyleColorsDark();
-            
-            // 根据高度自动缩放 UI
-            ImGui::GetStyle().ScaleAllSizes(g_Height / 1080.0f);
-            
-            g_Initialized = true;
-            KITTY_LOGI("ImGui Initialized: %dx%d", g_Width, g_Height);
-        }
+    // 获取 eglSwapBuffers 地址
+    void* sym_addr = dlsym(RTLD_DEFAULT, "eglSwapBuffers");
+    if (!sym_addr) {
+        LOGI("无法通过 RTLD_DEFAULT 找到 eglSwapBuffers，尝试直接从 libEGL.so 获取");
+        void* h_egl = dlopen("libEGL.so", RTLD_NOW);
+        sym_addr = dlsym(h_egl, "eglSwapBuffers");
     }
 
-    if (g_Initialized && g_ShowMenu) {
-        DrawImGuiMenu();
+    if (sym_addr) {
+        LOGI("目标 eglSwapBuffers 地址: %p，正在执行 Hook...", sym_addr);
+        DobbyHook(sym_addr, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
+        LOGI("Hook 完成！请检查屏幕是否有菜单。");
+    } else {
+        LOGI("错误：找不到 eglSwapBuffers 符号！");
     }
 
-    // 恢复状态
-    glUseProgram(last_program);
-    glBindBuffer(GL_ARRAY_BUFFER, last_buffer);
-
-    return orig_eglSwapBuffers(dpy, surf);
+    return nullptr;
 }
 
-// 实际的线程函数
-void thread_function() {
-    KITTY_LOGI("Thread started, waiting for EGL...");
-    // 增加等待时间至 15 秒，确保游戏环境自检完成
-    sleep(15); 
-    
-    void* handle = dlopen("libEGL.so", RTLD_LAZY);
-    if (handle) {
-        void* target = dlsym(handle, "eglSwapBuffers");
-        if (target) {
-            DobbyHook(target, (dobby_dummy_func_t)hook_eglSwapBuffers, (dobby_dummy_func_t*)&orig_eglSwapBuffers);
-            KITTY_LOGI("eglSwapBuffers Hooked Successfully!");
-        }
-        dlclose(handle);
-    }
-}
-
-// 注入器专用入口
-extern "C" jint JNIEXPORT JNI_OnLoad(JavaVM* vm, void *key)
-{
-    // 严格校验注入器 Key
-    if (key != (void*)1337)
-        return JNI_VERSION_1_6;
-
-    KITTY_LOGI("JNI_OnLoad called by injector.");
-
-    JNIEnv *env = nullptr;
-    if (vm->GetEnv((void**)&env, JNI_VERSION_1_6) == JNI_OK)
-    {
-        KITTY_LOGI("JavaEnv acquired: %p.", env);
-    }
-    
-    // 按照文档推荐方式启动线程
-    std::thread(thread_function).detach();
-    
-    return JNI_VERSION_1_6;
+// SO 加载自动执行
+__attribute__((constructor)) void init_plugin() {
+    pthread_t t;
+    pthread_create(&t, nullptr, init_thread, nullptr);
 }
