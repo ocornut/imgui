@@ -7,6 +7,7 @@
 #include <android/input.h>
 #include <stdio.h>
 #include <algorithm>
+#include <atomic>
 #include "dobby.h"
 #include "imgui.h"
 #include "imgui_impl_android.h"
@@ -19,7 +20,7 @@ static bool g_Initialized = false;
 struct {
     float x = 0.0f;
     float y = 0.0f;
-    bool down = false;
+    std::atomic<bool> down{false}; // 引入原子锁，防止多线程同时读写状态导致崩溃
     
     float renderW = 0.0f; 
     float renderH = 0.0f;
@@ -70,35 +71,24 @@ void handle_android_event(AInputEvent* event) {
         g_Touch.y = rawY * autoScaleY;
 
         if (action == AMOTION_EVENT_ACTION_DOWN) {
-            g_Touch.down = true;
+            g_Touch.down.store(true);
         } else if (action == AMOTION_EVENT_ACTION_UP || action == AMOTION_EVENT_ACTION_CANCEL) {
-            g_Touch.down = false;
+            g_Touch.down.store(false);
         }
     }
 }
 
 // =================================================================
-// 核心照抄区 1：完美触摸不穿透
+// 修复核心：移除导致内存泄露闪退的防穿透代码
 // =================================================================
 int hook_consume(void* instance, void* factory, bool consumeBatches, int64_t frameTime, uint32_t* outSeq, void** outEvent) {
-    // 1. 先让系统原函数去读取事件
+    // 正常放行，绝对不拦截吞噬事件，防止底层的 InputEvent 缓冲池被耗尽！
     int res = old_consume(instance, factory, consumeBatches, frameTime, outSeq, outEvent);
     
     if (res == 0 && outEvent && *outEvent) {
-        // 2. 我们先拿到事件并转换坐标给 ImGui
+        // 只做旁路监听，提取坐标给 ImGui，不干扰游戏本身的内存释放流程
         AInputEvent* event = (AInputEvent*)(*outEvent);
         handle_android_event(event);
-        
-        // 3. 【防穿透绝杀】判断当前手指是否点在菜单上
-        if (g_Initialized && ImGui::GetCurrentContext() != nullptr) {
-            ImGuiIO& io = ImGui::GetIO();
-            if (io.WantCaptureMouse) {
-                // 如果点在菜单上，直接把底层传给游戏引擎的事件指针“没收”
-                *outEvent = nullptr; 
-                // 返回 -EWOULDBLOCK (-11)，欺骗安卓系统，让它以为当前队列为空！
-                return -11; 
-            }
-        }
     }
     return res;
 }
@@ -122,7 +112,7 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     ImGuiIO& io = ImGui::GetIO();
     io.DisplaySize = ImVec2(g_Touch.renderW, g_Touch.renderH);
     io.MousePos = ImVec2(g_Touch.x, g_Touch.y);
-    io.MouseDown[0] = g_Touch.down;
+    io.MouseDown[0] = g_Touch.down.load(); // 安全原子读取
 
     float deviceScale = (float)h / 1000.0f;
     if (deviceScale < 1.0f) deviceScale = 1.0f;
@@ -145,7 +135,7 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
 
-    if (g_Touch.down) {
+    if (g_Touch.down.load()) {
         ImGui::GetForegroundDrawList()->AddCircleFilled(io.MousePos, 20.0f, IM_COL32(0, 255, 0, 200));
     }
 
@@ -191,25 +181,17 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     ImGui::Render();
     
     // =================================================================
-    // 核心照抄区 2：Viewport 渲染防污染机制
+    // 保留：Viewport 渲染防污染机制 (这个安全且必不可少)
     // =================================================================
-    // 备份游戏本身的 Viewport 和 深度测试状态
     GLint last_viewport[4];
     glGetIntegerv(GL_VIEWPORT, last_viewport);
     GLint last_depth;
     glGetIntegerv(GL_DEPTH_TEST, &last_depth);
     
-    // 关闭深度测试，防止 UI 被游戏的 3D 模型遮挡
     glDisable(GL_DEPTH_TEST);
-    
-    // 强制把渲染视口设置到与我们的 DisplaySize 一致
-    // 这行就是 2.txt 里的：glViewport(0, 0, g_gl_width, g_gl_height);
     glViewport(0, 0, w, h); 
-    
-    // 绘制 ImGui 数据
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     
-    // 完美复原游戏环境，游戏引擎就不会崩溃或画面扭曲
     glViewport(last_viewport[0], last_viewport[1], last_viewport[2], last_viewport[3]);
     if (last_depth) glEnable(GL_DEPTH_TEST);
 
