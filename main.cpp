@@ -13,6 +13,7 @@
 #include <thread>
 #include <chrono>
 #include <fcntl.h>
+#include <dirent.h> // 新增：用于扫描系统字体目录
 #include "dobby.h"
 #include "imgui.h"
 #include "imgui_impl_android.h"
@@ -25,6 +26,7 @@
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
 
 static bool g_Initialized = false;
+static bool g_FontLoaded = false; // 新增：记录字体是否成功加载
 
 struct {
     float x = 0.0f;
@@ -62,7 +64,6 @@ struct DynamicOffsets {
     uint32_t addr3_to_addr5 = 0x100;
     uint32_t addr3_to_addr6 = 0x70;
     
-    // 数据属性的偏移也可以视需要动态化，这里先固定常用的
     uint32_t prop_gold  = 0x20;
     uint32_t prop_hp    = 0x30;
     uint32_t prop_maxhp = 0x32;
@@ -108,7 +109,7 @@ struct DebugChain {
 
 struct GameSnapshot {
     bool inMatch = false;
-    DynamicOffsets offsets; // 记录生成这份快照时使用的偏移
+    DynamicOffsets offsets; 
     DebugChain debug;
     std::vector<PlayerData> players;
 };
@@ -124,7 +125,6 @@ void DataWorkerThread() {
     while (true) {
         GameSnapshot newSnap;
         
-        // 读取最新的动态偏移
         DynamicOffsets currOff;
         {
             std::lock_guard<std::mutex> lock(g_OffsetMutex);
@@ -138,7 +138,6 @@ void DataWorkerThread() {
             newSnap.inMatch = true;
             newSnap.debug.baseX0 = baseX0;
             
-            // 按照最新的动态偏移进行抓取
             uintptr_t addr1 = SafeRead<uintptr_t>(baseX0 + currOff.x0_to_addr1);
             newSnap.debug.addr1 = addr1;
             
@@ -148,7 +147,7 @@ void DataWorkerThread() {
                 
                 if (addr2) {
                     for (int i = 0; i < 15; ++i) { 
-                        uintptr_t item = SafeRead<uintptr_t>(addr2 + (i * 0x8)); // 假设指针数组大小为 8 字节
+                        uintptr_t item = SafeRead<uintptr_t>(addr2 + (i * 0x8)); 
                         newSnap.debug.items[i].base = item;
                         if (!item) continue;
 
@@ -183,7 +182,6 @@ void DataWorkerThread() {
                             p.mapY = SafeRead<float>(addr6 + 0x54);
                         }
 
-                        // 有效性过滤
                         if (p.maxHp > 0 && p.maxHp < 50000) {
                             newSnap.players.push_back(p);
                         }
@@ -239,7 +237,6 @@ void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
     
     if (ImGui::Begin("指针断点诊断工具 (Pointer Debugger)")) {
         
-        // --- 1. 运行时偏移量实时修改面板 ---
         if (ImGui::CollapsingHeader("动态偏移修改器 (点击下方按钮调节)", ImGuiTreeNodeFlags_DefaultOpen)) {
             std::lock_guard<std::mutex> lock(g_OffsetMutex);
             ImGui::TextColored(ImVec4(1, 1, 0, 1), "注：点击下方按钮直接微调，步长为 10 进制");
@@ -271,7 +268,6 @@ void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
 
         ImGui::Separator();
 
-        // --- 2. 核心模块与 RVA 展示 ---
         ImGui::TextColored(ImVec4(0, 1, 1, 1), "[核心库] %s 基址: 0x%lx", GAME_MODULE, g_GameBase);
         ImGui::TextColored(ImVec4(0, 1, 1, 1), "[Hook 1] InitActor (RVA 0x73507bc) -> 实际内存: 0x%lx", g_HookAddr_InitActor);
         ImGui::TextColored(ImVec4(0, 1, 1, 1), "[Hook 2] ClearActor (RVA 0x734bc10) -> 实际内存: 0x%lx", g_HookAddr_ClearActor);
@@ -280,7 +276,6 @@ void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
         ImGui::TextColored(ImVec4(1, 1, 0, 1), "断点图例: 绿色 = 读取成功 | 红色 = 0x0 (请排查上方该级偏移是否正确)");
         ImGui::Separator();
         
-        // --- 3. 动态实时断点树 ---
         const auto& d = snap.debug;
         const auto& off = snap.offsets;
         
@@ -382,19 +377,56 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     if (!g_Initialized) {
         ImGui::CreateContext();
         ImGui_ImplOpenGL3_Init("#version 300 es");
-        
-        // 自动加载安卓系统自带的中文字体，解决全部变成问号的问题
         ImGuiIO& io = ImGui::GetIO();
-        const char* fontPaths[] = {
-            "/system/fonts/NotoSansCJK-Regular.ttc",
-            "/system/fonts/NotoSansSC-Regular.otf",
-            "/system/fonts/DroidSansFallback.ttf",
-            "/system/fonts/Miui-Regular.ttf"
+        
+        // --- 核心修复：安卓全系统级中文字体智能扫描 ---
+        std::vector<std::string> fontKeywords = {
+            "NotoSansCJK", "NotoSansSC", "DroidSansFallback", 
+            "Miui-", "miui", "HwFont", "Oplus", "SysFont", "VivoFont"
         };
-        for (int i = 0; i < 4; ++i) {
-            if (access(fontPaths[i], F_OK) == 0) {
-                io.Fonts->AddFontFromFileTTF(fontPaths[i], 28.0f, NULL, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
-                break;
+        
+        DIR* dir = opendir("/system/fonts");
+        if (dir) {
+            struct dirent* entry;
+            while ((entry = readdir(dir)) != NULL) {
+                std::string fname = entry->d_name;
+                // 确保它是一个字体文件
+                if (fname.find(".ttf") != std::string::npos || 
+                    fname.find(".ttc") != std::string::npos || 
+                    fname.find(".otf") != std::string::npos) {
+                    
+                    // 看名字是否包含已知中文字体的关键字
+                    for (const auto& kw : fontKeywords) {
+                        if (fname.find(kw) != std::string::npos) {
+                            std::string fullPath = "/system/fonts/" + fname;
+                            if (access(fullPath.c_str(), R_OK) == 0) {
+                                io.Fonts->AddFontFromFileTTF(fullPath.c_str(), 28.0f, NULL, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
+                                g_FontLoaded = true;
+                                LOGI("[*] 成功智能匹配到你的手机字体: %s", fullPath.c_str());
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (g_FontLoaded) break;
+            }
+            closedir(dir);
+        }
+        
+        // 如果上面智能扫描全失败了，强行保底检查几个通用路径
+        if (!g_FontLoaded) {
+            const char* fallbacks[] = {
+                "/system/fonts/NotoSansCJK-Regular.ttc",
+                "/system/fonts/NotoSansSC-Regular.otf",
+                "/system/fonts/DroidSansFallback.ttf"
+            };
+            for (int i = 0; i < 3; i++) {
+                if (access(fallbacks[i], R_OK) == 0) {
+                    io.Fonts->AddFontFromFileTTF(fallbacks[i], 28.0f, NULL, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
+                    g_FontLoaded = true;
+                    LOGI("[*] 使用了系统备用中文字库: %s", fallbacks[i]);
+                    break;
+                }
             }
         }
         
@@ -442,6 +474,14 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     static bool show_radar = true;
 
     if (ImGui::Begin("游戏全自动透视框架 (全中文适配版)")) {
+        
+        // 专门给缺失字体手机的警报提示
+        if (!g_FontLoaded) {
+            ImGui::TextColored(ImVec4(1, 0, 0, 1), "WARNING: /system/fonts/ CJK FONT NOT FOUND!");
+            ImGui::TextColored(ImVec4(1, 0, 0, 1), "YOUR DEVICE MAY SHOW QUESTION MARKS (?)");
+            ImGui::Separator();
+        }
+
         float currentHeight = ImGui::GetWindowHeight();
         g_DynamicScale = currentHeight / g_BaseWindowHeight;
         if (g_DynamicScale < 0.4f) g_DynamicScale = 0.4f;
@@ -550,14 +590,27 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 }
 
 void* DelayedHookThread(void*) {
-    sleep(15); 
+    // 1. 无延迟！立即挂钩渲染层和输入层，让菜单瞬间显示
+    void* sym_egl = DobbySymbolResolver("libEGL.so", "eglSwapBuffers");
+    if (sym_egl) DobbyHook(sym_egl, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
     
+    void* consume_addr = DobbySymbolResolver("libinput.so", "_ZN7android13InputConsumer7consumeEPNS_26InputEventFactoryInterfaceEblPjPPNS_10InputEventE");
+    if (consume_addr) DobbyHook(consume_addr, (void*)hook_consume, (void**)&old_consume);
+    
+    // 2. 启动数据更新线程
     std::thread(DataWorkerThread).detach();
 
-    uintptr_t gameBase = GetModuleBase(GAME_MODULE);
-    if (!gameBase) {
-        LOGE("未找到 %s", GAME_MODULE);
-    } else {
+    // 3. 在后台默默轮询等待游戏核心库加载（绝不会再卡死菜单！）
+    uintptr_t gameBase = 0;
+    int wait_count = 0;
+    while (wait_count < 60) { // 最多等 60 秒
+        gameBase = GetModuleBase(GAME_MODULE);
+        if (gameBase) break;
+        sleep(1);
+        wait_count++;
+    }
+
+    if (gameBase) {
         g_GameBase = gameBase;
         g_HookAddr_InitActor = gameBase + 0x73507bc;
         g_HookAddr_ClearActor = gameBase + 0x734bc10;
@@ -568,15 +621,11 @@ void* DelayedHookThread(void*) {
         LOGI("[*] 准备 Hook ClearActor, RVA: 0x734bc10, 绝对地址: 0x%lx", g_HookAddr_ClearActor);
         DobbyHook((void*)g_HookAddr_ClearActor, (void*)hook_ClearActor, (void**)&old_ClearActor);
         
-        LOGI("[*] 注入成功! 模块基址: %p", (void*)gameBase);
+        LOGI("[*] 游戏模块 %s Hook 成功! 基址: %p", GAME_MODULE, (void*)gameBase);
+    } else {
+        LOGE("[-] 等待 %s 加载超时，请检查游戏包名是否正确", GAME_MODULE);
     }
 
-    void* sym_egl = DobbySymbolResolver("libEGL.so", "eglSwapBuffers");
-    if (sym_egl) DobbyHook(sym_egl, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
-    
-    void* consume_addr = DobbySymbolResolver("libinput.so", "_ZN7android13InputConsumer7consumeEPNS_26InputEventFactoryInterfaceEblPjPPNS_10InputEventE");
-    if (consume_addr) DobbyHook(consume_addr, (void*)hook_consume, (void**)&old_consume);
-    
     return nullptr;
 }
 
