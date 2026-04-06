@@ -16,20 +16,51 @@ static bool g_Initialized = false;
 typedef EGLBoolean (*p_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surface);
 static p_eglSwapBuffers old_eglSwapBuffers = nullptr;
 
+// 渲染钩子函数
 EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     if (!g_Initialized) {
-        LOGI("Successfully Entered Hook!");
+        LOGI("Successfully Entered Hook! Initializing ImGui...");
+        
+        // 获取真实的屏幕分辨率
+        EGLint width, height;
+        eglQuerySurface(dpy, surface, EGL_WIDTH, &width);
+        eglQuerySurface(dpy, surface, EGL_HEIGHT, &height);
+        LOGI("Detected Display Size: %d x %d", width, height);
+
         ImGui::CreateContext();
+        ImGuiIO& io = ImGui::GetIO();
+        io.DisplaySize = ImVec2((float)width, (float)height);
+        
+        // 设置基本样式，让菜单大一点
+        ImGui::GetStyle().ScaleAllSizes(3.0f); 
+        
         ImGui_ImplOpenGL3_Init("#version 300 es");
         g_Initialized = true;
+        LOGI("ImGui Initialized Successfully!");
     }
+
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
-    ImGui::Begin("Menu");
-    ImGui::Text("Success!");
-    ImGui::End();
+
+    // 强制显示一个简单的测试窗口
+    ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_FirstUseEver);
+    
+    if (ImGui::Begin("AndKitty Menu", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::TextColored(ImVec4(1,1,0,1), "Plugin Status: ACTIVE");
+        ImGui::Separator();
+        ImGui::Text("Package: com.tencent.jkchess");
+        static bool test_check = true;
+        ImGui::Checkbox("Test Feature", &test_check);
+        if (ImGui::Button("Close Menu")) {
+            // 逻辑处理
+        }
+        ImGui::End();
+    }
+
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
     return old_eglSwapBuffers(dpy, surface);
 }
 
@@ -38,8 +69,8 @@ void* init_thread(void*) {
     sleep(10); 
 
     LOGI("Step 2: Searching for eglSwapBuffers...");
-    // 直接查找，不进行复杂的 dlopen
-    void* sym_addr = (void*)eglSwapBuffers; 
+    // 使用 dlsym 确保获取的是 libEGL.so 里的导出符号地址
+    void* sym_addr = dlsym(RTLD_DEFAULT, "eglSwapBuffers");
     
     if (sym_addr) {
         LOGI("Step 3: Found addr at %p, Hooking...", sym_addr);
