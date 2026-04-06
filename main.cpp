@@ -16,42 +16,49 @@
 static bool g_Initialized = false;
 static bool g_ShowMenu = true;
 
-// 触摸状态全局变量
+// 记录全局触摸，如果自动处理失败，我们将手动强制注入
 struct {
     float x;
     float y;
     bool down;
     int count;
-} g_TouchData = {0, 0, false, 0};
+} g_ManualTouch = {0, 0, false, 0};
 
 typedef EGLBoolean (*p_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surface);
 static p_eglSwapBuffers old_eglSwapBuffers = nullptr;
 
-// --- 针对 Unity 绕过导出的最强 Hook 方案 ---
+// --- 针对王者荣耀 Unity 深度定制的输入拦截 ---
 
 typedef int32_t (*p_AInputQueue_getEvent)(AInputQueue* queue, AInputEvent** outEvent);
 static p_AInputQueue_getEvent old_getEvent = nullptr;
 
+typedef void (*p_AInputQueue_finishEvent)(AInputQueue* queue, AInputEvent* event, int handled);
+static p_AInputQueue_finishEvent old_finishEvent = nullptr;
+
+// 核心：拦截事件分发
 int32_t hook_AInputQueue_getEvent(AInputQueue* queue, AInputEvent** outEvent) {
     int32_t res = old_getEvent(queue, outEvent);
     if (res >= 0 && outEvent && *outEvent) {
         AInputEvent* event = *outEvent;
-        int32_t type = AInputEvent_getType(event);
-        
-        if (type == AINPUT_EVENT_TYPE_MOTION) {
-            int32_t action = AMotionEvent_getAction(event);
-            int32_t code = action & AMOTION_EVENT_ACTION_MASK;
+        if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
+            g_ManualTouch.count++;
             
-            // 直接在这里调用系统函数读取（即使 Unity 自己不调用，我们可以在 Hook 里主动读）
-            g_TouchData.x = AMotionEvent_getX(event, 0);
-            g_TouchData.y = AMotionEvent_getY(event, 0);
+            // 尝试获取坐标
+            g_ManualTouch.x = AMotionEvent_getX(event, 0);
+            g_ManualTouch.y = AMotionEvent_getY(event, 0);
             
-            if (code == AMOTION_EVENT_ACTION_DOWN || code == AMOTION_EVENT_ACTION_POINTER_DOWN) {
-                g_TouchData.down = true;
-            } else if (code == AMOTION_EVENT_ACTION_UP || code == AMOTION_EVENT_ACTION_POINTER_UP || code == AMOTION_EVENT_ACTION_CANCEL) {
-                g_TouchData.down = false;
+            int32_t action = AMotionEvent_getAction(event) & AMOTION_EVENT_ACTION_MASK;
+            if (action == AMOTION_EVENT_ACTION_DOWN || action == AMOTION_EVENT_ACTION_POINTER_DOWN) {
+                g_ManualTouch.down = true;
+            } else if (action == AMOTION_EVENT_ACTION_UP || action == AMOTION_EVENT_ACTION_POINTER_UP || action == AMOTION_EVENT_ACTION_CANCEL) {
+                g_ManualTouch.down = false;
             }
-            g_TouchData.count++;
+
+            // 如果菜单显示，尝试交给 ImGui 处理
+            if (g_ShowMenu && g_Initialized) {
+                // 调用 ImGui 后端自带的处理器
+                ImGui_ImplAndroid_HandleInputEvent(event, 1.0f, 1.0f);
+            }
         }
     }
     return res;
@@ -68,19 +75,21 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         ImGuiIO& io = ImGui::GetIO();
         io.DisplaySize = ImVec2((float)width, (float)height);
         
+        // 缩放适配
         float scale = (float)width / 1920.0f;
         ImGui::GetStyle().ScaleAllSizes(scale > 1.2f ? scale : 1.2f);
         
         ImGui_ImplOpenGL3_Init("#version 300 es");
         g_Initialized = true;
-        LOGI("ImGui Initialized: %d x %d", width, height);
+        LOGI("ImGui Context Created: %d x %d", width, height);
     }
 
     if (g_ShowMenu) {
-        // 【核心】在渲染前强行同步触摸状态
         ImGuiIO& io = ImGui::GetIO();
-        io.MousePos = ImVec2(g_TouchData.x, g_TouchData.y);
-        io.MouseDown[0] = g_TouchData.down;
+        
+        // 【双重保险】如果后端处理没生效，手动覆盖状态
+        io.MousePos = ImVec2(g_ManualTouch.x, g_ManualTouch.y);
+        io.MouseDown[0] = g_ManualTouch.down;
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui::NewFrame();
@@ -88,16 +97,16 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
         
-        if (ImGui::Begin("AndKitty SGame Debugger", &g_ShowMenu)) {
-            ImGui::Text("Captured: %d", g_TouchData.count);
-            ImGui::Text("Pos: %.1f, %.1f", g_TouchData.x, g_TouchData.y);
-            ImGui::Text("Status: %s", g_TouchData.down ? "DOWN" : "UP");
+        if (ImGui::Begin("AndKitty SGame Ultimate", &g_ShowMenu)) {
+            ImGui::TextColored(ImVec4(0,1,0,1), "Event Count: %d", g_ManualTouch.count);
+            ImGui::Text("Last Pos: %.1f, %.1f", g_ManualTouch.x, g_ManualTouch.y);
+            ImGui::Text("Status: %s", g_ManualTouch.down ? "HOLDING" : "IDLE");
+            
             ImGui::Separator();
+            if (ImGui::Button("Reset Counter")) g_ManualTouch.count = 0;
             
-            static bool test = false;
-            ImGui::Checkbox("Test Feature", &test);
-            
-            if (ImGui::Button("Close Menu")) g_ShowMenu = false;
+            static bool esp = true;
+            ImGui::Checkbox("Draw ESP", &esp);
         }
         ImGui::End();
 
@@ -109,27 +118,24 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 }
 
 void* init_thread(void*) {
-    // 既然日志显示 08:57 已经加载了 libunity.so，我们缩短等待
-    sleep(5); 
+    // 针对王者荣耀，我们等待更久，等 libunity.so 完全展开
+    sleep(12); 
 
     // 1. Hook 渲染
     void* swap_addr = dlsym(RTLD_DEFAULT, "eglSwapBuffers");
     if (swap_addr) DobbyHook(swap_addr, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
 
-    // 2. Hook AInputQueue_getEvent
-    // 它是 Unity 拿事件的总阀门，不管 Unity 内部怎么读，只要它拿了，我们就拦
-    void* getEvent_addr = dlsym(RTLD_DEFAULT, "AInputQueue_getEvent");
-    if (!getEvent_addr) {
-        void* h_android = dlopen("libandroid.so", RTLD_NOW);
-        if (h_android) getEvent_addr = dlsym(h_android, "AInputQueue_getEvent");
+    // 2. 尝试从 libandroid.so 强制获取符号
+    void* h_android = dlopen("libandroid.so", RTLD_NOW);
+    if (h_android) {
+        void* getEvent_addr = dlsym(h_android, "AInputQueue_getEvent");
+        if (getEvent_addr) {
+            LOGI("AInputQueue_getEvent found in libandroid.so, Hooking...");
+            DobbyHook(getEvent_addr, (void*)hook_AInputQueue_getEvent, (void**)&old_getEvent);
+        }
     }
 
-    if (getEvent_addr) {
-        LOGI("Hooking AInputQueue_getEvent...");
-        DobbyHook(getEvent_addr, (void*)hook_AInputQueue_getEvent, (void**)&old_getEvent);
-    }
-
-    LOGI("New Hook Strategy Applied.");
+    LOGI("Ultimate Input Strategy Loaded.");
     return nullptr;
 }
 
