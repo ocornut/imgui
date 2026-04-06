@@ -17,58 +17,50 @@
 static bool g_Initialized = false;
 static bool g_ShowMenu = true;
 
-// 增强型自适应状态存储
 struct {
-    float x, y;          // 映射后的坐标
+    float x, y;          
     bool down;
     float scaleX = 1.0f; 
     float scaleY = 1.0f;
-    float offsetX = 0.0f; // 窗口偏移修正
+    float offsetX = 0.0f; 
     float offsetY = 0.0f;
     bool calibrated = false;
     
-    // 探测到的原始数据（用于 UI 显示辅助调试）
-    float lastRawX, lastRawY;
     float lastLocalX, lastLocalY;
 } g_Touch = {0, 0, false};
 
 typedef EGLBoolean (*p_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surface);
 static p_eglSwapBuffers old_eglSwapBuffers = nullptr;
 
-// 核心自适应处理：双坐标对齐逻辑
 void handle_android_event(AInputEvent* event, float renderW, float renderH) {
     if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
         int32_t action = AMotionEvent_getAction(event) & AMOTION_EVENT_ACTION_MASK;
         
-        // 1. 获取相对窗口的逻辑坐标
         float lx = AMotionEvent_getX(event, 0);
         float ly = AMotionEvent_getY(event, 0);
-        
-        // 2. 获取屏幕绝对坐标（用于分析偏移）
-        static auto _getRawX = (float (*)(const AInputEvent*, size_t))dlsym(RTLD_DEFAULT, "AMotionEvent_getRawX");
-        static auto _getRawY = (float (*)(const AInputEvent*, size_t))dlsym(RTLD_DEFAULT, "AMotionEvent_getRawY");
-        float rx = _getRawX ? _getRawX(event, 0) : lx;
-        float ry = _getRawY ? _getRawY(event, 0) : ly;
 
-        g_Touch.lastLocalX = lx; g_Touch.lastLocalY = ly;
-        g_Touch.lastRawX = rx;   g_Touch.lastRawY = ry;
+        g_Touch.lastLocalX = lx; 
+        g_Touch.lastLocalY = ly;
 
-        // 3. 首次点击自动校准逻辑
+        // 核心修复：改进自动校准逻辑
+        // 只有在还没校准过，且点击的坐标明显属于“超大坐标系”时才触发
         if (!g_Touch.calibrated && action == AMOTION_EVENT_ACTION_DOWN) {
-            // 针对王者荣耀分屏模式的经验公式
-            // 如果逻辑坐标很大（如 > 3000），说明它基于 RequestedSize 3392
-            if (lx > renderW || ly > renderH || lx > 2000) {
+            // 如果坐标 > 2000 且 远大于渲染宽度，判定为 3392 模式
+            if (lx > renderW && lx > 2000.0f) {
                 g_Touch.scaleX = renderW / 3392.0f; 
                 g_Touch.scaleY = renderH / 2400.0f;
-            } else {
+                g_Touch.calibrated = true;
+                LOGI("Auto Sync to 3392 Mode: Scale=%.4f", g_Touch.scaleX);
+            } else if (lx > 0) {
+                // 如果坐标在渲染范围内，可能是 1:1 模式
                 g_Touch.scaleX = 1.0f;
                 g_Touch.scaleY = 1.0f;
+                g_Touch.calibrated = true;
+                LOGI("Auto Sync to 1:1 Mode");
             }
-            g_Touch.calibrated = true;
-            LOGI("Auto Calibrate: Scale(%.3f, %.3f)", g_Touch.scaleX, g_Touch.scaleY);
         }
 
-        // 4. 计算最终坐标：(原始坐标 + 偏移量) * 缩放
+        // 计算最终坐标
         g_Touch.x = (lx + g_Touch.offsetX) * g_Touch.scaleX;
         g_Touch.y = (ly + g_Touch.offsetY) * g_Touch.scaleY;
 
@@ -108,38 +100,33 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
 
-    // 辅助圆圈：红点
+    // 绘制辅助红点
     if (g_Touch.down) {
-        ImGui::GetBackgroundDrawList()->AddCircleFilled(io.MousePos, 25.0f, IM_COL32(255, 0, 0, 255));
-        ImGui::GetBackgroundDrawList()->AddCircle(io.MousePos, 40.0f, IM_COL32(255, 255, 255, 255), 12, 2.0f);
+        ImGui::GetBackgroundDrawList()->AddCircleFilled(io.MousePos, 20.0f, IM_COL32(255, 0, 0, 255));
     }
 
     if (g_ShowMenu) {
         ImGui::SetNextWindowSize(ImVec2(w * 0.8f, 0), ImGuiCond_Once);
-        ImGui::Begin("AndKitty Final Fixer", &g_ShowMenu);
+        ImGui::Begin("AndKitty Anti-Jump Fix", &g_ShowMenu);
         
-        ImGui::Text("Render: %.0f x %.0f", io.DisplaySize.x, io.DisplaySize.y);
-        ImGui::Text("Local Input: %.1f, %.1f", g_Touch.lastLocalX, g_Touch.lastLocalY);
-        ImGui::Text("Mapped ImGui: %.1f, %.1f", g_Touch.x, g_Touch.y);
-        
-        ImGui::Separator();
-        ImGui::Text("Calibration (If red dot is not under finger):");
-        
-        ImGui::SliderFloat("Scale X", &g_Touch.scaleX, 0.1f, 1.5f, "%.4f");
-        ImGui::SliderFloat("Scale Y", &g_Touch.scaleY, 0.1f, 1.5f, "%.4f");
-        ImGui::SliderFloat("Offset X (Horizontal)", &g_Touch.offsetX, -500.0f, 500.0f, "%.0f");
-        ImGui::SliderFloat("Offset Y (Vertical)", &g_Touch.offsetY, -500.0f, 500.0f, "%.0f");
+        ImGui::Text("Render: %d x %d", w, h);
+        ImGui::Text("Input Logic: %.1f, %.1f", g_Touch.lastLocalX, g_Touch.lastLocalY);
+        ImGui::Text("Scale: %.4f | Offset: %.1f", g_Touch.scaleX, g_Touch.offsetX);
 
-        if (ImGui::Button("Quick Sync (3392 Mode)", ImVec2(w*0.4f, 80))) {
-            g_Touch.scaleX = w / 3392.0f;
-            g_Touch.scaleY = h / 2400.0f;
-            g_Touch.calibrated = true;
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Reset All", ImVec2(w*0.4f, 80))) {
-            g_Touch.scaleX = 1.0f; g_Touch.scaleY = 1.0f;
-            g_Touch.offsetX = 0.0f; g_Touch.offsetY = 0.0f;
+        ImGui::Separator();
+        
+        // 允许手动微调，且调整后不再自动校准（除非重置）
+        if (ImGui::SliderFloat("Manual Scale X", &g_Touch.scaleX, 0.1f, 1.5f)) g_Touch.calibrated = true;
+        if (ImGui::SliderFloat("Manual Offset X", &g_Touch.offsetX, -200.0f, 200.0f)) g_Touch.calibrated = true;
+        
+        if (ImGui::Button("Reset & Re-Calibrate", ImVec2(-1, 80))) {
             g_Touch.calibrated = false;
+            g_Touch.offsetX = 0;
+            g_Touch.offsetY = 0;
+        }
+
+        if (ImGui::Button("Lock Current Scale", ImVec2(-1, 80))) {
+            g_Touch.calibrated = true;
         }
 
         if (ImGui::Button("Close Menu", ImVec2(-1, 80))) g_ShowMenu = false;
@@ -160,7 +147,7 @@ void* init_thread(void*) {
     void* consume = DobbySymbolResolver("libinput.so", sym);
     if (consume) {
         DobbyHook(consume, (void*)hook_consume, (void**)&old_consume);
-        LOGI("Input System Hooked.");
+        LOGI("Input Fixed.");
     }
     return nullptr;
 }
