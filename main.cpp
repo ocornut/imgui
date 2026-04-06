@@ -16,17 +16,16 @@
 static bool g_Initialized = false;
 static bool g_ShowMenu = true;
 
+struct TouchPos { float x, y; };
 struct {
     float x, y;
     bool down;
 } g_RawTouch = {0, 0, false};
 
-// 校准参数 (根据你的截图初始设定)
-static float g_ScaleX = 0.594f; 
-static float g_ScaleY = 0.473f;
-static bool g_SwapXY = false;
-static bool g_FlipX = false;
-static bool g_FlipY = false;
+// --- 自动校准存储 ---
+static TouchPos g_P1 = {0, 0}; // 窗口左上角在 Raw 坐标系下的位置
+static TouchPos g_P2 = {0, 0}; // 窗口右下角在 Raw 坐标系下的位置
+static float g_FinalX = 0, g_FinalY = 0;
 
 typedef EGLBoolean (*p_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surface);
 static p_eglSwapBuffers old_eglSwapBuffers = nullptr;
@@ -34,7 +33,6 @@ static p_eglSwapBuffers old_eglSwapBuffers = nullptr;
 typedef int (*p_InputConsumer_consume)(void* instance, void* factory, bool consumeBatches, int64_t frameTime, uint32_t* outSeq, void** outEvent);
 static p_InputConsumer_consume old_consume = nullptr;
 
-// 处理触摸事件
 void handle_event(void* event) {
     if (!event) return;
     static auto _getType = (int (*)(void*))dlsym(RTLD_DEFAULT, "AInputEvent_getType");
@@ -66,58 +64,63 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         ImGui::CreateContext();
         ImGui_ImplOpenGL3_Init("#version 300 es");
         ImGui::GetStyle().ScaleAllSizes(3.0f);
+        // 设置默认值 (基于你之前的截图尝试)
+        g_P1 = {600.0f, 200.0f}; 
+        g_P2 = {2000.0f, 1200.0f};
         g_Initialized = true;
     }
 
     ImGuiIO& io = ImGui::GetIO();
     io.DisplaySize = ImVec2((float)w, (float)h);
 
-    // 计算映射后的坐标
-    float tx = g_RawTouch.x;
-    float ty = g_RawTouch.y;
-
-    if (g_SwapXY) { float tmp = tx; tx = ty; ty = tmp; }
+    // --- 两点线性映射算法 ---
+    // 原理：将 [P1, P2] 的 Raw 范围映射到 [0, DisplaySize] 的渲染范围
+    float divX = (g_P2.x - g_P1.x);
+    float divY = (g_P2.y - g_P1.y);
     
-    float mappedX = tx * g_ScaleX;
-    float mappedY = ty * g_ScaleY;
-    
-    if (g_FlipX) mappedX = (float)w - mappedX;
-    if (g_FlipY) mappedY = (float)h - mappedY;
+    if (divX != 0 && divY != 0) {
+        g_FinalX = (g_RawTouch.x - g_P1.x) / divX * (float)w;
+        g_FinalY = (g_RawTouch.y - g_P1.y) / divY * (float)h;
+    }
 
-    io.MousePos = ImVec2(mappedX, mappedY);
+    io.MousePos = ImVec2(g_FinalX, g_FinalY);
     io.MouseDown[0] = g_RawTouch.down;
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
 
-    // 1. 在背景画一个“触摸指示器” (非常有用的调试工具)
+    // 辅助红点
     if (g_RawTouch.down) {
-        ImGui::GetBackgroundDrawList()->AddCircleFilled(io.MousePos, 20.0f, IM_COL32(255, 0, 0, 255));
-        ImGui::GetBackgroundDrawList()->AddText(ImVec2(io.MousePos.x + 30, io.MousePos.y), IM_COL32(255, 255, 0, 255), "HERE");
+        ImGui::GetBackgroundDrawList()->AddCircleFilled(io.MousePos, 25.0f, IM_COL32(255, 0, 0, 255));
     }
 
     if (g_ShowMenu) {
-        ImGui::Begin("AndKitty Touch Calibrator", &g_ShowMenu);
+        ImGui::SetNextWindowSize(ImVec2(w * 0.8f, h * 0.8f), ImGuiCond_Once);
+        ImGui::Begin("AndKitty SGame Touch Fixer", &g_ShowMenu);
+        
         ImGui::Text("Render: %dx%d", w, h);
-        ImGui::Text("Raw: %.1f, %.1f", g_RawTouch.x, g_RawTouch.y);
-        ImGui::Text("Mapped: %.1f, %.1f", mappedX, mappedY);
-        
+        ImGui::Text("Raw Touch: %.1f, %.1f", g_RawTouch.x, g_RawTouch.y);
         ImGui::Separator();
-        ImGui::Checkbox("Swap X/Y (轴翻转)", &g_SwapXY);
-        ImGui::Checkbox("Flip X (镜像X)", &g_FlipX);
-        ImGui::Checkbox("Flip Y (镜像Y)", &g_FlipY);
-        
-        ImGui::SliderFloat("Scale X", &g_ScaleX, 0.0f, 3.0f);
-        ImGui::SliderFloat("Scale Y", &g_ScaleY, 0.0f, 3.0f);
 
-        if (ImGui::Button("Reset Parameters", ImVec2(-1, 60))) {
-            g_ScaleX = 1.0f; g_ScaleY = 1.0f; g_SwapXY = false;
+        if (ImGui::Button("第一步：点击窗口[左上角]后点我", ImVec2(-1, 80))) {
+            g_P1 = {g_RawTouch.x, g_RawTouch.y};
+        }
+        ImGui::Text("P1(Min): %.1f, %.1f", g_P1.x, g_P1.y);
+
+        ImGui::Spacing();
+
+        if (ImGui::Button("第二步：点击窗口[右下角]后点我", ImVec2(-1, 80))) {
+            g_P2 = {g_RawTouch.x, g_RawTouch.y};
+        }
+        ImGui::Text("P2(Max): %.1f, %.1f", g_P2.x, g_P2.y);
+
+        ImGui::Separator();
+        ImGui::TextColored(ImVec2(0,1,0), "Mapped Pos: %.1f, %.1f", g_FinalX, g_FinalY);
+        
+        if (ImGui::Button("重置校准", ImVec2(200, 50))) {
+            g_P1 = {0,0}; g_P2 = {(float)w, (float)h};
         }
 
-        ImGui::Separator();
-        ImGui::TextColored(ImVec2(0, 1, 0), "Step: 滑动滑块，直到红点跟着手指走");
-        
-        if (ImGui::Button("Close Menu", ImVec2(-1, 60))) { g_ShowMenu = false; }
         ImGui::End();
     }
 
