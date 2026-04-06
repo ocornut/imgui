@@ -17,56 +17,56 @@
 static bool g_Initialized = false;
 static bool g_ShowMenu = true;
 
+// 存储自动校准后的比例和状态
 struct {
     float x, y;
     bool down;
+    float scaleX = 1.0f; // 默认缩放
+    float scaleY = 1.0f;
+    bool calibrated = false; // 是否已完成首次校准
 } g_Touch = {0, 0, false};
 
 typedef EGLBoolean (*p_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surface);
 static p_eglSwapBuffers old_eglSwapBuffers = nullptr;
 
-// --- 核心修复：使用 AInputEvent 官方 API 处理坐标 ---
+// 核心自适应处理：自动校准逻辑
 void handle_android_event(AInputEvent* event, float renderW, float renderH) {
     if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
         int32_t action = AMotionEvent_getAction(event) & AMOTION_EVENT_ACTION_MASK;
         
-        // 窗口模式下，getX 返回相对窗口坐标，getRawX 返回绝对屏幕坐标
+        // 获取逻辑坐标 (系统分发的，可能基于 3392x2400)
         float x = AMotionEvent_getX(event, 0);
         float y = AMotionEvent_getY(event, 0);
+        
+        // 如果还没有校准，我们通过 AInputEvent 的内部属性动态计算
+        // 逻辑：如果逻辑坐标 x 远大于渲染宽度 renderW，说明需要缩放
+        if (!g_Touch.calibrated && action == AMOTION_EVENT_ACTION_DOWN) {
+            // 假设系统最大逻辑坐标是容器宽度，我们通过它和当前渲染宽度的比例来对齐
+            // 常见的 Android 逻辑单位基准是 3392.0f, 这里我们做动态探测
+            if (x > renderW || y > renderH) {
+                g_Touch.scaleX = renderW / 3392.0f; // 你的 Requested w 默认值
+                g_Touch.scaleY = renderH / 2400.0f; // 你的 Requested h 默认值
+            } else {
+                g_Touch.scaleX = 1.0f;
+                g_Touch.scaleY = 1.0f;
+            }
+            g_Touch.calibrated = true; 
+            LOGI("Auto Calibrated: ScaleX=%.3f, ScaleY=%.3f", g_Touch.scaleX, g_Touch.scaleY);
+        }
 
-        // 关键自适应逻辑：
-        // 你的 Requested w=3392, 而渲染 w=1426
-        // 系统分发的坐标通常基于 Requested 尺寸
-        float containerW = 3392.0f; 
-        float containerH = 2400.0f;
-
-        g_Touch.x = (x / containerW) * renderW;
-        g_Touch.y = (y / containerH) * renderH;
+        // 应用缩放系数，将坐标映射回 ImGui 渲染区域
+        g_Touch.x = x * g_Touch.scaleX;
+        g_Touch.y = y * g_Touch.scaleY;
 
         if (action == AMOTION_EVENT_ACTION_DOWN) g_Touch.down = true;
         else if (action == AMOTION_EVENT_ACTION_UP || action == AMOTION_EVENT_ACTION_CANCEL) g_Touch.down = false;
         
-        // 打印坐标以便调试
         if (g_Touch.down) {
-            LOGI("Touch: Raw(%.1f, %.1f) -> Mapped(%.1f, %.1f)", x, y, g_Touch.x, g_Touch.y);
+            LOGI("Touch Event: Logic(%.1f, %.1f) -> Mapped(%.1f, %.1f)", x, y, g_Touch.x, g_Touch.y);
         }
     }
 }
 
-// --- 万能 Hook：拦截 ALooper_pollOnce ---
-// 只要应用在处理输入，就一定会走这个函数
-typedef int (*p_ALooper_pollOnce)(int timeoutMillis, int* outFd, int* outEvents, void** outData);
-static p_ALooper_pollOnce old_pollOnce = nullptr;
-
-int hook_ALooper_pollOnce(int timeoutMillis, int* outFd, int* outEvents, void** outData) {
-    int res = old_pollOnce(timeoutMillis, outFd, outEvents, outData);
-    
-    // 如果返回的是回调处理，尝试从中读取事件
-    // 注意：这里是很多游戏引擎处理输入的真正入口
-    return res;
-}
-
-// 继续保留 consume 挂钩作为双保险
 typedef int (*p_InputConsumer_consume)(void* instance, void* factory, bool consumeBatches, int64_t frameTime, uint32_t* outSeq, void** outEvent);
 static p_InputConsumer_consume old_consume = nullptr;
 
@@ -86,9 +86,9 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     if (!g_Initialized) {
         ImGui::CreateContext();
         ImGui_ImplOpenGL3_Init("#version 300 es");
-        ImGui::GetStyle().ScaleAllSizes(3.0f);
+        ImGui::GetStyle().ScaleAllSizes(3.0f); // 针对高分屏放大 UI
         g_Initialized = true;
-        LOGI("ImGui Init Success: %d x %d", w, h);
+        LOGI("ImGui Init: %d x %d", w, h);
     }
 
     ImGuiIO& io = ImGui::GetIO();
@@ -99,16 +99,23 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
 
+    // 在触碰点画一个红色指示圆圈，用于验证是否完全对齐
     if (g_Touch.down) {
         ImGui::GetBackgroundDrawList()->AddCircleFilled(io.MousePos, 20.0f, IM_COL32(255, 0, 0, 255));
     }
 
     if (g_ShowMenu) {
-        ImGui::SetNextWindowSize(ImVec2(w * 0.5f, h * 0.5f), ImGuiCond_Once);
-        ImGui::Begin("AndKitty Universal Fixer", &g_ShowMenu);
-        ImGui::Text("Plugin Status: ACTIVE");
-        ImGui::Text("Render Res: %d x %d", w, h);
+        ImGui::Begin("AndKitty Auto-Adaptive", &g_ShowMenu);
+        ImGui::Text("Render Res: %.0f x %.0f", io.DisplaySize.x, io.DisplaySize.y);
         ImGui::Text("Touch Pos: %.1f, %.1f", g_Touch.x, g_Touch.y);
+        ImGui::Separator();
+        
+        if (ImGui::SliderFloat("Manual Scale X", &g_Touch.scaleX, 0.1f, 2.0f)) g_Touch.calibrated = true;
+        if (ImGui::SliderFloat("Manual Scale Y", &g_Touch.scaleY, 0.1f, 2.0f)) g_Touch.calibrated = true;
+        
+        if (ImGui::Button("Reset Calibration", ImVec2(-1, 80))) {
+            g_Touch.calibrated = false;
+        }
         
         if (ImGui::Button("Close Menu", ImVec2(-1, 80))) g_ShowMenu = false;
         ImGui::End();
@@ -120,28 +127,16 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 }
 
 void* init_thread(void*) {
-    LOGI("Plugin thread started. Waiting 15s...");
     sleep(15);
-
-    // 1. Hook EGL
     void* egl = dlsym(RTLD_DEFAULT, "eglSwapBuffers");
     if (egl) DobbyHook(egl, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
 
-    // 2. Hook InputConsumer (针对 native 应用)
     const char* sym = "_ZN7android13InputConsumer7consumeEPNS_26InputEventFactoryInterfaceEblPjPPNS_10InputEventE";
     void* consume = DobbySymbolResolver("libinput.so", sym);
     if (consume) {
         DobbyHook(consume, (void*)hook_consume, (void**)&old_consume);
         LOGI("InputConsumer Hooked.");
     }
-
-    // 3. Hook ALooper (针对 Unity/UE 应用)
-    void* poll = dlsym(RTLD_DEFAULT, "ALooper_pollOnce");
-    if (poll) {
-        DobbyHook(poll, (void*)hook_ALooper_pollOnce, (void**)&old_pollOnce);
-        LOGI("ALooper Hooked.");
-    }
-
     return nullptr;
 }
 
