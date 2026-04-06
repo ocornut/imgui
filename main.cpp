@@ -27,6 +27,7 @@ struct {
     bool calibrated = false;
     
     float lastLocalX, lastLocalY;
+    float maxSeenX = 0.0f; // 用于动态探测屏幕逻辑宽度
 } g_Touch = {0, 0, false};
 
 typedef EGLBoolean (*p_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surface);
@@ -42,27 +43,28 @@ void handle_android_event(AInputEvent* event, float renderW, float renderH) {
         g_Touch.lastLocalX = lx; 
         g_Touch.lastLocalY = ly;
 
-        // 核心修复：改进自动校准逻辑
-        // 只有在还没校准过，且点击的坐标明显属于“超大坐标系”时才触发
+        // 核心修复：动态探测逻辑宽度
+        // 如果红点往右偏，通常是因为 scaleX 太大。
+        // 我们通过追踪用户点击的最大 X 坐标，来推断系统的 Requested Width
+        if (action == AMOTION_EVENT_ACTION_MOVE || action == AMOTION_EVENT_ACTION_DOWN) {
+            if (lx > g_Touch.maxSeenX) g_Touch.maxSeenX = lx;
+        }
+
         if (!g_Touch.calibrated && action == AMOTION_EVENT_ACTION_DOWN) {
-            // 如果坐标 > 2000 且 远大于渲染宽度，判定为 3392 模式
+            // 初始猜测：如果是超大坐标系
             if (lx > renderW && lx > 2000.0f) {
                 g_Touch.scaleX = renderW / 3392.0f; 
                 g_Touch.scaleY = renderH / 2400.0f;
-                g_Touch.calibrated = true;
-                LOGI("Auto Sync to 3392 Mode: Scale=%.4f", g_Touch.scaleX);
-            } else if (lx > 0) {
-                // 如果坐标在渲染范围内，可能是 1:1 模式
+            } else {
                 g_Touch.scaleX = 1.0f;
                 g_Touch.scaleY = 1.0f;
-                g_Touch.calibrated = true;
-                LOGI("Auto Sync to 1:1 Mode");
             }
+            // 注意：这里先不设 calibrated = true，允许动态调整
         }
 
         // 计算最终坐标
-        g_Touch.x = (lx + g_Touch.offsetX) * g_Touch.scaleX;
-        g_Touch.y = (ly + g_Touch.offsetY) * g_Touch.scaleY;
+        g_Touch.x = (lx * g_Touch.scaleX) + g_Touch.offsetX;
+        g_Touch.y = (ly * g_Touch.scaleY) + g_Touch.offsetY;
 
         if (action == AMOTION_EVENT_ACTION_DOWN) g_Touch.down = true;
         else if (action == AMOTION_EVENT_ACTION_UP || action == AMOTION_EVENT_ACTION_CANCEL) g_Touch.down = false;
@@ -100,33 +102,46 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
 
-    // 绘制辅助红点
     if (g_Touch.down) {
+        // 绘制十字准星辅助对齐
+        ImGui::GetBackgroundDrawList()->AddLine(ImVec2(0, g_Touch.y), ImVec2(io.DisplaySize.x, g_Touch.y), IM_COL32(255, 0, 0, 150));
+        ImGui::GetBackgroundDrawList()->AddLine(ImVec2(g_Touch.x, 0), ImVec2(g_Touch.x, io.DisplaySize.y), IM_COL32(255, 0, 0, 150));
         ImGui::GetBackgroundDrawList()->AddCircleFilled(io.MousePos, 20.0f, IM_COL32(255, 0, 0, 255));
     }
 
     if (g_ShowMenu) {
-        ImGui::SetNextWindowSize(ImVec2(w * 0.8f, 0), ImGuiCond_Once);
-        ImGui::Begin("AndKitty Anti-Jump Fix", &g_ShowMenu);
+        ImGui::SetNextWindowSize(ImVec2(w * 0.85f, 0), ImGuiCond_Once);
+        ImGui::Begin("AndKitty Precision Fix", &g_ShowMenu);
         
-        ImGui::Text("Render: %d x %d", w, h);
-        ImGui::Text("Input Logic: %.1f, %.1f", g_Touch.lastLocalX, g_Touch.lastLocalY);
-        ImGui::Text("Scale: %.4f | Offset: %.1f", g_Touch.scaleX, g_Touch.offsetX);
+        ImGui::Text("Render Res: %d x %d", w, h);
+        ImGui::Text("Max Input X Detected: %.1f", g_Touch.maxSeenX);
+        ImGui::Text("Current ScaleX: %.4f", g_Touch.scaleX);
 
         ImGui::Separator();
+        ImGui::Text("If red dot is too far RIGHT, decrease Scale X");
         
-        // 允许手动微调，且调整后不再自动校准（除非重置）
-        if (ImGui::SliderFloat("Manual Scale X", &g_Touch.scaleX, 0.1f, 1.5f)) g_Touch.calibrated = true;
-        if (ImGui::SliderFloat("Manual Offset X", &g_Touch.offsetX, -200.0f, 200.0f)) g_Touch.calibrated = true;
+        if (ImGui::SliderFloat("Scale X", &g_Touch.scaleX, 0.1f, 1.2f, "%.4f")) g_Touch.calibrated = true;
+        if (ImGui::SliderFloat("Offset X", &g_Touch.offsetX, -300.0f, 300.0f, "%.0f")) g_Touch.calibrated = true;
         
-        if (ImGui::Button("Reset & Re-Calibrate", ImVec2(-1, 80))) {
-            g_Touch.calibrated = false;
-            g_Touch.offsetX = 0;
-            g_Touch.offsetY = 0;
+        ImGui::Spacing();
+        
+        // 针对红点往右偏的快速修复方案
+        if (ImGui::Button("Fix: Red Dot Too Far Right", ImVec2(-1, 100))) {
+            // 如果 maxSeenX 存在，我们尝试用它作为分母
+            if (g_Touch.maxSeenX > w) {
+                g_Touch.scaleX = (float)w / g_Touch.maxSeenX;
+                g_Touch.scaleY = (float)h / (g_Touch.maxSeenX * (2400.0f/3392.0f));
+            } else {
+                g_Touch.scaleX *= 0.9f; // 每次缩小 10%
+            }
+            g_Touch.calibrated = true;
         }
 
-        if (ImGui::Button("Lock Current Scale", ImVec2(-1, 80))) {
-            g_Touch.calibrated = true;
+        if (ImGui::Button("Reset Calibration", ImVec2(-1, 80))) {
+            g_Touch.calibrated = false;
+            g_Touch.maxSeenX = 0;
+            g_Touch.scaleX = 1.0f; g_Touch.scaleY = 1.0f;
+            g_Touch.offsetX = 0; g_Touch.offsetY = 0;
         }
 
         if (ImGui::Button("Close Menu", ImVec2(-1, 80))) g_ShowMenu = false;
@@ -147,7 +162,7 @@ void* init_thread(void*) {
     void* consume = DobbySymbolResolver("libinput.so", sym);
     if (consume) {
         DobbyHook(consume, (void*)hook_consume, (void**)&old_consume);
-        LOGI("Input Fixed.");
+        LOGI("Input System Active.");
     }
     return nullptr;
 }
