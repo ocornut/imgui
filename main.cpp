@@ -99,9 +99,19 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     g_Touch.renderW = (float)w;
     g_Touch.renderH = (float)h;
 
+    // --- 纯净原生初始化 ---
     if (!g_Initialized) {
         ImGui::CreateContext();
         ImGui_ImplOpenGL3_Init("#version 300 es");
+        
+        // 仅在初始化时进行一次移动端适配放大，不再干涉后续的原生运行逻辑
+        float initScale = (float)h / 1000.0f;
+        if (initScale < 1.0f) initScale = 1.0f;
+        
+        ImGuiStyle& style = ImGui::GetStyle();
+        style.ScaleAllSizes(3.5f * initScale);
+        ImGui::GetIO().FontGlobalScale = 3.5f * initScale;
+        
         g_Initialized = true;
     }
 
@@ -109,18 +119,6 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     io.DisplaySize = ImVec2(g_Touch.renderW, g_Touch.renderH);
     io.MousePos = ImVec2(g_Touch.x, g_Touch.y);
     io.MouseDown[0] = g_Touch.down;
-
-    // --- 动态字体缩放 (移出了 Init，每一帧都会自适应) ---
-    // 如果你拉动分屏线，或者横竖屏切换，字体会瞬间跟着变大变小
-    float uiScale = (float)h / 1000.0f;
-    if (uiScale < 1.0f) uiScale = 1.0f;
-    io.FontGlobalScale = 3.5f * uiScale;
-
-    // 修改样式，把控件也变大，防止手指点不到
-    ImGuiStyle& style = ImGui::GetStyle();
-    style.ItemSpacing = ImVec2(8.0f * uiScale, 8.0f * uiScale);
-    style.FramePadding = ImVec2(8.0f * uiScale, 8.0f * uiScale);
-    style.WindowRounding = 12.0f;
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
@@ -132,11 +130,12 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 
     // --- 菜单 UI ---
     ImGui::SetNextWindowPos(ImVec2(30, 30), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(w * 0.6f, h * 0.5f), ImGuiCond_FirstUseEver);
     
-    // 恢复右下角的拖拽缩放小三角 (移除了 AlwaysAutoResize 标志)
-    if (ImGui::Begin("Zero-Config Engine", nullptr, ImGuiWindowFlags_NoCollapse)) {
+    // 原汁原味的 ImGui 窗口
+    if (ImGui::Begin("Zero-Config Engine")) {
         
-        ImGui::TextColored(ImVec4(0, 1, 1, 1), "[*] Auto-Adaptive Engine Active");
+        ImGui::TextColored(ImVec4(0, 1, 1, 1), "[*] Pure Native ImGui");
         ImGui::Separator();
         
         ImGui::Text("Render Surface: %.0f x %.0f", g_Touch.renderW, g_Touch.renderH);
@@ -152,8 +151,9 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
                     g_Touch.renderH / g_Touch.physH);
         
         ImGui::Separator();
-        ImGui::Text("- Fully automatic calibration.");
-        ImGui::Text("- Seamless split-screen support.");
+        ImGui::Text("- Drag bottom-right corner to resize.");
+        ImGui::Text("- Double-click title bar to collapse.");
+        ImGui::Separator();
 
         static bool esp_enabled = true;
         ImGui::Checkbox("Enable ESP (Demo)", &esp_enabled);
