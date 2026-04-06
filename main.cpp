@@ -43,12 +43,15 @@ struct {
 static float g_DynamicScale = 1.0f;
 static float g_UserUIScale = 1.2f; 
 
+// Hook 状态实时监控
 static std::atomic<int> g_InitActorTriggerCount{0};
 static std::atomic<int> g_DobbyStatus{-99}; 
 static uintptr_t g_GameBase = 0;
 static uintptr_t g_HookAddr_InitActor = 0;
 
-// 安全 Pipe 读取
+// =================================================================
+// 核心读取：Pipe 安全管道模式
+// =================================================================
 static int g_SafePipe[2] = {-1, -1};
 void InitSafePipe() {
     if (g_SafePipe[0] == -1 && pipe(g_SafePipe) == -1) {
@@ -151,19 +154,42 @@ uintptr_t GetModuleBase(const char* module_name) {
 void (*old_InitActorParams)(void* x0, void* x1, void* x2, void* x3);
 void hook_InitActorParams(void* x0, void* x1, void* x2, void* x3) {
     g_InitActorTriggerCount++;
+    LOGI("[TRIGGER] InitActorParams Hooked! x0 = %p", x0);
     g_ActorManager.store((uintptr_t)x0);
     old_InitActorParams(x0, x1, x2, x3);
 }
 
+// =================================================================
+// UI 绘制与状态输出
+// =================================================================
 void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
     ImGui::SetNextWindowPos(ImVec2(w * 0.45f, 50), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(w * 0.52f, h * 0.85f), ImGuiCond_FirstUseEver);
     
-    if (ImGui::Begin(u8"全量地址链路监控 (Debug Mode)")) {
+    if (ImGui::Begin(u8"地址链路全监控 (Debug Mode)")) {
         ImGui::TextColored(ImVec4(1, 1, 0, 1), u8"---- 核心 Hook 状态诊断 ----");
         ImGui::Text(u8"Dobby 状态: %d (0成功)", (int)g_DobbyStatus);
         ImGui::Text(u8"触发次数: %d", (int)g_InitActorTriggerCount);
+        if (g_InitActorTriggerCount == 0) {
+            ImGui::TextColored(ImVec4(1, 0.2f, 0.2f, 1), u8"提示: 进局内加载时才触发捕获!");
+        }
         ImGui::Separator();
+
+        if (ImGui::CollapsingHeader(u8"十进制偏移调节", ImGuiTreeNodeFlags_DefaultOpen)) {
+            std::lock_guard<std::mutex> lock(g_OffsetMutex);
+            auto drawBtn = [](const char* label, uint32_t& val) {
+                ImGui::PushID(&val);
+                ImGui::Text("%s: %u", label, val);
+                if (ImGui::Button("-1")) val -= 1; ImGui::SameLine();
+                if (ImGui::Button("+1")) val += 1; ImGui::SameLine();
+                if (ImGui::Button("+8")) val += 8;
+                ImGui::PopID();
+                ImGui::Separator();
+            };
+            drawBtn(u8"Addr1 (X0+?)", g_Offsets.x0_to_addr1);
+            drawBtn(u8"Array (A1+?)", g_Offsets.addr1_to_addr2);
+        }
+
         const auto& d = snap.debug;
         ImGui::TextColored(ImVec4(0, 1, 1, 1), u8"基址: 0x%lx", g_GameBase);
         ImGui::TextColored(d.baseX0 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), u8"X0 (起点): 0x%lx", d.baseX0);
@@ -179,20 +205,22 @@ typedef EGLBoolean (*p_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surface);
 static p_eglSwapBuffers old_eglSwapBuffers = nullptr;
 
 // =================================================================
-// 核心修复：防止画面“花了”的状态保护函数
+// 核心修复：极致 OpenGL 状态保护，防止画面花屏
 // =================================================================
 EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     EGLint w, h; eglQuerySurface(dpy, surface, EGL_WIDTH, &w); eglQuerySurface(dpy, surface, EGL_HEIGHT, &h);
     if (w <= 0 || h <= 0) return old_eglSwapBuffers(dpy, surface);
     g_Touch.renderW = (float)w; g_Touch.renderH = (float)h;
 
-    // --- [1] OpenGL 状态深度备份 ---
+    // --- [1] 深度备份所有可能影响画面的 OpenGL 状态 ---
     GLint last_program, last_texture, last_active_texture, last_array_buffer, last_element_array_buffer, last_vertex_array;
     GLint last_viewport[4], last_scissor_box[4];
+    GLint last_blend_src_rgb, last_blend_dst_rgb, last_blend_src_alpha, last_blend_dst_alpha, last_blend_equation_rgb, last_blend_equation_alpha;
     GLboolean last_enable_blend = glIsEnabled(GL_BLEND);
     GLboolean last_enable_cull_face = glIsEnabled(GL_CULL_FACE);
     GLboolean last_enable_depth_test = glIsEnabled(GL_DEPTH_TEST);
     GLboolean last_enable_scissor_test = glIsEnabled(GL_SCISSOR_TEST);
+    GLboolean last_depth_mask; glGetBooleanv(GL_DEPTH_WRITEMASK, &last_depth_mask);
 
     glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
@@ -202,8 +230,14 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vertex_array);
     glGetIntegerv(GL_VIEWPORT, last_viewport);
     glGetIntegerv(GL_SCISSOR_BOX, last_scissor_box);
+    glGetIntegerv(GL_BLEND_SRC_RGB, &last_blend_src_rgb);
+    glGetIntegerv(GL_BLEND_DST_RGB, &last_blend_dst_rgb);
+    glGetIntegerv(GL_BLEND_SRC_ALPHA, &last_blend_src_alpha);
+    glGetIntegerv(GL_BLEND_DST_ALPHA, &last_blend_dst_alpha);
+    glGetIntegerv(GL_BLEND_EQUATION_RGB, &last_blend_equation_rgb);
+    glGetIntegerv(GL_BLEND_EQUATION_ALPHA, &last_blend_equation_alpha);
 
-    // --- [2] ImGui 绘制逻辑 ---
+    // --- [2] 绘制 ImGui ---
     GameSnapshot snapshot;
     { std::lock_guard<std::mutex> lock(g_SnapshotMutex); snapshot = g_CurrentSnapshot; }
 
@@ -238,25 +272,29 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     ImGui::SetNextWindowSize(ImVec2(w * 0.4f, h * 0.3f), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(u8"自动对局控制台 (画面保护版)")) {
         ImGui::SliderFloat(u8"UI 缩放", &g_UserUIScale, 0.5f, 2.0f);
-        ImGui::Text(u8"对局状态: %s", snapshot.inMatch ? u8"读取中" : u8"待命");
+        if (ImGui::Button(u8"重置触控")) { g_Touch.offsetX = 0; g_Touch.offsetY = 0; }
+        ImGui::Text(u8"状态: %s", snapshot.inMatch ? u8"读取中" : u8"待命");
     }
     ImGui::End();
 
     DrawPointerDebugger(snapshot, w, h);
     
     ImGui::Render();
-    glViewport(0, 0, w, h); // 临时切换到全屏 Viewport 画菜单
+    glViewport(0, 0, w, h); 
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-    // --- [3] OpenGL 状态深度还原 (核心修复步骤) ---
+    // --- [3] 极致还原所有 OpenGL 状态 ---
     glUseProgram(last_program);
     glBindTexture(GL_TEXTURE_2D, last_texture);
     glActiveTexture(last_active_texture);
     glBindVertexArray(last_vertex_array);
     glBindBuffer(GL_ARRAY_BUFFER, last_array_buffer);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, last_element_array_buffer);
+    glBlendEquationSeparate(last_blend_equation_rgb, last_blend_equation_alpha);
+    glBlendFuncSeparate(last_blend_src_rgb, last_blend_dst_rgb, last_blend_src_alpha, last_blend_dst_alpha);
     glViewport(last_viewport[0], last_viewport[1], last_viewport[2], last_viewport[3]);
     glScissor(last_scissor_box[0], last_scissor_box[1], last_scissor_box[2], last_scissor_box[3]);
+    glDepthMask(last_depth_mask);
     
     if (last_enable_blend) glEnable(GL_BLEND); else glDisable(GL_BLEND);
     if (last_enable_cull_face) glEnable(GL_CULL_FACE); else glDisable(GL_CULL_FACE);
@@ -266,7 +304,7 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     return old_eglSwapBuffers(dpy, surface);
 }
 
-// 触摸 Hook 逻辑 (同前)
+// 触摸 Hook (略)
 typedef int (*p_consume)(void* instance, void* factory, bool consumeBatches, int64_t frameTime, uint32_t* outSeq, void** outEvent);
 static p_consume old_consume = nullptr;
 int hook_consume(void* instance, void* factory, bool consumeBatches, int64_t frameTime, uint32_t* outSeq, void** outEvent) {
@@ -275,9 +313,9 @@ int hook_consume(void* instance, void* factory, bool consumeBatches, int64_t fra
         AInputEvent* ev = (AInputEvent*)(*outEvent);
         if (AInputEvent_getType(ev) == AINPUT_EVENT_TYPE_MOTION) {
             int32_t action = AMotionEvent_getAction(ev) & AMOTION_EVENT_ACTION_MASK;
-            float rawX = AMotionEvent_getX(ev, 0); float rawY = AMotionEvent_getY(ev, 0);
             float scX = g_Touch.renderW / g_Touch.physW; float scY = g_Touch.renderH / g_Touch.physH;
-            g_Touch.x = (rawX * scX) + g_Touch.offsetX; g_Touch.y = (rawY * scY) + g_Touch.offsetY;
+            g_Touch.x = (AMotionEvent_getX(ev, 0) * scX) + g_Touch.offsetX;
+            g_Touch.y = (AMotionEvent_getY(ev, 0) * scY) + g_Touch.offsetY;
             if (action == AMOTION_EVENT_ACTION_DOWN) g_Touch.down.store(true);
             else if (action == AMOTION_EVENT_ACTION_UP || action == AMOTION_EVENT_ACTION_CANCEL) g_Touch.down.store(false);
         }
