@@ -16,52 +16,56 @@
 static bool g_Initialized = false;
 static bool g_ShowMenu = true;
 
-// 记录全局触摸，如果自动处理失败，我们将手动强制注入
+// 触摸状态全局变量 (数据补偿池)
 struct {
     float x;
     float y;
     bool down;
     int count;
-} g_ManualTouch = {0, 0, false, 0};
+} g_CompensatedTouch = {0, 0, false, 0};
 
 typedef EGLBoolean (*p_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surface);
 static p_eglSwapBuffers old_eglSwapBuffers = nullptr;
 
-// --- 针对王者荣耀 Unity 深度定制的输入拦截 ---
+// --- 深度补偿 Hook: 即使 Unity 不走 Queue，只要它读坐标，我们就截获 ---
 
-typedef int32_t (*p_AInputQueue_getEvent)(AInputQueue* queue, AInputEvent** outEvent);
-static p_AInputQueue_getEvent old_getEvent = nullptr;
+typedef float (*p_AMotionEvent_getRawX)(const AInputEvent* motion_event, size_t pointer_index);
+static p_AMotionEvent_getRawX old_getRawX = nullptr;
 
-typedef void (*p_AInputQueue_finishEvent)(AInputQueue* queue, AInputEvent* event, int handled);
-static p_AInputQueue_finishEvent old_finishEvent = nullptr;
+typedef float (*p_AMotionEvent_getRawY)(const AInputEvent* motion_event, size_t pointer_index);
+static p_AMotionEvent_getRawY old_getRawY = nullptr;
 
-// 核心：拦截事件分发
-int32_t hook_AInputQueue_getEvent(AInputQueue* queue, AInputEvent** outEvent) {
-    int32_t res = old_getEvent(queue, outEvent);
-    if (res >= 0 && outEvent && *outEvent) {
-        AInputEvent* event = *outEvent;
-        if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
-            g_ManualTouch.count++;
-            
-            // 尝试获取坐标
-            g_ManualTouch.x = AMotionEvent_getX(event, 0);
-            g_ManualTouch.y = AMotionEvent_getY(event, 0);
-            
-            int32_t action = AMotionEvent_getAction(event) & AMOTION_EVENT_ACTION_MASK;
-            if (action == AMOTION_EVENT_ACTION_DOWN || action == AMOTION_EVENT_ACTION_POINTER_DOWN) {
-                g_ManualTouch.down = true;
-            } else if (action == AMOTION_EVENT_ACTION_UP || action == AMOTION_EVENT_ACTION_POINTER_UP || action == AMOTION_EVENT_ACTION_CANCEL) {
-                g_ManualTouch.down = false;
-            }
+typedef int32_t (*p_AMotionEvent_getAction)(const AInputEvent* motion_event);
+static p_AMotionEvent_getAction old_getAction = nullptr;
 
-            // 如果菜单显示，尝试交给 ImGui 处理
-            if (g_ShowMenu && g_Initialized) {
-                // 调用 ImGui 后端自带的处理器
-                ImGui_ImplAndroid_HandleInputEvent(event, 1.0f, 1.0f);
-            }
+float hook_AMotionEvent_getRawX(const AInputEvent* motion_event, size_t pointer_index) {
+    float x = old_getRawX(motion_event, pointer_index);
+    if (g_ShowMenu && pointer_index == 0) {
+        g_CompensatedTouch.x = x;
+        g_CompensatedTouch.count++;
+    }
+    return x;
+}
+
+float hook_AMotionEvent_getRawY(const AInputEvent* motion_event, size_t pointer_index) {
+    float y = old_getRawY(motion_event, pointer_index);
+    if (g_ShowMenu && pointer_index == 0) {
+        g_CompensatedTouch.y = y;
+    }
+    return y;
+}
+
+int32_t hook_AMotionEvent_getAction(const AInputEvent* motion_event) {
+    int32_t action = old_getAction(motion_event);
+    if (g_ShowMenu) {
+        int32_t code = action & AMOTION_EVENT_ACTION_MASK;
+        if (code == AMOTION_EVENT_ACTION_DOWN || code == AMOTION_EVENT_ACTION_POINTER_DOWN) {
+            g_CompensatedTouch.down = true;
+        } else if (code == AMOTION_EVENT_ACTION_UP || code == AMOTION_EVENT_ACTION_POINTER_UP || code == AMOTION_EVENT_ACTION_CANCEL) {
+            g_CompensatedTouch.down = false;
         }
     }
-    return res;
+    return action;
 }
 
 // 渲染钩子
@@ -75,21 +79,20 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         ImGuiIO& io = ImGui::GetIO();
         io.DisplaySize = ImVec2((float)width, (float)height);
         
-        // 缩放适配
         float scale = (float)width / 1920.0f;
         ImGui::GetStyle().ScaleAllSizes(scale > 1.2f ? scale : 1.2f);
         
         ImGui_ImplOpenGL3_Init("#version 300 es");
         g_Initialized = true;
-        LOGI("ImGui Context Created: %d x %d", width, height);
+        LOGI("ImGui Context Created.");
     }
 
     if (g_ShowMenu) {
         ImGuiIO& io = ImGui::GetIO();
         
-        // 【双重保险】如果后端处理没生效，手动覆盖状态
-        io.MousePos = ImVec2(g_ManualTouch.x, g_ManualTouch.y);
-        io.MouseDown[0] = g_ManualTouch.down;
+        // 强制将补偿的触摸数据注入 ImGui
+        io.MousePos = ImVec2(g_CompensatedTouch.x, g_CompensatedTouch.y);
+        io.MouseDown[0] = g_CompensatedTouch.down;
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui::NewFrame();
@@ -98,12 +101,13 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
         
         if (ImGui::Begin("AndKitty SGame Ultimate", &g_ShowMenu)) {
-            ImGui::TextColored(ImVec4(0,1,0,1), "Event Count: %d", g_ManualTouch.count);
-            ImGui::Text("Last Pos: %.1f, %.1f", g_ManualTouch.x, g_ManualTouch.y);
-            ImGui::Text("Status: %s", g_ManualTouch.down ? "HOLDING" : "IDLE");
+            ImGui::TextColored(ImVec4(0,1,1,1), "Direct Hook Active");
+            ImGui::Text("Captured Count: %d", g_CompensatedTouch.count);
+            ImGui::Text("Last Pos: %.1f, %.1f", g_CompensatedTouch.x, g_CompensatedTouch.y);
+            ImGui::Text("Touch Status: %s", g_CompensatedTouch.down ? "HOLDING" : "IDLE");
             
             ImGui::Separator();
-            if (ImGui::Button("Reset Counter")) g_ManualTouch.count = 0;
+            if (ImGui::Button("Reset Trace")) g_CompensatedTouch.count = 0;
             
             static bool esp = true;
             ImGui::Checkbox("Draw ESP", &esp);
@@ -118,24 +122,33 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 }
 
 void* init_thread(void*) {
-    // 针对王者荣耀，我们等待更久，等 libunity.so 完全展开
-    sleep(12); 
+    // 等待 libunity.so 及其依赖库加载
+    LOGI("Plugin thread: waiting for modules...");
+    while (true) {
+        if (dlopen("libunity.so", RTLD_NOLOAD)) break;
+        usleep(500000);
+    }
+    sleep(10); 
 
     // 1. Hook 渲染
     void* swap_addr = dlsym(RTLD_DEFAULT, "eglSwapBuffers");
     if (swap_addr) DobbyHook(swap_addr, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
 
-    // 2. 尝试从 libandroid.so 强制获取符号
+    // 2. 深度 Hook libandroid.so 导出的原始函数
+    // 即使 Unity 绕过了 AInputQueue，它读坐标时也大概率会调这些导出的 API
     void* h_android = dlopen("libandroid.so", RTLD_NOW);
     if (h_android) {
-        void* getEvent_addr = dlsym(h_android, "AInputQueue_getEvent");
-        if (getEvent_addr) {
-            LOGI("AInputQueue_getEvent found in libandroid.so, Hooking...");
-            DobbyHook(getEvent_addr, (void*)hook_AInputQueue_getEvent, (void**)&old_getEvent);
-        }
+        void* getRawX = dlsym(h_android, "AMotionEvent_getRawX");
+        void* getRawY = dlsym(h_android, "AMotionEvent_getRawY");
+        void* getAction = dlsym(h_android, "AMotionEvent_getAction");
+
+        if (getRawX) DobbyHook(getRawX, (void*)hook_AMotionEvent_getRawX, (void**)&old_getRawX);
+        if (getRawY) DobbyHook(getRawY, (void*)hook_AMotionEvent_getRawY, (void**)&old_getRawY);
+        if (getAction) DobbyHook(getAction, (void*)hook_AMotionEvent_getAction, (void**)&old_getAction);
+        
+        LOGI("Deep Touch Hooks applied.");
     }
 
-    LOGI("Ultimate Input Strategy Loaded.");
     return nullptr;
 }
 
