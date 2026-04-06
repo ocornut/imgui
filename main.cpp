@@ -50,23 +50,17 @@ static uintptr_t g_HookAddr_InitActor = 0;
 static uintptr_t g_HookAddr_ClearActor = 0;
 
 struct DynamicOffsets {
-    // 指针链偏移
     uint32_t x0_to_addr1    = 0x20;
     uint32_t addr1_to_addr2 = 0x10;
     uint32_t item_to_addr3  = 0x18;
     uint32_t addr3_to_addr4 = 0x30;
     uint32_t addr3_to_addr5 = 0x100;
     uint32_t addr3_to_addr6 = 0x70;
-
-    // 属性偏移 (addr4 内)
     uint32_t prop_gold  = 0x20;
     uint32_t prop_hp    = 0x30;
-    uint32_t prop_maxhp = 0x32;   // 注意：可能是 int16
+    uint32_t prop_maxhp = 0x32;
     uint32_t prop_level = 0x50;
-
-    // 世界坐标区内偏移 (addr5 内)
-    uint32_t prop_mana  = 0x28;   // 蓝量偏移
-    // 世界坐标 XYZ 固定 0,4,8
+    uint32_t prop_mana  = 0x28;
 };
 
 DynamicOffsets g_Offsets;
@@ -131,7 +125,6 @@ void DataWorkerThread() {
                 uintptr_t addr2 = SafeRead<uintptr_t>(addr1 + currOff.addr1_to_addr2);
                 newSnap.debug.addr2 = addr2;
                 if (addr2) {
-                    // 遍历玩家数组（每个槽位8字节指针，最大15个）
                     for (int i = 0; i < 15; ++i) {
                         uintptr_t item = SafeRead<uintptr_t>(addr2 + (i * 0x8));
                         newSnap.debug.items[i].base = item;
@@ -142,19 +135,14 @@ void DataWorkerThread() {
                         if (!addr3) continue;
 
                         PlayerData p;
-
-                        // 属性区 addr4
                         uintptr_t addr4 = SafeRead<uintptr_t>(addr3 + currOff.addr3_to_addr4);
                         newSnap.debug.items[i].addr4 = addr4;
                         if (addr4) {
                             p.gold = SafeRead<int32_t>(addr4 + currOff.prop_gold);
                             p.hp   = SafeRead<int32_t>(addr4 + currOff.prop_hp);
-                            // maxhp 偏移 0x32，可能是 int16，安全读取后转为 int32
                             p.maxHp = SafeRead<int16_t>(addr4 + currOff.prop_maxhp);
                             p.level = SafeRead<int32_t>(addr4 + currOff.prop_level);
                         }
-
-                        // 世界坐标区 addr5
                         uintptr_t addr5 = SafeRead<uintptr_t>(addr3 + currOff.addr3_to_addr5);
                         newSnap.debug.items[i].addr5 = addr5;
                         if (addr5) {
@@ -163,15 +151,12 @@ void DataWorkerThread() {
                             p.worldY = SafeRead<float>(addr5 + 0x8);
                             p.mana   = SafeRead<int32_t>(addr5 + currOff.prop_mana);
                         }
-
-                        // 小地图坐标区 addr6
                         uintptr_t addr6 = SafeRead<uintptr_t>(addr3 + currOff.addr3_to_addr6);
                         newSnap.debug.items[i].addr6 = addr6;
                         if (addr6) {
                             p.mapX = SafeRead<float>(addr6 + 0x50);
                             p.mapY = SafeRead<float>(addr6 + 0x54);
                         }
-
                         if (p.maxHp > 0 && p.maxHp < 50000)
                             newSnap.players.push_back(p);
                     }
@@ -193,7 +178,7 @@ uintptr_t GetModuleBase(const char* module_name) {
     if (!f) return 0;
     char line[512];
     while (fgets(line, sizeof(line), f)) {
-        if (strstr(line, module_name)) {
+        if (strstr(line, module_name) && strstr(line, "r-xp")) {
             sscanf(line, "%lx", &base);
             break;
         }
@@ -202,23 +187,25 @@ uintptr_t GetModuleBase(const char* module_name) {
     return base;
 }
 
-// ========== 修改点：Hook 函数改为单参数 ==========
-void (*old_InitActorParams)(void* x0);   // 原只有1个参数
-void hook_InitActorParams(void* x0) {
-    g_ActorManager.store((uintptr_t)x0);
-    LOGI("[InitActor] x0 = %p", x0);
-    old_InitActorParams(x0);              // 调用时只传 x0
+// ======================== DobbyInstrument 回调 ========================
+#ifdef __aarch64__
+void instrument_InitActorParams(RegisterContext* ctx, void* userdata) {
+    uintptr_t x0 = ctx->general.x0;
+    if (x0 != 0) {
+        LOGI("[Instrument] InitActorParams x0 = %p", (void*)x0);
+        g_ActorManager.store(x0);
+    } else {
+        LOGI("[Instrument] InitActorParams called with x0 = 0");
+    }
 }
 
-void (*old_ClearActor)(void* x0);
-void hook_ClearActor(void* x0) {
+void instrument_ClearActor(RegisterContext* ctx, void* userdata) {
+    LOGI("[Instrument] ClearActor called, x0 = %p", (void*)ctx->general.x0);
     g_ActorManager.store(0);
-    LOGI("[ClearActor] Game ended");
-    old_ClearActor(x0);
 }
-// ========== 修改结束 ==========
+#endif
 
-// 指针调试器窗口（与原代码类似，但偏移面板已适配新偏移）
+// ======================== 原有 UI 绘制函数（保持不变）========================
 void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
     ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(w * 0.55f, h * 0.8f), ImGuiCond_FirstUseEver);
@@ -252,8 +239,8 @@ void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
         }
         ImGui::Separator();
         ImGui::TextColored(ImVec4(0, 1, 1, 1), "[核心库] %s 基址: 0x%lx", GAME_MODULE, g_GameBase);
-        ImGui::TextColored(ImVec4(0, 1, 1, 1), "[Hook 1] InitActor (RVA 0x73507bc) -> 0x%lx", g_HookAddr_InitActor);
-        ImGui::TextColored(ImVec4(0, 1, 1, 1), "[Hook 2] ClearActor (RVA 0x734bc10) -> 0x%lx", g_HookAddr_ClearActor);
+        ImGui::TextColored(ImVec4(0, 1, 1, 1), "[Hook] InitActor (RVA 0x734cd54) -> 0x%lx", g_HookAddr_InitActor);
+        ImGui::TextColored(ImVec4(0, 1, 1, 1), "[Hook] ClearActor (RVA 0x734bc10) -> 0x%lx", g_HookAddr_ClearActor);
         ImGui::Separator();
 
         const auto& d = snap.debug;
@@ -281,7 +268,6 @@ void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
     ImGui::End();
 }
 
-// 触摸及分辨率辅助
 void AutoFetchDeviceResolution() {
     FILE* pipe = popen("wm size", "r");
     if (!pipe) return;
@@ -309,17 +295,14 @@ void handle_android_event(AInputEvent* event) {
     }
 }
 
-// InputConsumer Hook
 typedef int (*p_InputConsumer_consume)(void* instance, void* factory, bool consumeBatches, int64_t frameTime, uint32_t* outSeq, void** outEvent);
 static p_InputConsumer_consume old_consume = nullptr;
-
 int hook_consume(void* instance, void* factory, bool consumeBatches, int64_t frameTime, uint32_t* outSeq, void** outEvent) {
     int res = old_consume(instance, factory, consumeBatches, frameTime, outSeq, outEvent);
     if (res == 0 && outEvent && *outEvent) handle_android_event((AInputEvent*)(*outEvent));
     return res;
 }
 
-// eglSwapBuffers Hook
 typedef EGLBoolean (*p_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surface);
 static p_eglSwapBuffers old_eglSwapBuffers = nullptr;
 
@@ -341,8 +324,6 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         ImGui::CreateContext();
         ImGui_ImplOpenGL3_Init("#version 300 es");
         ImGuiIO& io = ImGui::GetIO();
-
-        // 加载中文字体（根据你的系统字体路径）
         const char* systemFonts[] = {
             "/system/fonts/SysSans-Hans-Regular.ttf",
             "/system/fonts/NotoSansCJKjp-Regular.otc",
@@ -391,7 +372,7 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     static bool show_radar = true;
 
     if (ImGui::Begin("IL2CPP 透视框架 (偏移可调)")) {
-        if (!g_FontLoaded) ImGui::TextColored(ImVec4(1,0,0,1), "警告: 无法加载系统字库，将显示为问号!");
+        if (!g_FontLoaded) ImGui::TextColored(ImVec4(1,0,0,1), "警告: 无法加载系统字库");
         float currentHeight = ImGui::GetWindowHeight();
         g_DynamicScale = currentHeight / g_BaseWindowHeight;
         if (g_DynamicScale < 0.4f) g_DynamicScale = 0.4f;
@@ -467,30 +448,31 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 
 // 延迟 Hook 线程
 void* DelayedHookThread(void*) {
-    // 1. 立即 Hook 渲染和输入，保证菜单能显示
+    // 1. 立即 Hook 渲染和输入
     void* egl = DobbySymbolResolver("libEGL.so", "eglSwapBuffers");
     if (egl) DobbyHook(egl, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
-
     void* ins = DobbySymbolResolver("libinput.so", "_ZN7android13InputConsumer7consumeEPNS_26InputEventFactoryInterfaceEblPjPPNS_10InputEventE");
     if (ins) DobbyHook(ins, (void*)hook_consume, (void**)&old_consume);
 
-    // 2. 启动数据线程（后台读取）
+    // 2. 启动数据线程
     std::thread(DataWorkerThread).detach();
 
-    // 3. 等待 libil2cpp.so 加载，然后 Hook 游戏函数
+    // 3. 等待 libil2cpp.so 加载，注册 DobbyInstrument
     while (true) {
         uintptr_t base = GetModuleBase(GAME_MODULE);
         if (base) {
             g_GameBase = base;
-            g_HookAddr_InitActor = base + 0x73507bc;
+            g_HookAddr_InitActor = base + 0x734cd54;   // 修正后的 InitActorParams 地址
             g_HookAddr_ClearActor = base + 0x734bc10;
             LOGI("[*] libil2cpp.so base = 0x%lx", base);
             LOGI("[*] InitActor addr = 0x%lx", g_HookAddr_InitActor);
             LOGI("[*] ClearActor addr = 0x%lx", g_HookAddr_ClearActor);
 
-            int ret1 = DobbyHook((void*)g_HookAddr_InitActor, (void*)hook_InitActorParams, (void**)&old_InitActorParams);
-            int ret2 = DobbyHook((void*)g_HookAddr_ClearActor, (void*)hook_ClearActor, (void**)&old_ClearActor);
-            LOGI("[*] Hook InitActor result: %d, ClearActor result: %d", ret1, ret2);
+#ifdef __aarch64__
+            int ret1 = DobbyInstrument((void*)g_HookAddr_InitActor, instrument_InitActorParams);
+            int ret2 = DobbyInstrument((void*)g_HookAddr_ClearActor, instrument_ClearActor);
+            LOGI("[*] DobbyInstrument InitActor result: %d, ClearActor result: %d", ret1, ret2);
+#endif
             break;
         }
         sleep(1);
