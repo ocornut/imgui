@@ -17,22 +17,23 @@
 static bool g_Initialized = false;
 static bool g_ShowMenu = true;
 
+// 根据 Frida 抓取的 Logic X: 2802 进行硬核对齐
 struct {
     float x, y;          
     bool down;
-    float scaleX = 1.0f; 
-    float scaleY = 1.0f;
+    // 初始值设为根据 Frida 计算的比例 (1426 / 2802 ≈ 0.5089)
+    float scaleX = 0.5089f; 
+    float scaleY = 0.5089f; // 通常 Y 轴比例与 X 一致
     float offsetX = 0.0f; 
     float offsetY = 0.0f;
-    bool calibrated = false;
     
     float lastLocalX, lastLocalY;
-    float maxSeenX = 0.0f; // 用于动态探测屏幕逻辑宽度
 } g_Touch = {0, 0, false};
 
 typedef EGLBoolean (*p_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surface);
 static p_eglSwapBuffers old_eglSwapBuffers = nullptr;
 
+// 坐标映射处理
 void handle_android_event(AInputEvent* event, float renderW, float renderH) {
     if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
         int32_t action = AMotionEvent_getAction(event) & AMOTION_EVENT_ACTION_MASK;
@@ -43,26 +44,7 @@ void handle_android_event(AInputEvent* event, float renderW, float renderH) {
         g_Touch.lastLocalX = lx; 
         g_Touch.lastLocalY = ly;
 
-        // 核心修复：动态探测逻辑宽度
-        // 如果红点往右偏，通常是因为 scaleX 太大。
-        // 我们通过追踪用户点击的最大 X 坐标，来推断系统的 Requested Width
-        if (action == AMOTION_EVENT_ACTION_MOVE || action == AMOTION_EVENT_ACTION_DOWN) {
-            if (lx > g_Touch.maxSeenX) g_Touch.maxSeenX = lx;
-        }
-
-        if (!g_Touch.calibrated && action == AMOTION_EVENT_ACTION_DOWN) {
-            // 初始猜测：如果是超大坐标系
-            if (lx > renderW && lx > 2000.0f) {
-                g_Touch.scaleX = renderW / 3392.0f; 
-                g_Touch.scaleY = renderH / 2400.0f;
-            } else {
-                g_Touch.scaleX = 1.0f;
-                g_Touch.scaleY = 1.0f;
-            }
-            // 注意：这里先不设 calibrated = true，允许动态调整
-        }
-
-        // 计算最终坐标
+        // 应用 Frida 测出的精确比例和偏移
         g_Touch.x = (lx * g_Touch.scaleX) + g_Touch.offsetX;
         g_Touch.y = (ly * g_Touch.scaleY) + g_Touch.offsetY;
 
@@ -102,46 +84,32 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
 
+    // 绘制调试红点
     if (g_Touch.down) {
-        // 绘制十字准星辅助对齐
-        ImGui::GetBackgroundDrawList()->AddLine(ImVec2(0, g_Touch.y), ImVec2(io.DisplaySize.x, g_Touch.y), IM_COL32(255, 0, 0, 150));
-        ImGui::GetBackgroundDrawList()->AddLine(ImVec2(g_Touch.x, 0), ImVec2(g_Touch.x, io.DisplaySize.y), IM_COL32(255, 0, 0, 150));
         ImGui::GetBackgroundDrawList()->AddCircleFilled(io.MousePos, 20.0f, IM_COL32(255, 0, 0, 255));
+        // 十字辅助线
+        ImGui::GetBackgroundDrawList()->AddLine(ImVec2(0, g_Touch.y), ImVec2(io.DisplaySize.x, g_Touch.y), IM_COL32(255, 255, 255, 100));
+        ImGui::GetBackgroundDrawList()->AddLine(ImVec2(g_Touch.x, 0), ImVec2(g_Touch.x, io.DisplaySize.y), IM_COL32(255, 255, 255, 100));
     }
 
     if (g_ShowMenu) {
-        ImGui::SetNextWindowSize(ImVec2(w * 0.85f, 0), ImGuiCond_Once);
-        ImGui::Begin("AndKitty Precision Fix", &g_ShowMenu);
+        ImGui::SetNextWindowSize(ImVec2(w * 0.8f, 0), ImGuiCond_Once);
+        ImGui::Begin("AndKitty Frida-Synced Menu", &g_ShowMenu);
         
-        ImGui::Text("Render Res: %d x %d", w, h);
-        ImGui::Text("Max Input X Detected: %.1f", g_Touch.maxSeenX);
-        ImGui::Text("Current ScaleX: %.4f", g_Touch.scaleX);
+        ImGui::Text("Frida Local: %.1f, %.1f", g_Touch.lastLocalX, g_Touch.lastLocalY);
+        ImGui::Text("ImGui Mapped: %.1f, %.1f", g_Touch.x, g_Touch.y);
 
         ImGui::Separator();
-        ImGui::Text("If red dot is too far RIGHT, decrease Scale X");
         
-        if (ImGui::SliderFloat("Scale X", &g_Touch.scaleX, 0.1f, 1.2f, "%.4f")) g_Touch.calibrated = true;
-        if (ImGui::SliderFloat("Offset X", &g_Touch.offsetX, -300.0f, 300.0f, "%.0f")) g_Touch.calibrated = true;
-        
-        ImGui::Spacing();
-        
-        // 针对红点往右偏的快速修复方案
-        if (ImGui::Button("Fix: Red Dot Too Far Right", ImVec2(-1, 100))) {
-            // 如果 maxSeenX 存在，我们尝试用它作为分母
-            if (g_Touch.maxSeenX > w) {
-                g_Touch.scaleX = (float)w / g_Touch.maxSeenX;
-                g_Touch.scaleY = (float)h / (g_Touch.maxSeenX * (2400.0f/3392.0f));
-            } else {
-                g_Touch.scaleX *= 0.9f; // 每次缩小 10%
-            }
-            g_Touch.calibrated = true;
-        }
+        // 允许手动微调
+        ImGui::SliderFloat("Scale X", &g_Touch.scaleX, 0.4000f, 0.6000f, "%.4f");
+        ImGui::SliderFloat("Scale Y", &g_Touch.scaleY, 0.4000f, 1.5000f, "%.4f");
+        ImGui::SliderFloat("Offset X", &g_Touch.offsetX, -100.0f, 100.0f, "%.1f");
+        ImGui::SliderFloat("Offset Y", &g_Touch.offsetY, -100.0f, 100.0f, "%.1f");
 
-        if (ImGui::Button("Reset Calibration", ImVec2(-1, 80))) {
-            g_Touch.calibrated = false;
-            g_Touch.maxSeenX = 0;
-            g_Touch.scaleX = 1.0f; g_Touch.scaleY = 1.0f;
-            g_Touch.offsetX = 0; g_Touch.offsetY = 0;
+        if (ImGui::Button("Sync to Frida Data (2802)", ImVec2(-1, 80))) {
+            g_Touch.scaleX = (float)w / 2802.0f;
+            g_Touch.scaleY = (float)h / 734.0f; // 这里的 734 是基于你日志最后几行的 Logic Y
         }
 
         if (ImGui::Button("Close Menu", ImVec2(-1, 80))) g_ShowMenu = false;
@@ -162,7 +130,6 @@ void* init_thread(void*) {
     void* consume = DobbySymbolResolver("libinput.so", sym);
     if (consume) {
         DobbyHook(consume, (void*)hook_consume, (void**)&old_consume);
-        LOGI("Input System Active.");
     }
     return nullptr;
 }
