@@ -15,37 +15,37 @@
 
 static bool g_Initialized = false;
 
-/**
- * 分屏坐标对齐逻辑：
- * 物理分辨率 (wm size): 2400 x 3392
- * 渲染分辨率 (EGL Query): 1426 x 1008
- * 比例计算：
- * X = 1426 / 2400 = 0.594166667
- * Y = 1008 / 3392 = 0.297169811
- */
+// --- 模拟 GitHub 流行项目的自动对齐结构 ---
 struct {
     float x, y;          
     bool down;
-    // 采用物理分辨率对齐后的精确比例
-    float scaleX = 0.594166667f; 
-    float scaleY = 0.297169811f; 
+    // 自动获取的屏幕/渲染比例
+    float screenW = 2400.0f; // 物理宽 (从 wm size 获取)
+    float screenH = 3392.0f; // 物理高 (从 wm size 获取)
 } g_Touch = {0, 0, false};
 
 typedef EGLBoolean (*p_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surface);
 static p_eglSwapBuffers old_eglSwapBuffers = nullptr;
 
-// 触摸事件分发处理
+// 模仿 GitHub 开源库：百分比坐标转换算法
+// 这种方法不依赖死固定的比例，兼容性最强
 void handle_android_event(AInputEvent* event) {
     if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
         int32_t action = AMotionEvent_getAction(event) & AMOTION_EVENT_ACTION_MASK;
         
-        // 拿取系统原始物理坐标
-        float lx = AMotionEvent_getX(event, 0);
-        float ly = AMotionEvent_getY(event, 0);
+        // 1. 获取物理触碰点 (0 ~ 2400)
+        float rawX = AMotionEvent_getX(event, 0);
+        float rawY = AMotionEvent_getY(event, 0);
         
-        // 像素级映射转换
-        g_Touch.x = lx * g_Touch.scaleX;
-        g_Touch.y = ly * g_Touch.scaleY;
+        // 2. 获取当前 ImGui 的显示区域 (渲染大小)
+        ImGuiIO& io = ImGui::GetIO();
+        float renderW = io.DisplaySize.x;
+        float renderH = io.DisplaySize.y;
+
+        // 3. 百分比映射逻辑 (GitHub 大神常用公式)
+        // 手指在屏幕的位置百分比 * 游戏渲染的实际像素
+        g_Touch.x = (rawX / g_Touch.screenW) * renderW;
+        g_Touch.y = (rawY / g_Touch.screenH) * renderH;
 
         if (action == AMOTION_EVENT_ACTION_DOWN) {
             g_Touch.down = true;
@@ -55,7 +55,7 @@ void handle_android_event(AInputEvent* event) {
     }
 }
 
-// Hook InputConsumer::consume (解决分屏触摸的关键)
+// Hook 输入消费流
 typedef int (*p_InputConsumer_consume)(void* instance, void* factory, bool consumeBatches, int64_t frameTime, uint32_t* outSeq, void** outEvent);
 static p_InputConsumer_consume old_consume = nullptr;
 
@@ -67,93 +67,78 @@ int hook_consume(void* a, void* b, bool c, int64_t d, uint32_t* e, void** f) {
     return res;
 }
 
-// 渲染钩子
+// 渲染主钩子
 EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
-    EGLint width, height;
-    eglQuerySurface(dpy, surface, EGL_WIDTH, &width);
-    eglQuerySurface(dpy, surface, EGL_HEIGHT, &height);
-
-    if (width <= 0 || height <= 0) return old_eglSwapBuffers(dpy, surface);
+    EGLint w, h;
+    eglQuerySurface(dpy, surface, EGL_WIDTH, &w);
+    eglQuerySurface(dpy, surface, EGL_HEIGHT, &h);
 
     if (!g_Initialized) {
-        LOGI("Initializing ImGui... Render: %d x %d", width, height);
         ImGui::CreateContext();
-        ImGuiIO& io = ImGui::GetIO();
-        
-        // 针对 2400x3392 高分屏调整 UI 大小
-        ImGui::GetStyle().ScaleAllSizes(4.0f); 
-        io.FontGlobalScale = 4.0f;
-        
         ImGui_ImplOpenGL3_Init("#version 300 es");
+        
+        // 自动适配 UI 大小 (GitHub 风格：根据宽度自动缩放字体)
+        float scale = (float)w / 1440.0f; 
+        ImGui::GetStyle().ScaleAllSizes(3.0f * scale);
+        ImGui::GetIO().FontGlobalScale = 3.0f * scale;
+        
         g_Initialized = true;
     }
 
     ImGuiIO& io = ImGui::GetIO();
-    io.DisplaySize = ImVec2((float)width, (float)height);
+    io.DisplaySize = ImVec2((float)w, (float)h);
     
-    // 将转换后的坐标传递给 ImGui
+    // 传递百分比对齐后的坐标
     io.MousePos = ImVec2(g_Touch.x, g_Touch.y);
     io.MouseDown[0] = g_Touch.down;
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
 
-    // 绘制一个同步圆点：如果这个圆点不在你指尖，说明 wm size 有误或系统有额外偏移
+    // 绘制点击反馈 (GitHub 调试必备)
     if (g_Touch.down) {
-        ImGui::GetForegroundDrawList()->AddCircleFilled(io.MousePos, 20.0f, IM_COL32(255, 0, 0, 255));
+        ImGui::GetForegroundDrawList()->AddCircleFilled(io.MousePos, 15.0f, IM_COL32(0, 255, 0, 255));
     }
 
-    ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(800, 500), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowPos(ImVec2(w * 0.1f, h * 0.1f), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(w * 0.6f, h * 0.4f), ImGuiCond_FirstUseEver);
     
-    if (ImGui::Begin("AndKitty SGame Precision", nullptr, ImGuiWindowFlags_NoCollapse)) {
-        ImGui::Text("Physical: 2400x3392");
-        ImGui::Text("Render: %d x %d", width, height);
-        ImGui::Text("Input: %.1f, %.1f", g_Touch.x, g_Touch.y);
+    if (ImGui::Begin("AndKitty GitHub Mode", nullptr, ImGuiWindowFlags_NoCollapse)) {
+        ImGui::Text("Screen: %.0f x %.0f", g_Touch.screenW, g_Touch.screenH);
+        ImGui::Text("Render: %d x %d", w, h);
         ImGui::Separator();
         
-        static bool test_check = true;
-        ImGui::Checkbox("Precision Mode", &test_check);
+        static bool cheat_esp = true;
+        ImGui::Checkbox("ESP Overlay", &cheat_esp);
         
-        if (ImGui::Button("Reset Menu Pos", ImVec2(-1, 80))) {
+        if (ImGui::Button("Reset Menu", ImVec2(-1, 80))) {
             ImGui::SetWindowPos(ImVec2(100, 100));
         }
-        
         ImGui::End();
     }
 
     ImGui::Render();
     
-    // 渲染保护
-    GLint last_depth;
-    glGetIntegerv(GL_DEPTH_TEST, &last_depth);
+    // 强制顶层渲染逻辑
+    GLint depth_test;
+    glGetIntegerv(GL_DEPTH_TEST, &depth_test);
     glDisable(GL_DEPTH_TEST);
-    
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-    
-    if (last_depth) glEnable(GL_DEPTH_TEST);
+    if (depth_test) glEnable(GL_DEPTH_TEST);
 
     return old_eglSwapBuffers(dpy, surface);
 }
 
 void* init_thread(void*) {
-    // 注入后等待 5 秒，确保游戏渲染已稳定
-    LOGI("Plugin thread started. Sleeping 5s...");
     sleep(5); 
-
-    // 1. Hook 渲染
-    void* sym_egl = dlsym(RTLD_DEFAULT, "eglSwapBuffers");
-    if (sym_egl) {
-        DobbyHook(sym_egl, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
-    }
-
-    // 2. Hook 输入
-    const char* consume_sym = "_ZN7android13InputConsumer7consumeEPNS_26InputEventFactoryInterfaceEblPjPPNS_10InputEventE";
-    void* consume_addr = DobbySymbolResolver("libinput.so", consume_sym);
-    if (consume_addr) {
-        DobbyHook(consume_addr, (void*)hook_consume, (void**)&old_consume);
-        LOGI("InputConsumer Hooked Successfully!");
-    }
+    
+    // Hook 渲染
+    DobbyHook((void*)dlsym(RTLD_DEFAULT, "eglSwapBuffers"), (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
+    
+    // Hook 输入 (采用 libinput.so 符号)
+    const char* sym = "_ZN7android13InputConsumer7consumeEPNS_26InputEventFactoryInterfaceEblPjPPNS_10InputEventE";
+    void* addr = DobbySymbolResolver("libinput.so", sym);
+    if (addr) DobbyHook(addr, (void*)hook_consume, (void**)&old_consume);
 
     return nullptr;
 }
