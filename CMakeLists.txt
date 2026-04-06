@@ -19,13 +19,13 @@ include_directories(
     ${IMGUI_DIR}/backends
 )
 
-# --- 3. 引用 Dobby 静态库 ---
-# 假设你的 Dobby 库放在 libs/arm64-v8a/libdobby.a
+# --- 3. 引用 Dobby 静态库 (现在指向根目录) ---
 add_library(dobby STATIC IMPORTED)
 set_target_properties(dobby PROPERTIES IMPORTED_LOCATION 
-    ${SOURCE_DIR}/libs/${ANDROID_ABI}/libdobby.a)
+    ${SOURCE_DIR}/libdobby.a)
 
 # --- 4. 构建主菜单插件 (libMyMenu.so) ---
+# 注意：确保你的源文件路径与实际目录结构一致
 set(PLUGIN_SOURCES
     main.cpp
     ${IMGUI_DIR}/imgui.cpp
@@ -48,23 +48,17 @@ target_link_libraries(MyMenu
 )
 
 # --- 5. 构建独立注入器 (injector) ---
-# 该可执行文件用于 Ptrace 注入，不依赖上面的插件库
 add_executable(injector injector.cpp)
 
-# 注入器需要链接 log (用于输出调试信息) 和 dl (用于 dlopen 相关操作)
+# 注入器需要链接 log 和 dl 库
 target_link_libraries(injector
     log
     dl
 )
 
-# --- 6. 编译优化与兼容性设置 ---
-# 为插件设置符号隐藏，减小体积
-set_target_properties(MyMenu PROPERTIES CXX_VISIBILITY_PRESET hidden)
-
-# 为注入器设置静态链接 C++ 运行库
-# 这样即使在精简版安卓系统上运行也不会报错找不到 libc++_shared.so
+# 为注入器设置静态链接 C++ 运行库，确保兼容性
 set_target_properties(injector PROPERTIES LINK_FLAGS "-static-libstdc++")
 
-# 打印构建信息以便调试
+# 打印构建信息
 message(STATUS "Android ABI: ${ANDROID_ABI}")
-message(STATUS "NDK Path: ${ANDROID_NDK}")
+message(STATUS "Dobby path: ${SOURCE_DIR}/libdobby.a")
