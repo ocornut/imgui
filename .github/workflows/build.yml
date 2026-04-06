@@ -5,7 +5,7 @@ on:
     branches: [ "main", "master" ]
   pull_request:
     branches: [ "main", "master" ]
-  workflow_dispatch: # 允许在 Actions 页面手动点击运行
+  workflow_dispatch: 
 
 jobs:
   build:
@@ -13,10 +13,10 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4 # 升级到 v4
+        uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4 # 升级到 v4
+        uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
@@ -42,8 +42,10 @@ jobs:
         run: cmake --build build --config Release
 
       - name: Upload Artifact
-        # 修复点：升级到 v4 以解决弃用报错
         uses: actions/upload-artifact@v4
         with:
-          name: MyMenu-So-File
-          path: build/libMyMenu.so
+          name: Mod-Toolbox-Release
+          # 同时打包 so 和 injector 两个文件
+          path: |
+            build/libMyMenu.so
+            build/injector
