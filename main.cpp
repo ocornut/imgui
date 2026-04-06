@@ -25,9 +25,10 @@ struct {
     bool down;
 } g_TouchData = {0, 0, false};
 
-// 用于窗口化坐标转换
-static int g_RealWidth = 1;
-static int g_RealHeight = 1;
+// 用于窗口化坐标转换的全局变量
+static float g_ScreenScaleX = 1.0f;
+static float g_ScreenScaleY = 1.0f;
+static bool g_NeedCalibrate = true;
 
 // --- 原函数指针 ---
 typedef EGLBoolean (*p_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surface);
@@ -36,7 +37,7 @@ static p_eglSwapBuffers old_eglSwapBuffers = nullptr;
 typedef int (*p_InputConsumer_consume)(void* instance, void* factory, bool consumeBatches, int64_t frameTime, uint32_t* outSeq, void** outEvent);
 static p_InputConsumer_consume old_consume = nullptr;
 
-// 解析 MotionEvent 坐标并进行归一化处理
+// 解析 MotionEvent 坐标
 void handle_motion_event(void* event) {
     if (!event) return;
 
@@ -52,10 +53,6 @@ void handle_motion_event(void* event) {
         float raw_y = _getY(event, 0);
 
         if (raw_x >= 0 && raw_y >= 0) {
-            // 这里是修复核心：
-            // 如果是窗口化，系统返回的是屏幕绝对坐标（如 Y=2128）
-            // 但 ImGui 需要的是窗口相对坐标。
-            // 我们先假设游戏窗口是居中的或者全屏显示的（最通用方案）
             g_TouchData.x = raw_x;
             g_TouchData.y = raw_y;
             
@@ -65,7 +62,6 @@ void handle_motion_event(void* event) {
     }
 }
 
-// 输入钩子回调
 int hook_InputConsumer_consume(void* instance, void* factory, bool consumeBatches, int64_t frameTime, uint32_t* outSeq, void** outEvent) {
     int result = old_consume(instance, factory, consumeBatches, frameTime, outSeq, outEvent);
     if (result == 0 && outEvent && *outEvent) {
@@ -87,59 +83,58 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         g_Initialized = true;
     }
 
-    g_RealWidth = width;
-    g_RealHeight = height;
-
     ImGuiIO& io = ImGui::GetIO();
     io.DisplaySize = ImVec2((float)width, (float)height);
     
-    // 关键修正：坐标映射
-    // 获取屏幕物理分辨率（假设通过这种方式简单映射，如果还是点不准，说明需要获取物理屏幕高度）
-    // 这里的逻辑：如果 Touch_Y > 窗口高度，说明触摸的是物理坐标，需要按比例缩放
-    // 临时修正方案：强制限制坐标在显示范围内
-    float finalX = g_TouchData.x;
-    float finalY = g_TouchData.y;
-    
-    // 假设你的手机全屏高度大概是 2400 左右，而窗口是 1008
-    // 我们做一个简单的比例映射（如果这是由于系统缩放导致的）
-    if (finalY > height) {
-        // 自动计算缩放比例
-        static float scaleY = -1.0f;
-        if (scaleY < 0 && g_TouchData.down) {
-            // 第一次按下时尝试计算比例
-            // 这是一个估算值，因为我们不知道物理屏幕具体多大
-            scaleY = (float)height / 2400.0f; // 假设物理高 2400
-        }
-        // finalY *= 0.42f; // 这里的 0.42 是 1008/2400 的近似值
+    // --- 核心修复：动态坐标映射 ---
+    // 逻辑：如果捕获到的坐标 Y (如2128) 大于 渲染高度 (1008)
+    // 说明系统给的是物理全屏坐标。我们需要计算缩放比例。
+    if (g_TouchData.y > (float)height && g_NeedCalibrate) {
+        // 假设常见手机高度为 2400 左右，这里我们根据第一次点击自动校准
+        // 也可以手动设置：g_ScreenScaleY = (float)height / 2400.0f;
+        // 更稳妥的做法是：如果超出范围，按当前最高比例缩放
+        g_ScreenScaleY = (float)height / 2400.0f; // 这里的 2400 是假设值，后续可微调
+        g_ScreenScaleX = (float)width / 1080.0f;  
+        // g_NeedCalibrate = false; 
     }
 
-    io.MousePos = ImVec2(finalX, finalY);
+    // 如果你发现还是点不准，最简单的暴力解法：
+    // 根据你的截图比例 1008/2128 ≈ 0.47
+    float mappedX = g_TouchData.x * ((float)width / 1080.0f); // 假设宽1080
+    float mappedY = g_TouchData.y * ((float)height / 2400.0f); // 假设高2400
+
+    // 或者直接使用固定比例（根据你的截图计算所得）
+    // mappedY = g_TouchData.y * 0.473f; 
+    // mappedX = g_TouchData.x * 0.594f; // 1426/2400 左右
+
+    io.MousePos = ImVec2(mappedX, mappedY);
     io.MouseDown[0] = g_TouchData.down;
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
 
     if (g_ShowMenu) {
-        ImGui::SetNextWindowPos(ImVec2(width * 0.1f, height * 0.1f), ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(width * 0.7f, height * 0.7f), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowPos(ImVec2(50, 50), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(width * 0.8f, height * 0.8f), ImGuiCond_FirstUseEver);
         
         if (ImGui::Begin("AndKitty SGame Ultimate", &g_ShowMenu)) {
-            ImGui::TextColored(ImVec4(0, 1, 0, 1), "Input: AInputQueue + HandleEvent");
-            ImGui::Separator();
+            ImGui::Text("Render Size: %d x %d", width, height);
+            ImGui::Text("Raw Touch: %.1f, %.1f", g_TouchData.x, g_TouchData.y);
+            ImGui::Text("Mapped Pos: %.1f, %.1f", mappedX, mappedY);
             
-            ImGui::Text("Mouse Pos: %.1f, %.1f", io.MousePos.x, io.MousePos.y);
-            ImGui::Text("WantCapture: %s", io.WantCaptureMouse ? "YES" : "NO");
             ImGui::Separator();
+            static float manualScaleX = 0.59f;
+            static float manualScaleY = 0.47f;
+            ImGui::SliderFloat("Scale X", &manualScaleX, 0.1f, 2.0f);
+            ImGui::SliderFloat("Scale Y", &manualScaleY, 0.1f, 2.0f);
             
+            // 使用滑块实时调整，直到点准为止
+            io.MousePos = ImVec2(g_TouchData.x * manualScaleX, g_TouchData.y * manualScaleY);
+
+            ImGui::Separator();
             static bool esp = false;
             ImGui::Checkbox("Enable ESP", &esp);
-            
-            static int range = 50;
-            ImGui::SliderInt("Range", &range, 0, 100);
-            
-            if (ImGui::Button("Close Menu", ImVec2(120, 50))) {
-                // g_ShowMenu = false;
-            }
+            if (ImGui::Button("Close Menu")) { /* g_ShowMenu = false; */ }
         }
         ImGui::End();
     }
@@ -151,7 +146,7 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 }
 
 void* init_thread(void*) {
-    LOGI("Plugin thread started. Waiting for game to stabilize...");
+    LOGI("Plugin thread started. Waiting 15s...");
     sleep(15); 
 
     void* egl_addr = dlsym(RTLD_DEFAULT, "eglSwapBuffers");
@@ -164,7 +159,7 @@ void* init_thread(void*) {
 
     if (consume_addr) {
         DobbyHook(consume_addr, (void*)hook_InputConsumer_consume, (void**)&old_consume);
-        LOGI("AInputQueue Hooked Successfully.");
+        LOGI("Input Hook Success.");
     }
 
     return nullptr;
