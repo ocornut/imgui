@@ -10,30 +10,35 @@
 #include "imgui_impl_android.h"
 #include "imgui_impl_opengl3.h"
 
-#define TAG "MT_Drive"
+#define TAG "MT_Auto_Drive"
 
 static bool g_Initialized = false;
 
-// --- MT 专用可视化校准结构 ---
+// --- 全自动自适应结构 ---
 struct {
     float rawX = 0.0f;
     float rawY = 0.0f;
-    
     float mappedX = 0.0f;
     float mappedY = 0.0f;
-    
     bool down = false;
     
     float renderW = 0.0f; 
     float renderH = 0.0f;
 
-    // 根据你的设备 3392x2400 与 1426x1008 计算出的完美黄金比例
-    float scaleX = 0.4204f; // 1426 / 3392
-    float scaleY = 0.4200f; // 1008 / 2400
-    
+    // 设备固定的物理分辨率 (从你之前的 wm size 获取)
+    // 只要设备不换，这两个数字永远不用动
+    float physicalW = 3392.0f;
+    float physicalH = 2400.0f;
+
+    // 内部计算参数 (自动生成，不再需要手动调)
+    float scaleX = 1.0f;
+    float scaleY = 1.0f;
     float offsetX = 0.0f;
     float offsetY = 0.0f;
 } g_Touch;
+
+// 自动定点校准状态机
+static bool g_WaitingForTopLeft = false;
 
 typedef EGLBoolean (*p_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surface);
 static p_eglSwapBuffers old_eglSwapBuffers = nullptr;
@@ -51,16 +56,24 @@ void handle_android_event(AInputEvent* event) {
         g_Touch.rawX = currentRawX;
         g_Touch.rawY = currentRawY;
 
-        // 核心公式修正：先计算比例，再加偏移。
-        // 这样一来，偏移量的单位就等于屏幕上的实际像素！
-        g_Touch.mappedX = (currentRawX * g_Touch.scaleX) + g_Touch.offsetX;
-        g_Touch.mappedY = (currentRawY * g_Touch.scaleY) + g_Touch.offsetY;
-
         if (action == AMOTION_EVENT_ACTION_DOWN) {
+            // --- 一键自动对齐逻辑 ---
+            if (g_WaitingForTopLeft) {
+                // 原理：当手指点击游戏画面真正的左上角时，Mapped坐标应该是 (0,0)
+                // 推出公式：0 = (Raw + Offset) * Scale => Offset = -Raw
+                g_Touch.offsetX = -currentRawX;
+                g_Touch.offsetY = -currentRawY;
+                g_WaitingForTopLeft = false;
+                return; // 吃掉这次点击，防止误触菜单
+            }
             g_Touch.down = true;
         } else if (action == AMOTION_EVENT_ACTION_UP || action == AMOTION_EVENT_ACTION_CANCEL) {
             g_Touch.down = false;
         }
+
+        // 核心映射：动态比例 + 自动偏移
+        g_Touch.mappedX = (currentRawX + g_Touch.offsetX) * g_Touch.scaleX;
+        g_Touch.mappedY = (currentRawY + g_Touch.offsetY) * g_Touch.scaleY;
     }
 }
 
@@ -82,6 +95,11 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     g_Touch.renderW = (float)w;
     g_Touch.renderH = (float)h;
 
+    // --- 真正的自适应缩放核心 ---
+    // 每一帧自动计算比例，如果你在游戏中途拉动分屏线条，这里会瞬间无缝适应！
+    g_Touch.scaleX = g_Touch.renderW / g_Touch.physicalW;
+    g_Touch.scaleY = g_Touch.renderH / g_Touch.physicalH;
+
     if (!g_Initialized) {
         ImGui::CreateContext();
         ImGui_ImplOpenGL3_Init("#version 300 es");
@@ -102,59 +120,46 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
 
-    // 绘制调试十字和红点
-    if (g_Touch.down) {
-        ImDrawList* draw = ImGui::GetForegroundDrawList();
-        draw->AddLine(ImVec2(0, g_Touch.mappedY), ImVec2(g_Touch.renderW, g_Touch.mappedY), IM_COL32(0, 255, 0, 200), 3.0f);
-        draw->AddLine(ImVec2(g_Touch.mappedX, 0), ImVec2(g_Touch.mappedX, g_Touch.renderH), IM_COL32(0, 255, 0, 200), 3.0f);
-        draw->AddCircleFilled(ImVec2(g_Touch.mappedX, g_Touch.mappedY), 25.0f, IM_COL32(255, 0, 0, 255));
+    // 绘制自动校准状态提示
+    ImDrawList* draw = ImGui::GetForegroundDrawList();
+    if (g_WaitingForTopLeft) {
+        // 全屏半透明黑底 + 红色提示，引导用户点击
+        draw->AddRectFilled(ImVec2(0, 0), ImVec2(w, h), IM_COL32(0, 0, 0, 150));
+        draw->AddText(ImGui::GetFont(), ImGui::GetFontSize() * 1.5f, ImVec2(w * 0.1f, h * 0.4f), 
+                      IM_COL32(255, 50, 50, 255), "【自动校准中】\n请用手指准确点击游戏画面的【最左上角】一次！", NULL, 0.0f);
+    } else if (g_Touch.down) {
+        // 正常点按时的准星
+        draw->AddLine(ImVec2(0, g_Touch.mappedY), ImVec2(w, g_Touch.mappedY), IM_COL32(0, 255, 0, 150), 2.0f);
+        draw->AddLine(ImVec2(g_Touch.mappedX, 0), ImVec2(g_Touch.mappedX, h), IM_COL32(0, 255, 0, 150), 2.0f);
+        draw->AddCircleFilled(ImVec2(g_Touch.mappedX, g_Touch.mappedY), 20.0f, IM_COL32(255, 0, 0, 255));
     }
 
+    // 菜单界面
     ImGui::SetNextWindowPos(ImVec2(20, 20), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(w * 0.9f, h * 0.8f), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(w * 0.8f, h * 0.8f), ImGuiCond_FirstUseEver);
     
-    if (ImGui::Begin("MT Visual Calibration", nullptr, ImGuiWindowFlags_NoCollapse)) {
+    if (ImGui::Begin("Auto-Adaptive Menu", nullptr, ImGuiWindowFlags_NoCollapse)) {
         
-        ImGui::TextColored(ImVec4(1,1,0,1), "【法则】随手指拖动而距离变化=调Scale | 距离固定偏=调Offset");
-        ImGui::Text("系统 RAW X: %.1f | Y: %.1f", g_Touch.rawX, g_Touch.rawY);
+        ImGui::TextColored(ImVec4(0, 1, 1, 1), "★ 全自动适配引擎已启动 ★");
+        ImGui::Text("Render Res (实时): %.0f x %.0f", g_Touch.renderW, g_Touch.renderH);
+        ImGui::Text("Auto Scale (实时): X=%.4f, Y=%.4f", g_Touch.scaleX, g_Touch.scaleY);
         ImGui::Separator();
         
-        ImVec2 btnSize(140, 80); 
+        ImGui::TextColored(ImVec4(1, 1, 0, 1), "如果点不准，只需点击下方按钮，");
+        ImGui::TextColored(ImVec4(1, 1, 0, 1), "然后摸一下游戏【最左上角】即可。");
         
-        // 比例调节区（微调）
-        ImGui::TextColored(ImVec4(0,1,1,1), "【第一步】调比例 (让红点和手指移动速度一样)");
-        ImGui::Text("Scale X: %.4f", g_Touch.scaleX);
-        if (ImGui::Button("-0.01 SX", btnSize)) g_Touch.scaleX -= 0.01f; ImGui::SameLine();
-        if (ImGui::Button("+0.01 SX", btnSize)) g_Touch.scaleX += 0.01f; ImGui::SameLine();
-        if (ImGui::Button("-0.001 SX", btnSize)) g_Touch.scaleX -= 0.001f; ImGui::SameLine();
-        if (ImGui::Button("+0.001 SX", btnSize)) g_Touch.scaleX += 0.001f;
-
-        ImGui::Text("Scale Y: %.4f", g_Touch.scaleY);
-        if (ImGui::Button("-0.01 SY", btnSize)) g_Touch.scaleY -= 0.01f; ImGui::SameLine();
-        if (ImGui::Button("+0.01 SY", btnSize)) g_Touch.scaleY += 0.01f; ImGui::SameLine();
-        if (ImGui::Button("-0.001 SY", btnSize)) g_Touch.scaleY -= 0.001f; ImGui::SameLine();
-        if (ImGui::Button("+0.001 SY", btnSize)) g_Touch.scaleY += 0.001f;
+        if (ImGui::Button("🎯 一键自动校准偏移", ImVec2(-1, 120))) {
+            g_WaitingForTopLeft = true;
+        }
 
         ImGui::Separator();
+        ImGui::Text("当前 Offset: X=%.1f, Y=%.1f", g_Touch.offsetX, g_Touch.offsetY);
         
-        // 偏移调节区（单位为像素）
-        ImGui::TextColored(ImVec4(0,1,1,1), "【第二步】调偏移 (让红点对准手指中心)");
-        ImGui::Text("Offset X: %.1f", g_Touch.offsetX);
-        if (ImGui::Button("-50 X", btnSize)) g_Touch.offsetX -= 50.0f; ImGui::SameLine();
-        if (ImGui::Button("-10 X", btnSize)) g_Touch.offsetX -= 10.0f; ImGui::SameLine();
-        if (ImGui::Button("+10 X", btnSize)) g_Touch.offsetX += 10.0f; ImGui::SameLine();
-        if (ImGui::Button("+50 X", btnSize)) g_Touch.offsetX += 50.0f;
-        
-        ImGui::Text("Offset Y: %.1f", g_Touch.offsetY);
-        if (ImGui::Button("-50 Y", btnSize)) g_Touch.offsetY -= 50.0f; ImGui::SameLine();
-        if (ImGui::Button("-10 Y", btnSize)) g_Touch.offsetY -= 10.0f; ImGui::SameLine();
-        if (ImGui::Button("+10 Y", btnSize)) g_Touch.offsetY += 10.0f; ImGui::SameLine();
-        if (ImGui::Button("+50 Y", btnSize)) g_Touch.offsetY += 50.0f;
-        
-        ImGui::Separator();
-        if (ImGui::Button("重置默认黄金比例", ImVec2(-1, 100))) {
-            g_Touch.offsetX = 0; g_Touch.offsetY = 0;
-            g_Touch.scaleX = 0.4204f; g_Touch.scaleY = 0.4200f;
+        // 预留设备修改接口，如果换手机了，修改这里的物理分辨率即可
+        if (ImGui::CollapsingHeader("高级设置 (换设备才需要点开)")) {
+            ImGui::Text("设备物理分辨率 (横屏)");
+            ImGui::DragFloat("Physical W", &g_Touch.physicalW, 1.0f, 1000.0f, 5000.0f);
+            ImGui::DragFloat("Physical H", &g_Touch.physicalH, 1.0f, 1000.0f, 5000.0f);
         }
 
         ImGui::End();
