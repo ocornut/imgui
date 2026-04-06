@@ -8,18 +8,15 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # 1. 包含路径
-# 由于源码都在根目录，直接包含根目录和 backends 子目录
 include_directories(
     ${CMAKE_SOURCE_DIR}
     ${CMAKE_SOURCE_DIR}/backends
 )
 
 # 2. 库查找路径
-# 确保 libdobby.a 放在根目录
 link_directories(${CMAKE_SOURCE_DIR})
 
-# 3. 定义源文件
-# 修复：移除 imgui/ 前缀，因为源码就在根目录
+# 3. 定义插件源文件 (.so)
 set(SOURCE_FILES
     main.cpp
     imgui.cpp
@@ -34,9 +31,7 @@ set(SOURCE_FILES
 # 4. 生成共享库 (.so)
 add_library(MyMenu SHARED ${SOURCE_FILES})
 
-# 5. 链接依赖库
-# dobby: 静态库 (libdobby.a)
-# log, GLESv3, EGL, android: Android 系统内置库
+# 5. 链接插件依赖库
 target_link_libraries(MyMenu
     dobby
     log
@@ -44,3 +39,15 @@ target_link_libraries(MyMenu
     EGL
     android
 )
+
+# 6. --- 新增：生成独立注入器可执行文件 (injector) ---
+add_executable(injector injector.cpp)
+
+# 注入器需要链接 dl 库来处理远程地址映射
+target_link_libraries(injector
+    dl
+    log
+)
+
+# 设置注入器为静态链接 C++ 运行库，确保在手机上直接运行不会缺库
+set_target_properties(injector PROPERTIES LINK_FLAGS "-static-libstdc++")
