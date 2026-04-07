@@ -418,41 +418,42 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
             ImGui::SliderFloat("菜单缩放", &g_UserUIScale, 0.5f, 2.0f);
             ImGui::Text("坐标偏移 X:%.1f Y:%.1f", g_Touch.offsetX, g_Touch.offsetY);
             if (ImGui::Button("-10##x")) g_Touch.offsetX -= 10; ImGui::SameLine();
-            if (ImGui::Button("+10##x")) g_Touch.offsetX += 10; ImGui::SameLine();
-            if (ImGui::Button("-10##y")) g_Touch.offsetY -= 10; ImGui::SameLine();
-            if (ImGui::Button("+10##y")) g_Touch.offsetY += 10;
-        }
-        ImGui::Separator();
-        ImGui::Checkbox("雷达 (Radar)", &show_radar); ImGui::SameLine();
-        ImGui::Checkbox("指针断点调试", &show_pointer_debugger);
-        ImGui::Separator();
+void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
+    ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(w * 0.55f, h * 0.8f), ImGuiCond_FirstUseEver);
+    if (ImGui::Begin("指针断点排错器")) {
         
-        ImGui::TextColored(ImVec4(0, 1, 0, 1), "状态: %s", snapshot.inMatch ? "局内" : "未获取到对象");
-
-        // --- 英雄数据读取表 ---
-        if (ImGui::BeginTable("PlayersTable", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
-            ImGui::TableSetupColumn("等级"); ImGui::TableSetupColumn("血量");
-            ImGui::TableSetupColumn("蓝量"); ImGui::TableSetupColumn("金币");
-            ImGui::TableSetupColumn("雷达坐标"); ImGui::TableHeadersRow();
-            for (const auto& p : snapshot.players) {
-                ImGui::TableNextRow();
-                ImGui::TableNextColumn(); ImGui::Text("Lv.%d", p.level);
-                ImGui::TableNextColumn(); ImGui::Text("%d/%d", p.hp, p.maxHp);
-                ImGui::TableNextColumn(); ImGui::Text("%d", p.mana);
-                ImGui::TableNextColumn(); ImGui::Text("%d", p.gold);
-                ImGui::TableNextColumn(); ImGui::Text("%.0f, %.0f", p.mapX, p.mapY);
+        // ==========================================
+        // 新增：神级功能 - 实时内存结构解剖器
+        // ==========================================
+        if (ImGui::CollapsingHeader("基址内存探查器 (寻址神器)", ImGuiTreeNodeFlags_DefaultOpen)) {
+            uintptr_t currentBase = g_ActorManager.load();
+            ImGui::TextColored(ImVec4(1, 0.5, 0, 1), "当前正在探查基址: 0x%lx", currentBase);
+            if (currentBase != 0) {
+                ImGui::BeginChild("MemDump", ImVec2(0, 200), true);
+                for (uint32_t offset = 0; offset <= 0x100; offset += 8) {
+                    uintptr_t val = SafeRead<uintptr_t>(currentBase + offset);
+                    
+                    if (val > 0x10000000 && val < 0x00007FFFFFFFFFFF) {
+                        // 发现有效指针！用绿色高亮！
+                        ImGui::TextColored(ImVec4(0, 1, 0, 1), "+0x%02X : 0x%lx <--- [可能是有效指针!]", offset, val);
+                    } else if (val != 0) {
+                        // 发现普通数据（可能是血量、坐标等）
+                        ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1), "+0x%02X : 0x%lx (整数: %lu)", offset, val, val);
+                    } else {
+                        // 空数据
+                        ImGui::TextColored(ImVec4(0.4f, 0.4f, 0.4f, 1), "+0x%02X : 0x0", offset);
+                    }
+                }
+                ImGui::EndChild();
+                ImGui::TextColored(ImVec4(1, 1, 0, 1), "操作提示: 寻找显示为绿色的【有效指针】，把它的偏移 +0xXX 填到下方的【地址1】里！");
+            } else {
+                ImGui::Text("等待获取有效基址...");
             }
-            ImGui::EndTable();
         }
-    }
-    ImGui::End();
+        ImGui::Separator();
 
-    // --- 断点排错器面板 ---
-    if (show_pointer_debugger) {
-        ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(w * 0.55f, h * 0.8f), ImGuiCond_FirstUseEver);
-        if (ImGui::Begin("指针断点排错器")) {
-            if (ImGui::CollapsingHeader("动态偏移修改面板 (十进制)", ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (ImGui::CollapsingHeader("动态偏移修改面板 (十进制)", ImGuiTreeNodeFlags_DefaultOpen)) {
                 std::lock_guard<std::mutex> lock(g_OffsetMutex);
                 auto drawOffsetBtn = [](const char* label, uint32_t& val) {
                     ImGui::PushID(&val);
