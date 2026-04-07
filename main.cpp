@@ -205,6 +205,10 @@ private:
     EngineCore() : m_currentSnapshot(std::make_shared<GameSnapshot>()) {}
 
     void DataWorkerLoop() {
+        static uintptr_t lastLogX0 = 0;
+        static uintptr_t lastLogAddr1 = 0;
+        static uintptr_t lastLogAddr2 = 0;
+
         while (true) {
             auto newSnap = std::make_shared<GameSnapshot>();
             newSnap->offsets = GetOffsets();
@@ -214,13 +218,30 @@ private:
                 newSnap->inMatch = true;
                 newSnap->debug.baseX0 = baseX0;
                 
+                // 实时输出获取到的基址和偏移数据
+                if (baseX0 != lastLogX0) {
+                    LOG_INFO("数据更新 -> 捕获到新基址 x0: 0x%lx", baseX0);
+                    lastLogX0 = baseX0;
+                }
+
                 uintptr_t addr1 = MemoryReader::SafeRead<uintptr_t>(baseX0 + newSnap->offsets.x0ToAddr1);
                 newSnap->debug.addr1 = addr1;
                 
                 if (addr1) {
+                    if (addr1 != lastLogAddr1) {
+                        LOG_INFO("数据解引用 -> addr1: 0x%lx (偏移: 0x%X)", addr1, newSnap->offsets.x0ToAddr1);
+                        lastLogAddr1 = addr1;
+                    }
+
                     uintptr_t addr2 = MemoryReader::SafeRead<uintptr_t>(addr1 + newSnap->offsets.addr1ToAddr2);
                     newSnap->debug.addr2 = addr2;
-                    if (addr2) ParsePlayers(newSnap, addr2);
+                    if (addr2) {
+                        if (addr2 != lastLogAddr2) {
+                            LOG_INFO("数据解引用 -> addr2[英雄数组]: 0x%lx (偏移: 0x%X)", addr2, newSnap->offsets.addr1ToAddr2);
+                            lastLogAddr2 = addr2;
+                        }
+                        ParsePlayers(newSnap, addr2);
+                    }
                 }
             }
 
@@ -242,9 +263,13 @@ private:
             if (!addr3) continue;
 
             PlayerData p;
+            
+            // 按要求读取并输出 3 个坐标: X, Y, Z
             p.worldX = MemoryReader::SafeRead<float>(addr3 + snap->offsets.addr3ToWorld + 0x0);
             p.worldY = MemoryReader::SafeRead<float>(addr3 + snap->offsets.addr3ToWorld + 0x4);
             p.worldZ = MemoryReader::SafeRead<float>(addr3 + snap->offsets.addr3ToWorld + 0x8);
+            
+            // 映射到雷达的2D平面坐标
             p.mapX = p.worldX;
             p.mapY = p.worldZ;
 
@@ -296,19 +321,17 @@ public:
         io.MousePos = ImVec2(touch.GetX(), touch.GetY());
         io.MouseDown[0] = touch.IsDown();
 
-        // 基础缩放：按 1080p 标准屏幕进行基准推算
         float deviceScale = std::min(2.0f, std::max(0.5f, h / 1080.0f));
         float finalScale = deviceScale * m_userScale;
 
         ImGuiStyle& style = ImGui::GetStyle();
         style = m_defaultStyle; 
-        style.ScaleAllSizes(finalScale); // 缩放 UI 边距
-        io.FontGlobalScale = finalScale; // 缩放字体
+        style.ScaleAllSizes(finalScale); 
+        io.FontGlobalScale = finalScale; 
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui::NewFrame();
 
-        // 绘制鼠标触控波纹 (全局可见)
         if (touch.IsDown()) {
             ImGui::GetForegroundDrawList()->AddCircleFilled(io.MousePos, 15.0f * finalScale, IM_COL32(0, 255, 255, 120));
             ImGui::GetForegroundDrawList()->AddCircle(io.MousePos, 22.0f * finalScale, IM_COL32(0, 255, 255, 200), 0, 2.0f);
@@ -330,15 +353,14 @@ private:
     static bool m_showDebugger;
     static bool m_showRadar;
 
-    // --- 专业级高级配色 (深色暗蓝 + 高亮荧光青) ---
     static void ApplyTechStyle(ImGuiStyle& style) {
         ImVec4* colors = style.Colors;
         colors[ImGuiCol_Text]                   = ImVec4(0.90f, 0.95f, 1.00f, 1.00f);
         colors[ImGuiCol_TextDisabled]           = ImVec4(0.40f, 0.50f, 0.60f, 1.00f);
-        colors[ImGuiCol_WindowBg]               = ImVec4(0.05f, 0.05f, 0.08f, 0.94f); // 更深、略微透明的背景
+        colors[ImGuiCol_WindowBg]               = ImVec4(0.05f, 0.05f, 0.08f, 0.94f); 
         colors[ImGuiCol_ChildBg]                = ImVec4(0.00f, 0.00f, 0.00f, 0.20f);
         colors[ImGuiCol_PopupBg]                = ImVec4(0.08f, 0.08f, 0.12f, 0.98f);
-        colors[ImGuiCol_Border]                 = ImVec4(0.00f, 0.60f, 0.80f, 0.60f); // 优雅的科技蓝边框
+        colors[ImGuiCol_Border]                 = ImVec4(0.00f, 0.60f, 0.80f, 0.60f); 
         colors[ImGuiCol_FrameBg]                = ImVec4(0.10f, 0.14f, 0.22f, 0.70f);
         colors[ImGuiCol_FrameBgHovered]         = ImVec4(0.15f, 0.35f, 0.55f, 0.80f);
         colors[ImGuiCol_FrameBgActive]          = ImVec4(0.20f, 0.45f, 0.75f, 1.00f);
@@ -359,14 +381,12 @@ private:
         colors[ImGuiCol_TableBorderStrong]      = ImVec4(0.10f, 0.30f, 0.50f, 1.00f);
         colors[ImGuiCol_TableBorderLight]       = ImVec4(0.10f, 0.20f, 0.35f, 0.50f);
 
-        // 合理的内边距，告别拥挤
         style.WindowPadding     = ImVec2(16.0f, 16.0f);
         style.FramePadding      = ImVec2(12.0f, 8.0f);
         style.CellPadding       = ImVec2(10.0f, 8.0f);
         style.ItemSpacing       = ImVec2(12.0f, 10.0f);
         
-        // 专业的硬边设计
-        style.WindowRounding    = 4.0f; // 极其微小的圆角提升精致感
+        style.WindowRounding    = 4.0f;
         style.ChildRounding     = 2.0f;
         style.FrameRounding     = 2.0f;
         style.WindowBorderSize  = 1.0f;
@@ -377,48 +397,48 @@ private:
         ImGui::CreateContext();
         ImGui_ImplOpenGL3_Init("#version 300 es");
         ImGuiIO& io = ImGui::GetIO();
-        io.IniFilename = nullptr; // 禁用本地缓存坐标
+        io.IniFilename = nullptr; 
         
         m_defaultStyle = ImGui::GetStyle();
         ApplyTechStyle(m_defaultStyle);
         
-        // --- 【致命 Bug 修复】彻底抛弃 MergeMode ---
-        // 直接加载单源字体，并设定基准大小为 24.0f。
         io.Fonts->Clear();
         bool fontLoaded = false;
         const char* systemFonts[] = { 
-            "/system/fonts/MiSans-Regular.ttf",      // 小米/HyperOS
-            "/system/fonts/SysSans-Hans-Regular.ttf", // 一加/OPPO
-            "/system/fonts/NotoSansCJKjp-Regular.otc", // 谷歌原生
+            "/system/fonts/MiSans-Regular.ttf",      
+            "/system/fonts/SysSans-Hans-Regular.ttf", 
+            "/system/fonts/NotoSansCJKjp-Regular.otc", 
             "/system/fonts/NotoSansSC-Regular.otf",
             "/system/fonts/DroidSansFallback.ttf" 
         };
         for (const char* fontPath : systemFonts) {
             if (access(fontPath, R_OK) == 0) {
-                // 加载字体时直接包含常用中文区间
                 io.Fonts->AddFontFromFileTTF(fontPath, 24.0f, nullptr, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
                 fontLoaded = true;
                 break;
             }
         }
         if (!fontLoaded) {
-            io.Fonts->AddFontDefault(); // 仅当找不到中文字体时才兜底
+            io.Fonts->AddFontDefault(); 
         }
     }
 
     static void DrawMainWindow(float w, float h, std::shared_ptr<GameSnapshot>& snap, float finalScale) {
         ImGui::SetNextWindowPos(ImVec2(50, 50), ImGuiCond_FirstUseEver);
-        // 使用 FirstUseEver 允许用户自己拉伸窗口尺寸，默认给一个漂亮的比例
-        ImGui::SetNextWindowSize(ImVec2(w * 0.45f, h * 0.55f), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(w * 0.50f, h * 0.55f), ImGuiCond_FirstUseEver);
 
         if (ImGui::Begin("CYBER-CORE // 战术数据终端", nullptr, ImGuiWindowFlags_NoCollapse)) {
             
-            // 1. 注入控制区
+            float footerHeight = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing() + 5.0f;
+            ImGui::BeginChild("ScrollingRegion", ImVec2(0, -footerHeight), false, ImGuiWindowFlags_HorizontalScrollbar);
+            
+            ImGui::BeginChild("HookController", ImVec2(0, 85), true);
+            ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "SYS_STATUS // 系统内核状态");
+            ImGui::Separator();
             if (!m_isHookInstalled) {
                 ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.15f, 0.25f, 1.0f));
                 ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.2f, 0.35f, 1.0f));
-                // 使用 -1 让按钮自动撑满全宽，极其规整
-                if (ImGui::Button("[ ⚠ ] 核心态神经链路未连接 - 点击注入", ImVec2(-1, 0))) {
+                if (ImGui::Button("[ ⚠ ] 建立核心态神经链路 (Kernel Hook)", ImVec2(-1, 0))) {
                     extern void InstallHooks();
                     InstallHooks();
                 }
@@ -430,31 +450,20 @@ private:
                 ImGui::Button("✅ [ ONLINE ] 链路已建立", ImVec2(-1, 0));
                 ImGui::PopStyleColor(3);
             }
-            
-            // 提示回执
-            if (!m_hookStatusMsg.empty() && m_hookStatusMsg != "等待用户指令...") {
-                ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "SYS_LOG: %s", m_hookStatusMsg.c_str());
+            ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "LOG: %s", m_hookStatusMsg.c_str());
+            ImGui::EndChild();
+
+            if (ImGui::CollapsingHeader("TACTICAL_CALIBRATION // 模块校准", ImGuiTreeNodeFlags_DefaultOpen)) {
+                ImGui::Checkbox("HUD 全息雷达", &m_showRadar); ImGui::SameLine(0, 30.0f * finalScale);
+                ImGui::Checkbox("DBG 内存探针", &m_showDebugger);
             }
-
-            ImGui::Spacing();
-            ImGui::Separator();
-            ImGui::Spacing();
-
-            // 2. 战术配置开关
-            ImGui::Checkbox("HUD 全息雷达", &m_showRadar); ImGui::SameLine(0, 30.0f * finalScale);
-            ImGui::Checkbox("DBG 内存探针", &m_showDebugger);
-
-            ImGui::Spacing();
-            ImGui::Separator();
             ImGui::Spacing();
             
-            // 3. 核心数据表 (专业复活)
             ImGui::TextColored(ImVec4(0.0f, 1.0f, 1.0f, 1.0f), "DATA_STREAM // 实战数据解析");
             
             if (!snap->inMatch || snap->players.empty()) {
                 ImGui::TextColored(ImVec4(1, 0.5f, 0, 1), ">> 等待战场实体同步...");
             } else {
-                // 使用 ImGui 官方 Table，自带列对齐、斑马纹，极度专业
                 if (ImGui::BeginTable("PlayersTable", 5, 
                     ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp)) 
                 {
@@ -462,7 +471,8 @@ private:
                     ImGui::TableSetupColumn("HP");
                     ImGui::TableSetupColumn("MP"); 
                     ImGui::TableSetupColumn("GOLD");
-                    ImGui::TableSetupColumn("MAP(X,Y)"); 
+                    // 修改表头，按要求输出 3 个坐标
+                    ImGui::TableSetupColumn("POS(X, Y, Z)"); 
                     ImGui::TableHeadersRow();
 
                     for (const auto& p : snap->players) {
@@ -471,15 +481,15 @@ private:
                         ImGui::TableNextColumn(); ImGui::Text("%d/%d", p.hp, p.maxHp);
                         ImGui::TableNextColumn(); ImGui::TextColored(ImVec4(0, 0.8f, 1, 1), "%d/%d", p.mana, p.maxMana);
                         ImGui::TableNextColumn(); ImGui::TextColored(ImVec4(0.9f, 0.9f, 0.9f, 1), "%d", p.gold);
-                        ImGui::TableNextColumn(); ImGui::Text("%.0f, %.0f", p.mapX, p.mapY);
+                        // 输出按原先的3个坐标（X, Y, Z）
+                        ImGui::TableNextColumn(); ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1), "%.1f, %.1f, %.1f", p.worldX, p.worldY, p.worldZ);
                     }
                     ImGui::EndTable();
                 }
             }
+            ImGui::EndChild();
 
-            // 4. 右下角全局缩放滑块 (完美布局版)
-            ImGui::Dummy(ImVec2(0.0f, ImGui::GetContentRegionAvail().y - ImGui::GetFrameHeightWithSpacing() - ImGui::GetStyle().ItemSpacing.y)); // 把内容挤到底部
-            
+            ImGui::Dummy(ImVec2(0.0f, ImGui::GetContentRegionAvail().y - ImGui::GetFrameHeightWithSpacing() - ImGui::GetStyle().ItemSpacing.y));
             ImGui::Separator();
             ImGui::AlignTextToFramePadding();
             ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.8f, 1.0f), "[ STABLE ]");
@@ -488,7 +498,6 @@ private:
             ImGui::TextDisabled("|");
             ImGui::SameLine();
             
-            // 自动占据剩余全部空间的滑动条
             ImGui::PushItemWidth(-1);
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.4f, 0.6f, 0.4f));
             ImGui::PushStyleColor(ImGuiCol_SliderGrab, ImVec4(0.0f, 0.9f, 1.0f, 1.0f));
@@ -500,39 +509,34 @@ private:
     }
 
     static void DrawRadar(float w, float h, std::shared_ptr<GameSnapshot>& snap, float finalScale) {
-        // 雷达尺寸严格锁定为正方形
         float radarSize = 300.0f * finalScale;
-        
         ImGui::SetNextWindowPos(ImVec2(w - radarSize - 40, 50), ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSize(ImVec2(radarSize, radarSize), ImGuiCond_Always);
         
         ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.02f, 0.05f, 0.08f, 0.85f));
         ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 0.8f, 1.0f, 0.6f));
         
-        // 无标题栏的纯粹雷达框
         if (ImGui::Begin("HUD_Radar", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize)) {
             ImVec2 p0 = ImGui::GetWindowPos();
             ImVec2 size = ImGui::GetWindowSize();
             ImDrawList* dl = ImGui::GetWindowDrawList();
             ImVec2 center = ImVec2(p0.x + size.x * 0.5f, p0.y + size.y * 0.5f);
 
-            // 战术十字线与扫描环
             dl->AddLine(ImVec2(center.x, p0.y), ImVec2(center.x, p0.y + size.y), IM_COL32(0, 150, 255, 80));
             dl->AddLine(ImVec2(p0.x, center.y), ImVec2(p0.x + size.x, center.y), IM_COL32(0, 150, 255, 80));
             dl->AddCircle(center, size.x * 0.25f, IM_COL32(0, 200, 255, 60), 32, 1.0f);
             dl->AddCircle(center, size.x * 0.45f, IM_COL32(0, 200, 255, 60), 32, 1.0f);
 
-            // 雷达点位映射
             for (const auto& p : snap->players) {
                 float nX = p.mapX / 10000.0f;
                 float nY = p.mapY / 10000.0f;
                 
                 if (nX > 0 && nX < 1 && nY > 0 && nY < 1) {
                     float rX = p0.x + (nX * size.x);
-                    float rY = p0.y + size.y - (nY * size.y); // Y轴反转，适应小地图习惯
+                    float rY = p0.y + size.y - (nY * size.y); 
                     ImVec2 point(rX, rY);
-                    dl->AddCircleFilled(point, 6.0f * finalScale, IM_COL32(255, 50, 50, 80)); // 荧光拖尾
-                    dl->AddCircleFilled(point, 3.0f * finalScale, IM_COL32(255, 80, 80, 255)); // 实体内核
+                    dl->AddCircleFilled(point, 6.0f * finalScale, IM_COL32(255, 50, 50, 80)); 
+                    dl->AddCircleFilled(point, 3.0f * finalScale, IM_COL32(255, 80, 80, 255)); 
                 }
             }
         }
@@ -542,7 +546,7 @@ private:
 
     static void DrawDebugger(float w, float h, std::shared_ptr<GameSnapshot>& snap) {
         ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(w * 0.4f, h * 0.6f), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(w * 0.45f, h * 0.7f), ImGuiCond_FirstUseEver);
         
         if (ImGui::Begin("MEMORY_PROBE // 内存深度探查")) {
             auto& engine = EngineCore::GetInstance();
@@ -569,6 +573,9 @@ private:
             drawOffsetBtn("addr4ToAddr5", offsets.addr4ToAddr5);
             
             ImGui::Separator();
+            
+            // 展示所有获取到的关键指针日志
+            ImGui::TextColored(ImVec4(0.0f, 1.0f, 1.0f, 1.0f), "SYS_LOG // 终端底层回执 (显示Hook与解引用详情)");
             auto& logger = Logger::GetInstance();
             std::lock_guard<std::mutex> logLock(logger.GetMutex());
             
@@ -628,6 +635,8 @@ static InitActorParamsFunc g_oldInitActorParams = nullptr;
 void HookInitActorParams(void* x0, void* x1, void* x2, void* x3, void* x4, void* x5, void* x6, void* x7) {
     if (x0 != nullptr && reinterpret_cast<uintptr_t>(x0) > 0x10000000) { 
         EngineCore::GetInstance().SetActorManager(reinterpret_cast<uintptr_t>(x0));
+        // 将获取到的 x0 实时抛送进日志系统，在UI排错器中展现
+        LOG_INFO("Hook 触发! 成功捕获实体生成 x0: 0x%lx", reinterpret_cast<uintptr_t>(x0));
     }
     if (g_oldInitActorParams) {
         g_oldInitActorParams(x0, x1, x2, x3, x4, x5, x6, x7);
