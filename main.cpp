@@ -71,7 +71,7 @@ struct {
 
 static float g_DynamicScale = 1.0f;
 static float g_BaseWindowHeight = 0.0f;
-static float g_UserUIScale = 1.0f; // ★ 缩放因子，用于右下角滑块
+static float g_UserUIScale = 1.0f;
 
 static uintptr_t g_GameBase = 0;
 static uintptr_t g_HookAddr_InitActor = 0;
@@ -182,6 +182,7 @@ void DataWorkerThread() {
                 newSnap.debug.addr2 = addr2;
                 if (addr2) {
                     for (int i = 0; i < 15; ++i) {
+                        // 【核心修复】：直接跳过 IL2CPP 数组的 0x20 头部字节，直接读取元素！
                         uintptr_t item = SafeRead<uintptr_t>(addr2 + 0x20 + (i * 0x8));
                         
                         newSnap.debug.items[i].base = item;
@@ -317,44 +318,6 @@ void InstallCoreHook() {
         g_HookStatusMsg = "❌ 挂钩失败，Dobby 错误码: " + std::to_string(ret);
         LOGE("[-] %s", g_HookStatusMsg.c_str());
     }
-}
-
-// ----------------------------------------------------------------------------------
-// ★ [新增] 科技风调色板 (将默认 ImGui 渲染风格修改为极客深蓝+亮青色切角风格)
-// ----------------------------------------------------------------------------------
-void ApplyCyberpunkTechStyle(ImGuiStyle& style) {
-    ImVec4* colors = style.Colors;
-    colors[ImGuiCol_Text]                   = ImVec4(0.85f, 0.95f, 1.00f, 1.00f);
-    colors[ImGuiCol_WindowBg]               = ImVec4(0.06f, 0.06f, 0.09f, 0.96f);
-    colors[ImGuiCol_ChildBg]                = ImVec4(0.00f, 0.00f, 0.00f, 0.25f);
-    colors[ImGuiCol_PopupBg]                = ImVec4(0.08f, 0.08f, 0.12f, 0.98f);
-    colors[ImGuiCol_Border]                 = ImVec4(0.00f, 0.80f, 1.00f, 0.60f); // 亮青边框
-    colors[ImGuiCol_FrameBg]                = ImVec4(0.10f, 0.14f, 0.22f, 0.80f);
-    colors[ImGuiCol_FrameBgHovered]         = ImVec4(0.18f, 0.35f, 0.58f, 0.80f);
-    colors[ImGuiCol_FrameBgActive]          = ImVec4(0.22f, 0.45f, 0.75f, 1.00f);
-    colors[ImGuiCol_TitleBg]                = ImVec4(0.04f, 0.04f, 0.06f, 1.00f);
-    colors[ImGuiCol_TitleBgActive]          = ImVec4(0.08f, 0.20f, 0.38f, 1.00f);
-    colors[ImGuiCol_CheckMark]              = ImVec4(0.00f, 1.00f, 0.80f, 1.00f);
-    colors[ImGuiCol_SliderGrab]             = ImVec4(0.00f, 0.80f, 1.00f, 1.00f);
-    colors[ImGuiCol_SliderGrabActive]       = ImVec4(0.00f, 1.00f, 0.80f, 1.00f);
-    colors[ImGuiCol_Button]                 = ImVec4(0.10f, 0.30f, 0.55f, 0.80f);
-    colors[ImGuiCol_ButtonHovered]          = ImVec4(0.15f, 0.40f, 0.70f, 1.00f);
-    colors[ImGuiCol_ButtonActive]           = ImVec4(0.25f, 0.55f, 0.85f, 1.00f);
-    colors[ImGuiCol_Header]                 = ImVec4(0.12f, 0.25f, 0.45f, 0.80f);
-    colors[ImGuiCol_HeaderHovered]          = ImVec4(0.18f, 0.35f, 0.60f, 1.00f);
-    colors[ImGuiCol_HeaderActive]           = ImVec4(0.22f, 0.45f, 0.75f, 1.00f);
-
-    style.WindowBorderSize  = 1.0f;
-    style.ChildBorderSize   = 1.0f;
-    style.FrameBorderSize   = 1.0f;
-    // 去除所有圆角，变成硬朗工业风
-    style.WindowRounding    = 0.0f;
-    style.ChildRounding     = 0.0f;
-    style.FrameRounding     = 0.0f;
-    style.PopupRounding     = 0.0f;
-    style.ScrollbarRounding = 0.0f;
-    style.GrabRounding      = 0.0f;
-    style.TabRounding       = 0.0f;
 }
 
 void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
@@ -546,10 +509,6 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         ImGui::CreateContext();
         ImGui_ImplOpenGL3_Init("#version 300 es");
         ImGuiIO& io = ImGui::GetIO();
-        
-        // ★ 调用注入科技风调色板
-        ApplyCyberpunkTechStyle(ImGui::GetStyle());
-        
         const char* systemFonts[] = { "/system/fonts/SysSans-Hans-Regular.ttf", "/system/fonts/NotoSansCJKjp-Regular.otc", "/system/fonts/NotoSansSC-Regular.otf", "/system/fonts/DroidSansFallback.ttf" };
         for (int i = 0; i < 4; i++) {
             if (access(systemFonts[i], R_OK) == 0) {
@@ -567,24 +526,21 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 
     float deviceScale = (float)h / 1000.0f;
     if (deviceScale < 1.0f) deviceScale = 1.0f;
-    
-    // ★ 使用滑块产生的 g_UserUIScale 控制全局缩放
     float finalScale = deviceScale * g_DynamicScale * g_UserUIScale;
 
     static ImGuiStyle default_style = ImGui::GetStyle();
     ImGuiStyle& style = ImGui::GetStyle();
     style = default_style;
     style.ScaleAllSizes(1.2f * finalScale);
+    style.WindowRounding = 12.0f;
+    style.WindowMinSize = ImVec2(100.0f, 100.0f);
     io.FontGlobalScale = 1.2f * finalScale;
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
 
-    // 科技风：触摸水波纹变为亮青色
-    if (g_Touch.down.load()) {
-        ImGui::GetForegroundDrawList()->AddCircleFilled(io.MousePos, 20.0f * finalScale, IM_COL32(0, 200, 255, 120));
-        ImGui::GetForegroundDrawList()->AddCircle(io.MousePos, 28.0f * finalScale, IM_COL32(0, 200, 255, 200), 0, 2.0f);
-    }
+    if (g_Touch.down.load())
+        ImGui::GetForegroundDrawList()->AddCircleFilled(io.MousePos, 20.0f, IM_COL32(0, 255, 0, 200));
 
     if (g_BaseWindowHeight == 0.0f) g_BaseWindowHeight = h * 0.45f;
     ImGui::SetNextWindowPos(ImVec2(30, 30), ImGuiCond_FirstUseEver);
@@ -593,26 +549,26 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     static bool show_pointer_debugger = true;
     static bool show_radar = true;
 
-    // ★ 主窗口，保留原始一切结构，只在底部新增滑块
-    if (ImGui::Begin("CYBER-CORE 战术终端 // IL2CPP_Drive")) {
+    if (ImGui::Begin("IL2CPP 透视框架 (防闪退正式版)")) {
         
-        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.04f, 0.04f, 0.06f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.1f, 0.1f, 0.15f, 1.0f));
         ImGui::BeginChild("HookController", ImVec2(0, 70), true);
         if (!g_IsHookInstalled) {
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.1f, 0.2f, 1.0f));
-            if (ImGui::Button("🔴 建立核心态挂载 (Kernel Hook)", ImVec2(-1, 40))) {
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
+            if (ImGui::Button("🔴 在大厅界面点击此按钮注入", ImVec2(-1, 40))) {
                 InstallCoreHook();
             }
             ImGui::PopStyleColor();
         } else {
-            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.4f, 1.0f), "✅ [ ONLINE ] 核心链路稳定连接中...");
+            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "✅ Hook 注入完成！快去进对局测试。");
         }
         ImGui::Text("状态: %s", g_HookStatusMsg.c_str());
         ImGui::EndChild();
         ImGui::PopStyleColor();
         ImGui::Separator();
 
-        if (ImGui::CollapsingHeader("基础校准 (偏置)")) {
+        if (ImGui::CollapsingHeader("基础校准 (触控与缩放)")) {
+            ImGui::SliderFloat("菜单缩放", &g_UserUIScale, 0.5f, 2.0f);
             ImGui::Text("坐标偏移 X:%.1f Y:%.1f", g_Touch.offsetX, g_Touch.offsetY);
             if (ImGui::Button("-10##x")) g_Touch.offsetX -= 10; ImGui::SameLine();
             if (ImGui::Button("+10##x")) g_Touch.offsetX += 10; ImGui::SameLine();
@@ -620,92 +576,51 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
             if (ImGui::Button("+10##y")) g_Touch.offsetY += 10;
         }
         ImGui::Separator();
-        ImGui::Checkbox("全息雷达 (HUD Radar)", &show_radar); ImGui::SameLine();
+        ImGui::Checkbox("雷达 (Radar)", &show_radar); ImGui::SameLine();
         ImGui::Checkbox("指针断点调试", &show_pointer_debugger);
         ImGui::Separator();
         
-        ImGui::TextColored(ImVec4(0, 1, 1, 1), "DATA_STREAM // 数据流状态: %s", snapshot.inMatch ? "LIVE_SYNC_ON" : "SYNC_WAITING");
+        ImGui::TextColored(ImVec4(0, 1, 0, 1), "状态: %s", snapshot.inMatch ? "局内" : "未获取到对象");
 
         if (ImGui::BeginTable("PlayersTable", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
-            ImGui::TableSetupColumn("等级"); ImGui::TableSetupColumn("装甲(HP)");
-            ImGui::TableSetupColumn("能量(MP)"); ImGui::TableSetupColumn("晶体(GOLD)");
-            ImGui::TableSetupColumn("坐标系(X,Y)"); ImGui::TableHeadersRow();
+            ImGui::TableSetupColumn("等级"); ImGui::TableSetupColumn("血量");
+            ImGui::TableSetupColumn("蓝量"); ImGui::TableSetupColumn("金币");
+            ImGui::TableSetupColumn("雷达坐标"); ImGui::TableHeadersRow();
             for (const auto& p : snapshot.players) {
                 ImGui::TableNextRow();
-                ImGui::TableNextColumn(); ImGui::TextColored(ImVec4(1, 0.8f, 0, 1), "Lv.%d", p.level);
+                ImGui::TableNextColumn(); ImGui::Text("Lv.%d", p.level);
                 ImGui::TableNextColumn(); ImGui::Text("%d/%d", p.hp, p.maxHp);
-                ImGui::TableNextColumn(); ImGui::TextColored(ImVec4(0, 0.8f, 1, 1), "%d", p.mana);
-                ImGui::TableNextColumn(); ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1), "%d", p.gold);
+                ImGui::TableNextColumn(); ImGui::Text("%d", p.mana);
+                ImGui::TableNextColumn(); ImGui::Text("%d", p.gold);
                 ImGui::TableNextColumn(); ImGui::Text("%.0f, %.0f", p.mapX, p.mapY);
             }
             ImGui::EndTable();
         }
-
-        // ==========================================
-        // ★ 安全的右下角全局缩放滑块设计 (采用最稳妥的排版方式)
-        // ==========================================
-        ImGui::Spacing();
-        ImGui::Separator();
-        
-        // 状态指示
-        ImGui::AlignTextToFramePadding();
-        ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.8f, 1.0f), "[ SYS_OPT: STABLE ]");
-        
-        // 计算右对齐缩放条
-        float sliderWidth = ImGui::GetWindowWidth() * 0.40f; 
-        if (sliderWidth > 300.0f) sliderWidth = 300.0f;
-        ImGui::SameLine(ImGui::GetWindowWidth() - sliderWidth - ImGui::GetStyle().WindowPadding.x);
-        ImGui::SetNextItemWidth(sliderWidth);
-        
-        ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.4f, 0.6f, 0.4f));
-        ImGui::PushStyleColor(ImGuiCol_SliderGrab, ImVec4(0.0f, 0.9f, 1.0f, 1.0f));
-        // ★ 这里绑定了 g_UserUIScale，拖动后上面最终的 finalScale 就会发生变化
-        ImGui::SliderFloat("##UIScale", &g_UserUIScale, 0.5f, 2.5f, "UI ZOOM: %.2fx");
-        ImGui::PopStyleColor(2);
     }
     ImGui::End();
 
     if (show_pointer_debugger) DrawPointerDebugger(snapshot, w, h);
 
-    // ★ 升级为科技风全息雷达
     if (show_radar && snapshot.inMatch) {
         ImGui::SetNextWindowPos(ImVec2(w - 350, 30), ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSize(ImVec2(300, 300), ImGuiCond_FirstUseEver);
-        
-        ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.02f, 0.05f, 0.08f, 0.85f));
-        ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 0.8f, 1.0f, 0.6f));
-        
-        if (ImGui::Begin("HUD_Radar", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize)) {
+        ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0.5f));
+        if (ImGui::Begin("Radar", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize)) {
             ImVec2 p0 = ImGui::GetCursorScreenPos();
             ImVec2 size = ImGui::GetContentRegionAvail();
             ImDrawList* dl = ImGui::GetWindowDrawList();
-            ImVec2 center = ImVec2(p0.x + size.x * 0.5f, p0.y + size.y * 0.5f);
-
-            // 绘制底板与十字辅助线
-            dl->AddRectFilled(p0, ImVec2(p0.x + size.x, p0.y + size.y), IM_COL32(10, 15, 25, 200));
-            dl->AddRect(p0, ImVec2(p0.x + size.x, p0.y + size.y), IM_COL32(0, 180, 255, 150), 0, 0, 1.5f);
-            dl->AddLine(ImVec2(center.x, p0.y), ImVec2(center.x, p0.y + size.y), IM_COL32(0, 150, 255, 80));
-            dl->AddLine(ImVec2(p0.x, center.y), ImVec2(p0.x + size.x, center.y), IM_COL32(0, 150, 255, 80));
-            
-            // 同心扫描环
-            dl->AddCircle(center, size.x * 0.25f, IM_COL32(0, 200, 255, 60), 32, 1.0f);
-            dl->AddCircle(center, size.x * 0.45f, IM_COL32(0, 200, 255, 60), 32, 1.0f);
-
+            dl->AddRect(p0, ImVec2(p0.x + size.x, p0.y + size.y), IM_COL32(255, 255, 255, 100));
             for (const auto& p : snapshot.players) {
                 float nX = p.mapX / 10000.0f;
                 float nY = p.mapY / 10000.0f;
                 float rX = p0.x + (nX * size.x);
                 float rY = p0.y + size.y - (nY * size.y);
-                
-                if (nX > 0 && nX < 1 && nY > 0 && nY < 1) {
-                    ImVec2 point(rX, rY);
-                    dl->AddCircleFilled(point, 8.0f * finalScale, IM_COL32(255, 50, 50, 80));
-                    dl->AddCircleFilled(point, 4.0f * finalScale, IM_COL32(255, 80, 80, 255));
-                }
+                if (nX > 0 && nX < 1 && nY > 0 && nY < 1)
+                    dl->AddCircleFilled(ImVec2(rX, rY), 5.0f * finalScale, IM_COL32(255, 0, 0, 255));
             }
         }
         ImGui::End();
-        ImGui::PopStyleColor(2);
+        ImGui::PopStyleColor();
     }
 
     ImGui::Render();
