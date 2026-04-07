@@ -3387,9 +3387,6 @@ static bool ImGuiListClipper_StepInternal(ImGuiListClipper* clipper)
     if (clipper->ItemsHeight <= 0.0f)
     {
         IM_ASSERT(data->StepNo == 1);
-        if (table)
-            IM_ASSERT(table->RowPosY1 == clipper->StartPosY && table->RowPosY2 == window->DC.CursorPos.y);
-
         bool affected_by_floating_point_precision = ImIsFloatAboveGuaranteedIntegerPrecision((float)clipper->StartPosY) || ImIsFloatAboveGuaranteedIntegerPrecision(window->DC.CursorPos.y);
         if (affected_by_floating_point_precision)
         {
@@ -3403,7 +3400,14 @@ static bool ImGuiListClipper_StepInternal(ImGuiListClipper* clipper)
         }
         if (clipper->ItemsHeight == 0.0f && clipper->ItemsCount == INT_MAX) // Accept that no item have been submitted if in indeterminate mode.
             return false;
-        IM_ASSERT(clipper->ItemsHeight > 0.0f && "Unable to calculate item height! First item hasn't moved the cursor vertically!");
+        if (clipper->ItemsHeight <= 0.0f)
+        {
+            IM_ASSERT_USER_ERROR(clipper->ItemsHeight > 0.0f, "ImGuiListClipper: Failed to calculate item height! First item hasn't been submitted by user code, or has not moved the cursor vertically!");
+            return false;
+        }
+        if (table)
+            IM_ASSERT(table->RowPosY1 == clipper->StartPosY && table->RowPosY2 == window->DC.CursorPos.y);
+
         calc_clipping = true;   // If item height had to be calculated, calculate clipping afterwards.
     }
 
