@@ -228,48 +228,62 @@ uintptr_t GetModuleBase(const char* module_name) {
 }
 
 // ==========================================
-// 重写 Hook 逻辑，保存 x0, x1, x2 以供动态切换
+// 修复点 1：使用 void 返回值和 8 个宽泛参数，确保不破坏原游戏任何寄存器和栈
 // ==========================================
-typedef void* (*t_InitActorParams)(void* x0, void* x1, void* x2, void* x3);
+typedef void (*t_InitActorParams)(void* x0, void* x1, void* x2, void* x3, void* x4, void* x5, void* x6, void* x7);
 t_InitActorParams old_InitActorParams = nullptr;
 
-void* hook_InitActorParams(void* x0, void* x1, void* x2, void* x3) {
-    g_InitCallCount++; // 触发计数 + 1
+void hook_InitActorParams(void* x0, void* x1, void* x2, void* x3, void* x4, void* x5, void* x6, void* x7) {
+    g_InitCallCount++; 
     
-    // 保存捕获到的寄存器值，供菜单实时查看
-    g_CapturedX0.store((uintptr_t)x0);
-    g_CapturedX1.store((uintptr_t)x1);
-    g_CapturedX2.store((uintptr_t)x2);
+    // 过滤掉空指针，防止崩溃
+    if (x0 != nullptr) g_CapturedX0.store((uintptr_t)x0);
+    if (x1 != nullptr) g_CapturedX1.store((uintptr_t)x1);
+    if (x2 != nullptr) g_CapturedX2.store((uintptr_t)x2);
     
-    // 根据菜单的选项，动态决定把哪个寄存器作为分析起点
     uintptr_t target_ptr = 0;
     if (g_RootRegister == 0) target_ptr = (uintptr_t)x0;
     else if (g_RootRegister == 1) target_ptr = (uintptr_t)x1;
     else target_ptr = (uintptr_t)x2;
     
-    if (target_ptr != 0) {
+    // 只在捕获到有效非零指针时才更新基址
+    if (target_ptr != 0 && target_ptr > 0x10000000) { 
         g_ActorManager.store(target_ptr);
-        LOGI("[Hook-Init] 成功拦截! 次数:%d, 使用了 %s 作为起点: 0x%lx", 
-             g_InitCallCount.load(), 
-             g_RootRegister == 0 ? "x0" : (g_RootRegister == 1 ? "x1" : "x2"), 
-             target_ptr);
-    } else {
-        LOGI("[Hook-Init] 拦截到了调用! 但当前选择的寄存器是空指针 (0x0)");
+        LOGI("[Hook-Init] 拦截到了! 次数:%d, 设定的基址: 0x%lx", g_InitCallCount.load(), target_ptr);
     }
     
-    return old_InitActorParams(x0, x1, x2, x3);
+    // 呼叫原函数，完美放行
+    if (old_InitActorParams) {
+        old_InitActorParams(x0, x1, x2, x3, x4, x5, x6, x7);
+    }
 }
 
-typedef void* (*t_ClearActor)(void* x0, void* x1, void* x2, void* x3);
+typedef void (*t_ClearActor)(void* x0, void* x1, void* x2, void* x3, void* x4, void* x5, void* x6, void* x7);
 t_ClearActor old_ClearActor = nullptr;
 
-void* hook_ClearActor(void* x0, void* x1, void* x2, void* x3) {
+void hook_ClearActor(void* x0, void* x1, void* x2, void* x3, void* x4, void* x5, void* x6, void* x7) {
     g_ClearCallCount++;
-    g_ActorManager.store(0);
-    LOGI("[Hook-Clear] 触发对象清理");
-    return old_ClearActor(x0, x1, x2, x3);
-}
+    
+    // ==========================================
+    // 修复点 2：修复无差别清空指针的致命逻辑 Bug！
+    // 游戏里小兵、子弹消失都会调用 ClearActor。
+    // 如果无差别清空，g_ActorManager 会立刻被重置为 0。
+    // 现在改为：只有传入清理的地址 == 我们保存的英雄地址时，才清空！
+    // ==========================================
+    uintptr_t clearing_ptr = 0;
+    if (g_RootRegister == 0) clearing_ptr = (uintptr_t)x0;
+    else if (g_RootRegister == 1) clearing_ptr = (uintptr_t)x1;
+    else clearing_ptr = (uintptr_t)x2;
 
+    if (clearing_ptr != 0 && clearing_ptr == g_ActorManager.load()) {
+        LOGI("[Hook-Clear] 侦测到英雄对象销毁，清空基址 (0x%lx)", clearing_ptr);
+        // g_ActorManager.store(0); // 排错阶段，我们连英雄销毁都不清空基址，让它一直显示！
+    }
+    
+    if (old_ClearActor) {
+        old_ClearActor(x0, x1, x2, x3, x4, x5, x6, x7);
+    }
+}
 
 void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
     ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
