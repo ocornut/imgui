@@ -39,14 +39,61 @@ constexpr size_t kMaxLogSize = 30;
 constexpr size_t kMaxPlayers = 10;
 
 // ============================================================================
+// ★ W2S 核心数学引擎 (列优先 Column-Major)
+// ============================================================================
+struct Vector2 { float x, y; };
+struct Vector3 { float x, y, z; };
+
+// 采用一维数组存储 16 个浮点数，完美契合 Unity 列优先内存布局
+struct Matrix4x4 {
+    float m[16]; 
+};
+
+// 矩阵乘法：计算 Proj * View
+Matrix4x4 MultiplyMatrix(const Matrix4x4& a, const Matrix4x4& b) {
+    Matrix4x4 res;
+    for (int c = 0; c < 4; c++) {
+        for (int r = 0; r < 4; r++) {
+            res.m[c * 4 + r] = 
+                a.m[0 * 4 + r] * b.m[c * 4 + 0] +
+                a.m[1 * 4 + r] * b.m[c * 4 + 1] +
+                a.m[2 * 4 + r] * b.m[c * 4 + 2] +
+                a.m[3 * 4 + r] * b.m[c * 4 + 3];
+        }
+    }
+    return res;
+}
+
+// 核心 W2S 算法：世界 3D 坐标转换为屏幕 2D 像素坐标 (严格列优先计算)
+bool WorldToScreen(const Vector3& pos, const Matrix4x4& viewProj, Vector2& screenPos, float screenW, float screenH) {
+    // 1. 计算裁剪空间的 W (深度/Z轴)
+    float clipW = pos.x * viewProj.m[3] + pos.y * viewProj.m[7] + pos.z * viewProj.m[11] + viewProj.m[15];
+    
+    // 如果 W < 0.1，说明物体在摄像机背面或紧贴镜头，不进行绘制
+    if (clipW < 0.1f) return false;
+
+    // 2. 计算裁剪空间的 X 和 Y
+    float clipX = pos.x * viewProj.m[0] + pos.y * viewProj.m[4] + pos.z * viewProj.m[8] + viewProj.m[12];
+    float clipY = pos.x * viewProj.m[1] + pos.y * viewProj.m[5] + pos.z * viewProj.m[9] + viewProj.m[13];
+
+    // 3. 透视除法，转换为 NDC (标准化设备坐标) [-1.0, 1.0]
+    float ndcX = clipX / clipW;
+    float ndcY = clipY / clipW;
+
+    // 4. 映射到屏幕物理像素坐标
+    screenPos.x = (screenW / 2.0f) * (ndcX + 1.0f);
+    // Unity 和大多数引擎中，屏幕 Y 轴向下递增，NDC Y 轴向上递增，所以用 1.0f - ndcY 反转
+    screenPos.y = (screenH / 2.0f) * (1.0f - ndcY); 
+
+    return true;
+}
+
+// ============================================================================
 // 日志系统类
 // ============================================================================
 class Logger {
 public:
-    static Logger& GetInstance() {
-        static Logger instance;
-        return instance;
-    }
+    static Logger& GetInstance() { static Logger instance; return instance; }
 
     void Print(const char* level, const char* fmt, ...) {
         char buf[1024];
@@ -58,9 +105,7 @@ public:
         __android_log_print(ANDROID_LOG_INFO, kTag, "%s%s", level, buf);
 
         std::lock_guard<std::mutex> lock(m_mutex);
-        if (m_logs.size() >= kMaxLogSize) {
-            m_logs.pop_front();
-        }
+        if (m_logs.size() >= kMaxLogSize) m_logs.pop_front();
         m_logs.emplace_back(buf);
     }
 
@@ -77,18 +122,15 @@ private:
 #define LOG_ERROR(...) Overlay::Logger::GetInstance().Print("[ERROR] ", __VA_ARGS__)
 
 // ============================================================================
-// 内存读取工具类 (mincore 安全方案)
+// 内存读取工具类 (Mincore 防闪退方案)
 // ============================================================================
 class MemoryReader {
 public:
     static bool IsValidAddress(uintptr_t address) {
         if (address < 0x10000000 || address > 0x00007FFFFFFFFFFF) return false;
-        
         unsigned char vec[1];
         uintptr_t pageStart = address & ~0xFFF; 
-        if (mincore(reinterpret_cast<void*>(pageStart), 4096, vec) != 0) {
-            return false; 
-        }
+        if (mincore(reinterpret_cast<void*>(pageStart), 4096, vec) != 0) return false; 
         return true;
     }
 
@@ -125,16 +167,15 @@ struct DynamicOffsets {
     
     uint32_t addr5ToMana  = 0x24;  
     uint32_t addr5ToMaxMana = 0x28;
+
+    // ★ 同步你提供的最新相机矩阵偏移
+    uint32_t cameraViewOffset = 0x4C; // WorldToCameraMatrix
+    uint32_t cameraProjOffset = 0x8C; // ProjectionMatrix
 };
 
 struct PlayerData {
-    int32_t hp = 0;
-    int32_t maxHp = 0;
-    int32_t mana = 0;
-    int32_t maxMana = 0;
-    int32_t gold = 0;
-    int32_t level = 0;
-    float worldX = 0.0f, worldY = 0.0f, worldZ = 0.0f;
+    int32_t hp = 0, maxHp = 0, mana = 0, maxMana = 0, gold = 0, level = 0;
+    Vector3 worldPos; 
     float mapX = 0.0f, mapY = 0.0f;
 };
 
@@ -146,6 +187,9 @@ struct GameSnapshot {
     DynamicOffsets offsets;
     DebugChain debug;
     std::vector<PlayerData> players;
+    Matrix4x4 viewMatrix; 
+    Matrix4x4 rawViewMatrix; // ★ 新增：保存原始 View 矩阵用于格式化打印
+    Matrix4x4 rawProjMatrix; // ★ 新增：保存原始 Proj 矩阵用于格式化打印
 };
 
 // ============================================================================
@@ -184,7 +228,7 @@ private:
 };
 
 // ============================================================================
-// 数据引擎
+// 核心数据引擎
 // ============================================================================
 class EngineCore {
 public:
@@ -198,6 +242,9 @@ public:
 
     DynamicOffsets GetOffsets() { std::lock_guard<std::mutex> lock(m_offsetMutex); return m_offsets; }
     void SetActorManager(uintptr_t address) { m_actorManager.store(address); }
+    void SetCameraMatrixPtr(uintptr_t address) { m_cameraMatrixPtr.store(address); }
+    uintptr_t GetCameraMatrixPtr() { return m_cameraMatrixPtr.load(); }
+    
     std::mutex& GetOffsetMutex() { return m_offsetMutex; }
     DynamicOffsets& GetOffsetsRef() { return m_offsets; }
 
@@ -205,43 +252,41 @@ private:
     EngineCore() : m_currentSnapshot(std::make_shared<GameSnapshot>()) {}
 
     void DataWorkerLoop() {
-        static uintptr_t lastLogX0 = 0;
-        static uintptr_t lastLogAddr1 = 0;
-        static uintptr_t lastLogAddr2 = 0;
-
         while (true) {
             auto newSnap = std::make_shared<GameSnapshot>();
             newSnap->offsets = GetOffsets();
 
+            // 1. 读取并融合摄像机矩阵 (自动获取)
+            uintptr_t camBase = m_cameraMatrixPtr.load();
+            if (camBase != 0 && MemoryReader::IsValidAddress(camBase)) {
+                // 根据你提供的偏移读取列优先矩阵
+                Matrix4x4 view = MemoryReader::SafeRead<Matrix4x4>(camBase + newSnap->offsets.cameraViewOffset);
+                Matrix4x4 proj = MemoryReader::SafeRead<Matrix4x4>(camBase + newSnap->offsets.cameraProjOffset);
+                
+                // ★ 记录原始矩阵用于 UI 完美复刻截图输出
+                newSnap->rawViewMatrix = view;
+                newSnap->rawProjMatrix = proj;
+
+                // 矩阵乘法：Projection * View
+                newSnap->viewMatrix = MultiplyMatrix(proj, view); 
+            } else {
+                memset(&newSnap->viewMatrix, 0, sizeof(Matrix4x4));
+                memset(&newSnap->rawViewMatrix, 0, sizeof(Matrix4x4));
+                memset(&newSnap->rawProjMatrix, 0, sizeof(Matrix4x4));
+            }
+
+            // 2. 读取游戏英雄数据
             uintptr_t baseX0 = m_actorManager.load();
             if (baseX0 != 0 && MemoryReader::IsValidAddress(baseX0)) {
                 newSnap->inMatch = true;
                 newSnap->debug.baseX0 = baseX0;
                 
-                // 实时输出获取到的基址和偏移数据
-                if (baseX0 != lastLogX0) {
-                    LOG_INFO("数据更新 -> 捕获到新基址 x0: 0x%lx", baseX0);
-                    lastLogX0 = baseX0;
-                }
-
                 uintptr_t addr1 = MemoryReader::SafeRead<uintptr_t>(baseX0 + newSnap->offsets.x0ToAddr1);
                 newSnap->debug.addr1 = addr1;
-                
                 if (addr1) {
-                    if (addr1 != lastLogAddr1) {
-                        LOG_INFO("数据解引用 -> addr1: 0x%lx (偏移: 0x%X)", addr1, newSnap->offsets.x0ToAddr1);
-                        lastLogAddr1 = addr1;
-                    }
-
                     uintptr_t addr2 = MemoryReader::SafeRead<uintptr_t>(addr1 + newSnap->offsets.addr1ToAddr2);
                     newSnap->debug.addr2 = addr2;
-                    if (addr2) {
-                        if (addr2 != lastLogAddr2) {
-                            LOG_INFO("数据解引用 -> addr2[英雄数组]: 0x%lx (偏移: 0x%X)", addr2, newSnap->offsets.addr1ToAddr2);
-                            lastLogAddr2 = addr2;
-                        }
-                        ParsePlayers(newSnap, addr2);
-                    }
+                    if (addr2) ParsePlayers(newSnap, addr2);
                 }
             }
 
@@ -249,7 +294,7 @@ private:
                 std::lock_guard<std::mutex> lock(m_snapshotMutex);
                 m_currentSnapshot = newSnap;
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(16));
+            std::this_thread::sleep_for(std::chrono::milliseconds(16)); // 60Hz 刷新率
         }
     }
 
@@ -263,15 +308,11 @@ private:
             if (!addr3) continue;
 
             PlayerData p;
+            p.worldPos.x = MemoryReader::SafeRead<float>(addr3 + snap->offsets.addr3ToWorld + 0x0);
+            p.worldPos.y = MemoryReader::SafeRead<float>(addr3 + snap->offsets.addr3ToWorld + 0x4);
+            p.worldPos.z = MemoryReader::SafeRead<float>(addr3 + snap->offsets.addr3ToWorld + 0x8);
             
-            // 按要求读取并输出 3 个坐标: X, Y, Z
-            p.worldX = MemoryReader::SafeRead<float>(addr3 + snap->offsets.addr3ToWorld + 0x0);
-            p.worldY = MemoryReader::SafeRead<float>(addr3 + snap->offsets.addr3ToWorld + 0x4);
-            p.worldZ = MemoryReader::SafeRead<float>(addr3 + snap->offsets.addr3ToWorld + 0x8);
-            
-            // 映射到雷达的2D平面坐标
-            p.mapX = p.worldX;
-            p.mapY = p.worldZ;
+            p.mapX = p.worldPos.x; p.mapY = p.worldPos.z;
 
             uintptr_t addr4 = MemoryReader::SafeRead<uintptr_t>(addr3 + snap->offsets.addr3ToAddr4);
             snap->debug.items[i].addr4 = addr4;
@@ -289,10 +330,7 @@ private:
                     p.maxMana = MemoryReader::FastRead<int32_t>(addr5 + snap->offsets.addr5ToMaxMana);
                 }
             }
-
-            if (p.maxHp > 0 && p.maxHp < 50000) {
-                snap->players.push_back(p);
-            }
+            if (p.maxHp > 0 && p.maxHp < 50000) snap->players.push_back(p);
         }
     }
 
@@ -300,11 +338,13 @@ private:
     std::mutex m_snapshotMutex;
     DynamicOffsets m_offsets;
     std::mutex m_offsetMutex;
+    
     std::atomic<uintptr_t> m_actorManager{0};
+    std::atomic<uintptr_t> m_cameraMatrixPtr{0}; 
 };
 
 // ============================================================================
-// UI 渲染引擎 (专业科技风修复版)
+// UI 渲染引擎 
 // ============================================================================
 class UIRenderer {
 public:
@@ -332,13 +372,19 @@ public:
         ImGui_ImplOpenGL3_NewFrame();
         ImGui::NewFrame();
 
+        // === 3D 屏幕透视绘制引擎 (Draw ESP) ===
+        // m[15] (第四行第四列) 不为0说明矩阵已经成功读取并融合
+        if (m_showESP && snap->inMatch && snap->viewMatrix.m[15] != 0.0f) {
+            DrawESP(w, h, snap, finalScale);
+        }
+
         if (touch.IsDown()) {
             ImGui::GetForegroundDrawList()->AddCircleFilled(io.MousePos, 15.0f * finalScale, IM_COL32(0, 255, 255, 120));
             ImGui::GetForegroundDrawList()->AddCircle(io.MousePos, 22.0f * finalScale, IM_COL32(0, 255, 255, 200), 0, 2.0f);
         }
 
-        DrawMainWindow(w, h, snap, finalScale);
-        if (m_showDebugger) DrawDebugger(w, h, snap);
+        if (m_showMenu) DrawMainWindow(w, h, snap, finalScale);
+        if (m_showDebugger) DrawDebugger(w, h, snap, finalScale);
         if (m_showRadar && snap->inMatch) DrawRadar(w, h, snap, finalScale);
 
         ImGui::Render();
@@ -352,6 +398,8 @@ private:
     static ImGuiStyle m_defaultStyle;
     static bool m_showDebugger;
     static bool m_showRadar;
+    static bool m_showESP;     
+    static bool m_showMenu;    
 
     static void ApplyTechStyle(ImGuiStyle& style) {
         ImVec4* colors = style.Colors;
@@ -414,12 +462,59 @@ private:
         for (const char* fontPath : systemFonts) {
             if (access(fontPath, R_OK) == 0) {
                 io.Fonts->AddFontFromFileTTF(fontPath, 24.0f, nullptr, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
-                fontLoaded = true;
-                break;
+                fontLoaded = true; break;
             }
         }
-        if (!fontLoaded) {
-            io.Fonts->AddFontDefault(); 
+        if (!fontLoaded) io.Fonts->AddFontDefault(); 
+    }
+
+    static void DrawESP(float w, float h, std::shared_ptr<GameSnapshot>& snap, float scale) {
+        ImDrawList* drawList = ImGui::GetBackgroundDrawList(); 
+        ImVec2 screenBottomCenter(w / 2.0f, h); 
+
+        for (const auto& p : snap->players) {
+            if (p.hp <= 0 || p.maxHp <= 0) continue; 
+
+            // 1. 底端坐标转换为屏幕坐标
+            Vector2 screenFoot;
+            if (!WorldToScreen(p.worldPos, snap->viewMatrix, screenFoot, w, h)) continue; 
+            
+            // 2. 头部坐标转换 (此处假设人物高度是 2.0f，你可以根据游戏实际模型适当调整)
+            Vector3 headPos = { p.worldPos.x, p.worldPos.y + 2.0f, p.worldPos.z };
+            Vector2 screenHead;
+            if (!WorldToScreen(headPos, snap->viewMatrix, screenHead, w, h)) continue;
+
+            // 3. 计算方框大小
+            float boxHeight = screenFoot.y - screenHead.y;
+            float boxWidth = boxHeight / 1.5f; // 高宽比 1.5:1
+
+            if (screenFoot.y < 0 || screenHead.y > h || screenFoot.x + boxWidth/2 < 0 || screenFoot.x - boxWidth/2 > w) continue;
+
+            ImVec2 topLeft(screenHead.x - boxWidth / 2, screenHead.y);
+            ImVec2 bottomRight(screenFoot.x + boxWidth / 2, screenFoot.y);
+
+            // 绘制科幻青色边框
+            drawList->AddRect(topLeft, bottomRight, IM_COL32(0, 255, 255, 200), 0.0f, 0, 1.5f * scale);
+            drawList->AddRect(topLeft, bottomRight, IM_COL32(0, 0, 0, 255), 0.0f, 0, 3.0f * scale); // 外阴影
+
+            // 射线连线
+            drawList->AddLine(screenBottomCenter, ImVec2(screenFoot.x, screenFoot.y), IM_COL32(255, 255, 255, 80), 1.0f * scale);
+
+            // 血条渲染
+            float hpRatio = (float)p.hp / (float)p.maxHp;
+            ImVec2 hpTopLeft(topLeft.x - 10.0f * scale, bottomRight.y - boxHeight * hpRatio);
+            ImVec2 hpBottomRight(topLeft.x - 4.0f * scale, bottomRight.y);
+            
+            drawList->AddRectFilled(ImVec2(topLeft.x - 10.0f * scale, topLeft.y), ImVec2(topLeft.x - 4.0f * scale, bottomRight.y), IM_COL32(0, 0, 0, 180));
+            ImU32 hpColor = hpRatio > 0.5f ? IM_COL32(0, 255, 0, 255) : (hpRatio > 0.2f ? IM_COL32(255, 255, 0, 255) : IM_COL32(255, 0, 0, 255));
+            drawList->AddRectFilled(hpTopLeft, hpBottomRight, hpColor);
+
+            // 顶部信息
+            char info[64];
+            snprintf(info, sizeof(info), "Lv.%d | G:%d", p.level, p.gold);
+            ImVec2 textSize = ImGui::CalcTextSize(info);
+            drawList->AddRectFilled(ImVec2(screenHead.x - textSize.x/2 - 4, screenHead.y - textSize.y - 6), ImVec2(screenHead.x + textSize.x/2 + 4, screenHead.y - 2), IM_COL32(0, 0, 0, 180));
+            drawList->AddText(ImVec2(screenHead.x - textSize.x / 2, screenHead.y - textSize.y - 4), IM_COL32(255, 255, 255, 255), info);
         }
     }
 
@@ -427,7 +522,7 @@ private:
         ImGui::SetNextWindowPos(ImVec2(50, 50), ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSize(ImVec2(w * 0.50f, h * 0.55f), ImGuiCond_FirstUseEver);
 
-        if (ImGui::Begin("CYBER-CORE // 战术数据终端", nullptr, ImGuiWindowFlags_NoCollapse)) {
+        if (ImGui::Begin("CYBER-CORE // 战术数据终端", &m_showMenu, ImGuiWindowFlags_NoCollapse)) {
             
             float footerHeight = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing() + 5.0f;
             ImGui::BeginChild("ScrollingRegion", ImVec2(0, -footerHeight), false, ImGuiWindowFlags_HorizontalScrollbar);
@@ -437,42 +532,36 @@ private:
             ImGui::Separator();
             if (!m_isHookInstalled) {
                 ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.15f, 0.25f, 1.0f));
-                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.2f, 0.35f, 1.0f));
-                if (ImGui::Button("[ ⚠ ] 建立核心态神经链路 (Kernel Hook)", ImVec2(-1, 0))) {
-                    extern void InstallHooks();
-                    InstallHooks();
-                }
-                ImGui::PopStyleColor(2);
+                if (ImGui::Button("[ ⚠ ] 建立核心态神经链路 (Kernel Hook)", ImVec2(-1, 0))) { extern void InstallHooks(); InstallHooks(); }
+                ImGui::PopStyleColor(1);
             } else {
-                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.1f, 0.6f, 0.2f, 0.4f));
-                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.1f, 0.6f, 0.2f, 0.4f));
-                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.1f, 0.6f, 0.2f, 0.4f));
-                ImGui::Button("✅ [ ONLINE ] 链路已建立", ImVec2(-1, 0));
-                ImGui::PopStyleColor(3);
+                ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.4f, 1.0f), "✅ [ ONLINE ] 核心链路稳定连接中...");
             }
             ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "LOG: %s", m_hookStatusMsg.c_str());
             ImGui::EndChild();
 
             if (ImGui::CollapsingHeader("TACTICAL_CALIBRATION // 模块校准", ImGuiTreeNodeFlags_DefaultOpen)) {
-                ImGui::Checkbox("HUD 全息雷达", &m_showRadar); ImGui::SameLine(0, 30.0f * finalScale);
+                ImGui::Checkbox("屏幕 ESP 透视", &m_showESP); ImGui::SameLine(0, 30.0f * finalScale);
+                ImGui::Checkbox("HUD 小雷达", &m_showRadar); ImGui::SameLine(0, 30.0f * finalScale);
                 ImGui::Checkbox("DBG 内存探针", &m_showDebugger);
+
+                // 动态显示相机矩阵挂载状态
+                if (snap->viewMatrix.m[15] == 0.0f) {
+                    ImGui::TextColored(ImVec4(1, 0.4f, 0.4f, 1), "[!] 警告: ESP 等待相机矩阵抓取 (等待15秒自动同步)...");
+                } else {
+                    ImGui::TextColored(ImVec4(0, 1.0f, 0, 1), "[√] 相机矩阵已自动链接，W2S (ESP透视) 在线。");
+                }
             }
             ImGui::Spacing();
             
             ImGui::TextColored(ImVec4(0.0f, 1.0f, 1.0f, 1.0f), "DATA_STREAM // 实战数据解析");
-            
             if (!snap->inMatch || snap->players.empty()) {
                 ImGui::TextColored(ImVec4(1, 0.5f, 0, 1), ">> 等待战场实体同步...");
             } else {
-                if (ImGui::BeginTable("PlayersTable", 5, 
-                    ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp)) 
-                {
+                if (ImGui::BeginTable("PlayersTable", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp)) {
                     ImGui::TableSetupColumn("LVL", ImGuiTableColumnFlags_WidthFixed); 
-                    ImGui::TableSetupColumn("HP");
-                    ImGui::TableSetupColumn("MP"); 
-                    ImGui::TableSetupColumn("GOLD");
-                    // 修改表头，按要求输出 3 个坐标
-                    ImGui::TableSetupColumn("POS(X, Y, Z)"); 
+                    ImGui::TableSetupColumn("HP"); ImGui::TableSetupColumn("MP"); 
+                    ImGui::TableSetupColumn("GOLD"); ImGui::TableSetupColumn("POS(X, Y, Z)"); 
                     ImGui::TableHeadersRow();
 
                     for (const auto& p : snap->players) {
@@ -481,8 +570,7 @@ private:
                         ImGui::TableNextColumn(); ImGui::Text("%d/%d", p.hp, p.maxHp);
                         ImGui::TableNextColumn(); ImGui::TextColored(ImVec4(0, 0.8f, 1, 1), "%d/%d", p.mana, p.maxMana);
                         ImGui::TableNextColumn(); ImGui::TextColored(ImVec4(0.9f, 0.9f, 0.9f, 1), "%d", p.gold);
-                        // 输出按原先的3个坐标（X, Y, Z）
-                        ImGui::TableNextColumn(); ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1), "%.1f, %.1f, %.1f", p.worldX, p.worldY, p.worldZ);
+                        ImGui::TableNextColumn(); ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1), "%.1f, %.1f, %.1f", p.worldPos.x, p.worldPos.y, p.worldPos.z);
                     }
                     ImGui::EndTable();
                 }
@@ -493,10 +581,7 @@ private:
             ImGui::Separator();
             ImGui::AlignTextToFramePadding();
             ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.8f, 1.0f), "[ STABLE ]");
-            
-            ImGui::SameLine();
-            ImGui::TextDisabled("|");
-            ImGui::SameLine();
+            ImGui::SameLine(); ImGui::TextDisabled("|"); ImGui::SameLine();
             
             ImGui::PushItemWidth(-1);
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.4f, 0.6f, 0.4f));
@@ -544,11 +629,11 @@ private:
         ImGui::PopStyleColor(2);
     }
 
-    static void DrawDebugger(float w, float h, std::shared_ptr<GameSnapshot>& snap) {
+    static void DrawDebugger(float w, float h, std::shared_ptr<GameSnapshot>& snap, float finalScale) {
         ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(w * 0.45f, h * 0.7f), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(w * 0.50f, h * 0.7f), ImGuiCond_FirstUseEver);
         
-        if (ImGui::Begin("MEMORY_PROBE // 内存深度探查")) {
+        if (ImGui::Begin("MEMORY_PROBE // 内存深度探查", &m_showDebugger)) {
             auto& engine = EngineCore::GetInstance();
             std::lock_guard<std::mutex> lock(engine.GetOffsetMutex());
             auto& offsets = engine.GetOffsetsRef();
@@ -562,20 +647,39 @@ private:
                 ImGui::PopID();
             };
             
-            ImGui::TextColored(ImVec4(1, 0.8f, 0, 1), "当前 x0 基址: 0x%lx", snap->debug.baseX0);
+            if (ImGui::CollapsingHeader("OFFSET_MATRIX // 数据指针树", ImGuiTreeNodeFlags_DefaultOpen)) {
+                ImGui::TextColored(ImVec4(1, 0.8f, 0, 1), "当前 x0 基址: 0x%lx", snap->debug.baseX0);
+                drawOffsetBtn("x0_to_addr1", offsets.x0ToAddr1);
+                drawOffsetBtn("addr1_to_addr2", offsets.addr1ToAddr2);
+                drawOffsetBtn("arrayStart", offsets.arrayStart);
+                drawOffsetBtn("item_to_addr3", offsets.itemToAddr3);
+                drawOffsetBtn("addr3ToAddr4", offsets.addr3ToAddr4);
+                drawOffsetBtn("addr4ToAddr5", offsets.addr4ToAddr5);
+                
+                ImGui::Separator();
+                ImGui::TextColored(ImVec4(1, 0.8f, 0, 1), "当前 Camera 基址: 0x%lx", engine.GetCameraMatrixPtr());
+                drawOffsetBtn("cameraViewOffset", offsets.cameraViewOffset);
+                drawOffsetBtn("cameraProjOffset", offsets.cameraProjOffset);
+            }
+            
+            // ★ 新增：完全还原截图里的矩阵格式化输出
+            if (ImGui::CollapsingHeader("MATRIX_DUMP // 内存矩阵专项测试输出", ImGuiTreeNodeFlags_DefaultOpen)) {
+                auto drawMatrix = [](const char* title, const Matrix4x4& mat, uint32_t offset) {
+                    ImGui::TextColored(ImVec4(0.4f, 0.9f, 1.0f, 1.0f), "[专项测试] 偏移 0x%X (疑似 %s)", offset, title);
+                    // 按内存顺序(每4个浮点数一行)输出，完美复刻截图日志格式
+                    for (int i = 0; i < 4; ++i) {
+                        ImGui::Text("  %9.5f  %9.5f  %9.5f  %9.5f", 
+                                    mat.m[i*4 + 0], mat.m[i*4 + 1], mat.m[i*4 + 2], mat.m[i*4 + 3]);
+                    }
+                    ImGui::Spacing();
+                };
+
+                drawMatrix("m_prevWorldToCameraMatrix", snap->rawViewMatrix, offsets.cameraViewOffset);
+                drawMatrix("m_prevProjectionMatrix", snap->rawProjMatrix, offsets.cameraProjOffset);
+            }
+
             ImGui::Separator();
-            
-            drawOffsetBtn("x0_to_addr1", offsets.x0ToAddr1);
-            drawOffsetBtn("addr1_to_addr2", offsets.addr1ToAddr2);
-            drawOffsetBtn("arrayStart", offsets.arrayStart);
-            drawOffsetBtn("item_to_addr3", offsets.itemToAddr3);
-            drawOffsetBtn("addr3ToAddr4", offsets.addr3ToAddr4);
-            drawOffsetBtn("addr4ToAddr5", offsets.addr4ToAddr5);
-            
-            ImGui::Separator();
-            
-            // 展示所有获取到的关键指针日志
-            ImGui::TextColored(ImVec4(0.0f, 1.0f, 1.0f, 1.0f), "SYS_LOG // 终端底层回执 (显示Hook与解引用详情)");
+            ImGui::TextColored(ImVec4(0.0f, 1.0f, 1.0f, 1.0f), "SYS_LOG // 终端底层回执");
             auto& logger = Logger::GetInstance();
             std::lock_guard<std::mutex> logLock(logger.GetMutex());
             
@@ -594,6 +698,8 @@ float UIRenderer::m_userScale = 1.0f;
 ImGuiStyle UIRenderer::m_defaultStyle;
 bool UIRenderer::m_showDebugger = false;
 bool UIRenderer::m_showRadar = true;
+bool UIRenderer::m_showESP = true;     
+bool UIRenderer::m_showMenu = true;
 bool UIRenderer::m_isHookInstalled = false;
 std::string UIRenderer::m_hookStatusMsg = "等待用户指令...";
 
@@ -629,17 +735,54 @@ uintptr_t GetModuleBase(const char* moduleName) {
     return info.base;
 }
 
+// === 核心数据 Hook ===
 typedef void (*InitActorParamsFunc)(void* x0, void* x1, void* x2, void* x3, void* x4, void* x5, void* x6, void* x7);
 static InitActorParamsFunc g_oldInitActorParams = nullptr;
 
 void HookInitActorParams(void* x0, void* x1, void* x2, void* x3, void* x4, void* x5, void* x6, void* x7) {
     if (x0 != nullptr && reinterpret_cast<uintptr_t>(x0) > 0x10000000) { 
         EngineCore::GetInstance().SetActorManager(reinterpret_cast<uintptr_t>(x0));
-        // 将获取到的 x0 实时抛送进日志系统，在UI排错器中展现
-        LOG_INFO("Hook 触发! 成功捕获实体生成 x0: 0x%lx", reinterpret_cast<uintptr_t>(x0));
     }
     if (g_oldInitActorParams) {
         g_oldInitActorParams(x0, x1, x2, x3, x4, x5, x6, x7);
+    }
+}
+
+// === 【新增】相机矩阵抓取 Hook ===
+typedef void (*CameraUpdateFunc)(void* x0);
+static CameraUpdateFunc g_oldCameraUpdate = nullptr;
+
+void HookCameraUpdate(void* x0) {
+    if (x0 != nullptr && reinterpret_cast<uintptr_t>(x0) > 0x10000000) {
+        EngineCore::GetInstance().SetCameraMatrixPtr(reinterpret_cast<uintptr_t>(x0));
+    }
+    if (g_oldCameraUpdate) {
+        g_oldCameraUpdate(x0);
+    }
+}
+
+// === 延时 15 秒后自动挂载相机矩阵 ===
+void DelayedCameraHookTask() {
+    LOG_INFO("等待 15 秒后执行相机 (0xC4B5CD4) 拦截...");
+    sleep(15);
+    
+    uintptr_t base = GetModuleBase(kGameModule);
+    if (!base) return;
+
+    uintptr_t targetAddr = base + 0xC4B5CD4;
+    LOG_INFO("开始挂载 CameraData: 0x%lx", targetAddr);
+
+    void* pageStart = reinterpret_cast<void*>(targetAddr & ~0xFFF);
+    mprotect(pageStart, 0x2000, PROT_READ | PROT_WRITE | PROT_EXEC);
+
+    int ret = DobbyHook(reinterpret_cast<void*>(targetAddr), 
+                        reinterpret_cast<void*>(HookCameraUpdate), 
+                        reinterpret_cast<void**>(&g_oldCameraUpdate));
+                        
+    if (ret == 0) {
+        LOG_INFO("CameraData Hook 挂载成功！(15秒等待完成)");
+    } else {
+        LOG_ERROR("CameraData Hook 挂载失败！");
     }
 }
 
@@ -667,7 +810,11 @@ void InstallHooks() {
     if (ret == 0) {
         UIRenderer::m_isHookInstalled = true;
         UIRenderer::m_hookStatusMsg = "OK: 神经链路挂载完毕。";
-        LOG_INFO("手动安装 Hook 成功！");
+        LOG_INFO("核心数据 Hook 成功！");
+        
+        // ★ 核心 Hook 成功后，启动 15 秒倒计时去勾取相机矩阵
+        std::thread(DelayedCameraHookTask).detach();
+        
     } else {
         UIRenderer::m_hookStatusMsg = "FATAL: 挂载被拒绝(SELinux限制)";
         LOG_ERROR("挂钩失败, 返回码: %d", ret);
