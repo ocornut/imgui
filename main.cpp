@@ -36,10 +36,8 @@ void AddLog(const char* fmt, ...) {
     vsnprintf(buf, sizeof(buf), fmt, args);
     va_end(args);
     
-    // 输出到安卓标准日志
     __android_log_print(ANDROID_LOG_INFO, TAG, "%s", buf);
     
-    // 同时输出到 ImGui 悬浮窗
     std::lock_guard<std::mutex> lock(g_LogMutex);
     if (g_AppLogs.size() > 30) g_AppLogs.erase(g_AppLogs.begin());
     g_AppLogs.push_back(buf);
@@ -53,6 +51,8 @@ void AddLog(const char* fmt, ...) {
 
 static bool g_Initialized = false;
 static bool g_FontLoaded = false;
+static bool g_IsHookInstalled = false; // 新增：是否已安装核心 Hook 的标志
+static std::string g_HookStatusMsg = "等待手动挂钩... (请在大厅/选区界面操作)";
 
 struct {
     float x = 0.0f;
@@ -110,7 +110,6 @@ T SafeRead(uintptr_t address) {
     return value;
 }
 
-// 辅助函数：将内存读取为 Hex 字符串用于排错
 std::string ReadMemoryHex(uintptr_t address, size_t size) {
     if (address == 0) return "null";
     unsigned char buffer[32] = {0};
@@ -241,7 +240,9 @@ uintptr_t GetModuleBase(const char* module_name) {
     return base;
 }
 
+// ==========================================
 // 唯一 Hook 目标：InitActor
+// ==========================================
 typedef void (*t_InitActorParams)(void* x0, void* x1, void* x2, void* x3, void* x4, void* x5, void* x6, void* x7);
 t_InitActorParams old_InitActorParams = nullptr;
 
@@ -259,7 +260,9 @@ void hook_InitActorParams(void* x0, void* x1, void* x2, void* x3, void* x4, void
     
     if (target_ptr != 0 && target_ptr > 0x10000000) { 
         g_ActorManager.store(target_ptr);
-        LOGI("[Hook-Init] 拦截到了! 次数:%d, 设定的基址: 0x%lx", g_InitCallCount.load(), target_ptr);
+        if (g_InitCallCount.load() % 10 == 1) { // 减少日志刷屏频率
+            LOGI("[Hook-Init] 拦截到实体生成! 当前使用基址: 0x%lx", target_ptr);
+        }
     }
     
     if (old_InitActorParams) {
@@ -267,18 +270,82 @@ void hook_InitActorParams(void* x0, void* x1, void* x2, void* x3, void* x4, void
     }
 }
 
+// ==========================================
+// 新增：手动安装 Hook 函数
+// ==========================================
+void InstallCoreHook() {
+    if (g_IsHookInstalled) return;
+
+    uintptr_t base = GetModuleBase(GAME_MODULE);
+    if (!base) {
+        g_HookStatusMsg = "未找到 libil2cpp.so，游戏未加载完全！";
+        LOGE("%s", g_HookStatusMsg.c_str());
+        return;
+    }
+    
+    g_GameBase = base;
+
+#if defined(__arm__) 
+    g_HookAddr_InitActor = base + 0x73507bc + 1;
+#else
+    g_HookAddr_InitActor = base + 0x73507bc;
+#endif
+
+    // 自检
+    std::string hexInit = ReadMemoryHex(g_HookAddr_InitActor & ~1, 8);
+    if (hexInit == "00 00 00 00 00 00 00 00 " || hexInit == "read_failed") {
+        g_HookStatusMsg = "内存自检失败，地址无权限或全是0，无法挂钩！";
+        LOGE("%s", g_HookStatusMsg.c_str());
+        return;
+    }
+
+    int ret = DobbyHook((void*)g_HookAddr_InitActor, (void*)hook_InitActorParams, (void**)&old_InitActorParams);
+    if (ret == 0) {
+        g_IsHookInstalled = true;
+        g_HookStatusMsg = "挂钩成功！防闪退绕过完成，请进对局。";
+        LOGI("[*] 手动安装 Hook 成功！");
+    } else {
+        g_HookStatusMsg = "挂钩失败，Dobby 返回错误码: " + std::to_string(ret);
+        LOGE("%s", g_HookStatusMsg.c_str());
+    }
+}
+
+
 void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
     ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(w * 0.55f, h * 0.8f), ImGuiCond_FirstUseEver);
-    if (ImGui::Begin("指针断点排错器 (IL2CPP)")) {
+    
+    if (ImGui::Begin("指针断点排错器 (防闪退版)")) {
+        
+        // ==========================================
+        // UI 修改点：最顶部的“一键安装Hook”按钮
+        // ==========================================
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.1f, 0.1f, 0.15f, 1.0f));
+        ImGui::BeginChild("HookController", ImVec2(0, 100), true);
+        if (!g_IsHookInstalled) {
+            ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.0f, 1.0f), "⚠️ 安全提示：请等待游戏进入选区大厅后，再点击下方按钮！");
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.0f, 0.3f, 0.3f, 1.0f));
+            if (ImGui::Button("🔴 点击安装核心 Hook (InitActor)", ImVec2(-1, 40))) {
+                InstallCoreHook();
+            }
+            ImGui::PopStyleColor(2);
+        } else {
+            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "✅ 核心 Hook 已安全注入！运行中...");
+        }
+        ImGui::Text("状态: %s", g_HookStatusMsg.c_str());
+        ImGui::EndChild();
+        ImGui::PopStyleColor();
+        ImGui::Separator();
+
         
         if (ImGui::CollapsingHeader("拦截寄存器选择 (基址来源)", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::TextColored(ImVec4(1, 1, 0, 1), "当前捕获的值:");
+            ImGui::TextColored(ImVec4(1, 1, 0, 1), "当前捕获的最新值 (实体频繁生成时会跳动):");
             ImGui::Text("x0 (通常是 this): 0x%lx", g_CapturedX0.load());
             ImGui::Text("x1 (通常是 参数1): 0x%lx", g_CapturedX1.load());
             ImGui::Text("x2 (MethodInfo):  0x%lx", g_CapturedX2.load());
             ImGui::Separator();
-            ImGui::Text("动态切换起点 (改完后下次生成英雄生效，或立即生效):");
+            ImGui::Text("动态切换起点:");
             if (ImGui::RadioButton("使用 x0", &g_RootRegister, 0)) g_ActorManager.store(g_CapturedX0.load()); ImGui::SameLine();
             if (ImGui::RadioButton("使用 x1", &g_RootRegister, 1)) g_ActorManager.store(g_CapturedX1.load()); ImGui::SameLine();
             if (ImGui::RadioButton("使用 x2", &g_RootRegister, 2)) g_ActorManager.store(g_CapturedX2.load());
@@ -314,18 +381,12 @@ void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
         }
         ImGui::Separator();
         ImGui::TextColored(ImVec4(0, 1, 1, 1), "[核心库] %s 基址: 0x%lx", GAME_MODULE, g_GameBase);
-        ImGui::TextColored(ImVec4(0, 1, 1, 1), "[Hook 1] InitActor (RVA 0x73507bc) -> 0x%lx", g_HookAddr_InitActor);
+        ImGui::TextColored(ImVec4(0, 1, 1, 1), "[Hook] InitActor (RVA 0x73507bc) -> 0x%lx", g_HookAddr_InitActor);
         ImGui::Separator();
 
         if (ImGui::CollapsingHeader("实时运行日志 (排错必看)", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::TextColored(g_InitCallCount > 0 ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1), 
-                "> InitActor 函数被拦截次数: %d", g_InitCallCount.load());
-            
-            if (g_InitCallCount == 0) {
-                ImGui::TextColored(ImVec4(1, 1, 0, 1), "[状态] 正在等待进入对局...\n提示: 因为 InitActor 只在生成实体时触发，大厅为0是正常现象。\n请进入对局/训练营。如果进对局后仍为0，则说明地址找错了。");
-            } else {
-                ImGui::TextColored(ImVec4(0, 1, 0, 1), "[状态] 成功拦截！请根据需要在上方切换使用 x0/x1/x2 作为基址测试数据。");
-            }
+                "> 实体生成被拦截次数: %d", g_InitCallCount.load());
 
             ImGui::BeginChild("LogRegion", ImVec2(0, 120), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
             std::lock_guard<std::mutex> lock(g_LogMutex);
@@ -339,7 +400,7 @@ void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
 
         const auto& d = snap.debug;
         const auto& off = snap.offsets;
-        ImGui::TextColored(d.baseX0 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "[起点] InitActor x0/x1/x2: 0x%lx", d.baseX0);
+        ImGui::TextColored(d.baseX0 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "[起点] 选定基址 (x0/x1/x2): 0x%lx", d.baseX0);
         ImGui::TextColored(d.addr1 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), " └─ [+%d] 地址 1: 0x%lx", off.x0_to_addr1, d.addr1);
         ImGui::TextColored(d.addr2 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "     └─ [+%d] 英雄数组: 0x%lx", off.addr1_to_addr2, d.addr2);
         if (d.addr2 != 0) {
@@ -466,7 +527,7 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     static bool show_pointer_debugger = true;
     static bool show_radar = true;
 
-    if (ImGui::Begin("IL2CPP 透视框架 (偏移可调)")) {
+    if (ImGui::Begin("IL2CPP 透视框架 (防闪退定制版)")) {
         if (!g_FontLoaded) ImGui::TextColored(ImVec4(1,0,0,1), "警告: 无法加载系统字库，将显示为问号!");
         float currentHeight = ImGui::GetWindowHeight();
         g_DynamicScale = currentHeight / g_BaseWindowHeight;
@@ -542,50 +603,18 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 }
 
 void* DelayedHookThread(void*) {
-    // 界面与输入的 Hook 不需要等待游戏逻辑
+    // 界面与输入的 Hook 安全且不需要等待游戏逻辑，立即安装
     void* egl = DobbySymbolResolver("libEGL.so", "eglSwapBuffers");
     if (egl) DobbyHook(egl, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
 
     void* ins = DobbySymbolResolver("libinput.so", "_ZN7android13InputConsumer7consumeEPNS_26InputEventFactoryInterfaceEblPjPPNS_10InputEventE");
     if (ins) DobbyHook(ins, (void*)hook_consume, (void**)&old_consume);
 
+    // 启动内存读取后台线程
     std::thread(DataWorkerThread).detach();
 
-    while (true) {
-        uintptr_t base = GetModuleBase(GAME_MODULE);
-        if (base) {
-            g_GameBase = base;
-            LOGI("[*] 发现 libil2cpp.so 内存基址: 0x%lx", base);
-            
-            LOGI("[*] 等待 5 秒，确保引擎彻底解密和初始化内存...");
-            sleep(5); 
-
-#if defined(__arm__) 
-            g_HookAddr_InitActor = base + 0x73507bc + 1;
-            LOGI("[*] 架构: 32位 (Thumb +1)");
-#else
-            g_HookAddr_InitActor = base + 0x73507bc;
-            LOGI("[*] 架构: 64位");
-#endif
-
-            std::string hexInit = ReadMemoryHex(g_HookAddr_InitActor & ~1, 8);
-            LOGI("[*] 内存自检 InitActor(0x%lx) 前 8 字节: %s", g_HookAddr_InitActor, hexInit.c_str());
-            if (hexInit == "00 00 00 00 00 00 00 00 ") {
-                LOGE("[!] 致命警告: 目标内存仍然全是00！说明地址被加密、未初始化，或者找错偏移了！");
-            }
-
-            // 只安装一个 Hook
-            int ret1 = DobbyHook((void*)g_HookAddr_InitActor, (void*)hook_InitActorParams, (void**)&old_InitActorParams);
-            
-            if (ret1 == 0) {
-                LOGI("[*] Dobby Hook 下发成功! (ret1:%d) 现在进游戏测试...", ret1);
-            } else {
-                LOGE("[!] Dobby Hook 下发失败！请检查地址或保护机制 (ret1:%d)", ret1);
-            }
-            break; 
-        }
-        sleep(1);
-    }
+    // 不再自动挂钩 IL2CPP，把挂钩权利交给菜单上的【手动安装按钮】
+    LOGI("[*] 初始化完成，已开启安全模式。请在大厅界面手动点击菜单挂钩。");
     return nullptr;
 }
 
