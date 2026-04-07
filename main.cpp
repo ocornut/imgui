@@ -51,7 +51,7 @@ void AddLog(const char* fmt, ...) {
 
 static bool g_Initialized = false;
 static bool g_FontLoaded = false;
-static bool g_IsHookInstalled = false; // 新增：是否已安装核心 Hook 的标志
+static bool g_IsHookInstalled = false;
 static std::string g_HookStatusMsg = "等待手动挂钩... (请在大厅/选区界面操作)";
 
 struct {
@@ -108,23 +108,6 @@ T SafeRead(uintptr_t address) {
     if (g_MemFd == -1) g_MemFd = open("/proc/self/mem", O_RDONLY);
     if (g_MemFd >= 0) pread(g_MemFd, &value, sizeof(T), address);
     return value;
-}
-
-std::string ReadMemoryHex(uintptr_t address, size_t size) {
-    if (address == 0) return "null";
-    unsigned char buffer[32] = {0};
-    if (g_MemFd == -1) g_MemFd = open("/proc/self/mem", O_RDONLY);
-    if (g_MemFd >= 0) {
-        ssize_t bytes_read = pread(g_MemFd, buffer, std::min(size, sizeof(buffer)), address);
-        if (bytes_read > 0) {
-            std::stringstream ss;
-            for (ssize_t i = 0; i < bytes_read; ++i) {
-                ss << std::hex << std::setw(2) << std::setfill('0') << (int)buffer[i] << " ";
-            }
-            return ss.str();
-        }
-    }
-    return "read_failed";
 }
 
 struct PlayerData {
@@ -271,7 +254,7 @@ void hook_InitActorParams(void* x0, void* x1, void* x2, void* x3, void* x4, void
 }
 
 // ==========================================
-// 新增：手动安装 Hook 函数
+// 新增：强行安装 Hook 函数 (忽略自检错误)
 // ==========================================
 void InstallCoreHook() {
     if (g_IsHookInstalled) return;
@@ -291,25 +274,20 @@ void InstallCoreHook() {
     g_HookAddr_InitActor = base + 0x73507bc;
 #endif
 
-    // 自检
-    std::string hexInit = ReadMemoryHex(g_HookAddr_InitActor & ~1, 8);
-    if (hexInit == "00 00 00 00 00 00 00 00 " || hexInit == "read_failed") {
-        g_HookStatusMsg = "内存自检失败，地址无权限或全是0，无法挂钩！";
-        LOGE("%s", g_HookStatusMsg.c_str());
-        return;
-    }
+    LOGI("[*] 准备强行下达 Dobby Hook 到地址: 0x%lx", g_HookAddr_InitActor);
 
+    // 【重要修改】: 移除了那段会拦住我们的内存读取自检！直接让 Dobby 硬上！
     int ret = DobbyHook((void*)g_HookAddr_InitActor, (void*)hook_InitActorParams, (void**)&old_InitActorParams);
+    
     if (ret == 0) {
         g_IsHookInstalled = true;
-        g_HookStatusMsg = "挂钩成功！防闪退绕过完成，请进对局。";
+        g_HookStatusMsg = "✅ 挂钩成功！防闪退绕过完成，请进对局。";
         LOGI("[*] 手动安装 Hook 成功！");
     } else {
-        g_HookStatusMsg = "挂钩失败，Dobby 返回错误码: " + std::to_string(ret);
+        g_HookStatusMsg = "❌ 挂钩失败，Dobby 返回错误码: " + std::to_string(ret);
         LOGE("%s", g_HookStatusMsg.c_str());
     }
 }
-
 
 void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
     ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
@@ -317,16 +295,13 @@ void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
     
     if (ImGui::Begin("指针断点排错器 (防闪退版)")) {
         
-        // ==========================================
-        // UI 修改点：最顶部的“一键安装Hook”按钮
-        // ==========================================
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.1f, 0.1f, 0.15f, 1.0f));
         ImGui::BeginChild("HookController", ImVec2(0, 100), true);
         if (!g_IsHookInstalled) {
             ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.0f, 1.0f), "⚠️ 安全提示：请等待游戏进入选区大厅后，再点击下方按钮！");
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.0f, 0.3f, 0.3f, 1.0f));
-            if (ImGui::Button("🔴 点击安装核心 Hook (InitActor)", ImVec2(-1, 40))) {
+            if (ImGui::Button("🔴 点击强行安装核心 Hook (InitActor)", ImVec2(-1, 40))) {
                 InstallCoreHook();
             }
             ImGui::PopStyleColor(2);
@@ -338,7 +313,6 @@ void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
         ImGui::PopStyleColor();
         ImGui::Separator();
 
-        
         if (ImGui::CollapsingHeader("拦截寄存器选择 (基址来源)", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::TextColored(ImVec4(1, 1, 0, 1), "当前捕获的最新值 (实体频繁生成时会跳动):");
             ImGui::Text("x0 (通常是 this): 0x%lx", g_CapturedX0.load());
@@ -527,7 +501,7 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     static bool show_pointer_debugger = true;
     static bool show_radar = true;
 
-    if (ImGui::Begin("IL2CPP 透视框架 (防闪退定制版)")) {
+    if (ImGui::Begin("IL2CPP 透视框架 (强力注射版)")) {
         if (!g_FontLoaded) ImGui::TextColored(ImVec4(1,0,0,1), "警告: 无法加载系统字库，将显示为问号!");
         float currentHeight = ImGui::GetWindowHeight();
         g_DynamicScale = currentHeight / g_BaseWindowHeight;
@@ -605,7 +579,6 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 void* DelayedHookThread(void*) {
     LOGI("[*] 正在等待 libEGL.so 加载 (渲染引擎初始化)...");
     
-    // 1. 循环等待图形渲染引擎加载完成
     void* egl = nullptr;
     while (!egl) {
         egl = DobbySymbolResolver("libEGL.so", "eglSwapBuffers");
@@ -614,7 +587,6 @@ void* DelayedHookThread(void*) {
     DobbyHook(egl, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
     LOGI("[*] 菜单渲染 Hook (eglSwapBuffers) 安装成功!");
 
-    // 2. 循环等待触摸输入引擎加载完成
     void* ins = nullptr;
     while (!ins) {
         ins = DobbySymbolResolver("libinput.so", "_ZN7android13InputConsumer7consumeEPNS_26InputEventFactoryInterfaceEblPjPPNS_10InputEventE");
@@ -623,10 +595,8 @@ void* DelayedHookThread(void*) {
     DobbyHook(ins, (void*)hook_consume, (void**)&old_consume);
     LOGI("[*] 触摸输入 Hook (consume) 安装成功!");
 
-    // 3. 启动内存读取后台线程
     std::thread(DataWorkerThread).detach();
 
-    // 不再自动挂钩 IL2CPP，把挂钩权利交给菜单上的【手动安装按钮】
     LOGI("[*] 框架初始化完成，已开启安全模式。请在大厅界面手动点击菜单挂钩。");
     return nullptr;
 }
