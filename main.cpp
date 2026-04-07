@@ -311,7 +311,105 @@ void InstallCoreHook() {
     }
 }
 
-// 触摸事件拦截
+void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
+    ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(w * 0.55f, h * 0.8f), ImGuiCond_FirstUseEver);
+    if (ImGui::Begin("指针断点排错器")) {
+        
+        // ==========================================
+        // 新增：神级功能 - 实时内存结构解剖器
+        // ==========================================
+        if (ImGui::CollapsingHeader("基址内存探查器 (寻址神器)", ImGuiTreeNodeFlags_DefaultOpen)) {
+            uintptr_t currentBase = g_ActorManager.load();
+            ImGui::TextColored(ImVec4(1, 0.5, 0, 1), "当前正在探查基址: 0x%lx", currentBase);
+            if (currentBase != 0) {
+                ImGui::BeginChild("MemDump", ImVec2(0, 200), true);
+                for (uint32_t offset = 0; offset <= 0x100; offset += 8) {
+                    uintptr_t val = SafeRead<uintptr_t>(currentBase + offset);
+                    
+                    if (val > 0x10000000 && val < 0x00007FFFFFFFFFFF) {
+                        // 发现有效指针！用绿色高亮！
+                        ImGui::TextColored(ImVec4(0, 1, 0, 1), "+0x%02X : 0x%lx <--- [可能是有效指针!]", offset, val);
+                    } else if (val != 0) {
+                        // 发现普通数据（可能是血量、坐标等）
+                        ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1), "+0x%02X : 0x%lx (整数: %lu)", offset, val, val);
+                    } else {
+                        // 空数据
+                        ImGui::TextColored(ImVec4(0.4f, 0.4f, 0.4f, 1), "+0x%02X : 0x0", offset);
+                    }
+                }
+                ImGui::EndChild();
+                ImGui::TextColored(ImVec4(1, 1, 0, 1), "操作提示: 寻找显示为绿色的【有效指针】，把它的偏移 +0xXX 填到下方的【地址1】里！");
+            } else {
+                ImGui::Text("等待获取有效基址...");
+            }
+        }
+        ImGui::Separator();
+
+        if (ImGui::CollapsingHeader("动态偏移修改面板 (十进制)", ImGuiTreeNodeFlags_DefaultOpen)) {
+            std::lock_guard<std::mutex> lock(g_OffsetMutex);
+            auto drawOffsetBtn = [](const char* label, uint32_t& val) {
+                ImGui::PushID(&val);
+                ImGui::TextColored(ImVec4(0.5f, 0.8f, 1.0f, 1.0f), "%s -> 当前: %d (0x%X)", label, val, val);
+                if (ImGui::Button("-8")) { if (val >= 8) val -= 8; else val = 0; } ImGui::SameLine();
+                if (ImGui::Button("-4")) { if (val >= 4) val -= 4; else val = 0; } ImGui::SameLine();
+                if (ImGui::Button("-1")) { if (val >= 1) val -= 1; else val = 0; } ImGui::SameLine();
+                if (ImGui::Button("+1")) val += 1; ImGui::SameLine();
+                if (ImGui::Button("+4")) val += 4; ImGui::SameLine();
+                if (ImGui::Button("+8")) val += 8;
+                ImGui::Separator();
+                ImGui::PopID();
+            };
+            drawOffsetBtn("地址1 (x0 + ?)", g_Offsets.x0_to_addr1);
+            drawOffsetBtn("英雄数组 (addr1 + ?)", g_Offsets.addr1_to_addr2);
+            drawOffsetBtn("实体数据 (item + ?)", g_Offsets.item_to_addr3);
+            drawOffsetBtn("血量属性 (addr3 + ?)", g_Offsets.addr3_to_addr4);
+            drawOffsetBtn("坐标数据 (addr3 + ?)", g_Offsets.addr3_to_addr5);
+            drawOffsetBtn("雷达坐标 (addr3 + ?)", g_Offsets.addr3_to_addr6);
+            ImGui::Separator();
+            drawOffsetBtn("金币偏移", g_Offsets.prop_gold);
+            drawOffsetBtn("血量偏移", g_Offsets.prop_hp);
+            drawOffsetBtn("最大血量偏移", g_Offsets.prop_maxhp);
+            drawOffsetBtn("等级偏移", g_Offsets.prop_level);
+            drawOffsetBtn("蓝量偏移", g_Offsets.prop_mana);
+        }
+        ImGui::Separator();
+        
+        const auto& d = snap.debug;
+        const auto& off = snap.offsets;
+        ImGui::TextColored(d.baseX0 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "[起点] 捕获到的 x0: 0x%lx", d.baseX0);
+        ImGui::TextColored(d.addr1 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), " └─ [+%d] 地址 1: 0x%lx", off.x0_to_addr1, d.addr1);
+        ImGui::TextColored(d.addr2 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "     └─ [+%d] 英雄数组: 0x%lx", off.addr1_to_addr2, d.addr2);
+        if (d.addr2 != 0) {
+            for (int i = 0; i < 15; i++) {
+                if (d.items[i].base == 0) continue;
+                char nodeName[64];
+                snprintf(nodeName, sizeof(nodeName), "数组序号 [%d] - 0x%lx", i, d.items[i].base);
+                if (ImGui::TreeNodeEx(nodeName, ImGuiTreeNodeFlags_Framed)) {
+                    ImGui::TextColored(d.items[i].addr3 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), " └─ [+%d] 实体数据: 0x%lx", off.item_to_addr3, d.items[i].addr3);
+                    if (d.items[i].addr3) {
+                        ImGui::TextColored(d.items[i].addr4 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "     ├─ [+%d] 属性区: 0x%lx", off.addr3_to_addr4, d.items[i].addr4);
+                        ImGui::TextColored(d.items[i].addr5 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "     ├─ [+%d] 坐标区: 0x%lx", off.addr3_to_addr5, d.items[i].addr5);
+                        ImGui::TextColored(d.items[i].addr6 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "     └─ [+%d] 小地图: 0x%lx", off.addr3_to_addr6, d.items[i].addr6);
+                    }
+                    ImGui::TreePop();
+                }
+            }
+        }
+        ImGui::Separator();
+        if (ImGui::CollapsingHeader("实时运行日志", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::TextColored(g_InitCallCount > 0 ? ImVec4(0, 1, 0, 1) : ImVec4(1, 1, 0, 1), 
+                "> 当前成功拦截次数: %d", g_InitCallCount.load());
+            ImGui::BeginChild("LogRegion", ImVec2(0, 120), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
+            std::lock_guard<std::mutex> lock(g_LogMutex);
+            for (const auto& log : g_AppLogs) { ImGui::TextUnformatted(log.c_str()); }
+            if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) ImGui::SetScrollHereY(1.0f);
+            ImGui::EndChild();
+        }
+    }
+    ImGui::End();
+}
+
 void handle_android_event(AInputEvent* event) {
     if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
         int32_t action = AMotionEvent_getAction(event) & AMOTION_EVENT_ACTION_MASK;
@@ -333,7 +431,6 @@ int hook_consume(void* instance, void* factory, bool consumeBatches, int64_t fra
     return res;
 }
 
-// eglSwapBuffers 渲染 Hook
 typedef EGLBoolean (*p_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surface);
 static p_eglSwapBuffers old_eglSwapBuffers = nullptr;
 
@@ -397,7 +494,6 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 
     if (ImGui::Begin("IL2CPP 透视框架 (防闪退正式版)")) {
         
-        // --- 顶部控制台 ---
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.1f, 0.1f, 0.15f, 1.0f));
         ImGui::BeginChild("HookController", ImVec2(0, 70), true);
         if (!g_IsHookInstalled) {
@@ -418,106 +514,36 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
             ImGui::SliderFloat("菜单缩放", &g_UserUIScale, 0.5f, 2.0f);
             ImGui::Text("坐标偏移 X:%.1f Y:%.1f", g_Touch.offsetX, g_Touch.offsetY);
             if (ImGui::Button("-10##x")) g_Touch.offsetX -= 10; ImGui::SameLine();
-void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
-    ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(w * 0.55f, h * 0.8f), ImGuiCond_FirstUseEver);
-    if (ImGui::Begin("指针断点排错器")) {
-        
-        // ==========================================
-        // 新增：神级功能 - 实时内存结构解剖器
-        // ==========================================
-        if (ImGui::CollapsingHeader("基址内存探查器 (寻址神器)", ImGuiTreeNodeFlags_DefaultOpen)) {
-            uintptr_t currentBase = g_ActorManager.load();
-            ImGui::TextColored(ImVec4(1, 0.5, 0, 1), "当前正在探查基址: 0x%lx", currentBase);
-            if (currentBase != 0) {
-                ImGui::BeginChild("MemDump", ImVec2(0, 200), true);
-                for (uint32_t offset = 0; offset <= 0x100; offset += 8) {
-                    uintptr_t val = SafeRead<uintptr_t>(currentBase + offset);
-                    
-                    if (val > 0x10000000 && val < 0x00007FFFFFFFFFFF) {
-                        // 发现有效指针！用绿色高亮！
-                        ImGui::TextColored(ImVec4(0, 1, 0, 1), "+0x%02X : 0x%lx <--- [可能是有效指针!]", offset, val);
-                    } else if (val != 0) {
-                        // 发现普通数据（可能是血量、坐标等）
-                        ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1), "+0x%02X : 0x%lx (整数: %lu)", offset, val, val);
-                    } else {
-                        // 空数据
-                        ImGui::TextColored(ImVec4(0.4f, 0.4f, 0.4f, 1), "+0x%02X : 0x0", offset);
-                    }
-                }
-                ImGui::EndChild();
-                ImGui::TextColored(ImVec4(1, 1, 0, 1), "操作提示: 寻找显示为绿色的【有效指针】，把它的偏移 +0xXX 填到下方的【地址1】里！");
-            } else {
-                ImGui::Text("等待获取有效基址...");
-            }
+            if (ImGui::Button("+10##x")) g_Touch.offsetX += 10; ImGui::SameLine();
+            if (ImGui::Button("-10##y")) g_Touch.offsetY -= 10; ImGui::SameLine();
+            if (ImGui::Button("+10##y")) g_Touch.offsetY += 10;
         }
         ImGui::Separator();
+        ImGui::Checkbox("雷达 (Radar)", &show_radar); ImGui::SameLine();
+        ImGui::Checkbox("指针断点调试", &show_pointer_debugger);
+        ImGui::Separator();
+        
+        ImGui::TextColored(ImVec4(0, 1, 0, 1), "状态: %s", snapshot.inMatch ? "局内" : "未获取到对象");
 
-        if (ImGui::CollapsingHeader("动态偏移修改面板 (十进制)", ImGuiTreeNodeFlags_DefaultOpen)) {
-                std::lock_guard<std::mutex> lock(g_OffsetMutex);
-                auto drawOffsetBtn = [](const char* label, uint32_t& val) {
-                    ImGui::PushID(&val);
-                    ImGui::TextColored(ImVec4(0.5f, 0.8f, 1.0f, 1.0f), "%s -> 当前: %d (0x%X)", label, val, val);
-                    if (ImGui::Button("-8")) { if (val >= 8) val -= 8; else val = 0; } ImGui::SameLine();
-                    if (ImGui::Button("-4")) { if (val >= 4) val -= 4; else val = 0; } ImGui::SameLine();
-                    if (ImGui::Button("-1")) { if (val >= 1) val -= 1; else val = 0; } ImGui::SameLine();
-                    if (ImGui::Button("+1")) val += 1; ImGui::SameLine();
-                    if (ImGui::Button("+4")) val += 4; ImGui::SameLine();
-                    if (ImGui::Button("+8")) val += 8;
-                    ImGui::Separator();
-                    ImGui::PopID();
-                };
-                drawOffsetBtn("地址1 (x0 + ?)", g_Offsets.x0_to_addr1);
-                drawOffsetBtn("英雄数组 (addr1 + ?)", g_Offsets.addr1_to_addr2);
-                drawOffsetBtn("实体数据 (item + ?)", g_Offsets.item_to_addr3);
-                drawOffsetBtn("血量属性 (addr3 + ?)", g_Offsets.addr3_to_addr4);
-                drawOffsetBtn("坐标数据 (addr3 + ?)", g_Offsets.addr3_to_addr5);
-                drawOffsetBtn("雷达坐标 (addr3 + ?)", g_Offsets.addr3_to_addr6);
-                ImGui::Separator();
-                drawOffsetBtn("金币偏移", g_Offsets.prop_gold);
-                drawOffsetBtn("血量偏移", g_Offsets.prop_hp);
-                drawOffsetBtn("最大血量偏移", g_Offsets.prop_maxhp);
-                drawOffsetBtn("等级偏移", g_Offsets.prop_level);
-                drawOffsetBtn("蓝量偏移", g_Offsets.prop_mana);
+        if (ImGui::BeginTable("PlayersTable", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
+            ImGui::TableSetupColumn("等级"); ImGui::TableSetupColumn("血量");
+            ImGui::TableSetupColumn("蓝量"); ImGui::TableSetupColumn("金币");
+            ImGui::TableSetupColumn("雷达坐标"); ImGui::TableHeadersRow();
+            for (const auto& p : snapshot.players) {
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn(); ImGui::Text("Lv.%d", p.level);
+                ImGui::TableNextColumn(); ImGui::Text("%d/%d", p.hp, p.maxHp);
+                ImGui::TableNextColumn(); ImGui::Text("%d", p.mana);
+                ImGui::TableNextColumn(); ImGui::Text("%d", p.gold);
+                ImGui::TableNextColumn(); ImGui::Text("%.0f, %.0f", p.mapX, p.mapY);
             }
-            ImGui::Separator();
-            
-            const auto& d = snapshot.debug;
-            const auto& off = snapshot.offsets;
-            ImGui::TextColored(d.baseX0 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "[起点] 捕获到的 x0: 0x%lx", d.baseX0);
-            ImGui::TextColored(d.addr1 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), " └─ [+%d] 地址 1: 0x%lx", off.x0_to_addr1, d.addr1);
-            ImGui::TextColored(d.addr2 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "     └─ [+%d] 英雄数组: 0x%lx", off.addr1_to_addr2, d.addr2);
-            if (d.addr2 != 0) {
-                for (int i = 0; i < 15; i++) {
-                    if (d.items[i].base == 0) continue;
-                    char nodeName[64];
-                    snprintf(nodeName, sizeof(nodeName), "数组序号 [%d] - 0x%lx", i, d.items[i].base);
-                    if (ImGui::TreeNodeEx(nodeName, ImGuiTreeNodeFlags_Framed)) {
-                        ImGui::TextColored(d.items[i].addr3 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), " └─ [+%d] 实体数据: 0x%lx", off.item_to_addr3, d.items[i].addr3);
-                        if (d.items[i].addr3) {
-                            ImGui::TextColored(d.items[i].addr4 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "     ├─ [+%d] 属性区: 0x%lx", off.addr3_to_addr4, d.items[i].addr4);
-                            ImGui::TextColored(d.items[i].addr5 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "     ├─ [+%d] 坐标区: 0x%lx", off.addr3_to_addr5, d.items[i].addr5);
-                            ImGui::TextColored(d.items[i].addr6 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "     └─ [+%d] 小地图: 0x%lx", off.addr3_to_addr6, d.items[i].addr6);
-                        }
-                        ImGui::TreePop();
-                    }
-                }
-            }
-            ImGui::Separator();
-            if (ImGui::CollapsingHeader("实时运行日志", ImGuiTreeNodeFlags_DefaultOpen)) {
-                ImGui::TextColored(g_InitCallCount > 0 ? ImVec4(0, 1, 0, 1) : ImVec4(1, 1, 0, 1), 
-                    "> 当前成功拦截次数: %d", g_InitCallCount.load());
-                ImGui::BeginChild("LogRegion", ImVec2(0, 120), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
-                std::lock_guard<std::mutex> lock(g_LogMutex);
-                for (const auto& log : g_AppLogs) { ImGui::TextUnformatted(log.c_str()); }
-                if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) ImGui::SetScrollHereY(1.0f);
-                ImGui::EndChild();
-            }
+            ImGui::EndTable();
         }
-        ImGui::End();
     }
+    ImGui::End();
 
-    // --- 雷达绘制 ---
+    if (show_pointer_debugger) DrawPointerDebugger(snapshot, w, h);
+
     if (show_radar && snapshot.inMatch) {
         ImGui::SetNextWindowPos(ImVec2(w - 350, 30), ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSize(ImVec2(300, 300), ImGuiCond_FirstUseEver);
