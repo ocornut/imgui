@@ -14,8 +14,6 @@
 #include <chrono>
 #include <fcntl.h>
 #include <dirent.h>
-
-// 第三方库
 #include "dobby.h"
 #include "imgui.h"
 #include "imgui_impl_android.h"
@@ -23,74 +21,58 @@
 
 #define TAG "IL2CPP_Drive"
 #define GAME_MODULE "libil2cpp.so"
+
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
+#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
 
-// ===================== [1. 针对 ARM64 的寄存器定义] =====================
-#ifndef RegisterContext
-typedef struct {
-    union {
-        uint64_t x[29];
-        struct { uint64_t x0,x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23,x24,x25,x26,x27,x28; };
-    } general;
-    uint64_t fp; uint64_t lr; uint64_t sp; uint64_t pc;
-} RegisterContext;
-#endif
-
-// ===================== [2. 数据结构定义] =====================
-
-struct DynamicOffsets {
-    uint32_t x0_to_addr1 = 0x20; uint32_t addr1_to_addr2 = 0x10;
-    uint32_t item_to_addr3 = 0x18; uint32_t addr3_to_addr4 = 0x30;
-    uint32_t addr3_to_addr5 = 0x100; uint32_t addr3_to_addr6 = 0x70;
-    uint32_t prop_gold = 0x20; uint32_t prop_hp = 0x30;
-    uint32_t prop_maxhp = 0x32; uint32_t prop_level = 0x50;
-    uint32_t prop_mana = 0x28;
-};
-
-struct PlayerData {
-    int hp = 0, maxHp = 0, mana = 0, gold = 0, level = 0;
-    float worldX = 0, worldY = 0, worldZ = 0;
-    float mapX = 0, mapY = 0;
-};
-
-struct DebugChain {
-    uintptr_t baseX0 = 0, addr1 = 0, addr2 = 0;
-    struct Item { uintptr_t base = 0, addr3 = 0, addr4 = 0, addr5 = 0, addr6 = 0; } items[15];
-};
-
-struct GameSnapshot {
-    bool inMatch = false;
-    DynamicOffsets offsets;
-    DebugChain debug;
-    std::vector<PlayerData> players;
-};
-
-// ===================== [3. 前置声明] =====================
-void handle_android_event(AInputEvent* event);
-void DrawPointerDebugger(const GameSnapshot& snap, float w, float h);
-void DrawRadar(const GameSnapshot& snap, float w, float h, float finalScale);
-void instrument_InitActorParams(RegisterContext *ctx, const HookEntryInfo *info);
-void instrument_ClearActor(RegisterContext *ctx, const HookEntryInfo *info);
-uintptr_t GetModuleBase(const char* module_name);
-
-// ===================== [4. 全局变量] =====================
-static bool g_Initialized = false, g_FontLoaded = false;
-static int g_MemFd = -1;
-static uintptr_t g_GameBase = 0, g_HookAddr_InitActor = 0, g_HookAddr_ClearActor = 0;
-static float g_DynamicScale = 1.0f, g_BaseWindowHeight = 0.0f, g_UserUIScale = 1.0f;
+static bool g_Initialized = false;
+static bool g_FontLoaded = false;
 
 struct {
-    float x = 0.0f, y = 0.0f; std::atomic<bool> down{false};
-    float renderW = 0.0f, renderH = 0.0f; float physW = 3392.0f, physH = 2400.0f;
-    float offsetX = 0.0f, offsetY = 0.0f;
+    float x = 0.0f;
+    float y = 0.0f;
+    std::atomic<bool> down{false};
+    float renderW = 0.0f;
+    float renderH = 0.0f;
+    float physW = 3392.0f;
+    float physH = 2400.0f;
+    bool isSizeAutoDetected = false;
+    float offsetX = 0.0f;
+    float offsetY = 0.0f;
 } g_Touch;
 
-DynamicOffsets g_Offsets;
-std::mutex g_OffsetMutex, g_SnapshotMutex;
-GameSnapshot g_CurrentSnapshot;
-std::atomic<uintptr_t> g_ActorManager{0};
+static float g_DynamicScale = 1.0f;
+static float g_BaseWindowHeight = 0.0f;
+static float g_UserUIScale = 1.0f;
 
-// ===================== [5. 内存读取与数据线程] =====================
+static uintptr_t g_GameBase = 0;
+static uintptr_t g_HookAddr_InitActor = 0;
+static uintptr_t g_HookAddr_ClearActor = 0;
+
+struct DynamicOffsets {
+    // 指针链偏移
+    uint32_t x0_to_addr1    = 0x20;
+    uint32_t addr1_to_addr2 = 0x10;
+    uint32_t item_to_addr3  = 0x18;
+    uint32_t addr3_to_addr4 = 0x30;
+    uint32_t addr3_to_addr5 = 0x100;
+    uint32_t addr3_to_addr6 = 0x70;
+
+    // 属性偏移 (addr4 内)
+    uint32_t prop_gold  = 0x20;
+    uint32_t prop_hp    = 0x30;
+    uint32_t prop_maxhp = 0x32;   // 注意：可能是 int16
+    uint32_t prop_level = 0x50;
+
+    // 世界坐标区内偏移 (addr5 内)
+    uint32_t prop_mana  = 0x28;   // 蓝量偏移
+    // 世界坐标 XYZ 固定 0,4,8
+};
+
+DynamicOffsets g_Offsets;
+std::mutex g_OffsetMutex;
+
+static int g_MemFd = -1;
 
 template <typename T>
 T SafeRead(uintptr_t address) {
@@ -101,191 +83,413 @@ T SafeRead(uintptr_t address) {
     return value;
 }
 
+struct PlayerData {
+    int hp = 0, maxHp = 0, mana = 0, gold = 0, level = 0;
+    float worldX = 0, worldY = 0, worldZ = 0;
+    float mapX = 0, mapY = 0;
+};
+
+struct DebugChain {
+    uintptr_t baseX0 = 0;
+    uintptr_t addr1 = 0;
+    uintptr_t addr2 = 0;
+    struct Item {
+        uintptr_t base = 0, addr3 = 0, addr4 = 0, addr5 = 0, addr6 = 0;
+    } items[15];
+};
+
+struct GameSnapshot {
+    bool inMatch = false;
+    DynamicOffsets offsets;
+    DebugChain debug;
+    std::vector<PlayerData> players;
+};
+
+std::mutex g_SnapshotMutex;
+GameSnapshot g_CurrentSnapshot;
+std::atomic<uintptr_t> g_ActorManager{0};
+
+// 后台数据读取线程
 void DataWorkerThread() {
     while (true) {
         GameSnapshot newSnap;
-        { std::lock_guard<std::mutex> lock(g_OffsetMutex); newSnap.offsets = g_Offsets; }
+        DynamicOffsets currOff;
+        {
+            std::lock_guard<std::mutex> lock(g_OffsetMutex);
+            currOff = g_Offsets;
+        }
+        newSnap.offsets = currOff;
+
         uintptr_t baseX0 = g_ActorManager.load();
         if (baseX0 != 0) {
-            newSnap.inMatch = true; newSnap.debug.baseX0 = baseX0;
-            uintptr_t a1 = SafeRead<uintptr_t>(baseX0 + newSnap.offsets.x0_to_addr1);
-            newSnap.debug.addr1 = a1;
-            if (a1) {
-                uintptr_t a2 = SafeRead<uintptr_t>(a1 + newSnap.offsets.addr1_to_addr2);
-                newSnap.debug.addr2 = a2;
-                if (a2) {
+            newSnap.inMatch = true;
+            newSnap.debug.baseX0 = baseX0;
+
+            uintptr_t addr1 = SafeRead<uintptr_t>(baseX0 + currOff.x0_to_addr1);
+            newSnap.debug.addr1 = addr1;
+            if (addr1) {
+                uintptr_t addr2 = SafeRead<uintptr_t>(addr1 + currOff.addr1_to_addr2);
+                newSnap.debug.addr2 = addr2;
+                if (addr2) {
+                    // 遍历玩家数组（每个槽位8字节指针，最大15个）
                     for (int i = 0; i < 15; ++i) {
-                        uintptr_t item = SafeRead<uintptr_t>(a2 + (i * 0x8));
-                        newSnap.debug.items[i].base = item; if (!item) continue;
-                        uintptr_t a3 = SafeRead<uintptr_t>(item + newSnap.offsets.item_to_addr3);
-                        newSnap.debug.items[i].addr3 = a3; if (!a3) continue;
+                        uintptr_t item = SafeRead<uintptr_t>(addr2 + (i * 0x8));
+                        newSnap.debug.items[i].base = item;
+                        if (!item) continue;
+
+                        uintptr_t addr3 = SafeRead<uintptr_t>(item + currOff.item_to_addr3);
+                        newSnap.debug.items[i].addr3 = addr3;
+                        if (!addr3) continue;
 
                         PlayerData p;
-                        uintptr_t a4 = SafeRead<uintptr_t>(a3 + newSnap.offsets.addr3_to_addr4);
-                        newSnap.debug.items[i].addr4 = a4;
-                        if (a4) {
-                            p.gold = SafeRead<int32_t>(a4 + newSnap.offsets.prop_gold);
-                            p.hp = SafeRead<int32_t>(a4 + newSnap.offsets.prop_hp);
-                            p.maxHp = (int)SafeRead<int16_t>(a4 + newSnap.offsets.prop_maxhp);
-                            p.level = SafeRead<int32_t>(a4 + newSnap.offsets.prop_level);
+
+                        // 属性区 addr4
+                        uintptr_t addr4 = SafeRead<uintptr_t>(addr3 + currOff.addr3_to_addr4);
+                        newSnap.debug.items[i].addr4 = addr4;
+                        if (addr4) {
+                            p.gold = SafeRead<int32_t>(addr4 + currOff.prop_gold);
+                            p.hp   = SafeRead<int32_t>(addr4 + currOff.prop_hp);
+                            // maxhp 偏移 0x32，可能是 int16，安全读取后转为 int32
+                            p.maxHp = SafeRead<int16_t>(addr4 + currOff.prop_maxhp);
+                            p.level = SafeRead<int32_t>(addr4 + currOff.prop_level);
                         }
-                        uintptr_t a5 = SafeRead<uintptr_t>(a3 + newSnap.offsets.addr3_to_addr5);
-                        newSnap.debug.items[i].addr5 = a5;
-                        if (a5) {
-                            p.worldX = SafeRead<float>(a5 + 0x0); p.worldZ = SafeRead<float>(a5 + 0x4); p.worldY = SafeRead<float>(a5 + 0x8);
-                            p.mana = SafeRead<int32_t>(a5 + newSnap.offsets.prop_mana);
+
+                        // 世界坐标区 addr5
+                        uintptr_t addr5 = SafeRead<uintptr_t>(addr3 + currOff.addr3_to_addr5);
+                        newSnap.debug.items[i].addr5 = addr5;
+                        if (addr5) {
+                            p.worldX = SafeRead<float>(addr5 + 0x0);
+                            p.worldZ = SafeRead<float>(addr5 + 0x4);
+                            p.worldY = SafeRead<float>(addr5 + 0x8);
+                            p.mana   = SafeRead<int32_t>(addr5 + currOff.prop_mana);
                         }
-                        uintptr_t a6 = SafeRead<uintptr_t>(a3 + newSnap.offsets.addr3_to_addr6);
-                        newSnap.debug.items[i].addr6 = a6;
-                        if (a6) { p.mapX = SafeRead<float>(a6 + 0x50); p.mapY = SafeRead<float>(a6 + 0x54); }
-                        if (p.maxHp > 0) newSnap.players.push_back(p);
+
+                        // 小地图坐标区 addr6
+                        uintptr_t addr6 = SafeRead<uintptr_t>(addr3 + currOff.addr3_to_addr6);
+                        newSnap.debug.items[i].addr6 = addr6;
+                        if (addr6) {
+                            p.mapX = SafeRead<float>(addr6 + 0x50);
+                            p.mapY = SafeRead<float>(addr6 + 0x54);
+                        }
+
+                        if (p.maxHp > 0 && p.maxHp < 50000)
+                            newSnap.players.push_back(p);
                     }
                 }
             }
         }
-        { std::lock_guard<std::mutex> lock(g_SnapshotMutex); g_CurrentSnapshot = newSnap; }
+
+        {
+            std::lock_guard<std::mutex> lock(g_SnapshotMutex);
+            g_CurrentSnapshot = newSnap;
+        }
         std::this_thread::sleep_for(std::chrono::milliseconds(16));
     }
 }
 
-// ===================== [6. 绘制逻辑 (找回被删的功能)] =====================
+uintptr_t GetModuleBase(const char* module_name) {
+    uintptr_t base = 0;
+    FILE* f = fopen("/proc/self/maps", "r");
+    if (!f) return 0;
+    char line[512];
+    while (fgets(line, sizeof(line), f)) {
+        if (strstr(line, module_name)) {
+            sscanf(line, "%lx", &base);
+            break;
+        }
+    }
+    fclose(f);
+    return base;
+}
 
+// Hook 函数声明
+void (*old_InitActorParams)(void* x0, void* x1, void* x2, void* x3);
+void hook_InitActorParams(void* x0, void* x1, void* x2, void* x3) {
+    g_ActorManager.store((uintptr_t)x0);
+    LOGI("[InitActor] x0 = %p", x0);
+    old_InitActorParams(x0, x1, x2, x3);
+}
+
+void (*old_ClearActor)(void* x0);
+void hook_ClearActor(void* x0) {
+    g_ActorManager.store(0);
+    LOGI("[ClearActor] Game ended");
+    old_ClearActor(x0);
+}
+
+// 指针调试器窗口（与原代码类似，但偏移面板已适配新偏移）
 void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
-    ImGui::SetNextWindowSize(ImVec2(w * 0.5f, h * 0.7f), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(w * 0.55f, h * 0.8f), ImGuiCond_FirstUseEver);
     if (ImGui::Begin("指针断点排错器 (IL2CPP)")) {
-        if (ImGui::CollapsingHeader("动态偏移修改面板", ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (ImGui::CollapsingHeader("动态偏移修改面板 (十进制)", ImGuiTreeNodeFlags_DefaultOpen)) {
             std::lock_guard<std::mutex> lock(g_OffsetMutex);
-            auto btn = [](const char* l, uint32_t& v) {
-                ImGui::PushID(&v); ImGui::Text("%s: %d (0x%X)", l, v, v); ImGui::SameLine();
-                if(ImGui::Button("-1")) v--; ImGui::SameLine(); if(ImGui::Button("+1")) v++; ImGui::PopID();
+            auto drawOffsetBtn = [](const char* label, uint32_t& val) {
+                ImGui::PushID(&val);
+                ImGui::TextColored(ImVec4(0.5f, 0.8f, 1.0f, 1.0f), "%s -> 当前: %d (0x%X)", label, val, val);
+                if (ImGui::Button("-8")) { if (val >= 8) val -= 8; else val = 0; } ImGui::SameLine();
+                if (ImGui::Button("-4")) { if (val >= 4) val -= 4; else val = 0; } ImGui::SameLine();
+                if (ImGui::Button("-1")) { if (val >= 1) val -= 1; else val = 0; } ImGui::SameLine();
+                if (ImGui::Button("+1")) val += 1; ImGui::SameLine();
+                if (ImGui::Button("+4")) val += 4; ImGui::SameLine();
+                if (ImGui::Button("+8")) val += 8;
+                ImGui::Separator();
+                ImGui::PopID();
             };
-            btn("Addr1", g_Offsets.x0_to_addr1); btn("Array", g_Offsets.addr1_to_addr2);
-            btn("Entity", g_Offsets.item_to_addr3); btn("Attr", g_Offsets.addr3_to_addr4);
+            drawOffsetBtn("地址1 (x0 + ?)", g_Offsets.x0_to_addr1);
+            drawOffsetBtn("英雄数组 (addr1 + ?)", g_Offsets.addr1_to_addr2);
+            drawOffsetBtn("实体数据 (item + ?)", g_Offsets.item_to_addr3);
+            drawOffsetBtn("血量属性 (addr3 + ?)", g_Offsets.addr3_to_addr4);
+            drawOffsetBtn("坐标数据 (addr3 + ?)", g_Offsets.addr3_to_addr5);
+            drawOffsetBtn("雷达坐标 (addr3 + ?)", g_Offsets.addr3_to_addr6);
+            ImGui::Separator();
+            drawOffsetBtn("金币偏移", g_Offsets.prop_gold);
+            drawOffsetBtn("血量偏移", g_Offsets.prop_hp);
+            drawOffsetBtn("最大血量偏移", g_Offsets.prop_maxhp);
+            drawOffsetBtn("等级偏移", g_Offsets.prop_level);
+            drawOffsetBtn("蓝量偏移", g_Offsets.prop_mana);
         }
         ImGui::Separator();
-        ImGui::Text("BaseX0: 0x%lx", snap.debug.baseX0);
-        // ... (此处可以遍历 snap.debug.items 显示更多地址)
+        ImGui::TextColored(ImVec4(0, 1, 1, 1), "[核心库] %s 基址: 0x%lx", GAME_MODULE, g_GameBase);
+        ImGui::TextColored(ImVec4(0, 1, 1, 1), "[Hook 1] InitActor (RVA 0x73507bc) -> 0x%lx", g_HookAddr_InitActor);
+        ImGui::TextColored(ImVec4(0, 1, 1, 1), "[Hook 2] ClearActor (RVA 0x734bc10) -> 0x%lx", g_HookAddr_ClearActor);
+        ImGui::Separator();
+
+        const auto& d = snap.debug;
+        const auto& off = snap.offsets;
+        ImGui::TextColored(d.baseX0 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "[起点] InitActor x0: 0x%lx", d.baseX0);
+        ImGui::TextColored(d.addr1 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), " └─ [+%d] 地址 1: 0x%lx", off.x0_to_addr1, d.addr1);
+        ImGui::TextColored(d.addr2 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "     └─ [+%d] 英雄数组: 0x%lx", off.addr1_to_addr2, d.addr2);
+        if (d.addr2 != 0) {
+            for (int i = 0; i < 15; i++) {
+                if (d.items[i].base == 0) continue;
+                char nodeName[64];
+                snprintf(nodeName, sizeof(nodeName), "数组序号 [%d] - 0x%lx", i, d.items[i].base);
+                if (ImGui::TreeNodeEx(nodeName, ImGuiTreeNodeFlags_Framed)) {
+                    ImGui::TextColored(d.items[i].addr3 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), " └─ [+%d] 实体数据: 0x%lx", off.item_to_addr3, d.items[i].addr3);
+                    if (d.items[i].addr3) {
+                        ImGui::TextColored(d.items[i].addr4 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "     ├─ [+%d] 属性区: 0x%lx", off.addr3_to_addr4, d.items[i].addr4);
+                        ImGui::TextColored(d.items[i].addr5 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "     ├─ [+%d] 坐标区: 0x%lx", off.addr3_to_addr5, d.items[i].addr5);
+                        ImGui::TextColored(d.items[i].addr6 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "     └─ [+%d] 小地图: 0x%lx", off.addr3_to_addr6, d.items[i].addr6);
+                    }
+                    ImGui::TreePop();
+                }
+            }
+        }
     }
     ImGui::End();
 }
 
-void DrawRadar(const GameSnapshot& snap, float w, float h, float finalScale) {
-    ImGui::SetNextWindowPos(ImVec2(w - 320, 50), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(300, 300));
-    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0.4f));
-    if (ImGui::Begin("Radar", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize)) {
-        ImVec2 p0 = ImGui::GetCursorScreenPos(); ImVec2 sz = ImGui::GetContentRegionAvail();
-        ImDrawList* dl = ImGui::GetWindowDrawList();
-        dl->AddRect(p0, ImVec2(p0.x + sz.x, p0.y + sz.y), IM_COL32(255,255,255,100));
-        for (const auto& p : snap.players) {
-            float nX = p.mapX / 10000.0f; float nY = p.mapY / 10000.0f;
-            float rX = p0.x + (nX * sz.x); float rY = p0.y + sz.y - (nY * sz.y);
-            if (nX > 0 && nX < 1 && nY > 0 && nY < 1)
-                dl->AddCircleFilled(ImVec2(rX, rY), 6.0f * finalScale, IM_COL32(255,0,0,200));
+// 触摸及分辨率辅助
+void AutoFetchDeviceResolution() {
+    FILE* pipe = popen("wm size", "r");
+    if (!pipe) return;
+    char buffer[128];
+    while (fgets(buffer, sizeof(buffer), pipe) != NULL) {
+        int w = 0, h = 0;
+        if (sscanf(buffer, "Physical size: %dx%d", &w, &h) == 2 || sscanf(buffer, "Override size: %dx%d", &w, &h) == 2) {
+            g_Touch.physW = (float)std::max(w, h);
+            g_Touch.physH = (float)std::min(w, h);
+            g_Touch.isSizeAutoDetected = true;
         }
     }
-    ImGui::End(); ImGui::PopStyleColor();
+    pclose(pipe);
 }
-
-// ===================== [7. Hook & Event 逻辑] =====================
 
 void handle_android_event(AInputEvent* event) {
     if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
         int32_t action = AMotionEvent_getAction(event) & AMOTION_EVENT_ACTION_MASK;
-        float scX = g_Touch.renderW / g_Touch.physW; float scY = g_Touch.renderH / g_Touch.physH;
-        g_Touch.x = (AMotionEvent_getX(event, 0) * scX) + g_Touch.offsetX;
-        g_Touch.y = (AMotionEvent_getY(event, 0) * scY) + g_Touch.offsetY;
+        float autoScaleX = g_Touch.renderW / g_Touch.physW;
+        float autoScaleY = g_Touch.renderH / g_Touch.physH;
+        g_Touch.x = (AMotionEvent_getX(event, 0) * autoScaleX) + g_Touch.offsetX;
+        g_Touch.y = (AMotionEvent_getY(event, 0) * autoScaleY) + g_Touch.offsetY;
         if (action == AMOTION_EVENT_ACTION_DOWN) g_Touch.down.store(true);
         else if (action == AMOTION_EVENT_ACTION_UP || action == AMOTION_EVENT_ACTION_CANCEL) g_Touch.down.store(false);
     }
 }
 
-typedef int (*p_consume)(void*, void*, bool, int64_t, uint32_t*, void**);
-static p_consume old_consume = nullptr;
-int hook_consume(void* a, void* b, bool c, int64_t d, uint32_t* e, void** f) {
-    int res = old_consume(a,b,c,d,e,f);
-    if (res == 0 && f && *f) handle_android_event((AInputEvent*)*f);
+// InputConsumer Hook
+typedef int (*p_InputConsumer_consume)(void* instance, void* factory, bool consumeBatches, int64_t frameTime, uint32_t* outSeq, void** outEvent);
+static p_InputConsumer_consume old_consume = nullptr;
+
+int hook_consume(void* instance, void* factory, bool consumeBatches, int64_t frameTime, uint32_t* outSeq, void** outEvent) {
+    int res = old_consume(instance, factory, consumeBatches, frameTime, outSeq, outEvent);
+    if (res == 0 && outEvent && *outEvent) handle_android_event((AInputEvent*)(*outEvent));
     return res;
 }
 
-typedef EGLBoolean (*p_swap)(EGLDisplay, EGLSurface);
-static p_swap old_swap = nullptr;
-EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surf) {
-    EGLint w, h; eglQuerySurface(dpy, surf, EGL_WIDTH, &w); eglQuerySurface(dpy, surf, EGL_HEIGHT, &h);
-    if (w <= 0 || h <= 0) return old_swap(dpy, surf);
-    g_Touch.renderW = (float)w; g_Touch.renderH = (float)h;
+// eglSwapBuffers Hook
+typedef EGLBoolean (*p_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surface);
+static p_eglSwapBuffers old_eglSwapBuffers = nullptr;
+
+EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
+    EGLint w, h;
+    eglQuerySurface(dpy, surface, EGL_WIDTH, &w);
+    eglQuerySurface(dpy, surface, EGL_HEIGHT, &h);
+    if (w <= 0 || h <= 0) return old_eglSwapBuffers(dpy, surface);
+    g_Touch.renderW = (float)w;
+    g_Touch.renderH = (float)h;
+
+    GameSnapshot snapshot;
+    {
+        std::lock_guard<std::mutex> lock(g_SnapshotMutex);
+        snapshot = g_CurrentSnapshot;
+    }
 
     if (!g_Initialized) {
-        ImGui::CreateContext(); ImGui_ImplOpenGL3_Init("#version 300 es");
+        ImGui::CreateContext();
+        ImGui_ImplOpenGL3_Init("#version 300 es");
         ImGuiIO& io = ImGui::GetIO();
-        const char* fonts[] = {"/system/fonts/NotoSansCJKjp-Regular.otc", "/system/fonts/DroidSansFallback.ttf"};
-        for (auto f : fonts) { if(access(f, R_OK)==0) { io.Fonts->AddFontFromFileTTF(f, 32.0f, NULL, io.Fonts->GetGlyphRangesChineseSimplifiedCommon()); g_FontLoaded=true; break; }}
+
+        // 加载中文字体（根据你的系统字体路径）
+        const char* systemFonts[] = {
+            "/system/fonts/SysSans-Hans-Regular.ttf",
+            "/system/fonts/NotoSansCJKjp-Regular.otc",
+            "/system/fonts/NotoSansSC-Regular.otf",
+            "/system/fonts/DroidSansFallback.ttf"
+        };
+        for (int i = 0; i < 4; i++) {
+            if (access(systemFonts[i], R_OK) == 0) {
+                io.Fonts->AddFontFromFileTTF(systemFonts[i], 32.0f, NULL, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
+                g_FontLoaded = true;
+                LOGI("[*] 加载字体成功: %s", systemFonts[i]);
+                break;
+            }
+        }
         g_Initialized = true;
     }
 
-    GameSnapshot snap; { std::lock_guard<std::mutex> lock(g_SnapshotMutex); snap = g_CurrentSnapshot; }
     ImGuiIO& io = ImGui::GetIO();
     io.DisplaySize = ImVec2(g_Touch.renderW, g_Touch.renderH);
-    io.MousePos = ImVec2(g_Touch.x, g_Touch.y); io.MouseDown[0] = g_Touch.down.load();
+    io.MousePos = ImVec2(g_Touch.x, g_Touch.y);
+    io.MouseDown[0] = g_Touch.down.load();
 
-    float finalScale = ((float)h / 1000.0f) * g_DynamicScale * g_UserUIScale;
-    ImGui::GetStyle().ScaleAllSizes(finalScale); io.FontGlobalScale = finalScale;
+    float deviceScale = (float)h / 1000.0f;
+    if (deviceScale < 1.0f) deviceScale = 1.0f;
+    float finalScale = deviceScale * g_DynamicScale * g_UserUIScale;
 
-    ImGui_ImplOpenGL3_NewFrame(); ImGui::NewFrame();
+    static ImGuiStyle default_style = ImGui::GetStyle();
+    ImGuiStyle& style = ImGui::GetStyle();
+    style = default_style;
+    style.ScaleAllSizes(1.2f * finalScale);
+    style.WindowRounding = 12.0f;
+    style.WindowMinSize = ImVec2(100.0f, 100.0f);
+    io.FontGlobalScale = 1.2f * finalScale;
 
-    static bool show_db = true, show_rd = true;
-    if (ImGui::Begin("IL2CPP 菜单 (满血版)")) {
-        ImGui::Checkbox("调试器", &show_db); ImGui::SameLine(); ImGui::Checkbox("雷达", &show_rd);
-        ImGui::SliderFloat("UI 缩放", &g_UserUIScale, 0.5f, 2.0f);
-        if (ImGui::BeginTable("PT", 4, ImGuiTableFlags_Borders)) {
-            ImGui::TableSetupColumn("等级"); ImGui::TableSetupColumn("血量"); ImGui::TableSetupColumn("金币"); ImGui::TableSetupColumn("坐标"); ImGui::TableHeadersRow();
-            for (const auto& p : snap.players) {
-                ImGui::TableNextRow(); ImGui::TableNextColumn(); ImGui::Text("Lv.%d", p.level);
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui::NewFrame();
+
+    if (g_Touch.down.load())
+        ImGui::GetForegroundDrawList()->AddCircleFilled(io.MousePos, 20.0f, IM_COL32(0, 255, 0, 200));
+
+    if (g_BaseWindowHeight == 0.0f) g_BaseWindowHeight = h * 0.45f;
+    ImGui::SetNextWindowPos(ImVec2(30, 30), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(w * 0.6f, g_BaseWindowHeight), ImGuiCond_FirstUseEver);
+
+    static bool show_pointer_debugger = true;
+    static bool show_radar = true;
+
+    if (ImGui::Begin("IL2CPP 透视框架 (偏移可调)")) {
+        if (!g_FontLoaded) ImGui::TextColored(ImVec4(1,0,0,1), "警告: 无法加载系统字库，将显示为问号!");
+        float currentHeight = ImGui::GetWindowHeight();
+        g_DynamicScale = currentHeight / g_BaseWindowHeight;
+        if (g_DynamicScale < 0.4f) g_DynamicScale = 0.4f;
+        if (g_DynamicScale > 3.0f) g_DynamicScale = 3.0f;
+
+        if (ImGui::CollapsingHeader("基础校准 (触控与缩放)")) {
+            ImGui::SliderFloat("菜单缩放", &g_UserUIScale, 0.5f, 2.0f);
+            ImGui::Text("坐标偏移 X:%.1f Y:%.1f", g_Touch.offsetX, g_Touch.offsetY);
+            if (ImGui::Button("-10##x")) g_Touch.offsetX -= 10; ImGui::SameLine();
+            if (ImGui::Button("+10##x")) g_Touch.offsetX += 10; ImGui::SameLine();
+            if (ImGui::Button("-10##y")) g_Touch.offsetY -= 10; ImGui::SameLine();
+            if (ImGui::Button("+10##y")) g_Touch.offsetY += 10;
+        }
+        ImGui::Separator();
+        ImGui::Checkbox("雷达 (Radar)", &show_radar); ImGui::SameLine();
+        ImGui::Checkbox("指针断点调试", &show_pointer_debugger);
+        ImGui::Separator();
+        ImGui::TextColored(ImVec4(0, 1, 0, 1), "状态: %s", snapshot.inMatch ? "局内" : "大厅");
+
+        if (ImGui::BeginTable("PlayersTable", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
+            ImGui::TableSetupColumn("等级"); ImGui::TableSetupColumn("血量");
+            ImGui::TableSetupColumn("蓝量"); ImGui::TableSetupColumn("金币");
+            ImGui::TableSetupColumn("雷达坐标"); ImGui::TableHeadersRow();
+            for (const auto& p : snapshot.players) {
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn(); ImGui::Text("Lv.%d", p.level);
                 ImGui::TableNextColumn(); ImGui::Text("%d/%d", p.hp, p.maxHp);
+                ImGui::TableNextColumn(); ImGui::Text("%d", p.mana);
                 ImGui::TableNextColumn(); ImGui::Text("%d", p.gold);
-                ImGui::TableNextColumn(); ImGui::Text("%.0f,%.0f", p.mapX, p.mapY);
+                ImGui::TableNextColumn(); ImGui::Text("%.0f, %.0f", p.mapX, p.mapY);
             }
             ImGui::EndTable();
         }
     }
     ImGui::End();
 
-    if(show_db) DrawPointerDebugger(snap, w, h);
-    if(show_rd && snap.inMatch) DrawRadar(snap, w, h, finalScale);
+    if (show_pointer_debugger) DrawPointerDebugger(snapshot, w, h);
+    if (show_radar && snapshot.inMatch) {
+        ImGui::SetNextWindowPos(ImVec2(w - 350, 30), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(300, 300), ImGuiCond_FirstUseEver);
+        ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0.5f));
+        if (ImGui::Begin("Radar", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize)) {
+            ImVec2 p0 = ImGui::GetCursorScreenPos();
+            ImVec2 size = ImGui::GetContentRegionAvail();
+            ImDrawList* dl = ImGui::GetWindowDrawList();
+            dl->AddRect(p0, ImVec2(p0.x + size.x, p0.y + size.y), IM_COL32(255, 255, 255, 100));
+            for (const auto& p : snapshot.players) {
+                float nX = p.mapX / 10000.0f;
+                float nY = p.mapY / 10000.0f;
+                float rX = p0.x + (nX * size.x);
+                float rY = p0.y + size.y - (nY * size.y);
+                if (nX > 0 && nX < 1 && nY > 0 && nY < 1)
+                    dl->AddCircleFilled(ImVec2(rX, rY), 5.0f * finalScale, IM_COL32(255, 0, 0, 255));
+            }
+        }
+        ImGui::End();
+        ImGui::PopStyleColor();
+    }
 
-    ImGui::Render(); ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-    return old_swap(dpy, surf);
+    ImGui::Render();
+    GLint v[4];
+    glGetIntegerv(GL_VIEWPORT, v);
+    GLint d;
+    glGetIntegerv(GL_DEPTH_TEST, &d);
+    glDisable(GL_DEPTH_TEST);
+    glViewport(0, 0, w, h);
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    glViewport(v[0], v[1], v[2], v[3]);
+    if (d) glEnable(GL_DEPTH_TEST);
+
+    return old_eglSwapBuffers(dpy, surface);
 }
 
-// ===================== [8. 核心入口] =====================
-
-void instrument_InitActorParams(RegisterContext *ctx, const HookEntryInfo *info) {
-    g_ActorManager.store(ctx->general.x[0]);
-}
-
-void instrument_ClearActor(RegisterContext *ctx, const HookEntryInfo *info) {
-    g_ActorManager.store(0);
-}
-
-uintptr_t GetModuleBase(const char* m) {
-    uintptr_t b = 0; FILE* f = fopen("/proc/self/maps", "r"); if(!f) return 0;
-    char l[512]; while(fgets(l, 512, f)) { if(strstr(l, m)) { sscanf(l, "%lx", &b); break; } }
-    fclose(f); return b;
-}
-
+// 延迟 Hook 线程
 void* DelayedHookThread(void*) {
+    // 1. 立即 Hook 渲染和输入，保证菜单能显示
     void* egl = DobbySymbolResolver("libEGL.so", "eglSwapBuffers");
-    if (egl) DobbyHook(egl, (void*)hook_eglSwapBuffers, (void**)&old_swap);
+    if (egl) DobbyHook(egl, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
+
     void* ins = DobbySymbolResolver("libinput.so", "_ZN7android13InputConsumer7consumeEPNS_26InputEventFactoryInterfaceEblPjPPNS_10InputEventE");
     if (ins) DobbyHook(ins, (void*)hook_consume, (void**)&old_consume);
 
+    // 2. 启动数据线程（后台读取）
     std::thread(DataWorkerThread).detach();
+
+    // 3. 等待 libil2cpp.so 加载，然后 Hook 游戏函数
     while (true) {
-        uintptr_t b = GetModuleBase(GAME_MODULE);
-        if (b) {
-            g_GameBase = b;
-            DobbyInstrument((void*)(b + 0x73507bc), instrument_InitActorParams);
-            DobbyInstrument((void*)(b + 0x734bc10), instrument_ClearActor);
+        uintptr_t base = GetModuleBase(GAME_MODULE);
+        if (base) {
+            g_GameBase = base;
+            g_HookAddr_InitActor = base + 0x73507bc;
+            g_HookAddr_ClearActor = base + 0x734bc10;
+            LOGI("[*] libil2cpp.so base = 0x%lx", base);
+            LOGI("[*] InitActor addr = 0x%lx", g_HookAddr_InitActor);
+            LOGI("[*] ClearActor addr = 0x%lx", g_HookAddr_ClearActor);
+
+            int ret1 = DobbyHook((void*)g_HookAddr_InitActor, (void*)hook_InitActorParams, (void**)&old_InitActorParams);
+            int ret2 = DobbyHook((void*)g_HookAddr_ClearActor, (void*)hook_ClearActor, (void**)&old_ClearActor);
+            LOGI("[*] Hook InitActor result: %d, ClearActor result: %d", ret1, ret2);
             break;
         }
         sleep(1);
@@ -294,5 +498,6 @@ void* DelayedHookThread(void*) {
 }
 
 __attribute__((constructor)) void init_plugin() {
-    pthread_t t; pthread_create(&t, nullptr, DelayedHookThread, nullptr);
+    pthread_t t;
+    pthread_create(&t, nullptr, DelayedHookThread, nullptr);
 }
