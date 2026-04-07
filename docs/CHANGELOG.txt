@@ -46,6 +46,8 @@ Other Changes:
 - InputText:
   - InputTextMultiline: fixed an issue processing deactivation logic when an active
     multi-line edit is clipped due to being out of view.
+- Fonts:
+  - imgui_freetype: add FreeType headers & compiled version in 'About Dear ImGui' details.
 - Backends:
   - Metal: avoid redundant vertex buffer bind in SetupRenderState, which leads
     to validation issue. (#9343) [@Hunam6]
