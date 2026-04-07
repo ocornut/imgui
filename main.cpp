@@ -80,6 +80,13 @@ static std::atomic<uintptr_t> g_CapturedX0{0};
 static std::atomic<uintptr_t> g_CapturedX1{0};
 static std::atomic<uintptr_t> g_CapturedX2{0};
 
+// 交互式探测器状态变量
+static std::vector<uintptr_t> g_ExploreHistory;
+static uintptr_t g_CurrentExploreAddr = 0;
+static uintptr_t g_LastRootBase = 0;
+
+static bool g_ForceDirectRead = false;
+
 struct DynamicOffsets {
     uint32_t x0_to_addr1    = 0x20;
     uint32_t addr1_to_addr2 = 0x10;
@@ -100,7 +107,6 @@ std::mutex g_OffsetMutex;
 
 // ==========================================
 // 终极内部读取：信号捕获 + 指针暴力解引用
-// 彻底无视腾讯 ACE 的 Syscall 拦截，且免疫野指针闪退
 // ==========================================
 static __thread sigjmp_buf g_JmpBuf;
 static void sigsegv_handler(int sig) {
@@ -119,10 +125,8 @@ T SafeRead(uintptr_t address) {
     sigaction(SIGSEGV, &new_sa, &old_sa);
 
     if (sigsetjmp(g_JmpBuf, 1) == 0) {
-        // 核心：强行将其作为指针读取。因为没有经过系统调用，反外挂拦不到！
         value = *(volatile T*)address; 
     } else {
-        // 如果遇到野指针导致了段错误(SIGSEGV)，会瞬间跳到这里，安全返回0，游戏不会闪退！
         value = {}; 
     }
 
@@ -316,29 +320,78 @@ void InstallCoreHook() {
 
 void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
     ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(w * 0.55f, h * 0.8f), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(w * 0.65f, h * 0.85f), ImGuiCond_FirstUseEver); // 整体拉大宽度和高度
     if (ImGui::Begin("指针断点排错器")) {
 
-        if (ImGui::CollapsingHeader("基址内存探查器 (寻址神器)", ImGuiTreeNodeFlags_DefaultOpen)) {
-            uintptr_t currentBase = g_ActorManager.load();
-            ImGui::TextColored(ImVec4(1, 0.5, 0, 1), "当前正在探查基址: 0x%lx", currentBase);
-            if (currentBase != 0) {
-                ImGui::BeginChild("MemDump", ImVec2(0, 200), true);
+        // ==========================================
+        // 交互式基址内存探查器 (全新升级)
+        // ==========================================
+        if (ImGui::CollapsingHeader("交互式内存探查器 (无限层级点入)", ImGuiTreeNodeFlags_DefaultOpen)) {
+            uintptr_t rootBase = g_ActorManager.load();
+            
+            // 当捕获到全新对象时，自动重置探查器状态
+            if (rootBase != 0 && rootBase != g_LastRootBase) {
+                g_LastRootBase = rootBase;
+                g_CurrentExploreAddr = rootBase;
+                g_ExploreHistory.clear();
+            }
+
+            if (g_CurrentExploreAddr != 0) {
+                ImGui::TextColored(ImVec4(1, 0.5, 0, 1), "当前探查地址: 0x%lx", g_CurrentExploreAddr);
                 
-                // 重点：如果读出来还是全 0，说明偏移找错了
-                for (uint32_t offset = 0; offset <= 0x100; offset += 8) {
-                    uintptr_t val = SafeRead<uintptr_t>(currentBase + offset);
+                // 导航按钮
+                if (g_ExploreHistory.size() > 0) {
+                    if (ImGui::Button("⬅️ 返回上一层")) {
+                        g_CurrentExploreAddr = g_ExploreHistory.back();
+                        g_ExploreHistory.pop_back();
+                    }
+                    ImGui::SameLine();
+                }
+                if (ImGui::Button("🏠 回到起点 (x0)")) {
+                    g_ExploreHistory.clear();
+                    g_CurrentExploreAddr = rootBase;
+                }
+                ImGui::SameLine();
+                ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), " | 层级深度: %zu", g_ExploreHistory.size());
+
+                // 高度大幅提升的滚动区域 (450像素)
+                ImGui::BeginChild("MemDump", ImVec2(0, 450), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
+                
+                // 范围扩大到 0x1000 (支持扫描巨型类和深层组件)
+                for (uint32_t offset = 0; offset <= 0x1000; offset += 8) {
+                    uintptr_t val = SafeRead<uintptr_t>(g_CurrentExploreAddr + offset);
                     
                     if (val > 0x10000000 && val < 0x00007FFFFFFFFFFF) {
-                        ImGui::TextColored(ImVec4(0, 1, 0, 1), "+0x%02X : 0x%lx <--- [可能是有效指针!]", offset, val);
+                        // 有效指针渲染
+                        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 1, 0, 1));
+                        ImGui::Text("+0x%03X : 0x%lx", offset, val);
+                        ImGui::PopStyleColor();
+                        
+                        // 加入【点入按钮】
+                        ImGui::SameLine(350.0f); // 固定按钮位置对齐
+                        ImGui::PushID(offset);
+                        if (ImGui::Button("👉 点入", ImVec2(100, 0))) {
+                            g_ExploreHistory.push_back(g_CurrentExploreAddr);
+                            g_CurrentExploreAddr = val; // 跳转到新地址
+                        }
+                        ImGui::PopID();
+                        
                     } else if (val != 0) {
-                        ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1), "+0x%02X : 0x%lx (整数: %lu)", offset, val, val);
+                        // 非指针数据：智能识别整数和浮点数
+                        float fval = 0.0f;
+                        memcpy(&fval, &val, sizeof(float)); // 将低32位安全转为浮点数
+                        
+                        ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1), "+0x%03X : 0x%lx", offset, val);
+                        ImGui::SameLine(300.0f);
+                        ImGui::TextColored(ImVec4(0.5f, 0.8f, 1.0f, 1), "(整数:%lu, 浮点:%.2f)", val & 0xFFFFFFFF, fval);
                     } else {
-                        ImGui::TextColored(ImVec4(0.4f, 0.4f, 0.4f, 1), "+0x%02X : 0x0", offset);
+                        // 空指针
+                        ImGui::TextColored(ImVec4(0.4f, 0.4f, 0.4f, 1), "+0x%03X : 0x0", offset);
                     }
+                    ImGui::Separator();
                 }
                 ImGui::EndChild();
-                ImGui::TextColored(ImVec4(1, 1, 0, 1), "操作提示: 寻找显示为绿色的【有效指针】，把它前面的偏移 +0xXX 填到下方的【地址1】里！");
+                ImGui::TextColored(ImVec4(1, 1, 0, 1), "操作提示: 点击【👉 点入】进入下一层指针！找属性时注意看蓝色的【整数/浮点】值！");
             } else {
                 ImGui::Text("等待获取有效基址...");
             }
