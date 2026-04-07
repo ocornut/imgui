@@ -603,18 +603,31 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 }
 
 void* DelayedHookThread(void*) {
-    // 界面与输入的 Hook 安全且不需要等待游戏逻辑，立即安装
-    void* egl = DobbySymbolResolver("libEGL.so", "eglSwapBuffers");
-    if (egl) DobbyHook(egl, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
+    LOGI("[*] 正在等待 libEGL.so 加载 (渲染引擎初始化)...");
+    
+    // 1. 循环等待图形渲染引擎加载完成
+    void* egl = nullptr;
+    while (!egl) {
+        egl = DobbySymbolResolver("libEGL.so", "eglSwapBuffers");
+        if (!egl) sleep(1);
+    }
+    DobbyHook(egl, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
+    LOGI("[*] 菜单渲染 Hook (eglSwapBuffers) 安装成功!");
 
-    void* ins = DobbySymbolResolver("libinput.so", "_ZN7android13InputConsumer7consumeEPNS_26InputEventFactoryInterfaceEblPjPPNS_10InputEventE");
-    if (ins) DobbyHook(ins, (void*)hook_consume, (void**)&old_consume);
+    // 2. 循环等待触摸输入引擎加载完成
+    void* ins = nullptr;
+    while (!ins) {
+        ins = DobbySymbolResolver("libinput.so", "_ZN7android13InputConsumer7consumeEPNS_26InputEventFactoryInterfaceEblPjPPNS_10InputEventE");
+        if (!ins) sleep(1);
+    }
+    DobbyHook(ins, (void*)hook_consume, (void**)&old_consume);
+    LOGI("[*] 触摸输入 Hook (consume) 安装成功!");
 
-    // 启动内存读取后台线程
+    // 3. 启动内存读取后台线程
     std::thread(DataWorkerThread).detach();
 
     // 不再自动挂钩 IL2CPP，把挂钩权利交给菜单上的【手动安装按钮】
-    LOGI("[*] 初始化完成，已开启安全模式。请在大厅界面手动点击菜单挂钩。");
+    LOGI("[*] 框架初始化完成，已开启安全模式。请在大厅界面手动点击菜单挂钩。");
     return nullptr;
 }
 
