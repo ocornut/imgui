@@ -314,7 +314,7 @@ void InstallCoreHook() {
         g_HookStatusMsg = "✅ 核心态链路挂载成功！";
         LOGI("[+] 手动安装 Hook 成功！");
     } else {
-        g_HookStatusMsg = "❌ 挂载拒绝, Dobby 错误码: " + std::to_string(ret);
+        g_HookStatusMsg = "❌ 挂载拒绝, 错误码: " + std::to_string(ret);
         LOGE("[-] %s", g_HookStatusMsg.c_str());
     }
 }
@@ -412,7 +412,7 @@ void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
                 ImGui::SameLine();
                 ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), " | 层级深度: %zu", g_ExploreHistory.size());
 
-                ImGui::BeginChild("MemDump", ImVec2(0, 450), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
+                ImGui::BeginChild("MemDump", ImVec2(0, 300), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
                 
                 for (uint32_t offset = 0; offset <= 0x1000; offset += 8) {
                     uintptr_t val = SafeRead<uintptr_t>(g_CurrentExploreAddr + offset);
@@ -557,16 +557,22 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         ImGui_ImplOpenGL3_Init("#version 300 es");
         ImGuiIO& io = ImGui::GetIO();
         
-        // 应用赛博朋克深蓝配色
+        // 1. 初始化科技风配色
         ApplyTechStyle(ImGui::GetStyle());
         
+        // 2. [安全修复] 加入字体加载双重保障机制，防止找不到字体直接不渲染
+        bool font_success = false;
         const char* systemFonts[] = { "/system/fonts/SysSans-Hans-Regular.ttf", "/system/fonts/NotoSansCJKjp-Regular.otc", "/system/fonts/NotoSansSC-Regular.otf", "/system/fonts/DroidSansFallback.ttf" };
         for (int i = 0; i < 4; i++) {
             if (access(systemFonts[i], R_OK) == 0) {
                 io.Fonts->AddFontFromFileTTF(systemFonts[i], 32.0f, NULL, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
-                g_FontLoaded = true; break;
+                font_success = true; break;
             }
         }
+        if (!font_success) {
+            io.Fonts->AddFontDefault(); // 兜底：如果安卓内没有目标中文字体，加载引擎自带默认英文，保证菜单依然能弹出来
+        }
+        
         g_Initialized = true;
     }
 
@@ -596,7 +602,8 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 
     if (g_BaseWindowHeight == 0.0f) g_BaseWindowHeight = h * 0.45f;
     ImGui::SetNextWindowPos(ImVec2(30, 30), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(w * 0.6f, g_BaseWindowHeight), ImGuiCond_FirstUseEver);
+    // 强制设置主菜单大小以保证布局不崩溃
+    ImGui::SetNextWindowSize(ImVec2(w * 0.65f, g_BaseWindowHeight), ImGuiCond_FirstUseEver);
 
     static bool show_pointer_debugger = true;
     static bool show_radar = true;
@@ -604,13 +611,27 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     if (ImGui::Begin("CYBER-CORE 战术终端", nullptr, ImGuiWindowFlags_NoCollapse)) {
         
         // ==========================================
-        // 主内容区 (分离高度以便下方留出 Footer)
+        // [安全修复] 顶置全局缩放滑块 
+        // 移至最上方，防止底部被遮挡或布局崩溃
         // ==========================================
-        float footerHeight = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing() + 5.0f;
-        ImGui::BeginChild("ScrollingRegion", ImVec2(0, -footerHeight), false, ImGuiWindowFlags_HorizontalScrollbar);
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.8f, 1.0f), "[ SYS_OPT: STABLE ]");
+        
+        float sliderWidth = ImGui::GetWindowWidth() * 0.40f; 
+        if (sliderWidth > 300.0f) sliderWidth = 300.0f;
+        ImGui::SameLine(ImGui::GetWindowWidth() - sliderWidth - ImGui::GetStyle().WindowPadding.x);
+        ImGui::SetNextItemWidth(sliderWidth);
+        
+        ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.4f, 0.6f, 0.4f));
+        ImGui::PushStyleColor(ImGuiCol_SliderGrab, ImVec4(0.0f, 0.9f, 1.0f, 1.0f));
+        ImGui::SliderFloat("##UIScale", &g_UserUIScale, 0.5f, 2.5f, "UI ZOOM: %.2fx");
+        ImGui::PopStyleColor(2);
 
+        ImGui::Separator();
+
+        // 挂载控制台
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.04f, 0.04f, 0.06f, 1.0f));
-        ImGui::BeginChild("HookController", ImVec2(0, 75), true);
+        ImGui::BeginChild("HookController", ImVec2(0, 85), true);
         ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "SYS_STATUS //");
         if (!g_IsHookInstalled) {
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.1f, 0.2f, 1.0f));
@@ -624,8 +645,8 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         ImGui::Text("日志: %s", g_HookStatusMsg.c_str());
         ImGui::EndChild();
         ImGui::PopStyleColor();
-        ImGui::Separator();
 
+        // 配置项
         if (ImGui::CollapsingHeader("TACTICAL_CONFIG // 触控与偏置校准")) {
             ImGui::Text("坐标域偏移量 X:%.1f Y:%.1f", g_Touch.offsetX, g_Touch.offsetY);
             if (ImGui::Button(" -10 ##x")) g_Touch.offsetX -= 10; ImGui::SameLine();
@@ -639,11 +660,14 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         ImGui::Checkbox("开启内存探针排错", &show_pointer_debugger);
         ImGui::Separator();
         
+        // 数据流渲染区 (将其放入独立安全的 Child 中)
         ImGui::TextColored(ImVec4(0, 1, 1, 1), "DATA_STREAM // 实战数据流");
         ImGui::SameLine(ImGui::GetWindowWidth() - 150);
         ImGui::TextColored(snapshot.inMatch ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0.5f, 0, 1), 
             snapshot.inMatch ? "[ LIVE_SYNC_ON ]" : "[ SYNC_WAITING ]");
 
+        // 0代表自动填充剩余的全部空间，这种写法最稳定，绝对不会引发 ImGui 布局越界断言崩溃
+        ImGui::BeginChild("TableRegion", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
         if (ImGui::BeginTable("PlayersTable", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
             ImGui::TableSetupColumn("等级(LVL)"); ImGui::TableSetupColumn("装甲(HP)");
             ImGui::TableSetupColumn("能量(MP)"); ImGui::TableSetupColumn("晶体(GOLD)");
@@ -659,23 +683,6 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
             ImGui::EndTable();
         }
         ImGui::EndChild();
-
-        // ==========================================
-        // Footer: 底部状态栏与右下角缩放滑块
-        // ==========================================
-        ImGui::Separator();
-        ImGui::AlignTextToFramePadding();
-        ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.8f, 1.0f), "[ SYS_OPT: STABLE ]");
-        
-        float sliderWidth = ImGui::GetWindowWidth() * 0.40f; 
-        if (sliderWidth > 300.0f) sliderWidth = 300.0f;
-        ImGui::SameLine(ImGui::GetWindowWidth() - sliderWidth - ImGui::GetStyle().WindowPadding.x);
-        ImGui::SetNextItemWidth(sliderWidth);
-        
-        ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.4f, 0.6f, 0.4f));
-        ImGui::PushStyleColor(ImGuiCol_SliderGrab, ImVec4(0.0f, 0.9f, 1.0f, 1.0f));
-        ImGui::SliderFloat("##UIScale", &g_UserUIScale, 0.5f, 2.5f, "UI ZOOM: %.2fx");
-        ImGui::PopStyleColor(2);
     }
     ImGui::End();
 
