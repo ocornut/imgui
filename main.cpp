@@ -18,6 +18,7 @@
 #include <sstream>
 #include <link.h>
 #include <sys/mman.h>
+#include <sys/uio.h>
 #include "dobby.h"
 #include "imgui.h"
 #include "imgui_impl_android.h"
@@ -78,6 +79,8 @@ static std::atomic<uintptr_t> g_CapturedX0{0};
 static std::atomic<uintptr_t> g_CapturedX1{0};
 static std::atomic<uintptr_t> g_CapturedX2{0};
 
+static bool g_ForceDirectRead = false; // 危险：强制暴力裸读
+
 struct DynamicOffsets {
     uint32_t x0_to_addr1    = 0x20;
     uint32_t addr1_to_addr2 = 0x10;
@@ -96,14 +99,41 @@ struct DynamicOffsets {
 DynamicOffsets g_Offsets;
 std::mutex g_OffsetMutex;
 
-static int g_MemFd = -1;
-
+// ==========================================
+// 终极安全读取：绕过反外挂拦截
+// ==========================================
 template <typename T>
 T SafeRead(uintptr_t address) {
     T value{};
     if (address < 0x10000000 || address > 0x00007FFFFFFFFFFF) return value;
-    if (g_MemFd == -1) g_MemFd = open("/proc/self/mem", O_RDONLY);
-    if (g_MemFd >= 0) pread(g_MemFd, &value, sizeof(T), address);
+
+    if (g_ForceDirectRead) {
+        // 危险模式：直接将地址当作指针解引用！
+        // 如果地址是无效的/未分配的，游戏会瞬间闪退。
+        return *(T*)address; 
+    }
+
+    // 1. 系统级跨进程读取 (免疫文件句柄检测)
+    struct iovec local[1];
+    struct iovec remote[1];
+    local[0].iov_base = &value;
+    local[0].iov_len = sizeof(T);
+    remote[0].iov_base = (void*)address;
+    remote[0].iov_len = sizeof(T);
+
+    if (process_vm_readv(getpid(), local, 1, remote, 1, 0) == sizeof(T)) {
+        return value;
+    }
+
+    // 2. 备用管道读取 (防止部分内核未实现 process_vm_readv)
+    int fds[2];
+    if (pipe(fds) == 0) {
+        if (write(fds[1], (void*)address, sizeof(T)) == sizeof(T)) {
+            read(fds[0], &value, sizeof(T));
+        }
+        close(fds[0]);
+        close(fds[1]);
+    }
     return value;
 }
 
@@ -133,9 +163,6 @@ std::mutex g_SnapshotMutex;
 GameSnapshot g_CurrentSnapshot;
 std::atomic<uintptr_t> g_ActorManager{0};
 
-// ==========================================
-// 数据读取后台线程 (根据捕获的基址读取偏移)
-// ==========================================
 void DataWorkerThread() {
     while (true) {
         GameSnapshot newSnap;
@@ -208,9 +235,6 @@ void DataWorkerThread() {
     }
 }
 
-// ==========================================
-// 底层 Linker 迭代器获取真实基址
-// ==========================================
 struct ModuleInfo {
     const char* name;
     uintptr_t base;
@@ -244,25 +268,18 @@ uintptr_t GetRealModuleBase(const char* module_name) {
     return info.base;
 }
 
-// ==========================================
-// Hook 目标：InitActor
-// ==========================================
 typedef void (*t_InitActorParams)(void* x0, void* x1, void* x2, void* x3, void* x4, void* x5, void* x6, void* x7);
 t_InitActorParams old_InitActorParams = nullptr;
 
 void hook_InitActorParams(void* x0, void* x1, void* x2, void* x3, void* x4, void* x5, void* x6, void* x7) {
     g_InitCallCount++; 
     
-    // 捕获寄存器
     if (x0 != nullptr) g_CapturedX0.store((uintptr_t)x0);
     if (x1 != nullptr) g_CapturedX1.store((uintptr_t)x1);
     if (x2 != nullptr) g_CapturedX2.store((uintptr_t)x2);
     
-    // 直接使用 x0 作为基址来源，传给读取线程
     if (x0 != nullptr && (uintptr_t)x0 > 0x10000000) { 
         g_ActorManager.store((uintptr_t)x0);
-        
-        // 降低刷屏频率
         if (g_InitCallCount.load() % 5 == 1) { 
             LOGI("[+] 拦截到实体生成! 捕获基址 x0: 0x%lx", (uintptr_t)x0);
         }
@@ -273,9 +290,6 @@ void hook_InitActorParams(void* x0, void* x1, void* x2, void* x3, void* x4, void
     }
 }
 
-// ==========================================
-// 手动强力安装 Hook 
-// ==========================================
 void InstallCoreHook() {
     if (g_IsHookInstalled) return;
 
@@ -291,14 +305,10 @@ void InstallCoreHook() {
 
     LOGI("[*] 准备硬核挂钩! 真实基址: 0x%lx, 目标: 0x%lx", base, g_HookAddr_InitActor);
 
-    // 强制解锁内存页权限
     void* page_start = (void*)(g_HookAddr_InitActor & ~0xFFF);
     mprotect(page_start, 0x2000, PROT_READ | PROT_WRITE | PROT_EXEC);
 
-    // 执行 Dobby Hook (无视内存读取报错)
     int ret = DobbyHook((void*)g_HookAddr_InitActor, (void*)hook_InitActorParams, (void**)&old_InitActorParams);
-    
-    // 清理 CPU 指令缓存，强制生效
     __builtin___clear_cache((char*)g_HookAddr_InitActor, (char*)(g_HookAddr_InitActor + 16));
 
     if (ret == 0) {
@@ -317,8 +327,19 @@ void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
     if (ImGui::Begin("指针断点排错器")) {
         
         // ==========================================
-        // 新增：神级功能 - 实时内存结构解剖器
+        // 神器：暴力裸读开关
         // ==========================================
+        if (ImGui::CollapsingHeader("高级排错 (读不出数据时勾选)", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.4f, 0.4f, 1.0f));
+            ImGui::Checkbox("⚠️ 开启暴力裸读 (无视系统拦截)", &g_ForceDirectRead);
+            ImGui::PopStyleColor();
+            ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), 
+                "说明: 如果下方探查器全都是 0，极大可能是反外挂拦截了安全读取。\n"
+                "勾选此项强制读取。注意：如果勾选后游戏瞬间闪退，\n"
+                "【100% 证明你的 0x73507bc 函数找错了！它根本不是指针！】");
+        }
+        ImGui::Separator();
+
         if (ImGui::CollapsingHeader("基址内存探查器 (寻址神器)", ImGuiTreeNodeFlags_DefaultOpen)) {
             uintptr_t currentBase = g_ActorManager.load();
             ImGui::TextColored(ImVec4(1, 0.5, 0, 1), "当前正在探查基址: 0x%lx", currentBase);
@@ -328,13 +349,10 @@ void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
                     uintptr_t val = SafeRead<uintptr_t>(currentBase + offset);
                     
                     if (val > 0x10000000 && val < 0x00007FFFFFFFFFFF) {
-                        // 发现有效指针！用绿色高亮！
                         ImGui::TextColored(ImVec4(0, 1, 0, 1), "+0x%02X : 0x%lx <--- [可能是有效指针!]", offset, val);
                     } else if (val != 0) {
-                        // 发现普通数据（可能是血量、坐标等）
                         ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1), "+0x%02X : 0x%lx (整数: %lu)", offset, val, val);
                     } else {
-                        // 空数据
                         ImGui::TextColored(ImVec4(0.4f, 0.4f, 0.4f, 1), "+0x%02X : 0x0", offset);
                     }
                 }
@@ -587,7 +605,6 @@ void* DelayedHookThread(void*) {
     while (!ins) { ins = DobbySymbolResolver("libinput.so", "_ZN7android13InputConsumer7consumeEPNS_26InputEventFactoryInterfaceEblPjPPNS_10InputEventE"); if (!ins) sleep(1); }
     DobbyHook(ins, (void*)hook_consume, (void**)&old_consume);
 
-    // 启动数据读取线程，负责用捕获到的 x0 去读取各级偏移
     std::thread(DataWorkerThread).detach();
 
     return nullptr;
