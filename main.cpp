@@ -50,7 +50,6 @@ static uintptr_t g_HookAddr_InitActor = 0;
 static uintptr_t g_HookAddr_ClearActor = 0;
 
 struct DynamicOffsets {
-    // 指针链偏移
     uint32_t x0_to_addr1    = 0x20;
     uint32_t addr1_to_addr2 = 0x10;
     uint32_t item_to_addr3  = 0x18;
@@ -58,15 +57,11 @@ struct DynamicOffsets {
     uint32_t addr3_to_addr5 = 0x100;
     uint32_t addr3_to_addr6 = 0x70;
 
-    // 属性偏移 (addr4 内)
     uint32_t prop_gold  = 0x20;
     uint32_t prop_hp    = 0x30;
-    uint32_t prop_maxhp = 0x32;   // 注意：可能是 int16
+    uint32_t prop_maxhp = 0x32;   
     uint32_t prop_level = 0x50;
-
-    // 世界坐标区内偏移 (addr5 内)
-    uint32_t prop_mana  = 0x28;   // 蓝量偏移
-    // 世界坐标 XYZ 固定 0,4,8
+    uint32_t prop_mana  = 0x28;   
 };
 
 DynamicOffsets g_Offsets;
@@ -109,7 +104,6 @@ std::mutex g_SnapshotMutex;
 GameSnapshot g_CurrentSnapshot;
 std::atomic<uintptr_t> g_ActorManager{0};
 
-// 后台数据读取线程
 void DataWorkerThread() {
     while (true) {
         GameSnapshot newSnap;
@@ -131,7 +125,6 @@ void DataWorkerThread() {
                 uintptr_t addr2 = SafeRead<uintptr_t>(addr1 + currOff.addr1_to_addr2);
                 newSnap.debug.addr2 = addr2;
                 if (addr2) {
-                    // 遍历玩家数组（每个槽位8字节指针，最大15个）
                     for (int i = 0; i < 15; ++i) {
                         uintptr_t item = SafeRead<uintptr_t>(addr2 + (i * 0x8));
                         newSnap.debug.items[i].base = item;
@@ -143,18 +136,15 @@ void DataWorkerThread() {
 
                         PlayerData p;
 
-                        // 属性区 addr4
                         uintptr_t addr4 = SafeRead<uintptr_t>(addr3 + currOff.addr3_to_addr4);
                         newSnap.debug.items[i].addr4 = addr4;
                         if (addr4) {
                             p.gold = SafeRead<int32_t>(addr4 + currOff.prop_gold);
                             p.hp   = SafeRead<int32_t>(addr4 + currOff.prop_hp);
-                            // maxhp 偏移 0x32，可能是 int16，安全读取后转为 int32
                             p.maxHp = SafeRead<int16_t>(addr4 + currOff.prop_maxhp);
                             p.level = SafeRead<int32_t>(addr4 + currOff.prop_level);
                         }
 
-                        // 世界坐标区 addr5
                         uintptr_t addr5 = SafeRead<uintptr_t>(addr3 + currOff.addr3_to_addr5);
                         newSnap.debug.items[i].addr5 = addr5;
                         if (addr5) {
@@ -164,7 +154,6 @@ void DataWorkerThread() {
                             p.mana   = SafeRead<int32_t>(addr5 + currOff.prop_mana);
                         }
 
-                        // 小地图坐标区 addr6
                         uintptr_t addr6 = SafeRead<uintptr_t>(addr3 + currOff.addr3_to_addr6);
                         newSnap.debug.items[i].addr6 = addr6;
                         if (addr6) {
@@ -202,22 +191,33 @@ uintptr_t GetModuleBase(const char* module_name) {
     return base;
 }
 
-// Hook 函数声明
-void (*old_InitActorParams)(void* x0, void* x1, void* x2, void* x3);
-void hook_InitActorParams(void* x0, void* x1, void* x2, void* x3) {
-    g_ActorManager.store((uintptr_t)x0);
-    LOGI("[InitActor] x0 = %p", x0);
-    old_InitActorParams(x0, x1, x2, x3);
+// ==========================================
+// 严格按照 1 个参数进行 Hook
+// 此时参数必定存在于 x0 / r0 寄存器中
+// ==========================================
+typedef void* (*t_InitActorParams)(void* arg0);
+t_InitActorParams old_InitActorParams = nullptr;
+
+void* hook_InitActorParams(void* arg0) {
+    uintptr_t target_ptr = (uintptr_t)arg0; 
+    
+    if (target_ptr != 0) {
+        g_ActorManager.store(target_ptr);
+        LOGI("[InitActor] 成功触发! 获取到指针 arg0 = %p", arg0);
+    }
+    return old_InitActorParams(arg0);
 }
 
-void (*old_ClearActor)(void* x0);
-void hook_ClearActor(void* x0) {
+typedef void* (*t_ClearActor)(void* arg0);
+t_ClearActor old_ClearActor = nullptr;
+
+void* hook_ClearActor(void* arg0) {
     g_ActorManager.store(0);
-    LOGI("[ClearActor] Game ended");
-    old_ClearActor(x0);
+    LOGI("[ClearActor] 游戏清理完毕, 清空指针");
+    return old_ClearActor(arg0);
 }
 
-// 指针调试器窗口（与原代码类似，但偏移面板已适配新偏移）
+
 void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
     ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(w * 0.55f, h * 0.8f), ImGuiCond_FirstUseEver);
@@ -280,7 +280,6 @@ void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
     ImGui::End();
 }
 
-// 触摸及分辨率辅助
 void AutoFetchDeviceResolution() {
     FILE* pipe = popen("wm size", "r");
     if (!pipe) return;
@@ -308,7 +307,6 @@ void handle_android_event(AInputEvent* event) {
     }
 }
 
-// InputConsumer Hook
 typedef int (*p_InputConsumer_consume)(void* instance, void* factory, bool consumeBatches, int64_t frameTime, uint32_t* outSeq, void** outEvent);
 static p_InputConsumer_consume old_consume = nullptr;
 
@@ -318,7 +316,6 @@ int hook_consume(void* instance, void* factory, bool consumeBatches, int64_t fra
     return res;
 }
 
-// eglSwapBuffers Hook
 typedef EGLBoolean (*p_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surface);
 static p_eglSwapBuffers old_eglSwapBuffers = nullptr;
 
@@ -341,7 +338,6 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         ImGui_ImplOpenGL3_Init("#version 300 es");
         ImGuiIO& io = ImGui::GetIO();
 
-        // 加载中文字体（根据你的系统字体路径）
         const char* systemFonts[] = {
             "/system/fonts/SysSans-Hans-Regular.ttf",
             "/system/fonts/NotoSansCJKjp-Regular.otc",
@@ -464,32 +460,47 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     return old_eglSwapBuffers(dpy, surface);
 }
 
-// 延迟 Hook 线程
 void* DelayedHookThread(void*) {
-    // 1. 立即 Hook 渲染和输入，保证菜单能显示
     void* egl = DobbySymbolResolver("libEGL.so", "eglSwapBuffers");
     if (egl) DobbyHook(egl, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
 
     void* ins = DobbySymbolResolver("libinput.so", "_ZN7android13InputConsumer7consumeEPNS_26InputEventFactoryInterfaceEblPjPPNS_10InputEventE");
     if (ins) DobbyHook(ins, (void*)hook_consume, (void**)&old_consume);
 
-    // 2. 启动数据线程（后台读取）
     std::thread(DataWorkerThread).detach();
 
-    // 3. 等待 libil2cpp.so 加载，然后 Hook 游戏函数
     while (true) {
         uintptr_t base = GetModuleBase(GAME_MODULE);
         if (base) {
             g_GameBase = base;
+            
+            // ==========================================
+            // FIX 2: 架构检测，防止 32 位 Thumb 指令集崩溃
+            // 32 位 (armeabi-v7a) Hook IL2CPP 函数时由于是 Thumb 指令，地址必须 +1
+            // 64 位 (arm64-v8a) 保持原样即可
+            // ==========================================
+#if defined(__arm__) 
+            g_HookAddr_InitActor = base + 0x73507bc + 1;
+            g_HookAddr_ClearActor = base + 0x734bc10 + 1;
+            LOGI("[*] 检测到 32 位架构，已自动处理 Thumb 指令集 (+1)");
+#else
             g_HookAddr_InitActor = base + 0x73507bc;
             g_HookAddr_ClearActor = base + 0x734bc10;
+            LOGI("[*] 检测到 64 位架构，无需处理 Thumb");
+#endif
+
             LOGI("[*] libil2cpp.so base = 0x%lx", base);
             LOGI("[*] InitActor addr = 0x%lx", g_HookAddr_InitActor);
             LOGI("[*] ClearActor addr = 0x%lx", g_HookAddr_ClearActor);
 
             int ret1 = DobbyHook((void*)g_HookAddr_InitActor, (void*)hook_InitActorParams, (void**)&old_InitActorParams);
             int ret2 = DobbyHook((void*)g_HookAddr_ClearActor, (void*)hook_ClearActor, (void**)&old_ClearActor);
-            LOGI("[*] Hook InitActor result: %d, ClearActor result: %d", ret1, ret2);
+            
+            if (ret1 != 0 || ret2 != 0) {
+                LOGI("[*] Dobby Hook 成功! InitActor: %d, ClearActor: %d", ret1, ret2);
+            } else {
+                LOGE("[!] Dobby Hook 失败！请检查地址或内存权限！");
+            }
             break;
         }
         sleep(1);
