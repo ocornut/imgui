@@ -49,6 +49,42 @@ static uintptr_t g_GameBase = 0;
 static uintptr_t g_HookAddr_InitActor = 0;
 static uintptr_t g_HookAddr_ClearActor = 0;
 
+// --- 新增：寄存器动态切换器与状态保存 ---
+static int g_RootRegister = 0; // 0=x0, 1=x1, 2=x2
+static std::atomic<uintptr_t> g_CapturedX0{0};
+static std::atomic<uintptr_t> g_CapturedX1{0};
+static std::atomic<uintptr_t> g_CapturedX2{0};
+// ----------------------------------------
+
+// --- 新增：实时日志与计数器系统 ---
+std::atomic<int> g_InitCallCount{0};
+std::atomic<int> g_ClearCallCount{0};
+std::vector<std::string> g_AppLogs;
+std::mutex g_LogMutex;
+
+void AddLog(const char* fmt, ...) {
+    char buf[1024];
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, args);
+    va_end(args);
+    
+    // 输出到安卓标准日志
+    __android_log_print(ANDROID_LOG_INFO, TAG, "%s", buf);
+    
+    // 同时输出到 ImGui 悬浮窗
+    std::lock_guard<std::mutex> lock(g_LogMutex);
+    if (g_AppLogs.size() > 30) g_AppLogs.erase(g_AppLogs.begin());
+    g_AppLogs.push_back(buf);
+}
+
+// 覆盖原本的宏，使其同时输出到屏幕上
+#undef LOGI
+#undef LOGE
+#define LOGI(...) AddLog(__VA_ARGS__)
+#define LOGE(...) AddLog("[ERROR] " __VA_ARGS__)
+// ----------------------------------
+
 struct DynamicOffsets {
     uint32_t x0_to_addr1    = 0x20;
     uint32_t addr1_to_addr2 = 0x10;
@@ -192,29 +228,46 @@ uintptr_t GetModuleBase(const char* module_name) {
 }
 
 // ==========================================
-// 严格按照 1 个参数进行 Hook
-// 此时参数必定存在于 x0 / r0 寄存器中
+// 重写 Hook 逻辑，保存 x0, x1, x2 以供动态切换
 // ==========================================
-typedef void* (*t_InitActorParams)(void* arg0);
+typedef void* (*t_InitActorParams)(void* x0, void* x1, void* x2, void* x3);
 t_InitActorParams old_InitActorParams = nullptr;
 
-void* hook_InitActorParams(void* arg0) {
-    uintptr_t target_ptr = (uintptr_t)arg0; 
+void* hook_InitActorParams(void* x0, void* x1, void* x2, void* x3) {
+    g_InitCallCount++; // 触发计数 + 1
+    
+    // 保存捕获到的寄存器值，供菜单实时查看
+    g_CapturedX0.store((uintptr_t)x0);
+    g_CapturedX1.store((uintptr_t)x1);
+    g_CapturedX2.store((uintptr_t)x2);
+    
+    // 根据菜单的选项，动态决定把哪个寄存器作为分析起点
+    uintptr_t target_ptr = 0;
+    if (g_RootRegister == 0) target_ptr = (uintptr_t)x0;
+    else if (g_RootRegister == 1) target_ptr = (uintptr_t)x1;
+    else target_ptr = (uintptr_t)x2;
     
     if (target_ptr != 0) {
         g_ActorManager.store(target_ptr);
-        LOGI("[InitActor] 成功触发! 获取到指针 arg0 = %p", arg0);
+        LOGI("[Hook-Init] 成功拦截! 次数:%d, 使用了 %s 作为起点: 0x%lx", 
+             g_InitCallCount.load(), 
+             g_RootRegister == 0 ? "x0" : (g_RootRegister == 1 ? "x1" : "x2"), 
+             target_ptr);
+    } else {
+        LOGI("[Hook-Init] 拦截到了调用! 但当前选择的寄存器是空指针 (0x0)");
     }
-    return old_InitActorParams(arg0);
+    
+    return old_InitActorParams(x0, x1, x2, x3);
 }
 
-typedef void* (*t_ClearActor)(void* arg0);
+typedef void* (*t_ClearActor)(void* x0, void* x1, void* x2, void* x3);
 t_ClearActor old_ClearActor = nullptr;
 
-void* hook_ClearActor(void* arg0) {
+void* hook_ClearActor(void* x0, void* x1, void* x2, void* x3) {
+    g_ClearCallCount++;
     g_ActorManager.store(0);
-    LOGI("[ClearActor] 游戏清理完毕, 清空指针");
-    return old_ClearActor(arg0);
+    LOGI("[Hook-Clear] 触发对象清理");
+    return old_ClearActor(x0, x1, x2, x3);
 }
 
 
@@ -222,6 +275,22 @@ void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
     ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(w * 0.55f, h * 0.8f), ImGuiCond_FirstUseEver);
     if (ImGui::Begin("指针断点排错器 (IL2CPP)")) {
+        
+        // --- 新增：动态切换基址来源 ---
+        if (ImGui::CollapsingHeader("拦截寄存器选择 (基址来源)", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::TextColored(ImVec4(1, 1, 0, 1), "当前捕获的值:");
+            ImGui::Text("x0 (通常是 this): 0x%lx", g_CapturedX0.load());
+            ImGui::Text("x1 (通常是 参数1): 0x%lx", g_CapturedX1.load());
+            ImGui::Text("x2 (MethodInfo):  0x%lx", g_CapturedX2.load());
+            ImGui::Separator();
+            ImGui::Text("动态切换起点 (改完后下次生成英雄生效，或立即生效):");
+            if (ImGui::RadioButton("使用 x0", &g_RootRegister, 0)) g_ActorManager.store(g_CapturedX0.load()); ImGui::SameLine();
+            if (ImGui::RadioButton("使用 x1", &g_RootRegister, 1)) g_ActorManager.store(g_CapturedX1.load()); ImGui::SameLine();
+            if (ImGui::RadioButton("使用 x2", &g_RootRegister, 2)) g_ActorManager.store(g_CapturedX2.load());
+        }
+        ImGui::Separator();
+        // ------------------------------
+
         if (ImGui::CollapsingHeader("动态偏移修改面板 (十进制)", ImGuiTreeNodeFlags_DefaultOpen)) {
             std::lock_guard<std::mutex> lock(g_OffsetMutex);
             auto drawOffsetBtn = [](const char* label, uint32_t& val) {
@@ -254,6 +323,28 @@ void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
         ImGui::TextColored(ImVec4(0, 1, 1, 1), "[Hook 1] InitActor (RVA 0x73507bc) -> 0x%lx", g_HookAddr_InitActor);
         ImGui::TextColored(ImVec4(0, 1, 1, 1), "[Hook 2] ClearActor (RVA 0x734bc10) -> 0x%lx", g_HookAddr_ClearActor);
         ImGui::Separator();
+
+        // --- 新增：悬浮窗内嵌实时分析日志 ---
+        if (ImGui::CollapsingHeader("实时运行日志 (排错必看)", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::TextColored(g_InitCallCount > 0 ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1), 
+                "> InitActor 函数被拦截次数: %d", g_InitCallCount.load());
+            ImGui::TextColored(ImVec4(1, 1, 0, 1), "> ClearActor 函数被拦截次数: %d", g_ClearCallCount.load());
+            
+            if (g_InitCallCount == 0) {
+                ImGui::TextColored(ImVec4(1, 0.5f, 0, 1), "警告: 拦截次数为0，说明函数从未被游戏调用过。\n1. 请尝试开着菜单【重新开一局游戏/进训练营】。\n2. 如果还为0，说明 0x73507bc 不是生成英雄的函数。");
+            }
+
+            ImGui::BeginChild("LogRegion", ImVec2(0, 120), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
+            std::lock_guard<std::mutex> lock(g_LogMutex);
+            for (const auto& log : g_AppLogs) {
+                ImGui::TextUnformatted(log.c_str());
+            }
+            // 自动滚动到最新日志
+            if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) ImGui::SetScrollHereY(1.0f);
+            ImGui::EndChild();
+        }
+        ImGui::Separator();
+        // ---------------------------------
 
         const auto& d = snap.debug;
         const auto& off = snap.offsets;
@@ -496,10 +587,11 @@ void* DelayedHookThread(void*) {
             int ret1 = DobbyHook((void*)g_HookAddr_InitActor, (void*)hook_InitActorParams, (void**)&old_InitActorParams);
             int ret2 = DobbyHook((void*)g_HookAddr_ClearActor, (void*)hook_ClearActor, (void**)&old_ClearActor);
             
-            if (ret1 != 0 || ret2 != 0) {
-                LOGI("[*] Dobby Hook 成功! InitActor: %d, ClearActor: %d", ret1, ret2);
+            // 修复返回值判定：DobbyHook 成功时返回 0 (RS_SUCCESS)
+            if (ret1 == 0 && ret2 == 0) {
+                LOGI("[*] Dobby Hook 安装成功! 正在等待游戏调用函数...");
             } else {
-                LOGE("[!] Dobby Hook 失败！请检查地址或内存权限！");
+                LOGE("[!] Dobby Hook 安装失败！状态码 ret1:%d, ret2:%d", ret1, ret2);
             }
             break;
         }
