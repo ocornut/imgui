@@ -14,6 +14,8 @@
 #include <chrono>
 #include <fcntl.h>
 #include <dirent.h>
+#include <iomanip>
+#include <sstream>
 #include "dobby.h"
 #include "imgui.h"
 #include "imgui_impl_android.h"
@@ -22,8 +24,34 @@
 #define TAG "IL2CPP_Drive"
 #define GAME_MODULE "libil2cpp.so"
 
-#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
-#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
+// --- 新增：实时日志与计数器系统 ---
+std::atomic<int> g_InitCallCount{0};
+std::atomic<int> g_ClearCallCount{0};
+std::vector<std::string> g_AppLogs;
+std::mutex g_LogMutex;
+
+void AddLog(const char* fmt, ...) {
+    char buf[1024];
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, args);
+    va_end(args);
+    
+    // 输出到安卓标准日志
+    __android_log_print(ANDROID_LOG_INFO, TAG, "%s", buf);
+    
+    // 同时输出到 ImGui 悬浮窗
+    std::lock_guard<std::mutex> lock(g_LogMutex);
+    if (g_AppLogs.size() > 30) g_AppLogs.erase(g_AppLogs.begin());
+    g_AppLogs.push_back(buf);
+}
+
+// 覆盖原本的宏，使其同时输出到屏幕上
+#undef LOGI
+#undef LOGE
+#define LOGI(...) AddLog(__VA_ARGS__)
+#define LOGE(...) AddLog("[ERROR] " __VA_ARGS__)
+// ----------------------------------
 
 static bool g_Initialized = false;
 static bool g_FontLoaded = false;
@@ -56,35 +84,6 @@ static std::atomic<uintptr_t> g_CapturedX1{0};
 static std::atomic<uintptr_t> g_CapturedX2{0};
 // ----------------------------------------
 
-// --- 新增：实时日志与计数器系统 ---
-std::atomic<int> g_InitCallCount{0};
-std::atomic<int> g_ClearCallCount{0};
-std::vector<std::string> g_AppLogs;
-std::mutex g_LogMutex;
-
-void AddLog(const char* fmt, ...) {
-    char buf[1024];
-    va_list args;
-    va_start(args, fmt);
-    vsnprintf(buf, sizeof(buf), fmt, args);
-    va_end(args);
-    
-    // 输出到安卓标准日志
-    __android_log_print(ANDROID_LOG_INFO, TAG, "%s", buf);
-    
-    // 同时输出到 ImGui 悬浮窗
-    std::lock_guard<std::mutex> lock(g_LogMutex);
-    if (g_AppLogs.size() > 30) g_AppLogs.erase(g_AppLogs.begin());
-    g_AppLogs.push_back(buf);
-}
-
-// 覆盖原本的宏，使其同时输出到屏幕上
-#undef LOGI
-#undef LOGE
-#define LOGI(...) AddLog(__VA_ARGS__)
-#define LOGE(...) AddLog("[ERROR] " __VA_ARGS__)
-// ----------------------------------
-
 struct DynamicOffsets {
     uint32_t x0_to_addr1    = 0x20;
     uint32_t addr1_to_addr2 = 0x10;
@@ -112,6 +111,24 @@ T SafeRead(uintptr_t address) {
     if (g_MemFd == -1) g_MemFd = open("/proc/self/mem", O_RDONLY);
     if (g_MemFd >= 0) pread(g_MemFd, &value, sizeof(T), address);
     return value;
+}
+
+// 辅助函数：将内存读取为 Hex 字符串用于排错
+std::string ReadMemoryHex(uintptr_t address, size_t size) {
+    if (address == 0) return "null";
+    unsigned char buffer[32] = {0};
+    if (g_MemFd == -1) g_MemFd = open("/proc/self/mem", O_RDONLY);
+    if (g_MemFd >= 0) {
+        ssize_t bytes_read = pread(g_MemFd, buffer, std::min(size, sizeof(buffer)), address);
+        if (bytes_read > 0) {
+            std::stringstream ss;
+            for (ssize_t i = 0; i < bytes_read; ++i) {
+                ss << std::hex << std::setw(2) << std::setfill('0') << (int)buffer[i] << " ";
+            }
+            return ss.str();
+        }
+    }
+    return "read_failed";
 }
 
 struct PlayerData {
@@ -227,16 +244,12 @@ uintptr_t GetModuleBase(const char* module_name) {
     return base;
 }
 
-// ==========================================
-// 修复点 1：使用 void 返回值和 8 个宽泛参数，确保不破坏原游戏任何寄存器和栈
-// ==========================================
 typedef void (*t_InitActorParams)(void* x0, void* x1, void* x2, void* x3, void* x4, void* x5, void* x6, void* x7);
 t_InitActorParams old_InitActorParams = nullptr;
 
 void hook_InitActorParams(void* x0, void* x1, void* x2, void* x3, void* x4, void* x5, void* x6, void* x7) {
     g_InitCallCount++; 
     
-    // 过滤掉空指针，防止崩溃
     if (x0 != nullptr) g_CapturedX0.store((uintptr_t)x0);
     if (x1 != nullptr) g_CapturedX1.store((uintptr_t)x1);
     if (x2 != nullptr) g_CapturedX2.store((uintptr_t)x2);
@@ -246,13 +259,11 @@ void hook_InitActorParams(void* x0, void* x1, void* x2, void* x3, void* x4, void
     else if (g_RootRegister == 1) target_ptr = (uintptr_t)x1;
     else target_ptr = (uintptr_t)x2;
     
-    // 只在捕获到有效非零指针时才更新基址
     if (target_ptr != 0 && target_ptr > 0x10000000) { 
         g_ActorManager.store(target_ptr);
         LOGI("[Hook-Init] 拦截到了! 次数:%d, 设定的基址: 0x%lx", g_InitCallCount.load(), target_ptr);
     }
     
-    // 呼叫原函数，完美放行
     if (old_InitActorParams) {
         old_InitActorParams(x0, x1, x2, x3, x4, x5, x6, x7);
     }
@@ -264,12 +275,6 @@ t_ClearActor old_ClearActor = nullptr;
 void hook_ClearActor(void* x0, void* x1, void* x2, void* x3, void* x4, void* x5, void* x6, void* x7) {
     g_ClearCallCount++;
     
-    // ==========================================
-    // 修复点 2：修复无差别清空指针的致命逻辑 Bug！
-    // 游戏里小兵、子弹消失都会调用 ClearActor。
-    // 如果无差别清空，g_ActorManager 会立刻被重置为 0。
-    // 现在改为：只有传入清理的地址 == 我们保存的英雄地址时，才清空！
-    // ==========================================
     uintptr_t clearing_ptr = 0;
     if (g_RootRegister == 0) clearing_ptr = (uintptr_t)x0;
     else if (g_RootRegister == 1) clearing_ptr = (uintptr_t)x1;
@@ -277,7 +282,6 @@ void hook_ClearActor(void* x0, void* x1, void* x2, void* x3, void* x4, void* x5,
 
     if (clearing_ptr != 0 && clearing_ptr == g_ActorManager.load()) {
         LOGI("[Hook-Clear] 侦测到英雄对象销毁，清空基址 (0x%lx)", clearing_ptr);
-        // g_ActorManager.store(0); // 排错阶段，我们连英雄销毁都不清空基址，让它一直显示！
     }
     
     if (old_ClearActor) {
@@ -290,7 +294,6 @@ void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
     ImGui::SetNextWindowSize(ImVec2(w * 0.55f, h * 0.8f), ImGuiCond_FirstUseEver);
     if (ImGui::Begin("指针断点排错器 (IL2CPP)")) {
         
-        // --- 新增：动态切换基址来源 ---
         if (ImGui::CollapsingHeader("拦截寄存器选择 (基址来源)", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::TextColored(ImVec4(1, 1, 0, 1), "当前捕获的值:");
             ImGui::Text("x0 (通常是 this): 0x%lx", g_CapturedX0.load());
@@ -303,7 +306,6 @@ void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
             if (ImGui::RadioButton("使用 x2", &g_RootRegister, 2)) g_ActorManager.store(g_CapturedX2.load());
         }
         ImGui::Separator();
-        // ------------------------------
 
         if (ImGui::CollapsingHeader("动态偏移修改面板 (十进制)", ImGuiTreeNodeFlags_DefaultOpen)) {
             std::lock_guard<std::mutex> lock(g_OffsetMutex);
@@ -338,14 +340,16 @@ void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
         ImGui::TextColored(ImVec4(0, 1, 1, 1), "[Hook 2] ClearActor (RVA 0x734bc10) -> 0x%lx", g_HookAddr_ClearActor);
         ImGui::Separator();
 
-        // --- 新增：悬浮窗内嵌实时分析日志 ---
         if (ImGui::CollapsingHeader("实时运行日志 (排错必看)", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::TextColored(g_InitCallCount > 0 ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1), 
                 "> InitActor 函数被拦截次数: %d", g_InitCallCount.load());
             ImGui::TextColored(ImVec4(1, 1, 0, 1), "> ClearActor 函数被拦截次数: %d", g_ClearCallCount.load());
             
+            // 【修改点】：将警告变为友好的逻辑状态提示
             if (g_InitCallCount == 0) {
-                ImGui::TextColored(ImVec4(1, 0.5f, 0, 1), "警告: 拦截次数为0，说明函数从未被游戏调用过。\n1. 请尝试开着菜单【重新开一局游戏/进训练营】。\n2. 如果还为0，说明 0x73507bc 不是生成英雄的函数。");
+                ImGui::TextColored(ImVec4(1, 1, 0, 1), "[状态] 正在等待进入对局...\n提示: 因为 InitActor 只在生成实体时触发，大厅为0是正常现象。\n请进入对局/训练营。如果进对局后仍为0，则说明地址找错了。");
+            } else {
+                ImGui::TextColored(ImVec4(0, 1, 0, 1), "[状态] 成功拦截！请根据需要在上方切换使用 x0/x1/x2 作为基址测试数据。");
             }
 
             ImGui::BeginChild("LogRegion", ImVec2(0, 120), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
@@ -353,16 +357,14 @@ void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
             for (const auto& log : g_AppLogs) {
                 ImGui::TextUnformatted(log.c_str());
             }
-            // 自动滚动到最新日志
             if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) ImGui::SetScrollHereY(1.0f);
             ImGui::EndChild();
         }
         ImGui::Separator();
-        // ---------------------------------
 
         const auto& d = snap.debug;
         const auto& off = snap.offsets;
-        ImGui::TextColored(d.baseX0 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "[起点] InitActor x0: 0x%lx", d.baseX0);
+        ImGui::TextColored(d.baseX0 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "[起点] InitActor x0/x1/x2: 0x%lx", d.baseX0);
         ImGui::TextColored(d.addr1 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), " └─ [+%d] 地址 1: 0x%lx", off.x0_to_addr1, d.addr1);
         ImGui::TextColored(d.addr2 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "     └─ [+%d] 英雄数组: 0x%lx", off.addr1_to_addr2, d.addr2);
         if (d.addr2 != 0) {
@@ -453,7 +455,6 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
             if (access(systemFonts[i], R_OK) == 0) {
                 io.Fonts->AddFontFromFileTTF(systemFonts[i], 32.0f, NULL, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
                 g_FontLoaded = true;
-                LOGI("[*] 加载字体成功: %s", systemFonts[i]);
                 break;
             }
         }
@@ -566,6 +567,7 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 }
 
 void* DelayedHookThread(void*) {
+    // 界面与输入的 Hook 不需要等待游戏逻辑
     void* egl = DobbySymbolResolver("libEGL.so", "eglSwapBuffers");
     if (egl) DobbyHook(egl, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
 
@@ -578,36 +580,41 @@ void* DelayedHookThread(void*) {
         uintptr_t base = GetModuleBase(GAME_MODULE);
         if (base) {
             g_GameBase = base;
+            LOGI("[*] 发现 libil2cpp.so 内存基址: 0x%lx", base);
             
-            // ==========================================
-            // FIX 2: 架构检测，防止 32 位 Thumb 指令集崩溃
-            // 32 位 (armeabi-v7a) Hook IL2CPP 函数时由于是 Thumb 指令，地址必须 +1
-            // 64 位 (arm64-v8a) 保持原样即可
-            // ==========================================
+            // ========================================================
+            // 【核心修复】：注入太早会导致 Hook 被引擎初始化过程覆盖！
+            // 发现模块后，强制挂起 5 秒，等待游戏彻底解密、释放和初始化完毕。
+            // ========================================================
+            LOGI("[*] 等待 5 秒，确保引擎彻底解密和初始化内存...");
+            sleep(5); 
+
 #if defined(__arm__) 
             g_HookAddr_InitActor = base + 0x73507bc + 1;
             g_HookAddr_ClearActor = base + 0x734bc10 + 1;
-            LOGI("[*] 检测到 32 位架构，已自动处理 Thumb 指令集 (+1)");
+            LOGI("[*] 架构: 32位 (Thumb +1)");
 #else
             g_HookAddr_InitActor = base + 0x73507bc;
             g_HookAddr_ClearActor = base + 0x734bc10;
-            LOGI("[*] 检测到 64 位架构，无需处理 Thumb");
+            LOGI("[*] 架构: 64位");
 #endif
 
-            LOGI("[*] libil2cpp.so base = 0x%lx", base);
-            LOGI("[*] InitActor addr = 0x%lx", g_HookAddr_InitActor);
-            LOGI("[*] ClearActor addr = 0x%lx", g_HookAddr_ClearActor);
+            // 安装前自检：如果读出来的内存全是 0，说明地址还是空的，游戏根本没释放这块代码
+            std::string hexInit = ReadMemoryHex(g_HookAddr_InitActor & ~1, 8);
+            LOGI("[*] 内存自检 InitActor(0x%lx) 前 8 字节: %s", g_HookAddr_InitActor, hexInit.c_str());
+            if (hexInit == "00 00 00 00 00 00 00 00 ") {
+                LOGE("[!] 致命警告: 目标内存仍然全是00！说明地址被加密、未初始化，或者找错偏移了！");
+            }
 
             int ret1 = DobbyHook((void*)g_HookAddr_InitActor, (void*)hook_InitActorParams, (void**)&old_InitActorParams);
             int ret2 = DobbyHook((void*)g_HookAddr_ClearActor, (void*)hook_ClearActor, (void**)&old_ClearActor);
             
-            // 修复返回值判定：DobbyHook 成功时返回 0 (RS_SUCCESS)
             if (ret1 == 0 && ret2 == 0) {
-                LOGI("[*] Dobby Hook 安装成功! 正在等待游戏调用函数...");
+                LOGI("[*] Dobby Hook 下发成功! (ret1:%d, ret2:%d) 现在进游戏测试...", ret1, ret2);
             } else {
-                LOGE("[!] Dobby Hook 安装失败！状态码 ret1:%d, ret2:%d", ret1, ret2);
+                LOGE("[!] Dobby Hook 下发失败！请检查地址或保护机制 (ret1:%d, ret2:%d)", ret1, ret2);
             }
-            break;
+            break; // 跳出循环
         }
         sleep(1);
     }
