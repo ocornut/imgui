@@ -24,9 +24,8 @@
 #define TAG "IL2CPP_Drive"
 #define GAME_MODULE "libil2cpp.so"
 
-// --- 新增：实时日志与计数器系统 ---
+// --- 实时日志与计数器系统 ---
 std::atomic<int> g_InitCallCount{0};
-std::atomic<int> g_ClearCallCount{0};
 std::vector<std::string> g_AppLogs;
 std::mutex g_LogMutex;
 
@@ -46,7 +45,6 @@ void AddLog(const char* fmt, ...) {
     g_AppLogs.push_back(buf);
 }
 
-// 覆盖原本的宏，使其同时输出到屏幕上
 #undef LOGI
 #undef LOGE
 #define LOGI(...) AddLog(__VA_ARGS__)
@@ -75,9 +73,8 @@ static float g_UserUIScale = 1.0f;
 
 static uintptr_t g_GameBase = 0;
 static uintptr_t g_HookAddr_InitActor = 0;
-static uintptr_t g_HookAddr_ClearActor = 0;
 
-// --- 新增：寄存器动态切换器与状态保存 ---
+// --- 寄存器动态切换器与状态保存 ---
 static int g_RootRegister = 0; // 0=x0, 1=x1, 2=x2
 static std::atomic<uintptr_t> g_CapturedX0{0};
 static std::atomic<uintptr_t> g_CapturedX1{0};
@@ -244,6 +241,7 @@ uintptr_t GetModuleBase(const char* module_name) {
     return base;
 }
 
+// 唯一 Hook 目标：InitActor
 typedef void (*t_InitActorParams)(void* x0, void* x1, void* x2, void* x3, void* x4, void* x5, void* x6, void* x7);
 t_InitActorParams old_InitActorParams = nullptr;
 
@@ -266,26 +264,6 @@ void hook_InitActorParams(void* x0, void* x1, void* x2, void* x3, void* x4, void
     
     if (old_InitActorParams) {
         old_InitActorParams(x0, x1, x2, x3, x4, x5, x6, x7);
-    }
-}
-
-typedef void (*t_ClearActor)(void* x0, void* x1, void* x2, void* x3, void* x4, void* x5, void* x6, void* x7);
-t_ClearActor old_ClearActor = nullptr;
-
-void hook_ClearActor(void* x0, void* x1, void* x2, void* x3, void* x4, void* x5, void* x6, void* x7) {
-    g_ClearCallCount++;
-    
-    uintptr_t clearing_ptr = 0;
-    if (g_RootRegister == 0) clearing_ptr = (uintptr_t)x0;
-    else if (g_RootRegister == 1) clearing_ptr = (uintptr_t)x1;
-    else clearing_ptr = (uintptr_t)x2;
-
-    if (clearing_ptr != 0 && clearing_ptr == g_ActorManager.load()) {
-        LOGI("[Hook-Clear] 侦测到英雄对象销毁，清空基址 (0x%lx)", clearing_ptr);
-    }
-    
-    if (old_ClearActor) {
-        old_ClearActor(x0, x1, x2, x3, x4, x5, x6, x7);
     }
 }
 
@@ -337,15 +315,12 @@ void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
         ImGui::Separator();
         ImGui::TextColored(ImVec4(0, 1, 1, 1), "[核心库] %s 基址: 0x%lx", GAME_MODULE, g_GameBase);
         ImGui::TextColored(ImVec4(0, 1, 1, 1), "[Hook 1] InitActor (RVA 0x73507bc) -> 0x%lx", g_HookAddr_InitActor);
-        ImGui::TextColored(ImVec4(0, 1, 1, 1), "[Hook 2] ClearActor (RVA 0x734bc10) -> 0x%lx", g_HookAddr_ClearActor);
         ImGui::Separator();
 
         if (ImGui::CollapsingHeader("实时运行日志 (排错必看)", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::TextColored(g_InitCallCount > 0 ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1), 
                 "> InitActor 函数被拦截次数: %d", g_InitCallCount.load());
-            ImGui::TextColored(ImVec4(1, 1, 0, 1), "> ClearActor 函数被拦截次数: %d", g_ClearCallCount.load());
             
-            // 【修改点】：将警告变为友好的逻辑状态提示
             if (g_InitCallCount == 0) {
                 ImGui::TextColored(ImVec4(1, 1, 0, 1), "[状态] 正在等待进入对局...\n提示: 因为 InitActor 只在生成实体时触发，大厅为0是正常现象。\n请进入对局/训练营。如果进对局后仍为0，则说明地址找错了。");
             } else {
@@ -582,39 +557,32 @@ void* DelayedHookThread(void*) {
             g_GameBase = base;
             LOGI("[*] 发现 libil2cpp.so 内存基址: 0x%lx", base);
             
-            // ========================================================
-            // 【核心修复】：注入太早会导致 Hook 被引擎初始化过程覆盖！
-            // 发现模块后，强制挂起 5 秒，等待游戏彻底解密、释放和初始化完毕。
-            // ========================================================
             LOGI("[*] 等待 5 秒，确保引擎彻底解密和初始化内存...");
             sleep(5); 
 
 #if defined(__arm__) 
             g_HookAddr_InitActor = base + 0x73507bc + 1;
-            g_HookAddr_ClearActor = base + 0x734bc10 + 1;
             LOGI("[*] 架构: 32位 (Thumb +1)");
 #else
             g_HookAddr_InitActor = base + 0x73507bc;
-            g_HookAddr_ClearActor = base + 0x734bc10;
             LOGI("[*] 架构: 64位");
 #endif
 
-            // 安装前自检：如果读出来的内存全是 0，说明地址还是空的，游戏根本没释放这块代码
             std::string hexInit = ReadMemoryHex(g_HookAddr_InitActor & ~1, 8);
             LOGI("[*] 内存自检 InitActor(0x%lx) 前 8 字节: %s", g_HookAddr_InitActor, hexInit.c_str());
             if (hexInit == "00 00 00 00 00 00 00 00 ") {
                 LOGE("[!] 致命警告: 目标内存仍然全是00！说明地址被加密、未初始化，或者找错偏移了！");
             }
 
+            // 只安装一个 Hook
             int ret1 = DobbyHook((void*)g_HookAddr_InitActor, (void*)hook_InitActorParams, (void**)&old_InitActorParams);
-            int ret2 = DobbyHook((void*)g_HookAddr_ClearActor, (void*)hook_ClearActor, (void**)&old_ClearActor);
             
-            if (ret1 == 0 && ret2 == 0) {
-                LOGI("[*] Dobby Hook 下发成功! (ret1:%d, ret2:%d) 现在进游戏测试...", ret1, ret2);
+            if (ret1 == 0) {
+                LOGI("[*] Dobby Hook 下发成功! (ret1:%d) 现在进游戏测试...", ret1);
             } else {
-                LOGE("[!] Dobby Hook 下发失败！请检查地址或保护机制 (ret1:%d, ret2:%d)", ret1, ret2);
+                LOGE("[!] Dobby Hook 下发失败！请检查地址或保护机制 (ret1:%d)", ret1);
             }
-            break; // 跳出循环
+            break; 
         }
         sleep(1);
     }
