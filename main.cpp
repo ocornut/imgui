@@ -8,6 +8,12 @@
 #include <fcntl.h>
 #include <dirent.h>
 
+// --- 新增缺失的系统头文件 ---
+#include <link.h>       // 提供 dl_iterate_phdr 和 dl_phdr_info
+#include <sys/mman.h>   // 提供 mprotect 及 PROT_READ/WRITE/EXEC
+#include <cstdarg>      // 提供 va_list, va_start
+#include <cstring>      // 提供 strstr 等字符串操作
+
 #include <cstdio>
 #include <algorithm>
 #include <atomic>
@@ -296,7 +302,9 @@ private:
                 p.mapY = MemoryReader::FastRead<float>(addr6 + 0x54);
             }
 
-            if (p.maxHp > 0 && p.maxHp < 50000) {
+            // 修复警告：p.maxHp 是 int16_t(最大值 32767)，无需和 50000 比较
+            // 若大于 0 且小于其合理上限即可判定为有效实体
+            if (p.maxHp > 0 && p.maxHp < 32000) {
                 snap->players.push_back(p);
             }
         }
