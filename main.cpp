@@ -20,6 +20,10 @@
 #include <sys/mman.h>
 #include <setjmp.h>
 #include <signal.h>
+#include <cstdarg>
+#include <cstring>
+#include <errno.h>   // 引入 errno 以捕获 SELinux 拦截原因
+
 #include "dobby.h"
 #include "imgui.h"
 #include "imgui_impl_android.h"
@@ -54,7 +58,9 @@ void AddLog(const char* fmt, ...) {
 static bool g_Initialized = false;
 static bool g_FontLoaded = false;
 static bool g_IsHookInstalled = false;
-static std::string g_HookStatusMsg = "等待手动挂钩... (请在大厅/选区界面操作)";
+static std::string g_HookStatusMsg = "等待系统指令录入... (请在大厅执行挂载)";
+
+static bool g_IsCompatibilityMode = true; 
 
 struct {
     float x = 0.0f;
@@ -64,13 +70,11 @@ struct {
     float renderH = 0.0f;
     float physW = 3392.0f;
     float physH = 2400.0f;
-    bool isSizeAutoDetected = false;
     float offsetX = 0.0f;
     float offsetY = 0.0f;
 } g_Touch;
 
 static float g_DynamicScale = 1.0f;
-static float g_BaseWindowHeight = 0.0f;
 static float g_UserUIScale = 1.0f;
 
 static uintptr_t g_GameBase = 0;
@@ -80,16 +84,14 @@ static std::atomic<uintptr_t> g_CapturedX0{0};
 static std::atomic<uintptr_t> g_CapturedX1{0};
 static std::atomic<uintptr_t> g_CapturedX2{0};
 
-// 交互式探测器状态变量
 static std::vector<uintptr_t> g_ExploreHistory;
 static uintptr_t g_CurrentExploreAddr = 0;
 static uintptr_t g_LastRootBase = 0;
-
 static bool g_ForceDirectRead = false;
 
 struct DynamicOffsets {
-    uint32_t x0_to_addr1    = 0x20; // x0 + 0x20 = HeroActors (TinyValueList)
-    uint32_t addr1_to_addr2 = 0x10; // HeroActors + 0x10 = 真正的 Array
+    uint32_t x0_to_addr1    = 0x20; 
+    uint32_t addr1_to_addr2 = 0x10; 
     uint32_t item_to_addr3  = 0x18;
     uint32_t addr3_to_addr4 = 0x30;
     uint32_t addr3_to_addr5 = 0x100;
@@ -106,32 +108,22 @@ DynamicOffsets g_Offsets;
 std::mutex g_OffsetMutex;
 
 // ==========================================
-// 终极内部读取：信号捕获 + 指针暴力解引用
+// 内存校验终极方案：mincore (无视 SELinux 限制)
 // ==========================================
-static __thread sigjmp_buf g_JmpBuf;
-static void sigsegv_handler(int sig) {
-    siglongjmp(g_JmpBuf, 1);
-}
-
 template <typename T>
 T SafeRead(uintptr_t address) {
     T value{};
     if (address < 0x10000000 || address > 0x00007FFFFFFFFFFF) return value;
 
-    struct sigaction new_sa, old_sa;
-    new_sa.sa_handler = sigsegv_handler;
-    sigemptyset(&new_sa.sa_mask);
-    new_sa.sa_flags = 0;
-    sigaction(SIGSEGV, &new_sa, &old_sa);
-
-    if (sigsetjmp(g_JmpBuf, 1) == 0) {
-        value = *(volatile T*)address; 
-    } else {
-        value = {}; 
+    // 使用 mincore 验证内存页是否被映射，无需任何文件系统权限，纯内存校验！
+    unsigned char vec[1];
+    uintptr_t pageStart = address & ~0xFFF; // 4K 内存页对齐
+    if (mincore(reinterpret_cast<void*>(pageStart), 4096, vec) != 0) {
+        return value; // 内存未映射 (ENOMEM) 或拒绝访问，直接返回空，绝不闪退
     }
 
-    sigaction(SIGSEGV, &old_sa, nullptr);
-    return value;
+    // 确定内存安全后，直接极速解引用
+    return *(volatile T*)address; 
 }
 
 struct PlayerData {
@@ -141,12 +133,8 @@ struct PlayerData {
 };
 
 struct DebugChain {
-    uintptr_t baseX0 = 0;
-    uintptr_t addr1 = 0;
-    uintptr_t addr2 = 0;
-    struct Item {
-        uintptr_t base = 0, addr3 = 0, addr4 = 0, addr5 = 0, addr6 = 0;
-    } items[15];
+    uintptr_t baseX0 = 0, addr1 = 0, addr2 = 0;
+    struct Item { uintptr_t base = 0, addr3 = 0, addr4 = 0, addr5 = 0, addr6 = 0; } items[15];
 };
 
 struct GameSnapshot {
@@ -182,9 +170,7 @@ void DataWorkerThread() {
                 newSnap.debug.addr2 = addr2;
                 if (addr2) {
                     for (int i = 0; i < 15; ++i) {
-                        // 【核心修复】：直接跳过 IL2CPP 数组的 0x20 头部字节，直接读取元素！
                         uintptr_t item = SafeRead<uintptr_t>(addr2 + 0x20 + (i * 0x8));
-                        
                         newSnap.debug.items[i].base = item;
                         if (!item) continue;
 
@@ -193,7 +179,6 @@ void DataWorkerThread() {
                         if (!addr3) continue;
 
                         PlayerData p;
-
                         uintptr_t addr4 = SafeRead<uintptr_t>(addr3 + currOff.addr3_to_addr4);
                         newSnap.debug.items[i].addr4 = addr4;
                         if (addr4) {
@@ -234,16 +219,12 @@ void DataWorkerThread() {
     }
 }
 
-struct ModuleInfo {
-    const char* name;
-    uintptr_t base;
-};
+struct ModuleInfo { const char* name; uintptr_t base; };
 
 static int dl_iterate_callback(struct dl_phdr_info *info, size_t size, void *data) {
     ModuleInfo* modInfo = (ModuleInfo*)data;
     if (info->dlpi_name && strstr(info->dlpi_name, modInfo->name)) {
-        modInfo->base = info->dlpi_addr;
-        return 1;
+        modInfo->base = info->dlpi_addr; return 1;
     }
     return 0;
 }
@@ -272,18 +253,9 @@ t_InitActorParams old_InitActorParams = nullptr;
 
 void hook_InitActorParams(void* x0, void* x1, void* x2, void* x3, void* x4, void* x5, void* x6, void* x7) {
     g_InitCallCount++; 
-    
-    if (x0 != nullptr) g_CapturedX0.store((uintptr_t)x0);
-    if (x1 != nullptr) g_CapturedX1.store((uintptr_t)x1);
-    if (x2 != nullptr) g_CapturedX2.store((uintptr_t)x2);
-    
     if (x0 != nullptr && (uintptr_t)x0 > 0x10000000) { 
         g_ActorManager.store((uintptr_t)x0);
-        if (g_InitCallCount.load() % 5 == 1) { 
-            LOGI("[+] 拦截到实体生成! 捕获基址 x0: 0x%lx", (uintptr_t)x0);
-        }
     }
-    
     if (old_InitActorParams) {
         old_InitActorParams(x0, x1, x2, x3, x4, x5, x6, x7);
     }
@@ -294,175 +266,79 @@ void InstallCoreHook() {
 
     uintptr_t base = GetRealModuleBase(GAME_MODULE);
     if (!base) {
-        g_HookStatusMsg = "未找到 libil2cpp.so，游戏可能未加载完全！";
-        LOGE("[-] %s", g_HookStatusMsg.c_str());
+        g_HookStatusMsg = "ERR: 未找到 libil2cpp.so 游戏未启动完全";
         return;
     }
     
     g_GameBase = base;
     g_HookAddr_InitActor = base + 0x73507bc;
 
-    LOGI("[*] 准备硬核挂钩! 真实基址: 0x%lx, 目标: 0x%lx", base, g_HookAddr_InitActor);
-
     void* page_start = (void*)(g_HookAddr_InitActor & ~0xFFF);
-    mprotect(page_start, 0x2000, PROT_READ | PROT_WRITE | PROT_EXEC);
+    if (mprotect(page_start, 0x2000, PROT_READ | PROT_WRITE | PROT_EXEC) != 0) {
+        LOGE("mprotect 授权失败! (可能是 SELinux 拦截)。错误码: %d", errno);
+    }
 
     int ret = DobbyHook((void*)g_HookAddr_InitActor, (void*)hook_InitActorParams, (void**)&old_InitActorParams);
     __builtin___clear_cache((char*)g_HookAddr_InitActor, (char*)(g_HookAddr_InitActor + 16));
 
     if (ret == 0) {
         g_IsHookInstalled = true;
-        g_HookStatusMsg = "✅ 核心 Hook 注入成功！请进入对局。";
-        LOGI("[+] 手动安装 Hook 成功！");
+        g_HookStatusMsg = "✅ 核心态链路挂载成功！";
     } else {
-        g_HookStatusMsg = "❌ 挂钩失败，Dobby 错误码: " + std::to_string(ret);
-        LOGE("[-] %s", g_HookStatusMsg.c_str());
+        g_HookStatusMsg = "❌ 挂载被拒绝(SELinux限制): " + std::to_string(ret);
     }
 }
 
-void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
-    ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(w * 0.65f, h * 0.85f), ImGuiCond_FirstUseEver); 
-    if (ImGui::Begin("指针断点排错器")) {
+// ============================================================================
+// 科技风着色器
+// ============================================================================
+void ApplyCyberpunkTechStyle(ImGuiStyle& style) {
+    ImVec4* colors = style.Colors;
+    colors[ImGuiCol_Text]                   = ImVec4(0.85f, 0.95f, 1.00f, 1.00f);
+    colors[ImGuiCol_WindowBg]               = ImVec4(0.06f, 0.06f, 0.09f, 0.96f);
+    colors[ImGuiCol_Border]                 = ImVec4(0.00f, 0.80f, 1.00f, 0.60f); 
+    colors[ImGuiCol_FrameBg]                = ImVec4(0.10f, 0.14f, 0.22f, 0.80f);
+    colors[ImGuiCol_FrameBgHovered]         = ImVec4(0.18f, 0.35f, 0.58f, 0.80f);
+    colors[ImGuiCol_FrameBgActive]          = ImVec4(0.22f, 0.45f, 0.75f, 1.00f);
+    colors[ImGuiCol_TitleBg]                = ImVec4(0.04f, 0.04f, 0.06f, 1.00f);
+    colors[ImGuiCol_TitleBgActive]          = ImVec4(0.08f, 0.20f, 0.38f, 1.00f);
+    colors[ImGuiCol_CheckMark]              = ImVec4(0.00f, 1.00f, 0.80f, 1.00f);
+    colors[ImGuiCol_SliderGrab]             = ImVec4(0.00f, 0.80f, 1.00f, 1.00f);
+    colors[ImGuiCol_SliderGrabActive]       = ImVec4(0.00f, 1.00f, 0.80f, 1.00f);
+    colors[ImGuiCol_Button]                 = ImVec4(0.10f, 0.30f, 0.55f, 0.80f);
+    colors[ImGuiCol_ButtonHovered]          = ImVec4(0.15f, 0.40f, 0.70f, 1.00f);
+    colors[ImGuiCol_ButtonActive]           = ImVec4(0.25f, 0.55f, 0.85f, 1.00f);
+    colors[ImGuiCol_Header]                 = ImVec4(0.12f, 0.25f, 0.45f, 0.80f);
 
-        if (ImGui::CollapsingHeader("高级排错 (读不出数据时勾选)", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.4f, 0.4f, 1.0f));
-            ImGui::Checkbox("⚠️ 开启暴力裸读 (无视系统拦截)", &g_ForceDirectRead);
-            ImGui::PopStyleColor();
-            ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), 
-                "说明: 腾讯的反外挂可能会拦截系统的安全读取API。\n"
-                "勾选此项强制使用指针解引用。已经加入了信号接管，不会闪退！");
-        }
-        ImGui::Separator();
+    style.WindowBorderSize  = 1.0f;
+    style.FrameBorderSize   = 1.0f;
+    
+    style.WindowRounding    = 0.0f;
+    style.ChildRounding     = 0.0f;
+    style.FrameRounding     = 0.0f;
+    style.PopupRounding     = 0.0f;
+    style.ScrollbarRounding = 0.0f;
+    style.GrabRounding      = 0.0f;
+}
 
-        // ==========================================
-        // 交互式基址内存探查器 (0x1000 范围)
-        // ==========================================
-        if (ImGui::CollapsingHeader("交互式内存探查器 (无限层级点入)", ImGuiTreeNodeFlags_DefaultOpen)) {
-            uintptr_t rootBase = g_ActorManager.load();
-            
-            if (rootBase != 0 && rootBase != g_LastRootBase) {
-                g_LastRootBase = rootBase;
-                g_CurrentExploreAddr = rootBase;
-                g_ExploreHistory.clear();
-            }
-
-            if (g_CurrentExploreAddr != 0) {
-                ImGui::TextColored(ImVec4(1, 0.5, 0, 1), "当前探查地址: 0x%lx", g_CurrentExploreAddr);
-                
-                if (g_ExploreHistory.size() > 0) {
-                    if (ImGui::Button("⬅️ 返回上一层")) {
-                        g_CurrentExploreAddr = g_ExploreHistory.back();
-                        g_ExploreHistory.pop_back();
-                    }
-                    ImGui::SameLine();
-                }
-                if (ImGui::Button("🏠 回到起点 (x0)")) {
-                    g_ExploreHistory.clear();
-                    g_CurrentExploreAddr = rootBase;
-                }
-                ImGui::SameLine();
-                ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), " | 层级深度: %zu", g_ExploreHistory.size());
-
-                ImGui::BeginChild("MemDump", ImVec2(0, 450), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
-                
-                // 【核心升级】：扫描范围扩大至 0x1000
-                for (uint32_t offset = 0; offset <= 0x1000; offset += 8) {
-                    uintptr_t val = SafeRead<uintptr_t>(g_CurrentExploreAddr + offset);
-                    
-                    if (val > 0x10000000 && val < 0x00007FFFFFFFFFFF) {
-                        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 1, 0, 1));
-                        ImGui::Text("+0x%03X : 0x%lx", offset, val);
-                        ImGui::PopStyleColor();
-                        
-                        ImGui::SameLine(350.0f);
-                        ImGui::PushID(offset);
-                        if (ImGui::Button("👉 点入", ImVec2(100, 0))) {
-                            g_ExploreHistory.push_back(g_CurrentExploreAddr);
-                            g_CurrentExploreAddr = val;
-                        }
-                        ImGui::PopID();
-                        
-                    } else if (val != 0) {
-                        float fval = 0.0f;
-                        memcpy(&fval, &val, sizeof(float)); 
-                        
-                        ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1), "+0x%03X : 0x%lx", offset, val);
-                        ImGui::SameLine(300.0f);
-                        ImGui::TextColored(ImVec4(0.5f, 0.8f, 1.0f, 1), "(整数:%lu, 浮点:%.2f)", val & 0xFFFFFFFF, fval);
-                    } else {
-                        ImGui::TextColored(ImVec4(0.4f, 0.4f, 0.4f, 1), "+0x%03X : 0x0", offset);
-                    }
-                    ImGui::Separator();
-                }
-                ImGui::EndChild();
-            } else {
-                ImGui::Text("等待获取有效基址...");
-            }
-        }
-        ImGui::Separator();
-
-        if (ImGui::CollapsingHeader("动态偏移修改面板 (十进制)", ImGuiTreeNodeFlags_DefaultOpen)) {
-            std::lock_guard<std::mutex> lock(g_OffsetMutex);
-            auto drawOffsetBtn = [](const char* label, uint32_t& val) {
-                ImGui::PushID(&val);
-                ImGui::TextColored(ImVec4(0.5f, 0.8f, 1.0f, 1.0f), "%s -> 当前: %d (0x%X)", label, val, val);
-                if (ImGui::Button("-8")) { if (val >= 8) val -= 8; else val = 0; } ImGui::SameLine();
-                if (ImGui::Button("-4")) { if (val >= 4) val -= 4; else val = 0; } ImGui::SameLine();
-                if (ImGui::Button("-1")) { if (val >= 1) val -= 1; else val = 0; } ImGui::SameLine();
-                if (ImGui::Button("+1")) val += 1; ImGui::SameLine();
-                if (ImGui::Button("+4")) val += 4; ImGui::SameLine();
-                if (ImGui::Button("+8")) val += 8;
-                ImGui::Separator();
-                ImGui::PopID();
-            };
-            ImGui::TextColored(ImVec4(1, 0, 1, 1), "※ 提示: 英雄数组底层代码已自动跳过 0x20 的对象头，无需在此重复计算！");
-            drawOffsetBtn("地址1 (x0 + ?)", g_Offsets.x0_to_addr1);
-            drawOffsetBtn("英雄数组 (addr1 + ?)", g_Offsets.addr1_to_addr2);
-            drawOffsetBtn("实体数据 (item + ?)", g_Offsets.item_to_addr3);
-            drawOffsetBtn("血量属性 (addr3 + ?)", g_Offsets.addr3_to_addr4);
-            drawOffsetBtn("坐标数据 (addr3 + ?)", g_Offsets.addr3_to_addr5);
-            drawOffsetBtn("雷达坐标 (addr3 + ?)", g_Offsets.addr3_to_addr6);
-            ImGui::Separator();
-            drawOffsetBtn("金币偏移", g_Offsets.prop_gold);
-            drawOffsetBtn("血量偏移", g_Offsets.prop_hp);
-            drawOffsetBtn("最大血量偏移", g_Offsets.prop_maxhp);
-            drawOffsetBtn("等级偏移", g_Offsets.prop_level);
-            drawOffsetBtn("蓝量偏移", g_Offsets.prop_mana);
-        }
+void DrawPointerDebugger(const GameSnapshot& snap) {
+    if (ImGui::Begin("内存探针 [已开启自动兼容]", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Checkbox("开启暴力裸读 (防止反作弊异常)", &g_ForceDirectRead);
         ImGui::Separator();
         
-        const auto& d = snap.debug;
-        const auto& off = snap.offsets;
-        ImGui::TextColored(d.baseX0 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "[起点] 捕获到的 x0: 0x%lx", d.baseX0);
-        ImGui::TextColored(d.addr1 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), " └─ [+%d] 地址 1: 0x%lx", off.x0_to_addr1, d.addr1);
-        ImGui::TextColored(d.addr2 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "     └─ [+%d] 英雄数组: 0x%lx", off.addr1_to_addr2, d.addr2);
-        if (d.addr2 != 0) {
-            for (int i = 0; i < 15; i++) {
-                if (d.items[i].base == 0) continue;
-                char nodeName[64];
-                snprintf(nodeName, sizeof(nodeName), "数组序号 [%d] - 0x%lx", i, d.items[i].base);
-                if (ImGui::TreeNodeEx(nodeName, ImGuiTreeNodeFlags_Framed)) {
-                    ImGui::TextColored(d.items[i].addr3 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), " └─ [+%d] 实体数据: 0x%lx", off.item_to_addr3, d.items[i].addr3);
-                    if (d.items[i].addr3) {
-                        ImGui::TextColored(d.items[i].addr4 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "     ├─ [+%d] 属性区: 0x%lx", off.addr3_to_addr4, d.items[i].addr4);
-                        ImGui::TextColored(d.items[i].addr5 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "     ├─ [+%d] 坐标区: 0x%lx", off.addr3_to_addr5, d.items[i].addr5);
-                        ImGui::TextColored(d.items[i].addr6 ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), "     └─ [+%d] 小地图: 0x%lx", off.addr3_to_addr6, d.items[i].addr6);
-                    }
-                    ImGui::TreePop();
-                }
-            }
-        }
+        uintptr_t rootBase = g_ActorManager.load();
+        ImGui::TextColored(ImVec4(1, 0.5, 0, 1), "当前捕获基址(x0): 0x%lx", rootBase);
+        
         ImGui::Separator();
-        if (ImGui::CollapsingHeader("实时运行日志", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::TextColored(g_InitCallCount > 0 ? ImVec4(0, 1, 0, 1) : ImVec4(1, 1, 0, 1), 
-                "> 当前成功拦截次数: %d", g_InitCallCount.load());
-            ImGui::BeginChild("LogRegion", ImVec2(0, 120), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
-            std::lock_guard<std::mutex> lock(g_LogMutex);
-            for (const auto& log : g_AppLogs) { ImGui::TextUnformatted(log.c_str()); }
-            if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) ImGui::SetScrollHereY(1.0f);
-            ImGui::EndChild();
-        }
+        std::lock_guard<std::mutex> lock(g_OffsetMutex);
+        ImGui::Text("偏移量调整矩阵:");
+        if (ImGui::Button("-4##x0")) { g_Offsets.x0_to_addr1 -= 4; } ImGui::SameLine();
+        if (ImGui::Button("+4##x0")) { g_Offsets.x0_to_addr1 += 4; } ImGui::SameLine();
+        ImGui::Text("x0_to_addr1: 0x%X", g_Offsets.x0_to_addr1);
+
+        ImGui::Separator();
+        ImGui::TextColored(ImVec4(0,1,0,1), "实体层级1: 0x%lx", snap.debug.addr1);
+        ImGui::TextColored(ImVec4(0,1,0,1), "实体层级2: 0x%lx", snap.debug.addr2);
     }
     ImGui::End();
 }
@@ -506,14 +382,23 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     }
 
     if (!g_Initialized) {
+        LOGI("检测到首次渲染，正在初始化终端...");
         ImGui::CreateContext();
         ImGui_ImplOpenGL3_Init("#version 300 es");
         ImGuiIO& io = ImGui::GetIO();
-        const char* systemFonts[] = { "/system/fonts/SysSans-Hans-Regular.ttf", "/system/fonts/NotoSansCJKjp-Regular.otc", "/system/fonts/NotoSansSC-Regular.otf", "/system/fonts/DroidSansFallback.ttf" };
-        for (int i = 0; i < 4; i++) {
+        
+        io.IniFilename = nullptr; 
+        ApplyCyberpunkTechStyle(ImGui::GetStyle());
+        
+        io.Fonts->AddFontDefault(); 
+
+        ImFontConfig config;
+        config.MergeMode = true; 
+        const char* systemFonts[] = { "/system/fonts/SysSans-Hans-Regular.ttf", "/system/fonts/NotoSansCJKjp-Regular.otc", "/system/fonts/DroidSansFallback.ttf" };
+        for (int i = 0; i < 3; i++) {
             if (access(systemFonts[i], R_OK) == 0) {
-                io.Fonts->AddFontFromFileTTF(systemFonts[i], 32.0f, NULL, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
-                g_FontLoaded = true; break;
+                io.Fonts->AddFontFromFileTTF(systemFonts[i], 32.0f, &config, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
+                break;
             }
         }
         g_Initialized = true;
@@ -532,91 +417,88 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     ImGuiStyle& style = ImGui::GetStyle();
     style = default_style;
     style.ScaleAllSizes(1.2f * finalScale);
-    style.WindowRounding = 12.0f;
-    style.WindowMinSize = ImVec2(100.0f, 100.0f);
     io.FontGlobalScale = 1.2f * finalScale;
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
 
-    if (g_Touch.down.load())
-        ImGui::GetForegroundDrawList()->AddCircleFilled(io.MousePos, 20.0f, IM_COL32(0, 255, 0, 200));
+    if (g_Touch.down.load()) {
+        ImGui::GetForegroundDrawList()->AddCircleFilled(io.MousePos, 20.0f * finalScale, IM_COL32(0, 200, 255, 120));
+        ImGui::GetForegroundDrawList()->AddCircle(io.MousePos, 28.0f * finalScale, IM_COL32(0, 200, 255, 200), 0, 2.0f);
+    }
 
-    if (g_BaseWindowHeight == 0.0f) g_BaseWindowHeight = h * 0.45f;
-    ImGui::SetNextWindowPos(ImVec2(30, 30), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(w * 0.6f, g_BaseWindowHeight), ImGuiCond_FirstUseEver);
-
-    static bool show_pointer_debugger = true;
+    static bool show_pointer_debugger = false;
     static bool show_radar = true;
 
-    if (ImGui::Begin("IL2CPP 透视框架 (防闪退正式版)")) {
+    ImGui::SetNextWindowPos(ImVec2(50, 50), ImGuiCond_FirstUseEver);
+    if (ImGui::Begin("CYBER-CORE 战术终端", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
         
-        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.1f, 0.1f, 0.15f, 1.0f));
-        ImGui::BeginChild("HookController", ImVec2(0, 70), true);
+        if (g_IsCompatibilityMode) {
+            ImGui::TextColored(ImVec4(1, 0.4f, 0.4f, 1), "⚠ [系统警告] SELinux=Enforcing 状态检测！");
+            ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1), "如果 Hook 失败，请使用 APatch 的 ZygiskNext 模块或设置 Permissive。");
+            ImGui::Separator();
+        }
+
         if (!g_IsHookInstalled) {
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
-            if (ImGui::Button("🔴 在大厅界面点击此按钮注入", ImVec2(-1, 40))) {
-                InstallCoreHook();
-            }
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.1f, 0.2f, 1.0f));
+            if (ImGui::Button("🔴 建立挂载 (Kernel Hook)", ImVec2(280 * finalScale, 45 * finalScale))) InstallCoreHook();
             ImGui::PopStyleColor();
         } else {
-            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "✅ Hook 注入完成！快去进对局测试。");
+            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "✅ [ ONLINE ] 核心链路稳定连接中");
         }
-        ImGui::Text("状态: %s", g_HookStatusMsg.c_str());
-        ImGui::EndChild();
-        ImGui::PopStyleColor();
-        ImGui::Separator();
-
-        if (ImGui::CollapsingHeader("基础校准 (触控与缩放)")) {
-            ImGui::SliderFloat("菜单缩放", &g_UserUIScale, 0.5f, 2.0f);
-            ImGui::Text("坐标偏移 X:%.1f Y:%.1f", g_Touch.offsetX, g_Touch.offsetY);
-            if (ImGui::Button("-10##x")) g_Touch.offsetX -= 10; ImGui::SameLine();
-            if (ImGui::Button("+10##x")) g_Touch.offsetX += 10; ImGui::SameLine();
-            if (ImGui::Button("-10##y")) g_Touch.offsetY -= 10; ImGui::SameLine();
-            if (ImGui::Button("+10##y")) g_Touch.offsetY += 10;
-        }
-        ImGui::Separator();
-        ImGui::Checkbox("雷达 (Radar)", &show_radar); ImGui::SameLine();
-        ImGui::Checkbox("指针断点调试", &show_pointer_debugger);
+        ImGui::Text("终端日志: %s", g_HookStatusMsg.c_str());
+        
         ImGui::Separator();
         
-        ImGui::TextColored(ImVec4(0, 1, 0, 1), "状态: %s", snapshot.inMatch ? "局内" : "未获取到对象");
-
-        if (ImGui::BeginTable("PlayersTable", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
-            ImGui::TableSetupColumn("等级"); ImGui::TableSetupColumn("血量");
-            ImGui::TableSetupColumn("蓝量"); ImGui::TableSetupColumn("金币");
-            ImGui::TableSetupColumn("雷达坐标"); ImGui::TableHeadersRow();
+        ImGui::PushItemWidth(200.0f * finalScale);
+        ImGui::SliderFloat("UI ZOOM (终端缩放)", &g_UserUIScale, 0.5f, 2.5f);
+        ImGui::PopItemWidth();
+        
+        ImGui::Separator();
+        ImGui::Checkbox("启动全息雷达 (HUD Radar)", &show_radar);
+        ImGui::Checkbox("启动内存探针 (Debugger)", &show_pointer_debugger);
+        ImGui::Separator();
+        
+        ImGui::TextColored(ImVec4(0, 1, 1, 1), "DATA_STREAM // 实体数据流");
+        if (!snapshot.inMatch) {
+            ImGui::TextColored(ImVec4(1, 0.5f, 0, 1), "等待有效战场数据载入...");
+        } else {
             for (const auto& p : snapshot.players) {
-                ImGui::TableNextRow();
-                ImGui::TableNextColumn(); ImGui::Text("Lv.%d", p.level);
-                ImGui::TableNextColumn(); ImGui::Text("%d/%d", p.hp, p.maxHp);
-                ImGui::TableNextColumn(); ImGui::Text("%d", p.mana);
-                ImGui::TableNextColumn(); ImGui::Text("%d", p.gold);
-                ImGui::TableNextColumn(); ImGui::Text("%.0f, %.0f", p.mapX, p.mapY);
+                ImGui::Text("Lv.%-2d | HP: %d/%d | MP: %-4d | Gold: %-4d | 坐标: %.0f, %.0f", 
+                            p.level, p.hp, p.maxHp, p.mana, p.gold, p.mapX, p.mapY);
             }
-            ImGui::EndTable();
         }
     }
     ImGui::End();
 
-    if (show_pointer_debugger) DrawPointerDebugger(snapshot, w, h);
+    if (show_pointer_debugger) DrawPointerDebugger(snapshot);
 
     if (show_radar && snapshot.inMatch) {
-        ImGui::SetNextWindowPos(ImVec2(w - 350, 30), ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(300, 300), ImGuiCond_FirstUseEver);
-        ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0.5f));
-        if (ImGui::Begin("Radar", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize)) {
-            ImVec2 p0 = ImGui::GetCursorScreenPos();
-            ImVec2 size = ImGui::GetContentRegionAvail();
+        ImGui::SetNextWindowPos(ImVec2(w - 350, 50), ImGuiCond_FirstUseEver);
+        ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.02f, 0.05f, 0.08f, 0.85f));
+        
+        if (ImGui::Begin("HUD_Radar", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::Dummy(ImVec2(260 * finalScale, 260 * finalScale)); 
+            
+            ImVec2 p0 = ImGui::GetItemRectMin();
+            ImVec2 size = ImGui::GetItemRectSize();
             ImDrawList* dl = ImGui::GetWindowDrawList();
-            dl->AddRect(p0, ImVec2(p0.x + size.x, p0.y + size.y), IM_COL32(255, 255, 255, 100));
+            ImVec2 center = ImVec2(p0.x + size.x * 0.5f, p0.y + size.y * 0.5f);
+
+            dl->AddRect(p0, ImVec2(p0.x + size.x, p0.y + size.y), IM_COL32(0, 180, 255, 150), 0, 0, 1.5f);
+            dl->AddLine(ImVec2(center.x, p0.y), ImVec2(center.x, p0.y + size.y), IM_COL32(0, 150, 255, 80));
+            dl->AddLine(ImVec2(p0.x, center.y), ImVec2(p0.x + size.x, center.y), IM_COL32(0, 150, 255, 80));
+            dl->AddCircle(center, size.x * 0.25f, IM_COL32(0, 200, 255, 60), 32, 1.0f);
+
             for (const auto& p : snapshot.players) {
                 float nX = p.mapX / 10000.0f;
                 float nY = p.mapY / 10000.0f;
                 float rX = p0.x + (nX * size.x);
                 float rY = p0.y + size.y - (nY * size.y);
-                if (nX > 0 && nX < 1 && nY > 0 && nY < 1)
-                    dl->AddCircleFilled(ImVec2(rX, rY), 5.0f * finalScale, IM_COL32(255, 0, 0, 255));
+                
+                if (nX > 0 && nX < 1 && nY > 0 && nY < 1) {
+                    dl->AddCircleFilled(ImVec2(rX, rY), 5.0f * finalScale, IM_COL32(255, 50, 50, 150));
+                }
             }
         }
         ImGui::End();
@@ -636,16 +518,31 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 }
 
 void* DelayedHookThread(void*) {
+    sleep(2);
+    LOGI("底层初始化：挂载 EGL SwapBuffers...");
+    
     void* egl = nullptr;
-    while (!egl) { egl = DobbySymbolResolver("libEGL.so", "eglSwapBuffers"); if (!egl) sleep(1); }
-    DobbyHook(egl, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
+    int retry = 0;
+    while (!egl && retry < 10) { 
+        egl = DobbySymbolResolver("libEGL.so", "eglSwapBuffers"); 
+        if (!egl) { sleep(1); retry++; }
+    }
+    
+    if(egl) {
+        int ret = DobbyHook(egl, (void*)hook_eglSwapBuffers, (void**)&old_eglSwapBuffers);
+        if (ret != 0) LOGE("EGL Hook 失败！错误码: %d. SELinux 强制模式可能拦截了 libEGL 的修改(execmod)。", ret);
+    }
 
+    LOGI("底层初始化：挂载 InputConsumer...");
     void* ins = nullptr;
-    while (!ins) { ins = DobbySymbolResolver("libinput.so", "_ZN7android13InputConsumer7consumeEPNS_26InputEventFactoryInterfaceEblPjPPNS_10InputEventE"); if (!ins) sleep(1); }
-    DobbyHook(ins, (void*)hook_consume, (void**)&old_consume);
+    retry = 0;
+    while (!ins && retry < 10) { 
+        ins = DobbySymbolResolver("libinput.so", "_ZN7android13InputConsumer7consumeEPNS_26InputEventFactoryInterfaceEblPjPPNS_10InputEventE"); 
+        if (!ins) { sleep(1); retry++; }
+    }
+    if(ins) DobbyHook(ins, (void*)hook_consume, (void**)&old_consume);
 
     std::thread(DataWorkerThread).detach();
-
     return nullptr;
 }
 
