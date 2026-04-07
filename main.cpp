@@ -18,7 +18,8 @@
 #include <sstream>
 #include <link.h>
 #include <sys/mman.h>
-#include <sys/uio.h>
+#include <setjmp.h>
+#include <signal.h>
 #include "dobby.h"
 #include "imgui.h"
 #include "imgui_impl_android.h"
@@ -79,8 +80,6 @@ static std::atomic<uintptr_t> g_CapturedX0{0};
 static std::atomic<uintptr_t> g_CapturedX1{0};
 static std::atomic<uintptr_t> g_CapturedX2{0};
 
-static bool g_ForceDirectRead = false; // 危险：强制暴力裸读
-
 struct DynamicOffsets {
     uint32_t x0_to_addr1    = 0x20;
     uint32_t addr1_to_addr2 = 0x10;
@@ -100,40 +99,34 @@ DynamicOffsets g_Offsets;
 std::mutex g_OffsetMutex;
 
 // ==========================================
-// 终极安全读取：绕过反外挂拦截
+// 终极内部读取：信号捕获 + 指针暴力解引用
+// 彻底无视腾讯 ACE 的 Syscall 拦截，且免疫野指针闪退
 // ==========================================
+static __thread sigjmp_buf g_JmpBuf;
+static void sigsegv_handler(int sig) {
+    siglongjmp(g_JmpBuf, 1);
+}
+
 template <typename T>
 T SafeRead(uintptr_t address) {
     T value{};
     if (address < 0x10000000 || address > 0x00007FFFFFFFFFFF) return value;
 
-    if (g_ForceDirectRead) {
-        // 危险模式：直接将地址当作指针解引用！
-        // 如果地址是无效的/未分配的，游戏会瞬间闪退。
-        return *(T*)address; 
+    struct sigaction new_sa, old_sa;
+    new_sa.sa_handler = sigsegv_handler;
+    sigemptyset(&new_sa.sa_mask);
+    new_sa.sa_flags = 0;
+    sigaction(SIGSEGV, &new_sa, &old_sa);
+
+    if (sigsetjmp(g_JmpBuf, 1) == 0) {
+        // 核心：强行将其作为指针读取。因为没有经过系统调用，反外挂拦不到！
+        value = *(volatile T*)address; 
+    } else {
+        // 如果遇到野指针导致了段错误(SIGSEGV)，会瞬间跳到这里，安全返回0，游戏不会闪退！
+        value = {}; 
     }
 
-    // 1. 系统级跨进程读取 (免疫文件句柄检测)
-    struct iovec local[1];
-    struct iovec remote[1];
-    local[0].iov_base = &value;
-    local[0].iov_len = sizeof(T);
-    remote[0].iov_base = (void*)address;
-    remote[0].iov_len = sizeof(T);
-
-    if (process_vm_readv(getpid(), local, 1, remote, 1, 0) == sizeof(T)) {
-        return value;
-    }
-
-    // 2. 备用管道读取 (防止部分内核未实现 process_vm_readv)
-    int fds[2];
-    if (pipe(fds) == 0) {
-        if (write(fds[1], (void*)address, sizeof(T)) == sizeof(T)) {
-            read(fds[0], &value, sizeof(T));
-        }
-        close(fds[0]);
-        close(fds[1]);
-    }
+    sigaction(SIGSEGV, &old_sa, nullptr);
     return value;
 }
 
@@ -325,26 +318,14 @@ void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
     ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(w * 0.55f, h * 0.8f), ImGuiCond_FirstUseEver);
     if (ImGui::Begin("指针断点排错器")) {
-        
-        // ==========================================
-        // 神器：暴力裸读开关
-        // ==========================================
-        if (ImGui::CollapsingHeader("高级排错 (读不出数据时勾选)", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.4f, 0.4f, 1.0f));
-            ImGui::Checkbox("⚠️ 开启暴力裸读 (无视系统拦截)", &g_ForceDirectRead);
-            ImGui::PopStyleColor();
-            ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), 
-                "说明: 如果下方探查器全都是 0，极大可能是反外挂拦截了安全读取。\n"
-                "勾选此项强制读取。注意：如果勾选后游戏瞬间闪退，\n"
-                "【100% 证明你的 0x73507bc 函数找错了！它根本不是指针！】");
-        }
-        ImGui::Separator();
 
         if (ImGui::CollapsingHeader("基址内存探查器 (寻址神器)", ImGuiTreeNodeFlags_DefaultOpen)) {
             uintptr_t currentBase = g_ActorManager.load();
             ImGui::TextColored(ImVec4(1, 0.5, 0, 1), "当前正在探查基址: 0x%lx", currentBase);
             if (currentBase != 0) {
                 ImGui::BeginChild("MemDump", ImVec2(0, 200), true);
+                
+                // 重点：如果读出来还是全 0，说明偏移找错了
                 for (uint32_t offset = 0; offset <= 0x100; offset += 8) {
                     uintptr_t val = SafeRead<uintptr_t>(currentBase + offset);
                     
@@ -357,7 +338,7 @@ void DrawPointerDebugger(const GameSnapshot& snap, float w, float h) {
                     }
                 }
                 ImGui::EndChild();
-                ImGui::TextColored(ImVec4(1, 1, 0, 1), "操作提示: 寻找显示为绿色的【有效指针】，把它的偏移 +0xXX 填到下方的【地址1】里！");
+                ImGui::TextColored(ImVec4(1, 1, 0, 1), "操作提示: 寻找显示为绿色的【有效指针】，把它前面的偏移 +0xXX 填到下方的【地址1】里！");
             } else {
                 ImGui::Text("等待获取有效基址...");
             }
