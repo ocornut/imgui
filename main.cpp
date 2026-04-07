@@ -137,12 +137,12 @@ public:
     template <typename T>
     static T SafeRead(uintptr_t address) {
         if (!IsValidAddress(address)) return T{};
-        return *reinterpret_cast<volatile T*>(address);
+        return *reinterpret_cast<T*>(address);
     }
 
     template <typename T>
     static T FastRead(uintptr_t address) {
-        return *reinterpret_cast<volatile T*>(address);
+        return *reinterpret_cast<T*>(address);
     }
 };
 
