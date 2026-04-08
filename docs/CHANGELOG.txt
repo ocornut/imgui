@@ -54,6 +54,7 @@ Other Changes:
 - Windows:
   - Fixed a single-axis auto-resizing feedback loop issue with nested containers
     and varying scrollbar visibility. (#9352)
+  - Detect and report error when calling End() instead of EndPopup() on a popup. (#9351)
 - Fonts:
   - imgui_freetype: add FreeType headers & compiled version in 'About Dear ImGui' details.
 - Clipper:
