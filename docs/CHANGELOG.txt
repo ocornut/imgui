@@ -51,6 +51,9 @@ Other Changes:
   - Fixed issues reporting ideal size to parent window/container: (#9352, #7651)
     - When both scrollbars are visible but only one of ScrollX/ScrollY was explicitly requested.
     - When vertical scrollbar was not at the top, the computation was often incorrect.
+- Windows:
+  - Fixed a single-axis auto-resizing feedback loop issue with nested containers
+    and varying scrollbar visibility. (#9352)
 - Fonts:
   - imgui_freetype: add FreeType headers & compiled version in 'About Dear ImGui' details.
 - Clipper:

@@ -1566,7 +1566,7 @@ void    ImGui::EndTable()
     else if (temp_data->UserOuterSize.x <= 0.0f)
     {
         // Some references for this: #7651 + tests "table_reported_size", "table_reported_size_outer" equivalent Y block, #9352
-        // - FIXME-TABLE: Would make sense to pre-compute expected scrollbar visibility/sizes to generally save a frame of feedback?
+        // - FIXME-TABLE: Would make sense to pre-compute expected scrollbar visibility/sizes to generally save a frame of feedback? See broken test in 'table_reported_size_outer'
         const float outer_content_max_x = table->OuterRect.Min.x + table->ColumnsAutoFitWidth;
         const float decoration_size = table->TempData->AngledHeadersExtraWidth + ((inner_window != outer_window) ? inner_window->ScrollbarSizes.x : 0.0f);
         outer_window->DC.IdealMaxPos.x = ImMax(outer_window->DC.IdealMaxPos.x, outer_content_max_x + decoration_size - temp_data->UserOuterSize.x);
@@ -1578,6 +1578,7 @@ void    ImGui::EndTable()
     }
     if (temp_data->UserOuterSize.y <= 0.0f)
     {
+        // (same comment as above)
         const float outer_content_size_y = (inner_window == outer_window) ? (inner_content_max_y - table->InnerRect.Min.y) : (inner_content_max_y - inner_window->DC.CursorStartPos.y);
         const float outer_content_max_y = table->OuterRect.Min.y + outer_content_size_y;
         const float decoration_size = (inner_window != outer_window ? inner_window->ScrollbarSizes.y : 0.0f);
