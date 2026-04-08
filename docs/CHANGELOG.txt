@@ -46,6 +46,7 @@ Other Changes:
 - InputText:
   - InputTextMultiline: fixed an issue processing deactivation logic when an active
     multi-line edit is clipped due to being out of view.
+  - Fixed a crash when toggling ReadOnly while active. (#9354)
 - Tables:
   - Fixed an issue reporting ideal size to parent window/container when both scrollbars
     are visible but only one of ScrollX/ScrollY was explicitly requested. (#9352, #7651)
