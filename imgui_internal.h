@@ -1,4 +1,4 @@
-// dear imgui, v1.92.7
+// dear imgui, v1.92.8 WIP
 // (internal structures/api)
 
 // You may use this file to debug, understand or extend Dear ImGui features but we don't provide any guarantee of forward compatibility.
@@ -2410,6 +2410,7 @@ struct ImGuiContext
     float                   CurrentDpiScale;                    // Current window/viewport DpiScale == CurrentViewport->DpiScale
     ImDrawListSharedData    DrawListSharedData;
     ImGuiID                 WithinEndChildID;                   // Set within EndChild()
+    ImGuiID                 WithinEndPopupID;                   // Set within EndPopup()
     void*                   TestEngine;                         // Test engine user data
 
     // Inputs

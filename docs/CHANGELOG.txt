@@ -36,6 +36,38 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
+ VERSION 1.92.8 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Breaking Changes:
+
+Other Changes:
+
+- InputText:
+  - InputTextMultiline: fixed an issue processing deactivation logic when an active
+    multi-line edit is clipped due to being out of view.
+  - Fixed a crash when toggling ReadOnly while active. (#9354)
+- Tables:
+  - Fixed issues reporting ideal size to parent window/container: (#9352, #7651)
+    - When both scrollbars are visible but only one of ScrollX/ScrollY was explicitly requested.
+    - When vertical scrollbar was not at the top, the computation was often incorrect.
+- Windows:
+  - Fixed a single-axis auto-resizing feedback loop issue with nested containers
+    and varying scrollbar visibility. (#9352)
+  - Detect and report error when calling End() instead of EndPopup() on a popup. (#9351)
+- Fonts:
+  - imgui_freetype: add FreeType headers & compiled version in 'About Dear ImGui' details.
+- Clipper:
+  - Improved error reporting when misusing the clipper inside a table (prioritize
+    reporting the common clipper error over a table sanity check assert). (#9350)
+  - Tweaked assert triggering when first item height measurement fails, and made it
+    a better recoverable error. (#9350)
+- Backends:
+  - Metal: avoid redundant vertex buffer bind in SetupRenderState, which leads
+    to validation issue. (#9343) [@Hunam6]
+
+
+-----------------------------------------------------------------------
  VERSION 1.92.7 (Released 2026-04-02)
 -----------------------------------------------------------------------
 
