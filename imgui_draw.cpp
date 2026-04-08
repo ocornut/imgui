@@ -551,11 +551,21 @@ void ImDrawList::AddCallback(ImDrawCallback callback, void* userdata, size_t use
         // Copy and store user data in a buffer
         IM_ASSERT(userdata != NULL);
         IM_ASSERT(userdata_size < (1u << 31));
+        // Runtime guard: reject invalid sizes to prevent integer overflow and buffer overwrite in release builds
+        if (userdata == NULL || userdata_size == 0 || userdata_size >= (size_t)(1u << 31))
+            return;
         curr_cmd->UserCallbackData = NULL; // Will be resolved during Render()
         curr_cmd->UserCallbackDataSize = (int)userdata_size;
         curr_cmd->UserCallbackDataOffset = _CallbacksDataBuf.Size;
         _CallbacksDataBuf.resize(_CallbacksDataBuf.Size + (int)userdata_size);
-        memcpy(_CallbacksDataBuf.Data + (size_t)curr_cmd->UserCallbackDataOffset, userdata, userdata_size);
+        {
+            // Validate bounds before copy: offset + validated_size must not exceed buffer capacity
+            const size_t validated_offset = (size_t)curr_cmd->UserCallbackDataOffset;
+            const size_t validated_size = (size_t)curr_cmd->UserCallbackDataSize;
+            IM_ASSERT(validated_offset + validated_size <= (size_t)_CallbacksDataBuf.Size);
+            if (validated_offset + validated_size <= (size_t)_CallbacksDataBuf.Size)
+                memcpy(_CallbacksDataBuf.Data + validated_offset, userdata, validated_size);
+        }
     }
 
     AddDrawCmd(); // Force a new command after us (see comment below)
@@ -2210,8 +2220,8 @@ void ImDrawListSplitter::Merge(ImDrawList* draw_list)
     for (int i = 1; i < _Count; i++)
     {
         ImDrawChannel& ch = _Channels[i];
-        if (int sz = ch._CmdBuffer.Size) { memcpy(cmd_write, ch._CmdBuffer.Data, sz * sizeof(ImDrawCmd)); cmd_write += sz; }
-        if (int sz = ch._IdxBuffer.Size) { memcpy(idx_write, ch._IdxBuffer.Data, sz * sizeof(ImDrawIdx)); idx_write += sz; }
+        if (int sz = ch._CmdBuffer.Size) { IM_ASSERT(cmd_write + sz <= draw_list->CmdBuffer.Data + draw_list->CmdBuffer.Size); if (cmd_write + sz <= draw_list->CmdBuffer.Data + draw_list->CmdBuffer.Size) { memcpy(cmd_write, ch._CmdBuffer.Data, sz * sizeof(ImDrawCmd)); cmd_write += sz; } }
+        if (int sz = ch._IdxBuffer.Size) { IM_ASSERT(idx_write + sz <= draw_list->IdxBuffer.Data + draw_list->IdxBuffer.Size); if (idx_write + sz <= draw_list->IdxBuffer.Data + draw_list->IdxBuffer.Size) { memcpy(idx_write, ch._IdxBuffer.Data, sz * sizeof(ImDrawIdx)); idx_write += sz; } }
     }
     draw_list->_IdxWritePtr = idx_write;
 
