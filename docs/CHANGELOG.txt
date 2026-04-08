@@ -48,8 +48,9 @@ Other Changes:
     multi-line edit is clipped due to being out of view.
   - Fixed a crash when toggling ReadOnly while active. (#9354)
 - Tables:
-  - Fixed an issue reporting ideal size to parent window/container when both scrollbars
-    are visible but only one of ScrollX/ScrollY was explicitly requested. (#9352, #7651)
+  - Fixed issues reporting ideal size to parent window/container: (#9352, #7651)
+    - When both scrollbars are visible but only one of ScrollX/ScrollY was explicitly requested.
+    - When vertical scrollbar was not at the top, the computation was often incorrect.
 - Fonts:
   - imgui_freetype: add FreeType headers & compiled version in 'About Dear ImGui' details.
 - Clipper:
