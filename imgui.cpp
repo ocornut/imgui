@@ -6436,7 +6436,7 @@ bool ImGui::BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, I
     window_flags |= ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_NoTitleBar;
     window_flags |= (parent_window->Flags & ImGuiWindowFlags_NoMove); // Inherit the NoMove flag
     if (child_flags & (ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AlwaysAutoResize))
-        window_flags |= ImGuiWindowFlags_AlwaysAutoResize;
+        window_flags |= ImGuiWindowFlags_AlwaysAutoResize; // FIXME: Would be sane to not make single-axis flag set this. (#9355)
     if ((child_flags & (ImGuiChildFlags_ResizeX | ImGuiChildFlags_ResizeY)) == 0)
         window_flags |= ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings;
 
@@ -8035,9 +8035,14 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->DC.LayoutType = ImGuiLayoutType_Vertical;
         window->DC.ParentLayoutType = parent_window ? parent_window->DC.LayoutType : ImGuiLayoutType_Vertical;
 
-        // Default item width. Make it proportional to window size if window manually resizes
-        const bool is_resizable_window = (window->Size.x > 0.0f && !(flags & ImGuiWindowFlags_Tooltip) && !(flags & ImGuiWindowFlags_AlwaysAutoResize));
-        if (is_resizable_window)
+        // Default item width. Make it proportional to window size if window can be manually resized.
+        // (we cannot use AutoFitFramesX/AutoFitFramesY which is a temporary state)
+        bool is_resizable_width;
+        if (flags & ImGuiWindowFlags_ChildWindow)
+            is_resizable_width = (window->Size.x > 0.0f) && !(window->ChildFlags & (ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AlwaysAutoResize));
+        else
+            is_resizable_width = (window->Size.x > 0.0f) && !(flags & ImGuiWindowFlags_AlwaysAutoResize);
+        if (is_resizable_width)
             window->DC.ItemWidthDefault = ImTrunc(window->Size.x * 0.65f);
         else
             window->DC.ItemWidthDefault = ImTrunc(g.FontSize * 16.0f);
