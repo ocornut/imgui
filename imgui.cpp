@@ -3832,7 +3832,7 @@ void ImGui::RenderText(ImVec2 pos, const char* text, const char* text_end, bool 
     else
     {
         if (!text_end)
-            text_end = text + ImStrlen(text); // FIXME-OPT
+            text_end = text + ImStrlen(text); // FIXME-OPT (not reached by our internal calls)
         text_display_end = text_end;
     }
 
@@ -3850,7 +3850,7 @@ void ImGui::RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end
     ImGuiWindow* window = g.CurrentWindow;
 
     if (!text_end)
-        text_end = text + ImStrlen(text); // FIXME-OPT
+        text_end = text + ImStrlen(text); // FIXME-OPT (not reached by our internal calls)
 
     if (text != text_end)
     {
