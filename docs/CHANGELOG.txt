@@ -66,6 +66,12 @@ Other Changes:
   - Metal: avoid redundant vertex buffer bind in SetupRenderState, which leads
     to validation issue. (#9343) [@Hunam6]
 
+Docking+Viewports Branch:
+
+- Viewports:
+  - Added opaque `void* PlatformIconData` storage in viewport and ImGuiWindowClass
+    to allow passing icon information to a custom backend or hook. (#2715)
+
 
 -----------------------------------------------------------------------
  VERSION 1.92.7 (Released 2026-04-02)

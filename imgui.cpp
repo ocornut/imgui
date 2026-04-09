@@ -17377,6 +17377,8 @@ void ImGui::WindowSyncOwnedViewport(ImGuiWindow* window, ImGuiWindow* parent_win
 
     window->Viewport->Flags = viewport_flags;
 
+    window->Viewport->PlatformIconData = window->WindowClass.PlatformIconData;
+
     // Update parent viewport ID
     // (the !IsFallbackWindow test mimic the one done in WindowSelectViewport())
     if (window->WindowClass.ParentViewportId != (ImGuiID)-1)
