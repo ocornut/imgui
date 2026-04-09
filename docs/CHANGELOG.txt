@@ -67,6 +67,11 @@ Other Changes:
     enough to overlap multiple rows during a frame. (#7994, #1861, #6518)
   - Box-Select: fixed an issue using ImGuiMultiSelectFlags_BoxSelect2d mode in a Table
     while relying on the TableNextColumn() return value to perform coarse clipping. (#7994)
+  - Box-Select: disabled merging consecutive selection requests as we have no reliable
+    way of detecting if user has submitted all consecutives items without clipping gaps,
+    and ImGuiSelectionUserData is technically opaque storage. (#7994, #1861)
+    (we will probably bring this back as a minor optimization if we have a way to for
+    user to tell us ImGuiSelectionUserData are indices)
 - Fonts:
   - imgui_freetype: add FreeType headers & compiled version in 'About Dear ImGui' details.
 - Clipper:
