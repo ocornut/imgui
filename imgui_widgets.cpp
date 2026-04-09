@@ -7505,6 +7505,11 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     if (is_visible)
         RenderTextClipped(pos, ImVec2(ImMin(pos.x + size.x, window->WorkRect.Max.x), pos.y + size.y), label, NULL, &label_size, style.SelectableTextAlign, &bb);
 
+#ifdef IMGUI_DEBUG_BOXSELECT
+    if (g.BoxSelectState.UnclipMode)
+        GetForegroundDrawList()->AddText(pos, IM_COL32(255,255,0,200), label);
+#endif
+
     // Automatically close popups
     if (pressed && !auto_selected && (window->Flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiSelectableFlags_NoAutoClosePopups) && (g.LastItemData.ItemFlags & ImGuiItemFlags_AutoClosePopups))
         CloseCurrentPopup();
@@ -7841,9 +7846,12 @@ bool ImGui::BeginBoxSelect(const ImRect& scope_rect, ImGuiWindow* window, ImGuiI
             bs->UnclipRect.Add(bs->BoxSelectRectCurr);
         }
 
-    //GetForegroundDrawList()->AddRect(bs->UnclipRect.Min, bs->UnclipRect.Max, IM_COL32(255,0,0,200), 0.0f, 0, 3.0f);
+#ifdef IMGUI_DEBUG_BOXSELECT
+    if (ms_flags & ImGuiMultiSelectFlags_BoxSelect2d)
+        GetForegroundDrawList()->AddRect(bs->UnclipRect.Min, bs->UnclipRect.Max, bs->UnclipMode ? IM_COL32(255,255,0,200) : IM_COL32(255,0,0,200), 0.0f, 0, 4.0f);
     //GetForegroundDrawList()->AddRect(bs->BoxSelectRectPrev.Min, bs->BoxSelectRectPrev.Max, IM_COL32(255,0,0,200), 0.0f, 0, 3.0f);
     //GetForegroundDrawList()->AddRect(bs->BoxSelectRectCurr.Min, bs->BoxSelectRectCurr.Max, IM_COL32(0,255,0,200), 0.0f, 0, 1.0f);
+#endif
     return true;
 }
 
@@ -8304,6 +8312,9 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
                 {
                     selected = !selected;
                     MultiSelectAddSetRange(ms, selected, +1, item_data, item_data);
+#ifdef IMGUI_DEBUG_BOXSELECT
+                    GetForegroundDrawList()->AddRectFilled(g.LastItemData.Rect.Min, g.LastItemData.Rect.Max, selected ? IM_COL32(0, 255, 0, 200) : IM_COL32(255, 0, 0, 200));
+#endif
                 }
                 storage->LastSelectionSize = ImMax(storage->LastSelectionSize + 1, 1);
             }

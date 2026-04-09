@@ -252,6 +252,9 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit context pointer
 #define IMGUI_DEBUG_LOG_FONT(...)       do { ImGuiContext* g2 = GImGui; if (g2 && g2->DebugLogFlags & ImGuiDebugLogFlags_EventFont) IMGUI_DEBUG_LOG(__VA_ARGS__); } while (0) // Called from ImFontAtlas function which may operate without a context.
 #define IMGUI_DEBUG_LOG_INPUTROUTING(...) do{if (g.DebugLogFlags & ImGuiDebugLogFlags_EventInputRouting)IMGUI_DEBUG_LOG(__VA_ARGS__); } while (0)
 
+// Debug options (also see ones on top of imgui.cpp)
+//#define IMGUI_DEBUG_BOXSELECT
+
 // Static Asserts
 #define IM_STATIC_ASSERT(_COND)         static_assert(_COND, "")
 
