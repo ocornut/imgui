@@ -63,7 +63,10 @@ Other Changes:
     items out of view wouldn't be properly selected while scrolling while mouse cursor
     is hovering outside of selection scope. (#7994, #1861, #6518)
   - Box-Select: fixed an issue where items out of horizontal view would sometimes lead
-    to incorrect merging of sequential selection requests. (#7994, #1861, #6518)
+    to incorrect merging of sequential selection requests while also scrolling fast
+    enough to overlap multiple rows during a frame. (#7994, #1861, #6518)
+  - Box-Select: fixed an issue using ImGuiMultiSelectFlags_BoxSelect2d mode in a Table
+    while relying on the TableNextColumn() return value to perform coarse clipping. (#7994)
 - Fonts:
   - imgui_freetype: add FreeType headers & compiled version in 'About Dear ImGui' details.
 - Clipper:

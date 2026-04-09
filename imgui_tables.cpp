@@ -1152,6 +1152,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         column->ClipRect.Min.y = work_rect.Min.y;
         column->ClipRect.Max.x = column->MaxX; //column->WorkMaxX;
         column->ClipRect.Max.y = FLT_MAX;
+        ImRect clip_rect_unclipped = column->ClipRect;
         column->ClipRect.ClipWithFull(host_clip_rect);
 
         // Mark column as Clipped (not in sight)
@@ -1169,6 +1170,9 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
 
         // Mark column as requesting output from user. Note that fixed + non-resizable sets are auto-fitting at all times and therefore always request output.
         column->IsRequestOutput = is_visible || column->AutoFitQueue != 0 || column->CannotSkipItemsQueue != 0;
+        ImGuiBoxSelectState* bs = &g.BoxSelectState;
+        if (!column->IsRequestOutput && bs->UnclipMode && bs->UnclipRect.Overlaps(clip_rect_unclipped))
+            column->IsRequestOutput = true;
 
         // Mark column as SkipItems (ignoring all items/layout)
         // (table->HostSkipItems is a copy of inner_window->SkipItems before we cleared it above in Part 2)
