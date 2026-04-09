@@ -60,8 +60,10 @@ Other Changes:
     default ItemWidth. (#9355)
 - Multi-Select:
   - Box-Select: fixed an issue using ImGuiMultiSelectFlags_BoxSelect2d mode, where
-    items out of view wouldn't be properly selected when scrolling while mouse cursor
+    items out of view wouldn't be properly selected while scrolling while mouse cursor
     is hovering outside of selection scope. (#7994, #1861, #6518)
+  - Box-Select: fixed an issue where items out of horizontal view would sometimes lead
+    to incorrect merging of sequential selection requests. (#7994, #1861, #6518)
 - Fonts:
   - imgui_freetype: add FreeType headers & compiled version in 'About Dear ImGui' details.
 - Clipper:
