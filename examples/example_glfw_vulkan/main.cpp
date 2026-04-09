@@ -36,6 +36,7 @@
 #endif
 
 //#define APP_USE_UNLIMITED_FRAME_RATE
+// #define APP_USE_DYNAMIC_RENDERING
 #ifdef _DEBUG
 #define APP_USE_VULKAN_DEBUG_REPORT
 static VkDebugReportCallbackEXT g_DebugReport = VK_NULL_HANDLE;
@@ -158,7 +159,14 @@ static void SetupVulkan(ImVector<const char*> instance_extensions)
     // Create Logical Device (with 1 queue)
     {
         ImVector<const char*> device_extensions;
-        device_extensions.push_back("VK_KHR_swapchain");
+        device_extensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+#ifdef APP_USE_DYNAMIC_RENDERING
+        device_extensions.push_back(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
+        device_extensions.push_back(VK_KHR_DEPTH_STENCIL_RESOLVE_EXTENSION_NAME);
+        device_extensions.push_back(VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME);
+        device_extensions.push_back(VK_KHR_MAINTENANCE2_EXTENSION_NAME);
+        device_extensions.push_back(VK_KHR_MULTIVIEW_EXTENSION_NAME);
+#endif
 
         // Enumerate physical device extension
         uint32_t properties_count;
@@ -179,6 +187,13 @@ static void SetupVulkan(ImVector<const char*> instance_extensions)
         queue_info[0].pQueuePriorities = queue_priority;
         VkDeviceCreateInfo create_info = {};
         create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+#ifdef APP_USE_DYNAMIC_RENDERING
+        VkPhysicalDeviceDynamicRenderingFeaturesKHR physicalDeviceDynamicRenderingFeaturesKHR{};
+        physicalDeviceDynamicRenderingFeaturesKHR.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
+        physicalDeviceDynamicRenderingFeaturesKHR.pNext = nullptr;
+        physicalDeviceDynamicRenderingFeaturesKHR.dynamicRendering = VK_TRUE;
+        create_info.pNext = &physicalDeviceDynamicRenderingFeaturesKHR;
+#endif
         create_info.queueCreateInfoCount = sizeof(queue_info) / sizeof(queue_info[0]);
         create_info.pQueueCreateInfos = queue_info;
         create_info.enabledExtensionCount = (uint32_t)device_extensions.Size;
@@ -238,6 +253,9 @@ static void SetupVulkanWindow(ImGui_ImplVulkanH_Window* wd, VkSurfaceKHR surface
 
     // Create SwapChain, RenderPass, Framebuffer, etc.
     IM_ASSERT(g_MinImageCount >= 2);
+#ifdef APP_USE_DYNAMIC_RENDERING
+    wd->UseDynamicRendering = true;
+#endif
     ImGui_ImplVulkanH_CreateOrResizeWindow(g_Instance, g_PhysicalDevice, g_Device, wd, g_QueueFamily, g_Allocator, width, height, g_MinImageCount, 0);
 }
 
@@ -290,6 +308,41 @@ static void FrameRender(ImGui_ImplVulkanH_Window* wd, ImDrawData* draw_data)
         err = vkBeginCommandBuffer(fd->CommandBuffer, &info);
         check_vk_result(err);
     }
+
+    // Begin rendering
+#ifdef APP_USE_DYNAMIC_RENDERING
+    {
+        VkImageMemoryBarrier barrier = {};
+        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        barrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        barrier.image = fd->Backbuffer;
+        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        barrier.subresourceRange.levelCount = 1;
+        barrier.subresourceRange.layerCount = 1;
+        vkCmdPipelineBarrier(fd->CommandBuffer, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+
+        VkRenderingAttachmentInfoKHR attach_info = {};
+        attach_info.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
+        attach_info.imageView = fd->BackbufferView;
+        attach_info.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        attach_info.loadOp = wd->AttachmentDesc.loadOp;
+        attach_info.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        attach_info.clearValue = wd->ClearValue;
+
+        VkRenderingInfoKHR info = {};
+        info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
+        info.renderArea.extent.width = wd->Width;
+        info.renderArea.extent.height = wd->Height;
+        info.layerCount = 1;
+        info.colorAttachmentCount = 1;
+        info.pColorAttachments = &attach_info;
+
+        static auto fn_vkCmdBeginRenderingKHR = reinterpret_cast<PFN_vkCmdBeginRenderingKHR>(vkGetDeviceProcAddr(g_Device, "vkCmdBeginRenderingKHR"));
+        fn_vkCmdBeginRenderingKHR(fd->CommandBuffer, &info);
+    }
+#else
     {
         VkRenderPassBeginInfo info = {};
         info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -301,12 +354,33 @@ static void FrameRender(ImGui_ImplVulkanH_Window* wd, ImDrawData* draw_data)
         info.pClearValues = &wd->ClearValue;
         vkCmdBeginRenderPass(fd->CommandBuffer, &info, VK_SUBPASS_CONTENTS_INLINE);
     }
+#endif
 
     // Record dear imgui primitives into command buffer
     ImGui_ImplVulkan_RenderDrawData(draw_data, fd->CommandBuffer);
 
-    // Submit command buffer
-    vkCmdEndRenderPass(fd->CommandBuffer);
+    // End rendering
+#ifdef APP_USE_DYNAMIC_RENDERING
+    {
+        static auto fn_vkCmdEndRenderingKHR = reinterpret_cast<PFN_vkCmdEndRenderingKHR>(vkGetDeviceProcAddr(g_Device, "vkCmdEndRenderingKHR"));
+        fn_vkCmdEndRenderingKHR(fd->CommandBuffer);
+
+        VkImageMemoryBarrier barrier = {};
+        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        barrier.image = fd->Backbuffer;
+        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        barrier.subresourceRange.levelCount = 1;
+        barrier.subresourceRange.layerCount = 1;
+        vkCmdPipelineBarrier(fd->CommandBuffer, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+    }
+#else
+    {
+        vkCmdEndRenderPass(fd->CommandBuffer);
+    }
+#endif
     {
         VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         VkSubmitInfo info = {};
@@ -426,9 +500,16 @@ int main(int, char**)
     init_info.MinImageCount = g_MinImageCount;
     init_info.ImageCount = wd->ImageCount;
     init_info.Allocator = g_Allocator;
-    init_info.PipelineInfoMain.RenderPass = wd->RenderPass;
     init_info.PipelineInfoMain.Subpass = 0;
     init_info.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+#ifdef APP_USE_DYNAMIC_RENDERING
+    init_info.UseDynamicRendering = true;
+    init_info.PipelineInfoMain.PipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
+    init_info.PipelineInfoMain.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
+    init_info.PipelineInfoMain.PipelineRenderingCreateInfo.pColorAttachmentFormats = &wd->SurfaceFormat.format;
+#else
+    init_info.PipelineInfoMain.RenderPass = wd->RenderPass;
+#endif
     init_info.CheckVkResultFn = check_vk_result;
     ImGui_ImplVulkan_Init(&init_info);
 
