@@ -7836,15 +7836,17 @@ bool ImGui::BeginBoxSelect(const ImRect& scope_rect, ImGuiWindow* window, ImGuiI
     bs->BoxSelectRectCurr.Min = ImMin(start_pos_abs, curr_end_pos_abs);
     bs->BoxSelectRectCurr.Max = ImMax(start_pos_abs, curr_end_pos_abs);
 
-    // Box-select 2D mode detects horizontal changes (vertical ones are already picked by Clipper)
-    // Storing an extra rect used by widgets supporting box-select.
+    // Box-select 2D mode detects change of the rectangle.
+    // Storing unclip rect used by widgets supporting box-select.
     if (ms_flags & ImGuiMultiSelectFlags_BoxSelect2d)
-        if (bs->BoxSelectRectPrev.Min.x != bs->BoxSelectRectCurr.Min.x || bs->BoxSelectRectPrev.Max.x != bs->BoxSelectRectCurr.Max.x)
-        {
+    {
+        if (bs->BoxSelectRectPrev.Min != bs->BoxSelectRectCurr.Min || bs->BoxSelectRectPrev.Max != bs->BoxSelectRectCurr.Max)
             bs->UnclipMode = true;
-            bs->UnclipRect = bs->BoxSelectRectPrev; // FIXME-OPT: UnclipRect x coordinates could be intersection of Prev and Curr rect on X axis.
-            bs->UnclipRect.Add(bs->BoxSelectRectCurr);
-        }
+
+        // Always update rect even if we don't use it.
+        bs->UnclipRect = bs->BoxSelectRectPrev; // FIXME-OPT: UnclipRect X coordinates could be intersection of Prev and Curr rect on X axis.
+        bs->UnclipRect.Add(bs->BoxSelectRectCurr);
+    }
 
 #ifdef IMGUI_DEBUG_BOXSELECT
     if (ms_flags & ImGuiMultiSelectFlags_BoxSelect2d)
