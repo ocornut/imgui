@@ -2642,7 +2642,7 @@ struct ImGuiInputTextCallbackData
     ImGuiInputTextFlags EventFlag;      // One ImGuiInputTextFlags_Callback*    // Read-only
     ImGuiInputTextFlags Flags;          // What user passed to InputText()      // Read-only
     void*               UserData;       // What user passed to InputText()      // Read-only
-    ImGuiID             ID;             // Widget ID                             // Read-only
+    ImGuiID             ID;             // Widget ID                            // Read-only
 
     // Arguments for the different callback events
     // - During Resize callback, Buf will be same as your input buffer.
@@ -2656,9 +2656,9 @@ struct ImGuiInputTextCallbackData
     char*               Buf;            // Text buffer                          // Read-write   // [Resize] Can replace pointer / [Completion,History,Always] Only write to pointed data, don't replace the actual pointer!
     int                 BufTextLen;     // Text length (in bytes)               // Read-write   // [Resize,Completion,History,Always] Exclude zero-terminator storage. In C land: == strlen(some_text), in C++ land: string.length()
     int                 BufSize;        // Buffer size (in bytes) = capacity+1  // Read-only    // [Resize,Completion,History,Always] Include zero-terminator storage. In C land: == ARRAYSIZE(my_char_array), in C++ land: string.capacity()+1
-    int                 CursorPos;      //                                      // Read-write   // [Completion,History,Always]
-    int                 SelectionStart; //                                      // Read-write   // [Completion,History,Always] == to SelectionEnd when no selection
-    int                 SelectionEnd;   //                                      // Read-write   // [Completion,History,Always]
+    int                 CursorPos;      //                                      // Read-write   // [Completion,History,Always,CharFilter]
+    int                 SelectionStart; //                                      // Read-write   // [Completion,History,Always,CharFilter] == to SelectionEnd when no selection
+    int                 SelectionEnd;   //                                      // Read-write   // [Completion,History,Always,CharFilter]
 
     // Helper functions for text manipulation.
     // Use those function to benefit from the CallbackResize behaviors. Calling those function reset the selection.

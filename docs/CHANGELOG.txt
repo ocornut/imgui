@@ -47,6 +47,7 @@ Other Changes:
   - InputTextMultiline: fixed an issue processing deactivation logic when an active
     multi-line edit is clipped due to being out of view.
   - Fixed a crash when toggling ReadOnly while active. (#9354)
+  - CharFilter callback event sets CursorPos/SelectionStart/SelectionEnd. (#816)
 - Tables:
   - Fixed issues reporting ideal size to parent window/container: (#9352, #7651)
     - When both scrollbars are visible but only one of ScrollX/ScrollY was explicitly requested.

@@ -4521,6 +4521,9 @@ static bool InputTextFilterCharacter(ImGuiContext* ctx, ImGuiInputTextState* sta
         callback_data.EventFlag = ImGuiInputTextFlags_CallbackCharFilter;
         callback_data.EventChar = (ImWchar)c;
         callback_data.EventActivated = (g.ActiveId == state->ID && g.ActiveIdIsJustActivated);
+        callback_data.CursorPos = state->Stb->cursor;
+        callback_data.SelectionStart = state->Stb->select_start;
+        callback_data.SelectionEnd = state->Stb->select_end;
         callback_data.UserData = user_data;
         if (callback(&callback_data) != 0)
             return false;
