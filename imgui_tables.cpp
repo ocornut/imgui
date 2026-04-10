@@ -3180,7 +3180,7 @@ void ImGui::TableHeader(const char* label)
     if (label == NULL)
         label = "";
     const char* label_end = FindRenderedTextEnd(label);
-    ImVec2 label_size = CalcTextSize(label, label_end, true);
+    ImVec2 label_size = CalcTextSize(label, label_end, false);
     ImVec2 label_pos = window->DC.CursorPos;
 
     // If we already got a row height, there's use that.

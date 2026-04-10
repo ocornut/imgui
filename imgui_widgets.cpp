@@ -1524,7 +1524,7 @@ bool ImGui::TextLink(const char* label)
     const char* label_end = FindRenderedTextEnd(label);
 
     ImVec2 pos(window->DC.CursorPos.x, window->DC.CursorPos.y + window->DC.CurrLineTextBaseOffset);
-    ImVec2 size = CalcTextSize(label, label_end, true);
+    ImVec2 size = CalcTextSize(label, label_end, false);
     ImRect bb(pos, pos + size);
     ItemSize(size, 0.0f);
     if (!ItemAdd(bb, id))
@@ -7348,7 +7348,8 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
 
     // Submit label or explicit size to ItemSize(), whereas ItemAdd() will submit a larger/spanning rectangle.
     ImGuiID id = window->GetID(label);
-    ImVec2 label_size = CalcTextSize(label, NULL, true);
+    const char* label_end = FindRenderedTextEnd(label);
+    ImVec2 label_size = CalcTextSize(label, label_end, false);
     ImVec2 size(size_arg.x != 0.0f ? size_arg.x : label_size.x, size_arg.y != 0.0f ? size_arg.y : label_size.y);
     ImVec2 pos = window->DC.CursorPos;
     pos.y += window->DC.CurrLineTextBaseOffset;
@@ -7503,7 +7504,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
 
     // Text stays at the submission position. Alignment/clipping extents ignore SpanAllColumns.
     if (is_visible)
-        RenderTextClipped(pos, ImVec2(ImMin(pos.x + size.x, window->WorkRect.Max.x), pos.y + size.y), label, NULL, &label_size, style.SelectableTextAlign, &bb);
+        RenderTextClipped(pos, ImVec2(ImMin(pos.x + size.x, window->WorkRect.Max.x), pos.y + size.y), label, label_end, &label_size, style.SelectableTextAlign, &bb);
 
 #ifdef IMGUI_DEBUG_BOXSELECT
     if (g.BoxSelectState.UnclipMode)
@@ -10782,7 +10783,8 @@ void ImGui::TabItemBackground(ImDrawList* draw_list, const ImRect& bb, ImGuiTabI
 void ImGui::TabItemLabelAndCloseButton(ImDrawList* draw_list, const ImRect& bb, ImGuiTabItemFlags flags, ImVec2 frame_padding, const char* label, ImGuiID tab_id, ImGuiID close_button_id, bool is_contents_visible, bool* out_just_closed, bool* out_text_clipped)
 {
     ImGuiContext& g = *GImGui;
-    ImVec2 label_size = CalcTextSize(label, NULL, true);
+    const char* label_end = FindRenderedTextEnd(label);
+    ImVec2 label_size = CalcTextSize(label, label_end, false);
 
     if (out_just_closed)
         *out_just_closed = false;
@@ -10867,7 +10869,7 @@ void ImGui::TabItemLabelAndCloseButton(ImDrawList* draw_list, const ImRect& bb, 
         }
     }
     LogSetNextTextDecoration("/", "\\");
-    RenderTextEllipsis(draw_list, text_ellipsis_clip_bb.Min, text_ellipsis_clip_bb.Max, ellipsis_max_x, label, NULL, &label_size);
+    RenderTextEllipsis(draw_list, text_ellipsis_clip_bb.Min, text_ellipsis_clip_bb.Max, ellipsis_max_x, label, label_end, &label_size);
 
 #if 0
     if (!is_contents_visible)
