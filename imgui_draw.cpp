@@ -1432,35 +1432,21 @@ void ImDrawList::PathBezierQuadraticCurveTo(const ImVec2& p2, const ImVec2& p3, 
     }
 }
 
-static inline ImDrawFlags FixRectCornerFlags(ImDrawFlags flags)
-{
-    /*
-    IM_STATIC_ASSERT(ImDrawFlags_RoundCornersTopLeft == (1 << 4));
-#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    // Obsoleted in 1.82 (from February 2021). This code was stripped/simplified and mostly commented in 1.90 (from September 2023)
-    // - Legacy Support for hard coded ~0 (used to be a suggested equivalent to ImDrawCornerFlags_All)
-    if (flags == ~0)                    { return ImDrawFlags_RoundCornersAll; }
-    // - Legacy Support for hard coded 0x01 to 0x0F (matching 15 out of 16 old flags combinations). Read details in older version of this code.
-    if (flags >= 0x01 && flags <= 0x0F) { return (flags << 4); }
-    // We cannot support hard coded 0x00 with 'float rounding > 0.0f' --> replace with ImDrawFlags_RoundCornersNone or use 'float rounding = 0.0f'
-#endif
-    */
-    // If this assert triggers, please update your code replacing hardcoded values with new ImDrawFlags_RoundCorners* values.
-    // Note that ImDrawFlags_Closed (== 0x01) is an invalid flag for AddRect(), AddRectFilled(), PathRect() etc. anyway.
-    // See details in 1.82 Changelog as well as 2021/03/12 and 2023/09/08 entries in "API BREAKING CHANGES" section.
-    IM_ASSERT((flags & 0x0F) == 0 && "Misuse of legacy hardcoded ImDrawCornerFlags values!");
-
-    if ((flags & ImDrawFlags_RoundCornersMask_) == 0)
-        flags |= ImDrawFlags_RoundCornersAll;
-
-    return flags;
-}
-
 void ImDrawList::PathRect(const ImVec2& a, const ImVec2& b, float rounding, ImDrawFlags flags)
 {
     if (rounding >= 0.5f)
     {
-        flags = FixRectCornerFlags(flags);
+        // If this assert triggers on legacy code, please update your code replacing hardcoded values with ImDrawFlags_RoundCorners* values.
+        // - See details in 1.82 Changelog as well as 2021/03/12 and 2023/09/08 entries in "API BREAKING CHANGES" section.
+        // - Note that ImDrawFlags_Closed (== 0x01) is an invalid flag for AddRect(), AddRectFilled(), PathRect() etc. anyway.
+        // - Marked obsolete in 1.82 and completely removed in 1.90:
+        //   - Hard coded support for ~0 == ImDrawFlags_RoundCornersAll.
+        //   - Hard coded support for values 0x01 to 0x0F (matching 15 out of 16 old flags combinations) --> see FixRectCornerFlags() in <1.90 code.
+        //   - Hard coded 0x00 with 'float rounding > 0.0f' --> replace with ImDrawFlags_RoundCornersNone or use 'float rounding = 0.0f'
+        IM_ASSERT((flags & 0x0F) == 0 && "Misuse of legacy hardcoded ImDrawCornerFlags values!");
+        if ((flags & ImDrawFlags_RoundCornersMask_) == 0)
+            flags |= ImDrawFlags_RoundCornersAll;
+
         rounding = ImMin(rounding, ImFabs(b.x - a.x) * (((flags & ImDrawFlags_RoundCornersTop) == ImDrawFlags_RoundCornersTop) || ((flags & ImDrawFlags_RoundCornersBottom) == ImDrawFlags_RoundCornersBottom) ? 0.5f : 1.0f) - 1.0f);
         rounding = ImMin(rounding, ImFabs(b.y - a.y) * (((flags & ImDrawFlags_RoundCornersLeft) == ImDrawFlags_RoundCornersLeft) || ((flags & ImDrawFlags_RoundCornersRight) == ImDrawFlags_RoundCornersRight) ? 0.5f : 1.0f) - 1.0f);
     }
@@ -1776,7 +1762,10 @@ void ImDrawList::AddImageRounded(ImTextureRef tex_ref, const ImVec2& p_min, cons
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
-    flags = FixRectCornerFlags(flags);
+    IM_ASSERT((flags & 0x0F) == 0 && "Misuse of legacy hardcoded ImDrawCornerFlags values!"); // If this assert triggers on legacy code: see comments in ImDrawList::PathRect().
+    if ((flags & ImDrawFlags_RoundCornersMask_) == 0)
+        flags |= ImDrawFlags_RoundCornersAll;
+
     if (rounding < 0.5f || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
     {
         AddImage(tex_ref, p_min, p_max, uv_min, uv_max, col);
