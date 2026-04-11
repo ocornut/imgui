@@ -13,12 +13,19 @@
 //-----------------------------------------------------------------------------
 
 #pragma once
+#define _DEBUG
 
 //---- Define assertion handler. Defaults to calling assert().
 // - If your macro uses multiple statements, make sure is enclosed in a 'do { .. } while (0)' block so it can be used as a single statement.
 // - Compiling with NDEBUG will usually strip out assert() to nothing, which is NOT recommended because we use asserts to notify of programmer mistakes.
 //#define IM_ASSERT(_EXPR)  MyAssert(_EXPR)
 //#define IM_ASSERT(_EXPR)  ((void)(_EXPR))     // Disable asserts
+// Clang/GCC: break into debugger on assertion failure instead of calling abort().
+#if defined(__clang__)
+//#    define IM_ASSERT(_EXPR) do { if (!(_EXPR)) { assert(_EXPR); } } while(0)
+#elif defined(__GNUC__)
+#    define IM_ASSERT(_EXPR) do { if (!(_EXPR)) { __builtin_trap(); } } while(0)
+#endif
 
 //---- Define attributes of all API symbols declarations, e.g. for DLL under Windows
 // Using Dear ImGui via a shared library is not recommended, because of function call overhead and because we don't guarantee backward nor forward ABI compatibility.
@@ -29,7 +36,7 @@
 //#define IMGUI_API __attribute__((visibility("default")))  // GCC/Clang: override visibility when set is hidden
 
 //---- Don't define obsolete functions/enums/behaviors. Consider enabling from time to time after updating to clean your code of obsolete function/names.
-//#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 
 //---- Disable all of Dear ImGui or don't implement standard windows/tools.
 // It is very strongly recommended to NOT disable the demo windows and debug tool during development. They are extremely useful in day to day work. Please read comments in imgui_demo.cpp.
@@ -41,7 +48,7 @@
 //#define IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCTIONS   // [Win32] Don't implement default clipboard handler. Won't use and link with OpenClipboard/GetClipboardData/CloseClipboard etc. (user32.lib/.a, kernel32.lib/.a)
 //#define IMGUI_ENABLE_WIN32_DEFAULT_IME_FUNCTIONS          // [Win32] [Default with Visual Studio] Implement default IME handler (require imm32.lib/.a, auto-link for Visual Studio, -limm32 on command-line for MinGW)
 //#define IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS         // [Win32] [Default with non-Visual Studio compilers] Don't implement default IME handler (won't require imm32.lib/.a)
-//#define IMGUI_DISABLE_WIN32_FUNCTIONS                     // [Win32] Won't use and link with any Win32 function (clipboard, IME).
+#define IMGUI_DISABLE_WIN32_FUNCTIONS                     // [Win32] Won't use and link with any Win32 function (clipboard, IME).
 //#define IMGUI_ENABLE_OSX_DEFAULT_CLIPBOARD_FUNCTIONS      // [OSX] Implement default OSX clipboard handler (need to link with '-framework ApplicationServices', this is why this is not the default).
 //#define IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS             // Don't implement default platform_io.Platform_OpenInShellFn() handler (Win32: ShellExecute(), require shell32.lib/.a, Mac/Linux: use system("")).
 //#define IMGUI_DISABLE_DEFAULT_FORMAT_FUNCTIONS            // Don't implement ImFormatString/ImFormatStringV so you can implement them yourself (e.g. if you don't want to link with vsnprintf)
@@ -53,8 +60,8 @@
 //#define IMGUI_DISABLE_SSE                                 // Disable use of SSE intrinsics even if available
 
 //---- Enable Test Engine / Automation features.
-//#define IMGUI_ENABLE_TEST_ENGINE                          // Enable imgui_test_engine hooks. Generally set automatically by include "imgui_te_config.h", see Test Engine for details.
-
+#define IMGUI_ENABLE_TEST_ENGINE                          // Enable imgui_test_engine hooks. Generally set automatically by include "imgui_te_config.h", see Test Engine for details.
+#define IMGUI_TEST_ENGINE_ENABLE_COROUTINE_STDTHREAD_IMPL 1  // Enable the default implementation of the coroutine scheduler based on std::thread. You can implement your own scheduler and set it with ImGuiTestEngine_SetCoroutineScheduler().
 //---- Include imgui_user.h at the end of imgui.h as a convenience
 // May be convenient for some users to only explicitly include vanilla imgui.h and have extra stuff included.
 //#define IMGUI_INCLUDE_IMGUI_USER_H
@@ -67,7 +74,7 @@
 //#define IMGUI_USE_LEGACY_CRC32_ADLER
 
 //---- Use 32-bit for ImWchar (default is 16-bit) to support Unicode planes 1-16. (e.g. point beyond 0xFFFF like emoticons, dingbats, symbols, shapes, ancient languages, etc...)
-//#define IMGUI_USE_WCHAR32
+#define IMGUI_USE_WCHAR32
 
 //---- Avoid multiple STB libraries implementations, or redefine path/filenames to prioritize another version
 // By default the embedded implementations are declared static and not available outside of Dear ImGui sources files.
@@ -86,14 +93,14 @@
 // Requires FreeType headers to be available in the include path. Requires program to be compiled with 'misc/freetype/imgui_freetype.cpp' (in this repository) + the FreeType library (not provided).
 // Note that imgui_freetype.cpp may be used _without_ this define, if you manually call ImFontAtlas::SetFontLoader(). The define is simply a convenience.
 // On Windows you may use vcpkg with 'vcpkg install freetype --triplet=x64-windows' + 'vcpkg integrate install'.
-//#define IMGUI_ENABLE_FREETYPE
+#define IMGUI_ENABLE_FREETYPE
 
 //---- Use FreeType + plutosvg or lunasvg to render OpenType SVG fonts (SVGinOT)
 // Only works in combination with IMGUI_ENABLE_FREETYPE.
 // - plutosvg is currently easier to install, as e.g. it is part of vcpkg. It will support more fonts and may load them faster. See misc/freetype/README for instructions.
 // - Both require headers to be available in the include path + program to be linked with the library code (not provided).
 // - (note: lunasvg implementation is based on Freetype's rsvg-port.c which is licensed under CeCILL-C Free Software License Agreement)
-//#define IMGUI_ENABLE_FREETYPE_PLUTOSVG
+#define IMGUI_ENABLE_FREETYPE_PLUTOSVG
 //#define IMGUI_ENABLE_FREETYPE_LUNASVG
 
 //---- Use stb_truetype to build and rasterize the font atlas (default)
@@ -112,13 +119,13 @@
         operator MyVec4() const { return MyVec4(x,y,z,w); }
 */
 //---- ...Or use Dear ImGui's own very basic math operators.
-//#define IMGUI_DEFINE_MATH_OPERATORS
+#define IMGUI_DEFINE_MATH_OPERATORS
 
 //---- Use 32-bit vertex indices (default is 16-bit) is one way to allow large meshes with more than 64K vertices.
 // Your renderer backend will need to support it (most example renderer backends support both 16/32-bit indices).
 // Another way to allow large meshes while keeping 16-bit indices is to handle ImDrawCmd::VtxOffset in your renderer.
 // Read about ImGuiBackendFlags_RendererHasVtxOffset for details.
-//#define ImDrawIdx unsigned int
+#define ImDrawIdx unsigned int
 
 //---- Override ImDrawCallback signature (will need to modify renderer backends accordingly)
 //struct ImDrawList;
@@ -130,13 +137,18 @@
 // (use 'Metrics->Tools->Item Picker' to pick widgets with the mouse and break into them for easy debugging.)
 //#define IM_DEBUG_BREAK  IM_ASSERT(0)
 //#define IM_DEBUG_BREAK  __debugbreak()
+#if defined(__clang__)
+#    define IM_DEBUG_BREAK  __builtin_debugtrap
+#elif defined(__GNUC__)
+#    define IM_DEBUG_BREAK  __builtin_trap
+#endif
 
 //---- Debug Tools: Enable highlight ID conflicts _before_ hovering items. When io.ConfigDebugHighlightIdConflicts is set.
 // (THIS WILL SLOW DOWN DEAR IMGUI. Only use occasionally and disable after use)
-//#define IMGUI_DEBUG_HIGHLIGHT_ALL_ID_CONFLICTS
+#define IMGUI_DEBUG_HIGHLIGHT_ALL_ID_CONFLICTS
 
 //---- Debug Tools: Enable slower asserts
-//#define IMGUI_DEBUG_PARANOID
+#define IMGUI_DEBUG_PARANOID
 
 //---- Tip: You can add extra functions within the ImGui:: namespace from anywhere (e.g. your own sources/header files)
 /*

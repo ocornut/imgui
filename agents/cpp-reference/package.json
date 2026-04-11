@@ -1,0 +1,15 @@
+{
+  "name": "cpp-reference-mcp",
+  "version": "1.0.0",
+  "description": "C++ Reference MCP server — fetches docs from cppreference.com",
+  "type": "module",
+  "main": "mcp_server.js",
+  "scripts": {
+    "start": "node mcp_server.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "cheerio": "^1.0.0",
+    "zod": "^3.0.0"
+  }
+}

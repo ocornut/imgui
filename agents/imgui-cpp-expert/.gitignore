@@ -1,0 +1,11 @@
+.env
+.env.local
+__pycache__
+*.pyc
+.venv
+venv
+*.egg-info
+.DS_Store
+.idea
+*.swp
+*.swo

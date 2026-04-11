@@ -3,6 +3,14 @@
 .claude
 .vscode
 
+## Agent dependencies
+agents/cpp-reference/node_modules/
+agents/imgui-cpp-expert/venv/
+agents/imgui-cpp-expert/__pycache__/
+agents/cpp-reference/__pycache__/
+agents/**/__pycache__/
+*.pyc
+
 ## Dear ImGui artifacts
 imgui.ini
 imgui*.ini

@@ -1,0 +1,29 @@
+# Clangd configuration file
+# See https://clangd.llvm.org/config for more information.
+
+# Apply config conditionally (e.g. only for specific files)
+# If:
+#   PathMatch: .*\.h
+
+CompileFlags:
+  # Use the example-local compile_commands.json for files under this workspace.
+  CompilationDatabase: examples/example_sdl3_sdlgpu3
+  # Add flags to the compile command
+  Add:
+    - -I/home/joao/vscode/imgui
+    - -I/home/joao/vscode/imgui/backends
+    - -I/home/joao/.local/include
+    - -I/usr/include
+    - -Wunused-variable
+    - -Winfinite-recursion
+    - -Warray-bounds
+    - -Wreturn-stack-address
+    - -Werror=implicit-function-declaration
+    - -Wshadow
+    - -Wshadow-field-in-constructor-modified
+    - -Wshadow-ivar
+    - -Wuninitialized
+    - -Wunused-label
+    - -Wunused-lambda-capture
+
+# Press Ctrl+Space to bring up completion suggestions

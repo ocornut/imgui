@@ -16,6 +16,9 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
+#include "imgui_te_engine.h"
+#include "imgui_te_context.h"
+#include "imgui_te_ui.h"
 #include <stdio.h>          // printf, fprintf
 #include <stdlib.h>         // abort
 #define GLFW_INCLUDE_NONE
@@ -24,7 +27,7 @@
 
 // Volk headers
 #ifdef IMGUI_IMPL_VULKAN_USE_VOLK
-#define VOLK_IMPLEMENTATION
+#define VOLK_IMPLEMENTATION>
 #include <volk.h>
 #endif
 
@@ -399,6 +402,13 @@ int main(int, char**)
     style.ScaleAllSizes(main_scale);        // Bake a fixed style scale. (until we have a solution for dynamic style scaling, changing this requires resetting Style + calling this again)
     style.FontScaleDpi = main_scale;        // Set initial font scale. (in docking branch: using io.ConfigDpiScaleFonts=true automatically overrides this for every window depending on the current monitor)
 
+    // Setup Test Engine
+    ImGuiTestEngine* engine = ImGuiTestEngine_CreateContext();
+    ImGuiTestEngineIO& test_io = ImGuiTestEngine_GetIO(engine);
+    test_io.ConfigVerboseLevel = ImGuiTestVerboseLevel_Info;
+    test_io.ConfigVerboseLevelOnError = ImGuiTestVerboseLevel_Debug;
+    ImGuiTestEngine_Start(engine, ImGui::GetCurrentContext());
+
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForVulkan(window, true);
     ImGui_ImplVulkan_InitInfo init_info = {};
@@ -523,6 +533,7 @@ int main(int, char**)
             FrameRender(wd, draw_data);
             FramePresent(wd);
         }
+        ImGuiTestEngine_PostSwap(engine);
     }
 
     // Cleanup
@@ -530,7 +541,9 @@ int main(int, char**)
     check_vk_result(err);
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplGlfw_Shutdown();
+    ImGuiTestEngine_Stop(engine);
     ImGui::DestroyContext();
+    ImGuiTestEngine_DestroyContext(engine);
 
     CleanupVulkanWindow(&g_MainWindowData);
     CleanupVulkan();

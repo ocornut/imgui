@@ -12,18 +12,29 @@
 #
 
 #CXX = g++
-#CXX = clang++
+CXX = clang++
+#CXX = g++
 
 EXE = example_glfw_vulkan
 IMGUI_DIR = ../..
 SOURCES = main.cpp
 SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
 SOURCES += $(IMGUI_DIR)/backends/imgui_impl_glfw.cpp $(IMGUI_DIR)/backends/imgui_impl_vulkan.cpp
+SOURCES += $(IMGUI_DIR)/misc/freetype/imgui_freetype.cpp
+TE_DIR = /home/joao/vscode/imgui_test_engine/imgui_test_engine
+SOURCES += $(TE_DIR)/imgui_te_context.cpp
+SOURCES += $(TE_DIR)/imgui_te_coroutine.cpp
+SOURCES += $(TE_DIR)/imgui_te_engine.cpp
+SOURCES += $(TE_DIR)/imgui_te_exporters.cpp
+SOURCES += $(TE_DIR)/imgui_te_perftool.cpp
+SOURCES += $(TE_DIR)/imgui_te_ui.cpp
+SOURCES += $(TE_DIR)/imgui_te_utils.cpp
+SOURCES += $(TE_DIR)/imgui_capture_tool.cpp
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 UNAME_S := $(shell uname -s)
 LINUX_GL_LIBS = -lGL
 
-CXXFLAGS = -std=c++11 -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends
+CXXFLAGS = -std=c++11 -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -I$(TE_DIR)
 CXXFLAGS += -g -Wall -Wformat
 LIBS =
 
@@ -33,9 +44,9 @@ LIBS =
 
 ifeq ($(UNAME_S), Linux) #LINUX
 	ECHO_MESSAGE = "Linux"
-	LIBS += $(LINUX_GL_LIBS) `pkg-config --static --libs glfw3 vulkan`
+	LIBS += $(LINUX_GL_LIBS) `pkg-config --static --libs glfw3 vulkan` `pkg-config --libs freetype2` `pkg-config --libs plutosvg`
 
-	CXXFLAGS += `pkg-config --cflags glfw3 vulkan`
+	CXXFLAGS += `pkg-config --cflags glfw3 vulkan` `pkg-config --cflags freetype2` `pkg-config --cflags plutosvg`
 	CFLAGS = $(CXXFLAGS)
 endif
 
@@ -71,6 +82,12 @@ endif
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 %.o:$(IMGUI_DIR)/backends/%.cpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+%.o:$(IMGUI_DIR)/misc/freetype/%.cpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+%.o:$(TE_DIR)/%.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 all: $(EXE)

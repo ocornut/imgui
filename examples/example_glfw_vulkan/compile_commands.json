@@ -1,0 +1,33 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/clang++",
+      "-std=c++11",
+      "-I../..",
+      "-I../../backends",
+      "-I/home/joao/vscode/imgui_test_engine/imgui_test_engine",
+      "-g",
+      "-Wall",
+      "-Wformat",
+      "-I/usr/include/freetype2",
+      "-I/usr/include/libpng16",
+      "-DWITH_GZFILEOP",
+      "-I/usr/include/harfbuzz",
+      "-I/usr/include/glib-2.0",
+      "-I/usr/lib64/glib-2.0/include",
+      "-I/usr/include/sysprof-6",
+      "-pthread",
+      "-I/usr/local/lib64/pkgconfig/../../include/plutosvg",
+      "-DPLUTOSVG_BUILD_STATIC",
+      "-I/usr/local/lib64/pkgconfig/../../include/plutovg",
+      "-DPLUTOVG_BUILD_STATIC",
+      "-c",
+      "-o",
+      "main.o",
+      "main.cpp"
+    ],
+    "directory": "/home/joao/vscode/imgui/examples/example_glfw_vulkan",
+    "file": "/home/joao/vscode/imgui/examples/example_glfw_vulkan/main.cpp",
+    "output": "/home/joao/vscode/imgui/examples/example_glfw_vulkan/main.o"
+  }
+]
