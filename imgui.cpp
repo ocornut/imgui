@@ -9107,7 +9107,7 @@ void ImGui::UpdateCurrentFontSize(float restore_font_size_after_scaling)
     }
 
     g.FontBaked = (g.Font != NULL && window != NULL) ? g.Font->GetFontBaked(final_size) : NULL;
-    g.FontBakedScale = (g.Font != NULL && window != NULL) ? (g.FontSize / g.FontBaked->Size) : 0.0f;
+    g.FontBakedScale = (g.FontBaked != NULL) ? (g.FontSize / g.FontBaked->Size) : 0.0f;
     g.DrawListSharedData.FontScale = g.FontBakedScale;
 }
 
