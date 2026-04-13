@@ -16,6 +16,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-04-14: Metal: use a dedicated bufferCacheLock to avoid crashing when bufferCache is replaced by a new object while being used for @synchronize(). (#9367)
 //  2026-04-03: Metal: avoid redundant vertex buffer bind in SetupRenderState. (#9343)
 //  2026-03-19: Fixed issue in ImGui_ImplMetal_RenderDrawData() if ImTextureID_Invalid is defined to be != 0, which became the default since 2026-03-12. (#9295, #9310)
 //  2025-09-18: Call platform_io.ClearRendererHandlers() on shutdown.
@@ -78,6 +79,7 @@
 @property (nonatomic, strong) FramebufferDescriptor*        framebufferDescriptor; // framebuffer descriptor for current frame; transient
 @property (nonatomic, strong) NSMutableDictionary*          renderPipelineStateCache; // pipeline cache; keyed on framebuffer descriptors
 @property (nonatomic, strong) NSMutableArray<MetalBuffer*>* bufferCache;
+@property (nonatomic, strong) NSObject*                     bufferCacheLock;
 @property (nonatomic, assign) double                        lastBufferCachePurge;
 - (MetalBuffer*)dequeueReusableBufferOfLength:(NSUInteger)length device:(id<MTLDevice>)device;
 - (id<MTLRenderPipelineState>)renderPipelineStateForFramebufferDescriptor:(FramebufferDescriptor*)descriptor device:(id<MTLDevice>)device;
@@ -328,13 +330,11 @@ void ImGui_ImplMetal_RenderDrawData(ImDrawData* draw_data, id<MTLCommandBuffer> 
     MetalContext* sharedMetalContext = bd->SharedMetalContext;
     [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer>)
     {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            @synchronized(sharedMetalContext.bufferCache)
-            {
-                [sharedMetalContext.bufferCache addObject:vertexBuffer];
-                [sharedMetalContext.bufferCache addObject:indexBuffer];
-            }
-        });
+        @synchronized(sharedMetalContext.bufferCacheLock)
+        {
+            [sharedMetalContext.bufferCache addObject:vertexBuffer];
+            [sharedMetalContext.bufferCache addObject:indexBuffer];
+        }
     }];
 }
 
@@ -514,6 +514,7 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
     {
         self.renderPipelineStateCache = [NSMutableDictionary dictionary];
         self.bufferCache = [NSMutableArray array];
+        self.bufferCacheLock = [[NSObject alloc] init];
         _lastBufferCachePurge = GetMachAbsoluteTimeInSeconds();
     }
     return self;
@@ -521,9 +522,9 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
 
 - (MetalBuffer*)dequeueReusableBufferOfLength:(NSUInteger)length device:(id<MTLDevice>)device
 {
-    uint64_t now = GetMachAbsoluteTimeInSeconds();
+    double now = GetMachAbsoluteTimeInSeconds();
 
-    @synchronized(self.bufferCache)
+    @synchronized(self.bufferCacheLock)
     {
         // Purge old buffers that haven't been useful for a while
         if (now - self.lastBufferCachePurge > 1.0)
