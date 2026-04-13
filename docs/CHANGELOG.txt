@@ -76,6 +76,8 @@ Other Changes:
     before layout has been locked (first row or headers row submitted). (#8250)
 - Fonts:
   - imgui_freetype: add FreeType headers & compiled version in 'About Dear ImGui' details.
+  - Assert when using MergeMode with an explicit size over a target font with an implicit
+    size, as scale factor are likely erroneous. (#9361)
 - Clipper:
   - Improved error reporting when misusing the clipper inside a table (prioritize
     reporting the common clipper error over a table sanity check assert). (#9350)

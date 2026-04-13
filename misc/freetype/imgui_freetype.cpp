@@ -428,8 +428,9 @@ static bool ImGui_ImplFreeType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig* s
 {
     IM_UNUSED(atlas);
     float size = baked->Size;
+    const float ref_size = baked->OwnerFont->Sources[0]->SizePixels;
     if (src->MergeMode && src->SizePixels != 0.0f)
-        size *= (src->SizePixels / baked->OwnerFont->Sources[0]->SizePixels);
+        size *= (src->SizePixels / ref_size);
     size *= src->ExtraSizeScale;
 
     ImGui_ImplFreeType_FontSrcData* bd_font_data = (ImGui_ImplFreeType_FontSrcData*)src->FontLoaderData;

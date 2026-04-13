@@ -3039,7 +3039,7 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg_in)
     }
     else
     {
-        IM_ASSERT(Fonts.Size > 0 && "Cannot use MergeMode for the first font"); // When using MergeMode make sure that a font has already been added before.
+        IM_ASSERT(Fonts.Size > 0 && "Cannot use MergeMode for the first font!"); // When using MergeMode make sure that a font has already been added before.
         font = font_cfg_in->DstFont ? font_cfg_in->DstFont : Fonts.back();
         ImFontAtlasFontDiscardBakes(this, font, 0); // Need to discard bakes if the font was already used, because baked->FontLoaderDatas[] will change size. (#9162)
     }
@@ -3067,6 +3067,11 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg_in)
         IM_ASSERT(font_cfg->FontLoader->FontBakedLoadGlyph != NULL);
         IM_ASSERT(font_cfg->FontLoader->LoaderInit == NULL && font_cfg->FontLoader->LoaderShutdown == NULL); // FIXME-NEWATLAS: Unsupported yet.
     }
+    //                             | Target w/ Implicit RefSize | Target w/ Explicit RefSize |
+    // Adding w/ Implicit RefSize: | OK (same scale)            | OK (same scale)            |
+    // Adding w/ Explicit RefSize: | KO                         | OK (custom scale)          |
+    if (font_cfg_in->MergeMode && font_cfg_in->SizePixels > 0)
+        IM_ASSERT((font->Flags & ImFontFlags_ImplicitRefSize) == 0 && "Cannot use MergeMode with an explicit reference size when the destination font used an implicit reference size!");
     IM_ASSERT(font_cfg->FontLoaderData == NULL);
 
     if (!ImFontAtlasFontSourceInit(this, font_cfg))
@@ -3134,7 +3139,10 @@ ImFont* ImFontAtlas::AddFontDefaultBitmap(const ImFontConfig* font_cfg_template)
     if (!font_cfg_template)
         font_cfg.PixelSnapH = true; // Prevents sub-integer scaling factors at lower-level layers.
     if (font_cfg.SizePixels <= 0.0f)
+    {
         font_cfg.SizePixels = 13.0f; // This only serves (1) as a reference for GlyphOffset.y setting and (2) as a default for pre-1.92 backend.
+        font_cfg.Flags |= ImFontFlags_ImplicitRefSize;
+    }
     if (font_cfg.Name[0] == '\0')
         ImFormatString(font_cfg.Name, IM_COUNTOF(font_cfg.Name), "ProggyClean.ttf");
     font_cfg.EllipsisChar = (ImWchar)0x0085;
@@ -3159,7 +3167,10 @@ ImFont* ImFontAtlas::AddFontDefaultVector(const ImFontConfig* font_cfg_template)
     if (!font_cfg_template)
         font_cfg.PixelSnapH = true; // Precisely match ProggyClean, but prevents sub-integer scaling factors at lower-level layers.
     if (font_cfg.SizePixels <= 0.0f)
+    {
         font_cfg.SizePixels = 13.0f;
+        font_cfg.Flags |= ImFontFlags_ImplicitRefSize;
+    }
     if (font_cfg.Name[0] == '\0')
         ImFormatString(font_cfg.Name, IM_COUNTOF(font_cfg.Name), "ProggyForever.ttf");
     font_cfg.ExtraSizeScale *= 1.015f; // Match ProggyClean
