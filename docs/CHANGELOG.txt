@@ -74,6 +74,7 @@ Other Changes:
     (#9378, #9371, #3590, #8926, #2973, #7485, #7468, #6969, #5118, #7616, #9173, #8322, #7230,
     #5999, #6452, #5156, #7342, #7592, #7511)
   - Made AddCallback() user data default to Null for convenience.
+  - Added AddLineH(), AddLineV() helpers to draw horizontal and vertical lines. [@memononen]
 - InputText:
   - InputTextMultiline: fixed an issue processing deactivation logic when an active
     multi-line edit is clipped due to being out of view.
