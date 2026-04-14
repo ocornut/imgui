@@ -74,6 +74,9 @@ Other Changes:
     user to tell us ImGuiSelectionUserData are indices)
   - Box-Select, Tables: fixed an issue when calling `BeginMultiSelect()` in a table
     before layout has been locked (first row or headers row submitted). (#8250)
+- Style:
+  - Fixed vertical scrollbar top coordinates when using thick borders on windows
+    with no title bar and no menu bar. (#9366)
 - Fonts:
   - imgui_freetype: add FreeType headers & compiled version in 'About Dear ImGui' details.
   - Assert when using MergeMode with an explicit size over a target font with an implicit
