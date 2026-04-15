@@ -7848,6 +7848,8 @@ bool ImGui::BeginBoxSelect(const ImRect& scope_rect, ImGuiWindow* window, ImGuiI
         bs->UnclipRect = bs->BoxSelectRectPrev; // FIXME-OPT: UnclipRect X coordinates could be intersection of Prev and Curr rect on X axis.
         bs->UnclipRect.Add(bs->BoxSelectRectCurr);
     }
+    if (bs->UnclipMode && g.CurrentTable != NULL)
+        TableApplyExternalUnclipRect(g.CurrentTable, bs->UnclipRect);
 
 #ifdef IMGUI_DEBUG_BOXSELECT
     if (ms_flags & ImGuiMultiSelectFlags_BoxSelect2d)

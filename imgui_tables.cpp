@@ -1152,7 +1152,6 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         column->ClipRect.Min.y = work_rect.Min.y;
         column->ClipRect.Max.x = column->MaxX; //column->WorkMaxX;
         column->ClipRect.Max.y = FLT_MAX;
-        ImRect clip_rect_unclipped = column->ClipRect;
         column->ClipRect.ClipWithFull(host_clip_rect);
 
         // Mark column as Clipped (not in sight)
@@ -1170,9 +1169,6 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
 
         // Mark column as requesting output from user. Note that fixed + non-resizable sets are auto-fitting at all times and therefore always request output.
         column->IsRequestOutput = is_visible || column->AutoFitQueue != 0 || column->CannotSkipItemsQueue != 0;
-        ImGuiBoxSelectState* bs = &g.BoxSelectState;
-        if (!column->IsRequestOutput && bs->UnclipMode && bs->UnclipRect.Overlaps(clip_rect_unclipped))
-            column->IsRequestOutput = true;
 
         // Mark column as SkipItems (ignoring all items/layout)
         // (table->HostSkipItems is a copy of inner_window->SkipItems before we cleared it above in Part 2)
@@ -1319,12 +1315,28 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         table->InnerWindow->DecoInnerSizeY1 = table_instance->LastFrozenHeight;
     table_instance->LastFrozenHeight = 0.0f;
 
-    // Initial state
     ImGuiWindow* inner_window = table->InnerWindow;
+    ImGuiBoxSelectState* bs = &g.BoxSelectState;
+    if (bs->Window == inner_window && bs->UnclipMode)
+        TableApplyExternalUnclipRect(table, bs->UnclipRect);
+
+    // Initial state
     if (table->Flags & ImGuiTableFlags_NoClip)
         table->DrawSplitter->SetCurrentChannel(inner_window->DrawList, TABLE_DRAW_CHANNEL_NOCLIP);
     else
         inner_window->DrawList->PushClipRect(inner_window->InnerClipRect.Min, inner_window->InnerClipRect.Max, false); // FIXME: use table->InnerClipRect?
+}
+
+// When starting a BeginMultiSelect() after table has been layout we update IsRequestOutput fields.
+void ImGui::TableApplyExternalUnclipRect(ImGuiTable* table, ImRect& rect)
+{
+    for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
+    {
+        ImGuiTableColumn* column = &table->Columns[column_n];
+        if (!column->IsRequestOutput)
+            if (rect.Overlaps(ImRect(column->MinX, table->WorkRect.Min.y, column->MaxX, FLT_MAX)))
+                column->IsRequestOutput = true;
+    }
 }
 
 // Process hit-testing on resizing borders. Actual size change will be applied in EndTable()
