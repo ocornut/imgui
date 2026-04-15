@@ -10724,7 +10724,7 @@ struct ExampleAssetsBrowser
     bool            AllowBoxSelect = true;                  // Will set ImGuiMultiSelectFlags_BoxSelect2d
     bool            AllowBoxSelectInsideSelection = false;  // Will set ImGuiMultiSelectFlags_SelectOnClickAlways
     bool            AllowDragUnselected = false;            // Will set ImGuiMultiSelectFlags_SelectOnClickRelease
-    float           IconSize = 32.0f;
+    float           IconSize = 0;
     int             IconSpacing = 10;
     int             IconHitSpacing = 4;         // Increase hit-spacing if you want to make it possible to clear or box-select from gaps. Some spacing is required to able to amend with Shift+box-select. Value is small in Explorer.
     bool            StretchSpacing = true;
@@ -10791,6 +10791,9 @@ struct ExampleAssetsBrowser
 
     void Draw(const char* title, bool* p_open)
     {
+        if (IconSize <= 0.0f)
+            IconSize = ImGui::CalcTextSize("99999").x;
+
         ImGui::SetNextWindowSize(ImVec2(IconSize * 25, IconSize * 15), ImGuiCond_FirstUseEver);
         if (!ImGui::Begin(title, p_open, ImGuiWindowFlags_MenuBar))
         {
