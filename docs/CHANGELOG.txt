@@ -47,6 +47,7 @@ Other Changes:
   - InputTextMultiline: fixed an issue processing deactivation logic when an active
     multi-line edit is clipped due to being out of view.
   - Fixed a crash when toggling ReadOnly while active. (#9354)
+  - CharFilter callback event sets CursorPos/SelectionStart/SelectionEnd. (#816)
 - Tables:
   - Fixed issues reporting ideal size to parent window/container: (#9352, #7651)
     - When both scrollbars are visible but only one of ScrollX/ScrollY was explicitly requested.
@@ -55,16 +56,48 @@ Other Changes:
   - Fixed a single-axis auto-resizing feedback loop issue with nested containers
     and varying scrollbar visibility. (#9352)
   - Detect and report error when calling End() instead of EndPopup() on a popup. (#9351)
+  - Child windows with only ImGuiChildFlags_AutoResizeY flag keep using the proportional
+    default ItemWidth. (#9355)
+- Multi-Select:
+  - Fixed an issue using Multi-Select within a Table causing column width measurement to
+    be invalid when trailing column contents is not submitted in the last row. (#9341, #8250)
+  - Box-Select: fixed an issue using ImGuiMultiSelectFlags_BoxSelect2d mode, where
+    items out of view wouldn't be properly selected while scrolling while mouse cursor
+    is hovering outside of selection scope. (#7994, #1861, #6518)
+  - Box-Select: fixed an issue where items out of horizontal view would sometimes lead
+    to incorrect merging of sequential selection requests while also scrolling fast
+    enough to overlap multiple rows during a frame. (#7994, #1861, #6518)
+  - Box-Select: fixed an issue using ImGuiMultiSelectFlags_BoxSelect2d mode in a Table
+    while relying on the TableNextColumn() return value to perform coarse clipping. (#7994)
+  - Box-Select: disabled merging consecutive selection requests as we have no reliable
+    way of detecting if user has submitted all consecutives items without clipping gaps,
+    and ImGuiSelectionUserData is technically opaque storage. (#7994, #1861)
+    (we will probably bring this back as a minor optimization if we have a way to for
+    user to tell us ImGuiSelectionUserData are indices)
+  - Box-Select, Tables: fixed an issue when calling `BeginMultiSelect()` in a table
+    before layout has been locked (first row or headers row submitted). (#8250)
+- Style:
+  - Fixed vertical scrollbar top coordinates when using thick borders on windows
+    with no title bar and no menu bar. (#9366)
 - Fonts:
   - imgui_freetype: add FreeType headers & compiled version in 'About Dear ImGui' details.
+  - Assert when using MergeMode with an explicit size over a target font with an implicit
+    size, as scale factor are likely erroneous. (#9361)
 - Clipper:
   - Improved error reporting when misusing the clipper inside a table (prioritize
     reporting the common clipper error over a table sanity check assert). (#9350)
   - Tweaked assert triggering when first item height measurement fails, and made it
     a better recoverable error. (#9350)
+- Misc:
+  - Minor optimization: reduce redudant label scanning in common widgets.
 - Backends:
-  - Metal: avoid redundant vertex buffer bind in SetupRenderState, which leads
+  - Metal: avoid redundant vertex buffer bind in `SetupRenderState()`, which leads
     to validation issue. (#9343) [@Hunam6]
+  - Metal: use a dedicated `bufferCacheLock` to avoid crashing when `bufferCache` is
+    replaced by a new object while being used for `@synchronize()`. (#9367) [@andygrundman]
+  - SDL2: made `ImGui_ImplSDL2_GetContentScaleForWindow()`/`ImGui_ImplSDL2_GetContentScaleForDisplay()`
+    helpers return a minimum of 1.0f, as some Linux setup seems to report <1.0f value
+    and this breaks scaling border size. (#9369)
 
 Docking+Viewports Branch:
 
