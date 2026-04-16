@@ -1728,7 +1728,7 @@ void ImGui::Separator()
     if (window->DC.CurrentColumns)
         flags |= ImGuiSeparatorFlags_SpanAllColumns;
 
-    SeparatorEx(flags, g.Style.SeparatorSize);
+    SeparatorEx(flags, ImMax(g.Style.SeparatorSize, 1.0f));
 }
 
 void ImGui::SeparatorTextEx(ImGuiID id, const char* label, const char* label_end, float extra_w)
