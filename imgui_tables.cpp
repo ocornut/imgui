@@ -1330,6 +1330,8 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
 // When starting a BeginMultiSelect() after table has been layout we update IsRequestOutput fields.
 void ImGui::TableApplyExternalUnclipRect(ImGuiTable* table, ImRect& rect)
 {
+    if (rect.IsInverted())
+        return;
     for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
     {
         ImGuiTableColumn* column = &table->Columns[column_n];

@@ -61,6 +61,10 @@ Other Changes:
 - Multi-Select:
   - Fixed an issue using Multi-Select within a Table causing column width measurement to
     be invalid when trailing column contents is not submitted in the last row. (#9341, #8250)
+  - Box-Select: fixed an issue using ImGuiMultiSelectFlags_BoxSelect1d mode while scrolling.
+    Notably, using mouse wheel while holding a box-selection could lead items close to windows
+    edges from not being correctly unselected. (#7994, #8250, #7821, #7850, #7970)
+  - Box-Select: improved dirty/unclip rectangle logic for ImGuiMultiSelectFlags_BoxSelect2d.
   - Box-Select: fixed an issue using ImGuiMultiSelectFlags_BoxSelect2d mode, where
     items out of view wouldn't be properly selected while scrolling while mouse cursor
     is hovering outside of selection scope. (#7994, #1861, #6518)
