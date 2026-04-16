@@ -90,6 +90,7 @@ Other Changes:
     a better recoverable error. (#9350)
 - Misc:
   - Minor optimization: reduce redudant label scanning in common widgets.
+  - Added missing Test Engine hooks for PlotXXX(), VSliderXXX(), TableHeader().
 - Backends:
   - Metal: avoid redundant vertex buffer bind in `SetupRenderState()`, which leads
     to validation issue. (#9343) [@Hunam6]
