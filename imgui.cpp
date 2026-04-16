@@ -1542,6 +1542,7 @@ ImGuiStyle::ImGuiStyle()
 
 
 // Scale all spacing/padding/thickness values. Do not scale fonts.
+// Consider not calling this if your initial scale factor if <1.0.
 // Important: This operation is lossy because we round all sizes to integer. If you need to change your scale multiples, call this over a freshly initialized ImGuiStyle structure rather than scaling multiple times.
 void ImGuiStyle::ScaleAllSizes(float scale_factor)
 {

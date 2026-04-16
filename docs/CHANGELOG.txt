@@ -93,6 +93,9 @@ Other Changes:
     to validation issue. (#9343) [@Hunam6]
   - Metal: use a dedicated `bufferCacheLock` to avoid crashing when `bufferCache` is
     replaced by a new object while being used for `@synchronize()`. (#9367) [@andygrundman]
+  - SDL2: made `ImGui_ImplSDL2_GetContentScaleForWindow()`/`ImGui_ImplSDL2_GetContentScaleForDisplay()`
+    helpers return a minimum of 1.0f, as some Linux setup seems to report <1.0f value
+    and this breaks scaling border size. (#9369)
 
 
 -----------------------------------------------------------------------
