@@ -11016,6 +11016,8 @@ struct ExampleAssetsBrowser
                 }
             }
             clipper.End();
+            if (Items.Size == 0)
+                ImGui::Dummy(ImVec2(0, 0));
             ImGui::PopStyleVar(); // ImGuiStyleVar_ItemSpacing
 
             // Context menu
