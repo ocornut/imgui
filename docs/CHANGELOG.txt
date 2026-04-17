@@ -78,6 +78,7 @@ Other Changes:
     and ImGuiSelectionUserData is technically opaque storage. (#7994, #1861)
     (we will probably bring this back as a minor optimization if we have a way to for
     user to tell us ImGuiSelectionUserData are indices)
+  - Box-Select: fixes for using accross nested child windows. (#8364)
   - Box-Select + Clipper: fixed an issue selecting items while scrolling while a clipper
     active. (#7994, #8250, #7821, #7850, #7970)
   - Box-Select + Tables: fixed an issue when calling `BeginMultiSelect()` in a table

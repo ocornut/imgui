@@ -6588,6 +6588,14 @@ void ImGui::EndChild()
     g.LogLinePosY = -FLT_MAX; // To enforce a carriage return
 }
 
+ImGuiWindow* ImGui::FindFrontMostVisibleChildWindow(ImGuiWindow* window)
+{
+    for (int n = window->DC.ChildWindows.Size - 1; n >= 0; n--)
+        if (IsWindowActiveAndVisible(window->DC.ChildWindows[n]))
+            return FindFrontMostVisibleChildWindow(window->DC.ChildWindows[n]);
+    return window;
+}
+
 static void SetWindowConditionAllowFlags(ImGuiWindow* window, ImGuiCond flags, bool enabled)
 {
     window->SetWindowPosAllowFlags       = enabled ? (window->SetWindowPosAllowFlags       | flags) : (window->SetWindowPosAllowFlags       & ~flags);
@@ -8752,6 +8760,17 @@ void ImGui::PopFocusScope()
     IM_ASSERT_USER_ERROR_RET(g.FocusScopeStack.Size > g.StackSizesInBeginForCurrentWindow->SizeOfFocusScopeStack, "Calling PopFocusScope() too many times!");
     g.FocusScopeStack.pop_back();
     g.CurrentFocusScopeId = g.FocusScopeStack.Size ? g.FocusScopeStack.back().ID : 0;
+}
+
+bool ImGui::IsInNavFocusRoute(ImGuiID focus_scope_id)
+{
+    ImGuiContext& g = *GImGui;
+    if (g.NavFocusScopeId == focus_scope_id)
+        return true;
+    for (const ImGuiFocusScopeData& focus_scope : g.NavFocusRoute)
+        if (focus_scope.ID == focus_scope_id)
+            return true;
+    return false;
 }
 
 void ImGui::SetNavFocusScope(ImGuiID focus_scope_id)
