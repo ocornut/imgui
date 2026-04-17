@@ -8016,7 +8016,9 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, int sel
     ms->FocusScopeId = id;
     ms->Flags = flags;
     ms->BackupCursorMaxPos = window->DC.CursorMaxPos;
-    ms->ScopeRectMin = window->DC.CursorMaxPos = window->DC.CursorPos; // CalcScopeRect() for ImGuiMultiSelectFlags_ScopeRect will measure in EndMultiSelect().
+    ms->ScopeRectMin = window->DC.CursorPos;
+    if (flags & ImGuiMultiSelectFlags_ScopeRect)
+        window->DC.CursorMaxPos = ms->ScopeRectMin; // CalcScopeRect() for ImGuiMultiSelectFlags_ScopeRect will measure in EndMultiSelect().
     PushFocusScope(ms->FocusScopeId);
     ms->IsFocused = IsInNavFocusRoute(g.CurrentFocusScopeId);
     if (flags & ImGuiMultiSelectFlags_ScopeWindow) // Mark parent child window as navigable into, with highlight. Assume user will always submit interactive items.
