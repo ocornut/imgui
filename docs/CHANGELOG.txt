@@ -61,6 +61,12 @@ Other Changes:
 - Multi-Select:
   - Fixed an issue using Multi-Select within a Table causing column width measurement to
     be invalid when trailing column contents is not submitted in the last row. (#9341, #8250)
+  - Fixed an issue using Multi-Select within a Table with the right-most column visible,
+    which could lead to an extra vertical offset in the Header row. (#8250)
+  - Box-Select: fixed an issue using ImGuiMultiSelectFlags_BoxSelect1d mode while scrolling.
+    Notably, using mouse wheel while holding a box-selection could lead items close to windows
+    edges from not being correctly unselected. (#7994, #8250, #7821, #7850, #7970)
+  - Box-Select: improved dirty/unclip rectangle logic for ImGuiMultiSelectFlags_BoxSelect2d.
   - Box-Select: fixed an issue using ImGuiMultiSelectFlags_BoxSelect2d mode, where
     items out of view wouldn't be properly selected while scrolling while mouse cursor
     is hovering outside of selection scope. (#7994, #1861, #6518)
@@ -74,7 +80,12 @@ Other Changes:
     and ImGuiSelectionUserData is technically opaque storage. (#7994, #1861)
     (we will probably bring this back as a minor optimization if we have a way to for
     user to tell us ImGuiSelectionUserData are indices)
-  - Box-Select, Tables: fixed an issue when calling `BeginMultiSelect()` in a table
+  - Box-Select: fixes for using accross nested child windows. (#8364)
+  - Box-Select + Clipper: fixed an issue selecting items while scrolling while a clipper
+    active. (#7994, #8250, #7821, #7850, #7970)
+  - Box-Select + Tables: fixed an issue using box-selection in a tables with
+    items straying out of columns boundaries. (#7994, #2221)
+  - Box-Select + Tables: fixed an issue when calling `BeginMultiSelect()` in a table
     before layout has been locked (first row or headers row submitted). (#8250)
 - Style:
   - Fixed vertical scrollbar top coordinates when using thick borders on windows
@@ -90,6 +101,7 @@ Other Changes:
     a better recoverable error. (#9350)
 - Misc:
   - Minor optimization: reduce redudant label scanning in common widgets.
+  - Added missing Test Engine hooks for PlotXXX(), VSliderXXX(), TableHeader().
 - Backends:
   - Metal: avoid redundant vertex buffer bind in `SetupRenderState()`, which leads
     to validation issue. (#9343) [@Hunam6]

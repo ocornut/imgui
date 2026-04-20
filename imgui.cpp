@@ -3521,12 +3521,14 @@ static bool ImGuiListClipper_StepInternal(ImGuiListClipper* clipper)
                 // FIXME: Selectable() use of half-ItemSpacing isn't consistent in matter of layout, as ItemAdd(bb) stray above ItemSize()'s CursorPos.
                 // RangeSelect's BoxSelect relies on comparing overlap of previous and current rectangle and is sensitive to that.
                 // As a workaround we currently half ItemSpacing worth on each side.
-                min_y -= g.Style.ItemSpacing.y;
-                max_y += g.Style.ItemSpacing.y;
+                float pad_y = g.Style.ItemSpacing.y;
+                min_y -= pad_y;
+                max_y += pad_y;
 
                 // Box-select on 2D area requires different clipping.
+                // (best adding pad_y here than in BeginBoxSelect() as we are closer to current state)
                 if (bs->UnclipMode)
-                    data->Ranges.push_back(ImGuiListClipperRange::FromPositions(bs->UnclipRect.Min.y, bs->UnclipRect.Max.y, 0, 0));
+                    data->Ranges.push_back(ImGuiListClipperRange::FromPositions(bs->UnclipRect.Min.y - pad_y, bs->UnclipRect.Max.y + pad_y, 0, 0));
             }
 
             // Add main visible range
@@ -6095,14 +6097,6 @@ void ImGui::PopClipRect()
     window->ClipRect = window->DrawList->_ClipRectStack.back();
 }
 
-static ImGuiWindow* FindFrontMostVisibleChildWindow(ImGuiWindow* window)
-{
-    for (int n = window->DC.ChildWindows.Size - 1; n >= 0; n--)
-        if (IsWindowActiveAndVisible(window->DC.ChildWindows[n]))
-            return FindFrontMostVisibleChildWindow(window->DC.ChildWindows[n]);
-    return window;
-}
-
 static void ImGui::RenderDimmedBackgroundBehindWindow(ImGuiWindow* window, ImU32 col)
 {
     if ((col & IM_COL32_A_MASK) == 0)
@@ -6869,6 +6863,14 @@ void ImGui::EndChild()
 
     g.WithinEndChildID = backup_within_end_child_id;
     g.LogLinePosY = -FLT_MAX; // To enforce a carriage return
+}
+
+ImGuiWindow* ImGui::FindFrontMostVisibleChildWindow(ImGuiWindow* window)
+{
+    for (int n = window->DC.ChildWindows.Size - 1; n >= 0; n--)
+        if (IsWindowActiveAndVisible(window->DC.ChildWindows[n]))
+            return FindFrontMostVisibleChildWindow(window->DC.ChildWindows[n]);
+    return window;
 }
 
 static void SetWindowConditionAllowFlags(ImGuiWindow* window, ImGuiCond flags, bool enabled)
@@ -9381,6 +9383,17 @@ void ImGui::PopFocusScope()
     g.CurrentFocusScopeId = g.FocusScopeStack.Size ? g.FocusScopeStack.back().ID : 0;
 }
 
+bool ImGui::IsInNavFocusRoute(ImGuiID focus_scope_id)
+{
+    ImGuiContext& g = *GImGui;
+    if (g.NavFocusScopeId == focus_scope_id)
+        return true;
+    for (const ImGuiFocusScopeData& focus_scope : g.NavFocusRoute)
+        if (focus_scope.ID == focus_scope_id)
+            return true;
+    return false;
+}
+
 void ImGui::SetNavFocusScope(ImGuiID focus_scope_id)
 {
     ImGuiContext& g = *GImGui;
@@ -11457,7 +11470,8 @@ bool ImGui::DebugCheckVersionAndDataLayout(const char* version, size_t sz_io, si
 // to extend contents size of our parent container (e.g. window contents size, which is used for auto-resizing
 // windows, table column contents size used for auto-resizing columns, group size).
 // This was causing issues and ambiguities and we needed to retire that.
-// From 1.89, extending contents size boundaries REQUIRES AN ITEM TO BE SUBMITTED.
+// 2022/08/05 (1.89): extending contents size boundaries REQUIRES AN ITEM TO BE SUBMITTED. However we gated the new logic behind a '#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS' block.
+// 2025/06/25 (1.92): removed the legacy path and turned into an assert. It was a mistake that there was a #ifndef before: our obsolescence schedule gets pushed back a bit more :(
 //
 //  Previously this would make the window content size ~200x200:
 //    Begin(...) + SetCursorScreenPos(GetCursorScreenPos() + ImVec2(200,200)) + End();                      // NOT OK ANYMORE
@@ -14042,7 +14056,7 @@ static void ImGui::NavProcessItem()
     const ImGuiID id = g.LastItemData.ID;
     const ImGuiItemFlags item_flags = g.LastItemData.ItemFlags;
 
-    // When inside a container that isn't scrollable with Left<>Right, clip NavRect accordingly (#2221, #8816)
+    // When inside a container that isn't scrollable with Left<>Right, clip NavRect accordingly (#2221, #8816, #7994)
     ImRect nav_bb = g.LastItemData.NavRect;
     if (window->DC.NavIsScrollPushableX == false)
     {

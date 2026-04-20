@@ -1330,6 +1330,8 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
 // When starting a BeginMultiSelect() after table has been layout we update IsRequestOutput fields.
 void ImGui::TableApplyExternalUnclipRect(ImGuiTable* table, ImRect& rect)
 {
+    if (rect.IsInverted())
+        return;
     for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
     {
         ImGuiTableColumn* column = &table->Columns[column_n];
@@ -3311,6 +3313,8 @@ void ImGui::TableHeader(const char* label)
     // We don't use BeginPopupContextItem() because we want the popup to stay up even after the column is hidden
     if (IsPopupOpenRequestForItem(ImGuiPopupFlags_None, id))
         TableOpenContextMenu(column_n);
+
+    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags);
 }
 
 // Unlike TableHeadersRow() it is not expected that you can reimplement or customize this with custom widgets.
