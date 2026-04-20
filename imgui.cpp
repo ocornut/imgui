@@ -13349,7 +13349,7 @@ static void ImGui::NavProcessItem()
     const ImGuiID id = g.LastItemData.ID;
     const ImGuiItemFlags item_flags = g.LastItemData.ItemFlags;
 
-    // When inside a container that isn't scrollable with Left<>Right, clip NavRect accordingly (#2221, #8816)
+    // When inside a container that isn't scrollable with Left<>Right, clip NavRect accordingly (#2221, #8816, #7994)
     ImRect nav_bb = g.LastItemData.NavRect;
     if (window->DC.NavIsScrollPushableX == false)
     {
