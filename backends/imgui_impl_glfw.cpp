@@ -29,6 +29,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-04-21: Added a Win32-specific implementation of ImGui_ImplGlfw_GetContentScaleXXXX functions for legacy GLFW 3.2.
 //  2026-03-25: Mouse cursor is properly restored if changed by user app/code while using glfwSetInputMode(..., GLFW_CURSOR_DISABLED) or ImGuiConfigFlags_NoMouseCursorChange. Amend change from 2025-12-10.
 //  2026-02-10: Try to set IMGUI_IMPL_GLFW_DISABLE_X11 / IMGUI_IMPL_GLFW_DISABLE_WAYLAND automatically if corresponding headers are not accessible. (#9225)
 //  2025-12-12: Added IMGUI_IMPL_GLFW_DISABLE_X11 / IMGUI_IMPL_GLFW_DISABLE_WAYLAND to forcefully disable either.
@@ -947,6 +948,16 @@ static void ImGui_ImplGlfw_UpdateGamepads()
     #undef MAP_BUTTON
     #undef MAP_ANALOG
 }
+
+// For GFLW 3.2 + Windows: include a simplified non-monitor aware version of ImGui_ImplWin32_GetDpiScaleForMonitor().
+// This is merely a band-aid to make using GLFW 3.2 a little bit nicer, but prefer to use GLFW 3.3+ or the full correct functions from the Win32 backend.
+#if !GLFW_HAS_PER_MONITOR_DPI && defined(_WIN32) && !defined(NOGDI)
+float   ImGui_ImplWin32_GetLegacyDpiScale()   { const HDC dc = ::GetDC(nullptr); UINT xdpi = ::GetDeviceCaps(dc, LOGPIXELSX); ::ReleaseDC(nullptr, dc); return xdpi / 96.0f; }
+void    glfwGetWindowContentScale(GLFWwindow*, float* x_scale, float* y_scale) { *x_scale = *y_scale = ImGui_ImplWin32_GetLegacyDpiScale(); }
+void    glfwGetMonitorContentScale(GLFWmonitor*, float* x_scale, float* y_scale) { *x_scale = *y_scale = ImGui_ImplWin32_GetLegacyDpiScale(); }
+#undef GLFW_HAS_PER_MONITOR_DPI
+#define GLFW_HAS_PER_MONITOR_DPI 1
+#endif
 
 // - On Windows the process needs to be marked DPI-aware!! SDL2 doesn't do it by default. You can call ::SetProcessDPIAware() or call ImGui_ImplWin32_EnableDpiAwareness() from Win32 backend.
 // - Apple platforms use FramebufferScale so we always return 1.0f.
