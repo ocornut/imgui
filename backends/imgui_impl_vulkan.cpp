@@ -278,7 +278,7 @@ struct ImGui_ImplVulkan_Data
     ImVector<VkFormat>          PipelineRenderingCreateInfoColorAttachmentFormats; // Deep copy of format array
 
     // Texture management
-    VkSampler                   TexSamplerLinear;
+    VkSampler                   SamplerLinear;
     VkCommandPool               TexCommandPool;
     VkCommandBuffer             TexCommandBuffer;
 
@@ -753,7 +753,7 @@ void ImGui_ImplVulkan_UpdateTexture(ImTextureData* tex)
         }
 
         // Create the Descriptor Set
-        backend_tex->DescriptorSet = ImGui_ImplVulkan_AddTexture(bd->TexSamplerLinear, backend_tex->ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        backend_tex->DescriptorSet = ImGui_ImplVulkan_AddTexture(bd->SamplerLinear, backend_tex->ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
         // Store identifiers
         tex->SetTexID((ImTextureID)backend_tex->DescriptorSet);
@@ -1048,43 +1048,31 @@ static VkPipeline ImGui_ImplVulkan_CreatePipeline(VkDevice device, const VkAlloc
     return pipeline;
 }
 
+static void ImGui_ImplVulkan_CreateDescriptorSetLayout(VkDescriptorSetLayout* p_layout, VkDescriptorType descriptor_type)
+{
+    ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
+    ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
+
+    VkDescriptorSetLayoutBinding binding[1] = {};
+    binding[0].descriptorType = descriptor_type;
+    binding[0].descriptorCount = 1;
+    binding[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    VkDescriptorSetLayoutCreateInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    info.bindingCount = 1;
+    info.pBindings = binding;
+    VkResult err = vkCreateDescriptorSetLayout(v->Device, &info, v->Allocator, p_layout);
+    check_vk_result(err);
+}
+
 bool ImGui_ImplVulkan_CreateDeviceObjects()
 {
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
     ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
     VkResult err;
 
-    if (!bd->TexSamplerLinear)
-    {
-        // Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling.
-        VkSamplerCreateInfo info = {};
-        info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-        info.magFilter = VK_FILTER_LINEAR;
-        info.minFilter = VK_FILTER_LINEAR;
-        info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-        info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        info.minLod = -1000;
-        info.maxLod = 1000;
-        info.maxAnisotropy = 1.0f;
-        err = vkCreateSampler(v->Device, &info, v->Allocator, &bd->TexSamplerLinear);
-        check_vk_result(err);
-    }
-
     if (!bd->DescriptorSetLayout)
-    {
-        VkDescriptorSetLayoutBinding binding[1] = {};
-        binding[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        binding[0].descriptorCount = 1;
-        binding[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-        VkDescriptorSetLayoutCreateInfo info = {};
-        info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        info.bindingCount = 1;
-        info.pBindings = binding;
-        err = vkCreateDescriptorSetLayout(v->Device, &info, v->Allocator, &bd->DescriptorSetLayout);
-        check_vk_result(err);
-    }
+        ImGui_ImplVulkan_CreateDescriptorSetLayout(&bd->DescriptorSetLayout, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 
     if (v->DescriptorPoolSize != 0)
     {
@@ -1096,8 +1084,26 @@ bool ImGui_ImplVulkan_CreateDeviceObjects()
         pool_info.maxSets = v->DescriptorPoolSize;
         pool_info.poolSizeCount = 1;
         pool_info.pPoolSizes = &pool_size;
-
         err = vkCreateDescriptorPool(v->Device, &pool_info, v->Allocator, &bd->DescriptorPool);
+        check_vk_result(err);
+    }
+
+    // Create sampler
+    // Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling.
+    if (!bd->SamplerLinear)
+    {
+        VkSamplerCreateInfo info = {};
+        info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        info.magFilter = VK_FILTER_LINEAR;
+        info.minFilter = VK_FILTER_LINEAR;
+        info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+        info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        info.minLod = -1000;
+        info.maxLod = 1000;
+        info.maxAnisotropy = 1.0f;
+        err = vkCreateSampler(v->Device, &info, v->Allocator, &bd->SamplerLinear);
         check_vk_result(err);
     }
 
@@ -1191,7 +1197,7 @@ void    ImGui_ImplVulkan_DestroyDeviceObjects()
 
     if (bd->TexCommandBuffer)     { vkFreeCommandBuffers(v->Device, bd->TexCommandPool, 1, &bd->TexCommandBuffer); bd->TexCommandBuffer = VK_NULL_HANDLE; }
     if (bd->TexCommandPool)       { vkDestroyCommandPool(v->Device, bd->TexCommandPool, v->Allocator); bd->TexCommandPool = VK_NULL_HANDLE; }
-    if (bd->TexSamplerLinear)     { vkDestroySampler(v->Device, bd->TexSamplerLinear, v->Allocator); bd->TexSamplerLinear = VK_NULL_HANDLE; }
+    if (bd->SamplerLinear)        { vkDestroySampler(v->Device, bd->SamplerLinear, v->Allocator); bd->SamplerLinear = VK_NULL_HANDLE; }
     if (bd->ShaderModuleVert)     { vkDestroyShaderModule(v->Device, bd->ShaderModuleVert, v->Allocator); bd->ShaderModuleVert = VK_NULL_HANDLE; }
     if (bd->ShaderModuleFrag)     { vkDestroyShaderModule(v->Device, bd->ShaderModuleFrag, v->Allocator); bd->ShaderModuleFrag = VK_NULL_HANDLE; }
     if (bd->DescriptorSetLayout)  { vkDestroyDescriptorSetLayout(v->Device, bd->DescriptorSetLayout, v->Allocator); bd->DescriptorSetLayout = VK_NULL_HANDLE; }
