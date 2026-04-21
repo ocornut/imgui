@@ -3424,6 +3424,7 @@ struct ImDrawListSplitter
 enum ImDrawFlags_
 {
     ImDrawFlags_None                        = 0,
+    //ImDrawFlags_Closed                    = 1,        // -> FLAG MOVED BELOW. Prior to 1.92.8 (May 2026): ImDrawFlags_Closed was guaranteed to be == (1<<0) == 1, for legacy compatibility reason. Hardcoded use of 1 or true should be replaced with 'ImDrawFlags_Closed'.
 
     // Rounding for AddRect(), AddRectFilled(), PathRect()
     // - When not specified, we defaults to ImDrawFlags_RoundCornersAll! So you only need to use those flags if you want another configuration.
@@ -3441,8 +3442,8 @@ enum ImDrawFlags_
     ImDrawFlags_RoundCornersMask_           = ImDrawFlags_RoundCornersAll | ImDrawFlags_RoundCornersNone,
 
     // Stroke options
-    ImDrawFlags_Closed                      = 1 << 9, // PathStroke(), AddPolyline(): specify that shape should be closed.
-    //ImDrawFlags_Closed                    = 1,      // Prior to 1.92.8 (May 2026), ImDrawFlags_Closed was guaranteed to be == 1<<0 == 1 for legacy compatibility reason. Hardcoded use of 1 or true should be replaced.
+    ImDrawFlags_Closed                      = 1 << 9,  // PathStroke(), AddPolyline(): specify that shape should be closed.
+    ImDrawFlags_MiterOnly                   = 1 << 10, // PathStroke(), AddPolyline(): use miter corners only. This assumes that the input polyline does not have corners sharper than 90 degrees. Slightly faster.
 
     // Stroke position relative to the shape outline
     ImDrawFlags_StrokeInside                = 1 << 16, // Draw stroke inside of the shape outline (Default)
