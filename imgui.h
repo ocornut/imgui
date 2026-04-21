@@ -3546,6 +3546,7 @@ struct ImDrawList
     // - Only simple polygons are supported by filling functions (no self-intersections, no holes).
     // - Concave polygon fill is more expensive than convex one: it has O(N^2) complexity. Provided as a convenience for the user but not used by the main library.
     IMGUI_API void  AddPolyline(const ImVec2* points, int num_points, ImU32 col, float thickness, ImDrawFlags flags = 0);
+    IMGUI_API void  AddPolylineLegacy(const ImVec2* points, int num_points, ImU32 col, float thickness, ImDrawFlags flags = 0);
     IMGUI_API void  AddConvexPolyFilled(const ImVec2* points, int num_points, ImU32 col);
     IMGUI_API void  AddConcavePolyFilled(const ImVec2* points, int num_points, ImU32 col);
 
@@ -3646,6 +3647,8 @@ struct ImDrawList
     IMGUI_API void  _PathArcToN(const ImVec2& center, float radius, float a_min, float a_max, int num_segments);
     IMGUI_API void  _AddRectFilledBaked(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float r, ImVec4 tex_uvs, ImDrawFlags flags);
     IMGUI_API void  _AddRectBaked(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float r, float t, ImVec4 tex_uvs, ImDrawFlags flags);
+    IMGUI_API void  _AddPolylineThin(const ImVec2* points, const int points_count, ImU32 col, float thickness, ImDrawFlags flags, ImVec4 tex_uvs);
+    IMGUI_API void  _AddPolylineThick(const ImVec2* points, const int points_count, ImU32 col, float thickness, ImDrawFlags flags);
 };
 
 // All draw data to render a Dear ImGui frame
