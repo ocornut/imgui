@@ -56,8 +56,6 @@ Breaking Changes:
       - Before: ImGui_ImplVulkan_AddTexture(VkSampler, VkImageView, VkImageLayout)
       - After:  ImGui_ImplVulkan_AddTexture(VkImageView, VkImageLayout)
       - Kept inline redirection function that ignores the sampler (will obsolete).
-  - Vulkan: with the change above it is now possible to change the current Sampler during
-    rendering, by poking into ImGui_ImplVulkan_RenderState's SamplerCurrentDS. (#914)
 
 Other Changes:
 

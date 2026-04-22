@@ -173,9 +173,6 @@ struct ImGui_ImplVulkan_RenderState
     VkCommandBuffer     CommandBuffer;
     VkPipeline          Pipeline;
     VkPipelineLayout    PipelineLayout;
-    VkDescriptorSet     SamplerLinearDS;    // Bilinear filtering sampler
-    VkDescriptorSet     SamplerNearestDS;   // Nearest/point filtering sampler
-    VkDescriptorSet     SamplerCurrentDS;   // Current sampler (may be changed by callback)
 };
 
 //-------------------------------------------------------------------------

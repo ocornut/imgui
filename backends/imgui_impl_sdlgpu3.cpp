@@ -59,7 +59,10 @@ struct ImGui_ImplSDLGPU3_FrameData
 struct ImGui_ImplSDLGPU3_Data
 {
     ImGui_ImplSDLGPU3_InitInfo   InitInfo;
-    ImGui_ImplSDLGPU3_RenderState* RenderState          = nullptr; // == ImGui::GetPlatformIO().Renderer_RenderState during rendering.
+
+    // Render state
+    ImGui_ImplSDLGPU3_RenderState*  RenderState         = nullptr; // == ImGui::GetPlatformIO().Renderer_RenderState during rendering.
+    SDL_GPUSampler*                 CurrentSampler      = nullptr;
 
     // Graphics pipeline & shaders
     SDL_GPUShader*               VertexShader           = nullptr;
@@ -89,10 +92,10 @@ static ImGui_ImplSDLGPU3_Data* ImGui_ImplSDLGPU3_GetBackendData()
     return ImGui::GetCurrentContext() ? (ImGui_ImplSDLGPU3_Data*)ImGui::GetIO().BackendRendererUserData : nullptr;
 }
 
-static void ImGui_ImplSDLGPU3_SetupRenderState(ImDrawData* draw_data, ImGui_ImplSDLGPU3_RenderState* render_state, SDL_GPUGraphicsPipeline* pipeline, SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_pass, ImGui_ImplSDLGPU3_FrameData* fd, uint32_t fb_width, uint32_t fb_height)
+static void ImGui_ImplSDLGPU3_SetupRenderState(ImDrawData* draw_data, SDL_GPUGraphicsPipeline* pipeline, SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_pass, ImGui_ImplSDLGPU3_FrameData* fd, uint32_t fb_width, uint32_t fb_height)
 {
     ImGui_ImplSDLGPU3_Data* bd = ImGui_ImplSDLGPU3_GetBackendData();
-    render_state->SamplerCurrent = bd->TexSamplerLinear;
+    bd->CurrentSampler = bd->TexSamplerLinear;
 
     // Bind graphics pipeline
     SDL_BindGPUGraphicsPipeline(render_pass, pipeline);
@@ -220,9 +223,9 @@ void ImGui_ImplSDLGPU3_PrepareDrawData(ImDrawData* draw_data, SDL_GPUCommandBuff
 
 // Draw callbacks
 static void ImGui_ImplSDLGPU3_DrawCallback_ResetRenderState(const ImDrawList*, const ImDrawCmd*)    {} // Intentionally empty. Used as an identifier for rendering loop to call its code. Simpler to implement this way.
-static void ImGui_ImplSDLGPU3_DrawCallback_SetSamplerLinear(const ImDrawList*, const ImDrawCmd*)    { ImGui_ImplSDLGPU3_Data* bd = ImGui_ImplSDLGPU3_GetBackendData(); bd->RenderState->SamplerCurrent = bd->TexSamplerLinear; }
-static void ImGui_ImplSDLGPU3_DrawCallback_SetSamplerNearest(const ImDrawList*, const ImDrawCmd*)   { ImGui_ImplSDLGPU3_Data* bd = ImGui_ImplSDLGPU3_GetBackendData(); bd->RenderState->SamplerCurrent = bd->TexSamplerNearest; }
-static void ImGui_ImplSDLGPU3_DrawCallback_SetSamplerCustom(const ImDrawList*, const ImDrawCmd* cmd){ ImGui_ImplSDLGPU3_Data* bd = ImGui_ImplSDLGPU3_GetBackendData(); bd->RenderState->SamplerCurrent = (SDL_GPUSampler*)cmd->UserCallbackData; }
+static void ImGui_ImplSDLGPU3_DrawCallback_SetSamplerLinear(const ImDrawList*, const ImDrawCmd*)    { ImGui_ImplSDLGPU3_Data* bd = ImGui_ImplSDLGPU3_GetBackendData(); bd->CurrentSampler = bd->TexSamplerLinear; }
+static void ImGui_ImplSDLGPU3_DrawCallback_SetSamplerNearest(const ImDrawList*, const ImDrawCmd*)   { ImGui_ImplSDLGPU3_Data* bd = ImGui_ImplSDLGPU3_GetBackendData(); bd->CurrentSampler = bd->TexSamplerNearest; }
+static void ImGui_ImplSDLGPU3_DrawCallback_SetSamplerCustom(const ImDrawList*, const ImDrawCmd* cmd){ ImGui_ImplSDLGPU3_Data* bd = ImGui_ImplSDLGPU3_GetBackendData(); bd->CurrentSampler = (SDL_GPUSampler*)cmd->UserCallbackData; }
 
 void ImGui_ImplSDLGPU3_RenderDrawData(ImDrawData* draw_data, SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_pass, SDL_GPUGraphicsPipeline* pipeline)
 {
@@ -246,11 +249,9 @@ void ImGui_ImplSDLGPU3_RenderDrawData(ImDrawData* draw_data, SDL_GPUCommandBuffe
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     ImGui_ImplSDLGPU3_RenderState render_state;
     render_state.Device = bd->InitInfo.Device;
-    render_state.SamplerLinear = render_state.SamplerCurrent = bd->TexSamplerLinear;
-    render_state.SamplerNearest = bd->TexSamplerNearest;
     platform_io.Renderer_RenderState = bd->RenderState = &render_state;
 
-    ImGui_ImplSDLGPU3_SetupRenderState(draw_data, &render_state, pipeline, command_buffer, render_pass, fd, fb_width, fb_height);
+    ImGui_ImplSDLGPU3_SetupRenderState(draw_data, pipeline, command_buffer, render_pass, fd, fb_width, fb_height);
 
     // Render command lists
     // (Because we merged all buffers into a single one, we maintain our own offset into them)
@@ -265,7 +266,7 @@ void ImGui_ImplSDLGPU3_RenderDrawData(ImDrawData* draw_data, SDL_GPUCommandBuffe
             {
                 // User callback, registered via ImDrawList::AddCallback()
                 if (pcmd->UserCallback == ImGui_ImplSDLGPU3_DrawCallback_ResetRenderState)
-                    ImGui_ImplSDLGPU3_SetupRenderState(draw_data, &render_state, pipeline, command_buffer, render_pass, fd, fb_width, fb_height);
+                    ImGui_ImplSDLGPU3_SetupRenderState(draw_data, pipeline, command_buffer, render_pass, fd, fb_width, fb_height);
                 else
                     pcmd->UserCallback(draw_list, pcmd);
             }
@@ -294,7 +295,7 @@ void ImGui_ImplSDLGPU3_RenderDrawData(ImDrawData* draw_data, SDL_GPUCommandBuffe
                 // Bind DescriptorSet with font or user texture
                 SDL_GPUTextureSamplerBinding texture_sampler_binding;
                 texture_sampler_binding.texture = (SDL_GPUTexture*)(intptr_t)pcmd->GetTexID();
-                texture_sampler_binding.sampler = render_state.SamplerCurrent;
+                texture_sampler_binding.sampler = bd->CurrentSampler;
                 SDL_BindGPUFragmentSamplers(render_pass, 0, &texture_sampler_binding, 1);
 
                 // Draw

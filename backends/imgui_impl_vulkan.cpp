@@ -496,10 +496,9 @@ static void CreateOrResizeBuffer(VkBuffer& buffer, VkDeviceMemory& buffer_memory
     buffer_size = buffer_size_aligned;
 }
 
-static void ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, ImGui_ImplVulkan_RenderState* render_state, VkPipeline pipeline, VkCommandBuffer command_buffer, ImGui_ImplVulkan_FrameRenderBuffers* rb, int fb_width, int fb_height)
+static void ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, VkPipeline pipeline, VkCommandBuffer command_buffer, ImGui_ImplVulkan_FrameRenderBuffers* rb, int fb_width, int fb_height)
 {
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
-    render_state->SamplerCurrentDS = bd->SamplerLinearDS;
 
     // Bind pipeline:
     vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
@@ -531,6 +530,9 @@ static void ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, ImGui_ImplV
     constants[2] = -1.0f - draw_data->DisplayPos.x * constants[0]; // Translate
     constants[3] = -1.0f - draw_data->DisplayPos.y * constants[1];
     vkCmdPushConstants(command_buffer, bd->PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(float) * 4, constants);
+
+    // Setup sampler
+    vkCmdBindDescriptorSets(bd->RenderState->CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 1, 1, &bd->SamplerLinearDS, 0, nullptr);
 }
 
 // Draw callbacks
@@ -616,12 +618,10 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
     render_state.CommandBuffer = command_buffer;
     render_state.Pipeline = pipeline;
     render_state.PipelineLayout = bd->PipelineLayout;
-    render_state.SamplerLinearDS = render_state.SamplerCurrentDS = bd->SamplerLinearDS;
-    render_state.SamplerNearestDS = bd->SamplerNearestDS;
     platform_io.Renderer_RenderState = bd->RenderState = &render_state;
 
     // Setup desired Vulkan state
-    ImGui_ImplVulkan_SetupRenderState(draw_data, &render_state, pipeline, command_buffer, rb, fb_width, fb_height);
+    ImGui_ImplVulkan_SetupRenderState(draw_data, pipeline, command_buffer, rb, fb_width, fb_height);
 
     // Will project scissor/clipping rectangles into framebuffer space
     ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
@@ -630,7 +630,6 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
     // Render command lists
     // (Because we merged all buffers into a single one, we maintain our own offset into them)
     VkDescriptorSet last_image_view = VK_NULL_HANDLE;
-    VkDescriptorSet last_sampler = VK_NULL_HANDLE;
     int global_vtx_offset = 0;
     int global_idx_offset = 0;
     for (const ImDrawList* draw_list : draw_data->CmdLists)
@@ -643,8 +642,8 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
                 // User callback, registered via ImDrawList::AddCallback()
                 if (pcmd->UserCallback == ImGui_ImplVulkan_DrawCallback_ResetRenderState)
                 {
-                    ImGui_ImplVulkan_SetupRenderState(draw_data, &render_state, pipeline, command_buffer, rb, fb_width, fb_height);
-                    last_image_view = last_sampler = VK_NULL_HANDLE;
+                    ImGui_ImplVulkan_SetupRenderState(draw_data, pipeline, command_buffer, rb, fb_width, fb_height);
+                    last_image_view = VK_NULL_HANDLE;
                 }
                 else
                     pcmd->UserCallback(draw_list, pcmd);
@@ -675,10 +674,7 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
                 VkDescriptorSet image_view = (VkDescriptorSet)pcmd->GetTexID();
                 if (image_view != last_image_view)
                     vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 0, 1, &image_view, 0, nullptr);
-                if (render_state.SamplerCurrentDS != last_sampler)
-                    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 1, 1, &render_state.SamplerCurrentDS, 0, nullptr);
                 last_image_view = image_view;
-                last_sampler = render_state.SamplerCurrentDS;
 
                 // Draw
                 vkCmdDrawIndexed(command_buffer, pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0);
