@@ -41,6 +41,18 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
+- Backends:
+  - Vulkan: redesigned to use separate ImageView + Sampler instead of Combined Image Sampler. (#914)
+    This change allows us to facilitate changing samplers, in line with other backends. [@yaz0r, @ocornut]
+    - When creating your own descriptor pool (instead of letting backend creates its own):
+      - Before: need at least IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE descriptors of type VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER.
+      - After:  need at least IMGUI_IMPL_VULKAN_MINIMUM_SAMPLED_IMAGE_POOL_SIZE descriptors of type VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE.
+                            + IMGUI_IMPL_VULKAN_MINIMUM_SAMPLER_POOL_SIZE       descriptors of type VK_DESCRIPTOR_TYPE_SAMPLER.
+    - When registering custom textures: changed ImGui_ImplVulkan_AddTexture() signature to remove Sampler.
+      - Before: ImGui_ImplVulkan_AddTexture(VkSampler, VkImageView, VkImageLayout)
+      - After:  ImGui_ImplVulkan_AddTexture(VkImageView, VkImageLayout)
+      - Kept inline redirection function that ignores the sampler (will obsolete).
+
 Other Changes:
 
 - InputText:

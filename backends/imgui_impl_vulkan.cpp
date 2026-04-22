@@ -27,6 +27,15 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-04-22: *BREAKING CHANGE* redesigned to use separate ImageView + Sampler instead of Combined Image Sampler. This change allows us to facilitate changing samplers, in line with other backends.
+//              - When registering custom textures: changed ImGui_ImplVulkan_AddTexture() signature to remove Sampler.
+//                - Before: ImGui_ImplVulkan_AddTexture(VkSampler, VkImageView, VkImageLayout)
+//                - After:  ImGui_ImplVulkan_AddTexture(VkImageView, VkImageLayout)
+//                - Kept inline redirection function that ignores the sampler.
+//              - When creating your own descriptor pool (instead of letting backend creates its own):
+//                - Before: need at least IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE descriptors of type VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER.
+//                - After:  need at least IMGUI_IMPL_VULKAN_MINIMUM_SAMPLED_IMAGE_POOL_SIZE descriptors of type VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE.
+//                                      + IMGUI_IMPL_VULKAN_MINIMUM_SAMPLER_POOL_SIZE       descriptors of type VK_DESCRIPTOR_TYPE_SAMPLER.
 //  2026-03-11: Vulkan: Added ImGui_ImplVulkan_PipelineInfo::ExtraDynamicStates[] to allow specifying extra dynamic states to add when creating the VkPipeline. (#9211)
 //  2025-09-26: [Helpers] *BREAKING CHANGE*: Vulkan: Helper ImGui_ImplVulkanH_DestroyWindow() does not call vkDestroySurfaceKHR(): as surface is created by caller of ImGui_ImplVulkanH_CreateOrResizeWindow(), it is more consistent that we don't destroy it. (#9163)
 //  2026-01-05: [Helpers] *BREAKING CHANGE*: Vulkan: Helper for creating render pass uses ImGui_ImplVulkanH_Window::AttachmentDesc to create render pass. Removed ClearEnabled. (#9152)
@@ -322,7 +331,7 @@ void main()
 */
 static uint32_t __glsl_shader_vert_spv[] =
 {
-    0x07230203,0x00010000,0x00080001,0x0000002e,0x00000000,0x00020011,0x00000001,0x0006000b,
+    0x07230203,0x00010000,0x0008000b,0x0000002e,0x00000000,0x00020011,0x00000001,0x0006000b,
     0x00000001,0x4c534c47,0x6474732e,0x3035342e,0x00000000,0x0003000e,0x00000000,0x00000001,
     0x000a000f,0x00000000,0x00000004,0x6e69616d,0x00000000,0x0000000b,0x0000000f,0x00000015,
     0x0000001b,0x0000001c,0x00030003,0x00000002,0x000001c2,0x00040005,0x00000004,0x6e69616d,
@@ -335,10 +344,10 @@ static uint32_t __glsl_shader_vert_spv[] =
     0x00050006,0x0000001e,0x00000000,0x61635375,0x0000656c,0x00060006,0x0000001e,0x00000001,
     0x61725475,0x616c736e,0x00006574,0x00030005,0x00000020,0x00006370,0x00040047,0x0000000b,
     0x0000001e,0x00000000,0x00040047,0x0000000f,0x0000001e,0x00000002,0x00040047,0x00000015,
-    0x0000001e,0x00000001,0x00050048,0x00000019,0x00000000,0x0000000b,0x00000000,0x00030047,
-    0x00000019,0x00000002,0x00040047,0x0000001c,0x0000001e,0x00000000,0x00050048,0x0000001e,
-    0x00000000,0x00000023,0x00000000,0x00050048,0x0000001e,0x00000001,0x00000023,0x00000008,
-    0x00030047,0x0000001e,0x00000002,0x00020013,0x00000002,0x00030021,0x00000003,0x00000002,
+    0x0000001e,0x00000001,0x00030047,0x00000019,0x00000002,0x00050048,0x00000019,0x00000000,
+    0x0000000b,0x00000000,0x00040047,0x0000001c,0x0000001e,0x00000000,0x00030047,0x0000001e,
+    0x00000002,0x00050048,0x0000001e,0x00000000,0x00000023,0x00000000,0x00050048,0x0000001e,
+    0x00000001,0x00000023,0x00000008,0x00020013,0x00000002,0x00030021,0x00000003,0x00000002,
     0x00030016,0x00000006,0x00000020,0x00040017,0x00000007,0x00000006,0x00000004,0x00040017,
     0x00000008,0x00000006,0x00000002,0x0004001e,0x00000009,0x00000007,0x00000008,0x00040020,
     0x0000000a,0x00000003,0x00000009,0x0004003b,0x0000000a,0x0000000b,0x00000003,0x00040015,
@@ -370,11 +379,12 @@ static uint32_t __glsl_shader_vert_spv[] =
 /*
 #version 450 core
 layout(location = 0) out vec4 fColor;
-layout(set=0, binding=0) uniform sampler2D sTexture;
+layout(set=0, binding=0) uniform texture2D _Texture;
+layout(set=1, binding=0) uniform sampler _Sampler;
 layout(location = 0) in struct { vec4 Color; vec2 UV; } In;
 void main()
 {
-    fColor = In.Color * texture(sTexture, In.UV.st);
+    fColor = In.Color * texture(sampler2D(_Texture, _Sampler), In.UV.st);
 }
 */
 static uint32_t __glsl_shader_frag_spv[] =
@@ -388,8 +398,8 @@ static uint32_t __glsl_shader_frag_spv[] =
     0x00005655,0x00030005,0x0000000d,0x00006e49,0x00050005,0x00000015,0x7865545f,0x65727574,
     0x00000000,0x00050005,0x00000019,0x6d61535f,0x72656c70,0x00000000,0x00040047,0x00000009,
     0x0000001e,0x00000000,0x00040047,0x0000000d,0x0000001e,0x00000000,0x00040047,0x00000015,
-    0x00000022,0x00000000,0x00040047,0x00000015,0x00000021,0x00000000,0x00040047,0x00000019,
-    0x00000022,0x00000001,0x00040047,0x00000019,0x00000021,0x00000000,0x00020013,0x00000002,
+    0x00000021,0x00000000,0x00040047,0x00000015,0x00000022,0x00000000,0x00040047,0x00000019,
+    0x00000021,0x00000000,0x00040047,0x00000019,0x00000022,0x00000001,0x00020013,0x00000002,
     0x00030021,0x00000003,0x00000002,0x00030016,0x00000006,0x00000020,0x00040017,0x00000007,
     0x00000006,0x00000004,0x00040020,0x00000008,0x00000003,0x00000007,0x0004003b,0x00000008,
     0x00000009,0x00000003,0x00040017,0x0000000a,0x00000006,0x00000002,0x0004001e,0x0000000b,
@@ -484,9 +494,10 @@ static void CreateOrResizeBuffer(VkBuffer& buffer, VkDeviceMemory& buffer_memory
     buffer_size = buffer_size_aligned;
 }
 
-static void ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, VkPipeline pipeline, VkCommandBuffer command_buffer, ImGui_ImplVulkan_FrameRenderBuffers* rb, int fb_width, int fb_height)
+static void ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, ImGui_ImplVulkan_RenderState* render_state, VkPipeline pipeline, VkCommandBuffer command_buffer, ImGui_ImplVulkan_FrameRenderBuffers* rb, int fb_width, int fb_height)
 {
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
+    render_state->SamplerCurrentDS = bd->SamplerLinearDS;
 
     // Bind pipeline:
     vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
@@ -518,9 +529,6 @@ static void ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, VkPipeline 
     constants[2] = -1.0f - draw_data->DisplayPos.x * constants[0]; // Translate
     constants[3] = -1.0f - draw_data->DisplayPos.y * constants[1];
     vkCmdPushConstants(command_buffer, bd->PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(float) * 4, constants);
-
-    // use linear sampler by default
-    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 1, 1, &bd->SamplerLinearDS, 0, nullptr);
 }
 
 // Render function
@@ -600,10 +608,12 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
     render_state.CommandBuffer = command_buffer;
     render_state.Pipeline = pipeline;
     render_state.PipelineLayout = bd->PipelineLayout;
+    render_state.SamplerLinearDS = render_state.SamplerCurrentDS = bd->SamplerLinearDS;
+    render_state.SamplerNearestDS = bd->SamplerNearestDS;
     platform_io.Renderer_RenderState = &render_state;
 
     // Setup desired Vulkan state
-    ImGui_ImplVulkan_SetupRenderState(draw_data, pipeline, command_buffer, rb, fb_width, fb_height);
+    ImGui_ImplVulkan_SetupRenderState(draw_data, &render_state, pipeline, command_buffer, rb, fb_width, fb_height);
 
     // Will project scissor/clipping rectangles into framebuffer space
     ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
@@ -611,7 +621,8 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
 
     // Render command lists
     // (Because we merged all buffers into a single one, we maintain our own offset into them)
-    VkDescriptorSet last_desc_set = VK_NULL_HANDLE;
+    VkDescriptorSet last_image_view = VK_NULL_HANDLE;
+    VkDescriptorSet last_sampler = VK_NULL_HANDLE;
     int global_vtx_offset = 0;
     int global_idx_offset = 0;
     for (const ImDrawList* draw_list : draw_data->CmdLists)
@@ -624,21 +635,13 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
                 // User callback, registered via ImDrawList::AddCallback()
                 // (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
                 if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
-                    ImGui_ImplVulkan_SetupRenderState(draw_data, pipeline, command_buffer, rb, fb_width, fb_height);
+                {
+                    ImGui_ImplVulkan_SetupRenderState(draw_data, &render_state, pipeline, command_buffer, rb, fb_width, fb_height);
+                    last_image_view = last_sampler = VK_NULL_HANDLE;
+                }
                 else
                     pcmd->UserCallback(draw_list, pcmd);
-                last_desc_set = VK_NULL_HANDLE;
             }
-            /*else if (pcmd->UserCallback == ImDrawCallback_SetSamplerLinear)
-            {                // Bind Sampler
-                vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 1, 1, &bd->SamplerLinearDS, 0, nullptr);
-
-            }
-            else if (pcmd->UserCallback == ImDrawCallback_SetSamplerNearest)
-            {
-                // Bind Sampler
-                vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 1, 1, &bd->SamplerNearestDS, 0, nullptr);
-            }*/
             else
             {
                 // Project scissor/clipping rectangles into framebuffer space
@@ -661,11 +664,14 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
                 scissor.extent.height = (uint32_t)(clip_max.y - clip_min.y);
                 vkCmdSetScissor(command_buffer, 0, 1, &scissor);
 
-                // Bind DescriptorSet with font or user texture
-                VkDescriptorSet desc_set = (VkDescriptorSet)pcmd->GetTexID();
-                if (desc_set != last_desc_set)
-                    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 0, 1, &desc_set, 0, nullptr);
-                last_desc_set = desc_set;
+                // Bind DescriptorSets for image view (font or user texture) and samplers
+                VkDescriptorSet image_view = (VkDescriptorSet)pcmd->GetTexID();
+                if (image_view != last_image_view)
+                    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 0, 1, &image_view, 0, nullptr);
+                if (render_state.SamplerCurrentDS != last_sampler)
+                    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 1, 1, &render_state.SamplerCurrentDS, 0, nullptr);
+                last_image_view = image_view;
+                last_sampler = render_state.SamplerCurrentDS;
 
                 // Draw
                 vkCmdDrawIndexed(command_buffer, pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0);
@@ -1080,6 +1086,33 @@ static void ImGui_ImplVulkan_CreateDescriptorSetLayout(VkDescriptorSetLayout* p_
     check_vk_result(err);
 }
 
+static VkDescriptorSet ImGui_ImplVulkan_CreateSamplerDS(VkSampler sampler)
+{
+    ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
+    ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
+
+    VkDescriptorSet descriptor_set;
+    VkDescriptorSetAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    alloc_info.descriptorPool = bd->DescriptorPool ? bd->DescriptorPool : v->DescriptorPool;
+    alloc_info.descriptorSetCount = 1;
+    alloc_info.pSetLayouts = &bd->DescriptorSetLayoutSampler;
+    VkResult err = vkAllocateDescriptorSets(v->Device, &alloc_info, &descriptor_set);
+    check_vk_result(err);
+
+    VkDescriptorImageInfo desc_image = {};
+    desc_image.sampler = sampler;
+    VkWriteDescriptorSet sampler_write_desc = {};
+    sampler_write_desc.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    sampler_write_desc.dstSet = descriptor_set;
+    sampler_write_desc.descriptorCount = 1;
+    sampler_write_desc.dstBinding = 0;
+    sampler_write_desc.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+    sampler_write_desc.pImageInfo = &desc_image;
+    vkUpdateDescriptorSets(v->Device, 1, &sampler_write_desc, 0, nullptr);
+    return descriptor_set;
+}
+
 bool ImGui_ImplVulkan_CreateDeviceObjects()
 {
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
@@ -1087,53 +1120,32 @@ bool ImGui_ImplVulkan_CreateDeviceObjects()
     VkResult err;
 
     if (!bd->DescriptorSetLayoutTexture)
-    {
-        VkDescriptorSetLayoutBinding binding[1] = {};
-        binding[0].binding = 0;
-        binding[0].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-        binding[0].descriptorCount = 1;
-        binding[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-        VkDescriptorSetLayoutCreateInfo info = {};
-        info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        info.bindingCount = 1;
-        info.pBindings = binding;
-        err = vkCreateDescriptorSetLayout(v->Device, &info, v->Allocator, &bd->DescriptorSetLayoutTexture);
-        check_vk_result(err);
-    }
-
+        ImGui_ImplVulkan_CreateDescriptorSetLayout(&bd->DescriptorSetLayoutTexture, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE);
     if (!bd->DescriptorSetLayoutSampler)
-    {
-        VkDescriptorSetLayoutBinding binding[1] = {};
-        binding[0].binding = 0;
-        binding[0].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
-        binding[0].descriptorCount = 1;
-        binding[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-        VkDescriptorSetLayoutCreateInfo info = {};
-        info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        info.bindingCount = 1;
-        info.pBindings = binding;
-        err = vkCreateDescriptorSetLayout(v->Device, &info, v->Allocator, &bd->DescriptorSetLayoutSampler);
-        check_vk_result(err);
-    }
+        ImGui_ImplVulkan_CreateDescriptorSetLayout(&bd->DescriptorSetLayoutSampler, VK_DESCRIPTOR_TYPE_SAMPLER);
 
     if (v->DescriptorPoolSize != 0)
     {
-        // TODO: need to account for the samplers too
-        IM_ASSERT(v->DescriptorPoolSize >= IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_POOL_SIZE);
-        VkDescriptorPoolSize pool_size = { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, v->DescriptorPoolSize };
+        IM_ASSERT(v->DescriptorPoolSize >= IMGUI_IMPL_VULKAN_MINIMUM_SAMPLED_IMAGE_POOL_SIZE);
+        VkDescriptorPoolSize pool_sizes[] =
+        {
+            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, v->DescriptorPoolSize },
+            { VK_DESCRIPTOR_TYPE_SAMPLER, IMGUI_IMPL_VULKAN_MINIMUM_SAMPLER_POOL_SIZE },
+        };
         VkDescriptorPoolCreateInfo pool_info = {};
         pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-        pool_info.maxSets = v->DescriptorPoolSize;
-        pool_info.poolSizeCount = 1;
-        pool_info.pPoolSizes = &pool_size;
+        pool_info.maxSets = v->DescriptorPoolSize + IMGUI_IMPL_VULKAN_MINIMUM_SAMPLER_POOL_SIZE;
+        pool_info.poolSizeCount = (uint32_t)IM_COUNTOF(pool_sizes);
+        pool_info.pPoolSizes = pool_sizes;
         err = vkCreateDescriptorPool(v->Device, &pool_info, v->Allocator, &bd->DescriptorPool);
         check_vk_result(err);
     }
 
-    if (!bd->SamplerLinear)
+    // Create samplers
+    // Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling.
+    if (!bd->SamplerLinear || !bd->SamplerNearest)
     {
-        // Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling.
         VkSamplerCreateInfo info = {};
         info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
         info.magFilter = VK_FILTER_LINEAR;
@@ -1147,87 +1159,14 @@ bool ImGui_ImplVulkan_CreateDeviceObjects()
         info.maxAnisotropy = 1.0f;
         err = vkCreateSampler(v->Device, &info, v->Allocator, &bd->SamplerLinear);
         check_vk_result(err);
-    }
+        bd->SamplerLinearDS = ImGui_ImplVulkan_CreateSamplerDS(bd->SamplerLinear);
 
-    if (!bd->SamplerNearest)
-    {
-        VkSamplerCreateInfo info = {};
-        info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
         info.magFilter = VK_FILTER_NEAREST;
         info.minFilter = VK_FILTER_NEAREST;
         info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-        info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        info.minLod = -1000;
-        info.maxLod = 1000;
-        info.maxAnisotropy = 1.0f;
         err = vkCreateSampler(v->Device, &info, v->Allocator, &bd->SamplerNearest);
         check_vk_result(err);
-    }
-
-    if (!bd->SamplerLinearDS)
-    {
-        VkDescriptorPool pool = bd->DescriptorPool ? bd->DescriptorPool : v->DescriptorPool;
-
-        // Create Descriptor Set:
-        VkDescriptorSet descriptor_set;
-        {
-            VkDescriptorSetAllocateInfo alloc_info = {};
-            alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-            alloc_info.descriptorPool = pool;
-            alloc_info.descriptorSetCount = 1;
-            alloc_info.pSetLayouts = &bd->DescriptorSetLayoutSampler;
-            VkResult err = vkAllocateDescriptorSets(v->Device, &alloc_info, &descriptor_set);
-            check_vk_result(err);
-        }
-
-        // Update the Descriptor Set:
-        {
-            VkDescriptorImageInfo desc_image[1] = {};
-            desc_image[0].sampler = bd->SamplerLinear;
-            VkWriteDescriptorSet sampler_write_desc[1] = {};
-            sampler_write_desc[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            sampler_write_desc[0].dstSet = descriptor_set;
-            sampler_write_desc[0].descriptorCount = 1;
-            sampler_write_desc[0].dstBinding = 0;
-            sampler_write_desc[0].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
-            sampler_write_desc[0].pImageInfo = desc_image;
-            vkUpdateDescriptorSets(v->Device, 1, sampler_write_desc, 0, nullptr);
-        }
-        bd->SamplerLinearDS = descriptor_set;
-    }
-
-    if (!bd->SamplerNearestDS)
-    {
-        VkDescriptorPool pool = bd->DescriptorPool ? bd->DescriptorPool : v->DescriptorPool;
-
-        // Create Descriptor Set:
-        VkDescriptorSet descriptor_set;
-        {
-            VkDescriptorSetAllocateInfo alloc_info = {};
-            alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-            alloc_info.descriptorPool = pool;
-            alloc_info.descriptorSetCount = 1;
-            alloc_info.pSetLayouts = &bd->DescriptorSetLayoutSampler;
-            VkResult err = vkAllocateDescriptorSets(v->Device, &alloc_info, &descriptor_set);
-            check_vk_result(err);
-        }
-
-        // Update the Descriptor Set:
-        {
-            VkDescriptorImageInfo desc_image[1] = {};
-            desc_image[0].sampler = bd->SamplerNearest;
-            VkWriteDescriptorSet sampler_write_desc[1] = {};
-            sampler_write_desc[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            sampler_write_desc[0].dstSet = descriptor_set;
-            sampler_write_desc[0].descriptorCount = 1;
-            sampler_write_desc[0].dstBinding = 0;
-            sampler_write_desc[0].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
-            sampler_write_desc[0].pImageInfo = desc_image;
-            vkUpdateDescriptorSets(v->Device, 1, sampler_write_desc, 0, nullptr);
-        }
-        bd->SamplerNearestDS = descriptor_set;
+        bd->SamplerNearestDS = ImGui_ImplVulkan_CreateSamplerDS(bd->SamplerNearest);
     }
 
     if (!bd->PipelineLayout)
@@ -1325,7 +1264,7 @@ void    ImGui_ImplVulkan_DestroyDeviceObjects()
     if (bd->ShaderModuleVert)     { vkDestroyShaderModule(v->Device, bd->ShaderModuleVert, v->Allocator); bd->ShaderModuleVert = VK_NULL_HANDLE; }
     if (bd->ShaderModuleFrag)     { vkDestroyShaderModule(v->Device, bd->ShaderModuleFrag, v->Allocator); bd->ShaderModuleFrag = VK_NULL_HANDLE; }
     if (bd->DescriptorSetLayoutTexture)  { vkDestroyDescriptorSetLayout(v->Device, bd->DescriptorSetLayoutTexture, v->Allocator); bd->DescriptorSetLayoutTexture = VK_NULL_HANDLE; }
-    if (bd->DescriptorSetLayoutSampler) { vkDestroyDescriptorSetLayout(v->Device, bd->DescriptorSetLayoutSampler, v->Allocator); bd->DescriptorSetLayoutSampler = VK_NULL_HANDLE; }
+    if (bd->DescriptorSetLayoutSampler)  { vkDestroyDescriptorSetLayout(v->Device, bd->DescriptorSetLayoutSampler, v->Allocator); bd->DescriptorSetLayoutSampler = VK_NULL_HANDLE; }
     if (bd->PipelineLayout)       { vkDestroyPipelineLayout(v->Device, bd->PipelineLayout, v->Allocator); bd->PipelineLayout = VK_NULL_HANDLE; }
     if (bd->Pipeline)             { vkDestroyPipeline(v->Device, bd->Pipeline, v->Allocator); bd->Pipeline = VK_NULL_HANDLE; }
     if (bd->DescriptorPool)       { vkDestroyDescriptorPool(v->Device, bd->DescriptorPool, v->Allocator); bd->DescriptorPool = VK_NULL_HANDLE; }
@@ -1520,6 +1459,14 @@ VkDescriptorSet ImGui_ImplVulkan_AddTexture(VkImageView image_view, VkImageLayou
     }
     return descriptor_set;
 }
+
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+VkDescriptorSet ImGui_ImplVulkan_AddTexture(VkSampler sampler, VkImageView image_view, VkImageLayout image_layout)
+{
+    IM_UNUSED(sampler);
+    return ImGui_ImplVulkan_AddTexture(image_view, image_layout);
+}
+#endif
 
 void ImGui_ImplVulkan_RemoveTexture(VkDescriptorSet descriptor_set)
 {
