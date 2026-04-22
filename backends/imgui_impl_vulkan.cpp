@@ -481,9 +481,7 @@ static void ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, VkPipeline 
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
 
     // Bind pipeline:
-    {
-        vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-    }
+    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
     // Bind Vertex And Index Buffer:
     if (draw_data->TotalVtxCount > 0)
@@ -495,27 +493,23 @@ static void ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, VkPipeline 
     }
 
     // Setup viewport:
-    {
-        VkViewport viewport;
-        viewport.x = 0;
-        viewport.y = 0;
-        viewport.width = (float)fb_width;
-        viewport.height = (float)fb_height;
-        viewport.minDepth = 0.0f;
-        viewport.maxDepth = 1.0f;
-        vkCmdSetViewport(command_buffer, 0, 1, &viewport);
-    }
+    VkViewport viewport;
+    viewport.x = 0;
+    viewport.y = 0;
+    viewport.width = (float)fb_width;
+    viewport.height = (float)fb_height;
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    vkCmdSetViewport(command_buffer, 0, 1, &viewport);
 
     // Setup scale and translation:
     // Our visible imgui space lies from draw_data->DisplayPps (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayPos is (0,0) for single viewport apps.
-    {
-        float constants[4];
-        constants[0] = 2.0f / draw_data->DisplaySize.x; // Scale
-        constants[1] = 2.0f / draw_data->DisplaySize.y;
-        constants[2] = -1.0f - draw_data->DisplayPos.x * constants[0]; // Translate
-        constants[3] = -1.0f - draw_data->DisplayPos.y * constants[1];
-        vkCmdPushConstants(command_buffer, bd->PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(float) * 4, constants);
-    }
+    float constants[4];
+    constants[0] = 2.0f / draw_data->DisplaySize.x; // Scale
+    constants[1] = 2.0f / draw_data->DisplaySize.y;
+    constants[2] = -1.0f - draw_data->DisplayPos.x * constants[0]; // Translate
+    constants[3] = -1.0f - draw_data->DisplayPos.y * constants[1];
+    vkCmdPushConstants(command_buffer, bd->PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(float) * 4, constants);
 }
 
 // Render function
@@ -589,9 +583,6 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
         vkUnmapMemory(v->Device, rb->IndexBufferMemory);
     }
 
-    // Setup desired Vulkan state
-    ImGui_ImplVulkan_SetupRenderState(draw_data, pipeline, command_buffer, rb, fb_width, fb_height);
-
     // Setup render state structure (for callbacks and custom texture bindings)
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     ImGui_ImplVulkan_RenderState render_state;
@@ -599,6 +590,9 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
     render_state.Pipeline = pipeline;
     render_state.PipelineLayout = bd->PipelineLayout;
     platform_io.Renderer_RenderState = &render_state;
+
+    // Setup desired Vulkan state
+    ImGui_ImplVulkan_SetupRenderState(draw_data, pipeline, command_buffer, rb, fb_width, fb_height);
 
     // Will project scissor/clipping rectangles into framebuffer space
     ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
