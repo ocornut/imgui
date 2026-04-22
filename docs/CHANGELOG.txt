@@ -113,6 +113,8 @@ Other Changes:
     reporting the common clipper error over a table sanity check assert). (#9350)
   - Tweaked assert triggering when first item height measurement fails, and made it
     a better recoverable error. (#9350)
+- DrawList:
+  - Made AddCallback() user data default parameter.
 - Misc:
   - Minor optimization: reduce redudant label scanning in common widgets.
   - Added missing Test Engine hooks for PlotXXX(), VSliderXXX(), TableHeader().

@@ -83,7 +83,7 @@ struct ImGui_ImplWGPU_Texture
 
 struct RenderResources
 {
-    WGPUSampler         Sampler = nullptr;              // Sampler for textures
+    WGPUSampler         SamplerLinear = nullptr;        // Sampler for textures
     WGPUBuffer          Uniforms = nullptr;             // Shader uniforms
     WGPUBindGroup       CommonBindGroup = nullptr;      // Resources bind-group to bind the common resources to pipeline
     ImGuiStorage        ImageBindGroups;                // Resources bind-group to bind the font/image resources to pipeline (this is a key->value map)
@@ -296,7 +296,7 @@ static void SafeRelease(WGPUShaderModule& res)
 }
 static void SafeRelease(RenderResources& res)
 {
-    SafeRelease(res.Sampler);
+    SafeRelease(res.SamplerLinear);
     SafeRelease(res.Uniforms);
     SafeRelease(res.CommonBindGroup);
     SafeRelease(res.ImageBindGroupLayout);
@@ -538,6 +538,7 @@ void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder 
             {
                 // User callback, registered via ImDrawList::AddCallback()
                 // (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
+                IM_ASSERT(pcmd->UserCallback != ImDrawCallback_SetSamplerLinear && pcmd->UserCallback != ImDrawCallback_SetSamplerNearest); // Unsupported.
                 if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
                     ImGui_ImplWGPU_SetupRenderState(draw_data, pass_encoder, fr);
                 else
@@ -824,13 +825,13 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     sampler_desc.addressModeV = WGPUAddressMode_ClampToEdge;
     sampler_desc.addressModeW = WGPUAddressMode_ClampToEdge;
     sampler_desc.maxAnisotropy = 1;
-    bd->renderResources.Sampler = wgpuDeviceCreateSampler(bd->wgpuDevice, &sampler_desc);
+    bd->renderResources.SamplerLinear = wgpuDeviceCreateSampler(bd->wgpuDevice, &sampler_desc);
 
     // Create resource bind group
     WGPUBindGroupEntry common_bg_entries[] =
     {
         { nullptr, 0, bd->renderResources.Uniforms, 0, MEMALIGN(sizeof(Uniforms), 16), 0, 0 },
-        { nullptr, 1, 0, 0, 0, bd->renderResources.Sampler, 0 },
+        { nullptr, 1, 0, 0, 0, bd->renderResources.SamplerLinear, 0 },
     };
     WGPUBindGroupDescriptor common_bg_descriptor = {};
     common_bg_descriptor.layout = bg_layouts[0];
@@ -896,7 +897,7 @@ bool ImGui_ImplWGPU_Init(ImGui_ImplWGPU_InitInfo* init_info)
     bd->numFramesInFlight = init_info->NumFramesInFlight;
     bd->frameIndex = UINT_MAX;
 
-    bd->renderResources.Sampler = nullptr;
+    bd->renderResources.SamplerLinear = nullptr;
     bd->renderResources.Uniforms = nullptr;
     bd->renderResources.CommonBindGroup = nullptr;
     bd->renderResources.ImageBindGroups.Data.reserve(100);
