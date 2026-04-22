@@ -52,6 +52,8 @@ Breaking Changes:
       - Before: ImGui_ImplVulkan_AddTexture(VkSampler, VkImageView, VkImageLayout)
       - After:  ImGui_ImplVulkan_AddTexture(VkImageView, VkImageLayout)
       - Kept inline redirection function that ignores the sampler (will obsolete).
+  - Vulkan: with the change above it is now possible to change the current Sampler during
+    rendering, by poking into ImGui_ImplVulkan_RenderState's SamplerCurrentDS. (#914)
 
 Other Changes:
 
@@ -124,6 +126,11 @@ Other Changes:
   - SDL2: made `ImGui_ImplSDL2_GetContentScaleForWindow()`/`ImGui_ImplSDL2_GetContentScaleForDisplay()`
     helpers return a minimum of 1.0f, as some Linux setup seems to report <1.0f value
     and this breaks scaling border size. (#9369)
+- Examples:
+  - GLFW+Vulkan, SDL2+Vulkan, SDL3+Vulkan, Win32+Vulkan: reworked to create a descriptor pool with:
+    - IMGUI_IMPL_VULKAN_MINIMUM_SAMPLED_IMAGE_POOL_SIZE descriptors of type VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE.
+    - IMGUI_IMPL_VULKAN_MINIMUM_SAMPLER_POOL_SIZE       descriptors of type VK_DESCRIPTOR_TYPE_SAMPLER.
+
 
 
 -----------------------------------------------------------------------
