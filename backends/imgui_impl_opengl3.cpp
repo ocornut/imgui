@@ -254,10 +254,8 @@ struct ImGui_ImplOpenGL3_Data
     bool            HasClipOrigin;
     bool            UseBufferSubData;
     bool            UseTexParameterToSetSampler;
-    GLuint          NextSampler;
-#ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_BIND_SAMPLER
-    GLuint          TexSamplers[2];         // Linear, Nearest
-#endif
+    GLuint          NextSampler;            // Used if !HasBindSampler && UseTexParameterToSetSampler.
+    GLuint          TexSamplers[2];         // Used if IMGUI_IMPL_OPENGL_MAY_HAVE_BIND_SAMPLER && HasBindSimpler (0=linear, 1=nearest).
 
     ImVector<char>  TempBuffer;
 
