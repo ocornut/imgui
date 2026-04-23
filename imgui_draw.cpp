@@ -1564,6 +1564,125 @@ void ImDrawList::AddLineV(float x, float min_y, float max_y, ImU32 col, float th
     }
 }
 
+
+void ImDrawList::_AddRectBaked(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float r, float t, ImVec4 tex_uvs, ImDrawFlags flags)
+{
+    const ImVec2 uv_tl(tex_uvs.x, tex_uvs.y);
+    const ImVec2 uv_tr(tex_uvs.z, tex_uvs.y);
+    const ImVec2 uv_br(tex_uvs.z, tex_uvs.w);
+    const ImVec2 uv_bl(tex_uvs.x, tex_uvs.w);
+
+    const int idx_allocated = 8 * 2 * 3;
+    const int vtx_allocated = 8 * 4;
+    PrimReserve(idx_allocated, vtx_allocated);
+    ImDrawVert* start_vtx_ptr = _VtxWritePtr;
+    ImDrawIdx* start_idx_ptr = _IdxWritePtr;
+
+    if (flags & ImDrawFlags_RoundCornersTopLeft)
+    {
+        ImDrawIdx idx = (ImDrawIdx)_VtxCurrentIdx;
+        PrimWriteVtx(ImVec2(p_min.x, p_min.y), uv_tl, col);
+        PrimWriteVtx(ImVec2(p_min.x + r, p_min.y), uv_tr, col);
+        PrimWriteVtx(ImVec2(p_min.x + r, p_min.y + r), uv_br, col);
+        PrimWriteVtx(ImVec2(p_min.x, p_min.y + r), uv_bl, col);
+        PrimWriteIdx(idx+0); PrimWriteIdx(idx+1); PrimWriteIdx(idx+2);
+        PrimWriteIdx(idx+0); PrimWriteIdx(idx+2); PrimWriteIdx(idx+3);
+    }
+
+    if (flags & ImDrawFlags_RoundCornersTopRight)
+    {
+        ImDrawIdx idx = (ImDrawIdx)_VtxCurrentIdx;
+        PrimWriteVtx(ImVec2(p_max.x - r, p_min.y), uv_tr, col);
+        PrimWriteVtx(ImVec2(p_max.x, p_min.y), uv_tl, col);
+        PrimWriteVtx(ImVec2(p_max.x, p_min.y + r), uv_bl, col);
+        PrimWriteVtx(ImVec2(p_max.x - r, p_min.y + r), uv_br, col);
+        PrimWriteIdx(idx+0); PrimWriteIdx(idx+1); PrimWriteIdx(idx+2);
+        PrimWriteIdx(idx+0); PrimWriteIdx(idx+2); PrimWriteIdx(idx+3);
+    }
+
+    if (flags & ImDrawFlags_RoundCornersBottomRight)
+    {
+        ImDrawIdx idx = (ImDrawIdx)_VtxCurrentIdx;
+        PrimWriteVtx(ImVec2(p_max.x - r, p_max.y - r), uv_br, col);
+        PrimWriteVtx(ImVec2(p_max.x, p_max.y - r), uv_bl, col);
+        PrimWriteVtx(ImVec2(p_max.x, p_max.y), uv_tl, col);
+        PrimWriteVtx(ImVec2(p_max.x - r, p_max.y), uv_tr, col);
+        PrimWriteIdx(idx+0); PrimWriteIdx(idx+1); PrimWriteIdx(idx+2);
+        PrimWriteIdx(idx+0); PrimWriteIdx(idx+2); PrimWriteIdx(idx+3);
+    }
+
+    if (flags & ImDrawFlags_RoundCornersBottomLeft)
+    {
+        ImDrawIdx idx = (ImDrawIdx)_VtxCurrentIdx;
+        PrimWriteVtx(ImVec2(p_min.x, p_max.y - r), uv_bl, col);
+        PrimWriteVtx(ImVec2(p_min.x + r, p_max.y - r), uv_br, col);
+        PrimWriteVtx(ImVec2(p_min.x + r, p_max.y), uv_tr, col);
+        PrimWriteVtx(ImVec2(p_min.x, p_max.y), uv_tl, col);
+        PrimWriteIdx(idx+0); PrimWriteIdx(idx+1); PrimWriteIdx(idx+2);
+        PrimWriteIdx(idx+0); PrimWriteIdx(idx+2); PrimWriteIdx(idx+3);
+    }
+
+    const float r_tl = (flags & ImDrawFlags_RoundCornersTopLeft)     ? r : 0;
+    const float r_tr = (flags & ImDrawFlags_RoundCornersTopRight)    ? r : 0;
+    const float r_br = (flags & ImDrawFlags_RoundCornersBottomRight) ? r : 0;
+    const float r_bl = (flags & ImDrawFlags_RoundCornersBottomLeft)  ? r : 0;
+    const ImVec2 opaque_uv = _Data->TexUvWhitePixel;
+
+    {
+        // Top
+        ImDrawIdx idx = (ImDrawIdx)_VtxCurrentIdx;
+        const float left = p_min.x + r_tl;
+        const float right = p_max.x - r_tr;
+        PrimWriteVtx(ImVec2(left, p_min.y), opaque_uv, col);
+        PrimWriteVtx(ImVec2(right, p_min.y), opaque_uv, col);
+        PrimWriteVtx(ImVec2(right, p_min.y + t), opaque_uv, col);
+        PrimWriteVtx(ImVec2(left, p_min.y + t), opaque_uv, col);
+        PrimWriteIdx(idx+0); PrimWriteIdx(idx+1); PrimWriteIdx(idx+2);
+        PrimWriteIdx(idx+0); PrimWriteIdx(idx+2); PrimWriteIdx(idx+3);
+    }
+    {
+        // Left
+        ImDrawIdx idx = (ImDrawIdx)_VtxCurrentIdx;
+        const float top = p_min.y + ImMax(r_tl, t);
+        const float bottom = p_max.y - ImMax(r_bl, t);
+        PrimWriteVtx(ImVec2(p_min.x, top), opaque_uv, col);
+        PrimWriteVtx(ImVec2(p_min.x + t, top), opaque_uv, col);
+        PrimWriteVtx(ImVec2(p_min.x + t, bottom), opaque_uv, col);
+        PrimWriteVtx(ImVec2(p_min.x, bottom), opaque_uv, col);
+        PrimWriteIdx(idx+0); PrimWriteIdx(idx+1); PrimWriteIdx(idx+2);
+        PrimWriteIdx(idx+0); PrimWriteIdx(idx+2); PrimWriteIdx(idx+3);
+    }
+    {
+        // Right
+        ImDrawIdx idx = (ImDrawIdx)_VtxCurrentIdx;
+        const float top = p_min.y + ImMax(r_tr, t);
+        const float bottom = p_max.y - ImMax(r_br, t);
+        PrimWriteVtx(ImVec2(p_max.x - t, top), opaque_uv, col);
+        PrimWriteVtx(ImVec2(p_max.x, top), opaque_uv, col);
+        PrimWriteVtx(ImVec2(p_max.x, bottom), opaque_uv, col);
+        PrimWriteVtx(ImVec2(p_max.x - t, bottom), opaque_uv, col);
+        PrimWriteIdx(idx+0); PrimWriteIdx(idx+1); PrimWriteIdx(idx+2);
+        PrimWriteIdx(idx+0); PrimWriteIdx(idx+2); PrimWriteIdx(idx+3);
+    }
+    {
+        // Bottom
+        ImDrawIdx idx = (ImDrawIdx)_VtxCurrentIdx;
+        const float left = p_min.x + r_bl;
+        const float right = p_max.x - r_br;
+        PrimWriteVtx(ImVec2(left, p_max.y - t), opaque_uv, col);
+        PrimWriteVtx(ImVec2(right, p_max.y - t), opaque_uv, col);
+        PrimWriteVtx(ImVec2(right, p_max.y), opaque_uv, col);
+        PrimWriteVtx(ImVec2(left, p_max.y), opaque_uv, col);
+        PrimWriteIdx(idx+0); PrimWriteIdx(idx+1); PrimWriteIdx(idx+2);
+        PrimWriteIdx(idx+0); PrimWriteIdx(idx+2); PrimWriteIdx(idx+3);
+    }
+
+    const int idx_used = (int)(_IdxWritePtr - start_idx_ptr);
+    const int vtx_used = (int)(_VtxWritePtr - start_vtx_ptr);
+    if (idx_used < idx_allocated || vtx_used < vtx_allocated)
+        PrimUnreserve(idx_allocated - idx_used, vtx_allocated - vtx_used);
+}
+
 // p_min = upper-left, p_max = lower-right
 // Note we don't render 1 pixels sized rectangles properly.
 void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float rounding, float thickness, ImDrawFlags flags)
@@ -1592,8 +1711,49 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
         return;
     }
 
+    ImDrawFlags stroke_pos = (flags & ImDrawFlags_StrokeMask_);
+    if ((stroke_pos == ImDrawFlags_StrokeInside || stroke_pos == ImDrawFlags_StrokeOutside) && ImIsTruncated4(p_min.x, p_min.y, p_max.x, p_min.y) && ImIsTruncated(rounding) && ImIsTruncated(thickness))
+    {
+        if ((flags & ImDrawFlags_RoundCornersMask_) == 0)
+            flags |= ImDrawFlags_RoundCornersAll;
+
+        rounding = ImMin(rounding, ImFabs(p_max.x - p_min.x) * (((flags & ImDrawFlags_RoundCornersTop) == ImDrawFlags_RoundCornersTop) || ((flags & ImDrawFlags_RoundCornersBottom) == ImDrawFlags_RoundCornersBottom) ? 0.5f : 1.0f) - 1.0f);
+        rounding = ImMin(rounding, ImFabs(p_max.y - p_min.y) * (((flags & ImDrawFlags_RoundCornersLeft) == ImDrawFlags_RoundCornersLeft) || ((flags & ImDrawFlags_RoundCornersRight) == ImDrawFlags_RoundCornersRight) ? 0.5f : 1.0f) - 1.0f);
+
+        int s_rounding = (int)rounding;
+        int s_thickness = (int)thickness;
+
+        ImVec2 s_min = p_min;
+        ImVec2 s_max = p_max;
+        if (stroke_pos == ImDrawFlags_StrokeOutside)
+        {
+            s_min -= ImVec2(thickness, thickness);
+            s_max += ImVec2(thickness, thickness);
+            s_rounding += s_thickness;
+        }
+
+        if (s_rounding <= 0 || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
+        {
+            const float t = (float)s_thickness;
+            PrimReserve(6*4, 4*4);
+            PrimRect(ImVec2(p_min.x, p_min.y), ImVec2(p_max.x, p_min.y + t), col);
+            PrimRect(ImVec2(p_min.x, p_min.y + t), ImVec2(p_min.x + t, p_max.y - t), col);
+            PrimRect(ImVec2(p_max.x - t, p_min.y + t), ImVec2(p_max.x, p_max.y - t), col);
+            PrimRect(ImVec2(p_min.x, p_max.y - t), ImVec2(p_max.x, p_max.y), col);
+            return;
+        }
+        if (s_thickness <= IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX && s_rounding <= IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX)
+        {
+            const int size = ImMax(s_rounding, s_thickness);
+            const int idx = (s_thickness - 1) * IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX + s_rounding - 1;
+            IM_ASSERT(idx >= 0 && idx < IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX * IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX);
+            const ImVec4 tex_uvs = _Data->TexUvCornerStrokes[idx];
+            _AddRectBaked(s_min, s_max, col, (float)size, (float)thickness, tex_uvs, flags);
+            return;
+        }
+    }
+
     const ImVec2 offset(thickness * 0.5f, thickness * 0.5f);
-    const ImDrawFlags stroke_pos = (flags & ImDrawFlags_StrokeMask_);
     if (stroke_pos == ImDrawFlags_StrokeInside)
         PathRect(p_min + offset, p_max - offset, rounding - thickness * 0.5f, flags);
     else if (stroke_pos == ImDrawFlags_StrokeCenter)
@@ -1610,7 +1770,7 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
     PathStroke(col, thickness, ImDrawFlags_Closed);
 }
 
-void ImDrawList::_AddMirrored9Slice(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float r, ImVec4 tex_uvs, ImDrawFlags flags)
+void ImDrawList::_AddRectFilledBaked(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float r, ImVec4 tex_uvs, ImDrawFlags flags)
 {
     // 9-slice with corner mirroring
     const ImVec2 uv_tl(tex_uvs.x, tex_uvs.y);
@@ -1681,7 +1841,7 @@ void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
         else if (s_rounding <= IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX)
         {
             ImVec4 tex_uvs = _Data->TexUvCornerFills[s_rounding - 1];
-            _AddMirrored9Slice(p_min, p_max, col, ImMax(2.0f, (float)s_rounding), tex_uvs, flags);
+            _AddRectFilledBaked(p_min, p_max, col, ImMax(2.0f, (float)s_rounding), tex_uvs, flags);
         }
         else
         {
@@ -3840,6 +4000,17 @@ static ImU8 SampleCorner(float x, float y, float cx, float cy, float r)
     return (ImU8)(ImClamp(1.0f - (d - r + aa_width * 0.5f) / aa_width, 0.0f, 1.0f) * 255.0f);
 }
 
+static ImU8 SampleCornerStroke(float x, float y, float cx, float cy, float outer_r, float inner_r)
+{
+    const float dx = ImMin(x, cx) - cx;
+    const float dy = ImMin(y, cy) - cy;
+    const float d = ImSqrt(dx*dx + dy*dy);
+    const float aa_width = 1.0f;
+    const float outer = 1.0f - (d - outer_r + aa_width * 0.5f) / aa_width;
+    const float inner = (d - inner_r + aa_width * 0.5f) / aa_width;
+    return (ImU8)(ImClamp(ImMin(inner, outer), 0.0f, 1.0f) * 255.f);
+}
+
 static void ImFontAtlasBuildUpdateTexDataCorners(ImFontAtlas* atlas)
 {
     // Pack and store identifier so we can refresh UV coordinates on texture resize.
@@ -3851,10 +4022,30 @@ static void ImFontAtlasBuildUpdateTexDataCorners(ImFontAtlas* atlas)
     if (add_and_draw)
     {
         ImVec2i pack_size(0, 0);
+        // Filled corners
+        int row_width = 0;
+        int row_height = 0;
         for (int i = 0; i < IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX; i++)
         {
-            pack_size.x += ImMax(2, i+1) + 2;
-            pack_size.y = ImMax(pack_size.y, (i+1) + 2);
+            const int size = ImMax(2, i+1) + 2;
+            row_width += size;
+            row_height = ImMax(row_height, size);
+        }
+        pack_size.x = ImMax(pack_size.x, row_width);
+        pack_size.y += row_height;
+        // Rounded corners
+        for (int t = 0; t < IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX; t++)
+        {
+            row_width = 0;
+            row_height = 0;
+            for (int i = 0; i < IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX; i++)
+            {
+                const int size = ImMax(2, ImMax(i+1, t+1)) + 2;
+                row_width += size;
+                row_height = ImMax(row_height, size);
+            }
+            pack_size.x = ImMax(pack_size.x, row_width);
+            pack_size.y += row_height;
         }
         builder->PackIdCornersTexData = atlas->AddCustomRect(pack_size.x, pack_size.y, &r);
         IM_ASSERT(builder->PackIdCornersTexData != ImFontAtlasRectId_Invalid);
@@ -3862,16 +4053,20 @@ static void ImFontAtlasBuildUpdateTexDataCorners(ImFontAtlas* atlas)
 
     int x = r.x;
     int y = r.y;
-    for (int n = 0; n < IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX; n++) // +1 because of the zero-width row
+    int row_height = 0;
+
+    // Filled
+    for (int n = 0; n < IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX; n++)
     {
-        const int s = ImMax(2, n+1);    // We need at least 2px so that stretching has solid color.
+        const int rounding = n+1;
+        const int s = ImMax(2, rounding);    // We need at least 2px so that stretching has solid color.
         const int w = s + 2;
         const int h = s + 2;
 
         // Corner circle
         const float cx = 1.0f + (float)(n+1);
         const float cy = 1.0f + (float)(n+1);
-        const float rad = (float)(n+1);
+        const float rad = (float)rounding;
         IM_ASSERT((x + w) <= (r.x + r.w) && (y + h) <= (r.y + r.h)); // Make sure we're inside the texture bounds before we start writing pixels
 
         // Write each slice
@@ -3904,6 +4099,64 @@ static void ImFontAtlasBuildUpdateTexDataCorners(ImFontAtlas* atlas)
         atlas->TexUvCornerFills[n] = ImVec4(uv0.x, uv0.y, uv1.x, uv1.y);
 
         x += w;
+        row_height = ImMax(row_height, h);
+    }
+    y += row_height;
+
+    // Stroked
+    for (int t = 0; t < IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX; t++)
+    {
+        x = r.x;
+        row_height = 0;
+        for (int n = 0; n < IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX; n++)
+        {
+            const int rounding = n+1;
+            const int thickness = t+1;
+            const int s = ImMax(rounding, thickness);
+            const int w = s + 2;
+            const int h = s + 2;
+
+            // Corner circle
+            const float cx = 1.0f + (float)(n + 1);
+            const float cy = 1.0f + (float)(n + 1);
+            const float outer_rad = (float)rounding;
+            const float inner_rad = (float)(rounding - thickness);
+
+            IM_ASSERT((x + w) <= (r.x + r.w) && (y + h) <= (r.y + r.h)); // Make sure we're inside the texture bounds before we start writing pixels
+
+            // Write each slice
+            if (add_and_draw && tex->Format == ImTextureFormat_Alpha8)
+            {
+                ImU8* write_ptr = (ImU8*)tex->GetPixelsAt(x, y);
+                const int pitch = tex->Width;
+                for (int ly = 0; ly < h; ly++)
+                {
+                    for (int lx = 0; lx < h; lx++)
+                        write_ptr[lx] = SampleCornerStroke((float)lx + 0.5f, (float)ly + 0.5f, cx, cy, outer_rad, inner_rad);
+                    write_ptr += pitch;
+                }
+            }
+            else if (add_and_draw && tex->Format == ImTextureFormat_RGBA32)
+            {
+                ImU32* write_ptr = (ImU32*)(void*)tex->GetPixelsAt(x, y);
+                const int pitch = tex->Width;
+                for (int ly = 0; ly < h; ly++)
+                {
+                    for (int lx = 0; lx < h; lx++)
+                        write_ptr[lx] = IM_COL32(255, 255, 255, SampleCornerStroke((float)lx + 0.5f, (float)ly + 0.5f, cx, cy, outer_rad, inner_rad));
+                    write_ptr += pitch;
+                }
+            }
+
+            // Refresh UV coordinates
+            ImVec2 uv0 = ImVec2((float)(x + 1), (float)(y + 1)) * atlas->TexUvScale;
+            ImVec2 uv1 = ImVec2((float)(x + 1 + s), (float)(y + 1 + s)) * atlas->TexUvScale;
+            atlas->TexUvCornerStrokes[t*IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX + n] = ImVec4(uv0.x, uv0.y, uv1.x, uv1.y);
+
+            x += w;
+            row_height = ImMax(row_height, h);
+        }
+        y += row_height;
     }
 }
 
@@ -4343,6 +4596,7 @@ void ImFontAtlasUpdateDrawListsSharedData(ImFontAtlas* atlas)
             shared_data->TexUvWhitePixel = atlas->TexUvWhitePixel;
             shared_data->TexUvLines = atlas->TexUvLines;
             shared_data->TexUvCornerFills = atlas->TexUvCornerFills;
+            shared_data->TexUvCornerStrokes = atlas->TexUvCornerStrokes;
         }
 }
 
