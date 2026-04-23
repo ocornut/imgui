@@ -56,6 +56,9 @@ Breaking Changes:
       - Before: ImGui_ImplVulkan_AddTexture(VkSampler, VkImageView, VkImageLayout)
       - After:  ImGui_ImplVulkan_AddTexture(VkImageView, VkImageLayout)
       - Kept inline redirection function that ignores the sampler (will obsolete).
+  - DirectX10, DirectX11, SDLGPU3, Vulkan: removed samplers from ImGui_ImplXXXX_RenderState.
+    Prefer to use backend-agnostic DrawCallback_SetSamplerLinear which works everywhere! (#9378)
+    If there is a legit need/request for them or any render state we can always add them back.
 
 Other Changes:
 
