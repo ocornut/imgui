@@ -313,6 +313,7 @@ static void SafeRelease(FrameResources& res)
 static WGPUProgrammableStageDescriptor ImGui_ImplWGPU_CreateShaderModuleWGSL(const char* wgsl_source)
 {
     ImGui_ImplWGPU_Data* bd = ImGui_ImplWGPU_GetBackendData();
+    IM_UNUSED(bd);
 
     WGPUShaderSourceWGSL wgsl_desc = {};
     wgsl_desc.chain.sType = WGPUSType_ShaderSourceWGSL;
@@ -322,9 +323,10 @@ static WGPUProgrammableStageDescriptor ImGui_ImplWGPU_CreateShaderModuleWGSL(con
     desc.nextInChain = (WGPUChainedStruct*)&wgsl_desc;
 
     WGPUProgrammableStageDescriptor stage_desc = {};
+#if !defined(IMGUI_IMPL_WEBGPU_BACKEND_WGVK)
     stage_desc.module = wgpuDeviceCreateShaderModule(bd->wgpuDevice, &desc);
-
     stage_desc.entryPoint = { "main", WGPU_STRLEN };
+#endif
     return stage_desc;
 }
 

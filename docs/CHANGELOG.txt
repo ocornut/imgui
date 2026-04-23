@@ -128,6 +128,7 @@ Other Changes:
   - SDL2: made `ImGui_ImplSDL2_GetContentScaleForWindow()`/`ImGui_ImplSDL2_GetContentScaleForDisplay()`
     helpers return a minimum of 1.0f, as some Linux setup seems to report <1.0f value
     and this breaks scaling border size. (#9369)
+  - WebGPU: always use SPIR-V shader on WGVK, as it cannot be detected at runtime. (#9316, #9246, #9257)
 - Examples:
   - Update VS toolset in all .vcxproj from VS2015 (v140) to VS2017 (v141). The later is the
     first that supports vcpkg. Onward we will likely stop testing building the library with VS2015.
