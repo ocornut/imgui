@@ -29,6 +29,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2026-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2026-04-23: Added support for standard draw callbacks (in platform_io): DrawCallback_ResetRenderState, DrawCallback_SetSamplerLinear, DrawCallback_SetSamplerNearest. (#9378)
 //  2026-04-22: *BREAKING CHANGE* redesigned to use separate ImageView + Sampler instead of Combined Image Sampler. This change allows us to facilitate changing samplers, in line with other backends.
 //              - When registering custom textures: changed ImGui_ImplVulkan_AddTexture() signature to remove Sampler.
 //                - Before: ImGui_ImplVulkan_AddTexture(VkSampler, VkImageView, VkImageLayout)
@@ -299,6 +300,7 @@ struct ImGui_ImplVulkan_ViewportData
 struct ImGui_ImplVulkan_Data
 {
     ImGui_ImplVulkan_InitInfo   VulkanInitInfo;
+    ImGui_ImplVulkan_RenderState* RenderState;          // == ImGui::GetPlatformIO().Renderer_RenderState during rendering.
     VkDeviceSize                BufferMemoryAlignment;
     VkDeviceSize                NonCoherentAtomSize;
     VkPipelineCreateFlags       PipelineCreateFlags;
@@ -523,10 +525,9 @@ static void CreateOrResizeBuffer(VkBuffer& buffer, VkDeviceMemory& buffer_memory
     buffer_size = buffer_size_aligned;
 }
 
-static void ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, ImGui_ImplVulkan_RenderState* render_state, VkPipeline pipeline, VkCommandBuffer command_buffer, ImGui_ImplVulkan_FrameRenderBuffers* rb, int fb_width, int fb_height)
+static void ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, VkPipeline pipeline, VkCommandBuffer command_buffer, ImGui_ImplVulkan_FrameRenderBuffers* rb, int fb_width, int fb_height)
 {
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
-    render_state->SamplerCurrentDS = bd->SamplerLinearDS;
 
     // Bind pipeline:
     vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
@@ -558,7 +559,15 @@ static void ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, ImGui_ImplV
     constants[2] = -1.0f - draw_data->DisplayPos.x * constants[0]; // Translate
     constants[3] = -1.0f - draw_data->DisplayPos.y * constants[1];
     vkCmdPushConstants(command_buffer, bd->PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(float) * 4, constants);
+
+    // Setup sampler
+    vkCmdBindDescriptorSets(bd->RenderState->CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 1, 1, &bd->SamplerLinearDS, 0, nullptr);
 }
+
+// Draw callbacks
+static void ImGui_ImplVulkan_DrawCallback_ResetRenderState(const ImDrawList*, const ImDrawCmd*)     {} // Intentionally empty. Used as an identifier for rendering loop to call its code. Simpler to implement this way.
+static void ImGui_ImplVulkan_DrawCallback_SetSamplerLinear(const ImDrawList*, const ImDrawCmd*)     { ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData(); vkCmdBindDescriptorSets(bd->RenderState->CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 1, 1, &bd->SamplerLinearDS, 0, nullptr); }
+static void ImGui_ImplVulkan_DrawCallback_SetSamplerNearest(const ImDrawList*, const ImDrawCmd*)    { ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData(); vkCmdBindDescriptorSets(bd->RenderState->CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 1, 1, &bd->SamplerNearestDS, 0, nullptr); }
 
 // Render function
 void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer, VkPipeline pipeline)
@@ -639,12 +648,10 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
     render_state.CommandBuffer = command_buffer;
     render_state.Pipeline = pipeline;
     render_state.PipelineLayout = bd->PipelineLayout;
-    render_state.SamplerLinearDS = render_state.SamplerCurrentDS = bd->SamplerLinearDS;
-    render_state.SamplerNearestDS = bd->SamplerNearestDS;
-    platform_io.Renderer_RenderState = &render_state;
+    platform_io.Renderer_RenderState = bd->RenderState = &render_state;
 
     // Setup desired Vulkan state
-    ImGui_ImplVulkan_SetupRenderState(draw_data, &render_state, pipeline, command_buffer, rb, fb_width, fb_height);
+    ImGui_ImplVulkan_SetupRenderState(draw_data, pipeline, command_buffer, rb, fb_width, fb_height);
 
     // Will project scissor/clipping rectangles into framebuffer space
     ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
@@ -653,7 +660,6 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
     // Render command lists
     // (Because we merged all buffers into a single one, we maintain our own offset into them)
     VkDescriptorSet last_image_view = VK_NULL_HANDLE;
-    VkDescriptorSet last_sampler = VK_NULL_HANDLE;
     int global_vtx_offset = 0;
     int global_idx_offset = 0;
     for (const ImDrawList* draw_list : draw_data->CmdLists)
@@ -664,11 +670,10 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
             if (pcmd->UserCallback != nullptr)
             {
                 // User callback, registered via ImDrawList::AddCallback()
-                // (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
-                if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
+                if (pcmd->UserCallback == ImGui_ImplVulkan_DrawCallback_ResetRenderState)
                 {
-                    ImGui_ImplVulkan_SetupRenderState(draw_data, &render_state, pipeline, command_buffer, rb, fb_width, fb_height);
-                    last_image_view = last_sampler = VK_NULL_HANDLE;
+                    ImGui_ImplVulkan_SetupRenderState(draw_data, pipeline, command_buffer, rb, fb_width, fb_height);
+                    last_image_view = VK_NULL_HANDLE;
                 }
                 else
                     pcmd->UserCallback(draw_list, pcmd);
@@ -682,8 +687,8 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
                 // Clamp to viewport as vkCmdSetScissor() won't accept values that are off bounds
                 if (clip_min.x < 0.0f) { clip_min.x = 0.0f; }
                 if (clip_min.y < 0.0f) { clip_min.y = 0.0f; }
-                if (clip_max.x > fb_width) { clip_max.x = (float)fb_width; }
-                if (clip_max.y > fb_height) { clip_max.y = (float)fb_height; }
+                if (clip_max.x > (float)fb_width) { clip_max.x = (float)fb_width; }
+                if (clip_max.y > (float)fb_height) { clip_max.y = (float)fb_height; }
                 if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)
                     continue;
 
@@ -699,10 +704,7 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
                 VkDescriptorSet image_view = (VkDescriptorSet)pcmd->GetTexID();
                 if (image_view != last_image_view)
                     vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 0, 1, &image_view, 0, nullptr);
-                if (render_state.SamplerCurrentDS != last_sampler)
-                    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 1, 1, &render_state.SamplerCurrentDS, 0, nullptr);
                 last_image_view = image_view;
-                last_sampler = render_state.SamplerCurrentDS;
 
                 // Draw
                 vkCmdDrawIndexed(command_buffer, pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0);
@@ -711,7 +713,7 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
         global_idx_offset += draw_list->IdxBuffer.Size;
         global_vtx_offset += draw_list->VtxBuffer.Size;
     }
-    platform_io.Renderer_RenderState = nullptr;
+    platform_io.Renderer_RenderState = bd->RenderState = nullptr;
 
     // Note: at this point both vkCmdSetViewport() and vkCmdSetScissor() have been called.
     // Our last values will leak into user/application rendering IF:
@@ -1392,6 +1394,11 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info)
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
     io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;   // We can honor ImGuiPlatformIO::Textures[] requests during render.
     io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;  // We can create multi-viewports on the Renderer side (optional)
+
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    platform_io.DrawCallback_ResetRenderState = ImGui_ImplVulkan_DrawCallback_ResetRenderState;
+    platform_io.DrawCallback_SetSamplerLinear = ImGui_ImplVulkan_DrawCallback_SetSamplerLinear;
+    platform_io.DrawCallback_SetSamplerNearest = ImGui_ImplVulkan_DrawCallback_SetSamplerNearest;
 
     // Sanity checks
     IM_ASSERT(info->Instance != VK_NULL_HANDLE);

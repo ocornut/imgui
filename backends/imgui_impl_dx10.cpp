@@ -18,6 +18,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2026-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2026-04-23: DirectX10: Added support for standard draw callbacks (in platform_io): DrawCallback_ResetRenderState, DrawCallback_SetSamplerLinear, DrawCallback_SetSamplerNearest. Obsoleting samplers from ImGui_ImplDX10_RenderState. (#9378)
 //  2026-01-19: DirectX10: Added 'SamplerNearest' in ImGui_ImplDX10_RenderState. Renamed 'SamplerDefault' to 'SamplerLinear'. 
 //  2025-09-18: Call platform_io.ClearRendererHandlers() on shutdown.
 //  2025-06-11: DirectX10: Added support for ImGuiBackendFlags_RendererHasTextures, for dynamic font atlas.
@@ -159,6 +160,11 @@ static void ImGui_ImplDX10_SetupRenderState(ImDrawData* draw_data, ID3D10Device*
     device->RSSetState(bd->pRasterizerState);
 }
 
+// Draw callbacks
+static void ImGui_ImplDX10_DrawCallback_ResetRenderState(const ImDrawList*, const ImDrawCmd*)       {} // Intentionally empty. Used as an identifier for rendering loop to call its code. Simpler to implement this way.
+static void ImGui_ImplDX10_DrawCallback_SetSamplerLinear(const ImDrawList*, const ImDrawCmd*)       { ImGui_ImplDX10_Data* bd = ImGui_ImplDX10_GetBackendData(); bd->pd3dDevice->PSSetSamplers(0, 1, &bd->pTexSamplerLinear); }
+static void ImGui_ImplDX10_DrawCallback_SetSamplerNearest(const ImDrawList*, const ImDrawCmd*)      { ImGui_ImplDX10_Data* bd = ImGui_ImplDX10_GetBackendData(); bd->pd3dDevice->PSSetSamplers(0, 1, &bd->pTexSamplerNearest); }
+
 // Render function
 void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
 {
@@ -183,7 +189,7 @@ void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
         bd->VertexBufferSize = draw_data->TotalVtxCount + 5000;
         D3D10_BUFFER_DESC desc = {};
         desc.Usage = D3D10_USAGE_DYNAMIC;
-        desc.ByteWidth = bd->VertexBufferSize * sizeof(ImDrawVert);
+        desc.ByteWidth = (UINT)bd->VertexBufferSize * sizeof(ImDrawVert);
         desc.BindFlags = D3D10_BIND_VERTEX_BUFFER;
         desc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
         desc.MiscFlags = 0;
@@ -197,7 +203,7 @@ void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
         bd->IndexBufferSize = draw_data->TotalIdxCount + 10000;
         D3D10_BUFFER_DESC desc = {};
         desc.Usage = D3D10_USAGE_DYNAMIC;
-        desc.ByteWidth = bd->IndexBufferSize * sizeof(ImDrawIdx);
+        desc.ByteWidth = (UINT)bd->IndexBufferSize * sizeof(ImDrawIdx);
         desc.BindFlags = D3D10_BIND_INDEX_BUFFER;
         desc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
         if (device->CreateBuffer(&desc, nullptr, &bd->pIB) < 0)
@@ -266,8 +272,6 @@ void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     ImGui_ImplDX10_RenderState render_state;
     render_state.Device = bd->pd3dDevice;
-    render_state.SamplerLinear = bd->pTexSamplerLinear;
-    render_state.SamplerNearest = bd->pTexSamplerNearest;
     render_state.VertexConstantBuffer = bd->pVertexConstantBuffer;
     platform_io.Renderer_RenderState = &render_state;
 
@@ -285,8 +289,7 @@ void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
             if (pcmd->UserCallback != nullptr)
             {
                 // User callback, registered via ImDrawList::AddCallback()
-                // (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
-                if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
+                if (pcmd->UserCallback == ImGui_ImplDX10_DrawCallback_ResetRenderState)
                     ImGui_ImplDX10_SetupRenderState(draw_data, device);
                 else
                     pcmd->UserCallback(draw_list, pcmd);
@@ -620,6 +623,9 @@ bool    ImGui_ImplDX10_Init(ID3D10Device* device)
 
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     platform_io.Renderer_TextureMaxWidth = platform_io.Renderer_TextureMaxHeight = D3D10_REQ_TEXTURE2D_U_OR_V_DIMENSION;
+    platform_io.DrawCallback_ResetRenderState = ImGui_ImplDX10_DrawCallback_ResetRenderState;
+    platform_io.DrawCallback_SetSamplerLinear = ImGui_ImplDX10_DrawCallback_SetSamplerLinear;
+    platform_io.DrawCallback_SetSamplerNearest = ImGui_ImplDX10_DrawCallback_SetSamplerNearest;
 
     // Get factory from device
     IDXGIDevice* pDXGIDevice = nullptr;

@@ -41,6 +41,10 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
+- DrawList:
+  - Obsoleted `ImDrawCallback_ResetRenderState` in favor of using `ImGui::GetPlatformIO().DrawCallback_ResetRenderState`,
+    which is part of our new standard draw callbacks. (#9378)
+    Redirecting the earlier value into the later one when set, so both old and new code should work.
 - Backends:
   - Vulkan: redesigned to use separate ImageView + Sampler instead of Combined Image Sampler. (#914)
     This change allows us to facilitate changing samplers, in line with other backends. [@yaz0r, @ocornut]
@@ -52,11 +56,24 @@ Breaking Changes:
       - Before: ImGui_ImplVulkan_AddTexture(VkSampler, VkImageView, VkImageLayout)
       - After:  ImGui_ImplVulkan_AddTexture(VkImageView, VkImageLayout)
       - Kept inline redirection function that ignores the sampler (will obsolete).
-  - Vulkan: with the change above it is now possible to change the current Sampler during
-    rendering, by poking into ImGui_ImplVulkan_RenderState's SamplerCurrentDS. (#914)
+  - DirectX10, DirectX11, SDLGPU3, Vulkan: removed samplers from ImGui_ImplXXXX_RenderState.
+    Prefer to use backend-agnostic DrawCallback_SetSamplerLinear which works everywhere! (#9378)
+    If there is a legit need/request for them or any render state we can always add them back.
 
 Other Changes:
 
+- DrawList:
+  - Added room in ImGuiPlatformIO for standard backend-agnostic draw callbacks. Those callbacks
+    are setup/provided by the backend and available in most of our standard backends.
+    They allow backend-agnostic code from e.g. switching to a Nearest/Point sampler without
+    messing with custom Renderer-specific callbacks.
+      platform_io.DrawCallback_ResetRenderState;    // Request to reset the graphics/render state.
+      platform_io.DrawCallback_SetSamplerLinear;    // Request to set current texture sampling to Linear
+      platform_io.DrawCallback_SetSamplerNearest;   // Request to set current texture sampling to Nearest/Point
+    Note that some backends might not support all callbacks.
+    (#9378, #9371, #3590, #8926, #2973, #7485, #7468, #6969, #5118, #7616, #9173, #8322, #7230,
+    #5999, #6452, #5156, #7342, #7592, #7511)
+  - Made AddCallback() user data default to Null for convenience.
 - InputText:
   - InputTextMultiline: fixed an issue processing deactivation logic when an active
     multi-line edit is clipped due to being out of view.
@@ -113,12 +130,25 @@ Other Changes:
     reporting the common clipper error over a table sanity check assert). (#9350)
   - Tweaked assert triggering when first item height measurement fails, and made it
     a better recoverable error. (#9350)
-- DrawList:
-  - Made AddCallback() user data default parameter.
 - Misc:
   - Minor optimization: reduce redudant label scanning in common widgets.
   - Added missing Test Engine hooks for PlotXXX(), VSliderXXX(), TableHeader().
 - Backends:
+  - Added support for new standardized draw callbacks in most backends: (#9378)
+    - Allegro5:     Reset     n/a               n/a
+    - DX9:          Reset     SetSamplerLinear  SetSamplerNearest
+    - DX10:         Reset     SetSamplerLinear  SetSamplerNearest
+    - DX11:         Reset     SetSamplerLinear  SetSamplerNearest
+    - DX12:         Reset     SetSamplerLinear  SetSamplerNearest
+    - Metal:        Reset     *missing*         *missing*
+    - OpenGL2:      Reset     SetSamplerLinear  SetSamplerNearest
+    - OpenGL3+:     Reset     SetSamplerLinear  SetSamplerNearest
+    - SDLGPU3:      Reset     SetSamplerLinear  SetSamplerNearest
+    - SDLRenderer2: Reset     n/a               n/a
+    - SDLRenderer3: Reset     SetSamplerLinear  SetSamplerNearest
+    - Vulkan:       Reset     SetSamplerLinear  SetSamplerNearest
+    - WebGPU:       Reset     SetSamplerLinear  SetSamplerNearest
+    (Vulkan backend by @yaz0r, others by @ocornut)
   - GLFW: added a Win32-specific implementation of `ImGui_ImplGlfw_GetContentScaleXXXX`
     functions for legacy GLFW 3.2. (#9003)
   - Metal: avoid redundant vertex buffer bind in `SetupRenderState()`, which leads
@@ -128,6 +158,7 @@ Other Changes:
   - SDL2: made `ImGui_ImplSDL2_GetContentScaleForWindow()`/`ImGui_ImplSDL2_GetContentScaleForDisplay()`
     helpers return a minimum of 1.0f, as some Linux setup seems to report <1.0f value
     and this breaks scaling border size. (#9369)
+  - WebGPU: always use SPIR-V shader on WGVK, as it cannot be detected at runtime. (#9316, #9246, #9257)
 - Examples:
   - Update VS toolset in all .vcxproj from VS2015 (v140) to VS2017 (v141). The later is the
     first that supports vcpkg. Onward we will likely stop testing building the library with VS2015.

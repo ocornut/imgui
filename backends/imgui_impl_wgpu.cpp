@@ -22,6 +22,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-04-23: Added support for standard draw callbacks (in platform_io): DrawCallback_ResetRenderState, DrawCallback_SetSamplerLinear, DrawCallback_SetSamplerNearest. (#9378)
 //  2026-03-25: Added support for WGVK native backend via IMGUI_IMPL_WEBGPU_BACKEND_WGVK define, with SPIRV shaders if WGSL is not available. (#9316, #9246, #9257)
 //  2026-03-09: Removed support for Emscripten < 4.0.10. (#9281)
 //  2025-10-16: Update to compile with Dawn and Emscripten's 4.0.10+ '--use-port=emdawnwebgpu' ports. (#8381, #8898)
@@ -85,11 +86,13 @@ struct ImGui_ImplWGPU_Texture
 
 struct RenderResources
 {
-    WGPUSampler         SamplerLinear = nullptr;        // Sampler for textures
-    WGPUBuffer          Uniforms = nullptr;             // Shader uniforms
-    WGPUBindGroup       CommonBindGroup = nullptr;      // Resources bind-group to bind the common resources to pipeline
-    ImGuiStorage        ImageBindGroups;                // Resources bind-group to bind the font/image resources to pipeline (this is a key->value map)
-    WGPUBindGroupLayout ImageBindGroupLayout = nullptr; // Cache layout used for the image bind group. Avoids allocating unnecessary JS objects when working with WebASM
+    WGPUSampler         SamplerLinear = nullptr;            // Bilinear sampler
+    WGPUSampler         SamplerNearest = nullptr;           // Nearest/point sampler
+    WGPUBuffer          Uniforms = nullptr;                 // Shader uniforms
+    WGPUBindGroup       CommonBindGroupLinear = nullptr;    // Common bind-group bound to group 0 (uniforms + SamplerLinear)
+    WGPUBindGroup       CommonBindGroupNearest = nullptr;   // Common bind-group bound to group 0 (uniforms + SamplerNearest)
+    ImGuiStorage        ImageBindGroups;                    // Resources bind-group to bind the font/image resources to pipeline (this is a key->value map)
+    WGPUBindGroupLayout ImageBindGroupLayout = nullptr;     // Cache layout used for the image bind group. Avoids allocating unnecessary JS objects when working with WebASM
 };
 
 struct FrameResources
@@ -116,6 +119,7 @@ struct ImGui_ImplWGPU_Data
     WGPUTextureFormat       renderTargetFormat = WGPUTextureFormat_Undefined;
     WGPUTextureFormat       depthStencilFormat = WGPUTextureFormat_Undefined;
     WGPURenderPipeline      pipelineState = nullptr;
+    ImGui_ImplWGPU_RenderState* RenderState = nullptr;  // == ImGui::GetPlatformIO().Renderer_RenderState during rendering.
 
     RenderResources         renderResources;
     FrameResources*         pFrameResources = nullptr;
@@ -299,8 +303,10 @@ static void SafeRelease(WGPUShaderModule& res)
 static void SafeRelease(RenderResources& res)
 {
     SafeRelease(res.SamplerLinear);
+    SafeRelease(res.SamplerNearest);
     SafeRelease(res.Uniforms);
-    SafeRelease(res.CommonBindGroup);
+    SafeRelease(res.CommonBindGroupLinear);
+    SafeRelease(res.CommonBindGroupNearest);
     SafeRelease(res.ImageBindGroupLayout);
 };
 
@@ -315,6 +321,7 @@ static void SafeRelease(FrameResources& res)
 static WGPUProgrammableStageDescriptor ImGui_ImplWGPU_CreateShaderModuleWGSL(const char* wgsl_source)
 {
     ImGui_ImplWGPU_Data* bd = ImGui_ImplWGPU_GetBackendData();
+    IM_UNUSED(bd);
 
     WGPUShaderSourceWGSL wgsl_desc = {};
     wgsl_desc.chain.sType = WGPUSType_ShaderSourceWGSL;
@@ -324,9 +331,10 @@ static WGPUProgrammableStageDescriptor ImGui_ImplWGPU_CreateShaderModuleWGSL(con
     desc.nextInChain = (WGPUChainedStruct*)&wgsl_desc;
 
     WGPUProgrammableStageDescriptor stage_desc = {};
+#if !defined(IMGUI_IMPL_WEBGPU_BACKEND_WGVK)
     stage_desc.module = wgpuDeviceCreateShaderModule(bd->wgpuDevice, &desc);
-
     stage_desc.entryPoint = { "main", WGPU_STRLEN };
+#endif
     return stage_desc;
 }
 
@@ -420,15 +428,19 @@ static void ImGui_ImplWGPU_SetupRenderState(ImDrawData* draw_data, WGPURenderPas
     wgpuRenderPassEncoderSetVertexBuffer(ctx, 0, fr->VertexBuffer, 0, fr->VertexBufferSize * sizeof(ImDrawVert));
     wgpuRenderPassEncoderSetIndexBuffer(ctx, fr->IndexBuffer, sizeof(ImDrawIdx) == 2 ? WGPUIndexFormat_Uint16 : WGPUIndexFormat_Uint32, 0, fr->IndexBufferSize * sizeof(ImDrawIdx));
     wgpuRenderPassEncoderSetPipeline(ctx, bd->pipelineState);
-    wgpuRenderPassEncoderSetBindGroup(ctx, 0, bd->renderResources.CommonBindGroup, 0, nullptr);
+    wgpuRenderPassEncoderSetBindGroup(ctx, 0, bd->renderResources.CommonBindGroupLinear, 0, nullptr);
 
     // Setup blend factor
     WGPUColor blend_color = { 0.f, 0.f, 0.f, 0.f };
     wgpuRenderPassEncoderSetBlendConstant(ctx, &blend_color);
 }
 
+// Draw callbacks
+static void ImGui_ImplWGPU_DrawCallback_ResetRenderState(const ImDrawList*, const ImDrawCmd*)   {} // Intentionally empty. Used as an identifier for rendering loop to call its code. Simpler to implement this way.
+static void ImGui_ImplWGPU_DrawCallback_SetSamplerLinear(const ImDrawList*, const ImDrawCmd*)   { ImGui_ImplWGPU_Data* bd = ImGui_ImplWGPU_GetBackendData(); wgpuRenderPassEncoderSetBindGroup(bd->RenderState->RenderPassEncoder, 0, bd->renderResources.CommonBindGroupLinear, 0, nullptr); }
+static void ImGui_ImplWGPU_DrawCallback_SetSamplerNearest(const ImDrawList*, const ImDrawCmd*)  { ImGui_ImplWGPU_Data* bd = ImGui_ImplWGPU_GetBackendData(); wgpuRenderPassEncoderSetBindGroup(bd->RenderState->RenderPassEncoder, 0, bd->renderResources.CommonBindGroupNearest, 0, nullptr); }
+
 // Render function
-// (this used to be set in io.RenderDrawListsFn and called by ImGui::Render(), but you can now call this directly from your main loop)
 void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder pass_encoder)
 {
     // Avoid rendering when minimized
@@ -523,7 +535,7 @@ void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder 
     ImGui_ImplWGPU_RenderState render_state;
     render_state.Device = bd->wgpuDevice;
     render_state.RenderPassEncoder = pass_encoder;
-    platform_io.Renderer_RenderState = &render_state;
+    platform_io.Renderer_RenderState = bd->RenderState = &render_state;
 
     // Render command lists
     // (Because we merged all buffers into a single one, we maintain our own offset into them)
@@ -539,9 +551,7 @@ void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder 
             if (pcmd->UserCallback != nullptr)
             {
                 // User callback, registered via ImDrawList::AddCallback()
-                // (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
-                IM_ASSERT(pcmd->UserCallback != ImDrawCallback_SetSamplerLinear && pcmd->UserCallback != ImDrawCallback_SetSamplerNearest); // Unsupported.
-                if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
+                if (pcmd->UserCallback == ImGui_ImplWGPU_DrawCallback_ResetRenderState)
                     ImGui_ImplWGPU_SetupRenderState(draw_data, pass_encoder, fr);
                 else
                     pcmd->UserCallback(draw_list, pcmd);
@@ -552,12 +562,11 @@ void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder 
                 ImTextureID tex_id = pcmd->GetTexID();
                 ImGuiID tex_id_hash = ImHashData(&tex_id, sizeof(tex_id), 0);
                 WGPUBindGroup bind_group = (WGPUBindGroup)bd->renderResources.ImageBindGroups.GetVoidPtr(tex_id_hash);
-                if (!bind_group)
-                {
-                    bind_group = ImGui_ImplWGPU_CreateImageBindGroup(bd->renderResources.ImageBindGroupLayout, (WGPUTextureView)tex_id);
-                    bd->renderResources.ImageBindGroups.SetVoidPtr(tex_id_hash, bind_group);
-                }
-                wgpuRenderPassEncoderSetBindGroup(pass_encoder, 1, (WGPUBindGroup)bind_group, 0, nullptr);
+                if (!bind_group && tex_id != 0)
+                    if ((bind_group = ImGui_ImplWGPU_CreateImageBindGroup(bd->renderResources.ImageBindGroupLayout, (WGPUTextureView)tex_id)) != 0)
+                        bd->renderResources.ImageBindGroups.SetVoidPtr(tex_id_hash, bind_group);
+                if (bind_group)
+                    wgpuRenderPassEncoderSetBindGroup(pass_encoder, 1, (WGPUBindGroup)bind_group, 0, nullptr);
 
                 // Project scissor/clipping rectangles into framebuffer space
                 ImVec2 clip_min((pcmd->ClipRect.x - clip_off.x) * clip_scale.x, (pcmd->ClipRect.y - clip_off.y) * clip_scale.y);
@@ -566,8 +575,8 @@ void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder 
                 // Clamp to viewport as wgpuRenderPassEncoderSetScissorRect() won't accept values that are off bounds
                 if (clip_min.x < 0.0f) { clip_min.x = 0.0f; }
                 if (clip_min.y < 0.0f) { clip_min.y = 0.0f; }
-                if (clip_max.x > fb_width) { clip_max.x = (float)fb_width; }
-                if (clip_max.y > fb_height) { clip_max.y = (float)fb_height; }
+                if (clip_max.x > (float)fb_width) { clip_max.x = (float)fb_width; }
+                if (clip_max.y > (float)fb_height) { clip_max.y = (float)fb_height; }
                 if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)
                     continue;
 
@@ -589,7 +598,7 @@ void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder 
     }
     image_bind_groups.Data.resize(0);
 
-    platform_io.Renderer_RenderState = nullptr;
+    platform_io.Renderer_RenderState = bd->RenderState = nullptr;
 }
 
 static void ImGui_ImplWGPU_DestroyTexture(ImTextureData* tex)
@@ -817,19 +826,23 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
 
     ImGui_ImplWGPU_CreateUniformBuffer();
 
-    // Create sampler
+    // Create samplers (Linear/Nearest)
     // (Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling)
     WGPUSamplerDescriptor sampler_desc = {};
-    sampler_desc.minFilter = WGPUFilterMode_Linear;
-    sampler_desc.magFilter = WGPUFilterMode_Linear;
-    sampler_desc.mipmapFilter = WGPUMipmapFilterMode_Linear;
     sampler_desc.addressModeU = WGPUAddressMode_ClampToEdge;
     sampler_desc.addressModeV = WGPUAddressMode_ClampToEdge;
     sampler_desc.addressModeW = WGPUAddressMode_ClampToEdge;
     sampler_desc.maxAnisotropy = 1;
+    sampler_desc.minFilter = WGPUFilterMode_Linear;
+    sampler_desc.magFilter = WGPUFilterMode_Linear;
+    sampler_desc.mipmapFilter = WGPUMipmapFilterMode_Linear;
     bd->renderResources.SamplerLinear = wgpuDeviceCreateSampler(bd->wgpuDevice, &sampler_desc);
+    sampler_desc.minFilter = WGPUFilterMode_Nearest;
+    sampler_desc.magFilter = WGPUFilterMode_Nearest;
+    sampler_desc.mipmapFilter = WGPUMipmapFilterMode_Nearest;
+    bd->renderResources.SamplerNearest = wgpuDeviceCreateSampler(bd->wgpuDevice, &sampler_desc);
 
-    // Create resource bind group
+    // Create resource bind groups (one per sampler, otherwise identical)
     WGPUBindGroupEntry common_bg_entries[] =
     {
         { nullptr, 0, bd->renderResources.Uniforms, 0, MEMALIGN(sizeof(Uniforms), 16), 0, 0 },
@@ -839,7 +852,9 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     common_bg_descriptor.layout = bg_layouts[0];
     common_bg_descriptor.entryCount = sizeof(common_bg_entries) / sizeof(WGPUBindGroupEntry);
     common_bg_descriptor.entries = common_bg_entries;
-    bd->renderResources.CommonBindGroup = wgpuDeviceCreateBindGroup(bd->wgpuDevice, &common_bg_descriptor);
+    bd->renderResources.CommonBindGroupLinear = wgpuDeviceCreateBindGroup(bd->wgpuDevice, &common_bg_descriptor);
+    common_bg_entries[1].sampler = bd->renderResources.SamplerNearest;
+    bd->renderResources.CommonBindGroupNearest = wgpuDeviceCreateBindGroup(bd->wgpuDevice, &common_bg_descriptor);
     bd->renderResources.ImageBindGroupLayout = bg_layouts[1];
 
     SafeRelease(vertex_shader_desc.module);
@@ -891,6 +906,11 @@ bool ImGui_ImplWGPU_Init(ImGui_ImplWGPU_InitInfo* init_info)
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
     io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;   // We can honor ImGuiPlatformIO::Textures[] requests during render.
 
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    platform_io.DrawCallback_ResetRenderState = ImGui_ImplWGPU_DrawCallback_ResetRenderState;
+    platform_io.DrawCallback_SetSamplerLinear = ImGui_ImplWGPU_DrawCallback_SetSamplerLinear;
+    platform_io.DrawCallback_SetSamplerNearest = ImGui_ImplWGPU_DrawCallback_SetSamplerNearest;
+
     bd->initInfo = *init_info;
     bd->wgpuDevice = init_info->Device;
     bd->defaultQueue = wgpuDeviceGetQueue(bd->wgpuDevice);
@@ -899,11 +919,7 @@ bool ImGui_ImplWGPU_Init(ImGui_ImplWGPU_InitInfo* init_info)
     bd->numFramesInFlight = init_info->NumFramesInFlight;
     bd->frameIndex = UINT_MAX;
 
-    bd->renderResources.SamplerLinear = nullptr;
-    bd->renderResources.Uniforms = nullptr;
-    bd->renderResources.CommonBindGroup = nullptr;
     bd->renderResources.ImageBindGroups.Data.reserve(100);
-    bd->renderResources.ImageBindGroupLayout = nullptr;
 
     // Create buffers with a default size (they will later be grown as needed)
     bd->pFrameResources = new FrameResources[bd->numFramesInFlight];
