@@ -255,8 +255,8 @@ void MyImGuiBackend_RenderDrawData(ImDrawData* draw_data)
             const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
             if (pcmd->UserCallback)
             {
-                if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
-                    MyEngineSetupenderState();
+                if (pcmd->UserCallback == platform_io.DrawCallback_ResetRenderState)
+                    MyEngineSetupSenderState();
                 else
                     pcmd->UserCallback(cmd_list, pcmd);
             }

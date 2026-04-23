@@ -41,6 +41,10 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
+- DrawList:
+  - Obsoleted `ImDrawCallback_ResetRenderState` in favor of using `ImGui::GetPlatformIO().DrawCallback_ResetRenderState`,
+    which is part of our new standard draw callbacks. (#9378)
+    Redirecting the earlier value into the later one when set, so both old and new code should work.
 - Backends:
   - Vulkan: redesigned to use separate ImageView + Sampler instead of Combined Image Sampler. (#914)
     This change allows us to facilitate changing samplers, in line with other backends. [@yaz0r, @ocornut]
@@ -57,6 +61,19 @@ Breaking Changes:
 
 Other Changes:
 
+- DrawList:
+  - Added room in ImGuiPlatformIO for standard backend-agnostic draw callbacks. Those callbacks
+    are setup/provided by the backend and available in most of our standard backends.
+    They allow backend-agnostic code from e.g. switching to a Nearest/Point sampler without
+    messing with custom Renderer-specific callbacks.
+      platform_io.DrawCallback_ResetRenderState;    // Request to reset the graphics/render state.
+      platform_io.DrawCallback_SetSamplerLinear;    // Request to set current texture sampling to Linear
+      platform_io.DrawCallback_SetSamplerNearest;   // Request to set current texture sampling to Nearest/Point
+      platform_io.DrawCallback_SetSamplerCustom;    // Request to set current texture sampling using Backend Specific data.
+    Note that some backends might not support all callbacks.
+    (#9378, #9371, #3590, #8926, #2973, #7485, #7468, #6969, #5118, #7616, #9173, #8322, #7230,
+    #5999, #6452, #5156, #7342, #7592, #7511)
+  - Made AddCallback() user data default to Null for convenience.
 - InputText:
   - InputTextMultiline: fixed an issue processing deactivation logic when an active
     multi-line edit is clipped due to being out of view.
@@ -113,8 +130,6 @@ Other Changes:
     reporting the common clipper error over a table sanity check assert). (#9350)
   - Tweaked assert triggering when first item height measurement fails, and made it
     a better recoverable error. (#9350)
-- DrawList:
-  - Made AddCallback() user data default parameter.
 - Misc:
   - Minor optimization: reduce redudant label scanning in common widgets.
   - Added missing Test Engine hooks for PlotXXX(), VSliderXXX(), TableHeader().
