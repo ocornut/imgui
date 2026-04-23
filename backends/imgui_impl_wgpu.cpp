@@ -538,7 +538,6 @@ void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder 
             {
                 // User callback, registered via ImDrawList::AddCallback()
                 // (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
-                IM_ASSERT(pcmd->UserCallback != ImDrawCallback_SetSamplerLinear && pcmd->UserCallback != ImDrawCallback_SetSamplerNearest); // Unsupported.
                 if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
                     ImGui_ImplWGPU_SetupRenderState(draw_data, pass_encoder, fr);
                 else
