@@ -174,8 +174,8 @@ void ImGui_ImplSDLGPU3_PrepareDrawData(ImDrawData* draw_data, SDL_GPUCommandBuff
     ImGui_ImplSDLGPU3_InitInfo* v = &bd->InitInfo;
     ImGui_ImplSDLGPU3_FrameData* fd = &bd->MainWindowFrameData;
 
-    uint32_t vertex_size = draw_data->TotalVtxCount * sizeof(ImDrawVert);
-    uint32_t index_size  = draw_data->TotalIdxCount * sizeof(ImDrawIdx);
+    uint32_t vertex_size = (uint32_t)draw_data->TotalVtxCount * sizeof(ImDrawVert);
+    uint32_t index_size  = (uint32_t)draw_data->TotalIdxCount * sizeof(ImDrawIdx);
     if (fd->VertexBuffer == nullptr || fd->VertexBufferSize < vertex_size)
         CreateOrResizeBuffers(&fd->VertexBuffer, &fd->VertexTransferBuffer, &fd->VertexBufferSize, vertex_size, SDL_GPU_BUFFERUSAGE_VERTEX);
     if (fd->IndexBuffer == nullptr || fd->IndexBufferSize < index_size)
@@ -271,8 +271,8 @@ void ImGui_ImplSDLGPU3_RenderDrawData(ImDrawData* draw_data, SDL_GPUCommandBuffe
                 // Clamp to viewport as SDL_SetGPUScissor() won't accept values that are off bounds
                 if (clip_min.x < 0.0f) { clip_min.x = 0.0f; }
                 if (clip_min.y < 0.0f) { clip_min.y = 0.0f; }
-                if (clip_max.x > fb_width) { clip_max.x = (float)fb_width; }
-                if (clip_max.y > fb_height) { clip_max.y = (float)fb_height; }
+                if (clip_max.x > (float)fb_width) { clip_max.x = (float)fb_width; }
+                if (clip_max.y > (float)fb_height) { clip_max.y = (float)fb_height; }
                 if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)
                     continue;
 

@@ -177,7 +177,7 @@ void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
         bd->VertexBufferSize = draw_data->TotalVtxCount + 5000;
         D3D10_BUFFER_DESC desc = {};
         desc.Usage = D3D10_USAGE_DYNAMIC;
-        desc.ByteWidth = bd->VertexBufferSize * sizeof(ImDrawVert);
+        desc.ByteWidth = (UINT)bd->VertexBufferSize * sizeof(ImDrawVert);
         desc.BindFlags = D3D10_BIND_VERTEX_BUFFER;
         desc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
         desc.MiscFlags = 0;
@@ -191,7 +191,7 @@ void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
         bd->IndexBufferSize = draw_data->TotalIdxCount + 10000;
         D3D10_BUFFER_DESC desc = {};
         desc.Usage = D3D10_USAGE_DYNAMIC;
-        desc.ByteWidth = bd->IndexBufferSize * sizeof(ImDrawIdx);
+        desc.ByteWidth = (UINT)bd->IndexBufferSize * sizeof(ImDrawIdx);
         desc.BindFlags = D3D10_BIND_INDEX_BUFFER;
         desc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
         if (device->CreateBuffer(&desc, nullptr, &bd->pIB) < 0)

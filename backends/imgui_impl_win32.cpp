@@ -412,7 +412,7 @@ void    ImGui_ImplWin32_NewFrame()
     // Setup time step
     INT64 current_time = 0;
     ::QueryPerformanceCounter((LARGE_INTEGER*)&current_time);
-    io.DeltaTime = (float)(current_time - bd->Time) / bd->TicksPerSecond;
+    io.DeltaTime = (float)((double)(current_time - bd->Time) / (double)bd->TicksPerSecond);
     bd->Time = current_time;
 
     // Update OS mouse position
@@ -930,7 +930,7 @@ float ImGui_ImplWin32_GetDpiScaleForMonitor(void* monitor)
         {
             GetDpiForMonitorFn((HMONITOR)monitor, MDT_EFFECTIVE_DPI, &xdpi, &ydpi);
             IM_ASSERT(xdpi == ydpi); // Please contact me if you hit this assert!
-            return xdpi / 96.0f;
+            return (float)xdpi / 96.0f;
         }
     }
 #ifndef NOGDI
@@ -940,7 +940,7 @@ float ImGui_ImplWin32_GetDpiScaleForMonitor(void* monitor)
     IM_ASSERT(xdpi == ydpi); // Please contact me if you hit this assert!
     ::ReleaseDC(nullptr, dc);
 #endif
-    return xdpi / 96.0f;
+    return (float)xdpi / 96.0f;
 }
 
 float ImGui_ImplWin32_GetDpiScaleForHwnd(void* hwnd)

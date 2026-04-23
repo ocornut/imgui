@@ -260,7 +260,7 @@ struct ImGui_ImplVulkanH_Window
         memset((void*)this, 0, sizeof(*this));
 
         // Parameters to create SwapChain
-        PresentMode = (VkPresentModeKHR)~0;             // Ensure we get an error if user doesn't set this.
+        PresentMode = VK_PRESENT_MODE_MAX_ENUM_KHR;     // Ensure we get an error if user doesn't set this.
 
         // Parameters to create RenderPass
         AttachmentDesc.format = VK_FORMAT_UNDEFINED;    // Will automatically use wd->SurfaceFormat.format.
