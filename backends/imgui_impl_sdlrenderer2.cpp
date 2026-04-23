@@ -15,7 +15,7 @@
 //  [X] Renderer: Texture updates support for dynamic font atlas (ImGuiBackendFlags_RendererHasTextures).
 //  [X] Renderer: Expose selected render state for draw callbacks to use. Access in '(ImGui_ImplXXXX_RenderState*)GetPlatformIO().Renderer_RenderState'.
 
-// You can copy and use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
+// You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
 // Learn about Dear ImGui:
 // - FAQ                  https://dearimgui.com/faq
@@ -24,6 +24,7 @@
 // - Introduction, links and more at the top of imgui.cpp
 
 // CHANGELOG
+// (minor and older changes stripped away, please see git history for details)
 //  2026-03-12: Fixed invalid assert in ImGui_ImplSDLRenderer2_UpdateTexture() if ImTextureID_Invalid is defined to be != 0, which became the default since 2026-03-12. (#9295)
 //  2025-09-18: Call platform_io.ClearRendererHandlers() on shutdown.
 //  2025-06-11: Added support for ImGuiBackendFlags_RendererHasTextures, for dynamic font atlas. Removed ImGui_ImplSDLRenderer2_CreateFontsTexture() and ImGui_ImplSDLRenderer2_DestroyFontsTexture().
@@ -72,41 +73,6 @@ static ImGui_ImplSDLRenderer2_Data* ImGui_ImplSDLRenderer2_GetBackendData()
 }
 
 // Functions
-bool ImGui_ImplSDLRenderer2_Init(SDL_Renderer* renderer)
-{
-    ImGuiIO& io = ImGui::GetIO();
-    IMGUI_CHECKVERSION();
-    IM_ASSERT(io.BackendRendererUserData == nullptr && "Already initialized a renderer backend!");
-    IM_ASSERT(renderer != nullptr && "SDL_Renderer not initialized!");
-
-    // Setup backend capabilities flags
-    ImGui_ImplSDLRenderer2_Data* bd = IM_NEW(ImGui_ImplSDLRenderer2_Data)();
-    io.BackendRendererUserData = (void*)bd;
-    io.BackendRendererName = "imgui_impl_sdlrenderer2";
-    io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
-    io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;   // We can honor ImGuiPlatformIO::Textures[] requests during render.
-
-    bd->Renderer = renderer;
-
-    return true;
-}
-
-void ImGui_ImplSDLRenderer2_Shutdown()
-{
-    ImGui_ImplSDLRenderer2_Data* bd = ImGui_ImplSDLRenderer2_GetBackendData();
-    IM_ASSERT(bd != nullptr && "No renderer backend to shutdown, or already shutdown?");
-    ImGuiIO& io = ImGui::GetIO();
-    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
-
-    ImGui_ImplSDLRenderer2_DestroyDeviceObjects();
-
-    io.BackendRendererName = nullptr;
-    io.BackendRendererUserData = nullptr;
-    io.BackendFlags &= ~(ImGuiBackendFlags_RendererHasVtxOffset | ImGuiBackendFlags_RendererHasTextures);
-    platform_io.ClearRendererHandlers();
-    IM_DELETE(bd);
-}
-
 static void ImGui_ImplSDLRenderer2_SetupRenderState(SDL_Renderer* renderer)
 {
     // Clear out any viewports and cliprect set by the user
@@ -291,6 +257,41 @@ void ImGui_ImplSDLRenderer2_DestroyDeviceObjects()
             tex->SetStatus(ImTextureStatus_WantDestroy);
             ImGui_ImplSDLRenderer2_UpdateTexture(tex);
         }
+}
+
+bool ImGui_ImplSDLRenderer2_Init(SDL_Renderer* renderer)
+{
+    ImGuiIO& io = ImGui::GetIO();
+    IMGUI_CHECKVERSION();
+    IM_ASSERT(io.BackendRendererUserData == nullptr && "Already initialized a renderer backend!");
+    IM_ASSERT(renderer != nullptr && "SDL_Renderer not initialized!");
+
+    // Setup backend capabilities flags
+    ImGui_ImplSDLRenderer2_Data* bd = IM_NEW(ImGui_ImplSDLRenderer2_Data)();
+    io.BackendRendererUserData = (void*)bd;
+    io.BackendRendererName = "imgui_impl_sdlrenderer2";
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;   // We can honor ImGuiPlatformIO::Textures[] requests during render.
+
+    bd->Renderer = renderer;
+
+    return true;
+}
+
+void ImGui_ImplSDLRenderer2_Shutdown()
+{
+    ImGui_ImplSDLRenderer2_Data* bd = ImGui_ImplSDLRenderer2_GetBackendData();
+    IM_ASSERT(bd != nullptr && "No renderer backend to shutdown, or already shutdown?");
+    ImGuiIO& io = ImGui::GetIO();
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+
+    ImGui_ImplSDLRenderer2_DestroyDeviceObjects();
+
+    io.BackendRendererName = nullptr;
+    io.BackendRendererUserData = nullptr;
+    io.BackendFlags &= ~(ImGuiBackendFlags_RendererHasVtxOffset | ImGuiBackendFlags_RendererHasTextures);
+    platform_io.ClearRendererHandlers();
+    IM_DELETE(bd);
 }
 
 //-----------------------------------------------------------------------------

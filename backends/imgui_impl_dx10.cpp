@@ -16,7 +16,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2026-01-19: DirectX11: Added 'SamplerNearest' in ImGui_ImplDX11_RenderState. Renamed 'SamplerDefault' to 'SamplerLinear'. 
+//  2026-01-19: DirectX10: Added 'SamplerNearest' in ImGui_ImplDX10_RenderState. Renamed 'SamplerDefault' to 'SamplerLinear'. 
 //  2025-09-18: Call platform_io.ClearRendererHandlers() on shutdown.
 //  2025-06-11: DirectX10: Added support for ImGuiBackendFlags_RendererHasTextures, for dynamic font atlas.
 //  2025-05-07: DirectX10: Honor draw_data->FramebufferScale to allow for custom backends and experiment using it (consistently with other renderer backends, even though in normal condition it is not set under Windows).
@@ -177,7 +177,7 @@ void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
         bd->VertexBufferSize = draw_data->TotalVtxCount + 5000;
         D3D10_BUFFER_DESC desc = {};
         desc.Usage = D3D10_USAGE_DYNAMIC;
-        desc.ByteWidth = bd->VertexBufferSize * sizeof(ImDrawVert);
+        desc.ByteWidth = (UINT)bd->VertexBufferSize * sizeof(ImDrawVert);
         desc.BindFlags = D3D10_BIND_VERTEX_BUFFER;
         desc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
         desc.MiscFlags = 0;
@@ -191,7 +191,7 @@ void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
         bd->IndexBufferSize = draw_data->TotalIdxCount + 10000;
         D3D10_BUFFER_DESC desc = {};
         desc.Usage = D3D10_USAGE_DYNAMIC;
-        desc.ByteWidth = bd->IndexBufferSize * sizeof(ImDrawIdx);
+        desc.ByteWidth = (UINT)bd->IndexBufferSize * sizeof(ImDrawIdx);
         desc.BindFlags = D3D10_BIND_INDEX_BUFFER;
         desc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
         if (device->CreateBuffer(&desc, nullptr, &bd->pIB) < 0)

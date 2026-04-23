@@ -77,7 +77,7 @@ struct ImGui_ImplWGPU_Texture
 
 struct RenderResources
 {
-    WGPUSampler         Sampler = nullptr;              // Sampler for textures
+    WGPUSampler         SamplerLinear = nullptr;        // Sampler for textures
     WGPUBuffer          Uniforms = nullptr;             // Shader uniforms
     WGPUBindGroup       CommonBindGroup = nullptr;      // Resources bind-group to bind the common resources to pipeline
     ImGuiStorage        ImageBindGroups;                // Resources bind-group to bind the font/image resources to pipeline (this is a key->value map)
@@ -290,7 +290,7 @@ static void SafeRelease(WGPUShaderModule& res)
 }
 static void SafeRelease(RenderResources& res)
 {
-    SafeRelease(res.Sampler);
+    SafeRelease(res.SamplerLinear);
     SafeRelease(res.Uniforms);
     SafeRelease(res.CommonBindGroup);
     SafeRelease(res.ImageBindGroupLayout);
@@ -557,8 +557,8 @@ void ImGui_ImplWGPU_RenderDrawData(ImDrawData* draw_data, WGPURenderPassEncoder 
                 // Clamp to viewport as wgpuRenderPassEncoderSetScissorRect() won't accept values that are off bounds
                 if (clip_min.x < 0.0f) { clip_min.x = 0.0f; }
                 if (clip_min.y < 0.0f) { clip_min.y = 0.0f; }
-                if (clip_max.x > fb_width) { clip_max.x = (float)fb_width; }
-                if (clip_max.y > fb_height) { clip_max.y = (float)fb_height; }
+                if (clip_max.x > (float)fb_width) { clip_max.x = (float)fb_width; }
+                if (clip_max.y > (float)fb_height) { clip_max.y = (float)fb_height; }
                 if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)
                     continue;
 
@@ -812,13 +812,13 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     sampler_desc.addressModeV = WGPUAddressMode_ClampToEdge;
     sampler_desc.addressModeW = WGPUAddressMode_ClampToEdge;
     sampler_desc.maxAnisotropy = 1;
-    bd->renderResources.Sampler = wgpuDeviceCreateSampler(bd->wgpuDevice, &sampler_desc);
+    bd->renderResources.SamplerLinear = wgpuDeviceCreateSampler(bd->wgpuDevice, &sampler_desc);
 
     // Create resource bind group
     WGPUBindGroupEntry common_bg_entries[] =
     {
         { nullptr, 0, bd->renderResources.Uniforms, 0, MEMALIGN(sizeof(Uniforms), 16), 0, 0 },
-        { nullptr, 1, 0, 0, 0, bd->renderResources.Sampler, 0 },
+        { nullptr, 1, 0, 0, 0, bd->renderResources.SamplerLinear, 0 },
     };
     WGPUBindGroupDescriptor common_bg_descriptor = {};
     common_bg_descriptor.layout = bg_layouts[0];
@@ -884,7 +884,7 @@ bool ImGui_ImplWGPU_Init(ImGui_ImplWGPU_InitInfo* init_info)
     bd->numFramesInFlight = init_info->NumFramesInFlight;
     bd->frameIndex = UINT_MAX;
 
-    bd->renderResources.Sampler = nullptr;
+    bd->renderResources.SamplerLinear = nullptr;
     bd->renderResources.Uniforms = nullptr;
     bd->renderResources.CommonBindGroup = nullptr;
     bd->renderResources.ImageBindGroups.Data.reserve(100);

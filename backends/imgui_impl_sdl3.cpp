@@ -686,8 +686,8 @@ static void ImGui_ImplSDL3_UpdateMouseData()
             int window_x, window_y;
             SDL_GetGlobalMouseState(&mouse_x, &mouse_y);
             SDL_GetWindowPosition(focused_window, &window_x, &window_y);
-            mouse_x -= window_x;
-            mouse_y -= window_y;
+            mouse_x -= (float)window_x;
+            mouse_y -= (float)window_y;
             io.AddMousePosEvent(mouse_x, mouse_y);
         }
     }
@@ -860,7 +860,7 @@ void ImGui_ImplSDL3_NewFrame()
     Uint64 current_time = SDL_GetPerformanceCounter();
     if (current_time <= bd->Time)
         current_time = bd->Time + 1;
-    io.DeltaTime = bd->Time > 0 ? (float)((double)(current_time - bd->Time) / frequency) : (float)(1.0f / 60.0f);
+    io.DeltaTime = bd->Time > 0 ? (float)((double)(current_time - bd->Time) / (double)frequency) : (float)(1.0f / 60.0f);
     bd->Time = current_time;
 
     if (bd->MousePendingLeaveFrame && bd->MousePendingLeaveFrame >= ImGui::GetFrameCount() && bd->MouseButtonsDown == 0)

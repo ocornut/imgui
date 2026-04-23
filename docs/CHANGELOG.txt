@@ -41,6 +41,20 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
+- Backends:
+  - Vulkan: redesigned to use separate ImageView + Sampler instead of Combined Image Sampler. (#914)
+    This change allows us to facilitate changing samplers, in line with other backends. [@yaz0r, @ocornut]
+    - When creating your own descriptor pool (instead of letting backend creates its own):
+      - Before: need at least IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE descriptors of type VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER.
+      - After:  need at least IMGUI_IMPL_VULKAN_MINIMUM_SAMPLED_IMAGE_POOL_SIZE descriptors of type VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE.
+                            + IMGUI_IMPL_VULKAN_MINIMUM_SAMPLER_POOL_SIZE       descriptors of type VK_DESCRIPTOR_TYPE_SAMPLER.
+    - When registering custom textures: changed ImGui_ImplVulkan_AddTexture() signature to remove Sampler.
+      - Before: ImGui_ImplVulkan_AddTexture(VkSampler, VkImageView, VkImageLayout)
+      - After:  ImGui_ImplVulkan_AddTexture(VkImageView, VkImageLayout)
+      - Kept inline redirection function that ignores the sampler (will obsolete).
+  - Vulkan: with the change above it is now possible to change the current Sampler during
+    rendering, by poking into ImGui_ImplVulkan_RenderState's SamplerCurrentDS. (#914)
+
 Other Changes:
 
 - InputText:
@@ -99,10 +113,14 @@ Other Changes:
     reporting the common clipper error over a table sanity check assert). (#9350)
   - Tweaked assert triggering when first item height measurement fails, and made it
     a better recoverable error. (#9350)
+- DrawList:
+  - Made AddCallback() user data default parameter.
 - Misc:
   - Minor optimization: reduce redudant label scanning in common widgets.
   - Added missing Test Engine hooks for PlotXXX(), VSliderXXX(), TableHeader().
 - Backends:
+  - GLFW: added a Win32-specific implementation of `ImGui_ImplGlfw_GetContentScaleXXXX`
+    functions for legacy GLFW 3.2. (#9003)
   - Metal: avoid redundant vertex buffer bind in `SetupRenderState()`, which leads
     to validation issue. (#9343) [@Hunam6]
   - Metal: use a dedicated `bufferCacheLock` to avoid crashing when `bufferCache` is
@@ -110,6 +128,13 @@ Other Changes:
   - SDL2: made `ImGui_ImplSDL2_GetContentScaleForWindow()`/`ImGui_ImplSDL2_GetContentScaleForDisplay()`
     helpers return a minimum of 1.0f, as some Linux setup seems to report <1.0f value
     and this breaks scaling border size. (#9369)
+- Examples:
+  - Update VS toolset in all .vcxproj from VS2015 (v140) to VS2017 (v141). The later is the
+    first that supports vcpkg. Onward we will likely stop testing building the library with VS2015.
+  - GLFW+Vulkan, SDL2+Vulkan, SDL3+Vulkan, Win32+Vulkan: reworked to create a descriptor pool with:
+    - IMGUI_IMPL_VULKAN_MINIMUM_SAMPLED_IMAGE_POOL_SIZE descriptors of type VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE.
+    - IMGUI_IMPL_VULKAN_MINIMUM_SAMPLER_POOL_SIZE       descriptors of type VK_DESCRIPTOR_TYPE_SAMPLER.
+
 
 
 -----------------------------------------------------------------------

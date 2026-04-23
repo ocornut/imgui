@@ -200,7 +200,7 @@ static void ImGui_ImplDX12_SetupRenderState(ImDrawData* draw_data, ID3D12Graphic
     command_list->IASetVertexBuffers(0, 1, &vbv);
     D3D12_INDEX_BUFFER_VIEW ibv = {};
     ibv.BufferLocation = fr->IndexBuffer->GetGPUVirtualAddress();
-    ibv.SizeInBytes = fr->IndexBufferSize * sizeof(ImDrawIdx);
+    ibv.SizeInBytes = (UINT)fr->IndexBufferSize * sizeof(ImDrawIdx);
     ibv.Format = sizeof(ImDrawIdx) == 2 ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT;
     command_list->IASetIndexBuffer(&ibv);
     command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
