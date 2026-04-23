@@ -145,7 +145,7 @@ Other Changes:
     - SDLRenderer2: Reset     n/a               n/a                n/a
     - SDLRenderer3: Reset     SetSamplerLinear  SetSamplerNearest  n/a
     - Vulkan:       Reset     SetSamplerLinear  SetSamplerNearest  SetSamplerCustom
-    - WebGPU:       Reset     *missing*         *missing*          *missing*
+    - WebGPU:       Reset     SetSamplerLinear  SetSamplerNearest  *missing*
     (Vulkan backend by @yaz0r, others by @ocornut)
   - GLFW: added a Win32-specific implementation of `ImGui_ImplGlfw_GetContentScaleXXXX`
     functions for legacy GLFW 3.2. (#9003)
