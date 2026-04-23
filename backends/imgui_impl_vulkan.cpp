@@ -27,7 +27,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2026-XX-XX: Added support for standard draw callbacks (in platform_io): DrawCallback_ResetRenderState, DrawCallback_SetSamplerLinear, DrawCallback_SetSamplerNearest, DrawCallback_SetSamplerCustom.
+//  2026-XX-XX: Added support for standard draw callbacks (in platform_io): DrawCallback_ResetRenderState, DrawCallback_SetSamplerLinear, DrawCallback_SetSamplerNearest.
 //  2026-04-22: *BREAKING CHANGE* redesigned to use separate ImageView + Sampler instead of Combined Image Sampler. This change allows us to facilitate changing samplers, in line with other backends.
 //              - When registering custom textures: changed ImGui_ImplVulkan_AddTexture() signature to remove Sampler.
 //                - Before: ImGui_ImplVulkan_AddTexture(VkSampler, VkImageView, VkImageLayout)
@@ -539,7 +539,6 @@ static void ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, VkPipeline 
 static void ImGui_ImplVulkan_DrawCallback_ResetRenderState(const ImDrawList*, const ImDrawCmd*)     {} // Intentionally empty. Used as an identifier for rendering loop to call its code. Simpler to implement this way.
 static void ImGui_ImplVulkan_DrawCallback_SetSamplerLinear(const ImDrawList*, const ImDrawCmd*)     { ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData(); vkCmdBindDescriptorSets(bd->RenderState->CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 1, 1, &bd->SamplerLinearDS, 0, nullptr); }
 static void ImGui_ImplVulkan_DrawCallback_SetSamplerNearest(const ImDrawList*, const ImDrawCmd*)    { ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData(); vkCmdBindDescriptorSets(bd->RenderState->CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 1, 1, &bd->SamplerNearestDS, 0, nullptr); }
-static void ImGui_ImplVulkan_DrawCallback_SetSamplerCustom(const ImDrawList*, const ImDrawCmd* cmd) { ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData(); IM_ASSERT(cmd->UserCallbackDataSize == sizeof(VkDescriptorSet)); VkDescriptorSet* ds = (VkDescriptorSet*)cmd->UserCallbackData;  vkCmdBindDescriptorSets(bd->RenderState->CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 1, 1, ds, 0, nullptr); }
 
 // Render function
 void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer, VkPipeline pipeline)
@@ -1367,7 +1366,6 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info)
     platform_io.DrawCallback_ResetRenderState = ImGui_ImplVulkan_DrawCallback_ResetRenderState;
     platform_io.DrawCallback_SetSamplerLinear = ImGui_ImplVulkan_DrawCallback_SetSamplerLinear;
     platform_io.DrawCallback_SetSamplerNearest = ImGui_ImplVulkan_DrawCallback_SetSamplerNearest;
-    platform_io.DrawCallback_SetSamplerCustom = ImGui_ImplVulkan_DrawCallback_SetSamplerCustom;
 
     // Sanity checks
     IM_ASSERT(info->Instance != VK_NULL_HANDLE);

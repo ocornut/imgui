@@ -67,7 +67,6 @@ Other Changes:
       platform_io.DrawCallback_ResetRenderState;    // Request to reset the graphics/render state.
       platform_io.DrawCallback_SetSamplerLinear;    // Request to set current texture sampling to Linear
       platform_io.DrawCallback_SetSamplerNearest;   // Request to set current texture sampling to Nearest/Point
-      platform_io.DrawCallback_SetSamplerCustom;    // Request to set current texture sampling using Backend Specific data.
     Note that some backends might not support all callbacks.
     (#9378, #9371, #3590, #8926, #2973, #7485, #7468, #6969, #5118, #7616, #9173, #8322, #7230,
     #5999, #6452, #5156, #7342, #7592, #7511)
@@ -133,19 +132,19 @@ Other Changes:
   - Added missing Test Engine hooks for PlotXXX(), VSliderXXX(), TableHeader().
 - Backends:
   - Added support for new standardized draw callbacks in most backends: (#9378)
-    - Allegro5:     Reset     n/a               n/a                n/a
-    - DX9:          Reset     SetSamplerLinear  SetSamplerNearest  n/a
-    - DX10:         Reset     SetSamplerLinear  SetSamplerNearest  SetSamplerCustom
-    - DX11:         Reset     SetSamplerLinear  SetSamplerNearest  SetSamplerCustom
-    - DX12:         Reset     SetSamplerLinear  SetSamplerNearest  n/a
-    - Metal:        Reset     *missing*         *missing*          *missing*
-    - OpenGL2:      Reset     SetSamplerLinear  SetSamplerNearest  *missing*
-    - OpenGL3+:     Reset     SetSamplerLinear  SetSamplerNearest  SetSamplerCustom
-    - SDLGPU3:      Reset     SetSamplerLinear  SetSamplerNearest  SetSamplerCustom
-    - SDLRenderer2: Reset     n/a               n/a                n/a
-    - SDLRenderer3: Reset     SetSamplerLinear  SetSamplerNearest  n/a
-    - Vulkan:       Reset     SetSamplerLinear  SetSamplerNearest  SetSamplerCustom
-    - WebGPU:       Reset     SetSamplerLinear  SetSamplerNearest  *missing*
+    - Allegro5:     Reset     n/a               n/a
+    - DX9:          Reset     SetSamplerLinear  SetSamplerNearest
+    - DX10:         Reset     SetSamplerLinear  SetSamplerNearest
+    - DX11:         Reset     SetSamplerLinear  SetSamplerNearest
+    - DX12:         Reset     SetSamplerLinear  SetSamplerNearest
+    - Metal:        Reset     *missing*         *missing*
+    - OpenGL2:      Reset     SetSamplerLinear  SetSamplerNearest
+    - OpenGL3+:     Reset     SetSamplerLinear  SetSamplerNearest
+    - SDLGPU3:      Reset     SetSamplerLinear  SetSamplerNearest
+    - SDLRenderer2: Reset     n/a               n/a
+    - SDLRenderer3: Reset     SetSamplerLinear  SetSamplerNearest
+    - Vulkan:       Reset     SetSamplerLinear  SetSamplerNearest
+    - WebGPU:       Reset     SetSamplerLinear  SetSamplerNearest
     (Vulkan backend by @yaz0r, others by @ocornut)
   - GLFW: added a Win32-specific implementation of `ImGui_ImplGlfw_GetContentScaleXXXX`
     functions for legacy GLFW 3.2. (#9003)

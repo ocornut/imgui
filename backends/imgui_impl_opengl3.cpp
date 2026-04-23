@@ -23,7 +23,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2026-XX-XX: OpenGL: Added support for standard draw callbacks (in platform_io): DrawCallback_ResetRenderState, DrawCallback_SetSamplerLinear, DrawCallback_SetSamplerNearest, DrawCallback_SetSamplerCustom.
+//  2026-XX-XX: OpenGL: Added support for standard draw callbacks (in platform_io): DrawCallback_ResetRenderState, DrawCallback_SetSamplerLinear, DrawCallback_SetSamplerNearest.
 //  2026-03-12: OpenGL: Fixed invalid assert in ImGui_ImplOpenGL3_UpdateTexture() if ImTextureID_Invalid is defined to be != 0, which became the default since 2026-03-12. (#9295)
 //  2025-12-11: OpenGL: Fixed embedded loader multiple init/shutdown cycles broken on some platforms. (#8792, #9112)
 //  2025-09-18: Call platform_io.ClearRendererHandlers() on shutdown.
@@ -408,7 +408,6 @@ static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, int fb_wid
 static void ImGui_ImplOpenGL3_DrawCallback_ResetRenderState(const ImDrawList*, const ImDrawCmd*)    {} // Intentionally empty. Used as an identifier for rendering loop to call its code. Simpler to implement this way.
 static void ImGui_ImplOpenGL3_DrawCallback_SetSamplerLinear(const ImDrawList*, const ImDrawCmd*)    { ImGui_ImplOpenGL3_Data* bd = ImGui_ImplOpenGL3_GetBackendData(); if (bd->HasBindSampler) { glBindSampler(0, bd->TexSamplers[0]); } else { bd->UseTexParameterToSetSampler = true; bd->NextSampler = GL_LINEAR; } }
 static void ImGui_ImplOpenGL3_DrawCallback_SetSamplerNearest(const ImDrawList*, const ImDrawCmd*)   { ImGui_ImplOpenGL3_Data* bd = ImGui_ImplOpenGL3_GetBackendData(); if (bd->HasBindSampler) { glBindSampler(0, bd->TexSamplers[1]); } else { bd->UseTexParameterToSetSampler = true; bd->NextSampler = GL_NEAREST; } }
-static void ImGui_ImplOpenGL3_DrawCallback_SetSamplerCustom(const ImDrawList*, const ImDrawCmd* cmd){ ImGui_ImplOpenGL3_Data* bd = ImGui_ImplOpenGL3_GetBackendData(); if (bd->HasBindSampler) { glBindSampler(0, (GLuint)(intptr_t)cmd->UserCallbackData); } }
 
 // OpenGL3 Render function.
 // Note that this implementation is little overcomplicated because we are saving/setting up/restoring every OpenGL state explicitly.
@@ -1030,7 +1029,6 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     platform_io.DrawCallback_ResetRenderState = ImGui_ImplOpenGL3_DrawCallback_ResetRenderState;
     platform_io.DrawCallback_SetSamplerLinear = ImGui_ImplOpenGL3_DrawCallback_SetSamplerLinear;
     platform_io.DrawCallback_SetSamplerNearest = ImGui_ImplOpenGL3_DrawCallback_SetSamplerNearest;
-    platform_io.DrawCallback_SetSamplerCustom = ImGui_ImplOpenGL3_DrawCallback_SetSamplerCustom;
 
     // Store GLSL version string so we can refer to it later in case we recreate shaders.
     // Note: GLSL version is NOT the same as GL version. Leave this to nullptr if unsure.

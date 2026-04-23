@@ -158,7 +158,6 @@ static void ImGui_ImplDX10_SetupRenderState(ImDrawData* draw_data, ID3D10Device*
 static void ImGui_ImplDX10_DrawCallback_ResetRenderState(const ImDrawList*, const ImDrawCmd*)       {} // Intentionally empty. Used as an identifier for rendering loop to call its code. Simpler to implement this way.
 static void ImGui_ImplDX10_DrawCallback_SetSamplerLinear(const ImDrawList*, const ImDrawCmd*)       { ImGui_ImplDX10_Data* bd = ImGui_ImplDX10_GetBackendData(); bd->pd3dDevice->PSSetSamplers(0, 1, &bd->pTexSamplerLinear); }
 static void ImGui_ImplDX10_DrawCallback_SetSamplerNearest(const ImDrawList*, const ImDrawCmd*)      { ImGui_ImplDX10_Data* bd = ImGui_ImplDX10_GetBackendData(); bd->pd3dDevice->PSSetSamplers(0, 1, &bd->pTexSamplerNearest); }
-static void ImGui_ImplDX10_DrawCallback_SetSamplerCustom(const ImDrawList*, const ImDrawCmd* cmd)   { ImGui_ImplDX10_Data* bd = ImGui_ImplDX10_GetBackendData(); ID3D10SamplerState* sampler = (ID3D10SamplerState*)cmd->UserCallbackData; bd->pd3dDevice->PSSetSamplers(0, 1, &sampler); }
 
 // Render function
 void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
@@ -622,7 +621,6 @@ bool    ImGui_ImplDX10_Init(ID3D10Device* device)
     platform_io.DrawCallback_ResetRenderState = ImGui_ImplDX10_DrawCallback_ResetRenderState;
     platform_io.DrawCallback_SetSamplerLinear = ImGui_ImplDX10_DrawCallback_SetSamplerLinear;
     platform_io.DrawCallback_SetSamplerNearest = ImGui_ImplDX10_DrawCallback_SetSamplerNearest;
-    platform_io.DrawCallback_SetSamplerCustom = ImGui_ImplDX10_DrawCallback_SetSamplerCustom;
 
     // Get factory from device
     IDXGIDevice* pDXGIDevice = nullptr;

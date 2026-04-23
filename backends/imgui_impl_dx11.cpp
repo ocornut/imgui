@@ -17,7 +17,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2026-XX-XX: DirectX11: Added support for standard draw callbacks (in platform_io): DrawCallback_ResetRenderState, DrawCallback_SetSamplerLinear, DrawCallback_SetSamplerNearest, DrawCallback_SetSamplerCustom.
+//  2026-XX-XX: DirectX11: Added support for standard draw callbacks (in platform_io): DrawCallback_ResetRenderState, DrawCallback_SetSamplerLinear, DrawCallback_SetSamplerNearest.
 //  2026-01-19: DirectX11: Added 'SamplerNearest' in ImGui_ImplDX11_RenderState. Renamed 'SamplerDefault' to 'SamplerLinear'.
 //  2025-09-18: Call platform_io.ClearRendererHandlers() on shutdown.
 //  2025-06-11: DirectX11: Added support for ImGuiBackendFlags_RendererHasTextures, for dynamic font atlas.
@@ -165,7 +165,6 @@ static void ImGui_ImplDX11_SetupRenderState(const ImDrawData* draw_data, ID3D11D
 static void ImGui_ImplDX11_DrawCallback_ResetRenderState(const ImDrawList*, const ImDrawCmd*)       {} // Intentionally empty. Used as an identifier for rendering loop to call its code. Simpler to implement this way.
 static void ImGui_ImplDX11_DrawCallback_SetSamplerLinear(const ImDrawList*, const ImDrawCmd*)       { ImGui_ImplDX11_Data* bd = ImGui_ImplDX11_GetBackendData(); bd->RenderState->DeviceContext->PSSetSamplers(0, 1, &bd->pTexSamplerLinear); }
 static void ImGui_ImplDX11_DrawCallback_SetSamplerNearest(const ImDrawList*, const ImDrawCmd*)      { ImGui_ImplDX11_Data* bd = ImGui_ImplDX11_GetBackendData(); bd->RenderState->DeviceContext->PSSetSamplers(0, 1, &bd->pTexSamplerNearest); }
-static void ImGui_ImplDX11_DrawCallback_SetSamplerCustom(const ImDrawList*, const ImDrawCmd* cmd)   { ImGui_ImplDX11_Data* bd = ImGui_ImplDX11_GetBackendData(); ID3D11SamplerState* sampler = (ID3D11SamplerState*)cmd->UserCallbackData; bd->RenderState->DeviceContext->PSSetSamplers(0, 1, &sampler); }
 
 // Render function
 void ImGui_ImplDX11_RenderDrawData(ImDrawData* draw_data)
@@ -639,7 +638,6 @@ bool    ImGui_ImplDX11_Init(ID3D11Device* device, ID3D11DeviceContext* device_co
     platform_io.DrawCallback_ResetRenderState = ImGui_ImplDX11_DrawCallback_ResetRenderState;
     platform_io.DrawCallback_SetSamplerLinear = ImGui_ImplDX11_DrawCallback_SetSamplerLinear;
     platform_io.DrawCallback_SetSamplerNearest = ImGui_ImplDX11_DrawCallback_SetSamplerNearest;
-    platform_io.DrawCallback_SetSamplerCustom = ImGui_ImplDX11_DrawCallback_SetSamplerCustom;
 
     // Get factory from device
     IDXGIDevice* pDXGIDevice = nullptr;
