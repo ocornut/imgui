@@ -127,6 +127,8 @@ Other Changes:
     helpers return a minimum of 1.0f, as some Linux setup seems to report <1.0f value
     and this breaks scaling border size. (#9369)
 - Examples:
+  - Update VS toolset in all .vcxproj from VS2015 (v140) to VS2017 (v141). The later is the
+    first that supports vcpkg. Onward we will likely stop testing building the library with VS2015.
   - GLFW+Vulkan, SDL2+Vulkan, SDL3+Vulkan, Win32+Vulkan: reworked to create a descriptor pool with:
     - IMGUI_IMPL_VULKAN_MINIMUM_SAMPLED_IMAGE_POOL_SIZE descriptors of type VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE.
     - IMGUI_IMPL_VULKAN_MINIMUM_SAMPLER_POOL_SIZE       descriptors of type VK_DESCRIPTOR_TYPE_SAMPLER.
