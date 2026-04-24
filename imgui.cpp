@@ -4862,8 +4862,12 @@ void ImGui::MarkItemEdited(ImGuiID id)
     // This marking is to be able to provide info for IsItemDeactivatedAfterEdit().
     // ActiveId might have been released by the time we call this (as in the typical press/release button behavior) but still need to fill the data.
     ImGuiContext& g = *GImGui;
+
+    g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_EditedInternal;
     if (g.LastItemData.ItemFlags & ImGuiItemFlags_NoMarkEdited)
         return;
+    g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_Edited;
+
     if (g.ActiveId == id || g.ActiveId == 0)
     {
         // FIXME: Can't we fully rely on LastItemData yet?
@@ -4877,9 +4881,6 @@ void ImGui::MarkItemEdited(ImGuiID id)
     // We accept 'ActiveIdPreviousFrame == id' for InputText() returning an edit after it has been taken ActiveId away (#4714)
     // FIXME: This assert is getting a bit meaningless over time. It helped detect some unusual use cases but eventually it is becoming an unnecessary restriction.
     IM_ASSERT(g.DragDropActive || g.ActiveId == id || g.ActiveId == 0 || g.ActiveIdPreviousFrame == id || g.NavJustMovedToId || (g.CurrentMultiSelect != NULL && g.BoxSelectState.IsActive));
-
-    //IM_ASSERT(g.CurrentWindow->DC.LastItemId == id);
-    g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_Edited;
 }
 
 bool ImGui::IsWindowContentHoverable(ImGuiWindow* window, ImGuiHoveredFlags flags)

@@ -3802,7 +3802,7 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* p_data
 
     ImGuiContext& g = *GImGui;
     ImGuiStyle& style = g.Style;
-    IM_ASSERT((flags & ImGuiInputTextFlags_EnterReturnsTrue) == 0); // Not supported by InputScalar(). Please open an issue if you this would be useful to you. Otherwise use IsItemDeactivatedAfterEdit()!
+    //IM_ASSERT((flags & ImGuiInputTextFlags_EnterReturnsTrue) == 0); // Not supported by InputScalar(). Please open an issue if you this would be useful to you. Otherwise use IsItemDeactivatedAfterEdit()!
 
     if (format == NULL)
         format = DataTypeGetInfo(data_type)->PrintFmt;
@@ -3839,7 +3839,8 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* p_data
     }
 
     // Apply
-    bool value_changed = ret ? DataTypeApplyFromText(buf, data_type, p_data, format, (flags & ImGuiInputTextFlags_ParseEmptyRefVal) ? p_data_default : NULL) : false;
+    bool input_edited = (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_EditedInternal) != 0; // We would be using 'ret' if ImGuiInputTextFlags_EnterReturnsTrue was not involved.
+    bool value_changed = input_edited ? DataTypeApplyFromText(buf, data_type, p_data, format, (flags & ImGuiInputTextFlags_ParseEmptyRefVal) ? p_data_default : NULL) : false;
 
     // Step buttons
     if (has_step_buttons)
@@ -3853,13 +3854,13 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* p_data
         if (ButtonEx("-", ImVec2(button_size, button_size)))
         {
             DataTypeApplyOp(data_type, '-', p_data, p_data, g.IO.KeyCtrl && p_step_fast ? p_step_fast : p_step);
-            value_changed = true;
+            value_changed = ret = true;
         }
         SameLine(0, style.ItemInnerSpacing.x);
         if (ButtonEx("+", ImVec2(button_size, button_size)))
         {
             DataTypeApplyOp(data_type, '+', p_data, p_data, g.IO.KeyCtrl && p_step_fast ? p_step_fast : p_step);
-            value_changed = true;
+            value_changed = ret = true;
         }
         PopItemFlag();
         if (flags & ImGuiInputTextFlags_ReadOnly)
@@ -3881,6 +3882,8 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* p_data
     if (value_changed)
         MarkItemEdited(g.LastItemData.ID);
 
+    if (flags & ImGuiInputTextFlags_EnterReturnsTrue)
+        return ret;
     return value_changed;
 }
 

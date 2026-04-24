@@ -257,7 +257,9 @@ struct ImGui_ImplOpenGL3_Data
     bool            UseBufferSubData;
     bool            UseTexParameterToSetSampler;
     GLuint          NextSampler;            // Used if !HasBindSampler && UseTexParameterToSetSampler.
-    GLuint          TexSamplers[2];         // Used if IMGUI_IMPL_OPENGL_MAY_HAVE_BIND_SAMPLER && HasBindSimpler (0=linear, 1=nearest).
+#ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_BIND_SAMPLER
+    GLuint          TexSamplers[2];         // Used if HasBindSimpler. (0=linear, 1=nearest)
+#endif
 
     ImVector<char>  TempBuffer;
 
@@ -410,8 +412,13 @@ static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, int fb_wid
 
 // Draw callbacks
 static void ImGui_ImplOpenGL3_DrawCallback_ResetRenderState(const ImDrawList*, const ImDrawCmd*)    {} // Intentionally empty. Used as an identifier for rendering loop to call its code. Simpler to implement this way.
+#ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_BIND_SAMPLER
 static void ImGui_ImplOpenGL3_DrawCallback_SetSamplerLinear(const ImDrawList*, const ImDrawCmd*)    { ImGui_ImplOpenGL3_Data* bd = ImGui_ImplOpenGL3_GetBackendData(); if (bd->HasBindSampler) { glBindSampler(0, bd->TexSamplers[0]); } else { bd->UseTexParameterToSetSampler = true; bd->NextSampler = GL_LINEAR; } }
 static void ImGui_ImplOpenGL3_DrawCallback_SetSamplerNearest(const ImDrawList*, const ImDrawCmd*)   { ImGui_ImplOpenGL3_Data* bd = ImGui_ImplOpenGL3_GetBackendData(); if (bd->HasBindSampler) { glBindSampler(0, bd->TexSamplers[1]); } else { bd->UseTexParameterToSetSampler = true; bd->NextSampler = GL_NEAREST; } }
+#else
+static void ImGui_ImplOpenGL3_DrawCallback_SetSamplerLinear(const ImDrawList*, const ImDrawCmd*)    { ImGui_ImplOpenGL3_Data* bd = ImGui_ImplOpenGL3_GetBackendData(); bd->UseTexParameterToSetSampler = true; bd->NextSampler = GL_LINEAR; }
+static void ImGui_ImplOpenGL3_DrawCallback_SetSamplerNearest(const ImDrawList*, const ImDrawCmd*)   { ImGui_ImplOpenGL3_Data* bd = ImGui_ImplOpenGL3_GetBackendData(); bd->UseTexParameterToSetSampler = true; bd->NextSampler = GL_NEAREST; }
+#endif
 
 // OpenGL3 Render function.
 // Note that this implementation is little overcomplicated because we are saving/setting up/restoring every OpenGL state explicitly.
@@ -950,7 +957,9 @@ void    ImGui_ImplOpenGL3_DestroyDeviceObjects()
 {
     ImGui_ImplOpenGL3_InitLoader();
     ImGui_ImplOpenGL3_Data* bd = ImGui_ImplOpenGL3_GetBackendData();
+#ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_BIND_SAMPLER
     if (bd->TexSamplers[0]) { glDeleteSamplers(2, &bd->TexSamplers[0]); bd->TexSamplers[0] = bd->TexSamplers[1] = 0; }
+#endif
     if (bd->VboHandle)      { glDeleteBuffers(1, &bd->VboHandle); bd->VboHandle = 0; }
     if (bd->ElementsHandle) { glDeleteBuffers(1, &bd->ElementsHandle); bd->ElementsHandle = 0; }
     if (bd->ShaderHandle)   { glDeleteProgram(bd->ShaderHandle); bd->ShaderHandle = 0; }

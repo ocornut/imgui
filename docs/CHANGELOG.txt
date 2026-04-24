@@ -89,6 +89,14 @@ Other Changes:
   - Detect and report error when calling End() instead of EndPopup() on a popup. (#9351)
   - Child windows with only ImGuiChildFlags_AutoResizeY flag keep using the proportional
     default ItemWidth. (#9355)
+- InputInt, InputFloat, InputScalar: reinstated ImGuiInputTextFlags_EnterReturnsTrue
+  support which was removed in 1.91.4. (#8665, #9299, #8065, #3946, #6284, #9117)
+  - Fixed the fact that it didn't return true when validating same value.
+  - Fixed losing value when tabbing out or losing focus.
+  - Made it that pressing +/- step buttons also return true, which is in line
+    with 1.91.4 behavior.
+  - In a majority of cases you should use IsItemDeactivatedAfterEdit() instead,
+    but it still has a few edge cases flaws (to be addressed soon).
 - Multi-Select:
   - Fixed an issue using Multi-Select within a Table causing column width measurement to
     be invalid when trailing column contents is not submitted in the last row. (#9341, #8250)

@@ -1016,6 +1016,7 @@ enum ImGuiItemStatusFlags_
     ImGuiItemStatusFlags_HasClipRect        = 1 << 9,   // g.LastItemData.ClipRect is valid.
     ImGuiItemStatusFlags_HasShortcut        = 1 << 10,  // g.LastItemData.Shortcut valid. Set by SetNextItemShortcut() -> ItemAdd().
     //ImGuiItemStatusFlags_FocusedByTabbing = 1 << 8,   // Removed IN 1.90.1 (Dec 2023). The trigger is part of g.NavActivateId. See commit 54c1bdeceb.
+    ImGuiItemStatusFlags_EditedInternal     = 1 << 11,  // Similar to ImGuiItemStatusFlags_Edited but bypassing ImGuiItemFlags_NoMarkEdited.
 
     // Additional status + semantic for ImGuiTestEngine
 #ifdef IMGUI_ENABLE_TEST_ENGINE
