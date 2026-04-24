@@ -2469,23 +2469,108 @@ void ImDrawList::_AddRectBaked(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
         PrimUnreserve(idx_allocated - idx_used, vtx_allocated - vtx_used);
 }
 
-static void RectCornerArc(ImDrawList* draw_list, float cx, float cy, float radius, const int arc_step, const int arc_point_count, const int corner)
+// Draws rounded rectangle where thickness/2 > rounding. If rendered using the regular polyline, the stroke will fold and leave artefact on the corner if rendered with transparency.
+// The stroke is positioned inside the rectangle.
+void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float rounding, float thickness, ImDrawFlags flags)
 {
-    if (radius == 0.f)
+    thickness += _FringeScale;
+
+    // Adjust the rounding to be the outside radius.
+    rounding += thickness * 0.5f;
+
+    const int arc_step = ImClamp(IM_DRAWLIST_ARCFAST_SAMPLE_MAX / this->_CalcCircleAutoSegmentCount(rounding), 1, IM_DRAWLIST_ARCFAST_TABLE_SIZE / 4);
+    const int arc_point_count = (IM_DRAWLIST_ARCFAST_TABLE_SIZE / 4) / arc_step + 1;
+
+    int vtx_count = (4 + arc_point_count) * 4 + 4;
+    int idx_count = (4 + arc_point_count - 1) * 4 * 3;
+
+    PrimReserve(idx_count, vtx_count);
+    ImDrawVert* start_vtx_ptr = _VtxWritePtr;
+    ImDrawIdx* start_idx_ptr = _IdxWritePtr;
+
+    const float ht = thickness * 0.5f;
+    const ImVec2 corner_pos[4] = {
+        ImVec2(p_min.x - ht, p_min.y - ht),
+        ImVec2(p_max.x + ht, p_min.y - ht),
+        ImVec2(p_max.x + ht, p_max.y + ht),
+        ImVec2(p_min.x - ht, p_max.y + ht)
+    };
+    static const ImVec2 corner_offset[4] = { {1,1}, {-1,1}, {-1,-1}, {1,-1} };
+    static const ImDrawFlags corner_flags[4] = { ImDrawFlags_RoundCornersTopLeft, ImDrawFlags_RoundCornersTopRight, ImDrawFlags_RoundCornersBottomRight, ImDrawFlags_RoundCornersBottomLeft };
+
+    const float stem_offset = thickness - ImMax(thickness - rounding, _FringeScale);
+
+    const ImVec4 tex_uvs = _Data->TexUvLines[IM_DRAWLIST_TEX_LINES_WIDTH_MAX]; // TODO: max uv
+    const ImVec2 outer_uv0(tex_uvs.x + (0.5f / _FringeScale) * _Data->FontAtlas->TexUvScale.x, tex_uvs.y);
+    const ImVec2 outer_uv1(tex_uvs.x + ((0.5f + stem_offset) / _FringeScale) * _Data->FontAtlas->TexUvScale.x, tex_uvs.y);
+    const ImVec2 inner_uv0(tex_uvs.x + (0.5f / _FringeScale) * _Data->FontAtlas->TexUvScale.x, tex_uvs.y);
+    const ImVec2 inner_uv1(tex_uvs.x + ((0.5f + thickness - stem_offset) / _FringeScale) * _Data->FontAtlas->TexUvScale.x, tex_uvs.y);
+
+    int base_idx = (int)_VtxCurrentIdx;
+    IM_POLYLINE_APPEND_VERTEX(0, 0, outer_uv0, col);
+    IM_POLYLINE_APPEND_VERTEX(0, 0, outer_uv1, col);
+    IM_POLYLINE_APPEND_VERTEX(0, 0, inner_uv1, col);
+    IM_POLYLINE_APPEND_VERTEX(0, 0, inner_uv0, col);
+
+    for (int corner = 0; corner < 4; corner++)
     {
-        draw_list->_Path.push_back(ImVec2(cx, cy));
-        return;
+        const ImVec2 stem = corner_pos[corner] + corner_offset[corner] * stem_offset;
+        const ImVec2 inner = corner_pos[corner] + corner_offset[corner] * thickness;
+        const bool is_rounded = flags & corner_flags[corner];
+
+        const int arc_idx = (int)_VtxCurrentIdx;
+        if (is_rounded)
+        {
+            const ImVec2 center = corner_pos[corner] + corner_offset[corner] * rounding;
+            int a = (IM_DRAWLIST_ARCFAST_TABLE_SIZE / 4) * corner;
+            for (int i = 0; i < arc_point_count; i++)
+            {
+                const ImVec2 dir = _Data->ArcFastVtx[a];
+                IM_POLYLINE_APPEND_VERTEX(center.x - dir.x * rounding, center.y - dir.y * rounding, outer_uv0, col);
+                a = (a + arc_step) % IM_DRAWLIST_ARCFAST_TABLE_SIZE;
+            }
+        }
+        else
+        {
+            IM_POLYLINE_APPEND_VERTEX(corner_pos[corner].x, corner_pos[corner].y, outer_uv0, col);
+        }
+
+        const int stem0_idx = (int)_VtxCurrentIdx;
+        IM_POLYLINE_APPEND_VERTEX(stem.x, stem.y, outer_uv1, col);
+        const int stem1_idx = (int)_VtxCurrentIdx;
+        IM_POLYLINE_APPEND_VERTEX(stem.x, stem.y, inner_uv1, col);
+        const int inner_idx = (int)_VtxCurrentIdx;
+        IM_POLYLINE_APPEND_VERTEX(inner.x, inner.y, inner_uv0, col);
+
+        // Arc
+        if (is_rounded)
+        {
+            for (int i = 0; i < arc_point_count-1; i++)
+                IM_POLYLINE_APPEND_TRI(stem0_idx, arc_idx + i, arc_idx + i + 1);
+        }
+
+        // Connect with previous
+        IM_POLYLINE_APPEND_TRI(base_idx+0, arc_idx, stem0_idx);
+        IM_POLYLINE_APPEND_TRI(base_idx+0, stem0_idx, base_idx+1);
+        IM_POLYLINE_APPEND_TRI(base_idx+2, stem1_idx, inner_idx);
+        IM_POLYLINE_APPEND_TRI(base_idx+2, inner_idx, base_idx+3);
+
+
+        base_idx = stem0_idx - 1;
     }
 
-    int arc_idx = (IM_DRAWLIST_ARCFAST_TABLE_SIZE / 4) * corner;
-    for (int i = 0; i < arc_point_count; i++)
-    {
-        ImVec2 pt;
-        pt.x = cx - draw_list->_Data->ArcFastVtx[arc_idx].x * radius;
-        pt.y = cy - draw_list->_Data->ArcFastVtx[arc_idx].y * radius;
-        draw_list->_Path.push_back(pt);
-        arc_idx = (arc_idx + arc_step) % IM_DRAWLIST_ARCFAST_TABLE_SIZE;
-    }
+    // Close
+    start_vtx_ptr[0] = VtxBuffer.Data[base_idx+0];
+    start_vtx_ptr[1] = VtxBuffer.Data[base_idx+1];
+    start_vtx_ptr[2] = VtxBuffer.Data[base_idx+2];
+    start_vtx_ptr[3] = VtxBuffer.Data[base_idx+3];
+
+    const int idx_used = (int)(_IdxWritePtr - start_idx_ptr);
+    const int vtx_used = (int)(_VtxWritePtr - start_vtx_ptr);
+    IM_ASSERT(idx_used <= idx_count && vtx_used <= vtx_count);
+
+    if (idx_used < idx_count || vtx_used < vtx_count)
+        PrimUnreserve(idx_count - idx_used, vtx_count - vtx_used);
 }
 
 // p_min = upper-left, p_max = lower-right
@@ -2570,23 +2655,23 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
         // Constrain rounding to rect dimensions
         adjusted_rounding = ImMin(adjusted_rounding, ImFabs(width) * (((flags & ImDrawFlags_RoundCornersTop) == ImDrawFlags_RoundCornersTop) || ((flags & ImDrawFlags_RoundCornersBottom) == ImDrawFlags_RoundCornersBottom) ? 0.5f : 1.0f) - 1.0f);
         adjusted_rounding = ImMin(adjusted_rounding, ImFabs(height) * (((flags & ImDrawFlags_RoundCornersLeft) == ImDrawFlags_RoundCornersLeft) || ((flags & ImDrawFlags_RoundCornersRight) == ImDrawFlags_RoundCornersRight) ? 0.5f : 1.0f) - 1.0f);
-        // We have to have some kind of curve to render the corner with PathStroke().
-        // The small value limits the rounding to about half the stroke radius.
-        adjusted_rounding = ImMax(_FringeScale * 0.25f, adjusted_rounding);
+
+        if (thickness * 0.5f > adjusted_rounding)
+        {
+            // Special case rendering to avoid rendering artifacts at the corners.
+            // If rendered using the regular polyline, the stroke will fold and leave artifact on the corner if rendered with transparency.
+            _AddRectTinyRounding(adjusted_min, adjusted_max, col, adjusted_rounding, thickness, flags);
+            return;
+        }
 
         const float rounding_tl = (flags & ImDrawFlags_RoundCornersTopLeft) ? adjusted_rounding : 0.0f;
         const float rounding_tr = (flags & ImDrawFlags_RoundCornersTopRight) ? adjusted_rounding : 0.0f;
         const float rounding_br = (flags & ImDrawFlags_RoundCornersBottomRight) ? adjusted_rounding : 0.0f;
         const float rounding_bl = (flags & ImDrawFlags_RoundCornersBottomLeft) ? adjusted_rounding : 0.0f;
-
-        // Use custom arcs so that we can specify the point count.
-        const int arc_step = ImClamp(IM_DRAWLIST_ARCFAST_SAMPLE_MAX / this->_CalcCircleAutoSegmentCount(ImMax(adjusted_rounding, thickness * 0.5f)), 1, IM_DRAWLIST_ARCFAST_TABLE_SIZE / 4);
-        const int arc_point_count = (IM_DRAWLIST_ARCFAST_TABLE_SIZE / 4) / arc_step + 1;
-
-        RectCornerArc(this, adjusted_min.x + rounding_tl, adjusted_min.y + rounding_tl, rounding_tl, arc_step, arc_point_count, 0);
-        RectCornerArc(this, adjusted_max.x - rounding_tr, adjusted_min.y + rounding_tr, rounding_tr, arc_step, arc_point_count, 1);
-        RectCornerArc(this, adjusted_max.x - rounding_br, adjusted_max.y - rounding_br, rounding_br, arc_step, arc_point_count, 2);
-        RectCornerArc(this, adjusted_min.x + rounding_bl, adjusted_max.y - rounding_bl, rounding_bl, arc_step, arc_point_count, 3);
+        PathArcToFast(ImVec2(adjusted_min.x + rounding_tl, adjusted_min.y + rounding_tl), rounding_tl, 6, 9);
+        PathArcToFast(ImVec2(adjusted_max.x - rounding_tr, adjusted_min.y + rounding_tr), rounding_tr, 9, 12);
+        PathArcToFast(ImVec2(adjusted_max.x - rounding_br, adjusted_max.y - rounding_br), rounding_br, 0, 3);
+        PathArcToFast(ImVec2(adjusted_min.x + rounding_bl, adjusted_max.y - rounding_bl), rounding_bl, 3, 6);
     }
 
     PathStroke(col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly);
