@@ -1047,18 +1047,6 @@ void ImDrawList::_AddPolylineThin(const ImVec2* points, ImVec2* normals, float* 
                 // Bevel
                 if (sin_theta < 0.0f)
                 {
-/*                    IM_APPEND_VTX(pt_x - sd_x, pt_y - sd_y, uv0, col);
-                    const int next_base_idx = (ImDrawIdx)_VtxCurrentIdx;
-                    IM_APPEND_VTX(pt_x + sd_x, pt_y + sd_y, uv0, col);
-                    IM_APPEND_VTX(p1.x + miter_offset_x, p1.y + miter_offset_y, uv1, col);
-
-                    // Bevel tri
-                    IM_APPEND_TRI(base_idx+2, base_idx+3, base_idx+4);
-                    // Connect prev to next
-                    IM_APPEND_TRI(base_idx+0, base_idx+2, base_idx+4);
-                    IM_APPEND_TRI(base_idx+0, base_idx+4, base_idx+1);
-                    base_idx = next_base_idx;*/
-
                     IM_APPEND_VTX(pt_x - sd_x, pt_y - sd_y, uv0, col); // 2
                     IM_APPEND_VTX(p1.x, p1.y, uv2, col); // 3
                     const int next_base_idx = (ImDrawIdx)_VtxCurrentIdx;
@@ -1090,18 +1078,6 @@ void ImDrawList::_AddPolylineThin(const ImVec2* points, ImVec2* normals, float* 
                     IM_APPEND_TRI(base_idx + 3, base_idx + 4, base_idx + 5);
                     IM_APPEND_TRI(base_idx + 3, base_idx + 5, base_idx + 2);
                     base_idx = next_base_idx;
-
-/*                    IM_APPEND_VTX(pt_x + sd_x, pt_y + sd_y, uv1, col);
-                    const int next_base_idx = (ImDrawIdx)_VtxCurrentIdx;
-                    IM_APPEND_VTX(p1.x - miter_offset_x, p1.y - miter_offset_y, uv0, col);
-                    IM_APPEND_VTX(pt_x - sd_x, pt_y - sd_y, uv1, col);
-
-                    // Bevel tri
-                    IM_APPEND_TRI(base_idx + 3, base_idx + 4, base_idx + 2);
-                    // Connect prev to next
-                    IM_APPEND_TRI(base_idx + 0, base_idx + 3, base_idx + 2);
-                    IM_APPEND_TRI(base_idx + 0, base_idx + 2, base_idx + 1);
-                    base_idx = next_base_idx;*/
                 }
             }
         }
@@ -1831,7 +1807,161 @@ void ImDrawList::AddPolylineLegacy(const ImVec2* points, const int points_count,
 
 // - We intentionally avoid using ImVec2 and its math operators here to reduce cost to a minimum for debug/non-inlined builds.
 // - Filled shapes must always use clockwise winding order. The anti-aliasing fringe depends on it. Counter-clockwise shapes will have "inward" anti-aliasing.
-void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_count, ImU32 col)
+void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_count, ImU32 col, ImDrawFlags flags)
+{
+    if (points_count < 3 || (col & IM_COL32_A_MASK) == 0)
+        return;
+
+/*    if (ImGui::GetIO().KeyShift)
+    {
+        AddConvexPolyFilledLegacy(points, points_count, col);
+        return;
+    }*/
+
+    const ImVec2 uv = _Data->TexUvWhitePixel;
+    const float half_aa = _FringeScale * 0.5f;
+    ImU32 col_trans = col & ~IM_COL32_A_MASK;
+    const bool miters_only = (flags & ImDrawFlags_MiterOnly) != 0;
+
+    const int idx_count = ((points_count - 2) + points_count * 3) * 3;
+    const int vtx_count = (points_count * 3);
+    PrimReserve(idx_count, vtx_count);
+    ImDrawVert* start_vtx_ptr = _VtxWritePtr;
+    ImDrawIdx* start_idx_ptr = _IdxWritePtr;
+
+    // Compute normals and segment lengths
+    _Data->TempBuffer.reserve_discard(points_count * 2);
+    ImVec2* temp_normals = _Data->TempBuffer.Data;
+    float* temp_sqr_lengths = (float*)(_Data->TempBuffer.Data + points_count);
+    for (int i0 = points_count - 1, i1 = 0; i1 < points_count; i0 = i1++)
+    {
+        const ImVec2& p0 = points[i0];
+        const ImVec2& p1 = points[i1];
+        float dx = p1.x - p0.x;
+        float dy = p1.y - p0.y;
+        float d2 = dx*dx + dy*dy;
+        if (d2 > 0.f)
+        {
+            float inv_len = ImRsqrt(d2);
+            dx *= inv_len;
+            dy *= inv_len;
+        }
+        temp_normals[i0].x = dy;
+        temp_normals[i0].y = -dx;
+        temp_sqr_lengths[i0] = d2;
+    }
+
+
+    unsigned int vtx_inner_idx = _VtxCurrentIdx;
+    ImDrawVert* inner_vtx_ptr = _VtxWritePtr;
+    _VtxWritePtr += points_count;
+    _VtxCurrentIdx += points_count;
+
+    unsigned int prev_outer_idx = (unsigned int )-1; // We dont know oueter vert could yet, will need to patch once we're done.
+
+    const float miter_distance_limit = half_aa * IM_POLYLINE_MITER_LIMIT;
+    const float miter_distance_limit_sqr = miter_distance_limit * miter_distance_limit;
+
+    for (int i0 = points_count - 1, i1 = 0; i1 < points_count; i0 = i1++)
+    {
+        // Average normals
+        const ImVec2& n0 = temp_normals[i0];
+        const ImVec2& n1 = temp_normals[i1];
+
+        // theta is the angle between two segments
+        const float cos_theta = n0.x * n1.x + n0.y * n1.y;
+        // miter offset formula is derived here: https://www.angusj.com/clipper2/Docs/Trigonometry.htm
+        float miter_scale_factor = ImMin(1000.f, (cos_theta > IM_POLYLINE_MITER_ANGLE_LIMIT) ? (half_aa / (1.0f + cos_theta)) : FLT_MAX); // avoid division by zero
+
+        float dm_x = (n0.x + n1.x) * miter_scale_factor;
+        float dm_y = (n0.y + n1.y) * miter_scale_factor;
+        bool bevel = false;
+
+        if (!miters_only)
+        {
+            const float miter_distance_sqr = dm_x * dm_x + dm_y * dm_y;
+            bevel = miter_distance_sqr > miter_distance_limit_sqr;
+
+            const float segment_limit_sqr = ImMax(temp_sqr_lengths[i0], temp_sqr_lengths[i1]);
+            const bool overshoot = miter_distance_sqr > segment_limit_sqr;
+            if (overshoot)
+            {
+                // Make sure the miter stays within the polygon bounds.
+                const float scale = ImSqrt(segment_limit_sqr / miter_distance_sqr);
+                dm_x *= scale;
+                dm_y *= scale;
+            }
+        }
+
+        // Inner
+        inner_vtx_ptr->pos.x = (points[i1].x - dm_x); inner_vtx_ptr->pos.y = (points[i1].y - dm_y); inner_vtx_ptr->uv = uv; inner_vtx_ptr->col = col;
+        inner_vtx_ptr++;
+
+        unsigned int prev_inner_idx = vtx_inner_idx + i0;
+        unsigned int inner_idx = vtx_inner_idx + i1;
+        unsigned int outer_idx = _VtxCurrentIdx;
+
+        // Outer
+        if (bevel)
+        {
+            _VtxWritePtr->pos.x = (points[i1].x + n0.x * half_aa); _VtxWritePtr->pos.y = (points[i1].y + n0.y * half_aa); _VtxWritePtr->uv = uv; _VtxWritePtr->col = col_trans;
+            _VtxWritePtr++;
+            _VtxCurrentIdx++;
+            _VtxWritePtr->pos.x = (points[i1].x + n1.x * half_aa); _VtxWritePtr->pos.y = (points[i1].y + n1.y * half_aa); _VtxWritePtr->uv = uv; _VtxWritePtr->col = col_trans;
+            _VtxWritePtr++;
+            _VtxCurrentIdx++;
+        }
+        else
+        {
+            _VtxWritePtr->pos.x = (points[i1].x + dm_x); _VtxWritePtr->pos.y = (points[i1].y + dm_y); _VtxWritePtr->uv = uv; _VtxWritePtr->col = col_trans;
+            _VtxWritePtr++;
+            _VtxCurrentIdx++;
+        }
+
+        // Connect with previous
+        _IdxWritePtr[0] = (ImDrawIdx)prev_outer_idx;
+        _IdxWritePtr[1] = (ImDrawIdx)outer_idx;
+        _IdxWritePtr[2] = (ImDrawIdx)inner_idx;
+
+        _IdxWritePtr[3] = (ImDrawIdx)prev_outer_idx;
+        _IdxWritePtr[4] = (ImDrawIdx)inner_idx;
+        _IdxWritePtr[5] = (ImDrawIdx)prev_inner_idx;
+
+        _IdxWritePtr += 6;
+
+        // Fill bevel
+        if (bevel)
+        {
+            _IdxWritePtr[0] = (ImDrawIdx)outer_idx;
+            _IdxWritePtr[1] = (ImDrawIdx)outer_idx+1;
+            _IdxWritePtr[2] = (ImDrawIdx)inner_idx;
+            _IdxWritePtr += 3;
+            outer_idx++;
+        }
+
+        prev_outer_idx = outer_idx;
+    }
+
+    // Patch first segment
+    start_idx_ptr[0] = (ImDrawIdx)prev_outer_idx;
+    start_idx_ptr[3] = (ImDrawIdx)prev_outer_idx;
+
+    // Add indices for fill
+    for (int i = 2; i < points_count; i++)
+    {
+        _IdxWritePtr[0] = (ImDrawIdx)(vtx_inner_idx); _IdxWritePtr[1] = (ImDrawIdx)(vtx_inner_idx + i - 1); _IdxWritePtr[2] = (ImDrawIdx)(vtx_inner_idx + i);
+        _IdxWritePtr += 3;
+    }
+
+    const int idx_used = (int)(_IdxWritePtr - start_idx_ptr);
+    const int vtx_used = (int)(_VtxWritePtr - start_vtx_ptr);
+    IM_ASSERT(idx_used <= idx_count && vtx_used <= vtx_count);
+
+    if (idx_used < idx_count || vtx_used < vtx_count)
+        PrimUnreserve(idx_count - idx_used, vtx_count - vtx_used);
+}
+
+void ImDrawList::AddConvexPolyFilledLegacy(const ImVec2* points, const int points_count, ImU32 col)
 {
     if (points_count < 3 || (col & IM_COL32_A_MASK) == 0)
         return;
@@ -1912,6 +2042,7 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
         _VtxCurrentIdx += (ImDrawIdx)vtx_count;
     }
 }
+
 
 void ImDrawList::_PathArcToFastEx(const ImVec2& center, float radius, int a_min_sample, int a_max_sample, int a_step)
 {
@@ -2507,10 +2638,10 @@ void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, 
     const ImVec2 inner_uv1(tex_uvs.x + ((0.5f + thickness - stem_offset) / _FringeScale) * _Data->FontAtlas->TexUvScale.x, tex_uvs.y);
 
     int base_idx = (int)_VtxCurrentIdx;
-    IM_POLYLINE_APPEND_VERTEX(0, 0, outer_uv0, col);
-    IM_POLYLINE_APPEND_VERTEX(0, 0, outer_uv1, col);
-    IM_POLYLINE_APPEND_VERTEX(0, 0, inner_uv1, col);
-    IM_POLYLINE_APPEND_VERTEX(0, 0, inner_uv0, col);
+    IM_APPEND_VTX(0, 0, outer_uv0, col);
+    IM_APPEND_VTX(0, 0, outer_uv1, col);
+    IM_APPEND_VTX(0, 0, inner_uv1, col);
+    IM_APPEND_VTX(0, 0, inner_uv0, col);
 
     for (int corner = 0; corner < 4; corner++)
     {
@@ -2526,34 +2657,34 @@ void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, 
             for (int i = 0; i < arc_point_count; i++)
             {
                 const ImVec2 dir = _Data->ArcFastVtx[a];
-                IM_POLYLINE_APPEND_VERTEX(center.x - dir.x * rounding, center.y - dir.y * rounding, outer_uv0, col);
+                IM_APPEND_VTX(center.x - dir.x * rounding, center.y - dir.y * rounding, outer_uv0, col);
                 a = (a + arc_step) % IM_DRAWLIST_ARCFAST_TABLE_SIZE;
             }
         }
         else
         {
-            IM_POLYLINE_APPEND_VERTEX(corner_pos[corner].x, corner_pos[corner].y, outer_uv0, col);
+            IM_APPEND_VTX(corner_pos[corner].x, corner_pos[corner].y, outer_uv0, col);
         }
 
         const int stem0_idx = (int)_VtxCurrentIdx;
-        IM_POLYLINE_APPEND_VERTEX(stem.x, stem.y, outer_uv1, col);
+        IM_APPEND_VTX(stem.x, stem.y, outer_uv1, col);
         const int stem1_idx = (int)_VtxCurrentIdx;
-        IM_POLYLINE_APPEND_VERTEX(stem.x, stem.y, inner_uv1, col);
+        IM_APPEND_VTX(stem.x, stem.y, inner_uv1, col);
         const int inner_idx = (int)_VtxCurrentIdx;
-        IM_POLYLINE_APPEND_VERTEX(inner.x, inner.y, inner_uv0, col);
+        IM_APPEND_VTX(inner.x, inner.y, inner_uv0, col);
 
         // Arc
         if (is_rounded)
         {
             for (int i = 0; i < arc_point_count-1; i++)
-                IM_POLYLINE_APPEND_TRI(stem0_idx, arc_idx + i, arc_idx + i + 1);
+                IM_APPEND_TRI(stem0_idx, arc_idx + i, arc_idx + i + 1);
         }
 
         // Connect with previous
-        IM_POLYLINE_APPEND_TRI(base_idx+0, arc_idx, stem0_idx);
-        IM_POLYLINE_APPEND_TRI(base_idx+0, stem0_idx, base_idx+1);
-        IM_POLYLINE_APPEND_TRI(base_idx+2, stem1_idx, inner_idx);
-        IM_POLYLINE_APPEND_TRI(base_idx+2, inner_idx, base_idx+3);
+        IM_APPEND_TRI(base_idx + 0, arc_idx, stem0_idx);
+        IM_APPEND_TRI(base_idx + 0, stem0_idx, base_idx + 1);
+        IM_APPEND_TRI(base_idx + 2, stem1_idx, inner_idx);
+        IM_APPEND_TRI(base_idx + 2, inner_idx, base_idx + 3);
 
 
         base_idx = stem0_idx - 1;
@@ -2868,7 +2999,7 @@ void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
     else
     {
         PathRect(p_min, p_max, rounding, flags);
-        PathFillConvex(col);
+        PathFillConvex(col, ImDrawFlags_MiterOnly);
     }
 }
 
@@ -3023,7 +3154,7 @@ void ImDrawList::AddCircleFilled(const ImVec2& center, float radius, ImU32 col, 
         PathArcTo(center, radius, 0.0f, a_max, num_segments - 1);
     }
 
-    PathFillConvex(col);
+    PathFillConvex(col, ImDrawFlags_MiterOnly);
 }
 
 // Guaranteed to honor 'num_segments'
@@ -3078,7 +3209,7 @@ void ImDrawList::AddNgonFilled(const ImVec2& center, float radius, ImU32 col, in
     // Because we are filling a closed shape we remove 1 from the count of segments/points
     const float a_max = (IM_PI * 2.0f) * ((float)num_segments - 1.0f) / (float)num_segments;
     PathArcTo(center, radius, 0.0f, a_max, num_segments - 1);
-    PathFillConvex(col);
+    PathFillConvex(col, ImDrawFlags_MiterOnly);
 }
 
 // Ellipse
@@ -3283,7 +3414,7 @@ void ImDrawList::AddImageRounded(ImTextureRef tex_ref, const ImVec2& p_min, cons
 
     int vert_start_idx = VtxBuffer.Size;
     PathRect(p_min, p_max, rounding, flags);
-    PathFillConvex(col);
+    PathFillConvex(col, ImDrawFlags_MiterOnly);
     int vert_end_idx = VtxBuffer.Size;
     ImGui::ShadeVertsLinearUV(this, vert_start_idx, vert_end_idx, p_min, p_max, uv_min, uv_max, true);
 
@@ -7826,7 +7957,7 @@ void ImGui::RenderRectFilledInRangeH(ImDrawList* draw_list, const ImRect& rect, 
             draw_list->PathArcTo(ImVec2(x1, p1.y - rounding), rounding, +arc1_b, +arc1_e); // BR
         }
     }
-    draw_list->PathFillConvex(col);
+    draw_list->PathFillConvex(col, ImDrawFlags_MiterOnly);
 }
 
 void ImGui::RenderRectFilledWithHole(ImDrawList* draw_list, const ImRect& outer, const ImRect& inner, ImU32 col, float rounding)
