@@ -8450,6 +8450,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             SliderFloat2("TouchExtraPadding", (float*)&style.TouchExtraPadding, 0.0f, 10.0f, "%.0f");
             SliderFloat("IndentSpacing", &style.IndentSpacing, 0.0f, 30.0f, "%.0f");
             SliderFloat("GrabMinSize", &style.GrabMinSize, 1.0f, 20.0f, "%.0f");
+            SliderFloat("SliderThickness", &style.SliderThickness, 0.1f, 1.0f, "%.3f");
 
             SeparatorText("Borders");
             SliderFloat("WindowBorderSize", &style.WindowBorderSize, 0.0f, max_border_size, "%.0f");
