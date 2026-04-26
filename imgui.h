@@ -76,7 +76,7 @@ Index of this file:
 // Includes
 #include <float.h>                  // FLT_MIN, FLT_MAX
 #include <stdarg.h>                 // va_list, va_start, va_end
-#include <stddef.h>                 // ptrdiff_t, NULL
+#include <stddef.h>                 // ptrdiff_t, NULL, offsetof
 #include <string.h>                 // memset, memmove, memcpy, strlen, strchr, strcpy, strcmp
 
 // Define attributes of all API symbols declarations (e.g. for DLL under Windows)
@@ -151,6 +151,10 @@ Index of this file:
 #pragma GCC diagnostic ignored "-Wfloat-equal"                      // warning: comparing floating-point with '==' or '!=' is unsafe
 #pragma GCC diagnostic ignored "-Wclass-memaccess"                  // [__GNUC__ >= 8] warning: 'memset/memcpy' clearing/writing an object of type 'xxxx' with no trivial copy-assignment; use assignment or value-initialization instead
 #endif
+
+
+#define IM_PADDING_CHECK_FAIL_MSG(TypeName) "Cannot compile "## #TypeName ##" due to an padding assumption violation. \
+Please reply to (or start) the issue with your compiler version and flags at https://github.com/ocornut/imgui/issues."
 
 //-----------------------------------------------------------------------------
 // [SECTION] Forward declarations and basic types
@@ -303,6 +307,7 @@ struct ImVec2
     IM_VEC2_CLASS_EXTRA     // Define additional constructors and implicit cast operators in imconfig.h to convert back and forth between your math types and ImVec2.
 #endif
 };
+static_assert(offsetof(ImVec2, y) - offsetof(ImVec2, x) == sizeof(float), IM_PADDING_CHECK_FAIL_MSG(ImVec2));
 
 // ImVec4: 4D vector used to store clipping rectangles, colors etc. [Compile-time configurable type]
 struct ImVec4
@@ -314,6 +319,9 @@ struct ImVec4
     IM_VEC4_CLASS_EXTRA     // Define additional constructors and implicit cast operators in imconfig.h to convert back and forth between your math types and ImVec4.
 #endif
 };
+// It is guaranteed that struct fields are in order of declaration, i.e. addressof(x) < addressof(y) < addressof(z) < addressof(w)
+// This check uses the guarantee to ensure our padding assumption is correct for all members with only one comparison (concise, less error-prone).
+static_assert(offsetof(ImVec4, w) - offsetof(ImVec4, x) == 3 * sizeof(float), IM_PADDING_CHECK_FAIL_MSG(ImVec4));
 IM_MSVC_RUNTIME_CHECKS_RESTORE
 
 //-----------------------------------------------------------------------------
