@@ -1374,6 +1374,9 @@ static const ImVec2 TOOLTIP_DEFAULT_PIVOT_TOUCH = ImVec2(0.5f, 1.0f);   // Multi
 // [SECTION] FORWARD DECLARATIONS
 //-------------------------------------------------------------------------
 
+extern bool g_LEGACY_STROKES;
+bool g_LEGACY_STROKES = false;
+
 static void             SetCurrentWindow(ImGuiWindow* window);
 static ImGuiWindow*     CreateNewWindow(const char* name, ImGuiWindowFlags flags);
 static ImVec2           CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window);
@@ -5920,6 +5923,9 @@ void ImGui::NewFrame()
     else
         g.DebugBeginReturnValueCullDepth = -1;
 #endif
+
+    g_LEGACY_STROKES = g.IO.KeyShift;
+    ImGui::Checkbox("g_LEGACY_STROKES", &g_LEGACY_STROKES);
 
     CallContextHooks(&g, ImGuiContextHookType_NewFramePost);
 }
