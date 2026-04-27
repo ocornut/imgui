@@ -919,6 +919,7 @@ struct IMGUI_API ImDrawListSharedData
 {
     ImVec2          TexUvWhitePixel;            // UV of white pixel in the atlas (== FontAtlas->TexUvWhitePixel)
     const ImVec4*   TexUvLines;                 // UV of anti-aliased lines in the atlas (== FontAtlas->TexUvLines)
+    ImVec4          TexUvLineFract;             // UV of fractional anti-aliased lines in the atlas (== FontAtlas->TexUvLineFract)
     const ImVec4*   TexUvCornerFills;           // UV of rounded corner (== FontAtlas->TexUvCornerFills)
     const ImVec4*   TexUvCornerStrokes;
     ImFontAtlas*    FontAtlas;                  // Current font atlas
@@ -4327,9 +4328,10 @@ struct ImFontAtlasBuilder
     // Custom rectangle identifiers
     ImFontAtlasRectId           PackIdMouseCursors;     // White pixel + mouse cursors. Also happen to be fallback in case of packing failure.
     ImFontAtlasRectId           PackIdLinesTexData;
+    ImFontAtlasRectId           PackIdLineFractTexData;
     ImFontAtlasRectId           PackIdCornersTexData;
 
-    ImFontAtlasBuilder()        { memset((void*)this, 0, sizeof(*this)); FrameCount = -1; RectsIndexFreeListStart = -1; PackIdMouseCursors = PackIdLinesTexData = PackIdCornersTexData = -1; }
+    ImFontAtlasBuilder()        { memset((void*)this, 0, sizeof(*this)); FrameCount = -1; RectsIndexFreeListStart = -1; PackIdMouseCursors = PackIdLinesTexData = PackIdLineFractTexData = PackIdCornersTexData = -1; }
 };
 
 IMGUI_API void              ImFontAtlasBuildInit(ImFontAtlas* atlas);
