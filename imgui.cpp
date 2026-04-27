@@ -1389,6 +1389,9 @@ static const float DOCKING_TRANSPARENT_PAYLOAD_ALPHA        = 0.50f;    // For u
 // [SECTION] FORWARD DECLARATIONS
 //-------------------------------------------------------------------------
 
+extern bool g_LEGACY_STROKES;
+bool g_LEGACY_STROKES = false;
+
 static void             SetCurrentWindow(ImGuiWindow* window);
 static ImGuiWindow*     CreateNewWindow(const char* name, ImGuiWindowFlags flags);
 static ImVec2           CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window);
@@ -6087,6 +6090,9 @@ void ImGui::NewFrame()
     else
         g.DebugBeginReturnValueCullDepth = -1;
 #endif
+
+    g_LEGACY_STROKES = g.IO.KeyShift;
+    ImGui::Checkbox("g_LEGACY_STROKES", &g_LEGACY_STROKES);
 
     CallContextHooks(&g, ImGuiContextHookType_NewFramePost);
 }
