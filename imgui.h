@@ -3444,6 +3444,7 @@ enum ImDrawFlags_
     // Stroke options
     ImDrawFlags_Closed                      = 1 << 9,  // PathStroke(), AddPolyline(): specify that shape should be closed.
     ImDrawFlags_MiterOnly                   = 1 << 10, // PathStroke(), AddPolyline(): use miter corners only. This assumes that the input polyline does not have corners sharper than 90 degrees. Slightly faster.
+    ImDrawFlags_SquareCap                   = 1 << 11, // PathStroke(), AddPolyline(): use square cap line ends.
 
     // Stroke position relative to the shape outline
     ImDrawFlags_StrokeInside                = 1 << 16, // Draw stroke inside of the shape outline (Default)
@@ -3540,8 +3541,8 @@ struct ImDrawList
     IMGUI_API void  AddEllipseFilled(const ImVec2& center, const ImVec2& radius, ImU32 col, float rot = 0.0f, int num_segments = 0);
     IMGUI_API void  AddText(const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end = NULL);
     IMGUI_API void  AddText(ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end = NULL, float wrap_width = 0.0f, const ImVec4* cpu_fine_clip_rect = NULL);
-    IMGUI_API void  AddBezierCubic(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col, float thickness, int num_segments = 0); // Cubic Bezier (4 control points)
-    IMGUI_API void  AddBezierQuadratic(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 col, float thickness, int num_segments = 0);               // Quadratic Bezier (3 control points)
+    IMGUI_API void  AddBezierCubic(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col, float thickness, int num_segments = 0, ImDrawFlags flags = 0); // Cubic Bezier (4 control points)
+    IMGUI_API void  AddBezierQuadratic(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 col, float thickness, int num_segments = 0, ImDrawFlags flags = 0);               // Quadratic Bezier (3 control points)
 
     // General polygon
     // - Only simple polygons are supported by filling functions (no self-intersections, no holes).
