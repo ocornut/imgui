@@ -2031,7 +2031,7 @@ enum ImGuiDockNodeState
     ImGuiDockNodeState_HostWindowVisible,
 };
 
-// sizeof() 156~192
+// sizeof() 176~216
 struct IMGUI_API ImGuiDockNode
 {
     ImGuiID                 ID;
@@ -2048,8 +2048,8 @@ struct IMGUI_API ImGuiDockNode
     ImVec2                  Size;                       // Current size
     ImVec2                  SizeRef;                    // [Split node only] Last explicitly written-to size (overridden when using a splitter affecting the node), used to calculate Size.
     ImGuiAxis               SplitAxis;                  // [Split node only] Split axis (X or Y)
-    ImGuiWindowClass        WindowClass;                // [Root node only]
     ImU32                   LastBgColor;
+    ImGuiWindowClass        WindowClass;                // [Root node only]
 
     ImGuiWindow*            HostWindow;
     ImGuiWindow*            VisibleWindow;              // Generally point to window which is ID is == SelectedTabID, but when CTRL+Tabbing this can be a different window.

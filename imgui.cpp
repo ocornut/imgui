@@ -18922,10 +18922,13 @@ static void ImGui::DockNodeUpdateFlagsAndCollapse(ImGuiDockNode* node)
         node->WantHiddenTabBarToggle = false;
 
     // Apply toggles at a single point of the frame (here!)
+    const ImGuiDockNodeFlags prev_local_flags = node->LocalFlags;
     if (node->Windows.Size > 1)
         node->SetLocalFlags(node->LocalFlags & ~ImGuiDockNodeFlags_HiddenTabBar);
     else if (node->WantHiddenTabBarToggle)
         node->SetLocalFlags(node->LocalFlags ^ ImGuiDockNodeFlags_HiddenTabBar);
+    if ((node->LocalFlags ^ prev_local_flags) & ImGuiDockNodeFlags_SavedFlagsMask_)
+        MarkIniSettingsDirty(); // Bit flaky to only do this here. Perhaps compare node flags every frame? #9380
     node->WantHiddenTabBarToggle = false;
 
     DockNodeUpdateVisibleFlag(node);

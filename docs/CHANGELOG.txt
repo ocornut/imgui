@@ -177,6 +177,8 @@ Other Changes:
 
 Docking+Viewports Branch:
 
+- Docking:
+  - Toggling tab bar visibility marks saved settings as dirty. (#9380)
 - Viewports:
   - Added opaque `void* PlatformIconData` storage in viewport and ImGuiWindowClass
     to allow passing icon information to a custom backend or hook. (#2715)
