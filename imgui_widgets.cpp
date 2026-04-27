@@ -3365,18 +3365,30 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* p_dat
     }
 
     // Draw frame
-    const ImU32 frame_col = GetColorU32(g.ActiveId == id ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg);
+    const ImU32 frame_col = GetColorU32(g.ActiveId == id ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg, 1.0f + g.Style.SliderContrast);
+    const ImU32 frame_col_after = GetColorU32(g.ActiveId == id ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg, 1.0f - g.Style.SliderContrast);
     RenderNavCursor(frame_bb, id);
-    RenderFrame(frame_bb.Min, frame_bb.Max, frame_col, false, style.FrameRounding);
-    if (color_marker != 0 && style.ColorMarkerSize > 0.0f)
-        RenderColorComponentMarker(frame_bb, GetColorU32(color_marker), style.FrameRounding);
-    RenderFrameBorder(frame_bb.Min, frame_bb.Max, g.Style.FrameRounding);
 
     // Slider behavior
     ImRect grab_bb;
     const bool value_changed = SliderBehavior(frame_bb, id, data_type, p_data, p_min, p_max, format, flags, &grab_bb);
     if (value_changed)
         MarkItemEdited(id);
+
+    // Render track
+    ImRect draw_bb = frame_bb;
+    if (g.Style.SliderThickness != 1.0f)
+    {
+        float shrink_amount = (float)(int)((frame_bb.Max.y - frame_bb.Min.y) * 0.5f * (1.0f - g.Style.SliderThickness));
+        draw_bb.Min.y += shrink_amount;
+        draw_bb.Max.y -= shrink_amount;
+    }
+    window->DrawList->AddRectFilled(draw_bb.Min, ImVec2(grab_bb.Min.x + (grab_bb.Max.x - grab_bb.Min.x) * 0.65f, draw_bb.Max.y), frame_col, style.FrameRounding, ImDrawFlags_RoundCornersLeft);
+    window->DrawList->AddRectFilled(ImVec2(grab_bb.Max.x - (grab_bb.Max.x - grab_bb.Min.x) * 0.35f, draw_bb.Min.y), draw_bb.Max, frame_col_after, style.FrameRounding, ImDrawFlags_RoundCornersRight);
+    //RenderFrame(frame_bb.Min, frame_bb.Max, frame_col, false, style.FrameRounding);
+    if (color_marker != 0 && style.ColorMarkerSize > 0.0f)
+        RenderColorComponentMarker(draw_bb, GetColorU32(color_marker), style.FrameRounding);
+    //RenderFrameBorder(frame_bb.Min, frame_bb.Max, g.Style.FrameRounding);
 
     // Render grab
     if (grab_bb.Max.x > grab_bb.Min.x)
@@ -3521,15 +3533,27 @@ bool ImGui::VSliderScalar(const char* label, const ImVec2& size, ImGuiDataType d
     }
 
     // Draw frame
-    const ImU32 frame_col = GetColorU32(g.ActiveId == id ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg);
+    const ImU32 frame_col = GetColorU32(g.ActiveId == id ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg, 1.0f + g.Style.SliderContrast);
+    const ImU32 frame_col_after = GetColorU32(g.ActiveId == id ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg, 1.0f - g.Style.SliderContrast);
     RenderNavCursor(frame_bb, id);
-    RenderFrame(frame_bb.Min, frame_bb.Max, frame_col, true, g.Style.FrameRounding);
 
     // Slider behavior
     ImRect grab_bb;
     const bool value_changed = SliderBehavior(frame_bb, id, data_type, p_data, p_min, p_max, format, flags | ImGuiSliderFlags_Vertical, &grab_bb);
     if (value_changed)
         MarkItemEdited(id);
+
+    // Render track
+    ImRect draw_bb = frame_bb;
+    if (g.Style.SliderThickness != 1.0f)
+    {
+        float shrink_amount = (float)(int)((frame_bb.Max.x - frame_bb.Min.x) * 0.5f * (1.0f - g.Style.SliderThickness));
+        draw_bb.Min.x += shrink_amount;
+        draw_bb.Max.x -= shrink_amount;
+    }
+    //RenderFrame(frame_bb.Min, frame_bb.Max, frame_col, true, g.Style.FrameRounding);
+    window->DrawList->AddRectFilled(ImVec2(draw_bb.Min.x, grab_bb.Max.y - (grab_bb.Max.y - grab_bb.Min.y) * 0.65f), draw_bb.Max, frame_col, style.FrameRounding, ImDrawFlags_RoundCornersBottom);
+    window->DrawList->AddRectFilled(draw_bb.Min, ImVec2(draw_bb.Max.x, grab_bb.Min.y + (grab_bb.Max.y - grab_bb.Min.y) * 0.35f), frame_col_after, style.FrameRounding, ImDrawFlags_RoundCornersTop);
 
     // Render grab
     if (grab_bb.Max.y > grab_bb.Min.y)
