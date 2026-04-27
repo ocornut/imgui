@@ -877,7 +877,7 @@ static void CalcSegmentNormals(const ImVec2* points, const int points_count, ImV
     }
 }
 
-void ImDrawList::_AddPolylineThin(const ImVec2* points, ImVec2* normals, float* sqr_lengths, const int points_count, ImU32 col, float thickness, ImDrawFlags flags, ImVec4 tex_uvs)
+void ImDrawList::_AddPolylineIntThickness(const ImVec2* points, ImVec2* normals, float* sqr_lengths, const int points_count, ImU32 col, float thickness, ImDrawFlags flags, ImVec4 tex_uvs)
 {
     const bool closed = (flags & ImDrawFlags_Closed) != 0;
     const bool miters_only = (flags & ImDrawFlags_MiterOnly) != 0;
@@ -1190,7 +1190,7 @@ void ImDrawList::_AddPolylineThin(const ImVec2* points, ImVec2* normals, float* 
     PrimUnreserve(idx_count - idx_used, vtx_count - vtx_used);
 }
 
-void ImDrawList::_AddPolylineThick(const ImVec2* points, ImVec2* normals, float* sqr_lengths, const int points_count, ImU32 col, float thickness, ImDrawFlags flags)
+void ImDrawList::_AddPolylineFractThickness(const ImVec2* points, ImVec2* normals, float* sqr_lengths, const int points_count, ImU32 col, float thickness, ImDrawFlags flags)
 {
     const bool closed = (flags & ImDrawFlags_Closed) != 0;
     const bool miters_only = (flags & ImDrawFlags_MiterOnly) != 0;
@@ -1199,7 +1199,7 @@ void ImDrawList::_AddPolylineThick(const ImVec2* points, ImVec2* normals, float*
 
     // TODO: we can expand this by having one very long texture strip for the lines,
     // or if place black 2x2 pixel next to the while pixel, and use texture clamping (that thickness would expand out of the texture).
-    const float max_width = (IM_DRAWLIST_TEX_LINES_WIDTH_MAX-1) * _FringeScale * 2.0f;
+    const float max_width = IM_DRAWLIST_TEX_LINE_FRACT_WIDTH_MAX * _FringeScale * 2.0f;
     thickness = ImMin(thickness, max_width);
 
     thickness += _FringeScale; // Place half of AA fringe each side of the line.
@@ -1235,7 +1235,7 @@ void ImDrawList::_AddPolylineThick(const ImVec2* points, ImVec2* normals, float*
     ImVec2 n1;
     float len_sqr1;
 
-    const ImVec4 tex_uvs = _Data->TexUvLines[IM_DRAWLIST_TEX_LINES_WIDTH_MAX];
+    const ImVec4 tex_uvs = _Data->TexUvLineFract;
     const ImVec2 uv_out(tex_uvs.x + (0.5f / _FringeScale) * _Data->FontAtlas->TexUvScale.x, tex_uvs.y);
     const ImVec2 uv_in(tex_uvs.x + ((half_thickness + 0.5f) / _FringeScale) * _Data->FontAtlas->TexUvScale.x, tex_uvs.y);
 
@@ -1532,22 +1532,22 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
     // TODO: support splitting very long lines to multiple draw calls.
 
     // We can use cheaper rendering if the thickness is integer size.
-    const int int_thickness = (int)screen_thickness;
-    const bool can_use_thin = ImAbs(screen_thickness - (float)int_thickness) < 0.01f && (int_thickness >= 1 && int_thickness < IM_DRAWLIST_TEX_LINES_WIDTH_MAX);
+    const int truncated_thickness = (int)screen_thickness;
+    const bool is_int_thickness = ImAbs(screen_thickness - (float)truncated_thickness) < 0.01f && (truncated_thickness >= 1 && truncated_thickness < IM_DRAWLIST_TEX_LINES_WIDTH_MAX);
 
     _Data->TempBuffer.reserve_discard(points_count * 2);
     ImVec2* normals = _Data->TempBuffer.Data;
     float* sqr_lengths = (float*)(normals + points_count);
     CalcSegmentNormals(points, points_count, normals, sqr_lengths, (flags & ImDrawFlags_Closed) != 0);
 
-    if (can_use_thin)
+    if (is_int_thickness)
     {
-        const ImVec4 tex_uvs = _Data->TexUvLines[int_thickness];
-        _AddPolylineThin(points, normals, sqr_lengths, points_count, col, (float)int_thickness * _FringeScale, flags, tex_uvs);
+        const ImVec4 tex_uvs = _Data->TexUvLines[truncated_thickness];
+        _AddPolylineIntThickness(points, normals, sqr_lengths, points_count, col, (float)truncated_thickness * _FringeScale, flags, tex_uvs);
     }
     else
     {
-        _AddPolylineThick(points, normals, sqr_lengths, points_count, col, thickness, flags);
+        _AddPolylineFractThickness(points, normals, sqr_lengths, points_count, col, thickness, flags);
     }
 }
 
@@ -1848,7 +1848,7 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
         float dx = p1.x - p0.x;
         float dy = p1.y - p0.y;
         float d2 = dx*dx + dy*dy;
-        if (d2 > 0.f)
+        if (d2 > 0.0f)
         {
             float inv_len = ImRsqrt(d2);
             dx *= inv_len;
@@ -1879,7 +1879,7 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
         // theta is the angle between two segments
         const float cos_theta = n0.x * n1.x + n0.y * n1.y;
         // miter offset formula is derived here: https://www.angusj.com/clipper2/Docs/Trigonometry.htm
-        float miter_scale_factor = ImMin(1000.f, (cos_theta > IM_POLYLINE_MITER_ANGLE_LIMIT) ? (half_aa / (1.0f + cos_theta)) : FLT_MAX); // avoid division by zero
+        float miter_scale_factor = ImMin(1000.0f, (cos_theta > IM_POLYLINE_MITER_ANGLE_LIMIT) ? (half_aa / (1.0f + cos_theta)) : FLT_MAX); // avoid division by zero
 
         float dm_x = (n0.x + n1.x) * miter_scale_factor;
         float dm_y = (n0.y + n1.y) * miter_scale_factor;
@@ -2612,6 +2612,10 @@ void ImDrawList::_AddRectBaked(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
 // The stroke is positioned inside the rectangle.
 void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float rounding, float thickness, ImDrawFlags flags)
 {
+	// Note: this is smaller than in AddPolyline(), since the stem offset can be biased all the way to one side.
+	const float max_width = IM_DRAWLIST_TEX_LINE_FRACT_WIDTH_MAX * _FringeScale;
+    thickness = ImMin(thickness, max_width);
+
     thickness += _FringeScale;
 
     // Adjust the rounding to be the outside radius.
@@ -2639,7 +2643,7 @@ void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, 
 
     const float stem_offset = thickness - ImMax(thickness - rounding, _FringeScale);
 
-    const ImVec4 tex_uvs = _Data->TexUvLines[IM_DRAWLIST_TEX_LINES_WIDTH_MAX]; // TODO: max uv
+    const ImVec4 tex_uvs = _Data->TexUvLineFract; // TODO: max uv
     const ImVec2 outer_uv0(tex_uvs.x + (0.5f / _FringeScale) * _Data->FontAtlas->TexUvScale.x, tex_uvs.y);
     const ImVec2 outer_uv1(tex_uvs.x + ((0.5f + stem_offset) / _FringeScale) * _Data->FontAtlas->TexUvScale.x, tex_uvs.y);
     const ImVec2 inner_uv0(tex_uvs.x + (0.5f / _FringeScale) * _Data->FontAtlas->TexUvScale.x, tex_uvs.y);
@@ -5476,6 +5480,44 @@ static void ImFontAtlasBuildUpdateTexDataLines(ImFontAtlas* atlas)
         float half_v = (uv0.y + uv1.y) * 0.5f; // Calculate a constant V in the middle of the row to avoid sampling artifacts
         atlas->TexUvLines[n] = ImVec4(uv0.x, half_v, uv1.x, half_v);
     }
+
+	// Single larger line for fraction width textured lines.
+	// Alternative solution could be to fix while and black pixel next to the texture border 
+	// and use the texture clamping to expand the opaque pixel.
+	//  :
+	// 	[*][ ]
+	//  :
+	// 	<-- width would expand out of the texture expanding the while pixel to as far as needed.
+    add_and_draw = atlas->GetCustomRect(builder->PackIdLineFractTexData, &r) == false;
+    if (add_and_draw)
+    {
+        ImVec2i pack_size = ImVec2i(IM_DRAWLIST_TEX_LINE_FRACT_WIDTH_MAX + 1, 1);
+        builder->PackIdLineFractTexData = atlas->AddCustomRect(pack_size.x, pack_size.y, &r);
+        IM_ASSERT(builder->PackIdLineFractTexData != ImFontAtlasRectId_Invalid);
+    }
+
+    // Each line consists of at least two empty pixels at the ends, with a line of solid pixels in the middle
+    // Write each slice
+    if (add_and_draw && tex->Format == ImTextureFormat_Alpha8)
+    {
+        ImU8* write_ptr = (ImU8*)tex->GetPixelsAt(r.x, r.y);
+        *write_ptr++ = 0x00;
+        for (int i = 0; i < IM_DRAWLIST_TEX_LINE_FRACT_WIDTH_MAX; i++)
+            *write_ptr++ = 0xFF;
+    }
+    else if (add_and_draw && tex->Format == ImTextureFormat_RGBA32)
+    {
+        ImU32* write_ptr = (ImU32*)(void*)tex->GetPixelsAt(r.x, r.y);
+        *write_ptr++ = IM_COL32(255, 255, 255, 0);
+        for (int i = 0; i < IM_DRAWLIST_TEX_LINE_FRACT_WIDTH_MAX; i++)
+            *write_ptr++ = IM_COL32_WHITE;
+    }
+
+    // Refresh UV coordinates
+    ImVec2 uv0 = ImVec2((float)r.x, (float)r.y) * atlas->TexUvScale;
+    ImVec2 uv1 = ImVec2((float)r.x + 1.0f + IM_DRAWLIST_TEX_LINE_FRACT_WIDTH_MAX, (float)r.y) * atlas->TexUvScale;
+    float half_v = (uv0.y + uv1.y) * 0.5f; // Calculate a constant V in the middle of the row to avoid sampling artifacts
+    atlas->TexUvLineFract = ImVec4(uv0.x, half_v, uv1.x, half_v);
 }
 
 //-----------------------------------------------------------------------------------------------------------------------------
@@ -5849,6 +5891,7 @@ void ImFontAtlasUpdateDrawListsSharedData(ImFontAtlas* atlas)
         {
             shared_data->TexUvWhitePixel = atlas->TexUvWhitePixel;
             shared_data->TexUvLines = atlas->TexUvLines;
+            shared_data->TexUvLineFract = atlas->TexUvLineFract;
             shared_data->TexUvCornerFills = atlas->TexUvCornerFills;
             shared_data->TexUvCornerStrokes = atlas->TexUvCornerStrokes;
         }

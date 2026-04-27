@@ -3321,6 +3321,7 @@ struct ImGuiSelectionExternalStorage
 // The maximum line width to bake anti-aliased textures for. Build atlas with ImFontAtlasFlags_NoBakedLines to disable baking.
 #ifndef IM_DRAWLIST_TEX_LINES_WIDTH_MAX
 #define IM_DRAWLIST_TEX_LINES_WIDTH_MAX     (32)
+#define IM_DRAWLIST_TEX_LINE_FRACT_WIDTH_MAX     (128)
 #endif
 
 #ifndef IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX
@@ -3650,8 +3651,8 @@ struct ImDrawList
     IMGUI_API void  _PathArcToN(const ImVec2& center, float radius, float a_min, float a_max, int num_segments);
     IMGUI_API void  _AddRectFilledBaked(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float r, ImVec4 tex_uvs, ImDrawFlags flags);
     IMGUI_API void  _AddRectBaked(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float r, float t, ImVec4 tex_uvs, ImDrawFlags flags);
-    IMGUI_API void  _AddPolylineThin(const ImVec2* points, ImVec2* normals, float* sqr_lengths, const int points_count, ImU32 col, float thickness, ImDrawFlags flags, ImVec4 tex_uvs);
-    IMGUI_API void  _AddPolylineThick(const ImVec2* points, ImVec2* normals, float* sqr_lengths, const int points_count, ImU32 col, float thickness, ImDrawFlags flags);
+    IMGUI_API void  _AddPolylineIntThickness(const ImVec2* points, ImVec2* normals, float* sqr_lengths, const int points_count, ImU32 col, float thickness, ImDrawFlags flags, ImVec4 tex_uvs);
+    IMGUI_API void  _AddPolylineFractThickness(const ImVec2* points, ImVec2* normals, float* sqr_lengths, const int points_count, ImU32 col, float thickness, ImDrawFlags flags);
     IMGUI_API void  _AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float rounding, float thickness, ImDrawFlags flags);
 };
 
@@ -4015,6 +4016,7 @@ struct ImFontAtlas
     ImVector<ImFont*>           Fonts;              // Hold all the fonts returned by AddFont*. Fonts[0] is the default font upon calling ImGui::NewFrame(), use ImGui::PushFont()/PopFont() to change the current font.
     ImVector<ImFontConfig>      Sources;            // Source/configuration data
     ImVec4                      TexUvLines[IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1];        // UVs for baked anti-aliased lines
+    ImVec4                      TexUvLineFract;                                         // UVs for fraction thickness baked anti-aliased lines
     ImVec4                      TexUvCornerFills[IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX]; // UVs for baked anti-aliased corners
     ImVec4                      TexUvCornerStrokes[IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX * IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX];  // UVs for baked anti-aliased corners
     int                         TexNextUniqueID;    // Next value to be stored in TexData->UniqueID
