@@ -149,7 +149,7 @@ Other Changes:
     - DX10:         Reset     SetSamplerLinear  SetSamplerNearest
     - DX11:         Reset     SetSamplerLinear  SetSamplerNearest
     - DX12:         Reset     SetSamplerLinear  SetSamplerNearest
-    - Metal:        Reset     *missing*         *missing*
+    - Metal:        Reset     SetSamplerLinear  SetSamplerNearest
     - OpenGL2:      Reset     SetSamplerLinear  SetSamplerNearest
     - OpenGL3+:     Reset     SetSamplerLinear  SetSamplerNearest
     - SDLGPU3:      Reset     SetSamplerLinear  SetSamplerNearest
@@ -157,7 +157,7 @@ Other Changes:
     - SDLRenderer3: Reset     SetSamplerLinear  SetSamplerNearest
     - Vulkan:       Reset     SetSamplerLinear  SetSamplerNearest
     - WebGPU:       Reset     SetSamplerLinear  SetSamplerNearest
-    (Vulkan backend by @yaz0r, others by @ocornut)
+    (Vulkan backend by @yaz0r, Metal by @ssh4net, others by @ocornut)
   - GLFW: added a Win32-specific implementation of `ImGui_ImplGlfw_GetContentScaleXXXX`
     functions for legacy GLFW 3.2. (#9003)
   - Metal: avoid redundant vertex buffer bind in `SetupRenderState()`, which leads
