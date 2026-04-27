@@ -556,6 +556,23 @@ inline float  ImLinearRemapClamp(float s0, float s1, float d0, float d1, float x
 inline ImVec2 ImMul(const ImVec2& lhs, const ImVec2& rhs)               { return ImVec2(lhs.x * rhs.x, lhs.y * rhs.y); }
 inline bool   ImIsFloatAboveGuaranteedIntegerPrecision(float f)         { return f <= -16777216 || f >= 16777216; }
 inline float  ImExponentialMovingAverage(float avg, float sample, int n){ avg -= avg / (float)n; avg += sample / (float)n; return avg; }
+
+inline bool   ImIsTruncated(float x)           { return (float)(int)x == x; }
+#ifdef IMGUI_ENABLE_SSE
+// Returns true if all parameters are whole numbers.
+inline bool   ImIsTruncated4(float x, float y, float z, float w)
+{
+    __m128 v = _mm_set_ps(x, y, z, w);
+    __m128i i = _mm_cvttps_epi32(v);
+    return _mm_movemask_ps(_mm_cmpeq_ps(v, _mm_cvtepi32_ps(i))) == 0xF;
+}
+#else
+inline bool   ImIsTruncated4(float x, float y, float z, float w)
+{
+    return (float)(int)x == x && (float)(int)y == y && (float)(int)z == z && (float)(int)w == w;
+}
+#endif
+
 IM_MSVC_RUNTIME_CHECKS_RESTORE
 
 // Helpers: Geometry

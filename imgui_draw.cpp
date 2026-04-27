@@ -1490,11 +1490,20 @@ void ImDrawList::PathRect(const ImVec2& a, const ImVec2& b, float rounding, ImDr
     }
 }
 
+extern bool g_LEGACY_STROKES;
+
 void ImDrawList::AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float thickness)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
-    const ImVec2 points[2] = { ImVec2(p1.x + 0.5f, p1.y + 0.5f), ImVec2(p2.x + 0.5f, p2.y + 0.5f) };
+    if (g_LEGACY_STROKES)
+    {
+        const ImVec2 points[2] = { ImVec2(p1.x + 0.5f, p1.y + 0.5f), ImVec2(p2.x + 0.5f, p2.y + 0.5f) };
+        AddPolyline(points, 2, col, thickness);
+        return;
+    }
+
+    const ImVec2 points[2] = { p1, p2 };
     AddPolyline(points, 2, col, thickness);
 }
 
@@ -1502,16 +1511,46 @@ void ImDrawList::AddLineH(float min_x, float max_x, float y, ImU32 col, float th
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
-    const ImVec2 points[2] = { ImVec2(min_x + 0.5f, y + 0.5f), ImVec2(max_x + 0.5f, y + 0.5f) }; // Same as AddLine() above.
-    AddPolyline(points, 2, col, thickness);
+
+    if (g_LEGACY_STROKES)
+    {
+        const ImVec2 points[2] = { ImVec2(min_x + 0.5f, y + 0.5f), ImVec2(max_x + 0.5f, y + 0.5f) }; // Same as AddLine() above.
+        AddPolyline(points, 2, col, thickness);
+        return;
+    }
+
+    if (ImIsTruncated4(min_x, max_x, y, thickness))
+    {
+        PrimReserve(6, 4);
+        PrimRect(ImVec2(min_x, y), ImVec2(max_x, y + thickness), col);
+    }
+    else
+    {
+        AddRectFilled(ImVec2(min_x, y), ImVec2(max_x, y + thickness), col);
+    }
 }
 
 void ImDrawList::AddLineV(float x, float min_y, float max_y, ImU32 col, float thickness)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
-    const ImVec2 points[2] = { ImVec2(x + 0.5f, min_y + 0.5f), ImVec2(x + 0.5f, max_y + 0.5f) }; // Same as AddLine() above.
-    AddPolyline(points, 2, col, thickness);
+
+    if (g_LEGACY_STROKES)
+    {
+        const ImVec2 points[2] = { ImVec2(x + 0.5f, min_y + 0.5f), ImVec2(x + 0.5f, max_y + 0.5f) }; // Same as AddLine() above.
+        AddPolyline(points, 2, col, thickness);
+        return;
+    }
+
+    if (ImIsTruncated4(x, min_y, max_y, thickness))
+    {
+        PrimReserve(6, 4);
+        PrimRect(ImTrunc(ImVec2(x, min_y)), ImTrunc(ImVec2(x + thickness, max_y)), col);
+    }
+    else
+    {
+        AddRectFilled(ImVec2(x, min_y), ImVec2(x + thickness, max_y), col);
+    }
 }
 
 // p_min = upper-left, p_max = lower-right
@@ -1531,10 +1570,19 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
 
     if ((col & IM_COL32_A_MASK) == 0)
         return;
-    if (Flags & ImDrawListFlags_AntiAliasedLines)
-        PathRect(p_min + ImVec2(0.50f, 0.50f), p_max - ImVec2(0.50f, 0.50f), rounding, flags);
-    else
-        PathRect(p_min + ImVec2(0.50f, 0.50f), p_max - ImVec2(0.49f, 0.49f), rounding, flags); // Better looking lower-right corner and rounded non-AA shapes.
+
+    if (g_LEGACY_STROKES)
+    {
+        if (Flags & ImDrawListFlags_AntiAliasedLines)
+            PathRect(p_min + ImVec2(0.50f, 0.50f), p_max - ImVec2(0.50f, 0.50f), rounding, flags);
+        else
+            PathRect(p_min + ImVec2(0.50f, 0.50f), p_max - ImVec2(0.49f, 0.49f), rounding, flags); // Better looking lower-right corner and rounded non-AA shapes.
+        PathStroke(col, thickness, ImDrawFlags_Closed);
+        return;
+    }
+
+    const ImVec2 offset(thickness * 0.5f, thickness * 0.5f);
+    PathRect(p_min + offset, p_max - offset, rounding - thickness * 0.5f, flags);
     PathStroke(col, thickness, ImDrawFlags_Closed);
 }
 
@@ -1621,10 +1669,14 @@ void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int nu
     if ((col & IM_COL32_A_MASK) == 0 || radius < 0.5f)
         return;
 
+    if (g_LEGACY_STROKES)
+        radius -= 0.5f;
+    else
+        radius -= thickness * 0.5f;
     if (num_segments <= 0)
     {
         // Use arc with automatic segment count
-        _PathArcToFastEx(center, radius - 0.5f, 0, IM_DRAWLIST_ARCFAST_SAMPLE_MAX, 0);
+        _PathArcToFastEx(center, radius, 0, IM_DRAWLIST_ARCFAST_SAMPLE_MAX, 0);
         _Path.Size--;
     }
     else
@@ -1634,7 +1686,7 @@ void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int nu
 
         // Because we are filling a closed shape we remove 1 from the count of segments/points
         const float a_max = (IM_PI * 2.0f) * ((float)num_segments - 1.0f) / (float)num_segments;
-        PathArcTo(center, radius - 0.5f, 0.0f, a_max, num_segments - 1);
+        PathArcTo(center, radius, 0.0f, a_max, num_segments - 1);
     }
 
     PathStroke(col, thickness, ImDrawFlags_Closed);
@@ -1670,9 +1722,14 @@ void ImDrawList::AddNgon(const ImVec2& center, float radius, ImU32 col, int num_
     if ((col & IM_COL32_A_MASK) == 0 || num_segments <= 2)
         return;
 
+    if (g_LEGACY_STROKES)
+        radius -= 0.5f;
+    else
+        radius -= thickness * 0.5f;
+
     // Because we are filling a closed shape we remove 1 from the count of segments/points
     const float a_max = (IM_PI * 2.0f) * ((float)num_segments - 1.0f) / (float)num_segments;
-    PathArcTo(center, radius - 0.5f, 0.0f, a_max, num_segments - 1);
+    PathArcTo(center, radius, 0.0f, a_max, num_segments - 1);
     PathStroke(col, thickness, ImDrawFlags_Closed);
 }
 
@@ -1694,12 +1751,17 @@ void ImDrawList::AddEllipse(const ImVec2& center, const ImVec2& radius, ImU32 co
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
+    ImVec2 r;
+    if (g_LEGACY_STROKES)
+        r = radius;
+    else
+        r = ImVec2(radius.x - thickness * 0.5f, radius.y - thickness * 0.5f);
     if (num_segments <= 0)
-        num_segments = _CalcCircleAutoSegmentCount(ImMax(radius.x, radius.y)); // A bit pessimistic, maybe there's a better computation to do here.
+        num_segments = _CalcCircleAutoSegmentCount(ImMax(r.x, r.y)); // A bit pessimistic, maybe there's a better computation to do here.
 
     // Because we are filling a closed shape we remove 1 from the count of segments/points
     const float a_max = IM_PI * 2.0f * ((float)num_segments - 1.0f) / (float)num_segments;
-    PathEllipticalArcTo(center, radius, rot, 0.0f, a_max, num_segments - 1);
+    PathEllipticalArcTo(center, r, rot, 0.0f, a_max, num_segments - 1);
     PathStroke(col, thickness, ImDrawFlags_Closed);
 }
 
