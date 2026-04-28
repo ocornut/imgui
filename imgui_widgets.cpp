@@ -2378,9 +2378,17 @@ bool ImGui::DataTypeApplyFromText(const char* buf, ImGuiDataType data_type, void
     // - In theory could treat empty format as using default, but this would only cover rare/bizarre case of using InputScalar() + integer + format string without %.
     char format_sanitized[32];
     if (data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double)
+    {
         format = type_info->ScanFmt;
+    }
     else
+    {
         format = ImParseFormatSanitizeForScanning(format, format_sanitized, IM_COUNTOF(format_sanitized));
+
+        // Format doesn't want us to show the number currently, but we still need to parse the resulting input
+        if (format && format[0] == '\0')
+            format = type_info->ScanFmt;
+    }
 
     // Small types need a 32-bit buffer to receive the result from scanf()
     int v32 = 0;
