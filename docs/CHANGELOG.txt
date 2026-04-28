@@ -97,6 +97,8 @@ Other Changes:
     with 1.91.4 behavior.
   - In a majority of cases you should use IsItemDeactivatedAfterEdit() instead,
     but it still has a few edge cases flaws (to be addressed soon).
+- InputInt, InputFloat, InputScalar: allow passing a format string that does not display
+  the scalar value. Parsing input with default format for the type. (#9385) [@FireFox2000000]
 - Multi-Select:
   - Fixed an issue using Multi-Select within a Table causing column width measurement to
     be invalid when trailing column contents is not submitted in the last row. (#9341, #8250)
