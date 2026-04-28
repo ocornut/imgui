@@ -8463,6 +8463,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             SliderFloat("FrameRounding", &style.FrameRounding, 0.0f, 12.0f, "%.0f");
             SliderFloat("PopupRounding", &style.PopupRounding, 0.0f, 12.0f, "%.0f");
             SliderFloat("GrabRounding", &style.GrabRounding, 0.0f, 12.0f, "%.0f");
+            SliderFloat("SelectableRounding", &style.SelectableRounding, 0.0f, 12.0f, "%.0f");
 
             SeparatorText("Scrollbar");
             SliderFloat("ScrollbarSize", &style.ScrollbarSize, 1.0f, 20.0f, "%.0f");
