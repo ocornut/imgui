@@ -100,6 +100,7 @@ static void ImGui_ImplMetal_InvalidateDeviceObjectsForPlatformWindows();
 struct ImGui_ImplMetal_Data
 {
     MetalContext*               SharedMetalContext;
+    id<MTLRenderCommandEncoder> RenderCommandEncoder;
 
     ImGui_ImplMetal_Data()      { memset((void*)this, 0, sizeof(*this)); }
 };
@@ -201,8 +202,8 @@ static void ImGui_ImplMetal_SetupRenderState(ImDrawData* draw_data, id<MTLComman
 
 // Draw callbacks
 static void ImGui_ImplMetal_DrawCallback_ResetRenderState(const ImDrawList*, const ImDrawCmd*) {} // Intentionally empty. Used as an identifier for rendering loop to call its code. Simpler to implement this way.
-static void ImGui_ImplMetal_DrawCallback_SetSamplerLinear(const ImDrawList*, const ImDrawCmd*) {} // Intentionally empty. Used as an identifier for rendering loop to call its code. Simpler to implement this way.
-static void ImGui_ImplMetal_DrawCallback_SetSamplerNearest(const ImDrawList*, const ImDrawCmd*) {} // Intentionally empty. Used as an identifier for rendering loop to call its code. Simpler to implement this way.
+static void ImGui_ImplMetal_DrawCallback_SetSamplerLinear(const ImDrawList*, const ImDrawCmd*) { ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData(); [bd->RenderCommandEncoder setFragmentSamplerState:bd->SharedMetalContext.samplerStateLinear atIndex:0]; }
+static void ImGui_ImplMetal_DrawCallback_SetSamplerNearest(const ImDrawList*, const ImDrawCmd*) { ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData(); [bd->RenderCommandEncoder setFragmentSamplerState:bd->SharedMetalContext.samplerStateNearest atIndex:0]; }
 
 // Metal Render function.
 void ImGui_ImplMetal_RenderDrawData(ImDrawData* draw_data, id<MTLCommandBuffer> commandBuffer, id<MTLRenderCommandEncoder> commandEncoder)
@@ -240,6 +241,7 @@ void ImGui_ImplMetal_RenderDrawData(ImDrawData* draw_data, id<MTLCommandBuffer> 
     MetalBuffer* vertexBuffer = [ctx dequeueReusableBufferOfLength:vertexBufferLength device:commandBuffer.device];
     MetalBuffer* indexBuffer = [ctx dequeueReusableBufferOfLength:indexBufferLength device:commandBuffer.device];
 
+    bd->RenderCommandEncoder = commandEncoder;
     ImGui_ImplMetal_SetupRenderState(draw_data, commandBuffer, commandEncoder, renderPipelineState, vertexBuffer, 0);
 
     // Will project scissor/clipping rectangles into framebuffer space
@@ -249,7 +251,6 @@ void ImGui_ImplMetal_RenderDrawData(ImDrawData* draw_data, id<MTLCommandBuffer> 
     // Render command lists
     size_t vertexBufferOffset = 0;
     size_t indexBufferOffset = 0;
-    id<MTLSamplerState> currentSamplerState = ctx.samplerStateLinear;
     for (const ImDrawList* draw_list : draw_data->CmdLists)
     {
         memcpy((char*)vertexBuffer.buffer.contents + vertexBufferOffset, draw_list->VtxBuffer.Data, (size_t)draw_list->VtxBuffer.Size * sizeof(ImDrawVert));
@@ -262,20 +263,7 @@ void ImGui_ImplMetal_RenderDrawData(ImDrawData* draw_data, id<MTLCommandBuffer> 
             {
                 // User callback, registered via ImDrawList::AddCallback()
                 if (pcmd->UserCallback == ImGui_ImplMetal_DrawCallback_ResetRenderState)
-                {
                     ImGui_ImplMetal_SetupRenderState(draw_data, commandBuffer, commandEncoder, renderPipelineState, vertexBuffer, vertexBufferOffset);
-                    currentSamplerState = ctx.samplerStateLinear;
-                }
-                else if (pcmd->UserCallback == ImGui_ImplMetal_DrawCallback_SetSamplerLinear)
-                {
-                    currentSamplerState = ctx.samplerStateLinear;
-                    [commandEncoder setFragmentSamplerState:currentSamplerState atIndex:0];
-                }
-                else if (pcmd->UserCallback == ImGui_ImplMetal_DrawCallback_SetSamplerNearest)
-                {
-                    currentSamplerState = ctx.samplerStateNearest;
-                    [commandEncoder setFragmentSamplerState:currentSamplerState atIndex:0];
-                }
                 else
                     pcmd->UserCallback(draw_list, pcmd);
             }
@@ -309,7 +297,6 @@ void ImGui_ImplMetal_RenderDrawData(ImDrawData* draw_data, id<MTLCommandBuffer> 
                 ImTextureID tex_id = pcmd->GetTexID();
                 if (tex_id != ImTextureID_Invalid)
                     [commandEncoder setFragmentTexture:(__bridge id<MTLTexture>)(void*)(intptr_t)(tex_id) atIndex:0];
-                [commandEncoder setFragmentSamplerState:currentSamplerState atIndex:0];
 
                 [commandEncoder setVertexBufferOffset:(vertexBufferOffset + pcmd->VtxOffset * sizeof(ImDrawVert)) atIndex:0];
                 [commandEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
@@ -333,6 +320,7 @@ void ImGui_ImplMetal_RenderDrawData(ImDrawData* draw_data, id<MTLCommandBuffer> 
             [sharedMetalContext.bufferCache addObject:indexBuffer];
         }
     }];
+    bd->RenderCommandEncoder = nil;
 }
 
 static void ImGui_ImplMetal_DestroyTexture(ImTextureData* tex)
