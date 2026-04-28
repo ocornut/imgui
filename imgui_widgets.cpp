@@ -8367,11 +8367,20 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
                 if (ImGuiTable* table = g.CurrentTable)
                     if (table->CurrentColumn != -1)
                     {
-                        // FIXME: We cannot use current ClipRect as it includes HostClipRect.
-                        // A more generic version would be nice, but window->WorkRect.Min/Max exclude CellPadding. (#7994)
+                        // FIXME: We cannot solely use current ClipRect as it includes HostClipRect.
+                        // However we account for ClipRect being larger than current column (e.g. when using SpanAllColumns)
+                        // A more generic version would be nice, but window->WorkRect.Min/Max exclude CellPadding. (#7994, #9383)
                         ImGuiTableColumn* column = &table->Columns[table->CurrentColumn];
                         item_rect.Min.x = ImMax(item_rect.Min.x, column->MinX);
                         item_rect.Max.x = ImMin(item_rect.Max.x, column->MaxX);
+                        float clip_min_x = (g.LastItemData.ItemFlags & ImGuiItemStatusFlags_HasClipRect) ? g.LastItemData.ClipRect.Min.x : window->ClipRect.Min.x;
+                        float clip_max_x = (g.LastItemData.ItemFlags & ImGuiItemStatusFlags_HasClipRect) ? g.LastItemData.ClipRect.Max.x : window->ClipRect.Max.x;
+                        if (clip_min_x != clip_max_x) // When zero sized we expect that bounds have been clamped and thus are unreliable
+                        {
+                            item_rect.Min.x = ImMax(item_rect.Min.x, clip_min_x);
+                            item_rect.Max.x = ImMin(item_rect.Max.x, clip_max_x);
+                        }
+
                     }
             const bool rect_overlap_curr = bs->BoxSelectRectCurr.Overlaps(item_rect);
             const bool rect_overlap_prev = bs->BoxSelectRectPrev.Overlaps(item_rect);
