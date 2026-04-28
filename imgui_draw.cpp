@@ -1484,6 +1484,43 @@ void ImDrawList::AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float th
     PathStroke(col, 0, thickness);
 }
 
+void ImDrawList::AddLineMultiColor(const ImVec2& p1, const ImVec2& p2, ImU32 col_start, ImU32 col_end, float thickness) {
+    if ((col_start & IM_COL32_A_MASK) == 0 && (col_end & IM_COL32_A_MASK) == 0)
+        return;
+
+    ImVec2 dir = p2 - p1;
+    float len = sqrtf(dir.x * dir.x + dir.y * dir.y);
+    if (len == 0.0f)
+        return;
+
+    dir.x /= len;
+    dir.y /= len;
+
+    ImVec2 perp(-dir.y, dir.x);
+    perp.x *= thickness * 0.5f;
+    perp.y *= thickness * 0.5f;
+
+    ImVec2 v0 = p1 - perp; // bottom-left
+    ImVec2 v1 = p2 - perp; // bottom-right
+    ImVec2 v2 = p2 + perp; // top-right
+    ImVec2 v3 = p1 + perp; // top-left
+
+    PrimReserve(6, 4);
+    PrimWriteIdx((ImDrawIdx)(_VtxCurrentIdx));
+    PrimWriteIdx((ImDrawIdx)(_VtxCurrentIdx + 1));
+    PrimWriteIdx((ImDrawIdx)(_VtxCurrentIdx + 2));
+    PrimWriteIdx((ImDrawIdx)(_VtxCurrentIdx));
+    PrimWriteIdx((ImDrawIdx)(_VtxCurrentIdx + 2));
+    PrimWriteIdx((ImDrawIdx)(_VtxCurrentIdx + 3));
+
+    const ImVec2 uv = _Data->TexUvWhitePixel;
+
+    PrimWriteVtx(v0, uv, col_start); // bottom-left
+    PrimWriteVtx(v1, uv, col_end);   // bottom-right
+    PrimWriteVtx(v2, uv, col_end);   // top-right
+    PrimWriteVtx(v3, uv, col_start); // top-left
+}
+
 // p_min = upper-left, p_max = lower-right
 // Note we don't render 1 pixels sized rectangles properly.
 void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float rounding, ImDrawFlags flags, float thickness)
