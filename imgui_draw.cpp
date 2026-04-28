@@ -1507,7 +1507,7 @@ void ImDrawList::AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float th
     AddPolyline(points, 2, col, thickness);
 }
 
-void ImDrawList::AddLineH(float min_x, float max_x, float y, ImU32 col, float thickness)
+void ImDrawList::AddLineH(float min_x, float max_x, float y, ImU32 col, float thickness, ImDrawFlags flags)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
@@ -1519,6 +1519,11 @@ void ImDrawList::AddLineH(float min_x, float max_x, float y, ImU32 col, float th
         return;
     }
 
+    ImDrawFlags stroke_pos = (flags & ImDrawFlags_StrokeMask_);
+    if (stroke_pos == ImDrawFlags_StrokeCenter)
+        y -= thickness * 0.5f;
+    else if (stroke_pos == ImDrawFlags_StrokeOutside)
+        y -= thickness;
     if (ImIsTruncated4(min_x, max_x, y, thickness))
     {
         PrimReserve(6, 4);
@@ -1530,7 +1535,7 @@ void ImDrawList::AddLineH(float min_x, float max_x, float y, ImU32 col, float th
     }
 }
 
-void ImDrawList::AddLineV(float x, float min_y, float max_y, ImU32 col, float thickness)
+void ImDrawList::AddLineV(float x, float min_y, float max_y, ImU32 col, float thickness, ImDrawFlags flags)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
@@ -1542,6 +1547,11 @@ void ImDrawList::AddLineV(float x, float min_y, float max_y, ImU32 col, float th
         return;
     }
 
+    ImDrawFlags stroke_pos = (flags & ImDrawFlags_StrokeMask_);
+    if (stroke_pos == ImDrawFlags_StrokeCenter)
+        x += thickness * 0.5f;
+    else if (stroke_pos == ImDrawFlags_StrokeOutside)
+        x -= thickness;
     if (ImIsTruncated4(x, min_y, max_y, thickness))
     {
         PrimReserve(6, 4);
@@ -1582,7 +1592,20 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
     }
 
     const ImVec2 offset(thickness * 0.5f, thickness * 0.5f);
-    PathRect(p_min + offset, p_max - offset, rounding - thickness * 0.5f, flags);
+    const ImDrawFlags stroke_pos = (flags & ImDrawFlags_StrokeMask_);
+    if (stroke_pos == ImDrawFlags_StrokeInside)
+        PathRect(p_min + offset, p_max - offset, rounding - thickness * 0.5f, flags);
+    else if (stroke_pos == ImDrawFlags_StrokeCenter)
+        PathRect(p_min, p_max, rounding, flags);
+    else if (stroke_pos == ImDrawFlags_StrokeOutside)
+        PathRect(p_min - offset, p_max + offset, rounding + thickness * 0.5f, flags);
+    else if (stroke_pos == ImDrawFlags_StrokeLegacy)
+    {
+        if (Flags & ImDrawListFlags_AntiAliasedLines)
+            PathRect(p_min + ImVec2(0.50f, 0.50f), p_max - ImVec2(0.50f, 0.50f), rounding, flags);
+        else
+            PathRect(p_min + ImVec2(0.50f, 0.50f), p_max - ImVec2(0.49f, 0.49f), rounding, flags); // Better looking lower-right corner and rounded non-AA shapes.
+    }
     PathStroke(col, thickness, ImDrawFlags_Closed);
 }
 
@@ -1664,15 +1687,26 @@ void ImDrawList::AddTriangleFilled(const ImVec2& p1, const ImVec2& p2, const ImV
     PathFillConvex(col);
 }
 
-void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int num_segments, float thickness)
+void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int num_segments, float thickness, ImDrawFlags flags)
 {
     if ((col & IM_COL32_A_MASK) == 0 || radius < 0.5f)
         return;
 
     if (g_LEGACY_STROKES)
+    {
         radius -= 0.5f;
+    }
     else
-        radius -= thickness * 0.5f;
+    {
+        const ImDrawFlags stroke_pos = (flags & ImDrawFlags_StrokeMask_);
+        if (stroke_pos == ImDrawFlags_StrokeInside)
+            radius -= thickness * 0.5f;
+        else if (stroke_pos == ImDrawFlags_StrokeOutside)
+            radius += thickness * 0.5f;
+        else if (stroke_pos == ImDrawFlags_StrokeLegacy)
+            radius -= 0.5f;
+    }
+
     if (num_segments <= 0)
     {
         // Use arc with automatic segment count
@@ -1717,15 +1751,25 @@ void ImDrawList::AddCircleFilled(const ImVec2& center, float radius, ImU32 col, 
 }
 
 // Guaranteed to honor 'num_segments'
-void ImDrawList::AddNgon(const ImVec2& center, float radius, ImU32 col, int num_segments, float thickness)
+void ImDrawList::AddNgon(const ImVec2& center, float radius, ImU32 col, int num_segments, float thickness, ImDrawFlags flags)
 {
     if ((col & IM_COL32_A_MASK) == 0 || num_segments <= 2)
         return;
 
     if (g_LEGACY_STROKES)
+    {
         radius -= 0.5f;
+    }
     else
-        radius -= thickness * 0.5f;
+    {
+        const ImDrawFlags stroke_pos = (flags & ImDrawFlags_StrokeMask_);
+        if (stroke_pos == ImDrawFlags_StrokeInside)
+            radius -= thickness * 0.5f;
+        else if (stroke_pos == ImDrawFlags_StrokeOutside)
+            radius += thickness * 0.5f;
+        else if (stroke_pos == ImDrawFlags_StrokeLegacy)
+            radius -= 0.5f;
+    }
 
     // Because we are filling a closed shape we remove 1 from the count of segments/points
     const float a_max = (IM_PI * 2.0f) * ((float)num_segments - 1.0f) / (float)num_segments;
@@ -1746,16 +1790,26 @@ void ImDrawList::AddNgonFilled(const ImVec2& center, float radius, ImU32 col, in
 }
 
 // Ellipse
-void ImDrawList::AddEllipse(const ImVec2& center, const ImVec2& radius, ImU32 col, float rot, int num_segments, float thickness)
+void ImDrawList::AddEllipse(const ImVec2& center, const ImVec2& radius, ImU32 col, float rot, int num_segments, float thickness, ImDrawFlags flags)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
     ImVec2 r;
     if (g_LEGACY_STROKES)
+    {
         r = radius;
+    }
     else
-        r = ImVec2(radius.x - thickness * 0.5f, radius.y - thickness * 0.5f);
+    {
+        r = radius;
+        ImDrawFlags stroke_pos = (flags & ImDrawFlags_StrokeMask_);
+        if (stroke_pos == ImDrawFlags_StrokeInside)
+            r -= ImVec2(thickness * 0.5f, thickness * 0.5f);
+        else if (stroke_pos == ImDrawFlags_StrokeOutside)
+            r += ImVec2(thickness * 0.5f, thickness * 0.5f);
+    }
+
     if (num_segments <= 0)
         num_segments = _CalcCircleAutoSegmentCount(ImMax(r.x, r.y)); // A bit pessimistic, maybe there's a better computation to do here.
 
