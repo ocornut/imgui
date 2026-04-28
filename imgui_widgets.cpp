@@ -901,6 +901,8 @@ bool ImGui::ArrowButton(const char* str_id, ImGuiDir dir)
     return ArrowButtonEx(str_id, dir, ImVec2(sz, sz), ImGuiButtonFlags_None);
 }
 
+extern bool g_LEGACY_STROKES;
+
 // Button to close a window
 bool ImGui::CloseButton(ImGuiID id, const ImVec2& pos)
 {
@@ -930,7 +932,7 @@ bool ImGui::CloseButton(ImGuiID id, const ImVec2& pos)
         window->DrawList->AddRectFilled(bb.Min, bb.Max, bg_col);
     RenderNavCursor(bb, id, ImGuiNavRenderCursorFlags_Compact);
     const ImU32 cross_col = GetColorU32(ImGuiCol_Text);
-    const ImVec2 cross_center = bb.GetCenter() - ImVec2(0.5f, 0.5f);
+    const ImVec2 cross_center = g_LEGACY_STROKES ? (bb.GetCenter() - ImVec2(0.5f, 0.5f)) : bb.GetCenter();
     const float cross_extent = g.FontSize * 0.5f * 0.7071f - 1.0f;
     const float cross_thickness = 1.0f * (float)(int)g.Style._MainScale; // FIXME-DPI
     window->DrawList->AddLine(cross_center + ImVec2(+cross_extent, +cross_extent), cross_center + ImVec2(-cross_extent, -cross_extent), cross_col, cross_thickness);
@@ -1762,7 +1764,11 @@ void ImGui::SeparatorTextEx(ImGuiID id, const char* label, const char* label_end
 
     const float sep1_x1 = pos.x;
     const float sep2_x2 = bb.Max.x;
-    const float seps_y = ImTrunc((bb.Min.y + bb.Max.y) * 0.5f + 0.999f);
+    float seps_y;
+    if (g_LEGACY_STROKES)
+        seps_y = ImTrunc((bb.Min.y + bb.Max.y) * 0.5f + 0.999f);
+    else
+        seps_y = ImTrunc((bb.Min.y + bb.Max.y) * 0.5f + (-separator_thickness * 0.5f + 1.0f) + 0.999f); // Align hline vertically, and snap to pixels.
 
     const float label_avail_w = ImMax(0.0f, sep2_x2 - sep1_x1 - padding.x * 2.0f);
     const ImVec2 label_pos(pos.x + padding.x + ImMax(0.0f, (label_avail_w - label_size.x - extra_w) * style.SeparatorTextAlign.x), pos.y + text_baseline_y); // FIXME-ALIGN
@@ -5691,7 +5697,11 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         state->CursorAnim += io.DeltaTime;
         bool cursor_is_visible = (!g.IO.ConfigInputTextCursorBlink) || (state->CursorAnim <= 0.0f) || ImFmod(state->CursorAnim, 1.20f) <= 0.80f;
         ImVec2 cursor_screen_pos = ImTrunc(draw_pos + cursor_offset - draw_scroll);
-        ImRect cursor_screen_rect(cursor_screen_pos.x, cursor_screen_pos.y - g.FontSize + 0.5f, cursor_screen_pos.x + 1.0f, cursor_screen_pos.y - 1.5f);
+        ImRect cursor_screen_rect;
+        if (g_LEGACY_STROKES)
+        cursor_screen_rect = ImRect(cursor_screen_pos.x, cursor_screen_pos.y - g.FontSize + 0.5f, cursor_screen_pos.x + 1.0f, cursor_screen_pos.y - 1.5f);
+        else
+        cursor_screen_rect = ImRect(cursor_screen_pos.x, cursor_screen_pos.y - g.FontSize + 1.0f, cursor_screen_pos.x + 1.0f, cursor_screen_pos.y - 1.0f);
         if (cursor_is_visible && cursor_screen_rect.Overlaps(clip_rect))
             draw_window->DrawList->AddLineV(cursor_screen_rect.Min.x, cursor_screen_rect.Min.y, cursor_screen_rect.Max.y, GetColorU32(ImGuiCol_InputTextCursor), style.InputTextCursorSize);
 
@@ -7209,16 +7219,27 @@ void ImGui::TreeNodeDrawLineToChildNode(const ImVec2& target_pos)
         return;
 
     ImGuiTreeNodeStackData* parent_data = &g.TreeNodeStack.Data[g.TreeNodeStack.Size - 1];
-    float x1 = ImTrunc(parent_data->DrawLinesX1);
+    float x1;
+    if (g_LEGACY_STROKES)
+        x1 = ImTrunc(parent_data->DrawLinesX1);
+    else
+        x1 = ImTrunc(parent_data->DrawLinesX1 - g.Style.TreeLinesSize * 0.5f) + g.Style.TreeLinesSize * 0.5f; // Draw line centered at X1, but snap to pixels boundary.
     float x2 = ImTrunc(target_pos.x - g.Style.ItemInnerSpacing.x);
-    float y = ImTrunc(target_pos.y);
+    float y;
+    if (g_LEGACY_STROKES)
+        y = ImTrunc(target_pos.y);
+    else
+        y = ImTrunc(target_pos.y) + g.Style.TreeLinesSize * 0.5f;
     float rounding = (g.Style.TreeLinesRounding > 0.0f) ? ImMin(x2 - x1, g.Style.TreeLinesRounding) : 0.0f;
     parent_data->DrawLinesToNodesY2 = ImMax(parent_data->DrawLinesToNodesY2, y - rounding);
     if (x1 >= x2)
         return;
     if (rounding > 0.0f)
     {
-        x1 += 0.5f + rounding;
+        if (g_LEGACY_STROKES)
+            x1 += 0.5f + rounding;
+        else
+            x1 += rounding;
         window->DrawList->PathArcToFast(ImVec2(x1, y - rounding), rounding, 6, 3);
         if (x1 < x2)
             window->DrawList->PathLineTo(ImVec2(x2, y));
@@ -7226,7 +7247,11 @@ void ImGui::TreeNodeDrawLineToChildNode(const ImVec2& target_pos)
     }
     else
     {
-        window->DrawList->AddLineH(x1, x2, y, GetColorU32(ImGuiCol_TreeLines), g.Style.TreeLinesSize);
+        // We use AddLine() instead of AddLineH() as we provide coordinates for line center,
+        // in order to make the code use same coordinates for both rounded and non-rounded version.
+        if (!g_LEGACY_STROKES)
+            x1 += g.Style.TreeLinesSize * 0.5f; // Avoid overdraw
+        window->DrawList->AddLine(ImVec2(x1, y), ImVec2(x2, y), GetColorU32(ImGuiCol_TreeLines), g.Style.TreeLinesSize);
     }
 }
 
@@ -7249,10 +7274,15 @@ void ImGui::TreeNodeDrawLineToTreePop(const ImGuiTreeNodeStackData* data)
     y2 = ImMin(y2, window->ClipRect.Max.y);
     if (y2 <= y1)
         return;
-    float x = ImTrunc(data->DrawLinesX1);
+    float x;
+    if (g_LEGACY_STROKES)
+        x = ImTrunc(data->DrawLinesX1);
+    else
+        x = ImTrunc(data->DrawLinesX1 - g.Style.TreeLinesSize * 0.5f) + g.Style.TreeLinesSize * 0.5f; // Draw line centered at X1, but snap to pixels boundary.
     if (data->DrawLinesTableColumn != -1)
         TablePushColumnChannel(data->DrawLinesTableColumn);
-    window->DrawList->AddLineV(x, y1, y2, GetColorU32(ImGuiCol_TreeLines), g.Style.TreeLinesSize);
+    // We use AddLine() instead of AddLineV() as we provide coordinates for line center,
+    window->DrawList->AddLine(ImVec2(x, y1), ImVec2(x, y2), GetColorU32(ImGuiCol_TreeLines), g.Style.TreeLinesSize);
     if (data->DrawLinesTableColumn != -1)
         TablePopColumnChannel();
 }
@@ -10934,8 +10964,18 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
         if (tab_contents_visible && (tab_bar->Flags & ImGuiTabBarFlags_DrawSelectedOverline) && style.TabBarOverlineSize > 0.0f)
         {
             // Might be moved to TabItemBackground() ?
-            ImVec2 tl = bb.GetTL() + ImVec2(0, 1.0f * g.CurrentDpiScale);
-            ImVec2 tr = bb.GetTR() + ImVec2(0, 1.0f * g.CurrentDpiScale);
+            ImVec2 tl;
+            ImVec2 tr;
+            if (g_LEGACY_STROKES)
+            {
+                tl = bb.GetTL() + ImVec2(0, 1.0f * g.CurrentDpiScale);
+                tr = bb.GetTR() + ImVec2(0, 1.0f * g.CurrentDpiScale);
+            }
+            else
+            {
+                tl = bb.GetTL() + ImVec2(0, style.TabBarOverlineSize * 0.5f);
+                tr = bb.GetTR() + ImVec2(0, style.TabBarOverlineSize * 0.5f);
+            }
             ImU32 overline_col = GetColorU32(tab_bar_focused ? ImGuiCol_TabSelectedOverline : ImGuiCol_TabDimmedSelectedOverline);
             if (style.TabRounding > 0.0f)
             {
@@ -10946,7 +10986,10 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
             }
             else
             {
+                if (g_LEGACY_STROKES)
                 display_draw_list->AddLine(tl - ImVec2(0.5f, 0.5f), tr - ImVec2(0.5f, 0.5f), overline_col, style.TabBarOverlineSize);
+                else
+                display_draw_list->AddLine(tl, tr, overline_col, style.TabBarOverlineSize);
             }
         }
         RenderNavCursor(bb, id);
