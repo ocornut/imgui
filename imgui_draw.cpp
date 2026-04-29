@@ -560,7 +560,8 @@ void ImDrawList::AddCallback(ImDrawCallback callback, void* userdata, size_t use
         curr_cmd->UserCallbackDataSize = (int)userdata_size;
         curr_cmd->UserCallbackDataOffset = _CallbacksDataBuf.Size;
         _CallbacksDataBuf.resize(_CallbacksDataBuf.Size + (int)userdata_size);
-        memcpy(_CallbacksDataBuf.Data + (size_t)curr_cmd->UserCallbackDataOffset, userdata, userdata_size);
+        IM_ASSERT(curr_cmd->UserCallbackDataOffset >= 0 && curr_cmd->UserCallbackDataOffset + (int)userdata_size <= _CallbacksDataBuf.Size);
+        memcpy(_CallbacksDataBuf.Data + curr_cmd->UserCallbackDataOffset, userdata, userdata_size);
     }
 
     AddDrawCmd(); // Force a new command after us (see comment below)
