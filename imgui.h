@@ -1908,8 +1908,9 @@ enum ImGuiColorEditFlags_
     ImGuiColorEditFlags_Float           = 1 << 24,  // [DataType]   // ColorEdit, ColorPicker, ColorButton: _display_ values formatted as 0.0f..1.0f floats instead of 0..255 integers. No round-trip of value via integers.
     ImGuiColorEditFlags_PickerHueBar    = 1 << 25,  // [Picker]     // ColorPicker: bar for Hue, rectangle for Sat/Value.
     ImGuiColorEditFlags_PickerHueWheel  = 1 << 26,  // [Picker]     // ColorPicker: wheel for Hue, triangle for Sat/Value.
-    ImGuiColorEditFlags_InputRGB        = 1 << 27,  // [Input]      // ColorEdit, ColorPicker: input and output data in RGB format.
-    ImGuiColorEditFlags_InputHSV        = 1 << 28,  // [Input]      // ColorEdit, ColorPicker: input and output data in HSV format.
+    ImGuiColorEditFlags_FixedTriangle   = 1 << 27,  // [Picker]     // ColorPicker: fix triangle position for PickerHueWheel.
+    ImGuiColorEditFlags_InputRGB        = 1 << 28,  // [Input]      // ColorEdit, ColorPicker: input and output data in RGB format.
+    ImGuiColorEditFlags_InputHSV        = 1 << 29,  // [Input]      // ColorEdit, ColorPicker: input and output data in HSV format.
 
     // Defaults Options. You can set application defaults using SetColorEditOptions(). The intent is that you probably don't want to
     // override them in most of your calls. Let the user choose via the option menu and/or call SetColorEditOptions() once during startup.
