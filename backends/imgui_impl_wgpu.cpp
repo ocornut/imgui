@@ -328,11 +328,30 @@ static WGPUProgrammableStageDescriptor ImGui_ImplWGPU_CreateShaderModuleWGSL(con
     WGPUShaderModuleDescriptor desc = {};
     desc.nextInChain = (WGPUChainedStruct*)&wgsl_desc;
 
+    // flag to be passed into the validation callback `userdata1` pointer.
+    int validation_error = 0;
+
+    wgpuDevicePushErrorScope(bd->wgpuDevice, WGPUErrorFilter_Validation);
+    WGPUShaderModule module = wgpuDeviceCreateShaderModule(bd->wgpuDevice, &desc);
+    WGPUPopErrorScopeCallbackInfo pop_cb = {};
+    pop_cb.mode = WGPUCallbackMode_AllowSpontaneous;
+    pop_cb.callback = [](WGPUPopErrorScopeStatus, WGPUErrorType type, WGPUStringView, void* userdata1, void* /*userdata2*/) {
+        if (type == WGPUErrorType_Validation)
+            *static_cast<int*>(userdata1) = 1;
+    };
+    pop_cb.userdata1 = &validation_error;
+    wgpuDevicePopErrorScope(bd->wgpuDevice, pop_cb);
+
     WGPUProgrammableStageDescriptor stage_desc = {};
-#if !defined(IMGUI_IMPL_WEBGPU_BACKEND_WGVK)
-    stage_desc.module = wgpuDeviceCreateShaderModule(bd->wgpuDevice, &desc);
-    stage_desc.entryPoint = { "main", WGPU_STRLEN };
-#endif
+    if (module && !validation_error)
+    {
+        stage_desc.module = module;
+        stage_desc.entryPoint = { "main", WGPU_STRLEN };
+    }
+    else if (module)
+    {
+        wgpuShaderModuleRelease(module);
+    }
     return stage_desc;
 }
 
