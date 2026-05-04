@@ -10429,6 +10429,15 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             curve_segments_override |= ImGui::SliderInt("Curves segments override", &curve_segments_override_v, 3, 40);
             ImGui::ColorEdit4("Color", &colf.x);
 
+            static ImDrawFlags flags = 0;
+            ImGui::AlignTextToFramePadding();
+            ImGui::Text("Stroke:");
+            ImGui::SameLine(); ImGui::RadioButton("Inside", &flags, ImDrawFlags_StrokeInside);
+            ImGui::SameLine(); ImGui::RadioButton("Center", &flags, ImDrawFlags_StrokeCenter);
+            ImGui::SameLine(); ImGui::RadioButton("CenterPixelAligned", &flags, ImDrawFlags_StrokeCenterPixelAligned);
+            ImGui::SameLine(); ImGui::RadioButton("Outside", &flags, ImDrawFlags_StrokeOutside);
+            ImGui::SameLine(); ImGui::RadioButton("Legacy", &flags, ImDrawFlags_StrokeLegacy);
+
             const ImVec2 p = ImGui::GetCursorScreenPos();
             const ImU32 col = ImColor(colf);
             const float spacing = 10.0f;
@@ -10445,23 +10454,27 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             {
                 // First line uses a thickness of 1.0f, second line uses the configurable thickness
                 float th = (n == 0) ? 1.0f : thickness;
-                draw_list->AddNgon(ImVec2(x + sz*0.5f, y + sz*0.5f), sz*0.5f, col, ngon_sides, th);                 x += sz + spacing;  // N-gon
-                draw_list->AddCircle(ImVec2(x + sz*0.5f, y + sz*0.5f), sz*0.5f, col, circle_segments, th);          x += sz + spacing;  // Circle
-                draw_list->AddEllipse(ImVec2(x + sz*0.5f, y + sz*0.5f), ImVec2(sz*0.5f, sz*0.3f), col, -0.3f, circle_segments, th); x += sz + spacing;  // Ellipse
-                draw_list->AddRect(ImVec2(x, y), ImVec2(x + sz, y + sz), col, 0.0f, th);                            x += sz + spacing;  // Square
-                draw_list->AddRect(ImVec2(x, y), ImVec2(x + sz, y + sz), col, rounding, th);                        x += sz + spacing;  // Square with all rounded corners
-                draw_list->AddRect(ImVec2(x, y), ImVec2(x + sz, y + sz), col, rounding, th, corners_tl_br);         x += sz + spacing;  // Square with two rounded corners
-                draw_list->AddTriangle(ImVec2(x+sz*0.5f,y), ImVec2(x+sz, y+sz-0.5f), ImVec2(x, y+sz-0.5f), col, th);x += sz + spacing;  // Triangle
+                draw_list->AddNgon(ImVec2(x + sz*0.5f, y + sz*0.5f), sz*0.5f, col, ngon_sides, th, flags);                 x += sz + spacing;  // N-gon
+                draw_list->AddCircle(ImVec2(x + sz*0.5f, y + sz*0.5f), sz*0.5f, col, circle_segments, th, flags);          x += sz + spacing;  // Circle
+                draw_list->AddEllipse(ImVec2(x + sz*0.5f, y + sz*0.5f), ImVec2(sz*0.5f, sz*0.3f), col, -0.3f, circle_segments, th, flags); x += sz + spacing;  // Ellipse
+                draw_list->AddRect(ImVec2(x, y), ImVec2(x + sz, y + sz), col, 0.0f, th, flags);                            x += sz + spacing;  // Square
+                draw_list->AddRect(ImVec2(x, y), ImVec2(x + sz, y + sz), col, rounding, th, flags);                        x += sz + spacing;  // Square with all rounded corners
+                draw_list->AddRect(ImVec2(x, y), ImVec2(x + sz, y + sz), col, rounding, th, flags | corners_tl_br);        x += sz + spacing;  // Square with two rounded corners
+                draw_list->AddTriangle(ImVec2(x+sz*0.5f,y), ImVec2(x+sz, y+sz-0.5f), ImVec2(x, y+sz-0.5f), col, th/*, flags*/);x += sz + spacing;  // Triangle
                 //draw_list->AddTriangle(ImVec2(x+sz*0.2f,y), ImVec2(x, y+sz-0.5f), ImVec2(x+sz*0.4f, y+sz-0.5f), col, th);x+= sz*0.4f + spacing; // Thin triangle
-                PathConcaveShape(draw_list, x, y, sz); draw_list->PathStroke(col, th, ImDrawFlags_Closed);          x += sz + spacing;  // Concave Shape
+                PathConcaveShape(draw_list, x, y, sz); draw_list->PathStroke(col, th, flags | ImDrawFlags_Closed);          x += sz + spacing;  // Concave Shape
                 //draw_list->AddPolyline(concave_shape, IM_COUNTOF(concave_shape), col, ImDrawFlags_Closed, th);
-                draw_list->AddLineH(x, x + sz, y, col, th);                                                         x += sz + spacing;  // Horizontal line (note: drawing a filled rectangle will be faster!)
-                draw_list->AddLineV(x, y, y + sz, col, th);                                                         x += spacing;       // Vertical line (note: drawing a filled rectangle will be faster!)
-                draw_list->AddLine(ImVec2(x, y), ImVec2(x + sz, y + sz), col, th);                                  x += sz + spacing;  // Diagonal line
+                draw_list->AddLineH(x, x + sz, y, col, th, flags);                                                         x += sz + spacing;  // Horizontal line (note: drawing a filled rectangle will be faster!)
+                draw_list->AddLineV(x, y, y + sz, col, th, flags);                                                         x += spacing;       // Vertical line (note: drawing a filled rectangle will be faster!)
+
+                draw_list->AddLine(ImVec2(x, y), ImVec2(x + sz, y), col, th, flags);                                       x += sz + spacing;
+                draw_list->AddLine(ImVec2(x, y), ImVec2(x, y + sz), col, th, flags);                                       x += spacing;
+
+                draw_list->AddLine(ImVec2(x, y), ImVec2(x + sz, y + sz), col, th, flags);                                  x += sz + spacing;  // Diagonal line
 
                 // Path
                 draw_list->PathArcTo(ImVec2(x + sz*0.5f, y + sz*0.5f), sz*0.5f, 3.141592f, 3.141592f * -0.5f);
-                draw_list->PathStroke(col, th);
+                draw_list->PathStroke(col, th, flags);
                 x += sz + spacing;
 
                 // Quadratic Bezier Curve (3 control points)
@@ -10486,8 +10499,13 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             //draw_list->AddTriangleFilled(ImVec2(x+sz*0.2f,y), ImVec2(x, y+sz-0.5f), ImVec2(x+sz*0.4f, y+sz-0.5f), col); x += sz*0.4f + spacing; // Thin triangle
             PathConcaveShape(draw_list, x, y, sz); draw_list->PathFillConcave(col);                                 x += sz + spacing;  // Concave shape
             draw_list->AddRectFilled(ImVec2(x, y), ImVec2(x + sz, y + thickness), col);                             x += sz + spacing;  // Horizontal line (faster than AddLine, but only handle integer thickness)
-            draw_list->AddRectFilled(ImVec2(x, y), ImVec2(x + thickness, y + sz), col);                             x += spacing * 2.0f;// Vertical line (faster than AddLine, but only handle integer thickness)
-            draw_list->AddRectFilled(ImVec2(x, y), ImVec2(x + 1, y + 1), col);                                      x += sz;            // Pixel (faster than AddLine)
+            draw_list->AddRectFilled(ImVec2(x, y), ImVec2(x + thickness, y + sz), col);                             x += spacing;       // Vertical line (faster than AddLine, but only handle integer thickness)
+            x += sz + spacing;
+            x += spacing;
+            draw_list->AddRectFilled(ImVec2(x + 0, y), ImVec2(x + 0 + 1, y + 1), col);                              // Pixels (faster than AddLine)
+            draw_list->AddRectFilled(ImVec2(x + 2, y), ImVec2(x + 2 + 2, y + 2), col);
+            draw_list->AddRectFilled(ImVec2(x + 5, y), ImVec2(x + 5 + 3, y + 3), col);
+            x += spacing + sz;
 
             // Path
             draw_list->PathArcTo(ImVec2(x + sz * 0.5f, y + sz * 0.5f), sz * 0.5f, 3.141592f * -0.5f, 3.141592f);
