@@ -1492,11 +1492,11 @@ void ImDrawList::PathRect(const ImVec2& a, const ImVec2& b, float rounding, ImDr
 
 extern bool g_LEGACY_STROKES;
 
-void ImDrawList::AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float thickness)
+void ImDrawList::AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float thickness, ImDrawFlags flags)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
-    if (g_LEGACY_STROKES)
+    if (g_LEGACY_STROKES || (flags & ImDrawFlags_StrokeMask_) == ImDrawFlags_StrokeLegacy)
     {
         const ImVec2 points[2] = { ImVec2(p1.x + 0.5f, p1.y + 0.5f), ImVec2(p2.x + 0.5f, p2.y + 0.5f) };
         AddPolyline(points, 2, col, thickness);
