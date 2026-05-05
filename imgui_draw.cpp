@@ -1744,17 +1744,22 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
         int s_rounding = (int)(rounding / _FringeScale);
         int s_thickness = (int)(thickness / _FringeScale);
 
+        // AddRectBaked() renders the stroke inside the rectangle, so we need to adjust the outside case
+        // This branch does not handle the center, since odd thickness strokes are not pixel aligned, even if the rectangle is.
         ImVec2 s_min = p_min;
         ImVec2 s_max = p_max;
         if (stroke_pos == ImDrawFlags_StrokeOutside)
         {
             s_min -= ImVec2(thickness, thickness);
             s_max += ImVec2(thickness, thickness);
-            s_rounding += s_thickness;
+            if (s_rounding != 0.0f)
+                s_rounding += s_thickness;
         }
+        // FIXME-WIP: Why isn't rounding offset in the _StrokeInside case?
 
         if (s_rounding <= 0 || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
         {
+            // FIXME-WIP: This could use half the number of vertices.
             const float t = (float)s_thickness * _FringeScale;
             PrimReserve(6*4, 4*4);
             PrimRect(ImVec2(p_min.x, p_min.y), ImVec2(p_max.x, p_min.y + t), col);
