@@ -825,6 +825,25 @@ void ImDrawList::PrimQuadUV(const ImVec2& a, const ImVec2& b, const ImVec2& c, c
 #define IM_FIXNORMAL2F_MAX_INVLEN2          100.0f // 500.0f (see #4053, #3366)
 #define IM_FIXNORMAL2F(VX,VY)               { float d2 = VX*VX + VY*VY; if (d2 > 0.000001f) { float inv_len2 = 1.0f / d2; if (inv_len2 > IM_FIXNORMAL2F_MAX_INVLEN2) inv_len2 = IM_FIXNORMAL2F_MAX_INVLEN2; VX *= inv_len2; VY *= inv_len2; } } (void)0
 
+// We avoid using the 'do { } while (false)` idiom in those macros as they typically have overhead in debug builds.
+#define IM_APPEND_VTX(PX, PY, UV, COL)   \
+    {                                       \
+        _VtxWritePtr->pos.x = PX;           \
+        _VtxWritePtr->pos.y = PY;           \
+        _VtxWritePtr->uv = UV;              \
+        _VtxWritePtr->col = COL;            \
+        _VtxWritePtr++;                     \
+        _VtxCurrentIdx++;                   \
+    } (void)0
+
+#define IM_APPEND_TRI(a, b, c)              \
+    {                                       \
+        _IdxWritePtr[0] = (ImDrawIdx)(a);   \
+        _IdxWritePtr[1] = (ImDrawIdx)(b);   \
+        _IdxWritePtr[2] = (ImDrawIdx)(c);   \
+        _IdxWritePtr += 3;                  \
+    } (void)0
+
 // TODO: Thickness anti-aliased lines cap are missing their AA fringe.
 // We avoid using the ImVec2 math operators here to reduce cost to a minimum for debug/non-inlined builds.
 void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32 col, float thickness, ImDrawFlags flags)
@@ -1566,7 +1585,6 @@ void ImDrawList::AddLineV(float x, float min_y, float max_y, ImU32 col, float th
     }
 }
 
-
 void ImDrawList::_AddRectBaked(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float r, float t, ImVec4 tex_uvs, ImDrawFlags flags)
 {
     const ImVec2 uv_tl(tex_uvs.x, tex_uvs.y);
@@ -1583,45 +1601,45 @@ void ImDrawList::_AddRectBaked(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
     if (flags & ImDrawFlags_RoundCornersTopLeft)
     {
         ImDrawIdx idx = (ImDrawIdx)_VtxCurrentIdx;
-        PrimWriteVtx(ImVec2(p_min.x, p_min.y), uv_tl, col);
-        PrimWriteVtx(ImVec2(p_min.x + r, p_min.y), uv_tr, col);
-        PrimWriteVtx(ImVec2(p_min.x + r, p_min.y + r), uv_br, col);
-        PrimWriteVtx(ImVec2(p_min.x, p_min.y + r), uv_bl, col);
-        PrimWriteIdx(idx+0); PrimWriteIdx(idx+1); PrimWriteIdx(idx+2);
-        PrimWriteIdx(idx+0); PrimWriteIdx(idx+2); PrimWriteIdx(idx+3);
+        IM_APPEND_VTX(p_min.x, p_min.y, uv_tl, col);
+        IM_APPEND_VTX(p_min.x + r, p_min.y, uv_tr, col);
+        IM_APPEND_VTX(p_min.x + r, p_min.y + r, uv_br, col);
+        IM_APPEND_VTX(p_min.x, p_min.y + r, uv_bl, col);
+        IM_APPEND_TRI(idx + 0, idx + 1, idx + 2);
+        IM_APPEND_TRI(idx + 0, idx + 2, idx + 3);
     }
 
     if (flags & ImDrawFlags_RoundCornersTopRight)
     {
         ImDrawIdx idx = (ImDrawIdx)_VtxCurrentIdx;
-        PrimWriteVtx(ImVec2(p_max.x - r, p_min.y), uv_tr, col);
-        PrimWriteVtx(ImVec2(p_max.x, p_min.y), uv_tl, col);
-        PrimWriteVtx(ImVec2(p_max.x, p_min.y + r), uv_bl, col);
-        PrimWriteVtx(ImVec2(p_max.x - r, p_min.y + r), uv_br, col);
-        PrimWriteIdx(idx+0); PrimWriteIdx(idx+1); PrimWriteIdx(idx+2);
-        PrimWriteIdx(idx+0); PrimWriteIdx(idx+2); PrimWriteIdx(idx+3);
+        IM_APPEND_VTX(p_max.x - r, p_min.y, uv_tr, col);
+        IM_APPEND_VTX(p_max.x, p_min.y, uv_tl, col);
+        IM_APPEND_VTX(p_max.x, p_min.y + r, uv_bl, col);
+        IM_APPEND_VTX(p_max.x - r, p_min.y + r, uv_br, col);
+        IM_APPEND_TRI(idx + 0, idx + 1, idx + 2);
+        IM_APPEND_TRI(idx + 0, idx + 2, idx + 3);
     }
 
     if (flags & ImDrawFlags_RoundCornersBottomRight)
     {
         ImDrawIdx idx = (ImDrawIdx)_VtxCurrentIdx;
-        PrimWriteVtx(ImVec2(p_max.x - r, p_max.y - r), uv_br, col);
-        PrimWriteVtx(ImVec2(p_max.x, p_max.y - r), uv_bl, col);
-        PrimWriteVtx(ImVec2(p_max.x, p_max.y), uv_tl, col);
-        PrimWriteVtx(ImVec2(p_max.x - r, p_max.y), uv_tr, col);
-        PrimWriteIdx(idx+0); PrimWriteIdx(idx+1); PrimWriteIdx(idx+2);
-        PrimWriteIdx(idx+0); PrimWriteIdx(idx+2); PrimWriteIdx(idx+3);
+        IM_APPEND_VTX(p_max.x - r, p_max.y - r, uv_br, col);
+        IM_APPEND_VTX(p_max.x, p_max.y - r, uv_bl, col);
+        IM_APPEND_VTX(p_max.x, p_max.y, uv_tl, col);
+        IM_APPEND_VTX(p_max.x - r, p_max.y, uv_tr, col);
+        IM_APPEND_TRI(idx + 0, idx + 1, idx + 2);
+        IM_APPEND_TRI(idx + 0, idx + 2, idx + 3);
     }
 
     if (flags & ImDrawFlags_RoundCornersBottomLeft)
     {
         ImDrawIdx idx = (ImDrawIdx)_VtxCurrentIdx;
-        PrimWriteVtx(ImVec2(p_min.x, p_max.y - r), uv_bl, col);
-        PrimWriteVtx(ImVec2(p_min.x + r, p_max.y - r), uv_br, col);
-        PrimWriteVtx(ImVec2(p_min.x + r, p_max.y), uv_tr, col);
-        PrimWriteVtx(ImVec2(p_min.x, p_max.y), uv_tl, col);
-        PrimWriteIdx(idx+0); PrimWriteIdx(idx+1); PrimWriteIdx(idx+2);
-        PrimWriteIdx(idx+0); PrimWriteIdx(idx+2); PrimWriteIdx(idx+3);
+        IM_APPEND_VTX(p_min.x, p_max.y - r, uv_bl, col);
+        IM_APPEND_VTX(p_min.x + r, p_max.y - r, uv_br, col);
+        IM_APPEND_VTX(p_min.x + r, p_max.y, uv_tr, col);
+        IM_APPEND_VTX(p_min.x, p_max.y, uv_tl, col);
+        IM_APPEND_TRI(idx + 0, idx + 1, idx + 2);
+        IM_APPEND_TRI(idx + 0, idx + 2, idx + 3);
     }
 
     const float r_tl = (flags & ImDrawFlags_RoundCornersTopLeft)     ? r : 0;
@@ -1633,50 +1651,50 @@ void ImDrawList::_AddRectBaked(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
     {
         // Top
         ImDrawIdx idx = (ImDrawIdx)_VtxCurrentIdx;
-        const float left = p_min.x + r_tl;
-        const float right = p_max.x - r_tr;
-        PrimWriteVtx(ImVec2(left, p_min.y), opaque_uv, col);
-        PrimWriteVtx(ImVec2(right, p_min.y), opaque_uv, col);
-        PrimWriteVtx(ImVec2(right, p_min.y + t), opaque_uv, col);
-        PrimWriteVtx(ImVec2(left, p_min.y + t), opaque_uv, col);
-        PrimWriteIdx(idx+0); PrimWriteIdx(idx+1); PrimWriteIdx(idx+2);
-        PrimWriteIdx(idx+0); PrimWriteIdx(idx+2); PrimWriteIdx(idx+3);
+        const float x0 = p_min.x + r_tl;
+        const float x1 = p_max.x - r_tr;
+        IM_APPEND_VTX(x0, p_min.y, opaque_uv, col);
+        IM_APPEND_VTX(x1, p_min.y, opaque_uv, col);
+        IM_APPEND_VTX(x1, p_min.y + t, opaque_uv, col);
+        IM_APPEND_VTX(x0, p_min.y + t, opaque_uv, col);
+        IM_APPEND_TRI(idx + 0, idx + 1, idx + 2);
+        IM_APPEND_TRI(idx + 0, idx + 2, idx + 3);
     }
     {
         // Left
         ImDrawIdx idx = (ImDrawIdx)_VtxCurrentIdx;
-        const float top = p_min.y + ImMax(r_tl, t);
-        const float bottom = p_max.y - ImMax(r_bl, t);
-        PrimWriteVtx(ImVec2(p_min.x, top), opaque_uv, col);
-        PrimWriteVtx(ImVec2(p_min.x + t, top), opaque_uv, col);
-        PrimWriteVtx(ImVec2(p_min.x + t, bottom), opaque_uv, col);
-        PrimWriteVtx(ImVec2(p_min.x, bottom), opaque_uv, col);
-        PrimWriteIdx(idx+0); PrimWriteIdx(idx+1); PrimWriteIdx(idx+2);
-        PrimWriteIdx(idx+0); PrimWriteIdx(idx+2); PrimWriteIdx(idx+3);
+        const float y0 = p_min.y + ImMax(r_tl, t);
+        const float y1 = p_max.y - ImMax(r_bl, t);
+        IM_APPEND_VTX(p_min.x, y0, opaque_uv, col);
+        IM_APPEND_VTX(p_min.x + t, y0, opaque_uv, col);
+        IM_APPEND_VTX(p_min.x + t, y1, opaque_uv, col);
+        IM_APPEND_VTX(p_min.x, y1, opaque_uv, col);
+        IM_APPEND_TRI(idx + 0, idx + 1, idx + 2);
+        IM_APPEND_TRI(idx + 0, idx + 2, idx + 3);
     }
     {
         // Right
         ImDrawIdx idx = (ImDrawIdx)_VtxCurrentIdx;
-        const float top = p_min.y + ImMax(r_tr, t);
-        const float bottom = p_max.y - ImMax(r_br, t);
-        PrimWriteVtx(ImVec2(p_max.x - t, top), opaque_uv, col);
-        PrimWriteVtx(ImVec2(p_max.x, top), opaque_uv, col);
-        PrimWriteVtx(ImVec2(p_max.x, bottom), opaque_uv, col);
-        PrimWriteVtx(ImVec2(p_max.x - t, bottom), opaque_uv, col);
-        PrimWriteIdx(idx+0); PrimWriteIdx(idx+1); PrimWriteIdx(idx+2);
-        PrimWriteIdx(idx+0); PrimWriteIdx(idx+2); PrimWriteIdx(idx+3);
+        const float y0 = p_min.y + ImMax(r_tr, t);
+        const float y1 = p_max.y - ImMax(r_br, t);
+        IM_APPEND_VTX(p_max.x - t, y0, opaque_uv, col);
+        IM_APPEND_VTX(p_max.x, y0, opaque_uv, col);
+        IM_APPEND_VTX(p_max.x, y1, opaque_uv, col);
+        IM_APPEND_VTX(p_max.x - t, y1, opaque_uv, col);
+        IM_APPEND_TRI(idx + 0, idx + 1, idx + 2);
+        IM_APPEND_TRI(idx + 0, idx + 2, idx + 3);
     }
     {
         // Bottom
         ImDrawIdx idx = (ImDrawIdx)_VtxCurrentIdx;
-        const float left = p_min.x + r_bl;
-        const float right = p_max.x - r_br;
-        PrimWriteVtx(ImVec2(left, p_max.y - t), opaque_uv, col);
-        PrimWriteVtx(ImVec2(right, p_max.y - t), opaque_uv, col);
-        PrimWriteVtx(ImVec2(right, p_max.y), opaque_uv, col);
-        PrimWriteVtx(ImVec2(left, p_max.y), opaque_uv, col);
-        PrimWriteIdx(idx+0); PrimWriteIdx(idx+1); PrimWriteIdx(idx+2);
-        PrimWriteIdx(idx+0); PrimWriteIdx(idx+2); PrimWriteIdx(idx+3);
+        const float x0 = p_min.x + r_bl;
+        const float x1 = p_max.x - r_br;
+        IM_APPEND_VTX(x0, p_max.y - t, opaque_uv, col);
+        IM_APPEND_VTX(x1, p_max.y - t, opaque_uv, col);
+        IM_APPEND_VTX(x1, p_max.y, opaque_uv, col);
+        IM_APPEND_VTX(x0, p_max.y, opaque_uv, col);
+        IM_APPEND_TRI(idx + 0, idx + 1, idx + 2);
+        IM_APPEND_TRI(idx + 0, idx + 2, idx + 3);
     }
 
     const int idx_used = (int)(_IdxWritePtr - start_idx_ptr);
@@ -1791,32 +1809,32 @@ void ImDrawList::_AddRectFilledBaked(const ImVec2& p_min, const ImVec2& p_max, I
 
     ImDrawIdx idx = (ImDrawIdx)_VtxCurrentIdx;
 
-    PrimWriteVtx(ImVec2(p_min.x, p_min.y), uv_tl, col);
-    PrimWriteVtx(ImVec2(p_min.x + r_tl, p_min.y), uv_tr, col);
-    PrimWriteVtx(ImVec2(p_max.x - r_tr, p_min.y), uv_tr, col);
-    PrimWriteVtx(ImVec2(p_max.x, p_min.y), uv_tl, col);
+    IM_APPEND_VTX(p_min.x, p_min.y, uv_tl, col);
+    IM_APPEND_VTX(p_min.x + r_tl, p_min.y, uv_tr, col);
+    IM_APPEND_VTX(p_max.x - r_tr, p_min.y, uv_tr, col);
+    IM_APPEND_VTX(p_max.x, p_min.y, uv_tl, col);
 
-    PrimWriteVtx(ImVec2(p_min.x, p_min.y + r_tl), uv_bl, col);
-    PrimWriteVtx(ImVec2(p_min.x + r_tl, p_min.y + r_tl), uv_br, col);
-    PrimWriteVtx(ImVec2(p_max.x - r_tr, p_min.y + r_tr), uv_br, col);
-    PrimWriteVtx(ImVec2(p_max.x, p_min.y + r_tr), uv_bl, col);
+    IM_APPEND_VTX(p_min.x, p_min.y + r_tl, uv_bl, col);
+    IM_APPEND_VTX(p_min.x + r_tl, p_min.y + r_tl, uv_br, col);
+    IM_APPEND_VTX(p_max.x - r_tr, p_min.y + r_tr, uv_br, col);
+    IM_APPEND_VTX(p_max.x, p_min.y + r_tr, uv_bl, col);
 
-    PrimWriteVtx(ImVec2(p_min.x, p_max.y - r_bl), uv_bl, col);
-    PrimWriteVtx(ImVec2(p_min.x + r_bl, p_max.y - r_bl), uv_br, col);
-    PrimWriteVtx(ImVec2(p_max.x - r_br, p_max.y - r_br), uv_br, col);
-    PrimWriteVtx(ImVec2(p_max.x, p_max.y - r_br), uv_bl, col);
+    IM_APPEND_VTX(p_min.x, p_max.y - r_bl, uv_bl, col);
+    IM_APPEND_VTX(p_min.x + r_bl, p_max.y - r_bl, uv_br, col);
+    IM_APPEND_VTX(p_max.x - r_br, p_max.y - r_br, uv_br, col);
+    IM_APPEND_VTX(p_max.x, p_max.y - r_br, uv_bl, col);
 
-    PrimWriteVtx(ImVec2(p_min.x, p_max.y), uv_tl, col);
-    PrimWriteVtx(ImVec2(p_min.x + r_bl, p_max.y), uv_tr, col);
-    PrimWriteVtx(ImVec2(p_max.x - r_br, p_max.y ), uv_tr, col);
-    PrimWriteVtx(ImVec2(p_max.x, p_max.y), uv_tl, col);
+    IM_APPEND_VTX(p_min.x, p_max.y, uv_tl, col);
+    IM_APPEND_VTX(p_min.x + r_bl, p_max.y, uv_tr, col);
+    IM_APPEND_VTX(p_max.x - r_br, p_max.y, uv_tr, col);
+    IM_APPEND_VTX(p_max.x, p_max.y, uv_tl, col);
 
     for (int i = 0; i < 3; i++)
     {
         for (int j = 0; j < 3; j++)
         {
-            PrimWriteIdx(idx+4); PrimWriteIdx(idx+0); PrimWriteIdx(idx+1);
-            PrimWriteIdx(idx+4); PrimWriteIdx(idx+1); PrimWriteIdx(idx+5);
+            IM_APPEND_TRI(idx + 4, idx + 0, idx + 1);
+            IM_APPEND_TRI(idx + 4, idx + 1, idx + 5);
             idx++;
         }
         idx++;
