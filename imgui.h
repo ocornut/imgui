@@ -1813,7 +1813,7 @@ enum ImGuiBackendFlags_
     ImGuiBackendFlags_RendererHasViewports  = 1 << 10,  // Backend Renderer supports multiple viewports.
     ImGuiBackendFlags_PlatformHasViewports  = 1 << 11,  // Backend Platform supports multiple viewports.
     ImGuiBackendFlags_HasMouseHoveredViewport=1 << 12,  // Backend Platform supports calling io.AddMouseViewportEvent() with the viewport under the mouse. IF POSSIBLE, ignore viewports with the ImGuiViewportFlags_NoInputs flag (Win32 backend, GLFW 3.30+ backend can do this, SDL backend cannot). If this cannot be done, Dear ImGui needs to use a flawed heuristic to find the viewport under.
-    ImGuiBackendFlags_HasParentViewport     = 1 << 13,  // Backend Platform supports honoring viewport->ParentViewport/ParentViewportId value, by applying the corresponding parent/child relation at the Platform level.
+    ImGuiBackendFlags_HasParentViewport     = 1 << 13,  // Backend Platform supports honoring viewport->ParentViewport/ParentViewportId value, by applying the corresponding parent/child relationship at the Platform level. Child windows always appear in front of their parent window.
 };
 
 // Enumeration for PushStyleColor() / PopStyleColor()
@@ -2521,10 +2521,11 @@ struct ImGuiIO
     bool        ConfigDockingTransparentPayload;// = false          // [BETA] Make window or viewport transparent when docking and only display docking boxes on the target viewport. Useful if rendering of multiple viewport cannot be synced. Best used with ConfigViewportsNoAutoMerge.
 
     // Viewport options (when ImGuiConfigFlags_ViewportsEnable is set)
+    // (sorry for the amount of "NoXXXX" flags, which may be harder to reason about! may rework someday)
     bool        ConfigViewportsNoAutoMerge;     // = false;         // Set to make all floating imgui windows always create their own viewport. Otherwise, they are merged into the main host viewports when overlapping it. May also set ImGuiViewportFlags_NoAutoMerge on individual viewport.
     bool        ConfigViewportsNoTaskBarIcon;   // = false          // Disable default OS task bar icon flag for secondary viewports. When a viewport doesn't want a task bar icon, ImGuiViewportFlags_NoTaskBarIcon will be set on it.
     bool        ConfigViewportsNoDecoration;    // = true           // Disable default OS window decoration flag for secondary viewports. When a viewport doesn't want window decorations, ImGuiViewportFlags_NoDecoration will be set on it. Enabling decoration can create subsequent issues at OS levels (e.g. minimum window size).
-    bool        ConfigViewportsNoDefaultParent; // = true           // When false: set secondary viewports' ParentViewportId to main viewport ID by default. Expects the platform backend to setup a parent/child relationship between the OS windows based on this value. Some backend may ignore this. Set to true if you want viewports to automatically be parent of main viewport, otherwise all viewports will be top-level OS windows.
+    bool        ConfigViewportsNoDefaultParent; // = true           // Disable setting OS window parent to main viewport by default. The platform backend is expected to honor `viewport->ParentViewportID` to setup a parent/child relationship between the OS windows (supported if ImGuiBackendFlags_HasParentViewport is set). When parented: child windows always appear in front of their parent. Set to false if you want viewports to automatically be parent of main viewport, otherwise all viewports will be top-level OS windows. Parent/child relationship may be set on a per-window basis using ImGuiWindowClass.
     bool        ConfigViewportsPlatformFocusSetsImGuiFocus;//= true // When a platform window is focused (e.g. using Alt+Tab, clicking Platform Title Bar), apply corresponding focus on imgui windows (may clear focus/active id from imgui windows location in other platform windows). In principle this is better enabled but we provide an opt-out, because some Linux window managers tend to eagerly focus windows (e.g. on mouse hover, or even a simple window pos/size change).
 
     // DPI/Scaling options
@@ -2796,7 +2797,7 @@ struct ImGuiSizeCallbackData
 // before we stabilize Docking features. Please be mindful if using this.
 // Provide hints:
 // - To the platform backend via altered viewport flags (enable/disable OS decoration, OS task bar icons, etc.)
-// - To the platform backend for OS level parent/child relationships of viewport.
+// - To the platform backend for OS level parent/child relationships of viewport (otherwise: default is configured via io.ConfigViewportsNoDefaultParent)
 // - To the docking system for various options and filtering.
 struct ImGuiWindowClass
 {

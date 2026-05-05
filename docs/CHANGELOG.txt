@@ -930,6 +930,9 @@ Docking+Viewports Branch:
   - Fixed a bug where ImGuiWindowFlags_NoBringToFrontOnFocus would effectively
     be ignored when windows first appear and viewports are enabled. (#7008) [@jshofmann]
   - Changed default value of io.ConfigViewportsNoDefaultParent to true. (#8948)
+    As a reminder, for backend honoring ParentViewportID:
+    - Parented windows will always appear in front of the main viewport.
+    - Non-parented windows can appear behing the main viewport.
   - Fixed an issue inferring Z-order when attempting to merge a viewport
     back in the the main/hosting viewport. (#8948)
     Note that for GLFW/SDL2/OSX backends, which do not support honoring ParentViewportID.
