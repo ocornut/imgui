@@ -6,8 +6,6 @@
 //  [X] Renderer: Large meshes support (64k+ vertices) even with 16-bit indices (ImGuiBackendFlags_RendererHasVtxOffset).
 //  [X] Renderer: Texture updates support for dynamic font atlas (ImGuiBackendFlags_RendererHasTextures).
 //  [X] Renderer: Multi-viewport support (multiple windows). Enable with 'io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable'.
-// Missing features or Issues:
-//  [ ] Renderer: Missing support for DrawCallback_SetSamplerLinear, DrawCallback_SetSamplerNearest callbacks.
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
@@ -20,6 +18,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2026-XX-XX: Metal: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2026-04-28: Added support for standard draw callbacks (in platform_io): DrawCallback_SetSamplerLinear and DrawCallback_SetSamplerNearest. (#9378, #9381)
 //  2026-04-23: Added support for standard draw callbacks (in platform_io): DrawCallback_ResetRenderState (others are not yet supported). (#9378)
 //  2026-04-14: Metal: use a dedicated bufferCacheLock to avoid crashing when bufferCache is replaced by a new object while being used for @synchronize(). (#9367)
 //  2026-04-03: Metal: avoid redundant vertex buffer bind in SetupRenderState. (#9343)
@@ -87,6 +86,8 @@ static void ImGui_ImplMetal_InvalidateDeviceObjectsForPlatformWindows();
 @interface MetalContext : NSObject
 @property (nonatomic, strong) id<MTLDevice>                 device;
 @property (nonatomic, strong) id<MTLDepthStencilState>      depthStencilState;
+@property (nonatomic, strong) id<MTLSamplerState>           samplerStateLinear;
+@property (nonatomic, strong) id<MTLSamplerState>           samplerStateNearest;
 @property (nonatomic, strong) FramebufferDescriptor*        framebufferDescriptor; // framebuffer descriptor for current frame; transient
 @property (nonatomic, strong) NSMutableDictionary*          renderPipelineStateCache; // pipeline cache; keyed on framebuffer descriptors
 @property (nonatomic, strong) NSMutableArray<MetalBuffer*>* bufferCache;
@@ -99,6 +100,7 @@ static void ImGui_ImplMetal_InvalidateDeviceObjectsForPlatformWindows();
 struct ImGui_ImplMetal_Data
 {
     MetalContext*               SharedMetalContext;
+    id<MTLRenderCommandEncoder> RenderCommandEncoder;
 
     ImGui_ImplMetal_Data()      { memset((void*)this, 0, sizeof(*this)); }
 };
@@ -193,12 +195,15 @@ static void ImGui_ImplMetal_SetupRenderState(ImDrawData* draw_data, id<MTLComman
     [commandEncoder setVertexBytes:&ortho_projection length:sizeof(ortho_projection) atIndex:1];
 
     [commandEncoder setRenderPipelineState:renderPipelineState];
+    [commandEncoder setFragmentSamplerState:bd->SharedMetalContext.samplerStateLinear atIndex:0];
 
     [commandEncoder setVertexBuffer:vertexBuffer.buffer offset:vertexBufferOffset atIndex:0];
 }
 
 // Draw callbacks
-static void ImGui_ImplMetal_DrawCallback_ResetRenderState(const ImDrawList*, const ImDrawCmd*) {} // Intentionally empty. Used as an identifier for rendering loop to call its code. Simpler to implement this way.
+static void ImGui_ImplMetal_DrawCallback_ResetRenderState(const ImDrawList*, const ImDrawCmd*)  {} // Intentionally empty. Used as an identifier for rendering loop to call its code. Simpler to implement this way.
+static void ImGui_ImplMetal_DrawCallback_SetSamplerLinear(const ImDrawList*, const ImDrawCmd*)  { ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData(); [bd->RenderCommandEncoder setFragmentSamplerState:bd->SharedMetalContext.samplerStateLinear atIndex:0]; }
+static void ImGui_ImplMetal_DrawCallback_SetSamplerNearest(const ImDrawList*, const ImDrawCmd*) { ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData(); [bd->RenderCommandEncoder setFragmentSamplerState:bd->SharedMetalContext.samplerStateNearest atIndex:0]; }
 
 // Metal Render function.
 void ImGui_ImplMetal_RenderDrawData(ImDrawData* draw_data, id<MTLCommandBuffer> commandBuffer, id<MTLRenderCommandEncoder> commandEncoder)
@@ -236,6 +241,7 @@ void ImGui_ImplMetal_RenderDrawData(ImDrawData* draw_data, id<MTLCommandBuffer> 
     MetalBuffer* vertexBuffer = [ctx dequeueReusableBufferOfLength:vertexBufferLength device:commandBuffer.device];
     MetalBuffer* indexBuffer = [ctx dequeueReusableBufferOfLength:indexBufferLength device:commandBuffer.device];
 
+    bd->RenderCommandEncoder = commandEncoder;
     ImGui_ImplMetal_SetupRenderState(draw_data, commandBuffer, commandEncoder, renderPipelineState, vertexBuffer, 0);
 
     // Will project scissor/clipping rectangles into framebuffer space
@@ -314,6 +320,7 @@ void ImGui_ImplMetal_RenderDrawData(ImDrawData* draw_data, id<MTLCommandBuffer> 
             [sharedMetalContext.bufferCache addObject:indexBuffer];
         }
     }];
+    bd->RenderCommandEncoder = nil;
 }
 
 static void ImGui_ImplMetal_DestroyTexture(ImTextureData* tex)
@@ -390,8 +397,19 @@ bool ImGui_ImplMetal_CreateDeviceObjects(id<MTLDevice> device)
     depthStencilDescriptor.depthWriteEnabled = NO;
     depthStencilDescriptor.depthCompareFunction = MTLCompareFunctionAlways;
     bd->SharedMetalContext.depthStencilState = [device newDepthStencilStateWithDescriptor:depthStencilDescriptor];
+    MTLSamplerDescriptor* samplerDescriptor = [[MTLSamplerDescriptor alloc] init];
+    samplerDescriptor.minFilter = MTLSamplerMinMagFilterLinear;
+    samplerDescriptor.magFilter = MTLSamplerMinMagFilterLinear;
+    samplerDescriptor.mipFilter = MTLSamplerMipFilterLinear;
+    bd->SharedMetalContext.samplerStateLinear = [device newSamplerStateWithDescriptor:samplerDescriptor];
+    samplerDescriptor.minFilter = MTLSamplerMinMagFilterNearest;
+    samplerDescriptor.magFilter = MTLSamplerMinMagFilterNearest;
+    samplerDescriptor.mipFilter = MTLSamplerMipFilterNearest;
+    bd->SharedMetalContext.samplerStateNearest = [device newSamplerStateWithDescriptor:samplerDescriptor];
+
     ImGui_ImplMetal_CreateDeviceObjectsForPlatformWindows();
 #ifdef IMGUI_IMPL_METAL_CPP
+    [samplerDescriptor release];
     [depthStencilDescriptor release];
 #endif
 
@@ -409,6 +427,8 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
 
     ImGui_ImplMetal_InvalidateDeviceObjectsForPlatformWindows();
     [bd->SharedMetalContext.renderPipelineStateCache removeAllObjects];
+    bd->SharedMetalContext.samplerStateLinear = nil;
+    bd->SharedMetalContext.samplerStateNearest = nil;
 }
 
 bool ImGui_ImplMetal_Init(id<MTLDevice> device)
@@ -426,6 +446,8 @@ bool ImGui_ImplMetal_Init(id<MTLDevice> device)
 
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     platform_io.DrawCallback_ResetRenderState = ImGui_ImplMetal_DrawCallback_ResetRenderState;
+    platform_io.DrawCallback_SetSamplerLinear = ImGui_ImplMetal_DrawCallback_SetSamplerLinear;
+    platform_io.DrawCallback_SetSamplerNearest = ImGui_ImplMetal_DrawCallback_SetSamplerNearest;
 
     bd->SharedMetalContext = [[MetalContext alloc] init];
     bd->SharedMetalContext.device = device;
@@ -757,9 +779,9 @@ static void ImGui_ImplMetal_InvalidateDeviceObjectsForPlatformWindows()
     "}\n"
     "\n"
     "fragment half4 fragment_main(VertexOut in [[stage_in]],\n"
-    "                             texture2d<half, access::sample> texture [[texture(0)]]) {\n"
-    "    constexpr sampler linearSampler(coord::normalized, min_filter::linear, mag_filter::linear, mip_filter::linear);\n"
-    "    half4 texColor = texture.sample(linearSampler, in.texCoords);\n"
+    "                             texture2d<half, access::sample> texture [[texture(0)]],\n"
+    "                             sampler textureSampler [[sampler(0)]]) {\n"
+    "    half4 texColor = texture.sample(textureSampler, in.texCoords);\n"
     "    return half4(in.color) * texColor;\n"
     "}\n";
 

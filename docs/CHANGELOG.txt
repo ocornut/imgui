@@ -74,6 +74,7 @@ Other Changes:
     (#9378, #9371, #3590, #8926, #2973, #7485, #7468, #6969, #5118, #7616, #9173, #8322, #7230,
     #5999, #6452, #5156, #7342, #7592, #7511)
   - Made AddCallback() user data default to Null for convenience.
+  - Added AddLineH(), AddLineV() helpers to draw horizontal and vertical lines. [@memononen]
 - InputText:
   - InputTextMultiline: fixed an issue processing deactivation logic when an active
     multi-line edit is clipped due to being out of view.
@@ -97,6 +98,8 @@ Other Changes:
     with 1.91.4 behavior.
   - In a majority of cases you should use IsItemDeactivatedAfterEdit() instead,
     but it still has a few edge cases flaws (to be addressed soon).
+- InputInt, InputFloat, InputScalar: allow passing a format string that does not display
+  the scalar value. Parsing input with default format for the type. (#9385) [@FireFox2000000]
 - Multi-Select:
   - Fixed an issue using Multi-Select within a Table causing column width measurement to
     be invalid when trailing column contents is not submitted in the last row. (#9341, #8250)
@@ -129,6 +132,7 @@ Other Changes:
 - Style:
   - Fixed vertical scrollbar top coordinates when using thick borders on windows
     with no title bar and no menu bar. (#9366)
+  - Added ImGuiStyleVar_DragDropTargetRounding. (#9056)
 - Fonts:
   - imgui_freetype: add FreeType headers & compiled version in 'About Dear ImGui' details.
   - Assert when using MergeMode with an explicit size over a target font with an implicit
@@ -148,7 +152,7 @@ Other Changes:
     - DX10:         Reset     SetSamplerLinear  SetSamplerNearest
     - DX11:         Reset     SetSamplerLinear  SetSamplerNearest
     - DX12:         Reset     SetSamplerLinear  SetSamplerNearest
-    - Metal:        Reset     *missing*         *missing*
+    - Metal:        Reset     SetSamplerLinear  SetSamplerNearest
     - OpenGL2:      Reset     SetSamplerLinear  SetSamplerNearest
     - OpenGL3+:     Reset     SetSamplerLinear  SetSamplerNearest
     - SDLGPU3:      Reset     SetSamplerLinear  SetSamplerNearest
@@ -156,7 +160,7 @@ Other Changes:
     - SDLRenderer3: Reset     SetSamplerLinear  SetSamplerNearest
     - Vulkan:       Reset     SetSamplerLinear  SetSamplerNearest
     - WebGPU:       Reset     SetSamplerLinear  SetSamplerNearest
-    (Vulkan backend by @yaz0r, others by @ocornut)
+    (Vulkan backend by @yaz0r, Metal by @ssh4net, others by @ocornut)
   - GLFW: added a Win32-specific implementation of `ImGui_ImplGlfw_GetContentScaleXXXX`
     functions for legacy GLFW 3.2. (#9003)
   - Metal: avoid redundant vertex buffer bind in `SetupRenderState()`, which leads
