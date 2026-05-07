@@ -3530,9 +3530,9 @@ struct ImDrawList
     IMGUI_API void  AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float rounding = 0.0f, float thickness = 1.0f, ImDrawFlags flags = 0);   // a: upper-left, b: lower-right (== upper-left + size)
     IMGUI_API void  AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float rounding = 0.0f, ImDrawFlags flags = 0);                     // a: upper-left, b: lower-right (== upper-left + size)
     IMGUI_API void  AddRectFilledMultiColor(const ImVec2& p_min, const ImVec2& p_max, ImU32 col_upr_left, ImU32 col_upr_right, ImU32 col_bot_right, ImU32 col_bot_left);
-    IMGUI_API void  AddQuad(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col, float thickness = 1.0f);
+    IMGUI_API void  AddQuad(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col, float thickness = 1.0f, ImDrawFlags flags = 0);
     IMGUI_API void  AddQuadFilled(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col);
-    IMGUI_API void  AddTriangle(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 col, float thickness = 1.0f);
+    IMGUI_API void  AddTriangle(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 col, float thickness = 1.0f, ImDrawFlags = 0);
     IMGUI_API void  AddTriangleFilled(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 col);
     IMGUI_API void  AddCircle(const ImVec2& center, float radius, ImU32 col, int num_segments = 0, float thickness = 1.0f, ImDrawFlags flags = 0);
     IMGUI_API void  AddCircleFilled(const ImVec2& center, float radius, ImU32 col, int num_segments = 0);
@@ -3570,7 +3570,7 @@ struct ImDrawList
     inline    void  PathLineToMergeDuplicate(const ImVec2& pos)                 { if (_Path.Size == 0 || memcmp(&_Path.Data[_Path.Size - 1], &pos, 8) != 0) _Path.push_back(pos); }
     inline    void  PathFillConvex(ImU32 col, ImDrawFlags flags = 0)            { AddConvexPolyFilled(_Path.Data, _Path.Size, col, flags); _Path.Size = 0; }
     inline    void  PathFillConcave(ImU32 col)                                  { AddConcavePolyFilled(_Path.Data, _Path.Size, col); _Path.Size = 0; }
-    inline    void  PathStroke(ImU32 col, float thickness = 1.0f, ImDrawFlags flags = 0) { AddPolyline(_Path.Data, _Path.Size, col, thickness, flags); _Path.Size = 0; }
+    inline    void  PathStroke(ImU32 col, float thickness = 1.0f, ImDrawFlags flags = ImDrawFlags_StrokeCenter) { AddPolyline(_Path.Data, _Path.Size, col, thickness, flags); _Path.Size = 0; }
     IMGUI_API void  PathArcTo(const ImVec2& center, float radius, float a_min, float a_max, int num_segments = 0);
     IMGUI_API void  PathArcToFast(const ImVec2& center, float radius, int a_min_of_12, int a_max_of_12);                // Use precomputed angles for a 12 steps circle
     IMGUI_API void  PathEllipticalArcTo(const ImVec2& center, const ImVec2& radius, float rot, float a_min, float a_max, int num_segments = 0); // Ellipse
@@ -3651,8 +3651,7 @@ struct ImDrawList
     IMGUI_API void  _PathArcToN(const ImVec2& center, float radius, float a_min, float a_max, int num_segments);
     IMGUI_API void  _AddRectFilledBaked(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float r, ImVec4 tex_uvs, ImDrawFlags flags);
     IMGUI_API void  _AddRectBaked(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float r, float t, ImVec4 tex_uvs, ImDrawFlags flags);
-    IMGUI_API void  _AddPolylineIntThickness(const ImVec2* points, ImVec2* normals, float* sqr_lengths, const int points_count, ImU32 col, float thickness, ImDrawFlags flags, ImVec4 tex_uvs);
-    IMGUI_API void  _AddPolylineFractThickness(const ImVec2* points, ImVec2* normals, float* sqr_lengths, const int points_count, ImU32 col, float thickness, ImDrawFlags flags);
+    IMGUI_API void  _AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_lengths, const int points_count, ImU32 col, float thickness, ImDrawFlags flags, ImVec4 tex_uvs, float fringe);
     IMGUI_API void  _AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float rounding, float thickness, ImDrawFlags flags);
 };
 
