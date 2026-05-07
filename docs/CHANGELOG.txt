@@ -45,6 +45,27 @@ Breaking Changes:
   - Obsoleted `ImDrawCallback_ResetRenderState` in favor of using `ImGui::GetPlatformIO().DrawCallback_ResetRenderState`,
     which is part of our new standard draw callbacks. (#9378)
     Redirecting the earlier value into the later one when set, so both old and new code should work.
+- DrawList: swapped the last two arguments of AddRect(), AddPolyline(), PathStroke().
+  Recap:
+   - Before: `void ImDrawList::AddRect(ImVec2 p_min, ImVec2 p_max, ImU32 col, float rounding = 0.0f, ImDrawFlags flags = 0, float thickness = 1.0f);`
+   - After:  `void ImDrawList::AddRect(ImVec2 p_min, ImVec2 p_max, ImU32 col, float rounding = 0.0f, float thickness = 1.0f, ImDrawFlags flags = 0);`
+   - Before: `void ImDrawList::AddPolyline(const ImVec2* points, int num_points, ImU32 col, ImDrawFlags flags, float thickness);`
+   - After:  `void ImDrawList::AddPolyline(const ImVec2* points, int num_points, ImU32 col, float thickness, ImDrawFlags flags = 0);`
+   - Before: `void ImDrawList::PathStroke(ImU32 col, ImDrawFlags flags = 0, float thickness = 1.0f);`
+   - After:  `void ImDrawList::PathStroke(ImU32 col, float thickness = 1.0f, ImDrawFlags flags = 0);`
+  Added inline redirection functions when IMGUI_DISABLE_OBSOLETE_FUNCTIONS is off.
+  Marked the old functions are =delete when IMGUI_DISABLE_OBSOLETE_FUNCTIONS is on, to allow for better type-checking.
+  This is not an easy change but it makes ImDrawList function signatures consistent.
+  As we are aiming to add flags and features to variety of ImDrawList functions, that consistency will become particularly important.
+  The new order is also more convenient as `flags` are less frequently used than `thickness` in real code.
+  Effectively the typical call site is changing from:
+   - Before: `window->DrawList->AddRect(p_min, p_max, color, rounding, ImDrawFlags_None, border_size);`
+   - After:  `window->DrawList->AddRect(p_min, p_max, color, rounding, border_size);`
+  Notes:
+   - As a general policy in Dear ImGui, all our flags default to 0 so ImDrawFlags_None was likely written 0 in some call sites.
+   - Users of C++ and other languages with type-checking will be notified at compile-time of any mistakes.
+   - Users of high-level bindings or languages with no type-checking will be notified at runtime via an assert for invalid flags value.
+   - Consider adding `#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS` in your imconfig.h, even temporarily, to clean up legacy code.
 - Backends:
   - Vulkan: redesigned to use separate ImageView + Sampler instead of Combined Image Sampler. (#914)
     This change allows us to facilitate changing samplers, in line with other backends. [@yaz0r, @ocornut]
@@ -177,7 +198,6 @@ Other Changes:
   - GLFW+Vulkan, SDL2+Vulkan, SDL3+Vulkan, Win32+Vulkan: reworked to create a descriptor pool with:
     - IMGUI_IMPL_VULKAN_MINIMUM_SAMPLED_IMAGE_POOL_SIZE descriptors of type VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE.
     - IMGUI_IMPL_VULKAN_MINIMUM_SAMPLER_POOL_SIZE       descriptors of type VK_DESCRIPTOR_TYPE_SAMPLER.
-
 
 Docking+Viewports Branch:
 

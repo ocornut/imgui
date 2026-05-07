@@ -1158,7 +1158,7 @@ void ImGui::ImageWithBg(ImTextureRef tex_ref, const ImVec2& image_size, const Im
     else
         window->DrawList->AddImage(tex_ref, bb.Min + padding, bb.Max - padding, uv0, uv1, GetColorU32(tint_col));
     if (g.Style.ImageBorderSize > 0.0f)
-        window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_Border), rounding, ImDrawFlags_None, g.Style.ImageBorderSize);
+        window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_Border), rounding, g.Style.ImageBorderSize);
 }
 
 void ImGui::Image(ImTextureRef tex_ref, const ImVec2& image_size, const ImVec2& uv0, const ImVec2& uv1)
@@ -6359,7 +6359,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
             const float a1 = (n+1.0f)/6.0f * 2.0f * IM_PI + aeps;
             const int vert_start_idx = draw_list->VtxBuffer.Size;
             draw_list->PathArcTo(wheel_center, (wheel_r_inner + wheel_r_outer)*0.5f, a0, a1, segment_per_arc);
-            draw_list->PathStroke(col_white, 0, wheel_thickness);
+            draw_list->PathStroke(col_white, wheel_thickness);
             const int vert_end_idx = draw_list->VtxBuffer.Size;
 
             // Paint colors over existing vertices
@@ -6503,7 +6503,7 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
         if (g.Style.FrameBorderSize > 0.0f)
             RenderFrameBorder(bb.Min, bb.Max, rounding);
         else
-            window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_FrameBg), rounding, 0, 1.0f * (float)(int)g.Style._MainScale); // Color buttons are often in need of some sort of border // FIXME-DPI
+            window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_FrameBg), rounding, 1.0f * (float)(int)g.Style._MainScale); // Color buttons are often in need of some sort of border // FIXME-DPI
     }
 
     // Drag and Drop Source
@@ -7176,7 +7176,7 @@ void ImGui::TreeNodeDrawLineToChildNode(const ImVec2& target_pos)
         window->DrawList->PathArcToFast(ImVec2(x1, y - rounding), rounding, 6, 3);
         if (x1 < x2)
             window->DrawList->PathLineTo(ImVec2(x2, y));
-        window->DrawList->PathStroke(GetColorU32(ImGuiCol_TreeLines), ImDrawFlags_None, g.Style.TreeLinesSize);
+        window->DrawList->PathStroke(GetColorU32(ImGuiCol_TreeLines), g.Style.TreeLinesSize);
     }
     else
     {
@@ -10867,7 +10867,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
                 float rounding = style.TabRounding;
                 display_draw_list->PathArcToFast(tl + ImVec2(+rounding, +rounding), rounding, 7, 9);
                 display_draw_list->PathArcToFast(tr + ImVec2(-rounding, +rounding), rounding, 9, 11);
-                display_draw_list->PathStroke(overline_col, 0, style.TabBarOverlineSize);
+                display_draw_list->PathStroke(overline_col, style.TabBarOverlineSize);
             }
             else
             {
@@ -10985,7 +10985,7 @@ void ImGui::TabItemBackground(ImDrawList* draw_list, const ImRect& bb, ImGuiTabI
         draw_list->PathArcToFast(ImVec2(bb.Min.x + rounding + 0.5f, y1 + rounding + 0.5f), rounding, 6, 9);
         draw_list->PathArcToFast(ImVec2(bb.Max.x - rounding - 0.5f, y1 + rounding + 0.5f), rounding, 9, 12);
         draw_list->PathLineTo(ImVec2(bb.Max.x - 0.5f, y2));
-        draw_list->PathStroke(GetColorU32(ImGuiCol_Border), 0, g.Style.TabBorderSize);
+        draw_list->PathStroke(GetColorU32(ImGuiCol_Border), g.Style.TabBorderSize);
     }
 }
 

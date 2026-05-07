@@ -817,7 +817,7 @@ void ImDrawList::PrimQuadUV(const ImVec2& a, const ImVec2& b, const ImVec2& c, c
 
 // TODO: Thickness anti-aliased lines cap are missing their AA fringe.
 // We avoid using the ImVec2 math operators here to reduce cost to a minimum for debug/non-inlined builds.
-void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32 col, ImDrawFlags flags, float thickness)
+void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32 col, float thickness, ImDrawFlags flags)
 {
     if (points_count < 2 || (col & IM_COL32_A_MASK) == 0)
         return;
@@ -826,6 +826,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
     const ImVec2 opaque_uv = _Data->TexUvWhitePixel;
     const int count = closed ? points_count : points_count - 1; // The number of line segments we need to draw
     const bool thick_line = (thickness > _FringeScale);
+    IM_ASSERT((flags & ImDrawFlags_InvalidMask_) == 0 && "Incorrect parameter. Did you swapped 'thickness' and 'flags'?");
 
     if (Flags & ImDrawListFlags_AntiAliasedLines)
     {
@@ -1447,14 +1448,6 @@ void ImDrawList::PathRect(const ImVec2& a, const ImVec2& b, float rounding, ImDr
 {
     if (rounding >= 0.5f)
     {
-        // If this assert triggers on legacy code, please update your code replacing hardcoded values with ImDrawFlags_RoundCorners* values.
-        // - See details in 1.82 Changelog as well as 2021/03/12 and 2023/09/08 entries in "API BREAKING CHANGES" section.
-        // - Note that ImDrawFlags_Closed (== 0x01) is an invalid flag for AddRect(), AddRectFilled(), PathRect() etc. anyway.
-        // - Marked obsolete in 1.82 and completely removed in 1.90:
-        //   - Hard coded support for ~0 == ImDrawFlags_RoundCornersAll.
-        //   - Hard coded support for values 0x01 to 0x0F (matching 15 out of 16 old flags combinations) --> see FixRectCornerFlags() in <1.90 code.
-        //   - Hard coded 0x00 with 'float rounding > 0.0f' --> replace with ImDrawFlags_RoundCornersNone or use 'float rounding = 0.0f'
-        IM_ASSERT((flags & 0x0F) == 0 && "Misuse of legacy hardcoded ImDrawCornerFlags values!");
         if ((flags & ImDrawFlags_RoundCornersMask_) == 0)
             flags |= ImDrawFlags_RoundCornersAll;
 
@@ -1487,7 +1480,7 @@ void ImDrawList::AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float th
         return;
     PathLineTo(p1 + ImVec2(0.5f, 0.5f));
     PathLineTo(p2 + ImVec2(0.5f, 0.5f));
-    PathStroke(col, 0, thickness);
+    PathStroke(col, thickness);
 }
 
 void ImDrawList::AddLineH(float min_x, float max_x, float y, ImU32 col, float thickness)
@@ -1496,7 +1489,7 @@ void ImDrawList::AddLineH(float min_x, float max_x, float y, ImU32 col, float th
         return;
     PathLineTo(ImVec2(min_x + 0.5f, y + 0.5f)); // Same as AddLine() above.
     PathLineTo(ImVec2(max_x + 0.5f, y + 0.5f));
-    PathStroke(col, 0, thickness);
+    PathStroke(col, thickness);
 }
 
 void ImDrawList::AddLineV(float x, float min_y, float max_y, ImU32 col, float thickness)
@@ -1505,20 +1498,30 @@ void ImDrawList::AddLineV(float x, float min_y, float max_y, ImU32 col, float th
         return;
     PathLineTo(ImVec2(x + 0.5f, min_y + 0.5f)); // Same as AddLine() above.
     PathLineTo(ImVec2(x + 0.5f, max_y + 0.5f));
-    PathStroke(col, 0, thickness);
+    PathStroke(col, thickness);
 }
 
 // p_min = upper-left, p_max = lower-right
 // Note we don't render 1 pixels sized rectangles properly.
-void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float rounding, ImDrawFlags flags, float thickness)
+void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float rounding, float thickness, ImDrawFlags flags)
 {
+    // If this assert triggers on legacy code:
+    // - 1.92.8 (2025/04): swapped two last parameters order: flags, thickness --> thickness, flags. This should normally be caught by compile-time type-checking. 
+    // - 1.82.0 (2021/03): changed ImDrawCornerFlags to ImDrawFlags_RoundCornersXXX values.
+    //   If you used hard-coded 1 to 15 or ~0 in flags to configure corner rounding use the new flags!
+    //   - Hard coded support for ~0 == ImDrawFlags_RoundCornersAll.
+    //   - Hard coded support for values 0x01 to 0x0F (matching 15 out of 16 old flags combinations) --> see FixRectCornerFlags() in <1.90 code.
+    //   - Hard coded 0x00 with 'float rounding > 0.0f' --> replace with ImDrawFlags_RoundCornersNone or use 'float rounding = 0.0f'.
+    //   See "API BREAKING CHANGES" section for 1.82 and 1.90.
+    IM_ASSERT((flags & ImDrawFlags_InvalidMask_) == 0 && "Incorrect parameter. Did you swapped 'thickness' and 'flags'?"); // Or misuse of legacy hard-coded ImDrawCornerFlags values
+
     if ((col & IM_COL32_A_MASK) == 0)
         return;
     if (Flags & ImDrawListFlags_AntiAliasedLines)
         PathRect(p_min + ImVec2(0.50f, 0.50f), p_max - ImVec2(0.50f, 0.50f), rounding, flags);
     else
         PathRect(p_min + ImVec2(0.50f, 0.50f), p_max - ImVec2(0.49f, 0.49f), rounding, flags); // Better looking lower-right corner and rounded non-AA shapes.
-    PathStroke(col, ImDrawFlags_Closed, thickness);
+    PathStroke(col, thickness, ImDrawFlags_Closed);
 }
 
 void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float rounding, ImDrawFlags flags)
@@ -1562,7 +1565,7 @@ void ImDrawList::AddQuad(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, c
     PathLineTo(p2);
     PathLineTo(p3);
     PathLineTo(p4);
-    PathStroke(col, ImDrawFlags_Closed, thickness);
+    PathStroke(col, thickness, ImDrawFlags_Closed);
 }
 
 void ImDrawList::AddQuadFilled(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col)
@@ -1585,7 +1588,7 @@ void ImDrawList::AddTriangle(const ImVec2& p1, const ImVec2& p2, const ImVec2& p
     PathLineTo(p1);
     PathLineTo(p2);
     PathLineTo(p3);
-    PathStroke(col, ImDrawFlags_Closed, thickness);
+    PathStroke(col, thickness, ImDrawFlags_Closed);
 }
 
 void ImDrawList::AddTriangleFilled(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 col)
@@ -1620,7 +1623,7 @@ void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int nu
         PathArcTo(center, radius - 0.5f, 0.0f, a_max, num_segments - 1);
     }
 
-    PathStroke(col, ImDrawFlags_Closed, thickness);
+    PathStroke(col, thickness, ImDrawFlags_Closed);
 }
 
 void ImDrawList::AddCircleFilled(const ImVec2& center, float radius, ImU32 col, int num_segments)
@@ -1656,7 +1659,7 @@ void ImDrawList::AddNgon(const ImVec2& center, float radius, ImU32 col, int num_
     // Because we are filling a closed shape we remove 1 from the count of segments/points
     const float a_max = (IM_PI * 2.0f) * ((float)num_segments - 1.0f) / (float)num_segments;
     PathArcTo(center, radius - 0.5f, 0.0f, a_max, num_segments - 1);
-    PathStroke(col, ImDrawFlags_Closed, thickness);
+    PathStroke(col, thickness, ImDrawFlags_Closed);
 }
 
 // Guaranteed to honor 'num_segments'
@@ -1683,7 +1686,7 @@ void ImDrawList::AddEllipse(const ImVec2& center, const ImVec2& radius, ImU32 co
     // Because we are filling a closed shape we remove 1 from the count of segments/points
     const float a_max = IM_PI * 2.0f * ((float)num_segments - 1.0f) / (float)num_segments;
     PathEllipticalArcTo(center, radius, rot, 0.0f, a_max, num_segments - 1);
-    PathStroke(col, ImDrawFlags_Closed, thickness);
+    PathStroke(col, thickness, ImDrawFlags_Closed);
 }
 
 void ImDrawList::AddEllipseFilled(const ImVec2& center, const ImVec2& radius, ImU32 col, float rot, int num_segments)
@@ -1708,7 +1711,7 @@ void ImDrawList::AddBezierCubic(const ImVec2& p1, const ImVec2& p2, const ImVec2
 
     PathLineTo(p1);
     PathBezierCubicCurveTo(p2, p3, p4, num_segments);
-    PathStroke(col, 0, thickness);
+    PathStroke(col, thickness);
 }
 
 // Quadratic Bezier takes 3 controls points
@@ -1719,7 +1722,7 @@ void ImDrawList::AddBezierQuadratic(const ImVec2& p1, const ImVec2& p2, const Im
 
     PathLineTo(p1);
     PathBezierQuadraticCurveTo(p2, p3, num_segments);
-    PathStroke(col, 0, thickness);
+    PathStroke(col, thickness);
 }
 
 void ImDrawList::AddText(ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect)
@@ -2979,12 +2982,17 @@ void ImFontAtlasTextureBlockCopy(ImTextureData* src_tex, int src_x, int src_y, I
         memcpy(dst_tex->GetPixelsAt(dst_x, dst_y + y), src_tex->GetPixelsAt(src_x, src_y + y), w * dst_tex->BytesPerPixel);
 }
 
-// Queue texture block update for renderer backend
 void ImFontAtlasTextureBlockQueueUpload(ImFontAtlas* atlas, ImTextureData* tex, int x, int y, int w, int h)
+{
+    ImTextureDataQueueUpload(tex, x, y, w, h);
+    atlas->TexIsBuilt = false;
+}
+
+// Queue texture block update for renderer backend
+void ImTextureDataQueueUpload(ImTextureData* tex, int x, int y, int w, int h)
 {
     IM_ASSERT(tex->Status != ImTextureStatus_WantDestroy && tex->Status != ImTextureStatus_Destroyed);
     IM_ASSERT(x >= 0 && x <= 0xFFFF && y >= 0 && y <= 0xFFFF && w >= 0 && x + w <= 0x10000 && h >= 0 && y + h <= 0x10000);
-    IM_UNUSED(atlas);
 
     ImTextureRect req = { (unsigned short)x, (unsigned short)y, (unsigned short)w, (unsigned short)h };
     int new_x1 = ImMax(tex->UpdateRect.w == 0 ? 0 : tex->UpdateRect.x + tex->UpdateRect.w, req.x + req.w);
@@ -2997,7 +3005,6 @@ void ImFontAtlasTextureBlockQueueUpload(ImFontAtlas* atlas, ImTextureData* tex, 
     tex->UsedRect.y = ImMin(tex->UsedRect.y, req.y);
     tex->UsedRect.w = (unsigned short)(ImMax(tex->UsedRect.x + tex->UsedRect.w, req.x + req.w) - tex->UsedRect.x);
     tex->UsedRect.h = (unsigned short)(ImMax(tex->UsedRect.y + tex->UsedRect.h, req.y + req.h) - tex->UsedRect.y);
-    atlas->TexIsBuilt = false;
 
     // No need to queue if status is == ImTextureStatus_WantCreate
     if (tex->Status == ImTextureStatus_OK || tex->Status == ImTextureStatus_WantUpdates)
@@ -6044,7 +6051,7 @@ void ImGui::RenderCheckMark(ImDrawList* draw_list, ImVec2 pos, ImU32 col, float 
     draw_list->PathLineTo(ImVec2(bx - third, by - third));
     draw_list->PathLineTo(ImVec2(bx, by));
     draw_list->PathLineTo(ImVec2(bx + third * 2.0f, by - third * 2.0f));
-    draw_list->PathStroke(col, 0, thickness);
+    draw_list->PathStroke(col, thickness);
 }
 
 // Render an arrow. 'pos' is position of the arrow tip. half_sz.x is length from base to tip. half_sz.y is length on each side.
