@@ -847,53 +847,31 @@ void ImDrawList::PrimQuadUV(const ImVec2& a, const ImVec2& b, const ImVec2& c, c
 #define IM_POLYLINE_MITER_ANGLE_LIMIT (-0.9999619f) // cos(179.5)
 #define IM_POLYLINE_MITER_LIMIT (4.0f)
 
-static void CalcSegmentNormals(const ImVec2* points, const int points_count, ImVec2* normals, float* sqr_lengths, bool closed)
+void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_lengths, const int points_count, ImU32 col, float thickness, ImDrawFlags flags, ImVec4 tex_uvs, float fringe)
 {
-    // Calculate normals for each line segment
-    for (int i = 0; i < points_count - 1; i++)
-    {
-        float dx = points[i+1].x - points[i].x;
-        float dy = points[i+1].y - points[i].y;
-        const float d2 = dx*dx + dy*dy;
-        const float inv_len = (d2 > 0.0f) ? 1.0f / sqrtf(d2) : 0.0f; //ImRsqrt(d2) : 0.0f;
-        normals[i].x = -dy * inv_len;
-        normals[i].y = dx * inv_len;
-        sqr_lengths[i] = d2;
-    }
-    if (closed)
-    {
-        const float dx = points[0].x - points[points_count - 1].x;
-        const float dy = points[0].y - points[points_count - 1].y;
-        const float d2 = dx*dx + dy*dy;
-        const float inv_len = (d2 > 0.0f) ? 1.0f / sqrtf(d2) : 0.0f; //ImRsqrt(d2) : 0.0f;
-        normals[points_count - 1].x = -dy * inv_len;
-        normals[points_count - 1].y = dx * inv_len;
-        sqr_lengths[points_count - 1] = d2;
-    }
-    else
-    {
-        normals[points_count - 1] = normals[points_count - 2];
-        sqr_lengths[points_count - 1] = 0.0f;
-    }
-}
-
-void ImDrawList::_AddPolylineIntThickness(const ImVec2* points, ImVec2* normals, float* sqr_lengths, const int points_count, ImU32 col, float thickness, ImDrawFlags flags, ImVec4 tex_uvs)
-{
-    const bool closed = (flags & ImDrawFlags_Closed) != 0;
-    const bool miters_only = (flags & ImDrawFlags_MiterOnly) != 0;
     const ImU32 col_trans = col & ~IM_COL32_A_MASK;
 
-    thickness += _FringeScale;
-    const float half_thickness = thickness * 0.5f;
-    const float miter_distance_limit = half_thickness * IM_POLYLINE_MITER_LIMIT;
-    const float miter_distance_limit_sqr = miter_distance_limit * miter_distance_limit;
-    const float half_aa = _FringeScale * 0.5f;
+    const ImDrawFlags stroke_pos = (flags & ImDrawFlags_StrokeMask_);
+    const bool closed = (flags & ImDrawFlags_Closed) != 0;
+    const bool miters_only = (flags & ImDrawFlags_MiterOnly) != 0;
+    const float miter_distance_limit_sqr = IM_POLYLINE_MITER_LIMIT * IM_POLYLINE_MITER_LIMIT;
 
-    // TODO: Each point will generate 2-7 vertices. The worst case happens really rarely. This can be issue with large polylines and 16it indices.
-    // One option could be to calculate the miter values and overl & bevel flags before, then alloc, and finally commit.
+    float thickness0 = (thickness + fringe) * 0.5f;
+    float thickness1 = thickness0;
+	if (stroke_pos == ImDrawFlags_StrokeOutside)
+	{
+		thickness0 = thickness + fringe * 0.5f;
+		thickness1 = fringe * 0.5f;
+	}
+	else if (stroke_pos == ImDrawFlags_StrokeInside)
+	{
+		thickness0 = fringe * 0.5f;
+		thickness1 = thickness + fringe * 0.5f;
+	}
+
     int idx_count = 0;
     int vtx_count = 0;
-    const int max_verts_per_point = miters_only ? 2 : 7;
+    const int max_verts_per_point = miters_only ? 2 : 4;
     const int max_tris_per_point = miters_only ? 2 : 5;
     if (closed)
     {
@@ -917,10 +895,14 @@ void ImDrawList::_AddPolylineIntThickness(const ImVec2* points, ImVec2* normals,
     ImVec2 n1;
     float len_sqr1;
 
-    const float half_texel = (0.5f / _FringeScale) * _Data->FontAtlas->TexUvScale.x;
+    const float half_texel = 0.5f * _Data->FontAtlas->TexUvScale.x;
     const ImVec2 uv0(tex_uvs.x + half_texel, tex_uvs.y);
     const ImVec2 uv1(tex_uvs.z - half_texel, tex_uvs.y);
-    const ImVec2 uv2((uv0.x+uv1.x)*0.5f, tex_uvs.y);
+    const float ratio = thickness0 / (thickness0 + thickness1); // The points using uv2 are placed on the path, calculate the position from stroke offets.
+    const ImVec2 uv2(uv0.x + (uv1.x - uv0.x) * ratio, tex_uvs.y);
+
+    const float half_aa = _FringeScale * 0.5f; // Used for end caps, does not use "fringe" since end cap AA is not using the texture.
+    const float half_thickness = thickness * 0.5f;
 
     int point_idx = 0;
     int point_end = points_count;
@@ -935,17 +917,17 @@ void ImDrawList::_AddPolylineIntThickness(const ImVec2* points, ImVec2* normals,
 
         const ImVec2 dir(n1.y, -n1.x);
         if (flags & ImDrawFlags_SquareCap)
-            p1 -= dir * (half_thickness - half_aa); // At this point half_thickness has half fringe width baked in.
+            p1 -= dir * half_thickness;
         const ImVec2 pa = p1 - dir * half_aa;
         const ImVec2 pb = p1 + dir * half_aa;
 
         base_idx = (int)_VtxCurrentIdx;
-        IM_APPEND_VTX(pa.x - n1.x * half_thickness , pa.y - n1.y * half_thickness , uv0, col_trans);
-        IM_APPEND_VTX(pa.x + n1.x * half_thickness , pa.y + n1.y * half_thickness , uv1, col_trans);
+        IM_APPEND_VTX(pa.x - n1.x * thickness0, pa.y - n1.y * thickness0, uv0, col_trans);
+        IM_APPEND_VTX(pa.x + n1.x * thickness1, pa.y + n1.y * thickness1, uv1, col_trans);
 
         int next_base_idx = (int)_VtxCurrentIdx;
-        IM_APPEND_VTX(pb.x - n1.x * half_thickness , pb.y - n1.y * half_thickness , uv0, col);
-        IM_APPEND_VTX(pb.x + n1.x * half_thickness , pb.y + n1.y * half_thickness , uv1, col);
+        IM_APPEND_VTX(pb.x - n1.x * thickness0, pb.y - n1.y * thickness0, uv0, col);
+        IM_APPEND_VTX(pb.x + n1.x * thickness1, pb.y + n1.y * thickness1 , uv1, col);
 
         // AA cap
         IM_APPEND_TRI(base_idx + 0, base_idx + 2, base_idx + 3);
@@ -965,95 +947,90 @@ void ImDrawList::_AddPolylineIntThickness(const ImVec2* points, ImVec2* normals,
         IM_APPEND_VTX(0, 0, uv1, col);
     }
 
-    while (point_idx < point_end)
+    if (miters_only)
     {
-        ImVec2 n0 = n1;
-        float len_sqr0 = len_sqr1;
-        p1 = points[point_idx];
-        n1 = normals[point_idx];
-        len_sqr1 = sqr_lengths[point_idx];
-
-        // theta is the angle between two segments
-        const float cos_theta = n0.x * n1.x + n0.y * n1.y;
-
-        // miter offset formula is derived here: https://www.angusj.com/clipper2/Docs/Trigonometry.htm
-        const float miter_scale_factor =  (cos_theta > IM_POLYLINE_MITER_ANGLE_LIMIT) ? half_thickness / (1.0f + cos_theta) : FLT_MAX; // avoid division by zero
-        const float miter_offset_x = (n0.x + n1.x) * miter_scale_factor;
-        const float miter_offset_y = (n0.y + n1.y) * miter_scale_factor;
-        const float miter_distance_sqr = miter_offset_x * miter_offset_x + miter_offset_y * miter_offset_y;
-
-        const bool overlap = !miters_only && ((len_sqr0 < miter_distance_sqr) || (len_sqr1 < miter_distance_sqr) || (cos_theta <= IM_POLYLINE_MITER_ANGLE_LIMIT));
-        const bool bevel = !miters_only && (miter_distance_sqr > miter_distance_limit_sqr);
-
-        if (bevel)
+        while (point_idx < point_end)
         {
-            // Clipped bevel
+            ImVec2 n0 = n1;
+            p1 = points[point_idx];
+            n1 = normals[point_idx];
+
+            // theta is the angle between two segments
+            const float cos_theta = n0.x * n1.x + n0.y * n1.y;
+
+            // miter offset formula is derived here: https://www.angusj.com/clipper2/Docs/Trigonometry.htm
+            const float miter_scale_factor = ImMin(1000.0f, (cos_theta > IM_POLYLINE_MITER_ANGLE_LIMIT) ? 1.0f / (1.0f + cos_theta) : FLT_MAX); // avoid division by zero
+            const float miter_offset_x = (n0.x + n1.x) * miter_scale_factor;
+            const float miter_offset_y = (n0.y + n1.y) * miter_scale_factor;
+
+            // Miter
+            const int next_base_idx = (ImDrawIdx)_VtxCurrentIdx;
+            IM_APPEND_VTX(p1.x - miter_offset_x * thickness0, p1.y - miter_offset_y * thickness0, uv0, col);  // 2
+            IM_APPEND_VTX(p1.x + miter_offset_x * thickness1, p1.y + miter_offset_y * thickness1, uv1, col);  // 3
+
+            // Connect prev to next
+            IM_APPEND_TRI(base_idx + 0, base_idx + 2, base_idx + 3);
+            IM_APPEND_TRI(base_idx + 0, base_idx + 3, base_idx + 1);
+
+            base_idx = next_base_idx;
+
+            point_idx++;
+        }
+    }
+    else
+    {
+        while (point_idx < point_end)
+        {
+            ImVec2 n0 = n1;
+            float len_sqr0 = len_sqr1;
+            p1 = points[point_idx];
+            n1 = normals[point_idx];
+            len_sqr1 = sqr_lengths[point_idx];
+
+            // theta is the angle between two segments
+            const float cos_theta = n0.x * n1.x + n0.y * n1.y;
             const float sin_theta = n0.y * n1.x - n0.x * n1.y;
-            float bevel_normal_x = n0.x + n1.x;
-            float bevel_normal_y = n0.y + n1.y;
-            IM_NORMALIZE2F_OVER_ZERO(bevel_normal_x, bevel_normal_y);
 
-            const float signed_miter_offset = sin_theta < 0.0f ? half_thickness : -half_thickness;
-            const float side_offset = half_thickness * ((n0.x * bevel_normal_x + n0.y * bevel_normal_y) - 1.0f) / (n0.y * bevel_normal_x - n0.x * bevel_normal_y);
-            const float pt_x = p1.x - bevel_normal_x * signed_miter_offset;
-            const float pt_y = p1.y - bevel_normal_y * signed_miter_offset;
-            const float sd_x = bevel_normal_y * side_offset;
-            const float sd_y = -bevel_normal_x * side_offset;
+            // miter offset formula is derived here: https://www.angusj.com/clipper2/Docs/Trigonometry.htm
+            const float miter_scale_factor = (cos_theta > IM_POLYLINE_MITER_ANGLE_LIMIT) ? 1.0f / (1.0f + cos_theta) : FLT_MAX; // avoid division by zero
 
-            if (overlap)
+            float miter_offset_x = (n0.x + n1.x) * miter_scale_factor;
+            float miter_offset_y = (n0.y + n1.y) * miter_scale_factor;
+            const float miter_distance_sqr = miter_offset_x * miter_offset_x + miter_offset_y * miter_offset_y;
+
+            if (miter_distance_sqr > miter_distance_limit_sqr)
             {
-                // Dislocated bevel.
-                if (sin_theta < 0.0f)
-                {
-                    IM_APPEND_VTX(p1.x - n0.x * half_thickness, p1.y - n0.y * half_thickness, uv0, col); // 2
-                    IM_APPEND_VTX(p1.x + n0.x * half_thickness, p1.y + n0.y * half_thickness, uv1, col); // 3
-                    IM_APPEND_VTX(pt_x - sd_x, pt_y - sd_y, uv0, col); // 4
-                    IM_APPEND_VTX(pt_x + sd_x, pt_y + sd_y, uv0, col); // 5
-                    IM_APPEND_VTX(p1.x, p1.y, uv2, col); // 6
-                    const int next_base_idx = (ImDrawIdx)_VtxCurrentIdx;
-                    IM_APPEND_VTX(p1.x - n1.x * half_thickness, p1.y - n1.y * half_thickness, uv0, col); // 7
-                    IM_APPEND_VTX(p1.x + n1.x * half_thickness, p1.y + n1.y * half_thickness, uv1, col); // 8
+                // Clipped bevel
 
-                    // Connect prev to next
-                    IM_APPEND_TRI(base_idx + 0, base_idx + 2, base_idx + 3);
-                    IM_APPEND_TRI(base_idx + 0, base_idx + 3, base_idx + 1);
-                    // Bevel tris
-                    IM_APPEND_TRI(base_idx + 6, base_idx + 2, base_idx + 4);
-                    IM_APPEND_TRI(base_idx + 6, base_idx + 4, base_idx + 5);
-                    IM_APPEND_TRI(base_idx + 6, base_idx + 5, base_idx + 7);
-                    base_idx = next_base_idx;
-                }
-                else
+                // Limit the inner miter offset to avoid overshooting.
+                const float ref_thickness = (sin_theta < 0.0f) ? thickness1 : thickness0;
+                const float ref_thickness_sqr = ref_thickness * ref_thickness;
+                const float limit_sqr = ImMax(ImMax(len_sqr0, len_sqr1), ref_thickness_sqr);
+                const float ref_miter_dist_sqr = miter_distance_sqr * ref_thickness_sqr;
+                if (ref_miter_dist_sqr > limit_sqr)
                 {
-                    IM_APPEND_VTX(p1.x - n0.x * half_thickness, p1.y - n0.y * half_thickness, uv0, col); // 2
-                    IM_APPEND_VTX(p1.x + n0.x * half_thickness, p1.y + n0.y * half_thickness, uv1, col); // 3
-                    IM_APPEND_VTX(pt_x + sd_x, pt_y + sd_y, uv1, col); // 4
-                    IM_APPEND_VTX(pt_x - sd_x, pt_y - sd_y, uv1, col); // 5
-                    IM_APPEND_VTX(p1.x, p1.y, uv2, col); // 6
-                    const int next_base_idx = (ImDrawIdx)_VtxCurrentIdx;
-                    IM_APPEND_VTX(p1.x - n1.x * half_thickness, p1.y - n1.y * half_thickness, uv0, col); // 7
-                    IM_APPEND_VTX(p1.x + n1.x * half_thickness, p1.y + n1.y * half_thickness, uv1, col); // 8
-
-                    // Connect prev to next
-                    IM_APPEND_TRI(base_idx + 0, base_idx + 2, base_idx + 3);
-                    IM_APPEND_TRI(base_idx + 0, base_idx + 3, base_idx + 1);
-                    // Bevel
-                    IM_APPEND_TRI(base_idx + 6, base_idx + 7, base_idx + 5);
-                    IM_APPEND_TRI(base_idx + 6, base_idx + 5, base_idx + 4);
-                    IM_APPEND_TRI(base_idx + 6, base_idx + 4, base_idx + 3);
-                    base_idx = next_base_idx;
+                    const float scale = ImSqrt(limit_sqr / ref_miter_dist_sqr);
+                    miter_offset_x *= scale;
+                    miter_offset_y *= scale;
                 }
-            }
-            else
-            {
+
+                float bn_x = n0.x + n1.x;
+                float bn_y = n0.y + n1.y;
+                IM_NORMALIZE2F_OVER_ZERO(bn_x, bn_y);
+
+                const float side_offset = ((n0.x * bn_x + n0.y * bn_y) - 1.0f) / (n0.y * bn_x - n0.x * bn_y);
+                const float sd_x = bn_y * side_offset;
+                const float sd_y = -bn_x * side_offset;
+
                 // Bevel
                 if (sin_theta < 0.0f)
                 {
-                    IM_APPEND_VTX(pt_x - sd_x, pt_y - sd_y, uv0, col); // 2
+                    IM_APPEND_VTX(p1.x - (bn_x + sd_x) * thickness0, p1.y - (bn_y + sd_y) * thickness0, uv0, col); // 2
+                    // TODO: calc uv2 correctly.
                     IM_APPEND_VTX(p1.x, p1.y, uv2, col); // 3
                     const int next_base_idx = (ImDrawIdx)_VtxCurrentIdx;
-                    IM_APPEND_VTX(pt_x + sd_x, pt_y + sd_y, uv0, col); // 4
-                    IM_APPEND_VTX(p1.x + miter_offset_x, p1.y + miter_offset_y, uv1, col); // 5
+                    IM_APPEND_VTX(p1.x - (bn_x - sd_x) * thickness0, p1.y - (bn_y - sd_y) * thickness0, uv0, col); // 4
+                    IM_APPEND_VTX(p1.x + miter_offset_x * thickness1, p1.y + miter_offset_y * thickness1, uv1, col); // 5
 
                     // Connect prev to next
                     IM_APPEND_TRI(base_idx + 0, base_idx + 2, base_idx + 5);
@@ -1066,11 +1043,12 @@ void ImDrawList::_AddPolylineIntThickness(const ImVec2* points, ImVec2* normals,
                 }
                 else
                 {
-                    IM_APPEND_VTX(pt_x + sd_x, pt_y + sd_y, uv1, col); // 2
+                    IM_APPEND_VTX(p1.x + (bn_x + sd_x) * thickness1, p1.y + (bn_y + sd_y) * thickness1, uv1, col); // 2
+                    // TODO: calc uv2 correctly.
                     IM_APPEND_VTX(p1.x, p1.y, uv2, col); // 3
                     const int next_base_idx = (ImDrawIdx)_VtxCurrentIdx;
-                    IM_APPEND_VTX(p1.x - miter_offset_x, p1.y - miter_offset_y, uv0, col); // 4
-                    IM_APPEND_VTX(pt_x - sd_x, pt_y - sd_y, uv1, col); // 5
+                    IM_APPEND_VTX(p1.x - miter_offset_x * thickness0, p1.y - miter_offset_y * thickness0, uv0, col); // 4
+                    IM_APPEND_VTX(p1.x + (bn_x - sd_x) * thickness1, p1.y + (bn_y - sd_y) * thickness1, uv1, col); // 5
 
                     // Connect prev to next
                     IM_APPEND_TRI(base_idx + 0, base_idx + 4, base_idx + 2);
@@ -1082,69 +1060,22 @@ void ImDrawList::_AddPolylineIntThickness(const ImVec2* points, ImVec2* normals,
                     base_idx = next_base_idx;
                 }
             }
-        }
-        else
-        {
-            if (overlap)
-            {
-                // Dislocated Miter
-                const float sin_theta = n0.y * n1.x - n0.x * n1.y;
-                if (sin_theta < 0.0f)
-                {
-
-                    IM_APPEND_VTX(p1.x - n0.x * half_thickness, p1.y - n0.y * half_thickness, uv0, col); // 2
-                    IM_APPEND_VTX(p1.x + n0.x * half_thickness, p1.y + n0.y * half_thickness, uv1, col); // 3
-                    IM_APPEND_VTX(p1.x - miter_offset_x, p1.y - miter_offset_y, uv0, col); // 4
-                    IM_APPEND_VTX(p1.x, p1.y, uv2, col); // 5
-                    const int next_base_idx = (ImDrawIdx)_VtxCurrentIdx;
-                    IM_APPEND_VTX(p1.x - n1.x * half_thickness, p1.y - n1.y * half_thickness, uv0, col); // 6
-                    IM_APPEND_VTX(p1.x + n1.x * half_thickness, p1.y + n1.y * half_thickness, uv1, col); // 7
-
-                    // Connect prev to next
-                    IM_APPEND_TRI(base_idx+0, base_idx+2, base_idx+3);
-                    IM_APPEND_TRI(base_idx+0, base_idx+3, base_idx+1);
-                    // Miter
-                    IM_APPEND_TRI(base_idx+5, base_idx+2, base_idx+4);
-                    IM_APPEND_TRI(base_idx+5, base_idx+4, base_idx+6);
-
-                    base_idx = next_base_idx;
-                }
-                else
-                {
-                    IM_APPEND_VTX(p1.x - n0.x * half_thickness, p1.y - n0.y * half_thickness, uv0, col); // 2
-                    IM_APPEND_VTX(p1.x + n0.x * half_thickness, p1.y + n0.y * half_thickness, uv1, col); // 3
-                    IM_APPEND_VTX(p1.x + miter_offset_x, p1.y + miter_offset_y, uv1, col); // 4
-                    IM_APPEND_VTX(p1.x, p1.y, uv2, col); // 5
-                    const int next_base_idx = (ImDrawIdx)_VtxCurrentIdx;
-                    IM_APPEND_VTX(p1.x - n1.x * half_thickness, p1.y - n1.y * half_thickness, uv0, col); // 6
-                    IM_APPEND_VTX(p1.x + n1.x * half_thickness, p1.y + n1.y * half_thickness, uv1, col); // 7
-
-                    // Connect prev to next
-                    IM_APPEND_TRI(base_idx+0, base_idx+2, base_idx+3);
-                    IM_APPEND_TRI(base_idx+0, base_idx+3, base_idx+1);
-                    // Miter
-                    IM_APPEND_TRI(base_idx+5, base_idx+4, base_idx+3);
-                    IM_APPEND_TRI(base_idx+5, base_idx+7, base_idx+4);
-
-                    base_idx = next_base_idx;
-                }
-            }
             else
             {
                 // Miter
                 const int next_base_idx = (ImDrawIdx)_VtxCurrentIdx;
-                IM_APPEND_VTX(p1.x - miter_offset_x, p1.y - miter_offset_y, uv0, col);  // 2
-                IM_APPEND_VTX(p1.x + miter_offset_x, p1.y + miter_offset_y, uv1, col);  // 3
+                IM_APPEND_VTX(p1.x - miter_offset_x * thickness0, p1.y - miter_offset_y * thickness0, uv0, col);  // 2
+                IM_APPEND_VTX(p1.x + miter_offset_x * thickness1, p1.y + miter_offset_y * thickness1, uv1, col);  // 3
 
                 // Connect prev to next
-                IM_APPEND_TRI(base_idx+0, base_idx+2, base_idx+3);
-                IM_APPEND_TRI(base_idx+0, base_idx+3, base_idx+1);
+                IM_APPEND_TRI(base_idx + 0, base_idx + 2, base_idx + 3);
+                IM_APPEND_TRI(base_idx + 0, base_idx + 3, base_idx + 1);
 
                 base_idx = next_base_idx;
             }
-        }
 
-        point_idx++;
+            point_idx++;
+        }
     }
 
     // End cap
@@ -1156,16 +1087,16 @@ void ImDrawList::_AddPolylineIntThickness(const ImVec2* points, ImVec2* normals,
         // End cap
         const ImVec2 dir(n1.y, -n1.x);
         if (flags & ImDrawFlags_SquareCap)
-            p1 += dir * (half_thickness - half_aa); // At this point half_thickness has half fringe width baked in.
+            p1 += dir * half_thickness;
         const ImVec2 pa = p1 - dir * half_aa;
         const ImVec2 pb = p1 + dir * half_aa;
 
         int next_base_idx = (int)_VtxCurrentIdx;
-        IM_APPEND_VTX(pa.x - n1.x * half_thickness, pa.y - n1.y * half_thickness, uv0, col);
-        IM_APPEND_VTX(pa.x + n1.x * half_thickness, pa.y + n1.y * half_thickness, uv1, col);
+        IM_APPEND_VTX(pa.x - n1.x * thickness0, pa.y - n1.y * thickness0, uv0, col);
+        IM_APPEND_VTX(pa.x + n1.x * thickness1, pa.y + n1.y * thickness1, uv1, col);
 
-        IM_APPEND_VTX(pb.x - n1.x * half_thickness, pb.y - n1.y * half_thickness, uv0, col_trans);
-        IM_APPEND_VTX(pb.x + n1.x * half_thickness, pb.y + n1.y * half_thickness, uv1, col_trans);
+        IM_APPEND_VTX(pb.x - n1.x * thickness0, pb.y - n1.y * thickness0, uv0, col_trans);
+        IM_APPEND_VTX(pb.x + n1.x * thickness1, pb.y + n1.y * thickness1, uv1, col_trans);
 
         // Connect
         IM_APPEND_TRI(base_idx+0, base_idx+2, base_idx+3);
@@ -1181,328 +1112,6 @@ void ImDrawList::_AddPolylineIntThickness(const ImVec2* points, ImVec2* normals,
         // Connect the path.
         start_vtx_ptr[0] = VtxBuffer.Data[base_idx+0];
         start_vtx_ptr[1] = VtxBuffer.Data[base_idx+1];
-    }
-
-    // Restore unused memory
-    const int vtx_used = (int)(_VtxWritePtr - start_vtx_ptr);
-    const int idx_used = (int)(_IdxWritePtr - start_idx_ptr);
-    IM_ASSERT(vtx_used <= vtx_count && idx_used <= idx_count);
-    PrimUnreserve(idx_count - idx_used, vtx_count - vtx_used);
-}
-
-void ImDrawList::_AddPolylineFractThickness(const ImVec2* points, ImVec2* normals, float* sqr_lengths, const int points_count, ImU32 col, float thickness, ImDrawFlags flags)
-{
-    const bool closed = (flags & ImDrawFlags_Closed) != 0;
-    const bool miters_only = (flags & ImDrawFlags_MiterOnly) != 0;
-
-    const ImU32 col_trans = col & ~IM_COL32_A_MASK;
-
-    // TODO: we can expand this by having one very long texture strip for the lines,
-    // or if place black 2x2 pixel next to the while pixel, and use texture clamping (that thickness would expand out of the texture).
-    const float max_width = IM_DRAWLIST_TEX_LINE_FRACT_WIDTH_MAX * _FringeScale * 2.0f;
-    thickness = ImMin(thickness, max_width);
-
-    thickness += _FringeScale; // Place half of AA fringe each side of the line.
-    const float half_thickness = thickness * 0.5f;
-    const float miter_distance_limit = half_thickness * IM_POLYLINE_MITER_LIMIT;
-    const float miter_distance_limit_sqr = miter_distance_limit * miter_distance_limit;
-    const float half_aa = _FringeScale * 0.5f;
-
-    int idx_count = 0;
-    int vtx_count = 0;
-    const int max_verts_per_point = miters_only ? 3 : 5;
-    const int max_tris_per_point = miters_only ? 4 : 5;
-    if (closed)
-    {
-        vtx_count = /*body*/points_count * max_verts_per_point + /*closing*/3;
-        idx_count = (/*body*/points_count * max_tris_per_point + /*closing*/4) * 3;
-    }
-    else
-    {
-        // Body + caps
-        vtx_count = /*body*/(points_count - 2) * max_verts_per_point + /*caps*/(6 * 2);
-        idx_count = (/*body*/(points_count - 2) * max_tris_per_point + /*last seg*/4 + /*caps*/(4 * 2)) * 3;
-    }
-
-    PrimReserve(idx_count, vtx_count);
-
-    ImDrawVert* start_vtx_ptr = _VtxWritePtr;
-    ImDrawIdx* start_idx_ptr = _IdxWritePtr;
-
-    int base_idx = (int)_VtxCurrentIdx;
-
-    ImVec2 p1;
-    ImVec2 n1;
-    float len_sqr1;
-
-    const ImVec4 tex_uvs = _Data->TexUvLineFract;
-    const ImVec2 uv_out(tex_uvs.x + (0.5f / _FringeScale) * _Data->FontAtlas->TexUvScale.x, tex_uvs.y);
-    const ImVec2 uv_in(tex_uvs.x + ((half_thickness + 0.5f) / _FringeScale) * _Data->FontAtlas->TexUvScale.x, tex_uvs.y);
-
-    int point_idx = 0;
-    int point_end = points_count;
-    if (!closed)
-    {
-        point_idx++;
-        point_end--;
-        p1 = points[0];
-        n1 = normals[0];
-        len_sqr1 = sqr_lengths[0];
-
-        // Start cap
-        const ImVec2 dir(n1.y, -n1.x);
-        if (flags & ImDrawFlags_SquareCap)
-            p1 -= dir * (half_thickness - half_aa); // At this point half_thickness has half fringe width baked in.
-        const ImVec2 pa = p1 - dir * half_aa;
-        const ImVec2 pb = p1 + dir * half_aa;
-
-        base_idx = (int)_VtxCurrentIdx;
-        IM_APPEND_VTX(pa.x - n1.x * half_thickness , pa.y - n1.y * half_thickness , uv_out, col_trans);
-        IM_APPEND_VTX(pa.x, pa.y, uv_in, col_trans);
-        IM_APPEND_VTX(pa.x + n1.x * half_thickness , pa.y + n1.y * half_thickness , uv_out, col_trans);
-
-        int next_base_idx = (int)_VtxCurrentIdx;
-        IM_APPEND_VTX(pb.x - n1.x * half_thickness , pb.y - n1.y * half_thickness , uv_out, col);
-        IM_APPEND_VTX(pb.x, pb.y, uv_in, col);
-        IM_APPEND_VTX(pb.x + n1.x * half_thickness , pb.y + n1.y * half_thickness , uv_out, col);
-
-        // AA cap
-        IM_APPEND_TRI(base_idx+0, base_idx+3, base_idx+4);
-        IM_APPEND_TRI(base_idx+0, base_idx+4, base_idx+1);
-        IM_APPEND_TRI(base_idx+1, base_idx+4, base_idx+5);
-        IM_APPEND_TRI(base_idx+1, base_idx+5, base_idx+2);
-        base_idx = next_base_idx;
-    }
-    else
-    {
-        p1 = points[points_count-1];
-        n1 = normals[points_count-1];
-        len_sqr1 = sqr_lengths[points_count-1];
-
-        // This will be filled later, allocate space.
-        base_idx = (int)_VtxCurrentIdx;
-        IM_APPEND_VTX(0, 0, uv_out, col);
-        IM_APPEND_VTX(0, 0, uv_in, col);
-        IM_APPEND_VTX(0, 0, uv_out, col);
-    }
-
-    while (point_idx < point_end)
-    {
-        ImVec2 n0 = n1;
-        float len_sqr0 = len_sqr1;
-        p1 = points[point_idx];
-        n1 = normals[point_idx];
-        len_sqr1 = sqr_lengths[point_idx];
-
-        // theta is the angle between two segments
-        const float cos_theta = n0.x * n1.x + n0.y * n1.y;
-
-        // miter offset formula is derived here: https://www.angusj.com/clipper2/Docs/Trigonometry.htm
-        const float miter_scale_factor = (cos_theta > IM_POLYLINE_MITER_ANGLE_LIMIT) ? half_thickness / (1.0f + cos_theta) : FLT_MAX; // avoid division by zero
-        const float miter_offset_x = (n0.x + n1.x) * miter_scale_factor;
-        const float miter_offset_y = (n0.y + n1.y) * miter_scale_factor;
-        const float miter_distance_sqr = miter_offset_x * miter_offset_x + miter_offset_y * miter_offset_y;
-
-        const bool overlap = !miters_only && ((len_sqr0 < miter_distance_sqr) || (len_sqr1 < miter_distance_sqr) || (cos_theta <= IM_POLYLINE_MITER_ANGLE_LIMIT));
-        const bool bevel = !miters_only && (miter_distance_sqr > miter_distance_limit_sqr);
-
-        if (bevel)
-        {
-            IM_ASSERT(!miters_only);
-            // Clipped bevel
-            const float sin_theta = n0.y * n1.x - n0.x * n1.y;
-            float bevel_normal_x = n0.x + n1.x;
-            float bevel_normal_y = n0.y + n1.y;
-            IM_NORMALIZE2F_OVER_ZERO(bevel_normal_x, bevel_normal_y);
-
-            const float signed_miter_offset = sin_theta < 0.0f ? half_thickness : -half_thickness;
-            const float side_offset = half_thickness * ((n0.x * bevel_normal_x + n0.y * bevel_normal_y) - 1.0f) / (n0.y * bevel_normal_x - n0.x * bevel_normal_y);
-            const float pt_x = p1.x - bevel_normal_x * signed_miter_offset;
-            const float pt_y = p1.y - bevel_normal_y * signed_miter_offset;
-            const float sd_x = bevel_normal_y * side_offset;
-            const float sd_y = -bevel_normal_x * side_offset;
-
-            if (overlap)
-            {
-                // Dislocated bevel.
-                if (sin_theta < 0.0f)
-                {
-                    IM_APPEND_VTX(pt_x - sd_x, pt_y - sd_y, uv_out, col);
-                    IM_APPEND_VTX(p1.x + n0.x * half_thickness, p1.y + n0.y * half_thickness, uv_out, col);
-                    const int next_base_idx = (ImDrawIdx)_VtxCurrentIdx;
-                    IM_APPEND_VTX(pt_x + sd_x, pt_y + sd_y, uv_out, col);
-                    IM_APPEND_VTX(p1.x, p1.y, uv_in, col);
-                    IM_APPEND_VTX(p1.x + n1.x * half_thickness, p1.y + n1.y * half_thickness, uv_out, col);
-
-                    // Bevel tri
-                    IM_APPEND_TRI(base_idx+3, base_idx+5, base_idx+6);
-                    // Connect prev to next
-                    IM_APPEND_TRI(base_idx+0, base_idx+3, base_idx+6);
-                    IM_APPEND_TRI(base_idx+0, base_idx+6, base_idx+1);
-                    IM_APPEND_TRI(base_idx+1, base_idx+6, base_idx+4);
-                    IM_APPEND_TRI(base_idx+1, base_idx+4, base_idx+2);
-                    base_idx = next_base_idx;
-                }
-                else
-                {
-                    IM_APPEND_VTX(p1.x - n0.x * half_thickness, p1.y - n0.y * half_thickness, uv_out, col);
-                    IM_APPEND_VTX(pt_x + sd_x, pt_y + sd_y, uv_out, col);
-                    const int next_base_idx = (ImDrawIdx)_VtxCurrentIdx;
-                    IM_APPEND_VTX(p1.x - n1.x * half_thickness, p1.y - n1.y * half_thickness, uv_out, col);
-                    IM_APPEND_VTX(p1.x, p1.y, uv_in, col);
-                    IM_APPEND_VTX(pt_x - sd_x, pt_y - sd_y, uv_out, col);
-
-                    // Bevel tri
-                    IM_APPEND_TRI(base_idx+6, base_idx+7, base_idx+4);
-                    // Connect prev to next
-                    IM_APPEND_TRI(base_idx+0, base_idx+3, base_idx+6);
-                    IM_APPEND_TRI(base_idx+0, base_idx+6, base_idx+1);
-                    IM_APPEND_TRI(base_idx+1, base_idx+6, base_idx+4);
-                    IM_APPEND_TRI(base_idx+1, base_idx+4, base_idx+2);
-                    base_idx = next_base_idx;
-                }
-            }
-            else
-            {
-                // Bevel
-                if (sin_theta < 0.0f)
-                {
-                    IM_APPEND_VTX(pt_x - sd_x, pt_y - sd_y, uv_out, col);
-                    const int next_base_idx = (ImDrawIdx)_VtxCurrentIdx;
-                    IM_APPEND_VTX(pt_x + sd_x, pt_y + sd_y, uv_out, col);
-                    IM_APPEND_VTX(p1.x, p1.y, uv_in, col);
-                    IM_APPEND_VTX(p1.x + miter_offset_x, p1.y + miter_offset_y, uv_out, col);
-
-                    // Bevel tri
-                    IM_APPEND_TRI(base_idx+3, base_idx+4, base_idx+5);
-                    // Connect prev to next
-                    IM_APPEND_TRI(base_idx+0, base_idx+3, base_idx+5);
-                    IM_APPEND_TRI(base_idx+0, base_idx+5, base_idx+1);
-                    IM_APPEND_TRI(base_idx+1, base_idx+5, base_idx+6);
-                    IM_APPEND_TRI(base_idx+1, base_idx+6, base_idx+2);
-                    base_idx = next_base_idx;
-                }
-                else
-                {
-                    IM_APPEND_VTX(pt_x + sd_x, pt_y + sd_y, uv_out, col);
-                    const int next_base_idx = (ImDrawIdx)_VtxCurrentIdx;
-                    IM_APPEND_VTX(p1.x - miter_offset_x, p1.y - miter_offset_y, uv_out, col);
-                    IM_APPEND_VTX(p1.x, p1.y, uv_in, col);
-                    IM_APPEND_VTX(pt_x - sd_x, pt_y - sd_y, uv_out, col);
-
-                    // Bevel tri
-                    IM_APPEND_TRI(base_idx+5, base_idx+6, base_idx+3);
-                    // Connect prev to next
-                    IM_APPEND_TRI(base_idx+0, base_idx+4, base_idx+5);
-                    IM_APPEND_TRI(base_idx+0, base_idx+5, base_idx+1);
-                    IM_APPEND_TRI(base_idx+1, base_idx+5, base_idx+3);
-                    IM_APPEND_TRI(base_idx+1, base_idx+3, base_idx+2);
-                    base_idx = next_base_idx;
-                }
-            }
-        }
-        else
-        {
-            if (overlap)
-            {
-                IM_ASSERT(!miters_only);
-                // Dislocated miter
-                const float sin_theta = n0.y * n1.x - n0.x * n1.y;
-                if (sin_theta < 0.0f)
-                {
-                    IM_APPEND_VTX(p1.x + n0.x * half_thickness, p1.y + n0.y * half_thickness, uv_out, col);
-                    const int next_base_idx = (ImDrawIdx)_VtxCurrentIdx;
-                    IM_APPEND_VTX(p1.x - miter_offset_x, p1.y - miter_offset_y, uv_out, col);
-                    IM_APPEND_VTX(p1.x, p1.y, uv_in, col);
-                    IM_APPEND_VTX(p1.x + n1.x * half_thickness, p1.y + n1.y * half_thickness, uv_out, col);
-
-                    // Connect prev to next
-                    IM_APPEND_TRI(base_idx+0, base_idx+4, base_idx+5);
-                    IM_APPEND_TRI(base_idx+0, base_idx+5, base_idx+1);
-                    IM_APPEND_TRI(base_idx+1, base_idx+5, base_idx+3);
-                    IM_APPEND_TRI(base_idx+1, base_idx+3, base_idx+2);
-
-                    base_idx = next_base_idx;
-                }
-                else
-                {
-                    IM_APPEND_VTX(p1.x - n0.x * half_thickness, p1.y - n0.y * half_thickness, uv_out, col);
-                    const int next_base_idx = (ImDrawIdx)_VtxCurrentIdx;
-                    IM_APPEND_VTX(p1.x - n1.x * half_thickness, p1.y - n1.y * half_thickness, uv_out, col);
-                    IM_APPEND_VTX(p1.x, p1.y, uv_in, col);
-                    IM_APPEND_VTX(p1.x + miter_offset_x, p1.y + miter_offset_y, uv_out, col);
-
-                    // Connect prev to next
-                    IM_APPEND_TRI(base_idx+0, base_idx+3, base_idx+5);
-                    IM_APPEND_TRI(base_idx+0, base_idx+5, base_idx+1);
-                    IM_APPEND_TRI(base_idx+1, base_idx+5, base_idx+6);
-                    IM_APPEND_TRI(base_idx+1, base_idx+6, base_idx+2);
-
-                    base_idx = next_base_idx;
-                }
-            }
-            else
-            {
-                // Miter
-                const int next_base_idx = (ImDrawIdx)_VtxCurrentIdx;
-                IM_APPEND_VTX(p1.x - miter_offset_x, p1.y - miter_offset_y, uv_out, col);
-                IM_APPEND_VTX(p1.x, p1.y, uv_in, col);
-                IM_APPEND_VTX(p1.x + miter_offset_x, p1.y + miter_offset_y, uv_out, col);
-
-                // Connect prev to next
-                IM_APPEND_TRI(base_idx+0, base_idx+3, base_idx+4);
-                IM_APPEND_TRI(base_idx+0, base_idx+4, base_idx+1);
-                IM_APPEND_TRI(base_idx+1, base_idx+4, base_idx+5);
-                IM_APPEND_TRI(base_idx+1, base_idx+5, base_idx+2);
-
-                base_idx = next_base_idx;
-            }
-        }
-
-        point_idx++;
-    }
-
-    // End cap
-    if (!closed)
-    {
-        p1 = points[points_count-1];
-        n1 = normals[points_count-1];
-
-        // End cap
-        const ImVec2 dir(n1.y, -n1.x);
-        if (flags & ImDrawFlags_SquareCap)
-            p1 += dir * (half_thickness - half_aa); // At this point half_thickness has half fringe width baked in.
-        const ImVec2 pa = p1 - dir * half_aa;
-        const ImVec2 pb = p1 + dir * half_aa;
-
-        int next_base_idx = (int)_VtxCurrentIdx;
-        IM_APPEND_VTX(pa.x - n1.x * half_thickness, pa.y - n1.y * half_thickness, uv_out, col);
-        IM_APPEND_VTX(pa.x, pa.y, uv_in, col);
-        IM_APPEND_VTX(pa.x + n1.x * half_thickness, pa.y + n1.y * half_thickness, uv_out, col);
-
-        IM_APPEND_VTX(pb.x - n1.x * half_thickness, pb.y - n1.y * half_thickness, uv_out, col_trans);
-        IM_APPEND_VTX(pb.x, pb.y, uv_in, col_trans);
-        IM_APPEND_VTX(pb.x + n1.x * half_thickness, pb.y + n1.y * half_thickness, uv_out, col_trans);
-
-        // Connect
-        IM_APPEND_TRI(base_idx+0, base_idx+3, base_idx+4);
-        IM_APPEND_TRI(base_idx+0, base_idx+4, base_idx+1);
-        IM_APPEND_TRI(base_idx+1, base_idx+4, base_idx+5);
-        IM_APPEND_TRI(base_idx+1, base_idx+5, base_idx+2);
-        base_idx = next_base_idx;
-
-        // AA cap
-        IM_APPEND_TRI(base_idx+0, base_idx+3, base_idx+4);
-        IM_APPEND_TRI(base_idx+0, base_idx+4, base_idx+1);
-        IM_APPEND_TRI(base_idx+1, base_idx+4, base_idx+5);
-        IM_APPEND_TRI(base_idx+1, base_idx+5, base_idx+2);
-    }
-    else
-    {
-        // Connect the path.
-        start_vtx_ptr[0] = VtxBuffer.Data[base_idx+0];
-        start_vtx_ptr[1] = VtxBuffer.Data[base_idx+1];
-        start_vtx_ptr[2] = VtxBuffer.Data[base_idx+2];
     }
 
     // Restore unused memory
@@ -1528,27 +1137,46 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         thickness = _FringeScale;
     }
 
-    // TODO: square vs miter cap
     // TODO: support splitting very long lines to multiple draw calls.
 
-    // We can use cheaper rendering if the thickness is integer size.
-    const int truncated_thickness = (int)screen_thickness;
-    const bool is_int_thickness = ImAbs(screen_thickness - (float)truncated_thickness) < 0.01f && (truncated_thickness >= 1 && truncated_thickness < IM_DRAWLIST_TEX_LINES_WIDTH_MAX);
-
+    // Allocate data for temp buffers
     _Data->TempBuffer.reserve_discard(points_count * 2);
     ImVec2* normals = _Data->TempBuffer.Data;
     float* sqr_lengths = (float*)(normals + points_count);
-    CalcSegmentNormals(points, points_count, normals, sqr_lengths, (flags & ImDrawFlags_Closed) != 0);
 
-    if (is_int_thickness)
+    // Calculate normals for each line segment
+    for (int i = 0; i < points_count - 1; i++)
     {
-        const ImVec4 tex_uvs = _Data->TexUvLines[truncated_thickness];
-        _AddPolylineIntThickness(points, normals, sqr_lengths, points_count, col, (float)truncated_thickness * _FringeScale, flags, tex_uvs);
+        float dx = points[i + 1].x - points[i].x;
+        float dy = points[i + 1].y - points[i].y;
+        const float d2 = dx * dx + dy * dy;
+        const float inv_len = (d2 > 0.0f) ? 1.0f / sqrtf(d2) : 0.0f; //ImRsqrt(d2) : 0.0f; TODO: ImRsqrt is not accurate enough.
+        normals[i].x = -dy * inv_len;
+        normals[i].y = dx * inv_len;
+        sqr_lengths[i] = d2;
+    }
+    if ((flags & ImDrawFlags_Closed) != 0)
+    {
+        const float dx = points[0].x - points[points_count - 1].x;
+        const float dy = points[0].y - points[points_count - 1].y;
+        const float d2 = dx * dx + dy * dy;
+        const float inv_len = (d2 > 0.0f) ? 1.0f / sqrtf(d2) : 0.0f; //ImRsqrt(d2) : 0.0f; TODO: ImRsqrt is not accurate enough.
+        normals[points_count - 1].x = -dy * inv_len;
+        normals[points_count - 1].y = dx * inv_len;
+        sqr_lengths[points_count - 1] = d2;
     }
     else
     {
-        _AddPolylineFractThickness(points, normals, sqr_lengths, points_count, col, thickness, flags);
+        normals[points_count - 1] = normals[points_count - 2];
+        sqr_lengths[points_count - 1] = 0.0f;
     }
+
+    // Bias the texture selection towards higher resolution to avoid visual pops when the texture change.
+    const int texture_idx = ImClamp((int)(screen_thickness + 0.95f), 1, IM_DRAWLIST_TEX_LINES_WIDTH_MAX - 1);
+    const float fringe = _FringeScale * (screen_thickness / (float)texture_idx); // Scale the fringe to cover the discrepancy between the texture and requested size.
+    const ImVec4 tex_uvs = _Data->TexUvLines[texture_idx];
+
+    _AddPolyline(points, normals, sqr_lengths, points_count, col, thickness, flags, tex_uvs, fringe);
 }
 
 void ImDrawList::AddPolylineLegacy(const ImVec2* points, const int points_count, ImU32 col, float thickness, ImDrawFlags flags)
@@ -1890,14 +1518,16 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
             const float miter_distance_sqr = dm_x * dm_x + dm_y * dm_y;
             bevel = miter_distance_sqr > miter_distance_limit_sqr;
 
-            const float segment_limit_sqr = ImMax(temp_sqr_lengths[i0], temp_sqr_lengths[i1]);
-            const bool overshoot = miter_distance_sqr > segment_limit_sqr;
-            if (overshoot)
+            if (bevel)
             {
-                // Make sure the miter stays within the polygon bounds.
-                const float scale = ImSqrt(segment_limit_sqr / miter_distance_sqr);
-                dm_x *= scale;
-                dm_y *= scale;
+                // Limit inner bevel so that it is does not shoot out outside the polygon.
+                const float segment_limit_sqr = ImMax(temp_sqr_lengths[i0], temp_sqr_lengths[i1]);
+                if (miter_distance_sqr > segment_limit_sqr)
+                {
+                    const float scale = ImSqrt(segment_limit_sqr / miter_distance_sqr);
+                    dm_x *= scale;
+                    dm_y *= scale;
+                }
             }
         }
 
@@ -2399,32 +2029,14 @@ void ImDrawList::AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float th
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
-    ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeCenter); // WIP: only Legacy is used.
-    if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy)
+    if (g_LEGACY_STROKES)
     {
         const ImVec2 points[2] = { ImVec2(p1.x + 0.5f, p1.y + 0.5f), ImVec2(p2.x + 0.5f, p2.y + 0.5f) };
         AddPolyline(points, 2, col, thickness, ImDrawFlags_StrokeLegacy);
         return;
     }
 
-    ImVec2 off(0, 0);
-    if (stroke_pos != ImDrawFlags_StrokeCenter)
-    {
-        // FIXME: this should be removed when the generic PathStroke() stroke pos is merged.
-        float nx = -(p1.y - p2.y);
-        float ny = p1.x - p2.x;
-        IM_NORMALIZE2F_OVER_ZERO(nx, ny);
-        float offset = 0.0f;
-        if (stroke_pos == ImDrawFlags_StrokeInside)
-            offset = -thickness * 0.5f;
-        else if (stroke_pos == ImDrawFlags_StrokeCenterPixelAligned)
-            offset = -(thickness * 0.5f - CalculateCenterPixelAlignedOffset(thickness, _FringeScale));
-        else if (stroke_pos == ImDrawFlags_StrokeOutside)
-            offset = thickness * 0.5f;
-        off.x = nx * offset;
-        off.y = ny * offset;
-    }
-    const ImVec2 points[2] = { p1 + off, p2 + off };
+    const ImVec2 points[2] = { p1, p2 };
     AddPolyline(points, 2, col, thickness, flags);
 }
 
@@ -2618,9 +2230,6 @@ void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, 
 
     thickness += _FringeScale;
 
-    // Adjust the rounding to be the outside radius.
-    rounding += thickness * 0.5f;
-
     const int arc_step = ImClamp(IM_DRAWLIST_ARCFAST_SAMPLE_MAX / this->_CalcCircleAutoSegmentCount(rounding), 1, IM_DRAWLIST_ARCFAST_TABLE_SIZE / 4);
     const int arc_point_count = (IM_DRAWLIST_ARCFAST_TABLE_SIZE / 4) / arc_step + 1;
 
@@ -2631,12 +2240,11 @@ void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, 
     ImDrawVert* start_vtx_ptr = _VtxWritePtr;
     ImDrawIdx* start_idx_ptr = _IdxWritePtr;
 
-    const float ht = thickness * 0.5f;
     const ImVec2 corner_pos[4] = {
-        ImVec2(p_min.x - ht, p_min.y - ht),
-        ImVec2(p_max.x + ht, p_min.y - ht),
-        ImVec2(p_max.x + ht, p_max.y + ht),
-        ImVec2(p_min.x - ht, p_max.y + ht)
+        ImVec2(p_min.x, p_min.y),
+        ImVec2(p_max.x, p_min.y),
+        ImVec2(p_max.x, p_max.y),
+        ImVec2(p_min.x, p_max.y)
     };
     static const ImVec2 corner_offset[4] = { {1,1}, {-1,1}, {-1,-1}, {1,-1} };
     static const ImDrawFlags corner_flags[4] = { ImDrawFlags_RoundCornersTopLeft, ImDrawFlags_RoundCornersTopRight, ImDrawFlags_RoundCornersBottomRight, ImDrawFlags_RoundCornersBottomLeft };
@@ -2748,38 +2356,41 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
     // FIXME-POLYLINE
     const bool has_rounding = (rounding >= _FringeScale);
 
-    ImVec2 adjusted_min = p_min;
-    ImVec2 adjusted_max = p_max;
-    float adjusted_rounding = rounding;
+    ImVec2 outer_min = p_min;
+    ImVec2 outer_max = p_max;
+    float outer_rounding = rounding;
 
-    const ImVec2 offset(thickness * 0.5f, thickness * 0.5f);
-    if (stroke_pos == ImDrawFlags_StrokeInside)
+    if (stroke_pos == ImDrawFlags_StrokeLegacy)
     {
-        adjusted_min += offset;
-        adjusted_max -= offset;
-        adjusted_rounding -= thickness * 0.5f;
+        outer_min += ImVec2(0.50f, 0.50f);
+        if (Flags & ImDrawListFlags_AntiAliasedLines)
+            outer_max -= ImVec2(0.50f, 0.50f);
+        else
+            outer_max -= ImVec2(0.49f, 0.49f); // Better looking lower-right corner and rounded non-AA shapes.
+        stroke_pos = ImDrawFlags_StrokeCenter;
+    }
+
+    if (stroke_pos == ImDrawFlags_StrokeCenter)
+    {
+        const ImVec2 offset(thickness * 0.5f, thickness * 0.5f);
+        outer_min -= offset;
+        outer_max += offset;
+        outer_rounding += has_rounding ? thickness * 0.5f : 0.0f;
     }
     else if (stroke_pos == ImDrawFlags_StrokeOutside)
     {
-        adjusted_min -= offset;
-        adjusted_max += offset;
-        adjusted_rounding += thickness * 0.5f;
-    }
-    else if (stroke_pos == ImDrawFlags_StrokeLegacy)
-    {
-        adjusted_min += ImVec2(0.50f, 0.50f);
-        if (Flags & ImDrawListFlags_AntiAliasedLines)
-            adjusted_max -= ImVec2(0.50f, 0.50f);
-        else
-            adjusted_max -= ImVec2(0.49f, 0.49f); // Better looking lower-right corner and rounded non-AA shapes.
+        const ImVec2 offset(thickness, thickness);
+        outer_min -= offset;
+        outer_max += offset;
+        outer_rounding += has_rounding ? thickness : 0.0f;
     }
 
-    const float width = adjusted_max.x - adjusted_min.x;
-    const float height = adjusted_max.y - adjusted_min.y;
-    if (ImMin(width, height) < (thickness + _FringeScale))
+    const float width = outer_max.x - outer_min.x;
+    const float height = outer_max.y - outer_min.y;
+    if (ImMin(width, height) < (thickness + _FringeScale) * 2.0f)
     {
         // Rectangle has collapsed into filled rectangle.
-        AddRectFilled(p_min, p_max, col, rounding, flags);
+        AddRectFilled(outer_min, outer_max, col, outer_rounding, flags);
         return;
     }
 
@@ -2788,36 +2399,35 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
 
     if (!has_rounding || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
     {
-        PathLineTo(adjusted_min);
-        PathLineTo(ImVec2(adjusted_max.x, adjusted_min.y));
-        PathLineTo(adjusted_max);
-        PathLineTo(ImVec2(adjusted_min.x, adjusted_max.y));
+        PathLineTo(outer_min);
+        PathLineTo(ImVec2(outer_max.x, outer_min.y));
+        PathLineTo(outer_max);
+        PathLineTo(ImVec2(outer_min.x, outer_max.y));
     }
     else
     {
         // Constrain rounding to rect dimensions
-        adjusted_rounding = ImMin(adjusted_rounding, ImFabs(width) * (((flags & ImDrawFlags_RoundCornersTop) == ImDrawFlags_RoundCornersTop) || ((flags & ImDrawFlags_RoundCornersBottom) == ImDrawFlags_RoundCornersBottom) ? 0.5f : 1.0f) - 1.0f);
-        adjusted_rounding = ImMin(adjusted_rounding, ImFabs(height) * (((flags & ImDrawFlags_RoundCornersLeft) == ImDrawFlags_RoundCornersLeft) || ((flags & ImDrawFlags_RoundCornersRight) == ImDrawFlags_RoundCornersRight) ? 0.5f : 1.0f) - 1.0f);
+        outer_rounding = ImMin(outer_rounding, ImFabs(width) * (((flags & ImDrawFlags_RoundCornersTop) == ImDrawFlags_RoundCornersTop) || ((flags & ImDrawFlags_RoundCornersBottom) == ImDrawFlags_RoundCornersBottom) ? 0.5f : 1.0f) - 1.0f);
+        outer_rounding = ImMin(outer_rounding, ImFabs(height) * (((flags & ImDrawFlags_RoundCornersLeft) == ImDrawFlags_RoundCornersLeft) || ((flags & ImDrawFlags_RoundCornersRight) == ImDrawFlags_RoundCornersRight) ? 0.5f : 1.0f) - 1.0f);
 
-        if (thickness * 0.5f > adjusted_rounding)
+        if (thickness > outer_rounding)
         {
             // Special case rendering to avoid rendering artifacts at the corners.
             // If rendered using the regular polyline, the stroke will fold and leave artifact on the corner if rendered with transparency.
-            _AddRectTinyRounding(adjusted_min, adjusted_max, col, adjusted_rounding, thickness, flags);
+            _AddRectTinyRounding(outer_min, outer_max, col, outer_rounding, thickness, flags);
             return;
         }
-
-        const float rounding_tl = (flags & ImDrawFlags_RoundCornersTopLeft) ? adjusted_rounding : 0.0f;
-        const float rounding_tr = (flags & ImDrawFlags_RoundCornersTopRight) ? adjusted_rounding : 0.0f;
-        const float rounding_br = (flags & ImDrawFlags_RoundCornersBottomRight) ? adjusted_rounding : 0.0f;
-        const float rounding_bl = (flags & ImDrawFlags_RoundCornersBottomLeft) ? adjusted_rounding : 0.0f;
-        PathArcToFast(ImVec2(adjusted_min.x + rounding_tl, adjusted_min.y + rounding_tl), rounding_tl, 6, 9);
-        PathArcToFast(ImVec2(adjusted_max.x - rounding_tr, adjusted_min.y + rounding_tr), rounding_tr, 9, 12);
-        PathArcToFast(ImVec2(adjusted_max.x - rounding_br, adjusted_max.y - rounding_br), rounding_br, 0, 3);
-        PathArcToFast(ImVec2(adjusted_min.x + rounding_bl, adjusted_max.y - rounding_bl), rounding_bl, 3, 6);
+        const float rounding_tl = (flags & ImDrawFlags_RoundCornersTopLeft) ? outer_rounding : 0.0f;
+        const float rounding_tr = (flags & ImDrawFlags_RoundCornersTopRight) ? outer_rounding : 0.0f;
+        const float rounding_br = (flags & ImDrawFlags_RoundCornersBottomRight) ? outer_rounding : 0.0f;
+        const float rounding_bl = (flags & ImDrawFlags_RoundCornersBottomLeft) ? outer_rounding : 0.0f;
+        PathArcToFast(ImVec2(outer_min.x + rounding_tl, outer_min.y + rounding_tl), rounding_tl, 6, 9);
+        PathArcToFast(ImVec2(outer_max.x - rounding_tr, outer_min.y + rounding_tr), rounding_tr, 9, 12);
+        PathArcToFast(ImVec2(outer_max.x - rounding_br, outer_max.y - rounding_br), rounding_br, 0, 3);
+        PathArcToFast(ImVec2(outer_min.x + rounding_bl, outer_max.y - rounding_bl), rounding_bl, 3, 6);
     }
 
-    PathStroke(col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly);
+    PathStroke(col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | ImDrawFlags_StrokeInside);
 #else
     const bool is_truncated = _FringeScaleIsInteger && ImIsTruncated4(p_min.x, p_min.y, p_max.x, p_max.y) && ImIsTruncated4(rounding, thickness, 0.0f, 0.0f);
     if ((stroke_pos == ImDrawFlags_StrokeInside || stroke_pos == ImDrawFlags_StrokeOutside || stroke_pos == ImDrawFlags_StrokeCenterPixelAligned) && is_truncated)
@@ -3032,7 +2642,7 @@ void ImDrawList::AddRectFilledMultiColor(const ImVec2& p_min, const ImVec2& p_ma
     PrimWriteVtx(ImVec2(p_min.x, p_max.y), uv, col_bot_left);
 }
 
-void ImDrawList::AddQuad(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col, float thickness)
+void ImDrawList::AddQuad(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col, float thickness, ImDrawFlags flags)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
@@ -3041,7 +2651,7 @@ void ImDrawList::AddQuad(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, c
     PathLineTo(p2);
     PathLineTo(p3);
     PathLineTo(p4);
-    PathStroke(col, thickness, ImDrawFlags_Closed);
+    PathStroke(col, thickness, flags | ImDrawFlags_Closed);
 }
 
 void ImDrawList::AddQuadFilled(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col)
@@ -3056,7 +2666,7 @@ void ImDrawList::AddQuadFilled(const ImVec2& p1, const ImVec2& p2, const ImVec2&
     PathFillConvex(col);
 }
 
-void ImDrawList::AddTriangle(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 col, float thickness)
+void ImDrawList::AddTriangle(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 col, float thickness, ImDrawFlags flags)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
@@ -3064,7 +2674,7 @@ void ImDrawList::AddTriangle(const ImVec2& p1, const ImVec2& p2, const ImVec2& p
     PathLineTo(p1);
     PathLineTo(p2);
     PathLineTo(p3);
-    PathStroke(col, thickness, ImDrawFlags_Closed);
+    PathStroke(col, thickness, flags | ImDrawFlags_Closed);
 }
 
 void ImDrawList::AddTriangleFilled(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 col)
@@ -3084,42 +2694,34 @@ void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int nu
         return;
 
     ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
-
-    if (g_LEGACY_STROKES)
+    if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy)
     {
         radius -= 0.5f;
-    }
-    else
-    {
-        if (stroke_pos == ImDrawFlags_StrokeInside)
-            radius -= thickness * 0.5f;
-        else if (stroke_pos == ImDrawFlags_StrokeCenterPixelAligned)
-            radius -= thickness * 0.5f - CalculateCenterPixelAlignedOffset(thickness, _FringeScale);
-        else if (stroke_pos == ImDrawFlags_StrokeOutside)
-            radius += thickness * 0.5f;
-        else if (stroke_pos == ImDrawFlags_StrokeLegacy)
-            radius -= 0.5f;
+        stroke_pos = ImDrawFlags_StrokeCenter;
     }
 
-    float adjusted_radius = radius;
-    if (stroke_pos == ImDrawFlags_StrokeInside)
-    adjusted_radius -= thickness * 0.5f;
+    // FIXME-POLYLINE: missing ImDrawFlags_StrokeCenterPixelAligned.
+    float outer_radius = radius;
+    if (stroke_pos == ImDrawFlags_StrokeCenter)
+        outer_radius = radius + thickness * 0.5f;
+    else if (stroke_pos == ImDrawFlags_StrokeInside)
+        outer_radius = radius;
     else if (stroke_pos == ImDrawFlags_StrokeOutside)
-    adjusted_radius += thickness * 0.5f;
-    else if (stroke_pos == ImDrawFlags_StrokeLegacy)
-    adjusted_radius -= 0.5f;
-    if (adjusted_radius < (thickness * 0.5f + _FringeScale * 0.5f))
+        outer_radius = radius + thickness;
+    if (outer_radius < (thickness + _FringeScale))
     {
         // The circle has collapsed into a filled circle.
-        AddCircleFilled(center, radius, col, num_segments);
+        AddCircleFilled(center, outer_radius, col, num_segments);
         return;
     }
 
     if (num_segments <= 0)
     {
         // Use arc with automatic segment count
-        const int a_step = IM_DRAWLIST_ARCFAST_SAMPLE_MAX / _CalcCircleAutoSegmentCount(radius); // Radius used here inteitionally so that the circle matches filled circle of same radius.
-        _PathArcToFastEx(center, adjusted_radius, 0, IM_DRAWLIST_ARCFAST_SAMPLE_MAX, a_step);
+        // FIXME-POLYLINE: Review
+        //const int a_step = IM_DRAWLIST_ARCFAST_SAMPLE_MAX / _CalcCircleAutoSegmentCount(radius); // Radius used here intentionally so that the circle matches filled circle of same radius.
+        //_PathArcToFastEx(center, radius, 0, IM_DRAWLIST_ARCFAST_SAMPLE_MAX, a_step);
+        _PathArcToFastEx(center, radius, 0, IM_DRAWLIST_ARCFAST_SAMPLE_MAX, 0);
         _Path.Size--;
     }
     else
@@ -3129,10 +2731,10 @@ void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int nu
 
         // Because we are filling a closed shape we remove 1 from the count of segments/points
         const float a_max = (IM_PI * 2.0f) * ((float)num_segments - 1.0f) / (float)num_segments;
-        PathArcTo(center, adjusted_radius, 0.0f, a_max, num_segments - 1);
+        PathArcTo(center, radius, 0.0f, a_max, num_segments - 1);
     }
 
-    PathStroke(col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly);
+    PathStroke(col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | stroke_pos);
 }
 
 void ImDrawList::AddCircleFilled(const ImVec2& center, float radius, ImU32 col, int num_segments)
@@ -3175,31 +2777,35 @@ void ImDrawList::AddNgon(const ImVec2& center, float radius, ImU32 col, int num_
     if ((col & IM_COL32_A_MASK) == 0 || num_segments <= 2)
         return;
 
-    if (g_LEGACY_STROKES)
+    ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
+    if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy)
+    {
         radius -= 0.5f;
+        stroke_pos = ImDrawFlags_StrokeCenter;
+    }
 
-    const ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
     const float unit_apothem = ImCos(IM_PI / (float)num_segments);
     const float miter_thickness = thickness / unit_apothem;
 
-    float adjusted_radius = radius;
-    if (stroke_pos == ImDrawFlags_StrokeInside)
-        adjusted_radius -= miter_thickness * 0.5f;
+    float outer_radius = radius;
+    if (stroke_pos == ImDrawFlags_StrokeCenter)
+        outer_radius = radius + miter_thickness * 0.5f;
+    else if (stroke_pos == ImDrawFlags_StrokeInside)
+        outer_radius = radius;
     else if (stroke_pos == ImDrawFlags_StrokeOutside)
-        adjusted_radius += miter_thickness * 0.5f;
-    else if (stroke_pos == ImDrawFlags_StrokeLegacy)
-        adjusted_radius -= 0.5f;
-    if (adjusted_radius < (miter_thickness * 0.5f + _FringeScale * 0.5f))
+        outer_radius = radius + miter_thickness;
+
+    if (outer_radius < (miter_thickness + _FringeScale))
     {
         // The polygon has collapsed into a filled polygon.
-        AddNgonFilled(center, radius, col, num_segments);
+        AddNgonFilled(center, outer_radius, col, num_segments);
         return;
     }
 
      // Because we are filling a closed shape we remove 1 from the count of segments/points
     const float a_max = (IM_PI * 2.0f) * ((float)num_segments - 1.0f) / (float)num_segments;
-    PathArcTo(center, adjusted_radius, 0.0f, a_max, num_segments - 1);
-    PathStroke(col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly);
+    PathArcTo(center, radius, 0.0f, a_max, num_segments - 1);
+    PathStroke(col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | stroke_pos);
 }
 
 // Guaranteed to honor 'num_segments'
@@ -3230,8 +2836,9 @@ void ImDrawList::AddEllipse(const ImVec2& center, const ImVec2& radius, ImU32 co
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
-    ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
-
+    // Note: since offset ellipse is not ellipse anymore, we cannot fall back to filled ellipse when outline covers the whole shape like in other shapes.
+    // FIXME-POLYLINE
+    /*
     ImVec2 r;
     if (g_LEGACY_STROKES)
     {
@@ -3240,6 +2847,7 @@ void ImDrawList::AddEllipse(const ImVec2& center, const ImVec2& radius, ImU32 co
     else
     {
         r = radius;
+        ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
         if (stroke_pos == ImDrawFlags_StrokeInside)
             r -= ImVec2(thickness * 0.5f, thickness * 0.5f);
         else if (stroke_pos == ImDrawFlags_StrokeCenterPixelAligned)
@@ -3250,7 +2858,8 @@ void ImDrawList::AddEllipse(const ImVec2& center, const ImVec2& radius, ImU32 co
         else if (stroke_pos == ImDrawFlags_StrokeOutside)
             r += ImVec2(thickness * 0.5f, thickness * 0.5f);
     }
-
+    */
+    /*
     float stroke_offset = 0.0f;
     if (stroke_pos == ImDrawFlags_StrokeInside)
         stroke_offset = -thickness * 0.5f;
@@ -3261,48 +2870,17 @@ void ImDrawList::AddEllipse(const ImVec2& center, const ImVec2& radius, ImU32 co
         AddEllipseFilled(center, radius, col, rot, num_segments);
         return;
     }
+    */
 
     if (num_segments <= 0)
         num_segments = _CalcCircleAutoSegmentCount(ImMax(radius.x, radius.y)); // A bit pessimistic, maybe there's a better computation to do here.
 
     _Path.reserve(_Path.Size + (num_segments + 1));
 
-    // Custom tessellation, since offset ellipse is not an ellipse anymore.
-    const float cos_rot = ImCos(rot);
-    const float sin_rot = ImSin(rot);
-    if (stroke_offset != 0.0f)
-    {
-        const float inv_rx = 1.0f / radius.x;
-        const float inv_ry = 1.0f / radius.y;
-        for (int i = 0; i < num_segments; i++)
-        {
-            const float a = ((float)i / (float)num_segments) * IM_PI * 2.0f;
-            const float dir_x = ImCos(a);
-            const float dir_y = ImSin(a);
-            float nx = dir_x * inv_rx;
-            float ny = dir_y * inv_ry;
-            IM_NORMALIZE2F_OVER_ZERO(nx, ny);
-            ImVec2 point(dir_x * radius.x + nx * stroke_offset, dir_y * radius.y + ny * stroke_offset);
-            const ImVec2 rel((point.x * cos_rot) - (point.y * sin_rot), (point.x * sin_rot) + (point.y * cos_rot));
-            point.x = rel.x + center.x;
-            point.y = rel.y + center.y;
-            _Path.push_back(point);
-        }
-    }
-    else
-    {
-        for (int i = 0; i < num_segments; i++)
-        {
-            const float a = ((float)i / (float)num_segments) * IM_PI * 2.0f;
-            ImVec2 point(ImCos(a) * radius.x, ImSin(a) * radius.y);
-            const ImVec2 rel((point.x * cos_rot) - (point.y * sin_rot), (point.x * sin_rot) + (point.y * cos_rot));
-            point.x = rel.x + center.x;
-            point.y = rel.y + center.y;
-            _Path.push_back(point);
-        }
-    }
-
-    PathStroke(col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly);
+    // Because we are filling a closed shape we remove 1 from the count of segments/points
+    const float a_max = IM_PI * 2.0f * ((float)num_segments - 1.0f) / (float)num_segments;
+    PathEllipticalArcTo(center, radius, rot, 0.0f, a_max, num_segments - 1);
+    PathStroke(col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | flags);
 }
 
 void ImDrawList::AddEllipseFilled(const ImVec2& center, const ImVec2& radius, ImU32 col, float rot, int num_segments)
