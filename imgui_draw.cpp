@@ -1773,17 +1773,34 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
                 s_rounding += s_thickness / 2;
         }
 
-        // FIXME-WIP: Why isn't rounding offset in the _StrokeInside case?
-
         if (s_rounding <= 0 || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
         {
-            // FIXME-WIP: This could use half the number of vertices.
+            const ImVec2 opaque_uv = _Data->TexUvWhitePixel;
             const float t = (float)s_thickness * _FringeScale;
-            PrimReserve(6*4, 4*4);
-            PrimRect(ImVec2(s_min.x, s_min.y), ImVec2(s_max.x, s_min.y + t), col);
-            PrimRect(ImVec2(s_min.x, s_min.y + t), ImVec2(s_min.x + t, s_max.y - t), col);
-            PrimRect(ImVec2(s_max.x - t, s_min.y + t), ImVec2(s_max.x, s_max.y - t), col);
-            PrimRect(ImVec2(s_min.x, s_max.y - t), ImVec2(s_max.x, s_max.y), col);
+
+            PrimReserve(8*3, 8);
+            const ImDrawIdx idx = (ImDrawIdx)_VtxCurrentIdx;
+            IM_APPEND_VTX(s_min.x, s_min.y, opaque_uv, col);
+            IM_APPEND_VTX(s_min.x + t, s_min.y + t, opaque_uv, col);
+            IM_APPEND_VTX(s_max.x, s_min.y, opaque_uv, col);
+            IM_APPEND_VTX(s_max.x - t, s_min.y + t, opaque_uv, col);
+            IM_APPEND_VTX(s_max.x, s_max.y, opaque_uv, col);
+            IM_APPEND_VTX(s_max.x - t, s_max.y - t, opaque_uv, col);
+            IM_APPEND_VTX(s_min.x, s_max.y, opaque_uv, col);
+            IM_APPEND_VTX(s_min.x + t, s_max.y - t, opaque_uv, col);
+
+            IM_APPEND_TRI(idx + 0, idx + 3, idx + 1);
+            IM_APPEND_TRI(idx + 0, idx + 2, idx + 3);
+
+            IM_APPEND_TRI(idx + 2, idx + 5, idx + 3);
+            IM_APPEND_TRI(idx + 2, idx + 4, idx + 5);
+
+            IM_APPEND_TRI(idx + 4, idx + 7, idx + 5);
+            IM_APPEND_TRI(idx + 4, idx + 6, idx + 7);
+
+            IM_APPEND_TRI(idx + 6, idx + 1, idx + 7);
+            IM_APPEND_TRI(idx + 6, idx + 0, idx + 1);
+
             return;
         }
         if ((Flags & ImDrawListFlags_RoundCornersUseTex) && s_thickness <= IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX && s_rounding <= IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX)
