@@ -3447,9 +3447,10 @@ enum ImDrawFlags_
     // Stroke position relative to the shape outline
     ImDrawFlags_StrokeInside                = 0 << 16, // Draw stroke inside of the shape outline (Default)
     ImDrawFlags_StrokeCenter                = 1 << 16, // Draw stroke at the center of the shape outline
-    ImDrawFlags_StrokeOutside               = 2 << 16, // Draw stroke outside of the shape outline
-    ImDrawFlags_StrokeLegacy                = 3 << 16, // Use legacy position
-    ImDrawFlags_StrokeMask_                 = 0x03 << 16,
+    ImDrawFlags_StrokeCenterPixelAligned    = 2 << 16, // Draw stroke at the center of the shape outline, so that half thickness (rounded down) will be outside, and rest inside the shape outline.
+    ImDrawFlags_StrokeOutside               = 3 << 16, // Draw stroke outside of the shape outline
+    ImDrawFlags_StrokeLegacy                = 4 << 16, // Use legacy position
+    ImDrawFlags_StrokeMask_                 = 0x07 << 16,
 
     ImDrawFlags_InvalidMask_                = ~0x7FFFFFF0, // == 0x8000000F,
 };
