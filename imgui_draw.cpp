@@ -930,8 +930,8 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
         IM_APPEND_VTX(pb.x + n1.x * thickness1, pb.y + n1.y * thickness1 , uv1, col);
 
         // AA cap
-        IM_APPEND_TRI(base_idx + 0, base_idx + 2, base_idx + 3);
-        IM_APPEND_TRI(base_idx + 0, base_idx + 3, base_idx + 1);
+        IM_APPEND_TRI(base_idx+0, base_idx+2, base_idx+3);
+        IM_APPEND_TRI(base_idx+0, base_idx+3, base_idx+1);
         base_idx = next_base_idx;
     }
     else
@@ -959,7 +959,8 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
             const float cos_theta = n0.x * n1.x + n0.y * n1.y;
 
             // miter offset formula is derived here: https://www.angusj.com/clipper2/Docs/Trigonometry.htm
-            const float miter_scale_factor = ImMin(1000.0f, (cos_theta > IM_POLYLINE_MITER_ANGLE_LIMIT) ? 1.0f / (1.0f + cos_theta) : FLT_MAX); // avoid division by zero
+            const float cos_theta_clamped = ImMax(IM_POLYLINE_MITER_ANGLE_LIMIT, cos_theta); // Avoid div by 0.
+            const float miter_scale_factor = ImMin(1000.0f, 1.0f / (1.0f + cos_theta_clamped));
             const float miter_offset_x = (n0.x + n1.x) * miter_scale_factor;
             const float miter_offset_y = (n0.y + n1.y) * miter_scale_factor;
 
@@ -992,10 +993,11 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
             const float sin_theta = n0.y * n1.x - n0.x * n1.y;
 
             // miter offset formula is derived here: https://www.angusj.com/clipper2/Docs/Trigonometry.htm
-            const float miter_scale_factor = (cos_theta > IM_POLYLINE_MITER_ANGLE_LIMIT) ? 1.0f / (1.0f + cos_theta) : FLT_MAX; // avoid division by zero
-
+            const float cos_theta_clamped = ImMax(IM_POLYLINE_MITER_ANGLE_LIMIT, cos_theta); // Avoid div by 0.
+            const float miter_scale_factor = ImMin(1000.f, 1.f / (1.0f + cos_theta_clamped));
             float miter_offset_x = (n0.x + n1.x) * miter_scale_factor;
             float miter_offset_y = (n0.y + n1.y) * miter_scale_factor;
+
             const float miter_distance_sqr = miter_offset_x * miter_offset_x + miter_offset_y * miter_offset_y;
 
             if (miter_distance_sqr > miter_distance_limit_sqr)
@@ -1150,7 +1152,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         float dx = points[i + 1].x - points[i].x;
         float dy = points[i + 1].y - points[i].y;
         const float d2 = dx * dx + dy * dy;
-        const float inv_len = (d2 > 0.0f) ? 1.0f / sqrtf(d2) : 0.0f; //ImRsqrt(d2) : 0.0f; TODO: ImRsqrt is not accurate enough.
+        const float inv_len = (d2 > 0.0f) ? ImRsqrtPrecise(d2) : 0.0f;
         normals[i].x = -dy * inv_len;
         normals[i].y = dx * inv_len;
         sqr_lengths[i] = d2;
@@ -1160,7 +1162,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         const float dx = points[0].x - points[points_count - 1].x;
         const float dy = points[0].y - points[points_count - 1].y;
         const float d2 = dx * dx + dy * dy;
-        const float inv_len = (d2 > 0.0f) ? 1.0f / sqrtf(d2) : 0.0f; //ImRsqrt(d2) : 0.0f; TODO: ImRsqrt is not accurate enough.
+        const float inv_len = (d2 > 0.0f) ? ImRsqrtPrecise(d2) : 0.0f;
         normals[points_count - 1].x = -dy * inv_len;
         normals[points_count - 1].y = dx * inv_len;
         sqr_lengths[points_count - 1] = d2;
@@ -1458,6 +1460,7 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
     const float half_aa = _FringeScale * 0.5f;
     ImU32 col_trans = col & ~IM_COL32_A_MASK;
     const bool miters_only = (flags & ImDrawFlags_MiterOnly) != 0;
+    const float miter_distance_limit_sqr = IM_POLYLINE_MITER_LIMIT * IM_POLYLINE_MITER_LIMIT;
 
     const int idx_count = ((points_count - 2) + points_count * 3) * 3;
     const int vtx_count = (points_count * 3);
@@ -1478,7 +1481,7 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
         float d2 = dx*dx + dy*dy;
         if (d2 > 0.0f)
         {
-            float inv_len = ImRsqrt(d2);
+            const float inv_len = ImRsqrtPrecise(d2);
             dx *= inv_len;
             dy *= inv_len;
         }
@@ -1495,100 +1498,121 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
 
     unsigned int prev_outer_idx = 0; // We dont know outer vert could yet, will need to patch once we're done.
 
-    const float miter_distance_limit = half_aa * IM_POLYLINE_MITER_LIMIT;
-    const float miter_distance_limit_sqr = miter_distance_limit * miter_distance_limit;
 
-    for (int i0 = points_count - 1, i1 = 0; i1 < points_count; i0 = i1++)
+    if (miters_only)
     {
-        // Average normals
-        const ImVec2& n0 = temp_normals[i0];
-        const ImVec2& n1 = temp_normals[i1];
-
-        // theta is the angle between two segments
-        const float cos_theta = n0.x * n1.x + n0.y * n1.y;
-        // miter offset formula is derived here: https://www.angusj.com/clipper2/Docs/Trigonometry.htm
-        float miter_scale_factor = ImMin(1000.0f, (cos_theta > IM_POLYLINE_MITER_ANGLE_LIMIT) ? (half_aa / (1.0f + cos_theta)) : FLT_MAX); // avoid division by zero
-
-        float dm_x = (n0.x + n1.x) * miter_scale_factor;
-        float dm_y = (n0.y + n1.y) * miter_scale_factor;
-        bool bevel = false;
-
-        if (!miters_only)
+        for (int i0 = points_count - 1, i1 = 0; i1 < points_count; i0 = i1++)
         {
-            const float miter_distance_sqr = dm_x * dm_x + dm_y * dm_y;
-            bevel = miter_distance_sqr > miter_distance_limit_sqr;
+            // Average normals
+            const ImVec2 p1 = points[i1];
+            const ImVec2 n0 = temp_normals[i0];
+            const ImVec2 n1 = temp_normals[i1];
 
+            // theta is the angle between two segments
+            const float cos_theta = n0.x * n1.x + n0.y * n1.y;
+            // miter offset formula is derived here: https://www.angusj.com/clipper2/Docs/Trigonometry.htm
+            const float cos_theta_clamped = ImMax(IM_POLYLINE_MITER_ANGLE_LIMIT, cos_theta); // Avoid div by 0.
+            const float miter_scale_factor = ImMin(1000.f, 1.f / (1.0f + cos_theta_clamped));
+            const float miter_offset_x = (n0.x + n1.x) * miter_scale_factor * half_aa;
+            const float miter_offset_y = (n0.y + n1.y) * miter_scale_factor * half_aa;
+
+            // Inner
+            inner_vtx_ptr->pos.x = p1.x - miter_offset_x;
+            inner_vtx_ptr->pos.y = p1.y - miter_offset_y;
+            inner_vtx_ptr->uv = uv; inner_vtx_ptr->col = col;
+            inner_vtx_ptr++;
+
+            const unsigned int prev_inner_idx = vtx_inner_idx + i0;
+            const unsigned int inner_idx = vtx_inner_idx + i1;
+            const unsigned int outer_idx = _VtxCurrentIdx;
+
+            // Outer
+            IM_APPEND_VTX(p1.x + miter_offset_x, p1.y + miter_offset_y, uv, col_trans);
+            // Connect with previous
+            IM_APPEND_TRI(prev_outer_idx, outer_idx, inner_idx);
+            IM_APPEND_TRI(prev_outer_idx, inner_idx, prev_inner_idx);
+
+            prev_outer_idx = outer_idx;
+        }
+    }
+    else
+    {
+        for (int i0 = points_count - 1, i1 = 0; i1 < points_count; i0 = i1++)
+        {
+            // Average normals
+            const ImVec2 p1 = points[i1];
+            const ImVec2 n0 = temp_normals[i0];
+            const ImVec2 n1 = temp_normals[i1];
+
+            // theta is the angle between two segments
+            const float cos_theta = n0.x * n1.x + n0.y * n1.y;
+            // miter offset formula is derived here: https://www.angusj.com/clipper2/Docs/Trigonometry.htm
+            const float cos_theta_clamped = ImMax(IM_POLYLINE_MITER_ANGLE_LIMIT, cos_theta); // Avoid div by 0.
+            const float miter_scale_factor = ImMin(1000.f, 1.f / (1.0f + cos_theta_clamped));
+            float miter_offset_x = (n0.x + n1.x) * miter_scale_factor;
+            float miter_offset_y = (n0.y + n1.y) * miter_scale_factor;
+
+            const float miter_distance_sqr = miter_offset_x * miter_offset_x + miter_offset_y * miter_offset_y;
+            bool bevel = miter_distance_sqr > miter_distance_limit_sqr;
             if (bevel)
             {
                 // Limit inner bevel so that it is does not shoot out outside the polygon.
-                const float segment_limit_sqr = ImMax(temp_sqr_lengths[i0], temp_sqr_lengths[i1]);
-                if (miter_distance_sqr > segment_limit_sqr)
+                const float ref_thickness_sqr = half_aa * half_aa;
+                const float limit_sqr = ImMax(temp_sqr_lengths[i0], temp_sqr_lengths[i1]);
+                const float ref_miter_dist_sqr = miter_distance_sqr * ref_thickness_sqr;
+                if (ref_miter_dist_sqr > limit_sqr)
                 {
-                    const float scale = ImSqrt(segment_limit_sqr / miter_distance_sqr);
-                    dm_x *= scale;
-                    dm_y *= scale;
+                    const float scale = ImSqrt(limit_sqr / ref_miter_dist_sqr);
+                    miter_offset_x *= scale;
+                    miter_offset_y *= scale;
                 }
             }
+
+            miter_offset_x *= half_aa;
+            miter_offset_y *= half_aa;
+
+            // Inner
+            inner_vtx_ptr->pos.x = p1.x - miter_offset_x;
+            inner_vtx_ptr->pos.y = p1.y - miter_offset_y;
+            inner_vtx_ptr->uv = uv; inner_vtx_ptr->col = col;
+            inner_vtx_ptr++;
+
+            const unsigned int prev_inner_idx = vtx_inner_idx + i0;
+            const unsigned int inner_idx = vtx_inner_idx + i1;
+            unsigned int outer_idx = _VtxCurrentIdx;
+
+            // Outer
+            if (bevel)
+            {
+                IM_APPEND_VTX(p1.x + n0.x * half_aa, p1.y + n0.y * half_aa, uv, col_trans);
+                IM_APPEND_VTX(p1.x + n1.x * half_aa, p1.y + n1.y * half_aa, uv, col_trans);
+                // Connect with previous
+                IM_APPEND_TRI(prev_outer_idx, outer_idx, inner_idx);
+                IM_APPEND_TRI(prev_outer_idx, inner_idx, prev_inner_idx);
+                // Fill bevel
+                IM_APPEND_TRI(outer_idx, outer_idx + 1, inner_idx);
+                outer_idx++;
+            }
+            else
+            {
+                IM_APPEND_VTX(p1.x + miter_offset_x, p1.y + miter_offset_y, uv, col_trans);
+                // Connect with previous
+                IM_APPEND_TRI(prev_outer_idx, outer_idx, inner_idx);
+                IM_APPEND_TRI(prev_outer_idx, inner_idx, prev_inner_idx);
+            }
+
+            prev_outer_idx = outer_idx;
         }
-
-        // Inner
-        inner_vtx_ptr->pos.x = (points[i1].x - dm_x); inner_vtx_ptr->pos.y = (points[i1].y - dm_y); inner_vtx_ptr->uv = uv; inner_vtx_ptr->col = col;
-        inner_vtx_ptr++;
-
-        unsigned int prev_inner_idx = vtx_inner_idx + i0;
-        unsigned int inner_idx = vtx_inner_idx + i1;
-        unsigned int outer_idx = _VtxCurrentIdx;
-
-        // Outer
-        if (bevel)
-        {
-            _VtxWritePtr->pos.x = (points[i1].x + n0.x * half_aa); _VtxWritePtr->pos.y = (points[i1].y + n0.y * half_aa); _VtxWritePtr->uv = uv; _VtxWritePtr->col = col_trans;
-            _VtxWritePtr++;
-            _VtxCurrentIdx++;
-            _VtxWritePtr->pos.x = (points[i1].x + n1.x * half_aa); _VtxWritePtr->pos.y = (points[i1].y + n1.y * half_aa); _VtxWritePtr->uv = uv; _VtxWritePtr->col = col_trans;
-            _VtxWritePtr++;
-            _VtxCurrentIdx++;
-        }
-        else
-        {
-            _VtxWritePtr->pos.x = (points[i1].x + dm_x); _VtxWritePtr->pos.y = (points[i1].y + dm_y); _VtxWritePtr->uv = uv; _VtxWritePtr->col = col_trans;
-            _VtxWritePtr++;
-            _VtxCurrentIdx++;
-        }
-
-        // Connect with previous
-        _IdxWritePtr[0] = (ImDrawIdx)prev_outer_idx;
-        _IdxWritePtr[1] = (ImDrawIdx)outer_idx;
-        _IdxWritePtr[2] = (ImDrawIdx)inner_idx;
-
-        _IdxWritePtr[3] = (ImDrawIdx)prev_outer_idx;
-        _IdxWritePtr[4] = (ImDrawIdx)inner_idx;
-        _IdxWritePtr[5] = (ImDrawIdx)prev_inner_idx;
-
-        _IdxWritePtr += 6;
-
-        // Fill bevel
-        if (bevel)
-        {
-            _IdxWritePtr[0] = (ImDrawIdx)outer_idx;
-            _IdxWritePtr[1] = (ImDrawIdx)outer_idx+1;
-            _IdxWritePtr[2] = (ImDrawIdx)inner_idx;
-            _IdxWritePtr += 3;
-            outer_idx++;
-        }
-
-        prev_outer_idx = outer_idx;
     }
 
-    // Patch first segment
+    // Patch first segment to wrap around
     start_idx_ptr[0] = (ImDrawIdx)prev_outer_idx;
     start_idx_ptr[3] = (ImDrawIdx)prev_outer_idx;
 
     // Add indices for fill
     for (int i = 2; i < points_count; i++)
     {
-        _IdxWritePtr[0] = (ImDrawIdx)(vtx_inner_idx); _IdxWritePtr[1] = (ImDrawIdx)(vtx_inner_idx + i - 1); _IdxWritePtr[2] = (ImDrawIdx)(vtx_inner_idx + i);
-        _IdxWritePtr += 3;
+        IM_APPEND_TRI(vtx_inner_idx, vtx_inner_idx + i - 1, vtx_inner_idx + i);
     }
 
     const int idx_used = (int)(_IdxWritePtr - start_idx_ptr);
@@ -2305,7 +2329,6 @@ void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, 
         IM_APPEND_TRI(base_idx + 0, stem0_idx, base_idx + 1);
         IM_APPEND_TRI(base_idx + 2, stem1_idx, inner_idx);
         IM_APPEND_TRI(base_idx + 2, inner_idx, base_idx + 3);
-
 
         base_idx = stem0_idx - 1;
     }
