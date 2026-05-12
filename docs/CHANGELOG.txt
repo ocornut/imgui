@@ -36,17 +36,14 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.92.8 WIP (In Progress)
+ VERSION 1.92.8 (Released 2026-05-12)
 -----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.92.8
 
 Breaking Changes:
 
-- DrawList:
-  - Obsoleted `ImDrawCallback_ResetRenderState` in favor of using `ImGui::GetPlatformIO().DrawCallback_ResetRenderState`,
-    which is part of our new standard draw callbacks. (#9378)
-    Redirecting the earlier value into the later one when set, so both old and new code should work.
-- DrawList: swapped the last two arguments of AddRect(), AddPolyline(), PathStroke().
-  Recap:
+- DrawList: swapped the last two arguments of `AddRect()`, `AddPolyline()`, `PathStroke()`.
    - Before: `void ImDrawList::AddRect(ImVec2 p_min, ImVec2 p_max, ImU32 col, float rounding = 0.0f, ImDrawFlags flags = 0, float thickness = 1.0f);`
    - After:  `void ImDrawList::AddRect(ImVec2 p_min, ImVec2 p_max, ImU32 col, float rounding = 0.0f, float thickness = 1.0f, ImDrawFlags flags = 0);`
    - Before: `void ImDrawList::AddPolyline(const ImVec2* points, int num_points, ImU32 col, ImDrawFlags flags, float thickness);`
@@ -55,36 +52,40 @@ Breaking Changes:
    - After:  `void ImDrawList::PathStroke(ImU32 col, float thickness = 1.0f, ImDrawFlags flags = 0);`
   Added inline redirection functions when IMGUI_DISABLE_OBSOLETE_FUNCTIONS is off.
   Marked the old functions are =delete when IMGUI_DISABLE_OBSOLETE_FUNCTIONS is on, to allow for better type-checking.
-  This is not an easy change but it makes ImDrawList function signatures consistent.
-  As we are aiming to add flags and features to variety of ImDrawList functions, that consistency will become particularly important.
-  The new order is also more convenient as `flags` are less frequently used than `thickness` in real code.
   Effectively the typical call site is changing from:
    - Before: `window->DrawList->AddRect(p_min, p_max, color, rounding, ImDrawFlags_None, border_size);`
    - After:  `window->DrawList->AddRect(p_min, p_max, color, rounding, border_size);`
   Notes:
-   - As a general policy in Dear ImGui, all our flags default to 0 so ImDrawFlags_None was likely written 0 in some call sites.
    - Users of C++ and other languages with type-checking will be notified at compile-time of any mistakes.
    - Users of high-level bindings or languages with no type-checking will be notified at runtime via an assert for invalid flags value.
+     If you are a binding maintainer consider doing something to facilitate transition or error detection.
+   - This is perhaps the worst breaking change in our history :( but it makes ImDrawList function signatures consistent.
+     As we are aiming to add flags and features to variety of ImDrawList functions, that consistency becomes more important.
+     The new order is also more convenient as `flags` are less frequently used than `thickness` in real code.
+   - As a general policy in Dear ImGui, all our flags default to 0 so ImDrawFlags_None was likely written 0 in some call sites.
    - Consider adding `#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS` in your imconfig.h, even temporarily, to clean up legacy code.
+- DrawList: obsoleted `ImDrawCallback_ResetRenderState` in favor of using `ImGui::GetPlatformIO().DrawCallback_ResetRenderState`,
+    which is part of our new standard draw callbacks. (#9378)
+    Redirecting the earlier value into the later one when set, so both old and new code should work.
 - Backends:
   - Vulkan: redesigned to use separate ImageView + Sampler instead of Combined Image Sampler. (#914)
     This change allows us to facilitate changing samplers, in line with other backends. [@yaz0r, @ocornut]
     - When creating your own descriptor pool (instead of letting backend creates its own):
-      - Before: need at least IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE descriptors of type VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER.
-      - After:  need at least IMGUI_IMPL_VULKAN_MINIMUM_SAMPLED_IMAGE_POOL_SIZE descriptors of type VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE.
-                            + IMGUI_IMPL_VULKAN_MINIMUM_SAMPLER_POOL_SIZE       descriptors of type VK_DESCRIPTOR_TYPE_SAMPLER.
+      - Before: need at least `IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE` descriptors of type `VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER`.
+      - After:  need at least `IMGUI_IMPL_VULKAN_MINIMUM_SAMPLED_IMAGE_POOL_SIZE` descriptors of type `VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE`.
+                            + `IMGUI_IMPL_VULKAN_MINIMUM_SAMPLER_POOL_SIZE`       descriptors of type `VK_DESCRIPTOR_TYPE_SAMPLER`.
     - When registering custom textures: changed ImGui_ImplVulkan_AddTexture() signature to remove Sampler.
-      - Before: ImGui_ImplVulkan_AddTexture(VkSampler, VkImageView, VkImageLayout)
-      - After:  ImGui_ImplVulkan_AddTexture(VkImageView, VkImageLayout)
+      - Before: `ImGui_ImplVulkan_AddTexture(VkSampler, VkImageView, VkImageLayout)`
+      - After:  `ImGui_ImplVulkan_AddTexture(VkImageView, VkImageLayout)`
       - Kept inline redirection function that ignores the sampler (will obsolete).
-  - DirectX10, DirectX11, SDLGPU3, Vulkan: removed samplers from ImGui_ImplXXXX_RenderState.
+  - DirectX10, DirectX11, SDLGPU3, Vulkan: removed samplers from `ImGui_ImplXXXX_RenderState`.
     Prefer to use backend-agnostic DrawCallback_SetSamplerLinear which works everywhere! (#9378)
     If there is a legit need/request for them or any render state we can always add them back.
 
 Other Changes:
 
 - DrawList:
-  - Added room in ImGuiPlatformIO for standard backend-agnostic draw callbacks. Those callbacks
+  - Added room in `ImGuiPlatformIO` for standard backend-agnostic draw callbacks. Those callbacks
     are setup/provided by the backend and available in most of our standard backends.
     They allow backend-agnostic code from e.g. switching to a Nearest/Point sampler without
     messing with custom Renderer-specific callbacks.
@@ -94,13 +95,13 @@ Other Changes:
     Note that some backends might not support all callbacks.
     (#9378, #9371, #3590, #8926, #2973, #7485, #7468, #6969, #5118, #7616, #9173, #8322, #7230,
     #5999, #6452, #5156, #7342, #7592, #7511)
-  - Made AddCallback() user data default to Null for convenience.
-  - Added AddLineH(), AddLineV() helpers to draw horizontal and vertical lines. [@memononen]
+  - Made `AddCallback()` user data default to Null for convenience.
+  - Added `AddLineH()`, `AddLineV()` helpers to draw horizontal and vertical lines. [@memononen]
 - InputText:
   - InputTextMultiline: fixed an issue processing deactivation logic when an active
     multi-line edit is clipped due to being out of view.
   - Fixed a crash when toggling ReadOnly while active. (#9354)
-  - CharFilter callback event sets CursorPos/SelectionStart/SelectionEnd. (#816)
+  - `CharFilter` callback event sets CursorPos/SelectionStart/SelectionEnd. (#816)
 - Tables:
   - Fixed issues reporting ideal size to parent window/container: (#9352, #7651)
     - When both scrollbars are visible but only one of ScrollX/ScrollY was explicitly requested.
@@ -109,51 +110,72 @@ Other Changes:
   - Fixed a single-axis auto-resizing feedback loop issue with nested containers
     and varying scrollbar visibility. (#9352)
   - Detect and report error when calling End() instead of EndPopup() on a popup. (#9351)
-  - Child windows with only ImGuiChildFlags_AutoResizeY flag keep using the proportional
-    default ItemWidth. (#9355)
-- InputInt, InputFloat, InputScalar: reinstated ImGuiInputTextFlags_EnterReturnsTrue
-  support which was removed in 1.91.4. (#8665, #9299, #8065, #3946, #6284, #9117)
-  - Fixed the fact that it didn't return true when validating same value.
-  - Fixed losing value when tabbing out or losing focus.
-  - Made it that pressing +/- step buttons also return true, which is in line
-    with 1.91.4 behavior.
-  - In a majority of cases you should use IsItemDeactivatedAfterEdit() instead,
-    but it still has a few edge cases flaws (to be addressed soon).
-- InputInt, InputFloat, InputScalar: allow passing a format string that does not display
-  the scalar value. Parsing input with default format for the type. (#9385) [@FireFox2000000]
+  - Child windows with only `ImGuiChildFlags_AutoResizeY` flag keep using the proportional
+    default `ItemWidth`. (#9355)
+  - Using mouse wheel to scroll takes and keeps ownership of the corresponding keys
+    (e.g. `ImGuiKey_MouseWheelY`) while a wheeling window is locked. (#2604, #3795)
+- InputInt, InputFloat, InputScalar:
+  - Reinstated `ImGuiInputTextFlags_EnterReturnsTrue` support which was removed in 1.91.4.
+    (#8665, #9299, #8065, #3946, #6284, #9117)
+    - Fixed the fact that it didn't return true when validating same value.
+    - Fixed losing value when tabbing out or losing focus.
+    - Made it that pressing +/- step buttons also return true, which is in line
+      with 1.91.4 behavior.
+    - In a majority of cases you should use `IsItemDeactivatedAfterEdit()` instead,
+      but it still has a few edge cases flaws (to be addressed soon).
+  - Allow passing a format string that does not display the scalar value.
+    Parsing input with default format for the type. (#9385) [@FireFox2000000]
 - Multi-Select:
   - Fixed an issue using Multi-Select within a Table causing column width measurement to
     be invalid when trailing column contents is not submitted in the last row. (#9341, #8250)
   - Fixed an issue using Multi-Select within a Table with the right-most column visible,
     which could lead to an extra vertical offset in the Header row. (#8250)
-  - Box-Select: fixed an issue using ImGuiMultiSelectFlags_BoxSelect1d mode while scrolling.
+- Multi-Select + Box-Select:
+  - Fixed an issue using `ImGuiMultiSelectFlags_BoxSelect1d` mode while scrolling.
     Notably, using mouse wheel while holding a box-selection could lead items close to windows
     edges from not being correctly unselected. (#7994, #8250, #7821, #7850, #7970)
-  - Box-Select: improved dirty/unclip rectangle logic for ImGuiMultiSelectFlags_BoxSelect2d.
-  - Box-Select: fixed an issue using ImGuiMultiSelectFlags_BoxSelect2d mode, where
+  - Improved dirty/unclip rectangle logic for `ImGuiMultiSelectFlags_BoxSelect2d`.
+  - Fixed an issue using `ImGuiMultiSelectFlags_BoxSelect2d` mode, where
     items out of view wouldn't be properly selected while scrolling while mouse cursor
     is hovering outside of selection scope. (#7994, #1861, #6518)
-  - Box-Select: fixed an issue where items out of horizontal view would sometimes lead
+  - Fixed an issue where items out of horizontal view would sometimes lead
     to incorrect merging of sequential selection requests while also scrolling fast
     enough to overlap multiple rows during a frame. (#7994, #1861, #6518)
-  - Box-Select: fixed an issue using ImGuiMultiSelectFlags_BoxSelect2d mode in a Table
-    while relying on the TableNextColumn() return value to perform coarse clipping. (#7994)
-  - Box-Select: disabled merging consecutive selection requests as we have no reliable
-    way of detecting if user has submitted all consecutives items without clipping gaps,
-    and ImGuiSelectionUserData is technically opaque storage. (#7994, #1861)
+  - Fixed an issue using `ImGuiMultiSelectFlags_BoxSelect2d` mode in a Table
+    while relying on the `TableNextColumn()` return value to perform coarse clipping. (#7994)
+  - Disabled merging consecutive selection requests as we have no reliable
+    way of detecting if user has submitted all consecutive items without clipping gaps,
+    and `ImGuiSelectionUserData` is technically opaque storage. (#7994, #1861)
     (we will probably bring this back as a minor optimization if we have a way to for
-    user to tell us ImGuiSelectionUserData are indices)
-  - Box-Select: fixes for using accross nested child windows. (#8364)
+    user to tell us `ImGuiSelectionUserData` are indices)
+  - Fixes for using across nested child windows. (#8364)
   - Box-Select + Clipper: fixed an issue selecting items while scrolling while a clipper
     active. (#7994, #8250, #7821, #7850, #7970)
   - Box-Select + Tables: fixed an issue using box-selection in a tables with
     items straying out of columns boundaries. (#7994, #2221)
   - Box-Select + Tables: fixed an issue when calling `BeginMultiSelect()` in a table
     before layout has been locked (first row or headers row submitted). (#8250)
+- Menus:
+  - BeginMenu()/MenuItem(): fixed accidental triggering of child menu items when
+    opening a menu inside a small host window forcing the child menu window to be
+    repositioned under the mouse cursor. (#8233, #9394)
+    Done by reworking `BeginMenu()`/`MenuItem()`: they previously avoiding taking
+    ActiveID + key/click ownership (in order to allow releasing button on another item).
+    Now they take them and release them once the mouse is moved outside item boundaries.
+- Inputs:
+  - SetItemKeyOwner(): return true if ownership has been requested, which typically
+    needs to to checked for gating further tests. This is important as the function
+    may fail. (#456, #2637, #2620, #2891, #3370, #3724, #4828, #5108, #5242, #5641)
+  - SetItemKeyOwner(): does not set ownership is key is already taken. Effectively
+    this makes using `SetItemKeyOwner(ImGuiKey_MouseWheelY)` over an item work as
+    expected while not having item react if a scroll wheel is actively in progress.
+    May be subject to further redesign, e.g. conditional flags. Feedback welcome!
 - Style:
+  - Checkbox: added `ImGuiCol_CheckboxSelectedBg` to change or accentuate the
+    background color of checked/mixed checkboxes. (#9392)
+  - Added `ImGuiStyleVar_DragDropTargetRounding`. (#9056)
   - Fixed vertical scrollbar top coordinates when using thick borders on windows
     with no title bar and no menu bar. (#9366)
-  - Added ImGuiStyleVar_DragDropTargetRounding. (#9056)
 - Fonts:
   - imgui_freetype: add FreeType headers & compiled version in 'About Dear ImGui' details.
   - Assert when using MergeMode with an explicit size over a target font with an implicit
@@ -164,8 +186,12 @@ Other Changes:
   - Tweaked assert triggering when first item height measurement fails, and made it
     a better recoverable error. (#9350)
 - Misc:
-  - Minor optimization: reduce redudant label scanning in common widgets.
-  - Added missing Test Engine hooks for PlotXXX(), VSliderXXX(), TableHeader().
+  - Minor optimization: reduce redundant label scanning in common widgets.
+  - Added missing Test Engine hooks for `PlotLines()`, `PlotHistogram()`, `VSliderXXX()`
+    and `TableHeader()` functions.
+- Demo:
+  - Added simple demo for a scrollable/zoomable image viewer with a grid.
+    Available in `Examples->Image Viewer` and `Widgets->Images`.
 - Backends:
   - Added support for new standardized draw callbacks in most backends: (#9378)
     - Allegro5:     Reset     n/a               n/a
@@ -191,20 +217,20 @@ Other Changes:
   - SDL2: made `ImGui_ImplSDL2_GetContentScaleForWindow()`/`ImGui_ImplSDL2_GetContentScaleForDisplay()`
     helpers return a minimum of 1.0f, as some Linux setup seems to report <1.0f value
     and this breaks scaling border size. (#9369)
-  - WebGPU: always use SPIR-V shader on WGVK, as it cannot be detected at runtime. (#9316, #9246, #9257)
+  - WebGPU: rework choice/detection of using WGSL/SPIR-V shader on WGVK. (#9316, #9246, #9257, #9387)
 - Examples:
   - Update VS toolset in all .vcxproj from VS2015 (v140) to VS2017 (v141). The later is the
     first that supports vcpkg. Onward we will likely stop testing building the library with VS2015.
   - GLFW+Vulkan, SDL2+Vulkan, SDL3+Vulkan, Win32+Vulkan: reworked to create a descriptor pool with:
-    - IMGUI_IMPL_VULKAN_MINIMUM_SAMPLED_IMAGE_POOL_SIZE descriptors of type VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE.
-    - IMGUI_IMPL_VULKAN_MINIMUM_SAMPLER_POOL_SIZE       descriptors of type VK_DESCRIPTOR_TYPE_SAMPLER.
+    - `IMGUI_IMPL_VULKAN_MINIMUM_SAMPLED_IMAGE_POOL_SIZE` descriptors of type `VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE`.
+    - `IMGUI_IMPL_VULKAN_MINIMUM_SAMPLER_POOL_SIZE`       descriptors of type `VK_DESCRIPTOR_TYPE_SAMPLER`.
 
 Docking+Viewports Branch:
 
 - Docking:
   - Toggling tab bar visibility marks saved settings as dirty. (#9380)
 - Viewports:
-  - Added opaque `void* PlatformIconData` storage in viewport and ImGuiWindowClass
+  - Added opaque `void* PlatformIconData` storage in viewport and `ImGuiWindowClass`
     to allow passing icon information to a custom backend or hook. (#2715)
 
 

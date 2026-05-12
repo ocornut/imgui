@@ -1,4 +1,4 @@
-// dear imgui, v1.92.8 WIP
+// dear imgui, v1.92.8
 // (drawing and font code)
 
 /*
@@ -208,6 +208,7 @@ void ImGui::StyleColorsDark(ImGuiStyle* dst)
     colors[ImGuiCol_ScrollbarGrabHovered]   = ImVec4(0.41f, 0.41f, 0.41f, 1.00f);
     colors[ImGuiCol_ScrollbarGrabActive]    = ImVec4(0.51f, 0.51f, 0.51f, 1.00f);
     colors[ImGuiCol_CheckMark]              = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+    colors[ImGuiCol_CheckboxSelectedBg]     = ImLerp(colors[ImGuiCol_FrameBg], colors[ImGuiCol_FrameBgHovered], 0.65f);
     colors[ImGuiCol_SliderGrab]             = ImVec4(0.24f, 0.52f, 0.88f, 1.00f);
     colors[ImGuiCol_SliderGrabActive]       = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
     colors[ImGuiCol_Button]                 = ImVec4(0.26f, 0.59f, 0.98f, 0.40f);
@@ -277,6 +278,7 @@ void ImGui::StyleColorsClassic(ImGuiStyle* dst)
     colors[ImGuiCol_ScrollbarGrabHovered]   = ImVec4(0.40f, 0.40f, 0.80f, 0.40f);
     colors[ImGuiCol_ScrollbarGrabActive]    = ImVec4(0.41f, 0.39f, 0.80f, 0.60f);
     colors[ImGuiCol_CheckMark]              = ImVec4(0.90f, 0.90f, 0.90f, 0.50f);
+    colors[ImGuiCol_CheckboxSelectedBg]     = ImLerp(colors[ImGuiCol_FrameBg], colors[ImGuiCol_FrameBgActive], 0.65f);
     colors[ImGuiCol_SliderGrab]             = ImVec4(1.00f, 1.00f, 1.00f, 0.30f);
     colors[ImGuiCol_SliderGrabActive]       = ImVec4(0.41f, 0.39f, 0.80f, 0.60f);
     colors[ImGuiCol_Button]                 = ImVec4(0.35f, 0.40f, 0.61f, 0.62f);
@@ -347,6 +349,7 @@ void ImGui::StyleColorsLight(ImGuiStyle* dst)
     colors[ImGuiCol_ScrollbarGrabHovered]   = ImVec4(0.49f, 0.49f, 0.49f, 0.80f);
     colors[ImGuiCol_ScrollbarGrabActive]    = ImVec4(0.49f, 0.49f, 0.49f, 1.00f);
     colors[ImGuiCol_CheckMark]              = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+    colors[ImGuiCol_CheckboxSelectedBg]     = ImVec4(0.95f, 0.97f, 1.00f, 1.00f);
     colors[ImGuiCol_SliderGrab]             = ImVec4(0.26f, 0.59f, 0.98f, 0.78f);
     colors[ImGuiCol_SliderGrabActive]       = ImVec4(0.46f, 0.54f, 0.80f, 0.60f);
     colors[ImGuiCol_Button]                 = ImVec4(0.26f, 0.59f, 0.98f, 0.40f);
@@ -2522,10 +2525,11 @@ void ImTextureData::DestroyPixels()
 // - Default texture data encoded in ASCII
 // - ImFontAtlas()
 // - ImFontAtlas::Clear()
-// - ImFontAtlas::CompactCache()
+// - ImFontAtlas::ClearFonts()
 // - ImFontAtlas::ClearInputData()
 // - ImFontAtlas::ClearTexData()
-// - ImFontAtlas::ClearFonts()
+// - ImFontAtlas::CompactCache()
+// - ImFontAtlas::SetFontLoader()
 //-----------------------------------------------------------------------------
 // - ImFontAtlasUpdateNewFrame()
 // - ImFontAtlasTextureBlockConvert()
@@ -2686,7 +2690,9 @@ ImFontAtlas::~ImFontAtlas()
     TexData = NULL;
 }
 
-// If you call this mid-frame, you would need to add new font and bind them!
+// You probably should not call this directly. It is not well specified.
+// If you want to replace all your fonts mid-frame, most likely you should instead call ClearFonts() then load the new fonts.
+// Calling this mid-frame will discard the CPU-side copy of the texture data which is generally unreliable as you may have textures queued for creation or updates.
 void ImFontAtlas::Clear()
 {
     bool backup_renderer_has_textures = RendererHasTextures;
@@ -2696,20 +2702,27 @@ void ImFontAtlas::Clear()
     RendererHasTextures = backup_renderer_has_textures;
 }
 
-void ImFontAtlas::CompactCache()
+void ImFontAtlas::ClearFonts()
 {
-    ImFontAtlasTextureCompact(this);
-}
-
-void ImFontAtlas::SetFontLoader(const ImFontLoader* font_loader)
-{
-    ImFontAtlasBuildSetupFontLoader(this, font_loader);
+    // FIXME-NEWATLAS: Illegal to remove currently bound font.
+    IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas!");
+    for (ImFont* font : Fonts)
+        ImFontAtlasBuildNotifySetFont(this, font, NULL);
+    ImFontAtlasBuildDestroy(this);
+    ClearInputData();
+    Fonts.clear_delete();
+    TexIsBuilt = false;
+    for (ImDrawListSharedData* shared_data : DrawListSharedDatas)
+        if (shared_data->FontAtlas == this)
+        {
+            shared_data->Font = NULL;
+            shared_data->FontScale = shared_data->FontSize = 0.0f;
+        }
 }
 
 void ImFontAtlas::ClearInputData()
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas!");
-
     for (ImFont* font : Fonts)
         ImFontAtlasFontDestroyOutput(this, font);
     for (ImFontConfig& font_cfg : Sources)
@@ -2733,22 +2746,14 @@ void ImFontAtlas::ClearTexData()
     //Locked = true; // Hoped to be able to lock this down but some reload patterns may not be happy with it.
 }
 
-void ImFontAtlas::ClearFonts()
+void ImFontAtlas::CompactCache()
 {
-    // FIXME-NEWATLAS: Illegal to remove currently bound font.
-    IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas!");
-    for (ImFont* font : Fonts)
-        ImFontAtlasBuildNotifySetFont(this, font, NULL);
-    ImFontAtlasBuildDestroy(this);
-    ClearInputData();
-    Fonts.clear_delete();
-    TexIsBuilt = false;
-    for (ImDrawListSharedData* shared_data : DrawListSharedDatas)
-        if (shared_data->FontAtlas == this)
-        {
-            shared_data->Font = NULL;
-            shared_data->FontScale = shared_data->FontSize = 0.0f;
-        }
+    ImFontAtlasTextureCompact(this);
+}
+
+void ImFontAtlas::SetFontLoader(const ImFontLoader* font_loader)
+{
+    ImFontAtlasBuildSetupFontLoader(this, font_loader);
 }
 
 static void ImFontAtlasBuildUpdateRendererHasTexturesFromContext(ImFontAtlas* atlas)
