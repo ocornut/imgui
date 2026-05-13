@@ -7564,10 +7564,7 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
         if (is_window_selected)
         {
             const ImU32 border_selected_col = GetColorU32(ImGuiCol_WindowBorderSelected);
-            RenderWindowOuterSingleBorder(window, 0, border_selected_col, border_size);
-            RenderWindowOuterSingleBorder(window, 1, border_selected_col, border_size);
-            RenderWindowOuterSingleBorder(window, 2, border_selected_col, border_size);
-            RenderWindowOuterSingleBorder(window, 3, border_selected_col, border_size);
+            window->DrawList->AddRect(window->Pos, window->Pos + window->Size, border_selected_col, window_rounding, 0, border_size);
         }
     }
     window->DC.NavLayerCurrent = ImGuiNavLayer_Main;
