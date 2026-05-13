@@ -3262,7 +3262,7 @@ enum ImDrawFlags_
     ImDrawFlags_RoundCornersMask_           = ImDrawFlags_RoundCornersAll | ImDrawFlags_RoundCornersNone,
 
     ImDrawFlags_Closed                      = 1 << 9, // PathStroke(), AddPolyline(): specify that shape should be closed.
-    ImDrawFlags_InvalidMask_                = (ImDrawFlags)0x8000000F,
+    ImDrawFlags_InvalidMask_                = (ImDrawFlags)-0x7FFFFFF1,
 };
 
 // Flags for ImDrawList instance. Those are set automatically by ImGui:: functions from ImGuiIO settings, and generally not manipulated directly.
