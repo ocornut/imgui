@@ -7552,7 +7552,10 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
         if (!(window->Flags & (ImGuiWindowFlags_ChildMenu | ImGuiWindowFlags_Popup)))
         {
             // Regular window
-            is_window_selected &= g.WindowsFocusOrder.back() == window;
+            if (!(window->Flags & (ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_MenuBar)))
+                is_window_selected &= g.WindowsFocusOrder.back() == window;
+            else
+                is_window_selected = false;
         }
         else
         {
