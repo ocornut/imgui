@@ -36,6 +36,24 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
+ VERSION 1.92.9 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Breaking Changes:
+
+Other Changes:
+
+- Windows:
+  - Clicking on a window's empty-space to move/focus a window checks
+    for lack of mouse button ownership. This gives an additional opportunity
+    for user code to bypass it without using a clickable item. (#9382)
+  - Clicking on a window's empty-space to move/focus a window checks
+    for lack of queued focus request. (#9382)
+
+Docking+Viewports Branch:
+
+
+-----------------------------------------------------------------------
  VERSION 1.92.8 (Released 2026-05-12)
 -----------------------------------------------------------------------
 
@@ -64,6 +82,7 @@ Breaking Changes:
      The new order is also more convenient as `flags` are less frequently used than `thickness` in real code.
    - As a general policy in Dear ImGui, all our flags default to 0 so ImDrawFlags_None was likely written 0 in some call sites.
    - Consider adding `#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS` in your imconfig.h, even temporarily, to clean up legacy code.
+   - Reminder: you do NOT need to specify `ImDrawFlags_RoundCornersAll` for rounding, it is already the default!
 - DrawList: obsoleted `ImDrawCallback_ResetRenderState` in favor of using `ImGui::GetPlatformIO().DrawCallback_ResetRenderState`,
     which is part of our new standard draw callbacks. (#9378)
     Redirecting the earlier value into the later one when set, so both old and new code should work.

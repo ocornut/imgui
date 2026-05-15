@@ -1,4 +1,4 @@
-// dear imgui, v1.92.8
+// dear imgui, v1.92.9 WIP
 // (drawing and font code)
 
 /*
@@ -829,7 +829,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
     const ImVec2 opaque_uv = _Data->TexUvWhitePixel;
     const int count = closed ? points_count : points_count - 1; // The number of line segments we need to draw
     const bool thick_line = (thickness > _FringeScale);
-    IM_ASSERT((flags & ImDrawFlags_InvalidMask_) == 0 && "Incorrect parameter. Did you swapped 'thickness' and 'flags'?");
+    IM_ASSERT_USER_ERROR_RET((flags & ImDrawFlags_InvalidMask_) == 0, "Incorrect parameter. Did you swap 'thickness' and 'flags'?");
 
     if (Flags & ImDrawListFlags_AntiAliasedLines)
     {
@@ -1516,7 +1516,7 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
     //   - Hard coded support for values 0x01 to 0x0F (matching 15 out of 16 old flags combinations) --> see FixRectCornerFlags() in <1.90 code.
     //   - Hard coded 0x00 with 'float rounding > 0.0f' --> replace with ImDrawFlags_RoundCornersNone or use 'float rounding = 0.0f'.
     //   See "API BREAKING CHANGES" section for 1.82 and 1.90.
-    IM_ASSERT((flags & ImDrawFlags_InvalidMask_) == 0 && "Incorrect parameter. Did you swapped 'thickness' and 'flags'?"); // Or misuse of legacy hard-coded ImDrawCornerFlags values
+    IM_ASSERT_USER_ERROR_RET((flags & ImDrawFlags_InvalidMask_) == 0, "Incorrect parameter. Did you swap 'thickness' and 'flags'?"); // Or misuse of legacy hard-coded ImDrawCornerFlags values
 
     if ((col & IM_COL32_A_MASK) == 0)
         return;
