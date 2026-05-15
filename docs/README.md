@@ -39,7 +39,7 @@ Dear ImGui is particularly suited to integration in game engines (for tooling), 
 
 ### Usage
 
-**The core of Dear ImGui is self-contained within a few platform-agnostic files** which you can easily compile in your application/engine. They are all the files in the root folder of the repository (`imgui*.cpp`, `imgui*.h`). **No specific build process is required**: you can add all files into your existing project.
+**The core of Dear ImGui is self-contained within a few platform-agnostic files** which you can easily compile in your application/engine. They are all the files in the root folder of the repository (`imgui*.cpp`, `imgui*.h`). **No specific build process is required**: you can add all files into your existing project. Dear ImGui is provided as a C++ module for users of C++20 and above, in file `imgui.cppm` as module `ImGui`.
 
 **Backends for a variety of graphics API and rendering platforms** are provided in the [backends/](https://github.com/ocornut/imgui/tree/master/backends) folder, along with example applications in the [examples/](https://github.com/ocornut/imgui/tree/master/examples) folder. You may also create your own backend. Anywhere where you can render textured triangles, you can render Dear ImGui.
 
