@@ -41,21 +41,23 @@ abstract class FetchVkValidationLayersTask : DefaultTask() {
             return
         }
 
-        val zipUrl =
-            "https://github.com/KhronosGroup/Vulkan-ValidationLayers/releases/download/$tag/android-binaries-$version.zip"
         val zipFile = cachedZip.get().asFile
+        if (!zipFile.exists()) {
+            val zipUrl =
+                "https://github.com/KhronosGroup/Vulkan-ValidationLayers/releases/download/$tag/android-binaries-$version.zip"
 
-        zipFile.parentFile.mkdirs()
-        println("Downloading Vulkan validation layers...")
+            zipFile.parentFile.mkdirs()
+            println("Downloading Vulkan validation layers...")
 
-        URI(zipUrl)
-            .toURL()
-            .openStream()
-            .use { input ->
-                zipFile.outputStream().use { output ->
-                    input.copyTo(output)
+            URI(zipUrl)
+                .toURL()
+                .openStream()
+                .use { input ->
+                    zipFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
                 }
-            }
+        }
 
         val outDir = outputDir.get().asFile
 
