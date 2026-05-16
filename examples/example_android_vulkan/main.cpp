@@ -1,4 +1,4 @@
-// dear imgui: standalone example application for Android + OpenGL ES 3
+// dear imgui: standalone example application for Android + Vulkan
 
 // Learn about Dear ImGui:
 // - FAQ                  https://dearimgui.com/faq
@@ -25,7 +25,7 @@
 
 #define CALL_VK(func)                                                 \
   if (VK_SUCCESS != (func)) {                                         \
-    __android_log_print(ANDROID_LOG_ERROR, "HelloVulkan",             \
+    __android_log_print(ANDROID_LOG_ERROR, "ImGuiVulkan",             \
                         "Vulkan error. File[%s], line[%d]", __FILE__, \
                         __LINE__);                                    \
     assert(false);                                                    \
@@ -35,8 +35,6 @@
 static void Init(struct android_app *app);
 
 static void Shutdown();
-
-static void MainLoopStep();
 
 static int ShowSoftKeyboardInput();
 
