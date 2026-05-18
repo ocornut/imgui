@@ -1735,7 +1735,7 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
         return;
     }
 
-    const bool is_truncated = _FringeScaleIsInteger&& ImIsTruncated4(p_min.x, p_min.y, p_max.x, p_min.y) && ImIsTruncated4(rounding, thickness, 0.0f, 0.0f);
+    const bool is_truncated = _FringeScaleIsInteger && ImIsTruncated4(p_min.x, p_min.y, p_max.x, p_max.y) && ImIsTruncated4(rounding, thickness, 0.0f, 0.0f);
     ImDrawFlags stroke_pos = (flags & ImDrawFlags_StrokeMask_);
     if ((stroke_pos == ImDrawFlags_StrokeInside || stroke_pos == ImDrawFlags_StrokeOutside || stroke_pos == ImDrawFlags_StrokeCenterPixelAligned) && is_truncated)
     {
@@ -1818,7 +1818,7 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
     const ImVec2 offset(thickness * 0.5f, thickness * 0.5f);
     if (stroke_pos == ImDrawFlags_StrokeInside)
     {
-        rounding -= (rounding != 0.f) ? thickness * 0.5f : 0.f;
+        rounding -= (rounding != 0.0f) ? thickness * 0.5f : 0.0f;
         PathRect(p_min + offset, p_max - offset, rounding, flags);
     }
     else if (stroke_pos == ImDrawFlags_StrokeCenter)
@@ -1829,12 +1829,12 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
     {
         // PathRect() centers the stroke, just calculate the fractional offset.
         const float fract = (thickness * 0.5f) - IM_TRUNC(thickness * 0.5f / _FringeScale) * _FringeScale;
-        rounding += (rounding != 0.f) ? fract : 0.f;
+        rounding += (rounding != 0.0f) ? fract : 0.0f;
         PathRect(ImVec2(p_min.x + fract, p_min.y + fract), ImVec2(p_max.x - fract, p_max.y - fract), rounding, flags);
     }
     else if (stroke_pos == ImDrawFlags_StrokeOutside)
     {
-        rounding += (rounding != 0.f) ? thickness * 0.5f : 0.f;
+        rounding += (rounding != 0.0f) ? thickness * 0.5f : 0.0f;
         PathRect(p_min - offset, p_max + offset, rounding, flags);
     }
     else if (stroke_pos == ImDrawFlags_StrokeLegacy)
@@ -1901,7 +1901,7 @@ void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
-    if (ImIsTruncated4(p_min.x, p_min.y, p_max.x, p_min.y) && ImIsTruncated(rounding))
+    if (ImIsTruncated4(p_min.x, p_min.y, p_max.x, p_max.y) && ImIsTruncated(rounding))
     {
         if ((flags & ImDrawFlags_RoundCornersMask_) == 0)
             flags |= ImDrawFlags_RoundCornersAll;
