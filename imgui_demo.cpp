@@ -10418,7 +10418,6 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             static bool curve_segments_override = false;
             static int curve_segments_override_v = 8;
             static ImVec4 colf = ImVec4(1.0f, 1.0f, 0.4f, 1.0f);
-            static bool square_caps = false;
             ImGui::DragFloat("Size", &sz, 0.2f, 0.2f, 100.0f, "%.0f");
             ImGui::DragFloat("Thickness", &thickness, 0.1f, 0.0f, 30.0f, "%.02f");
             ImGui::SliderInt("N-gon sides", &ngon_sides, 3, 12);
@@ -10429,7 +10428,6 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
             curve_segments_override |= ImGui::SliderInt("Curves segments override", &curve_segments_override_v, 3, 40);
             ImGui::ColorEdit4("Color", &colf.x);
-            ImGui::Checkbox("Square caps", &square_caps);
 
             static ImDrawFlags flags = ImDrawFlags_None;
             ImGui::AlignTextToFramePadding();
@@ -10440,12 +10438,13 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             ImGui::SameLine(); ImGui::RadioButton("CenterPixelAligned", &flags, ImDrawFlags_StrokeCenterPixelAligned);
             ImGui::SameLine(); ImGui::RadioButton("Outside", &flags, ImDrawFlags_StrokeOutside);
             ImGui::SameLine(); ImGui::RadioButton("Legacy", &flags, ImDrawFlags_StrokeLegacy);
+            ImGui::CheckboxFlags("MiterOnly", &flags, ImDrawFlags_MiterOnly);
+            ImGui::SameLine(); ImGui::CheckboxFlags("SquareCap", &flags, ImDrawFlags_SquareCap);
 
             const ImVec2 p = ImGui::GetCursorScreenPos();
             const ImU32 col = ImColor(colf);
             const float spacing = 10.0f;
             const ImDrawFlags corners_tl_br = ImDrawFlags_RoundCornersTopLeft | ImDrawFlags_RoundCornersBottomRight;
-			const ImDrawFlags cap_flags = square_caps ? ImDrawFlags_SquareCap : ImDrawFlags_None;
             const float rounding = sz / 5.0f;
             const int circle_segments = circle_segments_override ? circle_segments_override_v : 0;
             const int curve_segments = curve_segments_override ? curve_segments_override_v : 0;
@@ -10464,8 +10463,8 @@ static void ShowExampleAppCustomRendering(bool* p_open)
                 draw_list->AddRect(ImVec2(x, y), ImVec2(x + sz, y + sz), col, 0.0f, th, flags);                            x += sz + spacing;  // Square
                 draw_list->AddRect(ImVec2(x, y), ImVec2(x + sz, y + sz), col, rounding, th, flags);                        x += sz + spacing;  // Square with all rounded corners
                 draw_list->AddRect(ImVec2(x, y), ImVec2(x + sz, y + sz), col, rounding, th, flags | corners_tl_br);        x += sz + spacing;  // Square with two rounded corners
-                draw_list->AddTriangle(ImVec2(x+sz*0.5f,y), ImVec2(x+sz, y+sz-0.5f), ImVec2(x, y+sz-0.5f), col, th/*, flags*/);x += sz + spacing;  // Triangle
-                //draw_list->AddTriangle(ImVec2(x+sz*0.2f,y), ImVec2(x, y+sz-0.5f), ImVec2(x+sz*0.4f, y+sz-0.5f), col, th);x+= sz*0.4f + spacing; // Thin triangle
+                draw_list->AddTriangle(ImVec2(x+sz*0.5f,y), ImVec2(x+sz, y+sz-0.5f), ImVec2(x, y+sz-0.5f), col, th, flags);x += sz + spacing;  // Triangle
+                //draw_list->AddTriangle(ImVec2(x+sz*0.2f,y), ImVec2(x, y+sz-0.5f), ImVec2(x+sz*0.4f, y+sz-0.5f), col, th, flags); x+= sz*0.4f + spacing; // Thin triangle
                 PathConcaveShape(draw_list, x, y, sz); draw_list->PathStroke(col, th, flags | ImDrawFlags_Closed);          x += sz + spacing;  // Concave Shape
                 //draw_list->AddPolyline(concave_shape, IM_COUNTOF(concave_shape), col, ImDrawFlags_Closed, th);
                 draw_list->AddLineH(x, x + sz, y, col, th, flags);                                                         x += sz + spacing;  // Horizontal line (note: drawing a filled rectangle will be faster!)
@@ -10473,19 +10472,29 @@ static void ShowExampleAppCustomRendering(bool* p_open)
                 draw_list->AddLine(ImVec2(x, y), ImVec2(x + sz, y), col, th, flags);                                       x += sz + spacing;
                 draw_list->AddLine(ImVec2(x, y + sz), ImVec2(x, y), col, th, flags);                                       x += spacing;
 
-                draw_list->AddLine(ImVec2(x, y), ImVec2(x + sz, y + sz), col, th, flags | cap_flags);                      x += sz + spacing;  // Diagonal line
+                draw_list->AddLine(ImVec2(x, y), ImVec2(x + sz, y + sz), col, th, flags);                                  x += sz + spacing;  // Diagonal line
+
+                // Rotating square made of lines
+                float side_step = 3.141592f * 0.5f;
+                for (int side = 0; side < 4; side++)
+                {
+                    float t = (float)ImGui::GetTime() * 0.3f + side * side_step;
+                    ImVec2 center(x + sz * 0.5f, y + sz * 0.5f);
+                    draw_list->AddLine({ center.x + cosf(t) * sz * 0.5f, center.y + sinf(t) * sz * 0.5f }, { center.x + cosf(t + side_step) * sz * 0.5f, center.y + sinf(t + side_step) * sz * 0.5f }, col, th, flags);
+                }
+                x += sz + spacing;
 
                 // Path
-                draw_list->PathArcTo(ImVec2(x + sz*0.5f, y + sz*0.5f), sz*0.5f, 3.141592f, 3.141592f * -0.5f);
-                draw_list->PathStroke(col, th, flags | cap_flags);
+                draw_list->PathArcTo(ImVec2(x + sz*0.5f, y + sz*0.5f), sz*0.5f, 3.141592f * -0.5f, 3.141592f);
+                draw_list->PathStroke(col, th, flags);
                 x += sz + spacing;
 
                 // Quadratic Bezier Curve (3 control points)
-                draw_list->AddBezierQuadratic(ImVec2(x + cp3[0].x, y + cp3[0].y), ImVec2(x + cp3[1].x, y + cp3[1].y), ImVec2(x + cp3[2].x, y + cp3[2].y), col, th, curve_segments, flags | cap_flags);
+                draw_list->AddBezierQuadratic(ImVec2(x + cp3[0].x, y + cp3[0].y), ImVec2(x + cp3[1].x, y + cp3[1].y), ImVec2(x + cp3[2].x, y + cp3[2].y), col, th, curve_segments, flags);
                 x += sz + spacing;
 
                 // Cubic Bezier Curve (4 control points)
-                draw_list->AddBezierCubic(ImVec2(x + cp4[0].x, y + cp4[0].y), ImVec2(x + cp4[1].x, y + cp4[1].y), ImVec2(x + cp4[2].x, y + cp4[2].y), ImVec2(x + cp4[3].x, y + cp4[3].y), col, th, curve_segments, flags | cap_flags);
+                draw_list->AddBezierCubic(ImVec2(x + cp4[0].x, y + cp4[0].y), ImVec2(x + cp4[1].x, y + cp4[1].y), ImVec2(x + cp4[2].x, y + cp4[2].y), ImVec2(x + cp4[3].x, y + cp4[3].y), col, th, curve_segments, flags);
 
                 x = p.x + 4;
                 y += sz + spacing;

@@ -825,6 +825,7 @@ void ImDrawList::PrimQuadUV(const ImVec2& a, const ImVec2& b, const ImVec2& c, c
 #define IM_FIXNORMAL2F_MAX_INVLEN2          100.0f // 500.0f (see #4053, #3366)
 #define IM_FIXNORMAL2F(VX,VY)               { float d2 = VX*VX + VY*VY; if (d2 > 0.000001f) { float inv_len2 = 1.0f / d2; if (inv_len2 > IM_FIXNORMAL2F_MAX_INVLEN2) inv_len2 = IM_FIXNORMAL2F_MAX_INVLEN2; VX *= inv_len2; VY *= inv_len2; } } (void)0
 
+// We avoid using the ImVec2 math operators here to reduce cost to a minimum for debug/non-inlined builds.
 // We avoid using the 'do { } while (false)` idiom in those macros as they typically have overhead in debug builds.
 #define IM_APPEND_VTX(PX, PY, UV, COL)   \
     {                                       \
@@ -851,7 +852,7 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
 {
     const ImU32 col_trans = col & ~IM_COL32_A_MASK;
 
-    const ImDrawFlags stroke_pos = (flags & ImDrawFlags_StrokeMask_);
+    const ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeCenter);
     const bool closed = (flags & ImDrawFlags_Closed) != 0;
     const bool miters_only = (flags & ImDrawFlags_MiterOnly) != 0;
     const float miter_distance_limit_sqr = IM_POLYLINE_MITER_LIMIT * IM_POLYLINE_MITER_LIMIT;
@@ -994,7 +995,7 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
 
             // miter offset formula is derived here: https://www.angusj.com/clipper2/Docs/Trigonometry.htm
             const float cos_theta_clamped = ImMax(IM_POLYLINE_MITER_ANGLE_LIMIT, cos_theta); // Avoid div by 0.
-            const float miter_scale_factor = ImMin(1000.f, 1.f / (1.0f + cos_theta_clamped));
+            const float miter_scale_factor = ImMin(1000.0f, 1.0f / (1.0f + cos_theta_clamped));
             float miter_offset_x = (n0.x + n1.x) * miter_scale_factor;
             float miter_offset_y = (n0.y + n1.y) * miter_scale_factor;
 
@@ -1123,6 +1124,14 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
     PrimUnreserve(idx_count - idx_used, vtx_count - vtx_used);
 }
 
+static ImU32 ImAlphaMultiply(ImU32 col, float alpha_mul)
+{
+    IM_ASSERT_PARANOID(a >= 0.0f && a < 1.0f); // We don't clamp!
+    ImU32 a = (col & IM_COL32_A_MASK) >> IM_COL32_A_SHIFT;
+    a = (ImU32)(a * alpha_mul); // We don't need to clamp 0..255 because alpha is in 0..1 range.
+    return (col & ~IM_COL32_A_MASK) | (a << IM_COL32_A_SHIFT);
+}
+
 void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32 col, float thickness, ImDrawFlags flags)
 {
     if (points_count < 2 || (col & IM_COL32_A_MASK) == 0)
@@ -1133,8 +1142,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         return;
     if (screen_thickness < 1.0f)
     {
-        const float alpha = screen_thickness;
-        col = ImGui::GetColorU32(col, alpha);
+        col = ImAlphaMultiply(col, screen_thickness);
         screen_thickness = 1.0f;
         thickness = _FringeScale;
     }
@@ -1512,7 +1520,7 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
             const float cos_theta = n0.x * n1.x + n0.y * n1.y;
             // miter offset formula is derived here: https://www.angusj.com/clipper2/Docs/Trigonometry.htm
             const float cos_theta_clamped = ImMax(IM_POLYLINE_MITER_ANGLE_LIMIT, cos_theta); // Avoid div by 0.
-            const float miter_scale_factor = ImMin(1000.f, 1.f / (1.0f + cos_theta_clamped));
+            const float miter_scale_factor = ImMin(1000.0f, 1.0f / (1.0f + cos_theta_clamped));
             const float miter_offset_x = (n0.x + n1.x) * miter_scale_factor * half_aa;
             const float miter_offset_y = (n0.y + n1.y) * miter_scale_factor * half_aa;
 
@@ -1548,7 +1556,7 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
             const float cos_theta = n0.x * n1.x + n0.y * n1.y;
             // miter offset formula is derived here: https://www.angusj.com/clipper2/Docs/Trigonometry.htm
             const float cos_theta_clamped = ImMax(IM_POLYLINE_MITER_ANGLE_LIMIT, cos_theta); // Avoid div by 0.
-            const float miter_scale_factor = ImMin(1000.f, 1.f / (1.0f + cos_theta_clamped));
+            const float miter_scale_factor = ImMin(1000.0f, 1.0f / (1.0f + cos_theta_clamped));
             float miter_offset_x = (n0.x + n1.x) * miter_scale_factor;
             float miter_offset_y = (n0.y + n1.y) * miter_scale_factor;
 
@@ -2091,6 +2099,7 @@ void ImDrawList::AddLineH(float min_x, float max_x, float y, ImU32 col, float th
     }
     else
     {
+        // FIXME-POLYLINE: Implement square caps
         AddRectFilled(ImVec2(min_x, y), ImVec2(max_x, y + thickness), col);
     }
 }
@@ -2122,6 +2131,7 @@ void ImDrawList::AddLineV(float x, float min_y, float max_y, ImU32 col, float th
     }
     else
     {
+        // FIXME-POLYLINE: Implement square caps
         AddRectFilled(ImVec2(x, min_y), ImVec2(x + thickness, max_y), col);
     }
 }
@@ -2452,6 +2462,7 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
 
     PathStroke(col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | ImDrawFlags_StrokeInside);
 #else
+    // textured_round_corners
     const bool is_truncated = _FringeScaleIsInteger && ImIsTruncated4(p_min.x, p_min.y, p_max.x, p_max.y) && ImIsTruncated4(rounding, thickness, 0.0f, 0.0f);
     if ((stroke_pos == ImDrawFlags_StrokeInside || stroke_pos == ImDrawFlags_StrokeOutside || stroke_pos == ImDrawFlags_StrokeCenterPixelAligned) && is_truncated)
     {
@@ -2770,8 +2781,7 @@ void ImDrawList::AddCircleFilled(const ImVec2& center, float radius, ImU32 col, 
         return;
     if (screen_diameter < 1.0f)
     {
-        const float alpha = screen_diameter;
-        col = ImGui::GetColorU32(col, alpha);
+        col = ImAlphaMultiply(col, screen_diameter);
         radius = _FringeScale * 0.5f;
     }
 
@@ -2817,7 +2827,6 @@ void ImDrawList::AddNgon(const ImVec2& center, float radius, ImU32 col, int num_
         outer_radius = radius;
     else if (stroke_pos == ImDrawFlags_StrokeOutside)
         outer_radius = radius + miter_thickness;
-
     if (outer_radius < (miter_thickness + _FringeScale))
     {
         // The polygon has collapsed into a filled polygon.
@@ -2842,8 +2851,7 @@ void ImDrawList::AddNgonFilled(const ImVec2& center, float radius, ImU32 col, in
         return;
     if (screen_diameter < 1.0f)
     {
-        const float alpha = screen_diameter;
-        col = ImGui::GetColorU32(col, alpha);
+        col = ImAlphaMultiply(col, screen_diameter);
         radius = _FringeScale * 0.5f;
     }
 
