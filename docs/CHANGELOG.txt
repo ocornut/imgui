@@ -49,6 +49,9 @@ Other Changes:
     for user code to bypass it without using a clickable item. (#9382)
   - Clicking on a window's empty-space to move/focus a window checks
     for lack of queued focus request. (#9382)
+- Demo:
+  - Extract 'Widgets->Tree Nodes->Selectable Nodes' out of the 'Advanced'
+    demo for clarity (manual reimplementation of basic selection).
 
 
 -----------------------------------------------------------------------

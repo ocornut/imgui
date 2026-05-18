@@ -6318,11 +6318,12 @@ bool ImGui::IsItemToggledOpen()
     return (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_ToggledOpen) ? true : false;
 }
 
-// Call after a Selectable() or TreeNode() involved in multi-selection.
-// Useful if you need the per-item information before reaching EndMultiSelect(), e.g. for rendering purpose.
-// This is only meant to be called inside a BeginMultiSelect()/EndMultiSelect() block.
-// (Outside of multi-select, it would be misleading/ambiguous to report this signal, as widgets
-// return e.g. a pressed event and user code is in charge of altering selection in ways we cannot predict.)
+// Call after a Selectable() or TreeNode() items inside a BeginMultiSelect()/EndMultiSelect() scope.
+// - Useful if you need the per-item information before reaching EndMultiSelect(), e.g. for rendering purpose.
+// Outside of a multi-select block:
+// - It would be misleading/ambiguous to report this signal, as widgets return e.g. a pressed event,
+//   and user code is in charge of altering selection in ways we cannot predict.
+//   Prefer using 'if (IsItemClicked() && !IsItemToggledOpen())' for a manual reimplementation of selection.
 bool ImGui::IsItemToggledSelection()
 {
     ImGuiContext& g = *GImGui;
