@@ -266,6 +266,8 @@ void ImGui::TextEx(const char* text, const char* text_end, ImGuiTextFlags flags)
     }
 }
 
+// Note that all functions taking format strings in the API may be passed ("%s", text) or ("%.*s", text_len, text),
+// which will automatically bypass the formatter.
 void ImGui::TextUnformatted(const char* text, const char* text_end)
 {
     TextEx(text, text_end, ImGuiTextFlags_NoWidthForLargeClippedText);
