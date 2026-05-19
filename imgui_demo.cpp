@@ -10469,7 +10469,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
                 draw_list->AddLineV(x, y, y + sz, col, th, flags);                                                         x += spacing;       // Vertical line (note: drawing a filled rectangle will be faster!)
 
                 draw_list->AddLine(ImVec2(x, y), ImVec2(x + sz, y), col, th, flags);                                       x += sz + spacing;
-                draw_list->AddLine(ImVec2(x, y), ImVec2(x, y + sz), col, th, flags);                                       x += spacing;
+                draw_list->AddLine(ImVec2(x, y + sz), ImVec2(x, y), col, th, flags);                                       x += spacing;
 
                 draw_list->AddLine(ImVec2(x, y), ImVec2(x + sz, y + sz), col, th, flags);                                  x += sz + spacing;  // Diagonal line
 
