@@ -3445,11 +3445,11 @@ enum ImDrawFlags_
     //ImDrawFlags_Closed                    = 1,      // Prior to 1.92.8 (May 2026), ImDrawFlags_Closed was guaranteed to be == 1<<0 == 1 for legacy compatibility reason. Hardcoded use of 1 or true should be replaced.
 
     // Stroke position relative to the shape outline
-    ImDrawFlags_StrokeInside                = 0 << 16, // Draw stroke inside of the shape outline (Default)
-    ImDrawFlags_StrokeCenter                = 1 << 16, // Draw stroke at the center of the shape outline
-    ImDrawFlags_StrokeCenterPixelAligned    = 2 << 16, // Draw stroke at the center of the shape outline, so that half thickness (rounded down) will be outside, and rest inside the shape outline.
-    ImDrawFlags_StrokeOutside               = 3 << 16, // Draw stroke outside of the shape outline
-    ImDrawFlags_StrokeLegacy                = 4 << 16, // Use legacy position
+    ImDrawFlags_StrokeInside                = 1 << 16, // Draw stroke inside of the shape outline (Default)
+    ImDrawFlags_StrokeCenter                = 2 << 16, // Draw stroke at the center of the shape outline
+    ImDrawFlags_StrokeCenterPixelAligned    = 3 << 16, // Draw stroke at the center of the shape outline, so that half thickness (rounded down) will be outside, and rest inside the shape outline.
+    ImDrawFlags_StrokeOutside               = 4 << 16, // Draw stroke outside of the shape outline
+    ImDrawFlags_StrokeLegacy                = 5 << 16, // Use legacy position
     ImDrawFlags_StrokeMask_                 = 0x07 << 16,
 
     ImDrawFlags_InvalidMask_                = ~0x7FFFFFF0, // == 0x8000000F,
@@ -3640,6 +3640,7 @@ struct ImDrawList
     IMGUI_API void  _OnChangedTexture();
     IMGUI_API void  _OnChangedVtxOffset();
     IMGUI_API void  _SetTexture(ImTextureRef tex_ref);
+    IMGUI_API ImDrawFlags _GetStrokePos(ImDrawFlags flags, ImDrawFlags default_stroke_pos);
     IMGUI_API int   _CalcCircleAutoSegmentCount(float radius) const;
     IMGUI_API void  _PathArcToFastEx(const ImVec2& center, float radius, int a_min_sample, int a_max_sample, int a_step);
     IMGUI_API void  _PathArcToN(const ImVec2& center, float radius, float a_min, float a_max, int num_segments);

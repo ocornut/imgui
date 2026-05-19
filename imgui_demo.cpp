@@ -10429,9 +10429,10 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             curve_segments_override |= ImGui::SliderInt("Curves segments override", &curve_segments_override_v, 3, 40);
             ImGui::ColorEdit4("Color", &colf.x);
 
-            static ImDrawFlags flags = 0;
+            static ImDrawFlags flags = ImDrawFlags_None;
             ImGui::AlignTextToFramePadding();
             ImGui::Text("Stroke:");
+            ImGui::SameLine(); ImGui::RadioButton("Default", &flags, ImDrawFlags_None);
             ImGui::SameLine(); ImGui::RadioButton("Inside", &flags, ImDrawFlags_StrokeInside);
             ImGui::SameLine(); ImGui::RadioButton("Center", &flags, ImDrawFlags_StrokeCenter);
             ImGui::SameLine(); ImGui::RadioButton("CenterPixelAligned", &flags, ImDrawFlags_StrokeCenterPixelAligned);
