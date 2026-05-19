@@ -52,6 +52,11 @@ Other Changes:
 - Demo:
   - Extract 'Widgets->Tree Nodes->Selectable Nodes' out of the 'Advanced'
     demo for clarity (manual reimplementation of basic selection).
+- Backends:
+  - Win32:
+    - Uses `SetProcessDpiAwarenessContext()` instead of `SetThreadDpiAwarenessContext()`
+      when available, fixing OpenGL DPI scaling issues as e.g. NVIDIA drivers tends
+      to spawn multiple-thread to manage OpenGL. (#9403)
 
 
 -----------------------------------------------------------------------
