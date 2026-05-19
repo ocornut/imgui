@@ -1510,6 +1510,19 @@ void ImDrawList::PathRect(const ImVec2& a, const ImVec2& b, float rounding, ImDr
     }
 }
 
+static float CalculateCenterPixelAlignedOffset(float thickness, float _FringeScale)
+{
+    // Old jumpy one.
+    // return IM_TRUNC(thickness * 0.5f / _FringeScale) * _FringeScale;
+
+    // Calculate outside offset for stroke position CenterPixelAligned
+    // so that one side the of the line is always at pixel boundary.
+    // On integer thickness both sides of the line are on pixel boundary.
+    const float screen_thickness = thickness / _FringeScale;
+    const int s_thickness = IM_TRUNC(screen_thickness);
+    return ((s_thickness / 2) + (s_thickness & 1) * (screen_thickness - s_thickness)) * _FringeScale;
+}
+
 extern bool g_LEGACY_STROKES;
 
 // We intently don't turn g_LEGACY_STROKES into ImDrawFlags_StrokeLegacy here.
@@ -1534,8 +1547,26 @@ void ImDrawList::AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float th
         return;
     }
 
-    const ImVec2 points[2] = { p1, p2 };
-    AddPolyline(points, 2, col, thickness);
+    ImDrawFlags stroke_pos = (flags & ImDrawFlags_StrokeMask_);
+    ImVec2 off(0, 0);
+    if (stroke_pos != ImDrawFlags_StrokeCenter)
+    {
+        // FIXME: this should be removed when the generic PathStroke() stroke pos is merged.
+        float nx = -(p1.y - p2.y);
+        float ny = p1.x - p2.x;
+        IM_NORMALIZE2F_OVER_ZERO(nx, ny);
+        float offset = 0.0f;
+        if (stroke_pos == ImDrawFlags_StrokeInside)
+            offset = -thickness * 0.5f;
+        else if (stroke_pos == ImDrawFlags_StrokeCenterPixelAligned)
+            offset = -(thickness * 0.5f - CalculateCenterPixelAlignedOffset(thickness, _FringeScale));
+        else if (stroke_pos == ImDrawFlags_StrokeOutside)
+            offset = thickness * 0.5f;
+        off.x = nx * offset;
+        off.y = ny * offset;
+    }
+    const ImVec2 points[2] = { p1 + off, p2 + off };
+    AddPolyline(points, 2, col, thickness, flags);
 }
 
 void ImDrawList::AddLineH(float min_x, float max_x, float y, ImU32 col, float thickness, ImDrawFlags flags)
@@ -1554,7 +1585,7 @@ void ImDrawList::AddLineH(float min_x, float max_x, float y, ImU32 col, float th
     if (stroke_pos == ImDrawFlags_StrokeCenter)
         y -= thickness * 0.5f;
     else if (stroke_pos == ImDrawFlags_StrokeCenterPixelAligned)
-        y -= IM_TRUNC(thickness * 0.5f / _FringeScale) * _FringeScale;
+        y -= CalculateCenterPixelAlignedOffset(thickness, _FringeScale);
     else if (stroke_pos == ImDrawFlags_StrokeOutside)
         y -= thickness;
 
@@ -1576,7 +1607,7 @@ void ImDrawList::AddLineV(float x, float min_y, float max_y, ImU32 col, float th
 
     if (g_LEGACY_STROKES)
     {
-        const ImVec2 points[2] = { ImVec2(x + 0.5f, min_y + 0.5f), ImVec2(x + 0.5f, max_y + 0.5f) }; // Same as AddLine() above.
+        const ImVec2 points[2] = { ImVec2(x + 0.5f, max_y + 0.5f), ImVec2(x + 0.5f, min_y + 0.5f) }; // Same as AddLine() above.
         AddPolyline(points, 2, col, thickness);
         return;
     }
@@ -1585,7 +1616,7 @@ void ImDrawList::AddLineV(float x, float min_y, float max_y, ImU32 col, float th
     if (stroke_pos == ImDrawFlags_StrokeCenter)
         x -= thickness * 0.5f;
     else if (stroke_pos == ImDrawFlags_StrokeCenterPixelAligned)
-        x -= IM_TRUNC(thickness * 0.5f / _FringeScale) * _FringeScale;
+        x -= CalculateCenterPixelAlignedOffset(thickness, _FringeScale);
     else if (stroke_pos == ImDrawFlags_StrokeOutside)
         x -= thickness;
 
@@ -1839,7 +1870,7 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
     else if (stroke_pos == ImDrawFlags_StrokeCenterPixelAligned)
     {
         // PathRect() centers the stroke, just calculate the fractional offset.
-        const float fract = (thickness * 0.5f) - IM_TRUNC(thickness * 0.5f / _FringeScale) * _FringeScale;
+        const float fract = (thickness * 0.5f) - CalculateCenterPixelAlignedOffset(thickness, _FringeScale);
         rounding += (rounding != 0.0f) ? fract : 0.0f;
         PathRect(ImVec2(p_min.x + fract, p_min.y + fract), ImVec2(p_max.x - fract, p_max.y - fract), rounding, flags);
     }
@@ -2026,7 +2057,7 @@ void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int nu
         if (stroke_pos == ImDrawFlags_StrokeInside)
             radius -= thickness * 0.5f;
         else if (stroke_pos == ImDrawFlags_StrokeCenterPixelAligned)
-            radius += IM_TRUNC(thickness * 0.5f / _FringeScale) * _FringeScale - thickness * 0.5f;
+            radius -= thickness * 0.5f  - CalculateCenterPixelAlignedOffset(thickness, _FringeScale);
         else if (stroke_pos == ImDrawFlags_StrokeOutside)
             radius += thickness * 0.5f;
         else if (stroke_pos == ImDrawFlags_StrokeLegacy)
@@ -2092,7 +2123,7 @@ void ImDrawList::AddNgon(const ImVec2& center, float radius, ImU32 col, int num_
         if (stroke_pos == ImDrawFlags_StrokeInside)
             radius -= thickness * 0.5f;
         else if (stroke_pos == ImDrawFlags_StrokeCenterPixelAligned)
-            radius -= thickness * 0.5f - IM_TRUNC(thickness * 0.5f / _FringeScale) * _FringeScale;
+            radius -= thickness * 0.5f - CalculateCenterPixelAlignedOffset(thickness, _FringeScale);
         else if (stroke_pos == ImDrawFlags_StrokeOutside)
             radius += thickness * 0.5f;
         else if (stroke_pos == ImDrawFlags_StrokeLegacy)
@@ -2136,7 +2167,7 @@ void ImDrawList::AddEllipse(const ImVec2& center, const ImVec2& radius, ImU32 co
             r -= ImVec2(thickness * 0.5f, thickness * 0.5f);
         else if (stroke_pos == ImDrawFlags_StrokeCenterPixelAligned)
         {
-            const float fract = thickness * 0.5f - IM_TRUNC(thickness * 0.5f / _FringeScale) * _FringeScale;
+            const float fract = thickness * 0.5f - CalculateCenterPixelAlignedOffset(thickness, _FringeScale);
             r -= ImVec2(fract, fract);
         }
         else if (stroke_pos == ImDrawFlags_StrokeOutside)
