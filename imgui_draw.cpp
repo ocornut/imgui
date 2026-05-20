@@ -1519,8 +1519,8 @@ static float CalculateCenterPixelAlignedOffset(float thickness, float _FringeSca
     // so that one side the of the line is always at pixel boundary.
     // On integer thickness both sides of the line are on pixel boundary.
     const float screen_thickness = thickness / _FringeScale;
-    const int s_thickness = IM_TRUNC(screen_thickness);
-    return ((s_thickness / 2) + (s_thickness & 1) * (screen_thickness - s_thickness)) * _FringeScale;
+    const int s_thickness = (int)screen_thickness;
+    return ((float)(s_thickness / 2) + (s_thickness & 1) * (screen_thickness - s_thickness)) * _FringeScale;
 }
 
 extern bool g_LEGACY_STROKES;
@@ -1547,7 +1547,6 @@ void ImDrawList::AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float th
         return;
     }
 
-    ImDrawFlags stroke_pos = (flags & ImDrawFlags_StrokeMask_);
     ImVec2 off(0, 0);
     if (stroke_pos != ImDrawFlags_StrokeCenter)
     {
@@ -1574,14 +1573,14 @@ void ImDrawList::AddLineH(float min_x, float max_x, float y, ImU32 col, float th
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
-    if (g_LEGACY_STROKES)
+    ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
+    if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy)
     {
         const ImVec2 points[2] = { ImVec2(min_x + 0.5f, y + 0.5f), ImVec2(max_x + 0.5f, y + 0.5f) }; // Same as AddLine() above.
         AddPolyline(points, 2, col, thickness);
         return;
     }
 
-    ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
     if (stroke_pos == ImDrawFlags_StrokeCenter)
         y -= thickness * 0.5f;
     else if (stroke_pos == ImDrawFlags_StrokeCenterPixelAligned)
@@ -1605,14 +1604,14 @@ void ImDrawList::AddLineV(float x, float min_y, float max_y, ImU32 col, float th
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
-    if (g_LEGACY_STROKES)
+    ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
+    if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy)
     {
         const ImVec2 points[2] = { ImVec2(x + 0.5f, max_y + 0.5f), ImVec2(x + 0.5f, min_y + 0.5f) }; // Same as AddLine() above.
         AddPolyline(points, 2, col, thickness);
         return;
     }
 
-    ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
     if (stroke_pos == ImDrawFlags_StrokeCenter)
         x -= thickness * 0.5f;
     else if (stroke_pos == ImDrawFlags_StrokeCenterPixelAligned)
@@ -1806,7 +1805,7 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
         }
         else if (stroke_pos == ImDrawFlags_StrokeCenterPixelAligned)
         {
-            const float offset = (s_thickness / 2) * _FringeScale; // Using integer div, since we want IM_TRUNC(thickness/2).
+            const float offset = (float)(s_thickness / 2) * _FringeScale; // Using integer div, since we want IM_TRUNC(thickness/2).
             s_min.x -= offset;
             s_min.y -= offset;
             s_max.x += offset;
@@ -1981,6 +1980,7 @@ void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
 }
 
 // p_min = upper-left, p_max = lower-right
+// Note: this does not support anti-aliasing when provided non-integer vertices.
 void ImDrawList::AddRectFilledMultiColor(const ImVec2& p_min, const ImVec2& p_max, ImU32 col_upr_left, ImU32 col_upr_right, ImU32 col_bot_right, ImU32 col_bot_left)
 {
     if (((col_upr_left | col_upr_right | col_bot_right | col_bot_left) & IM_COL32_A_MASK) == 0)
