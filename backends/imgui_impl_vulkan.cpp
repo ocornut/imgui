@@ -251,11 +251,9 @@ static PFN_vkCmdBeginRenderingKHR   ImGuiImplVulkanFuncs_vkCmdBeginRenderingKHR;
 static PFN_vkCmdEndRenderingKHR     ImGuiImplVulkanFuncs_vkCmdEndRenderingKHR;
 #endif
 
-#ifndef VK_KHR_push_descriptor
-#define VK_KHR_push_descriptor 1
-typedef void (VKAPI_PTR* PFN_vkCmdPushDescriptorSetKHR)(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout, uint32_t set, uint32_t descriptorWriteCount, const VkWriteDescriptorSet* pDescriptorWrites);
+#ifdef IMGUI_IMPL_VULKAN_HAS_PUSH_DESCRIPTOR_SET
+static PFN_vkCmdPushDescriptorSetKHR ImGuiImplVulkanFuncs_vkCmdPushDescriptorSetKHR;
 #endif
-static PFN_vkCmdPushDescriptorSetKHR ImGuiImplVulkanFuncs_vkCmdPushDescriptorSetKHR = nullptr;
 
 // Reusable buffers used for rendering 1 current in-flight frame, for ImGui_ImplVulkan_RenderDrawData()
 // [Please zero-clear before use!]
@@ -283,7 +281,7 @@ struct ImGui_ImplVulkan_Texture
     VkDeviceMemory              Memory;
     VkImage                     Image;
     VkImageView                 ImageView;
-    //VkDescriptorSet             DescriptorSet;
+    VkDescriptorSet             DescriptorSet;
 
     ImGui_ImplVulkan_Texture() { memset((void*)this, 0, sizeof(*this)); }
 };
@@ -665,7 +663,10 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
 
     // Render command lists
     // (Because we merged all buffers into a single one, we maintain our own offset into them)
-    VkImageView last_image_view = VK_NULL_HANDLE;
+    VkDescriptorSet last_image_view = VK_NULL_HANDLE;
+#ifdef IMGUI_IMPL_VULKAN_HAS_PUSH_DESCRIPTOR_SET
+    VkImageView last_push_image_view = VK_NULL_HANDLE;
+#endif
     int global_vtx_offset = 0;
     int global_idx_offset = 0;
     for (const ImDrawList* draw_list : draw_data->CmdLists)
@@ -680,6 +681,9 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
                 {
                     ImGui_ImplVulkan_SetupRenderState(draw_data, pipeline, command_buffer, rb, fb_width, fb_height);
                     last_image_view = VK_NULL_HANDLE;
+#ifdef IMGUI_IMPL_VULKAN_HAS_PUSH_DESCRIPTOR_SET
+                    last_push_image_view = VK_NULL_HANDLE; 
+#endif
                 }
                 else
                     pcmd->UserCallback(draw_list, pcmd);
@@ -706,26 +710,41 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
                 scissor.extent.height = (uint32_t)(clip_max.y - clip_min.y);
                 vkCmdSetScissor(command_buffer, 0, 1, &scissor);
 
-                // Bind DescriptorSets for image view (font or user texture) and samplers
-                VkImageView image_view = (VkImageView)pcmd->GetTexID();
-                if (image_view != last_image_view)
+                // PushDescriptorSets for image view(font or user texture)
+#ifdef IMGUI_IMPL_VULKAN_HAS_PUSH_DESCRIPTOR_SET
+                if (bd->VulkanInitInfo.UsePushDescriptorSet)
                 {
-                    VkDescriptorImageInfo image_info = {};
-                    image_info.imageView = image_view;
-                    image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                    VkImageView image_view = (VkImageView)pcmd->GetTexID();
+                    if (image_view != last_push_image_view)
+                    {
+                        // The user application is strictly responsible for transitioning the 
+                        // image layout to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL prior to rendering.
+                        VkDescriptorImageInfo image_info = {};
+                        image_info.imageView = image_view;
+                        image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-                    VkWriteDescriptorSet write_desc[1] = {};
-                    write_desc[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-                    write_desc[0].dstSet = 0;
-                    write_desc[0].dstBinding = 0;
-                    write_desc[0].descriptorCount = 1;
-                    write_desc[0].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-                    write_desc[0].pImageInfo = &image_info;
+                        VkWriteDescriptorSet write_desc[1] = {};
+                        write_desc[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                        write_desc[0].dstSet = 0;
+                        write_desc[0].dstBinding = 0;
+                        write_desc[0].descriptorCount = 1;
+                        write_desc[0].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+                        write_desc[0].pImageInfo = &image_info;
 
-                    if (ImGuiImplVulkanFuncs_vkCmdPushDescriptorSetKHR)
-                        ImGuiImplVulkanFuncs_vkCmdPushDescriptorSetKHR(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 0, 1, write_desc);
+                        if (ImGuiImplVulkanFuncs_vkCmdPushDescriptorSetKHR)
+                            ImGuiImplVulkanFuncs_vkCmdPushDescriptorSetKHR(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 0, 1, write_desc);
+                    }
+                    last_push_image_view = image_view;
                 }
-                last_image_view = image_view;
+                else
+#endif
+                // Bind DescriptorSets for image view (font or user texture) and samplers
+                {
+                    VkDescriptorSet image_view = (VkDescriptorSet)pcmd->GetTexID();
+                    if (image_view != last_image_view)
+                        vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 0, 1, &image_view, 0, nullptr);
+                    last_image_view = image_view;
+                }
 
                 // Draw
                 vkCmdDrawIndexed(command_buffer, pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0);
@@ -751,11 +770,20 @@ static void ImGui_ImplVulkan_DestroyTexture(ImTextureData* tex)
 {
     if (ImGui_ImplVulkan_Texture* backend_tex = (ImGui_ImplVulkan_Texture*)tex->BackendUserData)
     {
-        //IM_ASSERT(backend_tex->DescriptorSet == (VkDescriptorSet)tex->TexID);
         ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
+#ifdef IMGUI_IMPL_VULKAN_HAS_PUSH_DESCRIPTOR_SET
+        if (bd->VulkanInitInfo.UsePushDescriptorSet)
+        {
+            IM_ASSERT(backend_tex->ImageView == (VkImageView)tex->TexID);
+        }
+        else
+#endif
+        {
+            IM_ASSERT(backend_tex->DescriptorSet == (VkDescriptorSet)tex->TexID);
+            ImGui_ImplVulkan_RemoveTexture(backend_tex->DescriptorSet);
+        }
         ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
 
-        //ImGui_ImplVulkan_RemoveTexture(backend_tex->DescriptorSet);
         vkDestroyImageView(v->Device, backend_tex->ImageView, v->Allocator);
         vkDestroyImage(v->Device, backend_tex->Image, v->Allocator);
         vkFreeMemory(v->Device, backend_tex->Memory, v->Allocator);
@@ -828,11 +856,20 @@ void ImGui_ImplVulkan_UpdateTexture(ImTextureData* tex)
             check_vk_result(err);
         }
 
-        // Create the Descriptor Set
-        // backend_tex->DescriptorSet = ImGui_ImplVulkan_AddTexture(backend_tex->ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+#ifdef IMGUI_IMPL_VULKAN_HAS_PUSH_DESCRIPTOR_SET
+        if (bd->VulkanInitInfo.UsePushDescriptorSet)
+        {
+            tex->SetTexID((ImTextureID)backend_tex->ImageView);
+        }
+        else
+#endif
+        {
+            // Create the Descriptor Set
+            backend_tex->DescriptorSet = ImGui_ImplVulkan_AddTexture(backend_tex->ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-        // Store identifiers
-        tex->SetTexID((ImTextureID)backend_tex->ImageView);
+            // Store identifiers
+            tex->SetTexID((ImTextureID)backend_tex->DescriptorSet);
+        }
         tex->BackendUserData = backend_tex;
     }
 
@@ -1137,8 +1174,10 @@ static void ImGui_ImplVulkan_CreateDescriptorSetLayout(VkDescriptorSetLayout* p_
     info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     info.bindingCount = 1;
     info.pBindings = binding;
-    if (descriptor_type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
+#ifdef IMGUI_IMPL_VULKAN_HAS_PUSH_DESCRIPTOR_SET
+    if (bd->VulkanInitInfo.UsePushDescriptorSet && descriptor_type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
         info.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR;
+#endif
 
     VkResult err = vkCreateDescriptorSetLayout(v->Device, &info, v->Allocator, p_layout);
     check_vk_result(err);
@@ -1184,7 +1223,12 @@ bool ImGui_ImplVulkan_CreateDeviceObjects()
 
     if (v->DescriptorPoolSize != 0)
     {
-        // IM_ASSERT(v->DescriptorPoolSize >= IMGUI_IMPL_VULKAN_MINIMUM_SAMPLED_IMAGE_POOL_SIZE);
+#ifdef IMGUI_IMPL_VULKAN_HAS_PUSH_DESCRIPTOR_SET
+        if (!bd->VulkanInitInfo.UsePushDescriptorSet)
+#endif
+        {
+            IM_ASSERT(v->DescriptorPoolSize >= IMGUI_IMPL_VULKAN_MINIMUM_SAMPLED_IMAGE_POOL_SIZE);
+        }
         VkDescriptorPoolSize pool_sizes[] =
         {
             { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, v->DescriptorPoolSize },
@@ -1315,18 +1359,18 @@ void    ImGui_ImplVulkan_DestroyDeviceObjects()
         if (tex->RefCount == 1)
             ImGui_ImplVulkan_DestroyTexture(tex);
 
-    if (bd->TexCommandBuffer) { vkFreeCommandBuffers(v->Device, bd->TexCommandPool, 1, &bd->TexCommandBuffer); bd->TexCommandBuffer = VK_NULL_HANDLE; }
-    if (bd->TexCommandPool) { vkDestroyCommandPool(v->Device, bd->TexCommandPool, v->Allocator); bd->TexCommandPool = VK_NULL_HANDLE; }
-    if (bd->SamplerLinear) { vkDestroySampler(v->Device, bd->SamplerLinear, v->Allocator); bd->SamplerLinear = VK_NULL_HANDLE; }
-    if (bd->SamplerNearest) { vkDestroySampler(v->Device, bd->SamplerNearest, v->Allocator); bd->SamplerNearest = VK_NULL_HANDLE; }
-    if (bd->ShaderModuleVert) { vkDestroyShaderModule(v->Device, bd->ShaderModuleVert, v->Allocator); bd->ShaderModuleVert = VK_NULL_HANDLE; }
-    if (bd->ShaderModuleFrag) { vkDestroyShaderModule(v->Device, bd->ShaderModuleFrag, v->Allocator); bd->ShaderModuleFrag = VK_NULL_HANDLE; }
-    if (bd->DescriptorSetLayoutTexture) { vkDestroyDescriptorSetLayout(v->Device, bd->DescriptorSetLayoutTexture, v->Allocator); bd->DescriptorSetLayoutTexture = VK_NULL_HANDLE; }
-    if (bd->DescriptorSetLayoutSampler) { vkDestroyDescriptorSetLayout(v->Device, bd->DescriptorSetLayoutSampler, v->Allocator); bd->DescriptorSetLayoutSampler = VK_NULL_HANDLE; }
-    if (bd->PipelineLayout) { vkDestroyPipelineLayout(v->Device, bd->PipelineLayout, v->Allocator); bd->PipelineLayout = VK_NULL_HANDLE; }
-    if (bd->Pipeline) { vkDestroyPipeline(v->Device, bd->Pipeline, v->Allocator); bd->Pipeline = VK_NULL_HANDLE; }
+    if (bd->TexCommandBuffer)     { vkFreeCommandBuffers(v->Device, bd->TexCommandPool, 1, &bd->TexCommandBuffer); bd->TexCommandBuffer = VK_NULL_HANDLE; }
+    if (bd->TexCommandPool)       { vkDestroyCommandPool(v->Device, bd->TexCommandPool, v->Allocator); bd->TexCommandPool = VK_NULL_HANDLE; }
+    if (bd->SamplerLinear)        { vkDestroySampler(v->Device, bd->SamplerLinear, v->Allocator); bd->SamplerLinear = VK_NULL_HANDLE; }
+    if (bd->SamplerNearest)       { vkDestroySampler(v->Device, bd->SamplerNearest, v->Allocator); bd->SamplerNearest = VK_NULL_HANDLE; }
+    if (bd->ShaderModuleVert)     { vkDestroyShaderModule(v->Device, bd->ShaderModuleVert, v->Allocator); bd->ShaderModuleVert = VK_NULL_HANDLE; }
+    if (bd->ShaderModuleFrag)     { vkDestroyShaderModule(v->Device, bd->ShaderModuleFrag, v->Allocator); bd->ShaderModuleFrag = VK_NULL_HANDLE; }
+    if (bd->DescriptorSetLayoutTexture)  { vkDestroyDescriptorSetLayout(v->Device, bd->DescriptorSetLayoutTexture, v->Allocator); bd->DescriptorSetLayoutTexture = VK_NULL_HANDLE; }
+    if (bd->DescriptorSetLayoutSampler)  { vkDestroyDescriptorSetLayout(v->Device, bd->DescriptorSetLayoutSampler, v->Allocator); bd->DescriptorSetLayoutSampler = VK_NULL_HANDLE; }
+    if (bd->PipelineLayout)       { vkDestroyPipelineLayout(v->Device, bd->PipelineLayout, v->Allocator); bd->PipelineLayout = VK_NULL_HANDLE; }
+    if (bd->Pipeline)             { vkDestroyPipeline(v->Device, bd->Pipeline, v->Allocator); bd->Pipeline = VK_NULL_HANDLE; }
     if (bd->PipelineForViewports) { vkDestroyPipeline(v->Device, bd->PipelineForViewports, v->Allocator); bd->PipelineForViewports = VK_NULL_HANDLE; }
-    if (bd->DescriptorPool) { vkDestroyDescriptorPool(v->Device, bd->DescriptorPool, v->Allocator); bd->DescriptorPool = VK_NULL_HANDLE; }
+    if (bd->DescriptorPool)       { vkDestroyDescriptorPool(v->Device, bd->DescriptorPool, v->Allocator); bd->DescriptorPool = VK_NULL_HANDLE; }
 }
 
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
@@ -1344,6 +1388,21 @@ static void ImGui_ImplVulkan_LoadDynamicRenderingFunctions(uint32_t api_version,
     {
         ImGuiImplVulkanFuncs_vkCmdBeginRenderingKHR = reinterpret_cast<PFN_vkCmdBeginRenderingKHR>(loader_func("vkCmdBeginRenderingKHR", user_data));
         ImGuiImplVulkanFuncs_vkCmdEndRenderingKHR = reinterpret_cast<PFN_vkCmdEndRenderingKHR>(loader_func("vkCmdEndRenderingKHR", user_data));
+    }
+}
+#endif
+
+#ifdef IMGUI_IMPL_VULKAN_HAS_PUSH_DESCRIPTOR_SET
+static void ImGui_ImplVulkan_LoadPushDescriptorSetFunction(uint32_t api_version, PFN_vkVoidFunction(*loader_func)(const char* function_name, void* user_data), void* user_data)
+{
+    IM_UNUSED(api_version);
+
+    ImGuiImplVulkanFuncs_vkCmdPushDescriptorSetKHR = reinterpret_cast<PFN_vkCmdPushDescriptorSetKHR>(loader_func("vkCmdPushDescriptorSet", user_data));
+
+    // - Fallback to KHR versions if core not available (this will work if KHR extension is available and enabled and also the device supports push descriptors)
+    if (ImGuiImplVulkanFuncs_vkCmdPushDescriptorSetKHR == nullptr)
+    {
+        ImGuiImplVulkanFuncs_vkCmdPushDescriptorSetKHR = reinterpret_cast<PFN_vkCmdPushDescriptorSetKHR>(loader_func("vkCmdPushDescriptorSetKHR", user_data));
     }
 }
 #endif
@@ -1379,6 +1438,10 @@ bool    ImGui_ImplVulkan_LoadFunctions(uint32_t api_version, PFN_vkVoidFunction(
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
         ImGui_ImplVulkan_LoadDynamicRenderingFunctions(api_version, loader_func, user_data);
 #endif
+
+#ifdef IMGUI_IMPL_VULKAN_HAS_PUSH_DESCRIPTOR_SET
+    ImGui_ImplVulkan_LoadPushDescriptorSetFunction(api_version, loader_func, user_data);
+#endif
 #else
     IM_UNUSED(loader_func);
     IM_UNUSED(user_data);
@@ -1405,6 +1468,18 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info)
         IM_ASSERT(ImGuiImplVulkanFuncs_vkCmdEndRenderingKHR != nullptr);
 #else
         IM_ASSERT(0 && "Can't use dynamic rendering when neither VK_VERSION_1_3 or VK_KHR_dynamic_rendering is defined.");
+#endif
+    }
+
+    if (info->UsePushDescriptorSet)
+    {
+#ifdef IMGUI_IMPL_VULKAN_HAS_PUSH_DESCRIPTOR_SET
+#ifndef IMGUI_IMPL_VULKAN_USE_LOADER
+        ImGui_ImplVulkan_LoadPushDescriptorSetFunction(info->ApiVersion, [](const char* function_name, void* user_data) { return vkGetDeviceProcAddr((VkDevice)user_data, function_name); }, (void*)info->Device);
+#endif
+        IM_ASSERT(ImGuiImplVulkanFuncs_vkCmdPushDescriptorSetKHR != nullptr);
+#else
+        IM_ASSERT(0 && "Can't use Push Descriptors when neither VK_VERSION_1_4 or VK_KHR_push_descriptor is defined.");
 #endif
     }
 
@@ -1440,9 +1515,6 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info)
         IM_ASSERT(info->PipelineInfoMain.RenderPass == VK_NULL_HANDLE && info->PipelineInfoForViewports.RenderPass == VK_NULL_HANDLE);
 
     bd->VulkanInitInfo = *info;
-
-    ImGuiImplVulkanFuncs_vkCmdPushDescriptorSetKHR = (PFN_vkCmdPushDescriptorSetKHR)vkGetDeviceProcAddr(info->Device, "vkCmdPushDescriptorSetKHR");
-    IM_ASSERT(ImGuiImplVulkanFuncs_vkCmdPushDescriptorSetKHR != nullptr && "Error: VK_KHR_push_descriptor MUST be enabled on the Vulkan device!");
 
     VkPhysicalDeviceProperties properties;
     vkGetPhysicalDeviceProperties(info->PhysicalDevice, &properties);
@@ -1513,9 +1585,44 @@ void ImGui_ImplVulkan_SetMinImageCount(uint32_t min_image_count)
 // FIXME: This is experimental in the sense that we are unsure how to best design/tackle this problem, please post to https://github.com/ocornut/imgui/pull/914 if you have suggestions.
 VkDescriptorSet ImGui_ImplVulkan_AddTexture(VkImageView image_view, VkImageLayout image_layout)
 {
-    IM_UNUSED(image_layout);
+    ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
+    ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
 
-    return (VkDescriptorSet)image_view;
+#ifdef IMGUI_IMPL_VULKAN_HAS_PUSH_DESCRIPTOR_SET
+    IM_ASSERT(v->UsePushDescriptorSet == false && "ImGui_ImplVulkan_AddTexture() is not needed and should not be called when UsePushDescriptorSet is enabled. Simply cast your VkImageView to ImTextureID directly.");
+    if (v->UsePushDescriptorSet)
+        return VK_NULL_HANDLE; 
+#endif
+
+    VkDescriptorPool pool = bd->DescriptorPool ? bd->DescriptorPool : v->DescriptorPool;
+
+    // Create Descriptor Set:
+    VkDescriptorSet descriptor_set;
+    {
+        VkDescriptorSetAllocateInfo alloc_info = {};
+        alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        alloc_info.descriptorPool = pool;
+        alloc_info.descriptorSetCount = 1;
+        alloc_info.pSetLayouts = &bd->DescriptorSetLayoutTexture;
+        VkResult err = vkAllocateDescriptorSets(v->Device, &alloc_info, &descriptor_set);
+        check_vk_result(err);
+    }
+
+    // Update the Descriptor Set:
+    if (descriptor_set != VK_NULL_HANDLE)
+    {
+        VkDescriptorImageInfo desc_image[1] = {};
+        desc_image[0].imageView = image_view;
+        desc_image[0].imageLayout = image_layout;
+        VkWriteDescriptorSet write_desc[1] = {};
+        write_desc[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write_desc[0].dstSet = descriptor_set;
+        write_desc[0].descriptorCount = 1;
+        write_desc[0].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        write_desc[0].pImageInfo = desc_image;
+        vkUpdateDescriptorSets(v->Device, 1, write_desc, 0, nullptr);
+    }
+    return descriptor_set;
 }
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
@@ -1528,8 +1635,19 @@ VkDescriptorSet ImGui_ImplVulkan_AddTexture(VkSampler sampler, VkImageView image
 
 void ImGui_ImplVulkan_RemoveTexture(VkDescriptorSet descriptor_set)
 {
-    IM_UNUSED(descriptor_set);
+    ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
+    ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
+
+#ifdef IMGUI_IMPL_VULKAN_HAS_PUSH_DESCRIPTOR_SET
+    IM_ASSERT(v->UsePushDescriptorSet == false && "ImGui_ImplVulkan_RemoveTexture() should not be called when UsePushDescriptorSet is enabled.");
+    if (v->UsePushDescriptorSet)
+        return;
+#endif
+
+    VkDescriptorPool pool = bd->DescriptorPool ? bd->DescriptorPool : v->DescriptorPool;
+    vkFreeDescriptorSets(v->Device, pool, 1, &descriptor_set);
 }
+
 
 void ImGui_ImplVulkan_DestroyFrameRenderBuffers(VkDevice device, ImGui_ImplVulkan_FrameRenderBuffers* buffers, const VkAllocationCallbacks* allocator)
 {
