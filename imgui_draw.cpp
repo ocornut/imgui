@@ -3151,9 +3151,13 @@ static void         Decode85(const unsigned char* src, unsigned char* dst)
     }
 }
 #ifndef IMGUI_DISABLE_DEFAULT_FONT
+#ifndef IMGUI_DISABLE_DEFAULT_BITMAP_FONT
 static const char* GetDefaultCompressedFontDataProggyClean(int* out_size);
+#endif
+#ifndef IMGUI_DISABLE_DEFAULT_VECTOR_FONT
 static const char* GetDefaultCompressedFontDataProggyForever(int* out_size);
 #endif
+#endif // #ifndef IMGUI_DISABLE_DEFAULT_FONT
 
 // This duplicates some of the logic in UpdateFontsNewFrame() which is a bit chicken-and-eggy/tricky to extract due to variety of codepaths and possible initialization ordering.
 static float GetExpectedContextFontSize(ImGuiContext* ctx)
@@ -3176,7 +3180,7 @@ ImFont* ImFontAtlas::AddFontDefault(const ImFontConfig* font_cfg)
 // If you want a similar font which may be better scaled, consider using AddFontDefaultVector().
 ImFont* ImFontAtlas::AddFontDefaultBitmap(const ImFontConfig* font_cfg_template)
 {
-#ifndef IMGUI_DISABLE_DEFAULT_FONT
+#if !(defined(IMGUI_DISABLE_DEFAULT_FONT) || defined(IMGUI_DISABLE_DEFAULT_BITMAP_FONT))
     ImFontConfig font_cfg = font_cfg_template ? *font_cfg_template : ImFontConfig();
     if (!font_cfg_template)
         font_cfg.PixelSnapH = true; // Prevents sub-integer scaling factors at lower-level layers.
@@ -3197,14 +3201,14 @@ ImFont* ImFontAtlas::AddFontDefaultBitmap(const ImFontConfig* font_cfg_template)
     IM_ASSERT(0 && "Function is disabled in this build.");
     IM_UNUSED(font_cfg_template);
     return NULL;
-#endif // #ifndef IMGUI_DISABLE_DEFAULT_FONT
+#endif // #if !(defined(IMGUI_DISABLE_DEFAULT_FONT) || defined(IMGUI_DISABLE_DEFAULT_BITMAP_FONT))
 }
 
 // Load a minimal version of ProggyForever, designed to match our good old ProggyClean, but nicely scalable.
 // (See build script in https://github.com/ocornut/proggyforever for details)
 ImFont* ImFontAtlas::AddFontDefaultVector(const ImFontConfig* font_cfg_template)
 {
-#ifndef IMGUI_DISABLE_DEFAULT_FONT
+#if !(defined(IMGUI_DISABLE_DEFAULT_FONT) || defined(IMGUI_DISABLE_DEFAULT_VECTOR_FONT))
     ImFontConfig font_cfg = font_cfg_template ? *font_cfg_template : ImFontConfig();
     if (!font_cfg_template)
         font_cfg.PixelSnapH = true; // Precisely match ProggyClean, but prevents sub-integer scaling factors at lower-level layers.
@@ -3225,7 +3229,7 @@ ImFont* ImFontAtlas::AddFontDefaultVector(const ImFontConfig* font_cfg_template)
     IM_ASSERT(0 && "Function is disabled in this build.");
     IM_UNUSED(font_cfg_template);
     return NULL;
-#endif // #ifndef IMGUI_DISABLE_DEFAULT_FONT
+#endif // #if !(defined(IMGUI_DISABLE_DEFAULT_FONT) || defined(IMGUI_DISABLE_DEFAULT_VECTOR_FONT))
 }
 
 ImFont* ImFontAtlas::AddFontFromFileTTF(const char* filename, float size_pixels, const ImFontConfig* font_cfg_template, const ImWchar* glyph_ranges)
@@ -6328,6 +6332,8 @@ static unsigned int stb_decompress(unsigned char *output, const unsigned char *i
     }
 }
 
+#ifndef IMGUI_DISABLE_DEFAULT_FONT
+
 //-----------------------------------------------------------------------------
 // [SECTION] Default font data (ProggyClean.ttf)
 //-----------------------------------------------------------------------------
@@ -6335,7 +6341,7 @@ static unsigned int stb_decompress(unsigned char *output, const unsigned char *i
 // Download and more information at https://github.com/bluescan/proggyfonts
 //-----------------------------------------------------------------------------
 
-#ifndef IMGUI_DISABLE_DEFAULT_FONT
+#ifndef IMGUI_DISABLE_DEFAULT_BITMAP_FONT
 
 // File: 'ProggyClean.ttf' (41208 bytes)
 // Exported using binary_to_compressed_c.exe -u8 "ProggyClean.ttf" proggy_clean_ttf
@@ -6516,12 +6522,16 @@ static const char* GetDefaultCompressedFontDataProggyClean(int* out_size)
     return (const char*)proggy_clean_ttf_compressed_data;
 }
 
+#endif // #ifndef IMGUI_DISABLE_DEFAULT_BITMAP_FONT
+
 //-----------------------------------------------------------------------------
 // [SECTION] Default font data (ProggyForever-Regular-minimal.ttf)
 //-----------------------------------------------------------------------------
 // Based on ProggyForever: https://github.com/ocornut/proggyforever
 // MIT license / Copyright (c) 2026 Disco Hello, Copyright (c) 2019,2023 Tristan Grimmer
 //-----------------------------------------------------------------------------
+
+#ifndef IMGUI_DISABLE_DEFAULT_VECTOR_FONT
 
 // File: 'output/ProggyForever-Regular-minimal.ttf' (18556 bytes)
 // Exported using binary_to_compressed_c.exe -u8 "output/ProggyForever-Regular-minimal.ttf" proggy_forever_minimal_ttf
@@ -6777,6 +6787,8 @@ static const char* GetDefaultCompressedFontDataProggyForever(int* out_size)
     *out_size = proggy_forever_minimal_ttf_compressed_size;
     return (const char*)proggy_forever_minimal_ttf_compressed_data;
 }
+
+#endif // #ifndef IMGUI_DISABLE_DEFAULT_VECTOR_FONT
 
 #endif // #ifndef IMGUI_DISABLE_DEFAULT_FONT
 
