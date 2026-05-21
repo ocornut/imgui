@@ -52,6 +52,9 @@ Other Changes:
 - InputText:
   - Added style.InputTextCursorSize to configure cursor/caret thickness. (#7031, #9409)
     This is automatically scaled by style.ScaleAllSizes().
+- Fonts:
+  - Added `IMGUI_DISABLE_DEFAULT_FONT_BITMAP`/`IMGUI_DISABLE_DEFAULT_FONT_VECTOR` to
+    disable embedding either fonts separately. (#9407)
 - Demo:
   - Extract 'Widgets->Tree Nodes->Selectable Nodes' out of the 'Advanced'
     demo for clarity (manual reimplementation of basic selection).
