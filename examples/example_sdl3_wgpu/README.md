@@ -60,14 +60,10 @@ For the WASM code produced by Emscripten to work correctly, it will also be nece
 CMake checks the EMSCRIPEN version then:
    - if EMS >= 4.0.10 uses `--use-port=emdawnwebgpu` flag to build  
       - it set `IMGUI_IMPL_WEBGPU_BACKEND_DAWN` compiler define 
-   - if EMS < 4.0.10 uses `-sUSE_WEBGPU=1` flag to build
-      - it set `IMGUI_IMPL_WEBGPU_BACKEND_WGPU` compiler define 
-
-#### Generate Emscripten forcing `-sUSE_WEBGPU=1` deprecated flag even with EMS >= 4.0.10
-- `emcmake cmake -G Ninja -DIMGUI_EMSCRIPTEN_WEBGPU_FLAG="-sUSE_WEBGPU=1" -B where_to_build_dir`
-   - it set `IMGUI_IMPL_WEBGPU_BACKEND_WGPU` compiler define 
+   - if EMS < 4.0.10 the build aborts (`-sUSE_WEBGPU=1` is no longer supported by our examples and our WGPU backend
 
 #### Generate Emscripten using external WebGPU library (emdawnwebgpu_pkg)
+
 - `emcmake cmake -G Ninja -DIMGUI_EMSCRIPTEN_WEBGPU_FLAG="--use-port=path_to_emdawnwebgpu_pkg" -B where_to_build_dir`
    - it set `IMGUI_IMPL_WEBGPU_BACKEND_DAWN` compiler define 
    - *To use external WebGPU library it's necessary to have EMS >= 4.0.10 or the minimum requirements specified by the package:*
@@ -89,7 +85,7 @@ Once the procedure for the specific builder is generated, the build command is *
 ---
 
 ### CMake useful options
-#### Generator types (alternative to **ninja** bulder):
+#### Generator types (alternative to **ninja** builder):
 - `-G Ninja` to build with __ninja__ builder
 - `-G "Unix Makefiles"` to build with __make__ builder
 - `-G "Visual Studio 17 2022" -A x64` to create a VS 2022 solution (.sln) file, Windows only 

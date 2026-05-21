@@ -256,8 +256,8 @@ void MyImGuiBackend_RenderDrawData(ImDrawData* draw_data)
             const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
             if (pcmd->UserCallback)
             {
-                if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
-                    MyEngineSetupenderState();
+                if (pcmd->UserCallback == platform_io.DrawCallback_ResetRenderState)
+                    MyEngineSetupSenderState();
                 else
                     pcmd->UserCallback(cmd_list, pcmd);
             }
@@ -338,7 +338,7 @@ void MyImGuiBackend_UpdateTexture(ImTextureData* tex)
     {
         // Create texture based on tex->Width, tex->Height.
         // - Most backends only support tex->Format == ImTextureFormat_RGBA32.
-        // - Backends for particularly memory constrainted platforms may support tex->Format == ImTextureFormat_Alpha8.
+        // - Backends for particularly memory constrained platforms may support tex->Format == ImTextureFormat_Alpha8.
 
         // Upload all texture pixels
         // - Read from our CPU-side copy of the texture and copy to your graphics API.

@@ -19,8 +19,8 @@ WEB_DIR = web
 EXE = $(WEB_DIR)/index.html
 IMGUI_DIR = ../..
 SOURCES = main.cpp
-SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
 SOURCES += $(IMGUI_DIR)/backends/imgui_impl_sdl2.cpp $(IMGUI_DIR)/backends/imgui_impl_wgpu.cpp
+SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 UNAME_S := $(shell uname -s)
 CPPFLAGS =
@@ -40,11 +40,7 @@ LDFLAGS += -s ASYNCIFY=1
 LDFLAGS += -s NO_EXIT_RUNTIME=0
 LDFLAGS += -s ASSERTIONS=1
 
-# (1) Using legacy WebGPU implementation (Emscripten < 4.0.10)
-#EMS += -DIMGUI_IMPL_WEBGPU_BACKEND_WGPU
-#LDFLAGS += -s USE_WEBGPU=1
-
-# or (2) Using newer Dawn-based WebGPU port (Emscripten >= 4.0.10)
+# Using Dawn-based WebGPU port (requires Emscripten >= 4.0.10)
 EMS += --use-port=emdawnwebgpu
 LDFLAGS += --use-port=emdawnwebgpu
 
