@@ -10548,7 +10548,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
                     // Rotating square
                     for (int n = 0; n < 4; n++)
                         draw_list->PathLineTo({ x + half_sz + rotating_square[n].x, y + half_sz + rotating_square[n].y });
-                    draw_list->PathStroke(col, flags | ImDrawFlags_Closed, th);
+                    draw_list->PathStroke(col, th, flags | ImDrawFlags_Closed);
                     //for (int n = 0; n < 4; n++) // ...made of individual line
                     //    draw_list->AddLine({ x + half_sz + rotating_square[n].x, y + half_sz + rotating_square[n].y }, { x + half_sz + rotating_square[(n + 1) & 3].x, y + half_sz + rotating_square[(n + 1) & 3].y }, col, th, flags);
                     x += sz + spacing;
