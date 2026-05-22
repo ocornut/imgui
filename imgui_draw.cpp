@@ -818,6 +818,20 @@ void ImDrawList::PrimQuadUV(const ImVec2& a, const ImVec2& b, const ImVec2& c, c
     _IdxWritePtr += 6;
 }
 
+
+static float CalculateCenterPixelAlignedOffset(float thickness, float _FringeScale)
+{
+    // Old jumpy one.
+    // return IM_TRUNC(thickness * 0.5f / _FringeScale) * _FringeScale;
+
+    // Calculate outside offset for stroke position CenterPixelAligned
+    // so that one side the of the line is always at pixel boundary.
+    // On integer thickness both sides of the line are on pixel boundary.
+    const float screen_thickness = thickness / _FringeScale;
+    const int s_thickness = (int)screen_thickness;
+    return ((float)(s_thickness / 2) + (s_thickness & 1) * (screen_thickness - s_thickness)) * _FringeScale;
+}
+
 // On AddPolyline() and AddConvexPolyFilled() we intentionally avoid using ImVec2 and superfluous function calls to optimize debug/non-inlined builds.
 // - Those macros expects l-values and need to be used as their own statement.
 // - Those macros are intentionally not surrounded by the 'do {} while (0)' idiom because even that translates to runtime with debug compilers.
@@ -857,18 +871,14 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
     const bool miters_only = (flags & ImDrawFlags_MiterOnly) != 0;
     const float miter_distance_limit_sqr = IM_POLYLINE_MITER_LIMIT * IM_POLYLINE_MITER_LIMIT;
 
-    float thickness0 = (thickness + fringe) * 0.5f;
-    float thickness1 = thickness0;
+    float thickness0 = (thickness + fringe) * 0.5f; // Center (or legacy)
 	if (stroke_pos == ImDrawFlags_StrokeOutside)
-	{
 		thickness0 = thickness + fringe * 0.5f;
-		thickness1 = fringe * 0.5f;
-	}
+    else if (stroke_pos == ImDrawFlags_StrokeCenterPixelAligned)
+        thickness0 = CalculateCenterPixelAlignedOffset(thickness, _FringeScale) + fringe * 0.5f;
 	else if (stroke_pos == ImDrawFlags_StrokeInside)
-	{
 		thickness0 = fringe * 0.5f;
-		thickness1 = thickness + fringe * 0.5f;
-	}
+    float thickness1 = (thickness + fringe) - thickness0;
 
     int idx_count = 0;
     int vtx_count = 0;
@@ -2032,19 +2042,6 @@ void ImDrawList::PathRect(const ImVec2& a, const ImVec2& b, float rounding, ImDr
     }
 }
 
-static float CalculateCenterPixelAlignedOffset(float thickness, float _FringeScale)
-{
-    // Old jumpy one.
-    // return IM_TRUNC(thickness * 0.5f / _FringeScale) * _FringeScale;
-
-    // Calculate outside offset for stroke position CenterPixelAligned
-    // so that one side the of the line is always at pixel boundary.
-    // On integer thickness both sides of the line are on pixel boundary.
-    const float screen_thickness = thickness / _FringeScale;
-    const int s_thickness = (int)screen_thickness;
-    return ((float)(s_thickness / 2) + (s_thickness & 1) * (screen_thickness - s_thickness)) * _FringeScale;
-}
-
 extern bool g_LEGACY_STROKES;
 
 // We intently don't turn g_LEGACY_STROKES into ImDrawFlags_StrokeLegacy here.
@@ -2061,7 +2058,8 @@ void ImDrawList::AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float th
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
-    if (g_LEGACY_STROKES)
+    ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeCenter);
+    if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy)
     {
         const ImVec2 points[2] = { ImVec2(p1.x + 0.5f, p1.y + 0.5f), ImVec2(p2.x + 0.5f, p2.y + 0.5f) };
         AddPolyline(points, 2, col, thickness, ImDrawFlags_StrokeLegacy);
@@ -2081,26 +2079,33 @@ void ImDrawList::AddLineH(float min_x, float max_x, float y, ImU32 col, float th
     if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy)
     {
         const ImVec2 points[2] = { ImVec2(min_x + 0.5f, y + 0.5f), ImVec2(max_x + 0.5f, y + 0.5f) }; // Same as AddLine() above.
-        AddPolyline(points, 2, col, thickness, ImDrawFlags_StrokeLegacy);
+        AddPolyline(points, 2, col, thickness, stroke_pos);
         return;
     }
 
+    float top_y = y; // Inside
     if (stroke_pos == ImDrawFlags_StrokeCenter)
-        y -= thickness * 0.5f;
+        top_y -= thickness * 0.5f;
     else if (stroke_pos == ImDrawFlags_StrokeCenterPixelAligned)
-        y -= CalculateCenterPixelAlignedOffset(thickness, _FringeScale);
+        top_y -= CalculateCenterPixelAlignedOffset(thickness, _FringeScale);
     else if (stroke_pos == ImDrawFlags_StrokeOutside)
-        y -= thickness;
+        top_y -= thickness;
 
-    if (_FringeScaleIsInteger && ImIsTruncated4(min_x, max_x, y, thickness))
+    if (_FringeScaleIsInteger && ImIsTruncated4(min_x, max_x, top_y, thickness) && (flags & ImDrawFlags_SquareCap) == 0)
     {
+        // For pixel aligned case, use simple rectangle.
         PrimReserve(6, 4);
-        PrimRect(ImVec2(min_x, y), ImVec2(max_x, y + thickness), col);
+        PrimRect(ImVec2(min_x, top_y), ImVec2(max_x, top_y + thickness), col);
     }
     else
     {
-        // FIXME-POLYLINE: Implement square caps
-        AddRectFilled(ImVec2(min_x, y), ImVec2(max_x, y + thickness), col);
+        // Replace stroke pos with the already calculated one.
+        flags = (flags & ~ImDrawFlags_StrokeMask_) | stroke_pos;
+
+        // For generic case use line, since it needs less triangles than AA rectangle.
+        PathLineTo(ImVec2(min_x, y));
+        PathLineTo(ImVec2(max_x, y));
+        PathStroke(col, thickness, flags);
     }
 }
 
@@ -2113,26 +2118,34 @@ void ImDrawList::AddLineV(float x, float min_y, float max_y, ImU32 col, float th
     if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy)
     {
         const ImVec2 points[2] = { ImVec2(x + 0.5f, max_y + 0.5f), ImVec2(x + 0.5f, min_y + 0.5f) }; // Same as AddLine() above.
-        AddPolyline(points, 2, col, thickness, ImDrawFlags_StrokeLegacy);
+        AddPolyline(points, 2, col, thickness, stroke_pos);
         return;
     }
 
+    float left_x = x; // Inside
     if (stroke_pos == ImDrawFlags_StrokeCenter)
-        x -= thickness * 0.5f;
+        left_x -= thickness * 0.5f;
     else if (stroke_pos == ImDrawFlags_StrokeCenterPixelAligned)
-        x -= CalculateCenterPixelAlignedOffset(thickness, _FringeScale);
+        left_x -= CalculateCenterPixelAlignedOffset(thickness, _FringeScale);
     else if (stroke_pos == ImDrawFlags_StrokeOutside)
-        x -= thickness;
+        left_x -= thickness;
 
-    if (_FringeScaleIsInteger && ImIsTruncated4(x, min_y, max_y, thickness))
+    if (_FringeScaleIsInteger && ImIsTruncated4(left_x, min_y, max_y, thickness) && (flags & ImDrawFlags_SquareCap) == 0)
     {
+        // For pixel aligned case, use simple rectangle.
         PrimReserve(6, 4);
-        PrimRect(ImVec2(x, min_y), ImVec2(x + thickness, max_y), col);
+        PrimRect(ImVec2(left_x, min_y), ImVec2(left_x + thickness, max_y), col);
     }
     else
     {
-        // FIXME-POLYLINE: Implement square caps
-        AddRectFilled(ImVec2(x, min_y), ImVec2(x + thickness, max_y), col);
+        // Replace stroke pos with the already calculated one.
+        flags = (flags & ~ImDrawFlags_StrokeMask_) | stroke_pos;
+
+        // For generic case use line, since it needs less triangles than AA rectangle.
+        // Drawing for bottom to top, so that the inside stroke pos expands to right.
+        PathLineTo(ImVec2(x, max_y));
+        PathLineTo(ImVec2(x, min_y));
+        PathStroke(col, thickness, flags);
     }
 }
 
@@ -2374,49 +2387,37 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
-    if (g_LEGACY_STROKES)
+    ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
+
+    if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy)
     {
         if (Flags & ImDrawListFlags_AntiAliasedLines)
             PathRect(p_min + ImVec2(0.50f, 0.50f), p_max - ImVec2(0.50f, 0.50f), rounding, flags);
         else
             PathRect(p_min + ImVec2(0.50f, 0.50f), p_max - ImVec2(0.49f, 0.49f), rounding, flags); // Better looking lower-right corner and rounded non-AA shapes.
-        PathStroke(col, thickness, ImDrawFlags_Closed);
+        PathStroke(col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | ImDrawFlags_StrokeCenter);
         return;
     }
 
-    ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
-#if 0 // shiny_polyline
-    // FIXME-POLYLINE
-    const bool has_rounding = (rounding >= _FringeScale);
+    const bool has_rounding = (rounding >= _FringeScale * 0.5f);
 
+    // Calculate the outer boundary of the rectangle based on the stroke position.
     ImVec2 outer_min = p_min;
     ImVec2 outer_max = p_max;
     float outer_rounding = rounding;
 
-    if (stroke_pos == ImDrawFlags_StrokeLegacy)
-    {
-        outer_min += ImVec2(0.50f, 0.50f);
-        if (Flags & ImDrawListFlags_AntiAliasedLines)
-            outer_max -= ImVec2(0.50f, 0.50f);
-        else
-            outer_max -= ImVec2(0.49f, 0.49f); // Better looking lower-right corner and rounded non-AA shapes.
-        stroke_pos = ImDrawFlags_StrokeCenter;
-    }
-
+    float offset = 0.0f; // Inside
     if (stroke_pos == ImDrawFlags_StrokeCenter)
-    {
-        const ImVec2 offset(thickness * 0.5f, thickness * 0.5f);
-        outer_min -= offset;
-        outer_max += offset;
-        outer_rounding += has_rounding ? thickness * 0.5f : 0.0f;
-    }
+        offset = thickness * 0.5f;
+    else if (stroke_pos == ImDrawFlags_StrokeCenterPixelAligned)
+        offset = CalculateCenterPixelAlignedOffset(thickness, _FringeScale);
     else if (stroke_pos == ImDrawFlags_StrokeOutside)
-    {
-        const ImVec2 offset(thickness, thickness);
-        outer_min -= offset;
-        outer_max += offset;
-        outer_rounding += has_rounding ? thickness : 0.0f;
-    }
+        offset = thickness;
+    outer_min.x -= offset;
+    outer_min.y -= offset;
+    outer_max.x += offset;
+    outer_max.y += offset;
+    outer_rounding += has_rounding ? offset : 0.0f;
 
     const float width = outer_max.x - outer_min.x;
     const float height = outer_max.y - outer_min.y;
@@ -2429,6 +2430,61 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
 
     if ((flags & ImDrawFlags_RoundCornersMask_) == 0)
         flags |= ImDrawFlags_RoundCornersAll;
+    if (has_rounding)
+    {
+        // Constrain rounding to rect dimensions
+        outer_rounding = ImMin(outer_rounding, ImFabs(width) * (((flags & ImDrawFlags_RoundCornersTop) == ImDrawFlags_RoundCornersTop) || ((flags & ImDrawFlags_RoundCornersBottom) == ImDrawFlags_RoundCornersBottom) ? 0.5f : 1.0f) - 1.0f);
+        outer_rounding = ImMin(outer_rounding, ImFabs(height) * (((flags & ImDrawFlags_RoundCornersLeft) == ImDrawFlags_RoundCornersLeft) || ((flags & ImDrawFlags_RoundCornersRight) == ImDrawFlags_RoundCornersRight) ? 0.5f : 1.0f) - 1.0f);
+    }
+
+    if (_FringeScaleIsInteger && ImIsTruncated4(outer_min.x, outer_min.y, outer_max.x, outer_max.y) && ImIsTruncated4(outer_rounding, thickness, 0.0f, 0.0f))
+    {
+        int s_rounding = (int)(outer_rounding / _FringeScale);
+        int s_thickness = (int)(thickness / _FringeScale);
+
+        if (s_rounding <= 0 || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
+        {
+            // Pixel aligned non-rounded rect.
+            const ImVec2 opaque_uv = _Data->TexUvWhitePixel;
+            const float t = (float)s_thickness * _FringeScale;
+
+            PrimReserve(8*3, 8);
+            const ImDrawIdx idx = (ImDrawIdx)_VtxCurrentIdx;
+            IM_APPEND_VTX(outer_min.x, outer_min.y, opaque_uv, col);
+            IM_APPEND_VTX(outer_min.x + t, outer_min.y + t, opaque_uv, col);
+            IM_APPEND_VTX(outer_max.x, outer_min.y, opaque_uv, col);
+            IM_APPEND_VTX(outer_max.x - t, outer_min.y + t, opaque_uv, col);
+            IM_APPEND_VTX(outer_max.x, outer_max.y, opaque_uv, col);
+            IM_APPEND_VTX(outer_max.x - t, outer_max.y - t, opaque_uv, col);
+            IM_APPEND_VTX(outer_min.x, outer_max.y, opaque_uv, col);
+            IM_APPEND_VTX(outer_min.x + t, outer_max.y - t, opaque_uv, col);
+
+            IM_APPEND_TRI(idx + 0, idx + 3, idx + 1);
+            IM_APPEND_TRI(idx + 0, idx + 2, idx + 3);
+
+            IM_APPEND_TRI(idx + 2, idx + 5, idx + 3);
+            IM_APPEND_TRI(idx + 2, idx + 4, idx + 5);
+
+            IM_APPEND_TRI(idx + 4, idx + 7, idx + 5);
+            IM_APPEND_TRI(idx + 4, idx + 6, idx + 7);
+
+            IM_APPEND_TRI(idx + 6, idx + 1, idx + 7);
+            IM_APPEND_TRI(idx + 6, idx + 0, idx + 1);
+
+            return;
+        }
+        if ((Flags & ImDrawListFlags_RoundCornersUseTex) && s_thickness <= IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX && s_rounding <= IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX)
+        {
+            // Pixel aligned rect with round corners rendered using baked textures.
+			IM_ASSERT_PARANOID(!(_Data->Font->OwnerAtlas->Flags & ImFontAtlasFlags_NoBakedRoundCorners));
+            const int size = ImMax(s_rounding, s_thickness); // This is matching the baking calculations.
+            const int idx = (s_thickness - 1) * IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX + s_rounding - 1;
+            IM_ASSERT_PARANOID(idx >= 0 && idx < IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX * IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX);
+            const ImVec4 tex_uvs = _Data->TexUvCornerStrokes[idx];
+            _AddRectBaked(outer_min, outer_max, col, (float)size * _FringeScale, (float)thickness, tex_uvs, flags);
+            return;
+        }
+    }
 
     if (!has_rounding || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
     {
@@ -2439,10 +2495,6 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
     }
     else
     {
-        // Constrain rounding to rect dimensions
-        outer_rounding = ImMin(outer_rounding, ImFabs(width) * (((flags & ImDrawFlags_RoundCornersTop) == ImDrawFlags_RoundCornersTop) || ((flags & ImDrawFlags_RoundCornersBottom) == ImDrawFlags_RoundCornersBottom) ? 0.5f : 1.0f) - 1.0f);
-        outer_rounding = ImMin(outer_rounding, ImFabs(height) * (((flags & ImDrawFlags_RoundCornersLeft) == ImDrawFlags_RoundCornersLeft) || ((flags & ImDrawFlags_RoundCornersRight) == ImDrawFlags_RoundCornersRight) ? 0.5f : 1.0f) - 1.0f);
-
         if (thickness > outer_rounding)
         {
             // Special case rendering to avoid rendering artifacts at the corners.
@@ -2461,111 +2513,6 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
     }
 
     PathStroke(col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | ImDrawFlags_StrokeInside);
-#else
-    // textured_round_corners
-    const bool is_truncated = _FringeScaleIsInteger && ImIsTruncated4(p_min.x, p_min.y, p_max.x, p_max.y) && ImIsTruncated4(rounding, thickness, 0.0f, 0.0f);
-    if ((stroke_pos == ImDrawFlags_StrokeInside || stroke_pos == ImDrawFlags_StrokeOutside || stroke_pos == ImDrawFlags_StrokeCenterPixelAligned) && is_truncated)
-    {
-        if ((flags & ImDrawFlags_RoundCornersMask_) == 0)
-            flags |= ImDrawFlags_RoundCornersAll;
-
-        rounding = ImMin(rounding, ImFabs(p_max.x - p_min.x) * (((flags & ImDrawFlags_RoundCornersTop) == ImDrawFlags_RoundCornersTop) || ((flags & ImDrawFlags_RoundCornersBottom) == ImDrawFlags_RoundCornersBottom) ? 0.5f : 1.0f) - 1.0f);
-        rounding = ImMin(rounding, ImFabs(p_max.y - p_min.y) * (((flags & ImDrawFlags_RoundCornersLeft) == ImDrawFlags_RoundCornersLeft) || ((flags & ImDrawFlags_RoundCornersRight) == ImDrawFlags_RoundCornersRight) ? 0.5f : 1.0f) - 1.0f);
-
-        int s_rounding = (int)(rounding / _FringeScale);
-        int s_thickness = (int)(thickness / _FringeScale);
-
-        // AddRectBaked() renders the stroke inside the rectangle, so we need to adjust the outside case
-        // This branch does not handle the center, since odd thickness strokes are not pixel aligned, even if the rectangle is.
-        // Pixel aligned center works, since the stroke is aligned to pixels.
-        ImVec2 s_min = p_min;
-        ImVec2 s_max = p_max;
-        if (stroke_pos == ImDrawFlags_StrokeOutside)
-        {
-            s_min.x -= thickness;
-            s_min.y -= thickness;
-            s_max.x += thickness;
-            s_max.y += thickness;
-            if (s_rounding != 0)
-                s_rounding += s_thickness;
-        }
-        else if (stroke_pos == ImDrawFlags_StrokeCenterPixelAligned)
-        {
-            const float offset = (float)(s_thickness / 2) * _FringeScale; // Using integer div, since we want IM_TRUNC(thickness/2).
-            s_min.x -= offset;
-            s_min.y -= offset;
-            s_max.x += offset;
-            s_max.y += offset;
-            if (s_rounding != 0)
-                s_rounding += s_thickness / 2;
-        }
-
-        if (s_rounding <= 0 || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
-        {
-            const ImVec2 opaque_uv = _Data->TexUvWhitePixel;
-            const float t = (float)s_thickness * _FringeScale;
-
-            PrimReserve(8*3, 8);
-            const ImDrawIdx idx = (ImDrawIdx)_VtxCurrentIdx;
-            IM_APPEND_VTX(s_min.x, s_min.y, opaque_uv, col);
-            IM_APPEND_VTX(s_min.x + t, s_min.y + t, opaque_uv, col);
-            IM_APPEND_VTX(s_max.x, s_min.y, opaque_uv, col);
-            IM_APPEND_VTX(s_max.x - t, s_min.y + t, opaque_uv, col);
-            IM_APPEND_VTX(s_max.x, s_max.y, opaque_uv, col);
-            IM_APPEND_VTX(s_max.x - t, s_max.y - t, opaque_uv, col);
-            IM_APPEND_VTX(s_min.x, s_max.y, opaque_uv, col);
-            IM_APPEND_VTX(s_min.x + t, s_max.y - t, opaque_uv, col);
-
-            IM_APPEND_TRI(idx + 0, idx + 3, idx + 1);
-            IM_APPEND_TRI(idx + 0, idx + 2, idx + 3);
-
-            IM_APPEND_TRI(idx + 2, idx + 5, idx + 3);
-            IM_APPEND_TRI(idx + 2, idx + 4, idx + 5);
-
-            IM_APPEND_TRI(idx + 4, idx + 7, idx + 5);
-            IM_APPEND_TRI(idx + 4, idx + 6, idx + 7);
-
-            IM_APPEND_TRI(idx + 6, idx + 1, idx + 7);
-            IM_APPEND_TRI(idx + 6, idx + 0, idx + 1);
-
-            return;
-        }
-        if ((Flags & ImDrawListFlags_RoundCornersUseTex) && s_thickness <= IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX && s_rounding <= IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX)
-        {
-			IM_ASSERT_PARANOID(!(_Data->Font->OwnerAtlas->Flags & ImFontAtlasFlags_NoBakedRoundCorners));
-            const int size = ImMax(s_rounding, s_thickness); // This is matching the baking calculations.
-            const int idx = (s_thickness - 1) * IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX + s_rounding - 1;
-            IM_ASSERT_PARANOID(idx >= 0 && idx < IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX * IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX);
-            const ImVec4 tex_uvs = _Data->TexUvCornerStrokes[idx];
-            _AddRectBaked(s_min, s_max, col, (float)size * _FringeScale, (float)thickness, tex_uvs, flags);
-            return;
-        }
-    }
-
-    const ImVec2 offset(thickness * 0.5f, thickness * 0.5f);
-    if (stroke_pos == ImDrawFlags_StrokeInside)
-    {
-        rounding -= (rounding != 0.0f) ? thickness * 0.5f : 0.0f;
-        PathRect(p_min + offset, p_max - offset, rounding, flags);
-    }
-    else if (stroke_pos == ImDrawFlags_StrokeCenter)
-    {
-        PathRect(p_min, p_max, rounding, flags);
-    }
-    else if (stroke_pos == ImDrawFlags_StrokeCenterPixelAligned)
-    {
-        // PathRect() centers the stroke, just calculate the fractional offset.
-        const float fract = (thickness * 0.5f) - CalculateCenterPixelAlignedOffset(thickness, _FringeScale);
-        rounding += (rounding != 0.0f) ? fract : 0.0f;
-        PathRect(ImVec2(p_min.x + fract, p_min.y + fract), ImVec2(p_max.x - fract, p_max.y - fract), rounding, flags);
-    }
-    else if (stroke_pos == ImDrawFlags_StrokeOutside)
-    {
-        rounding += (rounding != 0.0f) ? thickness * 0.5f : 0.0f;
-        PathRect(p_min - offset, p_max + offset, rounding, flags);
-    }
-    PathStroke(col, thickness, ImDrawFlags_Closed);
-#endif
 }
 
 void ImDrawList::_AddRectFilledBaked(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float r, ImVec4 tex_uvs, ImDrawFlags flags)
@@ -2734,10 +2681,11 @@ void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int nu
         stroke_pos = ImDrawFlags_StrokeCenter;
     }
 
-    // FIXME-POLYLINE: missing ImDrawFlags_StrokeCenterPixelAligned.
     float outer_radius = radius;
     if (stroke_pos == ImDrawFlags_StrokeCenter)
         outer_radius = radius + thickness * 0.5f;
+    else if (stroke_pos == ImDrawFlags_StrokeCenterPixelAligned)
+        outer_radius = radius + CalculateCenterPixelAlignedOffset(thickness, _FringeScale);
     else if (stroke_pos == ImDrawFlags_StrokeInside)
         outer_radius = radius;
     else if (stroke_pos == ImDrawFlags_StrokeOutside)
@@ -2752,10 +2700,8 @@ void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int nu
     if (num_segments <= 0)
     {
         // Use arc with automatic segment count
-        // FIXME-POLYLINE: Review
-        //const int a_step = IM_DRAWLIST_ARCFAST_SAMPLE_MAX / _CalcCircleAutoSegmentCount(radius); // Radius used here intentionally so that the circle matches filled circle of same radius.
-        //_PathArcToFastEx(center, radius, 0, IM_DRAWLIST_ARCFAST_SAMPLE_MAX, a_step);
-        _PathArcToFastEx(center, radius, 0, IM_DRAWLIST_ARCFAST_SAMPLE_MAX, 0);
+        const int a_step = IM_DRAWLIST_ARCFAST_SAMPLE_MAX / _CalcCircleAutoSegmentCount(outer_radius); // Use outer_radius for segment count to be consistent with rounded rect.
+        _PathArcToFastEx(center, radius, 0, IM_DRAWLIST_ARCFAST_SAMPLE_MAX, a_step);
         _Path.Size--;
     }
     else
@@ -2823,6 +2769,8 @@ void ImDrawList::AddNgon(const ImVec2& center, float radius, ImU32 col, int num_
     float outer_radius = radius;
     if (stroke_pos == ImDrawFlags_StrokeCenter)
         outer_radius = radius + miter_thickness * 0.5f;
+    else if (stroke_pos == ImDrawFlags_StrokeCenterPixelAligned)
+        outer_radius = radius + CalculateCenterPixelAlignedOffset(miter_thickness, _FringeScale);
     else if (stroke_pos == ImDrawFlags_StrokeInside)
         outer_radius = radius;
     else if (stroke_pos == ImDrawFlags_StrokeOutside)
@@ -2867,41 +2815,12 @@ void ImDrawList::AddEllipse(const ImVec2& center, const ImVec2& radius, ImU32 co
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
-    // Note: since offset ellipse is not ellipse anymore, we cannot fall back to filled ellipse when outline covers the whole shape like in other shapes.
-    // FIXME-POLYLINE
-    /*
-    ImVec2 r;
-    if (g_LEGACY_STROKES)
+    ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
+
+    if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy)
     {
-        r = radius;
+        stroke_pos = ImDrawFlags_StrokeCenter;
     }
-    else
-    {
-        r = radius;
-        ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
-        if (stroke_pos == ImDrawFlags_StrokeInside)
-            r -= ImVec2(thickness * 0.5f, thickness * 0.5f);
-        else if (stroke_pos == ImDrawFlags_StrokeCenterPixelAligned)
-        {
-            const float fract = thickness * 0.5f - CalculateCenterPixelAlignedOffset(thickness, _FringeScale);
-            r -= ImVec2(fract, fract);
-        }
-        else if (stroke_pos == ImDrawFlags_StrokeOutside)
-            r += ImVec2(thickness * 0.5f, thickness * 0.5f);
-    }
-    */
-    /*
-    float stroke_offset = 0.0f;
-    if (stroke_pos == ImDrawFlags_StrokeInside)
-        stroke_offset = -thickness * 0.5f;
-    else if (stroke_pos == ImDrawFlags_StrokeOutside)
-        stroke_offset = thickness * 0.5f;
-    if ((ImMin(radius.x, radius.y) + stroke_offset) < (thickness * 0.5f + _FringeScale * 0.5f))
-    {
-        AddEllipseFilled(center, radius, col, rot, num_segments);
-        return;
-    }
-    */
 
     if (num_segments <= 0)
         num_segments = _CalcCircleAutoSegmentCount(ImMax(radius.x, radius.y)); // A bit pessimistic, maybe there's a better computation to do here.
@@ -2911,7 +2830,7 @@ void ImDrawList::AddEllipse(const ImVec2& center, const ImVec2& radius, ImU32 co
     // Because we are filling a closed shape we remove 1 from the count of segments/points
     const float a_max = IM_PI * 2.0f * ((float)num_segments - 1.0f) / (float)num_segments;
     PathEllipticalArcTo(center, radius, rot, 0.0f, a_max, num_segments - 1);
-    PathStroke(col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | flags);
+    PathStroke(col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | stroke_pos);
 }
 
 void ImDrawList::AddEllipseFilled(const ImVec2& center, const ImVec2& radius, ImU32 col, float rot, int num_segments)
