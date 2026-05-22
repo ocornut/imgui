@@ -867,6 +867,9 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
     const ImU32 col_trans = col & ~IM_COL32_A_MASK;
 
     const ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeCenter);
+    if (stroke_pos == ImDrawFlags_StrokeLegacy)
+        flags |= ImDrawFlags_MiterOnly | ImDrawFlags_NoAAEnds;
+
     const bool closed = (flags & ImDrawFlags_Closed) != 0;
     const bool miters_only = (flags & ImDrawFlags_MiterOnly) != 0;
     const float miter_distance_limit_sqr = IM_POLYLINE_MITER_LIMIT * IM_POLYLINE_MITER_LIMIT;
@@ -1184,8 +1187,16 @@ static ImU32 ImAlphaMultiply(ImU32 col, float alpha_mul)
     return (col & ~IM_COL32_A_MASK) | (a << IM_COL32_A_SHIFT);
 }
 
+extern bool g_LEGACY_STROKES;
+
 void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32 col, float thickness, ImDrawFlags flags)
 {
+    if (g_LEGACY_STROKES)
+    {
+        AddPolylineLegacy(points, points_count, col, thickness, flags);
+        return;
+    }
+
     if (points_count < 2 || (col & IM_COL32_A_MASK) == 0)
         return;
 
@@ -2084,8 +2095,6 @@ void ImDrawList::PathRect(const ImVec2& a, const ImVec2& b, float rounding, ImDr
     }
 }
 
-extern bool g_LEGACY_STROKES;
-
 // We intently don't turn g_LEGACY_STROKES into ImDrawFlags_StrokeLegacy here.
 // The earlier should use verbatim legacy code but will be removed before release once we confirm that both matches.
 ImDrawFlags ImDrawList::_GetStrokePos(ImDrawFlags flags, ImDrawFlags default_stroke_pos)
@@ -2694,6 +2703,8 @@ void ImDrawList::AddTriangle(const ImVec2& p1, const ImVec2& p2, const ImVec2& p
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
+    ImDrawFlags stroke_pos = g_LEGACY_STROKES ? ImDrawFlags_StrokeLegacy : _GetStrokePos(flags, ImDrawFlags_StrokeInside);
+    flags = (flags & ~ImDrawFlags_StrokeMask_) | stroke_pos;
     PathLineTo(p1);
     PathLineTo(p2);
     PathLineTo(p3);
