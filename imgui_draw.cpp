@@ -819,12 +819,12 @@ void ImDrawList::PrimQuadUV(const ImVec2& a, const ImVec2& b, const ImVec2& c, c
 }
 
 
-static float CalculateCenterPixelAlignedOffset(float thickness, float _FringeScale)
+static float CalculateCenterAlignedOffset(float thickness, float _FringeScale)
 {
     // Old jumpy one.
     // return IM_TRUNC(thickness * 0.5f / _FringeScale) * _FringeScale;
 
-    // Calculate outside offset for stroke position CenterPixelAligned
+    // Calculate outside offset for stroke position CenterAligned
     // so that one side the of the line is always at pixel boundary.
     // On integer thickness both sides of the line are on pixel boundary.
     const float screen_thickness = thickness / _FringeScale;
@@ -877,8 +877,8 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
     float thickness0 = (thickness + fringe) * 0.5f; // Center (or legacy)
 	if (stroke_pos == ImDrawFlags_StrokeOutside)
 		thickness0 = thickness + fringe * 0.5f;
-    else if (stroke_pos == ImDrawFlags_StrokeCenterPixelAligned)
-        thickness0 = CalculateCenterPixelAlignedOffset(thickness, _FringeScale) + fringe * 0.5f;
+    else if (stroke_pos == ImDrawFlags_StrokeCenterAligned)
+        thickness0 = CalculateCenterAlignedOffset(thickness, _FringeScale) + fringe * 0.5f;
 	else if (stroke_pos == ImDrawFlags_StrokeInside)
 		thickness0 = fringe * 0.5f;
     float thickness1 = (thickness + fringe) - thickness0;
@@ -2137,8 +2137,8 @@ void ImDrawList::AddLineH(float min_x, float max_x, float y, ImU32 col, float th
     float top_y = y; // Inside
     if (stroke_pos == ImDrawFlags_StrokeCenter)
         top_y -= thickness * 0.5f;
-    else if (stroke_pos == ImDrawFlags_StrokeCenterPixelAligned)
-        top_y -= CalculateCenterPixelAlignedOffset(thickness, _FringeScale);
+    else if (stroke_pos == ImDrawFlags_StrokeCenterAligned)
+        top_y -= CalculateCenterAlignedOffset(thickness, _FringeScale);
     else if (stroke_pos == ImDrawFlags_StrokeOutside)
         top_y -= thickness;
 
@@ -2176,8 +2176,8 @@ void ImDrawList::AddLineV(float x, float min_y, float max_y, ImU32 col, float th
     float left_x = x; // Inside
     if (stroke_pos == ImDrawFlags_StrokeCenter)
         left_x -= thickness * 0.5f;
-    else if (stroke_pos == ImDrawFlags_StrokeCenterPixelAligned)
-        left_x -= CalculateCenterPixelAlignedOffset(thickness, _FringeScale);
+    else if (stroke_pos == ImDrawFlags_StrokeCenterAligned)
+        left_x -= CalculateCenterAlignedOffset(thickness, _FringeScale);
     else if (stroke_pos == ImDrawFlags_StrokeOutside)
         left_x -= thickness;
 
@@ -2460,8 +2460,8 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
     float offset = 0.0f; // Inside
     if (stroke_pos == ImDrawFlags_StrokeCenter)
         offset = thickness * 0.5f;
-    else if (stroke_pos == ImDrawFlags_StrokeCenterPixelAligned)
-        offset = CalculateCenterPixelAlignedOffset(thickness, _FringeScale);
+    else if (stroke_pos == ImDrawFlags_StrokeCenterAligned)
+        offset = CalculateCenterAlignedOffset(thickness, _FringeScale);
     else if (stroke_pos == ImDrawFlags_StrokeOutside)
         offset = thickness;
     outer_min.x -= offset;
@@ -2737,8 +2737,8 @@ void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int nu
     float outer_radius = radius;
     if (stroke_pos == ImDrawFlags_StrokeCenter)
         outer_radius = radius + thickness * 0.5f;
-    else if (stroke_pos == ImDrawFlags_StrokeCenterPixelAligned)
-        outer_radius = radius + CalculateCenterPixelAlignedOffset(thickness, _FringeScale);
+    else if (stroke_pos == ImDrawFlags_StrokeCenterAligned)
+        outer_radius = radius + CalculateCenterAlignedOffset(thickness, _FringeScale);
     else if (stroke_pos == ImDrawFlags_StrokeInside)
         outer_radius = radius;
     else if (stroke_pos == ImDrawFlags_StrokeOutside)
@@ -2822,8 +2822,8 @@ void ImDrawList::AddNgon(const ImVec2& center, float radius, ImU32 col, int num_
     float outer_radius = radius;
     if (stroke_pos == ImDrawFlags_StrokeCenter)
         outer_radius = radius + miter_thickness * 0.5f;
-    else if (stroke_pos == ImDrawFlags_StrokeCenterPixelAligned)
-        outer_radius = radius + CalculateCenterPixelAlignedOffset(miter_thickness, _FringeScale);
+    else if (stroke_pos == ImDrawFlags_StrokeCenterAligned)
+        outer_radius = radius + CalculateCenterAlignedOffset(miter_thickness, _FringeScale);
     else if (stroke_pos == ImDrawFlags_StrokeInside)
         outer_radius = radius;
     else if (stroke_pos == ImDrawFlags_StrokeOutside)
