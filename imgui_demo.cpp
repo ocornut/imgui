@@ -10440,6 +10440,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             ImGui::SameLine(); ImGui::RadioButton("Legacy", &flags, ImDrawFlags_StrokeLegacy);
             ImGui::CheckboxFlags("MiterOnly", &flags, ImDrawFlags_MiterOnly);
             ImGui::SameLine(); ImGui::CheckboxFlags("SquareCap", &flags, ImDrawFlags_SquareCap);
+            ImGui::SameLine(); ImGui::CheckboxFlags("NoAAEnds", &flags, ImDrawFlags_NoAAEnds);
 
             const ImVec2 p = ImGui::GetCursorScreenPos();
             const ImU32 col = ImColor(colf);
@@ -10478,7 +10479,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
                 float side_step = 3.141592f * 0.5f;
                 for (int side = 0; side < 4; side++)
                 {
-                    float t = (float)ImGui::GetTime() * 0.3f + side * side_step;
+                    float t = (float)ImGui::GetTime() * 0.1f + side * side_step;
                     ImVec2 center(x + sz * 0.5f, y + sz * 0.5f);
                     draw_list->AddLine({ center.x + cosf(t) * sz * 0.5f, center.y + sinf(t) * sz * 0.5f }, { center.x + cosf(t + side_step) * sz * 0.5f, center.y + sinf(t + side_step) * sz * 0.5f }, col, th, flags);
                 }
