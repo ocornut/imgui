@@ -2560,8 +2560,6 @@ void ImTextureData::DestroyPixels()
 // - ImFontAtlasBuildPreloadAllGlyphRanges()
 // - ImFontAtlasBuildUpdatePointers()
 // - ImFontAtlasBuildRenderBitmapFromString()
-// - ImFontAtlasBuildUpdateBasicTexData()
-// - ImFontAtlasBuildUpdateLinesTexData()
 // - ImFontAtlasBuildAddFont()
 // - ImFontAtlasBuildSetupFontBakedEllipsis()
 // - ImFontAtlasBuildSetupFontBakedBlanks()
@@ -2578,13 +2576,14 @@ void ImTextureData::DestroyPixels()
 // - ImFontAtlasUpdateDrawListsSharedData()
 //-----------------------------------------------------------------------------
 // - ImFontAtlasBuildSetTexture()
-// - ImFontAtlasBuildAddTexture()
-// - ImFontAtlasBuildMakeSpace()
-// - ImFontAtlasBuildRepackTexture()
-// - ImFontAtlasBuildGrowTexture()
-// - ImFontAtlasBuildRepackOrGrowTexture()
-// - ImFontAtlasBuildGetTextureSizeEstimate()
-// - ImFontAtlasBuildCompactTexture()
+// - ImFontAtlasBuildUpdateTexData()
+// - ImFontAtlasTextureAdd()
+// - ImFontAtlasTextureRepack()
+// - ImFontAtlasTextureGrow()
+// - ImFontAtlasTextureMakeSpace()
+// - ImFontAtlasTextureGetSizeEstimate()
+// - ImFontAtlasBuildClear()
+// - ImFontAtlasTextureCompact()
 // - ImFontAtlasBuildInit()
 // - ImFontAtlasBuildDestroy()
 //-----------------------------------------------------------------------------
@@ -3581,7 +3580,7 @@ void ImFontAtlasBuildRenderBitmapFromString(ImFontAtlas* atlas, int x, int y, in
     }
 }
 
-static void ImFontAtlasBuildUpdateBasicTexData(ImFontAtlas* atlas)
+static void ImFontAtlasBuildUpdateTexDataBasic(ImFontAtlas* atlas)
 {
     // Pack and store identifier so we can refresh UV coordinates on texture resize.
     // FIXME-NEWATLAS: User/custom rects where user code wants to store UV coordinates will need to do the same thing.
@@ -3615,7 +3614,7 @@ static void ImFontAtlasBuildUpdateBasicTexData(ImFontAtlas* atlas)
     atlas->TexUvWhitePixel = ImVec2((r.x + 0.5f) * atlas->TexUvScale.x, (r.y + 0.5f) * atlas->TexUvScale.y);
 }
 
-static void ImFontAtlasBuildUpdateLinesTexData(ImFontAtlas* atlas)
+static void ImFontAtlasBuildUpdateTexDataLines(ImFontAtlas* atlas)
 {
     if (atlas->Flags & ImFontAtlasFlags_NoBakedLines)
         return;
@@ -4064,6 +4063,12 @@ static void ImFontAtlasBuildSetTexture(ImFontAtlas* atlas, ImTextureData* tex)
     ImFontAtlasUpdateDrawListsTextures(atlas, old_tex_ref, atlas->TexRef);
 }
 
+static void ImFontAtlasBuildUpdateTexData(ImFontAtlas* atlas)
+{
+    ImFontAtlasBuildUpdateTexDataBasic(atlas);
+    ImFontAtlasBuildUpdateTexDataLines(atlas);
+}
+
 // Create a new texture, discard previous one
 ImTextureData* ImFontAtlasTextureAdd(ImFontAtlas* atlas, int w, int h)
 {
@@ -4178,8 +4183,7 @@ void ImFontAtlasTextureRepack(ImFontAtlas* atlas, int w, int h)
             }
 
     // Update other cached UV
-    ImFontAtlasBuildUpdateLinesTexData(atlas);
-    ImFontAtlasBuildUpdateBasicTexData(atlas);
+    ImFontAtlasBuildUpdateTexData(atlas);
 
     builder->LockDisableResize = false;
     ImFontAtlasUpdateDrawListsSharedData(atlas);
@@ -4328,8 +4332,7 @@ void ImFontAtlasBuildInit(ImFontAtlas* atlas)
     ImFontAtlasPackInit(atlas);
 
     // Add required texture data
-    ImFontAtlasBuildUpdateLinesTexData(atlas);
-    ImFontAtlasBuildUpdateBasicTexData(atlas);
+    ImFontAtlasBuildUpdateTexData(atlas);
 
     // Register fonts
     ImFontAtlasBuildUpdatePointers(atlas);
@@ -4357,6 +4360,8 @@ void ImFontAtlasBuildDestroy(ImFontAtlas* atlas)
     IM_DELETE(atlas->Builder);
     atlas->Builder = NULL;
 }
+
+//-----------------------------------------------------------------------------
 
 void ImFontAtlasPackInit(ImFontAtlas * atlas)
 {
