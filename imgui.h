@@ -2339,6 +2339,7 @@ struct ImGuiStyle
     ImGuiDir    ColorButtonPosition;        // Side of the color button in the ColorEdit4 widget (left/right). Defaults to ImGuiDir_Right.
     ImVec2      ButtonTextAlign;            // Alignment of button text when button is larger than text. Defaults to (0.5f, 0.5f) (centered).
     ImVec2      SelectableTextAlign;        // Alignment of selectable text. Defaults to (0.0f, 0.0f) (top-left aligned). It's generally important to keep this left-aligned if you want to lay multiple items on a same line.
+    float       InputTextCursorSize;        // Thickness of cursor/caret in InputText().
     float       SeparatorSize;              // Thickness of border in Separator(). Must be >= 1.0f.
     float       SeparatorTextBorderSize;    // Thickness of border in SeparatorText()
     ImVec2      SeparatorTextAlign;         // Alignment of text within the separator. Defaults to (0.0f, 0.5f) (left aligned, center).
