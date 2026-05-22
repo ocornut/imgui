@@ -895,6 +895,20 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
         idx_count = (/*body*/(points_count - 2) * max_tris_per_point + /*last seg*/4 + /*caps*/(4 * 2)) * 3;
     }
 
+
+    const float half_texel = 0.5f * _Data->FontAtlas->TexUvScale.x;
+    const float ratio = thickness0 / (thickness0 + thickness1); // The points using uv2 are placed on the path, calculate the position from stroke offets.
+    ImVec2 uv0, uv1, uv2;
+    uv0.x = tex_uvs.x + half_texel;
+    uv0.y = tex_uvs.y;
+    uv1.x = tex_uvs.z - half_texel;
+    uv1.y = tex_uvs.y;
+    uv2.x = uv0.x + (uv1.x - uv0.x) * ratio;
+    uv2.y = tex_uvs.y;
+
+    const float half_aa = _FringeScale * 0.5f; // Used for end caps, does not use "fringe" since end cap AA is not using the texture.
+    const float half_thickness = thickness * 0.5f;
+
     PrimReserve(idx_count, vtx_count);
 
     ImDrawVert* start_vtx_ptr = _VtxWritePtr;
@@ -902,18 +916,10 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
 
     int base_idx = (int)_VtxCurrentIdx;
 
+    ImVec2 pa, pb, dir;
     ImVec2 p1;
     ImVec2 n1;
     float len_sqr1;
-
-    const float half_texel = 0.5f * _Data->FontAtlas->TexUvScale.x;
-    const ImVec2 uv0(tex_uvs.x + half_texel, tex_uvs.y);
-    const ImVec2 uv1(tex_uvs.z - half_texel, tex_uvs.y);
-    const float ratio = thickness0 / (thickness0 + thickness1); // The points using uv2 are placed on the path, calculate the position from stroke offets.
-    const ImVec2 uv2(uv0.x + (uv1.x - uv0.x) * ratio, tex_uvs.y);
-
-    const float half_aa = _FringeScale * 0.5f; // Used for end caps, does not use "fringe" since end cap AA is not using the texture.
-    const float half_thickness = thickness * 0.5f;
 
     int point_idx = 0;
     int point_end = points_count;
@@ -926,9 +932,14 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
         n1 = normals[0];
         len_sqr1 = sqr_lengths[0];
 
-        const ImVec2 dir(n1.y, -n1.x);
+        dir.x = n1.y;
+        dir.y = -n1.x;
+
         if (flags & ImDrawFlags_SquareCap)
-            p1 -= dir * half_thickness;
+        {
+            p1.x -= dir.x * half_thickness;
+            p1.y -= dir.y * half_thickness;
+        }
 
         if (flags & ImDrawFlags_NoAAEnds)
         {
@@ -938,8 +949,10 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
         }
         else
         {
-            const ImVec2 pa = p1 - dir * half_aa;
-            const ImVec2 pb = p1 + dir * half_aa;
+            pa.x = p1.x - dir.x * half_aa;
+            pa.y = p1.y - dir.y * half_aa;
+            pb.x = p1.x + dir.x * half_aa;
+            pb.y = p1.y + dir.y * half_aa;
 
             base_idx = (int)_VtxCurrentIdx;
             IM_APPEND_VTX(pa.x - n1.x * thickness0, pa.y - n1.y * thickness0, uv0, col_trans);
@@ -1108,9 +1121,13 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
         n1 = normals[points_count-1];
 
         // End cap
-        const ImVec2 dir(n1.y, -n1.x);
+        dir.x = n1.y;
+        dir.y = -n1.x;
         if (flags & ImDrawFlags_SquareCap)
-            p1 += dir * half_thickness;
+        {
+            p1.x += dir.x * half_thickness;
+            p1.y += dir.y * half_thickness;
+        }
 
         if (flags & ImDrawFlags_NoAAEnds)
         {
@@ -1123,8 +1140,10 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
         }
         else
         {
-            const ImVec2 pa = p1 - dir * half_aa;
-            const ImVec2 pb = p1 + dir * half_aa;
+            pa.x = p1.x - dir.x * half_aa;
+            pa.y = p1.y - dir.y * half_aa;
+            pb.x = p1.x + dir.x * half_aa;
+            pb.y = p1.y + dir.y * half_aa;
 
             int next_base_idx = (int)_VtxCurrentIdx;
             IM_APPEND_VTX(pa.x - n1.x * thickness0, pa.y - n1.y * thickness0, uv0, col);
