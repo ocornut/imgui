@@ -929,21 +929,31 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
         const ImVec2 dir(n1.y, -n1.x);
         if (flags & ImDrawFlags_SquareCap)
             p1 -= dir * half_thickness;
-        const ImVec2 pa = p1 - dir * half_aa;
-        const ImVec2 pb = p1 + dir * half_aa;
 
-        base_idx = (int)_VtxCurrentIdx;
-        IM_APPEND_VTX(pa.x - n1.x * thickness0, pa.y - n1.y * thickness0, uv0, col_trans);
-        IM_APPEND_VTX(pa.x + n1.x * thickness1, pa.y + n1.y * thickness1, uv1, col_trans);
+        if (flags & ImDrawFlags_NoAAEnds)
+        {
+            base_idx = (int)_VtxCurrentIdx;
+            IM_APPEND_VTX(p1.x - n1.x * thickness0, p1.y - n1.y * thickness0, uv0, col);
+            IM_APPEND_VTX(p1.x + n1.x * thickness1, p1.y + n1.y * thickness1, uv1, col);
+        }
+        else
+        {
+            const ImVec2 pa = p1 - dir * half_aa;
+            const ImVec2 pb = p1 + dir * half_aa;
 
-        int next_base_idx = (int)_VtxCurrentIdx;
-        IM_APPEND_VTX(pb.x - n1.x * thickness0, pb.y - n1.y * thickness0, uv0, col);
-        IM_APPEND_VTX(pb.x + n1.x * thickness1, pb.y + n1.y * thickness1 , uv1, col);
+            base_idx = (int)_VtxCurrentIdx;
+            IM_APPEND_VTX(pa.x - n1.x * thickness0, pa.y - n1.y * thickness0, uv0, col_trans);
+            IM_APPEND_VTX(pa.x + n1.x * thickness1, pa.y + n1.y * thickness1, uv1, col_trans);
 
-        // AA cap
-        IM_APPEND_TRI(base_idx+0, base_idx+2, base_idx+3);
-        IM_APPEND_TRI(base_idx+0, base_idx+3, base_idx+1);
-        base_idx = next_base_idx;
+            int next_base_idx = (int)_VtxCurrentIdx;
+            IM_APPEND_VTX(pb.x - n1.x * thickness0, pb.y - n1.y * thickness0, uv0, col);
+            IM_APPEND_VTX(pb.x + n1.x * thickness1, pb.y + n1.y * thickness1, uv1, col);
+
+            // AA cap
+            IM_APPEND_TRI(base_idx + 0, base_idx + 2, base_idx + 3);
+            IM_APPEND_TRI(base_idx + 0, base_idx + 3, base_idx + 1);
+            base_idx = next_base_idx;
+        }
     }
     else
     {
@@ -1101,24 +1111,37 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
         const ImVec2 dir(n1.y, -n1.x);
         if (flags & ImDrawFlags_SquareCap)
             p1 += dir * half_thickness;
-        const ImVec2 pa = p1 - dir * half_aa;
-        const ImVec2 pb = p1 + dir * half_aa;
 
-        int next_base_idx = (int)_VtxCurrentIdx;
-        IM_APPEND_VTX(pa.x - n1.x * thickness0, pa.y - n1.y * thickness0, uv0, col);
-        IM_APPEND_VTX(pa.x + n1.x * thickness1, pa.y + n1.y * thickness1, uv1, col);
+        if (flags & ImDrawFlags_NoAAEnds)
+        {
+            IM_APPEND_VTX(p1.x - n1.x * thickness0, p1.y - n1.y * thickness0, uv0, col);
+            IM_APPEND_VTX(p1.x + n1.x * thickness1, p1.y + n1.y * thickness1, uv1, col);
 
-        IM_APPEND_VTX(pb.x - n1.x * thickness0, pb.y - n1.y * thickness0, uv0, col_trans);
-        IM_APPEND_VTX(pb.x + n1.x * thickness1, pb.y + n1.y * thickness1, uv1, col_trans);
+            // Connect
+            IM_APPEND_TRI(base_idx + 0, base_idx + 2, base_idx + 3);
+            IM_APPEND_TRI(base_idx + 0, base_idx + 3, base_idx + 1);
+        }
+        else
+        {
+            const ImVec2 pa = p1 - dir * half_aa;
+            const ImVec2 pb = p1 + dir * half_aa;
 
-        // Connect
-        IM_APPEND_TRI(base_idx+0, base_idx+2, base_idx+3);
-        IM_APPEND_TRI(base_idx+0, base_idx+3, base_idx+1);
-        base_idx = next_base_idx;
+            int next_base_idx = (int)_VtxCurrentIdx;
+            IM_APPEND_VTX(pa.x - n1.x * thickness0, pa.y - n1.y * thickness0, uv0, col);
+            IM_APPEND_VTX(pa.x + n1.x * thickness1, pa.y + n1.y * thickness1, uv1, col);
 
-        // AA cap
-        IM_APPEND_TRI(base_idx+0, base_idx+2, base_idx+3);
-        IM_APPEND_TRI(base_idx+0, base_idx+3, base_idx+1);
+            IM_APPEND_VTX(pb.x - n1.x * thickness0, pb.y - n1.y * thickness0, uv0, col_trans);
+            IM_APPEND_VTX(pb.x + n1.x * thickness1, pb.y + n1.y * thickness1, uv1, col_trans);
+
+            // Connect
+            IM_APPEND_TRI(base_idx + 0, base_idx + 2, base_idx + 3);
+            IM_APPEND_TRI(base_idx + 0, base_idx + 3, base_idx + 1);
+            base_idx = next_base_idx;
+
+            // AA cap
+            IM_APPEND_TRI(base_idx + 0, base_idx + 2, base_idx + 3);
+            IM_APPEND_TRI(base_idx + 0, base_idx + 3, base_idx + 1);
+        }
     }
     else
     {
