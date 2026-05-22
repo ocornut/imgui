@@ -2529,9 +2529,9 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
             // Pixel aligned rect with round corners rendered using baked textures.
 			IM_ASSERT_PARANOID(!(_Data->Font->OwnerAtlas->Flags & ImFontAtlasFlags_NoBakedRoundCorners));
             const int size = ImMax(s_rounding, s_thickness); // This is matching the baking calculations.
-            const int idx = (s_thickness - 1) * IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX + s_rounding - 1;
+            const int idx = (s_thickness * IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX) + s_rounding - 1;
             IM_ASSERT_PARANOID(idx >= 0 && idx < IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX * IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX);
-            const ImVec4 tex_uvs = _Data->TexUvCornerStrokes[idx];
+            const ImVec4 tex_uvs = _Data->TexUvCorners[idx];
             _AddRectBaked(outer_min, outer_max, col, (float)size * _FringeScale, (float)thickness, tex_uvs, flags);
             return;
         }
@@ -2639,9 +2639,9 @@ void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
         {
 			IM_ASSERT_PARANOID(!(_Data->Font->OwnerAtlas->Flags & ImFontAtlasFlags_NoBakedRoundCorners));
             const int size = ImMax(2, s_rounding); // This is matching the baking calculations.
-			const int idx = s_rounding - 1;
+			const int idx = (s_rounding - 1);
 			IM_ASSERT_PARANOID(idx >= 0 && idx < IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX);
-            ImVec4 tex_uvs = _Data->TexUvCornerFills[idx];
+            ImVec4 tex_uvs = _Data->TexUvCorners[idx];
             _AddRectFilledBaked(p_min, p_max, col, (float)size * _FringeScale, tex_uvs, flags);
         }
         else
@@ -4873,13 +4873,13 @@ static void ImFontAtlasBuildUpdateTexDataCorners(ImFontAtlas* atlas)
         pack_size.x = ImMax(pack_size.x, row_width);
         pack_size.y += row_height;
         // Rounded corners
-        for (int t = 0; t < IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX; t++)
+        for (int thickness = 1; thickness < IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX; thickness++)
         {
             row_width = 0;
             row_height = 0;
             for (int i = 0; i < IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX; i++)
             {
-                const int size = ImMax(2, ImMax(i+1, t+1)) + 2;
+                const int size = ImMax(2, ImMax(i + 1, thickness)) + 2;
                 row_width += size;
                 row_height = ImMax(row_height, size);
             }
@@ -4935,7 +4935,7 @@ static void ImFontAtlasBuildUpdateTexDataCorners(ImFontAtlas* atlas)
         // Refresh UV coordinates
         ImVec2 uv0 = ImVec2((float)(x + 1), (float)(y + 1)) * atlas->TexUvScale;
         ImVec2 uv1 = ImVec2((float)(x + 1 + s), (float)(y + 1 + s)) * atlas->TexUvScale;
-        atlas->TexUvCornerFills[n] = ImVec4(uv0.x, uv0.y, uv1.x, uv1.y);
+        atlas->TexUvCorners[n] = ImVec4(uv0.x, uv0.y, uv1.x, uv1.y);
 
         x += w;
         row_height = ImMax(row_height, h);
@@ -4943,14 +4943,13 @@ static void ImFontAtlasBuildUpdateTexDataCorners(ImFontAtlas* atlas)
     y += row_height;
 
     // Stroked
-    for (int t = 0; t < IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX; t++)
+    for (int thickness = 1; thickness < IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX; thickness++)
     {
         x = r.x;
         row_height = 0;
         for (int n = 0; n < IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX; n++)
         {
             const int rounding = n+1;
-            const int thickness = t+1;
             const int s = ImMax(rounding, thickness);
             const int w = s + 2;
             const int h = s + 2;
@@ -4990,7 +4989,7 @@ static void ImFontAtlasBuildUpdateTexDataCorners(ImFontAtlas* atlas)
             // Refresh UV coordinates
             ImVec2 uv0 = ImVec2((float)(x + 1), (float)(y + 1)) * atlas->TexUvScale;
             ImVec2 uv1 = ImVec2((float)(x + 1 + s), (float)(y + 1 + s)) * atlas->TexUvScale;
-            atlas->TexUvCornerStrokes[t*IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX + n] = ImVec4(uv0.x, uv0.y, uv1.x, uv1.y);
+            atlas->TexUvCorners[thickness * IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX + n] = ImVec4(uv0.x, uv0.y, uv1.x, uv1.y);
 
             x += w;
             row_height = ImMax(row_height, h);
@@ -5473,8 +5472,7 @@ void ImFontAtlasUpdateDrawListsSharedData(ImFontAtlas* atlas)
             shared_data->TexUvWhitePixel = atlas->TexUvWhitePixel;
             shared_data->TexUvLines = atlas->TexUvLines;
             shared_data->TexUvLineFract = atlas->TexUvLineFract;
-            shared_data->TexUvCornerFills = atlas->TexUvCornerFills;
-            shared_data->TexUvCornerStrokes = atlas->TexUvCornerStrokes;
+            shared_data->TexUvCorners = atlas->TexUvCorners;
         }
 }
 
