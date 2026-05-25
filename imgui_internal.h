@@ -923,7 +923,6 @@ struct IMGUI_API ImDrawListSharedData
 {
     ImVec2          TexUvWhitePixel;            // UV of white pixel in the atlas (== FontAtlas->TexUvWhitePixel)
     const ImVec4*   TexUvLines;                 // UV of anti-aliased lines in the atlas (== FontAtlas->TexUvLines)
-    ImVec4          TexUvLineFract;             // UV of fractional anti-aliased lines in the atlas (== FontAtlas->TexUvLineFract)
     const ImVec4*   TexUvCorners;               // UV of rounded corner (== FontAtlas->TexUvCorners)
     ImFontAtlas*    FontAtlas;                  // Current font atlas
     ImFont*         Font;                       // Current font (used for simplified AddText overload)
