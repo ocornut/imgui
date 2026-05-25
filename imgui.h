@@ -3321,7 +3321,6 @@ struct ImGuiSelectionExternalStorage
 // The maximum line width to bake anti-aliased textures for. Build atlas with ImFontAtlasFlags_NoBakedLines to disable baking.
 #ifndef IM_DRAWLIST_TEX_LINES_WIDTH_MAX
 #define IM_DRAWLIST_TEX_LINES_WIDTH_MAX         (32)
-#define IM_DRAWLIST_TEX_LINE_FRACT_WIDTH_MAX    (128)
 #endif
 
 #ifndef IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX
@@ -4016,7 +4015,6 @@ struct ImFontAtlas
     ImVector<ImFont*>           Fonts;              // Hold all the fonts returned by AddFont*. Fonts[0] is the default font upon calling ImGui::NewFrame(), use ImGui::PushFont()/PopFont() to change the current font.
     ImVector<ImFontConfig>      Sources;            // Source/configuration data
     ImVec4                      TexUvLines[IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1];        // UVs for baked anti-aliased lines
-    ImVec4                      TexUvLineFract;                                         // UVs for fraction thickness baked anti-aliased lines
     ImVec4                      TexUvCorners[IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX * IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX];  // UVs for baked anti-aliased corners (0= fill, 1> stroke thickness)
     int                         TexNextUniqueID;    // Next value to be stored in TexData->UniqueID
     int                         FontNextUniqueID;   // Next value to be stored in ImFont->FontID
