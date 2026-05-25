@@ -2322,96 +2322,116 @@ void ImDrawList::_AddRectBaked(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
 // The stroke is positioned inside the rectangle.
 void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float rounding, float thickness, ImDrawFlags flags)
 {
-	// Note: this is smaller than in AddPolyline(), since the stem offset can be biased all the way to one side.
-	const float max_width = IM_DRAWLIST_TEX_LINE_FRACT_WIDTH_MAX * _FringeScale;
-    thickness = ImMin(thickness, max_width);
+    float screen_thickness = thickness / _FringeScale;
+    if (screen_thickness < 1.0f / 255.0f)
+        return;
+    if (screen_thickness < 1.0f)
+    {
+        col = ImAlphaMultiply(col, screen_thickness);
+        screen_thickness = 1.0f;
+        thickness = _FringeScale;
+    }
 
-    thickness += _FringeScale;
+    // Bias the texture selection towards higher resolution to avoid visual pops when the texture change.
+    const int texture_idx = ImClamp((int)(screen_thickness + 0.95f), 1, IM_DRAWLIST_TEX_LINES_WIDTH_MAX - 1);
+    const float fringe = _FringeScale * (screen_thickness / (float)texture_idx); // Scale the fringe to cover the discrepancy between the texture and requested size.
+    const ImVec4 tex_uvs = _Data->TexUvLines[texture_idx];
 
     const int arc_step = ImClamp(IM_DRAWLIST_ARCFAST_SAMPLE_MAX / this->_CalcCircleAutoSegmentCount(rounding), 1, IM_DRAWLIST_ARCFAST_TABLE_SIZE / 4);
     const int arc_point_count = (IM_DRAWLIST_ARCFAST_TABLE_SIZE / 4) / arc_step + 1;
 
-    int vtx_count = (4 + arc_point_count) * 4 + 4;
+    int vtx_count = (4 + arc_point_count) * 3 + 3;
     int idx_count = (4 + arc_point_count - 1) * 4 * 3;
 
     PrimReserve(idx_count, vtx_count);
     ImDrawVert* start_vtx_ptr = _VtxWritePtr;
     ImDrawIdx* start_idx_ptr = _IdxWritePtr;
 
-    const ImVec2 corner_pos[4] = {
-        ImVec2(p_min.x, p_min.y),
-        ImVec2(p_max.x, p_min.y),
-        ImVec2(p_max.x, p_max.y),
-        ImVec2(p_min.x, p_max.y)
-    };
     static const ImVec2 corner_offset[4] = { {1,1}, {-1,1}, {-1,-1}, {1,-1} };
     static const ImDrawFlags corner_flags[4] = { ImDrawFlags_RoundCornersTopLeft, ImDrawFlags_RoundCornersTopRight, ImDrawFlags_RoundCornersBottomRight, ImDrawFlags_RoundCornersBottomLeft };
+    const float half_fringe = fringe * 0.5f;
+    const ImVec2 corner_pos[4] = {
+        ImVec2(p_min.x - half_fringe, p_min.y - half_fringe),
+        ImVec2(p_max.x + half_fringe, p_min.y - half_fringe),
+        ImVec2(p_max.x + half_fringe, p_max.y + half_fringe),
+        ImVec2(p_min.x - half_fringe, p_max.y + half_fringe)
+    };
+    thickness += fringe;
+    rounding += half_fringe;
 
+    // We need to stem offset to be atleast fringe scale away, to maintain the fringe size.
     const float stem_offset = thickness - ImMax(thickness - rounding, _FringeScale);
 
-    const ImVec4 tex_uvs = _Data->TexUvLineFract; // TODO: max uv
-    const ImVec2 outer_uv0(tex_uvs.x + (0.5f / _FringeScale) * _Data->FontAtlas->TexUvScale.x, tex_uvs.y);
-    const ImVec2 outer_uv1(tex_uvs.x + ((0.5f + stem_offset) / _FringeScale) * _Data->FontAtlas->TexUvScale.x, tex_uvs.y);
-    const ImVec2 inner_uv0(tex_uvs.x + (0.5f / _FringeScale) * _Data->FontAtlas->TexUvScale.x, tex_uvs.y);
-    const ImVec2 inner_uv1(tex_uvs.x + ((0.5f + thickness - stem_offset) / _FringeScale) * _Data->FontAtlas->TexUvScale.x, tex_uvs.y);
+    const float half_texel = 0.5f * _Data->FontAtlas->TexUvScale.x;
+    const float ratio = stem_offset / thickness;
+    ImVec2 inner_uv, outer_uv, stem_uv;
+    inner_uv.x = tex_uvs.x + half_texel;
+    inner_uv.y = tex_uvs.y;
+    outer_uv.x = tex_uvs.z - half_texel;
+    outer_uv.y = tex_uvs.y;
+    stem_uv.x = inner_uv.x + (outer_uv.x - inner_uv.x) * ratio;
+    stem_uv.y = tex_uvs.y;
 
+    // Previous vertices, copied from the last vertices.
     int base_idx = (int)_VtxCurrentIdx;
-    IM_APPEND_VTX(0, 0, outer_uv0, col);
-    IM_APPEND_VTX(0, 0, outer_uv1, col);
-    IM_APPEND_VTX(0, 0, inner_uv1, col);
-    IM_APPEND_VTX(0, 0, inner_uv0, col);
+    IM_APPEND_VTX(0, 0, inner_uv, col);
+    IM_APPEND_VTX(0, 0, stem_uv, col);
+    IM_APPEND_VTX(0, 0, outer_uv, col);
+
+    ImVec2 outer, stem, inner, center;
 
     for (int corner = 0; corner < 4; corner++)
     {
-        const ImVec2 stem = corner_pos[corner] + corner_offset[corner] * stem_offset;
-        const ImVec2 inner = corner_pos[corner] + corner_offset[corner] * thickness;
+        outer = corner_pos[corner];
+        stem.x = corner_pos[corner].x + corner_offset[corner].x * stem_offset;
+        stem.y = corner_pos[corner].y + corner_offset[corner].y * stem_offset;
+        inner.x = corner_pos[corner].x + corner_offset[corner].x * thickness;
+        inner.y = corner_pos[corner].y + corner_offset[corner].y * thickness;
+
         const bool is_rounded = flags & corner_flags[corner];
 
         const int arc_idx = (int)_VtxCurrentIdx;
         if (is_rounded)
         {
-            const ImVec2 center = corner_pos[corner] + corner_offset[corner] * rounding;
+            center.x = outer.x + corner_offset[corner].x * rounding;
+            center.y = outer.y + corner_offset[corner].y * rounding;
             int a = (IM_DRAWLIST_ARCFAST_TABLE_SIZE / 4) * corner;
             for (int i = 0; i < arc_point_count; i++)
             {
-                const ImVec2 dir = _Data->ArcFastVtx[a];
-                IM_APPEND_VTX(center.x - dir.x * rounding, center.y - dir.y * rounding, outer_uv0, col);
+                IM_APPEND_VTX(center.x - _Data->ArcFastVtx[a].x * rounding, center.y - _Data->ArcFastVtx[a].y * rounding, inner_uv, col);
                 a = (a + arc_step) % IM_DRAWLIST_ARCFAST_TABLE_SIZE;
             }
         }
         else
         {
-            IM_APPEND_VTX(corner_pos[corner].x, corner_pos[corner].y, outer_uv0, col);
+            IM_APPEND_VTX(outer.x, outer.y, inner_uv, col);
         }
 
-        const int stem0_idx = (int)_VtxCurrentIdx;
-        IM_APPEND_VTX(stem.x, stem.y, outer_uv1, col);
-        const int stem1_idx = (int)_VtxCurrentIdx;
-        IM_APPEND_VTX(stem.x, stem.y, inner_uv1, col);
+        const int stem_idx = (int)_VtxCurrentIdx;
+        IM_APPEND_VTX(stem.x, stem.y, stem_uv, col);
         const int inner_idx = (int)_VtxCurrentIdx;
-        IM_APPEND_VTX(inner.x, inner.y, inner_uv0, col);
+        IM_APPEND_VTX(inner.x, inner.y, outer_uv, col);
 
         // Arc
         if (is_rounded)
         {
-            for (int i = 0; i < arc_point_count-1; i++)
-                IM_APPEND_TRI(stem0_idx, arc_idx + i, arc_idx + i + 1);
+            for (int i = 0; i < arc_point_count - 1; i++)
+                IM_APPEND_TRI(stem_idx, arc_idx + i, arc_idx + i + 1);
         }
 
         // Connect with previous
-        IM_APPEND_TRI(base_idx + 0, arc_idx, stem0_idx);
-        IM_APPEND_TRI(base_idx + 0, stem0_idx, base_idx + 1);
-        IM_APPEND_TRI(base_idx + 2, stem1_idx, inner_idx);
-        IM_APPEND_TRI(base_idx + 2, inner_idx, base_idx + 3);
+        IM_APPEND_TRI(base_idx + 0, arc_idx, stem_idx);
+        IM_APPEND_TRI(base_idx + 0, stem_idx, base_idx + 1);
+        IM_APPEND_TRI(base_idx + 1, stem_idx, inner_idx);
+        IM_APPEND_TRI(base_idx + 1, inner_idx, base_idx + 2);
 
-        base_idx = stem0_idx - 1;
+        base_idx = stem_idx - 1;
     }
 
     // Close
-    start_vtx_ptr[0] = VtxBuffer.Data[base_idx+0];
-    start_vtx_ptr[1] = VtxBuffer.Data[base_idx+1];
-    start_vtx_ptr[2] = VtxBuffer.Data[base_idx+2];
-    start_vtx_ptr[3] = VtxBuffer.Data[base_idx+3];
+    start_vtx_ptr[0] = VtxBuffer.Data[base_idx + 0];
+    start_vtx_ptr[1] = VtxBuffer.Data[base_idx + 1];
+    start_vtx_ptr[2] = VtxBuffer.Data[base_idx + 2];
 
     const int idx_used = (int)(_IdxWritePtr - start_idx_ptr);
     const int vtx_used = (int)(_VtxWritePtr - start_vtx_ptr);
@@ -5060,44 +5080,6 @@ static void ImFontAtlasBuildUpdateTexDataLines(ImFontAtlas* atlas)
         float half_v = (uv0.y + uv1.y) * 0.5f; // Calculate a constant V in the middle of the row to avoid sampling artifacts
         atlas->TexUvLines[n] = ImVec4(uv0.x, half_v, uv1.x, half_v);
     }
-
-	// Single larger line for fraction width textured lines.
-	// Alternative solution could be to fix while and black pixel next to the texture border 
-	// and use the texture clamping to expand the opaque pixel.
-	//  :
-	// 	[*][ ]
-	//  :
-	// 	<-- width would expand out of the texture expanding the while pixel to as far as needed.
-    add_and_draw = atlas->GetCustomRect(builder->PackIdLineFractTexData, &r) == false;
-    if (add_and_draw)
-    {
-        ImVec2i pack_size = ImVec2i(IM_DRAWLIST_TEX_LINE_FRACT_WIDTH_MAX + 1, 1);
-        builder->PackIdLineFractTexData = atlas->AddCustomRect(pack_size.x, pack_size.y, &r);
-        IM_ASSERT(builder->PackIdLineFractTexData != ImFontAtlasRectId_Invalid);
-    }
-
-    // Each line consists of at least two empty pixels at the ends, with a line of solid pixels in the middle
-    // Write each slice
-    if (add_and_draw && tex->Format == ImTextureFormat_Alpha8)
-    {
-        ImU8* write_ptr = (ImU8*)tex->GetPixelsAt(r.x, r.y);
-        *write_ptr++ = 0x00;
-        for (int i = 0; i < IM_DRAWLIST_TEX_LINE_FRACT_WIDTH_MAX; i++)
-            *write_ptr++ = 0xFF;
-    }
-    else if (add_and_draw && tex->Format == ImTextureFormat_RGBA32)
-    {
-        ImU32* write_ptr = (ImU32*)(void*)tex->GetPixelsAt(r.x, r.y);
-        *write_ptr++ = IM_COL32(255, 255, 255, 0);
-        for (int i = 0; i < IM_DRAWLIST_TEX_LINE_FRACT_WIDTH_MAX; i++)
-            *write_ptr++ = IM_COL32_WHITE;
-    }
-
-    // Refresh UV coordinates
-    ImVec2 uv0 = ImVec2((float)r.x, (float)r.y) * atlas->TexUvScale;
-    ImVec2 uv1 = ImVec2((float)r.x + 1.0f + IM_DRAWLIST_TEX_LINE_FRACT_WIDTH_MAX, (float)r.y) * atlas->TexUvScale;
-    float half_v = (uv0.y + uv1.y) * 0.5f; // Calculate a constant V in the middle of the row to avoid sampling artifacts
-    atlas->TexUvLineFract = ImVec4(uv0.x, half_v, uv1.x, half_v);
 }
 
 //-----------------------------------------------------------------------------------------------------------------------------
@@ -5471,7 +5453,6 @@ void ImFontAtlasUpdateDrawListsSharedData(ImFontAtlas* atlas)
         {
             shared_data->TexUvWhitePixel = atlas->TexUvWhitePixel;
             shared_data->TexUvLines = atlas->TexUvLines;
-            shared_data->TexUvLineFract = atlas->TexUvLineFract;
             shared_data->TexUvCorners = atlas->TexUvCorners;
         }
 }
