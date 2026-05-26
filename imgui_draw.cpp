@@ -2144,6 +2144,16 @@ void ImDrawList::AddLineH(float min_x, float max_x, float y, ImU32 col, float th
 
     if (_FringeScaleIsInteger && ImIsTruncated4(min_x, max_x, top_y, thickness) && (flags & ImDrawFlags_SquareCap) == 0)
     {
+        float screen_thickness = thickness / _FringeScale;
+        if (screen_thickness < 1.f / 255.f)
+            return;
+        if (screen_thickness < 1.f)
+        {
+            col = ImAlphaMultiply(col, screen_thickness);
+            screen_thickness = 1.f;
+            thickness = _FringeScale;
+        }
+
         // For pixel aligned case, use simple rectangle.
         PrimReserve(6, 4);
         PrimRect(ImVec2(min_x, top_y), ImVec2(max_x, top_y + thickness), col);
@@ -2183,6 +2193,16 @@ void ImDrawList::AddLineV(float x, float min_y, float max_y, ImU32 col, float th
 
     if (_FringeScaleIsInteger && ImIsTruncated4(left_x, min_y, max_y, thickness) && (flags & ImDrawFlags_SquareCap) == 0)
     {
+        float screen_thickness = thickness / _FringeScale;
+        if (screen_thickness < 1.f / 255.f)
+            return;
+        if (screen_thickness < 1.f)
+        {
+            col = ImAlphaMultiply(col, screen_thickness);
+            screen_thickness = 1.f;
+            thickness = _FringeScale;
+        }
+
         // For pixel aligned case, use simple rectangle.
         PrimReserve(6, 4);
         PrimRect(ImVec2(left_x, min_y), ImVec2(left_x + thickness, max_y), col);
@@ -2512,6 +2532,8 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
     {
         int s_rounding = (int)(outer_rounding / _FringeScale);
         int s_thickness = (int)(thickness / _FringeScale);
+        if (s_thickness <= 0)
+            return;
 
         if (s_rounding <= 0 || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
         {
@@ -2640,14 +2662,35 @@ void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
+    ImVec2 b_min = p_min;
+    ImVec2 b_max = p_max;
+    const float width = b_max.x - b_min.x;
+    const float height = b_max.y - b_min.y;
+
+    const float inv_fringe_scale = 1.f / _FringeScale;
+    const float screen_width = width * inv_fringe_scale;
+    const float screen_height = height * inv_fringe_scale;
+
+    if (ImMin(screen_width, screen_height) < 1.f / 255.f)
+        return;
+    if (screen_width < 1.f)
+    {
+        col = ImAlphaMultiply(col, screen_width);
+        b_max.x = b_min.x + _FringeScale;
+    }
+    if (screen_height < 1.f)
+    {
+        col = ImAlphaMultiply(col, screen_height);
+        b_max.y = b_min.y + _FringeScale;
+    }
+
     if (ImIsTruncated4(p_min.x, p_min.y, p_max.x, p_max.y) && ImIsTruncated(rounding))
     {
         if ((flags & ImDrawFlags_RoundCornersMask_) == 0)
             flags |= ImDrawFlags_RoundCornersAll;
 
-        rounding = ImMin(rounding, ImFabs(p_max.x - p_min.x) * (((flags & ImDrawFlags_RoundCornersTop) == ImDrawFlags_RoundCornersTop) || ((flags & ImDrawFlags_RoundCornersBottom) == ImDrawFlags_RoundCornersBottom) ? 0.5f : 1.0f) - 1.0f);
-        rounding = ImMin(rounding, ImFabs(p_max.y - p_min.y) * (((flags & ImDrawFlags_RoundCornersLeft) == ImDrawFlags_RoundCornersLeft) || ((flags & ImDrawFlags_RoundCornersRight) == ImDrawFlags_RoundCornersRight) ? 0.5f : 1.0f) - 1.0f);
-
+        rounding = ImMin(rounding, ImFabs(width) * (((flags & ImDrawFlags_RoundCornersTop) == ImDrawFlags_RoundCornersTop) || ((flags & ImDrawFlags_RoundCornersBottom) == ImDrawFlags_RoundCornersBottom) ? 0.5f : 1.0f) - 1.0f);
+        rounding = ImMin(rounding, ImFabs(height) * (((flags & ImDrawFlags_RoundCornersLeft) == ImDrawFlags_RoundCornersLeft) || ((flags & ImDrawFlags_RoundCornersRight) == ImDrawFlags_RoundCornersRight) ? 0.5f : 1.0f) - 1.0f);
 
         const int s_rounding = (int)(rounding / _FringeScale);
         if (s_rounding <= 0 || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
@@ -2744,7 +2787,7 @@ void ImDrawList::AddTriangleFilled(const ImVec2& p1, const ImVec2& p2, const ImV
 
 void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int num_segments, float thickness, ImDrawFlags flags)
 {
-    if ((col & IM_COL32_A_MASK) == 0 || radius < 0.01f)
+    if ((col & IM_COL32_A_MASK) == 0)
         return;
 
     ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
@@ -2753,6 +2796,8 @@ void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int nu
         radius -= 0.5f;
         stroke_pos = ImDrawFlags_StrokeCenter;
     }
+
+    radius = ImMax(0.01f, radius);
 
     float outer_radius = radius;
     if (stroke_pos == ImDrawFlags_StrokeCenter)
@@ -2836,6 +2881,8 @@ void ImDrawList::AddNgon(const ImVec2& center, float radius, ImU32 col, int num_
         stroke_pos = ImDrawFlags_StrokeCenter;
     }
 
+    radius = ImMax(0.01f, radius);
+
     const float unit_apothem = ImCos(IM_PI / (float)num_segments);
     const float miter_thickness = thickness / unit_apothem;
 
@@ -2895,14 +2942,18 @@ void ImDrawList::AddEllipse(const ImVec2& center, const ImVec2& radius, ImU32 co
         stroke_pos = ImDrawFlags_StrokeCenter;
     }
 
+    ImVec2 rad = radius;
+    rad.x = ImMax(0.01f, rad.x);
+    rad.y = ImMax(0.01f, rad.y);
+
     if (num_segments <= 0)
-        num_segments = _CalcCircleAutoSegmentCount(ImMax(radius.x, radius.y)); // A bit pessimistic, maybe there's a better computation to do here.
+        num_segments = _CalcCircleAutoSegmentCount(ImMax(rad.x, rad.y)); // A bit pessimistic, maybe there's a better computation to do here.
 
     _Path.reserve(_Path.Size + (num_segments + 1));
 
     // Because we are filling a closed shape we remove 1 from the count of segments/points
     const float a_max = IM_PI * 2.0f * ((float)num_segments - 1.0f) / (float)num_segments;
-    PathEllipticalArcTo(center, radius, rot, 0.0f, a_max, num_segments - 1);
+    PathEllipticalArcTo(center, rad, rot, 0.0f, a_max, num_segments - 1);
     PathStroke(col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | stroke_pos);
 }
 
@@ -2910,6 +2961,25 @@ void ImDrawList::AddEllipseFilled(const ImVec2& center, const ImVec2& radius, Im
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
+
+    ImVec2 rad = radius;
+
+    const float inv_fringe_scale = 1.f / _FringeScale;
+    float screen_diameter_x = rad.x* 2.f * inv_fringe_scale;
+    float screen_diameter_y = rad.y * 2.f * inv_fringe_scale;
+    if (screen_diameter_x < 1.f / 255.f || screen_diameter_y < 1.f / 255.f)
+        return;
+
+    if (screen_diameter_x < 1.f)
+    {
+        col = ImAlphaMultiply(col, screen_diameter_x);
+        rad.x = _FringeScale * 0.5f;
+    }
+    if (screen_diameter_y < 1.f)
+    {
+        col = ImAlphaMultiply(col, screen_diameter_y);
+        rad.y = _FringeScale * 0.5f;
+    }
 
     if (num_segments <= 0)
         num_segments = _CalcCircleAutoSegmentCount(ImMax(radius.x, radius.y)); // A bit pessimistic, maybe there's a better computation to do here.
