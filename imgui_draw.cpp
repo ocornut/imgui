@@ -2398,7 +2398,7 @@ void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, 
     thickness += fringe;
     rounding += half_fringe;
 
-    // We need to stem offset to be atleast fringe scale away, to maintain the fringe size.
+    // We need to stem offset to be at least fringe scale away, to maintain the fringe size.
     const float stem_offset = thickness - ImMax(thickness - rounding, _FringeScale);
 
     const float half_texel = 0.5f * _Data->FontAtlas->TexUvScale.x;
@@ -2417,39 +2417,37 @@ void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, 
     IM_APPEND_VTX(0, 0, stem_uv, col);
     IM_APPEND_VTX(0, 0, outer_uv, col);
 
-    ImVec2 outer, stem, inner, center;
-
     for (int corner = 0; corner < 4; corner++)
     {
-        outer = corner_pos[corner];
-        stem.x = corner_pos[corner].x + corner_offset[corner].x * stem_offset;
-        stem.y = corner_pos[corner].y + corner_offset[corner].y * stem_offset;
-        inner.x = corner_pos[corner].x + corner_offset[corner].x * thickness;
-        inner.y = corner_pos[corner].y + corner_offset[corner].y * thickness;
-
-        const bool is_rounded = flags & corner_flags[corner];
+        const float outer_x = corner_pos[corner].x;
+        const float outer_y = corner_pos[corner].y;
+        const float stem_x = outer_x + corner_offset[corner].x * stem_offset;
+        const float stem_y = outer_y + corner_offset[corner].y * stem_offset;
+        const float inner_x = outer_x + corner_offset[corner].x * thickness;
+        const float inner_y = outer_y + corner_offset[corner].y * thickness;
+        const bool is_rounded = (flags & corner_flags[corner]);
 
         const int arc_idx = (int)_VtxCurrentIdx;
         if (is_rounded)
         {
-            center.x = outer.x + corner_offset[corner].x * rounding;
-            center.y = outer.y + corner_offset[corner].y * rounding;
+            const float center_x = outer_x + corner_offset[corner].x * rounding;
+            const float center_y = outer_y + corner_offset[corner].y * rounding;
             int a = (IM_DRAWLIST_ARCFAST_TABLE_SIZE / 4) * corner;
             for (int i = 0; i < arc_point_count; i++)
             {
-                IM_APPEND_VTX(center.x - _Data->ArcFastVtx[a].x * rounding, center.y - _Data->ArcFastVtx[a].y * rounding, inner_uv, col);
+                IM_APPEND_VTX(center_x - _Data->ArcFastVtx[a].x * rounding, center_y - _Data->ArcFastVtx[a].y * rounding, inner_uv, col);
                 a = (a + arc_step) % IM_DRAWLIST_ARCFAST_TABLE_SIZE;
             }
         }
         else
         {
-            IM_APPEND_VTX(outer.x, outer.y, inner_uv, col);
+            IM_APPEND_VTX(outer_x, outer_y, inner_uv, col);
         }
 
         const int stem_idx = (int)_VtxCurrentIdx;
-        IM_APPEND_VTX(stem.x, stem.y, stem_uv, col);
+        IM_APPEND_VTX(stem_x, stem_y, stem_uv, col);
         const int inner_idx = (int)_VtxCurrentIdx;
-        IM_APPEND_VTX(inner.x, inner.y, outer_uv, col);
+        IM_APPEND_VTX(inner_x, inner_y, outer_uv, col);
 
         // Arc
         if (is_rounded)
