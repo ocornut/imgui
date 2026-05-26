@@ -3323,6 +3323,10 @@ struct ImGuiSelectionExternalStorage
 #define IM_DRAWLIST_TEX_LINES_WIDTH_MAX         (32)
 #endif
 
+#ifndef IM_DRAWLIST_TEX_LINES_SUPERSAMPLE_MAX
+#define IM_DRAWLIST_TEX_LINES_SUPERSAMPLE_MAX   (2) // How many samples for lines between [1..2) thickness.
+#endif
+
 #ifndef IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX
 #define IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX    (16)
 #endif
@@ -3653,6 +3657,7 @@ struct ImDrawList
     IMGUI_API void  _AddRectBaked(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float r, float t, ImVec4 tex_uvs, ImDrawFlags flags);
     IMGUI_API void  _AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_lengths, const int points_count, ImU32 col, float thickness, ImDrawFlags flags, ImVec4 tex_uvs, float fringe);
     IMGUI_API void  _AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float rounding, float thickness, ImDrawFlags flags);
+    IMGUI_API void  _SelectFringeTexture(float screen_thickness, ImVec4& tex_uvs, float& fringe);
 };
 
 // All draw data to render a Dear ImGui frame
@@ -4014,7 +4019,7 @@ struct ImFontAtlas
     ImVec2                      TexUvWhitePixel;    // Texture coordinates to a white pixel. May change as new texture gets created.
     ImVector<ImFont*>           Fonts;              // Hold all the fonts returned by AddFont*. Fonts[0] is the default font upon calling ImGui::NewFrame(), use ImGui::PushFont()/PopFont() to change the current font.
     ImVector<ImFontConfig>      Sources;            // Source/configuration data
-    ImVec4                      TexUvLines[IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1];        // UVs for baked anti-aliased lines
+    ImVec4                      TexUvLines[IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1 + IM_DRAWLIST_TEX_LINES_SUPERSAMPLE_MAX + 1];        // UVs for baked anti-aliased lines
     ImVec4                      TexUvCorners[IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX * IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX];  // UVs for baked anti-aliased corners (0= fill, 1> stroke thickness)
     int                         TexNextUniqueID;    // Next value to be stored in TexData->UniqueID
     int                         FontNextUniqueID;   // Next value to be stored in ImFont->FontID

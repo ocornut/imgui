@@ -10411,17 +10411,25 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             // Draw a bunch of primitives
             ImGui::Text("All primitives");
             static float sz = 42.0f;
-            static float thickness = 3.0f;
-            static int ngon_sides = 6;
+            static bool animate_thickness = false;
+            static float base_thickness = 3.0f;
+            static int ngon_segments = 6;
             static bool circle_segments_override = false;
             static int circle_segments_override_v = 12;
             static bool curve_segments_override = false;
             static int curve_segments_override_v = 8;
             static ImVec4 colf_stroke = ImVec4(1.00f, 1.00f, 0.40f, 1.0f);
             static ImVec4 colf_fill = ImVec4(0.70f, 0.18f, 0.62f, 1.0f);
+            const float thickness_anim_period = 5.f;
+            float thickness_wave = 1.0f - fabs(fmod((float)ImGui::GetTime(), thickness_anim_period) * (2.0f / thickness_anim_period) - 1.0f);
+            float thickness = animate_thickness ? thickness_wave * base_thickness : base_thickness;
+
             ImGui::DragFloat("Size", &sz, 0.2f, 0.2f, 100.0f, "%.0f");
-            ImGui::DragFloat("Thickness", &thickness, 0.1f, 0.0f, 30.0f, "%.02f");
-            ImGui::SliderInt("N-gon sides", &ngon_sides, 3, 12);
+            ImGui::DragFloat("Thickness", &base_thickness, 0.1f, 0.0f, 30.0f, "%.02f");
+            ImGui::Checkbox("Animate Thickness", &animate_thickness);
+            ImGui::SameLine();
+            ImGui::Text("%.2f", thickness);
+            ImGui::SliderInt("N-gon sides", &ngon_segments, 3, 12);
             ImGui::Checkbox("##circlesegmentoverride", &circle_segments_override);
             ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
             circle_segments_override |= ImGui::SliderInt("Circle segments override", &circle_segments_override_v, 3, 40);
@@ -10473,7 +10481,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
                 {
                     // FILLED SHAPES
                     const ImU32 col = ImColor(colf_fill);
-                    draw_list->AddNgonFilled({ x + half_sz, y + half_sz }, half_sz, col, ngon_sides);                    x += sz + spacing;  // N-gon
+                    draw_list->AddNgonFilled({ x + half_sz, y + half_sz }, half_sz, col, ngon_segments);                    x += sz + spacing;  // N-gon
                     draw_list->AddCircleFilled({ x + half_sz, y + half_sz }, half_sz, col, circle_segments);                x += sz + spacing;  // Circle
                     draw_list->AddEllipseFilled({ x + half_sz, y + half_sz }, { sz * 0.5f, sz * 0.3f }, col, -0.3f, circle_segments); x += sz + spacing;// Ellipse
                     draw_list->AddRectFilled({ x, y }, { x + sz, y + sz }, col);                                            x += sz + spacing;  // Square
@@ -10523,7 +10531,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
                     // First row uses a thickness of 1.0f, second row uses the configurable thickness
                     const ImU32 col = ImColor(colf_stroke);
                     float th = (row == 0) ? 1.0f : thickness;
-                    draw_list->AddNgon({ x + half_sz, y + half_sz }, half_sz, col, ngon_sides, th, flags);               x += sz + spacing;  // N-gon
+                    draw_list->AddNgon({ x + half_sz, y + half_sz }, half_sz, col, ngon_segments, th, flags);               x += sz + spacing;  // N-gon
                     draw_list->AddCircle({ x + half_sz, y + half_sz }, half_sz, col, circle_segments, th, flags);           x += sz + spacing;  // Circle
                     draw_list->AddEllipse({ x + half_sz, y + half_sz }, { sz * 0.5f, sz * 0.3f }, col, -0.3f, circle_segments, th, flags); x += sz + spacing;  // Ellipse
                     draw_list->AddRect({ x, y }, { x + sz, y + sz }, col, 0.0f, th, flags);                                 x += sz + spacing;  // Square
