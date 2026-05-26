@@ -3323,9 +3323,15 @@ struct ImGuiSelectionExternalStorage
 #define IM_DRAWLIST_TEX_LINES_WIDTH_MAX         (32)
 #endif
 
-#ifndef IM_DRAWLIST_TEX_LINES_SUPERSAMPLE_MAX
-#define IM_DRAWLIST_TEX_LINES_SUPERSAMPLE_MAX   (2) // How many samples for lines between [1..2) thickness.
+#ifndef IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH
+#define IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH    (4) // Calculate detailed textures for width [1..IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH]
 #endif
+
+#ifndef IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT
+#define IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT      (2) // How many samples per integer thickness level.
+#endif
+
+#define IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX         (IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH * IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT)
 
 #ifndef IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX
 #define IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX    (16)
@@ -4019,7 +4025,7 @@ struct ImFontAtlas
     ImVec2                      TexUvWhitePixel;    // Texture coordinates to a white pixel. May change as new texture gets created.
     ImVector<ImFont*>           Fonts;              // Hold all the fonts returned by AddFont*. Fonts[0] is the default font upon calling ImGui::NewFrame(), use ImGui::PushFont()/PopFont() to change the current font.
     ImVector<ImFontConfig>      Sources;            // Source/configuration data
-    ImVec4                      TexUvLines[IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1 + IM_DRAWLIST_TEX_LINES_SUPERSAMPLE_MAX + 1];        // UVs for baked anti-aliased lines
+    ImVec4                      TexUvLines[IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1 + IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX + 1];        // UVs for baked anti-aliased lines
     ImVec4                      TexUvCorners[IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX * IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX];  // UVs for baked anti-aliased corners (0= fill, 1> stroke thickness)
     int                         TexNextUniqueID;    // Next value to be stored in TexData->UniqueID
     int                         FontNextUniqueID;   // Next value to be stored in ImFont->FontID
