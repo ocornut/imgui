@@ -2761,6 +2761,8 @@ void ImDrawList::AddQuad(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, c
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
+    ImDrawFlags stroke_pos = g_LEGACY_STROKES ? ImDrawFlags_StrokeLegacy : _GetStrokePos(flags, ImDrawFlags_StrokeInside);
+    flags = (flags & ~ImDrawFlags_StrokeMask_) | stroke_pos;
     PathLineTo(p1);
     PathLineTo(p2);
     PathLineTo(p3);
