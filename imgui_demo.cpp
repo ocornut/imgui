@@ -10420,15 +10420,18 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             static int curve_segments_override_v = 8;
             static ImVec4 colf_stroke = ImVec4(1.00f, 1.00f, 0.40f, 1.0f);
             static ImVec4 colf_fill = ImVec4(0.70f, 0.18f, 0.62f, 1.0f);
-            const float thickness_anim_period = 5.f;
-            float thickness_wave = 1.0f - fabs(fmod((float)ImGui::GetTime(), thickness_anim_period) * (2.0f / thickness_anim_period) - 1.0f);
-            float thickness = animate_thickness ? thickness_wave * base_thickness : base_thickness;
 
             ImGui::DragFloat("Size", &sz, 0.2f, 0.2f, 100.0f, "%.0f");
-            ImGui::DragFloat("Thickness", &base_thickness, 0.1f, 0.0f, 30.0f, "%.02f");
-            ImGui::Checkbox("Animate Thickness", &animate_thickness);
+
+            const float thickness_anim_period = 5.f;
+            const float thickness_wave = 1.0f - fabsf(fmodf((float)ImGui::GetTime(), thickness_anim_period) * (2.0f / thickness_anim_period) - 1.0f);
+            const float thickness = animate_thickness ? thickness_wave * base_thickness : base_thickness;
+            ImGui::DragFloat("Thickness", &base_thickness, 0.02f, 0.0f, 30.0f, "%.02f");
+            ImGui::SameLine();
+            ImGui::Checkbox("Animate", &animate_thickness);
             ImGui::SameLine();
             ImGui::Text("%.2f", thickness);
+
             ImGui::SliderInt("N-gon sides", &ngon_segments, 3, 12);
             ImGui::Checkbox("##circlesegmentoverride", &circle_segments_override);
             ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
@@ -10439,18 +10442,20 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             ImGui::ColorEdit4("Stroke Color", &colf_stroke.x);
             ImGui::ColorEdit4("Fill Color", &colf_fill.x);
 
-            static ImDrawFlags flags = ImDrawFlags_None;
+            static ImDrawFlags stroke_flags = ImDrawFlags_None;
+            static ImDrawFlags other_flags = ImDrawFlags_None;
             ImGui::Text("Stroke Flags:");
-            ImGui::RadioButton("Default", &flags, ImDrawFlags_None); ImGui::SameLine();
-            ImGui::RadioButton("Inside", &flags, ImDrawFlags_StrokeInside); ImGui::SameLine();
-            ImGui::RadioButton("Center", &flags, ImDrawFlags_StrokeCenter); ImGui::SameLine();
-            ImGui::RadioButton("CenterAligned", &flags, ImDrawFlags_StrokeCenterAligned); ImGui::SameLine();
-            ImGui::RadioButton("Outside", &flags, ImDrawFlags_StrokeOutside); ImGui::SameLine();
-            ImGui::RadioButton("Legacy", &flags, ImDrawFlags_StrokeLegacy);
-            ImGui::CheckboxFlags("MiterOnly", &flags, ImDrawFlags_MiterOnly); ImGui::SameLine();
-            ImGui::CheckboxFlags("SquareCap", &flags, ImDrawFlags_SquareCap); ImGui::SameLine();
-            ImGui::CheckboxFlags("NoAAEnds", &flags, ImDrawFlags_NoAAEnds);
+            ImGui::RadioButton("Default", &stroke_flags, ImDrawFlags_None); ImGui::SameLine();
+            ImGui::RadioButton("Inside", &stroke_flags, ImDrawFlags_StrokeInside); ImGui::SameLine();
+            ImGui::RadioButton("Center", &stroke_flags, ImDrawFlags_StrokeCenter); ImGui::SameLine();
+            ImGui::RadioButton("CenterAligned", &stroke_flags, ImDrawFlags_StrokeCenterAligned); ImGui::SameLine();
+            ImGui::RadioButton("Outside", &stroke_flags, ImDrawFlags_StrokeOutside); ImGui::SameLine();
+            ImGui::RadioButton("Legacy", &stroke_flags, ImDrawFlags_StrokeLegacy);
+            ImGui::CheckboxFlags("MiterOnly", &other_flags, ImDrawFlags_MiterOnly); ImGui::SameLine();
+            ImGui::CheckboxFlags("SquareCap", &other_flags, ImDrawFlags_SquareCap); ImGui::SameLine();
+            ImGui::CheckboxFlags("NoAAEnds", &other_flags, ImDrawFlags_NoAAEnds);
             ImGui::Spacing();
+            const ImDrawFlags flags = stroke_flags | other_flags;
 
             ImVec2 start_pos = ImGui::GetCursorScreenPos();
             const float pi = 3.141592f;
