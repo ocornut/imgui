@@ -1191,18 +1191,18 @@ void ImDrawList::_SelectFringeTexture(float screen_thickness, ImVec4& tex_uvs, f
 {
     if (screen_thickness <= 2.f)
     {
-        // Handle the thickness between [1..2]. The texture scaling in this range will cause visual pop near 1, so we generate super sampled textures in this range.
-        // There IM_DRAWLIST_TEX_LINES_SUPERSAMPLE_MAX+1 textures, where 0 maps to 1.0 and IM_DRAWLIST_TEX_LINES_SUPERSAMPLE_MAX maps 2.0.
+        // Handle the thickness between [1..IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH]. The texture scaling in this range will cause slight visual pops, so we generate super sampled textures in this range.
+        // There are IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX+1 textures, where 0 maps to 1.0 and IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX maps to IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH.
         constexpr float base_width = 1.f;
-        const int texture_idx = ImClamp((int)((screen_thickness - base_width) * IM_DRAWLIST_TEX_LINES_SUPERSAMPLE_MAX + 0.5f), 0, IM_DRAWLIST_TEX_LINES_SUPERSAMPLE_MAX);
-        const float tex_width = base_width + (float)texture_idx / IM_DRAWLIST_TEX_LINES_SUPERSAMPLE_MAX;
+        const int texture_idx = ImClamp((int)((screen_thickness - base_width) * IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT + 0.995f), 0, IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX);
+        const float tex_width = base_width + (float)texture_idx / IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT;
         fringe = _FringeScale * (screen_thickness / tex_width); // Scale the fringe to cover the discrepancy between the texture and requested size.
         tex_uvs = _Data->TexUvLines[IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1 + texture_idx];
     }
     else
     {
         // Bias the texture selection towards higher resolution to avoid visual pops when the texture change.
-        const int texture_idx = ImClamp((int)(screen_thickness + 0.95f), 1, IM_DRAWLIST_TEX_LINES_WIDTH_MAX - 1);
+        const int texture_idx = ImClamp((int)(screen_thickness + 0.995f), 2, IM_DRAWLIST_TEX_LINES_WIDTH_MAX - 1);
         fringe = _FringeScale * (screen_thickness / (float)texture_idx); // Scale the fringe to cover the discrepancy between the texture and requested size.
         tex_uvs = _Data->TexUvLines[texture_idx];
     }
@@ -5122,7 +5122,7 @@ static void ImFontAtlasBuildUpdateTexDataLines(ImFontAtlas* atlas)
     bool add_and_draw = atlas->GetCustomRect(builder->PackIdLinesTexData, &r) == false;
     if (add_and_draw)
     {
-        ImVec2i pack_size = ImVec2i(IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 2, IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1 + IM_DRAWLIST_TEX_LINES_SUPERSAMPLE_MAX + 1);
+        ImVec2i pack_size = ImVec2i(IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 2, IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1 + IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX + 1);
         builder->PackIdLinesTexData = atlas->AddCustomRect(pack_size.x, pack_size.y, &r);
         IM_ASSERT(builder->PackIdLinesTexData != ImFontAtlasRectId_Invalid);
     }
@@ -5176,16 +5176,16 @@ static void ImFontAtlasBuildUpdateTexDataLines(ImFontAtlas* atlas)
 
     {
 
-        ImU8 ramp[IM_DRAWLIST_TEX_LINES_SUPERSAMPLE_MAX];
-        for (int n = 0; n < IM_DRAWLIST_TEX_LINES_SUPERSAMPLE_MAX; n++)
-            ramp[n] = (ImU8)(((float)n / IM_DRAWLIST_TEX_LINES_SUPERSAMPLE_MAX) * 255.f);
+        ImU8 ramp[IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT];
+        for (int n = 0; n < IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT; n++)
+            ramp[n] = (ImU8)(((float)n / IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT) * 255.f);
 
-        for (int n = 0; n < IM_DRAWLIST_TEX_LINES_SUPERSAMPLE_MAX + 1; n++)
+        for (int n = 0; n < IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX + 1; n++)
         {
             // Each line consists of at least two empty pixels at the ends, with a line of solid pixels in the middle
             const int y = IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1 + n;
-            const int line_width = IM_DRAWLIST_TEX_LINES_SUPERSAMPLE_MAX + n;
-            IM_ASSERT(IM_DRAWLIST_TEX_LINES_SUPERSAMPLE_MAX + line_width + IM_DRAWLIST_TEX_LINES_SUPERSAMPLE_MAX <= r.w && y < r.h); // Make sure we're inside the texture bounds before we start writing pixels
+            const int line_width = IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT + n;
+            IM_ASSERT(IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT + line_width + IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT <= r.w && y < r.h); // Make sure we're inside the texture bounds before we start writing pixels
 
             // Write each slice
             if (add_and_draw && tex->Format == ImTextureFormat_Alpha8)
@@ -5193,13 +5193,13 @@ static void ImFontAtlasBuildUpdateTexDataLines(ImFontAtlas* atlas)
                 ImU8* write_ptr = (ImU8*)tex->GetPixelsAt(r.x, r.y + y);
                 int idx = 0;
 
-                for (int i = 0; i < IM_DRAWLIST_TEX_LINES_SUPERSAMPLE_MAX; i++)
+                for (int i = 0; i < IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT; i++)
                     write_ptr[idx++] = ramp[i];
 
                 for (int i = 0; i < line_width; i++)
                     write_ptr[idx++] = 0xFF;
 
-                for (int i = IM_DRAWLIST_TEX_LINES_SUPERSAMPLE_MAX-1; i >= 0; i--)
+                for (int i = IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT - 1; i >= 0; i--)
                     write_ptr[idx++] = ramp[i];
 
                 while (idx < r.w)
@@ -5211,13 +5211,13 @@ static void ImFontAtlasBuildUpdateTexDataLines(ImFontAtlas* atlas)
 
                 int idx = 0;
 
-                for (int i = 0; i < IM_DRAWLIST_TEX_LINES_SUPERSAMPLE_MAX; i++)
+                for (int i = 0; i < IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT; i++)
                     write_ptr[idx++] = IM_COL32(255, 255, 255, ramp[i]);
 
                 for (int i = 0; i < line_width; i++)
                     write_ptr[idx++] = IM_COL32(255, 255, 255, 255);
 
-                for (int i = IM_DRAWLIST_TEX_LINES_SUPERSAMPLE_MAX - 1; i >= 0; i--)
+                for (int i = IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT - 1; i >= 0; i--)
                     write_ptr[idx++] = IM_COL32(255, 255, 255, ramp[i]);
 
                 while (idx < r.w)
@@ -5226,7 +5226,7 @@ static void ImFontAtlasBuildUpdateTexDataLines(ImFontAtlas* atlas)
 
             // Refresh UV coordinates
             ImVec2 uv0 = ImVec2((float)(r.x), (float)(r.y + y)) * atlas->TexUvScale;
-            ImVec2 uv1 = ImVec2((float)(r.x + IM_DRAWLIST_TEX_LINES_SUPERSAMPLE_MAX * 2 + line_width), (float)(r.y + y + 1)) * atlas->TexUvScale;
+            ImVec2 uv1 = ImVec2((float)(r.x + IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT * 2 + line_width), (float)(r.y + y + 1)) * atlas->TexUvScale;
             float half_v = (uv0.y + uv1.y) * 0.5f; // Calculate a constant V in the middle of the row to avoid sampling artifacts
             atlas->TexUvLines[IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1 + n] = ImVec4(uv0.x, half_v, uv1.x, half_v);
         }
