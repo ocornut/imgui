@@ -1189,15 +1189,15 @@ static ImU32 ImAlphaMultiply(ImU32 col, float alpha_mul)
 
 void ImDrawList::_SelectFringeTexture(float screen_thickness, ImVec4& tex_uvs, float& fringe)
 {
-    if (screen_thickness <= 2.f)
+    if (screen_thickness <= IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH)
     {
         // Handle the thickness between [1..IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH]. The texture scaling in this range will cause slight visual pops, so we generate super sampled textures in this range.
         // There are IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX+1 textures, where 0 maps to 1.0 and IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX maps to IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH.
         constexpr float base_width = 1.f;
-        const int texture_idx = ImClamp((int)((screen_thickness - base_width) * IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT + 0.995f), 0, IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX);
+        const int texture_idx = ImClamp((int)((screen_thickness - base_width) * IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT + 0.1f), 0, IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX);
         const float tex_width = base_width + (float)texture_idx / IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT;
         fringe = _FringeScale * (screen_thickness / tex_width); // Scale the fringe to cover the discrepancy between the texture and requested size.
-        tex_uvs = _Data->TexUvLines[IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1 + texture_idx];
+        tex_uvs = _Data->TexUvLines[(IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1) + texture_idx];
     }
     else
     {
@@ -5182,9 +5182,18 @@ static void ImFontAtlasBuildUpdateTexDataLines(ImFontAtlas* atlas)
 
         for (int n = 0; n < IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX + 1; n++)
         {
-            // Each line consists of at least two empty pixels at the ends, with a line of solid pixels in the middle
             const int y = IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1 + n;
-            const int line_width = IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT + n;
+            // For integer thickness lines the one pixel line texture looks like this:
+            // [  0  |  1  |  0  ]
+            //    :...........:
+            // Since the texture samples are at the center of the texel, we only use range above.
+            // The result after bilinear filtering is a triangle across the used uv range.
+            //
+            // To super 2x sample that signal, we end up with following texture:
+            // [  0  |  .5 |  1  |  .5 |  0  ]
+            //    :.......................:
+            // One might think that there should be 2 opaque pixels the the middle section, but no singe we're super sampling the triangle signal.
+            const int line_width = 1 + n;
             IM_ASSERT(IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT + line_width + IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT <= r.w && y < r.h); // Make sure we're inside the texture bounds before we start writing pixels
 
             // Write each slice
