@@ -10556,7 +10556,8 @@ static void ShowExampleAppCustomRendering(bool* p_open)
                     x += half_sz + spacing;
 
                     if (!(draw_fill && draw_strokes)) //-V560
-                        draw_list->AddLine({ x, y }, { x + sz, y + sz }, col, th, flags);                                   x += sz + spacing;  // Diagonal line
+                        draw_list->AddLine({ x, y }, { x + sz, y + sz }, col, th, flags);                                   // Diagonal line
+                    x += sz + spacing;
 
                     // Rotating square
                     for (int n = 0; n < 4; n++)

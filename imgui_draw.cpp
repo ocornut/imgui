@@ -862,7 +862,7 @@ static float CalculateCenterAlignedOffset(float thickness, float _FringeScale)
 #define IM_POLYLINE_MITER_ANGLE_LIMIT (-0.9999619f) // cos(179.5)
 #define IM_POLYLINE_MITER_LIMIT (4.0f)
 
-void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_lengths, const int points_count, ImU32 col, float thickness, ImDrawFlags flags, ImVec4 tex_uvs, float fringe)
+void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_lengths, const int points_count, ImU32 col, float thickness, ImDrawFlags flags, const ImVec4& tex_uvs, float fringe)
 {
     const ImU32 col_trans = col & ~IM_COL32_A_MASK;
 
@@ -1187,7 +1187,7 @@ static ImU32 ImAlphaMultiply(ImU32 col, float alpha_mul)
     return (col & ~IM_COL32_A_MASK) | (a << IM_COL32_A_SHIFT);
 }
 
-void ImDrawList::_SelectFringeTexture(float screen_thickness, ImVec4& tex_uvs, float& fringe)
+void ImDrawList::_SelectFringeTexture(float screen_thickness, ImVec4* out_tex_uvs, float* out_fringe)
 {
     if (screen_thickness <= IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH)
     {
@@ -1196,15 +1196,15 @@ void ImDrawList::_SelectFringeTexture(float screen_thickness, ImVec4& tex_uvs, f
         constexpr float base_width = 1.f;
         const int texture_idx = ImClamp((int)((screen_thickness - base_width) * IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT + 0.1f), 0, IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX);
         const float tex_width = base_width + (float)texture_idx / IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT;
-        fringe = _FringeScale * (screen_thickness / tex_width); // Scale the fringe to cover the discrepancy between the texture and requested size.
-        tex_uvs = _Data->TexUvLines[(IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1) + texture_idx];
+        *out_fringe = _FringeScale * (screen_thickness / tex_width); // Scale the fringe to cover the discrepancy between the texture and requested size.
+        *out_tex_uvs = _Data->TexUvLines[(IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1) + texture_idx];
     }
     else
     {
         // Bias the texture selection towards higher resolution to avoid visual pops when the texture change.
         const int texture_idx = ImClamp((int)(screen_thickness + 0.995f), 2, IM_DRAWLIST_TEX_LINES_WIDTH_MAX - 1);
-        fringe = _FringeScale * (screen_thickness / (float)texture_idx); // Scale the fringe to cover the discrepancy between the texture and requested size.
-        tex_uvs = _Data->TexUvLines[texture_idx];
+        *out_fringe = _FringeScale * (screen_thickness / (float)texture_idx); // Scale the fringe to cover the discrepancy between the texture and requested size.
+        *out_tex_uvs = _Data->TexUvLines[texture_idx];
     }
 }
 
@@ -1267,8 +1267,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
 
     ImVec4 tex_uvs;
     float fringe;
-    _SelectFringeTexture(screen_thickness, tex_uvs, fringe);
-
+    _SelectFringeTexture(screen_thickness, &tex_uvs, &fringe);
     _AddPolyline(points, normals, sqr_lengths, points_count, col, thickness, flags, tex_uvs, fringe);
 }
 
@@ -2240,7 +2239,7 @@ void ImDrawList::AddLineV(float x, float min_y, float max_y, ImU32 col, float th
     }
 }
 
-void ImDrawList::_AddRectBaked(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float r, float t, ImVec4 tex_uvs, ImDrawFlags flags)
+void ImDrawList::_AddRectBaked(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float r, float t, const ImVec4& tex_uvs, ImDrawFlags flags)
 {
     const ImVec2 uv_tl(tex_uvs.x, tex_uvs.y);
     const ImVec2 uv_tr(tex_uvs.z, tex_uvs.y);
@@ -2374,7 +2373,7 @@ void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, 
 
     ImVec4 tex_uvs;
     float fringe;
-    _SelectFringeTexture(screen_thickness, tex_uvs, fringe);
+    _SelectFringeTexture(screen_thickness, &tex_uvs, &fringe);
 
     const int arc_step = ImClamp(IM_DRAWLIST_ARCFAST_SAMPLE_MAX / this->_CalcCircleAutoSegmentCount(rounding), 1, IM_DRAWLIST_ARCFAST_TABLE_SIZE / 4);
     const int arc_point_count = (IM_DRAWLIST_ARCFAST_TABLE_SIZE / 4) / arc_step + 1;
@@ -2389,7 +2388,8 @@ void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, 
     static const ImVec2 corner_offset[4] = { {1,1}, {-1,1}, {-1,-1}, {1,-1} };
     static const ImDrawFlags corner_flags[4] = { ImDrawFlags_RoundCornersTopLeft, ImDrawFlags_RoundCornersTopRight, ImDrawFlags_RoundCornersBottomRight, ImDrawFlags_RoundCornersBottomLeft };
     const float half_fringe = fringe * 0.5f;
-    const ImVec2 corner_pos[4] = {
+    const ImVec2 corner_pos[4] =
+    {
         ImVec2(p_min.x - half_fringe, p_min.y - half_fringe),
         ImVec2(p_max.x + half_fringe, p_min.y - half_fringe),
         ImVec2(p_max.x + half_fringe, p_max.y + half_fringe),
@@ -2456,7 +2456,7 @@ void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, 
         {
             for (int i = 0; i < arc_point_count - 1; i++)
                 IM_APPEND_TRI(stem_idx, arc_idx + i, arc_idx + i + 1);
-        }
+        } // (keep braces because of macro above)
 
         // Connect with previous
         IM_APPEND_TRI(base_idx + 0, arc_idx, stem_idx);
@@ -2588,9 +2588,9 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
         if ((Flags & ImDrawListFlags_RoundCornersUseTex) && s_thickness <= IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX && s_rounding <= IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX)
         {
             // Pixel aligned rect with round corners rendered using baked textures.
-			IM_ASSERT_PARANOID(!(_Data->Font->OwnerAtlas->Flags & ImFontAtlasFlags_NoBakedRoundCorners));
             const int size = ImMax(s_rounding, s_thickness); // This is matching the baking calculations.
             const int idx = (s_thickness * IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX) + s_rounding - 1;
+            IM_ASSERT_PARANOID((_Data->Font->OwnerAtlas->Flags & ImFontAtlasFlags_NoBakedRoundCorners) == 0);
             IM_ASSERT_PARANOID(idx >= 0 && idx < IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX * IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX);
             const ImVec4 tex_uvs = _Data->TexUvCorners[idx];
             _AddRectBaked(outer_min, outer_max, col, (float)size * _FringeScale, (float)thickness, tex_uvs, flags);
@@ -2627,7 +2627,7 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
     PathStroke(col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | ImDrawFlags_StrokeInside);
 }
 
-void ImDrawList::_AddRectFilledBaked(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float r, ImVec4 tex_uvs, ImDrawFlags flags)
+void ImDrawList::_AddRectFilledBaked(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float r, const ImVec4& tex_uvs, ImDrawFlags flags)
 {
     // 9-slice with corner mirroring
     const ImVec2 uv_tl(tex_uvs.x, tex_uvs.y);
@@ -2643,7 +2643,6 @@ void ImDrawList::_AddRectFilledBaked(const ImVec2& p_min, const ImVec2& p_max, I
     const float r_bl = (flags & ImDrawFlags_RoundCornersBottomLeft)  ? r : 0.0f;
 
     ImDrawIdx idx = (ImDrawIdx)_VtxCurrentIdx;
-
     IM_APPEND_VTX(p_min.x, p_min.y, uv_tl, col);
     IM_APPEND_VTX(p_min.x + r_tl, p_min.y, uv_tr, col);
     IM_APPEND_VTX(p_max.x - r_tr, p_min.y, uv_tr, col);
