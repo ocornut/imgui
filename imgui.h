@@ -3459,8 +3459,8 @@ enum ImDrawFlags_
 
     // Stroke position relative to the shape outline
     ImDrawFlags_StrokeInside                = 1 << 16, // Draw stroke inside of the shape outline (default for closed shapes and AddLineH, AddLineV functions)
-    ImDrawFlags_StrokeCenter                = 2 << 16, // Draw stroke at the center of the shape outline
-    ImDrawFlags_StrokeCenterAligned         = 3 << 16, // Draw stroke at the center of the shape outline, so that half thickness (rounded down) will be outside, and rest inside the shape outline.
+    ImDrawFlags_StrokeCenter                = 2 << 16, // Draw stroke at the center of the shape outline (default for paths, bezier, and AddLine functions)
+    ImDrawFlags_StrokeCenterAligned         = 3 << 16, // Draw stroke at the center of the shape outline, so that half thickness (rounded down) will be outside, and rest inside the shape outline. Does not animate well!
     ImDrawFlags_StrokeOutside               = 4 << 16, // Draw stroke outside of the shape outline
     ImDrawFlags_StrokeLegacy                = 5 << 16, // Use legacy positioning + enable MiterOnly and NoAAEnds flags.
     ImDrawFlags_StrokeMask_                 = 0x07 << 16,
@@ -3478,7 +3478,7 @@ enum ImDrawListFlags_
     ImDrawListFlags_AntiAliasedFill         = 1 << 2,  // Enable anti-aliased edge around filled shapes (rounded rectangles, circles).
     ImDrawListFlags_AllowVtxOffset          = 1 << 3,  // Can emit 'VtxOffset > 0' to allow large meshes. Set when 'ImGuiBackendFlags_RendererHasVtxOffset' is enabled.
     ImDrawListFlags_TextNoPixelSnap         = 1 << 4,  // Disable automatically snapping AddText() calls to pixel boundaries.
-    ImDrawListFlags_RoundCornersUseTex      = 1 << 5,  // Enable using textures instead of strokes to draw rounded corners/circles where possible.
+    ImDrawListFlags_RoundCornersUseTex      = 1 << 5,  // Enable using textures instead of strokes to draw rounded corners/circles where possible. Set when `ImFontAtlasFlags_NoBakedRoundCorners` is enabled in the font atlas.
 };
 
 // Draw command list
@@ -3659,11 +3659,11 @@ struct ImDrawList
     IMGUI_API int   _CalcCircleAutoSegmentCount(float radius) const;
     IMGUI_API void  _PathArcToFastEx(const ImVec2& center, float radius, int a_min_sample, int a_max_sample, int a_step);
     IMGUI_API void  _PathArcToN(const ImVec2& center, float radius, float a_min, float a_max, int num_segments);
-    IMGUI_API void  _AddRectFilledBaked(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float r, ImVec4 tex_uvs, ImDrawFlags flags);
-    IMGUI_API void  _AddRectBaked(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float r, float t, ImVec4 tex_uvs, ImDrawFlags flags);
-    IMGUI_API void  _AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_lengths, const int points_count, ImU32 col, float thickness, ImDrawFlags flags, ImVec4 tex_uvs, float fringe);
+    IMGUI_API void  _AddRectFilledBaked(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float r, const ImVec4& tex_uvs, ImDrawFlags flags);
+    IMGUI_API void  _AddRectBaked(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float r, float t, const ImVec4& tex_uvs, ImDrawFlags flags);
+    IMGUI_API void  _AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_lengths, const int points_count, ImU32 col, float thickness, ImDrawFlags flags, const ImVec4& tex_uvs, float fringe);
     IMGUI_API void  _AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float rounding, float thickness, ImDrawFlags flags);
-    IMGUI_API void  _SelectFringeTexture(float screen_thickness, ImVec4& tex_uvs, float& fringe);
+    IMGUI_API void  _SelectFringeTexture(float screen_thickness, ImVec4* out_tex_uvs, float* out_fringe);
 };
 
 // All draw data to render a Dear ImGui frame
