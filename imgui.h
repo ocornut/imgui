@@ -3324,11 +3324,11 @@ struct ImGuiSelectionExternalStorage
 #endif
 
 #ifndef IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH
-#define IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH    (4) // Calculate detailed textures for width [1..IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH]
+#define IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH    (3) // Calculate detailed textures for width [1..IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH]
 #endif
 
 #ifndef IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT
-#define IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT      (2) // How many samples per integer thickness level.
+#define IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT      (4) // How many samples per integer thickness level.
 #endif
 
 #define IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX         (IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH * IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT)
