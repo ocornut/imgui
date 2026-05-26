@@ -125,6 +125,15 @@ Other Changes:
     #5999, #6452, #5156, #7342, #7592, #7511)
   - Made `AddCallback()` user data default to Null for convenience.
   - Added `AddLineH()`, `AddLineV()` helpers to draw horizontal and vertical lines. [@memononen]
+    The new functions are more optimal and will be part of a larger effort in 1.93 to fix
+    inconsistencies and improve the DrawList API. In the current API, `AddLine()` adds a "magic" +0.5f
+    offset and then center the line, whereas AddLineH()/AddLineV() use the right side of the line to expand.
+    For thickness=1.0f lines this is equivalent:
+      `AddLine({10,3}, {20,3}, ...)` --> `AddLineH(x1=10, x2=20, y=3, ...)`.
+      `AddLine({3,10}, {3,20}, ...)` --> `AddLineV(x=3, y1=10, y2=20, ...)`.
+    For larger integer thickness, AddLine() will center but may be blurry, AddLineH()/AddLineV()
+    will expand "inside" (to the right side) and will always be sharp.
+    A subsequent release will expand on those concepts and add new options.
 - InputText:
   - InputTextMultiline: fixed an issue processing deactivation logic when an active
     multi-line edit is clipped due to being out of view.
