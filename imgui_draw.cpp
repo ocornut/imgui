@@ -2149,7 +2149,7 @@ void ImDrawList::AddLineH(float min_x, float max_x, float y, ImU32 col, float th
     if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy)
     {
         const ImVec2 points[2] = { ImVec2(min_x + 0.5f, y + 0.5f), ImVec2(max_x + 0.5f, y + 0.5f) }; // Same as AddLine() above.
-        AddPolyline(points, 2, col, thickness, stroke_pos);
+        AddPolyline(points, 2, col, thickness, ImDrawFlags_StrokeLegacy);
         return;
     }
 
@@ -2183,9 +2183,8 @@ void ImDrawList::AddLineH(float min_x, float max_x, float y, ImU32 col, float th
         flags = (flags & ~ImDrawFlags_StrokeMask_) | stroke_pos;
 
         // For generic case use line, since it needs less triangles than AA rectangle.
-        PathLineTo(ImVec2(min_x, y));
-        PathLineTo(ImVec2(max_x, y));
-        PathStroke(col, thickness, flags);
+        const ImVec2 points[2] = { ImVec2(min_x, y), ImVec2(max_x, y) };
+        AddPolyline(points, 2, col, thickness, flags);
     }
 }
 
@@ -2197,8 +2196,8 @@ void ImDrawList::AddLineV(float x, float min_y, float max_y, ImU32 col, float th
     ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
     if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy)
     {
-        const ImVec2 points[2] = { ImVec2(x + 0.5f, max_y + 0.5f), ImVec2(x + 0.5f, min_y + 0.5f) }; // Same as AddLine() above.
-        AddPolyline(points, 2, col, thickness, stroke_pos);
+        const ImVec2 points[2] = { ImVec2(x + 0.5f, min_y + 0.5f), ImVec2(x + 0.5f, max_y + 0.5f) }; // Same as AddLine() above.
+        AddPolyline(points, 2, col, thickness, ImDrawFlags_StrokeLegacy);
         return;
     }
 
@@ -2233,9 +2232,8 @@ void ImDrawList::AddLineV(float x, float min_y, float max_y, ImU32 col, float th
 
         // For generic case use line, since it needs less triangles than AA rectangle.
         // Drawing for bottom to top, so that the inside stroke pos expands to right.
-        PathLineTo(ImVec2(x, max_y));
-        PathLineTo(ImVec2(x, min_y));
-        PathStroke(col, thickness, flags);
+        const ImVec2 points[2] = { ImVec2(x, max_y), ImVec2(x, min_y) };
+        AddPolyline(points, 2, col, thickness, flags);
     }
 }
 
@@ -2500,9 +2498,9 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
     if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy)
     {
         if (Flags & ImDrawListFlags_AntiAliasedLines)
-            PathRect(p_min + ImVec2(0.50f, 0.50f), p_max - ImVec2(0.50f, 0.50f), rounding, flags);
+            PathRect(ImVec2(p_min.x + 0.50f, p_min.y + 0.50f), ImVec2(p_max.x - 0.50f, p_max.y - 0.50f), rounding, flags);
         else
-            PathRect(p_min + ImVec2(0.50f, 0.50f), p_max - ImVec2(0.49f, 0.49f), rounding, flags); // Better looking lower-right corner and rounded non-AA shapes.
+            PathRect(ImVec2(p_min.x + 0.50f, p_min.y + 0.50f), ImVec2(p_max.x - 0.49f, p_max.y - 0.49f), rounding, flags); // Better looking lower-right corner and rounded non-AA shapes.
         PathStroke(col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | ImDrawFlags_StrokeCenter);
         return;
     }
@@ -2599,10 +2597,8 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
 
     if (!has_rounding || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
     {
-        PathLineTo(outer_min);
-        PathLineTo(ImVec2(outer_max.x, outer_min.y));
-        PathLineTo(outer_max);
-        PathLineTo(ImVec2(outer_min.x, outer_max.y));
+        const ImVec2 points[4] = { outer_min, ImVec2(outer_max.x, outer_min.y), outer_max, ImVec2(outer_min.x, outer_max.y) };
+        AddPolyline(points, 4, col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | ImDrawFlags_StrokeInside);
     }
     else
     {
@@ -2621,9 +2617,8 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
         PathArcToFast(ImVec2(outer_max.x - rounding_tr, outer_min.y + rounding_tr), rounding_tr, 9, 12);
         PathArcToFast(ImVec2(outer_max.x - rounding_br, outer_max.y - rounding_br), rounding_br, 0, 3);
         PathArcToFast(ImVec2(outer_min.x + rounding_bl, outer_max.y - rounding_bl), rounding_bl, 3, 6);
+        PathStroke(col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | ImDrawFlags_StrokeInside);
     }
-
-    PathStroke(col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | ImDrawFlags_StrokeInside);
 }
 
 void ImDrawList::_AddRectFilledBaked(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float r, const ImVec4& tex_uvs, ImDrawFlags flags)
@@ -2957,9 +2952,7 @@ void ImDrawList::AddEllipse(const ImVec2& center, const ImVec2& radius, ImU32 co
     ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
 
     if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy)
-    {
         stroke_pos = ImDrawFlags_StrokeCenter;
-    }
 
     ImVec2 rad = radius;
     rad.x = ImMax(0.01f, rad.x);
