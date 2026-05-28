@@ -823,6 +823,11 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
     const ImVec2 opaque_uv = _Data->TexUvWhitePixel;
     const int count = closed ? points_count : points_count - 1; // The number of line segments we need to draw
     const bool thick_line = (thickness > _FringeScale);
+
+    // If this assert triggers on legacy code:
+    // - 1.92.8 (2025/05): swapped two last parameters order: flags, thickness --> thickness, flags. This should normally be caught by compile-time type-checking.
+    // - 1.92.8 (2025/05): changed value of ImDrawList_Closed which was previously guaranteed to be == 1. Hardcoded use of 1 or true should be replaced.
+    // Read more details near AddRect() + see "API BREAKING CHANGES" section for 1.82, 1.90 and 1.92.8.
     IM_ASSERT_USER_ERROR_RET((flags & ImDrawFlags_InvalidMask_) == 0, "Incorrect parameter. Did you swap 'thickness' and 'flags'?");
 
     if (Flags & ImDrawListFlags_AntiAliasedLines)
@@ -1503,13 +1508,14 @@ void ImDrawList::AddLineV(float x, float min_y, float max_y, ImU32 col, float th
 void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float rounding, float thickness, ImDrawFlags flags)
 {
     // If this assert triggers on legacy code:
-    // - 1.92.8 (2025/04): swapped two last parameters order: flags, thickness --> thickness, flags. This should normally be caught by compile-time type-checking. 
+    // - 1.92.8 (2025/05): swapped two last parameters order: flags, thickness --> thickness, flags. This should normally be caught by compile-time type-checking.
+    // - 1.92.8 (2025/05): changed value of ImDrawList_Closed which was previously guaranteed to be == 1. Hardcoded use of 1 or true should be replaced.
     // - 1.82.0 (2021/03): changed ImDrawCornerFlags to ImDrawFlags_RoundCornersXXX values.
     //   If you used hard-coded 1 to 15 or ~0 in flags to configure corner rounding use the new flags!
     //   - Hard coded support for ~0 == ImDrawFlags_RoundCornersAll.
     //   - Hard coded support for values 0x01 to 0x0F (matching 15 out of 16 old flags combinations) --> see FixRectCornerFlags() in <1.90 code.
     //   - Hard coded 0x00 with 'float rounding > 0.0f' --> replace with ImDrawFlags_RoundCornersNone or use 'float rounding = 0.0f'.
-    //   See "API BREAKING CHANGES" section for 1.82 and 1.90.
+    //   See "API BREAKING CHANGES" section for 1.82, 1.90 and 1.92.8.
     IM_ASSERT_USER_ERROR_RET((flags & ImDrawFlags_InvalidMask_) == 0, "Incorrect parameter. Did you swap 'thickness' and 'flags'?"); // Or misuse of legacy hard-coded ImDrawCornerFlags values
 
     if ((col & IM_COL32_A_MASK) == 0)
