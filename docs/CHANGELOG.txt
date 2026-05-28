@@ -49,6 +49,22 @@ Other Changes:
     for user code to bypass it without using a clickable item. (#9382)
   - Clicking on a window's empty-space to move/focus a window checks
     for lack of queued focus request. (#9382)
+- InputText:
+  - Added style.InputTextCursorSize to configure cursor/caret thickness. (#7031, #9409)
+    This is automatically scaled by style.ScaleAllSizes().
+- Fonts:
+  - Added `IMGUI_DISABLE_DEFAULT_FONT_BITMAP`/`IMGUI_DISABLE_DEFAULT_FONT_VECTOR` to
+    disable embedding either fonts separately. (#9407)
+- DrawList:
+  - Minor optimization to AddLine(), AddLineH(), AddLineV() functions. (#4091)
+- Demo:
+  - Extract 'Widgets->Tree Nodes->Selectable Nodes' out of the 'Advanced'
+    demo for clarity (manual reimplementation of basic selection).
+- Backends:
+  - Win32:
+    - Uses `SetProcessDpiAwarenessContext()` instead of `SetThreadDpiAwarenessContext()`
+      when available, fixing OpenGL DPI scaling issues as e.g. NVIDIA drivers tends
+      to spawn multiple-thread to manage OpenGL. (#9403)
 
 Docking+Viewports Branch:
 
@@ -86,6 +102,9 @@ Breaking Changes:
 - DrawList: obsoleted `ImDrawCallback_ResetRenderState` in favor of using `ImGui::GetPlatformIO().DrawCallback_ResetRenderState`,
     which is part of our new standard draw callbacks. (#9378)
     Redirecting the earlier value into the later one when set, so both old and new code should work.
+- DrawList: changed value of `ImDrawFlags_Closed`. It was previously advertised as "always == 1" when introduced
+  in 1.82 (2021/02), in order to facilitate backward compatibility with the legacy `bool closed` flag. This
+  guarantee has been removed. The bit is reserved, and `AddPolyline()`, `PathStroke()` will assert when it is used.
 - Backends:
   - Vulkan: redesigned to use separate ImageView + Sampler instead of Combined Image Sampler. (#914)
     This change allows us to facilitate changing samplers, in line with other backends. [@yaz0r, @ocornut]
@@ -116,6 +135,15 @@ Other Changes:
     #5999, #6452, #5156, #7342, #7592, #7511)
   - Made `AddCallback()` user data default to Null for convenience.
   - Added `AddLineH()`, `AddLineV()` helpers to draw horizontal and vertical lines. [@memononen]
+    The new functions are more optimal and will be part of a larger effort in 1.93 to fix
+    inconsistencies and improve the DrawList API. In the current API, `AddLine()` adds a "magic" +0.5f
+    offset and then center the line, whereas AddLineH()/AddLineV() use the right side of the line to expand.
+    For thickness=1.0f lines this is equivalent:
+      `AddLine({10,3}, {20,3}, ...)` --> `AddLineH(x1=10, x2=20, y=3, ...)`.
+      `AddLine({3,10}, {3,20}, ...)` --> `AddLineV(x=3, y1=10, y2=20, ...)`.
+    For larger integer thickness, AddLine() will center but may be blurry, AddLineH()/AddLineV()
+    will expand "inside" (to the right side) and will always be sharp.
+    A subsequent release will expand on those concepts and add new options.
 - InputText:
   - InputTextMultiline: fixed an issue processing deactivation logic when an active
     multi-line edit is clipped due to being out of view.

@@ -4224,9 +4224,9 @@ static void DemoWindowWidgetsTreeNodes()
     {
         IMGUI_DEMO_MARKER("Widgets/Tree Nodes");
         // See see "Examples -> Property Editor" (ShowExampleAppPropertyEditor() function) for a fancier, data-driven tree.
-        if (ImGui::TreeNode("Basic trees"))
+        if (ImGui::TreeNode("Basic Trees"))
         {
-            IMGUI_DEMO_MARKER("Widgets/Tree Nodes/Basic trees");
+            IMGUI_DEMO_MARKER("Widgets/Tree Nodes/Basic Trees");
             for (int i = 0; i < 5; i++)
             {
                 // Use SetNextItemOpen() so set the default state of a node to be open. We could
@@ -4250,9 +4250,9 @@ static void DemoWindowWidgetsTreeNodes()
             ImGui::TreePop();
         }
 
-        if (ImGui::TreeNode("Hierarchy lines"))
+        if (ImGui::TreeNode("Hierarchy Lines"))
         {
-            IMGUI_DEMO_MARKER("Widgets/Tree Nodes/Hierarchy lines");
+            IMGUI_DEMO_MARKER("Widgets/Tree Nodes/Hierarchy Lines");
             static ImGuiTreeNodeFlags base_flags = ImGuiTreeNodeFlags_DrawLinesFull | ImGuiTreeNodeFlags_DefaultOpen;
             HelpMarker("Default option for DrawLinesXXX is stored in style.TreeLinesFlags");
             ImGui::CheckboxFlags("ImGuiTreeNodeFlags_DrawLinesNone", &base_flags, ImGuiTreeNodeFlags_DrawLinesNone);
@@ -4289,15 +4289,57 @@ static void DemoWindowWidgetsTreeNodes()
             ImGui::TreePop();
         }
 
-        if (ImGui::TreeNode("Advanced, with Selectable nodes"))
+        if (ImGui::TreeNode("Selectable Nodes"))
         {
-            IMGUI_DEMO_MARKER("Widgets/Tree Nodes/Advanced, with Selectable nodes");
+            IMGUI_DEMO_MARKER("Widgets/Tree Nodes/Selectable Nodes");
             HelpMarker(
-                "This is a more typical looking tree with selectable nodes.\n"
-                "Click to select, Ctrl+Click to toggle, click on arrows or double-click to open.");
+                "Manually implemented selectable nodes.\n"
+                "Click to select, Ctrl+Click to toggle, click on arrows or double-click to open.\n\n"
+                "You may also use the multi-select API (see 'Demo->Widgets->Selection State & Multi-Select') for more advanced multi-selection features.");
+
+            // Hold in 'selection_mask' a simple representation of what may be user-side selection state.
+            // - You may retain selection state inside or outside your objects in whatever format you see fit.
+            //   You may use ImGuiSelectionBasicStorage which is conceptually close to a set<> of identifiers.
+            // - We record which node was clicked and then apply selection at the end of the loop.
+            // - This is a manual and simplified reimplementation of multi-selection, which the full
+            //   BeginMultiSelect() API implements better, but which is not trivial to wire for trees.
+            static int selection_mask = 0x00;
+            int node_clicked_idx = -1;
+            for (int node_n = 0; node_n < 6; node_n++)
+            {
+                // Disable the default "open on single-click behavior" + set Selected flag according to our selection.
+                // To alter selection we use if 'IsItemClicked() && !IsItemToggledOpen()', so clicking on an arrow doesn't alter selection.
+                // In a BeginMultiSelect()/EndMultiSelect() we could use IsItemToggledSelection() but here we reimplement and use our own logic.
+                ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAvailWidth;
+                if (selection_mask & (1 << node_n))
+                    flags |= ImGuiTreeNodeFlags_Selected;
+
+                bool is_open = ImGui::TreeNodeEx((void*)(intptr_t)node_n, flags, "Selectable Node %d", node_n);
+                if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
+                    node_clicked_idx = node_n;
+                if (is_open)
+                {
+                    ImGui::BulletText("<Node contents here>");
+                    ImGui::TreePop();
+                }
+            }
+            if (node_clicked_idx != -1)
+            {
+                // Update selection state (process outside of tree loop to avoid visual inconsistencies during the clicking frame)
+                if (ImGui::GetIO().KeyCtrl)
+                    selection_mask ^= (1 << node_clicked_idx);          // Ctrl+Click to toggle
+                else //if (!(selection_mask & (1 << node_clicked_idx))) // Depending on selection behavior you want, may want to preserve selection when clicking on item that is part of the selection
+                    selection_mask = (1 << node_clicked_idx);           // Click to single-select
+            }
+            ImGui::TreePop();
+        }
+
+        if (ImGui::TreeNode("Advanced"))
+        {
+            IMGUI_DEMO_MARKER("Widgets/Tree Nodes/Advanced");
             static ImGuiTreeNodeFlags base_flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAvailWidth;
             static bool align_label_with_current_x_position = false;
-            static bool test_drag_and_drop = false;
+            static bool use_drag_and_drop = false;
             ImGui::CheckboxFlags("ImGuiTreeNodeFlags_OpenOnArrow", &base_flags, ImGuiTreeNodeFlags_OpenOnArrow);
             ImGui::CheckboxFlags("ImGuiTreeNodeFlags_OpenOnDoubleClick", &base_flags, ImGuiTreeNodeFlags_OpenOnDoubleClick);
             ImGui::CheckboxFlags("ImGuiTreeNodeFlags_SpanAvailWidth", &base_flags, ImGuiTreeNodeFlags_SpanAvailWidth); ImGui::SameLine(); HelpMarker("Extend hit area to all available width instead of allowing more items to be laid out after the node.");
@@ -4315,44 +4357,30 @@ static void DemoWindowWidgetsTreeNodes()
             ImGui::CheckboxFlags("ImGuiTreeNodeFlags_DrawLinesToNodes", &base_flags, ImGuiTreeNodeFlags_DrawLinesToNodes);
 
             ImGui::Checkbox("Align label with current X position", &align_label_with_current_x_position);
-            ImGui::Checkbox("Test tree node as drag source", &test_drag_and_drop);
-            ImGui::Text("Hello!");
+            ImGui::Checkbox("Make Tree Nodes as drag & drop sources", &use_drag_and_drop);
             if (align_label_with_current_x_position)
                 ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
 
-            // 'selection_mask' is dumb representation of what may be user-side selection state.
-            //  You may retain selection state inside or outside your objects in whatever format you see fit.
-            // 'node_clicked' is temporary storage of what node we have clicked to process selection at the end
-            /// of the loop. May be a pointer to your own node type, etc.
-            static int selection_mask = (1 << 2);
-            int node_clicked = -1;
-            for (int i = 0; i < 6; i++)
+            for (int node_n = 0; node_n < 6; node_n++)
             {
-                // Disable the default "open on single-click behavior" + set Selected flag according to our selection.
-                // To alter selection we use IsItemClicked() && !IsItemToggledOpen(), so clicking on an arrow doesn't alter selection.
                 ImGuiTreeNodeFlags node_flags = base_flags;
-                const bool is_selected = (selection_mask & (1 << i)) != 0;
-                if (is_selected)
-                    node_flags |= ImGuiTreeNodeFlags_Selected;
-                if (i < 3)
+                if (node_n < 3)
                 {
                     // Items 0..2 are Tree Node
-                    bool node_open = ImGui::TreeNodeEx((void*)(intptr_t)i, node_flags, "Selectable Node %d", i);
-                    if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
-                        node_clicked = i;
-                    if (test_drag_and_drop && ImGui::BeginDragDropSource())
+                    bool is_open = ImGui::TreeNodeEx((void*)(intptr_t)node_n, node_flags, "Selectable Node %d", node_n);
+                    if (use_drag_and_drop && ImGui::BeginDragDropSource())
                     {
-                        ImGui::SetDragDropPayload("_TREENODE", NULL, 0);
+                        ImGui::SetDragDropPayload("MY_TREENODE_PAYLOAD_TYPE", NULL, 0);
                         ImGui::Text("This is a drag and drop source");
                         ImGui::EndDragDropSource();
                     }
-                    if (i == 2 && (base_flags & ImGuiTreeNodeFlags_SpanLabelWidth))
+                    if (node_n == 2 && (base_flags & ImGuiTreeNodeFlags_SpanLabelWidth))
                     {
                         // Item 2 has an additional inline button to help demonstrate SpanLabelWidth.
                         ImGui::SameLine();
                         if (ImGui::SmallButton("button")) {}
                     }
-                    if (node_open)
+                    if (is_open)
                     {
                         ImGui::BulletText("Blah blah\nBlah Blah");
                         ImGui::SameLine();
@@ -4366,25 +4394,14 @@ static void DemoWindowWidgetsTreeNodes()
                     // The only reason we use TreeNode at all is to allow selection of the leaf. Otherwise we can
                     // use BulletText() or advance the cursor by GetTreeNodeToLabelSpacing() and call Text().
                     node_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen; // ImGuiTreeNodeFlags_Bullet
-                    ImGui::TreeNodeEx((void*)(intptr_t)i, node_flags, "Selectable Leaf %d", i);
-                    if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
-                        node_clicked = i;
-                    if (test_drag_and_drop && ImGui::BeginDragDropSource())
+                    ImGui::TreeNodeEx((void*)(intptr_t)node_n, node_flags, "Selectable Leaf %d", node_n);
+                    if (use_drag_and_drop && ImGui::BeginDragDropSource())
                     {
-                        ImGui::SetDragDropPayload("_TREENODE", NULL, 0);
+                        ImGui::SetDragDropPayload("MY_TREENODE_PAYLOAD_TYPE", NULL, 0);
                         ImGui::Text("This is a drag and drop source");
                         ImGui::EndDragDropSource();
                     }
                 }
-            }
-            if (node_clicked != -1)
-            {
-                // Update selection state
-                // (process outside of tree loop to avoid visual inconsistencies during the clicking frame)
-                if (ImGui::GetIO().KeyCtrl)
-                    selection_mask ^= (1 << node_clicked);          // Ctrl+Click to toggle
-                else //if (!(selection_mask & (1 << node_clicked))) // Depending on selection behavior you want, may want to preserve selection when clicking on item that is part of the selection
-                    selection_mask = (1 << node_clicked);           // Click to single-select
             }
             if (align_label_with_current_x_position)
                 ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());

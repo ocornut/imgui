@@ -23,6 +23,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2026-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2026-05-19: DPI: ImGui_ImplWin32_EnableDpiAwareness() helper uses SetProcessDpiAwarenessContext() instead of SetThreadDpiAwarenessContext(), fixes DPI scaling issues with e.g. OpenGL. (#9403)
 //  2026-03-31: [Viewports] Fixed setting/getting size when viewports have OS decorations (e.g. io.ConfigViewportsNoDecoration = false) and process is running in Per-Monitor V2 DPI mode. (#8897)
 //  2026-01-28: Inputs: Minor optimization not submitting gamepad input if packet number has not changed (reworked from 2025-09-23 attempt). (#9202, #8556)
 //  2026-01-26: [Viewports] Fixed an issue from 1.90.5 where newly appearing windows that are not parented to the main viewport don't have task bar icon appear before the windows was explicited refocused. (#7354, #8669)
@@ -1016,6 +1017,7 @@ DECLARE_HANDLE(DPI_AWARENESS_CONTEXT);
 typedef HRESULT(WINAPI* PFN_SetProcessDpiAwareness)(PROCESS_DPI_AWARENESS);                             // Shcore.lib + dll, Windows 8.1+
 typedef HRESULT(WINAPI* PFN_GetDpiForMonitor)(HMONITOR, MONITOR_DPI_TYPE, UINT*, UINT*);                // Shcore.lib + dll, Windows 8.1+
 typedef DPI_AWARENESS_CONTEXT(WINAPI* PFN_SetThreadDpiAwarenessContext)(DPI_AWARENESS_CONTEXT);         // User32.lib + dll, Windows 10 v1607+ (Creators Update)
+typedef BOOL (WINAPI* PFN_SetProcessDpiAwarenessContext)(DPI_AWARENESS_CONTEXT);                        // User32.lib + dll, Windows 10 v1703+ (Creators Update)
 typedef DPI_AWARENESS_CONTEXT(WINAPI* PFN_GetThreadDpiAwarenessContext)();                              // "
 typedef BOOL(WINAPI* PFN_AreDpiAwarenessContextsEqual)(DPI_AWARENESS_CONTEXT, DPI_AWARENESS_CONTEXT);   // "
 
@@ -1029,7 +1031,12 @@ void ImGui_ImplWin32_EnableDpiAwareness()
     if (_IsWindows10OrGreater())
     {
         static HINSTANCE user32_dll = ::LoadLibraryA("user32.dll"); // Reference counted per-process
-        if (PFN_SetThreadDpiAwarenessContext SetThreadDpiAwarenessContextFn = (PFN_SetThreadDpiAwarenessContext)::GetProcAddress(user32_dll, "SetThreadDpiAwarenessContext"))
+        if (PFN_SetProcessDpiAwarenessContext SetProcessDpiAwarenessContextFn = (PFN_SetProcessDpiAwarenessContext)::GetProcAddress(user32_dll, "SetProcessDpiAwarenessContext")) // Windows 10 v1703+
+        {
+            SetProcessDpiAwarenessContextFn(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+            return;
+        }
+        if (PFN_SetThreadDpiAwarenessContext SetThreadDpiAwarenessContextFn = (PFN_SetThreadDpiAwarenessContext)::GetProcAddress(user32_dll, "SetThreadDpiAwarenessContext")) // Windows 10 v1607+
         {
             SetThreadDpiAwarenessContextFn(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
             return;

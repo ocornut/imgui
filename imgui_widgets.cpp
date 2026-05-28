@@ -266,6 +266,8 @@ void ImGui::TextEx(const char* text, const char* text_end, ImGuiTextFlags flags)
     }
 }
 
+// Note that all functions taking format strings in the API may be passed ("%s", text) or ("%.*s", text_len, text),
+// which will automatically bypass the formatter.
 void ImGui::TextUnformatted(const char* text, const char* text_end)
 {
     TextEx(text, text_end, ImGuiTextFlags_NoWidthForLargeClippedText);
@@ -5648,7 +5650,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         ImVec2 cursor_screen_pos = ImTrunc(draw_pos + cursor_offset - draw_scroll);
         ImRect cursor_screen_rect(cursor_screen_pos.x, cursor_screen_pos.y - g.FontSize + 0.5f, cursor_screen_pos.x + 1.0f, cursor_screen_pos.y - 1.5f);
         if (cursor_is_visible && cursor_screen_rect.Overlaps(clip_rect))
-            draw_window->DrawList->AddLineV(cursor_screen_rect.Min.x, cursor_screen_rect.Min.y, cursor_screen_rect.Max.y, GetColorU32(ImGuiCol_InputTextCursor), 1.0f * (float)(int)style._MainScale); // FIXME-DPI: Cursor thickness (#7031)
+            draw_window->DrawList->AddLineV(cursor_screen_rect.Min.x, cursor_screen_rect.Min.y, cursor_screen_rect.Max.y, GetColorU32(ImGuiCol_InputTextCursor), style.InputTextCursorSize);
 
         // Notify OS of text input position for advanced IME (-1 x offset so that Windows IME can cover our cursor. Bit of an extra nicety.)
         // This is required for some backends (SDL3) to start emitting character/text inputs.
