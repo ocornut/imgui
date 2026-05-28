@@ -2583,9 +2583,10 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
 
             return;
         }
-        if ((Flags & ImDrawListFlags_RoundCornersUseTex) && s_thickness <= IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX && s_rounding <= IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX)
+        if ((Flags & ImDrawListFlags_RoundCornersUseTex) && s_thickness < IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX && s_rounding <= IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX)
         {
             // Pixel aligned rect with round corners rendered using baked textures.
+            IM_ASSERT_PARANOID(s_thickness > 0 && s_rounding > 0);
             const int size = ImMax(s_rounding, s_thickness); // This is matching the baking calculations.
             const int idx = (s_thickness * IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX) + s_rounding - 1;
             IM_ASSERT_PARANOID((_Data->Font->OwnerAtlas->Flags & ImFontAtlasFlags_NoBakedRoundCorners) == 0);
