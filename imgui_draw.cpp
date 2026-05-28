@@ -1480,27 +1480,24 @@ void ImDrawList::AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float th
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
-    PathLineTo(p1 + ImVec2(0.5f, 0.5f));
-    PathLineTo(p2 + ImVec2(0.5f, 0.5f));
-    PathStroke(col, thickness);
+    const ImVec2 points[2] = { ImVec2(p1.x + 0.5f, p1.y + 0.5f), ImVec2(p2.x + 0.5f, p2.y + 0.5f) };
+    AddPolyline(points, 2, col, thickness);
 }
 
 void ImDrawList::AddLineH(float min_x, float max_x, float y, ImU32 col, float thickness)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
-    PathLineTo(ImVec2(min_x + 0.5f, y + 0.5f)); // Same as AddLine() above.
-    PathLineTo(ImVec2(max_x + 0.5f, y + 0.5f));
-    PathStroke(col, thickness);
+    const ImVec2 points[2] = { ImVec2(min_x + 0.5f, y + 0.5f), ImVec2(max_x + 0.5f, y + 0.5f) }; // Same as AddLine() above.
+    AddPolyline(points, 2, col, thickness);
 }
 
 void ImDrawList::AddLineV(float x, float min_y, float max_y, ImU32 col, float thickness)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
-    PathLineTo(ImVec2(x + 0.5f, min_y + 0.5f)); // Same as AddLine() above.
-    PathLineTo(ImVec2(x + 0.5f, max_y + 0.5f));
-    PathStroke(col, thickness);
+    const ImVec2 points[2] = { ImVec2(x + 0.5f, min_y + 0.5f), ImVec2(x + 0.5f, max_y + 0.5f) }; // Same as AddLine() above.
+    AddPolyline(points, 2, col, thickness);
 }
 
 // p_min = upper-left, p_max = lower-right

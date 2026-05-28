@@ -55,6 +55,8 @@ Other Changes:
 - Fonts:
   - Added `IMGUI_DISABLE_DEFAULT_FONT_BITMAP`/`IMGUI_DISABLE_DEFAULT_FONT_VECTOR` to
     disable embedding either fonts separately. (#9407)
+- DrawList:
+  - Minor optimization to AddLine(), AddLineH(), AddLineV() functions. (#4091)
 - Demo:
   - Extract 'Widgets->Tree Nodes->Selectable Nodes' out of the 'Advanced'
     demo for clarity (manual reimplementation of basic selection).
