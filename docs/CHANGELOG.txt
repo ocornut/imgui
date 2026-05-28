@@ -55,6 +55,8 @@ Other Changes:
 - Fonts:
   - Added `IMGUI_DISABLE_DEFAULT_FONT_BITMAP`/`IMGUI_DISABLE_DEFAULT_FONT_VECTOR` to
     disable embedding either fonts separately. (#9407)
+  - Tweak CalcTextSize() awkward width rounding/ceiling code to reduce floating-point
+    imprecisions altering the result by 1 even at relatively small width. (#791)
 - DrawList:
   - Minor optimization to AddLine(), AddLineH(), AddLineV() functions. (#4091)
 - Demo:

@@ -6199,11 +6199,10 @@ ImVec2 ImGui::CalcTextSize(const char* text, const char* text_end, bool hide_tex
     ImVec2 text_size = font->CalcTextSizeA(font_size, FLT_MAX, wrap_width, text, text_display_end, NULL);
 
     // Round
-    // FIXME: This has been here since Dec 2015 (7b0bf230) but down the line we want this out.
-    // FIXME: Investigate using ceilf or e.g.
-    // - https://git.musl-libc.org/cgit/musl/tree/src/math/ceilf.c
-    // - https://embarkstudios.github.io/rust-gpu/api/src/libm/math/ceilf.rs.html
-    text_size.x = IM_TRUNC(text_size.x + 0.99999f);
+    // FIXME: This has been here since Dec 2015 (7b0bf230 then 4622fa4b6) but down the line we want this out. See #791.
+    // Investigate using ceilf or e.g. https://git.musl-libc.org/cgit/musl/tree/src/math/ceilf.c, https://embarkstudios.github.io/rust-gpu/api/src/libm/math/ceilf.rs.html
+    // The problem is that ceilf() has a measurable cost. Not high, but measurable!
+    text_size.x = IM_TRUNC(text_size.x + 0.999f);
 
     return text_size;
 }
