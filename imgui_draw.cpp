@@ -5764,8 +5764,13 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, const ImVec2& pos, Im
     if (glyph->Colored)
         col |= ~IM_COL32_A_MASK;
     float scale = (size >= 0.0f) ? (size / baked->Size) : 1.0f;
-    float x = IM_TRUNC(pos.x);
-    float y = IM_TRUNC(pos.y);
+    float x = pos.x;
+    float y = pos.y;
+    if ((draw_list->Flags & ImDrawListFlags_NoTextPixelSnap) == 0)
+    {
+        x = IM_TRUNC(x);
+        y = IM_TRUNC(y);
+    }
 
     float x1 = x + glyph->X0 * scale;
     float x2 = x + glyph->X1 * scale;
@@ -5797,12 +5802,17 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, const ImVec2& pos, Im
 // DO NOT CALL DIRECTLY THIS WILL CHANGE WILDLY IN 2026. Use ImDrawList::AddText().
 void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width, ImDrawTextFlags flags)
 {
-    // Align to be pixel perfect
 begin:
-    float x = IM_TRUNC(pos.x);
-    float y = IM_TRUNC(pos.y);
+    // Align to be pixel perfect
+    float x = pos.x;
+    float y = pos.y;
     if (y > clip_rect.w)
         return;
+    if ((draw_list->Flags & ImDrawListFlags_NoTextPixelSnap) == 0)
+    {
+        x = IM_TRUNC(x);
+        y = IM_TRUNC(y);
+    }
 
     if (!text_end)
         text_end = text_begin + ImStrlen(text_begin); // ImGui:: functions generally already provides a valid text_end, so this is merely to handle direct calls.
