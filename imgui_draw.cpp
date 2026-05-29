@@ -2376,7 +2376,7 @@ void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, 
     const int arc_step = ImClamp(IM_DRAWLIST_ARCFAST_SAMPLE_MAX / this->_CalcCircleAutoSegmentCount(rounding), 1, IM_DRAWLIST_ARCFAST_TABLE_SIZE / 4);
     const int arc_point_count = (IM_DRAWLIST_ARCFAST_TABLE_SIZE / 4) / arc_step + 1;
 
-    int vtx_count = (4 + arc_point_count) * 3 + 3;
+    int vtx_count = (2 + arc_point_count) * 4 + 3;
     int idx_count = (4 + arc_point_count - 1) * 4 * 3;
 
     PrimReserve(idx_count, vtx_count);
