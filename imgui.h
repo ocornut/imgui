@@ -237,7 +237,7 @@ typedef int ImGuiTableBgTarget;     // -> enum ImGuiTableBgTarget_   // Enum: A 
 //   - In VS Code, CLion, etc.: Ctrl+Click can follow symbols inside comments.
 typedef int ImDrawFlags;            // -> enum ImDrawFlags_          // Flags: for ImDrawList functions
 typedef int ImDrawListFlags;        // -> enum ImDrawListFlags_      // Flags: for ImDrawList instance
-typedef int ImDrawTextFlags;        // -> enum ImDrawTextFlags_      // Internal, do not use!
+typedef int ImDrawTextFlags;        // -> enum ImDrawTextFlags_      // Flags: for ImDrawList::AddText()
 typedef int ImFontFlags;            // -> enum ImFontFlags_          // Flags: for ImFont
 typedef int ImFontAtlasFlags;       // -> enum ImFontAtlasFlags_     // Flags: for ImFontAtlas
 typedef int ImGuiBackendFlags;      // -> enum ImGuiBackendFlags_    // Flags: for io.BackendFlags
@@ -3281,6 +3281,16 @@ enum ImDrawListFlags_
     ImDrawListFlags_AllowVtxOffset          = 1 << 3,  // Can emit 'VtxOffset > 0' to allow large meshes. Set when 'ImGuiBackendFlags_RendererHasVtxOffset' is enabled.
 };
 
+// Flags for ImDrawList::AddText()
+enum ImDrawTextFlags_
+{
+    ImDrawTextFlags_None                = 0,
+    ImDrawTextFlags_NoPixelSnap         = 1 << 0,  // Don't snap text starting position to integer pixels. Useful for subpixel accurate text rendering.
+    ImDrawTextFlags_CpuFineClip         = 1 << 1,  // [Internal] Must be == 1/true for legacy with 'bool cpu_fine_clip' arg to RenderText()
+    ImDrawTextFlags_WrapKeepBlanks      = 1 << 2,  // [Internal] Keep trailing blanks when wrapping a line.
+    ImDrawTextFlags_StopOnNewLine       = 1 << 3,  // [Internal] Stop on first newline character.
+};
+
 // Draw command list
 // This is the low-level list of polygons that ImGui:: functions are filling. At the end of the frame,
 // all command lists are passed to your ImGuiIO::RenderDrawListFn function for rendering.
@@ -3349,7 +3359,7 @@ struct ImDrawList
     IMGUI_API void  AddEllipse(const ImVec2& center, const ImVec2& radius, ImU32 col, float rot = 0.0f, int num_segments = 0, float thickness = 1.0f);
     IMGUI_API void  AddEllipseFilled(const ImVec2& center, const ImVec2& radius, ImU32 col, float rot = 0.0f, int num_segments = 0);
     IMGUI_API void  AddText(const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end = NULL);
-    IMGUI_API void  AddText(ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end = NULL, float wrap_width = 0.0f, const ImVec4* cpu_fine_clip_rect = NULL);
+    IMGUI_API void  AddText(ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end = NULL, float wrap_width = 0.0f, const ImVec4* cpu_fine_clip_rect = NULL, ImDrawTextFlags flags = 0);
     IMGUI_API void  AddBezierCubic(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col, float thickness, int num_segments = 0); // Cubic Bezier (4 control points)
     IMGUI_API void  AddBezierQuadratic(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 col, float thickness, int num_segments = 0);               // Quadratic Bezier (3 control points)
 

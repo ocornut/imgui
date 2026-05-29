@@ -1725,7 +1725,7 @@ void ImDrawList::AddBezierQuadratic(const ImVec2& p1, const ImVec2& p2, const Im
     PathStroke(col, thickness);
 }
 
-void ImDrawList::AddText(ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect)
+void ImDrawList::AddText(ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect, ImDrawTextFlags flags)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
@@ -1748,8 +1748,9 @@ void ImDrawList::AddText(ImFont* font, float font_size, const ImVec2& pos, ImU32
         clip_rect.y = ImMax(clip_rect.y, cpu_fine_clip_rect->y);
         clip_rect.z = ImMin(clip_rect.z, cpu_fine_clip_rect->z);
         clip_rect.w = ImMin(clip_rect.w, cpu_fine_clip_rect->w);
+        flags |= ImDrawTextFlags_CpuFineClip;
     }
-    font->RenderText(this, font_size, pos, col, clip_rect, text_begin, text_end, wrap_width, (cpu_fine_clip_rect != NULL) ? ImDrawTextFlags_CpuFineClip : ImDrawTextFlags_None);
+    font->RenderText(this, font_size, pos, col, clip_rect, text_begin, text_end, wrap_width, flags);
 }
 
 void ImDrawList::AddText(const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end)
@@ -5797,10 +5798,10 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, const ImVec2& pos, Im
 // DO NOT CALL DIRECTLY THIS WILL CHANGE WILDLY IN 2026. Use ImDrawList::AddText().
 void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width, ImDrawTextFlags flags)
 {
-    // Align to be pixel perfect
+    // Align to be pixel perfect (unless caller opted out via ImDrawTextFlags_NoPixelSnap).
 begin:
-    float x = IM_TRUNC(pos.x);
-    float y = IM_TRUNC(pos.y);
+    float x = (flags & ImDrawTextFlags_NoPixelSnap) ? pos.x : IM_TRUNC(pos.x);
+    float y = (flags & ImDrawTextFlags_NoPixelSnap) ? pos.y : IM_TRUNC(pos.y);
     if (y > clip_rect.w)
         return;
 
