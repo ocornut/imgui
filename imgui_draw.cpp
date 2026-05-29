@@ -5766,7 +5766,7 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, const ImVec2& pos, Im
     float scale = (size >= 0.0f) ? (size / baked->Size) : 1.0f;
     float x = pos.x;
     float y = pos.y;
-    if ((draw_list->Flags & ImDrawListFlags_NoTextPixelSnap) == 0)
+    if ((draw_list->Flags & ImDrawListFlags_TextNoPixelSnap) == 0)
     {
         x = IM_TRUNC(x);
         y = IM_TRUNC(y);
@@ -5808,7 +5808,7 @@ begin:
     float y = pos.y;
     if (y > clip_rect.w)
         return;
-    if ((draw_list->Flags & ImDrawListFlags_NoTextPixelSnap) == 0)
+    if ((draw_list->Flags & ImDrawListFlags_TextNoPixelSnap) == 0)
     {
         x = IM_TRUNC(x);
         y = IM_TRUNC(y);

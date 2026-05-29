@@ -59,7 +59,7 @@ Other Changes:
     imprecisions altering the result by 1 even at relatively small width. (#791)
 - DrawList:
   - Minor optimization to `AddLine()`, `AddLineH()`, `AddLineV()` functions. (#4091)
-  - Added `ImDrawListFlags_NoTextPixelSnap` to disable snapping of AddText()
+  - Added `ImDrawListFlags_TextNoPixelSnap` to disable snapping of AddText()
     coordinates for a given scope. (#3437, #9417, #2291)
 - Demo:
   - Extract 'Widgets->Tree Nodes->Selectable Nodes' out of the 'Advanced'
