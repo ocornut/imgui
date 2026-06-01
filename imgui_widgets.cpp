@@ -1768,7 +1768,7 @@ void ImGui::SeparatorTextEx(ImGuiID id, const char* label, const char* label_end
     if (g_LEGACY_STROKES)
         seps_y = ImTrunc((bb.Min.y + bb.Max.y) * 0.5f + 0.999f);
     else
-        seps_y = ImTrunc((bb.Min.y + bb.Max.y) * 0.5f + (-separator_thickness * 0.5f + 1.0f) + 0.999f); // Align hline vertically, and snap to pixels.
+        seps_y = ImTrunc((bb.Min.y + bb.Max.y) * 0.5f) + 1.0f;
 
     const float label_avail_w = ImMax(0.0f, sep2_x2 - sep1_x1 - padding.x * 2.0f);
     const ImVec2 label_pos(pos.x + padding.x + ImMax(0.0f, (label_avail_w - label_size.x - extra_w) * style.SeparatorTextAlign.x), pos.y + text_baseline_y); // FIXME-ALIGN
@@ -1782,9 +1782,9 @@ void ImGui::SeparatorTextEx(ImGuiID id, const char* label, const char* label_end
         const float sep1_x2 = label_pos.x - style.ItemSpacing.x;
         const float sep2_x1 = label_pos.x + label_size.x + extra_w + style.ItemSpacing.x;
         if (sep1_x2 > sep1_x1 && separator_thickness > 0.0f)
-            window->DrawList->AddLineH(sep1_x1, sep1_x2, seps_y, separator_col, separator_thickness);
+            window->DrawList->AddLineH(sep1_x1, sep1_x2, seps_y, separator_col, separator_thickness, ImDrawFlags_StrokeCenterBiased);
         if (sep2_x2 > sep2_x1 && separator_thickness > 0.0f)
-            window->DrawList->AddLineH(sep2_x1, sep2_x2, seps_y, separator_col, separator_thickness);
+            window->DrawList->AddLineH(sep2_x1, sep2_x2, seps_y, separator_col, separator_thickness, ImDrawFlags_StrokeCenterBiased);
         if (g.LogEnabled)
             LogSetNextTextDecoration("---", NULL);
         RenderTextEllipsis(window->DrawList, label_pos, ImVec2(bb.Max.x, bb.Max.y + style.ItemSpacing.y), bb.Max.x, label, label_end, &label_size);
@@ -1794,7 +1794,7 @@ void ImGui::SeparatorTextEx(ImGuiID id, const char* label, const char* label_end
         if (g.LogEnabled)
             LogText("---");
         if (separator_thickness > 0.0f)
-            window->DrawList->AddLineH(sep1_x1, sep2_x2, seps_y, separator_col, separator_thickness);
+            window->DrawList->AddLineH(sep1_x1, sep2_x2, seps_y, separator_col, separator_thickness, ImDrawFlags_StrokeCenterBiased);
     }
 }
 
@@ -5703,7 +5703,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         else
         cursor_screen_rect = ImRect(cursor_screen_pos.x, cursor_screen_pos.y - g.FontSize + 1.0f, cursor_screen_pos.x + 1.0f, cursor_screen_pos.y - 1.0f);
         if (cursor_is_visible && cursor_screen_rect.Overlaps(clip_rect))
-            draw_window->DrawList->AddLineV(cursor_screen_rect.Min.x, cursor_screen_rect.Min.y, cursor_screen_rect.Max.y, GetColorU32(ImGuiCol_InputTextCursor), style.InputTextCursorSize);
+            draw_window->DrawList->AddLineV(cursor_screen_rect.Min.x, cursor_screen_rect.Min.y, cursor_screen_rect.Max.y, GetColorU32(ImGuiCol_InputTextCursor), style.InputTextCursorSize, ImDrawFlags_StrokeInside);
 
         // Notify OS of text input position for advanced IME (-1 x offset so that Windows IME can cover our cursor. Bit of an extra nicety.)
         // This is required for some backends (SDL3) to start emitting character/text inputs.
@@ -7218,23 +7218,25 @@ void ImGui::TreeNodeDrawLineToChildNode(const ImVec2& target_pos)
     if (window->DC.TreeDepth == 0 || (window->DC.TreeHasStackDataDepthMask & (1 << (window->DC.TreeDepth - 1))) == 0)
         return;
 
+    // FIXME: Could this be simplified using new stroke flags?
     ImGuiTreeNodeStackData* parent_data = &g.TreeNodeStack.Data[g.TreeNodeStack.Size - 1];
+    const float half_size = g.Style.TreeLinesSize * 0.5f;
     float x1;
     if (g_LEGACY_STROKES)
         x1 = ImTrunc(parent_data->DrawLinesX1);
     else
-        x1 = ImTrunc(parent_data->DrawLinesX1 - g.Style.TreeLinesSize * 0.5f) + g.Style.TreeLinesSize * 0.5f; // Draw line centered at X1, but snap to pixels boundary.
+        x1 = ImTrunc(parent_data->DrawLinesX1 - half_size) + half_size; // Draw line centered at X1, but snap to pixels boundary.
     float x2 = ImTrunc(target_pos.x - g.Style.ItemInnerSpacing.x);
     float y;
     if (g_LEGACY_STROKES)
         y = ImTrunc(target_pos.y);
     else
-        y = ImTrunc(target_pos.y) + g.Style.TreeLinesSize * 0.5f;
+        y = ImTrunc(target_pos.y - half_size) + half_size;
     float rounding = (g.Style.TreeLinesRounding > 0.0f) ? ImMin(x2 - x1, g.Style.TreeLinesRounding) : 0.0f;
     parent_data->DrawLinesToNodesY2 = ImMax(parent_data->DrawLinesToNodesY2, y - rounding);
     if (x1 >= x2)
         return;
-    if (rounding > 0.0f)
+    if (rounding > 0.0f && rounding > half_size)
     {
         if (g_LEGACY_STROKES)
             x1 += 0.5f + rounding;
@@ -7248,9 +7250,9 @@ void ImGui::TreeNodeDrawLineToChildNode(const ImVec2& target_pos)
     else
     {
         // We use AddLine() instead of AddLineH() as we provide coordinates for line center,
-        // in order to make the code use same coordinates for both rounded and non-rounded version.
+        // in order to make the code use same coordinates for both rounded and non-rounded version. (FIXME-OPT)
         if (!g_LEGACY_STROKES)
-            x1 += g.Style.TreeLinesSize * 0.5f; // Avoid overdraw
+            x1 += half_size; // Avoid overdraw
         window->DrawList->AddLine(ImVec2(x1, y), ImVec2(x2, y), GetColorU32(ImGuiCol_TreeLines), g.Style.TreeLinesSize);
     }
 }
@@ -7281,7 +7283,8 @@ void ImGui::TreeNodeDrawLineToTreePop(const ImGuiTreeNodeStackData* data)
         x = ImTrunc(data->DrawLinesX1 - g.Style.TreeLinesSize * 0.5f) + g.Style.TreeLinesSize * 0.5f; // Draw line centered at X1, but snap to pixels boundary.
     if (data->DrawLinesTableColumn != -1)
         TablePushColumnChannel(data->DrawLinesTableColumn);
-    // We use AddLine() instead of AddLineV() as we provide coordinates for line center,
+
+    // We use AddLine() instead of AddLineV() as we provide coordinates for line center (FIXME-OPT)
     window->DrawList->AddLine(ImVec2(x, y1), ImVec2(x, y2), GetColorU32(ImGuiCol_TreeLines), g.Style.TreeLinesSize);
     if (data->DrawLinesTableColumn != -1)
         TablePopColumnChannel();
