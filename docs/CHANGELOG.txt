@@ -61,6 +61,8 @@ Other Changes:
   - Minor optimization to `AddLine()`, `AddLineH()`, `AddLineV()` functions. (#4091)
   - Added `ImDrawListFlags_TextNoPixelSnap` to disable snapping of AddText()
     coordinates for a given scope. (#3437, #9417, #2291)
+- ColorButton:
+  - Small rendering tweak/optimization for the alpha checkerboard.
 - Demo:
   - Extract 'Widgets->Tree Nodes->Selectable Nodes' out of the 'Advanced'
     demo for clarity (manual reimplementation of basic selection).
