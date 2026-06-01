@@ -10448,7 +10448,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             ImGui::RadioButton("Default", &stroke_flags, ImDrawFlags_None); ImGui::SameLine();
             ImGui::RadioButton("Inside", &stroke_flags, ImDrawFlags_StrokeInside); ImGui::SameLine();
             ImGui::RadioButton("Center", &stroke_flags, ImDrawFlags_StrokeCenter); ImGui::SameLine();
-            ImGui::RadioButton("CenterAligned", &stroke_flags, ImDrawFlags_StrokeCenterAligned); ImGui::SameLine();
+            ImGui::RadioButton("CenterBiased", &stroke_flags, ImDrawFlags_StrokeCenterBiased); ImGui::SameLine();
             ImGui::RadioButton("Outside", &stroke_flags, ImDrawFlags_StrokeOutside); ImGui::SameLine();
             ImGui::RadioButton("Legacy", &stroke_flags, ImDrawFlags_StrokeLegacy);
             ImGui::CheckboxFlags("MiterOnly", &other_flags, ImDrawFlags_MiterOnly); ImGui::SameLine();
