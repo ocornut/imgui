@@ -7596,16 +7596,11 @@ static void ImGui::RenderWindowOuterBorders(ImGuiWindow* window)
     }
     if (g.Style.FrameBorderSize > 0 && !(window->Flags & ImGuiWindowFlags_NoTitleBar) && !window->DockIsActive)
     {
-        if (g_LEGACY_STROKES)
-        {
         float y = window->Pos.y + window->TitleBarHeight - 1;
+        if (g_LEGACY_STROKES)
         window->DrawList->AddLineH(window->Pos.x + border_size * 0.5f, window->Pos.x + window->Size.x - border_size * 0.5f, y, border_col, g.Style.FrameBorderSize);
-        }
         else
-        {
-        float y = window->Pos.y + window->TitleBarHeight - g.Style.FrameBorderSize;
-        window->DrawList->AddLineH(window->Pos.x + border_size, window->Pos.x + window->Size.x - border_size, y, border_col, g.Style.FrameBorderSize);
-        }
+        window->DrawList->AddLineH(window->Pos.x + border_size, window->Pos.x + window->Size.x - border_size, y, border_col, g.Style.FrameBorderSize, ImDrawFlags_StrokeCenterBiased);
     }
 }
 
@@ -7719,7 +7714,7 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
                 if (g_LEGACY_STROKES)
                 window->DrawList->AddLineH(menu_bar_rect.Min.x + window_border_size * 0.5f, menu_bar_rect.Max.x - window_border_size * 0.5f, menu_bar_rect.Max.y, GetColorU32(ImGuiCol_Border), style.FrameBorderSize);
                 else
-                window->DrawList->AddLineH(menu_bar_rect.Min.x + window_border_size, menu_bar_rect.Max.x - window_border_size, menu_bar_rect.Max.y - style.FrameBorderSize, GetColorU32(ImGuiCol_Border), style.FrameBorderSize);
+                window->DrawList->AddLineH(menu_bar_rect.Min.x + window_border_size, menu_bar_rect.Max.x - window_border_size, menu_bar_rect.Max.y, GetColorU32(ImGuiCol_Border), style.FrameBorderSize, ImDrawFlags_StrokeCenterBiased);
             }
         }
 
@@ -24274,12 +24269,12 @@ void ImGui::DebugDrawLineExtents(ImU32 col)
     float curr_x = window->DC.CursorPos.x;
     float line_y1 = (window->DC.IsSameLine ? window->DC.CursorPosPrevLine.y : window->DC.CursorPos.y);
     float line_y2 = line_y1 + (window->DC.IsSameLine ? window->DC.PrevLineSize.y : window->DC.CurrLineSize.y);
-    window->DrawList->AddLineH(curr_x - 5.0f, curr_x + 5.0f, line_y1, col, 1.0f);
+    window->DrawList->AddLineH(curr_x - 4.0f, curr_x + 5.0f, line_y1, col, 1.0f);
     if (g_LEGACY_STROKES)
     window->DrawList->AddLineV(curr_x - 0.5f, line_y1, line_y2, col, 1.0f);
     else
     window->DrawList->AddLineV(curr_x, line_y1, line_y2, col, 1.0f);
-    window->DrawList->AddLineH(curr_x - 5.0f, curr_x + 5.0f, line_y2, col, 1.0f);
+    window->DrawList->AddLineH(curr_x - 4.0f, curr_x + 5.0f, line_y2, col, 1.0f);
 }
 
 // Draw last item rect in ForegroundDrawList (so it is always visible)
