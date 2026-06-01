@@ -860,7 +860,16 @@ static float CalculateCenterBiasedOffset(float thickness, float _FringeScale)
     } (void)0
 
 #define IM_POLYLINE_MITER_ANGLE_LIMIT (-0.9999619f) // cos(179.5)
-#define IM_POLYLINE_MITER_LIMIT (4.0f)
+#define IM_POLYLINE_MITER_LIMIT (4.0f)  // ~29 deg
+
+// In debug builds the functions are likely not inlined, so inlined check is cheaper.
+#if defined(DEBUG) || defined(_DEBUG)
+#define IM_IS_TRUNCATED4(a, b, c, d)    ((float)(int)(a) == (a)) && ((float)(int)(b) == (b)) && ((float)(int)(c) == (c)) && ((float)(int)(d) == (d))
+#define IM_IS_TRUNCATED(a)              ((float)(int)(a) == (a))
+#else
+#define IM_IS_TRUNCATED4(a, b, c, d)    ImIsTruncated4(a, b, c, d)
+#define IM_IS_TRUNCATED(a)              ImIsTruncated(a)
+#endif
 
 void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_lengths, const int points_count, ImU32 col, float thickness, ImDrawFlags flags, const ImVec4& tex_uvs, float fringe)
 {
@@ -2161,7 +2170,8 @@ void ImDrawList::AddLineH(float min_x, float max_x, float y, ImU32 col, float th
     else if (stroke_pos == ImDrawFlags_StrokeOutside)
         top_y -= thickness;
 
-    if (_FringeScaleIsInteger && ImIsTruncated4(min_x, max_x, top_y, thickness) && (flags & ImDrawFlags_SquareCap) == 0)
+    const bool is_truncated = IM_IS_TRUNCATED4(min_x, max_x, top_y, thickness);
+    if (_FringeScaleIsInteger && is_truncated && (flags & ImDrawFlags_SquareCap) == 0)
     {
         float screen_thickness = thickness / _FringeScale;
         if (screen_thickness < 1.0f / 255.0f)
@@ -2209,7 +2219,8 @@ void ImDrawList::AddLineV(float x, float min_y, float max_y, ImU32 col, float th
     else if (stroke_pos == ImDrawFlags_StrokeOutside)
         left_x -= thickness;
 
-    if (_FringeScaleIsInteger && ImIsTruncated4(left_x, min_y, max_y, thickness) && (flags & ImDrawFlags_SquareCap) == 0)
+    const bool is_truncated = IM_IS_TRUNCATED4(left_x, min_y, max_y, thickness);
+    if (_FringeScaleIsInteger && is_truncated && (flags & ImDrawFlags_SquareCap) == 0)
     {
         float screen_thickness = thickness / _FringeScale;
         if (screen_thickness < 1.0f / 255.0f)
@@ -2543,7 +2554,8 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
         outer_rounding = ImMin(outer_rounding, ImFabs(height) * (((flags & ImDrawFlags_RoundCornersLeft) == ImDrawFlags_RoundCornersLeft) || ((flags & ImDrawFlags_RoundCornersRight) == ImDrawFlags_RoundCornersRight) ? 0.5f : 1.0f) - 1.0f);
     }
 
-    if (_FringeScaleIsInteger && ImIsTruncated4(outer_min.x, outer_min.y, outer_max.x, outer_max.y) && ImIsTruncated4(outer_rounding, thickness, 0.0f, 0.0f))
+    const bool is_truncated = IM_IS_TRUNCATED4(outer_min.x, outer_min.y, outer_max.x, outer_max.y) && IM_IS_TRUNCATED4(outer_rounding, thickness, 0.0f, 0.0f);
+    if (_FringeScaleIsInteger && is_truncated)
     {
         int s_rounding = (int)(outer_rounding / _FringeScale);
         int s_thickness = (int)(thickness / _FringeScale);
@@ -2696,11 +2708,12 @@ void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
         b_max.y = b_min.y + _FringeScale;
     }
 
-    if (ImIsTruncated4(p_min.x, p_min.y, p_max.x, p_max.y) && ImIsTruncated(rounding))
-    {
-        if ((flags & ImDrawFlags_RoundCornersMask_) == 0)
-            flags |= ImDrawFlags_RoundCornersAll;
+    if ((flags & ImDrawFlags_RoundCornersMask_) == 0)
+        flags |= ImDrawFlags_RoundCornersAll;
 
+    const bool is_truncated = IM_IS_TRUNCATED4(p_min.x, p_min.y, p_max.x, p_max.y) && IM_IS_TRUNCATED(rounding);
+    if (_FringeScaleIsInteger && is_truncated)
+    {
         rounding = ImMin(rounding, ImFabs(width) * (((flags & ImDrawFlags_RoundCornersTop) == ImDrawFlags_RoundCornersTop) || ((flags & ImDrawFlags_RoundCornersBottom) == ImDrawFlags_RoundCornersBottom) ? 0.5f : 1.0f) - 1.0f);
         rounding = ImMin(rounding, ImFabs(height) * (((flags & ImDrawFlags_RoundCornersLeft) == ImDrawFlags_RoundCornersLeft) || ((flags & ImDrawFlags_RoundCornersRight) == ImDrawFlags_RoundCornersRight) ? 0.5f : 1.0f) - 1.0f);
 
@@ -2708,7 +2721,18 @@ void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
         if (s_rounding <= 0 || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
         {
             PrimReserve(6, 4);
-            PrimRect(p_min, p_max, col);
+
+            const ImVec2 opaque_uv = _Data->TexUvWhitePixel;
+            const ImDrawIdx idx = (ImDrawIdx)_VtxCurrentIdx;
+            IM_APPEND_VTX(p_min.x, p_min.y, opaque_uv, col);
+            IM_APPEND_VTX(p_max.x, p_min.y, opaque_uv, col);
+            IM_APPEND_VTX(p_max.x, p_max.y, opaque_uv, col);
+            IM_APPEND_VTX(p_min.x, p_max.y, opaque_uv, col);
+
+            IM_APPEND_TRI(idx + 0, idx + 1, idx + 2);
+            IM_APPEND_TRI(idx + 0, idx + 2, idx + 3);
+
+            return;
         }
         else if ((Flags & ImDrawListFlags_RoundCornersUseTex) && s_rounding <= IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX)
         {
@@ -2718,12 +2742,15 @@ void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
 			IM_ASSERT_PARANOID(idx >= 0 && idx < IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX);
             ImVec4 tex_uvs = _Data->TexUvCorners[idx];
             _AddRectFilledBaked(p_min, p_max, col, (float)size * _FringeScale, tex_uvs, flags);
+            return;
         }
-        else
-        {
-            PathRect(p_min, p_max, (float)s_rounding, flags);
-            PathFillConvex(col);
-        }
+    }
+
+    const bool has_rounding = (rounding >= _FringeScale * 0.5f);
+    if (!has_rounding || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
+    {
+        const ImVec2 points[4] = { p_min, ImVec2(p_max.x, p_min.y), p_max, ImVec2(p_min.x, p_max.y) };
+        AddConvexPolyFilled(points, 4, col, ImDrawFlags_MiterOnly);
     }
     else
     {
