@@ -68,6 +68,10 @@ Other Changes:
 
 Docking+Viewports Branch:
 
+- Viewports:
+  - Fixed an issue where the implicit "Debug" window while hidden would erroneously
+    interfere with merging secondary viewports into the main viewport.
+
 
 -----------------------------------------------------------------------
  VERSION 1.92.8 (Released 2026-05-12)
@@ -450,7 +454,7 @@ Docking+Viewports Branch:
 - Viewports:
   - Fixed an issue where the implicit "Debug" window would erroneously be targetted for
     mouse inputs while hidden if (1) the implicit "Debug" window was used in a previous
-    session  and moved to a secondary viewport and (2) the Platform Backend does not
+    session and moved to a secondary viewport and (2) the Platform Backend does not
     support the `ImGuiBackendFlags_HasMouseHoveredViewport` feature. (#9254)
   - Backends: SDL2, SDL3: fixed an issue dated 2025/04/09 (1.92 WIP) where a refactor
     and a merge caused `ImGuiBackendFlags_HasMouseHoveredViewport` to never be set, causing

@@ -16781,7 +16781,7 @@ static bool ImGui::UpdateTryMergeWindowIntoHostViewport(ImGuiWindow* window, ImG
 
     for (ImGuiViewportP* viewport_obstructing : g.Viewports)
     {
-        if (viewport_obstructing == viewport_src || viewport_obstructing == viewport_dst)
+        if (viewport_obstructing == viewport_src || viewport_obstructing == viewport_dst || !viewport_obstructing->PlatformWindowCreated)
             continue;
         if (viewport_obstructing->GetMainRect().Overlaps(window->Rect()))
             if (IsViewportAbove(viewport_obstructing, viewport_dst))
