@@ -3460,7 +3460,7 @@ enum ImDrawFlags_
     // Stroke position relative to the shape outline
     ImDrawFlags_StrokeInside                = 1 << 16, // Draw stroke inside of the shape outline (default for closed shapes and AddLineH, AddLineV functions)
     ImDrawFlags_StrokeCenter                = 2 << 16, // Draw stroke at the center of the shape outline (default for paths, bezier, and AddLine functions)
-    ImDrawFlags_StrokeCenterAligned         = 3 << 16, // Draw stroke at the center of the shape outline, so that half thickness (rounded down) will be outside, and rest inside the shape outline. Does not animate well!
+    ImDrawFlags_StrokeCenterBiased          = 3 << 16, // Draw stroke at the center of the shape outline, so that half thickness (rounded down) will be outside, and rest inside the shape outline. Does not animate well!
     ImDrawFlags_StrokeOutside               = 4 << 16, // Draw stroke outside of the shape outline
     ImDrawFlags_StrokeLegacy                = 5 << 16, // Use legacy positioning + enable MiterOnly and NoAAEnds flags.
     ImDrawFlags_StrokeMask_                 = 0x07 << 16,
