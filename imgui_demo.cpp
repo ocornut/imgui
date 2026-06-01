@@ -10423,7 +10423,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
 
             ImGui::DragFloat("Size", &sz, 0.2f, 0.2f, 100.0f, "%.0f");
 
-            const float thickness_anim_period = 5.f;
+            const float thickness_anim_period = 5.0f;
             const float thickness_wave = 1.0f - fabsf(fmodf((float)ImGui::GetTime(), thickness_anim_period) * (2.0f / thickness_anim_period) - 1.0f);
             const float thickness = animate_thickness ? thickness_wave * base_thickness : base_thickness;
             ImGui::DragFloat("Thickness", &base_thickness, 0.02f, 0.0f, 30.0f, "%.02f");
