@@ -1193,7 +1193,7 @@ void ImDrawList::_SelectFringeTexture(float screen_thickness, ImVec4* out_tex_uv
     {
         // Handle the thickness between [1..IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH]. The texture scaling in this range will cause slight visual pops, so we generate super sampled textures in this range.
         // There are IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX+1 textures, where 0 maps to 1.0 and IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX maps to IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH.
-        constexpr float base_width = 1.f;
+        constexpr float base_width = 1.0f;
         const int texture_idx = ImClamp((int)((screen_thickness - base_width) * IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT + 0.1f), 0, IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX);
         const float tex_width = base_width + (float)texture_idx / IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT;
         *out_fringe = _FringeScale * (screen_thickness / tex_width); // Scale the fringe to cover the discrepancy between the texture and requested size.
@@ -2164,12 +2164,12 @@ void ImDrawList::AddLineH(float min_x, float max_x, float y, ImU32 col, float th
     if (_FringeScaleIsInteger && ImIsTruncated4(min_x, max_x, top_y, thickness) && (flags & ImDrawFlags_SquareCap) == 0)
     {
         float screen_thickness = thickness / _FringeScale;
-        if (screen_thickness < 1.f / 255.f)
+        if (screen_thickness < 1.0f / 255.0f)
             return;
-        if (screen_thickness < 1.f)
+        if (screen_thickness < 1.0f)
         {
             col = ImAlphaMultiply(col, screen_thickness);
-            screen_thickness = 1.f;
+            screen_thickness = 1.0f;
             thickness = _FringeScale;
         }
 
@@ -2212,12 +2212,12 @@ void ImDrawList::AddLineV(float x, float min_y, float max_y, ImU32 col, float th
     if (_FringeScaleIsInteger && ImIsTruncated4(left_x, min_y, max_y, thickness) && (flags & ImDrawFlags_SquareCap) == 0)
     {
         float screen_thickness = thickness / _FringeScale;
-        if (screen_thickness < 1.f / 255.f)
+        if (screen_thickness < 1.0f / 255.0f)
             return;
-        if (screen_thickness < 1.f)
+        if (screen_thickness < 1.0f)
         {
             col = ImAlphaMultiply(col, screen_thickness);
-            screen_thickness = 1.f;
+            screen_thickness = 1.0f;
             thickness = _FringeScale;
         }
 
@@ -2679,18 +2679,18 @@ void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
     const float width = b_max.x - b_min.x;
     const float height = b_max.y - b_min.y;
 
-    const float inv_fringe_scale = 1.f / _FringeScale;
+    const float inv_fringe_scale = 1.0f / _FringeScale;
     const float screen_width = width * inv_fringe_scale;
     const float screen_height = height * inv_fringe_scale;
 
-    if (ImMin(screen_width, screen_height) < 1.f / 255.f)
+    if (ImMin(screen_width, screen_height) < 1.0f / 255.0f)
         return;
-    if (screen_width < 1.f)
+    if (screen_width < 1.0f)
     {
         col = ImAlphaMultiply(col, screen_width);
         b_max.x = b_min.x + _FringeScale;
     }
-    if (screen_height < 1.f)
+    if (screen_height < 1.0f)
     {
         col = ImAlphaMultiply(col, screen_height);
         b_max.y = b_min.y + _FringeScale;
@@ -2976,18 +2976,18 @@ void ImDrawList::AddEllipseFilled(const ImVec2& center, const ImVec2& radius, Im
 
     ImVec2 rad = radius;
 
-    const float inv_fringe_scale = 1.f / _FringeScale;
-    float screen_diameter_x = rad.x* 2.f * inv_fringe_scale;
-    float screen_diameter_y = rad.y * 2.f * inv_fringe_scale;
-    if (screen_diameter_x < 1.f / 255.f || screen_diameter_y < 1.f / 255.f)
+    const float inv_fringe_scale = 1.0f / _FringeScale;
+    float screen_diameter_x = rad.x * 2.0f * inv_fringe_scale;
+    float screen_diameter_y = rad.y * 2.0f * inv_fringe_scale;
+    if (screen_diameter_x < 1.0f / 255.0f || screen_diameter_y < 1.0f / 255.0f)
         return;
 
-    if (screen_diameter_x < 1.f)
+    if (screen_diameter_x < 1.0f)
     {
         col = ImAlphaMultiply(col, screen_diameter_x);
         rad.x = _FringeScale * 0.5f;
     }
-    if (screen_diameter_y < 1.f)
+    if (screen_diameter_y < 1.0f)
     {
         col = ImAlphaMultiply(col, screen_diameter_y);
         rad.y = _FringeScale * 0.5f;
@@ -5169,7 +5169,7 @@ static void ImFontAtlasBuildUpdateTexDataLines(ImFontAtlas* atlas)
 
         ImU8 ramp[IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT];
         for (int n = 0; n < IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT; n++)
-            ramp[n] = (ImU8)(((float)n / IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT) * 255.f);
+            ramp[n] = (ImU8)(((float)n / IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT) * 255.0f);
 
         for (int n = 0; n < IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX + 1; n++)
         {
