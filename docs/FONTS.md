@@ -79,7 +79,7 @@ Some solutions:
 
 ### (5) Reduce texture resizes/copy on startup
 
-🆕 Since 1.92, the ImFontAtlas is initially created using a 512x128 texture, then grows as glyphs and fonts are registered. Growth leads to a copy, and both the old and new sized textures are present in memory. If you use known fonts and want to reduce initial growth, you may set `TexMinWidth` and `TexMinHeight` during initializaton.
+🆕 Since 1.92, the ImFontAtlas is initially created using a 512x128 texture, then grows as glyphs and fonts are used. Atlas growth leads to alloc+copy, and both the old and new sized textures are present in memory for a short time (typically one frame). If you use known fonts and want to reduce initial growth, you may set `TexMinWidth` and `TexMinHeight` during initializaton.
 
 ```cpp
 ImFontAtlas* atlas = io.Fonts;
