@@ -41,6 +41,9 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
+- TreeNode: commented out legacy name `ImGuiTreeNodeFlags_SpanTextWidth` which
+  was obsoleted in 1.90.7 (May 2024). Use `ImGuiTreeNodeFlags_SpanLabelWidth`.
+
 Other Changes:
 
 - Windows:
