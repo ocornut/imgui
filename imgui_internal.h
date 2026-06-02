@@ -521,11 +521,17 @@ inline float  ImRsqrtPrecise(float x)    { const float r = _mm_cvtss_f32(_mm_rsq
 inline float  ImRsqrt(float x)           { return 1.0f / sqrtf(x); }
 inline float  ImRsqrtPrecise(float x)    { return 1.0f / sqrtf(x); }
 #endif
-inline double ImRsqrt(double x)          { return 1.0 / sqrt(x); }
+inline double ImRsqrt(double x) { return 1.0 / sqrt(x); }
 #endif
 
 // - ImMin/ImMax/ImClamp/ImLerp/ImSwap are used by widgets which support variety of types: signed/unsigned int/long long float/double
-// (Exceptionally using templates here but we could also redefine them for those types)
+// (Specialized version ensure that runtime-check pragmas/macros are applied with caller settings. Template version are less reliable in this regards)
+inline int             ImMin(int lhs, int rhs)                          { return lhs < rhs ? lhs : rhs; }
+inline int             ImMax(int lhs, int rhs)                          { return lhs >= rhs ? lhs : rhs; }
+inline int             ImClamp(int v, int mn, int mx)                   { return (v < mn) ? mn : (v > mx) ? mx : v; }
+inline float           ImMin(float lhs, float rhs)                      { return lhs < rhs ? lhs : rhs; }
+inline float           ImMax(float lhs, float rhs)                      { return lhs >= rhs ? lhs : rhs; }
+inline float           ImClamp(float v, float mn, float mx)             { return (v < mn) ? mn : (v > mx) ? mx : v; }
 template<typename T> T ImMin(T lhs, T rhs)                              { return lhs < rhs ? lhs : rhs; }
 template<typename T> T ImMax(T lhs, T rhs)                              { return lhs >= rhs ? lhs : rhs; }
 template<typename T> T ImClamp(T v, T mn, T mx)                         { return (v < mn) ? mn : (v > mx) ? mx : v; }
