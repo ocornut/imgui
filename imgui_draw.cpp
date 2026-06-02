@@ -819,7 +819,7 @@ void ImDrawList::PrimQuadUV(const ImVec2& a, const ImVec2& b, const ImVec2& c, c
 }
 
 
-static float CalculateCenterBiasedOffset(float thickness, float _FringeScale)
+float ImDrawList::_CalculateCenterBiasedOffset(float thickness)
 {
     // Old jumpy one.
     // return IM_TRUNC(thickness * 0.5f / _FringeScale) * _FringeScale;
@@ -827,7 +827,7 @@ static float CalculateCenterBiasedOffset(float thickness, float _FringeScale)
     // Calculate outside offset for stroke position ImDrawFlags_StrokeCenterBiased
     // so that one side the of the line is always at pixel boundary.
     // On integer thickness both sides of the line are on pixel boundary.
-    const float screen_thickness = thickness / _FringeScale;
+    const float screen_thickness = thickness * _InvFringeScale;
     const int s_thickness = (int)screen_thickness;
     return ((float)(s_thickness / 2) + (s_thickness & 1) * (screen_thickness - s_thickness)) * _FringeScale;
 }
@@ -887,7 +887,7 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
 	if (stroke_pos == ImDrawFlags_StrokeOutside)
 		thickness0 = thickness + fringe * 0.5f;
     else if (stroke_pos == ImDrawFlags_StrokeCenterBiased)
-        thickness0 = CalculateCenterBiasedOffset(thickness, _FringeScale) + fringe * 0.5f;
+        thickness0 = _CalculateCenterBiasedOffset(thickness) + fringe * 0.5f;
 	else if (stroke_pos == ImDrawFlags_StrokeInside)
 		thickness0 = fringe * 0.5f;
     float thickness1 = (thickness + fringe) - thickness0;
@@ -1230,7 +1230,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
     if (points_count < 2 || (col & IM_COL32_A_MASK) == 0)
         return;
 
-    float screen_thickness = thickness / _FringeScale;
+    float screen_thickness = thickness * _InvFringeScale;
     if (screen_thickness < 1.0f / 255.0f)
         return;
     if (screen_thickness < 1.0f)
@@ -2166,20 +2166,18 @@ void ImDrawList::AddLineH(float min_x, float max_x, float y, ImU32 col, float th
     if (stroke_pos == ImDrawFlags_StrokeCenter)
         top_y -= thickness * 0.5f;
     else if (stroke_pos == ImDrawFlags_StrokeCenterBiased)
-        top_y -= CalculateCenterBiasedOffset(thickness, _FringeScale);
+        top_y -= _CalculateCenterBiasedOffset(thickness);
     else if (stroke_pos == ImDrawFlags_StrokeOutside)
         top_y -= thickness;
 
     const bool is_truncated = IM_IS_TRUNCATED4(min_x, max_x, top_y, thickness);
     if (_FringeScaleIsInteger && is_truncated && (flags & ImDrawFlags_SquareCap) == 0)
     {
-        float screen_thickness = thickness / _FringeScale;
-        if (screen_thickness < 1.0f / 255.0f)
-            return;
-        if (screen_thickness < 1.0f)
+        if (thickness < _FringeScale) IM_UNLIKELY
         {
-            col = ImAlphaMultiply(col, screen_thickness);
-            screen_thickness = 1.0f;
+            if (thickness < (1.0f / 255.0f) * _FringeScale)
+                return;
+            col = ImAlphaMultiply(col, thickness * _InvFringeScale);
             thickness = _FringeScale;
         }
 
@@ -2215,20 +2213,18 @@ void ImDrawList::AddLineV(float x, float min_y, float max_y, ImU32 col, float th
     if (stroke_pos == ImDrawFlags_StrokeCenter)
         left_x -= thickness * 0.5f;
     else if (stroke_pos == ImDrawFlags_StrokeCenterBiased)
-        left_x -= CalculateCenterBiasedOffset(thickness, _FringeScale);
+        left_x -= _CalculateCenterBiasedOffset(thickness);
     else if (stroke_pos == ImDrawFlags_StrokeOutside)
         left_x -= thickness;
 
     const bool is_truncated = IM_IS_TRUNCATED4(left_x, min_y, max_y, thickness);
     if (_FringeScaleIsInteger && is_truncated && (flags & ImDrawFlags_SquareCap) == 0)
     {
-        float screen_thickness = thickness / _FringeScale;
-        if (screen_thickness < 1.0f / 255.0f)
-            return;
-        if (screen_thickness < 1.0f)
+        if (thickness < _FringeScale) IM_UNLIKELY
         {
-            col = ImAlphaMultiply(col, screen_thickness);
-            screen_thickness = 1.0f;
+            if (thickness < (1.0f / 255.0f) * _FringeScale)
+                return;
+            col = ImAlphaMultiply(col, thickness * _InvFringeScale);
             thickness = _FringeScale;
         }
 
@@ -2370,7 +2366,7 @@ void ImDrawList::_AddRectBaked(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
 // The stroke is positioned inside the rectangle.
 void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float rounding, float thickness, ImDrawFlags flags)
 {
-    float screen_thickness = thickness / _FringeScale;
+    float screen_thickness = thickness * _InvFringeScale;
     if (screen_thickness < 1.0f / 255.0f)
         return;
     if (screen_thickness < 1.0f)
@@ -2527,7 +2523,7 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
     if (stroke_pos == ImDrawFlags_StrokeCenter)
         offset = thickness * 0.5f;
     else if (stroke_pos == ImDrawFlags_StrokeCenterBiased)
-        offset = CalculateCenterBiasedOffset(thickness, _FringeScale);
+        offset = _CalculateCenterBiasedOffset(thickness);
     else if (stroke_pos == ImDrawFlags_StrokeOutside)
         offset = thickness;
     outer_min.x -= offset;
@@ -2557,8 +2553,8 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
     const bool is_truncated = IM_IS_TRUNCATED4(outer_min.x, outer_min.y, outer_max.x, outer_max.y) && IM_IS_TRUNCATED4(outer_rounding, thickness, 0.0f, 0.0f);
     if (_FringeScaleIsInteger && is_truncated)
     {
-        int s_rounding = (int)(outer_rounding / _FringeScale);
-        int s_thickness = (int)(thickness / _FringeScale);
+        int s_rounding = (int)(outer_rounding * _InvFringeScale);
+        int s_thickness = (int)(thickness * _InvFringeScale);
         if (s_thickness <= 0)
             return;
 
@@ -2697,12 +2693,12 @@ void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
             return;
         if (width < _FringeScale)
         {
-            col = ImAlphaMultiply(col, width / _FringeScale);
+            col = ImAlphaMultiply(col, width * _InvFringeScale);
             width = _FringeScale;
         }
         if (height < _FringeScale)
         {
-            col = ImAlphaMultiply(col, height / _FringeScale);
+            col = ImAlphaMultiply(col, height * _InvFringeScale);
             height = _FringeScale;
         }
         const ImVec2 points[4] = { p_min, ImVec2(p_min.x + width, p_min.y), ImVec2(p_min.x + width, p_min.y + height), ImVec2(p_min.x, p_max.y + height) };
@@ -2719,7 +2715,7 @@ void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
         rounding = ImMin(rounding, ImFabs(width) * (((flags & ImDrawFlags_RoundCornersTop) == ImDrawFlags_RoundCornersTop) || ((flags & ImDrawFlags_RoundCornersBottom) == ImDrawFlags_RoundCornersBottom) ? 0.5f : 1.0f) - 1.0f);
         rounding = ImMin(rounding, ImFabs(height) * (((flags & ImDrawFlags_RoundCornersLeft) == ImDrawFlags_RoundCornersLeft) || ((flags & ImDrawFlags_RoundCornersRight) == ImDrawFlags_RoundCornersRight) ? 0.5f : 1.0f) - 1.0f);
 
-        const int s_rounding = (int)(rounding / _FringeScale);
+        const int s_rounding = (int)(rounding * _InvFringeScale);
         if (s_rounding <= 0 || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
         {
             PrimReserve(6, 4);
@@ -2837,7 +2833,7 @@ void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int nu
     if (stroke_pos == ImDrawFlags_StrokeCenter)
         outer_radius = radius + thickness * 0.5f;
     else if (stroke_pos == ImDrawFlags_StrokeCenterBiased)
-        outer_radius = radius + CalculateCenterBiasedOffset(thickness, _FringeScale);
+        outer_radius = radius + _CalculateCenterBiasedOffset(thickness);
     else if (stroke_pos == ImDrawFlags_StrokeInside)
         outer_radius = radius;
     else if (stroke_pos == ImDrawFlags_StrokeOutside)
@@ -2879,7 +2875,7 @@ void ImDrawList::AddCircleFilled(const ImVec2& center, float radius, ImU32 col, 
     {
         if (diameter < (1.0f / 255.0f) * _FringeScale)
             return;
-        col = ImAlphaMultiply(col, diameter / _FringeScale);
+        col = ImAlphaMultiply(col, diameter * _InvFringeScale);
         radius = _FringeScale * 0.5f;
     }
 
@@ -2924,7 +2920,7 @@ void ImDrawList::AddNgon(const ImVec2& center, float radius, ImU32 col, int num_
     if (stroke_pos == ImDrawFlags_StrokeCenter)
         outer_radius = radius + miter_thickness * 0.5f;
     else if (stroke_pos == ImDrawFlags_StrokeCenterBiased)
-        outer_radius = radius + CalculateCenterBiasedOffset(miter_thickness, _FringeScale);
+        outer_radius = radius + _CalculateCenterBiasedOffset(miter_thickness);
     else if (stroke_pos == ImDrawFlags_StrokeInside)
         outer_radius = radius;
     else if (stroke_pos == ImDrawFlags_StrokeOutside)
@@ -2953,7 +2949,7 @@ void ImDrawList::AddNgonFilled(const ImVec2& center, float radius, ImU32 col, in
     {
         if (diameter < (1.0f / 255.0f) * _FringeScale)
             return;
-        col = ImAlphaMultiply(col, diameter / _FringeScale);
+        col = ImAlphaMultiply(col, diameter * _InvFringeScale);
         radius = _FringeScale * 0.5f;
     }
 
@@ -3006,12 +3002,12 @@ void ImDrawList::AddEllipseFilled(const ImVec2& center, const ImVec2& radius, Im
             return;
         if (diameter_x < _FringeScale)
         {
-            col = ImAlphaMultiply(col, diameter_x / _FringeScale);
+            col = ImAlphaMultiply(col, diameter_x * _InvFringeScale);
             rad.x = _FringeScale * 0.5f;
         }
         if (diameter_y < _FringeScale)
         {
-            col = ImAlphaMultiply(col, diameter_y / _FringeScale);
+            col = ImAlphaMultiply(col, diameter_y * _InvFringeScale);
             rad.y = _FringeScale * 0.5f;
         }
     }
