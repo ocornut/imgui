@@ -1203,7 +1203,9 @@ void ImDrawList::_SelectFringeTexture(float screen_thickness, ImVec4* out_tex_uv
         // Handle the thickness between [1..IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH]. The texture scaling in this range will cause slight visual pops, so we generate super sampled textures in this range.
         // There are IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX+1 textures, where 0 maps to 1.0 and IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX maps to IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH.
         constexpr float base_width = 1.0f;
-        const int texture_idx = ImClamp((int)((screen_thickness - base_width) * IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT + 0.1f), 0, IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX);
+        int texture_idx = (int)((screen_thickness - base_width) * IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT + 0.1f);
+        texture_idx = ImMax(texture_idx, 0);
+        texture_idx = ImMin(texture_idx, IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX);
         const float tex_width = base_width + (float)texture_idx / IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT;
         *out_fringe = _FringeScale * (screen_thickness / tex_width); // Scale the fringe to cover the discrepancy between the texture and requested size.
         *out_tex_uvs = _Data->TexUvLines[(IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1) + texture_idx];
@@ -1211,7 +1213,9 @@ void ImDrawList::_SelectFringeTexture(float screen_thickness, ImVec4* out_tex_uv
     else
     {
         // Bias the texture selection towards higher resolution to avoid visual pops when the texture change.
-        const int texture_idx = ImClamp((int)(screen_thickness + 0.995f), 2, IM_DRAWLIST_TEX_LINES_WIDTH_MAX - 1);
+        int texture_idx = (int)(screen_thickness + 0.995f);
+        texture_idx = ImMax(texture_idx, 2);
+        texture_idx = ImMin(texture_idx, IM_DRAWLIST_TEX_LINES_WIDTH_MAX - 1);
         *out_fringe = _FringeScale * (screen_thickness / (float)texture_idx); // Scale the fringe to cover the discrepancy between the texture and requested size.
         *out_tex_uvs = _Data->TexUvLines[texture_idx];
     }
@@ -2132,6 +2136,150 @@ ImDrawFlags ImDrawList::_GetStrokePos(ImDrawFlags flags, ImDrawFlags default_str
     return _Data->OverrideStrokePos ? _Data->OverrideStrokePos : default_stroke_pos;
 }
 
+void ImDrawList::_AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float thickness, ImDrawFlags flags)
+{
+    if (g_LEGACY_STROKES) IM_UNLIKELY
+    {
+        ImVec2 points[2] = { p1, p2 };
+        AddPolylineLegacy(points, 2, col, thickness, flags);
+        return;
+    }
+
+    if ((col & IM_COL32_A_MASK) == 0) IM_UNLIKELY
+        return;
+
+    float screen_thickness = thickness * _InvFringeScale;
+    if (screen_thickness < 1.0f / 255.0f) IM_UNLIKELY
+        return;
+    if (screen_thickness < 1.0f) IM_UNLIKELY
+    {
+        col = ImAlphaMultiply(col, screen_thickness);
+        screen_thickness = 1.0f;
+        thickness = _FringeScale;
+    }
+
+    ImVec4 tex_uvs;
+    float fringe;
+    _SelectFringeTexture(screen_thickness, &tex_uvs, &fringe);
+
+    float dir_x = p2.x - p1.x;
+    float dir_y = p2.y - p1.y;
+    const float d2 = dir_x * dir_x + dir_y * dir_y;
+    const float inv_len = (d2 > 0.0f) ? ImRsqrtPrecise(d2) : 0.0f;
+    dir_x *= inv_len;
+    dir_y *= inv_len;
+    const float norm_x = -dir_y;
+    const float norm_y = dir_x;
+
+    const ImU32 col_trans = col & ~IM_COL32_A_MASK;
+
+    const ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeCenter);
+    if (stroke_pos == ImDrawFlags_StrokeLegacy)
+        flags |= ImDrawFlags_MiterOnly | ImDrawFlags_NoAAEnds;
+
+    float thickness0 = (thickness + fringe) * 0.5f; // Center (or legacy)
+    if (stroke_pos == ImDrawFlags_StrokeOutside)
+        thickness0 = thickness + fringe * 0.5f;
+    else if (stroke_pos == ImDrawFlags_StrokeCenterBiased)
+        thickness0 = _CalculateCenterBiasedOffset(thickness) + fringe * 0.5f;
+    else if (stroke_pos == ImDrawFlags_StrokeInside)
+        thickness0 = fringe * 0.5f;
+    float thickness1 = (thickness + fringe) - thickness0;
+
+
+    const float half_texel = 0.5f * _Data->FontAtlas->TexUvScale.x;
+    const float ratio = thickness0 / (thickness0 + thickness1); // The points using uv2 are placed on the path, calculate the position from stroke offets.
+    ImVec2 uv0, uv1, uv2;
+    uv0.x = tex_uvs.x + half_texel;
+    uv0.y = tex_uvs.y;
+    uv1.x = tex_uvs.z - half_texel;
+    uv1.y = tex_uvs.y;
+    uv2.x = uv0.x + (uv1.x - uv0.x) * ratio;
+    uv2.y = tex_uvs.y;
+
+    const float half_aa = _FringeScale * 0.5f; // Used for end caps, does not use "fringe" since end cap AA is not using the texture.
+    const float half_thickness = thickness * 0.5f;
+
+    if (flags & ImDrawFlags_NoAAEnds)
+        PrimReserve(2*3, 4);
+    else
+        PrimReserve(6*3, 8);
+
+    int base_idx = (int)_VtxCurrentIdx;
+
+    float p1_x = p1.x;
+    float p1_y = p1.y;
+    float p2_x = p2.x;
+    float p2_y = p2.y;
+
+    if (flags & ImDrawFlags_SquareCap)
+    {
+        p1_x -= dir_x * half_thickness;
+        p1_y -= dir_y * half_thickness;
+        p2_x += dir_x * half_thickness;
+        p2_y += dir_y * half_thickness;
+    }
+
+    // Start cap
+    if (flags & ImDrawFlags_NoAAEnds)
+    {
+        base_idx = (int)_VtxCurrentIdx;
+        IM_APPEND_VTX(p1_x - norm_x * thickness0, p1_y - norm_y * thickness0, uv0, col);
+        IM_APPEND_VTX(p1_x + norm_x * thickness1, p1_y + norm_y * thickness1, uv1, col);
+
+        IM_APPEND_VTX(p2_x - norm_x * thickness0, p2_y - norm_y * thickness0, uv0, col);
+        IM_APPEND_VTX(p2_x + norm_x * thickness1, p2_y + norm_y * thickness1, uv1, col);
+
+        // Connect
+        IM_APPEND_TRI(base_idx + 0, base_idx + 2, base_idx + 3);
+        IM_APPEND_TRI(base_idx + 0, base_idx + 3, base_idx + 1);
+    }
+    else
+    {
+        // Start
+        float pa_x = p1_x - dir_x * half_aa;
+        float pa_y = p1_y - dir_y * half_aa;
+        float pb_x = p1_x + dir_x * half_aa;
+        float pb_y = p1_y + dir_y * half_aa;
+
+        base_idx = (int)_VtxCurrentIdx;
+        IM_APPEND_VTX(pa_x - norm_x * thickness0, pa_y - norm_y * thickness0, uv0, col_trans);
+        IM_APPEND_VTX(pa_x + norm_x * thickness1, pa_y + norm_y * thickness1, uv1, col_trans);
+
+        int next_base_idx = (int)_VtxCurrentIdx;
+        IM_APPEND_VTX(pb_x - norm_x * thickness0, pb_y - norm_y * thickness0, uv0, col);
+        IM_APPEND_VTX(pb_x + norm_x * thickness1, pb_y + norm_y * thickness1, uv1, col);
+
+        // AA cap
+        IM_APPEND_TRI(base_idx + 0, base_idx + 2, base_idx + 3);
+        IM_APPEND_TRI(base_idx + 0, base_idx + 3, base_idx + 1);
+        base_idx = next_base_idx;
+
+        // End
+        pa_x = p2_x - dir_x * half_aa;
+        pa_y = p2_y - dir_y * half_aa;
+        pb_x = p2_x + dir_x * half_aa;
+        pb_y = p2_y + dir_y * half_aa;
+
+        next_base_idx = (int)_VtxCurrentIdx;
+        IM_APPEND_VTX(pa_x - norm_x * thickness0, pa_y - norm_y * thickness0, uv0, col);
+        IM_APPEND_VTX(pa_x + norm_x * thickness1, pa_y + norm_y * thickness1, uv1, col);
+
+        IM_APPEND_VTX(pb_x - norm_x * thickness0, pb_y - norm_y * thickness0, uv0, col_trans);
+        IM_APPEND_VTX(pb_x + norm_x * thickness1, pb_y + norm_y * thickness1, uv1, col_trans);
+
+        // Connect
+        IM_APPEND_TRI(base_idx + 0, base_idx + 2, base_idx + 3);
+        IM_APPEND_TRI(base_idx + 0, base_idx + 3, base_idx + 1);
+        base_idx = next_base_idx;
+
+        // AA cap
+        IM_APPEND_TRI(base_idx + 0, base_idx + 2, base_idx + 3);
+        IM_APPEND_TRI(base_idx + 0, base_idx + 3, base_idx + 1);
+
+    }
+}
+
 void ImDrawList::AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float thickness, ImDrawFlags flags)
 {
     if ((col & IM_COL32_A_MASK) == 0)
@@ -2140,13 +2288,11 @@ void ImDrawList::AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float th
     ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeCenter);
     if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy)
     {
-        const ImVec2 points[2] = { ImVec2(p1.x + 0.5f, p1.y + 0.5f), ImVec2(p2.x + 0.5f, p2.y + 0.5f) };
-        AddPolyline(points, 2, col, thickness, ImDrawFlags_StrokeLegacy);
+        _AddLine(ImVec2(p1.x + 0.5f, p1.y + 0.5f), ImVec2(p2.x + 0.5f, p2.y + 0.5f), col, thickness, flags);
         return;
     }
 
-    const ImVec2 points[2] = { p1, p2 };
-    AddPolyline(points, 2, col, thickness, flags);
+    _AddLine(p1, p2, col, thickness, flags);
 }
 
 void ImDrawList::AddLineH(float min_x, float max_x, float y, ImU32 col, float thickness, ImDrawFlags flags)
@@ -2157,8 +2303,7 @@ void ImDrawList::AddLineH(float min_x, float max_x, float y, ImU32 col, float th
     ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
     if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy)
     {
-        const ImVec2 points[2] = { ImVec2(min_x + 0.5f, y + 0.5f), ImVec2(max_x + 0.5f, y + 0.5f) }; // Same as AddLine() above.
-        AddPolyline(points, 2, col, thickness, ImDrawFlags_StrokeLegacy);
+        _AddLine(ImVec2(min_x + 0.5f, y + 0.5f), ImVec2(max_x + 0.5f, y + 0.5f), col, thickness, flags);
         return;
     }
 
@@ -2191,8 +2336,7 @@ void ImDrawList::AddLineH(float min_x, float max_x, float y, ImU32 col, float th
         flags = (flags & ~ImDrawFlags_StrokeMask_) | stroke_pos;
 
         // For generic case use line, since it needs less triangles than AA rectangle.
-        const ImVec2 points[2] = { ImVec2(min_x, y), ImVec2(max_x, y) };
-        AddPolyline(points, 2, col, thickness, flags);
+        _AddLine(ImVec2(min_x, y), ImVec2(max_x, y), col, thickness, flags);
     }
 }
 
@@ -2204,8 +2348,7 @@ void ImDrawList::AddLineV(float x, float min_y, float max_y, ImU32 col, float th
     ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
     if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy)
     {
-        const ImVec2 points[2] = { ImVec2(x + 0.5f, min_y + 0.5f), ImVec2(x + 0.5f, max_y + 0.5f) }; // Same as AddLine() above.
-        AddPolyline(points, 2, col, thickness, ImDrawFlags_StrokeLegacy);
+        _AddLine(ImVec2(x + 0.5f, min_y + 0.5f), ImVec2(x + 0.5f, max_y + 0.5f), col, thickness, flags);
         return;
     }
 
@@ -2239,8 +2382,7 @@ void ImDrawList::AddLineV(float x, float min_y, float max_y, ImU32 col, float th
 
         // For generic case use line, since it needs less triangles than AA rectangle.
         // Drawing for bottom to top, so that the inside stroke pos expands to right.
-        const ImVec2 points[2] = { ImVec2(x, max_y), ImVec2(x, min_y) };
-        AddPolyline(points, 2, col, thickness, flags);
+        _AddLine(ImVec2(x, max_y), ImVec2(x, min_y), col, thickness, flags);
     }
 }
 
