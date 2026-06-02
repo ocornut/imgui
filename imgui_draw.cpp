@@ -2506,7 +2506,7 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
 
     ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
 
-    if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy)
+    if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy) IM_UNLIKELY
     {
         if (Flags & ImDrawListFlags_AntiAliasedLines)
             PathRect(ImVec2(p_min.x + 0.50f, p_min.y + 0.50f), ImVec2(p_max.x - 0.50f, p_max.y - 0.50f), rounding, flags);
@@ -2538,7 +2538,7 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
 
     const float width = outer_max.x - outer_min.x;
     const float height = outer_max.y - outer_min.y;
-    if (ImMin(width, height) < (thickness + _FringeScale) * 2.0f)
+    if (ImMin(width, height) < (thickness + _FringeScale) * 2.0f) IM_UNLIKELY
     {
         // Rectangle has collapsed into filled rectangle.
         AddRectFilled(outer_min, outer_max, col, outer_rounding, flags);
@@ -2686,26 +2686,28 @@ void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
-    ImVec2 b_min = p_min;
-    ImVec2 b_max = p_max;
-    const float width = b_max.x - b_min.x;
-    const float height = b_max.y - b_min.y;
+    float width = p_max.x - p_min.x;
+    float height = p_max.y - p_min.y;
+    const float min_dim = ImMin(width, height);
 
-    const float inv_fringe_scale = 1.0f / _FringeScale;
-    const float screen_width = width * inv_fringe_scale;
-    const float screen_height = height * inv_fringe_scale;
-
-    if (ImMin(screen_width, screen_height) < 1.0f / 255.0f)
+    // The rect is smaller than pixel in one dimension.
+    if (min_dim < _FringeScale) IM_UNLIKELY
+    {
+        if (min_dim < (1.0f / 255.0f) * _FringeScale)
+            return;
+        if (width < _FringeScale)
+        {
+            col = ImAlphaMultiply(col, width / _FringeScale);
+            width = _FringeScale;
+        }
+        if (height < _FringeScale)
+        {
+            col = ImAlphaMultiply(col, height / _FringeScale);
+            height = _FringeScale;
+        }
+        const ImVec2 points[4] = { p_min, ImVec2(p_min.x + width, p_min.y), ImVec2(p_min.x + width, p_min.y + height), ImVec2(p_min.x, p_max.y + height) };
+        AddConvexPolyFilled(points, 4, col, ImDrawFlags_MiterOnly);
         return;
-    if (screen_width < 1.0f)
-    {
-        col = ImAlphaMultiply(col, screen_width);
-        b_max.x = b_min.x + _FringeScale;
-    }
-    if (screen_height < 1.0f)
-    {
-        col = ImAlphaMultiply(col, screen_height);
-        b_max.y = b_min.y + _FringeScale;
     }
 
     if ((flags & ImDrawFlags_RoundCornersMask_) == 0)
@@ -2783,11 +2785,8 @@ void ImDrawList::AddQuad(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, c
 
     ImDrawFlags stroke_pos = g_LEGACY_STROKES ? ImDrawFlags_StrokeLegacy : _GetStrokePos(flags, ImDrawFlags_StrokeInside);
     flags = (flags & ~ImDrawFlags_StrokeMask_) | stroke_pos;
-    PathLineTo(p1);
-    PathLineTo(p2);
-    PathLineTo(p3);
-    PathLineTo(p4);
-    PathStroke(col, thickness, flags | ImDrawFlags_Closed);
+    const ImVec2 points[4] = { p1, p2, p3, p4 };
+    AddPolyline(points, 4, col, thickness, flags | ImDrawFlags_Closed);
 }
 
 void ImDrawList::AddQuadFilled(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col)
@@ -2795,11 +2794,8 @@ void ImDrawList::AddQuadFilled(const ImVec2& p1, const ImVec2& p2, const ImVec2&
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
-    PathLineTo(p1);
-    PathLineTo(p2);
-    PathLineTo(p3);
-    PathLineTo(p4);
-    PathFillConvex(col);
+    const ImVec2 points[4] = { p1, p2, p3, p4 };
+    AddConvexPolyFilled(points, 4, col);
 }
 
 void ImDrawList::AddTriangle(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 col, float thickness, ImDrawFlags flags)
@@ -2809,10 +2805,9 @@ void ImDrawList::AddTriangle(const ImVec2& p1, const ImVec2& p2, const ImVec2& p
 
     ImDrawFlags stroke_pos = g_LEGACY_STROKES ? ImDrawFlags_StrokeLegacy : _GetStrokePos(flags, ImDrawFlags_StrokeInside);
     flags = (flags & ~ImDrawFlags_StrokeMask_) | stroke_pos;
-    PathLineTo(p1);
-    PathLineTo(p2);
-    PathLineTo(p3);
-    PathStroke(col, thickness, flags | ImDrawFlags_Closed);
+
+    const ImVec2 points[3] = { p1, p2, p3 };
+    AddPolyline(points, 3, col, thickness, flags | ImDrawFlags_Closed);
 }
 
 void ImDrawList::AddTriangleFilled(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 col)
@@ -2820,10 +2815,8 @@ void ImDrawList::AddTriangleFilled(const ImVec2& p1, const ImVec2& p2, const ImV
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
-    PathLineTo(p1);
-    PathLineTo(p2);
-    PathLineTo(p3);
-    PathFillConvex(col);
+    const ImVec2 points[3] = { p1, p2, p3 };
+    AddConvexPolyFilled(points, 3, col);
 }
 
 void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int num_segments, float thickness, ImDrawFlags flags)
@@ -2832,7 +2825,7 @@ void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int nu
         return;
 
     ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
-    if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy)
+    if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy) IM_UNLIKELY
     {
         radius -= 0.5f;
         stroke_pos = ImDrawFlags_StrokeCenter;
@@ -2849,7 +2842,7 @@ void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int nu
         outer_radius = radius;
     else if (stroke_pos == ImDrawFlags_StrokeOutside)
         outer_radius = radius + thickness;
-    if (outer_radius < (thickness + _FringeScale))
+    if (outer_radius < (thickness + _FringeScale)) IM_UNLIKELY
     {
         // The circle has collapsed into a filled circle.
         AddCircleFilled(center, outer_radius, col, num_segments);
@@ -2881,12 +2874,12 @@ void ImDrawList::AddCircleFilled(const ImVec2& center, float radius, ImU32 col, 
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
-    float screen_diameter = radius * 2.0f / _FringeScale;
-    if (screen_diameter < 1.0f / 255.0f)
-        return;
-    if (screen_diameter < 1.0f)
+    const float diameter = radius * 2.0f;
+    if (diameter < _FringeScale) IM_UNLIKELY
     {
-        col = ImAlphaMultiply(col, screen_diameter);
+        if (diameter < (1.0f / 255.0f) * _FringeScale)
+            return;
+        col = ImAlphaMultiply(col, diameter / _FringeScale);
         radius = _FringeScale * 0.5f;
     }
 
@@ -2916,7 +2909,7 @@ void ImDrawList::AddNgon(const ImVec2& center, float radius, ImU32 col, int num_
         return;
 
     ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
-    if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy)
+    if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy) IM_UNLIKELY
     {
         radius -= 0.5f;
         stroke_pos = ImDrawFlags_StrokeCenter;
@@ -2936,7 +2929,7 @@ void ImDrawList::AddNgon(const ImVec2& center, float radius, ImU32 col, int num_
         outer_radius = radius;
     else if (stroke_pos == ImDrawFlags_StrokeOutside)
         outer_radius = radius + miter_thickness;
-    if (outer_radius < (miter_thickness + _FringeScale))
+    if (outer_radius < (miter_thickness + _FringeScale)) IM_UNLIKELY
     {
         // The polygon has collapsed into a filled polygon.
         AddNgonFilled(center, outer_radius, col, num_segments);
@@ -2955,12 +2948,12 @@ void ImDrawList::AddNgonFilled(const ImVec2& center, float radius, ImU32 col, in
     if ((col & IM_COL32_A_MASK) == 0 || num_segments <= 2)
         return;
 
-    float screen_diameter = radius * 2.0f / _FringeScale;
-    if (screen_diameter < 1.0f / 255.0f)
-        return;
-    if (screen_diameter < 1.0f)
+    const float diameter = radius * 2.0f;
+    if (diameter < _FringeScale) IM_UNLIKELY
     {
-        col = ImAlphaMultiply(col, screen_diameter);
+        if (diameter < (1.0f / 255.0f) * _FringeScale)
+            return;
+        col = ImAlphaMultiply(col, diameter / _FringeScale);
         radius = _FringeScale * 0.5f;
     }
 
@@ -3002,22 +2995,25 @@ void ImDrawList::AddEllipseFilled(const ImVec2& center, const ImVec2& radius, Im
         return;
 
     ImVec2 rad = radius;
+    float diameter_x = rad.x * 2.0f;
+    float diameter_y = rad.y * 2.0f;
+    const float min_dim = ImMin(diameter_x, diameter_y);
 
-    const float inv_fringe_scale = 1.0f / _FringeScale;
-    float screen_diameter_x = rad.x * 2.0f * inv_fringe_scale;
-    float screen_diameter_y = rad.y * 2.0f * inv_fringe_scale;
-    if (screen_diameter_x < 1.0f / 255.0f || screen_diameter_y < 1.0f / 255.0f)
-        return;
-
-    if (screen_diameter_x < 1.0f)
+    // The ellipse is smaller than pixel in one dimension.
+    if (min_dim < _FringeScale) IM_UNLIKELY
     {
-        col = ImAlphaMultiply(col, screen_diameter_x);
-        rad.x = _FringeScale * 0.5f;
-    }
-    if (screen_diameter_y < 1.0f)
-    {
-        col = ImAlphaMultiply(col, screen_diameter_y);
-        rad.y = _FringeScale * 0.5f;
+        if (min_dim < (1.0f / 255.0f) * _FringeScale)
+            return;
+        if (diameter_x < _FringeScale)
+        {
+            col = ImAlphaMultiply(col, diameter_x / _FringeScale);
+            rad.x = _FringeScale * 0.5f;
+        }
+        if (diameter_y < _FringeScale)
+        {
+            col = ImAlphaMultiply(col, diameter_y / _FringeScale);
+            rad.y = _FringeScale * 0.5f;
+        }
     }
 
     if (num_segments <= 0)
