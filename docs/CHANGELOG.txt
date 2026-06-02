@@ -60,6 +60,8 @@ Other Changes:
     disable embedding either fonts separately. (#9407)
   - Tweak `CalcTextSize()` awkward width rounding/ceiling code to reduce floating-point
     imprecisions altering the result by 1 even at relatively small width. (#791)
+  - Fixed an issue where passing a manually created ImFontAtlas to CreateContext() would
+    incorrectly destroy it in DestroyContext() when ref-count gets back to zero. (#9426)
 - DrawList:
   - Minor optimization to `AddLine()`, `AddLineH()`, `AddLineV()` functions. (#4091)
   - Added `ImDrawListFlags_TextNoPixelSnap` to disable snapping of AddText()
