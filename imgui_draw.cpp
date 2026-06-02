@@ -940,8 +940,8 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
     }
     else
     {
-        vtx_count = /*body*/(points_count - 2) * max_verts_per_point + /*caps*/(6 * 2);
-        idx_count = (/*body*/(points_count - 2) * max_tris_per_point + /*last seg*/4 + /*caps*/(4 * 2)) * 3;
+        vtx_count = /*body*/(points_count - 2) * max_verts_per_point + /*caps*/(4 * 2);
+        idx_count = (/*body*/(points_count - 2) * max_tris_per_point + /*last seg*/2 + /*caps*/(2 * 2)) * 3;
     }
 
 
