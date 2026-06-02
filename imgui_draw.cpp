@@ -734,6 +734,7 @@ void ImDrawList::_SetPixelDensity(float pixel_density)
     _FringeScaleIsInteger = ImIsTruncated(_InvFringeScale);
 }
 
+IM_MSVC_RUNTIME_CHECKS_OFF
 // Reserve space for a number of vertices and indices.
 // You must finish filling your reserved data before calling PrimReserve() again, as it may reallocate or
 // submit the intermediate results. PrimUnreserve() can be used to release unused allocations.
@@ -772,6 +773,26 @@ void ImDrawList::PrimUnreserve(int idx_count, int vtx_count)
     VtxBuffer.shrink(VtxBuffer.Size - vtx_count);
     IdxBuffer.shrink(IdxBuffer.Size - idx_count);
 }
+
+// We avoid using the ImVec2 math operators here to reduce cost to a minimum for debug/non-inlined builds.
+// We avoid using the 'do { } while (false)` idiom in those macros as they typically have overhead in debug builds.
+#define IM_APPEND_VTX(PX, PY, UV, COL)      \
+    {                                       \
+        _VtxWritePtr->pos.x = PX;           \
+        _VtxWritePtr->pos.y = PY;           \
+        _VtxWritePtr->uv = UV;              \
+        _VtxWritePtr->col = COL;            \
+        _VtxWritePtr++;                     \
+        _VtxCurrentIdx++;                   \
+    } (void)0
+
+#define IM_APPEND_TRI(a, b, c)              \
+    {                                       \
+        _IdxWritePtr[0] = (ImDrawIdx)(a);   \
+        _IdxWritePtr[1] = (ImDrawIdx)(b);   \
+        _IdxWritePtr[2] = (ImDrawIdx)(c);   \
+        _IdxWritePtr += 3;                  \
+    } (void)0
 
 // Fully unrolled with inline call to keep our debug builds decently fast.
 void ImDrawList::PrimRect(const ImVec2& a, const ImVec2& c, ImU32 col)
@@ -818,7 +839,6 @@ void ImDrawList::PrimQuadUV(const ImVec2& a, const ImVec2& b, const ImVec2& c, c
     _IdxWritePtr += 6;
 }
 
-
 float ImDrawList::_CalculateCenterBiasedOffset(float thickness)
 {
     // Old jumpy one.
@@ -831,6 +851,7 @@ float ImDrawList::_CalculateCenterBiasedOffset(float thickness)
     const int s_thickness = (int)screen_thickness;
     return ((float)(s_thickness / 2) + (s_thickness & 1) * (screen_thickness - s_thickness)) * _FringeScale;
 }
+IM_MSVC_RUNTIME_CHECKS_RESTORE
 
 // On AddPolyline() and AddConvexPolyFilled() we intentionally avoid using ImVec2 and superfluous function calls to optimize debug/non-inlined builds.
 // - Those macros expects l-values and need to be used as their own statement.
@@ -838,26 +859,6 @@ float ImDrawList::_CalculateCenterBiasedOffset(float thickness)
 #define IM_NORMALIZE2F_OVER_ZERO(VX,VY)     { float d2 = VX*VX + VY*VY; if (d2 > 0.0f) { float inv_len = ImRsqrt(d2); VX *= inv_len; VY *= inv_len; } } (void)0
 #define IM_FIXNORMAL2F_MAX_INVLEN2          100.0f // 500.0f (see #4053, #3366)
 #define IM_FIXNORMAL2F(VX,VY)               { float d2 = VX*VX + VY*VY; if (d2 > 0.000001f) { float inv_len2 = 1.0f / d2; if (inv_len2 > IM_FIXNORMAL2F_MAX_INVLEN2) inv_len2 = IM_FIXNORMAL2F_MAX_INVLEN2; VX *= inv_len2; VY *= inv_len2; } } (void)0
-
-// We avoid using the ImVec2 math operators here to reduce cost to a minimum for debug/non-inlined builds.
-// We avoid using the 'do { } while (false)` idiom in those macros as they typically have overhead in debug builds.
-#define IM_APPEND_VTX(PX, PY, UV, COL)   \
-    {                                       \
-        _VtxWritePtr->pos.x = PX;           \
-        _VtxWritePtr->pos.y = PY;           \
-        _VtxWritePtr->uv = UV;              \
-        _VtxWritePtr->col = COL;            \
-        _VtxWritePtr++;                     \
-        _VtxCurrentIdx++;                   \
-    } (void)0
-
-#define IM_APPEND_TRI(a, b, c)              \
-    {                                       \
-        _IdxWritePtr[0] = (ImDrawIdx)(a);   \
-        _IdxWritePtr[1] = (ImDrawIdx)(b);   \
-        _IdxWritePtr[2] = (ImDrawIdx)(c);   \
-        _IdxWritePtr += 3;                  \
-    } (void)0
 
 #define IM_POLYLINE_MITER_ANGLE_LIMIT (-0.9999619f)     // cos(179.5)
 #define IM_POLYLINE_MITER_LIMIT (4.0f)                  // ~29 deg
@@ -1243,6 +1244,7 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
     PrimUnreserve(remaining_idx_count, remaining_vtx_count);
 }
 
+IM_MSVC_RUNTIME_CHECKS_OFF
 static ImU32 ImAlphaMultiply(ImU32 col, float alpha_mul)
 {
     IM_ASSERT_PARANOID(a >= 0.0f && a < 1.0f); // We don't clamp!
@@ -1275,6 +1277,7 @@ void ImDrawList::_SelectFringeTexture(float screen_thickness, ImVec4* out_tex_uv
         *out_tex_uvs = _Data->TexUvLines[texture_idx];
     }
 }
+IM_MSVC_RUNTIME_CHECKS_RESTORE
 
 extern bool g_LEGACY_STROKES;
 
@@ -2920,17 +2923,7 @@ void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
         if (s_rounding <= 0 || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
         {
             PrimReserve(6, 4);
-
-            const ImVec2 opaque_uv = _Data->TexUvWhitePixel;
-            const ImDrawIdx idx = (ImDrawIdx)_VtxCurrentIdx;
-            IM_APPEND_VTX(p_min.x, p_min.y, opaque_uv, col);
-            IM_APPEND_VTX(p_max.x, p_min.y, opaque_uv, col);
-            IM_APPEND_VTX(p_max.x, p_max.y, opaque_uv, col);
-            IM_APPEND_VTX(p_min.x, p_max.y, opaque_uv, col);
-
-            IM_APPEND_TRI(idx + 0, idx + 1, idx + 2);
-            IM_APPEND_TRI(idx + 0, idx + 2, idx + 3);
-
+            PrimRect(p_min, p_max, col);
             return;
         }
         else if ((Flags & ImDrawListFlags_RoundCornersUseTex) && s_rounding <= IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX)
