@@ -1177,8 +1177,8 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
     else
     {
         // Connect the path.
-        start_vtx_ptr[0] = VtxBuffer.Data[base_idx+0];
-        start_vtx_ptr[1] = VtxBuffer.Data[base_idx+1];
+        start_vtx_ptr[0] = VtxBuffer.Data[_CmdHeader.VtxOffset + base_idx+0];
+        start_vtx_ptr[1] = VtxBuffer.Data[_CmdHeader.VtxOffset + base_idx+1];
     }
 
     // Restore unused memory
@@ -2500,6 +2500,7 @@ void ImDrawList::_AddRectBaked(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
 
     const int idx_used = (int)(_IdxWritePtr - start_idx_ptr);
     const int vtx_used = (int)(_VtxWritePtr - start_vtx_ptr);
+    IM_ASSERT_PARANOID(idx_used <= idx_allocated && vtx_used <= vtx_allocated);
     if (idx_used < idx_allocated || vtx_used < vtx_allocated)
         PrimUnreserve(idx_allocated - idx_used, vtx_allocated - vtx_used);
 }
@@ -2613,13 +2614,13 @@ void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, 
     }
 
     // Close
-    start_vtx_ptr[0] = VtxBuffer.Data[base_idx + 0];
-    start_vtx_ptr[1] = VtxBuffer.Data[base_idx + 1];
-    start_vtx_ptr[2] = VtxBuffer.Data[base_idx + 2];
+    start_vtx_ptr[0] = VtxBuffer.Data[_CmdHeader.VtxOffset + base_idx + 0];
+    start_vtx_ptr[1] = VtxBuffer.Data[_CmdHeader.VtxOffset + base_idx + 1];
+    start_vtx_ptr[2] = VtxBuffer.Data[_CmdHeader.VtxOffset + base_idx + 2];
 
     const int idx_used = (int)(_IdxWritePtr - start_idx_ptr);
     const int vtx_used = (int)(_VtxWritePtr - start_vtx_ptr);
-    IM_ASSERT(idx_used <= idx_count && vtx_used <= vtx_count);
+    IM_ASSERT_PARANOID(idx_used <= idx_count && vtx_used <= vtx_count);
 
     if (idx_used < idx_count || vtx_used < vtx_count)
         PrimUnreserve(idx_count - idx_used, vtx_count - vtx_used);
