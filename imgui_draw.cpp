@@ -861,6 +861,7 @@ float ImDrawList::_CalculateCenterBiasedOffset(float thickness)
 
 #define IM_POLYLINE_MITER_ANGLE_LIMIT (-0.9999619f) // cos(179.5)
 #define IM_POLYLINE_MITER_LIMIT (4.0f)  // ~29 deg
+#define IM_POLYLINE_CONVEX_POLY_MAX_BEVELS  (2)         // (int)(360/floor(180-29))
 
 // In debug builds the functions are likely not inlined, so inlined check is cheaper.
 #if defined(DEBUG) || defined(_DEBUG)
@@ -1074,7 +1075,6 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
                 if (sin_theta < 0.0f)
                 {
                     IM_APPEND_VTX(p1.x - (bn_x + sd_x) * thickness0, p1.y - (bn_y + sd_y) * thickness0, uv0, col); // 2
-                    // TODO: calc uv2 correctly.
                     IM_APPEND_VTX(p1.x, p1.y, uv2, col); // 3
                     const int next_base_idx = (ImDrawIdx)_VtxCurrentIdx;
                     IM_APPEND_VTX(p1.x - (bn_x - sd_x) * thickness0, p1.y - (bn_y - sd_y) * thickness0, uv0, col); // 4
@@ -1092,7 +1092,6 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
                 else
                 {
                     IM_APPEND_VTX(p1.x + (bn_x + sd_x) * thickness1, p1.y + (bn_y + sd_y) * thickness1, uv1, col); // 2
-                    // TODO: calc uv2 correctly.
                     IM_APPEND_VTX(p1.x, p1.y, uv2, col); // 3
                     const int next_base_idx = (ImDrawIdx)_VtxCurrentIdx;
                     IM_APPEND_VTX(p1.x - miter_offset_x * thickness0, p1.y - miter_offset_y * thickness0, uv0, col); // 4
@@ -1565,8 +1564,8 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
     const bool miters_only = (flags & ImDrawFlags_MiterOnly) != 0;
     const float miter_distance_limit_sqr = IM_POLYLINE_MITER_LIMIT * IM_POLYLINE_MITER_LIMIT;
 
-    const int idx_count = ((points_count - 2) + points_count * 3) * 3;
-    const int vtx_count = (points_count * 3);
+    const int idx_count = ((points_count - 2) + points_count * 2 + IM_POLYLINE_CONVEX_POLY_MAX_BEVELS) * 3;
+    const int vtx_count = points_count * 2 + IM_POLYLINE_CONVEX_POLY_MAX_BEVELS;
     PrimReserve(idx_count, vtx_count);
     ImDrawVert* start_vtx_ptr = _VtxWritePtr;
     ImDrawIdx* start_idx_ptr = _IdxWritePtr;
@@ -1640,6 +1639,7 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
     }
     else
     {
+        int bevel_count = 0;
         for (int i0 = points_count - 1, i1 = 0; i1 < points_count; i0 = i1++)
         {
             // Average normals
@@ -1685,8 +1685,12 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
             unsigned int outer_idx = _VtxCurrentIdx;
 
             // Outer
-            if (bevel)
+            if (bevel && bevel_count < IM_POLYLINE_CONVEX_POLY_MAX_BEVELS) IM_UNLIKELY
             {
+                // Because the polygon is convex, we know the maximum number of bevel corners we can hit (which is very small number).
+                // We keep track of them just in case the calculations disagree.
+                bevel_count++;
+
                 IM_APPEND_VTX(p1.x + n0.x * half_aa, p1.y + n0.y * half_aa, uv, col_trans);
                 IM_APPEND_VTX(p1.x + n1.x * half_aa, p1.y + n1.y * half_aa, uv, col_trans);
                 // Connect with previous
