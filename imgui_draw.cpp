@@ -402,7 +402,6 @@ ImDrawListSharedData::ImDrawListSharedData()
         const float a = ((float)i * 2 * IM_PI) / (float)IM_COUNTOF(ArcFastVtx);
         ArcFastVtx[i] = ImVec2(ImCos(a), ImSin(a));
     }
-    ArcFastRadiusCutoff = IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC_R(IM_DRAWLIST_ARCFAST_SAMPLE_MAX, CircleSegmentMaxError);
 }
 
 ImDrawListSharedData::~ImDrawListSharedData()
@@ -412,17 +411,17 @@ ImDrawListSharedData::~ImDrawListSharedData()
 
 void ImDrawListSharedData::SetCircleTessellationMaxError(float max_error)
 {
-    if (CircleSegmentMaxError == max_error)
+    if (CircleTessellationMaxError == max_error)
         return;
 
     IM_ASSERT(max_error > 0.0f);
-    CircleSegmentMaxError = max_error;
+    CircleTessellationMaxError = max_error;
     for (int i = 0; i < IM_COUNTOF(CircleSegmentCounts); i++)
     {
         const float radius = (float)i;
-        CircleSegmentCounts[i] = (ImU8)((i > 0) ? IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, CircleSegmentMaxError) : IM_DRAWLIST_ARCFAST_SAMPLE_MAX);
+        CircleSegmentCounts[i] = (ImU8)((i > 0) ? IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, CircleTessellationMaxError) : IM_DRAWLIST_ARCFAST_SAMPLE_MAX);
     }
-    ArcFastRadiusCutoff = IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC_R(IM_DRAWLIST_ARCFAST_SAMPLE_MAX, CircleSegmentMaxError);
+    ArcFastRadiusCutoff = IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC_R(IM_DRAWLIST_ARCFAST_SAMPLE_MAX, CircleTessellationMaxError);
 }
 
 ImDrawList::ImDrawList(ImDrawListSharedData* shared_data)
@@ -660,7 +659,7 @@ int ImDrawList::_CalcCircleAutoSegmentCount(float radius) const
     if (radius_idx >= 0 && radius_idx < IM_COUNTOF(_Data->CircleSegmentCounts))
         return _Data->CircleSegmentCounts[radius_idx]; // Use cached value
     else
-        return IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, _Data->CircleSegmentMaxError);
+        return IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, _Data->CircleTessellationMaxError);
 }
 
 // Render-level scissoring. This is passed down to your render function but not used for CPU-side coarse clipping. Prefer using higher-level ImGui::PushClipRect() to affect logic (hit-testing and widget culling)
