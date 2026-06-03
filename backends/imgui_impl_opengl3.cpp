@@ -1049,6 +1049,8 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
         glsl_version = "#version 150";
 #else
         glsl_version = "#version 130";
+		if (bd->GlVersion >= 410)
+			glsl_version = "#version 410";
 #endif
     }
     IM_ASSERT((int)strlen(glsl_version) + 2 < IM_COUNTOF(bd->GlslVersionString));
