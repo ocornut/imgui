@@ -10411,8 +10411,10 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             // Draw a bunch of primitives
             ImGui::Text("All primitives");
             static float sz = 42.0f;
-            static bool animate_thickness = false;
+            static float base_rounding = 8.0f;
             static float base_thickness = 3.0f;
+            static bool animate_rounding = false;
+            static bool animate_thickness = false;
             static int ngon_segments = 6;
             static bool circle_segments_override = false;
             static int circle_segments_override_v = 12;
@@ -10423,12 +10425,21 @@ static void ShowExampleAppCustomRendering(bool* p_open)
 
             ImGui::DragFloat("Size", &sz, 0.2f, 0.2f, 100.0f, "%.0f");
 
+            const float rounding_anim_period = 8.0f;
+            const float rounding_wave = 1.0f - fabsf(fmodf((float)ImGui::GetTime(), rounding_anim_period) * (2.0f / rounding_anim_period) - 1.0f);
+            const float rounding = animate_rounding ? (float)((int)(rounding_wave * base_rounding * 10.0f)) / 10.0f : base_rounding;
+            ImGui::DragFloat("Rounding", &base_rounding, 0.02f, 0.0f, 30.0f, "%.02f");
+            ImGui::SameLine();
+            ImGui::Checkbox("Animate##rounding", &animate_rounding);
+            ImGui::SameLine();
+            ImGui::Text("%.2f", rounding);
+
             const float thickness_anim_period = 5.0f;
             const float thickness_wave = 1.0f - fabsf(fmodf((float)ImGui::GetTime(), thickness_anim_period) * (2.0f / thickness_anim_period) - 1.0f);
             const float thickness = animate_thickness ? thickness_wave * base_thickness : base_thickness;
             ImGui::DragFloat("Thickness", &base_thickness, 0.02f, 0.0f, 30.0f, "%.02f");
             ImGui::SameLine();
-            ImGui::Checkbox("Animate", &animate_thickness);
+            ImGui::Checkbox("Animate##thickness", &animate_thickness);
             ImGui::SameLine();
             ImGui::Text("%.2f", thickness);
 
@@ -10461,7 +10472,6 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             const float pi = 3.141592f;
             const float spacing = 10.0f;
             const ImDrawFlags corners_tl_br = ImDrawFlags_RoundCornersTopLeft | ImDrawFlags_RoundCornersBottomRight;
-            const float rounding = sz / 5.0f;
             const float half_sz = sz * 0.5f;
             const float half_szi = (float)(int)(sz * 0.5f);
             const int circle_segments = circle_segments_override ? circle_segments_override_v : 0;
