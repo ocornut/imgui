@@ -2691,6 +2691,7 @@ ImFontAtlas::~ImFontAtlas()
 // Calling this mid-frame will discard the CPU-side copy of the texture data which is generally unreliable as you may have textures queued for creation or updates.
 void ImFontAtlas::Clear()
 {
+    IMGUI_DEBUG_LOG_FONT("[font] ImFontAtlas::Clear()\n");
     bool backup_renderer_has_textures = RendererHasTextures;
     RendererHasTextures = false; // Full Clear() is supported, but ClearTexData() only isn't.
     ClearFonts();
@@ -2701,6 +2702,7 @@ void ImFontAtlas::Clear()
 void ImFontAtlas::ClearFonts()
 {
     // FIXME-NEWATLAS: Illegal to remove currently bound font.
+    IMGUI_DEBUG_LOG_FONT("[font] ImFontAtlas::ClearFonts()\n");
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas!");
     for (ImFont* font : Fonts)
         ImFontAtlasBuildNotifySetFont(this, font, NULL);
@@ -2776,6 +2778,28 @@ void ImFontAtlasUpdateNewFrame(ImFontAtlas* atlas, int frame_count, bool rendere
     IM_ASSERT(atlas->Builder == NULL || atlas->Builder->FrameCount < frame_count); // Protection against being called twice.
     atlas->RendererHasTextures = renderer_has_textures;
 
+    // Update texture status and discard old textures.
+    // (we do this first thing to handle an edge case: if user mistakenly calls ClearFonts()+SetStatus(OK) during
+    //  rendering, it would ImFontAtlasBuildMain() rebuilding before tex->Updates[] gets a chance to be cleared)
+    // (if somehow we need to move this back lower in the function, we could manually call the code to clear Updates[]).
+    for (int tex_n = 0; tex_n < atlas->TexList.Size; tex_n++)
+    {
+        // Update and remove if requested
+        ImTextureData* tex = atlas->TexList[tex_n];
+        if (tex->Status == ImTextureStatus_WantCreate && atlas->RendererHasTextures)
+            IM_ASSERT(tex->TexID == ImTextureID_Invalid && tex->BackendUserData == NULL && "Backend set texture's TexID/BackendUserData but did not update Status to OK.");
+
+        bool remove_from_list = ImTextureDataUpdateNewFrame(tex);
+        if (remove_from_list)
+        {
+            IM_ASSERT(atlas->TexData != tex);
+            tex->DestroyPixels();
+            IM_DELETE(tex);
+            atlas->TexList.erase(atlas->TexList.begin() + tex_n);
+            tex_n--;
+        }
+    }
+
     // Check that font atlas was built or backend support texture reload in which case we can build now
     if (atlas->RendererHasTextures)
     {
@@ -2814,25 +2838,6 @@ void ImFontAtlasUpdateNewFrame(ImFontAtlas* atlas, int frame_count, bool rendere
         IM_ASSERT(dst_n + builder->BakedDiscardedCount == src_n);
         builder->BakedPool.Size -= builder->BakedDiscardedCount;
         builder->BakedDiscardedCount = 0;
-    }
-
-    // Update texture status
-    for (int tex_n = 0; tex_n < atlas->TexList.Size; tex_n++)
-    {
-        // Update and remove if requested
-        ImTextureData* tex = atlas->TexList[tex_n];
-        if (tex->Status == ImTextureStatus_WantCreate && atlas->RendererHasTextures)
-            IM_ASSERT(tex->TexID == ImTextureID_Invalid && tex->BackendUserData == NULL && "Backend set texture's TexID/BackendUserData but did not update Status to OK.");
-
-        bool remove_from_list = ImTextureDataUpdateNewFrame(tex);
-        if (remove_from_list)
-        {
-            IM_ASSERT(atlas->TexData != tex);
-            tex->DestroyPixels();
-            IM_DELETE(tex);
-            atlas->TexList.erase(atlas->TexList.begin() + tex_n);
-            tex_n--;
-        }
     }
 }
 
