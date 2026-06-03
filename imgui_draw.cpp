@@ -853,6 +853,9 @@ float ImDrawList::_CalculateCenterBiasedOffset(float thickness)
 }
 IM_MSVC_RUNTIME_CHECKS_RESTORE
 
+// Check if R is considered to be worthy rounding. Can be only used within ImDrawList due to use of _FringeScale.
+#define IM_HAS_ROUNDING(RAD)                ((RAD) >= (0.25f * _FringeScale))
+
 // On AddPolyline() and AddConvexPolyFilled() we intentionally avoid using ImVec2 and superfluous function calls to optimize debug/non-inlined builds.
 // - Those macros expects l-values and need to be used as their own statement.
 // - Those macros are intentionally not surrounded by the 'do {} while (0)' idiom because even that translates to runtime with debug compilers.
@@ -1872,7 +1875,7 @@ void ImDrawList::AddConvexPolyFilledLegacy(const ImVec2* points, const int point
 
 void ImDrawList::_PathArcToFastEx(const ImVec2& center, float radius, int a_min_sample, int a_max_sample, int a_step)
 {
-    if (radius < 0.5f)
+    if (!IM_HAS_ROUNDING(radius))
     {
         _Path.push_back(center);
         return;
@@ -1964,7 +1967,7 @@ void ImDrawList::_PathArcToFastEx(const ImVec2& center, float radius, int a_min_
 
 void ImDrawList::_PathArcToN(const ImVec2& center, float radius, float a_min, float a_max, int num_segments)
 {
-    if (radius < 0.5f)
+    if (!IM_HAS_ROUNDING(radius))
     {
         _Path.push_back(center);
         return;
@@ -1983,7 +1986,7 @@ void ImDrawList::_PathArcToN(const ImVec2& center, float radius, float a_min, fl
 // 0: East, 3: South, 6: West, 9: North, 12: East
 void ImDrawList::PathArcToFast(const ImVec2& center, float radius, int a_min_of_12, int a_max_of_12)
 {
-    if (radius < 0.5f)
+    if (!IM_HAS_ROUNDING(radius))
     {
         _Path.push_back(center);
         return;
@@ -1993,7 +1996,7 @@ void ImDrawList::PathArcToFast(const ImVec2& center, float radius, int a_min_of_
 
 void ImDrawList::PathArcTo(const ImVec2& center, float radius, float a_min, float a_max, int num_segments)
 {
-    if (radius < 0.5f)
+    if (!IM_HAS_ROUNDING(radius))
     {
         _Path.push_back(center);
         return;
@@ -2160,7 +2163,8 @@ void ImDrawList::PathBezierQuadraticCurveTo(const ImVec2& p2, const ImVec2& p3, 
 
 void ImDrawList::PathRect(const ImVec2& a, const ImVec2& b, float rounding, ImDrawFlags flags)
 {
-    if (rounding >= 0.5f)
+    const bool has_rounding = IM_HAS_ROUNDING(rounding);
+    if (has_rounding)
     {
         if ((flags & ImDrawFlags_RoundCornersMask_) == 0)
             flags |= ImDrawFlags_RoundCornersAll;
@@ -2168,7 +2172,7 @@ void ImDrawList::PathRect(const ImVec2& a, const ImVec2& b, float rounding, ImDr
         rounding = ImMin(rounding, ImFabs(b.x - a.x) * (((flags & ImDrawFlags_RoundCornersTop) == ImDrawFlags_RoundCornersTop) || ((flags & ImDrawFlags_RoundCornersBottom) == ImDrawFlags_RoundCornersBottom) ? 0.5f : 1.0f) - 1.0f);
         rounding = ImMin(rounding, ImFabs(b.y - a.y) * (((flags & ImDrawFlags_RoundCornersLeft) == ImDrawFlags_RoundCornersLeft) || ((flags & ImDrawFlags_RoundCornersRight) == ImDrawFlags_RoundCornersRight) ? 0.5f : 1.0f) - 1.0f);
     }
-    if (rounding < 0.5f || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
+    if (!has_rounding || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
     {
         PathLineTo(a);
         PathLineTo(ImVec2(b.x, a.y));
@@ -2716,7 +2720,7 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
         return;
     }
 
-    const bool has_rounding = (rounding >= _FringeScale * 0.5f);
+    const bool has_rounding = IM_HAS_ROUNDING(rounding);
 
     // Calculate the outer boundary of the rectangle based on the stroke position.
     ImVec2 outer_min = p_min;
