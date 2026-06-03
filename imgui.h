@@ -3318,27 +3318,22 @@ struct ImGuiSelectionExternalStorage
 // Hold a series of drawing commands. The user provides a renderer for ImDrawData which essentially contains an array of ImDrawList.
 //-----------------------------------------------------------------------------
 
-// The maximum line width to bake anti-aliased textures for. Build atlas with ImFontAtlasFlags_NoBakedLines to disable baking.
 #ifndef IM_DRAWLIST_TEX_LINES_WIDTH_MAX
-#define IM_DRAWLIST_TEX_LINES_WIDTH_MAX         (32)
+#define IM_DRAWLIST_TEX_LINES_WIDTH_MAX             (32)    // The maximum line width to bake anti-aliased textures for. Build atlas with ImFontAtlasFlags_NoBakedLines to disable baking.
 #endif
-
 #ifndef IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH
-#define IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH    (3) // Calculate detailed textures for width [1..IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH]
+#define IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH        (4)     // Calculate detailed textures for width [1..IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH]
 #endif
-
 #ifndef IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT
-#define IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT      (4) // How many samples per integer thickness level.
+#define IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT          (4)     // How many samples per integer thickness level.
 #endif
-
-#define IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX         (IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH * IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT)
-
 #ifndef IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX
-#define IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX    (16)
+#define IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX        (16)
 #endif
 #ifndef IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX
-#define IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX   (4)     // 0: fill, 1-3: strokes thickness
+#define IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX       (4)     // 0: fill, 1-3: strokes thickness
 #endif
+#define IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX    (IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH * IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT)
 
 // ImDrawIdx: vertex index. [Compile-time configurable type]
 // - To use 16-bit indices + allow large meshes: backend need to set 'io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset' and handle ImDrawCmd::VtxOffset (recommended).
