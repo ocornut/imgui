@@ -14,7 +14,7 @@
 #   * build/example_glfw_wgpu[.exe] or build/Debug/example_glfw_wgpu[.exe]
 
 # Building for desktop with WGVK (MUCH EASIER)
-#  1. git clone https://github.com/manuel5975p/WGVK dawn
+#  1. git clone https://github.com/manuel5975p/WGVK wgvk
 #  2. cmake -B build -DIMGUI_WGVK_DIR=wgvk
 #  3. cmake --build build
 # The resulting binary will be found at one of the following locations:
