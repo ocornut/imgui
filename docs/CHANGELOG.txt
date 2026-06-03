@@ -75,6 +75,9 @@ Other Changes:
   - Extract 'Widgets->Tree Nodes->Selectable Nodes' out of the 'Advanced'
     demo for clarity (manual reimplementation of basic selection).
 - Backends:
+  - OpenGL3:
+    - GLSL version detection assume GLSL 410 when GL context is 4.1.
+      Fixes an issue running on macOS with Wine. [#9427, #6577) [@perminovVS]
   - Win32:
     - Uses `SetProcessDpiAwarenessContext()` instead of `SetThreadDpiAwarenessContext()`
       when available, fixing OpenGL DPI scaling issues as e.g. NVIDIA drivers tends
