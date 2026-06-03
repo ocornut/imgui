@@ -1872,6 +1872,16 @@ void ImDrawList::AddConvexPolyFilledLegacy(const ImVec2* points, const int point
     }
 }
 
+// Calculates arc step and step count for 90 degree arc. The calculated arc step will complete a 90 degree arc when stepped arc_step_count times.
+IM_MSVC_RUNTIME_CHECKS_OFF
+static void CalcArcStepAndCount(int segment_count, int& arc_step, int& arc_step_count)
+{
+    arc_step = ImClamp(IM_DRAWLIST_ARCFAST_SAMPLE_MAX / segment_count, 1, IM_DRAWLIST_ARCFAST_TABLE_SIZE / 4);
+    arc_step_count = (IM_DRAWLIST_ARCFAST_TABLE_SIZE / 4) / arc_step;
+    if ((arc_step * arc_step_count) != (IM_DRAWLIST_ARCFAST_TABLE_SIZE / 4)) // Make sure that the arc step can iterate 90 degree arc.
+        arc_step = (IM_DRAWLIST_ARCFAST_TABLE_SIZE / 4) / arc_step_count;
+}
+IM_MSVC_RUNTIME_CHECKS_RESTORE
 
 void ImDrawList::_PathArcToFastEx(const ImVec2& center, float radius, int a_min_sample, int a_max_sample, int a_step)
 {
@@ -1883,10 +1893,17 @@ void ImDrawList::_PathArcToFastEx(const ImVec2& center, float radius, int a_min_
 
     // Calculate arc auto segment step size
     if (a_step <= 0)
-        a_step = IM_DRAWLIST_ARCFAST_SAMPLE_MAX / _CalcCircleAutoSegmentCount(radius);
-
-    // Make sure we never do steps larger than one quarter of the circle
-    a_step = ImClamp(a_step, 1, IM_DRAWLIST_ARCFAST_TABLE_SIZE / 4);
+    {
+        // Calculate step size using the common function. No need to clamp, the step is already in range.
+        const int auto_seg_count = _CalcCircleAutoSegmentCount(radius);
+        int arc_step_count;
+        CalcArcStepAndCount(auto_seg_count, a_step, arc_step_count);
+    }
+    else
+    {
+        // Make sure we never do steps larger than one quarter of the circle
+        a_step = ImClamp(a_step, 1, IM_DRAWLIST_ARCFAST_TABLE_SIZE / 4);
+    }
 
     const int sample_range = ImAbs(a_max_sample - a_min_sample);
     const int a_next_step = a_step;
@@ -2588,8 +2605,10 @@ void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, 
     float fringe;
     _SelectFringeTexture(screen_thickness, &tex_uvs, &fringe);
 
-    const int arc_step = ImClamp(IM_DRAWLIST_ARCFAST_SAMPLE_MAX / this->_CalcCircleAutoSegmentCount(rounding), 1, IM_DRAWLIST_ARCFAST_TABLE_SIZE / 4);
-    const int arc_point_count = (IM_DRAWLIST_ARCFAST_TABLE_SIZE / 4) / arc_step + 1;
+    const int auto_seg_count = _CalcCircleAutoSegmentCount(rounding);
+    int arc_step, arc_step_count;
+    CalcArcStepAndCount(auto_seg_count, arc_step, arc_step_count);
+    const int arc_point_count = arc_step_count + 1;
 
     int vtx_count = (2 + arc_point_count) * 4 + 3;
     int idx_count = (4 + arc_point_count - 1) * 4 * 3;
@@ -2611,17 +2630,15 @@ void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, 
     thickness += fringe;
     rounding += half_fringe;
 
-    // We need to stem offset to be at least fringe scale away, to maintain the fringe size.
-    const float stem_offset = thickness - ImMax(thickness - rounding, _FringeScale);
-
+    const float stem_offset = thickness - (thickness - rounding);
     const float half_texel = 0.5f * _Data->FontAtlas->TexUvScale.x;
     const float ratio = stem_offset / thickness;
     ImVec2 inner_uv, outer_uv, stem_uv;
-    inner_uv.x = tex_uvs.x + half_texel;
-    inner_uv.y = tex_uvs.y;
-    outer_uv.x = tex_uvs.z - half_texel;
+    outer_uv.x = tex_uvs.x + half_texel;
     outer_uv.y = tex_uvs.y;
-    stem_uv.x = inner_uv.x + (outer_uv.x - inner_uv.x) * ratio;
+    inner_uv.x = tex_uvs.z - half_texel;
+    inner_uv.y = tex_uvs.y;
+    stem_uv.x = outer_uv.x + (inner_uv.x - outer_uv.x) * ratio;
     stem_uv.y = tex_uvs.y;
 
     // Previous vertices, copied from the last vertices.
@@ -2648,19 +2665,19 @@ void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, 
             int a = (IM_DRAWLIST_ARCFAST_TABLE_SIZE / 4) * corner;
             for (int i = 0; i < arc_point_count; i++)
             {
-                IM_APPEND_VTX(center_x - _Data->ArcFastVtx[a].x * rounding, center_y - _Data->ArcFastVtx[a].y * rounding, inner_uv, col);
+                IM_APPEND_VTX(center_x - _Data->ArcFastVtx[a].x * rounding, center_y - _Data->ArcFastVtx[a].y * rounding, outer_uv, col);
                 a = (a + arc_step) % IM_DRAWLIST_ARCFAST_TABLE_SIZE;
             }
         }
         else
         {
-            IM_APPEND_VTX(outer_x, outer_y, inner_uv, col);
+            IM_APPEND_VTX(outer_x, outer_y, outer_uv, col);
         }
 
         const int stem_idx = (int)_VtxCurrentIdx;
         IM_APPEND_VTX(stem_x, stem_y, stem_uv, col);
         const int inner_idx = (int)_VtxCurrentIdx;
-        IM_APPEND_VTX(inner_x, inner_y, outer_uv, col);
+        IM_APPEND_VTX(inner_x, inner_y, inner_uv, col);
 
         // Arc
         if (is_rounded)
@@ -5146,23 +5163,84 @@ static void ImFontAtlasBuildUpdateTexDataBasic(ImFontAtlas* atlas)
     atlas->TexUvWhitePixel = ImVec2((r.x + 0.5f) * atlas->TexUvScale.x, (r.y + 0.5f) * atlas->TexUvScale.y);
 }
 
-static ImU8 SampleCorner(float x, float y, float cx, float cy, float r)
+
+#define IM_DRAWLIST_CORNER_POINTS_MAX (IM_DRAWLIST_ARCFAST_TABLE_SIZE / 4 + 3) // Max number of points in corner profiles
+
+static int InitCornerGeometry(float cx, float cy, float rounding, float circle_segment_max_error, ImVec2* line_normals, float* line_distances)
 {
-    const float dx = ImMin(x, cx) - cx;
-    const float dy = ImMin(y, cy) - cy;
-    const float d = ImSqrt(dx*dx + dy*dy);
-    const float aa_width = 1.0f;
-    return (ImU8)(ImClamp(1.0f - (d - r + aa_width * 0.5f) / aa_width, 0.0f, 1.0f) * 255.0f);
+    // This tries to quite faithfully replication how we render the corners using tessellation.
+    // Older code sampled a circle SDF directly, but it had clearly visible discrepancy between the baked corners
+    // and tessellated corners due to circle_segment_max_error.
+
+    const int auto_seg_count = IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(rounding, circle_segment_max_error);
+    int arc_step, arc_step_count;
+    CalcArcStepAndCount(auto_seg_count, arc_step, arc_step_count);
+    const int arc_point_count = arc_step_count + 1;
+
+    // Build arc of points, with straight segments at each end.
+    //      . [n-2]..[n-1] 
+    //    .`
+    //   .
+    //  [1]     x (cx,cy)
+    //   :
+    //  [0]
+    ImVec2 points[IM_DRAWLIST_CORNER_POINTS_MAX];
+    int num_points = 0;
+
+    points[num_points++] = ImVec2(cx - rounding, cy + 1.0f);
+
+    float da = ((float)arc_step / (float)IM_DRAWLIST_ARCFAST_TABLE_SIZE) * IM_PI * 2.0f;
+    float a = IM_PI;
+    for (int i = 0; i < arc_point_count; i++)
+    {
+        float dx = cosf(a);
+        float dy = sinf(a);
+        points[num_points++] = ImVec2(cx + dx * rounding, cy + dy * rounding);
+        a += da;
+    }
+
+    points[num_points++] = ImVec2(cx + 1.0f, cy - rounding);
+
+    // Turn segments to half spaces.
+    for (int i = 0; i < num_points - 1; i++)
+    {
+        const ImVec2 diff = points[i + 1] - points[i];
+        const float d2 = diff.x * diff.x + diff.y * diff.y;
+        const float inv_d = ImRsqrtPrecise(d2);
+        line_normals[i].x = diff.y * inv_d;     // Normal points outwards
+        line_normals[i].y = -diff.x * inv_d;
+        line_distances[i] = -ImDot(points[i], line_normals[i]);
+    }
+
+    return num_points - 1;
 }
 
-static ImU8 SampleCornerStroke(float x, float y, float cx, float cy, float outer_r, float inner_r)
+// Returns distance to convex shape limited by lines.
+static float SampleConvex(float x, float y, const ImVec2* line_normals, const float* line_distances, int num_lines)
 {
-    const float dx = ImMin(x, cx) - cx;
-    const float dy = ImMin(y, cy) - cy;
-    const float d = ImSqrt(dx*dx + dy*dy);
+    float result = -FLT_MAX;
+    for (int i = 0; i < num_lines; i++)
+    {
+        const float d = line_normals[i].x * x + line_normals[i].y * y + line_distances[i];
+        if (d > result)
+            result = d;
+    }
+    return result;
+}
+
+static ImU8 SampleCorner(float x, float y, const ImVec2* line_normals, const float* line_distances, int num_lines)
+{
+    const float d = SampleConvex(x, y, line_normals, line_distances, num_lines);
     const float aa_width = 1.0f;
-    const float outer = 1.0f - (d - outer_r + aa_width * 0.5f) / aa_width;
-    const float inner = (d - inner_r + aa_width * 0.5f) / aa_width;
+    return (ImU8)(ImClamp(1.0f - (d + aa_width * 0.5f) / aa_width, 0.0f, 1.0f) * 255.0f);
+}
+
+static ImU8 SampleCornerStroke(float x, float y, float thickness, const ImVec2* line_normals, const float* line_distances, int num_lines)
+{
+    const float d = SampleConvex(x, y, line_normals, line_distances, num_lines);
+    const float aa_width = 1.0f;
+    const float outer = 1.0f - (d + aa_width * 0.5f) / aa_width;
+    const float inner = (d + thickness + aa_width * 0.5f) / aa_width;
     return (ImU8)(ImClamp(ImMin(inner, outer), 0.0f, 1.0f) * 255.0f);
 }
 
@@ -5174,6 +5252,11 @@ static void ImFontAtlasBuildUpdateTexDataCorners(ImFontAtlas* atlas)
     // Pack and store identifier so we can refresh UV coordinates on texture resize.
     ImTextureData* tex = atlas->TexData;
     ImFontAtlasBuilder* builder = atlas->Builder;
+
+    // FIXME-TEXCORNERS: Ideally we should pick up the max error from the styles, but it does not seem be to set by the time we build the data the first time.
+    float circle_segment_max_error = 0.30f; // Default matching ImGuiStyle::CircleTessellationMaxError.
+    //    if (atlas->OwnerContext)
+    //        circle_segment_max_error = atlas->OwnerContext->DrawListSharedData.CircleSegmentMaxError;
 
     ImFontAtlasRect r;
     bool add_and_draw = atlas->GetCustomRect(builder->PackIdCornersTexData, &r) == false;
@@ -5213,6 +5296,9 @@ static void ImFontAtlasBuildUpdateTexDataCorners(ImFontAtlas* atlas)
     int y = r.y;
     int row_height = 0;
 
+    ImVec2 line_normals[IM_DRAWLIST_CORNER_POINTS_MAX];
+    float line_distances[IM_DRAWLIST_CORNER_POINTS_MAX];
+
     // Filled
     for (int n = 0; n < IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX; n++)
     {
@@ -5224,8 +5310,9 @@ static void ImFontAtlasBuildUpdateTexDataCorners(ImFontAtlas* atlas)
         // Corner circle
         const float cx = 1.0f + (float)(n+1);
         const float cy = 1.0f + (float)(n+1);
-        const float rad = (float)rounding;
         IM_ASSERT((x + w) <= (r.x + r.w) && (y + h) <= (r.y + r.h)); // Make sure we're inside the texture bounds before we start writing pixels
+
+        const int num_lines = InitCornerGeometry(cx, cy, (float)rounding, circle_segment_max_error, line_normals, line_distances);
 
         // Write each slice
         if (add_and_draw && tex->Format == ImTextureFormat_Alpha8)
@@ -5235,7 +5322,7 @@ static void ImFontAtlasBuildUpdateTexDataCorners(ImFontAtlas* atlas)
             for (int ly = 0; ly < h; ly++)
             {
                 for (int lx = 0; lx < h; lx++)
-                    write_ptr[lx] = SampleCorner((float)lx + 0.5f, (float)ly + 0.5f, cx, cy, rad);
+                    write_ptr[lx] = SampleCorner((float)lx + 0.5f, (float)ly + 0.5f, line_normals, line_distances, num_lines);
                 write_ptr += pitch;
             }
         }
@@ -5246,7 +5333,7 @@ static void ImFontAtlasBuildUpdateTexDataCorners(ImFontAtlas* atlas)
             for (int ly = 0; ly < h; ly++)
             {
                 for (int lx = 0; lx < h; lx++)
-                    write_ptr[lx] = IM_COL32(255, 255, 255, SampleCorner((float)lx + 0.5f, (float)ly + 0.5f, cx, cy, rad));
+                    write_ptr[lx] = IM_COL32(255, 255, 255, SampleCorner((float)lx + 0.5f, (float)ly + 0.5f, line_normals, line_distances, num_lines));
                 write_ptr += pitch;
             }
         }
@@ -5276,10 +5363,10 @@ static void ImFontAtlasBuildUpdateTexDataCorners(ImFontAtlas* atlas)
             // Corner circle
             const float cx = 1.0f + (float)(n + 1);
             const float cy = 1.0f + (float)(n + 1);
-            const float outer_rad = (float)rounding;
-            const float inner_rad = (float)(rounding - thickness);
 
             IM_ASSERT((x + w) <= (r.x + r.w) && (y + h) <= (r.y + r.h)); // Make sure we're inside the texture bounds before we start writing pixels
+
+            const int num_lines = InitCornerGeometry(cx, cy, (float)rounding, circle_segment_max_error, line_normals, line_distances);
 
             // Write each slice
             if (add_and_draw && tex->Format == ImTextureFormat_Alpha8)
@@ -5289,7 +5376,7 @@ static void ImFontAtlasBuildUpdateTexDataCorners(ImFontAtlas* atlas)
                 for (int ly = 0; ly < h; ly++)
                 {
                     for (int lx = 0; lx < h; lx++)
-                        write_ptr[lx] = SampleCornerStroke((float)lx + 0.5f, (float)ly + 0.5f, cx, cy, outer_rad, inner_rad);
+                        write_ptr[lx] = SampleCornerStroke((float)lx + 0.5f, (float)ly + 0.5f, (float)thickness, line_normals, line_distances, num_lines);
                     write_ptr += pitch;
                 }
             }
@@ -5300,7 +5387,7 @@ static void ImFontAtlasBuildUpdateTexDataCorners(ImFontAtlas* atlas)
                 for (int ly = 0; ly < h; ly++)
                 {
                     for (int lx = 0; lx < h; lx++)
-                        write_ptr[lx] = IM_COL32(255, 255, 255, SampleCornerStroke((float)lx + 0.5f, (float)ly + 0.5f, cx, cy, outer_rad, inner_rad));
+                        write_ptr[lx] = IM_COL32(255, 255, 255, SampleCornerStroke((float)lx + 0.5f, (float)ly + 0.5f, (float)thickness, line_normals, line_distances, num_lines));
                     write_ptr += pitch;
                 }
             }
