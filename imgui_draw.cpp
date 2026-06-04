@@ -979,6 +979,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         tex_uvs.z = _Data->TexUvWhitePixel.x;
         tex_uvs.w = _Data->TexUvWhitePixel.y;
         fringe = 0.0f;
+        flags |= ImDrawFlags_NoAAEnds;
     }
 
     const ImU32 col_trans = col & ~IM_COL32_A_MASK;
@@ -2214,6 +2215,7 @@ void ImDrawList::_AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float t
         tex_uvs.z = _Data->TexUvWhitePixel.x;
         tex_uvs.w = _Data->TexUvWhitePixel.y;
         fringe = 0.0f;
+        flags |= ImDrawFlags_NoAAEnds;
     }
 
     float dir_x = p2.x - p1.x;
