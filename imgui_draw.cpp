@@ -2630,7 +2630,7 @@ void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, 
     thickness += fringe;
     rounding += half_fringe;
 
-    const float stem_offset = thickness - (thickness - rounding);
+    const float stem_offset = ImMin(rounding, thickness); // The function might get called with rounding slightly bigger than thickness, which is ok, but we should keep the stem inside the shape.
     const float half_texel = 0.5f * _Data->FontAtlas->TexUvScale.x;
     const float ratio = stem_offset / thickness;
     ImVec2 inner_uv, outer_uv, stem_uv;
@@ -2835,7 +2835,8 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
     }
     else
     {
-        if (thickness > outer_rounding)
+        // Switch to specialized rendering a bit early to avoid overdraw visible in transparent shapes.
+        if (thickness + (0.75f * _FringeScale) > outer_rounding)
         {
             // Special case rendering to avoid rendering artifacts at the corners.
             // If rendered using the regular polyline, the stroke will fold and leave artifact on the corner if rendered with transparency.
