@@ -148,8 +148,6 @@ HOW TO UPDATE?
   - Tree: hierarchy lines (when thickness>1.0f).
   - TabBar: selected overline border ((when thickness>1.0f).
   - Demo: Custom Rendering: canvas lines.
-- (Breaking) Removed support for non-aliased shapes.
-  - Clearing `ImDrawListFlags_AntiAliasedLines` / `ImDrawListFlags_AntiAliasedFill` will have no effect.
 - Demo: Custom Rendering: exposed new flags; Showcasing overlapping strokes and
   filled shapes; Added an option to animation thickness; Added new shapes to
   showcase new rendering features that previously hit limitations.
