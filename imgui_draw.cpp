@@ -876,8 +876,111 @@ IM_MSVC_RUNTIME_CHECKS_RESTORE
 #define IM_IS_TRUNCATED(a)              ImIsTruncated(a)
 #endif
 
-void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_lengths, const int points_count, ImU32 col, float thickness, ImDrawFlags flags, const ImVec4& tex_uvs, float fringe)
+IM_MSVC_RUNTIME_CHECKS_OFF
+static ImU32 ImAlphaMultiply(ImU32 col, float alpha_mul)
 {
+    IM_ASSERT_PARANOID(a >= 0.0f && a < 1.0f); // We don't clamp!
+    ImU32 a = (col & IM_COL32_A_MASK) >> IM_COL32_A_SHIFT;
+    a = (ImU32)(a * alpha_mul); // We don't need to clamp 0..255 because alpha is in 0..1 range.
+    return (col & ~IM_COL32_A_MASK) | (a << IM_COL32_A_SHIFT);
+}
+
+void ImDrawList::_SelectFringeTexture(float screen_thickness, ImVec4* out_tex_uvs, float* out_fringe)
+{
+    if (screen_thickness <= IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH)
+    {
+        // Handle the thickness between [1..IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH]. The texture scaling in this range will cause slight visual pops, so we generate super sampled textures in this range.
+        // There are IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX+1 textures, where 0 maps to 1.0 and IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX maps to IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH.
+        constexpr float base_width = 1.0f;
+        int texture_idx = (int)((screen_thickness - base_width) * IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT + 0.1f);
+        texture_idx = ImMax(texture_idx, 0);
+        texture_idx = ImMin(texture_idx, IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX);
+        const float tex_width = base_width + (float)texture_idx / IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT;
+        *out_fringe = _FringeScale * (screen_thickness / tex_width); // Scale the fringe to cover the discrepancy between the texture and requested size.
+        *out_tex_uvs = _Data->TexUvLines[(IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1) + texture_idx];
+    }
+    else
+    {
+        // Bias the texture selection towards higher resolution to avoid visual pops when the texture change.
+        int texture_idx = (int)(screen_thickness + 0.995f);
+        texture_idx = ImMax(texture_idx, 2);
+        texture_idx = ImMin(texture_idx, IM_DRAWLIST_TEX_LINES_WIDTH_MAX - 1);
+        *out_fringe = _FringeScale * (screen_thickness / (float)texture_idx); // Scale the fringe to cover the discrepancy between the texture and requested size.
+        *out_tex_uvs = _Data->TexUvLines[texture_idx];
+    }
+}
+IM_MSVC_RUNTIME_CHECKS_RESTORE
+
+extern bool g_LEGACY_STROKES;
+
+void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32 col, float thickness, ImDrawFlags flags)
+{
+    if (g_LEGACY_STROKES)
+    {
+        AddPolylineLegacy(points, points_count, col, thickness, flags);
+        return;
+    }
+
+    if (points_count < 2 || (col & IM_COL32_A_MASK) == 0)
+        return;
+
+    float screen_thickness = thickness * _InvFringeScale;
+    if (screen_thickness < 1.0f / 255.0f)
+        return;
+    if (screen_thickness < 1.0f)
+    {
+        col = ImAlphaMultiply(col, screen_thickness);
+        screen_thickness = 1.0f;
+        thickness = _FringeScale;
+    }
+
+    // Allocate data for temp buffers
+    _Data->TempBuffer.reserve_discard(points_count * 2);
+    ImVec2* normals = _Data->TempBuffer.Data;
+    float* sqr_lengths = (float*)(normals + points_count);
+
+    // Calculate normals for each line segment
+    for (int i = 0; i < points_count - 1; i++)
+    {
+        float dx = points[i + 1].x - points[i].x;
+        float dy = points[i + 1].y - points[i].y;
+        const float d2 = dx * dx + dy * dy;
+        const float inv_len = (d2 > 0.0f) ? ImRsqrtPrecise(d2) : 0.0f;
+        normals[i].x = -dy * inv_len;
+        normals[i].y = dx * inv_len;
+        sqr_lengths[i] = d2;
+    }
+    if ((flags & ImDrawFlags_Closed) != 0)
+    {
+        const float dx = points[0].x - points[points_count - 1].x;
+        const float dy = points[0].y - points[points_count - 1].y;
+        const float d2 = dx * dx + dy * dy;
+        const float inv_len = (d2 > 0.0f) ? ImRsqrtPrecise(d2) : 0.0f;
+        normals[points_count - 1].x = -dy * inv_len;
+        normals[points_count - 1].y = dx * inv_len;
+        sqr_lengths[points_count - 1] = d2;
+    }
+    else
+    {
+        normals[points_count - 1] = normals[points_count - 2];
+        sqr_lengths[points_count - 1] = 0.0f;
+    }
+
+    ImVec4 tex_uvs;
+    float fringe;
+    if (Flags & ImDrawListFlags_AntiAliasedLines)
+    {
+        _SelectFringeTexture(screen_thickness, &tex_uvs, &fringe);
+    }
+    else
+    {
+        tex_uvs.x = _Data->TexUvWhitePixel.x;
+        tex_uvs.y = _Data->TexUvWhitePixel.y;
+        tex_uvs.z = _Data->TexUvWhitePixel.x;
+        tex_uvs.w = _Data->TexUvWhitePixel.y;
+        fringe = 0.0f;
+    }
+
     const ImU32 col_trans = col & ~IM_COL32_A_MASK;
 
     const ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeCenter);
@@ -889,12 +992,12 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
     const float miter_distance_limit_sqr = IM_POLYLINE_MITER_LIMIT * IM_POLYLINE_MITER_LIMIT;
 
     float thickness0 = (thickness + fringe) * 0.5f; // Center (or legacy)
-	if (stroke_pos == ImDrawFlags_StrokeOutside)
-		thickness0 = thickness + fringe * 0.5f;
+    if (stroke_pos == ImDrawFlags_StrokeOutside)
+        thickness0 = thickness + fringe * 0.5f;
     else if (stroke_pos == ImDrawFlags_StrokeCenterBiased)
         thickness0 = _CalculateCenterBiasedOffset(thickness) + fringe * 0.5f;
-	else if (stroke_pos == ImDrawFlags_StrokeInside)
-		thickness0 = fringe * 0.5f;
+    else if (stroke_pos == ImDrawFlags_StrokeInside)
+        thickness0 = fringe * 0.5f;
     float thickness1 = (thickness + fringe) - thickness0;
 
     int idx_count = 0;
@@ -911,7 +1014,7 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
         vtx_count = /*body*/(points_count - 2) * max_verts_per_point + /*caps*/(4 * 2);
         idx_count = (/*body*/(points_count - 2) * max_tris_per_point + /*last seg*/2 + /*caps*/(2 * 2)) * 3;
     }
-
+    PrimReserve(idx_count, vtx_count);
 
     const float half_texel = 0.5f * _Data->FontAtlas->TexUvScale.x;
     const float ratio = thickness0 / (thickness0 + thickness1); // The points using uv2 are placed on the path, calculate the position from stroke offets.
@@ -925,8 +1028,6 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
 
     const float half_aa = _FringeScale * 0.5f; // Used for end caps, does not use "fringe" since end cap AA is not using the texture.
     const float half_thickness = thickness * 0.5f;
-
-    PrimReserve(idx_count, vtx_count);
 
     const int first_vtx_offset = (int)(_VtxWritePtr - VtxBuffer.Data);
     int base_idx = (int)_VtxCurrentIdx;
@@ -986,9 +1087,9 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
     else
     {
         // Wrap around segment
-        p1 = points[points_count-1];
-        n1 = normals[points_count-1];
-        len_sqr1 = sqr_lengths[points_count-1];
+        p1 = points[points_count - 1];
+        n1 = normals[points_count - 1];
+        len_sqr1 = sqr_lengths[points_count - 1];
 
         // This will be filled later, allocate space.
         base_idx = (int)_VtxCurrentIdx;
@@ -1130,8 +1231,8 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
     // End cap
     if (!closed)
     {
-        p1 = points[points_count-1];
-        n1 = normals[points_count-1];
+        p1 = points[points_count - 1];
+        n1 = normals[points_count - 1];
 
         // End cap
         dir.x = n1.y;
@@ -1178,8 +1279,8 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
     else
     {
         // Connect the path.
-        VtxBuffer.Data[first_vtx_offset + 0] = VtxBuffer.Data[_CmdHeader.VtxOffset + base_idx+0];
-        VtxBuffer.Data[first_vtx_offset + 1] = VtxBuffer.Data[_CmdHeader.VtxOffset + base_idx+1];
+        VtxBuffer.Data[first_vtx_offset + 0] = VtxBuffer.Data[_CmdHeader.VtxOffset + base_idx + 0];
+        VtxBuffer.Data[first_vtx_offset + 1] = VtxBuffer.Data[_CmdHeader.VtxOffset + base_idx + 1];
     }
 
     // Restore unused memory
@@ -1189,113 +1290,6 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
     const int remaining_vtx_count = VtxBuffer.Size - cur_vtx_offset;
     IM_ASSERT_PARANOID(remaining_idx_count >= 0 && remaining_vtx_count >= 0);
     PrimUnreserve(remaining_idx_count, remaining_vtx_count);
-}
-
-IM_MSVC_RUNTIME_CHECKS_OFF
-static ImU32 ImAlphaMultiply(ImU32 col, float alpha_mul)
-{
-    IM_ASSERT_PARANOID(a >= 0.0f && a < 1.0f); // We don't clamp!
-    ImU32 a = (col & IM_COL32_A_MASK) >> IM_COL32_A_SHIFT;
-    a = (ImU32)(a * alpha_mul); // We don't need to clamp 0..255 because alpha is in 0..1 range.
-    return (col & ~IM_COL32_A_MASK) | (a << IM_COL32_A_SHIFT);
-}
-
-void ImDrawList::_SelectFringeTexture(float screen_thickness, ImVec4* out_tex_uvs, float* out_fringe)
-{
-    if (screen_thickness <= IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH)
-    {
-        // Handle the thickness between [1..IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH]. The texture scaling in this range will cause slight visual pops, so we generate super sampled textures in this range.
-        // There are IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX+1 textures, where 0 maps to 1.0 and IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX maps to IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH.
-        constexpr float base_width = 1.0f;
-        int texture_idx = (int)((screen_thickness - base_width) * IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT + 0.1f);
-        texture_idx = ImMax(texture_idx, 0);
-        texture_idx = ImMin(texture_idx, IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX);
-        const float tex_width = base_width + (float)texture_idx / IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT;
-        *out_fringe = _FringeScale * (screen_thickness / tex_width); // Scale the fringe to cover the discrepancy between the texture and requested size.
-        *out_tex_uvs = _Data->TexUvLines[(IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1) + texture_idx];
-    }
-    else
-    {
-        // Bias the texture selection towards higher resolution to avoid visual pops when the texture change.
-        int texture_idx = (int)(screen_thickness + 0.995f);
-        texture_idx = ImMax(texture_idx, 2);
-        texture_idx = ImMin(texture_idx, IM_DRAWLIST_TEX_LINES_WIDTH_MAX - 1);
-        *out_fringe = _FringeScale * (screen_thickness / (float)texture_idx); // Scale the fringe to cover the discrepancy between the texture and requested size.
-        *out_tex_uvs = _Data->TexUvLines[texture_idx];
-    }
-}
-IM_MSVC_RUNTIME_CHECKS_RESTORE
-
-extern bool g_LEGACY_STROKES;
-
-void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32 col, float thickness, ImDrawFlags flags)
-{
-    if (g_LEGACY_STROKES)
-    {
-        AddPolylineLegacy(points, points_count, col, thickness, flags);
-        return;
-    }
-
-    if (points_count < 2 || (col & IM_COL32_A_MASK) == 0)
-        return;
-
-    float screen_thickness = thickness * _InvFringeScale;
-    if (screen_thickness < 1.0f / 255.0f)
-        return;
-    if (screen_thickness < 1.0f)
-    {
-        col = ImAlphaMultiply(col, screen_thickness);
-        screen_thickness = 1.0f;
-        thickness = _FringeScale;
-    }
-
-    // Allocate data for temp buffers
-    _Data->TempBuffer.reserve_discard(points_count * 2);
-    ImVec2* normals = _Data->TempBuffer.Data;
-    float* sqr_lengths = (float*)(normals + points_count);
-
-    // Calculate normals for each line segment
-    for (int i = 0; i < points_count - 1; i++)
-    {
-        float dx = points[i + 1].x - points[i].x;
-        float dy = points[i + 1].y - points[i].y;
-        const float d2 = dx * dx + dy * dy;
-        const float inv_len = (d2 > 0.0f) ? ImRsqrtPrecise(d2) : 0.0f;
-        normals[i].x = -dy * inv_len;
-        normals[i].y = dx * inv_len;
-        sqr_lengths[i] = d2;
-    }
-    if ((flags & ImDrawFlags_Closed) != 0)
-    {
-        const float dx = points[0].x - points[points_count - 1].x;
-        const float dy = points[0].y - points[points_count - 1].y;
-        const float d2 = dx * dx + dy * dy;
-        const float inv_len = (d2 > 0.0f) ? ImRsqrtPrecise(d2) : 0.0f;
-        normals[points_count - 1].x = -dy * inv_len;
-        normals[points_count - 1].y = dx * inv_len;
-        sqr_lengths[points_count - 1] = d2;
-    }
-    else
-    {
-        normals[points_count - 1] = normals[points_count - 2];
-        sqr_lengths[points_count - 1] = 0.0f;
-    }
-
-    ImVec4 tex_uvs;
-    float fringe;
-    if (Flags & ImDrawListFlags_AntiAliasedLines)
-    {
-        _SelectFringeTexture(screen_thickness, &tex_uvs, &fringe);
-    }
-    else
-    {
-        tex_uvs.x = _Data->TexUvWhitePixel.x;
-        tex_uvs.y = _Data->TexUvWhitePixel.y;
-        tex_uvs.z = _Data->TexUvWhitePixel.x;
-        tex_uvs.w = _Data->TexUvWhitePixel.y;
-        fringe = 0.0f;
-    }
-    _AddPolyline(points, normals, sqr_lengths, points_count, col, thickness, flags, tex_uvs, fringe);
 }
 
 void ImDrawList::AddPolylineLegacy(const ImVec2* points, const int points_count, ImU32 col, float thickness, ImDrawFlags flags)
@@ -1628,7 +1622,7 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
                 const float cos_theta = n0.x * n1.x + n0.y * n1.y;
                 // miter offset formula is derived here: https://www.angusj.com/clipper2/Docs/Trigonometry.htm
                 const float cos_theta_clamped = ImMax(IM_POLYLINE_MITER_ANGLE_LIMIT, cos_theta); // Avoid div by 0.
-                const float miter_scale_factor = ImMin(1000.f, 1.0f / (1.0f + cos_theta_clamped));
+                const float miter_scale_factor = ImMin(1000.0f, 1.0f / (1.0f + cos_theta_clamped));
                 const float miter_offset_x = (n0.x + n1.x) * miter_scale_factor * half_aa;
                 const float miter_offset_y = (n0.y + n1.y) * miter_scale_factor * half_aa;
 
@@ -1665,7 +1659,7 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
                 const float cos_theta = n0.x * n1.x + n0.y * n1.y;
                 // miter offset formula is derived here: https://www.angusj.com/clipper2/Docs/Trigonometry.htm
                 const float cos_theta_clamped = ImMax(IM_POLYLINE_MITER_ANGLE_LIMIT, cos_theta); // Avoid div by 0.
-                const float miter_scale_factor = ImMin(1000.f, 1.0f / (1.0f + cos_theta_clamped));
+                const float miter_scale_factor = ImMin(1000.0f, 1.0f / (1.0f + cos_theta_clamped));
                 float miter_offset_x = (n0.x + n1.x) * miter_scale_factor;
                 float miter_offset_y = (n0.y + n1.y) * miter_scale_factor;
 
