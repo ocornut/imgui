@@ -876,41 +876,6 @@ IM_MSVC_RUNTIME_CHECKS_RESTORE
 #define IM_IS_TRUNCATED(a)              ImIsTruncated(a)
 #endif
 
-// Called when the current vertex count for a polyline call would overflow the index range.
-// Commit the vertices so far, reserve new buffers, reset index, and duplicate the base vertices so that they can be accessed by the new indices.
-static void SplitPolyline(ImDrawList* draw_list, int& start_idx_offset, int& start_vtx_offset, int& base_idx)
-{
-    // Make copy of current base points.
-    ImDrawVert base0 = draw_list->VtxBuffer.Data[draw_list->_CmdHeader.VtxOffset + base_idx + 0];
-    ImDrawVert base1 = draw_list->VtxBuffer.Data[draw_list->_CmdHeader.VtxOffset + base_idx + 1];
-
-    // Release unused verts and indices.
-    const int cur_idx_offset = (int)(draw_list->_IdxWritePtr - draw_list->IdxBuffer.Data);
-    const int cur_vtx_offset = (int)(draw_list->_VtxWritePtr - draw_list->VtxBuffer.Data);
-    const int remaining_idx_count = draw_list->IdxBuffer.Size - cur_idx_offset;
-    const int remaining_vtx_count = draw_list->VtxBuffer.Size - cur_vtx_offset;
-
-    IM_ASSERT(remaining_vtx_count >= 0 && remaining_idx_count >= 0);
-    draw_list->PrimUnreserve(remaining_idx_count, remaining_vtx_count);
-
-    // Reserve remaining verts and indices.
-    draw_list->PrimReserve(remaining_idx_count, remaining_vtx_count + 2); // +2 for the duplicated base points.
-
-    start_idx_offset = cur_idx_offset;
-    start_vtx_offset = cur_vtx_offset;
-    base_idx = (int)draw_list->_VtxCurrentIdx;
-
-    // Duplicate base points
-    draw_list->_VtxWritePtr[0] = base0;
-    draw_list->_VtxWritePtr[1] = base1;
-    draw_list->_VtxWritePtr += 2;
-    draw_list->_VtxCurrentIdx += 2;
-}
-
-#define IM_ADD_POLYLINE_HANDLE_VTX_OFFSET_OVERFLOW(new_verts) \
-    if (sizeof(ImDrawIdx) == 2 && (Flags & ImDrawListFlags_AllowVtxOffset) && _VtxCurrentIdx + (new_verts) > (1 << 16)) IM_UNLIKELY \
-        SplitPolyline(this, start_idx_offset, start_vtx_offset, base_idx)
-
 void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_lengths, const int points_count, ImU32 col, float thickness, ImDrawFlags flags, const ImVec4& tex_uvs, float fringe)
 {
     const ImU32 col_trans = col & ~IM_COL32_A_MASK;
@@ -963,10 +928,7 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
 
     PrimReserve(idx_count, vtx_count);
 
-    // These offsets change if we need to create new draw command mid shape.
     const int first_vtx_offset = (int)(_VtxWritePtr - VtxBuffer.Data);
-    int start_vtx_offset = (int)(_VtxWritePtr - VtxBuffer.Data);
-    int start_idx_offset = (int)(_IdxWritePtr - IdxBuffer.Data);
     int base_idx = (int)_VtxCurrentIdx;
 
     ImVec2 pa, pb, dir;
@@ -996,8 +958,6 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
 
         if (flags & ImDrawFlags_NoAAEnds)
         {
-            IM_ADD_POLYLINE_HANDLE_VTX_OFFSET_OVERFLOW(2);
-
             base_idx = (int)_VtxCurrentIdx;
             IM_APPEND_VTX(p1.x - n1.x * thickness0, p1.y - n1.y * thickness0, uv0, col);
             IM_APPEND_VTX(p1.x + n1.x * thickness1, p1.y + n1.y * thickness1, uv1, col);
@@ -1008,8 +968,6 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
             pa.y = p1.y - dir.y * half_aa;
             pb.x = p1.x + dir.x * half_aa;
             pb.y = p1.y + dir.y * half_aa;
-
-            IM_ADD_POLYLINE_HANDLE_VTX_OFFSET_OVERFLOW(4);
 
             base_idx = (int)_VtxCurrentIdx;
             IM_APPEND_VTX(pa.x - n1.x * thickness0, pa.y - n1.y * thickness0, uv0, col_trans);
@@ -1033,8 +991,6 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
         len_sqr1 = sqr_lengths[points_count-1];
 
         // This will be filled later, allocate space.
-        IM_ADD_POLYLINE_HANDLE_VTX_OFFSET_OVERFLOW(2);
-
         base_idx = (int)_VtxCurrentIdx;
         IM_APPEND_VTX(0, 0, uv0, col);
         IM_APPEND_VTX(0, 0, uv1, col);
@@ -1058,8 +1014,6 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
             const float miter_offset_y = (n0.y + n1.y) * miter_scale_factor;
 
             // Miter
-            IM_ADD_POLYLINE_HANDLE_VTX_OFFSET_OVERFLOW(2);
-
             const int next_base_idx = (ImDrawIdx)_VtxCurrentIdx;
             IM_APPEND_VTX(p1.x - miter_offset_x * thickness0, p1.y - miter_offset_y * thickness0, uv0, col);  // 2
             IM_APPEND_VTX(p1.x + miter_offset_x * thickness1, p1.y + miter_offset_y * thickness1, uv1, col);  // 3
@@ -1122,8 +1076,6 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
                 // Bevel
                 if (sin_theta < 0.0f)
                 {
-                    IM_ADD_POLYLINE_HANDLE_VTX_OFFSET_OVERFLOW(4);
-
                     IM_APPEND_VTX(p1.x - (bn_x + sd_x) * thickness0, p1.y - (bn_y + sd_y) * thickness0, uv0, col); // 2
                     IM_APPEND_VTX(p1.x, p1.y, uv2, col); // 3
                     const int next_base_idx = (ImDrawIdx)_VtxCurrentIdx;
@@ -1141,8 +1093,6 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
                 }
                 else
                 {
-                    IM_ADD_POLYLINE_HANDLE_VTX_OFFSET_OVERFLOW(4);
-
                     IM_APPEND_VTX(p1.x + (bn_x + sd_x) * thickness1, p1.y + (bn_y + sd_y) * thickness1, uv1, col); // 2
                     IM_APPEND_VTX(p1.x, p1.y, uv2, col); // 3
                     const int next_base_idx = (ImDrawIdx)_VtxCurrentIdx;
@@ -1161,8 +1111,6 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
             }
             else
             {
-                IM_ADD_POLYLINE_HANDLE_VTX_OFFSET_OVERFLOW(4);
-
                 // Miter
                 const int next_base_idx = (ImDrawIdx)_VtxCurrentIdx;
                 IM_APPEND_VTX(p1.x - miter_offset_x * thickness0, p1.y - miter_offset_y * thickness0, uv0, col);  // 2
@@ -1196,8 +1144,6 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
 
         if (flags & ImDrawFlags_NoAAEnds)
         {
-            IM_ADD_POLYLINE_HANDLE_VTX_OFFSET_OVERFLOW(2);
-
             IM_APPEND_VTX(p1.x - n1.x * thickness0, p1.y - n1.y * thickness0, uv0, col);
             IM_APPEND_VTX(p1.x + n1.x * thickness1, p1.y + n1.y * thickness1, uv1, col);
 
@@ -1211,8 +1157,6 @@ void ImDrawList::_AddPolyline(const ImVec2* points, ImVec2* normals, float* sqr_
             pa.y = p1.y - dir.y * half_aa;
             pb.x = p1.x + dir.x * half_aa;
             pb.y = p1.y + dir.y * half_aa;
-
-            IM_ADD_POLYLINE_HANDLE_VTX_OFFSET_OVERFLOW(4);
 
             int next_base_idx = (int)_VtxCurrentIdx;
             IM_APPEND_VTX(pa.x - n1.x * thickness0, pa.y - n1.y * thickness0, uv0, col);
