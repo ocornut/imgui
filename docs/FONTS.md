@@ -77,6 +77,17 @@ Some solutions:
   You can use the `ImFontGlyphRangesBuilder` for this purpose and rebuilding your atlas between frames when new characters are needed. This will be the biggest win!
 - Set `io.Fonts.Flags |= ImFontAtlasFlags_NoPowerOfTwoHeight;` to disable rounding the texture height to the next power of two.
 
+### (5) Reduce texture resizes/copy on startup
+
+🆕 Since 1.92, the ImFontAtlas is initially created using a 512x128 texture, then grows as glyphs and fonts are used. Atlas growth leads to alloc+copy, and both the old and new sized textures are present in memory for a short time (typically one frame). If you use known fonts and want to reduce initial growth, you may set `TexMinWidth` and `TexMinHeight` during initializaton.
+
+```cpp
+ImFontAtlas* atlas = io.Fonts;
+atlas->TexMinWidth = 1024;
+atlas->TexMinHeight = 1024;
+atlas->AddFont(...);
+```
+
 ##### [Return to Index](#index)
 
 ---------------------------------------

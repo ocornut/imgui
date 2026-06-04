@@ -41,6 +41,9 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
+- TreeNode: commented out legacy name `ImGuiTreeNodeFlags_SpanTextWidth` which
+  was obsoleted in 1.90.7 (May 2024). Use `ImGuiTreeNodeFlags_SpanLabelWidth`.
+
 Other Changes:
 
 - Windows:
@@ -50,17 +53,31 @@ Other Changes:
   - Clicking on a window's empty-space to move/focus a window checks
     for lack of queued focus request. (#9382)
 - InputText:
-  - Added style.InputTextCursorSize to configure cursor/caret thickness. (#7031, #9409)
-    This is automatically scaled by style.ScaleAllSizes().
+  - Added `style.InputTextCursorSize` to configure cursor/caret thickness. (#7031, #9409)
+    This is automatically scaled by `style.ScaleAllSizes()`.
 - Fonts:
   - Added `IMGUI_DISABLE_DEFAULT_FONT_BITMAP`/`IMGUI_DISABLE_DEFAULT_FONT_VECTOR` to
     disable embedding either fonts separately. (#9407)
+  - Tweak `CalcTextSize()` awkward width rounding/ceiling code to reduce floating-point
+    imprecisions altering the result by 1 even at relatively small width. (#791)
+  - Better document the fact that ImFontAtlas::Clear()/ClearFonts() functions are
+    unlikely to be useful nowadays. Better recover to an edge case of mistakenly
+    calling ClearFonts() during rendering.
+  - Fixed an issue where passing a manually created ImFontAtlas to CreateContext() would
+    incorrectly destroy it in DestroyContext() when ref-count gets back to zero. (#9426)
 - DrawList:
-  - Minor optimization to AddLine(), AddLineH(), AddLineV() functions. (#4091)
+  - Minor optimization to `AddLine()`, `AddLineH()`, `AddLineV()` functions. (#4091)
+  - Added `ImDrawListFlags_TextNoPixelSnap` to disable snapping of AddText()
+    coordinates for a given scope. (#3437, #9417, #2291)
+- ColorButton:
+  - Small rendering tweak/optimization for the alpha checkerboard.
 - Demo:
   - Extract 'Widgets->Tree Nodes->Selectable Nodes' out of the 'Advanced'
     demo for clarity (manual reimplementation of basic selection).
 - Backends:
+  - OpenGL3:
+    - GLSL version detection assume GLSL 410 when GL context is 4.1.
+      Fixes an issue running on macOS with Wine. [#9427, #6577) [@perminovVS]
   - Win32:
     - Uses `SetProcessDpiAwarenessContext()` instead of `SetThreadDpiAwarenessContext()`
       when available, fixing OpenGL DPI scaling issues as e.g. NVIDIA drivers tends
