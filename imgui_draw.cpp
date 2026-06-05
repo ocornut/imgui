@@ -2172,12 +2172,14 @@ void ImDrawList::PathRect(const ImVec2& a, const ImVec2& b, float rounding, ImDr
 
 // We intently don't turn g_LEGACY_STROKES into ImDrawFlags_StrokeLegacy here.
 // The earlier should use verbatim legacy code but will be removed before release once we confirm that both matches.
+IM_MSVC_RUNTIME_CHECKS_OFF
 ImDrawFlags ImDrawList::_GetStrokePos(ImDrawFlags flags, ImDrawFlags default_stroke_pos)
 {
     if (flags & ImDrawFlags_StrokeMask_)
         return (flags & ImDrawFlags_StrokeMask_);
     return _Data->OverrideStrokePos ? _Data->OverrideStrokePos : default_stroke_pos;
 }
+IM_MSVC_RUNTIME_CHECKS_RESTORE
 
 void ImDrawList::_AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float thickness, ImDrawFlags flags)
 {
