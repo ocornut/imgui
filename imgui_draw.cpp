@@ -889,10 +889,11 @@ void ImDrawList::_SelectFringeTexture(float screen_thickness, ImVec4* out_tex_uv
 {
     if (screen_thickness <= IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH)
     {
-        // Handle the thickness between [1..IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH]. The texture scaling in this range will cause slight visual pops, so we generate super sampled textures in this range.
-        // There are IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX+1 textures, where 0 maps to 1.0 and IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX maps to IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH.
+        // Handle the thickness between [1..IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH].
+        // We use super sampled textures in this range to make texture changes less noticeable.
+        // There are IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX+1 textures, where 0 maps to 1.0 and IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX maps to IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH (4.0).
         constexpr float base_width = 1.0f;
-        int texture_idx = (int)((screen_thickness - base_width) * IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT + 0.1f);
+        int texture_idx = (int)((screen_thickness - base_width) * IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT + 0.5f);
         texture_idx = ImMax(texture_idx, 0);
         texture_idx = ImMin(texture_idx, IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX);
         const float tex_width = base_width + (float)texture_idx / IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT;
@@ -901,8 +902,7 @@ void ImDrawList::_SelectFringeTexture(float screen_thickness, ImVec4* out_tex_uv
     }
     else
     {
-        // Bias the texture selection towards higher resolution to avoid visual pops when the texture change.
-        int texture_idx = (int)(screen_thickness + 0.995f);
+        int texture_idx = (int)(screen_thickness + 0.5f);
         texture_idx = ImMax(texture_idx, 2);
         texture_idx = ImMin(texture_idx, IM_DRAWLIST_TEX_LINES_WIDTH_MAX - 1);
         *out_fringe = _FringeScale * (screen_thickness / (float)texture_idx); // Scale the fringe to cover the discrepancy between the texture and requested size.
