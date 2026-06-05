@@ -863,9 +863,9 @@ IM_MSVC_RUNTIME_CHECKS_RESTORE
 #define IM_FIXNORMAL2F_MAX_INVLEN2          100.0f // 500.0f (see #4053, #3366)
 #define IM_FIXNORMAL2F(VX,VY)               { float d2 = VX*VX + VY*VY; if (d2 > 0.000001f) { float inv_len2 = 1.0f / d2; if (inv_len2 > IM_FIXNORMAL2F_MAX_INVLEN2) inv_len2 = IM_FIXNORMAL2F_MAX_INVLEN2; VX *= inv_len2; VY *= inv_len2; } } (void)0
 
-#define IM_POLYLINE_MITER_ANGLE_LIMIT (-0.9999619f)     // cos(179.5)
-#define IM_POLYLINE_MITER_LIMIT (4.0f)                  // ~29 deg
-#define IM_POLYLINE_CONVEX_POLY_MAX_BEVELS  (2)         // (int)(360/floor(180-29))
+#define IM_POLYLINE_MITER_ANGLE_LIMIT       (-0.9999619f)   // Safeguard for miter corner calculation to avoid div by zero. cos(179.5)
+#define IM_POLYLINE_MITER_LIMIT             (4.0f)          // How much the miter can be scaled before we turn it into a bevel instead. (equals ~29 deg corner)
+#define IM_POLYLINE_CONVEX_POLY_MAX_BEVELS  (2)             // How many bevels there can be in a convex polygon. (int)(360/floor(180-29))
 
 // In debug builds the functions are likely not inlined, so inlined check is cheaper.
 #if defined(DEBUG) || defined(_DEBUG)
@@ -974,6 +974,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
     }
     else
     {
+        // For no anti-alias we use fully opaque texture, and no fringe expansion.
         tex_uvs.x = _Data->TexUvWhitePixel.x;
         tex_uvs.y = _Data->TexUvWhitePixel.y;
         tex_uvs.z = _Data->TexUvWhitePixel.x;
@@ -1018,7 +1019,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
     PrimReserve(idx_count, vtx_count);
 
     const float half_texel = 0.5f * _Data->FontAtlas->TexUvScale.x;
-    const float ratio = thickness0 / (thickness0 + thickness1); // The points using uv2 are placed on the path, calculate the position from stroke offets.
+    const float ratio = thickness0 / (thickness0 + thickness1); // The points that use uv2 are placed directly on the path (offset = 0), calculate the texture position from stroke offsets.
     ImVec2 uv0, uv1, uv2;
     uv0.x = tex_uvs.x + half_texel;
     uv0.y = tex_uvs.y;
@@ -1609,12 +1610,11 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
         _VtxWritePtr += points_count;
         _VtxCurrentIdx += points_count;
 
-        unsigned int prev_outer_idx = 0; // We don't know outer vert could yet, will need to patch once we're done.
+        unsigned int prev_outer_idx = 0; // This should be the index of the last vertex, but we don't know it yet. Will need to patch once we're done.
         if (miters_only)
         {
             for (int i0 = points_count - 1, i1 = 0; i1 < points_count; i0 = i1++)
             {
-                // Average normals
                 const ImVec2 p1 = points[i1];
                 const ImVec2 n0 = temp_normals[i0];
                 const ImVec2 n1 = temp_normals[i1];
@@ -1651,7 +1651,6 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
             int bevel_count = 0;
             for (int i0 = points_count - 1, i1 = 0; i1 < points_count; i0 = i1++)
             {
-                // Average normals
                 const ImVec2 p1 = points[i1];
                 const ImVec2 n0 = temp_normals[i0];
                 const ImVec2 n1 = temp_normals[i1];
@@ -2210,6 +2209,7 @@ void ImDrawList::_AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float t
     }
     else
     {
+        // For no anti-alias we use fully opaque texture, and no fringe expansion.
         tex_uvs.x = _Data->TexUvWhitePixel.x;
         tex_uvs.y = _Data->TexUvWhitePixel.y;
         tex_uvs.z = _Data->TexUvWhitePixel.x;
@@ -2561,7 +2561,7 @@ void ImDrawList::_AddRectBaked(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
         PrimUnreserve(idx_allocated - idx_used, vtx_allocated - vtx_used);
 }
 
-// Draws rounded rectangle where thickness/2 > rounding. If rendered using the regular polyline, the stroke will fold and leave artefact on the corner if rendered with transparency.
+// Draws rounded rectangle where thickness > rounding. If rendered using the regular polyline, the stroke will fold and leave artifacts on the corners if rendered with transparency.
 // The stroke is positioned inside the rectangle.
 void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float rounding, float thickness, ImDrawFlags flags)
 {
@@ -2583,6 +2583,7 @@ void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, 
     }
     else
     {
+        // For no anti-alias we use fully opaque texture, and no fringe expansion.
         tex_uvs.x = _Data->TexUvWhitePixel.x;
         tex_uvs.y = _Data->TexUvWhitePixel.y;
         tex_uvs.z = _Data->TexUvWhitePixel.x;
@@ -2826,7 +2827,7 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
         if (thickness + (0.75f * _FringeScale) > outer_rounding)
         {
             // Special case rendering to avoid rendering artifacts at the corners.
-            // If rendered using the regular polyline, the stroke will fold and leave artifact on the corner if rendered with transparency.
+            // If rendered using the regular polyline, the stroke will fold and leave artifacts on the corners if rendered with transparency.
             _AddRectTinyRounding(outer_min, outer_max, col, outer_rounding, thickness, flags);
             return;
         }
