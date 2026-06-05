@@ -5332,7 +5332,7 @@ static void ImFontAtlasBuildUpdateTexDataCorners(ImFontAtlas* atlas)
         // Refresh UV coordinates
         ImVec2 uv0 = ImVec2((float)(x + 1), (float)(y + 1)) * atlas->TexUvScale;
         ImVec2 uv1 = ImVec2((float)(x + 1 + s), (float)(y + 1 + s)) * atlas->TexUvScale;
-        atlas->TexUvCorners[n] = ImVec4(uv0.x, uv0.y, uv1.x, uv1.y);
+        builder->TexUvCorners[n] = ImVec4(uv0.x, uv0.y, uv1.x, uv1.y);
 
         x += w;
         row_height = ImMax(row_height, h);
@@ -5386,7 +5386,7 @@ static void ImFontAtlasBuildUpdateTexDataCorners(ImFontAtlas* atlas)
             // Refresh UV coordinates
             ImVec2 uv0 = ImVec2((float)(x + 1), (float)(y + 1)) * atlas->TexUvScale;
             ImVec2 uv1 = ImVec2((float)(x + 1 + s), (float)(y + 1 + s)) * atlas->TexUvScale;
-            atlas->TexUvCorners[thickness * IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX + n] = ImVec4(uv0.x, uv0.y, uv1.x, uv1.y);
+            builder->TexUvCorners[thickness * IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX + n] = ImVec4(uv0.x, uv0.y, uv1.x, uv1.y);
 
             x += w;
             row_height = ImMax(row_height, h);
@@ -5456,7 +5456,7 @@ static void ImFontAtlasBuildUpdateTexDataLines(ImFontAtlas* atlas)
             ImVec2 uv0 = ImVec2((float)(r.x + pad_left - 1), (float)(r.y + y)) * atlas->TexUvScale;
             ImVec2 uv1 = ImVec2((float)(r.x + pad_left + line_width + 1), (float)(r.y + y + 1)) * atlas->TexUvScale;
             float half_v = (uv0.y + uv1.y) * 0.5f; // Calculate a constant V in the middle of the row to avoid sampling artifacts
-            atlas->TexUvLines[n] = ImVec4(uv0.x, half_v, uv1.x, half_v);
+            builder->TexUvLines[n] = ImVec4(uv0.x, half_v, uv1.x, half_v);
         }
     }
 
@@ -5523,7 +5523,7 @@ static void ImFontAtlasBuildUpdateTexDataLines(ImFontAtlas* atlas)
             ImVec2 uv0 = ImVec2((float)(r.x), (float)(r.y + y)) * atlas->TexUvScale;
             ImVec2 uv1 = ImVec2((float)(r.x + IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT * 2 + line_width), (float)(r.y + y + 1)) * atlas->TexUvScale;
             float half_v = (uv0.y + uv1.y) * 0.5f; // Calculate a constant V in the middle of the row to avoid sampling artifacts
-            atlas->TexUvLines[IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1 + n] = ImVec4(uv0.x, half_v, uv1.x, half_v);
+            builder->TexUvLines[IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1 + n] = ImVec4(uv0.x, half_v, uv1.x, half_v);
         }
     }
 }
@@ -5898,8 +5898,8 @@ void ImFontAtlasUpdateDrawListsSharedData(ImFontAtlas* atlas)
         if (shared_data->FontAtlas == atlas)
         {
             shared_data->TexUvWhitePixel = atlas->TexUvWhitePixel;
-            shared_data->TexUvLines = atlas->TexUvLines;
-            shared_data->TexUvCorners = atlas->TexUvCorners;
+            shared_data->TexUvLines = atlas->Builder->TexUvLines;
+            shared_data->TexUvCorners = atlas->Builder->TexUvCorners;
         }
 }
 
