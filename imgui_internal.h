@@ -915,11 +915,28 @@ IMGUI_API ImGuiStoragePair* ImLowerBound(ImGuiStoragePair* in_begin, ImGuiStorag
 #define IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC_R(_N,_MAXERROR)    ((_MAXERROR) / (1 - ImCos(IM_PI / ImMax((float)(_N), IM_PI))))
 #define IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC_ERROR(_N,_RAD)     ((1 - ImCos(IM_PI / ImMax((float)(_N), IM_PI))) / (_RAD))
 
-// ImDrawList: Lookup table size for adaptive arc drawing, cover full circle.
+// ImDrawList: Lookup tables
 #ifndef IM_DRAWLIST_ARCFAST_TABLE_SIZE
-#define IM_DRAWLIST_ARCFAST_TABLE_SIZE                          48 // Number of samples in lookup table.
+#define IM_DRAWLIST_ARCFAST_TABLE_SIZE              (48)    // Number of samples in adaptive arc drawing lookup table.
 #endif
-#define IM_DRAWLIST_ARCFAST_SAMPLE_MAX                          IM_DRAWLIST_ARCFAST_TABLE_SIZE // Sample index _PathArcToFastEx() for 360 angle.
+#define IM_DRAWLIST_ARCFAST_SAMPLE_MAX              IM_DRAWLIST_ARCFAST_TABLE_SIZE // Sample index _PathArcToFastEx() for 360 angle.
+
+#ifndef IM_DRAWLIST_TEX_LINES_WIDTH_MAX
+#define IM_DRAWLIST_TEX_LINES_WIDTH_MAX             (32)    // The maximum line width to bake anti-aliased textures for. Build atlas with ImFontAtlasFlags_NoBakedLines to disable baking.
+#endif
+#ifndef IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH
+#define IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH        (4)     // Calculate detailed textures for width [1..IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH]
+#endif
+#ifndef IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT
+#define IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT          (4)     // How many samples per integer thickness level.
+#endif
+#ifndef IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX
+#define IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX        (16)
+#endif
+#ifndef IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX
+#define IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX       (4)     // 0: fill, 1-3: strokes thickness
+#endif
+#define IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX    (IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH * IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT)
 
 // Data shared between all ImDrawList instances
 // Conceptually this could have been called e.g. ImDrawListSharedContext
@@ -928,8 +945,8 @@ IMGUI_API ImGuiStoragePair* ImLowerBound(ImGuiStoragePair* in_begin, ImGuiStorag
 struct IMGUI_API ImDrawListSharedData
 {
     ImVec2          TexUvWhitePixel;            // UV of white pixel in the atlas (== FontAtlas->TexUvWhitePixel)
-    const ImVec4*   TexUvLines;                 // UV of anti-aliased lines in the atlas (== FontAtlas->TexUvLines)
-    const ImVec4*   TexUvCorners;               // UV of rounded corner (== FontAtlas->TexUvCorners)
+    const ImVec4*   TexUvLines;                 // UV of anti-aliased lines in the atlas (== FontAtlas->Builder->TexUvLines)
+    const ImVec4*   TexUvCorners;               // UV of rounded corner (== FontAtlas->Builder->TexUvCorners)
     ImFontAtlas*    FontAtlas;                  // Current font atlas
     ImFont*         Font;                       // Current font (used for simplified AddText overload)
     float           FontSize;                   // Current font size (used for for simplified AddText overload)
@@ -4342,6 +4359,10 @@ struct ImFontAtlasBuilder
     ImFontAtlasRectId           PackIdLinesTexData;
     ImFontAtlasRectId           PackIdLineFractTexData;
     ImFontAtlasRectId           PackIdCornersTexData;
+
+    // Cached UV coordinates
+    ImVec4                      TexUvLines[IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1 + IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX + 1]; // UVs for baked anti-aliased lines
+    ImVec4                      TexUvCorners[IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX * IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX];     // UVs for baked anti-aliased corners (0= fill, 1> stroke thickness)
 
     ImFontAtlasBuilder()        { memset((void*)this, 0, sizeof(*this)); FrameCount = -1; RectsIndexFreeListStart = -1; PackIdMouseCursors = PackIdLinesTexData = PackIdLineFractTexData = PackIdCornersTexData = -1; }
 };
