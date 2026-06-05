@@ -3318,23 +3318,6 @@ struct ImGuiSelectionExternalStorage
 // Hold a series of drawing commands. The user provides a renderer for ImDrawData which essentially contains an array of ImDrawList.
 //-----------------------------------------------------------------------------
 
-#ifndef IM_DRAWLIST_TEX_LINES_WIDTH_MAX
-#define IM_DRAWLIST_TEX_LINES_WIDTH_MAX             (32)    // The maximum line width to bake anti-aliased textures for. Build atlas with ImFontAtlasFlags_NoBakedLines to disable baking.
-#endif
-#ifndef IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH
-#define IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH        (4)     // Calculate detailed textures for width [1..IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH]
-#endif
-#ifndef IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT
-#define IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT          (4)     // How many samples per integer thickness level.
-#endif
-#ifndef IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX
-#define IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX        (16)
-#endif
-#ifndef IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX
-#define IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX       (4)     // 0: fill, 1-3: strokes thickness
-#endif
-#define IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX    (IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH * IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT)
-
 // ImDrawIdx: vertex index. [Compile-time configurable type]
 // - To use 16-bit indices + allow large meshes: backend need to set 'io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset' and handle ImDrawCmd::VtxOffset (recommended).
 // - To use 32-bit indices: override with '#define ImDrawIdx unsigned int' in your imconfig.h file.
@@ -3455,7 +3438,7 @@ enum ImDrawFlags_
     // Stroke position relative to the shape outline
     ImDrawFlags_StrokeInside                = 1 << 16, // Draw stroke inside of the shape outline (default for closed shapes and AddLineH, AddLineV functions)
     ImDrawFlags_StrokeCenter                = 2 << 16, // Draw stroke at the center of the shape outline (default for paths, bezier, and AddLine functions)
-    ImDrawFlags_StrokeCenterBiased          = 3 << 16, // Draw stroke at the center of the shape outline, so that half thickness (rounded down) will be outside, and rest inside the shape outline. Does not animate well!
+    ImDrawFlags_StrokeCenterBiased          = 3 << 16, // Draw stroke at the center of the shape outline, so that half thickness rounded down will be outside, and rest inside the shape outline. Useful for axis-aligned shapes: AddLineH, AddLineV, AddRect. Does not animate well!
     ImDrawFlags_StrokeOutside               = 4 << 16, // Draw stroke outside of the shape outline
     ImDrawFlags_StrokeLegacy                = 5 << 16, // Use legacy positioning + enable MiterOnly and NoAAEnds flags.
     ImDrawFlags_StrokeMask_                 = 0x07 << 16,
@@ -4022,8 +4005,6 @@ struct ImFontAtlas
     ImVec2                      TexUvWhitePixel;    // Texture coordinates to a white pixel. May change as new texture gets created.
     ImVector<ImFont*>           Fonts;              // Hold all the fonts returned by AddFont*. Fonts[0] is the default font upon calling ImGui::NewFrame(), use ImGui::PushFont()/PopFont() to change the current font.
     ImVector<ImFontConfig>      Sources;            // Source/configuration data
-    ImVec4                      TexUvLines[IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1 + IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX + 1];        // UVs for baked anti-aliased lines
-    ImVec4                      TexUvCorners[IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX * IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX];  // UVs for baked anti-aliased corners (0= fill, 1> stroke thickness)
     int                         TexNextUniqueID;    // Next value to be stored in TexData->UniqueID
     int                         FontNextUniqueID;   // Next value to be stored in ImFont->FontID
     ImVector<ImDrawListSharedData*> DrawListSharedDatas; // List of users for this atlas. Typically one per Dear ImGui context.
