@@ -3411,39 +3411,67 @@ struct ImDrawListSplitter
 // Flags for ImDrawList functions
 enum ImDrawFlags_
 {
-    ImDrawFlags_None                        = 0,
-    //ImDrawFlags_Closed                    = 1,        // -> FLAG MOVED BELOW. Prior to 1.92.8 (May 2026): ImDrawFlags_Closed was guaranteed to be == (1<<0) == 1, for legacy compatibility reason. Hardcoded use of 1 or true should be replaced with 'ImDrawFlags_Closed'.
+    ImDrawFlags_None                    = 0,
+    //ImDrawFlags_Closed                = 1,        // -> FLAG MOVED BELOW. Prior to 1.92.8 (May 2026): ImDrawFlags_Closed was guaranteed to be == (1<<0) == 1, for legacy compatibility reason. Hardcoded use of 1 or true should be replaced with 'ImDrawFlags_Closed'.
 
-    // Rounding for AddRect(), AddRectFilled(), PathRect()
-    // - When not specified, we defaults to ImDrawFlags_RoundCornersAll! So you only need to use those flags if you want another configuration.
-    ImDrawFlags_RoundCornersTopLeft         = 1 << 4, // Round top-left corner only (when rounding > 0.0f, we default to all corners).
-    ImDrawFlags_RoundCornersTopRight        = 1 << 5, // Round top-right corner only (when rounding > 0.0f, we default to all corners).
-    ImDrawFlags_RoundCornersBottomLeft      = 1 << 6, // Round bottom-left corner only (when rounding > 0.0f, we default to all corners).
-    ImDrawFlags_RoundCornersBottomRight     = 1 << 7, // Round bottom-right corner only (when rounding > 0.0f, we default to all corners).
-    ImDrawFlags_RoundCornersNone            = 1 << 8, // Disable rounding even if `float rounding > 0.0f`. This is NOT zero, NOT an implicit flag!
-    ImDrawFlags_RoundCornersAll             = ImDrawFlags_RoundCornersTopLeft | ImDrawFlags_RoundCornersTopRight | ImDrawFlags_RoundCornersBottomLeft | ImDrawFlags_RoundCornersBottomRight, // (Default!!)
-    ImDrawFlags_RoundCornersDefault_        = ImDrawFlags_RoundCornersAll, // Default to ALL corners if none of the _RoundCornersXX flags are specified!
-    ImDrawFlags_RoundCornersTop             = ImDrawFlags_RoundCornersTopLeft | ImDrawFlags_RoundCornersTopRight,
-    ImDrawFlags_RoundCornersBottom          = ImDrawFlags_RoundCornersBottomLeft | ImDrawFlags_RoundCornersBottomRight,
-    ImDrawFlags_RoundCornersLeft            = ImDrawFlags_RoundCornersBottomLeft | ImDrawFlags_RoundCornersTopLeft,
-    ImDrawFlags_RoundCornersRight           = ImDrawFlags_RoundCornersBottomRight | ImDrawFlags_RoundCornersTopRight,
-    ImDrawFlags_RoundCornersMask_           = ImDrawFlags_RoundCornersAll | ImDrawFlags_RoundCornersNone,
+    // About usage of flags:
+    // - "Prim" column:  'OK' = flag can be used to configure an individual AddXXX() call.
+    // - "Scope" column: 'OK' = initialized by ImGui based on Style options (e.g. whether anti-aliased is enabled).
+    //                          OK(0)/OK(1) indicates whether this flag is set in the default ImGui Style settings.
+    //                          (flag will be possible to alter in a scope using PushDrawFlags()).
 
-    // Stroke options
-    ImDrawFlags_Closed                      = 1 << 9,  // PathStroke(), AddPolyline(): specify that shape should be closed.
-    ImDrawFlags_MiterOnly                   = 1 << 10, // PathStroke(), AddPolyline(): use miter corners only. This assumes that the input polyline does not have corners sharper than 90 degrees. Slightly faster.
-    ImDrawFlags_SquareCap                   = 1 << 11, // PathStroke(), AddPolyline(): use square cap line ends.
-    ImDrawFlags_AAEnds                      = 1 << 12, // PathStroke(), AddPolyline(): generate anti-aliased line ends.
+    // - Rounding default to ImDrawFlags_RoundCornersAll when 'rounding > 0'.
+    // - So you only need to use the _RoundCorners flags if you want a special configuration (e.g. a rectangle with one rounded corner).
+    // Rounding for AddRectXXX(), PathRect() ------ // Prim/Scope?
+    ImDrawFlags_RoundCornersTopLeft     = 1 << 4,   // OK   --    // Round top-left corner only (when 'rounding > 0.0f', we default to all corners).
+    ImDrawFlags_RoundCornersTopRight    = 1 << 5,   // OK   --    // Round top-right corner only (when 'rounding > 0.0f', we default to all corners).
+    ImDrawFlags_RoundCornersBottomLeft  = 1 << 6,   // OK   --    // Round bottom-left corner only (when 'rounding > 0.0f', we default to all corners).
+    ImDrawFlags_RoundCornersBottomRight = 1 << 7,   // OK   --    // Round bottom-right corner only (when 'rounding > 0.0f', we default to all corners).
+    ImDrawFlags_RoundCornersNone        = 1 << 8,   // OK   --    // Disable rounding even when 'rounding > 0.0f'. This value is NOT zero, it is NOT an implicit flag!
+    ImDrawFlags_RoundCornersAll         = ImDrawFlags_RoundCornersTopLeft | ImDrawFlags_RoundCornersTopRight | ImDrawFlags_RoundCornersBottomLeft | ImDrawFlags_RoundCornersBottomRight, // (Default!!)
+    ImDrawFlags_RoundCornersTop         = ImDrawFlags_RoundCornersTopLeft | ImDrawFlags_RoundCornersTopRight,
+    ImDrawFlags_RoundCornersBottom      = ImDrawFlags_RoundCornersBottomLeft | ImDrawFlags_RoundCornersBottomRight,
+    ImDrawFlags_RoundCornersLeft        = ImDrawFlags_RoundCornersBottomLeft | ImDrawFlags_RoundCornersTopLeft,
+    ImDrawFlags_RoundCornersRight       = ImDrawFlags_RoundCornersBottomRight | ImDrawFlags_RoundCornersTopRight,
 
-    // Stroke position relative to the shape outline
-    ImDrawFlags_StrokeInside                = 1 << 16, // Draw stroke inside of the shape outline (default for closed shapes and AddLineH, AddLineV functions)
-    ImDrawFlags_StrokeCenter                = 2 << 16, // Draw stroke at the center of the shape outline (default for paths, bezier, and AddLine functions)
-    ImDrawFlags_StrokeCenterBiased          = 3 << 16, // Draw stroke at the center of the shape outline, so that half thickness rounded down will be outside, and rest inside the shape outline. Useful for axis-aligned shapes: AddLineH, AddLineV, AddRect. Does not animate well!
-    ImDrawFlags_StrokeOutside               = 4 << 16, // Draw stroke outside of the shape outline
-    ImDrawFlags_StrokeLegacy                = 5 << 16, // Use legacy positioning + enable MiterOnly, disable AAEnds flags.
-    ImDrawFlags_StrokeMask_                 = 0x07 << 16,
+    // Stroke Options ----------------------------- // Prim/Scope?
+    ImDrawFlags_Closed                  = 1 << 9,   // OK   --     // PathStroke(), AddPolyline(): specify that shape should be closed.
+    ImDrawFlags_MiterOnly               = 1 << 10,  // OK   --     // PathStroke(), AddPolyline(): use miter corners only. This assumes that the input polyline does not have corners sharper than 90 degrees. Slightly faster.
+    ImDrawFlags_SquareCap               = 1 << 11,  // OK   --     // PathStroke(), AddPolyline(): use square cap line ends.
 
-    ImDrawFlags_InvalidMask_                = ~0x7FFFFFF0, // == 0x8000000F,
+    // About Stroke Ends:
+    // - Rendering is optimized for fast pixel-perfect UI, so line ends are not anti-aliased by default. It cheaper (we can emit less vertices).
+    // - For more free-form drawings, light graphs and markers, or when using thick strokes: you can turn them on using the ImDrawFlags_AALineEnds flag.
+    // - See 'Demo->Examples->Custom Rendering' to interactively toy with those flags.
+    // - 'OK*' indicates using this at the AddXXX() call site is unlikely: it would only makes sense if (1) the option is disabled in style/scope and (2) you want to forcefully enable it for a single primitives. Possible but unlikely! Only supported for functions taking flags inputs.
+    // Stroke/Fill Anti-aliasing ------------------ // Prim/Scope?
+    ImDrawFlags_AAFill                  = 1 << 12,  // OK*  OK(1)  // Enable anti-aliasing for Filled shapes.
+    ImDrawFlags_AALines                 = 1 << 13,  // OK*  OK(1)  // Enable anti-aliasing for Strokes (lines, borders).
+    ImDrawFlags_AALineEnds              = 1 << 14,  // OK   OK(0)  // Enable anti-aliasing for Strokes Ends. Useful on thick strokes or for precise continuity of multiple lines. A little more costly.
+    //ImDrawFlags_NoAA                  = 1 << 15,  // OK   --     // Disable anti-aliasing for a given primitive.
+    //ImDrawFlags_NoAALineEnds          = 1 << 16,  // OK   --     // Disable anti-aliasing ends for a given primitive.
+
+    // About Stroke Position:
+    // - Read https://github.com/ocornut/imgui/wiki/Draw-List
+    // - Read https://github.com/ocornut/imgui/wiki/Pixel-Perfect-Rendering
+    // Stroke Position relative to shape outline -- // Prim/Scope?
+    ImDrawFlags_StrokeInside            = 1 << 17,  // OK   --     // Draw stroke inside of the shape outline (default for closed shapes and AddLineH, AddLineV functions)
+    ImDrawFlags_StrokeCenter            = 2 << 17,  // OK   --     // Draw stroke at the center of the shape outline (default for paths, bezier, and AddLine functions)
+    ImDrawFlags_StrokeCenterBiased      = 3 << 17,  // OK   --     // Draw stroke at the center of the shape outline, so that half thickness rounded down will be outside, and rest inside the shape outline. Useful for axis-aligned shapes: AddLineH, AddLineV, AddRect. Does not animate well!
+    ImDrawFlags_StrokeOutside           = 4 << 17,  // OK   --     // Draw stroke outside of the shape outline
+    ImDrawFlags_StrokeLegacy            = 7 << 17,  // OK   OK(0)  // Use legacy positioning + enable MiterOnly + disable AALineEnds. Must be all bits set.
+
+    // Other Options ------------------------------ // Prim/Scope?
+    ImDrawFlags_TextNoPixelSnap         = 1 << 20,  // OK   OK(0)  // Disable automatically snapping AddText() calls to pixel boundaries.
+    ImDrawFlags_UseTexForRoundCorners   = 1 << 21,  // --   OK(1)  // Enable using textures instead of strokes to draw rounded corners/circles where possible (faster). Used by default unless 'ImFontAtlasFlags_NoBakedRoundCorners' is enabled in the font atlas.
+    ImDrawFlags_UseTexForStrokeLegacy   = 1 << 22,  // --   OK(1)  // Enable anti-aliased lines/borders using textures when using legacy strokes. Require backend to render with bilinear filtering (NOT point/nearest filtering). Used by default unless 'ImFontAtlasFlags_NoBakedLines' is set in the font atlas.
+    ImDrawFlags_UseVtxOffset            = 1 << 23,  // --   OK(1)  // Can emit 'VtxOffset > 0' to allow large meshes with 16-bit ImDrawIdx. Used by default when 'ImGuiBackendFlags_RendererHasVtxOffset' is enabled by the backend.
+
+    // [Internal]
+    ImDrawFlags_AllowedInScope_         = ImDrawFlags_AAFill | ImDrawFlags_AALines | ImDrawFlags_AALineEnds | ImDrawFlags_StrokeLegacy | ImDrawFlags_TextNoPixelSnap | ImDrawFlags_UseTexForRoundCorners | ImDrawFlags_UseTexForStrokeLegacy | ImDrawFlags_UseVtxOffset, // [Internal] Values allowed in scope e.g. incoming PushDrawFlags() stack.
+    ImDrawFlags_RoundCornersMask_       = ImDrawFlags_RoundCornersAll | ImDrawFlags_RoundCornersNone, // [Internal]
+    ImDrawFlags_StrokeMask_             = 0x07 << 17,              // [Internal] 
+    ImDrawFlags_InvalidMask_            = ~0x7FFFFFF0,             // [Internal] == 0x8000000F. Reserved to detect misuses. 
 };
 
 // Flags for ImDrawList instance. Those are set automatically by ImGui:: functions from ImGuiIO settings, and generally not manipulated directly.

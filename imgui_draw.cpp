@@ -981,14 +981,14 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         tex_uvs.z = _Data->TexUvWhitePixel.y;   // v
         tex_uvs.w = 0.0f;                       // 1/thickness, unused.
         fringe = 0.0f;
-        flags &= ~ImDrawFlags_AAEnds;
+        flags &= ~ImDrawFlags_AALineEnds;
     }
 
     const ImU32 col_trans = col & ~IM_COL32_A_MASK;
 
     const ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeCenter);
     if (stroke_pos == ImDrawFlags_StrokeLegacy)
-        flags = (flags | ImDrawFlags_MiterOnly) & ~ImDrawFlags_AAEnds;
+        flags = (flags | ImDrawFlags_MiterOnly) & ~ImDrawFlags_AALineEnds;
 
     const bool closed = (flags & ImDrawFlags_Closed) != 0;
     const bool miters_only = (flags & ImDrawFlags_MiterOnly) != 0;
@@ -1060,7 +1060,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
             p1.y -= dir.y * half_thickness;
         }
 
-        if ((flags & ImDrawFlags_AAEnds) == 0)
+        if ((flags & ImDrawFlags_AALineEnds) == 0)
         {
             base_idx = (int)_VtxCurrentIdx;
             IM_APPEND_VTX(p1.x - n1.x * thickness0, p1.y - n1.y * thickness0, uv0, col);
@@ -1246,7 +1246,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
             p1.y += dir.y * half_thickness;
         }
 
-        if ((flags & ImDrawFlags_AAEnds) == 0)
+        if ((flags & ImDrawFlags_AALineEnds) == 0)
         {
             IM_APPEND_VTX(p1.x - n1.x * thickness0, p1.y - n1.y * thickness0, uv0, col);
             IM_APPEND_VTX(p1.x + n1.x * thickness1, p1.y + n1.y * thickness1, uv1, col);
@@ -2218,7 +2218,7 @@ void ImDrawList::_AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float t
         tex_uvs.z = _Data->TexUvWhitePixel.y;   // v
         tex_uvs.w = 0.0f;                       // 1/thickness, unused.
         fringe = 0.0f;
-        flags &= ~ImDrawFlags_AAEnds;
+        flags &= ~ImDrawFlags_AALineEnds;
     }
 
     float dir_x = p2.x - p1.x;
@@ -2234,7 +2234,7 @@ void ImDrawList::_AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float t
 
     const ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeCenter);
     if (stroke_pos == ImDrawFlags_StrokeLegacy)
-        flags = (flags | ImDrawFlags_MiterOnly) & ~ImDrawFlags_AAEnds;
+        flags = (flags | ImDrawFlags_MiterOnly) & ~ImDrawFlags_AALineEnds;
 
     float thickness0 = (thickness + fringe) * 0.5f; // Center (or legacy)
     if (stroke_pos == ImDrawFlags_StrokeOutside)
@@ -2259,7 +2259,7 @@ void ImDrawList::_AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float t
     const float half_aa = _FringeScale * 0.5f; // Used for end caps, does not use "fringe" since end cap AA is not using the texture.
     const float half_thickness = thickness * 0.5f;
 
-    if ((flags & ImDrawFlags_AAEnds) == 0)
+    if ((flags & ImDrawFlags_AALineEnds) == 0)
         PrimReserve(2*3, 4);
     else
         PrimReserve(6*3, 8);
@@ -2280,7 +2280,7 @@ void ImDrawList::_AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float t
     }
 
     // Start cap
-    if ((flags & ImDrawFlags_AAEnds) == 0)
+    if ((flags & ImDrawFlags_AALineEnds) == 0)
     {
         base_idx = (int)_VtxCurrentIdx;
         IM_APPEND_VTX(p1_x - norm_x * thickness0, p1_y - norm_y * thickness0, uv0, col);
@@ -8079,7 +8079,7 @@ ImDrawFlags ImGui::CalcRoundingFlagsForRectInRect(const ImRect& r_in, const ImRe
 void ImGui::RenderColorRectWithAlphaCheckerboard(ImDrawList* draw_list, ImVec2 p_min, ImVec2 p_max, ImU32 col, float grid_step, ImVec2 grid_off, float rounding, ImDrawFlags flags)
 {
     if ((flags & ImDrawFlags_RoundCornersMask_) == 0)
-        flags = ImDrawFlags_RoundCornersDefault_;
+        flags = ImDrawFlags_RoundCornersAll;
     if (((col & IM_COL32_A_MASK) >> IM_COL32_A_SHIFT) < 0xFF)
     {
         ImU32 col_bg1 = GetColorU32(ImAlphaBlendColors(IM_COL32(128, 128, 128, 255), col));
