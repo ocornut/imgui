@@ -37,7 +37,7 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "" FORCE)
 endif()
 
-set(CMAKE_CXX_STANDARD 17) # Dawn requires C++17
+set(CMAKE_CXX_STANDARD 20) # Dawn requires C++20
 
 # Dear ImGui
 set(IMGUI_DIR ../../)
