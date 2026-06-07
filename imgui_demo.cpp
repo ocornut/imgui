@@ -10431,7 +10431,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             ImGui::ColorEdit4("Shadow Color", &shadow_color.x);
             ImGui::ColorEdit4("Shape Color", &shape_color.x);
             ImGui::DragFloat("Shape Rounding", &shape_rounding, 1.0f, 0.0f, 20.0f, "%.02f");
-            ImGui::Combo("Convex shape", &poly_shape_index, "Shape 1\0Shape 2\0Shape 3\0Shape 4\0Shape 4 (winding reversed)");
+            ImGui::Combo("Convex shape", &poly_shape_index, "Shape 1\0Shape 2\0Shape 3\0Shape 4\0Shape 4 (winding reversed)\0");
 
             ImDrawList* draw_list = ImGui::GetWindowDrawList();
             ImDrawListFlags old_flags = draw_list->Flags;
