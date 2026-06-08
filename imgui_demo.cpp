@@ -10466,17 +10466,19 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             ImGui::CheckboxFlags("SquareCap", &other_flags, ImDrawFlags_SquareCap); ImGui::SameLine();
             ImGui::CheckboxFlags("AALineEnds", &other_flags, ImDrawFlags_AALineEnds);
             ImGui::Spacing();
-            const ImDrawFlags flags = stroke_flags | other_flags;
 
             // FIXME: Clarify how this is exposed, consider changing Demo code to simply alter Style.s
-            static ImDrawListFlags draw_list_flags = ImDrawListFlags_AntiAliasedLines | ImDrawListFlags_AntiAliasedFill | ImDrawListFlags_RoundCornersUseTex;
-            ImGui::Text("DrawList Flags:");
-            ImGui::CheckboxFlags("AntiAliasedLines", &draw_list_flags, ImDrawListFlags_AntiAliasedLines); ImGui::SameLine();
-            ImGui::CheckboxFlags("AntiAliasedFill", &draw_list_flags, ImDrawListFlags_AntiAliasedFill); ImGui::SameLine();
-            ImGui::CheckboxFlags("RoundCornersUseTex", &draw_list_flags, ImDrawListFlags_RoundCornersUseTex);
-            ImDrawListFlags backup_draw_list_flags = draw_list->Flags;
-            draw_list->Flags &= ~(ImDrawListFlags_AntiAliasedLines | ImDrawListFlags_AntiAliasedFill | ImDrawListFlags_RoundCornersUseTex);
-            draw_list->Flags |= draw_list_flags;
+            const ImDrawFlags scope_flags_mask = ImDrawFlags_AllowedInScope_;
+            static ImDrawFlags scope_flags = scope_flags_mask; // All
+            ImGui::Text("AA Flags:");
+            ImGui::CheckboxFlags("AAFill", &scope_flags, ImDrawFlags_AAFill); ImGui::SameLine();
+            ImGui::CheckboxFlags("AALines", &scope_flags, ImDrawFlags_AALines); ImGui::SameLine();
+            ImGui::CheckboxFlags("AALineEnds", &scope_flags, ImDrawFlags_AALineEnds);
+            ImGui::CheckboxFlags("UseTexForRoundCorners", &scope_flags, ImDrawFlags_UseTexForRoundCorners);
+            ImGui::CheckboxFlags("UseTexForStrokeLegacy", &scope_flags, ImDrawFlags_UseTexForStrokeLegacy); ImGui::SameLine();
+            ImDrawFlags backup_draw_list_flags = draw_list->Flags;
+            draw_list->Flags = (draw_list->Flags & ~scope_flags_mask) | scope_flags;
+            const ImDrawFlags flags = stroke_flags | other_flags;
 
             ImVec2 start_pos = ImGui::GetCursorScreenPos();
             const float pi = 3.141592f;
