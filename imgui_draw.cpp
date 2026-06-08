@@ -467,7 +467,8 @@ void ImDrawList::_ResetForNewFrame()
     CmdBuffer.resize(0);
     IdxBuffer.resize(0);
     VtxBuffer.resize(0);
-    Flags = _Data->InitialFlags;
+    Flags = _Data->InitialDrawFlags;
+    IM_ASSERT((Flags & ~ImDrawFlags_AllowedInScope_) == 0);
     memset(&_CmdHeader, 0, sizeof(_CmdHeader));
     _VtxCurrentIdx = 0;
     _VtxWritePtr = NULL;
@@ -486,7 +487,7 @@ void ImDrawList::_ClearFreeMemory()
     CmdBuffer.clear();
     IdxBuffer.clear();
     VtxBuffer.clear();
-    Flags = ImDrawListFlags_None;
+    Flags = ImDrawFlags_None;
     _VtxCurrentIdx = 0;
     _VtxWritePtr = NULL;
     _IdxWritePtr = NULL;
@@ -742,7 +743,7 @@ void ImDrawList::PrimReserve(int idx_count, int vtx_count)
 {
     // Large mesh support (when enabled)
     IM_ASSERT_PARANOID(idx_count >= 0 && vtx_count >= 0);
-    if (sizeof(ImDrawIdx) == 2 && (_VtxCurrentIdx + vtx_count >= (1 << 16)) && (Flags & ImDrawListFlags_AllowVtxOffset))
+    if (sizeof(ImDrawIdx) == 2 && (_VtxCurrentIdx + vtx_count >= (1 << 16)) && (Flags & ImDrawFlags_UseVtxOffset))
     {
         // FIXME: In theory we should be testing that vtx_count <64k here.
         // In practice, RenderText() relies on reserving ahead for a worst case scenario so it is currently useful for us
@@ -969,7 +970,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
 
     ImVec4 tex_uvs;
     float fringe;
-    if (Flags & ImDrawListFlags_AntiAliasedLines)
+    if (Flags & ImDrawFlags_AALines)
     {
         _SelectFringeTexture(screen_thickness, &tex_uvs, &fringe);
     }
@@ -1311,7 +1312,7 @@ void ImDrawList::AddPolylineLegacy(const ImVec2* points, const int points_count,
     // Read more details near AddRect() + see "API BREAKING CHANGES" section for 1.82, 1.90 and 1.92.8.
     IM_ASSERT_USER_ERROR_RET((flags & ImDrawFlags_InvalidMask_) == 0, "Incorrect parameter. Did you swap 'thickness' and 'flags'?");
 
-    if (Flags & ImDrawListFlags_AntiAliasedLines)
+    if (Flags & ImDrawFlags_AALines)
     {
         // Anti-aliased stroke
         const float AA_SIZE = _FringeScale;
@@ -1325,9 +1326,9 @@ void ImDrawList::AddPolylineLegacy(const ImVec2* points, const int points_count,
         // Do we want to draw this line using a texture?
         // - For now, only draw integer-width lines using textures to avoid issues with the way scaling occurs, could be improved.
         // - If AA_SIZE is not 1.0f we cannot use the texture path.
-        const bool use_texture = (Flags & ImDrawListFlags_AntiAliasedLinesUseTex) && (integer_thickness < IM_DRAWLIST_TEX_LINES_WIDTH_MAX) && (fractional_thickness <= 0.00001f) && (AA_SIZE == 1.0f);
+        const bool use_texture = (Flags & ImDrawFlags_UseTexForStrokeLegacy) && (integer_thickness < IM_DRAWLIST_TEX_LINES_WIDTH_MAX) && (fractional_thickness <= 0.00001f) && (AA_SIZE == 1.0f);
 
-        // We should never hit this, because NewFrame() doesn't set ImDrawListFlags_AntiAliasedLinesUseTex unless ImFontAtlasFlags_NoBakedLines is off
+        // We should never hit this, because NewFrame() doesn't set ImDrawFlags_UseTexForStrokeLegacy unless ImFontAtlasFlags_NoBakedLines is off
         IM_ASSERT_PARANOID(!use_texture || !(_Data->Font->OwnerAtlas->Flags & ImFontAtlasFlags_NoBakedLines));
 
         const int idx_count = use_texture ? (count * 6) : (thick_line ? count * 18 : count * 12);
@@ -1571,7 +1572,7 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
     }*/
 
     const ImVec2 uv = _Data->TexUvWhitePixel;
-    if (Flags & ImDrawListFlags_AntiAliasedFill)
+    if (Flags & ImDrawFlags_AAFill)
     {
         const float half_aa = _FringeScale * 0.5f;
         ImU32 col_trans = col & ~IM_COL32_A_MASK;
@@ -1759,7 +1760,7 @@ void ImDrawList::AddConvexPolyFilledLegacy(const ImVec2* points, const int point
 
     const ImVec2 uv = _Data->TexUvWhitePixel;
 
-    if (Flags & ImDrawListFlags_AntiAliasedFill)
+    if (Flags & ImDrawFlags_AAFill)
     {
         // Anti-aliased Fill
         const float AA_SIZE = _FringeScale;
@@ -2206,7 +2207,7 @@ void ImDrawList::_AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float t
 
     ImVec4 tex_uvs;
     float fringe;
-    if (Flags & ImDrawListFlags_AntiAliasedLines)
+    if (Flags & ImDrawFlags_AALines)
     {
         _SelectFringeTexture(screen_thickness, &tex_uvs, &fringe);
     }
@@ -2580,7 +2581,7 @@ void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, 
 
     ImVec4 tex_uvs;
     float fringe;
-    if (Flags & ImDrawListFlags_AntiAliasedLines)
+    if (Flags & ImDrawFlags_AALines)
     {
         _SelectFringeTexture(screen_thickness, &tex_uvs, &fringe);
     }
@@ -2718,7 +2719,7 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
 
     if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy) IM_UNLIKELY
     {
-        if (Flags & ImDrawListFlags_AntiAliasedLines)
+        if (Flags & ImDrawFlags_AALines)
             PathRect(ImVec2(p_min.x + 0.50f, p_min.y + 0.50f), ImVec2(p_max.x - 0.50f, p_max.y - 0.50f), rounding, flags);
         else
             PathRect(ImVec2(p_min.x + 0.50f, p_min.y + 0.50f), ImVec2(p_max.x - 0.49f, p_max.y - 0.49f), rounding, flags); // Better looking lower-right corner and rounded non-AA shapes.
@@ -2804,7 +2805,7 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
             return;
         }
         // Textured corners are baked with AA, do not use them if no-AA is requested.
-        const bool allow_tex_corners = (Flags & (ImDrawListFlags_RoundCornersUseTex | ImDrawListFlags_AntiAliasedLines)) == (ImDrawListFlags_RoundCornersUseTex | ImDrawListFlags_AntiAliasedLines);
+        const bool allow_tex_corners = (Flags & (ImDrawFlags_AALines | ImDrawFlags_UseTexForRoundCorners)) == (ImDrawFlags_AALines | ImDrawFlags_UseTexForRoundCorners);
         if (allow_tex_corners && s_thickness < IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX && s_rounding <= IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX)
         {
             // Pixel aligned rect with round corners rendered using baked textures.
@@ -2950,7 +2951,7 @@ void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
             return;
         }
         // Textured corners are baked with AA, do not use them if no-AA is requested.
-        const bool allow_tex_corners = (Flags & (ImDrawListFlags_RoundCornersUseTex | ImDrawListFlags_AntiAliasedFill)) == (ImDrawListFlags_RoundCornersUseTex | ImDrawListFlags_AntiAliasedFill);
+        const bool allow_tex_corners = (Flags & (ImDrawFlags_AAFill | ImDrawFlags_UseTexForRoundCorners)) == (ImDrawFlags_AAFill | ImDrawFlags_UseTexForRoundCorners);
         if (allow_tex_corners && s_rounding <= IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX)
         {
 			IM_ASSERT_PARANOID(!(_Data->Font->OwnerAtlas->Flags & ImFontAtlasFlags_NoBakedRoundCorners));
@@ -3587,7 +3588,7 @@ void ImDrawList::AddConcavePolyFilled(const ImVec2* points, const int points_cou
     const ImVec2 uv = _Data->TexUvWhitePixel;
     ImTriangulator triangulator;
     unsigned int triangle[3];
-    if (Flags & ImDrawListFlags_AntiAliasedFill)
+    if (Flags & ImDrawFlags_AAFill)
     {
         // Anti-aliased Fill
         const float AA_SIZE = _FringeScale;
@@ -3844,7 +3845,7 @@ void ImGui::AddDrawListToDrawDataEx(ImDrawData* draw_data, ImVector<ImDrawList*>
     // May trigger for you if you are using PrimXXX functions incorrectly.
     IM_ASSERT(draw_list->VtxBuffer.Size == 0 || draw_list->_VtxWritePtr == draw_list->VtxBuffer.Data + draw_list->VtxBuffer.Size);
     IM_ASSERT(draw_list->IdxBuffer.Size == 0 || draw_list->_IdxWritePtr == draw_list->IdxBuffer.Data + draw_list->IdxBuffer.Size);
-    if (!(draw_list->Flags & ImDrawListFlags_AllowVtxOffset))
+    if (!(draw_list->Flags & ImDrawFlags_UseVtxOffset))
         IM_ASSERT((int)draw_list->_VtxCurrentIdx == draw_list->VtxBuffer.Size);
 
     // Check that draw_list doesn't use more vertices than indexable (default ImDrawIdx = unsigned short = 2 bytes = 64K vertices per ImDrawList = per window)
@@ -7641,7 +7642,7 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, const ImVec2& pos, Im
     float scale = (size >= 0.0f) ? (size / baked->Size) : 1.0f;
     float x = pos.x;
     float y = pos.y;
-    if ((draw_list->Flags & ImDrawListFlags_TextNoPixelSnap) == 0)
+    if ((draw_list->Flags & ImDrawFlags_TextNoPixelSnap) == 0)
     {
         x = IM_TRUNC(x);
         y = IM_TRUNC(y);
@@ -7683,7 +7684,7 @@ begin:
     float y = pos.y;
     if (y > clip_rect.w)
         return;
-    if ((draw_list->Flags & ImDrawListFlags_TextNoPixelSnap) == 0)
+    if ((draw_list->Flags & ImDrawFlags_TextNoPixelSnap) == 0)
     {
         x = IM_TRUNC(x);
         y = IM_TRUNC(y);
