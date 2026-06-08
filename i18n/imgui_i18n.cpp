@@ -5,7 +5,7 @@
 
 namespace imgui_i18n {
 
-// Meyers Singleton — 保证跨编译单元 static initializer 调用时已初始化（避免 SIOF）
+// Meyers Singleton: guarantees initialization before first use across translation units, avoiding SIOF.
 static std::string& locale() {
     static std::string s;
     return s;
@@ -50,8 +50,9 @@ void registerLocale(
     const char* loc,
     std::initializer_list<std::pair<const char*, const char*>> entries)
 {
-    // 注意：registerLocale 必须在第一次调用 translate() 之前全部完成（通常由 static initializer 保证）
-    // 注册完成后不可再追加，否则 unordered_map rehash 会使已返回的 c_str() 指针失效
+    // All registerLocale() calls must complete before the first translate() call (normally guaranteed
+    // by static initializers). Do not add entries after translate() has been called: unordered_map
+    // rehashing would invalidate the c_str() pointers returned by translate().
     auto& table = tables()[loc];
     for (const auto& e : entries)
         table[e.first] = e.second;
