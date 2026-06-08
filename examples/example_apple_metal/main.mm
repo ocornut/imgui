@@ -18,8 +18,12 @@
 #import <MetalKit/MetalKit.h>
 
 #include "imgui.h"
+// i18n support: include unconditionally — when IMGUI_DEMO_ENABLE_I18N is not defined
+// the header provides a no-op Tr(s) stub with zero overhead.
 #include "imgui_i18n.h"
+#ifdef IMGUI_DEMO_ENABLE_I18N
 #include <unistd.h>
+#endif
 #include "imgui_impl_metal.h"
 #if TARGET_OS_OSX
 #include "imgui_impl_osx.h"
@@ -40,6 +44,7 @@
 // AppViewController
 //-----------------------------------------------------------------------------------
 
+#ifdef IMGUI_DEMO_ENABLE_I18N
 bool g_need_font_rebuild = false;
 
 static void RebuildFonts()
@@ -76,6 +81,7 @@ static void RebuildFonts()
     }
     io.Fonts->Build();
 }
+#endif // IMGUI_DEMO_ENABLE_I18N
 
 @implementation AppViewController
 
@@ -150,8 +156,10 @@ static void RebuildFonts()
     [NSApp activateIgnoringOtherApps:YES];
 #endif
 
+#ifdef IMGUI_DEMO_ENABLE_I18N
     // Build initial font atlas with CJK glyphs so the Language menu renders correctly from the start.
     RebuildFonts();
+#endif
 }
 
 -(void)drawInMTKView:(MTKView*)view
@@ -176,11 +184,13 @@ static void RebuildFonts()
         return;
     }
 
-    // 语言切换后重建字体 Atlas（必须在 NewFrame 之前，避免当帧纹理 use-after-free）
+#ifdef IMGUI_DEMO_ENABLE_I18N
+    // Rebuild font atlas after language switch (must be before NewFrame to avoid use-after-free).
     if (g_need_font_rebuild) {
         g_need_font_rebuild = false;
         RebuildFonts();
     }
+#endif
 
     // Start the Dear ImGui frame
     ImGui_ImplMetal_NewFrame(renderPassDescriptor);
