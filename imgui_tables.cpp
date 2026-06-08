@@ -363,6 +363,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
         g.TablesTempData.resize(g.TablesTempDataStacked, ImGuiTableTempData());
     ImGuiTableTempData* temp_data = table->TempData = &g.TablesTempData[g.TablesTempDataStacked - 1];
     temp_data->TableIndex = table_idx;
+    temp_data->ReconcileColumnsRequests.resize(0); // FIXME: Use shrink(0) everywhere?
     table->DrawSplitter = &table->TempData->DrawSplitter;
     table->DrawSplitter->Clear();
 
@@ -563,15 +564,14 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     table->MemoryCompacted = false;
 
     // Setup memory buffer (clear data if columns count changed)
-    ImGuiTableColumn* old_columns_to_preserve = NULL;
-    void* old_columns_raw_data = NULL;
     const int old_columns_count = table->Columns.size();
     if (old_columns_count != 0 && old_columns_count != columns_count)
     {
-        // Attempt to preserve width and other settings on column count/specs change (#4046)
+        // Attempt to preserve width and other settings on column count/specs change (#4046, #9108)
         IMGUI_DEBUG_LOG_TABLE("[table] Table 0x%08X column count %d -> %d, recreating storage.\n", table->ID, old_columns_count, columns_count);
-        old_columns_to_preserve = table->Columns.Data;
-        old_columns_raw_data = table->RawData; // Free at end of function
+        IM_ASSERT(temp_data->OldColumnsRawData == NULL);
+        temp_data->OldColumnsRawData = table->RawData; // Freed during layout
+        temp_data->OldColumnsData = table->Columns;
         table->RawData = NULL;
     }
     if (table->RawData == NULL)
@@ -595,9 +595,9 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
         for (int n = 0; n < columns_count; n++)
         {
             ImGuiTableColumn* column = &table->Columns[n];
-            if (old_columns_to_preserve && n < old_columns_count)
+            if (temp_data->OldColumnsData.Data && n < temp_data->OldColumnsData.size())
             {
-                *column = old_columns_to_preserve[n];
+                *column = temp_data->OldColumnsData[n];
             }
             else
             {
@@ -611,8 +611,6 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
             table->DisplayOrderToIndex[n] = column->DisplayOrder;
         }
     }
-    if (old_columns_raw_data)
-        IM_FREE(old_columns_raw_data);
 
     // Load settings
     if (table->IsSettingsRequestLoad)
@@ -842,7 +840,41 @@ static void TableSetupColumnFlags(ImGuiTable* table, ImGuiTableColumn* column, I
 void ImGui::TableUpdateLayout(ImGuiTable* table)
 {
     ImGuiContext& g = *GImGui;
+    ImGuiTableTempData* temp_data = table->TempData;
     IM_ASSERT(table->IsLayoutLocked == false);
+    const int columns_count = table->ColumnsCount;
+
+    // Reconcile moved columns
+    if (table->Flags & ImGuiTableFlags_TrackTopologyChanges)
+    {
+        IM_ASSERT_USER_ERROR(table->DeclColumnsCount == columns_count, "When using TrackTopologyChanges: must call TableSetupColumn() with a valid identifier for all columns!");
+        if (temp_data->ReconcileColumnsRequests.Size > 0)
+            TableReconcileColumns(table);
+    }
+    if (temp_data->OldColumnsRawData)
+    {
+        IM_FREE(temp_data->OldColumnsRawData);
+        temp_data->OldColumnsRawData = NULL;
+        temp_data->OldColumnsData.clear();
+    }
+
+    // Apply columns settings
+    if (table->IsSettingsRequestLoad)
+        TableLoadSettingsForColumns(table);
+    if (table->IsInitializing || table->IsSettingsRequestLoad)
+    {
+        for (ImGuiTableColumn& column : table->Columns)
+        {
+            ImGuiTableFlags init_flags;
+            if (table->IsSettingsRequestLoad)
+                init_flags = column.IsLoadedSettings ? ~table->SettingsLoadedFlags : ~0;
+            else
+                init_flags = column.IsJustCreated ? ~0 : 0;
+            TableInitColumnDefaults(table, &column, init_flags);
+        }
+        TableFixDisplayOrder(table); // Call even for non _Reorderable table as we loaded .ini data.
+        table->IsSettingsRequestLoad = false;
+    }
 
     // Apply queued resizing/reordering/hiding requests
     TableApplyQueuedRequests(table);
@@ -853,7 +885,6 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     // FIXME-DPI: Provide consistent standards for reference size. Perhaps using g.CurrentDpiScale would be more self explanatory.
     // This is will lead us to non-rounded WidthRequest in columns, which should work but is a poorly tested path.
     const float new_ref_scale_unit = g.FontSize; // g.Font->GetCharAdvance('A') ?
-    const int columns_count = table->ColumnsCount;
     if (table->RefScale != 0.0f && table->RefScale != new_ref_scale_unit)
     {
         const float scale_factor = new_ref_scale_unit / table->RefScale;
@@ -892,7 +923,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         {
             TableSetupColumnFlags(table, column, ImGuiTableColumnFlags_None);
             column->NameOffset = -1;
-            column->UserData = 0;
+            column->ID = column->UserData = 0;
             column->InitStretchWeightOrWidth = -1.0f;
         }
 
@@ -905,6 +936,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
             table->IsSettingsDirty = true;
         }
         column->IsEnabled = column->IsUserEnabled && (column->Flags & ImGuiTableColumnFlags_Disabled) == 0;
+        column->IsJustCreated = false;
 
         if (column->IsEnabled != ((column->Flags & ImGuiTableColumnFlags_DefaultHide) ? 0 : 1))
             table->IsDefaultVisibility = false;
@@ -1644,9 +1676,9 @@ void    ImGui::EndTable()
     NavUpdateCurrentWindowIsScrollPushableX();
 }
 
-// Called in TableSetupColumn() when initializing and in TableLoadSettings() for defaults before applying stored settings.
+// Called in TableUpdateLayout() when initializing/after loading settings.
 // 'init_mask' specify which fields to initialize.
-static void TableInitColumnDefaults(ImGuiTable* table, ImGuiTableColumn* column, ImGuiTableColumnFlags init_mask)
+void ImGui::TableInitColumnDefaults(ImGuiTable* table, ImGuiTableColumn* column, ImGuiTableColumnFlags init_mask)
 {
     ImGuiTableColumnFlags flags = column->Flags;
     if (init_mask & ImGuiTableFlags_Resizable)
@@ -1658,7 +1690,7 @@ static void TableInitColumnDefaults(ImGuiTable* table, ImGuiTableColumn* column,
             column->AutoFitQueue = 0x00;
     }
     if (init_mask & ImGuiTableFlags_Reorderable)
-        column->DisplayOrder = (ImGuiTableColumnIdx)table->Columns.index_from_ptr(column);
+        column->DisplayOrder = (ImGuiTableColumnIdx)((table->Flags & ImGuiTableFlags_Reorderable) ? -1 : table->Columns.index_from_ptr(column));
     if (init_mask & ImGuiTableFlags_Hideable)
         column->IsUserEnabled = column->IsUserEnabledNextFrame = (flags & ImGuiTableColumnFlags_DefaultHide) ? 0 : 1;
     if (init_mask & ImGuiTableFlags_Sortable)
@@ -1695,20 +1727,10 @@ static void TableSetupColumnApply(ImGuiTable* table, int idx, ImGuiID id, ImS16 
     column->ID = id;
     column->UserData = user_data;
     column->NameOffset = name_offset;
-    flags = column->Flags;
-
-    // Initialize defaults
     column->InitStretchWeightOrWidth = init_width_or_weight;
-    if (table->IsInitializing)
-    {
-        ImGuiTableFlags init_flags = ~table->SettingsLoadedFlags;
-        if (column->WidthRequest < 0.0f && column->StretchWeight < 0.0f)
-            init_flags |= ImGuiTableFlags_Resizable;
-        TableInitColumnDefaults(table, column, init_flags);
-    }
 }
 
-void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, float init_width_or_weight, ImGuiID user_data_for_sort_specs)
+void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, float init_width_or_weight, ImGuiID user_data)
 {
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
@@ -1725,10 +1747,63 @@ void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, flo
         name_offset = (ImS16)table->ColumnsNames.size();
         table->ColumnsNames.append(label, label + ImStrlen(label) + 1);
     }
-
     const ImGuiID column_id = (label != NULL && label[0] != 0) ? ImHashStr(label) : 0;
-    TableSetupColumnApply(table, table->DeclColumnsCount, column_id, name_offset, flags, init_width_or_weight, user_data_for_sort_specs);
-    table->DeclColumnsCount++;
+
+    // When ID changed or a column moved: defer the request until layout where we will process full reconcile.
+    const int column_idx = table->DeclColumnsCount++;
+    if (table->Flags & ImGuiTableFlags_TrackTopologyChanges)
+    {
+        // On column count change: search the previous columns:
+        // - the live Columns[] array is truncated on shrink, so a moved column may only exist in old data.
+        // - the live Columns[] array may already be partially reset by the TableInitColumnDefaults() call above.
+        // When count changed, even a never-updated slot (prev_column_id == 0 while initializing) may have old data to recover.
+        // Defer applying data, TableUpdateLayout() will call TableSetupColumnApply().
+        IM_ASSERT_USER_ERROR(column_id != 0, "When using TrackTopologyChanges: Must call TableSetupColumn() with a valid identifier for all columns!");
+        ImGuiTableColumn* column = &table->Columns[column_idx];
+        const bool may_have_old_data = (column->ID != 0 || !table->IsInitializing || !table->TempData->OldColumnsData.empty());
+        if (column->ID != column_id && column_id != 0 && may_have_old_data)
+        {
+            table->TempData->ReconcileColumnsRequests.push_back(ImGuiTableReconcileColumnData());
+            ImGuiTableReconcileColumnData& reconcile_data = table->TempData->ReconcileColumnsRequests.back();
+            reconcile_data.ID = column_id;
+            reconcile_data.NameOffset = name_offset;
+            reconcile_data.Flags = flags;
+            reconcile_data.InitWidthOrWeight = init_width_or_weight;
+            reconcile_data.UserData = user_data;
+            reconcile_data.ColumnNewIdx = (ImGuiTableColumnIdx)column_idx;
+            reconcile_data.ColumnOldIdx = (ImGuiTableColumnIdx)-1;
+            ImSpan<ImGuiTableColumn>& search_columns = table->TempData->OldColumnsData.empty() ? table->Columns : table->TempData->OldColumnsData;
+            for (ImGuiTableColumn& old_column : search_columns)
+                if (old_column.ID == column_id)
+                {
+                    reconcile_data.ColumnOldIdx = (ImGuiTableColumnIdx)search_columns.index_from_ptr(&old_column);
+                    reconcile_data.ColumnOldData = old_column;
+                    break;
+                }
+            column->NameOffset = name_offset; // Allow TableGetColumnName() to work before layout.
+            return;
+        }
+    }
+    
+    TableSetupColumnApply(table, column_idx, column_id, name_offset, flags, init_width_or_weight, user_data);
+}
+
+void ImGui::TableReconcileColumns(ImGuiTable* table)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiTableTempData* temp_data = table->TempData;
+    IM_UNUSED(g);
+    IMGUI_DEBUG_LOG_TABLE("[table] Reconcile moved columns for table 0x%08X\n", table->ID);
+    for (ImGuiTableReconcileColumnData& reconcile_data : temp_data->ReconcileColumnsRequests)
+    {
+        ImGuiTableColumn* column = &table->Columns[reconcile_data.ColumnNewIdx];
+        *column = reconcile_data.ColumnOldData; // When old column was not found clear anyway with default-constructed data.
+        TableSetupColumnApply(table, reconcile_data.ColumnNewIdx, reconcile_data.ID, reconcile_data.NameOffset, reconcile_data.Flags, reconcile_data.InitWidthOrWeight, reconcile_data.UserData);
+        IMGUI_DEBUG_LOG_TABLE("[table] - old %d -> new %d \"%s\"\n", reconcile_data.ColumnOldIdx, reconcile_data.ColumnNewIdx, TableGetColumnName(table, reconcile_data.ColumnNewIdx)); // Log at the end so NameOffset was copied.
+    }
+    TableFixDisplayOrder(table);
+    table->IsSettingsDirty = true; // FIXME-RECONCILE: Necessary?
+    temp_data->ReconcileColumnsRequests.resize(0); // GC-ed once in NewFrame()
 }
 
 // [Public]
@@ -3778,9 +3853,7 @@ ImGuiTableSettings* ImGui::TableGetBoundSettings(ImGuiTable* table)
         ImGuiContext& g = *GImGui;
         ImGuiTableSettings* settings = g.SettingsTables.ptr_from_offset(table->SettingsOffset);
         IM_ASSERT(settings->ID == table->ID);
-        if (settings->ColumnsCountMax >= table->ColumnsCount)
-            return settings; // OK
-        settings->ID = 0; // Invalidate storage, we won't fit because of a count change
+        return settings;
     }
     return NULL;
 }
@@ -3803,6 +3876,11 @@ void ImGui::TableSaveSettings(ImGuiTable* table)
     // Bind or create settings data
     ImGuiContext& g = *GImGui;
     ImGuiTableSettings* settings = TableGetBoundSettings(table);
+    if (settings != NULL && table->ColumnsCount > settings->ColumnsCountMax)
+    {
+        settings->ID = 0; // Invalidate storage, we won't fit because of a count change
+        settings = NULL;
+    }
     if (settings == NULL)
     {
         settings = TableSettingsCreate(table->ID, table->ColumnsCount);
@@ -3818,6 +3896,8 @@ void ImGui::TableSaveSettings(ImGuiTable* table)
 
     bool save_ref_scale = false;
     settings->SaveFlags = ImGuiTableFlags_None;
+    if (table->Flags & ImGuiTableFlags_TrackTopologyChanges)
+        settings->SaveFlags |= ImGuiTableFlags_TrackTopologyChanges | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
     for (int n = 0; n < table->ColumnsCount; n++, column++, column_settings++)
     {
         const float width_or_weight = (column->Flags & ImGuiTableColumnFlags_WidthStretch) ? column->StretchWeight : column->WidthRequest;
@@ -3853,9 +3933,11 @@ void ImGui::TableSaveSettings(ImGuiTable* table)
 void ImGui::TableLoadSettings(ImGuiTable* table)
 {
     ImGuiContext& g = *GImGui;
-    table->IsSettingsRequestLoad = false;
     if (table->Flags & ImGuiTableFlags_NoSavedSettings)
+    {
+        table->IsSettingsRequestLoad = false; // Done
         return;
+    }
 
     // Bind settings
     ImGuiTableSettings* settings;
@@ -3875,30 +3957,50 @@ void ImGui::TableLoadSettings(ImGuiTable* table)
 
     table->SettingsLoadedFlags = settings->SaveFlags;
     table->RefScale = settings->RefScale;
+    // (TableUpdateLayout() will further read from settings data)
+}
 
-    // Initialize default columns settings
-    for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
-    {
-        ImGuiTableColumn* column = &table->Columns[column_n];
-        TableInitColumnDefaults(table, column, ~0);
-        column->AutoFitQueue = 0x00;
-    }
+void ImGui::TableLoadSettingsForColumns(ImGuiTable* table)
+{
+    for (ImGuiTableColumn& column : table->Columns)
+        column.IsLoadedSettings = false;
+    ImGuiTableSettings* settings = TableGetBoundSettings(table);
+    if (settings == NULL)
+        return;
+
+    // When using TrackTopologyChanges mode, columns ID are either all sets, either all cleared (initially).
+    //const bool has_columns_id = table->Columns[0].ID != 0;
 
     // Serialize ImGuiTableSettings/ImGuiTableColumnSettings into ImGuiTable/ImGuiTableColumn
     ImGuiTableColumnSettings* column_settings = settings->GetColumnSettings();
     for (int data_n = 0; data_n < settings->ColumnsCount; data_n++, column_settings++)
     {
         int column_n = column_settings->Index;
+        if ((table->Flags & ImGuiTableFlags_TrackTopologyChanges) && (settings->SaveFlags & ImGuiTableFlags_TrackTopologyChanges))// && has_columns_id)
+            if (column_n >= table->ColumnsCount || table->Columns[column_n].ID != column_settings->ID)
+            {
+                // - Case 1: done during initial table creation: we don't have ID yet. Write back loaded IDs, will reconcile in TableUpdateLayout().
+                // - Case 2 (this code): we have columns identifiers already.
+                column_n = -1;
+                for (int other_n = 0; other_n < table->ColumnsCount && column_n == -1; other_n++)
+                    if (table->Columns[other_n].ID == column_settings->ID)
+                        column_n = other_n;
+            }
+
         if (column_n < 0 || column_n >= table->ColumnsCount)
             continue;
 
         ImGuiTableColumn* column = &table->Columns[column_n];
+        column->IsLoadedSettings = true;
+        if (settings->SaveFlags & ImGuiTableFlags_TrackTopologyChanges)
+            column->ID = column_settings->ID;
         if (settings->SaveFlags & ImGuiTableFlags_Resizable)
         {
             if (column_settings->IsStretch)
                 column->StretchWeight = column_settings->WidthOrWeight;
             else
                 column->WidthRequest = column_settings->WidthOrWeight;
+            column->AutoFitQueue = 0x00;
         }
         if (settings->SaveFlags & ImGuiTableFlags_Reorderable)
             column->DisplayOrder = column_settings->DisplayOrder;
@@ -3907,12 +4009,6 @@ void ImGui::TableLoadSettings(ImGuiTable* table)
         column->SortOrder = column_settings->SortOrder;
         column->SortDirection = column_settings->SortDirection;
     }
-
-    // Fix display order and build index
-    if (settings->SaveFlags & ImGuiTableFlags_Reorderable)
-        TableFixDisplayOrder(table);
-    for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
-        table->DisplayOrderToIndex[table->Columns[column_n].DisplayOrder] = (ImGuiTableColumnIdx)column_n;
 }
 
 struct ImGuiTableFixDisplayOrderColumnData
@@ -3927,7 +4023,8 @@ static int IMGUI_CDECL TableFixDisplayOrderComparer(const void* lhs, const void*
     const ImGuiTable* table = ((const ImGuiTableFixDisplayOrderColumnData*)lhs)->Table;
     const ImGuiTableColumnIdx lhs_idx = ((const ImGuiTableFixDisplayOrderColumnData*)lhs)->Idx;
     const ImGuiTableColumnIdx rhs_idx = ((const ImGuiTableFixDisplayOrderColumnData*)rhs)->Idx;
-    const int order_delta = (table->Columns[lhs_idx].DisplayOrder - table->Columns[rhs_idx].DisplayOrder);
+    // Assume ImGuiTableColumnIdx == signed short, to turn -1 into a large value so that it always sort after.
+    const int order_delta = ((unsigned short)table->Columns[lhs_idx].DisplayOrder - (unsigned short)table->Columns[rhs_idx].DisplayOrder);
     return (order_delta > 0) ? +1 : (order_delta < 0) ? -1 : (lhs_idx > rhs_idx) ? +1 : -1;
 }
 
@@ -3945,6 +4042,8 @@ void ImGui::TableFixDisplayOrder(ImGuiTable* table)
     ImQsort(fdo_columns, (size_t)table->ColumnsCount, sizeof(ImGuiTableFixDisplayOrderColumnData), TableFixDisplayOrderComparer);
     for (int n = 0; n < table->ColumnsCount; n++)
         table->Columns[fdo_columns[n].Idx].DisplayOrder = (ImGuiTableColumnIdx)n;
+    for (int n = 0; n < table->ColumnsCount; n++)
+        table->DisplayOrderToIndex[table->Columns[n].DisplayOrder] = (ImGuiTableColumnIdx)n;
 }
 
 static void TableSettingsHandler_ClearAll(ImGuiContext* ctx, ImGuiSettingsHandler*)
@@ -4010,7 +4109,7 @@ static void TableSettingsHandler_ReadLine(ImGuiContext*, ImGuiSettingsHandler*, 
         if (sscanf(line, "Visible=%d%n", &n, &r) == 1)          { line = ImStrSkipBlank(line + r); column->IsEnabled = (ImU8)n; settings->SaveFlags |= ImGuiTableFlags_Hideable; }
         if (sscanf(line, "Order=%d%n", &n, &r) == 1)            { line = ImStrSkipBlank(line + r); column->DisplayOrder = (ImGuiTableColumnIdx)n; settings->SaveFlags |= ImGuiTableFlags_Reorderable; }
         if (sscanf(line, "Sort=%d%c%n", &n, &c, &r) == 2)       { line = ImStrSkipBlank(line + r); column->SortOrder = (ImGuiTableColumnIdx)n; column->SortDirection = (c == '^') ? ImGuiSortDirection_Descending : ImGuiSortDirection_Ascending; settings->SaveFlags |= ImGuiTableFlags_Sortable; }
-        if (sscanf(line, "ID=0x%08X%n", (ImU32*)&n, &r) == 1)   { line = ImStrSkipBlank(line + r); column->ID = (ImGuiID)n; }
+        if (sscanf(line, "ID=0x%08X%n", (ImU32*)&n, &r) == 1)   { line = ImStrSkipBlank(line + r); column->ID = (ImGuiID)n; settings->SaveFlags |= ImGuiTableFlags_TrackTopologyChanges; }
     }
 }
 
@@ -4028,6 +4127,7 @@ static void TableSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandle
         const bool save_visible = (settings->SaveFlags & ImGuiTableFlags_Hideable) != 0;
         const bool save_order   = (settings->SaveFlags & ImGuiTableFlags_Reorderable) != 0;
         const bool save_sort    = (settings->SaveFlags & ImGuiTableFlags_Sortable) != 0;
+        const bool save_id      = (settings->SaveFlags & ImGuiTableFlags_TrackTopologyChanges) != 0;
         // We need to save the [Table] entry even if all the bools are false, since this records a table with "default settings".
 
         buf->reserve(buf->size() + 30 + settings->ColumnsCount * 50); // ballpark reserve
@@ -4047,7 +4147,7 @@ static void TableSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandle
             if (save_visible)                           { buf->appendf(" Visible=%d", column->IsEnabled); }
             if (save_order)                             { buf->appendf(" Order=%d", column->DisplayOrder); }
             if (save_sort && column->SortOrder != -1)   { buf->appendf(" Sort=%d%c", column->SortOrder, (column->SortDirection == ImGuiSortDirection_Ascending) ? 'v' : '^'); }
-            if (column->ID != 0)                        { buf->appendf(" ID=0x%08X", column->ID); }
+            if (save_id && column->ID != 0)             { buf->appendf(" ID=0x%08X", column->ID); }
             buf->append("\n");
         }
         buf->append("\n");
