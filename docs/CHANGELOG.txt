@@ -93,8 +93,8 @@ HOW TO UPDATE?
     but the artifacts should be more localized. The new implementation attempted to favor simple
     implementation and robustness over the corner case accuracy.
   - Added anti-aliasing ends, most noticeable for thick lines.
-  - Added `ImDrawFlags_AAEnds` flag to enable anti-aliased line ends. Enabling AA Ends by
-    default would be more "correct", but it is slower and increase vertex/index data.
+  - Added `ImDrawFlags_AALineEnds` flag to enable anti-aliased line ends. Enabling AA Ends
+    by default would be more "correct", but it is slower and increase vertex/index data.
   - Added `ImDrawFlags_MiterOnly` flag to disable using beveled corner (closer to legacy
     rendering, slightly faster, but corners sharpers than 90 degrees may expand far out).
     Automatically used by AddRect(), AddCircle(), AddNgon(), AddEllipse() etc functions
@@ -141,6 +141,14 @@ HOW TO UPDATE?
   - All closed shapes with thickness=1.0f will appear identical.
   - The difference for thickness>1.0f shapes may be minimal since very large strokes
     were not well supported for widgets, but stroke will default inside widgets.
+- (Breaking) Merged `ImDrawListFlags` into `ImDrawFlags`.
+  `ImDrawListFlags` was very rarely used directly. Keep inline redirection (will obsolete).
+    - `ImDrawListFlags_AntiAliasedLines`       -> `ImDrawFlags_AALines`
+    - `ImDrawListFlags_AntiAliasedFill`        -> `ImDrawFlags_AAFill`
+    - `ImDrawListFlags_AntiAliasedLinesUseTex` -> `ImDrawFlags_UseTexForStrokeLegacy`
+    - `ImDrawListFlags_AllowVtxOffset`         -> `ImDrawFlags_UseVtxOffset`
+    - `ImDrawListFlags_TextNoPixelSnap`        -> `ImDrawFlags_TextNoPixelSnap`
+  Unifying them allows easily using them for both per-primitives and scope alterations.
 - Tweaked line rendering in various locations to avoid blurryness:
   - Windows: title-bar and menu-bar border (when thickness>1.0f).
   - Tables: borders (when thickness>1.0f).
@@ -151,7 +159,6 @@ HOW TO UPDATE?
 - Demo: Custom Rendering: exposed new flags; Showcasing overlapping strokes and
   filled shapes; Added an option to animation thickness; Added new shapes to
   showcase new rendering features that previously hit limitations.
-
 
 Breaking Changes:
 
