@@ -1669,17 +1669,9 @@ static void TableInitColumnDefaults(ImGuiTable* table, ImGuiTableColumn* column,
 
 // See "COLUMNS SIZING POLICIES" comments at the top of this file
 // If (init_width_or_weight <= 0.0f) it is ignored
-void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, float init_width_or_weight, ImGuiID user_id)
+static void TableSetupColumnApply(ImGuiTable* table, int idx, ImGuiID id, ImS16 name_offset, ImGuiTableColumnFlags flags, float init_width_or_weight, ImGuiID user_id)
 {
-    ImGuiContext& g = *GImGui;
-    ImGuiTable* table = g.CurrentTable;
-    IM_ASSERT_USER_ERROR_RET(table != NULL, "Call should only be done while in BeginTable() scope!");
-    IM_ASSERT_USER_ERROR_RET(table->DeclColumnsCount < table->ColumnsCount, "TableSetupColumn(): called too many times!");
-    IM_ASSERT_USER_ERROR_RET(table->IsLayoutLocked == false, "TableSetupColumn(): need to call before first row!"); // Table layout is locked when submitting a row or when calling BeginMultiSelect() with box-select.
-    IM_ASSERT((flags & ImGuiTableColumnFlags_StatusMask_) == 0 && "Illegal to pass StatusMask values to TableSetupColumn()");
-
-    ImGuiTableColumn* column = &table->Columns[table->DeclColumnsCount];
-    table->DeclColumnsCount++;
+    ImGuiTableColumn* column = &table->Columns[idx];
 
     // Assert when passing a width or weight if policy is entirely left to default, to avoid storing width into weight and vice-versa.
     // Give a grace to users of ImGuiTableFlags_ScrollX.
@@ -1698,8 +1690,9 @@ void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, flo
     }
 
     TableSetupColumnFlags(table, column, flags);
-    column->ID = (label != NULL && label[0] != 0) ? ImHashStr(label) : 0;
+    column->ID = id;
     column->UserID = user_id;
+    column->NameOffset = name_offset;
     flags = column->Flags;
 
     // Initialize defaults
@@ -1711,15 +1704,29 @@ void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, flo
             init_flags |= ImGuiTableFlags_Resizable;
         TableInitColumnDefaults(table, column, init_flags);
     }
+}
+
+void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, float init_width_or_weight, ImGuiID user_id)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiTable* table = g.CurrentTable;
+    IM_ASSERT_USER_ERROR_RET(table != NULL, "Call should only be done while in BeginTable() scope!");
+    IM_ASSERT_USER_ERROR_RET(table->DeclColumnsCount < table->ColumnsCount, "TableSetupColumn(): called too many times!");
+    IM_ASSERT_USER_ERROR_RET(table->IsLayoutLocked == false, "TableSetupColumn(): need to call before first row!"); // Table layout is locked when submitting a row or when calling BeginMultiSelect() with box-select.
+    IM_ASSERT((flags & ImGuiTableColumnFlags_StatusMask_) == 0 && "Illegal to pass StatusMask values to TableSetupColumn()");
 
     // Store name (append with zero-terminator in contiguous buffer)
     // FIXME: If we recorded the number of \n in names we could compute header row height
-    column->NameOffset = -1;
+    ImS16 name_offset = -1;
     if (label != NULL && label[0] != 0)
     {
-        column->NameOffset = (ImS16)table->ColumnsNames.size();
+        name_offset = (ImS16)table->ColumnsNames.size();
         table->ColumnsNames.append(label, label + ImStrlen(label) + 1);
     }
+
+    const ImGuiID column_id = (label != NULL && label[0] != 0) ? ImHashStr(label) : 0;
+    TableSetupColumnApply(table, table->DeclColumnsCount, column_id, name_offset, flags, init_width_or_weight, user_id);
+    table->DeclColumnsCount++;
 }
 
 // [Public]
