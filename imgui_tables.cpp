@@ -4076,6 +4076,7 @@ void ImGui::TableGcCompactTransientBuffers(ImGuiTable* table)
 
 void ImGui::TableGcCompactTransientBuffers(ImGuiTableTempData* temp_data)
 {
+    temp_data->AngledHeadersRequests.clear();
     temp_data->DrawSplitter.ClearFreeMemory();
     temp_data->LastTimeActive = -1.0f;
 }
