@@ -47,6 +47,39 @@ static VkDescriptorPool         g_DescriptorPool = VK_NULL_HANDLE;
 static ImGui_ImplVulkanH_Window g_MainWindowData;
 static uint32_t                 g_MinImageCount = 2;
 static bool                     g_SwapChainRebuild = false;
+static bool                     g_UsingDescriptorHeap = false;
+
+struct HeapInfo
+{
+    VkBuffer Buffer;
+    VkDeviceMemory Memory;
+    void *Mapped;
+    VkBindHeapInfoEXT BindInfo;
+    uint64_t FreeList;
+    VkDeviceSize Stride;
+
+    uint32_t allocate()
+    {
+        if(!FreeList)
+            abort();
+        for(uint32_t i = 0; i < 8 * sizeof(FreeList); i++)
+        {
+            if(FreeList & (1ull << i))
+            {
+                FreeList ^= (1ull << i);
+                return i;
+            }
+        }
+        return 0;
+    }
+    void free(uint32_t idx)
+    {
+        FreeList |= 1ull << idx;
+    }
+};
+static HeapInfo g_ResourceHeap;
+static HeapInfo g_SamplerHeap;
+static ImGui_ImplVulkan_DescriptorHeapInfo g_DescriptorHeapInfo;
 
 static void check_vk_result(VkResult err)
 {
@@ -72,6 +105,52 @@ static bool IsExtensionAvailable(const ImVector<VkExtensionProperties>& properti
         if (strcmp(p.extensionName, extension) == 0)
             return true;
     return false;
+}
+
+// Same as IM_MEMALIGN(). 'alignment' must be a power of two.
+static inline VkDeviceSize AlignBufferSize(VkDeviceSize size, VkDeviceSize alignment)
+{
+    return (size + alignment - 1) & ~(alignment - 1);
+}
+
+static void SetupHeap(
+    HeapInfo& heap, VkDeviceSize size, VkDeviceSize alignment, VkDeviceSize stride, uint32_t mem_index)
+{
+    heap.Stride = stride;
+
+    VkDeviceSize buffer_size_aligned = AlignBufferSize(size, alignment);
+    VkBufferCreateInfo buffer_info = {};
+    buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buffer_info.size = buffer_size_aligned;
+    buffer_info.usage = VK_BUFFER_USAGE_DESCRIPTOR_HEAP_BIT_EXT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+    buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    VkResult err = vkCreateBuffer(g_Device, &buffer_info, g_Allocator, &heap.Buffer);
+    check_vk_result(err);
+
+    VkMemoryRequirements mem_req;
+    vkGetBufferMemoryRequirements(g_Device, heap.Buffer, &mem_req);
+
+    VkMemoryAllocateFlagsInfo alloc_flags = {};
+    alloc_flags.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO;
+    alloc_flags.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
+    VkMemoryAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    alloc_info.pNext = &alloc_flags;
+    alloc_info.allocationSize = buffer_size_aligned;
+    alloc_info.memoryTypeIndex = mem_index;
+    err = vkAllocateMemory(g_Device, &alloc_info, g_Allocator, &heap.Memory);
+    check_vk_result(err);
+    err = vkMapMemory(g_Device, heap.Memory, 0, buffer_size_aligned, 0, &heap.Mapped);
+    check_vk_result(err);
+    err = vkBindBufferMemory(g_Device, heap.Buffer, heap.Memory, 0);
+    check_vk_result(err);
+
+    const VkBufferDeviceAddressInfo addr = {
+        VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO, nullptr, heap.Buffer
+    };
+    heap.BindInfo.sType = VK_STRUCTURE_TYPE_BIND_HEAP_INFO_EXT;
+    heap.BindInfo.heapRange.address = vkGetBufferDeviceAddressKHR(g_Device, &addr);
+    heap.BindInfo.heapRange.size = size;
 }
 
 static void SetupVulkan(ImVector<const char*> instance_extensions)
@@ -116,6 +195,9 @@ static void SetupVulkan(ImVector<const char*> instance_extensions)
         // Create Vulkan Instance
         create_info.enabledExtensionCount = (uint32_t)instance_extensions.Size;
         create_info.ppEnabledExtensionNames = instance_extensions.Data;
+        VkApplicationInfo app_info{};
+        app_info.apiVersion = VK_API_VERSION_1_1;
+        create_info.pApplicationInfo = &app_info;
         err = vkCreateInstance(&create_info, g_Allocator, &g_Instance);
         check_vk_result(err);
 #ifdef IMGUI_IMPL_VULKAN_USE_VOLK
@@ -159,6 +241,20 @@ static void SetupVulkan(ImVector<const char*> instance_extensions)
         if (IsExtensionAvailable(properties, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME))
             device_extensions.push_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
 #endif
+        if (IsExtensionAvailable(properties, VK_EXT_DESCRIPTOR_HEAP_EXTENSION_NAME))
+        {
+            device_extensions.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
+            device_extensions.push_back(VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME);
+            device_extensions.push_back(VK_KHR_DEPTH_STENCIL_RESOLVE_EXTENSION_NAME);
+            device_extensions.push_back(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
+            device_extensions.push_back(VK_KHR_MAINTENANCE_2_EXTENSION_NAME);
+            device_extensions.push_back(VK_KHR_MAINTENANCE_5_EXTENSION_NAME);
+            device_extensions.push_back(VK_KHR_MULTIVIEW_EXTENSION_NAME);
+            device_extensions.push_back(VK_KHR_SHADER_UNTYPED_POINTERS_EXTENSION_NAME);
+            device_extensions.push_back(VK_EXT_DESCRIPTOR_HEAP_EXTENSION_NAME);
+
+            g_UsingDescriptorHeap = true;
+        }
 
         const float queue_priority[] = { 1.0f };
         VkDeviceQueueCreateInfo queue_info[1] = {};
@@ -167,6 +263,17 @@ static void SetupVulkan(ImVector<const char*> instance_extensions)
         queue_info[0].queueCount = 1;
         queue_info[0].pQueuePriorities = queue_priority;
         VkDeviceCreateInfo create_info = {};
+        VkPhysicalDeviceBufferDeviceAddressFeatures buffer_device_addr{
+            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES, nullptr, VK_TRUE};
+        VkPhysicalDeviceDescriptorHeapFeaturesEXT desc_heap_feat{
+            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_HEAP_FEATURES_EXT, &buffer_device_addr, VK_TRUE};
+        VkPhysicalDeviceShaderUntypedPointersFeaturesKHR untyped_pointers{
+            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_UNTYPED_POINTERS_FEATURES_KHR, &desc_heap_feat, VK_TRUE};
+        if(g_UsingDescriptorHeap)
+        {
+            create_info.pNext = &untyped_pointers;
+        }
+
         create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
         create_info.queueCreateInfoCount = sizeof(queue_info) / sizeof(queue_info[0]);
         create_info.pQueueCreateInfos = queue_info;
@@ -177,8 +284,80 @@ static void SetupVulkan(ImVector<const char*> instance_extensions)
         vkGetDeviceQueue(g_Device, g_QueueFamily, 0, &g_Queue);
     }
 
+    // Create descriptor heaps
+    if (g_UsingDescriptorHeap)
+    {
+        VkPhysicalDeviceDescriptorHeapPropertiesEXT descriptor_heap_properties{
+            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_HEAP_PROPERTIES_EXT};
+        VkPhysicalDeviceProperties2 properties2{
+            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, &descriptor_heap_properties};
+        vkGetPhysicalDeviceProperties2(g_PhysicalDevice, &properties2);
+
+        size_t resource_size =
+            descriptor_heap_properties.imageDescriptorSize * IMGUI_IMPL_VULKAN_MINIMUM_SAMPLED_IMAGE_POOL_SIZE +
+            descriptor_heap_properties.minResourceHeapReservedRange;
+        size_t sampler_size =
+            descriptor_heap_properties.samplerDescriptorSize * IMGUI_IMPL_VULKAN_MINIMUM_SAMPLER_POOL_SIZE +
+            descriptor_heap_properties.minSamplerHeapReservedRange;
+
+        VkPhysicalDeviceMemoryProperties prop;
+        vkGetPhysicalDeviceMemoryProperties(g_PhysicalDevice, &prop);
+        uint32_t mem_index = 0;
+        for (uint32_t i = 0; i < prop.memoryTypeCount; i++)
+        {
+            if ((prop.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) ==
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
+            {
+                mem_index = i;
+                break;
+            }
+        }
+
+        SetupHeap(g_ResourceHeap, resource_size, descriptor_heap_properties.resourceHeapAlignment, descriptor_heap_properties.imageDescriptorSize, mem_index);
+        SetupHeap(g_SamplerHeap, sampler_size, descriptor_heap_properties.samplerHeapAlignment, descriptor_heap_properties.samplerDescriptorSize, mem_index);
+
+        g_ResourceHeap.BindInfo.reservedRangeOffset =
+            descriptor_heap_properties.imageDescriptorSize * IMGUI_IMPL_VULKAN_MINIMUM_SAMPLED_IMAGE_POOL_SIZE;
+        g_ResourceHeap.BindInfo.reservedRangeSize = descriptor_heap_properties.minResourceHeapReservedRange;
+        g_SamplerHeap.BindInfo.reservedRangeOffset =
+            descriptor_heap_properties.samplerDescriptorSize * IMGUI_IMPL_VULKAN_MINIMUM_SAMPLER_POOL_SIZE;
+        g_SamplerHeap.BindInfo.reservedRangeSize = descriptor_heap_properties.minSamplerHeapReservedRange;
+
+        g_ResourceHeap.FreeList = (1ull << IMGUI_IMPL_VULKAN_MINIMUM_SAMPLED_IMAGE_POOL_SIZE) - 1;
+        g_SamplerHeap.FreeList = (1ull << IMGUI_IMPL_VULKAN_MINIMUM_SAMPLER_POOL_SIZE) - 1;
+
+        g_DescriptorHeapInfo.RegisterImage = [](void *, const VkImageViewCreateInfo *ci) -> uint32_t {
+            uint32_t idx = g_ResourceHeap.allocate();
+
+            VkImageDescriptorInfoEXT image{};
+            image.sType = VK_STRUCTURE_TYPE_IMAGE_DESCRIPTOR_INFO_EXT;
+            image.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            image.pView = ci;
+            VkResourceDescriptorInfoEXT r{};
+            r.sType = VK_STRUCTURE_TYPE_RESOURCE_DESCRIPTOR_INFO_EXT;
+            r.type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+            r.data.pImage = &image;
+            VkHostAddressRangeEXT addr{
+                (char *)g_ResourceHeap.Mapped + idx * g_ResourceHeap.Stride, g_ResourceHeap.Stride};
+            vkWriteResourceDescriptorsEXT(g_Device, 1, &r, &addr);
+
+            return idx;
+        };
+        g_DescriptorHeapInfo.UnRegisterImage = [](void *, uint32_t idx) { g_ResourceHeap.free(idx); };
+        g_DescriptorHeapInfo.RegisterSampler = [](void *, const VkSamplerCreateInfo *ci) -> uint32_t {
+            uint32_t idx = g_SamplerHeap.allocate();
+
+            VkHostAddressRangeEXT addr{(char *)g_SamplerHeap.Mapped + idx * g_SamplerHeap.Stride, g_SamplerHeap.Stride};
+            vkWriteSamplerDescriptorsEXT(g_Device, 1, ci, &addr);
+
+            return idx;
+        };
+        g_DescriptorHeapInfo.UnRegisterSampler = [](void *, uint32_t idx) { g_SamplerHeap.free(idx); };
+    }
+
     // Create Descriptor Pool
     // If you wish to load e.g. additional textures you may need to alter pools sizes and maxSets.
+    if (!g_UsingDescriptorHeap)
     {
         VkDescriptorPoolSize pool_sizes[] =
         {
@@ -233,7 +412,16 @@ static void SetupVulkanWindow(ImGui_ImplVulkanH_Window* wd, VkSurfaceKHR surface
 
 static void CleanupVulkan()
 {
-    vkDestroyDescriptorPool(g_Device, g_DescriptorPool, g_Allocator);
+    if (g_UsingDescriptorHeap)
+    {
+        vkDestroyBuffer(g_Device, g_ResourceHeap.Buffer, g_Allocator);
+        vkDestroyBuffer(g_Device, g_SamplerHeap.Buffer, g_Allocator);
+        vkFreeMemory(g_Device, g_ResourceHeap.Memory, g_Allocator);
+        vkFreeMemory(g_Device, g_SamplerHeap.Memory, g_Allocator);
+    } else
+    {
+        vkDestroyDescriptorPool(g_Device, g_DescriptorPool, g_Allocator);
+    }
 
 #ifdef APP_USE_VULKAN_DEBUG_REPORT
     // Remove the debug report callback
@@ -290,6 +478,12 @@ static void FrameRender(ImGui_ImplVulkanH_Window* wd, ImDrawData* draw_data)
         info.clearValueCount = 1;
         info.pClearValues = &wd->ClearValue;
         vkCmdBeginRenderPass(fd->CommandBuffer, &info, VK_SUBPASS_CONTENTS_INLINE);
+    }
+
+    if (g_UsingDescriptorHeap)
+    {
+        vkCmdBindResourceHeapEXT(fd->CommandBuffer, &g_ResourceHeap.BindInfo);
+        vkCmdBindSamplerHeapEXT(fd->CommandBuffer, &g_SamplerHeap.BindInfo);
     }
 
     // Record dear imgui primitives into command buffer
@@ -411,6 +605,10 @@ int main(int, char**)
     init_info.PipelineInfoMain.Subpass = 0;
     init_info.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
     init_info.CheckVkResultFn = check_vk_result;
+    if (g_UsingDescriptorHeap)
+    {
+        init_info.DescriptorHeapInfo = &g_DescriptorHeapInfo;
+    }
     ImGui_ImplVulkan_Init(&init_info);
 
     // Load Fonts
