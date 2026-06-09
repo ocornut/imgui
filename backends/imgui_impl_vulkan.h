@@ -93,6 +93,15 @@ struct ImGui_ImplVulkan_PipelineInfo
 #endif
 };
 
+struct ImGui_ImplVulkan_DescriptorHeapInfo
+{
+    uint32_t (*RegisterSampler)(void *, const VkSamplerCreateInfo *);
+    void (*UnRegisterSampler)(void *, uint32_t);
+    uint32_t (*RegisterImage)(void *, const VkImageViewCreateInfo *);
+    void (*UnRegisterImage)(void *, uint32_t);
+    void *UserContext;
+};
+
 // Initialization data, for ImGui_ImplVulkan_Init()
 // [Please zero-clear before use!]
 // - About descriptor pool:
@@ -136,6 +145,9 @@ struct ImGui_ImplVulkan_InitInfo
     // - Shader inputs/outputs need to match ours. Code/data pointed to by the structure needs to survive for whole during of backend usage.
     VkShaderModuleCreateInfo        CustomShaderVertCreateInfo;
     VkShaderModuleCreateInfo        CustomShaderFragCreateInfo;
+
+    // (Optional) If set, use VK_EXT_descriptor_heap.
+    const ImGui_ImplVulkan_DescriptorHeapInfo *DescriptorHeapInfo;
 };
 
 // Follow "Getting Started" link and check examples/ folder to learn about using backends!
@@ -156,6 +168,7 @@ IMGUI_IMPL_API void             ImGui_ImplVulkan_UpdateTexture(ImTextureData* te
 // Register a texture (VkDescriptorSet for a VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE == ImTextureID)
 IMGUI_IMPL_API VkDescriptorSet  ImGui_ImplVulkan_AddTexture(VkImageView image_view, VkImageLayout image_layout);
 IMGUI_IMPL_API void             ImGui_ImplVulkan_RemoveTexture(VkDescriptorSet descriptor_set);
+IMGUI_IMPL_API void             ImGui_ImplVulkan_RemoveHeapTexture(uint32_t id);
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 IMGUI_IMPL_API VkDescriptorSet  ImGui_ImplVulkan_AddTexture(VkSampler sampler, VkImageView image_view, VkImageLayout image_layout); // Ignore VkSampler
