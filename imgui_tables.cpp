@@ -615,21 +615,6 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     if (table->IsSettingsRequestLoad)
         TableLoadSettings(table);
 
-    // Handle DPI/font resize
-    // This is designed to facilitate DPI changes with the assumption that e.g. style.CellPadding has been scaled as well.
-    // It will also react to changing fonts with mixed results. It doesn't need to be perfect but merely provide a decent transition.
-    // FIXME-DPI: Provide consistent standards for reference size. Perhaps using g.CurrentDpiScale would be more self explanatory.
-    // This is will lead us to non-rounded WidthRequest in columns, which should work but is a poorly tested path.
-    const float new_ref_scale_unit = g.FontSize; // g.Font->GetCharAdvance('A') ?
-    if (table->RefScale != 0.0f && table->RefScale != new_ref_scale_unit)
-    {
-        const float scale_factor = new_ref_scale_unit / table->RefScale;
-        //IMGUI_DEBUG_PRINT("[table] %08X RefScaleUnit %.3f -> %.3f, scaling width by %.3f\n", table->ID, table->RefScaleUnit, new_ref_scale_unit, scale_factor);
-        for (int n = 0; n < columns_count; n++)
-            table->Columns[n].WidthRequest = table->Columns[n].WidthRequest * scale_factor;
-    }
-    table->RefScale = new_ref_scale_unit;
-
     // Disable output until user calls TableNextRow() or TableNextColumn() leading to the TableUpdateLayout() call..
     // This is not strictly necessary but will reduce cases were "out of table" output will be misleading to the user.
     // Because we cannot safely assert in EndTable() when no rows have been created, this seems like our best option.
@@ -851,11 +836,27 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     ImGuiContext& g = *GImGui;
     IM_ASSERT(table->IsLayoutLocked == false);
 
+    // Handle DPI/font resize
+    // This is designed to facilitate DPI changes with the assumption that e.g. style.CellPadding has been scaled as well.
+    // It will also react to changing fonts with mixed results. It doesn't need to be perfect but merely provide a decent transition.
+    // FIXME-DPI: Provide consistent standards for reference size. Perhaps using g.CurrentDpiScale would be more self explanatory.
+    // This is will lead us to non-rounded WidthRequest in columns, which should work but is a poorly tested path.
+    const float new_ref_scale_unit = g.FontSize; // g.Font->GetCharAdvance('A') ?
+    const int columns_count = table->ColumnsCount;
+    if (table->RefScale != 0.0f && table->RefScale != new_ref_scale_unit)
+    {
+        const float scale_factor = new_ref_scale_unit / table->RefScale;
+        //IMGUI_DEBUG_PRINT("[table] %08X RefScaleUnit %.3f -> %.3f, scaling width by %.3f\n", table->ID, table->RefScaleUnit, new_ref_scale_unit, scale_factor);
+        for (int n = 0; n < columns_count; n++)
+            table->Columns[n].WidthRequest = table->Columns[n].WidthRequest * scale_factor;
+    }
+    table->RefScale = new_ref_scale_unit;
+
     const ImGuiTableFlags table_sizing_policy = (table->Flags & ImGuiTableFlags_SizingMask_);
     table->IsDefaultDisplayOrder = true;
     table->ColumnsEnabledCount = 0;
-    ImBitArrayClearAllBits(table->EnabledMaskByIndex, table->ColumnsCount);
-    ImBitArrayClearAllBits(table->EnabledMaskByDisplayOrder, table->ColumnsCount);
+    ImBitArrayClearAllBits(table->EnabledMaskByIndex, columns_count);
+    ImBitArrayClearAllBits(table->EnabledMaskByDisplayOrder, columns_count);
     table->LeftMostEnabledColumn = -1;
     table->MinColumnWidth = ImMax(1.0f, g.Style.FramePadding.x * 1.0f); // g.Style.ColumnsMinSpacing; // FIXME-TABLE
 
@@ -868,7 +869,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     bool has_resizable = false;
     float stretch_sum_width_auto = 0.0f;
     float fixed_max_width_auto = 0.0f;
-    for (int order_n = 0; order_n < table->ColumnsCount; order_n++)
+    for (int order_n = 0; order_n < columns_count; order_n++)
     {
         const int column_n = table->DisplayOrderToIndex[order_n];
         if (column_n != order_n)
@@ -967,7 +968,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     float sum_width_requests = 0.0f;    // Sum of all width for fixed and auto-resize columns, excluding width contributed by Stretch columns but including spacing/padding.
     float stretch_sum_weights = 0.0f;   // Sum of all weights for stretch columns.
     table->LeftMostStretchedColumn = table->RightMostStretchedColumn = -1;
-    for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
+    for (int column_n = 0; column_n < columns_count; column_n++)
     {
         if (!IM_BITARRAY_TESTBIT(table->EnabledMaskByIndex, column_n))
             continue;
@@ -1031,7 +1032,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     const float width_avail_for_stretched_columns = width_avail - width_spacings - sum_width_requests;
     float width_remaining_for_stretched_columns = width_avail_for_stretched_columns;
     table->ColumnsGivenWidth = width_spacings + (table->CellPaddingX * 2.0f) * table->ColumnsEnabledCount;
-    for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
+    for (int column_n = 0; column_n < columns_count; column_n++)
     {
         if (!IM_BITARRAY_TESTBIT(table->EnabledMaskByIndex, column_n))
             continue;
@@ -1058,7 +1059,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     // [Part 5] Redistribute stretch remainder width due to rounding (remainder width is < 1.0f * number of Stretch column).
     // Using right-to-left distribution (more likely to match resizing cursor).
     if (width_remaining_for_stretched_columns >= 1.0f && !(table->Flags & ImGuiTableFlags_PreciseWidths))
-        for (int order_n = table->ColumnsCount - 1; stretch_sum_weights > 0.0f && width_remaining_for_stretched_columns >= 1.0f && order_n >= 0; order_n--)
+        for (int order_n = columns_count - 1; stretch_sum_weights > 0.0f && width_remaining_for_stretched_columns >= 1.0f && order_n >= 0; order_n--)
         {
             if (!IM_BITARRAY_TESTBIT(table->EnabledMaskByDisplayOrder, order_n))
                 continue;
@@ -1098,8 +1099,8 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     float offset_x = ((table->FreezeColumnsCount > 0) ? table->OuterRect.Min.x : work_rect.Min.x) + table->OuterPaddingX - table->CellSpacingX1;
     ImRect host_clip_rect = table->InnerClipRect;
     //host_clip_rect.Max.x += table->CellPaddingX + table->CellSpacingX2;
-    ImBitArrayClearAllBits(table->VisibleMaskByIndex, table->ColumnsCount);
-    for (int order_n = 0; order_n < table->ColumnsCount; order_n++)
+    ImBitArrayClearAllBits(table->VisibleMaskByIndex, columns_count);
+    for (int order_n = 0; order_n < columns_count; order_n++)
     {
         const int column_n = table->DisplayOrderToIndex[order_n];
         ImGuiTableColumn* column = &table->Columns[column_n];
@@ -1247,7 +1248,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     const float unused_x1 = ImMax(table->WorkRect.Min.x, table->Columns[table->RightMostEnabledColumn].ClipRect.Max.x);
     if (is_hovering_table && table->HoveredColumnBody == -1)
         if (mouse_skewed_x >= unused_x1)
-            table->HoveredColumnBody = (ImGuiTableColumnIdx)table->ColumnsCount;
+            table->HoveredColumnBody = (ImGuiTableColumnIdx)columns_count;
     if (has_resizable == false && (table->Flags & ImGuiTableFlags_Resizable))
         table->Flags &= ~ImGuiTableFlags_Resizable;
 
@@ -1289,7 +1290,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     table->HighlightColumnHeader = -1;
     if (table->IsContextPopupOpen && table->ContextPopupColumn != -1 && table->InstanceInteracted == table->InstanceCurrent)
         table->HighlightColumnHeader = table->ContextPopupColumn;
-    else if ((table->Flags & ImGuiTableFlags_HighlightHoveredColumn) && table->HoveredColumnBody != -1 && table->HoveredColumnBody != table->ColumnsCount && table->HoveredColumnBorder == -1)
+    else if ((table->Flags & ImGuiTableFlags_HighlightHoveredColumn) && table->HoveredColumnBody != -1 && table->HoveredColumnBody != columns_count && table->HoveredColumnBorder == -1)
         if (g.ActiveId == 0 || (table->IsActiveIdInTable || g.DragDropActive))
             table->HighlightColumnHeader = table->HoveredColumnBody;
 
