@@ -8846,40 +8846,38 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
 void ImGui::ShowUserGuide()
 {
     ImGuiIO& io = GetIO();
-    BulletText("Double-click on title bar to collapse window.");
-    BulletText(
-        "Click and drag on lower corner or border to resize window.\n"
-        "(double-click to auto fit window to its contents)");
-    BulletText("Ctrl+Click on a slider or drag box to input value as text.");
-    BulletText("Tab/Shift+Tab to cycle through keyboard editable fields.");
-    BulletText("Ctrl+Tab/Ctrl+Shift+Tab to focus windows.");
+    BulletText("%s", Tr("Double-click on title bar to collapse window."));
+    BulletText("%s", Tr("Click and drag on lower corner or border to resize window.\n(double-click to auto fit window to its contents)"));
+    BulletText("%s", Tr("Ctrl+Click on a slider or drag box to input value as text."));
+    BulletText("%s", Tr("Tab/Shift+Tab to cycle through keyboard editable fields."));
+    BulletText("%s", Tr("Ctrl+Tab/Ctrl+Shift+Tab to focus windows."));
     if (io.FontAllowUserScaling)
-        BulletText("Ctrl+Mouse Wheel to zoom window contents.");
-    BulletText("While inputting text:\n");
+        BulletText("%s", Tr("Ctrl+Mouse Wheel to zoom window contents."));
+    BulletText("%s", Tr("While inputting text:"));
     Indent();
-    BulletText("Ctrl+Left/Right to word jump.");
-    BulletText("Ctrl+A or double-click to select all.");
-    BulletText("Ctrl+X/C/V to use clipboard cut/copy/paste.");
-    BulletText("Ctrl+Z to undo, Ctrl+Y/Ctrl+Shift+Z to redo.");
-    BulletText("Escape to revert.");
+    BulletText("%s", Tr("Ctrl+Left/Right to word jump."));
+    BulletText("%s", Tr("Ctrl+A or double-click to select all."));
+    BulletText("%s", Tr("Ctrl+X/C/V to use clipboard cut/copy/paste."));
+    BulletText("%s", Tr("Ctrl+Z to undo, Ctrl+Y/Ctrl+Shift+Z to redo."));
+    BulletText("%s", Tr("Escape to revert."));
     Unindent();
-    BulletText("With Keyboard controls enabled:");
+    BulletText("%s", Tr("With Keyboard controls enabled:"));
     Indent();
-    BulletText("Arrow keys or Home/End/PageUp/PageDown to navigate.");
-    BulletText("Space to activate a widget.");
-    BulletText("Return to input text into a widget.");
-    BulletText("Escape to deactivate a widget, close popup,\nexit a child window or the menu layer, clear focus.");
-    BulletText("Alt to jump to the menu layer of a window.");
-    BulletText("Menu or Shift+F10 to open a context menu.");
+    BulletText("%s", Tr("Arrow keys or Home/End/PageUp/PageDown to navigate."));
+    BulletText("%s", Tr("Space to activate a widget."));
+    BulletText("%s", Tr("Return to input text into a widget."));
+    BulletText("%s", Tr("Escape to deactivate a widget, close popup,\nexit a child window or the menu layer, clear focus."));
+    BulletText("%s", Tr("Alt to jump to the menu layer of a window."));
+    BulletText("%s", Tr("Menu or Shift+F10 to open a context menu."));
     Unindent();
-    BulletText("With Gamepad controls enabled:");
+    BulletText("%s", Tr("With Gamepad controls enabled:"));
     Indent();
-    BulletText("D-Pad: Navigate / Tweak / Resize (in Windowing mode).");
-    BulletText("%s Face button: Activate / Open / Toggle. Hold: activate with text input.", io.ConfigNavSwapGamepadButtons ? "East" : "South");
-    BulletText("%s Face button: Cancel / Close / Exit.", io.ConfigNavSwapGamepadButtons ? "South" : "East");
-    BulletText("West Face button: Toggle Menu. Hold for Windowing mode (Focus/Move/Resize windows).");
-    BulletText("North Face button: Open Context Menu.");
-    BulletText("L1/R1: Tweak Slower/Faster, Focus Previous/Next (in Windowing Mode).");
+    BulletText("%s", Tr("D-Pad: Navigate / Tweak / Resize (in Windowing mode)."));
+    BulletText(Tr("%s Face button: Activate / Open / Toggle. Hold: activate with text input."), io.ConfigNavSwapGamepadButtons ? "East" : "South");
+    BulletText(Tr("%s Face button: Cancel / Close / Exit."), io.ConfigNavSwapGamepadButtons ? "South" : "East");
+    BulletText("%s", Tr("West Face button: Toggle Menu. Hold for Windowing mode (Focus/Move/Resize windows)."));
+    BulletText("%s", Tr("North Face button: Open Context Menu."));
+    BulletText("%s", Tr("L1/R1: Tweak Slower/Faster, Focus Previous/Next (in Windowing Mode)."));
     Unindent();
 }
 
