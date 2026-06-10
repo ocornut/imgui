@@ -51,15 +51,10 @@ static void RebuildFonts()
 {
     ImGuiIO& io = ImGui::GetIO();
     io.Fonts->ClearFonts();
-    // v1.92: must pass explicit SizePixels so base font is not marked ImplicitRefSize,
-    // otherwise MergeMode on the CJK font triggers an assertion.
-    ImFontConfig default_cfg;
-    default_cfg.SizePixels = 13.0f;
-    io.Fonts->AddFontDefault(&default_cfg);
+    io.Fonts->AddFontDefault();
 
-    // Merge CJK font:
-    //   zh_CN → full common range (~2500 glyphs, renders all translated text)
-    //   English → only "中文" (2 glyphs U+4E2D,U+6587) so Language menu label renders correctly
+    // Merge a CJK font so the Language menu and translated strings render correctly.
+    // In v1.92+ with an updated backend, glyph ranges are handled dynamically and do not need to be specified.
     // Hiragino Sans GB is designed for Simplified Chinese; fall back to STHeiti.
     const char* font_paths[] = {
         "/System/Library/Fonts/Hiragino Sans GB.ttc",
@@ -71,13 +66,9 @@ static void RebuildFonts()
         if (access(font_paths[i], R_OK) == 0) { chosen = font_paths[i]; break; }
     }
     if (chosen) {
-        static const ImWchar zh_label_ranges[] = { 0x4E2D, 0x4E2D, 0x6587, 0x6587, 0 };
-        bool is_zh = (strcmp(imgui_i18n::getLocale(), "zh_CN") == 0);
         ImFontConfig cfg;
-        cfg.MergeMode  = true;
-        cfg.PixelSnapH = true;
-        io.Fonts->AddFontFromFileTTF(chosen, 13.0f, &cfg,
-            is_zh ? io.Fonts->GetGlyphRangesChineseSimplifiedCommon() : zh_label_ranges);
+        cfg.MergeMode = true;
+        io.Fonts->AddFontFromFileTTF(chosen, 13.0f, &cfg);
     }
     io.Fonts->Build();
 }
