@@ -132,7 +132,7 @@ Index of this file:
 #include "imgui.h"
 // i18n support: opt-in by defining IMGUI_DEMO_ENABLE_I18N in your build.
 // When not defined, Tr(s) is a no-op and this header has no dependencies.
-#include "i18n/imgui_i18n.h"
+#include "misc/i18n/imgui_i18n.h"
 #ifdef IMGUI_DEMO_ENABLE_I18N
 #if defined(__APPLE__)
 extern bool g_need_font_rebuild; // defined in main.mm (Apple Metal example only)

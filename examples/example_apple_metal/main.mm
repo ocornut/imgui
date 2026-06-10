@@ -20,7 +20,7 @@
 #include "imgui.h"
 // i18n support: include unconditionally — when IMGUI_DEMO_ENABLE_I18N is not defined
 // the header provides a no-op Tr(s) stub with zero overhead.
-#include "imgui_i18n.h"
+#include "misc/i18n/imgui_i18n.h"
 #ifdef IMGUI_DEMO_ENABLE_I18N
 #include <unistd.h>
 #endif
