@@ -68,7 +68,7 @@ static void RebuildFonts()
     if (chosen) {
         ImFontConfig cfg;
         cfg.MergeMode = true;
-        io.Fonts->AddFontFromFileTTF(chosen, 13.0f, &cfg);
+        io.Fonts->AddFontFromFileTTF(chosen, 0.0f, &cfg); // 0.0f = implicit ref size, matches AddFontDefault()
     }
     io.Fonts->Build();
 }
