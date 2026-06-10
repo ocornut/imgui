@@ -1,5 +1,5 @@
 // i18n/locale/zh_CN.cpp
-// 中文翻译表 —— 按批次追加，static initializer 在 main() 前自动注册
+// Simplified Chinese (zh_CN) translation table. Auto-registered before main() via static initializer.
 #include "../imgui_i18n.h"
 
 namespace {
@@ -73,7 +73,7 @@ struct ZhCNRegistrar {
             {"Color", "颜色"},
             {"SeparatorText", "分隔文字"},
             {"Dear ImGui Style Editor", "Dear ImGui 样式编辑器"},
-            // --- Step 1 补充（Configuration 面板） ---
+            // --- Step 1 supplement: Configuration panel ---
             {"dear imgui says hello! (%s) (%d)", "dear imgui 向你问好！(%s) (%d)"},
             {"<<PRESS SPACE TO DISABLE>>", "<<按空格键禁用>>"},
             {"Also see Style->Rendering for rendering options.", "另见 样式->渲染 中的渲染选项。"},
@@ -536,7 +536,7 @@ struct ZhCNRegistrar {
             {"Read 'Programmer Guide' in imgui.cpp for notes on how to setup Dear ImGui in your codebase.", "阅读 imgui.cpp 中的《程序员指南》了解集成方法。"},
             {"Understood!", "明白了！"},
             {"Oops, button is disabled!", "按钮已被禁用！"},
-            // === Step 11: Tables（前半段）===
+            // === Step 11: Tables (first half) ===
             {"Borders, background", "边框与背景"},
             {"Resizable, stretch", "可缩放（拉伸）"},
             {"Resizable, fixed", "可缩放（固定）"},
@@ -555,7 +555,7 @@ struct ZhCNRegistrar {
             {"Expand all", "展开全部"},
             {"Collapse all", "折叠全部"},
             {"Display headers", "显示表头"},
-            // === Step 11b 预留（Tables 后半段）===
+            // === Step 11b: Tables (second half, part 1) ===
             {"Headers", "表头"},
             {"Row flags", "行标志"},
             {"Reordering", "重排"},
@@ -585,7 +585,7 @@ struct ZhCNRegistrar {
             {"Vertical headers", "垂直表头"},
             {"Custom headers", "自定义表头"},
             {"Row background color", "行背景色"},
-            // === Step 11b: Tables 后半段 ===
+            // === Step 11b: Tables (second half, part 2) ===
             {"Background color", "背景色"},
             {"Tree view", "树形视图"},
             {"Item width", "条目宽度"},
@@ -780,7 +780,7 @@ struct ZhCNRegistrar {
             {"Application average %.3f ms/frame (%.1f FPS)", "平均 %.3f 毫秒/帧（%.1f FPS）"},
             {"Hello from another window!", "来自另一个窗口的问候！"},
             {"Close Me", "关闭"},
-            // === Help 折叠内容 ===
+            // === Help collapsing section ===
             {"ABOUT THIS DEMO:", "关于本演示："},
             {"Sections below are demonstrating many aspects of the library.", "下方各章节展示了库的众多特性。"},
             {"The \"Examples\" menu above leads to more demo contents.", "上方「示例」菜单包含更多演示内容。"},
@@ -794,7 +794,7 @@ struct ZhCNRegistrar {
             {"Set 'io.ConfigFlags |= NavEnableKeyboard' for keyboard controls.", "设置 'io.ConfigFlags |= NavEnableKeyboard' 以启用键盘控制。"},
             {"Set 'io.ConfigFlags |= NavEnableGamepad' for gamepad controls.", "设置 'io.ConfigFlags |= NavEnableGamepad' 以启用手柄控制。"},
             {"USER GUIDE:", "用户指南："},
-            // === Configuration HelpMarker 提示 ===
+            // === Configuration panel HelpMarker tooltips ===
             {"Enable keyboard controls.", "启用键盘控制。"},
             {"Enable gamepad controls. Require backend to set io.BackendFlags |= ImGuiBackendFlags_HasGamepad.\n\nRead instructions in imgui.cpp for details.", "启用手柄控制。需要后端设置 io.BackendFlags |= ImGuiBackendFlags_HasGamepad。\n\n详情请阅读 imgui.cpp 中的说明。"},
             {"Instruct dear imgui to disable mouse inputs and interactions.", "禁止 Dear ImGui 处理鼠标输入和交互。"},
