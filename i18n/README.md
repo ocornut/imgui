@@ -114,6 +114,43 @@ The pattern:
 
 ---
 
+## Translation Guidelines
+
+Follow these rules when translating strings to ensure quality and consistency.
+
+### What to translate
+
+Translate user-visible UI labels: menu items, button labels, window titles, section
+headers, tooltip descriptions, and status messages.
+
+### What NOT to translate
+
+| Category | Example | Reason |
+|----------|---------|--------|
+| Universally recognized programming examples | `"Hello, world!"` | Part of global programming culture; keeping English avoids confusion for learners following tutorials |
+| Standard boilerplate example text | `"This is some useful text."` | Canonical ImGui getting-started template text |
+| C++ type/variable names used as labels | `"float"`, `"counter = %d"` | Labels the underlying type or variable name, not a description |
+| Intentional filler/nonsense | `"blah blah blah"` | The meaninglessness is the message; translating it to real words defeats the purpose |
+| API / function names | `"IsItemHovered()"` | Must remain identical to the actual API; adding an entry that maps to itself is redundant |
+| Brand / product names | `"Dear ImGui"`, `"dear imgui"` | Proper nouns; do not translate |
+| `##`-suffixed ImGui IDs | `"Config##2"` | The `##` part is a disambiguation suffix handled in code, not user-visible |
+
+### Translation quality rules
+
+1. **Accuracy over literalness.** Translate meaning, not word-by-word.  
+   Bad: `Metrics` → `性能` (performance)  
+   Good: `Metrics` → `指标` (indicators/measurements)
+
+2. **Preserve format specifiers.** `%d`, `%s`, `%.3f`, `$1`, `$2` must appear unchanged in the translated string.
+
+3. **Preserve newlines.** `\n` positions in the translation may differ from the English, but must be present where the UI needs line breaks.
+
+4. **Preserve punctuation intent.** If the English ends with `:`, the translation should too (adjusted for the target language's punctuation conventions).
+
+5. **Redundant identity entries are noise.** If a string needs no translation (e.g. an API function name), do **not** add `{"Foo()", "Foo()"}` to the table. The fallback mechanism returns the key automatically.
+
+---
+
 ## Extracting Strings for Translation
 
 Use the helper script to generate a translation skeleton for a range of lines:
