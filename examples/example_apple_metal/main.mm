@@ -213,19 +213,20 @@ static void RebuildFonts()
         static float f = 0.0f;
         static int counter = 0;
 
-        ImGui::Begin(Tr("Hello, world!"));
+        // "Hello, world!" is the canonical ImGui getting-started window title — kept in English.
+        ImGui::Begin("Hello, world!");
 
-        ImGui::Text("%s", Tr("This is some useful text."));
+        ImGui::Text("This is some useful text.");    // standard example text, kept in English
         ImGui::Checkbox(Tr("Demo Window"), &show_demo_window);
         ImGui::Checkbox(Tr("Another Window"), &show_another_window);
 
-        ImGui::SliderFloat(Tr("float"), &f, 0.0f, 1.0f);
+        ImGui::SliderFloat("float", &f, 0.0f, 1.0f);   // "float" labels the C++ type, not translated
         ImGui::ColorEdit3(Tr("clear color"), (float*)&clear_color);
 
         if (ImGui::Button(Tr("Button")))
             counter++;
         ImGui::SameLine();
-        ImGui::Text(Tr("counter = %d"), counter);
+        ImGui::Text("counter = %d", counter);       // variable name, not translated
 
         ImGui::Text(Tr("Application average %.3f ms/frame (%.1f FPS)"), 1000.0f / io.Framerate, io.Framerate);
         ImGui::End();
