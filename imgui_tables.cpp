@@ -43,6 +43,7 @@ Index of this file:
 //    | TableBeginApplyRequests()               - apply queued resizing/reordering/hiding requests
 //    | - TableSetColumnWidth()                 - apply resizing width (for mouse resize, often requested by previous frame)
 //    |    - TableUpdateColumnsWeightFromWidth()- recompute columns weights (of stretch columns) from their respective width
+//-----------------------------------------------------------------------------
 // - TableSetupColumn()                         user submit columns details (optional)
 // - TableSetupScrollFreeze()                   user submit scroll freeze information (optional)
 //-----------------------------------------------------------------------------
@@ -567,6 +568,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     if (old_columns_count != 0 && old_columns_count != columns_count)
     {
         // Attempt to preserve width and other settings on column count/specs change (#4046)
+        IMGUI_DEBUG_LOG_TABLE("[table] Table 0x%08X column count %d -> %d, recreating storage.\n", table->ID, old_columns_count, columns_count);
         old_columns_to_preserve = table->Columns.Data;
         old_columns_raw_data = table->RawData; // Free at end of function
         table->RawData = NULL;
@@ -853,7 +855,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     if (table->RefScale != 0.0f && table->RefScale != new_ref_scale_unit)
     {
         const float scale_factor = new_ref_scale_unit / table->RefScale;
-        //IMGUI_DEBUG_PRINT("[table] %08X RefScaleUnit %.3f -> %.3f, scaling width by %.3f\n", table->ID, table->RefScaleUnit, new_ref_scale_unit, scale_factor);
+        IMGUI_DEBUG_LOG_TABLE("[table] 0x%08X RefScale %.3f -> %.3f, scaling width by %.3f\n", table->ID, table->RefScale, new_ref_scale_unit, scale_factor);
         for (int n = 0; n < columns_count; n++)
             table->Columns[n].WidthRequest = table->Columns[n].WidthRequest * scale_factor;
     }
@@ -4203,7 +4205,7 @@ void ImGui::DebugNodeTable(ImGuiTable* table)
     if (ImGuiTableSettings* settings = TableGetBoundSettings(table))
         DebugNodeTableSettings(settings);
     if (clear_settings)
-        table->IsResetAllRequest = true;
+        table->IsResetAllRequest = true; // Queue a call to TableResetSettings()
     TreePop();
 }
 

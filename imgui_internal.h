@@ -247,6 +247,7 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit context pointer
 #define IMGUI_DEBUG_LOG_POPUP(...)      do { if (g.DebugLogFlags & ImGuiDebugLogFlags_EventPopup)       IMGUI_DEBUG_LOG(__VA_ARGS__); } while (0)
 #define IMGUI_DEBUG_LOG_NAV(...)        do { if (g.DebugLogFlags & ImGuiDebugLogFlags_EventNav)         IMGUI_DEBUG_LOG(__VA_ARGS__); } while (0)
 #define IMGUI_DEBUG_LOG_SELECTION(...)  do { if (g.DebugLogFlags & ImGuiDebugLogFlags_EventSelection)   IMGUI_DEBUG_LOG(__VA_ARGS__); } while (0)
+#define IMGUI_DEBUG_LOG_TABLE(...)      do { if (g.DebugLogFlags & ImGuiDebugLogFlags_EventTable)       IMGUI_DEBUG_LOG(__VA_ARGS__); } while (0)
 #define IMGUI_DEBUG_LOG_CLIPPER(...)    do { if (g.DebugLogFlags & ImGuiDebugLogFlags_EventClipper)     IMGUI_DEBUG_LOG(__VA_ARGS__); } while (0)
 #define IMGUI_DEBUG_LOG_IO(...)         do { if (g.DebugLogFlags & ImGuiDebugLogFlags_EventIO)          IMGUI_DEBUG_LOG(__VA_ARGS__); } while (0)
 #define IMGUI_DEBUG_LOG_FONT(...)       do { ImGuiContext* g2 = GImGui; if (g2 && g2->DebugLogFlags & ImGuiDebugLogFlags_EventFont) IMGUI_DEBUG_LOG(__VA_ARGS__); } while (0) // Called from ImFontAtlas function which may operate without a context.
@@ -2104,8 +2105,9 @@ enum ImGuiDebugLogFlags_
     ImGuiDebugLogFlags_EventInputRouting    = 1 << 9,
     ImGuiDebugLogFlags_EventDocking         = 1 << 10,  // Unused in this branch
     ImGuiDebugLogFlags_EventViewport        = 1 << 11,  // Unused in this branch
+    ImGuiDebugLogFlags_EventTable           = 1 << 12,
 
-    ImGuiDebugLogFlags_EventMask_           = ImGuiDebugLogFlags_EventError | ImGuiDebugLogFlags_EventActiveId | ImGuiDebugLogFlags_EventFocus | ImGuiDebugLogFlags_EventPopup | ImGuiDebugLogFlags_EventNav | ImGuiDebugLogFlags_EventClipper | ImGuiDebugLogFlags_EventSelection | ImGuiDebugLogFlags_EventIO | ImGuiDebugLogFlags_EventFont | ImGuiDebugLogFlags_EventInputRouting | ImGuiDebugLogFlags_EventDocking | ImGuiDebugLogFlags_EventViewport,
+    ImGuiDebugLogFlags_EventMask_           = ImGuiDebugLogFlags_EventError | ImGuiDebugLogFlags_EventActiveId | ImGuiDebugLogFlags_EventFocus | ImGuiDebugLogFlags_EventPopup | ImGuiDebugLogFlags_EventNav | ImGuiDebugLogFlags_EventClipper | ImGuiDebugLogFlags_EventSelection | ImGuiDebugLogFlags_EventTable | ImGuiDebugLogFlags_EventIO | ImGuiDebugLogFlags_EventFont | ImGuiDebugLogFlags_EventInputRouting | ImGuiDebugLogFlags_EventDocking | ImGuiDebugLogFlags_EventViewport,
     ImGuiDebugLogFlags_OutputToTTY          = 1 << 20,  // Also send output to TTY
     ImGuiDebugLogFlags_OutputToDebugger     = 1 << 21,  // Also send output to Debugger Console [Windows only]
     ImGuiDebugLogFlags_OutputToTestEngine   = 1 << 22,  // Also send output to Dear ImGui Test Engine
@@ -3229,6 +3231,7 @@ namespace ImGui
 
     // Tables: Settings
     IMGUI_API void                  TableLoadSettings(ImGuiTable* table);
+    IMGUI_API void                  TableLoadSettingsForColumns(ImGuiTable* table);
     IMGUI_API void                  TableSaveSettings(ImGuiTable* table);
     IMGUI_API void                  TableResetSettings(ImGuiTable* table);
     IMGUI_API ImGuiTableSettings*   TableGetBoundSettings(ImGuiTable* table);
