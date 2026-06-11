@@ -704,12 +704,19 @@ void ImGui::TableBeginApplyRequests(ImGuiTable* table)
         //    table->ReorderColumn = -1;
     }
 
-    // Handle display order reset request
+    // Handle display order / visibility reset requests
     if (table->IsResetDisplayOrderRequest)
     {
         for (int n = 0; n < table->ColumnsCount; n++)
             table->DisplayOrderToIndex[n] = table->Columns[n].DisplayOrder = (ImGuiTableColumnIdx)n;
         table->IsResetDisplayOrderRequest = false;
+        table->IsSettingsDirty = true;
+    }
+    if (table->IsResetVisibilityRequest)
+    {
+        for (ImGuiTableColumn& column : table->Columns)
+            column.IsUserEnabled = column.IsUserEnabledNextFrame = (column.Flags & ImGuiTableColumnFlags_DefaultHide) ? 0 : 1;
+        table->IsResetVisibilityRequest = false;
         table->IsSettingsDirty = true;
     }
 }
@@ -853,7 +860,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     table->RefScale = new_ref_scale_unit;
 
     const ImGuiTableFlags table_sizing_policy = (table->Flags & ImGuiTableFlags_SizingMask_);
-    table->IsDefaultDisplayOrder = true;
+    table->IsDefaultDisplayOrder = table->IsDefaultVisibility = true;
     table->ColumnsEnabledCount = 0;
     ImBitArrayClearAllBits(table->EnabledMaskByIndex, columns_count);
     ImBitArrayClearAllBits(table->EnabledMaskByDisplayOrder, columns_count);
@@ -872,8 +879,6 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     for (int order_n = 0; order_n < columns_count; order_n++)
     {
         const int column_n = table->DisplayOrderToIndex[order_n];
-        if (column_n != order_n)
-            table->IsDefaultDisplayOrder = false;
         ImGuiTableColumn* column = &table->Columns[column_n];
 
         // Clear column setup if not submitted by user. Currently we make it mandatory to call TableSetupColumn() every frame.
@@ -896,6 +901,11 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
             table->IsSettingsDirty = true;
         }
         column->IsEnabled = column->IsUserEnabled && (column->Flags & ImGuiTableColumnFlags_Disabled) == 0;
+
+        if (column->IsEnabled != ((column->Flags & ImGuiTableColumnFlags_DefaultHide) ? 0 : 1))
+            table->IsDefaultVisibility = false;
+        if (column_n != order_n)
+            table->IsDefaultDisplayOrder = false;
 
         if (column->SortOrder != -1 && !column->IsEnabled)
             table->IsSortSpecsDirty = true;
@@ -3598,17 +3608,20 @@ void ImGui::TableDrawDefaultContextMenu(ImGuiTable* table, ImGuiTableFlags flags
         want_separator = true;
     }
 
-    // Ordering
-    if (flags_for_section_to_display & ImGuiTableFlags_Reorderable)
-    {
-        if (MenuItem(LocalizeGetMsg(ImGuiLocKey_TableResetOrder), NULL, false, !table->IsDefaultDisplayOrder))
-            table->IsResetDisplayOrderRequest = true;
-        want_separator = true;
-    }
-
-    // Reset all (should work but seems unnecessary/noisy to expose?)
-    //if (MenuItem("Reset all"))
-    //    table->IsResetAllRequest = true;
+    // Reset Order/Visibility etc.
+    if (flags_for_section_to_display & (ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable))
+        if (BeginMenu(LocalizeGetMsg(ImGuiLocKey_TableReset)))
+        {
+            //if (MenuItem(LocalizeGetMsg(ImGuiLocKey_TableResetAll))) // FIXME: Hiding because altering Sort Order + requesting auto-fit simultaneously has a tendency to exhibit a sizing glitch.
+            //    table->IsResetAllRequest = true;
+            if (flags_for_section_to_display & ImGuiTableFlags_Reorderable)
+                if (MenuItem(LocalizeGetMsg(ImGuiLocKey_TableResetOrder), NULL, false, !table->IsDefaultDisplayOrder)) // PS: cannot be hidden because it would mess with drag reordering.
+                    table->IsResetDisplayOrderRequest = true;
+            if (flags_for_section_to_display & ImGuiTableFlags_Hideable)
+                if (MenuItem(LocalizeGetMsg(ImGuiLocKey_TableResetVisibility), NULL, false, !table->IsDefaultVisibility))
+                    table->IsResetVisibilityRequest = true;
+            EndMenu();
+        }
 
     // Sorting
     // (modify TableOpenContextMenu() to add _Sortable flag if enabling this)

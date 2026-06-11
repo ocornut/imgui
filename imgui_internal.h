@@ -2047,7 +2047,10 @@ enum ImGuiLocKey : int
     ImGuiLocKey_TableSizeOne,
     ImGuiLocKey_TableSizeAllFit,
     ImGuiLocKey_TableSizeAllDefault,
+    ImGuiLocKey_TableReset,
+    //ImGuiLocKey_TableResetAll,
     ImGuiLocKey_TableResetOrder,
+    ImGuiLocKey_TableResetVisibility,
     ImGuiLocKey_WindowingMainMenuBar,
     ImGuiLocKey_WindowingPopup,
     ImGuiLocKey_WindowingUntitled,
@@ -3086,8 +3089,10 @@ struct IMGUI_API ImGuiTable
     bool                        IsSettingsRequestLoad;
     bool                        IsSettingsDirty;            // Set when table settings have changed and needs to be reported into ImGuiTableSettings data.
     bool                        IsDefaultDisplayOrder;      // Set when display order is unchanged from default (DisplayOrder contains 0...Count-1)
-    bool                        IsResetAllRequest;
+    bool                        IsDefaultVisibility;        // Set when enabled/visibility is unchanged from default
+    bool                        IsResetAllRequest;          // Set to queue a call to TableResetSettings() in BeginTable()
     bool                        IsResetDisplayOrderRequest;
+    bool                        IsResetVisibilityRequest;
     bool                        IsUnfrozenRows;             // Set when we got past the frozen row.
     bool                        IsDefaultSizingPolicy;      // Set if user didn't explicitly set a sizing policy in BeginTable()
     bool                        IsActiveIdAliveBeforeTable;
