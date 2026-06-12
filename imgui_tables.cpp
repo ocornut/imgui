@@ -3288,7 +3288,9 @@ void ImGui::TableHeader(const char* label)
     }
 
     // Sort order arrow
-    const float ellipsis_max = ImMax(cell_r.Max.x - w_arrow - w_sort_text, label_pos.x);
+    // - Only clip label for a visible arrow. Auto-fit still accounts for a possible arrow, but when
+    //   manually sized smaller we don't clip the label for the sake of an arrow that isn't displayed.
+    const float ellipsis_max = ImMax(cell_r.Max.x - (sort_arrow ? w_arrow + w_sort_text : 0.0f), label_pos.x);
     if ((table->Flags & ImGuiTableFlags_Sortable) && !(column->Flags & ImGuiTableColumnFlags_NoSort))
     {
         if (column->SortOrder != -1)

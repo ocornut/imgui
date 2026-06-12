@@ -58,6 +58,9 @@ Other Changes:
 - Tables:
   - Context Menu: added a "Reset" sub-menu with a "Reset Visibility" option.
     (which is greyed out when using default settings)
+  - Headers: fixed label being clipped early to reserve space for a sort marker
+    even when no sort marker is displayed. Auto-fitting a column still accounts
+    for the possible marker, so that sorting after an auto-fit doesn't clip the label.
 - Fonts:
   - Added `IMGUI_DISABLE_DEFAULT_FONT_BITMAP`/`IMGUI_DISABLE_DEFAULT_FONT_VECTOR` to
     disable embedding either fonts separately. (#9407)
