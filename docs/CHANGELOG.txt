@@ -52,6 +52,9 @@ Other Changes:
     for user code to bypass it without using a clickable item. (#9382)
   - Clicking on a window's empty-space to move/focus a window checks
     for lack of queued focus request. (#9382)
+  - Fixed double-click collapse toggle not owning the mouse button. If a
+    `SetNextWindowPos()` with pivot was queued in the same frame, the second
+    click could trigger another item in the same window. (#9439) [@Cleroth]
 - InputText:
   - Added `style.InputTextCursorSize` to configure cursor/caret thickness. (#7031, #9409)
     This is automatically scaled by `style.ScaleAllSizes()`.
