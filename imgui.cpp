@@ -7714,7 +7714,12 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             ImRect title_bar_rect = window->TitleBarRect();
             if (g.HoveredWindow == window && g.HoveredId == 0 && g.HoveredIdPreviousFrame == 0 && g.ActiveId == 0 && IsMouseHoveringRect(title_bar_rect.Min, title_bar_rect.Max))
                 if (g.IO.MouseClickedCount[0] == 2 && GetKeyOwner(ImGuiKey_MouseLeft) == ImGuiKeyOwner_NoOwner)
+                {
                     window->WantCollapseToggle = true;
+                    // Claim the click until release: the toggle may relayout the window (e.g. auto-resizing window positioned with a bottom pivot expands upward)
+                    // and move an item under the still-pressed cursor, which would otherwise become active and get triggered on the mouse release.
+                    SetKeyOwner(ImGuiKey_MouseLeft, window->MoveId, ImGuiInputFlags_LockUntilRelease);
+                }
             if (window->WantCollapseToggle)
             {
                 window->Collapsed = !window->Collapsed;
