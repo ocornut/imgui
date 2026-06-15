@@ -2907,8 +2907,8 @@ struct ImGuiTableColumn
     float                   StretchWeight;                  // Master width weight when (Flags & _WidthStretch). Often around ~1.0f initially.
     float                   InitStretchWeightOrWidth;       // Value passed to TableSetupColumn(). For Width it is a content width (_without padding_).
     ImRect                  ClipRect;                       // Clipping rectangle for the column
-    ImGuiID                 ID;                             // Hash of column name (ignoring top of ID stack), used for .ini persistance when available.
-    ImGuiID                 UserID;                         // Optional, value passed to TableSetupColumn()
+    ImGuiID                 ID;                             // Hash of column name (ignoring top of ID stack), used for .ini persistence when available.
+    ImGuiID                 UserData;                       // (Optional) User data value passed to TableSetupColumn()
     float                   WorkMinX;                       // Contents region min ~(MinX + CellPaddingX + CellSpacingX1) == cursor start position when entering column
     float                   WorkMaxX;                       // Contents region max ~(MaxX - CellPaddingX - CellSpacingX2)
     float                   ItemWidth;                      // Current item width for the column, preserved across rows

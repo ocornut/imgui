@@ -893,7 +893,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         {
             TableSetupColumnFlags(table, column, ImGuiTableColumnFlags_None);
             column->NameOffset = -1;
-            column->UserID = 0;
+            column->UserData = 0;
             column->InitStretchWeightOrWidth = -1.0f;
         }
 
@@ -1672,7 +1672,7 @@ static void TableInitColumnDefaults(ImGuiTable* table, ImGuiTableColumn* column,
 
 // See "COLUMNS SIZING POLICIES" comments at the top of this file
 // If (init_width_or_weight <= 0.0f) it is ignored
-static void TableSetupColumnApply(ImGuiTable* table, int idx, ImGuiID id, ImS16 name_offset, ImGuiTableColumnFlags flags, float init_width_or_weight, ImGuiID user_id)
+static void TableSetupColumnApply(ImGuiTable* table, int idx, ImGuiID id, ImS16 name_offset, ImGuiTableColumnFlags flags, float init_width_or_weight, ImGuiID user_data)
 {
     ImGuiTableColumn* column = &table->Columns[idx];
 
@@ -1694,7 +1694,7 @@ static void TableSetupColumnApply(ImGuiTable* table, int idx, ImGuiID id, ImS16 
 
     TableSetupColumnFlags(table, column, flags);
     column->ID = id;
-    column->UserID = user_id;
+    column->UserData = user_data;
     column->NameOffset = name_offset;
     flags = column->Flags;
 
@@ -1709,7 +1709,7 @@ static void TableSetupColumnApply(ImGuiTable* table, int idx, ImGuiID id, ImS16 
     }
 }
 
-void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, float init_width_or_weight, ImGuiID user_id)
+void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, float init_width_or_weight, ImGuiID user_data_for_sort_specs)
 {
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
@@ -1728,7 +1728,7 @@ void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, flo
     }
 
     const ImGuiID column_id = (label != NULL && label[0] != 0) ? ImHashStr(label) : 0;
-    TableSetupColumnApply(table, table->DeclColumnsCount, column_id, name_offset, flags, init_width_or_weight, user_id);
+    TableSetupColumnApply(table, table->DeclColumnsCount, column_id, name_offset, flags, init_width_or_weight, user_data_for_sort_specs);
     table->DeclColumnsCount++;
 }
 
@@ -3105,7 +3105,7 @@ void ImGui::TableSortSpecsBuild(ImGuiTable* table)
                 continue;
             IM_ASSERT(column->SortOrder < table->SortSpecsCount);
             ImGuiTableColumnSortSpecs* sort_spec = &sort_specs[column->SortOrder];
-            sort_spec->ColumnUserID = column->UserID;
+            sort_spec->ColumnUserID = column->UserData;
             sort_spec->ColumnIndex = (ImGuiTableColumnIdx)column_n;
             sort_spec->SortOrder = (ImGuiTableColumnIdx)column->SortOrder;
             sort_spec->SortDirection = (ImGuiSortDirection)column->SortDirection;
@@ -4198,13 +4198,13 @@ void ImGui::DebugNodeTable(ImGuiTable* table)
             "WidthGiven: %.1f, Request/Auto: %.1f/%.1f, StretchWeight: %.3f (%.1f%%)\n"
             "MinX: %.1f, MaxX: %.1f (%+.1f), ClipRect: %.1f to %.1f (+%.1f)\n"
             "ContentWidth: %.1f,%.1f, HeadersUsed/Ideal %.1f/%.1f\n"
-            "Sort: %d%s, UserID: 0x%08X, Flags: 0x%04X: %s%s%s..",
+            "Sort: %d%s, UserData: 0x%08X, Flags: 0x%04X: %s%s%s..",
             n, column->DisplayOrder, name, column->MinX - table->WorkRect.Min.x, column->MaxX - table->WorkRect.Min.x, (n < table->FreezeColumnsRequest) ? " (Frozen)" : "",
             column->IsEnabled, column->IsVisibleX, column->IsVisibleY, column->IsRequestOutput, column->IsSkipItems, column->DrawChannelFrozen, column->DrawChannelUnfrozen,
             column->WidthGiven, column->WidthRequest, column->WidthAuto, column->StretchWeight, column->StretchWeight > 0.0f ? (column->StretchWeight / sum_weights) * 100.0f : 0.0f,
             column->MinX, column->MaxX, column->MaxX - column->MinX, column->ClipRect.Min.x, column->ClipRect.Max.x, column->ClipRect.Max.x - column->ClipRect.Min.x,
             column->ContentMaxXFrozen - column->WorkMinX, column->ContentMaxXUnfrozen - column->WorkMinX, column->ContentMaxXHeadersUsed - column->WorkMinX, column->ContentMaxXHeadersIdeal - column->WorkMinX,
-            column->SortOrder, (column->SortDirection == ImGuiSortDirection_Ascending) ? " (Asc)" : (column->SortDirection == ImGuiSortDirection_Descending) ? " (Des)" : "", column->UserID, column->Flags,
+            column->SortOrder, (column->SortDirection == ImGuiSortDirection_Ascending) ? " (Asc)" : (column->SortDirection == ImGuiSortDirection_Descending) ? " (Des)" : "", column->UserData, column->Flags,
             (column->Flags & ImGuiTableColumnFlags_WidthStretch) ? "WidthStretch " : "",
             (column->Flags & ImGuiTableColumnFlags_WidthFixed) ? "WidthFixed " : "",
             (column->Flags & ImGuiTableColumnFlags_NoResize) ? "NoResize " : "");
