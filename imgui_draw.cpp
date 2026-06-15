@@ -885,29 +885,30 @@ static ImU32 ImAlphaMultiply(ImU32 col, float alpha_mul)
     return (col & ~IM_COL32_A_MASK) | (a << IM_COL32_A_SHIFT);
 }
 
+// Select texture and adjust fringe size for specified line thickness.
 void ImDrawList::_SelectFringeTexture(float screen_thickness, ImVec4* out_tex_uvs, float* out_fringe)
 {
-    if (screen_thickness <= IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH)
+    // We assume that the screen_thickness has been clamped to 1.0 by the caller.
+    IM_ASSERT_PARANOID(screen_thickness >= 1.0f);
+
+    ImVec4 tex_uvs;
+    if (screen_thickness <= IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH) IM_LIKELY
     {
-        // Handle the thickness between [1..IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH].
+        // Handle the thickness between 1.0 - IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH].
         // We use super sampled textures in this range to make texture changes less noticeable.
         // There are IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX+1 textures, where 0 maps to 1.0 and IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX maps to IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH (4.0).
-        constexpr float base_width = 1.0f;
-        int texture_idx = (int)((screen_thickness - base_width) * IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT + 0.5f);
-        texture_idx = ImMax(texture_idx, 0);
-        texture_idx = ImMin(texture_idx, IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX);
-        const float tex_width = base_width + (float)texture_idx / IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT;
-        *out_fringe = _FringeScale * (screen_thickness / tex_width); // Scale the fringe to cover the discrepancy between the texture and requested size.
-        *out_tex_uvs = _Data->TexUvLines[(IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1) + texture_idx];
+        int texture_idx = (int)((screen_thickness - 1.0f) * IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT + 0.5f);
+        tex_uvs = _Data->TexUvLines[(IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1) + texture_idx];
     }
     else
     {
-        int texture_idx = (int)(screen_thickness + 0.5f);
-        texture_idx = ImMax(texture_idx, 2);
-        texture_idx = ImMin(texture_idx, IM_DRAWLIST_TEX_LINES_WIDTH_MAX - 1);
-        *out_fringe = _FringeScale * (screen_thickness / (float)texture_idx); // Scale the fringe to cover the discrepancy between the texture and requested size.
-        *out_tex_uvs = _Data->TexUvLines[texture_idx];
+        const int texture_idx = ImMin((int)(screen_thickness + 0.5f), IM_DRAWLIST_TEX_LINES_WIDTH_MAX - 1);
+        tex_uvs = _Data->TexUvLines[texture_idx];
     }
+
+    *out_tex_uvs = tex_uvs;
+    // Scale the fringe so that the texture matches the line thickness.
+    *out_fringe = _FringeScale * screen_thickness * tex_uvs.w; // tex_uvs.w = 1 / thickness
 }
 IM_MSVC_RUNTIME_CHECKS_RESTORE
 
@@ -975,10 +976,10 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
     else
     {
         // For no anti-alias we use fully opaque texture, and no fringe expansion.
-        tex_uvs.x = _Data->TexUvWhitePixel.x;
-        tex_uvs.y = _Data->TexUvWhitePixel.y;
-        tex_uvs.z = _Data->TexUvWhitePixel.x;
-        tex_uvs.w = _Data->TexUvWhitePixel.y;
+        tex_uvs.x = _Data->TexUvWhitePixel.x;   // u0
+        tex_uvs.y = _Data->TexUvWhitePixel.x;   // u1
+        tex_uvs.z = _Data->TexUvWhitePixel.y;   // v
+        tex_uvs.w = 0.0f;                       // 1/thickness, unused.
         fringe = 0.0f;
         flags |= ImDrawFlags_NoAAEnds;
     }
@@ -1022,11 +1023,11 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
     const float ratio = thickness0 / (thickness0 + thickness1); // The points that use uv2 are placed directly on the path (offset = 0), calculate the texture position from stroke offsets.
     ImVec2 uv0, uv1, uv2;
     uv0.x = tex_uvs.x + half_texel;
-    uv0.y = tex_uvs.y;
-    uv1.x = tex_uvs.z - half_texel;
-    uv1.y = tex_uvs.y;
+    uv0.y = tex_uvs.z;
+    uv1.x = tex_uvs.y - half_texel;
+    uv1.y = tex_uvs.z;
     uv2.x = uv0.x + (uv1.x - uv0.x) * ratio;
-    uv2.y = tex_uvs.y;
+    uv2.y = tex_uvs.z;
 
     const float half_aa = _FringeScale * 0.5f; // Used for end caps, does not use "fringe" since end cap AA is not using the texture.
     const float half_thickness = thickness * 0.5f;
@@ -1430,8 +1431,8 @@ void ImDrawList::AddPolylineLegacy(const ImVec2* points, const int points_count,
                     tex_uvs.z = tex_uvs.z + (tex_uvs_1.z - tex_uvs.z) * fractional_thickness;
                     tex_uvs.w = tex_uvs.w + (tex_uvs_1.w - tex_uvs.w) * fractional_thickness;
                 }*/
-                ImVec2 tex_uv0(tex_uvs.x, tex_uvs.y);
-                ImVec2 tex_uv1(tex_uvs.z, tex_uvs.w);
+                ImVec2 tex_uv0(tex_uvs.x, tex_uvs.z);
+                ImVec2 tex_uv1(tex_uvs.y, tex_uvs.z);
                 for (int i = 0; i < points_count; i++)
                 {
                     _VtxWritePtr[0].pos = temp_points[i * 2 + 0]; _VtxWritePtr[0].uv = tex_uv0; _VtxWritePtr[0].col = col; // Left-side outer edge
@@ -2212,10 +2213,10 @@ void ImDrawList::_AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float t
     else
     {
         // For no anti-alias we use fully opaque texture, and no fringe expansion.
-        tex_uvs.x = _Data->TexUvWhitePixel.x;
-        tex_uvs.y = _Data->TexUvWhitePixel.y;
-        tex_uvs.z = _Data->TexUvWhitePixel.x;
-        tex_uvs.w = _Data->TexUvWhitePixel.y;
+        tex_uvs.x = _Data->TexUvWhitePixel.x;   // u0
+        tex_uvs.y = _Data->TexUvWhitePixel.x;   // u1
+        tex_uvs.z = _Data->TexUvWhitePixel.y;   // v
+        tex_uvs.w = 0.0f;                       // 1/thickness, unused.
         fringe = 0.0f;
         flags |= ImDrawFlags_NoAAEnds;
     }
@@ -2249,11 +2250,11 @@ void ImDrawList::_AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float t
     const float ratio = thickness0 / (thickness0 + thickness1); // The points using uv2 are placed on the path, calculate the position from stroke offets.
     ImVec2 uv0, uv1, uv2;
     uv0.x = tex_uvs.x + half_texel;
-    uv0.y = tex_uvs.y;
-    uv1.x = tex_uvs.z - half_texel;
-    uv1.y = tex_uvs.y;
+    uv0.y = tex_uvs.z;
+    uv1.x = tex_uvs.y - half_texel;
+    uv1.y = tex_uvs.z;
     uv2.x = uv0.x + (uv1.x - uv0.x) * ratio;
-    uv2.y = tex_uvs.y;
+    uv2.y = tex_uvs.z;
 
     const float half_aa = _FringeScale * 0.5f; // Used for end caps, does not use "fringe" since end cap AA is not using the texture.
     const float half_thickness = thickness * 0.5f;
@@ -2586,10 +2587,10 @@ void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, 
     else
     {
         // For no anti-alias we use fully opaque texture, and no fringe expansion.
-        tex_uvs.x = _Data->TexUvWhitePixel.x;
-        tex_uvs.y = _Data->TexUvWhitePixel.y;
-        tex_uvs.z = _Data->TexUvWhitePixel.x;
-        tex_uvs.w = _Data->TexUvWhitePixel.y;
+        tex_uvs.x = _Data->TexUvWhitePixel.x;   // u0
+        tex_uvs.y = _Data->TexUvWhitePixel.x;   // u1
+        tex_uvs.z = _Data->TexUvWhitePixel.y;   // v
+        tex_uvs.w = 0.0f;                       // 1/thickness, unused.
         fringe = 0.0f;
     }
 
@@ -2623,11 +2624,11 @@ void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, 
     const float ratio = stem_offset / thickness;
     ImVec2 inner_uv, outer_uv, stem_uv;
     outer_uv.x = tex_uvs.x + half_texel;
-    outer_uv.y = tex_uvs.y;
-    inner_uv.x = tex_uvs.z - half_texel;
-    inner_uv.y = tex_uvs.y;
+    outer_uv.y = tex_uvs.z;
+    inner_uv.x = tex_uvs.y - half_texel;
+    inner_uv.y = tex_uvs.z;
     stem_uv.x = outer_uv.x + (inner_uv.x - outer_uv.x) * ratio;
-    stem_uv.y = tex_uvs.y;
+    stem_uv.y = tex_uvs.z;
 
     // Previous vertices, copied from the last vertices.
     int base_idx = (int)_VtxCurrentIdx;
@@ -5458,7 +5459,9 @@ static void ImFontAtlasBuildUpdateTexDataLines(ImFontAtlas* atlas)
             ImVec2 uv0 = ImVec2((float)(r.x + pad_left - 1), (float)(r.y + y)) * atlas->TexUvScale;
             ImVec2 uv1 = ImVec2((float)(r.x + pad_left + line_width + 1), (float)(r.y + y + 1)) * atlas->TexUvScale;
             float half_v = (uv0.y + uv1.y) * 0.5f; // Calculate a constant V in the middle of the row to avoid sampling artifacts
-            builder->TexUvLines[n] = ImVec4(uv0.x, half_v, uv1.x, half_v);
+            // Store inverse of the line-width (thickness) to the w component so that we can avoid division when selecting texture.
+            float inv_line_width = line_width > 0.f ? 1.0f / line_width : 0.f;
+            builder->TexUvLines[n] = ImVec4(uv0.x, uv1.x, half_v, inv_line_width);
         }
     }
 
@@ -5525,7 +5528,9 @@ static void ImFontAtlasBuildUpdateTexDataLines(ImFontAtlas* atlas)
             ImVec2 uv0 = ImVec2((float)(r.x), (float)(r.y + y)) * atlas->TexUvScale;
             ImVec2 uv1 = ImVec2((float)(r.x + IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT * 2 + line_width), (float)(r.y + y + 1)) * atlas->TexUvScale;
             float half_v = (uv0.y + uv1.y) * 0.5f; // Calculate a constant V in the middle of the row to avoid sampling artifacts
-            builder->TexUvLines[IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1 + n] = ImVec4(uv0.x, half_v, uv1.x, half_v);
+            // Store inverse of the line-width (thickness) to the w component so that we can avoid division when selecting texture.
+            float inv_line_width = 1.0f / (1.0f + (float)n / (float)IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT);
+            builder->TexUvLines[IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1 + n] = ImVec4(uv0.x, uv1.x, half_v, inv_line_width);
         }
     }
 }
