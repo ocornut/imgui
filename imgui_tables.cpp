@@ -4252,7 +4252,7 @@ void ImGui::DebugNodeTableSettings(ImGuiTableSettings* settings, ImGuiTable* tab
 #else // #ifndef IMGUI_DISABLE_DEBUG_TOOLS
 
 void ImGui::DebugNodeTable(ImGuiTable*) {}
-void ImGui::DebugNodeTableSettings(ImGuiTableSettings*) {}
+void ImGui::DebugNodeTableSettings(ImGuiTableSettings*, ImGuiTable* table) {}
 
 #endif
 
