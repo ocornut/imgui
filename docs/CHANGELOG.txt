@@ -80,6 +80,8 @@ Other Changes:
 - Demo:
   - Extract 'Widgets->Tree Nodes->Selectable Nodes' out of the 'Advanced'
     demo for clarity (manual reimplementation of basic selection).
+- Misc:
+  - Added IM_DEBUG_BREAK() handler for GCC+AArch64/ARM64. [@tom-seddon]
 - Backends:
   - OpenGL3:
     - GLSL version detection assume GLSL 410 when GL context is 4.1.
