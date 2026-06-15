@@ -4214,28 +4214,39 @@ void ImGui::DebugNodeTable(ImGuiTable* table)
         }
     }
     if (ImGuiTableSettings* settings = TableGetBoundSettings(table))
-        DebugNodeTableSettings(settings);
+        DebugNodeTableSettings(settings, table);
     if (clear_settings)
         table->IsResetAllRequest = true; // Queue a call to TableResetSettings()
     TreePop();
 }
 
-void ImGui::DebugNodeTableSettings(ImGuiTableSettings* settings)
+void ImGui::DebugNodeTableSettings(ImGuiTableSettings* settings, ImGuiTable* table)
 {
-    if (!TreeNode((void*)(intptr_t)settings->ID, "Settings 0x%08X (%d columns)", settings->ID, settings->ColumnsCount))
-        return;
-    BulletText("SaveFlags: 0x%08X", settings->SaveFlags);
-    BulletText("ColumnsCount: %d (max %d)", settings->ColumnsCount, settings->ColumnsCountMax);
-    for (int n = 0; n < settings->ColumnsCount; n++)
+    if (settings->ID == 0)
+        PushID(settings);
+    const bool open = TreeNode((void*)(intptr_t)settings->ID, "Settings 0x%08X (%d columns)", settings->ID, settings->ColumnsCount);
+    const bool hovered = IsItemHovered();
+    if (hovered && table == NULL && settings->ID != 0)
+        table = TableFindByID(settings->ID);
+    if (hovered && table != NULL)
+        GetForegroundDrawList(table->OuterWindow)->AddRect(table->OuterRect.Min, table->OuterRect.Max, IM_COL32(255, 255, 0, 255));
+    if (open)
     {
-        ImGuiTableColumnSettings* column_settings = &settings->GetColumnSettings()[n];
-        ImGuiSortDirection sort_dir = (column_settings->SortOrder != -1) ? (ImGuiSortDirection)column_settings->SortDirection : ImGuiSortDirection_None;
-        BulletText("Column %d Order %d SortOrder %2d %s Vis %d %s %7.3f ID 0x%08X",
-            n, column_settings->DisplayOrder, column_settings->SortOrder,
-            (sort_dir == ImGuiSortDirection_Ascending) ? "Asc" : (sort_dir == ImGuiSortDirection_Descending) ? "Des" : "---",
-            column_settings->IsEnabled, column_settings->IsStretch ? "Weight" : "Width ", column_settings->WidthOrWeight, column_settings->ID);
+        BulletText("SaveFlags: 0x%08X", settings->SaveFlags);
+        BulletText("ColumnsCount: %d (max %d)", settings->ColumnsCount, settings->ColumnsCountMax);
+        for (int n = 0; n < settings->ColumnsCount; n++)
+        {
+            ImGuiTableColumnSettings* column_settings = &settings->GetColumnSettings()[n];
+            ImGuiSortDirection sort_dir = (column_settings->SortOrder != -1) ? (ImGuiSortDirection)column_settings->SortDirection : ImGuiSortDirection_None;
+            BulletText("Column %d Order %d SortOrder %2d %s Vis %d %s %7.3f ID 0x%08X",
+                n, column_settings->DisplayOrder, column_settings->SortOrder,
+                (sort_dir == ImGuiSortDirection_Ascending) ? "Asc" : (sort_dir == ImGuiSortDirection_Descending) ? "Des" : "---",
+                column_settings->IsEnabled, column_settings->IsStretch ? "Weight" : "Width ", column_settings->WidthOrWeight, column_settings->ID);
+        }
+        TreePop();
     }
-    TreePop();
+    if (settings->ID == 0)
+        PopID();
 }
 
 #else // #ifndef IMGUI_DISABLE_DEBUG_TOOLS

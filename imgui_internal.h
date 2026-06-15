@@ -2934,8 +2934,8 @@ struct ImGuiTableColumn
     bool                    IsSkipItems;                    // Do we want item submissions to this column to be completely ignored (no layout will happen).
     bool                    IsPreserveWidthAuto;
     ImS8                    NavLayerCurrent;                // ImGuiNavLayer in 1 byte
-    ImU8                    AutoFitQueue;                   // Queue of 8 values for the next 8 frames to request auto-fit
-    ImU8                    CannotSkipItemsQueue;           // Queue of 8 values for the next 8 frames to disable Clipped/SkipItem
+    ImU8                    AutoFitQueue : 4;               // Queue of 4 values for the next 4 frames to request auto-fit
+    ImU8                    CannotSkipItemsQueue : 4;       // Queue of 4 values for the next 4 frames to disable Clipped/SkipItem
     ImU8                    SortDirection : 2;              // ImGuiSortDirection_Ascending or ImGuiSortDirection_Descending
     ImU8                    SortDirectionsAvailCount : 2;   // Number of available sort directions (0 to 3)
     ImU8                    SortDirectionsAvailMask : 4;    // Mask of available sort directions (1-bit each)
@@ -3785,7 +3785,7 @@ namespace ImGui
     IMGUI_API void          DebugNodeStorage(ImGuiStorage* storage, const char* label);
     IMGUI_API void          DebugNodeTabBar(ImGuiTabBar* tab_bar, const char* label);
     IMGUI_API void          DebugNodeTable(ImGuiTable* table);
-    IMGUI_API void          DebugNodeTableSettings(ImGuiTableSettings* settings);
+    IMGUI_API void          DebugNodeTableSettings(ImGuiTableSettings* settings, ImGuiTable* table);
     IMGUI_API void          DebugNodeInputTextState(ImGuiInputTextState* state);
     IMGUI_API void          DebugNodeTypingSelectState(ImGuiTypingSelectState* state);
     IMGUI_API void          DebugNodeMultiSelectState(ImGuiMultiSelectState* state);
