@@ -40,14 +40,16 @@ Index of this file:
 //    | TableBeginInitMemory()                  - first time table is used
 //    | TableResetSettings()                    - on settings reset
 //    | TableLoadSettings()                     - on settings load
-//    | TableBeginApplyRequests()               - apply queued resizing/reordering/hiding requests
-//    | - TableSetColumnWidth()                 - apply resizing width (for mouse resize, often requested by previous frame)
-//    |    - TableUpdateColumnsWeightFromWidth()- recompute columns weights (of stretch columns) from their respective width
 //-----------------------------------------------------------------------------
 // - TableSetupColumn()                         user submit columns details (optional)
 // - TableSetupScrollFreeze()                   user submit scroll freeze information (optional)
 //-----------------------------------------------------------------------------
 // - TableUpdateLayout() [Internal]             followup to BeginTable(): setup everything: widths, columns positions, clipping rectangles. Automatically called by the FIRST call to TableNextRow() or TableHeadersRow().
+//    | TableLoadSettingsForColumns()           - on settings load
+//    | TableApplyQueuedRequests()              - apply queued resizing/reordering/hiding requests
+//    | - TableSetColumnWidth()                 - apply resizing width (for mouse resize, often requested by previous frame)
+//    |    - TableUpdateColumnsWeightFromWidth()- recompute columns weights (of stretch columns) from their respective width
+//    | - TableSetColumnDisplayOrder()          - apply reordering a column
 //    | TableSetupDrawChannels()                - setup ImDrawList channels
 //    | TableUpdateBorders()                    - detect hovering columns for resize, ahead of contents submission
 //    | TableBeginContextMenuPopup()
@@ -253,7 +255,7 @@ Index of this file:
 // - BeginTable()
 // - BeginTableEx() [Internal]
 // - TableBeginInitMemory() [Internal]
-// - TableBeginApplyRequests() [Internal]
+// - TableApplyQueuedRequests() [Internal]
 // - TableSetupColumnFlags() [Internal]
 // - TableUpdateLayout() [Internal]
 // - TableUpdateBorders() [Internal]
@@ -626,10 +628,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     // At this point the ->NameOffset field of each column will be invalid until TableUpdateLayout() or the first call to TableSetupColumn()
     if (table->ColumnsNames.Buf.Size > 0)
         table->ColumnsNames.Buf.resize(0);
-
-    // Apply queued resizing/reordering/hiding requests
-    TableBeginApplyRequests(table);
-
+    
     return true;
 }
 
@@ -664,7 +663,7 @@ void ImGui::TableBeginInitMemory(ImGuiTable* table, int columns_count)
 }
 
 // Apply queued resizing/reordering/hiding requests
-void ImGui::TableBeginApplyRequests(ImGuiTable* table)
+void ImGui::TableApplyQueuedRequests(ImGuiTable* table)
 {
     // Handle resizing request
     // (We process this in the TableBegin() of the first instance of each table)
@@ -844,6 +843,9 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(table->IsLayoutLocked == false);
+
+    // Apply queued resizing/reordering/hiding requests
+    TableApplyQueuedRequests(table);
 
     // Handle DPI/font resize
     // This is designed to facilitate DPI changes with the assumption that e.g. style.CellPadding has been scaled as well.
