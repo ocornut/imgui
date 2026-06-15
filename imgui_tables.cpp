@@ -775,8 +775,9 @@ void ImGui::TableQueueSetColumnDisplayOrder(ImGuiTable* table, int column_n, int
     table->ReorderColumn = (ImGuiTableColumnIdx)column_n;
     table->ReorderColumnDstOrder = (ImGuiTableColumnIdx)-1;
     dst_order = TableGetMaxDisplayOrderAllowed(table, src_order, dst_order);
-    if (dst_order != src_order)
-        table->ReorderColumnDstOrder = (ImGuiTableColumnIdx)dst_order;
+    if (table->IsLayoutLocked && dst_order == src_order) // We allow calling the function before layout w/ reconcile so don't early out.
+        return;
+    table->ReorderColumnDstOrder = (ImGuiTableColumnIdx)dst_order;
 }
 
 // Adjust flags: default width mode + stretch columns are not allowed when auto extending
