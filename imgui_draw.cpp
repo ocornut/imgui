@@ -2923,17 +2923,27 @@ void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
         return;
     }
 
-    if ((flags & ImDrawFlags_RoundCornersMask_) == 0)
-        flags |= ImDrawFlags_RoundCornersAll;
-
+    const bool has_rounding = (flags & ImDrawFlags_RoundCornersMask_) != ImDrawFlags_RoundCornersNone && IM_HAS_ROUNDING(rounding);
     const bool is_truncated = IM_IS_TRUNCATED4(p_min.x, p_min.y, p_max.x, p_max.y) && IM_IS_TRUNCATED(rounding);
+
     if (_FringeScaleIsInteger && is_truncated)
     {
+        // Fast path for the non-AA non-rounded rect.
+        if (!has_rounding)
+        {
+            PrimReserve(6, 4);
+            PrimRect(p_min, p_max, col);
+            return;
+        }
+
+        if ((flags & ImDrawFlags_RoundCornersMask_) == 0)
+            flags |= ImDrawFlags_RoundCornersAll;
+
         rounding = ImMin(rounding, ImFabs(width) * (((flags & ImDrawFlags_RoundCornersTop) == ImDrawFlags_RoundCornersTop) || ((flags & ImDrawFlags_RoundCornersBottom) == ImDrawFlags_RoundCornersBottom) ? 0.5f : 1.0f) - 1.0f);
         rounding = ImMin(rounding, ImFabs(height) * (((flags & ImDrawFlags_RoundCornersLeft) == ImDrawFlags_RoundCornersLeft) || ((flags & ImDrawFlags_RoundCornersRight) == ImDrawFlags_RoundCornersRight) ? 0.5f : 1.0f) - 1.0f);
 
         const int s_rounding = (int)(rounding * _InvFringeScale);
-        if (s_rounding <= 0 || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
+        if (s_rounding <= 0)
         {
             PrimReserve(6, 4);
             PrimRect(p_min, p_max, col);
@@ -2953,8 +2963,7 @@ void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
         }
     }
 
-    const bool has_rounding = (rounding >= _FringeScale * 0.5f);
-    if (!has_rounding || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
+    if (!has_rounding)
     {
         const ImVec2 points[4] = { p_min, ImVec2(p_max.x, p_min.y), p_max, ImVec2(p_min.x, p_max.y) };
         AddConvexPolyFilled(points, 4, col, ImDrawFlags_MiterOnly);
