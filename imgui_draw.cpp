@@ -3131,23 +3131,27 @@ void ImDrawList::AddNgon(const ImVec2& center, float radius, ImU32 col, int num_
 
     radius = ImMax(0.01f, radius);
 
-    const float unit_apothem = ImCos(IM_PI / (float)num_segments);
-    const float miter_thickness = thickness / unit_apothem;
-
-    float outer_radius = radius;
-    if (stroke_pos == ImDrawFlags_StrokeCenter)
-        outer_radius = radius + miter_thickness * 0.5f;
-    else if (stroke_pos == ImDrawFlags_StrokeCenterBiased)
-        outer_radius = radius + _CalculateCenterBiasedOffset(miter_thickness);
-    else if (stroke_pos == ImDrawFlags_StrokeInside)
-        outer_radius = radius;
-    else if (stroke_pos == ImDrawFlags_StrokeOutside)
-        outer_radius = radius + miter_thickness;
-    if (outer_radius < (miter_thickness + _FringeScale)) IM_UNLIKELY
+    // Check overestimate first before testing details.
+    if (radius < (thickness * 2.f + 1.f))
     {
-        // The polygon has collapsed into a filled polygon.
-        AddNgonFilled(center, outer_radius, col, num_segments);
-        return;
+        const float unit_apothem = ImCos(IM_PI / (float)num_segments);
+        const float miter_thickness = thickness / unit_apothem;
+
+        float outer_radius = radius;
+        if (stroke_pos == ImDrawFlags_StrokeCenter)
+            outer_radius = radius + miter_thickness * 0.5f;
+        else if (stroke_pos == ImDrawFlags_StrokeCenterBiased)
+            outer_radius = radius + _CalculateCenterBiasedOffset(miter_thickness);
+        else if (stroke_pos == ImDrawFlags_StrokeInside)
+            outer_radius = radius;
+        else if (stroke_pos == ImDrawFlags_StrokeOutside)
+            outer_radius = radius + miter_thickness;
+        if (outer_radius < (miter_thickness + _FringeScale)) IM_UNLIKELY
+        {
+            // The polygon has collapsed into a filled polygon.
+            AddNgonFilled(center, outer_radius, col, num_segments);
+            return;
+        }
     }
 
      // Because we are filling a closed shape we remove 1 from the count of segments/points
