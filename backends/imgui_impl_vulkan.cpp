@@ -171,6 +171,7 @@ static bool g_FunctionsLoaded = true;
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkCmdDrawIndexed) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkCmdPipelineBarrier) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkCmdPushConstants) \
+    IMGUI_VULKAN_FUNC_MAP_MACRO(vkCmdPushDataEXT) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkCmdSetScissor) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkCmdSetViewport) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkCreateBuffer) \
@@ -268,6 +269,7 @@ struct ImGui_ImplVulkan_Texture
     VkImage                     Image;
     VkImageView                 ImageView;
     VkDescriptorSet             DescriptorSet;
+    uint32_t                    DescriptorHeapIndex;
 
     ImGui_ImplVulkan_Texture() { memset((void*)this, 0, sizeof(*this)); }
 };
@@ -296,6 +298,8 @@ struct ImGui_ImplVulkan_Data
     VkDescriptorSet             SamplerNearestDS;
     VkCommandPool               TexCommandPool;
     VkCommandBuffer             TexCommandBuffer;
+    uint32_t                    DescriptorHeapSamplerLinear;
+    uint32_t                    DescriptorHeapSamplerNearest;
 
     // Render buffers for main window
     ImGui_ImplVulkan_WindowRenderBuffers MainWindowRenderBuffers;
@@ -422,6 +426,76 @@ static uint32_t __glsl_shader_frag_spv[] =
     0x00010038
 };
 
+// backends/vulkan/glsl_shader_heap.frag, compiled with:
+// # glslangValidator -V --target-env spirv1.2 -x -o glsl_shader.frag.u32 glsl_shader.frag
+/*
+#version 460 core
+#extension GL_EXT_descriptor_heap : require
+#extension GL_EXT_nonuniform_qualifier : require
+
+layout(location = 0) out vec4 fColor;
+layout(descriptor_heap) uniform texture2D _Textures[];
+layout(descriptor_heap) uniform sampler _Samplers[];
+layout(location = 0) in struct { vec4 Color; vec2 UV; } In;
+layout(push_constant) uniform uPushConstant { vec2 uScale; vec2 uTranslate; uvec2 uID; } pc;
+void main()
+{
+    fColor = In.Color * texture(sampler2D(_Textures[pc.uID.x], _Samplers[pc.uID.y]), In.UV.st);
+}
+*/
+static uint32_t __glsl_shader_heap_frag_spv[] =
+{
+    0x07230203,0x00010200,0x0008000b,0x00000036,0x00000000,0x00020011,0x00000001,0x00020011,
+    0x00001179,0x00020011,0x00001408,0x0007000a,0x5f565053,0x5f545845,0x63736564,0x74706972,
+    0x685f726f,0x00706165,0x0008000a,0x5f565053,0x5f52484b,0x79746e75,0x5f646570,0x6e696f70,
+    0x73726574,0x00000000,0x0006000b,0x00000001,0x4c534c47,0x6474732e,0x3035342e,0x00000000,
+    0x0003000e,0x00000000,0x00000001,0x0007000f,0x00000004,0x00000004,0x6e69616d,0x00000000,
+    0x00000009,0x0000000d,0x00030010,0x00000004,0x00000007,0x00030003,0x00000002,0x000001cc,
+    0x00070004,0x455f4c47,0x645f5458,0x72637365,0x6f747069,0x65685f72,0x00007061,0x00080004,
+    0x455f4c47,0x6e5f5458,0x6e756e6f,0x726f6669,0x75715f6d,0x66696c61,0x00726569,0x00040005,
+    0x00000004,0x6e69616d,0x00000000,0x00040005,0x00000009,0x6c6f4366,0x0000726f,0x00030005,
+    0x0000000b,0x00000000,0x00050006,0x0000000b,0x00000000,0x6f6c6f43,0x00000072,0x00040006,
+    0x0000000b,0x00000001,0x00005655,0x00030005,0x0000000d,0x00006e49,0x00060005,0x00000014,
+    0x6f736572,0x65637275,0x6165685f,0x00000070,0x00060005,0x00000017,0x73755075,0x6e6f4368,
+    0x6e617473,0x00000074,0x00050006,0x00000017,0x00000000,0x61635375,0x0000656c,0x00060006,
+    0x00000017,0x00000001,0x61725475,0x616c736e,0x00006574,0x00040006,0x00000017,0x00000002,
+    0x00444975,0x00030005,0x00000019,0x00006370,0x00060005,0x00000025,0x706d6173,0x5f72656c,
+    0x70616568,0x00000000,0x00040047,0x00000009,0x0000001e,0x00000000,0x00040047,0x0000000d,
+    0x0000001e,0x00000000,0x00040047,0x00000014,0x0000000b,0x00001403,0x00030047,0x00000017,
+    0x00000002,0x00050048,0x00000017,0x00000000,0x00000023,0x00000000,0x00050048,0x00000017,
+    0x00000001,0x00000023,0x00000008,0x00050048,0x00000017,0x00000002,0x00000023,0x00000010,
+    0x0004014c,0x00000023,0x00001404,0x00000022,0x00040047,0x00000025,0x0000000b,0x00001402,
+    0x0004014c,0x0000002c,0x00001404,0x0000002b,0x00020013,0x00000002,0x00030021,0x00000003,
+    0x00000002,0x00030016,0x00000006,0x00000020,0x00040017,0x00000007,0x00000006,0x00000004,
+    0x00040020,0x00000008,0x00000003,0x00000007,0x0004003b,0x00000008,0x00000009,0x00000003,
+    0x00040017,0x0000000a,0x00000006,0x00000002,0x0004001e,0x0000000b,0x00000007,0x0000000a,
+    0x00040020,0x0000000c,0x00000001,0x0000000b,0x0004003b,0x0000000c,0x0000000d,0x00000001,
+    0x00040015,0x0000000e,0x00000020,0x00000001,0x0004002b,0x0000000e,0x0000000f,0x00000000,
+    0x00040020,0x00000010,0x00000001,0x00000007,0x00031141,0x00000013,0x00000000,0x00041142,
+    0x00000013,0x00000014,0x00000000,0x00040015,0x00000015,0x00000020,0x00000000,0x00040017,
+    0x00000016,0x00000015,0x00000002,0x0005001e,0x00000017,0x0000000a,0x0000000a,0x00000016,
+    0x00040020,0x00000018,0x00000009,0x00000017,0x0004003b,0x00000018,0x00000019,0x00000009,
+    0x0004002b,0x0000000e,0x0000001a,0x00000002,0x0004002b,0x00000015,0x0000001b,0x00000000,
+    0x00040020,0x0000001c,0x00000009,0x00000015,0x00090019,0x0000001f,0x00000006,0x00000001,
+    0x00000000,0x00000000,0x00000000,0x00000001,0x00000000,0x00031141,0x00000020,0x00000002,
+    0x00041409,0x0000000e,0x00000022,0x0000001f,0x0003001d,0x00000023,0x0000001f,0x00041142,
+    0x00000013,0x00000025,0x00000000,0x0004002b,0x00000015,0x00000026,0x00000001,0x0002001a,
+    0x00000029,0x00041409,0x0000000e,0x0000002b,0x00000029,0x0003001d,0x0000002c,0x00000029,
+    0x0003001b,0x0000002e,0x0000001f,0x0004002b,0x0000000e,0x00000030,0x00000001,0x00040020,
+    0x00000031,0x00000001,0x0000000a,0x00050036,0x00000002,0x00000004,0x00000000,0x00000003,
+    0x000200f8,0x00000005,0x00050041,0x00000010,0x00000011,0x0000000d,0x0000000f,0x0004003d,
+    0x00000007,0x00000012,0x00000011,0x00060041,0x0000001c,0x0000001d,0x00000019,0x0000001a,
+    0x0000001b,0x0004003d,0x00000015,0x0000001e,0x0000001d,0x00061143,0x00000013,0x00000021,
+    0x00000023,0x00000014,0x0000001e,0x0004003d,0x0000001f,0x00000024,0x00000021,0x00060041,
+    0x0000001c,0x00000027,0x00000019,0x0000001a,0x00000026,0x0004003d,0x00000015,0x00000028,
+    0x00000027,0x00061143,0x00000013,0x0000002a,0x0000002c,0x00000025,0x00000028,0x0004003d,
+    0x00000029,0x0000002d,0x0000002a,0x00050056,0x0000002e,0x0000002f,0x00000024,0x0000002d,
+    0x00050041,0x00000031,0x00000032,0x0000000d,0x00000030,0x0004003d,0x0000000a,0x00000033,
+    0x00000032,0x00050057,0x00000007,0x00000034,0x0000002f,0x00000033,0x00050085,0x00000007,
+    0x00000035,0x00000012,0x00000034,0x0003003e,0x00000009,0x00000035,0x000100fd,0x00010038
+};
+
+
 //-----------------------------------------------------------------------------
 // FUNCTIONS
 //-----------------------------------------------------------------------------
@@ -522,23 +596,74 @@ static void ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, VkPipeline 
     viewport.maxDepth = 1.0f;
     vkCmdSetViewport(command_buffer, 0, 1, &viewport);
 
-    // Setup scale and translation:
-    // Our visible imgui space lies from draw_data->DisplayPps (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayPos is (0,0) for single viewport apps.
-    float constants[4];
-    constants[0] = 2.0f / draw_data->DisplaySize.x; // Scale
-    constants[1] = 2.0f / draw_data->DisplaySize.y;
-    constants[2] = -1.0f - draw_data->DisplayPos.x * constants[0]; // Translate
-    constants[3] = -1.0f - draw_data->DisplayPos.y * constants[1];
-    vkCmdPushConstants(command_buffer, bd->PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(float) * 4, constants);
+    struct push_data
+    {
+        float constants[4];
+        // First ID is texture, second is sampler.
+        uint32_t ids[2];
+    } pd;
+    pd.constants[0] = 2.0f / draw_data->DisplaySize.x; // Scale
+    pd.constants[1] = 2.0f / draw_data->DisplaySize.y;
+    pd.constants[2] = -1.0f - draw_data->DisplayPos.x * pd.constants[0]; // Translate
+    pd.constants[3] = -1.0f - draw_data->DisplayPos.y * pd.constants[1];
+    if(bd->VulkanInitInfo.DescriptorHeapInfo)
+    {
+        pd.ids[0] = 0;
+        pd.ids[1] = bd->DescriptorHeapSamplerLinear;
 
-    // Setup sampler
-    vkCmdBindDescriptorSets(bd->RenderState->CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 1, 1, &bd->SamplerLinearDS, 0, nullptr);
+        VkPushDataInfoEXT push{};
+        push.sType = VK_STRUCTURE_TYPE_PUSH_DATA_INFO_EXT;
+        push.data.address = &pd;
+        push.data.size = sizeof(pd);
+        vkCmdPushDataEXT(bd->RenderState->CommandBuffer, &push);
+    }
+    else
+    {
+        // Setup scale and translation:
+        // Our visible imgui space lies from draw_data->DisplayPps (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayPos is (0,0) for single viewport apps.
+        vkCmdPushConstants(command_buffer, bd->PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(float) * 4, pd.constants);
+
+        // Setup sampler
+        vkCmdBindDescriptorSets(bd->RenderState->CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 1, 1, &bd->SamplerLinearDS, 0, nullptr);
+    }
 }
 
 // Draw callbacks
 static void ImGui_ImplVulkan_DrawCallback_ResetRenderState(const ImDrawList*, const ImDrawCmd*)     {} // Intentionally empty. Used as an identifier for rendering loop to call its code. Simpler to implement this way.
-static void ImGui_ImplVulkan_DrawCallback_SetSamplerLinear(const ImDrawList*, const ImDrawCmd*)     { ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData(); vkCmdBindDescriptorSets(bd->RenderState->CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 1, 1, &bd->SamplerLinearDS, 0, nullptr); }
-static void ImGui_ImplVulkan_DrawCallback_SetSamplerNearest(const ImDrawList*, const ImDrawCmd*)    { ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData(); vkCmdBindDescriptorSets(bd->RenderState->CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 1, 1, &bd->SamplerNearestDS, 0, nullptr); }
+static void ImGui_ImplVulkan_DrawCallback_SetSamplerLinear(const ImDrawList*, const ImDrawCmd*)
+{
+    ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
+    if(bd->VulkanInitInfo.DescriptorHeapInfo)
+    {
+        VkPushDataInfoEXT push{};
+        push.sType = VK_STRUCTURE_TYPE_PUSH_DATA_INFO_EXT;
+        push.data.address = &bd->DescriptorHeapSamplerLinear;
+        push.data.size = 4;
+        push.offset = 20;
+        vkCmdPushDataEXT(bd->RenderState->CommandBuffer, &push);
+    }
+    else
+    {
+        vkCmdBindDescriptorSets(bd->RenderState->CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 1, 1, &bd->SamplerLinearDS, 0, nullptr);
+    }
+}
+static void ImGui_ImplVulkan_DrawCallback_SetSamplerNearest(const ImDrawList*, const ImDrawCmd*)
+{
+    ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
+    if(bd->VulkanInitInfo.DescriptorHeapInfo)
+    {
+        VkPushDataInfoEXT push{};
+        push.sType = VK_STRUCTURE_TYPE_PUSH_DATA_INFO_EXT;
+        push.data.address = &bd->DescriptorHeapSamplerNearest;
+        push.data.size = 4;
+        push.offset = 20;
+        vkCmdPushDataEXT(bd->RenderState->CommandBuffer, &push);
+    }
+    else
+    {
+        vkCmdBindDescriptorSets(bd->RenderState->CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 1, 1, &bd->SamplerNearestDS, 0, nullptr);
+    }
+}
 
 // Render function
 void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer, VkPipeline pipeline)
@@ -670,9 +795,25 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
                 vkCmdSetScissor(command_buffer, 0, 1, &scissor);
 
                 // Bind DescriptorSets for image view (font or user texture) and samplers
-                VkDescriptorSet image_view = (VkDescriptorSet)pcmd->GetTexID();
+                ImTextureID image_id = pcmd->GetTexID();
+                VkDescriptorSet image_view = (VkDescriptorSet)image_id;
                 if (image_view != last_image_view)
-                    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 0, 1, &image_view, 0, nullptr);
+                {
+                    if(v->DescriptorHeapInfo)
+                    {
+                        VkPushDataInfoEXT push{};
+                        push.sType = VK_STRUCTURE_TYPE_PUSH_DATA_INFO_EXT;
+                        image_id &= 0x7FFFFFFF;
+                        push.data.address = &image_id;
+                        push.data.size = 4;
+                        push.offset = 16;
+                        vkCmdPushDataEXT(command_buffer, &push);
+                    }
+                    else
+                    {
+                        vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 0, 1, &image_view, 0, nullptr);
+                    }
+                }
                 last_image_view = image_view;
 
                 // Draw
@@ -699,11 +840,16 @@ static void ImGui_ImplVulkan_DestroyTexture(ImTextureData* tex)
 {
     if (ImGui_ImplVulkan_Texture* backend_tex = (ImGui_ImplVulkan_Texture*)tex->BackendUserData)
     {
-        IM_ASSERT(backend_tex->DescriptorSet == (VkDescriptorSet)tex->TexID);
+        IM_ASSERT(backend_tex->DescriptorSet == (VkDescriptorSet)tex->TexID ||
+                  backend_tex->DescriptorHeapIndex == (tex->TexID & 0x7FFFFFFF));
         ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
         ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
-        ImGui_ImplVulkan_RemoveTexture(backend_tex->DescriptorSet);
-        vkDestroyImageView(v->Device, backend_tex->ImageView, v->Allocator);
+        if (backend_tex->DescriptorSet != VK_NULL_HANDLE)
+            ImGui_ImplVulkan_RemoveTexture(backend_tex->DescriptorSet);
+        else
+            ImGui_ImplVulkan_RemoveHeapTexture(backend_tex->DescriptorHeapIndex);
+        if (backend_tex->ImageView != VK_NULL_HANDLE)
+            vkDestroyImageView(v->Device, backend_tex->ImageView, v->Allocator);
         vkDestroyImage(v->Device, backend_tex->Image, v->Allocator);
         vkFreeMemory(v->Device, backend_tex->Memory, v->Allocator);
         IM_DELETE(backend_tex);
@@ -761,25 +907,33 @@ void ImGui_ImplVulkan_UpdateTexture(ImTextureData* tex)
             check_vk_result(err);
         }
 
-        // Create the Image View:
+        VkImageViewCreateInfo info = {};
+        info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        info.image = backend_tex->Image;
+        info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        info.format = VK_FORMAT_R8G8B8A8_UNORM;
+        info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        info.subresourceRange.levelCount = 1;
+        info.subresourceRange.layerCount = 1;
+        if(v->DescriptorHeapInfo)
         {
-            VkImageViewCreateInfo info = {};
-            info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-            info.image = backend_tex->Image;
-            info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            info.format = VK_FORMAT_R8G8B8A8_UNORM;
-            info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            info.subresourceRange.levelCount = 1;
-            info.subresourceRange.layerCount = 1;
+            backend_tex->DescriptorHeapIndex =
+                v->DescriptorHeapInfo->RegisterImage(v->DescriptorHeapInfo->UserContext, &info);
+            // Store identifiers
+            tex->SetTexID((ImTextureID)(backend_tex->DescriptorHeapIndex | 0x80000000));
+        }
+        else
+        {
+            // Create the Image View:
             err = vkCreateImageView(v->Device, &info, v->Allocator, &backend_tex->ImageView);
             check_vk_result(err);
+
+            // Create the Descriptor Set
+            backend_tex->DescriptorSet = ImGui_ImplVulkan_AddTexture(backend_tex->ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+            // Store identifiers
+            tex->SetTexID((ImTextureID)backend_tex->DescriptorSet);
         }
 
-        // Create the Descriptor Set
-        backend_tex->DescriptorSet = ImGui_ImplVulkan_AddTexture(backend_tex->ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-        // Store identifiers
-        tex->SetTexID((ImTextureID)backend_tex->DescriptorSet);
         tex->BackendUserData = backend_tex;
     }
 
@@ -943,6 +1097,11 @@ static void ImGui_ImplVulkan_CreateShaderModules(VkDevice device, const VkAlloca
         default_frag_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
         default_frag_info.codeSize = sizeof(__glsl_shader_frag_spv);
         default_frag_info.pCode = (uint32_t*)__glsl_shader_frag_spv;
+        if (v->DescriptorHeapInfo)
+        {
+            default_frag_info.codeSize = sizeof(__glsl_shader_heap_frag_spv);
+            default_frag_info.pCode = (uint32_t *)__glsl_shader_heap_frag_spv;
+        }
         VkShaderModuleCreateInfo* p_frag_info = (v->CustomShaderFragCreateInfo.sType == VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO) ? &v->CustomShaderFragCreateInfo : &default_frag_info;
         VkResult err = vkCreateShaderModule(device, p_frag_info, allocator, &bd->ShaderModuleFrag);
         check_vk_result(err);
@@ -1056,6 +1215,14 @@ static VkPipeline ImGui_ImplVulkan_CreatePipeline(VkDevice device, const VkAlloc
     create_info.renderPass = info->RenderPass;
     create_info.subpass = info->Subpass;
 
+    VkPipelineCreateFlags2CreateInfo ci_heap_flags{};
+    ci_heap_flags.sType = VK_STRUCTURE_TYPE_PIPELINE_CREATE_FLAGS_2_CREATE_INFO;
+    ci_heap_flags.flags = VK_PIPELINE_CREATE_2_DESCRIPTOR_HEAP_BIT_EXT;
+    if(bd->VulkanInitInfo.DescriptorHeapInfo)
+    {
+        create_info.pNext = &ci_heap_flags;
+    }
+
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
     if (bd->VulkanInitInfo.UseDynamicRendering)
     {
@@ -1161,17 +1328,31 @@ bool ImGui_ImplVulkan_CreateDeviceObjects()
         info.maxAnisotropy = 1.0f;
         err = vkCreateSampler(v->Device, &info, v->Allocator, &bd->SamplerLinear);
         check_vk_result(err);
-        bd->SamplerLinearDS = ImGui_ImplVulkan_CreateSamplerDS(bd->SamplerLinear);
+        if (v->DescriptorHeapInfo)
+        {
+            bd->DescriptorHeapSamplerLinear =
+                v->DescriptorHeapInfo->RegisterSampler(v->DescriptorHeapInfo->UserContext, &info);
+        } else
+        {
+            bd->SamplerLinearDS = ImGui_ImplVulkan_CreateSamplerDS(bd->SamplerLinear);
+        }
 
         info.magFilter = VK_FILTER_NEAREST;
         info.minFilter = VK_FILTER_NEAREST;
         info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
         err = vkCreateSampler(v->Device, &info, v->Allocator, &bd->SamplerNearest);
         check_vk_result(err);
-        bd->SamplerNearestDS = ImGui_ImplVulkan_CreateSamplerDS(bd->SamplerNearest);
+        if(v->DescriptorHeapInfo)
+        {
+            bd->DescriptorHeapSamplerNearest =
+                v->DescriptorHeapInfo->RegisterSampler(v->DescriptorHeapInfo->UserContext, &info);
+        } else
+        {
+            bd->SamplerNearestDS = ImGui_ImplVulkan_CreateSamplerDS(bd->SamplerNearest);
+        }
     }
 
-    if (!bd->PipelineLayout)
+    if (!bd->PipelineLayout && !v->DescriptorHeapInfo)
     {
         // Constants: we are using 'vec2 offset' and 'vec2 scale' instead of a full 3d projection matrix
         VkPushConstantRange push_constants[1] = {};
@@ -1270,6 +1451,11 @@ void    ImGui_ImplVulkan_DestroyDeviceObjects()
     if (bd->PipelineLayout)       { vkDestroyPipelineLayout(v->Device, bd->PipelineLayout, v->Allocator); bd->PipelineLayout = VK_NULL_HANDLE; }
     if (bd->Pipeline)             { vkDestroyPipeline(v->Device, bd->Pipeline, v->Allocator); bd->Pipeline = VK_NULL_HANDLE; }
     if (bd->DescriptorPool)       { vkDestroyDescriptorPool(v->Device, bd->DescriptorPool, v->Allocator); bd->DescriptorPool = VK_NULL_HANDLE; }
+    if (v->DescriptorHeapInfo)
+    {
+        v->DescriptorHeapInfo->UnRegisterSampler(v->DescriptorHeapInfo->UserContext, bd->DescriptorHeapSamplerLinear);
+        v->DescriptorHeapInfo->UnRegisterSampler(v->DescriptorHeapInfo->UserContext, bd->DescriptorHeapSamplerNearest);
+    }
 }
 
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
@@ -1374,7 +1560,9 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info)
     IM_ASSERT(info->Queue != VK_NULL_HANDLE);
     IM_ASSERT(info->MinImageCount >= 2);
     IM_ASSERT(info->ImageCount >= info->MinImageCount);
-    if (info->DescriptorPool != VK_NULL_HANDLE) // Either DescriptorPool or DescriptorPoolSize must be set, not both!
+    if (info->DescriptorHeapInfo != nullptr) // If using descriptor heap then DescriptorPool and DescriptorPoolSize must be unset.
+        IM_ASSERT(info->DescriptorPool == VK_NULL_HANDLE && info->DescriptorPoolSize == 0);
+    else if (info->DescriptorPool != VK_NULL_HANDLE) // Either DescriptorPool or DescriptorPoolSize must be set, not both!
         IM_ASSERT(info->DescriptorPoolSize == 0);
     else
         IM_ASSERT(info->DescriptorPoolSize > 0);
@@ -1481,6 +1669,13 @@ void ImGui_ImplVulkan_RemoveTexture(VkDescriptorSet descriptor_set)
     ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
     VkDescriptorPool pool = bd->DescriptorPool ? bd->DescriptorPool : v->DescriptorPool;
     vkFreeDescriptorSets(v->Device, pool, 1, &descriptor_set);
+}
+
+void ImGui_ImplVulkan_RemoveHeapTexture(uint32_t id)
+{
+    ImGui_ImplVulkan_Data *bd = ImGui_ImplVulkan_GetBackendData();
+    ImGui_ImplVulkan_InitInfo *v = &bd->VulkanInitInfo;
+    v->DescriptorHeapInfo->UnRegisterImage(v->DescriptorHeapInfo->UserContext, id);
 }
 
 void ImGui_ImplVulkan_DestroyFrameRenderBuffers(VkDevice device, ImGui_ImplVulkan_FrameRenderBuffers* buffers, const VkAllocationCallbacks* allocator)
