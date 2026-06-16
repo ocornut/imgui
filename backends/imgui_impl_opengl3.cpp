@@ -25,6 +25,7 @@
 // (minor and older changes stripped away, please see git history for details)
 //  2026-06-23: OpenGL: GLSL version detection assume GLSL 410 when GL context is 4.1. Fixes an issue running on macOS with Wine. (#9427, #6577)
 //  2026-04-23: OpenGL: Added support for standard draw callbacks (in platform_io): DrawCallback_ResetRenderState, DrawCallback_SetSamplerLinear, DrawCallback_SetSamplerNearest. (#9378)
+//                      (Breaking): this change prioritize using glBindSampler() when available, which would override glTexParameter() settings you may have set on custom textures.
 //  2026-03-12: OpenGL: Fixed invalid assert in ImGui_ImplOpenGL3_UpdateTexture() if ImTextureID_Invalid is defined to be != 0, which became the default since 2026-03-12. (#9295)
 //  2025-12-11: OpenGL: Fixed embedded loader multiple init/shutdown cycles broken on some platforms. (#8792, #9112)
 //  2025-09-18: Call platform_io.ClearRendererHandlers() on shutdown.
@@ -549,7 +550,7 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
                 GL_CALL(glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->GetTexID()));
 
                 // Emulate sampler change (even though it is technically part of texture data)
-                // As a sort of hack/workaround, we only start writing using glTextParameter() if sampler is ever changed explicitly.
+                // As a sort of hack/workaround, we only start writing using glTexParameter() if sampler is ever changed explicitly.
                 if (!bd->HasBindSampler && bd->UseTexParameterToSetSampler)
                 {
                     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, bd->NextSampler);
