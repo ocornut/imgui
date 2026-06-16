@@ -55,6 +55,12 @@ Other Changes:
 - InputText:
   - Added `style.InputTextCursorSize` to configure cursor/caret thickness. (#7031, #9409)
     This is automatically scaled by `style.ScaleAllSizes()`.
+- Tables:
+  - Context Menu: added a "Reset" sub-menu with a "Reset Visibility" option.
+    (which is greyed out when using default settings)
+  - Headers: fixed label being clipped early to reserve space for a sort marker
+    even when no sort marker is displayed. Auto-fitting a column still accounts
+    for the possible marker, so that sorting after an auto-fit doesn't clip the label.
 - Fonts:
   - Added `IMGUI_DISABLE_DEFAULT_FONT_BITMAP`/`IMGUI_DISABLE_DEFAULT_FONT_VECTOR` to
     disable embedding either fonts separately. (#9407)
@@ -74,6 +80,8 @@ Other Changes:
 - Demo:
   - Extract 'Widgets->Tree Nodes->Selectable Nodes' out of the 'Advanced'
     demo for clarity (manual reimplementation of basic selection).
+- Misc:
+  - Added IM_DEBUG_BREAK() handler for GCC+AArch64/ARM64. [@tom-seddon]
 - Backends:
   - OpenGL3:
     - GLSL version detection assume GLSL 410 when GL context is 4.1.

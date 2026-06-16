@@ -25,8 +25,8 @@ jobs:
         working-directory: ${{ github.workspace }}/imgui
 
     env:
-      VS_PATH: C:\Program Files\Microsoft Visual Studio\2022\Enterprise\
-      MSBUILD_PATH: C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\
+      VS_PATH: C:\Program Files\Microsoft Visual Studio\18\Enterprise
+      MSBUILD_PATH: C:\Program Files\Microsoft Visual Studio\18\Enterprise\MSBuild\Current\Bin\
     steps:
       - uses: actions/checkout@v6
         with:
@@ -667,7 +667,7 @@ jobs:
         working-directory: ${{ github.workspace }}/imgui
 
     env:
-      MSBUILD_PATH: C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\
+      MSBUILD_PATH: C:\Program Files\Microsoft Visual Studio\18\Enterprise\MSBuild\Current\Bin\
 
     steps:
       - uses: actions/checkout@v6
