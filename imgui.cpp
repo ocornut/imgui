@@ -8591,7 +8591,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // Default item width. Make it proportional to window size if window can be manually resized.
         // (we cannot use AutoFitFramesX/AutoFitFramesY which is a temporary state)
         bool is_resizable_width;
-        if (flags & ImGuiWindowFlags_ChildWindow)
+        if ((flags & ImGuiWindowFlags_ChildWindow) && !window->DockIsActive)
             is_resizable_width = (window->Size.x > 0.0f) && !(window->ChildFlags & (ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AlwaysAutoResize));
         else
             is_resizable_width = (window->Size.x > 0.0f) && !(flags & ImGuiWindowFlags_AlwaysAutoResize);

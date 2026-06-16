@@ -88,6 +88,10 @@ Docking+Viewports Branch:
 - Viewports:
   - Fixed an issue where the implicit "Debug" window while hidden would erroneously
     interfere with merging secondary viewports into the main viewport.
+- Docking:
+  - Fixed behavior change/regression in 1.92.8 where a window using the
+    ImGuiWindowFlags_AlwaysAutoResize flag would have ItemWidth default
+    change when docked. (#9355, #9443) [@reybits]
 
 
 -----------------------------------------------------------------------
