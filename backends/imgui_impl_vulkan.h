@@ -78,6 +78,10 @@
 #define IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
 #endif
 
+#if defined(VK_VERSION_1_4) || defined(VK_KHR_push_descriptor)
+#define IMGUI_IMPL_VULKAN_HAS_PUSH_DESCRIPTOR_SET
+#endif
+
 // Backend uses a small number of descriptors per font atlas + as many as additional calls done to ImGui_ImplVulkan_AddTexture().
 #define IMGUI_IMPL_VULKAN_MINIMUM_SAMPLED_IMAGE_POOL_SIZE   (8)     // Minimum per atlas
 #define IMGUI_IMPL_VULKAN_MINIMUM_SAMPLER_POOL_SIZE         (2)     // Minimum for linear + nearest
@@ -134,6 +138,12 @@ struct ImGui_ImplVulkan_InitInfo
     // Need to explicitly enable VK_KHR_dynamic_rendering extension to use this, even for Vulkan 1.3 + setup PipelineInfoMain.PipelineRenderingCreateInfo and PipelineInfoViewports.PipelineRenderingCreateInfo.
     bool                            UseDynamicRendering;
 
+    // (Optional) PushDescriptorSet
+    // Need to explicitly enable VK_KHR_push_descriptor extension to use this.
+    // When enabled, you must pass VkImageView as ImTextureID instead of VkDescriptorSet, 
+    // eliminating the need for descriptor pool allocations for textures.
+    bool                            UsePushDescriptorSet;
+
     // (Optional) Allocation, Debugging
     const VkAllocationCallbacks*    Allocator;
     void                            (*CheckVkResultFn)(VkResult err);
@@ -162,6 +172,7 @@ IMGUI_IMPL_API void             ImGui_ImplVulkan_CreateMainPipeline(const ImGui_
 IMGUI_IMPL_API void             ImGui_ImplVulkan_UpdateTexture(ImTextureData* tex);
 
 // Register a texture (VkDescriptorSet for a VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE == ImTextureID)
+// (Note: If using InitInfo.UsePushDescriptorSet, this function is NOT needed. You can directly pass your VkImageView casted to ImTextureID.)
 IMGUI_IMPL_API VkDescriptorSet  ImGui_ImplVulkan_AddTexture(VkImageView image_view, VkImageLayout image_layout);
 IMGUI_IMPL_API void             ImGui_ImplVulkan_RemoveTexture(VkDescriptorSet descriptor_set);
 
