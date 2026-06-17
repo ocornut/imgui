@@ -86,6 +86,8 @@ Other Changes:
   - OpenGL3:
     - GLSL version detection assume GLSL 410 when GL context is 4.1.
       Fixes an issue running on macOS with Wine. [#9427, #6577) [@perminovVS]
+    - Expose selected render state in ImGui_ImplOpenGL3_RenderState, allowing to
+      dynamically select between use of glBindSampler() and glTexParameter(). (#9378)
   - Win32:
     - Uses `SetProcessDpiAwarenessContext()` instead of `SetThreadDpiAwarenessContext()`
       when available, fixing OpenGL DPI scaling issues as e.g. NVIDIA drivers tends
