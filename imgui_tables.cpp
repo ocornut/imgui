@@ -4110,7 +4110,7 @@ void ImGui::TableGcCompactTransientBuffers(ImGuiTableTempData* temp_data)
     temp_data->LastTimeActive = -1.0f;
 }
 
-// Compact and remove unused settings data (currently only used by TestEngine)
+// Compact and remove unused or resize settings data (only TestEngine mark unused, but resizing table down can lead to compaction)
 void ImGui::TableGcCompactSettings()
 {
     ImGuiContext& g = *GImGui;
@@ -4126,6 +4126,9 @@ void ImGui::TableGcCompactSettings()
         if (settings->ID != 0)
             memcpy(new_chunk_stream.alloc_chunk(TableSettingsCalcChunkSize(settings->ColumnsCount)), settings, TableSettingsCalcChunkSize(settings->ColumnsCount));
     g.SettingsTables.swap(new_chunk_stream);
+    for (int table_n = 0; table_n < g.Tables.GetMapSize(); table_n++)
+        if (ImGuiTable* table = g.Tables.TryGetMapData(table_n))
+            table->SettingsOffset = -1;
 }
 
 
