@@ -375,6 +375,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     const int previous_frame_active = table->LastFrameActive;
     const int instance_no = (previous_frame_active != g.FrameCount) ? 0 : table->InstanceCurrent + 1;
     const ImGuiTableFlags previous_flags = table->Flags;
+    const bool is_new_table = (previous_frame_active == -1);
     table->ID = id;
     table->Flags = flags;
     table->LastFrameActive = g.FrameCount;
@@ -584,7 +585,8 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     if (table->IsInitializing)
     {
         // Initialize
-        table->SettingsOffset = -1;
+        if (is_new_table)
+            table->SettingsOffset = -1;
         table->IsSortSpecsDirty = true;
         table->IsSettingsDirty = true; // Records itself into .ini file even when in default state (#7934)
         table->InstanceInteracted = -1;
@@ -3829,6 +3831,8 @@ static size_t TableSettingsCalcChunkSize(int columns_count)
 ImGuiTableSettings* ImGui::TableSettingsCreate(ImGuiID id, int columns_count)
 {
     ImGuiContext& g = *GImGui;
+    //ImGuiTableSettings* old_settings = TableSettingsFindByID(id); // Comment out sanity check to avoid unnecessary lookups.
+    //IM_ASSERT(old_settings == NULL || old_settings->ColumnsCountMax < columns_count);
     ImGuiTableSettings* settings = g.SettingsTables.alloc_chunk(TableSettingsCalcChunkSize(columns_count));
     TableSettingsInit(settings, id, columns_count, columns_count);
     return settings;
@@ -3848,14 +3852,12 @@ ImGuiTableSettings* ImGui::TableSettingsFindByID(ImGuiID id)
 // Get settings for a given table, NULL if none
 ImGuiTableSettings* ImGui::TableGetBoundSettings(ImGuiTable* table)
 {
-    if (table->SettingsOffset != -1)
-    {
-        ImGuiContext& g = *GImGui;
-        ImGuiTableSettings* settings = g.SettingsTables.ptr_from_offset(table->SettingsOffset);
-        IM_ASSERT(settings->ID == table->ID);
-        return settings;
-    }
-    return NULL;
+    if (table->SettingsOffset == -1)
+        return NULL;
+    ImGuiContext& g = *GImGui;
+    ImGuiTableSettings* settings = g.SettingsTables.ptr_from_offset(table->SettingsOffset);
+    IM_ASSERT(settings->ID == table->ID);
+    return settings;
 }
 
 // Restore initial state of table (with or without saved settings)
