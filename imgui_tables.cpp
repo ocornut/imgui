@@ -3962,7 +3962,7 @@ void ImGui::TableLoadSettings(ImGuiTable* table)
 
     table->SettingsLoadedFlags = settings->SaveFlags;
     table->RefScale = settings->RefScale;
-    // (TableUpdateLayout() will further read from settings data)
+    // TableUpdateLayout() will then call TableLoadSettingsForColumns() to apply the data.
 }
 
 void ImGui::TableLoadSettingsForColumns(ImGuiTable* table)
@@ -3973,15 +3973,11 @@ void ImGui::TableLoadSettingsForColumns(ImGuiTable* table)
     if (settings == NULL)
         return;
 
-    // When using TrackTopologyChanges mode, columns ID are either all sets, either all cleared (initially).
-    //const bool has_columns_id = table->Columns[0].ID != 0;
-
     // Serialize ImGuiTableSettings/ImGuiTableColumnSettings into ImGuiTable/ImGuiTableColumn
     ImGuiTableColumnSettings* column_settings = settings->GetColumnSettings();
     for (int data_n = 0; data_n < settings->ColumnsCount; data_n++, column_settings++)
     {
         int column_n = column_settings->Index;
-        //if (table->Flags & ImGuiTableFlags_TrackTopologyChanges)
         if ((table->Flags & ImGuiTableFlags_TrackTopologyChanges) && (settings->SaveFlags & ImGuiTableFlags_TrackTopologyChanges))// && has_columns_id)
             if (column_n >= table->ColumnsCount || table->Columns[column_n].ID != column_settings->ID)
             {
@@ -3993,29 +3989,32 @@ void ImGui::TableLoadSettingsForColumns(ImGuiTable* table)
 
         if (column_n < 0 || column_n >= table->ColumnsCount)
             continue;
-
-        ImGuiTableColumn* column = &table->Columns[column_n];
-        column->IsLoadedSettings = true;
-        if (settings->SaveFlags & ImGuiTableFlags_TrackTopologyChanges)
-            column->ID = column_settings->ID;
-        if (settings->SaveFlags & ImGuiTableFlags_Resizable)
-        {
-            if (column_settings->IsStretch)
-                column->StretchWeight = column_settings->WidthOrWeight;
-            else
-                column->WidthRequest = column_settings->WidthOrWeight;
-            column->AutoFitQueue = 0x00;
-        }
-        if (settings->SaveFlags & ImGuiTableFlags_Reorderable)
-            column->DisplayOrder = column_settings->DisplayOrder;
-        else
-            column->DisplayOrder = column_settings->Index; // Because default depends on previous Index, we need to set that up and cannot rely on TableInitColumnDefaults()
-        if ((settings->SaveFlags & ImGuiTableFlags_Hideable) && column_settings->IsEnabled != -1)
-            column->IsUserEnabled = column->IsUserEnabledNextFrame = (column_settings->IsEnabled == 1);
-        column->SortOrder = column_settings->SortOrder;
-        column->SortDirection = column_settings->SortDirection;
+        TableLoadSettingsForColumn(&table->Columns[column_n], column_settings, settings->SaveFlags);
     }
     table->SettingsLoadedFlags |= ImGuiTableFlags_Reorderable; // We handle above in code above.
+}
+
+void ImGui::TableLoadSettingsForColumn(ImGuiTableColumn* column, const ImGuiTableColumnSettings* column_settings, ImGuiTableFlags load_flags)
+{
+    column->IsLoadedSettings = true;
+    if (load_flags & ImGuiTableFlags_TrackTopologyChanges)
+        column->ID = column_settings->ID;
+    if (load_flags & ImGuiTableFlags_Resizable)
+    {
+        if (column_settings->IsStretch)
+            column->StretchWeight = column_settings->WidthOrWeight;
+        else
+            column->WidthRequest = column_settings->WidthOrWeight;
+        column->AutoFitQueue = 0x00;
+    }
+    if (load_flags & ImGuiTableFlags_Reorderable)
+        column->DisplayOrder = column_settings->DisplayOrder;
+    else
+        column->DisplayOrder = column_settings->Index; // Because default depends on previous Index, we need to set that up and cannot rely on TableInitColumnDefaults()
+    if ((load_flags & ImGuiTableFlags_Hideable) && column_settings->IsEnabled != -1)
+        column->IsUserEnabled = column->IsUserEnabledNextFrame = (column_settings->IsEnabled == 1);
+    column->SortOrder = column_settings->SortOrder;
+    column->SortDirection = column_settings->SortDirection;
 }
 
 struct ImGuiTableFixDisplayOrderColumnData
