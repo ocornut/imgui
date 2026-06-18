@@ -578,7 +578,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     if (table->RawData == NULL)
     {
         TableBeginInitMemory(table, columns_count);
-        table->IsInitializing = table->IsSettingsRequestLoad = true;
+        table->IsInitializing = true;
     }
     if (table->IsResetAllRequest)
         TableResetSettings(table);
@@ -586,7 +586,10 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     {
         // Initialize
         if (is_new_table)
+        {
             table->SettingsOffset = -1;
+            table->IsSettingsRequestLoad = true;
+        }
         table->IsSortSpecsDirty = true;
         table->IsSettingsDirty = true; // Records itself into .ini file even when in default state (#7934)
         table->InstanceInteracted = -1;
