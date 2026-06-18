@@ -3898,8 +3898,6 @@ void ImGui::TableSaveSettings(ImGuiTable* table)
 
     bool save_ref_scale = false;
     settings->SaveFlags = ImGuiTableFlags_None;
-    if (table->Flags & ImGuiTableFlags_TrackTopologyChanges)
-        settings->SaveFlags |= ImGuiTableFlags_TrackTopologyChanges | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
     for (int n = 0; n < table->ColumnsCount; n++, column++, column_settings++)
     {
         const float width_or_weight = (column->Flags & ImGuiTableColumnFlags_WidthStretch) ? column->StretchWeight : column->WidthRequest;
@@ -3925,6 +3923,8 @@ void ImGui::TableSaveSettings(ImGuiTable* table)
             settings->SaveFlags |= ImGuiTableFlags_Sortable;
         if (column->IsUserEnabled != ((column->Flags & ImGuiTableColumnFlags_DefaultHide) == 0))
             settings->SaveFlags |= ImGuiTableFlags_Hideable;
+        if (column->ID != 0)
+            settings->SaveFlags |= ImGuiTableFlags_TrackTopologyChanges;
     }
     settings->SaveFlags &= table->Flags;
     settings->RefScale = save_ref_scale ? table->RefScale : 0.0f;
@@ -3978,12 +3978,11 @@ void ImGui::TableLoadSettingsForColumns(ImGuiTable* table)
     for (int data_n = 0; data_n < settings->ColumnsCount; data_n++, column_settings++)
     {
         int column_n = column_settings->Index;
+        //if (table->Flags & ImGuiTableFlags_TrackTopologyChanges)
         if ((table->Flags & ImGuiTableFlags_TrackTopologyChanges) && (settings->SaveFlags & ImGuiTableFlags_TrackTopologyChanges))// && has_columns_id)
             if (column_n >= table->ColumnsCount || table->Columns[column_n].ID != column_settings->ID)
             {
-                // - Case 1: done during initial table creation: we don't have ID yet. Write back loaded IDs, will reconcile in TableUpdateLayout().
-                // - Case 2 (this code): we have columns identifiers already.
-                column_n = -1;
+                column_n = -1; // FIXME-RECONCILE
                 for (int other_n = 0; other_n < table->ColumnsCount && column_n == -1; other_n++)
                     if (table->Columns[other_n].ID == column_settings->ID)
                         column_n = other_n;
@@ -4006,11 +4005,14 @@ void ImGui::TableLoadSettingsForColumns(ImGuiTable* table)
         }
         if (settings->SaveFlags & ImGuiTableFlags_Reorderable)
             column->DisplayOrder = column_settings->DisplayOrder;
+        else
+            column->DisplayOrder = column_settings->Index; // Because default depends on previous Index, we need to set that up and cannot rely on TableInitColumnDefaults()
         if ((settings->SaveFlags & ImGuiTableFlags_Hideable) && column_settings->IsEnabled != -1)
-            column->IsUserEnabled = column->IsUserEnabledNextFrame = column_settings->IsEnabled == 1;
+            column->IsUserEnabled = column->IsUserEnabledNextFrame = (column_settings->IsEnabled == 1);
         column->SortOrder = column_settings->SortOrder;
         column->SortDirection = column_settings->SortDirection;
     }
+    table->SettingsLoadedFlags |= ImGuiTableFlags_Reorderable; // We handle above in code above.
 }
 
 struct ImGuiTableFixDisplayOrderColumnData
