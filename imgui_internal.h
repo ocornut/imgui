@@ -2937,7 +2937,8 @@ struct ImGuiTableColumn
     bool                    IsPreserveWidthAuto : 1;
     bool                    IsJustCreated : 1;
     bool                    IsLoadedSettings : 1;
-    bool                    SrcFoundReconcileTarget : 1;
+    bool                    IsNeedReconcileSrc : 1;
+    bool                    IsNeedReconcileDst : 1;
     ImS8                    NavLayerCurrent;                // ImGuiNavLayer in 1 byte
     ImU8                    AutoFitQueue : 4;               // Queue of 4 values for the next 4 frames to request auto-fit
     ImU8                    CannotSkipItemsQueue : 4;       // Queue of 4 values for the next 4 frames to disable Clipped/SkipItem

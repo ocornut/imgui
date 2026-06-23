@@ -573,6 +573,8 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
         IM_ASSERT(temp_data->OldColumnsRawData == NULL);
         temp_data->OldColumnsRawData = table->RawData; // Freed during layout
         temp_data->OldColumnsData = table->Columns;
+        for (ImGuiTableColumn& src_column : table->TempData->OldColumnsData)
+            src_column.IsNeedReconcileSrc = true;
         table->RawData = NULL;
     }
     if (table->RawData == NULL)
@@ -1756,7 +1758,7 @@ void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, flo
     ImGuiTableColumn* column = &table->Columns[column_idx];
 
     // If topology change goes into reconcile mode
-    if (!table->IsReconcileMode && column->ID != column_id)
+    if (table->IsReconcileMode == false && column->ID != column_id)
     {
         table->IsReconcileMode = true;
         table->TempData->ReconcileColumnsRequests.reserve(table->ColumnsCount - column_idx);
@@ -1766,6 +1768,9 @@ void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, flo
     if (table->IsReconcileMode == false)
     {
         TableSetupColumnApply(table, column_idx, column_id, name_offset, flags, init_width_or_weight, user_data);
+        column->IsNeedReconcileSrc = column->IsNeedReconcileDst = false;
+        if (column_idx < table->TempData->OldColumnsData.size())
+            table->TempData->OldColumnsData[column_idx].IsNeedReconcileSrc = false;
         return;
     }
 
@@ -1782,9 +1787,8 @@ void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, flo
     reconcile_data.UserData = user_data;
     reconcile_data.ColumnNewIdx = (ImGuiTableColumnIdx)column_idx;
     reconcile_data.ColumnOldIdx = (ImGuiTableColumnIdx)-1;
-
-    // Allow TableGetColumnName() to work before layout
-    column->NameOffset = name_offset;
+    column->NameOffset = name_offset; // Allow TableGetColumnName() to work before layout
+    column->IsNeedReconcileSrc = column->IsNeedReconcileDst = true;
 }
 
 // NB: This was written to be similar to the logic in TableLoadSettingsForColumns().
@@ -1795,9 +1799,8 @@ void ImGui::TableReconcileColumns(ImGuiTable* table)
     IM_UNUSED(g);
     IMGUI_DEBUG_LOG_TABLE("[table] Reconcile columns for table 0x%08X\n", table->ID);
 
+    ImSpan<ImGuiTableColumn>& dst_columns = table->Columns;
     ImSpan<ImGuiTableColumn>& src_columns = table->TempData->OldColumnsData.empty() ? table->Columns : table->TempData->OldColumnsData;
-    for (ImGuiTableColumn& src_column : src_columns)
-        src_column.SrcFoundReconcileTarget = false;
 
     // Find matches for named columns.
     int matches = 0;
@@ -1805,11 +1808,13 @@ void ImGui::TableReconcileColumns(ImGuiTable* table)
     for (ImGuiTableReconcileColumnData& reconcile_data : reconcile_requests)
         if (reconcile_data.ID != 0)
             for (ImGuiTableColumn& src_column : src_columns)
-                if (src_column.ID == reconcile_data.ID && !src_column.SrcFoundReconcileTarget)
+                if (src_column.ID == reconcile_data.ID && src_column.IsNeedReconcileSrc)
                 {
+                    ImGuiTableColumn& dst_column = dst_columns[reconcile_data.ColumnNewIdx];
+                    IM_ASSERT(src_column.IsNeedReconcileSrc && dst_column.IsNeedReconcileDst);
+                    src_column.IsNeedReconcileSrc = dst_column.IsNeedReconcileDst = false;
                     reconcile_data.ColumnOldIdx = (ImGuiTableColumnIdx)src_columns.index_from_ptr(&src_column);
                     reconcile_data.ColumnOldData = src_column;
-                    src_column.SrcFoundReconcileTarget = true;
                     matches++;
                     break;
                 }
@@ -1818,21 +1823,25 @@ void ImGui::TableReconcileColumns(ImGuiTable* table)
     int dst_idx = 0; // index in reconcile array
     if (matches != reconcile_requests.Size)
         for (ImGuiTableColumn& src_column : src_columns)
-            if (!src_column.SrcFoundReconcileTarget)
-            {
-                while (dst_idx < reconcile_requests.Size && reconcile_requests[dst_idx].ColumnOldIdx != (ImGuiTableColumnIdx)-1)
-                    dst_idx++;
-                if (dst_idx == reconcile_requests.Size)
-                    break;
-                reconcile_requests[dst_idx].ColumnOldIdx = (ImGuiTableColumnIdx)src_columns.index_from_ptr(&src_column);
-                reconcile_requests[dst_idx].ColumnOldData = src_column;
-                IM_ASSERT(src_column.SrcFoundReconcileTarget == false);
-            }
+        {
+            if (!src_column.IsNeedReconcileSrc)
+                continue;
+            while (dst_idx < reconcile_requests.Size && reconcile_requests[dst_idx].ColumnOldIdx != (ImGuiTableColumnIdx)-1)
+                dst_idx++;
+            if (dst_idx == reconcile_requests.Size)
+                break;
+            ImGuiTableReconcileColumnData& reconcile_data = reconcile_requests[dst_idx];
+            ImGuiTableColumn& dst_column = dst_columns[reconcile_data.ColumnNewIdx];
+            IM_ASSERT(src_column.IsNeedReconcileSrc && dst_column.IsNeedReconcileDst);
+            dst_column.IsNeedReconcileSrc = dst_column.IsNeedReconcileDst = false;
+            reconcile_data.ColumnOldIdx = (ImGuiTableColumnIdx)src_columns.index_from_ptr(&src_column);
+            reconcile_data.ColumnOldData = src_column;
+        }
 
     // Apply in the final pass. Because it is possible that src_columns == table->Columns we went through a temporary copy.
     for (ImGuiTableReconcileColumnData& reconcile_data : reconcile_requests)
     {
-        table->Columns[reconcile_data.ColumnNewIdx] = reconcile_data.ColumnOldData; // When old column was not found clear anyway with default-constructed data.
+        table->Columns[reconcile_data.ColumnNewIdx] = reconcile_data.ColumnOldData; // When old column was not found clear anyway with default-constructed data (which will set IsJustCreated=true)
         TableSetupColumnApply(table, reconcile_data.ColumnNewIdx, reconcile_data.ID, reconcile_data.NameOffset, reconcile_data.Flags, reconcile_data.InitWidthOrWeight, reconcile_data.UserData);
         IMGUI_DEBUG_LOG_TABLE("[table] - old %d -> new %d \"%s\"\n", reconcile_data.ColumnOldIdx, reconcile_data.ColumnNewIdx, TableGetColumnName(table, reconcile_data.ColumnNewIdx)); // Log at the end so NameOffset was copied.
     }
@@ -3831,6 +3840,7 @@ void ImGui::TableDrawDefaultContextMenu(ImGuiTable* table, ImGuiTableFlags flags
 // - TableResetSettings()
 // - TableSaveSettings() [Internal]
 // - TableLoadSettings() [Internal]
+// - TableLoadSettingsForColumns() [Internal]
 // - TableSettingsHandler_ClearAll() [Internal]
 // - TableSettingsHandler_ApplyAll() [Internal]
 // - TableSettingsHandler_ReadOpen() [Internal]
@@ -4008,27 +4018,25 @@ void ImGui::TableLoadSettingsForColumns(ImGuiTable* table)
     ImGuiTableColumnSettings* column_settings = settings->GetColumnSettings();
     for (int column_settings_n = 0; column_settings_n < settings->ColumnsCount; column_settings_n++, column_settings++)
     {
-        const int src_idx = column_settings->Index;
-        int dst_idx = src_idx;
         column_settings->IsLoaded = false;
-        if (dst_idx >= 0 && dst_idx < table->ColumnsCount && table->Columns[dst_idx].ID == column_settings->ID)
+        const int dst_idx = column_settings->Index;
+        if (dst_idx >= 0 && dst_idx < table->ColumnsCount && table->Columns[dst_idx].ID == column_settings->ID && !table->Columns[dst_idx].IsLoadedSettings)
         {
             // Fast/Common path
             TableLoadSettingsForColumn(&table->Columns[dst_idx], column_settings, settings->SaveFlags);
             matches++;
+            continue;
         }
-        else if (column_settings->ID != 0)
-        {
-            // Find match for named columns.
-            for (int other_n = 0; other_n < table->ColumnsCount; other_n++)
-                if (table->Columns[other_n].ID == column_settings->ID)
+
+        // Find match for named columns.
+        if (column_settings->ID != 0)
+            for (ImGuiTableColumn& column : table->Columns)
+                if (column.ID == column_settings->ID && !column.IsLoadedSettings)
                 {
-                    dst_idx = other_n;
-                    TableLoadSettingsForColumn(&table->Columns[dst_idx], column_settings, settings->SaveFlags);
+                    TableLoadSettingsForColumn(&column, column_settings, settings->SaveFlags);
                     matches++;
                     break;
                 }
-        }
     }
 
     // Remaining entries are matched sequentially
