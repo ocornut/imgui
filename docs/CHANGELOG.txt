@@ -74,6 +74,9 @@ Other Changes:
     calling ClearFonts() during rendering.
   - Fixed an issue where passing a manually created ImFontAtlas to CreateContext() would
     incorrectly destroy it in DestroyContext() when ref-count gets back to zero. (#9426)
+- Nav:
+  - Fixed context menu activation with gamepad erroneously testing for _NavEnableKeyboard
+    instead of _NavEnableGamepad. (#9454, #8803, #9270) [@Clownacy]
 - DrawList:
   - Minor optimization to `AddLine()`, `AddLineH()`, `AddLineV()` functions. (#4091)
   - Added `ImDrawListFlags_TextNoPixelSnap` to disable snapping of AddText()
