@@ -66,4 +66,17 @@ IMGUI_IMPL_API void     ImGui_ImplOpenGL3_UpdateTexture(ImTextureData* tex);
 
 #endif
 
+// [BETA] Selected render state data shared with callbacks.
+// This is temporarily stored in GetPlatformIO().Renderer_RenderState during the ImGui_ImplOpenGL3_RenderDrawData() call.
+// (Please open an issue if you feel you need access to more data)
+struct ImGui_ImplOpenGL3_RenderState
+{
+    bool            UseBindSampler;
+    bool            UseTexParameterFilter;
+    unsigned int    CurrentSampler;                 // (GLuint) Used if UseBindSampler == true, otherwise always 0
+    unsigned int    CurrentTexParameterFilter;      // (GLuint) Used if UseTexParameterToSetSampler == true
+};
+
+static inline ImGui_ImplOpenGL3_RenderState* ImGui_ImplOpenGL3_GetRenderState() { return (ImGui_ImplOpenGL3_RenderState*)ImGui::GetPlatformIO().Renderer_RenderState; }
+
 #endif // #ifndef IMGUI_DISABLE

@@ -5949,8 +5949,11 @@ void ImGui::NewFrame()
         if (g.TablesLastTimeActive[i] >= 0.0f && g.TablesLastTimeActive[i] < memory_compact_start_time)
             TableGcCompactTransientBuffers(g.Tables.GetByIndex(i));
     for (ImGuiTableTempData& table_temp_data : g.TablesTempData)
+    {
+        table_temp_data.ReconcileColumnsRequests.clear(); // Unusual: clear every frame because this is rarely used.
         if (table_temp_data.LastTimeActive >= 0.0f && table_temp_data.LastTimeActive < memory_compact_start_time)
             TableGcCompactTransientBuffers(&table_temp_data);
+    }
     if (g.GcCompactAll)
         GcCompactTransientMiscBuffers();
     g.GcCompactAll = false;
@@ -8160,7 +8163,10 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             ImRect title_bar_rect = window->TitleBarRect();
             if (g.HoveredWindow == window && g.HoveredId == 0 && g.HoveredIdPreviousFrame == 0 && g.ActiveId == 0 && IsMouseHoveringRect(title_bar_rect.Min, title_bar_rect.Max))
                 if (g.IO.MouseClickedCount[0] == 2 && GetKeyOwner(ImGuiKey_MouseLeft) == ImGuiKeyOwner_NoOwner)
+                {
                     window->WantCollapseToggle = true;
+                    SetKeyOwner(ImGuiKey_MouseLeft, window->MoveId); // Claim input the same way ButtonBehavior() does. Prevent a same-frame move from triggering other items. (#9439)
+                }
             if (window->WantCollapseToggle)
             {
                 window->Collapsed = !window->Collapsed;
@@ -15065,7 +15071,7 @@ static void ImGui::NavUpdateContextMenuRequest()
     ImGuiContext& g = *GImGui;
     g.NavOpenContextMenuItemId = g.NavOpenContextMenuWindowId = 0;
     const bool nav_keyboard_active = (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard) != 0;
-    const bool nav_gamepad_active = (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard) != 0;
+    const bool nav_gamepad_active = (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) != 0;
     if ((!nav_keyboard_active && !nav_gamepad_active) || g.NavWindow == NULL)
         return;
 

@@ -25,8 +25,10 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2026-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
-//  2026-06-23: OpenGL: GLSL version detection assume GLSL 410 when GL context is 4.1. Fixes an issue running on macOS with Wine. (#9427, #6577)
+//  2026-06-17: OpenGL: Expose selected render state in ImGui_ImplOpenGL3_RenderState, Allowing to dynamically select between use of glBindSampler() and glTexParameter(). You can access in 'void* platform_io.Renderer_RenderState' during rendering.
+//  2026-06-03: OpenGL: GLSL version detection assume GLSL 410 when GL context is 4.1. Fixes an issue running on macOS with Wine. (#9427, #6577)
 //  2026-04-23: OpenGL: Added support for standard draw callbacks (in platform_io): DrawCallback_ResetRenderState, DrawCallback_SetSamplerLinear, DrawCallback_SetSamplerNearest. (#9378)
+//                      (Breaking): this change prioritize using glBindSampler() when available, which would override glTexParameter() settings you may have set on custom textures.
 //  2026-03-12: OpenGL: Fixed invalid assert in ImGui_ImplOpenGL3_UpdateTexture() if ImTextureID_Invalid is defined to be != 0, which became the default since 2026-03-12. (#9295)
 //  2025-12-11: OpenGL: Fixed embedded loader multiple init/shutdown cycles broken on some platforms. (#8792, #9112)
 //  2025-09-18: Call platform_io.ClearRendererHandlers() on shutdown.
@@ -256,8 +258,6 @@ struct ImGui_ImplOpenGL3_Data
     bool            HasBindSampler;
     bool            HasClipOrigin;
     bool            UseBufferSubData;
-    bool            UseTexParameterToSetSampler;
-    GLuint          NextSampler;            // Used if !HasBindSampler && UseTexParameterToSetSampler.
 #ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_BIND_SAMPLER
     GLuint          TexSamplers[2];         // Used if HasBindSimpler. (0=linear, 1=nearest)
 #endif
@@ -337,7 +337,7 @@ void    ImGui_ImplOpenGL3_NewFrame()
             IM_ASSERT(0 && "ImGui_ImplOpenGL3_CreateDeviceObjects() failed!");
 }
 
-static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, int fb_width, int fb_height, GLuint vertex_array_object)
+static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, ImGui_ImplOpenGL3_RenderState* render_state, int fb_width, int fb_height, GLuint vertex_array_object)
 {
     ImGui_ImplOpenGL3_Data* bd = ImGui_ImplOpenGL3_GetBackendData();
 
@@ -391,8 +391,11 @@ static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, int fb_wid
     glUniformMatrix4fv(bd->AttribLocationProjMtx, 1, GL_FALSE, &ortho_projection[0][0]);
 
 #ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_BIND_SAMPLER
-    if (bd->HasBindSampler)
-        glBindSampler(0, bd->TexSamplers[0]); // We use combined texture/sampler state. Applications using GL 3.3 and GL ES 3.0 may set that otherwise.
+    if (render_state->UseBindSampler)
+    {
+        render_state->CurrentSampler = bd->TexSamplers[0];
+        glBindSampler(0, render_state->CurrentSampler); // We use combined texture/sampler state. Applications using GL 3.3 and GL ES 3.0 may set that otherwise.
+    }
 #endif
 
     (void)vertex_array_object;
@@ -413,13 +416,42 @@ static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, int fb_wid
 
 // Draw callbacks
 static void ImGui_ImplOpenGL3_DrawCallback_ResetRenderState(const ImDrawList*, const ImDrawCmd*)    {} // Intentionally empty. Used as an identifier for rendering loop to call its code. Simpler to implement this way.
+static void ImGui_ImplOpenGL3_DrawCallback_SetSamplerLinear(const ImDrawList*, const ImDrawCmd*)
+{
+    ImGui_ImplOpenGL3_RenderState* render_state = ImGui_ImplOpenGL3_GetRenderState();
 #ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_BIND_SAMPLER
-static void ImGui_ImplOpenGL3_DrawCallback_SetSamplerLinear(const ImDrawList*, const ImDrawCmd*)    { ImGui_ImplOpenGL3_Data* bd = ImGui_ImplOpenGL3_GetBackendData(); if (bd->HasBindSampler) { glBindSampler(0, bd->TexSamplers[0]); } else { bd->UseTexParameterToSetSampler = true; bd->NextSampler = GL_LINEAR; } }
-static void ImGui_ImplOpenGL3_DrawCallback_SetSamplerNearest(const ImDrawList*, const ImDrawCmd*)   { ImGui_ImplOpenGL3_Data* bd = ImGui_ImplOpenGL3_GetBackendData(); if (bd->HasBindSampler) { glBindSampler(0, bd->TexSamplers[1]); } else { bd->UseTexParameterToSetSampler = true; bd->NextSampler = GL_NEAREST; } }
-#else
-static void ImGui_ImplOpenGL3_DrawCallback_SetSamplerLinear(const ImDrawList*, const ImDrawCmd*)    { ImGui_ImplOpenGL3_Data* bd = ImGui_ImplOpenGL3_GetBackendData(); bd->UseTexParameterToSetSampler = true; bd->NextSampler = GL_LINEAR; }
-static void ImGui_ImplOpenGL3_DrawCallback_SetSamplerNearest(const ImDrawList*, const ImDrawCmd*)   { ImGui_ImplOpenGL3_Data* bd = ImGui_ImplOpenGL3_GetBackendData(); bd->UseTexParameterToSetSampler = true; bd->NextSampler = GL_NEAREST; }
+    ImGui_ImplOpenGL3_Data* bd = ImGui_ImplOpenGL3_GetBackendData();
+    if (bd->HasBindSampler)
+    {
+        render_state->CurrentSampler = bd->TexSamplers[0];
+        render_state->UseTexParameterFilter = false;
+        glBindSampler(0, render_state->CurrentSampler);
+    }
+    else
 #endif
+    {
+        render_state->UseTexParameterFilter = true;
+        render_state->CurrentTexParameterFilter = GL_LINEAR;
+    }
+}
+static void ImGui_ImplOpenGL3_DrawCallback_SetSamplerNearest(const ImDrawList*, const ImDrawCmd*)
+{
+    ImGui_ImplOpenGL3_RenderState* render_state = ImGui_ImplOpenGL3_GetRenderState();
+#ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_BIND_SAMPLER
+    ImGui_ImplOpenGL3_Data* bd = ImGui_ImplOpenGL3_GetBackendData();
+    if (bd->HasBindSampler)
+    {
+        render_state->CurrentSampler = bd->TexSamplers[1];
+        render_state->UseTexParameterFilter = false;
+        glBindSampler(0, render_state->CurrentSampler);
+    }
+    else
+#endif
+    {
+        render_state->UseTexParameterFilter = true;
+        render_state->CurrentTexParameterFilter = GL_NEAREST;
+    }
+}
 
 // OpenGL3 Render function.
 // Note that this implementation is little overcomplicated because we are saving/setting up/restoring every OpenGL state explicitly.
@@ -489,7 +521,17 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
 #ifdef IMGUI_IMPL_OPENGL_USE_VERTEX_ARRAY
     GL_CALL(glGenVertexArrays(1, &vertex_array_object));
 #endif
-    ImGui_ImplOpenGL3_SetupRenderState(draw_data, fb_width, fb_height, vertex_array_object);
+
+    // Setup render state structure (for callbacks and custom texture bindings)
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    ImGui_ImplOpenGL3_RenderState render_state;
+    render_state.UseBindSampler = bd->HasBindSampler;
+    render_state.UseTexParameterFilter = false;
+    render_state.CurrentSampler = 0;
+    render_state.CurrentTexParameterFilter = 0;
+    platform_io.Renderer_RenderState = &render_state;
+
+    ImGui_ImplOpenGL3_SetupRenderState(draw_data, &render_state, fb_width, fb_height, vertex_array_object);
 
     // Will project scissor/clipping rectangles into framebuffer space
     ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
@@ -536,7 +578,7 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
             {
                 // User callback, registered via ImDrawList::AddCallback()
                 if (pcmd->UserCallback == ImGui_ImplOpenGL3_DrawCallback_ResetRenderState)
-                    ImGui_ImplOpenGL3_SetupRenderState(draw_data, fb_width, fb_height, vertex_array_object);
+                    ImGui_ImplOpenGL3_SetupRenderState(draw_data, &render_state, fb_width, fb_height, vertex_array_object);
                 else
                     pcmd->UserCallback(draw_list, pcmd);
             }
@@ -555,11 +597,11 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
                 GL_CALL(glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->GetTexID()));
 
                 // Emulate sampler change (even though it is technically part of texture data)
-                // As a sort of hack/workaround, we only start writing using glTextParameter() if sampler is ever changed explicitly.
-                if (!bd->HasBindSampler && bd->UseTexParameterToSetSampler)
+                // As a sort of hack/workaround, we only start writing using glTexParameter() if sampler is ever changed explicitly.
+                if (render_state.UseTexParameterFilter)
                 {
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, bd->NextSampler);
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, bd->NextSampler);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, render_state.CurrentTexParameterFilter);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, render_state.CurrentTexParameterFilter);
                 }
 
 #ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET
@@ -571,6 +613,7 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
             }
         }
     }
+    platform_io.Renderer_RenderState = nullptr;
 
     // Destroy the temporary VAO
 #ifdef IMGUI_IMPL_OPENGL_USE_VERTEX_ARRAY

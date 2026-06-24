@@ -175,6 +175,7 @@ IMGUI_IMPL_API bool             ImGui_ImplVulkan_LoadFunctions(uint32_t api_vers
 
 // [BETA] Selected render state data shared with callbacks.
 // This is temporarily stored in GetPlatformIO().Renderer_RenderState during the ImGui_ImplVulkan_RenderDrawData() call.
+//      ImGui_ImplVulkan_RenderState* render_state = (ImGui_ImplVulkan_RenderState*)ImGui::GetPlatformIO().Renderer_RenderState;
 // (Please open an issue if you feel you need access to more data)
 struct ImGui_ImplVulkan_RenderState
 {

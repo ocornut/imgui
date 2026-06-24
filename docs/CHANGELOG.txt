@@ -52,10 +52,26 @@ Other Changes:
     for user code to bypass it without using a clickable item. (#9382)
   - Clicking on a window's empty-space to move/focus a window checks
     for lack of queued focus request. (#9382)
+  - Fixed double-click collapse toggle not owning the mouse button. If a
+    `SetNextWindowPos()` with pivot was queued in the same frame, the second
+    click could trigger another item in the same window. (#9439) [@Cleroth]
 - InputText:
   - Added `style.InputTextCursorSize` to configure cursor/caret thickness. (#7031, #9409)
     This is automatically scaled by `style.ScaleAllSizes()`.
 - Tables:
+  - Redesigned/rewrote code to reconcile columns and settings on topology changes. (#9108)
+    - When a column label is passed to TableSetupColumn(), the underlying identifier
+      is used to match live columns data and .ini settings data when changing.
+      This makes it possible to add/remove columns from a table without losing
+      neither live data neither .ini settings data.
+    - PS: Note that this is distinct from toggling column visibility or reordering
+      columns, which was always possible. The new matching makes it easier to create
+      tables that are entirely customized by user or code, without losing state.
+    - Columns without identifiers or with duplicate identifiers are matched
+      sequentially, matching old behavior.
+    - Column ID are stored in .ini file.
+    - Code is being tested both for live topology changes and for loading .ini
+      data with mismatched topology.
   - Context Menu: added a "Reset" sub-menu with a "Reset Visibility" option.
     (which is greyed out when using default settings)
   - Headers: fixed label being clipped early to reserve space for a sort marker
@@ -71,6 +87,9 @@ Other Changes:
     calling ClearFonts() during rendering.
   - Fixed an issue where passing a manually created ImFontAtlas to CreateContext() would
     incorrectly destroy it in DestroyContext() when ref-count gets back to zero. (#9426)
+- Nav:
+  - Fixed context menu activation with gamepad erroneously testing for _NavEnableKeyboard
+    instead of _NavEnableGamepad. (#9454, #8803, #9270) [@Clownacy]
 - DrawList:
   - Minor optimization to `AddLine()`, `AddLineH()`, `AddLineV()` functions. (#4091)
   - Added `ImDrawListFlags_TextNoPixelSnap` to disable snapping of AddText()
@@ -86,6 +105,8 @@ Other Changes:
   - OpenGL3:
     - GLSL version detection assume GLSL 410 when GL context is 4.1.
       Fixes an issue running on macOS with Wine. [#9427, #6577) [@perminovVS]
+    - Expose selected render state in ImGui_ImplOpenGL3_RenderState, allowing to
+      dynamically select between use of glBindSampler() and glTexParameter(). (#9378)
   - Win32:
     - Uses `SetProcessDpiAwarenessContext()` instead of `SetThreadDpiAwarenessContext()`
       when available, fixing OpenGL DPI scaling issues as e.g. NVIDIA drivers tends
@@ -152,6 +173,8 @@ Breaking Changes:
   - DirectX10, DirectX11, SDLGPU3, Vulkan: removed samplers from `ImGui_ImplXXXX_RenderState`.
     Prefer to use backend-agnostic DrawCallback_SetSamplerLinear which works everywhere! (#9378)
     If there is a legit need/request for them or any render state we can always add them back.
+  - OpenGL3: the new sampler support system prioritize using glBindSampler() when available,
+    which would override glTexParameter() settings you may have set on custom textures. (#9378)
 
 Other Changes:
 
