@@ -90,6 +90,8 @@ Other Changes:
 - Nav:
   - Fixed context menu activation with gamepad erroneously testing for _NavEnableKeyboard
     instead of _NavEnableGamepad. (#9454, #8803, #9270) [@Clownacy]
+- TreeNode:
+  - Fixed nav cursor rendering with rounding even though tree nodes don't have it. (#7589)
 - DrawList:
   - Minor optimization to `AddLine()`, `AddLineH()`, `AddLineV()` functions. (#4091)
   - Added `ImDrawListFlags_TextNoPixelSnap` to disable snapping of AddText()
