@@ -7118,7 +7118,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
                 const ImU32 bg_col = GetColorU32((held && hovered) ? ImGuiCol_HeaderActive : hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header);
                 RenderFrame(frame_bb.Min, frame_bb.Max, bg_col, false, 0.0f);
             }
-            RenderNavCursor(frame_bb, id, nav_render_cursor_flags | ImGuiNavRenderCursorFlags_NoRounding);
+            RenderNavCursor(frame_bb, id, nav_render_cursor_flags, 0.0f);
             if (span_all_columns && !span_all_columns_label)
                 TablePopBackgroundChannel();
             if (flags & ImGuiTreeNodeFlags_Bullet)
@@ -7502,10 +7502,10 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
         }
         if (g.NavId == id)
         {
-            ImGuiNavRenderCursorFlags nav_render_cursor_flags = ImGuiNavRenderCursorFlags_Compact | ImGuiNavRenderCursorFlags_NoRounding;
+            ImGuiNavRenderCursorFlags nav_render_cursor_flags = ImGuiNavRenderCursorFlags_Compact;
             if (is_multi_select)
                 nav_render_cursor_flags |= ImGuiNavRenderCursorFlags_AlwaysDraw; // Always show the nav rectangle
-            RenderNavCursor(bb, id, nav_render_cursor_flags);
+            RenderNavCursor(bb, id, nav_render_cursor_flags, 0.0f);
         }
     }
 

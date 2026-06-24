@@ -4026,7 +4026,7 @@ void ImGui::RenderColorComponentMarker(const ImRect& bb, ImU32 col, float roundi
     RenderRectFilledInRangeH(window->DrawList, bb, col, bb.Min.x, ImMin(bb.Min.x + g.Style.ColorMarkerSize, bb.Max.x), rounding);
 }
 
-void ImGui::RenderNavCursor(const ImRect& bb, ImGuiID id, ImGuiNavRenderCursorFlags flags)
+void ImGui::RenderNavCursor(const ImRect& bb, ImGuiID id, ImGuiNavRenderCursorFlags flags, float rounding)
 {
     ImGuiContext& g = *GImGui;
     if (id != g.NavId)
@@ -4042,7 +4042,13 @@ void ImGui::RenderNavCursor(const ImRect& bb, ImGuiID id, ImGuiNavRenderCursorFl
     if (window->DC.NavHideHighlightOneFrame)
         return;
 
-    float rounding = (flags & ImGuiNavRenderCursorFlags_NoRounding) ? 0.0f : g.Style.FrameRounding;
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    if (rounding < 0.0f && (flags & ImGuiNavRenderCursorFlags_NoRounding))
+        rounding = 0.0f;
+#endif
+    if (rounding < 0.0f)
+        rounding = g.Style.FrameRounding;
+
     ImRect display_rect = bb;
     display_rect.ClipWith(window->ClipRect);
     const float scale_factor = GetScale(); // FIXME-DPI
