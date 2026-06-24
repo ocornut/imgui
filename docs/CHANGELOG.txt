@@ -92,6 +92,8 @@ Other Changes:
     instead of _NavEnableGamepad. (#9454, #8803, #9270) [@Clownacy]
 - TreeNode:
   - Fixed nav cursor rendering with rounding even though tree nodes don't have it. (#7589)
+- Style:
+  - Scale the NavCursor border thickness when using large values with `ScallAllSizes()`.
 - DrawList:
   - Minor optimization to `AddLine()`, `AddLineH()`, `AddLineV()` functions. (#4091)
   - Added `ImDrawListFlags_TextNoPixelSnap` to disable snapping of AddText()

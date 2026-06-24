@@ -4045,14 +4045,15 @@ void ImGui::RenderNavCursor(const ImRect& bb, ImGuiID id, ImGuiNavRenderCursorFl
     float rounding = (flags & ImGuiNavRenderCursorFlags_NoRounding) ? 0.0f : g.Style.FrameRounding;
     ImRect display_rect = bb;
     display_rect.ClipWith(window->ClipRect);
-    const float thickness = 2.0f;
+    const float scale_factor = GetScale(); // FIXME-DPI
+    const float thickness = (float)(int)ImMax(2.0f, 1.5f * scale_factor);
     if (flags & ImGuiNavRenderCursorFlags_Compact)
     {
         window->DrawList->AddRect(display_rect.Min, display_rect.Max, GetColorU32(ImGuiCol_NavCursor), rounding, thickness);
     }
     else
     {
-        const float distance = 3.0f + thickness * 0.5f;
+        const float distance = (float)(int)(3.0f + thickness * 0.5f);
         display_rect.Expand(ImVec2(distance, distance));
         bool fully_visible = window->ClipRect.Contains(display_rect);
         if (!fully_visible)
