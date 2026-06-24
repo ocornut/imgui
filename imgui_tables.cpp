@@ -4013,50 +4013,49 @@ void ImGui::TableLoadSettingsForColumns(ImGuiTable* table)
     if (settings == NULL)
         return;
 
-    // Serialize ImGuiTableSettings/ImGuiTableColumnSettings into ImGuiTable/ImGuiTableColumn
-    int matches = 0;
-    ImGuiTableColumnSettings* column_settings = settings->GetColumnSettings();
-    for (int column_settings_n = 0; column_settings_n < settings->ColumnsCount; column_settings_n++, column_settings++)
-    {
-        column_settings->IsLoaded = false;
-        const int dst_idx = column_settings->Index;
-        if (dst_idx >= 0 && dst_idx < table->ColumnsCount && table->Columns[dst_idx].ID == column_settings->ID && !table->Columns[dst_idx].IsLoadedSettings)
-        {
-            // Fast/Common path
-            TableLoadSettingsForColumn(&table->Columns[dst_idx], column_settings, settings->SaveFlags);
-            matches++;
-            continue;
-        }
+    table->SettingsLoadedFlags |= ImGuiTableFlags_Reorderable; // We handle above in code above.
 
-        // Find match for named columns.
-        if (column_settings->ID != 0)
-            for (ImGuiTableColumn& column : table->Columns)
-                if (column.ID == column_settings->ID && !column.IsLoadedSettings)
+    // Serialize ImGuiTableSettings/ImGuiTableColumnSettings into ImGuiTable/ImGuiTableColumn
+    ImGuiTableColumnSettings* column_settings = settings->GetColumnSettings();
+
+    // Fast path
+    int matches = 0;
+    for (int n = 0; n < table->ColumnsCount; n++)
+    {
+        if (n >= settings->ColumnsCount || column_settings[n].ID != table->Columns[n].ID)
+            break;
+        TableLoadSettingsForColumn(&table->Columns[n], &column_settings[n], settings->SaveFlags);
+        matches++;
+    }
+    if (matches == settings->ColumnsCount)
+        return;
+    const int settings_start_n = matches; // Small optimization
+    for (int n = settings_start_n; n < settings->ColumnsCount; n++)
+        column_settings[n].IsLoaded = false;
+
+    // Find matches for named columns
+    for (ImGuiTableColumn& column : table->Columns)
+        if (column.ID != 0 && !column.IsLoadedSettings)
+            for (int n = settings_start_n; n < settings->ColumnsCount; n++)
+                if (column_settings[n].ID == column.ID && !column_settings[n].IsLoaded)
                 {
-                    TableLoadSettingsForColumn(&column, column_settings, settings->SaveFlags);
+                    TableLoadSettingsForColumn(&column, &column_settings[n], settings->SaveFlags);
                     matches++;
                     break;
                 }
-    }
 
     // Remaining entries are matched sequentially
-    if (matches != settings->ColumnsCount)
-    {
-        int dst_idx = 0;
-        column_settings = settings->GetColumnSettings();
-        for (int column_settings_n = 0; column_settings_n < settings->ColumnsCount; column_settings_n++, column_settings++)
-            if (!column_settings->IsLoaded)
-            {
-                while (dst_idx < table->ColumnsCount && table->Columns[dst_idx].IsLoadedSettings)
-                    dst_idx++;
-                if (dst_idx >= table->ColumnsCount)
-                    break;
-                TableLoadSettingsForColumn(&table->Columns[dst_idx], column_settings, settings->SaveFlags);
+    int dst_idx = 0;
+    for (int n = settings_start_n; n < settings->ColumnsCount; n++)
+        if (!column_settings[n].IsLoaded)
+        {
+            while (dst_idx < table->ColumnsCount && table->Columns[dst_idx].IsLoadedSettings)
                 dst_idx++;
-            }
-    }
-
-    table->SettingsLoadedFlags |= ImGuiTableFlags_Reorderable; // We handle above in code above.
+            if (dst_idx >= table->ColumnsCount)
+                break;
+            TableLoadSettingsForColumn(&table->Columns[dst_idx], &column_settings[n], settings->SaveFlags);
+            dst_idx++;
+        }
 }
 
 void ImGui::TableLoadSettingsForColumn(ImGuiTableColumn* column, ImGuiTableColumnSettings* column_settings, ImGuiTableFlags load_flags)
