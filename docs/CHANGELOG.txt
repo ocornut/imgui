@@ -93,6 +93,10 @@ Other Changes:
 - TreeNode:
   - Fixed nav cursor rendering with rounding even though tree nodes don't have it. (#7589)
 - Style:
+  - Added style.MenuItemRounding, ImGuiStyleVar_MenuItemRounding. (#7589, #9375, #9453)
+  - Added style.SelectableRounding, ImGuiStyleVar_SelectableRounding. (#7589, #9375, #9453)
+    The use of this is discouraged because it can easily create problems rendering e.g.
+    contiguous selection.
   - Scale the NavCursor border thickness when using large values with `ScallAllSizes()`.
 - DrawList:
   - Minor optimization to `AddLine()`, `AddLineH()`, `AddLineV()` functions. (#4091)

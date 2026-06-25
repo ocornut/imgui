@@ -7498,14 +7498,14 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
         {
             // Between 1.91.0 and 1.91.4 we made selected Selectable use an arbitrary lerp between _Header and _HeaderHovered. Removed that now. (#8106)
             ImU32 col = GetColorU32((held && highlighted) ? ImGuiCol_HeaderActive : highlighted ? ImGuiCol_HeaderHovered : ImGuiCol_Header);
-            RenderFrame(bb.Min, bb.Max, col, false, 0.0f);
+            RenderFrame(bb.Min, bb.Max, col, false, style.SelectableRounding);
         }
         if (g.NavId == id)
         {
             ImGuiNavRenderCursorFlags nav_render_cursor_flags = ImGuiNavRenderCursorFlags_Compact;
             if (is_multi_select)
                 nav_render_cursor_flags |= ImGuiNavRenderCursorFlags_AlwaysDraw; // Always show the nav rectangle
-            RenderNavCursor(bb, id, nav_render_cursor_flags, 0.0f);
+            RenderNavCursor(bb, id, nav_render_cursor_flags, style.SelectableRounding);
         }
     }
 
@@ -9350,7 +9350,7 @@ bool ImGui::BeginMenuEx(const char* label, const char* icon, bool enabled)
         return false;
 
     ImGuiContext& g = *GImGui;
-    const ImGuiStyle& style = g.Style;
+    ImGuiStyle& style = g.Style;
     const ImGuiID id = window->GetID(label);
     bool menu_is_open = IsPopupOpen(id, ImGuiPopupFlags_None);
 
@@ -9395,6 +9395,8 @@ bool ImGui::BeginMenuEx(const char* label, const char* icon, bool enabled)
 
     bool pressed;
 
+    const float backup_rounding = style.SelectableRounding;
+    style.SelectableRounding = style.MenuItemRounding;
     const ImGuiSelectableFlags selectable_flags = ImGuiSelectableFlags_NoAutoClosePopups | (ImGuiSelectableFlags)ImGuiSelectableFlags_SelectOnClick;
     ImGuiMenuColumns* offsets = &window->DC.MenuColumns;
     if (window->DC.LayoutType == ImGuiLayoutType_Horizontal)
@@ -9430,6 +9432,7 @@ bool ImGui::BeginMenuEx(const char* label, const char* icon, bool enabled)
         RenderArrow(window->DrawList, ImVec2(text_pos.x + offsets->OffsetMark + extra_w + g.FontSize * 0.30f, text_pos.y), GetColorU32(ImGuiCol_Text), ImGuiDir_Right);
         popup_pos = ImVec2(pos.x, text_pos.y - style.WindowPadding.y);
     }
+    style.SelectableRounding = backup_rounding;
     if (!enabled)
         EndDisabled();
 
@@ -9616,6 +9619,8 @@ bool ImGui::MenuItemEx(const char* label, const char* icon, const char* shortcut
         BeginDisabled();
 
     // We use ImGuiSelectableFlags_NoSetKeyOwner to allow down on one menu item, move, up on another.
+    const float backup_rounding = style.SelectableRounding;
+    style.SelectableRounding = style.MenuItemRounding;
     const ImGuiSelectableFlags selectable_flags = (ImGuiSelectableFlags)ImGuiSelectableFlags_SelectOnRelease | (ImGuiSelectableFlags)ImGuiSelectableFlags_SetNavIdOnHover;
     ImGuiMenuColumns* offsets = &window->DC.MenuColumns;
     if (window->DC.LayoutType == ImGuiLayoutType_Horizontal)
@@ -9659,6 +9664,7 @@ bool ImGui::MenuItemEx(const char* label, const char* icon, const char* shortcut
                 RenderCheckMark(window->DrawList, text_pos + ImVec2(offsets->OffsetMark + stretch_w + g.FontSize * 0.40f, g.FontSize * 0.134f * 0.5f), GetColorU32(ImGuiCol_Text), g.FontSize * 0.866f);
         }
     }
+    style.SelectableRounding = backup_rounding;
 
     // Once dragged, release ActiveId + key ownership. This is to allow the idiom of mouse down a menu, dragging elsewhere, up on some other MenuItem(). (#8233, #9394)
     // Could move logic into lower-level ImGuiButtonFlags_AutoReleaseActiveId + ImGuiButtonFlags_AutoReleaseKeyOwner? Easier once we get rid of the Selectable() middle-man here.
