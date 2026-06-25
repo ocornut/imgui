@@ -1274,7 +1274,7 @@ bool ImGui::Checkbox(const char* label, bool* v)
 
     // Range-Selection/Multi-selection support (footer)
     if (is_multi_select)
-        MultiSelectItemFooter(id, &checked, &pressed);
+        MultiSelectItemFooter(id, &checked, &pressed, ImGuiMultiSelectFlags_CheckboxMode_);
     else if (pressed)
         checked = !checked;
 
@@ -8307,7 +8307,7 @@ void ImGui::MultiSelectItemHeader(ImGuiID id, bool* p_selected, ImGuiButtonFlags
 // - Altering selection based on Ctrl/Shift modifiers, both for keyboard and mouse.
 // - Record current selection state for RangeSrc
 // This is all rather complex, best to run and refer to "widgets_multiselect_xxx" tests in imgui_test_suite.
-void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
+void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed, ImGuiMultiSelectFlags extra_flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -8327,7 +8327,7 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
 
     ImGuiSelectionUserData item_data = g.NextItemData.SelectionUserData;
 
-    ImGuiMultiSelectFlags flags = ms->Flags;
+    ImGuiMultiSelectFlags flags = ms->Flags | extra_flags;
     const bool is_singleselect = (flags & ImGuiMultiSelectFlags_SingleSelect) != 0;
     bool is_ctrl = (ms->KeyMods & ImGuiMod_Ctrl) != 0;
     bool is_shift = (ms->KeyMods & ImGuiMod_Shift) != 0;
@@ -8481,7 +8481,7 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
             //IM_ASSERT(storage->HasRangeSrc && storage->HasRangeValue);
             if (storage->RangeSrcItem == ImGuiSelectionUserData_Invalid)
                 storage->RangeSrcItem = item_data;
-            if ((flags & ImGuiMultiSelectFlags_NoAutoSelect) == 0)
+            if ((flags & ImGuiMultiSelectFlags_CheckboxMode_) == 0)
             {
                 // Shift+Arrow always select
                 // Ctrl+Shift+Arrow copy source selection state (already stored by BeginMultiSelect() in storage->RangeSelected)
@@ -8501,7 +8501,7 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
         else
         {
             // Ctrl inverts selection, otherwise always select
-            if ((flags & ImGuiMultiSelectFlags_NoAutoSelect) == 0)
+            if ((flags & ImGuiMultiSelectFlags_CheckboxMode_) == 0)
                 selected = is_ctrl ? !selected : true;
             else
                 selected = !selected;

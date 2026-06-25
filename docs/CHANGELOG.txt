@@ -77,6 +77,14 @@ Other Changes:
   - Headers: fixed label being clipped early to reserve space for a sort marker
     even when no sort marker is displayed. Auto-fitting a column still accounts
     for the possible marker, so that sorting after an auto-fit doesn't clip the label.
+- Multi-Select
+  - Reworked ImGuiMultiSelectFlags_NoAutoSelect as it carried side-effects that
+    were hardcoded/designed to use multi-selection on checkboxes. (#9391)
+    Specifically removed those undocumented behaviors from _NoAutoSelect:
+    - Clicking a selected/checked item always unselect/uncheck.
+    - Shift+Click inverts targets value and copy to range.
+    - Shift+Keyboard copy selection source value to range.
+    Those behaviors are still happening on checkboxes used within multi-selection.
 - Fonts:
   - Added `IMGUI_DISABLE_DEFAULT_FONT_BITMAP`/`IMGUI_DISABLE_DEFAULT_FONT_VECTOR` to
     disable embedding either fonts separately. (#9407)
