@@ -1833,7 +1833,7 @@ void ImGui::TableReconcileColumns(ImGuiTable* table)
             ImGuiTableReconcileColumnData& reconcile_data = reconcile_requests[dst_idx];
             ImGuiTableColumn& dst_column = dst_columns[reconcile_data.ColumnNewIdx];
             IM_ASSERT(src_column.IsNeedReconcileSrc && dst_column.IsNeedReconcileDst);
-            dst_column.IsNeedReconcileSrc = dst_column.IsNeedReconcileDst = false;
+            src_column.IsNeedReconcileSrc = dst_column.IsNeedReconcileDst = false;
             reconcile_data.ColumnOldIdx = (ImGuiTableColumnIdx)src_columns.index_from_ptr(&src_column);
             reconcile_data.ColumnOldData = src_column;
         }
