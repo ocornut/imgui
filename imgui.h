@@ -4035,7 +4035,7 @@ struct ImGuiPlatformIO
 
     // Optional: Platform locale
     // [Experimental] Configure decimal point e.g. '.' or ',' useful for some languages (e.g. German), generally pulled from *localeconv()->decimal_point
-    ImWchar     Platform_LocaleDecimalPoint;     // '.'
+    ImWchar     Platform_LocaleDecimalPoint;    // '.'
 
     //------------------------------------------------------------------
     // Input - Interface with Renderer Backend
