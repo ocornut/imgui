@@ -116,6 +116,14 @@ Other Changes:
     The use of this is discouraged because it can easily create problems rendering e.g.
     contiguous selection.
   - Scale the NavCursor border thickness when using large values with `ScallAllSizes()`.
+- Settings:
+  - Windows/Tables settings entries can now record the last used date in YYYYMMDD format,
+    allowing cleanup tools to run to e.g. delete entries that haven't been used in X months.
+  - Added bool io.ConfigIniSettingsSaveLastUsedDate to disable saving that info.
+  - The current system date is fed through ImGuiPlatformIO::Platform_SessionDate,
+    which is automatically set by a call to time() done during context creation.
+  - Added IMGUI_DISABLE_TIME_FUNCTIONS to disable setting platform_io.Platform_SessionDate.
+    A custom backend may still set it manually.
 - DrawList:
   - Minor optimization to `AddLine()`, `AddLineH()`, `AddLineV()` functions. (#4091)
   - Added `ImDrawListFlags_TextNoPixelSnap` to disable snapping of AddText()

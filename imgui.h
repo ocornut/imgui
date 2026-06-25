@@ -2436,6 +2436,9 @@ struct ImGuiIO
     bool        ConfigNavCursorVisibleAuto;     // = true           // Using directional navigation key makes the cursor visible. Mouse click hides the cursor.
     bool        ConfigNavCursorVisibleAlways;   // = false          // Navigation cursor is always visible.
 
+    // Ini Settings
+    bool        ConfigIniSettingsSaveLastUsedDate;// = true         // Enable loading/saving last used day (YYYYMMDD) in some .ini struct, making things easier to audit and allowing custom tools to cleanup old data.
+
     // Miscellaneous options
     // (you can visualize and interact with all options in 'Demo->Configuration')
     bool        MouseDrawCursor;                // = false          // Request ImGui to draw a mouse cursor for you (if you are on a platform without a mouse cursor). Cannot be easily renamed to 'io.ConfigXXX' because this is frequently used by backend implementations.
@@ -4038,6 +4041,10 @@ struct ImGuiPlatformIO
     // Optional: Platform locale
     // [Experimental] Configure decimal point e.g. '.' or ',' useful for some languages (e.g. German), generally pulled from *localeconv()->decimal_point
     ImWchar     Platform_LocaleDecimalPoint;    // '.'
+
+    // Optional: Platform time/date
+    // This is automatically filled on startup. Used to store a "last used date" in some .ini structures. Facilitate creating tools to clean up old/unused data.
+    int         Platform_SessionDate;           // Integer storing YYYYMMDD e.g. 20261231 corresponding to the beginning of application session.
 
     //------------------------------------------------------------------
     // Input - Interface with Renderer Backend

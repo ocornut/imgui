@@ -3933,6 +3933,7 @@ void ImGui::TableSaveSettings(ImGuiTable* table)
         table->SettingsOffset = g.SettingsTables.offset_from_ptr(settings);
     }
     settings->ColumnsCount = (ImGuiTableColumnIdx)table->ColumnsCount;
+    settings->LastUsedDate = g.SessionDate;
 
     // Serialize ImGuiTable/ImGuiTableColumn into ImGuiTableSettings/ImGuiTableColumnSettings
     IM_ASSERT(settings->ID == table->ID);
@@ -4001,6 +4002,7 @@ void ImGui::TableLoadSettings(ImGuiTable* table)
 
     table->SettingsLoadedFlags = settings->SaveFlags;
     table->RefScale = settings->RefScale;
+    settings->LastUsedDate = g.SessionDate;
     // TableUpdateLayout() will then call TableLoadSettingsForColumns() to apply the data.
 }
 
@@ -4163,6 +4165,7 @@ static void TableSettingsHandler_ReadLine(ImGuiContext*, ImGuiSettingsHandler*, 
     int column_n = 0, r = 0, n = 0;
 
     if (sscanf(line, "RefScale=%f", &f) == 1) { settings->RefScale = f; return; }
+    if (sscanf(line, "LastUsed=%d", &n) == 1) { settings->LastUsedDate = n; return; }
 
     if (sscanf(line, "Column %d%n", &column_n, &r) == 1)
     {
@@ -4218,6 +4221,9 @@ static void TableSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandle
             if (column->ID != 0)                        { buf->appendf(" ID=0x%08X", column->ID); }
             buf->append("\n");
         }
+        if (g.IO.ConfigIniSettingsSaveLastUsedDate)
+            if (int last_used_date = settings->LastUsedDate.Unpack())
+                buf->appendf("LastUsed=%08d\n", last_used_date);
         buf->append("\n");
     }
 }

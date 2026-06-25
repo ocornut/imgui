@@ -1243,6 +1243,12 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
 // System includes
 #include <stdio.h>      // vsnprintf, sscanf, printf
 #include <stdint.h>     // intptr_t
+#ifndef IMGUI_DISABLE_TIME_FUNCTIONS
+#include <time.h>       // time(), localtime_r()/localtime_s()
+#if defined(_WIN32)
+static tm* localtime_r(const time_t* timep, tm* result) { return localtime_s(result, timep) == 0 ? result : NULL; }
+#endif
+#endif
 
 // [Windows] On non-Visual Studio compilers, we default to IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS unless explicitly enabled
 #if defined(_WIN32) && !defined(_MSC_VER) && !defined(IMGUI_ENABLE_WIN32_DEFAULT_IME_FUNCTIONS) && !defined(IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS)
@@ -1677,6 +1683,7 @@ ImGuiIO::ImGuiIO()
     ConfigWindowsMoveFromTitleBarOnly = false;
     ConfigWindowsCopyContentsWithCtrlC = false;
     ConfigScrollbarScrollByPage = true;
+    ConfigIniSettingsSaveLastUsedDate = true;
     ConfigMemoryCompactTimer = 60.0f;
     ConfigDebugIsDebuggerPresent = false;
     ConfigDebugHighlightIdConflicts = true;
@@ -4452,6 +4459,14 @@ void ImGui::Initialize()
     g.PlatformIO.Platform_OpenInShellFn = Platform_OpenInShellFn_DefaultImpl;
     g.PlatformIO.Platform_SetImeDataFn = Platform_SetImeDataFn_DefaultImpl;
 
+    // Setup session starting date
+#ifndef IMGUI_DISABLE_TIME_FUNCTIONS
+    const time_t session_time = time(NULL);
+    struct tm session_datetime = {};
+    if (localtime_r(&session_time, &session_datetime))
+        g.PlatformIO.Platform_SessionDate = (session_datetime.tm_year + 1900) * 10000 + (session_datetime.tm_mon + 1) * 100 + session_datetime.tm_mday;
+#endif
+
     // Create default viewport
     ImGuiViewportP* viewport = IM_NEW(ImGuiViewportP)();
     viewport->ID = IMGUI_VIEWPORT_DEFAULT_ID;
@@ -5568,6 +5583,7 @@ void ImGui::NewFrame()
 
     g.Time += g.IO.DeltaTime;
     g.FrameCount += 1;
+    g.SessionDate = ImGuiPackedDate(g.PlatformIO.Platform_SessionDate);
     g.TooltipOverrideCount = 0;
     g.WindowsActiveCount = 0;
     g.MenusIdSubmittedThisFrame.resize(0);
@@ -6692,6 +6708,7 @@ static void InitOrLoadWindowSettings(ImGuiWindow* window, ImGuiWindowSettings* s
 {
     // Initial window state with e.g. default/arbitrary window position
     // Use SetNextWindowPos() with the appropriate condition flag to change the initial position of a window.
+    ImGuiContext& g = *GImGui;
     const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     window->Pos = main_viewport->Pos + ImVec2(60, 60);
     window->Size = window->SizeFull = ImVec2(0, 0);
@@ -6699,6 +6716,7 @@ static void InitOrLoadWindowSettings(ImGuiWindow* window, ImGuiWindowSettings* s
 
     if (settings != NULL)
     {
+        settings->LastUsedDate = g.SessionDate;
         SetWindowConditionAllowFlags(window, ImGuiCond_FirstUseEver, false);
         ApplyWindowSettings(window, settings);
     }
@@ -15870,6 +15888,7 @@ static void WindowSettingsHandler_ReadLine(ImGuiContext*, ImGuiSettingsHandler*,
     else if (sscanf(line, "Size=%i,%i", &x, &y) == 2)   { settings->Size = ImVec2ih((short)x, (short)y); }
     else if (sscanf(line, "Collapsed=%d", &i) == 1)     { settings->Collapsed = (i != 0); }
     else if (sscanf(line, "IsChild=%d", &i) == 1)       { settings->IsChild = (i != 0); }
+    else if (sscanf(line, "LastUsed=%d", &i) == 1)      { settings->LastUsedDate = i; return; }
 }
 
 // Apply to existing windows (if any)
@@ -15907,6 +15926,7 @@ static void WindowSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandl
         settings->IsChild = (window->Flags & ImGuiWindowFlags_ChildWindow) != 0;
         settings->Collapsed = window->Collapsed;
         settings->WantDelete = false;
+        settings->LastUsedDate = g.SessionDate;
     }
 
     // Write to text buffer
@@ -15916,7 +15936,7 @@ static void WindowSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandl
         if (settings->WantDelete)
             continue;
         const char* settings_name = settings->GetName();
-        buf->appendf("[%s][%s]\n", handler->TypeName, settings_name);
+        buf->appendf("[%s][%s]\n", handler->TypeName, settings_name); // [Window][name]
         if (settings->IsChild)
         {
             buf->appendf("IsChild=1\n");
@@ -15929,6 +15949,9 @@ static void WindowSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandl
             if (settings->Collapsed)
                 buf->appendf("Collapsed=1\n");
         }
+        if (g.IO.ConfigIniSettingsSaveLastUsedDate)
+            if (int last_used_date = settings->LastUsedDate.Unpack())
+                buf->appendf("LastUsed=%08d\n", last_used_date);
         buf->append("\n");
     }
 }
@@ -17866,7 +17889,7 @@ void ImGui::DebugNodeWindowSettings(ImGuiWindowSettings* settings)
 {
     if (settings->WantDelete)
         BeginDisabled();
-    Text("0x%08X \"%s\" Pos (%d,%d) Size (%d,%d) Collapsed=%d",
+    BulletText("0x%08X \"%s\" Pos (%d,%d) Size (%d,%d) Collapsed=%d",
         settings->ID, settings->GetName(), settings->Pos.x, settings->Pos.y, settings->Size.x, settings->Size.y, settings->Collapsed);
     if (settings->WantDelete)
         EndDisabled();

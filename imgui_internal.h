@@ -138,6 +138,7 @@ Index of this file:
 struct ImBitVector;                 // Store 1-bit per value
 struct ImRect;                      // An axis-aligned rectangle (2 points)
 struct ImGuiTextIndex;              // Maintain a line index for a text buffer.
+struct ImGuiPackedDate;             // A date in YYYYMMDD format packed into 16-bits
 
 // ImDrawList/ImFontAtlas
 struct ImDrawDataBuilder;           // Helper to build a ImDrawData instance
@@ -831,6 +832,20 @@ struct ImGuiTextIndex
     const char*     get_line_begin(const char* base, int n) { return base + (Offsets.Size != 0 ? Offsets[n] : 0); }
     const char*     get_line_end(const char* base, int n)   { return base + (n + 1 < Offsets.Size ? (Offsets[n + 1] - 1) : EndOffset); }
     void            append(const char* base, int old_size, int new_size);
+};
+
+// Helper: ImGuiPackedDate (sizeof() == 2)
+// Store a date in a way that is efficient to read/write in text form. If we stored e.g. number of days since Epoch we'd need costlier back and forth.
+// This is specifically designed to be able to prune old .ini data.
+struct ImGuiPackedDate
+{
+    ImU16   Year : 7;   // Year since 2000      // We can change to another offset e.g. 1970 but this is easier to watch in debugger.
+    ImU16   Month : 4;  // Month (1-12)
+    ImU16   Day : 5;    // Day (1-31)
+
+    ImGuiPackedDate()                           { Year = Month = Day = 0; }
+    ImGuiPackedDate(int yyyymmdd)               { Year = (ImU16)((yyyymmdd / 10000) - 2000); Month = (ImU16)((yyyymmdd / 100) % 100); Day = (ImU16)(yyyymmdd % 100); } // Pack
+    int                 Unpack() const          { return (Year && Month && Day) ? ((Year + 2000) * 10000) + (Month * 100) + Day : 0; }      // Unpack
 };
 
 // Helper: ImGuiStorage
@@ -2018,6 +2033,7 @@ struct ImGuiWindowSettings
     ImGuiID         ID;
     ImVec2ih        Pos;
     ImVec2ih        Size;
+    ImGuiPackedDate LastUsedDate;
     bool            Collapsed : 1;
     bool            IsChild : 1;
     bool            WantApply : 1;    // Set when loaded from .ini data (to enable merging/loading .ini data into an already running context)
@@ -2533,6 +2549,7 @@ struct ImGuiContext
     ImVector<ImTextureData*> UserTextures;                      // List of textures created/managed by user or third-party extension. Automatically appended into platform_io.Textures[].
 
     // Settings
+    ImGuiPackedDate         SessionDate;                        // Packed copy of platform_io.Platform_SessionDate, when valid.
     bool                    SettingsLoaded;
     float                   SettingsDirtyTimer;                 // Save .ini Settings to memory when time reaches zero
     ImGuiTextBuffer         SettingsIniData;                    // In memory .ini settings
@@ -3208,6 +3225,7 @@ struct ImGuiTableSettings
     float                       RefScale;               // Reference scale to be able to rescale columns on font/dpi changes.
     ImGuiTableColumnIdx         ColumnsCount;
     ImGuiTableColumnIdx         ColumnsCountMax;        // Maximum number of columns this settings instance can store, we can recycle a settings instance with lower number of columns but not higher
+    ImGuiPackedDate             LastUsedDate;
     bool                        WantApply : 1;          // Set when loaded from .ini data (to enable merging/loading .ini data into an already running context)
 
     ImGuiTableSettings()        { memset((void*)this, 0, sizeof(*this)); }
