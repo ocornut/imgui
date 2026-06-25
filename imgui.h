@@ -1941,6 +1941,8 @@ enum ImGuiStyleVar_
     ImGuiStyleVar_TableAngledHeadersTextAlign,// ImVec2  TableAngledHeadersTextAlign
     ImGuiStyleVar_TreeLinesSize,            // float     TreeLinesSize
     ImGuiStyleVar_TreeLinesRounding,        // float     TreeLinesRounding
+    ImGuiStyleVar_MenuItemRounding,         // float     MenuItemRounding
+    ImGuiStyleVar_SelectableRounding,       // float     SelectableRounding
     ImGuiStyleVar_DragDropTargetRounding,   // float     DragDropTargetRounding
     ImGuiStyleVar_ButtonTextAlign,          // ImVec2    ButtonTextAlign
     ImGuiStyleVar_SelectableTextAlign,      // ImVec2    SelectableTextAlign
@@ -2419,6 +2421,8 @@ struct ImGuiStyle
     ImGuiTreeNodeFlags TreeLinesFlags;      // Default way to draw lines connecting TreeNode hierarchy. ImGuiTreeNodeFlags_DrawLinesNone or ImGuiTreeNodeFlags_DrawLinesFull or ImGuiTreeNodeFlags_DrawLinesToNodes.
     float       TreeLinesSize;              // Thickness of outlines when using ImGuiTreeNodeFlags_DrawLines.
     float       TreeLinesRounding;          // Radius of lines connecting child nodes to the vertical line.
+    float       MenuItemRounding;           // Radius of MenuItem, BeginMenu rounding. 
+    float       SelectableRounding;         // Radius of Selectable rounding. MODIFYING THIS IS DISCOURAGED. CONTIGUOUS SELECTIONS WILL NOT LOOK RIGHT. (#7589)
     float       DragDropTargetRounding;     // Radius of the drag and drop target frame. When <0.0f: use FrameRounding.
     float       DragDropTargetBorderSize;   // Thickness of the drag and drop target border.
     float       DragDropTargetPadding;      // Size to expand the drag and drop target from actual target item size.
@@ -3186,6 +3190,7 @@ enum ImGuiMultiSelectFlags_
     ImGuiMultiSelectFlags_NavWrapX              = 1 << 16,  // [Temporary] Enable navigation wrapping on X axis. Provided as a convenience because we don't have a design for the general Nav API for this yet. When the more general feature be public we may obsolete this flag in favor of new one.
     ImGuiMultiSelectFlags_NoSelectOnRightClick  = 1 << 17,  // Disable default right-click processing, which selects item on mouse down, and is designed for context-menus.
     ImGuiMultiSelectFlags_SelectOnMask_         = ImGuiMultiSelectFlags_SelectOnAuto | ImGuiMultiSelectFlags_SelectOnClickAlways | ImGuiMultiSelectFlags_SelectOnClickRelease,
+    ImGuiMultiSelectFlags_CheckboxMode_         = 1 << 20,  // [Internal]
 
     // Obsolete names
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS

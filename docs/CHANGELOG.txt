@@ -77,6 +77,14 @@ Other Changes:
   - Headers: fixed label being clipped early to reserve space for a sort marker
     even when no sort marker is displayed. Auto-fitting a column still accounts
     for the possible marker, so that sorting after an auto-fit doesn't clip the label.
+- Multi-Select
+  - Reworked ImGuiMultiSelectFlags_NoAutoSelect as it carried side-effects that
+    were hardcoded/designed to use multi-selection on checkboxes. (#9391)
+    Specifically removed those undocumented behaviors from _NoAutoSelect:
+    - Clicking a selected/checked item always unselect/uncheck.
+    - Shift+Click inverts targets value and copy to range.
+    - Shift+Keyboard copy selection source value to range.
+    Those behaviors are still happening on checkboxes used within multi-selection.
 - Fonts:
   - Added `IMGUI_DISABLE_DEFAULT_FONT_BITMAP`/`IMGUI_DISABLE_DEFAULT_FONT_VECTOR` to
     disable embedding either fonts separately. (#9407)
@@ -90,6 +98,14 @@ Other Changes:
 - Nav:
   - Fixed context menu activation with gamepad erroneously testing for _NavEnableKeyboard
     instead of _NavEnableGamepad. (#9454, #8803, #9270) [@Clownacy]
+- TreeNode:
+  - Fixed nav cursor rendering with rounding even though tree nodes don't have it. (#7589)
+- Style:
+  - Added style.MenuItemRounding, ImGuiStyleVar_MenuItemRounding. (#7589, #9375, #9453)
+  - Added style.SelectableRounding, ImGuiStyleVar_SelectableRounding. (#7589, #9375, #9453)
+    The use of this is discouraged because it can easily create problems rendering e.g.
+    contiguous selection.
+  - Scale the NavCursor border thickness when using large values with `ScallAllSizes()`.
 - DrawList:
   - Minor optimization to `AddLine()`, `AddLineH()`, `AddLineV()` functions. (#4091)
   - Added `ImDrawListFlags_TextNoPixelSnap` to disable snapping of AddText()

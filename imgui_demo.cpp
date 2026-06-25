@@ -8665,6 +8665,8 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             SliderFloat("FrameRounding", &style.FrameRounding, 0.0f, 12.0f, "%.0f");
             SliderFloat("PopupRounding", &style.PopupRounding, 0.0f, 12.0f, "%.0f");
             SliderFloat("GrabRounding", &style.GrabRounding, 0.0f, 12.0f, "%.0f");
+            SliderFloat("MenuItemRounding", &style.MenuItemRounding, 0.0f, 12.0f, "%.0f");
+            // NB: SelectableRounding is intentionally NOT made visible here. We don't want to encourage people using that.
 
             SeparatorText("Scrollbar");
             SliderFloat("ScrollbarSize", &style.ScrollbarSize, 1.0f, 20.0f, "%.0f");
