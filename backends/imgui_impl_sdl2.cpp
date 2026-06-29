@@ -147,7 +147,8 @@ struct ImGui_ImplSDL2_Data
     SDL_Renderer*           Renderer;
     Uint64                  Time;
     char*                   ClipboardTextData;
-    char                    BackendPlatformName[48];
+    char                    BackendPlatformName[64];
+    bool                    IsWayland;
 
     // Mouse handling
     Uint32                  MouseWindowID;
@@ -499,11 +500,12 @@ static bool ImGui_ImplSDL2_Init(SDL_Window* window, SDL_Renderer* renderer, void
     SDL_version ver_runtime;
     SDL_VERSION(&ver_compiled);
     SDL_GetVersion(&ver_runtime);
+    const char* sdl_video_driver = SDL_GetCurrentVideoDriver();
 
     // Setup backend capabilities flags
     ImGui_ImplSDL2_Data* bd = IM_NEW(ImGui_ImplSDL2_Data)();
-    snprintf(bd->BackendPlatformName, sizeof(bd->BackendPlatformName), "imgui_impl_sdl2 (%u.%u.%u, %u.%u.%u)",
-        ver_compiled.major, ver_compiled.minor, ver_compiled.patch, ver_runtime.major, ver_runtime.minor, ver_runtime.patch);
+    snprintf(bd->BackendPlatformName, sizeof(bd->BackendPlatformName), "imgui_impl_sdl2 (%u.%u.%u, %u.%u.%u) (%s)",
+        ver_compiled.major, ver_compiled.minor, ver_compiled.patch, ver_runtime.major, ver_runtime.minor, ver_runtime.patch, sdl_video_driver);
     io.BackendPlatformUserData = (void*)bd;
     io.BackendPlatformName = bd->BackendPlatformName;
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;           // We can honor GetMouseCursor() values (optional)
@@ -512,16 +514,16 @@ static bool ImGui_ImplSDL2_Init(SDL_Window* window, SDL_Renderer* renderer, void
     bd->Window = window;
     bd->WindowID = SDL_GetWindowID(window);
     bd->Renderer = renderer;
+    bd->IsWayland = strcmp(sdl_video_driver, "Wayland") == 0;
 
     // Check and store if we are on a SDL backend that supports SDL_GetGlobalMouseState() and SDL_CaptureMouse()
     // ("wayland" and "rpi" don't support it, but we chose to use a white-list instead of a black-list)
     bd->MouseCanUseGlobalState = false;
     bd->MouseCaptureMode = ImGui_ImplSDL2_MouseCaptureMode_Disabled;
 #if SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE
-    const char* sdl_backend = SDL_GetCurrentVideoDriver();
     const char* capture_and_global_state_whitelist[] = { "windows", "cocoa", "x11", "DIVE", "VMAN" };
     for (const char* item : capture_and_global_state_whitelist)
-        if (strncmp(sdl_backend, item, strlen(item)) == 0)
+        if (strncmp(sdl_video_driver, item, strlen(item)) == 0)
         {
             bd->MouseCanUseGlobalState = true;
             bd->MouseCaptureMode = (strcmp(item, "x11") == 0) ? ImGui_ImplSDL2_MouseCaptureMode_EnabledAfterDrag : ImGui_ImplSDL2_MouseCaptureMode_Enabled;

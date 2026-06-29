@@ -213,7 +213,7 @@ struct ImGui_ImplGlfw_Data
     bool                    IsWayland;
     bool                    InstalledCallbacks;
     bool                    CallbacksChainForAllWindows;
-    char                    BackendPlatformName[32];
+    char                    BackendPlatformName[40];
 #ifdef EMSCRIPTEN_USE_EMBEDDED_GLFW3
     const char*             CanvasSelector;
 #endif
@@ -676,19 +676,19 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
 
     // Setup backend capabilities flags
     ImGui_ImplGlfw_Data* bd = IM_NEW(ImGui_ImplGlfw_Data)();
-    snprintf(bd->BackendPlatformName, sizeof(bd->BackendPlatformName), "imgui_impl_glfw (%d)", GLFW_VERSION_COMBINED);
+    bd->Context = ImGui::GetCurrentContext();
+    bd->Window = window;
+    bd->Time = 0.0;
+    bd->IsWayland = ImGui_ImplGlfw_IsWayland();
+    ImGui_ImplGlfw_ContextMap_Add(window, bd->Context);
+
+    snprintf(bd->BackendPlatformName, sizeof(bd->BackendPlatformName), "imgui_impl_glfw (%d)%s", GLFW_VERSION_COMBINED, bd->IsWayland ? " (Wayland)" : "");
     io.BackendPlatformUserData = (void*)bd;
     io.BackendPlatformName = bd->BackendPlatformName;
 #if GLFW_HAS_CREATECURSOR
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;         // We can honor GetMouseCursor() values (optional)
 #endif
     io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
-
-    bd->Context = ImGui::GetCurrentContext();
-    bd->Window = window;
-    bd->Time = 0.0;
-    bd->IsWayland = ImGui_ImplGlfw_IsWayland();
-    ImGui_ImplGlfw_ContextMap_Add(window, bd->Context);
 
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
 #if GLFW_VERSION_COMBINED < 3300
