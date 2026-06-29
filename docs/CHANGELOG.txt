@@ -127,7 +127,9 @@ Other Changes:
     - Uses `SetProcessDpiAwarenessContext()` instead of `SetThreadDpiAwarenessContext()`
       when available, fixing OpenGL DPI scaling issues as e.g. NVIDIA drivers tends
       to spawn multiple-thread to manage OpenGL. (#9403)
-
+- Examples: 
+  - SDL2/SDL3: use `SDL_GetWindowSizeInPixels()` to create frame-buffers. Fixes issues
+    with non-fractional framebuffer size on Wayland. (#8761, #9124) [@billtran1632001]
 
 -----------------------------------------------------------------------
  VERSION 1.92.8 (Released 2026-05-12)

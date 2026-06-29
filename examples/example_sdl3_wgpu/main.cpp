@@ -155,7 +155,7 @@ int main(int, char**)
         // [If using SDL_MAIN_USE_CALLBACKS: all code below would likely be your SDL_AppIterate() function]
         // React to changes in screen size
         int width, height;
-        SDL_GetWindowSize(window, &width, &height);
+        SDL_GetWindowSizeInPixels(window, &width, &height);
         if (width != wgpu_surface_width || height != wgpu_surface_height)
             ResizeSurface(width, height);
 
