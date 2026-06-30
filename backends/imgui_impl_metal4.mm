@@ -14,9 +14,8 @@
 // - Documentation        https://dearimgui.com/docs (same as your local docs/ folder).
 // - Introduction, links and more at the top of imgui.cpp
 
-// TODO:
-// - Metal-cpp support
-// - (?) Texture view pool support
+// FIXME: Metal-cpp support
+// FIXME?: Texture view pool support
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
@@ -56,6 +55,9 @@ struct ImGui_Metal4_ConstantData
 - (instancetype)initWithTexture:(id<MTLTexture>)metalTexture;
 @end
 
+// A singleton that stores long-lived objects that are needed by the Metal
+// renderer backend. Stores the render pipeline state cache and the default
+// font texture, and manages the reusable buffer cache.
 @interface MetalContext : NSObject
 @property (nonatomic, strong) id<MTLDevice>                 device;
 @property (nonatomic, strong) id<MTL4CommandQueue>          commandQueue;
@@ -94,7 +96,7 @@ static inline CFTimeInterval    GetMachAbsoluteTimeInSeconds()      { return (CF
 
 #pragma mark - Dear ImGui Metal Backend API
 
-void ImGui_ImplMetal4_NewFrame(MTL4RenderPassDescriptor* renderPassDescriptor, ImU32 frameInFlightIndex)
+void ImGui_ImplMetal4_NewFrame(MTL4RenderPassDescriptor* renderPassDescriptor, int frameInFlightIndex)
 {
     ImGui_ImplMetal4_Data* bd = ImGui_ImplMetal4_GetBackendData();
     IM_ASSERT(bd != nil && "Context or backend not initialized! Did you call ImGui_ImplMetal4_Init()?");
@@ -414,7 +416,7 @@ void ImGui_ImplMetal4_DestroyDeviceObjects()
     bd->SharedMetalContext.samplerStateNearest = nil;
 }
 
-bool ImGui_ImplMetal4_Init(id<MTLDevice> device, id<MTL4CommandQueue> commandQueue, ImU32 framesInFlight)
+bool ImGui_ImplMetal4_Init(id<MTLDevice> device, id<MTL4CommandQueue> commandQueue, int framesInFlight)
 {
     ImGuiIO& io = ImGui::GetIO();
     IMGUI_CHECKVERSION();

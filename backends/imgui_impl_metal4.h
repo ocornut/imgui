@@ -31,11 +31,11 @@
 // command buffer/allocator ring). The backend uses it to size its own per-frame-in-flight resources (constant
 // buffer, vertex/index buffer cache) so the CPU never overwrites a slot the GPU may still be reading.
 // Follow "Getting Started" link and check examples/ folder to learn about using backends!
-IMGUI_IMPL_API bool ImGui_ImplMetal4_Init(id<MTLDevice> device, id<MTL4CommandQueue> commandQueue, ImU32 framesInFlight);
+IMGUI_IMPL_API bool ImGui_ImplMetal4_Init(id<MTLDevice> device, id<MTL4CommandQueue> commandQueue, int framesInFlight);
 IMGUI_IMPL_API void ImGui_ImplMetal4_Shutdown();
 // frameInFlightIndex must match the slot you use to index your own per-frame-in-flight resources
 // (e.g. the same index used to pick your command buffer/allocator), and must be < framesInFlight passed to Init().
-IMGUI_IMPL_API void ImGui_ImplMetal4_NewFrame(MTL4RenderPassDescriptor* renderPassDescriptor, ImU32 frameInFlightIndex);
+IMGUI_IMPL_API void ImGui_ImplMetal4_NewFrame(MTL4RenderPassDescriptor* renderPassDescriptor, int frameInFlightIndex);
 IMGUI_IMPL_API void ImGui_ImplMetal4_RenderDrawData(ImDrawData* drawData,
                                                    id<MTL4CommandBuffer> commandBuffer,
                                                    id<MTL4RenderCommandEncoder> commandEncoder);
