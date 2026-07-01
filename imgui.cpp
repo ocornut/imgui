@@ -17384,7 +17384,20 @@ void ImGui::DebugNodeDrawList(ImGuiWindow* window, ImGuiViewportP* viewport, con
     {
         if (pcmd->UserCallback)
         {
-            BulletText("Callback %p, user_data %p", pcmd->UserCallback, pcmd->UserCallbackData);
+            if (g.IO.DebugDrawCmdCallback)
+            {
+                char buf[300];
+                g.IO.DebugDrawCmdCallback(NULL, draw_list, pcmd, false, false, buf, IM_ARRAYSIZE(buf));
+                bool cb_node_open = TreeNode((void*)(pcmd - draw_list->CmdBuffer.begin()), "Callback: %s", buf);
+                if (IsItemHovered() && (cfg->ShowDrawCmdMesh || cfg->ShowDrawCmdBoundingBoxes) && fg_draw_list)
+                    g.IO.DebugDrawCmdCallback(fg_draw_list, draw_list, pcmd, cfg->ShowDrawCmdMesh, cfg->ShowDrawCmdBoundingBoxes, NULL, 0);
+                if (cb_node_open)
+                    TreePop();
+            }
+            else
+            {
+                BulletText("Callback %p, user_data %p", pcmd->UserCallback, pcmd->UserCallbackData);
+            }
             continue;
         }
 
