@@ -4234,6 +4234,7 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     ActiveIdIsAlive = 0;
     ActiveIdTimer = 0.0f;
     ActiveIdIsJustActivated = false;
+    ActiveIdWasSelected = ActiveIdWasSoleSelected = false;
     ActiveIdAllowOverlap = false;
     ActiveIdNoClearOnFocusLoss = false;
     ActiveIdHasBeenPressedBefore = false;
@@ -4250,6 +4251,7 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     memset(&ActiveIdValueOnActivation, 0, sizeof(ActiveIdValueOnActivation));
     LastActiveId = 0;
     LastActiveIdTimer = 0.0f;
+    LastActiveIdWasSelected = LastActiveIdWasSoleSelected = false;
 
     LastKeyboardKeyPressTime = LastKeyModsChangeTime = LastKeyModsChangeFromNoneTime = -1.0;
 
@@ -5629,6 +5631,11 @@ void ImGui::NewFrame()
     // Update ActiveId data (clear reference to active widget if the widget isn't alive anymore)
     if (g.ActiveId)
         g.ActiveIdTimer += g.IO.DeltaTime;
+    if (g.ActiveId && g.ActiveId == g.LastActiveId)
+    {
+        g.LastActiveIdWasSelected = g.ActiveIdWasSelected;
+        g.LastActiveIdWasSoleSelected = g.ActiveIdWasSoleSelected;
+    }
     g.LastActiveIdTimer += g.IO.DeltaTime;
     g.ActiveIdPreviousFrame = g.ActiveId;
     g.ActiveIdIsAlive = 0;
