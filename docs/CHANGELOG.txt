@@ -100,6 +100,15 @@ Other Changes:
     instead of _NavEnableGamepad. (#9454, #8803, #9270) [@Clownacy]
 - TreeNode:
   - Fixed nav cursor rendering with rounding even though tree nodes don't have it. (#7589)
+- Inputs:
+  - Added GetItemClickedCountWithSingleClickDelay() helper for easy disambiguation
+    between single-click and double-click for actions that needs single-click to do
+    something other than selection. (#8337)
+    - Returns 1 on single-click but delayed by io.MouseSingleClickDelay.
+    - Returns 2 on double-click, and 2+ on subsequent repeated cicks.
+  - Added io.MouseSingleClickDelay to configure default delayed single click delay when
+    using GetItemClickedCountWithSingleClickDelay() or IsMouseReleasedWithDelay(). (#8337)
+    Note that io.MouseSingleClickDelay is always > io.MouseDoubleClickTime.
 - Style:
   - Added style.MenuItemRounding, ImGuiStyleVar_MenuItemRounding. (#7589, #9375, #9453)
   - Added style.SelectableRounding, ImGuiStyleVar_SelectableRounding. (#7589, #9375, #9453)

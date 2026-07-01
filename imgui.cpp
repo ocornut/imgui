@@ -1692,6 +1692,7 @@ ImGuiIO::ImGuiIO()
     // Inputs Behaviors
     MouseDoubleClickTime = 0.30f;
     MouseDoubleClickMaxDist = 6.0f;
+    MouseSingleClickDelay = 0.50f;
     MouseDragThreshold = 6.0f;
     KeyRepeatDelay = 0.275f;
     KeyRepeatRate = 0.050f;
@@ -9427,6 +9428,7 @@ IM_MSVC_RUNTIME_CHECKS_RESTORE
 // - IsMouseReleased()
 // - IsMouseDoubleClicked()
 // - GetMouseClickedCount()
+// - GetItemClickedCountWithSingleClickDelay()
 // - IsMouseHoveringRect() [Internal]
 // - IsMouseDragPastThreshold() [Internal]
 // - IsMouseDragging()
@@ -10006,6 +10008,8 @@ bool ImGui::IsMouseReleased(ImGuiMouseButton button, ImGuiID owner_id)
     return g.IO.MouseReleased[button] && TestKeyOwner(MouseButtonToKey(button), owner_id); // Should be same as IsKeyReleased(MouseButtonToKey(button), owner_id)
 }
 
+
+// Prefer higher-level helper GetItemClickedCountWithSingleClickDelay()
 // Use if you absolutely need to distinguish single-click from double-click by introducing a delay.
 // Generally use with 'delay >= io.MouseDoubleClickTime' + combined with a 'io.MouseClickedLastCount == 1' test.
 // This is a very rarely used UI idiom, but some apps use this: e.g. MS Explorer single click on an icon to rename.
@@ -10013,8 +10017,12 @@ bool ImGui::IsMouseReleasedWithDelay(ImGuiMouseButton button, float delay)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(button >= 0 && button < IM_COUNTOF(g.IO.MouseDown));
+    if (IsMouseDown(button))
+        return false;
+    if (delay < 0.0f)
+        delay = g.IO.MouseSingleClickDelay;
     const float time_since_release = (float)(g.Time - g.IO.MouseReleasedTime[button]);
-    return !IsMouseDown(button) && (time_since_release - g.IO.DeltaTime < delay) && (time_since_release >= delay);
+    return (time_since_release - g.IO.DeltaTime < delay) && (time_since_release >= delay);
 }
 
 bool ImGui::IsMouseDoubleClicked(ImGuiMouseButton button)
@@ -10036,6 +10044,62 @@ int ImGui::GetMouseClickedCount(ImGuiMouseButton button)
     ImGuiContext& g = *GImGui;
     IM_ASSERT(button >= 0 && button < IM_COUNTOF(g.IO.MouseDown));
     return g.IO.MouseClickedCount[button];
+}
+
+// FIXME: This is close to what BeginDragDropSource() is doing, maybe rework.
+static ImGuiID LastItemOverlayButtonForNullId(ImGuiMouseButton mouse_button)
+{
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(g.LastItemData.ID == 0);
+    ImGuiWindow* window = g.CurrentWindow;
+    ImGuiID id = window->GetIDFromRectangle(g.LastItemData.Rect);
+    if (g.IO.MouseClicked[mouse_button] && ImGui::ItemHoverable(g.LastItemData.Rect, id, g.LastItemData.ItemFlags))
+    {
+        ImGui::SetActiveID(id, window);
+        ImGui::FocusWindow(window);
+    }
+    else if (g.ActiveId == id)
+    {
+        ImGui::KeepAliveID(id);
+        if (!g.IO.MouseDown[mouse_button])
+            ImGui::ClearActiveID();
+    }
+    return id;
+}
+
+// [BETA] Building block for disambiguation between single-click and double-click.
+// - Returns 1 on single-click but delayed by io.MouseSingleClickDelay (which is always > io.MouseDoubleClickTime) after mouse release.
+// - Returns 2+ on double-click and subsequent repeated clicks.
+// In order use that to replicate Windows Explorer's "click on label to rename after a delay",
+// When the function returns 1 for a delayed single click, you can add with further tests:
+// - If you want to test that the mouse position AT THE TIME of the click (before the delay): you can use the 'io.MouseClickedPos[mouse_button]' position.
+// - If you want to test that the mouse position is still over the item at the end of delay: you can use '&& IsItemHovered()'.
+// - If you want to test that the item was selected or the sole selection AT THE TIME of the click (before the delay): you can test for 'g.LastActiveIdWasSelected' or 'g.LastActiveIdWasSoleSelected'.
+// e.g.
+//   int click_count = ImGui::GetItemClickedCountWithSingleClickDelay(mouse_button);
+//   if (click_count == 1 && ImGui::GetCurrentContext()->LastActiveIdWasSoleSelected)
+//       StartRename();
+//   if (click_count == 2)
+//       Launch();
+int ImGui::GetItemClickedCountWithSingleClickDelay(ImGuiMouseButton mouse_button, float delay)
+{
+    // Action: double-click and subsequent clicks
+    ImGuiContext& g = *GImGui;
+    if (g.IO.MouseClickedCount[mouse_button] >= 2 && IsItemClicked(mouse_button))
+        return g.IO.MouseClickedCount[mouse_button];
+
+    // Action: second click, delayed
+    ImGuiID id = g.LastItemData.ID;
+    if (id == 0)
+        id = LastItemOverlayButtonForNullId(mouse_button);
+    if (g.LastActiveId == id)
+    {
+        if (delay >= 0.0f)
+            delay = ImMax(delay, g.IO.MouseDoubleClickTime + 0.01f);
+        if (IsMouseReleasedWithDelay(mouse_button, delay) && g.IO.MouseClickedLastCount[mouse_button] == 1)
+            return 1;
+    }
+    return 0;
 }
 
 // Test if mouse cursor is hovering given rectangle
@@ -10985,6 +11049,7 @@ static void ImGui::ErrorCheckNewFrameSanityChecks()
     IM_ASSERT(g.Style.WindowMenuButtonPosition == ImGuiDir_None || g.Style.WindowMenuButtonPosition == ImGuiDir_Left || g.Style.WindowMenuButtonPosition == ImGuiDir_Right);
     IM_ASSERT(g.Style.ColorButtonPosition == ImGuiDir_Left || g.Style.ColorButtonPosition == ImGuiDir_Right);
     IM_ASSERT(g.Style.TreeLinesFlags == ImGuiTreeNodeFlags_DrawLinesNone || g.Style.TreeLinesFlags == ImGuiTreeNodeFlags_DrawLinesFull || g.Style.TreeLinesFlags == ImGuiTreeNodeFlags_DrawLinesToNodes);
+    IM_ASSERT(g.IO.MouseSingleClickDelay > g.IO.MouseDoubleClickTime);
 
     // Error handling: we do not accept 100% silent recovery! Please contact me if you feel this is getting in your way.
     if (g.IO.ConfigErrorRecovery)
