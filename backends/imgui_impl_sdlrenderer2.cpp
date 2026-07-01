@@ -150,6 +150,17 @@ void ImGui_ImplSDLRenderer2_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* 
         const ImDrawVert* vtx_buffer = draw_list->VtxBuffer.Data;
         const ImDrawIdx* idx_buffer = draw_list->IdxBuffer.Data;
 
+        // Vertex color byte swapper
+        #if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+        for(int i=0; i<draw_list->VtxBuffer.Size; i++) {
+            unsigned int* color = (unsigned int*)&vtx_buffer[i].col;
+            *color =    ((*color & 0xFF000000) >> 24) |     // Alpha
+                        ((*color & 0x00FF0000) >> 8) |      // Red
+                        ((*color & 0x0000FF00) << 8) |      // Green
+                        ((*color & 0x000000FF) << 24);      // Blue
+        }
+        #endif
+        
         for (int cmd_i = 0; cmd_i < draw_list->CmdBuffer.Size; cmd_i++)
         {
             const ImDrawCmd* pcmd = &draw_list->CmdBuffer[cmd_i];
@@ -215,7 +226,11 @@ void ImGui_ImplSDLRenderer2_UpdateTexture(ImTextureData* tex)
 
         // Create texture
         // (Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling)
+        #if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+        SDL_Texture* sdl_texture = SDL_CreateTexture(bd->Renderer, SDL_PIXELFORMAT_ABGR32, SDL_TEXTUREACCESS_STATIC, tex->Width, tex->Height);
+        #else
         SDL_Texture* sdl_texture = SDL_CreateTexture(bd->Renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC, tex->Width, tex->Height);
+        #endif
         IM_ASSERT(sdl_texture != nullptr && "Backend failed to create texture!");
         SDL_UpdateTexture(sdl_texture, nullptr, tex->GetPixels(), tex->GetPitch());
         SDL_SetTextureBlendMode(sdl_texture, SDL_BLENDMODE_BLEND);
