@@ -95,6 +95,7 @@ Other Changes:
     calling ClearFonts() during rendering.
   - Fixed an issue where passing a manually created ImFontAtlas to CreateContext() would
     incorrectly destroy it in DestroyContext() when ref-count gets back to zero. (#9426)
+  - Destroying an ImGui context using a ImFontAtlas checks that the later has no references.
 - Nav:
   - Fixed context menu activation with gamepad erroneously testing for _NavEnableKeyboard
     instead of _NavEnableGamepad. (#9454, #8803, #9270) [@Clownacy]

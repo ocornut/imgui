@@ -4495,10 +4495,14 @@ void ImGui::Shutdown()
     for (ImFontAtlas* atlas : g.FontAtlases)
     {
         UnregisterFontAtlas(atlas);
-        if (atlas->RefCount == 0 && atlas->OwnerContext == &g)
+        if (atlas->OwnerContext == &g)
         {
-            atlas->Locked = false;
-            IM_DELETE(atlas);
+            IM_ASSERT(atlas->RefCount == 0 && "Destroying context owning a ImFontAtlas which is still used elsewhere!");
+            if (atlas->RefCount == 0)
+            {
+                atlas->Locked = false;
+                IM_DELETE(atlas);
+            }
         }
     }
     g.DrawListSharedData.TempBuffer.clear();
