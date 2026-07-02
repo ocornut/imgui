@@ -654,8 +654,12 @@ jobs:
     name: Build - Android
 
     steps:
-    - uses: actions/checkout@v6
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v6
+      with:
+        gradle-version: '8.14.5'
 
+    - uses: actions/checkout@v6
     - name: Build example_android_opengl3
       run: |
         cd examples/example_android_opengl3/android
