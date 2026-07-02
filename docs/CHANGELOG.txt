@@ -140,9 +140,11 @@ Other Changes:
       when available, fixing OpenGL DPI scaling issues as e.g. NVIDIA drivers tends
       to spawn multiple-thread to manage OpenGL. (#9403)
 - Examples: 
+  - Android: update to AGP 9.2.0 to support Gradle 9.6.0.
   - SDL2/SDL3: use `SDL_GetWindowSizeInPixels()` to create frame-buffers. Fixes issues
     with non-fractional framebuffer size on Wayland. (#8761, #9124) [@billtran1632001]
   - SDL3+Metal4: added new example. (#9458, #9451) [@AmelieHeinrich]
+
 
 -----------------------------------------------------------------------
  VERSION 1.92.8 (Released 2026-05-12)
