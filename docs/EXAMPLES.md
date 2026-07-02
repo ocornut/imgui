@@ -164,6 +164,10 @@ SDL3 + DirectX11 examples, Windows only. <BR>
 SDL3 + Metal example, Mac only. <BR>
 = main.cpp + imgui_impl_sdl3.cpp + imgui_impl_metal.mm <BR>
 
+[example_sdl3_metal4/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl3_metal/) <BR>
+SDL3 + Metal4 example, Mac only. <BR>
+= main.cpp + imgui_impl_sdl3.cpp + imgui_impl_metal4.mm <BR>
+
 [example_sdl3_opengl3/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl3_opengl3/) <BR>
 SDL3 (Win32, Mac, Linux, etc.) + OpenGL3+/ES2/ES3 example. <BR>
 = main.cpp + imgui_impl_sdl3.cpp + imgui_impl_opengl3.cpp <BR>

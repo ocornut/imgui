@@ -5,6 +5,9 @@
 //  [X] Renderer: User texture binding. Use 'MTLTexture.gpuResourceID' as texture identifier. Read the FAQ about ImTextureID/ImTextureRef!
 //  [X] Renderer: Large meshes support (64k+ vertices) even with 16-bit indices (ImGuiBackendFlags_RendererHasVtxOffset).
 //  [X] Renderer: Texture updates support for dynamic font atlas (ImGuiBackendFlags_RendererHasTextures).
+// Missing features or Issues:
+//  [ ] Metal-cpp support.
+//  [ ] Texture view pool support? Reevaluate which type to use for ImtextureID.
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.

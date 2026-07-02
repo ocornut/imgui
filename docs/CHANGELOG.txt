@@ -127,6 +127,9 @@ Other Changes:
 - Misc:
   - Added IM_DEBUG_BREAK() handler for GCC+AArch64/ARM64. [@tom-seddon]
 - Backends:
+  - Metal4:
+    - Added new Metal 4 backend (forked from Metal 3 backend). (#9458, #9451) [@AmelieHeinrich]
+      Note that Metal-cpp is not yet supported.
   - OpenGL3:
     - GLSL version detection assume GLSL 410 when GL context is 4.1.
       Fixes an issue running on macOS with Wine. [#9427, #6577) [@perminovVS]
@@ -139,6 +142,7 @@ Other Changes:
 - Examples: 
   - SDL2/SDL3: use `SDL_GetWindowSizeInPixels()` to create frame-buffers. Fixes issues
     with non-fractional framebuffer size on Wayland. (#8761, #9124) [@billtran1632001]
+  - SDL3+Metal4: added new example. (#9458, #9451) [@AmelieHeinrich]
 
 -----------------------------------------------------------------------
  VERSION 1.92.8 (Released 2026-05-12)

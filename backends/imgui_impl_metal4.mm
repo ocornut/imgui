@@ -5,6 +5,9 @@
 //  [X] Renderer: User texture binding. Use 'MTLTexture' as texture identifier. Read the FAQ about ImTextureID/ImTextureRef!
 //  [X] Renderer: Large meshes support (64k+ vertices) even with 16-bit indices (ImGuiBackendFlags_RendererHasVtxOffset).
 //  [X] Renderer: Texture updates support for dynamic font atlas (ImGuiBackendFlags_RendererHasTextures).
+// Missing features or Issues:
+//  [ ] Metal-cpp support.
+//  [ ] Texture view pool support? Reevaluate which type to use for ImtextureID.
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
@@ -14,12 +17,9 @@
 // - Documentation        https://dearimgui.com/docs (same as your local docs/ folder).
 // - Introduction, links and more at the top of imgui.cpp
 
-// FIXME: Metal-cpp support
-// FIXME?: Texture view pool support
-
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2026-29-06: Metal 4: Added new Metal 4 backend implementation.
+//  2026-07-02: Metal 4: Added new Metal 4 backend implementation. (#9458)
 
 #include "imgui.h"
 #ifndef IMGUI_DISABLE
