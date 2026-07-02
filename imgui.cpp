@@ -1365,6 +1365,7 @@ static void             AddWindowToSortBuffer(ImVector<ImGuiWindow*>* out_sorted
 
 // Settings
 static void             WindowSettingsHandler_ClearAll(ImGuiContext*, ImGuiSettingsHandler*);
+static void             WindowSettingsHandler_Cleanup(ImGuiContext*, ImGuiSettingsHandler*, ImGuiSettingsCleanupArgs* args);
 static void*            WindowSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name);
 static void             WindowSettingsHandler_ReadLine(ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line);
 static void             WindowSettingsHandler_ApplyAll(ImGuiContext*, ImGuiSettingsHandler*);
@@ -1684,6 +1685,7 @@ ImGuiIO::ImGuiIO()
     ConfigWindowsCopyContentsWithCtrlC = false;
     ConfigScrollbarScrollByPage = true;
     ConfigIniSettingsSaveLastUsedDate = true;
+    ConfigIniSettingsAutoDiscardMonths = 0;
     ConfigMemoryCompactTimer = 60.0f;
     ConfigDebugIsDebuggerPresent = false;
     ConfigDebugHighlightIdConflicts = true;
@@ -4442,6 +4444,7 @@ void ImGui::Initialize()
         ini_handler.TypeName = "Window";
         ini_handler.TypeHash = ImHashStr("Window");
         ini_handler.ClearAllFn = WindowSettingsHandler_ClearAll;
+        ini_handler.CleanupFn =  WindowSettingsHandler_Cleanup;
         ini_handler.ReadOpenFn = WindowSettingsHandler_ReadOpen;
         ini_handler.ReadLineFn = WindowSettingsHandler_ReadLine;
         ini_handler.ApplyAllFn = WindowSettingsHandler_ApplyAll;
@@ -15692,6 +15695,19 @@ void ImGui::ClearIniSettings()
             handler.ClearAllFn(&g, &handler);
 }
 
+void ImGui::CleanupIniSettings(ImGuiSettingsCleanupArgs* args)
+{
+    ImGuiContext& g = *GImGui;
+    if (g.PlatformIO.Platform_SessionDate == 0)
+        return;
+    ImGuiPackedDate discard_older_than_date_p = g.PlatformIO.Platform_SessionDate;
+    discard_older_than_date_p.SubtractMonths(args->DiscardOlderThanMonths);
+    args->_DiscardOlderThanDate = discard_older_than_date_p.Unpack();
+    for (ImGuiSettingsHandler& handler : g.SettingsHandlers)
+        if (handler.CleanupFn != NULL)
+            handler.CleanupFn(&g, &handler, args);
+}
+
 void ImGui::LoadIniSettingsFromDisk(const char* ini_filename)
 {
     size_t file_data_size = 0;
@@ -15770,6 +15786,9 @@ void ImGui::LoadIniSettingsFromMemory(const char* ini_data, size_t ini_size)
     memcpy(buf, ini_data, ini_size);
 
     // Call post-read handlers
+    ImGuiSettingsCleanupArgs cleanup_args;
+    if (g.IO.ConfigIniSettingsAutoDiscardMonths > 0)
+        cleanup_args.DiscardOlderThanMonths = g.IO.ConfigIniSettingsAutoDiscardMonths;
     for (ImGuiSettingsHandler& handler : g.SettingsHandlers)
         if (handler.ApplyAllFn != NULL)
             handler.ApplyAllFn(&g, &handler);
@@ -15866,6 +15885,18 @@ static void WindowSettingsHandler_ClearAll(ImGuiContext* ctx, ImGuiSettingsHandl
     g.SettingsWindows.clear();
 }
 
+static void WindowSettingsHandler_Cleanup(ImGuiContext* ctx, ImGuiSettingsHandler*, ImGuiSettingsCleanupArgs* args)
+{
+    ImGuiContext& g = *ctx;
+    for (ImGuiWindowSettings* settings = g.SettingsWindows.begin(); settings != NULL; settings = g.SettingsWindows.next_chunk(settings))
+    {
+        if (args->_DiscardOlderThanDate != 0 && settings->LastUsedDate.Unpack() < args->_DiscardOlderThanDate)
+            settings->WantDelete = true;
+        if (args->SetCurrentSessionDateToAll || (args->SetCurrentSessionDateWhenMissingDate && settings->LastUsedDate.IsValid() == false))
+            settings->LastUsedDate = g.SessionDate;
+    }
+}
+
 static void* WindowSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name)
 {
     ImGuiID id = ImHashStr(name);
@@ -15918,6 +15949,7 @@ static void WindowSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandl
         if (!settings)
         {
             settings = ImGui::CreateNewWindowSettings(window->Name);
+            settings->LastUsedDate = g.SessionDate;
             window->SettingsOffset = g.SettingsWindows.offset_from_ptr(settings);
         }
         IM_ASSERT(settings->ID == window->ID);
@@ -16724,6 +16756,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
 {
     ImGuiContext& g = *GImGui;
     ImGuiIO& io = g.IO;
+    ImGuiPlatformIO& platform_io = g.PlatformIO;
     ImGuiMetricsConfig* cfg = &g.DebugMetricsConfig;
     if (cfg->ShowDebugLog)
         ShowDebugLogWindow(&cfg->ShowDebugLog);
@@ -17056,8 +17089,36 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             Text("\"%s\"", g.IO.IniFilename);
         else
             TextUnformatted("<NULL>");
-        Checkbox("io.ConfigDebugIniSettings", &io.ConfigDebugIniSettings);
         Text("SettingsDirtyTimer %.2f", g.SettingsDirtyTimer);
+
+        int highlight_older_than_date = 0;
+        Text("SessionDate: %d", platform_io.Platform_SessionDate);
+        BeginDisabled(platform_io.Platform_SessionDate == 0);
+        Checkbox("Highlight Entries Older Than", &cfg->SettingsHighlightOldEntries);
+        SetNextItemWidth(GetFontSize() * 8);
+        SameLine();
+        SliderInt("Months", &cfg->SettingsDiscardMonths, 1, 24);
+        if (cfg->SettingsHighlightOldEntries && cfg->SettingsDiscardMonths > 0)
+        {
+            ImGuiPackedDate cutoff_date = platform_io.Platform_SessionDate;
+            cutoff_date.SubtractMonths(cfg->SettingsDiscardMonths);
+            highlight_older_than_date = cutoff_date.Unpack();
+            SameLine();
+            ImGuiSettingsCleanupArgs cleanup_args;
+            cleanup_args.DiscardOlderThanMonths = cfg->SettingsDiscardMonths;
+            if (Button("Discard"))
+                CleanupIniSettings(&cleanup_args);
+        }
+        EndDisabled();
+        Checkbox("io.ConfigDebugIniSettings", &io.ConfigDebugIniSettings);
+
+        struct ScopedHighlightOlderThan
+        {
+            bool Highlight;
+            ScopedHighlightOlderThan(int cutoff_date, ImGuiPackedDate in_date)  { Highlight = cutoff_date != 0 && in_date.Unpack() < cutoff_date; if (Highlight) PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.4f, 0.4f, 1.0f)); }
+            ~ScopedHighlightOlderThan()                                         { if (Highlight) PopStyleColor(); }
+        };
+
         if (TreeNode("SettingsHandlers", "Settings handlers: (%d)", g.SettingsHandlers.Size))
         {
             for (ImGuiSettingsHandler& handler : g.SettingsHandlers)
@@ -17067,14 +17128,20 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         if (TreeNode("SettingsWindows", "Settings packed data: Windows: %d bytes", g.SettingsWindows.size()))
         {
             for (ImGuiWindowSettings* settings = g.SettingsWindows.begin(); settings != NULL; settings = g.SettingsWindows.next_chunk(settings))
+            {
+                ScopedHighlightOlderThan scoped_highlight(highlight_older_than_date, settings->LastUsedDate);
                 DebugNodeWindowSettings(settings);
+            }
             TreePop();
         }
 
         if (TreeNode("SettingsTables", "Settings packed data: Tables: %d bytes", g.SettingsTables.size()))
         {
             for (ImGuiTableSettings* settings = g.SettingsTables.begin(); settings != NULL; settings = g.SettingsTables.next_chunk(settings))
+            {
+                ScopedHighlightOlderThan scoped_highlight(highlight_older_than_date, settings->LastUsedDate);
                 DebugNodeTableSettings(settings, NULL);
+            }
             TreePop();
         }
 

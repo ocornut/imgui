@@ -4126,6 +4126,21 @@ static void TableSettingsHandler_ClearAll(ImGuiContext* ctx, ImGuiSettingsHandle
     g.SettingsTables.clear();
 }
 
+static void TableSettingsHandler_Cleanup(ImGuiContext* ctx, ImGuiSettingsHandler*, ImGuiSettingsCleanupArgs* args)
+{
+    ImGuiContext& g = *ctx;
+    for (int i = 0; i != g.Tables.GetMapSize(); i++)
+        if (ImGuiTable* table = g.Tables.TryGetMapData(i))
+            table->SettingsOffset = -1;
+    for (ImGuiTableSettings* settings = g.SettingsTables.begin(); settings != NULL; settings = g.SettingsTables.next_chunk(settings))
+    {
+        if (args->_DiscardOlderThanDate != 0 && settings->LastUsedDate.Unpack() < args->_DiscardOlderThanDate)
+            settings->ID = 0;
+        if (args->SetCurrentSessionDateToAll || (args->SetCurrentSessionDateWhenMissingDate && settings->LastUsedDate.IsValid() == false))
+            settings->LastUsedDate = g.SessionDate;
+    }
+}
+
 // Apply to existing windows (if any)
 static void TableSettingsHandler_ApplyAll(ImGuiContext* ctx, ImGuiSettingsHandler*)
 {
@@ -4234,6 +4249,7 @@ void ImGui::TableSettingsAddSettingsHandler()
     ini_handler.TypeName = "Table";
     ini_handler.TypeHash = ImHashStr("Table");
     ini_handler.ClearAllFn = TableSettingsHandler_ClearAll;
+    ini_handler.CleanupFn  = TableSettingsHandler_Cleanup;
     ini_handler.ReadOpenFn = TableSettingsHandler_ReadOpen;
     ini_handler.ReadLineFn = TableSettingsHandler_ReadLine;
     ini_handler.ApplyAllFn = TableSettingsHandler_ApplyAll;

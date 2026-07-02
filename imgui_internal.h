@@ -98,6 +98,7 @@ Index of this file:
 #pragma clang diagnostic ignored "-Wimplicit-int-float-conversion"  // warning: implicit conversion from 'xxx' to 'float' may lose precision
 #pragma clang diagnostic ignored "-Wmissing-noreturn"               // warning: function 'xxx' could be declared with attribute 'noreturn'
 #pragma clang diagnostic ignored "-Wdeprecated-enum-enum-conversion"// warning: bitwise operation between different enumeration types ('XXXFlags_' and 'XXXFlagsPrivate_') is deprecated
+#pragma clang diagnostic ignored "-Wreserved-identifier"            // warning: identifier '_Xxx' is reserved because it starts with '_' followed by a capital letter
 #pragma clang diagnostic ignored "-Wunsafe-buffer-usage"            // warning: 'xxx' is an unsafe pointer used for buffer access
 #pragma clang diagnostic ignored "-Wnontrivial-memaccess"           // warning: first argument in call to 'memset' is a pointer to non-trivially copyable type
 #elif defined(__GNUC__)
@@ -845,7 +846,9 @@ struct ImGuiPackedDate
 
     ImGuiPackedDate()                           { Year = Month = Day = 0; }
     ImGuiPackedDate(int yyyymmdd)               { Year = (ImU16)((yyyymmdd / 10000) - 2000); Month = (ImU16)((yyyymmdd / 100) % 100); Day = (ImU16)(yyyymmdd % 100); } // Pack
+    bool                IsValid()               { return (Year && Month && Day); }
     int                 Unpack() const          { return (Year && Month && Day) ? ((Year + 2000) * 10000) + (Month * 100) + Day : 0; }      // Unpack
+    void                SubtractMonths(int m)   { while (m > 0) { Year -= Month == 1; Month = (Month == 1) ? 12 : Month - 1; m--; } }       // FIXME-OPT: Stupid but enough for what we do with it.
 };
 
 // Helper: ImGuiStorage
@@ -2043,6 +2046,14 @@ struct ImGuiWindowSettings
     char* GetName()             { return (char*)(this + 1); }
 };
 
+struct ImGuiSettingsCleanupArgs
+{
+    int             DiscardOlderThanMonths = 0;                     // Enable to discard entries older than XX months. 
+    bool            SetCurrentSessionDateToAll = false;             // Enable to write current SessionDate to all supporting entries. // Let us know in #9460 if you use this.
+    bool            SetCurrentSessionDateWhenMissingDate = false;   // Enable to write current SessionDate to all supporting entries missing a date. // Let us know in #9460 if you use this.
+    int             _DiscardOlderThanDate = 0;                      // [Internal]
+};
+
 struct ImGuiSettingsHandler
 {
     const char* TypeName;       // Short description stored in .ini file. Disallowed characters: '[' ']'
@@ -2053,6 +2064,7 @@ struct ImGuiSettingsHandler
     void        (*ReadLineFn)(ImGuiContext* ctx, ImGuiSettingsHandler* handler, void* entry, const char* line); // Read: Called for every line of text within an ini entry
     void        (*ApplyAllFn)(ImGuiContext* ctx, ImGuiSettingsHandler* handler);                                // Read: Called after reading (in registration order)
     void        (*WriteAllFn)(ImGuiContext* ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* out_buf);      // Write: Output every entries into 'out_buf'
+    void        (*CleanupFn) (ImGuiContext* ctx, ImGuiSettingsHandler* handler, ImGuiSettingsCleanupArgs* args);// Cleanup/patch settings
     void*       UserData;
 
     ImGuiSettingsHandler() { memset((void*)this, 0, sizeof(*this)); }
@@ -2166,6 +2178,8 @@ struct ImGuiMetricsConfig
     int         ShowTablesRectsType = -1;
     int         HighlightMonitorIdx = -1;
     ImGuiID     HighlightViewportID = 0;
+    int         SettingsDiscardMonths = 6;
+    bool        SettingsHighlightOldEntries = false;
     bool        ShowFontPreview = true;
 };
 
@@ -3410,6 +3424,7 @@ namespace ImGui
     IMGUI_API void                  MarkIniSettingsDirty();
     IMGUI_API void                  MarkIniSettingsDirty(ImGuiWindow* window);
     IMGUI_API void                  ClearIniSettings();
+    IMGUI_API void                  CleanupIniSettings(ImGuiSettingsCleanupArgs* args); // [BETA] Expected to turn into a public API. Please report if you are using this!
     IMGUI_API void                  AddSettingsHandler(const ImGuiSettingsHandler* handler);
     IMGUI_API void                  RemoveSettingsHandler(const char* type_name);
     IMGUI_API ImGuiSettingsHandler* FindSettingsHandler(const char* type_name);

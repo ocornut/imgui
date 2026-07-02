@@ -2438,6 +2438,7 @@ struct ImGuiIO
 
     // Ini Settings
     bool        ConfigIniSettingsSaveLastUsedDate;// = true         // Enable loading/saving last used day (YYYYMMDD) in some .ini struct, making things easier to audit and allowing custom tools to cleanup old data.
+    int         ConfigIniSettingsAutoDiscardMonths; // = 0          // [BETA] Set number of months after which unused .ini entries are discarded on load. Require platform_io.Platform_SessionDate to be set. For systems supporting the feature, .ini entries without a LastUsed field will always be discarded! Please report if you are using this.
 
     // Miscellaneous options
     // (you can visualize and interact with all options in 'Demo->Configuration')
