@@ -1,5 +1,6 @@
 // dear imgui: Renderer Backend for Metal 4
 // This needs to be used along with a Platform Backend (e.g. OSX)
+// Metal 4 requires Apple Silicon and macOS 26+.
 
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'MTLTexture.gpuResourceID' as texture identifier. Read the FAQ about ImTextureID/ImTextureRef!
