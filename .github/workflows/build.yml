@@ -116,7 +116,7 @@ jobs:
           cl.exe /D_USRDLL /D_WINDLL /I. example_single_file.cpp /LD /FeImGui.dll /link
           cl.exe /DIMGUI_API=__declspec(dllimport) -DIMGUI_IMPL_API= /I. ImGui.lib /Feexample_null.exe examples/example_null/main.cpp
 
-      # Win64 examples are more frequently compilted than the Win32 examples.
+      # Win64 examples are more frequently compiled than the Win32 examples.
       # More of the Win32 examples requires 'workflow_run' to reduce waste.
       - name: Build Win32 example_glfw_opengl2
         shell: cmd
@@ -160,6 +160,7 @@ jobs:
       - name: Build Win32 example_sdl3_opengl3
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl3_opengl3/example_sdl3_opengl3.vcxproj /p:Platform=Win32 /p:Configuration=Release'
+        if: github.event_name == 'workflow_run'
 
       - name: Build Win32 example_sdl3_sdlgpu3
         shell: cmd
@@ -200,6 +201,7 @@ jobs:
       - name: Build Win64 example_glfw_opengl3
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_glfw_opengl3/example_glfw_opengl3.vcxproj /p:Platform=x64 /p:Configuration=Release'
+        if: github.event_name == 'workflow_run'
 
       - name: Build Win64 example_glfw_vulkan
         shell: cmd
@@ -228,6 +230,7 @@ jobs:
       - name: Build Win64 example_sdl2_directx11
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl2_directx11/example_sdl2_directx11.vcxproj /p:Platform=x64 /p:Configuration=Release'
+        if: github.event_name == 'workflow_run'
 
       - name: Build Win64 example_sdl3_opengl3
         shell: cmd
@@ -572,6 +575,9 @@ jobs:
     - name: Build macOS example_sdl2_metal
       run: make -C examples/example_sdl2_metal
 
+    - name: Build macOS example_sdl3_metal4
+      run: make -C examples/example_sdl3_metal4
+
     - name: Build macOS example_sdl2_opengl2
       run: make -C examples/example_sdl2_opengl2
       if: github.event_name == 'workflow_run'
@@ -651,8 +657,12 @@ jobs:
     name: Build - Android
 
     steps:
-    - uses: actions/checkout@v6
+    #- name: Setup Gradle
+    #  uses: gradle/actions/setup-gradle@v6
+    #  with:
+    #    gradle-version: '8.14.5'
 
+    - uses: actions/checkout@v6
     - name: Build example_android_opengl3
       run: |
         cd examples/example_android_opengl3/android

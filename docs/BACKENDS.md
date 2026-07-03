@@ -89,6 +89,7 @@ List of Renderer Backends:
     imgui_impl_dx11.cpp         ; DirectX11
     imgui_impl_dx12.cpp         ; DirectX12
     imgui_impl_metal.mm         ; Metal (ObjC or C++)
+    imgui_impl_metal4.mm        ; Metal 4 (ObjC or C++)
     imgui_impl_opengl2.cpp      ; OpenGL 2 (legacy fixed pipeline. Don't use with modern OpenGL code!)
     imgui_impl_opengl3.cpp      ; OpenGL 3/4, OpenGL ES 2/3, WebGL
     imgui_impl_sdlgpu3.cpp      ; SDL_GPU (portable 3D graphics API of SDL3)

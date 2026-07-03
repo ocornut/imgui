@@ -7496,6 +7496,11 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
 
     if (selected != was_selected)
         g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_ToggledSelection;
+    if (g.ActiveId == id && g.ActiveIdIsJustActivated)
+    {
+        g.ActiveIdWasSelected = was_selected;
+        g.ActiveIdWasSoleSelected = was_selected && (!is_multi_select || g.CurrentMultiSelect->IsSoleOrUnknownSelectionSize);
+    }
 
     // Render
     if (is_visible)
@@ -8123,6 +8128,7 @@ ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, int sel
             storage->LastSelectionSize = 0;
     }
     ms->LoopRequestSetAll = request_select_all ? 1 : request_clear ? 0 : -1;
+    ms->IsSoleOrUnknownSelectionSize = (storage->LastSelectionSize == 1) || (storage->LastSelectionSize == -1);
     //ms->PrevSubmittedItem = ImGuiSelectionUserData_Invalid;
 
     if (g.DebugLogFlags & ImGuiDebugLogFlags_EventSelection)
@@ -9394,7 +9400,7 @@ bool ImGui::BeginMenuEx(const char* label, const char* icon, bool enabled)
     // This is only done for items for the menu set and not the full parent window.
     const bool menuset_is_open = IsRootOfOpenMenuSet();
     if (menuset_is_open)
-        PushItemFlag(ImGuiItemFlags_NoWindowHoverableCheck, true);
+        g.NextItemData.ItemFlags |= ImGuiItemFlags_NoWindowHoverableCheck;
 
     // The reference position stored in popup_pos will be used by Begin() to find a suitable position for the child menu,
     // However the final position is going to be different! It is chosen by FindBestWindowPosForPopup().
@@ -9457,8 +9463,6 @@ bool ImGui::BeginMenuEx(const char* label, const char* icon, bool enabled)
     }
 
     const bool hovered = (g.HoveredId == id) && enabled && !g.NavHighlightItemUnderNav;
-    if (menuset_is_open)
-        PopItemFlag();
 
     bool want_open = false;
     bool want_open_nav_init = false;
@@ -9621,7 +9625,7 @@ bool ImGui::MenuItemEx(const char* label, const char* icon, const char* shortcut
     // See BeginMenuEx() for comments about this.
     const bool menuset_is_open = IsRootOfOpenMenuSet();
     if (menuset_is_open)
-        PushItemFlag(ImGuiItemFlags_NoWindowHoverableCheck, true);
+        g.NextItemData.ItemFlags |= ImGuiItemFlags_NoWindowHoverableCheck;
 
     // We've been using the equivalent of ImGuiSelectableFlags_SetNavIdOnHover on all Selectable() since early Nav system days (commit 43ee5d73),
     // but I am unsure whether this should be kept at all. For now moved it to be an opt-in feature used by menus only.
@@ -9692,8 +9696,6 @@ bool ImGui::MenuItemEx(const char* label, const char* icon, const char* shortcut
     if (!enabled)
         EndDisabled();
     PopID();
-    if (menuset_is_open)
-        PopItemFlag();
 
     return pressed;
 }

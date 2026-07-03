@@ -95,17 +95,38 @@ Other Changes:
     calling ClearFonts() during rendering.
   - Fixed an issue where passing a manually created ImFontAtlas to CreateContext() would
     incorrectly destroy it in DestroyContext() when ref-count gets back to zero. (#9426)
+  - Destroying an ImGui context using a ImFontAtlas checks that the later has no references.
 - Nav:
   - Fixed context menu activation with gamepad erroneously testing for _NavEnableKeyboard
     instead of _NavEnableGamepad. (#9454, #8803, #9270) [@Clownacy]
 - TreeNode:
   - Fixed nav cursor rendering with rounding even though tree nodes don't have it. (#7589)
+- Inputs:
+  - Added GetItemClickedCountWithSingleClickDelay() helper for easy disambiguation
+    between single-click and double-click for actions that needs single-click to do
+    something other than selection. (#8337)
+    - Returns 1 on single-click but delayed by io.MouseSingleClickDelay.
+    - Returns 2 on double-click, and 2+ on subsequent repeated cicks.
+  - Added io.MouseSingleClickDelay to configure default delayed single click delay when
+    using GetItemClickedCountWithSingleClickDelay() or IsMouseReleasedWithDelay(). (#8337)
+    Note that io.MouseSingleClickDelay is always > io.MouseDoubleClickTime.
 - Style:
   - Added style.MenuItemRounding, ImGuiStyleVar_MenuItemRounding. (#7589, #9375, #9453)
   - Added style.SelectableRounding, ImGuiStyleVar_SelectableRounding. (#7589, #9375, #9453)
     The use of this is discouraged because it can easily create problems rendering e.g.
     contiguous selection.
   - Scale the NavCursor border thickness when using large values with `ScallAllSizes()`.
+- Settings:
+  - Windows/Tables settings entries can now record the last used date in YYYYMMDD format,
+    allowing tools to run to e.g. delete entries that haven't been used in X months. (#9460)
+  - Added bool io.ConfigIniSettingsSaveLastUsedDate to disable saving that info. (#9460)
+  - Added int io.ConfigIniSettingsAutoDiscardMonths to enable a mode where unused settings
+    are automatically discard after xx months. (#9460)
+  - Added a trimming tool under Metrics->Settings, along with a yet-unexposed function.
+  - The current system date is fed through ImGuiPlatformIO::Platform_SessionDate,
+    which is automatically set by a call to time() done during context creation. (#9460)
+  - Added IMGUI_DISABLE_TIME_FUNCTIONS to disable setting platform_io.Platform_SessionDate.
+    A custom backend may still set it manually. (#9460)
 - DrawList:
   - Minor optimization to `AddLine()`, `AddLineH()`, `AddLineV()` functions. (#4091)
   - Added `ImDrawListFlags_TextNoPixelSnap` to disable snapping of AddText()
@@ -118,6 +139,9 @@ Other Changes:
 - Misc:
   - Added IM_DEBUG_BREAK() handler for GCC+AArch64/ARM64. [@tom-seddon]
 - Backends:
+  - Metal4:
+    - Added new Metal 4 backend (forked from Metal 3 backend). (#9458, #9451) [@AmelieHeinrich]
+      Note that Metal-cpp is not yet supported.
   - OpenGL3:
     - GLSL version detection assume GLSL 410 when GL context is 4.1.
       Fixes an issue running on macOS with Wine. [#9427, #6577) [@perminovVS]
@@ -127,6 +151,11 @@ Other Changes:
     - Uses `SetProcessDpiAwarenessContext()` instead of `SetThreadDpiAwarenessContext()`
       when available, fixing OpenGL DPI scaling issues as e.g. NVIDIA drivers tends
       to spawn multiple-thread to manage OpenGL. (#9403)
+- Examples: 
+  - Android: update to AGP 9.2.0 to support Gradle 9.6.0.
+  - SDL2/SDL3: use `SDL_GetWindowSizeInPixels()` to create frame-buffers. Fixes issues
+    with non-fractional framebuffer size on Wayland. (#8761, #9124) [@billtran1632001]
+  - SDL3+Metal4: added new example. (#9458, #9451) [@AmelieHeinrich]
 
 Docking+Viewports Branch:
 

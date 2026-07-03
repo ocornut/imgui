@@ -602,6 +602,9 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::SameLine(); HelpMarker("Swap Cmd<>Ctrl keys, enable various MacOS style behaviors.");
             ImGui::Text("Also see Style->Rendering for rendering options.");
 
+            ImGui::SeparatorText("Settings");
+            ImGui::Checkbox("io.ConfigIniSettingsSaveLastUsedDate", &io.ConfigIniSettingsSaveLastUsedDate);
+
             // Also read: https://github.com/ocornut/imgui/wiki/Error-Handling
             ImGui::SeparatorText("Error Handling");
 
