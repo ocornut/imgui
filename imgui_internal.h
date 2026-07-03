@@ -198,7 +198,7 @@ struct ImGuiWindowSettings;         // Storage for a window .ini settings (we ke
 // Enumerations
 // Use your programming IDE "Go to definition" facility on the names of the center columns to find the actual flags/enum lists.
 enum ImGuiLocKey : int;                 // -> enum ImGuiLocKey              // Enum: a localization entry for translation.
-typedef int ImGuiDataAuthority;         // -> enum ImGuiDataAuthority_      // Enum: for storing the source authority (dock node vs window) of a field
+typedef unsigned int ImGuiDataAuthority;// -> enum ImGuiDataAuthority_      // Enum: for storing the source authority (dock node vs window) of a field
 typedef int ImGuiLayoutType;            // -> enum ImGuiLayoutType_         // Enum: Horizontal or vertical
 
 // Flags
@@ -2091,9 +2091,9 @@ struct IMGUI_API ImGuiDockNode
     ImGuiID                 SelectedTabId;              // [Leaf node only] Which of our tab/window is selected.
     ImGuiID                 WantCloseTabId;             // [Leaf node only] Set when closing a specific tab/window.
     ImGuiID                 RefViewportId;              // Reference viewport ID from visible window when HostWindow == NULL.
-    ImGuiDataAuthority      AuthorityForPos         :3;
-    ImGuiDataAuthority      AuthorityForSize        :3;
-    ImGuiDataAuthority      AuthorityForViewport    :3;
+    ImU8                    AuthorityForPos         :3; // ImGuiDataAuthority
+    ImU8                    AuthorityForSize        :3;
+    ImU8                    AuthorityForViewport    :3;
     bool                    IsVisible               :1; // Set to false when the node is hidden (usually disabled as it has no active window)
     bool                    IsFocused               :1;
     bool                    IsBgDrawnThisFrame      :1;

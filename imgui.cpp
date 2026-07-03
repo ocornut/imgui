@@ -21013,8 +21013,8 @@ void ImGui::DockBuilderRemoveNodeChildNodes(ImGuiID root_id)
         return;
     bool has_central_node = false;
 
-    ImGuiDataAuthority backup_root_node_authority_for_pos = root_node ? root_node->AuthorityForPos : ImGuiDataAuthority_Auto;
-    ImGuiDataAuthority backup_root_node_authority_for_size = root_node ? root_node->AuthorityForSize : ImGuiDataAuthority_Auto;
+    ImGuiDataAuthority backup_root_node_authority_for_pos = root_node ? (ImGuiDataAuthority_)root_node->AuthorityForPos : ImGuiDataAuthority_Auto;
+    ImGuiDataAuthority backup_root_node_authority_for_size = root_node ? (ImGuiDataAuthority_)root_node->AuthorityForSize : ImGuiDataAuthority_Auto;
 
     // Process active windows
     ImVector<ImGuiDockNode*> nodes_to_remove;
@@ -21041,8 +21041,8 @@ void ImGui::DockBuilderRemoveNodeChildNodes(ImGuiID root_id)
     // Make sure we don't lose our current pos/size. (FIXME-DOCK: Consider tidying up that code in DockNodeAddWindow instead)
     if (root_node)
     {
-        root_node->AuthorityForPos = backup_root_node_authority_for_pos;
-        root_node->AuthorityForSize = backup_root_node_authority_for_size;
+        root_node->AuthorityForPos = (ImU8)backup_root_node_authority_for_pos;
+        root_node->AuthorityForSize = (ImU8)backup_root_node_authority_for_size;
     }
 
     // Apply to settings
