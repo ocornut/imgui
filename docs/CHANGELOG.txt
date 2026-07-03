@@ -153,6 +153,9 @@ Other Changes:
       to spawn multiple-thread to manage OpenGL. (#9403)
 - Examples: 
   - Android: update to AGP 9.2.0 to support Gradle 9.6.0.
+  - OpenGL3+GLFW/SDL2/SDL3: allow Wine compatibility by passing empty GLSL version
+    string to ImGui_ImplOpenGL3_Init() to let backend decide of a GLSL version based
+    on actual GL version obtained. (#9427, #6577) [@perminovVS]
   - SDL2/SDL3: use `SDL_GetWindowSizeInPixels()` to create frame-buffers. Fixes issues
     with non-fractional framebuffer size on Wayland. (#8761, #9124) [@billtran1632001]
   - SDL3+Metal4: added new example. (#9458, #9451) [@AmelieHeinrich]
