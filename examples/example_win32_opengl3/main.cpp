@@ -233,8 +233,8 @@ bool CreateDeviceWGL(HWND hWnd, WGL_WindowData* data)
 
     // Keep temporary context: already OpenGL 3.0+.
     g_hRC = tempRC;
-    //if (gl_version >= 300)
-      //  return true;
+    if (gl_version >= 300)
+        return true;
 
     typedef HGLRC(WINAPI* PFNWGLCREATECONTEXTATTRIBSARBPROC)(HDC, HGLRC, const int*);
     const PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC)wglGetProcAddress("wglCreateContextAttribsARB");
