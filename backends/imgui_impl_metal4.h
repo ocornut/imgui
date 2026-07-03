@@ -7,7 +7,6 @@
 //  [X] Renderer: Large meshes support (64k+ vertices) even with 16-bit indices (ImGuiBackendFlags_RendererHasVtxOffset).
 //  [X] Renderer: Texture updates support for dynamic font atlas (ImGuiBackendFlags_RendererHasTextures).
 // Missing features or Issues:
-//  [ ] Metal-cpp support.
 //  [ ] Texture view pool support? Reevaluate which type to use for ImtextureID.
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
@@ -51,6 +50,38 @@ IMGUI_IMPL_API void ImGui_ImplMetal4_DestroyDeviceObjects();
 // (Advanced) Use e.g. if you need to precisely control the timing of texture updates (e.g. for staged rendering), by setting ImDrawData::Textures = nullptr to handle this manually.
 IMGUI_IMPL_API void ImGui_ImplMetal4_UpdateTexture(ImTextureData* tex);
 
+#endif
+
+//-----------------------------------------------------------------------------
+// C++ API
+//-----------------------------------------------------------------------------
+
+// Enable Metal C++ binding support with '#define IMGUI_IMPL_METAL_CPP' in your imconfig.h file
+// More info about using Metal from C++: https://developer.apple.com/metal/cpp/
+
+#ifdef IMGUI_IMPL_METAL_CPP
+#ifndef __OBJC__
+
+// Forward declare relevant classes from the MTL and MTL4 namespace
+namespace MTL { class Device; }
+namespace MTL4 { class CommandQueue; class CommandBuffer; class RenderPassDescriptor; class RenderCommandEncoder; }
+
+// Follow "Getting Started" link and check examples/ folder to learn about using backends!
+IMGUI_IMPL_API bool ImGui_ImplMetal4_Init(MTL::Device* device, MTL4::CommandQueue* commandQueue, int framesInFlight);
+IMGUI_IMPL_API void ImGui_ImplMetal4_Shutdown();
+IMGUI_IMPL_API void ImGui_ImplMetal4_NewFrame(MTL4::RenderPassDescriptor* renderPassDescriptor, int frameInFlightIndex);
+IMGUI_IMPL_API void ImGui_ImplMetal4_RenderDrawData(ImDrawData* draw_data,
+                                                   MTL4::CommandBuffer* commandBuffer,
+                                                   MTL4::RenderCommandEncoder* commandEncoder);
+
+// Called by Init/NewFrame/Shutdown
+IMGUI_IMPL_API bool ImGui_ImplMetal4_CreateDeviceObjects(MTL::Device* device);
+IMGUI_IMPL_API void ImGui_ImplMetal4_DestroyDeviceObjects();
+
+// (Advanced) Use e.g. if you need to precisely control the timing of texture updates (e.g. for staged rendering), by setting ImDrawData::Textures = nullptr to handle this manually.
+IMGUI_IMPL_API void ImGui_ImplMetal4_UpdateTexture(ImTextureData* tex);
+
+#endif
 #endif
 
 //-----------------------------------------------------------------------------

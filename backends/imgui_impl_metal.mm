@@ -123,7 +123,6 @@ void ImGui_ImplMetal_RenderDrawData(ImDrawData* draw_data,
     ImGui_ImplMetal_RenderDrawData(draw_data,
                                    (__bridge id<MTLCommandBuffer>)(commandBuffer),
                                    (__bridge id<MTLRenderCommandEncoder>)(commandEncoder));
-
 }
 
 bool ImGui_ImplMetal_CreateDeviceObjects(MTL::Device* device)

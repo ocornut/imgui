@@ -7,7 +7,6 @@
 //  [X] Renderer: Large meshes support (64k+ vertices) even with 16-bit indices (ImGuiBackendFlags_RendererHasVtxOffset).
 //  [X] Renderer: Texture updates support for dynamic font atlas (ImGuiBackendFlags_RendererHasTextures).
 // Missing features or Issues:
-//  [ ] Metal-cpp support.
 //  [ ] Texture view pool support? Reevaluate which type to use for ImtextureID.
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
@@ -20,6 +19,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-07-07: Metal 4: Added metal-cpp support. (#9461)
 //  2026-07-02: Metal 4: Added new Metal 4 backend implementation. (#9458)
 
 #include "imgui.h"
@@ -27,6 +27,10 @@
 #include "imgui_impl_metal4.h"
 #import <time.h>
 #import <Metal/Metal.h>
+
+#ifdef IMGUI_IMPL_METAL_CPP
+#include <Metal/Metal.hpp>
+#endif
 
 #pragma mark - Support classes and structs
 
@@ -94,6 +98,36 @@ static ImGui_ImplMetal4_Data*    ImGui_ImplMetal4_GetBackendData()    { return I
 static void                      ImGui_ImplMetal4_DestroyBackendData(){ IM_DELETE(ImGui_ImplMetal4_GetBackendData()); }
 
 static inline CFTimeInterval    GetMachAbsoluteTimeInSeconds()      { return (CFTimeInterval)(double)(clock_gettime_nsec_np(CLOCK_UPTIME_RAW) / 1e9); }
+
+#ifdef IMGUI_IMPL_METAL_CPP
+
+#pragma mark - Dear ImGui Metal C++ Backend API
+
+bool ImGui_ImplMetal4_Init(MTL::Device* device, MTL4::CommandQueue* commandQueue, int framesInFlight)
+{
+    return ImGui_ImplMetal4_Init((__bridge id<MTLDevice>)(device),(__bridge id<MTL4CommandQueue>)(commandQueue), framesInFlight);
+}
+
+void ImGui_ImplMetal4_NewFrame(MTL4::RenderPassDescriptor* renderPassDescriptor, int frameInFlightIndex)
+{
+    ImGui_ImplMetal4_NewFrame((__bridge MTL4RenderPassDescriptor*)(renderPassDescriptor), frameInFlightIndex);
+}
+
+void ImGui_ImplMetal4_RenderDrawData(ImDrawData* draw_data,
+                                    MTL4::CommandBuffer* commandBuffer,
+                                    MTL4::RenderCommandEncoder* commandEncoder)
+{
+    ImGui_ImplMetal4_RenderDrawData(draw_data,
+                                   (__bridge id<MTL4CommandBuffer>)(commandBuffer),
+                                   (__bridge id<MTL4RenderCommandEncoder>)(commandEncoder));
+}
+
+bool ImGui_ImplMetal_CreateDeviceObjects(MTL::Device* device)
+{
+    return ImGui_ImplMetal4_CreateDeviceObjects((__bridge id<MTLDevice>)(device));
+}
+
+#endif // #ifdef IMGUI_IMPL_METAL_CPP
 
 #pragma mark - Dear ImGui Metal Backend API
 
