@@ -2659,6 +2659,20 @@ static void ValueLadderRender(ImGuiWindow* window, ImGuiDataType data_type, cons
     ImGuiContext& g = *GImGui;
     ImGuiValueLadderState* ladder = &g.ValueLadderState;
     ImDrawList* draw_list = GetForegroundDrawList(window->Viewport);
+
+    // Widen the ladder when the current value text outgrows it (never shrink to avoid jittering), keeping it centered.
+    char value_buf[64];
+    const char* value_buf_end = value_buf + DataTypeFormatString(value_buf, IM_COUNTOF(value_buf), data_type, p_data, format);
+    const ImVec2 value_size = CalcTextSize(value_buf, value_buf_end);
+    const float min_width = value_size.x + g.Style.FramePadding.x * 4.0f;
+    if (ladder->Size.x < min_width)
+    {
+        ladder->Pos.x -= (min_width - ladder->Size.x) * 0.5f;
+        ladder->Size.x = min_width;
+        const ImRect viewport_rect = window->Viewport->GetMainRect();
+        ladder->Pos = ImClamp(ladder->Pos, viewport_rect.Min, ImMax(viewport_rect.Min, viewport_rect.Max - ladder->Size));
+    }
+
     const ImRect bb(ladder->Pos, ladder->Pos + ladder->Size);
     draw_list->AddRectFilled(bb.Min, bb.Max, GetColorU32(ImGuiCol_PopupBg), g.Style.PopupRounding);
     for (int n = 0; n < ladder->RungCount; n++)
@@ -2678,12 +2692,7 @@ static void ValueLadderRender(ImGuiWindow* window, ImGuiDataType data_type, cons
         const float label_y = is_selected ? (row_min.y + ((row_max.y - row_min.y) - g.FontSize * 2.0f) * 0.5f) : (row_min.y + ((row_max.y - row_min.y) - g.FontSize) * 0.5f);
         draw_list->AddText(ImVec2(row_min.x + ((row_max.x - row_min.x) - label_size.x) * 0.5f, label_y), GetColorU32(ImGuiCol_Text), label);
         if (is_selected)
-        {
-            char value_buf[64];
-            const char* value_buf_end = value_buf + DataTypeFormatString(value_buf, IM_COUNTOF(value_buf), data_type, p_data, format);
-            const ImVec2 value_size = CalcTextSize(value_buf, value_buf_end);
             draw_list->AddText(ImVec2(row_min.x + ((row_max.x - row_min.x) - value_size.x) * 0.5f, label_y + g.FontSize), GetColorU32(ImGuiCol_Text), value_buf, value_buf_end);
-        }
     }
     draw_list->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_Border), g.Style.PopupRounding);
 }
