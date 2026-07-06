@@ -1853,7 +1853,7 @@ static void DemoWindowWidgetsDragsAndSliders()
         IMGUI_DEMO_MARKER("Widgets/Value Ladder");
         // Demonstrate the value ladder: stepped value editing with explicit magnitude selection, inspired by Houdini.
         // Enabled here per-widget with ImGuiSliderFlags_ValueLadder. Use io.ConfigDragValueLadder to enable it on all DragXXX widgets.
-        ImGui::TextWrapped("Hold middle mouse button over a widget to open a value ladder: drag vertically to select step magnitude, horizontally to add/subtract steps. Release to confirm, press Escape to cancel.");
+        ImGui::TextWrapped("Hold middle mouse button over a widget to open a value ladder: drag vertically to select step magnitude, horizontally to add/subtract steps. Release to confirm, press Escape to cancel. With keyboard/gamepad navigation: activate the widget (Space) to open the ladder, Up/Down to select step magnitude, Left/Right to add/subtract steps.");
         ImGui::Checkbox("io.ConfigDragValueLadder (enable on all DragXXX widgets)", &ImGui::GetIO().ConfigDragValueLadder);
         ImGui::Spacing();
 
@@ -1877,6 +1877,9 @@ static void DemoWindowWidgetsDragsAndSliders()
         ImGui::DragFloat("Clamped (0 -> 1)", &clamped, 0.005f, 0.0f, 1.0f, "%.3f", flags);
         ImGui::DragInt("Integer (0 -> 100)", &count, 1.0f, 0, 100, "%d", flags);
         ImGui::SameLine(); HelpMarker("Integer types offer no rung smaller than 1.");
+        static int small_count = 5;
+        ImGui::DragInt("Integer (0 -> 10)", &small_count, 1.0f, 0, 10, "%d", flags);
+        ImGui::SameLine(); HelpMarker("No ladder here: it provides little to no value on integer ranges of 2 digits or less, so it is disabled.");
         ImGui::DragScalar("Double (unbounded)", ImGuiDataType_Double, &d_value, 1.0f, NULL, NULL, "%.3f", flags);
         ImGui::DragFloat3("DragFloat3", f3, 0.01f, 0.0f, 0.0f, "%.2f", flags);
         ImGui::SameLine(); HelpMarker("Multi-component widgets get a ladder on each component.");

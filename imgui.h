@@ -1950,7 +1950,7 @@ enum ImGuiSliderFlags_
     ImGuiSliderFlags_ClampZeroRange     = 1 << 10,      // Clamp even if min==max==0.0f. Otherwise due to legacy reason DragXXX functions don't clamp with those values. When your clamping limits are dynamic you almost always want to use it.
     ImGuiSliderFlags_NoSpeedTweaks      = 1 << 11,      // Disable keyboard modifiers altering tweak speed. Useful if you want to alter tweak speed yourself based on your own logic.
     ImGuiSliderFlags_ColorMarkers       = 1 << 12,      // DragScalarN(), SliderScalarN(): Draw R/G/B/A color markers on each component.
-    ImGuiSliderFlags_ValueLadder        = 1 << 13,      // DragXXX() only: hold middle mouse button over the widget to open a value ladder: drag vertically to select step magnitude, horizontally to add/subtract steps. (Shared behavior flag: io.ConfigDragValueLadder)
+    ImGuiSliderFlags_ValueLadder        = 1 << 13,      // DragXXX() only: hold middle mouse button over the widget (or activate it with keyboard/gamepad nav) to open a value ladder: drag vertically/Up/Down to select step magnitude, horizontally/Left/Right to add/subtract steps. (Shared behavior flag: io.ConfigDragValueLadder)
     ImGuiSliderFlags_AlwaysClamp        = ImGuiSliderFlags_ClampOnInput | ImGuiSliderFlags_ClampZeroRange,
     ImGuiSliderFlags_InvalidMask_       = 0x7000000F,   // [Internal] We treat using those bits as being potentially a 'float power' argument from legacy API (obsoleted 2020-08) that has got miscast to this enum, and will trigger an assert if needed.
 };
@@ -2450,7 +2450,7 @@ struct ImGuiIO
     bool        ConfigInputTextCursorBlink;     // = true           // Enable blinking cursor (optional as some users consider it to be distracting).
     bool        ConfigInputTextEnterKeepActive; // = false          // [BETA] Pressing Enter will reactivate item and select all text (single-line only).
     bool        ConfigDragClickToInputText;     // = false          // [BETA] Enable turning DragXXX widgets into text input with a simple mouse click-release (without moving). Not desirable on devices without a keyboard.
-    bool        ConfigDragValueLadder;          // = false          // [BETA] Enable holding middle mouse button over DragXXX widgets to open a value ladder: drag vertically to select step magnitude, horizontally to add/subtract steps. (Also available per-widget via ImGuiSliderFlags_ValueLadder.)
+    bool        ConfigDragValueLadder;          // = false          // [BETA] Enable value ladder on DragXXX widgets: hold middle mouse button (or activate with keyboard/gamepad nav) to open it, drag vertically/Up/Down to select step magnitude, horizontally/Left/Right to add/subtract steps. (Also available per-widget via ImGuiSliderFlags_ValueLadder.)
     bool        ConfigWindowsResizeFromEdges;   // = true           // Enable resizing of windows from their edges and from the lower-left corner. This requires ImGuiBackendFlags_HasMouseCursors for better mouse cursor feedback. (This used to be a per-window ImGuiWindowFlags_ResizeFromAnySide flag)
     bool        ConfigWindowsMoveFromTitleBarOnly;  // = false      // Enable allowing to move windows only when clicking on their title bar. Does not apply to windows without a title bar.
     bool        ConfigWindowsCopyContentsWithCtrlC; // = false      // [EXPERIMENTAL] Ctrl+C copy the contents of focused window into the clipboard. Experimental because: (1) has known issues with nested Begin/End pairs (2) text output quality varies (3) text output is in submission order rather than spatial order.

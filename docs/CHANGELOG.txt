@@ -50,8 +50,12 @@ Other Changes:
   a DragXXX widget to open a vertical ladder of step magnitudes: drag vertically
   to select the step magnitude, horizontally to add/subtract steps of that size.
   Release middle mouse button to confirm, press Escape to cancel and revert.
+  Also works with keyboard/gamepad navigation: activating the widget (Space)
+  opens the ladder, Up/Down select the step magnitude, Left/Right add/subtract
+  steps, Space confirms, Escape cancels and reverts.
   Enable globally with `io.ConfigDragValueLadder` or per-widget with
-  `ImGuiSliderFlags_ValueLadder`. Not supported with ImGuiSliderFlags_Logarithmic. (#9463)
+  `ImGuiSliderFlags_ValueLadder`. Not supported with ImGuiSliderFlags_Logarithmic.
+  Disabled on integer ranges of 2 digits or less. (#9463)
 - Windows:
   - Clicking on a window's empty-space to move/focus a window checks
     for lack of mouse button ownership. This gives an additional opportunity

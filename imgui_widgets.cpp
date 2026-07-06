@@ -2242,6 +2242,7 @@ bool ImGui::Combo(const char* label, int* current_item, const char* items_separa
 // - DataTypeGetInfo()
 // - DataTypeFormatString()
 // - DataTypeApplyOp()
+// - DataTypeAsDouble()
 // - DataTypeApplyFromText()
 // - DataTypeCompare()
 // - DataTypeClamp()
@@ -2353,6 +2354,26 @@ void ImGui::DataTypeApplyOp(ImGuiDataType data_type, int op, void* output, const
         case ImGuiDataType_COUNT: break;
     }
     IM_ASSERT(0);
+}
+
+double ImGui::DataTypeAsDouble(ImGuiDataType data_type, const void* p_data)
+{
+    switch (data_type)
+    {
+    case ImGuiDataType_S8:     return (double)*(const ImS8*)p_data;
+    case ImGuiDataType_U8:     return (double)*(const ImU8*)p_data;
+    case ImGuiDataType_S16:    return (double)*(const ImS16*)p_data;
+    case ImGuiDataType_U16:    return (double)*(const ImU16*)p_data;
+    case ImGuiDataType_S32:    return (double)*(const ImS32*)p_data;
+    case ImGuiDataType_U32:    return (double)*(const ImU32*)p_data;
+    case ImGuiDataType_S64:    return (double)*(const ImS64*)p_data;
+    case ImGuiDataType_U64:    return (double)*(const ImU64*)p_data;
+    case ImGuiDataType_Float:  return (double)*(const float*)p_data;
+    case ImGuiDataType_Double: return *(const double*)p_data;
+    case ImGuiDataType_COUNT:  break;
+    }
+    IM_ASSERT(0);
+    return 0.0;
 }
 
 // User can input math operators (e.g. +100) to edit a numerical values.
@@ -2526,32 +2547,22 @@ TYPE ImGui::RoundScalarWithFormatT(const char* format, ImGuiDataType data_type, 
 // - DragIntRange2()
 //-------------------------------------------------------------------------
 // Value ladder (hold middle mouse button over a Drag widget): [Internal]
+// - ValueLadderCalcRange()
 // - ValueLadderStart()
 // - ValueLadderUpdate()
 // - ValueLadderRender()
 //-------------------------------------------------------------------------
 
-static double ValueLadderGetValueAsDouble(ImGuiDataType data_type, const void* p_data)
+// Compute (max - min) as double. Integer overflow is clamped by DataTypeApplyOp().
+static double ValueLadderCalcRange(ImGuiDataType data_type, const void* p_min, const void* p_max)
 {
-    switch (data_type)
-    {
-    case ImGuiDataType_S8:     return (double)*(const ImS8*)p_data;
-    case ImGuiDataType_U8:     return (double)*(const ImU8*)p_data;
-    case ImGuiDataType_S16:    return (double)*(const ImS16*)p_data;
-    case ImGuiDataType_U16:    return (double)*(const ImU16*)p_data;
-    case ImGuiDataType_S32:    return (double)*(const ImS32*)p_data;
-    case ImGuiDataType_U32:    return (double)*(const ImU32*)p_data;
-    case ImGuiDataType_S64:    return (double)*(const ImS64*)p_data;
-    case ImGuiDataType_U64:    return (double)*(const ImU64*)p_data;
-    case ImGuiDataType_Float:  return (double)*(const float*)p_data;
-    case ImGuiDataType_Double: return *(const double*)p_data;
-    }
-    IM_ASSERT(0);
-    return 0.0;
+    ImGuiDataTypeStorage range_storage;
+    ImGui::DataTypeApplyOp(data_type, '-', &range_storage, p_max, p_min);
+    return ImGui::DataTypeAsDouble(data_type, &range_storage);
 }
 
-// Initiate a value ladder for the given widget: build magnitude rungs and lay out the overlay around the mouse cursor.
-static void ValueLadderStart(ImGuiWindow* window, ImGuiID id, ImGuiDataType data_type, const void* p_data, float v_speed, const void* p_min, const void* p_max, const char* format)
+// Initiate a value ladder for the given widget: build magnitude rungs and lay out the overlay so the selected rung is centered on anchor_pos.
+static void ValueLadderStart(ImGuiWindow* window, ImGuiID id, ImGuiDataType data_type, const void* p_data, float v_speed, const void* p_min, const void* p_max, const char* format, ImVec2 anchor_pos)
 {
     using namespace ImGui;
     ImGuiContext& g = *GImGui;
@@ -2569,7 +2580,7 @@ static void ValueLadderStart(ImGuiWindow* window, ImGuiID id, ImGuiDataType data
     // For a bounded widget, drop rungs covering the whole range or more: cap at the largest power of ten smaller than the range span.
     if (p_min != NULL && p_max != NULL)
     {
-        const double range = ValueLadderGetValueAsDouble(data_type, p_max) - ValueLadderGetValueAsDouble(data_type, p_min);
+        const double range = ValueLadderCalcRange(data_type, p_min, p_max);
         if (range > 0.0 && range < (double)FLT_MAX)
         {
             int range_exp = (int)ImFloor(ImLog(range) / ImLog(10.0));
@@ -2590,7 +2601,7 @@ static void ValueLadderStart(ImGuiWindow* window, ImGuiID id, ImGuiDataType data
         rung_index = (int)ImFloor(ImLog(v_speed) / ImLog(10.0f) + 0.5f) - min_exp;
     ladder->RungIndex = ImClamp(rung_index, 0, ladder->RungCount - 1);
 
-    // Lay out a vertical stack with the largest step at top and the selected rung under the mouse cursor, clamped into the viewport.
+    // Lay out a vertical stack with the largest step at top and the selected rung centered on the anchor, clamped into the viewport.
     // Each rung is two text lines tall so the selected rung can display the step value above the current widget value.
     float max_label_width = 0.0f;
     for (int n = 0; n < ladder->RungCount; n++)
@@ -2604,19 +2615,28 @@ static void ValueLadderStart(ImGuiWindow* window, ImGuiID id, ImGuiDataType data
     max_label_width = ImMax(max_label_width, CalcTextSize(value_buf, value_buf + value_buf_len).x);
     ladder->RowHeight = g.FontSize * 2.0f + g.Style.FramePadding.y * 2.0f;
     ladder->Size = ImVec2(max_label_width + g.Style.FramePadding.x * 4.0f, ladder->RowHeight * ladder->RungCount);
-    ladder->Pos.x = g.IO.MousePos.x - ladder->Size.x * 0.5f;
-    ladder->Pos.y = g.IO.MousePos.y - ladder->RowHeight * 0.5f - (float)(ladder->RungCount - 1 - ladder->RungIndex) * ladder->RowHeight;
+    ladder->Pos.x = anchor_pos.x - ladder->Size.x * 0.5f;
+    ladder->Pos.y = anchor_pos.y - ladder->RowHeight * 0.5f - (float)(ladder->RungCount - 1 - ladder->RungIndex) * ladder->RowHeight;
     const ImRect viewport_rect = window->Viewport->GetMainRect();
     ladder->Pos = ImClamp(ladder->Pos, viewport_rect.Min, ImMax(viewport_rect.Min, viewport_rect.Max - ladder->Size));
 }
 
-// Update rung selection from vertical mouse position and convert horizontal mouse movement into steps.
+// Update rung selection and convert inputs into steps.
+// Mouse: vertical position selects the magnitude, horizontal movement adds/subtracts steps.
+// Keyboard/Gamepad: Up/Down select the magnitude, Left/Right add/subtract steps.
 static void ValueLadderUpdate()
 {
     using namespace ImGui;
     ImGuiContext& g = *GImGui;
     ImGuiValueLadderState* ladder = &g.ValueLadderState;
     ladder->StepDeltaToApply = 0.0f;
+    if (g.ActiveIdSource == ImGuiInputSource_Keyboard || g.ActiveIdSource == ImGuiInputSource_Gamepad)
+    {
+        const int rung_delta = -(int)GetNavTweakPressedAmount(ImGuiAxis_Y); // Up = larger steps
+        ladder->RungIndex = ImClamp(ladder->RungIndex + rung_delta, 0, ladder->RungCount - 1);
+        ladder->StepDeltaToApply = (float)((double)GetNavTweakPressedAmount(ImGuiAxis_X) * ladder->RungSteps[ladder->RungIndex]);
+        return;
+    }
     if (!IsMousePosValid())
         return;
 
@@ -2818,21 +2838,17 @@ bool ImGui::DragBehavior(ImGuiID id, ImGuiDataType data_type, void* p_v, float v
     if (g.ActiveId == id)
     {
         // Those are the things we can do easily outside the DragBehaviorT<> template, saves code generation.
-        if (ladder != NULL && g.ActiveIdSource == ImGuiInputSource_Mouse)
+        if (ladder != NULL && Shortcut(ImGuiKey_Escape, ImGuiInputFlags_None, id))
         {
-            // Value ladder is held with the middle mouse button. Escape cancels and reverts to the initial value.
-            if (Shortcut(ImGuiKey_Escape, ImGuiInputFlags_None, id))
-            {
-                const bool value_changed = (DataTypeCompare(data_type, p_v, g.ActiveIdValueOnActivation.Data) != 0);
-                memcpy(p_v, g.ActiveIdValueOnActivation.Data, DataTypeGetInfo(data_type)->Size);
-                ClearActiveID();
-                ladder->SourceId = 0;
-                return value_changed;
-            }
-            if (!g.IO.MouseDown[ImGuiMouseButton_Middle])
-                ClearActiveID();
+            // Escape cancels the value ladder and reverts to the initial value.
+            const bool value_changed = (DataTypeCompare(data_type, p_v, g.ActiveIdValueOnActivation.Data) != 0);
+            memcpy(p_v, g.ActiveIdValueOnActivation.Data, DataTypeGetInfo(data_type)->Size);
+            ClearActiveID();
+            ladder->SourceId = 0;
+            return value_changed;
         }
-        else if (g.ActiveIdSource == ImGuiInputSource_Mouse && !g.IO.MouseDown[0])
+        // Value ladder driven by mouse is held with the middle mouse button.
+        if (g.ActiveIdSource == ImGuiInputSource_Mouse && !g.IO.MouseDown[(ladder != NULL) ? ImGuiMouseButton_Middle : ImGuiMouseButton_Left])
             ClearActiveID();
         else if ((g.ActiveIdSource == ImGuiInputSource_Keyboard || g.ActiveIdSource == ImGuiInputSource_Gamepad) && g.NavActivatePressedId == id && !g.ActiveIdIsJustActivated)
             ClearActiveID();
@@ -2915,7 +2931,15 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data,
         // Tabbing or Ctrl+Click on Drag turns it into an InputText
         const bool clicked = hovered && IsMouseClicked(0, ImGuiInputFlags_None, id);
         const bool double_clicked = (hovered && g.IO.MouseClickedCount[0] == 2 && TestKeyOwner(ImGuiKey_MouseLeft, id));
-        const bool ladder_enabled = ((flags & ImGuiSliderFlags_ValueLadder) || g.IO.ConfigDragValueLadder) && !(flags & ImGuiSliderFlags_Logarithmic);
+        bool ladder_enabled = ((flags & ImGuiSliderFlags_ValueLadder) || g.IO.ConfigDragValueLadder) && !(flags & ImGuiSliderFlags_Logarithmic);
+        const bool ladder_requested = ladder_enabled && ((hovered && IsMouseClicked(ImGuiMouseButton_Middle, ImGuiInputFlags_None, id)) || g.NavActivateId == id);
+        if (ladder_requested && (data_type != ImGuiDataType_Float && data_type != ImGuiDataType_Double) && p_min != NULL && p_max != NULL)
+        {
+            // The ladder provides little to no value on integer ranges of 2 digits or less.
+            const double range = ValueLadderCalcRange(data_type, p_min, p_max);
+            if (range > 0.0 && range < 100.0)
+                ladder_enabled = false;
+        }
         const bool ladder_clicked = ladder_enabled && hovered && IsMouseClicked(ImGuiMouseButton_Middle, ImGuiInputFlags_None, id);
         const bool make_active = (clicked || double_clicked || ladder_clicked || g.NavActivateId == id);
         if (make_active && (clicked || double_clicked))
@@ -2946,7 +2970,13 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data,
             FocusWindow(window);
             g.ActiveIdUsingNavDirMask = (1 << ImGuiDir_Left) | (1 << ImGuiDir_Right);
             if (ladder_clicked)
-                ValueLadderStart(window, id, data_type, p_data, v_speed, p_min, p_max, format);
+                ValueLadderStart(window, id, data_type, p_data, v_speed, p_min, p_max, format, g.IO.MousePos);
+            else if (ladder_enabled && g.NavActivateId == id)
+            {
+                // Keyboard/Gamepad activation (Space): open the ladder over the widget, claim Up/Down for magnitude selection.
+                ValueLadderStart(window, id, data_type, p_data, v_speed, p_min, p_max, format, frame_bb.GetCenter());
+                g.ActiveIdUsingNavDirMask |= (1 << ImGuiDir_Up) | (1 << ImGuiDir_Down);
+            }
         }
     }
 
