@@ -55,7 +55,8 @@ Other Changes:
   steps, Space confirms, Escape cancels and reverts.
   Enable globally with `io.ConfigDragValueLadder` or per-widget with
   `ImGuiSliderFlags_ValueLadder`. Not supported with ImGuiSliderFlags_Logarithmic.
-  Disabled on integer ranges of 2 digits or less. (#9463)
+  Disabled when the widget would yield fewer than 3 rungs (e.g. small integer
+  ranges). (#9463)
 - Windows:
   - Clicking on a window's empty-space to move/focus a window checks
     for lack of mouse button ownership. This gives an additional opportunity

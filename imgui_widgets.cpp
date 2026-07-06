@@ -2548,6 +2548,7 @@ TYPE ImGui::RoundScalarWithFormatT(const char* format, ImGuiDataType data_type, 
 //-------------------------------------------------------------------------
 // Value ladder (hold middle mouse button over a Drag widget): [Internal]
 // - ValueLadderCalcRange()
+// - ValueLadderCalcRungs()
 // - ValueLadderStart()
 // - ValueLadderUpdate()
 // - ValueLadderRender()
@@ -2561,23 +2562,15 @@ static double ValueLadderCalcRange(ImGuiDataType data_type, const void* p_min, c
     return ImGui::DataTypeAsDouble(data_type, &range_storage);
 }
 
-// Initiate a value ladder for the given widget: build magnitude rungs and lay out the overlay so the selected rung is centered on anchor_pos.
-static void ValueLadderStart(ImGuiWindow* window, ImGuiID id, ImGuiDataType data_type, const void* p_data, float v_speed, const void* p_min, const void* p_max, const char* format, ImVec2 anchor_pos)
+// Compute the rung magnitudes as a range of powers of ten and return the rung count.
+// Rungs go from the smallest step representable with the display format (1 for integers) up to 10000.
+// For a bounded widget, rungs covering the whole range or more are dropped: capped at the largest power of ten smaller than the range span.
+static int ValueLadderCalcRungs(ImGuiDataType data_type, const void* p_min, const void* p_max, const char* format, int* out_min_exp)
 {
-    using namespace ImGui;
-    ImGuiContext& g = *GImGui;
-    ImGuiValueLadderState* ladder = &g.ValueLadderState;
-    ladder->SourceId = id;
-    ladder->PendingAccumX = 0.0f;
-    ladder->StepDeltaToApply = 0.0f;
-
-    // Build rungs from the smallest step representable with the display format (1 for integers) up to 10000.
     const bool is_floating_point = (data_type == ImGuiDataType_Float) || (data_type == ImGuiDataType_Double);
     const int decimal_precision = is_floating_point ? ImParseFormatPrecision(format, 3) : 0;
     int min_exp = -ImClamp(decimal_precision, 0, 9);
     int max_exp = 4;
-
-    // For a bounded widget, drop rungs covering the whole range or more: cap at the largest power of ten smaller than the range span.
     if (p_min != NULL && p_max != NULL)
     {
         const double range = ValueLadderCalcRange(data_type, p_min, p_max);
@@ -2591,7 +2584,22 @@ static void ValueLadderStart(ImGuiWindow* window, ImGuiID id, ImGuiDataType data
                 min_exp = max_exp; // Add steps smaller than the display format rather than ending up with no rungs at all.
         }
     }
-    ladder->RungCount = ImMin(max_exp - min_exp + 1, (int)IM_COUNTOF(ladder->RungSteps));
+    *out_min_exp = min_exp;
+    return ImMin(max_exp - min_exp + 1, (int)IM_COUNTOF(GImGui->ValueLadderState.RungSteps));
+}
+
+// Initiate a value ladder for the given widget: build magnitude rungs and lay out the overlay so the selected rung is centered on anchor_pos.
+static void ValueLadderStart(ImGuiWindow* window, ImGuiID id, ImGuiDataType data_type, const void* p_data, float v_speed, const void* p_min, const void* p_max, const char* format, ImVec2 anchor_pos)
+{
+    using namespace ImGui;
+    ImGuiContext& g = *GImGui;
+    ImGuiValueLadderState* ladder = &g.ValueLadderState;
+    ladder->SourceId = id;
+    ladder->PendingAccumX = 0.0f;
+    ladder->StepDeltaToApply = 0.0f;
+
+    int min_exp;
+    ladder->RungCount = ValueLadderCalcRungs(data_type, p_min, p_max, format, &min_exp);
     for (int n = 0; n < ladder->RungCount; n++)
         ladder->RungSteps[n] = ImPow(10.0, (double)(min_exp + n));
 
@@ -2613,7 +2621,7 @@ static void ValueLadderStart(ImGuiWindow* window, ImGuiID id, ImGuiDataType data
     char value_buf[64];
     const int value_buf_len = DataTypeFormatString(value_buf, IM_COUNTOF(value_buf), data_type, p_data, format);
     max_label_width = ImMax(max_label_width, CalcTextSize(value_buf, value_buf + value_buf_len).x);
-    ladder->RowHeight = g.FontSize * 2.0f + g.Style.FramePadding.y * 2.0f;
+    ladder->RowHeight = g.FontSize * 3.0f + g.Style.FramePadding.y * 2.0f;
     ladder->Size = ImVec2(max_label_width + g.Style.FramePadding.x * 4.0f, ladder->RowHeight * ladder->RungCount);
     ladder->Pos.x = anchor_pos.x - ladder->Size.x * 0.5f;
     ladder->Pos.y = anchor_pos.y - ladder->RowHeight * 0.5f - (float)(ladder->RungCount - 1 - ladder->RungIndex) * ladder->RowHeight;
@@ -2942,11 +2950,11 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data,
         const bool double_clicked = (hovered && g.IO.MouseClickedCount[0] == 2 && TestKeyOwner(ImGuiKey_MouseLeft, id));
         bool ladder_enabled = ((flags & ImGuiSliderFlags_ValueLadder) || g.IO.ConfigDragValueLadder) && !(flags & ImGuiSliderFlags_Logarithmic);
         const bool ladder_requested = ladder_enabled && ((hovered && IsMouseClicked(ImGuiMouseButton_Middle, ImGuiInputFlags_None, id)) || g.NavActivateId == id);
-        if (ladder_requested && (data_type != ImGuiDataType_Float && data_type != ImGuiDataType_Double) && p_min != NULL && p_max != NULL)
+        if (ladder_requested)
         {
-            // The ladder provides little to no value on integer ranges of 2 digits or less.
-            const double range = ValueLadderCalcRange(data_type, p_min, p_max);
-            if (range > 0.0 && range < 100.0)
+            // The ladder provides little to no value when only very few magnitudes are reachable (e.g. small integer ranges).
+            int rung_min_exp;
+            if (ValueLadderCalcRungs(data_type, p_min, p_max, format, &rung_min_exp) < 3)
                 ladder_enabled = false;
         }
         const bool ladder_clicked = ladder_enabled && hovered && IsMouseClicked(ImGuiMouseButton_Middle, ImGuiInputFlags_None, id);

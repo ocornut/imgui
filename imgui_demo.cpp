@@ -1875,11 +1875,11 @@ static void DemoWindowWidgetsDragsAndSliders()
         ImGui::DragFloat("High precision", &precise, 0.001f, 0.0f, 0.0f, "%.4f", flags);
         ImGui::SameLine(); HelpMarker("The smallest rung comes from the display format: %.4f offers steps down to 0.0001.");
         ImGui::DragFloat("Clamped (0 -> 1)", &clamped, 0.005f, 0.0f, 1.0f, "%.3f", flags);
-        ImGui::DragInt("Integer (0 -> 100)", &count, 1.0f, 0, 100, "%d", flags);
+        ImGui::DragInt("Integer (0 -> 1000)", &count, 1.0f, 0, 1000, "%d", flags);
         ImGui::SameLine(); HelpMarker("Integer types offer no rung smaller than 1.");
         static int small_count = 5;
-        ImGui::DragInt("Integer (0 -> 10)", &small_count, 1.0f, 0, 10, "%d", flags);
-        ImGui::SameLine(); HelpMarker("No ladder here: it provides little to no value on integer ranges of 2 digits or less, so it is disabled.");
+        ImGui::DragInt("Integer (0 -> 100)", &small_count, 1.0f, 0, 100, "%d", flags);
+        ImGui::SameLine(); HelpMarker("No ladder here: this range yields fewer than 3 rungs, so the ladder is disabled (it would provide little to no value).");
         ImGui::DragScalar("Double (unbounded)", ImGuiDataType_Double, &d_value, 1.0f, NULL, NULL, "%.3f", flags);
         ImGui::DragFloat3("DragFloat3", f3, 0.01f, 0.0f, 0.0f, "%.2f", flags);
         ImGui::SameLine(); HelpMarker("Multi-component widgets get a ladder on each component.");
