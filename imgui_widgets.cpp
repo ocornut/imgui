@@ -5751,7 +5751,6 @@ void ImGui::DebugNodeInputTextState(ImGuiInputTextState* state)
 // - RenderColorRectWithAlphaCheckerboard() [Internal]
 // - ColorPicker4()
 // - ColorButton()
-// - SetColorEditOptions()
 // - ColorTooltip() [Internal]
 // - ColorEditOptionsPopup() [Internal]
 // - ColorPickerOptionsPopup() [Internal]
@@ -5823,14 +5822,14 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
 
     // Read stored options
     if (!(flags & ImGuiColorEditFlags_DisplayMask_))
-        flags |= (g.ColorEditOptions & ImGuiColorEditFlags_DisplayMask_);
+        flags |= (g.Style.ColorEditFlags & ImGuiColorEditFlags_DisplayMask_);
     if (!(flags & ImGuiColorEditFlags_DataTypeMask_))
-        flags |= (g.ColorEditOptions & ImGuiColorEditFlags_DataTypeMask_);
+        flags |= (g.Style.ColorEditFlags & ImGuiColorEditFlags_DataTypeMask_);
     if (!(flags & ImGuiColorEditFlags_PickerMask_))
-        flags |= (g.ColorEditOptions & ImGuiColorEditFlags_PickerMask_);
+        flags |= (g.Style.ColorEditFlags & ImGuiColorEditFlags_PickerMask_);
     if (!(flags & ImGuiColorEditFlags_InputMask_))
-        flags |= (g.ColorEditOptions & ImGuiColorEditFlags_InputMask_);
-    flags |= (g.ColorEditOptions & ~(ImGuiColorEditFlags_DisplayMask_ | ImGuiColorEditFlags_DataTypeMask_ | ImGuiColorEditFlags_PickerMask_ | ImGuiColorEditFlags_InputMask_));
+        flags |= (g.Style.ColorEditFlags & ImGuiColorEditFlags_InputMask_);
+    flags |= (g.Style.ColorEditFlags & ~(ImGuiColorEditFlags_DisplayMask_ | ImGuiColorEditFlags_DataTypeMask_ | ImGuiColorEditFlags_PickerMask_ | ImGuiColorEditFlags_InputMask_));
     IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiColorEditFlags_DisplayMask_)); // Check that only 1 is selected
     IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiColorEditFlags_InputMask_));   // Check that only 1 is selected
 
@@ -6099,13 +6098,13 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
 
     // Read stored options
     if (!(flags & ImGuiColorEditFlags_PickerMask_))
-        flags |= ((g.ColorEditOptions & ImGuiColorEditFlags_PickerMask_) ? g.ColorEditOptions : ImGuiColorEditFlags_DefaultOptions_) & ImGuiColorEditFlags_PickerMask_;
+        flags |= ((g.Style.ColorEditFlags & ImGuiColorEditFlags_PickerMask_) ? g.Style.ColorEditFlags : ImGuiColorEditFlags_DefaultOptions_) & ImGuiColorEditFlags_PickerMask_;
     if (!(flags & ImGuiColorEditFlags_InputMask_))
-        flags |= ((g.ColorEditOptions & ImGuiColorEditFlags_InputMask_) ? g.ColorEditOptions : ImGuiColorEditFlags_DefaultOptions_) & ImGuiColorEditFlags_InputMask_;
+        flags |= ((g.Style.ColorEditFlags & ImGuiColorEditFlags_InputMask_) ? g.Style.ColorEditFlags : ImGuiColorEditFlags_DefaultOptions_) & ImGuiColorEditFlags_InputMask_;
     IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiColorEditFlags_PickerMask_)); // Check that only 1 is selected
     IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiColorEditFlags_InputMask_));  // Check that only 1 is selected
     if (!(flags & ImGuiColorEditFlags_NoOptions))
-        flags |= (g.ColorEditOptions & ImGuiColorEditFlags_AlphaBar);
+        flags |= (g.Style.ColorEditFlags & ImGuiColorEditFlags_AlphaBar);
 
     // Setup
     int components = (flags & ImGuiColorEditFlags_NoAlpha) ? 3 : 4;
@@ -6525,25 +6524,18 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
     return pressed;
 }
 
-// Initialize/override default color options
-// FIXME: Could be moved to a simple IO field.
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+// This allowed passing 0 to set default, whereas NewFrame() will assert if one of missing. Abide to old logic.
 void ImGui::SetColorEditOptions(ImGuiColorEditFlags flags)
 {
     ImGuiContext& g = *GImGui;
-    if ((flags & ImGuiColorEditFlags_DisplayMask_) == 0)
-        flags |= ImGuiColorEditFlags_DefaultOptions_ & ImGuiColorEditFlags_DisplayMask_;
-    if ((flags & ImGuiColorEditFlags_DataTypeMask_) == 0)
-        flags |= ImGuiColorEditFlags_DefaultOptions_ & ImGuiColorEditFlags_DataTypeMask_;
-    if ((flags & ImGuiColorEditFlags_PickerMask_) == 0)
-        flags |= ImGuiColorEditFlags_DefaultOptions_ & ImGuiColorEditFlags_PickerMask_;
-    if ((flags & ImGuiColorEditFlags_InputMask_) == 0)
-        flags |= ImGuiColorEditFlags_DefaultOptions_ & ImGuiColorEditFlags_InputMask_;
-    IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiColorEditFlags_DisplayMask_));    // Check only 1 option is selected
-    IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiColorEditFlags_DataTypeMask_));   // Check only 1 option is selected
-    IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiColorEditFlags_PickerMask_));     // Check only 1 option is selected
-    IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiColorEditFlags_InputMask_));      // Check only 1 option is selected
-    g.ColorEditOptions = flags;
+    if ((flags & ImGuiColorEditFlags_DisplayMask_) == 0)    { flags |= ImGuiColorEditFlags_DefaultOptions_ & ImGuiColorEditFlags_DisplayMask_; }
+    if ((flags & ImGuiColorEditFlags_DataTypeMask_) == 0)   { flags |= ImGuiColorEditFlags_DefaultOptions_ & ImGuiColorEditFlags_DataTypeMask_; }
+    if ((flags & ImGuiColorEditFlags_PickerMask_) == 0)     { flags |= ImGuiColorEditFlags_DefaultOptions_ & ImGuiColorEditFlags_PickerMask_; }
+    if ((flags & ImGuiColorEditFlags_InputMask_) == 0)      { flags |= ImGuiColorEditFlags_DefaultOptions_ & ImGuiColorEditFlags_InputMask_; }
+    g.Style.ColorEditFlags = flags;
 }
+#endif
 
 // Note: only access 3 floats if ImGuiColorEditFlags_NoAlpha flag is set.
 void ImGui::ColorTooltip(const char* text, const float* col, ImGuiColorEditFlags flags)
@@ -6591,7 +6583,7 @@ void ImGui::ColorEditOptionsPopup(const float* col, ImGuiColorEditFlags flags)
 
     ImGuiContext& g = *GImGui;
     PushItemFlag(ImGuiItemFlags_NoMarkEdited, true);
-    ImGuiColorEditFlags opts = g.ColorEditOptions;
+    ImGuiColorEditFlags opts = g.Style.ColorEditFlags;
     if (allow_opt_inputs)
     {
         if (RadioButton("RGB", (opts & ImGuiColorEditFlags_DisplayRGB) != 0)) opts = (opts & ~ImGuiColorEditFlags_DisplayMask_) | ImGuiColorEditFlags_DisplayRGB;
@@ -6631,7 +6623,7 @@ void ImGui::ColorEditOptionsPopup(const float* col, ImGuiColorEditFlags flags)
         EndPopup();
     }
 
-    g.ColorEditOptions = opts;
+    g.Style.ColorEditFlags = opts;
     PopItemFlag();
     EndPopup();
 }
@@ -6659,7 +6651,7 @@ void ImGui::ColorPickerOptionsPopup(const float* ref_col, ImGuiColorEditFlags fl
             if (picker_type == 1) picker_flags |= ImGuiColorEditFlags_PickerHueWheel;
             ImVec2 backup_pos = GetCursorScreenPos();
             if (Selectable("##selectable", false, 0, picker_size)) // By default, Selectable() is closing popup
-                g.ColorEditOptions = (g.ColorEditOptions & ~ImGuiColorEditFlags_PickerMask_) | (picker_flags & ImGuiColorEditFlags_PickerMask_);
+                g.Style.ColorEditFlags = (g.Style.ColorEditFlags & ~ImGuiColorEditFlags_PickerMask_) | (picker_flags & ImGuiColorEditFlags_PickerMask_);
             SetCursorScreenPos(backup_pos);
             ImVec4 previewing_ref_col;
             memcpy(&previewing_ref_col, ref_col, sizeof(float) * ((picker_flags & ImGuiColorEditFlags_NoAlpha) ? 3 : 4));
@@ -6671,7 +6663,7 @@ void ImGui::ColorPickerOptionsPopup(const float* ref_col, ImGuiColorEditFlags fl
     if (allow_opt_alpha_bar)
     {
         if (allow_opt_picker) Separator();
-        CheckboxFlags("Alpha Bar", &g.ColorEditOptions, ImGuiColorEditFlags_AlphaBar);
+        CheckboxFlags("Alpha Bar", &g.Style.ColorEditFlags, ImGuiColorEditFlags_AlphaBar);
     }
     PopItemFlag();
     EndPopup();

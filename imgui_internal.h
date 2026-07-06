@@ -2528,7 +2528,6 @@ struct ImGuiContext
     ImGuiDataTypeStorage    DataTypeZeroValue;                  // 0 for all data types
     int                     BeginMenuDepth;
     int                     BeginComboDepth;
-    ImGuiColorEditFlags     ColorEditOptions;                   // Store user options for color edit widgets
     ImGuiID                 ColorEditCurrentID;                 // Set temporarily while inside of the parent-most ColorEdit4/ColorPicker4 (because they call each others).
     ImGuiID                 ColorEditSavedID;                   // ID we are saving/restoring HS for
     float                   ColorEditSavedHue;                  // Backup of last Hue associated to LastColor, so we can restore Hue in lossy RGB<>HSV round trips

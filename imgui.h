@@ -30,7 +30,7 @@
 // Library Version
 // (Integer encoded as XYYZZ for use in #if preprocessor conditionals, e.g. '#if IMGUI_VERSION_NUM >= 12345')
 #define IMGUI_VERSION       "1.92.9 WIP"
-#define IMGUI_VERSION_NUM   19284
+#define IMGUI_VERSION_NUM   19285
 #define IMGUI_HAS_TABLE             // Added BeginTable() - from IMGUI_VERSION_NUM >= 18000
 #define IMGUI_HAS_TEXTURES          // Added ImGuiBackendFlags_RendererHasTextures - from IMGUI_VERSION_NUM >= 19198
 
@@ -737,7 +737,6 @@ namespace ImGui
     IMGUI_API bool          ColorPicker3(const char* label, float col[3], ImGuiColorEditFlags flags = 0);
     IMGUI_API bool          ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags flags = 0, const float* ref_col = NULL);
     IMGUI_API bool          ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFlags flags = 0, const ImVec2& size = ImVec2(0, 0)); // display a color square/button, hover for details, return true when pressed.
-    IMGUI_API void          SetColorEditOptions(ImGuiColorEditFlags flags);                     // initialize current options (generally on application startup) if you want to select a default format, picker type, etc. User will be able to change many settings, unless you pass the _NoOptions flag to your calls.
 
     // Widgets: Trees
     // - TreeNode functions return true when the node is open, in which case you need to also call TreePop() when you are finished displaying the tree node contents.
@@ -1918,8 +1917,9 @@ enum ImGuiColorEditFlags_
     ImGuiColorEditFlags_InputRGB        = 1 << 27,  // [Input]      // ColorEdit, ColorPicker: input and output data in RGB format.
     ImGuiColorEditFlags_InputHSV        = 1 << 28,  // [Input]      // ColorEdit, ColorPicker: input and output data in HSV format.
 
-    // Defaults Options. You can set application defaults using SetColorEditOptions(). The intent is that you probably don't want to
-    // override them in most of your calls. Let the user choose via the option menu and/or call SetColorEditOptions() once during startup.
+    // Defaults Options copied to style.ColorEditFlags during initialization.
+    // The intent is that you probably don't want to override them in most of your calls.
+    // Let the user choose via the option menu and/or modify style.ColorEditFlags directly during startup if you want.
     ImGuiColorEditFlags_DefaultOptions_ = ImGuiColorEditFlags_Uint8 | ImGuiColorEditFlags_DisplayRGB | ImGuiColorEditFlags_InputRGB | ImGuiColorEditFlags_PickerHueBar,
 
     // [Internal] Masks
@@ -2343,6 +2343,7 @@ struct ImGuiStyle
     float       DragDropTargetPadding;      // Size to expand the drag and drop target from actual target item size.
     float       ColorMarkerSize;            // Size of R/G/B/A color markers for ColorEdit4() and for Drags/Sliders when using ImGuiSliderFlags_ColorMarkers.
     ImGuiDir    ColorButtonPosition;        // Side of the color button in the ColorEdit4 widget (left/right). Defaults to ImGuiDir_Right.
+    ImGuiColorEditFlags ColorEditFlags;     // Current settings for ColorEdit/ColorPicker widgets. Must have one bit of ImGuiColorEditFlags_DisplayMask_, one bit of ImGuiColorEditFlags_DataTypeMask_, one bit of ImGuiColorEditFlags_PickerMask_, one bit of ImGuiColorEditFlags_InputMask_. Defaults to ImGuiColorEditFlags_DefaultOptions_. May be further edited by users, unless you also set ImGuiColorEditFlags_NoOptions.
     ImVec2      ButtonTextAlign;            // Alignment of button text when button is larger than text. Defaults to (0.5f, 0.5f) (centered).
     ImVec2      SelectableTextAlign;        // Alignment of selectable text. Defaults to (0.0f, 0.0f) (top-left aligned). It's generally important to keep this left-aligned if you want to lay multiple items on a same line.
     float       InputTextCursorSize;        // Thickness of cursor/caret in InputText().
@@ -4099,6 +4100,8 @@ struct ImGuiPlatformImeData
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 namespace ImGui
 {
+    // OBSOLETED in 1.92.9 (from July 2026)
+    IMGUI_API void      SetColorEditOptions(ImGuiColorEditFlags flags);         // set current options for if you want to select a default format, picker type, etc. User will be able to change those settings, unless you pass the _NoOptions flag to your calls.
     // OBSOLETED in 1.92.0 (from June 2025)
     inline void         PushFont(ImFont* font)                                  { PushFont(font, font ? font->LegacySize : 0.0f); }
     IMGUI_API void      SetWindowFontScale(float scale);                        // Set font scale factor for current window. Prefer using PushFont(NULL, style.FontSizeBase * factor) or use style.FontScaleMain to scale all windows.

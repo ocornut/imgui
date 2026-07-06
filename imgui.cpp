@@ -395,6 +395,7 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
  When you are not sure about an old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2026/07/06 (1.92.9) - ColorEdit: obsoleted SetColorEditOptions() function added in 1.51 (June 2017) in favor of directly poking to style.ColorEditFlags. More consistent and easier to discover.
  - 2026/06/02 (1.92.9) - TreeNode: commented out legacy name ImGuiTreeNodeFlags_SpanTextWidth which was obsoleted in 1.90.7 (May 2024). Use ImGuiTreeNodeFlags_SpanLabelWidth instead.
  - 2026/05/07 (1.92.8) - DrawList: swapped the last two arguments of AddRect(), AddPolyline(), PathStroke().
                          - Before: void ImDrawList::AddRect(ImVec2 p_min, ImVec2 p_max, ImU32 col, float rounding = 0.0f, ImDrawFlags flags = 0, float thickness = 1.0f);
@@ -1547,6 +1548,7 @@ ImGuiStyle::ImGuiStyle()
     DragDropTargetPadding       = 3.0f;             // Size to expand the drag and drop target from actual target item size.
     ColorMarkerSize             = 3.0f;             // Size of R/G/B/A color markers for ColorEdit4() and for Drags/Sliders when using ImGuiSliderFlags_ColorMarkers.
     ColorButtonPosition         = ImGuiDir_Right;   // Side of the color button in the ColorEdit4 widget (left/right). Defaults to ImGuiDir_Right.
+    ColorEditFlags              = ImGuiColorEditFlags_DefaultOptions_; // Current settings for ColorEdit/ColorPicker widgets. May be further edited by users, unless you also set ImGuiColorEditFlags_NoOptions.
     ButtonTextAlign             = ImVec2(0.5f,0.5f);// Alignment of button text when button is larger than text.
     SelectableTextAlign         = ImVec2(0.0f,0.0f);// Alignment of selectable text. Defaults to (0.0f, 0.0f) (top-left aligned). It's generally important to keep this left-aligned if you want to lay multiple items on a same line.
     InputTextCursorSize         = 1.0f;             // Thickness of cursor/caret in InputText().
@@ -4356,7 +4358,6 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     TempInputId = 0;
     memset(&DataTypeZeroValue, 0, sizeof(DataTypeZeroValue));
     BeginMenuDepth = BeginComboDepth = 0;
-    ColorEditOptions = ImGuiColorEditFlags_DefaultOptions_;
     ColorEditCurrentID = ColorEditSavedID = 0;
     ColorEditSavedHue = ColorEditSavedSat = 0.0f;
     ColorEditSavedColor = 0;
@@ -11073,6 +11074,11 @@ static void ImGui::ErrorCheckNewFrameSanityChecks()
     IM_ASSERT(g.Style.WindowBorderHoverPadding > 0.0f                   && "Invalid style setting!"); // Required otherwise cannot resize from borders.
     IM_ASSERT(g.Style.WindowMenuButtonPosition == ImGuiDir_None || g.Style.WindowMenuButtonPosition == ImGuiDir_Left || g.Style.WindowMenuButtonPosition == ImGuiDir_Right);
     IM_ASSERT(g.Style.ColorButtonPosition == ImGuiDir_Left || g.Style.ColorButtonPosition == ImGuiDir_Right);
+    IM_ASSERT(ImIsPowerOfTwo(g.Style.ColorEditFlags & ImGuiColorEditFlags_DisplayMask_));    // Check only 1 option is selected
+    IM_ASSERT(ImIsPowerOfTwo(g.Style.ColorEditFlags & ImGuiColorEditFlags_DataTypeMask_));   // Check only 1 option is selected
+    IM_ASSERT(ImIsPowerOfTwo(g.Style.ColorEditFlags & ImGuiColorEditFlags_PickerMask_));     // Check only 1 option is selected
+    IM_ASSERT(ImIsPowerOfTwo(g.Style.ColorEditFlags & ImGuiColorEditFlags_InputMask_));      // Check only 1 option is selected
+
     IM_ASSERT(g.Style.TreeLinesFlags == ImGuiTreeNodeFlags_DrawLinesNone || g.Style.TreeLinesFlags == ImGuiTreeNodeFlags_DrawLinesFull || g.Style.TreeLinesFlags == ImGuiTreeNodeFlags_DrawLinesToNodes);
     IM_ASSERT(g.IO.MouseSingleClickDelay > g.IO.MouseDoubleClickTime);
 

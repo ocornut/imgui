@@ -1334,7 +1334,7 @@ static void DemoWindowWidgetsColorAndPickers()
         ImGui::SameLine(); HelpMarker(
             "ColorEdit defaults to displaying RGB inputs if you don't specify a display mode, "
             "but the user can change it with a right-click on those inputs.\n\nColorPicker defaults to displaying RGB+HSV+Hex "
-            "if you don't specify a display mode.\n\nYou can change the defaults using SetColorEditOptions().");
+            "if you don't specify a display mode.\n\nYou can change the defaults using style.ColorEditFlags.");
 
         ImGuiColorEditFlags flags = base_flags | color_picker_flags;
         if (picker_mode == 1)  flags |= ImGuiColorEditFlags_PickerHueBar;
@@ -1347,14 +1347,14 @@ static void DemoWindowWidgetsColorAndPickers()
 
         ImGui::Text("Set defaults in code:");
         ImGui::SameLine(); HelpMarker(
-            "SetColorEditOptions() is designed to allow you to set boot-time default.\n"
+            "style.ColorEditFlags is designed to allow you to set boot-time default.\n"
             "We don't have Push/Pop functions because you can force options on a per-widget basis if needed, "
             "and the user can change non-forced ones with the options menu.\nWe don't have a getter to avoid "
             "encouraging you to persistently save values that aren't forward-compatible.");
-        if (ImGui::Button("Default: Uint8 + HSV + Hue Bar"))
-            ImGui::SetColorEditOptions(ImGuiColorEditFlags_Uint8 | ImGuiColorEditFlags_DisplayHSV | ImGuiColorEditFlags_PickerHueBar);
-        if (ImGui::Button("Default: Float + HDR + Hue Wheel"))
-            ImGui::SetColorEditOptions(ImGuiColorEditFlags_Float | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_PickerHueWheel);
+        if (ImGui::Button("Overwrite default: Uint8 + HSV + Hue Bar"))
+            ImGui::GetStyle().ColorEditFlags = ImGuiColorEditFlags_Uint8 | ImGuiColorEditFlags_DisplayHSV | ImGuiColorEditFlags_PickerHueBar;
+        if (ImGui::Button("Overwrite default: Float + HDR + Hue Wheel"))
+            ImGui::GetStyle().ColorEditFlags = ImGuiColorEditFlags_Float | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_PickerHueWheel;
 
         // Always display a small version of both types of pickers
         // (that's in order to make it more visible in the demo to people who are skimming quickly through it)
