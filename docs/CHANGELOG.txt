@@ -46,6 +46,12 @@ Breaking Changes:
 
 Other Changes:
 
+- Drags: added value ladder (inspired by Houdini): hold middle mouse button over
+  a DragXXX widget to open a vertical ladder of step magnitudes: drag vertically
+  to select the step magnitude, horizontally to add/subtract steps of that size.
+  Release middle mouse button to confirm, press Escape to cancel and revert.
+  Enable globally with `io.ConfigDragValueLadder` or per-widget with
+  `ImGuiSliderFlags_ValueLadder`. Not supported with ImGuiSliderFlags_Logarithmic. (#9463)
 - Windows:
   - Clicking on a window's empty-space to move/focus a window checks
     for lack of mouse button ownership. This gives an additional opportunity

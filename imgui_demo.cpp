@@ -534,6 +534,8 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::SameLine(); HelpMarker("Pressing Enter will reactivate item and select all text (single-line only).");
             ImGui::Checkbox("io.ConfigDragClickToInputText", &io.ConfigDragClickToInputText);
             ImGui::SameLine(); HelpMarker("Enable turning DragXXX widgets into text input with a simple mouse click-release (without moving).");
+            ImGui::Checkbox("io.ConfigDragValueLadder", &io.ConfigDragValueLadder);
+            ImGui::SameLine(); HelpMarker("Enable holding middle mouse button over DragXXX widgets to open a value ladder: drag vertically to select step magnitude, horizontally to add/subtract steps. Release to confirm, press Escape to cancel.");
             ImGui::Checkbox("io.ConfigMacOSXBehaviors", &io.ConfigMacOSXBehaviors);
             ImGui::SameLine(); HelpMarker("Swap Cmd<>Ctrl keys, enable various MacOS style behaviors.");
             ImGui::Text("Also see Style->Rendering for rendering options.");
@@ -1816,6 +1818,8 @@ static void DemoWindowWidgetsDragsAndSliders()
         ImGui::CheckboxFlags("ImGuiSliderFlags_WrapAround", &flags, ImGuiSliderFlags_WrapAround);
         ImGui::SameLine(); HelpMarker("Enable wrapping around from max to min and from min to max (only supported by DragXXX() functions)");
         ImGui::CheckboxFlags("ImGuiSliderFlags_ColorMarkers", &flags, ImGuiSliderFlags_ColorMarkers);
+        ImGui::CheckboxFlags("ImGuiSliderFlags_ValueLadder", &flags, ImGuiSliderFlags_ValueLadder);
+        ImGui::SameLine(); HelpMarker("Hold middle mouse button over the widget to open a value ladder: drag vertically to select step magnitude, horizontally to add/subtract steps. Release to confirm, press Escape to cancel. (only supported by DragXXX() functions)");
 
         // Drags
         static float drag_f = 0.5f;
@@ -1841,6 +1845,41 @@ static void DemoWindowWidgetsDragsAndSliders()
         ImGui::SliderInt("SliderInt (0 -> 100)", &slider_i, 0, 100, "%d", flags_for_sliders);
         ImGui::SliderFloat4("SliderFloat4 (0 -> 1)", slider_f4, 0.0f, 1.0f, "%.3f", flags); // Multi-component item, mostly here to document the effect of ImGuiSliderFlags_ColorMarkers.
 
+        ImGui::TreePop();
+    }
+
+    if (ImGui::TreeNode("Value Ladder"))
+    {
+        IMGUI_DEMO_MARKER("Widgets/Value Ladder");
+        // Demonstrate the value ladder: stepped value editing with explicit magnitude selection, inspired by Houdini.
+        // Enabled here per-widget with ImGuiSliderFlags_ValueLadder. Use io.ConfigDragValueLadder to enable it on all DragXXX widgets.
+        ImGui::TextWrapped("Hold middle mouse button over a widget to open a value ladder: drag vertically to select step magnitude, horizontally to add/subtract steps. Release to confirm, press Escape to cancel.");
+        ImGui::Checkbox("io.ConfigDragValueLadder (enable on all DragXXX widgets)", &ImGui::GetIO().ConfigDragValueLadder);
+        ImGui::Spacing();
+
+        const ImGuiSliderFlags flags = ImGuiSliderFlags_ValueLadder;
+        static float pos = 0.0f;
+        static float angle = 0.0f;
+        static float precise = 0.5f;
+        static float clamped = 0.5f;
+        static int count = 50;
+        static double d_value = 1000.0;
+        static float f3[3] = { 1.0f, 2.0f, 3.0f };
+        ImGui::DragFloat("Unbounded float", &pos, 1.0f, 0.0f, 0.0f, "%.2f", flags);
+        ImGui::SameLine(); HelpMarker("No min/max: the ladder shines here as any size of change is reachable, from 0.01 to 10000.");
+        ImGui::DragFloat("Angle (wrap 0 -> 360)", &angle, 1.0f, 0.0f, 360.0f, "%.1f deg", flags | ImGuiSliderFlags_WrapAround);
+        ImGui::SameLine(); HelpMarker("v_speed=1 preselects the '1' rung. Move up to '10' or '100' for coarse rotation.");
+        static float angle2 = 0.0f;
+        ImGui::DragFloat("Angle (%.2f precision)", &angle2, 1.0f, 0.0f, 360.0f, "%.2f deg", flags | ImGuiSliderFlags_WrapAround);
+        ImGui::SameLine(); HelpMarker("Same as above but displaying two digits after the decimal point, adding a 0.01 rung.");
+        ImGui::DragFloat("High precision", &precise, 0.001f, 0.0f, 0.0f, "%.4f", flags);
+        ImGui::SameLine(); HelpMarker("The smallest rung comes from the display format: %.4f offers steps down to 0.0001.");
+        ImGui::DragFloat("Clamped (0 -> 1)", &clamped, 0.005f, 0.0f, 1.0f, "%.3f", flags);
+        ImGui::DragInt("Integer (0 -> 100)", &count, 1.0f, 0, 100, "%d", flags);
+        ImGui::SameLine(); HelpMarker("Integer types offer no rung smaller than 1.");
+        ImGui::DragScalar("Double (unbounded)", ImGuiDataType_Double, &d_value, 1.0f, NULL, NULL, "%.3f", flags);
+        ImGui::DragFloat3("DragFloat3", f3, 0.01f, 0.0f, 0.0f, "%.2f", flags);
+        ImGui::SameLine(); HelpMarker("Multi-component widgets get a ladder on each component.");
         ImGui::TreePop();
     }
 }
