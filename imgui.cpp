@@ -1548,7 +1548,6 @@ ImGuiStyle::ImGuiStyle()
     DragDropTargetPadding       = 3.0f;             // Size to expand the drag and drop target from actual target item size.
     ColorMarkerSize             = 3.0f;             // Size of R/G/B/A color markers for ColorEdit4() and for Drags/Sliders when using ImGuiSliderFlags_ColorMarkers.
     ColorButtonPosition         = ImGuiDir_Right;   // Side of the color button in the ColorEdit4 widget (left/right). Defaults to ImGuiDir_Right.
-    ColorEditFlags              = ImGuiColorEditFlags_DefaultOptions_; // Current settings for ColorEdit/ColorPicker widgets. May be further edited by users, unless you also set ImGuiColorEditFlags_NoOptions.
     ButtonTextAlign             = ImVec2(0.5f,0.5f);// Alignment of button text when button is larger than text.
     SelectableTextAlign         = ImVec2(0.0f,0.0f);// Alignment of selectable text. Defaults to (0.0f, 0.0f) (top-left aligned). It's generally important to keep this left-aligned if you want to lay multiple items on a same line.
     InputTextCursorSize         = 1.0f;             // Thickness of cursor/caret in InputText().
@@ -1671,8 +1670,8 @@ ImGuiIO::ImGuiIO()
     ConfigNavCursorVisibleAuto = true;
     ConfigNavCursorVisibleAlways = false;
 
-    // Miscellaneous options
-    MouseDrawCursor = false;
+    // Widget options
+
 #ifdef __APPLE__
     ConfigMacOSXBehaviors = true;  // Set Mac OS X style defaults based on __APPLE__ compile time flag
 #else
@@ -1682,13 +1681,21 @@ ImGuiIO::ImGuiIO()
     ConfigInputTextCursorBlink = true;
     ConfigInputTextEnterKeepActive = false;
     ConfigDragClickToInputText = false;
+    ColorEditFlags = ImGuiColorEditFlags_DefaultOptions_; // Current settings for ColorEdit/ColorPicker widgets. May be further edited by users, unless you also set ImGuiColorEditFlags_NoOptions.
     ConfigWindowsResizeFromEdges = true;
     ConfigWindowsMoveFromTitleBarOnly = false;
     ConfigWindowsCopyContentsWithCtrlC = false;
     ConfigScrollbarScrollByPage = true;
+
+    // Ini Settings options
     ConfigIniSettingsSaveLastUsedDate = true;
     ConfigIniSettingsAutoDiscardMonths = 0;
+    ConfigDebugIniSettings = false;
+
+    // Miscellaneous options
+    MouseDrawCursor = false;
     ConfigMemoryCompactTimer = 60.0f;
+
     ConfigDebugIsDebuggerPresent = false;
     ConfigDebugHighlightIdConflicts = true;
     ConfigDebugHighlightIdConflictsShowItemPicker = true;
@@ -11074,10 +11081,10 @@ static void ImGui::ErrorCheckNewFrameSanityChecks()
     IM_ASSERT(g.Style.WindowBorderHoverPadding > 0.0f                   && "Invalid style setting!"); // Required otherwise cannot resize from borders.
     IM_ASSERT(g.Style.WindowMenuButtonPosition == ImGuiDir_None || g.Style.WindowMenuButtonPosition == ImGuiDir_Left || g.Style.WindowMenuButtonPosition == ImGuiDir_Right);
     IM_ASSERT(g.Style.ColorButtonPosition == ImGuiDir_Left || g.Style.ColorButtonPosition == ImGuiDir_Right);
-    IM_ASSERT(ImIsPowerOfTwo(g.Style.ColorEditFlags & ImGuiColorEditFlags_DisplayMask_));    // Check only 1 option is selected
-    IM_ASSERT(ImIsPowerOfTwo(g.Style.ColorEditFlags & ImGuiColorEditFlags_DataTypeMask_));   // Check only 1 option is selected
-    IM_ASSERT(ImIsPowerOfTwo(g.Style.ColorEditFlags & ImGuiColorEditFlags_PickerMask_));     // Check only 1 option is selected
-    IM_ASSERT(ImIsPowerOfTwo(g.Style.ColorEditFlags & ImGuiColorEditFlags_InputMask_));      // Check only 1 option is selected
+    IM_ASSERT(ImIsPowerOfTwo(g.IO.ColorEditFlags & ImGuiColorEditFlags_DisplayMask_));    // Check only 1 option is selected
+    IM_ASSERT(ImIsPowerOfTwo(g.IO.ColorEditFlags & ImGuiColorEditFlags_DataTypeMask_));   // Check only 1 option is selected
+    IM_ASSERT(ImIsPowerOfTwo(g.IO.ColorEditFlags & ImGuiColorEditFlags_PickerMask_));     // Check only 1 option is selected
+    IM_ASSERT(ImIsPowerOfTwo(g.IO.ColorEditFlags & ImGuiColorEditFlags_InputMask_));      // Check only 1 option is selected
 
     IM_ASSERT(g.Style.TreeLinesFlags == ImGuiTreeNodeFlags_DrawLinesNone || g.Style.TreeLinesFlags == ImGuiTreeNodeFlags_DrawLinesFull || g.Style.TreeLinesFlags == ImGuiTreeNodeFlags_DrawLinesToNodes);
     IM_ASSERT(g.IO.MouseSingleClickDelay > g.IO.MouseDoubleClickTime);
