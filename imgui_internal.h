@@ -190,6 +190,7 @@ struct ImGuiTableColumnsSettings;   // Storage for a column .ini settings
 struct ImGuiTreeNodeStackData;      // Temporary storage for TreeNode().
 struct ImGuiTypingSelectState;      // Storage for GetTypingSelectRequest()
 struct ImGuiTypingSelectRequest;    // Storage for GetTypingSelectRequest() (aimed to be public)
+struct ImGuiValueLadderState;       // Storage for value ladder (middle mouse button drag on DragXXX widgets)
 struct ImGuiWindow;                 // Storage for one window
 struct ImGuiWindowDockStyle;        // Storage for window-style data which needs to be stored for docking purpose
 struct ImGuiWindowTempData;         // Temporary storage for one window (that's the data which in theory we could ditch at the end of the frame, in practice we currently keep it for each window)
@@ -1877,6 +1878,27 @@ struct IMGUI_API ImGuiTypingSelectState
 };
 
 //-----------------------------------------------------------------------------
+// [SECTION] Value ladder support
+//-----------------------------------------------------------------------------
+
+// Storage for value ladder: stepped value editing with explicit magnitude selection, activated by holding
+// middle mouse button over a DragXXX widget. See io.ConfigDragValueLadder and ImGuiSliderFlags_ValueLadder.
+struct IMGUI_API ImGuiValueLadderState
+{
+    ImGuiID         SourceId;               // Widget owning the ladder (0 when inactive)
+    int             RungCount;
+    int             RungIndex;              // Currently selected magnitude (index into RungSteps[])
+    double          RungSteps[16];          // Step value of each rung, ascending (displayed with largest at top)
+    ImVec2          Pos;                    // Top-left corner of the ladder overlay, in screen space
+    ImVec2          Size;
+    float           RowHeight;
+    float           PendingAccumX;          // Horizontal mouse movement not yet converted into steps
+    float           StepDeltaToApply;       // Computed by ValueLadderUpdate(), consumed by DragBehaviorT()
+
+    ImGuiValueLadderState() { memset((void*)this, 0, sizeof(*this)); }
+};
+
+//-----------------------------------------------------------------------------
 // [SECTION] Columns support
 //-----------------------------------------------------------------------------
 
@@ -2772,6 +2794,7 @@ struct ImGuiContext
     ImVector<char>          ClipboardHandlerData;               // If no custom clipboard handler is defined
     ImVector<ImGuiID>       MenusIdSubmittedThisFrame;          // A list of menu IDs that were rendered at least once
     ImGuiTypingSelectState  TypingSelectState;                  // State for GetTypingSelectRequest()
+    ImGuiValueLadderState   ValueLadderState;                   // State for value ladder (middle mouse button drag on DragXXX widgets)
 
     // Platform support
     ImGuiPlatformImeData    PlatformImeData;                    // Data updated by current frame. Will be applied at end of the frame. For some backends, this is required to have WantVisible=true in order to receive text message.
@@ -4096,6 +4119,7 @@ namespace ImGui
     IMGUI_API const ImGuiDataTypeInfo*  DataTypeGetInfo(ImGuiDataType data_type);
     IMGUI_API int           DataTypeFormatString(char* buf, int buf_size, ImGuiDataType data_type, const void* p_data, const char* format);
     IMGUI_API void          DataTypeApplyOp(ImGuiDataType data_type, int op, void* output, const void* arg_1, const void* arg_2);
+    IMGUI_API double        DataTypeAsDouble(ImGuiDataType data_type, const void* p_data);
     IMGUI_API bool          DataTypeApplyFromText(const char* buf, ImGuiDataType data_type, void* p_data, const char* format, void* p_data_when_empty = NULL);
     IMGUI_API int           DataTypeCompare(ImGuiDataType data_type, const void* arg_1, const void* arg_2);
     IMGUI_API bool          DataTypeClamp(ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max);
