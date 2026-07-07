@@ -15713,12 +15713,11 @@ void ImGui::CleanupIniSettings(ImGuiSettingsCleanupArgs* args)
     ImGuiContext& g = *GImGui;
     if (g.PlatformIO.Platform_SessionDate == 0)
         return;
-    ImGuiID type_hash_filter = args->TypeName ? ImHashStr(args->TypeName) : 0;
     ImGuiPackedDate discard_older_than_date_p = g.PlatformIO.Platform_SessionDate;
     discard_older_than_date_p.SubtractMonths(args->DiscardOlderThanMonths);
     args->_DiscardOlderThanDate = discard_older_than_date_p.Unpack();
     for (ImGuiSettingsHandler& handler : g.SettingsHandlers)
-        if (type_hash_filter == 0 || handler.TypeHash == type_hash_filter)
+        if (args->TypeHashFilter == 0 || handler.TypeHash == args->TypeHashFilter)
             if (handler.CleanupFn != NULL)
                 handler.CleanupFn(&g, &handler, args);
 }
