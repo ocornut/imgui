@@ -3875,8 +3875,15 @@ static size_t TableSettingsCalcChunkSize(int columns_count)
 ImGuiTableSettings* ImGui::TableSettingsCreate(ImGuiID id, int columns_count)
 {
     ImGuiContext& g = *GImGui;
-    //ImGuiTableSettings* old_settings = TableSettingsFindByID(id); // Comment out sanity check to avoid unnecessary lookups.
-    //IM_ASSERT(old_settings == NULL || old_settings->ColumnsCountMax < columns_count);
+    if (ImGuiTableSettings* settings = TableSettingsFindByID(id))
+    {
+        if (settings->ColumnsCountMax >= columns_count)
+        {
+            TableSettingsInit(settings, id, columns_count, settings->ColumnsCountMax); // Recycle
+            return settings;
+        }
+        settings->ID = 0; // Invalidate storage, we won't fit because of a count change
+    }
     ImGuiTableSettings* settings = g.SettingsTables.alloc_chunk(TableSettingsCalcChunkSize(columns_count));
     TableSettingsInit(settings, id, columns_count, columns_count);
     return settings;
@@ -4162,16 +4169,6 @@ static void* TableSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*,
     int columns_count = 0;
     if (sscanf(name, "0x%08X,%d", &id, &columns_count) < 2)
         return NULL;
-
-    if (ImGuiTableSettings* settings = ImGui::TableSettingsFindByID(id))
-    {
-        if (settings->ColumnsCountMax >= columns_count)
-        {
-            TableSettingsInit(settings, id, columns_count, settings->ColumnsCountMax); // Recycle
-            return settings;
-        }
-        settings->ID = 0; // Invalidate storage, we won't fit because of a count change
-    }
     return ImGui::TableSettingsCreate(id, columns_count);
 }
 
