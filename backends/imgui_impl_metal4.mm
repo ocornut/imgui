@@ -239,9 +239,6 @@ void ImGui_ImplMetal4_RenderDrawData(ImDrawData* draw_data, id<MTL4CommandBuffer
     ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
     ImVec2 clip_scale = draw_data->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
 
-    // Before rendering command lists, commit residency set
-    [bd->SharedMetalContext.residencySet commit];
-
     // Render command lists
     size_t vertexBufferOffset = 0;
     size_t indexBufferOffset = 0;
@@ -292,6 +289,7 @@ void ImGui_ImplMetal4_RenderDrawData(ImDrawData* draw_data, id<MTL4CommandBuffer
                 if (tex_id != ImTextureID_Invalid)
                 {
                     id<MTLTexture> texture = (__bridge id<MTLTexture>)(void*)(intptr_t)tex_id;
+                    [bd->SharedMetalContext.residencySet addAllocation:texture];
                     [bd->SharedMetalContext.argumentTable setTexture:texture.gpuResourceID atIndex:0];
                 }
 
@@ -317,6 +315,9 @@ void ImGui_ImplMetal4_RenderDrawData(ImDrawData* draw_data, id<MTL4CommandBuffer
         [slotCache addObject:vertexBuffer];
         [slotCache addObject:indexBuffer];
     }
+    
+    // Commit residency set
+    [bd->SharedMetalContext.residencySet commit];
     bd->RenderCommandEncoder = nil;
 }
 
