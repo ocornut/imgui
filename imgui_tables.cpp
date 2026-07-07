@@ -4134,9 +4134,12 @@ static void TableSettingsHandler_Cleanup(ImGuiContext* ctx, ImGuiSettingsHandler
             table->SettingsOffset = -1;
     for (ImGuiTableSettings* settings = g.SettingsTables.begin(); settings != NULL; settings = g.SettingsTables.next_chunk(settings))
     {
+        const bool is_valid = settings->LastUsedDate.IsValid();
         if (args->_DiscardOlderThanDate != 0 && settings->LastUsedDate.Unpack() < args->_DiscardOlderThanDate)
             settings->ID = 0;
-        if (args->SetCurrentSessionDateToAll || (args->SetCurrentSessionDateWhenMissingDate && settings->LastUsedDate.IsValid() == false))
+        else if (args->DiscardWhenMissingDate && !is_valid)
+            settings->ID = 0;
+        else if (args->SetCurrentSessionDateToAll || (args->SetCurrentSessionDateWhenMissingDate && !is_valid))
             settings->LastUsedDate = g.SessionDate;
     }
 }

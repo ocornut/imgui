@@ -2048,7 +2048,8 @@ struct ImGuiWindowSettings
 
 struct ImGuiSettingsCleanupArgs
 {
-    int             DiscardOlderThanMonths = 0;                     // Enable to discard entries older than XX months. 
+    int             DiscardOlderThanMonths = 0;                     // Enable to discard entries older than XX months.
+    bool            DiscardWhenMissingDate = false;                 // Enable to discard entries missing a date.
     bool            SetCurrentSessionDateToAll = false;             // Enable to write current SessionDate to all supporting entries. // Let us know in #9460 if you use this.
     bool            SetCurrentSessionDateWhenMissingDate = false;   // Enable to write current SessionDate to all supporting entries missing a date. // Let us know in #9460 if you use this.
     int             _DiscardOlderThanDate = 0;                      // [Internal]
