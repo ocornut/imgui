@@ -1326,7 +1326,7 @@ static void DemoWindowWidgetsColorAndPickers()
                 ImGui::ColorEdit4("##RefColor", &ref_color_v.x, ImGuiColorEditFlags_NoInputs | base_flags);
             }
         }
-        ImGui::Checkbox("io.ConfigColorPickerRotate", &ImGui::GetIO().ConfigColorPickerRotateTriangle);
+        ImGui::CheckboxFlags("ImGuiColorEditFlags_PickerNoRotate", &color_picker_flags, ImGuiColorEditFlags_PickerNoRotate);
 
         ImGui::Combo("Picker Mode", &picker_mode, "Auto/Current\0ImGuiColorEditFlags_PickerHueBar\0ImGuiColorEditFlags_PickerHueWheel\0");
         ImGui::SameLine(); HelpMarker("When not specified explicitly, user can right-click the picker to change mode.");

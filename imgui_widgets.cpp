@@ -6126,7 +6126,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
     ImVec2 wheel_center(picker_pos.x + (sv_picker_size + bars_width)*0.5f, picker_pos.y + sv_picker_size * 0.5f);
 
     // Note: the triangle is displayed rotated with triangle_pa pointing to Hue, but most coordinates stays unrotated for logic.
-    const bool triangle_rotate = io.ConfigColorPickerRotateTriangle;
+    const bool triangle_rotate = (flags & ImGuiColorEditFlags_PickerNoRotate) == 0;
     float triangle_r = wheel_r_inner - (int)(sv_picker_size * 0.027f);
     ImVec2 triangle_pa = triangle_rotate ? ImVec2(triangle_r, 0.0f)                         : ImVec2(triangle_r * +0.866f, triangle_r * +0.5f); // Hue point.
     ImVec2 triangle_pb = triangle_rotate ? ImVec2(triangle_r * -0.5f, triangle_r * -0.866f) : ImVec2(0.0f, -triangle_r);                        // Black point.
