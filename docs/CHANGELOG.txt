@@ -115,7 +115,7 @@ Other Changes:
     Note that io.MouseSingleClickDelay is always > io.MouseDoubleClickTime.
 - ColorEdit:
   - Added `io.ConfigColorEditFlags` to read/modify current color edit/picker settings.
-  - ColorPicker: added `io.ConfigColorPickerRotateTriangle` to disable rotation of the
+  - ColorPicker: added `ImGuiColorEditFlags_PickerNoRotate` to disable rotation of the
     S/V triangle when in `ImGuiColorEditFlags_PickerHueWheel` mode. (#9337) [@SeanTheBuilder1]
     Likely best passed to `style.ColorEditFlags` to setup globally and once.
   - ColorButton: small rendering tweak/optimization for the alpha checkerboard.
