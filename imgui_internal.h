@@ -2048,6 +2048,7 @@ struct ImGuiWindowSettings
 
 struct ImGuiSettingsCleanupArgs
 {
+    const char*     TypeName = NULL;                                // Set to restrict cleanup to a given .ini type, e.g. "Window", "Table". Otherwise every types supporting Cleanup are supported.
     int             DiscardOlderThanMonths = 0;                     // Enable to discard entries older than XX months.
     bool            DiscardWhenMissingDate = false;                 // Enable to discard entries missing a date.
     bool            SetCurrentSessionDateToAll = false;             // Enable to write current SessionDate to all supporting entries. // Let us know in #9460 if you use this.
