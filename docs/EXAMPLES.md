@@ -60,10 +60,12 @@ Android + OpenGL3 (ES) example. <BR>
 
 [example_apple_metal/](https://github.com/ocornut/imgui/tree/master/examples/example_apple_metal/) <BR>
 OSX & iOS + Metal example. <BR>
-= main.m + imgui_impl_osx.mm + imgui_impl_metal.mm <BR>
+= main.mm + imgui_impl_osx.mm + imgui_impl_metal.mm <BR>
 It is based on the "cross-platform" game template provided with Xcode as of Xcode 9.
-(NB: imgui_impl_osx.mm is currently not as feature complete as other platforms backends.
-You may prefer to use the GLFW Or SDL backends, which will also support Windows and Linux.)
+
+[example_apple_metal4/](https://github.com/ocornut/imgui/blob/master/examples/example_apple_metal4/) <BR>
+OSX & iOS + Metal4 example, Mac only. <BR>
+= main.mm + imgui_impl_osx.mm + imgui_impl_metal4.mm <BR>
 
 [example_apple_opengl2/](https://github.com/ocornut/imgui/blob/master/examples/example_apple_opengl2/) <BR>
 OSX + OpenGL2 example. <BR>
