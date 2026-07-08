@@ -42,11 +42,11 @@ static void ImGui_ImplMetal_InvalidateDeviceObjectsForPlatformWindows();
 
 #pragma mark - Support classes and structs
 
-#define METAL_IMGUI_MAX_VIEWPORTS 64
+#define METAL_IMGUI_VIEWPORTS_PER_CHUNK 64
 
 struct ImGui_Metal4_ConstantData
 {
-    char data[METAL_IMGUI_MAX_VIEWPORTS * 64];
+    float ModelViewProjectionMatrix[METAL_IMGUI_VIEWPORTS_PER_CHUNK][4][4];
 };
 
 @interface MetalBuffer : NSObject
@@ -85,17 +85,15 @@ struct ImGui_Metal4_ConstantData
 @property (nonatomic, strong) NSMutableDictionary*          renderPipelineStateCache;
 @property (nonatomic, assign) NSUInteger                    framesInFlight;
 @property (nonatomic, assign) NSUInteger                    currentFrameSlot;
-@property (nonatomic, strong) NSArray<id<MTLBuffer>>*       constantBuffers;
-@property (nonatomic, assign) ImGui_Metal4_ConstantData**   constantBufferContentsArray;
 @property (nonatomic, strong) NSMutableArray<NSMutableArray<MetalBuffer*>*>* bufferCaches;
 @property (nonatomic, strong) NSObject*                     bufferCacheLock;
 @property (nonatomic, assign) double                        lastBufferCachePurge;
 @property (nonatomic, strong) NSArray<id<MTLSharedEvent>>*  events; // for tracking when a commands are complete to reset allocator
 @property (nonatomic) uint64_t                              eventValue;
-@property (nonatomic) uint64_t                              tempBufferOffset; // offset into constantBuffer (used as ring buffer)
 @property (nonatomic, strong) NSArray<id<MTL4CommandAllocator>>* commandAllocators;
-- (id<MTLBuffer>)currentConstantBuffer;
-- (ImGui_Metal4_ConstantData*)currentConstantBufferContents;
+@property (nonatomic, strong) NSMutableArray<NSMutableArray<id<MTLBuffer>>*>*  constantBuffers;
+@property (nonatomic) uint64_t                              constantBufferChunkCount;
+@property (nonatomic) uint64_t                              currentConstantBufferIndex;
 - (MetalBuffer*)dequeueReusableBufferOfLength:(NSUInteger)length device:(id<MTLDevice>)device;
 - (id<MTLRenderPipelineState>)renderPipelineStateForFramebufferDescriptor:(FramebufferDescriptor*)descriptor device:(id<MTLDevice>)device;
 @end
@@ -159,6 +157,7 @@ void ImGui_ImplMetal4_NewFrame(MTL4RenderPassDescriptor* renderPassDescriptor, i
     if (bd->SharedMetalContext.depthStencilState == nil)
         ImGui_ImplMetal4_CreateDeviceObjects(bd->SharedMetalContext.device);
     
+    bd->SharedMetalContext.currentConstantBufferIndex = 0;
     [bd->SharedMetalContext.events[frameInFlightIndex] waitUntilSignaledValue:bd->SharedMetalContext.eventValue timeoutMS:UINT64_MAX];
     [bd->SharedMetalContext.commandAllocators[frameInFlightIndex] reset];
 }
@@ -199,17 +198,22 @@ static void ImGui_ImplMetal4_SetupRenderState(ImDrawData* draw_data, id<MTL4Comm
         { 0.0f,         0.0f,        1/(F-N),   0.0f },
         { (R+L)/(L-R),  (T+B)/(B-T), N/(F-N),   1.0f },
     };
-    ImGui_Metal4_ConstantData* constantBufferContents = [bd->SharedMetalContext currentConstantBufferContents];
-    memcpy(&constantBufferContents->data[bd->SharedMetalContext.tempBufferOffset], ortho_projection, sizeof(ortho_projection));
+    
+    int currentChunk = (int)floor((float)bd->SharedMetalContext.currentConstantBufferIndex / (float)METAL_IMGUI_VIEWPORTS_PER_CHUNK);
+    int currentIndex = bd->SharedMetalContext.currentConstantBufferIndex % METAL_IMGUI_VIEWPORTS_PER_CHUNK;
+    
+    int currentFrameIndex = (int)bd->SharedMetalContext.currentFrameSlot;
+    id<MTLBuffer> constantBuffer = bd->SharedMetalContext.constantBuffers[currentFrameIndex][currentChunk];
+    ImGui_Metal4_ConstantData* constantBufferContents = (ImGui_Metal4_ConstantData*)constantBuffer.contents;
+    
+    memcpy(&constantBufferContents->ModelViewProjectionMatrix[currentIndex], ortho_projection, sizeof(ortho_projection));
+    
     id<MTL4ArgumentTable> argumentTable = bd->SharedMetalContext.argumentTable;
-    [argumentTable setAddress:[bd->SharedMetalContext currentConstantBuffer].gpuAddress+(uint64_t)bd->SharedMetalContext.tempBufferOffset atIndex:1];
+    [argumentTable setAddress:constantBuffer.gpuAddress+(uint64_t)currentIndex * sizeof(constantBufferContents->ModelViewProjectionMatrix[0]) atIndex:1];
     [argumentTable setAddress:(vertexBuffer.buffer.gpuAddress + vertexBufferOffset) attributeStride:sizeof(ImDrawVert) atIndex:0];
     [argumentTable setSamplerState:bd->SharedMetalContext.samplerStateLinear.gpuResourceID atIndex:0];
     [commandEncoder setArgumentTable:argumentTable atStages:MTLRenderStageVertex | MTLRenderStageFragment];
     [commandEncoder setRenderPipelineState:renderPipelineState];
-    
-    bd->SharedMetalContext.tempBufferOffset += 64;
-    bd->SharedMetalContext.tempBufferOffset %= METAL_IMGUI_MAX_VIEWPORTS * 64;
 }
 
 static void ImGui_ImplMetal4_DrawCallback_ResetRenderState(const ImDrawList*, const ImDrawCmd*)  {} // Intentionally empty. Used as an identifier for rendering loop to call its code. Simpler to implement this way.
@@ -252,8 +256,25 @@ void ImGui_ImplMetal4_RenderDrawData(ImDrawData* draw_data, id<MTL4CommandBuffer
     MetalBuffer* indexBuffer = [ctx dequeueReusableBufferOfLength:indexBufferLength device:commandBuffer.device];
 
     bd->RenderCommandEncoder = commandEncoder;
+    
+    // check if more chunks are required
+    int chunksRequired = 1 + (int)floor((float)bd->SharedMetalContext.currentConstantBufferIndex / (float)METAL_IMGUI_VIEWPORTS_PER_CHUNK);
+    if(chunksRequired > bd->SharedMetalContext.constantBufferChunkCount)
+    {
+        for (NSUInteger i = 0; i < bd->SharedMetalContext.framesInFlight; i++)
+        {
+            id<MTLBuffer> buffer = [bd->SharedMetalContext.device newBufferWithLength:sizeof(ImGui_Metal4_ConstantData) options:MTLResourceStorageModeShared];
+            [bd->SharedMetalContext.constantBuffers[i] addObject:buffer];
+            [bd->SharedMetalContext.residencySet addAllocation:buffer];
+        }
+        
+        bd->SharedMetalContext.constantBufferChunkCount++;
+    }
+    
     ImGui_ImplMetal4_SetupRenderState(draw_data, commandBuffer, commandEncoder, renderPipelineState, vertexBuffer, 0);
+    bd->SharedMetalContext.currentConstantBufferIndex++;
 
+    
     // Will project scissor/clipping rectangles into framebuffer space
     ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
     ImVec2 clip_scale = draw_data->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
@@ -435,20 +456,18 @@ bool ImGui_ImplMetal4_CreateDeviceObjects(id<MTLDevice> device)
 
     NSMutableArray<id<MTL4CommandAllocator>>* commandAllocators = [NSMutableArray array];
     NSMutableArray<id<MTLSharedEvent>>* events = [NSMutableArray array];
-    NSMutableArray<id<MTLBuffer>>* constantBuffers = [NSMutableArray array];
-    ImGui_Metal4_ConstantData** constantBufferContentsArray = (ImGui_Metal4_ConstantData**)malloc(sizeof(ImGui_Metal4_ConstantData*) * bd->SharedMetalContext.framesInFlight);
+    bd->SharedMetalContext.constantBuffers = [NSMutableArray array];
     for (NSUInteger i = 0; i < bd->SharedMetalContext.framesInFlight; i++)
     {
-        id<MTLBuffer> constantBuffer = [device newBufferWithLength:sizeof(ImGui_Metal4_ConstantData) options:MTLResourceStorageModeShared];
-        [constantBuffers addObject:constantBuffer];
-        constantBufferContentsArray[i] = (ImGui_Metal4_ConstantData*)constantBuffer.contents;
-        [bd->SharedMetalContext.residencySet addAllocation:constantBuffer];
         events[i] = [device newSharedEvent];
         commandAllocators[i] = [device newCommandAllocator];
+        bd->SharedMetalContext.constantBuffers[i] = [NSMutableArray array];
+        id<MTLBuffer> buffer = [device newBufferWithLength:sizeof(ImGui_Metal4_ConstantData) options:MTLResourceStorageModeShared];
+        [bd->SharedMetalContext.constantBuffers[i] addObject:buffer];
+        [bd->SharedMetalContext.residencySet addAllocation:buffer];
     }
+    bd->SharedMetalContext.constantBufferChunkCount = 1;
     bd->SharedMetalContext.events = events;
-    bd->SharedMetalContext.constantBuffers = constantBuffers;
-    bd->SharedMetalContext.constantBufferContentsArray = constantBufferContentsArray;
 
     MTL4ArgumentTableDescriptor* argumentTableDescriptor = [[MTL4ArgumentTableDescriptor alloc] init];
     argumentTableDescriptor.maxBufferBindCount = 2; // vertex buffer + constant buffer
@@ -620,17 +639,6 @@ void ImGui_ImplMetal4_Shutdown()
 
 - (void)dealloc
 {
-    free(_constantBufferContentsArray);
-}
-
-- (id<MTLBuffer>)currentConstantBuffer
-{
-    return self.constantBuffers[self.currentFrameSlot];
-}
-
-- (ImGui_Metal4_ConstantData*)currentConstantBufferContents
-{
-    return self.constantBufferContentsArray[self.currentFrameSlot];
 }
 
 - (MetalBuffer*)dequeueReusableBufferOfLength:(NSUInteger)length device:(id<MTLDevice>)device
