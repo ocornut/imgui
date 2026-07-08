@@ -1,5 +1,6 @@
 // Dear ImGui: standalone example application for SDL3 + Metal 4
 // (SDL is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan/Metal graphics context creation, etc.)
+// (Metal 4 requires Apple Silicon and macOS 26+.)
 
 // Learn about Dear ImGui:
 // - FAQ                  https://dearimgui.com/faq

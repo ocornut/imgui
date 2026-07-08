@@ -43,6 +43,9 @@ Breaking Changes:
 
 - TreeNode: commented out legacy name `ImGuiTreeNodeFlags_SpanTextWidth` which
   was obsoleted in 1.90.7 (May 2024). Use `ImGuiTreeNodeFlags_SpanLabelWidth`.
+- ColorEdit: obsoleted SetColorEditOptions() function added in 1.51 (June 2017) in
+  of directly poking to io.ConfigColorEditFlags. More consistent and easier to discover.
+
 
 Other Changes:
 
@@ -110,6 +113,12 @@ Other Changes:
   - Added io.MouseSingleClickDelay to configure default delayed single click delay when
     using GetItemClickedCountWithSingleClickDelay() or IsMouseReleasedWithDelay(). (#8337)
     Note that io.MouseSingleClickDelay is always > io.MouseDoubleClickTime.
+- ColorEdit:
+  - Added `io.ConfigColorEditFlags` to read/modify current color edit/picker settings.
+  - ColorPicker: added `ImGuiColorEditFlags_PickerNoRotate` to disable rotation of the
+    S/V triangle when in `ImGuiColorEditFlags_PickerHueWheel` mode. (#9337) [@SeanTheBuilder1]
+    Likely best passed to `style.ColorEditFlags` to setup globally and once.
+  - ColorButton: small rendering tweak/optimization for the alpha checkerboard.
 - Style:
   - Added style.MenuItemRounding, ImGuiStyleVar_MenuItemRounding. (#7589, #9375, #9453)
   - Added style.SelectableRounding, ImGuiStyleVar_SelectableRounding. (#7589, #9375, #9453)
@@ -131,8 +140,6 @@ Other Changes:
   - Minor optimization to `AddLine()`, `AddLineH()`, `AddLineV()` functions. (#4091)
   - Added `ImDrawListFlags_TextNoPixelSnap` to disable snapping of AddText()
     coordinates for a given scope. (#3437, #9417, #2291)
-- ColorButton:
-  - Small rendering tweak/optimization for the alpha checkerboard.
 - Demo:
   - Extract 'Widgets->Tree Nodes->Selectable Nodes' out of the 'Advanced'
     demo for clarity (manual reimplementation of basic selection).
@@ -141,7 +148,7 @@ Other Changes:
 - Backends:
   - Metal4:
     - Added new Metal 4 backend (forked from Metal 3 backend). (#9458, #9451) [@AmelieHeinrich]
-      Note that Metal-cpp is not yet supported.
+    - Added Metal-cpp support enabled with `IMGUI_IMPL_METAL_CPP` define. (#9461) [@MERL10N]
   - OpenGL3:
     - GLSL version detection assume GLSL 410 when GL context is 4.1.
       Fixes an issue running on macOS with Wine. [#9427, #6577) [@perminovVS]
@@ -151,8 +158,12 @@ Other Changes:
     - Uses `SetProcessDpiAwarenessContext()` instead of `SetThreadDpiAwarenessContext()`
       when available, fixing OpenGL DPI scaling issues as e.g. NVIDIA drivers tends
       to spawn multiple-thread to manage OpenGL. (#9403)
-- Examples: 
+- Examples:
   - Android: update to AGP 9.2.0 to support Gradle 9.6.0.
+  - OpenGL3+GLFW/SDL2/SDL3: allow Wine compatibility by passing empty GLSL version
+    string to ImGui_ImplOpenGL3_Init() to let backend decide of a GLSL version based
+    on actual GL version obtained. (#9427, #6577) [@perminovVS]
+  - OpenGL3+Win32: rework context creation to allow Wine compatibility. (#9427, #6577) [@perminovVS]
   - SDL2/SDL3: use `SDL_GetWindowSizeInPixels()` to create frame-buffers. Fixes issues
     with non-fractional framebuffer size on Wayland. (#8761, #9124) [@billtran1632001]
   - SDL3+Metal4: added new example. (#9458, #9451) [@AmelieHeinrich]

@@ -402,6 +402,7 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
                             you may use GetMainViewport()->Pos to offset hard-coded positions, e.g. SetNextWindowPos(GetMainViewport()->Pos)
                           - likewise io.MousePos and GetMousePos() will use OS coordinates.
                             If you query mouse positions to interact with non-imgui coordinates you will need to offset them, e.g. subtract GetWindowViewport()->Pos.
+ - 2026/07/06 (1.92.9) - ColorEdit: obsoleted SetColorEditOptions() function added in 1.51 (June 2017) in favor of directly poking to io.ConfigColorEditFlags. More consistent and easier to discover.
  - 2026/06/02 (1.92.9) - TreeNode: commented out legacy name ImGuiTreeNodeFlags_SpanTextWidth which was obsoleted in 1.90.7 (May 2024). Use ImGuiTreeNodeFlags_SpanLabelWidth instead.
  - 2026/05/07 (1.92.8) - DrawList: swapped the last two arguments of AddRect(), AddPolyline(), PathStroke().
                          - Before: void ImDrawList::AddRect(ImVec2 p_min, ImVec2 p_max, ImU32 col, float rounding = 0.0f, ImDrawFlags flags = 0, float thickness = 1.0f);
@@ -1714,8 +1715,7 @@ ImGuiIO::ImGuiIO()
     ConfigViewportsNoDefaultParent = true;
     ConfigViewportsPlatformFocusSetsImGuiFocus = true;
 
-    // Miscellaneous options
-    MouseDrawCursor = false;
+    // Widget options
 #ifdef __APPLE__
     ConfigMacOSXBehaviors = true;  // Set Mac OS X style defaults based on __APPLE__ compile time flag
 #else
@@ -1725,13 +1725,21 @@ ImGuiIO::ImGuiIO()
     ConfigInputTextCursorBlink = true;
     ConfigInputTextEnterKeepActive = false;
     ConfigDragClickToInputText = false;
+    ConfigColorEditFlags = ImGuiColorEditFlags_DefaultOptions_; // Current settings for ColorEdit/ColorPicker widgets. May be further edited by users, unless you also set ImGuiColorEditFlags_NoOptions.
     ConfigWindowsResizeFromEdges = true;
     ConfigWindowsMoveFromTitleBarOnly = false;
     ConfigWindowsCopyContentsWithCtrlC = false;
     ConfigScrollbarScrollByPage = true;
+
+    // Ini Settings options
     ConfigIniSettingsSaveLastUsedDate = true;
     ConfigIniSettingsAutoDiscardMonths = 0;
+    ConfigDebugIniSettings = false;
+
+    // Miscellaneous options
+    MouseDrawCursor = false;
     ConfigMemoryCompactTimer = 60.0f;
+
     ConfigDebugIsDebuggerPresent = false;
     ConfigDebugHighlightIdConflicts = true;
     ConfigDebugHighlightIdConflictsShowItemPicker = true;
@@ -4440,7 +4448,6 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     TempInputId = 0;
     memset(&DataTypeZeroValue, 0, sizeof(DataTypeZeroValue));
     BeginMenuDepth = BeginComboDepth = 0;
-    ColorEditOptions = ImGuiColorEditFlags_DefaultOptions_;
     ColorEditCurrentID = ColorEditSavedID = 0;
     ColorEditSavedHue = ColorEditSavedSat = 0.0f;
     ColorEditSavedColor = 0;
@@ -11703,6 +11710,11 @@ static void ImGui::ErrorCheckNewFrameSanityChecks()
     IM_ASSERT(g.Style.WindowBorderHoverPadding > 0.0f                   && "Invalid style setting!"); // Required otherwise cannot resize from borders.
     IM_ASSERT(g.Style.WindowMenuButtonPosition == ImGuiDir_None || g.Style.WindowMenuButtonPosition == ImGuiDir_Left || g.Style.WindowMenuButtonPosition == ImGuiDir_Right);
     IM_ASSERT(g.Style.ColorButtonPosition == ImGuiDir_Left || g.Style.ColorButtonPosition == ImGuiDir_Right);
+    IM_ASSERT(ImIsPowerOfTwo(g.IO.ConfigColorEditFlags & ImGuiColorEditFlags_DisplayMask_));  // Check only 1 option is selected
+    IM_ASSERT(ImIsPowerOfTwo(g.IO.ConfigColorEditFlags & ImGuiColorEditFlags_DataTypeMask_)); // "
+    IM_ASSERT(ImIsPowerOfTwo(g.IO.ConfigColorEditFlags & ImGuiColorEditFlags_PickerMask_));   // "
+    IM_ASSERT(ImIsPowerOfTwo(g.IO.ConfigColorEditFlags & ImGuiColorEditFlags_InputMask_));    // "
+
     IM_ASSERT(g.Style.TreeLinesFlags == ImGuiTreeNodeFlags_DrawLinesNone || g.Style.TreeLinesFlags == ImGuiTreeNodeFlags_DrawLinesFull || g.Style.TreeLinesFlags == ImGuiTreeNodeFlags_DrawLinesToNodes);
     IM_ASSERT(g.IO.MouseSingleClickDelay > g.IO.MouseDoubleClickTime);
 
@@ -16422,14 +16434,21 @@ void ImGui::ClearIniSettings()
 void ImGui::CleanupIniSettings(ImGuiSettingsCleanupArgs* args)
 {
     ImGuiContext& g = *GImGui;
-    if (g.PlatformIO.Platform_SessionDate == 0)
-        return;
-    ImGuiPackedDate discard_older_than_date_p = g.PlatformIO.Platform_SessionDate;
-    discard_older_than_date_p.SubtractMonths(args->DiscardOlderThanMonths);
-    args->_DiscardOlderThanDate = discard_older_than_date_p.Unpack();
+    if (args->DiscardAll)
+        for (ImGuiSettingsHandler& handler : g.SettingsHandlers)
+            if (args->TypeHashFilter == 0 || handler.TypeHash == args->TypeHashFilter)
+                if (handler.ClearAllFn != NULL)
+                    handler.ClearAllFn(&g, &handler);
+    if (g.PlatformIO.Platform_SessionDate != 0 && args->DiscardOlderThanMonths != 0)
+    {
+        ImGuiPackedDate discard_older_than_date_p = g.PlatformIO.Platform_SessionDate;
+        discard_older_than_date_p.SubtractMonths(args->DiscardOlderThanMonths);
+        args->_DiscardOlderThanDate = discard_older_than_date_p.Unpack();
+    }
     for (ImGuiSettingsHandler& handler : g.SettingsHandlers)
-        if (handler.CleanupFn != NULL)
-            handler.CleanupFn(&g, &handler, args);
+        if (args->TypeHashFilter == 0 || handler.TypeHash == args->TypeHashFilter)
+            if (handler.CleanupFn != NULL)
+                handler.CleanupFn(&g, &handler, args);
 }
 
 void ImGui::LoadIniSettingsFromDisk(const char* ini_filename)
@@ -16617,9 +16636,10 @@ static void WindowSettingsHandler_Cleanup(ImGuiContext* ctx, ImGuiSettingsHandle
     ImGuiContext& g = *ctx;
     for (ImGuiWindowSettings* settings = g.SettingsWindows.begin(); settings != NULL; settings = g.SettingsWindows.next_chunk(settings))
     {
-        if (args->_DiscardOlderThanDate != 0 && settings->LastUsedDate.Unpack() < args->_DiscardOlderThanDate)
+        const bool is_valid = settings->LastUsedDate.IsValid();
+        if ((args->_DiscardOlderThanDate != 0 && settings->LastUsedDate.Unpack() < args->_DiscardOlderThanDate) || (args->DiscardWhenMissingDate && !is_valid))
             settings->WantDelete = true;
-        if (args->SetCurrentSessionDateToAll || (args->SetCurrentSessionDateWhenMissingDate && settings->LastUsedDate.IsValid() == false))
+        if (args->SetCurrentSessionDateToAll || (args->SetCurrentSessionDateWhenMissingDate && !is_valid))
             settings->LastUsedDate = g.SessionDate;
     }
 }

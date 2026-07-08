@@ -2238,7 +2238,10 @@ struct ImGuiWindowSettings
 
 struct ImGuiSettingsCleanupArgs
 {
-    int             DiscardOlderThanMonths = 0;                     // Enable to discard entries older than XX months. 
+    ImGuiID         TypeHashFilter = 0;                             // Set to restrict cleanup to a given .ini type, e.g. == ImHashStr("Window"), ImHashStr("Table"). Otherwise every types supporting Cleanup will be affected.
+    int             DiscardOlderThanMonths = 0;                     // Enable to discard entries older than XX months.
+    bool            DiscardWhenMissingDate = false;                 // Enable to discard entries missing a date.
+    bool            DiscardAll = false;                             // Enable to discard all entries = same as calling ClearIniSettings() except it may be filtered.
     bool            SetCurrentSessionDateToAll = false;             // Enable to write current SessionDate to all supporting entries. // Let us know in #9460 if you use this.
     bool            SetCurrentSessionDateWhenMissingDate = false;   // Enable to write current SessionDate to all supporting entries missing a date. // Let us know in #9460 if you use this.
     int             _DiscardOlderThanDate = 0;                      // [Internal]
@@ -2734,7 +2737,6 @@ struct ImGuiContext
     ImGuiDataTypeStorage    DataTypeZeroValue;                  // 0 for all data types
     int                     BeginMenuDepth;
     int                     BeginComboDepth;
-    ImGuiColorEditFlags     ColorEditOptions;                   // Store user options for color edit widgets
     ImGuiID                 ColorEditCurrentID;                 // Set temporarily while inside of the parent-most ColorEdit4/ColorPicker4 (because they call each others).
     ImGuiID                 ColorEditSavedID;                   // ID we are saving/restoring HS for
     float                   ColorEditSavedHue;                  // Backup of last Hue associated to LastColor, so we can restore Hue in lossy RGB<>HSV round trips
