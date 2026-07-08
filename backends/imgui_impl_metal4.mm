@@ -6,9 +6,10 @@
 //  [X] Renderer: User texture binding. Use 'MTLTexture' as texture identifier. Read the FAQ about ImTextureID/ImTextureRef!
 //  [X] Renderer: Large meshes support (64k+ vertices) even with 16-bit indices (ImGuiBackendFlags_RendererHasVtxOffset).
 //  [X] Renderer: Texture updates support for dynamic font atlas (ImGuiBackendFlags_RendererHasTextures).
+//  [X] Renderer: Multi-viewport support (multiple windows).
+
 // Missing features or Issues:
 //  [ ] Texture view pool support? Reevaluate which type to use for ImtextureID.
-//  [ ] Renderer: Multi-viewport support (multiple windows).
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
@@ -33,11 +34,19 @@
 #include <Metal/Metal.hpp>
 #endif
 
+// Forward Declarations
+static void ImGui_ImplMetal_InitMultiViewportSupport();
+static void ImGui_ImplMetal_ShutdownMultiViewportSupport();
+static void ImGui_ImplMetal_CreateDeviceObjectsForPlatformWindows();
+static void ImGui_ImplMetal_InvalidateDeviceObjectsForPlatformWindows();
+
 #pragma mark - Support classes and structs
+
+#define METAL_IMGUI_MAX_VIEWPORTS 64
 
 struct ImGui_Metal4_ConstantData
 {
-    float ModelViewProjectionMatrix[4][4];
+    char data[METAL_IMGUI_MAX_VIEWPORTS * 64]; // only allows up to 64 separate viewports (should we make this a setting?)
 };
 
 @interface MetalBuffer : NSObject
@@ -81,6 +90,10 @@ struct ImGui_Metal4_ConstantData
 @property (nonatomic, strong) NSMutableArray<NSMutableArray<MetalBuffer*>*>* bufferCaches;
 @property (nonatomic, strong) NSObject*                     bufferCacheLock;
 @property (nonatomic, assign) double                        lastBufferCachePurge;
+@property (nonatomic, strong) NSArray<id<MTLSharedEvent>>*  events; // for tracking when a commands are complete to reset allocator
+@property (nonatomic) uint64_t                              eventValue;
+@property (nonatomic) uint64_t                              tempBufferOffset; // offset into constantBuffer (used as ring buffer)
+@property (nonatomic, strong) NSArray<id<MTL4CommandAllocator>>* commandAllocators;
 - (id<MTLBuffer>)currentConstantBuffer;
 - (ImGui_Metal4_ConstantData*)currentConstantBufferContents;
 - (MetalBuffer*)dequeueReusableBufferOfLength:(NSUInteger)length device:(id<MTLDevice>)device;
@@ -145,6 +158,9 @@ void ImGui_ImplMetal4_NewFrame(MTL4RenderPassDescriptor* renderPassDescriptor, i
     bd->SharedMetalContext.currentFrameSlot = (NSUInteger)frameInFlightIndex;
     if (bd->SharedMetalContext.depthStencilState == nil)
         ImGui_ImplMetal4_CreateDeviceObjects(bd->SharedMetalContext.device);
+    
+    [bd->SharedMetalContext.events[frameInFlightIndex] waitUntilSignaledValue:bd->SharedMetalContext.eventValue timeoutMS:UINT64_MAX];
+    [bd->SharedMetalContext.commandAllocators[frameInFlightIndex] reset];
 }
 
 static void ImGui_ImplMetal4_SetupRenderState(ImDrawData* draw_data, id<MTL4CommandBuffer> commandBuffer,
@@ -184,14 +200,16 @@ static void ImGui_ImplMetal4_SetupRenderState(ImDrawData* draw_data, id<MTL4Comm
         { (R+L)/(L-R),  (T+B)/(B-T), N/(F-N),   1.0f },
     };
     ImGui_Metal4_ConstantData* constantBufferContents = [bd->SharedMetalContext currentConstantBufferContents];
-    memcpy(constantBufferContents->ModelViewProjectionMatrix, ortho_projection, sizeof(ortho_projection));
-
+    memcpy(&constantBufferContents->data[bd->SharedMetalContext.tempBufferOffset], ortho_projection, sizeof(ortho_projection));
     id<MTL4ArgumentTable> argumentTable = bd->SharedMetalContext.argumentTable;
-    [argumentTable setAddress:[bd->SharedMetalContext currentConstantBuffer].gpuAddress atIndex:1];
+    [argumentTable setAddress:[bd->SharedMetalContext currentConstantBuffer].gpuAddress+(uint64_t)bd->SharedMetalContext.tempBufferOffset atIndex:1];
     [argumentTable setAddress:(vertexBuffer.buffer.gpuAddress + vertexBufferOffset) attributeStride:sizeof(ImDrawVert) atIndex:0];
     [argumentTable setSamplerState:bd->SharedMetalContext.samplerStateLinear.gpuResourceID atIndex:0];
     [commandEncoder setArgumentTable:argumentTable atStages:MTLRenderStageVertex | MTLRenderStageFragment];
     [commandEncoder setRenderPipelineState:renderPipelineState];
+    
+    bd->SharedMetalContext.tempBufferOffset += 64;
+    bd->SharedMetalContext.tempBufferOffset %= METAL_IMGUI_MAX_VIEWPORTS * 64;
 }
 
 static void ImGui_ImplMetal4_DrawCallback_ResetRenderState(const ImDrawList*, const ImDrawCmd*)  {} // Intentionally empty. Used as an identifier for rendering loop to call its code. Simpler to implement this way.
@@ -415,6 +433,8 @@ bool ImGui_ImplMetal4_CreateDeviceObjects(id<MTLDevice> device)
     samplerDescriptor.mipFilter = MTLSamplerMipFilterNearest;
     bd->SharedMetalContext.samplerStateNearest = [device newSamplerStateWithDescriptor:samplerDescriptor];
 
+    NSMutableArray<id<MTL4CommandAllocator>>* commandAllocators = [NSMutableArray array];
+    NSMutableArray<id<MTLSharedEvent>>* events = [NSMutableArray array];
     NSMutableArray<id<MTLBuffer>>* constantBuffers = [NSMutableArray array];
     ImGui_Metal4_ConstantData** constantBufferContentsArray = (ImGui_Metal4_ConstantData**)malloc(sizeof(ImGui_Metal4_ConstantData*) * bd->SharedMetalContext.framesInFlight);
     for (NSUInteger i = 0; i < bd->SharedMetalContext.framesInFlight; i++)
@@ -423,19 +443,26 @@ bool ImGui_ImplMetal4_CreateDeviceObjects(id<MTLDevice> device)
         [constantBuffers addObject:constantBuffer];
         constantBufferContentsArray[i] = (ImGui_Metal4_ConstantData*)constantBuffer.contents;
         [bd->SharedMetalContext.residencySet addAllocation:constantBuffer];
+        events[i] = [device newSharedEvent];
+        commandAllocators[i] = [device newCommandAllocator];
     }
+    bd->SharedMetalContext.events = events;
     bd->SharedMetalContext.constantBuffers = constantBuffers;
     bd->SharedMetalContext.constantBufferContentsArray = constantBufferContentsArray;
 
     MTL4ArgumentTableDescriptor* argumentTableDescriptor = [[MTL4ArgumentTableDescriptor alloc] init];
-    argumentTableDescriptor.maxBufferBindCount = 8;
-    argumentTableDescriptor.maxTextureBindCount = 8;
-    argumentTableDescriptor.maxSamplerStateBindCount = 8;
+    argumentTableDescriptor.maxBufferBindCount = 2; // vertex buffer + constant buffer
+    argumentTableDescriptor.maxTextureBindCount = 1; // font atlas or user texture
+    argumentTableDescriptor.maxSamplerStateBindCount = 2;
     argumentTableDescriptor.supportAttributeStrides = YES; // required: vertex buffer is bound via setAddress:stride:atIndex: for stage_in fetch
+    
+    bd->SharedMetalContext.commandAllocators = commandAllocators;
+    
 
     bd->SharedMetalContext.argumentTable = [device newArgumentTableWithDescriptor:argumentTableDescriptor error:&error];
     IM_ASSERT(bd->SharedMetalContext.argumentTable != nil && error == nil);
 
+    ImGui_ImplMetal_CreateDeviceObjectsForPlatformWindows();
     return true;
 }
 
@@ -451,6 +478,8 @@ void ImGui_ImplMetal4_DestroyDeviceObjects()
     [bd->SharedMetalContext.renderPipelineStateCache removeAllObjects];
     bd->SharedMetalContext.samplerStateLinear = nil;
     bd->SharedMetalContext.samplerStateNearest = nil;
+    ImGui_ImplMetal_InvalidateDeviceObjectsForPlatformWindows();
+    [bd->SharedMetalContext.renderPipelineStateCache removeAllObjects];
 }
 
 bool ImGui_ImplMetal4_Init(id<MTLDevice> device, id<MTL4CommandQueue> commandQueue, int framesInFlight)
@@ -465,6 +494,7 @@ bool ImGui_ImplMetal4_Init(id<MTLDevice> device, id<MTL4CommandQueue> commandQue
     io.BackendRendererName = "imgui_impl_metal4";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
     io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;   // We can honor ImGuiPlatformIO::Textures[] requests during render.
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;  // We can create multi-viewports on the Renderer side (optional)
 
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     platform_io.DrawCallback_ResetRenderState = ImGui_ImplMetal4_DrawCallback_ResetRenderState;
@@ -479,6 +509,8 @@ bool ImGui_ImplMetal4_Init(id<MTLDevice> device, id<MTL4CommandQueue> commandQue
     for (NSUInteger i = 0; i < framesInFlight; i++)
         [bufferCaches addObject:[NSMutableArray array]];
     bd->SharedMetalContext.bufferCaches = bufferCaches;
+    
+    ImGui_ImplMetal_InitMultiViewportSupport();
     return true;
 }
 
@@ -490,6 +522,7 @@ void ImGui_ImplMetal4_Shutdown()
     ImGuiIO& io = ImGui::GetIO();
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
 
+    ImGui_ImplMetal_ShutdownMultiViewportSupport();
     ImGui_ImplMetal4_DestroyDeviceObjects();
     ImGui_ImplMetal4_DestroyBackendData();
 
@@ -739,6 +772,159 @@ fragment half4 fragment_main(VertexOut in [[stage_in]],
 
 @end
 
+
+#pragma mark - Multi-viewport support
+
+#import <QuartzCore/CAMetalLayer.h>
+
+#if TARGET_OS_OSX
+#import <Cocoa/Cocoa.h>
+#endif
+
+//--------------------------------------------------------------------------------------------------------
+// MULTI-VIEWPORT / PLATFORM INTERFACE SUPPORT
+// This is an _advanced_ and _optional_ feature, allowing the back-end to create and handle multiple viewports simultaneously.
+// If you are new to dear imgui or creating a new binding for dear imgui, it is recommended that you completely ignore this section first..
+//--------------------------------------------------------------------------------------------------------
+
+struct ImGuiViewportDataMetal
+{
+    CAMetalLayer*               MetalLayer;
+    id<MTLCommandQueue>         CommandQueue;
+    MTL4RenderPassDescriptor*   RenderPassDescriptor;
+    void*                       Handle = nullptr;
+    bool                        FirstFrame = true;
+};
+
+static void ImGui_ImplMetal_CreateWindow(ImGuiViewport* viewport)
+{
+    ImGui_ImplMetal4_Data* bd = ImGui_ImplMetal4_GetBackendData();
+    ImGuiViewportDataMetal* data = IM_NEW(ImGuiViewportDataMetal)();
+    viewport->RendererUserData = data;
+
+    // PlatformHandleRaw should always be a NSWindow*, whereas PlatformHandle might be a higher-level handle (e.g. GLFWWindow*, SDL_Window*).
+    // Some back-ends will leave PlatformHandleRaw == 0, in which case we assume PlatformHandle will contain the NSWindow*.
+    void* handle = viewport->PlatformHandleRaw ? viewport->PlatformHandleRaw : viewport->PlatformHandle;
+    IM_ASSERT(handle != nullptr);
+
+    id<MTLDevice> device = bd->SharedMetalContext.device;
+    CAMetalLayer* layer = [CAMetalLayer layer];
+    layer.device = device;
+    layer.framebufferOnly = YES;
+    layer.pixelFormat = bd->SharedMetalContext.framebufferDescriptor.colorPixelFormat;
+#if TARGET_OS_OSX
+    NSWindow* window = (__bridge NSWindow*)handle;
+    NSView* view = window.contentView;
+    view.layer = layer;
+    view.wantsLayer = YES;
+#endif
+    data->MetalLayer = layer;
+    data->CommandQueue = [device newCommandQueue];
+    data->RenderPassDescriptor = [[MTL4RenderPassDescriptor alloc] init];
+    data->Handle = handle;
+}
+
+static void ImGui_ImplMetal_DestroyWindow(ImGuiViewport* viewport)
+{
+    // The main viewport (owned by the application) will always have RendererUserData == 0 since we didn't create the data for it.
+    if (ImGuiViewportDataMetal* data = (ImGuiViewportDataMetal*)viewport->RendererUserData)
+        IM_DELETE(data);
+    viewport->RendererUserData = nullptr;
+}
+
+inline static CGSize MakeScaledSize(CGSize size, CGFloat scale)
+{
+    return CGSizeMake(size.width * scale, size.height * scale);
+}
+
+static void ImGui_ImplMetal_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
+{
+    ImGuiViewportDataMetal* data = (ImGuiViewportDataMetal*)viewport->RendererUserData;
+    data->MetalLayer.drawableSize = MakeScaledSize(CGSizeMake(size.x, size.y), viewport->DpiScale);
+}
+
+static void ImGui_ImplMetal_RenderWindow(ImGuiViewport* viewport, void*)
+{
+    ImGuiViewportDataMetal* data = (ImGuiViewportDataMetal*)viewport->RendererUserData;
+
+#if TARGET_OS_OSX
+    void* handle = viewport->PlatformHandleRaw ? viewport->PlatformHandleRaw : viewport->PlatformHandle;
+    NSWindow* window = (__bridge NSWindow*)handle;
+
+    // Always render the first frame, regardless of occlusionState, to avoid an initial flicker
+    if ((window.occlusionState & NSWindowOcclusionStateVisible) == 0 && !data->FirstFrame)
+    {
+        // Do not render windows which are completely occluded. Calling -[CAMetalLayer nextDrawable] will hang for
+        // approximately 1 second if the Metal layer is completely occluded.
+        return;
+    }
+    data->FirstFrame = false;
+
+    float fb_scale = (float)window.backingScaleFactor;
+    if (data->MetalLayer.contentsScale != fb_scale)
+    {
+        data->MetalLayer.contentsScale = fb_scale;
+        data->MetalLayer.drawableSize = MakeScaledSize(window.frame.size, fb_scale);
+    }
+#endif
+
+    id <CAMetalDrawable> drawable = [data->MetalLayer nextDrawable];
+    if (drawable == nil)
+        return;
+
+    MTL4RenderPassDescriptor* renderPassDescriptor = data->RenderPassDescriptor;
+    renderPassDescriptor.colorAttachments[0].texture = drawable.texture;
+    renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(0, 0, 0, 0);
+    if ((viewport->Flags & ImGuiViewportFlags_NoRendererClear) == 0)
+        renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionClear;
+
+    ImGui_ImplMetal4_Data* bd = ImGui_ImplMetal4_GetBackendData();
+    id <MTL4CommandBuffer> commandBuffer = [bd->SharedMetalContext.device newCommandBuffer];
+    [commandBuffer beginCommandBufferWithAllocator:bd->SharedMetalContext.commandAllocators[bd->SharedMetalContext.currentFrameSlot]];
+
+    id <MTL4RenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+    ImGui_ImplMetal4_RenderDrawData(viewport->DrawData, commandBuffer, renderEncoder);
+    [renderEncoder endEncoding];
+    [commandBuffer endCommandBuffer];
+
+    [bd->SharedMetalContext.commandQueue waitForDrawable:drawable];
+    [bd->SharedMetalContext.commandQueue commit:&commandBuffer count:1];
+    [bd->SharedMetalContext.commandQueue signalDrawable:drawable];
+    [drawable present];
+    [bd->SharedMetalContext.commandQueue signalEvent:bd->SharedMetalContext.events[bd->SharedMetalContext.currentFrameSlot] value:++(bd->SharedMetalContext.eventValue)];
+}
+
+static void ImGui_ImplMetal_InitMultiViewportSupport()
+{
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    platform_io.Renderer_CreateWindow = ImGui_ImplMetal_CreateWindow;
+    platform_io.Renderer_DestroyWindow = ImGui_ImplMetal_DestroyWindow;
+    platform_io.Renderer_SetWindowSize = ImGui_ImplMetal_SetWindowSize;
+    platform_io.Renderer_RenderWindow = ImGui_ImplMetal_RenderWindow;
+}
+
+static void ImGui_ImplMetal_ShutdownMultiViewportSupport()
+{
+    ImGui::DestroyPlatformWindows();
+}
+
+static void ImGui_ImplMetal_CreateDeviceObjectsForPlatformWindows()
+{
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    for (int i = 1; i < platform_io.Viewports.Size; i++)
+        if (!platform_io.Viewports[i]->RendererUserData)
+            ImGui_ImplMetal_CreateWindow(platform_io.Viewports[i]);
+}
+
+static void ImGui_ImplMetal_InvalidateDeviceObjectsForPlatformWindows()
+{
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    for (int i = 1; i < platform_io.Viewports.Size; i++)
+        if (platform_io.Viewports[i]->RendererUserData)
+            ImGui_ImplMetal_DestroyWindow(platform_io.Viewports[i]);
+}
+
 //-----------------------------------------------------------------------------
+
 
 #endif // #ifndef IMGUI_DISABLE
