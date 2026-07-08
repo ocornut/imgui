@@ -46,7 +46,7 @@ static void ImGui_ImplMetal_InvalidateDeviceObjectsForPlatformWindows();
 
 struct ImGui_Metal4_ConstantData
 {
-    char data[METAL_IMGUI_MAX_VIEWPORTS * 64]; // only allows up to 64 separate viewports (should we make this a setting?)
+    char data[METAL_IMGUI_MAX_VIEWPORTS * 64];
 };
 
 @interface MetalBuffer : NSObject
