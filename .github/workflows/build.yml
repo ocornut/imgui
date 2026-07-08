@@ -593,6 +593,10 @@ jobs:
       run: xcodebuild -project examples/example_apple_metal/example_apple_metal.xcodeproj -target example_apple_metal_macos
       if: github.event_name == 'workflow_run'
 
+    - name: Build macOS example_apple_metal4
+      run: xcodebuild -project examples/example_apple_metal4/example_apple_metal4.xcodeproj -target example_apple_metal_macos
+      if: github.event_name == 'workflow_run'
+
     - name: Build macOS example_apple_opengl2
       run: xcodebuild -project examples/example_apple_opengl2/example_apple_opengl2.xcodeproj -target example_osx_opengl2
       if: github.event_name == 'workflow_run'
