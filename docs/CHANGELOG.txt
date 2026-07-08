@@ -177,6 +177,8 @@ Docking+Viewports Branch:
   - Fixed behavior change/regression in 1.92.8 where a window using the
     ImGuiWindowFlags_AlwaysAutoResize flag would have ItemWidth default
     change when docked. (#9355, #9443) [@reybits]
+- Backends:
+  - Metal4: added multi-viewport support. (#9465, #9451) [@hoffstadt]
 
 
 -----------------------------------------------------------------------
