@@ -45,6 +45,8 @@ Breaking Changes:
   was obsoleted in 1.90.7 (May 2024). Use `ImGuiTreeNodeFlags_SpanLabelWidth`.
 - ColorEdit: obsoleted SetColorEditOptions() function added in 1.51 (June 2017) in
   of directly poking to io.ConfigColorEditFlags. More consistent and easier to discover.
+- Drag and Drop: commented out legacy name `ImGuiDragDropFlags_SourceAutoExpirePayload`
+  which obsoleted in 1.90.9 (July 2024). Use `ImGuiDragDropFlags_PayloadAutoExpire`.
 
 
 Other Changes:

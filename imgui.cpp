@@ -395,6 +395,7 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
  When you are not sure about an old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2026/07/08 (1.92.9) - Drag and Drop: commented out legacy name `ImGuiDragDropFlags_SourceAutoExpirePayload` which obsoleted in 1.90.9 (July 2024). Use `ImGuiDragDropFlags_PayloadAutoExpire`.
  - 2026/07/06 (1.92.9) - ColorEdit: obsoleted SetColorEditOptions() function added in 1.51 (June 2017) in favor of directly poking to io.ConfigColorEditFlags. More consistent and easier to discover.
  - 2026/06/02 (1.92.9) - TreeNode: commented out legacy name ImGuiTreeNodeFlags_SpanTextWidth which was obsoleted in 1.90.7 (May 2024). Use ImGuiTreeNodeFlags_SpanLabelWidth instead.
  - 2026/05/07 (1.92.8) - DrawList: swapped the last two arguments of AddRect(), AddPolyline(), PathStroke().
