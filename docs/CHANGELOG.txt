@@ -63,6 +63,8 @@ Other Changes:
 - InputText:
   - Added `style.InputTextCursorSize` to configure cursor/caret thickness. (#7031, #9409)
     This is automatically scaled by `style.ScaleAllSizes()`.
+  - Reworked `io.ConfigInputTextEnterKeepActive` mode so that pressing
+    Ctrl+Enter or Shift+Enter still allows to deactivate. (#9239)
 - Tables:
   - Redesigned/rewrote code to reconcile columns and settings on topology changes. (#9108)
     - When a column label is passed to TableSetupColumn(), the underlying identifier

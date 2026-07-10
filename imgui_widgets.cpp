@@ -5173,7 +5173,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             if (!is_new_line)
             {
                 validated = clear_active_id = true;
-                if (io.ConfigInputTextEnterKeepActive && !is_multiline)
+                if (io.ConfigInputTextEnterKeepActive && !is_multiline && !is_ctrl_enter && !is_shift_enter)
                 {
                     // Queue reactivation, so that e.g. IsItemDeactivatedAfterEdit() will work. (#9001)
                     state->SelectAll(); // No need to scroll
