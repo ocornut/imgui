@@ -180,6 +180,8 @@ Docking+Viewports Branch:
     change when docked. (#9355, #9443) [@reybits]
 - Backends:
   - Metal4: added multi-viewport support. (#9465, #9451) [@hoffstadt]
+  - Vulkan: fixed use after-free when using multi-viewports with dynamic rendering.
+    (#9390, #9468) [@vikhik, @Turtle-PB]
 
 
 -----------------------------------------------------------------------
