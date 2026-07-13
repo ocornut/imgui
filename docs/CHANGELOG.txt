@@ -135,6 +135,7 @@ Other Changes:
   - Added bool io.ConfigIniSettingsSaveLastUsedDate to disable saving that info. (#9460)
   - Added int io.ConfigIniSettingsAutoDiscardMonths to enable a mode where unused settings
     are automatically discard after xx months. (#9460)
+  - Fixed io.ConfigIniSettingsAutoDiscardMonths not removing expired or undated settings on load.
   - Added a trimming tool under Metrics->Settings, along with a yet-unexposed function.
   - The current system date is fed through ImGuiPlatformIO::Platform_SessionDate,
     which is automatically set by a call to time() done during context creation. (#9460)

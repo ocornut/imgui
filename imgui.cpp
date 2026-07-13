@@ -15808,8 +15808,12 @@ void ImGui::LoadIniSettingsFromMemory(const char* ini_data, size_t ini_size)
 
     // Call post-read handlers
     ImGuiSettingsCleanupArgs cleanup_args;
-    if (g.IO.ConfigIniSettingsAutoDiscardMonths > 0)
+    if (g.IO.ConfigIniSettingsAutoDiscardMonths > 0 && g.PlatformIO.Platform_SessionDate != 0)
+    {
         cleanup_args.DiscardOlderThanMonths = g.IO.ConfigIniSettingsAutoDiscardMonths;
+        cleanup_args.DiscardWhenMissingDate = true;
+        CleanupIniSettings(&cleanup_args);
+    }
     for (ImGuiSettingsHandler& handler : g.SettingsHandlers)
         if (handler.ApplyAllFn != NULL)
             handler.ApplyAllFn(&g, &handler);
