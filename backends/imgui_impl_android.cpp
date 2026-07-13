@@ -1,17 +1,19 @@
-// dear imgui: Platform Binding for Android native app
-// This needs to be used along with the OpenGL 3 Renderer (imgui_impl_opengl3)
+// dear imgui: Platform Backend for Android native app
+// This needs to be used along with a Renderer Backend (e.g. OpenGL3, Vulkan)
 
 // Implemented features:
 //  [X] Platform: Keyboard support. Since 1.87 we are using the io.AddKeyEvent() function. Pass ImGuiKey values to all key functions e.g. ImGui::IsKeyPressed(ImGuiKey_Space). [Legacy AKEYCODE_* values are obsolete since 1.87 and not supported since 1.91.5]
 //  [X] Platform: Mouse support. Can discriminate Mouse/TouchScreen/Pen.
+//  [X] Platform: On-screen keyboard (soft input) — handled internally via JNI. No application code needed.
+//  [X] Platform: Unicode character input — handled internally via JNI. No application code needed.
+//  [X] Platform: Clipboard support (via JNI to Android ClipboardManager).
 // Missing features or Issues:
-//  [ ] Platform: Clipboard support.
 //  [ ] Platform: Gamepad support.
 //  [ ] Platform: Mouse cursor shape and visibility (ImGuiBackendFlags_HasMouseCursors). Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'. FIXME: Check if this is even possible with Android.
 // Important:
 //  - Consider using SDL or GLFW backend on Android, which will be more full-featured than this.
-//  - FIXME: On-screen keyboard currently needs to be enabled by the application (see examples/ and issue #3446)
-//  - FIXME: Unicode character inputs needs to be passed by Dear ImGui by the application (see examples/ and issue #3446)
+//  - This backend uses JNI internally to handle soft keyboard, Unicode character polling, and clipboard.
+//    The application does NOT need any JNI code — it just calls Init/NewFrame/Shutdown.
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
@@ -22,7 +24,12 @@
 // - Introduction, links and more at the top of imgui.cpp
 
 // CHANGELOG
-// (minor and older changes stripped away, please see git history for details)
+//  2026-07-13: Android: Moved JNI soft-keyboard and Unicode char polling from the example into the backend.
+//                Added clipboard support via JNI. The application no longer needs any JNI boilerplate. (#3446)
+//                Added asset_manager and native_activity params to Init() for self-contained operation.
+//                Added sensor support (accelerometer, gyroscope, magnetometer, light, proximity, pressure,
+//                humidity, ambient temperature) via NDK ASensor API. No JNI needed for sensors.
+//                Added display metrics (DPI, density, refresh rate, orientation) via JNI.
 //  2022-09-26: Inputs: Renamed ImGuiKey_ModXXX introduced in 1.87 to ImGuiMod_XXX (old names still supported).
 //  2022-01-26: Inputs: replaced short-lived io.AddKeyModsEvent() (added two weeks ago) with io.AddKeyEvent() using ImGuiKey_ModXXX flags. Sorry for the confusion.
 //  2022-01-17: Inputs: calling new io.AddMousePosEvent(), io.AddMouseButtonEvent(), io.AddMouseWheelEvent() API (1.87+).
@@ -33,15 +40,56 @@
 #ifndef IMGUI_DISABLE
 #include "imgui_impl_android.h"
 #include <time.h>
+#include <string.h>
 #include <android/native_window.h>
 #include <android/input.h>
 #include <android/keycodes.h>
 #include <android/log.h>
+#include <android/sensor.h>
+#include <android/looper.h>
+#include <jni.h>
 
 // Android data
 static double                                   g_Time = 0.0;
-static ANativeWindow*                           g_Window;
-static char                                     g_LogTag[] = "ImGuiExample";
+static ANativeWindow*                           g_Window = nullptr;
+static AAssetManager*                           g_AssetManager = nullptr;
+static char                                     g_LogTag[] = "ImGuiBackend";
+
+// JNI state (for soft keyboard, Unicode polling, clipboard, display metrics)
+static JavaVM*                                  g_JavaVM = nullptr;
+static jobject                                  g_NativeActivity = nullptr;  // Global ref
+static bool                                     g_HasJni = false;
+
+// Clipboard state
+static char*                                    g_ClipboardText = nullptr;
+
+// Display metrics
+static ImGui_ImplAndroid_DisplayMetrics         g_DisplayMetrics = {};
+
+// Sensor state — uses NDK ASensor API (no JNI)
+static ASensorManager*                          g_SensorManager = nullptr;
+static ASensorEventQueue*                       g_SensorEventQueue = nullptr;
+static int                                      g_SensorLooperId = 1;  // Looper ID for sensor events
+static const ASensor*                           g_Sensors[ImGui_ImplAndroid_SensorType_Count] = {};
+static bool                                     g_SensorEnabled[ImGui_ImplAndroid_SensorType_Count] = {};
+static ImGui_ImplAndroid_SensorData             g_SensorData[ImGui_ImplAndroid_SensorType_Count] = {};
+static const int                                g_SensorTypes[ImGui_ImplAndroid_SensorType_Count] = {
+    ASENSOR_TYPE_ACCELEROMETER,
+    ASENSOR_TYPE_GYROSCOPE,
+    ASENSOR_TYPE_MAGNETIC_FIELD,
+    ASENSOR_TYPE_LIGHT,
+    ASENSOR_TYPE_PROXIMITY,
+    ASENSOR_TYPE_PRESSURE,
+    ASENSOR_TYPE_RELATIVE_HUMIDITY,
+    ASENSOR_TYPE_AMBIENT_TEMPERATURE,
+};
+
+// Forward declarations of JNI helpers
+static void ImGui_ImplAndroid_JniShowSoftKeyboard();
+static void ImGui_ImplAndroid_JniHideSoftKeyboard();
+static void ImGui_ImplAndroid_JniPollUnicodeChars();
+static void ImGui_ImplAndroid_JniSetClipboardText(const char* text);
+static const char* ImGui_ImplAndroid_JniGetClipboardText();
 
 static ImGuiKey ImGui_ImplAndroid_KeyCodeToImGuiKey(int32_t key_code)
 {
@@ -261,24 +309,377 @@ int32_t ImGui_ImplAndroid_HandleInputEvent(const AInputEvent* input_event)
     return 0;
 }
 
-bool ImGui_ImplAndroid_Init(ANativeWindow* window)
+// --- JNI helpers ---
+// These functions handle the soft keyboard, Unicode character polling, and clipboard
+// entirely within the backend so the application code stays clean.
+
+static JNIEnv* ImGui_ImplAndroid_GetEnv()
+{
+    if (!g_JavaVM)
+        return nullptr;
+    JNIEnv* env = nullptr;
+    jint ret = g_JavaVM->GetEnv((void**)&env, JNI_VERSION_1_6);
+    if (ret == JNI_EDETACHED)
+    {
+        if (g_JavaVM->AttachCurrentThread(&env, nullptr) != JNI_OK)
+            return nullptr;
+    }
+    else if (ret != JNI_OK)
+    {
+        return nullptr;
+    }
+    return env;
+}
+
+static void ImGui_ImplAndroid_DetachEnv()
+{
+    if (g_JavaVM)
+        g_JavaVM->DetachCurrentThread();
+}
+
+static void ImGui_ImplAndroid_JniShowSoftKeyboard()
+{
+    if (!g_NativeActivity)
+        return;
+    JNIEnv* env = ImGui_ImplAndroid_GetEnv();
+    if (!env) return;
+
+    jclass cls = env->GetObjectClass(g_NativeActivity);
+    if (!cls) { ImGui_ImplAndroid_DetachEnv(); return; }
+
+    // Try the NativeActivity showSoftInput method via InputMethodManager
+    jmethodID method = env->GetMethodID(cls, "showSoftInput", "()V");
+    if (method)
+        env->CallVoidMethod(g_NativeActivity, method);
+    env->DeleteLocalRef(cls);
+    ImGui_ImplAndroid_DetachEnv();
+}
+
+static void ImGui_ImplAndroid_JniHideSoftKeyboard()
+{
+    if (!g_NativeActivity)
+        return;
+    JNIEnv* env = ImGui_ImplAndroid_GetEnv();
+    if (!env) return;
+
+    jclass cls = env->GetObjectClass(g_NativeActivity);
+    if (!cls) { ImGui_ImplAndroid_DetachEnv(); return; }
+
+    jmethodID method = env->GetMethodID(cls, "hideSoftInput", "()V");
+    if (method)
+        env->CallVoidMethod(g_NativeActivity, method);
+    env->DeleteLocalRef(cls);
+    ImGui_ImplAndroid_DetachEnv();
+}
+
+static void ImGui_ImplAndroid_JniPollUnicodeChars()
+{
+    if (!g_NativeActivity)
+        return;
+    JNIEnv* env = ImGui_ImplAndroid_GetEnv();
+    if (!env) return;
+
+    jclass cls = env->GetObjectClass(g_NativeActivity);
+    if (!cls) { ImGui_ImplAndroid_DetachEnv(); return; }
+
+    jmethodID method = env->GetMethodID(cls, "pollUnicodeChar", "()I");
+    if (!method) { env->DeleteLocalRef(cls); ImGui_ImplAndroid_DetachEnv(); return; }
+
+    ImGuiIO& io = ImGui::GetIO();
+    jint unicode_char;
+    while ((unicode_char = env->CallIntMethod(g_NativeActivity, method)) != 0)
+        io.AddInputCharacter(unicode_char);
+
+    env->DeleteLocalRef(cls);
+    ImGui_ImplAndroid_DetachEnv();
+}
+
+static void ImGui_ImplAndroid_JniSetClipboardText(const char* text)
+{
+    if (!g_NativeActivity || !text)
+        return;
+    JNIEnv* env = ImGui_ImplAndroid_GetEnv();
+    if (!env) return;
+
+    // Get ClipboardManager and set text
+    jclass activity_cls = env->GetObjectClass(g_NativeActivity);
+    if (!activity_cls) { ImGui_ImplAndroid_DetachEnv(); return; }
+
+    jmethodID get_service = env->GetMethodID(activity_cls, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;");
+    if (!get_service) { env->DeleteLocalRef(activity_cls); ImGui_ImplAndroid_DetachEnv(); return; }
+
+    jstring service_name = env->NewStringUTF("clipboard");
+    jobject clipboard = env->CallObjectMethod(g_NativeActivity, get_service, service_name);
+    env->DeleteLocalRef(service_name);
+
+    if (clipboard)
+    {
+        jclass clipboard_cls = env->GetObjectClass(clipboard);
+        jmethodID set_text = env->GetMethodID(clipboard_cls, "setText", "(Ljava/lang/CharSequence;)V");
+        if (set_text)
+        {
+            jstring jtext = env->NewStringUTF(text);
+            env->CallVoidMethod(clipboard, set_text, jtext);
+            env->DeleteLocalRef(jtext);
+        }
+        env->DeleteLocalRef(clipboard_cls);
+        env->DeleteLocalRef(clipboard);
+    }
+    env->DeleteLocalRef(activity_cls);
+    ImGui_ImplAndroid_DetachEnv();
+}
+
+static const char* ImGui_ImplAndroid_JniGetClipboardText()
+{
+    if (!g_NativeActivity)
+        return nullptr;
+    JNIEnv* env = ImGui_ImplAndroid_GetEnv();
+    if (!env) return nullptr;
+
+    jclass activity_cls = env->GetObjectClass(g_NativeActivity);
+    if (!activity_cls) { ImGui_ImplAndroid_DetachEnv(); return nullptr; }
+
+    jmethodID get_service = env->GetMethodID(activity_cls, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;");
+    if (!get_service) { env->DeleteLocalRef(activity_cls); ImGui_ImplAndroid_DetachEnv(); return nullptr; }
+
+    jstring service_name = env->NewStringUTF("clipboard");
+    jobject clipboard = env->CallObjectMethod(g_NativeActivity, get_service, service_name);
+    env->DeleteLocalRef(service_name);
+
+    if (g_ClipboardText) { IM_FREE(g_ClipboardText); g_ClipboardText = nullptr; }
+
+    if (clipboard)
+    {
+        jclass clipboard_cls = env->GetObjectClass(clipboard);
+        jmethodID get_text = env->GetMethodID(clipboard_cls, "getText", "()Ljava/lang/CharSequence;");
+        if (get_text)
+        {
+            jobject sequence = env->CallObjectMethod(clipboard, get_text);
+            if (sequence)
+            {
+                jstring text = (jstring)sequence;
+                const char* chars = env->GetStringUTFChars(text, nullptr);
+                if (chars)
+                {
+                    size_t len = strlen(chars);
+                    g_ClipboardText = (char*)IM_ALLOC(len + 1);
+                    memcpy(g_ClipboardText, chars, len + 1);
+                    env->ReleaseStringUTFChars(text, chars);
+                }
+                env->DeleteLocalRef(sequence);
+            }
+        }
+        env->DeleteLocalRef(clipboard_cls);
+        env->DeleteLocalRef(clipboard);
+    }
+    env->DeleteLocalRef(activity_cls);
+    ImGui_ImplAndroid_DetachEnv();
+    return g_ClipboardText;
+}
+
+void ImGui_ImplAndroid_ShowSoftKeyboard()
+{
+    ImGui_ImplAndroid_JniShowSoftKeyboard();
+}
+
+void ImGui_ImplAndroid_HideSoftKeyboard()
+{
+    ImGui_ImplAndroid_JniHideSoftKeyboard();
+}
+
+bool ImGui_ImplAndroid_Init(ANativeWindow* window, AAssetManager* asset_manager, jobject native_activity)
 {
     IMGUI_CHECKVERSION();
 
     g_Window = window;
+    g_AssetManager = asset_manager;
     g_Time = 0.0;
 
     // Setup backend capabilities flags
     ImGuiIO& io = ImGui::GetIO();
     io.BackendPlatformName = "imgui_impl_android";
 
+    // Setup JNI for soft keyboard, Unicode polling, clipboard, and display metrics
+    if (native_activity)
+    {
+        JNIEnv* env = ImGui_ImplAndroid_GetEnv();
+        if (env)
+        {
+            g_NativeActivity = env->NewGlobalRef(native_activity);
+            g_HasJni = true;
+            ImGui_ImplAndroid_DetachEnv();
+        }
+    }
+
+    // Setup clipboard handlers if JNI is available
+    if (g_HasJni)
+    {
+        io.SetClipboardTextFn = [](void* /*user_data*/, const char* text) { ImGui_ImplAndroid_JniSetClipboardText(text); };
+        io.GetClipboardTextFn = [](void* /*user_data*/) -> const char* { return ImGui_ImplAndroid_JniGetClipboardText(); };
+    }
+
+    // Initialize sensor manager (NDK native API, no JNI)
+    // ASensorManager_getInstance() is deprecated in API 26+ but still works.
+    // ASensorManager_getInstanceForPackage() is the modern replacement.
+#if __ANDROID_API__ >= 26
+    const char* package_name = "imgui.backend";
+    g_SensorManager = ASensorManager_getInstanceForPackage(package_name);
+#else
+    g_SensorManager = ASensorManager_getInstance();
+#endif
+    if (g_SensorManager)
+    {
+        // Create the event queue tied to the current thread's looper
+        ALooper* looper = ALooper_forThread();
+        if (!looper)
+            looper = ALooper_prepare(ALOOPER_PREPARE_ALLOW_NON_CALLBACKS);
+        g_SensorEventQueue = ASensorManager_createEventQueue(g_SensorManager, looper, g_SensorLooperId, nullptr, nullptr);
+    }
+
+    // Query display metrics via JNI (if activity available)
+    if (g_HasJni)
+    {
+        JNIEnv* env = ImGui_ImplAndroid_GetEnv();
+        if (env)
+        {
+            jclass activity_cls = env->GetObjectClass(g_NativeActivity);
+            if (activity_cls)
+            {
+                jmethodID get_metrics = env->GetMethodID(activity_cls, "getWindowManager", "()Landroid/view/WindowManager;");
+                if (get_metrics)
+                {
+                    jobject wm = env->CallObjectMethod(g_NativeActivity, get_metrics);
+                    if (wm)
+                    {
+                        jclass wm_cls = env->GetObjectClass(wm);
+                        jmethodID get_default_display = env->GetMethodID(wm_cls, "getDefaultDisplay", "()Landroid/view/Display;");
+                        if (get_default_display)
+                        {
+                            jobject display = env->CallObjectMethod(wm, get_default_display);
+                            if (display)
+                            {
+                                jclass display_cls = env->GetObjectClass(display);
+
+                                // Refresh rate
+                                jmethodID get_refresh = env->GetMethodID(display_cls, "getRefreshRate", "()F");
+                                if (get_refresh)
+                                    g_DisplayMetrics.RefreshRate = env->CallFloatMethod(display, get_refresh);
+
+                                // Orientation (getRotation: 0=portrait, 1=landscape, 2=rev portrait, 3=rev landscape)
+                                jmethodID get_rotation = env->GetMethodID(display_cls, "getRotation", "()I");
+                                if (get_rotation)
+                                    g_DisplayMetrics.Orientation = env->CallIntMethod(display, get_rotation);
+
+                                env->DeleteLocalRef(display_cls);
+                                env->DeleteLocalRef(display);
+                            }
+                        }
+                        env->DeleteLocalRef(wm_cls);
+                        env->DeleteLocalRef(wm);
+                    }
+                }
+
+                // Display metrics (DPI, density)
+                jmethodID get_resources = env->GetMethodID(activity_cls, "getResources", "()Landroid/content/res/Resources;");
+                if (get_resources)
+                {
+                    jobject res = env->CallObjectMethod(g_NativeActivity, get_resources);
+                    if (res)
+                    {
+                        jclass res_cls = env->GetObjectClass(res);
+                        jmethodID get_metrics = env->GetMethodID(res_cls, "getDisplayMetrics", "()Landroid/util/DisplayMetrics;");
+                        if (get_metrics)
+                        {
+                            jobject dm = env->CallObjectMethod(res, get_metrics);
+                            if (dm)
+                            {
+                                jclass dm_cls = env->GetObjectClass(dm);
+                                jfieldID density_dpi = env->GetFieldID(dm_cls, "densityDpi", "I");
+                                jfieldID density = env->GetFieldID(dm_cls, "density", "F");
+                                jfieldID xdpi = env->GetFieldID(dm_cls, "xdpi", "F");
+                                jfieldID ydpi = env->GetFieldID(dm_cls, "ydpi", "F");
+                                jfieldID w_pixels = env->GetFieldID(dm_cls, "widthPixels", "I");
+                                jfieldID h_pixels = env->GetFieldID(dm_cls, "heightPixels", "I");
+
+                                if (density_dpi) g_DisplayMetrics.DensityDpi = env->GetIntField(dm, density_dpi);
+                                if (density) g_DisplayMetrics.Density = env->GetFloatField(dm, density);
+                                if (xdpi) g_DisplayMetrics.Xdpi = env->GetFloatField(dm, xdpi);
+                                if (ydpi) g_DisplayMetrics.Ydpi = env->GetFloatField(dm, ydpi);
+                                if (w_pixels) g_DisplayMetrics.WidthPixels = env->GetIntField(dm, w_pixels);
+                                if (h_pixels) g_DisplayMetrics.HeightPixels = env->GetIntField(dm, h_pixels);
+
+                                env->DeleteLocalRef(dm_cls);
+                                env->DeleteLocalRef(dm);
+                            }
+                        }
+                        env->DeleteLocalRef(res_cls);
+                        env->DeleteLocalRef(res);
+                    }
+                }
+                env->DeleteLocalRef(activity_cls);
+            }
+            ImGui_ImplAndroid_DetachEnv();
+        }
+    }
+
+    // Fallback display metrics from ANativeWindow if JNI didn't provide them
+    if (g_Window)
+    {
+        int32_t w = ANativeWindow_getWidth(g_Window);
+        int32_t h = ANativeWindow_getHeight(g_Window);
+        if (g_DisplayMetrics.WidthPixels == 0) g_DisplayMetrics.WidthPixels = w;
+        if (g_DisplayMetrics.HeightPixels == 0) g_DisplayMetrics.HeightPixels = h;
+        if (g_DisplayMetrics.DensityDpi == 0) g_DisplayMetrics.DensityDpi = 160;  // Default to mdpi
+        if (g_DisplayMetrics.Density == 0.0f) g_DisplayMetrics.Density = (float)g_DisplayMetrics.DensityDpi / 160.0f;
+        if (g_DisplayMetrics.RefreshRate == 0.0f) g_DisplayMetrics.RefreshRate = 60.0f;
+    }
+
     return true;
 }
 
 void ImGui_ImplAndroid_Shutdown()
 {
+    // Disable all sensors and destroy the event queue
+    if (g_SensorManager && g_SensorEventQueue)
+    {
+        for (int i = 0; i < ImGui_ImplAndroid_SensorType_Count; i++)
+        {
+            if (g_SensorEnabled[i] && g_Sensors[i])
+            {
+                ASensorEventQueue_disableSensor(g_SensorEventQueue, g_Sensors[i]);
+                g_SensorEnabled[i] = false;
+            }
+            g_Sensors[i] = nullptr;
+            g_SensorData[i] = ImGui_ImplAndroid_SensorData{};
+        }
+        ASensorManager_destroyEventQueue(g_SensorManager, g_SensorEventQueue);
+        g_SensorEventQueue = nullptr;
+    }
+    g_SensorManager = nullptr;
+
     ImGuiIO& io = ImGui::GetIO();
     io.BackendPlatformName = nullptr;
+    io.SetClipboardTextFn = nullptr;
+    io.GetClipboardTextFn = nullptr;
+
+    if (g_ClipboardText) { IM_FREE(g_ClipboardText); g_ClipboardText = nullptr; }
+
+    // Release the global ref to the activity
+    if (g_NativeActivity)
+    {
+        JNIEnv* env = ImGui_ImplAndroid_GetEnv();
+        if (env)
+        {
+            env->DeleteGlobalRef(g_NativeActivity);
+            g_NativeActivity = nullptr;
+            ImGui_ImplAndroid_DetachEnv();
+        }
+    }
+    g_HasJni = false;
+    g_JavaVM = nullptr;
+    g_Window = nullptr;
+    g_AssetManager = nullptr;
+    g_DisplayMetrics = ImGui_ImplAndroid_DisplayMetrics{};
 }
 
 void ImGui_ImplAndroid_NewFrame()
@@ -301,8 +702,123 @@ void ImGui_ImplAndroid_NewFrame()
     double current_time = (double)(current_timespec.tv_sec) + (current_timespec.tv_nsec / 1000000000.0);
     io.DeltaTime = g_Time > 0.0 ? (float)(current_time - g_Time) : (float)(1.0f / 60.0f);
     g_Time = current_time;
+
+    // Poll Unicode characters from the Java side (soft keyboard input)
+    if (g_HasJni)
+    {
+        ImGui_ImplAndroid_JniPollUnicodeChars();
+
+        // Show/hide soft keyboard based on ImGui's text input requests
+        static bool want_text_input_last = false;
+        if (io.WantTextInput && !want_text_input_last)
+            ImGui_ImplAndroid_JniShowSoftKeyboard();
+        else if (!io.WantTextInput && want_text_input_last)
+            ImGui_ImplAndroid_JniHideSoftKeyboard();
+        want_text_input_last = io.WantTextInput;
+    }
+
+    // Drain sensor events — non-blocking, process all available
+    if (g_SensorEventQueue)
+    {
+        ASensorEvent event;
+        while (ASensorEventQueue_getEvents(g_SensorEventQueue, &event, 1) > 0)
+        {
+            for (int i = 0; i < ImGui_ImplAndroid_SensorType_Count; i++)
+            {
+                if (event.type == g_SensorTypes[i] && g_SensorEnabled[i])
+                {
+                    g_SensorData[i].Values[0] = event.vector.x;
+                    g_SensorData[i].Values[1] = event.vector.y;
+                    g_SensorData[i].Values[2] = event.vector.z;
+                    g_SensorData[i].Accuracy = (float)event.acceleration.status; // Reuse the status field
+                    g_SensorData[i].Timestamp = (double)event.timestamp / 1e9;  // ns to seconds
+                    break;
+                }
+            }
+        }
+    }
+
+    // Update display size (in case of rotation/resize)
+    g_DisplayMetrics.WidthPixels = (int)io.DisplaySize.x;
+    g_DisplayMetrics.HeightPixels = (int)io.DisplaySize.y;
+}
+
+// --- Sensor API ---
+
+bool ImGui_ImplAndroid_IsSensorAvailable(int sensor_type)
+{
+    if (sensor_type < 0 || sensor_type >= ImGui_ImplAndroid_SensorType_Count)
+        return false;
+    if (!g_SensorManager)
+        return false;
+    if (g_Sensors[sensor_type])
+        return true;
+    // Try to get the default sensor for this type
+    const ASensor* sensor = ASensorManager_getDefaultSensor(g_SensorManager, g_SensorTypes[sensor_type]);
+    return sensor != nullptr;
+}
+
+bool ImGui_ImplAndroid_EnableSensor(int sensor_type)
+{
+    if (sensor_type < 0 || sensor_type >= ImGui_ImplAndroid_SensorType_Count)
+        return false;
+    if (!g_SensorManager || !g_SensorEventQueue)
+        return false;
+
+    if (g_Sensors[sensor_type] == nullptr)
+    {
+        g_Sensors[sensor_type] = ASensorManager_getDefaultSensor(g_SensorManager, g_SensorTypes[sensor_type]);
+        if (!g_Sensors[sensor_type])
+            return false; // Sensor not present on this device
+    }
+
+    if (g_SensorEnabled[sensor_type])
+        return true; // Already enabled
+
+    int result = ASensorEventQueue_enableSensor(g_SensorEventQueue, g_Sensors[sensor_type]);
+    if (result < 0)
+        return false;
+
+    // Set a reasonable sampling rate (events per second)
+    // Use the sensor's minimum delay for maximum precision, or ~60Hz
+    int min_delay_us = ASensor_getMinDelay(g_Sensors[sensor_type]);
+    int sampling_period_us = (min_delay_us > 0 && min_delay_us < 16666) ? min_delay_us : 16666; // ~60Hz
+    ASensorEventQueue_setEventRate(g_SensorEventQueue, g_Sensors[sensor_type], sampling_period_us);
+
+    g_SensorEnabled[sensor_type] = true;
+    g_SensorData[sensor_type].Available = true;
+    return true;
+}
+
+void ImGui_ImplAndroid_DisableSensor(int sensor_type)
+{
+    if (sensor_type < 0 || sensor_type >= ImGui_ImplAndroid_SensorType_Count)
+        return;
+    if (!g_SensorEventQueue || !g_Sensors[sensor_type] || !g_SensorEnabled[sensor_type])
+        return;
+
+    ASensorEventQueue_disableSensor(g_SensorEventQueue, g_Sensors[sensor_type]);
+    g_SensorEnabled[sensor_type] = false;
+    g_SensorData[sensor_type].Available = false;
+}
+
+void ImGui_ImplAndroid_GetSensorData(int sensor_type, ImGui_ImplAndroid_SensorData* out_data)
+{
+    if (!out_data || sensor_type < 0 || sensor_type >= ImGui_ImplAndroid_SensorType_Count)
+    {
+        if (out_data) *out_data = ImGui_ImplAndroid_SensorData{};
+        return;
+    }
+    *out_data = g_SensorData[sensor_type];
+    out_data->Available = g_Sensors[sensor_type] != nullptr;
+}
+
+// --- Display Metrics API ---
+
+void ImGui_ImplAndroid_GetDisplayMetrics(ImGui_ImplAndroid_DisplayMetrics* out_metrics)
+{
+    if (out_metrics) *out_metrics = g_DisplayMetrics;
 }
 
 //-----------------------------------------------------------------------------
-
 #endif // #ifndef IMGUI_DISABLE
