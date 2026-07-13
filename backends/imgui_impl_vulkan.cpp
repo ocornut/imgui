@@ -40,6 +40,7 @@
 //                - After:  need at least IMGUI_IMPL_VULKAN_MINIMUM_SAMPLED_IMAGE_POOL_SIZE descriptors of type VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE.
 //                                      + IMGUI_IMPL_VULKAN_MINIMUM_SAMPLER_POOL_SIZE       descriptors of type VK_DESCRIPTOR_TYPE_SAMPLER.
 //  2026-03-11: Vulkan: Added ImGui_ImplVulkan_PipelineInfo::ExtraDynamicStates[] to allow specifying extra dynamic states to add when creating the VkPipeline. (#9211)
+//  2026-07-13: Vulkan: Fixed use-after-free in multi-viewport dynamic rendering path: deep-copy SurfaceFormat.format into the persistent buffer instead of storing a pointer to the viewport's wd->SurfaceFormat which dangles after the viewport is destroyed. (#9390)
 //  2025-09-26: [Helpers] *BREAKING CHANGE*: Vulkan: Helper ImGui_ImplVulkanH_DestroyWindow() does not call vkDestroySurfaceKHR(): as surface is created by caller of ImGui_ImplVulkanH_CreateOrResizeWindow(), it is more consistent that we don't destroy it. (#9163)
 //  2026-01-05: [Helpers] *BREAKING CHANGE*: Vulkan: Helper for creating render pass uses ImGui_ImplVulkanH_Window::AttachmentDesc to create render pass. Removed ClearEnabled. (#9152)
 //  2025-11-24: [Helpers] Vulkan: Helper for creating a swap-chain (used by examples and multi-viewports) selects VkSwapchainCreateInfoKHR's compositeAlpha based on cap.supportedCompositeAlpha. (#8784)
@@ -2127,7 +2128,12 @@ static void ImGui_ImplVulkan_CreateWindow(ImGuiViewport* viewport)
         {
             pipeline_info->PipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
             pipeline_info->PipelineRenderingCreateInfo.colorAttachmentCount = 1;
-            pipeline_info->PipelineRenderingCreateInfo.pColorAttachmentFormats = &wd->SurfaceFormat.format;
+            // Deep copy the format so the pointer remains valid after the viewport's wd is destroyed (#9390)
+            // The previous code used &wd->SurfaceFormat.format which becomes a dangling pointer when the
+            // viewport is destroyed and wd is freed, causing a use-after-free on the next viewport creation.
+            bd->PipelineRenderingCreateInfoColorAttachmentFormats.resize(1);
+            bd->PipelineRenderingCreateInfoColorAttachmentFormats[0] = wd->SurfaceFormat.format;
+            pipeline_info->PipelineRenderingCreateInfo.pColorAttachmentFormats = bd->PipelineRenderingCreateInfoColorAttachmentFormats.Data;
         }
         else
         {
