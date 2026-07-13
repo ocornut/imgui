@@ -66,6 +66,7 @@ Other Changes:
   - Reworked `io.ConfigInputTextEnterKeepActive` mode so that pressing
     Ctrl+Enter or Shift+Enter still allows to deactivate. (#9239)
 - Tables:
+  - Fixed loading a corrupted Table .ini entry with an invalid column count potentially causing memory corruption.
   - Redesigned/rewrote code to reconcile columns and settings on topology changes. (#9108)
     - When a column label is passed to TableSetupColumn(), the underlying identifier
       is used to match live columns data and .ini settings data when changing.
