@@ -18998,8 +18998,9 @@ static void ImGui::DockNodeMoveWindows(ImGuiDockNode* dst_node, ImGuiDockNode* s
     for (ImGuiWindow* window : src_node->Windows)
     {
         window->DockNode = NULL;
-        window->DockIsActive = false;
+        const bool dock_is_active = window->DockIsActive;
         DockNodeAddWindow(dst_node, window, !move_tab_bar);
+        window->DockIsActive |= dock_is_active;
     }
     src_node->Windows.clear();
 
