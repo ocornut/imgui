@@ -159,6 +159,7 @@ Other Changes:
     - Expose selected render state in ImGui_ImplOpenGL3_RenderState, allowing to
       dynamically select between use of glBindSampler() and glTexParameter(). (#9378)
   - SDLRenderer3:
+    - Fixed sampler change which didn't work on all graphics backends. (#7616, #9470, #9378)
     - Fixed default sampler not being Linear. Regression in 1.92.8. (#7616, #9470, #9378) [@ShiroKSH]
   - Win32:
     - Uses `SetProcessDpiAwarenessContext()` instead of `SetThreadDpiAwarenessContext()`
