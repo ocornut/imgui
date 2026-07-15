@@ -1325,7 +1325,7 @@ bool ImGui::CheckboxFlagsT(const char* label, T* flags, T flags_value)
     if (!all_on && any_on)
     {
         ImGuiContext& g = *GImGui;
-        g.NextItemData.ItemFlags |= ImGuiItemFlags_MixedValue;
+        g.NextItemData.ItemFlagsSet |= ImGuiItemFlags_MixedValue;
         pressed = Checkbox(label, &all_on);
     }
     else
@@ -3820,7 +3820,7 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* p_data
 
     // Disable the MarkItemEdited() call in InputText but keep ImGuiItemStatusFlags_Edited.
     // We call MarkItemEdited() ourselves by comparing the actual data rather than the string.
-    g.NextItemData.ItemFlags |= ImGuiItemFlags_NoMarkEdited;
+    g.NextItemData.ItemFlagsSet |= ImGuiItemFlags_NoMarkEdited;
     flags |= ImGuiInputTextFlags_AutoSelectAll | (ImGuiInputTextFlags)ImGuiInputTextFlags_LocalizeDecimalPoint;
 
     const bool has_step_buttons = (p_step != NULL);
@@ -5707,7 +5707,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     {
         // For focus requests to work on our multiline we need to ensure our child ItemAdd() call specifies the ImGuiItemFlags_Inputable (see #4761, #7870)...
         Dummy(ImVec2(0.0f, text_size_y + style.FramePadding.y));
-        g.NextItemData.ItemFlags |= (ImGuiItemFlags)ImGuiItemFlags_Inputable | ImGuiItemFlags_NoTabStop;
+        g.NextItemData.ItemFlagsSet |= (ImGuiItemFlags)ImGuiItemFlags_Inputable | ImGuiItemFlags_NoTabStop;
         EndChild();
         item_data_backup.StatusFlags |= (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_HoveredWindow);
 
@@ -6121,7 +6121,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
     ImGuiIO& io = g.IO;
 
     const float width = CalcItemWidth();
-    const bool is_readonly = ((g.NextItemData.ItemFlags | g.CurrentItemFlags) & ImGuiItemFlags_ReadOnly) != 0;
+    const bool is_readonly = ((g.NextItemData.ItemFlagsSet | g.CurrentItemFlags) & ImGuiItemFlags_ReadOnly) != 0;
     g.NextItemData.ClearFlags();
 
     PushID(label);
@@ -8264,7 +8264,7 @@ void ImGui::SetNextItemSelectionUserData(ImGuiSelectionUserData selection_user_d
     if (ImGuiMultiSelectTempData* ms = g.CurrentMultiSelect)
     {
         // Auto updating RangeSrcPassedBy for cases were clipper is not used (done before ItemAdd() clipping)
-        g.NextItemData.ItemFlags |= ImGuiItemFlags_HasSelectionUserData | ImGuiItemFlags_IsMultiSelect;
+        g.NextItemData.ItemFlagsSet |= ImGuiItemFlags_HasSelectionUserData | ImGuiItemFlags_IsMultiSelect;
         if (ms->IO.RangeSrcItem == selection_user_data)
             ms->RangeSrcPassedBy = true;
         //ms->PrevSubmittedItem = ms->CurrSubmittedItem; // Can't rely on previous g.NextItemData.SelectionUserData because NextItemData is not restored on nested multi-select.
@@ -8272,7 +8272,7 @@ void ImGui::SetNextItemSelectionUserData(ImGuiSelectionUserData selection_user_d
     }
     else
     {
-        g.NextItemData.ItemFlags |= ImGuiItemFlags_HasSelectionUserData;
+        g.NextItemData.ItemFlagsSet |= ImGuiItemFlags_HasSelectionUserData;
     }
 }
 
@@ -9427,7 +9427,7 @@ bool ImGui::BeginMenuEx(const char* label, const char* icon, bool enabled)
     // This is only done for items for the menu set and not the full parent window.
     const bool menuset_is_open = IsRootOfOpenMenuSet();
     if (menuset_is_open)
-        g.NextItemData.ItemFlags |= ImGuiItemFlags_NoWindowHoverableCheck;
+        g.NextItemData.ItemFlagsSet |= ImGuiItemFlags_NoWindowHoverableCheck;
 
     // The reference position stored in popup_pos will be used by Begin() to find a suitable position for the child menu,
     // However the final position is going to be different! It is chosen by FindBestWindowPosForPopup().
@@ -9652,7 +9652,7 @@ bool ImGui::MenuItemEx(const char* label, const char* icon, const char* shortcut
     // See BeginMenuEx() for comments about this.
     const bool menuset_is_open = IsRootOfOpenMenuSet();
     if (menuset_is_open)
-        g.NextItemData.ItemFlags |= ImGuiItemFlags_NoWindowHoverableCheck;
+        g.NextItemData.ItemFlagsSet |= ImGuiItemFlags_NoWindowHoverableCheck;
 
     // We've been using the equivalent of ImGuiSelectableFlags_SetNavIdOnHover on all Selectable() since early Nav system days (commit 43ee5d73),
     // but I am unsure whether this should be kept at all. For now moved it to be an opt-in feature used by menus only.
