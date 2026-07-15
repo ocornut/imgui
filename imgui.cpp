@@ -4250,6 +4250,7 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     HoveredIdIsDisabled = false;
     HoveredIdTimer = HoveredIdNotActiveTimer = 0.0f;
     ItemUnclipByLog = false;
+    AnyIdHasBeenEditedThisFrame = false;
     ActiveId = 0;
     ActiveIdIsAlive = 0;
     ActiveIdTimer = 0.0f;
@@ -4842,8 +4843,7 @@ void ImGui::MarkItemEdited(ImGuiID id)
     if (g.ActiveId == id || g.ActiveId == 0)
     {
         // FIXME: Can't we fully rely on LastItemData yet?
-        g.ActiveIdHasBeenEditedThisFrame = true;
-        g.ActiveIdHasBeenEditedBefore = true;
+        g.AnyIdHasBeenEditedThisFrame = g.ActiveIdHasBeenEditedThisFrame = g.ActiveIdHasBeenEditedBefore = true;
     }
     if (g.DeactivatedItemData.ID == id)
         g.DeactivatedItemData.HasBeenEditedBefore = true;
@@ -5673,6 +5673,7 @@ void ImGui::NewFrame()
     g.LastActiveIdTimer += g.IO.DeltaTime;
     g.ActiveIdPreviousFrame = g.ActiveId;
     g.ActiveIdIsAlive = 0;
+    g.AnyIdHasBeenEditedThisFrame = false;
     g.ActiveIdHasBeenEditedThisFrame = false;
     g.ActiveIdIsJustActivated = false;
     if (g.TempInputId != 0 && g.ActiveId != g.TempInputId)
@@ -11889,7 +11890,7 @@ void ImGui::BeginGroup()
     group_data.BackupActiveIdIsAlive = g.ActiveIdIsAlive;
     group_data.BackupHoveredIdIsAlive = g.HoveredId != 0;
     group_data.BackupIsSameLine = window->DC.IsSameLine;
-    group_data.BackupActiveIdHasBeenEditedThisFrame = g.ActiveIdHasBeenEditedThisFrame;
+    group_data.BackupAnyIdHasBeenEditedThisFrame = g.AnyIdHasBeenEditedThisFrame;
     group_data.BackupDeactivatedIdIsAlive = g.DeactivatedItemData.IsAlive;
     group_data.EmitItem = true;
 
@@ -11954,7 +11955,7 @@ void ImGui::EndGroup()
         g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_HoveredWindow;
 
     // Forward Edited flag
-    if (g.ActiveIdHasBeenEditedThisFrame && !group_data.BackupActiveIdHasBeenEditedThisFrame)
+    if (g.AnyIdHasBeenEditedThisFrame && !group_data.BackupAnyIdHasBeenEditedThisFrame)
         g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_Edited;
 
     // Forward Deactivated flag
