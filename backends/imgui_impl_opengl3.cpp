@@ -23,6 +23,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-07-15: OpenGL: Backup and restore GL_UNPACK_ROW_LENGTH and GL_UNPACK_ALIGNMENT in UpdateTexture() to avoid corrupting caller GL state. (#8802, #9473)
 //  2026-06-17: OpenGL: Expose selected render state in ImGui_ImplOpenGL3_RenderState, Allowing to dynamically select between use of glBindSampler() and glTexParameter(). You can access in 'void* platform_io.Renderer_RenderState' during rendering.
 //  2026-06-03: OpenGL: GLSL version detection assume GLSL 410 when GL context is 4.1. Fixes an issue running on macOS with Wine. (#9427, #6577)
 //  2026-04-23: OpenGL: Added support for standard draw callbacks (in platform_io): DrawCallback_ResetRenderState, DrawCallback_SetSamplerLinear, DrawCallback_SetSamplerNearest. (#9378)
@@ -32,7 +33,6 @@
 //  2025-09-18: Call platform_io.ClearRendererHandlers() on shutdown.
 //  2025-07-22: OpenGL: Add and call embedded loader shutdown during ImGui_ImplOpenGL3_Shutdown() to facilitate multiple init/shutdown cycles in same process. (#8792)
 //  2025-07-15: OpenGL: Set GL_UNPACK_ALIGNMENT to 1 before updating textures (#8802) + restore non-WebGL/ES update path that doesn't require a CPU-side copy.
-//  2026-07-15: OpenGL: Backup and restore GL_UNPACK_ROW_LENGTH and GL_UNPACK_ALIGNMENT in UpdateTexture() to avoid corrupting caller GL state. (#8802, #9473)
 //  2025-06-11: OpenGL: Added support for ImGuiBackendFlags_RendererHasTextures, for dynamic font atlas. Removed ImGui_ImplOpenGL3_CreateFontsTexture() and ImGui_ImplOpenGL3_DestroyFontsTexture().
 //  2025-06-04: OpenGL: Made GLES 3.20 contexts not access GL_CONTEXT_PROFILE_MASK nor GL_PRIMITIVE_RESTART. (#8664)
 //  2025-02-18: OpenGL: Lazily reinitialize embedded GL loader for when calling backend from e.g. other DLL boundaries. (#8406)
@@ -668,21 +668,13 @@ static void ImGui_ImplOpenGL3_DestroyTexture(ImTextureData* tex)
 void ImGui_ImplOpenGL3_UpdateTexture(ImTextureData* tex)
 {
     // Backup GL_UNPACK state that we modify, restore on exit.
-    // This prevents corrupting the caller's pixel store state when ImGui
-    // creates or updates textures mid-frame. (#8802, #9473)
-#ifdef GL_UNPACK_ROW_LENGTH
-    GLint last_unpack_row_length = 0; GL_CALL(glGetIntegerv(GL_UNPACK_ROW_LENGTH, &last_unpack_row_length));
-#endif
-#ifdef GL_UNPACK_ALIGNMENT
-    GLint last_unpack_alignment = 0; GL_CALL(glGetIntegerv(GL_UNPACK_ALIGNMENT, &last_unpack_alignment));
-#endif
-
+    GLint last_unpack_row_length = 0; (void)last_unpack_row_length;
+    GLint last_unpack_alignment = 0; (void)last_unpack_alignment;
     if (tex->Status == ImTextureStatus_WantCreate || tex->Status == ImTextureStatus_WantUpdates)
     {
 #ifdef GL_UNPACK_ROW_LENGTH // Not on WebGL/ES
-        GL_CALL(glPixelStorei(GL_UNPACK_ROW_LENGTH, 0));
-#endif
-#ifdef GL_UNPACK_ALIGNMENT
+        GL_CALL(glGetIntegerv(GL_UNPACK_ROW_LENGTH, &last_unpack_row_length));
+        GL_CALL(glGetIntegerv(GL_UNPACK_ALIGNMENT, &last_unpack_alignment));
         GL_CALL(glPixelStorei(GL_UNPACK_ALIGNMENT, 1));
 #endif
     }
@@ -706,6 +698,9 @@ void ImGui_ImplOpenGL3_UpdateTexture(ImTextureData* tex)
         GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
         GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
         GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
+#if GL_UNPACK_ROW_LENGTH // Not on WebGL/ES
+        GL_CALL(glPixelStorei(GL_UNPACK_ROW_LENGTH, 0));
+#endif
         GL_CALL(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex->Width, tex->Height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels));
 
         // Store identifiers
@@ -728,7 +723,6 @@ void ImGui_ImplOpenGL3_UpdateTexture(ImTextureData* tex)
         GL_CALL(glPixelStorei(GL_UNPACK_ROW_LENGTH, tex->Width));
         for (ImTextureRect& r : tex->Updates)
             GL_CALL(glTexSubImage2D(GL_TEXTURE_2D, 0, r.x, r.y, r.w, r.h, GL_RGBA, GL_UNSIGNED_BYTE, tex->GetPixelsAt(r.x, r.y)));
-        GL_CALL(glPixelStorei(GL_UNPACK_ROW_LENGTH, 0));
 #else
         // GL ES doesn't have GL_UNPACK_ROW_LENGTH, so we need to (A) copy to a contiguous buffer or (B) upload line by line.
         ImGui_ImplOpenGL3_Data* bd = ImGui_ImplOpenGL3_GetBackendData();
@@ -750,12 +744,13 @@ void ImGui_ImplOpenGL3_UpdateTexture(ImTextureData* tex)
         ImGui_ImplOpenGL3_DestroyTexture(tex);
 
     // Restore GL_UNPACK state
+    if (tex->Status == ImTextureStatus_WantCreate || tex->Status == ImTextureStatus_WantUpdates)
+    {
 #ifdef GL_UNPACK_ROW_LENGTH
-    GL_CALL(glPixelStorei(GL_UNPACK_ROW_LENGTH, last_unpack_row_length));
+        GL_CALL(glPixelStorei(GL_UNPACK_ROW_LENGTH, last_unpack_row_length));
+        GL_CALL(glPixelStorei(GL_UNPACK_ALIGNMENT, last_unpack_alignment));
 #endif
-#ifdef GL_UNPACK_ALIGNMENT
-    GL_CALL(glPixelStorei(GL_UNPACK_ALIGNMENT, last_unpack_alignment));
-#endif
+    }
 }
 
 // If you get an error please report on github. You may try different GL context version or GLSL version. See GL<>GLSL version table at the top of this file.

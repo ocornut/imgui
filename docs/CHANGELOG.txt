@@ -156,11 +156,16 @@ Other Changes:
   - Metal4:
     - Added new Metal 4 backend (forked from Metal 3 backend). (#9458, #9451) [@AmelieHeinrich]
     - Added Metal-cpp support enabled with `IMGUI_IMPL_METAL_CPP` define. (#9461) [@MERL10N]
+  - OpenGL2:
+    - Backup and restore GL_UNPACK_ROW_LENGTH and GL_UNPACK_ALIGNMENT when updating texture
+      to avoid altering caller GL state. (#8802, #9473) [@Turtle-PB]
   - OpenGL3:
     - GLSL version detection assume GLSL 410 when GL context is 4.1.
       Fixes an issue running on macOS with Wine. [#9427, #6577) [@perminovVS]
     - Expose selected render state in ImGui_ImplOpenGL3_RenderState, allowing to
       dynamically select between use of glBindSampler() and glTexParameter(). (#9378)
+    - Backup and restore GL_UNPACK_ROW_LENGTH and GL_UNPACK_ALIGNMENT when updating texture
+      to avoid altering caller GL state. (#8802, #9473) [@Turtle-PB]
   - SDL2:
     - Restore SDL_StartTextInput()/SDL_StopTextInput() in IME handler for on-screen keyboard
       support on Android. (#7636, #9474) [@Turtle-PB]
