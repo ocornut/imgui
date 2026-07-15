@@ -150,6 +150,9 @@ Other Changes:
 - Misc:
   - Added IM_DEBUG_BREAK() handler for GCC+AArch64/ARM64. [@tom-seddon]
 - Backends:
+  - Android:
+     - Clear mouse position on touch release (AMOTION_EVENT_ACTION_UP) to prevent
+       items from staying in hovered state. (#6627, #9474) [@Turtle-PB]
   - Metal4:
     - Added new Metal 4 backend (forked from Metal 3 backend). (#9458, #9451) [@AmelieHeinrich]
     - Added Metal-cpp support enabled with `IMGUI_IMPL_METAL_CPP` define. (#9461) [@MERL10N]
