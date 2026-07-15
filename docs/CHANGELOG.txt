@@ -151,8 +151,8 @@ Other Changes:
   - Added IM_DEBUG_BREAK() handler for GCC+AArch64/ARM64. [@tom-seddon]
 - Backends:
   - Android:
-     - Clear mouse position on touch release (AMOTION_EVENT_ACTION_UP) to prevent
-       items from staying in hovered state. (#6627, #9474) [@Turtle-PB]
+    - Clear mouse position on touch release (AMOTION_EVENT_ACTION_UP) to prevent
+      items from staying in hovered state. (#6627, #9474) [@Turtle-PB]
   - Metal4:
     - Added new Metal 4 backend (forked from Metal 3 backend). (#9458, #9451) [@AmelieHeinrich]
     - Added Metal-cpp support enabled with `IMGUI_IMPL_METAL_CPP` define. (#9461) [@MERL10N]
@@ -161,6 +161,9 @@ Other Changes:
       Fixes an issue running on macOS with Wine. [#9427, #6577) [@perminovVS]
     - Expose selected render state in ImGui_ImplOpenGL3_RenderState, allowing to
       dynamically select between use of glBindSampler() and glTexParameter(). (#9378)
+  - SDL2:
+    - Restore SDL_StartTextInput()/SDL_StopTextInput() in IME handler for on-screen keyboard
+      support on Android. (#7636, #9474) [@Turtle-PB]
   - SDLRenderer3:
     - Fixed sampler change which didn't work on all graphics backends. (#7616, #9470, #9378)
     - Fixed default sampler not being Linear. Regression in 1.92.8. (#7616, #9470, #9378) [@ShiroKSH]

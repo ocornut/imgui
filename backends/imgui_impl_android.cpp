@@ -24,6 +24,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2026-07-15: Inputs: clear mouse position on touch release (AMOTION_EVENT_ACTION_UP) to prevent items from staying in hovered state. (#6627, #9474)
+//  2023-04-11: Inputs: calling new io.AddMouseSourceEvent() to discriminate Mouse from Touch events.
 //  2022-09-26: Inputs: renamed ImGuiKey_ModXXX introduced in 1.87 to ImGuiMod_XXX (old names still supported).
 //  2022-01-26: Inputs: replaced short-lived io.AddKeyModsEvent() (added two weeks ago) with io.AddKeyEvent() using ImGuiKey_ModXXX flags. Sorry for the confusion.
 //  2022-01-17: Inputs: calling new io.AddMousePosEvent(), io.AddMouseButtonEvent(), io.AddMouseWheelEvent() API (1.87+).
