@@ -30,6 +30,7 @@
 //  2026-03-12: OpenGL: Fixed invalid assert in ImGui_ImplOpenGL3_UpdateTexture() if ImTextureID_Invalid is defined to be != 0, which became the default since 2026-03-12. (#9295)
 //  2025-09-18: Call platform_io.ClearRendererHandlers() on shutdown.
 //  2025-07-15: OpenGL: Set GL_UNPACK_ALIGNMENT to 1 before updating textures. (#8802)
+//  2026-07-15: OpenGL: Backup and restore GL_UNPACK_ROW_LENGTH and GL_UNPACK_ALIGNMENT in UpdateTexture() to avoid corrupting caller GL state. (#8802, #9473)
 //  2025-06-11: OpenGL: Added support for ImGuiBackendFlags_RendererHasTextures, for dynamic font atlas. Removed ImGui_ImplOpenGL2_CreateFontsTexture() and ImGui_ImplOpenGL2_DestroyFontsTexture().
 //  2024-10-07: OpenGL: Changed default texture sampler to Clamp instead of Repeat/Wrap.
 //  2024-06-28: OpenGL: ImGui_ImplOpenGL2_NewFrame() recreates font texture if it has been destroyed by ImGui_ImplOpenGL2_DestroyFontsTexture(). (#7748)
@@ -262,6 +263,12 @@ void ImGui_ImplOpenGL2_RenderDrawData(ImDrawData* draw_data)
 
 void ImGui_ImplOpenGL2_UpdateTexture(ImTextureData* tex)
 {
+    // Backup GL_UNPACK state that we modify, restore on exit.
+    // This prevents corrupting the caller's pixel store state when ImGui
+    // creates or updates textures mid-frame. (#8802, #9473)
+    GLint last_unpack_row_length = 0; GL_CALL(glGetIntegerv(GL_UNPACK_ROW_LENGTH, &last_unpack_row_length));
+    GLint last_unpack_alignment = 0; GL_CALL(glGetIntegerv(GL_UNPACK_ALIGNMENT, &last_unpack_alignment));
+
     if (tex->Status == ImTextureStatus_WantCreate)
     {
         // Create and upload new texture to graphics system
@@ -318,6 +325,10 @@ void ImGui_ImplOpenGL2_UpdateTexture(ImTextureData* tex)
         tex->SetTexID(ImTextureID_Invalid);
         tex->SetStatus(ImTextureStatus_Destroyed);
     }
+
+    // Restore GL_UNPACK state
+    GL_CALL(glPixelStorei(GL_UNPACK_ROW_LENGTH, last_unpack_row_length));
+    GL_CALL(glPixelStorei(GL_UNPACK_ALIGNMENT, last_unpack_alignment));
 }
 
 bool    ImGui_ImplOpenGL2_CreateDeviceObjects()
