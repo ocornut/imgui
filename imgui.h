@@ -1238,16 +1238,29 @@ enum ImGuiChildFlags_
 // (Those are shared by all submitted items)
 enum ImGuiItemFlags_
 {
-    ImGuiItemFlags_None                     = 0,        // (Default)
+    ImGuiItemFlags_None                     = 0,        // Default:
     ImGuiItemFlags_NoTabStop                = 1 << 0,   // false    // Disable keyboard tabbing. This is a "lighter" version of ImGuiItemFlags_NoNav.
-    ImGuiItemFlags_NoNav                    = 1 << 1,   // false    // Disable any form of focusing (keyboard/gamepad directional navigation and SetKeyboardFocusHere() calls).
+    ImGuiItemFlags_NoNav                    = 1 << 1,   // false    // Disable any form of focusing: keyboard/gamepad directional navigation and SetKeyboardFocusHere() calls.
     ImGuiItemFlags_NoNavDefaultFocus        = 1 << 2,   // false    // Disable item being a candidate for default focus (e.g. used by title bar items).
     ImGuiItemFlags_ButtonRepeat             = 1 << 3,   // false    // Any button-like behavior will have repeat mode enabled (based on io.KeyRepeatDelay and io.KeyRepeatRate values). Note that you can also call IsItemActive() after any button to tell if it is being held.
     ImGuiItemFlags_AutoClosePopups          = 1 << 4,   // true     // MenuItem()/Selectable() automatically close their parent popup window.
     ImGuiItemFlags_AllowDuplicateId         = 1 << 5,   // false    // Allow submitting an item with the same identifier as an item already submitted this frame without triggering a warning tooltip if io.ConfigDebugHighlightIdConflicts is set.
     ImGuiItemFlags_Disabled                 = 1 << 6,   // false    // [Internal] Disable interactions. DOES NOT affect visuals. This is used by BeginDisabled()/EndDisabled() and only provided here so you can read back via GetItemFlags().
 
-    ImGuiItemFlags_LiveEdit                 = 1 << 7,   // true     // WIP
+    //---------------------------------------------------------------------------------
+    // LiveEdit refers to applying edits to backing variables _while_ typing.
+    // Widget:                          | Input:   | w/ LiveEdit:    | Output:
+    //   InputText()                    |   "123"  |   on(default)   |  "1" then "12" then "123"
+    //   InputText()                    |   "123"  |   off           |  "123" after validating or tabbing out or losing focus.
+    //   DragFloat(), SliderInt(), etc. |   "123"  |   on(default)*  |  1 then 12 then 123
+    //   DragFloat(), SliderInt(), etc. |   "123"  |   off*          |  123 after validation or tabbing out or losing focus.
+    //---------------------------------------------------------------------------------
+    // (*) The feature is currently being evaluated, and the aim is to change ImGuiItemFlags_LiveEditOnInputScalar to OFF by default.
+    //     The legacy behavior until July 2026 was that LiveEdit was always ON for everything.
+    //---------------------------------------------------------------------------------
+    ImGuiItemFlags_LiveEditOnInputText      = 1 << 7,   // true     // InputText: apply keyboard edits to backing value while typing. Otherwise, edits are applied when validating, tabbing out or losing focus.
+    ImGuiItemFlags_LiveEditOnInputScalar    = 1 << 8,   // true*    // DragXXX, SliderXXX, InputScalar: apply keyboard edits to backing value while typing. Otherwise, edits are applied when validating, tabbing out or losing focus.
+    ImGuiItemFlags_LiveEditOnInput          = ImGuiItemFlags_LiveEditOnInputText | ImGuiItemFlags_LiveEditOnInputScalar,
 };
 
 // Flags for ImGui::InputText()
@@ -1264,7 +1277,7 @@ enum ImGuiInputTextFlags_
 
     // Inputs
     ImGuiInputTextFlags_AllowTabInput       = 1 << 5,   // Pressing TAB input a '\t' character into the text field
-    ImGuiInputTextFlags_EnterReturnsTrue    = 1 << 6,   // Return 'true' when Enter is pressed (as opposed to every time the value was modified). Consider using IsItemDeactivatedAfterEdit() instead!
+    ImGuiInputTextFlags_EnterReturnsTrue    = 1 << 6,   // Return 'true' when Enter is pressed (as opposed to every time the value was modified). Consider disabling LiveEdit! or using IsItemDeactivatedAfterEdit() instead!
     ImGuiInputTextFlags_EscapeClearsAll     = 1 << 7,   // Escape key clears content if not empty, and deactivate otherwise (contrast to default behavior of Escape to revert)
     ImGuiInputTextFlags_CtrlEnterForNewLine = 1 << 8,   // In multi-line mode: validate with Enter, add new line with Ctrl+Enter (default is opposite: validate with Ctrl+Enter, add line with Enter). Note that Shift+Enter always enter a new line either way.
 
@@ -1277,7 +1290,7 @@ enum ImGuiInputTextFlags_
     ImGuiInputTextFlags_DisplayEmptyRefVal  = 1 << 14,  // InputFloat(), InputInt(), InputScalar() etc. only: when value is zero, do not display it. Generally used with ImGuiInputTextFlags_ParseEmptyRefVal.
     ImGuiInputTextFlags_NoHorizontalScroll  = 1 << 15,  // Disable following the cursor horizontally
     ImGuiInputTextFlags_NoUndoRedo          = 1 << 16,  // Disable undo/redo. Note that input text owns the text data while active, if you want to provide your own undo/redo stack you need e.g. to call ClearActiveID().
-    //ImGuiInputTextFlags_NoLiveEdit        = 1 << 25,
+    //ImGuiInputTextFlags_NoLiveEdit        = 1 << 25,  // Disable applying output to backing variable while typing. Same as setting ImGuiItemFlags_LiveEditOnInput to false.
 
     // Elide display / Alignment
     ImGuiInputTextFlags_ElideLeft           = 1 << 17,  // When text doesn't fit, elide left side to ensure right side stays visible. Useful for path/filenames. Single-line only!
@@ -1956,6 +1969,8 @@ enum ImGuiSliderFlags_
     ImGuiSliderFlags_NoSpeedTweaks      = 1 << 11,      // Disable keyboard modifiers altering tweak speed. Useful if you want to alter tweak speed yourself based on your own logic.
     ImGuiSliderFlags_ColorMarkers       = 1 << 12,      // DragScalarN(), SliderScalarN(): Draw R/G/B/A color markers on each component.
     ImGuiSliderFlags_AlwaysClamp        = ImGuiSliderFlags_ClampOnInput | ImGuiSliderFlags_ClampZeroRange,
+    //ImGuiSliderFlags_LiveEditOnInput  = 1 << 13,      // Shortcut to enable LiveEdit for this field.
+    //ImGuiSliderFlags_NoLiveEditOnInput= 1 << 14,      // Shortcut to disable LiveEdit for this field.
     ImGuiSliderFlags_InvalidMask_       = 0x7000000F,   // [Internal] We treat using those bits as being potentially a 'float power' argument from legacy API (obsoleted 2020-08) that has got miscast to this enum, and will trigger an assert if needed.
 };
 

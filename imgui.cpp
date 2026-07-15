@@ -6358,6 +6358,7 @@ bool ImGui::IsItemDeactivated()
     return g.DeactivatedItemData.ID == g.LastItemData.ID && g.LastItemData.ID != 0 && g.DeactivatedItemData.ElapseFrame >= g.FrameCount;
 }
 
+// Since 1.92.9: consider using NoLiveEdit flags if all you need to that values are not written bo backing variable while typing.
 bool ImGui::IsItemDeactivatedAfterEdit()
 {
     ImGuiContext& g = *GImGui;

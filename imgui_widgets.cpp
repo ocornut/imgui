@@ -3763,6 +3763,7 @@ bool ImGui::TempInputScalar(const ImRect& bb, ImGuiID id, const char* label, ImG
 
     ImGuiInputTextFlags flags = ImGuiInputTextFlags_AutoSelectAll | (ImGuiInputTextFlags)ImGuiInputTextFlags_LocalizeDecimalPoint;
     g.LastItemData.ItemFlags |= ImGuiItemFlags_NoMarkEdited; // Because TempInputText() uses ImGuiInputTextFlags_MergedItem it doesn't submit a new item, so we poke LastItemData.
+    g.LastItemData.ItemFlags = (g.LastItemData.ItemFlags & ImGuiItemFlags_LiveEditOnInputScalar) ? (g.LastItemData.ItemFlags | ImGuiItemFlags_LiveEditOnInputText) : (g.LastItemData.ItemFlags & ~ImGuiItemFlags_LiveEditOnInputText);
     if (!TempInputText(bb, id, label, data_buf, IM_COUNTOF(data_buf), flags))
         return false;
 
@@ -3843,7 +3844,7 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* p_data
 
     // Apply
     bool value_changed = false;
-    if (g.LastItemData.ItemFlags & ImGuiItemFlags_LiveEdit)
+    if (g.LastItemData.ItemFlags & ImGuiItemFlags_LiveEditOnInputScalar)
     {
         bool input_edited = (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_EditedInternal) != 0; // We would be using 'ret' if ImGuiInputTextFlags_EnterReturnsTrue was not involved.
         if (input_edited)
@@ -4868,7 +4869,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         state->CursorAnimReset();
 
         // Backup state of deactivating item so they'll have a chance to do a write to output buffer on the same frame they report IsItemDeactivatedAfterEdit (#4714)
-        if (state->ID != id && state->ID == g.ActiveId && (init_make_active && g.ActiveId != id))
+        if (state->ID != id && state->ID == g.ActiveId && (init_make_active && g.ActiveId != id)) //-V560
             InputTextDeactivateHook(state->ID); // <-- this is essentially an earlier call to what SetActiveID() would do below.
 
         // Take a copy of the initial buffer value.
@@ -5410,7 +5411,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         // FIXME-OPT: Could mark dirty state from the stb_textedit callbacks
         if (!is_readonly)
         {
-            if (g.LastItemData.ItemFlags & ImGuiItemFlags_LiveEdit)
+            if (g.LastItemData.ItemFlags & ImGuiItemFlags_LiveEditOnInputText)
             {
                 // Apply when modified
                 if (strcmp(state->TextSrc, buf) != 0)
