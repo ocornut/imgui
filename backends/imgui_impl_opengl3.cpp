@@ -668,6 +668,7 @@ static void ImGui_ImplOpenGL3_DestroyTexture(ImTextureData* tex)
 void ImGui_ImplOpenGL3_UpdateTexture(ImTextureData* tex)
 {
     // Backup GL_UNPACK state that we modify, restore on exit.
+    bool saved = false;
     GLint last_unpack_row_length = 0; (void)last_unpack_row_length;
     GLint last_unpack_alignment = 0; (void)last_unpack_alignment;
     if (tex->Status == ImTextureStatus_WantCreate || tex->Status == ImTextureStatus_WantUpdates)
@@ -677,6 +678,7 @@ void ImGui_ImplOpenGL3_UpdateTexture(ImTextureData* tex)
         GL_CALL(glGetIntegerv(GL_UNPACK_ALIGNMENT, &last_unpack_alignment));
         GL_CALL(glPixelStorei(GL_UNPACK_ALIGNMENT, 1));
 #endif
+        saved = true;
     }
 
     if (tex->Status == ImTextureStatus_WantCreate)
@@ -744,7 +746,7 @@ void ImGui_ImplOpenGL3_UpdateTexture(ImTextureData* tex)
         ImGui_ImplOpenGL3_DestroyTexture(tex);
 
     // Restore GL_UNPACK state
-    if (tex->Status == ImTextureStatus_WantCreate || tex->Status == ImTextureStatus_WantUpdates)
+    if (saved)
     {
 #ifdef GL_UNPACK_ROW_LENGTH
         GL_CALL(glPixelStorei(GL_UNPACK_ROW_LENGTH, last_unpack_row_length));
