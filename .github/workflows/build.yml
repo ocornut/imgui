@@ -509,7 +509,7 @@ jobs:
       run: g++ -c -I. -std=c++11 -DIMGUI_IMPL_VULKAN_NO_PROTOTYPES=1 backends/imgui_impl_vulkan.cpp
 
   Build-MacOS:
-    runs-on: macos-latest
+    runs-on: macos-26
     name: Build - MacOS
 
     defaults:
@@ -575,8 +575,8 @@ jobs:
     - name: Build macOS example_sdl2_metal
       run: make -C examples/example_sdl2_metal
 
-    #- name: Build macOS example_sdl3_metal4
-    #  run: make -C examples/example_sdl3_metal4
+    - name: Build macOS example_sdl3_metal4
+      run: make -C examples/example_sdl3_metal4
 
     - name: Build macOS example_sdl2_opengl2
       run: make -C examples/example_sdl2_opengl2
@@ -593,9 +593,9 @@ jobs:
       run: xcodebuild -project examples/example_apple_metal/example_apple_metal.xcodeproj -target example_apple_metal_macos
       if: github.event_name == 'workflow_run'
 
-    #- name: Build macOS example_apple_metal4
-    #  run: xcodebuild -project examples/example_apple_metal4/example_apple_metal4.xcodeproj -target example_apple_metal_macos
-    #  if: github.event_name == 'workflow_run'
+    - name: Build macOS example_apple_metal4
+      run: xcodebuild -project examples/example_apple_metal4/example_apple_metal4.xcodeproj -target example_apple_metal_macos
+      if: github.event_name == 'workflow_run'
 
     - name: Build macOS example_apple_opengl2
       run: xcodebuild -project examples/example_apple_opengl2/example_apple_opengl2.xcodeproj -target example_osx_opengl2
@@ -661,10 +661,10 @@ jobs:
     name: Build - Android
 
     steps:
-    #- name: Setup Gradle
-    #  uses: gradle/actions/setup-gradle@v6
-    #  with:
-    #    gradle-version: '8.14.5'
+    - name: Setup Gradle 9.4.1
+      uses: gradle/actions/setup-gradle@v6
+      with:
+        gradle-version: '9.4.1'
 
     - uses: actions/checkout@v6
     - name: Build example_android_opengl3

@@ -86,6 +86,7 @@ Index of this file:
 // [SECTION] DemoWindowWidgetsFonts()
 // [SECTION] DemoWindowWidgetsImages()
 // [SECTION] DemoWindowWidgetsListBoxes()
+// [SECTION] DemoWindowWidgetsLiveEdit()
 // [SECTION] DemoWindowWidgetsMultiComponents()
 // [SECTION] DemoWindowWidgetsPlotting()
 // [SECTION] DemoWindowWidgetsProgressBars()
@@ -344,6 +345,8 @@ struct ImGuiDemoWindowData
 
     // Other data
     bool DisableSections = false;
+    bool LiveEditOverride = false;
+    ImGuiItemFlags LiveEditFlags = ImGuiItemFlags_LiveEditOnInputText;
     ExampleTreeNode* DemoTree = NULL;
 
     ~ImGuiDemoWindowData() { if (DemoTree) ExampleTree_DestroyNode(DemoTree); }
@@ -2081,6 +2084,44 @@ static void DemoWindowWidgetsListBoxes()
 }
 
 //-----------------------------------------------------------------------------
+// [SECTION] DemoWindowWidgetsLiveEdit()
+//-----------------------------------------------------------------------------
+
+static void DemoWindowWidgetsLiveEdit(ImGuiDemoWindowData* demo_data)
+{
+    if (ImGui::TreeNode("Live Edit Flags"))
+    {
+        IMGUI_DEMO_MARKER("Widgets/Live Edit Flgs");
+
+        ImGui::TextWrapped("Select whether to apply keyboard edits to backing variables _while_ typing.");
+
+        ImGui::Checkbox("Override Live Edit Flags in Demo Window", &demo_data->LiveEditOverride);
+        if (!demo_data->LiveEditOverride)
+            demo_data->LiveEditFlags = ImGui::GetItemFlags();
+
+        ImGui::BeginDisabled(demo_data->LiveEditOverride == false);
+        ImGui::Indent();
+        ImGui::CheckboxFlags("ImGuiItemFlags_LiveEditOnInputText", &demo_data->LiveEditFlags, ImGuiItemFlags_LiveEditOnInputText);
+        ImGui::CheckboxFlags("ImGuiItemFlags_LiveEditOnInputScalar", &demo_data->LiveEditFlags, ImGuiItemFlags_LiveEditOnInputScalar);
+        ImGui::Unindent();
+        ImGui::EndDisabled();
+
+        ImGui::Text("Try typing '123' and seeing effect on backing value:");
+        static char str[32] = "";
+        ImGui::InputText("str", str, IM_COUNTOF(str));
+        ImGui::Text("Backing value: \"%s\"", str);
+        static int i = 0;
+        ImGui::InputInt("int", &i, 0, 0);
+        ImGui::Text("Backing value: %d", i);
+        static float f = 0.0f;
+        ImGui::SliderFloat("float", &f, 0.0f, 100.0f);
+        ImGui::Text("Backing value: %f", f);
+
+        ImGui::TreePop();
+    }
+}
+
+//-----------------------------------------------------------------------------
 // [SECTION] DemoWindowWidgetsMultiComponents()
 //-----------------------------------------------------------------------------
 
@@ -2260,10 +2301,28 @@ static void DemoWindowWidgetsQueryingStatuses()
         };
         static int item_type = 4;
         static bool item_disabled = false;
+        static bool liveedit_flags_override = false;
+        static ImGuiItemFlags liveedit_flags = 0;
         ImGui::Combo("Item Type", &item_type, item_names, IM_COUNTOF(item_names), IM_COUNTOF(item_names));
         ImGui::SameLine();
         HelpMarker("Testing how various types of items are interacting with the IsItemXXX functions. Note that the bool return value of most ImGui function is generally equivalent to calling ImGui::IsItemHovered().");
         ImGui::Checkbox("Item Disabled", &item_disabled);
+        ImGui::Checkbox("Override LiveEdit:", &liveedit_flags_override);
+        ImGui::SameLine();
+        if (!liveedit_flags_override)
+            liveedit_flags = ImGui::GetItemFlags();
+        ImGui::BeginDisabled(liveedit_flags_override == false);
+        ImGui::CheckboxFlags("_LiveEditOnInput", &liveedit_flags, ImGuiItemFlags_LiveEditOnInput);
+        ImGui::SameLine();
+        ImGui::CheckboxFlags("_LiveEditOnInputText", &liveedit_flags, ImGuiItemFlags_LiveEditOnInputText);
+        ImGui::SameLine();
+        ImGui::CheckboxFlags("_LiveEditOnInputScalar", &liveedit_flags, ImGuiItemFlags_LiveEditOnInputScalar);
+        ImGui::EndDisabled();
+        if (liveedit_flags_override)
+        {
+            ImGui::PushItemFlag(ImGuiItemFlags_LiveEditOnInputText, (liveedit_flags & ImGuiItemFlags_LiveEditOnInputText) != 0);
+            ImGui::PushItemFlag(ImGuiItemFlags_LiveEditOnInputScalar, (liveedit_flags & ImGuiItemFlags_LiveEditOnInputScalar) != 0);
+        }
 
         // Submit selected items so we can query their status in the code following it.
         bool ret = false;
@@ -2350,6 +2409,11 @@ static void DemoWindowWidgetsQueryingStatuses()
             "IsItemHovered(_Tooltip) = %d",
             hovered_delay_none, hovered_delay_stationary, hovered_delay_short, hovered_delay_normal, hovered_delay_tooltip);
 
+        if (liveedit_flags_override)
+        {
+            ImGui::PopItemFlag();
+            ImGui::PopItemFlag();
+        }
         if (item_disabled)
             ImGui::EndDisabled();
 
@@ -4499,8 +4563,14 @@ static void DemoWindowWidgets(ImGuiDemoWindowData* demo_data)
     // IMGUI_DEMO_MARKER("Widgets");
 
     const bool disable_all = demo_data->DisableSections; // The Checkbox for that is inside the "Disabled" section at the bottom
+    const bool override_liveedit = demo_data->LiveEditOverride;
     if (disable_all)
         ImGui::BeginDisabled();
+    if (override_liveedit)
+    {
+        ImGui::PushItemFlag(ImGuiItemFlags_LiveEditOnInputText, (demo_data->LiveEditFlags & ImGuiItemFlags_LiveEditOnInputText) != 0);
+        ImGui::PushItemFlag(ImGuiItemFlags_LiveEditOnInputScalar, (demo_data->LiveEditFlags & ImGuiItemFlags_LiveEditOnInputScalar) != 0);
+    }
 
     DemoWindowWidgetsBasic();
     DemoWindowWidgetsBullets();
@@ -4520,6 +4590,7 @@ static void DemoWindowWidgets(ImGuiDemoWindowData* demo_data)
     DemoWindowWidgetsFonts();
     DemoWindowWidgetsImages();
     DemoWindowWidgetsListBoxes();
+    DemoWindowWidgetsLiveEdit(demo_data);
     DemoWindowWidgetsMultiComponents();
     DemoWindowWidgetsPlotting();
     DemoWindowWidgetsProgressBars();
@@ -4534,6 +4605,11 @@ static void DemoWindowWidgets(ImGuiDemoWindowData* demo_data)
     DemoWindowWidgetsTreeNodes();
     DemoWindowWidgetsVerticalSliders();
 
+    if (override_liveedit)
+    {
+        ImGui::PopItemFlag();
+        ImGui::PopItemFlag();
+    }
     if (disable_all)
         ImGui::EndDisabled();
 }

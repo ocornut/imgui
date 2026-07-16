@@ -26,6 +26,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2026-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2026-07-15: Inputs: restore SDL_StartTextInput()/SDL_StopTextInput() in IME handler for on-screen keyboard support on Android/mobile. (#7636, #9474)
 //  2026-04-16: Made ImGui_ImplSDL2_GetContentScaleForWindow(), ImGui_ImplSDL2_GetContentScaleForDisplay() helpers return a minimum of 1.0f, as some Linux setup seems to report <1.0f value and this breaks scaling border size. (#9369)
 //  2026-03-09: [Docking] Fixed an issue dated 2025/04/09 (1.92 WIP) where a refactor+merge caused ImGuiBackendFlags_HasMouseHoveredViewport to never be set, causing foreign windows to be ignored when deciding of hovered viewport. (#9284)
 //  2026-02-13: Inputs: systems other than X11 are back to starting mouse capture on mouse down (reverts 2025-02-26 change). Only X11 requires waiting for a drag by default (not ideal, but a better default for X11 users). Added ImGui_ImplSDL2_SetMouseCaptureMode() for X11 debugger users. (#3650, #6410, #9235)
@@ -231,6 +232,18 @@ static void ImGui_ImplSDL2_PlatformSetImeData(ImGuiContext*, ImGuiViewport* view
         r.w = 1;
         r.h = (int)data->InputLineHeight;
         SDL_SetTextInputRect(&r);
+
+#ifdef __ANDROID__
+        // SDL_StartTextInput() is needed on Android (and some other platforms) to show the on-screen keyboard. (#7636, #9474, #6306)
+        // It was removed in a7703fe6 due to concerns about its relation to desktop IME, but is required on mobile.
+        SDL_StartTextInput();
+#endif
+    }
+    else
+    {
+#ifdef __ANDROID__
+        SDL_StopTextInput();
+#endif
     }
 }
 

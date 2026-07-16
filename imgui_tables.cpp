@@ -4165,9 +4165,12 @@ static void TableSettingsHandler_ApplyAll(ImGuiContext* ctx, ImGuiSettingsHandle
 
 static void* TableSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name)
 {
+    // FIXME: As topology changes are allowed, strictly speaking a >= IMGUI_TABLE_MAX_COLUMNS tables stored in .ini file
+    // that was emitted with a higher max count could still be meaningful in some unlikely cases.
+    // We might want to use another MAX defined as (1<<(sizeof(ImGuiTableColumnIdx)*8-1))-1.
     ImGuiID id = 0;
     int columns_count = 0;
-    if (sscanf(name, "0x%08X,%d", &id, &columns_count) < 2)
+    if (sscanf(name, "0x%08X,%d", &id, &columns_count) < 2 || columns_count <= 0 || columns_count >= IMGUI_TABLE_MAX_COLUMNS)
         return NULL;
     return ImGui::TableSettingsCreate(id, columns_count);
 }

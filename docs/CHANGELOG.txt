@@ -45,6 +45,8 @@ Breaking Changes:
   was obsoleted in 1.90.7 (May 2024). Use `ImGuiTreeNodeFlags_SpanLabelWidth`.
 - ColorEdit: obsoleted SetColorEditOptions() function added in 1.51 (June 2017) in
   of directly poking to io.ConfigColorEditFlags. More consistent and easier to discover.
+- Drag and Drop: commented out legacy name `ImGuiDragDropFlags_SourceAutoExpirePayload`
+  which obsoleted in 1.90.9 (July 2024). Use `ImGuiDragDropFlags_PayloadAutoExpire`.
 
 
 Other Changes:
@@ -58,9 +60,50 @@ Other Changes:
   - Fixed double-click collapse toggle not owning the mouse button. If a
     `SetNextWindowPos()` with pivot was queued in the same frame, the second
     click could trigger another item in the same window. (#9439) [@Cleroth]
+- Added `ImGuiItemFlags_LiveEditOnInputText` and `ImGuiItemFlags_LiveEditOnInputScalar`
+  flags to configure the timing of applying edits of backing variables when typing
+  values using a keyboard.
+  (#701, #9476, #3936, #3946, #5904, #6284, #8149, #8065, #8665, #9117, #9299, #700, #1351,
+   #1875, #2060, #2215, #2380, #2550, #3083, #3338, #3556, #4373, #4714, #4885, #5184,
+   #5777, #6707, #6766, #8004, #8303, #8915, #9308)
+  - Until now:
+    - Edits where always applied immediately to backing variable, which is equivalent
+      to the `ImGuiItemFlags_LiveEditXXX` flags being enabled.
+    - Typing '123' in an integer field would output successively 1, 12 then 123.
+    - Most uses of `IsItemDeactivatedAfterEdit()` or `ImGuiInputTextFlags_EnterReturnsTrue`
+      were actually workarounds for this issue. Advanced applications would typically
+      use `IsItemDeactivatedAfterEdit()` to distinguish transactions.
+      Workarounds often required a backing store for scalar values, and there were
+      also a few niggles related to `IsItemDeactivatedAfterEdit()` when using +/-
+      buttons of an `InputInt()` widgets.
+      Many of those situations can now be naturally simplified by disabling
+      `ImGuiItemFlags_LiveEditOnInputScalar`, which is expected to become the default.
+  - The new flags allows disabling this behavior selectively for strings fields
+    such as `InputText()` vs scalar fields: `SliderInt()`, `InputFloat()`, etc.
+    - When LiveEdit is disabled, edits are applied when pressing enter, tabbing out,
+      clearing a field or deactivating due to a focus loss.
+    - The flag may be altered programmatically:
+        PushItemFlag(ImGuiItemFlags_LiveEditOnInputScalar, false); // Disable for scalars
+        SliderInt(...);
+        PopItemFlag();
+        PushItemFlag(ImGuiItemFlags_LiveEditOnInput, true);        // Enable for all
+        SliderInt(...);
+        PopItemFlag();
+      But with upcoming new defaults it is expected you shouldn't touch them much.
+  - Both flags currently defaults to true, which matches previous behavior.
+    - The expectation is that for strings/text, enabling LiveEdit is a better default.
+    - The expectation is that for scalars, disable LiveEdit is a better default.
+    - The short-term intent is to change `ImGuiItemFlags_LiveEditOnInputScalar` to
+      default to being disabled, as soon as we get more feedback from users (SOON).
+  - We intentionally are not adding `io.ConfigLiveEditXXX` fields to dictate the
+    default value of each `ImGuiItemFlags_LiveEditXXX`, because this is not
+    expected to be a user preference but a programmer/widget preferences.
+    Also, we strive to make the toolkit consistent.
 - InputText:
   - Added `style.InputTextCursorSize` to configure cursor/caret thickness. (#7031, #9409)
     This is automatically scaled by `style.ScaleAllSizes()`.
+  - Reworked `io.ConfigInputTextEnterKeepActive` mode so that pressing
+    Ctrl+Enter or Shift+Enter still allows to deactivate. (#9239)
 - Tables:
   - Redesigned/rewrote code to reconcile columns and settings on topology changes. (#9108)
     - When a column label is passed to TableSetupColumn(), the underlying identifier
@@ -146,14 +189,28 @@ Other Changes:
 - Misc:
   - Added IM_DEBUG_BREAK() handler for GCC+AArch64/ARM64. [@tom-seddon]
 - Backends:
+  - Android:
+    - Clear mouse position on touch release (AMOTION_EVENT_ACTION_UP) to prevent
+      items from staying in hovered state. (#6627, #9474) [@Turtle-PB]
   - Metal4:
     - Added new Metal 4 backend (forked from Metal 3 backend). (#9458, #9451) [@AmelieHeinrich]
     - Added Metal-cpp support enabled with `IMGUI_IMPL_METAL_CPP` define. (#9461) [@MERL10N]
+  - OpenGL2:
+    - Backup and restore GL_UNPACK_ROW_LENGTH and GL_UNPACK_ALIGNMENT when updating texture
+      to avoid altering caller GL state. (#8802, #9473) [@Turtle-PB]
   - OpenGL3:
     - GLSL version detection assume GLSL 410 when GL context is 4.1.
       Fixes an issue running on macOS with Wine. [#9427, #6577) [@perminovVS]
     - Expose selected render state in ImGui_ImplOpenGL3_RenderState, allowing to
       dynamically select between use of glBindSampler() and glTexParameter(). (#9378)
+    - Backup and restore GL_UNPACK_ROW_LENGTH and GL_UNPACK_ALIGNMENT when updating texture
+      to avoid altering caller GL state. (#8802, #9473) [@Turtle-PB]
+  - SDL2:
+    - Restore SDL_StartTextInput()/SDL_StopTextInput() in IME handler for on-screen keyboard
+      support on Android. (#7636, #9474) [@Turtle-PB]
+  - SDLRenderer3:
+    - Fixed sampler change which didn't work on all graphics backends. (#7616, #9470, #9378)
+    - Fixed default sampler not being Linear. Regression in 1.92.8. (#7616, #9470, #9378) [@ShiroKSH]
   - Win32:
     - Uses `SetProcessDpiAwarenessContext()` instead of `SetThreadDpiAwarenessContext()`
       when available, fixing OpenGL DPI scaling issues as e.g. NVIDIA drivers tends
