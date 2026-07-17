@@ -22,6 +22,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-07-17: Allegro5: Fixed texture destruction not deferring until UnusedFrames > 0, inconsistent with all other backends. (#8597, #9475)
 //  2026-04-23: Added support for standard draw callbacks (in platform_io): DrawCallback_ResetRenderState (others cannot be supported by Allegro5). (#9378)
 //  2025-09-18: Call platform_io.ClearRendererHandlers() and platform_io.ClearPlatformHandlers() on shutdown.
 //  2025-08-12: Inputs: fixed missing support for ImGuiKey_PrintScreen under Windows, as raw Allegro 5 does not receive it.
@@ -310,7 +311,7 @@ void ImGui_ImplAllegro5_UpdateTexture(ImTextureData* tex)
         al_unlock_bitmap(gpu_bitmap);
         tex->SetStatus(ImTextureStatus_OK);
     }
-    else if (tex->Status == ImTextureStatus_WantDestroy)
+    else if (tex->Status == ImTextureStatus_WantDestroy && tex->UnusedFrames > 0)
     {
         ALLEGRO_BITMAP* backend_tex = (ALLEGRO_BITMAP*)(intptr_t)tex->TexID;
         if (backend_tex)

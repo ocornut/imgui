@@ -27,6 +27,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-07-17: SDLRenderer2: Fixed texture destruction not deferring until UnusedFrames > 0, inconsistent with all other backends. (#8597, #9475)
 //  2026-04-23: Added support for standard draw callbacks (in platform_io): DrawCallback_ResetRenderState (others cannot be supported). (#9378)
 //  2026-03-12: Fixed invalid assert in ImGui_ImplSDLRenderer2_UpdateTexture() if ImTextureID_Invalid is defined to be != 0, which became the default since 2026-03-12. (#9295)
 //  2025-09-18: Call platform_io.ClearRendererHandlers() on shutdown.
@@ -237,7 +238,7 @@ void ImGui_ImplSDLRenderer2_UpdateTexture(ImTextureData* tex)
         }
         tex->SetStatus(ImTextureStatus_OK);
     }
-    else if (tex->Status == ImTextureStatus_WantDestroy)
+    else if (tex->Status == ImTextureStatus_WantDestroy && tex->UnusedFrames > 0)
     {
         if (tex->TexID != ImTextureID_Invalid)
             if (SDL_Texture* sdl_texture = (SDL_Texture*)(intptr_t)tex->TexID)
