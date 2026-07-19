@@ -40,6 +40,8 @@
 #include "imgui_impl_android.h"
 #include <time.h>
 #include <string.h>
+#include <stdint.h>
+#include <stdlib.h>
 #include <android/native_window.h>
 #include <android/input.h>
 #include <android/keycodes.h>
@@ -56,6 +58,7 @@ static char                                     g_LogTag[] = "ImGuiBackend";
 static JavaVM*                                  g_JavaVM = nullptr;
 static jobject                                  g_NativeActivity = nullptr;  // Global ref
 static bool                                     g_HasJni = false;
+static bool                                     g_JniEnabled = false;  // Opt-in: default false, app retains control
 
 // Clipboard state
 static char*                                    g_ClipboardText = nullptr;
@@ -63,6 +66,23 @@ static char*                                    g_ClipboardText = nullptr;
 // Display metrics
 static ImGui_ImplAndroid_DisplayMetrics         g_DisplayMetrics = {};
 
+// Keyboard customization
+static int                                      g_KeyboardInputType = 0;   // 0 = default (text)
+static int                                      g_KeyboardImeAction = 0;   // 0 = default (done)
+
+// Long press state
+static void (*g_LongPressCallback)(float x, float y, void* user_data) = nullptr;
+static void* g_LongPressUserData = nullptr;
+static float g_LongPressDuration = 0.5f;
+static float g_LongPressStartTime = 0.0f;
+static float g_LongPressX = 0.0f, g_LongPressY = 0.0f;
+static bool g_LongPressActive = false;
+
+// Pressure sensitivity state (per-pointer, indexed by pointer id)
+#define IMGUI_ANDROID_MAX_POINTERS 10
+static float g_TouchPressure[IMGUI_ANDROID_MAX_POINTERS] = {};
+static float g_TouchPressureMin = 0.3f; // Minimum pressure to register intentional touch
+static bool g_PressureEnabled = true;
 
 // Forward declarations of JNI helpers
 static void ImGui_ImplAndroid_JniShowSoftKeyboard();
@@ -70,6 +90,7 @@ static void ImGui_ImplAndroid_JniHideSoftKeyboard();
 static void ImGui_ImplAndroid_JniPollUnicodeChars();
 static void ImGui_ImplAndroid_JniSetClipboardText(const char* text);
 static const char* ImGui_ImplAndroid_JniGetClipboardText();
+static void ImGui_ImplAndroid_JniRefreshDisplayMetrics();
 
 static ImGuiKey ImGui_ImplAndroid_KeyCodeToImGuiKey(int32_t key_code)
 {
@@ -197,6 +218,16 @@ int32_t ImGui_ImplAndroid_HandleInputEvent(const AInputEvent* input_event)
         int32_t event_action = AKeyEvent_getAction(input_event);
         int32_t event_meta_state = AKeyEvent_getMetaState(input_event);
 
+        // Back button: hide soft keyboard when visible, consume the event
+        if (event_key_code == AKEYCODE_BACK && event_action == AKEY_EVENT_ACTION_UP)
+        {
+            if (g_JniEnabled && g_HasJni)
+            {
+                ImGui_ImplAndroid_JniHideSoftKeyboard();
+                return 1; // Consume the event
+            }
+        }
+
         io.AddKeyEvent(ImGuiMod_Ctrl,  (event_meta_state & AMETA_CTRL_ON)  != 0);
         io.AddKeyEvent(ImGuiMod_Shift, (event_meta_state & AMETA_SHIFT_ON) != 0);
         io.AddKeyEvent(ImGuiMod_Alt,   (event_meta_state & AMETA_ALT_ON)   != 0);
@@ -256,6 +287,32 @@ int32_t ImGui_ImplAndroid_HandleInputEvent(const AInputEvent* input_event)
             int tool_type = AMotionEvent_getToolType(input_event, event_pointer_index);
             if (tool_type == AMOTION_EVENT_TOOL_TYPE_FINGER || tool_type == AMOTION_EVENT_TOOL_TYPE_UNKNOWN)
             {
+                // Track pressure for this pointer
+                int pointer_id = AMotionEvent_getPointerId(input_event, event_pointer_index);
+                if (pointer_id >= 0 && pointer_id < IMGUI_ANDROID_MAX_POINTERS)
+                {
+                    g_TouchPressure[pointer_id] = AMotionEvent_getPressure(input_event, event_pointer_index);
+                }
+
+                // Start long press timer on DOWN (only if pressure is sufficient)
+                if (event_action == AMOTION_EVENT_ACTION_DOWN)
+                {
+                    float pressure = AMotionEvent_getPressure(input_event, event_pointer_index);
+                    if (!g_PressureEnabled || pressure >= g_TouchPressureMin)
+                    {
+                        g_LongPressActive = true;
+                        g_LongPressStartTime = (float)(AMotionEvent_getEventTime(input_event) / 1000000000.0);
+                        g_LongPressX = AMotionEvent_getX(input_event, event_pointer_index);
+                        g_LongPressY = AMotionEvent_getY(input_event, event_pointer_index);
+                    }
+                }
+                else
+                {
+                    g_LongPressActive = false;
+                    if (pointer_id >= 0 && pointer_id < IMGUI_ANDROID_MAX_POINTERS)
+                        g_TouchPressure[pointer_id] = 0.0f;
+                }
+
                 io.AddMousePosEvent(AMotionEvent_getX(input_event, event_pointer_index), AMotionEvent_getY(input_event, event_pointer_index));
                 io.AddMouseButtonEvent(0, event_action == AMOTION_EVENT_ACTION_DOWN);
             }
@@ -272,11 +329,51 @@ int32_t ImGui_ImplAndroid_HandleInputEvent(const AInputEvent* input_event)
         }
         case AMOTION_EVENT_ACTION_HOVER_MOVE: // Hovering: Tool moves while NOT pressed (such as a physical mouse)
         case AMOTION_EVENT_ACTION_MOVE:       // Touch pointer moves while DOWN
+        {
+            // Update pressure for all active pointers
+            for (int32_t i = 0; i < AMotionEvent_getPointerCount(input_event); i++)
+            {
+                int pid = AMotionEvent_getPointerId(input_event, i);
+                if (pid >= 0 && pid < IMGUI_ANDROID_MAX_POINTERS)
+                    g_TouchPressure[pid] = AMotionEvent_getPressure(input_event, i);
+            }
+
+            // Cancel long press if moved too far or pressure dropped
+            if (g_LongPressActive)
+            {
+                float dx = AMotionEvent_getX(input_event, event_pointer_index) - g_LongPressX;
+                float dy = AMotionEvent_getY(input_event, event_pointer_index) - g_LongPressY;
+                float pressure = AMotionEvent_getPressure(input_event, event_pointer_index);
+                bool pressure_ok = !g_PressureEnabled || pressure >= g_TouchPressureMin;
+                if (dx * dx + dy * dy > 100.0f || !pressure_ok) // ~10px tolerance
+                    g_LongPressActive = false;
+            }
+
             io.AddMousePosEvent(AMotionEvent_getX(input_event, event_pointer_index), AMotionEvent_getY(input_event, event_pointer_index));
             break;
+        }
         case AMOTION_EVENT_ACTION_SCROLL:
-            io.AddMouseWheelEvent(AMotionEvent_getAxisValue(input_event, AMOTION_EVENT_AXIS_HSCROLL, event_pointer_index), AMotionEvent_getAxisValue(input_event, AMOTION_EVENT_AXIS_VSCROLL, event_pointer_index));
+        {
+            float h_scroll = AMotionEvent_getAxisValue(input_event, AMOTION_EVENT_AXIS_HSCROLL, event_pointer_index);
+            float v_scroll = AMotionEvent_getAxisValue(input_event, AMOTION_EVENT_AXIS_VSCROLL, event_pointer_index);
+
+            // Apply pressure weighting to scroll (firmer press = faster scroll)
+            if (g_PressureEnabled)
+            {
+                int pointer_id = AMotionEvent_getPointerId(input_event, event_pointer_index);
+                if (pointer_id >= 0 && pointer_id < IMGUI_ANDROID_MAX_POINTERS)
+                {
+                    float pressure = g_TouchPressure[pointer_id];
+                    // Scale scroll by pressure: 0.5x at min pressure, 2.0x at max pressure
+                    float scale = 0.5f + pressure * 1.5f;
+                    h_scroll *= scale;
+                    v_scroll *= scale;
+                }
+            }
+
+            io.AddMouseWheelEvent(h_scroll, v_scroll);
             break;
+        }
         default:
             break;
         }
@@ -498,93 +595,9 @@ bool ImGui_ImplAndroid_Init(ANativeWindow* window, AAssetManager* asset_manager,
         io.GetClipboardTextFn = [](void* /*user_data*/) -> const char* { return ImGui_ImplAndroid_JniGetClipboardText(); };
     }
 
-    }
-
-    // Query display metrics via JNI (if activity available)
+    // Query initial display metrics
     if (g_HasJni)
-    {
-        JNIEnv* env = ImGui_ImplAndroid_GetEnv();
-        if (env)
-        {
-            jclass activity_cls = env->GetObjectClass(g_NativeActivity);
-            if (activity_cls)
-            {
-                jmethodID get_metrics = env->GetMethodID(activity_cls, "getWindowManager", "()Landroid/view/WindowManager;");
-                if (get_metrics)
-                {
-                    jobject wm = env->CallObjectMethod(g_NativeActivity, get_metrics);
-                    if (wm)
-                    {
-                        jclass wm_cls = env->GetObjectClass(wm);
-                        jmethodID get_default_display = env->GetMethodID(wm_cls, "getDefaultDisplay", "()Landroid/view/Display;");
-                        if (get_default_display)
-                        {
-                            jobject display = env->CallObjectMethod(wm, get_default_display);
-                            if (display)
-                            {
-                                jclass display_cls = env->GetObjectClass(display);
-
-                                // Refresh rate
-                                jmethodID get_refresh = env->GetMethodID(display_cls, "getRefreshRate", "()F");
-                                if (get_refresh)
-                                    g_DisplayMetrics.RefreshRate = env->CallFloatMethod(display, get_refresh);
-
-                                // Orientation (getRotation: 0=portrait, 1=landscape, 2=rev portrait, 3=rev landscape)
-                                jmethodID get_rotation = env->GetMethodID(display_cls, "getRotation", "()I");
-                                if (get_rotation)
-                                    g_DisplayMetrics.Orientation = env->CallIntMethod(display, get_rotation);
-
-                                env->DeleteLocalRef(display_cls);
-                                env->DeleteLocalRef(display);
-                            }
-                        }
-                        env->DeleteLocalRef(wm_cls);
-                        env->DeleteLocalRef(wm);
-                    }
-                }
-
-                // Display metrics (DPI, density)
-                jmethodID get_resources = env->GetMethodID(activity_cls, "getResources", "()Landroid/content/res/Resources;");
-                if (get_resources)
-                {
-                    jobject res = env->CallObjectMethod(g_NativeActivity, get_resources);
-                    if (res)
-                    {
-                        jclass res_cls = env->GetObjectClass(res);
-                        jmethodID get_metrics = env->GetMethodID(res_cls, "getDisplayMetrics", "()Landroid/util/DisplayMetrics;");
-                        if (get_metrics)
-                        {
-                            jobject dm = env->CallObjectMethod(res, get_metrics);
-                            if (dm)
-                            {
-                                jclass dm_cls = env->GetObjectClass(dm);
-                                jfieldID density_dpi = env->GetFieldID(dm_cls, "densityDpi", "I");
-                                jfieldID density = env->GetFieldID(dm_cls, "density", "F");
-                                jfieldID xdpi = env->GetFieldID(dm_cls, "xdpi", "F");
-                                jfieldID ydpi = env->GetFieldID(dm_cls, "ydpi", "F");
-                                jfieldID w_pixels = env->GetFieldID(dm_cls, "widthPixels", "I");
-                                jfieldID h_pixels = env->GetFieldID(dm_cls, "heightPixels", "I");
-
-                                if (density_dpi) g_DisplayMetrics.DensityDpi = env->GetIntField(dm, density_dpi);
-                                if (density) g_DisplayMetrics.Density = env->GetFloatField(dm, density);
-                                if (xdpi) g_DisplayMetrics.Xdpi = env->GetFloatField(dm, xdpi);
-                                if (ydpi) g_DisplayMetrics.Ydpi = env->GetFloatField(dm, ydpi);
-                                if (w_pixels) g_DisplayMetrics.WidthPixels = env->GetIntField(dm, w_pixels);
-                                if (h_pixels) g_DisplayMetrics.HeightPixels = env->GetIntField(dm, h_pixels);
-
-                                env->DeleteLocalRef(dm_cls);
-                                env->DeleteLocalRef(dm);
-                            }
-                        }
-                        env->DeleteLocalRef(res_cls);
-                        env->DeleteLocalRef(res);
-                    }
-                }
-                env->DeleteLocalRef(activity_cls);
-            }
-            ImGui_ImplAndroid_DetachEnv();
-        }
-    }
+        ImGui_ImplAndroid_JniRefreshDisplayMetrics();
 
     // Fallback display metrics from ANativeWindow if JNI didn't provide them
     if (g_Window)
@@ -601,5 +614,335 @@ bool ImGui_ImplAndroid_Init(ANativeWindow* window, AAssetManager* asset_manager,
     return true;
 }
 
+static void ImGui_ImplAndroid_JniRefreshDisplayMetrics()
+{
+    if (!g_HasJni || !g_NativeActivity)
+        return;
+
+    JNIEnv* env = ImGui_ImplAndroid_GetEnv();
+    if (!env)
+        return;
+
+    jclass activity_cls = env->GetObjectClass(g_NativeActivity);
+    if (!activity_cls) { ImGui_ImplAndroid_DetachEnv(); return; }
+
+    // Refresh rate and orientation via WindowManager
+    jmethodID get_wm = env->GetMethodID(activity_cls, "getWindowManager", "()Landroid/view/WindowManager;");
+    if (get_wm)
+    {
+        jobject wm = env->CallObjectMethod(g_NativeActivity, get_wm);
+        if (wm)
+        {
+            jclass wm_cls = env->GetObjectClass(wm);
+            jmethodID get_default_display = env->GetMethodID(wm_cls, "getDefaultDisplay", "()Landroid/view/Display;");
+            if (get_default_display)
+            {
+                jobject display = env->CallObjectMethod(wm, get_default_display);
+                if (display)
+                {
+                    jclass display_cls = env->GetObjectClass(display);
+                    jmethodID get_refresh = env->GetMethodID(display_cls, "getRefreshRate", "()F");
+                    if (get_refresh)
+                        g_DisplayMetrics.RefreshRate = env->CallFloatMethod(display, get_refresh);
+                    jmethodID get_rotation = env->GetMethodID(display_cls, "getRotation", "()I");
+                    if (get_rotation)
+                        g_DisplayMetrics.Orientation = env->CallIntMethod(display, get_rotation);
+                    env->DeleteLocalRef(display_cls);
+                    env->DeleteLocalRef(display);
+                }
+            }
+            env->DeleteLocalRef(wm_cls);
+            env->DeleteLocalRef(wm);
+        }
+    }
+
+    // Density / DPI via Resources
+    jmethodID get_res = env->GetMethodID(activity_cls, "getResources", "()Landroid/content/res/Resources;");
+    if (get_res)
+    {
+        jobject res = env->CallObjectMethod(g_NativeActivity, get_res);
+        if (res)
+        {
+            jclass res_cls = env->GetObjectClass(res);
+            jmethodID get_dm = env->GetMethodID(res_cls, "getDisplayMetrics", "()Landroid/util/DisplayMetrics;");
+            if (get_dm)
+            {
+                jobject dm = env->CallObjectMethod(res, get_dm);
+                if (dm)
+                {
+                    jclass dm_cls = env->GetObjectClass(dm);
+                    jfieldID density_dpi = env->GetFieldID(dm_cls, "densityDpi", "I");
+                    jfieldID density = env->GetFieldID(dm_cls, "density", "F");
+                    jfieldID xdpi = env->GetFieldID(dm_cls, "xdpi", "F");
+                    jfieldID ydpi = env->GetFieldID(dm_cls, "ydpi", "F");
+                    jfieldID w_pixels = env->GetFieldID(dm_cls, "widthPixels", "I");
+                    jfieldID h_pixels = env->GetFieldID(dm_cls, "heightPixels", "I");
+                    if (density_dpi) g_DisplayMetrics.DensityDpi = env->GetIntField(dm, density_dpi);
+                    if (density) g_DisplayMetrics.Density = env->GetFloatField(dm, density);
+                    if (xdpi) g_DisplayMetrics.Xdpi = env->GetFloatField(dm, xdpi);
+                    if (ydpi) g_DisplayMetrics.Ydpi = env->GetFloatField(dm, ydpi);
+                    if (w_pixels) g_DisplayMetrics.WidthPixels = env->GetIntField(dm, w_pixels);
+                    if (h_pixels) g_DisplayMetrics.HeightPixels = env->GetIntField(dm, h_pixels);
+                    env->DeleteLocalRef(dm_cls);
+                    env->DeleteLocalRef(dm);
+                }
+            }
+            env->DeleteLocalRef(res_cls);
+            env->DeleteLocalRef(res);
+        }
+    }
+    env->DeleteLocalRef(activity_cls);
+    ImGui_ImplAndroid_DetachEnv();
+}
+
 void ImGui_ImplAndroid_Shutdown()
 {
+    ImGuiIO& io = ImGui::GetIO();
+    io.BackendPlatformName = nullptr;
+
+    // Clean up JNI global ref
+    if (g_JavaVM && g_NativeActivity)
+    {
+        JNIEnv* env = ImGui_ImplAndroid_GetEnv();
+        if (env)
+        {
+            env->DeleteGlobalRef(g_NativeActivity);
+            ImGui_ImplAndroid_DetachEnv();
+        }
+        g_NativeActivity = nullptr;
+    }
+    g_HasJni = false;
+
+    if (g_ClipboardText)
+    {
+        free(g_ClipboardText);
+        g_ClipboardText = nullptr;
+    }
+}
+
+void ImGui_ImplAndroid_NewFrame()
+{
+    ImGuiIO& io = ImGui::GetIO();
+
+    // Setup display size (every frame to accommodate for window resizing)
+    int32_t window_width = ANativeWindow_getWidth(g_Window);
+    int32_t window_height = ANativeWindow_getHeight(g_Window);
+    int display_width = window_width;
+    int display_height = window_height;
+
+    io.DisplaySize = ImVec2((float)window_width, (float)window_height);
+    if (window_width > 0 && window_height > 0)
+        io.DisplayFramebufferScale = ImVec2((float)display_width / window_width, (float)display_height / window_height);
+
+    // Re-query display metrics when window size changes (rotation, resize)
+    static int last_w = 0, last_h = 0;
+    if (window_width != last_w || window_height != last_h)
+    {
+        last_w = window_width;
+        last_h = window_height;
+        if (g_HasJni)
+            ImGui_ImplAndroid_JniRefreshDisplayMetrics();
+    }
+
+    // Setup time step
+    struct timespec current_timespec;
+    clock_gettime(CLOCK_MONOTONIC, &current_timespec);
+    double current_time = (double)(current_timespec.tv_sec) + (current_timespec.tv_nsec / 1000000000.0);
+    io.DeltaTime = g_Time > 0.0 ? (float)(current_time - g_Time) : (float)(1.0f / 60.0f);
+    g_Time = current_time;
+}
+
+void ImGui_ImplAndroid_GetDisplayMetrics(ImGui_ImplAndroid_DisplayMetrics* out_metrics)
+{
+    if (out_metrics)
+        *out_metrics = g_DisplayMetrics;
+}
+
+// --- Optional JNI features (opt-in) ---
+
+void ImGui_ImplAndroid_SetJniEnabled(bool enabled)
+{
+    g_JniEnabled = enabled;
+}
+
+bool ImGui_ImplAndroid_GetJniEnabled()
+{
+    return g_JniEnabled;
+}
+
+void ImGui_ImplAndroid_SetKeyboardType(int input_type)
+{
+    g_KeyboardInputType = input_type;
+}
+
+void ImGui_ImplAndroid_SetKeyboardAction(int ime_action)
+{
+    g_KeyboardImeAction = ime_action;
+}
+
+bool ImGui_ImplAndroid_GetWantTextInput()
+{
+    ImGuiIO& io = ImGui::GetIO();
+    return io.WantTextInput;
+}
+
+void ImGui_ImplAndroid_ResubmitTextInput()
+{
+    ImGuiIO& io = ImGui::GetIO();
+    io.WantTextInput = true;
+}
+
+int ImGui_ImplAndroid_GetNavBarHeight()
+{
+    if (!g_HasJni || !g_NativeActivity)
+        return 0;
+    JNIEnv* env = ImGui_ImplAndroid_GetEnv();
+    if (!env)
+        return 0;
+
+    int height = 0;
+    jclass activity_cls = env->GetObjectClass(g_NativeActivity);
+    if (activity_cls)
+    {
+        jmethodID get_res = env->GetMethodID(activity_cls, "getResources", "()Landroid/content/res/Resources;");
+        if (get_res)
+        {
+            jobject res = env->CallObjectMethod(g_NativeActivity, get_res);
+            if (res)
+            {
+                jclass res_cls = env->GetObjectClass(res);
+                jmethodID get_id = env->GetMethodID(res_cls, "getIdentifier", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)I");
+                if (get_id)
+                {
+                    jstring name = env->NewStringUTF("navigation_bar_height");
+                    jstring def_type = env->NewStringUTF("dimen");
+                    jstring def_package = env->NewStringUTF("android");
+                    jint res_id = env->CallIntMethod(res, get_id, name, def_type, def_package);
+                    env->DeleteLocalRef(name);
+                    env->DeleteLocalRef(def_type);
+                    env->DeleteLocalRef(def_package);
+                    if (res_id > 0)
+                    {
+                        jmethodID get_dimen = env->GetMethodID(res_cls, "getDimensionPixelSize", "(I)I");
+                        if (get_dimen)
+                            height = env->CallIntMethod(res, get_dimen, res_id);
+                    }
+                }
+                env->DeleteLocalRef(res_cls);
+                env->DeleteLocalRef(res);
+            }
+        }
+        env->DeleteLocalRef(activity_cls);
+    }
+    ImGui_ImplAndroid_DetachEnv();
+    return height;
+}
+
+int ImGui_ImplAndroid_GetBottomInset()
+{
+    if (!g_HasJni || !g_NativeActivity)
+        return 0;
+    JNIEnv* env = ImGui_ImplAndroid_GetEnv();
+    if (!env)
+        return 0;
+
+    int inset = 0;
+    jclass activity_cls = env->GetObjectClass(g_NativeActivity);
+    if (activity_cls)
+    {
+        jmethodID get_wm = env->GetMethodID(activity_cls, "getWindowManager", "()Landroid/view/WindowManager;");
+        if (get_wm)
+        {
+            jobject wm = env->CallObjectMethod(g_NativeActivity, get_wm);
+            if (wm)
+            {
+                jclass wm_cls = env->GetObjectClass(wm);
+                jmethodID get_default_display = env->GetMethodID(wm_cls, "getDefaultDisplay", "()Landroid/view/Display;");
+                if (get_default_display)
+                {
+                    jobject display = env->CallObjectMethod(wm, get_default_display);
+                    if (display)
+                    {
+                        jclass display_cls = env->GetObjectClass(display);
+                        // Android 9+ (API 28): getDisplayCutout()
+                        jmethodID get_cutout = env->GetMethodID(display_cls, "getDisplayCutout", "()Landroid/view/DisplayCutout;");
+                        if (get_cutout)
+                        {
+                            jobject cutout = env->CallObjectMethod(display, get_cutout);
+                            if (cutout)
+                            {
+                                jclass cutout_cls = env->GetObjectClass(cutout);
+                                jmethodID get_safe_inset_bottom = env->GetMethodID(cutout_cls, "getSafeInsetBottom", "()I");
+                                if (get_safe_inset_bottom)
+                                    inset = env->CallIntMethod(cutout, get_safe_inset_bottom);
+                                env->DeleteLocalRef(cutout_cls);
+                                env->DeleteLocalRef(cutout);
+                            }
+                        }
+                        env->DeleteLocalRef(display_cls);
+                        env->DeleteLocalRef(display);
+                    }
+                }
+                env->DeleteLocalRef(wm_cls);
+                env->DeleteLocalRef(wm);
+            }
+        }
+        env->DeleteLocalRef(activity_cls);
+    }
+    ImGui_ImplAndroid_DetachEnv();
+    return inset;
+}
+
+void ImGui_ImplAndroid_SetLongPressCallback(void (*callback)(float x, float y, void* user_data), void* user_data)
+{
+    g_LongPressCallback = callback;
+    g_LongPressUserData = user_data;
+}
+
+void ImGui_ImplAndroid_SetLongPressDuration(float seconds)
+{
+    g_LongPressDuration = seconds;
+}
+
+float ImGui_ImplAndroid_GetTouchPressure(int pointer_id)
+{
+    if (pointer_id < 0 || pointer_id >= IMGUI_ANDROID_MAX_POINTERS)
+        return 0.0f;
+    return g_TouchPressure[pointer_id];
+}
+
+void ImGui_ImplAndroid_SetPressureEnabled(bool enabled)
+{
+    g_PressureEnabled = enabled;
+}
+
+bool ImGui_ImplAndroid_GetPressureEnabled()
+{
+    return g_PressureEnabled;
+}
+
+void ImGui_ImplAndroid_SetPressureThreshold(float min_pressure)
+{
+    g_TouchPressureMin = min_pressure;
+}
+
+// Call this from your main loop to check for long press events
+void ImGui_ImplAndroid_UpdateLongPress()
+{
+    if (!g_LongPressActive || !g_LongPressCallback)
+        return;
+
+    struct timespec current_timespec;
+    clock_gettime(CLOCK_MONOTONIC, &current_timespec);
+    double current_time = (double)(current_timespec.tv_sec) + (current_timespec.tv_nsec / 1000000000.0);
+
+    if (current_time - g_LongPressStartTime >= g_LongPressDuration)
+    {
+        g_LongPressActive = false;
+        g_LongPressCallback(g_LongPressX, g_LongPressY, g_LongPressUserData);
+    }
+}
+
+//-----------------------------------------------------------------------------
+
+#endif // #ifndef IMGUI_DISABLE
