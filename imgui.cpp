@@ -5954,7 +5954,7 @@ static void FlattenDrawDataIntoSingleLayer(ImDrawDataBuilder* builder)
 
 static void InitViewportDrawData(ImGuiViewportP* viewport)
 {
-    ImGuiIO& io = ImGui::GetIO();
+    ImGuiContext& g = *GImGui;
     ImDrawData* draw_data = &viewport->DrawDataP;
 
     viewport->DrawDataBuilder.Layers[0] = &draw_data->CmdLists;
@@ -5963,12 +5963,13 @@ static void InitViewportDrawData(ImGuiViewportP* viewport)
     viewport->DrawDataBuilder.Layers[1]->resize(0);
 
     draw_data->Valid = true;
+    draw_data->FrameCount = g.FrameCount;
     draw_data->TotalVtxCount = draw_data->TotalIdxCount = 0;
     draw_data->DisplayPos = viewport->Pos;
     draw_data->DisplaySize = viewport->Size;
-    draw_data->FramebufferScale = io.DisplayFramebufferScale;
+    draw_data->FramebufferScale = g.IO.DisplayFramebufferScale;
     draw_data->OwnerViewport = viewport;
-    draw_data->Textures = &ImGui::GetPlatformIO().Textures;
+    draw_data->Textures = &g.PlatformIO.Textures;
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     draw_data->CmdListsCount = 0;
 #endif
