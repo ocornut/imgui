@@ -1006,7 +1006,7 @@ enum ImGuiItemFlagsPrivate_
     ImGuiItemFlags_HasSelectionUserData     = 1 << 21, // false     // Set by SetNextItemSelectionUserData()
     ImGuiItemFlags_IsMultiSelect            = 1 << 22, // false     // Set by SetNextItemSelectionUserData()
 
-    ImGuiItemFlags_Default_                 = ImGuiItemFlags_AutoClosePopups | ImGuiItemFlags_LiveEditOnInputText | ImGuiItemFlags_LiveEditOnInputScalar, // Please don't change, use PushItemFlag() instead.
+    ImGuiItemFlags_Default_                 = ImGuiItemFlags_AutoClosePopups | ImGuiItemFlags_LiveEditOnInputText, // Please don't change, use PushItemFlag() instead.
 
     // Obsolete
     //ImGuiItemFlags_SelectableDontClosePopup = !ImGuiItemFlags_AutoClosePopups, // Can't have a redirect as we inverted the behavior

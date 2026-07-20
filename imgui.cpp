@@ -395,6 +395,11 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
  When you are not sure about an old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2026/07/20 (1.92.9) - DragXXX, SliderXXX, InputScalar: with `ImGuiItemFlags_LiveEditOnInputScalar` now defaulting to being disabled:
+                         inputting a value with the keyboard doesn't write intermediate values to backing variable. (#9476)
+                         - Before: DragFloat() with user typing "123" --> write back 1, then 12, then 123.
+                         - After:  DragFloat() with user typing "123" --> write back 123 when validated/unfocused.
+                         You can enable the flag back for a given scope if needed by specific widget/behavior.
  - 2026/07/08 (1.92.9) - Drag and Drop: commented out legacy name `ImGuiDragDropFlags_SourceAutoExpirePayload` which obsoleted in 1.90.9 (July 2024). Use `ImGuiDragDropFlags_PayloadAutoExpire`.
  - 2026/07/06 (1.92.9) - ColorEdit: obsoleted SetColorEditOptions() function added in 1.51 (June 2017) in favor of directly poking to io.ConfigColorEditFlags. More consistent and easier to discover.
  - 2026/06/02 (1.92.9) - TreeNode: commented out legacy name ImGuiTreeNodeFlags_SpanTextWidth which was obsoleted in 1.90.7 (May 2024). Use ImGuiTreeNodeFlags_SpanLabelWidth instead.

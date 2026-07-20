@@ -47,6 +47,12 @@ Breaking Changes:
   of directly poking to io.ConfigColorEditFlags. More consistent and easier to discover.
 - Drag and Drop: commented out legacy name `ImGuiDragDropFlags_SourceAutoExpirePayload`
   which obsoleted in 1.90.9 (July 2024). Use `ImGuiDragDropFlags_PayloadAutoExpire`.
+- DragXXX, SliderXXX, InputScalar: with `ImGuiItemFlags_LiveEditOnInputScalar` now
+  defaulting to being disabled: inputting a value with the keyboard doesn't write
+  intermediate values to the backing variable. (#9476)
+    Before: DragFloat() with user typing "123" --> write back 1, then 12, then 123.
+    After:  DragFloat() with user typing "123" --> write back 123 when validated/unfocused.
+  You can enable the flag back for a given scope if needed by specific widget/behavior.
 
 
 Other Changes:
@@ -63,9 +69,13 @@ Other Changes:
 - Added `ImGuiItemFlags_LiveEditOnInputText` and `ImGuiItemFlags_LiveEditOnInputScalar`
   flags to configure the timing of applying edits of backing variables when typing
   values using a keyboard.
-  (#701, #9476, #3936, #3946, #5904, #6284, #8149, #8065, #8665, #9117, #9299, #700, #1351,
+  (#9476, #701, #3936, #3946, #5904, #6284, #8149, #8065, #8665, #9117, #9299, #700, #1351,
    #1875, #2060, #2215, #2380, #2550, #3083, #3338, #3556, #4373, #4714, #4885, #5184,
    #5777, #6707, #6766, #8004, #8303, #8915, #9308)
+  - ImGuiItemFlags_LiveEditOnInputText is enabled by default (same as before):
+    - The expectation is that for strings/text, enabling LiveEdit is a better default.
+  - ImGuiItemFlags_LiveEditOnInputScalar is disabled by default (new behavior):
+    - The expectation is that for numeric/scalars values, disabling LiveEdit is a better default.
   - Until now:
     - Edits where always applied immediately to backing variable, which is equivalent
       to the `ImGuiItemFlags_LiveEditXXX` flags being enabled.
@@ -76,28 +86,25 @@ Other Changes:
       Workarounds often required a backing store for scalar values, and there were
       also a few niggles related to `IsItemDeactivatedAfterEdit()` when using +/-
       buttons of an `InputInt()` widgets.
-      Many of those situations can now be naturally simplified by disabling
-      `ImGuiItemFlags_LiveEditOnInputScalar`, which is expected to become the default.
+    - Many of those situations can now be naturally simplified when disabling
+      `ImGuiItemFlags_LiveEditOnInputScalar` is disabled.
   - The new flags allows disabling this behavior selectively for strings fields
     such as `InputText()` vs scalar fields: `SliderInt()`, `InputFloat()`, etc.
     - When LiveEdit is disabled, edits are applied when pressing enter, tabbing out,
       clearing a field or deactivating due to a focus loss.
-    - The flag may be altered programmatically:
-        PushItemFlag(ImGuiItemFlags_LiveEditOnInputScalar, false); // Disable for scalars
+    - The flag may be altered programmatically, e.g. for the entire frame scope:
+        NewFrame();
+        PushItemFlag(ImGuiItemFlags_LiveEditOnInputScalar, true); // Enable for scalars for the whole frame
+        ....
+        PopItemFlag();
+        EndFrame();
+      Or for a specific widget:
+        PushItemFlag(ImGuiItemFlags_LiveEditOnInput, true);       // Enable for one widget
         SliderInt(...);
         PopItemFlag();
-        PushItemFlag(ImGuiItemFlags_LiveEditOnInput, true);        // Enable for all
-        SliderInt(...);
-        PopItemFlag();
-      But with upcoming new defaults it is expected you shouldn't touch them much.
-  - Both flags currently defaults to true, which matches previous behavior.
-    - The expectation is that for strings/text, enabling LiveEdit is a better default.
-    - The expectation is that for scalars, disable LiveEdit is a better default.
-    - The short-term intent is to change `ImGuiItemFlags_LiveEditOnInputScalar` to
-      default to being disabled, as soon as we get more feedback from users (SOON).
   - We intentionally are not adding `io.ConfigLiveEditXXX` fields to dictate the
-    default value of each `ImGuiItemFlags_LiveEditXXX`, because this is not
-    expected to be a user preference but a programmer/widget preferences.
+    default value of each `ImGuiItemFlags_LiveEditXXX`, because this is not expected
+    to be a user preference but a programmer/widget preferences.
     Also, we strive to make the toolkit consistent.
 - InputText:
   - Added `style.InputTextCursorSize` to configure cursor/caret thickness. (#7031, #9409)

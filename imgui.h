@@ -30,7 +30,7 @@
 // Library Version
 // (Integer encoded as XYYZZ for use in #if preprocessor conditionals, e.g. '#if IMGUI_VERSION_NUM >= 12345')
 #define IMGUI_VERSION       "1.92.9 WIP"
-#define IMGUI_VERSION_NUM   19286
+#define IMGUI_VERSION_NUM   19287
 #define IMGUI_HAS_TABLE             // Added BeginTable() - from IMGUI_VERSION_NUM >= 18000
 #define IMGUI_HAS_TEXTURES          // Added ImGuiBackendFlags_RendererHasTextures - from IMGUI_VERSION_NUM >= 19198
 
@@ -1248,18 +1248,16 @@ enum ImGuiItemFlags_
     ImGuiItemFlags_Disabled                 = 1 << 6,   // false    // [Internal] Disable interactions. DOES NOT affect visuals. This is used by BeginDisabled()/EndDisabled() and only provided here so you can read back via GetItemFlags().
 
     //---------------------------------------------------------------------------------
-    // LiveEdit refers to applying edits to backing variables _while_ typing.
+    // LiveEdit refers to applying edits to backing variables _while_ typing a value using the keyboard.
     // Widget:                          | Input:   | w/ LiveEdit:    | Output:
     //   InputText()                    |   "123"  |   on(default)   |  "1" then "12" then "123"
     //   InputText()                    |   "123"  |   off           |  "123" after validating or tabbing out or losing focus.
-    //   DragFloat(), SliderInt(), etc. |   "123"  |   on(default)*  |  1 then 12 then 123
-    //   DragFloat(), SliderInt(), etc. |   "123"  |   off*          |  123 after validation or tabbing out or losing focus.
-    //---------------------------------------------------------------------------------
-    // (*) The feature is currently being evaluated, and the aim is to change ImGuiItemFlags_LiveEditOnInputScalar to OFF by default.
-    //     The legacy behavior until July 2026 was that LiveEdit was always ON for everything.
+    //   DragFloat(), SliderInt(), etc. |   "123"  |   on*           |  1 then 12 then 123
+    //   DragFloat(), SliderInt(), etc. |   "123"  |   off(default)* |  123 after validation or tabbing out or losing focus.
+    // (*) Since 1.92.9 (July 2026), ImGuiItemFlags_LiveEditOnInputScalar is OFF by default. In prior version it was ON for everything.
     //---------------------------------------------------------------------------------
     ImGuiItemFlags_LiveEditOnInputText      = 1 << 7,   // true     // InputText: apply keyboard edits to backing value while typing. Otherwise, edits are applied when validating, tabbing out or losing focus.
-    ImGuiItemFlags_LiveEditOnInputScalar    = 1 << 8,   // true*    // DragXXX, SliderXXX, InputScalar: apply keyboard edits to backing value while typing. Otherwise, edits are applied when validating, tabbing out or losing focus.
+    ImGuiItemFlags_LiveEditOnInputScalar    = 1 << 8,   // false    // DragXXX, SliderXXX, InputScalar: apply keyboard edits to backing value while typing. Otherwise, edits are applied when validating, tabbing out or losing focus.
     ImGuiItemFlags_LiveEditOnInput          = ImGuiItemFlags_LiveEditOnInputText | ImGuiItemFlags_LiveEditOnInputScalar,
 };
 
