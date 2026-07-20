@@ -7,6 +7,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026/07/19: fixed loading CBDT/COLR bitmap color emoji fonts (NotoColorEmoji, Twemoji COLR) by detecting CBDT table and using FT_Select_Size() instead of FT_Request_Size(). (#6302) [@sakiodre]
 //  2025/06/11: refactored for the new ImFontLoader architecture, and ImGuiBackendFlags_RendererHasTextures support.
 //  2024/10/17: added plutosvg support for SVG Fonts (seems faster/better than lunasvg). Enable by using '#define IMGUI_ENABLE_FREETYPE_PLUTOSVG'. (#7927)
 //  2023/11/13: added support for ImFontConfig::RasterizationDensity field for scaling render density without scaling metrics.
@@ -449,13 +450,45 @@ static bool ImGui_ImplFreeType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig* s
     // FT_Set_Pixel_Sizes() doesn't seem to get us the same result."
     // (FT_Set_Pixel_Sizes() essentially calls FT_Request_Size() with FT_SIZE_REQUEST_TYPE_NOMINAL)
     const float rasterizer_density = src->RasterizerDensity * baked->RasterizerDensity;
-    FT_Size_RequestRec req;
-    req.type = (bd_font_data->UserFlags & ImGuiFreeTypeLoaderFlags_Bitmap) ? FT_SIZE_REQUEST_TYPE_NOMINAL : FT_SIZE_REQUEST_TYPE_REAL_DIM;
-    req.width = 0;
-    req.height = (uint32_t)(size * 64 * rasterizer_density);
-    req.horiResolution = 0;
-    req.vertResolution = 0;
-    FT_Request_Size(bd_font_data->FtFace, &req);
+
+    // Detect CBDT/COLR bitmap fonts (NotoColorEmoji, Twemoji COLR, etc.) which are not scalable
+    // and require FT_Select_Size() instead of FT_Request_Size(). (#6302)
+    FT_ULong cbdt_tag = FT_MAKE_TAG('C', 'B', 'D', 'T');
+    FT_ULong cbdt_length = 0;
+    FT_Error cbdt_err = FT_Load_Sfnt_Table(bd_font_data->FtFace, cbdt_tag, 0, nullptr, &cbdt_length);
+    bool is_cbdt_font = (cbdt_err == 0 && cbdt_length > 0);
+
+    if (is_cbdt_font && bd_font_data->FtFace->num_fixed_sizes > 0)
+    {
+        // Select the closest available bitmap strike size
+        int best_match = 0;
+        FT_Int best_diff = INT_MAX;
+        FT_Int target_size = (FT_Int)(size * rasterizer_density);
+        for (int i = 0; i < bd_font_data->FtFace->num_fixed_sizes; i++)
+        {
+            FT_Int diff = (FT_Int)bd_font_data->FtFace->available_sizes[i].height - target_size;
+            if (diff < 0) diff = -diff;
+            if (diff < best_diff)
+            {
+                best_diff = diff;
+                best_match = i;
+            }
+        }
+        FT_Select_Size(bd_font_data->FtFace, best_match);
+        // Load color glyphs
+        bd_font_data->LoadFlags |= FT_LOAD_COLOR;
+    }
+    else
+    {
+        // Standard scalable font path
+        FT_Size_RequestRec req;
+        req.type = (bd_font_data->UserFlags & ImGuiFreeTypeLoaderFlags_Bitmap) ? FT_SIZE_REQUEST_TYPE_NOMINAL : FT_SIZE_REQUEST_TYPE_REAL_DIM;
+        req.width = 0;
+        req.height = (uint32_t)(size * 64 * rasterizer_density);
+        req.horiResolution = 0;
+        req.vertResolution = 0;
+        FT_Request_Size(bd_font_data->FtFace, &req);
+    }
 
     // Output
     if (src->MergeMode == false)
