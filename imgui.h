@@ -3493,7 +3493,6 @@ struct ImDrawList
 struct ImDrawData
 {
     bool                Valid;              // Only valid after Render() is called and before the next NewFrame() is called.
-    int                 CmdListsCount;      // == CmdLists.Size. (OBSOLETE: exists for legacy reasons). Number of ImDrawList* to render.
     int                 TotalIdxCount;      // For convenience, sum of all ImDrawList's IdxBuffer.Size
     int                 TotalVtxCount;      // For convenience, sum of all ImDrawList's VtxBuffer.Size
     ImVector<ImDrawList*> CmdLists;         // Array of ImDrawList* to render. The ImDrawLists are owned by ImGuiContext and only pointed to from here.
@@ -3502,6 +3501,10 @@ struct ImDrawData
     ImVec2              FramebufferScale;   // Amount of pixels for each unit of DisplaySize. Copied from viewport->FramebufferScale (== io.DisplayFramebufferScale for main viewport). Generally (1,1) on normal display, (2,2) on OSX with Retina display.
     ImGuiViewport*      OwnerViewport;      // Viewport carrying the ImDrawData instance, might be of use to the renderer (generally not).
     ImVector<ImTextureData*>* Textures;     // List of textures to update. Most of the times the list is shared by all ImDrawData, has only 1 texture and it doesn't need any update. This almost always points to ImGui::GetPlatformIO().Textures[]. May be overridden or set to NULL if you want to manually update textures.
+
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    int                 CmdListsCount;      // Use CmdLists.Size instead. Number of ImDrawList* to render.
+#endif
 
     // Functions
     ImDrawData()    { Clear(); }

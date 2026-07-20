@@ -53,7 +53,8 @@ Breaking Changes:
     Before: DragFloat() with user typing "123" --> write back 1, then 12, then 123.
     After:  DragFloat() with user typing "123" --> write back 123 when validated/unfocused.
   You can enable the flag back for a given scope if needed by specific widget/behavior.
-
+- ImDrawData: marked `CmdListsCount` as obsolete (technically was obsoleted in 1.89.8).
+    Before: `draw_data->CmdListsCount`, After: `draw_data->CmdLists.Size`.
 
 Other Changes:
 
@@ -3541,8 +3542,10 @@ Breaking changes:
   input queue. This is automatically cleared by io.ClearInputKeys(). (#4921)
 - ImDrawData: CmdLists[] array is now owned, changed from 'ImDrawList**' to
   'ImVector<ImDrawList*>'. Majority of users shouldn't be affected, but you
-  cannot compare to NULL nor reassign manually anymore.
-  Instead use AddDrawList(). Allocation count are identical. (#6406, #4879, #1878)
+  cannot compare to NULL nor reassign manually anymore. (#6406, #4879, #1878)
+  - Allocation count are identical.
+  - Use `draw_data->CmdLists.Size` instead of `draw_list->CmdListsCount`!
+  - Use `AddDrawList()` to add to a `ImDrawData`.
 
 Other changes:
 
