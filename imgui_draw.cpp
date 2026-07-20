@@ -2866,13 +2866,14 @@ bool ImTextureDataUpdateNewFrame(ImTextureData* tex)
     // If a texture has never reached the backend, they don't need to know about it.
     // (note: backends between 1.92.0 and 1.92.4 could set an already destroyed texture to ImTextureStatus_WantDestroy
     //  when invalidating graphics objects twice, which would previously remove it from the list and crash.)
-    if (tex->Status == ImTextureStatus_WantDestroy && tex->TexID == ImTextureID_Invalid && tex->BackendUserData == NULL)
+    if (tex->Status == ImTextureStatus_WantDestroy && tex->TexID == ImTextureID_Invalid && tex->BackendUserData == NULL && tex->QueueUserData == NULL)
         tex->Status = ImTextureStatus_Destroyed;
 
     // Process texture being destroyed
     if (tex->Status == ImTextureStatus_Destroyed)
     {
         IM_ASSERT(tex->TexID == ImTextureID_Invalid && tex->BackendUserData == NULL && "Backend set texture Status to Destroyed but did not clear TexID/BackendUserData!");
+        IM_ASSERT(tex->QueueUserData == NULL && "Texture queue set Status to Destroyed but did not clear QueueUserData!");
         if (tex->WantDestroyNextFrame)
             remove_from_list = true; // Destroy was scheduled by us
         else

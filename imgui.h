@@ -3558,13 +3558,14 @@ struct ImTextureRect
 // Why does we store two identifiers: TexID and BackendUserData?
 // - ImTextureID    TexID           = lower-level identifier stored in ImDrawCmd. ImDrawCmd can refer to textures not created by the backend, and for which there's no ImTextureData.
 // - void*          BackendUserData = higher-level opaque storage for backend own book-keeping. Some backends may have enough with TexID and not need both.
- // In columns below: who reads/writes each fields? 'r'=read, 'w'=write, 'core'=main library, 'backend'=renderer backend
+// In columns below: who reads/writes each fields? 'r'=read, 'w'=write, 'core'=main library, 'backend'=renderer backend
 struct ImTextureData
 {
     //------------------------------------------ core / backend ---------------------------------------
     int                 UniqueID;               // w    -   // [DEBUG] Sequential index to facilitate identifying a texture when debugging/printing. Unique per atlas.
     ImTextureStatus     Status;                 // rw   rw  // ImTextureStatus_OK/_WantCreate/_WantUpdates/_WantDestroy. Always use SetStatus() to modify!
     void*               BackendUserData;        // -    rw  // Convenience storage for backend. Some backends may have enough with TexID.
+    void*               QueueUserData;          // r    -   // Convenience storage for a staged/multi-threaded rendering texture queue (e.g. imgui_threaded_rendering.h. See #8597). When != NULL, core assumes the texture is referenced by the queue.
     ImTextureID         TexID;                  // r    w   // Backend-specific texture identifier. Always use SetTexID() to modify! The identifier will stored in ImDrawCmd::GetTexID() and passed to backend's RenderDrawData function.
     ImTextureFormat     Format;                 // w    r   // ImTextureFormat_RGBA32 (default) or ImTextureFormat_Alpha8
     int                 Width;                  // w    r   // Texture width
