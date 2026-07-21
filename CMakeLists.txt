@@ -7,6 +7,19 @@ project(AndKittyModProject)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# ====================================================
+# 🌟 强行修复编译错误（无需修改 main.cpp）
+# ====================================================
+# 1. 强制开启数学宏定义 (解决报错: M_PI undeclared)
+add_compile_definitions(_USE_MATH_DEFINES)
+add_compile_definitions(M_PI=3.14159265358979323846)
+
+# 2. 强制全局注入基础类型头文件 (解决报错: unknown type name 'uintptr_t')
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    add_compile_options(-include cstdint)
+endif()
+# ====================================================
+
 # --- 1. 设置路径变量 ---
 set(SOURCE_DIR ${CMAKE_SOURCE_DIR})
 
