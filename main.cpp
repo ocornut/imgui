@@ -36,8 +36,6 @@
 #define STBI_NO_SIMD
 #define STBI_NO_THREAD_LOCALS
 #include "stb_image.h"
-#include "HeroImages.h"
-#include "EquipImages.h" 
 
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "JKInternal", __VA_ARGS__)
 
