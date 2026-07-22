@@ -2286,11 +2286,14 @@ void ImDrawListSplitter::SetCurrentChannel(ImDrawList* draw_list, int idx)
 void ImDrawData::Clear()
 {
     Valid = false;
-    CmdListsCount = TotalIdxCount = TotalVtxCount = 0;
+    TotalIdxCount = TotalVtxCount = 0;
     CmdLists.resize(0); // The ImDrawList are NOT owned by ImDrawData but e.g. by ImGuiContext, so we don't clear them.
     DisplayPos = DisplaySize = FramebufferScale = ImVec2(0.0f, 0.0f);
     OwnerViewport = NULL;
     Textures = NULL;
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    CmdListsCount = 0;
+#endif
 }
 
 // Important: 'out_list' is generally going to be draw_data->CmdLists, but may be another temporary list
@@ -2335,16 +2338,17 @@ void ImGui::AddDrawListToDrawDataEx(ImDrawData* draw_data, ImVector<ImDrawList*>
 
     // Add to output list + records state in ImDrawData
     out_list->push_back(draw_list);
-    draw_data->CmdListsCount++;
     draw_data->TotalVtxCount += draw_list->VtxBuffer.Size;
     draw_data->TotalIdxCount += draw_list->IdxBuffer.Size;
 }
 
 void ImDrawData::AddDrawList(ImDrawList* draw_list)
 {
-    IM_ASSERT(CmdLists.Size == CmdListsCount);
     draw_list->_PopUnusedDrawCmd();
     ImGui::AddDrawListToDrawDataEx(this, &CmdLists, draw_list);
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    CmdListsCount = CmdLists.Size;
+#endif
 }
 
 // For backward compatibility: convert all buffers from indexed to de-indexed, in case you cannot render indexed. Note: this is slow and most likely a waste of resources. Always prefer indexed rendering!
@@ -2868,13 +2872,14 @@ bool ImTextureDataUpdateNewFrame(ImTextureData* tex)
     // If a texture has never reached the backend, they don't need to know about it.
     // (note: backends between 1.92.0 and 1.92.4 could set an already destroyed texture to ImTextureStatus_WantDestroy
     //  when invalidating graphics objects twice, which would previously remove it from the list and crash.)
-    if (tex->Status == ImTextureStatus_WantDestroy && tex->TexID == ImTextureID_Invalid && tex->BackendUserData == NULL)
+    if (tex->Status == ImTextureStatus_WantDestroy && tex->TexID == ImTextureID_Invalid && tex->BackendUserData == NULL && tex->QueueUserData == NULL)
         tex->Status = ImTextureStatus_Destroyed;
 
     // Process texture being destroyed
     if (tex->Status == ImTextureStatus_Destroyed)
     {
         IM_ASSERT(tex->TexID == ImTextureID_Invalid && tex->BackendUserData == NULL && "Backend set texture Status to Destroyed but did not clear TexID/BackendUserData!");
+        IM_ASSERT(tex->QueueUserData == NULL && "Texture queue set Status to Destroyed but did not clear QueueUserData!");
         if (tex->WantDestroyNextFrame)
             remove_from_list = true; // Destroy was scheduled by us
         else

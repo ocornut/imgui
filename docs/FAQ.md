@@ -25,7 +25,7 @@ or view this file with any Markdown viewer.
 | [I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around...](#q-i-integrated-dear-imgui-in-my-engine-and-some-elements-are-clipping-or-disappearing-when-i-move-windows-around) |
 | [I integrated Dear ImGui in my engine and some elements are displaying outside their expected windows boundaries...](#q-i-integrated-dear-imgui-in-my-engine-and-some-elements-are-displaying-outside-their-expected-windows-boundaries) |
 | **Q&A: Usage** |
-| **[About the ID Stack system...](#q-about-the-id-stack-system)**<br>**[How can I have multiple widgets with the same label?](#q-how-can-i-have-multiple-widgets-with-the-same-label) (using `##` or `PushID()`)**<br>**[How can I have widgets with an empty label?](#q-how-can-i-have-widgets-with-an-empty-label) (using `##`)**<br>**[How can I animate the label of an existing widget?](#q-how-can-i-change-the-label-of-an-existing-widget) (using `###`)**<br>**[General description of the label and ID Stack system.](#general-description-of-the-label-and-id-stack-system)** |
+| **[About the ID Stack system...](#q-about-the-id-stack-system)**<br>**[How can I have multiple widgets with the same label?](#q-how-can-i-have-multiple-widgets-with-the-same-label) (using `##` or `PushID()`)**<br>**[How can I have widgets with an empty label?](#q-how-can-i-have-widgets-with-an-empty-label) (using `##`)**<br>**[How can I make a label dynamic?](#q-how-can-i-make-a-label-dynamic) (using `###`)**<br>**[General description of the label and ID Stack system.](#general-description-of-the-label-and-id-stack-system)** |
 | [How can I display an image?](#q-how-can-i-display-an-image)<br>[What are ImTextureID/ImTextureRef?](#q-what-are-imtextureidimtextureref)|
 | [How can I use maths operators with ImVec2?](#q-how-can-i-use-maths-operators-with-imvec2) |
 | [How can I use my own maths types instead of ImVec2/ImVec4?](#q-how-can-i-use-my-own-maths-types-instead-of-imvec2imvec4) |
@@ -85,16 +85,17 @@ Here's a very simplified comparison between the approach taken by Dear ImGui vs 
 |--------------------------|--------------------------|
 | UI fully issued on every update. | UI issued once then later modified. |
 | UI layout is fully dynamic and can change at any time.<BR>UI is generally emitted programmatically, which empowers reflecting a dynamic set of data. | UI layout is mostly static.<BR>UI may be emitted programmatically or from data created by offline tools. UI need extra code to evolve, which is often tedious and error-prone if it needs to be reflecting dynamic data and systems. |
-| Application can submit UI based on arbitrary logic and then forget about it. | Application needs more bookkeeping of UI elements. |
+| UI system is optimized for the worst case and designed to be optimal even under frequent changes. | UI system is optimized for the case where nothing changes. Performances tends to degrade when anything changes. |
+| Application can submit UI based on arbitrary logic without bookkeeping all aspects of that logic. | Application needs more bookkeeping of UI elements. |
 | UI library stores minimal amounts of data. At one point in time, it typically doesn't know or remember which other widgets are displayed and which widgets are coming next. As a result, certain layout features (alignment, resizing) are not as easy to implement or require ad-hoc code. | UI library stores entire widgets tree and state. UI library can use this retained data to easily layout things. |
 | UI code may be added anywhere.<BR>You can even create UI to edit a local variable! | UI code needs to be added in dedicated spots. |
 | UI layout/logic/action/data bindings are all nearby in the code. | UI layout/logic/action/data bindings in distinct functions, files or formats. |
 | Data is naturally always synchronized. | Use callback/signal/slot for synchronizing data (error-prone). |
-| API is simple and easy to learn. In particular, doing basic things is very easy. | API is more complex and specialized. |
-| API is low-level (raw language types). | API are higher-level (more abstractions, advanced language features). |
-| Less fancy look and feel. | Standard look and feel. |
+| API is simple and easy to learn. In particular, doing basic things is very easy.<BR>Attractive to more programmers. | API is more complex and specialized.<BR>Tends to require specialized programmers. |
+| API is low-level. Few abstractions, uses raw language types and your existing data. | API are higher-level. More abstractions, advanced language features. |
+| Less fancy look and feel. But keeps improving :) | Standard look and feel. |
 | Compile yourself. Easy to debug, hack, modify, study. | Mostly use precompiled libraries. Compiling, modifying or studying is daunting if not impossible. |
-| Run on every platform. | Run on limited desktop platforms. |
+| Run on every platform (incl. web, consoles, mobiles, legacy systems). | Run on major desktop platforms. |
 
 Idiomatic Dear ImGui code:
 ```cpp

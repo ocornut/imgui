@@ -402,6 +402,14 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
                             you may use GetMainViewport()->Pos to offset hard-coded positions, e.g. SetNextWindowPos(GetMainViewport()->Pos)
                           - likewise io.MousePos and GetMousePos() will use OS coordinates.
                             If you query mouse positions to interact with non-imgui coordinates you will need to offset them, e.g. subtract GetWindowViewport()->Pos.
+ - 2026/07/20 (1.92.9) - DragXXX, SliderXXX, InputScalar: with `ImGuiItemFlags_LiveEditOnInputScalar` now defaulting to being disabled:
+                         inputting a value with the keyboard doesn't write intermediate values to backing variable. (#9476)
+                         - Before: DragFloat() with user typing "123" --> write back 1, then 12, then 123.
+                         - After:  DragFloat() with user typing "123" --> write back 123 when validated/unfocused.
+                         You can enable the flag back for a given scope if needed by specific widget/behavior.
+ - 2026/07/20 (1.92.9) - ImDrawData: marked ImDrawData::CmdListsCount as obsolete (technically was obsoleted in 1.89.8).
+                         - Before: draw_data->CmdListsCount
+                         - After:  draw_data->CmdLists.Size
  - 2026/07/08 (1.92.9) - Drag and Drop: commented out legacy name `ImGuiDragDropFlags_SourceAutoExpirePayload` which obsoleted in 1.90.9 (July 2024). Use `ImGuiDragDropFlags_PayloadAutoExpire`.
  - 2026/07/06 (1.92.9) - ColorEdit: obsoleted SetColorEditOptions() function added in 1.51 (June 2017) in favor of directly poking to io.ConfigColorEditFlags. More consistent and easier to discover.
  - 2026/06/02 (1.92.9) - TreeNode: commented out legacy name ImGuiTreeNodeFlags_SpanTextWidth which was obsoleted in 1.90.7 (May 2024). Use ImGuiTreeNodeFlags_SpanLabelWidth instead.
@@ -745,7 +753,9 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
                            - ImDrawCornerFlags_XXX          -> use ImDrawFlags_RoundCornersXXX flags. Read 1.82 Changelog for details + grep commented names in sources.
                        - commented out runtime support for hardcoded ~0 or 0x01..0x0F rounding flags values for AddRect()/AddRectFilled()/PathRect()/AddImageRounded() -> use ImDrawFlags_RoundCornersXXX flags. Read 1.82 Changelog for details
  - 2023/08/25 (1.89.9) - clipper: Renamed IncludeRangeByIndices() (also called ForceDisplayRangeByIndices() before 1.89.6) to IncludeItemsByIndex(). Kept inline redirection function. Sorry!
- - 2023/07/12 (1.89.8) - ImDrawData: CmdLists now owned, changed from ImDrawList** to ImVector<ImDrawList*>. Majority of users shouldn't be affected, but you cannot compare to NULL nor reassign manually anymore. Instead use AddDrawList(). (#6406, #4879, #1878)
+ - 2023/07/12 (1.89.8) - ImDrawData: CmdLists now owned, changed from ImDrawList** to ImVector<ImDrawList*>. Majority of users shouldn't be affected, but you cannot compare to NULL nor reassign manually anymore. (#6406, #4879, #1878)
+                            - use `draw_data->CmdLists.Size` instead of `draw_list->CmdListsCount`.
+                            - use `draw_data->AddDrawList()` to add to a ImDrawData.
  - 2023/06/28 (1.89.7) - overlapping items: obsoleted 'SetItemAllowOverlap()' (called after item) in favor of calling 'SetNextItemAllowOverlap()' (called before item). 'SetItemAllowOverlap()' didn't and couldn't work reliably since 1.89 (2022-11-15).
  - 2023/06/28 (1.89.7) - overlapping items: renamed 'ImGuiTreeNodeFlags_AllowItemOverlap' to 'ImGuiTreeNodeFlags_AllowOverlap', 'ImGuiSelectableFlags_AllowItemOverlap' to 'ImGuiSelectableFlags_AllowOverlap'. Kept redirecting enums (will obsolete).
  - 2023/06/28 (1.89.7) - overlapping items: IsItemHovered() now by default return false when querying an item using AllowOverlap mode which is being overlapped. Use ImGuiHoveredFlags_AllowWhenOverlappedByItem to revert to old behavior.
@@ -6145,7 +6155,7 @@ static void FlattenDrawDataIntoSingleLayer(ImDrawDataBuilder* builder)
 
 static void InitViewportDrawData(ImGuiViewportP* viewport)
 {
-    ImGuiIO& io = ImGui::GetIO();
+    ImGuiContext& g = *GImGui;
     ImDrawData* draw_data = &viewport->DrawDataP;
 
     viewport->DrawData = draw_data; // Make publicly accessible
@@ -6162,13 +6172,16 @@ static void InitViewportDrawData(ImGuiViewportP* viewport)
     const bool is_minimized = (viewport->Flags & ImGuiViewportFlags_IsMinimized) != 0;
 
     draw_data->Valid = true;
-    draw_data->CmdListsCount = 0;
+    draw_data->FrameCount = g.FrameCount;
     draw_data->TotalVtxCount = draw_data->TotalIdxCount = 0;
     draw_data->DisplayPos = viewport->Pos;
     draw_data->DisplaySize = is_minimized ? ImVec2(0.0f, 0.0f) : viewport->Size;
-    draw_data->FramebufferScale = (viewport->FramebufferScale.x != 0.0f) ? viewport->FramebufferScale : io.DisplayFramebufferScale;
+    draw_data->FramebufferScale = (viewport->FramebufferScale.x != 0.0f) ? viewport->FramebufferScale : g.IO.DisplayFramebufferScale;
     draw_data->OwnerViewport = viewport;
-    draw_data->Textures = &ImGui::GetPlatformIO().Textures;
+    draw_data->Textures = &g.PlatformIO.Textures;
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    draw_data->CmdListsCount = 0;
+#endif
 }
 
 // Push a clipping rectangle for both ImGui logic (hit-testing etc.) and low-level ImDrawList rendering.
@@ -6481,7 +6494,6 @@ void ImGui::Render()
 
         // We call _PopUnusedDrawCmd() last thing, as RenderDimmedBackgrounds() rely on a valid command being there (especially in docking branch).
         ImDrawData* draw_data = &viewport->DrawDataP;
-        IM_ASSERT(draw_data->CmdLists.Size == draw_data->CmdListsCount);
         for (ImDrawList* draw_list : draw_data->CmdLists)
             draw_list->_PopUnusedDrawCmd();
 
@@ -12198,7 +12210,7 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGu
                 *p_highlight = g.FrameCount;
             *p_alive = g.FrameCount;
             if (*p_highlight >= g.FrameCount - 1)
-                window->DrawList->AddRect(bb.Min - ImVec2(1, 1), bb.Max + ImVec2(1, 1), IM_COL32(255, 0, 0, 255), 0.0f, ImDrawFlags_None, 2.0f);
+                window->DrawList->AddRect(bb.Min - ImVec2(1, 1), bb.Max + ImVec2(1, 1), IM_COL32(255, 0, 0, 255), 0.0f, 2.0f);
         }
 #endif
     }

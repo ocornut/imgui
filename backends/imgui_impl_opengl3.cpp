@@ -676,7 +676,8 @@ void ImGui_ImplOpenGL3_UpdateTexture(ImTextureData* tex)
     // Backup GL_UNPACK state that we modify, restore on exit.
     GLint last_unpack_row_length = 0; (void)last_unpack_row_length;
     GLint last_unpack_alignment = 0; (void)last_unpack_alignment;
-    if (tex->Status == ImTextureStatus_WantCreate || tex->Status == ImTextureStatus_WantUpdates)
+    const bool last_unpack_state_save_and_restore = (tex->Status == ImTextureStatus_WantCreate || tex->Status == ImTextureStatus_WantUpdates);
+    if (last_unpack_state_save_and_restore)
     {
 #ifdef GL_UNPACK_ROW_LENGTH // Not on WebGL/ES
         GL_CALL(glGetIntegerv(GL_UNPACK_ROW_LENGTH, &last_unpack_row_length));
@@ -750,7 +751,7 @@ void ImGui_ImplOpenGL3_UpdateTexture(ImTextureData* tex)
         ImGui_ImplOpenGL3_DestroyTexture(tex);
 
     // Restore GL_UNPACK state
-    if (tex->Status == ImTextureStatus_WantCreate || tex->Status == ImTextureStatus_WantUpdates)
+    if (last_unpack_state_save_and_restore)
     {
 #ifdef GL_UNPACK_ROW_LENGTH
         GL_CALL(glPixelStorei(GL_UNPACK_ROW_LENGTH, last_unpack_row_length));
