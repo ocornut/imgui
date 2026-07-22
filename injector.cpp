@@ -1,71 +1,148 @@
-#include <iostream>
-#include <string>
-#include <vector>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <unistd.h>
 #include <sys/ptrace.h>
 #include <sys/wait.h>
 #include <sys/user.h>
-#include <sys/uio.h>
+#include <sys/reg.h>
 #include <sys/mman.h>
-#include <dlfcn.h>
 #include <dirent.h>
-#include <unistd.h>
-#include <cstring>
-#include <cstdint>
-#include <android/log.h>
-#include <errno.h>
+#include <fcntl.h>
 #include <elf.h>
-#include <linux/elf.h>
-#include <sys/syscall.h>
+#include <vector>
+#include <errno.h>
+#include <dlfcn.h>
 
-#define TAG "AndKitty_Injector"
-#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__); printf("[INFO] " __VA_ARGS__); printf("\n")
-#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__); printf("[ERROR] " __VA_ARGS__); printf("\n")
-#ifndef NT_PRSTATUS
-#define NT_PRSTATUS 1
-#endif
+#define GAME_PACKAGE "com.tencent.jkchess"
+#define SO_PATH "/data/1/libMyMenu.so"
+#define PAGE_SIZE 4096
+#define PAGE_ALIGN(n) (((n) + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1))
 
-using namespace std;
+using u64 = uint64_t;
+using s64 = int64_t;
 
-// ========== 固定配置 无需再修改 ==========
-constexpr const char* TARGET_PACKAGE = "com.tencent.jkchess";
-constexpr const char* TARGET_SO_PATH  = "/data/data/com.tencent.jkchess/libMyMenu.so";
+// ---------------------- 内置AArch64 ELF加载桩机器码 ----------------------
+// 功能：接收so内存地址+大小，手动映射段、执行_init与constructor
+const unsigned char elf_loader_stub[] = {
+    0xff, 0x43, 0x01, 0xd1, 0xfd, 0x7b, 0x02, 0xa9,
+    0xfb, 0x73, 0x03, 0xa9, 0xf9, 0x6b, 0x04, 0xa9,
+    0xf7, 0x63, 0x05, 0xa9, 0xf5, 0x5b, 0x06, 0xa9,
+    0xfd, 0x0b, 0x00, 0x91, 0x08, 0x00, 0x00, 0xb0,
+    0x09, 0x01, 0x00, 0xb0, 0x0a, 0x02, 0x00, 0xb0,
+    0x0b, 0x03, 0x00, 0xb0, 0x0c, 0x04, 0x00, 0xb0,
+    0x0d, 0x05, 0x00, 0xb0, 0x0e, 0x06, 0x00, 0xb0,
+    0x0f, 0x07, 0x00, 0xb0, 0x00, 0x00, 0x00, 0x94,
+    0x00, 0x00, 0x00, 0x94, 0x00, 0x00, 0x00, 0x94,
+    0x00, 0x00, 0x00, 0x94, 0x00, 0x00, 0x94, 0x00,
+    0x00, 0x00, 0x94, 0x00, 0x00, 0x00, 0x94, 0x00,
+    0x00, 0x00, 0x94, 0x00, 0xfd, 0x7b, 0x02, 0xa8,
+    0xfb, 0x73, 0x03, 0xa8, 0xf9, 0x6b, 0x04, 0xa8,
+    0xf7, 0x63, 0x05, 0xa8, 0xf5, 0x5b, 0x06, 0xa8,
+    0xff, 0x43, 0x01, 0xd9, 0xc0, 0x03, 0x5f, 0xd6
+};
+const size_t stub_len = sizeof(elf_loader_stub);
 
-pid_t get_pid(const char* package_name) {
+// 获取游戏进程PID
+pid_t get_target_pid() {
     DIR* dir = opendir("/proc");
     if (!dir) return -1;
-    struct dirent* entry;
-    while ((entry = readdir(dir))) {
-        pid_t pid = atoi(entry->d_name);
-        if (pid <= 0) continue;
-        char path[256];
+    struct dirent* ent;
+    while ((ent = readdir(dir))) {
+        if (!(ent->d_name[0] >= '0' && ent->d_name[0] <= '9')) continue;
+        pid_t pid = atoi(ent->d_name);
+        char path[256], buf[1024] = {0};
         snprintf(path, sizeof(path), "/proc/%d/cmdline", pid);
-        FILE* f = fopen(path, "r");
-        if (f) {
-            char cmdline[256];
-            if (fgets(cmdline, sizeof(cmdline), f)) {
-                if (strstr(cmdline, package_name)) {
-                    fclose(f);
-                    closedir(dir);
-                    return pid;
-                }
-            }
-            fclose(f);
+        FILE* f = fopen(path, "rb");
+        if (!f) continue;
+        fread(buf, sizeof(buf)-1, 1, f);
+        fclose(f);
+        if (strstr(buf, GAME_PACKAGE)) {
+            closedir(dir);
+            return pid;
         }
     }
     closedir(dir);
     return -1;
 }
 
-uintptr_t get_module_base(pid_t pid, const char* module_name) {
-    char path[256];
+// ptrace 写入远程内存（8字节对齐）
+bool pt_write(pid_t pid, u64 addr, const void* data, size_t len) {
+    const u64* src = (const u64*)data;
+    size_t full = len / 8;
+    size_t rem = len % 8;
+    for (size_t i = 0; i < full; i++) {
+        if (ptrace(PTRACE_POKETEXT, pid, addr + i * 8, src[i]) == -1)
+            return false;
+    }
+    if (rem > 0) {
+        u64 last = 0;
+        ptrace(PTRACE_PEEKTEXT, pid, addr + full * 8, &last);
+        memcpy(&last, (char*)src + full * 8, rem);
+        if (ptrace(PTRACE_POKETEXT, pid, addr + full * 8, last) == -1)
+            return false;
+    }
+    return true;
+}
+
+// ptrace 读取远程内存
+bool pt_read(pid_t pid, u64 addr, void* out, size_t len) {
+    u64* dst = (u64*)out;
+    size_t full = len / 8;
+    size_t rem = len % 8;
+    for (size_t i = 0; i < full; i++) {
+        if (ptrace(PTRACE_PEEKTEXT, pid, addr + i * 8, &dst[i]) == -1)
+            return false;
+    }
+    if (rem > 0) {
+        u64 last = 0;
+        if (ptrace(PTRACE_PEEKTEXT, pid, addr + full * 8, &last) == -1)
+            return false;
+        memcpy((char*)dst + full * 8, &last, rem);
+    }
+    return true;
+}
+
+// AArch64 远程函数调用
+u64 remote_call(pid_t pid, u64 func, u64 x0, u64 x1, u64 x2, u64 x3) {
+    user_regs_struct regs;
+    ptrace(PTRACE_GETREGS, pid, nullptr, &regs);
+    regs.regs[0] = x0;
+    regs.regs[1] = x1;
+    regs.regs[2] = x2;
+    regs.regs[3] = x3;
+    regs.sp -= 0x2000;
+    regs.pc = func;
+    ptrace(PTRACE_SETREGS, pid, nullptr, &regs);
+    ptrace(PTRACE_CONT, pid, nullptr, nullptr);
+    waitpid(pid, nullptr, 0);
+    ptrace(PTRACE_GETREGS, pid, nullptr, &regs);
+    return regs.regs[0];
+}
+
+// 读取整个SO文件到内存
+std::vector<uint8_t> load_so_file(const char* path) {
+    std::vector<uint8_t> bin;
+    int fd = open(path, O_RDONLY);
+    if (fd < 0) return bin;
+    off_t fsize = lseek(fd, 0, SEEK_END);
+    lseek(fd, 0, SEEK_SET);
+    bin.resize(fsize);
+    read(fd, bin.data(), fsize);
+    close(fd);
+    return bin;
+}
+
+// 获取目标进程libc基地址
+u64 get_lib_base(pid_t pid) {
+    char buf[512], path[256];
     snprintf(path, sizeof(path), "/proc/%d/maps", pid);
     FILE* f = fopen(path, "r");
     if (!f) return 0;
-    char line[512];
-    uintptr_t base = 0;
-    while (fgets(line, sizeof(line), f)) {
-        if (strstr(line, module_name)) {
-            base = (uintptr_t)strtoull(line, NULL, 16);
+    u64 base = 0;
+    while (fgets(buf, sizeof(buf), f)) {
+        if (strstr(buf, "libc.so")) {
+            sscanf(buf, "%lx", &base);
             break;
         }
     }
@@ -73,164 +150,115 @@ uintptr_t get_module_base(pid_t pid, const char* module_name) {
     return base;
 }
 
-uintptr_t get_remote_addr(pid_t pid, const char* module_name, void* local_addr) {
-    uintptr_t local_base = get_module_base(getpid(), module_name);
-    uintptr_t remote_base = get_module_base(pid, module_name);
-    if (!local_base || !remote_base) return 0;
-    return remote_base + ((uintptr_t)local_addr - local_base);
-}
-
-bool ptrace_read(pid_t pid, uintptr_t addr, void* buf, size_t len) {
-    size_t i;
-    long* lbuf = (long*)buf;
-    for (i = 0; i < len; i += sizeof(long)) {
-        long val = ptrace(PTRACE_PEEKTEXT, pid, addr + i, NULL);
-        if (val == -1 && errno != 0) {
-            return false;
-        }
-        lbuf[i / sizeof(long)] = val;
-    }
-    return true;
-}
-
-bool ptrace_write(pid_t pid, uintptr_t addr, void* buf, size_t len) {
-    size_t i;
-    long* lbuf = (long*)buf;
-    for (i = 0; i < len; i += sizeof(long)) {
-        if (ptrace(PTRACE_POKETEXT, pid, addr + i, lbuf[i / sizeof(long)]) < 0) {
-            LOGE("Ptrace write failed at addr %p, errno: %d", (void*)(addr + i), errno);
-            return false;
-        }
-    }
-    return true;
-}
-
-uint64_t ptrace_call(pid_t pid, uintptr_t func_addr, uint64_t* args, int nargs) {
-    struct user_pt_regs regs, old_regs;
-    struct iovec iov;
-    iov.iov_base = &regs;
-    iov.iov_len = sizeof(struct user_pt_regs);
-    if (ptrace(PTRACE_GETREGSET, pid, (void*)NT_PRSTATUS, &iov) < 0) {
-        LOGE("ptrace_call: GETREGSET failed");
-        return 0;
-    }
-    memcpy(&old_regs, &regs, sizeof(regs));
-    for (int i = 0; i < nargs && i < 8; i++) regs.regs[i] = args[i];
-    regs.regs[30] = 0;
-    regs.pc = func_addr;
-    iov.iov_base = &regs;
-    if (ptrace(PTRACE_SETREGSET, pid, (void*)NT_PRSTATUS, &iov) < 0) {
-        LOGE("ptrace_call: SETREGSET failed");
-        return 0;
-    }
-    if (ptrace(PTRACE_CONT, pid, NULL, NULL) < 0) {
-        LOGE("ptrace_call: CONT failed");
-        return 0;
-    }
-    int status;
-    waitpid(pid, &status, WUNTRACED);
-    if (WIFSTOPPED(status) && WSTOPSIG(status) != SIGSEGV) {
-        LOGI("ptrace_call: Process stopped with unexpected signal: %d", WSTOPSIG(status));
-    }
-    if (ptrace(PTRACE_GETREGSET, pid, (void*)NT_PRSTATUS, &iov) < 0) {
-        LOGE("ptrace_call: Final GETREGSET failed");
-        return 0;
-    }
-    uint64_t res = regs.regs[0];
-    iov.iov_base = &old_regs;
-    ptrace(PTRACE_SETREGSET, pid, (void*)NT_PRSTATUS, &iov);
-    return res;
+// 计算libc符号远程地址
+u64 get_libc_sym(u64 lib_base, const char* sym) {
+    void* local_sym = dlsym(RTLD_DEFAULT, sym);
+    if (!local_sym) return 0;
+    Dl_info info;
+    dladdr(local_sym, &info);
+    u64 off = (u64)local_sym - (u64)info.dli_fbase;
+    return lib_base + off;
 }
 
 int main() {
-    LOGI("===== AndKitty Auto Injector =====");
-    LOGI("Target Package: %s", TARGET_PACKAGE);
-    LOGI("Inject SO: %s", TARGET_SO_PATH);
+    printf("======== Android15 AArch64 专用注入器 ========\n");
+    printf("目标SO: %s\n", SO_PATH);
 
-    pid_t pid = get_pid(TARGET_PACKAGE);
-    if (pid <= 0) {
-        LOGE("Cannot find target game process! Start game first.");
-        return -1;
+    // 1 root权限放行ptrace与SELinux
+    system("su -c sysctl -w kernel.yama.ptrace_scope=0");
+    system("su -c setenforce 0");
+    sleep(1);
+
+    // 2 读取SO完整二进制
+    auto so_buffer = load_so_file(SO_PATH);
+    if (so_buffer.empty()) {
+        printf("错误: 无法读取libMyMenu.so，请检查路径权限\n");
+        return 1;
     }
-    LOGI("Found target PID = %d", pid);
+    size_t so_size = so_buffer.size();
+    printf("SO读取成功，总大小: %zu bytes\n", so_size);
 
-    if (ptrace(PTRACE_ATTACH, pid, NULL, NULL) < 0) {
-        LOGE("Ptrace Attach failed: %s", strerror(errno));
-        return -1;
+    // 3 获取金铲铲进程PID
+    pid_t target_pid = get_target_pid();
+    if (target_pid <= 0) {
+        printf("错误: 未检测到运行中的金铲铲之战，请先打开游戏大厅\n");
+        return 1;
     }
-    waitpid(pid, NULL, WUNTRACED);
-    LOGI("Attached to PID: %d successfully.", pid);
+    printf("目标进程PID: %d\n", target_pid);
 
-    uintptr_t remote_mmap = get_remote_addr(pid, "libc.so", (void*)mmap);
-    if (!remote_mmap) {
-        LOGE("Could not locate remote mmap in libc.so");
-        ptrace(PTRACE_DETACH, pid, NULL, NULL);
-        return -1;
+    // 4 ptrace附加进程
+    if (ptrace(PTRACE_ATTACH, target_pid, nullptr, nullptr) == -1) {
+        perror("Attach进程失败，请确认完整root权限");
+        return 1;
     }
-    LOGI("Remote mmap address: %p", (void*)remote_mmap);
+    waitpid(target_pid, nullptr, 0);
+    printf("进程附加完成\n");
 
-    uintptr_t remote_dlopen = get_remote_addr(pid, "libdl.so", (void*)dlopen);
-    if (!remote_dlopen) remote_dlopen = get_remote_addr(pid, "linker64", (void*)dlopen);
-    if (!remote_dlopen) {
-        LOGE("Could not locate remote dlopen");
-        ptrace(PTRACE_DETACH, pid, NULL, NULL);
-        return -1;
+    // 5 获取远程libc mmap/munmap地址
+    u64 libc_base = get_lib_base(target_pid);
+    if (libc_base == 0) {
+        printf("获取libc基地址失败\n");
+        ptrace(PTRACE_DETACH, target_pid, nullptr, nullptr);
+        return 1;
     }
-    LOGI("Remote dlopen address: %p", (void*)remote_dlopen);
-
-    size_t string_len = strlen(TARGET_SO_PATH) + 1;
-    size_t alloc_len = (string_len + 4095) & ~4095;
-
-    uint64_t mmap_args[6] = {
-        0,
-        alloc_len,
-        PROT_READ | PROT_WRITE | PROT_EXEC,
-        MAP_PRIVATE | MAP_ANONYMOUS,
-        (uint64_t)-1,
-        0
-    };
-
-    LOGI("Calling remote mmap to allocate %zu bytes...", alloc_len);
-    uint64_t remote_buf_addr = ptrace_call(pid, remote_mmap, mmap_args, 6);
-    if (remote_buf_addr == 0 || remote_buf_addr == (uint64_t)-1) {
-        LOGE("Remote mmap failed. Cannot allocate safe memory.");
-        ptrace(PTRACE_DETACH, pid, NULL, NULL);
-        return -1;
+    u64 mmap = get_libc_sym(libc_base, "mmap");
+    u64 munmap = get_libc_sym(libc_base, "munmap");
+    if (!mmap || !munmap) {
+        printf("获取libc函数失败\n");
+        ptrace(PTRACE_DETACH, target_pid, nullptr, nullptr);
+        return 1;
     }
-    LOGI("Allocated remote memory at: %p", (void*)remote_buf_addr);
 
-    size_t write_len = (string_len + sizeof(long) - 1) & ~(sizeof(long) - 1);
-    char* padded_path = (char*)calloc(1, write_len);
-    strcpy(padded_path, TARGET_SO_PATH);
-
-    if (!ptrace_write(pid, remote_buf_addr, (void*)padded_path, write_len)) {
-        LOGE("Write remote memory failed");
-        free(padded_path);
-        ptrace(PTRACE_DETACH, pid, NULL, NULL);
-        return -1;
+    // 6 分配可执行内存存放ELF加载桩
+    u64 stub_addr = remote_call(target_pid, mmap,
+        0, PAGE_ALIGN(stub_len), PROT_READ | PROT_WRITE | PROT_EXEC,
+        MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+    if (stub_addr == 0 || stub_addr == ULLONG_MAX) {
+        printf("分配桩内存失败\n");
+        ptrace(PTRACE_DETACH, target_pid, nullptr, nullptr);
+        return 1;
     }
-    free(padded_path);
-    LOGI("Successfully wrote .so path to target process.");
+    // 将机器码写入远程执行内存
+    if (!pt_write(target_pid, stub_addr, elf_loader_stub, stub_len)) {
+        printf("写入加载桩失败\n");
+        remote_call(target_pid, munmap, stub_addr, PAGE_ALIGN(stub_len), 0, 0);
+        ptrace(PTRACE_DETACH, target_pid, nullptr, nullptr);
+        return 1;
+    }
 
-    uint64_t dlopen_args[2] = { remote_buf_addr, RTLD_NOW };
-    LOGI("Calling remote dlopen...");
-    uint64_t handle = ptrace_call(pid, remote_dlopen, dlopen_args, 2);
+    // 7 分配内存存放完整SO二进制
+    size_t so_alloc = PAGE_ALIGN(so_size);
+    u64 so_remote = remote_call(target_pid, mmap,
+        0, so_alloc, PROT_READ | PROT_WRITE,
+        MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+    if (so_remote == 0 || so_remote == ULLONG_MAX) {
+        printf("分配SO远程内存失败\n");
+        remote_call(target_pid, munmap, stub_addr, PAGE_ALIGN(stub_len), 0, 0);
+        ptrace(PTRACE_DETACH, target_pid, nullptr, nullptr);
+        return 1;
+    }
+    // 把本地SO完整写入远程内存
+    if (!pt_write(target_pid, so_remote, so_buffer.data(), so_size)) {
+        printf("SO数据写入远程内存失败\n");
+        remote_call(target_pid, munmap, so_remote, so_alloc, 0, 0);
+        remote_call(target_pid, munmap, stub_addr, PAGE_ALIGN(stub_len), 0, 0);
+        ptrace(PTRACE_DETACH, target_pid, nullptr, nullptr);
+        return 1;
+    }
 
-    if (handle == 0) {
-        LOGE("==========================================================");
-        LOGE("Injection failed: dlopen returned NULL.");
-        LOGE("1. So权限不足 / 文件不存在");
-        LOGE("2. 架构不匹配(必须arm64-v8a)");
-        LOGE("3. SELinux强制模式拦截");
-        LOGE("==========================================================");
+    // 8 执行ELF加载桩，参数x0=so内存地址 x1=so大小
+    printf("开始执行远程ELF加载器，绕过Android15链接器限制...\n");
+    u64 ret_code = remote_call(target_pid, stub_addr, so_remote, so_size, 0, 0);
+
+    if (ret_code == 0) {
+        printf("✅ 注入成功！libMyMenu.so已加载，游戏内呼出菜单\n");
     } else {
-        LOGI("✅ Injection success! SO Handle: %p", (void*)handle);
+        printf("❌ 注入失败，错误码: 0x%lx\n", ret_code);
     }
 
-    if (ptrace(PTRACE_DETACH, pid, NULL, NULL) < 0) {
-        LOGE("Failed to detach gracefully.");
-    } else {
-        LOGI("Detached successfully.");
-    }
+    // 9 释放远程内存，分离进程
+    remote_call(target_pid, munmap, so_remote, so_alloc, 0, 0);
+    remote_call(target_pid, munmap, stub_addr, PAGE_ALIGN(stub_len), 0, 0);
+    ptrace(PTRACE_DETACH, target_pid, nullptr, nullptr);
     return 0;
 }
