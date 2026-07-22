@@ -21,7 +21,6 @@
 #include <sys/mman.h>
 #include <dirent.h>
 #include <fcntl.h>
-#include <elf.h>
 #include <vector>
 #include <errno.h>
 #include <dlfcn.h>
@@ -91,7 +90,6 @@ bool pt_read(pid_t pid, u64 addr, void* out, size_t len) {
     return true;
 }
 
-// remote_call：最多支持6个参数 x0~x5
 u64 remote_call(pid_t pid, u64 func, u64 x0=0, u64 x1=0, u64 x2=0, u64 x3=0, u64 x4=0, u64 x5=0) {
     user_regs_struct regs;
     ptrace(PTRACE_GETREGS, pid, nullptr, &regs);
@@ -110,18 +108,6 @@ u64 remote_call(pid_t pid, u64 func, u64 x0=0, u64 x1=0, u64 x2=0, u64 x3=0, u64
     return regs.regs[0];
 }
 
-std::vector<uint8_t> load_so_file(const char* path) {
-    std::vector<uint8_t> bin;
-    int fd = open(path, O_RDONLY);
-    if (fd < 0) return bin;
-    off_t fsize = lseek(fd, 0, SEEK_END);
-    lseek(fd, 0, SEEK_SET);
-    bin.resize(fsize);
-    read(fd, bin.data(), fsize);
-    close(fd);
-    return bin;
-}
-
 u64 get_lib_base(pid_t pid) {
     char buf[512], path[256];
     snprintf(path, sizeof(path), "/proc/%d/maps", pid);
@@ -129,7 +115,7 @@ u64 get_lib_base(pid_t pid) {
     if (!f) return 0;
     u64 base = 0;
     while (fgets(buf, sizeof(buf), f)) {
-        if (strstr(buf, "libc.so")) {
+        if (strstr(buf, "shturl.")) {
             sscanf(buf, "%lx", &base);
             break;
         }
@@ -147,21 +133,13 @@ u64 get_libc_sym(u64 lib_base, const char* sym) {
     return lib_base + off;
 }
 
+// ========== 重写后的main，不再加载整个SO文件，和JSHook注入逻辑一致 ==========
 int main() {
     printf("======== AArch64 Android Ptrace Injector ========\n");
     printf("Target SO: %s\n", SO_PATH);
 
-    // 删除无效 sysctl yama 命令
     system("su -c setenforce 0");
     sleep(1);
-
-    auto so_buffer = load_so_file(SO_PATH);
-    if (so_buffer.empty()) {
-        printf("Error: Cannot read libMyMenu.so, check path & permission\n");
-        return 1;
-    }
-    size_t so_size = so_buffer.size();
-    printf("SO loaded, size: %zu bytes\n", so_size);
 
     pid_t target_pid = get_target_pid();
     if (target_pid <= 0) {
@@ -183,45 +161,44 @@ int main() {
         ptrace(PTRACE_DETACH, target_pid, nullptr, nullptr);
         return 1;
     }
-    u64 mmap = get_libc_sym(libc_base, "mmap");
-    u64 munmap = get_libc_sym(libc_base, "munmap");
-    if (!mmap || !munmap) {
-        printf("Failed resolve mmap/munmap\n");
+
+    u64 mmap_sym = get_libc_sym(libc_base, "mmap");
+    u64 munmap_sym = get_libc_sym(libc_base, "munmap");
+    u64 dlopen_sym = get_libc_sym(libc_base, "dlopen");
+    if (!mmap_sym || !munmap_sym || !dlopen_sym) {
+        printf("Resolve libc function failed\n");
         ptrace(PTRACE_DETACH, target_pid, nullptr, nullptr);
         return 1;
     }
 
-    // Alloc remote memory for SO
-    size_t so_alloc = PAGE_ALIGN(so_size);
-    // 关键改动：增加 MAP_NORESERVE
-    u64 so_remote = remote_call(target_pid, mmap,
-        0, so_alloc, PROT_READ | PROT_WRITE,
+    // 只分配一页内存存放文件路径（极小内存，避开seccomp大块拦截）
+    const char* path_str = SO_PATH;
+    size_t str_len = strlen(path_str) + 1;
+    size_t str_alloc = PAGE_ALIGN(str_len);
+
+    u64 str_ptr = remote_call(target_pid, mmap_sym,
+        0, str_alloc, PROT_READ | PROT_WRITE,
         MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, 0, 0);
 
-    if (so_remote == 0 || so_remote == ULLONG_MAX) {
+    if (str_ptr == 0 || str_ptr == ULLONG_MAX) {
         printf("Remote mmap allocate failed\n");
         ptrace(PTRACE_DETACH, target_pid, nullptr, nullptr);
         return 1;
     }
 
-    if (!pt_write(target_pid, so_remote, so_buffer.data(), so_size)) {
-        printf("Write SO buffer to remote failed\n");
-        remote_call(target_pid, munmap, so_remote, so_alloc);
-        ptrace(PTRACE_DETACH, target_pid, nullptr, nullptr);
-        return 1;
-    }
+    // 把路径字符串写入远端进程
+    pt_write(target_pid, str_ptr, path_str, str_len);
 
-    // dlopen 加载so
-    u64 dlopen_addr = get_libc_sym(libc_base, "dlopen");
-    u64 ret = remote_call(target_pid, dlopen_addr, so_remote, RTLD_NOW | RTLD_GLOBAL);
+    // 远程调用 dlopen(路径, RTLD_NOW | RTLD_GLOBAL)
+    u64 handle = remote_call(target_pid, dlopen_sym, str_ptr, RTLD_NOW | RTLD_GLOBAL);
 
-    if (ret != 0) {
-        printf("✅ Inject Success! Handle: 0x%lx\n", ret);
+    if (handle != 0) {
+        printf("✅ Inject Success! Handle: 0x%lx\n", handle);
     } else {
         printf("❌ Inject Failed, dlopen returned NULL\n");
     }
 
-    remote_call(target_pid, munmap, so_remote, so_alloc);
+    remote_call(target_pid, munmap_sym, str_ptr, str_alloc);
     ptrace(PTRACE_DETACH, target_pid, nullptr, nullptr);
     return 0;
 }
