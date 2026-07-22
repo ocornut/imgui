@@ -58,6 +58,16 @@ enum ImGuiFreeTypeLoaderFlags_
 typedef ImGuiFreeTypeLoaderFlags_ ImGuiFreeTypeBuilderFlags_;
 #endif
 
+// Variable font axis information (returned by GetFontAxes)
+struct ImFontVarAxisInfo
+{
+    ImU32   Tag;        // OpenType axis tag (use IM_FONT_TAG to compare, e.g., IM_FONT_TAG('w','g','h','t'))
+    char    Name[64];   // Human-readable axis name (e.g., "Weight", "Width", "Optical Size")
+    float   Minimum;    // Minimum axis value
+    float   Default;    // Default axis value
+    float   Maximum;    // Maximum axis value
+};
+
 namespace ImGuiFreeType
 {
     // This is automatically assigned when using '#define IMGUI_ENABLE_FREETYPE'.
@@ -72,6 +82,12 @@ namespace ImGuiFreeType
 
     // Display UI to edit ImFontAtlas::FontLoaderFlags (shared) or ImFontConfig::FontLoaderFlags (single source)
     IMGUI_API bool                      DebugEditFontLoaderFlags(ImGuiFreeTypeLoaderFlags* p_font_loader_flags);
+
+    // Query variable font axes from a font file (standalone utility, no atlas required)
+    // Returns number of axes found, or -1 on error (file not found, not a valid font, etc.)
+    // If out_axes is NULL, just returns the axis count without writing data.
+    // Axes array should have at least 'max_axes' elements.
+    IMGUI_API int                       GetFontAxes(const char* filename, ImFontVarAxisInfo* out_axes, int max_axes);
 
     // Obsolete names (will be removed)
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
