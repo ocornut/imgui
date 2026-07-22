@@ -26,9 +26,9 @@
 
 using namespace std;
 
-// 【固定配置】
+// ========== 固定配置 无需再修改 ==========
 constexpr const char* TARGET_PACKAGE = "com.tencent.jkchess";
-constexpr const char* TARGET_SO_PATH  = "/data/1/libhack.so";
+constexpr const char* TARGET_SO_PATH  = "/data/data/com.tencent.jkchess/libMyMenu.so";
 
 pid_t get_pid(const char* package_name) {
     DIR* dir = opendir("/proc");
@@ -147,7 +147,6 @@ int main() {
     LOGI("Target Package: %s", TARGET_PACKAGE);
     LOGI("Inject SO: %s", TARGET_SO_PATH);
 
-    // 修复原代码重大漏洞：先获取PID
     pid_t pid = get_pid(TARGET_PACKAGE);
     if (pid <= 0) {
         LOGE("Cannot find target game process! Start game first.");
@@ -220,9 +219,9 @@ int main() {
     if (handle == 0) {
         LOGE("==========================================================");
         LOGE("Injection failed: dlopen returned NULL.");
-        LOGE("1. Linker Namespace 命名空间拦截");
-        LOGE("2. 游戏进程无权限读取 /data/1/libhack.so");
-        LOGE("3. CPU架构不匹配");
+        LOGE("1. So权限不足 / 文件不存在");
+        LOGE("2. 架构不匹配(必须arm64-v8a)");
+        LOGE("3. SELinux强制模式拦截");
         LOGE("==========================================================");
     } else {
         LOGI("✅ Injection success! SO Handle: %p", (void*)handle);
