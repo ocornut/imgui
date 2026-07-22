@@ -4528,6 +4528,12 @@ void DrawMenu() {
             
             ImGui::Spacing();
             
+            // 【新增】一键全功能诊断测试按钮
+            if (ImGui::Button((const char*)u8"🧪 一键全功能诊断测试", ImVec2(-1, 45 * g_autoScale))) {
+                RunFeatureTest();
+            }
+            ImGui::TextColored(ImVec4(0.6f, 0.8f, 1.0f, 1.0f), (const char*)u8"点击后打开调试日志窗口查看结果");
+            
             ColoredSeparator();
             
             if (g_save_timer > 0.0f) {
@@ -4664,4 +4670,107 @@ __attribute__((constructor)) void Init() {
     pthread_t t; 
     pthread_create(&t, 0, SetupThread, 0); 
     pthread_detach(t); 
+}
+// ======================================
+// 【新增：全功能分段测试模块】
+// 原有代码完全不动，仅追加测试函数
+// ======================================
+void LogTest(const char* fmt, ...)
+{
+    char buf[1024];
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, args);
+    va_end(args);
+    std::string log = std::string("[TEST] ") + buf;
+    AddLog(log.c_str());
+}
+
+// 全链路功能测试入口：在菜单加按钮调用即可
+void RunFeatureTest()
+{
+    LogTest("==================== 开始全链路功能测试 ====================");
+
+    // 第1步：检测IL2CPP基址
+    if (g_il2cppBase == 0)
+    {
+        LogTest("❌ 失败：g_il2cppBase = 0，未找到libil2cpp基地址，所有Hook/调用全部失效");
+        return;
+    }
+    LogTest("✅ IL2CPP基地址正常: 0x%lx", g_il2cppBase);
+
+    // 第2步：检测IL2CPP核心API
+    if (!g_il2cpp_domain_get || !g_il2cpp_thread_attach || !g_il2cpp_string_new)
+    {
+        LogTest("❌ 失败：il2cpp核心函数未加载，字符串/线程相关功能失效");
+    }
+    else
+    {
+        LogTest("✅ il2cpp runtime 函数全部加载完成");
+    }
+
+    // 第3步：检测当前对局状态
+    bool inMatch = g_is_in_match.load(std::memory_order_acquire);
+    LogTest("ℹ 当前对局状态 g_is_in_match = %s", inMatch ? "true(对局中)" : "false(大厅/加载)");
+    if (!inMatch)
+    {
+        LogTest("⚠ 警告：未进入对局，商店/装备/对手ESP/自动功能全部不会执行");
+    }
+
+    // 第4步：读取当前快照，检测游戏核心实例
+    const GameSnapshot* snap = GetSnapshot();
+    if (!snap)
+    {
+        LogTest("❌ 失败：GetSnapshot() 返回空，后台数据线程未生成对局数据");
+    }
+    else
+    {
+        LogTest("✅ 对局快照有效");
+        LogTest("ℹ chessBattleModel 地址: 0x%lx", snap->chessBattleModel);
+        LogTest("ℹ 自身玩家ID: %d  下一个对手ID: %d", snap->myPlayerId, snap->nextEnemyPlayerId);
+        LogTest("ℹ 场上英雄数量: %zu  备战英雄数量: %zu", snap->myLiveHeroes.size(), snap->myBenchLiveHeroes.size());
+        LogTest("ℹ 背包装备数量: %zu", snap->myItems.size());
+    }
+
+    // 第5步：自动功能函数指针检测
+    LogTest("===== 自动功能指针检测 =====");
+    LogTest("自动购买函数 g_reqbuyhero = %p", g_reqbuyhero);
+    LogTest("自动刷新函数 g_req_refresh = %p", g_req_refresh);
+    LogTest("商店UI实例捕获数量: %d", g_shop_slot_index);
+    
+    bool hasShopInstance = false;
+    for (int i = 0; i < 5; i++)
+    {
+        if (g_shop_slot_instances[i] != 0)
+        {
+            LogTest("✅ 商店槽位%d 实例地址:0x%lx", i, g_shop_slot_instances[i]);
+            hasShopInstance = true;
+        }
+    }
+    if (!hasShopInstance) LogTest("⚠ 未捕获到商店UI实例，自动买牌不会生效");
+
+    // 第6步：触摸模拟/JNI检测
+    LogTest("===== 触摸模拟模块检测 =====");
+    LogTest("JVM实例 g_jvm = %p", g_jvm);
+    LogTest("游戏View g_view_obj = %p", g_view_obj);
+    LogTest("原始触摸注入函数 old_nativeInjectEvent = %p", old_nativeInjectEvent);
+    if (!g_jvm || !g_view_obj || !old_nativeInjectEvent)
+    {
+        LogTest("❌ JNI触摸模块未挂载，穿装/卖牌滑动模拟失效");
+    }
+    else
+    {
+        LogTest("✅ JNI触摸模块正常，SimulateSwipe可用");
+    }
+
+    // 第7步：偏移校验：读取基础内存测试
+    if (snap && snap->chessBattleModel != 0)
+    {
+        uint32_t testVal = SAFE_READ(uint32_t, snap->chessBattleModel, 0x140, 9999);
+        LogTest("ℹ 棋盘Season偏移读取测试(0x140)=%d", testVal);
+    }
+
+    // 第8步：配置序列化校验
+    LogTest("ℹ 自动购买英雄配置字符串长度: %zu", g_auto_buy_heroes_str.size());
+    LogTest("==================== 测试流程结束 ====================\n");
 }
