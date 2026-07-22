@@ -157,7 +157,18 @@ Index of this file:
 //-----------------------------------------------------------------------------
 
 // Scalar data types
-typedef unsigned int        ImGuiID;// A unique ID used by widgets (typically the result of hashing a stack of string)
+#ifndef IMGUI_DISABLE_STDINT_EXACT_BIT_WIDTH_INTEGER
+#include <stdint.h>
+typedef int8_t              ImS8;   // 8-bit signed integer
+typedef uint8_t             ImU8;   // 8-bit unsigned integer
+typedef int16_t             ImS16;  // 16-bit signed integer
+typedef uint16_t            ImU16;  // 16-bit unsigned integer
+typedef int32_t             ImS32;  // 32-bit signed integer == int
+typedef uint32_t            ImU32;  // 32-bit unsigned integer (often used to store packed colors)
+typedef int64_t             ImS64;  // 64-bit signed integer
+typedef uint64_t            ImU64;  // 64-bit unsigned integer
+#else
+// FIXME: Unfortunately, there are multiple data models, such as ILP32/LLP64, ILP64, LP64. Please adjust the following code according to the actual situation of your target platform.
 typedef signed char         ImS8;   // 8-bit signed integer
 typedef unsigned char       ImU8;   // 8-bit unsigned integer
 typedef signed short        ImS16;  // 16-bit signed integer
@@ -166,6 +177,8 @@ typedef signed int          ImS32;  // 32-bit signed integer == int
 typedef unsigned int        ImU32;  // 32-bit unsigned integer (often used to store packed colors)
 typedef signed   long long  ImS64;  // 64-bit signed integer
 typedef unsigned long long  ImU64;  // 64-bit unsigned integer
+#endif
+typedef ImU32               ImGuiID;// A unique ID used by widgets (typically the result of hashing a stack of string)
 
 // Forward declarations: ImDrawList, ImFontAtlas layer
 struct ImDrawChannel;               // Temporary storage to output draw commands out of order, used by ImDrawListSplitter and ImDrawList::ChannelsSplit()
