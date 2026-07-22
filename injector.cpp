@@ -91,7 +91,7 @@ bool pt_read(pid_t pid, u64 addr, void* out, size_t len) {
     return true;
 }
 
-// remote_call：最多支持6个参数 x0~x5，解决之前参数不匹配报错
+// remote_call：最多支持6个参数 x0~x5
 u64 remote_call(pid_t pid, u64 func, u64 x0=0, u64 x1=0, u64 x2=0, u64 x3=0, u64 x4=0, u64 x5=0) {
     user_regs_struct regs;
     ptrace(PTRACE_GETREGS, pid, nullptr, &regs);
@@ -151,7 +151,7 @@ int main() {
     printf("======== AArch64 Android Ptrace Injector ========\n");
     printf("Target SO: %s\n", SO_PATH);
 
-    system("su -c sysctl -w kernel.yama.ptrace_scope=0");
+    // 删除无效 sysctl yama 命令
     system("su -c setenforce 0");
     sleep(1);
 
@@ -193,9 +193,10 @@ int main() {
 
     // Alloc remote memory for SO
     size_t so_alloc = PAGE_ALIGN(so_size);
+    // 关键改动：增加 MAP_NORESERVE
     u64 so_remote = remote_call(target_pid, mmap,
         0, so_alloc, PROT_READ | PROT_WRITE,
-        MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+        MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, 0, 0);
 
     if (so_remote == 0 || so_remote == ULLONG_MAX) {
         printf("Remote mmap allocate failed\n");
