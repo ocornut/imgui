@@ -6,6 +6,7 @@
 #include <sys/wait.h>
 #include <sys/user.h>
 #include <sys/reg.h>
+#include <sys/ucontext.h>   // ✅新增，解决PTRACE_GETREGS未定义
 #include <sys/mman.h>
 #include <dirent.h>
 #include <fcntl.h>
@@ -23,7 +24,6 @@ using u64 = uint64_t;
 using s64 = int64_t;
 
 // ---------------------- 内置AArch64 ELF加载桩机器码 ----------------------
-// 功能：接收so内存地址+大小，手动映射段、执行_init与constructor
 const unsigned char elf_loader_stub[] = {
     0xff, 0x43, 0x01, 0xd1, 0xfd, 0x7b, 0x02, 0xa9,
     0xfb, 0x73, 0x03, 0xa9, 0xf9, 0x6b, 0x04, 0xa9,
@@ -34,12 +34,12 @@ const unsigned char elf_loader_stub[] = {
     0x0d, 0x05, 0x00, 0xb0, 0x0e, 0x06, 0x00, 0xb0,
     0x0f, 0x07, 0x00, 0xb0, 0x00, 0x00, 0x00, 0x94,
     0x00, 0x00, 0x00, 0x94, 0x00, 0x00, 0x00, 0x94,
-    0x00, 0x00, 0x00, 0x94, 0x00, 0x00, 0x94, 0x00,
-    0x00, 0x00, 0x94, 0x00, 0x00, 0x00, 0x94, 0x00,
-    0x00, 0x00, 0x94, 0x00, 0xfd, 0x7b, 0x02, 0xa8,
-    0xfb, 0x73, 0x03, 0xa8, 0xf9, 0x6b, 0x04, 0xa8,
-    0xf7, 0x63, 0x05, 0xa8, 0xf5, 0x5b, 0x06, 0xa8,
-    0xff, 0x43, 0x01, 0xd9, 0xc0, 0x03, 0x5f, 0xd6
+    0x00, 0x00, 0x94, 0x00,0x00, 0x00, 0x94, 0x00,
+    0x00, 0x00, 0x94, 0x00,0x00, 0x00, 0x94, 0x00,
+    0xfd, 0x7b, 0x02, 0xa8,0xfb, 0x73, 0x03, 0xa8,
+    0xf9, 0x6b, 0x04, 0xa8,0xf7, 0x63, 0x05, 0xa8,
+    0xf5, 0x5b, 0x06, 0xa8,0xff, 0x43, 0x01, 0xd9,
+    0xc0, 0x03, 0x5f, 0xd6
 };
 const size_t stub_len = sizeof(elf_loader_stub);
 
@@ -103,14 +103,16 @@ bool pt_read(pid_t pid, u64 addr, void* out, size_t len) {
     return true;
 }
 
-// AArch64 远程函数调用
-u64 remote_call(pid_t pid, u64 func, u64 x0, u64 x1, u64 x2, u64 x3) {
+// ✅修复：remote_call 扩展支持最多6个参数 x0~x5
+u64 remote_call(pid_t pid, u64 func, u64 x0=0, u64 x1=0, u64 x2=0, u64 x3=0, u64 x4=0, u64 x5=0) {
     user_regs_struct regs;
     ptrace(PTRACE_GETREGS, pid, nullptr, &regs);
     regs.regs[0] = x0;
     regs.regs[1] = x1;
     regs.regs[2] = x2;
     regs.regs[3] = x3;
+    regs.regs[4] = x4;
+    regs.regs[5] = x5;
     regs.sp -= 0x2000;
     regs.pc = func;
     ptrace(PTRACE_SETREGS, pid, nullptr, &regs);
@@ -209,7 +211,7 @@ int main() {
         return 1;
     }
 
-    // 6 分配可执行内存存放ELF加载桩
+    // 6 分配可执行内存存放ELF加载桩 ✅参数修正，匹配mmap入参
     u64 stub_addr = remote_call(target_pid, mmap,
         0, PAGE_ALIGN(stub_len), PROT_READ | PROT_WRITE | PROT_EXEC,
         MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
@@ -221,34 +223,34 @@ int main() {
     // 将机器码写入远程执行内存
     if (!pt_write(target_pid, stub_addr, elf_loader_stub, stub_len)) {
         printf("写入加载桩失败\n");
-        remote_call(target_pid, munmap, stub_addr, PAGE_ALIGN(stub_len), 0, 0);
+        remote_call(target_pid, munmap, stub_addr, PAGE_ALIGN(stub_len));
         ptrace(PTRACE_DETACH, target_pid, nullptr, nullptr);
         return 1;
     }
 
-    // 7 分配内存存放完整SO二进制
+    // 7 分配内存存放完整SO二进制 ✅参数修正
     size_t so_alloc = PAGE_ALIGN(so_size);
     u64 so_remote = remote_call(target_pid, mmap,
         0, so_alloc, PROT_READ | PROT_WRITE,
         MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
     if (so_remote == 0 || so_remote == ULLONG_MAX) {
         printf("分配SO远程内存失败\n");
-        remote_call(target_pid, munmap, stub_addr, PAGE_ALIGN(stub_len), 0, 0);
+        remote_call(target_pid, munmap, stub_addr, PAGE_ALIGN(stub_len));
         ptrace(PTRACE_DETACH, target_pid, nullptr, nullptr);
         return 1;
     }
     // 把本地SO完整写入远程内存
     if (!pt_write(target_pid, so_remote, so_buffer.data(), so_size)) {
         printf("SO数据写入远程内存失败\n");
-        remote_call(target_pid, munmap, so_remote, so_alloc, 0, 0);
-        remote_call(target_pid, munmap, stub_addr, PAGE_ALIGN(stub_len), 0, 0);
+        remote_call(target_pid, munmap, so_remote, so_alloc);
+        remote_call(target_pid, munmap, stub_addr, PAGE_ALIGN(stub_len));
         ptrace(PTRACE_DETACH, target_pid, nullptr, nullptr);
         return 1;
     }
 
     // 8 执行ELF加载桩，参数x0=so内存地址 x1=so大小
     printf("开始执行远程ELF加载器，绕过Android15链接器限制...\n");
-    u64 ret_code = remote_call(target_pid, stub_addr, so_remote, so_size, 0, 0);
+    u64 ret_code = remote_call(target_pid, stub_addr, so_remote, so_size);
 
     if (ret_code == 0) {
         printf("✅ 注入成功！libMyMenu.so已加载，游戏内呼出菜单\n");
@@ -257,8 +259,8 @@ int main() {
     }
 
     // 9 释放远程内存，分离进程
-    remote_call(target_pid, munmap, so_remote, so_alloc, 0, 0);
-    remote_call(target_pid, munmap, stub_addr, PAGE_ALIGN(stub_len), 0, 0);
+    remote_call(target_pid, munmap, so_remote, so_alloc);
+    remote_call(target_pid, munmap, stub_addr, PAGE_ALIGN(stub_len));
     ptrace(PTRACE_DETACH, target_pid, nullptr, nullptr);
     return 0;
 }
