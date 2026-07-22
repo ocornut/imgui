@@ -1,7 +1,6 @@
 #define _GNU_SOURCE
 #define __USE_GNU
 
-// 适配Android NDK缺失ptrace常量(aarch64)
 #ifndef PTRACE_GETREGS
 #define PTRACE_GETREGS  12
 #endif
@@ -108,6 +107,7 @@ u64 remote_call(pid_t pid, u64 func, u64 x0=0, u64 x1=0, u64 x2=0, u64 x3=0, u64
     return regs.regs[0];
 }
 
+// 【修复点】正确扫描shturl.基地址
 u64 get_lib_base(pid_t pid) {
     char buf[512], path[256];
     snprintf(path, sizeof(path), "/proc/%d/maps", pid);
@@ -133,7 +133,6 @@ u64 get_libc_sym(u64 lib_base, const char* sym) {
     return lib_base + off;
 }
 
-// ========== 重写后的main，不再加载整个SO文件，和JSHook注入逻辑一致 ==========
 int main() {
     printf("======== AArch64 Android Ptrace Injector ========\n");
     printf("Target SO: %s\n", SO_PATH);
@@ -171,7 +170,6 @@ int main() {
         return 1;
     }
 
-    // 只分配一页内存存放文件路径（极小内存，避开seccomp大块拦截）
     const char* path_str = SO_PATH;
     size_t str_len = strlen(path_str) + 1;
     size_t str_alloc = PAGE_ALIGN(str_len);
@@ -186,10 +184,7 @@ int main() {
         return 1;
     }
 
-    // 把路径字符串写入远端进程
     pt_write(target_pid, str_ptr, path_str, str_len);
-
-    // 远程调用 dlopen(路径, RTLD_NOW | RTLD_GLOBAL)
     u64 handle = remote_call(target_pid, dlopen_sym, str_ptr, RTLD_NOW | RTLD_GLOBAL);
 
     if (handle != 0) {
