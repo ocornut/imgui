@@ -76,6 +76,9 @@
 #if defined(VK_VERSION_1_3) || defined(VK_KHR_dynamic_rendering)
 #define IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
 #endif
+#if defined(VK_EXT_descriptor_heap)
+#define IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
+#endif
 
 // Backend uses a small number of descriptors per font atlas + as many as additional calls done to ImGui_ImplVulkan_AddTexture().
 #define IMGUI_IMPL_VULKAN_MINIMUM_SAMPLED_IMAGE_POOL_SIZE   (8)     // Minimum per atlas
@@ -93,6 +96,7 @@ struct ImGui_ImplVulkan_PipelineInfo
 #endif
 };
 
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
 struct ImGui_ImplVulkan_DescriptorHeapInfo
 {
     uint32_t (*RegisterSampler)(void *, const VkSamplerCreateInfo *);
@@ -101,6 +105,7 @@ struct ImGui_ImplVulkan_DescriptorHeapInfo
     void (*UnRegisterImage)(void *, uint32_t);
     void *UserContext;
 };
+#endif
 
 // Initialization data, for ImGui_ImplVulkan_Init()
 // [Please zero-clear before use!]
@@ -108,8 +113,10 @@ struct ImGui_ImplVulkan_DescriptorHeapInfo
 //   - A VkDescriptorPool should be created with VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
 //     and must contain a pool size large enough to hold a small number of VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER descriptors.
 //   - As an convenience, by setting DescriptorPoolSize > 0 the backend will create one for you.
-// - About dynamic rendering:
+    // - About dynamic rendering:
 //   - When using dynamic rendering, set UseDynamicRendering=true + fill PipelineInfoMain.PipelineRenderingCreateInfo structure.
+// - About descriptor heap (requires VK_EXT_descriptor_heap in your Vulkan headers → IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP):
+//   - When using descriptor heaps, set DescriptorHeapInfo and leave DescriptorPool / DescriptorPoolSize unset.
 struct ImGui_ImplVulkan_InitInfo
 {
     uint32_t                        ApiVersion;                 // Fill with API version of Instance, e.g. VK_API_VERSION_1_3 or your value of VkApplicationInfo::apiVersion. May be lower than header version (VK_HEADER_VERSION_COMPLETE)
@@ -146,8 +153,10 @@ struct ImGui_ImplVulkan_InitInfo
     VkShaderModuleCreateInfo        CustomShaderVertCreateInfo;
     VkShaderModuleCreateInfo        CustomShaderFragCreateInfo;
 
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
     // (Optional) If set, use VK_EXT_descriptor_heap.
     const ImGui_ImplVulkan_DescriptorHeapInfo *DescriptorHeapInfo;
+#endif
 };
 
 // Follow "Getting Started" link and check examples/ folder to learn about using backends!
@@ -168,7 +177,9 @@ IMGUI_IMPL_API void             ImGui_ImplVulkan_UpdateTexture(ImTextureData* te
 // Register a texture (VkDescriptorSet for a VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE == ImTextureID)
 IMGUI_IMPL_API VkDescriptorSet  ImGui_ImplVulkan_AddTexture(VkImageView image_view, VkImageLayout image_layout);
 IMGUI_IMPL_API void             ImGui_ImplVulkan_RemoveTexture(VkDescriptorSet descriptor_set);
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
 IMGUI_IMPL_API void             ImGui_ImplVulkan_RemoveHeapTexture(uint32_t id);
+#endif
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 IMGUI_IMPL_API VkDescriptorSet  ImGui_ImplVulkan_AddTexture(VkSampler sampler, VkImageView image_view, VkImageLayout image_layout); // Ignore VkSampler

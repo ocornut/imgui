@@ -171,7 +171,6 @@ static bool g_FunctionsLoaded = true;
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkCmdDrawIndexed) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkCmdPipelineBarrier) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkCmdPushConstants) \
-    IMGUI_VULKAN_FUNC_MAP_MACRO(vkCmdPushDataEXT) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkCmdSetScissor) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkCmdSetViewport) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkCreateBuffer) \
@@ -240,6 +239,11 @@ IMGUI_VULKAN_FUNC_MAP(IMGUI_VULKAN_FUNC_DEF)
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
 static PFN_vkCmdBeginRenderingKHR   ImGuiImplVulkanFuncs_vkCmdBeginRenderingKHR;
 static PFN_vkCmdEndRenderingKHR     ImGuiImplVulkanFuncs_vkCmdEndRenderingKHR;
+#endif
+
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
+// VK_EXT_descriptor_heap (not exported by most Vulkan loaders; resolve like dynamic rendering)
+static PFN_vkCmdPushDataEXT         ImGuiImplVulkanFuncs_vkCmdPushDataEXT = nullptr;
 #endif
 
 // Reusable buffers used for rendering 1 current in-flight frame, for ImGui_ImplVulkan_RenderDrawData()
@@ -428,6 +432,7 @@ static uint32_t __glsl_shader_frag_spv[] =
 
 // backends/vulkan/glsl_shader_heap.frag, compiled with:
 // # glslangValidator -V --target-env spirv1.2 -x -o glsl_shader.frag.u32 glsl_shader.frag
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
 /*
 #version 460 core
 #extension GL_EXT_descriptor_heap : require
@@ -494,6 +499,7 @@ static uint32_t __glsl_shader_heap_frag_spv[] =
     0x00000032,0x00050057,0x00000007,0x00000034,0x0000002f,0x00000033,0x00050085,0x00000007,
     0x00000035,0x00000012,0x00000034,0x0003003e,0x00000009,0x00000035,0x000100fd,0x00010038
 };
+#endif // IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
 
 
 //-----------------------------------------------------------------------------
@@ -606,6 +612,7 @@ static void ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, VkPipeline 
     pd.constants[1] = 2.0f / draw_data->DisplaySize.y;
     pd.constants[2] = -1.0f - draw_data->DisplayPos.x * pd.constants[0]; // Translate
     pd.constants[3] = -1.0f - draw_data->DisplayPos.y * pd.constants[1];
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
     if (bd->VulkanInitInfo.DescriptorHeapInfo)
     {
         pd.ids[0] = 0;
@@ -615,9 +622,10 @@ static void ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, VkPipeline 
         push.sType = VK_STRUCTURE_TYPE_PUSH_DATA_INFO_EXT;
         push.data.address = &pd;
         push.data.size = sizeof(pd);
-        vkCmdPushDataEXT(bd->RenderState->CommandBuffer, &push);
+        ImGuiImplVulkanFuncs_vkCmdPushDataEXT(bd->RenderState->CommandBuffer, &push);
     }
     else
+#endif
     {
         // Setup scale and translation:
         // Our visible imgui space lies from draw_data->DisplayPps (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayPos is (0,0) for single viewport apps.
@@ -633,6 +641,7 @@ static void ImGui_ImplVulkan_DrawCallback_ResetRenderState(const ImDrawList*, co
 static void ImGui_ImplVulkan_DrawCallback_SetSamplerLinear(const ImDrawList*, const ImDrawCmd*)
 {
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
     if (bd->VulkanInitInfo.DescriptorHeapInfo)
     {
         VkPushDataInfoEXT push{};
@@ -640,9 +649,10 @@ static void ImGui_ImplVulkan_DrawCallback_SetSamplerLinear(const ImDrawList*, co
         push.data.address = &bd->DescriptorHeapSamplerLinear;
         push.data.size = 4;
         push.offset = 20;
-        vkCmdPushDataEXT(bd->RenderState->CommandBuffer, &push);
+        ImGuiImplVulkanFuncs_vkCmdPushDataEXT(bd->RenderState->CommandBuffer, &push);
     }
     else
+#endif
     {
         vkCmdBindDescriptorSets(bd->RenderState->CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 1, 1, &bd->SamplerLinearDS, 0, nullptr);
     }
@@ -650,6 +660,7 @@ static void ImGui_ImplVulkan_DrawCallback_SetSamplerLinear(const ImDrawList*, co
 static void ImGui_ImplVulkan_DrawCallback_SetSamplerNearest(const ImDrawList*, const ImDrawCmd*)
 {
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
     if (bd->VulkanInitInfo.DescriptorHeapInfo)
     {
         VkPushDataInfoEXT push{};
@@ -657,9 +668,10 @@ static void ImGui_ImplVulkan_DrawCallback_SetSamplerNearest(const ImDrawList*, c
         push.data.address = &bd->DescriptorHeapSamplerNearest;
         push.data.size = 4;
         push.offset = 20;
-        vkCmdPushDataEXT(bd->RenderState->CommandBuffer, &push);
+        ImGuiImplVulkanFuncs_vkCmdPushDataEXT(bd->RenderState->CommandBuffer, &push);
     }
     else
+#endif
     {
         vkCmdBindDescriptorSets(bd->RenderState->CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 1, 1, &bd->SamplerNearestDS, 0, nullptr);
     }
@@ -808,6 +820,7 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
                 VkDescriptorSet image_view = (VkDescriptorSet)image_id;
                 if (image_view != last_image_view)
                 {
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
                     if (v->DescriptorHeapInfo)
                     {
                         VkPushDataInfoEXT push{};
@@ -816,9 +829,10 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
                         push.data.address = &image_id;
                         push.data.size = 4;
                         push.offset = 16;
-                        vkCmdPushDataEXT(command_buffer, &push);
+                        ImGuiImplVulkanFuncs_vkCmdPushDataEXT(command_buffer, &push);
                     }
                     else
+#endif
                     {
                         vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 0, 1, &image_view, 0, nullptr);
                     }
@@ -855,8 +869,10 @@ static void ImGui_ImplVulkan_DestroyTexture(ImTextureData* tex)
         ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
         if (backend_tex->DescriptorSet != VK_NULL_HANDLE)
             ImGui_ImplVulkan_RemoveTexture(backend_tex->DescriptorSet);
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
         else
             ImGui_ImplVulkan_RemoveHeapTexture(backend_tex->DescriptorHeapIndex);
+#endif
         if (backend_tex->ImageView != VK_NULL_HANDLE)
             vkDestroyImageView(v->Device, backend_tex->ImageView, v->Allocator);
         vkDestroyImage(v->Device, backend_tex->Image, v->Allocator);
@@ -924,6 +940,7 @@ void ImGui_ImplVulkan_UpdateTexture(ImTextureData* tex)
         info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         info.subresourceRange.levelCount = 1;
         info.subresourceRange.layerCount = 1;
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
         if (v->DescriptorHeapInfo)
         {
             backend_tex->DescriptorHeapIndex =
@@ -932,6 +949,7 @@ void ImGui_ImplVulkan_UpdateTexture(ImTextureData* tex)
             tex->SetTexID((ImTextureID)(backend_tex->DescriptorHeapIndex | 0x80000000));
         }
         else
+#endif
         {
             // Create the Image View:
             err = vkCreateImageView(v->Device, &info, v->Allocator, &backend_tex->ImageView);
@@ -1106,11 +1124,13 @@ static void ImGui_ImplVulkan_CreateShaderModules(VkDevice device, const VkAlloca
         default_frag_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
         default_frag_info.codeSize = sizeof(__glsl_shader_frag_spv);
         default_frag_info.pCode = (uint32_t*)__glsl_shader_frag_spv;
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
         if (v->DescriptorHeapInfo)
         {
             default_frag_info.codeSize = sizeof(__glsl_shader_heap_frag_spv);
             default_frag_info.pCode = (uint32_t*)__glsl_shader_heap_frag_spv;
         }
+#endif
         VkShaderModuleCreateInfo* p_frag_info = (v->CustomShaderFragCreateInfo.sType == VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO) ? &v->CustomShaderFragCreateInfo : &default_frag_info;
         VkResult err = vkCreateShaderModule(device, p_frag_info, allocator, &bd->ShaderModuleFrag);
         check_vk_result(err);
@@ -1224,9 +1244,11 @@ static VkPipeline ImGui_ImplVulkan_CreatePipeline(VkDevice device, const VkAlloc
     create_info.renderPass = info->RenderPass;
     create_info.subpass = info->Subpass;
 
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
     VkPipelineCreateFlags2CreateInfo ci_heap_flags{};
     ci_heap_flags.sType = VK_STRUCTURE_TYPE_PIPELINE_CREATE_FLAGS_2_CREATE_INFO;
     ci_heap_flags.flags = VK_PIPELINE_CREATE_2_DESCRIPTOR_HEAP_BIT_EXT;
+#endif
 
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
     VkPipelineRenderingCreateInfo pipeline_rendering_create_info = {};
@@ -1235,16 +1257,23 @@ static VkPipeline ImGui_ImplVulkan_CreatePipeline(VkDevice device, const VkAlloc
         IM_ASSERT(info->PipelineRenderingCreateInfo.sType == VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR && "PipelineRenderingCreateInfo::sType must be VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR");
         IM_ASSERT(info->PipelineRenderingCreateInfo.pNext == nullptr && "PipelineRenderingCreateInfo::pNext must be nullptr");
         pipeline_rendering_create_info = info->PipelineRenderingCreateInfo;
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
         if (bd->VulkanInitInfo.DescriptorHeapInfo)
             pipeline_rendering_create_info.pNext = &ci_heap_flags;
+#endif
         create_info.pNext = &pipeline_rendering_create_info;
         create_info.renderPass = VK_NULL_HANDLE; // Just make sure it's actually nullptr.
     }
 #endif
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
     if (bd->VulkanInitInfo.DescriptorHeapInfo)
     {
-        create_info.pNext = &ci_heap_flags;
+        if (create_info.pNext == nullptr)
+        {
+            create_info.pNext = &ci_heap_flags;
+        }
     }
+#endif
     VkPipeline pipeline;
     VkResult err = vkCreateGraphicsPipelines(device, pipelineCache, 1, &create_info, allocator, &pipeline);
     check_vk_result(err);
@@ -1340,11 +1369,13 @@ bool ImGui_ImplVulkan_CreateDeviceObjects()
         info.maxAnisotropy = 1.0f;
         err = vkCreateSampler(v->Device, &info, v->Allocator, &bd->SamplerLinear);
         check_vk_result(err);
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
         if (v->DescriptorHeapInfo)
         {
             bd->DescriptorHeapSamplerLinear =
                 v->DescriptorHeapInfo->RegisterSampler(v->DescriptorHeapInfo->UserContext, &info);
         } else
+#endif
         {
             bd->SamplerLinearDS = ImGui_ImplVulkan_CreateSamplerDS(bd->SamplerLinear);
         }
@@ -1354,17 +1385,23 @@ bool ImGui_ImplVulkan_CreateDeviceObjects()
         info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
         err = vkCreateSampler(v->Device, &info, v->Allocator, &bd->SamplerNearest);
         check_vk_result(err);
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
         if (v->DescriptorHeapInfo)
         {
             bd->DescriptorHeapSamplerNearest =
                 v->DescriptorHeapInfo->RegisterSampler(v->DescriptorHeapInfo->UserContext, &info);
         } else
+#endif
         {
             bd->SamplerNearestDS = ImGui_ImplVulkan_CreateSamplerDS(bd->SamplerNearest);
         }
     }
 
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
     if (!bd->PipelineLayout && !v->DescriptorHeapInfo)
+#else
+    if (!bd->PipelineLayout)
+#endif
     {
         // Constants: we are using 'vec2 offset' and 'vec2 scale' instead of a full 3d projection matrix
         VkPushConstantRange push_constants[1] = {};
@@ -1463,11 +1500,13 @@ void    ImGui_ImplVulkan_DestroyDeviceObjects()
     if (bd->PipelineLayout)       { vkDestroyPipelineLayout(v->Device, bd->PipelineLayout, v->Allocator); bd->PipelineLayout = VK_NULL_HANDLE; }
     if (bd->Pipeline)             { vkDestroyPipeline(v->Device, bd->Pipeline, v->Allocator); bd->Pipeline = VK_NULL_HANDLE; }
     if (bd->DescriptorPool)       { vkDestroyDescriptorPool(v->Device, bd->DescriptorPool, v->Allocator); bd->DescriptorPool = VK_NULL_HANDLE; }
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
     if (v->DescriptorHeapInfo)
     {
         v->DescriptorHeapInfo->UnRegisterSampler(v->DescriptorHeapInfo->UserContext, bd->DescriptorHeapSamplerLinear);
         v->DescriptorHeapInfo->UnRegisterSampler(v->DescriptorHeapInfo->UserContext, bd->DescriptorHeapSamplerNearest);
     }
+#endif
 }
 
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
@@ -1520,6 +1559,9 @@ bool    ImGui_ImplVulkan_LoadFunctions(uint32_t api_version, PFN_vkVoidFunction(
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
     ImGui_ImplVulkan_LoadDynamicRenderingFunctions(api_version, loader_func, user_data);
 #endif
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
+    ImGuiImplVulkanFuncs_vkCmdPushDataEXT = reinterpret_cast<PFN_vkCmdPushDataEXT>(loader_func("vkCmdPushDataEXT", user_data));
+#endif
 #else
     IM_UNUSED(loader_func);
     IM_UNUSED(user_data);
@@ -1549,6 +1591,16 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info)
 #endif
     }
 
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
+    if (info->DescriptorHeapInfo != nullptr)
+    {
+#ifndef IMGUI_IMPL_VULKAN_USE_LOADER
+        ImGuiImplVulkanFuncs_vkCmdPushDataEXT = reinterpret_cast<PFN_vkCmdPushDataEXT>(vkGetDeviceProcAddr(info->Device, "vkCmdPushDataEXT"));
+#endif
+        IM_ASSERT(ImGuiImplVulkanFuncs_vkCmdPushDataEXT != nullptr && "vkCmdPushDataEXT not available (enable VK_EXT_descriptor_heap)");
+    }
+#endif
+
     ImGuiIO& io = ImGui::GetIO();
     IMGUI_CHECKVERSION();
     IM_ASSERT(io.BackendRendererUserData == nullptr && "Already initialized a renderer backend!");
@@ -1572,9 +1624,12 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info)
     IM_ASSERT(info->Queue != VK_NULL_HANDLE);
     IM_ASSERT(info->MinImageCount >= 2);
     IM_ASSERT(info->ImageCount >= info->MinImageCount);
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
     if (info->DescriptorHeapInfo != nullptr) // If using descriptor heap then DescriptorPool and DescriptorPoolSize must be unset.
         IM_ASSERT(info->DescriptorPool == VK_NULL_HANDLE && info->DescriptorPoolSize == 0);
-    else if (info->DescriptorPool != VK_NULL_HANDLE) // Either DescriptorPool or DescriptorPoolSize must be set, not both!
+    else
+#endif
+    if (info->DescriptorPool != VK_NULL_HANDLE) // Either DescriptorPool or DescriptorPoolSize must be set, not both!
         IM_ASSERT(info->DescriptorPoolSize == 0);
     else
         IM_ASSERT(info->DescriptorPoolSize > 0);
@@ -1683,12 +1738,14 @@ void ImGui_ImplVulkan_RemoveTexture(VkDescriptorSet descriptor_set)
     vkFreeDescriptorSets(v->Device, pool, 1, &descriptor_set);
 }
 
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
 void ImGui_ImplVulkan_RemoveHeapTexture(uint32_t id)
 {
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
     ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
     v->DescriptorHeapInfo->UnRegisterImage(v->DescriptorHeapInfo->UserContext, id);
 }
+#endif
 
 void ImGui_ImplVulkan_DestroyFrameRenderBuffers(VkDevice device, ImGui_ImplVulkan_FrameRenderBuffers* buffers, const VkAllocationCallbacks* allocator)
 {
