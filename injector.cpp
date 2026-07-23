@@ -1,196 +1,253 @@
-#define _GNU_SOURCE
-#define __USE_GNU
+// injector.cpp – Android ptrace 注入器 (arm64)
+// 编译: arm64-linux-android-clang++ -static -std=c++17 injector.cpp -o injector
+// 运行: adb push injector /data/local/tmp/ && adb shell su -c /data/local/tmp/injector
 
-#ifndef PTRACE_GETREGS
-#define PTRACE_GETREGS  12
-#endif
-#ifndef PTRACE_SETREGS
-#define PTRACE_SETREGS  13
-#endif
-
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <sys/ptrace.h>
 #include <sys/wait.h>
-#include <sys/user.h>
-#include <sys/reg.h>
 #include <sys/mman.h>
-#include <dirent.h>
+#include <sys/user.h>
+#include <sys/stat.h>
 #include <fcntl.h>
-#include <errno.h>
+#include <dirent.h>
 #include <dlfcn.h>
-#include <cstdint>
+#include <errno.h>
+#include <string>
+#include <vector>
+#include <algorithm>
 
-#define GAME_PACKAGE "com.tencent.jkchess"
-#define SO_PATH "/data/1/libMyMenu.so"
-#define PAGE_SIZE 4096
-#define PAGE_ALIGN(n) (((n) + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1))
-
-using u64 = uint64_t;
-using s64 = int64_t;
-
-// 获取游戏进程PID
-pid_t get_target_pid() {
+// ---------- 工具函数 ----------
+// 根据进程名获取 PID
+int find_pid_by_name(const char* proc_name) {
     DIR* dir = opendir("/proc");
     if (!dir) return -1;
-    struct dirent* ent;
-    while ((ent = readdir(dir))) {
-        if (!(ent->d_name[0] >= '0' && ent->d_name[0] <= '9')) continue;
-        pid_t pid = atoi(ent->d_name);
-        char path[256], buf[1024] = {0};
-        snprintf(path, sizeof(path), "/proc/%d/cmdline", pid);
-        FILE* f = fopen(path, "rb");
-        if (!f) continue;
-        fread(buf, sizeof(buf)-1, 1, f);
-        fclose(f);
-        if (strstr(buf, GAME_PACKAGE)) {
-            closedir(dir);
-            return pid;
+    struct dirent* entry;
+    int pid = -1;
+    while ((entry = readdir(dir)) != nullptr) {
+        if (entry->d_type != DT_DIR) continue;
+        int tmp_pid = atoi(entry->d_name);
+        if (tmp_pid <= 0) continue;
+        char path[256];
+        snprintf(path, sizeof(path), "/proc/%d/comm", tmp_pid);
+        FILE* fp = fopen(path, "r");
+        if (fp) {
+            char comm[64] = {0};
+            if (fgets(comm, sizeof(comm), fp)) {
+                comm[strcspn(comm, "\n")] = 0;
+                if (strcmp(comm, proc_name) == 0) {
+                    pid = tmp_pid;
+                    fclose(fp);
+                    break;
+                }
+            }
+            fclose(fp);
         }
     }
     closedir(dir);
-    return -1;
+    return pid;
 }
 
-// ptrace写入内存
-bool pt_write(pid_t pid, u64 addr, const void* data, size_t len) {
-    const u64* src = (const u64*)data;
-    size_t full = len / 8;
-    size_t rem = len % 8;
-    for (size_t i = 0; i < full; i++) {
-        if (ptrace(PTRACE_POKETEXT, pid, addr + i * 8, src[i]) == -1)
-            return false;
+// 在远程进程中调用 dlopen 并加载库
+// 成功返回 0，失败返回 -1
+int ptrace_inject(int pid, const char* so_path) {
+    // 1. 附加进程
+    if (ptrace(PTRACE_ATTACH, pid, 0, 0) == -1) {
+        perror("ptrace attach");
+        return -1;
     }
-    if (rem > 0) {
-        u64 last = 0;
-        ptrace(PTRACE_PEEKTEXT, pid, addr + full * 8, &last);
-        memcpy(&last, (char*)src + full * 8, rem);
-        if (ptrace(PTRACE_POKETEXT, pid, addr + full * 8, last) == -1)
-            return false;
+    int status;
+    waitpid(pid, &status, 0);
+    if (!WIFSTOPPED(status)) {
+        fprintf(stderr, "process not stopped\n");
+        ptrace(PTRACE_DETACH, pid, 0, 0);
+        return -1;
     }
-    return true;
-}
 
-// 远程函数调用
-u64 remote_call(pid_t pid, u64 func, u64 x0=0, u64 x1=0, u64 x2=0, u64 x3=0, u64 x4=0, u64 x5=0) {
-    user_regs_struct regs;
-    ptrace(PTRACE_GETREGS, pid, nullptr, &regs);
-    regs.regs[0] = x0;
-    regs.regs[1] = x1;
-    regs.regs[2] = x2;
-    regs.regs[3] = x3;
-    regs.regs[4] = x4;
-    regs.regs[5] = x5;
-    regs.sp -= 0x2000;
-    regs.pc = func;
-    ptrace(PTRACE_SETREGS, pid, nullptr, &regs);
-    ptrace(PTRACE_CONT, pid, nullptr, nullptr);
-    waitpid(pid, nullptr, 0);
-    ptrace(PTRACE_GETREGS, pid, nullptr, &regs);
-    return regs.regs[0];
-}
+    // 2. 保存原始寄存器（用于恢复）
+    struct user_pt_regs regs, orig_regs;
+    if (ptrace(PTRACE_GETREGS, pid, 0, &regs) == -1) {
+        perror("getregs");
+        ptrace(PTRACE_DETACH, pid, 0, 0);
+        return -1;
+    }
+    orig_regs = regs;
 
-// ✅【重点修复】扫描 shturl. 基地址，不再使用错误字符串
-u64 get_libc_base(pid_t pid) {
-    char buf[1024], path[256];
-    snprintf(path, sizeof(path), "/proc/%d/maps", pid);
-    FILE* f = fopen(path, "r");
-    if (!f) return 0;
-    u64 base = 0;
-    while (fgets(buf, sizeof(buf), f)) {
-        // 匹配系统标准libc
-        if (strstr(buf, "shturl.")) {
-            sscanf(buf, "%lx", &base);
+    // 3. 在远程进程中分配内存，用于存放 so 路径
+    size_t path_len = strlen(so_path) + 1;
+    // 使用 mmap 分配匿名内存 (ARM64 系统调用号 222)
+    // 参数：addr=0, length=path_len, prot=PROT_READ|PROT_WRITE, flags=MAP_PRIVATE|MAP_ANONYMOUS, fd=-1, offset=0
+    regs.regs[0] = 0;                     // addr
+    regs.regs[1] = path_len;              // length
+    regs.regs[2] = PROT_READ | PROT_WRITE;// prot
+    regs.regs[3] = MAP_PRIVATE | MAP_ANONYMOUS; // flags
+    regs.regs[4] = -1;                    // fd
+    regs.regs[5] = 0;                     // offset
+    regs.regs[8] = 222;                   // syscall number (mmap)
+    if (ptrace(PTRACE_SETREGS, pid, 0, &regs) == -1) {
+        perror("setregs for mmap");
+        ptrace(PTRACE_DETACH, pid, 0, 0);
+        return -1;
+    }
+    // 执行系统调用
+    if (ptrace(PTRACE_SYSCALL, pid, 0, 0) == -1) {
+        perror("ptrace syscall");
+        ptrace(PTRACE_DETACH, pid, 0, 0);
+        return -1;
+    }
+    waitpid(pid, &status, 0);
+    if (!WIFSTOPPED(status)) {
+        fprintf(stderr, "process not stopped after syscall\n");
+        ptrace(PTRACE_DETACH, pid, 0, 0);
+        return -1;
+    }
+    // 获取返回值（分配的地址）
+    struct user_pt_regs ret_regs;
+    if (ptrace(PTRACE_GETREGS, pid, 0, &ret_regs) == -1) {
+        perror("getregs after mmap");
+        ptrace(PTRACE_DETACH, pid, 0, 0);
+        return -1;
+    }
+    long remote_addr = ret_regs.regs[0];
+    if (remote_addr <= 0) {
+        fprintf(stderr, "mmap failed, remote_addr=0x%lx\n", remote_addr);
+        ptrace(PTRACE_DETACH, pid, 0, 0);
+        return -1;
+    }
+    printf("Allocated remote memory at 0x%lx\n", remote_addr);
+
+    // 4. 将 so 路径写入远程内存
+    for (size_t i = 0; i < path_len; i += sizeof(long)) {
+        long data = 0;
+        memcpy(&data, so_path + i, std::min(sizeof(long), path_len - i));
+        if (ptrace(PTRACE_POKEDATA, pid, remote_addr + i, (void*)data) == -1) {
+            perror("ptrace pokedata");
+            ptrace(PTRACE_DETACH, pid, 0, 0);
+            return -1;
+        }
+    }
+
+    // 5. 获取远程进程中 dlopen 的地址
+    //    方法：从本地 dlopen 地址减去本地 libdl.so 基址，再加上远程 libdl.so 基址
+    void* local_dlopen = (void*)dlopen;
+    // 获取本地 libdl.so 基址
+    FILE* maps = fopen("/proc/self/maps", "r");
+    if (!maps) {
+        perror("fopen self maps");
+        ptrace(PTRACE_DETACH, pid, 0, 0);
+        return -1;
+    }
+    unsigned long local_libdl_base = 0;
+    char line[512];
+    while (fgets(line, sizeof(line), maps)) {
+        if (strstr(line, "libdl.so")) {
+            sscanf(line, "%lx", &local_libdl_base);
             break;
         }
     }
-    fclose(f);
-    return base;
-}
-
-// 根据libc基址解析符号地址
-u64 get_sym_addr(u64 lib_base, const char* sym_name) {
-    void* local_ptr = dlsym(RTLD_DEFAULT, sym_name);
-    if (!local_ptr) return 0;
-    Dl_info info;
-    dladdr(local_ptr, &info);
-    u64 offset = (u64)local_ptr - (u64)info.dli_fbase;
-    return lib_base + offset;
-}
-
-int main() {
-    printf("===== AArch64 Ptrace Injector (dlopen文件路径方案) =====\n");
-    printf("Inject SO Path: %s\n", SO_PATH);
-
-    system("su -c setenforce 0");
-    sleep(1);
-
-    pid_t target_pid = get_target_pid();
-    if (target_pid <= 0) {
-        printf("错误：未找到游戏进程，请先打开游戏！\n");
-        return 1;
+    fclose(maps);
+    if (local_libdl_base == 0) {
+        fprintf(stderr, "cannot find local libdl.so base\n");
+        ptrace(PTRACE_DETACH, pid, 0, 0);
+        return -1;
     }
-    printf("目标进程 PID: %d\n", target_pid);
+    unsigned long local_dlopen_offset = (unsigned long)local_dlopen - local_libdl_base;
 
-    // Attach目标进程
-    if (ptrace(PTRACE_ATTACH, target_pid, nullptr, nullptr) == -1) {
-        perror("PTRACE_ATTACH 失败，请确认ROOT权限");
-        return 1;
+    // 获取远程 libdl.so 基址
+    char remote_maps_path[64];
+    snprintf(remote_maps_path, sizeof(remote_maps_path), "/proc/%d/maps", pid);
+    maps = fopen(remote_maps_path, "r");
+    if (!maps) {
+        perror("fopen remote maps");
+        ptrace(PTRACE_DETACH, pid, 0, 0);
+        return -1;
     }
-    waitpid(target_pid, nullptr, 0);
-    printf("成功Attach进程\n");
-
-    // 获取libc基址
-    u64 libc_base = get_libc_base(target_pid);
-    if (libc_base == 0) {
-        printf("❌ Failed get libc base address\n");
-        ptrace(PTRACE_DETACH, target_pid, nullptr, nullptr);
-        return 1;
+    unsigned long remote_libdl_base = 0;
+    while (fgets(line, sizeof(line), maps)) {
+        if (strstr(line, "libdl.so")) {
+            sscanf(line, "%lx", &remote_libdl_base);
+            break;
+        }
     }
-    printf("shturl. base: 0x%lx\n", libc_base);
+    fclose(maps);
+    if (remote_libdl_base == 0) {
+        fprintf(stderr, "cannot find remote libdl.so base\n");
+        ptrace(PTRACE_DETACH, pid, 0, 0);
+        return -1;
+    }
+    unsigned long remote_dlopen_addr = remote_libdl_base + local_dlopen_offset;
+    printf("Remote dlopen address: 0x%lx\n", remote_dlopen_addr);
 
-    // 解析需要的libc函数
-    u64 mmap_addr = get_sym_addr(libc_base, "mmap");
-    u64 munmap_addr = get_sym_addr(libc_base, "munmap");
-    u64 dlopen_addr = get_sym_addr(libc_base, "dlopen");
-
-    if (!mmap_addr || !munmap_addr || !dlopen_addr) {
-        printf("函数符号解析失败\n");
-        ptrace(PTRACE_DETACH, target_pid, nullptr, nullptr);
-        return 1;
+    // 6. 调用远程 dlopen(so_path, RTLD_LAZY)
+    //    ARM64 调用约定：x0=路径, x1=flag, PC=dlopen
+    regs = orig_regs; // 恢复成刚 attach 时的状态
+    regs.regs[0] = remote_addr;                  // 路径指针
+    regs.regs[1] = RTLD_LAZY;                    // 第二个参数
+    regs.pc = remote_dlopen_addr;                // 跳转到 dlopen
+    // 设置 LR 为一个无效地址，执行后触发段错误停下（我们会捕获）
+    regs.regs[30] = 0x0;                         // LR = 0，执行完会 crash，但没关系
+    if (ptrace(PTRACE_SETREGS, pid, 0, &regs) == -1) {
+        perror("setregs for dlopen");
+        ptrace(PTRACE_DETACH, pid, 0, 0);
+        return -1;
     }
 
-    // 分配一小块内存存放SO路径字符串（仅4KB内，规避大块mmap拦截）
-    const char* so_file_path = SO_PATH;
-    size_t str_len = strlen(so_file_path) + 1;
-    size_t alloc_size = PAGE_ALIGN(str_len);
-
-    u64 str_buf = remote_call(target_pid, mmap_addr,
-        0, alloc_size, PROT_READ | PROT_WRITE,
-        MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, 0, 0);
-
-    if (str_buf == 0 || str_buf == ULLONG_MAX) {
-        printf("❌ Remote mmap allocate failed（游戏拦截mmap调用）\n");
-        ptrace(PTRACE_DETACH, target_pid, nullptr, nullptr);
-        return 1;
+    // 让远程进程继续执行 dlopen，然后会因 PC=0 而 crash
+    if (ptrace(PTRACE_CONT, pid, 0, 0) == -1) {
+        perror("ptrace cont");
+        ptrace(PTRACE_DETACH, pid, 0, 0);
+        return -1;
     }
-
-    // 把路径字符串写入游戏进程内存
-    pt_write(target_pid, str_buf, so_file_path, str_len);
-
-    // 远程调用 dlopen 加载本地so
-    u64 so_handle = remote_call(target_pid, dlopen_addr, str_buf, RTLD_NOW | RTLD_GLOBAL);
-
-    if (so_handle != 0) {
-        printf("✅ 注入成功! SO句柄:0x%lx\n", so_handle);
+    waitpid(pid, &status, 0);
+    if (WIFSIGNALED(status) && WTERMSIG(status) == SIGSEGV) {
+        // 预期的段错误，因为 LR=0，dlopen 返回后跳转到 0
+        printf("dlopen executed (segfault expected)\n");
     } else {
-        printf("❌ dlopen返回NULL，检查SO文件权限、路径是否正确\n");
+        fprintf(stderr, "unexpected stop: status=%d\n", status);
+        ptrace(PTRACE_DETACH, pid, 0, 0);
+        return -1;
     }
 
-    // 释放临时内存、解除附着
-    remote_call(target_pid, munmap_addr, str_buf, alloc_size);
-    ptrace(PTRACE_DETACH, target_pid, nullptr, nullptr);
+    // 7. 清理：释放远程内存（可选）
+    //    可以不释放，因为进程会继续运行，so 已经加载。
+    //    但为了干净，可调用 munmap，但这里省略。
+
+    // 8. 恢复原始寄存器并 detach
+    if (ptrace(PTRACE_SETREGS, pid, 0, &orig_regs) == -1) {
+        perror("restore regs");
+    }
+    if (ptrace(PTRACE_DETACH, pid, 0, 0) == -1) {
+        perror("detach");
+        return -1;
+    }
+
+    printf("Injection successful!\n");
     return 0;
+}
+
+int main(int argc, char** argv) {
+    const char* target_name = "com.tencent.jkchess";
+    const char* so_path = "/data/local/tmp/libcheat.so"; // 请修改为实际路径
+
+    if (argc >= 2) so_path = argv[1];
+    if (argc >= 3) target_name = argv[2];
+
+    printf("Injecting %s into %s ...\n", so_path, target_name);
+
+    int pid = find_pid_by_name(target_name);
+    if (pid <= 0) {
+        fprintf(stderr, "Process %s not found\n", target_name);
+        return 1;
+    }
+    printf("Found PID: %d\n", pid);
+
+    // 检查 so 文件是否存在
+    if (access(so_path, F_OK) == -1) {
+        fprintf(stderr, "SO file %s does not exist\n", so_path);
+        return 1;
+    }
+
+    return ptrace_inject(pid, so_path);
 }
