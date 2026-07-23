@@ -1,12 +1,14 @@
 // injector.cpp – Android ptrace 注入器 (arm64)
+// 使用 PTRACE_GETREGSET / PTRACE_SETREGSET 兼容 Android NDK
 // 编译: arm64-linux-android-clang++ -static -std=c++17 injector.cpp -o injector
-// 运行: adb push injector /data/local/tmp/ && adb shell su -c /data/local/tmp/injector
+// 运行: adb push injector /data/local/tmp/ && adb shell su -c /data/local/tmp/injector [so_path] [package_name]
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/ptrace.h>
+#include <sys/uio.h>
 #include <sys/wait.h>
 #include <sys/mman.h>
 #include <sys/user.h>
@@ -15,6 +17,8 @@
 #include <dirent.h>
 #include <dlfcn.h>
 #include <errno.h>
+#include <linux/elf.h>     // NT_PRSTATUS
+#include <asm/ptrace.h>    // user_pt_regs
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -50,6 +54,27 @@ int find_pid_by_name(const char* proc_name) {
     return pid;
 }
 
+// 读取远程进程内存
+long ptrace_readdata(int pid, unsigned long addr, void* buffer, size_t size) {
+    for (size_t i = 0; i < size; i += sizeof(long)) {
+        long data = ptrace(PTRACE_PEEKDATA, pid, addr + i, 0);
+        if (data == -1 && errno) return -1;
+        memcpy((char*)buffer + i, &data, std::min(sizeof(long), size - i));
+    }
+    return 0;
+}
+
+// 写入远程进程内存
+long ptrace_writedata(int pid, unsigned long addr, const void* buffer, size_t size) {
+    for (size_t i = 0; i < size; i += sizeof(long)) {
+        long data = 0;
+        memcpy(&data, (char*)buffer + i, std::min(sizeof(long), size - i));
+        if (ptrace(PTRACE_POKEDATA, pid, addr + i, data) == -1)
+            return -1;
+    }
+    return 0;
+}
+
 // 在远程进程中调用 dlopen 并加载库
 // 成功返回 0，失败返回 -1
 int ptrace_inject(int pid, const char* so_path) {
@@ -68,8 +93,9 @@ int ptrace_inject(int pid, const char* so_path) {
 
     // 2. 保存原始寄存器（用于恢复）
     struct user_pt_regs regs, orig_regs;
-    if (ptrace(PTRACE_GETREGS, pid, 0, &regs) == -1) {
-        perror("getregs");
+    struct iovec iov = { &regs, sizeof(regs) };
+    if (ptrace(PTRACE_GETREGSET, pid, NT_PRSTATUS, &iov) == -1) {
+        perror("ptrace getregset");
         ptrace(PTRACE_DETACH, pid, 0, 0);
         return -1;
     }
@@ -78,7 +104,6 @@ int ptrace_inject(int pid, const char* so_path) {
     // 3. 在远程进程中分配内存，用于存放 so 路径
     size_t path_len = strlen(so_path) + 1;
     // 使用 mmap 分配匿名内存 (ARM64 系统调用号 222)
-    // 参数：addr=0, length=path_len, prot=PROT_READ|PROT_WRITE, flags=MAP_PRIVATE|MAP_ANONYMOUS, fd=-1, offset=0
     regs.regs[0] = 0;                     // addr
     regs.regs[1] = path_len;              // length
     regs.regs[2] = PROT_READ | PROT_WRITE;// prot
@@ -86,8 +111,9 @@ int ptrace_inject(int pid, const char* so_path) {
     regs.regs[4] = -1;                    // fd
     regs.regs[5] = 0;                     // offset
     regs.regs[8] = 222;                   // syscall number (mmap)
-    if (ptrace(PTRACE_SETREGS, pid, 0, &regs) == -1) {
-        perror("setregs for mmap");
+    iov.iov_base = &regs; iov.iov_len = sizeof(regs);
+    if (ptrace(PTRACE_SETREGSET, pid, NT_PRSTATUS, &iov) == -1) {
+        perror("ptrace setregset for mmap");
         ptrace(PTRACE_DETACH, pid, 0, 0);
         return -1;
     }
@@ -105,8 +131,9 @@ int ptrace_inject(int pid, const char* so_path) {
     }
     // 获取返回值（分配的地址）
     struct user_pt_regs ret_regs;
-    if (ptrace(PTRACE_GETREGS, pid, 0, &ret_regs) == -1) {
-        perror("getregs after mmap");
+    iov.iov_base = &ret_regs; iov.iov_len = sizeof(ret_regs);
+    if (ptrace(PTRACE_GETREGSET, pid, NT_PRSTATUS, &iov) == -1) {
+        perror("ptrace getregset after mmap");
         ptrace(PTRACE_DETACH, pid, 0, 0);
         return -1;
     }
@@ -119,14 +146,10 @@ int ptrace_inject(int pid, const char* so_path) {
     printf("Allocated remote memory at 0x%lx\n", remote_addr);
 
     // 4. 将 so 路径写入远程内存
-    for (size_t i = 0; i < path_len; i += sizeof(long)) {
-        long data = 0;
-        memcpy(&data, so_path + i, std::min(sizeof(long), path_len - i));
-        if (ptrace(PTRACE_POKEDATA, pid, remote_addr + i, (void*)data) == -1) {
-            perror("ptrace pokedata");
-            ptrace(PTRACE_DETACH, pid, 0, 0);
-            return -1;
-        }
+    if (ptrace_writedata(pid, remote_addr, so_path, path_len) == -1) {
+        perror("ptrace writedata");
+        ptrace(PTRACE_DETACH, pid, 0, 0);
+        return -1;
     }
 
     // 5. 获取远程进程中 dlopen 的地址
@@ -181,15 +204,14 @@ int ptrace_inject(int pid, const char* so_path) {
     printf("Remote dlopen address: 0x%lx\n", remote_dlopen_addr);
 
     // 6. 调用远程 dlopen(so_path, RTLD_LAZY)
-    //    ARM64 调用约定：x0=路径, x1=flag, PC=dlopen
     regs = orig_regs; // 恢复成刚 attach 时的状态
     regs.regs[0] = remote_addr;                  // 路径指针
     regs.regs[1] = RTLD_LAZY;                    // 第二个参数
     regs.pc = remote_dlopen_addr;                // 跳转到 dlopen
-    // 设置 LR 为一个无效地址，执行后触发段错误停下（我们会捕获）
-    regs.regs[30] = 0x0;                         // LR = 0，执行完会 crash，但没关系
-    if (ptrace(PTRACE_SETREGS, pid, 0, &regs) == -1) {
-        perror("setregs for dlopen");
+    regs.regs[30] = 0x0;                         // LR = 0，执行完会 crash
+    iov.iov_base = &regs; iov.iov_len = sizeof(regs);
+    if (ptrace(PTRACE_SETREGSET, pid, NT_PRSTATUS, &iov) == -1) {
+        perror("ptrace setregset for dlopen");
         ptrace(PTRACE_DETACH, pid, 0, 0);
         return -1;
     }
@@ -202,7 +224,7 @@ int ptrace_inject(int pid, const char* so_path) {
     }
     waitpid(pid, &status, 0);
     if (WIFSIGNALED(status) && WTERMSIG(status) == SIGSEGV) {
-        // 预期的段错误，因为 LR=0，dlopen 返回后跳转到 0
+        // 预期的段错误，因为 LR=0
         printf("dlopen executed (segfault expected)\n");
     } else {
         fprintf(stderr, "unexpected stop: status=%d\n", status);
@@ -210,12 +232,11 @@ int ptrace_inject(int pid, const char* so_path) {
         return -1;
     }
 
-    // 7. 清理：释放远程内存（可选）
-    //    可以不释放，因为进程会继续运行，so 已经加载。
-    //    但为了干净，可调用 munmap，但这里省略。
+    // 7. 清理：远程内存可以不释放，进程会继续运行，so 已加载
 
     // 8. 恢复原始寄存器并 detach
-    if (ptrace(PTRACE_SETREGS, pid, 0, &orig_regs) == -1) {
+    iov.iov_base = &orig_regs; iov.iov_len = sizeof(orig_regs);
+    if (ptrace(PTRACE_SETREGSET, pid, NT_PRSTATUS, &iov) == -1) {
         perror("restore regs");
     }
     if (ptrace(PTRACE_DETACH, pid, 0, 0) == -1) {
@@ -229,7 +250,7 @@ int ptrace_inject(int pid, const char* so_path) {
 
 int main(int argc, char** argv) {
     const char* target_name = "com.tencent.jkchess";
-    const char* so_path = "/data/local/tmp/libcheat.so"; // 请修改为实际路径
+    const char* so_path = "/data/data/com.tencent.jkchess/libcheat.so"; // 默认路径
 
     if (argc >= 2) so_path = argv[1];
     if (argc >= 3) target_name = argv[2];
