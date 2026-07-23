@@ -1,5 +1,5 @@
 /**
- * injector.cpp – 最终版（跳过ptrace读取测试，直接注入）
+ * injector.cpp – 最终稳定版（使用远程进程已有可写内存，无需 mmap）
  * 编译: aarch64-linux-android-clang++ -static -std=c++17 -O2 injector.cpp -o injector
  */
 
@@ -10,7 +10,6 @@
 #include <sys/ptrace.h>
 #include <sys/uio.h>
 #include <sys/wait.h>
-#include <sys/mman.h>
 #include <sys/user.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -57,15 +56,6 @@ int find_pid_by_name(const char* proc_name) {
 }
 
 // ---------- ptrace 读写 ----------
-long ptrace_readdata(int pid, unsigned long addr, void* buffer, size_t size) {
-    for (size_t i = 0; i < size; i += sizeof(long)) {
-        long data = ptrace(PTRACE_PEEKDATA, pid, addr + i, 0);
-        if (data == -1 && errno) return -1;
-        memcpy((char*)buffer + i, &data, (size - i) < sizeof(long) ? (size - i) : sizeof(long));
-    }
-    return 0;
-}
-
 long ptrace_writedata(int pid, unsigned long addr, const void* buffer, size_t size) {
     for (size_t i = 0; i < size; i += sizeof(long)) {
         long data = 0;
@@ -78,41 +68,33 @@ long ptrace_writedata(int pid, unsigned long addr, const void* buffer, size_t si
     return 0;
 }
 
-// ---------- 执行系统调用 ----------
-int remote_syscall(int pid, struct user_pt_regs& regs, unsigned long* result = nullptr) {
-    struct iovec iov = { &regs, sizeof(regs) };
-    if (ptrace(PTRACE_SETREGSET, pid, NT_PRSTATUS, &iov) == -1) {
-        perror("setregset before syscall");
-        return -1;
+// ---------- 扫描远程进程的可写内存区域 ----------
+unsigned long find_writable_region(int pid, size_t needed_size) {
+    char maps_path[64];
+    snprintf(maps_path, sizeof(maps_path), "/proc/%d/maps", pid);
+    FILE* fp = fopen(maps_path, "r");
+    if (!fp) {
+        perror("open remote maps");
+        return 0;
     }
-    if (ptrace(PTRACE_SYSCALL, pid, 0, 0) == -1) {
-        perror("ptrace syscall enter");
-        return -1;
+    char line[512];
+    unsigned long best_addr = 0;
+    while (fgets(line, sizeof(line), fp)) {
+        unsigned long start, end;
+        char perms[8];
+        if (sscanf(line, "%lx-%lx %s", &start, &end, perms) != 3) continue;
+        // 需要可写、非低地址（避免 0x1 类）、且空间足够
+        if (strchr(perms, 'w') && start >= 0x1000000 && (end - start) >= needed_size) {
+            // 优先选择 [anon:libc_malloc] 或 [heap] 或 [anon]
+            if (strstr(line, "libc_malloc") || strstr(line, "[heap]") || strstr(line, "[anon]")) {
+                best_addr = start;
+                break;
+            }
+            if (best_addr == 0) best_addr = start;
+        }
     }
-    int status;
-    waitpid(pid, &status, 0);
-    if (!WIFSTOPPED(status)) {
-        fprintf(stderr, "not stopped after syscall enter\n");
-        return -1;
-    }
-    if (ptrace(PTRACE_SYSCALL, pid, 0, 0) == -1) {
-        perror("ptrace syscall exit");
-        return -1;
-    }
-    waitpid(pid, &status, 0);
-    if (!WIFSTOPPED(status)) {
-        fprintf(stderr, "not stopped after syscall exit\n");
-        return -1;
-    }
-    struct user_pt_regs ret_regs;
-    iov.iov_base = &ret_regs; iov.iov_len = sizeof(ret_regs);
-    if (ptrace(PTRACE_GETREGSET, pid, NT_PRSTATUS, &iov) == -1) {
-        perror("getregset for return");
-        return -1;
-    }
-    if (result) *result = ret_regs.regs[0];
-    regs = ret_regs;
-    return 0;
+    fclose(fp);
+    return best_addr;
 }
 
 // ---------- 注入主函数 ----------
@@ -140,51 +122,15 @@ int inject_so(int pid, const char* so_path) {
     }
     regs = orig_regs;
 
-    // 3. mmap（重试：失败则使用固定地址）
+    // 3. 在远程进程找一块可写内存
     size_t path_len = strlen(so_path) + 1;
-    unsigned long remote_addr = 0;
-    int retry = 0;
-    do {
-        regs = orig_regs;
-        regs.regs[0] = (retry == 0) ? 0 : 0x10000000;  // 第二次固定地址
-        regs.regs[1] = path_len;
-        regs.regs[2] = PROT_READ | PROT_WRITE;
-        regs.regs[3] = (retry == 0) ? (MAP_PRIVATE | MAP_ANONYMOUS) : (MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED);
-        regs.regs[4] = -1;
-        regs.regs[5] = 0;
-        regs.regs[8] = 222;  // __NR_mmap
-
-        if (remote_syscall(pid, regs, &remote_addr) != 0) {
-            fprintf(stderr, "mmap syscall failed\n");
-            ptrace(PTRACE_DETACH, pid, 0, 0);
-            return -1;
-        }
-        if (remote_addr == 0 || remote_addr == (unsigned long)-1) {
-            fprintf(stderr, "mmap returned invalid: 0x%lx (retry=%d)\n", remote_addr, retry);
-            if (retry == 0) {
-                retry++;
-                continue;
-            } else {
-                ptrace(PTRACE_DETACH, pid, 0, 0);
-                return -1;
-            }
-        }
-        // 测试写一个字节验证可写性
-        char tmp = 0;
-        if (ptrace_writedata(pid, remote_addr, &tmp, 1) == -1) {
-            printf("[!] mmap address 0x%lx not writable (errno=%d), retrying with fixed address...\n", remote_addr, errno);
-            if (retry == 0) {
-                retry++;
-                continue;
-            } else {
-                ptrace(PTRACE_DETACH, pid, 0, 0);
-                return -1;
-            }
-        }
-        break;
-    } while (retry < 2);
-
-    printf("[+] Allocated remote memory at 0x%lx\n", remote_addr);
+    unsigned long remote_addr = find_writable_region(pid, path_len);
+    if (remote_addr == 0) {
+        fprintf(stderr, "No suitable writable region found\n");
+        ptrace(PTRACE_DETACH, pid, 0, 0);
+        return -1;
+    }
+    printf("[+] Using writable region at 0x%lx\n", remote_addr);
 
     // 4. 写入 SO 路径
     if (ptrace_writedata(pid, remote_addr, so_path, path_len) == -1) {
@@ -242,7 +188,7 @@ int inject_so(int pid, const char* so_path) {
     unsigned long remote_dlopen = remote_libdl_base + dlopen_offset;
     printf("[+] Remote dlopen: 0x%lx\n", remote_dlopen);
 
-    // 6. 执行 dlopen
+    // 6. 执行 dlopen（直接设置 PC）
     regs = orig_regs;
     regs.regs[0] = remote_addr;
     regs.regs[1] = RTLD_LAZY;
