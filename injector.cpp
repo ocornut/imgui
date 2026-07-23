@@ -1,11 +1,12 @@
-// injector.cpp – 改进版 Android ptrace 注入器 (arm64)
-// 编译: arm64-linux-android-clang++ -static -std=c++17 injector.cpp -o injector
-// 用法:
-//   ./injector [so_path] [package_name]       // 自动查找进程
-//   ./injector [so_path] [pid]                // 直接指定 PID（第三个参数为数字）
-// 示例:
-//   ./injector /data/local/tmp/libcheat.so com.tencent.jkchess
-//   ./injector /data/local/tmp/libcheat.so 12345
+/**
+ * injector.cpp – Android arm64 ptrace 注入器（支持 Android 8~14）
+ * 编译: aarch64-linux-android-clang++ -static -std=c++17 injector.cpp -o injector
+ * 用法:
+ *   ./injector <so_path> <package_name|pid>
+ * 示例:
+ *   ./injector /data/1/libMyMenu.so com.tencent.jkchess
+ *   ./injector /data/1/libMyMenu.so 12345
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,7 +29,7 @@
 #include <vector>
 #include <algorithm>
 
-// ---------- 通过 cmdline 精确查找进程 ----------
+// ---------- 查找进程 ----------
 int find_pid_by_name(const char* proc_name) {
     DIR* dir = opendir("/proc");
     if (!dir) return -1;
@@ -46,12 +47,9 @@ int find_pid_by_name(const char* proc_name) {
             size_t n = fread(cmdline, 1, sizeof(cmdline) - 1, fp);
             fclose(fp);
             if (n > 0) {
-                // cmdline 的第一个字符串是命令（包含路径）
                 char* pkg = cmdline;
-                // 去除路径前缀
                 char* last_slash = strrchr(pkg, '/');
                 if (last_slash) pkg = last_slash + 1;
-                // 比较完整包名
                 if (strcmp(pkg, proc_name) == 0) {
                     pid = tmp_pid;
                     break;
@@ -63,28 +61,59 @@ int find_pid_by_name(const char* proc_name) {
     return pid;
 }
 
-// ---------- 远程内存读写辅助 ----------
-long ptrace_readdata(int pid, unsigned long addr, void* buffer, size_t size) {
-    for (size_t i = 0; i < size; i += sizeof(long)) {
-        long data = ptrace(PTRACE_PEEKDATA, pid, addr + i, 0);
-        if (data == -1 && errno) return -1;
-        memcpy((char*)buffer + i, &data, std::min(sizeof(long), size - i));
+// ---------- 远程内存读写（使用 process_vm 系列，更高效） ----------
+ssize_t remote_read(int pid, unsigned long addr, void* buffer, size_t size) {
+    struct iovec local = { buffer, size };
+    struct iovec remote = { (void*)addr, size };
+    return process_vm_readv(pid, &local, 1, &remote, 1, 0);
+}
+
+ssize_t remote_write(int pid, unsigned long addr, const void* buffer, size_t size) {
+    struct iovec local = { (void*)buffer, size };
+    struct iovec remote = { (void*)addr, size };
+    return process_vm_writev(pid, &local, 1, &remote, 1, 0);
+}
+
+// ---------- 执行系统调用（ptrace） ----------
+int remote_syscall(int pid, struct user_pt_regs& regs) {
+    struct iovec iov = { &regs, sizeof(regs) };
+    if (ptrace(PTRACE_SETREGSET, pid, NT_PRSTATUS, &iov) == -1) {
+        perror("setregset before syscall");
+        return -1;
     }
+    if (ptrace(PTRACE_SYSCALL, pid, 0, 0) == -1) {
+        perror("ptrace syscall");
+        return -1;
+    }
+    int status;
+    waitpid(pid, &status, 0);
+    if (!WIFSTOPPED(status)) {
+        fprintf(stderr, "process not stopped after syscall\n");
+        return -1;
+    }
+    // 再执行一次 PTRACE_SYSCALL 以获取返回值（Linux 在 syscall 进入和退出都会停住）
+    if (ptrace(PTRACE_SYSCALL, pid, 0, 0) == -1) {
+        perror("ptrace syscall exit");
+        return -1;
+    }
+    waitpid(pid, &status, 0);
+    if (!WIFSTOPPED(status)) {
+        fprintf(stderr, "process not stopped after syscall exit\n");
+        return -1;
+    }
+    // 读取返回值
+    struct user_pt_regs ret_regs;
+    iov.iov_base = &ret_regs; iov.iov_len = sizeof(ret_regs);
+    if (ptrace(PTRACE_GETREGSET, pid, NT_PRSTATUS, &iov) == -1) {
+        perror("getregset for return");
+        return -1;
+    }
+    regs = ret_regs;
     return 0;
 }
 
-long ptrace_writedata(int pid, unsigned long addr, const void* buffer, size_t size) {
-    for (size_t i = 0; i < size; i += sizeof(long)) {
-        long data = 0;
-        memcpy(&data, (char*)buffer + i, std::min(sizeof(long), size - i));
-        if (ptrace(PTRACE_POKEDATA, pid, addr + i, data) == -1)
-            return -1;
-    }
-    return 0;
-}
-
-// ---------- 注入主逻辑 ----------
-int ptrace_inject(int pid, const char* so_path) {
+// ---------- 注入主函数 ----------
+int inject_so(int pid, const char* so_path) {
     // 1. 附加进程
     if (ptrace(PTRACE_ATTACH, pid, 0, 0) == -1) {
         perror("ptrace attach");
@@ -98,124 +127,110 @@ int ptrace_inject(int pid, const char* so_path) {
         return -1;
     }
 
-    // 2. 保存原始寄存器
-    struct user_pt_regs regs, orig_regs;
-    struct iovec iov = { &regs, sizeof(regs) };
+    // 2. 获取原始寄存器
+    struct user_pt_regs orig_regs, regs;
+    struct iovec iov = { &orig_regs, sizeof(orig_regs) };
     if (ptrace(PTRACE_GETREGSET, pid, NT_PRSTATUS, &iov) == -1) {
-        perror("ptrace getregset");
+        perror("getregset original");
         ptrace(PTRACE_DETACH, pid, 0, 0);
         return -1;
     }
-    orig_regs = regs;
+    regs = orig_regs;
 
-    // 3. 在远程进程中分配内存存放 SO 路径
+    // 3. 在远程进程分配内存（mmap）
     size_t path_len = strlen(so_path) + 1;
-    regs.regs[0] = 0;
-    regs.regs[1] = path_len;
+    regs.regs[0] = 0;                   // addr
+    regs.regs[1] = path_len;            // length
     regs.regs[2] = PROT_READ | PROT_WRITE;
     regs.regs[3] = MAP_PRIVATE | MAP_ANONYMOUS;
-    regs.regs[4] = -1;
-    regs.regs[5] = 0;
-    regs.regs[8] = 222; // mmap syscall
-    iov.iov_base = &regs; iov.iov_len = sizeof(regs);
-    if (ptrace(PTRACE_SETREGSET, pid, NT_PRSTATUS, &iov) == -1) {
-        perror("ptrace setregset for mmap");
+    regs.regs[4] = -1;                  // fd
+    regs.regs[5] = 0;                   // offset
+    regs.regs[8] = 222;                 // __NR_mmap (arm64)
+    if (remote_syscall(pid, regs) != 0) {
+        fprintf(stderr, "mmap syscall failed\n");
         ptrace(PTRACE_DETACH, pid, 0, 0);
         return -1;
     }
-    if (ptrace(PTRACE_SYSCALL, pid, 0, 0) == -1) {
-        perror("ptrace syscall");
+    long remote_addr = regs.regs[0];
+    if (remote_addr <= 0 || remote_addr == -1) {
+        fprintf(stderr, "mmap returned invalid address: 0x%lx\n", remote_addr);
         ptrace(PTRACE_DETACH, pid, 0, 0);
         return -1;
     }
-    waitpid(pid, &status, 0);
-    if (!WIFSTOPPED(status)) {
-        fprintf(stderr, "process not stopped after syscall\n");
-        ptrace(PTRACE_DETACH, pid, 0, 0);
-        return -1;
-    }
-    struct user_pt_regs ret_regs;
-    iov.iov_base = &ret_regs; iov.iov_len = sizeof(ret_regs);
-    if (ptrace(PTRACE_GETREGSET, pid, NT_PRSTATUS, &iov) == -1) {
-        perror("ptrace getregset after mmap");
-        ptrace(PTRACE_DETACH, pid, 0, 0);
-        return -1;
-    }
-    long remote_addr = ret_regs.regs[0];
-    if (remote_addr <= 0) {
-        fprintf(stderr, "mmap failed, remote_addr=0x%lx\n", remote_addr);
-        ptrace(PTRACE_DETACH, pid, 0, 0);
-        return -1;
-    }
-    printf("Allocated remote memory at 0x%lx\n", remote_addr);
+    printf("[+] Allocated memory at 0x%lx (size=%zu)\n", remote_addr, path_len);
 
-    // 4. 写入 SO 路径
-    if (ptrace_writedata(pid, remote_addr, so_path, path_len) == -1) {
-        perror("ptrace writedata");
+    // 4. 写入 so 路径
+    if (remote_write(pid, remote_addr, so_path, path_len) != (ssize_t)path_len) {
+        perror("remote_write");
         ptrace(PTRACE_DETACH, pid, 0, 0);
         return -1;
     }
+    printf("[+] Wrote SO path into remote memory\n");
 
-    // 5. 获取远程 dlopen 地址
+    // 5. 计算远程 dlopen 地址
+    // 获取本机 dlopen 相对于 libdl.so 的偏移
     void* local_dlopen = (void*)dlopen;
-    FILE* maps = fopen("/proc/self/maps", "r");
-    if (!maps) {
-        perror("fopen self maps");
+    unsigned long local_libdl_base = 0;
+    FILE* fp = fopen("/proc/self/maps", "r");
+    if (!fp) {
+        perror("open self maps");
         ptrace(PTRACE_DETACH, pid, 0, 0);
         return -1;
     }
-    unsigned long local_libdl_base = 0;
     char line[512];
-    while (fgets(line, sizeof(line), maps)) {
+    while (fgets(line, sizeof(line), fp)) {
         if (strstr(line, "libdl.so")) {
             sscanf(line, "%lx", &local_libdl_base);
             break;
         }
     }
-    fclose(maps);
+    fclose(fp);
     if (local_libdl_base == 0) {
-        fprintf(stderr, "cannot find local libdl.so base\n");
+        fprintf(stderr, "can't find local libdl.so base\n");
         ptrace(PTRACE_DETACH, pid, 0, 0);
         return -1;
     }
-    unsigned long local_dlopen_offset = (unsigned long)local_dlopen - local_libdl_base;
+    unsigned long dlopen_offset = (unsigned long)local_dlopen - local_libdl_base;
 
+    // 获取远程 libdl.so 基址
     char remote_maps_path[64];
     snprintf(remote_maps_path, sizeof(remote_maps_path), "/proc/%d/maps", pid);
-    maps = fopen(remote_maps_path, "r");
-    if (!maps) {
-        perror("fopen remote maps");
+    fp = fopen(remote_maps_path, "r");
+    if (!fp) {
+        perror("open remote maps");
         ptrace(PTRACE_DETACH, pid, 0, 0);
         return -1;
     }
     unsigned long remote_libdl_base = 0;
-    while (fgets(line, sizeof(line), maps)) {
+    while (fgets(line, sizeof(line), fp)) {
         if (strstr(line, "libdl.so")) {
             sscanf(line, "%lx", &remote_libdl_base);
             break;
         }
     }
-    fclose(maps);
+    fclose(fp);
     if (remote_libdl_base == 0) {
-        fprintf(stderr, "cannot find remote libdl.so base\n");
+        fprintf(stderr, "can't find remote libdl.so base\n");
         ptrace(PTRACE_DETACH, pid, 0, 0);
         return -1;
     }
-    unsigned long remote_dlopen_addr = remote_libdl_base + local_dlopen_offset;
-    printf("Remote dlopen address: 0x%lx\n", remote_dlopen_addr);
+    unsigned long remote_dlopen = remote_libdl_base + dlopen_offset;
+    printf("[+] Remote dlopen address: 0x%lx\n", remote_dlopen);
 
-    // 6. 调用远程 dlopen
+    // 6. 设置远程寄存器执行 dlopen
     regs = orig_regs;
-    regs.regs[0] = remote_addr;
-    regs.regs[1] = RTLD_LAZY;
-    regs.pc = remote_dlopen_addr;
-    regs.regs[30] = 0x0; // LR = 0，执行后崩溃以便我们捕获
+    regs.regs[0] = remote_addr;        // path
+    regs.regs[1] = RTLD_LAZY;          // flag
+    regs.pc = remote_dlopen;
+    regs.regs[30] = 0x0;               // LR = 0 (导致返回后 segfault)
     iov.iov_base = &regs; iov.iov_len = sizeof(regs);
     if (ptrace(PTRACE_SETREGSET, pid, NT_PRSTATUS, &iov) == -1) {
-        perror("ptrace setregset for dlopen");
+        perror("setregset for dlopen");
         ptrace(PTRACE_DETACH, pid, 0, 0);
         return -1;
     }
+
+    // 7. 继续执行
     if (ptrace(PTRACE_CONT, pid, 0, 0) == -1) {
         perror("ptrace cont");
         ptrace(PTRACE_DETACH, pid, 0, 0);
@@ -223,69 +238,62 @@ int ptrace_inject(int pid, const char* so_path) {
     }
     waitpid(pid, &status, 0);
     if (WIFSIGNALED(status) && WTERMSIG(status) == SIGSEGV) {
-        printf("dlopen executed (segfault expected)\n");
+        printf("[+] dlopen executed (expected segfault due to LR=0)\n");
     } else {
-        fprintf(stderr, "unexpected stop: status=%d\n", status);
+        fprintf(stderr, "Unexpected stop: status=%d\n", status);
         ptrace(PTRACE_DETACH, pid, 0, 0);
         return -1;
     }
 
-    // 7. 恢复寄存器并 detach
+    // 8. 恢复寄存器并 detach
     iov.iov_base = &orig_regs; iov.iov_len = sizeof(orig_regs);
     if (ptrace(PTRACE_SETREGSET, pid, NT_PRSTATUS, &iov) == -1) {
-        perror("restore regs");
+        perror("restore registers");
     }
     if (ptrace(PTRACE_DETACH, pid, 0, 0) == -1) {
-        perror("detach");
+        perror("ptrace detach");
         return -1;
     }
 
-    printf("Injection successful!\n");
+    printf("[+] Injection successful!\n");
     return 0;
 }
 
-// ---------- 主函数 ----------
+// ---------- 主程序 ----------
 int main(int argc, char** argv) {
-    const char* so_path = "/data/local/tmp/libcheat.so";   // 默认路径
-    const char* target = "com.tencent.jkchess";            // 默认包名
-    int pid = -1;
-
-    if (argc >= 2) so_path = argv[1];
-    if (argc >= 3) {
-        // 检查第三个参数是否为纯数字（PID）
-        bool is_number = true;
-        for (int i = 0; argv[2][i]; i++) {
-            if (!isdigit(argv[2][i])) { is_number = false; break; }
-        }
-        if (is_number) {
-            pid = atoi(argv[2]);
-            printf("Using specified PID: %d\n", pid);
-        } else {
-            target = argv[2];
-        }
-    }
-    if (argc >= 4) {
-        // 如果第四个参数存在，则作为 PID（覆盖之前的推断）
-        pid = atoi(argv[3]);
-        printf("Using specified PID (from arg4): %d\n", pid);
-    }
-
-    if (pid <= 0) {
-        printf("Searching for process '%s' ...\n", target);
-        pid = find_pid_by_name(target);
-        if (pid <= 0) {
-            fprintf(stderr, "Process '%s' not found. Please ensure the game is running.\n", target);
-            fprintf(stderr, "You can also specify PID manually: %s <so_path> <pid>\n", argv[0]);
-            return 1;
-        }
-        printf("Found PID: %d\n", pid);
-    }
-
-    // 检查 SO 文件是否存在
-    if (access(so_path, F_OK) == -1) {
-        fprintf(stderr, "SO file '%s' does not exist\n", so_path);
+    if (argc < 3) {
+        fprintf(stderr, "Usage: %s <so_path> <package_name|pid>\n", argv[0]);
         return 1;
     }
 
-    return ptrace_inject(pid, so_path);
+    const char* so_path = argv[1];
+    const char* target = argv[2];
+
+    int pid = 0;
+    // 检查 target 是否为纯数字（PID）
+    bool is_digit = true;
+    for (int i = 0; target[i]; i++) {
+        if (!isdigit(target[i])) { is_digit = false; break; }
+    }
+    if (is_digit) {
+        pid = atoi(target);
+        printf("[+] Using specified PID: %d\n", pid);
+    } else {
+        printf("[+] Searching for process: %s\n", target);
+        pid = find_pid_by_name(target);
+        if (pid <= 0) {
+            fprintf(stderr, "Process '%s' not found. Make sure it's running.\n", target);
+            return 1;
+        }
+        printf("[+] Found PID: %d\n", pid);
+    }
+
+    // 检查 SO 文件是否存在
+    if (access(so_path, F_OK) != 0) {
+        fprintf(stderr, "SO file '%s' does not exist\n", so_path);
+        return 1;
+    }
+    printf("[+] SO file: %s\n", so_path);
+
+    return inject_so(pid, so_path);
 }
