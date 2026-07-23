@@ -107,6 +107,9 @@ Other Changes:
     default value of each `ImGuiItemFlags_LiveEditXXX`, because this is not expected
     to be a user preference but a programmer/widget preferences.
     Also, we strive to make the toolkit consistent.
+- Popups:
+  - Added bool return value to `OpenPopup()`, `OpenPopupOnItemClick()` functions
+    to notify when the popup was just opened. (#9429)
 - InputText:
   - Added `style.InputTextCursorSize` to configure cursor/caret thickness. (#7031, #9409)
     This is automatically scaled by `style.ScaleAllSizes()`.
@@ -131,7 +134,7 @@ Other Changes:
   - Headers: fixed label being clipped early to reserve space for a sort marker
     even when no sort marker is displayed. Auto-fitting a column still accounts
     for the possible marker, so that sorting after an auto-fit doesn't clip the label.
-- Multi-Select
+- Multi-Select:
   - Reworked ImGuiMultiSelectFlags_NoAutoSelect as it carried side-effects that
     were hardcoded/designed to use multi-selection on checkboxes. (#9391)
     Specifically removed those undocumented behaviors from _NoAutoSelect:
