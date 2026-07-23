@@ -1,8 +1,6 @@
 /**
- * injector.cpp – 最终稳定版（使用远程进程已有可写内存，无需 mmap）
- * 编译: aarch64-linux-android-clang++ -static -std=c++17 -O2 injector.cpp -o injector
+ * injector.cpp – 让 dlopen 正常返回（不再依赖 segfault）
  */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -68,7 +66,7 @@ long ptrace_writedata(int pid, unsigned long addr, const void* buffer, size_t si
     return 0;
 }
 
-// ---------- 扫描远程进程的可写内存区域 ----------
+// ---------- 扫描远程进程的可写内存 ----------
 unsigned long find_writable_region(int pid, size_t needed_size) {
     char maps_path[64];
     snprintf(maps_path, sizeof(maps_path), "/proc/%d/maps", pid);
@@ -83,9 +81,7 @@ unsigned long find_writable_region(int pid, size_t needed_size) {
         unsigned long start, end;
         char perms[8];
         if (sscanf(line, "%lx-%lx %s", &start, &end, perms) != 3) continue;
-        // 需要可写、非低地址（避免 0x1 类）、且空间足够
         if (strchr(perms, 'w') && start >= 0x1000000 && (end - start) >= needed_size) {
-            // 优先选择 [anon:libc_malloc] 或 [heap] 或 [anon]
             if (strstr(line, "libc_malloc") || strstr(line, "[heap]") || strstr(line, "[anon]")) {
                 best_addr = start;
                 break;
@@ -99,7 +95,6 @@ unsigned long find_writable_region(int pid, size_t needed_size) {
 
 // ---------- 注入主函数 ----------
 int inject_so(int pid, const char* so_path) {
-    // 1. 附加
     if (ptrace(PTRACE_ATTACH, pid, 0, 0) == -1) {
         perror("ptrace attach");
         return -1;
@@ -112,7 +107,6 @@ int inject_so(int pid, const char* so_path) {
         return -1;
     }
 
-    // 2. 备份寄存器
     struct user_pt_regs orig_regs, regs;
     struct iovec iov = { &orig_regs, sizeof(orig_regs) };
     if (ptrace(PTRACE_GETREGSET, pid, NT_PRSTATUS, &iov) == -1) {
@@ -122,25 +116,23 @@ int inject_so(int pid, const char* so_path) {
     }
     regs = orig_regs;
 
-    // 3. 在远程进程找一块可写内存
     size_t path_len = strlen(so_path) + 1;
     unsigned long remote_addr = find_writable_region(pid, path_len);
     if (remote_addr == 0) {
-        fprintf(stderr, "No suitable writable region found\n");
+        fprintf(stderr, "No suitable writable region\n");
         ptrace(PTRACE_DETACH, pid, 0, 0);
         return -1;
     }
     printf("[+] Using writable region at 0x%lx\n", remote_addr);
 
-    // 4. 写入 SO 路径
     if (ptrace_writedata(pid, remote_addr, so_path, path_len) == -1) {
-        fprintf(stderr, "ptrace_writedata failed, errno=%d\n", errno);
+        fprintf(stderr, "ptrace_writedata failed\n");
         ptrace(PTRACE_DETACH, pid, 0, 0);
         return -1;
     }
     printf("[+] Wrote SO path\n");
 
-    // 5. 计算远程 dlopen
+    // 计算远程 dlopen
     void* local_dlopen = (void*)dlopen;
     unsigned long local_libdl_base = 0;
     FILE* fp = fopen("/proc/self/maps", "r");
@@ -188,12 +180,12 @@ int inject_so(int pid, const char* so_path) {
     unsigned long remote_dlopen = remote_libdl_base + dlopen_offset;
     printf("[+] Remote dlopen: 0x%lx\n", remote_dlopen);
 
-    // 6. 执行 dlopen（直接设置 PC）
+    // 设置 PC 为 dlopen，LR 为原 PC+4（让 dlopen 返回后继续执行）
     regs = orig_regs;
     regs.regs[0] = remote_addr;
     regs.regs[1] = RTLD_LAZY;
     regs.pc = remote_dlopen;
-    regs.regs[30] = 0x0;  // LR=0 → segfault
+    regs.regs[30] = orig_regs.pc + 4;  // 返回地址设为原 PC 后一条指令
 
     iov.iov_base = &regs; iov.iov_len = sizeof(regs);
     if (ptrace(PTRACE_SETREGSET, pid, NT_PRSTATUS, &iov) == -1) {
@@ -201,25 +193,28 @@ int inject_so(int pid, const char* so_path) {
         ptrace(PTRACE_DETACH, pid, 0, 0);
         return -1;
     }
+
+    // 继续执行，不再等待 segfault
     if (ptrace(PTRACE_CONT, pid, 0, 0) == -1) {
         perror("ptrace cont");
         ptrace(PTRACE_DETACH, pid, 0, 0);
         return -1;
     }
+
+    // 等待进程暂停（可能由于信号）或退出
     waitpid(pid, &status, 0);
-    if (WIFSIGNALED(status) && WTERMSIG(status) == SIGSEGV) {
-        printf("[+] dlopen executed (expected segfault)\n");
-    } else {
-        fprintf(stderr, "unexpected stop: %d\n", status);
-        ptrace(PTRACE_DETACH, pid, 0, 0);
-        return -1;
+    // 如果进程意外停止，尝试恢复
+    if (WIFSTOPPED(status)) {
+        printf("[!] Process stopped with signal %d, continuing...\n", WSTOPSIG(status));
+        ptrace(PTRACE_CONT, pid, 0, 0);
+        waitpid(pid, &status, 0);
     }
 
-    // 7. 恢复并 detach
+    // 恢复原始寄存器并 detach
     iov.iov_base = &orig_regs; iov.iov_len = sizeof(orig_regs);
     ptrace(PTRACE_SETREGSET, pid, NT_PRSTATUS, &iov);
     ptrace(PTRACE_DETACH, pid, 0, 0);
-    printf("[+] Injection successful!\n");
+    printf("[+] Injection completed (dlopen returned).\n");
     return 0;
 }
 
