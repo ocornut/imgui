@@ -1,6 +1,8 @@
 /**
- * injector.cpp – 让 dlopen 正常返回（不再依赖 segfault）
+ * injector.cpp – 稳健注入器（使用 mmap 独立内存，不破坏进程）
+ * 编译: aarch64-linux-android-clang++ -static -std=c++17 -O2 injector.cpp -o injector
  */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,6 +10,7 @@
 #include <sys/ptrace.h>
 #include <sys/uio.h>
 #include <sys/wait.h>
+#include <sys/mman.h>
 #include <sys/user.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -66,31 +69,41 @@ long ptrace_writedata(int pid, unsigned long addr, const void* buffer, size_t si
     return 0;
 }
 
-// ---------- 扫描远程进程的可写内存 ----------
-unsigned long find_writable_region(int pid, size_t needed_size) {
-    char maps_path[64];
-    snprintf(maps_path, sizeof(maps_path), "/proc/%d/maps", pid);
-    FILE* fp = fopen(maps_path, "r");
-    if (!fp) {
-        perror("open remote maps");
-        return 0;
+// ---------- 执行系统调用 ----------
+int remote_syscall(int pid, struct user_pt_regs& regs, unsigned long* result = nullptr) {
+    struct iovec iov = { &regs, sizeof(regs) };
+    if (ptrace(PTRACE_SETREGSET, pid, NT_PRSTATUS, &iov) == -1) {
+        perror("setregset before syscall");
+        return -1;
     }
-    char line[512];
-    unsigned long best_addr = 0;
-    while (fgets(line, sizeof(line), fp)) {
-        unsigned long start, end;
-        char perms[8];
-        if (sscanf(line, "%lx-%lx %s", &start, &end, perms) != 3) continue;
-        if (strchr(perms, 'w') && start >= 0x1000000 && (end - start) >= needed_size) {
-            if (strstr(line, "libc_malloc") || strstr(line, "[heap]") || strstr(line, "[anon]")) {
-                best_addr = start;
-                break;
-            }
-            if (best_addr == 0) best_addr = start;
-        }
+    if (ptrace(PTRACE_SYSCALL, pid, 0, 0) == -1) {
+        perror("ptrace syscall enter");
+        return -1;
     }
-    fclose(fp);
-    return best_addr;
+    int status;
+    waitpid(pid, &status, 0);
+    if (!WIFSTOPPED(status)) {
+        fprintf(stderr, "not stopped after syscall enter\n");
+        return -1;
+    }
+    if (ptrace(PTRACE_SYSCALL, pid, 0, 0) == -1) {
+        perror("ptrace syscall exit");
+        return -1;
+    }
+    waitpid(pid, &status, 0);
+    if (!WIFSTOPPED(status)) {
+        fprintf(stderr, "not stopped after syscall exit\n");
+        return -1;
+    }
+    struct user_pt_regs ret_regs;
+    iov.iov_base = &ret_regs; iov.iov_len = sizeof(ret_regs);
+    if (ptrace(PTRACE_GETREGSET, pid, NT_PRSTATUS, &iov) == -1) {
+        perror("getregset for return");
+        return -1;
+    }
+    if (result) *result = ret_regs.regs[0];
+    regs = ret_regs;
+    return 0;
 }
 
 // ---------- 注入主函数 ----------
@@ -117,14 +130,39 @@ int inject_so(int pid, const char* so_path) {
     regs = orig_regs;
 
     size_t path_len = strlen(so_path) + 1;
-    unsigned long remote_addr = find_writable_region(pid, path_len);
-    if (remote_addr == 0) {
-        fprintf(stderr, "No suitable writable region\n");
+
+    // 尝试 mmap 多个候选地址
+    unsigned long candidate_addrs[] = { 0x10000000, 0x20000000, 0x30000000, 0x40000000, 0 };
+    unsigned long remote_addr = 0;
+    int retry = 0;
+    while (candidate_addrs[retry] != 0) {
+        regs = orig_regs;
+        regs.regs[0] = candidate_addrs[retry];
+        regs.regs[1] = path_len;
+        regs.regs[2] = PROT_READ | PROT_WRITE;
+        regs.regs[3] = MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE; // 不覆盖已有映射
+        regs.regs[4] = -1;
+        regs.regs[5] = 0;
+        regs.regs[8] = 222; // mmap
+
+        if (remote_syscall(pid, regs, &remote_addr) != 0) {
+            fprintf(stderr, "mmap syscall failed at 0x%lx\n", candidate_addrs[retry]);
+            retry++;
+            continue;
+        }
+        if (remote_addr != (unsigned long)-1 && remote_addr != 0) {
+            printf("[+] mmap succeeded at 0x%lx\n", remote_addr);
+            break;
+        }
+        retry++;
+    }
+    if (remote_addr == 0 || remote_addr == (unsigned long)-1) {
+        fprintf(stderr, "All mmap attempts failed\n");
         ptrace(PTRACE_DETACH, pid, 0, 0);
         return -1;
     }
-    printf("[+] Using writable region at 0x%lx\n", remote_addr);
 
+    // 写入 SO 路径
     if (ptrace_writedata(pid, remote_addr, so_path, path_len) == -1) {
         fprintf(stderr, "ptrace_writedata failed\n");
         ptrace(PTRACE_DETACH, pid, 0, 0);
@@ -180,12 +218,12 @@ int inject_so(int pid, const char* so_path) {
     unsigned long remote_dlopen = remote_libdl_base + dlopen_offset;
     printf("[+] Remote dlopen: 0x%lx\n", remote_dlopen);
 
-    // 设置 PC 为 dlopen，LR 为原 PC+4（让 dlopen 返回后继续执行）
+    // 执行 dlopen，LR 设回原 PC+4
     regs = orig_regs;
     regs.regs[0] = remote_addr;
     regs.regs[1] = RTLD_LAZY;
     regs.pc = remote_dlopen;
-    regs.regs[30] = orig_regs.pc + 4;  // 返回地址设为原 PC 后一条指令
+    regs.regs[30] = orig_regs.pc + 4;   // 正常返回
 
     iov.iov_base = &regs; iov.iov_len = sizeof(regs);
     if (ptrace(PTRACE_SETREGSET, pid, NT_PRSTATUS, &iov) == -1) {
@@ -194,27 +232,28 @@ int inject_so(int pid, const char* so_path) {
         return -1;
     }
 
-    // 继续执行，不再等待 segfault
+    // 继续执行，不等待信号
     if (ptrace(PTRACE_CONT, pid, 0, 0) == -1) {
         perror("ptrace cont");
         ptrace(PTRACE_DETACH, pid, 0, 0);
         return -1;
     }
 
-    // 等待进程暂停（可能由于信号）或退出
-    waitpid(pid, &status, 0);
-    // 如果进程意外停止，尝试恢复
-    if (WIFSTOPPED(status)) {
+    // 等待一下，让 dlopen 执行
+    usleep(100000); // 100ms
+
+    // 检查进程状态，如果停止则恢复并继续
+    pid_t wpid = waitpid(pid, &status, WNOHANG);
+    if (wpid > 0 && WIFSTOPPED(status)) {
         printf("[!] Process stopped with signal %d, continuing...\n", WSTOPSIG(status));
         ptrace(PTRACE_CONT, pid, 0, 0);
-        waitpid(pid, &status, 0);
     }
 
-    // 恢复原始寄存器并 detach
+    // 恢复寄存器并 detach
     iov.iov_base = &orig_regs; iov.iov_len = sizeof(orig_regs);
     ptrace(PTRACE_SETREGSET, pid, NT_PRSTATUS, &iov);
     ptrace(PTRACE_DETACH, pid, 0, 0);
-    printf("[+] Injection completed (dlopen returned).\n");
+    printf("[+] Injection completed successfully.\n");
     return 0;
 }
 
