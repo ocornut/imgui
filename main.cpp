@@ -191,8 +191,6 @@ EGLBoolean hook_eglSwap(EGLDisplay dpy, EGLSurface surf) {
     io.DeltaTime = (delta > 0.0001f) ? delta : (1.0f / 120.0f);
 
     // ---------- 绘制 ----------
-    ProcessTextureQueue? 无功能，无需调用
-
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
     glDisable(GL_SCISSOR_TEST);
