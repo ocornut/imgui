@@ -1,5 +1,5 @@
 /**
- * injector.cpp – 带诊断的注入器
+ * injector.cpp – 最终版（跳过ptrace读取测试，直接注入）
  * 编译: aarch64-linux-android-clang++ -static -std=c++17 -O2 injector.cpp -o injector
  */
 
@@ -78,7 +78,7 @@ long ptrace_writedata(int pid, unsigned long addr, const void* buffer, size_t si
     return 0;
 }
 
-// ---------- 执行系统调用（带错误诊断） ----------
+// ---------- 执行系统调用 ----------
 int remote_syscall(int pid, struct user_pt_regs& regs, unsigned long* result = nullptr) {
     struct iovec iov = { &regs, sizeof(regs) };
     if (ptrace(PTRACE_SETREGSET, pid, NT_PRSTATUS, &iov) == -1) {
@@ -130,18 +130,7 @@ int inject_so(int pid, const char* so_path) {
         return -1;
     }
 
-    // 2. 测试 ptrace 读写能力（读取进程的第一个字节，通常可读）
-    unsigned long test_addr = 0x1000; // 尝试读取低地址
-    char test_buf[1];
-    if (ptrace_readdata(pid, test_addr, test_buf, 1) == -1) {
-        printf("[!] Warning: ptrace_readdata failed at 0x%lx, errno=%d. Maybe ptrace is restricted.\n", test_addr, errno);
-        printf("[!] Please ensure SELinux is Permissive and Yama ptrace_scope=0.\n");
-        ptrace(PTRACE_DETACH, pid, 0, 0);
-        return -1;
-    }
-    printf("[+] ptrace read test passed.\n");
-
-    // 3. 备份寄存器
+    // 2. 备份寄存器
     struct user_pt_regs orig_regs, regs;
     struct iovec iov = { &orig_regs, sizeof(orig_regs) };
     if (ptrace(PTRACE_GETREGSET, pid, NT_PRSTATUS, &iov) == -1) {
@@ -151,13 +140,13 @@ int inject_so(int pid, const char* so_path) {
     }
     regs = orig_regs;
 
-    // 4. mmap 分配内存（尝试两次，第一次普通，第二次固定地址）
+    // 3. mmap（重试：失败则使用固定地址）
     size_t path_len = strlen(so_path) + 1;
     unsigned long remote_addr = 0;
     int retry = 0;
     do {
-        regs = orig_regs; // 恢复
-        regs.regs[0] = (retry == 0) ? 0 : 0x10000000; // 第二次指定地址
+        regs = orig_regs;
+        regs.regs[0] = (retry == 0) ? 0 : 0x10000000;  // 第二次固定地址
         regs.regs[1] = path_len;
         regs.regs[2] = PROT_READ | PROT_WRITE;
         regs.regs[3] = (retry == 0) ? (MAP_PRIVATE | MAP_ANONYMOUS) : (MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED);
@@ -166,7 +155,7 @@ int inject_so(int pid, const char* so_path) {
         regs.regs[8] = 222;  // __NR_mmap
 
         if (remote_syscall(pid, regs, &remote_addr) != 0) {
-            fprintf(stderr, "remote_syscall mmap failed\n");
+            fprintf(stderr, "mmap syscall failed\n");
             ptrace(PTRACE_DETACH, pid, 0, 0);
             return -1;
         }
@@ -180,7 +169,7 @@ int inject_so(int pid, const char* so_path) {
                 return -1;
             }
         }
-        // 检查地址是否可写（尝试写入一个字节）
+        // 测试写一个字节验证可写性
         char tmp = 0;
         if (ptrace_writedata(pid, remote_addr, &tmp, 1) == -1) {
             printf("[!] mmap address 0x%lx not writable (errno=%d), retrying with fixed address...\n", remote_addr, errno);
@@ -192,12 +181,12 @@ int inject_so(int pid, const char* so_path) {
                 return -1;
             }
         }
-        break; // 成功
+        break;
     } while (retry < 2);
 
     printf("[+] Allocated remote memory at 0x%lx\n", remote_addr);
 
-    // 5. 写入 SO 路径
+    // 4. 写入 SO 路径
     if (ptrace_writedata(pid, remote_addr, so_path, path_len) == -1) {
         fprintf(stderr, "ptrace_writedata failed, errno=%d\n", errno);
         ptrace(PTRACE_DETACH, pid, 0, 0);
@@ -205,7 +194,7 @@ int inject_so(int pid, const char* so_path) {
     }
     printf("[+] Wrote SO path\n");
 
-    // 6. 计算远程 dlopen
+    // 5. 计算远程 dlopen
     void* local_dlopen = (void*)dlopen;
     unsigned long local_libdl_base = 0;
     FILE* fp = fopen("/proc/self/maps", "r");
@@ -253,12 +242,12 @@ int inject_so(int pid, const char* so_path) {
     unsigned long remote_dlopen = remote_libdl_base + dlopen_offset;
     printf("[+] Remote dlopen: 0x%lx\n", remote_dlopen);
 
-    // 7. 执行 dlopen
+    // 6. 执行 dlopen
     regs = orig_regs;
     regs.regs[0] = remote_addr;
     regs.regs[1] = RTLD_LAZY;
     regs.pc = remote_dlopen;
-    regs.regs[30] = 0x0;
+    regs.regs[30] = 0x0;  // LR=0 → segfault
 
     iov.iov_base = &regs; iov.iov_len = sizeof(regs);
     if (ptrace(PTRACE_SETREGSET, pid, NT_PRSTATUS, &iov) == -1) {
@@ -280,6 +269,7 @@ int inject_so(int pid, const char* so_path) {
         return -1;
     }
 
+    // 7. 恢复并 detach
     iov.iov_base = &orig_regs; iov.iov_len = sizeof(orig_regs);
     ptrace(PTRACE_SETREGSET, pid, NT_PRSTATUS, &iov);
     ptrace(PTRACE_DETACH, pid, 0, 0);
