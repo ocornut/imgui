@@ -2297,7 +2297,7 @@ void InitBusinessHooks() {
             char line[512];
             while (fgets(line, sizeof(line), fp)) {
                 if (strstr(line, "libil2cpp.so") && strstr(line, "r-xp")) {
-                    ssscanf(line, "%lx", &g_il2cppBase); break;
+                    sscanf(line, "%lx", &g_il2cppBase); break;
                 }
             }
             fclose(fp);
@@ -4665,4 +4665,3 @@ __attribute__((constructor)) void Init() {
     pthread_create(&t, 0, SetupThread, 0); 
     pthread_detach(t); 
 }
-```eof
