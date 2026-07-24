@@ -1,10 +1,5 @@
-// ============================================================
-// 完整功能版 + 美化菜单
-// 保留所有透视、自动操作、牌池、换肤、调试等功能
-// 仅替换 DrawMenu 为现代化风格
-// ============================================================
-
-#define IMGUI_DEFINE_MATH_OPERATORS
+// 启用 ImVec2 的数学运算符支持
+#define IMGUI_DEFINE_MATH_OPERATORS 
 
 #include "imgui.h"
 #include "imgui_internal.h"
@@ -202,11 +197,6 @@ std::deque<std::string> g_collected_maps;
 std::mutex g_collect_mutex;
 bool g_collect_skins = false;
 bool g_collect_maps = false;
-
-// ===== 新增：用于 Combo 的显示名称列表 =====
-std::vector<const char*> g_skinNames;
-std::vector<const char*> g_mapNames;
-// ============================================
 
 ConfigEntry g_configTable[] = {
     {"enableSkin", C_BOOL, &g_enable_skin}, {"skinIdx", C_INT, &g_selected_skin_idx}, 
@@ -1224,7 +1214,7 @@ void UpdateEquipAndLiveHeroes() {
                             pos.y = SAFE_READ(float, battleUnit, g_off_battle_posx + 4, 0.0f);
                             pos.z = SAFE_READ(float, battleUnit, g_off_battle_posx + 8, 0.0f);
 
-                            // 严格的野指针检测与边界过滤
+                            // 【彻底修复追踪线乱跳】：加上严格的野指针检测与边界过滤！
                             if (std::isnan(pos.x) || std::isnan(pos.y) || std::isnan(pos.z) || 
                                 std::isinf(pos.x) || std::isinf(pos.y) || std::isinf(pos.z) ||
                                 pos.y < -50.0f || pos.y > 200.0f || 
@@ -1238,7 +1228,7 @@ void UpdateEquipAndLiveHeroes() {
                                 try { screenPos = w2s((void*)g_BackendData.mainCamera, pos); } catch(...) {}
                             }
                             
-                            // 屏幕坐标过滤
+                            // 屏幕坐标过滤：摄像机背面(z<=0.01)或者转换失败的，直接丢弃
                             if (screenPos.z <= 0.01f || std::isnan(screenPos.x) || std::isnan(screenPos.y) || std::isinf(screenPos.x) || std::isinf(screenPos.y)) {
                                 continue;
                             }
@@ -2366,13 +2356,6 @@ void LoadConfig() {
         }
     }
     in.close();
-
-    // ===== 填充皮肤和地图名称列表（供 Combo 使用） =====
-    g_skinNames.clear();
-    for (auto& s : g_skinList) g_skinNames.push_back(s.zh_name);
-    g_mapNames.clear();
-    for (auto& m : g_mapList) g_mapNames.push_back(m.zh_name);
-    // ===================================================
 
     g_auto_buy_heroes.clear();
     std::stringstream ss(g_auto_buy_heroes_str);
@@ -4373,228 +4356,187 @@ void DrawDebugWindow(const GameSnapshot* snap) {
     ImGui::End();
 }
 
-// ============================================================
-// 美化版 DrawMenu（所有功能完整保留）
-// ============================================================
 void DrawMenu() {
-    ImGuiIO& io = ImGui::GetIO();
-    ImGuiStyle& style = ImGui::GetStyle();
+    ImGuiIO& io = ImGui::GetIO(); ImGuiStyle& style = ImGui::GetStyle();
+    style.WindowRounding = 16.0f * g_autoScale; style.FrameRounding = 8.0f * g_autoScale; style.PopupRounding = 8.0f * g_autoScale;
+    style.ItemSpacing = ImVec2(12 * g_autoScale, 12 * g_autoScale); style.WindowPadding = ImVec2(16 * g_autoScale, 16 * g_autoScale); 
+    style.WindowBorderSize = 1.0f; style.ScrollbarSize = 35.0f * g_autoScale; style.GrabMinSize = 25.0f * g_autoScale;
+    style.Colors[ImGuiCol_WindowBg] = ImVec4(0.08f, 0.09f, 0.11f, 0.92f); style.Colors[ImGuiCol_Border] = ImVec4(1.0f, 1.0f, 1.0f, 0.08f);
+    style.Colors[ImGuiCol_TitleBg] = ImVec4(0.08f, 0.09f, 0.11f, 0.95f); style.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.12f, 0.13f, 0.15f, 0.95f);
 
-    // 毛玻璃 & 圆润风格
-    style.WindowRounding = 18.0f * g_autoScale;
-    style.FrameRounding = 10.0f * g_autoScale;
-    style.PopupRounding = 10.0f * g_autoScale;
-    style.ItemSpacing = ImVec2(12 * g_autoScale, 10 * g_autoScale);
-    style.WindowPadding = ImVec2(20 * g_autoScale, 18 * g_autoScale);
-    style.WindowBorderSize = 0.0f;
-    style.ScrollbarSize = 30.0f * g_autoScale;
-    style.GrabMinSize = 20.0f * g_autoScale;
-
-    style.Colors[ImGuiCol_WindowBg] = ImVec4(0.06f, 0.07f, 0.09f, 0.88f);
-    style.Colors[ImGuiCol_TitleBg] = ImVec4(0.08f, 0.09f, 0.11f, 0.90f);
-    style.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.12f, 0.13f, 0.15f, 0.92f);
-    style.Colors[ImGuiCol_Border] = ImVec4(1.0f, 1.0f, 1.0f, 0.04f);
-
-    style.Colors[ImGuiCol_Button] = ImVec4(0.15f, 0.20f, 0.25f, 0.7f);
-    style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.0f, 0.7f, 0.5f, 0.8f);
-    style.Colors[ImGuiCol_ButtonActive] = ImVec4(0.0f, 0.9f, 0.6f, 0.9f);
-    style.Colors[ImGuiCol_FrameBg] = ImVec4(0.12f, 0.15f, 0.18f, 0.7f);
-    style.Colors[ImGuiCol_FrameBgHovered] = ImVec4(0.0f, 0.6f, 0.4f, 0.5f);
-    style.Colors[ImGuiCol_FrameBgActive] = ImVec4(0.0f, 0.8f, 0.5f, 0.6f);
-    style.Colors[ImGuiCol_SliderGrab] = ImVec4(0.0f, 0.85f, 0.55f, 1.0f);
-    style.Colors[ImGuiCol_SliderGrabActive] = ImVec4(0.0f, 1.0f, 0.65f, 1.0f);
-    style.Colors[ImGuiCol_CheckMark] = ImVec4(0.0f, 0.85f, 0.55f, 1.0f);
-    style.Colors[ImGuiCol_Header] = ImVec4(0.0f, 0.85f, 0.55f, 0.3f);
-    style.Colors[ImGuiCol_HeaderHovered] = ImVec4(0.0f, 0.85f, 0.55f, 0.5f);
-    style.Colors[ImGuiCol_HeaderActive] = ImVec4(0.0f, 0.85f, 0.55f, 0.7f);
-
-    static bool firstOpen = true;
-    if (firstOpen) {
-        ImGui::SetNextWindowPos(ImVec2(g_menuX, g_menuY), ImGuiCond_Always);
+    static bool firstMenuOpen = true; 
+    if (firstMenuOpen) { 
+        ImGui::SetNextWindowPos(ImVec2(g_menuX, g_menuY), ImGuiCond_Always); 
         ImGui::SetNextWindowSize(ImVec2(g_menuW, g_menuH), ImGuiCond_Always);
-        ImGui::SetNextWindowCollapsed(g_menuCollapsed, ImGuiCond_Always);
-        firstOpen = false;
+        ImGui::SetNextWindowCollapsed(g_menuCollapsed, ImGuiCond_Always); 
+        firstMenuOpen = false; 
     }
 
-    if (ImGui::Begin(u8"✨ 金铲铲助手", nullptr,
-                     ImGuiWindowFlags_NoSavedSettings |
-                     ImGuiWindowFlags_NoCollapse)) 
-    {
-        g_menuX = ImGui::GetWindowPos().x;
-        g_menuY = ImGui::GetWindowPos().y;
-        g_menuW = ImGui::GetWindowSize().x;
-        g_menuH = ImGui::GetWindowSize().y;
-
-        ImGui::PushFont(io.Fonts->Fonts[0]);
-        ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.6f, 1.0f), u8"⚡ 稳定运行中  |  FPS: %.1f", io.Framerate);
-        ImGui::PopFont();
-
-        ImDrawList* draw = ImGui::GetWindowDrawList();
-        ImVec2 p = ImGui::GetCursorScreenPos();
-        float line_w = ImGui::GetContentRegionAvail().x;
-        draw->AddRectFilled(p, ImVec2(p.x + line_w, p.y + 2.0f * g_autoScale),
-                            IM_COL32(0, 200, 150, 180), 2.0f * g_autoScale);
-        ImGui::Dummy(ImVec2(0, 4.0f * g_autoScale));
-
-        // ---------- 功能分组（保持原有顺序） ----------
-        if (ModernAnimatedFolder(u8"🎨 神话皮肤换肤", &g_header_skin)) {
-            ImGui::Columns(2, nullptr, false);
-            ModernToggle(u8"小小英雄换肤 (对局内生效)", &g_enable_skin, 18);
-            if (g_enable_skin) {
-                ImGui::NextColumn();
-                ImGui::PushItemWidth(-1);
-                if (ImGui::Combo("##SkinSelect", &g_selected_skin_idx,
-                                 [](void* data, int idx, const char** out) {
-                                     const auto& list = *(std::vector<const char*>*)data;
-                                     *out = list[idx];
-                                     return true;
-                                 }, &g_skinNames, (int)g_skinNames.size(), 10))
-                {
-                    g_save_timer = 1.5f;
-                    SaveConfig();
-                }
-                ImGui::PopItemWidth();
-                ImGui::NextColumn();
-            }
-            ImGui::Columns(1);
-            ImGui::Separator();
-
-            ImGui::Columns(2, nullptr, false);
-            ModernToggle(u8"竞技场换肤 (大厅/进图前)", &g_enable_map_skin, 19);
-            if (g_enable_map_skin) {
-                ImGui::NextColumn();
-                ImGui::PushItemWidth(-1);
-                if (ImGui::Combo("##MapSelect", &g_selected_map_idx,
-                                 [](void* data, int idx, const char** out) {
-                                     const auto& list = *(std::vector<const char*>*)data;
-                                     *out = list[idx];
-                                     return true;
-                                 }, &g_mapNames, (int)g_mapNames.size(), 10))
-                {
-                    g_save_timer = 1.5f;
-                    SaveConfig();
-                }
-                ImGui::PopItemWidth();
-                ImGui::NextColumn();
-            }
-            ImGui::Columns(1);
-            EndModernAnimatedFolder();
+    if (ImGui::Begin((const char*)u8"金铲铲助手", NULL, ImGuiWindowFlags_NoSavedSettings)) {
+        if (!ImGui::IsWindowCollapsed()) {
+            float curW = ImGui::GetWindowSize().x, curH = ImGui::GetWindowSize().y;
+            if (std::abs(curW - g_menuW) > 5.0f || std::abs(curH - g_menuH) > 5.0f) { g_menuW = curW; g_menuH = curH; g_scale = std::clamp(curW / (500.0f * g_autoScale), 0.5f, 2.5f); }
         }
-
-        ModernToggle(u8"🚪 极速退游悬浮窗", &g_show_instant_quit_window, 7);
-        ModernToggle(u8"💰 卖空英雄悬浮窗", &g_show_sell_window, 23);
-        ModernToggle(u8"⚙️ 穿卸装备悬浮窗", &g_show_equip_window, 21);
-        ModernToggle(u8"📌 英雄3D追踪连线", &g_draw_hero_lines, 22);
-        ColoredSeparator();
-
-        ModernToggle(u8"🔄 主线程并发极速秒牌", &g_auto_buy, 14);
-        if (g_auto_buy) {
-            ImGui::Indent(15.0f * g_autoScale * g_scale);
-            ModernToggle(u8"📋 英雄列表及装备图鉴", &g_show_hero_list_window, 20);
-            ImGui::Unindent(15.0f * g_autoScale * g_scale);
-        }
-        ModernSlider(u8"⏱ 自动刷新间隔 (ms)", &g_auto_buy_delay_ms, 0.0f, 1000.0f);
-        ModernNumberAdjuster(u8"💰 低于该金币停止刷新", &g_auto_refresh_money_threshold, 0, 200);
-        ColoredSeparator();
-
-        ModernToggle(u8"📦 打开自动操作悬浮窗", &g_show_auto_window, 15);
-        if (g_show_auto_window) {
-            ImGui::Indent(15.0f * g_autoScale * g_scale);
-            ModernToggle(u8"⭐ 自动拿天选 (二星英雄)", &g_auto_buy_chosen, 16);
-            ModernToggle(u8"🧹 显示[一键清空备战席]按钮", &g_show_clear_bench_btn, 24);
-            ImGui::Unindent(15.0f * g_autoScale * g_scale);
-        }
-        ColoredSeparator();
-
-        if (ModernAnimatedFolder(u8"🔮 预测功能", &g_header_pred)) {
-            ModernToggle(u8"👤 预测对手", &g_predict_enemy, 1);
-            if (g_predict_enemy) {
-                ImGui::Indent(15.0f * g_autoScale * g_scale);
-                ModernSlider(u8"名字缩放", &g_predictNameScale, 0.5f, 5.0f);
-                ImGui::Unindent(15.0f * g_autoScale * g_scale);
-            }
-            ModernToggle(u8"🔰 预测海克斯", &g_predict_hex, 2);
-            EndModernAnimatedFolder();
-        }
-
-        if (ModernAnimatedFolder(u8"👁️ 透视功能", &g_header_esp)) {
-            ModernSlider(u8"整体透明度", &g_global_esp_alpha, 0.1f, 1.0f);
-            ModernToggle(u8"🛡️ 对手棋盘透视", &g_esp_board, 3);
-            ModernToggle(u8"🪑 敌方备战席透视", &g_esp_enemy_bench, 5);
-            ModernToggle(u8"💰 金币等级透视", &g_esp_level, 9);
-            if (g_esp_level) {
-                ImGui::Indent(15.0f * g_autoScale * g_scale);
-                ModernSlider(u8"行间距", &g_level_Spacing, 20.0f, 150.0f);
-                ModernSlider(u8"字体缩放", &g_level_Scale, 0.5f, 3.0f);
-                ImGui::Unindent(15.0f * g_autoScale * g_scale);
-            }
-            EndModernAnimatedFolder();
-        }
-
-        ColoredSeparator();
-
-        ModernToggle(u8"🔒 锁定所有窗口", &g_boardLocked, 8);
-        ModernToggle(u8"🎯 显示/调节穿装落点", &g_show_equip_ui_debug, 25);
-        ModernToggle(u8"🎯 显示/调节卖牌落点", &g_show_sell_ui_debug, 26);
-
-        if (g_boardLocked) {
-            ImGui::Indent(15.0f * g_autoScale * g_scale);
-            ImGui::TextColored(ImVec4(1, 0.8f, 0.2f, 1), u8"【装备栏微调】");
-            ModernFloatAdjuster(u8"起点 X", &g_equip_ui_start_x, 0.0f, 3000.0f, 1.0f);
-            ModernFloatAdjuster(u8"起点 Y", &g_equip_ui_start_y, 0.0f, 3000.0f, 1.0f);
-            ModernFloatAdjuster(u8"列间距 X", &g_equip_ui_step_x, 10.0f, 500.0f, 1.0f);
-            ModernFloatAdjuster(u8"行间距 Y", &g_equip_ui_step_y, 10.0f, 500.0f, 1.0f);
-            ImGui::Unindent(15.0f * g_autoScale * g_scale);
-        }
-
-        ModernToggle(u8"🃏 牌库显示", &g_show_card_pool, 10);
-        if (g_show_card_pool) {
-            ImGui::Indent(15.0f * g_autoScale * g_scale);
-            ModernTierSelector(u8"显示等级:", g_show_pool_tiers);
-            ModernNumberAdjuster(u8"单行最大列数", &g_card_pool_cols, 1, 30);
-            ModernFloatAdjuster(u8"牌库透明度", &g_cardPoolAlpha, 0.1f, 1.0f, 0.1f);
+        g_menuX = ImGui::GetWindowPos().x; g_menuY = ImGui::GetWindowPos().y; g_menuCollapsed = ImGui::IsWindowCollapsed();
+        if (!g_menuCollapsed) {
+            ImGui::SetWindowFontScale(g_scale);
+            ImGui::TextColored(ImVec4(0.0f, 0.85f, 0.55f, 1.0f), (const char*)u8"[+] 稳定原版运行中 | FPS: %.1f", io.Framerate);
             ColoredSeparator();
-            ModernToggle(u8"⚠️ 牌库剩余红框预警", &g_pool_warning_enable, 17);
-            if (g_pool_warning_enable) {
+            
+            // ===============================================
+            // 神话换肤UI 
+            // ===============================================
+            if (ModernAnimatedFolder((const char*)u8"🏆 神话皮肤换肤", &g_header_skin)) {
+                ModernToggle((const char*)u8"开启小小英雄换肤 (对局内生效)", &g_enable_skin, 18);
+                if (g_enable_skin) {
+                    ImGui::Indent(15.0f * g_autoScale * g_scale);
+                    
+                    const int numSkins = sizeof(g_skinList)/sizeof(g_skinList[0]);
+                    std::vector<const char*> skinNames(numSkins);
+                    for (int i = 0; i < numSkins; i++) {
+                        skinNames[i] = g_skinList[i].zh_name;
+                    }
+
+                    ImGui::PushItemWidth(260.0f * g_autoScale * g_scale);
+                    if (ImGui::Combo("##SkinSelect", &g_selected_skin_idx, skinNames.data(), numSkins, 10)) {
+                        g_save_timer = 1.5f; SaveConfig();
+                    }
+                    ImGui::PopItemWidth();
+                    ImGui::SameLine();
+                    ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f), (const char*)u8"选择英雄");
+
+                    ImGui::Unindent(15.0f * g_autoScale * g_scale);
+                }
+                
+                ImGui::Separator();
+                
+                ModernToggle((const char*)u8"开启竞技场换肤 (大厅或进图前开启)", &g_enable_map_skin, 19);
+                if (g_enable_map_skin) {
+                    ImGui::Indent(15.0f * g_autoScale * g_scale);
+                    
+                    const int numMaps = sizeof(g_mapList)/sizeof(g_mapList[0]);
+                    std::vector<const char*> mapNames(numMaps);
+                    for (int i = 0; i < numMaps; i++) {
+                        mapNames[i] = g_mapList[i].zh_name;
+                    }
+
+                    ImGui::PushItemWidth(260.0f * g_autoScale * g_scale);
+                    if (ImGui::Combo("##MapSelect", &g_selected_map_idx, mapNames.data(), numMaps, 10)) {
+                        g_save_timer = 1.5f; SaveConfig();
+                    }
+                    ImGui::PopItemWidth();
+                    ImGui::SameLine();
+                    ImGui::TextColored(ImVec4(0.5f, 0.8f, 1.0f, 1.0f), (const char*)u8"选择棋盘");
+
+                    ImGui::Unindent(15.0f * g_autoScale * g_scale);
+                }
+                
+                EndModernAnimatedFolder();
+                ColoredSeparator();
+            }
+
+            ModernToggle((const char*)u8"打开极速退游悬浮窗", &g_show_instant_quit_window, 7);
+            ModernToggle((const char*)u8"打开卖空英雄悬浮窗", &g_show_sell_window, 23); 
+            ColoredSeparator();
+
+            // 穿拆装备与连线选项
+            ModernToggle((const char*)u8"打开穿卸装备悬浮窗", &g_show_equip_window, 21);
+            ModernToggle((const char*)u8"开启英雄3D追踪连线", &g_draw_hero_lines, 22);
+            ColoredSeparator();
+            
+            ModernToggle((const char*)u8"主线程并发极速秒牌", &g_auto_buy, 14);
+            if (g_auto_buy) {
                 ImGui::Indent(15.0f * g_autoScale * g_scale);
-                ModernTierSelector(u8"预警卡费:", g_pool_warning_tiers);
-                ModernNumberAdjuster(u8"低于几张红框", &g_pool_warning_count, 1, 30);
+                ModernToggle((const char*)u8"英雄列表及装备图鉴", &g_show_hero_list_window, 20);
                 ImGui::Unindent(15.0f * g_autoScale * g_scale);
             }
-            ImGui::Unindent(15.0f * g_autoScale * g_scale);
-        }
+            ModernSlider((const char*)u8"自动刷新(D牌)间隔 (毫秒)", &g_auto_buy_delay_ms, 0.0f, 1000.0f);
+            ModernNumberAdjuster((const char*)u8"低于该金币停止刷新", &g_auto_refresh_money_threshold, 0, 200);
+            ColoredSeparator();
 
-        ModernToggle(u8"📊 卡牌预警数量", &g_card_warning, 11);
-        if (g_card_warning) {
-            ImGui::Indent(15.0f * g_autoScale * g_scale);
-            ModernTierSelector(u8"预警等级:", g_warning_tiers);
-            ModernNumberAdjuster(u8"预警张数", &g_warning_threshold, 1, 30);
-            ModernSlider(u8"预警行间距", &g_warn_Spacing, 20.0f, 150.0f);
-            ModernSlider(u8"预警缩放", &g_warn_Scale, 0.5f, 3.0f);
-            ImGui::Unindent(15.0f * g_autoScale * g_scale);
-        }
-
-        ModernToggle(u8"🐞 全功能偏移追踪与调试", &g_show_debug_window, 12);
-
-        ImGui::Spacing();
-        ColoredSeparator();
-
-        if (g_save_timer > 0.0f) {
-            g_save_timer -= io.DeltaTime;
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.7f, 0.4f, 1.0f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.0f, 0.8f, 0.5f, 1.0f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.0f, 0.9f, 0.6f, 1.0f));
-            ImGui::Button(u8"✅ 配置文件已保存", ImVec2(-1, 50 * g_autoScale));
-            ImGui::PopStyleColor(3);
-        } else {
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.5f, 0.8f, 0.8f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.0f, 0.7f, 1.0f, 0.9f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.0f, 0.9f, 1.0f, 1.0f));
-            if (ImGui::Button(u8"💾 保存当前配置", ImVec2(-1, 50 * g_autoScale))) {
-                g_save_timer = 1.5f;
-                SaveConfig();
+            ModernToggle((const char*)u8"打开自动操作悬浮窗", &g_show_auto_window, 15);
+            if (g_show_auto_window) {
+                ImGui::Indent(15.0f * g_autoScale * g_scale);
+                ModernToggle((const char*)u8"自动拿天选 (二星英雄)", &g_auto_buy_chosen, 16);
+                ModernToggle((const char*)u8"显示[一键清空备战席]按钮", &g_show_clear_bench_btn, 24); 
+                ImGui::Unindent(15.0f * g_autoScale * g_scale);
             }
-            ImGui::PopStyleColor(3);
+            ColoredSeparator();
+            
+            if (ModernAnimatedFolder((const char*)u8"预测功能", &g_header_pred)) {
+                ModernToggle((const char*)u8"预测对手", &g_predict_enemy, 1); 
+                if (g_predict_enemy) {
+                    ImGui::Indent(15.0f * g_autoScale * g_scale); ModernSlider((const char*)u8"预测名字缩放", &g_predictNameScale, 0.5f, 5.0f); ImGui::Unindent(15.0f * g_autoScale * g_scale);
+                }
+                ModernToggle((const char*)u8"预测海克斯", &g_predict_hex, 2); 
+                EndModernAnimatedFolder();
+            }
+            if (ModernAnimatedFolder((const char*)u8"透视功能", &g_header_esp)) {
+                ModernSlider((const char*)u8"整体透视透明度", &g_global_esp_alpha, 0.1f, 1.0f); 
+                ModernToggle((const char*)u8"对手棋盘透视", &g_esp_board, 3); 
+                ModernToggle((const char*)u8"敌方备战席透视", &g_esp_enemy_bench, 5); 
+                ModernToggle((const char*)u8"金币等级透视", &g_esp_level, 9); 
+                if (g_esp_level) {
+                    ImGui::Indent(15.0f * g_autoScale * g_scale); ModernSlider((const char*)u8"行与行间距", &g_level_Spacing, 20.0f, 150.0f); ModernSlider((const char*)u8"字体缩放", &g_level_Scale, 0.5f, 3.0f); ImGui::Unindent(15.0f * g_autoScale * g_scale);
+                }
+                EndModernAnimatedFolder();
+            }
+            ColoredSeparator();
+            
+            ModernToggle((const char*)u8"锁定所有窗口", &g_boardLocked, 8); 
+            
+            if (ModernToggle((const char*)u8"显示/调节 [穿装] 落点 (需解锁窗口移动)", &g_show_equip_ui_debug, 25)) {
+                if (g_show_equip_ui_debug) g_show_sell_ui_debug = false;
+            }
+            if (ModernToggle((const char*)u8"显示/调节 [卖牌] 落点 (需解锁窗口移动)", &g_show_sell_ui_debug, 26)) {
+                if (g_show_sell_ui_debug) g_show_equip_ui_debug = false;
+            }
+
+            if (g_boardLocked) {
+                ImGui::Indent(15.0f * g_autoScale * g_scale);
+                ImGui::TextColored(ImVec4(1, 0.8f, 0.2f, 1), (const char*)u8"【装备栏点击点微调】");
+                ModernFloatAdjuster((const char*)u8"起点 X", &g_equip_ui_start_x, 0.0f, 3000.0f, 1.0f);
+                ModernFloatAdjuster((const char*)u8"起点 Y", &g_equip_ui_start_y, 0.0f, 3000.0f, 1.0f);
+                ModernFloatAdjuster((const char*)u8"列间距 X", &g_equip_ui_step_x, 10.0f, 500.0f, 1.0f);
+                ModernFloatAdjuster((const char*)u8"行间距 Y", &g_equip_ui_step_y, 10.0f, 500.0f, 1.0f);
+                ImGui::Unindent(15.0f * g_autoScale * g_scale);
+            }
+            
+            ModernToggle((const char*)u8"牌库显示", &g_show_card_pool, 10);
+            if (g_show_card_pool) {
+                ImGui::Indent(15.0f * g_autoScale * g_scale); ModernTierSelector((const char*)u8"显示等级:", g_show_pool_tiers); 
+                ModernNumberAdjuster((const char*)u8"单行最大列数", &g_card_pool_cols, 1, 30); ModernFloatAdjuster((const char*)u8"牌库透明度", &g_cardPoolAlpha, 0.1f, 1.0f, 0.1f);
+                
+                ColoredSeparator();
+                ModernToggle((const char*)u8"开启牌库剩余量红框预警", &g_pool_warning_enable, 17);
+                if (g_pool_warning_enable) {
+                    ImGui::Indent(15.0f * g_autoScale * g_scale);
+                    ModernTierSelector((const char*)u8"预警卡费:", g_pool_warning_tiers);
+                    ModernNumberAdjuster((const char*)u8"低于几张红框并沉底", &g_pool_warning_count, 1, 30);
+                    ImGui::Unindent(15.0f * g_autoScale * g_scale);
+                }
+                
+                ImGui::Unindent(15.0f * g_autoScale * g_scale);
+            }
+            ModernToggle((const char*)u8"卡牌预警数量", &g_card_warning, 11);
+            if (g_card_warning) {
+                ImGui::Indent(15.0f * g_autoScale * g_scale); ModernTierSelector((const char*)u8"预警等级:", g_warning_tiers); 
+                ModernNumberAdjuster((const char*)u8"预警张数", &g_warning_threshold, 1, 30); ModernSlider((const char*)u8"预警行间距", &g_warn_Spacing, 20.0f, 150.0f); ModernSlider((const char*)u8"预警整体缩放", &g_warn_Scale, 0.5f, 3.0f);
+                ImGui::Unindent(15.0f * g_autoScale * g_scale);
+            }
+            ModernToggle((const char*)u8"全功能偏移追踪与调试", &g_show_debug_window, 12);
+            
+            ImGui::Spacing();
+            
+            ColoredSeparator();
+            
+            if (g_save_timer > 0.0f) {
+                g_save_timer -= io.DeltaTime;
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.7f, 0.4f, 1.0f)); ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.0f, 0.7f, 0.4f, 1.0f)); ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.0f, 0.7f, 0.4f, 1.0f));
+                ImGui::Button((const char*)u8"✓ 配置文件已保存", ImVec2(-1, 55 * g_autoScale)); ImGui::PopStyleColor(3);
+            } else {
+                if (ImGui::Button((const char*)u8"保存当前配置", ImVec2(-1, 55 * g_autoScale))) { g_save_timer = 1.5f; SaveConfig(); }
+            }
         }
     }
     ImGui::End();
@@ -4696,14 +4638,19 @@ void* DelayedHookThread(void*) {
 }
 
 void* SetupThread(void*) {
+    // 初始化瞬间在后台建立本地全图鉴，不会卡住游戏
     BuildLocalPokedex();
+
+    // 启动图片解压专属工人线程（终结并发发热）
     std::thread(TextureDecodingWorkerThread).detach();
 
     void* egl_ptr = nullptr;
+    // [关键修复] 循环等待直到 Unity 引擎真正加载了 libEGL.so
     while ((egl_ptr = DobbySymbolResolver("libEGL.so", "eglSwapBuffers")) == nullptr) {
-        sleep(1);
+        sleep(1); // 每秒检测一次，直到图形库加载完成
     }
     
+    // 成功获取到指针后再进行 Hook
     DobbyHook(egl_ptr, (void*)hook_eglSwap, (void**)&old_eglSwap);
     
     pthread_t t;
