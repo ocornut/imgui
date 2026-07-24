@@ -24,7 +24,7 @@
 #endif
 
 const char* TARGET_PROCESS = "com.tencent.jkchess"; // 目标进程名
-const char* PAYLOAD_PATH = "/data/local/tmp/libjk_internal.so"; // 您的动态库路径
+const char* PAYLOAD_PATH = "/data/1/libMyMenu.so"; // 您的动态库路径
 
 // =================================================================
 // 辅助函数：通过进程名获取 PID
