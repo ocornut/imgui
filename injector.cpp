@@ -130,11 +130,22 @@ bool PtraceCall(pid_t pid, uintptr_t func_addr, long *params, int num_params, st
         regs->uregs[i] = params[i];
     }
     
+    // ARM64 架构强制要求 SP (栈指针) 必须 16 字节对齐
+    regs->ARM_sp = (regs->ARM_sp - 0x100) & ~0xF;
+    
     // 设置返回地址为 0，当执行到 0 时会触发 SIGSEGV 被 ptrace 捕获
     regs->ARM_lr = 0;
     regs->ARM_pc = func_addr;
     
-    if (ptrace(PTRACE_SETREGSET, pid, NT_PRSTATUS, regs) == -1) return false;
+    // ARM64 必须使用 iovec 结构体传递寄存器状态
+    struct iovec io;
+    io.iov_base = regs;
+    io.iov_len = sizeof(struct pt_regs);
+    
+    if (ptrace(PTRACE_SETREGSET, pid, NT_PRSTATUS, &io) == -1) {
+        printf("[-] PtraceCall: 写入寄存器失败, errno=%d\n", errno);
+        return false;
+    }
     if (ptrace(PTRACE_CONT, pid, NULL, 0) == -1) return false;
     
     int status = 0;
@@ -143,7 +154,7 @@ bool PtraceCall(pid_t pid, uintptr_t func_addr, long *params, int num_params, st
     while (WIFSTOPPED(status)) {
         if (WSTOPSIG(status) == SIGSEGV) {
             // 函数执行完毕，读取寄存器获取返回值
-            ptrace(PTRACE_GETREGSET, pid, NT_PRSTATUS, regs);
+            ptrace(PTRACE_GETREGSET, pid, NT_PRSTATUS, &io);
             return true;
         }
         ptrace(PTRACE_CONT, pid, NULL, 0);
@@ -189,9 +200,9 @@ bool InjectLibrary(pid_t pid, const char *library_path) {
     long parameters[6];
     parameters[0] = 0;                                 // addr
     parameters[1] = 0x1000;                            // size
-    parameters[2] = PROT_READ | PROT_WRITE | PROT_EXEC;// prot
+    parameters[2] = PROT_READ | PROT_WRITE;            // prot (去除PROT_EXEC，绕过Android W^X保护)
     parameters[3] = MAP_ANONYMOUS | MAP_PRIVATE;       // flags
-    parameters[4] = 0;                                 // fd
+    parameters[4] = -1;                                // fd (匿名映射要求为 -1)
     parameters[5] = 0;                                 // offset
 
     printf("[+] 调用远程 mmap 分配内存...\n");
