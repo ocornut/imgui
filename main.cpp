@@ -181,7 +181,7 @@ int g_warning_threshold = 6;
 bool g_show_debug_window = false, g_header_pred = true, g_header_esp = true, g_menuCollapsed = false;
 float g_save_timer = 0.0f, g_scale = 1.0f, g_autoScale = 1.0f, g_current_rendered_size = 0.0f; 
 float g_anim[30] = {0.0f}; 
-float g_boardScale = 2.2f, g_boardManualScale = 1.0f, g_startX = 400.0f, g_startY = 400.0f;    
+float g_boardScale = 2.2f, g_boardManualScale = 1.0f, g_startX = 400.0f, g_startY = 400.0f;   
 float g_menuX = 100.0f, g_menuY = 100.0f, g_menuW = 500.0f, g_menuH = 650.0f; 
 float g_enemy_X = 100.0f, g_enemy_Y = 100.0f, g_enemy_Scale = 1.0f;
 float g_hex_X = 100.0f, g_hex_Y = 220.0f, g_hex_Scale = 1.0f;
@@ -429,6 +429,13 @@ bool SafeReadMemory(uintptr_t addr, void* buffer, size_t size) {
 std::deque<std::string> g_appLogs;
 std::mutex g_logMutex;
 
+// -- 全局 Debug 计数器声明区 --
+int g_debug_hook_LoadAsset_718_count = 0;
+int g_debug_hook_LoadMapImpl_count = 0;
+int g_debug_hook_46cce08_count = 0;
+int g_debug_hook_4848cec_count = 0;
+int g_debug_hook_nativeInjectEvent_count = 0;
+
 void AddLog(const char* fmt, ...) {
     char buf[1024]; 
     va_list args; 
@@ -486,6 +493,7 @@ std::string ReadIl2cppStr(void* strObj) {
 typedef void* (*func_LoadAsset_t)(void* x0, void* x1, void* x2, void* x3, int x4);
 func_LoadAsset_t orig_LoadAsset_718 = nullptr;
 void* hook_LoadAsset_718(void* x0, void* x1, void* x2, void* x3, int x4) { 
+    g_debug_hook_LoadAsset_718_count++; // 计数器追加
     if (x1 && x2) {
         std::string bundleStr = ReadIl2cppStr(x1);
         std::string assetStr = ReadIl2cppStr(x2);
@@ -513,6 +521,7 @@ void* hook_LoadAsset_718(void* x0, void* x1, void* x2, void* x3, int x4) {
 typedef void* (*func_LoadMapImpl_t)(void* x0, void* bundlePath, void* assetName, void* container, uint64_t isBackground, uint64_t isMineMap);
 func_LoadMapImpl_t orig_LoadMapImpl = nullptr;
 void* hook_LoadMapImpl(void* x0, void* bundlePath, void* assetName, void* container, uint64_t isBackground, uint64_t isMineMap) { 
+    g_debug_hook_LoadMapImpl_count++; // 计数器追加
     if (bundlePath && assetName) {
         std::string bundleStr = ReadIl2cppStr(bundlePath);
         std::string assetStr = ReadIl2cppStr(assetName);
@@ -1751,6 +1760,7 @@ void TriggerSellAllHeroes() {
 }
 
 extern "C" void hook_nativeInjectEvent(JNIEnv* env, jobject obj, jobject event) {
+    g_debug_hook_nativeInjectEvent_count++; // 计数器追加
     if (!g_jvm) env->GetJavaVM(&g_jvm);
     
     if (obj) {
@@ -1934,6 +1944,7 @@ func_46cce08_t orig_46cce08 = nullptr;
 
 void* hook_46cce08(void* x0, void* arg1, void* arg2, void* arg3) {
     if (!g_is_in_match.load(std::memory_order_relaxed)) return orig_46cce08(x0, arg1, arg2, arg3);
+    g_debug_hook_46cce08_count++; // 计数器追加
     if (g_shop_slot_index < 5 && x0 != nullptr) {
         uintptr_t ptr_x0 = (uintptr_t)x0;
         bool already_exists = false;
@@ -2286,6 +2297,7 @@ func_4848cec_t orig_4848cec = nullptr;
 
 void* hook_4848cec(void* x0, void* arg1, void* arg2, void* arg3) {
     if (!g_is_in_match.load(std::memory_order_relaxed)) return orig_4848cec(x0, arg1, arg2, arg3);
+    g_debug_hook_4848cec_count++; // 计数器追加
     if (x0 != nullptr) g_refresh_instance = (uintptr_t)x0;
     return orig_4848cec(x0, arg1, arg2, arg3);
 }
