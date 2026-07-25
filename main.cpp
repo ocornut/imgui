@@ -653,21 +653,6 @@ std::atomic<int> g_ReadIdx{0};
 
 std::atomic<bool> g_is_in_match{false}; 
 
-uintptr_t g_il2cppBase = 0, g_debug_mgrObj = 0;
-void* g_turnStartThisObj = nullptr; 
-void* g_hexCfgObj = nullptr;
-
-int g_debug_TurnStartCalled = 0, g_debug_hook_3Cd6058_count = 0, g_debug_hook_set_Money_count = 0, g_debug_hook_set_Level_count = 0;
-int g_debug_UpdateTurnStart_count = 0, g_debug_set_IsGameEnd_count = 0, g_debug_SendWillRenderCanvases_count = 0;
-int g_debug_collected_players_count = 0, g_debug_hook_InitTurnDropCfg_count = 0, g_debug_bg_thread_count = 0; 
-int g_debug_hook_6A67e48_count = 0;
-
-std::atomic<bool> g_collected_all_players{false};
-std::atomic<bool> g_matchFetchRequested{false}, g_matchFetchReady{false};
-std::chrono::steady_clock::time_point g_matchFetchTime;
-std::atomic<uintptr_t> g_pool_entries1{0}; 
-
-
 void PushSnapshot() {
     int write_idx = g_WriteIdx.load(std::memory_order_relaxed);
     int next_write = 1 - write_idx;
@@ -681,6 +666,19 @@ const GameSnapshot* GetSnapshot() {
     return &g_Snapshots[read_idx];
 }
 
+uintptr_t g_il2cppBase = 0, g_debug_mgrObj = 0;
+void* g_turnStartThisObj = nullptr; 
+void* g_hexCfgObj = nullptr;
+
+int g_debug_TurnStartCalled = 0, g_debug_hook_3Cd6058_count = 0, g_debug_hook_set_Money_count = 0, g_debug_hook_set_Level_count = 0;
+int g_debug_UpdateTurnStart_count = 0, g_debug_set_IsGameEnd_count = 0, g_debug_SendWillRenderCanvases_count = 0;
+int g_debug_collected_players_count = 0, g_debug_hook_InitTurnDropCfg_count = 0, g_debug_bg_thread_count = 0; 
+int g_debug_hook_6A67e48_count = 0;
+
+std::atomic<bool> g_collected_all_players{false};
+std::atomic<bool> g_matchFetchRequested{false}, g_matchFetchReady{false};
+std::chrono::steady_clock::time_point g_matchFetchTime;
+std::atomic<uintptr_t> g_pool_entries1{0}; 
 
 // =================================================================
 // 极速数学解析引擎
