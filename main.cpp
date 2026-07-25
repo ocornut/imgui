@@ -181,7 +181,7 @@ int g_warning_threshold = 6;
 bool g_show_debug_window = false, g_header_pred = true, g_header_esp = true, g_menuCollapsed = false;
 float g_save_timer = 0.0f, g_scale = 1.0f, g_autoScale = 1.0f, g_current_rendered_size = 0.0f; 
 float g_anim[30] = {0.0f}; 
-float g_boardScale = 2.2f, g_boardManualScale = 1.0f, g_startX = 400.0f, g_startY = 400.0f;   
+float g_boardScale = 2.2f, g_boardManualScale = 1.0f, g_startX = 400.0f, g_startY = 400.0f;    
 float g_menuX = 100.0f, g_menuY = 100.0f, g_menuW = 500.0f, g_menuH = 650.0f; 
 float g_enemy_X = 100.0f, g_enemy_Y = 100.0f, g_enemy_Scale = 1.0f;
 float g_hex_X = 100.0f, g_hex_Y = 220.0f, g_hex_Scale = 1.0f;
@@ -429,13 +429,6 @@ bool SafeReadMemory(uintptr_t addr, void* buffer, size_t size) {
 std::deque<std::string> g_appLogs;
 std::mutex g_logMutex;
 
-// -- 全局 Debug 计数器声明区 --
-int g_debug_hook_LoadAsset_718_count = 0;
-int g_debug_hook_LoadMapImpl_count = 0;
-int g_debug_hook_46cce08_count = 0;
-int g_debug_hook_4848cec_count = 0;
-int g_debug_hook_nativeInjectEvent_count = 0;
-
 void AddLog(const char* fmt, ...) {
     char buf[1024]; 
     va_list args; 
@@ -469,6 +462,7 @@ void AddLog(const char* fmt, ...) {
 
 std::string Utf16ToUtf8(const char16_t* u16str, size_t len) {
     std::string u8str;
+    u8str.reserve(len);
     for (size_t i = 0; i < len; ++i) {
         char16_t wc = u16str[i];
         if (wc < 0x80) u8str += (char)wc;
@@ -493,7 +487,6 @@ std::string ReadIl2cppStr(void* strObj) {
 typedef void* (*func_LoadAsset_t)(void* x0, void* x1, void* x2, void* x3, int x4);
 func_LoadAsset_t orig_LoadAsset_718 = nullptr;
 void* hook_LoadAsset_718(void* x0, void* x1, void* x2, void* x3, int x4) { 
-    g_debug_hook_LoadAsset_718_count++; // 计数器追加
     if (x1 && x2) {
         std::string bundleStr = ReadIl2cppStr(x1);
         std::string assetStr = ReadIl2cppStr(x2);
@@ -521,7 +514,6 @@ void* hook_LoadAsset_718(void* x0, void* x1, void* x2, void* x3, int x4) {
 typedef void* (*func_LoadMapImpl_t)(void* x0, void* bundlePath, void* assetName, void* container, uint64_t isBackground, uint64_t isMineMap);
 func_LoadMapImpl_t orig_LoadMapImpl = nullptr;
 void* hook_LoadMapImpl(void* x0, void* bundlePath, void* assetName, void* container, uint64_t isBackground, uint64_t isMineMap) { 
-    g_debug_hook_LoadMapImpl_count++; // 计数器追加
     if (bundlePath && assetName) {
         std::string bundleStr = ReadIl2cppStr(bundlePath);
         std::string assetStr = ReadIl2cppStr(assetName);
@@ -726,6 +718,7 @@ void BuildLocalPokedex() {
         g_local_pokedex = std::move(temp_pokedex);
         
         std::vector<int> temp_equip_pokedex;
+        temp_equip_pokedex.reserve(256);
         for (int i = 1; i <= 20000; i++) { 
             int len = 0;
             const unsigned char* ptr = GetEquipImageBytes(i, &len);
@@ -1116,12 +1109,13 @@ void UpdateEnemyBoardState() {
 
     int heroCount = SAFE_READ(int, heroArray, g_off_hero_count, 0);
     if (heroCount <= 0 || heroCount > 200) {
-        auto it = g_BackendData.players.find(g_BackendData.nextEnemyPlayerId);
-        if (it != g_BackendData.players.end()) it->second.heroArrayAddr = 0;
+        auto iter = g_BackendData.players.find(g_BackendData.nextEnemyPlayerId);
+        if (iter != g_BackendData.players.end()) iter->second.heroArrayAddr = 0;
         return;
     }
 
     g_BackendData.currentEnemyHeroes.clear();
+    g_BackendData.currentEnemyHeroes.reserve(28);
 
     for (int x = 0; x < 7; ++x) {
         for (int y = 0; y < 4; ++y) {
@@ -1169,6 +1163,7 @@ void UpdateEquipAndLiveHeroes() {
         if (IsValidPtr(itemArr)) {
             int equipCount = SAFE_READ(int, itemArr, g_off_equip_count, 0);
             int maxEquipIter = std::clamp(equipCount, 0, 20); 
+            g_BackendData.myItems.reserve(maxEquipIter);
             for (int i = 0; i < maxEquipIter; i++) {
                 uintptr_t itemObj = SAFE_READ_PTR(itemArr, g_off_equip_head + i * g_off_equip_step);
                 int equipId = 0;
@@ -1183,6 +1178,10 @@ void UpdateEquipAndLiveHeroes() {
     g_BackendData.myLiveHeroes.clear();
     g_BackendData.myBenchLiveHeroes.clear(); 
     g_BackendData.debugHeroTraces.clear(); 
+    
+    g_BackendData.myLiveHeroes.reserve(28);
+    g_BackendData.myBenchLiveHeroes.reserve(9);
+    g_BackendData.debugHeroTraces.reserve(37);
     
     uintptr_t pDyn = SAFE_READ_PTR(logicObj, g_off_hero_dyn);
     uintptr_t cachedHeroArr = 0;
@@ -1488,37 +1487,38 @@ void SimulateSwipe(float startX, float startY, float endX, float endY, bool inst
 void SaveConfig() {
     std::lock_guard<std::mutex> lock(g_configMutex); 
 
-    g_auto_buy_heroes_str = "";
-    for (int id : g_auto_buy_heroes) {
-        g_auto_buy_heroes_str += std::to_string(id) + ",";
-    }
+    std::ostringstream ss_heroes;
+    for (int id : g_auto_buy_heroes) { ss_heroes << id << ","; }
+    g_auto_buy_heroes_str = ss_heroes.str();
 
-    g_hero_equip_bindings_str = "";
+    std::ostringstream ss_binds;
     for(const auto& pair : g_hero_equip_bindings) {
         if(pair.second.empty()) continue;
-        g_hero_equip_bindings_str += std::to_string(pair.first) + ":";
+        ss_binds << pair.first << ":";
         for(size_t i=0; i<pair.second.size(); i++) {
-            g_hero_equip_bindings_str += std::to_string(pair.second[i]);
-            if(i < pair.second.size()-1) g_hero_equip_bindings_str += ",";
+            ss_binds << pair.second[i] << (i < pair.second.size()-1 ? "," : "");
         }
-        g_hero_equip_bindings_str += ";";
+        ss_binds << ";";
     }
+    g_hero_equip_bindings_str = ss_binds.str();
 
-    g_hero_equip_priority_str = "";
+    std::ostringstream ss_prio;
     for(const auto& pair : g_hero_equip_priority) {
-        if (pair.second > 0) {
-            g_hero_equip_priority_str += std::to_string(pair.first) + ":" + std::to_string(pair.second) + ";";
-        }
+        if (pair.second > 0) ss_prio << pair.first << ":" << pair.second << ";";
     }
+    g_hero_equip_priority_str = ss_prio.str();
 
-    g_cell_equip_offset_str = "";
+    std::ostringstream ss_eq;
     for (const auto& kv : g_cell_equip_offset) {
-        g_cell_equip_offset_str += std::to_string(kv.first) + ":" + std::to_string(kv.second.x) + "," + std::to_string(kv.second.y) + ";";
+        ss_eq << kv.first << ":" << kv.second.x << "," << kv.second.y << ";";
     }
-    g_cell_sell_offset_str = "";
+    g_cell_equip_offset_str = ss_eq.str();
+
+    std::ostringstream ss_sell;
     for (const auto& kv : g_cell_sell_offset) {
-        g_cell_sell_offset_str += std::to_string(kv.first) + ":" + std::to_string(kv.second.x) + "," + std::to_string(kv.second.y) + ";";
+        ss_sell << kv.first << ":" << kv.second.x << "," << kv.second.y << ";";
     }
+    g_cell_sell_offset_str = ss_sell.str();
 
     std::ofstream out(g_configPath);
     if (!out.is_open()) return;
@@ -1568,6 +1568,7 @@ void ExecuteMainThreadAutoEquip() {
             int star;
         };
         std::vector<HeroEquipTarget> sorted_targets;
+        sorted_targets.reserve(num_heroes);
         
         for (int i = 0; i < num_heroes; i++) {
             const auto& liveHero = snap->myLiveHeroes[i];
@@ -1760,7 +1761,6 @@ void TriggerSellAllHeroes() {
 }
 
 extern "C" void hook_nativeInjectEvent(JNIEnv* env, jobject obj, jobject event) {
-    g_debug_hook_nativeInjectEvent_count++; // 计数器追加
     if (!g_jvm) env->GetJavaVM(&g_jvm);
     
     if (obj) {
@@ -1944,7 +1944,6 @@ func_46cce08_t orig_46cce08 = nullptr;
 
 void* hook_46cce08(void* x0, void* arg1, void* arg2, void* arg3) {
     if (!g_is_in_match.load(std::memory_order_relaxed)) return orig_46cce08(x0, arg1, arg2, arg3);
-    g_debug_hook_46cce08_count++; // 计数器追加
     if (g_shop_slot_index < 5 && x0 != nullptr) {
         uintptr_t ptr_x0 = (uintptr_t)x0;
         bool already_exists = false;
@@ -2297,7 +2296,6 @@ func_4848cec_t orig_4848cec = nullptr;
 
 void* hook_4848cec(void* x0, void* arg1, void* arg2, void* arg3) {
     if (!g_is_in_match.load(std::memory_order_relaxed)) return orig_4848cec(x0, arg1, arg2, arg3);
-    g_debug_hook_4848cec_count++; // 计数器追加
     if (x0 != nullptr) g_refresh_instance = (uintptr_t)x0;
     return orig_4848cec(x0, arg1, arg2, arg3);
 }
@@ -2309,7 +2307,7 @@ void InitBusinessHooks() {
             char line[512];
             while (fgets(line, sizeof(line), fp)) {
                 if (strstr(line, "libil2cpp.so") && strstr(line, "r-xp")) {
-                    sscanf(line, "%lx", &g_il2cppBase); break;
+                    ssscanf(line, "%lx", &g_il2cppBase); break;
                 }
             }
             fclose(fp);
@@ -3417,1263 +3415,3 @@ void DrawHeroSelectionWindow() {
                         ImGui::OpenPopup("EquipPopup");
                         just_opened_popup = true;
                     }
-                } else if (isDeactivated) {
-                    if (active_hero_id== heroId) {
-                        if (!just_opened_popup && (ImGui::GetTime() - press_time) <= 0.25) {
-                            if (bottomList) {
-                                g_auto_buy_heroes.erase(heroId); 
-                            } else {
-                                if (is_selected) g_auto_buy_heroes.erase(heroId);
-                                else g_auto_buy_heroes.insert(heroId);
-                            }
-                            g_save_timer = 1.0f; SaveConfig();
-                        }
-                        active_hero_id = -1; 
-                    }
-                }
-                
-                ImGui::PushID("tri");
-                if (ImGui::InvisibleButton("fold", ImVec2(smallIconSz, triHeight))) {
-                    if (is_expanded) g_expanded_equip_heroes.erase(heroId);
-                    else g_expanded_equip_heroes.insert(heroId);
-                }
-                ImGui::PopID();
-
-                ImGui::PopStyleVar(); 
-
-                if (is_expanded) {
-                    float eqH = 4.0f * g_autoScale * h_scale + eq_rows * (smallEqBoxSz + smEqSpaceY);
-                    ImGui::Dummy(ImVec2(smallIconSz, eqH));
-                }
-                
-                ImGui::EndGroup();
-
-                ImFont* font = g_mainFont ? g_mainFont : ImGui::GetFont();
-                
-                ImU32 pColor;
-                switch(prio) {
-                    case 5: pColor = IM_COL32(255, 30, 30, 255); break;  
-                    case 4: pColor = IM_COL32(255, 120, 0, 255); break;  
-                    case 3: pColor = IM_COL32(255, 200, 0, 255); break;  
-                    case 2: pColor = IM_COL32(50, 200, 50, 255); break;  
-                    case 1: pColor = IM_COL32(50, 150, 255, 255); break; 
-                    default: pColor = IM_COL32(100, 100, 100, 255); break;
-                }
-                ImVec2 prioBarMin = startPos;
-                ImVec2 prioBarMax = ImVec2(startPos.x + smallIconSz, startPos.y + prioH);
-                
-                draw_list->AddRectFilled(prioBarMin, prioBarMax, IM_COL32(40, 40, 40, 255), 4.0f * g_autoScale * h_scale, ImDrawFlags_RoundCornersTop);
-                
-                ImVec2 mBtnMax = ImVec2(prioBarMin.x + smallIconSz * 0.3f, prioBarMax.y);
-                draw_list->AddRectFilled(prioBarMin, mBtnMax, IM_COL32(70, 70, 70, 255), 4.0f * g_autoScale * h_scale, ImDrawFlags_RoundCornersTopLeft);
-                ImVec2 mTxtSz = font->CalcTextSizeA(16.0f*g_autoScale*h_scale, FLT_MAX, 0.0f, "-");
-                draw_list->AddText(font, 16.0f*g_autoScale*h_scale, ImVec2(prioBarMin.x + (smallIconSz*0.3f - mTxtSz.x)*0.5f, prioBarMin.y + (prioH - mTxtSz.y)*0.5f), IM_COL32_WHITE, "-");
-
-                ImVec2 pBtnMin = ImVec2(prioBarMin.x + smallIconSz * 0.7f, prioBarMin.y);
-                draw_list->AddRectFilled(pBtnMin, prioBarMax, IM_COL32(70, 70, 70, 255), 4.0f * g_autoScale * h_scale, ImDrawFlags_RoundCornersTopRight);
-                ImVec2 pTxtSz = font->CalcTextSizeA(16.0f*g_autoScale*h_scale, FLT_MAX, 0.0f, "+");
-                draw_list->AddText(font, 16.0f*g_autoScale*h_scale, ImVec2(pBtnMin.x + (smallIconSz*0.3f - pTxtSz.x)*0.5f, pBtnMin.y + (prioH - pTxtSz.y)*0.5f), IM_COL32_WHITE, "+");
-
-                char pText[8];
-                if (prio == 0) snprintf(pText, sizeof(pText), "无");
-                else snprintf(pText, sizeof(pText), "P%d", prio);
-                ImVec2 tSz = font->CalcTextSizeA(14.0f*g_autoScale*h_scale, FLT_MAX, 0.0f, pText);
-                draw_list->AddText(font, 14.0f*g_autoScale*h_scale, ImVec2(prioBarMin.x + smallIconSz*0.5f - tSz.x*0.5f, prioBarMin.y + (prioH - tSz.y)*0.5f), pColor, pText);
-
-                ImVec2 heroMin = ImVec2(startPos.x, startPos.y + prioH);
-                ImVec2 heroMax = ImVec2(heroMin.x + smallIconSz, heroMin.y + smallIconSz);
-                GLuint tex = GetHeroTexture(heroId);
-                
-                if (tex) draw_list->AddImage((ImTextureID)(intptr_t)tex, heroMin, heroMax);
-                else draw_list->AddRectFilled(heroMin, heroMax, IM_COL32(50,50,50,255));
-
-                if (is_selected) {
-                    draw_list->AddRect(heroMin, heroMax, IM_COL32(0, 255, 180, 255), 0, 0, 3.0f * g_autoScale * h_scale);
-                    draw_list->AddCircleFilled(ImVec2(heroMax.x - 10.0f*g_autoScale*h_scale, heroMax.y - 10.0f*g_autoScale*h_scale), 8.0f*g_autoScale*h_scale, IM_COL32(0, 200, 100, 255));
-                } else {
-                    draw_list->AddRect(heroMin, heroMax, costColor, 0, 0, 1.5f * g_autoScale * h_scale);
-                }
-
-                ImVec2 triMin = ImVec2(startPos.x, heroMax.y);
-                ImVec2 triMax = ImVec2(startPos.x + smallIconSz, triMin.y + triHeight);
-                draw_list->AddRectFilled(triMin, triMax, IM_COL32(35, 35, 45, 255), 4.0f * g_autoScale * h_scale, ImDrawFlags_RoundCornersBottom);
-                
-                float triSz = 6.0f * g_autoScale * h_scale; 
-                ImVec2 triC = ImVec2(triMin.x + smallIconSz * 0.5f, triMin.y + triHeight * 0.5f);
-                if (is_expanded) {
-                    draw_list->AddTriangleFilled(triC - ImVec2(triSz, -triSz), triC + ImVec2(triSz, triSz), triC - ImVec2(0, triSz), IM_COL32_WHITE);
-                } else {
-                    draw_list->AddTriangleFilled(triC - ImVec2(triSz, triSz), triC + ImVec2(triSz, -triSz), triC + ImVec2(0, triSz), IM_COL32(180, 180, 180, 255));
-                }
-
-                if (is_expanded) {
-                    ImVec2 equipStartPos = ImVec2(startPos.x, triMax.y + 4.0f * g_autoScale * h_scale);
-                    int slots_to_draw = std::max((int)binds.size(), cols_in_fold); 
-                    for(int k = 0; k < slots_to_draw; k++) {
-                        int row = k / cols_in_fold;
-                        int col = k % cols_in_fold;
-                        ImVec2 eqMin = ImVec2(equipStartPos.x + col * (smallEqBoxSz + smEqSpaceX), 
-                                              equipStartPos.y + row * (smallEqBoxSz + smEqSpaceY));
-                        ImVec2 eqMax = ImVec2(eqMin.x + smallEqBoxSz, eqMin.y + smallEqBoxSz);
-                        
-                        if (k < binds.size()) {
-                            GLuint eqTex = GetEquipTexture(binds[k]);
-                            if (eqTex) draw_list->AddImageRounded((ImTextureID)(intptr_t)eqTex, eqMin, eqMax, ImVec2(0,0), ImVec2(1,1), IM_COL32_WHITE, 2.0f*h_scale);
-                            else draw_list->AddRectFilled(eqMin, eqMax, IM_COL32(100,100,100,255), 2.0f*h_scale);
-                            draw_list->AddRect(eqMin, eqMax, IM_COL32(150,150,150,200), 2.0f*h_scale, 0, 1.0f);
-                            
-                            char orderBuf[4]; snprintf(orderBuf, sizeof(orderBuf), "%d", k + 1);
-                            draw_list->AddText(font, 13.0f * g_autoScale * h_scale, eqMin + ImVec2(1.0f, 1.0f), IM_COL32(0,0,0,255), orderBuf);
-                            draw_list->AddText(font, 13.0f * g_autoScale * h_scale, eqMin, IM_COL32(0,255,150,255), orderBuf);
-                        } else {
-                            draw_list->AddRectFilled(eqMin, eqMax, IM_COL32(30,30,30,100), 2.0f*h_scale);
-                            draw_list->AddRect(eqMin, eqMax, IM_COL32(80,80,80,150), 2.0f*h_scale, 0, 1.0f);
-                        }
-                    }
-                }
-
-                ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10 * g_autoScale * h_scale, 10 * g_autoScale * h_scale));
-                if (ImGui::BeginPopup("EquipPopup")) {
-                    ImGui::SetWindowFontScale(h_scale); 
-                    ImGui::TextColored(ImColor(costColor).Value, "为英雄 %d 选择推荐装备 (最多18件，按点击顺序定优先级)", heroId);
-                    
-                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 0.8f));
-                    if (ImGui::Button((const char*)u8"一键清空已选装备", ImVec2(-1, 30 * g_autoScale * h_scale))) {
-                        binds.clear();
-                        g_save_timer = 1.0f; SaveConfig();
-                    }
-                    ImGui::PopStyleColor();
-                    ImGui::Separator();
-                    
-                    if (!g_equip_pokedex_ready.load()) ImGui::TextColored(ImVec4(1,1,0,1), "扫描中...");
-                    else {
-                        int cols = 8;
-                        for (size_t e = 0; e < g_local_equip_pokedex.size(); e++) {
-                            int equipId = g_local_equip_pokedex[e];
-                            ImGui::PushID(equipId + 20000);
-                            GLuint equipTex = GetEquipTexture(equipId);
-                            ImVec2 btnSize = ImVec2(45 * g_autoScale * h_scale, 45 * g_autoScale * h_scale);
-                            
-                            auto it_bind = std::find(binds.begin(), binds.end(), equipId);
-                            bool is_equipped = (it_bind != binds.end());
-                            int order_idx = is_equipped ? std::distance(binds.begin(), it_bind) + 1 : 0;
-                            
-                            if (is_equipped) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0.8f, 0.4f, 0.6f));
-                            else ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
-
-                            ImVec2 btnMin = ImGui::GetCursorScreenPos();
-                            if (equipTex != 0) {
-                                if (ImGui::ImageButton("##eq2", (ImTextureID)(intptr_t)equipTex, btnSize)) {
-                                    if (is_equipped) binds.erase(std::remove(binds.begin(), binds.end(), equipId), binds.end());
-                                    else if (binds.size() < 18) binds.push_back(equipId);
-                                    g_save_timer = 1.0f; SaveConfig();
-                                }
-                            } else {
-                                if (ImGui::Button(std::to_string(equipId).c_str(), btnSize)) {
-                                    if (is_equipped) binds.erase(std::remove(binds.begin(), binds.end(), equipId), binds.end());
-                                    else if (binds.size() < 18) binds.push_back(equipId);
-                                    g_save_timer = 1.0f; SaveConfig();
-                                }
-                            }
-                            
-                            if (is_equipped) {
-                                char numBuf[4]; snprintf(numBuf, sizeof(numBuf), "%d", order_idx);
-                                draw_list->AddText(font, 16.0f * g_autoScale * h_scale, btnMin + ImVec2(4.0f, 4.0f), IM_COL32(0,0,0,255), numBuf);
-                                draw_list->AddText(font, 16.0f * g_autoScale * h_scale, btnMin + ImVec2(2.0f, 2.0f), IM_COL32(0,255,150,255), numBuf);
-                            }
-
-                            ImGui::PopStyleColor();
-                            if ((e + 1) % cols != 0 && (e + 1) < g_local_equip_pokedex.size()) ImGui::SameLine();
-                            ImGui::PopID();
-                        }
-                    }
-                    ImGui::EndPopup();
-                }
-                ImGui::PopStyleVar();
-
-                if (isHovered) {
-                    ImGui::SetTooltip((const char*)u8"单击选定/取消 | 长按改装备");
-                }
-
-                float last_button_x2 = ImGui::GetItemRectMax().x;
-                float next_button_x2 = last_button_x2 + style.ItemSpacing.x + smallIconSz;
-                if (next_button_x2 < window_visible_x2) {
-                    ImGui::SameLine();
-                }
-            };
-
-            for (int cost = 1; cost <= 5; cost++) {
-                if (g_local_pokedex[cost].empty()) continue;
-
-                ImU32 costColor;
-                switch(cost) {
-                    case 1: costColor = IM_COL32(200, 200, 200, 255); break;
-                    case 2: costColor = IM_COL32(0, 255, 0, 255); break;
-                    case 3: costColor = IM_COL32(0, 200, 255, 255); break;
-                    case 4: costColor = IM_COL32(210, 50, 255, 255); break;
-                    case 5: costColor = IM_COL32(255, 215, 0, 255); break;
-                    default:costColor = IM_COL32(255, 255, 255, 255); break;
-                }
-
-                ImGui::PushStyleColor(ImGuiCol_Text, costColor);
-                ImGui::Text("%d费英雄", cost);
-                ImGui::PopStyleColor();
-                ImGui::Separator();
-
-                for (size_t i = 0; i < g_local_pokedex[cost].size(); i++) {
-                    renderHeroBlock(g_local_pokedex[cost][i], costColor, false);
-                }
-                ImGui::NewLine();
-                ImGui::Spacing();
-            }
-
-            ImGui::Separator();
-            ImGui::TextColored(ImVec4(0.0f, 0.85f, 0.55f, 1.0f), (const char*)u8"★ 已选自动拿牌列表 (长按头像弹装 | 点击三角折叠)");
-            
-            for (int cost = 1; cost <= 5; cost++) {
-                std::vector<int> selected_heroes;
-                for (int heroId : g_local_pokedex[cost]) {
-                    if (g_auto_buy_heroes.count(heroId)) selected_heroes.push_back(heroId);
-                }
-                if (selected_heroes.empty()) continue;
-
-                ImU32 costColor;
-                switch(cost) {
-                    case 1: costColor = IM_COL32(200, 200, 200, 255); break;
-                    case 2: costColor = IM_COL32(0, 255, 0, 255); break;
-                    case 3: costColor = IM_COL32(0, 200, 255, 255); break;
-                    case 4: costColor = IM_COL32(210, 50, 255, 255); break;
-                    case 5: costColor = IM_COL32(255, 215, 0, 255); break;
-                    default:costColor = IM_COL32(255, 255, 255, 255); break;
-                }
-
-                ImGui::TextColored(ImColor(costColor), "[%d费]", cost); ImGui::SameLine();
-
-                for (size_t i = 0; i < selected_heroes.size(); i++) {
-                    renderHeroBlock(selected_heroes[i], costColor, true);
-                }
-                ImGui::NewLine();
-            }
-        }
-    }
-    ImGui::End();
-}
-
-void DrawShopESP(const GameSnapshot* snap) {
-    if (!snap) return;
-    // 已经移除了自己和敌方商店的单槽位透视调用，这里可以安全留空。
-}
-
-void DrawBenchESP(const GameSnapshot* snap) {
-    if (!snap) return;
-    // 只保留敌方备战席的透视调用
-    DrawSingleSlotOverlay("EnemyBench", "敌方备战席", g_esp_enemy_bench, g_enemy_bench_X, g_enemy_bench_Y, g_enemy_bench_Scale, 9, snap->enemyBenchHeroes, IM_COL32(255, 100, 100, 255));
-}
-
-void DrawPurePredictEnemy(const GameSnapshot* snap) {
-    if (!snap) return;
-    static float alpha_raw = 0.0f; alpha_raw = ImLerp(alpha_raw, g_predict_enemy ? 1.0f : 0.0f, 1.0f - expf(-20.0f * ImGui::GetIO().DeltaTime));
-    float alpha = alpha_raw * g_global_esp_alpha;
-    if (alpha < 0.01f) return;
-    ImDrawList* d = ImGui::GetForegroundDrawList();
-    static float t_x = g_enemy_X, t_y = g_enemy_Y, t_scale = g_enemy_Scale; static bool first = true; if (first) { t_x = g_enemy_X; t_y = g_enemy_Y; t_scale = g_enemy_Scale; first = false; }
-    static bool isDragging = false, isScaling = false; static ImVec2 dragOffset, scaleDragOffset;
-
-    int display_row = 1; bool isAi = false;
-    if (snap->nextEnemyPlayerId != -1) {
-        auto it = snap->players.find(snap->nextEnemyPlayerId);
-        if (it != snap->players.end()) { display_row = it->second.rowIdx; isAi = it->second.isAi; }
-    }
-    
-    HandleGridInteraction(g_enemy_X, g_enemy_Y, g_enemy_Scale, t_x, t_y, t_scale, isDragging, isScaling, dragOffset, scaleDragOffset,
-                          25.0f * g_autoScale * 2.5f, 25.0f * g_autoScale, -15.0f * g_autoScale, 25.0f * g_autoScale, 0, 0, 50.0f * g_autoScale, 50.0f * g_autoScale, g_boardLocked, &g_predict_enemy, true);
-    
-    float drawRadius = 25.0f * g_autoScale * g_enemy_Scale; ImVec2 center(g_enemy_X + drawRadius, g_enemy_Y + drawRadius);
-    float r, g, b; ImGui::ColorConvertHSVtoRGB(fmodf((float)ImGui::GetTime() * 0.5f, 1.0f), 0.8f, 1.0f, r, g, b);
-    d->AddCircleFilled(center, drawRadius, IM_COL32((int)(r*255), (int)(g*255), (int)(b*255), (int)(255 * alpha)), 32);
-
-    if (isAi) {
-        ImFont* font = g_mainFont ? g_mainFont : ImGui::GetFont();
-        float fSz = 20.0f * g_autoScale * g_enemy_Scale; 
-        ImVec2 tSz = font->CalcTextSizeA(fSz, FLT_MAX, 0.0f, "Ai");
-        DrawTextWithStroke(d, font, fSz, center - ImVec2(tSz.x*0.5f, tSz.y*0.5f), IM_COL32(255, 255, 255, (int)(255 * alpha)), IM_COL32(0, 0, 0, (int)(255 * alpha)), "Ai");
-    }
-    
-    if (!g_boardLocked && alpha > 0.9f * g_global_esp_alpha) {
-        DrawScaleHandle(d, ImVec2(g_enemy_X + 62.5f * g_autoScale * g_enemy_Scale, g_enemy_Y + 25.0f * g_autoScale * g_enemy_Scale), isScaling);
-        DrawCloseHandle(d, ImVec2(g_enemy_X - 15.0f * g_autoScale * g_enemy_Scale, g_enemy_Y + 25.0f * g_autoScale * g_enemy_Scale), &g_predict_enemy);
-    }
-}
-
-void DrawPurePredictHex(const GameSnapshot* snap) {
-    if (!snap) return;
-    static float alpha_raw = 0.0f; alpha_raw = ImLerp(alpha_raw, g_predict_hex ? 1.0f : 0.0f, 1.0f - expf(-20.0f * ImGui::GetIO().DeltaTime));
-    float alpha = alpha_raw * g_global_esp_alpha;
-    if (alpha < 0.01f) return;
-    
-    ImDrawList* d = ImGui::GetForegroundDrawList();
-    static float t_x = g_hex_X, t_y = g_hex_Y, t_scale = g_hex_Scale; static bool first = true; if (first) { t_x = g_hex_X; t_y = g_hex_Y; t_scale = g_hex_Scale; first = false; }
-    static bool isDragging = false, isScaling = false; static ImVec2 dragOffset, scaleDragOffset;
-
-    int drawCount = snap->validHexCount > 0 ? snap->validHexCount : 3;
-    if (drawCount > 4) drawCount = 4; // 安全限制
-
-    float bW = (drawCount * 60.0f - 15.0f) * g_autoScale; 
-    float bH = 45.0f * g_autoScale;
-
-    HandleGridInteraction(g_hex_X, g_hex_Y, g_hex_Scale, t_x, t_y, t_scale, isDragging, isScaling, dragOffset, scaleDragOffset,
-                          bW + 15.0f * g_autoScale, bH * 0.5f, -15.0f * g_autoScale, bH * 0.5f, 0, 0, bW, bH, g_boardLocked, &g_predict_hex, true);
-    
-    ImFont* font = g_mainFont ? g_mainFont : ImGui::GetFont();
-    float fSz = 24.0f * g_autoScale * g_hex_Scale;
-
-    for (int i = 0; i < drawCount; i++) {
-        int rarity = (snap->validHexCount > 0) ? snap->cachedHexes[i] : 0; 
-        ImU32 boxColor = IM_COL32(100, 100, 100, (int)(150 * alpha)); 
-        const char* text = "?";
-        
-        if (rarity == 1) { boxColor = IM_COL32(200, 200, 200, (int)(255 * alpha)); text = "银"; }
-        else if (rarity == 2) { boxColor = IM_COL32(255, 215, 0, (int)(255 * alpha)); text = "金"; }
-        else if (rarity == 3) { 
-            float hue = fmodf((float)ImGui::GetTime() * 0.5f + i * 0.2f, 1.0f);
-            float r, g, b; ImGui::ColorConvertHSVtoRGB(hue, 0.8f, 1.0f, r, g, b);
-            boxColor = IM_COL32((int)(r*255), (int)(g*255), (int)(b*255), (int)(255 * alpha));
-            text = "彩"; 
-        }
-
-        ImVec2 pMin(g_hex_X + i * 60.0f * g_autoScale * g_hex_Scale, g_hex_Y);
-        ImVec2 pMax(g_hex_X + i * 60.0f * g_autoScale * g_hex_Scale + 45.0f * g_autoScale * g_hex_Scale, g_hex_Y + 45.0f * g_autoScale * g_hex_Scale);
-        
-        d->AddRectFilled(pMin, pMax, IM_COL32(20, 20, 20, (int)(200 * alpha)), 6.0f * g_autoScale * g_hex_Scale);
-        d->AddRect(pMin, pMax, boxColor, 6.0f * g_autoScale * g_hex_Scale, 0, 2.0f * g_autoScale * g_hex_Scale);
-        
-        ImVec2 tSz = font->CalcTextSizeA(fSz, FLT_MAX, 0.0f, text);
-        ImVec2 tPos = ImVec2(pMin.x + (45.0f * g_autoScale * g_hex_Scale - tSz.x) * 0.5f, pMin.y + (45.0f * g_autoScale * g_hex_Scale - tSz.y) * 0.5f);
-        DrawTextWithStroke(d, font, fSz, tPos, boxColor, IM_COL32(0,0,0,(int)(255*alpha)), text);
-    }
-    
-    if (!g_boardLocked && alpha > 0.9f * g_global_esp_alpha) {
-        DrawScaleHandle(d, ImVec2(g_hex_X + (bW + 15.0f * g_autoScale) * g_hex_Scale, g_hex_Y + bH * 0.5f * g_hex_Scale), isScaling);
-        DrawCloseHandle(d, ImVec2(g_hex_X - 15.0f * g_autoScale * g_hex_Scale, g_hex_Y + bH * 0.5f * g_hex_Scale), &g_predict_hex);
-    }
-}
-
-void DrawLevelOverlay(const GameSnapshot* snap) {
-    if (!snap || !g_esp_level) return;
-    static float alpha_raw = 0.0f; alpha_raw = ImLerp(alpha_raw, g_esp_level ? 1.0f : 0.0f, 1.0f - expf(-20.0f * ImGui::GetIO().DeltaTime));
-    float alpha = alpha_raw * g_global_esp_alpha;
-    if (alpha < 0.01f) return;
-    ImDrawList* d = ImGui::GetForegroundDrawList();
-    static float t_x = g_level_X, t_y = g_level_Y, t_scale = g_level_Scale; static bool first = true; if (first) { t_x = g_level_X; t_y = g_level_Y; t_scale = g_level_Scale; first = false; }
-    static bool isDragging = false, isScaling = false; static ImVec2 dragOffset, scaleDragOffset;
-    
-    float bW = 160.0f * g_autoScale;
-    float bH = g_level_Spacing * g_autoScale * 7.0f + 32.0f * g_autoScale;
-    
-    HandleGridInteraction(g_level_X, g_level_Y, g_level_Scale, t_x, t_y, t_scale, isDragging, isScaling, dragOffset, scaleDragOffset,
-                          bW + 20.0f * g_autoScale, bH * 0.5f, -20.0f * g_autoScale, bH * 0.5f, 0, 0, bW, bH, g_boardLocked, &g_esp_level, true);
-    
-    if (!g_boardLocked && alpha > 0.9f * g_global_esp_alpha) {
-        DrawScaleHandle(d, ImVec2(g_level_X + (bW + 20.0f * g_autoScale) * g_level_Scale, g_level_Y + bH * 0.5f * g_level_Scale), isScaling);
-        DrawCloseHandle(d, ImVec2(g_level_X - 20.0f * g_autoScale * g_level_Scale, g_level_Y + bH * 0.5f * g_level_Scale), &g_esp_level);
-    }
-    
-    ImFont* font = ImGui::GetFont(); float fSz = ImGui::GetFontSize() * g_level_Scale;
-
-    for (int i = 0; i < 8; i++) {
-        float cy = g_level_Y + i * g_level_Spacing * g_autoScale * g_level_Scale; 
-        int cm = 0, cl = 0, cw = 0, clost = 0;
-        
-        for (const auto& pair : snap->players) {
-            if (pair.second.rowIdx == i + 1) { 
-                cm = pair.second.money; 
-                cl = pair.second.level; 
-                cw = pair.second.winStreak; 
-                clost = pair.second.loseStreak; 
-                break; 
-            }
-        }
-        char buf[16]; 
-        
-        snprintf(buf, sizeof(buf), "%d", cm); 
-        ImVec2 tSz = font->CalcTextSizeA(fSz, FLT_MAX, 0.0f, buf);
-        ImVec2 posM = ImVec2(g_level_X + (40.0f * g_autoScale * g_level_Scale - tSz.x)*0.5f, cy + (32.0f * g_autoScale * g_level_Scale - tSz.y)*0.5f);
-        DrawTextWithStroke(d, font, fSz, posM, IM_COL32(255, 215, 0, (int)(255 * alpha)), IM_COL32(0, 0, 0, (int)(255 * alpha)), buf);
-        
-        snprintf(buf, sizeof(buf), "%d", cl); 
-        tSz = font->CalcTextSizeA(fSz, FLT_MAX, 0.0f, buf);
-        ImVec2 posL = ImVec2(g_level_X + 50.0f * g_autoScale * g_level_Scale + (40.0f * g_autoScale * g_level_Scale - tSz.x)*0.5f, cy + (32.0f * g_autoScale * g_level_Scale - tSz.y)*0.5f);
-        DrawTextWithStroke(d, font, fSz, posL, IM_COL32(0, 255, 180, (int)(255 * alpha)), IM_COL32(0, 0, 0, (int)(255 * alpha)), buf);
-
-        char streakBuf[16] = "-";
-        ImU32 streakColor = IM_COL32(100, 100, 100, (int)(200 * alpha));
-        if (cw > 0) {
-            snprintf(streakBuf, sizeof(streakBuf), "%d", cw);
-            streakColor = IM_COL32(255, 80, 50, (int)(255 * alpha)); 
-        } else if (clost > 0) {
-            snprintf(streakBuf, sizeof(streakBuf), "%d", clost);
-            streakColor = IM_COL32(50, 180, 255, (int)(255 * alpha)); 
-        }
-        
-        tSz = font->CalcTextSizeA(fSz, FLT_MAX, 0.0f, streakBuf);
-        ImVec2 posS = ImVec2(g_level_X + 100.0f * g_autoScale * g_level_Scale + (60.0f * g_autoScale * g_level_Scale - tSz.x)*0.5f, cy + (32.0f * g_autoScale * g_level_Scale - tSz.y)*0.5f);
-        DrawTextWithStroke(d, font, fSz, posS, streakColor, IM_COL32(0, 0, 0, (int)(255 * alpha)), streakBuf);
-    }
-}
-
-void DrawWarningOverlay(const GameSnapshot* snap) {
-    if (!snap || !g_card_warning) return;
-    static float alpha_raw = 0.0f; alpha_raw = ImLerp(alpha_raw, g_card_warning ? 1.0f : 0.0f, 1.0f - expf(-20.0f * ImGui::GetIO().DeltaTime));
-    float alpha = alpha_raw * g_global_esp_alpha;
-    if (alpha < 0.01f) return;
-
-    ImDrawList* d = ImGui::GetForegroundDrawList();
-    static float t_x = g_warn_X, t_y = g_warn_Y, t_scale = g_warn_Scale; 
-    static bool first = true; if (first) { t_x = g_warn_X; t_y = g_warn_Y; t_scale = g_warn_Scale; first = false; }
-    static bool isDragging = false, isScaling = false; static ImVec2 dragOffset, scaleDragOffset;
-
-    float baseSz = 40.0f * g_autoScale, gap = 2.0f * g_autoScale; 
-    float bH = g_warn_Spacing * g_autoScale * 7.0f + 32.0f * g_autoScale;
-    
-    HandleGridInteraction(g_warn_X, g_warn_Y, g_warn_Scale, t_x, t_y, t_scale, isDragging, isScaling, dragOffset, scaleDragOffset,
-                          60.0f * g_autoScale, bH * 0.5f, -220.0f * g_autoScale, bH * 0.5f, -200.0f * g_autoScale, 0, 40.0f * g_autoScale, bH, g_boardLocked, &g_card_warning, true);
-
-    if (!g_boardLocked && alpha > 0.9f * g_global_esp_alpha) {
-        DrawScaleHandle(d, ImVec2(g_warn_X + 60.0f * g_autoScale * g_warn_Scale, g_warn_Y + bH * 0.5f * g_warn_Scale), isScaling);
-        DrawCloseHandle(d, ImVec2(g_warn_X - 220.0f * g_autoScale * g_warn_Scale, g_warn_Y + bH * 0.5f * g_warn_Scale), &g_card_warning);
-    }
-
-    ImFont* font = g_mainFont ? g_mainFont : ImGui::GetFont();
-    float fSz = 20.0f * g_autoScale * g_warn_Scale;
-
-    for (const auto& w : snap->playerWarnings) {
-        int displayRow = w.rowIdx - 1;
-        float cy = g_warn_Y + displayRow * g_warn_Spacing * g_autoScale * g_warn_Scale;
-
-        int drawIdx = 0;
-        for (const auto& kv : w.heroCounts) {
-            int baseId = kv.first, count = kv.second;
-            if (count < g_warning_threshold) continue;
-            
-            int cost = 1;
-            auto pit = snap->cardPoolData.find(baseId);
-            if (pit != snap->cardPoolData.end()) {
-                cost = pit->second.cost;
-            } else {
-                if (baseId >= 100) cost = (baseId / 10) % 10;
-                else if (baseId >= 10) cost = baseId % 10;
-            }
-            
-            if (cost < 1 || cost > 5 || !g_warning_tiers[cost]) continue;
-
-            ImU32 borderColor = IM_COL32(255, 255, 255, (int)(255 * alpha));
-            switch(cost) {
-                case 1: borderColor = IM_COL32(200, 200, 200, (int)(255 * alpha)); break; 
-                case 2: borderColor = IM_COL32(0, 255, 0, (int)(255 * alpha)); break;   
-                case 3: borderColor = IM_COL32(0, 200, 255, (int)(255 * alpha)); break; 
-                case 4: borderColor = IM_COL32(210, 50, 255, (int)(255 * alpha)); break; 
-                case 5: borderColor = IM_COL32(255, 215, 0, (int)(255 * alpha)); break; 
-            }
-
-            float cx = g_warn_X - drawIdx * (baseSz + gap) * g_warn_Scale;
-            ImVec2 pMin = ImVec2(cx, cy), pMax = ImVec2(cx + baseSz * g_warn_Scale, cy + baseSz * g_warn_Scale);
-
-            GLuint tex = GetHeroTexture(baseId);
-            if (tex) {
-                d->AddImageRounded((ImTextureID)(intptr_t)tex, pMin, pMax, ImVec2(0,0), ImVec2(1,1), IM_COL32(255,255,255, (int)(255*alpha)), 6.0f * g_autoScale * g_warn_Scale);
-            } else {
-                d->AddRectFilled(pMin, pMax, IM_COL32(30,30,30, (int)(200*alpha)), 6.0f * g_autoScale * g_warn_Scale);
-                char idBuf[16]; snprintf(idBuf, sizeof(idBuf), "%d", baseId);
-                float idFSz = 14.0f * g_autoScale * g_warn_Scale;
-                ImVec2 idSz = font->CalcTextSizeA(idFSz, FLT_MAX, 0.0f, idBuf);
-                d->AddText(font, idFSz, ImVec2(cx + (baseSz*g_warn_Scale - idSz.x)*0.5f, cy + (baseSz*g_warn_Scale - idSz.y)*0.5f), borderColor, idBuf);
-            }
-            d->AddRect(pMin, pMax, borderColor, 6.0f * g_autoScale * g_warn_Scale, 0, 2.0f * g_autoScale * g_warn_Scale);
-
-            char cntBuf[16]; snprintf(cntBuf, sizeof(cntBuf), "%d张", count);
-            ImVec2 tSz = font->CalcTextSizeA(fSz, FLT_MAX, 0.0f, cntBuf);
-            ImVec2 tPos = ImVec2(cx + (baseSz*g_warn_Scale - tSz.x)*0.5f, cy + baseSz*g_warn_Scale - tSz.y * 0.2f);
-            
-            DrawTextWithStroke(d, font, fSz, tPos, borderColor, IM_COL32(0,0,0, (int)(255*alpha)), cntBuf);
-            drawIdx++;
-        }
-    }
-}
-
-void DrawBoard(const GameSnapshot* snap) {
-    if (!snap || !g_esp_board) return;
-
-    ImDrawList* d = ImGui::GetForegroundDrawList();
-    static float t_x = g_startX, t_y = g_startY, t_scale = g_boardManualScale;
-    static bool firstFrame = true;
-    if (firstFrame) { t_x = g_startX; t_y = g_startY; t_scale = g_boardManualScale; firstFrame = false; }
-    static bool isDragging = false, isScaling = false;
-    static ImVec2 dragOffset, scaleDragOffset;   
-    
-    float baseSz = 38.0f * g_boardScale * g_autoScale;
-    float baseXStep = baseSz * 1.73205f, baseYStep = baseSz * 1.5f;
-    float hitMinY = -baseSz * 2.0f; 
-
-    HandleGridInteraction(g_startX, g_startY, g_boardManualScale, t_x, t_y, t_scale,
-                          isDragging, isScaling, dragOffset, scaleDragOffset,
-                          -6.5f * baseXStep, 3.5f * baseYStep, 0.5f * baseXStep, 3.5f * baseYStep,  
-                          -7.5f * baseXStep, hitMinY, 1.0f * baseXStep, 4.0f * baseYStep,  
-                          g_boardLocked, &g_esp_board, true);
-    
-    static float alpha_raw = 0.0f; 
-    alpha_raw = ImLerp(alpha_raw, g_esp_board ? 1.0f : 0.0f, 1.0f - expf(-20.0f * ImGui::GetIO().DeltaTime));
-    float final_alpha = alpha_raw * g_global_esp_alpha; 
-    if (final_alpha < 0.01f) return;
-    
-    float curSz = baseSz * g_boardManualScale, curXStep = baseXStep * g_boardManualScale, curYStep = baseYStep * g_boardManualScale;
-    float time = (float)ImGui::GetTime(); 
-
-    if (!g_boardLocked) {
-        DrawScaleHandle(d, ImVec2(g_startX - 6.5f * baseXStep * g_boardManualScale, g_startY + 3.5f * baseYStep * g_boardManualScale), isScaling);
-        DrawCloseHandle(d, ImVec2(g_startX + 0.5f * baseXStep * g_boardManualScale, g_startY + 3.5f * baseYStep * g_boardManualScale), &g_esp_board);
-    }
-
-    std::string display_name = "未知";
-
-    if (g_predict_enemy && snap->nextEnemyPlayerId != -1) {
-        auto it = snap->players.find(snap->nextEnemyPlayerId);
-        if (it != snap->players.end() && !it->second.name.empty() && it->second.name != "Unknown") {
-            display_name = it->second.name;
-        }
-    }
-
-    if (g_predict_enemy) {
-        std::string full_text = std::string("下场对手预测: ") + display_name;
-        ImFont* font = g_mainFont ? g_mainFont : ImGui::GetFont();
-        float fontSize = 24.0f * g_autoScale * g_predictNameScale; 
-        ImVec2 tSz = font->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, full_text.c_str());
-        
-        static float t_name_x = g_predictNameX, t_name_y = g_predictNameY, t_name_scale = g_predictNameScale;
-        static bool first_name = true; 
-        if (first_name) { t_name_x = g_predictNameX; t_name_y = g_predictNameY; t_name_scale = g_predictNameScale; first_name = false; }
-        static bool isNameDragging = false, isNameScaling = false; 
-        static ImVec2 nameDragOffset, nameScaleDragOffset;
-        
-        HandleGridInteraction(g_predictNameX, g_predictNameY, g_predictNameScale, t_name_x, t_name_y, t_name_scale,
-                              isNameDragging, isNameScaling, nameDragOffset, nameScaleDragOffset,
-                              tSz.x / g_predictNameScale + 20.0f * g_autoScale, tSz.y / g_predictNameScale * 0.5f,
-                              0, 0, 0, 0, tSz.x / g_predictNameScale, tSz.y / g_predictNameScale, 
-                              g_boardLocked, nullptr, true);
-                              
-        if (!g_boardLocked && final_alpha > 0.9f * g_global_esp_alpha) {
-            DrawScaleHandle(d, ImVec2(g_predictNameX + (tSz.x / g_predictNameScale + 20.0f * g_autoScale) * g_predictNameScale, g_predictNameY + (tSz.y / g_predictNameScale * 0.5f) * g_predictNameScale), isNameScaling);
-        }
-
-        ImVec2 textPos(g_predictNameX, g_predictNameY);
-        float r, g, b; ImGui::ColorConvertHSVtoRGB(fmodf(time * 0.4f, 1.0f), 0.5f, 1.0f, r, g, b);
-        DrawTextWithStroke(d, font, fontSize, textPos, IM_COL32((int)(r*255), (int)(g*255), (int)(b*255), (int)(255 * final_alpha)), IM_COL32(0,0,0, (int)(255 * final_alpha)), full_text.c_str());
-    }
-
-    for(int y = 0; y < 4; y++) {
-        for(int x = 0; x < 7; x++) {
-            float cx = g_startX - x * curXStep - (y % 2 == 1 ? curXStep * 0.5f : 0);
-            float cy = g_startY + y * curYStep;
-            
-            bool hasHero = false;
-            int cellCost = -1, cellBaseHeroId = -1, cellStarLevel = 1, cellHeroId = -1, cellEquipCount = 0;
-
-            if (g_predict_enemy) {
-                for (const auto& hero : snap->currentEnemyHeroes) {
-                    if (hero.x == x && hero.y == y) { 
-                        hasHero = true; cellHeroId = hero.heroId; cellEquipCount = hero.equipCount; 
-                        FastParseHeroId(hero.heroId, cellBaseHeroId, cellCost, cellStarLevel);
-                        break; 
-                    }
-                }
-            }
-
-            ImU32 hexColor = IM_COL32(255, 255, 255, (int)(150 * final_alpha));
-            if (hasHero && cellCost != -1) {
-                switch(cellCost) {
-                    case 1: hexColor = IM_COL32(200, 200, 200, (int)(220 * final_alpha)); break; 
-                    case 2: hexColor = IM_COL32(0, 255, 0, (int)(220 * final_alpha)); break;     
-                    case 3: hexColor = IM_COL32(0, 200, 255, (int)(220 * final_alpha)); break;   
-                    case 4: hexColor = IM_COL32(210, 50, 255, (int)(220 * final_alpha)); break;  
-                    case 5: hexColor = IM_COL32(255, 215, 0, (int)(220 * final_alpha)); break;   
-                    default:hexColor = IM_COL32(255, 255, 255, (int)(220 * final_alpha)); break;
-                }
-            }
-
-            if (hasHero) {
-                GLuint tex = GetHeroTexture(cellBaseHeroId);
-                float imgSz = curSz * 1.5f; 
-                ImVec2 pMin = ImVec2(cx - imgSz*0.5f, cy - imgSz*0.5f), pMax = ImVec2(cx + imgSz*0.5f, cy + imgSz*0.5f);
-                
-                if (tex != 0) d->AddImageRounded((ImTextureID)(intptr_t)tex, pMin, pMax, ImVec2(0,0), ImVec2(1,1), IM_COL32(255, 255, 255, (int)(255 * final_alpha)), imgSz*0.5f);
-                else d->AddCircleFilled(ImVec2(cx, cy), curSz * 0.4f, IM_COL32(0,0,0, (int)(255 * final_alpha)));
-            }
-
-            ImVec2 pts[6];
-            for(int i = 0; i < 6; i++) {
-                float a = (60.0f * i - 30.0f) * (M_PI / 180.0f);
-                pts[i] = ImVec2(cx + curSz * cosf(a), cy + curSz * sinf(a));
-            }
-            d->AddPolyline(pts, 6, hexColor, ImDrawFlags_Closed, 12.0f * g_autoScale * g_boardManualScale);
-
-            if (hasHero) {
-                char infoBuf[16]; snprintf(infoBuf, sizeof(infoBuf), "%d/%d", cellEquipCount, cellStarLevel);
-                ImFont* font = g_mainFont ? g_mainFont : ImGui::GetFont();
-                float fSzInfo = 70.0f * g_autoScale * g_boardManualScale; 
-                ImVec2 tSzInfo = font->CalcTextSizeA(fSzInfo, FLT_MAX, 0.0f, infoBuf);
-                ImVec2 tPosInfo = ImVec2(cx - tSzInfo.x * 0.5f, cy + curSz * 1.5f * 0.10f);
-                DrawTextWithStroke(d, font, fSzInfo, tPosInfo, hexColor | ((int)(255 * final_alpha) << 24), IM_COL32(0,0,0, (int)(255 * final_alpha)), infoBuf);
-            }
-        }
-    }
-}
-
-void DrawCardPool(const GameSnapshot* snap) {
-    if (!snap) return;
-    static float alpha_raw = 0.0f; alpha_raw = ImLerp(alpha_raw, g_show_card_pool ? 1.0f : 0.0f, 1.0f - expf(-20.0f * ImGui::GetIO().DeltaTime));
-    float final_alpha = alpha_raw * g_global_esp_alpha;
-    if (final_alpha < 0.01f) return;
-
-    ImDrawList* d = ImGui::GetForegroundDrawList(); ImGuiIO& io = ImGui::GetIO();
-    
-    std::vector<CardInfo> normalGroups[6];
-    std::vector<CardInfo> warningGroups[6];
-    for (const auto& pair : snap->cardPoolData) {
-        int cost = pair.second.cost;
-        if (cost >= 1 && cost <= 5 && g_show_pool_tiers[cost]) {
-            if (g_pool_warning_enable && g_pool_warning_tiers[cost] && pair.second.remaining <= g_pool_warning_count) {
-                warningGroups[cost].push_back(pair.second);
-            } else {
-                normalGroups[cost].push_back(pair.second);
-            }
-        }
-    }
-    
-    for(int c = 1; c <= 5; c++) {
-        std::sort(normalGroups[c].begin(), normalGroups[c].end(), [](const CardInfo& a, const CardInfo& b) { return a.heroId < b.heroId; });
-        std::sort(warningGroups[c].begin(), warningGroups[c].end(), [](const CardInfo& a, const CardInfo& b) { return a.heroId < b.heroId; });
-    }
-    
-    static float t_x = g_cardPoolX, t_y = g_cardPoolY, t_scaleX = g_cardPoolScaleX, t_scaleY = g_cardPoolScaleY; 
-    static bool first = true; if (first) { t_x = g_cardPoolX; t_y = g_cardPoolY; t_scaleX = g_cardPoolScaleX; t_scaleY = g_cardPoolScaleY; first = false; }
-    
-    static float current_cols = g_card_pool_cols;
-    current_cols = ImLerp(current_cols, (float)g_card_pool_cols, 1.0f - expf(-15.0f * io.DeltaTime));
-    int draw_cols = std::max(1, (int)std::ceil(current_cols));
-
-    float baseImgSz = 45.0f * g_autoScale, gap = 5.0f * g_autoScale;
-    
-    int total_rows = 0;
-    int max_items_in_row = 0;
-    for(int cost = 1; cost <= 5; cost++) {
-        int n_size = normalGroups[cost].size();
-        int w_size = warningGroups[cost].size();
-        if(n_size == 0 && w_size == 0) continue;
-        
-        if (n_size > 0) {
-            total_rows += std::ceil((float)n_size / draw_cols);
-            max_items_in_row = std::max(max_items_in_row, std::min(n_size, draw_cols));
-        }
-        if (w_size > 0) {
-            total_rows += std::ceil((float)w_size / draw_cols);
-            max_items_in_row = std::max(max_items_in_row, std::min(w_size, draw_cols));
-        }
-    }
-    if(total_rows == 0) return; 
-
-    float totalW = max_items_in_row * baseImgSz + std::max(0, max_items_in_row - 1) * gap; 
-    float totalH = total_rows * baseImgSz + std::max(0, total_rows - 1) * gap;
-    
-    static bool isDragging = false, isScaling = false; static ImVec2 dragOffset, scaleDragOffset;
-    if (g_show_card_pool) {
-        HandleGridInteractionXY(g_cardPoolX, g_cardPoolY, g_cardPoolScaleX, g_cardPoolScaleY, t_x, t_y, t_scaleX, t_scaleY,
-                              isDragging, isScaling, dragOffset, scaleDragOffset, totalW + 10.0f * g_autoScale, totalH + 10.0f * g_autoScale, 
-                              -15.0f * g_autoScale, -15.0f * g_autoScale, -15.0f * g_autoScale, -15.0f * g_autoScale, totalW + 15.0f * g_autoScale, totalH + 15.0f * g_autoScale, g_boardLocked, &g_show_card_pool);
-    }
-    
-    if (!g_boardLocked && final_alpha > 0.9f * g_global_esp_alpha) {
-        DrawScaleHandle(d, ImVec2(g_cardPoolX + (totalW + 10.0f * g_autoScale) * g_cardPoolScaleX, g_cardPoolY + (totalH + 10.0f * g_autoScale) * g_cardPoolScaleY), isScaling);
-        DrawCloseHandle(d, ImVec2(g_cardPoolX - 15.0f * g_autoScale * g_cardPoolScaleX, g_cardPoolY - 15.0f * g_autoScale * g_cardPoolScaleY), &g_show_card_pool);
-    }
-
-    ImFont* font = g_mainFont ? g_mainFont : ImGui::GetFont(); 
-    float avgScale = (g_cardPoolScaleX + g_cardPoolScaleY) * 0.5f, fSz = 18.0f * g_autoScale * avgScale;
-    float fa = final_alpha * g_cardPoolAlpha; 
-    int aInt = (int)(255 * fa); if (aInt <= 0) return;
-
-    int current_row_offset = 0;
-    for(int cost = 1; cost <= 5; cost++) {
-        if(normalGroups[cost].empty() && warningGroups[cost].empty()) continue;
-        
-        ImU32 bcNormal;
-        switch(cost) { 
-            case 1: bcNormal = IM_COL32(169,169,169,aInt); break; case 2: bcNormal = IM_COL32(0,255,0,aInt); break; 
-            case 3: bcNormal = IM_COL32(0,150,255,aInt); break; case 4: bcNormal = IM_COL32(200,0,255,aInt); break; 
-            case 5: bcNormal = IM_COL32(255,215,0,aInt); break; default:bcNormal = IM_COL32(255,255,255,aInt); 
-        }
-        ImU32 bcWarning = IM_COL32(255, 50, 50, aInt); 
-        
-        auto drawGroup = [&](const std::vector<CardInfo>& group, ImU32 bc) {
-            if(group.empty()) return;
-            for (size_t i = 0; i < group.size(); i++) {
-                int c = i % draw_cols; 
-                int r = current_row_offset + (i / draw_cols);
-                const auto& card = group[i]; 
-
-                float x = g_cardPoolX + c * (baseImgSz * g_cardPoolScaleX + gap * g_cardPoolScaleX); 
-                float y = g_cardPoolY + r * (baseImgSz * g_cardPoolScaleY + gap * g_cardPoolScaleY);
-                
-                GLuint tex = GetHeroTexture(card.heroId); float round = 6.0f * g_autoScale * avgScale;
-                if (tex != 0) d->AddImageRounded((ImTextureID)(intptr_t)tex, ImVec2(x, y), ImVec2(x + baseImgSz*g_cardPoolScaleX, y + baseImgSz*g_cardPoolScaleY), ImVec2(0,0), ImVec2(1,1), IM_COL32(255, 255, 255, aInt), round);
-                else {
-                    d->AddRectFilled(ImVec2(x, y), ImVec2(x + baseImgSz*g_cardPoolScaleX, y + baseImgSz*g_cardPoolScaleY), IM_COL32(20, 20, 20, aInt), round);
-                    char idBuf[16]; snprintf(idBuf, sizeof(idBuf), "%d", card.heroId); float idFSz = 14.0f * g_autoScale * avgScale; ImVec2 idSz = font->CalcTextSizeA(idFSz, FLT_MAX, 0.0f, idBuf);
-                    d->AddText(font, idFSz, ImVec2(x + (baseImgSz*g_cardPoolScaleX - idSz.x)*0.5f, y + (baseImgSz*g_cardPoolScaleY - idSz.y)*0.5f), bc, idBuf);
-                }
-                
-                float borderThick = (bc == bcWarning) ? (2.5f * g_autoScale * avgScale) : (1.0f * g_autoScale * avgScale);
-                if (bc == bcWarning) {
-                    float pulse = (sinf((float)ImGui::GetTime() * 8.0f) + 1.0f) * 0.5f; 
-                    bc = IM_COL32(255, 50 + (int)(100*pulse), 50 + (int)(100*pulse), aInt); 
-                    d->AddRect(ImVec2(x, y), ImVec2(x + baseImgSz*g_cardPoolScaleX, y + baseImgSz*g_cardPoolScaleY), IM_COL32(255,0,0, (int)(aInt*0.4f)), round, 0, borderThick + 2.0f);
-                }
-                d->AddRect(ImVec2(x, y), ImVec2(x + baseImgSz*g_cardPoolScaleX, y + baseImgSz*g_cardPoolScaleY), bc, round, ImDrawFlags_RoundCornersAll, borderThick);
-
-                char buf[32]; snprintf(buf, sizeof(buf), "%d/%d", card.remaining, card.total); 
-                ImVec2 tSz = font->CalcTextSizeA(fSz, FLT_MAX, 0.0f, buf);
-                ImVec2 tPos = ImVec2(x + (baseImgSz*g_cardPoolScaleX - tSz.x)*0.5f, y + baseImgSz*g_cardPoolScaleY - tSz.y - 2.0f);
-                ImU32 textColor = (bc == bcWarning) ? IM_COL32(255,100,100, aInt) : (bc | (aInt << 24));
-                DrawTextWithStroke(d, font, fSz, tPos, textColor, IM_COL32(0,0,0, aInt), buf);
-            }
-            current_row_offset += std::ceil((float)group.size() / draw_cols);
-        };
-
-        drawGroup(normalGroups[cost], bcNormal);
-        drawGroup(warningGroups[cost], bcWarning);
-    }
-}
-
-void DrawDebugWindow(const GameSnapshot* snap) {
-    if (!snap || !g_show_debug_window) return;
-    ImGui::SetNextWindowSize(ImVec2(550 * g_autoScale, 600 * g_autoScale), ImGuiCond_FirstUseEver);
-    if (ImGui::Begin((const char*)u8"调试日志 & 全功能偏移链监控", &g_show_debug_window)) {
-        
-        ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.5f, 1.0f), (const char*)u8"当前渲染帧率 (FPS): %.1f", ImGui::GetIO().Framerate);
-        ImGui::Separator();
-
-        if (ImGui::BeginTabBar("DebugTabs")) {
-
-            if (ImGui::BeginTabItem((const char*)u8"3D追踪与装备偏移调试")) {
-                auto InputHex = [](const char* label, int* v) {
-                    int step = 1, step_fast = 16;
-                    ImGui::InputScalar(label, ImGuiDataType_S32, v, &step, &step_fast, "%X", ImGuiInputTextFlags_CharsHexadecimal);
-                };
-
-                ImGui::TextColored(ImVec4(1, 0.8f, 0.2f, 1), (const char*)u8"【装备栏偏移调节】");
-                InputHex("Equip Base (0x2e8)", &g_off_equip_base);
-                InputHex("Equip Array (0x10)", &g_off_equip_arr);
-                InputHex("Equip Count (0x18)", &g_off_equip_count); 
-                InputHex("Equip Head (0x20)", &g_off_equip_head); 
-                InputHex("Equip Step (0x8)", &g_off_equip_step);  
-                InputHex("Equip ID (0x14)", &g_off_equip_id);
-                
-                ImGui::Separator();
-                ImGui::TextColored(ImVec4(1, 0.8f, 0.2f, 1), (const char*)u8"【场上英雄实体与3D坐标偏移调节】");
-                InputHex("Hero Dyn Base (0x2b0)", &g_off_hero_dyn);
-                InputHex("Hero Array (0x20)", &g_off_hero_arr);
-                InputHex("Hero Count (0x18)", &g_off_hero_count);   
-                InputHex("Hero Head (0x20)", &g_off_hero_head);   
-                InputHex("Hero Step (0x8)", &g_off_hero_step);    
-                InputHex("Hero ID (0x108)", &g_off_hero_id);
-                InputHex("UnitData (0x48)", &g_off_hero_unit);
-                InputHex("BattleUnit (0x20)", &g_off_unit_battle);
-                InputHex("Pos X (0x238)", &g_off_battle_posx);
-                
-                ImGui::Separator();
-                ImGui::TextColored(ImVec4(1, 0.5f, 0.5f, 1), (const char*)u8"【穿拆装备可视化校准】");
-                if (ImGui::Checkbox((const char*)u8"显示[穿拆装备]辅助圈 (直接在屏幕拖拽英雄上的绿圈)", &g_show_equip_ui_debug)) {
-                    if (g_show_equip_ui_debug) g_show_sell_ui_debug = false;
-                }
-                
-                ImGui::Separator();
-                ImGui::TextColored(ImVec4(1, 0.5f, 0.8f, 1), (const char*)u8"【卖出英雄可视化校准】");
-                if (ImGui::Checkbox((const char*)u8"显示[卖出英雄]连线与圈 (拖拽英雄身上的粉圈或底部的红圈)", &g_show_sell_ui_debug)) {
-                    if (g_show_sell_ui_debug) g_show_equip_ui_debug = false;
-                }
-                
-                ImGui::Separator();
-                ImGui::TextColored(ImVec4(0.8f, 1.0f, 0.8f, 1), (const char*)u8"【滑动动作控制】");
-                ImGui::Checkbox((const char*)u8"开启滑动动画视觉反馈", &g_show_swipe_visuals);
-                ImGui::SliderInt((const char*)u8"按下后停留时间 (ms)", &g_swipe_down_delay_ms, 0, 100);
-                ImGui::SliderInt((const char*)u8"滑动拖拽步数 (0为瞬间移动)", &g_swipe_steps, 0, 50);
-                ImGui::SliderInt((const char*)u8"单步拖拽延迟 (ms)", &g_swipe_step_delay_ms, 0, 50);
-                ImGui::SliderInt((const char*)u8"释放前停留时间 (ms)", &g_swipe_up_delay_ms, 0, 100);
-                ImGui::SliderInt((const char*)u8"动作执行后额外缓冲 (ms)", &g_equip_extra_cooldown_ms, 0, 500);
-
-                ImGui::Separator();
-                if (ImGui::Button((const char*)u8"保存上述所有配置", ImVec2(180 * g_autoScale, 30 * g_autoScale))) { SaveConfig(); g_save_timer = 1.5f; }
-
-                ImGui::Separator();
-                ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), (const char*)u8"【寻址状态实时输出监控】");
-                ImGui::Text("Main Camera: 0x%lX", snap->mainCamera);
-
-                ImGui::TextColored(ImVec4(0.8f, 0.6f, 1.0f, 1.0f), (const char*)u8"★ 左侧装备数组 (0-19):");
-                if (snap->myItems.empty()) {
-                    ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), (const char*)u8"暂未读取到装备...");
-                } else {
-                    std::string eqRow1 = "";
-                    std::string eqRow2 = "";
-                    for (int i = 0; i < snap->myItems.size(); i++) {
-                        if (i < 10) eqRow1 += std::to_string(snap->myItems[i]) + " ";
-                        else eqRow2 += std::to_string(snap->myItems[i]) + " ";
-                    }
-                    ImGui::TextWrapped("列1(0-9): %s", eqRow1.c_str());
-                    ImGui::TextWrapped("列2(10-19): %s", eqRow2.c_str());
-                }
-                ImGui::Separator();
-
-                ImGui::BeginChild("TracesScroll", ImVec2(0, 0), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
-                if (snap->debugHeroTraces.empty()) {
-                    ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), (const char*)u8"暂未读取到英雄实体...");
-                } else {
-                    for (const auto& t : snap->debugHeroTraces) {
-                        ImGui::TextColored(ImVec4(1,1,0,1), "[槽位 %d] HeroID: %d", t.index, t.heroId);
-                        ImGui::Text(" HeroObj: 0x%lX", t.heroObj);
-                        ImGui::Text(" UnitData: 0x%lX", t.unitData);
-                        ImGui::Text(" BattleUnit: 0x%lX", t.battleUnit);
-                        ImGui::TextColored(ImVec4(0,1,1,1), " 3D World: (%.1f, %.1f, %.1f)", t.worldPos.x, t.worldPos.y, t.worldPos.z);
-                        ImGui::TextColored(ImVec4(0,1,0,1), " 2D Screen: (%.1f, %.1f)", t.screenPos.x, t.screenPos.y);
-                        ImGui::Separator();
-                    }
-                }
-                ImGui::EndChild();
-
-                ImGui::EndTabItem();
-            }
-
-            if (ImGui::BeginTabItem((const char*)u8"自动拿牌/刷新(UI组件)状态")) {
-                ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.5f, 1.0f), (const char*)u8"【HeroRoot 0x46cce08 拦截列表 - 自动拿牌】");
-                ImGui::Separator();
-                for (int i = 0; i < 5; i++) {
-                    if (g_shop_slot_instances[i] != 0) ImGui::TextColored(ImVec4(0.6f, 0.9f, 1.0f, 1.0f), "[买牌槽位 %d] UI 实例 x0: 0x%lX", i, g_shop_slot_instances[i]);
-                    else ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "[买牌槽位 %d] 等待商店刷新捕获...", i);
-                }
-                ImGui::EndTabItem();
-            }
-
-            if (ImGui::BeginTabItem((const char*)u8"商店/备战席偏移调试")) {
-                ImGui::TextColored(ImVec4(1, 0.8f, 0.2f, 1), (const char*)u8"【动态偏移调节】");
-                auto InputHex = [](const char* label, int* v) {
-                    int step = 1, step_fast = 16;
-                    ImGui::InputScalar(label, ImGuiDataType_S32, v, &step, &step_fast, "%X", ImGuiInputTextFlags_CharsHexadecimal);
-                };
-
-                InputHex("Shop Base", &g_off_shop_base); InputHex("Bench Base", &g_off_bench_base);
-                InputHex("Base -> p20", &g_off_shop_p20); InputHex("p20 -> Entries", &g_off_shop_entries);
-                if (ImGui::Button((const char*)u8"保存上述偏移配置", ImVec2(180 * g_autoScale, 30 * g_autoScale))) { SaveConfig(); g_save_timer = 1.5f; }
-                ImGui::EndTabItem();
-            }
-
-            if (ImGui::BeginTabItem((const char*)u8"运行日志(防崩溃)")) {
-                ImGui::BeginChild("LogScrollRegion", ImVec2(0, 0), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
-                {
-                    std::lock_guard<std::mutex> logLock(g_logMutex);
-                    if (g_appLogs.empty()) ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), (const char*)u8"暂无错误日志...");
-                    else for (const auto& log : g_appLogs) ImGui::TextWrapped("%s", log.c_str());
-                    if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) ImGui::SetScrollHereY(1.0f);
-                }
-                ImGui::EndChild();
-                ImGui::EndTabItem();
-            }
-
-            if (ImGui::BeginTabItem((const char*)u8"资源路径收集器")) {
-                ImGui::Checkbox((const char*)u8"开启小小英雄路径收集", &g_collect_skins);
-                ImGui::SameLine();
-                ImGui::Checkbox((const char*)u8"开启棋盘路径收集", &g_collect_maps);
-                
-                ImGui::Spacing();
-                if (ImGui::Button((const char*)u8"清空所有记录", ImVec2(-1, 30 * g_autoScale))) {
-                    std::lock_guard<std::mutex> lock(g_collect_mutex);
-                    g_collected_skins.clear();
-                    g_collected_maps.clear();
-                }
-
-                ImGui::Separator();
-                ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f), (const char*)u8"【截获的小小英雄模型路径】");
-                ImGui::BeginChild("SkinsScroll", ImVec2(0, 180 * g_autoScale), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
-                {
-                    std::lock_guard<std::mutex> lock(g_collect_mutex);
-                    if (g_collected_skins.empty()) ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), (const char*)u8"暂无记录，请勾选开关并在游戏中切换界面或等待...");
-                    
-                    static int copied_skin_idx = -1;
-                    static float skin_copy_timer = 0.0f;
-                    if (skin_copy_timer > 0.0f) skin_copy_timer -= ImGui::GetIO().DeltaTime;
-
-                    int s_idx = 0;
-                    for (const auto& s : g_collected_skins) {
-                        ImGui::TextWrapped("%s", s.c_str());
-                        ImGui::PushID(s_idx);
-                        if (ImGui::Button((const char*)u8"复制路径", ImVec2(100 * g_autoScale, 26 * g_autoScale))) {
-                            ImGui::SetClipboardText(s.c_str());
-                            CopyToAndroidClipboard(s.c_str());
-                            copied_skin_idx = s_idx;
-                            skin_copy_timer = 2.0f;
-                        }
-                        if (copied_skin_idx == s_idx && skin_copy_timer > 0.0f) {
-                            ImGui::SameLine();
-                            ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.2f, 1.0f), (const char*)u8"✓ 已复制");
-                        }
-                        ImGui::PopID();
-                        ImGui::Separator();
-                        s_idx++;
-                    }
-                }
-                ImGui::EndChild();
-
-                ImGui::TextColored(ImVec4(0.2f, 0.8f, 1.0f, 1.0f), (const char*)u8"【截获的竞技场/棋盘路径】");
-                ImGui::BeginChild("MapsScroll", ImVec2(0, 180 * g_autoScale), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
-                {
-                    std::lock_guard<std::mutex> lock(g_collect_mutex);
-                    if (g_collected_maps.empty()) ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), (const char*)u8"暂无记录，请勾选开关并在游戏中切换界面或等待...");
-                    
-                    static int copied_map_idx = -1;
-                    static float map_copy_timer = 0.0f;
-                    if (map_copy_timer > 0.0f) map_copy_timer -= ImGui::GetIO().DeltaTime;
-
-                    int m_idx = 0;
-                    for (const auto& m : g_collected_maps) {
-                        ImGui::TextWrapped("%s", m.c_str());
-                        ImGui::PushID(m_idx + 10000); // 避免ID冲突
-                        if (ImGui::Button((const char*)u8"复制路径", ImVec2(100 * g_autoScale, 26 * g_autoScale))) {
-                            ImGui::SetClipboardText(m.c_str());
-                            CopyToAndroidClipboard(m.c_str());
-                            copied_map_idx = m_idx;
-                            map_copy_timer = 2.0f;
-                        }
-                        if (copied_map_idx == m_idx && map_copy_timer > 0.0f) {
-                            ImGui::SameLine();
-                            ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.2f, 1.0f), (const char*)u8"✓ 已复制");
-                        }
-                        ImGui::PopID();
-                        ImGui::Separator();
-                        m_idx++;
-                    }
-                }
-                ImGui::EndChild();
-                ImGui::EndTabItem();
-            }
-
-            ImGui::EndTabBar();
-        }
-    }
-    ImGui::End();
-}
-
-void DrawMenu() {
-    ImGuiIO& io = ImGui::GetIO(); ImGuiStyle& style = ImGui::GetStyle();
-    style.WindowRounding = 16.0f * g_autoScale; style.FrameRounding = 8.0f * g_autoScale; style.PopupRounding = 8.0f * g_autoScale;
-    style.ItemSpacing = ImVec2(12 * g_autoScale, 12 * g_autoScale); style.WindowPadding = ImVec2(16 * g_autoScale, 16 * g_autoScale); 
-    style.WindowBorderSize = 1.0f; style.ScrollbarSize = 35.0f * g_autoScale; style.GrabMinSize = 25.0f * g_autoScale;
-    style.Colors[ImGuiCol_WindowBg] = ImVec4(0.08f, 0.09f, 0.11f, 0.92f); style.Colors[ImGuiCol_Border] = ImVec4(1.0f, 1.0f, 1.0f, 0.08f);
-    style.Colors[ImGuiCol_TitleBg] = ImVec4(0.08f, 0.09f, 0.11f, 0.95f); style.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.12f, 0.13f, 0.15f, 0.95f);
-
-    static bool firstMenuOpen = true; 
-    if (firstMenuOpen) { 
-        ImGui::SetNextWindowPos(ImVec2(g_menuX, g_menuY), ImGuiCond_Always); 
-        ImGui::SetNextWindowSize(ImVec2(g_menuW, g_menuH), ImGuiCond_Always);
-        ImGui::SetNextWindowCollapsed(g_menuCollapsed, ImGuiCond_Always); 
-        firstMenuOpen = false; 
-    }
-
-    if (ImGui::Begin((const char*)u8"金铲铲助手", NULL, ImGuiWindowFlags_NoSavedSettings)) {
-        if (!ImGui::IsWindowCollapsed()) {
-            float curW = ImGui::GetWindowSize().x, curH = ImGui::GetWindowSize().y;
-            if (std::abs(curW - g_menuW) > 5.0f || std::abs(curH - g_menuH) > 5.0f) { g_menuW = curW; g_menuH = curH; g_scale = std::clamp(curW / (500.0f * g_autoScale), 0.5f, 2.5f); }
-        }
-        g_menuX = ImGui::GetWindowPos().x; g_menuY = ImGui::GetWindowPos().y; g_menuCollapsed = ImGui::IsWindowCollapsed();
-        if (!g_menuCollapsed) {
-            ImGui::SetWindowFontScale(g_scale);
-            ImGui::TextColored(ImVec4(0.0f, 0.85f, 0.55f, 1.0f), (const char*)u8"[+] 稳定原版运行中 | FPS: %.1f", io.Framerate);
-            ColoredSeparator();
-            
-            // ===============================================
-            // 神话换肤UI 
-            // ===============================================
-            if (ModernAnimatedFolder((const char*)u8"🏆 神话皮肤换肤", &g_header_skin)) {
-                ModernToggle((const char*)u8"开启小小英雄换肤 (对局内生效)", &g_enable_skin, 18);
-                if (g_enable_skin) {
-                    ImGui::Indent(15.0f * g_autoScale * g_scale);
-                    
-                    const int numSkins = sizeof(g_skinList)/sizeof(g_skinList[0]);
-                    std::vector<const char*> skinNames(numSkins);
-                    for (int i = 0; i < numSkins; i++) {
-                        skinNames[i] = g_skinList[i].zh_name;
-                    }
-
-                    ImGui::PushItemWidth(260.0f * g_autoScale * g_scale);
-                    if (ImGui::Combo("##SkinSelect", &g_selected_skin_idx, skinNames.data(), numSkins, 10)) {
-                        g_save_timer = 1.5f; SaveConfig();
-                    }
-                    ImGui::PopItemWidth();
-                    ImGui::SameLine();
-                    ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f), (const char*)u8"选择英雄");
-
-                    ImGui::Unindent(15.0f * g_autoScale * g_scale);
-                }
-                
-                ImGui::Separator();
-                
-                ModernToggle((const char*)u8"开启竞技场换肤 (大厅或进图前开启)", &g_enable_map_skin, 19);
-                if (g_enable_map_skin) {
-                    ImGui::Indent(15.0f * g_autoScale * g_scale);
-                    
-                    const int numMaps = sizeof(g_mapList)/sizeof(g_mapList[0]);
-                    std::vector<const char*> mapNames(numMaps);
-                    for (int i = 0; i < numMaps; i++) {
-                        mapNames[i] = g_mapList[i].zh_name;
-                    }
-
-                    ImGui::PushItemWidth(260.0f * g_autoScale * g_scale);
-                    if (ImGui::Combo("##MapSelect", &g_selected_map_idx, mapNames.data(), numMaps, 10)) {
-                        g_save_timer = 1.5f; SaveConfig();
-                    }
-                    ImGui::PopItemWidth();
-                    ImGui::SameLine();
-                    ImGui::TextColored(ImVec4(0.5f, 0.8f, 1.0f, 1.0f), (const char*)u8"选择棋盘");
-
-                    ImGui::Unindent(15.0f * g_autoScale * g_scale);
-                }
-                
-                EndModernAnimatedFolder();
-                ColoredSeparator();
-            }
-
-            ModernToggle((const char*)u8"打开极速退游悬浮窗", &g_show_instant_quit_window, 7);
-            ModernToggle((const char*)u8"打开卖空英雄悬浮窗", &g_show_sell_window, 23); 
-            ColoredSeparator();
-
-            // 穿拆装备与连线选项
-            ModernToggle((const char*)u8"打开穿卸装备悬浮窗", &g_show_equip_window, 21);
-            ModernToggle((const char*)u8"开启英雄3D追踪连线", &g_draw_hero_lines, 22);
-            ColoredSeparator();
-            
-            ModernToggle((const char*)u8"主线程并发极速秒牌", &g_auto_buy, 14);
-            if (g_auto_buy) {
-                ImGui::Indent(15.0f * g_autoScale * g_scale);
-                ModernToggle((const char*)u8"英雄列表及装备图鉴", &g_show_hero_list_window, 20);
-                ImGui::Unindent(15.0f * g_autoScale * g_scale);
-            }
-            ModernSlider((const char*)u8"自动刷新(D牌)间隔 (毫秒)", &g_auto_buy_delay_ms, 0.0f, 1000.0f);
-            ModernNumberAdjuster((const char*)u8"低于该金币停止刷新", &g_auto_refresh_money_threshold, 0, 200);
-            ColoredSeparator();
-
-            ModernToggle((const char*)u8"打开自动操作悬浮窗", &g_show_auto_window, 15);
-            if (g_show_auto_window) {
-                ImGui::Indent(15.0f * g_autoScale * g_scale);
-                ModernToggle((const char*)u8"自动拿天选 (二星英雄)", &g_auto_buy_chosen, 16);
-                ModernToggle((const char*)u8"显示[一键清空备战席]按钮", &g_show_clear_bench_btn, 24); 
-                ImGui::Unindent(15.0f * g_autoScale * g_scale);
-            }
-            ColoredSeparator();
-            
-            if (ModernAnimatedFolder((const char*)u8"预测功能", &g_header_pred)) {
-                ModernToggle((const char*)u8"预测对手", &g_predict_enemy, 1); 
-                if (g_predict_enemy) {
-                    ImGui::Indent(15.0f * g_autoScale * g_scale); ModernSlider((const char*)u8"预测名字缩放", &g_predictNameScale, 0.5f, 5.0f); ImGui::Unindent(15.0f * g_autoScale * g_scale);
-                }
-                ModernToggle((const char*)u8"预测海克斯", &g_predict_hex, 2); 
-                EndModernAnimatedFolder();
-            }
-            if (ModernAnimatedFolder((const char*)u8"透视功能", &g_header_esp)) {
-                ModernSlider((const char*)u8"整体透视透明度", &g_global_esp_alpha, 0.1f, 1.0f); 
-                ModernToggle((const char*)u8"对手棋盘透视", &g_esp_board, 3); 
-                ModernToggle((const char*)u8"敌方备战席透视", &g_esp_enemy_bench, 5); 
-                ModernToggle((const char*)u8"金币等级透视", &g_esp_level, 9); 
-                if (g_esp_level) {
-                    ImGui::Indent(15.0f * g_autoScale * g_scale); ModernSlider((const char*)u8"行与行间距", &g_level_Spacing, 20.0f, 150.0f); ModernSlider((const char*)u8"字体缩放", &g_level_Scale, 0.5f, 3.0f); ImGui::Unindent(15.0f * g_autoScale * g_scale);
-                }
-                EndModernAnimatedFolder();
-            }
-            ColoredSeparator();
-            
-            ModernToggle((const char*)u8"锁定所有窗口", &g_boardLocked, 8); 
-            
-            if (ModernToggle((const char*)u8"显示/调节 [穿装] 落点 (需解锁窗口移动)", &g_show_equip_ui_debug, 25)) {
-                if (g_show_equip_ui_debug) g_show_sell_ui_debug = false;
-            }
-            if (ModernToggle((const char*)u8"显示/调节 [卖牌] 落点 (需解锁窗口移动)", &g_show_sell_ui_debug, 26)) {
-                if (g_show_sell_ui_debug) g_show_equip_ui_debug = false;
-            }
-
-            if (g_boardLocked) {
-                ImGui::Indent(15.0f * g_autoScale * g_scale);
-                ImGui::TextColored(ImVec4(1, 0.8f, 0.2f, 1), (const char*)u8"【装备栏点击点微调】");
-                ModernFloatAdjuster((const char*)u8"起点 X", &g_equip_ui_start_x, 0.0f, 3000.0f, 1.0f);
-                ModernFloatAdjuster((const char*)u8"起点 Y", &g_equip_ui_start_y, 0.0f, 3000.0f, 1.0f);
-                ModernFloatAdjuster((const char*)u8"列间距 X", &g_equip_ui_step_x, 10.0f, 500.0f, 1.0f);
-                ModernFloatAdjuster((const char*)u8"行间距 Y", &g_equip_ui_step_y, 10.0f, 500.0f, 1.0f);
-                ImGui::Unindent(15.0f * g_autoScale * g_scale);
-            }
-            
-            ModernToggle((const char*)u8"牌库显示", &g_show_card_pool, 10);
-            if (g_show_card_pool) {
-                ImGui::Indent(15.0f * g_autoScale * g_scale); ModernTierSelector((const char*)u8"显示等级:", g_show_pool_tiers); 
-                ModernNumberAdjuster((const char*)u8"单行最大列数", &g_card_pool_cols, 1, 30); ModernFloatAdjuster((const char*)u8"牌库透明度", &g_cardPoolAlpha, 0.1f, 1.0f, 0.1f);
-                
-                ColoredSeparator();
-                ModernToggle((const char*)u8"开启牌库剩余量红框预警", &g_pool_warning_enable, 17);
-                if (g_pool_warning_enable) {
-                    ImGui::Indent(15.0f * g_autoScale * g_scale);
-                    ModernTierSelector((const char*)u8"预警卡费:", g_pool_warning_tiers);
-                    ModernNumberAdjuster((const char*)u8"低于几张红框并沉底", &g_pool_warning_count, 1, 30);
-                    ImGui::Unindent(15.0f * g_autoScale * g_scale);
-                }
-                
-                ImGui::Unindent(15.0f * g_autoScale * g_scale);
-            }
-            ModernToggle((const char*)u8"卡牌预警数量", &g_card_warning, 11);
-            if (g_card_warning) {
-                ImGui::Indent(15.0f * g_autoScale * g_scale); ModernTierSelector((const char*)u8"预警等级:", g_warning_tiers); 
-                ModernNumberAdjuster((const char*)u8"预警张数", &g_warning_threshold, 1, 30); ModernSlider((const char*)u8"预警行间距", &g_warn_Spacing, 20.0f, 150.0f); ModernSlider((const char*)u8"预警整体缩放", &g_warn_Scale, 0.5f, 3.0f);
-                ImGui::Unindent(15.0f * g_autoScale * g_scale);
-            }
-            ModernToggle((const char*)u8"全功能偏移追踪与调试", &g_show_debug_window, 12);
-            
-            ImGui::Spacing();
-            
-            ColoredSeparator();
-            
-            if (g_save_timer > 0.0f) {
-                g_save_timer -= io.DeltaTime;
-                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.7f, 0.4f, 1.0f)); ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.0f, 0.7f, 0.4f, 1.0f)); ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.0f, 0.7f, 0.4f, 1.0f));
-                ImGui::Button((const char*)u8"✓ 配置文件已保存", ImVec2(-1, 55 * g_autoScale)); ImGui::PopStyleColor(3);
-            } else {
-                if (ImGui::Button((const char*)u8"保存当前配置", ImVec2(-1, 55 * g_autoScale))) { g_save_timer = 1.5f; SaveConfig(); }
-            }
-        }
-    }
-    ImGui::End();
-}
-
-// =================================================================
-// 核心渲染循环 EGLSwapBuffers
-// =================================================================
-EGLBoolean (*old_eglSwap)(EGLDisplay, EGLSurface) = nullptr;
-std::atomic<bool> g_engine_rendering{false};
-
-EGLBoolean hook_eglSwap(EGLDisplay dpy, EGLSurface surf) {
-    if (!g_engine_rendering.load()) {
-        g_engine_rendering.store(true);
-    }
-
-    eglQuerySurface(dpy, surf, EGL_WIDTH, &g_gl_width);
-    eglQuerySurface(dpy, surf, EGL_HEIGHT, &g_gl_height);
-    
-    if (g_gl_width <= 0 || g_gl_height <= 0) {
-        return old_eglSwap(dpy, surf);
-    }
-
-    static bool init = false;
-    static auto last_time = std::chrono::high_resolution_clock::now();
-    
-    static EGLContext last_ctx = EGL_NO_CONTEXT;
-    EGLContext current_ctx = eglGetCurrentContext();
-    if (current_ctx != last_ctx) {
-        if (init) {
-            ImGui_ImplOpenGL3_DestroyDeviceObjects();
-            ClearAllTextureCaches();     
-            g_needUpdateFontSafe = true; 
-            g_cached_view_width = -1;    
-            g_cached_view_height = -1;
-        }
-        last_ctx = current_ctx;
-    }
-
-    if (!init) {
-        ImGui::CreateContext(); ImGuiIO& io = ImGui::GetIO(); io.IniFilename = nullptr; LoadConfig(); 
-        ImGui_ImplOpenGL3_Init("#version 300 es"); io.DisplaySize = ImVec2((float)g_gl_width, (float)g_gl_height); UpdateFontHD(true); init = true;
-    }
-    if (g_needUpdateFontSafe) { UpdateFontHD(true); g_needUpdateFontSafe = false; }
-    
-    auto current_time = std::chrono::high_resolution_clock::now();
-    float delta = std::chrono::duration<float>(current_time - last_time).count();
-    last_time = current_time;
-    ImGuiIO& io = ImGui::GetIO();
-    io.DisplaySize = ImVec2((float)g_gl_width, (float)g_gl_height);
-    io.DeltaTime = delta > 0.0001f ? delta : (1.0f / 120.0f); 
-    
-    ProcessTextureQueue();
-
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui::NewFrame();
-    glDisable(GL_SCISSOR_TEST); 
-    
-    auto snapshot = GetSnapshot();
-    
-    DrawBoard(snapshot); 
-    DrawBenchESP(snapshot);   
-    DrawPurePredictEnemy(snapshot); 
-    DrawPurePredictHex(snapshot); 
-    DrawLevelOverlay(snapshot); 
-    DrawWarningOverlay(snapshot);   
-    DrawCardPool(snapshot); 
-    DrawShopESP(snapshot);
-    DrawAutoActionWindow(); 
-    DrawAutoEquipWindow();     
-    DrawSellHeroWindow(); 
-    DrawHeroLinesESP(snapshot);
-    DrawEquipUIDebug();         
-    DrawSwipePaths();           
-    DrawInstantQuitWindow();
-    DrawHeroSelectionWindow(); 
-    DrawMenu();
-    DrawDebugWindow(snapshot); 
-    
-    ImGui::Render();
-    glViewport(0, 0, g_gl_width, g_gl_height);
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-    return old_eglSwap(dpy, surf);
-}
-
-// =================================================================
-// 初始化入口
-// =================================================================
-void* DelayedHookThread(void*) {
-    while (!g_engine_rendering.load()) {
-        sleep(1);
-    }
-    sleep(4);
-
-    FindAndHookHiddenJNI();
-    InitBusinessHooks();
-    return nullptr;
-}
-
-void* SetupThread(void*) {
-    // 初始化瞬间在后台建立本地全图鉴，不会卡住游戏
-    BuildLocalPokedex();
-
-    // 启动图片解压专属工人线程（终结并发发热）
-    std::thread(TextureDecodingWorkerThread).detach();
-
-    void* egl_ptr = nullptr;
-    // [关键修复] 循环等待直到 Unity 引擎真正加载了 libEGL.so
-    while ((egl_ptr = DobbySymbolResolver("libEGL.so", "eglSwapBuffers")) == nullptr) {
-        sleep(1); // 每秒检测一次，直到图形库加载完成
-    }
-    
-    // 成功获取到指针后再进行 Hook
-    DobbyHook(egl_ptr, (void*)hook_eglSwap, (void**)&old_eglSwap);
-    
-    pthread_t t;
-    pthread_create(&t, 0, DelayedHookThread, 0);
-    pthread_detach(t);
-    
-    return nullptr;
-}
-
-__attribute__((constructor)) void Init() { 
-    pthread_t t; 
-    pthread_create(&t, 0, SetupThread, 0); 
-    pthread_detach(t); 
-}
