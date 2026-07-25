@@ -673,6 +673,7 @@ int g_debug_TurnStartCalled = 0, g_debug_hook_3Cd6058_count = 0, g_debug_hook_se
 int g_debug_UpdateTurnStart_count = 0, g_debug_set_IsGameEnd_count = 0, g_debug_SendWillRenderCanvases_count = 0;
 int g_debug_collected_players_count = 0, g_debug_hook_InitTurnDropCfg_count = 0, g_debug_bg_thread_count = 0; 
 int g_debug_hook_6A67e48_count = 0;
+int g_debug_hook_46cce08_count = 0;
 
 std::atomic<bool> g_collected_all_players{false};
 std::atomic<bool> g_matchFetchRequested{false}, g_matchFetchReady{false};
