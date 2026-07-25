@@ -162,7 +162,7 @@ else() # Native/Desktop build
             endif()
             list(APPEND WGVK_PLATFORM_LIBS m dl pthread)
         endif()
-        set(LIBRARIES glfw Vulkan::Vulkan ${WGVK_PLATFORM_LIBS})
+        set(LIBRARIES Vulkan::Vulkan ${WGVK_PLATFORM_LIBS})
     endif()
 endif()
 

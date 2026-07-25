@@ -1,4 +1,4 @@
-// dear imgui, v1.92.9 WIP
+// dear imgui, v1.92.9
 // (main code and documentation)
 
 // Help:
@@ -32,7 +32,7 @@
 // See LICENSE.txt for copyright and licensing details (standard MIT License).
 // This library is free but needs your support to sustain development and maintenance.
 // Businesses: you can support continued development via B2B invoiced technical support, maintenance and sponsoring contracts.
-// PLEASE reach out at omar AT dearimgui DOT com. See https://github.com/ocornut/imgui/wiki/Funding
+// PLEASE reach out at omar AT discohello DOT com. See https://github.com/ocornut/imgui/wiki/Funding
 // Businesses: you can also purchase licenses for the Dear ImGui Automation/Test Engine.
 
 // It is recommended that you don't modify imgui.cpp! It will become difficult for you to update the library.
@@ -1212,6 +1212,7 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
  Q: How can I use my own math types instead of ImVec2?
  Q: How can I interact with standard C++ types (such as std::string and std::vector)?
  Q: How can I display custom shapes? (using low-level ImDrawList API)
+ Q: About Multi-Threading
  >> See https://www.dearimgui.com/faq
 
  Q&A: Fonts, Text
@@ -1237,7 +1238,7 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
  ==============
 
  Q: How can I help?
- A: - Businesses: please reach out to "omar AT dearimgui DOT com" if you work in a place using Dear ImGui!
+ A: - Businesses: please reach out to "omar AT discohello DOT com" if you work in a place using Dear ImGui!
       We can discuss ways for your company to fund development via invoiced technical support, maintenance or sponsoring contacts.
       This is among the most useful thing you can do for Dear ImGui. With increased funding, we sustain and grow work on this project.
       >>> See https://github.com/ocornut/imgui/wiki/Funding
@@ -13108,24 +13109,26 @@ ImGuiWindow* ImGui::FindBlockingModal(ImGuiWindow* window)
     return NULL;
 }
 
-void ImGui::OpenPopup(const char* str_id, ImGuiPopupFlags popup_flags)
+bool ImGui::OpenPopup(const char* str_id, ImGuiPopupFlags popup_flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiID id = g.CurrentWindow->GetID(str_id);
     IMGUI_DEBUG_LOG_POPUP("[popup] OpenPopup(\"%s\" -> 0x%08X)\n", str_id, id);
-    OpenPopupEx(id, popup_flags);
+    return OpenPopupEx(id, popup_flags);
 }
 
-void ImGui::OpenPopup(ImGuiID id, ImGuiPopupFlags popup_flags)
+bool ImGui::OpenPopup(ImGuiID id, ImGuiPopupFlags popup_flags)
 {
-    OpenPopupEx(id, popup_flags);
+    return OpenPopupEx(id, popup_flags);
 }
 
 // Mark popup as open (toggle toward open state).
-// Popups are closed when user click outside, or activate a pressable item, or CloseCurrentPopup() is called within a BeginPopup()/EndPopup() block.
-// Popup identifiers are relative to the current ID-stack (so OpenPopup and BeginPopup needs to be at the same level).
-// One open popup per level of the popup hierarchy (NB: when assigning we reset the Window member of ImGuiPopupRef to NULL)
-void ImGui::OpenPopupEx(ImGuiID id, ImGuiPopupFlags popup_flags)
+// - Return true when the popup is toggled open, which allows you to capture local state if needed.
+//   You may also call IsWindowAppearing() inside the later BeginPopup() scope if you need to prepare/compute data for the popup.
+// - Popups are closed when user click outside, or activate a pressable item, or CloseCurrentPopup() is called within a BeginPopup()/EndPopup() block.
+// - Popup identifiers are relative to the current ID-stack (so OpenPopup and BeginPopup needs to be at the same level).
+// - One open popup per level of the popup hierarchy (NB: when assigning we reset the Window member of ImGuiPopupRef to NULL).
+bool ImGui::OpenPopupEx(ImGuiID id, ImGuiPopupFlags popup_flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* parent_window = g.CurrentWindow;
@@ -13133,7 +13136,7 @@ void ImGui::OpenPopupEx(ImGuiID id, ImGuiPopupFlags popup_flags)
 
     if (popup_flags & ImGuiPopupFlags_NoOpenOverExistingPopup)
         if (IsPopupOpen((ImGuiID)0, ImGuiPopupFlags_AnyPopupId))
-            return;
+            return false;
 
     ImGuiPopupData popup_ref; // Tagged as new ref as Window will be set back to NULL if we write this into OpenPopupStack.
     popup_ref.PopupId = id;
@@ -13148,6 +13151,7 @@ void ImGui::OpenPopupEx(ImGuiID id, ImGuiPopupFlags popup_flags)
     if (g.OpenPopupStack.Size < current_stack_size + 1)
     {
         g.OpenPopupStack.push_back(popup_ref);
+        return true;
     }
     else
     {
@@ -13175,6 +13179,8 @@ void ImGui::OpenPopupEx(ImGuiID id, ImGuiPopupFlags popup_flags)
         // This is equivalent to what ClosePopupToLevel() does.
         //if (g.OpenPopupStack[current_stack_size].PopupId == id)
         //    FocusWindow(parent_window);
+
+        return !keep_existing;
     }
 }
 
@@ -13460,16 +13466,17 @@ bool ImGui::IsPopupOpenRequestForWindow(ImGuiPopupFlags popup_flags)
 
 // Helper to open a popup if mouse button is released over the item
 // - This is essentially the same as BeginPopupContextItem() but without the trailing BeginPopup()
-void ImGui::OpenPopupOnItemClick(const char* str_id, ImGuiPopupFlags popup_flags)
+bool ImGui::OpenPopupOnItemClick(const char* str_id, ImGuiPopupFlags popup_flags)
 {
     ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
     if (IsPopupOpenRequestForItem(popup_flags, g.LastItemData.ID))
     {
+        ImGuiWindow* window = g.CurrentWindow;
         ImGuiID id = str_id ? window->GetID(str_id) : g.LastItemData.ID; // If user hasn't passed an ID, we can use the LastItemID. Using LastItemID as a Popup ID won't conflict!
         IM_ASSERT(id != 0);                                              // You cannot pass a NULL str_id if the last item has no identifier (e.g. a Text() item)
-        OpenPopupEx(id, popup_flags);
+        return OpenPopupEx(id, popup_flags);
     }
+    return false;
 }
 
 // This is a helper to handle the simplest case of associating one named popup to one given widget.

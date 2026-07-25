@@ -1,4 +1,4 @@
-// dear imgui, v1.92.9 WIP
+// dear imgui, v1.92.9
 // (drawing and font code)
 
 /*
@@ -2286,7 +2286,7 @@ void ImDrawListSplitter::SetCurrentChannel(ImDrawList* draw_list, int idx)
 void ImDrawData::Clear()
 {
     Valid = false;
-    TotalIdxCount = TotalVtxCount = 0;
+    FrameCount = TotalIdxCount = TotalVtxCount = 0;
     CmdLists.resize(0); // The ImDrawList are NOT owned by ImDrawData but e.g. by ImGuiContext, so we don't clear them.
     DisplayPos = DisplaySize = FramebufferScale = ImVec2(0.0f, 0.0f);
     OwnerViewport = NULL;
