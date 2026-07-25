@@ -595,7 +595,6 @@ func_req_refresh_t g_req_refresh = nullptr;
 
 struct Vector3 { float x, y, z; };
 
-// 增加 cellIndex 来记录是哪个格子(0-27场上, 28-36备战席)
 struct LiveHeroData { int heroId; Vector3 worldPos; Vector3 screenPos; int equipCount; int cellIndex; };
 
 struct DebugHeroTrace {
@@ -1214,7 +1213,6 @@ void UpdateEquipAndLiveHeroes() {
                             pos.y = SAFE_READ(float, battleUnit, g_off_battle_posx + 4, 0.0f);
                             pos.z = SAFE_READ(float, battleUnit, g_off_battle_posx + 8, 0.0f);
 
-                            // 【彻底修复追踪线乱跳】：加上严格的野指针检测与边界过滤！
                             if (std::isnan(pos.x) || std::isnan(pos.y) || std::isnan(pos.z) || 
                                 std::isinf(pos.x) || std::isinf(pos.y) || std::isinf(pos.z) ||
                                 pos.y < -50.0f || pos.y > 200.0f || 
@@ -1228,7 +1226,6 @@ void UpdateEquipAndLiveHeroes() {
                                 try { screenPos = w2s((void*)g_BackendData.mainCamera, pos); } catch(...) {}
                             }
                             
-                            // 屏幕坐标过滤：摄像机背面(z<=0.01)或者转换失败的，直接丢弃
                             if (screenPos.z <= 0.01f || std::isnan(screenPos.x) || std::isnan(screenPos.y) || std::isinf(screenPos.x) || std::isinf(screenPos.y)) {
                                 continue;
                             }
@@ -2732,9 +2729,6 @@ void DrawEquipUIDebug() {
         }
     }
 
-    // ==========================================
-    // 【核心修复 3：新增装备席物理坐标透视】
-    // ==========================================
     if (show_equip) {
         for (int i = 0; i < 20; i++) { 
             int col = i / 10;
@@ -2751,9 +2745,6 @@ void DrawEquipUIDebug() {
         }
     }
 
-    // ==========================================
-    // 1. 穿拆装备可视化 (各个格子独立偏移，深绿色)
-    // ==========================================
     if (show_equip) {
         if (allHeroData.empty()) {
             if (g_cell_equip_offset.find(0) == g_cell_equip_offset.end()) g_cell_equip_offset[0] = ImVec2(0.0f, -80.0f);
@@ -2775,7 +2766,6 @@ void DrawEquipUIDebug() {
             d->AddCircle(targetPos, drawRadius + 1.5f, IM_COL32(0, 220, 0, 255), 0, 1.5f * g_autoScale);
             d->AddText(font, 14.0f*g_autoScale, targetPos + ImVec2(drawRadius+2, -drawRadius-2), IM_COL32(0, 220, 0, 255), "格子0 穿装落点");
         } else {
-            // 点击判定
             if (!g_boardLocked && mouseClicked && dragging_idx == -1) {
                 for (const auto& hero : allHeroData) {
                     if (g_cell_equip_offset.find(hero.cellIndex) == g_cell_equip_offset.end()) g_cell_equip_offset[hero.cellIndex] = ImVec2(0.0f, -80.0f);
@@ -2787,12 +2777,10 @@ void DrawEquipUIDebug() {
                     }
                 }
             }
-            // 拖拽应用
             if (mouseDown && dragging_idx == 0 && dragging_cell_idx != -1) {
                 g_cell_equip_offset[dragging_cell_idx].x = drag_start_off_x + (mouse.x - drag_start_mouse.x) / g_autoScale;
                 g_cell_equip_offset[dragging_cell_idx].y = drag_start_off_y + (mouse.y - drag_start_mouse.y) / g_autoScale;
             }
-            // 渲染
             std::unordered_set<int> drawn_cells;
             for (const auto& hero : allHeroData) {
                 if (drawn_cells.count(hero.cellIndex)) continue;
@@ -2811,15 +2799,11 @@ void DrawEquipUIDebug() {
         }
     }
 
-    // ==========================================
-    // 2. 卖出英雄可视化 (各个格子独立起点 -> 统一全局落点)
-    // ==========================================
     if (show_sell) {
         ImVec2 dropPos(g_sell_drop_x * g_autoScale, g_sell_drop_y * g_autoScale); 
 
-        // 点击判定
         if (!g_boardLocked && mouseClicked && dragging_idx == -1) {
-            if (ImLengthSqr(mouse - dropPos) < hitRadius * hitRadius) { // 优先点红圈
+            if (ImLengthSqr(mouse - dropPos) < hitRadius * hitRadius) {
                 dragging_idx = 2; drag_start_mouse = mouse; 
                 drag_start_off_x = g_sell_drop_x; drag_start_off_y = g_sell_drop_y;
             } else {
@@ -2833,7 +2817,6 @@ void DrawEquipUIDebug() {
                     }
                 }
             }
-            // 假人补充逻辑
             if (dragging_idx == -1 && allHeroData.empty()) {
                 if (g_cell_sell_offset.find(0) == g_cell_sell_offset.end()) g_cell_sell_offset[0] = ImVec2(0.0f, -80.0f);
                 ImVec2 grabPos(dummyX + g_cell_sell_offset[0].x * g_autoScale, dummyY + g_cell_sell_offset[0].y * g_autoScale);
@@ -2843,19 +2826,17 @@ void DrawEquipUIDebug() {
             }
         }
 
-        // 拖动计算
         if (mouseDown) {
-            if (dragging_idx == 1 && dragging_cell_idx != -1) { // 拖动独立格子起滑点
+            if (dragging_idx == 1 && dragging_cell_idx != -1) {
                 g_cell_sell_offset[dragging_cell_idx].x = drag_start_off_x + (mouse.x - drag_start_mouse.x) / g_autoScale;
                 g_cell_sell_offset[dragging_cell_idx].y = drag_start_off_y + (mouse.y - drag_start_mouse.y) / g_autoScale;
-            } else if (dragging_idx == 2) { // 拖动全局落点
+            } else if (dragging_idx == 2) {
                 g_sell_drop_x = drag_start_off_x + (mouse.x - drag_start_mouse.x) / g_autoScale;
                 g_sell_drop_y = drag_start_off_y + (mouse.y - drag_start_mouse.y) / g_autoScale;
                 dropPos = ImVec2(g_sell_drop_x * g_autoScale, g_sell_drop_y * g_autoScale); 
             }
         }
 
-        // 渲染假人
         if (allHeroData.empty()) {
             ImVec2 grabPos(dummyX + g_cell_sell_offset[0].x * g_autoScale, dummyY + g_cell_sell_offset[0].y * g_autoScale);
             d->AddCircleFilled(ImVec2(dummyX, dummyY), 4.0f * g_autoScale, IM_COL32(255,255,255,150));
@@ -2865,12 +2846,10 @@ void DrawEquipUIDebug() {
             d->AddText(font, 14.0f*g_autoScale, grabPos + ImVec2(drawRadius+2, -drawRadius-2), IM_COL32(220, 50, 220, 255), "格子0卖出起滑");
         }
 
-        // 画单一落点 (深红圈)
         d->AddCircleFilled(dropPos, drawRadius * 1.5f, IM_COL32(180, 0, 0, 230));
         d->AddCircle(dropPos, drawRadius * 1.5f + 1.5f, IM_COL32(255, 50, 50, 255), 0, 2.0f * g_autoScale);
         d->AddText(font, 14.0f*g_autoScale, dropPos + ImVec2(drawRadius*1.5f+2, -drawRadius*1.5f-2), IM_COL32(255, 50, 50, 255), "全局卖出落点");
 
-        // 渲染所有真实英雄独立格子起滑点 (深紫圈) 及连线
         std::unordered_set<int> drawn_cells;
         for (const auto& hero : allHeroData) {
             if (drawn_cells.count(hero.cellIndex)) continue;
@@ -4142,13 +4121,128 @@ void DrawCardPool(const GameSnapshot* snap) {
 
 void DrawDebugWindow(const GameSnapshot* snap) {
     if (!snap || !g_show_debug_window) return;
-    ImGui::SetNextWindowSize(ImVec2(550 * g_autoScale, 600 * g_autoScale), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(550 * g_autoScale, 650 * g_autoScale), ImGuiCond_FirstUseEver);
     if (ImGui::Begin((const char*)u8"调试日志 & 全功能偏移链监控", &g_show_debug_window)) {
         
         ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.5f, 1.0f), (const char*)u8"当前渲染帧率 (FPS): %.1f", ImGui::GetIO().Framerate);
         ImGui::Separator();
 
         if (ImGui::BeginTabBar("DebugTabs")) {
+
+            if (ImGui::BeginTabItem((const char*)u8"Hook调用统计")) {
+                ImGui::BeginChild("HookCountScroll", ImVec2(0, 0), true);
+                ImGui::TextColored(ImVec4(1, 0.8f, 0.2f, 1), (const char*)u8"【引擎/线程存活状态】");
+                ImGui::Text("Background Update Thread: %d", g_debug_bg_thread_count);
+                ImGui::Text("SendWillRenderCanvases (UI): %d", g_debug_SendWillRenderCanvases_count);
+                
+                ImGui::Separator();
+                ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1), (const char*)u8"【业务 Hook 触发次数】");
+                ImGui::Text("TurnStart (回合开始): %d", g_debug_TurnStartCalled);
+                ImGui::Text("UpdateTurnStart (回合状态): %d", g_debug_UpdateTurnStart_count);
+                ImGui::Text("set_IsGameEnd (对局结束): %d", g_debug_set_IsGameEnd_count);
+                ImGui::Text("InitTurnDropCfg (海克斯): %d", g_debug_hook_InitTurnDropCfg_count);
+                ImGui::Text("hook_6A67e48 (牌库拦截): %d", g_debug_hook_6A67e48_count);
+                
+                ImGui::Separator();
+                ImGui::TextColored(ImVec4(0.5f, 0.8f, 1.0f, 1), (const char*)u8"【玩家属性同步次数】");
+                ImGui::Text("hook_3Cd6058 (RowIdx): %d", g_debug_hook_3Cd6058_count);
+                ImGui::Text("hook_set_Money (金币): %d", g_debug_hook_set_Money_count);
+                ImGui::Text("hook_set_Level (等级): %d", g_debug_hook_set_Level_count);
+                
+                ImGui::EndChild();
+                ImGui::EndTabItem();
+            }
+
+            if (ImGui::BeginTabItem((const char*)u8"偏移链实时监控")) {
+                ImGui::BeginChild("PtrScroll", ImVec2(0,0), true);
+
+                auto PrintPtr = [](const char* name, uintptr_t ptr, int offset = -1) {
+                    if (offset != -1) {
+                        if (ptr == 0) ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "%s [+0x%X]: 0x0 (断链!)", name, offset);
+                        else ImGui::Text("%s [+0x%X]: 0x%lX", name, offset, ptr);
+                    } else {
+                        if (ptr == 0) ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "%s: 0x0", name);
+                        else ImGui::Text("%s: 0x%lX", name, ptr);
+                    }
+                };
+
+                ImGui::TextColored(ImVec4(0, 1, 1, 1), (const char*)u8"【全局基础】");
+                ImGui::Text("il2cppBase: 0x%lX", g_il2cppBase);
+                ImGui::Text("ChessBattleModel: 0x%lX", snap->chessBattleModel);
+                ImGui::Text("MyPlayerId: %d", snap->myPlayerId);
+
+                auto myIt = snap->players.find(snap->myPlayerId);
+                if (snap->myPlayerId != -1 && myIt != snap->players.end()) {
+                    uintptr_t myObj = myIt->second.objAddr;
+                    uintptr_t myLogicObj = myIt->second.logicObjAddr;
+
+                    ImGui::Separator();
+                    ImGui::TextColored(ImVec4(1, 0.5f, 0.5f, 1), (const char*)u8"【商店偏移链 (Shop Entries)】");
+                    PrintPtr("PlayerObj", myObj);
+                    uintptr_t pBase = SAFE_READ_PTR(myObj, g_off_shop_base);
+                    PrintPtr("ShopBase", pBase, g_off_shop_base);
+                    uintptr_t p20 = SAFE_READ_PTR(pBase, g_off_shop_p20);
+                    PrintPtr("p20", p20, g_off_shop_p20);
+                    uintptr_t entries = SAFE_READ_PTR(p20, g_off_shop_entries);
+                    PrintPtr("Entries", entries, g_off_shop_entries);
+                    if (IsValidPtr(entries)) {
+                        int count = SAFE_READ(int, entries, g_off_entries_count, 0);
+                        ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1), "  -> Count (+0x%X): %d", g_off_entries_count, count);
+                    }
+
+                    ImGui::Separator();
+                    ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1), (const char*)u8"【英雄实体偏移链 (Hero Array)】");
+                    PrintPtr("LogicObj", myLogicObj);
+                    uintptr_t dyn2b0 = SAFE_READ_PTR(myLogicObj, g_off_hero_dyn);
+                    PrintPtr("HeroDyn", dyn2b0, g_off_hero_dyn);
+                    uintptr_t heroArr = SAFE_READ_PTR(dyn2b0, g_off_hero_arr);
+                    PrintPtr("HeroArray", heroArr, g_off_hero_arr);
+                    if (IsValidPtr(heroArr)) {
+                        int hCount = SAFE_READ(int, heroArr, g_off_hero_count, 0);
+                        ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1), "  -> HeroCount (+0x%X): %d", g_off_hero_count, hCount);
+                    }
+
+                    ImGui::Separator();
+                    ImGui::TextColored(ImVec4(1, 0.8f, 0.2f, 1), (const char*)u8"【装备偏移链 (Equip Array)】");
+                    uintptr_t eqBase = SAFE_READ_PTR(myLogicObj, g_off_equip_base);
+                    PrintPtr("EquipBase", eqBase, g_off_equip_base);
+                    uintptr_t eqArr = SAFE_READ_PTR(eqBase, g_off_equip_arr);
+                    PrintPtr("EquipArray", eqArr, g_off_equip_arr);
+                    if (IsValidPtr(eqArr)) {
+                        int eqCount = SAFE_READ(int, eqArr, g_off_equip_count, 0);
+                        ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1), "  -> EquipCount (+0x%X): %d", g_off_equip_count, eqCount);
+                    }
+                } else {
+                    ImGui::Separator();
+                    ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), (const char*)u8"未获取到本地玩家对象(PlayerObj/LogicObj)!");
+                }
+
+                ImGui::Separator();
+                ImGui::TextColored(ImVec4(0.8f, 0.4f, 1.0f, 1), (const char*)u8"【牌库池偏移链 (Card Pool)】");
+                uintptr_t pEntries1 = g_pool_entries1.load(std::memory_order_acquire);
+                PrintPtr("pool_entries1 (Hook)", pEntries1);
+                if (IsValidPtr(pEntries1)) {
+                    int e1Count = SAFE_READ(int, pEntries1, g_off_pool_e1_count, 0);
+                    ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1), "  -> E1 Count (+0x%X): %d", g_off_pool_e1_count, e1Count);
+                    if (e1Count > 0) {
+                        uintptr_t entry1_ptr = pEntries1 + g_off_pool_e1_head;
+                        PrintPtr("  -> First E1 Addr", entry1_ptr, g_off_pool_e1_head);
+                        uintptr_t value1 = SAFE_READ_PTR(entry1_ptr, g_off_pool_e1_val);
+                        PrintPtr("  -> E1 Value", value1, g_off_pool_e1_val);
+                        uintptr_t entries2 = SAFE_READ_PTR(value1, g_off_pool_entries2);
+                        PrintPtr("  -> Entries2", entries2, g_off_pool_entries2);
+                        if (IsValidPtr(entries2)) {
+                            int e2Count = SAFE_READ(int, entries2, g_off_pool_e2_count, 0);
+                            ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1), "     -> E2 Count (+0x%X): %d", g_off_pool_e2_count, e2Count);
+                        }
+                    }
+                } else {
+                    ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1), (const char*)u8"尚未截获到 pool_entries1");
+                }
+
+                ImGui::EndChild();
+                ImGui::EndTabItem();
+            }
 
             if (ImGui::BeginTabItem((const char*)u8"3D追踪与装备偏移调试")) {
                 auto InputHex = [](const char* label, int* v) {
