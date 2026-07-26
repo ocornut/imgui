@@ -57,6 +57,8 @@ bool g_enable_skin = false;
 int g_selected_skin_idx = 0;
 bool g_header_skin = true;
 
+int g_menuThemeIdx = 0; // 0: 冰晶 Indigo, 1: 翡翠 Emerald, 2: 幻紫 Purple, 3: 霜天 Sky
+
 bool g_enable_map_skin = false;
 int g_selected_map_idx = 0;
 bool g_header_map_skin = true;
@@ -239,7 +241,7 @@ ConfigEntry g_configTable[] = {
     {"instantWinX", C_FLOAT, &g_instant_win_x}, {"instantWinY", C_FLOAT, &g_instant_win_y}, {"instantWinScale", C_FLOAT, &g_instant_win_scale},
     {"showSellWin", C_BOOL, &g_show_sell_window}, {"sellWinX", C_FLOAT, &g_sell_win_x}, {"sellWinY", C_FLOAT, &g_sell_win_y}, {"sellWinScale", C_FLOAT, &g_sell_win_scale},
     {"menuX", C_FLOAT, &g_menuX}, {"menuY", C_FLOAT, &g_menuY}, {"menuW", C_FLOAT, &g_menuW}, {"menuH", C_FLOAT, &g_menuH}, 
-    {"menuScale", C_FLOAT, &g_scale}, {"menuCollapsed", C_BOOL, &g_menuCollapsed},
+    {"menuScale", C_FLOAT, &g_scale}, {"menuCollapsed", C_BOOL, &g_menuCollapsed}, {"menuThemeIdx", C_INT, &g_menuThemeIdx},
     {"startX", C_FLOAT, &g_startX}, {"startY", C_FLOAT, &g_startY}, {"manualScale", C_FLOAT, &g_boardManualScale},
     {"enemyBenchX", C_FLOAT, &g_enemy_bench_X}, {"enemyBenchY", C_FLOAT, &g_enemy_bench_Y}, {"enemyBenchScale", C_FLOAT, &g_enemy_bench_Scale},
     {"enemyX", C_FLOAT, &g_enemy_X}, {"enemyY", C_FLOAT, &g_enemy_Y}, {"enemyScale", C_FLOAT, &g_enemy_Scale},
@@ -2736,26 +2738,21 @@ void ModernSlider(const char* label, float* v, float v_min, float v_max) {
 
 bool ModernToggle(const char* label, bool* v, int idx) {
     ImGuiWindow* win = ImGui::GetCurrentWindow(); const ImGuiStyle& style = ImGui::GetStyle(); ImGuiID id = win->GetID(label);
-    float h = ImGui::GetFrameHeight(); float w = h * 2.0f; const ImRect bb(win->DC.CursorPos, win->DC.CursorPos + ImVec2(w + style.ItemInnerSpacing.x + ImGui::CalcTextSize(label).x, h));
+    float h = ImGui::GetFrameHeight(); float w = h * 1.85f; const ImRect bb(win->DC.CursorPos, win->DC.CursorPos + ImVec2(w + style.ItemInnerSpacing.x + ImGui::CalcTextSize(label).x, h));
     ImGui::ItemSize(bb, style.FramePadding.y); bool pressed = false;
     if (ImGui::ItemAdd(bb, id)) { bool hovered, held; if ((pressed = ImGui::ButtonBehavior(bb, id, &hovered, &held))) *v = !(*v); }
     g_anim[idx] = ImLerp(g_anim[idx], *v ? 1.0f : 0.0f, 1.0f - expf(-20.0f * ImGui::GetIO().DeltaTime)); 
     
-    ImVec4 offCol = ImVec4(0.12f, 0.16f, 0.24f, 1.0f);
-    ImVec4 onCol  = ImVec4(0.0f, 0.95f, 1.0f, 1.0f); // 霓虹电光青
-    win->DrawList->AddRectFilled(bb.Min, bb.Min + ImVec2(w, h), ImGui::GetColorU32(ImLerp(offCol, onCol, g_anim[idx])), h*0.35f);
-    if (g_anim[idx] > 0.01f) {
-        win->DrawList->AddRect(bb.Min, bb.Min + ImVec2(w, h), IM_COL32(0, 243, 255, (int)(160 * g_anim[idx])), h*0.35f, 0, 1.5f);
-    }
+    ImVec4 offCol = ImVec4(1.0f, 1.0f, 1.0f, 0.12f);
+    ImVec4 onCol  = g_curPrimaryColor;
+    win->DrawList->AddRectFilled(bb.Min, bb.Min + ImVec2(w, h), ImGui::GetColorU32(ImLerp(offCol, onCol, g_anim[idx])), h*0.5f);
+    win->DrawList->AddRect(bb.Min, bb.Min + ImVec2(w, h), IM_COL32(255, 255, 255, 40), h*0.5f, 0, 1.0f);
     
     ImVec2 hc = bb.Min + ImVec2(h*0.5f + g_anim[idx]*(w-h), h*0.5f);
-    win->DrawList->AddCircleFilled(hc + ImVec2(0, 1.0f), h*0.5f - 2.5f * g_autoScale, IM_COL32(0, 0, 0, 80));
-    win->DrawList->AddCircleFilled(hc, h*0.5f - 2.5f * g_autoScale, IM_COL32(255, 255, 255, 255));
-    if (g_anim[idx] > 0.01f) {
-        win->DrawList->AddCircle(hc, h*0.5f - 1.0f * g_autoScale, IM_COL32(0, 243, 255, (int)(255 * g_anim[idx])), 16, 1.5f);
-    }
+    win->DrawList->AddCircleFilled(hc + ImVec2(0, 1.0f), h*0.5f - 2.0f * g_autoScale, IM_COL32(0, 0, 0, 40));
+    win->DrawList->AddCircleFilled(hc, h*0.5f - 2.0f * g_autoScale, IM_COL32(255, 255, 255, 240));
     
-    ImVec4 textColor = ImLerp(ImVec4(0.55f, 0.65f, 0.78f, 1.0f), ImVec4(0.92f, 0.96f, 1.0f, 1.0f), g_anim[idx]);
+    ImVec4 textColor = ImLerp(ImVec4(0.65f, 0.70f, 0.80f, 0.9f), ImVec4(0.97f, 0.98f, 1.0f, 1.0f), g_anim[idx]);
     ImGui::PushStyleColor(ImGuiCol_Text, textColor);
     ImGui::RenderText(ImVec2(bb.Min.x + w + style.ItemInnerSpacing.x, bb.Min.y + (h - ImGui::GetFontSize()) * 0.5f), label);
     ImGui::PopStyleColor();
@@ -2768,19 +2765,17 @@ bool ModernAnimatedFolder(const char* label, bool* state) {
     if (ImGui::ItemAdd(bb, id)) if (ImGui::ButtonBehavior(bb, id, &hovered, &held)) *state = !(*state); 
     float* p_anim = win->StateStorage.GetFloatRef(id, *state ? 1.0f : 0.0f); float anim = (*p_anim = ImLerp(*p_anim, *state ? 1.0f : 0.0f, 1.0f - expf(-18.0f * ImGui::GetIO().DeltaTime)));
     
-    ImU32 bgCol = hovered ? IM_COL32(0, 243, 255, 25) : IM_COL32(14, 20, 32, 180);
-    win->DrawList->AddRectFilled(bb.Min, bb.Max, bgCol, 6.0f * g_autoScale * g_scale);
-    if (*state || anim > 0.01f || hovered) {
-        win->DrawList->AddRect(bb.Min, bb.Max, IM_COL32(0, 243, 255, (int)(80 * anim + (hovered ? 40 : 20))), 6.0f * g_autoScale * g_scale, 0, 1.0f);
-    }
+    ImU32 bgCol = hovered ? IM_COL32(255, 255, 255, 24) : IM_COL32(255, 255, 255, 12);
+    win->DrawList->AddRectFilled(bb.Min, bb.Max, bgCol, 8.0f * g_autoScale * g_scale);
+    win->DrawList->AddRect(bb.Min, bb.Max, IM_COL32(255, 255, 255, (int)(45 + 30 * anim)), 8.0f * g_autoScale * g_scale, 0, 1.0f);
     
-    float cx = bb.Min.x + 15.0f * g_autoScale * g_scale; float cy = bb.Min.y + size.y * 0.5f; float ang = anim * 1.5708f; float arr = 5.0f * g_autoScale * g_scale; 
+    float cx = bb.Min.x + 15.0f * g_autoScale * g_scale; float cy = bb.Min.y + size.y * 0.5f; float ang = anim * 1.5708f; float arr = 4.5f * g_autoScale * g_scale; 
     
-    ImU32 arrCol = ImGui::GetColorU32(ImLerp(ImVec4(0.45f, 0.55f, 0.70f, 1.0f), ImVec4(0.0f, 0.95f, 1.0f, 1.0f), anim));
+    ImU32 arrCol = ImGui::GetColorU32(ImLerp(ImVec4(0.65f, 0.70f, 0.80f, 1.0f), g_curAccentColor, anim));
     win->DrawList->AddTriangleFilled(ImVec2(cx+cosf(ang)*arr, cy+sinf(ang)*arr), ImVec2(cx+cosf(ang+2.094f)*arr, cy+sinf(ang+2.094f)*arr), ImVec2(cx+cosf(ang-2.094f)*arr, cy+sinf(ang-2.094f)*arr), arrCol);
     
     ImFont* font = ImGui::GetFont(); float fSz = ImGui::GetFontSize();
-    ImU32 textCol = ImGui::GetColorU32(ImLerp(ImVec4(0.70f, 0.80f, 0.90f, 1.0f), ImVec4(0.92f, 0.96f, 1.0f, 1.0f), anim));
+    ImU32 textCol = ImGui::GetColorU32(ImLerp(ImVec4(0.78f, 0.82f, 0.90f, 1.0f), ImVec4(0.97f, 0.98f, 1.0f, 1.0f), anim));
     win->DrawList->AddText(font, fSz, ImVec2(cx + 25.0f * g_autoScale * g_scale, bb.Min.y + (size.y - fSz)*0.5f), textCol, label);
     
     if (*state) { ImGui::Indent(15.0f * g_autoScale * g_scale); return true; } return false;
@@ -2799,8 +2794,9 @@ void ModernTierSelector(const char* label, bool* tierArray) {
         if (ImGui::ItemAdd(bb, win->GetID(tierArray + i))) { bool h, he; if (ImGui::ButtonBehavior(bb, win->GetID(tierArray+i), &h, &he)) tierArray[i] = !tierArray[i]; }
         static std::unordered_map<void*, float> anims_map; float& a = (anims_map[tierArray + i] = ImLerp(anims_map[tierArray + i], tierArray[i] ? 1.0f : 0.0f, 1.0f - expf(-20.0f * ImGui::GetIO().DeltaTime)));
         
-        win->DrawList->AddRectFilled(bb.Min, bb.Max, IM_COL32(20, (int)(30+a*90), (int)(45+a*150), 255), 4.0f * g_autoScale);
-        if (a > 0.01f) win->DrawList->AddRect(bb.Min, bb.Max, IM_COL32(0, 243, 255, (int)(220*a)), 4.0f * g_autoScale, 0, 1.5f);
+        win->DrawList->AddRectFilled(bb.Min, bb.Max, IM_COL32(255, 255, 255, 15), 6.0f * g_autoScale);
+        if (a > 0.01f) win->DrawList->AddRectFilled(bb.Min, bb.Max, ImGui::GetColorU32(g_curPrimaryColor), 6.0f * g_autoScale);
+        win->DrawList->AddRect(bb.Min, bb.Max, IM_COL32(255, 255, 255, 45), 6.0f * g_autoScale, 0, 1.0f);
         
         char buf[8]; snprintf(buf, sizeof(buf), "%d", i); ImVec2 t_sz = ImGui::CalcTextSize(buf);
         win->DrawList->AddText(ImGui::GetFont(), ImGui::GetFontSize(), pos + ImVec2((bb.GetWidth() - t_sz.x)*0.5f, (bb.GetHeight() - t_sz.y)*0.5f), 
@@ -4639,7 +4635,33 @@ void DrawMenu() {
         g_menuX = ImGui::GetWindowPos().x; g_menuY = ImGui::GetWindowPos().y; g_menuCollapsed = ImGui::IsWindowCollapsed();
         if (!g_menuCollapsed) {
             ImGui::SetWindowFontScale(g_scale);
-            ImGui::TextColored(ImVec4(0.0f, 0.85f, 0.55f, 1.0f), (const char*)u8"[+] 稳定原版运行中 | FPS: %.1f", io.Framerate);
+            ImGui::TextColored(ImVec4(0.34f, 0.83f, 0.60f, 1.0f), (const char*)u8"● 系统运行中 | FPS: %.1f", io.Framerate);
+            
+            // --- 4种磨砂主题丝滑切换条 ---
+            {
+                const char* themeNames[4] = { (const char*)u8"🔮 冰晶", (const char*)u8"🍃 翡翠", (const char*)u8"🍇 幻紫", (const char*)u8"❄️ 霜天" };
+                ImGui::Spacing();
+                ImGui::TextColored(ImVec4(0.85f, 0.88f, 0.95f, 1.0f), (const char*)u8"磨砂主题:");
+                ImGui::SameLine();
+                for (int tIdx = 0; tIdx < 4; tIdx++) {
+                    if (tIdx > 0) ImGui::SameLine(0, 4.0f * g_autoScale * g_scale);
+                    bool isSel = (g_menuThemeIdx == tIdx);
+                    if (isSel) {
+                        ImGui::PushStyleColor(ImGuiCol_Button, g_curPrimaryColor);
+                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_curPrimaryColor);
+                    } else {
+                        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1.0f, 1.0f, 1.0f, 0.08f));
+                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.0f, 1.0f, 1.0f, 0.18f));
+                    }
+                    ImGui::PushID(tIdx + 9900);
+                    if (ImGui::Button(themeNames[tIdx])) {
+                        g_menuThemeIdx = tIdx;
+                        g_save_timer = 1.0f; SaveConfig();
+                    }
+                    ImGui::PopID();
+                    ImGui::PopStyleColor(2);
+                }
+            }
             ColoredSeparator();
             
             // ===============================================
