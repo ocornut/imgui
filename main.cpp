@@ -4490,6 +4490,149 @@ void DrawMenu() {
             ColoredSeparator();
             
             // ===============================================
+            // 基址 & 监控面板（可折叠）
+            // ===============================================
+            {
+                static bool s_mon_open = false;
+                const GameSnapshot* snapBase = GetSnapshot();
+                float panelScale = g_autoScale * g_scale * 0.82f;
+
+                // --- 顶栏：基址一览 + 折叠按钮 ---
+                ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.07f, 0.10f, 0.13f, 0.92f));
+                ImGui::BeginChild("BaseAddrPanel", ImVec2(-1, 0), false,
+                    ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_AlwaysAutoResize);
+                ImGui::SetWindowFontScale(panelScale);
+
+                ImGui::TextColored(ImVec4(0.55f, 0.55f, 0.55f, 1.0f), (const char*)u8"■ 基址");
+                ImGui::SameLine(0, 6);
+                if (g_il2cppBase != 0)
+                    ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.5f, 1.0f), "il2cpp:0x%lX", g_il2cppBase);
+                else
+                    ImGui::TextColored(ImVec4(0.5f,0.5f,0.5f,0.6f), (const char*)u8"il2cpp:等待注入");
+                ImGui::SameLine(0, 8);
+                uintptr_t bm = snapBase ? snapBase->chessBattleModel : 0;
+                if (bm) ImGui::TextColored(ImVec4(0.4f,0.8f,1.0f,1.0f), "Battle:0x%lX", bm);
+                else    ImGui::TextColored(ImVec4(0.5f,0.5f,0.5f,0.6f), (const char*)u8"Battle:无");
+                ImGui::SameLine(0, 8);
+                uintptr_t cso = snapBase ? snapBase->csoGame : 0;
+                if (cso) ImGui::TextColored(ImVec4(1.0f,0.7f,0.3f,1.0f), "CSO:0x%lX", cso);
+                else     ImGui::TextColored(ImVec4(0.5f,0.5f,0.5f,0.6f), (const char*)u8"CSO:-");
+                ImGui::SameLine(0, 8);
+                uintptr_t poolB = g_debug_pool_base.load();
+                if (poolB) ImGui::TextColored(ImVec4(1.0f,0.5f,0.2f,1.0f), "Pool:0x%lX", poolB);
+                else       ImGui::TextColored(ImVec4(0.5f,0.5f,0.5f,0.6f), (const char*)u8"Pool:-");
+                ImGui::SameLine(0, 8);
+                uintptr_t cam = snapBase ? snapBase->mainCamera : 0;
+                if (cam) ImGui::TextColored(ImVec4(0.8f,0.5f,1.0f,1.0f), "Cam:0x%lX", cam);
+                else     ImGui::TextColored(ImVec4(0.5f,0.5f,0.5f,0.6f), (const char*)u8"Cam:-");
+
+                // 折叠/展开按钮
+                ImGui::SameLine(0, 14);
+                ImGui::SetWindowFontScale(panelScale * 0.9f);
+                ImGui::PushStyleColor(ImGuiCol_Button,        ImVec4(0.18f,0.22f,0.30f,0.95f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.28f,0.38f,0.55f,1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive,  ImVec4(0.12f,0.20f,0.35f,1.0f));
+                if (ImGui::SmallButton(s_mon_open ? (const char*)u8"▲ 收起" : (const char*)u8"▼ 展开监控"))
+                    s_mon_open = !s_mon_open;
+                ImGui::PopStyleColor(3);
+
+                // --- 展开区域：调用次数 + 偏移链 ---
+                if (s_mon_open) {
+                    ImGui::Separator();
+                    ImGui::SetWindowFontScale(panelScale);
+
+                    // ---- 调用次数 ----
+                    ImGui::TextColored(ImVec4(0.2f,0.85f,1.0f,1.0f), (const char*)u8"[ Hook 调用次数 ]");
+                    ImGui::Columns(3, "HookCols", false);
+                    ImGui::SetColumnWidth(0, 200.0f * panelScale);
+                    ImGui::SetColumnWidth(1, 200.0f * panelScale);
+
+                    auto HookRow = [&](const char* name, int cnt) {
+                        ImVec4 col = cnt > 0 ? ImVec4(0.3f,1.0f,0.6f,1.0f) : ImVec4(0.5f,0.5f,0.5f,0.7f);
+                        ImGui::TextColored(col, "%s: %d", name, cnt);
+                        ImGui::NextColumn();
+                    };
+                    HookRow("3Cd6058",        g_debug_hook_3Cd6058_count);
+                    HookRow("set_Money",      g_debug_hook_set_Money_count);
+                    HookRow("set_Level",      g_debug_hook_set_Level_count);
+                    HookRow("TurnStart",      g_debug_TurnStartCalled);
+                    HookRow("IsGameEnd",      g_debug_set_IsGameEnd_count);
+                    HookRow("UpdateTurnStart",g_debug_UpdateTurnStart_count);
+                    HookRow("InitTurnDropCfg",g_debug_hook_InitTurnDropCfg_count);
+                    HookRow("6A67e48(Pool)",  g_debug_hook_6A67e48_count);
+                    HookRow("RenderCanvases", g_debug_SendWillRenderCanvases_count);
+                    HookRow("BgThread",       g_debug_bg_thread_count);
+                    ImGui::Columns(1);
+
+                    // ---- 偏移链 ----
+                    ImGui::Separator();
+                    ImGui::TextColored(ImVec4(1.0f,0.85f,0.2f,1.0f), (const char*)u8"[ 偏移链实时监控 ]");
+
+                    uintptr_t myObj = 0, myLogicObj = 0;
+                    if (snapBase) {
+                        auto myIt2 = snapBase->players.find(snapBase->myPlayerId);
+                        if (myIt2 != snapBase->players.end()) {
+                            myObj      = myIt2->second.objAddr;
+                            myLogicObj = myIt2->second.logicObjAddr;
+                        }
+                    }
+
+                    // 商店链
+                    ImGui::TextColored(ImVec4(0.2f,1.0f,0.5f,1.0f), (const char*)u8"▶ 商店链");
+                    if (myObj) {
+                        uintptr_t pBase   = SAFE_READ_PTR(myObj, g_off_shop_base);
+                        uintptr_t p20     = pBase   ? SAFE_READ_PTR(pBase,  g_off_shop_p20)    : 0;
+                        uintptr_t entries = p20     ? SAFE_READ_PTR(p20,    g_off_shop_entries) : 0;
+                        ImGui::Text("  PlayerObj:0x%lX  +0x%X->0x%lX  +0x%X->0x%lX  +0x%X->0x%lX",
+                            myObj, g_off_shop_base, pBase, g_off_shop_p20, p20, g_off_shop_entries, entries);
+                    } else { ImGui::TextColored(ImVec4(0.5f,0.5f,0.5f,0.7f), (const char*)u8"  等待对局..."); }
+
+                    // 备战席链
+                    ImGui::TextColored(ImVec4(0.2f,1.0f,0.5f,1.0f), (const char*)u8"▶ 备战席链");
+                    if (myObj) {
+                        uintptr_t pBase   = SAFE_READ_PTR(myObj, g_off_bench_base);
+                        uintptr_t p20     = pBase   ? SAFE_READ_PTR(pBase,  g_off_shop_p20)    : 0;
+                        uintptr_t entries = p20     ? SAFE_READ_PTR(p20,    g_off_shop_entries) : 0;
+                        ImGui::Text("  PlayerObj:0x%lX  +0x%X->0x%lX  +0x%X->0x%lX  +0x%X->0x%lX",
+                            myObj, g_off_bench_base, pBase, g_off_shop_p20, p20, g_off_shop_entries, entries);
+                    } else { ImGui::TextColored(ImVec4(0.5f,0.5f,0.5f,0.7f), (const char*)u8"  等待对局..."); }
+
+                    // 卡池链
+                    ImGui::TextColored(ImVec4(1.0f,0.5f,0.2f,1.0f), (const char*)u8"▶ 卡池链(Pool)");
+                    if (poolB) {
+                        uintptr_t heroku   = SAFE_READ_PTR(poolB,  g_off_pool_heroku);
+                        uintptr_t aheroku  = heroku  ? SAFE_READ_PTR(heroku, g_off_pool_Aheroku)  : 0;
+                        uintptr_t entries1 = aheroku ? SAFE_READ_PTR(aheroku,g_off_pool_entries1) : 0;
+                        ImGui::Text("  PoolBase:0x%lX  +0x%X->0x%lX  +0x%X->0x%lX  +0x%X->0x%lX",
+                            poolB, g_off_pool_heroku, heroku, g_off_pool_Aheroku, aheroku, g_off_pool_entries1, entries1);
+                    } else { ImGui::TextColored(ImVec4(0.5f,0.5f,0.5f,0.7f), (const char*)u8"  等待 hook_6A67e48 触发..."); }
+
+                    // 装备链
+                    ImGui::TextColored(ImVec4(1.0f,0.8f,0.2f,1.0f), (const char*)u8"▶ 装备链(Equip)");
+                    if (myLogicObj) {
+                        uintptr_t pEquipBase = SAFE_READ_PTR(myLogicObj, g_off_equip_base);
+                        uintptr_t itemArr    = pEquipBase ? SAFE_READ_PTR(pEquipBase, g_off_equip_arr) : 0;
+                        ImGui::Text("  LogicObj:0x%lX  +0x%X->0x%lX  +0x%X->0x%lX",
+                            myLogicObj, g_off_equip_base, pEquipBase, g_off_equip_arr, itemArr);
+                    } else { ImGui::TextColored(ImVec4(0.5f,0.5f,0.5f,0.7f), (const char*)u8"  等待对局..."); }
+
+                    // 英雄链
+                    ImGui::TextColored(ImVec4(0.8f,0.5f,1.0f,1.0f), (const char*)u8"▶ 英雄实体链(Hero)");
+                    if (myLogicObj) {
+                        uintptr_t pDyn    = SAFE_READ_PTR(myLogicObj, g_off_hero_dyn);
+                        uintptr_t heroArr = pDyn ? SAFE_READ_PTR(pDyn, g_off_hero_arr) : 0;
+                        ImGui::Text("  LogicObj:0x%lX  +0x%X->0x%lX  +0x%X->0x%lX",
+                            myLogicObj, g_off_hero_dyn, pDyn, g_off_hero_arr, heroArr);
+                    } else { ImGui::TextColored(ImVec4(0.5f,0.5f,0.5f,0.7f), (const char*)u8"  等待对局..."); }
+                }
+
+                ImGui::SetWindowFontScale(g_scale);
+                ImGui::EndChild();
+                ImGui::PopStyleColor();
+            }
+            ColoredSeparator();
+            
+            // ===============================================
             // 神话换肤UI 
             // ===============================================
             if (ModernAnimatedFolder((const char*)u8"🏆 神话皮肤换肤", &g_header_skin)) {
