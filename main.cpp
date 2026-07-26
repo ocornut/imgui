@@ -2564,9 +2564,12 @@ void DrawCloseHandle(ImDrawList* d, ImVec2 p, bool* isOpen) {
 }
 
 void ColoredSeparator() { 
-    ImGui::PushStyleColor(ImGuiCol_Separator, ImVec4(0.0f, 0.85f, 0.55f, 0.6f)); 
-    ImGui::Separator(); 
-    ImGui::PopStyleColor(); 
+    ImGuiWindow* win = ImGui::GetCurrentWindow();
+    if (win->SkipItems) return;
+    ImRect bb(win->DC.CursorPos, win->DC.CursorPos + ImVec2(ImGui::GetContentRegionAvail().x, 2.0f * g_autoScale * g_scale));
+    ImGui::ItemSize(bb); if (!ImGui::ItemAdd(bb, 0)) return;
+    win->DrawList->AddRectFilledMultiColor(bb.Min, bb.Max, 
+        IM_COL32(0, 0, 0, 0), IM_COL32(0, 217, 126, 200), IM_COL32(0, 217, 126, 200), IM_COL32(0, 0, 0, 0));
 }
 
 template <typename T> void ModernAdjusterInternal(const char* label, T* v, T v_min, T v_max, T step, const char* format) {
@@ -2595,12 +2598,24 @@ void ModernFloatAdjuster(const char* label, float* v, float v_min, float v_max, 
 
 void ModernSlider(const char* label, float* v, float v_min, float v_max) {
     ImGuiWindow* win = ImGui::GetCurrentWindow(); const ImGuiStyle& style = ImGui::GetStyle(); ImGui::PushID(label);
-    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetFrameHeight() * 2.2f + style.ItemInnerSpacing.x); ImGui::Text("%s", label); ImGui::SameLine();
+    
+    // 文本颜色微调为灰蓝，不那么刺眼
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.75f, 0.8f, 1.0f));
+    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetFrameHeight() * 2.2f + style.ItemInnerSpacing.x); 
+    ImGui::Text("%s", label); 
+    ImGui::PopStyleColor();
+    ImGui::SameLine();
     
     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15.0f * g_autoScale * g_scale);
-    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.15f, 0.18f, 0.22f, 1.0f)); ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.20f, 0.25f, 0.30f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_SliderGrab, ImVec4(0.0f, 0.85f, 0.55f, 1.0f)); ImGui::PushStyleColor(ImGuiCol_SliderGrabActive, ImVec4(0.0f, 0.95f, 0.65f, 1.0f));
-    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f * g_autoScale); 
+    
+    // 滑块轨道底色更暗，抓手变为青色渐变
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.12f, 0.15f, 0.18f, 1.0f)); 
+    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.15f, 0.18f, 0.22f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_SliderGrab, ImVec4(0.0f, 0.85f, 0.85f, 1.0f)); // 青绿
+    ImGui::PushStyleColor(ImGuiCol_SliderGrabActive, ImVec4(0.0f, 1.0f, 0.9f, 1.0f));
+    
+    // 胶囊形滑块轨道
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, ImGui::GetFrameHeight() * 0.5f); 
     
     ImGui::PushItemWidth(180.0f * g_autoScale * g_scale); 
     ImGui::SliderFloat("##sl", v, v_min, v_max, "%.2f"); 
@@ -2613,11 +2628,22 @@ bool ModernToggle(const char* label, bool* v, int idx) {
     ImGui::ItemSize(bb, style.FramePadding.y); bool pressed = false;
     if (ImGui::ItemAdd(bb, id)) { bool hovered, held; if ((pressed = ImGui::ButtonBehavior(bb, id, &hovered, &held))) *v = !(*v); }
     g_anim[idx] = ImLerp(g_anim[idx], *v ? 1.0f : 0.0f, 1.0f - expf(-20.0f * ImGui::GetIO().DeltaTime)); 
-    win->DrawList->AddRectFilled(bb.Min, bb.Min + ImVec2(w, h), ImGui::GetColorU32(ImLerp(ImVec4(0.2f, 0.22f, 0.27f, 1.0f), ImVec4(0.0f, 0.85f, 0.55f, 1.0f), g_anim[idx])), h*0.5f);
-    win->DrawList->AddRect(bb.Min, bb.Min + ImVec2(w, h), IM_COL32(0, 0, 0, 80), h*0.5f, 0, 1.0f);
+    
+    // 背景色过渡：暗灰 -> 亮绿
+    win->DrawList->AddRectFilled(bb.Min, bb.Min + ImVec2(w, h), ImGui::GetColorU32(ImLerp(ImVec4(0.15f, 0.17f, 0.20f, 1.0f), ImVec4(0.0f, 0.85f, 0.55f, 1.0f), g_anim[idx])), h*0.5f);
+    // 边框弱化
+    win->DrawList->AddRect(bb.Min, bb.Min + ImVec2(w, h), IM_COL32(255, 255, 255, 10), h*0.5f, 0, 1.0f);
+    
     ImVec2 hc = bb.Min + ImVec2(h*0.5f + g_anim[idx]*(w-h), h*0.5f);
-    win->DrawList->AddCircleFilled(hc + ImVec2(0, 1.5f), h*0.5f - 2.5f, IM_COL32(0, 0, 0, 90)); win->DrawList->AddCircleFilled(hc, h*0.5f - 2.5f, IM_COL32_WHITE);
+    // 增加球体的物理阴影和更大高光
+    win->DrawList->AddCircleFilled(hc + ImVec2(0, 3.0f * g_autoScale), h*0.5f - 2.0f * g_autoScale, IM_COL32(0, 0, 0, 100)); // 阴影
+    win->DrawList->AddCircleFilled(hc, h*0.5f - 2.0f * g_autoScale, IM_COL32_WHITE); // 主球体
+    
+    // 文字颜色根据状态渐变高亮
+    ImVec4 textColor = ImLerp(ImVec4(0.6f, 0.65f, 0.7f, 1.0f), ImVec4(1.0f, 1.0f, 1.0f, 1.0f), g_anim[idx]);
+    ImGui::PushStyleColor(ImGuiCol_Text, textColor);
     ImGui::RenderText(ImVec2(bb.Min.x + w + style.ItemInnerSpacing.x, bb.Min.y + (h - ImGui::GetFontSize()) * 0.5f), label);
+    ImGui::PopStyleColor();
     return pressed;
 }
 
@@ -4464,11 +4490,11 @@ void DrawDebugWindow(const GameSnapshot* snap) {
 
 void DrawMenu() {
     ImGuiIO& io = ImGui::GetIO(); ImGuiStyle& style = ImGui::GetStyle();
-    style.WindowRounding = 16.0f * g_autoScale; style.FrameRounding = 8.0f * g_autoScale; style.PopupRounding = 8.0f * g_autoScale;
-    style.ItemSpacing = ImVec2(12 * g_autoScale, 12 * g_autoScale); style.WindowPadding = ImVec2(16 * g_autoScale, 16 * g_autoScale); 
+    style.WindowRounding = 12.0f * g_autoScale; style.FrameRounding = 6.0f * g_autoScale; style.PopupRounding = 8.0f * g_autoScale;
+    style.ItemSpacing = ImVec2(14 * g_autoScale, 14 * g_autoScale); style.WindowPadding = ImVec2(18 * g_autoScale, 18 * g_autoScale); 
     style.WindowBorderSize = 1.0f; style.ScrollbarSize = 35.0f * g_autoScale; style.GrabMinSize = 25.0f * g_autoScale;
-    style.Colors[ImGuiCol_WindowBg] = ImVec4(0.08f, 0.09f, 0.11f, 0.92f); style.Colors[ImGuiCol_Border] = ImVec4(1.0f, 1.0f, 1.0f, 0.08f);
-    style.Colors[ImGuiCol_TitleBg] = ImVec4(0.08f, 0.09f, 0.11f, 0.95f); style.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.12f, 0.13f, 0.15f, 0.95f);
+    style.Colors[ImGuiCol_WindowBg] = ImVec4(0.06f, 0.07f, 0.09f, 0.96f); style.Colors[ImGuiCol_Border] = ImVec4(1.0f, 1.0f, 1.0f, 0.06f);
+    style.Colors[ImGuiCol_TitleBg] = ImVec4(0.09f, 0.11f, 0.15f, 0.98f); style.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.09f, 0.11f, 0.15f, 0.98f);
 
     static bool firstMenuOpen = true; 
     if (firstMenuOpen) { 
