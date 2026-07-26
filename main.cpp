@@ -184,7 +184,7 @@ bool g_warning_tiers[7] = {false, false, false, false, true, false, false};
 int g_warning_threshold = 6;   
 
 bool g_show_debug_window = false, g_header_pred = true, g_header_esp = true, g_menuCollapsed = false;
-float g_save_timer = 0.0f, g_scale = 1.0f, g_autoScale = 1.0f, g_current_rendered_size = 0.0f; 
+float g_save_timer = 0.0f, g_scale = 1.0f, g_fontScale = 1.0f, g_autoScale = 1.0f, g_current_rendered_size = 0.0f; 
 float g_anim[30] = {0.0f}; 
 float g_boardScale = 2.2f, g_boardManualScale = 1.0f, g_startX = 400.0f, g_startY = 400.0f;    
 float g_menuX = 100.0f, g_menuY = 100.0f, g_menuW = 500.0f, g_menuH = 650.0f; 
@@ -244,7 +244,7 @@ ConfigEntry g_configTable[] = {
     {"instantWinX", C_FLOAT, &g_instant_win_x}, {"instantWinY", C_FLOAT, &g_instant_win_y}, {"instantWinScale", C_FLOAT, &g_instant_win_scale},
     {"showSellWin", C_BOOL, &g_show_sell_window}, {"sellWinX", C_FLOAT, &g_sell_win_x}, {"sellWinY", C_FLOAT, &g_sell_win_y}, {"sellWinScale", C_FLOAT, &g_sell_win_scale},
     {"menuX", C_FLOAT, &g_menuX}, {"menuY", C_FLOAT, &g_menuY}, {"menuW", C_FLOAT, &g_menuW}, {"menuH", C_FLOAT, &g_menuH}, 
-    {"menuScale", C_FLOAT, &g_scale}, {"menuCollapsed", C_BOOL, &g_menuCollapsed}, {"menuThemeIdx", C_INT, &g_menuThemeIdx},
+    {"menuScale", C_FLOAT, &g_scale}, {"fontScale", C_FLOAT, &g_fontScale}, {"menuCollapsed", C_BOOL, &g_menuCollapsed}, {"menuThemeIdx", C_INT, &g_menuThemeIdx},
     {"startX", C_FLOAT, &g_startX}, {"startY", C_FLOAT, &g_startY}, {"manualScale", C_FLOAT, &g_boardManualScale},
     {"enemyBenchX", C_FLOAT, &g_enemy_bench_X}, {"enemyBenchY", C_FLOAT, &g_enemy_bench_Y}, {"enemyBenchScale", C_FLOAT, &g_enemy_bench_Scale},
     {"enemyX", C_FLOAT, &g_enemy_X}, {"enemyY", C_FLOAT, &g_enemy_Y}, {"enemyScale", C_FLOAT, &g_enemy_Scale},
@@ -2735,7 +2735,7 @@ template <typename T> void ModernAdjusterInternal(const char* label, T* v, T v_m
 void ModernNumberAdjuster(const char* label, int* v, int v_min, int v_max) { ModernAdjusterInternal<int>(label, v, v_min, v_max, 1, "%d"); }
 void ModernFloatAdjuster(const char* label, float* v, float v_min, float v_max, float step) { ModernAdjusterInternal<float>(label, v, v_min, v_max, step, "%.1f"); }
 
-void ModernSlider(const char* label, float* v, float v_min, float v_max) {
+bool ModernSlider(const char* label, float* v, float v_min, float v_max) {
     ImGuiWindow* win = ImGui::GetCurrentWindow(); const ImGuiStyle& style = ImGui::GetStyle(); ImGui::PushID(label);
     
     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.88f, 0.89f, 0.93f, 1.0f));
@@ -2748,15 +2748,16 @@ void ModernSlider(const char* label, float* v, float v_min, float v_max) {
     
     ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.16f, 0.17f, 0.22f, 1.0f)); 
     ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.20f, 0.22f, 0.28f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_SliderGrab, ImVec4(0.0f, 0.83f, 0.67f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_SliderGrabActive, ImVec4(0.0f, 0.70f, 0.56f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.0f, 0.83f, 0.67f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_SliderGrab, g_curAccentColor);
+    ImGui::PushStyleColor(ImGuiCol_SliderGrabActive, g_curPrimaryColor);
+    ImGui::PushStyleColor(ImGuiCol_Text, g_curAccentColor);
     
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 6.0f * g_autoScale); 
     
     ImGui::PushItemWidth(180.0f * g_autoScale * g_scale); 
-    ImGui::SliderFloat("##sl", v, v_min, v_max, "%.2f"); 
+    bool changed = ImGui::SliderFloat("##sl", v, v_min, v_max, "%.2f"); 
     ImGui::PopItemWidth(); ImGui::PopStyleVar(); ImGui::PopStyleColor(5); ImGui::PopID();
+    return changed;
 }
 
 bool ModernToggle(const char* label, bool* v, int idx) {
@@ -4657,7 +4658,7 @@ void DrawMenu() {
         }
         g_menuX = ImGui::GetWindowPos().x; g_menuY = ImGui::GetWindowPos().y; g_menuCollapsed = ImGui::IsWindowCollapsed();
         if (!g_menuCollapsed) {
-            ImGui::SetWindowFontScale(g_scale);
+            ImGui::SetWindowFontScale(g_scale * g_fontScale);
             ImGui::TextColored(ImVec4(0.34f, 0.83f, 0.60f, 1.0f), (const char*)u8"● 系统运行中 | FPS: %.1f", io.Framerate);
             
             // --- 4种磨砂主题丝滑切换条 ---
@@ -4688,7 +4689,9 @@ void DrawMenu() {
             ColoredSeparator();
             
             // --- 字体大小调节滑块 ---
-            ModernSlider((const char*)u8"字体大小", &g_scale, 0.5f, 2.5f);
+            if (ModernSlider((const char*)u8"字体大小", &g_fontScale, 0.5f, 2.5f)) {
+                g_save_timer = 1.0f; SaveConfig();
+            }
             ImGui::Spacing();
             
             // ===============================================
