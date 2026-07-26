@@ -2706,7 +2706,7 @@ static void EndMenuSection() {
     ImGui::Spacing();
 }
 
-template <typename T> void ModernAdjusterInternal(const char* label, T* v, T v_min, T v_max, T step, const char* format) {
+template <typename T> bool ModernAdjusterInternal(const char* label, T* v, T v_min, T v_max, T step, const char* format) {
     ImGuiWindow* win = ImGui::GetCurrentWindow(); const ImGuiStyle& style = ImGui::GetStyle(); ImGui::PushID(label);
     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.88f, 0.89f, 0.93f, 1.0f));
     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetFrameHeight() * 2.2f + style.ItemInnerSpacing.x); ImGui::Text("%s", label); ImGui::PopStyleColor(); ImGui::SameLine();
@@ -2717,23 +2717,26 @@ template <typename T> void ModernAdjusterInternal(const char* label, T* v, T v_m
     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15.0f * g_autoScale * g_scale);
 
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.18f, 0.20f, 0.26f, 1.0f)); 
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.00f, 0.83f, 0.67f, 0.35f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.00f, 0.83f, 0.67f, 0.55f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_curPrimaryColor);
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_curAccentColor);
     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.94f, 0.94f, 0.97f, 1.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 6.0f * g_autoScale);
     ImGui::PushButtonRepeat(true);
-    if (ImGui::Button("-", ImVec2(btn_sz, btn_sz))) if (*v > v_min) *v -= step; ImGui::SameLine();
+    bool modified = false;
+    if (ImGui::Button("-", ImVec2(btn_sz, btn_sz))) { if (*v > v_min + 0.001f) { *v -= step; modified = true; } }
+    ImGui::SameLine();
     char buf[32]; std::is_same<T, int>::value ? snprintf(buf, sizeof(buf), format, *v) : snprintf(buf, sizeof(buf), format, (float)(*v)); 
     ImVec2 t_sz = ImGui::CalcTextSize(buf); ImVec2 val_pos = win->DC.CursorPos;
     win->DrawList->AddRectFilled(val_pos, val_pos + ImVec2(val_w, btn_sz), IM_COL32(30, 32, 42, 255), 6.0f * g_autoScale * g_scale);
-    win->DrawList->AddText(ImGui::GetFont(), ImGui::GetFontSize(), val_pos + ImVec2((val_w - t_sz.x)*0.5f, (btn_sz - t_sz.y)*0.5f), IM_COL32(0, 212, 170, 255), buf); ImGui::Dummy(ImVec2(val_w, btn_sz)); ImGui::SameLine();
-    if (ImGui::Button("+", ImVec2(btn_sz, btn_sz))) if (*v < v_max) *v += step; 
+    win->DrawList->AddText(ImGui::GetFont(), ImGui::GetFontSize(), val_pos + ImVec2((val_w - t_sz.x)*0.5f, (btn_sz - t_sz.y)*0.5f), ImGui::GetColorU32(g_curAccentColor), buf); ImGui::Dummy(ImVec2(val_w, btn_sz)); ImGui::SameLine();
+    if (ImGui::Button("+", ImVec2(btn_sz, btn_sz))) { if (*v < v_max - 0.001f) { *v += step; modified = true; } }
     ImGui::PopButtonRepeat();
     ImGui::PopStyleVar(); ImGui::PopStyleColor(4); ImGui::PopID();
+    return modified;
 }
 
-void ModernNumberAdjuster(const char* label, int* v, int v_min, int v_max) { ModernAdjusterInternal<int>(label, v, v_min, v_max, 1, "%d"); }
-void ModernFloatAdjuster(const char* label, float* v, float v_min, float v_max, float step) { ModernAdjusterInternal<float>(label, v, v_min, v_max, step, "%.1f"); }
+bool ModernNumberAdjuster(const char* label, int* v, int v_min, int v_max) { return ModernAdjusterInternal<int>(label, v, v_min, v_max, 1, "%d"); }
+bool ModernFloatAdjuster(const char* label, float* v, float v_min, float v_max, float step) { return ModernAdjusterInternal<float>(label, v, v_min, v_max, step, "%.1f"); }
 
 bool ModernSlider(const char* label, float* v, float v_min, float v_max) {
     ImGuiWindow* win = ImGui::GetCurrentWindow(); const ImGuiStyle& style = ImGui::GetStyle(); ImGui::PushID(label);
@@ -4688,8 +4691,8 @@ void DrawMenu() {
             }
             ColoredSeparator();
             
-            // --- 字体大小调节滑块 ---
-            if (ModernSlider((const char*)u8"字体大小", &g_fontScale, 0.5f, 2.5f)) {
+            // --- 字体大小调节（按键步进调控，解决连续拖拽产生的浮点重绘残影） ---
+            if (ModernFloatAdjuster((const char*)u8"字体大小", &g_fontScale, 0.5f, 2.5f, 0.1f)) {
                 g_save_timer = 1.0f; SaveConfig();
             }
             ImGui::Spacing();
