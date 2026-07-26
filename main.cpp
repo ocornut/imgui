@@ -1,5 +1,6 @@
 // 启用 ImVec2 的数学运算符支持
 #define IMGUI_DEFINE_MATH_OPERATORS 
+// --- Antigravity AI 自动同步测试注释 --- 
 
 #include "imgui.h"
 #include "imgui_internal.h"
