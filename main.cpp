@@ -4621,17 +4621,7 @@ void DrawDebugWindow(const GameSnapshot* snap) {
 
 void DrawMenu() {
     ImGuiIO& io = ImGui::GetIO(); ImGuiStyle& style = ImGui::GetStyle();
-    // 极简圆角
-    style.WindowRounding = 6.0f * g_autoScale; style.FrameRounding = 4.0f * g_autoScale; style.PopupRounding = 4.0f * g_autoScale;
-    style.ItemSpacing = ImVec2(10 * g_autoScale, 10 * g_autoScale); style.WindowPadding = ImVec2(16 * g_autoScale, 16 * g_autoScale); 
-    style.WindowBorderSize = 1.0f; style.ScrollbarSize = 35.0f * g_autoScale; style.GrabMinSize = 25.0f * g_autoScale;
-    
-    // Apple 亮色系配色
-    style.Colors[ImGuiCol_WindowBg] = ImVec4(0.96f, 0.96f, 0.97f, 0.98f); // 极简白
-    style.Colors[ImGuiCol_Border] = ImVec4(0.0f, 0.0f, 0.0f, 0.05f); // 极微弱边框
-    style.Colors[ImGuiCol_TitleBg] = ImVec4(0.9f, 0.9f, 0.92f, 1.0f); // 浅灰标题栏
-    style.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.88f, 0.88f, 0.9f, 1.0f);
-    style.Colors[ImGuiCol_Text] = ImVec4(0.1f, 0.1f, 0.1f, 1.0f); // 全局文字深黑
+    ApplyMenuTheme(style);
 
     static bool firstMenuOpen = true; 
     if (firstMenuOpen) { 
@@ -4641,7 +4631,7 @@ void DrawMenu() {
         firstMenuOpen = false; 
     }
 
-    if (ImGui::Begin((const char*)u8"金铲铲助手", NULL, ImGuiWindowFlags_NoSavedSettings)) {
+    if (ImGui::Begin((const char*)u8"金铲铲助手 // CYBER-HUD", NULL, ImGuiWindowFlags_NoSavedSettings)) {
         if (!ImGui::IsWindowCollapsed()) {
             float curW = ImGui::GetWindowSize().x, curH = ImGui::GetWindowSize().y;
             if (std::abs(curW - g_menuW) > 5.0f || std::abs(curH - g_menuH) > 5.0f) { g_menuW = curW; g_menuH = curH; g_scale = std::clamp(curW / (500.0f * g_autoScale), 0.5f, 2.5f); }
