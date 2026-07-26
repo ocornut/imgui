@@ -58,6 +58,8 @@ int g_selected_skin_idx = 0;
 bool g_header_skin = true;
 
 int g_menuThemeIdx = 0; // 0: 冰晶 Indigo, 1: 翡翠 Emerald, 2: 幻紫 Purple, 3: 霜天 Sky
+ImVec4 g_curPrimaryColor = ImVec4(0.39f, 0.40f, 0.95f, 1.0f);
+ImVec4 g_curAccentColor  = ImVec4(0.55f, 0.58f, 0.98f, 1.0f);
 
 bool g_enable_map_skin = false;
 int g_selected_map_idx = 0;
@@ -2583,6 +2585,26 @@ void ColoredSeparator() {
 }
 
 static void ApplyMenuTheme(ImGuiStyle& style) {
+    switch (g_menuThemeIdx) {
+        case 1: // 🍃 翡翠 Emerald
+            g_curPrimaryColor = ImVec4(0.06f, 0.73f, 0.51f, 1.0f);
+            g_curAccentColor  = ImVec4(0.20f, 0.88f, 0.65f, 1.0f);
+            break;
+        case 2: // 🍇 幻紫 Purple
+            g_curPrimaryColor = ImVec4(0.66f, 0.33f, 0.97f, 1.0f);
+            g_curAccentColor  = ImVec4(0.78f, 0.45f, 0.98f, 1.0f);
+            break;
+        case 3: // ❄️ 霜天 Sky
+            g_curPrimaryColor = ImVec4(0.22f, 0.74f, 0.97f, 1.0f);
+            g_curAccentColor  = ImVec4(0.38f, 0.82f, 0.98f, 1.0f);
+            break;
+        case 0: // 🔮 冰晶 Indigo
+        default:
+            g_curPrimaryColor = ImVec4(0.39f, 0.40f, 0.95f, 1.0f);
+            g_curAccentColor  = ImVec4(0.55f, 0.58f, 0.98f, 1.0f);
+            break;
+    }
+
     float s = g_autoScale;
     style.WindowRounding = 6.0f * s;
     style.ChildRounding = 6.0f * s;
@@ -2607,34 +2629,34 @@ static void ApplyMenuTheme(ImGuiStyle& style) {
     c[ImGuiCol_WindowBg]              = ImVec4(0.05f, 0.07f, 0.11f, 0.96f);
     c[ImGuiCol_ChildBg]               = ImVec4(0.08f, 0.10f, 0.16f, 0.88f);
     c[ImGuiCol_PopupBg]               = ImVec4(0.08f, 0.10f, 0.16f, 0.98f);
-    c[ImGuiCol_Border]                = ImVec4(0.0f, 0.95f, 1.0f, 0.35f);
+    c[ImGuiCol_Border]                = ImVec4(g_curPrimaryColor.x, g_curPrimaryColor.y, g_curPrimaryColor.z, 0.35f);
     c[ImGuiCol_FrameBg]               = ImVec4(0.10f, 0.14f, 0.22f, 1.0f);
-    c[ImGuiCol_FrameBgHovered]        = ImVec4(0.0f, 0.40f, 0.60f, 0.60f);
-    c[ImGuiCol_FrameBgActive]         = ImVec4(0.0f, 0.60f, 0.80f, 0.80f);
+    c[ImGuiCol_FrameBgHovered]        = ImVec4(g_curPrimaryColor.x * 0.5f, g_curPrimaryColor.y * 0.5f, g_curPrimaryColor.z * 0.5f, 0.60f);
+    c[ImGuiCol_FrameBgActive]         = ImVec4(g_curPrimaryColor.x * 0.8f, g_curPrimaryColor.y * 0.8f, g_curPrimaryColor.z * 0.8f, 0.80f);
     c[ImGuiCol_TitleBg]               = ImVec4(0.06f, 0.08f, 0.14f, 1.0f);
-    c[ImGuiCol_TitleBgActive]         = ImVec4(0.0f, 0.45f, 0.65f, 1.0f);
+    c[ImGuiCol_TitleBgActive]         = ImVec4(g_curPrimaryColor.x * 0.6f, g_curPrimaryColor.y * 0.6f, g_curPrimaryColor.z * 0.6f, 1.0f);
     c[ImGuiCol_TitleBgCollapsed]      = ImVec4(0.06f, 0.08f, 0.14f, 0.75f);
     c[ImGuiCol_ScrollbarBg]           = ImVec4(0.05f, 0.07f, 0.11f, 0.60f);
-    c[ImGuiCol_ScrollbarGrab]         = ImVec4(0.0f, 0.60f, 0.80f, 0.70f);
-    c[ImGuiCol_ScrollbarGrabHovered]  = ImVec4(0.0f, 0.95f, 1.0f, 0.85f);
+    c[ImGuiCol_ScrollbarGrab]         = ImVec4(g_curPrimaryColor.x * 0.8f, g_curPrimaryColor.y * 0.8f, g_curPrimaryColor.z * 0.8f, 0.70f);
+    c[ImGuiCol_ScrollbarGrabHovered]  = g_curAccentColor;
     c[ImGuiCol_ScrollbarGrabActive]   = ImVec4(1.0f, 0.0f, 0.45f, 1.0f);
-    c[ImGuiCol_CheckMark]             = ImVec4(0.0f, 0.95f, 1.0f, 1.0f);
-    c[ImGuiCol_SliderGrab]            = ImVec4(0.0f, 0.95f, 1.0f, 1.0f);
-    c[ImGuiCol_SliderGrabActive]      = ImVec4(1.0f, 0.0f, 0.45f, 1.0f);
-    c[ImGuiCol_Button]                = ImVec4(0.08f, 0.20f, 0.32f, 0.9f);
-    c[ImGuiCol_ButtonHovered]         = ImVec4(0.0f, 0.75f, 0.95f, 0.45f);
-    c[ImGuiCol_ButtonActive]          = ImVec4(1.0f, 0.0f, 0.45f, 0.75f);
-    c[ImGuiCol_Header]                = ImVec4(0.0f, 0.75f, 0.95f, 0.25f);
-    c[ImGuiCol_HeaderHovered]         = ImVec4(0.0f, 0.95f, 1.0f, 0.40f);
-    c[ImGuiCol_HeaderActive]          = ImVec4(1.0f, 0.0f, 0.45f, 0.60f);
+    c[ImGuiCol_CheckMark]             = g_curAccentColor;
+    c[ImGuiCol_SliderGrab]            = g_curAccentColor;
+    c[ImGuiCol_SliderGrabActive]      = g_curPrimaryColor;
+    c[ImGuiCol_Button]                = ImVec4(g_curPrimaryColor.x * 0.3f, g_curPrimaryColor.y * 0.3f, g_curPrimaryColor.z * 0.3f, 0.9f);
+    c[ImGuiCol_ButtonHovered]         = ImVec4(g_curPrimaryColor.x * 0.7f, g_curPrimaryColor.y * 0.7f, g_curPrimaryColor.z * 0.7f, 0.6f);
+    c[ImGuiCol_ButtonActive]          = g_curPrimaryColor;
+    c[ImGuiCol_Header]                = ImVec4(g_curPrimaryColor.x * 0.4f, g_curPrimaryColor.y * 0.4f, g_curPrimaryColor.z * 0.4f, 0.3f);
+    c[ImGuiCol_HeaderHovered]         = ImVec4(g_curPrimaryColor.x * 0.7f, g_curPrimaryColor.y * 0.7f, g_curPrimaryColor.z * 0.7f, 0.5f);
+    c[ImGuiCol_HeaderActive]          = g_curPrimaryColor;
     c[ImGuiCol_Tab]                   = ImVec4(0.08f, 0.12f, 0.20f, 1.0f);
-    c[ImGuiCol_TabHovered]            = ImVec4(0.0f, 0.95f, 1.0f, 0.40f);
-    c[ImGuiCol_TabActive]             = ImVec4(0.0f, 0.55f, 0.75f, 1.0f);
+    c[ImGuiCol_TabHovered]            = ImVec4(g_curPrimaryColor.x * 0.8f, g_curPrimaryColor.y * 0.8f, g_curPrimaryColor.z * 0.8f, 0.6f);
+    c[ImGuiCol_TabActive]             = g_curPrimaryColor;
     c[ImGuiCol_TabUnfocused]          = ImVec4(0.06f, 0.09f, 0.14f, 1.0f);
     c[ImGuiCol_TabUnfocusedActive]    = ImVec4(0.08f, 0.14f, 0.22f, 1.0f);
-    c[ImGuiCol_Separator]             = ImVec4(0.0f, 0.95f, 1.0f, 0.25f);
-    c[ImGuiCol_ResizeGrip]            = ImVec4(0.0f, 0.95f, 1.0f, 0.30f);
-    c[ImGuiCol_ResizeGripHovered]     = ImVec4(0.0f, 0.95f, 1.0f, 0.70f);
+    c[ImGuiCol_Separator]             = ImVec4(g_curPrimaryColor.x, g_curPrimaryColor.y, g_curPrimaryColor.z, 0.35f);
+    c[ImGuiCol_ResizeGrip]            = ImVec4(g_curPrimaryColor.x, g_curPrimaryColor.y, g_curPrimaryColor.z, 0.30f);
+    c[ImGuiCol_ResizeGripHovered]     = g_curAccentColor;
     c[ImGuiCol_ResizeGripActive]      = ImVec4(1.0f, 0.0f, 0.45f, 1.0f);
 }
 
