@@ -1,0 +1,30 @@
+* text=auto
+
+*.c text
+*.cpp text
+*.h text
+*.m text
+*.mm text
+*.md text
+*.txt text
+*.html text
+*.bat text
+*.frag text
+*.vert text
+*.mkb text
+*.icf text
+
+*.sln text eol=crlf
+*.vcxproj text eol=crlf
+*.vcxproj.filters text eol=crlf
+*.natvis text eol=crlf
+
+Makefile text eol=lf
+*.sh text eol=lf
+*.pbxproj text eol=lf
+*.storyboard text eol=lf
+*.plist text eol=lf
+
+*.png binary
+*.ttf binary
+*.lib binary
