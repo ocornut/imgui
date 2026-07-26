@@ -2340,9 +2340,6 @@ void ImDrawData::AddDrawList(ImDrawList* draw_list)
 {
     draw_list->_PopUnusedDrawCmd();
     ImGui::AddDrawListToDrawDataEx(this, &CmdLists, draw_list);
-#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    CmdListsCount = CmdLists.Size;
-#endif
 }
 
 // For backward compatibility: convert all buffers from indexed to de-indexed, in case you cannot render indexed. Note: this is slow and most likely a waste of resources. Always prefer indexed rendering!

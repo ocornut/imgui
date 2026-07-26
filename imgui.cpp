@@ -6243,7 +6243,9 @@ void ImGui::Render()
         ImDrawData* draw_data = &viewport->DrawDataP;
         for (ImDrawList* draw_list : draw_data->CmdLists)
             draw_list->_PopUnusedDrawCmd();
-
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+        draw_data->CmdListsCount = draw_data->CmdLists.Size;
+#endif
         g.IO.MetricsRenderVertices += draw_data->TotalVtxCount;
         g.IO.MetricsRenderIndices += draw_data->TotalIdxCount;
     }

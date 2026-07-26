@@ -36,10 +36,23 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
+ VERSION 1.92.9b (In Progress)
+-----------------------------------------------------------------------
+
+Breaking Changes:
+
+Other Changes:
+
+- ImDrawData: fixed a regression in 1.92.9 where legacy `ImDrawData::CmdListsCount` was always 0.
+  Prefer using `ImDrawData::CmdList.Size` anyway.
+
+
+
+-----------------------------------------------------------------------
  VERSION 1.92.9 (Released 2026-07-25)
 -----------------------------------------------------------------------
 
-Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.92.8
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.92.9
 
 Breaking Changes:
 
@@ -1106,7 +1119,7 @@ Other Changes:
     not available. (#5924, #5562)
   - SDL3+DirectX11: Added SDL3+DirectX11 example. (#8956, #8957) [@tomaz82]
   - Win32+DirectX12: Rework synchronization logic. (#8961) [@RT2Code]
-  - Made examples's main.cpp consistent with returning 1 on error.
+  - Made examples' main.cpp consistent with returning 1 on error.
 
 
 -----------------------------------------------------------------------
