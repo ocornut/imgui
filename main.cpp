@@ -2568,12 +2568,12 @@ void ColoredSeparator() {
     if (win->SkipItems) return;
     ImRect bb(win->DC.CursorPos, win->DC.CursorPos + ImVec2(ImGui::GetContentRegionAvail().x, 1.0f * g_autoScale * g_scale));
     ImGui::ItemSize(bb); if (!ImGui::ItemAdd(bb, 0)) return;
-    win->DrawList->AddRectFilled(bb.Min, bb.Max, IM_COL32(255, 255, 255, 15));
+    win->DrawList->AddRectFilled(bb.Min, bb.Max, IM_COL32(0, 0, 0, 30)); // 浅灰细线
 }
 
 template <typename T> void ModernAdjusterInternal(const char* label, T* v, T v_min, T v_max, T step, const char* format) {
     ImGuiWindow* win = ImGui::GetCurrentWindow(); const ImGuiStyle& style = ImGui::GetStyle(); ImGui::PushID(label);
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.85f, 0.85f, 0.85f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.2f, 0.2f, 1.0f));
     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetFrameHeight() * 2.2f + style.ItemInnerSpacing.x); ImGui::Text("%s", label); ImGui::PopStyleColor(); ImGui::SameLine();
     
     float btn_sz = ImGui::GetFrameHeight(); 
@@ -2581,19 +2581,20 @@ template <typename T> void ModernAdjusterInternal(const char* label, T* v, T v_m
     
     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15.0f * g_autoScale * g_scale);
 
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.22f, 1.0f)); 
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.25f, 0.25f, 0.28f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.0f, 0.48f, 0.8f, 1.0f)); // VSCode Blue
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.9f, 0.9f, 0.9f, 1.0f)); 
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.85f, 0.85f, 0.85f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.0f, 0.48f, 1.0f, 1.0f)); // Apple Blue
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.1f, 0.1f, 0.1f, 1.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f * g_autoScale);
     ImGui::PushButtonRepeat(true);
     if (ImGui::Button("-", ImVec2(btn_sz, btn_sz))) if (*v > v_min) *v -= step; ImGui::SameLine();
     char buf[32]; std::is_same<T, int>::value ? snprintf(buf, sizeof(buf), format, *v) : snprintf(buf, sizeof(buf), format, (float)(*v)); 
     ImVec2 t_sz = ImGui::CalcTextSize(buf); ImVec2 val_pos = win->DC.CursorPos;
-    win->DrawList->AddRectFilled(val_pos, val_pos + ImVec2(val_w, btn_sz), IM_COL32(45, 45, 48, 255), 4.0f * g_autoScale * g_scale);
-    win->DrawList->AddText(ImGui::GetFont(), ImGui::GetFontSize(), val_pos + ImVec2((val_w - t_sz.x)*0.5f, (btn_sz - t_sz.y)*0.5f), IM_COL32(230, 230, 230, 255), buf); ImGui::Dummy(ImVec2(val_w, btn_sz)); ImGui::SameLine();
+    win->DrawList->AddRectFilled(val_pos, val_pos + ImVec2(val_w, btn_sz), IM_COL32(235, 235, 240, 255), 4.0f * g_autoScale * g_scale);
+    win->DrawList->AddText(ImGui::GetFont(), ImGui::GetFontSize(), val_pos + ImVec2((val_w - t_sz.x)*0.5f, (btn_sz - t_sz.y)*0.5f), IM_COL32(20, 20, 20, 255), buf); ImGui::Dummy(ImVec2(val_w, btn_sz)); ImGui::SameLine();
     if (ImGui::Button("+", ImVec2(btn_sz, btn_sz))) if (*v < v_max) *v += step; 
     ImGui::PopButtonRepeat();
-    ImGui::PopStyleVar(); ImGui::PopStyleColor(3); ImGui::PopID();
+    ImGui::PopStyleVar(); ImGui::PopStyleColor(4); ImGui::PopID();
 }
 
 void ModernNumberAdjuster(const char* label, int* v, int v_min, int v_max) { ModernAdjusterInternal<int>(label, v, v_min, v_max, 1, "%d"); }
@@ -2602,7 +2603,7 @@ void ModernFloatAdjuster(const char* label, float* v, float v_min, float v_max, 
 void ModernSlider(const char* label, float* v, float v_min, float v_max) {
     ImGuiWindow* win = ImGui::GetCurrentWindow(); const ImGuiStyle& style = ImGui::GetStyle(); ImGui::PushID(label);
     
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.85f, 0.85f, 0.85f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.2f, 0.2f, 1.0f));
     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetFrameHeight() * 2.2f + style.ItemInnerSpacing.x); 
     ImGui::Text("%s", label); 
     ImGui::PopStyleColor();
@@ -2610,16 +2611,17 @@ void ModernSlider(const char* label, float* v, float v_min, float v_max) {
     
     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15.0f * g_autoScale * g_scale);
     
-    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.2f, 0.22f, 1.0f)); 
-    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.25f, 0.25f, 0.28f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_SliderGrab, ImVec4(0.0f, 0.48f, 0.8f, 1.0f)); // VSCode Blue
-    ImGui::PushStyleColor(ImGuiCol_SliderGrabActive, ImVec4(0.0f, 0.55f, 0.9f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.9f, 0.9f, 0.92f, 1.0f)); 
+    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.85f, 0.85f, 0.88f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_SliderGrab, ImVec4(0.0f, 0.48f, 1.0f, 1.0f)); // Apple Blue
+    ImGui::PushStyleColor(ImGuiCol_SliderGrabActive, ImVec4(0.0f, 0.4f, 0.9f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.2f, 0.2f, 1.0f));
     
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f * g_autoScale); 
     
     ImGui::PushItemWidth(180.0f * g_autoScale * g_scale); 
     ImGui::SliderFloat("##sl", v, v_min, v_max, "%.2f"); 
-    ImGui::PopItemWidth(); ImGui::PopStyleVar(); ImGui::PopStyleColor(4); ImGui::PopID();
+    ImGui::PopItemWidth(); ImGui::PopStyleVar(); ImGui::PopStyleColor(5); ImGui::PopID();
 }
 
 bool ModernToggle(const char* label, bool* v, int idx) {
@@ -2629,14 +2631,15 @@ bool ModernToggle(const char* label, bool* v, int idx) {
     if (ImGui::ItemAdd(bb, id)) { bool hovered, held; if ((pressed = ImGui::ButtonBehavior(bb, id, &hovered, &held))) *v = !(*v); }
     g_anim[idx] = ImLerp(g_anim[idx], *v ? 1.0f : 0.0f, 1.0f - expf(-20.0f * ImGui::GetIO().DeltaTime)); 
     
-    // 极简深灰底 -> VSCode蓝
-    win->DrawList->AddRectFilled(bb.Min, bb.Min + ImVec2(w, h), ImGui::GetColorU32(ImLerp(ImVec4(0.2f, 0.2f, 0.22f, 1.0f), ImVec4(0.0f, 0.48f, 0.8f, 1.0f), g_anim[idx])), h*0.5f);
+    // 浅灰底 -> Apple蓝
+    win->DrawList->AddRectFilled(bb.Min, bb.Min + ImVec2(w, h), ImGui::GetColorU32(ImLerp(ImVec4(0.85f, 0.85f, 0.88f, 1.0f), ImVec4(0.0f, 0.48f, 1.0f, 1.0f), g_anim[idx])), h*0.5f);
     
     ImVec2 hc = bb.Min + ImVec2(h*0.5f + g_anim[idx]*(w-h), h*0.5f);
-    // 纯白扁平滑块，无阴影
+    // 纯白扁平滑块，加微弱阴影使其在白底上立体
+    win->DrawList->AddCircleFilled(hc + ImVec2(0, 1.0f), h*0.5f - 2.0f * g_autoScale, IM_COL32(0, 0, 0, 30));
     win->DrawList->AddCircleFilled(hc, h*0.5f - 2.0f * g_autoScale, IM_COL32_WHITE);
     
-    ImVec4 textColor = ImLerp(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), ImVec4(0.95f, 0.95f, 0.95f, 1.0f), g_anim[idx]);
+    ImVec4 textColor = ImLerp(ImVec4(0.4f, 0.4f, 0.4f, 1.0f), ImVec4(0.1f, 0.1f, 0.1f, 1.0f), g_anim[idx]);
     ImGui::PushStyleColor(ImGuiCol_Text, textColor);
     ImGui::RenderText(ImVec2(bb.Min.x + w + style.ItemInnerSpacing.x, bb.Min.y + (h - ImGui::GetFontSize()) * 0.5f), label);
     ImGui::PopStyleColor();
@@ -2649,16 +2652,16 @@ bool ModernAnimatedFolder(const char* label, bool* state) {
     if (ImGui::ItemAdd(bb, id)) if (ImGui::ButtonBehavior(bb, id, &hovered, &held)) *state = !(*state); 
     float* p_anim = win->StateStorage.GetFloatRef(id, *state ? 1.0f : 0.0f); float anim = (*p_anim = ImLerp(*p_anim, *state ? 1.0f : 0.0f, 1.0f - expf(-18.0f * ImGui::GetIO().DeltaTime)));
     
-    // 极简微灰底
-    win->DrawList->AddRectFilled(bb.Min, bb.Max, hovered ? IM_COL32(255, 255, 255, 10) : IM_COL32(0, 0, 0, 0), 4.0f * g_autoScale * g_scale);
+    // 亮色折叠夹底色
+    win->DrawList->AddRectFilled(bb.Min, bb.Max, hovered ? IM_COL32(0, 0, 0, 10) : IM_COL32(0, 0, 0, 0), 4.0f * g_autoScale * g_scale);
     
     float cx = bb.Min.x + 15.0f * g_autoScale * g_scale; float cy = bb.Min.y + size.y * 0.5f; float ang = anim * 1.5708f; float arr = 5.0f * g_autoScale * g_scale; 
     
-    ImU32 arrCol = ImGui::GetColorU32(ImLerp(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), ImVec4(0.8f, 0.8f, 0.8f, 1.0f), anim));
+    ImU32 arrCol = ImGui::GetColorU32(ImLerp(ImVec4(0.4f, 0.4f, 0.4f, 1.0f), ImVec4(0.2f, 0.2f, 0.2f, 1.0f), anim));
     win->DrawList->AddTriangleFilled(ImVec2(cx+cosf(ang)*arr, cy+sinf(ang)*arr), ImVec2(cx+cosf(ang+2.094f)*arr, cy+sinf(ang+2.094f)*arr), ImVec2(cx+cosf(ang-2.094f)*arr, cy+sinf(ang-2.094f)*arr), arrCol);
     
     ImFont* font = ImGui::GetFont(); float fSz = ImGui::GetFontSize();
-    ImU32 textCol = ImGui::GetColorU32(ImLerp(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), ImVec4(0.9f, 0.9f, 0.9f, 1.0f), anim));
+    ImU32 textCol = ImGui::GetColorU32(ImLerp(ImVec4(0.4f, 0.4f, 0.4f, 1.0f), ImVec4(0.1f, 0.1f, 0.1f, 1.0f), anim));
     win->DrawList->AddText(font, fSz, ImVec2(cx + 25.0f * g_autoScale * g_scale, bb.Min.y + (size.y - fSz)*0.5f), textCol, label);
     
     if (*state) { ImGui::Indent(15.0f * g_autoScale * g_scale); return true; } return false;
@@ -2668,7 +2671,7 @@ void EndModernAnimatedFolder() { ImGui::Unindent(15.0f * g_autoScale * g_scale);
 
 void ModernTierSelector(const char* label, bool* tierArray) {
     ImGuiWindow* win = ImGui::GetCurrentWindow(); const ImGuiStyle& style = ImGui::GetStyle();
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.85f, 0.85f, 0.85f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.2f, 0.2f, 1.0f));
     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetFrameHeight() * 2.2f + style.ItemInnerSpacing.x); ImGui::Text("%s", label); ImGui::PopStyleColor(); ImGui::SameLine();
     
     for (int i = 1; i <= 5; i++) {
@@ -2677,12 +2680,12 @@ void ModernTierSelector(const char* label, bool* tierArray) {
         if (ImGui::ItemAdd(bb, win->GetID(tierArray + i))) { bool h, he; if (ImGui::ButtonBehavior(bb, win->GetID(tierArray+i), &h, &he)) tierArray[i] = !tierArray[i]; }
         static std::unordered_map<void*, float> anims_map; float& a = (anims_map[tierArray + i] = ImLerp(anims_map[tierArray + i], tierArray[i] ? 1.0f : 0.0f, 1.0f - expf(-20.0f * ImGui::GetIO().DeltaTime)));
         
-        // 极简深灰未激活，蓝灰激活
-        win->DrawList->AddRectFilled(bb.Min, bb.Max, IM_COL32((int)(45+0*a), (int)(45+77*a), (int)(48+128*a), 255), 4.0f * g_autoScale);
+        // 浅灰未激活，蓝灰激活
+        win->DrawList->AddRectFilled(bb.Min, bb.Max, IM_COL32((int)(230-100*a), (int)(230-10*a), (int)(235+20*a), 255), 4.0f * g_autoScale);
         
         char buf[8]; snprintf(buf, sizeof(buf), "%d", i); ImVec2 t_sz = ImGui::CalcTextSize(buf);
         win->DrawList->AddText(ImGui::GetFont(), ImGui::GetFontSize(), pos + ImVec2((bb.GetWidth() - t_sz.x)*0.5f, (bb.GetHeight() - t_sz.y)*0.5f), 
-            tierArray[i] ? IM_COL32_WHITE : IM_COL32(150, 150, 150, 255), buf);
+            tierArray[i] ? IM_COL32_WHITE : IM_COL32(100, 100, 100, 255), buf);
     }
 }
 
@@ -4504,11 +4507,12 @@ void DrawMenu() {
     style.ItemSpacing = ImVec2(10 * g_autoScale, 10 * g_autoScale); style.WindowPadding = ImVec2(16 * g_autoScale, 16 * g_autoScale); 
     style.WindowBorderSize = 1.0f; style.ScrollbarSize = 35.0f * g_autoScale; style.GrabMinSize = 25.0f * g_autoScale;
     
-    // VSCode 深空灰系配色
-    style.Colors[ImGuiCol_WindowBg] = ImVec4(0.12f, 0.12f, 0.12f, 0.98f); 
-    style.Colors[ImGuiCol_Border] = ImVec4(1.0f, 1.0f, 1.0f, 0.08f);
-    style.Colors[ImGuiCol_TitleBg] = ImVec4(0.15f, 0.15f, 0.15f, 1.0f); 
-    style.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.18f, 0.18f, 0.18f, 1.0f);
+    // Apple 亮色系配色
+    style.Colors[ImGuiCol_WindowBg] = ImVec4(0.96f, 0.96f, 0.97f, 0.98f); // 极简白
+    style.Colors[ImGuiCol_Border] = ImVec4(0.0f, 0.0f, 0.0f, 0.05f); // 极微弱边框
+    style.Colors[ImGuiCol_TitleBg] = ImVec4(0.9f, 0.9f, 0.92f, 1.0f); // 浅灰标题栏
+    style.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.88f, 0.88f, 0.9f, 1.0f);
+    style.Colors[ImGuiCol_Text] = ImVec4(0.1f, 0.1f, 0.1f, 1.0f); // 全局文字深黑
 
     static bool firstMenuOpen = true; 
     if (firstMenuOpen) { 
