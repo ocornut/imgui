@@ -77,7 +77,7 @@ HOW TO UPDATE?
     Being anti-aliased diagonal lines, they won't look particularly better or worse, just slightly offset.
     It'll likely only be noticeable if you carefully combined them with other primitives for a pixel-perfect result.
   - Old AddLine({x1, y1}, {x2, y2}, col) == AddLine({x1, y1}, {x2, y2}, col, thickness, ImDrawFlags_StrokeLegacy); // Offset by +0.5f + disable AA ends.
-                                         == AddLine({x1 + 0.5f, y1 + 0.5f}, {x2+ 0.5f, y2 + 0.5f}, col, thickness, ImDrawFlags_NoAAEnds); // Same
+                                         == AddLine({x1 + 0.5f, y1 + 0.5f}, {x2+ 0.5f, y2 + 0.5f}, col, thickness); // Same
     This reapplies the old offset, and should get you exactly the same result you previously got for thickness=1.0f lines.
     But said result was sometimes ambiguous and renderer dependent. (#3116, #3258, #2441)
   - Old AddLine() did not have anti-aliased ends, which could create gaps when rendering shapes out
@@ -93,8 +93,8 @@ HOW TO UPDATE?
     but the artifacts should be more localized. The new implementation attempted to favor simple
     implementation and robustness over the corner case accuracy.
   - Added anti-aliasing ends, most noticeable for thick lines.
-  - Added `ImDrawFlags_NoAAEnds` flag to disable anti-aliased line ends (slightly faster
-    and reduce vertex/index data).
+  - Added `ImDrawFlags_AAEnds` flag to enable anti-aliased line ends. Enabling AA Ends by
+    default would be more "correct", but it is slower and increase vertex/index data.
   - Added `ImDrawFlags_MiterOnly` flag to disable using beveled corner (closer to legacy
     rendering, slightly faster, but corners sharpers than 90 degrees may expand far out).
     Automatically used by AddRect(), AddCircle(), AddNgon(), AddEllipse() etc functions

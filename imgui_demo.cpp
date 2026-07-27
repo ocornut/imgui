@@ -10453,7 +10453,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             ImGui::ColorEdit4("Stroke Color", &colf_stroke.x);
             ImGui::ColorEdit4("Fill Color", &colf_fill.x);
 
-            static ImDrawFlags stroke_flags = ImDrawFlags_None;
+            static ImDrawFlags stroke_flags = ImDrawFlags_AAEnds;
             static ImDrawFlags other_flags = ImDrawFlags_None;
             ImGui::Text("Stroke Flags:");
             ImGui::RadioButton("Default", &stroke_flags, ImDrawFlags_None); ImGui::SameLine();
@@ -10464,7 +10464,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             ImGui::RadioButton("Legacy", &stroke_flags, ImDrawFlags_StrokeLegacy);
             ImGui::CheckboxFlags("MiterOnly", &other_flags, ImDrawFlags_MiterOnly); ImGui::SameLine();
             ImGui::CheckboxFlags("SquareCap", &other_flags, ImDrawFlags_SquareCap); ImGui::SameLine();
-            ImGui::CheckboxFlags("NoAAEnds", &other_flags, ImDrawFlags_NoAAEnds);
+            ImGui::CheckboxFlags("AAEnds", &other_flags, ImDrawFlags_AAEnds);
             ImGui::Spacing();
             const ImDrawFlags flags = stroke_flags | other_flags;
 
