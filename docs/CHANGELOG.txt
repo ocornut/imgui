@@ -149,6 +149,8 @@ HOW TO UPDATE?
     - `ImDrawListFlags_AllowVtxOffset`         -> `ImDrawFlags_UseVtxOffset`
     - `ImDrawListFlags_TextNoPixelSnap`        -> `ImDrawFlags_TextNoPixelSnap`
   Unifying them allows easily using them for both per-primitives and scope alterations.
+- (Breaking) Enabling ImFontAtlasFlags_NoBakedLines in the font atlas will disable
+  support for anti-aliased lines.
 - Tweaked line rendering in various locations to avoid blurryness:
   - Windows: title-bar and menu-bar border (when thickness>1.0f).
   - Tables: borders (when thickness>1.0f).
