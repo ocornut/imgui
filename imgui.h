@@ -3875,7 +3875,7 @@ enum ImFontAtlasFlags_
     ImFontAtlasFlags_None               = 0,
     ImFontAtlasFlags_NoPowerOfTwoHeight = 1 << 0,   // Don't round the height to next power of two
     ImFontAtlasFlags_NoMouseCursors     = 1 << 1,   // Don't build software mouse cursors into the atlas (save a little texture memory)
-    ImFontAtlasFlags_NoBakedLines       = 1 << 2,   // Don't build thick line textures into the atlas (save a little texture memory, allow support for point/nearest filtering). The AntiAliasedLinesUseTex features uses them, otherwise they will be rendered using polygons (more expensive for CPU/GPU).
+    ImFontAtlasFlags_NoBakedLines       = 1 << 2,   // [OBSOLETE] Don't build line textures into the atlas (save a little texture memory). SINCE 1.93.0 THIS PREVENT ANTI-ALIASED STROKES FROM WORKING.
     ImFontAtlasFlags_NoBakedRoundCorners= 1 << 3,   // Don't build round corners into the atlas.
 };
 
