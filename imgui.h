@@ -3433,14 +3433,14 @@ enum ImDrawFlags_
     ImDrawFlags_Closed                      = 1 << 9,  // PathStroke(), AddPolyline(): specify that shape should be closed.
     ImDrawFlags_MiterOnly                   = 1 << 10, // PathStroke(), AddPolyline(): use miter corners only. This assumes that the input polyline does not have corners sharper than 90 degrees. Slightly faster.
     ImDrawFlags_SquareCap                   = 1 << 11, // PathStroke(), AddPolyline(): use square cap line ends.
-    ImDrawFlags_NoAAEnds                    = 1 << 12, // PathStroke(), AddPolyline(): do not generate anti-aliased line ends. This can speed up single line rendering.
+    ImDrawFlags_AAEnds                      = 1 << 12, // PathStroke(), AddPolyline(): generate anti-aliased line ends.
 
     // Stroke position relative to the shape outline
     ImDrawFlags_StrokeInside                = 1 << 16, // Draw stroke inside of the shape outline (default for closed shapes and AddLineH, AddLineV functions)
     ImDrawFlags_StrokeCenter                = 2 << 16, // Draw stroke at the center of the shape outline (default for paths, bezier, and AddLine functions)
     ImDrawFlags_StrokeCenterBiased          = 3 << 16, // Draw stroke at the center of the shape outline, so that half thickness rounded down will be outside, and rest inside the shape outline. Useful for axis-aligned shapes: AddLineH, AddLineV, AddRect. Does not animate well!
     ImDrawFlags_StrokeOutside               = 4 << 16, // Draw stroke outside of the shape outline
-    ImDrawFlags_StrokeLegacy                = 5 << 16, // Use legacy positioning + enable MiterOnly and NoAAEnds flags.
+    ImDrawFlags_StrokeLegacy                = 5 << 16, // Use legacy positioning + enable MiterOnly, disable AAEnds flags.
     ImDrawFlags_StrokeMask_                 = 0x07 << 16,
 
     ImDrawFlags_InvalidMask_                = ~0x7FFFFFF0, // == 0x8000000F,
