@@ -574,7 +574,6 @@ bool    ImGui_ImplDX11_CreateDeviceObjects()
     }
 
     // Create texture sampler
-    // (Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling)
     {
         D3D11_SAMPLER_DESC desc;
         ZeroMemory(&desc, sizeof(desc));
