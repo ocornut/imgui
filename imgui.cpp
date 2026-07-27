@@ -403,6 +403,7 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
                           - ImDrawListFlags_AllowVtxOffset          -> ImDrawFlags_UseVtxOffset,
                           - ImDrawListFlags_TextNoPixelSnap         -> ImDrawFlags_TextNoPixelSnap,
                          unifying them allows easily using them for both per-primitives alterations and scope alterations.
+                       - obsoleted style.AntiAliasedLinesUseTex which now only makes sense for legacy strokes.
 
 (Docking/Viewport Branch)
  - 2026/XX/XX (1.XXXX) - when multi-viewports are enabled, all positions will be in your natural OS coordinates space. It means that:
@@ -1614,10 +1615,10 @@ ImGuiStyle::ImGuiStyle()
     DockingSeparatorSize        = 2.0f;             // Thickness of resizing border between docked windows
     MouseCursorScale            = 1.0f;             // Scale software rendered mouse cursor (when io.MouseDrawCursor is enabled). May be removed later.
 
-    // Rendering & Tesselation
-    AntiAliasedLines            = true;             // Enable anti-aliased lines/borders. Disable if you are really tight on CPU/GPU.
-    AntiAliasedLinesUseTex      = true;             // Enable anti-aliased lines/borders using textures where possible. Require backend to render with bilinear filtering (NOT point/nearest filtering).
-    AntiAliasedFill             = true;             // Enable anti-aliased filled shapes (rounded rectangles, circles, etc.).
+    // Rendering & Tessellation
+    AntiAliasedLines            = true;             // Enable anti-aliased lines/borders. Used at the beginning of the frame to set ImDrawFlags_AALines in all draw-lists.
+    AntiAliasedLineEnds         = false;            // Enable anti-aliased lines/borders ends. Nicer for thick lines but more expensive. Used at the beginning of the frame to set ImDrawFlags_AALineEnds in all draw-lists.
+    AntiAliasedFill             = true;             // Enable anti-aliased edges around filled shapes (rounded rectangles, circles, etc.). Used at the beginning of the frame to set ImDrawFlags_AAFill in all draw-lists.
     CurveTessellationMaxError   = 1.12f;            // Maximum error (in pixels) when using PathBezierCurveTo() without a specific number of segments. Decrease for highly tessellated curves (higher quality, more polygons), increase to reduce quality.
     CircleTessellationMaxError  = 0.30f;            // Maximum error (in pixels) allowed when using AddCircle()/AddCircleFilled() or drawing rounded corner rectangles with no explicit segment count specified. Decrease for higher quality but more geometry.
 
@@ -1633,6 +1634,7 @@ ImGuiStyle::ImGuiStyle()
     _NextFrameFontSizeBase      = 0.0f;
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     CurveTessellationTol        = 0.0f;             // Old CurveTessellationTol = CurveTessellationMaxError*CurveTessellationMaxError.
+    AntiAliasedLinesUseTex      = true;             // Enable anti-aliased lines/borders using textures for legacy strokes. Require backend to render with bilinear filtering (NOT point/nearest filtering).
 #endif
 
     // Default theme
@@ -5787,8 +5789,12 @@ static void SetupDrawListSharedData()
         g.DrawListSharedData.InitialDrawFlags |= ImDrawFlags_AAFill;
     if (g.Style.AntiAliasedLines)
         g.DrawListSharedData.InitialDrawFlags |= ImDrawFlags_AALines;
+    if (g.Style.AntiAliasedLineEnds)
+        g.DrawListSharedData.InitialDrawFlags |= ImDrawFlags_AALineEnds;
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     if (g.Style.AntiAliasedLinesUseTex && !(g.IO.Fonts->Flags & ImFontAtlasFlags_NoBakedLines))
         g.DrawListSharedData.InitialDrawFlags |= ImDrawFlags_UseTexForStrokeLegacy;
+#endif
     if (!(g.IO.Fonts->Flags & ImFontAtlasFlags_NoBakedRoundCorners))
         g.DrawListSharedData.InitialDrawFlags |= ImDrawFlags_UseTexForRoundCorners;
     if (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasVtxOffset)

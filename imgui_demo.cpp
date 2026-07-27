@@ -8936,9 +8936,15 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             SameLine();
             HelpMarker("When disabling anti-aliasing lines, you'll probably want to disable borders in your style as well.");
 
+            Checkbox("Anti-aliased line ends", &style.AntiAliasedLineEnds);
+
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+            BeginDisabled();
             Checkbox("Anti-aliased lines use texture", &style.AntiAliasedLinesUseTex);
             SameLine();
             HelpMarker("Faster lines using texture data. Require backend to render with bilinear filtering (not point/nearest filtering).");
+            EndDisabled();
+#endif
 
             Checkbox("Anti-aliased fill", &style.AntiAliasedFill);
             PushItemWidth(GetFontSize() * 8);
