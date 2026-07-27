@@ -10459,32 +10459,39 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             ImGui::ColorEdit4("Stroke Color", &colf_stroke.x);
             ImGui::ColorEdit4("Fill Color", &colf_fill.x);
 
-            static ImDrawFlags stroke_flags = ImDrawFlags_AALineEnds;
-            static ImDrawFlags other_flags = ImDrawFlags_None;
-            ImGui::Text("Stroke Flags:");
-            ImGui::RadioButton("Default", &stroke_flags, ImDrawFlags_None); ImGui::SameLine();
-            ImGui::RadioButton("Inside", &stroke_flags, ImDrawFlags_StrokeInside); ImGui::SameLine();
-            ImGui::RadioButton("Center", &stroke_flags, ImDrawFlags_StrokeCenter); ImGui::SameLine();
-            ImGui::RadioButton("CenterBiased", &stroke_flags, ImDrawFlags_StrokeCenterBiased); ImGui::SameLine();
-            ImGui::RadioButton("Outside", &stroke_flags, ImDrawFlags_StrokeOutside); ImGui::SameLine();
-            ImGui::RadioButton("Legacy", &stroke_flags, ImDrawFlags_StrokeLegacy);
-            ImGui::CheckboxFlags("MiterOnly", &other_flags, ImDrawFlags_MiterOnly); ImGui::SameLine();
-            ImGui::CheckboxFlags("SquareCap", &other_flags, ImDrawFlags_SquareCap); ImGui::SameLine();
-            ImGui::CheckboxFlags("AALineEnds", &other_flags, ImDrawFlags_AALineEnds);
-            ImGui::Spacing();
+            static ImDrawFlags prim_stroke_flags = ImDrawFlags_None;
+            static ImDrawFlags prim_other_flags = ImDrawFlags_AALineEnds;
+            ImGui::SeparatorText("Per primitive flags (AddXXX functions)");
+            ImGui::RadioButton("Default", &prim_stroke_flags, ImDrawFlags_None); ImGui::SameLine();
+            ImGui::RadioButton("Inside", &prim_stroke_flags, ImDrawFlags_StrokeInside); ImGui::SameLine();
+            ImGui::RadioButton("Center", &prim_stroke_flags, ImDrawFlags_StrokeCenter); ImGui::SameLine();
+            ImGui::RadioButton("CenterBiased", &prim_stroke_flags, ImDrawFlags_StrokeCenterBiased); ImGui::SameLine();
+            ImGui::RadioButton("Outside", &prim_stroke_flags, ImDrawFlags_StrokeOutside); ImGui::SameLine();
+            ImGui::RadioButton("Legacy", &prim_stroke_flags, ImDrawFlags_StrokeLegacy);
+            ImGui::CheckboxFlags("AAFill", &prim_other_flags, ImDrawFlags_AAFill); ImGui::SameLine(); // Note: Only for functions taking flags.
+            ImGui::CheckboxFlags("AALines", &prim_other_flags, ImDrawFlags_AALines); ImGui::SameLine(); // Note: Only for functions taking flags.
+            ImGui::CheckboxFlags("AALineEnds", &prim_other_flags, ImDrawFlags_AALineEnds); ImGui::SameLine();
+            ImGui::CheckboxFlags("MiterOnly", &prim_other_flags, ImDrawFlags_MiterOnly); ImGui::SameLine();
+            ImGui::CheckboxFlags("SquareCap", &prim_other_flags, ImDrawFlags_SquareCap);
+            //ImGui::CheckboxFlags("UseTexForRoundCorners", &prim_other_flags, ImDrawFlags_UseTexForRoundCorners); ImGui::SameLine();
+            //ImGui::CheckboxFlags("UseTexForStrokeLegacy", &prim_other_flags, ImDrawFlags_UseTexForStrokeLegacy);
 
-            // FIXME: Clarify how this is exposed, consider changing Demo code to simply alter Style.s
-            const ImDrawFlags scope_flags_mask = ImDrawFlags_AllowedInScope_;
-            static ImDrawFlags scope_flags = scope_flags_mask; // All
-            ImGui::Text("AA Flags:");
+            static ImDrawFlags scope_flags = draw_list->Flags; // First init copy current state.
+            ImGui::SeparatorText("Current ImDrawList flags (e.g. PushDrawFlag function)");
+            ImGui::PushID("ScopeFlags");
             ImGui::CheckboxFlags("AAFill", &scope_flags, ImDrawFlags_AAFill); ImGui::SameLine();
             ImGui::CheckboxFlags("AALines", &scope_flags, ImDrawFlags_AALines); ImGui::SameLine();
-            ImGui::CheckboxFlags("AALineEnds", &scope_flags, ImDrawFlags_AALineEnds);
-            ImGui::CheckboxFlags("UseTexForRoundCorners", &scope_flags, ImDrawFlags_UseTexForRoundCorners);
-            ImGui::CheckboxFlags("UseTexForStrokeLegacy", &scope_flags, ImDrawFlags_UseTexForStrokeLegacy); ImGui::SameLine();
+            ImGui::CheckboxFlags("AALineEnds", &scope_flags, ImDrawFlags_AALineEnds); ImGui::SameLine();
+            ImGui::CheckboxFlags("StrokeLegacy", &scope_flags, ImDrawFlags_StrokeLegacy);
+            //ImGui::CheckboxFlags("UseTexForRoundCorners", &scope_flags, ImDrawFlags_UseTexForRoundCorners); ImGui::SameLine();
+            //ImGui::CheckboxFlags("UseTexForStrokeLegacy", &scope_flags, ImDrawFlags_UseTexForStrokeLegacy);
+            ImGui::PopID();
+            ImGui::Spacing();
+
             ImDrawFlags backup_draw_list_flags = draw_list->Flags;
-            draw_list->Flags = (draw_list->Flags & ~scope_flags_mask) | scope_flags;
-            const ImDrawFlags flags = stroke_flags | other_flags;
+            draw_list->Flags = (draw_list->Flags & ~ImDrawFlags_AllowedInScope_) | scope_flags; // Equivalent to an hypothetical PushDrawFlags() API
+            const ImDrawFlags flags = prim_stroke_flags | prim_other_flags;
+            const ImDrawFlags fill_flags = flags & (ImDrawFlags_AAFill | ImDrawFlags_UseTexForRoundCorners);
 
             ImVec2 start_pos = ImGui::GetCursorScreenPos();
             const float pi = 3.141592f;
@@ -10517,9 +10524,9 @@ static void ShowExampleAppCustomRendering(bool* p_open)
                     draw_list->AddNgonFilled({ x + half_sz, y + half_sz }, half_sz, col, ngon_segments);                    x += sz + spacing;  // N-gon
                     draw_list->AddCircleFilled({ x + half_sz, y + half_sz }, half_sz, col, circle_segments);                x += sz + spacing;  // Circle
                     draw_list->AddEllipseFilled({ x + half_sz, y + half_sz }, { sz * 0.5f, sz * 0.3f }, col, -0.3f, circle_segments); x += sz + spacing;// Ellipse
-                    draw_list->AddRectFilled({ x, y }, { x + sz, y + sz }, col);                                            x += sz + spacing;  // Square
-                    draw_list->AddRectFilled({ x, y }, { x + sz, y + sz }, col, rounding);                                  x += sz + spacing;  // Square with all rounded corners
-                    draw_list->AddRectFilled({ x, y }, { x + sz, y + sz }, col, rounding, corners_tl_br);                   x += sz + spacing;  // Square with two rounded corners
+                    draw_list->AddRectFilled({ x, y }, { x + sz, y + sz }, col, 0.0f, fill_flags);                          x += sz + spacing;  // Square
+                    draw_list->AddRectFilled({ x, y }, { x + sz, y + sz }, col, rounding, fill_flags);                      x += sz + spacing;  // Square with all rounded corners
+                    draw_list->AddRectFilled({ x, y }, { x + sz, y + sz }, col, rounding, corners_tl_br | fill_flags);      x += sz + spacing;  // Square with two rounded corners
                     draw_list->AddTriangleFilled({ x + sz * 0.5f, y }, { x + sz, y + sz }, { x, y + sz }, col);             x += sz + spacing;  // Triangle
                     draw_list->AddTriangleFilled({ x + sz * 0.2f, y }, { x + sz * 0.4f, y + sz }, { x, y + sz }, col);      x += (float)(int)(sz * 0.4f) + spacing; // Thin triangle
                     PathConcaveShape(draw_list, x, y, sz); draw_list->PathFillConcave(col);                                 x += sz + spacing;  // Concave shape
