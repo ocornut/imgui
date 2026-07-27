@@ -2764,7 +2764,7 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
         outer_rounding = ImMin(outer_rounding, ImFabs(height) * (((flags & ImDrawFlags_RoundCornersLeft) == ImDrawFlags_RoundCornersLeft) || ((flags & ImDrawFlags_RoundCornersRight) == ImDrawFlags_RoundCornersRight) ? 0.5f : 1.0f) - 1.0f);
     }
 
-    const bool is_truncated = IM_IS_TRUNCATED4(outer_min.x, outer_min.y, outer_max.x, outer_max.y) && IM_IS_TRUNCATED4(outer_rounding, thickness, 0.0f, 0.0f);
+    const bool is_truncated = IM_IS_TRUNCATED4(outer_min.x, outer_min.y, outer_max.x, outer_max.y) && IM_IS_TRUNCATED4(outer_rounding, thickness, 0.0f, 0.0f); //-V501
     if (_FringeScaleIsInteger && is_truncated)
     {
         int s_rounding = (int)(outer_rounding * _InvFringeScale);
@@ -3132,7 +3132,7 @@ void ImDrawList::AddNgon(const ImVec2& center, float radius, ImU32 col, int num_
     radius = ImMax(0.01f, radius);
 
     // Check overestimate first before testing details.
-    if (radius < (thickness * 2.f + 1.f))
+    if (radius < (thickness * 2.0f + 1.0f))
     {
         const float unit_apothem = ImCos(IM_PI / (float)num_segments);
         const float miter_thickness = thickness / unit_apothem;
@@ -5251,6 +5251,14 @@ static ImU8 SampleCornerStroke(float x, float y, float thickness, const ImVec2* 
     return (ImU8)(ImClamp(ImMin(inner, outer), 0.0f, 1.0f) * 255.0f);
 }
 
+#if 0 // Set to 1 to visualize coverage of textured corners
+#define DEBUG_TEX_CORNER_U8(_LX, _H)    ((_LX & 1) ? 255 : 0)
+#define DEBUG_TEX_CORNER_U32(_LX, _H)   IM_COL32((_LX & 1) ? 255: 0, 0, 0, (_LX & 1) ? 200 : 0)
+#else
+#define DEBUG_TEX_CORNER_U8(_LX, _H)    0xFF
+#define DEBUG_TEX_CORNER_U32(_LX, _H)   0xFFFFFFFF
+#endif
+
 static void ImFontAtlasBuildUpdateTexDataCorners(ImFontAtlas* atlas)
 {
     if (atlas->Flags & ImFontAtlasFlags_NoBakedRoundCorners)
@@ -5329,7 +5337,7 @@ static void ImFontAtlasBuildUpdateTexDataCorners(ImFontAtlas* atlas)
             for (int ly = 0; ly < h; ly++)
             {
                 for (int lx = 0; lx < h; lx++)
-                    write_ptr[lx] = SampleCorner((float)lx + 0.5f, (float)ly + 0.5f, line_normals, line_distances, num_lines);
+                    write_ptr[lx] = SampleCorner((float)lx + 0.5f, (float)ly + 0.5f, line_normals, line_distances, num_lines) & DEBUG_TEX_CORNER_U8(lx, h);
                 write_ptr += pitch;
             }
         }
@@ -5340,7 +5348,7 @@ static void ImFontAtlasBuildUpdateTexDataCorners(ImFontAtlas* atlas)
             for (int ly = 0; ly < h; ly++)
             {
                 for (int lx = 0; lx < h; lx++)
-                    write_ptr[lx] = IM_COL32(255, 255, 255, SampleCorner((float)lx + 0.5f, (float)ly + 0.5f, line_normals, line_distances, num_lines));
+                    write_ptr[lx] = IM_COL32(255, 255, 255, SampleCorner((float)lx + 0.5f, (float)ly + 0.5f, line_normals, line_distances, num_lines)) & DEBUG_TEX_CORNER_U32(lx, h);
                 write_ptr += pitch;
             }
         }
@@ -5383,7 +5391,7 @@ static void ImFontAtlasBuildUpdateTexDataCorners(ImFontAtlas* atlas)
                 for (int ly = 0; ly < h; ly++)
                 {
                     for (int lx = 0; lx < h; lx++)
-                        write_ptr[lx] = SampleCornerStroke((float)lx + 0.5f, (float)ly + 0.5f, (float)thickness, line_normals, line_distances, num_lines);
+                        write_ptr[lx] = SampleCornerStroke((float)lx + 0.5f, (float)ly + 0.5f, (float)thickness, line_normals, line_distances, num_lines) & DEBUG_TEX_CORNER_U8(lx, h);
                     write_ptr += pitch;
                 }
             }
@@ -5394,7 +5402,7 @@ static void ImFontAtlasBuildUpdateTexDataCorners(ImFontAtlas* atlas)
                 for (int ly = 0; ly < h; ly++)
                 {
                     for (int lx = 0; lx < h; lx++)
-                        write_ptr[lx] = IM_COL32(255, 255, 255, SampleCornerStroke((float)lx + 0.5f, (float)ly + 0.5f, (float)thickness, line_normals, line_distances, num_lines));
+                        write_ptr[lx] = IM_COL32(255, 255, 255, SampleCornerStroke((float)lx + 0.5f, (float)ly + 0.5f, (float)thickness, line_normals, line_distances, num_lines)) & DEBUG_TEX_CORNER_U32(lx, h);
                     write_ptr += pitch;
                 }
             }
@@ -5473,7 +5481,7 @@ static void ImFontAtlasBuildUpdateTexDataLines(ImFontAtlas* atlas)
             ImVec2 uv1 = ImVec2((float)(r.x + pad_left + line_width + 1), (float)(r.y + y + 1)) * atlas->TexUvScale;
             float half_v = (uv0.y + uv1.y) * 0.5f; // Calculate a constant V in the middle of the row to avoid sampling artifacts
             // Store inverse of the line-width (thickness) to the w component so that we can avoid division when selecting texture.
-            float inv_line_width = line_width > 0.f ? 1.0f / line_width : 0.f;
+            float inv_line_width = (line_width > 0) ? (1.0f / (float)line_width) : 0.0f;
             builder->TexUvLines[n] = ImVec4(uv0.x, uv1.x, half_v, inv_line_width);
         }
     }
