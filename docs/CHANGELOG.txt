@@ -151,6 +151,7 @@ HOW TO UPDATE?
   Unifying them allows easily using them for both per-primitives and scope alterations.
 - (Breaking) Enabling ImFontAtlasFlags_NoBakedLines in the font atlas will disable
   support for anti-aliased lines.
+- `ImDrawFlags_TextNoPixelSnap` may be passed to low-level RenderText() primitive. (#9417)
 - Tweaked line rendering in various locations to avoid blurryness:
   - Windows: title-bar and menu-bar border (when thickness>1.0f).
   - Tables: borders (when thickness>1.0f).
