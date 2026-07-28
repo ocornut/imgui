@@ -3663,7 +3663,6 @@ struct ImDrawList
     IMGUI_API void  _OnChangedTexture();
     IMGUI_API void  _OnChangedVtxOffset();
     IMGUI_API void  _SetTexture(ImTextureRef tex_ref);
-    IMGUI_API ImDrawFlags _GetStrokePos(ImDrawFlags flags, ImDrawFlags default_stroke_pos);
     IMGUI_API int   _CalcCircleAutoSegmentCount(float radius) const;
     IMGUI_API void  _PathArcToFastEx(const ImVec2& center, float radius, int a_min_sample, int a_max_sample, int a_step);
     IMGUI_API void  _PathArcToN(const ImVec2& center, float radius, float a_min, float a_max, int num_segments);
