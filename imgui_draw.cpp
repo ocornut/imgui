@@ -970,7 +970,8 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
 
     ImVec4 tex_uvs;
     float fringe;
-    if (Flags & ImDrawFlags_AALines)
+    flags |= Flags;
+    if (flags & ImDrawFlags_AALines)
     {
         _SelectFringeTexture(screen_thickness, &tex_uvs, &fringe);
     }
@@ -1312,7 +1313,8 @@ void ImDrawList::AddPolylineLegacy(const ImVec2* points, const int points_count,
     // Read more details near AddRect() + see "API BREAKING CHANGES" section for 1.82, 1.90 and 1.92.8.
     IM_ASSERT_USER_ERROR_RET((flags & ImDrawFlags_InvalidMask_) == 0, "Incorrect parameter. Did you swap 'thickness' and 'flags'?");
 
-    if (Flags & ImDrawFlags_AALines)
+    flags |= Flags;
+    if (flags & ImDrawFlags_AALines)
     {
         // Anti-aliased stroke
         const float AA_SIZE = _FringeScale;
@@ -1326,7 +1328,7 @@ void ImDrawList::AddPolylineLegacy(const ImVec2* points, const int points_count,
         // Do we want to draw this line using a texture?
         // - For now, only draw integer-width lines using textures to avoid issues with the way scaling occurs, could be improved.
         // - If AA_SIZE is not 1.0f we cannot use the texture path.
-        const bool use_texture = (Flags & ImDrawFlags_UseTexForStrokeLegacy) && (integer_thickness < IM_DRAWLIST_TEX_LINES_WIDTH_MAX) && (fractional_thickness <= 0.00001f) && (AA_SIZE == 1.0f);
+        const bool use_texture = (flags & ImDrawFlags_UseTexForStrokeLegacy) && (integer_thickness < IM_DRAWLIST_TEX_LINES_WIDTH_MAX) && (fractional_thickness <= 0.00001f) && (AA_SIZE == 1.0f);
 
         // We should never hit this, because NewFrame() doesn't set ImDrawFlags_UseTexForStrokeLegacy unless ImFontAtlasFlags_NoBakedLines is off
         IM_ASSERT_PARANOID(!use_texture || !(_Data->Font->OwnerAtlas->Flags & ImFontAtlasFlags_NoBakedLines));
@@ -1572,7 +1574,8 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
     }*/
 
     const ImVec2 uv = _Data->TexUvWhitePixel;
-    if (Flags & ImDrawFlags_AAFill)
+    flags |= Flags;
+    if (flags & ImDrawFlags_AAFill)
     {
         const float half_aa = _FringeScale * 0.5f;
         ImU32 col_trans = col & ~IM_COL32_A_MASK;
@@ -2179,7 +2182,7 @@ ImDrawFlags ImDrawList::_GetStrokePos(ImDrawFlags flags, ImDrawFlags default_str
 {
     if (flags & ImDrawFlags_StrokeMask_)
         return (flags & ImDrawFlags_StrokeMask_);
-    return _Data->OverrideStrokePos ? _Data->OverrideStrokePos : default_stroke_pos;
+    return default_stroke_pos;
 }
 IM_MSVC_RUNTIME_CHECKS_RESTORE
 
@@ -2207,7 +2210,8 @@ void ImDrawList::_AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float t
 
     ImVec4 tex_uvs;
     float fringe;
-    if (Flags & ImDrawFlags_AALines)
+    flags |= Flags;
+    if (flags & ImDrawFlags_AALines)
     {
         _SelectFringeTexture(screen_thickness, &tex_uvs, &fringe);
     }
@@ -2345,6 +2349,7 @@ void ImDrawList::AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float th
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
+    flags |= Flags;
     ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeCenter);
     if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy)
     {
@@ -2360,6 +2365,7 @@ void ImDrawList::AddLineH(float min_x, float max_x, float y, ImU32 col, float th
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
+    flags |= Flags;
     ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
     if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy)
     {
@@ -2405,6 +2411,7 @@ void ImDrawList::AddLineV(float x, float min_y, float max_y, ImU32 col, float th
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
+    flags |= Flags;
     ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
     if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy)
     {
@@ -2581,7 +2588,8 @@ void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, 
 
     ImVec4 tex_uvs;
     float fringe;
-    if (Flags & ImDrawFlags_AALines)
+    flags |= Flags;
+    if (flags & ImDrawFlags_AALines)
     {
         _SelectFringeTexture(screen_thickness, &tex_uvs, &fringe);
     }
@@ -2715,6 +2723,7 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
+    flags |= Flags;
     ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
 
     if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy) IM_UNLIKELY
@@ -2805,7 +2814,7 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
             return;
         }
         // Textured corners are baked with AA, do not use them if no-AA is requested.
-        const bool allow_tex_corners = (Flags & (ImDrawFlags_AALines | ImDrawFlags_UseTexForRoundCorners)) == (ImDrawFlags_AALines | ImDrawFlags_UseTexForRoundCorners);
+        const bool allow_tex_corners = (flags & (ImDrawFlags_AALines | ImDrawFlags_UseTexForRoundCorners)) == (ImDrawFlags_AALines | ImDrawFlags_UseTexForRoundCorners);
         if (allow_tex_corners && s_thickness < IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX && s_rounding <= IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX)
         {
             // Pixel aligned rect with round corners rendered using baked textures.
@@ -2903,6 +2912,7 @@ void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
     float width = p_max.x - p_min.x;
     float height = p_max.y - p_min.y;
     const float min_dim = ImMin(width, height);
+    flags |= Flags;
 
     // The rect is smaller than pixel in one dimension.
     if (min_dim < _FringeScale) IM_UNLIKELY
@@ -2951,7 +2961,7 @@ void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
             return;
         }
         // Textured corners are baked with AA, do not use them if no-AA is requested.
-        const bool allow_tex_corners = (Flags & (ImDrawFlags_AAFill | ImDrawFlags_UseTexForRoundCorners)) == (ImDrawFlags_AAFill | ImDrawFlags_UseTexForRoundCorners);
+        const bool allow_tex_corners = (flags & (ImDrawFlags_AAFill | ImDrawFlags_UseTexForRoundCorners)) == (ImDrawFlags_AAFill | ImDrawFlags_UseTexForRoundCorners);
         if (allow_tex_corners && s_rounding <= IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX)
         {
 			IM_ASSERT_PARANOID(!(_Data->Font->OwnerAtlas->Flags & ImFontAtlasFlags_NoBakedRoundCorners));
@@ -3039,6 +3049,7 @@ void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int nu
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
+    flags |= Flags;
     ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
     if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy) IM_UNLIKELY
     {
@@ -3123,6 +3134,7 @@ void ImDrawList::AddNgon(const ImVec2& center, float radius, ImU32 col, int num_
     if ((col & IM_COL32_A_MASK) == 0 || num_segments <= 2)
         return;
 
+    flags |= Flags;
     ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
     if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy) IM_UNLIKELY
     {
@@ -7684,7 +7696,8 @@ begin:
     float y = pos.y;
     if (y > clip_rect.w)
         return;
-    if ((draw_list->Flags & ImDrawFlags_TextNoPixelSnap) == 0)
+    flags |= draw_list->Flags;
+    if ((flags & ImDrawFlags_TextNoPixelSnap) == 0)
     {
         x = IM_TRUNC(x);
         y = IM_TRUNC(y);

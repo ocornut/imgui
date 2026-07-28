@@ -3489,7 +3489,7 @@ struct ImDrawList
     ImVector<ImDrawCmd>     CmdBuffer;          // Draw commands. Typically 1 command = 1 GPU draw call, unless the command is a callback.
     ImVector<ImDrawIdx>     IdxBuffer;          // Index buffer. Each command consume ImDrawCmd::ElemCount of those
     ImVector<ImDrawVert>    VtxBuffer;          // Vertex buffer.
-    ImDrawFlags             Flags;              // Flags, you may poke into these to adjust anti-aliasing settings per-primitive.
+    ImDrawFlags             Flags;              // Current flags for drawing primitives. You may poke into these to adjust anti-aliasing settings per-primitive. Will be exposed as PushDrawFlags().
 
     // [Internal, used while building lists]
     unsigned int            _VtxCurrentIdx;     // [Internal] generally == VtxBuffer.Size unless we are past 64K vertices, in which case this gets reset to 0.
