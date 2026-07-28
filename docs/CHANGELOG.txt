@@ -51,12 +51,12 @@ HOW TO UPDATE?
   textures instead of tessellated geometry to draw round corners.
 - Most of the work courtesy of @memononen, with bits from @ocornut, @thedmd, @potocpav.
 - Refer to our full guides:
-  - ImDrawList Vector Rendering Reference
-    https://github.com/ocornut/imgui/wiki/Draw-List
-  - Pixel Perfect Anti-aliased Rendering
-    https://github.com/ocornut/imgui/wiki/Pixel-Perfect-Rendering
-  - How Anti-aliased Polyline Rendering is Implemented
-    https://github.com/ocornut/imgui/wiki/Polyline-Rendering
+  - ImDrawList Vector Rendering Reference:
+      https://github.com/ocornut/imgui/wiki/Draw-List
+  - Pixel Perfect Anti-aliased Rendering:
+      https://github.com/ocornut/imgui/wiki/Pixel-Perfect-Rendering
+  - How Anti-aliased Polyline Rendering is Implemented:
+      https://github.com/ocornut/imgui/wiki/Polyline-Rendering
 - (Breaking) AddLine: removed the (+0.5f,+0.5f) offset that was sneakily added to input coordinates.
   - This fixes inconsistencies in the API and matches the PathXXX API.
   - By default, stroke thickness extends on both side of the given segment.
@@ -64,37 +64,44 @@ HOW TO UPDATE?
   - Use `ImDrawFlags_StrokeLegacy` to use old offset if required. But you might as well apply the offset manually!
   - Generally better to use to newly introduced `AddLineH()`, `AddLineV()` functions.
   READ IF YOU ARE MINDFUL OF PIXEL-PERFECTNESS IN YOUR CUSTOM RENDERING/WIDGETS:
-  Transition guide for axis-aligned lines:
-  - When switching from legacy `AddLine()` values to `AddLineV()`, `AddLineH()` you can keep same inputs coordinates as before.
-    - Old `AddLine({x, y1}, {x, y2}, col)` --> `AddLineV(x, y1, y2, col);` // Vertical line.
-    - Old `AddLine({x1, y}, {x2, y}, col)` --> `AddLineH(x1, x2, y, col);` // Horizontal line.
-    - This will be equivalent and faster for thickness=1.0f lines.
-  - Since `AddLine()` use default stroke pos Center and `AddLineV()`, `AddLineH()` use Inside, thickness>1.0f strokes will differ.
-    Using `ImDrawFlags_StrokeCenter` will match old result more closely (aka look centered), but is more likely
-    to look blurry as it already did before. Read table below about StrokePos if you care about pixel-perfect lines.
-  Transition guide for diagonal lines:
-  - Your lines will appear offset by -0.5f pixels on each axis.
-    Being anti-aliased diagonal lines, they won't look particularly better or worse, just slightly offset.
-    It'll likely only be noticeable if you carefully combined them with other primitives for a pixel-perfect result.
-  - Old AddLine({x1, y1}, {x2, y2}, col) == AddLine({x1, y1}, {x2, y2}, col, thickness, ImDrawFlags_StrokeLegacy); // Offset by +0.5f + disable AA ends.
-                                         == AddLine({x1 + 0.5f, y1 + 0.5f}, {x2+ 0.5f, y2 + 0.5f}, col, thickness); // Same
-    This reapplies the old offset, and should get you exactly the same result you previously got for thickness=1.0f lines.
-    But said result was sometimes ambiguous and renderer dependent. (#3116, #3258, #2441)
-  - Old AddLine() did not have anti-aliased ends, which could create gaps when rendering shapes out
-    of multiple contiguous lines instead of using AddPolyline(). There is a possibility that you could
-    have added fudge offsets here and there which are not necessary anymore or may be simplified.
-- AddPolyline(), PathStroke(), AddTriangle(): the algorithm to render lines got overhauled. (#2183, #2964, #7972)
+  - TRANSITION GUIDE FOR AXIS-ALIGNED LINES:
+    - When switching from legacy `AddLine()` values to `AddLineV()`, `AddLineH()` you can keep same inputs coordinates as before.
+      - Old `AddLine({x, y1}, {x, y2}, col)` --> `AddLineV(x, y1, y2, col);` // Vertical line.
+      - Old `AddLine({x1, y}, {x2, y}, col)` --> `AddLineH(x1, x2, y, col);` // Horizontal line.
+      - This will be equivalent and faster for thickness=1.0f lines.
+    - Since `AddLine()` use default stroke pos Center and `AddLineV()`, `AddLineH()` use Inside, thickness>1.0f strokes will differ.
+      Using `ImDrawFlags_StrokeCenter` will match old result more closely (aka look centered), but is more likely
+      to look blurry as it already did before. Read table below about StrokePos and the
+      "Pixel-Perfect Rendering" guide if you care about pixel-perfect lines.
+  - TRANSITION GUIDE FOR DIAGONAL LINES:
+    - Your lines will appear offset by -0.5f pixels on each axis.
+      Being anti-aliased diagonal lines, they won't look particularly better or worse, just slightly offset.
+      It'll likely only be noticeable if you carefully combined them with other primitives for a pixel-perfect result.
+    - Old AddLine({x1, y1}, {x2, y2}, col) == AddLine({x1, y1}, {x2, y2}, col, thickness, ImDrawFlags_StrokeLegacy); // Offset by +0.5f + disable AA ends.
+                                           == AddLine({x1 + 0.5f, y1 + 0.5f}, {x2+ 0.5f, y2 + 0.5f}, col, thickness); // Same
+      This reapplies the old offset, and should get you exactly the same result you previously got for thickness=1.0f lines.
+      But said result was sometimes ambiguous and renderer dependent. (#3116, #3258, #2441)
+    - Old `AddLine()` did not have anti-aliased ends, which could create gaps when rendering shapes out
+      of multiple contiguous lines instead of using AddPolyline(). There is a possibility that you could
+      have added fudge offsets here and there which are not necessary anymore or may be simplified.
+- AddPolyline(), PathStroke(), AddTriangle(): the algorithm to render lines got overhauled.
+  (#2183, #2964, #7972)
   - Generally fixed rendering of thick strokes/paths.
-  - The new stroke expansion now uses corner miter calculation, which keeps thickness along the line segments
-    consistent. If the corner becomes too sharp, it will be bevelled to avoid long spikes at corners.
-  - There are also some robustness measures for the case where the line thickness is larger than the
-    features being drawn.
+  - The new stroke expansion now uses corner miter calculation, which keeps thickness along
+    the line segments consistent. If the corner becomes too sharp, it will be bevelled to avoid
+    long spikes at corners.
+  - There are also some robustness measures for the case where the line thickness is larger
+    than the features being drawn.
   - Rendering artifacts are still possible when the path features are smaller than line thickness,
     but the artifacts should be more localized. The new implementation attempted to favor simple
     implementation and robustness over the corner case accuracy.
-  - Added anti-aliasing ends, most noticeable for thick lines.
-  - Added `ImDrawFlags_AALineEnds` flag to enable anti-aliased line ends. Enabling AA Ends
-    by default would be more "correct", but it is slower and increase vertex/index data.
+  - New rendering code fixes (subtle) inconsistencies between graphics API (e.g. DirectX vs OpenGL)
+    using different diamond exits rules. New code should work precisely the same regardless
+    of graphics API. (#3116, #3258, #2441)
+  - Added `ImDrawFlags_AALineEnds` flag to enable anti-aliased line ends.
+    - Most noticeable for thick lines.
+    - Helps fills minor gaps if combining multiple individual lines.
+    - Enabling AA Ends by default would be more "correct", but it is slower and increase vertex/index data.s
   - Added `ImDrawFlags_MiterOnly` flag to disable using beveled corner (closer to legacy
     rendering, slightly faster, but corners sharpers than 90 degrees may expand far out).
     Automatically used by AddRect(), AddCircle(), AddNgon(), AddEllipse() etc functions
@@ -111,17 +118,18 @@ HOW TO UPDATE?
   - Integer-aligned coordinates and thicknesses will automatically use baked textures,
     saving on both CPU and vertex/index data.
   - Added `ImFontAtlasFlags_NoBakedRoundCorners` to disable baking round corners in font atlas.
-  - Added `ImDrawListFlags_RoundCornersUseTex` to disable using round corners.
+  - Added `ImDrawFlags_UseTexForRoundCorners` to enable using round corners.
 - AddRectFilled(): non-integer coordinates will now display anti-aliased edges. (#6971)
-- Improved minor mismatches when overlapping strokes and filled shapes, e.g. when using inside strokes,
+- Improved minor mismatches when overlapping strokes and filled shapes,
+  e.g. when using inside strokes,
   - `AddRect()` and `AddRectFilled()` with rounding now overlap better. (#3656)
   - `AddCircle()` and `AddCircleFilled()` now overlap better.
-- Added flags to specify stroke position in all ImDrawList stroking functions:
+- Added flags to specify stroke position in all `ImDrawList` stroking functions:
   - `ImDrawFlags_StrokeInside` (default for closed primitives and AddLineH, AddLineV)
   - `ImDrawFlags_StrokeCenter` (default for paths, bezier and AddLine)
   - `ImDrawFlags_StrokeCenterAligned`
   - `ImDrawFlags_StrokeOutside`
-  - `ImDrawFlags_StrokeLegacy`
+  - `ImDrawFlags_StrokeLegacy` (may be set as default for a given scope using PushItemFlag()).
   - Legacy code was generally applying +0.50f offset which meant that,
     - with thickness=1.0f: the stroke would appear inside.
     - with thickness>1.0f: the stroke would start expanding on both sides but starting from that slightly initial offset.
@@ -129,7 +137,7 @@ HOW TO UPDATE?
     - TL;DR; the logic didn't make much sense for thickness>1.0f.
   - Defaulting to Inside for closed shapes ensure that rectangles and lines are never blurry,
     regardless of thickness, as long as input coordinates/sizes are integers. (#9359)
-  - Recap:
+  - Read our Wiki guides! Recap:
     ------------------------------------------------------------------------
                        Legacy     Inside    Outside    Center   CenterAligned
     --------------------------------------------------------------------------------
@@ -137,7 +145,8 @@ HOW TO UPDATE?
      Thickness=2.0f    blurry     sharp     sharp      sharp    sharp
      Thickness=3.0f    sharp      sharp     sharp      blurry   sharp
     ------------------------------------------------------------------------
-- Added ImDrawList::PushDrawFlag()/PopDrawFlag() to alter certain flags for a scope.
+- Added ImDrawList::PushDrawFlag()/PopDrawFlag() to alter certain flags for a scope,
+  e.g. `PushDrawFlag(ImDrawFlags_StrokeLegacy, true);` enforce legacy tweaks.
 - (Breaking) AddRect, AddCircle, AddNgon, AddEllipse: defaulting to "inside" stroke.
   - All closed shapes with thickness=1.0f will appear identical.
   - The difference for thickness>1.0f shapes may be minimal since very large strokes
@@ -150,9 +159,22 @@ HOW TO UPDATE?
     - `ImDrawListFlags_AllowVtxOffset`         -> `ImDrawFlags_UseVtxOffset`
     - `ImDrawListFlags_TextNoPixelSnap`        -> `ImDrawFlags_TextNoPixelSnap`
   Unifying them allows easily using them for both per-primitives and scope alterations.
-- (Breaking) Enabling ImFontAtlasFlags_NoBakedLines in the font atlas will disable
+- (Breaking) Enabling `ImFontAtlasFlags_NoBakedLines` in the font atlas will disable
   support for anti-aliased lines.
-- `ImDrawFlags_TextNoPixelSnap` may be passed to low-level RenderText() primitive. (#9417)
+- About `ImDrawFlags_StrokeLegacy`:
+  - This is designed to emulate old coordinates:
+    - Most shapes are "StrokeCenter".
+    - AddLine() adds a +0.5f,+0.5f offset.
+    - Closed shapes user miter angles.
+  - But there are known difference between legacy code and ImDrawFlags_StrokeLegacy:
+    - Thick shapes with acute angles will now preserve thickness.
+    - Thick shapes with acute angles will protrude a little more.
+- About disabling anti-aliasing:
+  - Disabling anti-aliasing is now emulated by using different UV coordinates.
+    It does not result in a performance increase any more (however the tendency
+    is that the new code behave better than old code).
+  - Many thick shapes had broken corners with old no-AA code, and the old no-AA code
+    was wildly different from the AA code. Not the case any more. (#288)
 - Tweaked line rendering in various locations to avoid blurryness:
   - Windows: title-bar and menu-bar border (when thickness>1.0f).
   - Tables: borders (when thickness>1.0f).
