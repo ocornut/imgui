@@ -936,8 +936,6 @@ void ImDrawList::_SelectFringeTexture(float screen_thickness, ImVec4* out_tex_uv
     }
 }
 
-// We intently don't turn g_LEGACY_STROKES into ImDrawFlags_StrokeLegacy here.
-// The earlier should use verbatim legacy code but will be removed before release once we confirm that both matches.
 static inline ImDrawFlags _GetStrokePos(ImDrawFlags flags, ImDrawFlags default_stroke_pos)
 {
     if (flags & ImDrawFlags_StrokeMask_)
@@ -947,16 +945,8 @@ static inline ImDrawFlags _GetStrokePos(ImDrawFlags flags, ImDrawFlags default_s
 
 IM_MSVC_RUNTIME_CHECKS_RESTORE
 
-extern bool g_LEGACY_STROKES;
-
 void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32 col, float thickness, ImDrawFlags flags)
 {
-    if (g_LEGACY_STROKES)
-    {
-        AddPolylineLegacy(points, points_count, col, thickness, flags);
-        return;
-    }
-
     if (points_count < 2 || (col & IM_COL32_A_MASK) == 0)
         return;
 
@@ -2200,13 +2190,6 @@ void ImDrawList::PathRect(const ImVec2& a, const ImVec2& b, float rounding, ImDr
 
 void ImDrawList::_AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float thickness, ImDrawFlags flags)
 {
-    if (g_LEGACY_STROKES) IM_UNLIKELY
-    {
-        ImVec2 points[2] = { p1, p2 };
-        AddPolylineLegacy(points, 2, col, thickness, flags);
-        return;
-    }
-
     if ((col & IM_COL32_A_MASK) == 0) IM_UNLIKELY
         return;
 
@@ -2349,7 +2332,7 @@ void ImDrawList::AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float th
 
     flags |= Flags;
     ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeCenter);
-    if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy)
+    if (stroke_pos == ImDrawFlags_StrokeLegacy)
     {
         _AddLine(ImVec2(p1.x + 0.5f, p1.y + 0.5f), ImVec2(p2.x + 0.5f, p2.y + 0.5f), col, thickness, flags);
         return;
@@ -2365,7 +2348,7 @@ void ImDrawList::AddLineH(float min_x, float max_x, float y, ImU32 col, float th
 
     flags |= Flags;
     ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
-    if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy)
+    if (stroke_pos == ImDrawFlags_StrokeLegacy)
     {
         _AddLine(ImVec2(min_x + 0.5f, y + 0.5f), ImVec2(max_x + 0.5f, y + 0.5f), col, thickness, flags);
         return;
@@ -2411,7 +2394,7 @@ void ImDrawList::AddLineV(float x, float min_y, float max_y, ImU32 col, float th
 
     flags |= Flags;
     ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
-    if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy)
+    if (stroke_pos == ImDrawFlags_StrokeLegacy)
     {
         _AddLine(ImVec2(x + 0.5f, min_y + 0.5f), ImVec2(x + 0.5f, max_y + 0.5f), col, thickness, flags);
         return;
@@ -2708,8 +2691,7 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
 
     flags |= Flags;
     ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
-
-    if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy) IM_UNLIKELY
+    if (stroke_pos == ImDrawFlags_StrokeLegacy) IM_UNLIKELY
     {
         if (Flags & ImDrawFlags_AALines)
             PathRect(ImVec2(p_min.x + 0.50f, p_min.y + 0.50f), ImVec2(p_max.x - 0.50f, p_max.y - 0.50f), rounding, flags);
@@ -2992,8 +2974,9 @@ void ImDrawList::AddQuad(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, c
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
-    ImDrawFlags stroke_pos = g_LEGACY_STROKES ? ImDrawFlags_StrokeLegacy : _GetStrokePos(flags, ImDrawFlags_StrokeInside);
+    ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
     flags = (flags & ~ImDrawFlags_StrokeMask_) | stroke_pos;
+
     const ImVec2 points[4] = { p1, p2, p3, p4 };
     AddPolyline(points, 4, col, thickness, flags | ImDrawFlags_Closed);
 }
@@ -3012,7 +2995,7 @@ void ImDrawList::AddTriangle(const ImVec2& p1, const ImVec2& p2, const ImVec2& p
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
-    ImDrawFlags stroke_pos = g_LEGACY_STROKES ? ImDrawFlags_StrokeLegacy : _GetStrokePos(flags, ImDrawFlags_StrokeInside);
+    ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
     flags = (flags & ~ImDrawFlags_StrokeMask_) | stroke_pos;
 
     const ImVec2 points[3] = { p1, p2, p3 };
@@ -3035,7 +3018,7 @@ void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int nu
 
     flags |= Flags;
     ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
-    if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy) IM_UNLIKELY
+    if (stroke_pos == ImDrawFlags_StrokeLegacy) IM_UNLIKELY
     {
         radius -= 0.5f;
         stroke_pos = ImDrawFlags_StrokeCenter;
@@ -3119,7 +3102,7 @@ void ImDrawList::AddNgon(const ImVec2& center, float radius, ImU32 col, int num_
 
     flags |= Flags;
     ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
-    if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy) IM_UNLIKELY
+    if (stroke_pos == ImDrawFlags_StrokeLegacy) IM_UNLIKELY
     {
         radius -= 0.5f;
         stroke_pos = ImDrawFlags_StrokeCenter;
@@ -3183,8 +3166,7 @@ void ImDrawList::AddEllipse(const ImVec2& center, const ImVec2& radius, ImU32 co
         return;
 
     ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
-
-    if (g_LEGACY_STROKES || stroke_pos == ImDrawFlags_StrokeLegacy)
+    if (stroke_pos == ImDrawFlags_StrokeLegacy)
         stroke_pos = ImDrawFlags_StrokeCenter;
 
     ImVec2 rad = radius;
