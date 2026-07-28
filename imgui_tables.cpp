@@ -2947,8 +2947,6 @@ static ImU32 TableGetColumnBorderCol(ImGuiTable* table, int order_n, int column_
     return table->BorderColorLight;
 }
 
-extern bool g_LEGACY_STROKES;
-
 // FIXME-TABLE: This is a mess, need to redesign how we render borders (as some are also done in TableEndRow)
 void ImGui::TableDrawBorders(ImGuiTable* table)
 {
@@ -2963,11 +2961,7 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
     // Draw inner border and resizing feedback
     ImGuiTableInstanceData* table_instance = TableGetInstanceData(table, table->InstanceCurrent);
     const float border_size = TABLE_BORDER_SIZE;
-    float draw_y1;
-    if (g_LEGACY_STROKES)
-        draw_y1 = ImMax(table->InnerRect.Min.y, (table->FreezeRowsCount >= 1 ? table->InnerRect.Min.y : table->WorkRect.Min.y) + table->AngledHeadersHeight) + ((table->Flags & ImGuiTableFlags_BordersOuterH) ? 1.0f : 0.0f);
-    else
-        draw_y1 = ImMax(table->InnerRect.Min.y, (table->FreezeRowsCount >= 1 ? table->InnerRect.Min.y : table->WorkRect.Min.y) + table->AngledHeadersHeight) + ((table->Flags & ImGuiTableFlags_BordersOuterH) ? border_size : 0.0f);
+    const float draw_y1 = ImMax(table->InnerRect.Min.y, (table->FreezeRowsCount >= 1 ? table->InnerRect.Min.y : table->WorkRect.Min.y) + table->AngledHeadersHeight) + ((table->Flags & ImGuiTableFlags_BordersOuterH) ? border_size : 0.0f);
     const float draw_y2_body = table->InnerRect.Max.y;
     const float draw_y2_head = table->IsUsingHeaders ? ImMin(table->InnerRect.Max.y, (table->FreezeRowsCount >= 1 ? table->InnerRect.Min.y : table->WorkRect.Min.y) + table_instance->LastTopHeadersRowHeight) : draw_y1;
     if (table->Flags & ImGuiTableFlags_BordersInnerV)
@@ -3038,12 +3032,7 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
         const float h_inset = (table->Flags & ImGuiTableFlags_BordersOuterV) ? border_size : 0.0f;
         const float border_y = table->RowPosY2;
         if (border_y >= table->BgClipRect.Min.y && border_y < table->BgClipRect.Max.y)
-        {
-            if (g_LEGACY_STROKES)
-            inner_drawlist->AddLineH(table->BorderX1, table->BorderX2, border_y, table->BorderColorLight, border_size);
-            else
             inner_drawlist->AddLineH(table->BorderX1 + h_inset, table->BorderX2 - h_inset, border_y, table->BorderColorLight, border_size);
-        }
     }
 
     inner_drawlist->PopClipRect();
@@ -3637,10 +3626,7 @@ void ImGui::TableAngledHeadersRowEx(ImGuiID row_id, float angle, float max_label
             {
                 // Draw border
                 const float border_size = TABLE_BORDER_SIZE;
-                if (g_LEGACY_STROKES)
-                    draw_list->AddLine(bg_shape[0] - ImVec2(border_size * 0.5f, 0.0f), bg_shape[3] - ImVec2(border_size * 0.5f, 0.0f), TableGetColumnBorderCol(table, order_n, column_n), border_size);
-                else
-                    draw_list->AddLine(bg_shape[0] + ImVec2(border_size * 0.5f, 0.0f), bg_shape[3] + ImVec2(border_size * 0.5f, 0.0f), TableGetColumnBorderCol(table, order_n, column_n), border_size);
+                draw_list->AddLine(bg_shape[0] + ImVec2(border_size * 0.5f, 0.0f), bg_shape[3] + ImVec2(border_size * 0.5f, 0.0f), TableGetColumnBorderCol(table, order_n, column_n), border_size);
             }
         }
     PopClipRect();
