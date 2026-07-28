@@ -470,6 +470,7 @@ void ImDrawList::_ResetForNewFrame()
     _ClipRectStack.resize(0);
     _TextureStack.resize(0);
     _CallbacksDataBuf.resize(0);
+    _DrawFlagsStack.clear();
     _Path.resize(0);
     _Splitter.Clear();
     CmdBuffer.push_back(ImDrawCmd());
@@ -488,6 +489,7 @@ void ImDrawList::_ClearFreeMemory()
     _ClipRectStack.clear();
     _TextureStack.clear();
     _CallbacksDataBuf.clear();
+    _DrawFlagsStack.clear();
     _Path.clear();
     _Splitter.ClearFreeMemory();
 }
@@ -709,6 +711,24 @@ void ImDrawList::PopTexture()
     _TextureStack.pop_back();
     _CmdHeader.TexRef = (_TextureStack.Size == 0) ? ImTextureRef() : _TextureStack.Data[_TextureStack.Size - 1];
     _OnChangedTexture();
+}
+
+// IMPORTANT: currently limited to 3 deep
+void ImDrawList::PushDrawFlag(ImDrawFlags flags, bool enabled)
+{
+    IM_ASSERT((flags & ~ImDrawFlags_AllowedInScope_) == 0);
+    _DrawFlagsStack.push_back(Flags);
+    if (enabled)
+        Flags |= flags;
+    else
+        Flags &= ~flags;
+}
+
+void ImDrawList::PopDrawFlag()
+{
+    IM_ASSERT_USER_ERROR_RET(_DrawFlagsStack.Size > 0, "Calling PopDrawFlags() too many times!");
+    Flags = _DrawFlagsStack.back();
+    _DrawFlagsStack.pop_back();
 }
 
 // This is used by ImGui::PushFont()/PopFont(). It works because we never use _TextureIdStack[] elsewhere than in PushTexture()/PopTexture().
@@ -3138,7 +3158,7 @@ void ImDrawList::AddNgon(const ImVec2& center, float radius, ImU32 col, int num_
 
     radius = ImMax(0.01f, radius);
 
-    // Check overestimate first before testing details.
+    // Check overestimate first before testing details (+1.0f is intended, not FringeScale)
     if (radius < (thickness * 2.0f + 1.0f))
     {
         const float unit_apothem = ImCos(IM_PI / (float)num_segments);
@@ -5343,7 +5363,7 @@ static void ImFontAtlasBuildUpdateTexDataCorners(ImFontAtlas* atlas)
             const int pitch = tex->Width;
             for (int ly = 0; ly < h; ly++)
             {
-                for (int lx = 0; lx < h; lx++)
+                for (int lx = 0; lx < w; lx++)
                     write_ptr[lx] = SampleCorner((float)lx + 0.5f, (float)ly + 0.5f, line_normals, line_distances, num_lines) & DEBUG_TEX_CORNER_U8(lx, h);
                 write_ptr += pitch;
             }
@@ -5354,7 +5374,7 @@ static void ImFontAtlasBuildUpdateTexDataCorners(ImFontAtlas* atlas)
             const int pitch = tex->Width;
             for (int ly = 0; ly < h; ly++)
             {
-                for (int lx = 0; lx < h; lx++)
+                for (int lx = 0; lx < w; lx++)
                     write_ptr[lx] = IM_COL32(255, 255, 255, SampleCorner((float)lx + 0.5f, (float)ly + 0.5f, line_normals, line_distances, num_lines)) & DEBUG_TEX_CORNER_U32(lx, h);
                 write_ptr += pitch;
             }

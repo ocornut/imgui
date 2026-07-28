@@ -137,6 +137,7 @@ HOW TO UPDATE?
      Thickness=2.0f    blurry     sharp     sharp      sharp    sharp
      Thickness=3.0f    sharp      sharp     sharp      blurry   sharp
     ------------------------------------------------------------------------
+- Added ImDrawList::PushDrawFlag()/PopDrawFlag() to alter certain flags for a scope.
 - (Breaking) AddRect, AddCircle, AddNgon, AddEllipse: defaulting to "inside" stroke.
   - All closed shapes with thickness=1.0f will appear identical.
   - The difference for thickness>1.0f shapes may be minimal since very large strokes
