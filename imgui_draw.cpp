@@ -907,24 +907,33 @@ static ImU32 ImAlphaMultiply(ImU32 col, float alpha_mul)
 }
 
 // Select texture and adjust fringe size for specified line thickness.
-void ImDrawList::_SelectFringeTexture(float screen_thickness, ImVec4* out_tex_uvs, float* out_fringe)
+void ImDrawList::_SelectFringeTexture(float screen_thickness, ImVec4* out_tex_uvs, float* out_fringe, ImDrawFlags flags)
 {
     // We assume that the screen_thickness has been clamped to 1.0 by the caller.
     IM_ASSERT_PARANOID(screen_thickness >= 1.0f);
 
-    // Handle the thickness between 1.0 - IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH].
-    // We use super sampled textures in this range to make texture changes less noticeable.
-    // There are IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX+1 textures, where 0 maps to 1.0 and IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX maps to IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH (4.0).
-    int texture_idx;
-    if (screen_thickness <= IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH) IM_LIKELY
-        texture_idx = (int)((screen_thickness - 1.0f) * IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT + 0.5f) + (IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1);
-    else
-        texture_idx = ImMin((int)(screen_thickness + 0.5f), IM_DRAWLIST_TEX_LINES_WIDTH_MAX - 1);
+    if (flags & ImDrawFlags_AALines)
+    {
+        // Handle the thickness between 1.0 - IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH].
+        // We use super sampled textures in this range to make texture changes less noticeable.
+        // There are IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX+1 textures, where 0 maps to 1.0 and IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX maps to IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH (4.0).
+        int texture_idx;
+        if (screen_thickness <= IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH) IM_LIKELY
+            texture_idx = (int)((screen_thickness - 1.0f) * IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT + 0.5f) + (IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1);
+        else
+            texture_idx = ImMin((int)(screen_thickness + 0.5f), IM_DRAWLIST_TEX_LINES_WIDTH_MAX - 1);
 
-    // Scale the fringe so that the texture matches the line thickness.
-    ImVec4 tex_uvs = _Data->TexUvLines[texture_idx];
-    *out_tex_uvs = tex_uvs;
-    *out_fringe = _FringeScale * screen_thickness * tex_uvs.w; // tex_uvs.w = 1 / thickness
+        // Scale the fringe so that the texture matches the line thickness.
+        ImVec4 tex_uvs = _Data->TexUvLines[texture_idx];
+        *out_tex_uvs = tex_uvs;
+        *out_fringe = _FringeScale * screen_thickness * tex_uvs.w; // tex_uvs.w = 1 / thickness
+    }
+    else
+    {
+        // For no anti-alias we use fully opaque texture, and no fringe expansion.
+        *out_tex_uvs = ImVec4(_Data->TexUvWhitePixel.x, _Data->TexUvWhitePixel.x, _Data->TexUvWhitePixel.y, 0.0f); // u0, u1, v, 1/thickness (unused)
+        *out_fringe = 0.0f;
+    }
 }
 
 // We intently don't turn g_LEGACY_STROKES into ImDrawFlags_StrokeLegacy here.
@@ -999,23 +1008,10 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         sqr_lengths[points_count - 1] = 0.0f;
     }
 
+    flags |= Flags;
     ImVec4 tex_uvs;
     float fringe;
-    flags |= Flags;
-    if (flags & ImDrawFlags_AALines)
-    {
-        _SelectFringeTexture(screen_thickness, &tex_uvs, &fringe);
-    }
-    else
-    {
-        // For no anti-alias we use fully opaque texture, and no fringe expansion.
-        tex_uvs.x = _Data->TexUvWhitePixel.x;   // u0
-        tex_uvs.y = _Data->TexUvWhitePixel.x;   // u1
-        tex_uvs.z = _Data->TexUvWhitePixel.y;   // v
-        tex_uvs.w = 0.0f;                       // 1/thickness, unused.
-        fringe = 0.0f;
-        flags &= ~ImDrawFlags_AALineEnds;
-    }
+    _SelectFringeTexture(screen_thickness, &tex_uvs, &fringe, flags);
 
     const ImU32 col_trans = col & ~IM_COL32_A_MASK;
 
@@ -1086,7 +1082,6 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
 
         dir.x = n1.y;
         dir.y = -n1.x;
-
         if (flags & ImDrawFlags_SquareCap)
         {
             p1.x -= dir.x * half_thickness;
@@ -1700,7 +1695,7 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
                 float miter_offset_y = (n0.y + n1.y) * miter_scale_factor;
 
                 const float miter_distance_sqr = miter_offset_x * miter_offset_x + miter_offset_y * miter_offset_y;
-                bool bevel = miter_distance_sqr > miter_distance_limit_sqr;
+                const bool bevel = miter_distance_sqr > miter_distance_limit_sqr;
                 if (bevel)
                 {
                     // Limit inner bevel so that it is does not shoot out outside the polygon.
@@ -1762,14 +1757,11 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
 
         // Add indices for fill
         for (int i = 2; i < points_count; i++)
-        {
             IM_APPEND_TRI(vtx_inner_idx, vtx_inner_idx + i - 1, vtx_inner_idx + i);
-        }
 
         const int idx_used = (int)(_IdxWritePtr - start_idx_ptr);
         const int vtx_used = (int)(_VtxWritePtr - start_vtx_ptr);
         IM_ASSERT(idx_used <= idx_count && vtx_used <= vtx_count);
-
         if (idx_used < idx_count || vtx_used < vtx_count)
             PrimUnreserve(idx_count - idx_used, vtx_count - vtx_used);
     }
@@ -2228,23 +2220,10 @@ void ImDrawList::_AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float t
         thickness = _FringeScale;
     }
 
+    flags |= Flags;
     ImVec4 tex_uvs;
     float fringe;
-    flags |= Flags;
-    if (flags & ImDrawFlags_AALines)
-    {
-        _SelectFringeTexture(screen_thickness, &tex_uvs, &fringe);
-    }
-    else
-    {
-        // For no anti-alias we use fully opaque texture, and no fringe expansion.
-        tex_uvs.x = _Data->TexUvWhitePixel.x;   // u0
-        tex_uvs.y = _Data->TexUvWhitePixel.x;   // u1
-        tex_uvs.z = _Data->TexUvWhitePixel.y;   // v
-        tex_uvs.w = 0.0f;                       // 1/thickness, unused.
-        fringe = 0.0f;
-        flags &= ~ImDrawFlags_AALineEnds;
-    }
+    _SelectFringeTexture(screen_thickness, &tex_uvs, &fringe, flags);
 
     float dir_x = p2.x - p1.x;
     float dir_y = p2.y - p1.y;
@@ -2295,7 +2274,6 @@ void ImDrawList::_AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float t
     float p1_y = p1.y;
     float p2_x = p2.x;
     float p2_y = p2.y;
-
     if (flags & ImDrawFlags_SquareCap)
     {
         p1_x -= dir_x * half_thickness;
@@ -2606,22 +2584,10 @@ void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, 
         thickness = _FringeScale;
     }
 
+    flags |= Flags;
     ImVec4 tex_uvs;
     float fringe;
-    flags |= Flags;
-    if (flags & ImDrawFlags_AALines)
-    {
-        _SelectFringeTexture(screen_thickness, &tex_uvs, &fringe);
-    }
-    else
-    {
-        // For no anti-alias we use fully opaque texture, and no fringe expansion.
-        tex_uvs.x = _Data->TexUvWhitePixel.x;   // u0
-        tex_uvs.y = _Data->TexUvWhitePixel.x;   // u1
-        tex_uvs.z = _Data->TexUvWhitePixel.y;   // v
-        tex_uvs.w = 0.0f;                       // 1/thickness, unused.
-        fringe = 0.0f;
-    }
+    _SelectFringeTexture(screen_thickness, &tex_uvs, &fringe, flags);
 
     const int auto_seg_count = _CalcCircleAutoSegmentCount(rounding);
     int arc_step, arc_step_count;
@@ -2699,10 +2665,8 @@ void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, 
 
         // Arc
         if (is_rounded)
-        {
             for (int i = 0; i < arc_point_count - 1; i++)
                 IM_APPEND_TRI(stem_idx, arc_idx + i, arc_idx + i + 1);
-        } // (keep braces because of macro above)
 
         // Connect with previous
         IM_APPEND_TRI(base_idx + 0, arc_idx, stem_idx);
@@ -2721,7 +2685,6 @@ void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, 
     const int idx_used = (int)(_IdxWritePtr - start_idx_ptr);
     const int vtx_used = (int)(_VtxWritePtr - start_vtx_ptr);
     IM_ASSERT_PARANOID(idx_used <= idx_count && vtx_used <= vtx_count);
-
     if (idx_used < idx_count || vtx_used < vtx_count)
         PrimUnreserve(idx_count - idx_used, vtx_count - vtx_used);
 }
@@ -2954,6 +2917,7 @@ void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
         return;
     }
 
+    // When rounding non-integer and under threshold, has_rounding may be false but still affect is_truncated. Likely not worth catering for.
     const bool has_rounding = (flags & ImDrawFlags_RoundCornersMask_) != ImDrawFlags_RoundCornersNone && IM_HAS_ROUNDING(rounding);
     const bool is_truncated = IM_IS_TRUNCATED4(p_min.x, p_min.y, p_max.x, p_max.y) && IM_IS_TRUNCATED(rounding);
 
