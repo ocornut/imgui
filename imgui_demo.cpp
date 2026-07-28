@@ -10488,8 +10488,8 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             ImGui::PopID();
             ImGui::Spacing();
 
-            ImDrawFlags backup_draw_list_flags = draw_list->Flags;
-            draw_list->Flags = (draw_list->Flags & ~ImDrawFlags_AllowedInScope_) | scope_flags; // Equivalent to an hypothetical PushDrawFlags() API
+            draw_list->PushDrawFlag(ImDrawFlags_AllowedInScope_, false); // Reset all existing (very unusual: done for this demo)
+            draw_list->PushDrawFlag(scope_flags, true);
             const ImDrawFlags flags = prim_stroke_flags | prim_other_flags;
             const ImDrawFlags fill_flags = flags & (ImDrawFlags_AAFill | ImDrawFlags_UseTexForRoundCorners);
 
@@ -10622,11 +10622,12 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             }
 
             ImGui::Dummy(ImVec2((sz + spacing) * 15.0f, (sz + spacing) * 4.0f));
+            draw_list->PopDrawFlag();
+            draw_list->PopDrawFlag();
+
             ImGui::PopItemFlag();
             ImGui::PopItemWidth();
             ImGui::EndTabItem();
-
-            draw_list->Flags = backup_draw_list_flags;
         }
 
         if (ImGui::BeginTabItem("Canvas"))
