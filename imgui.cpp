@@ -23582,10 +23582,9 @@ void ImGui::DebugNodeDrawList(ImGuiWindow* window, ImGuiViewportP* viewport, con
                 Selectable(buf, false);
                 if (fg_draw_list && IsItemHovered())
                 {
-                    ImDrawFlags backup_flags = fg_draw_list->Flags;
-                    fg_draw_list->Flags &= ~ImDrawFlags_AALines; // Disable AA on triangle outlines is more readable for very large and thin triangles.
+                    fg_draw_list->PushDrawFlag(ImDrawFlags_AALines, false); // Disable AA on triangle outlines is more readable for very large and thin triangles.
                     fg_draw_list->AddPolyline(triangle, 3, IM_COL32(255, 255, 0, 255), 1.0f, ImDrawFlags_Closed);
-                    fg_draw_list->Flags = backup_flags;
+                    fg_draw_list->PopDrawFlag();
                 }
             }
         TreePop();
@@ -23601,8 +23600,7 @@ void ImGui::DebugNodeDrawCmdShowMeshAndBoundingBox(ImDrawList* out_draw_list, co
     // Draw wire-frame version of all triangles
     ImRect clip_rect = draw_cmd->ClipRect;
     ImRect vtxs_rect(FLT_MAX, FLT_MAX, -FLT_MAX, -FLT_MAX);
-    ImDrawFlags backup_flags = out_draw_list->Flags;
-    out_draw_list->Flags &= ~ImDrawFlags_AALines; // Disable AA on triangle outlines is more readable for very large and thin triangles.
+    out_draw_list->PushDrawFlag(ImDrawFlags_AALines, false); // Disable AA on triangle outlines is more readable for very large and thin triangles.
     for (unsigned int idx_n = draw_cmd->IdxOffset, idx_end = draw_cmd->IdxOffset + draw_cmd->ElemCount; idx_n < idx_end; )
     {
         ImDrawIdx* idx_buffer = (draw_list->IdxBuffer.Size > 0) ? draw_list->IdxBuffer.Data : NULL; // We don't hold on those pointers past iterations as ->AddPolyline() may invalidate them if out_draw_list==draw_list
@@ -23620,7 +23618,7 @@ void ImGui::DebugNodeDrawCmdShowMeshAndBoundingBox(ImDrawList* out_draw_list, co
         out_draw_list->AddRect(ImTrunc(clip_rect.Min), ImTrunc(clip_rect.Max), IM_COL32(255, 0, 255, 255)); // In pink: clipping rectangle submitted to GPU
         out_draw_list->AddRect(ImTrunc(vtxs_rect.Min), ImTrunc(vtxs_rect.Max), IM_COL32(0, 255, 255, 255)); // In cyan: bounding box of triangles
     }
-    out_draw_list->Flags = backup_flags;
+    out_draw_list->PopDrawFlag();
 }
 
 // [DEBUG] Compute mask of inputs with the same codepoint.

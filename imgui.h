@@ -3001,6 +3001,19 @@ struct ImGuiStorage
 #endif
 };
 
+// [Internal] Used for small stacks. Do not use.
+template<typename T, int Capacity, typename SZ_T = ImU16>
+struct ImSmallStack_
+{
+    T       LocalData[Capacity];                // FIXME: should evolve into using heap, e.g union {} with T* HeapData + add SZ_T Capacity.
+    SZ_T    Size = 0;
+
+    inline void         clear()                 { Size = 0; }
+    inline T&           back()                  { IM_ASSERT(Size > 0); return LocalData[Size - 1]; }
+    inline void         push_back(const T& v)   { IM_ASSERT(Size < Capacity); memcpy(&LocalData[Size], &v, sizeof(v)); Size++; }
+    inline void         pop_back()              { IM_ASSERT(Size > 0); Size--; }
+};
+
 // Flags for ImGuiListClipper (currently not fully exposed in function calls: a future refactor will likely add this to ImGuiListClipper::Begin function equivalent)
 enum ImGuiListClipperFlags_
 {
@@ -3416,9 +3429,8 @@ enum ImDrawFlags_
 
     // About usage of flags:
     // - "Prim" column:  'OK' = flag can be used to configure an individual AddXXX() call.
-    // - "Scope" column: 'OK' = initialized by ImGui based on Style options (e.g. whether anti-aliased is enabled).
+    // - "Scope" column: 'OK' = initialized by ImGui based on Style options (e.g. whether anti-aliased is enabled) + may be modified using ImDrawList::PushDrawFlag().
     //                          OK(0)/OK(1) indicates whether this flag is set in the default ImGui Style settings.
-    //                          (flag will be possible to alter in a scope using PushDrawFlags()).
 
     // - Rounding default to ImDrawFlags_RoundCornersAll when 'rounding > 0'.
     // - So you only need to use the _RoundCorners flags if you want a special configuration (e.g. a rectangle with one rounded corner).
@@ -3468,7 +3480,7 @@ enum ImDrawFlags_
     ImDrawFlags_UseVtxOffset            = 1 << 23,  // --   OK(1)  // Can emit 'VtxOffset > 0' to allow large meshes with 16-bit ImDrawIdx. Used by default when 'ImGuiBackendFlags_RendererHasVtxOffset' is enabled by the backend.
 
     // [Internal]
-    ImDrawFlags_AllowedInScope_         = ImDrawFlags_AAFill | ImDrawFlags_AALines | ImDrawFlags_AALineEnds | ImDrawFlags_StrokeLegacy | ImDrawFlags_TextNoPixelSnap | ImDrawFlags_UseTexForRoundCorners | ImDrawFlags_UseTexForStrokeLegacy | ImDrawFlags_UseVtxOffset, // [Internal] Values allowed in scope e.g. incoming PushDrawFlags() stack.
+    ImDrawFlags_AllowedInScope_         = ImDrawFlags_AAFill | ImDrawFlags_AALines | ImDrawFlags_AALineEnds | ImDrawFlags_StrokeLegacy | ImDrawFlags_TextNoPixelSnap | ImDrawFlags_UseTexForRoundCorners | ImDrawFlags_UseTexForStrokeLegacy | ImDrawFlags_UseVtxOffset, // [Internal] Values allowed in PushDrawFlag() scope.
     ImDrawFlags_RoundCornersMask_       = ImDrawFlags_RoundCornersAll | ImDrawFlags_RoundCornersNone, // [Internal]
     ImDrawFlags_StrokeMask_             = 0x07 << 17,              // [Internal] 
     ImDrawFlags_InvalidMask_            = ~0x7FFFFFF0,             // [Internal] == 0x8000000F. Reserved to detect misuses. 
@@ -3489,7 +3501,7 @@ struct ImDrawList
     ImVector<ImDrawCmd>     CmdBuffer;          // Draw commands. Typically 1 command = 1 GPU draw call, unless the command is a callback.
     ImVector<ImDrawIdx>     IdxBuffer;          // Index buffer. Each command consume ImDrawCmd::ElemCount of those
     ImVector<ImDrawVert>    VtxBuffer;          // Vertex buffer.
-    ImDrawFlags             Flags;              // Current flags for drawing primitives. You may poke into these to adjust anti-aliasing settings per-primitive. Will be exposed as PushDrawFlags().
+    ImDrawFlags             Flags;              // Current flags for drawing primitives. You may poke into these to adjust anti-aliasing settings per-primitive. Alter with PushDrawFlag().
 
     // [Internal, used while building lists]
     unsigned int            _VtxCurrentIdx;     // [Internal] generally == VtxBuffer.Size unless we are past 64K vertices, in which case this gets reset to 0.
@@ -3502,6 +3514,7 @@ struct ImDrawList
     ImVector<ImVec4>        _ClipRectStack;     // [Internal]
     ImVector<ImTextureRef>  _TextureStack;      // [Internal]
     ImVector<ImU8>          _CallbacksDataBuf;  // [Internal]
+    ImSmallStack_<ImDrawFlags,3> _DrawFlagsStack;// [Internal]
     float                   _FringeScale;       // [Internal] anti-alias fringe is scaled by this value, this helps to keep things sharp while zooming at vertex buffer content
     float                   _InvFringeScale;    // [internal] 1.0 / _FringeScale // FIXME: Consider renaming to _PixelDensity.
     bool                    _FringeScaleIsInteger;  // [Internal] true if 1/_FringeScale is a whole number, used to select fast path for rendering
@@ -3517,6 +3530,8 @@ struct ImDrawList
     IMGUI_API void  PopClipRect();
     IMGUI_API void  PushTexture(ImTextureRef tex_ref);
     IMGUI_API void  PopTexture();
+    IMGUI_API void  PushDrawFlag(ImDrawFlags flags, bool enabled); // [BETA] Please notify me if you are using this.
+    IMGUI_API void  PopDrawFlag();
     inline ImVec2   GetClipRectMin() const { const ImVec4& cr = _ClipRectStack.back(); return ImVec2(cr.x, cr.y); }
     inline ImVec2   GetClipRectMax() const { const ImVec4& cr = _ClipRectStack.back(); return ImVec2(cr.z, cr.w); }
 
@@ -3658,7 +3673,6 @@ struct ImDrawList
     IMGUI_API void  _AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float rounding, float thickness, ImDrawFlags flags);
     IMGUI_API void  _SelectFringeTexture(float screen_thickness, ImVec4* out_tex_uvs, float* out_fringe);
     IMGUI_API float _CalculateCenterBiasedOffset(float thickness);
-
 };
 
 // All draw data to render a Dear ImGui frame
