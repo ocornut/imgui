@@ -912,23 +912,18 @@ void ImDrawList::_SelectFringeTexture(float screen_thickness, ImVec4* out_tex_uv
     // We assume that the screen_thickness has been clamped to 1.0 by the caller.
     IM_ASSERT_PARANOID(screen_thickness >= 1.0f);
 
-    ImVec4 tex_uvs;
+    // Handle the thickness between 1.0 - IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH].
+    // We use super sampled textures in this range to make texture changes less noticeable.
+    // There are IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX+1 textures, where 0 maps to 1.0 and IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX maps to IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH (4.0).
+    int texture_idx;
     if (screen_thickness <= IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH) IM_LIKELY
-    {
-        // Handle the thickness between 1.0 - IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH].
-        // We use super sampled textures in this range to make texture changes less noticeable.
-        // There are IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX+1 textures, where 0 maps to 1.0 and IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX maps to IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH (4.0).
-        int texture_idx = (int)((screen_thickness - 1.0f) * IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT + 0.5f);
-        tex_uvs = _Data->TexUvLines[(IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1) + texture_idx];
-    }
+        texture_idx = (int)((screen_thickness - 1.0f) * IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT + 0.5f) + (IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1);
     else
-    {
-        const int texture_idx = ImMin((int)(screen_thickness + 0.5f), IM_DRAWLIST_TEX_LINES_WIDTH_MAX - 1);
-        tex_uvs = _Data->TexUvLines[texture_idx];
-    }
+        texture_idx = ImMin((int)(screen_thickness + 0.5f), IM_DRAWLIST_TEX_LINES_WIDTH_MAX - 1);
 
-    *out_tex_uvs = tex_uvs;
     // Scale the fringe so that the texture matches the line thickness.
+    ImVec4 tex_uvs = _Data->TexUvLines[texture_idx];
+    *out_tex_uvs = tex_uvs;
     *out_fringe = _FringeScale * screen_thickness * tex_uvs.w; // tex_uvs.w = 1 / thickness
 }
 
@@ -957,14 +952,20 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         return;
 
     float screen_thickness = thickness * _InvFringeScale;
-    if (screen_thickness < 1.0f / 255.0f)
-        return;
-    if (screen_thickness < 1.0f)
+    if (screen_thickness < 1.0f) IM_UNLIKELY
     {
+        if (screen_thickness < 1.0f / 255.0f) IM_UNLIKELY
+            return;
         col = ImAlphaMultiply(col, screen_thickness);
         screen_thickness = 1.0f;
         thickness = _FringeScale;
     }
+
+    // If this assert triggers on legacy code:
+    // - 1.92.8 (2025/05): swapped two last parameters order: flags, thickness --> thickness, flags. This should normally be caught by compile-time type-checking.
+    // - 1.92.8 (2025/05): changed value of ImDrawList_Closed which was previously guaranteed to be == 1. Hardcoded use of 1 or true should be replaced.
+    // Read more details near AddRect() + see "API BREAKING CHANGES" section for 1.82, 1.90 and 1.92.8.
+    IM_ASSERT_USER_ERROR_RET((flags & ImDrawFlags_InvalidMask_) == 0, "Incorrect parameter. Did you swap 'thickness' and 'flags'?");
 
     // Allocate data for temp buffers
     _Data->TempBuffer.reserve_discard(points_count * 2);
@@ -2218,10 +2219,10 @@ void ImDrawList::_AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float t
         return;
 
     float screen_thickness = thickness * _InvFringeScale;
-    if (screen_thickness < 1.0f / 255.0f) IM_UNLIKELY
-        return;
     if (screen_thickness < 1.0f) IM_UNLIKELY
     {
+        if (screen_thickness < 1.0f / 255.0f) IM_UNLIKELY
+            return;
         col = ImAlphaMultiply(col, screen_thickness);
         screen_thickness = 1.0f;
         thickness = _FringeScale;
@@ -2596,10 +2597,10 @@ void ImDrawList::_AddRectBaked(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
 void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float rounding, float thickness, ImDrawFlags flags)
 {
     float screen_thickness = thickness * _InvFringeScale;
-    if (screen_thickness < 1.0f / 255.0f)
-        return;
-    if (screen_thickness < 1.0f)
+    if (screen_thickness < 1.0f) IM_UNLIKELY
     {
+        if (screen_thickness < 1.0f / 255.0f) IM_UNLIKELY
+            return;
         col = ImAlphaMultiply(col, screen_thickness);
         screen_thickness = 1.0f;
         thickness = _FringeScale;
@@ -2936,7 +2937,7 @@ void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
     // The rect is smaller than pixel in one dimension.
     if (min_dim < _FringeScale) IM_UNLIKELY
     {
-        if (min_dim < (1.0f / 255.0f) * _FringeScale)
+        if (min_dim < (1.0f / 255.0f) * _FringeScale) IM_UNLIKELY
             return;
         if (width < _FringeScale)
         {
@@ -3075,7 +3076,6 @@ void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int nu
         radius -= 0.5f;
         stroke_pos = ImDrawFlags_StrokeCenter;
     }
-
     radius = ImMax(0.01f, radius);
 
     float outer_radius = radius;
@@ -3160,7 +3160,6 @@ void ImDrawList::AddNgon(const ImVec2& center, float radius, ImU32 col, int num_
         radius -= 0.5f;
         stroke_pos = ImDrawFlags_StrokeCenter;
     }
-
     radius = ImMax(0.01f, radius);
 
     // Check overestimate first before testing details (+1.0f is intended, not FringeScale)
@@ -3201,7 +3200,7 @@ void ImDrawList::AddNgonFilled(const ImVec2& center, float radius, ImU32 col, in
     const float diameter = radius * 2.0f;
     if (diameter < _FringeScale) IM_UNLIKELY
     {
-        if (diameter < (1.0f / 255.0f) * _FringeScale)
+        if (diameter < (1.0f / 255.0f) * _FringeScale) IM_UNLIKELY
             return;
         col = ImAlphaMultiply(col, diameter * _InvFringeScale);
         radius = _FringeScale * 0.5f;
@@ -3252,7 +3251,7 @@ void ImDrawList::AddEllipseFilled(const ImVec2& center, const ImVec2& radius, Im
     // The ellipse is smaller than pixel in one dimension.
     if (min_dim < _FringeScale) IM_UNLIKELY
     {
-        if (min_dim < (1.0f / 255.0f) * _FringeScale)
+        if (min_dim < (1.0f / 255.0f) * _FringeScale) IM_UNLIKELY
             return;
         if (diameter_x < _FringeScale)
         {
