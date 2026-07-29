@@ -2150,7 +2150,7 @@ static void DemoWindowWidgetsPlotting()
                 average += values[n];
             average /= (float)IM_COUNTOF(values);
             char overlay[32];
-            sprintf(overlay, "avg %f", average);
+            snprintf(overlay, sizeof(overlay), "avg %f", average);
             ImGui::PlotLines("Lines", values, IM_COUNTOF(values), values_offset, overlay, -1.0f, 1.0f, ImVec2(0, 80.0f));
         }
 
@@ -2200,7 +2200,7 @@ static void DemoWindowWidgetsProgressBars()
         ImGui::Text("Progress Bar");
 
         char buf[32];
-        sprintf(buf, "%d/%d", (int)(progress * 1753), 1753);
+        snprintf(buf, sizeof(buf), "%d/%d", (int)(progress * 1753), 1753);
         ImGui::ProgressBar(progress, ImVec2(0.f, 0.f), buf);
 
         // Pass an animated negative value, e.g. -1.0f * (float)ImGui::GetTime() is the recommended value.
@@ -2518,7 +2518,7 @@ static void DemoWindowWidgetsSelectables()
                 for (int i = 0; i < 10; i++)
                 {
                     char label[32];
-                    sprintf(label, "Item %d", i);
+                    snprintf(label, sizeof(label), "Item %d", i);
                     ImGui::TableNextColumn();
                     ImGui::Selectable(label, &selected[i]); // FIXME-TABLE: Selection overlap
                 }
@@ -2530,7 +2530,7 @@ static void DemoWindowWidgetsSelectables()
                 for (int i = 0; i < 10; i++)
                 {
                     char label[32];
-                    sprintf(label, "Item %d", i);
+                     snprintf(label, sizeof(label), "Item %d", i);
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();
                     ImGui::Selectable(label, &selected[i], ImGuiSelectableFlags_SpanAllColumns);
@@ -2594,7 +2594,7 @@ static void DemoWindowWidgetsSelectables()
                 {
                     ImVec2 alignment = ImVec2((float)x / 2.0f, (float)y / 2.0f);
                     char name[32];
-                    sprintf(name, "(%.1f,%.1f)", alignment.x, alignment.y);
+                    snprintf(name, sizeof(name), "(%.1f,%.1f)", alignment.x, alignment.y);
                     if (x > 0) ImGui::SameLine();
                     ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, alignment);
                     ImGui::Selectable(name, &selected[3 * y + x], ImGuiSelectableFlags_None, ImVec2(size, size));
@@ -2858,7 +2858,7 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
             for (int n = 0; n < 5; n++)
             {
                 char buf[32];
-                sprintf(buf, "Object %d", n);
+                 snprintf(buf, sizeof(buf), "Object %d", n);
                 if (ImGui::Selectable(buf, selected == n))
                     selected = n;
             }
@@ -2875,7 +2875,7 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
             for (int n = 0; n < 5; n++)
             {
                 char buf[32];
-                sprintf(buf, "Object %d", n);
+                snprintf(buf, sizeof(buf), "Object %d", n);
                 if (ImGui::Selectable(buf, selection[n]))
                 {
                     if (!ImGui::GetIO().KeyCtrl) // Clear selection when Ctrl is not held
@@ -2916,7 +2916,7 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
                 for (int n = 0; n < ITEMS_COUNT; n++)
                 {
                     char label[64];
-                    sprintf(label, "Object %05d: %s", n, ExampleNames[n % IM_COUNTOF(ExampleNames)]);
+                     snprintf(label, sizeof(label), "Object %05d: %s", n, ExampleNames[n % IM_COUNTOF(ExampleNames)]);
                     bool item_is_selected = selection.Contains((ImGuiID)n);
                     ImGui::SetNextItemSelectionUserData(n);
                     ImGui::Selectable(label, item_is_selected);
@@ -2956,7 +2956,7 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
                     for (int n = clipper.DisplayStart; n < clipper.DisplayEnd; n++)
                     {
                         char label[64];
-                        sprintf(label, "Object %05d: %s", n, ExampleNames[n % IM_COUNTOF(ExampleNames)]);
+                        snprintf(label, sizeof(label), "Object %05d: %s", n, ExampleNames[n % IM_COUNTOF(ExampleNames)]);
                         bool item_is_selected = selection.Contains((ImGuiID)n);
                         ImGui::SetNextItemSelectionUserData(n);
                         ImGui::Selectable(label, item_is_selected);
@@ -3018,7 +3018,7 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
                 {
                     const ImGuiID item_id = items[n];
                     char label[64];
-                    sprintf(label, "Object %05u: %s", item_id, ExampleNames[item_id % IM_COUNTOF(ExampleNames)]);
+                    snprintf(label, sizeof(label), "Object %05u: %s", item_id, ExampleNames[item_id % IM_COUNTOF(ExampleNames)]);
 
                     bool item_is_selected = selection.Contains(item_id);
                     ImGui::SetNextItemSelectionUserData(n);
@@ -3084,7 +3084,7 @@ static void DemoWindowWidgetsSelectionAndMultiSelect(ImGuiDemoWindowData* demo_d
                         ImGui::TableNextColumn();
                         ImGui::PushID(n);
                         char label[64];
-                        sprintf(label, "Object %05d: %s", n, ExampleNames[n % IM_COUNTOF(ExampleNames)]);
+                        snprintf(label, sizeof(label), "Object %05d: %s", n, ExampleNames[n % IM_COUNTOF(ExampleNames)]);
                         bool item_is_selected = selection.Contains((ImGuiID)n);
                         ImGui::SetNextItemSelectionUserData(n);
                         ImGui::Selectable(label, item_is_selected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap);
@@ -6325,7 +6325,7 @@ static void DemoWindowTables()
             {
                 ImGui::TableNextColumn();
                 if (init)
-                    strcpy(text_bufs[cell], "edit me");
+                    snprintf(text_bufs[cell], IM_COUNTOF(text_bufs[cell]), "edit me");
                 ImGui::SetNextItemWidth(-FLT_MIN);
                 ImGui::PushID(cell);
                 ImGui::InputText("##cell", text_bufs[cell], IM_COUNTOF(text_bufs[cell]));
@@ -9246,7 +9246,7 @@ struct ExampleAppConsole
             Strtrim(s);
             if (s[0])
                 ExecCommand(s);
-            strcpy(s, "");
+            s[0] = '\0';
             reclaim_focus = true;
         }
 
