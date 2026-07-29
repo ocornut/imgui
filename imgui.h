@@ -3480,8 +3480,8 @@ enum ImDrawFlags_
     ImDrawFlags_UseVtxOffset            = 1 << 23,  // --   OK(1)  // Can emit 'VtxOffset > 0' to allow large meshes with 16-bit ImDrawIdx. Used by default when 'ImGuiBackendFlags_RendererHasVtxOffset' is enabled by the backend.
 
     // [Internal]
-    ImDrawFlags_AllowedInScope_         = ImDrawFlags_AAFill | ImDrawFlags_AALines | ImDrawFlags_AALineEnds | ImDrawFlags_StrokeLegacy | ImDrawFlags_TextNoPixelSnap | ImDrawFlags_UseTexForRoundCorners | ImDrawFlags_UseTexForStrokeLegacy | ImDrawFlags_UseVtxOffset, // [Internal] Values allowed in PushDrawFlag() scope.
     ImDrawFlags_RoundCornersMask_       = ImDrawFlags_RoundCornersAll | ImDrawFlags_RoundCornersNone, // [Internal]
+    ImDrawFlags_AllowedInScope_         = ImDrawFlags_AAFill | ImDrawFlags_AALines | ImDrawFlags_AALineEnds | ImDrawFlags_StrokeLegacy | ImDrawFlags_TextNoPixelSnap | ImDrawFlags_UseTexForRoundCorners | ImDrawFlags_UseTexForStrokeLegacy | ImDrawFlags_UseVtxOffset | ImDrawFlags_RoundCornersMask_, // [Internal] Values allowed in PushDrawFlag() scope.
     ImDrawFlags_StrokeMask_             = 0x07 << 17,              // [Internal] 
     ImDrawFlags_InvalidMask_            = ~0x7FFFFFF0,             // [Internal] == 0x8000000F. Reserved to detect misuses. 
 };
