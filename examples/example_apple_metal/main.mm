@@ -18,6 +18,12 @@
 #import <MetalKit/MetalKit.h>
 
 #include "imgui.h"
+// i18n support: include unconditionally — when IMGUI_DEMO_ENABLE_I18N is not defined
+// the header provides a no-op Tr(s) stub with zero overhead.
+#include "misc/i18n/imgui_i18n.h"
+#ifdef IMGUI_DEMO_ENABLE_I18N
+#include <unistd.h>
+#endif
 #include "imgui_impl_metal.h"
 #if TARGET_OS_OSX
 #include "imgui_impl_osx.h"
@@ -37,6 +43,36 @@
 //-----------------------------------------------------------------------------------
 // AppViewController
 //-----------------------------------------------------------------------------------
+
+#ifdef IMGUI_DEMO_ENABLE_I18N
+bool g_need_font_rebuild = false;
+
+static void RebuildFonts()
+{
+    ImGuiIO& io = ImGui::GetIO();
+    io.Fonts->ClearFonts();
+    io.Fonts->AddFontDefault();
+
+    // Merge a CJK font so the Language menu and translated strings render correctly.
+    // In v1.92+ with an updated backend, glyph ranges are handled dynamically and do not need to be specified.
+    // Hiragino Sans GB is designed for Simplified Chinese; fall back to STHeiti.
+    const char* font_paths[] = {
+        "/System/Library/Fonts/Hiragino Sans GB.ttc",
+        "/System/Library/Fonts/STHeiti Light.ttc",
+        nullptr
+    };
+    const char* chosen = nullptr;
+    for (int i = 0; font_paths[i]; ++i) {
+        if (access(font_paths[i], R_OK) == 0) { chosen = font_paths[i]; break; }
+    }
+    if (chosen) {
+        ImFontConfig cfg;
+        cfg.MergeMode = true;
+        io.Fonts->AddFontFromFileTTF(chosen, 0.0f, &cfg); // 0.0f = implicit ref size, matches AddFontDefault()
+    }
+    io.Fonts->Build();
+}
+#endif // IMGUI_DEMO_ENABLE_I18N
 
 @implementation AppViewController
 
@@ -110,6 +146,11 @@
     ImGui_ImplOSX_Init(self.view);
     [NSApp activateIgnoringOtherApps:YES];
 #endif
+
+#ifdef IMGUI_DEMO_ENABLE_I18N
+    // Build initial font atlas with CJK glyphs so the Language menu renders correctly from the start.
+    RebuildFonts();
+#endif
 }
 
 -(void)drawInMTKView:(MTKView*)view
@@ -134,6 +175,14 @@
         return;
     }
 
+#ifdef IMGUI_DEMO_ENABLE_I18N
+    // Rebuild font atlas after language switch (must be before NewFrame to avoid use-after-free).
+    if (g_need_font_rebuild) {
+        g_need_font_rebuild = false;
+        RebuildFonts();
+    }
+#endif
+
     // Start the Dear ImGui frame
     ImGui_ImplMetal_NewFrame(renderPassDescriptor);
 #if TARGET_OS_OSX
@@ -155,30 +204,31 @@
         static float f = 0.0f;
         static int counter = 0;
 
-        ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+        // "Hello, world!" is the canonical ImGui getting-started window title — kept in English.
+        ImGui::Begin("Hello, world!");
 
-        ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-        ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-        ImGui::Checkbox("Another Window", &show_another_window);
+        ImGui::Text("This is some useful text.");    // standard example text, kept in English
+        ImGui::Checkbox(Tr("Demo Window"), &show_demo_window);
+        ImGui::Checkbox(Tr("Another Window"), &show_another_window);
 
-        ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-        ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+        ImGui::SliderFloat("float", &f, 0.0f, 1.0f);   // "float" labels the C++ type, not translated
+        ImGui::ColorEdit3(Tr("clear color"), (float*)&clear_color);
 
-        if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
+        if (ImGui::Button(Tr("Button")))
             counter++;
         ImGui::SameLine();
-        ImGui::Text("counter = %d", counter);
+        ImGui::Text("counter = %d", counter);       // variable name, not translated
 
-        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+        ImGui::Text(Tr("Application average %.3f ms/frame (%.1f FPS)"), 1000.0f / io.Framerate, io.Framerate);
         ImGui::End();
     }
 
     // 3. Show another simple window.
     if (show_another_window)
     {
-        ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-        ImGui::Text("Hello from another window!");
-        if (ImGui::Button("Close Me"))
+        ImGui::Begin(Tr("Another Window"), &show_another_window);
+        ImGui::Text("%s", Tr("Hello from another window!"));
+        if (ImGui::Button(Tr("Close Me")))
             show_another_window = false;
         ImGui::End();
     }
