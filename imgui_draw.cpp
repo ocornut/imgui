@@ -723,6 +723,7 @@ void ImDrawList::PopTexture()
 void ImDrawList::PushDrawFlag(ImDrawFlags flags, bool enabled)
 {
     IM_ASSERT((flags & ~ImDrawFlags_AllowedInScope_) == 0);
+    IM_ASSERT((flags & ImDrawFlags_StrokeMask_) == 0 || (flags & ImDrawFlags_StrokeMask_) == ImDrawFlags_StrokeLegacy);
     _DrawFlagsStack.push_back(Flags);
     if (enabled)
         Flags |= flags;
@@ -732,7 +733,7 @@ void ImDrawList::PushDrawFlag(ImDrawFlags flags, bool enabled)
 
 void ImDrawList::PopDrawFlag()
 {
-    IM_ASSERT_USER_ERROR_RET(_DrawFlagsStack.Size > 0, "Calling PopDrawFlags() too many times!");
+    IM_ASSERT_USER_ERROR_RET(_DrawFlagsStack.Size > 0, "Calling PopDrawFlag() too many times!");
     Flags = _DrawFlagsStack.back();
     _DrawFlagsStack.pop_back();
 }
@@ -900,7 +901,7 @@ IM_MSVC_RUNTIME_CHECKS_RESTORE
 IM_MSVC_RUNTIME_CHECKS_OFF
 static ImU32 ImAlphaMultiply(ImU32 col, float alpha_mul)
 {
-    IM_ASSERT_PARANOID(a >= 0.0f && a < 1.0f); // We don't clamp!
+    IM_ASSERT_PARANOID(alpha_mul >= 0.0f && alpha_mul < 1.0f); // We don't clamp!
     ImU32 a = (col & IM_COL32_A_MASK) >> IM_COL32_A_SHIFT;
     a = (ImU32)(a * alpha_mul); // We don't need to clamp 0..255 because alpha is in 0..1 range.
     return (col & ~IM_COL32_A_MASK) | (a << IM_COL32_A_SHIFT);
@@ -2028,7 +2029,7 @@ void ImDrawList::AddLineH(float min_x, float max_x, float y, ImU32 col, float th
     }
     else
     {
-        // Replace stroke pos with the already calculated one.
+        // Replace stroke pos with the already calculated one, as AddPolyline() default is different.
         flags = (flags & ~ImDrawFlags_StrokeMask_) | stroke_pos;
 
         // For generic case use line, since it needs less triangles than AA rectangle.
@@ -2074,7 +2075,7 @@ void ImDrawList::AddLineV(float x, float min_y, float max_y, ImU32 col, float th
     }
     else
     {
-        // Replace stroke pos with the already calculated one.
+        // Replace stroke pos with the already calculated one, as AddPolyline() default is different.
         flags = (flags & ~ImDrawFlags_StrokeMask_) | stroke_pos;
 
         // For generic case use line, since it needs less triangles than AA rectangle.
@@ -2623,8 +2624,9 @@ void ImDrawList::AddQuad(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, c
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
+    //flags |= Flags; // Not needed.
     ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
-    flags = (flags & ~ImDrawFlags_StrokeMask_) | stroke_pos;
+    flags = (flags & ~ImDrawFlags_StrokeMask_) | stroke_pos; // As AddPolyline() default is different
 
     const ImVec2 points[4] = { p1, p2, p3, p4 };
     AddPolyline(points, 4, col, thickness, flags | ImDrawFlags_Closed);
@@ -2644,8 +2646,9 @@ void ImDrawList::AddTriangle(const ImVec2& p1, const ImVec2& p2, const ImVec2& p
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
+    //flags |= Flags; // Not needed.
     ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
-    flags = (flags & ~ImDrawFlags_StrokeMask_) | stroke_pos;
+    flags = (flags & ~ImDrawFlags_StrokeMask_) | stroke_pos; // As AddPolyline() default is different
 
     const ImVec2 points[3] = { p1, p2, p3 };
     AddPolyline(points, 3, col, thickness, flags | ImDrawFlags_Closed);
