@@ -182,6 +182,7 @@ HOW TO UPDATE?
   - Tree: hierarchy lines (when thickness>1.0f).
   - TabBar: selected overline border ((when thickness>1.0f).
   - Demo: Custom Rendering: canvas lines.
+- Checkbox, Menus: check marks use anti-aliased ends.
 - Demo: Custom Rendering: exposed new flags; Showcasing overlapping strokes and
   filled shapes; Added an option to animation thickness; Added new shapes to
   showcase new rendering features that previously hit limitations.
