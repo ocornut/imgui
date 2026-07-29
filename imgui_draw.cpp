@@ -7579,7 +7579,7 @@ void ImGui::RenderCheckMark(ImDrawList* draw_list, ImVec2 pos, ImU32 col, float 
     draw_list->PathLineTo(ImVec2(bx - third, by - third));
     draw_list->PathLineTo(ImVec2(bx, by));
     draw_list->PathLineTo(ImVec2(bx + third * 2.0f, by - third * 2.0f));
-    draw_list->PathStroke(col, thickness);
+    draw_list->PathStroke(col, thickness, (draw_list->Flags & ImDrawFlags_AALines) ? ImDrawFlags_AALineEnds : 0); // FIXME: Design idiomatic selection/threshold for this?
 }
 
 // Render an arrow. 'pos' is position of the arrow tip. half_sz.x is length from base to tip. half_sz.y is length on each side.
