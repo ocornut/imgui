@@ -1,4 +1,4 @@
-// dear imgui, v1.92.9 WIP
+// dear imgui, v1.92.9
 // (main code and documentation)
 
 // Help:
@@ -32,7 +32,7 @@
 // See LICENSE.txt for copyright and licensing details (standard MIT License).
 // This library is free but needs your support to sustain development and maintenance.
 // Businesses: you can support continued development via B2B invoiced technical support, maintenance and sponsoring contracts.
-// PLEASE reach out at omar AT dearimgui DOT com. See https://github.com/ocornut/imgui/wiki/Funding
+// PLEASE reach out at omar AT discohello DOT com. See https://github.com/ocornut/imgui/wiki/Funding
 // Businesses: you can also purchase licenses for the Dear ImGui Automation/Test Engine.
 
 // It is recommended that you don't modify imgui.cpp! It will become difficult for you to update the library.
@@ -1198,6 +1198,7 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
  Q: How can I use my own math types instead of ImVec2?
  Q: How can I interact with standard C++ types (such as std::string and std::vector)?
  Q: How can I display custom shapes? (using low-level ImDrawList API)
+ Q: About Multi-Threading
  >> See https://www.dearimgui.com/faq
 
  Q&A: Fonts, Text
@@ -1223,7 +1224,7 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
  ==============
 
  Q: How can I help?
- A: - Businesses: please reach out to "omar AT dearimgui DOT com" if you work in a place using Dear ImGui!
+ A: - Businesses: please reach out to "omar AT discohello DOT com" if you work in a place using Dear ImGui!
       We can discuss ways for your company to fund development via invoiced technical support, maintenance or sponsoring contacts.
       This is among the most useful thing you can do for Dear ImGui. With increased funding, we sustain and grow work on this project.
       >>> See https://github.com/ocornut/imgui/wiki/Funding
@@ -2859,7 +2860,7 @@ IM_MSVC_RUNTIME_CHECKS_RESTORE
 
 IMGUI_API ImU32 ImAlphaBlendColors(ImU32 col_a, ImU32 col_b)
 {
-    float t = ((col_b >> IM_COL32_A_SHIFT) & 0xFF) / 255.f;
+    float t = ((col_b >> IM_COL32_A_SHIFT) & 0xFF) / 255.0f;
     int r = ImLerp((int)(col_a >> IM_COL32_R_SHIFT) & 0xFF, (int)(col_b >> IM_COL32_R_SHIFT) & 0xFF, t);
     int g = ImLerp((int)(col_a >> IM_COL32_G_SHIFT) & 0xFF, (int)(col_b >> IM_COL32_G_SHIFT) & 0xFF, t);
     int b = ImLerp((int)(col_a >> IM_COL32_B_SHIFT) & 0xFF, (int)(col_b >> IM_COL32_B_SHIFT) & 0xFF, t);
@@ -2890,20 +2891,20 @@ ImU32 ImGui::ColorConvertFloat4ToU32(const ImVec4& in)
 // Optimized http://lolengine.net/blog/2013/01/13/fast-rgb-to-hsv
 void ImGui::ColorConvertRGBtoHSV(float r, float g, float b, float& out_h, float& out_s, float& out_v)
 {
-    float K = 0.f;
+    float K = 0.0f;
     if (g < b)
     {
         ImSwap(g, b);
-        K = -1.f;
+        K = -1.0f;
     }
     if (r < g)
     {
         ImSwap(r, g);
-        K = -2.f / 6.f - K;
+        K = -2.0f / 6.0f - K;
     }
 
     const float chroma = r - (g < b ? g : b);
-    out_h = ImFabs(K + (g - b) / (6.f * chroma + 1e-20f));
+    out_h = ImFabs(K + (g - b) / (6.0f * chroma + 1e-20f));
     out_s = chroma / (r + 1e-20f);
     out_v = r;
 }
@@ -6242,7 +6243,9 @@ void ImGui::Render()
         ImDrawData* draw_data = &viewport->DrawDataP;
         for (ImDrawList* draw_list : draw_data->CmdLists)
             draw_list->_PopUnusedDrawCmd();
-
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+        draw_data->CmdListsCount = draw_data->CmdLists.Size;
+#endif
         g.IO.MetricsRenderVertices += draw_data->TotalVtxCount;
         g.IO.MetricsRenderIndices += draw_data->TotalIdxCount;
     }
@@ -7743,10 +7746,10 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             if (flags & ImGuiWindowFlags_AlwaysAutoResize)
             {
                 if (!window_size_x_set_by_api)
-                    window->Size.x = window->SizeFull.x = 0.f;
+                    window->Size.x = window->SizeFull.x = 0.0f;
                 if (!window_size_y_set_by_api)
-                    window->Size.y = window->SizeFull.y = 0.f;
-                window->ContentSize = window->ContentSizeIdeal = ImVec2(0.f, 0.f);
+                    window->Size.y = window->SizeFull.y = 0.0f;
+                window->ContentSize = window->ContentSizeIdeal = ImVec2(0.0f, 0.0f);
             }
         }
 
@@ -18516,7 +18519,7 @@ void ImGui::ShowIDStackToolWindow(bool* p_open)
     Checkbox("Ctrl+C: copy path", &tool->OptCopyToClipboardOnCtrlC);
     PopStyleVar();
     SameLine();
-    TextColored((time_since_copy >= 0.0f && time_since_copy < 0.75f && ImFmod(time_since_copy, 0.25f) < 0.25f * 0.5f) ? ImVec4(1.f, 1.f, 0.3f, 1.f) : ImVec4(), "*COPIED*");
+    TextColored((time_since_copy >= 0.0f && time_since_copy < 0.75f && ImFmod(time_since_copy, 0.25f) < 0.25f * 0.5f) ? ImVec4(1.0f, 1.0f, 0.3f, 1.0f) : ImVec4(), "*COPIED*");
     if (tool->OptCopyToClipboardOnCtrlC && Shortcut(ImGuiMod_Ctrl | ImGuiKey_C, ImGuiInputFlags_RouteGlobal | ImGuiInputFlags_RouteOverFocused))
     {
         tool->CopyToClipboardLastTime = (float)g.Time;

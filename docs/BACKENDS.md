@@ -117,7 +117,7 @@ If you are not sure which backend to use, the recommended platform/frameworks fo
 | GLFW | https://github.com/glfw/glfw | imgui_impl_glfw.cpp | |
 | Sokol | https://github.com/floooh/sokol | [util/sokol_imgui.h](https://github.com/floooh/sokol/blob/master/util/sokol_imgui.h) | Lower-level than GLFW/SDL |
 
-If your application runs on Windows or if you are using multi-viewport, the win32 backend handles some details a little better than other backends.
+If your application runs on Windows or if you are using multi-viewports, the imgui_impl_win32 backend handles some details better than other backends.
 
 ## Using third-party Backends
 
