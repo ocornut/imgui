@@ -2581,9 +2581,10 @@ void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
         if (allow_tex_corners && s_rounding <= IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX)
         {
 			IM_ASSERT_PARANOID(!(_Data->Font->OwnerAtlas->Flags & ImFontAtlasFlags_NoBakedRoundCorners));
-            const int size = ImMax(2, s_rounding); // This is matching the baking calculations.
-			const int idx = (s_rounding - 1);
-			IM_ASSERT_PARANOID(idx >= 0 && idx < IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX);
+            // This is matching the baking calculations. The rounding clamping above makes sure that there's enough space for the extra pixel.
+            const int size = s_rounding + 1;
+            const int idx = (s_rounding - 1);
+            IM_ASSERT_PARANOID(idx >= 0 && idx < IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX);
             ImVec4 tex_uvs = _Data->TexUvCorners[idx];
             _AddRectFilledBaked(p_min, p_max, col, (float)size * _FringeScale, tex_uvs, flags);
             return;
@@ -4925,7 +4926,7 @@ static void ImFontAtlasBuildUpdateTexDataCorners(ImFontAtlas* atlas)
             row_height = 0;
             for (int i = 0; i < IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX; i++)
             {
-                const int size = ImMax(2, ImMax(i + 1, thickness)) + 2;
+                const int size = ImMax(i + 2, thickness) + 2;
                 row_width += size;
                 row_height = ImMax(row_height, size);
             }
@@ -4946,8 +4947,8 @@ static void ImFontAtlasBuildUpdateTexDataCorners(ImFontAtlas* atlas)
     // Filled
     for (int n = 0; n < IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX; n++)
     {
-        const int rounding = n+1;
-        const int s = ImMax(2, rounding);    // We need at least 2px so that stretching has solid color.
+        const int rounding = n + 1;
+        const int s = rounding + 1; // Always add 1px to the fill side of the rounded corner to prevent the corner AA to bleed into the rectangle edges.
         const int w = s + 2;
         const int h = s + 2;
 
