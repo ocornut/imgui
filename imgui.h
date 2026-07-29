@@ -3550,7 +3550,7 @@ struct ImDrawList
     IMGUI_API void  AddRectFilledMultiColor(const ImVec2& p_min, const ImVec2& p_max, ImU32 col_upr_left, ImU32 col_upr_right, ImU32 col_bot_right, ImU32 col_bot_left);
     IMGUI_API void  AddQuad(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col, float thickness = 1.0f, ImDrawFlags flags = 0);
     IMGUI_API void  AddQuadFilled(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col);
-    IMGUI_API void  AddTriangle(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 col, float thickness = 1.0f, ImDrawFlags = 0);
+    IMGUI_API void  AddTriangle(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 col, float thickness = 1.0f, ImDrawFlags flags = 0);
     IMGUI_API void  AddTriangleFilled(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 col);
     IMGUI_API void  AddCircle(const ImVec2& center, float radius, ImU32 col, int num_segments = 0, float thickness = 1.0f, ImDrawFlags flags = 0);
     IMGUI_API void  AddCircleFilled(const ImVec2& center, float radius, ImU32 col, int num_segments = 0);
@@ -3886,7 +3886,7 @@ enum ImFontAtlasFlags_
     ImFontAtlasFlags_None               = 0,
     ImFontAtlasFlags_NoPowerOfTwoHeight = 1 << 0,   // Don't round the height to next power of two
     ImFontAtlasFlags_NoMouseCursors     = 1 << 1,   // Don't build software mouse cursors into the atlas (save a little texture memory)
-    ImFontAtlasFlags_NoBakedLines       = 1 << 2,   // [OBSOLETE] Don't build line textures into the atlas (save a little texture memory). SINCE 1.93.0 THIS PREVENT ANTI-ALIASED STROKES FROM WORKING.
+    ImFontAtlasFlags_NoBakedLines       = 1 << 2,   // [OBSOLETE] Don't build line textures into the atlas (save a little texture memory). SINCE 1.93.0 THIS PREVENT ANTI-ALIASED STROKES FROM WORKING AND WILL DISABLE AA.
     ImFontAtlasFlags_NoBakedRoundCorners= 1 << 3,   // Don't build round corners into the atlas.
 };
 

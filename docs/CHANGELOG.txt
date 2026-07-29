@@ -103,7 +103,7 @@ HOW TO UPDATE?
     - Helps fills minor gaps if combining multiple individual lines.
     - Enabling AA Ends by default would be more "correct", but it is slower and increase vertex/index data.s
   - Added `ImDrawFlags_MiterOnly` flag to disable using beveled corner (closer to legacy
-    rendering, slightly faster, but corners sharpers than 90 degrees may expand far out).
+    rendering, slightly faster, but corners sharper than 90 degrees may expand far out).
     Automatically used by AddRect(), AddCircle(), AddNgon(), AddEllipse() etc functions
     since we know that the input path does not contains sharper corners.
   - Added `ImDrawFlags_SquareCap` flag to use extend lines ends using square caps.
@@ -127,9 +127,9 @@ HOW TO UPDATE?
 - Added flags to specify stroke position in all `ImDrawList` stroking functions:
   - `ImDrawFlags_StrokeInside` (default for closed primitives and AddLineH, AddLineV)
   - `ImDrawFlags_StrokeCenter` (default for paths, bezier and AddLine)
-  - `ImDrawFlags_StrokeCenterAligned`
+  - `ImDrawFlags_StrokeCenterBiased`
   - `ImDrawFlags_StrokeOutside`
-  - `ImDrawFlags_StrokeLegacy` (may be set as default for a given scope using PushItemFlag()).
+  - `ImDrawFlags_StrokeLegacy` (may be set as default for a given scope using PushDrawFlag()).
   - Legacy code was generally applying +0.50f offset which meant that,
     - with thickness=1.0f: the stroke would appear inside.
     - with thickness>1.0f: the stroke would start expanding on both sides but starting from that slightly initial offset.
@@ -139,7 +139,7 @@ HOW TO UPDATE?
     regardless of thickness, as long as input coordinates/sizes are integers. (#9359)
   - Read our Wiki guides! Recap:
     ------------------------------------------------------------------------
-                       Legacy     Inside    Outside    Center   CenterAligned
+                       Legacy     Inside    Outside    Center   CenterBiased
     --------------------------------------------------------------------------------
      Thickness=1.0f    sharp      sharp     sharp      blurry   sharp
      Thickness=2.0f    blurry     sharp     sharp      sharp    sharp
