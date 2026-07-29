@@ -56,6 +56,10 @@ Other Changes:
   - Per-viewport FramebufferScale for Apple/Retina screen is applied to draw lists:
     - AA Fringe is scaled accordingly.
     - Circle and Curves tessellation error are scaled accordingly.
+- Backends:
+  - QNX: added QNX Screen backend. (#9492) [@mgorchak-blackberry]
+- Examples:
+  - QNX+OpenGL3, QNX+Vulkan: added QNX Screen examples. (#9492) [@mgorchak-blackberry]
 
 
 -----------------------------------------------------------------------
