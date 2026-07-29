@@ -5782,6 +5782,8 @@ static void SetupDrawListSharedData()
     g.DrawListSharedData.CurveTessellationMaxError = g.Style.CurveTessellationMaxError;
     g.DrawListSharedData.SetCircleTessellationMaxError(g.Style.CircleTessellationMaxError);
     g.DrawListSharedData.InitialDrawFlags = ImDrawFlags_None;
+    if (g.IO.Fonts->Flags & ImFontAtlasFlags_NoBakedLines)
+        g.Style.AntiAliasedLines = g.Style.AntiAliasedLineEnds = false;
     if (g.Style.AntiAliasedFill)
         g.DrawListSharedData.InitialDrawFlags |= ImDrawFlags_AAFill;
     if (g.Style.AntiAliasedLines)
