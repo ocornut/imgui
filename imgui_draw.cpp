@@ -556,8 +556,8 @@ void ImDrawList::AddCallback(ImDrawCallback callback, void* userdata, size_t use
     else
     {
         // Copy and store user data in a buffer
-        IM_ASSERT(userdata != NULL);
-        IM_ASSERT(userdata_size < (1u << 31));
+        if (userdata == NULL || userdata_size >= (1u << 31))
+            return;
         curr_cmd->UserCallbackData = NULL; // Will be resolved during Render()
         curr_cmd->UserCallbackDataSize = (int)userdata_size;
         curr_cmd->UserCallbackDataOffset = _CallbacksDataBuf.Size;
