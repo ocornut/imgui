@@ -43,6 +43,10 @@ Breaking Changes:
 
 Other Changes:
 
+- Tables:
+  - Fixed Y2 position of lower horizontal border (ImGuiTableFlags_BordersOuterH)
+    being off by one pixel when vertical ones are not also enabled. [@thedmd]
+  - Fixed X position of angled borders being off by half a pixel. [@thedmd]
 - ImDrawData: fixed a regression in 1.92.9 where legacy `ImDrawData::CmdListsCount` was always 0.
   Prefer using `ImDrawData::CmdList.Size` anyway.
 
