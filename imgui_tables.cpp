@@ -3627,7 +3627,7 @@ void ImGui::TableAngledHeadersRowEx(ImGuiID row_id, float angle, float max_label
             if (pass == 1)
             {
                 // Draw border
-                draw_list->AddLine(bg_shape[0], bg_shape[3], TableGetColumnBorderCol(table, order_n, column_n), TABLE_BORDER_SIZE);
+                draw_list->AddLine(bg_shape[0] - ImVec2(TABLE_BORDER_SIZE * 0.5f, 0.0f), bg_shape[3] - ImVec2(TABLE_BORDER_SIZE * 0.5f, 0.0f), TableGetColumnBorderCol(table, order_n, column_n), TABLE_BORDER_SIZE);
             }
         }
     PopClipRect();
