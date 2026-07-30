@@ -921,8 +921,10 @@ void ImDrawList::_SelectFringeTexture(float screen_thickness, ImVec4* out_tex_uv
         int texture_idx;
         if (screen_thickness <= IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH) IM_LIKELY
             texture_idx = (int)((screen_thickness - 1.0f) * IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT + 0.5f) + (IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1);
+        else if (screen_thickness < (float)IM_DRAWLIST_TEX_LINES_WIDTH_MAX - 1.5f) IM_LIKELY
+            texture_idx = (int)(screen_thickness + 0.5f);
         else
-            texture_idx = ImMin((int)(screen_thickness + 0.5f), IM_DRAWLIST_TEX_LINES_WIDTH_MAX - 1);
+            texture_idx = IM_DRAWLIST_TEX_LINES_WIDTH_MAX - 1; // Catches large values of screen_thickness (and +inf/NaN) that a ImMin() wouldn't.
 
         // Scale the fringe so that the texture matches the line thickness.
         ImVec4 tex_uvs = _Data->TexUvLines[texture_idx];
