@@ -8935,8 +8935,9 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             Checkbox("Anti-aliased lines", &style.AntiAliasedLines);
             SameLine();
             HelpMarker("When disabling anti-aliasing lines, you'll probably want to disable borders in your style as well.");
-
+            BeginDisabled(style.AntiAliasedLines == false);
             Checkbox("Anti-aliased line ends", &style.AntiAliasedLineEnds);
+            EndDisabled();
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
             BeginDisabled();

@@ -1051,6 +1051,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
 
     const float half_aa = _FringeScale * 0.5f; // Used for end caps, does not use "fringe" since end cap AA is not using the texture.
     const float half_thickness = thickness * 0.5f;
+    const bool use_aa_ends = (flags & (ImDrawFlags_AALines | ImDrawFlags_AALineEnds)) == (ImDrawFlags_AALines | ImDrawFlags_AALineEnds);
 
     const int first_vtx_offset = (int)(_VtxWritePtr - VtxBuffer.Data);
     int base_idx = (int)_VtxCurrentIdx;
@@ -1079,7 +1080,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
             p1.y -= dir.y * half_thickness;
         }
 
-        if ((flags & ImDrawFlags_AALineEnds) == 0)
+        if (!use_aa_ends)
         {
             base_idx = (int)_VtxCurrentIdx;
             IM_APPEND_VTX(p1.x - n1.x * thickness0, p1.y - n1.y * thickness0, uv0, col);
@@ -1265,7 +1266,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
             p1.y += dir.y * half_thickness;
         }
 
-        if ((flags & ImDrawFlags_AALineEnds) == 0)
+        if (!use_aa_ends)
         {
             IM_APPEND_VTX(p1.x - n1.x * thickness0, p1.y - n1.y * thickness0, uv0, col);
             IM_APPEND_VTX(p1.x + n1.x * thickness1, p1.y + n1.y * thickness1, uv1, col);
@@ -1895,8 +1896,9 @@ void ImDrawList::_AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float t
 
     const float half_aa = _FringeScale * 0.5f; // Used for end caps, does not use "fringe" since end cap AA is not using the texture.
     const float half_thickness = thickness * 0.5f;
+    const bool use_aa_ends = (flags & (ImDrawFlags_AALines | ImDrawFlags_AALineEnds)) == (ImDrawFlags_AALines | ImDrawFlags_AALineEnds);
 
-    if ((flags & ImDrawFlags_AALineEnds) == 0)
+    if (!use_aa_ends)
         PrimReserve(2*3, 4);
     else
         PrimReserve(6*3, 8);
@@ -1916,7 +1918,7 @@ void ImDrawList::_AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float t
     }
 
     // Start cap
-    if ((flags & ImDrawFlags_AALineEnds) == 0)
+    if (!use_aa_ends)
     {
         base_idx = (int)_VtxCurrentIdx;
         IM_APPEND_VTX(p1_x - norm_x * thickness0, p1_y - norm_y * thickness0, uv0, col);
@@ -7583,7 +7585,7 @@ void ImGui::RenderCheckMark(ImDrawList* draw_list, ImVec2 pos, ImU32 col, float 
     draw_list->PathLineTo(ImVec2(bx - third, by - third));
     draw_list->PathLineTo(ImVec2(bx, by));
     draw_list->PathLineTo(ImVec2(bx + third * 2.0f, by - third * 2.0f));
-    draw_list->PathStroke(col, thickness, (draw_list->Flags & ImDrawFlags_AALines) ? ImDrawFlags_AALineEnds : 0); // FIXME: Design idiomatic selection/threshold for this?
+    draw_list->PathStroke(col, thickness, ImDrawFlags_AALineEnds);
 }
 
 // Render an arrow. 'pos' is position of the arrow tip. half_sz.x is length from base to tip. half_sz.y is length on each side.
