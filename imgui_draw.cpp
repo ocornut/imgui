@@ -965,6 +965,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
     // - 1.92.8 (2025/05): swapped two last parameters order: flags, thickness --> thickness, flags. This should normally be caught by compile-time type-checking.
     // - 1.92.8 (2025/05): changed value of ImDrawList_Closed which was previously guaranteed to be == 1. Hardcoded use of 1 or true should be replaced.
     // Read more details near AddRect() + see "API BREAKING CHANGES" section for 1.82, 1.90 and 1.92.8.
+    flags |= Flags;
     IM_ASSERT_USER_ERROR_RET((flags & ImDrawFlags_InvalidMask_) == 0, "Incorrect parameter. Did you swap 'thickness' and 'flags'?");
 
     // Allocate data for temp buffers
@@ -999,7 +1000,6 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         sqr_lengths[points_count - 1] = 0.0f;
     }
 
-    flags |= Flags;
     ImVec4 tex_uvs;
     float fringe;
     _SelectFringeTexture(screen_thickness, &tex_uvs, &fringe, flags);
@@ -2343,11 +2343,11 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
     ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeInside);
     if (stroke_pos == ImDrawFlags_StrokeLegacy) IM_UNLIKELY
     {
-        if (Flags & ImDrawFlags_AALines)
+        if (flags & ImDrawFlags_AALines)
             PathRect(ImVec2(p_min.x + 0.50f, p_min.y + 0.50f), ImVec2(p_max.x - 0.50f, p_max.y - 0.50f), rounding, flags);
         else
             PathRect(ImVec2(p_min.x + 0.50f, p_min.y + 0.50f), ImVec2(p_max.x - 0.49f, p_max.y - 0.49f), rounding, flags); // Better looking lower-right corner and rounded non-AA shapes.
-        PathStroke(col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | ImDrawFlags_StrokeCenter);
+        PathStroke(col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | ImDrawFlags_StrokeCenter | (flags & ~ImDrawFlags_StrokeMask_));
         return;
     }
 
@@ -2447,7 +2447,7 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
     if (!has_rounding || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
     {
         const ImVec2 points[4] = { outer_min, ImVec2(outer_max.x, outer_min.y), outer_max, ImVec2(outer_min.x, outer_max.y) };
-        AddPolyline(points, 4, col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | ImDrawFlags_StrokeInside);
+        AddPolyline(points, 4, col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | ImDrawFlags_StrokeInside | (flags & ~ImDrawFlags_StrokeMask_));
     }
     else
     {
@@ -2467,7 +2467,7 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
         PathArcToFast(ImVec2(outer_max.x - rounding_tr, outer_min.y + rounding_tr), rounding_tr, 9, 12);
         PathArcToFast(ImVec2(outer_max.x - rounding_br, outer_max.y - rounding_br), rounding_br, 0, 3);
         PathArcToFast(ImVec2(outer_min.x + rounding_bl, outer_max.y - rounding_bl), rounding_bl, 3, 6);
-        PathStroke(col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | ImDrawFlags_StrokeInside);
+        PathStroke(col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | ImDrawFlags_StrokeInside | (flags & ~ImDrawFlags_StrokeMask_));
     }
 }
 
