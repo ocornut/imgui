@@ -1039,12 +1039,11 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
     }
     PrimReserve(idx_count, vtx_count);
 
-    const float half_texel = 0.5f * _Data->FontAtlas->TexUvScale.x;
     const float ratio = thickness0 / (thickness0 + thickness1); // The points that use uv2 are placed directly on the path (offset = 0), calculate the texture position from stroke offsets.
     ImVec2 uv0, uv1, uv2;
-    uv0.x = tex_uvs.x + half_texel;
+    uv0.x = tex_uvs.x;
     uv0.y = tex_uvs.z;
-    uv1.x = tex_uvs.y - half_texel;
+    uv1.x = tex_uvs.y;
     uv1.y = tex_uvs.z;
     uv2.x = uv0.x + (uv1.x - uv0.x) * ratio;
     uv2.y = tex_uvs.z;
@@ -1883,13 +1882,11 @@ void ImDrawList::_AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float t
         thickness0 = fringe * 0.5f;
     float thickness1 = (thickness + fringe) - thickness0;
 
-
-    const float half_texel = 0.5f * _Data->FontAtlas->TexUvScale.x;
     const float ratio = thickness0 / (thickness0 + thickness1); // The points using uv2 are placed on the path, calculate the position from stroke offets.
     ImVec2 uv0, uv1, uv2;
-    uv0.x = tex_uvs.x + half_texel;
+    uv0.x = tex_uvs.x;
     uv0.y = tex_uvs.z;
-    uv1.x = tex_uvs.y - half_texel;
+    uv1.x = tex_uvs.y;
     uv1.y = tex_uvs.z;
     uv2.x = uv0.x + (uv1.x - uv0.x) * ratio;
     uv2.y = tex_uvs.z;
@@ -2250,12 +2247,11 @@ void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, 
     rounding += half_fringe;
 
     const float stem_offset = ImMin(rounding, thickness); // The function might get called with rounding slightly bigger than thickness, which is ok, but we should keep the stem inside the shape.
-    const float half_texel = 0.5f * _Data->FontAtlas->TexUvScale.x;
     const float ratio = stem_offset / thickness;
     ImVec2 inner_uv, outer_uv, stem_uv;
-    outer_uv.x = tex_uvs.x + half_texel;
+    outer_uv.x = tex_uvs.x;
     outer_uv.y = tex_uvs.z;
-    inner_uv.x = tex_uvs.y - half_texel;
+    inner_uv.x = tex_uvs.y;
     inner_uv.y = tex_uvs.z;
     stem_uv.x = outer_uv.x + (inner_uv.x - outer_uv.x) * ratio;
     stem_uv.y = tex_uvs.z;
@@ -2440,8 +2436,7 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
             const int idx = (s_thickness * IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX) + s_rounding - 1;
             IM_ASSERT_PARANOID((_Data->Font->OwnerAtlas->Flags & ImFontAtlasFlags_NoBakedRoundCorners) == 0);
             IM_ASSERT_PARANOID(idx >= 0 && idx < IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX * IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX);
-            const ImVec4 tex_uvs = _Data->TexUvCorners[idx];
-            _AddRectBaked(outer_min, outer_max, col, (float)size * _FringeScale, (float)thickness, tex_uvs, flags);
+            _AddRectBaked(outer_min, outer_max, col, (float)size * _FringeScale, (float)thickness, _Data->TexUvCorners[idx], flags);
             return;
         }
     }
@@ -2587,8 +2582,7 @@ void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
             const int size = s_rounding + 1;
             const int idx = (s_rounding - 1);
             IM_ASSERT_PARANOID(idx >= 0 && idx < IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX);
-            ImVec4 tex_uvs = _Data->TexUvCorners[idx];
-            _AddRectFilledBaked(p_min, p_max, col, (float)size * _FringeScale, tex_uvs, flags);
+            _AddRectFilledBaked(p_min, p_max, col, (float)size * _FringeScale, _Data->TexUvCorners[idx], flags);
             return;
         }
     }
@@ -5109,8 +5103,8 @@ static void ImFontAtlasBuildUpdateTexDataLines(ImFontAtlas* atlas)
             }
 
             // Refresh UV coordinates
-            ImVec2 uv0 = ImVec2((float)(r.x + pad_left - 1), (float)(r.y + y)) * atlas->TexUvScale;
-            ImVec2 uv1 = ImVec2((float)(r.x + pad_left + line_width + 1), (float)(r.y + y + 1)) * atlas->TexUvScale;
+            ImVec2 uv0 = ImVec2((float)(r.x + pad_left - 0.5f), (float)(r.y + y)) * atlas->TexUvScale;
+            ImVec2 uv1 = ImVec2((float)(r.x + pad_left + line_width + 0.5f), (float)(r.y + y + 1)) * atlas->TexUvScale;
             float half_v = (uv0.y + uv1.y) * 0.5f; // Calculate a constant V in the middle of the row to avoid sampling artifacts
             // Store inverse of the line-width (thickness) to the w component so that we can avoid division when selecting texture.
             float inv_line_width = (line_width > 0) ? (1.0f / (float)line_width) : 0.0f;
@@ -5119,7 +5113,6 @@ static void ImFontAtlasBuildUpdateTexDataLines(ImFontAtlas* atlas)
     }
 
     {
-
         ImU8 ramp[IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT];
         for (int n = 0; n < IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT; n++)
             ramp[n] = (ImU8)(((float)n / IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT) * 255.0f);
@@ -5178,8 +5171,8 @@ static void ImFontAtlasBuildUpdateTexDataLines(ImFontAtlas* atlas)
             }
 
             // Refresh UV coordinates
-            ImVec2 uv0 = ImVec2((float)(r.x), (float)(r.y + y)) * atlas->TexUvScale;
-            ImVec2 uv1 = ImVec2((float)(r.x + IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT * 2 + line_width), (float)(r.y + y + 1)) * atlas->TexUvScale;
+            ImVec2 uv0 = ImVec2((float)(r.x + 0.5f), (float)(r.y + y)) * atlas->TexUvScale;
+            ImVec2 uv1 = ImVec2((float)(r.x - 0.5f + IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT * 2 + line_width), (float)(r.y + y + 1)) * atlas->TexUvScale;
             float half_v = (uv0.y + uv1.y) * 0.5f; // Calculate a constant V in the middle of the row to avoid sampling artifacts
             // Store inverse of the line-width (thickness) to the w component so that we can avoid division when selecting texture.
             float inv_line_width = 1.0f / (1.0f + (float)n / (float)IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT);
