@@ -3459,7 +3459,7 @@ enum ImDrawFlags_
     // Stroke/Fill Anti-aliasing ------------------ // Prim/Scope?
     ImDrawFlags_AAFill                  = 1 << 12,  // OK*  OK(1)  // Enable anti-aliasing for Filled shapes.
     ImDrawFlags_AALines                 = 1 << 13,  // OK*  OK(1)  // Enable anti-aliasing for Strokes (lines, borders).
-    ImDrawFlags_AALineEnds              = 1 << 14,  // OK   OK(0)  // Enable anti-aliasing for Strokes Ends. Useful on thick strokes or for precise continuity of multiple lines. A little more costly.
+    ImDrawFlags_AALineEnds              = 1 << 14,  // OK   OK(0)  // Enable anti-aliasing for Strokes Ends. Requires AALines to also be enabled. Useful on thick strokes or for precise continuity of multiple lines. A little more costly.
     //ImDrawFlags_NoAA                  = 1 << 15,  // OK   --     // Disable anti-aliasing for a given primitive.
     //ImDrawFlags_NoAALineEnds          = 1 << 16,  // OK   --     // Disable anti-aliasing ends for a given primitive.
 
