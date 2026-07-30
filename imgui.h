@@ -3478,10 +3478,12 @@ enum ImDrawFlags_
     ImDrawFlags_UseTexForRoundCorners   = 1 << 21,  // --   OK(1)  // Enable using textures instead of strokes to draw rounded corners/circles where possible (faster). Used by default unless 'ImFontAtlasFlags_NoBakedRoundCorners' is enabled in the font atlas.
     ImDrawFlags_UseTexForStrokeLegacy   = 1 << 22,  // --   OK(1)  // Enable anti-aliased lines/borders using textures when using legacy strokes. Require backend to render with bilinear filtering (NOT point/nearest filtering). Used by default unless 'ImFontAtlasFlags_NoBakedLines' is set in the font atlas.
     ImDrawFlags_UseVtxOffset            = 1 << 23,  // --   OK(1)  // Can emit 'VtxOffset > 0' to allow large meshes with 16-bit ImDrawIdx. Used by default when 'ImGuiBackendFlags_RendererHasVtxOffset' is enabled by the backend.
+    ImDrawFlags_AllowTexForRoundCorners_= 1 << 24,  // --   OK(1)  // [Internal]
 
     // [Internal]
     ImDrawFlags_RoundCornersMask_       = ImDrawFlags_RoundCornersAll | ImDrawFlags_RoundCornersNone, // [Internal]
-    ImDrawFlags_AllowedInScope_         = ImDrawFlags_AAFill | ImDrawFlags_AALines | ImDrawFlags_AALineEnds | ImDrawFlags_StrokeLegacy | ImDrawFlags_TextNoPixelSnap | ImDrawFlags_UseTexForRoundCorners | ImDrawFlags_UseTexForStrokeLegacy | ImDrawFlags_UseVtxOffset | ImDrawFlags_RoundCornersMask_, // [Internal] Values allowed in PushDrawFlag() scope.
+    ImDrawFlags_AllowInPushScope_       = ImDrawFlags_AAFill | ImDrawFlags_AALines | ImDrawFlags_AALineEnds | ImDrawFlags_StrokeLegacy | ImDrawFlags_TextNoPixelSnap | ImDrawFlags_UseTexForRoundCorners | ImDrawFlags_UseTexForStrokeLegacy | ImDrawFlags_UseVtxOffset | ImDrawFlags_RoundCornersMask_, // [Internal] Values allowed in PushDrawFlag() scope.
+    ImDrawFlags_AllowInFrameScope_      = ImDrawFlags_AllowInPushScope_ | ImDrawFlags_AllowTexForRoundCorners_,
     ImDrawFlags_StrokeMask_             = 0x07 << 17,              // [Internal] 
     ImDrawFlags_InvalidMask_            = ~0x7FFFFFF0,             // [Internal] == 0x8000000F. Reserved to detect misuses. 
 };
