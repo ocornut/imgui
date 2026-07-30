@@ -4360,7 +4360,7 @@ struct ImFontAtlasBuilder
     ImFontAtlasRectId           PackIdCornersTexData;
 
     // Cached UV coordinates
-    ImVec4                      TexUvLines[IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1 + IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX + 1]; // UVs for baked anti-aliased lines
+    ImVec4                      TexUvLines[IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1 + IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX + 1]; // UVs for baked anti-aliased lines (u0, u1, v, 1/thickness)
     ImVec4                      TexUvCorners[IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX * IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX];     // UVs for baked anti-aliased corners (0= fill, 1> stroke thickness)
 
     ImFontAtlasBuilder()        { memset((void*)this, 0, sizeof(*this)); FrameCount = -1; RectsIndexFreeListStart = -1; PackIdMouseCursors = PackIdLinesTexData = PackIdLineFractTexData = PackIdCornersTexData = -1; }
