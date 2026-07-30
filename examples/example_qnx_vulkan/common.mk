@@ -3,7 +3,7 @@ QCONFIG=qconfig.mk
 endif
 include $(QCONFIG)
 
-NAME=example_screen_opengl3
+NAME=example_qnx_vulkan
 
 SRCS = \
     main.cpp \
@@ -12,19 +12,19 @@ SRCS = \
     imgui_draw.cpp \
     imgui_tables.cpp \
     imgui_widgets.cpp \
-    imgui_impl_screen.cpp \
-    imgui_impl_opengl3.cpp
+    imgui_impl_qnx.cpp \
+    imgui_impl_vulkan.cpp
 
 EXTRA_SRCVPATH += $(PROJECT_ROOT)/../.. $(PROJECT_ROOT)/../../backends
 EXTRA_INCVPATH += $(PROJECT_ROOT)/../.. $(PROJECT_ROOT)/../../backends
 
-CXXFLAGS += -std=gnu++11 -DIMGUI_IMPL_OPENGL_ES3
-LIBS += EGL GLESv2 screen m
+CXXFLAGS += -std=gnu++11 -DVK_USE_PLATFORM_SCREEN_QNX=1
+LIBS += vulkan screen m
 
 INSTALLDIR=$(firstword $(INSTALLDIR_$(OS)) usr/bin)
 
 define PINFO
-PINFO DESCRIPTION=Dear ImGui QNX Screen and OpenGL ES 3 example
+PINFO DESCRIPTION=Dear ImGui QNX Screen and Vulkan example
 endef
 
 include $(MKFILES_ROOT)/qmacros.mk

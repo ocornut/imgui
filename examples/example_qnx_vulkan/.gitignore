@@ -1,0 +1,19 @@
+# ignore all files
+*
+
+# unignore all dirs
+!/**/
+
+# unignore all with extensions
+!*.*
+
+# unignore makefiles
+!Makefile
+
+# re-ignore qnx build artefacts
+*.o
+*.so*
+*.a
+*.pinfo
+*.dep
+*.gcno

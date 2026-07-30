@@ -28,9 +28,9 @@
 
 // The application owns the Screen context, window and event object.
 // Poll events with screen_get_event() and pass each non-NONE event to ProcessEvent().
-IMGUI_IMPL_API bool     ImGui_ImplScreen_Init(screen_context_t context, screen_window_t window);
-IMGUI_IMPL_API void     ImGui_ImplScreen_Shutdown();
-IMGUI_IMPL_API void     ImGui_ImplScreen_NewFrame();
-IMGUI_IMPL_API bool     ImGui_ImplScreen_ProcessEvent(screen_event_t event);
+IMGUI_IMPL_API bool     ImGui_ImplQNX_Init(screen_context_t context, screen_window_t window);
+IMGUI_IMPL_API void     ImGui_ImplQNX_Shutdown();
+IMGUI_IMPL_API void     ImGui_ImplQNX_NewFrame();
+IMGUI_IMPL_API bool     ImGui_ImplQNX_ProcessEvent(screen_event_t event);
 
 #endif // #ifndef IMGUI_DISABLE

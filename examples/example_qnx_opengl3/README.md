@@ -2,7 +2,7 @@
 
 This example uses:
 
-- `imgui_impl_screen.cpp` as the QNX Screen platform backend
+- `imgui_impl_qnx.cpp` as the QNX Screen platform backend
 - `imgui_impl_opengl3.cpp` as the renderer backend
 - EGL to create an OpenGL ES 3 context and Screen window surface
 
@@ -15,15 +15,15 @@ No separate Screen/OpenGL renderer backend is required.
 Load the QNX SDP environment, then run:
 
 ```sh
-cd examples/example_screen_opengl3
+cd examples/example_qnx_opengl3
 make
 ```
 
 The QNX recursive make files build for the CPUs enabled in your SDP
-configuration and install the program as `example_screen_opengl3`.
+configuration and install the program as `example_qnx_opengl3`.
 
 ## Input
 
 The application polls its `screen_context_t` event queue and forwards every
-non-`SCREEN_EVENT_NONE` event to `ImGui_ImplScreen_ProcessEvent()`.
+non-`SCREEN_EVENT_NONE` event to `ImGui_ImplQNX_ProcessEvent()`.
 Escape exits the example.

@@ -1,6 +1,6 @@
 Dear ImGui QNX Screen + Vulkan example
 
-Usage: example_screen_vulkan
+Usage: example_qnx_vulkan
 
 The example uses the fullscreen size reported by QNX Screen, creates a VK_QNX_screen_surface
 swapchain, displays the Dear ImGui demo UI, and exits when Escape is pressed

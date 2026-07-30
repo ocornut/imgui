@@ -117,14 +117,14 @@ Because this application doesn't create a window nor a graphic context, there's 
 Please note that imgui_impl_null itself is a rather empty backend. We provide it for consistency but
 it is similarly easy to create a skeleton application without the null backend.
 
-[example_screen_opengl3/](https://github.com/ocornut/imgui/blob/master/examples/example_screen_opengl3/) <BR>
+[example_qnx_opengl3/](https://github.com/ocornut/imgui/blob/master/examples/example_qnx_opengl3/) <BR>
 QNX Screen + OpenGL ES 3 example. <BR>
-= main.cpp + imgui_impl_screen.cpp + imgui_impl_opengl3.cpp <BR>
+= main.cpp + imgui_impl_qnx.cpp + imgui_impl_opengl3.cpp <BR>
 Uses the QNX recursive make build system and compiles the OpenGL3 renderer with `IMGUI_IMPL_OPENGL_ES3`.
 
-[example_screen_vulkan/](https://github.com/ocornut/imgui/blob/master/examples/example_screen_vulkan/) <BR>
+[example_qnx_vulkan/](https://github.com/ocornut/imgui/blob/master/examples/example_qnx_vulkan/) <BR>
 QNX Screen + Vulkan example using `VK_QNX_screen_surface`. <BR>
-= main.cpp + imgui_impl_screen.cpp + imgui_impl_vulkan.cpp <BR>
+= main.cpp + imgui_impl_qnx.cpp + imgui_impl_vulkan.cpp <BR>
 Uses the QNX recursive make build system and the Vulkan backend's example helper structures.
 
 [example_sdl2_directx11/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl2_directx11/) <BR>
