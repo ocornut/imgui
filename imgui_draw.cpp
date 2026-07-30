@@ -1421,6 +1421,8 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
                 if (bevel)
                 {
                     // Limit inner bevel so that it is does not shoot out outside the polygon.
+                    // (using ImMax is intentional: using min limited too much in Mikko's tests when you have short edge next to long one.
+                    // The idea of that check is to keep that worst case overshoot no bigger than the polygon)
                     const float ref_thickness_sqr = half_aa * half_aa;
                     const float limit_sqr = ImMax(temp_sqr_lengths[i0], temp_sqr_lengths[i1]);
                     const float ref_miter_dist_sqr = miter_distance_sqr * ref_thickness_sqr;
@@ -2541,7 +2543,7 @@ void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
             col = ImAlphaMultiply(col, height * _InvFringeScale);
             height = _FringeScale;
         }
-        const ImVec2 points[4] = { p_min, ImVec2(p_min.x + width, p_min.y), ImVec2(p_min.x + width, p_min.y + height), ImVec2(p_min.x, p_max.y + height) };
+        const ImVec2 points[4] = { p_min, ImVec2(p_min.x + width, p_min.y), ImVec2(p_min.x + width, p_min.y + height), ImVec2(p_min.x, p_min.y + height) };
         AddConvexPolyFilled(points, 4, col, ImDrawFlags_MiterOnly);
         return;
     }
@@ -5064,9 +5066,7 @@ static void ImFontAtlasBuildUpdateTexDataLines(ImFontAtlas* atlas)
     }
 
     {
-        // Register texture region for thick lines
-        // The +2 here is to give space for the end caps, whilst height +1 is to accommodate the fact we have a zero-width row
-        // This generates a triangular shape in the texture, with the various line widths stacked on top of each other to allow interpolation between them
+        // FIXME: Lines 0 to IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH(4) are currently never used and could be ditched, saving DETAILED_WIDTH*WIDTH_MAX
         for (int n = 0; n < IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1; n++) // +1 because of the zero-width row
         {
             // Each line consists of at least two empty pixels at the ends, with a line of solid pixels in the middle
@@ -5082,10 +5082,8 @@ static void ImFontAtlasBuildUpdateTexDataLines(ImFontAtlas* atlas)
                 ImU8* write_ptr = (ImU8*)tex->GetPixelsAt(r.x, r.y + y);
                 for (int i = 0; i < pad_left; i++)
                     *(write_ptr + i) = 0x00;
-
                 for (int i = 0; i < line_width; i++)
                     *(write_ptr + pad_left + i) = 0xFF;
-
                 for (int i = 0; i < pad_right; i++)
                     *(write_ptr + pad_left + line_width + i) = 0x00;
             }
@@ -5094,10 +5092,8 @@ static void ImFontAtlasBuildUpdateTexDataLines(ImFontAtlas* atlas)
                 ImU32* write_ptr = (ImU32*)(void*)tex->GetPixelsAt(r.x, r.y + y);
                 for (int i = 0; i < pad_left; i++)
                     *(write_ptr + i) = IM_COL32(255, 255, 255, 0);
-
                 for (int i = 0; i < line_width; i++)
                     *(write_ptr + pad_left + i) = IM_COL32_WHITE;
-
                 for (int i = 0; i < pad_right; i++)
                     *(write_ptr + pad_left + line_width + i) = IM_COL32(255, 255, 255, 0);
             }
@@ -5138,34 +5134,25 @@ static void ImFontAtlasBuildUpdateTexDataLines(ImFontAtlas* atlas)
             {
                 ImU8* write_ptr = (ImU8*)tex->GetPixelsAt(r.x, r.y + y);
                 int idx = 0;
-
                 for (int i = 0; i < IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT; i++)
                     write_ptr[idx++] = ramp[i];
-
                 for (int i = 0; i < line_width; i++)
                     write_ptr[idx++] = 0xFF;
-
                 for (int i = IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT - 1; i >= 0; i--)
                     write_ptr[idx++] = ramp[i];
-
                 while (idx < r.w)
                     write_ptr[idx++] = 0x0;
             }
             else if (add_and_draw && tex->Format == ImTextureFormat_RGBA32)
             {
                 ImU32* write_ptr = (ImU32*)(void*)tex->GetPixelsAt(r.x, r.y + y);
-
                 int idx = 0;
-
                 for (int i = 0; i < IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT; i++)
                     write_ptr[idx++] = IM_COL32(255, 255, 255, ramp[i]);
-
                 for (int i = 0; i < line_width; i++)
                     write_ptr[idx++] = IM_COL32(255, 255, 255, 255);
-
                 for (int i = IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT - 1; i >= 0; i--)
                     write_ptr[idx++] = IM_COL32(255, 255, 255, ramp[i]);
-
                 while (idx < r.w)
                     write_ptr[idx++] = IM_COL32(255, 255, 255, 0);
             }
