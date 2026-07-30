@@ -5795,7 +5795,7 @@ static void SetupDrawListSharedData()
         g.DrawListSharedData.InitialDrawFlags |= ImDrawFlags_UseTexForStrokeLegacy;
 #endif
     if (!(g.IO.Fonts->Flags & ImFontAtlasFlags_NoBakedRoundCorners))
-        g.DrawListSharedData.InitialDrawFlags |= ImDrawFlags_UseTexForRoundCorners;
+        g.DrawListSharedData.InitialDrawFlags |= ImDrawFlags_UseTexForRoundCorners | ImDrawFlags_AllowTexForRoundCorners_;
     if (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasVtxOffset)
         g.DrawListSharedData.InitialDrawFlags |= ImDrawFlags_UseVtxOffset;
 }

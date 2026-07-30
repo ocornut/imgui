@@ -10476,7 +10476,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             //ImGui::CheckboxFlags("UseTexForRoundCorners", &prim_other_flags, ImDrawFlags_UseTexForRoundCorners); ImGui::SameLine();
             //ImGui::CheckboxFlags("UseTexForStrokeLegacy", &prim_other_flags, ImDrawFlags_UseTexForStrokeLegacy);
 
-            static ImDrawFlags scope_flags = draw_list->Flags; // First init copy current state.
+            static ImDrawFlags scope_flags = draw_list->Flags & ImDrawFlags_AllowInPushScope_; // First init copy current state.
             ImGui::SeparatorText("Current ImDrawList flags (e.g. PushDrawFlag function)");
             ImGui::PushID("ScopeFlags");
             ImGui::CheckboxFlags("AAFill", &scope_flags, ImDrawFlags_AAFill); ImGui::SameLine();
@@ -10488,7 +10488,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             ImGui::PopID();
             ImGui::Spacing();
 
-            draw_list->PushDrawFlag(ImDrawFlags_AllowedInScope_, false); // Reset all existing (very unusual: done for this demo)
+            draw_list->PushDrawFlag(ImDrawFlags_AllowInPushScope_, false); // Reset all existing (very unusual: done for this demo)
             draw_list->PushDrawFlag(scope_flags, true);
             const ImDrawFlags flags = prim_stroke_flags | prim_other_flags;
             const ImDrawFlags fill_flags = flags & (ImDrawFlags_AAFill | ImDrawFlags_UseTexForRoundCorners);

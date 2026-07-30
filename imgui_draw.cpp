@@ -468,7 +468,7 @@ void ImDrawList::_ResetForNewFrame()
     IdxBuffer.resize(0);
     VtxBuffer.resize(0);
     Flags = _Data->InitialDrawFlags;
-    IM_ASSERT((Flags & ~ImDrawFlags_AllowedInScope_) == 0);
+    IM_ASSERT((Flags & ~ImDrawFlags_AllowInFrameScope_) == 0);
     memset(&_CmdHeader, 0, sizeof(_CmdHeader));
     _VtxCurrentIdx = 0;
     _VtxWritePtr = NULL;
@@ -722,7 +722,7 @@ void ImDrawList::PopTexture()
 // IMPORTANT: currently limited to 3 deep
 void ImDrawList::PushDrawFlag(ImDrawFlags flags, bool enabled)
 {
-    IM_ASSERT((flags & ~ImDrawFlags_AllowedInScope_) == 0);
+    IM_ASSERT((flags & ~ImDrawFlags_AllowInPushScope_) == 0);
     IM_ASSERT((flags & ImDrawFlags_StrokeMask_) == 0 || (flags & ImDrawFlags_StrokeMask_) == ImDrawFlags_StrokeLegacy);
     _DrawFlagsStack.push_back(Flags);
     if (enabled)
@@ -2429,7 +2429,7 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
             return;
         }
         // Textured corners are baked with AA, do not use them if no-AA is requested.
-        const bool allow_tex_corners = (flags & (ImDrawFlags_AALines | ImDrawFlags_UseTexForRoundCorners)) == (ImDrawFlags_AALines | ImDrawFlags_UseTexForRoundCorners);
+        const bool allow_tex_corners = (flags & (ImDrawFlags_AALines | ImDrawFlags_UseTexForRoundCorners | ImDrawFlags_AllowTexForRoundCorners_)) == (ImDrawFlags_AALines | ImDrawFlags_UseTexForRoundCorners | ImDrawFlags_AllowTexForRoundCorners_);
         if (allow_tex_corners && s_thickness < IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX && s_rounding <= IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX)
         {
             // Pixel aligned rect with round corners rendered using baked textures.
@@ -2577,10 +2577,10 @@ void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
             return;
         }
         // Textured corners are baked with AA, do not use them if no-AA is requested.
-        const bool allow_tex_corners = (flags & (ImDrawFlags_AAFill | ImDrawFlags_UseTexForRoundCorners)) == (ImDrawFlags_AAFill | ImDrawFlags_UseTexForRoundCorners);
+        const bool allow_tex_corners = (flags & (ImDrawFlags_AAFill | ImDrawFlags_UseTexForRoundCorners | ImDrawFlags_AllowTexForRoundCorners_)) == (ImDrawFlags_AAFill | ImDrawFlags_UseTexForRoundCorners | ImDrawFlags_AllowTexForRoundCorners_);
         if (allow_tex_corners && s_rounding <= IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX)
         {
-			IM_ASSERT_PARANOID(!(_Data->Font->OwnerAtlas->Flags & ImFontAtlasFlags_NoBakedRoundCorners));
+            IM_ASSERT_PARANOID(!(_Data->Font->OwnerAtlas->Flags & ImFontAtlasFlags_NoBakedRoundCorners));
             // This is matching the baking calculations. The rounding clamping above makes sure that there's enough space for the extra pixel.
             const int size = s_rounding + 1;
             const int idx = (s_rounding - 1);
