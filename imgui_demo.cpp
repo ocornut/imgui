@@ -10474,8 +10474,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             ImGui::CheckboxFlags("AALineEnds", &prim_other_flags, ImDrawFlags_AALineEnds); ImGui::SameLine();
             ImGui::CheckboxFlags("MiterOnly", &prim_other_flags, ImDrawFlags_MiterOnly); ImGui::SameLine();
             ImGui::CheckboxFlags("SquareCap", &prim_other_flags, ImDrawFlags_SquareCap);
-            //ImGui::CheckboxFlags("UseTexForRoundCorners", &prim_other_flags, ImDrawFlags_UseTexForRoundCorners); ImGui::SameLine();
-            //ImGui::CheckboxFlags("UseTexForStrokeLegacy", &prim_other_flags, ImDrawFlags_UseTexForStrokeLegacy);
+            //ImGui::CheckboxFlags("UseTexForRoundCorners", &prim_other_flags, ImDrawFlags_UseTexForRoundCorners);
 
             static ImDrawFlags scope_flags = draw_list->Flags & ImDrawFlags_AllowInPushScope_; // First init copy current state.
             ImGui::SeparatorText("Current ImDrawList flags (e.g. PushDrawFlag function)");
@@ -10484,8 +10483,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             ImGui::CheckboxFlags("AALines", &scope_flags, ImDrawFlags_AALines); ImGui::SameLine();
             ImGui::CheckboxFlags("AALineEnds", &scope_flags, ImDrawFlags_AALineEnds); ImGui::SameLine();
             ImGui::CheckboxFlags("StrokeLegacy", &scope_flags, ImDrawFlags_StrokeLegacy);
-            //ImGui::CheckboxFlags("UseTexForRoundCorners", &scope_flags, ImDrawFlags_UseTexForRoundCorners); ImGui::SameLine();
-            //ImGui::CheckboxFlags("UseTexForStrokeLegacy", &scope_flags, ImDrawFlags_UseTexForStrokeLegacy);
+            //ImGui::CheckboxFlags("UseTexForRoundCorners", &scope_flags, ImDrawFlags_UseTexForRoundCorners);
             ImGui::PopID();
             ImGui::Spacing();
 
@@ -10508,7 +10506,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             for (int side = 0; side < 4; side++)
             {
                 float t = (float)ImGui::GetTime() * 0.1f + side * pi * 0.5f;
-                rotating_square[side] = { (float)cosf(t) * half_sz, (float)sin(t) * half_sz };
+                rotating_square[side] = { (float)cosf(t) * half_sz, (float)sinf(t) * half_sz };
             }
 
             float x = start_pos.x;
