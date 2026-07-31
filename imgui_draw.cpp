@@ -1997,6 +1997,9 @@ void ImDrawList::AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float th
     _AddLine(p1, p2, col, thickness, flags);
 }
 
+// AddLineH(10, 20, 5, col, 1.0f) == AddLine( {10,5.5}, {20,5.5}, col, 1.0f)
+//                                == AddLine( {10,5}, {20,5}, col, 1.0f, ImDrawFlags_StrokeLegacy); // or before 1.93.0
+// Thickness extend inside/bottom by default. Faster than equivalent AddLine() call.
 void ImDrawList::AddLineH(float min_x, float max_x, float y, ImU32 col, float thickness, ImDrawFlags flags)
 {
     if ((col & IM_COL32_A_MASK) == 0)
@@ -2043,6 +2046,9 @@ void ImDrawList::AddLineH(float min_x, float max_x, float y, ImU32 col, float th
     }
 }
 
+// AddLineV(5, 10, 20, col, 1.0f) == AddLine( {5.5,10}, {5.5,20}, col, 1.0f)
+//                                == AddLine( {5,10}, {5,20}, col, 1.0f, ImDrawFlags_StrokeLegacy); // or before 1.93.0
+// Thickness extend inside/right by default. Faster than equivalent AddLine() call.
 void ImDrawList::AddLineV(float x, float min_y, float max_y, ImU32 col, float thickness, ImDrawFlags flags)
 {
     if ((col & IM_COL32_A_MASK) == 0)
@@ -4834,7 +4840,7 @@ static void ImFontAtlasBuildUpdateTexDataBasic(ImFontAtlas* atlas)
 
 static int InitCornerGeometry(float cx, float cy, float rounding, float circle_segment_max_error, ImVec2* line_normals, float* line_distances)
 {
-    // This tries to quite faithfully replication how we render the corners using tessellation.
+    // This tries to quite faithfully replicate how we render the corners using tessellation.
     // Older code sampled a circle SDF directly, but it had clearly visible discrepancy between the baked corners
     // and tessellated corners due to circle_segment_max_error.
 
@@ -5083,9 +5089,9 @@ static void ImFontAtlasBuildUpdateTexDataLines(ImFontAtlas* atlas)
     }
 
     {
-        // Calculate super sampled lin textures for smaller line widths to make transition between sizes smoother.
+        // Calculate super sampled line textures for smaller line widths to make transition between sizes smoother.
 
-        // Calc ramp used for all the textures.
+        // Calculate ramp used for all the textures.
         ImU8 ramp[IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT];
         for (int n = 0; n < IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT; n++)
             ramp[n] = (ImU8)(((float)n / IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT) * 255.0f);
@@ -5102,7 +5108,7 @@ static void ImFontAtlasBuildUpdateTexDataLines(ImFontAtlas* atlas)
             // To super 2x sample that signal, we end up with following texture:
             // [  0  |  .5 |  1  |  .5 |  0  ]
             //    :.......................:
-            // One might think that there should be 2 opaque pixels the the middle section, but no singe we're super sampling the triangle signal.
+            // One might think that there should be 2 opaque pixels in the middle section, but no since we're super sampling the triangle signal.
             const int line_width = 1 + n;
             IM_ASSERT(IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT + line_width + IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT <= r.w && y < r.h); // Make sure we're inside the texture bounds before we start writing pixels
 

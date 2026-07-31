@@ -395,7 +395,29 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
  When you are not sure about an old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
-   2026/10/07 (1.93.0) - merged ImDrawListFlags into ImDrawFlags. obsoleted ImDrawListFlags (which were rarely used directly):
+   2026/10/07 (1.93.0) - large cleanup/refactor of ImDrawList. many issues and inconsistencies fixed! (#9504)
+                         BELOW IS A SIMPLIFIED/SHORTENED RECAP OF CHANGES. READ CHANGELOG AND LINKS ABOVE FOR MORE DETAILS!
+                         useful links:
+                          - ImDrawList 1.92.9 <> 1.93 Interactive Testbed: https://www.dearimgui.com/docs/drawlist_v193 (<-- you can download this locally)
+                          - ImDrawList Wiki Reference:                     https://github.com/ocornut/imgui/wiki/Draw-List
+                          - Discussion thread:                             https://github.com/ocornut/imgui/issues/9504
+                          - Use ImDrawFlags_StrokeLegacy mode to emulate old rendering per-primitive or per-scope.
+                       - AddLine: removed the (+0.5f,+0.5f) offset that was sneakily added to input coordinates by this function, and led to lots of inconsistencies.
+                          - This fixes inconsistencies in the API and matches the PathXXX API.
+                          - By default, stroke thickness extends on both side of the given segment. e.g for a "pixel-perfect" looking line with thickness=1.0f, coords should be passed as center of each ends of the line.
+                          - Use `ImDrawFlags_StrokeLegacy` to use old offset if required. Or you can apply the offset manually!
+                          - Generally better, simpler and faster to use `AddLineH()`, `AddLineV()` functions added in 1.92.8.
+                          - IF YOU ARE MINDFUL OF PIXEL-PERFECTNESS IN YOUR CUSTOM RENDERING/WIDGETS read Changelog and links above for details.
+                       - AddRect(), AddCircle(), AddNgon(), AddEllipse(), AddTriangle(), AddQuad(): defaulting to "inside" stroke. All closed shapes with thickness=1.0f will appear identical. The difference for thickness>1.0f shapes may be minimal since very large strokes were not well supported for widgets, but stroke will default inside widgets.
+                       - AddCircle(), AddNgon(): removed +0.5f offset added to radius. This fixes inconsistencies in the API. Use `ImDrawFlags_StrokeLegacy` to use old method if required. Or you can apply the offset manually!
+                       - AddRectFilled(): non-integer coordinates will now display anti-aliased edges. Previously, non-integer coordinates rendered with aliased edges snapped by the rasterizer.
+                       - AddRect(), AddRectFilled(): rectangles with inverted coordinates won't be visible unless using ImDrawList_StrokeLegacy mode.
+                         With inverted coordinates:
+                          - Legacy `AddRect()` rounding off         -> visible but incorrect outer size.
+                          - Legacy `AddRect()` rounding on          -> visible but very glitchy.
+                          - Legacy `AddRectFilled()` rounding off   -> visible and correct.
+                          - Legacy `AddRectFilled()` rounding on    -> visible but very glitchy.
+                       - merged ImDrawListFlags into ImDrawFlags. obsoleted ImDrawListFlags (which were rarely used directly):
                           - ImDrawListFlags_AntiAliasedLines        -> ImDrawFlags_AALines,
                           - ImDrawListFlags_AntiAliasedFill         -> ImDrawFlags_AAFill,
                           - ImDrawListFlags_AllowVtxOffset          -> ImDrawFlags_UseVtxOffset,
@@ -405,11 +427,11 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
                           - ImDrawFlags_RoundCornersAll             -> ImDrawFlags_RoundAll,
                           - ImDrawFlags_RoundCornersNone            -> ImDrawFlags_RoundNone,
                           - ImDrawFlags_RoundCornersTopLeft         -> ImDrawFlags_RoundTopLeft,
+                          - ImDrawFlags_RoundCornersTopRight        -> ImDrawFlags_RoundTopRight,
                           - ImDrawFlags_RoundCornersTop             -> ImDrawFlags_RoundTop,
                           - ImDrawFlags_RoundCornersBottom          -> ImDrawFlags_RoundBottom,
-                          etc.
-                         kept redirection enums (will obsolete).
-                       - obsoleted style.AntiAliasedLinesUseTex which now only makes sense for legacy strokes.
+                         etc. kept redirection enums (will obsolete).
+                       - obsoleted style.AntiAliasedLinesUseTex and ImDrawListFlags_AntiAliasedLinesUseTex, as the new line rendering code always uses textures.
  - 2026/09/30 (1.93.0) - ImFont: renamed `AddRemapChar()` to `AddRemapCodepoint()` (rarely used, marked internal). (#609, #5748)
  - 2026/09/18 (1.93.0) - ImGuiTextFilter: removed `float width` parameter of `Draw(const char* filter, float width)`: prefer using `SetNextItemWidth(float)` which is standard. Kept inline redirection function.
  - 2026/08/03 (1.93.0) - Style: obsoleted `style.CurveTessellationTol (default 1.25)` which was in Pixels² unit in favor of `style.CurveTessellationMaxError` (default 1.12)` which is in Pixels unit.
