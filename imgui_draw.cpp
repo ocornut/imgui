@@ -4916,20 +4916,22 @@ static float SampleConvex(float x, float y, const ImVec2* line_normals, const fl
     return result;
 }
 
-static ImU8 SampleCorner(float x, float y, const ImVec2* line_normals, const float* line_distances, int num_lines)
+static ImU8 SampleCornerFillOrStroke(float x, float y, float thickness, const ImVec2* line_normals, const float* line_distances, int num_lines)
 {
     const float d = SampleConvex(x, y, line_normals, line_distances, num_lines);
     const float aa_width = 1.0f;
-    return (ImU8)(ImClamp(1.0f - (d + aa_width * 0.5f) / aa_width, 0.0f, 1.0f) * 255.0f);
-}
-
-static ImU8 SampleCornerStroke(float x, float y, float thickness, const ImVec2* line_normals, const float* line_distances, int num_lines)
-{
-    const float d = SampleConvex(x, y, line_normals, line_distances, num_lines);
-    const float aa_width = 1.0f;
-    const float outer = 1.0f - (d + aa_width * 0.5f) / aa_width;
-    const float inner = (d + thickness + aa_width * 0.5f) / aa_width;
-    return (ImU8)(ImClamp(ImMin(inner, outer), 0.0f, 1.0f) * 255.0f);
+    if (thickness == 0.0f)
+    {
+        // Fill
+        return (ImU8)(ImClamp(1.0f - (d + aa_width * 0.5f) / aa_width, 0.0f, 1.0f) * 255.0f);
+    }
+    else
+    {
+        // Stroke
+        const float outer = 1.0f - (d + aa_width * 0.5f) / aa_width;
+        const float inner = (d + thickness + aa_width * 0.5f) / aa_width;
+        return (ImU8)(ImClamp(ImMin(inner, outer), 0.0f, 1.0f) * 255.0f);
+    }
 }
 
 #if 0 // Set to 1 to visualize coverage of textured corners
@@ -4954,30 +4956,21 @@ static void ImFontAtlasBuildUpdateTexDataCorners(ImFontAtlas* atlas)
     //    if (atlas->OwnerContext)
     //        circle_segment_max_error = atlas->OwnerContext->DrawListSharedData.CircleSegmentMaxError;
 
+    // Calculate size and pack
     ImFontAtlasRect r;
     bool add_and_draw = atlas->GetCustomRect(builder->PackIdCornersTexData, &r) == false;
     if (add_and_draw)
     {
+        // (thickness 0 for filled, thickness >0 for strokes)
         ImVec2i pack_size(0, 0);
-        // Filled corners
-        int row_width = 0;
-        int row_height = 0;
-        for (int i = 0; i < IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX; i++)
+        for (int thickness = 0; thickness < IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX; thickness++)
         {
-            const int size = ImMax(2, i+1) + 2;
-            row_width += size;
-            row_height = ImMax(row_height, size);
-        }
-        pack_size.x = ImMax(pack_size.x, row_width);
-        pack_size.y += row_height;
-        // Rounded corners
-        for (int thickness = 1; thickness < IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX; thickness++)
-        {
-            row_width = 0;
-            row_height = 0;
+            const bool is_filled = (thickness == 0);
+            int row_width = 0;
+            int row_height = 0;
             for (int i = 0; i < IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX; i++)
             {
-                const int size = ImMax(i + 2, thickness) + 2;
+                const int size = is_filled ? ImMax(i + 1, 2) + 2 : ImMax(i + 2, thickness) + 2;
                 row_width += size;
                 row_height = ImMax(row_height, size);
             }
@@ -4988,80 +4981,27 @@ static void ImFontAtlasBuildUpdateTexDataCorners(ImFontAtlas* atlas)
         IM_ASSERT(builder->PackIdCornersTexData != ImFontAtlasRectId_Invalid);
     }
 
-    int x = r.x;
+    // Render
     int y = r.y;
-    int row_height = 0;
-
     ImVec2 line_normals[IM_DRAWLIST_CORNER_POINTS_MAX];
     float line_distances[IM_DRAWLIST_CORNER_POINTS_MAX];
-
-    // Filled
-    for (int n = 0; n < IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX; n++)
+    for (int thickness = 0; thickness < IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX; thickness++)
     {
-        const int rounding = n + 1;
-        const int s = rounding + 1; // Always add 1px to the fill side of the rounded corner to prevent the corner AA to bleed into the rectangle edges.
-        const int w = s + 2;
-        const int h = s + 2;
-
-        // Corner circle
-        const float cx = 1.0f + (float)(n+1);
-        const float cy = 1.0f + (float)(n+1);
-        IM_ASSERT((x + w) <= (r.x + r.w) && (y + h) <= (r.y + r.h)); // Make sure we're inside the texture bounds before we start writing pixels
-
-        const int num_lines = InitCornerGeometry(cx, cy, (float)rounding, circle_segment_max_error, line_normals, line_distances);
-
-        // Write each slice
-        if (add_and_draw && tex->Format == ImTextureFormat_Alpha8)
-        {
-            ImU8* write_ptr = (ImU8*)tex->GetPixelsAt(x, y);
-            const int pitch = tex->Width;
-            for (int ly = 0; ly < h; ly++)
-            {
-                for (int lx = 0; lx < w; lx++)
-                    write_ptr[lx] = SampleCorner((float)lx + 0.5f, (float)ly + 0.5f, line_normals, line_distances, num_lines) & DEBUG_TEX_CORNER_U8(lx, h);
-                write_ptr += pitch;
-            }
-        }
-        else if (add_and_draw && tex->Format == ImTextureFormat_RGBA32)
-        {
-            ImU32* write_ptr = (ImU32*)(void*)tex->GetPixelsAt(x, y);
-            const int pitch = tex->Width;
-            for (int ly = 0; ly < h; ly++)
-            {
-                for (int lx = 0; lx < w; lx++)
-                    write_ptr[lx] = IM_COL32(255, 255, 255, SampleCorner((float)lx + 0.5f, (float)ly + 0.5f, line_normals, line_distances, num_lines)) & DEBUG_TEX_CORNER_U32(lx, h);
-                write_ptr += pitch;
-            }
-        }
-
-        // Refresh UV coordinates
-        ImVec2 uv0 = ImVec2((float)(x + 1), (float)(y + 1)) * atlas->TexUvScale;
-        ImVec2 uv1 = ImVec2((float)(x + 1 + s), (float)(y + 1 + s)) * atlas->TexUvScale;
-        builder->TexUvCorners[n] = ImVec4(uv0.x, uv0.y, uv1.x, uv1.y);
-
-        x += w;
-        row_height = ImMax(row_height, h);
-    }
-    y += row_height;
-
-    // Stroked
-    for (int thickness = 1; thickness < IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX; thickness++)
-    {
-        x = r.x;
-        row_height = 0;
+        const bool is_filled = (thickness == 0);
+        int x = r.x;
+        int row_height = 0;
         for (int n = 0; n < IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX; n++)
         {
-            const int rounding = n+1;
-            const int s = ImMax(rounding, thickness);
+            // Filled: Always add 1px to the fill side of the rounded corner to prevent the corner AA to bleed into the rectangle edges.
+            const int rounding = n + 1;
+            const int s = is_filled ? (rounding + 1) : ImMax(rounding, thickness);
             const int w = s + 2;
             const int h = s + 2;
 
             // Corner circle
             const float cx = 1.0f + (float)(n + 1);
             const float cy = 1.0f + (float)(n + 1);
-
-            IM_ASSERT((x + w) <= (r.x + r.w) && (y + h) <= (r.y + r.h)); // Make sure we're inside the texture bounds before we start writing pixels
-
+            IM_ASSERT((x + w) <= (r.x + r.w) && (y + h) <= (r.y + r.h)); // Make sure we're inside the texture bounds
             const int num_lines = InitCornerGeometry(cx, cy, (float)rounding, circle_segment_max_error, line_normals, line_distances);
 
             // Write each slice
@@ -5071,8 +5011,8 @@ static void ImFontAtlasBuildUpdateTexDataCorners(ImFontAtlas* atlas)
                 const int pitch = tex->Width;
                 for (int ly = 0; ly < h; ly++)
                 {
-                    for (int lx = 0; lx < h; lx++)
-                        write_ptr[lx] = SampleCornerStroke((float)lx + 0.5f, (float)ly + 0.5f, (float)thickness, line_normals, line_distances, num_lines) & DEBUG_TEX_CORNER_U8(lx, h);
+                    for (int lx = 0; lx < w; lx++)
+                        write_ptr[lx] = SampleCornerFillOrStroke((float)lx + 0.5f, (float)ly + 0.5f, (float)thickness, line_normals, line_distances, num_lines) & DEBUG_TEX_CORNER_U8(lx, h);
                     write_ptr += pitch;
                 }
             }
@@ -5082,8 +5022,8 @@ static void ImFontAtlasBuildUpdateTexDataCorners(ImFontAtlas* atlas)
                 const int pitch = tex->Width;
                 for (int ly = 0; ly < h; ly++)
                 {
-                    for (int lx = 0; lx < h; lx++)
-                        write_ptr[lx] = IM_COL32(255, 255, 255, SampleCornerStroke((float)lx + 0.5f, (float)ly + 0.5f, (float)thickness, line_normals, line_distances, num_lines)) & DEBUG_TEX_CORNER_U32(lx, h);
+                    for (int lx = 0; lx < w; lx++)
+                        write_ptr[lx] = IM_COL32(255, 255, 255, SampleCornerFillOrStroke((float)lx + 0.5f, (float)ly + 0.5f, (float)thickness, line_normals, line_distances, num_lines)) & DEBUG_TEX_CORNER_U32(lx, h);
                     write_ptr += pitch;
                 }
             }
@@ -5091,7 +5031,7 @@ static void ImFontAtlasBuildUpdateTexDataCorners(ImFontAtlas* atlas)
             // Refresh UV coordinates
             ImVec2 uv0 = ImVec2((float)(x + 1), (float)(y + 1)) * atlas->TexUvScale;
             ImVec2 uv1 = ImVec2((float)(x + 1 + s), (float)(y + 1 + s)) * atlas->TexUvScale;
-            builder->TexUvCorners[thickness * IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX + n] = ImVec4(uv0.x, uv0.y, uv1.x, uv1.y);
+            builder->TexUvCorners[n + thickness * IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX] = ImVec4(uv0.x, uv0.y, uv1.x, uv1.y);
 
             x += w;
             row_height = ImMax(row_height, h);
