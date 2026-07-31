@@ -396,7 +396,7 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
  When you are not sure about an old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
-   2026/06/XX (1.XXXX) - merged ImDrawListFlags into ImDrawFlags. obsoleted ImDrawListFlags (which were rarely used directly):
+   2026/07/XX (1.93.0) - merged ImDrawListFlags into ImDrawFlags. obsoleted ImDrawListFlags (which were rarely used directly):
                           - ImDrawListFlags_AntiAliasedLines        -> ImDrawFlags_AALines,
                           - ImDrawListFlags_AntiAliasedFill         -> ImDrawFlags_AAFill,
                           - ImDrawListFlags_AllowVtxOffset          -> ImDrawFlags_UseVtxOffset,
