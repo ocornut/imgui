@@ -3012,6 +3012,7 @@ struct ImSmallStack_
     inline T&           back()                  { IM_ASSERT(Size > 0); return LocalData[Size - 1]; }
     inline void         push_back(const T& v)   { IM_ASSERT(Size < Capacity); memcpy(&LocalData[Size], &v, sizeof(v)); Size++; }
     inline void         pop_back()              { IM_ASSERT(Size > 0); Size--; }
+    inline int          capacity() const        { return Capacity; }
 };
 
 // Flags for ImGuiListClipper (currently not fully exposed in function calls: a future refactor will likely add this to ImGuiListClipper::Begin function equivalent)
