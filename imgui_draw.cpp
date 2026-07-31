@@ -4969,11 +4969,12 @@ static void ImFontAtlasBuildUpdateTexDataCorners(ImFontAtlas* atlas)
             const bool is_filled = (thickness == 0);
             int row_width = 0;
             int row_height = 0;
-            for (int i = 0; i < IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX; i++)
+            for (int n = 0; n < IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX; n++)
             {
-                const int size = is_filled ? ImMax(i + 1, 2) + 2 : ImMax(i + 2, thickness) + 2;
-                row_width += size;
-                row_height = ImMax(row_height, size);
+                const int rounding = n + 1;
+                const int size = (is_filled ? (rounding + 1) : ImMax(rounding, thickness));
+                row_width += size + 2;
+                row_height = ImMax(row_height, size + 2);
             }
             pack_size.x = ImMax(pack_size.x, row_width);
             pack_size.y += row_height;
@@ -4995,9 +4996,9 @@ static void ImFontAtlasBuildUpdateTexDataCorners(ImFontAtlas* atlas)
         {
             // Filled: Always add 1px to the fill side of the rounded corner to prevent the corner AA to bleed into the rectangle edges.
             const int rounding = n + 1;
-            const int s = is_filled ? (rounding + 1) : ImMax(rounding, thickness);
-            const int w = s + 2;
-            const int h = s + 2;
+            const int size = (is_filled ? (rounding + 1) : ImMax(rounding, thickness));
+            const int w = size + 2;
+            const int h = size + 2;
 
             // Corner circle
             const float cx = 1.0f + (float)(n + 1);
@@ -5031,7 +5032,7 @@ static void ImFontAtlasBuildUpdateTexDataCorners(ImFontAtlas* atlas)
 
             // Refresh UV coordinates
             ImVec2 uv0 = ImVec2((float)(x + 1), (float)(y + 1)) * atlas->TexUvScale;
-            ImVec2 uv1 = ImVec2((float)(x + 1 + s), (float)(y + 1 + s)) * atlas->TexUvScale;
+            ImVec2 uv1 = ImVec2((float)(x + 1 + size), (float)(y + 1 + size)) * atlas->TexUvScale;
             builder->TexUvCorners[n + thickness * IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX] = ImVec4(uv0.x, uv0.y, uv1.x, uv1.y);
 
             x += w;
