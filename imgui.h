@@ -3453,7 +3453,7 @@ enum ImDrawFlags_
     ImDrawFlags_SquareCap               = 1 << 11,  // OK   --     // PathStroke(), AddPolyline(): use square cap line ends.
 
     // About Stroke Ends:
-    // - Rendering is optimized for fast pixel-perfect UI, so line ends are not anti-aliased by default. It cheaper (we can emit less vertices).
+    // - Rendering is optimized for fast pixel-perfect UI, so line ends are not anti-aliased by default. It's cheaper (we can emit less vertices).
     // - For more free-form drawings, light graphs and markers, or when using thick strokes: you can turn them on using the ImDrawFlags_AALineEnds flag.
     // - See 'Demo->Examples->Custom Rendering' to interactively toy with those flags.
     // - 'OK*' indicates using this at the AddXXX() call site is unlikely: it would only makes sense if (1) the option is disabled in style/scope and (2) you want to forcefully enable it for a single primitives. Possible but unlikely! Only supported for functions taking flags inputs.
@@ -3465,12 +3465,12 @@ enum ImDrawFlags_
     //ImDrawFlags_NoAALineEnds          = 1 << 16,  // OK   --     // Disable anti-aliasing ends for a given primitive.
 
     // About Stroke Position:
-    // - Read https://github.com/ocornut/imgui/wiki/Draw-List
+    // - Read https://github.com/ocornut/imgui/wiki/Draw-List (this guide includes a precise list of differences between 1.92.9 and 1.93.0)
     // - Read https://github.com/ocornut/imgui/wiki/Pixel-Perfect-Rendering
     // Stroke Position relative to shape outline -- // Prim/Scope?
     ImDrawFlags_StrokeInside            = 1 << 17,  // OK   --     // Draw stroke inside of the shape outline (default for closed shapes and AddLineH, AddLineV functions)
     ImDrawFlags_StrokeCenter            = 2 << 17,  // OK   --     // Draw stroke at the center of the shape outline (default for paths, bezier, and AddLine functions)
-    ImDrawFlags_StrokeCenterBiased      = 3 << 17,  // OK   --     // Draw stroke at the center of the shape outline, so that half thickness rounded down will be outside, and rest inside the shape outline. Useful for axis-aligned shapes: AddLineH, AddLineV, AddRect. Does not animate well!
+    ImDrawFlags_StrokeCenterBiased      = 3 << 17,  // OK   --     // Draw stroke at the center of the shape outline, so that half thickness rounded down will be outside, and the rest inside the shape outline. Useful for axis-aligned shapes: AddLineH, AddLineV, AddRect. Does not animate well!
     ImDrawFlags_StrokeOutside           = 4 << 17,  // OK   --     // Draw stroke outside of the shape outline
     ImDrawFlags_StrokeLegacy            = 7 << 17,  // OK   OK(0)  // Use legacy positioning + enable MiterOnly + disable AALineEnds. Must be all bits set.
 
@@ -3484,8 +3484,8 @@ enum ImDrawFlags_
     ImDrawFlags_RoundCornersMask_       = ImDrawFlags_RoundCornersAll | ImDrawFlags_RoundCornersNone, // [Internal]
     ImDrawFlags_AllowInPushScope_       = ImDrawFlags_AAFill | ImDrawFlags_AALines | ImDrawFlags_AALineEnds | ImDrawFlags_StrokeLegacy | ImDrawFlags_TextNoPixelSnap | ImDrawFlags_UseTexForRoundCorners | ImDrawFlags_UseVtxOffset | ImDrawFlags_RoundCornersMask_, // [Internal] Values allowed in PushDrawFlag() scope.
     ImDrawFlags_AllowInFrameScope_      = ImDrawFlags_AllowInPushScope_ | ImDrawFlags_AllowTexForRoundCorners_,
-    ImDrawFlags_StrokeMask_             = 0x07 << 17,              // [Internal] 
-    ImDrawFlags_InvalidMask_            = ~0x7FFFFFF0,             // [Internal] == 0x8000000F. Reserved to detect misuses. 
+    ImDrawFlags_StrokeMask_             = 0x07 << 17,              // [Internal]
+    ImDrawFlags_InvalidMask_            = ~0x7FFFFFF0,             // [Internal] == 0x8000000F. Reserved to detect misuses.
 };
 
 // Draw command list
@@ -3672,7 +3672,7 @@ struct ImDrawList
     IMGUI_API void  _AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, float rounding, float thickness, ImDrawFlags flags);
     IMGUI_API void  _SelectLineTexture(float screen_thickness, ImVec2* out_uv0, ImVec2* out_uv1, float* out_fringe, ImDrawFlags flags);
     IMGUI_API float _CalculateCenterBiasedOffset(float thickness);
-    IMGUI_API void  _AddPolyline(const ImVec2* points, int num_points, ImU32 col, float thickness, ImDrawFlags flags, float max_inner_thickness);
+    IMGUI_API void  _AddPolyline(const ImVec2* points, int num_points, ImU32 col, float thickness, ImDrawFlags flags, float max_inner_offset);
 };
 
 // All draw data to render a Dear ImGui frame
@@ -3889,7 +3889,7 @@ enum ImFontAtlasFlags_
     ImFontAtlasFlags_None               = 0,
     ImFontAtlasFlags_NoPowerOfTwoHeight = 1 << 0,   // Don't round the height to next power of two
     ImFontAtlasFlags_NoMouseCursors     = 1 << 1,   // Don't build software mouse cursors into the atlas (save a little texture memory)
-    ImFontAtlasFlags_NoBakedLines       = 1 << 2,   // [OBSOLETE] Don't build line textures into the atlas (save a little texture memory). SINCE 1.93.0 THIS PREVENT ANTI-ALIASED STROKES FROM WORKING AND WILL DISABLE AA.
+    ImFontAtlasFlags_NoBakedLines       = 1 << 2,   // Don't build anti-aliased line textures into the atlas (save a little texture memory). SINCE 1.93.0 THIS PREVENTS ANTI-ALIASED LINES FROM WORKING AND WILL DISABLE THEM.
     ImFontAtlasFlags_NoBakedRoundCorners= 1 << 3,   // Don't build round corners into the atlas.
 };
 
@@ -4556,7 +4556,7 @@ enum ImDrawListFlags_
     ImDrawListFlags_None                    = ImDrawFlags_None,
     ImDrawListFlags_AntiAliasedFill         = ImDrawFlags_AAFill,
     ImDrawListFlags_AntiAliasedLines        = ImDrawFlags_AALines,
-    ImDrawListFlags_AntiAliasedLinesUseTex  = 0, // Only apply to StrokeLegacy mode!
+    ImDrawListFlags_AntiAliasedLinesUseTex  = ImDrawFlags_AALines, // No effect, anti-aliased rendering always uses textures from 1.93+
     ImDrawListFlags_AllowVtxOffset          = ImDrawFlags_UseVtxOffset,
     ImDrawListFlags_TextNoPixelSnap         = ImDrawFlags_TextNoPixelSnap,
 };
