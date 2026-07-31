@@ -399,7 +399,6 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
    2026/06/XX (1.XXXX) - merged ImDrawListFlags into ImDrawFlags. obsoleted ImDrawListFlags (which were rarely used directly):
                           - ImDrawListFlags_AntiAliasedLines        -> ImDrawFlags_AALines,
                           - ImDrawListFlags_AntiAliasedFill         -> ImDrawFlags_AAFill,
-                          - ImDrawListFlags_AntiAliasedLinesUseTex  -> ImDrawFlags_UseTexForStrokeLegacy
                           - ImDrawListFlags_AllowVtxOffset          -> ImDrawFlags_UseVtxOffset,
                           - ImDrawListFlags_TextNoPixelSnap         -> ImDrawFlags_TextNoPixelSnap,
                          unifying them allows easily using them for both per-primitives alterations and scope alterations.
@@ -5790,10 +5789,6 @@ static void SetupDrawListSharedData()
         g.DrawListSharedData.InitialDrawFlags |= ImDrawFlags_AALines;
     if (g.Style.AntiAliasedLineEnds)
         g.DrawListSharedData.InitialDrawFlags |= ImDrawFlags_AALineEnds;
-#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    if (g.Style.AntiAliasedLinesUseTex && !(g.IO.Fonts->Flags & ImFontAtlasFlags_NoBakedLines))
-        g.DrawListSharedData.InitialDrawFlags |= ImDrawFlags_UseTexForStrokeLegacy;
-#endif
     if (!(g.IO.Fonts->Flags & ImFontAtlasFlags_NoBakedRoundCorners))
         g.DrawListSharedData.InitialDrawFlags |= ImDrawFlags_UseTexForRoundCorners | ImDrawFlags_AllowTexForRoundCorners_;
     if (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasVtxOffset)
