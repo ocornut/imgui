@@ -948,7 +948,7 @@ static inline ImDrawFlags _GetStrokePos(ImDrawFlags flags, ImDrawFlags default_s
 
 IM_MSVC_RUNTIME_CHECKS_RESTORE
 
-void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32 col, float thickness, ImDrawFlags flags)
+void ImDrawList::_AddPolyline(const ImVec2* points, const int points_count, ImU32 col, float thickness, ImDrawFlags flags, float max_inner_offset)
 {
     if (points_count < 2 || (col & IM_COL32_A_MASK) == 0)
         return;
@@ -1049,6 +1049,16 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
     uv1.y = tex_uvs.z;
     uv2.x = uv0.x + (uv1.x - uv0.x) * ratio;
     uv2.y = tex_uvs.z;
+
+    // Clamp inner offset and adjust texture coordinates to match the change.
+    // This is used by some of the convex shape rendering to avoid rendering artifacts when thickness is about to fill the whole shape.
+    if (thickness1 > max_inner_offset)
+    {
+        thickness1 = max_inner_offset;
+        const float s = (thickness0 + thickness1) / (thickness + fringe);
+        const float du = uv1.x - uv0.x;
+        uv1.x = uv0.x + du * s;
+    }
 
     const float half_aa = _FringeScale * 0.5f; // Used for end caps, does not use "fringe" since end cap AA is not using the texture.
     const float half_thickness = thickness * 0.5f;
@@ -2375,7 +2385,8 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
 
     const float width = outer_max.x - outer_min.x;
     const float height = outer_max.y - outer_min.y;
-    if (ImMin(width, height) < (thickness + _FringeScale) * 2.0f) IM_UNLIKELY
+    const float half_min_dim = ImMin(width, height) * 0.5f;
+    if (half_min_dim <= thickness) IM_UNLIKELY
     {
         // Rectangle has collapsed into filled rectangle.
         AddRectFilled(outer_min, outer_max, col, outer_rounding, flags);
@@ -2448,7 +2459,8 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
     if (!has_rounding || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
     {
         const ImVec2 points[4] = { outer_min, ImVec2(outer_max.x, outer_min.y), outer_max, ImVec2(outer_min.x, outer_max.y) };
-        AddPolyline(points, 4, col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | ImDrawFlags_StrokeInside | (flags & ~ImDrawFlags_StrokeMask_));
+        _AddPolyline(points, 4, col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | ImDrawFlags_StrokeInside, half_min_dim);
+        _Path.Size = 0;
     }
     else
     {
@@ -2468,7 +2480,9 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
         PathArcToFast(ImVec2(outer_max.x - rounding_tr, outer_min.y + rounding_tr), rounding_tr, 9, 12);
         PathArcToFast(ImVec2(outer_max.x - rounding_br, outer_max.y - rounding_br), rounding_br, 0, 3);
         PathArcToFast(ImVec2(outer_min.x + rounding_bl, outer_max.y - rounding_bl), rounding_bl, 3, 6);
-        PathStroke(col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | ImDrawFlags_StrokeInside | (flags & ~ImDrawFlags_StrokeMask_));
+
+        _AddPolyline(_Path.Data, _Path.Size, col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | ImDrawFlags_StrokeInside | (flags & ~ImDrawFlags_StrokeMask_), half_min_dim);
+        _Path.Size = 0;
     }
 }
 
@@ -2634,7 +2648,7 @@ void ImDrawList::AddQuad(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, c
     flags = (flags & ~ImDrawFlags_StrokeMask_) | stroke_pos; // As AddPolyline() default is different
 
     const ImVec2 points[4] = { p1, p2, p3, p4 };
-    AddPolyline(points, 4, col, thickness, flags | ImDrawFlags_Closed);
+    _AddPolyline(points, 4, col, thickness, flags | ImDrawFlags_Closed, FLT_MAX);
 }
 
 void ImDrawList::AddQuadFilled(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col)
@@ -2656,7 +2670,7 @@ void ImDrawList::AddTriangle(const ImVec2& p1, const ImVec2& p2, const ImVec2& p
     flags = (flags & ~ImDrawFlags_StrokeMask_) | stroke_pos; // As AddPolyline() default is different
 
     const ImVec2 points[3] = { p1, p2, p3 };
-    AddPolyline(points, 3, col, thickness, flags | ImDrawFlags_Closed);
+    _AddPolyline(points, 3, col, thickness, flags | ImDrawFlags_Closed, FLT_MAX);
 }
 
 void ImDrawList::AddTriangleFilled(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 col)
@@ -2666,6 +2680,14 @@ void ImDrawList::AddTriangleFilled(const ImVec2& p1, const ImVec2& p2, const ImV
 
     const ImVec2 points[3] = { p1, p2, p3 };
     AddConvexPolyFilled(points, 3, col);
+}
+
+static float ApproxApothem(int num_segments)
+{
+    // Calculates approximation (within 0.001%) distance from the center of the circumscribed circle to the edge of the polygon, cos(pi / n)
+    IM_ASSERT_PARANOID(num_segments >= 3);
+    const float u = 1.0f / num_segments;
+    return ((4.058712f * u * u) - 4.934802f) * u * u + 1.0f;
 }
 
 void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int num_segments, float thickness, ImDrawFlags flags)
@@ -2691,7 +2713,8 @@ void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int nu
         outer_radius = radius;
     else if (stroke_pos == ImDrawFlags_StrokeOutside)
         outer_radius = radius + thickness;
-    if (outer_radius < (thickness + _FringeScale)) IM_UNLIKELY
+
+    if (outer_radius <= thickness) IM_UNLIKELY
     {
         // The circle has collapsed into a filled circle.
         AddCircleFilled(center, outer_radius, col, num_segments);
@@ -2715,7 +2738,15 @@ void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int nu
         PathArcTo(center, radius, 0.0f, a_max, num_segments - 1);
     }
 
-    PathStroke(col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | stroke_pos);
+    if (_Path.Size < 3)
+        return;
+
+    // Calculate distance to the edge of the polygon describing the circle.
+    // This will be used by _AddPolyline() to clamp the inner stroke expansion, to avoid creating rendering artifacts.
+    const float unit_apothem = ApproxApothem(_Path.Size);
+    const float edge_dist = radius * unit_apothem;
+    _AddPolyline(_Path.Data, _Path.Size, col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | stroke_pos, edge_dist);
+    _Path.Size = 0;
 }
 
 void ImDrawList::AddCircleFilled(const ImVec2& center, float radius, ImU32 col, int num_segments)
@@ -2766,22 +2797,24 @@ void ImDrawList::AddNgon(const ImVec2& center, float radius, ImU32 col, int num_
     }
     radius = ImMax(0.01f, radius);
 
-    // Check overestimate first before testing details (+1.0f is intended, not FringeScale)
-    if (radius < (thickness * 2.0f + 1.0f))
-    {
-        const float unit_apothem = ImCos(IM_PI / (float)num_segments);
-        const float miter_thickness = thickness / unit_apothem;
+    // Calculate distance to the edge of the polygon describing the circle.
+    // This will be used by _AddPolyline() to clamp the inner stroke expansion, to avoid creating rendering artifacts.
+    const float unit_apothem = ApproxApothem(num_segments);
+    const float edge_dist = radius * unit_apothem;
 
+    // Check overestimate first before testing details.
+    if (radius < thickness * 2.0f)
+    {
         float outer_radius = radius;
         if (stroke_pos == ImDrawFlags_StrokeCenter)
-            outer_radius = radius + miter_thickness * 0.5f;
+            outer_radius = radius + thickness * 0.5f;
         else if (stroke_pos == ImDrawFlags_StrokeCenterBiased)
-            outer_radius = radius + _CalculateCenterBiasedOffset(miter_thickness);
+            outer_radius = radius + _CalculateCenterBiasedOffset(thickness);
         else if (stroke_pos == ImDrawFlags_StrokeInside)
             outer_radius = radius;
         else if (stroke_pos == ImDrawFlags_StrokeOutside)
-            outer_radius = radius + miter_thickness;
-        if (outer_radius < (miter_thickness + _FringeScale)) IM_UNLIKELY
+            outer_radius = radius + thickness;
+        if (outer_radius * unit_apothem <= thickness) IM_UNLIKELY
         {
             // The polygon has collapsed into a filled polygon.
             AddNgonFilled(center, outer_radius, col, num_segments);
@@ -2792,7 +2825,8 @@ void ImDrawList::AddNgon(const ImVec2& center, float radius, ImU32 col, int num_
      // Because we are filling a closed shape we remove 1 from the count of segments/points
     const float a_max = (IM_PI * 2.0f) * ((float)num_segments - 1.0f) / (float)num_segments;
     PathArcTo(center, radius, 0.0f, a_max, num_segments - 1);
-    PathStroke(col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | stroke_pos);
+    _AddPolyline(_Path.Data, _Path.Size, col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | stroke_pos, edge_dist);
+    _Path.Size = 0;
 }
 
 // Guaranteed to honor 'num_segments'
@@ -2838,7 +2872,11 @@ void ImDrawList::AddEllipse(const ImVec2& center, const ImVec2& radius, ImU32 co
     // Because we are filling a closed shape we remove 1 from the count of segments/points
     const float a_max = IM_PI * 2.0f * ((float)num_segments - 1.0f) / (float)num_segments;
     PathEllipticalArcTo(center, rad, rot, 0.0f, a_max, num_segments - 1);
-    PathStroke(col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | stroke_pos);
+
+    // Prevent the inside part of the stroke to be expanded too much to prevent some rendering artifacts.
+    const float max_inner_offset = ImMin(rad.x, rad.y);
+    _AddPolyline(_Path.Data, _Path.Size, col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | stroke_pos, max_inner_offset);
+    _Path.Size = 0;
 }
 
 void ImDrawList::AddEllipseFilled(const ImVec2& center, const ImVec2& radius, ImU32 col, float rot, int num_segments)
