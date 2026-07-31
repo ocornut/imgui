@@ -917,7 +917,7 @@ void ImDrawList::_SelectFringeTexture(float screen_thickness, ImVec4* out_tex_uv
     {
         // Handle the thickness between 1.0 - IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH].
         // We use super sampled textures in this range to make texture changes less noticeable.
-        // There are IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX+1 textures, where 0 maps to 1.0 and IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX maps to IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH (4.0).
+        // There are IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_COUNT textures, where 0 maps to 1.0 and IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_COUNT-1 maps to IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH (4.0).
         int texture_idx;
         if (screen_thickness <= IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH) IM_LIKELY
             texture_idx = (int)((screen_thickness - 1.0f) * IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT + 0.5f) + (IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1);
@@ -5104,7 +5104,9 @@ static void ImFontAtlasBuildUpdateTexDataLines(ImFontAtlas* atlas)
     bool add_and_draw = atlas->GetCustomRect(builder->PackIdLinesTexData, &r) == false;
     if (add_and_draw)
     {
-        ImVec2i pack_size = ImVec2i(IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 2, IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1 + IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX + 1);
+        // Register texture region for thick lines
+        // The +2 here is to give space for the end caps, whilst height +1 is to accommodate the fact we have a zero-width row
+        ImVec2i pack_size = ImVec2i(IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 2, IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1 + IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_COUNT);
         builder->PackIdLinesTexData = atlas->AddCustomRect(pack_size.x, pack_size.y, &r);
         IM_ASSERT(builder->PackIdLinesTexData != ImFontAtlasRectId_Invalid);
     }
@@ -5153,11 +5155,14 @@ static void ImFontAtlasBuildUpdateTexDataLines(ImFontAtlas* atlas)
     }
 
     {
+        // Calculate super sampled lin textures for smaller line widths to make transition between sizes smoother.
+
+        // Calc ramp used for all the textures.
         ImU8 ramp[IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT];
         for (int n = 0; n < IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT; n++)
             ramp[n] = (ImU8)(((float)n / IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT) * 255.0f);
 
-        for (int n = 0; n < IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_MAX + 1; n++)
+        for (int n = 0; n < IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_COUNT; n++)
         {
             const int y = IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1 + n;
             // For integer thickness lines the one pixel line texture looks like this:
