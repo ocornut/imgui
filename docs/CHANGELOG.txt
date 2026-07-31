@@ -43,6 +43,8 @@ Breaking Changes:
 
 Other Changes:
 
+- DragXXX, SliderXXX: fixed a regression in 1.92.9 where clicking a previously
+  Ctrl+Clicked field would flick it to text edit mode for a frame. (#9476, #701)
 - Tables:
   - Fixed Y2 position of lower horizontal border (ImGuiTableFlags_BordersOuterH)
     being off by one pixel when vertical ones are not also enabled. [@thedmd]

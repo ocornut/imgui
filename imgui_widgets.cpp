@@ -4606,6 +4606,7 @@ void ImGui::InputTextDeactivateHook(ImGuiID id)
     if (!state->EditedBefore)
         return;
     //IMGUI_DEBUG_LOG_ACTIVEID("InputTextDeactivateHook() id = 0x%08X\n", id);
+    state->EditedBefore = false;
     g.InputTextDeactivatedState.ID = state->ID;
     g.InputTextDeactivatedState.ElapseFrame = g.FrameCount + 1;
     if (state->Flags & ImGuiInputTextFlags_ReadOnly)
@@ -4997,6 +4998,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     if (state != NULL && state->ID == id)
     {
         state->Flags = flags;
+        //state->LastFrameActive = g.FrameCount;
 
         // Word-wrapping: attempt to keep cursor in view while resizing frame/parent (FIXME-WORDWRAP: would be better to preserve same relative offset)
         if (is_wordwrap && state->WrapWidth != wrap_width)
@@ -5484,9 +5486,8 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     // Otherwise request text input ahead for next frame.
     if (g.ActiveId == id && clear_active_id)
     {
-        state->ID = 0; // To avoid InputTextDeactivateHook() unnecessarily running, which wouldn't be harmful but wasteful.
+        state->EditedBefore = false; // Data already applied: avoid InputTextDeactivateHook() taking a record now or later if same id is activated again without editing.
         ClearActiveID();
-        state->ID = id;
     }
 
     // Render frame
