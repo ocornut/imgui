@@ -36,12 +36,12 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.92.9b (In Progress)
+ VERSION 1.92.9b (Released 2026-07-31)
 -----------------------------------------------------------------------
 
-Breaking Changes:
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.92.9b
 
-Other Changes:
+Changes:
 
 - DragXXX, SliderXXX: fixed a regression in 1.92.9 where clicking a previously
   Ctrl+Clicked field would flick it to text edit mode for a frame. (#9476, #701)
@@ -51,7 +51,6 @@ Other Changes:
   - Fixed X position of angled borders being off by half a pixel. [@thedmd]
 - ImDrawData: fixed a regression in 1.92.9 where legacy `ImDrawData::CmdListsCount` was always 0.
   Prefer using `ImDrawData::CmdList.Size` anyway.
-
 
 
 -----------------------------------------------------------------------
