@@ -1517,7 +1517,7 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
 
 // Calculates arc step and step count for 90 degree arc. The calculated arc step will complete a 90 degree arc when stepped arc_step_count times.
 IM_MSVC_RUNTIME_CHECKS_OFF
-static void CalcArcStepAndCount(int segment_count, int& arc_step, int& arc_step_count)
+static void CalcCornerArcStepAndCount(int segment_count, int& arc_step, int& arc_step_count)
 {
     arc_step = ImClamp(IM_DRAWLIST_ARCFAST_SAMPLE_MAX / segment_count, 1, IM_DRAWLIST_ARCFAST_TABLE_SIZE / 4);
     arc_step_count = (IM_DRAWLIST_ARCFAST_TABLE_SIZE / 4) / arc_step;
@@ -1540,7 +1540,7 @@ void ImDrawList::_PathArcToFastEx(const ImVec2& center, float radius, int a_min_
         // Calculate step size using the common function. No need to clamp, the step is already in range.
         const int auto_seg_count = _CalcCircleAutoSegmentCount(radius);
         int arc_step_count;
-        CalcArcStepAndCount(auto_seg_count, a_step, arc_step_count);
+        CalcCornerArcStepAndCount(auto_seg_count, a_step, arc_step_count);
     }
     else
     {
@@ -1670,16 +1670,25 @@ void ImDrawList::PathArcTo(const ImVec2& center, float radius, float a_min, floa
 
     // Automatic segment count
     if (radius <= _Data->ArcFastRadiusCutoff)
-    {
+    { 
         const bool a_is_reverse = a_max < a_min;
+
+        // Calculate number of segments per circle.
+        // First we calculate the step count as usual, then match to the precomputed directions.
+        // This will give us the spacing between the samples (step), and how many segments to use in total for a full circle.
+        const int auto_seg_count = _CalcCircleAutoSegmentCount(radius);
+        int arc_step, arc_step_count;
+        CalcCornerArcStepAndCount(auto_seg_count, arc_step, arc_step_count);
+        const int arc_seg_count = arc_step_count * 4; // Seg count for full circle.
 
         // We are going to use precomputed values for mid samples.
         // Determine first and last sample in lookup table that belong to the arc.
-        const float a_min_sample_f = IM_DRAWLIST_ARCFAST_SAMPLE_MAX * a_min / (IM_PI * 2.0f);
-        const float a_max_sample_f = IM_DRAWLIST_ARCFAST_SAMPLE_MAX * a_max / (IM_PI * 2.0f);
+        // In first step we use the coarser segment count, and after rounding, convert back to the precomputed array index.
+        const float a_min_sample_f = arc_seg_count * a_min / (IM_PI * 2.0f);
+        const float a_max_sample_f = arc_seg_count * a_max / (IM_PI * 2.0f);
 
-        const int a_min_sample = a_is_reverse ? (int)ImFloor(a_min_sample_f) : (int)ImCeil(a_min_sample_f);
-        const int a_max_sample = a_is_reverse ? (int)ImCeil(a_max_sample_f) : (int)ImFloor(a_max_sample_f);
+        const int a_min_sample = (a_is_reverse ? (int)ImFloor(a_min_sample_f) : (int)ImCeil(a_min_sample_f)) * arc_step;
+        const int a_max_sample = (a_is_reverse ? (int)ImCeil(a_max_sample_f) : (int)ImFloor(a_max_sample_f)) * arc_step;
         const int a_mid_samples = a_is_reverse ? ImMax(a_min_sample - a_max_sample, 0) : ImMax(a_max_sample - a_min_sample, 0);
 
         const float a_min_segment_angle = a_min_sample * IM_PI * 2.0f / IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
@@ -1691,7 +1700,7 @@ void ImDrawList::PathArcTo(const ImVec2& center, float radius, float a_min, floa
         if (a_emit_start)
             _Path.push_back(ImVec2(center.x + ImCos(a_min) * radius, center.y + ImSin(a_min) * radius));
         if (a_mid_samples > 0)
-            _PathArcToFastEx(center, radius, a_min_sample, a_max_sample, 0);
+            _PathArcToFastEx(center, radius, a_min_sample, a_max_sample, arc_step);
         if (a_emit_end)
             _Path.push_back(ImVec2(center.x + ImCos(a_max) * radius, center.y + ImSin(a_max) * radius));
     }
@@ -2237,7 +2246,7 @@ void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, 
 
     const int auto_seg_count = _CalcCircleAutoSegmentCount(rounding);
     int arc_step, arc_step_count;
-    CalcArcStepAndCount(auto_seg_count, arc_step, arc_step_count);
+    CalcCornerArcStepAndCount(auto_seg_count, arc_step, arc_step_count);
     const int arc_point_count = arc_step_count + 1;
 
     int vtx_count = (2 + arc_point_count) * 4 + 3;
@@ -4853,7 +4862,7 @@ static int InitCornerGeometry(float cx, float cy, float rounding, float circle_s
 
     const int auto_seg_count = IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(rounding, circle_segment_max_error);
     int arc_step, arc_step_count;
-    CalcArcStepAndCount(auto_seg_count, arc_step, arc_step_count);
+    CalcCornerArcStepAndCount(auto_seg_count, arc_step, arc_step_count);
     const int arc_point_count = arc_step_count + 1;
 
     // Build arc of points, with straight segments at each end.
