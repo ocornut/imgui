@@ -282,7 +282,7 @@ static void ImGui_ImplDX12_SetupRenderState(ImDrawData* draw_data, ID3D12Graphic
     command_list->SetGraphicsRoot32BitConstants(0, 16, &vertex_constant_buffer, 0);
 
     // Setup blend factor
-    const float blend_factor[4] = { 0.f, 0.f, 0.f, 0.f };
+    const float blend_factor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
     command_list->OMSetBlendFactor(blend_factor);
 }
 
@@ -690,11 +690,11 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
         staticSampler[0].AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
         staticSampler[0].AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
         staticSampler[0].AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-        staticSampler[0].MipLODBias = 0.f;
+        staticSampler[0].MipLODBias = 0.0f;
         staticSampler[0].MaxAnisotropy = 0;
         staticSampler[0].ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
         staticSampler[0].BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
-        staticSampler[0].MinLOD = 0.f;
+        staticSampler[0].MinLOD = 0.0f;
         staticSampler[0].MaxLOD = D3D12_FLOAT32_MAX;
         staticSampler[0].ShaderRegister = 0;
         staticSampler[0].RegisterSpace = 0;
@@ -797,7 +797,7 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
             PS_INPUT main(VS_INPUT input)\
             {\
               PS_INPUT output;\
-              output.pos = mul( ProjectionMatrix, float4(input.pos.xy, 0.f, 1.f));\
+              output.pos = mul( ProjectionMatrix, float4(input.pos.xy, 0.0f, 1.0f));\
               output.col = input.col;\
               output.uv  = input.uv;\
               return output;\
