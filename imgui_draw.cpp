@@ -724,6 +724,7 @@ void ImDrawList::PushDrawFlag(ImDrawFlags flags, bool enabled)
 {
     IM_ASSERT((flags & ~ImDrawFlags_AllowInPushScope_) == 0);
     IM_ASSERT((flags & ImDrawFlags_StrokeMask_) == 0 || (flags & ImDrawFlags_StrokeMask_) == ImDrawFlags_StrokeLegacy);
+    IM_ASSERT_USER_ERROR_RET(_DrawFlagsStack.Size < _DrawFlagsStack.capacity(), "PushDrawFlag() has a depth limit. Contact us.");
     _DrawFlagsStack.push_back(Flags);
     if (enabled)
         Flags |= flags;
