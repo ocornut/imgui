@@ -234,9 +234,7 @@ void MyImGuiBackend_RenderDrawData(ImDrawData* draw_data)
     // - Scissor enabled
     MyEngineSetupenderState();
 
-    // TODO: Setup texture sampling state
-    // - Sample with bilinear filtering (NOT point/nearest filtering).
-    // - Use 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines;' to allow point/nearest filtering.
+    // TODO: Setup texture sampler to bilinear (NOT point/nearest filtering).
 
     // TODO: Setup viewport covering draw_data->DisplayPos to draw_data->DisplayPos + draw_data->DisplaySize
 

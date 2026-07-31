@@ -844,8 +844,7 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
 
     ImGui_ImplWGPU_CreateUniformBuffer();
 
-    // Create samplers (Linear/Nearest)
-    // (Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling)
+    // Create samplers (Linear/Nearest) (bilinear sampling is required)
     WGPUSamplerDescriptor sampler_desc = {};
     sampler_desc.addressModeU = WGPUAddressMode_ClampToEdge;
     sampler_desc.addressModeV = WGPUAddressMode_ClampToEdge;

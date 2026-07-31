@@ -608,7 +608,7 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
         param[1].DescriptorTable.pDescriptorRanges = &descRange;
         param[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-        // Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling.
+        // Bilinear sampling is required
         D3D12_STATIC_SAMPLER_DESC staticSampler[1] = {};
         staticSampler[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
         staticSampler[0].AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
