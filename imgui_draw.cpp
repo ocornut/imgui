@@ -2583,11 +2583,15 @@ void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
         {
             IM_ASSERT_PARANOID(!(_Data->Font->OwnerAtlas->Flags & ImFontAtlasFlags_NoBakedRoundCorners));
             // This is matching the baking calculations. The rounding clamping above makes sure that there's enough space for the extra pixel.
-            const int size = s_rounding + 1;
-            const int idx = (s_rounding - 1);
-            IM_ASSERT_PARANOID(idx >= 0 && idx < IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX);
-            _AddRectFilledBaked(p_min, p_max, col, (float)size * _FringeScale, _Data->TexUvCorners[idx], flags);
-            return;
+            const int corner_size = s_rounding + 1;
+            // Check that the baked corners do not overlap (this could be made more accurate if tested for x and y separately).
+            if ((float)corner_size * 2.0f * _FringeScale < min_dim)
+            {
+                const int idx = (s_rounding - 1);
+                IM_ASSERT_PARANOID(idx >= 0 && idx < IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX);
+                _AddRectFilledBaked(p_min, p_max, col, (float)corner_size * _FringeScale, _Data->TexUvCorners[idx], flags);
+                return;
+            }
         }
     }
 
