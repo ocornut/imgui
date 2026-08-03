@@ -43,6 +43,11 @@ Breaking Changes:
 
 Other Changes:
 
+- Fonts:
+  - Reworked `AddFontDefault()` to use `io.DisplayFrameBufferScale` as part of the heuristic
+    to select `AddFontDefaultVector()` by default, effectively using ProggyForever instead of
+    ProggyClean on most Mac setups by default.
+
 
 -----------------------------------------------------------------------
  VERSION 1.92.9b (Released 2026-07-31)
