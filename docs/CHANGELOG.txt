@@ -41,6 +41,11 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
+- Style: obsoleted `style.CurveTessellationTol (default 1.25)` which was in Pixels² unit in
+  favor of `style.CurveTesselationMaxError` (default 1.12)` which is in Pixels unit. It is
+  easier to tweak + this allows us to easily scale error threshold on high density screens.
+  - style.CurveTesselationMaxError == sqrf(style.CurveTessellationTol).
+
 Other Changes:
 
 - Fonts:
