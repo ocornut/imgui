@@ -51,7 +51,11 @@ Other Changes:
 - Fonts:
   - Reworked `AddFontDefault()` to use `io.DisplayFrameBufferScale` as part of the heuristic
     to select `AddFontDefaultVector()` by default, effectively using ProggyForever instead of
-    ProggyClean on most Mac setups by default.
+    ProggyClean on most Apple/Retina setups by default.
+- ImDrawList:
+  - Per-viewport FramebufferScale for Apple/Retina screen is applied to draw lists:
+    - AA Fringe is scaled accordingly.
+    - Circle and Curves tessellation error are scaled accordingly.
 
 
 -----------------------------------------------------------------------

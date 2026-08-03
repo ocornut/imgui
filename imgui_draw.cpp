@@ -396,7 +396,6 @@ void ImGui::StyleColorsLight(ImGuiStyle* dst)
 ImDrawListSharedData::ImDrawListSharedData()
 {
     memset((void*)this, 0, sizeof(*this));
-    InitialFringeScale = 1.0f;
     for (int i = 0; i < IM_COUNTOF(ArcFastVtx); i++)
     {
         const float a = ((float)i * 2 * IM_PI) / (float)IM_COUNTOF(ArcFastVtx);
@@ -473,7 +472,7 @@ void ImDrawList::_ResetForNewFrame()
     _Path.resize(0);
     _Splitter.Clear();
     CmdBuffer.push_back(ImDrawCmd());
-    _FringeScale = _Data->InitialFringeScale;
+    // Caller needs to bet _SetPixelDensity() as well.
 }
 
 void ImDrawList::_ClearFreeMemory()
@@ -655,6 +654,7 @@ void ImDrawList::_OnChangedVtxOffset()
 int ImDrawList::_CalcCircleAutoSegmentCount(float radius) const
 {
     // Automatic segment count
+    radius *= _InvFringeScale;
     const int radius_idx = (int)(radius + 0.999f); // ceil to never reduce accuracy
     if (radius_idx >= 0 && radius_idx < IM_COUNTOF(_Data->CircleSegmentCounts))
         return _Data->CircleSegmentCounts[radius_idx]; // Use cached value
@@ -718,6 +718,12 @@ void ImDrawList::_SetTexture(ImTextureRef tex_ref)
     _CmdHeader.TexRef = tex_ref;
     _TextureStack.back() = tex_ref;
     _OnChangedTexture();
+}
+
+void ImDrawList::_SetPixelDensity(float pixel_density)
+{
+    _FringeScale = 1.0f / pixel_density;
+    _InvFringeScale = pixel_density;
 }
 
 // Reserve space for a number of vertices and indices.
@@ -1419,7 +1425,7 @@ void ImDrawList::PathBezierCubicCurveTo(const ImVec2& p2, const ImVec2& p3, cons
     if (num_segments == 0)
     {
         IM_ASSERT(_Data->CurveTessellationMaxError > 0.0f);
-        float max_error_sqr = _Data->CurveTessellationMaxError * _Data->CurveTessellationMaxError;
+        float max_error_sqr = (_Data->CurveTessellationMaxError * _FringeScale) * (_Data->CurveTessellationMaxError * _FringeScale);
         PathBezierCubicCurveToCasteljau(&_Path, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, p4.x, p4.y, max_error_sqr, 0); // Auto-tessellated
     }
     else
@@ -1436,7 +1442,7 @@ void ImDrawList::PathBezierQuadraticCurveTo(const ImVec2& p2, const ImVec2& p3, 
     if (num_segments == 0)
     {
         IM_ASSERT(_Data->CurveTessellationMaxError > 0.0f);
-        float max_error_sqr = _Data->CurveTessellationMaxError * _Data->CurveTessellationMaxError;
+        float max_error_sqr = (_Data->CurveTessellationMaxError * _FringeScale) * (_Data->CurveTessellationMaxError * _FringeScale);
         PathBezierQuadraticCurveToCasteljau(&_Path, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, max_error_sqr, 0);// Auto-tessellated
     }
     else
