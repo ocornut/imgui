@@ -1,4 +1,4 @@
-// dear imgui, v1.92.9b
+// dear imgui, v1.93.0 WIP
 // (internal structures/api)
 
 // You may use this file to debug, understand or extend Dear ImGui features but we don't provide any guarantee of forward compatibility.
