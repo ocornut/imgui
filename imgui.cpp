@@ -1,4 +1,4 @@
-// dear imgui, v1.92.9b
+// dear imgui, v1.93.0 WIP
 // (main code and documentation)
 
 // Help:
@@ -402,6 +402,8 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
                             you may use GetMainViewport()->Pos to offset hard-coded positions, e.g. SetNextWindowPos(GetMainViewport()->Pos)
                           - likewise io.MousePos and GetMousePos() will use OS coordinates.
                             If you query mouse positions to interact with non-imgui coordinates you will need to offset them, e.g. subtract GetWindowViewport()->Pos.
+ - 2026/08/03 (1.93.0) - Style: obsoleted `style.CurveTessellationTol (default 1.25)` which was in Pixels² unit in favor of `style.CurveTesselationMaxError` (default 1.12)` which is in Pixels unit.
+                         - style.CurveTesselationMaxError == sqrf(style.CurveTessellationTol).
  - 2026/07/20 (1.92.9) - DragXXX, SliderXXX, InputScalar: with `ImGuiItemFlags_LiveEditOnInputScalar` now defaulting to being disabled:
                          inputting a value with the keyboard doesn't write intermediate values to backing variable. (#9476)
                          - Before: DragFloat() with user typing "123" --> write back 1, then 12, then 123.
@@ -1600,10 +1602,12 @@ ImGuiStyle::ImGuiStyle()
     DockingNodeHasCloseButton   = true;             // Docking nodes have their own CloseButton() to close all docked windows.
     DockingSeparatorSize        = 2.0f;             // Thickness of resizing border between docked windows
     MouseCursorScale            = 1.0f;             // Scale software rendered mouse cursor (when io.MouseDrawCursor is enabled). May be removed later.
+
+    // Rendering & Tesselation
     AntiAliasedLines            = true;             // Enable anti-aliased lines/borders. Disable if you are really tight on CPU/GPU.
     AntiAliasedLinesUseTex      = true;             // Enable anti-aliased lines/borders using textures where possible. Require backend to render with bilinear filtering (NOT point/nearest filtering).
     AntiAliasedFill             = true;             // Enable anti-aliased filled shapes (rounded rectangles, circles, etc.).
-    CurveTessellationTol        = 1.25f;            // Tessellation tolerance when using PathBezierCurveTo() without a specific number of segments. Decrease for highly tessellated curves (higher quality, more polygons), increase to reduce quality.
+    CurveTessellationMaxError   = 1.12f;            // Maximum error (in pixels) when using PathBezierCurveTo() without a specific number of segments. Decrease for highly tessellated curves (higher quality, more polygons), increase to reduce quality.
     CircleTessellationMaxError  = 0.30f;            // Maximum error (in pixels) allowed when using AddCircle()/AddCircleFilled() or drawing rounded corner rectangles with no explicit segment count specified. Decrease for higher quality but more geometry.
 
     // Behaviors
@@ -1616,6 +1620,9 @@ ImGuiStyle::ImGuiStyle()
     // [Internal]
     _MainScale                  = 1.0f;
     _NextFrameFontSizeBase      = 0.0f;
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    CurveTessellationTol        = 0.0f;             // Old CurveTessellationTol = CurveTessellationMaxError*CurveTessellationMaxError.
+#endif
 
     // Default theme
     ImGui::StyleColorsDark(this);
@@ -2165,7 +2172,7 @@ ImVec2 ImBezierCubicClosestPoint(const ImVec2& p1, const ImVec2& p2, const ImVec
 }
 
 // Closely mimics PathBezierToCasteljau() in imgui_draw.cpp
-static void ImBezierCubicClosestPointCasteljauStep(const ImVec2& p, ImVec2& p_closest, ImVec2& p_last, float& p_closest_dist2, float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4, float tess_tol, int level)
+static void ImBezierCubicClosestPointCasteljauStep(const ImVec2& p, ImVec2& p_closest, ImVec2& p_last, float& p_closest_dist2, float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4, float max_error_sqr, int level)
 {
     float dx = x4 - x1;
     float dy = y4 - y1;
@@ -2173,7 +2180,7 @@ static void ImBezierCubicClosestPointCasteljauStep(const ImVec2& p, ImVec2& p_cl
     float d3 = ((x3 - x4) * dy - (y3 - y4) * dx);
     d2 = (d2 >= 0) ? d2 : -d2;
     d3 = (d3 >= 0) ? d3 : -d3;
-    if ((d2 + d3) * (d2 + d3) < tess_tol * (dx * dx + dy * dy))
+    if ((d2 + d3) * (d2 + d3) < max_error_sqr * (dx * dx + dy * dy))
     {
         ImVec2 p_current(x4, y4);
         ImVec2 p_line = ImLineClosestPoint(p_last, p_current, p);
@@ -2193,20 +2200,21 @@ static void ImBezierCubicClosestPointCasteljauStep(const ImVec2& p, ImVec2& p_cl
         float x123 = (x12 + x23)*0.5f,    y123 = (y12 + y23)*0.5f;
         float x234 = (x23 + x34)*0.5f,    y234 = (y23 + y34)*0.5f;
         float x1234 = (x123 + x234)*0.5f, y1234 = (y123 + y234)*0.5f;
-        ImBezierCubicClosestPointCasteljauStep(p, p_closest, p_last, p_closest_dist2, x1, y1, x12, y12, x123, y123, x1234, y1234, tess_tol, level + 1);
-        ImBezierCubicClosestPointCasteljauStep(p, p_closest, p_last, p_closest_dist2, x1234, y1234, x234, y234, x34, y34, x4, y4, tess_tol, level + 1);
+        ImBezierCubicClosestPointCasteljauStep(p, p_closest, p_last, p_closest_dist2, x1, y1, x12, y12, x123, y123, x1234, y1234, max_error_sqr, level + 1);
+        ImBezierCubicClosestPointCasteljauStep(p, p_closest, p_last, p_closest_dist2, x1234, y1234, x234, y234, x34, y34, x4, y4, max_error_sqr, level + 1);
     }
 }
 
-// tess_tol is generally the same value you would find in ImGui::GetStyle().CurveTessellationTol
+// tess_tol is generally the same value you would find in ImGui::GetStyle().CurveTessellationMaxError
 // Because those ImXXX functions are lower-level than ImGui:: we cannot access this value automatically.
-ImVec2 ImBezierCubicClosestPointCasteljau(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec2& p, float tess_tol)
+ImVec2 ImBezierCubicClosestPointCasteljau(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec2& p, float max_error)
 {
-    IM_ASSERT(tess_tol > 0.0f);
+    IM_ASSERT(max_error > 0.0f);
     ImVec2 p_last = p1;
     ImVec2 p_closest;
     float p_closest_dist2 = FLT_MAX;
-    ImBezierCubicClosestPointCasteljauStep(p, p_closest, p_last, p_closest_dist2, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, p4.x, p4.y, tess_tol, 0);
+    float max_error_sqr = max_error * max_error;
+    ImBezierCubicClosestPointCasteljauStep(p, p_closest, p_last, p_closest_dist2, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, p4.x, p4.y, max_error_sqr, 0);
     return p_closest;
 }
 
@@ -4309,7 +4317,7 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     Font = NULL;
     FontBaked = NULL;
     FontSize = FontSizeBase = FontBakedScale = CurrentDpiScale = 0.0f;
-    FontRasterizerDensity = 1.0f;
+    CurrentPixelDensity = 1.0f;
     IO.Fonts = shared_font_atlas ? shared_font_atlas : IM_NEW(ImFontAtlas)();
     if (shared_font_atlas == NULL)
         IO.Fonts->OwnerContext = this;
@@ -4810,7 +4818,7 @@ static void SetCurrentWindow(ImGuiWindow* window)
         if (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures)
         {
             ImGuiViewport* viewport = window->Viewport;
-            g.FontRasterizerDensity = (viewport->FramebufferScale.x != 0.0f) ? viewport->FramebufferScale.x : g.IO.DisplayFramebufferScale.x; // == SetFontRasterizerDensity()
+            g.CurrentPixelDensity = (viewport->FramebufferScale.x != 0.0f) ? viewport->FramebufferScale.x : g.IO.DisplayFramebufferScale.x; // == SetPixelDensity()
         }
         const bool backup_skip_items = window->SkipItems;
         window->SkipItems = false;
@@ -5419,6 +5427,7 @@ static ImDrawList* GetViewportBgFgDrawList(ImGuiViewportP* viewport, size_t draw
     if (viewport->BgFgDrawListsLastTimeActive[drawlist_no] != (float)g.Time)
     {
         draw_list->_ResetForNewFrame();
+        draw_list->_SetPixelDensity(viewport->FramebufferScale.x);
         draw_list->PushTexture(g.IO.Fonts->TexRef);
         draw_list->PushClipRect(viewport->Pos, viewport->Pos + viewport->Size, false);
         viewport->BgFgDrawListsLastTimeActive[drawlist_no] = (float)g.Time;
@@ -5760,7 +5769,7 @@ static void SetupDrawListSharedData()
     for (ImGuiViewportP* viewport : g.Viewports)
         virtual_space.Add(viewport->GetMainRect());
     g.DrawListSharedData.ClipRectFullscreen = virtual_space.ToVec4();
-    g.DrawListSharedData.CurveTessellationTol = g.Style.CurveTessellationTol;
+    g.DrawListSharedData.CurveTessellationMaxError = g.Style.CurveTessellationMaxError;
     g.DrawListSharedData.SetCircleTessellationMaxError(g.Style.CircleTessellationMaxError);
     g.DrawListSharedData.InitialFlags = ImDrawListFlags_None;
     if (g.Style.AntiAliasedLines)
@@ -5771,7 +5780,6 @@ static void SetupDrawListSharedData()
         g.DrawListSharedData.InitialFlags |= ImDrawListFlags_AntiAliasedFill;
     if (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasVtxOffset)
         g.DrawListSharedData.InitialFlags |= ImDrawListFlags_AllowVtxOffset;
-    g.DrawListSharedData.InitialFringeScale = 1.0f; // FIXME-DPI: Change this for some DPI scaling experiments.
 }
 
 void ImGui::NewFrame()
@@ -8578,6 +8586,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         // Setup draw list and outer clipping rectangle
         IM_ASSERT(window->DrawList->CmdBuffer.Size == 1 && window->DrawList->CmdBuffer[0].ElemCount == 0);
+        window->DrawList->_SetPixelDensity(window->Viewport->FramebufferScale.x);
         window->DrawList->PushTexture(g.Font->OwnerAtlas->TexRef);
         PushClipRect(host_rect.Min, host_rect.Max, false);
 
@@ -8755,7 +8764,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // Set default BgClickFlags
         // This is set at the end of this function, so UpdateWindowManualResize()/ClampWindowPos() may use last-frame value if overridden by user code.
         // FIXME: The general intent is that we will later expose config options to default to enable scrolling + select scrolling mouse button.
-        window->BgClickFlags = (flags & ImGuiWindowFlags_ChildWindow) ? parent_window->BgClickFlags : (g.IO.ConfigWindowsMoveFromTitleBarOnly ? ImGuiWindowBgClickFlags_None : ImGuiWindowBgClickFlags_Move);
+        window->BgClickFlags = (flags & ImGuiWindowFlags_ChildWindow) ? parent_window->BgClickFlags : (g.IO.ConfigWindowsMoveFromTitleBarOnly ? ImGuiWindowBgClickFlags_None : ImGuiWindowBgClickFlags_Move); // -V1004
 
         // We fill last item data based on Title Bar/Tab, in order for IsItemHovered() and IsItemActive() to be usable after Begin().
         // This is useful to allow creating context menus on title bar only, etc.
@@ -9660,7 +9669,7 @@ bool ImGui::IsRectVisible(const ImVec2& rect_min, const ImVec2& rect_max)
 // - UnregisterFontAtlas() [Internal]
 // - SetCurrentFont() [Internal]
 // - UpdateCurrentFontSize() [Internal]
-// - SetFontRasterizerDensity() [Internal]
+// - SetPixelDensity() [Internal]
 // - PushFont()
 // - PopFont()
 //-----------------------------------------------------------------------------
@@ -9853,7 +9862,7 @@ void ImGui::UpdateCurrentFontSize(float restore_font_size_after_scaling)
     final_size = GetRoundedFontSize(final_size);
     final_size = ImClamp(final_size, 1.0f, IMGUI_FONT_SIZE_MAX);
     if (g.Font != NULL && (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures))
-        g.Font->CurrentRasterizerDensity = g.FontRasterizerDensity;
+        g.Font->CurrentRasterizerDensity = g.CurrentPixelDensity;
 
     g.FontSize = final_size;
     g.DrawListSharedData.FontSize = g.FontSize;
@@ -9877,13 +9886,13 @@ void ImGui::UpdateCurrentFontSize(float restore_font_size_after_scaling)
 
 // Exposed in case user may want to override setting density.
 // IMPORTANT: Begin()/End() is overriding density. Be considerate of this you change it.
-void ImGui::SetFontRasterizerDensity(float rasterizer_density)
+void ImGui::SetPixelDensity(float pixel_density)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures);
-    if (g.FontRasterizerDensity == rasterizer_density)
+    if (g.CurrentPixelDensity == pixel_density)
         return;
-    g.FontRasterizerDensity = rasterizer_density;
+    g.CurrentPixelDensity = pixel_density;
     UpdateCurrentFontSize(0.0f);
 }
 
@@ -11727,7 +11736,7 @@ static void ImGui::ErrorCheckNewFrameSanityChecks()
     IM_ASSERT((g.IO.DeltaTime > 0.0f || g.FrameCount == 0)              && "Need a positive DeltaTime!");
     IM_ASSERT((g.FrameCount == 0 || g.FrameCountEnded == g.FrameCount)  && "Forgot to call Render() or EndFrame() at the end of the previous frame?");
     IM_ASSERT(g.IO.DisplaySize.x >= 0.0f && g.IO.DisplaySize.y >= 0.0f  && "Invalid DisplaySize value!");
-    IM_ASSERT(g.Style.CurveTessellationTol > 0.0f                       && "Invalid style setting!");
+    IM_ASSERT(g.Style.CurveTessellationMaxError > 0.0f                  && "Invalid style setting!");
     IM_ASSERT(g.Style.CircleTessellationMaxError > 0.0f                 && "Invalid style setting!");
     IM_ASSERT(g.Style.Alpha >= 0.0f && g.Style.Alpha <= 1.0f            && "Invalid style setting!"); // Allows us to avoid a few clamps in color computations
     IM_ASSERT(g.Style.WindowMinSize.x >= 1.0f && g.Style.WindowMinSize.y >= 1.0f && "Invalid style setting!");
@@ -11777,6 +11786,11 @@ static void ImGui::ErrorCheckNewFrameSanityChecks()
         g.PlatformIO.Platform_GetClipboardTextFn = [](ImGuiContext* ctx) { return ctx->IO.GetClipboardTextFn(ctx->IO.ClipboardUserData); };
     if (g.IO.SetClipboardTextFn != NULL && (g.PlatformIO.Platform_SetClipboardTextFn == NULL || g.PlatformIO.Platform_SetClipboardTextFn == Platform_SetClipboardTextFn_DefaultImpl))
         g.PlatformIO.Platform_SetClipboardTextFn = [](ImGuiContext* ctx, const char* text) { return ctx->IO.SetClipboardTextFn(ctx->IO.ClipboardUserData, text); };
+
+    // Remap legacy CurveTessellationTol into CurveTessellationMaxError (OBSOLETED in 1.93.0, August 2026)
+    if (g.Style.CurveTessellationTol != 0.0f)
+        g.Style.CurveTessellationMaxError = ImSqrt(g.Style.CurveTessellationTol);
+    g.Style.CurveTessellationTol = 0.0f;
 #endif
 
     // Perform simple check: error if Docking or Viewport are enabled _exactly_ on frame 1 (instead of frame 0 or later), which is a common error leading to loss of .ini data.

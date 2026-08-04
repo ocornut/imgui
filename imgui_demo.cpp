@@ -1,4 +1,4 @@
-// dear imgui, v1.92.9b
+// dear imgui, v1.93.0 WIP
 // (demo code)
 
 // Help:
@@ -8942,8 +8942,9 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
 
             Checkbox("Anti-aliased fill", &style.AntiAliasedFill);
             PushItemWidth(GetFontSize() * 8);
-            DragFloat("Curve Tessellation Tolerance", &style.CurveTessellationTol, 0.02f, 0.10f, 10.0f, "%.2f");
-            if (style.CurveTessellationTol < 0.10f) style.CurveTessellationTol = 0.10f;
+            DragFloat("Curve Tessellation Max Error", &style.CurveTessellationMaxError, 0.02f, 0.10f, 10.0f, "%.2f");
+            if (style.CurveTessellationMaxError < 0.10f)
+                style.CurveTessellationMaxError = 0.10f;
 
             // When editing the "Circle Segment Max Error" value, draw a preview of its effect on auto-tessellated circles.
             DragFloat("Circle Tessellation Max Error", &style.CircleTessellationMaxError , 0.005f, 0.10f, 5.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);

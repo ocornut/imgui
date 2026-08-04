@@ -1,4 +1,4 @@
-// dear imgui, v1.92.9b
+// dear imgui, v1.93.0 WIP
 // (drawing and font code)
 
 /*
@@ -402,7 +402,6 @@ void ImGui::StyleColorsLight(ImGuiStyle* dst)
 ImDrawListSharedData::ImDrawListSharedData()
 {
     memset((void*)this, 0, sizeof(*this));
-    InitialFringeScale = 1.0f;
     for (int i = 0; i < IM_COUNTOF(ArcFastVtx); i++)
     {
         const float a = ((float)i * 2 * IM_PI) / (float)IM_COUNTOF(ArcFastVtx);
@@ -479,7 +478,7 @@ void ImDrawList::_ResetForNewFrame()
     _Path.resize(0);
     _Splitter.Clear();
     CmdBuffer.push_back(ImDrawCmd());
-    _FringeScale = _Data->InitialFringeScale;
+    // Caller needs to bet _SetPixelDensity() as well.
 }
 
 void ImDrawList::_ClearFreeMemory()
@@ -661,6 +660,7 @@ void ImDrawList::_OnChangedVtxOffset()
 int ImDrawList::_CalcCircleAutoSegmentCount(float radius) const
 {
     // Automatic segment count
+    radius *= _InvFringeScale;
     const int radius_idx = (int)(radius + 0.999f); // ceil to never reduce accuracy
     if (radius_idx >= 0 && radius_idx < IM_COUNTOF(_Data->CircleSegmentCounts))
         return _Data->CircleSegmentCounts[radius_idx]; // Use cached value
@@ -724,6 +724,13 @@ void ImDrawList::_SetTexture(ImTextureRef tex_ref)
     _CmdHeader.TexRef = tex_ref;
     _TextureStack.back() = tex_ref;
     _OnChangedTexture();
+}
+
+void ImDrawList::_SetPixelDensity(float pixel_density)
+{
+    IM_ASSERT(pixel_density > 0.0f);
+    _FringeScale = 1.0f / pixel_density;
+    _InvFringeScale = pixel_density;
 }
 
 // Reserve space for a number of vertices and indices.
@@ -1376,7 +1383,7 @@ ImVec2 ImBezierQuadraticCalc(const ImVec2& p1, const ImVec2& p2, const ImVec2& p
 }
 
 // Closely mimics ImBezierCubicClosestPointCasteljau() in imgui.cpp
-static void PathBezierCubicCurveToCasteljau(ImVector<ImVec2>* path, float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4, float tess_tol, int level)
+static void PathBezierCubicCurveToCasteljau(ImVector<ImVec2>* path, float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4, float max_error_sqr, int level)
 {
     float dx = x4 - x1;
     float dy = y4 - y1;
@@ -1384,7 +1391,7 @@ static void PathBezierCubicCurveToCasteljau(ImVector<ImVec2>* path, float x1, fl
     float d3 = (x3 - x4) * dy - (y3 - y4) * dx;
     d2 = (d2 >= 0) ? d2 : -d2;
     d3 = (d3 >= 0) ? d3 : -d3;
-    if ((d2 + d3) * (d2 + d3) < tess_tol * (dx * dx + dy * dy))
+    if ((d2 + d3) * (d2 + d3) < max_error_sqr * (dx * dx + dy * dy))
     {
         path->push_back(ImVec2(x4, y4));
     }
@@ -1396,16 +1403,16 @@ static void PathBezierCubicCurveToCasteljau(ImVector<ImVec2>* path, float x1, fl
         float x123 = (x12 + x23) * 0.5f, y123 = (y12 + y23) * 0.5f;
         float x234 = (x23 + x34) * 0.5f, y234 = (y23 + y34) * 0.5f;
         float x1234 = (x123 + x234) * 0.5f, y1234 = (y123 + y234) * 0.5f;
-        PathBezierCubicCurveToCasteljau(path, x1, y1, x12, y12, x123, y123, x1234, y1234, tess_tol, level + 1);
-        PathBezierCubicCurveToCasteljau(path, x1234, y1234, x234, y234, x34, y34, x4, y4, tess_tol, level + 1);
+        PathBezierCubicCurveToCasteljau(path, x1, y1, x12, y12, x123, y123, x1234, y1234, max_error_sqr, level + 1);
+        PathBezierCubicCurveToCasteljau(path, x1234, y1234, x234, y234, x34, y34, x4, y4, max_error_sqr, level + 1);
     }
 }
 
-static void PathBezierQuadraticCurveToCasteljau(ImVector<ImVec2>* path, float x1, float y1, float x2, float y2, float x3, float y3, float tess_tol, int level)
+static void PathBezierQuadraticCurveToCasteljau(ImVector<ImVec2>* path, float x1, float y1, float x2, float y2, float x3, float y3, float max_error_sqr, int level)
 {
     float dx = x3 - x1, dy = y3 - y1;
     float det = (x2 - x3) * dy - (y2 - y3) * dx;
-    if (det * det * 4.0f < tess_tol * (dx * dx + dy * dy))
+    if (det * det * 4.0f < max_error_sqr * (dx * dx + dy * dy))
     {
         path->push_back(ImVec2(x3, y3));
     }
@@ -1414,8 +1421,8 @@ static void PathBezierQuadraticCurveToCasteljau(ImVector<ImVec2>* path, float x1
         float x12 = (x1 + x2) * 0.5f, y12 = (y1 + y2) * 0.5f;
         float x23 = (x2 + x3) * 0.5f, y23 = (y2 + y3) * 0.5f;
         float x123 = (x12 + x23) * 0.5f, y123 = (y12 + y23) * 0.5f;
-        PathBezierQuadraticCurveToCasteljau(path, x1, y1, x12, y12, x123, y123, tess_tol, level + 1);
-        PathBezierQuadraticCurveToCasteljau(path, x123, y123, x23, y23, x3, y3, tess_tol, level + 1);
+        PathBezierQuadraticCurveToCasteljau(path, x1, y1, x12, y12, x123, y123, max_error_sqr, level + 1);
+        PathBezierQuadraticCurveToCasteljau(path, x123, y123, x23, y23, x3, y3, max_error_sqr, level + 1);
     }
 }
 
@@ -1424,8 +1431,9 @@ void ImDrawList::PathBezierCubicCurveTo(const ImVec2& p2, const ImVec2& p3, cons
     ImVec2 p1 = _Path.back();
     if (num_segments == 0)
     {
-        IM_ASSERT(_Data->CurveTessellationTol > 0.0f);
-        PathBezierCubicCurveToCasteljau(&_Path, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, p4.x, p4.y, _Data->CurveTessellationTol, 0); // Auto-tessellated
+        IM_ASSERT(_Data->CurveTessellationMaxError > 0.0f);
+        float max_error_sqr = (_Data->CurveTessellationMaxError * _FringeScale) * (_Data->CurveTessellationMaxError * _FringeScale);
+        PathBezierCubicCurveToCasteljau(&_Path, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, p4.x, p4.y, max_error_sqr, 0); // Auto-tessellated
     }
     else
     {
@@ -1440,8 +1448,9 @@ void ImDrawList::PathBezierQuadraticCurveTo(const ImVec2& p2, const ImVec2& p3, 
     ImVec2 p1 = _Path.back();
     if (num_segments == 0)
     {
-        IM_ASSERT(_Data->CurveTessellationTol > 0.0f);
-        PathBezierQuadraticCurveToCasteljau(&_Path, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, _Data->CurveTessellationTol, 0);// Auto-tessellated
+        IM_ASSERT(_Data->CurveTessellationMaxError > 0.0f);
+        float max_error_sqr = (_Data->CurveTessellationMaxError * _FringeScale) * (_Data->CurveTessellationMaxError * _FringeScale);
+        PathBezierQuadraticCurveToCasteljau(&_Path, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, max_error_sqr, 0);// Auto-tessellated
     }
     else
     {
@@ -3174,11 +3183,15 @@ const char* ImGui_GetDefaultCompressedFontDataProggyForever(int* out_size);
 // This duplicates some of the logic in UpdateFontsNewFrame() which is a bit chicken-and-eggy/tricky to extract due to variety of codepaths and possible initialization ordering.
 static float GetExpectedContextFontSize(ImGuiContext* ctx)
 {
-    return ((ctx->Style.FontSizeBase > 0.0f) ? ctx->Style.FontSizeBase : 13.0f) * ctx->Style.FontScaleMain * ctx->Style.FontScaleDpi;
+    float fb_scale = (ctx->IO.DisplayFramebufferScale.x != 0.0f) ? ctx->IO.DisplayFramebufferScale.x : 1.0f;
+    if (ctx->IO.DisplayFramebufferScale.x == 1.0f && ctx->IO.DisplaySize.x <= 0.0f && ctx->IO.ConfigMacOSXBehaviors)
+        fb_scale = 2.0f; // If called before backend had a chance to init DisplayFramebufferScale. default to expecting Retina.
+    float scale = ctx->Style.FontScaleMain * ctx->Style.FontScaleDpi * fb_scale;
+    return ((ctx->Style.FontSizeBase > 0.0f) ? ctx->Style.FontSizeBase : 13.0f) * scale;
 }
 
 // Legacy function with heuristic to select Pixel or Vector font.
-// The selection is based on (style.FontSizeBase * style.FontScaleMain * style.FontScaleDpi) reaching a small threshold at the time of adding the default font.
+// The selection is based on (style.FontSizeBase * style.FontScaleMain * style.FontScaleDpi * io.DisplayFramebufferScale) reaching a small threshold at the time of adding the default font.
 // Prefer calling AddFontDefaultVector() or AddFontDefaultBitmap() based on your own logic.
 ImFont* ImFontAtlas::AddFontDefault(const ImFontConfig* font_cfg)
 {

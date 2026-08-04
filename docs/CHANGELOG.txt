@@ -36,6 +36,33 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
+ VERSION 1.93.0 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Breaking Changes:
+
+- Style: obsoleted `style.CurveTessellationTol (default 1.25)` which was in Pixels² unit in
+  favor of `style.CurveTesselationMaxError` (default 1.12)` which is in Pixels unit. It is
+  easier to tweak + this allows us to easily scale error threshold on high density screens.
+  - style.CurveTesselationMaxError == sqrf(style.CurveTessellationTol).
+
+Other Changes:
+
+- Fonts:
+  - Reworked `AddFontDefault()` to use `io.DisplayFrameBufferScale` as part of the heuristic
+    to select `AddFontDefaultVector()` by default, effectively using ProggyForever instead of
+    ProggyClean on most Apple/Retina setups by default.
+- ImDrawList:
+  - Per-viewport FramebufferScale for Apple/Retina screen is applied to draw lists:
+    - AA Fringe is scaled accordingly.
+    - Circle and Curves tessellation error are scaled accordingly.
+- Backends:
+  - QNX: added QNX Screen backend. (#9492) [@mgorchak-blackberry]
+- Examples:
+  - QNX+OpenGL3, QNX+Vulkan: added QNX Screen examples. (#9492) [@mgorchak-blackberry]
+
+
+-----------------------------------------------------------------------
  VERSION 1.92.9b (Released 2026-07-31)
 -----------------------------------------------------------------------
 
