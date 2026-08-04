@@ -10,7 +10,6 @@
 //  [ ] Platform: Clipboard support.
 //  [ ] Platform: Gamepad support.
 //  [ ] Platform: Mouse cursor shape and visibility (ImGuiBackendFlags_HasMouseCursors).
-//  [ ] Platform: Multi-viewport support.
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.

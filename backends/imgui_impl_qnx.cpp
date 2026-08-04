@@ -14,11 +14,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2026-07-30: Renamed backend from imgui_impl_screen to imgui_impl_qnx and embedded a compact keysym table.
-//  2026-07-29: Reworked keyboard handling from the proven qterm Screen path: authoritative modifier masks,
-//              complete keypad/Hyper mapping, and QNX/X11 keysym-to-Unicode conversion.
-//  2026-07-29: Fixed keyboard handling: use KEY_CAP for physical keys, SYM for text, and honor Screen validity flags.
-//  2026-07-28: Initial QNX Screen backend.
+//  2026-08-04: Initial QNX Screen backend. (#9492)
 
 #include "imgui.h"
 #ifndef IMGUI_DISABLE

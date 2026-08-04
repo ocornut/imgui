@@ -1,6 +1,0 @@
-Dear ImGui QNX Screen + OpenGL ES 3 example
-
-Usage: example_qnx_opengl3
-
-The example uses the fullscreen size reported by QNX Screen, displays the Dear ImGui demo UI,
-and exits when Escape is pressed or the Screen window receives a close event.

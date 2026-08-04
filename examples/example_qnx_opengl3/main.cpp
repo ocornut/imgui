@@ -36,137 +36,10 @@ struct QNXWindow
     int Size[2] = {};
 };
 
-static bool CreateQNXWindow(QNXWindow* window)
-{
-    if (screen_create_context(&window->Context, 0) != 0 ||
-        screen_create_window(&window->Window, window->Context) != 0 ||
-        screen_create_event(&window->Event) != 0)
-    {
-        fprintf(stderr, "QNX Screen initialization failed: %s\n", strerror(errno));
-        return false;
-    }
-
-    // A newly created QNX Screen window reports the fullscreen dimensions.
-    if (screen_get_window_property_iv(window->Window, SCREEN_PROPERTY_SIZE, window->Size) != 0 || window->Size[0] <= 0 || window->Size[1] <= 0)
-    {
-        fprintf(stderr, "Failed to obtain QNX Screen window size: %s\n", strerror(errno));
-        return false;
-    }
-
-    const int usage = SCREEN_USAGE_OPENGL_ES2 | SCREEN_USAGE_OPENGL_ES3 | SCREEN_USAGE_NATIVE;
-    const int transparency = SCREEN_TRANSPARENCY_NONE;
-    const int swap_interval = 1;
-    if (screen_set_window_property_iv(window->Window, SCREEN_PROPERTY_USAGE, &usage) != 0 ||
-        screen_set_window_property_iv(window->Window, SCREEN_PROPERTY_SIZE, window->Size) != 0 ||
-        screen_set_window_property_iv(window->Window, SCREEN_PROPERTY_TRANSPARENCY, &transparency) != 0 ||
-        screen_set_window_property_iv(window->Window, SCREEN_PROPERTY_SWAP_INTERVAL, &swap_interval) != 0)
-    {
-        fprintf(stderr, "Failed to configure QNX Screen window: %s\n", strerror(errno));
-        return false;
-    }
-
-    window->Display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-    if (window->Display == EGL_NO_DISPLAY || eglInitialize(window->Display, nullptr, nullptr) != EGL_TRUE || eglBindAPI(EGL_OPENGL_ES_API) != EGL_TRUE)
-    {
-        fprintf(stderr, "EGL initialization failed: 0x%04x\n", eglGetError());
-        return false;
-    }
-
-    const EGLint config_attributes[] =
-    {
-        EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
-        EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT,
-        EGL_RED_SIZE, 8,
-        EGL_GREEN_SIZE, 8,
-        EGL_BLUE_SIZE, 8,
-        EGL_ALPHA_SIZE, 8,
-        EGL_DEPTH_SIZE, 24,
-        EGL_STENCIL_SIZE, 8,
-        EGL_NONE
-    };
-    EGLConfig config = nullptr;
-    EGLint config_count = 0;
-    if (eglChooseConfig(window->Display, config_attributes, &config, 1, &config_count) != EGL_TRUE || config_count == 0)
-    {
-        fprintf(stderr, "eglChooseConfig() failed: 0x%04x\n", eglGetError());
-        return false;
-    }
-
-    EGLint native_visual = 0;
-    if (eglGetConfigAttrib(window->Display, config, EGL_NATIVE_VISUAL_ID, &native_visual) != EGL_TRUE ||
-        screen_set_window_property_iv(window->Window, SCREEN_PROPERTY_FORMAT, &native_visual) != 0 ||
-        screen_create_window_buffers(window->Window, 2) != 0)
-    {
-        fprintf(stderr, "Failed to create QNX Screen buffers: %s\n", strerror(errno));
-        return false;
-    }
-
-    const EGLint context_attributes[] = { EGL_CONTEXT_CLIENT_VERSION, 3, EGL_NONE };
-    window->GLContext = eglCreateContext(window->Display, config, EGL_NO_CONTEXT, context_attributes);
-    window->GLSurface = eglCreateWindowSurface(window->Display, config, window->Window, nullptr);
-    if (window->GLContext == EGL_NO_CONTEXT || window->GLSurface == EGL_NO_SURFACE ||
-        eglMakeCurrent(window->Display, window->GLSurface, window->GLSurface, window->GLContext) != EGL_TRUE ||
-        eglSwapInterval(window->Display, 1) != EGL_TRUE)
-    {
-        fprintf(stderr, "EGL context creation failed: 0x%04x\n", eglGetError());
-        return false;
-    }
-
-    const int visible = 1;
-    if (screen_set_window_property_iv(window->Window, SCREEN_PROPERTY_VISIBLE, &visible) != 0)
-    {
-        fprintf(stderr, "Failed to show QNX Screen window: %s\n", strerror(errno));
-        return false;
-    }
-    return true;
-}
-
-static void DestroyQNXWindow(QNXWindow* window)
-{
-    if (window->Display != EGL_NO_DISPLAY)
-    {
-        eglMakeCurrent(window->Display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-        if (window->GLSurface != EGL_NO_SURFACE)
-            eglDestroySurface(window->Display, window->GLSurface);
-        if (window->GLContext != EGL_NO_CONTEXT)
-            eglDestroyContext(window->Display, window->GLContext);
-        eglTerminate(window->Display);
-    }
-    if (window->Event != nullptr)
-        screen_destroy_event(window->Event);
-    if (window->Window != nullptr)
-        screen_destroy_window(window->Window);
-    if (window->Context != nullptr)
-        screen_destroy_context(window->Context);
-}
-
-static bool ProcessQNXEvents(QNXWindow* window)
-{
-    for (;;)
-    {
-        if (screen_get_event(window->Context, window->Event, 0) != 0)
-            return false;
-
-        int type = SCREEN_EVENT_NONE;
-        if (screen_get_event_property_iv(window->Event, SCREEN_PROPERTY_TYPE, &type) != 0)
-            return false;
-        if (type == SCREEN_EVENT_NONE)
-            return true;
-
-        ImGui_ImplQNX_ProcessEvent(window->Event);
-        if (type == SCREEN_EVENT_CLOSE)
-            return false;
-        if (type == SCREEN_EVENT_KEYBOARD)
-        {
-            int flags = 0;
-            int key_cap = 0;
-            if (screen_get_event_property_iv(window->Event, SCREEN_PROPERTY_FLAGS, &flags) == 0 &&
-                screen_get_event_property_iv(window->Event, SCREEN_PROPERTY_KEY_CAP, &key_cap) == 0 &&
-                (flags & SCREEN_FLAG_KEY_DOWN) != 0 && key_cap == KEYCODE_ESCAPE)
-                return false;
-        }
-    }
-}
+// Forward declarations of helper functions
+bool CreateQNXWindow(QNXWindow* window);
+void DestroyQNXWindow(QNXWindow* window);
+bool ProcessQNXEvents(QNXWindow* window);
 
 // Main code
 int main(int, char**)
@@ -297,3 +170,138 @@ int main(int, char**)
 
     return 0;
 }
+
+// Helper functions
+
+bool CreateQNXWindow(QNXWindow* window)
+{
+    if (screen_create_context(&window->Context, 0) != 0 ||
+        screen_create_window(&window->Window, window->Context) != 0 ||
+        screen_create_event(&window->Event) != 0)
+    {
+        fprintf(stderr, "QNX Screen initialization failed: %s\n", strerror(errno));
+        return false;
+    }
+
+    // A newly created QNX Screen window reports the fullscreen dimensions.
+    if (screen_get_window_property_iv(window->Window, SCREEN_PROPERTY_SIZE, window->Size) != 0 || window->Size[0] <= 0 || window->Size[1] <= 0)
+    {
+        fprintf(stderr, "Failed to obtain QNX Screen window size: %s\n", strerror(errno));
+        return false;
+    }
+
+    const int usage = SCREEN_USAGE_OPENGL_ES2 | SCREEN_USAGE_OPENGL_ES3 | SCREEN_USAGE_NATIVE;
+    const int transparency = SCREEN_TRANSPARENCY_NONE;
+    const int swap_interval = 1;
+    if (screen_set_window_property_iv(window->Window, SCREEN_PROPERTY_USAGE, &usage) != 0 ||
+        screen_set_window_property_iv(window->Window, SCREEN_PROPERTY_SIZE, window->Size) != 0 ||
+        screen_set_window_property_iv(window->Window, SCREEN_PROPERTY_TRANSPARENCY, &transparency) != 0 ||
+        screen_set_window_property_iv(window->Window, SCREEN_PROPERTY_SWAP_INTERVAL, &swap_interval) != 0)
+    {
+        fprintf(stderr, "Failed to configure QNX Screen window: %s\n", strerror(errno));
+        return false;
+    }
+
+    window->Display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+    if (window->Display == EGL_NO_DISPLAY || eglInitialize(window->Display, nullptr, nullptr) != EGL_TRUE || eglBindAPI(EGL_OPENGL_ES_API) != EGL_TRUE)
+    {
+        fprintf(stderr, "EGL initialization failed: 0x%04x\n", eglGetError());
+        return false;
+    }
+
+    const EGLint config_attributes[] =
+    {
+        EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+        EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT,
+        EGL_RED_SIZE, 8,
+        EGL_GREEN_SIZE, 8,
+        EGL_BLUE_SIZE, 8,
+        EGL_ALPHA_SIZE, 8,
+        EGL_DEPTH_SIZE, 24,
+        EGL_STENCIL_SIZE, 8,
+        EGL_NONE
+    };
+    EGLConfig config = nullptr;
+    EGLint config_count = 0;
+    if (eglChooseConfig(window->Display, config_attributes, &config, 1, &config_count) != EGL_TRUE || config_count == 0)
+    {
+        fprintf(stderr, "eglChooseConfig() failed: 0x%04x\n", eglGetError());
+        return false;
+    }
+
+    EGLint native_visual = 0;
+    if (eglGetConfigAttrib(window->Display, config, EGL_NATIVE_VISUAL_ID, &native_visual) != EGL_TRUE ||
+        screen_set_window_property_iv(window->Window, SCREEN_PROPERTY_FORMAT, &native_visual) != 0 ||
+        screen_create_window_buffers(window->Window, 2) != 0)
+    {
+        fprintf(stderr, "Failed to create QNX Screen buffers: %s\n", strerror(errno));
+        return false;
+    }
+
+    const EGLint context_attributes[] = { EGL_CONTEXT_CLIENT_VERSION, 3, EGL_NONE };
+    window->GLContext = eglCreateContext(window->Display, config, EGL_NO_CONTEXT, context_attributes);
+    window->GLSurface = eglCreateWindowSurface(window->Display, config, window->Window, nullptr);
+    if (window->GLContext == EGL_NO_CONTEXT || window->GLSurface == EGL_NO_SURFACE ||
+        eglMakeCurrent(window->Display, window->GLSurface, window->GLSurface, window->GLContext) != EGL_TRUE ||
+        eglSwapInterval(window->Display, 1) != EGL_TRUE)
+    {
+        fprintf(stderr, "EGL context creation failed: 0x%04x\n", eglGetError());
+        return false;
+    }
+
+    const int visible = 1;
+    if (screen_set_window_property_iv(window->Window, SCREEN_PROPERTY_VISIBLE, &visible) != 0)
+    {
+        fprintf(stderr, "Failed to show QNX Screen window: %s\n", strerror(errno));
+        return false;
+    }
+    return true;
+}
+
+void DestroyQNXWindow(QNXWindow* window)
+{
+    if (window->Display != EGL_NO_DISPLAY)
+    {
+        eglMakeCurrent(window->Display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+        if (window->GLSurface != EGL_NO_SURFACE)
+            eglDestroySurface(window->Display, window->GLSurface);
+        if (window->GLContext != EGL_NO_CONTEXT)
+            eglDestroyContext(window->Display, window->GLContext);
+        eglTerminate(window->Display);
+    }
+    if (window->Event != nullptr)
+        screen_destroy_event(window->Event);
+    if (window->Window != nullptr)
+        screen_destroy_window(window->Window);
+    if (window->Context != nullptr)
+        screen_destroy_context(window->Context);
+}
+
+bool ProcessQNXEvents(QNXWindow* window)
+{
+    for (;;)
+    {
+        if (screen_get_event(window->Context, window->Event, 0) != 0)
+            return false;
+
+        int type = SCREEN_EVENT_NONE;
+        if (screen_get_event_property_iv(window->Event, SCREEN_PROPERTY_TYPE, &type) != 0)
+            return false;
+        if (type == SCREEN_EVENT_NONE)
+            return true;
+
+        ImGui_ImplQNX_ProcessEvent(window->Event);
+        if (type == SCREEN_EVENT_CLOSE)
+            return false;
+        if (type == SCREEN_EVENT_KEYBOARD)
+        {
+            int flags = 0;
+            int key_cap = 0;
+            if (screen_get_event_property_iv(window->Event, SCREEN_PROPERTY_FLAGS, &flags) == 0 &&
+                screen_get_event_property_iv(window->Event, SCREEN_PROPERTY_KEY_CAP, &key_cap) == 0 &&
+                (flags & SCREEN_FLAG_KEY_DOWN) != 0 && key_cap == KEYCODE_ESCAPE)
+                return false;
+        }
+    }
+}
+
