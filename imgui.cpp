@@ -6177,7 +6177,7 @@ static void InitViewportDrawData(ImGuiViewportP* viewport)
     draw_data->TotalVtxCount = draw_data->TotalIdxCount = 0;
     draw_data->DisplayPos = viewport->Pos;
     draw_data->DisplaySize = is_minimized ? ImVec2(0.0f, 0.0f) : viewport->Size;
-    draw_data->FramebufferScale = (viewport->FramebufferScale.x != 0.0f) ? viewport->FramebufferScale : g.IO.DisplayFramebufferScale;
+    draw_data->FramebufferScale = viewport->FramebufferScale;
     draw_data->OwnerViewport = viewport;
     draw_data->Textures = &g.PlatformIO.Textures;
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
@@ -17411,6 +17411,7 @@ ImGuiViewportP* ImGui::AddUpdateViewport(ImGuiWindow* window, ImGuiID id, const 
     }
 
     viewport->Window = window;
+    viewport->FramebufferScale = g.IO.DisplayFramebufferScale; // Later overidden by Platform_GetWindowFramebufferScale() for platform having it
     viewport->LastFrameActive = g.FrameCount;
     viewport->UpdateWorkRect();
     IM_ASSERT(window == NULL || viewport->ID == window->ID);
