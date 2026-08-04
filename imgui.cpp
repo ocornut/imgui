@@ -16225,7 +16225,7 @@ static void Platform_SetClipboardTextFn_DefaultImpl(ImGuiContext*, const char* t
     ::CloseClipboard();
 }
 
-#elif defined(__APPLE__) && TARGET_OS_OSX && defined(IMGUI_ENABLE_OSX_DEFAULT_CLIPBOARD_FUNCTIONS)
+#elif defined(__APPLE__) && defined(TARGET_OS_OSX) && TARGET_OS_OSX && defined(IMGUI_ENABLE_OSX_DEFAULT_CLIPBOARD_FUNCTIONS)
 
 #include <Carbon/Carbon.h>  // Use old API to avoid need for separate .mm file
 static PasteboardRef main_clipboard = 0;
