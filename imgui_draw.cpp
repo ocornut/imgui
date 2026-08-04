@@ -722,6 +722,7 @@ void ImDrawList::_SetTexture(ImTextureRef tex_ref)
 
 void ImDrawList::_SetPixelDensity(float pixel_density)
 {
+    IM_ASSERT(pixel_density > 0.0f);
     _FringeScale = 1.0f / pixel_density;
     _InvFringeScale = pixel_density;
 }
