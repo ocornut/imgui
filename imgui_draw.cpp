@@ -909,7 +909,7 @@ static ImU32 ImAlphaMultiply(ImU32 col, float alpha_mul)
 }
 
 // Select texture and adjust fringe size for specified line thickness.
-void ImDrawList::_SelectFringeTexture(float screen_thickness, ImVec4* out_tex_uvs, float* out_fringe, ImDrawFlags flags)
+void ImDrawList::_SelectLineTexture(float screen_thickness, ImVec2* out_uv0, ImVec2* out_uv1, float* out_fringe, ImDrawFlags flags)
 {
     // We assume that the screen_thickness has been clamped to 1.0 by the caller.
     IM_ASSERT_PARANOID(screen_thickness >= 1.0f);
@@ -929,13 +929,15 @@ void ImDrawList::_SelectFringeTexture(float screen_thickness, ImVec4* out_tex_uv
 
         // Scale the fringe so that the texture matches the line thickness.
         ImVec4 tex_uvs = _Data->TexUvLines[texture_idx];
-        *out_tex_uvs = tex_uvs;
+        out_uv0->x = tex_uvs.x;
+        out_uv1->x = tex_uvs.y;
+        out_uv0->y = out_uv1->y = tex_uvs.z;
         *out_fringe = _FringeScale * screen_thickness * tex_uvs.w; // tex_uvs.w = 1 / thickness
     }
     else
     {
         // For no anti-alias we use fully opaque texture, and no fringe expansion.
-        *out_tex_uvs = ImVec4(_Data->TexUvWhitePixel.x, _Data->TexUvWhitePixel.x, _Data->TexUvWhitePixel.y, 0.0f); // u0, u1, v, 1/thickness (unused)
+        *out_uv0 = *out_uv1 = _Data->TexUvWhitePixel;
         *out_fringe = 0.0f;
     }
 }
@@ -1003,9 +1005,9 @@ void ImDrawList::_AddPolyline(const ImVec2* points, const int points_count, ImU3
         sqr_lengths[points_count - 1] = 0.0f;
     }
 
-    ImVec4 tex_uvs;
+    ImVec2 uv0, uv1;
     float fringe;
-    _SelectFringeTexture(screen_thickness, &tex_uvs, &fringe, flags);
+    _SelectLineTexture(screen_thickness, &uv0, &uv1, &fringe, flags);
 
     const ImU32 col_trans = col & ~IM_COL32_A_MASK;
 
@@ -1043,13 +1045,7 @@ void ImDrawList::_AddPolyline(const ImVec2* points, const int points_count, ImU3
     PrimReserve(idx_count, vtx_count);
 
     const float ratio = thickness0 / (thickness0 + thickness1); // The points that use uv2 are placed directly on the path (offset = 0), calculate the texture position from stroke offsets.
-    ImVec2 uv0, uv1, uv2;
-    uv0.x = tex_uvs.x;
-    uv0.y = tex_uvs.z;
-    uv1.x = tex_uvs.y;
-    uv1.y = tex_uvs.z;
-    uv2.x = uv0.x + (uv1.x - uv0.x) * ratio;
-    uv2.y = tex_uvs.z;
+    const ImVec2 uv2(uv0.x + (uv1.x - uv0.x) * ratio, uv0.y);
 
     // Clamp inner offset and adjust texture coordinates to match the change.
     // This is used by some of the convex shape rendering to avoid rendering artifacts when thickness is about to fill the whole shape.
@@ -1878,9 +1874,9 @@ void ImDrawList::_AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float t
     }
 
     flags |= Flags;
-    ImVec4 tex_uvs;
+    ImVec2 uv0, uv1;
     float fringe;
-    _SelectFringeTexture(screen_thickness, &tex_uvs, &fringe, flags);
+    _SelectLineTexture(screen_thickness, &uv0, &uv1, &fringe, flags);
 
     float dir_x = p2.x - p1.x;
     float dir_y = p2.y - p1.y;
@@ -1907,13 +1903,7 @@ void ImDrawList::_AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float t
     float thickness1 = (thickness + fringe) - thickness0;
 
     const float ratio = thickness0 / (thickness0 + thickness1); // The points using uv2 are placed on the path, calculate the position from stroke offets.
-    ImVec2 uv0, uv1, uv2;
-    uv0.x = tex_uvs.x;
-    uv0.y = tex_uvs.z;
-    uv1.x = tex_uvs.y;
-    uv1.y = tex_uvs.z;
-    uv2.x = uv0.x + (uv1.x - uv0.x) * ratio;
-    uv2.y = tex_uvs.z;
+    const ImVec2 uv2(uv0.x + (uv1.x - uv0.x) * ratio, uv0.y);
 
     const float half_aa = _FringeScale * 0.5f; // Used for end caps, does not use "fringe" since end cap AA is not using the texture.
     const float half_thickness = thickness * 0.5f;
@@ -1994,7 +1984,6 @@ void ImDrawList::_AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float t
         // AA cap
         IM_APPEND_TRI(base_idx + 0, base_idx + 2, base_idx + 3);
         IM_APPEND_TRI(base_idx + 0, base_idx + 3, base_idx + 1);
-
     }
 }
 
@@ -2241,9 +2230,9 @@ void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, 
     }
 
     flags |= Flags;
-    ImVec4 tex_uvs;
+    ImVec2 outer_uv, inner_uv;
     float fringe;
-    _SelectFringeTexture(screen_thickness, &tex_uvs, &fringe, flags);
+    _SelectLineTexture(screen_thickness, &outer_uv, &inner_uv, &fringe, flags);
 
     const int auto_seg_count = _CalcCircleAutoSegmentCount(rounding);
     int arc_step, arc_step_count;
@@ -2272,13 +2261,7 @@ void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, 
 
     const float stem_offset = ImMin(rounding, thickness); // The function might get called with rounding slightly bigger than thickness, which is ok, but we should keep the stem inside the shape.
     const float ratio = stem_offset / thickness;
-    ImVec2 inner_uv, outer_uv, stem_uv;
-    outer_uv.x = tex_uvs.x;
-    outer_uv.y = tex_uvs.z;
-    inner_uv.x = tex_uvs.y;
-    inner_uv.y = tex_uvs.z;
-    stem_uv.x = outer_uv.x + (inner_uv.x - outer_uv.x) * ratio;
-    stem_uv.y = tex_uvs.z;
+    const ImVec2 stem_uv(outer_uv.x + (inner_uv.x - outer_uv.x) * ratio, outer_uv.y);
 
     // Previous vertices, copied from the last vertices.
     int base_idx = (int)_VtxCurrentIdx;
