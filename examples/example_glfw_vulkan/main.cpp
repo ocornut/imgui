@@ -244,6 +244,18 @@ static bool PhysicalDeviceHasExtension(VkPhysicalDevice physical_device, const c
     return IsExtensionAvailable(properties, extension);
 }
 
+// Extensions required by this example's VK_EXT_descriptor_heap path (Vulkan 1.1 instance → BDA is an extension).
+// Formal deps of VK_EXT_descriptor_heap: maintenance5 + (buffer_device_address | Vulkan 1.2).
+// shader_untyped_pointers is required by ImGui's default layout(descriptor_heap) shaders, not by the Vulkan extension itself.
+// See "About descriptor heap" in imgui_impl_vulkan.h.
+static bool PhysicalDeviceSupportsImGuiDescriptorHeap(VkPhysicalDevice physical_device)
+{
+    return PhysicalDeviceHasExtension(physical_device, VK_EXT_DESCRIPTOR_HEAP_EXTENSION_NAME)
+        && PhysicalDeviceHasExtension(physical_device, VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME)
+        && PhysicalDeviceHasExtension(physical_device, VK_KHR_SHADER_UNTYPED_POINTERS_EXTENSION_NAME)
+        && PhysicalDeviceHasExtension(physical_device, VK_KHR_MAINTENANCE_5_EXTENSION_NAME);
+}
+
 static void SetupVulkan(ImVector<const char*> instance_extensions, bool require_descriptor_heap)
 {
     VkResult err;
@@ -321,17 +333,21 @@ static void SetupVulkan(ImVector<const char*> instance_extensions, bool require_
         VkPhysicalDevice device_with_heap = VK_NULL_HANDLE;
         for (uint32_t i = 0; i < device_count; i++)
         {
-            VkPhysicalDeviceProperties props;
-            vkGetPhysicalDeviceProperties(physical_devices[i], &props);
-            const bool has_heap = PhysicalDeviceHasExtension(physical_devices[i], VK_EXT_DESCRIPTOR_HEAP_EXTENSION_NAME);
-
-            if (has_heap && device_with_heap == VK_NULL_HANDLE)
+            if (PhysicalDeviceSupportsImGuiDescriptorHeap(physical_devices[i]))
+            {
                 device_with_heap = physical_devices[i];
+                break;
+            }
         }
 
         if (device_with_heap == VK_NULL_HANDLE)
         {
-            fprintf(stderr, "Error: --require-descriptor-heap requested but no device with VK_EXT_descriptor_heap was found.\n");
+            fprintf(stderr, "Error: --require-descriptor-heap requested but no device with VK_EXT_descriptor_heap and its required dependencies was found.\n");
+            fprintf(stderr, "  Required: %s, %s, %s, %s\n",
+                VK_EXT_DESCRIPTOR_HEAP_EXTENSION_NAME,
+                VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
+                VK_KHR_SHADER_UNTYPED_POINTERS_EXTENSION_NAME,
+                VK_KHR_MAINTENANCE_5_EXTENSION_NAME);
             exit(1);
         }
         g_PhysicalDevice = device_with_heap;
@@ -364,18 +380,18 @@ static void SetupVulkan(ImVector<const char*> instance_extensions, bool require_
         if (IsExtensionAvailable(properties, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME))
             device_extensions.push_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
 #endif
-        if (IsExtensionAvailable(properties, VK_EXT_DESCRIPTOR_HEAP_EXTENSION_NAME))
+        if (PhysicalDeviceSupportsImGuiDescriptorHeap(g_PhysicalDevice))
         {
             device_extensions.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
-            device_extensions.push_back(VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME);
-            device_extensions.push_back(VK_KHR_DEPTH_STENCIL_RESOLVE_EXTENSION_NAME);
-            device_extensions.push_back(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
-            device_extensions.push_back(VK_KHR_MAINTENANCE_2_EXTENSION_NAME);
             device_extensions.push_back(VK_KHR_MAINTENANCE_5_EXTENSION_NAME);
-            device_extensions.push_back(VK_KHR_MULTIVIEW_EXTENSION_NAME);
             device_extensions.push_back(VK_KHR_SHADER_UNTYPED_POINTERS_EXTENSION_NAME);
             device_extensions.push_back(VK_EXT_DESCRIPTOR_HEAP_EXTENSION_NAME);
             g_UsingDescriptorHeap = true;
+        }
+        else if (require_descriptor_heap)
+        {
+            fprintf(stderr, "Error: --require-descriptor-heap but selected device is missing a required dependency.\n");
+            exit(1);
         }
 
         const float queue_priority[] = { 1.0f };

@@ -130,6 +130,12 @@ struct ImGui_ImplVulkan_DescriptorHeapInfo
 //   - ImTextureID is the GPU descriptor device address returned by RegisterImage.
 //     Requires a 64-bit ImTextureID.
 //   - ImGui_ImplVulkan_AddTexture()/RemoveTexture() are pool-path only.
+//   - Device extensions / features the application must enable:
+//     - VK_EXT_descriptor_heap (feature: descriptorHeap).
+//     - VK_KHR_maintenance5 (formal dependency of descriptor_heap; used for VkPipelineCreateFlags2 / DESCRIPTOR_HEAP pipeline flag).
+//     - VK_KHR_buffer_device_address, or Vulkan 1.2+ where BDA is core (formal dependency; enable the bufferDeviceAddress feature either way).
+//     - VK_KHR_shader_untyped_pointers (feature: shaderUntypedPointers): required by the default heap shaders (layout(descriptor_heap)).
+//     Not a formal dependency of VK_EXT_descriptor_heap; mapping-based custom shaders could omit it.
 struct ImGui_ImplVulkan_InitInfo
 {
     uint32_t                        ApiVersion;                 // Fill with API version of Instance, e.g. VK_API_VERSION_1_3 or your value of VkApplicationInfo::apiVersion. May be lower than header version (VK_HEADER_VERSION_COMPLETE)
@@ -169,6 +175,7 @@ struct ImGui_ImplVulkan_InitInfo
 #ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
     // (Optional) If set, use VK_EXT_descriptor_heap (app-owned Register*/UnRegister* callbacks; see comment above).
     // ImTextureID = RegisterImage(...) device address. ImGui_ImplVulkan_AddTexture() is unavailable in this mode.
+    // App must enable the device extensions/features listed under "About descriptor heap".
     const ImGui_ImplVulkan_DescriptorHeapInfo *DescriptorHeapInfo;
 #endif
 };
