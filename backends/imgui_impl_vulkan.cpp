@@ -1756,6 +1756,9 @@ void ImGui_ImplVulkan_RemoveTexture(VkDescriptorSet descriptor_set)
 {
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
     ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
+    IM_ASSERT(v->DescriptorHeapInfo == nullptr && "ImGui_ImplVulkan_RemoveTexture() is unavailable when using DescriptorHeapInfo; use DescriptorHeapInfo::UnRegisterImage");
+#endif
     VkDescriptorPool pool = bd->DescriptorPool ? bd->DescriptorPool : v->DescriptorPool;
     vkFreeDescriptorSets(v->Device, pool, 1, &descriptor_set);
 }
