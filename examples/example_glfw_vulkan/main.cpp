@@ -456,8 +456,7 @@ static void SetupVulkan(ImVector<const char*> instance_extensions, bool require_
         g_SamplerHeapAlloc.Create(g_Device, g_PhysicalDevice, descriptor_heap_properties.samplerDescriptorSize, descriptor_heap_properties.samplerHeapAlignment,
             descriptor_heap_properties.minSamplerHeapReservedRange, APP_SAMPLER_HEAP_SIZE, g_Allocator);
 
-        // Allocating descriptors is up to the application, so we provide callbacks (same idea as DX12 SrvDescriptorAllocFn/FreeFn).
-        // ImTextureID = GPU descriptor device address (like D3D12_GPU_DESCRIPTOR_HANDLE.ptr); slot 0 is usable.
+        // Allocating descriptors is up to the application, so we provide callbacks. ImTextureID = GPU descriptor device address.
         g_DescriptorHeapInfo = {};
         g_DescriptorHeapInfo.ResourceHeapAddress = g_ResourceHeapAlloc.BindInfo.heapRange.address;
         g_DescriptorHeapInfo.ImageDescriptorSize = g_ResourceHeapAlloc.Stride;

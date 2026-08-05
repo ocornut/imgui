@@ -129,6 +129,7 @@ struct ImGui_ImplVulkan_DescriptorHeapInfo
 //   - The application owns heap slots via Register*/UnRegister* callbacks.
 //   - ImTextureID is the GPU descriptor device address returned by RegisterImage.
 //     Requires a 64-bit ImTextureID.
+//   - DescriptorHeapInfo pointer and ResourceHeapAddress/ImageDescriptorSize must remain valid for the backend lifetime; if you recreate the heap, update those fields and re-register textures (old ImTextureIDs become invalid).
 //   - ImGui_ImplVulkan_AddTexture()/RemoveTexture() are pool-path only.
 //   - Device extensions / features the application must enable:
 //     - VK_EXT_descriptor_heap (feature: descriptorHeap).
