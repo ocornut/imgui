@@ -2,7 +2,7 @@
 // This needs to be used along with a Platform Backend (e.g. GLFW, SDL, Win32, custom..)
 
 // Implemented features:
-//  [!] Renderer: User texture binding. Use a VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE 'VkDescriptorSet' as texture identifier. Call ImGui_ImplVulkan_AddTexture() to register one. Read the FAQ about ImTextureID/ImTextureRef + https://github.com/ocornut/imgui/pull/914 for discussions.
+//  [!] Renderer: User texture binding. Pool mode: use a VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE 'VkDescriptorSet' as texture identifier (ImGui_ImplVulkan_AddTexture()). Descriptor-heap mode (VK_EXT_descriptor_heap): use a GPU descriptor device address (like DX12's D3D12_GPU_DESCRIPTOR_HANDLE). Read the FAQ about ImTextureID/ImTextureRef + https://github.com/ocornut/imgui/pull/914 for discussions.
 //  [X] Renderer: Large meshes support (64k+ vertices) even with 16-bit indices (ImGuiBackendFlags_RendererHasVtxOffset).
 //  [X] Renderer: Texture updates support for dynamic font atlas (ImGuiBackendFlags_RendererHasTextures).
 //  [X] Renderer: Expose selected render state for draw callbacks to use. Access in '(ImGui_ImplXXXX_RenderState*)GetPlatformIO().Renderer_RenderState'.
