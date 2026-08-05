@@ -244,6 +244,17 @@ static PFN_vkCmdEndRenderingKHR     ImGuiImplVulkanFuncs_vkCmdEndRenderingKHR;
 #ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
 // VK_EXT_descriptor_heap (not exported by most Vulkan loaders; resolve like dynamic rendering)
 static PFN_vkCmdPushDataEXT         ImGuiImplVulkanFuncs_vkCmdPushDataEXT = nullptr;
+
+// Convert GPU descriptor handle (device address) back to a heap index for PushData.
+static uint32_t ImGui_ImplVulkan_DescriptorHeapIndexFromTexID(const ImGui_ImplVulkan_DescriptorHeapInfo* info, ImTextureID tex_id)
+{
+    IM_ASSERT(tex_id != ImTextureID_Invalid);
+    IM_ASSERT(info->ResourceHeapAddress != 0 && info->ImageDescriptorSize != 0);
+    const VkDeviceAddress addr = (VkDeviceAddress)(ImU64)tex_id;
+    IM_ASSERT(addr >= info->ResourceHeapAddress);
+    IM_ASSERT(((addr - info->ResourceHeapAddress) % info->ImageDescriptorSize) == 0);
+    return (uint32_t)((addr - info->ResourceHeapAddress) / info->ImageDescriptorSize);
+}
 #endif
 
 // Reusable buffers used for rendering 1 current in-flight frame, for ImGui_ImplVulkan_RenderDrawData()
@@ -273,7 +284,7 @@ struct ImGui_ImplVulkan_Texture
     VkImage                     Image;
     VkImageView                 ImageView;
     VkDescriptorSet             DescriptorSet;
-    uint32_t                    DescriptorHeapIndex;
+    uint64_t                    DescriptorHeapGpuHandle; // Device address into resource heap (== ImTextureID in heap mode)
 
     ImGui_ImplVulkan_Texture() { memset((void*)this, 0, sizeof(*this)); }
 };
@@ -823,11 +834,8 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
 #ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
                     if (v->DescriptorHeapInfo)
                     {
-                        // Heap-mode TexIDs are tagged (index | 0x80000000). Use ImU64 for bit ops (ImTextureID may be redefined; default is ImU64).
-                        // Push a uint32_t index (not &image_id) so size=4 is endian-safe.
-                        const ImU64 tex_id_u64 = (ImU64)image_id;
-                        IM_ASSERT((tex_id_u64 & 0x80000000ull) != 0 && "ImTextureID is not a descriptor-heap index (do not use ImGui_ImplVulkan_AddTexture when DescriptorHeapInfo is set; use DescriptorHeapInfo::RegisterImage and tag with 0x80000000)");
-                        uint32_t heap_index = (uint32_t)(tex_id_u64 & 0x7FFFFFFFull);
+                        // ImTextureID is a GPU descriptor device address.
+                        uint32_t heap_index = ImGui_ImplVulkan_DescriptorHeapIndexFromTexID(v->DescriptorHeapInfo, image_id);
                         VkPushDataInfoEXT push{};
                         push.sType = VK_STRUCTURE_TYPE_PUSH_DATA_INFO_EXT;
                         push.data.address = &heap_index;
@@ -867,15 +875,18 @@ static void ImGui_ImplVulkan_DestroyTexture(ImTextureData* tex)
 {
     if (ImGui_ImplVulkan_Texture* backend_tex = (ImGui_ImplVulkan_Texture*)tex->BackendUserData)
     {
-        IM_ASSERT(backend_tex->DescriptorSet == (VkDescriptorSet)tex->TexID ||
-                  backend_tex->DescriptorHeapIndex == (uint32_t)((ImU64)tex->TexID & 0x7FFFFFFFull));
+        IM_ASSERT(backend_tex->DescriptorSet == (VkDescriptorSet)tex->TexID
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
+                  || backend_tex->DescriptorHeapGpuHandle == (uint64_t)(ImU64)tex->TexID
+#endif
+        );
         ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
         ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
         if (backend_tex->DescriptorSet != VK_NULL_HANDLE)
             ImGui_ImplVulkan_RemoveTexture(backend_tex->DescriptorSet);
 #ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
         else if (v->DescriptorHeapInfo)
-            v->DescriptorHeapInfo->UnRegisterImage(v->DescriptorHeapInfo->UserContext, backend_tex->DescriptorHeapIndex);
+            v->DescriptorHeapInfo->UnRegisterImage(v->DescriptorHeapInfo->UserContext, backend_tex->DescriptorHeapGpuHandle);
 #endif
         if (backend_tex->ImageView != VK_NULL_HANDLE)
             vkDestroyImageView(v->Device, backend_tex->ImageView, v->Allocator);
@@ -947,10 +958,10 @@ void ImGui_ImplVulkan_UpdateTexture(ImTextureData* tex)
 #ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
         if (v->DescriptorHeapInfo)
         {
-            backend_tex->DescriptorHeapIndex =
+            backend_tex->DescriptorHeapGpuHandle =
                 v->DescriptorHeapInfo->RegisterImage(v->DescriptorHeapInfo->UserContext, &info);
-            // Store identifiers (ImU64 cast so tagging works if ImTextureID is customized)
-            tex->SetTexID((ImTextureID)(ImU64)(backend_tex->DescriptorHeapIndex | 0x80000000u));
+            IM_ASSERT(backend_tex->DescriptorHeapGpuHandle != 0 && "RegisterImage must return a non-zero device address");
+            tex->SetTexID((ImTextureID)backend_tex->DescriptorHeapGpuHandle);
         }
         else
 #endif
@@ -1602,6 +1613,10 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info)
         ImGuiImplVulkanFuncs_vkCmdPushDataEXT = reinterpret_cast<PFN_vkCmdPushDataEXT>(vkGetDeviceProcAddr(info->Device, "vkCmdPushDataEXT"));
 #endif
         IM_ASSERT(ImGuiImplVulkanFuncs_vkCmdPushDataEXT != nullptr && "vkCmdPushDataEXT not available (enable VK_EXT_descriptor_heap)");
+        IM_ASSERT(sizeof(ImTextureID) >= sizeof(VkDeviceAddress) && "Descriptor heap mode needs 64-bit ImTextureID");
+        IM_ASSERT(info->DescriptorHeapInfo->ResourceHeapAddress != 0 && info->DescriptorHeapInfo->ImageDescriptorSize != 0);
+        IM_ASSERT(info->DescriptorHeapInfo->RegisterImage != nullptr && info->DescriptorHeapInfo->UnRegisterImage != nullptr);
+        IM_ASSERT(info->DescriptorHeapInfo->RegisterSampler != nullptr && info->DescriptorHeapInfo->UnRegisterSampler != nullptr);
     }
 #endif
 
@@ -1696,7 +1711,7 @@ VkDescriptorSet ImGui_ImplVulkan_AddTexture(VkImageView image_view, VkImageLayou
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
     ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
 #ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
-    IM_ASSERT(v->DescriptorHeapInfo == nullptr && "ImGui_ImplVulkan_AddTexture() is unavailable when using DescriptorHeapInfo; use DescriptorHeapInfo::RegisterImage and set ImTextureID to (index | 0x80000000)");
+    IM_ASSERT(v->DescriptorHeapInfo == nullptr && "ImGui_ImplVulkan_AddTexture() is unavailable when using DescriptorHeapInfo; use DescriptorHeapInfo::RegisterImage");
 #endif
     VkDescriptorPool pool = bd->DescriptorPool ? bd->DescriptorPool : v->DescriptorPool;
 

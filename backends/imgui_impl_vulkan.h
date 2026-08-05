@@ -97,13 +97,22 @@ struct ImGui_ImplVulkan_PipelineInfo
 };
 
 #ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
+// App owns heap slots. ImTextureID is the descriptor's device address in the resource heap (like D3D12_GPU_DESCRIPTOR_HANDLE.ptr).
+// Backend converts to a heap index for vkCmdPushDataEXT via (tex_id - ResourceHeapAddress) / ImageDescriptorSize.
+// Requires a 64-bit ImTextureID (Dear ImGui default since 1.91.4). Do not redefine ImTextureID to a 32-bit type.
 struct ImGui_ImplVulkan_DescriptorHeapInfo
 {
-    uint32_t (*RegisterSampler)(void *, const VkSamplerCreateInfo *);
-    void (*UnRegisterSampler)(void *, uint32_t);
-    uint32_t (*RegisterImage)(void *, const VkImageViewCreateInfo *);
-    void (*UnRegisterImage)(void *, uint32_t);
-    void *UserContext;
+    VkDeviceAddress ResourceHeapAddress;    // Bound resource heap base (vkGetBufferDeviceAddress of heap buffer)
+    VkDeviceSize    ImageDescriptorSize;    // imageDescriptorSize from VkPhysicalDeviceDescriptorHeapPropertiesEXT
+
+    // RegisterImage returns GPU descriptor handle (device address / VkDeviceAddress). UnRegisterImage takes that same handle.
+    // Returned value is stored as ImTextureID; needs sizeof(ImTextureID) >= 8.
+    uint64_t (*RegisterImage)(void*, const VkImageViewCreateInfo*);
+    void     (*UnRegisterImage)(void*, uint64_t);
+    // Samplers are not ImTextureIDs; indices are fine (including 0).
+    uint32_t (*RegisterSampler)(void*, const VkSamplerCreateInfo*);
+    void     (*UnRegisterSampler)(void*, uint32_t);
+    void*    UserContext;
 };
 #endif
 
@@ -117,9 +126,10 @@ struct ImGui_ImplVulkan_DescriptorHeapInfo
 //   - When using dynamic rendering, set UseDynamicRendering=true + fill PipelineInfoMain.PipelineRenderingCreateInfo structure.
 // - About descriptor heap (requires VK_EXT_descriptor_heap in your Vulkan headers → IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP):
 //   - When using descriptor heaps, set DescriptorHeapInfo and leave DescriptorPool / DescriptorPoolSize unset.
-//   - Like DX12's SrvDescriptorAllocFn/FreeFn: the application owns heap allocation via Register*/UnRegister* callbacks.
-//   - ImGui_ImplVulkan_AddTexture()/RemoveTexture() are unavailable in this mode (pool path only).
-//   - User textures: call RegisterImage yourself and use ImTextureID = (heap_index | 0x80000000); free with UnRegisterImage.
+//   - The application owns heap slots via Register*/UnRegister* callbacks.
+//   - ImTextureID is the GPU descriptor device address returned by RegisterImage.
+//     Requires a 64-bit ImTextureID.
+//   - ImGui_ImplVulkan_AddTexture()/RemoveTexture() are pool-path only.
 struct ImGui_ImplVulkan_InitInfo
 {
     uint32_t                        ApiVersion;                 // Fill with API version of Instance, e.g. VK_API_VERSION_1_3 or your value of VkApplicationInfo::apiVersion. May be lower than header version (VK_HEADER_VERSION_COMPLETE)
@@ -158,7 +168,7 @@ struct ImGui_ImplVulkan_InitInfo
 
 #ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
     // (Optional) If set, use VK_EXT_descriptor_heap (app-owned Register*/UnRegister* callbacks; see comment above).
-    // ImTextureID must be (RegisterImage() index | 0x80000000). ImGui_ImplVulkan_AddTexture() is unavailable in this mode.
+    // ImTextureID = RegisterImage(...) device address. ImGui_ImplVulkan_AddTexture() is unavailable in this mode.
     const ImGui_ImplVulkan_DescriptorHeapInfo *DescriptorHeapInfo;
 #endif
 };
@@ -180,7 +190,7 @@ IMGUI_IMPL_API void             ImGui_ImplVulkan_UpdateTexture(ImTextureData* te
 
 // Register a texture (VkDescriptorSet for a VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE == ImTextureID)
 // - Pool path only. Not available when InitInfo::DescriptorHeapInfo is set (asserts).
-// - Heap mode: use DescriptorHeapInfo::RegisterImage / UnRegisterImage and ImTextureID = (heap_index | 0x80000000).
+// - Heap mode: ImTextureID = DescriptorHeapInfo::RegisterImage(...) device address; free with UnRegisterImage.
 IMGUI_IMPL_API VkDescriptorSet  ImGui_ImplVulkan_AddTexture(VkImageView image_view, VkImageLayout image_layout);
 IMGUI_IMPL_API void             ImGui_ImplVulkan_RemoveTexture(VkDescriptorSet descriptor_set);
 

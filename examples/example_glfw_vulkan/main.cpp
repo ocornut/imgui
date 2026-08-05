@@ -146,8 +146,8 @@ struct ExampleDescriptorHeapAllocator
         BindInfo.reservedRangeSize = reserved_range;
 
         FreeIndices.reserve(capacity);
-        for (int n = capacity; n > 0; n--)
-            FreeIndices.push_back(n - 1);
+        for (int n = capacity - 1; n >= 0; n--)
+            FreeIndices.push_back(n);
     }
     void Destroy(VkDevice device, const VkAllocationCallbacks* allocator)
     {
@@ -169,6 +169,16 @@ struct ExampleDescriptorHeapAllocator
     void Free(int idx)
     {
         FreeIndices.push_back(idx);
+    }
+    VkDeviceAddress GpuHandleFromIndex(int idx) const
+    {
+        return BindInfo.heapRange.address + (VkDeviceAddress)idx * (VkDeviceAddress)Stride;
+    }
+    int IndexFromGpuHandle(VkDeviceAddress gpu_handle) const
+    {
+        IM_ASSERT(gpu_handle >= BindInfo.heapRange.address);
+        IM_ASSERT(((gpu_handle - BindInfo.heapRange.address) % Stride) == 0);
+        return (int)((gpu_handle - BindInfo.heapRange.address) / Stride);
     }
     VkHostAddressRangeEXT DescriptorAddress(int idx) const
     {
@@ -417,8 +427,12 @@ static void SetupVulkan(ImVector<const char*> instance_extensions, bool require_
             descriptor_heap_properties.minSamplerHeapReservedRange, APP_SAMPLER_HEAP_SIZE, g_Allocator);
 
         // Allocating descriptors is up to the application, so we provide callbacks (same idea as DX12 SrvDescriptorAllocFn/FreeFn).
+        // ImTextureID = GPU descriptor device address (like D3D12_GPU_DESCRIPTOR_HANDLE.ptr); slot 0 is usable.
+        g_DescriptorHeapInfo = {};
+        g_DescriptorHeapInfo.ResourceHeapAddress = g_ResourceHeapAlloc.BindInfo.heapRange.address;
+        g_DescriptorHeapInfo.ImageDescriptorSize = g_ResourceHeapAlloc.Stride;
         g_DescriptorHeapInfo.UserContext = nullptr;
-        g_DescriptorHeapInfo.RegisterImage = [](void*, const VkImageViewCreateInfo* ci) -> uint32_t {
+        g_DescriptorHeapInfo.RegisterImage = [](void*, const VkImageViewCreateInfo* ci) -> uint64_t {
             int idx = g_ResourceHeapAlloc.Alloc();
             VkImageDescriptorInfoEXT image = {};
             image.sType = VK_STRUCTURE_TYPE_IMAGE_DESCRIPTOR_INFO_EXT;
@@ -430,9 +444,11 @@ static void SetupVulkan(ImVector<const char*> instance_extensions, bool require_
             resource.data.pImage = &image;
             VkHostAddressRangeEXT addr = g_ResourceHeapAlloc.DescriptorAddress(idx);
             check_vk_result(g_DescHeapFns.vkWriteResourceDescriptorsEXT(g_Device, 1, &resource, &addr));
-            return (uint32_t)idx;
+            return (uint64_t)g_ResourceHeapAlloc.GpuHandleFromIndex(idx);
         };
-        g_DescriptorHeapInfo.UnRegisterImage = [](void*, uint32_t idx) { g_ResourceHeapAlloc.Free((int)idx); };
+        g_DescriptorHeapInfo.UnRegisterImage = [](void*, uint64_t gpu_handle) {
+            g_ResourceHeapAlloc.Free(g_ResourceHeapAlloc.IndexFromGpuHandle((VkDeviceAddress)gpu_handle));
+        };
         g_DescriptorHeapInfo.RegisterSampler = [](void*, const VkSamplerCreateInfo* ci) -> uint32_t {
             int idx = g_SamplerHeapAlloc.Alloc();
             VkHostAddressRangeEXT addr = g_SamplerHeapAlloc.DescriptorAddress(idx);
