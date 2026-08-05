@@ -17429,10 +17429,10 @@ ImGuiViewportP* ImGui::AddUpdateViewport(ImGuiWindow* window, ImGuiID id, const 
     viewport->UpdateWorkRect();
     IM_ASSERT(window == NULL || viewport->ID == window->ID);
 
-    // Initialize FramebufferScale for new viewports, before UpdatePlatformWindows() -> Platform_GetWindowFramebufferScale() has a chance to run.
+    // Initialize FramebufferScale for main viewport and new viewports, before UpdatePlatformWindows() -> Platform_GetWindowFramebufferScale() has a chance to run.
     // FIXME: New viewport on monitors with a different scale will run for a frame with wrong scale? (#9502)
     // A workaround could be to cache last known FramebufferScale per monitor, so the heuristic can pull it from monitor.
-    if (viewport->FramebufferScale.x <= 0.0f || viewport->FramebufferScale.y <= 0.0f)
+    if (viewport->FramebufferScale.x <= 0.0f || viewport->FramebufferScale.y <= 0.0f || viewport->ID == IMGUI_VIEWPORT_DEFAULT_ID)
         viewport->FramebufferScale = g.IO.DisplayFramebufferScale;
 
     if (window != NULL)
