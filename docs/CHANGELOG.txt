@@ -255,6 +255,8 @@ Other Changes:
       round corners in font atlas.
     - Added `ImDrawFlags_UseTexForRoundCorners` flag to enable in scope or per-shape.
       Added for consistency and debugging, not really needed in practice.
+  - AddCircle, AddCircleFilled: fixed large circles being under-tessellated
+    (when above ~140 with default CircleTessellationMaxError).
   - Improved debug-build performance in various locations.
   - Improved minor mismatches when overlapping strokes and filled shapes.
     For example, when using inside strokes,
