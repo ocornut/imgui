@@ -179,18 +179,18 @@ Other Changes:
       slower and increases vertex/index data we decided to not enable it by default.
       This keeps situations such as "throw tens of thousands of lines at ImDrawList"
       optimal. You can opt-in for a given shape or in a scope using `PushDrawFlag()`.
-  - Added `ImDrawFlags_MiterOnly` flag to disable using beveled corner.
+  - Added `ImDrawFlags_JoinMiter` flag to disable using beveled corner.
     - Closer to legacy rendering and slightly faster, but corners sharper than
       90 degrees may expand far out.
     - Automatically used by AddRect(), AddCircle(), AddNgon(), AddEllipse() functions
       since we know that the input path does not contain sharper corners.
-  - Added `ImDrawFlags_SquareCap` flag to extend lines ends using square caps. (#9360)
+  - Added `ImDrawFlags_CapSquare` flag to extend lines ends using square caps. (#9360)
   - AddConvexPolyFilled()/PathFillConvex(): improved to handle input geometry more robustly.
     The rendering of sharp corners was improved. Earlier there were issues with sharp corners
     either creating long spikes, or messing up the adjacent edge's anti-aliasing. Now the
     anti-aliasing fringe calculation is more consistent, and sharp corners get bevelled to
     avoid spikes. There might still be issues when the smallest extent of a long thin polygon
-    is less than a pixel. Also supports `ImDrawFlags_MiterOnly`, to facilitate matching
+    is less than a pixel. Also supports `ImDrawFlags_JoinMiter`, to facilitate matching
     a stroke using the same flag.
   - AddRect(), AddRectFilled(): various optimizations for rounded rectangles. (#1962)
     - Integer-aligned coordinates and thicknesses will automatically use baked textures,
