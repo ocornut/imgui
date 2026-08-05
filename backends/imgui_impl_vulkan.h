@@ -117,6 +117,9 @@ struct ImGui_ImplVulkan_DescriptorHeapInfo
 //   - When using dynamic rendering, set UseDynamicRendering=true + fill PipelineInfoMain.PipelineRenderingCreateInfo structure.
 // - About descriptor heap (requires VK_EXT_descriptor_heap in your Vulkan headers → IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP):
 //   - When using descriptor heaps, set DescriptorHeapInfo and leave DescriptorPool / DescriptorPoolSize unset.
+//   - Like DX12's SrvDescriptorAllocFn/FreeFn: the application owns heap allocation via Register*/UnRegister* callbacks.
+//   - ImGui_ImplVulkan_AddTexture()/RemoveTexture() are unavailable in this mode (pool path only).
+//   - User textures: call RegisterImage yourself and use ImTextureID = (heap_index | 0x80000000); free with UnRegisterImage.
 struct ImGui_ImplVulkan_InitInfo
 {
     uint32_t                        ApiVersion;                 // Fill with API version of Instance, e.g. VK_API_VERSION_1_3 or your value of VkApplicationInfo::apiVersion. May be lower than header version (VK_HEADER_VERSION_COMPLETE)
@@ -154,7 +157,7 @@ struct ImGui_ImplVulkan_InitInfo
     VkShaderModuleCreateInfo        CustomShaderFragCreateInfo;
 
 #ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
-    // (Optional) If set, use VK_EXT_descriptor_heap.
+    // (Optional) If set, use VK_EXT_descriptor_heap (app-owned Register*/UnRegister* callbacks; see comment above).
     // ImTextureID must be (RegisterImage() index | 0x80000000). ImGui_ImplVulkan_AddTexture() is unavailable in this mode.
     const ImGui_ImplVulkan_DescriptorHeapInfo *DescriptorHeapInfo;
 #endif
@@ -176,13 +179,10 @@ IMGUI_IMPL_API void             ImGui_ImplVulkan_CreateMainPipeline(const ImGui_
 IMGUI_IMPL_API void             ImGui_ImplVulkan_UpdateTexture(ImTextureData* tex);
 
 // Register a texture (VkDescriptorSet for a VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE == ImTextureID)
-// - Not available when InitInfo::DescriptorHeapInfo is set (asserts). In heap mode register via DescriptorHeapInfo::RegisterImage
-//   and use ImTextureID = (heap_index | 0x80000000).
+// - Pool path only. Not available when InitInfo::DescriptorHeapInfo is set (asserts).
+// - Heap mode: use DescriptorHeapInfo::RegisterImage / UnRegisterImage and ImTextureID = (heap_index | 0x80000000).
 IMGUI_IMPL_API VkDescriptorSet  ImGui_ImplVulkan_AddTexture(VkImageView image_view, VkImageLayout image_layout);
 IMGUI_IMPL_API void             ImGui_ImplVulkan_RemoveTexture(VkDescriptorSet descriptor_set);
-#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
-IMGUI_IMPL_API void             ImGui_ImplVulkan_RemoveHeapTexture(uint32_t id);
-#endif
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 IMGUI_IMPL_API VkDescriptorSet  ImGui_ImplVulkan_AddTexture(VkSampler sampler, VkImageView image_view, VkImageLayout image_layout); // Ignore VkSampler
