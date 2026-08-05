@@ -2720,7 +2720,7 @@ void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int nu
         return;
     }
 
-    if (num_segments <= 0)
+    if (num_segments <= 0 && outer_radius <= _Data->ArcFastRadiusCutoff)
     {
         // Use arc with automatic segment count
         const int a_step = IM_DRAWLIST_ARCFAST_SAMPLE_MAX / _CalcCircleAutoSegmentCount(outer_radius); // Use outer_radius for segment count to be consistent with rounded rect.
@@ -2729,7 +2729,9 @@ void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int nu
     }
     else
     {
-        // Explicit segment count (still clamp to avoid drawing insanely tessellated shapes)
+        // Explicit segment count or above fast arc cutoff (still clamp to avoid drawing insanely tessellated shapes)
+        if (num_segments <= 0)
+            num_segments = _CalcCircleAutoSegmentCount(outer_radius);
         num_segments = ImClamp(num_segments, 3, IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_MAX);
 
         // Because we are filling a closed shape we remove 1 from the count of segments/points
@@ -2762,7 +2764,7 @@ void ImDrawList::AddCircleFilled(const ImVec2& center, float radius, ImU32 col, 
         radius = _FringeScale * 0.5f;
     }
 
-    if (num_segments <= 0)
+    if (num_segments <= 0 && radius <= _Data->ArcFastRadiusCutoff)
     {
         // Use arc with automatic segment count
         _PathArcToFastEx(center, radius, 0, IM_DRAWLIST_ARCFAST_SAMPLE_MAX, 0);
@@ -2770,7 +2772,9 @@ void ImDrawList::AddCircleFilled(const ImVec2& center, float radius, ImU32 col, 
     }
     else
     {
-        // Explicit segment count (still clamp to avoid drawing insanely tessellated shapes)
+        // Explicit segment count or above cutoff (still clamp to avoid drawing insanely tessellated shapes)
+        if (num_segments <= 0)
+            num_segments = _CalcCircleAutoSegmentCount(radius);
         num_segments = ImClamp(num_segments, 3, IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_MAX);
 
         // Because we are filling a closed shape we remove 1 from the count of segments/points
