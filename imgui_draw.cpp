@@ -1013,10 +1013,10 @@ void ImDrawList::_AddPolyline(const ImVec2* points, const int points_count, ImU3
 
     const ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeCenter);
     if (stroke_pos == ImDrawFlags_StrokeLegacy)
-        flags = (flags | ImDrawFlags_MiterOnly) & ~ImDrawFlags_AALineEnds;
+        flags = (flags | ImDrawFlags_JoinMiter) & ~ImDrawFlags_AALineEnds;
 
     const bool closed = (flags & ImDrawFlags_Closed) != 0;
-    const bool miters_only = (flags & ImDrawFlags_MiterOnly) != 0;
+    const bool miters_only = (flags & ImDrawFlags_JoinMiter) != 0;
     const float miter_distance_limit_sqr = IM_POLYLINE_MITER_LIMIT * IM_POLYLINE_MITER_LIMIT;
 
     float thickness0 = (thickness + fringe) * 0.5f; // Center (or legacy)
@@ -1082,7 +1082,7 @@ void ImDrawList::_AddPolyline(const ImVec2* points, const int points_count, ImU3
 
         dir.x = n1.y;
         dir.y = -n1.x;
-        if (flags & ImDrawFlags_SquareCap)
+        if (flags & ImDrawFlags_CapSquare)
         {
             p1.x -= dir.x * half_thickness;
             p1.y -= dir.y * half_thickness;
@@ -1268,7 +1268,7 @@ void ImDrawList::_AddPolyline(const ImVec2* points, const int points_count, ImU3
         // End cap
         dir.x = n1.y;
         dir.y = -n1.x;
-        if (flags & ImDrawFlags_SquareCap)
+        if (flags & ImDrawFlags_CapSquare)
         {
             p1.x += dir.x * half_thickness;
             p1.y += dir.y * half_thickness;
@@ -1336,7 +1336,7 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
     {
         const float half_aa = _FringeScale * 0.5f;
         ImU32 col_trans = col & ~IM_COL32_A_MASK;
-        const bool miters_only = (flags & ImDrawFlags_MiterOnly) != 0;
+        const bool miters_only = (flags & ImDrawFlags_JoinMiter) != 0;
         const float miter_distance_limit_sqr = IM_POLYLINE_MITER_LIMIT * IM_POLYLINE_MITER_LIMIT;
 
         const int idx_count = ((points_count - 2) + points_count * 2 + IM_POLYLINE_CONVEX_POLY_MAX_BEVELS) * 3;
@@ -1891,7 +1891,7 @@ void ImDrawList::_AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float t
 
     const ImDrawFlags stroke_pos = _GetStrokePos(flags, ImDrawFlags_StrokeCenter);
     if (stroke_pos == ImDrawFlags_StrokeLegacy)
-        flags = (flags | ImDrawFlags_MiterOnly) & ~ImDrawFlags_AALineEnds;
+        flags = (flags | ImDrawFlags_JoinMiter) & ~ImDrawFlags_AALineEnds;
 
     float thickness0 = (thickness + fringe) * 0.5f; // Center (or legacy)
     if (stroke_pos == ImDrawFlags_StrokeOutside)
@@ -1920,7 +1920,7 @@ void ImDrawList::_AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float t
     float p1_y = p1.y;
     float p2_x = p2.x;
     float p2_y = p2.y;
-    if (flags & ImDrawFlags_SquareCap)
+    if (flags & ImDrawFlags_CapSquare)
     {
         p1_x -= dir_x * half_thickness;
         p1_y -= dir_y * half_thickness;
@@ -2025,7 +2025,7 @@ void ImDrawList::AddLineH(float min_x, float max_x, float y, ImU32 col, float th
         top_y -= thickness;
 
     const bool is_truncated = IM_IS_TRUNCATED4(min_x, max_x, top_y, thickness);
-    if (_FringeScaleIsInteger && is_truncated && (flags & ImDrawFlags_SquareCap) == 0)
+    if (_FringeScaleIsInteger && is_truncated && (flags & ImDrawFlags_CapSquare) == 0)
     {
         if (thickness < _FringeScale) IM_UNLIKELY
         {
@@ -2071,7 +2071,7 @@ void ImDrawList::AddLineV(float x, float min_y, float max_y, ImU32 col, float th
         left_x -= thickness;
 
     const bool is_truncated = IM_IS_TRUNCATED4(left_x, min_y, max_y, thickness);
-    if (_FringeScaleIsInteger && is_truncated && (flags & ImDrawFlags_SquareCap) == 0)
+    if (_FringeScaleIsInteger && is_truncated && (flags & ImDrawFlags_CapSquare) == 0)
     {
         if (thickness < _FringeScale) IM_UNLIKELY
         {
@@ -2352,7 +2352,7 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
             PathRect(ImVec2(p_min.x + 0.50f, p_min.y + 0.50f), ImVec2(p_max.x - 0.50f, p_max.y - 0.50f), rounding, flags);
         else
             PathRect(ImVec2(p_min.x + 0.50f, p_min.y + 0.50f), ImVec2(p_max.x - 0.49f, p_max.y - 0.49f), rounding, flags); // Better looking lower-right corner and rounded non-AA shapes.
-        PathStroke(col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | ImDrawFlags_StrokeCenter | (flags & ~ImDrawFlags_StrokeMask_));
+        PathStroke(col, thickness, ImDrawFlags_Closed | ImDrawFlags_JoinMiter | ImDrawFlags_StrokeCenter | (flags & ~ImDrawFlags_StrokeMask_));
         return;
     }
 
@@ -2452,7 +2452,7 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
     if (!has_rounding || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
     {
         const ImVec2 points[4] = { outer_min, ImVec2(outer_max.x, outer_min.y), outer_max, ImVec2(outer_min.x, outer_max.y) };
-        _AddPolyline(points, 4, col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | ImDrawFlags_StrokeInside, half_min_dim);
+        _AddPolyline(points, 4, col, thickness, ImDrawFlags_Closed | ImDrawFlags_JoinMiter | ImDrawFlags_StrokeInside, half_min_dim);
         _Path.Size = 0;
     }
     else
@@ -2474,7 +2474,7 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
         PathArcToFast(ImVec2(outer_max.x - rounding_br, outer_max.y - rounding_br), rounding_br, 0, 3);
         PathArcToFast(ImVec2(outer_min.x + rounding_bl, outer_max.y - rounding_bl), rounding_bl, 3, 6);
 
-        _AddPolyline(_Path.Data, _Path.Size, col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | ImDrawFlags_StrokeInside | (flags & ~ImDrawFlags_StrokeMask_), half_min_dim);
+        _AddPolyline(_Path.Data, _Path.Size, col, thickness, ImDrawFlags_Closed | ImDrawFlags_JoinMiter | ImDrawFlags_StrokeInside | (flags & ~ImDrawFlags_StrokeMask_), half_min_dim);
         _Path.Size = 0;
     }
 }
@@ -2553,7 +2553,7 @@ void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
             height = _FringeScale;
         }
         const ImVec2 points[4] = { p_min, ImVec2(p_min.x + width, p_min.y), ImVec2(p_min.x + width, p_min.y + height), ImVec2(p_min.x, p_min.y + height) };
-        AddConvexPolyFilled(points, 4, col, ImDrawFlags_MiterOnly);
+        AddConvexPolyFilled(points, 4, col, ImDrawFlags_JoinMiter);
         return;
     }
 
@@ -2605,12 +2605,12 @@ void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
     if (!has_rounding)
     {
         const ImVec2 points[4] = { p_min, ImVec2(p_max.x, p_min.y), p_max, ImVec2(p_min.x, p_max.y) };
-        AddConvexPolyFilled(points, 4, col, ImDrawFlags_MiterOnly);
+        AddConvexPolyFilled(points, 4, col, ImDrawFlags_JoinMiter);
     }
     else
     {
         PathRect(p_min, p_max, rounding, flags);
-        PathFillConvex(col, ImDrawFlags_MiterOnly);
+        PathFillConvex(col, ImDrawFlags_JoinMiter);
     }
 }
 
@@ -2740,7 +2740,7 @@ void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int nu
     // This will be used by _AddPolyline() to clamp the inner stroke expansion, to avoid creating rendering artifacts.
     const float unit_apothem = ApproxApothem(_Path.Size);
     const float edge_dist = radius * unit_apothem;
-    _AddPolyline(_Path.Data, _Path.Size, col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | stroke_pos, edge_dist);
+    _AddPolyline(_Path.Data, _Path.Size, col, thickness, ImDrawFlags_Closed | ImDrawFlags_JoinMiter | stroke_pos, edge_dist);
     _Path.Size = 0;
 }
 
@@ -2776,7 +2776,7 @@ void ImDrawList::AddCircleFilled(const ImVec2& center, float radius, ImU32 col, 
         PathArcTo(center, radius, 0.0f, a_max, num_segments - 1);
     }
 
-    PathFillConvex(col, ImDrawFlags_MiterOnly);
+    PathFillConvex(col, ImDrawFlags_JoinMiter);
 }
 
 // Guaranteed to honor 'num_segments'
@@ -2822,7 +2822,7 @@ void ImDrawList::AddNgon(const ImVec2& center, float radius, ImU32 col, int num_
      // Because we are filling a closed shape we remove 1 from the count of segments/points
     const float a_max = (IM_PI * 2.0f) * ((float)num_segments - 1.0f) / (float)num_segments;
     PathArcTo(center, radius, 0.0f, a_max, num_segments - 1);
-    _AddPolyline(_Path.Data, _Path.Size, col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | stroke_pos, edge_dist);
+    _AddPolyline(_Path.Data, _Path.Size, col, thickness, ImDrawFlags_Closed | ImDrawFlags_JoinMiter | stroke_pos, edge_dist);
     _Path.Size = 0;
 }
 
@@ -2844,7 +2844,7 @@ void ImDrawList::AddNgonFilled(const ImVec2& center, float radius, ImU32 col, in
     // Because we are filling a closed shape we remove 1 from the count of segments/points
     const float a_max = (IM_PI * 2.0f) * ((float)num_segments - 1.0f) / (float)num_segments;
     PathArcTo(center, radius, 0.0f, a_max, num_segments - 1);
-    PathFillConvex(col, ImDrawFlags_MiterOnly);
+    PathFillConvex(col, ImDrawFlags_JoinMiter);
 }
 
 // Ellipse
@@ -2872,7 +2872,7 @@ void ImDrawList::AddEllipse(const ImVec2& center, const ImVec2& radius, ImU32 co
 
     // Prevent the inside part of the stroke to be expanded too much to prevent some rendering artifacts.
     const float max_inner_offset = ImMin(rad.x, rad.y);
-    _AddPolyline(_Path.Data, _Path.Size, col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | stroke_pos, max_inner_offset);
+    _AddPolyline(_Path.Data, _Path.Size, col, thickness, ImDrawFlags_Closed | ImDrawFlags_JoinMiter | stroke_pos, max_inner_offset);
     _Path.Size = 0;
 }
 
@@ -3019,7 +3019,7 @@ void ImDrawList::AddImageRounded(ImTextureRef tex_ref, const ImVec2& p_min, cons
 
     int vert_start_idx = VtxBuffer.Size;
     PathRect(p_min, p_max, rounding, flags);
-    PathFillConvex(col, ImDrawFlags_MiterOnly);
+    PathFillConvex(col, ImDrawFlags_JoinMiter);
     int vert_end_idx = VtxBuffer.Size;
     ImGui::ShadeVertsLinearUV(this, vert_start_idx, vert_end_idx, p_min, p_max, uv_min, uv_max, true);
 
@@ -7642,7 +7642,7 @@ void ImGui::RenderRectFilledInRangeH(ImDrawList* draw_list, const ImRect& rect, 
             draw_list->PathArcTo(ImVec2(x1, p1.y - rounding), rounding, +arc1_b, +arc1_e); // BR
         }
     }
-    draw_list->PathFillConvex(col, ImDrawFlags_MiterOnly);
+    draw_list->PathFillConvex(col, ImDrawFlags_JoinMiter);
 }
 
 void ImGui::RenderRectFilledWithHole(ImDrawList* draw_list, const ImRect& outer, const ImRect& inner, ImU32 col, float rounding)

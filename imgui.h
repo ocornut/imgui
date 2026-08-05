@@ -3449,8 +3449,8 @@ enum ImDrawFlags_
 
     // Stroke Options ----------------------------- // Prim/Scope?
     ImDrawFlags_Closed                  = 1 << 9,   // OK   --     // PathStroke(), AddPolyline(): specify that shape should be closed.
-    ImDrawFlags_MiterOnly               = 1 << 10,  // OK   --     // PathStroke(), AddPolyline(): use miter corners only. This assumes that the input polyline does not have corners sharper than 90 degrees. Slightly faster.
-    ImDrawFlags_SquareCap               = 1 << 11,  // OK   --     // PathStroke(), AddPolyline(): use square cap line ends.
+    ImDrawFlags_JoinMiter               = 1 << 10,  // OK   --     // PathStroke(), AddPolyline(): use miter joins/corners only. This assumes that the input polyline does not have corners sharper than 90 degrees. Slightly faster.
+    ImDrawFlags_CapSquare               = 1 << 11,  // OK   --     // PathStroke(), AddPolyline(): use square cap line ends.
 
     // About Stroke Ends:
     // - Rendering is optimized for fast pixel-perfect UI, so line ends are not anti-aliased by default. It's cheaper (we can emit less vertices).
@@ -3472,7 +3472,7 @@ enum ImDrawFlags_
     ImDrawFlags_StrokeCenter            = 2 << 17,  // OK   --     // Draw stroke at the center of the shape outline (default for paths, bezier, and AddLine functions)
     ImDrawFlags_StrokeCenterBiased      = 3 << 17,  // OK   --     // Draw stroke at the center of the shape outline, so that half thickness rounded down will be outside, and the rest inside the shape outline. Useful for axis-aligned shapes: AddLineH, AddLineV, AddRect. Does not animate well!
     ImDrawFlags_StrokeOutside           = 4 << 17,  // OK   --     // Draw stroke outside of the shape outline
-    ImDrawFlags_StrokeLegacy            = 7 << 17,  // OK   OK(0)  // Use legacy positioning + enable MiterOnly + disable AALineEnds. Must be all bits set.
+    ImDrawFlags_StrokeLegacy            = 7 << 17,  // OK   OK(0)  // Use legacy positioning + enable JoinMiter + disable AALineEnds. Must be all bits set.
 
     // Other Options ------------------------------ // Prim/Scope?
     ImDrawFlags_TextNoPixelSnap         = 1 << 20,  // OK   OK(0)  // Disable automatically snapping AddText() calls to pixel boundaries.

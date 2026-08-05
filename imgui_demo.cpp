@@ -10472,8 +10472,8 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             ImGui::CheckboxFlags("AAFill", &prim_other_flags, ImDrawFlags_AAFill); ImGui::SameLine(); // Note: Only for functions taking flags.
             ImGui::CheckboxFlags("AALines", &prim_other_flags, ImDrawFlags_AALines); ImGui::SameLine(); // Note: Only for functions taking flags.
             ImGui::CheckboxFlags("AALineEnds", &prim_other_flags, ImDrawFlags_AALineEnds); ImGui::SameLine();
-            ImGui::CheckboxFlags("MiterOnly", &prim_other_flags, ImDrawFlags_MiterOnly); ImGui::SameLine();
-            ImGui::CheckboxFlags("SquareCap", &prim_other_flags, ImDrawFlags_SquareCap);
+            ImGui::CheckboxFlags("JoinMiter", &prim_other_flags, ImDrawFlags_JoinMiter); ImGui::SameLine();
+            ImGui::CheckboxFlags("CapSquare", &prim_other_flags, ImDrawFlags_CapSquare);
             //ImGui::CheckboxFlags("UseTexForRoundCorners", &prim_other_flags, ImDrawFlags_UseTexForRoundCorners);
 
             static ImDrawFlags scope_flags = draw_list->Flags & ImDrawFlags_AllowInPushScope_; // First init copy current state.
