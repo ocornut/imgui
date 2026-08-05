@@ -4817,8 +4817,8 @@ static void SetCurrentWindow(ImGuiWindow* window)
     {
         if (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasTextures)
         {
-            ImGuiViewport* viewport = window->Viewport;
-            g.CurrentPixelDensity = (viewport->FramebufferScale.x != 0.0f) ? viewport->FramebufferScale.x : g.IO.DisplayFramebufferScale.x; // == SetPixelDensity()
+            g.CurrentPixelDensity = window->Viewport->FramebufferScale.x; // == SetPixelDensity()
+            IM_ASSERT(g.CurrentPixelDensity != 0.0f);
         }
         const bool backup_skip_items = window->SkipItems;
         window->SkipItems = false;
@@ -17162,12 +17162,10 @@ static void ImGui::UpdateViewportsNewFrame()
     IM_ASSERT(main_viewport->Window == NULL);
     ImVec2 main_viewport_pos = viewports_enabled ? g.PlatformIO.Platform_GetWindowPos(main_viewport) : ImVec2(0.0f, 0.0f);
     ImVec2 main_viewport_size = g.IO.DisplaySize;
-    ImVec2 main_viewport_framebuffer_scale = g.IO.DisplayFramebufferScale;
     if (viewports_enabled && (main_viewport->Flags & ImGuiViewportFlags_IsMinimized))
     {
         main_viewport_pos = main_viewport->Pos; // Preserve last pos/size when minimized (FIXME: We don't do the same for Size outside of the viewport path)
         main_viewport_size = main_viewport->Size;
-        main_viewport_framebuffer_scale = main_viewport->FramebufferScale;
     }
     AddUpdateViewport(NULL, IMGUI_VIEWPORT_DEFAULT_ID, main_viewport_pos, main_viewport_size, ImGuiViewportFlags_OwnedByApp | ImGuiViewportFlags_CanHostOtherWindows);
 
