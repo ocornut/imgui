@@ -823,11 +823,15 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
 #ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
                     if (v->DescriptorHeapInfo)
                     {
+                        // Heap-mode TexIDs are tagged (index | 0x80000000). Use ImU64 for bit ops (ImTextureID may be redefined; default is ImU64).
+                        // Push a uint32_t index (not &image_id) so size=4 is endian-safe.
+                        const ImU64 tex_id_u64 = (ImU64)image_id;
+                        IM_ASSERT((tex_id_u64 & 0x80000000ull) != 0 && "ImTextureID is not a descriptor-heap index (do not use ImGui_ImplVulkan_AddTexture when DescriptorHeapInfo is set; use RegisterImage and tag with 0x80000000)");
+                        uint32_t heap_index = (uint32_t)(tex_id_u64 & 0x7FFFFFFFull);
                         VkPushDataInfoEXT push{};
                         push.sType = VK_STRUCTURE_TYPE_PUSH_DATA_INFO_EXT;
-                        image_id &= 0x7FFFFFFF;
-                        push.data.address = &image_id;
-                        push.data.size = 4;
+                        push.data.address = &heap_index;
+                        push.data.size = sizeof(heap_index);
                         push.offset = 16;
                         ImGuiImplVulkanFuncs_vkCmdPushDataEXT(command_buffer, &push);
                     }
@@ -864,7 +868,7 @@ static void ImGui_ImplVulkan_DestroyTexture(ImTextureData* tex)
     if (ImGui_ImplVulkan_Texture* backend_tex = (ImGui_ImplVulkan_Texture*)tex->BackendUserData)
     {
         IM_ASSERT(backend_tex->DescriptorSet == (VkDescriptorSet)tex->TexID ||
-                  backend_tex->DescriptorHeapIndex == (tex->TexID & 0x7FFFFFFF));
+                  backend_tex->DescriptorHeapIndex == (uint32_t)((ImU64)tex->TexID & 0x7FFFFFFFull));
         ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
         ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
         if (backend_tex->DescriptorSet != VK_NULL_HANDLE)
@@ -945,8 +949,8 @@ void ImGui_ImplVulkan_UpdateTexture(ImTextureData* tex)
         {
             backend_tex->DescriptorHeapIndex =
                 v->DescriptorHeapInfo->RegisterImage(v->DescriptorHeapInfo->UserContext, &info);
-            // Store identifiers
-            tex->SetTexID((ImTextureID)(backend_tex->DescriptorHeapIndex | 0x80000000));
+            // Store identifiers (ImU64 cast so tagging works if ImTextureID is customized)
+            tex->SetTexID((ImTextureID)(ImU64)(backend_tex->DescriptorHeapIndex | 0x80000000u));
         }
         else
 #endif
@@ -1691,6 +1695,9 @@ VkDescriptorSet ImGui_ImplVulkan_AddTexture(VkImageView image_view, VkImageLayou
 {
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
     ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
+    IM_ASSERT(v->DescriptorHeapInfo == nullptr && "ImGui_ImplVulkan_AddTexture() is unavailable when using DescriptorHeapInfo; register via DescriptorHeapInfo::RegisterImage and set ImTextureID to (index | 0x80000000)");
+#endif
     VkDescriptorPool pool = bd->DescriptorPool ? bd->DescriptorPool : v->DescriptorPool;
 
     // Create Descriptor Set:
