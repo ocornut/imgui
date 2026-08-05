@@ -198,6 +198,8 @@ Other Changes:
   - AddRectFilled(): non-integer coordinates will now display anti-aliased edges.
     Previously, non-integer coordinates rendered with aliased edges snapped by the
     rasterizer. (#6971)
+  - AddCircle, AddCircleFilled: fixed large circles being under-tessellated
+    (when above ~140 with default CircleTessellationMaxError).
   - Improved debug-build performance in various locations.
   - Improved minor mismatches when overlapping strokes and filled shapes.
     For example, when using inside strokes,
