@@ -45,6 +45,10 @@ Breaking Changes:
   favor of `style.CurveTesselationMaxError` (default 1.12)` which is in Pixels unit. It is
   easier to tweak + this allows us to easily scale error threshold on high density screens.
   - style.CurveTesselationMaxError == sqrf(style.CurveTessellationTol).
+- Backends:
+  - DirectX12: Removed support for legacy `ImGui_ImplDX12_Init()` signature, which was
+    obsoleted in 1.91.6 (December 2014), because it needed to forcefully disable support
+    for `ImGuiBackendFlags_RendererHasTextures`. Use the new signature! (#9487)
 
 Other Changes:
 

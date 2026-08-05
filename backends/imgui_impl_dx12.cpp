@@ -20,6 +20,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-08-05: DirectX12: *BREAKING CHANGE* Removed support for legacy `ImGui_ImplDX12_Init()` signature obsoleted in 1.91.6 (2024-11-15) because it needed to forcefully disable support for ImGuiBackendFlags_RendererHasTextures. (#9487)
 //  2026-04-23: Added support for standard draw callbacks (in platform_io): DrawCallback_ResetRenderState, DrawCallback_SetSamplerLinear, DrawCallback_SetSamplerNearest. (#9378)
 //  2025-10-11: DirectX12: Reuse texture upload buffer and grow it only when necessary. (#9002)
 //  2025-09-29: DirectX12: Rework synchronization logic. (#8961)
@@ -955,37 +956,6 @@ bool ImGui_ImplDX12_Init(ImGui_ImplDX12_InitInfo* init_info)
 
     return true;
 }
-
-#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-// Legacy initialization API Obsoleted in 1.91.5
-// font_srv_cpu_desc_handle and font_srv_gpu_desc_handle are handles to a single SRV descriptor to use for the internal font texture, they must be in 'srv_descriptor_heap'
-bool ImGui_ImplDX12_Init(ID3D12Device* device, int num_frames_in_flight, DXGI_FORMAT rtv_format, ID3D12DescriptorHeap* srv_descriptor_heap, D3D12_CPU_DESCRIPTOR_HANDLE font_srv_cpu_desc_handle, D3D12_GPU_DESCRIPTOR_HANDLE font_srv_gpu_desc_handle)
-{
-    ImGui_ImplDX12_InitInfo init_info;
-    init_info.Device = device;
-    init_info.NumFramesInFlight = num_frames_in_flight;
-    init_info.RTVFormat = rtv_format;
-    init_info.SrvDescriptorHeap = srv_descriptor_heap;
-    init_info.LegacySingleSrvCpuDescriptor = font_srv_cpu_desc_handle;
-    init_info.LegacySingleSrvGpuDescriptor = font_srv_gpu_desc_handle;
-
-    D3D12_COMMAND_QUEUE_DESC queueDesc = {};
-    queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-    queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-    queueDesc.NodeMask = 1;
-    HRESULT hr = device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&init_info.CommandQueue));
-    IM_ASSERT(SUCCEEDED(hr));
-
-    bool ret = ImGui_ImplDX12_Init(&init_info);
-    ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
-    bd->commandQueueOwned = true;
-
-    ImGuiIO& io = ImGui::GetIO();
-    io.BackendFlags &= ~ImGuiBackendFlags_RendererHasTextures; // Using legacy ImGui_ImplDX12_Init() call with 1 SRV descriptor we cannot support multiple textures.
-
-    return ret;
-}
-#endif
 
 void ImGui_ImplDX12_Shutdown()
 {
