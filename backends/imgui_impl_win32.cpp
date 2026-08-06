@@ -1421,22 +1421,6 @@ static float ImGui_ImplWin32_GetWindowDpiScale(ImGuiViewport* viewport)
     return ImGui_ImplWin32_GetDpiScaleForHwnd(vd->Hwnd);
 }
 
-// FIXME-DPI: Testing DPI related ideas
-static void ImGui_ImplWin32_OnChangedViewport(ImGuiViewport* viewport)
-{
-    (void)viewport;
-#if 0
-    ImGuiStyle default_style;
-    //default_style.WindowPadding = ImVec2(0, 0);
-    //default_style.WindowBorderSize = 0.0f;
-    //default_style.ItemSpacing.y = 3.0f;
-    //default_style.FramePadding = ImVec2(0, 0);
-    default_style.ScaleAllSizes(viewport->DpiScale);
-    ImGuiStyle& style = ImGui::GetStyle();
-    style = default_style;
-#endif
-}
-
 namespace ImGui { extern ImGuiIO& GetIO(ImGuiContext*); extern ImGuiPlatformIO& GetPlatformIO(ImGuiContext*); }
 
 static LRESULT CALLBACK ImGui_ImplWin32_WndProcHandler_PlatformWindow(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -1518,7 +1502,6 @@ static void ImGui_ImplWin32_InitMultiViewportSupport(bool platform_has_own_dc)
     platform_io.Platform_SetWindowAlpha = ImGui_ImplWin32_SetWindowAlpha;
     platform_io.Platform_UpdateWindow = ImGui_ImplWin32_UpdateWindow;
     platform_io.Platform_GetWindowDpiScale = ImGui_ImplWin32_GetWindowDpiScale; // FIXME-DPI
-    platform_io.Platform_OnChangedViewport = ImGui_ImplWin32_OnChangedViewport; // FIXME-DPI
 
     // Register main window handle (which is owned by the main application, not by us)
     // This is mostly for simplicity and consistency, so that our code (e.g. mouse handling etc.) can use same logic for main and secondary viewports.
