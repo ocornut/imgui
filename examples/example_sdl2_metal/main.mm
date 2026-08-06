@@ -10,34 +10,84 @@
 #include "imgui.h"
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_metal.h"
-#include <stdio.h>
+#include <stdio.h>          // printf, fprintf
 #include <SDL.h>
 
 #import <Metal/Metal.h>
 #import <QuartzCore/QuartzCore.h>
 
+// Main code
 int main(int, char**)
 {
+    // Setup SDL
+    // (Some versions of SDL before <2.0.10 appears to have performance/stalling issues on a minority of Windows systems,
+    // depending on whether SDL_INIT_GAMECONTROLLER is enabled or disabled.. updating to latest version of SDL is recommended!)
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
+    {
+        printf("Error: SDL_Init(): %s\n", SDL_GetError());
+        return 1;
+    }
+
+    // From 2.0.18: Enable native IME.
+#ifdef SDL_HINT_IME_SHOW_UI
+    SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");
+#endif
+
+    // Create SDL window graphics context
+    float main_scale = ImGui_ImplSDL2_GetContentScaleForDisplay(0);
+    int window_flags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI;
+    SDL_Window* window = SDL_CreateWindow("Dear ImGui SDL2+Metal example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, (int)(1280 * main_scale), (int)(800 * main_scale), window_flags);
+    if (window == nullptr)
+    {
+        printf("Error: SDL_CreateWindow(): %s\n", SDL_GetError());
+        return 1;
+    }
+
+    // Create Metal device _before_ creating the view/layer
+    id<MTLDevice> metalDevice = MTLCreateSystemDefaultDevice();
+    if (!metalDevice)
+    {
+        printf("Error: failed to create Metal device.\n");
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return 1;
+    }
+    SDL_MetalView view = SDL_Metal_CreateView(window);
+    CAMetalLayer* layer = (__bridge CAMetalLayer*)SDL_Metal_GetLayer(view);
+    layer.device = metalDevice;
+    layer.pixelFormat = MTLPixelFormatBGRA8Unorm;
+
+    id<MTLCommandQueue> commandQueue = [layer.device newCommandQueue];
+    MTLRenderPassDescriptor* renderPassDescriptor = [MTLRenderPassDescriptor new];
+
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;   // Enable Gamepad Controls
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;      // Enable Docking
-    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;    // Enable Multi-Viewport / Platform Windows
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // Enable Docking
+    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
 
-    // Setup style
+    // Setup Dear ImGui style
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsLight();
 
-    // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
+    // Setup scaling
     ImGuiStyle& style = ImGui::GetStyle();
+    style.ScaleAllSizes(main_scale);        // Bake a fixed style scale. (until we have a solution for dynamic style scaling, changing this requires resetting Style + calling this again)
+    style.FontScaleDpi = main_scale;        // Set initial font scale. (in docking branch: using io.ConfigDpiScaleFonts=true automatically overrides this for every window depending on the current monitor)
+
+    // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
     {
         style.WindowRounding = 0.0f;
         style.Colors[ImGuiCol_WindowBg].w = 1.0f;
     }
+
+    // Setup Platform/Renderer backends
+    ImGui_ImplMetal_Init(layer.device);
+    ImGui_ImplSDL2_InitForMetal(window);
 
     // Load Fonts
     // - If fonts are not explicitly loaded, Dear ImGui will select an embedded font: either AddFontDefaultVector() or AddFontDefaultBitmap().
@@ -57,48 +107,10 @@ int main(int, char**)
     //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf");
     //IM_ASSERT(font != nullptr);
 
-    // Setup SDL
-    // (Some versions of SDL before <2.0.10 appears to have performance/stalling issues on a minority of Windows systems,
-    // depending on whether SDL_INIT_GAMECONTROLLER is enabled or disabled.. updating to latest version of SDL is recommended!)
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
-    {
-        printf("Error: %s\n", SDL_GetError());
-        return 1;
-    }
-
-    // Inform SDL that we will be using metal for rendering. Without this hint initialization of metal renderer may fail.
-    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "metal");
-
-    // Enable native IME.
-    SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");
-
-    SDL_Window* window = SDL_CreateWindow("Dear ImGui SDL+Metal example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 800, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
-    if (window == nullptr)
-    {
-        printf("Error creating window: %s\n", SDL_GetError());
-        return -2;
-    }
-
-    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-    if (renderer == nullptr)
-    {
-        printf("Error creating renderer: %s\n", SDL_GetError());
-        return -3;
-    }
-
-    // Setup Platform/Renderer backends
-    CAMetalLayer* layer = (__bridge CAMetalLayer*)SDL_RenderGetMetalLayer(renderer);
-    layer.pixelFormat = MTLPixelFormatBGRA8Unorm;
-    ImGui_ImplMetal_Init(layer.device);
-    ImGui_ImplSDL2_InitForMetal(window);
-
-    id<MTLCommandQueue> commandQueue = [layer.device newCommandQueue];
-    MTLRenderPassDescriptor* renderPassDescriptor = [MTLRenderPassDescriptor new];
-
     // Our state
     bool show_demo_window = true;
     bool show_another_window = false;
-    float clear_color[4] = {0.45f, 0.55f, 0.60f, 1.00f};
+    float clear_color[4] = { 0.45f, 0.55f, 0.60f, 1.00f };
 
     // Main loop
     bool done = false;
@@ -122,7 +134,8 @@ int main(int, char**)
             }
 
             int width, height;
-            SDL_GetRendererOutputSize(renderer, &width, &height);
+            SDL_GetWindowSizeInPixels(window, &width, &height);
+
             layer.drawableSize = CGSizeMake(width, height);
             id<CAMetalDrawable> drawable = [layer nextDrawable];
 
@@ -178,7 +191,8 @@ int main(int, char**)
 
             // Rendering
             ImGui::Render();
-            ImGui_ImplMetal_RenderDrawData(ImGui::GetDrawData(), commandBuffer, renderEncoder);
+            ImDrawData* draw_data = ImGui::GetDrawData();
+            ImGui_ImplMetal_RenderDrawData(draw_data, commandBuffer, renderEncoder);
 
             // Update and Render additional Platform Windows
             if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
@@ -200,7 +214,6 @@ int main(int, char**)
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
 
-    SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
 

@@ -26,6 +26,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2026-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2026-08-06: Fixed querying framebuffer scale when using Metal. (#5592)
 //  2026-07-15: Inputs: restore SDL_StartTextInput()/SDL_StopTextInput() in IME handler for on-screen keyboard support on Android/mobile. (#7636, #9474)
 //  2026-04-16: Made ImGui_ImplSDL2_GetContentScaleForWindow(), ImGui_ImplSDL2_GetContentScaleForDisplay() helpers return a minimum of 1.0f, as some Linux setup seems to report <1.0f value and this breaks scaling border size. (#9369)
 //  2026-03-09: [Docking] Fixed an issue dated 2025/04/09 (1.92 WIP) where a refactor+merge caused ImGuiBackendFlags_HasMouseHoveredViewport to never be set, causing foreign windows to be ignored when deciding of hovered viewport. (#9284)
@@ -150,12 +151,20 @@
 #define SDL_HAS_PER_MONITOR_DPI             SDL_VERSION_ATLEAST(2,0,4)
 #define SDL_HAS_VULKAN                      SDL_VERSION_ATLEAST(2,0,6)
 #define SDL_HAS_DISPLAY_EVENT               SDL_VERSION_ATLEAST(2,0,9)
+#if defined(__APPLE__)
+#define SDL_HAS_METAL                       SDL_VERSION_ATLEAST(2,0,14)
+#else
+#define SDL_HAS_METAL                       0
+#endif
 #define SDL_HAS_OPEN_URL                    SDL_VERSION_ATLEAST(2,0,14)
 #define SDL_HAS_SHOW_WINDOW_ACTIVATION_HINT SDL_VERSION_ATLEAST(2,0,18)
 #if SDL_HAS_VULKAN
 #include <SDL_vulkan.h>
 #else
 static const Uint32 SDL_WINDOW_VULKAN = 0x10000000;
+#endif
+#if SDL_HAS_METAL
+#include <SDL_metal.h>
 #endif
 
 // SDL Data
@@ -1034,6 +1043,10 @@ static void ImGui_ImplSDL2_GetWindowSizeAndFramebufferScale(SDL_Window* window, 
 #if SDL_HAS_VULKAN
     else if (SDL_GetWindowFlags(window) & SDL_WINDOW_VULKAN)
         SDL_Vulkan_GetDrawableSize(window, &display_w, &display_h);
+#endif
+#if SDL_HAS_METAL
+    else if (SDL_GetWindowFlags(window) & SDL_WINDOW_METAL)
+        SDL_Metal_GetDrawableSize(window, &display_w, &display_h);
 #endif
     else
         SDL_GL_GetDrawableSize(window, &display_w, &display_h);
