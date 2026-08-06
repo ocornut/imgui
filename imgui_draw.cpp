@@ -942,12 +942,7 @@ void ImDrawList::_SelectLineTexture(float screen_thickness, ImVec2* out_uv0, ImV
     }
 }
 
-static inline ImDrawFlags _GetStrokePos(ImDrawFlags flags, ImDrawFlags default_stroke_pos)
-{
-    if (flags & ImDrawFlags_StrokeMask_)
-        return (flags & ImDrawFlags_StrokeMask_);
-    return default_stroke_pos;
-}
+#define _GetStrokePos(_FLAGS, _DEFAULT_STROKE_POS)      (((_FLAGS) & ImDrawFlags_StrokeMask_) ? ((_FLAGS) & ImDrawFlags_StrokeMask_) : _DEFAULT_STROKE_POS)
 
 IM_MSVC_RUNTIME_CHECKS_RESTORE
 
@@ -1058,7 +1053,6 @@ void ImDrawList::_AddPolyline(const ImVec2* points, const int points_count, ImU3
     }
 
     const float half_aa = _FringeScale * 0.5f; // Used for end caps, does not use "fringe" since end cap AA is not using the texture.
-    const float half_thickness = thickness * 0.5f;
     const bool use_aa_ends = (flags & (ImDrawFlags_AALines | ImDrawFlags_AALineEnds)) == (ImDrawFlags_AALines | ImDrawFlags_AALineEnds);
 
     const int first_vtx_offset = (int)(_VtxWritePtr - VtxBuffer.Data);
@@ -1084,8 +1078,8 @@ void ImDrawList::_AddPolyline(const ImVec2* points, const int points_count, ImU3
         dir.y = -n1.x;
         if (flags & ImDrawFlags_CapSquare)
         {
-            p1.x -= dir.x * half_thickness;
-            p1.y -= dir.y * half_thickness;
+            p1.x -= dir.x * thickness * 0.5f;
+            p1.y -= dir.y * thickness * 0.5f;
         }
 
         if (!use_aa_ends)
@@ -1251,7 +1245,6 @@ void ImDrawList::_AddPolyline(const ImVec2* points, const int points_count, ImU3
                 // Connect prev to next
                 IM_APPEND_TRI(base_idx + 0, base_idx + 2, base_idx + 3);
                 IM_APPEND_TRI(base_idx + 0, base_idx + 3, base_idx + 1);
-
                 base_idx = next_base_idx;
             }
 
@@ -1270,8 +1263,8 @@ void ImDrawList::_AddPolyline(const ImVec2* points, const int points_count, ImU3
         dir.y = -n1.x;
         if (flags & ImDrawFlags_CapSquare)
         {
-            p1.x += dir.x * half_thickness;
-            p1.y += dir.y * half_thickness;
+            p1.x += dir.x * thickness * 0.5f;
+            p1.y += dir.y * thickness * 0.5f;
         }
 
         if (!use_aa_ends)
@@ -1900,13 +1893,12 @@ void ImDrawList::_AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float t
         thickness0 = _CalculateCenterBiasedOffset(thickness) + fringe * 0.5f;
     else if (stroke_pos == ImDrawFlags_StrokeInside)
         thickness0 = fringe * 0.5f;
-    float thickness1 = (thickness + fringe) - thickness0;
+    const float thickness1 = (thickness + fringe) - thickness0;
 
-    const float ratio = thickness0 / (thickness0 + thickness1); // The points using uv2 are placed on the path, calculate the position from stroke offets.
+    const float ratio = thickness0 / (thickness0 + thickness1); // The points using uv2 are placed on the path, calculate the position from stroke offsets.
     const ImVec2 uv2(uv0.x + (uv1.x - uv0.x) * ratio, uv0.y);
 
     const float half_aa = _FringeScale * 0.5f; // Used for end caps, does not use "fringe" since end cap AA is not using the texture.
-    const float half_thickness = thickness * 0.5f;
     const bool use_aa_ends = (flags & (ImDrawFlags_AALines | ImDrawFlags_AALineEnds)) == (ImDrawFlags_AALines | ImDrawFlags_AALineEnds);
 
     if (!use_aa_ends)
@@ -1922,6 +1914,7 @@ void ImDrawList::_AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float t
     float p2_y = p2.y;
     if (flags & ImDrawFlags_CapSquare)
     {
+        const float half_thickness = thickness * 0.5f;
         p1_x -= dir_x * half_thickness;
         p1_y -= dir_y * half_thickness;
         p2_x += dir_x * half_thickness;
@@ -1934,7 +1927,6 @@ void ImDrawList::_AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float t
         base_idx = (int)_VtxCurrentIdx;
         IM_APPEND_VTX(p1_x - norm_x * thickness0, p1_y - norm_y * thickness0, uv0, col);
         IM_APPEND_VTX(p1_x + norm_x * thickness1, p1_y + norm_y * thickness1, uv1, col);
-
         IM_APPEND_VTX(p2_x - norm_x * thickness0, p2_y - norm_y * thickness0, uv0, col);
         IM_APPEND_VTX(p2_x + norm_x * thickness1, p2_y + norm_y * thickness1, uv1, col);
 
@@ -1972,7 +1964,6 @@ void ImDrawList::_AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float t
         next_base_idx = (int)_VtxCurrentIdx;
         IM_APPEND_VTX(pa_x - norm_x * thickness0, pa_y - norm_y * thickness0, uv0, col);
         IM_APPEND_VTX(pa_x + norm_x * thickness1, pa_y + norm_y * thickness1, uv1, col);
-
         IM_APPEND_VTX(pb_x - norm_x * thickness0, pb_y - norm_y * thickness0, uv0, col_trans);
         IM_APPEND_VTX(pb_x + norm_x * thickness1, pb_y + norm_y * thickness1, uv1, col_trans);
 
