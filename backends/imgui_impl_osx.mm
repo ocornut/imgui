@@ -939,7 +939,13 @@ static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* viewport)
 
     KeyEventResponder* view = [[KeyEventResponder alloc] initWithFrame:rect];
     if (floor(NSAppKitVersionNumber) > NSAppKitVersionNumber10_6 && ceil(NSAppKitVersionNumber) < NSAppKitVersionNumber10_15)
+    {
+        // Benefits OpenGL renderers on macOS 10.7-10.14: deprecated in 10.14, on by default since 10.15.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         [view setWantsBestResolutionOpenGLSurface:YES];
+#pragma clang diagnostic pop
+    }
 
     window.contentView = view;
 
