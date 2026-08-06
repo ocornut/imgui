@@ -67,6 +67,7 @@ Other Changes:
 - Examples:
   - SDL2+Metal: create Metal context without using a SDL_Renderer.
   - QNX+OpenGL3, QNX+Vulkan: added QNX Screen examples. (#9492) [@mgorchak-blackberry]
+  - OSX+OpenGL3: added example_apple_opengl3/ (OSX/Cocoa + OpenGL 3.2 Core profile).
 
 
 -----------------------------------------------------------------------
