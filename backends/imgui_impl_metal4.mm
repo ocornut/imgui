@@ -21,6 +21,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-08-06: Metal 4: fixed resizing windows losing framebuffer scale. (#6828, #8856)
 //  2026-07-07: Metal 4: Added metal-cpp support. (#9461)
 //  2026-07-02: Metal 4: Added new Metal 4 backend implementation. (#9458)
 
@@ -847,7 +848,7 @@ inline static CGSize MakeScaledSize(CGSize size, CGFloat scale)
 static void ImGui_ImplMetal_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 {
     ImGuiViewportDataMetal* data = (ImGuiViewportDataMetal*)viewport->RendererUserData;
-    data->MetalLayer.drawableSize = MakeScaledSize(CGSizeMake(size.x, size.y), viewport->DpiScale);
+    data->MetalLayer.drawableSize = MakeScaledSize(CGSizeMake(size.x, size.y), data->MetalLayer.contentsScale);
 }
 
 static void ImGui_ImplMetal_RenderWindow(ImGuiViewport* viewport, void*)
@@ -867,12 +868,12 @@ static void ImGui_ImplMetal_RenderWindow(ImGuiViewport* viewport, void*)
     }
     data->FirstFrame = false;
 
-    float fb_scale = (float)window.backingScaleFactor;
-    if (data->MetalLayer.contentsScale != fb_scale)
-    {
-        data->MetalLayer.contentsScale = fb_scale;
-        data->MetalLayer.drawableSize = MakeScaledSize(window.frame.size, fb_scale);
-    }
+    // The layer is installed on the window's contentView; window.frame additionally includes the title bar.
+    CGFloat fb_scale = window.backingScaleFactor;
+    data->MetalLayer.contentsScale = fb_scale;
+    CGSize want_size = MakeScaledSize(window.contentView.bounds.size, fb_scale);
+    if (!CGSizeEqualToSize(data->MetalLayer.drawableSize, want_size))
+        data->MetalLayer.drawableSize = want_size;
 #endif
 
     id <CAMetalDrawable> drawable = [data->MetalLayer nextDrawable];

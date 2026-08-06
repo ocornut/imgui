@@ -68,6 +68,11 @@ Other Changes:
   - SDL2+Metal: create Metal context without using a SDL_Renderer.
   - QNX+OpenGL3, QNX+Vulkan: added QNX Screen examples. (#9492) [@mgorchak-blackberry]
 
+Docking+Viewports Branch:
+
+- Backends:
+  - Metal: fixed resizing windows losing framebuffer scale. (#6828, #8856) [@laikoken]
+
 
 -----------------------------------------------------------------------
  VERSION 1.92.9b (Released 2026-07-31)
