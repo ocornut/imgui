@@ -886,9 +886,20 @@ IM_MSVC_RUNTIME_CHECKS_RESTORE
 #define IM_FIXNORMAL2F_MAX_INVLEN2          100.0f // 500.0f (see #4053, #3366)
 #define IM_FIXNORMAL2F(VX,VY)               { float d2 = VX*VX + VY*VY; if (d2 > 0.000001f) { float inv_len2 = 1.0f / d2; if (inv_len2 > IM_FIXNORMAL2F_MAX_INVLEN2) inv_len2 = IM_FIXNORMAL2F_MAX_INVLEN2; VX *= inv_len2; VY *= inv_len2; } } (void)0
 
+// - The miter limit describes how much the miter cross section can be scaled before we turn it into a bevel instead.
+//   The minimum value of miter limit is 1.0, which translates to 180 (all corners are bevels), the higher the number,
+//   the closer to zero the angle is (never bevel a corner). The miter limit angle can be calculated as:
+//      miter_limit_angle = 2 * acos(1 / miter_limit)
+// - We can use the miter limit angle to figure maximum number of beveled corners in a convex polygon,
+//   to prevent having allocate much extra memory (for a reasonable miter limit).
+//      (n - 2) * 360 > k * miter_limit_angle + (n - k) * 360
+//   Where, n = number of corners in a polygon, k = beveled corners. Solved for k, simplifies to:
+//      k < 360 / (180 - miter_limit_angle)
+//   To find value strictly less than:
+//      max_bevels = k = floor(360/(180-miter_limit_angle))
 #define IM_POLYLINE_MITER_ANGLE_LIMIT       (-0.9999619f)   // Safeguard for miter corner calculation to avoid div by zero. cos(179.5)
-#define IM_POLYLINE_MITER_LIMIT             (4.0f)          // How much the miter can be scaled before we turn it into a bevel instead. (equals ~29 deg corner)
-#define IM_POLYLINE_CONVEX_POLY_MAX_BEVELS  (2)             // How many bevels there can be in a convex polygon. (int)(360/floor(180-29))
+#define IM_POLYLINE_MITER_LIMIT             (4.0f)          // (~29 deg corner)
+#define IM_POLYLINE_CONVEX_POLY_MAX_BEVELS  (2)			    // For miter value 4.0
 
 // In debug builds the functions are likely not inlined, so inlined check is cheaper.
 #if defined(DEBUG) || defined(_DEBUG)
