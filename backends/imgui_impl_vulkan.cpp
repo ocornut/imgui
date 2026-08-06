@@ -2,7 +2,7 @@
 // This needs to be used along with a Platform Backend (e.g. GLFW, SDL, Win32, custom..)
 
 // Implemented features:
-//  [!] Renderer: User texture binding. Pool mode: use a VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE 'VkDescriptorSet' as texture identifier (ImGui_ImplVulkan_AddTexture()). Descriptor-heap mode (VK_EXT_descriptor_heap): use a GPU descriptor device address (like DX12's D3D12_GPU_DESCRIPTOR_HANDLE). Read the FAQ about ImTextureID/ImTextureRef + https://github.com/ocornut/imgui/pull/914 for discussions.
+//  [!] Renderer: User texture binding. Pool mode: use a VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE 'VkDescriptorSet' as texture identifier (ImGui_ImplVulkan_AddTexture()). Descriptor-heap mode (VK_EXT_descriptor_heap): use a heap index (ImTextureID); index 0 is reserved (ImTextureID_Invalid). Read the FAQ about ImTextureID/ImTextureRef + https://github.com/ocornut/imgui/pull/914 for discussions.
 //  [X] Renderer: Large meshes support (64k+ vertices) even with 16-bit indices (ImGuiBackendFlags_RendererHasVtxOffset).
 //  [X] Renderer: Texture updates support for dynamic font atlas (ImGuiBackendFlags_RendererHasTextures).
 //  [X] Renderer: Expose selected render state for draw callbacks to use. Access in '(ImGui_ImplXXXX_RenderState*)GetPlatformIO().Renderer_RenderState'.
@@ -27,7 +27,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2026-08-05: Vulkan: Added optional VK_EXT_descriptor_heap support via ImGui_ImplVulkan_InitInfo::DescriptorHeapInfo (app-owned Register*/UnRegister* callbacks). ImTextureID is a GPU descriptor device address (like DX12). Requires IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP (headers with VK_EXT_descriptor_heap).
+//  2026-08-05: Vulkan: Added optional VK_EXT_descriptor_heap support via ImGui_ImplVulkan_InitInfo::DescriptorHeapInfo (app-owned Register*/UnRegister* callbacks). ImTextureID is a non-zero heap index. Requires IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP (headers with VK_EXT_descriptor_heap). (#9374)
 //  2026-04-23: Added support for standard draw callbacks (in platform_io): DrawCallback_ResetRenderState, DrawCallback_SetSamplerLinear, DrawCallback_SetSamplerNearest. (#9378)
 //  2026-04-22: *BREAKING CHANGE* redesigned to use separate ImageView + Sampler instead of Combined Image Sampler. This change allows us to facilitate changing samplers, in line with other backends.
 //              - When registering custom textures: changed ImGui_ImplVulkan_AddTexture() signature to remove Sampler.
@@ -245,17 +245,6 @@ static PFN_vkCmdEndRenderingKHR     ImGuiImplVulkanFuncs_vkCmdEndRenderingKHR;
 #ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
 // VK_EXT_descriptor_heap (not exported by most Vulkan loaders; resolve like dynamic rendering)
 static PFN_vkCmdPushDataEXT         ImGuiImplVulkanFuncs_vkCmdPushDataEXT = nullptr;
-
-// Convert GPU descriptor handle (device address) back to a heap index for PushData.
-static uint32_t ImGui_ImplVulkan_DescriptorHeapIndexFromTexID(const ImGui_ImplVulkan_DescriptorHeapInfo* info, ImTextureID tex_id)
-{
-    IM_ASSERT(tex_id != ImTextureID_Invalid);
-    IM_ASSERT(info->ResourceHeapAddress != 0 && info->ImageDescriptorSize != 0);
-    const VkDeviceAddress addr = (VkDeviceAddress)(ImU64)tex_id;
-    IM_ASSERT(addr >= info->ResourceHeapAddress);
-    IM_ASSERT(((addr - info->ResourceHeapAddress) % info->ImageDescriptorSize) == 0);
-    return (uint32_t)((addr - info->ResourceHeapAddress) / info->ImageDescriptorSize);
-}
 #endif
 
 // Reusable buffers used for rendering 1 current in-flight frame, for ImGui_ImplVulkan_RenderDrawData()
@@ -285,7 +274,7 @@ struct ImGui_ImplVulkan_Texture
     VkImage                     Image;
     VkImageView                 ImageView;
     VkDescriptorSet             DescriptorSet;
-    uint64_t                    DescriptorHeapGpuHandle; // Device address into resource heap (== ImTextureID in heap mode)
+    uint32_t                    DescriptorHeapIndex;
 
     ImGui_ImplVulkan_Texture() { memset((void*)this, 0, sizeof(*this)); }
 };
@@ -835,8 +824,9 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
 #ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
                     if (v->DescriptorHeapInfo)
                     {
-                        // ImTextureID is a GPU descriptor device address.
-                        uint32_t heap_index = ImGui_ImplVulkan_DescriptorHeapIndexFromTexID(v->DescriptorHeapInfo, image_id);
+                        // ImTextureID is the heap index. Index 0 is ImTextureID_Invalid / reserved.
+                        uint32_t heap_index = (uint32_t)(ImU64)image_id;
+                        IM_ASSERT(heap_index != 0 && "ImTextureID 0 is invalid in descriptor-heap mode (RegisterImage must not return 0)");
                         VkPushDataInfoEXT push{};
                         push.sType = VK_STRUCTURE_TYPE_PUSH_DATA_INFO_EXT;
                         push.data.address = &heap_index;
@@ -878,7 +868,7 @@ static void ImGui_ImplVulkan_DestroyTexture(ImTextureData* tex)
     {
         IM_ASSERT(backend_tex->DescriptorSet == (VkDescriptorSet)tex->TexID
 #ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
-                  || backend_tex->DescriptorHeapGpuHandle == (uint64_t)(ImU64)tex->TexID
+                  || backend_tex->DescriptorHeapIndex == (uint32_t)(ImU64)tex->TexID
 #endif
         );
         ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
@@ -887,7 +877,7 @@ static void ImGui_ImplVulkan_DestroyTexture(ImTextureData* tex)
             ImGui_ImplVulkan_RemoveTexture(backend_tex->DescriptorSet);
 #ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
         else if (v->DescriptorHeapInfo)
-            v->DescriptorHeapInfo->UnRegisterImage(v->DescriptorHeapInfo->UserContext, backend_tex->DescriptorHeapGpuHandle);
+            v->DescriptorHeapInfo->UnRegisterImage(v->DescriptorHeapInfo->UserContext, backend_tex->DescriptorHeapIndex);
 #endif
         if (backend_tex->ImageView != VK_NULL_HANDLE)
             vkDestroyImageView(v->Device, backend_tex->ImageView, v->Allocator);
@@ -959,10 +949,10 @@ void ImGui_ImplVulkan_UpdateTexture(ImTextureData* tex)
 #ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
         if (v->DescriptorHeapInfo)
         {
-            backend_tex->DescriptorHeapGpuHandle =
+            backend_tex->DescriptorHeapIndex =
                 v->DescriptorHeapInfo->RegisterImage(v->DescriptorHeapInfo->UserContext, &info);
-            IM_ASSERT(backend_tex->DescriptorHeapGpuHandle != 0 && "RegisterImage must return a non-zero device address");
-            tex->SetTexID((ImTextureID)backend_tex->DescriptorHeapGpuHandle);
+            IM_ASSERT(backend_tex->DescriptorHeapIndex != 0 && "RegisterImage must not return 0 (reserved as ImTextureID_Invalid)");
+            tex->SetTexID((ImTextureID)(ImU64)backend_tex->DescriptorHeapIndex);
         }
         else
 #endif
@@ -1614,8 +1604,6 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info)
         ImGuiImplVulkanFuncs_vkCmdPushDataEXT = reinterpret_cast<PFN_vkCmdPushDataEXT>(vkGetDeviceProcAddr(info->Device, "vkCmdPushDataEXT"));
 #endif
         IM_ASSERT(ImGuiImplVulkanFuncs_vkCmdPushDataEXT != nullptr && "vkCmdPushDataEXT not available (enable VK_EXT_descriptor_heap)");
-        IM_ASSERT(sizeof(ImTextureID) >= sizeof(VkDeviceAddress) && "Descriptor heap mode needs 64-bit ImTextureID");
-        IM_ASSERT(info->DescriptorHeapInfo->ResourceHeapAddress != 0 && info->DescriptorHeapInfo->ImageDescriptorSize != 0);
         IM_ASSERT(info->DescriptorHeapInfo->RegisterImage != nullptr && info->DescriptorHeapInfo->UnRegisterImage != nullptr);
         IM_ASSERT(info->DescriptorHeapInfo->RegisterSampler != nullptr && info->DescriptorHeapInfo->UnRegisterSampler != nullptr);
     }
