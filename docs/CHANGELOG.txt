@@ -72,6 +72,8 @@ Docking+Viewports Branch:
 
 - Backends:
   - Metal: fixed resizing windows losing framebuffer scale. (#6828, #8856) [@laikoken]
+- Examples:
+  - SDL3+Metal, GLFW+Metal: fix multi-viewport support.
 
 
 -----------------------------------------------------------------------

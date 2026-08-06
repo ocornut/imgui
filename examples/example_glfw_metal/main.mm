@@ -69,7 +69,7 @@ int main(int, char**)
     id <MTLCommandQueue> commandQueue = [device newCommandQueue];
 
     // Setup Platform/Renderer backends
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplGlfw_InitForOther(window, true);
     ImGui_ImplMetal_Init(device);
 
     // Load Fonts
