@@ -62,6 +62,7 @@ Other Changes:
     - Circle and Curves tessellation error are scaled accordingly.
 - Backends:
   - QNX: added QNX Screen backend. (#9492) [@mgorchak-blackberry]
+  - SDL2: fixed querying framebuffer scale/density when using Metal. (#5592) [@lailoken]
 - Examples:
   - QNX+OpenGL3, QNX+Vulkan: added QNX Screen examples. (#9492) [@mgorchak-blackberry]
 

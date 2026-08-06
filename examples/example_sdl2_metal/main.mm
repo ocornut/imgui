@@ -56,13 +56,15 @@ int main(int, char**)
         return 1;
     }
 
-    // Inform SDL that we will be using metal for rendering. Without this hint initialization of metal renderer may fail.
+    // Inform SDL that we will be using metal for rendering. Without this hint initialization of Metal renderer may fail.
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "metal");
 
-    // Enable native IME.
+    // From 2.0.18: Enable native IME.
+#ifdef SDL_HINT_IME_SHOW_UI
     SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");
+#endif
 
-    SDL_Window* window = SDL_CreateWindow("Dear ImGui SDL+Metal example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 800, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+    SDL_Window* window = SDL_CreateWindow("Dear ImGui SDL2+Metal example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 800, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
     if (window == nullptr)
     {
         printf("Error creating window: %s\n", SDL_GetError());
