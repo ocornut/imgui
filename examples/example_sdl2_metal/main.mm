@@ -28,9 +28,6 @@ int main(int, char**)
         return 1;
     }
 
-    // Inform SDL that we will be using metal for rendering. Without this hint initialization of Metal renderer may fail.
-    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "metal");
-
     // From 2.0.18: Enable native IME.
 #ifdef SDL_HINT_IME_SHOW_UI
     SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");
@@ -46,13 +43,18 @@ int main(int, char**)
         return 1;
     }
 
-    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-    if (renderer == nullptr)
+    // Create Metal device _before_ creating the view/layer
+    id<MTLDevice> metalDevice = MTLCreateSystemDefaultDevice();
+    if (!metalDevice)
     {
-        printf("Error creating renderer: %s\n", SDL_GetError());
-        return -3;
+        printf("Error: failed to create Metal device.\n");
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return 1;
     }
-    CAMetalLayer* layer = (__bridge CAMetalLayer*)SDL_RenderGetMetalLayer(renderer);
+    SDL_MetalView view = SDL_Metal_CreateView(window);
+    CAMetalLayer* layer = (__bridge CAMetalLayer*)SDL_Metal_GetLayer(view);
+    layer.device = metalDevice;
     layer.pixelFormat = MTLPixelFormatBGRA8Unorm;
 
     id<MTLCommandQueue> commandQueue = [layer.device newCommandQueue];
@@ -123,7 +125,8 @@ int main(int, char**)
             }
 
             int width, height;
-            SDL_GetRendererOutputSize(renderer, &width, &height);
+            SDL_GetWindowSizeInPixels(window, &width, &height);
+
             layer.drawableSize = CGSizeMake(width, height);
             id<CAMetalDrawable> drawable = [layer nextDrawable];
 
@@ -195,7 +198,6 @@ int main(int, char**)
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
 
-    SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
 
