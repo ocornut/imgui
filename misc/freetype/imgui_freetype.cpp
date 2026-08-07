@@ -508,9 +508,9 @@ static bool ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConf
 
     // Load metrics only mode
     const float advance_x = (slot->advance.x / FT_SCALEFACTOR) / rasterizer_density;
-    if (out_advance_x != NULL)
+    if (out_advance_x != nullptr)
     {
-        IM_ASSERT(out_glyph == NULL);
+        IM_ASSERT(out_glyph == nullptr);
         *out_advance_x = advance_x;
         return true;
     }
