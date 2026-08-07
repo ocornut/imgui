@@ -41,6 +41,144 @@
 static VkDebugReportCallbackEXT g_DebugReport = VK_NULL_HANDLE;
 #endif
 
+static void check_vk_result(VkResult err);
+
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
+// Config for example app
+static const int APP_RESOURCE_HEAP_SIZE = 64;
+static const int APP_SAMPLER_HEAP_SIZE = 64;
+
+// Explicitly loaded VK_EXT_descriptor_heap entry points.
+// Stored as members so names can match the Vulkan entry points without colliding with prototypes.
+struct DescriptorHeapFunctions
+{
+    PFN_vkWriteResourceDescriptorsEXT vkWriteResourceDescriptorsEXT = nullptr;
+    PFN_vkCmdBindResourceHeapEXT      vkCmdBindResourceHeapEXT = nullptr;
+    PFN_vkCmdBindSamplerHeapEXT       vkCmdBindSamplerHeapEXT = nullptr;
+    PFN_vkWriteSamplerDescriptorsEXT  vkWriteSamplerDescriptorsEXT = nullptr;
+    PFN_vkGetBufferDeviceAddress      vkGetBufferDeviceAddress = nullptr;
+
+    void Load(VkDevice device)
+    {
+        vkWriteResourceDescriptorsEXT = reinterpret_cast<PFN_vkWriteResourceDescriptorsEXT>(vkGetDeviceProcAddr(device, "vkWriteResourceDescriptorsEXT"));
+        vkCmdBindResourceHeapEXT = reinterpret_cast<PFN_vkCmdBindResourceHeapEXT>(vkGetDeviceProcAddr(device, "vkCmdBindResourceHeapEXT"));
+        vkCmdBindSamplerHeapEXT = reinterpret_cast<PFN_vkCmdBindSamplerHeapEXT>(vkGetDeviceProcAddr(device, "vkCmdBindSamplerHeapEXT"));
+        vkWriteSamplerDescriptorsEXT = reinterpret_cast<PFN_vkWriteSamplerDescriptorsEXT>(vkGetDeviceProcAddr(device, "vkWriteSamplerDescriptorsEXT"));
+        vkGetBufferDeviceAddress = reinterpret_cast<PFN_vkGetBufferDeviceAddress>(vkGetDeviceProcAddr(device, "vkGetBufferDeviceAddress"));
+        if (vkGetBufferDeviceAddress == nullptr)
+            vkGetBufferDeviceAddress = reinterpret_cast<PFN_vkGetBufferDeviceAddress>(vkGetDeviceProcAddr(device, "vkGetBufferDeviceAddressKHR"));
+        IM_ASSERT(vkWriteResourceDescriptorsEXT && vkCmdBindResourceHeapEXT && vkCmdBindSamplerHeapEXT && vkWriteSamplerDescriptorsEXT && vkGetBufferDeviceAddress);
+    }
+};
+static DescriptorHeapFunctions g_DescHeapFns;
+
+// Simple free-list allocator modeled after example_win32_directx12
+struct ExampleDescriptorHeapAllocator
+{
+    VkBuffer            Buffer = VK_NULL_HANDLE;
+    VkDeviceMemory      Memory = VK_NULL_HANDLE;
+    void*               Mapped = nullptr;
+    VkBindHeapInfoEXT   BindInfo = {};
+    VkDeviceSize        Stride = 0;
+    int                 Capacity = 0;
+    ImVector<int>       FreeIndices;
+
+    void Create(VkDevice device, VkPhysicalDevice physical_device, VkDeviceSize descriptor_size, VkDeviceSize alignment, VkDeviceSize reserved_range, int capacity, const VkAllocationCallbacks* allocator)
+    {
+        IM_ASSERT(Buffer == VK_NULL_HANDLE && FreeIndices.empty());
+        Capacity = capacity;
+        Stride = descriptor_size;
+
+        VkDeviceSize descriptors_bytes = descriptor_size * (VkDeviceSize)capacity;
+        VkDeviceSize total_size = descriptors_bytes + reserved_range;
+        VkDeviceSize buffer_size_aligned = (total_size + alignment - 1) & ~(alignment - 1);
+
+        VkBufferCreateInfo buffer_info = {};
+        buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        buffer_info.size = buffer_size_aligned;
+        buffer_info.usage = VK_BUFFER_USAGE_DESCRIPTOR_HEAP_BIT_EXT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+        buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        VkResult err = vkCreateBuffer(device, &buffer_info, allocator, &Buffer);
+        check_vk_result(err);
+
+        VkMemoryRequirements mem_req;
+        vkGetBufferMemoryRequirements(device, Buffer, &mem_req);
+
+        VkPhysicalDeviceMemoryProperties mem_props;
+        vkGetPhysicalDeviceMemoryProperties(physical_device, &mem_props);
+        const VkMemoryPropertyFlags required_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        uint32_t mem_index = (uint32_t)-1;
+        for (uint32_t i = 0; i < mem_props.memoryTypeCount; i++)
+        {
+            if ((mem_req.memoryTypeBits & (1u << i)) == 0)
+                continue;
+            if ((mem_props.memoryTypes[i].propertyFlags & required_flags) == required_flags)
+            {
+                mem_index = i;
+                break;
+            }
+        }
+        IM_ASSERT(mem_index != (uint32_t)-1 && "No HOST_VISIBLE|HOST_COHERENT memory type compatible with descriptor heap buffer");
+
+        VkMemoryAllocateFlagsInfo alloc_flags = {};
+        alloc_flags.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO;
+        alloc_flags.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
+        VkMemoryAllocateInfo alloc_info = {};
+        alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        alloc_info.pNext = &alloc_flags;
+        alloc_info.allocationSize = mem_req.size > buffer_size_aligned ? mem_req.size : buffer_size_aligned;
+        alloc_info.memoryTypeIndex = mem_index;
+        err = vkAllocateMemory(device, &alloc_info, allocator, &Memory);
+        check_vk_result(err);
+        err = vkMapMemory(device, Memory, 0, alloc_info.allocationSize, 0, &Mapped);
+        check_vk_result(err);
+        err = vkBindBufferMemory(device, Buffer, Memory, 0);
+        check_vk_result(err);
+
+        VkBufferDeviceAddressInfo addr_info = {};
+        addr_info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+        addr_info.buffer = Buffer;
+
+        BindInfo = {};
+        BindInfo.sType = VK_STRUCTURE_TYPE_BIND_HEAP_INFO_EXT;
+        BindInfo.heapRange.address = g_DescHeapFns.vkGetBufferDeviceAddress(device, &addr_info);
+        BindInfo.heapRange.size = total_size;
+        BindInfo.reservedRangeOffset = descriptors_bytes;
+        BindInfo.reservedRangeSize = reserved_range;
+
+        FreeIndices.reserve(capacity > 1 ? capacity - 1 : 0);
+        // Slot 0 reserved: ImTextureID_Invalid is 0, so RegisterImage indices used as ImTextureID must be non-zero.
+        for (int n = capacity - 1; n >= 1; n--)
+            FreeIndices.push_back(n);
+    }
+    void Destroy(VkDevice device, const VkAllocationCallbacks* allocator)
+    {
+        if (Buffer) { vkDestroyBuffer(device, Buffer, allocator); Buffer = VK_NULL_HANDLE; }
+        if (Memory) { vkFreeMemory(device, Memory, allocator); Memory = VK_NULL_HANDLE; }
+        Mapped = nullptr;
+        FreeIndices.clear();
+        Capacity = 0;
+        Stride = 0;
+        BindInfo = {};
+    }
+    int Alloc()
+    {
+        IM_ASSERT(FreeIndices.Size > 0);
+        int idx = FreeIndices.back();
+        FreeIndices.pop_back();
+        return idx;
+    }
+    void Free(int idx)
+    {
+        FreeIndices.push_back(idx);
+    }
+    VkHostAddressRangeEXT DescriptorAddress(int idx) const
+    {
+        return VkHostAddressRangeEXT{ (char*)Mapped + (VkDeviceSize)idx * Stride, Stride };
+    }
+};
+#endif // IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
+
 // Data
 static VkAllocationCallbacks*   g_Allocator = nullptr;
 static VkInstance               g_Instance = VK_NULL_HANDLE;
@@ -54,6 +192,12 @@ static VkDescriptorPool         g_DescriptorPool = VK_NULL_HANDLE;
 static ImGui_ImplVulkanH_Window g_MainWindowData;
 static uint32_t                 g_MinImageCount = 2;
 static bool                     g_SwapChainRebuild = false;
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
+static bool                     g_UsingDescriptorHeap = false;
+static ExampleDescriptorHeapAllocator g_ResourceHeapAlloc;
+static ExampleDescriptorHeapAllocator g_SamplerHeapAlloc;
+static ImGui_ImplVulkan_DescriptorHeapInfo g_DescriptorHeapInfo;
+#endif
 
 static void glfw_error_callback(int error, const char* description)
 {
@@ -85,7 +229,31 @@ static bool IsExtensionAvailable(const ImVector<VkExtensionProperties>& properti
     return false;
 }
 
-static void SetupVulkan(ImVector<const char*> instance_extensions)
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
+static bool PhysicalDeviceHasExtension(VkPhysicalDevice physical_device, const char* extension)
+{
+    uint32_t properties_count = 0;
+    vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &properties_count, nullptr);
+    ImVector<VkExtensionProperties> properties;
+    properties.resize(properties_count);
+    vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &properties_count, properties.Data);
+    return IsExtensionAvailable(properties, extension);
+}
+
+// Extensions required by this example's VK_EXT_descriptor_heap path (Vulkan 1.1 instance → BDA is an extension).
+// Formal deps of VK_EXT_descriptor_heap: maintenance5 + (buffer_device_address | Vulkan 1.2).
+// shader_untyped_pointers is required by ImGui's default layout(descriptor_heap) shaders, not by the Vulkan extension itself.
+// See "About descriptor heap" in imgui_impl_vulkan.h.
+static bool PhysicalDeviceSupportsImGuiDescriptorHeap(VkPhysicalDevice physical_device)
+{
+    return PhysicalDeviceHasExtension(physical_device, VK_EXT_DESCRIPTOR_HEAP_EXTENSION_NAME)
+        && PhysicalDeviceHasExtension(physical_device, VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME)
+        && PhysicalDeviceHasExtension(physical_device, VK_KHR_SHADER_UNTYPED_POINTERS_EXTENSION_NAME)
+        && PhysicalDeviceHasExtension(physical_device, VK_KHR_MAINTENANCE_5_EXTENSION_NAME);
+}
+#endif // IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
+
+static void SetupVulkan(ImVector<const char*> instance_extensions, bool require_descriptor_heap)
 {
     VkResult err;
 #ifdef IMGUI_IMPL_VULKAN_USE_VOLK
@@ -127,6 +295,10 @@ static void SetupVulkan(ImVector<const char*> instance_extensions)
         // Create Vulkan Instance
         create_info.enabledExtensionCount = (uint32_t)instance_extensions.Size;
         create_info.ppEnabledExtensionNames = instance_extensions.Data;
+        VkApplicationInfo app_info = {};
+        app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+        app_info.apiVersion = VK_API_VERSION_1_1;
+        create_info.pApplicationInfo = &app_info;
         err = vkCreateInstance(&create_info, g_Allocator, &g_Instance);
         check_vk_result(err);
 #ifdef IMGUI_IMPL_VULKAN_USE_VOLK
@@ -147,9 +319,47 @@ static void SetupVulkan(ImVector<const char*> instance_extensions)
 #endif
     }
 
-    // Select Physical Device (GPU)
-    g_PhysicalDevice = ImGui_ImplVulkanH_SelectPhysicalDevice(g_Instance);
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
+    if (require_descriptor_heap)
+    {
+        uint32_t device_count = 0;
+        vkEnumeratePhysicalDevices(g_Instance, &device_count, nullptr);
+        ImVector<VkPhysicalDevice> physical_devices;
+        physical_devices.resize(device_count);
+        vkEnumeratePhysicalDevices(g_Instance, &device_count, physical_devices.Data);
+
+        VkPhysicalDevice device_with_heap = VK_NULL_HANDLE;
+        for (uint32_t i = 0; i < device_count; i++)
+        {
+            if (PhysicalDeviceSupportsImGuiDescriptorHeap(physical_devices[i]))
+            {
+                device_with_heap = physical_devices[i];
+                break;
+            }
+        }
+
+        if (device_with_heap == VK_NULL_HANDLE)
+        {
+            fprintf(stderr, "Error: --require-descriptor-heap requested but no device with VK_EXT_descriptor_heap and its required dependencies was found.\n");
+            fprintf(stderr, "  Required: %s, %s, %s, %s\n",
+                VK_EXT_DESCRIPTOR_HEAP_EXTENSION_NAME,
+                VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
+                VK_KHR_SHADER_UNTYPED_POINTERS_EXTENSION_NAME,
+                VK_KHR_MAINTENANCE_5_EXTENSION_NAME);
+            exit(1);
+        }
+        g_PhysicalDevice = device_with_heap;
+    }
+    else
+#endif
+    {
+        (void)require_descriptor_heap;
+        g_PhysicalDevice = ImGui_ImplVulkanH_SelectPhysicalDevice(g_Instance);
+    }
     IM_ASSERT(g_PhysicalDevice != VK_NULL_HANDLE);
+
+    VkPhysicalDeviceProperties chosen_props;
+    vkGetPhysicalDeviceProperties(g_PhysicalDevice, &chosen_props);
 
     // Select graphics queue family
     g_QueueFamily = ImGui_ImplVulkanH_SelectQueueFamilyIndex(g_PhysicalDevice);
@@ -170,6 +380,21 @@ static void SetupVulkan(ImVector<const char*> instance_extensions)
         if (IsExtensionAvailable(properties, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME))
             device_extensions.push_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
 #endif
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
+        if (PhysicalDeviceSupportsImGuiDescriptorHeap(g_PhysicalDevice))
+        {
+            device_extensions.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
+            device_extensions.push_back(VK_KHR_MAINTENANCE_5_EXTENSION_NAME);
+            device_extensions.push_back(VK_KHR_SHADER_UNTYPED_POINTERS_EXTENSION_NAME);
+            device_extensions.push_back(VK_EXT_DESCRIPTOR_HEAP_EXTENSION_NAME);
+            g_UsingDescriptorHeap = true;
+        }
+        else if (require_descriptor_heap)
+        {
+            fprintf(stderr, "Error: --require-descriptor-heap but selected device is missing a required dependency.\n");
+            exit(1);
+        }
+#endif
 
         const float queue_priority[] = { 1.0f };
         VkDeviceQueueCreateInfo queue_info[1] = {};
@@ -183,14 +408,77 @@ static void SetupVulkan(ImVector<const char*> instance_extensions)
         create_info.pQueueCreateInfos = queue_info;
         create_info.enabledExtensionCount = (uint32_t)device_extensions.Size;
         create_info.ppEnabledExtensionNames = device_extensions.Data;
+
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
+        VkPhysicalDeviceBufferDeviceAddressFeatures buffer_device_addr = {};
+        buffer_device_addr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
+        buffer_device_addr.bufferDeviceAddress = VK_TRUE;
+        VkPhysicalDeviceDescriptorHeapFeaturesEXT desc_heap_feat = {};
+        desc_heap_feat.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_HEAP_FEATURES_EXT;
+        desc_heap_feat.pNext = &buffer_device_addr;
+        desc_heap_feat.descriptorHeap = VK_TRUE;
+        VkPhysicalDeviceShaderUntypedPointersFeaturesKHR untyped_pointers = {};
+        untyped_pointers.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_UNTYPED_POINTERS_FEATURES_KHR;
+        untyped_pointers.pNext = &desc_heap_feat;
+        untyped_pointers.shaderUntypedPointers = VK_TRUE;
+        if (g_UsingDescriptorHeap)
+            create_info.pNext = &untyped_pointers;
+#endif
+
         err = vkCreateDevice(g_PhysicalDevice, &create_info, g_Allocator, &g_Device);
         check_vk_result(err);
         vkGetDeviceQueue(g_Device, g_QueueFamily, 0, &g_Queue);
     }
 
-    // Create Descriptor Pool
-    // If you wish to load e.g. additional textures you may need to alter pools sizes and maxSets.
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
+    if (g_UsingDescriptorHeap)
     {
+        g_DescHeapFns.Load(g_Device);
+
+        VkPhysicalDeviceDescriptorHeapPropertiesEXT descriptor_heap_properties = {};
+        descriptor_heap_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_HEAP_PROPERTIES_EXT;
+        VkPhysicalDeviceProperties2 properties2 = {};
+        properties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+        properties2.pNext = &descriptor_heap_properties;
+        vkGetPhysicalDeviceProperties2(g_PhysicalDevice, &properties2);
+
+        g_ResourceHeapAlloc.Create(g_Device, g_PhysicalDevice, descriptor_heap_properties.imageDescriptorSize, descriptor_heap_properties.resourceHeapAlignment,
+            descriptor_heap_properties.minResourceHeapReservedRange, APP_RESOURCE_HEAP_SIZE, g_Allocator);
+        g_SamplerHeapAlloc.Create(g_Device, g_PhysicalDevice, descriptor_heap_properties.samplerDescriptorSize, descriptor_heap_properties.samplerHeapAlignment,
+            descriptor_heap_properties.minSamplerHeapReservedRange, APP_SAMPLER_HEAP_SIZE, g_Allocator);
+
+        // Allocating descriptors is up to the application (like DX12 SrvDescriptorAllocFn/FreeFn).
+        // ImTextureID = heap index from RegisterImage; index 0 is reserved (ImTextureID_Invalid).
+        g_DescriptorHeapInfo = {};
+        g_DescriptorHeapInfo.UserContext = nullptr;
+        g_DescriptorHeapInfo.RegisterImage = [](void*, const VkImageViewCreateInfo* ci) -> uint32_t {
+            int idx = g_ResourceHeapAlloc.Alloc();
+            VkImageDescriptorInfoEXT image = {};
+            image.sType = VK_STRUCTURE_TYPE_IMAGE_DESCRIPTOR_INFO_EXT;
+            image.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            image.pView = ci;
+            VkResourceDescriptorInfoEXT resource = {};
+            resource.sType = VK_STRUCTURE_TYPE_RESOURCE_DESCRIPTOR_INFO_EXT;
+            resource.type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+            resource.data.pImage = &image;
+            VkHostAddressRangeEXT addr = g_ResourceHeapAlloc.DescriptorAddress(idx);
+            check_vk_result(g_DescHeapFns.vkWriteResourceDescriptorsEXT(g_Device, 1, &resource, &addr));
+            return (uint32_t)idx;
+        };
+        g_DescriptorHeapInfo.UnRegisterImage = [](void*, uint32_t idx) { g_ResourceHeapAlloc.Free((int)idx); };
+        g_DescriptorHeapInfo.RegisterSampler = [](void*, const VkSamplerCreateInfo* ci) -> uint32_t {
+            int idx = g_SamplerHeapAlloc.Alloc();
+            VkHostAddressRangeEXT addr = g_SamplerHeapAlloc.DescriptorAddress(idx);
+            check_vk_result(g_DescHeapFns.vkWriteSamplerDescriptorsEXT(g_Device, 1, ci, &addr));
+            return (uint32_t)idx;
+        };
+        g_DescriptorHeapInfo.UnRegisterSampler = [](void*, uint32_t idx) { g_SamplerHeapAlloc.Free((int)idx); };
+    }
+    else
+#endif
+    {
+        // Create Descriptor Pool
+        // If you wish to load e.g. additional textures you may need to alter pools sizes and maxSets.
         VkDescriptorPoolSize pool_sizes[] =
         {
             { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, IMGUI_IMPL_VULKAN_MINIMUM_SAMPLED_IMAGE_POOL_SIZE },
@@ -244,7 +532,17 @@ static void SetupVulkanWindow(ImGui_ImplVulkanH_Window* wd, VkSurfaceKHR surface
 
 static void CleanupVulkan()
 {
-    vkDestroyDescriptorPool(g_Device, g_DescriptorPool, g_Allocator);
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
+    if (g_UsingDescriptorHeap)
+    {
+        g_ResourceHeapAlloc.Destroy(g_Device, g_Allocator);
+        g_SamplerHeapAlloc.Destroy(g_Device, g_Allocator);
+    }
+    else
+#endif
+    {
+        vkDestroyDescriptorPool(g_Device, g_DescriptorPool, g_Allocator);
+    }
 
 #ifdef APP_USE_VULKAN_DEBUG_REPORT
     // Remove the debug report callback
@@ -303,6 +601,14 @@ static void FrameRender(ImGui_ImplVulkanH_Window* wd, ImDrawData* draw_data)
         vkCmdBeginRenderPass(fd->CommandBuffer, &info, VK_SUBPASS_CONTENTS_INLINE);
     }
 
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
+    if (g_UsingDescriptorHeap)
+    {
+        g_DescHeapFns.vkCmdBindResourceHeapEXT(fd->CommandBuffer, &g_ResourceHeapAlloc.BindInfo);
+        g_DescHeapFns.vkCmdBindSamplerHeapEXT(fd->CommandBuffer, &g_SamplerHeapAlloc.BindInfo);
+    }
+#endif
+
     // Record dear imgui primitives into command buffer
     ImGui_ImplVulkan_RenderDrawData(draw_data, fd->CommandBuffer);
 
@@ -350,8 +656,38 @@ static void FramePresent(ImGui_ImplVulkanH_Window* wd)
 }
 
 // Main code
-int main(int, char**)
+int main(int argc, char** argv)
 {
+    bool require_descriptor_heap = false;
+    for (int i = 1; i < argc; i++)
+    {
+        if (strcmp(argv[i], "--require-descriptor-heap") == 0)
+        {
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
+            require_descriptor_heap = true;
+#else
+            fprintf(stderr, "Error: --require-descriptor-heap requested but Vulkan headers lack VK_EXT_descriptor_heap (IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP undefined).\n");
+            return 1;
+#endif
+        }
+        else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0)
+        {
+            printf("Usage: %s [--require-descriptor-heap]\n", argv[0]);
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
+            printf("  --require-descriptor-heap  Require a device with VK_EXT_descriptor_heap (exit on failure).\n");
+            printf("  (default)                Use ImGui_ImplVulkanH_SelectPhysicalDevice; enable heap if available.\n");
+#else
+            printf("  --require-descriptor-heap  Unavailable (Vulkan headers lack VK_EXT_descriptor_heap).\n");
+#endif
+            return 0;
+        }
+        else
+        {
+            fprintf(stderr, "Unknown argument: %s (try --help)\n", argv[i]);
+            return 1;
+        }
+    }
+
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit())
         return 1;
@@ -371,7 +707,7 @@ int main(int, char**)
     const char** glfw_extensions = glfwGetRequiredInstanceExtensions(&extensions_count);
     for (uint32_t i = 0; i < extensions_count; i++)
         extensions.push_back(glfw_extensions[i]);
-    SetupVulkan(extensions);
+    SetupVulkan(extensions, require_descriptor_heap);
 
     // Create Window Surface
     VkSurfaceKHR surface;
@@ -418,6 +754,10 @@ int main(int, char**)
     init_info.PipelineInfoMain.Subpass = 0;
     init_info.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
     init_info.CheckVkResultFn = check_vk_result;
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
+    if (g_UsingDescriptorHeap)
+        init_info.DescriptorHeapInfo = &g_DescriptorHeapInfo;
+#endif
     ImGui_ImplVulkan_Init(&init_info);
 
     // Load Fonts
