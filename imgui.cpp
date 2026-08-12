@@ -4334,6 +4334,7 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     HoveredWindowUnderMovingWindow = NULL;
     HoveredWindowBeforeClear = NULL;
     MovingWindow = NULL;
+    MovingWindowClickOffset = ImVec2(-1, -1);
     WheelingWindow = NULL;
     WheelingWindowStartFrame = WheelingWindowScrolledFrame = -1;
     WheelingWindowReleaseTimer = 0.0f;
@@ -5465,6 +5466,7 @@ void ImGui::StartMouseMovingWindow(ImGuiWindow* window)
     if (g.IO.ConfigNavCursorVisibleAuto)
         g.NavCursorVisible = false;
     g.ActiveIdClickOffset = g.IO.MouseClickedPos[0] - window->RootWindowDockTree->Pos;
+    g.MovingWindowClickOffset = g.ActiveIdClickOffset;
     g.ActiveIdNoClearOnFocusLoss = true;
     SetActiveIdUsingAllKeyboardKeys();
 
@@ -5550,7 +5552,7 @@ void ImGui::UpdateMouseMovingWindowNewFrame()
         const bool window_disappeared = (!moving_window->WasActive && !moving_window->Active);
         if (g.IO.MouseDown[0] && IsMousePosValid(&g.IO.MousePos) && !window_disappeared)
         {
-            ImVec2 pos = g.IO.MousePos - g.ActiveIdClickOffset;
+            ImVec2 pos = g.IO.MousePos - g.MovingWindowClickOffset;
             if (moving_window->Pos.x != pos.x || moving_window->Pos.y != pos.y)
             {
                 SetWindowPos(moving_window, pos, ImGuiCond_Always);
@@ -17210,7 +17212,22 @@ static void ImGui::UpdateViewportsNewFrame()
             {
                 // Viewport->WorkPos and WorkSize will be updated below
                 if (viewport->PlatformRequestMove)
-                    viewport->Pos = viewport->LastPlatformPos = g.PlatformIO.Platform_GetWindowPos(viewport);
+                {
+                    const ImVec2 requested_pos = viewport->Pos;
+                    const ImVec2 platform_pos = g.PlatformIO.Platform_GetWindowPos(viewport);
+                    // When a window manager adjusts an actively dragged viewport, rebase the mutable drag offset.
+                    // Only rebase adjusted axes: accepted axes should retain any mouse movement received this frame.
+                    // Keep ActiveIdClickOffset unchanged: docking uses it as the original click location.
+                    ImGuiWindow* moving_root = g.MovingWindow ? g.MovingWindow->RootWindowDockTree : NULL;
+                    if (moving_root && viewport->Window == moving_root && moving_root->ViewportOwned && IsMousePosValid(&g.IO.MousePos))
+                    {
+                        if (platform_pos.x != requested_pos.x)
+                            g.MovingWindowClickOffset.x = g.IO.MousePos.x - platform_pos.x;
+                        if (platform_pos.y != requested_pos.y)
+                            g.MovingWindowClickOffset.y = g.IO.MousePos.y - platform_pos.y;
+                    }
+                    viewport->Pos = viewport->LastPlatformPos = platform_pos;
+                }
                 if (viewport->PlatformRequestResize)
                     viewport->Size = viewport->LastPlatformSize = g.PlatformIO.Platform_GetWindowSize(viewport);
                 if (g.PlatformIO.Platform_GetWindowFramebufferScale != NULL)
@@ -17763,15 +17780,26 @@ void ImGui::UpdatePlatformWindows()
             viewport->PlatformWindowCreated = true;
         }
 
+        // Consume requests received before this update. Callbacks raised synchronously by setters below must survive
+        // until the next NewFrame(), so clear the old requests before invoking platform functions instead of afterward.
+        const bool platform_request_move = viewport->PlatformRequestMove;
+        const bool platform_request_resize = viewport->PlatformRequestResize;
+        viewport->PlatformRequestMove = viewport->PlatformRequestResize = false;
+
         // Apply Position and Size (from ImGui to Platform/Renderer backends)
-        if ((viewport->LastPlatformPos.x != viewport->Pos.x || viewport->LastPlatformPos.y != viewport->Pos.y) && !viewport->PlatformRequestMove)
+        if ((viewport->LastPlatformPos.x != viewport->Pos.x || viewport->LastPlatformPos.y != viewport->Pos.y) && !platform_request_move)
+        {
             g.PlatformIO.Platform_SetWindowPos(viewport, viewport->Pos);
-        if ((viewport->LastPlatformSize.x != viewport->Size.x || viewport->LastPlatformSize.y != viewport->Size.y) && !viewport->PlatformRequestResize)
+            viewport->LastPlatformPos = viewport->Pos;
+        }
+        if ((viewport->LastPlatformSize.x != viewport->Size.x || viewport->LastPlatformSize.y != viewport->Size.y) && !platform_request_resize)
+        {
             g.PlatformIO.Platform_SetWindowSize(viewport, viewport->Size);
+            viewport->LastPlatformSize = viewport->Size;
+        }
         if ((viewport->LastRendererSize.x != viewport->Size.x || viewport->LastRendererSize.y != viewport->Size.y) && g.PlatformIO.Renderer_SetWindowSize)
             g.PlatformIO.Renderer_SetWindowSize(viewport, viewport->Size);
-        viewport->LastPlatformPos = viewport->Pos;
-        viewport->LastPlatformSize = viewport->LastRendererSize = viewport->Size;
+        viewport->LastRendererSize = viewport->Size;
 
         // Update title bar (if it changed)
         if (ImGuiWindow* window_for_title = GetWindowForTitleDisplay(viewport->Window))
@@ -17808,8 +17836,10 @@ void ImGui::UpdatePlatformWindows()
             g.PlatformIO.Platform_ShowWindow(viewport);
         }
 
-        // Clear request flags
-        viewport->ClearRequestFlags();
+        // Position/size requests raised synchronously above need to survive until the next NewFrame().
+        // Close requests keep their previous lifetime and are consumed once per platform update.
+        viewport->PlatformRequestClose = false;
+
     }
 }
 
@@ -19259,6 +19289,7 @@ static void ImGui::DockNodeStartMouseMovingWindow(ImGuiDockNode* node, ImGuiWind
     IM_ASSERT(node->WantMouseMove == true);
     StartMouseMovingWindow(window);
     g.ActiveIdClickOffset = g.IO.MouseClickedPos[0] - node->Pos;
+    g.MovingWindowClickOffset = g.ActiveIdClickOffset;
     g.MovingWindow = window; // If we are docked into a non moveable root window, StartMouseMovingWindow() won't set g.MovingWindow. Override that decision.
     node->WantMouseMove = false;
 }

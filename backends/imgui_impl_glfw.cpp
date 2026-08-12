@@ -31,6 +31,8 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-08-12: [Docking] Multi-viewport: Synchronize window manager adjustments instead of treating them as setter echoes. On X11, when the native API is available, observe synthetic ConfigureNotify events so fully rejected requests also synchronize without a timeout. (#9356, #9398, #9442)
+//  2026-08-12: [Docking] Multi-viewport: Disable support on Wayland with legacy GLFW versions as global window positioning is unavailable.
 //  2026-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
 //  2026-04-21: Added a Win32-specific implementation of ImGui_ImplGlfw_GetContentScaleXXXX functions for legacy GLFW 3.2.
 //  2026-03-25: Mouse cursor is properly restored if changed by user app/code while using glfwSetInputMode(..., GLFW_CURSOR_DISABLED) or ImGuiConfigFlags_NoMouseCursorChange. Amend change from 2025-12-10.
@@ -235,6 +237,12 @@ typedef Atom (*PFN_XInternAtom)(Display*, const char* ,Bool);
 typedef int  (*PFN_XChangeProperty)(Display*, Window, Atom, Atom, int, int, const unsigned char*, int);
 typedef int  (*PFN_XChangeWindowAttributes)(Display*, Window, unsigned long, XSetWindowAttributes*);
 typedef int  (*PFN_XFlush)(Display*);
+typedef Display* (*PFN_XOpenDisplay)(const char*);
+typedef int  (*PFN_XCloseDisplay)(Display*);
+typedef int  (*PFN_XSelectInput)(Display*, Window, long);
+typedef int  (*PFN_XPending)(Display*);
+typedef int  (*PFN_XNextEvent)(Display*, XEvent*);
+typedef int  (*PFN_XSync)(Display*, Bool);
 #endif
 
 // GLFW data
@@ -281,6 +289,13 @@ struct ImGui_ImplGlfw_Data
     PFN_XChangeProperty         XChangeProperty;
     PFN_XChangeWindowAttributes XChangeWindowAttributes;
     PFN_XFlush                  XFlush;
+    PFN_XOpenDisplay            XOpenDisplay;
+    PFN_XCloseDisplay           XCloseDisplay;
+    PFN_XSelectInput            XSelectInput;
+    PFN_XPending                XPending;
+    PFN_XNextEvent              XNextEvent;
+    PFN_XSync                   XSync;
+    Display*                    X11EventObserverDisplay;
 #endif
 
     ImGui_ImplGlfw_Data()   { memset((void*)this, 0, sizeof(*this)); }
@@ -310,6 +325,9 @@ static ImGui_ImplGlfw_Data* ImGui_ImplGlfw_GetBackendData(GLFWwindow* window)
 static void ImGui_ImplGlfw_UpdateMonitors();
 static void ImGui_ImplGlfw_InitMultiViewportSupport();
 static void ImGui_ImplGlfw_ShutdownMultiViewportSupport();
+#if GLFW_HAS_X11
+static void ImGui_ImplGlfw_UpdateX11ConfigureEvents();
+#endif
 
 // Functions
 static bool ImGui_ImplGlfw_IsWayland()
@@ -739,11 +757,7 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
 
     bool has_viewports = false;
 #ifndef __EMSCRIPTEN__
-    has_viewports = true;
-#if GLFW_HAS_GETPLATFORM
-    if (glfwGetPlatform() == GLFW_PLATFORM_WAYLAND)
-        has_viewports = false;
-#endif
+    has_viewports = !bd->IsWayland;
     if (has_viewports)
         io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;  // We can create multi-viewports on the Platform side (optional)
 #endif
@@ -835,11 +849,20 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
         const char* x11_module_path = "libX11.so.6";
 #endif
         bd->X11Module = dlopen(x11_module_path, RTLD_LAZY | RTLD_LOCAL);
-        bd->XInternAtom = (PFN_XInternAtom)dlsym(bd->X11Module, "XInternAtom");
-        bd->XChangeProperty = (PFN_XChangeProperty)dlsym(bd->X11Module, "XChangeProperty");
-        bd->XChangeWindowAttributes = (PFN_XChangeWindowAttributes)dlsym(bd->X11Module, "XChangeWindowAttributes");
-        bd->XFlush = (PFN_XFlush)dlsym(bd->X11Module, "XFlush");
-        IM_ASSERT(bd->XInternAtom != nullptr && bd->XChangeProperty != nullptr && bd->XChangeWindowAttributes != nullptr && bd->XFlush != nullptr);
+        if (bd->X11Module != nullptr)
+        {
+            bd->XInternAtom = (PFN_XInternAtom)dlsym(bd->X11Module, "XInternAtom");
+            bd->XChangeProperty = (PFN_XChangeProperty)dlsym(bd->X11Module, "XChangeProperty");
+            bd->XChangeWindowAttributes = (PFN_XChangeWindowAttributes)dlsym(bd->X11Module, "XChangeWindowAttributes");
+            bd->XFlush = (PFN_XFlush)dlsym(bd->X11Module, "XFlush");
+            bd->XOpenDisplay = (PFN_XOpenDisplay)dlsym(bd->X11Module, "XOpenDisplay");
+            bd->XCloseDisplay = (PFN_XCloseDisplay)dlsym(bd->X11Module, "XCloseDisplay");
+            bd->XSelectInput = (PFN_XSelectInput)dlsym(bd->X11Module, "XSelectInput");
+            bd->XPending = (PFN_XPending)dlsym(bd->X11Module, "XPending");
+            bd->XNextEvent = (PFN_XNextEvent)dlsym(bd->X11Module, "XNextEvent");
+            bd->XSync = (PFN_XSync)dlsym(bd->X11Module, "XSync");
+            IM_ASSERT(bd->XInternAtom != nullptr && bd->XChangeProperty != nullptr && bd->XChangeWindowAttributes != nullptr && bd->XFlush != nullptr);
+        }
     }
 #endif
 
@@ -907,6 +930,11 @@ void ImGui_ImplGlfw_Shutdown()
 #endif
 
 #if GLFW_HAS_X11
+    if (bd->X11EventObserverDisplay != nullptr)
+    {
+        bd->XCloseDisplay(bd->X11EventObserverDisplay);
+        bd->X11EventObserverDisplay = nullptr;
+    }
     if (bd->X11Module != nullptr)
         dlclose(bd->X11Module);
 #endif
@@ -1201,6 +1229,9 @@ void ImGui_ImplGlfw_NewFrame()
     // Setup main viewport size (every frame to accommodate for window resizing)
     ImGui_ImplGlfw_GetWindowSizeAndFramebufferScale(bd->Window, &io.DisplaySize, &io.DisplayFramebufferScale);
     ImGui_ImplGlfw_UpdateMonitors();
+#if GLFW_HAS_X11
+    ImGui_ImplGlfw_UpdateX11ConfigureEvents();
+#endif
 
     // Setup time step
     // (Accept glfwGetTime() not returning a monotonically increasing value. Seems to happens on disconnecting peripherals and probably on VMs and Emscripten, see #6491, #6189, #6114, #3644)
@@ -1294,6 +1325,11 @@ struct ImGui_ImplGlfw_ViewportData
     bool        WindowOwned;
     int         IgnoreWindowPosEventFrame;
     int         IgnoreWindowSizeEventFrame;
+    int         LastWindowPosRequest[2];
+    int         LastWindowSizeRequest[2];
+#if GLFW_HAS_X11
+    ::Window    X11Window;
+#endif
 #ifdef _WIN32
     WNDPROC     PrevWndProc;
 #endif
@@ -1314,30 +1350,75 @@ static void ImGui_ImplGlfw_WindowCloseCallback(GLFWwindow* window)
 // - on Linux it is queued and invoked during glfwPollEvents()
 // Because the event doesn't always fire on glfwSetWindowXXX() we use a frame counter tag to only
 // ignore recent glfwSetWindowXXX() calls.
-static void ImGui_ImplGlfw_WindowPosCallback(GLFWwindow* window, int, int)
+static void ImGui_ImplGlfw_WindowPosCallback(GLFWwindow* window, int x, int y)
 {
     if (ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle(window))
     {
         if (ImGui_ImplGlfw_ViewportData* vd = (ImGui_ImplGlfw_ViewportData*)viewport->PlatformUserData)
         {
             bool ignore_event = (ImGui::GetFrameCount() <= vd->IgnoreWindowPosEventFrame + 1);
-            //data->IgnoreWindowPosEventFrame = -1;
-            if (ignore_event)
+            // A window manager may adjust the requested position. Only ignore the callback when it reports
+            // the latest position passed to glfwSetWindowPos() and the viewport still expects that position.
+            // Otherwise query and apply the authoritative platform position.
+            const bool is_latest_request = (x == vd->LastWindowPosRequest[0] && y == vd->LastWindowPosRequest[1]);
+            const bool is_current_viewport_pos = (x == (int)viewport->Pos.x && y == (int)viewport->Pos.y);
+            if (ignore_event && is_latest_request && is_current_viewport_pos)
                 return;
         }
         viewport->PlatformRequestMove = true;
     }
 }
 
-static void ImGui_ImplGlfw_WindowSizeCallback(GLFWwindow* window, int, int)
+#if GLFW_HAS_X11
+// X11 window managers report a completely rejected ConfigureRequest with a synthetic ConfigureNotify containing the
+// unchanged geometry. GLFW consumes that event but doesn't invoke its public callback when the cached geometry didn't
+// change. Observe synthetic ConfigureNotify events through a separate X connection so those rejections still reach
+// Dear ImGui without relying on a timing heuristic. The application should call glfwPollEvents() before this NewFrame().
+static void ImGui_ImplGlfw_UpdateX11ConfigureEvents()
+{
+    ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
+    if (bd->X11EventObserverDisplay == nullptr)
+        return;
+
+    while (bd->XPending(bd->X11EventObserverDisplay) > 0)
+    {
+        XEvent event;
+        bd->XNextEvent(bd->X11EventObserverDisplay, &event);
+        if (event.type != ConfigureNotify || !event.xconfigure.send_event)
+            continue;
+
+        ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+        for (int viewport_n = 1; viewport_n < platform_io.Viewports.Size; viewport_n++)
+        {
+            ImGuiViewport* viewport = platform_io.Viewports[viewport_n];
+            ImGui_ImplGlfw_ViewportData* vd = (ImGui_ImplGlfw_ViewportData*)viewport->PlatformUserData;
+            if (vd == nullptr || vd->X11Window != event.xconfigure.window)
+                continue;
+
+            int x, y, width, height;
+            glfwGetWindowPos(vd->Window, &x, &y);
+            glfwGetWindowSize(vd->Window, &width, &height);
+            if (x != (int)viewport->Pos.x || y != (int)viewport->Pos.y)
+                viewport->PlatformRequestMove = true;
+            if (width != (int)viewport->Size.x || height != (int)viewport->Size.y)
+                viewport->PlatformRequestResize = true;
+            break;
+        }
+    }
+}
+#endif
+
+static void ImGui_ImplGlfw_WindowSizeCallback(GLFWwindow* window, int width, int height)
 {
     if (ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle(window))
     {
         if (ImGui_ImplGlfw_ViewportData* vd = (ImGui_ImplGlfw_ViewportData*)viewport->PlatformUserData)
         {
             bool ignore_event = (ImGui::GetFrameCount() <= vd->IgnoreWindowSizeEventFrame + 1);
-            //data->IgnoreWindowSizeEventFrame = -1;
-            if (ignore_event)
+            // Preserve delayed setter-echo suppression only while the viewport still expects that exact size.
+            const bool is_latest_request = (width == vd->LastWindowSizeRequest[0] && height == vd->LastWindowSizeRequest[1]);
+            const bool is_current_viewport_size = (width == (int)viewport->Size.x && height == (int)viewport->Size.y);
+            if (ignore_event && is_latest_request && is_current_viewport_size)
                 return;
         }
         viewport->PlatformRequestResize = true;
@@ -1349,7 +1430,7 @@ static void ImGui_ImplGlfw_WindowSizeCallback(GLFWwindow* window, int, int)
 static void ImGui_ImplGlfw_SetWindowFloating(ImGui_ImplGlfw_Data* bd, GLFWwindow* window)
 {
 #ifdef GLFW_EXPOSE_NATIVE_X11
-    if (glfwGetPlatform() == GLFW_PLATFORM_X11)
+    if (glfwGetPlatform() == GLFW_PLATFORM_X11 && bd->XInternAtom != nullptr && bd->XChangeProperty != nullptr && bd->XChangeWindowAttributes != nullptr && bd->XFlush != nullptr)
     {
         Display* display = glfwGetX11Display();
         Window xwindow = glfwGetX11Window(window);
@@ -1405,6 +1486,26 @@ static void ImGui_ImplGlfw_CreateWindow(ImGuiViewport* viewport)
     viewport->PlatformHandleRaw = (void*)glfwGetCocoaWindow(vd->Window);
 #endif
     glfwSetWindowPos(vd->Window, (int)viewport->Pos.x, (int)viewport->Pos.y);
+#if GLFW_HAS_X11
+#if GLFW_HAS_GETPLATFORM
+    const bool is_x11 = (glfwGetPlatform() == GLFW_PLATFORM_X11);
+#else
+    const bool is_x11 = !bd->IsWayland;
+#endif
+    const bool has_x11_observer_api = (bd->XOpenDisplay != nullptr && bd->XCloseDisplay != nullptr && bd->XSelectInput != nullptr && bd->XPending != nullptr && bd->XNextEvent != nullptr && bd->XSync != nullptr);
+    if (is_x11 && has_x11_observer_api && bd->X11EventObserverDisplay == nullptr)
+        bd->X11EventObserverDisplay = bd->XOpenDisplay(DisplayString(glfwGetX11Display()));
+    if (bd->X11EventObserverDisplay != nullptr)
+    {
+        bd->XSync(glfwGetX11Display(), False);
+        vd->X11Window = glfwGetX11Window(vd->Window);
+        if (vd->X11Window != None)
+        {
+            bd->XSelectInput(bd->X11EventObserverDisplay, vd->X11Window, StructureNotifyMask);
+            bd->XSync(bd->X11EventObserverDisplay, False);
+        }
+    }
+#endif
 
     // Install GLFW callbacks for secondary viewports
     glfwSetWindowFocusCallback(vd->Window, ImGui_ImplGlfw_WindowFocusCallback);
@@ -1429,6 +1530,14 @@ static void ImGui_ImplGlfw_DestroyWindow(ImGuiViewport* viewport)
     ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
     if (ImGui_ImplGlfw_ViewportData* vd = (ImGui_ImplGlfw_ViewportData*)viewport->PlatformUserData)
     {
+#if GLFW_HAS_X11
+        if (bd->X11EventObserverDisplay != nullptr && vd->X11Window != 0)
+        {
+            bd->XSelectInput(bd->X11EventObserverDisplay, vd->X11Window, NoEventMask);
+            bd->XSync(bd->X11EventObserverDisplay, False);
+            ImGui_ImplGlfw_UpdateX11ConfigureEvents();
+        }
+#endif
         if (vd->WindowOwned)
         {
 #if !GLFW_HAS_MOUSE_PASSTHROUGH && GLFW_HAS_WINDOW_HOVERED && defined(_WIN32)
@@ -1499,7 +1608,9 @@ static void ImGui_ImplGlfw_SetWindowPos(ImGuiViewport* viewport, ImVec2 pos)
 {
     ImGui_ImplGlfw_ViewportData* vd = (ImGui_ImplGlfw_ViewportData*)viewport->PlatformUserData;
     vd->IgnoreWindowPosEventFrame = ImGui::GetFrameCount();
-    glfwSetWindowPos(vd->Window, (int)pos.x, (int)pos.y);
+    vd->LastWindowPosRequest[0] = (int)pos.x;
+    vd->LastWindowPosRequest[1] = (int)pos.y;
+    glfwSetWindowPos(vd->Window, vd->LastWindowPosRequest[0], vd->LastWindowPosRequest[1]);
 }
 
 static ImVec2 ImGui_ImplGlfw_GetWindowSize(ImGuiViewport* viewport)
@@ -1521,10 +1632,15 @@ static void ImGui_ImplGlfw_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
     int x, y, width, height;
     glfwGetWindowPos(vd->Window, &x, &y);
     glfwGetWindowSize(vd->Window, &width, &height);
-    glfwSetWindowPos(vd->Window, x, y - height + size.y);
+    vd->IgnoreWindowPosEventFrame = ImGui::GetFrameCount();
+    vd->LastWindowPosRequest[0] = x;
+    vd->LastWindowPosRequest[1] = (int)(y - height + size.y);
+    glfwSetWindowPos(vd->Window, vd->LastWindowPosRequest[0], vd->LastWindowPosRequest[1]);
 #endif
     vd->IgnoreWindowSizeEventFrame = ImGui::GetFrameCount();
-    glfwSetWindowSize(vd->Window, (int)size.x, (int)size.y);
+    vd->LastWindowSizeRequest[0] = (int)size.x;
+    vd->LastWindowSizeRequest[1] = (int)size.y;
+    glfwSetWindowSize(vd->Window, vd->LastWindowSizeRequest[0], vd->LastWindowSizeRequest[1]);
 }
 
 static ImVec2 ImGui_ImplGlfw_GetWindowFramebufferScale(ImGuiViewport* viewport)

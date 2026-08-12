@@ -10908,6 +10908,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
                 g.MovingWindow = docked_window;
                 SetActiveID(g.MovingWindow->MoveId, g.MovingWindow);
                 g.ActiveIdClickOffset -= g.MovingWindow->Pos - bb.Min;
+                g.MovingWindowClickOffset = g.ActiveIdClickOffset;
                 g.ActiveIdNoClearOnFocusLoss = true;
                 SetActiveIdUsingAllKeyboardKeys();
             }
