@@ -75,8 +75,8 @@ Docking+Viewports Branch:
   continues from the platform-accepted position instead of repeatedly requesting rejected
   geometry. (#9356, #9398, #9442)
 - Backends:
-  - GLFW: on X11, observe synthetic ConfigureNotify events when the native API is available
-    so completely rejected viewport geometry requests are synchronized without a timeout.
+  - GLFW: on X11, poll live geometry after a setter so completely rejected viewport
+    requests are synchronized. (#9356, #9398, #9442)
   - GLFW: disabled multi-viewports on Wayland with legacy GLFW versions, where global window
     positioning is unavailable.
   - Metal: fixed resizing windows losing framebuffer scale. (#6828, #8856) [@laikoken]

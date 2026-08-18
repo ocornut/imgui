@@ -17213,23 +17213,42 @@ static void ImGui::UpdateViewportsNewFrame()
                 // Viewport->WorkPos and WorkSize will be updated below
                 if (viewport->PlatformRequestMove)
                 {
-                    const ImVec2 requested_pos = viewport->Pos;
+                    const ImVec2 requested_pos = viewport->LastPlatformPos;
                     const ImVec2 platform_pos = g.PlatformIO.Platform_GetWindowPos(viewport);
-                    // When a window manager adjusts an actively dragged viewport, rebase the mutable drag offset.
-                    // Only rebase adjusted axes: accepted axes should retain any mouse movement received this frame.
-                    // Keep ActiveIdClickOffset unchanged: docking uses it as the original click location.
+                    // Rebase only axes adjusted by the window manager. Platform coordinates are integer pixels.
+                    const bool platform_pos_adjusted = (ImTrunc(platform_pos.x) != ImTrunc(requested_pos.x) || ImTrunc(platform_pos.y) != ImTrunc(requested_pos.y));
                     ImGuiWindow* moving_root = g.MovingWindow ? g.MovingWindow->RootWindowDockTree : NULL;
-                    if (moving_root && viewport->Window == moving_root && moving_root->ViewportOwned && IsMousePosValid(&g.IO.MousePos))
+                    const bool moving_owned_viewport = (moving_root && viewport->Window == moving_root && moving_root->ViewportOwned && IsMousePosValid(&g.IO.MousePos));
+                    if (moving_owned_viewport)
                     {
-                        if (platform_pos.x != requested_pos.x)
+                        if (ImTrunc(platform_pos.x) != ImTrunc(requested_pos.x))
                             g.MovingWindowClickOffset.x = g.IO.MousePos.x - platform_pos.x;
-                        if (platform_pos.y != requested_pos.y)
+                        if (ImTrunc(platform_pos.y) != ImTrunc(requested_pos.y))
                             g.MovingWindowClickOffset.y = g.IO.MousePos.y - platform_pos.y;
                     }
                     viewport->Pos = viewport->LastPlatformPos = platform_pos;
+                    if (platform_pos_adjusted && viewport->Window != NULL)
+                    {
+                        viewport->Window->Pos = platform_pos;
+                        MarkIniSettingsDirty(viewport->Window);
+                    }
+                    if (!platform_pos_adjusted || moving_owned_viewport)
+                        viewport->PlatformRequestMove = false;
                 }
                 if (viewport->PlatformRequestResize)
-                    viewport->Size = viewport->LastPlatformSize = g.PlatformIO.Platform_GetWindowSize(viewport);
+                {
+                    const ImVec2 requested_size = viewport->LastPlatformSize;
+                    const ImVec2 platform_size = g.PlatformIO.Platform_GetWindowSize(viewport);
+                    const bool platform_size_adjusted = (ImTrunc(platform_size.x) != ImTrunc(requested_size.x) || ImTrunc(platform_size.y) != ImTrunc(requested_size.y));
+                    viewport->Size = viewport->LastPlatformSize = platform_size;
+                    if (platform_size_adjusted && viewport->Window != NULL)
+                    {
+                        viewport->Window->Size = viewport->Window->SizeFull = platform_size;
+                        MarkIniSettingsDirty(viewport->Window);
+                    }
+                    if (!platform_size_adjusted)
+                        viewport->PlatformRequestResize = false;
+                }
                 if (g.PlatformIO.Platform_GetWindowFramebufferScale != NULL)
                     viewport->FramebufferScale = g.PlatformIO.Platform_GetWindowFramebufferScale(viewport);
             }
@@ -17780,18 +17799,18 @@ void ImGui::UpdatePlatformWindows()
             viewport->PlatformWindowCreated = true;
         }
 
-        // Consume requests received before this update. NewFrame already applied them to Pos/Size/LastPlatform*.
-        // A leftover flag must not suppress a later imgui-initiated Set (e.g. continued drag after a setter echo).
-        // Clear before invoking platform functions so synchronous setter callbacks survive until the next NewFrame().
+        // Consume requests applied by NewFrame(), before setters can raise synchronous callbacks.
+        const bool platform_request_move = viewport->PlatformRequestMove;
+        const bool platform_request_resize = viewport->PlatformRequestResize;
         viewport->PlatformRequestMove = viewport->PlatformRequestResize = false;
 
         // Apply Position and Size (from ImGui to Platform/Renderer backends)
-        if (viewport->LastPlatformPos.x != viewport->Pos.x || viewport->LastPlatformPos.y != viewport->Pos.y)
+        if ((viewport->LastPlatformPos.x != viewport->Pos.x || viewport->LastPlatformPos.y != viewport->Pos.y) && !platform_request_move)
         {
             g.PlatformIO.Platform_SetWindowPos(viewport, viewport->Pos);
             viewport->LastPlatformPos = viewport->Pos;
         }
-        if (viewport->LastPlatformSize.x != viewport->Size.x || viewport->LastPlatformSize.y != viewport->Size.y)
+        if ((viewport->LastPlatformSize.x != viewport->Size.x || viewport->LastPlatformSize.y != viewport->Size.y) && !platform_request_resize)
         {
             g.PlatformIO.Platform_SetWindowSize(viewport, viewport->Size);
             viewport->LastPlatformSize = viewport->Size;
