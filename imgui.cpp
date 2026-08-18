@@ -17780,19 +17780,18 @@ void ImGui::UpdatePlatformWindows()
             viewport->PlatformWindowCreated = true;
         }
 
-        // Consume requests received before this update. Callbacks raised synchronously by setters below must survive
-        // until the next NewFrame(), so clear the old requests before invoking platform functions instead of afterward.
-        const bool platform_request_move = viewport->PlatformRequestMove;
-        const bool platform_request_resize = viewport->PlatformRequestResize;
+        // Consume requests received before this update. NewFrame already applied them to Pos/Size/LastPlatform*.
+        // A leftover flag must not suppress a later imgui-initiated Set (e.g. continued drag after a setter echo).
+        // Clear before invoking platform functions so synchronous setter callbacks survive until the next NewFrame().
         viewport->PlatformRequestMove = viewport->PlatformRequestResize = false;
 
         // Apply Position and Size (from ImGui to Platform/Renderer backends)
-        if ((viewport->LastPlatformPos.x != viewport->Pos.x || viewport->LastPlatformPos.y != viewport->Pos.y) && !platform_request_move)
+        if (viewport->LastPlatformPos.x != viewport->Pos.x || viewport->LastPlatformPos.y != viewport->Pos.y)
         {
             g.PlatformIO.Platform_SetWindowPos(viewport, viewport->Pos);
             viewport->LastPlatformPos = viewport->Pos;
         }
-        if ((viewport->LastPlatformSize.x != viewport->Size.x || viewport->LastPlatformSize.y != viewport->Size.y) && !platform_request_resize)
+        if (viewport->LastPlatformSize.x != viewport->Size.x || viewport->LastPlatformSize.y != viewport->Size.y)
         {
             g.PlatformIO.Platform_SetWindowSize(viewport, viewport->Size);
             viewport->LastPlatformSize = viewport->Size;
