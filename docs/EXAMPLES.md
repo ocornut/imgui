@@ -70,8 +70,10 @@ OSX & iOS + Metal4 example, Mac only. <BR>
 [example_apple_opengl2/](https://github.com/ocornut/imgui/blob/master/examples/example_apple_opengl2/) <BR>
 OSX + OpenGL2 example. <BR>
 = main.mm + imgui_impl_osx.mm + imgui_impl_opengl2.cpp <BR>
-(NB: imgui_impl_osx.mm is currently not as feature complete as other platforms backends.
- You may prefer to use the GLFW Or SDL backends, which will also support Windows and Linux.)
+
+[example_apple_opengl3/](https://github.com/ocornut/imgui/blob/master/examples/example_apple_opengl3/) <BR>
+OSX + OpenGL3 example. <BR>
+= main.mm + imgui_impl_osx.mm + imgui_impl_opengl3.cpp <BR>
 
 [example_glfw_wgpu/](https://github.com/ocornut/imgui/blob/master/examples/example_glfw_wgpu/) <BR>
 GLFW + WebGPU example. Supports Emscripten (web), Dawn (native), WGPU (native). <BR>

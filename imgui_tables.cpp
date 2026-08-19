@@ -631,7 +631,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     // At this point the ->NameOffset field of each column will be invalid until TableUpdateLayout() or the first call to TableSetupColumn()
     if (table->ColumnsNames.Buf.Size > 0)
         table->ColumnsNames.Buf.resize(0);
-    
+
     return true;
 }
 
@@ -3974,6 +3974,8 @@ void ImGui::TableSaveSettings(ImGuiTable* table)
         if (column->IsUserEnabled != ((column->Flags & ImGuiTableColumnFlags_DefaultHide) == 0))
             settings->SaveFlags |= ImGuiTableFlags_Hideable;
     }
+    if (table->Flags & ImGuiTableFlags_Sortable)
+        settings->SaveFlags |= ImGuiTableFlags_Sortable | ImGuiTableFlags_Reorderable;
     settings->SaveFlags &= table->Flags;
     settings->RefScale = save_ref_scale ? table->RefScale : 0.0f;
 

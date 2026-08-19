@@ -570,8 +570,8 @@ typedef ImU64 ImTextureID;  // Default: store up to 64-bits (any pointer or inte
 // Store a ImTextureID _or_ a ImTextureData*.
 struct ImTextureRef
 {
-    ImTextureRef()                          { _TexData = NULL; _TexID = ImTextureID_Invalid; }
-    ImTextureRef(ImTextureID tex_id)        { _TexData = NULL; _TexID = tex_id; }
+    ImTextureRef()                          { _TexData = nullptr; _TexID = ImTextureID_Invalid; }
+    ImTextureRef(ImTextureID tex_id)        { _TexData = nullptr; _TexID = tex_id; }
     inline ImTextureID  GetTexID() const    { return _TexData ? _TexData->TexID : _TexID; }
 
     // Members (either are set, never both!)
@@ -589,7 +589,7 @@ struct ImTextureRef
    We intentionally do not provide an `ImTextureRef` constructor for this: we don't expect this to be frequently useful to the end-user, and it would be erroneously called by many legacy code.
  - There is no constructor to create a `ImTextureRef` from a `ImTextureData*` as we don't expect this to be useful to the end-user, and it would be erroneously called by many legacy code.
  - If you want to bind the current atlas when using custom rectangles, you can use `io.Fonts->TexRef`.
- - Binding generators for languages such as C (which don't have constructors), should provide a helper, e.g. `inline ImTextureRef ImTextureRefFromID(ImTextureID tex_id) { ImTextureRef tex_ref = { ._TexData = NULL, .TexID = tex_id }; return tex_ref; }`
+ - Binding generators for languages such as C (which don't have constructors), should provide a helper, e.g. `inline ImTextureRef ImTextureRefFromID(ImTextureID tex_id) { ImTextureRef tex_ref = { ._TexData = nullptr, .TexID = tex_id }; return tex_ref; }`
 
 **Please read documentations or tutorials on your graphics API to understand how to display textures on the screen before moving onward.**
 
@@ -780,7 +780,7 @@ style.FontScaleDpi = 2.0f;
 
 To change font size:
 ```cpp
-ImGui::PushFont(NULL, 42.0f); // This will be multiplied by style.FontScaleDpi
+ImGui::PushFont(nullptr, 42.0f); // This will be multiplied by style.FontScaleDpi
 ```
 To change font and font size:
 ```cpp

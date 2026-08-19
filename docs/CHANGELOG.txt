@@ -64,9 +64,12 @@ Other Changes:
   - QNX: added QNX Screen backend. (#9492) [@mgorchak-blackberry]
   - SDL2: fixed querying framebuffer scale/density when using Metal without
     going through a SDL_Renderer. (#5592) [@lailoken]
+  - WebGPU: fixed passing non-integer sizes to `wgpuRenderPassEncoderSetViewport()`
+    when when `FramebufferScale` is >1.0f. (#9515, #8628) [@WayU]
 - Examples:
   - SDL2+Metal: create Metal context without using a SDL_Renderer.
   - QNX+OpenGL3, QNX+Vulkan: added QNX Screen examples. (#9492) [@mgorchak-blackberry]
+  - OSX+OpenGL3: added example_apple_opengl3/ (OSX/Cocoa + OpenGL 3.2 Core profile).
 
 Docking+Viewports Branch:
 

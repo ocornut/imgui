@@ -1,4 +1,4 @@
-// Dear ImGui: standalone example application for OSX + OpenGL2, using legacy fixed pipeline
+// Dear ImGui: standalone example application for OSX + OpenGL3
 
 // Learn about Dear ImGui:
 // - FAQ                  https://dearimgui.com/faq
@@ -10,11 +10,10 @@
 
 #define GL_SILENCE_DEPRECATION
 #import <Cocoa/Cocoa.h>
-#import <OpenGL/gl.h>
-#import <OpenGL/glu.h>
+#import <OpenGL/gl3.h>
 
 #include "imgui.h"
-#include "imgui_impl_opengl2.h"
+#include "imgui_impl_opengl3.h"
 #include "imgui_impl_osx.h"
 
 //-----------------------------------------------------------------------------------
@@ -66,8 +65,9 @@
     }
 
     // Setup Platform/Renderer backends
+    [[self openGLContext] makeCurrentContext]; // ImGui_ImplOpenGL3_Init() requires a current GL context.
     ImGui_ImplOSX_Init(self);
-    ImGui_ImplOpenGL2_Init();
+    ImGui_ImplOpenGL3_Init();
 
     // Load Fonts
     // - If fonts are not explicitly loaded, Dear ImGui will select an embedded font: either AddFontDefaultVector() or AddFontDefaultBitmap().
@@ -92,7 +92,7 @@
 {
     // Start the Dear ImGui frame
     ImGuiIO& io = ImGui::GetIO();
-    ImGui_ImplOpenGL2_NewFrame();
+    ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplOSX_NewFrame(self);
     ImGui::NewFrame();
 
@@ -149,7 +149,7 @@
     glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    ImGui_ImplOpenGL2_RenderDrawData(draw_data);
+    ImGui_ImplOpenGL3_RenderDrawData(draw_data);
 
     // Update and Render additional Platform Windows
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
@@ -196,7 +196,7 @@
     NSRect viewRect = NSMakeRect(100.0, 100.0, 100.0 + 1280.0, 100 + 800.0);
 
     _window = [[NSWindow alloc] initWithContentRect:viewRect styleMask:NSWindowStyleMaskTitled|NSWindowStyleMaskMiniaturizable|NSWindowStyleMaskResizable|NSWindowStyleMaskClosable backing:NSBackingStoreBuffered defer:YES];
-    [_window setTitle:@"Dear ImGui OSX+OpenGL2 Example"];
+    [_window setTitle:@"Dear ImGui OSX+OpenGL3 Example"];
     [_window setAcceptsMouseMovedEvents:YES];
     [_window setOpaque:YES];
     [_window makeKeyAndOrderFront:NSApp];
@@ -210,8 +210,8 @@
     NSMenu* appMenu;
     NSMenuItem* menuItem;
 
-    appMenu = [[NSMenu alloc] initWithTitle:@"Dear ImGui OSX+OpenGL2 Example"];
-    menuItem = [appMenu addItemWithTitle:@"Quit Dear ImGui OSX+OpenGL2 Example" action:@selector(terminate:) keyEquivalent:@"q"];
+    appMenu = [[NSMenu alloc] initWithTitle:@"Dear ImGui OSX+OpenGL3 Example"];
+    menuItem = [appMenu addItemWithTitle:@"Quit Dear ImGui OSX+OpenGL3 Example" action:@selector(terminate:) keyEquivalent:@"q"];
     [menuItem setKeyEquivalentModifierMask:NSEventModifierFlagCommand];
 
     menuItem = [[NSMenuItem alloc] init];
@@ -239,6 +239,7 @@
 
     NSOpenGLPixelFormatAttribute attrs[] =
     {
+        NSOpenGLPFAOpenGLProfile, NSOpenGLProfileVersion3_2Core,
         NSOpenGLPFADoubleBuffer,
         NSOpenGLPFADepthSize, 32,
         0

@@ -505,29 +505,29 @@ WGPUSurface CreateWGPUSurface(const WGPUInstance& instance, SDL_Window* window)
 #if defined(SDL_PLATFORM_MACOS)
     {
         create_info.System = "cocoa";
-        create_info.RawWindow = (void*)SDL_GetPointerProperty(propertiesID, SDL_PROP_WINDOW_COCOA_WINDOW_POINTER, NULL);
+        create_info.RawWindow = (void*)SDL_GetPointerProperty(propertiesID, SDL_PROP_WINDOW_COCOA_WINDOW_POINTER, nullptr);
         return ImGui_ImplWGPU_CreateWGPUSurfaceHelper(&create_info);
     }
 #elif defined(SDL_PLATFORM_LINUX)
     if (SDL_strcmp(SDL_GetCurrentVideoDriver(), "wayland") == 0)
     {
         create_info.System = "wayland";
-        create_info.RawDisplay = (void*)SDL_GetPointerProperty(propertiesID, SDL_PROP_WINDOW_WAYLAND_DISPLAY_POINTER, NULL);
-        create_info.RawSurface = (void*)SDL_GetPointerProperty(propertiesID, SDL_PROP_WINDOW_WAYLAND_SURFACE_POINTER, NULL);
+        create_info.RawDisplay = (void*)SDL_GetPointerProperty(propertiesID, SDL_PROP_WINDOW_WAYLAND_DISPLAY_POINTER, nullptr);
+        create_info.RawSurface = (void*)SDL_GetPointerProperty(propertiesID, SDL_PROP_WINDOW_WAYLAND_SURFACE_POINTER, nullptr);
         return ImGui_ImplWGPU_CreateWGPUSurfaceHelper(&create_info);
     }
     else if (!SDL_strcmp(SDL_GetCurrentVideoDriver(), "x11"))
     {
         create_info.System = "x11";
         create_info.RawWindow = (void*)SDL_GetNumberProperty(propertiesID, SDL_PROP_WINDOW_X11_WINDOW_NUMBER, 0);
-        create_info.RawDisplay = (void*)SDL_GetPointerProperty(propertiesID, SDL_PROP_WINDOW_X11_DISPLAY_POINTER, NULL);
+        create_info.RawDisplay = (void*)SDL_GetPointerProperty(propertiesID, SDL_PROP_WINDOW_X11_DISPLAY_POINTER, nullptr);
         return ImGui_ImplWGPU_CreateWGPUSurfaceHelper(&create_info);
     }
 #elif defined(SDL_PLATFORM_WIN32)
     {
         create_info.System = "win32";
-        create_info.RawWindow = (void*)SDL_GetPointerProperty(propertiesID, SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
-        create_info.RawInstance = (void*)::GetModuleHandle(NULL);
+        create_info.RawWindow = (void*)SDL_GetPointerProperty(propertiesID, SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr);
+        create_info.RawInstance = (void*)::GetModuleHandle(nullptr);
         return ImGui_ImplWGPU_CreateWGPUSurfaceHelper(&create_info);
     }
 #else
