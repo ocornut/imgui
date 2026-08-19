@@ -3974,6 +3974,8 @@ void ImGui::TableSaveSettings(ImGuiTable* table)
         if (column->IsUserEnabled != ((column->Flags & ImGuiTableColumnFlags_DefaultHide) == 0))
             settings->SaveFlags |= ImGuiTableFlags_Hideable;
     }
+    if (table->Flags & ImGuiTableFlags_Sortable)
+        settings->SaveFlags |= ImGuiTableFlags_Sortable | ImGuiTableFlags_Reorderable;
     settings->SaveFlags &= table->Flags;
     settings->RefScale = save_ref_scale ? table->RefScale : 0.0f;
 
