@@ -1,14 +1,14 @@
 // dear imgui: single-file wrapper include
 // We use this to validate compiling all *.cpp files in a same compilation unit.
-// Users of that technique (also called "Unity builds") can generally provide this themselves,
-// so we don't really recommend you use this in your projects.
+// Users of that technique (also called "Unity builds") can generally provide this themselves easily.
 
 // Do this:
 //    #define IMGUI_IMPLEMENTATION
-// Before you include this file in *one* C++ file to create the implementation.
+//    #include "imgui_single_file.h"
+// In *one* C++ file to create the implementation.
 // Using this in your project will leak the contents of imgui_internal.h and ImVec2 operators in this compilation unit.
 
-#ifdef IMGUI_IMPLEMENTATION
+#if defined(IMGUI_IMPLEMENTATION) && !defined(IMGUI_DEFINE_MATH_OPERATORS)
 #define IMGUI_DEFINE_MATH_OPERATORS
 #endif
 
