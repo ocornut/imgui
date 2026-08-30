@@ -708,7 +708,7 @@ void ImGui::TableApplyQueuedRequests(ImGuiTable* table)
     // Handle display order / visibility reset requests
     if (table->IsResetDisplayOrderRequest)
     {
-        for (int n = 0; n < table->ColumnsCount; n++)
+        for (int n = 0; n < table->ColumnsCount; n++) // Variant of using TableInitColumnDefaults()(
             table->DisplayOrderToIndex[n] = table->Columns[n].DisplayOrder = (ImGuiTableColumnIdx)n;
         table->IsResetDisplayOrderRequest = false;
         table->IsSettingsDirty = true;
@@ -716,7 +716,7 @@ void ImGui::TableApplyQueuedRequests(ImGuiTable* table)
     if (table->IsResetVisibilityRequest)
     {
         for (ImGuiTableColumn& column : table->Columns)
-            column.IsUserEnabled = column.IsUserEnabledNextFrame = (column.Flags & ImGuiTableColumnFlags_DefaultHide) ? 0 : 1;
+            TableInitColumnDefaults(table, &column, ImGuiTableFlags_Hideable);
         table->IsResetVisibilityRequest = false;
         table->IsSettingsDirty = true;
     }
@@ -1685,7 +1685,7 @@ void ImGui::TableInitColumnDefaults(ImGuiTable* table, ImGuiTableColumn* column,
     if (init_mask & ImGuiTableFlags_Resizable)
     {
         float init_width_or_weight = column->InitStretchWeightOrWidth;
-        column->WidthRequest = ((flags & ImGuiTableColumnFlags_WidthFixed) && init_width_or_weight > 0.0f) ? init_width_or_weight : -1.0f;
+        column->WidthRequest = (init_width_or_weight > 0.0f && (flags & ImGuiTableColumnFlags_WidthFixed)) ? init_width_or_weight : -1.0f;
         column->StretchWeight = (init_width_or_weight > 0.0f && (flags & ImGuiTableColumnFlags_WidthStretch)) ? init_width_or_weight : -1.0f;
         if (init_width_or_weight > 0.0f) // Disable auto-fit if an explicit width/weight has been specified
             column->AutoFitQueue = 0x00;
