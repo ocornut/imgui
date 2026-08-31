@@ -9,6 +9,8 @@ imgui*.ini
 
 ## General build artifacts
 *.o
+*.so*
+*.a
 *.obj
 *.exe
 examples/*/Debug/*
@@ -57,9 +59,15 @@ examples/example_sdl3_wgpu/web/*
 .idea
 cmake-build-*
 
+## QNX artifacts
+*.pinfo
+*.dep
+*.gcno
+
 ## Unix executables from our example Makefiles
 examples/example_apple_metal/example_apple_metal
 examples/example_apple_opengl2/example_apple_opengl2
+examples/example_apple_opengl3/example_apple_opengl3
 examples/example_glfw_metal/example_glfw_metal
 examples/example_glfw_opengl2/example_glfw_opengl2
 examples/example_glfw_opengl3/example_glfw_opengl3

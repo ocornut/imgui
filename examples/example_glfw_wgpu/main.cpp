@@ -548,7 +548,7 @@ WGPUSurface CreateWGPUSurface(const WGPUInstance& instance, GLFWwindow* window)
     {
         create_info.System = "win32";
         create_info.RawWindow = (void*)glfwGetWin32Window(window);
-        create_info.RawInstance = (void*)::GetModuleHandle(NULL);
+        create_info.RawInstance = (void*)::GetModuleHandle(nullptr);
         return ImGui_ImplWGPU_CreateWGPUSurfaceHelper(&create_info);
     }
 #else

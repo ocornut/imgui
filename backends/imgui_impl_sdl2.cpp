@@ -21,6 +21,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-08-06: Fixed querying framebuffer scale when using Metal. (#5592)
 //  2026-07-15: Inputs: restore SDL_StartTextInput()/SDL_StopTextInput() in IME handler for on-screen keyboard support on Android/mobile. (#7636, #9474)
 //  2026-04-16: Made ImGui_ImplSDL2_GetContentScaleForWindow(), ImGui_ImplSDL2_GetContentScaleForDisplay() helpers return a minimum of 1.0f, as some Linux setup seems to report <1.0f value and this breaks scaling border size. (#9369)
 //  2026-02-13: Inputs: systems other than X11 are back to starting mouse capture on mouse down (reverts 2025-02-26 change). Only X11 requires waiting for a drag by default (not ideal, but a better default for X11 users). Added ImGui_ImplSDL2_SetMouseCaptureMode() for X11 debugger users. (#3650, #6410, #9235)
@@ -135,9 +136,17 @@
 #endif
 #define SDL_HAS_PER_MONITOR_DPI             SDL_VERSION_ATLEAST(2,0,4)
 #define SDL_HAS_VULKAN                      SDL_VERSION_ATLEAST(2,0,6)
+#if defined(__APPLE__)
+#define SDL_HAS_METAL                       SDL_VERSION_ATLEAST(2,0,14)
+#else
+#define SDL_HAS_METAL                       0
+#endif
 #define SDL_HAS_OPEN_URL                    SDL_VERSION_ATLEAST(2,0,14)
 #if SDL_HAS_VULKAN
 #include <SDL_vulkan.h>
+#endif
+#if SDL_HAS_METAL
+#include <SDL_metal.h>
 #endif
 
 // SDL Data
@@ -899,6 +908,10 @@ static void ImGui_ImplSDL2_GetWindowSizeAndFramebufferScale(SDL_Window* window, 
 #if SDL_HAS_VULKAN
     else if (SDL_GetWindowFlags(window) & SDL_WINDOW_VULKAN)
         SDL_Vulkan_GetDrawableSize(window, &display_w, &display_h);
+#endif
+#if SDL_HAS_METAL
+    else if (SDL_GetWindowFlags(window) & SDL_WINDOW_METAL)
+        SDL_Metal_GetDrawableSize(window, &display_w, &display_h);
 #endif
     else
         SDL_GL_GetDrawableSize(window, &display_w, &display_h);

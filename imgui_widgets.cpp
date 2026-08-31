@@ -1,4 +1,4 @@
-// dear imgui, v1.92.9 WIP
+// dear imgui, v1.93.0 WIP
 // (widgets code)
 
 /*
@@ -342,18 +342,18 @@ void ImGui::TextWrappedV(const char* fmt, va_list args)
         PopTextWrapPos();
 }
 
-void ImGui::TextAligned(float align_x, float size_x, const char* fmt, ...)
+void ImGui::TextAligned(float align_x, float width, const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    TextAlignedV(align_x, size_x, fmt, args);
+    TextAlignedV(align_x, width, fmt, args);
     va_end(args);
 }
 
 // align_x: 0.0f = left, 0.5f = center, 1.0f = right.
-// size_x : 0.0f = shortcut for GetContentRegionAvail().x
-// FIXME-WIP: Works but API is likely to be reworked. This is designed for 1 item on the line. (#7024)
-void ImGui::TextAlignedV(float align_x, float size_x, const char* fmt, va_list args)
+// width < 0.0f (e.g. -FLT_MIN): shortcut for GetContentRegionAvail().x
+// FIXME-WIP: Works but API is likely to be reworked. This is designed for 1 item on the line. (#7024, #9455)
+void ImGui::TextAlignedV(float align_x, float width, const char* fmt, va_list args)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -362,23 +362,25 @@ void ImGui::TextAlignedV(float align_x, float size_x, const char* fmt, va_list a
     const char* text, *text_end;
     ImFormatStringToTempBufferV(&text, &text_end, fmt, args);
     const ImVec2 text_size = CalcTextSize(text, text_end);
-    size_x = CalcItemSize(ImVec2(size_x, 0.0f), 0.0f, text_size.y).x;
 
+    const ImVec2 size = CalcItemSize(ImVec2(width, 0.0f), 0.0f, text_size.y);
     ImVec2 pos(window->DC.CursorPos.x, window->DC.CursorPos.y + window->DC.CurrLineTextBaseOffset);
-    ImVec2 pos_max(pos.x + size_x, window->ClipRect.Max.y);
-    ImVec2 size(ImMin(size_x, text_size.x), text_size.y);
+    ImVec2 pos_max(pos.x + size.x, window->ClipRect.Max.y);
+
     window->DC.CursorMaxPos.x = ImMax(window->DC.CursorMaxPos.x, pos.x + text_size.x);
     window->DC.IdealMaxPos.x = ImMax(window->DC.IdealMaxPos.x, pos.x + text_size.x);
-    if (align_x > 0.0f && text_size.x < size_x)
-        pos.x += ImTrunc((size_x - text_size.x) * align_x);
-    RenderTextEllipsis(window->DrawList, pos, pos_max, pos_max.x, text, text_end, &text_size);
-
     const ImVec2 backup_max_pos = window->DC.CursorMaxPos;
     ItemSize(size);
-    ItemAdd(ImRect(pos, pos + size), 0);
-    window->DC.CursorMaxPos.x = backup_max_pos.x; // Cancel out extending content size because right-aligned text would otherwise mess it up.
+    const bool is_visible = ItemAdd(ImRect(pos, pos + size), 0);
+    window->DC.CursorMaxPos.x = backup_max_pos.x; // Cancel out extending content to 'size' to use 'text_size' allowing auto-resize to function with align_x > 0.0f
+    if (!is_visible)
+        return;
 
-    if (size_x < text_size.x && IsItemHovered(ImGuiHoveredFlags_NoNavOverride | ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_ForTooltip))
+    if (align_x > 0.0f && text_size.x < size.x)
+        pos.x += ImTrunc((size.x - text_size.x) * align_x);
+    RenderTextEllipsis(window->DrawList, pos, pos_max, pos_max.x, text, text_end, &text_size);
+
+    if (size.x < text_size.x && IsItemHovered(ImGuiHoveredFlags_NoNavOverride | ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_ForTooltip))
         SetTooltip("%.*s", (int)(text_end - text), text);
 }
 
@@ -3004,7 +3006,7 @@ float ImGui::ScaleRatioFromValueT(ImGuiDataType data_type, TYPE v, TYPE v_min, T
             result = 0.0f; // Workaround for values that are in-range but below our fudge
         else if (v_clamped >= v_max_fudged)
             result = 1.0f; // Workaround for values that are in-range but above our fudge
-        else if ((v_min * v_max) < 0.0f) // Range crosses zero, so split into two portions
+        else if (((FLOATTYPE)v_min * (FLOATTYPE)v_max) < 0.0f) // Range crosses zero, so split into two portions
         {
             float zero_point_center = (-(float)v_min) / ((float)v_max - (float)v_min); // The zero point in parametric space.  There's an argument we should take the logarithmic nature into account when calculating this, but for now this should do (and the most common case of a symmetrical range works fine)
             float zero_point_snap_L = zero_point_center - zero_deadzone_halfsize;
@@ -3058,7 +3060,7 @@ TYPE ImGui::ScaleValueFromRatioT(ImGuiDataType data_type, float t, TYPE v_min, T
 
         float t_with_flip = flipped ? (1.0f - t) : t; // t, but flipped if necessary to account for us flipping the range
 
-        if ((v_min * v_max) < 0.0f) // Range crosses zero, so we have to do this in two parts
+        if (((FLOATTYPE)v_min * (FLOATTYPE)v_max) < 0.0f) // Range crosses zero, so we have to do this in two parts
         {
             float zero_point_center = (-(float)ImMin(v_min, v_max)) / ImAbs((float)v_max - (float)v_min); // The zero point in parametric space
             float zero_point_snap_L = zero_point_center - zero_deadzone_halfsize;
@@ -3633,6 +3635,7 @@ const char* ImParseFormatTrimDecorations(const char* fmt, char* buf, size_t buf_
     const char* fmt_end = ImParseFormatFindEnd(fmt_start);
     if (fmt_end[0] == 0) // If we only have leading decoration, we don't need to copy the data.
         return fmt_start;
+    buf[0] = 0; // Fix false positive with caller assuming that buf could be non-initialized (#9508)
     ImStrncpy(buf, fmt_start, ImMin((size_t)(fmt_end - fmt_start) + 1, buf_size));
     return buf;
 }
@@ -4606,6 +4609,7 @@ void ImGui::InputTextDeactivateHook(ImGuiID id)
     if (!state->EditedBefore)
         return;
     //IMGUI_DEBUG_LOG_ACTIVEID("InputTextDeactivateHook() id = 0x%08X\n", id);
+    state->EditedBefore = false;
     g.InputTextDeactivatedState.ID = state->ID;
     g.InputTextDeactivatedState.ElapseFrame = g.FrameCount + 1;
     if (state->Flags & ImGuiInputTextFlags_ReadOnly)
@@ -4997,6 +5001,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     if (state != NULL && state->ID == id)
     {
         state->Flags = flags;
+        //state->LastFrameActive = g.FrameCount;
 
         // Word-wrapping: attempt to keep cursor in view while resizing frame/parent (FIXME-WORDWRAP: would be better to preserve same relative offset)
         if (is_wordwrap && state->WrapWidth != wrap_width)
@@ -5484,9 +5489,8 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     // Otherwise request text input ahead for next frame.
     if (g.ActiveId == id && clear_active_id)
     {
-        state->ID = 0; // To avoid InputTextDeactivateHook() unnecessarily running, which wouldn't be harmful but wasteful.
+        state->EditedBefore = false; // Data already applied: avoid InputTextDeactivateHook() taking a record now or later if same id is activated again without editing.
         ClearActiveID();
-        state->ID = id;
     }
 
     // Render frame

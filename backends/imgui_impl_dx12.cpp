@@ -20,6 +20,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-08-05: DirectX12: *BREAKING CHANGE* Removed support for legacy `ImGui_ImplDX12_Init()` signature obsoleted in 1.91.6 (2024-11-15) because it needed to forcefully disable support for ImGuiBackendFlags_RendererHasTextures. (#9487)
 //  2026-04-23: Added support for standard draw callbacks (in platform_io): DrawCallback_ResetRenderState, DrawCallback_SetSamplerLinear, DrawCallback_SetSamplerNearest. (#9378)
 //  2025-10-11: DirectX12: Reuse texture upload buffer and grow it only when necessary. (#9002)
 //  2025-09-29: DirectX12: Rework synchronization logic. (#8961)
@@ -207,7 +208,7 @@ static void ImGui_ImplDX12_SetupRenderState(ImDrawData* draw_data, ID3D12Graphic
     command_list->SetGraphicsRoot32BitConstants(0, 16, &vertex_constant_buffer, 0);
 
     // Setup blend factor
-    const float blend_factor[4] = { 0.f, 0.f, 0.f, 0.f };
+    const float blend_factor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
     command_list->OMSetBlendFactor(blend_factor);
 }
 
@@ -608,17 +609,17 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
         param[1].DescriptorTable.pDescriptorRanges = &descRange;
         param[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-        // Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling.
+        // Bilinear sampling is required
         D3D12_STATIC_SAMPLER_DESC staticSampler[1] = {};
         staticSampler[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
         staticSampler[0].AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
         staticSampler[0].AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
         staticSampler[0].AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-        staticSampler[0].MipLODBias = 0.f;
+        staticSampler[0].MipLODBias = 0.0f;
         staticSampler[0].MaxAnisotropy = 0;
         staticSampler[0].ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
         staticSampler[0].BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
-        staticSampler[0].MinLOD = 0.f;
+        staticSampler[0].MinLOD = 0.0f;
         staticSampler[0].MaxLOD = D3D12_FLOAT32_MAX;
         staticSampler[0].ShaderRegister = 0;
         staticSampler[0].RegisterSpace = 0;
@@ -721,7 +722,7 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
             PS_INPUT main(VS_INPUT input)\
             {\
               PS_INPUT output;\
-              output.pos = mul( ProjectionMatrix, float4(input.pos.xy, 0.f, 1.f));\
+              output.pos = mul( ProjectionMatrix, float4(input.pos.xy, 0.0f, 1.0f));\
               output.col = input.col;\
               output.uv  = input.uv;\
               return output;\
@@ -955,37 +956,6 @@ bool ImGui_ImplDX12_Init(ImGui_ImplDX12_InitInfo* init_info)
 
     return true;
 }
-
-#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-// Legacy initialization API Obsoleted in 1.91.5
-// font_srv_cpu_desc_handle and font_srv_gpu_desc_handle are handles to a single SRV descriptor to use for the internal font texture, they must be in 'srv_descriptor_heap'
-bool ImGui_ImplDX12_Init(ID3D12Device* device, int num_frames_in_flight, DXGI_FORMAT rtv_format, ID3D12DescriptorHeap* srv_descriptor_heap, D3D12_CPU_DESCRIPTOR_HANDLE font_srv_cpu_desc_handle, D3D12_GPU_DESCRIPTOR_HANDLE font_srv_gpu_desc_handle)
-{
-    ImGui_ImplDX12_InitInfo init_info;
-    init_info.Device = device;
-    init_info.NumFramesInFlight = num_frames_in_flight;
-    init_info.RTVFormat = rtv_format;
-    init_info.SrvDescriptorHeap = srv_descriptor_heap;
-    init_info.LegacySingleSrvCpuDescriptor = font_srv_cpu_desc_handle;
-    init_info.LegacySingleSrvGpuDescriptor = font_srv_gpu_desc_handle;
-
-    D3D12_COMMAND_QUEUE_DESC queueDesc = {};
-    queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-    queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-    queueDesc.NodeMask = 1;
-    HRESULT hr = device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&init_info.CommandQueue));
-    IM_ASSERT(SUCCEEDED(hr));
-
-    bool ret = ImGui_ImplDX12_Init(&init_info);
-    ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
-    bd->commandQueueOwned = true;
-
-    ImGuiIO& io = ImGui::GetIO();
-    io.BackendFlags &= ~ImGuiBackendFlags_RendererHasTextures; // Using legacy ImGui_ImplDX12_Init() call with 1 SRV descriptor we cannot support multiple textures.
-
-    return ret;
-}
-#endif
 
 void ImGui_ImplDX12_Shutdown()
 {

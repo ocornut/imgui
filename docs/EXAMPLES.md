@@ -70,8 +70,10 @@ OSX & iOS + Metal4 example, Mac only. <BR>
 [example_apple_opengl2/](https://github.com/ocornut/imgui/blob/master/examples/example_apple_opengl2/) <BR>
 OSX + OpenGL2 example. <BR>
 = main.mm + imgui_impl_osx.mm + imgui_impl_opengl2.cpp <BR>
-(NB: imgui_impl_osx.mm is currently not as feature complete as other platforms backends.
- You may prefer to use the GLFW Or SDL backends, which will also support Windows and Linux.)
+
+[example_apple_opengl3/](https://github.com/ocornut/imgui/blob/master/examples/example_apple_opengl3/) <BR>
+OSX + OpenGL3 example. <BR>
+= main.mm + imgui_impl_osx.mm + imgui_impl_opengl3.cpp <BR>
 
 [example_glfw_wgpu/](https://github.com/ocornut/imgui/blob/master/examples/example_glfw_wgpu/) <BR>
 GLFW + WebGPU example. Supports Emscripten (web), Dawn (native), WGPU (native). <BR>
@@ -116,6 +118,16 @@ This is used to quickly test compilation of core imgui files in as many setups a
 Because this application doesn't create a window nor a graphic context, there's no graphics output.
 Please note that imgui_impl_null itself is a rather empty backend. We provide it for consistency but
 it is similarly easy to create a skeleton application without the null backend.
+
+[example_qnx_opengl3/](https://github.com/ocornut/imgui/blob/master/examples/example_qnx_opengl3/) <BR>
+QNX Screen + OpenGL ES 3 example. <BR>
+= main.cpp + imgui_impl_qnx.cpp + imgui_impl_opengl3.cpp <BR>
+Uses the QNX recursive make build system and compiles the OpenGL3 renderer with `IMGUI_IMPL_OPENGL_ES3`.
+
+[example_qnx_vulkan/](https://github.com/ocornut/imgui/blob/master/examples/example_qnx_vulkan/) <BR>
+QNX Screen + Vulkan example using `VK_QNX_screen_surface`. <BR>
+= main.cpp + imgui_impl_qnx.cpp + imgui_impl_vulkan.cpp <BR>
+Uses the QNX recursive make build system and the Vulkan backend's example helper structures.
 
 [example_sdl2_directx11/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl2_directx11/) <BR>
 SDL2 + DirectX11 example, Windows only. <BR>

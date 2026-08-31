@@ -6,5 +6,7 @@
 
 3. Consider running the [imgui_test_suite](https://github.com/ocornut/imgui_test_engine) or adding new tests to test for expected behaviors.
 
-4. Clear this template before submitting your PR.
+4. PLEASE DO NOT SUBMIT AI SLOP OR AUTOMATED REPORTS. Submissions that are lacking proper human review/judgement before being passed to us are not welcome.
+
+5. Clear this template before submitting your PR.
 

@@ -584,7 +584,7 @@ void ImGui_ImplMetal_Shutdown()
     return [[MetalBuffer alloc] initWithBuffer:backing];
 }
 
-// Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling.
+// Bilinear sampling is required.
 - (id<MTLRenderPipelineState>)renderPipelineStateForFramebufferDescriptor:(FramebufferDescriptor*)descriptor device:(id<MTLDevice>)device
 {
     NSError* error = nil;

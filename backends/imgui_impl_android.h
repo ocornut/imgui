@@ -1,5 +1,5 @@
-// dear imgui: Platform Backend for Android native app
-// This needs to be used along with a Renderer Backend (e.g. OpenGL3, Vulkan)
+// dear imgui: Platform Binding for Android native app
+// This needs to be used along with a Renderer (e.g. OpenGL3, Vulkan..)
 
 // Implemented features:
 //  [X] Platform: Keyboard support. Since 1.87 we are using the io.AddKeyEvent() function. Pass ImGuiKey values to all key functions e.g. ImGui::IsKeyPressed(ImGuiKey_Space). [Legacy AKEYCODE_* values are obsolete since 1.87 and not supported since 1.91.5]
