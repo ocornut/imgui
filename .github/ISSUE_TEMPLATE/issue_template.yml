@@ -14,6 +14,7 @@ body:
     attributes:
       value: |
         **Prerequisites:**
+        - I am not using a LLM to think or write for me. Please distill information to what's necessary and meaningful.
         - I have read [Frequently Asked Questions](https://github.com/ocornut/imgui/blob/master/docs/FAQ.md).
         - I have read [Contributing Guidelines -> General Advices](https://github.com/ocornut/imgui/blob/master/docs/CONTRIBUTING.md#getting-started--general-advice).
         - I have read [Contributing Guidelines -> How to open an Issue](https://github.com/ocornut/imgui/blob/master/docs/CONTRIBUTING.md#how-to-open-an-issue).

@@ -3,7 +3,7 @@
 ## Index
 
 - [Getting Started & General Advice](#getting-started--general-advice)
-- [Issues vs Discussions](#issues-vs-discussions)
+- [Using "Issues" for almost everything!](using-issues-for-almost-everything)
 - [How to open an Issue](#how-to-open-an-issue)
 - [How to open a Pull Request](#how-to-open-a-pull-request)
 - [Copyright / Contributor License Agreement](#copyright--contributor-license-agreement)
@@ -23,18 +23,20 @@
 - If you get a crash or assert, use a debugger to locate the line triggering it and read the comments around.
 - Please don't be a [Help Vampire](https://slash7.com/2006/12/22/vampires/).
 
-## 'Issues' vs 'Discussions'
+## Using "Issues" for almost everything!
 
-We are happy to use 'Issues' for many type of open-ended questions. We are encouraging 'Issues' becoming an enormous, centralized and cross-referenced database of Dear ImGui contents.
+We are happy to use 'Issues' for many type of open-ended questions.
+We are encouraging 'Issues' becoming an enormous, centralized and cross-referenced database of Dear ImGui contents.
 
-Only if you:
+- Need help using the API? Open an Issue!
+- Want to suggest a feature? Open an Issue!
+- etc.
+
+ONLY IN THOSE CASE you can use the [Discussions forums](https://github.com/ocornut/imgui/discussions)
 - Cannot BUILD or LINK examples.
 - Cannot BUILD, or LINK, or RUN Dear ImGui in your application or custom engine.
-- Cannot LOAD a font.
 
-Then please [use the Discussions forums](https://github.com/ocornut/imgui/discussions) instead of opening an issue.
-
-If Dear ImGui is successfully showing in your app and you have used Dear ImGui before, you can open an Issue. Any form of discussions is welcome as a new issue.
+If Dear ImGui is successfully showing in your app and you have used Dear ImGui before, you can open an Issue. Any form of discussions is welcome as a new Issue.
 
 ## How to open an issue
 
