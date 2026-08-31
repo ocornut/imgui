@@ -74,7 +74,8 @@ Other Changes:
     when when `FramebufferScale` is >1.0f. (#9515, #8628) [@WayU]
   - WebGPU: update to build with wgpu-native 29.0+. (#9377, #9532, #9530) [@lucascompython, @ivan-enzhaev]
 - Examples:
-  - SDL2+Metal: create Metal context without using a SDL_Renderer.
+  - GLFW/SDL2/SDL3+WebGPU: fixed running with wgpu-native missing `wgpuInstanceWaitAny()`. (#9377)
+  - SDL2+Metal: create Metal context without using a `SDL_Renderer`.
   - QNX+OpenGL3, QNX+Vulkan: added QNX Screen examples. (#9492) [@mgorchak-blackberry]
   - OSX+OpenGL3: added example_apple_opengl3/ (OSX/Cocoa + OpenGL 3.2 Core profile).
 

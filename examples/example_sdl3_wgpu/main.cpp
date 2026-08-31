@@ -373,8 +373,10 @@ static WGPUAdapter RequestAdapter(WGPUInstance& instance)
     adapterCallbackInfo.userdata1 = &local_adapter;
 
     WGPUFuture future = wgpuInstanceRequestAdapter(instance, &adapter_options, adapterCallbackInfo);
+#if !defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
     WGPUFutureWaitInfo waitInfo = { future, false };
     wgpuInstanceWaitAny(instance, 1, &waitInfo, ~0ull);
+#endif
     IM_ASSERT(local_adapter && "Error on Adapter request");
     return local_adapter;
 }
@@ -388,8 +390,12 @@ static WGPUDevice RequestDevice(WGPUInstance& instance, WGPUAdapter& adapter)
     deviceCallbackInfo.userdata1 = &local_device;
 
     WGPUFuture future = wgpuAdapterRequestDevice(adapter, nullptr, deviceCallbackInfo);
+#if !defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
     WGPUFutureWaitInfo waitInfo = { future, false };
     wgpuInstanceWaitAny(instance, 1, &waitInfo, ~0ull);
+#else
+    IM_UNUSED(instance);
+#endif
     IM_ASSERT(local_device && "Error on Device request");
     return local_device;
 }
