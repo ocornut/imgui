@@ -95,10 +95,9 @@ bool        ImGui_ImplWGPU_IsSurfaceStatusSubOptimal(WGPUSurfaceGetCurrentTextur
 void        ImGui_ImplWGPU_DebugPrintAdapterInfo(const WGPUAdapter& adapter);
 const char* ImGui_ImplWGPU_GetBackendTypeName(WGPUBackendType type);
 const char* ImGui_ImplWGPU_GetAdapterTypeName(WGPUAdapterType type);
-#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
 const char* ImGui_ImplWGPU_GetDeviceLostReasonName(WGPUDeviceLostReason type);
 const char* ImGui_ImplWGPU_GetErrorTypeName(WGPUErrorType type);
-#elif defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) && !defined(__EMSCRIPTEN__)
 const char* ImGui_ImplWGPU_GetLogLevelName(WGPULogLevel level);
 #endif
 

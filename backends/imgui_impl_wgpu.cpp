@@ -20,7 +20,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2026-08-31: Update to compile with wgpu-native 29.0. (#9532, #9530)
+//  2026-08-31: Update to compile with wgpu-native 29.0. (#9377, #9532, #9530)
 //  2026-08-18: Fixed passing non-integer sizes to `wgpuRenderPassEncoderSetViewport() when FramebufferScale is >1.0f. (#9515, #8628)
 //  2026-04-23: Added support for standard draw callbacks (in platform_io): DrawCallback_ResetRenderState, DrawCallback_SetSamplerLinear, DrawCallback_SetSamplerNearest. (#9378)
 //  2026-03-25: Added support for WGVK native backend via IMGUI_IMPL_WEBGPU_BACKEND_WGVK define, with SPIRV shaders if WGSL is not available. (#9316, #9246, #9257)
@@ -65,24 +65,6 @@
 #endif
 #if defined(__EMSCRIPTEN__) && defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
 #error Emscripten <4.0.10 with '-sUSE_WEBGPU=1' is not supported anymore.
-#endif
-
-#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) || defined(IMGUI_IMPL_WEBGPU_BACKEND_WGVK)
-// Dawn renamed WGPUProgrammableStageDescriptor to WGPUComputeState (see: https://github.com/webgpu-native/webgpu-headers/pull/413)
-// Using type alias until WGPU adopts the same naming convention (#8369)
-using WGPUProgrammableStageDescriptor = WGPUComputeState;
-#endif
-
-#if defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
-#ifndef WGPUProgrammableStageDescriptor
-#define WGPUProgrammableStageDescriptor WGPUFragmentState
-#endif
-#ifndef WGPUSurfaceGetCurrentTextureStatus_OutOfMemory
-#define WGPUSurfaceGetCurrentTextureStatus_OutOfMemory WGPUSurfaceGetCurrentTextureStatus_Outdated
-#endif
-#ifndef WGPUSurfaceGetCurrentTextureStatus_DeviceLost
-#define WGPUSurfaceGetCurrentTextureStatus_DeviceLost WGPUSurfaceGetCurrentTextureStatus_Timeout
-#endif
 #endif
 
 // Dear ImGui prototypes from imgui_internal.h
@@ -330,7 +312,7 @@ static void SafeRelease(FrameResources& res)
     SafeRelease(res.VertexBufferHost);
 }
 
-static WGPUProgrammableStageDescriptor ImGui_ImplWGPU_CreateShaderModuleWGSL(const char* wgsl_source)
+static WGPUComputeState ImGui_ImplWGPU_CreateShaderModuleWGSL(const char* wgsl_source)
 {
     ImGui_ImplWGPU_Data* bd = ImGui_ImplWGPU_GetBackendData();
     IM_UNUSED(bd);
@@ -357,7 +339,7 @@ static WGPUProgrammableStageDescriptor ImGui_ImplWGPU_CreateShaderModuleWGSL(con
     pop_cb.userdata1 = &validation_error;
     wgpuDevicePopErrorScope(bd->wgpuDevice, pop_cb);
 
-    WGPUProgrammableStageDescriptor stage_desc = {};
+    WGPUComputeState stage_desc = {};
     if (module && !validation_error)
     {
         stage_desc.module = module;
@@ -370,7 +352,7 @@ static WGPUProgrammableStageDescriptor ImGui_ImplWGPU_CreateShaderModuleWGSL(con
     return stage_desc;
 }
 
-static WGPUProgrammableStageDescriptor ImGui_ImplWGPU_CreateShaderModuleSPIRV(const void* spirv_binary, size_t spirv_length)
+static WGPUComputeState ImGui_ImplWGPU_CreateShaderModuleSPIRV(const void* spirv_binary, size_t spirv_length)
 {
     ImGui_ImplWGPU_Data* bd = ImGui_ImplWGPU_GetBackendData();
 
@@ -382,7 +364,7 @@ static WGPUProgrammableStageDescriptor ImGui_ImplWGPU_CreateShaderModuleSPIRV(co
     WGPUShaderModuleDescriptor desc = {};
     desc.nextInChain = (WGPUChainedStruct*)&spirv_desc;
 
-    WGPUProgrammableStageDescriptor stage_desc = {};
+    WGPUComputeState stage_desc = {};
     stage_desc.module = wgpuDeviceCreateShaderModule(bd->wgpuDevice, &desc);
 
     stage_desc.entryPoint = { "main", WGPU_STRLEN };
@@ -785,7 +767,7 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     graphics_pipeline_desc.layout = wgpuDeviceCreatePipelineLayout(bd->wgpuDevice, &layout_desc);
 
     // Create the vertex shader
-    WGPUProgrammableStageDescriptor vertex_shader_desc = ImGui_ImplWGPU_CreateShaderModuleWGSL(__shader_vert_wgsl);
+    WGPUComputeState vertex_shader_desc = ImGui_ImplWGPU_CreateShaderModuleWGSL(__shader_vert_wgsl);
     if (!vertex_shader_desc.module) vertex_shader_desc = ImGui_ImplWGPU_CreateShaderModuleSPIRV(__shader_vert_spirv, sizeof(__shader_vert_spirv));
     graphics_pipeline_desc.vertex.module = vertex_shader_desc.module;
     graphics_pipeline_desc.vertex.entryPoint = vertex_shader_desc.entryPoint;
@@ -808,7 +790,7 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     graphics_pipeline_desc.vertex.buffers = buffer_layouts;
 
     // Create the pixel shader
-    WGPUProgrammableStageDescriptor pixel_shader_desc = ImGui_ImplWGPU_CreateShaderModuleWGSL(__shader_frag_wgsl);
+    WGPUComputeState pixel_shader_desc = ImGui_ImplWGPU_CreateShaderModuleWGSL(__shader_frag_wgsl);
     if (!pixel_shader_desc.module)  pixel_shader_desc = ImGui_ImplWGPU_CreateShaderModuleSPIRV(__shader_frag_spirv, sizeof(__shader_frag_spirv));
 
     // Create the blending setup
@@ -1001,11 +983,7 @@ void ImGui_ImplWGPU_NewFrame()
 
 bool ImGui_ImplWGPU_IsSurfaceStatusError(WGPUSurfaceGetCurrentTextureStatus status)
 {
-#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) || defined(IMGUI_IMPL_WEBGPU_BACKEND_WGVK)
     return (status == WGPUSurfaceGetCurrentTextureStatus_Error);
-#else
-    return (status == WGPUSurfaceGetCurrentTextureStatus_OutOfMemory || status == WGPUSurfaceGetCurrentTextureStatus_DeviceLost);
-#endif
 }
 
 bool ImGui_ImplWGPU_IsSurfaceStatusSubOptimal(WGPUSurfaceGetCurrentTextureStatus status)
@@ -1018,7 +996,6 @@ bool ImGui_ImplWGPU_IsSurfaceStatusSubOptimal(WGPUSurfaceGetCurrentTextureStatus
 }
 
 // Helpers to obtain a string
-#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) || defined(IMGUI_IMPL_WEBGPU_BACKEND_WGVK)
 const char* ImGui_ImplWGPU_GetErrorTypeName(WGPUErrorType type)
 {
     switch (type)
@@ -1041,7 +1018,7 @@ const char* ImGui_ImplWGPU_GetDeviceLostReasonName(WGPUDeviceLostReason type)
     default: return "Unknown";
     }
 }
-#elif !defined(__EMSCRIPTEN__)
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) && !defined(__EMSCRIPTEN__)
 const char* ImGui_ImplWGPU_GetLogLevelName(WGPULogLevel level)
 {
     switch (level)
