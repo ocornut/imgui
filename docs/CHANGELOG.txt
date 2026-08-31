@@ -62,6 +62,8 @@ Other Changes:
 - Misc:
   - ColorButton, ColorEdit, ColorPicker: cancel-out alpha caused by BeginDisabled() so
     disabled color buttons have the same color as non-disabled oness. (#9511)
+  - ColorButton: fixed issues/inconsistencies with checkerboard rendering when combining
+    color alpha and global style alpha. (#9511) [@enjmiah, @ocornut]
   - Fixed `GetBackgroundDrawList()`/`GetForegroundDrawList()` not being properly reset
     every frame when cumulated session time is very large (e.g. a few days). [@lailoken]
 - ImDrawList:
