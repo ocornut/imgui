@@ -20,6 +20,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-08-31: Update to compile with wgpu-native 29.0. (#9532, #9530)
 //  2026-08-18: Fixed passing non-integer sizes to `wgpuRenderPassEncoderSetViewport() when FramebufferScale is >1.0f. (#9515, #8628)
 //  2026-04-23: Added support for standard draw callbacks (in platform_io): DrawCallback_ResetRenderState, DrawCallback_SetSamplerLinear, DrawCallback_SetSamplerNearest. (#9378)
 //  2026-03-25: Added support for WGVK native backend via IMGUI_IMPL_WEBGPU_BACKEND_WGVK define, with SPIRV shaders if WGSL is not available. (#9316, #9246, #9257)
@@ -66,10 +67,22 @@
 #error Emscripten <4.0.10 with '-sUSE_WEBGPU=1' is not supported anymore.
 #endif
 
-#if defined IMGUI_IMPL_WEBGPU_BACKEND_DAWN || defined IMGUI_IMPL_WEBGPU_BACKEND_WGVK
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) || defined(IMGUI_IMPL_WEBGPU_BACKEND_WGVK)
 // Dawn renamed WGPUProgrammableStageDescriptor to WGPUComputeState (see: https://github.com/webgpu-native/webgpu-headers/pull/413)
 // Using type alias until WGPU adopts the same naming convention (#8369)
 using WGPUProgrammableStageDescriptor = WGPUComputeState;
+#endif
+
+#if defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
+#ifndef WGPUProgrammableStageDescriptor
+#define WGPUProgrammableStageDescriptor WGPUFragmentState
+#endif
+#ifndef WGPUSurfaceGetCurrentTextureStatus_OutOfMemory
+#define WGPUSurfaceGetCurrentTextureStatus_OutOfMemory WGPUSurfaceGetCurrentTextureStatus_Outdated
+#endif
+#ifndef WGPUSurfaceGetCurrentTextureStatus_DeviceLost
+#define WGPUSurfaceGetCurrentTextureStatus_DeviceLost WGPUSurfaceGetCurrentTextureStatus_Timeout
+#endif
 #endif
 
 // Dear ImGui prototypes from imgui_internal.h
@@ -780,15 +793,9 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     // Vertex input configuration
     WGPUVertexAttribute attribute_desc[] =
     {
-#if defined IMGUI_IMPL_WEBGPU_BACKEND_DAWN || defined IMGUI_IMPL_WEBGPU_BACKEND_WGVK
         { nullptr, WGPUVertexFormat_Float32x2, (uint64_t)offsetof(ImDrawVert, pos), 0 },
         { nullptr, WGPUVertexFormat_Float32x2, (uint64_t)offsetof(ImDrawVert, uv),  1 },
         { nullptr, WGPUVertexFormat_Unorm8x4,  (uint64_t)offsetof(ImDrawVert, col), 2 },
-#else
-        { WGPUVertexFormat_Float32x2, (uint64_t)offsetof(ImDrawVert, pos), 0 },
-        { WGPUVertexFormat_Float32x2, (uint64_t)offsetof(ImDrawVert, uv),  1 },
-        { WGPUVertexFormat_Unorm8x4,  (uint64_t)offsetof(ImDrawVert, col), 2 },
-#endif
     };
 
     WGPUVertexBufferLayout buffer_layouts[1];
