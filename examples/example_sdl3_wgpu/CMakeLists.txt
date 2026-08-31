@@ -29,7 +29,7 @@
 #  5. emrun build/index.html
 
 cmake_minimum_required(VERSION 3.22) # Dawn requires CMake >= 3.22
-project(imgui_example_sdl3_wgpu C CXX)
+project(example_sdl3_wgpu C CXX)
 
 set(IMGUI_EXECUTABLE example_sdl3_wgpu)
 
