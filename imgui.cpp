@@ -16812,7 +16812,7 @@ void ImGui::DebugNodeTexture(ImTextureData* tex, int int_id, const ImFontAtlasRe
         Checkbox("Show used rect", &cfg->ShowTextureUsedRect);
         PushStyleVar(ImGuiStyleVar_ImageBorderSize, ImMax(1.0f, g.Style.ImageBorderSize));
         ImVec2 p = GetCursorScreenPos();
-        if (tex->WantDestroyNextFrame)
+        if (tex->Status == ImTextureStatus_WantDestroy || tex->Status == ImTextureStatus_Destroyed)
             Dummy(ImVec2((float)tex->Width, (float)tex->Height));
         else
             ImageWithBg(tex->GetTexRef(), ImVec2((float)tex->Width, (float)tex->Height), ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f), ImVec4(0.0f, 0.0f, 0.0f, 1.0f));

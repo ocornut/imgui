@@ -70,6 +70,9 @@ Other Changes:
   - Per-viewport FramebufferScale for Apple/Retina screen is applied to draw lists:
     - AA Fringe is scaled accordingly.
     - Circle and Curves tessellation error are scaled accordingly.
+  - Reworked assert in PushTexture() to allow convenience grace period of using a
+    texture that was queue for destroy during the frame. Make it safe to stick to
+    an existing texture during the frame. (#9528, #8465)
 - Backends:
   - QNX: added QNX Screen backend. (#9492) [@mgorchak-blackberry]
   - SDL2: fixed querying framebuffer scale/density when using Metal without
