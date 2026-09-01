@@ -6895,7 +6895,7 @@ bool ImGui::TreeNodeUpdateNextOpen(ImGuiID storage_id, ImGuiTreeNodeFlags flags)
 }
 
 // Store ImGuiTreeNodeStackData for just submitted node.
-// Currently only supports 32 level deep and we are fine with (1 << Depth) overflowing into a zero, easy to increase.
+// Currently only supports 32 level deep. Easy to increase to e.g. 64.
 static void TreeNodeStoreStackData(ImGuiTreeNodeFlags flags, float x1)
 {
     ImGuiContext& g = *GImGui;
@@ -6917,6 +6917,9 @@ static void TreeNodeStoreStackData(ImGuiTreeNodeFlags flags, float x1)
     if (flags & ImGuiTreeNodeFlags_DrawLinesToNodes)
         window->DC.TreeRecordsClippedNodesY2Mask |= (1 << window->DC.TreeDepth);
 }
+
+#define TREE_NODE_MAX_DEPTH                     32
+#define TREE_NODE_GET_DEPTH_MASK(_DEPTH)        (((ImU32)(_DEPTH) < TREE_NODE_MAX_DEPTH) ? (1u << (_DEPTH)) : 0u)
 
 bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* label, const char* label_end)
 {
@@ -6994,7 +6997,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     if ((flags & ImGuiTreeNodeFlags_DrawLinesMask_) == 0)
         flags |= g.Style.TreeLinesFlags;
     const bool draw_tree_lines = (flags & (ImGuiTreeNodeFlags_DrawLinesFull | ImGuiTreeNodeFlags_DrawLinesToNodes)) && (frame_bb.Min.y < window->ClipRect.Max.y) && (g.Style.TreeLinesSize > 0.0f);
-    if (!(flags & ImGuiTreeNodeFlags_NoTreePushOnOpen))
+    if (!(flags & ImGuiTreeNodeFlags_NoTreePushOnOpen) && window->DC.TreeDepth < TREE_NODE_MAX_DEPTH)
     {
         store_tree_node_stack_data = draw_tree_lines;
         if ((flags & ImGuiTreeNodeFlags_NavLeftJumpsToParent) && !g.NavIdIsAlive)
@@ -7005,12 +7008,16 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     const bool is_leaf = (flags & ImGuiTreeNodeFlags_Leaf) != 0;
     if (!is_visible)
     {
-        if ((flags & ImGuiTreeNodeFlags_DrawLinesToNodes) && (window->DC.TreeRecordsClippedNodesY2Mask & (1 << (window->DC.TreeDepth - 1))))
+        if (flags & ImGuiTreeNodeFlags_DrawLinesToNodes)
         {
-            ImGuiTreeNodeStackData* parent_data = &g.TreeNodeStack.Data[g.TreeNodeStack.Size - 1];
-            parent_data->DrawLinesToNodesY2 = ImMax(parent_data->DrawLinesToNodesY2, window->DC.CursorPos.y); // Don't need to aim to mid Y position as we are clipped anyway.
-            if (frame_bb.Min.y >= window->ClipRect.Max.y)
-                window->DC.TreeRecordsClippedNodesY2Mask &= ~(1 << (window->DC.TreeDepth - 1)); // Done
+            const ImU32 tree_depth_mask = TREE_NODE_GET_DEPTH_MASK(window->DC.TreeDepth - 1);
+            if (window->DC.TreeRecordsClippedNodesY2Mask & tree_depth_mask)
+            {
+                ImGuiTreeNodeStackData* parent_data = &g.TreeNodeStack.Data[g.TreeNodeStack.Size - 1];
+                parent_data->DrawLinesToNodesY2 = ImMax(parent_data->DrawLinesToNodesY2, window->DC.CursorPos.y); // Don't need to aim to mid Y position as we are clipped anyway.
+                if (frame_bb.Min.y >= window->ClipRect.Max.y)
+                    window->DC.TreeRecordsClippedNodesY2Mask &= ~tree_depth_mask; // Done
+            }
         }
         if (is_open && store_tree_node_stack_data)
             TreeNodeStoreStackData(flags, text_pos.x - text_offset_x); // Call before TreePushOverrideID()
@@ -7207,7 +7214,7 @@ void ImGui::TreeNodeDrawLineToChildNode(const ImVec2& target_pos)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    if (window->DC.TreeDepth == 0 || (window->DC.TreeHasStackDataDepthMask & (1 << (window->DC.TreeDepth - 1))) == 0)
+    if ((window->DC.TreeHasStackDataDepthMask & TREE_NODE_GET_DEPTH_MASK(window->DC.TreeDepth - 1)) == 0)
         return;
 
     ImGuiTreeNodeStackData* parent_data = &g.TreeNodeStack.Data[g.TreeNodeStack.Size - 1];
@@ -7291,8 +7298,7 @@ void ImGui::TreePop()
     Unindent();
 
     window->DC.TreeDepth--;
-    ImU32 tree_depth_mask = (1 << window->DC.TreeDepth);
-
+    ImU32 tree_depth_mask = TREE_NODE_GET_DEPTH_MASK(window->DC.TreeDepth);
     if (window->DC.TreeHasStackDataDepthMask & tree_depth_mask)
     {
         const ImGuiTreeNodeStackData* data = &g.TreeNodeStack.Data[g.TreeNodeStack.Size - 1];

@@ -55,6 +55,9 @@ Other Changes:
 - Drags, Sliders:
   - Fixed an overflow using `ImGuiSliderFlags_Logarithmic` with S32/S64 types which
     leads to clamped interactions. (#9526, #3361, #1823, #1316, #642) [@lailoken]
+- TreeNode:
+  - Fixed issues/asserts with 32+ deep trees when using ImGuiTreeNodeFlags_DrawLinesXXX
+    features or other features requiring stack storage. (#9509) [@lasrod]
 - Fonts:
   - Reworked `AddFontDefault()` to use `io.DisplayFrameBufferScale` as part of the heuristic
     to select `AddFontDefaultVector()` by default, effectively using ProggyForever instead of
