@@ -232,8 +232,9 @@ static bool g_FunctionsLoaded = true;
 
 struct ImGui_ImplVulkan_Functions
 {
+// Define function pointers
 #define IMGUI_VULKAN_FUNC_DEF(func) PFN_##func pfn_##func;
-    IMGUI_VULKAN_FUNC_MAP(IMGUI_VULKAN_FUNC_DEF)
+IMGUI_VULKAN_FUNC_MAP(IMGUI_VULKAN_FUNC_DEF)
 #undef IMGUI_VULKAN_FUNC_DEF
 };
 
@@ -241,7 +242,7 @@ struct ImGui_ImplVulkan_Functions
 static ImGui_ImplVulkan_Functions   ImGuiImplVulkanFuncs;
 static ImGui_ImplVulkan_Functions&  ImGui_ImplVulkan_GetFunctions();
 
-// Define a wrapper around each Vulkan function pointer to properly dispatch it
+// Wrap each Vulkan function pointer to properly dispatch it using the current backend data
 #define IMGUI_VULKAN_FUNC_WRAPPER(func) \
     template<typename... Args> \
     auto func(Args&&... args) { \
@@ -1526,8 +1527,6 @@ void ImGui_ImplVulkan_RemoveTexture(VkDescriptorSet descriptor_set)
 
 void ImGui_ImplVulkan_DestroyFrameRenderBuffers(VkDevice device, ImGui_ImplVulkan_FrameRenderBuffers* buffers, const VkAllocationCallbacks* allocator)
 {
-    ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
-    IM_UNUSED(bd); // May be unused
     if (buffers->VertexBuffer) { vkDestroyBuffer(device, buffers->VertexBuffer, allocator); buffers->VertexBuffer = VK_NULL_HANDLE; }
     if (buffers->VertexBufferMemory) { vkFreeMemory(device, buffers->VertexBufferMemory, allocator); buffers->VertexBufferMemory = VK_NULL_HANDLE; }
     if (buffers->IndexBuffer) { vkDestroyBuffer(device, buffers->IndexBuffer, allocator); buffers->IndexBuffer = VK_NULL_HANDLE; }
