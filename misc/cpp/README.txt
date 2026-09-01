@@ -9,5 +9,9 @@ imgui_scoped.h
   Try by merging: https://github.com/ocornut/imgui/pull/2197
   Discuss at: https://github.com/ocornut/imgui/issues/2096
 
-See more C++ related extension (fmt, RAII, syntaxis sugar) on Wiki:
+imgui-module:
+  C++20 module binding
+  https://github.com/stripe2933/imgui-module
+
+See more C++ related extension (fmt, RAII, syntactic sugar) on Wiki:
   https://github.com/ocornut/imgui/wiki/Useful-Extensions#cness

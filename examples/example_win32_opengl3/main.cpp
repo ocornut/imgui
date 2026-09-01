@@ -1,4 +1,4 @@
-// Dear ImGui: standalone example application for Win32 + OpenGL 3
+// Dear ImGui: standalone example application for Windows API + OpenGL
 
 // Learn about Dear ImGui:
 // - FAQ                  https://dearimgui.com/faq
@@ -15,14 +15,15 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
-#include <GL/GL.h>
+#include <GL/gl.h>
 #include <tchar.h>
+#include <stdio.h>
 
 // Data stored per platform window
 struct WGL_WindowData { HDC hDC; };
 
 // Data
-static HGLRC            g_hRC;
+static HGLRC            g_hRC;          // Rendering context
 static WGL_WindowData   g_MainWindow;
 static int              g_Width;
 static int              g_Height;
@@ -36,11 +37,14 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 // Main code
 int main(int, char**)
 {
+    // Make process DPI aware and obtain main monitor scale
+    ImGui_ImplWin32_EnableDpiAwareness();
+    float main_scale = ImGui_ImplWin32_GetDpiScaleForMonitor(::MonitorFromPoint(POINT{ 0, 0 }, MONITOR_DEFAULTTOPRIMARY));
+
     // Create application window
-    //ImGui_ImplWin32_EnableDpiAwareness();
     WNDCLASSEXW wc = { sizeof(wc), CS_OWNDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, L"ImGui Example", nullptr };
     ::RegisterClassExW(&wc);
-    HWND hwnd = ::CreateWindowW(wc.lpszClassName, L"Dear ImGui Win32+OpenGL3 Example", WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, nullptr, nullptr, wc.hInstance, nullptr);
+    HWND hwnd = ::CreateWindowW(wc.lpszClassName, L"Dear ImGui Win32+OpenGL3 Example", WS_OVERLAPPEDWINDOW, 100, 100, (int)(1280 * main_scale), (int)(800 * main_scale), nullptr, nullptr, wc.hInstance, nullptr);
 
     // Initialize OpenGL
     if (!CreateDeviceWGL(hwnd, &g_MainWindow))
@@ -67,24 +71,31 @@ int main(int, char**)
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsClassic();
 
+    // Setup scaling
+    ImGuiStyle& style = ImGui::GetStyle();
+    style.ScaleAllSizes(main_scale);        // Bake a fixed style scale. (until we have a solution for dynamic style scaling, changing this requires resetting Style + calling this again)
+    style.FontScaleDpi = main_scale;        // Set initial font scale. (in docking branch: using io.ConfigDpiScaleFonts=true automatically overrides this for every window depending on the current monitor)
+
     // Setup Platform/Renderer backends
     ImGui_ImplWin32_InitForOpenGL(hwnd);
     ImGui_ImplOpenGL3_Init();
 
     // Load Fonts
-    // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
-    // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
-    // - If the file cannot be loaded, the function will return a nullptr. Please handle those errors in your application (e.g. use an assertion, or display an error and quit).
-    // - The fonts will be rasterized at a given size (w/ oversampling) and stored into a texture when calling ImFontAtlas::Build()/GetTexDataAsXXXX(), which ImGui_ImplXXXX_NewFrame below will call.
-    // - Use '#define IMGUI_ENABLE_FREETYPE' in your imconfig file to use Freetype for higher quality font rendering.
+    // - If fonts are not explicitly loaded, Dear ImGui will select an embedded font: either AddFontDefaultVector() or AddFontDefaultBitmap().
+    //   This selection is based on (style.FontSizeBase * style.FontScaleMain * style.FontScaleDpi) reaching a small threshold.
+    // - You can load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
+    // - If a file cannot be loaded, AddFont functions will return a nullptr. Please handle those errors in your code (e.g. use an assertion, display an error and quit).
     // - Read 'docs/FONTS.md' for more instructions and details.
+    // - Use '#define IMGUI_ENABLE_FREETYPE' in your imconfig file to use FreeType for higher quality font rendering.
     // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
-    //io.Fonts->AddFontDefault();
-    //io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf", 18.0f);
-    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
-    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 16.0f);
-    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
-    //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
+    //style.FontSizeBase = 20.0f;
+    //io.Fonts->AddFontDefaultVector();
+    //io.Fonts->AddFontDefaultBitmap();
+    //io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf");
+    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf");
+    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf");
+    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf");
+    //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf");
     //IM_ASSERT(font != nullptr);
 
     // Our state
@@ -108,6 +119,11 @@ int main(int, char**)
         }
         if (done)
             break;
+        if (::IsIconic(hwnd))
+        {
+            ::Sleep(10);
+            continue;
+        }
 
         // Start the Dear ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
@@ -193,8 +209,57 @@ bool CreateDeviceWGL(HWND hWnd, WGL_WindowData* data)
     ::ReleaseDC(hWnd, hDc);
 
     data->hDC = ::GetDC(hWnd);
-    if (!g_hRC)
-        g_hRC = wglCreateContext(data->hDC);
+    if (g_hRC)
+        return true;
+
+    // Create legacy context
+    HGLRC tempRC = wglCreateContext(data->hDC);
+    if (!tempRC) { ::ReleaseDC(hWnd, data->hDC); return false; }
+    if (!wglMakeCurrent(data->hDC, tempRC))
+    {
+        wglDeleteContext(tempRC);
+        ::ReleaseDC(hWnd, data->hDC);
+        return false;
+    }
+
+    // Get context version
+    GLint major = 0, minor = 0;
+    glGetIntegerv(0x821B, &major); // GL_MAJOR_VERSION
+    glGetIntegerv(0x821C, &minor); // GL_MINOR_VERSION
+    const char* gl_version_str = (const char*)glGetString(GL_VERSION);
+    if (major == 0 && minor == 0)
+        sscanf_s(gl_version_str, "%d.%d", &major, &minor); // Query GL_VERSION in desktop GL 2.x, the string will start with "<major>.<minor>"
+    const GLuint gl_version = (GLuint)(major * 100 + minor * 10);
+
+    // Keep temporary context: already OpenGL 3.0+.
+    g_hRC = tempRC;
+    if (gl_version >= 300)
+        return true;
+
+    typedef HGLRC(WINAPI* PFNWGLCREATECONTEXTATTRIBSARBPROC)(HDC, HGLRC, const int*);
+    const PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC)wglGetProcAddress("wglCreateContextAttribsARB");
+
+    // GL 3.0
+    const int attribs[] =
+    {
+        0x2091, 3,      // WGL_CONTEXT_MAJOR_VERSION_ARB
+        0x2092, 0,      // WGL_CONTEXT_MINOR_VERSION_ARB
+        0x9126, 0x0001, // WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB
+        0
+    };
+    HGLRC newRC = nullptr;
+    if (wglCreateContextAttribsARB)
+        newRC = wglCreateContextAttribsARB(data->hDC, 0, attribs);
+
+    // If we managed to create 3.0+ context: use that one and destroy the temporary OpenGL 2.x compatibility context.
+    if (newRC)
+    {
+        wglMakeCurrent(nullptr, nullptr);
+        wglDeleteContext(tempRC);
+        g_hRC = newRC;
+        wglMakeCurrent(data->hDC, g_hRC);
+    }
+
     return true;
 }
 

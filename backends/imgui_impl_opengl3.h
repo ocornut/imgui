@@ -4,8 +4,9 @@
 // This needs to be used along with a Platform Backend (e.g. GLFW, SDL, Win32, custom..)
 
 // Implemented features:
-//  [X] Renderer: User texture binding. Use 'GLuint' OpenGL texture identifier as void*/ImTextureID. Read the FAQ about ImTextureID!
-//  [x] Renderer: Large meshes support (64k+ vertices) with 16-bit indices (Desktop OpenGL only).
+//  [X] Renderer: User texture binding. Use 'GLuint' OpenGL texture as texture identifier. Read the FAQ about ImTextureID/ImTextureRef!
+//  [x] Renderer: Large meshes support (64k+ vertices) even with 16-bit indices (ImGuiBackendFlags_RendererHasVtxOffset) [Desktop OpenGL only!]
+//  [X] Renderer: Texture updates support for dynamic font atlas (ImGuiBackendFlags_RendererHasTextures).
 
 // About WebGL/ES:
 // - You need to '#define IMGUI_IMPL_OPENGL_ES2' or '#define IMGUI_IMPL_OPENGL_ES3' to use WebGL or OpenGL ES.
@@ -29,21 +30,22 @@
 #include "imgui.h"      // IMGUI_IMPL_API
 #ifndef IMGUI_DISABLE
 
-// Backend API
+// Follow "Getting Started" link and check examples/ folder to learn about using backends!
 IMGUI_IMPL_API bool     ImGui_ImplOpenGL3_Init(const char* glsl_version = nullptr);
 IMGUI_IMPL_API void     ImGui_ImplOpenGL3_Shutdown();
 IMGUI_IMPL_API void     ImGui_ImplOpenGL3_NewFrame();
 IMGUI_IMPL_API void     ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data);
 
 // (Optional) Called by Init/NewFrame/Shutdown
-IMGUI_IMPL_API bool     ImGui_ImplOpenGL3_CreateFontsTexture();
-IMGUI_IMPL_API void     ImGui_ImplOpenGL3_DestroyFontsTexture();
 IMGUI_IMPL_API bool     ImGui_ImplOpenGL3_CreateDeviceObjects();
 IMGUI_IMPL_API void     ImGui_ImplOpenGL3_DestroyDeviceObjects();
 
-// Specific OpenGL ES versions
-//#define IMGUI_IMPL_OPENGL_ES2     // Auto-detected on Emscripten
-//#define IMGUI_IMPL_OPENGL_ES3     // Auto-detected on iOS/Android
+// (Advanced) Use e.g. if you need to precisely control the timing of texture updates (e.g. for staged rendering), by setting ImDrawData::Textures = nullptr to handle this manually.
+IMGUI_IMPL_API void     ImGui_ImplOpenGL3_UpdateTexture(ImTextureData* tex);
+
+// Configuration flags to add in your imconfig file:
+//#define IMGUI_IMPL_OPENGL_ES2     // Enable ES 2 (Auto-detected on Emscripten)
+//#define IMGUI_IMPL_OPENGL_ES3     // Enable ES 3 (Auto-detected on iOS/Android)
 
 // You can explicitly select GLES2 or GLES3 API by using one of the '#define IMGUI_IMPL_OPENGL_LOADER_XXX' in imconfig.h or compiler command-line.
 #if !defined(IMGUI_IMPL_OPENGL_ES2) \
@@ -62,5 +64,18 @@ IMGUI_IMPL_API void     ImGui_ImplOpenGL3_DestroyDeviceObjects();
 #endif
 
 #endif
+
+// [BETA] Selected render state data shared with callbacks.
+// This is temporarily stored in GetPlatformIO().Renderer_RenderState during the ImGui_ImplOpenGL3_RenderDrawData() call.
+// (Please open an issue if you feel you need access to more data)
+struct ImGui_ImplOpenGL3_RenderState
+{
+    bool            UseBindSampler;
+    bool            UseTexParameterFilter;
+    unsigned int    CurrentSampler;                 // (GLuint) Used if UseBindSampler == true, otherwise always 0
+    unsigned int    CurrentTexParameterFilter;      // (GLuint) Used if UseTexParameterToSetSampler == true
+};
+
+static inline ImGui_ImplOpenGL3_RenderState* ImGui_ImplOpenGL3_GetRenderState() { return (ImGui_ImplOpenGL3_RenderState*)ImGui::GetPlatformIO().Renderer_RenderState; }
 
 #endif // #ifndef IMGUI_DISABLE

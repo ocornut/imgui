@@ -1,0 +1,4 @@
+
+Script to rebuild shaders stored inside imgui_impl_vulkan.h
+(You don't need to copy this folder if you are using the backend as-is)
+

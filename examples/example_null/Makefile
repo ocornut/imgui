@@ -1,6 +1,6 @@
 #
 # Cross Platform Makefile
-# Compatible with MSYS2/MINGW, Ubuntu 14.04.1 and Mac OS X
+# Compatible with MSYS2/MINGW, Ubuntu 14.04.1+ and Mac OS X
 #
 # Important: This is a "null backend" application, with no visible output or interaction!
 # This is used for testing purpose and continuous integration, and has little use for end-user.

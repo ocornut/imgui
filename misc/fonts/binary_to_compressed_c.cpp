@@ -2,10 +2,11 @@
 // (binary_to_compressed_c.cpp)
 // Helper tool to turn a file into a C array, if you want to embed font data in your source code.
 
-// The data is first compressed with stb_compress() to reduce source code size,
-// then encoded in Base85 to fit in a string so we can fit roughly 4 bytes of compressed data into 5 bytes of source code (suggested by @mmalex)
-// (If we used 32-bit constants it would require take 11 bytes of source code to encode 4 bytes, and be endianness dependent)
-// Note that even with compression, the output array is likely to be bigger than the binary file..
+// The data is first compressed with stb_compress() to reduce source code size.
+// Then stored in a C array:
+// - Base85:   ~5 bytes of source code for 4 bytes of input data. 5 bytes stored in binary (suggested by @mmalex).
+// - As int:  ~11 bytes of source code for 4 bytes of input data. 4 bytes stored in binary. Endianness dependent, need swapping on big-endian CPU.
+// - As char: ~12 bytes of source code for 4 bytes of input data. 4 bytes stored in binary. Not endianness dependent.
 // Load compressed TTF fonts with ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF()
 
 // Build with, e.g:
@@ -15,10 +16,12 @@
 // You can also find a precompiled Windows binary in the binary/demo package available from https://github.com/ocornut/imgui
 
 // Usage:
-//   binary_to_compressed_c.exe [-base85] [-nocompress] [-nostatic] <inputfile> <symbolname>
+//   binary_to_compressed_c.exe [-nocompress] [-nostatic] [-base85] <inputfile> <symbolname>
 // Usage example:
 //   # binary_to_compressed_c.exe myfont.ttf MyFont > myfont.cpp
 //   # binary_to_compressed_c.exe -base85 myfont.ttf MyFont > myfont.cpp
+// Note:
+//   Base85 encoding will be obsoleted by future version of Dear ImGui!
 
 #define _CRT_SECURE_NO_WARNINGS
 #include <stdio.h>
@@ -31,23 +34,36 @@ typedef unsigned int stb_uint;
 typedef unsigned char stb_uchar;
 stb_uint stb_compress(stb_uchar* out, stb_uchar* in, stb_uint len);
 
-static bool binary_to_compressed_c(const char* filename, const char* symbol, bool use_base85_encoding, bool use_compression, bool use_static);
+enum SourceEncoding
+{
+    SourceEncoding_U8,      // New default since 2024/11
+    SourceEncoding_U32,
+    SourceEncoding_Base85,
+};
+
+static bool binary_to_compressed_c(const char* filename, const char* symbol, SourceEncoding source_encoding, bool use_compression, bool use_static);
 
 int main(int argc, char** argv)
 {
     if (argc < 3)
     {
-        printf("Syntax: %s [-base85] [-nocompress] [-nostatic] <inputfile> <symbolname>\n", argv[0]);
+        printf("Syntax: %s [-u8|-u32|-base85] [-nocompress] [-nostatic] <inputfile> <symbolname>\n", argv[0]);
+        printf("Source encoding types:\n");
+        printf(" -u8     = ~12 bytes of source per 4 bytes of data. 4 bytes in binary.\n");
+        printf(" -u32    = ~11 bytes of source per 4 bytes of data. 4 bytes in binary. Need endianness swapping on big-endian.\n");
+        printf(" -base85 =  ~5 bytes of source per 4 bytes of data. 5 bytes in binary. Need decoder.\n");
         return 0;
     }
 
     int argn = 1;
-    bool use_base85_encoding = false;
     bool use_compression = true;
     bool use_static = true;
+    SourceEncoding source_encoding = SourceEncoding_U8; // New default
     while (argn < (argc - 2) && argv[argn][0] == '-')
     {
-        if (strcmp(argv[argn], "-base85") == 0) { use_base85_encoding = true; argn++; }
+        if (strcmp(argv[argn], "-u8") == 0) { source_encoding = SourceEncoding_U8; argn++; }
+        else if (strcmp(argv[argn], "-u32") == 0) { source_encoding = SourceEncoding_U32; argn++; }
+        else if (strcmp(argv[argn], "-base85") == 0) { source_encoding = SourceEncoding_Base85; argn++; }
         else if (strcmp(argv[argn], "-nocompress") == 0) { use_compression = false; argn++; }
         else if (strcmp(argv[argn], "-nostatic") == 0) { use_static = false; argn++; }
         else
@@ -57,7 +73,7 @@ int main(int argc, char** argv)
         }
     }
 
-    bool ret = binary_to_compressed_c(argv[argn], argv[argn + 1], use_base85_encoding, use_compression, use_static);
+    bool ret = binary_to_compressed_c(argv[argn], argv[argn + 1], source_encoding, use_compression, use_static);
     if (!ret)
         fprintf(stderr, "Error opening or reading file: '%s'\n", argv[argn]);
     return ret ? 0 : 1;
@@ -69,7 +85,7 @@ char Encode85Byte(unsigned int x)
     return (char)((x >= '\\') ? x + 1 : x);
 }
 
-bool binary_to_compressed_c(const char* filename, const char* symbol, bool use_base85_encoding, bool use_compression, bool use_static)
+bool binary_to_compressed_c(const char* filename, const char* symbol, SourceEncoding source_encoding, bool use_compression, bool use_static)
 {
     // Read file
     FILE* f = fopen(filename, "rb");
@@ -91,11 +107,11 @@ bool binary_to_compressed_c(const char* filename, const char* symbol, bool use_b
     // Output as Base85 encoded
     FILE* out = stdout;
     fprintf(out, "// File: '%s' (%d bytes)\n", filename, (int)data_sz);
-    fprintf(out, "// Exported using binary_to_compressed_c.cpp\n");
     const char* static_str = use_static ? "static " : "";
     const char* compressed_str = use_compression ? "compressed_" : "";
-    if (use_base85_encoding)
+    if (source_encoding == SourceEncoding_Base85)
     {
+        fprintf(out, "// Exported using binary_to_compressed_c.exe -base85 \"%s\" %s\n", filename, symbol);
         fprintf(out, "%sconst char %s_%sdata_base85[%d+1] =\n    \"", static_str, symbol, compressed_str, (int)((compressed_sz + 3) / 4)*5);
         char prev_c = 0;
         for (int src_i = 0; src_i < compressed_sz; src_i += 4)
@@ -113,15 +129,35 @@ bool binary_to_compressed_c(const char* filename, const char* symbol, bool use_b
         }
         fprintf(out, "\";\n\n");
     }
-    else
+    else if (source_encoding == SourceEncoding_U8)
     {
+        // As individual bytes, not subject to endianness issues.
+        fprintf(out, "// Exported using binary_to_compressed_c.exe -u8 \"%s\" %s\n", filename, symbol);
+        fprintf(out, "%sconst unsigned int %s_%ssize = %d;\n", static_str, symbol, compressed_str, (int)compressed_sz);
+        fprintf(out, "%sconst unsigned char %s_%sdata[%d] =\n{", static_str, symbol, compressed_str, (int)compressed_sz);
+        int column = 0;
+        for (int i = 0; i < compressed_sz; i++)
+        {
+            unsigned char d = *(unsigned char*)(compressed + i);
+            if (column == 0)
+                fprintf(out, "\n    ");
+            column += fprintf(out, "%d,", d);
+            if (column >= 180)
+                column = 0;
+        }
+        fprintf(out, "\n};\n\n");
+    }
+    else if (source_encoding == SourceEncoding_U32)
+    {
+        // As integers
+        fprintf(out, "// Exported using binary_to_compressed_c.exe -u32 \"%s\" %s\n", filename, symbol);
         fprintf(out, "%sconst unsigned int %s_%ssize = %d;\n", static_str, symbol, compressed_str, (int)compressed_sz);
         fprintf(out, "%sconst unsigned int %s_%sdata[%d/4] =\n{", static_str, symbol, compressed_str, (int)((compressed_sz + 3) / 4)*4);
         int column = 0;
         for (int i = 0; i < compressed_sz; i += 4)
         {
             unsigned int d = *(unsigned int*)(compressed + i);
-            if ((column++ % 12) == 0)
+            if ((column++ % 14) == 0)
                 fprintf(out, "\n    0x%08x, ", d);
             else
                 fprintf(out, "0x%08x, ", d);
