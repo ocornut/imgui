@@ -62,13 +62,19 @@ Other Changes:
   - Reworked `AddFontDefault()` to use `io.DisplayFrameBufferScale` as part of the heuristic
     to select `AddFontDefaultVector()` by default, effectively using ProggyForever instead of
     ProggyClean on most Apple/Retina setups by default.
-- Misc:
+- ColorEdit:
   - ColorButton, ColorEdit, ColorPicker: cancel-out alpha caused by BeginDisabled() so
     disabled color buttons have the same color as non-disabled oness. (#9511)
   - ColorButton: fixed issues/inconsistencies with checkerboard rendering when combining
     color alpha and global style alpha. (#9511) [@enjmiah, @ocornut]
+- Misc:
   - Fixed `GetBackgroundDrawList()`/`GetForegroundDrawList()` not being properly reset
     every frame when cumulated session time is very large (e.g. a few days). [@lailoken]
+  - Added `IM_NODEBUGSTEP` helper to tag functions with `__declspec(non_user_code)` (MSVC)
+    or `[[gnu::artificial]]` (Clang/GCC) in order to provide a hint to debuggers to skip
+    trivial functions when stepping into.
+  - Tagged various trivial functions using `IM_NODEBUGSTEP`: `ImVec2()`, `ImVec4()` etc.
+    and various operators.
 - ImDrawList:
   - Per-viewport FramebufferScale for Apple/Retina screen is applied to draw lists:
     - AA Fringe is scaled accordingly.
