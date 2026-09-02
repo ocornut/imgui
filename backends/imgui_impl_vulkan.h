@@ -2,7 +2,7 @@
 // This needs to be used along with a Platform Backend (e.g. GLFW, SDL, Win32, custom..)
 
 // Implemented features:
-//  [!] Renderer: User texture binding. Use a VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE 'VkDescriptorSet' as texture identifier. Call ImGui_ImplVulkan_AddTexture() to register one. Read the FAQ about ImTextureID/ImTextureRef + https://github.com/ocornut/imgui/pull/914 for discussions.
+//  [!] Renderer: User texture binding. Pool mode: use a VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE 'VkDescriptorSet' as texture identifier (ImGui_ImplVulkan_AddTexture()). Descriptor-heap mode (VK_EXT_descriptor_heap): use a heap index (ImTextureID); index 0 is reserved (ImTextureID_Invalid). Read the FAQ about ImTextureID/ImTextureRef + https://github.com/ocornut/imgui/pull/914 for discussions.
 //  [X] Renderer: Large meshes support (64k+ vertices) even with 16-bit indices (ImGuiBackendFlags_RendererHasVtxOffset).
 //  [X] Renderer: Texture updates support for dynamic font atlas (ImGuiBackendFlags_RendererHasTextures).
 //  [X] Renderer: Expose selected render state for draw callbacks to use. Access in '(ImGui_ImplXXXX_RenderState*)GetPlatformIO().Renderer_RenderState'.
@@ -76,6 +76,9 @@
 #if defined(VK_VERSION_1_3) || defined(VK_KHR_dynamic_rendering)
 #define IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
 #endif
+#if defined(VK_EXT_descriptor_heap)
+#define IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
+#endif
 
 // Backend uses a small number of descriptors per font atlas + as many as additional calls done to ImGui_ImplVulkan_AddTexture().
 #define IMGUI_IMPL_VULKAN_MINIMUM_SAMPLED_IMAGE_POOL_SIZE   (8)     // Minimum per atlas
@@ -93,6 +96,19 @@ struct ImGui_ImplVulkan_PipelineInfo
 #endif
 };
 
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
+// App owns heap slots via Register*/UnRegister* (like DX12 SrvDescriptorAllocFn/FreeFn).
+// ImTextureID is the heap index returned by RegisterImage. Index 0 is reserved (ImTextureID_Invalid == 0).
+struct ImGui_ImplVulkan_DescriptorHeapInfo
+{
+    uint32_t (*RegisterImage)(void*, const VkImageViewCreateInfo*);   // Return non-zero heap index used as ImTextureID
+    void     (*UnRegisterImage)(void*, uint32_t);
+    uint32_t (*RegisterSampler)(void*, const VkSamplerCreateInfo*); // Indices may be 0 (not used as ImTextureID)
+    void     (*UnRegisterSampler)(void*, uint32_t);
+    void*    UserContext;
+};
+#endif
+
 // Initialization data, for ImGui_ImplVulkan_Init()
 // [Please zero-clear before use!]
 // - About descriptor pool:
@@ -101,6 +117,18 @@ struct ImGui_ImplVulkan_PipelineInfo
 //   - As an convenience, by setting DescriptorPoolSize > 0 the backend will create one for you.
 // - About dynamic rendering:
 //   - When using dynamic rendering, set UseDynamicRendering=true + fill PipelineInfoMain.PipelineRenderingCreateInfo structure.
+// - About descriptor heap (requires VK_EXT_descriptor_heap in your Vulkan headers → IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP):
+//   - When using descriptor heaps, set DescriptorHeapInfo and leave DescriptorPool / DescriptorPoolSize unset.
+//   - The application owns heap slots via Register*/UnRegister* callbacks.
+//   - ImTextureID is the heap index returned by RegisterImage. Index 0 is reserved (conflicts with ImTextureID_Invalid).
+//   - DescriptorHeapInfo pointer must remain valid for the backend lifetime.
+//   - ImGui_ImplVulkan_AddTexture()/RemoveTexture() are pool-path only.
+//   - Device extensions / features the application must enable:
+//     - VK_EXT_descriptor_heap (feature: descriptorHeap).
+//     - VK_KHR_maintenance5 (formal dependency of descriptor_heap; used for VkPipelineCreateFlags2 / DESCRIPTOR_HEAP pipeline flag).
+//     - VK_KHR_buffer_device_address, or Vulkan 1.2+ where BDA is core (formal dependency; enable the bufferDeviceAddress feature either way).
+//     - VK_KHR_shader_untyped_pointers (feature: shaderUntypedPointers): required by the default heap shaders (layout(descriptor_heap)).
+//     Not a formal dependency of VK_EXT_descriptor_heap; mapping-based custom shaders could omit it.
 struct ImGui_ImplVulkan_InitInfo
 {
     uint32_t                        ApiVersion;                 // Fill with API version of Instance, e.g. VK_API_VERSION_1_3 or your value of VkApplicationInfo::apiVersion. May be lower than header version (VK_HEADER_VERSION_COMPLETE)
@@ -136,6 +164,13 @@ struct ImGui_ImplVulkan_InitInfo
     // - Shader inputs/outputs need to match ours. Code/data pointed to by the structure needs to survive for whole during of backend usage.
     VkShaderModuleCreateInfo        CustomShaderVertCreateInfo;
     VkShaderModuleCreateInfo        CustomShaderFragCreateInfo;
+
+#ifdef IMGUI_IMPL_VULKAN_HAS_DESCRIPTOR_HEAP
+    // (Optional) If set, use VK_EXT_descriptor_heap (app-owned Register*/UnRegister* callbacks; see comment above).
+    // ImTextureID = RegisterImage(...) heap index (non-zero). ImGui_ImplVulkan_AddTexture() is unavailable in this mode.
+    // App must enable the device extensions/features listed under "About descriptor heap".
+    const ImGui_ImplVulkan_DescriptorHeapInfo *DescriptorHeapInfo;
+#endif
 };
 
 // Follow "Getting Started" link and check examples/ folder to learn about using backends!
@@ -154,6 +189,8 @@ IMGUI_IMPL_API void             ImGui_ImplVulkan_CreateMainPipeline(const ImGui_
 IMGUI_IMPL_API void             ImGui_ImplVulkan_UpdateTexture(ImTextureData* tex);
 
 // Register a texture (VkDescriptorSet for a VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE == ImTextureID)
+// - Pool path only. Not available when InitInfo::DescriptorHeapInfo is set (asserts).
+// - Heap mode: ImTextureID = DescriptorHeapInfo::RegisterImage(...) heap index; free with UnRegisterImage.
 IMGUI_IMPL_API VkDescriptorSet  ImGui_ImplVulkan_AddTexture(VkImageView image_view, VkImageLayout image_layout);
 IMGUI_IMPL_API void             ImGui_ImplVulkan_RemoveTexture(VkDescriptorSet descriptor_set);
 
