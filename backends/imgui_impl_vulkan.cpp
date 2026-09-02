@@ -245,7 +245,8 @@ static ImGui_ImplVulkan_Functions&  ImGui_ImplVulkan_GetFunctions();
 // Wrap each Vulkan function pointer to properly dispatch it using the current backend data
 #define IMGUI_VULKAN_FUNC_WRAPPER(func) \
     template<typename... Args> \
-    auto func(Args&&... args) { \
+    auto func(Args&&... args) -> decltype(ImGui_ImplVulkan_GetFunctions().pfn_##func(args...)) \
+    { \
         return ImGui_ImplVulkan_GetFunctions().pfn_##func(args...); \
     }
 IMGUI_VULKAN_FUNC_MAP(IMGUI_VULKAN_FUNC_WRAPPER)
@@ -1423,7 +1424,9 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info)
         IM_ASSERT(info->PipelineInfoMain.RenderPass == VK_NULL_HANDLE);
 
     bd->VulkanInitInfo = *info;
+#ifdef IMGUI_IMPL_VULKAN_USE_LOADER
     bd->Functions = ImGuiImplVulkanFuncs;
+#endif
 
     VkPhysicalDeviceProperties properties;
     vkGetPhysicalDeviceProperties(info->PhysicalDevice, &properties);
