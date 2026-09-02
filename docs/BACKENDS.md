@@ -72,7 +72,7 @@ For example, the [example_win32_directx11](https://github.com/ocornut/imgui/tree
 
 In the [backends/](https://github.com/ocornut/imgui/blob/master/backends) folder:
 
-List of Platforms Backends:
+List of Platform Backends:
 
     imgui_impl_android.cpp      ; Android native app API
     imgui_impl_glfw.cpp         ; GLFW (Windows, macOS, Linux, etc.) http://www.glfw.org/

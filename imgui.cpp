@@ -5424,12 +5424,13 @@ static ImDrawList* GetViewportBgFgDrawList(ImGuiViewportP* viewport, size_t draw
     }
 
     // Our ImDrawList system requires that there is always a command
-    if (viewport->BgFgDrawListsLastTimeActive[drawlist_no] != (float)g.Time)
+    if (viewport->BgFgDrawListsLastFrameActive[drawlist_no] != g.FrameCount)
     {
         draw_list->_ResetForNewFrame();
         draw_list->_SetPixelDensity(viewport->FramebufferScale.x);
         draw_list->PushTexture(g.IO.Fonts->TexRef);
         draw_list->PushClipRect(viewport->Pos, viewport->Pos + viewport->Size, false);
+        viewport->BgFgDrawListsLastFrameActive[drawlist_no] = g.FrameCount;
         viewport->BgFgDrawListsLastTimeActive[drawlist_no] = (float)g.Time;
     }
     return draw_list;
@@ -6466,7 +6467,7 @@ void ImGui::Render()
     for (ImGuiViewportP* viewport : g.Viewports)
     {
         InitViewportDrawData(viewport);
-        if (viewport->BgFgDrawLists[0] != NULL && viewport->BgFgDrawListsLastTimeActive[0] == (float)g.Time)
+        if (viewport->BgFgDrawLists[0] != NULL && viewport->BgFgDrawListsLastFrameActive[0] == g.FrameCount)
             AddDrawListToDrawDataEx(&viewport->DrawDataP, viewport->DrawDataBuilder.Layers[0], GetBackgroundDrawList(viewport));
     }
 
@@ -6498,7 +6499,7 @@ void ImGui::Render()
         FlattenDrawDataIntoSingleLayer(&viewport->DrawDataBuilder);
 
         // Add foreground ImDrawList (for each active viewport)
-        if (viewport->BgFgDrawLists[1] != NULL && viewport->BgFgDrawListsLastTimeActive[1] == (float)g.Time)
+        if (viewport->BgFgDrawLists[1] != NULL && viewport->BgFgDrawListsLastFrameActive[1] == g.FrameCount)
             AddDrawListToDrawDataEx(&viewport->DrawDataP, viewport->DrawDataBuilder.Layers[0], GetForegroundDrawList(viewport));
 
         // We call _PopUnusedDrawCmd() last thing, as RenderDimmedBackgrounds() rely on a valid command being there (especially in docking branch).
@@ -21994,7 +21995,7 @@ static void Platform_SetClipboardTextFn_DefaultImpl(ImGuiContext*, const char* t
     ::CloseClipboard();
 }
 
-#elif defined(__APPLE__) && TARGET_OS_OSX && defined(IMGUI_ENABLE_OSX_DEFAULT_CLIPBOARD_FUNCTIONS)
+#elif defined(__APPLE__) && defined(TARGET_OS_OSX) && TARGET_OS_OSX && defined(IMGUI_ENABLE_OSX_DEFAULT_CLIPBOARD_FUNCTIONS)
 
 #include <Carbon/Carbon.h>  // Use old API to avoid need for separate .mm file
 static PasteboardRef main_clipboard = 0;
@@ -22584,7 +22585,7 @@ void ImGui::DebugNodeTexture(ImTextureData* tex, int int_id, const ImFontAtlasRe
         Checkbox("Show used rect", &cfg->ShowTextureUsedRect);
         PushStyleVar(ImGuiStyleVar_ImageBorderSize, ImMax(1.0f, g.Style.ImageBorderSize));
         ImVec2 p = GetCursorScreenPos();
-        if (tex->WantDestroyNextFrame)
+        if (tex->Status == ImTextureStatus_WantDestroy || tex->Status == ImTextureStatus_Destroyed)
             Dummy(ImVec2((float)tex->Width, (float)tex->Height));
         else
             ImageWithBg(tex->GetTexRef(), ImVec2((float)tex->Width, (float)tex->Height), ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f), ImVec4(0.0f, 0.0f, 0.0f, 1.0f));

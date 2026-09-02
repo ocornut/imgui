@@ -6,7 +6,7 @@
 
 3. Consider running the [imgui_test_suite](https://github.com/ocornut/imgui_test_engine) or adding new tests to test for expected behaviors.
 
-4. PLEASE DO NOT SUBMIT AI SLOP OR AUTOMATED REPORTS. Submissions that are lacking proper human review/judgement before being passed to us are not welcome.
+4. PLEASE DO NOT SUBMIT AI SLOP OR AUTOMATED AI REPORTS. Submissions that are lacking proper human review/judgement before being passed to us are not welcome. Do not let a LLM AI write most of the text for you.
 
 5. Clear this template before submitting your PR.
 

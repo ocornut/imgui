@@ -107,15 +107,18 @@
 // This will be inlined as part of ImVec2 and ImVec4 class declarations.
 /*
 #define IM_VEC2_CLASS_EXTRA                                                     \
-        constexpr ImVec2(const MyVec2& f) : x(f.x), y(f.y) {}                   \
-        operator MyVec2() const { return MyVec2(x,y); }
+        IM_NODEBUGSTEP constexpr inline ImVec2(const MyVec2& f) : x(f.x), y(f.y) {}    \
+        IM_NODEBUGSTEP inline operator MyVec2() const { return MyVec2(x,y); }
 
-#define IM_VEC4_CLASS_EXTRA                                                     \
-        constexpr ImVec4(const MyVec4& f) : x(f.x), y(f.y), z(f.z), w(f.w) {}   \
-        operator MyVec4() const { return MyVec4(x,y,z,w); }
+#define IM_VEC4_CLASS_EXTRA                                                                     \
+        IM_NODEBUGSTEP constexpr inline ImVec4(const MyVec4& f) : x(f.x), y(f.y), z(f.z), w(f.w) {}    \
+        IM_NODEBUGSTEP inline operator MyVec4() const { return MyVec4(x,y,z,w); }
 */
-//---- ...Or use Dear ImGui's own very basic math operators.
+//---- ...Or use Dear ImGui's own basic math operators in every file including imgui.h:
+//#ifndef IMGUI_DEFINE_MATH_OPERATORS
 //#define IMGUI_DEFINE_MATH_OPERATORS
+//#endif
+//---- ...Or manually '#define IMGUI_DEFINE_MATH_OPERATORS' before '#include "imgui.h"' to use from one file.
 
 //---- Use 32-bit vertex indices (default is 16-bit) is one way to allow large meshes with more than 64K vertices.
 // Your renderer backend will need to support it (most example renderer backends support both 16/32-bit indices).

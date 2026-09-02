@@ -3013,7 +3013,7 @@ float ImGui::ScaleRatioFromValueT(ImGuiDataType data_type, TYPE v, TYPE v_min, T
             result = 0.0f; // Workaround for values that are in-range but below our fudge
         else if (v_clamped >= v_max_fudged)
             result = 1.0f; // Workaround for values that are in-range but above our fudge
-        else if ((v_min * v_max) < 0.0f) // Range crosses zero, so split into two portions
+        else if (((FLOATTYPE)v_min * (FLOATTYPE)v_max) < 0.0f) // Range crosses zero, so split into two portions
         {
             float zero_point_center = (-(float)v_min) / ((float)v_max - (float)v_min); // The zero point in parametric space.  There's an argument we should take the logarithmic nature into account when calculating this, but for now this should do (and the most common case of a symmetrical range works fine)
             float zero_point_snap_L = zero_point_center - zero_deadzone_halfsize;
@@ -3067,7 +3067,7 @@ TYPE ImGui::ScaleValueFromRatioT(ImGuiDataType data_type, float t, TYPE v_min, T
 
         float t_with_flip = flipped ? (1.0f - t) : t; // t, but flipped if necessary to account for us flipping the range
 
-        if ((v_min * v_max) < 0.0f) // Range crosses zero, so we have to do this in two parts
+        if (((FLOATTYPE)v_min * (FLOATTYPE)v_max) < 0.0f) // Range crosses zero, so we have to do this in two parts
         {
             float zero_point_center = (-(float)ImMin(v_min, v_max)) / ImAbs((float)v_max - (float)v_min); // The zero point in parametric space
             float zero_point_snap_L = zero_point_center - zero_deadzone_halfsize;
@@ -6136,6 +6136,10 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
     const bool is_readonly = ((g.NextItemData.ItemFlagsSet | g.CurrentItemFlags) & ImGuiItemFlags_ReadOnly) != 0;
     g.NextItemData.ClearFlags();
 
+    const float backup_alpha = g.Style.Alpha;
+    if (g.DisabledStackSize > 0)
+        g.Style.Alpha = g.DisabledAlphaBackup; // Cancel out effect of BeginDisabled() for color swatches.
+
     PushID(label);
     const bool set_current_color_edit_id = (g.ColorEditCurrentID == 0);
     if (set_current_color_edit_id)
@@ -6475,7 +6479,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
     {
         float alpha = ImSaturate(col[3]);
         ImRect bar1_bb(bar1_pos_x, picker_pos.y, bar1_pos_x + bars_width, picker_pos.y + sv_picker_size);
-        RenderColorRectWithAlphaCheckerboard(draw_list, bar1_bb.Min, bar1_bb.Max, 0, bar1_bb.GetWidth() / 2.0f, ImVec2(0.0f, 0.0f));
+        RenderColorRectWithAlphaCheckerboard(draw_list, bar1_bb.Min, bar1_bb.Max, IM_COL32(0,0,0,0), style.Alpha, bar1_bb.GetWidth() / 2.0f, ImVec2(0.0f, 0.0f));
         draw_list->AddRectFilledMultiColor(bar1_bb.Min, bar1_bb.Max, user_col32_striped_of_alpha, user_col32_striped_of_alpha, user_col32_striped_of_alpha & ~IM_COL32_A_MASK, user_col32_striped_of_alpha & ~IM_COL32_A_MASK);
         float bar1_line_y = IM_ROUND(picker_pos.y + (1.0f - alpha) * sv_picker_size);
         RenderFrameBorder(bar1_bb.Min, bar1_bb.Max, 0.0f);
@@ -6492,6 +6496,9 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
     if (set_current_color_edit_id)
         g.ColorEditCurrentID = 0;
     PopID();
+
+    if (g.DisabledStackSize > 0)
+        g.Style.Alpha = backup_alpha;
 
     return value_changed;
 }
@@ -6528,31 +6535,30 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
     ImVec4 col_rgb_without_alpha(col_rgb.x, col_rgb.y, col_rgb.z, 1.0f);
     float grid_step = ImMin(size.x, size.y) / 2.99f;
     float rounding = ImMin(g.Style.FrameRounding, grid_step * 0.5f);
-    ImRect bb_inner = bb;
-    float off = 0.0f;
-    if ((flags & ImGuiColorEditFlags_NoBorder) == 0)
-    {
-        off = -0.75f; // The border (using Col_FrameBg) tends to look off when color is near-opaque and rounding is enabled. This offset seemed like a good middle ground to reduce those artifacts.
-        bb_inner.Expand(off);
-    }
+
+    const float backup_alpha = g.Style.Alpha;
+    if (g.DisabledStackSize > 0)
+        g.Style.Alpha = g.DisabledAlphaBackup; // Cancel out effect of BeginDisabled() for color swatches.
     if ((flags & ImGuiColorEditFlags_AlphaPreviewHalf) && col_rgb.w < 1.0f)
     {
-        float mid_x = IM_ROUND((bb_inner.Min.x + bb_inner.Max.x) * 0.5f);
+        float mid_x = IM_ROUND((bb.Min.x + bb.Max.x) * 0.5f);
         if ((flags & ImGuiColorEditFlags_AlphaNoBg) == 0)
-            RenderColorRectWithAlphaCheckerboard(window->DrawList, ImVec2(bb_inner.Min.x + grid_step, bb_inner.Min.y), bb_inner.Max, GetColorU32(col_rgb), grid_step, ImVec2(-grid_step + off, off), rounding, ImDrawFlags_RoundCornersRight);
+            RenderColorRectWithAlphaCheckerboard(window->DrawList, ImVec2(bb.Min.x + grid_step, bb.Min.y), bb.Max, ColorConvertFloat4ToU32(col_rgb), g.Style.Alpha, grid_step, ImVec2(-grid_step, 0.0f), rounding, ImDrawFlags_RoundCornersRight);
         else
-            window->DrawList->AddRectFilled(ImVec2(bb_inner.Min.x + grid_step, bb_inner.Min.y), bb_inner.Max, GetColorU32(col_rgb), rounding, ImDrawFlags_RoundCornersRight);
-        window->DrawList->AddRectFilled(bb_inner.Min, ImVec2(mid_x, bb_inner.Max.y), GetColorU32(col_rgb_without_alpha), rounding, ImDrawFlags_RoundCornersLeft);
+            window->DrawList->AddRectFilled(ImVec2(bb.Min.x + grid_step, bb.Min.y), bb.Max, GetColorU32(col_rgb), rounding, ImDrawFlags_RoundCornersRight);
+        window->DrawList->AddRectFilled(bb.Min, ImVec2(mid_x, bb.Max.y), GetColorU32(col_rgb_without_alpha), rounding, ImDrawFlags_RoundCornersLeft);
     }
     else
     {
         // Because GetColorU32() multiplies by the global style Alpha and we don't want to display a checkerboard if the source code had no alpha
         ImVec4 col_source = (flags & ImGuiColorEditFlags_AlphaOpaque) ? col_rgb_without_alpha : col_rgb;
         if (col_source.w < 1.0f && (flags & ImGuiColorEditFlags_AlphaNoBg) == 0)
-            RenderColorRectWithAlphaCheckerboard(window->DrawList, bb_inner.Min, bb_inner.Max, GetColorU32(col_source), grid_step, ImVec2(off, off), rounding);
+            RenderColorRectWithAlphaCheckerboard(window->DrawList, bb.Min, bb.Max, ColorConvertFloat4ToU32(col_source), g.Style.Alpha, grid_step, ImVec2(0.0f, 0.0f), rounding);
         else
-            window->DrawList->AddRectFilled(bb_inner.Min, bb_inner.Max, GetColorU32(col_source), rounding);
+            window->DrawList->AddRectFilled(bb.Min, bb.Max, GetColorU32(col_source), rounding);
     }
+    if (g.DisabledStackSize > 0)
+        g.Style.Alpha = backup_alpha;
     RenderNavCursor(bb, id);
     if ((flags & ImGuiColorEditFlags_NoBorder) == 0)
     {
@@ -6896,7 +6902,7 @@ bool ImGui::TreeNodeUpdateNextOpen(ImGuiID storage_id, ImGuiTreeNodeFlags flags)
 }
 
 // Store ImGuiTreeNodeStackData for just submitted node.
-// Currently only supports 32 level deep and we are fine with (1 << Depth) overflowing into a zero, easy to increase.
+// Currently only supports 32 level deep. Easy to increase to e.g. 64.
 static void TreeNodeStoreStackData(ImGuiTreeNodeFlags flags, float x1)
 {
     ImGuiContext& g = *GImGui;
@@ -6918,6 +6924,9 @@ static void TreeNodeStoreStackData(ImGuiTreeNodeFlags flags, float x1)
     if (flags & ImGuiTreeNodeFlags_DrawLinesToNodes)
         window->DC.TreeRecordsClippedNodesY2Mask |= (1 << window->DC.TreeDepth);
 }
+
+#define TREE_NODE_MAX_DEPTH                     32
+#define TREE_NODE_GET_DEPTH_MASK(_DEPTH)        (((ImU32)(_DEPTH) < TREE_NODE_MAX_DEPTH) ? (1u << (_DEPTH)) : 0u)
 
 bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* label, const char* label_end)
 {
@@ -6995,7 +7004,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     if ((flags & ImGuiTreeNodeFlags_DrawLinesMask_) == 0)
         flags |= g.Style.TreeLinesFlags;
     const bool draw_tree_lines = (flags & (ImGuiTreeNodeFlags_DrawLinesFull | ImGuiTreeNodeFlags_DrawLinesToNodes)) && (frame_bb.Min.y < window->ClipRect.Max.y) && (g.Style.TreeLinesSize > 0.0f);
-    if (!(flags & ImGuiTreeNodeFlags_NoTreePushOnOpen))
+    if (!(flags & ImGuiTreeNodeFlags_NoTreePushOnOpen) && window->DC.TreeDepth < TREE_NODE_MAX_DEPTH)
     {
         store_tree_node_stack_data = draw_tree_lines;
         if ((flags & ImGuiTreeNodeFlags_NavLeftJumpsToParent) && !g.NavIdIsAlive)
@@ -7006,12 +7015,16 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     const bool is_leaf = (flags & ImGuiTreeNodeFlags_Leaf) != 0;
     if (!is_visible)
     {
-        if ((flags & ImGuiTreeNodeFlags_DrawLinesToNodes) && (window->DC.TreeRecordsClippedNodesY2Mask & (1 << (window->DC.TreeDepth - 1))))
+        if (flags & ImGuiTreeNodeFlags_DrawLinesToNodes)
         {
-            ImGuiTreeNodeStackData* parent_data = &g.TreeNodeStack.Data[g.TreeNodeStack.Size - 1];
-            parent_data->DrawLinesToNodesY2 = ImMax(parent_data->DrawLinesToNodesY2, window->DC.CursorPos.y); // Don't need to aim to mid Y position as we are clipped anyway.
-            if (frame_bb.Min.y >= window->ClipRect.Max.y)
-                window->DC.TreeRecordsClippedNodesY2Mask &= ~(1 << (window->DC.TreeDepth - 1)); // Done
+            const ImU32 tree_depth_mask = TREE_NODE_GET_DEPTH_MASK(window->DC.TreeDepth - 1);
+            if (window->DC.TreeRecordsClippedNodesY2Mask & tree_depth_mask)
+            {
+                ImGuiTreeNodeStackData* parent_data = &g.TreeNodeStack.Data[g.TreeNodeStack.Size - 1];
+                parent_data->DrawLinesToNodesY2 = ImMax(parent_data->DrawLinesToNodesY2, window->DC.CursorPos.y); // Don't need to aim to mid Y position as we are clipped anyway.
+                if (frame_bb.Min.y >= window->ClipRect.Max.y)
+                    window->DC.TreeRecordsClippedNodesY2Mask &= ~tree_depth_mask; // Done
+            }
         }
         if (is_open && store_tree_node_stack_data)
             TreeNodeStoreStackData(flags, text_pos.x - text_offset_x); // Call before TreePushOverrideID()
@@ -7208,7 +7221,7 @@ void ImGui::TreeNodeDrawLineToChildNode(const ImVec2& target_pos)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    if (window->DC.TreeDepth == 0 || (window->DC.TreeHasStackDataDepthMask & (1 << (window->DC.TreeDepth - 1))) == 0)
+    if ((window->DC.TreeHasStackDataDepthMask & TREE_NODE_GET_DEPTH_MASK(window->DC.TreeDepth - 1)) == 0)
         return;
 
     ImGuiTreeNodeStackData* parent_data = &g.TreeNodeStack.Data[g.TreeNodeStack.Size - 1];
@@ -7292,8 +7305,7 @@ void ImGui::TreePop()
     Unindent();
 
     window->DC.TreeDepth--;
-    ImU32 tree_depth_mask = (1 << window->DC.TreeDepth);
-
+    ImU32 tree_depth_mask = TREE_NODE_GET_DEPTH_MASK(window->DC.TreeDepth);
     if (window->DC.TreeHasStackDataDepthMask & tree_depth_mask)
     {
         const ImGuiTreeNodeStackData* data = &g.TreeNodeStack.Data[g.TreeNodeStack.Size - 1];

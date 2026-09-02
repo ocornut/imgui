@@ -345,29 +345,25 @@ static WGPUDevice RequestDevice(wgpu::Instance& instance, wgpu::Adapter& adapter
 static void handle_request_adapter(WGPURequestAdapterStatus status, WGPUAdapter adapter, WGPUStringView message, void* userdata1, void* userdata2)
 {
     IM_UNUSED(userdata2);
-    if (status == WGPURequestAdapterStatus_Success)
+    if (status != WGPURequestAdapterStatus_Success)
     {
-        WGPUAdapter* extAdapter = (WGPUAdapter*)userdata1;
-        *extAdapter = adapter;
+        printf("Request_adapter status=%#.8x message=%.*s\n", status, (int)message.length, message.data);
+        return;
     }
-    else
-    {
-        printf("Request_adapter status=%#.8x message=%.*s\n", status, (int) message.length, message.data);
-    }
+    WGPUAdapter* extAdapter = (WGPUAdapter*)userdata1;
+    *extAdapter = adapter;
 }
 
 static void handle_request_device(WGPURequestDeviceStatus status, WGPUDevice device, WGPUStringView message, void* userdata1, void* userdata2)
 {
     IM_UNUSED(userdata2);
-    if (status == WGPURequestDeviceStatus_Success)
+    if (status != WGPURequestDeviceStatus_Success)
     {
-        WGPUDevice* extDevice = (WGPUDevice*)userdata1;
-        *extDevice = device;
+        printf("Request_device status=%#.8x message=%.*s\n", status, (int)message.length, message.data);
+        return;
     }
-    else
-    {
-        printf("Request_device status=%#.8x message=%.*s\n", status, (int) message.length, message.data);
-    }
+    WGPUDevice* extDevice = (WGPUDevice*)userdata1;
+    *extDevice = device;
 }
 
 static WGPUAdapter RequestAdapter(WGPUInstance& instance)
@@ -381,8 +377,10 @@ static WGPUAdapter RequestAdapter(WGPUInstance& instance)
     adapterCallbackInfo.userdata1 = &local_adapter;
 
     WGPUFuture future = wgpuInstanceRequestAdapter(instance, &adapter_options, adapterCallbackInfo);
+#if !defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
     WGPUFutureWaitInfo waitInfo = { future, false };
     wgpuInstanceWaitAny(instance, 1, &waitInfo, ~0ull);
+#endif
     IM_ASSERT(local_adapter && "Error on Adapter request");
     return local_adapter;
 }
@@ -394,15 +392,20 @@ static WGPUDevice RequestDevice(WGPUInstance& instance, WGPUAdapter& adapter)
     deviceCallbackInfo.mode = WGPUCallbackMode_WaitAnyOnly;
     deviceCallbackInfo.callback = handle_request_device;
     deviceCallbackInfo.userdata1 = &local_device;
+
     WGPUFuture future = wgpuAdapterRequestDevice(adapter, nullptr, deviceCallbackInfo);
+#if !defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
     WGPUFutureWaitInfo waitInfo = { future, false };
     wgpuInstanceWaitAny(instance, 1, &waitInfo, ~0ull);
+#else
+    IM_UNUSED(instance);
+#endif
     IM_ASSERT(local_device && "Error on Device request");
     return local_device;
 }
 #endif // IMGUI_IMPL_WEBGPU_BACKEND_WGPU
 
-bool InitWGPU(GLFWwindow* window)
+static bool InitWGPU(GLFWwindow* window)
 {
     WGPUTextureFormat preferred_fmt = WGPUTextureFormat_Undefined;  // acquired from SurfaceCapabilities
 
@@ -451,7 +454,7 @@ bool InitWGPU(GLFWwindow* window)
 
 #if defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
     wgpuSetLogCallback(
-        [](WGPULogLevel level, WGPUStringView msg, void* userdata) { fprintf(stderr, "%s: %.*s\n", ImGui_ImplWGPU_GetLogLevelName(level), (int)msg.length, msg.data); }, nullptr
+        [](WGPULogLevel level, WGPUStringView msg, void*) { fprintf(stderr, "%s: %.*s\n", ImGui_ImplWGPU_GetLogLevelName(level), (int)msg.length, msg.data); }, nullptr
     );
     wgpuSetLogLevel(WGPULogLevel_Warn);
 #endif

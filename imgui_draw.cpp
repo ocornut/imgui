@@ -705,7 +705,7 @@ void ImDrawList::PushTexture(ImTextureRef tex_ref)
     _TextureStack.push_back(tex_ref);
     _CmdHeader.TexRef = tex_ref;
     if (tex_ref._TexData != NULL)
-        IM_ASSERT(tex_ref._TexData->WantDestroyNextFrame == false);
+        IM_ASSERT(tex_ref._TexData->Status != ImTextureStatus_WantDestroy && tex_ref._TexData->Status != ImTextureStatus_Destroyed);
     _OnChangedTexture();
 }
 
@@ -6225,26 +6225,33 @@ ImDrawFlags ImGui::CalcRoundingFlagsForRectInRect(const ImRect& r_in, const ImRe
 // Helper for ColorPicker4()
 // NB: This is rather brittle and will show artifact when rounding this enabled if rounded corners overlap multiple cells. Caller currently responsible for avoiding that.
 // Spent a non reasonable amount of time trying to getting this right for ColorButton with rounding+anti-aliasing+ImGuiColorEditFlags_HalfAlphaPreview flag + various grid sizes and offsets, and eventually gave up... probably more reasonable to disable rounding altogether.
-// FIXME: uses ImGui::GetColorU32
-void ImGui::RenderColorRectWithAlphaCheckerboard(ImDrawList* draw_list, ImVec2 p_min, ImVec2 p_max, ImU32 col, float grid_step, ImVec2 grid_off, float rounding, ImDrawFlags flags)
+void ImGui::RenderColorRectWithAlphaCheckerboard(ImDrawList* draw_list, ImVec2 p_min, ImVec2 p_max, ImU32 col, float alpha, float grid_step, ImVec2 grid_off, float rounding, ImDrawFlags flags)
 {
     if ((flags & ImDrawFlags_RoundCornersMask_) == 0)
-        flags = ImDrawFlags_RoundCornersDefault_;
+        flags = ImDrawFlags_RoundCornersAll;
     if (((col & IM_COL32_A_MASK) >> IM_COL32_A_SHIFT) < 0xFF)
     {
-        ImU32 col_bg1 = GetColorU32(ImAlphaBlendColors(IM_COL32(128, 128, 128, 255), col));
-        ImU32 col_bg2 = GetColorU32(ImAlphaBlendColors(IM_COL32(204, 204, 204, 255), col));
-        draw_list->AddRectFilled(p_min, p_max, col_bg1, rounding, flags);
+        IM_ASSERT(alpha >= 0.0f && alpha <= 1.0f);
+        const ImU32 a_mask = (ImU32)(alpha * 255.0f) << IM_COL32_A_SHIFT;
+        ImU32 col_bg1 = (ImAlphaBlendColors(IM_COL32(128, 128, 128, 255), col) & ~IM_COL32_A_MASK) | a_mask;
+        ImU32 col_bg2 = (ImAlphaBlendColors(IM_COL32(204, 204, 204, 255), col) & ~IM_COL32_A_MASK) | a_mask;
+        const bool dual_layer = (alpha == 1.0f); // Dual layer is faster but incorrect if blending.
+        if (dual_layer)
+            draw_list->AddRectFilled(p_min, p_max, col_bg1, rounding, flags);
 
         int yi = 0;
         for (float y = p_min.y + grid_off.y; y < p_max.y; y += grid_step, yi++)
         {
-            float y1 = ImClamp(y, p_min.y, p_max.y), y2 = ImMin(y + grid_step, p_max.y);
+            float y1 = ImClamp((float)(int)y, p_min.y, p_max.y), y2 = ImMin((float)(int)(y + grid_step), p_max.y);
             if (y2 <= y1)
                 continue;
-            for (float x = p_min.x + grid_off.x + ((yi ^ 1)  & 1) * grid_step; x < p_max.x; x += grid_step * 2.0f)
+
+            const float x_start_off = dual_layer ? (((yi ^ 1) & 1) * grid_step) : 0.0f;
+            const float x_step = dual_layer ? (grid_step * 2.0f) : (grid_step);
+            int xi = 0;
+            for (float x = p_min.x + grid_off.x + x_start_off; x < p_max.x; x += x_step, xi++)
             {
-                float x1 = ImClamp(x, p_min.x, p_max.x), x2 = ImMin(x + grid_step, p_max.x);
+                float x1 = ImClamp((float)(int)x, p_min.x, p_max.x), x2 = ImMin((float)(int)(x + grid_step), p_max.x);
                 if (x2 <= x1)
                     continue;
                 ImDrawFlags cell_flags = ImDrawFlags_RoundCornersNone; // FIXME: Could use CalcRoundingFlagsForRectInRect()
@@ -6253,7 +6260,8 @@ void ImGui::RenderColorRectWithAlphaCheckerboard(ImDrawList* draw_list, ImVec2 p
 
                 // Combine flags
                 cell_flags = (flags == ImDrawFlags_RoundCornersNone || cell_flags == ImDrawFlags_RoundCornersNone) ? ImDrawFlags_RoundCornersNone : (cell_flags & flags);
-                draw_list->AddRectFilled(ImVec2(x1, y1), ImVec2(x2, y2), col_bg2, rounding, cell_flags);
+                ImU32 col_bg = dual_layer ? col_bg2 : (((yi + xi) & 1) ? col_bg2 : col_bg1);
+                draw_list->AddRectFilled(ImVec2(x1, y1), ImVec2(x2, y2), col_bg, rounding, cell_flags);
             }
         }
     }

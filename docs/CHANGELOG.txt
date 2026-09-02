@@ -52,22 +52,47 @@ Breaking Changes:
 
 Other Changes:
 
+- Drags, Sliders:
+  - Fixed an overflow using `ImGuiSliderFlags_Logarithmic` with S32/S64 types which
+    leads to clamped interactions. (#9526, #3361, #1823, #1316, #642) [@lailoken]
+- TreeNode:
+  - Fixed issues/asserts with 32+ deep trees when using ImGuiTreeNodeFlags_DrawLinesXXX
+    features or other features requiring stack storage. (#9509) [@lasrod]
 - Fonts:
   - Reworked `AddFontDefault()` to use `io.DisplayFrameBufferScale` as part of the heuristic
     to select `AddFontDefaultVector()` by default, effectively using ProggyForever instead of
     ProggyClean on most Apple/Retina setups by default.
+- ColorEdit:
+  - ColorButton, ColorEdit, ColorPicker: cancel-out alpha caused by BeginDisabled() so
+    disabled color buttons have the same color as non-disabled oness. (#9511)
+  - ColorButton: fixed issues/inconsistencies with checkerboard rendering when combining
+    color alpha and global style alpha. (#9511) [@enjmiah, @ocornut]
+- Misc:
+  - Fixed `GetBackgroundDrawList()`/`GetForegroundDrawList()` not being properly reset
+    every frame when cumulated session time is very large (e.g. a few days). [@lailoken]
+  - Added `IM_NODEBUGSTEP` helper to tag functions with `__declspec(non_user_code)` (MSVC)
+    or `[[gnu::artificial]]` (Clang/GCC) in order to provide a hint to debuggers to skip
+    trivial functions when stepping into.
+  - Tagged various trivial functions using `IM_NODEBUGSTEP`: `ImVec2()`, `ImVec4()` etc.
+    and various operators.
 - ImDrawList:
   - Per-viewport FramebufferScale for Apple/Retina screen is applied to draw lists:
     - AA Fringe is scaled accordingly.
     - Circle and Curves tessellation error are scaled accordingly.
+  - Reworked assert in PushTexture() to allow convenience grace period of using a
+    texture that was queue for destroy during the frame. Make it safe to stick to
+    an existing texture during the frame. (#9528, #8465)
 - Backends:
   - QNX: added QNX Screen backend. (#9492) [@mgorchak-blackberry]
   - SDL2: fixed querying framebuffer scale/density when using Metal without
     going through a SDL_Renderer. (#5592) [@lailoken]
   - WebGPU: fixed passing non-integer sizes to `wgpuRenderPassEncoderSetViewport()`
     when when `FramebufferScale` is >1.0f. (#9515, #8628) [@WayU]
+  - WebGPU: update to build with wgpu-native 29.0+. (#9377, #9532, #9530) [@lucascompython, @ivan-enzhaev]
 - Examples:
-  - SDL2+Metal: create Metal context without using a SDL_Renderer.
+  - MSVC: disabled /JMC in Visual Studio projects (unnecessary overhead).
+  - GLFW/SDL2/SDL3+WebGPU: fixed running with wgpu-native missing `wgpuInstanceWaitAny()`. (#9377)
+  - SDL2+Metal: create Metal context without using a `SDL_Renderer`.
   - QNX+OpenGL3, QNX+Vulkan: added QNX Screen examples. (#9492) [@mgorchak-blackberry]
   - OSX+OpenGL3: added example_apple_opengl3/ (OSX/Cocoa + OpenGL 3.2 Core profile).
 
