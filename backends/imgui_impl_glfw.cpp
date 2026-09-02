@@ -31,6 +31,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-XX-XX: [Docking] Multi-viewport: treat different window position reported after glfwSetWindowPos() as an actual platform move. (#9356, #9398)
 //  2026-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
 //  2026-04-21: Added a Win32-specific implementation of ImGui_ImplGlfw_GetContentScaleXXXX functions for legacy GLFW 3.2.
 //  2026-03-25: Mouse cursor is properly restored if changed by user app/code while using glfwSetInputMode(..., GLFW_CURSOR_DISABLED) or ImGuiConfigFlags_NoMouseCursorChange. Amend change from 2025-12-10.
@@ -1314,7 +1315,7 @@ static void ImGui_ImplGlfw_WindowCloseCallback(GLFWwindow* window)
 // - on Linux it is queued and invoked during glfwPollEvents()
 // Because the event doesn't always fire on glfwSetWindowXXX() we use a frame counter tag to only
 // ignore recent glfwSetWindowXXX() calls.
-static void ImGui_ImplGlfw_WindowPosCallback(GLFWwindow* window, int, int)
+static void ImGui_ImplGlfw_WindowPosCallback(GLFWwindow* window, int x, int y)
 {
     if (ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle(window))
     {
@@ -1322,7 +1323,10 @@ static void ImGui_ImplGlfw_WindowPosCallback(GLFWwindow* window, int, int)
         {
             bool ignore_event = (ImGui::GetFrameCount() <= vd->IgnoreWindowPosEventFrame + 1);
             //data->IgnoreWindowPosEventFrame = -1;
-            if (ignore_event)
+            // The event may report a different position than requested when the window manager
+            // clamps/moves the platform window (e.g. Linux/X11 near monitor edges). In that case
+            // keep the viewport in sync with the real platform position instead of ignoring it.
+            if (ignore_event && x == (int)viewport->Pos.x && y == (int)viewport->Pos.y)
                 return;
         }
         viewport->PlatformRequestMove = true;
