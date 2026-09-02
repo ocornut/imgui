@@ -4097,6 +4097,9 @@ struct ImFont
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     float                       Scale;              // 4     // in  // Legacy base font scale (~1.0f), multiplied by the per-window font scale which you can adjust with SetWindowFontScale()
 #endif
+    // Optional pair kerning. Extra advance in pixels at 'size'. NULL = advance only (no extra cost).
+    float                     (*KerningFn)(ImFont* font, ImWchar left, ImWchar right, float size, void* user);
+    void*                       KerningUserData;
 
     // Methods
     IMGUI_API ImFont();
