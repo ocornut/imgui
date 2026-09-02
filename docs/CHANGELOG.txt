@@ -98,7 +98,15 @@ Other Changes:
 
 Docking+Viewports Branch:
 
+- Viewports: fixed platform position/size requests adjusted or rejected by a window manager
+  leaving Dear ImGui geometry out of sync with the native window. Active window dragging now
+  continues from the platform-accepted position instead of repeatedly requesting rejected
+  geometry. (#9356, #9398, #9442)
 - Backends:
+  - GLFW: on X11, poll live geometry after a setter so completely rejected viewport
+    requests are synchronized. (#9356, #9398, #9442)
+  - GLFW: disabled multi-viewports on Wayland with legacy GLFW versions, where global window
+    positioning is unavailable.
   - Metal: fixed resizing windows losing framebuffer scale. (#6828, #8856) [@laikoken]
 - Examples:
   - SDL3+Metal, GLFW+Metal: fix multi-viewport support.
@@ -9699,4 +9707,3 @@ Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v
 Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.00
 
 - Initial release.
-
