@@ -2665,10 +2665,10 @@ bool ImGui::DragBehavior(ImGuiID id, ImGuiDataType data_type, void* p_v, float v
     // Read imgui.cpp "API BREAKING CHANGES" section for 1.78 if you hit this assert.
     IM_ASSERT((flags == 1 || (flags & ImGuiSliderFlags_InvalidMask_) == 0) && "Invalid ImGuiSliderFlags flags! Has the legacy 'float power' argument been mistakenly cast to flags? Call function with ImGuiSliderFlags_Logarithmic flags instead.");
 
+    // Things we can do easily outside the DragBehaviorT<> template, saves code generation.
     ImGuiContext& g = *GImGui;
     if (g.ActiveId == id)
     {
-        // Those are the things we can do easily outside the DragBehaviorT<> template, saves code generation.
         if (g.ActiveIdSource == ImGuiInputSource_Mouse && !g.IO.MouseDown[0])
             ClearActiveID();
         else if ((g.ActiveIdSource == ImGuiInputSource_Keyboard || g.ActiveIdSource == ImGuiInputSource_Gamepad) && g.NavActivatePressedId == id && !g.ActiveIdIsJustActivated)
@@ -3140,37 +3140,24 @@ bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_typ
         float clicked_t = 0.0f;
         if (g.ActiveIdSource == ImGuiInputSource_Mouse)
         {
-            if (!g.IO.MouseDown[0])
+            const float mouse_abs_pos = g.IO.MousePos[axis];
+            if (g.ActiveIdIsJustActivated)
             {
-                ClearActiveID();
-            }
-            else
-            {
-                const float mouse_abs_pos = g.IO.MousePos[axis];
-                if (g.ActiveIdIsJustActivated)
-                {
-                    float grab_t = ScaleRatioFromValueT<TYPE, SIGNEDTYPE, FLOATTYPE>(data_type, *v, v_min, v_max, logarithmic_zero_epsilon, zero_deadzone_halfsize);
-                    if (axis == ImGuiAxis_Y)
-                        grab_t = 1.0f - grab_t;
-                    const float grab_pos = ImLerp(slider_usable_pos_min, slider_usable_pos_max, grab_t);
-                    const bool clicked_around_grab = (mouse_abs_pos >= grab_pos - grab_sz * 0.5f - 1.0f) && (mouse_abs_pos <= grab_pos + grab_sz * 0.5f + 1.0f); // No harm being extra generous here.
-                    g.SliderGrabClickOffset = (clicked_around_grab && is_floating_point) ? mouse_abs_pos - grab_pos : 0.0f;
-                }
-                if (slider_usable_sz > 0.0f)
-                    clicked_t = ImSaturate((mouse_abs_pos - g.SliderGrabClickOffset - slider_usable_pos_min) / slider_usable_sz);
+                float grab_t = ScaleRatioFromValueT<TYPE, SIGNEDTYPE, FLOATTYPE>(data_type, *v, v_min, v_max, logarithmic_zero_epsilon, zero_deadzone_halfsize);
                 if (axis == ImGuiAxis_Y)
-                    clicked_t = 1.0f - clicked_t;
-                set_new_value = true;
+                    grab_t = 1.0f - grab_t;
+                const float grab_pos = ImLerp(slider_usable_pos_min, slider_usable_pos_max, grab_t);
+                const bool clicked_around_grab = (mouse_abs_pos >= grab_pos - grab_sz * 0.5f - 1.0f) && (mouse_abs_pos <= grab_pos + grab_sz * 0.5f + 1.0f); // No harm being extra generous here.
+                g.SliderGrabClickOffset = (clicked_around_grab && is_floating_point) ? mouse_abs_pos - grab_pos : 0.0f;
             }
+            if (slider_usable_sz > 0.0f)
+                clicked_t = ImSaturate((mouse_abs_pos - g.SliderGrabClickOffset - slider_usable_pos_min) / slider_usable_sz);
+            if (axis == ImGuiAxis_Y)
+                clicked_t = 1.0f - clicked_t;
+            set_new_value = true;
         }
         else if (g.ActiveIdSource == ImGuiInputSource_Keyboard || g.ActiveIdSource == ImGuiInputSource_Gamepad)
         {
-            if (g.ActiveIdIsJustActivated)
-            {
-                g.SliderCurrentAccum = 0.0f; // Reset any stored nav delta upon activation
-                g.SliderCurrentAccumDirty = false;
-            }
-
             float input_delta = (axis == ImGuiAxis_X) ? GetNavTweakPressedAmount(axis) : -GetNavTweakPressedAmount(axis);
             if (input_delta != 0.0f)
             {
@@ -3198,11 +3185,7 @@ bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_typ
             }
 
             float delta = g.SliderCurrentAccum;
-            if (g.NavActivatePressedId == id && !g.ActiveIdIsJustActivated)
-            {
-                ClearActiveID();
-            }
-            else if (g.SliderCurrentAccumDirty)
+            if (g.SliderCurrentAccumDirty)
             {
                 clicked_t = ScaleRatioFromValueT<TYPE, SIGNEDTYPE, FLOATTYPE>(data_type, *v, v_min, v_max, logarithmic_zero_epsilon, zero_deadzone_halfsize);
 
@@ -3228,7 +3211,6 @@ bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_typ
                     else
                         g.SliderCurrentAccum -= ImMax(new_clicked_t - old_clicked_t, delta);
                 }
-
                 g.SliderCurrentAccumDirty = false;
             }
         }
@@ -3282,6 +3264,24 @@ bool ImGui::SliderBehavior(const ImRect& bb, ImGuiID id, ImGuiDataType data_type
     // Read imgui.cpp "API BREAKING CHANGES" section for 1.78 if you hit this assert.
     IM_ASSERT((flags == 1 || (flags & ImGuiSliderFlags_InvalidMask_) == 0) && "Invalid ImGuiSliderFlags flags! Has the legacy 'float power' argument been mistakenly cast to flags? Call function with ImGuiSliderFlags_Logarithmic flags instead.");
     IM_ASSERT((flags & ImGuiSliderFlags_WrapAround) == 0); // Not supported by SliderXXX(), only by DragXXX()
+
+    // Things we can do easily outside the SliderBehaviorT<> template, saves code generation.
+    ImGuiContext& g = *GImGui;
+    if (g.ActiveId == id)
+    {
+        if (g.ActiveIdSource == ImGuiInputSource_Mouse && !g.IO.MouseDown[0])
+            ClearActiveID();
+        if (g.ActiveIdSource == ImGuiInputSource_Keyboard || g.ActiveIdSource == ImGuiInputSource_Gamepad)
+        {
+            if (g.ActiveIdIsJustActivated)
+            {
+                g.SliderCurrentAccum = 0.0f; // Reset any stored nav delta upon activation
+                g.SliderCurrentAccumDirty = false;
+            }
+            if (g.NavActivatePressedId == id && !g.ActiveIdIsJustActivated)
+                ClearActiveID();
+        }
+    }
 
     switch (data_type)
     {
