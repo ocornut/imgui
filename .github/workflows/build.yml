@@ -633,6 +633,13 @@ jobs:
         popd
         make -C examples/example_emscripten_opengl3 -f Makefile.emscripten
 
+    - name: Build example_emscripten_wgpu
+      run: |
+        pushd emsdk-master
+        source ./emsdk_env.sh
+        popd
+        make -C examples/example_emscripten_wgpu -f Makefile.emscripten
+
     # This build compiles example_glfw_wgpu using Makefile.emscripten and Emscripten GLFW built-in implementation (-sUSE_GLFW=3)
     # This ensures 2 things: the make build works, and the GLFW built-in implementation is tested
     - name: Build example_glfw_wgpu with Emscripten/Makefile
