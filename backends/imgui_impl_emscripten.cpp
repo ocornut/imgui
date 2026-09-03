@@ -573,215 +573,225 @@ static constexpr ImGuiMouseButton ImGui_ImplEmscripten_TranslateMouseButton(unsi
 
 static ImGuiStorage const& ImGui_ImplEmscripten_GetKeyTranslationStorage()
 {
+    struct ImGui_ImplEmscripten_KeyTranslation
+    {
+        const char* EmscriptenKey;
+        ImGuiKey Key;
+    };
+    static const ImGui_ImplEmscripten_KeyTranslation key_translations[] =
+    {
+        // main character keys
+        { "Backquote",                 ImGuiKey_GraveAccent        },
+        { "Backslash",                 ImGuiKey_Backslash          },
+        { "BracketLeft",               ImGuiKey_LeftBracket        },
+        { "BracketRight",              ImGuiKey_RightBracket       },
+        { "Comma",                     ImGuiKey_Comma              },
+        { "Digit0",                    ImGuiKey_0                  },
+        { "Digit1",                    ImGuiKey_1                  },
+        { "Digit2",                    ImGuiKey_2                  },
+        { "Digit3",                    ImGuiKey_3                  },
+        { "Digit4",                    ImGuiKey_4                  },
+        { "Digit5",                    ImGuiKey_5                  },
+        { "Digit6",                    ImGuiKey_6                  },
+        { "Digit7",                    ImGuiKey_7                  },
+        { "Digit8",                    ImGuiKey_8                  },
+        { "Digit9",                    ImGuiKey_9                  },
+        { "Equal",                     ImGuiKey_Equal              },
+        { "IntlBackslash",             ImGuiKey_Backslash          },           // Mapping to generic backslash
+        { "IntlRo",                    ImGuiKey_Slash              },           // Closest match for non-standard layouts
+        { "IntlYen",                   ImGuiKey_Backslash          },           // Closest match for non-standard layouts
+        { "KeyA",                      ImGuiKey_A                  },
+        { "KeyB",                      ImGuiKey_B                  },
+        { "KeyC",                      ImGuiKey_C                  },
+        { "KeyD",                      ImGuiKey_D                  },
+        { "KeyE",                      ImGuiKey_E                  },
+        { "KeyF",                      ImGuiKey_F                  },
+        { "KeyG",                      ImGuiKey_G                  },
+        { "KeyH",                      ImGuiKey_H                  },
+        { "KeyI",                      ImGuiKey_I                  },
+        { "KeyJ",                      ImGuiKey_J                  },
+        { "KeyK",                      ImGuiKey_K                  },
+        { "KeyL",                      ImGuiKey_L                  },
+        { "KeyM",                      ImGuiKey_M                  },
+        { "KeyN",                      ImGuiKey_N                  },
+        { "KeyO",                      ImGuiKey_O                  },
+        { "KeyP",                      ImGuiKey_P                  },
+        { "KeyQ",                      ImGuiKey_Q                  },
+        { "KeyR",                      ImGuiKey_R                  },
+        { "KeyS",                      ImGuiKey_S                  },
+        { "KeyT",                      ImGuiKey_T                  },
+        { "KeyU",                      ImGuiKey_U                  },
+        { "KeyV",                      ImGuiKey_V                  },
+        { "KeyW",                      ImGuiKey_W                  },
+        { "KeyX",                      ImGuiKey_X                  },
+        { "KeyY",                      ImGuiKey_Y                  },
+        { "KeyZ",                      ImGuiKey_Z                  },
+        { "Minus",                     ImGuiKey_Minus              },
+        { "Period",                    ImGuiKey_Period             },
+        { "Quote",                     ImGuiKey_Apostrophe         },
+        { "Semicolon",                 ImGuiKey_Semicolon          },
+        { "Slash",                     ImGuiKey_Slash              },
+
+        // control keys
+        { "AltLeft",                   ImGuiKey_LeftAlt            },
+        { "AltRight",                  ImGuiKey_RightAlt           },
+        { "Backspace",                 ImGuiKey_Backspace          },
+        { "CapsLock",                  ImGuiKey_CapsLock           },
+        { "ContextMenu",               ImGuiKey_Menu               },
+        { "ControlLeft",               ImGuiKey_LeftCtrl           },
+        { "ControlRight",              ImGuiKey_RightCtrl          },
+        { "Enter",                     ImGuiKey_Enter              },
+        { "MetaLeft",                  ImGuiKey_LeftSuper          },
+        { "MetaRight",                 ImGuiKey_RightSuper         },
+        { "ShiftLeft",                 ImGuiKey_LeftShift          },
+        { "ShiftRight",                ImGuiKey_RightShift         },
+        { "Space",                     ImGuiKey_Space              },
+        { "Tab",                       ImGuiKey_Tab                },
+
+        // navigation key group
+        { "Delete",                    ImGuiKey_Delete             },
+        { "End",                       ImGuiKey_End                },
+        //{ "Help",                      ImGuiKey_PrintScreen        },           // Best approximation
+        { "Home",                      ImGuiKey_Home               },
+        { "Insert",                    ImGuiKey_Insert             },
+        { "PageDown",                  ImGuiKey_PageDown           },
+        { "PageUp",                    ImGuiKey_PageUp             },
+
+        // arrow key group
+        { "ArrowDown",                 ImGuiKey_DownArrow          },
+        { "ArrowLeft",                 ImGuiKey_LeftArrow          },
+        { "ArrowRight",                ImGuiKey_RightArrow         },
+        { "ArrowUp",                   ImGuiKey_UpArrow            },
+
+        // browser key group
+        { "BrowserBack",               ImGuiKey_AppBack            },           // Pass through so the embedding app can decide
+        //{ "BrowserFavorites",          ImGuiKey_None               },           // No direct mapping
+        { "BrowserForward",            ImGuiKey_AppForward         },           // Pass through so the embedding app can decide
+        //{ "BrowserHome",               ImGuiKey_None               },           // No direct mapping
+        //{ "BrowserRefresh",            ImGuiKey_None               },           // No direct mapping
+        //{ "BrowserSearch",             ImGuiKey_None               },           // No direct mapping
+        //{ "BrowserStop",               ImGuiKey_None               },           // No direct mapping
+
+        // number pad group
+        { "NumLock",                   ImGuiKey_NumLock            },
+        { "Numpad0",                   ImGuiKey_Keypad0            },
+        { "Numpad1",                   ImGuiKey_Keypad1            },
+        { "Numpad2",                   ImGuiKey_Keypad2            },
+        { "Numpad3",                   ImGuiKey_Keypad3            },
+        { "Numpad4",                   ImGuiKey_Keypad4            },
+        { "Numpad5",                   ImGuiKey_Keypad5            },
+        { "Numpad6",                   ImGuiKey_Keypad6            },
+        { "Numpad7",                   ImGuiKey_Keypad7            },
+        { "Numpad8",                   ImGuiKey_Keypad8            },
+        { "Numpad9",                   ImGuiKey_Keypad9            },
+        { "NumpadAdd",                 ImGuiKey_KeypadAdd          },
+        { "NumpadBackspace",           ImGuiKey_Backspace          },           // No direct mapping; backspace functionality
+        //{ "NumpadClear",               ImGuiKey_None               },           // No defined Dear ImGui mapping
+        //{ "NumpadClearEntry",          ImGuiKey_None               },           // No defined Dear ImGui mapping
+        { "NumpadComma",               ImGuiKey_KeypadDecimal      },           // Closest match
+        { "NumpadDecimal",             ImGuiKey_KeypadDecimal      },
+        { "NumpadDivide",              ImGuiKey_KeypadDivide       },
+        { "NumpadEnter",               ImGuiKey_KeypadEnter        },
+        { "NumpadEqual",               ImGuiKey_KeypadEqual        },
+        { "NumpadHash",                ImGuiKey_Backslash          },           // Mapped to generic backslash for telephone-style '#'
+        //{ "NumpadMemoryAdd",           ImGuiKey_None               },           // No defined mapping
+        //{ "NumpadMemoryClear",         ImGuiKey_None               },           // No defined mapping
+        //{ "NumpadMemoryRecall",        ImGuiKey_None               },           // No defined mapping
+        //{ "NumpadMemoryStore",         ImGuiKey_None               },           // No defined mapping
+        //{ "NumpadMemorySubtract",      ImGuiKey_None               },           // No defined mapping
+        { "NumpadMultiply",            ImGuiKey_KeypadMultiply     },
+        { "NumpadParenLeft",           ImGuiKey_LeftBracket        },           // Closest available
+        { "NumpadParenRight",          ImGuiKey_RightBracket       },           // Closest available
+        { "NumpadStar",                ImGuiKey_KeypadMultiply     },           // Same as multiply
+        { "NumpadSubtract",            ImGuiKey_KeypadSubtract     },
+
+        // top row key group
+        { "Escape",                    ImGuiKey_Escape             },
+        { "F1",                        ImGuiKey_F1                 },
+        { "F2",                        ImGuiKey_F2                 },
+        { "F3",                        ImGuiKey_F3                 },
+        { "F4",                        ImGuiKey_F4                 },
+        { "F5",                        ImGuiKey_F5                 },
+        { "F6",                        ImGuiKey_F6                 },
+        { "F7",                        ImGuiKey_F7                 },
+        { "F8",                        ImGuiKey_F8                 },
+        { "F9",                        ImGuiKey_F9                 },
+        { "F10",                       ImGuiKey_F10                },
+        { "F11",                       ImGuiKey_F11                },
+        { "F12",                       ImGuiKey_F12                },
+        { "F13",                       ImGuiKey_F13                },
+        { "F14",                       ImGuiKey_F14                },
+        { "F15",                       ImGuiKey_F15                },
+        { "F16",                       ImGuiKey_F16                },
+        { "F17",                       ImGuiKey_F17                },
+        { "F18",                       ImGuiKey_F18                },
+        { "F19",                       ImGuiKey_F19                },
+        { "F20",                       ImGuiKey_F20                },
+        { "F21",                       ImGuiKey_F21                },
+        { "F22",                       ImGuiKey_F22                },
+        { "F23",                       ImGuiKey_F23                },
+        { "F24",                       ImGuiKey_F24                },
+        //{ "Fn",                        ImGuiKey_None               },           // No direct mapping
+        //{ "FnLock",                    ImGuiKey_None               },           // No direct mapping
+        { "PrintScreen",               ImGuiKey_PrintScreen        },
+        { "ScrollLock",                ImGuiKey_ScrollLock         },
+        { "Pause",                     ImGuiKey_Pause              },
+
+        // clipboard/editing keys without direct mapping
+        //{ "Abort",                     ImGuiKey_None               },
+        //{ "Again",                     ImGuiKey_None               },
+        //{ "Convert",                   ImGuiKey_None               },
+        //{ "Copy",                      ImGuiKey_None               },
+        //{ "Cut",                       ImGuiKey_None               },
+        //{ "Find",                      ImGuiKey_None               },
+        //{ "Open",                      ImGuiKey_None               },
+        //{ "Paste",                     ImGuiKey_None               },
+        //{ "Props",                     ImGuiKey_None               },
+        //{ "Resume",                    ImGuiKey_None               },
+        //{ "Select",                    ImGuiKey_None               },
+        //{ "Undo",                      ImGuiKey_None               },
+
+        // IME and international keys without direct mapping
+        //{ "Hiragana",                  ImGuiKey_None               },
+        //{ "KanaMode",                  ImGuiKey_None               },
+        //{ "Katakana",                  ImGuiKey_None               },
+        //{ "Lang1",                     ImGuiKey_None               },
+        //{ "Lang2",                     ImGuiKey_None               },
+        //{ "NonConvert",                ImGuiKey_None               },
+
+        // media and launcher keys without direct mapping
+        //{ "AudioVolumeDown",           ImGuiKey_None               },
+        //{ "AudioVolumeMute",           ImGuiKey_None               },
+        //{ "AudioVolumeUp",             ImGuiKey_None               },
+        //{ "LaunchApp1",                ImGuiKey_None               },
+        //{ "LaunchApp2",                ImGuiKey_None               },
+        //{ "LaunchMail",                ImGuiKey_None               },
+        //{ "MediaPlayPause",            ImGuiKey_None               },
+        //{ "MediaSelect",               ImGuiKey_None               },
+        //{ "MediaStop",                 ImGuiKey_None               },
+        //{ "MediaTrackNext",            ImGuiKey_None               },
+        //{ "MediaTrackPrevious",        ImGuiKey_None               },
+
+        // system keys without direct mapping
+        //{ "Eject",                     ImGuiKey_None               },
+        //{ "Hyper",                     ImGuiKey_None               },
+        //{ "Power",                     ImGuiKey_None               },
+        //{ "Sleep",                     ImGuiKey_None               },
+        //{ "Super",                     ImGuiKey_None               },
+        //{ "Suspend",                   ImGuiKey_None               },
+        //{ "Turbo",                     ImGuiKey_None               },
+        //{ "Unidentified",              ImGuiKey_None               },
+        //{ "WakeUp",                    ImGuiKey_None               },
+    };
+
     static ImGuiStorage storage;
     static bool is_initialized = false;
     if (is_initialized) return storage;
     is_initialized = true;
-    storage.Data.reserve(128);
-
-    // main character keys
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Backquote"),          ImGuiKey_GraveAccent));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Backslash"),          ImGuiKey_Backslash));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("BracketLeft"),        ImGuiKey_LeftBracket));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("BracketRight"),       ImGuiKey_RightBracket));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Comma"),              ImGuiKey_Comma));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Digit0"),             ImGuiKey_0));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Digit1"),             ImGuiKey_1));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Digit2"),             ImGuiKey_2));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Digit3"),             ImGuiKey_3));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Digit4"),             ImGuiKey_4));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Digit5"),             ImGuiKey_5));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Digit6"),             ImGuiKey_6));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Digit7"),             ImGuiKey_7));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Digit8"),             ImGuiKey_8));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Digit9"),             ImGuiKey_9));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Equal"),              ImGuiKey_Equal));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("IntlBackslash"),      ImGuiKey_Backslash)); // Mapping to generic backslash
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("IntlRo"),             ImGuiKey_Slash)); // Closest match for non-standard layouts
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("IntlYen"),            ImGuiKey_Backslash)); // Closest match for non-standard layouts
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyA"),               ImGuiKey_A));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyB"),               ImGuiKey_B));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyC"),               ImGuiKey_C));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyD"),               ImGuiKey_D));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyE"),               ImGuiKey_E));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyF"),               ImGuiKey_F));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyG"),               ImGuiKey_G));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyH"),               ImGuiKey_H));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyI"),               ImGuiKey_I));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyJ"),               ImGuiKey_J));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyK"),               ImGuiKey_K));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyL"),               ImGuiKey_L));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyM"),               ImGuiKey_M));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyN"),               ImGuiKey_N));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyO"),               ImGuiKey_O));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyP"),               ImGuiKey_P));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyQ"),               ImGuiKey_Q));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyR"),               ImGuiKey_R));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyS"),               ImGuiKey_S));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyT"),               ImGuiKey_T));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyU"),               ImGuiKey_U));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyV"),               ImGuiKey_V));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyW"),               ImGuiKey_W));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyX"),               ImGuiKey_X));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyY"),               ImGuiKey_Y));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("KeyZ"),               ImGuiKey_Z));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Minus"),              ImGuiKey_Minus));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Period"),             ImGuiKey_Period));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Quote"),              ImGuiKey_Apostrophe));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Semicolon"),          ImGuiKey_Semicolon));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Slash"),              ImGuiKey_Slash));
-
-    // control keys
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("AltLeft"),            ImGuiKey_LeftAlt));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("AltRight"),           ImGuiKey_RightAlt));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Backspace"),          ImGuiKey_Backspace));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("CapsLock"),           ImGuiKey_CapsLock));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("ContextMenu"),        ImGuiKey_Menu));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("ControlLeft"),        ImGuiKey_LeftCtrl));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("ControlRight"),       ImGuiKey_RightCtrl));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Enter"),              ImGuiKey_Enter));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("MetaLeft"),           ImGuiKey_LeftSuper));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("MetaRight"),          ImGuiKey_RightSuper));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("ShiftLeft"),          ImGuiKey_LeftShift));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("ShiftRight"),         ImGuiKey_RightShift));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Space"),              ImGuiKey_Space));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Tab"),                ImGuiKey_Tab));
-
-    // navigation key group
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Delete"),             ImGuiKey_Delete));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("End"),                ImGuiKey_End));
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Help"),               ImGuiKey_PrintScreen)); // Best approximation
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Home"),               ImGuiKey_Home));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Insert"),             ImGuiKey_Insert));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("PageDown"),           ImGuiKey_PageDown));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("PageUp"),             ImGuiKey_PageUp));
-
-    // arrow key group
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("ArrowDown"),          ImGuiKey_DownArrow));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("ArrowLeft"),          ImGuiKey_LeftArrow));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("ArrowRight"),         ImGuiKey_RightArrow));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("ArrowUp"),            ImGuiKey_UpArrow));
-
-    // browser key group
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("BrowserBack"),        ImGuiKey_AppBack)); // Pass through so the embedding app can decide
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("BrowserFavorites"),   ImGuiKey_None)); // No direct mapping
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("BrowserForward"),     ImGuiKey_AppForward)); // Pass through so the embedding app can decide
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("BrowserHome"),        ImGuiKey_None)); // No direct mapping
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("BrowserRefresh"),     ImGuiKey_None)); // No direct mapping
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("BrowserSearch"),      ImGuiKey_None)); // No direct mapping
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("BrowserStop"),        ImGuiKey_None)); // No direct mapping
-
-    // number pad group
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumLock"),            ImGuiKey_NumLock));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Numpad0"),            ImGuiKey_Keypad0));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Numpad1"),            ImGuiKey_Keypad1));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Numpad2"),            ImGuiKey_Keypad2));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Numpad3"),            ImGuiKey_Keypad3));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Numpad4"),            ImGuiKey_Keypad4));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Numpad5"),            ImGuiKey_Keypad5));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Numpad6"),            ImGuiKey_Keypad6));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Numpad7"),            ImGuiKey_Keypad7));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Numpad8"),            ImGuiKey_Keypad8));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Numpad9"),            ImGuiKey_Keypad9));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadAdd"),          ImGuiKey_KeypadAdd));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadBackspace"),    ImGuiKey_Backspace)); // No direct mapping; backspace functionality
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadClear"),        ImGuiKey_None)); // No defined Dear ImGui mapping
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadClearEntry"),   ImGuiKey_None)); // No defined Dear ImGui mapping
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadComma"),        ImGuiKey_KeypadDecimal)); // Closest match
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadDecimal"),      ImGuiKey_KeypadDecimal));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadDivide"),       ImGuiKey_KeypadDivide));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadEnter"),        ImGuiKey_KeypadEnter));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadEqual"),        ImGuiKey_KeypadEqual));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadHash"),         ImGuiKey_Backslash)); // Mapped to generic backslash for telephone-style '#'
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadMemoryAdd"),    ImGuiKey_None)); // No defined mapping
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadMemoryClear"),  ImGuiKey_None)); // No defined mapping
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadMemoryRecall"), ImGuiKey_None)); // No defined mapping
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadMemoryStore"),  ImGuiKey_None)); // No defined mapping
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadMemorySubtract"), ImGuiKey_None)); // No defined mapping
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadMultiply"),     ImGuiKey_KeypadMultiply));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadParenLeft"),    ImGuiKey_LeftBracket)); // Closest available
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadParenRight"),   ImGuiKey_RightBracket)); // Closest available
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadStar"),         ImGuiKey_KeypadMultiply)); // Same as multiply
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("NumpadSubtract"),     ImGuiKey_KeypadSubtract));
-
-    // top row key group
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Escape"),             ImGuiKey_Escape));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F1"),                 ImGuiKey_F1));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F2"),                 ImGuiKey_F2));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F3"),                 ImGuiKey_F3));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F4"),                 ImGuiKey_F4));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F5"),                 ImGuiKey_F5));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F6"),                 ImGuiKey_F6));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F7"),                 ImGuiKey_F7));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F8"),                 ImGuiKey_F8));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F9"),                 ImGuiKey_F9));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F10"),                ImGuiKey_F10));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F11"),                ImGuiKey_F11));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F12"),                ImGuiKey_F12));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F13"),                ImGuiKey_F13));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F14"),                ImGuiKey_F14));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F15"),                ImGuiKey_F15));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F16"),                ImGuiKey_F16));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F17"),                ImGuiKey_F17));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F18"),                ImGuiKey_F18));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F19"),                ImGuiKey_F19));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F20"),                ImGuiKey_F20));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F21"),                ImGuiKey_F21));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F22"),                ImGuiKey_F22));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F23"),                ImGuiKey_F23));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("F24"),                ImGuiKey_F24));
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Fn"),                 ImGuiKey_None)); // No direct mapping
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("FnLock"),             ImGuiKey_None)); // No direct mapping
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("PrintScreen"),        ImGuiKey_PrintScreen));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("ScrollLock"),         ImGuiKey_ScrollLock));
-    storage.Data.push_back(ImGuiStoragePair(ImHashStr("Pause"),              ImGuiKey_Pause));
-
-    // clipboard/editing keys without direct mapping
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Abort"),              ImGuiKey_None));
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Again"),              ImGuiKey_None));
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Convert"),            ImGuiKey_None));
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Copy"),               ImGuiKey_None));
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Cut"),                ImGuiKey_None));
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Find"),               ImGuiKey_None));
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Open"),               ImGuiKey_None));
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Paste"),              ImGuiKey_None));
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Props"),              ImGuiKey_None));
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Resume"),             ImGuiKey_None));
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Select"),             ImGuiKey_None));
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Undo"),               ImGuiKey_None));
-
-    // IME and international keys without direct mapping
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Hiragana"),           ImGuiKey_None));
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("KanaMode"),           ImGuiKey_None));
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Katakana"),           ImGuiKey_None));
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Lang1"),              ImGuiKey_None));
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Lang2"),              ImGuiKey_None));
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("NonConvert"),         ImGuiKey_None));
-
-    // media and launcher keys without direct mapping
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("AudioVolumeDown"),    ImGuiKey_None));
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("AudioVolumeMute"),    ImGuiKey_None));
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("AudioVolumeUp"),      ImGuiKey_None));
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("LaunchApp1"),         ImGuiKey_None));
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("LaunchApp2"),         ImGuiKey_None));
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("LaunchMail"),         ImGuiKey_None));
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("MediaPlayPause"),     ImGuiKey_None));
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("MediaSelect"),        ImGuiKey_None));
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("MediaStop"),          ImGuiKey_None));
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("MediaTrackNext"),     ImGuiKey_None));
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("MediaTrackPrevious"), ImGuiKey_None));
-
-    // system keys without direct mapping
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Eject"),              ImGuiKey_None));
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Hyper"),              ImGuiKey_None));
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Power"),              ImGuiKey_None));
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Sleep"),              ImGuiKey_None));
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Super"),              ImGuiKey_None));
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Suspend"),            ImGuiKey_None));
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Turbo"),              ImGuiKey_None));
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("Unidentified"),       ImGuiKey_None));
-    //storage.Data.push_back(ImGuiStoragePair(ImHashStr("WakeUp"),             ImGuiKey_None));
-
+    storage.Data.reserve(IM_ARRAYSIZE(key_translations));
+    for (int n = 0; n != IM_ARRAYSIZE(key_translations); ++n) {
+        storage.Data.push_back(ImGuiStoragePair(ImHashStr(key_translations[n].EmscriptenKey), key_translations[n].Key));
+    }
     storage.BuildSortByKey();
     return storage;
 }
