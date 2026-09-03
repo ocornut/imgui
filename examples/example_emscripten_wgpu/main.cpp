@@ -48,12 +48,14 @@ static void GetFramebufferSizeFromDisplaySize(int width, int height, int* frameb
 
 static void ResizeSurface(int width, int height)
 {
-    if (width <= 0 || height <= 0) return;
+    if (width <= 0 || height <= 0)
+        return;
 
     int framebuffer_width = 0;
     int framebuffer_height = 0;
     GetFramebufferSizeFromDisplaySize(width, height, &framebuffer_width, &framebuffer_height);
-    if (framebuffer_width <= 0 || framebuffer_height <= 0) return;
+    if (framebuffer_width <= 0 || framebuffer_height <= 0)
+        return;
 
     emscripten_set_canvas_element_size("#canvas", framebuffer_width, framebuffer_height);
     wgpu_surface_configuration.width = wgpu_surface_width = framebuffer_width;
@@ -64,7 +66,8 @@ static void ResizeSurface(int width, int height)
 // Main code
 int main(int, char**)
 {
-    if (!InitWGPU()) return 1;
+    if (!InitWGPU())
+        return 1;
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -79,7 +82,8 @@ int main(int, char**)
 
     // Setup Platform/Renderer backends
     ImGui_ImplEmscripten_Init();
-    if (io.DisplaySize.x > 0.0f && io.DisplaySize.y > 0.0f) ResizeSurface((int)io.DisplaySize.x, (int)io.DisplaySize.y);
+    if (io.DisplaySize.x > 0.0f && io.DisplaySize.y > 0.0f)
+        ResizeSurface((int)io.DisplaySize.x, (int)io.DisplaySize.y);
 
     ImGui_ImplWGPU_InitInfo init_info;
     init_info.Device = wgpu_device;
@@ -131,7 +135,8 @@ int main(int, char**)
         int framebuffer_width = 0;
         int framebuffer_height = 0;
         GetFramebufferSizeFromDisplaySize(width, height, &framebuffer_width, &framebuffer_height);
-        if (framebuffer_width != wgpu_surface_width || framebuffer_height != wgpu_surface_height) ResizeSurface(width, height);
+        if (framebuffer_width != wgpu_surface_width || framebuffer_height != wgpu_surface_height)
+            ResizeSurface(width, height);
 
         // Check surface status for error. If texture is not optimal, try to reconfigure the surface.
         WGPUSurfaceTexture surface_texture;
@@ -143,7 +148,8 @@ int main(int, char**)
         }
         if (ImGui_ImplWGPU_IsSurfaceStatusSubOptimal(surface_texture.status))
         {
-            if (surface_texture.texture) wgpuTextureRelease(surface_texture.texture);
+            if (surface_texture.texture)
+                wgpuTextureRelease(surface_texture.texture);
             ResizeSurface(width, height);
             continue;
         }
