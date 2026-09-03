@@ -2660,6 +2660,17 @@ bool ImGui::DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed, const
     return true;
 }
 
+static bool ShortcutsForCancel(ImGuiID id)
+{
+    ImGuiContext& g = *GImGui;
+    bool is_cancel_with_keyboard = ImGui::Shortcut(ImGuiKey_Escape, ImGuiInputFlags_None, id);
+    bool is_cancel_with_gamepad = (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) != 0 && (g.IO.BackendFlags & ImGuiBackendFlags_HasGamepad) != 0 && ImGui::Shortcut(ImGuiKey_NavGamepadCancel, ImGuiInputFlags_None, id);
+    //bool is_cancel_with_mouse = ImGui::IsMouseClicked(ImGuiMouseButton_Right, ImGuiInputFlags_None, id);
+    //if (is_cancel_with_mouse)
+    //    ImGui::SetKeyOwner(ImGuiKey_MouseRight, id);
+    return is_cancel_with_keyboard || is_cancel_with_gamepad; //|| is_cancel_with_mouse
+}
+
 bool ImGui::DragBehavior(ImGuiID id, ImGuiDataType data_type, void* p_v, float v_speed, const void* p_min, const void* p_max, const char* format, ImGuiSliderFlags flags)
 {
     // Read imgui.cpp "API BREAKING CHANGES" section for 1.78 if you hit this assert.
@@ -2673,6 +2684,15 @@ bool ImGui::DragBehavior(ImGuiID id, ImGuiDataType data_type, void* p_v, float v
             ClearActiveID();
         else if ((g.ActiveIdSource == ImGuiInputSource_Keyboard || g.ActiveIdSource == ImGuiInputSource_Gamepad) && g.NavActivatePressedId == id && !g.ActiveIdIsJustActivated)
             ClearActiveID();
+        if (ShortcutsForCancel(id) && g.ActiveId == id)
+        {
+            // Canceling action reverts to initial value
+            size_t data_size = DataTypeGetInfo(data_type)->Size;
+            bool value_changed = memcmp(p_v, &g.ActiveIdValueOnActivation, data_size);
+            memcpy(p_v, &g.ActiveIdValueOnActivation, data_size);
+            ClearActiveID();
+            return value_changed;
+        }
     }
     if (g.ActiveId != id)
         return false;
@@ -3280,6 +3300,15 @@ bool ImGui::SliderBehavior(const ImRect& bb, ImGuiID id, ImGuiDataType data_type
             }
             if (g.NavActivatePressedId == id && !g.ActiveIdIsJustActivated)
                 ClearActiveID();
+        }
+        if (ShortcutsForCancel(id) && g.ActiveId == id)
+        {
+            // Canceling action reverts to initial value
+            size_t data_size = DataTypeGetInfo(data_type)->Size;
+            bool value_changed = memcmp(p_v, &g.ActiveIdValueOnActivation, data_size);
+            memcpy(p_v, &g.ActiveIdValueOnActivation, data_size);
+            ClearActiveID();
+            return value_changed;
         }
     }
 
