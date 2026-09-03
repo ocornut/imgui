@@ -4,6 +4,7 @@
 //
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-09-03: Updated coding style and simplified key translation table setup.
 //  2026-04-02: Inputs: Replaced custom KeyboardEvent.code parser with ImHashStr()/ImGuiStorage lookup to match Dear ImGui backend style.
 //  2026-03-31: Emscripten: Added configurable TargetDevicePixelRatio to control how browser device pixels map to Dear ImGui pixels.
 //  2026-03-31: Inputs: Added BrowserBack/Forward and F13-F24 key mappings.
