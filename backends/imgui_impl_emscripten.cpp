@@ -120,7 +120,7 @@ float get_target_device_pixel_ratio()
 void update_display_properties(ImGuiIO& io, ImGui_ImplEmscripten_Data* bd, float css_width, float css_height)
 {
     float const target_device_pixel_ratio = get_target_device_pixel_ratio();
-    float const css_to_imgui_scale = static_cast<float>(emscripten_get_device_pixel_ratio()) / target_device_pixel_ratio;
+    float const css_to_imgui_scale = (float)emscripten_get_device_pixel_ratio() / target_device_pixel_ratio;
     bd->CssToImGuiScale = css_to_imgui_scale;
     io.DisplaySize.x = css_width * css_to_imgui_scale;
     io.DisplaySize.y = css_height * css_to_imgui_scale;
@@ -130,7 +130,7 @@ void update_display_properties(ImGuiIO& io, ImGui_ImplEmscripten_Data* bd, float
 // Backend data stored in io.BackendPlatformUserData to allow support for multiple Dear ImGui contexts
 ImGui_ImplEmscripten_Data* ImGui_ImplEmscripten_GetBackendData()
 {
-    return ImGui::GetCurrentContext() ? static_cast<ImGui_ImplEmscripten_Data*>(ImGui::GetIO().BackendPlatformUserData) : nullptr;
+    return ImGui::GetCurrentContext() ? (ImGui_ImplEmscripten_Data*)ImGui::GetIO().BackendPlatformUserData : nullptr;
 }
 
 } // anonymous namespace
@@ -142,7 +142,7 @@ void ImGui_ImplEmscripten_Init()
     IMGUI_CHECKVERSION();
     IM_ASSERT(io.BackendPlatformUserData == nullptr && "Already initialized a platform backend!");
     ImGui_ImplEmscripten_Data* bd = IM_NEW(ImGui_ImplEmscripten_Data)();
-    io.BackendPlatformUserData = static_cast<void*>(bd);
+    io.BackendPlatformUserData = (void*)bd;
     io.BackendPlatformName = "imgui_impl_emscripten";
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;
 
@@ -150,8 +150,8 @@ void ImGui_ImplEmscripten_Init()
     update_display_properties(
         io,
         bd,
-        static_cast<float>(EM_ASM_INT(return window.innerWidth;)),
-        static_cast<float>(EM_ASM_INT(return window.innerHeight;))
+        (float)EM_ASM_INT(return window.innerWidth;),
+        (float)EM_ASM_INT(return window.innerHeight;)
     );
 
     emscripten_set_mousemove_callback(
@@ -162,8 +162,8 @@ void ImGui_ImplEmscripten_Init()
             ImGui_ImplEmscripten_Data* bd = ImGui_ImplEmscripten_GetBackendData();
             float const css_to_imgui_scale = bd ? bd->CssToImGuiScale : 1.0f;
             ImGui::GetIO().AddMousePosEvent(
-                static_cast<float>(mouse_event->clientX) * css_to_imgui_scale,
-                static_cast<float>(mouse_event->clientY) * css_to_imgui_scale
+                (float)mouse_event->clientX * css_to_imgui_scale,
+                (float)mouse_event->clientY * css_to_imgui_scale
             );
             return true;                                                        // the event was consumed
         }
@@ -194,8 +194,8 @@ void ImGui_ImplEmscripten_Init()
             ImGui_ImplEmscripten_Data* bd = ImGui_ImplEmscripten_GetBackendData();
             float const css_to_imgui_scale = bd ? bd->CssToImGuiScale : 1.0f;
             ImGui::GetIO().AddMousePosEvent(
-                static_cast<float>(mouse_event->clientX) * css_to_imgui_scale,
-                static_cast<float>(mouse_event->clientY) * css_to_imgui_scale
+                (float)mouse_event->clientX * css_to_imgui_scale,
+                (float)mouse_event->clientY * css_to_imgui_scale
             );
             return true;                                                        // the event was consumed
         }
@@ -232,8 +232,8 @@ void ImGui_ImplEmscripten_Init()
             // TODO: make scrolling speeds configurable
             ImGuiIO& io = ImGui::GetIO();
             io.AddMouseWheelEvent(
-                -static_cast<float>(wheel_event->deltaX) * scale,
-                -static_cast<float>(wheel_event->deltaY) * scale
+                -(float)wheel_event->deltaX * scale,
+                -(float)wheel_event->deltaY * scale
             );
             return io.WantCaptureMouse;                                         // consume the event when imgui wants to capture mouse input
         }
@@ -325,7 +325,7 @@ void ImGui_ImplEmscripten_Init()
         [](int /*event_type*/, EmscriptenUiEvent const* event, void* /*data*/) { // event_type == EMSCRIPTEN_EVENT_RESIZE
             ImGuiIO& io = ImGui::GetIO();
             ImGui_ImplEmscripten_Data* bd = ImGui_ImplEmscripten_GetBackendData();
-            if (bd != nullptr) update_display_properties(io, bd, static_cast<float>(event->windowInnerWidth), static_cast<float>(event->windowInnerHeight));
+            if (bd != nullptr) update_display_properties(io, bd, (float)event->windowInnerWidth, (float)event->windowInnerHeight);
             return true;                                                        // the event was consumed
         }
     );
@@ -524,9 +524,9 @@ namespace emscripten_browser_cursor_internal
 char* get_string()
 {
     // Return the current cursor setting as a newly-allocated string, caller must free it.
-    return reinterpret_cast<char*>(EM_ASM_PTR(
+    return (char*)EM_ASM_PTR(
         return stringToNewUTF8(document.body.style.cursor);
-    ));
+    );
 }
 
 void set(cursor new_cursor)
@@ -811,7 +811,7 @@ ImGuiKey translate_key(char const* emscripten_key)
     if (emscripten_key == nullptr || emscripten_key[0] == '\0') return ImGuiKey_None;
 
     ImGuiStorage const& storage = get_key_translation_storage();
-    return static_cast<ImGuiKey>(storage.GetInt(ImHashStr(emscripten_key), ImGuiKey_None));
+    return (ImGuiKey)storage.GetInt(ImHashStr(emscripten_key), ImGuiKey_None);
 }
 
 } // anonymous namespace
