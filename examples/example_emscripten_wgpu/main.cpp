@@ -26,11 +26,11 @@
 #endif
 
 // Data
-static WGPUInstance             wgpu_instance{nullptr};
-static WGPUDevice               wgpu_device{nullptr};
-static WGPUSurface              wgpu_surface{nullptr};
-static WGPUQueue                wgpu_queue{nullptr};
-static WGPUSurfaceConfiguration wgpu_surface_configuration{};
+static WGPUInstance             wgpu_instance = nullptr;
+static WGPUDevice               wgpu_device = nullptr;
+static WGPUSurface              wgpu_surface = nullptr;
+static WGPUQueue                wgpu_queue = nullptr;
+static WGPUSurfaceConfiguration wgpu_surface_configuration = {};
 static int                      wgpu_surface_width = 1280;
 static int                      wgpu_surface_height = 800;
 
@@ -93,30 +93,30 @@ static WGPUDevice RequestDevice(wgpu::Instance& instance, wgpu::Adapter& adapter
 
 static bool InitWGPU()
 {
-    WGPUTextureFormat preferred_fmt{WGPUTextureFormat_Undefined};
+    WGPUTextureFormat preferred_fmt = WGPUTextureFormat_Undefined;
 
-    wgpu::InstanceDescriptor instance_desc{};
+    wgpu::InstanceDescriptor instance_desc = {};
     static constexpr wgpu::InstanceFeatureName timedWaitAny = wgpu::InstanceFeatureName::TimedWaitAny;
     instance_desc.requiredFeatureCount = 1;
     instance_desc.requiredFeatures = &timedWaitAny;
-    wgpu::Instance instance{wgpu::CreateInstance(&instance_desc)};
+    wgpu::Instance instance = wgpu::CreateInstance(&instance_desc);
 
     wgpu::Adapter adapter = RequestAdapter(instance);
     ImGui_ImplWGPU_DebugPrintAdapterInfo(adapter.Get());
 
     wgpu_device = RequestDevice(instance, adapter);
 
-    wgpu::EmscriptenSurfaceSourceCanvasHTMLSelector canvas_desc{};
+    wgpu::EmscriptenSurfaceSourceCanvasHTMLSelector canvas_desc = {};
     canvas_desc.selector = "#canvas";
 
-    wgpu::SurfaceDescriptor surface_desc{};
+    wgpu::SurfaceDescriptor surface_desc = {};
     surface_desc.nextInChain = &canvas_desc;
     wgpu_surface = instance.CreateSurface(&surface_desc).MoveToCHandle();
     if (!wgpu_surface) return false;
 
     wgpu_instance = instance.MoveToCHandle();
 
-    WGPUSurfaceCapabilities surface_capabilities{};
+    WGPUSurfaceCapabilities surface_capabilities = {};
     wgpuSurfaceGetCapabilities(wgpu_surface, adapter.Get(), &surface_capabilities);
     preferred_fmt = surface_capabilities.formats[0];
 
@@ -136,7 +136,7 @@ static bool InitWGPU()
 
 static void GetFramebufferSizeFromDisplaySize(int width, int height, int* framebuffer_width, int* framebuffer_height)
 {
-    ImGuiIO& io{ImGui::GetIO()};
+    ImGuiIO& io = ImGui::GetIO();
     *framebuffer_width = static_cast<int>(width * io.DisplayFramebufferScale.x + 0.5f);
     *framebuffer_height = static_cast<int>(height * io.DisplayFramebufferScale.y + 0.5f);
 }
@@ -145,8 +145,8 @@ static void ResizeSurface(int width, int height)
 {
     if (width <= 0 || height <= 0) return;
 
-    int framebuffer_width{0};
-    int framebuffer_height{0};
+    int framebuffer_width = 0;
+    int framebuffer_height = 0;
     GetFramebufferSizeFromDisplaySize(width, height, &framebuffer_width, &framebuffer_height);
     if (framebuffer_width <= 0 || framebuffer_height <= 0) return;
 
@@ -164,7 +164,7 @@ int main(int, char**)
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    ImGuiIO& io{ImGui::GetIO()}; (void)io;
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;                       // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;                        // Enable Gamepad Controls
 
@@ -205,9 +205,9 @@ int main(int, char**)
 #endif
 
     // Our state
-    bool show_demo_window{true};
-    bool show_another_window{false};
-    ImVec4 clear_color{0.45f, 0.55f, 0.60f, 1.00f};
+    bool show_demo_window = true;
+    bool show_another_window = false;
+    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
     // Main loop
     // For an Emscripten build we are disabling file-system access, so let's not attempt to do a fopen() of the imgui.ini file.
@@ -223,8 +223,8 @@ int main(int, char**)
         if (width <= 0 || height <= 0)
             continue;
 
-        int framebuffer_width{0};
-        int framebuffer_height{0};
+        int framebuffer_width = 0;
+        int framebuffer_height = 0;
         GetFramebufferSizeFromDisplaySize(width, height, &framebuffer_width, &framebuffer_height);
         if (framebuffer_width != wgpu_surface_width || framebuffer_height != wgpu_surface_height) ResizeSurface(width, height);
 
@@ -254,8 +254,8 @@ int main(int, char**)
 
         // 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
         {
-            static float f{0.0f};
-            static int counter{0};
+            static float f = 0.0f;
+            static int counter = 0;
 
             ImGui::Begin("Hello, world!");                                      // Create a window called "Hello, world!" and append into it.
 
@@ -287,7 +287,7 @@ int main(int, char**)
         // Rendering
         ImGui::Render();
 
-        WGPUTextureViewDescriptor view_desc{};
+        WGPUTextureViewDescriptor view_desc = {};
         view_desc.format = wgpu_surface_configuration.format;
         view_desc.dimension = WGPUTextureViewDimension_2D;
         view_desc.mipLevelCount = WGPU_MIP_LEVEL_COUNT_UNDEFINED;
@@ -296,26 +296,26 @@ int main(int, char**)
 
         WGPUTextureView texture_view = wgpuTextureCreateView(surface_texture.texture, &view_desc);
 
-        WGPURenderPassColorAttachment color_attachments{};
+        WGPURenderPassColorAttachment color_attachments = {};
         color_attachments.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
         color_attachments.loadOp = WGPULoadOp_Clear;
         color_attachments.storeOp = WGPUStoreOp_Store;
         color_attachments.clearValue = { clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w };
         color_attachments.view = texture_view;
 
-        WGPURenderPassDescriptor render_pass_desc{};
+        WGPURenderPassDescriptor render_pass_desc = {};
         render_pass_desc.colorAttachmentCount = 1;
         render_pass_desc.colorAttachments = &color_attachments;
         render_pass_desc.depthStencilAttachment = nullptr;
 
-        WGPUCommandEncoderDescriptor enc_desc{};
+        WGPUCommandEncoderDescriptor enc_desc = {};
         WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(wgpu_device, &enc_desc);
 
         WGPURenderPassEncoder pass = wgpuCommandEncoderBeginRenderPass(encoder, &render_pass_desc);
         ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), pass);
         wgpuRenderPassEncoderEnd(pass);
 
-        WGPUCommandBufferDescriptor cmd_buffer_desc{};
+        WGPUCommandBufferDescriptor cmd_buffer_desc = {};
         WGPUCommandBuffer cmd_buffer = wgpuCommandEncoderFinish(encoder, &cmd_buffer_desc);
         wgpuQueueSubmit(wgpu_queue, 1, &cmd_buffer);
 
