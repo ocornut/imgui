@@ -3085,7 +3085,7 @@ TYPE ImGui::ScaleValueFromRatioT(ImGuiDataType data_type, float t, TYPE v_min, T
         {
             result = ImLerp(v_min, v_max, t);
         }
-        else if (t < 1.0)
+        else // t is already < 1.0 here
         {
             // - For integer values we want the clicking position to match the grab box so we round above
             //   This code is carefully tuned to work with large values (e.g. high ranges of U64) while preserving this property..
