@@ -21,6 +21,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-05-19: DPI: ImGui_ImplWin32_EnableDpiAwareness() helper uses SetProcessDpiAwarenessContext() instead of SetThreadDpiAwarenessContext(), fixes DPI scaling issues with e.g. OpenGL. (#9403)
 //  2026-01-28: Inputs: Minor optimization not submitting gamepad input if packet number has not changed (reworked from 2025-09-23 attempt). (#9202, #8556)
 //  2025-12-03: Inputs: handle WM_IME_CHAR/WM_IME_COMPOSITION messages to support Unicode inputs on MBCS (non-Unicode) Windows. (#9099, #3653, #5961)
 //  2025-10-19: Inputs: Revert previous change to allow for io.ClearInputKeys() on focus-out not losing gamepad state.
@@ -412,7 +413,7 @@ void    ImGui_ImplWin32_NewFrame()
     // Setup time step
     INT64 current_time = 0;
     ::QueryPerformanceCounter((LARGE_INTEGER*)&current_time);
-    io.DeltaTime = (float)(current_time - bd->Time) / bd->TicksPerSecond;
+    io.DeltaTime = (float)((double)(current_time - bd->Time) / (double)bd->TicksPerSecond);
     bd->Time = current_time;
 
     // Update OS mouse position
@@ -886,6 +887,7 @@ DECLARE_HANDLE(DPI_AWARENESS_CONTEXT);
 typedef HRESULT(WINAPI* PFN_SetProcessDpiAwareness)(PROCESS_DPI_AWARENESS);                     // Shcore.lib + dll, Windows 8.1+
 typedef HRESULT(WINAPI* PFN_GetDpiForMonitor)(HMONITOR, MONITOR_DPI_TYPE, UINT*, UINT*);        // Shcore.lib + dll, Windows 8.1+
 typedef DPI_AWARENESS_CONTEXT(WINAPI* PFN_SetThreadDpiAwarenessContext)(DPI_AWARENESS_CONTEXT); // User32.lib + dll, Windows 10 v1607+ (Creators Update)
+typedef BOOL(WINAPI* PFN_SetProcessDpiAwarenessContext)(DPI_AWARENESS_CONTEXT);                 // User32.lib + dll, Windows 10 v1703+ (Creators Update)
 
 // Helper function to enable DPI awareness without setting up a manifest
 void ImGui_ImplWin32_EnableDpiAwareness()
@@ -893,7 +895,12 @@ void ImGui_ImplWin32_EnableDpiAwareness()
     if (_IsWindows10OrGreater())
     {
         static HINSTANCE user32_dll = ::LoadLibraryA("user32.dll"); // Reference counted per-process
-        if (PFN_SetThreadDpiAwarenessContext SetThreadDpiAwarenessContextFn = (PFN_SetThreadDpiAwarenessContext)::GetProcAddress(user32_dll, "SetThreadDpiAwarenessContext"))
+        if (PFN_SetProcessDpiAwarenessContext SetProcessDpiAwarenessContextFn = (PFN_SetProcessDpiAwarenessContext)::GetProcAddress(user32_dll, "SetProcessDpiAwarenessContext")) // Windows 10 v1703+
+        {
+            SetProcessDpiAwarenessContextFn(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+            return;
+        }
+        if (PFN_SetThreadDpiAwarenessContext SetThreadDpiAwarenessContextFn = (PFN_SetThreadDpiAwarenessContext)::GetProcAddress(user32_dll, "SetThreadDpiAwarenessContext")) // Windows 10 v1607+
         {
             SetThreadDpiAwarenessContextFn(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
             return;
@@ -930,7 +937,7 @@ float ImGui_ImplWin32_GetDpiScaleForMonitor(void* monitor)
         {
             GetDpiForMonitorFn((HMONITOR)monitor, MDT_EFFECTIVE_DPI, &xdpi, &ydpi);
             IM_ASSERT(xdpi == ydpi); // Please contact me if you hit this assert!
-            return xdpi / 96.0f;
+            return (float)xdpi / 96.0f;
         }
     }
 #ifndef NOGDI
@@ -940,7 +947,7 @@ float ImGui_ImplWin32_GetDpiScaleForMonitor(void* monitor)
     IM_ASSERT(xdpi == ydpi); // Please contact me if you hit this assert!
     ::ReleaseDC(nullptr, dc);
 #endif
-    return xdpi / 96.0f;
+    return (float)xdpi / 96.0f;
 }
 
 float ImGui_ImplWin32_GetDpiScaleForHwnd(void* hwnd)

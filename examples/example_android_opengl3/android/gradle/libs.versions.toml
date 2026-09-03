@@ -1,6 +1,6 @@
 [versions]
-agp = "8.12.0"
-kotlin = "2.0.21"
+agp = "9.2.0"
+kotlin = "2.3.21"
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -14,7 +14,7 @@
 #   * build/example_sdl3_wgpu[.exe] or build/Debug/example_sdl3_wgpu[.exe]
 
 # Building for desktop with WGVK (MUCH EASIER)
-#  1. git clone https://github.com/manuel5975p/WGVK dawn
+#  1. git clone https://github.com/manuel5975p/WGVK wgvk
 #  2. cmake -B build -DIMGUI_WGVK_DIR=wgvk
 #  3. cmake --build build
 # The resulting binary will be found at one of the following locations:
@@ -29,7 +29,7 @@
 #  5. emrun build/index.html
 
 cmake_minimum_required(VERSION 3.22) # Dawn requires CMake >= 3.22
-project(imgui_example_sdl3_wgpu C CXX)
+project(example_sdl3_wgpu C CXX)
 
 set(IMGUI_EXECUTABLE example_sdl3_wgpu)
 
@@ -37,7 +37,7 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "" FORCE)
 endif()
 
-set(CMAKE_CXX_STANDARD 17) # Dawn requires C++17
+set(CMAKE_CXX_STANDARD 20) # Dawn requires C++20
 
 # Dear ImGui
 set(IMGUI_DIR ../../)
@@ -141,6 +141,28 @@ else() # Native/Desktop build
     endif()
 
     if(IMGUI_WGVK_DIR)
+        find_package(Vulkan REQUIRED)
+        set(WGVK_PLATFORM_LIBS)
+        set(WGVK_PLATFORM_DEFS)
+        if(WIN32)
+            list(APPEND WGVK_PLATFORM_DEFS SUPPORT_WIN32_SURFACE=1)
+        elseif(APPLE)
+            list(APPEND WGVK_PLATFORM_DEFS SUPPORT_METAL_SURFACE=1)
+        elseif(UNIX)
+            find_package(PkgConfig QUIET)
+            pkg_check_modules(WAYLAND_CLIENT QUIET wayland-client)
+            if(WAYLAND_CLIENT_FOUND)
+                list(APPEND WGVK_PLATFORM_DEFS SUPPORT_WAYLAND_SURFACE=1)
+                list(APPEND WGVK_PLATFORM_LIBS ${WAYLAND_CLIENT_LIBRARIES})
+            endif()
+            find_package(X11 QUIET)
+            if(X11_FOUND)
+                list(APPEND WGVK_PLATFORM_DEFS SUPPORT_XLIB_SURFACE=1)
+                list(APPEND WGVK_PLATFORM_LIBS X11::X11)
+            endif()
+            list(APPEND WGVK_PLATFORM_LIBS m dl pthread)
+        endif()
+        set(LIBRARIES Vulkan::Vulkan ${WGVK_PLATFORM_LIBS})
     endif()
 endif()
 
@@ -182,6 +204,7 @@ if(NOT EMSCRIPTEN) # WegGPU-Native settings
     if(IMGUI_WGVK_DIR)
         target_sources(${IMGUI_EXECUTABLE} PRIVATE ${IMGUI_WGVK_DIR}/src/wgvk.c)
         target_compile_definitions(${IMGUI_EXECUTABLE} PUBLIC "IMGUI_IMPL_WEBGPU_BACKEND_WGVK")
+        target_compile_definitions(${IMGUI_EXECUTABLE} PRIVATE ${WGVK_PLATFORM_DEFS})
         target_include_directories(${IMGUI_EXECUTABLE} PUBLIC ${IMGUI_WGVK_DIR}/include)
         if (MSVC)
            target_compile_options(${IMGUI_EXECUTABLE} PUBLIC /std:clatest /experimental:c11atomics)

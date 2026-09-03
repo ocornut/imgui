@@ -60,16 +60,20 @@ Android + OpenGL3 (ES) example. <BR>
 
 [example_apple_metal/](https://github.com/ocornut/imgui/tree/master/examples/example_apple_metal/) <BR>
 OSX & iOS + Metal example. <BR>
-= main.m + imgui_impl_osx.mm + imgui_impl_metal.mm <BR>
+= main.mm + imgui_impl_osx.mm + imgui_impl_metal.mm <BR>
 It is based on the "cross-platform" game template provided with Xcode as of Xcode 9.
-(NB: imgui_impl_osx.mm is currently not as feature complete as other platforms backends.
-You may prefer to use the GLFW Or SDL backends, which will also support Windows and Linux.)
+
+[example_apple_metal4/](https://github.com/ocornut/imgui/blob/master/examples/example_apple_metal4/) <BR>
+OSX & iOS + Metal4 example, Mac only. <BR>
+= main.mm + imgui_impl_osx.mm + imgui_impl_metal4.mm <BR>
 
 [example_apple_opengl2/](https://github.com/ocornut/imgui/blob/master/examples/example_apple_opengl2/) <BR>
 OSX + OpenGL2 example. <BR>
 = main.mm + imgui_impl_osx.mm + imgui_impl_opengl2.cpp <BR>
-(NB: imgui_impl_osx.mm is currently not as feature complete as other platforms backends.
- You may prefer to use the GLFW Or SDL backends, which will also support Windows and Linux.)
+
+[example_apple_opengl3/](https://github.com/ocornut/imgui/blob/master/examples/example_apple_opengl3/) <BR>
+OSX + OpenGL3 example. <BR>
+= main.mm + imgui_impl_osx.mm + imgui_impl_opengl3.cpp <BR>
 
 [example_emscripten_opengl3/](https://github.com/ocornut/imgui/blob/master/examples/example_emscripten_opengl3/) <BR>
 Emscripten (browser) + OpenGL3/ES2/ES3 example. Uses imgui_impl_emscripten for platform input and imgui_impl_opengl3 for rendering. <BR>
@@ -123,6 +127,16 @@ Because this application doesn't create a window nor a graphic context, there's 
 Please note that imgui_impl_null itself is a rather empty backend. We provide it for consistency but
 it is similarly easy to create a skeleton application without the null backend.
 
+[example_qnx_opengl3/](https://github.com/ocornut/imgui/blob/master/examples/example_qnx_opengl3/) <BR>
+QNX Screen + OpenGL ES 3 example. <BR>
+= main.cpp + imgui_impl_qnx.cpp + imgui_impl_opengl3.cpp <BR>
+Uses the QNX recursive make build system and compiles the OpenGL3 renderer with `IMGUI_IMPL_OPENGL_ES3`.
+
+[example_qnx_vulkan/](https://github.com/ocornut/imgui/blob/master/examples/example_qnx_vulkan/) <BR>
+QNX Screen + Vulkan example using `VK_QNX_screen_surface`. <BR>
+= main.cpp + imgui_impl_qnx.cpp + imgui_impl_vulkan.cpp <BR>
+Uses the QNX recursive make build system and the Vulkan backend's example helper structures.
+
 [example_sdl2_directx11/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl2_directx11/) <BR>
 SDL2 + DirectX11 example, Windows only. <BR>
 = main.cpp + imgui_impl_sdl2.cpp + imgui_impl_dx11.cpp <BR>
@@ -171,6 +185,10 @@ SDL3 + DirectX11 examples, Windows only. <BR>
 [example_sdl3_metal/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl3_metal/) <BR>
 SDL3 + Metal example, Mac only. <BR>
 = main.cpp + imgui_impl_sdl3.cpp + imgui_impl_metal.mm <BR>
+
+[example_sdl3_metal4/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl3_metal/) <BR>
+SDL3 + Metal4 example, Mac only. <BR>
+= main.cpp + imgui_impl_sdl3.cpp + imgui_impl_metal4.mm <BR>
 
 [example_sdl3_opengl3/](https://github.com/ocornut/imgui/blob/master/examples/example_sdl3_opengl3/) <BR>
 SDL3 (Win32, Mac, Linux, etc.) + OpenGL3+/ES2/ES3 example. <BR>

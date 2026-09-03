@@ -2,12 +2,14 @@ dear imgui
 ISSUES & TODO LIST
 
 Issue numbers (#) refer to GitHub issues listed at https://github.com/ocornut/imgui/issues/XXXX
+
 THIS LIST IS NOT WELL MAINTAINED. MOST OF THE WORK HAPPENS ON GITHUB NOWADAYS.
+
 The list below consist mostly of ideas noted down before they are requested/discussed by users (at which point they usually exist on the github issue tracker).
 It's mostly a bunch of personal notes, probably incomplete. Feel free to query if you have any questions.
 
- - doc: add a proper documentation system (maybe relying on automation? #435)
  - doc: checklist app to verify backends/integration of imgui (test inputs, rendering, callback, etc.).
+ - doc: add a proper documentation system (maybe relying on automation? #435)
  - doc/tips: tips of the day: website? applet in imgui_club?
 
  - window: preserve/restore relative focus ordering (persistent or not), and e.g. of multiple reappearing windows (#2304) -> also see docking reference to same #.
@@ -29,9 +31,9 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window/clipping: some form of clipping when DisplaySize (or corresponding viewport) is zero.
  - window/tabbing: add a way to signify that a window or docked window requires attention (e.g. blinking title bar, trying to click behind a modal).
  - window/id_stack: add e.g. window->GetIDFromPath() with support for leading / and ../ (#1390, #331) -> model from test engine.
- ! scrolling: exposing horizontal scrolling with Shift+Wheel even when scrollbar is disabled expose lots of issues (#2424, #1463)
+
+ ! scrolling: exposing horizontal scrolling with Shift+Wheel even when scrollbar is disabled expose various issues (#2424, #1463)
  - scrolling: while holding down a scrollbar, try to keep the same contents visible (at least while not moving mouse)
- - scrolling: allow immediately effective change of scroll after Begin() if we haven't appended items yet.
  - scrolling: forward mouse wheel scrolling to parent window when at the edge of scrolling limits? (useful for listbox,tables?)
  - scrolling/style: shadows on scrollable areas to denote that there is more contents (see e.g. DaVinci Resolve ui)
 
@@ -51,38 +53,32 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - widgets: display mode: widget-label, label-widget (aligned on column or using fixed size), label-newline-tab-widget etc. (#395)
  - widgets: clean up widgets internal toward exposing everything and stabilizing imgui_internals.h.
  - widgets: add always-allow-overlap mode. This should perhaps be the default? one problem is that highlight after mouse-wheel scrolling gets deferred, makes scrolling more flickery.
- - widgets: start exposing PushItemFlag() and ImGuiItemFlags
  - widgets: alignment options in style (e.g. center Selectable, Right-Align within Button, etc.) #1260
  - widgets: activate by identifier (trigger button, focus given id)
  - widgets: custom glyph/shapes replacements for stock shapes. (also #6090 #2431 #2235 #6517)
  - widgets: coloredit: keep reporting as active when picker is on?
- - widgets: group/scalarn functions: expose more per-component information. e.g. store NextItemData.ComponentIdx set by scalarn function, groups can expose them back somehow.
+ - widgets: group/ScalarN functions: expose more per-component information. e.g. store NextItemData.ComponentIdx set by scalarn function, groups can expose them back somehow.
  - selectable: using (size.x == 0.0f) and (SelectableTextAlign.x > 0.0f) followed by SameLine() is currently not supported.
  - selectable: generic BeginSelectable()/EndSelectable() mechanism. (work out alongside range-select branch)
  - selectable: a way to visualize partial/mixed selection (e.g. parent tree node has children with mixed selection)
 
+ - input text: flag to disable live update of the user buffer (also applies to float/int text input) (#701)
  - input text: preserve scrolling when unfocused?
  - input text: reorganize event handling, allow CharFilter to modify buffers, allow multiple events? (#541)
- - input text: expose CursorPos in char filter event (#816)
- - input text: try usage idiom of using InputText with data only exposed through get/set accessors, without extraneous copy/alloc. (#3009)
- - input text: access public fields via a non-callback API e.g. InputTextGetState("xxx") that may return nullptr if not active (available in internals)
- - input text: flag to disable live update of the user buffer (also applies to float/int text input) (#701)
  - input text: hover tooltip could show unclamped text
  - input text: support for INSERT key to toggle overwrite mode. currently disabled because stb_textedit behavior is unsatisfactory on multi-line. (#2863)
  - input text: option to Tab after an Enter validation.
  - input text: add ImGuiInputTextFlags_EnterToApply? (off #218)
  - input text: easier ways to update buffer (from source char*) while owned. preserve some sort of cursor position for multi-line text.
  - input text: add discard flag (e.g. ImGuiInputTextFlags_DiscardActiveBuffer) or make it easier to clear active focus for text replacement during edition (#725)
- - input text: display bug when clicking a drag/slider after an input text in a different window has all-selected text (order dependent). actually a very old bug but no one appears to have noticed it.
  - input text: allow centering/positioning text so that ctrl+clicking Drag or Slider keeps the textual value at the same pixel position.
  - input text: decorrelate display layout from inputs with custom template - e.g. what's the easiest way to implement a nice IP/Mac address input editor?
- - input text: global callback system so user can plug in an expression evaluator easily. (#1691)
+ - input text: callback system (global) so user can plug in an expression evaluator easily. (#1691)
  - input text: force scroll to end or scroll to a given line/contents (so user can implement a log or a search feature)
  - input text: a way to preview completion (e.g. disabled text completing from the cursor)
  - input text: a side bar that could e.g. preview where errors are. probably left to the user to draw but we'd need to give them the info there.
  - input text: a way for the user to provide syntax coloring.
  - input text: Shift+TAB with ImGuiInputTextFlags_AllowTabInput could eat preceding blanks, up to tab_count.
- - input text multi-line: don't directly call AddText() which does an unnecessary vertex reserve for character count prior to clipping. and/or more line-based clipping to AddText(). and/or reorganize TextUnformatted/RenderText for more efficiency for large text (e.g TextUnformatted could clip and log separately, etc).
  - input text multi-line: support for copy/cut without selection (copy/cut current line?)
  - input text multi-line: line numbers? status bar? (follow up on #200)
  - input text multi-line: behave better when user changes input buffer while editing is active (even though it is illegal behavior). namely, the change of buffer can create a scrollbar glitch (#725)
@@ -111,11 +107,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
 !- color: the color conversion helpers/types are a mess and needs sorting out.
  - color: (api breaking) ImGui::ColorConvertXXX functions should be loose ImColorConvertXX to match imgui_internals.h
 
- - plot: full featured plot/graph api w/ scrolling, zooming etc. --> promote using ImPlot
- - (plot: deleted all other todo lines on 2023-06-28)
-
  - clipper: ability to disable the clipping through a simple flag/bool.
- - clipper: ability to run without knowing full count in advance.
  - clipper: horizontal clipping support. (#2580)
 
  - separator: expose flags (#759)
@@ -141,22 +133,19 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - knob: rotating knob widget (#942)
  - drag float: support for reversed drags (min > max) (removed is_locked, also see fdc526e)
  - drag float: up/down axis
- - drag float: power != 0.0f with current value being outside the range keeps the value stuck.
  - drag float: added leeway on edge (e.g. a few invisible steps past the clamp limits)
 
  - combo: a way/helper to customize the combo preview (#1658) -> experimental BeginComboPreview()
  - combo/listbox: keyboard control. need InputText-like non-active focus + key handling. considering keyboard for custom listbox (pr #203)
- - listbox: multiple selection (WIP range-select branch)
  - listbox: unselect option (#1208)
- - listbox: make it easier/more natural to implement range-select (need some sort of info/ref about the last clicked/focused item that user can translate to an index?) (WIP range-select branch)
  - listbox: user may want to initial scroll to focus on the one selected value?
  - listbox: disable capturing mouse wheel if the listbox has no scrolling. (#1681)
  - listbox: scrolling should track modified selection.
  - listbox: future api should allow to enable horizontal scrolling (#2510)
 
 !- popups/menus: clarify usage of popups id, how MenuItem/Selectable closing parent popups affects the ID, etc. this is quite fishy needs improvement! (#331, #402)
- - modals: make modal title bar blink when trying to click outside the modal
- - modals: technically speaking, we could make Begin() with ImGuiWindowFlags_Modal work without involving popup. May help untangle a few things, as modals are more like regular windows than popups.
+ - modals: make modal title bar blink when trying to click outside the modal.
+ - modals: technically speaking, we could make Begin() with ImGuiWindowFlags_Modal work without involving popup. May help untangle a few things, as modals are more like regular windows than popups. (#402)
  - popups: if the popup functions took explicit ImGuiID it would allow the user to manage the scope of those ID. (#331)
  - popups: clicking outside (to close popup) and holding shouldn't drag window below.
  - popups: add variant using global identifier similar to Begin/End (#402)
@@ -198,7 +187,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - style: FramePadding could be different for up vs down (#584)
  - style: WindowPadding needs to be EVEN as the 0.5 multiplier used on this value probably have a subtle effect on clip rectangle
  - style: have a more global HSV setter (e.g. alter hue on all elements). consider replacing active/hovered by offset in HSV space? (#438, #707, #1223)
- - style: gradients fill (#1223) ~ 2 bg colors for each fill? tricky with rounded shapes and using textures for corners.
+ - style: gradients fill (#4722, #1223) ~ 2 bg colors for each fill? tricky with rounded shapes and using textures for corners.
  - style editor: color child window height expressed in multiple of line height.
 
  - log: improve logging of ArrowButton, ListBox, TabItem
@@ -214,7 +203,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - filters: fuzzy matches (may use code at blog.forrestthewoods.com/4cffeed33fdb)
 
  - drag and drop: focus drag target window on hold (even without open)
- - drag and drop: releasing a drop shows the "..." tooltip for one frame - since e13e598 (#1725)
  - drag and drop: drag source on a group object (would need e.g. an invisible button covering group in EndGroup) https://twitter.com/paniq/status/1121446364909535233
  - drag and drop: have some way to know when a drag begin from BeginDragDropSource() pov. (see 2018/01/11 post in #143)
  - drag and drop: allow preview tooltip to be submitted from a different place than the drag source. (#1725)
@@ -247,7 +235,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - font: make it easier to submit own bitmap font (same texture, another texture?). (#2127, #2575)
  - font: MemoryTTF taking ownership confusing/not obvious, maybe default should be opposite?
  - font: storing MinAdvanceX per font would allow us to skip calculating line width (under a threshold of character count) in loops looking for block width
- - font/demo: demonstrate use of ImFontGlyphRangesBuilder.
  - font/draw: vertical and/or rotated text renderer (#705) - vertical is easier clipping wise
  - font/draw: need to be able to specify wrap start position.
  - font/draw: better reserve policy for large horizontal block of text (shouldn't reserve for all clipped lines). also see #3349.
@@ -273,12 +260,11 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - nav: NavFlattened: ESC on a flattened child should select something.
  - nav: NavFlattened: broken: in typical usage scenario, the items of a fully clipped child are currently not considered to enter into a NavFlattened child.
  - nav: NavFlattened: cannot access menu-bar of a flattened child window with Alt/menu key (not a very common use case..).
- - nav: simulate right-click or context activation? (SHIFT+F10, keyboard Menu key?)
  - nav/popup: esc/enter default behavior for popups, e.g. be able to mark an "ok" or "cancel" button that would get triggered by those keys, default validation button, etc.
  - nav/treenode: left within a tree node block as a fallback (ImGuiTreeNodeFlags_NavLeftJumpsBackHere by default?)
  - nav/menus: pressing left-right on a vertically clipped menu bar tends to jump to the collapse/close buttons.
  - nav/menus: allow pressing Menu to leave a sub-menu.
- - nav/menus: a way to access the main menu bar with Alt? (currently needs CTRL+TAB) or last focused window menu bar?
+ ! nav/menus: a way to access the main menu bar with Alt? (currently needs CTRL+TAB) or last focused window menu bar?
  - nav/menus: when using the main menu bar, even though we restore focus after, the underlying window loses its title bar highlight during menu manipulation. could we prevent it?
  - nav/menus: main menu bar currently cannot restore a nullptr focus. Could save NavWindow at the time of being focused, similarly to what popup do?
  - nav/menus: Alt,Up could open the first menu (e.g. "File") currently it tends to nav into the window/collapse menu. Do do that we would need custom transition?
@@ -297,7 +283,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - misc: no way to run a root-most GetID() with ImGui:: api since there's always a Debug window in the stack. (mentioned in #2960)
  - misc: make the ImGuiCond values linear (non-power-of-two). internal storage for ImGuiWindow can use integers to combine into flags (Why?)
  - misc: PushItemFlag(): add a flag to disable keyboard capture when used with mouse? (#1682)
- - misc: use more size_t in public api?
  - misc: support for string view/range instead of char* would e.g. facilitate usage with Rust (#683, #3038, WIP string_view branch)
 
  - demo: demonstrate using PushStyleVar() in more details.
@@ -315,8 +300,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - backends: opengl: could use a single vertex buffer and glBufferSubData for uploads?
  - backends: opengl: explicitly disable GL_STENCIL_TEST in bindings.
  - backends: vulkan: viewport: support for synchronized swapping of multiple swap chains.
- - backends: bgfx: https://gist.github.com/RichardGale/6e2b74bc42b3005e08397236e4be0fd0
- - backends: emscripten: with refactored examples, we could provide a direct imgui_impl_emscripten platform layer (see eg. https://github.com/floooh/sokol-samples/blob/master/html5/imgui-emsc.cc#L42)
+ - backends: emscripten: dedicated backend? (#8178, #9120, eg. https://github.com/floooh/sokol-samples/blob/master/html5/imgui-emsc.cc#L42)
 
  - bindings: ways to use clang ast dump to generate bindings or helpers for bindings? (e.g. clang++ -Xclang -ast-dump=json imgui.h) (--> use https://github.com/dearimgui/dear_bindings)
 

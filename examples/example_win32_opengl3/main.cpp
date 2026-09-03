@@ -17,12 +17,13 @@
 #include <windows.h>
 #include <GL/gl.h>
 #include <tchar.h>
+#include <stdio.h>
 
 // Data stored per platform window
 struct WGL_WindowData { HDC hDC; };
 
 // Data
-static HGLRC            g_hRC;
+static HGLRC            g_hRC;          // Rendering context
 static WGL_WindowData   g_MainWindow;
 static int              g_Width;
 static int              g_Height;
@@ -208,8 +209,57 @@ bool CreateDeviceWGL(HWND hWnd, WGL_WindowData* data)
     ::ReleaseDC(hWnd, hDc);
 
     data->hDC = ::GetDC(hWnd);
-    if (!g_hRC)
-        g_hRC = wglCreateContext(data->hDC);
+    if (g_hRC)
+        return true;
+
+    // Create legacy context
+    HGLRC tempRC = wglCreateContext(data->hDC);
+    if (!tempRC) { ::ReleaseDC(hWnd, data->hDC); return false; }
+    if (!wglMakeCurrent(data->hDC, tempRC))
+    {
+        wglDeleteContext(tempRC);
+        ::ReleaseDC(hWnd, data->hDC);
+        return false;
+    }
+
+    // Get context version
+    GLint major = 0, minor = 0;
+    glGetIntegerv(0x821B, &major); // GL_MAJOR_VERSION
+    glGetIntegerv(0x821C, &minor); // GL_MINOR_VERSION
+    const char* gl_version_str = (const char*)glGetString(GL_VERSION);
+    if (major == 0 && minor == 0)
+        sscanf_s(gl_version_str, "%d.%d", &major, &minor); // Query GL_VERSION in desktop GL 2.x, the string will start with "<major>.<minor>"
+    const GLuint gl_version = (GLuint)(major * 100 + minor * 10);
+
+    // Keep temporary context: already OpenGL 3.0+.
+    g_hRC = tempRC;
+    if (gl_version >= 300)
+        return true;
+
+    typedef HGLRC(WINAPI* PFNWGLCREATECONTEXTATTRIBSARBPROC)(HDC, HGLRC, const int*);
+    const PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC)wglGetProcAddress("wglCreateContextAttribsARB");
+
+    // GL 3.0
+    const int attribs[] =
+    {
+        0x2091, 3,      // WGL_CONTEXT_MAJOR_VERSION_ARB
+        0x2092, 0,      // WGL_CONTEXT_MINOR_VERSION_ARB
+        0x9126, 0x0001, // WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB
+        0
+    };
+    HGLRC newRC = nullptr;
+    if (wglCreateContextAttribsARB)
+        newRC = wglCreateContextAttribsARB(data->hDC, 0, attribs);
+
+    // If we managed to create 3.0+ context: use that one and destroy the temporary OpenGL 2.x compatibility context.
+    if (newRC)
+    {
+        wglMakeCurrent(nullptr, nullptr);
+        wglDeleteContext(tempRC);
+        g_hRC = newRC;
+        wglMakeCurrent(data->hDC, g_hRC);
+    }
+
     return true;
 }
 

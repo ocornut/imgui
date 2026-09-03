@@ -14,6 +14,8 @@ If you have multiple VS version installed, the version that matters is the one y
 of (not the compiling toolset). This is supported since Visual Studio 2012.
 
 More information at: https://docs.microsoft.com/en-us/visualstudio/debugger/just-my-code?view=vs-2019#BKMK_C___Just_My_Code
+
+Since Dear ImGui 1.93.0 WIP (September 2026): we use a IM_NODEBUGSTEP() macro to provide the equivalent feature via __declspec(non_user_code).
 -->
 
 <StepFilter xmlns="http://schemas.microsoft.com/vstudio/debugger/natstepfilter/2010">

@@ -77,6 +77,17 @@ Some solutions:
   You can use the `ImFontGlyphRangesBuilder` for this purpose and rebuilding your atlas between frames when new characters are needed. This will be the biggest win!
 - Set `io.Fonts.Flags |= ImFontAtlasFlags_NoPowerOfTwoHeight;` to disable rounding the texture height to the next power of two.
 
+### (5) Reduce texture resizes/copy on startup
+
+🆕 Since 1.92, the ImFontAtlas is initially created using a 512x128 texture, then grows as glyphs and fonts are used. Atlas growth leads to alloc+copy, and both the old and new sized textures are present in memory for a short time (typically one frame). If you use known fonts and want to reduce initial growth, you may set `TexMinWidth` and `TexMinHeight` during initializaton.
+
+```cpp
+ImFontAtlas* atlas = io.Fonts;
+atlas->TexMinWidth = 1024;
+atlas->TexMinHeight = 1024;
+atlas->AddFont(...);
+```
+
 ##### [Return to Index](#index)
 
 ---------------------------------------
@@ -85,7 +96,7 @@ Some solutions:
 
 v1.92 introduces a newer, dynamic font system. It requires backend to support the `ImGuiBackendFlags_HasTextures` feature:
 - Users of icons, Asian and non-English languages do not need to pre-build all glyphs ahead of time. Saving on loading time, memory, and also reducing issues with missing glyphs. Specifying glyph ranges is not needed anymore.
-- `PushFont(NULL, new_size)` may be used anytime to change font size.
+- `PushFont(nullptr, new_size)` may be used anytime to change font size.
 - Packing custom rectangles is more convenient as pixels may be written to immediately.
 - Any update to fonts previously required backend specific calls to re-upload the texture, and said calls were not portable across backends. It is now possible to scale fonts etc. in a way that doesn't require you to make backend-specific calls.
 - It is possible to plug a custom loader/backend to any font source.

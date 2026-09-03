@@ -23,9 +23,9 @@ jobs:
         run: |
           if [[ "$PVS_STUDIO_LICENSE" != "" ]];
           then
-            wget -q https://files.viva64.com/etc/pubkey.txt
+            wget -q https://files.pvs-studio.com/etc/pubkey.txt
             sudo apt-key add pubkey.txt
-            sudo wget -O /etc/apt/sources.list.d/viva64.list https://files.viva64.com/etc/viva64.list
+            sudo wget -O /etc/apt/sources.list.d/viva64.list https://files.pvs-studio.com/etc/viva64.list
             sudo apt-get update
             sudo apt-get install -y pvs-studio
             pvs-studio-analyzer credentials -o pvs-studio.lic $PVS_STUDIO_LICENSE
