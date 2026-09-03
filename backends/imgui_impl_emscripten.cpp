@@ -26,14 +26,10 @@ extern ImGuiID ImHashStr(char const* data, size_t data_size = 0, ImGuiID seed = 
 
 float ImGui_ImplEmscripten_TargetDevicePixelRatio = 1.0f;
 
-namespace {
-
 // W3C UI Events KeyboardEvent.code translation helpers
 
-ImGuiKey translate_key(char const* emscripten_key);
-constexpr ImGuiMouseButton translate_mousebutton(unsigned short emscripten_button) __attribute__((__const__));
-
-} // anonymous namespace
+static ImGuiKey ImGui_ImplEmscripten_TranslateKey(char const* emscripten_key);
+static constexpr ImGuiMouseButton ImGui_ImplEmscripten_TranslateMouseButton(unsigned short emscripten_button) __attribute__((__const__));
 
 namespace emscripten_browser_cursor_internal
 {
@@ -94,13 +90,11 @@ enum class cursor
     invalid
 };
 
-void set(cursor new_cursor);                                                    // set a new cursor from a cursor enum
-char* get_string();                                                             // read the current cursor setting as an owned string, caller must free()
-void set(char const* new_cursor);                                               // set the cursor from an arbitrary string
-
 } // namespace emscripten_browser_cursor_internal
 
-namespace {
+static void ImGui_ImplEmscripten_SetBrowserCursor(emscripten_browser_cursor_internal::cursor new_cursor); // set a new cursor from a cursor enum
+static char* ImGui_ImplEmscripten_GetBrowserCursor();                           // read the current cursor setting as an owned string, caller must free()
+static void ImGui_ImplEmscripten_SetBrowserCursor(char const* new_cursor);      // set the cursor from an arbitrary string
 
 struct ImGui_ImplEmscripten_Data
 {
@@ -111,15 +105,15 @@ struct ImGui_ImplEmscripten_Data
     bool LastNoMouseCursorChange = false;
 };
 
-float get_target_device_pixel_ratio()
+static float ImGui_ImplEmscripten_GetTargetDevicePixelRatio()
 {
     IM_ASSERT(ImGui_ImplEmscripten_TargetDevicePixelRatio > 0.0f && "ImGui_ImplEmscripten_TargetDevicePixelRatio must be positive.");
     return ImGui_ImplEmscripten_TargetDevicePixelRatio > 0.0f ? ImGui_ImplEmscripten_TargetDevicePixelRatio : 1.0f;
 }
 
-void update_display_properties(ImGuiIO& io, ImGui_ImplEmscripten_Data* bd, float css_width, float css_height)
+static void ImGui_ImplEmscripten_UpdateDisplayProperties(ImGuiIO& io, ImGui_ImplEmscripten_Data* bd, float css_width, float css_height)
 {
-    float const target_device_pixel_ratio = get_target_device_pixel_ratio();
+    float const target_device_pixel_ratio = ImGui_ImplEmscripten_GetTargetDevicePixelRatio();
     float const css_to_imgui_scale = (float)emscripten_get_device_pixel_ratio() / target_device_pixel_ratio;
     bd->CssToImGuiScale = css_to_imgui_scale;
     io.DisplaySize.x = css_width * css_to_imgui_scale;
@@ -128,12 +122,10 @@ void update_display_properties(ImGuiIO& io, ImGui_ImplEmscripten_Data* bd, float
 }
 
 // Backend data stored in io.BackendPlatformUserData to allow support for multiple Dear ImGui contexts
-ImGui_ImplEmscripten_Data* ImGui_ImplEmscripten_GetBackendData()
+static ImGui_ImplEmscripten_Data* ImGui_ImplEmscripten_GetBackendData()
 {
     return ImGui::GetCurrentContext() ? (ImGui_ImplEmscripten_Data*)ImGui::GetIO().BackendPlatformUserData : nullptr;
 }
-
-} // anonymous namespace
 
 void ImGui_ImplEmscripten_Init()
 {
@@ -147,7 +139,7 @@ void ImGui_ImplEmscripten_Init()
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;
 
     // set up initial display size values
-    update_display_properties(
+    ImGui_ImplEmscripten_UpdateDisplayProperties(
         io,
         bd,
         (float)EM_ASM_INT(return window.innerWidth;),
@@ -173,7 +165,7 @@ void ImGui_ImplEmscripten_Init()
         nullptr,                                                                // userData
         false,                                                                  // useCapture
         [](int /*event_type*/, EmscriptenMouseEvent const* mouse_event, void* /*data*/) { // callback, event_type == EMSCRIPTEN_EVENT_MOUSEDOWN
-            ImGui::GetIO().AddMouseButtonEvent(translate_mousebutton(mouse_event->button), true); // translated button, down
+            ImGui::GetIO().AddMouseButtonEvent(ImGui_ImplEmscripten_TranslateMouseButton(mouse_event->button), true); // translated button, down
             return true;                                                        // the event was consumed
         }
     );
@@ -182,7 +174,7 @@ void ImGui_ImplEmscripten_Init()
         nullptr,                                                                // userData
         false,                                                                  // useCapture
         [](int /*event_type*/, EmscriptenMouseEvent const* mouse_event, void* /*data*/) { // callback, event_type == EMSCRIPTEN_EVENT_MOUSEUP
-            ImGui::GetIO().AddMouseButtonEvent(translate_mousebutton(mouse_event->button), false); // translated button, up
+            ImGui::GetIO().AddMouseButtonEvent(ImGui_ImplEmscripten_TranslateMouseButton(mouse_event->button), false); // translated button, up
             return true;                                                        // the event was consumed
         }
     );
@@ -243,7 +235,7 @@ void ImGui_ImplEmscripten_Init()
         nullptr,                                                                // userData
         false,                                                                  // useCapture
         [](int /*event_type*/, EmscriptenKeyboardEvent const* key_event, void* /*data*/) { // callback, event_type == EMSCRIPTEN_EVENT_KEYDOWN
-            const ImGuiKey key = translate_key(key_event->code);
+            const ImGuiKey key = ImGui_ImplEmscripten_TranslateKey(key_event->code);
             ImGuiIO& io = ImGui::GetIO();
             io.AddKeyEvent(key, true);
             switch (key)                                                        // special cases for certain key events
@@ -281,7 +273,7 @@ void ImGui_ImplEmscripten_Init()
         nullptr,                                                                // userData
         false,                                                                  // useCapture
         [](int /*event_type*/, EmscriptenKeyboardEvent const* key_event, void* /*data*/) { // callback, event_type == EMSCRIPTEN_EVENT_KEYUP
-            const ImGuiKey key = translate_key(key_event->code);
+            const ImGuiKey key = ImGui_ImplEmscripten_TranslateKey(key_event->code);
             ImGuiIO& io = ImGui::GetIO();
             io.AddKeyEvent(key, false);
             switch (key)                                                        // special cases for certain key events
@@ -325,7 +317,7 @@ void ImGui_ImplEmscripten_Init()
         [](int /*event_type*/, EmscriptenUiEvent const* event, void* /*data*/) { // event_type == EMSCRIPTEN_EVENT_RESIZE
             ImGuiIO& io = ImGui::GetIO();
             ImGui_ImplEmscripten_Data* bd = ImGui_ImplEmscripten_GetBackendData();
-            if (bd != nullptr) update_display_properties(io, bd, (float)event->windowInnerWidth, (float)event->windowInnerHeight);
+            if (bd != nullptr) ImGui_ImplEmscripten_UpdateDisplayProperties(io, bd, (float)event->windowInnerWidth, (float)event->windowInnerHeight);
             return true;                                                        // the event was consumed
         }
     );
@@ -401,7 +393,7 @@ void ImGui_ImplEmscripten_Shutdown()
 
     if (bd->CursorToRestore != nullptr)
     {
-        emscripten_browser_cursor_internal::set(bd->CursorToRestore);           // restore the previous cursor state if imgui still owns the cursor on shutdown
+        ImGui_ImplEmscripten_SetBrowserCursor(bd->CursorToRestore);             // restore the previous cursor state if imgui still owns the cursor on shutdown
         free(bd->CursorToRestore);
     }
 
@@ -412,26 +404,24 @@ void ImGui_ImplEmscripten_Shutdown()
     IM_DELETE(bd);
 }
 
-namespace {
-
-void restore_cursor_if_necessary(ImGui_ImplEmscripten_Data* bd)
+static void ImGui_ImplEmscripten_RestoreMouseCursor(ImGui_ImplEmscripten_Data* bd)
 {
     if (bd->CursorToRestore == nullptr) return;
-    emscripten_browser_cursor_internal::set(bd->CursorToRestore);               // restore the previous cursor state when leaving imgui cursor ownership
+    ImGui_ImplEmscripten_SetBrowserCursor(bd->CursorToRestore);                 // restore the previous cursor state when leaving imgui cursor ownership
     free(bd->CursorToRestore);
     bd->CursorToRestore = nullptr;
     bd->CurrentCursor = emscripten_browser_cursor_internal::cursor::invalid;    // select an unused value for current cursor to force a set next time
 }
 
-void set_cursor_if_necessary(ImGui_ImplEmscripten_Data* bd, emscripten_browser_cursor_internal::cursor new_cursor)
+static void ImGui_ImplEmscripten_SetMouseCursor(ImGui_ImplEmscripten_Data* bd, emscripten_browser_cursor_internal::cursor new_cursor)
 {
     if (new_cursor == bd->CurrentCursor) return;                                // don't do anything if the current cursor is already set
-    if (bd->CursorToRestore == nullptr) bd->CursorToRestore = emscripten_browser_cursor_internal::get_string(); // back up the existing cursor state when first taking cursor ownership
+    if (bd->CursorToRestore == nullptr) bd->CursorToRestore = ImGui_ImplEmscripten_GetBrowserCursor(); // back up the existing cursor state when first taking cursor ownership
     bd->CurrentCursor = new_cursor;
-    emscripten_browser_cursor_internal::set(new_cursor);
+    ImGui_ImplEmscripten_SetBrowserCursor(new_cursor);
 }
 
-void update_cursor(ImGui_ImplEmscripten_Data* bd)
+static void ImGui_ImplEmscripten_UpdateMouseCursor(ImGui_ImplEmscripten_Data* bd)
 {
     // Sync any cursor changes due to ImGui to the browser's cursor
     ImGuiIO& io = ImGui::GetIO();
@@ -453,14 +443,14 @@ void update_cursor(ImGui_ImplEmscripten_Data* bd)
     {
         if (bd->LastMouseDrawCursor) return;
 
-        set_cursor_if_necessary(bd, emscripten_browser_cursor_internal::cursor::none); // hide the cursor for the entire window if imgui is handling cursor drawing - not just when imgui wants to capture the mouse
+        ImGui_ImplEmscripten_SetMouseCursor(bd, emscripten_browser_cursor_internal::cursor::none); // hide the cursor for the entire window if imgui is handling cursor drawing - not just when imgui wants to capture the mouse
         bd->LastMouseDrawCursor = true;
     }
     else
     {
         if (bd->LastMouseDrawCursor)
         {
-            restore_cursor_if_necessary(bd);
+            ImGui_ImplEmscripten_RestoreMouseCursor(bd);
             bd->LastMouseDrawCursor = false;
         }
     }
@@ -470,44 +460,42 @@ void update_cursor(ImGui_ImplEmscripten_Data* bd)
         switch (ImGui::GetMouseCursor())
         {
         case ImGuiMouseCursor_None:
-            set_cursor_if_necessary(bd, emscripten_browser_cursor_internal::cursor::none);
+            ImGui_ImplEmscripten_SetMouseCursor(bd, emscripten_browser_cursor_internal::cursor::none);
             break;
         case ImGuiMouseCursor_Arrow:
-            set_cursor_if_necessary(bd, emscripten_browser_cursor_internal::cursor::cursor_default);
+            ImGui_ImplEmscripten_SetMouseCursor(bd, emscripten_browser_cursor_internal::cursor::cursor_default);
             break;
         case ImGuiMouseCursor_TextInput:                                        // When hovering over InputText, etc.
-            set_cursor_if_necessary(bd, emscripten_browser_cursor_internal::cursor::text);
+            ImGui_ImplEmscripten_SetMouseCursor(bd, emscripten_browser_cursor_internal::cursor::text);
             break;
         case ImGuiMouseCursor_ResizeAll:                                        // (Unused by Dear ImGui functions)
-            set_cursor_if_necessary(bd, emscripten_browser_cursor_internal::cursor::move);
+            ImGui_ImplEmscripten_SetMouseCursor(bd, emscripten_browser_cursor_internal::cursor::move);
             break;
         case ImGuiMouseCursor_ResizeNS:                                         // When hovering over a horizontal border
-            set_cursor_if_necessary(bd, emscripten_browser_cursor_internal::cursor::ns_resize);
+            ImGui_ImplEmscripten_SetMouseCursor(bd, emscripten_browser_cursor_internal::cursor::ns_resize);
             break;
         case ImGuiMouseCursor_ResizeEW:                                         // When hovering over a vertical border or a column
-            set_cursor_if_necessary(bd, emscripten_browser_cursor_internal::cursor::ew_resize);
+            ImGui_ImplEmscripten_SetMouseCursor(bd, emscripten_browser_cursor_internal::cursor::ew_resize);
             break;
         case ImGuiMouseCursor_ResizeNESW:                                       // When hovering over the bottom-left corner of a window
-            set_cursor_if_necessary(bd, emscripten_browser_cursor_internal::cursor::nesw_resize);
+            ImGui_ImplEmscripten_SetMouseCursor(bd, emscripten_browser_cursor_internal::cursor::nesw_resize);
             break;
         case ImGuiMouseCursor_ResizeNWSE:                                       // When hovering over the bottom-right corner of a window
-            set_cursor_if_necessary(bd, emscripten_browser_cursor_internal::cursor::nwse_resize);
+            ImGui_ImplEmscripten_SetMouseCursor(bd, emscripten_browser_cursor_internal::cursor::nwse_resize);
             break;
         case ImGuiMouseCursor_Hand:                                             // (Unused by Dear ImGui functions. Use for e.g. hyperlinks)
-            set_cursor_if_necessary(bd, emscripten_browser_cursor_internal::cursor::pointer);
+            ImGui_ImplEmscripten_SetMouseCursor(bd, emscripten_browser_cursor_internal::cursor::pointer);
             break;
         case ImGuiMouseCursor_NotAllowed:                                       // When hovering something with disallowed interaction. Usually a crossed circle.
-            set_cursor_if_necessary(bd, emscripten_browser_cursor_internal::cursor::not_allowed);
+            ImGui_ImplEmscripten_SetMouseCursor(bd, emscripten_browser_cursor_internal::cursor::not_allowed);
             break;
         }
     }
     else                                                                        // mouse is away from the gui, hovering over some other part of the viewport
     {
-        restore_cursor_if_necessary(bd);
+        ImGui_ImplEmscripten_RestoreMouseCursor(bd);
     }
 }
-
-} // anonymous namespace
 
 void ImGui_ImplEmscripten_NewFrame()
 {
@@ -515,13 +503,10 @@ void ImGui_ImplEmscripten_NewFrame()
     IM_ASSERT(bd != nullptr && "Context or backend not initialized? Did you call ImGui_ImplEmscripten_Init()?");
 
     // Update any state that needs to be polled
-    update_cursor(bd);
+    ImGui_ImplEmscripten_UpdateMouseCursor(bd);
 }
 
-namespace emscripten_browser_cursor_internal
-{
-
-char* get_string()
+static char* ImGui_ImplEmscripten_GetBrowserCursor()
 {
     // Return the current cursor setting as a newly-allocated string, caller must free it.
     return (char*)EM_ASM_PTR(
@@ -529,47 +514,47 @@ char* get_string()
     );
 }
 
-void set(cursor new_cursor)
+static void ImGui_ImplEmscripten_SetBrowserCursor(emscripten_browser_cursor_internal::cursor new_cursor)
 {
     // Set the cursor according to the given enum
     // Note, implementations omitted for cursors not used by imgui.  For full implementation, use https://github.com/Armchair-Software/emscripten-browser-cursor
     switch (new_cursor)
     {
-    case cursor::none:
+    case emscripten_browser_cursor_internal::cursor::none:
         EM_ASM(document.body.style.cursor = 'none';);
         break;
-    case cursor::cursor_default:
+    case emscripten_browser_cursor_internal::cursor::cursor_default:
     default:
         EM_ASM(document.body.style.cursor = 'default';);
         break;
-    case cursor::pointer:
+    case emscripten_browser_cursor_internal::cursor::pointer:
         EM_ASM(document.body.style.cursor = 'pointer';);
         break;
-    case cursor::text:
+    case emscripten_browser_cursor_internal::cursor::text:
         EM_ASM(document.body.style.cursor = 'text';);
         break;
-    case cursor::move:
+    case emscripten_browser_cursor_internal::cursor::move:
         EM_ASM(document.body.style.cursor = 'move';);
         break;
-    case cursor::not_allowed:
+    case emscripten_browser_cursor_internal::cursor::not_allowed:
         EM_ASM(document.body.style.cursor = 'not-allowed';);
         break;
-    case cursor::ew_resize:
+    case emscripten_browser_cursor_internal::cursor::ew_resize:
         EM_ASM(document.body.style.cursor = 'ew-resize';);
         break;
-    case cursor::ns_resize:
+    case emscripten_browser_cursor_internal::cursor::ns_resize:
         EM_ASM(document.body.style.cursor = 'ns-resize';);
         break;
-    case cursor::nesw_resize:
+    case emscripten_browser_cursor_internal::cursor::nesw_resize:
         EM_ASM(document.body.style.cursor = 'nesw-resize';);
         break;
-    case cursor::nwse_resize:
+    case emscripten_browser_cursor_internal::cursor::nwse_resize:
         EM_ASM(document.body.style.cursor = 'nwse-resize';);
         break;
     }
 }
 
-void set(char const* new_cursor)
+static void ImGui_ImplEmscripten_SetBrowserCursor(char const* new_cursor)
 {
     // Set the cursor from an arbitrary string
     EM_ASM({
@@ -577,11 +562,7 @@ void set(char const* new_cursor)
     }, new_cursor);
 }
 
-} // namespace emscripten_browser_cursor_internal
-
-namespace {
-
-constexpr ImGuiMouseButton translate_mousebutton(unsigned short emscripten_button)
+static constexpr ImGuiMouseButton ImGui_ImplEmscripten_TranslateMouseButton(unsigned short emscripten_button)
 {
     // Translate an emscripten-provided integer describing a mouse button to an imgui mouse button
     if (emscripten_button == 1) return ImGuiMouseButton_Middle;                 // 1 = middle mouse button
@@ -590,7 +571,7 @@ constexpr ImGuiMouseButton translate_mousebutton(unsigned short emscripten_butto
     return emscripten_button;                                                   // any other button translates 1:1
 }
 
-ImGuiStorage const& get_key_translation_storage()
+static ImGuiStorage const& ImGui_ImplEmscripten_GetKeyTranslationStorage()
 {
     static ImGuiStorage storage;
     static bool is_initialized = false;
@@ -805,15 +786,13 @@ ImGuiStorage const& get_key_translation_storage()
     return storage;
 }
 
-ImGuiKey translate_key(char const* emscripten_key)
+static ImGuiKey ImGui_ImplEmscripten_TranslateKey(char const* emscripten_key)
 {
     // Translate a W3C KeyboardEvent.code string into an ImGuiKey.
     if (emscripten_key == nullptr || emscripten_key[0] == '\0') return ImGuiKey_None;
 
-    ImGuiStorage const& storage = get_key_translation_storage();
+    ImGuiStorage const& storage = ImGui_ImplEmscripten_GetKeyTranslationStorage();
     return (ImGuiKey)storage.GetInt(ImHashStr(emscripten_key), ImGuiKey_None);
 }
-
-} // anonymous namespace
 
 #endif // IMGUI_DISABLE
