@@ -137,8 +137,8 @@ static bool InitWGPU()
 static void GetFramebufferSizeFromDisplaySize(int width, int height, int* framebuffer_width, int* framebuffer_height)
 {
     ImGuiIO& io = ImGui::GetIO();
-    *framebuffer_width = static_cast<int>(width * io.DisplayFramebufferScale.x + 0.5f);
-    *framebuffer_height = static_cast<int>(height * io.DisplayFramebufferScale.y + 0.5f);
+    *framebuffer_width = (int)(width * io.DisplayFramebufferScale.x + 0.5f);
+    *framebuffer_height = (int)(height * io.DisplayFramebufferScale.y + 0.5f);
 }
 
 static void ResizeSurface(int width, int height)
