@@ -86,6 +86,7 @@ Other Changes:
   - QNX: added QNX Screen backend. (#9492) [@mgorchak-blackberry]
   - SDL2: fixed querying framebuffer scale/density when using Metal without
     going through a SDL_Renderer. (#5592) [@lailoken]
+  - Vulkan: added for support for multiple Vulkan contexts with custom loaders. (#6616) [@lstalmir]
   - WebGPU: fixed passing non-integer sizes to `wgpuRenderPassEncoderSetViewport()`
     when when `FramebufferScale` is >1.0f. (#9515, #8628) [@WayU]
   - WebGPU: update to build with wgpu-native 29.0+. (#9377, #9532, #9530) [@lucascompython, @ivan-enzhaev]
