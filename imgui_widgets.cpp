@@ -2684,7 +2684,7 @@ bool ImGui::DragBehavior(ImGuiID id, ImGuiDataType data_type, void* p_v, float v
             ClearActiveID();
         else if ((g.ActiveIdSource == ImGuiInputSource_Keyboard || g.ActiveIdSource == ImGuiInputSource_Gamepad) && g.NavActivatePressedId == id && !g.ActiveIdIsJustActivated)
             ClearActiveID();
-        if (ShortcutsForCancel(id) && g.ActiveId == id)
+        if (ShortcutsForCancel(id) && g.ActiveId == id) //-V560 
         {
             // Canceling action reverts to initial value
             size_t data_size = DataTypeGetInfo(data_type)->Size;
@@ -3301,7 +3301,7 @@ bool ImGui::SliderBehavior(const ImRect& bb, ImGuiID id, ImGuiDataType data_type
             if (g.NavActivatePressedId == id && !g.ActiveIdIsJustActivated)
                 ClearActiveID();
         }
-        if (ShortcutsForCancel(id) && g.ActiveId == id)
+        if (ShortcutsForCancel(id) && g.ActiveId == id) //-V560
         {
             // Canceling action reverts to initial value
             size_t data_size = DataTypeGetInfo(data_type)->Size;
