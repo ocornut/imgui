@@ -55,6 +55,8 @@ Other Changes:
 - Drags, Sliders:
   - Fixed an overflow using `ImGuiSliderFlags_Logarithmic` with S32/S64 types which
     leads to clamped interactions. (#9526, #3361, #1823, #1316, #642) [@lailoken]
+  - Ongoing drags may be cancelled using Escape or Gamepad Triangle, reverting
+    to the initial value. (#8564, #9534)
 - TreeNode:
   - Fixed issues/asserts with 32+ deep trees when using ImGuiTreeNodeFlags_DrawLinesXXX
     features or other features requiring stack storage. (#9509) [@lasrod]
