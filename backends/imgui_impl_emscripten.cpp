@@ -151,7 +151,8 @@ void ImGui_ImplEmscripten_Init()
         EMSCRIPTEN_EVENT_TARGET_WINDOW,                                         // target
         nullptr,                                                                // userData
         false,                                                                  // useCapture
-        [](int /*event_type*/, EmscriptenMouseEvent const* mouse_event, void* /*data*/) { // callback, event_type == EMSCRIPTEN_EVENT_MOUSEMOVE
+        [](int /*event_type*/, EmscriptenMouseEvent const* mouse_event, void* /*data*/) // callback, event_type == EMSCRIPTEN_EVENT_MOUSEMOVE
+        {
             ImGui_ImplEmscripten_Data* bd = ImGui_ImplEmscripten_GetBackendData();
             float const css_to_imgui_scale = bd ? bd->CssToImGuiScale : 1.0f;
             ImGui::GetIO().AddMousePosEvent(
@@ -165,7 +166,8 @@ void ImGui_ImplEmscripten_Init()
         EMSCRIPTEN_EVENT_TARGET_WINDOW,                                         // target
         nullptr,                                                                // userData
         false,                                                                  // useCapture
-        [](int /*event_type*/, EmscriptenMouseEvent const* mouse_event, void* /*data*/) { // callback, event_type == EMSCRIPTEN_EVENT_MOUSEDOWN
+        [](int /*event_type*/, EmscriptenMouseEvent const* mouse_event, void* /*data*/) // callback, event_type == EMSCRIPTEN_EVENT_MOUSEDOWN
+        {
             ImGui::GetIO().AddMouseButtonEvent(ImGui_ImplEmscripten_TranslateMouseButton(mouse_event->button), true); // translated button, down
             return true;                                                        // the event was consumed
         }
@@ -174,7 +176,8 @@ void ImGui_ImplEmscripten_Init()
         EMSCRIPTEN_EVENT_TARGET_WINDOW,                                         // target
         nullptr,                                                                // userData
         false,                                                                  // useCapture
-        [](int /*event_type*/, EmscriptenMouseEvent const* mouse_event, void* /*data*/) { // callback, event_type == EMSCRIPTEN_EVENT_MOUSEUP
+        [](int /*event_type*/, EmscriptenMouseEvent const* mouse_event, void* /*data*/) // callback, event_type == EMSCRIPTEN_EVENT_MOUSEUP
+        {
             ImGui::GetIO().AddMouseButtonEvent(ImGui_ImplEmscripten_TranslateMouseButton(mouse_event->button), false); // translated button, up
             return true;                                                        // the event was consumed
         }
@@ -183,7 +186,8 @@ void ImGui_ImplEmscripten_Init()
         EMSCRIPTEN_EVENT_TARGET_DOCUMENT,                                       // target - WINDOW doesn't produce mouseenter events
         nullptr,                                                                // userData
         false,                                                                  // useCapture
-        [](int /*event_type*/, EmscriptenMouseEvent const* mouse_event, void* /*data*/) { // callback, event_type == EMSCRIPTEN_EVENT_MOUSEENTER
+        [](int /*event_type*/, EmscriptenMouseEvent const* mouse_event, void* /*data*/) // callback, event_type == EMSCRIPTEN_EVENT_MOUSEENTER
+        {
             ImGui_ImplEmscripten_Data* bd = ImGui_ImplEmscripten_GetBackendData();
             float const css_to_imgui_scale = bd ? bd->CssToImGuiScale : 1.0f;
             ImGui::GetIO().AddMousePosEvent(
@@ -197,7 +201,8 @@ void ImGui_ImplEmscripten_Init()
         EMSCRIPTEN_EVENT_TARGET_DOCUMENT,                                       // target - WINDOW doesn't produce mouseenter events
         nullptr,                                                                // userData
         false,                                                                  // useCapture
-        [](int /*event_type*/, EmscriptenMouseEvent const* /*mouse_event*/, void* /*data*/) { // callback, event_type == EMSCRIPTEN_EVENT_MOUSELEAVE
+        [](int /*event_type*/, EmscriptenMouseEvent const* /*mouse_event*/, void* /*data*/) // callback, event_type == EMSCRIPTEN_EVENT_MOUSELEAVE
+        {
             ImGuiIO& io = ImGui::GetIO();
             io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);                            // cursor is not in the window
             io.ClearInputKeys();                                                // clear pending input keys on mouse exit
@@ -208,7 +213,8 @@ void ImGui_ImplEmscripten_Init()
         EMSCRIPTEN_EVENT_TARGET_WINDOW,                                         // target
         nullptr,                                                                // userData
         false,                                                                  // useCapture
-        [](int /*event_type*/, EmscriptenWheelEvent const* wheel_event, void* /*data*/) { // callback, event_type == EMSCRIPTEN_EVENT_WHEEL
+        [](int /*event_type*/, EmscriptenWheelEvent const* wheel_event, void* /*data*/) // callback, event_type == EMSCRIPTEN_EVENT_WHEEL
+        {
             float scale = 1.0f;
             switch (wheel_event->deltaMode)
             {
@@ -235,7 +241,8 @@ void ImGui_ImplEmscripten_Init()
         EMSCRIPTEN_EVENT_TARGET_WINDOW,                                         // target
         nullptr,                                                                // userData
         false,                                                                  // useCapture
-        [](int /*event_type*/, EmscriptenKeyboardEvent const* key_event, void* /*data*/) { // callback, event_type == EMSCRIPTEN_EVENT_KEYDOWN
+        [](int /*event_type*/, EmscriptenKeyboardEvent const* key_event, void* /*data*/) // callback, event_type == EMSCRIPTEN_EVENT_KEYDOWN
+        {
             const ImGuiKey key = ImGui_ImplEmscripten_TranslateKey(key_event->code);
             ImGuiIO& io = ImGui::GetIO();
             io.AddKeyEvent(key, true);
@@ -273,7 +280,8 @@ void ImGui_ImplEmscripten_Init()
         EMSCRIPTEN_EVENT_TARGET_WINDOW,                                         // target
         nullptr,                                                                // userData
         false,                                                                  // useCapture
-        [](int /*event_type*/, EmscriptenKeyboardEvent const* key_event, void* /*data*/) { // callback, event_type == EMSCRIPTEN_EVENT_KEYUP
+        [](int /*event_type*/, EmscriptenKeyboardEvent const* key_event, void* /*data*/) // callback, event_type == EMSCRIPTEN_EVENT_KEYUP
+        {
             const ImGuiKey key = ImGui_ImplEmscripten_TranslateKey(key_event->code);
             ImGuiIO& io = ImGui::GetIO();
             io.AddKeyEvent(key, false);
@@ -305,7 +313,8 @@ void ImGui_ImplEmscripten_Init()
         EMSCRIPTEN_EVENT_TARGET_WINDOW,                                         // target
         nullptr,                                                                // userData
         false,                                                                  // useCapture
-        [](int /*event_type*/, EmscriptenKeyboardEvent const* key_event, void* /*data*/) { // callback, event_type == EMSCRIPTEN_EVENT_KEYPRESS
+        [](int /*event_type*/, EmscriptenKeyboardEvent const* key_event, void* /*data*/) // callback, event_type == EMSCRIPTEN_EVENT_KEYPRESS
+        {
             ImGuiIO& io = ImGui::GetIO();
             io.AddInputCharactersUTF8(key_event->key);
             return io.WantCaptureKeyboard;                                      // the event was consumed only if imgui wants to capture the keyboard
@@ -315,7 +324,8 @@ void ImGui_ImplEmscripten_Init()
         EMSCRIPTEN_EVENT_TARGET_WINDOW,                                         // target
         nullptr,                                                                // userData
         false,                                                                  // useCapture
-        [](int /*event_type*/, EmscriptenUiEvent const* event, void* /*data*/) { // event_type == EMSCRIPTEN_EVENT_RESIZE
+        [](int /*event_type*/, EmscriptenUiEvent const* event, void* /*data*/)  // event_type == EMSCRIPTEN_EVENT_RESIZE
+        {
             ImGuiIO& io = ImGui::GetIO();
             ImGui_ImplEmscripten_Data* bd = ImGui_ImplEmscripten_GetBackendData();
             if (bd != nullptr) ImGui_ImplEmscripten_UpdateDisplayProperties(io, bd, (float)event->windowInnerWidth, (float)event->windowInnerHeight);
@@ -326,7 +336,8 @@ void ImGui_ImplEmscripten_Init()
         EMSCRIPTEN_EVENT_TARGET_WINDOW,                                         // target
         nullptr,                                                                // userData
         false,                                                                  // useCapture
-        [](int /*event_type*/, EmscriptenFocusEvent const* /*event*/, void* /*data*/) { // event_type == EMSCRIPTEN_EVENT_BLUR
+        [](int /*event_type*/, EmscriptenFocusEvent const* /*event*/, void* /*data*/) // event_type == EMSCRIPTEN_EVENT_BLUR
+        {
             ImGuiIO& io = ImGui::GetIO();
             io.AddFocusEvent(false);
             io.ClearInputKeys();                                                // clear pending input keys on focus loss
@@ -337,7 +348,8 @@ void ImGui_ImplEmscripten_Init()
         EMSCRIPTEN_EVENT_TARGET_WINDOW,                                         // target
         nullptr,                                                                // userData
         false,                                                                  // useCapture
-        [](int /*event_type*/, EmscriptenFocusEvent const* /*event*/, void* /*data*/) { // event_type == EMSCRIPTEN_EVENT_FOCUS
+        [](int /*event_type*/, EmscriptenFocusEvent const* /*event*/, void* /*data*/) // event_type == EMSCRIPTEN_EVENT_FOCUS
+        {
             ImGuiIO& io = ImGui::GetIO();
             io.AddFocusEvent(true);
             io.ClearInputKeys();                                                // clear pending input keys on focus gain - for example if you press tab to cycle back into the browser window
@@ -348,7 +360,8 @@ void ImGui_ImplEmscripten_Init()
         EMSCRIPTEN_EVENT_TARGET_WINDOW,                                         // target
         nullptr,                                                                // userData
         false,                                                                  // useCapture
-        [](int /*event_type*/, EmscriptenFocusEvent const* /*event*/, void* /*data*/) { // event_type == EMSCRIPTEN_EVENT_FOCUSIN
+        [](int /*event_type*/, EmscriptenFocusEvent const* /*event*/, void* /*data*/) // event_type == EMSCRIPTEN_EVENT_FOCUSIN
+        {
             ImGuiIO& io = ImGui::GetIO();
             io.AddFocusEvent(true);
             io.ClearInputKeys();                                                // clear pending input keys on focus gain
@@ -359,7 +372,8 @@ void ImGui_ImplEmscripten_Init()
         EMSCRIPTEN_EVENT_TARGET_WINDOW,                                         // target
         nullptr,                                                                // userData
         false,                                                                  // useCapture
-        [](int /*event_type*/, EmscriptenFocusEvent const* /*event*/, void* /*data*/) { // event_type == EMSCRIPTEN_EVENT_FOCUSOUT
+        [](int /*event_type*/, EmscriptenFocusEvent const* /*event*/, void* /*data*/) // event_type == EMSCRIPTEN_EVENT_FOCUSOUT
+        {
             ImGuiIO& io = ImGui::GetIO();
             io.AddFocusEvent(false);
             io.ClearInputKeys();                                                // clear pending input keys on focus loss - for example if you press tab to cycle to another part of the UI
@@ -790,7 +804,8 @@ static ImGuiStorage const& ImGui_ImplEmscripten_GetKeyTranslationStorage()
     if (is_initialized) return storage;
     is_initialized = true;
     storage.Data.reserve(IM_ARRAYSIZE(key_translations));
-    for (int n = 0; n != IM_ARRAYSIZE(key_translations); ++n) {
+    for (int n = 0; n != IM_ARRAYSIZE(key_translations); ++n)
+    {
         storage.Data.push_back(ImGuiStoragePair(ImHashStr(key_translations[n].EmscriptenKey), key_translations[n].Key));
     }
     storage.BuildSortByKey();
