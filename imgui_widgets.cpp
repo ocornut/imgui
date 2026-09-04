@@ -2808,11 +2808,19 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data,
     if (color_marker != 0 && style.ColorMarkerSize > 0.0f)
         RenderColorComponentMarker(frame_bb, GetColorU32(color_marker), style.FrameRounding);
     RenderFrameBorder(frame_bb.Min, frame_bb.Max, g.Style.FrameRounding);
+// Drag behavior
+bool value_changed = DragBehavior(id, data_type, p_data, v_speed, p_min, p_max, format, flags);
 
-    // Drag behavior
-    const bool value_changed = DragBehavior(id, data_type, p_data, v_speed, p_min, p_max, format, flags);
-    if (value_changed)
-        MarkItemEdited(id);
+// Right-click cancels the active drag and restores the value from activation.
+if (g.ActiveId == id && IsMouseClicked(1))
+{
+    memcpy(p_data, &g.ActiveIdValueOnActivation, DataTypeGetInfo(data_type)->Size);
+    ClearActiveID();
+    value_changed = false;
+}
+
+if (value_changed)
+    MarkItemEdited(id);
 
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
     char value_buf[64];
