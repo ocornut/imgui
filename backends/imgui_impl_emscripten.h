@@ -45,7 +45,7 @@
 extern IMGUI_IMPL_API float ImGui_ImplEmscripten_TargetDevicePixelRatio;
 
 // Initialise the Emscripten backend, setting input callbacks.  This should be called after ImGui::CreateContext();
-IMGUI_IMPL_API void ImGui_ImplEmscripten_Init();
+IMGUI_IMPL_API bool ImGui_ImplEmscripten_Init();
 
 // Shut down the Emscripten backend.  This unsets all Emscripten input callbacks set by Init.
 // Note it'll also unset any Emscripten input callbacks set elsewhere in the program!

@@ -123,7 +123,7 @@ static ImGui_ImplEmscripten_Data* ImGui_ImplEmscripten_GetBackendData()
     return ImGui::GetCurrentContext() ? (ImGui_ImplEmscripten_Data*)ImGui::GetIO().BackendPlatformUserData : nullptr;
 }
 
-void ImGui_ImplEmscripten_Init()
+bool ImGui_ImplEmscripten_Init()
 {
     // Initialise the Emscripten backend, setting input callbacks
     ImGuiIO& io = ImGui::GetIO();
@@ -377,6 +377,8 @@ void ImGui_ImplEmscripten_Init()
     );
 
     // TODO: Touch events
+
+    return true;
 }
 
 void ImGui_ImplEmscripten_Shutdown()
