@@ -313,6 +313,9 @@ Other Changes:
       when available, fixing OpenGL DPI scaling issues as e.g. NVIDIA drivers tends
       to spawn multiple-thread to manage OpenGL. (#9403)
 - Examples:
+  - Android: Removed JNI boilerplate (ShowSoftKeyboardInput, PollUnicodeChars) from
+    the example as these are now handled by the backend. (#3446)
+    Use display density for main_scale instead of hardcoded 2.0f.
   - Android: update to AGP 9.2.0 to support Gradle 9.6.0.
   - Apple+Metal4: added new example. (#9465, #9451) [@hoffstadt]
   - OpenGL3+GLFW/SDL2/SDL3: allow Wine compatibility by passing empty GLSL version
