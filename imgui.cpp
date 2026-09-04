@@ -1387,6 +1387,7 @@ static void             WindowSettingsHandler_ApplyAll(ImGuiContext*, ImGuiSetti
 static void             WindowSettingsHandler_WriteAll(ImGuiContext*, ImGuiSettingsHandler*, ImGuiTextBuffer* buf);
 
 // Platform Dependents default implementation for ImGuiPlatformIO functions
+static void             InitializePlatformHandlers(ImGuiPlatformIO&);
 static const char*      Platform_GetClipboardTextFn_DefaultImpl(ImGuiContext* ctx);
 static void             Platform_SetClipboardTextFn_DefaultImpl(ImGuiContext* ctx, const char* text);
 static void             Platform_SetImeDataFn_DefaultImpl(ImGuiContext* ctx, ImGuiViewport* viewport, ImGuiPlatformImeData* data);
@@ -4485,11 +4486,8 @@ void ImGui::Initialize()
     // Setup default localization table
     LocalizeRegisterEntries(GLocalizationEntriesEnUS, IM_COUNTOF(GLocalizationEntriesEnUS));
 
-    // Setup default ImGuiPlatformIO clipboard/IME handlers.
-    g.PlatformIO.Platform_GetClipboardTextFn = Platform_GetClipboardTextFn_DefaultImpl;    // Platform dependent default implementations
-    g.PlatformIO.Platform_SetClipboardTextFn = Platform_SetClipboardTextFn_DefaultImpl;
-    g.PlatformIO.Platform_OpenInShellFn = Platform_OpenInShellFn_DefaultImpl;
-    g.PlatformIO.Platform_SetImeDataFn = Platform_SetImeDataFn_DefaultImpl;
+    // Setup default platform handlers
+    InitializePlatformHandlers(g.PlatformIO);
 
     // Setup session starting date
 #ifndef IMGUI_DISABLE_TIME_FUNCTIONS
@@ -16101,6 +16099,10 @@ void ImGuiPlatformIO::ClearPlatformHandlers()
     Platform_OpenInShellUserData = NULL;
     Platform_SetImeDataFn = NULL;
     Platform_ImeUserData = NULL;
+
+    // Restore the platform handlers to the initial state.
+    // This prevents losing the functionality provided by Platform_*_DefaultImpl on backend re-creation.
+    InitializePlatformHandlers(*this);
 }
 
 void ImGuiPlatformIO::ClearRendererHandlers()
@@ -16188,6 +16190,15 @@ static void ImGui::UpdateViewportsNewFrame()
 // - Default shell function handlers
 // - Default IME handlers
 //-----------------------------------------------------------------------------
+
+static void InitializePlatformHandlers(ImGuiPlatformIO& io)
+{
+    // Setup default ImGuiPlatformIO clipboard/IME handlers
+    io.Platform_GetClipboardTextFn = Platform_GetClipboardTextFn_DefaultImpl;
+    io.Platform_SetClipboardTextFn = Platform_SetClipboardTextFn_DefaultImpl;
+    io.Platform_OpenInShellFn = Platform_OpenInShellFn_DefaultImpl;
+    io.Platform_SetImeDataFn = Platform_SetImeDataFn_DefaultImpl;
+}
 
 #if defined(_WIN32) && !defined(IMGUI_DISABLE_WIN32_FUNCTIONS) && !defined(IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCTIONS)
 
