@@ -4,6 +4,7 @@
 //
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-09-04: Emscripten: Replaced TargetDevicePixelRatio global with an Init() parameter and runtime setter.
 //  2026-09-03: Updated coding style and simplified key translation table setup.
 //  2026-04-02: Inputs: Replaced custom KeyboardEvent.code parser with ImHashStr()/ImGuiStorage lookup to match Dear ImGui backend style.
 //  2026-03-31: Emscripten: Added configurable TargetDevicePixelRatio to control how browser device pixels map to Dear ImGui pixels.
@@ -24,8 +25,6 @@
 #include <emscripten/html5.h>
 
 extern ImGuiID ImHashStr(char const* data, size_t data_size = 0, ImGuiID seed = 0); // Declared in imgui_internal.h.
-
-float ImGui_ImplEmscripten_TargetDevicePixelRatio = 1.0f;
 
 // W3C UI Events KeyboardEvent.code translation helpers
 
@@ -94,6 +93,7 @@ static void ImGui_ImplEmscripten_SetBrowserCursor(char const* new_cursor);      
 
 struct ImGui_ImplEmscripten_Data
 {
+    float TargetDevicePixelRatio = 1.0f;
     float CssToImGuiScale = 1.0f;
     ImGui_ImplEmscripten_Cursor CurrentCursor = ImGui_ImplEmscripten_Cursor_Invalid;
     char* CursorToRestore = nullptr;
@@ -101,15 +101,9 @@ struct ImGui_ImplEmscripten_Data
     bool LastNoMouseCursorChange = false;
 };
 
-static float ImGui_ImplEmscripten_GetTargetDevicePixelRatio()
-{
-    IM_ASSERT(ImGui_ImplEmscripten_TargetDevicePixelRatio > 0.0f && "ImGui_ImplEmscripten_TargetDevicePixelRatio must be positive.");
-    return ImGui_ImplEmscripten_TargetDevicePixelRatio > 0.0f ? ImGui_ImplEmscripten_TargetDevicePixelRatio : 1.0f;
-}
-
 static void ImGui_ImplEmscripten_UpdateDisplayProperties(ImGuiIO& io, ImGui_ImplEmscripten_Data* bd, float css_width, float css_height)
 {
-    float const target_device_pixel_ratio = ImGui_ImplEmscripten_GetTargetDevicePixelRatio();
+    float const target_device_pixel_ratio = bd->TargetDevicePixelRatio;
     float const css_to_imgui_scale = (float)emscripten_get_device_pixel_ratio() / target_device_pixel_ratio;
     bd->CssToImGuiScale = css_to_imgui_scale;
     io.DisplaySize.x = css_width * css_to_imgui_scale;
@@ -123,13 +117,16 @@ static ImGui_ImplEmscripten_Data* ImGui_ImplEmscripten_GetBackendData()
     return ImGui::GetCurrentContext() ? (ImGui_ImplEmscripten_Data*)ImGui::GetIO().BackendPlatformUserData : nullptr;
 }
 
-bool ImGui_ImplEmscripten_Init()
+bool ImGui_ImplEmscripten_Init(float target_device_pixel_ratio)
 {
     // Initialise the Emscripten backend, setting input callbacks
     ImGuiIO& io = ImGui::GetIO();
     IMGUI_CHECKVERSION();
     IM_ASSERT(io.BackendPlatformUserData == nullptr && "Already initialized a platform backend!");
+    IM_ASSERT(target_device_pixel_ratio > 0.0f && "Target device pixel ratio must be positive.");
+    if (target_device_pixel_ratio <= 0.0f) return false;
     ImGui_ImplEmscripten_Data* bd = IM_NEW(ImGui_ImplEmscripten_Data)();
+    bd->TargetDevicePixelRatio = target_device_pixel_ratio;
     io.BackendPlatformUserData = (void*)bd;
     io.BackendPlatformName = "imgui_impl_emscripten";
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;
@@ -379,6 +376,22 @@ bool ImGui_ImplEmscripten_Init()
     // TODO: Touch events
 
     return true;
+}
+
+void ImGui_ImplEmscripten_SetTargetDevicePixelRatio(float target_device_pixel_ratio)
+{
+    ImGui_ImplEmscripten_Data* bd = ImGui_ImplEmscripten_GetBackendData();
+    IM_ASSERT(bd != nullptr && "Context or backend not initialized? Did you call ImGui_ImplEmscripten_Init()?");
+    IM_ASSERT(target_device_pixel_ratio > 0.0f && "Target device pixel ratio must be positive.");
+    if (bd == nullptr || target_device_pixel_ratio <= 0.0f || target_device_pixel_ratio == bd->TargetDevicePixelRatio) return;
+
+    bd->TargetDevicePixelRatio = target_device_pixel_ratio;
+    ImGui_ImplEmscripten_UpdateDisplayProperties(
+        ImGui::GetIO(),
+        bd,
+        (float)EM_ASM_INT(return window.innerWidth;),
+        (float)EM_ASM_INT(return window.innerHeight;)
+    );
 }
 
 void ImGui_ImplEmscripten_Shutdown()
