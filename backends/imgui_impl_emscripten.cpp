@@ -4,6 +4,7 @@
 //
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-09-05: Emscripten: Use the canvas framebuffer dimensions for display sizing and exact per-axis mouse coordinate scaling.
 //  2026-09-04: Emscripten: Replaced TargetDevicePixelRatio global with an Init() parameter and runtime setter.
 //  2026-09-03: Updated coding style and simplified key translation table setup.
 //  2026-04-02: Inputs: Replaced custom KeyboardEvent.code parser with ImHashStr()/ImGuiStorage lookup to match Dear ImGui backend style.
@@ -94,21 +95,38 @@ static void ImGui_ImplEmscripten_SetBrowserCursor(char const* new_cursor);      
 struct ImGui_ImplEmscripten_Data
 {
     float TargetDevicePixelRatio = 1.0f;
-    float CssToImGuiScale = 1.0f;
+    ImVec2 CssToImGuiScale = ImVec2(1.0f, 1.0f);
+    ImVec2 CanvasFramebufferSize = ImVec2(0.0f, 0.0f);
     ImGui_ImplEmscripten_Cursor CurrentCursor = ImGui_ImplEmscripten_Cursor_Invalid;
     char* CursorToRestore = nullptr;
     bool LastMouseDrawCursor = false;
     bool LastNoMouseCursorChange = false;
 };
 
-static void ImGui_ImplEmscripten_UpdateDisplayProperties(ImGuiIO& io, ImGui_ImplEmscripten_Data* bd, float css_width, float css_height)
+static ImVec2 ImGui_ImplEmscripten_GetCanvasFramebufferSize()
 {
+    return ImVec2(
+        (float)EM_ASM_INT({ return Module["canvas"] ? Module["canvas"].width : 0; }),
+        (float)EM_ASM_INT({ return Module["canvas"] ? Module["canvas"].height : 0; }));
+}
+
+static void ImGui_ImplEmscripten_UpdateDisplayProperties(ImGuiIO& io, ImGui_ImplEmscripten_Data* bd)
+{
+    double const css_width = EM_ASM_DOUBLE({ return Module["canvas"] ? Module["canvas"].getBoundingClientRect().width : window.innerWidth; });
+    double const css_height = EM_ASM_DOUBLE({ return Module["canvas"] ? Module["canvas"].getBoundingClientRect().height : window.innerHeight; });
     float const target_device_pixel_ratio = bd->TargetDevicePixelRatio;
-    float const css_to_imgui_scale = (float)emscripten_get_device_pixel_ratio() / target_device_pixel_ratio;
-    bd->CssToImGuiScale = css_to_imgui_scale;
-    io.DisplaySize.x = css_width * css_to_imgui_scale;
-    io.DisplaySize.y = css_height * css_to_imgui_scale;
+    ImVec2 framebuffer_size = ImGui_ImplEmscripten_GetCanvasFramebufferSize();
+    if (framebuffer_size.x <= 0.0f || framebuffer_size.y <= 0.0f)
+    {
+        double const device_pixel_ratio = emscripten_get_device_pixel_ratio();
+        framebuffer_size = ImVec2((float)(int)(css_width * device_pixel_ratio + 0.5), (float)(int)(css_height * device_pixel_ratio + 0.5));
+    }
+    bd->CanvasFramebufferSize = framebuffer_size;
+    io.DisplaySize.x = framebuffer_size.x / target_device_pixel_ratio;
+    io.DisplaySize.y = framebuffer_size.y / target_device_pixel_ratio;
     io.DisplayFramebufferScale = ImVec2(target_device_pixel_ratio, target_device_pixel_ratio);
+    bd->CssToImGuiScale.x = css_width > 0.0 ? (float)((double)io.DisplaySize.x / css_width) : 1.0f;
+    bd->CssToImGuiScale.y = css_height > 0.0 ? (float)((double)io.DisplaySize.y / css_height) : 1.0f;
 }
 
 // Backend data stored in io.BackendPlatformUserData to allow support for multiple Dear ImGui contexts
@@ -132,12 +150,7 @@ bool ImGui_ImplEmscripten_Init(float target_device_pixel_ratio)
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;
 
     // Set up initial display size values
-    ImGui_ImplEmscripten_UpdateDisplayProperties(
-        io,
-        bd,
-        (float)EM_ASM_INT(return window.innerWidth;),
-        (float)EM_ASM_INT(return window.innerHeight;)
-    );
+    ImGui_ImplEmscripten_UpdateDisplayProperties(io, bd);
 
     emscripten_set_mousemove_callback(
         EMSCRIPTEN_EVENT_TARGET_WINDOW,                                         // target
@@ -146,10 +159,10 @@ bool ImGui_ImplEmscripten_Init(float target_device_pixel_ratio)
         [](int /*event_type*/, EmscriptenMouseEvent const* mouse_event, void* /*data*/) // callback, event_type == EMSCRIPTEN_EVENT_MOUSEMOVE
         {
             ImGui_ImplEmscripten_Data* bd = ImGui_ImplEmscripten_GetBackendData();
-            float const css_to_imgui_scale = bd ? bd->CssToImGuiScale : 1.0f;
+            ImVec2 const css_to_imgui_scale = bd ? bd->CssToImGuiScale : ImVec2(1.0f, 1.0f);
             ImGui::GetIO().AddMousePosEvent(
-                (float)mouse_event->clientX * css_to_imgui_scale,
-                (float)mouse_event->clientY * css_to_imgui_scale
+                (float)mouse_event->clientX * css_to_imgui_scale.x,
+                (float)mouse_event->clientY * css_to_imgui_scale.y
             );
             return true;                                                        // the event was consumed
         }
@@ -181,10 +194,10 @@ bool ImGui_ImplEmscripten_Init(float target_device_pixel_ratio)
         [](int /*event_type*/, EmscriptenMouseEvent const* mouse_event, void* /*data*/) // callback, event_type == EMSCRIPTEN_EVENT_MOUSEENTER
         {
             ImGui_ImplEmscripten_Data* bd = ImGui_ImplEmscripten_GetBackendData();
-            float const css_to_imgui_scale = bd ? bd->CssToImGuiScale : 1.0f;
+            ImVec2 const css_to_imgui_scale = bd ? bd->CssToImGuiScale : ImVec2(1.0f, 1.0f);
             ImGui::GetIO().AddMousePosEvent(
-                (float)mouse_event->clientX * css_to_imgui_scale,
-                (float)mouse_event->clientY * css_to_imgui_scale
+                (float)mouse_event->clientX * css_to_imgui_scale.x,
+                (float)mouse_event->clientY * css_to_imgui_scale.y
             );
             return true;                                                        // the event was consumed
         }
@@ -316,11 +329,11 @@ bool ImGui_ImplEmscripten_Init(float target_device_pixel_ratio)
         EMSCRIPTEN_EVENT_TARGET_WINDOW,                                         // target
         nullptr,                                                                // userData
         false,                                                                  // useCapture
-        [](int /*event_type*/, EmscriptenUiEvent const* event, void* /*data*/)  // event_type == EMSCRIPTEN_EVENT_RESIZE
+        [](int /*event_type*/, EmscriptenUiEvent const* /*event*/, void* /*data*/) // event_type == EMSCRIPTEN_EVENT_RESIZE
         {
             ImGuiIO& io = ImGui::GetIO();
             ImGui_ImplEmscripten_Data* bd = ImGui_ImplEmscripten_GetBackendData();
-            if (bd != nullptr) ImGui_ImplEmscripten_UpdateDisplayProperties(io, bd, (float)event->windowInnerWidth, (float)event->windowInnerHeight);
+            if (bd != nullptr) ImGui_ImplEmscripten_UpdateDisplayProperties(io, bd);
             return true;                                                        // the event was consumed
         }
     );
@@ -386,12 +399,7 @@ void ImGui_ImplEmscripten_SetTargetDevicePixelRatio(float target_device_pixel_ra
     if (bd == nullptr || target_device_pixel_ratio <= 0.0f || target_device_pixel_ratio == bd->TargetDevicePixelRatio) return;
 
     bd->TargetDevicePixelRatio = target_device_pixel_ratio;
-    ImGui_ImplEmscripten_UpdateDisplayProperties(
-        ImGui::GetIO(),
-        bd,
-        (float)EM_ASM_INT(return window.innerWidth;),
-        (float)EM_ASM_INT(return window.innerHeight;)
-    );
+    ImGui_ImplEmscripten_UpdateDisplayProperties(ImGui::GetIO(), bd);
 }
 
 void ImGui_ImplEmscripten_Shutdown()
@@ -528,6 +536,9 @@ void ImGui_ImplEmscripten_NewFrame()
     IM_ASSERT(bd != nullptr && "Context or backend not initialized? Did you call ImGui_ImplEmscripten_Init()?");
 
     // Update any state that needs to be polled
+    ImVec2 const canvas_framebuffer_size = ImGui_ImplEmscripten_GetCanvasFramebufferSize();
+    if (canvas_framebuffer_size.x != bd->CanvasFramebufferSize.x || canvas_framebuffer_size.y != bd->CanvasFramebufferSize.y)
+        ImGui_ImplEmscripten_UpdateDisplayProperties(ImGui::GetIO(), bd);
     ImGui_ImplEmscripten_UpdateMouseCursor(bd);
 }
 
