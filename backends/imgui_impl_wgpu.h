@@ -1,6 +1,6 @@
 // dear imgui: Renderer for WebGPU
-// This needs to be used along with a Platform Binding (e.g. GLFW, SDL2, SDL3)
-// (Please note that WebGPU is a recent API, may not be supported by all browser, and its ecosystem is generally a mess)
+// This needs to be used along with a Platform Binding (e.g. GLFW, SDL2, SDL3, Emscripten)
+// (Please note that WebGPU is a recent API, may not be supported by all browsers, and its ecosystem is generally a mess)
 
 // When targeting native platforms:
 //  - One of IMGUI_IMPL_WEBGPU_BACKEND_DAWN, IMGUI_IMPL_WEBGPU_BACKEND_WGPU or IMGUI_IMPL_WEBGPU_BACKEND_WGVK *must* be provided.
