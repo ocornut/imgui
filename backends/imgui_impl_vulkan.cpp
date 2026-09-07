@@ -29,6 +29,8 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2026-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2026-09-07: Round framebuffer dimensions to the nearest integer instead of truncating them. (#9538, 9515, #8628)
+//  2026-09-03: Added for support for multiple Vulkan contexts with custom loaders. (#6616)
 //  2026-07-15: [Docking] Vulkan: fixed use-after-free when using multi-viewport with dynamic rendering path: deep-copy SurfaceFormat.format into the persistent buffer instead of storing a pointer to the viewport's wd->SurfaceFormat which dangles after the viewport is destroyed. (#9390, #9468)
 //  2026-04-23: Added support for standard draw callbacks (in platform_io): DrawCallback_ResetRenderState, DrawCallback_SetSamplerLinear, DrawCallback_SetSamplerNearest. (#9378)
 //  2026-04-22: *BREAKING CHANGE* redesigned to use separate ImageView + Sampler instead of Combined Image Sampler. This change allows us to facilitate changing samplers, in line with other backends.
@@ -241,10 +243,28 @@ static bool g_FunctionsLoaded = true;
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkUpdateDescriptorSets) \
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkWaitForFences)
 
+struct ImGui_ImplVulkan_Functions
+{
 // Define function pointers
-#define IMGUI_VULKAN_FUNC_DEF(func) static PFN_##func func;
+#define IMGUI_VULKAN_FUNC_DEF(func) PFN_##func pfn_##func;
 IMGUI_VULKAN_FUNC_MAP(IMGUI_VULKAN_FUNC_DEF)
 #undef IMGUI_VULKAN_FUNC_DEF
+};
+
+// Globally available function pointers used for initialization of the backend data
+static ImGui_ImplVulkan_Functions   ImGuiImplVulkanFuncs;
+
+// Multi Vulkan contexts support: wrap each Vulkan function pointer to properly dispatch it using the current backend data
+static ImGui_ImplVulkan_Functions&  ImGui_ImplVulkan_GetFunctions();
+#define IMGUI_VULKAN_FUNC_WRAPPER(func) \
+    template<typename... Args> \
+    auto func(Args&&... args) -> decltype(ImGui_ImplVulkan_GetFunctions().pfn_##func(args...)) \
+    { \
+        return ImGui_ImplVulkan_GetFunctions().pfn_##func(args...); \
+    }
+IMGUI_VULKAN_FUNC_MAP(IMGUI_VULKAN_FUNC_WRAPPER)
+#undef IMGUI_VULKAN_FUNC_WRAPPER
+
 #endif // IMGUI_IMPL_VULKAN_USE_LOADER
 
 #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
@@ -325,6 +345,11 @@ struct ImGui_ImplVulkan_Data
 
     // Render buffers for main window
     ImGui_ImplVulkan_WindowRenderBuffers MainWindowRenderBuffers;
+
+    // Vulkan function pointers loaded for this context
+#ifdef IMGUI_IMPL_VULKAN_USE_LOADER
+    ImGui_ImplVulkan_Functions  Functions;
+#endif
 
     ImGui_ImplVulkan_Data()
     {
@@ -464,6 +489,16 @@ static ImGui_ImplVulkan_Data* ImGui_ImplVulkan_GetBackendData()
     return ImGui::GetCurrentContext() ? (ImGui_ImplVulkan_Data*)ImGui::GetIO().BackendRendererUserData : nullptr;
 }
 
+#ifdef IMGUI_IMPL_VULKAN_USE_LOADER
+// Get the Vulkan function pointers used by the current backend.
+// If no backend is available, return the currently loaded global function pointers (ImGuiImplVulkanFuncs).
+static ImGui_ImplVulkan_Functions& ImGui_ImplVulkan_GetFunctions()
+{
+    ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
+    return bd ? bd->Functions : ImGuiImplVulkanFuncs;
+}
+#endif
+
 static uint32_t ImGui_ImplVulkan_MemoryType(VkMemoryPropertyFlags properties, uint32_t type_bits)
 {
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
@@ -559,7 +594,7 @@ static void ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, VkPipeline 
     constants[1] = 2.0f / draw_data->DisplaySize.y;
     constants[2] = -1.0f - draw_data->DisplayPos.x * constants[0]; // Translate
     constants[3] = -1.0f - draw_data->DisplayPos.y * constants[1];
-    vkCmdPushConstants(command_buffer, bd->PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(float) * 4, constants);
+    vkCmdPushConstants(command_buffer, bd->PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, (uint32_t)sizeof(float) * 4, constants);
 
     // Setup sampler
     vkCmdBindDescriptorSets(bd->RenderState->CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 1, 1, &bd->SamplerLinearDS, 0, nullptr);
@@ -583,8 +618,8 @@ void ImGui_ImplVulkan_DrawCallback_SetSamplerCustom(const ImDrawList*, const ImD
 void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer, VkPipeline pipeline)
 {
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
-    int fb_width = (int)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
-    int fb_height = (int)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
+    int fb_width = (int)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x + 0.5f);
+    int fb_height = (int)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y + 0.5f);
     if (fb_width <= 0 || fb_height <= 0)
         return;
 
@@ -1354,8 +1389,8 @@ bool    ImGui_ImplVulkan_LoadFunctions(uint32_t api_version, PFN_vkVoidFunction(
 
 #ifdef IMGUI_IMPL_VULKAN_USE_LOADER
 #define IMGUI_VULKAN_FUNC_LOAD(func) \
-    func = reinterpret_cast<decltype(func)>(loader_func(#func, user_data)); \
-    if (func == nullptr)   \
+    ImGuiImplVulkanFuncs.pfn_##func = reinterpret_cast<PFN_##func>(loader_func(#func, user_data)); \
+    if (ImGuiImplVulkanFuncs.pfn_##func == nullptr)   \
         return false;
     IMGUI_VULKAN_FUNC_MAP(IMGUI_VULKAN_FUNC_LOAD)
 #undef IMGUI_VULKAN_FUNC_LOAD
@@ -1424,6 +1459,9 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info)
         IM_ASSERT(info->PipelineInfoMain.RenderPass == VK_NULL_HANDLE && info->PipelineInfoForViewports.RenderPass == VK_NULL_HANDLE);
 
     bd->VulkanInitInfo = *info;
+#ifdef IMGUI_IMPL_VULKAN_USE_LOADER
+    bd->Functions = ImGuiImplVulkanFuncs;
+#endif
 
     VkPhysicalDeviceProperties properties;
     vkGetPhysicalDeviceProperties(info->PhysicalDevice, &properties);

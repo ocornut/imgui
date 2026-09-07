@@ -18,6 +18,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2026-XX-XX: Metal: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2026-09-07: Round framebuffer dimensions to the nearest integer instead of truncating them. (#9538, 9515, #8628)
 //  2026-08-06: Metal: fixed resizing windows losing framebuffer scale. (#6828, #8856)
 //  2026-04-28: Added support for standard draw callbacks (in platform_io): DrawCallback_SetSamplerLinear and DrawCallback_SetSamplerNearest. (#9378, #9381)
 //  2026-04-23: Added support for standard draw callbacks (in platform_io): DrawCallback_ResetRenderState (others are not yet supported). (#9378)
@@ -172,8 +173,8 @@ static void ImGui_ImplMetal_SetupRenderState(ImDrawData* draw_data, id<MTLComman
     {
         .originX = 0.0,
         .originY = 0.0,
-        .width = (double)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x),
-        .height = (double)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y),
+        .width = (double)(int)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x + 0.5f),
+        .height = (double)(int)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y + 0.5f),
         .znear = 0.0,
         .zfar = 1.0
     };
@@ -212,8 +213,8 @@ void ImGui_ImplMetal_RenderDrawData(ImDrawData* draw_data, id<MTLCommandBuffer> 
     MetalContext* ctx = bd->SharedMetalContext;
 
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
-    int fb_width = (int)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
-    int fb_height = (int)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
+    int fb_width = (int)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x + 0.5f);
+    int fb_height = (int)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y + 0.5f);
     if (fb_width <= 0 || fb_height <= 0 || draw_data->CmdLists.Size == 0)
         return;
 
