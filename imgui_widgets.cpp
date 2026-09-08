@@ -2093,8 +2093,10 @@ void ImGui::EndCombo()
     EndPopup();
 }
 
-// Call directly after the BeginCombo/EndCombo block. The preview is designed to only host non-interactive elements
-// (Experimental, see GitHub issues: #1658, #4168)
+// Call directly after the BeginCombo() call. If you use nested combo, make sure you end wait for EndCombo() to call this!
+// The preview is designed to only host non-interactive elements.
+// - [BETA] See GitHub issues: #1658, #4168.
+// - Not compatible with ImGuiComboFlags_WidthFitPreview.
 bool ImGui::BeginComboPreview()
 {
     ImGuiContext& g = *GImGui;
@@ -2113,6 +2115,9 @@ bool ImGui::BeginComboPreview()
     preview_data->BackupCursorPosPrevLine = window->DC.CursorPosPrevLine;
     preview_data->BackupPrevLineTextBaseOffset = window->DC.PrevLineTextBaseOffset;
     preview_data->BackupLayout = window->DC.LayoutType;
+    preview_data->BackupWorkRectMaxX = window->WorkRect.Max.x;
+    preview_data->BackupContentRectMaxX = window->ContentRegionRect.Max.x;
+    window->WorkRect.Max.x = window->ContentRegionRect.Max.x = preview_data->PreviewRect.Max.x - g.Style.FramePadding.x;
     window->DC.CursorPos = preview_data->PreviewRect.Min + g.Style.FramePadding;
     window->DC.CursorMaxPos = window->DC.CursorPos;
     window->DC.LayoutType = ImGuiLayoutType_Horizontal;
@@ -2138,9 +2143,11 @@ void ImGui::EndComboPreview()
         }
     PopClipRect();
     window->DC.CursorPos = preview_data->BackupCursorPos;
-    window->DC.CursorMaxPos = ImMax(window->DC.CursorMaxPos, preview_data->BackupCursorMaxPos);
+    window->DC.CursorMaxPos = ImMax(window->DC.CursorMaxPos, preview_data->BackupCursorMaxPos); // No need to do the same with IdealMaxPos
     window->DC.CursorPosPrevLine = preview_data->BackupCursorPosPrevLine;
     window->DC.PrevLineTextBaseOffset = preview_data->BackupPrevLineTextBaseOffset;
+    window->WorkRect.Max.x = preview_data->BackupWorkRectMaxX;
+    window->ContentRegionRect.Max.x = preview_data->BackupContentRectMaxX;
     window->DC.LayoutType = preview_data->BackupLayout;
     window->DC.IsSameLine = false;
     preview_data->PreviewRect = ImRect();

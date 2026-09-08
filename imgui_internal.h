@@ -1192,6 +1192,8 @@ struct IMGUI_API ImGuiComboPreviewData
     ImVec2          BackupCursorMaxPos;
     ImVec2          BackupCursorPosPrevLine;
     float           BackupPrevLineTextBaseOffset;
+    float           BackupWorkRectMaxX;
+    float           BackupContentRectMaxX;
     ImGuiLayoutType BackupLayout;
 
     ImGuiComboPreviewData() { memset((void*)this, 0, sizeof(*this)); }
