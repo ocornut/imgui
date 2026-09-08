@@ -2074,6 +2074,7 @@ bool ImGui::BeginComboPopup(ImGuiID popup_id, const ImRect& bb, ImGuiComboFlags 
         return false;
     }
     g.BeginComboDepth++;
+    g.CurrentWindowStack.back().ParentLastComboPreviewRect = g.ComboPreviewData.PreviewRect;
     return true;
 }
 
@@ -2081,6 +2082,7 @@ void ImGui::EndCombo()
 {
     ImGuiContext& g = *GImGui;
     g.BeginComboDepth--;
+    g.ComboPreviewData.PreviewRect = g.CurrentWindowStack.back().ParentLastComboPreviewRect;
     char name[16];
     ImFormatString(name, IM_COUNTOF(name), "##Combo_%02d", g.BeginComboDepth); // FIXME: Move those to helpers?
     if (strcmp(g.CurrentWindow->Name, name) != 0)
@@ -2088,10 +2090,10 @@ void ImGui::EndCombo()
     EndPopup();
 }
 
-// Submit preview contents for the *last* BeginCombo() call, to display contents that's more than just a text label.
+// Submit preview contents for BeginCombo()/EndCombo(), to display contents that's more than just a text label.
 // - [BETA] See GitHub issues: #1658, #4168.
+// - Make sure you call this after EndCombo().
 // - The preview is designed to only host non-interactive elements.
-// - If you use nested combos, make sure you call this right after BeginCombo() and not after EndCombo(), in order to target the correct one.
 // - Not compatible with ImGuiComboFlags_WidthFitPreview.
 // - 2026-09-08 (1.93.0): removed ImGuiComboFlags_CustomPreview. You can use BeginComboPreview()/EndComboPreview() without an extra flag.
 bool ImGui::BeginComboPreview()
