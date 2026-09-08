@@ -1951,7 +1951,7 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
     const ImGuiID id = window->GetID(label);
     IM_ASSERT((flags & (ImGuiComboFlags_NoArrowButton | ImGuiComboFlags_NoPreview)) != (ImGuiComboFlags_NoArrowButton | ImGuiComboFlags_NoPreview)); // Can't use both flags together
     if (flags & ImGuiComboFlags_WidthFitPreview)
-        IM_ASSERT((flags & (ImGuiComboFlags_NoPreview | (ImGuiComboFlags)ImGuiComboFlags_CustomPreview)) == 0);
+        IM_ASSERT((flags & ImGuiComboFlags_NoPreview) == 0);
 
     const float arrow_size = (flags & ImGuiComboFlags_NoArrowButton) ? 0.0f : GetFrameHeight();
     const char* label_end = FindRenderedTextEnd(label);
@@ -1991,13 +1991,8 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
     }
     RenderFrameBorder(bb.Min, bb.Max, style.FrameRounding);
 
-    // Custom preview
-    if (flags & ImGuiComboFlags_CustomPreview)
-    {
-        g.ComboPreviewData.PreviewRect = ImRect(bb.Min.x, bb.Min.y, value_x2, bb.Max.y);
-        IM_ASSERT(preview_value == NULL || preview_value[0] == 0);
-        preview_value = NULL;
-    }
+    // Store geometry for BeginComboPreview() - only necessary when visible.
+    g.ComboPreviewData.PreviewRect = (flags & ImGuiComboFlags_NoPreview) ? ImRect() : ImRect(bb.Min.x, bb.Min.y, value_x2, bb.Max.y);
 
     // Render preview and label
     if (preview_value != NULL && !(flags & ImGuiComboFlags_NoPreview))
@@ -2093,21 +2088,26 @@ void ImGui::EndCombo()
     EndPopup();
 }
 
-// Call directly after the BeginCombo() call. If you use nested combo, make sure you end wait for EndCombo() to call this!
-// The preview is designed to only host non-interactive elements.
+// Submit preview contents for the *last* BeginCombo() call, to display contents that's more than just a text label.
 // - [BETA] See GitHub issues: #1658, #4168.
+// - The preview is designed to only host non-interactive elements.
+// - If you use nested combos, make sure you call this right after BeginCombo() and not after EndCombo(), in order to target the correct one.
 // - Not compatible with ImGuiComboFlags_WidthFitPreview.
+// - 2026-09-08 (1.93.0): removed ImGuiComboFlags_CustomPreview. You can use BeginComboPreview()/EndComboPreview() without an extra flag.
 bool ImGui::BeginComboPreview()
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    ImGuiComboPreviewData* preview_data = &g.ComboPreviewData;
 
     if (window->SkipItems || !(g.LastItemData.StatusFlags & ImGuiItemStatusFlags_Visible))
         return false;
-    IM_ASSERT(g.LastItemData.Rect.Min.x == preview_data->PreviewRect.Min.x && g.LastItemData.Rect.Min.y == preview_data->PreviewRect.Min.y); // Didn't call after BeginCombo/EndCombo block or forgot to pass ImGuiComboFlags_CustomPreview flag?
-    if (!window->ClipRect.Overlaps(preview_data->PreviewRect)) // Narrower test (optional)
+    ImGuiComboPreviewData* preview_data = &g.ComboPreviewData;
+    if (!window->ClipRect.Overlaps(preview_data->PreviewRect) || preview_data->PreviewRect.GetWidth() <= 0.0f) // Narrower test (optional) + handle _NoPreview
         return false;
+    IM_ASSERT_USER_ERROR_RETV(g.LastItemData.Rect.Min.x == preview_data->PreviewRect.Min.x && g.LastItemData.Rect.Min.y == preview_data->PreviewRect.Min.y, false,
+        "Call BeginComboPreview() after BeginCombo(), not after EndCombo()!"); // Calling after EndCombo() works only if you don't nest combos.
+    IM_ASSERT_USER_ERROR_RETV(preview_data->WithinPreview == false, false,
+        "Cannot recurse BeginComboPreview(): call EndComboPreview() before opening another combo.");
 
     // FIXME: This could be contained in a PushWorkRect() api
     preview_data->BackupCursorPos = window->DC.CursorPos;
@@ -2115,6 +2115,7 @@ bool ImGui::BeginComboPreview()
     preview_data->BackupCursorPosPrevLine = window->DC.CursorPosPrevLine;
     preview_data->BackupPrevLineTextBaseOffset = window->DC.PrevLineTextBaseOffset;
     preview_data->BackupLayout = window->DC.LayoutType;
+    preview_data->WithinPreview = true;
     preview_data->BackupWorkRectMaxX = window->WorkRect.Max.x;
     preview_data->BackupContentRectMaxX = window->ContentRegionRect.Max.x;
     window->WorkRect.Max.x = window->ContentRegionRect.Max.x = preview_data->PreviewRect.Max.x - g.Style.FramePadding.x;
@@ -2150,7 +2151,7 @@ void ImGui::EndComboPreview()
     window->ContentRegionRect.Max.x = preview_data->BackupContentRectMaxX;
     window->DC.LayoutType = preview_data->BackupLayout;
     window->DC.IsSameLine = false;
-    preview_data->PreviewRect = ImRect();
+    preview_data->WithinPreview = false;
 }
 
 // Getter for the old Combo() API: const char*[]
