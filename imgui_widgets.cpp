@@ -2817,12 +2817,16 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data,
         MarkItemEdited(id);
 
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
-    const char* format_for_display = (g.LastItemData.ItemFlags & ImGuiItemFlags_MixedValue) ? g.MixedValueLabel : format;
+    const bool is_mixed = (g.LastItemData.ItemFlags & ImGuiItemFlags_MixedValue) != 0;
     char value_buf[64];
-    const char* value_buf_end = value_buf + DataTypeFormatString(value_buf, IM_COUNTOF(value_buf), data_type, p_data, format_for_display);
+    const char* value_buf_end = value_buf + DataTypeFormatString(value_buf, IM_COUNTOF(value_buf), data_type, p_data, (is_mixed && g.MixedValueLabel != NULL) ? g.MixedValueLabel : format);
     if (g.LogEnabled)
         LogSetNextTextDecoration("{", "}");
+    if (is_mixed)
+        PushStyleColor(ImGuiCol_Text, g.Style.Colors[ImGuiCol_TextMixedValue]);
     RenderTextClipped(frame_bb.Min, frame_bb.Max, value_buf, value_buf_end, NULL, ImVec2(0.5f, 0.5f));
+    if (is_mixed)
+        PopStyleColor();
 
     if (label_size.x > 0.0f)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label, label_end, false);
@@ -3425,12 +3429,16 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* p_dat
         window->DrawList->AddRectFilled(grab_bb.Min, grab_bb.Max, GetColorU32(g.ActiveId == id ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab), style.GrabRounding);
 
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
-    const char* format_for_display = (g.LastItemData.ItemFlags & ImGuiItemFlags_MixedValue) ? g.MixedValueLabel : format;
+    const bool is_mixed = (g.LastItemData.ItemFlags & ImGuiItemFlags_MixedValue) != 0;
     char value_buf[64];
-    const char* value_buf_end = value_buf + DataTypeFormatString(value_buf, IM_COUNTOF(value_buf), data_type, p_data, format_for_display);
+    const char* value_buf_end = value_buf + DataTypeFormatString(value_buf, IM_COUNTOF(value_buf), data_type, p_data, (is_mixed && g.MixedValueLabel != NULL) ? g.MixedValueLabel : format);
     if (g.LogEnabled)
         LogSetNextTextDecoration("{", "}");
+    if (is_mixed)
+        PushStyleColor(ImGuiCol_Text, g.Style.Colors[ImGuiCol_TextMixedValue]);
     RenderTextClipped(frame_bb.Min, frame_bb.Max, value_buf, value_buf_end, NULL, ImVec2(0.5f, 0.5f));
+    if (is_mixed)
+        PopStyleColor();
 
     if (label_size.x > 0.0f)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label, label_end, false);
@@ -3580,10 +3588,15 @@ bool ImGui::VSliderScalar(const char* label, const ImVec2& size, ImGuiDataType d
 
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
     // For the vertical slider we allow centered text to overlap the frame padding
-    const char* format_for_display = (g.LastItemData.ItemFlags & ImGuiItemFlags_MixedValue) ? g.MixedValueLabel : format;
+    const bool is_mixed = (g.LastItemData.ItemFlags & ImGuiItemFlags_MixedValue) != 0;
     char value_buf[64];
-    const char* value_buf_end = value_buf + DataTypeFormatString(value_buf, IM_COUNTOF(value_buf), data_type, p_data, format_for_display);
+    const char* value_buf_end = value_buf + DataTypeFormatString(value_buf, IM_COUNTOF(value_buf), data_type, p_data, (is_mixed && g.MixedValueLabel != NULL) ? g.MixedValueLabel : format);
+    if (is_mixed)
+        PushStyleColor(ImGuiCol_Text, g.Style.Colors[ImGuiCol_TextMixedValue]);
     RenderTextClipped(ImVec2(frame_bb.Min.x, frame_bb.Min.y + style.FramePadding.y), frame_bb.Max, value_buf, value_buf_end, NULL, ImVec2(0.5f, 0.0f));
+    if (is_mixed)
+        PopStyleColor();
+
     if (label_size.x > 0.0f)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label, label_end, false);
 
@@ -5560,7 +5573,8 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         if (is_password && !is_displaying_hint)
             PushPasswordFont();
     }
-    if (is_mixed && g.ActiveId != id && apply_new_text == NULL)
+    const bool is_displaying_mixed = is_mixed && g.ActiveId != id && apply_new_text == NULL;
+    if (is_displaying_mixed && g.MixedValueLabel != NULL)
     {
         buf_display = g.MixedValueLabel;
         buf_display_end = buf_display + strlen(g.MixedValueLabel);
@@ -5609,7 +5623,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     ImVec2 draw_scroll;
 
     // Render text. We currently only render selection when the widget is active or while scrolling.
-    const ImU32 text_col = GetColorU32(is_displaying_hint ? ImGuiCol_TextDisabled : ImGuiCol_Text);
+    const ImU32 text_col = GetColorU32(is_displaying_mixed ? ImGuiCol_TextMixedValue : is_displaying_hint ? ImGuiCol_TextDisabled : ImGuiCol_Text);
     if (render_cursor || render_selection)
     {
         // Render text (with cursor and selection)
@@ -6583,7 +6597,10 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
     if (is_mixed)
     {
         window->DrawList->AddRectFilled(bb.Min, bb.Max, GetColorU32(ImGuiCol_FrameBg), rounding);
-        RenderTextClipped(ImVec2(bb.Min.x, bb.Min.y + g.Style.FramePadding.y), bb.Max, g.MixedValueLabel, NULL, NULL, ImVec2(0.5f, 0.0f));
+        PushStyleColor(ImGuiCol_Text, g.Style.Colors[ImGuiCol_TextMixedValue]);
+        if (g.MixedValueLabel != NULL)
+            RenderTextClipped(ImVec2(bb.Min.x, bb.Min.y + g.Style.FramePadding.y), bb.Max, g.MixedValueLabel, NULL, NULL, ImVec2(0.5f, 0.0f));
+        PopStyleColor();
     }
     else if ((flags & ImGuiColorEditFlags_AlphaPreviewHalf) && col_rgb.w < 1.0f)
     {

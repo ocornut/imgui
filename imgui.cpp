@@ -3945,6 +3945,7 @@ void ImGui::RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end
 // Effectively as this is called from widget doing their own coarse clipping it's not very valuable presently. Next time function will take
 // better advantage of the render function taking size into account for coarse clipping.
 void ImGui::RenderTextClippedEx(ImDrawList* draw_list, const ImVec2& pos_min, const ImVec2& pos_max, const char* text, const char* text_display_end, const ImVec2* text_size_if_known, const ImVec2& align, const ImRect* clip_rect)
+// DOES NOT CALL LogRenderedText(), unlike RenderTextClipped!!!
 {
     // Perform CPU side clipping for single clipped element to avoid using scissor state
     ImVec2 pos = pos_min;

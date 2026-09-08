@@ -932,6 +932,8 @@ struct ImFontStackData
 // [SECTION] Style support
 //-----------------------------------------------------------------------------
 
+#define ImGuiCol_TextMixedValue     ImGuiCol_TextDisabled
+
 struct ImGuiStyleVarInfo
 {
     ImU32           Count : 8;      // 1+
@@ -2304,7 +2306,7 @@ struct ImGuiContext
     ImVec2                  WheelingAxisAvg;
 
     // Item/widgets state and tracking information
-    const char*             MixedValueLabel;                    // Value replacement when displaying a mixed value. Default to "-" (Unreal uses "Multiple values", Unity uses "---"). May be interpreted as a format: must not contain single %.
+    const char*             MixedValueLabel;                    // Value replacement when displaying a mixed value. Default to "-" (Unreal uses "Multiple values", Unity uses "---"). May be interpreted as a format: must not contain single %. Set to NULL to display original value.
     ImGuiID                 DebugDrawIdConflictsId;             // Set when we detect multiple items with the same identifier
     ImGuiID                 DebugHookIdInfoId;                  // Will call core hooks: DebugHookIdInfo() from GetID functions, used by ID Stack Tool [next HoveredId/ActiveId to not pull in an extra cache-line]
     ImGuiID                 HoveredId;                          // Hovered widget, filled during the frame
