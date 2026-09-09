@@ -340,12 +340,12 @@ struct ImStrv
 {
     const char* Begin;
     const char* End;
-    ImStrv()                            { Begin = End = NULL; }
-    ImStrv(const char* b)               { Begin = b; End = b ? b + strlen(b) : NULL; }
-    ImStrv(const char* b, const char* e){ Begin = b; End = e ? e : b ? b + strlen(b) : NULL; }
-    inline int length() const           { return (int)(End - Begin); }
-    inline bool empty() const           { return Begin == End; }    // == "" or == NULL
-    inline operator bool() const        { return Begin != NULL; }   // return true when valid ("" is valid, NULL construction is not)
+    IM_NODEBUGSTEP inline ImStrv()                            { Begin = End = NULL; }
+    IM_NODEBUGSTEP inline ImStrv(const char* b)               { Begin = b; End = b ? b + strlen(b) : NULL; }
+    IM_NODEBUGSTEP inline ImStrv(const char* b, const char* e){ Begin = b; End = e ? e : b ? b + strlen(b) : NULL; }
+    IM_NODEBUGSTEP inline int length() const                  { return (int)(End - Begin); }
+    IM_NODEBUGSTEP inline bool empty() const                  { return Begin == End; }    // == "" or == NULL
+    IM_NODEBUGSTEP inline operator bool() const               { return Begin != NULL; }   // return true when valid ("" is valid, NULL construction is not)
 #ifdef IM_STRV_CLASS_EXTRA
     IM_STRV_CLASS_EXTRA     // Define additional constructor in imconfig.h to convert your string types (e.g. std::string, std::string_view) to ImStrV.
 #endif
