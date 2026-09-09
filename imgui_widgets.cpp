@@ -3843,7 +3843,11 @@ bool ImGui::TempInputScalar(const ImRect& bb, ImGuiID id, const char* label, ImG
 
     // Only mark as edited if new value is different
     g.LastItemData.ItemFlags &= ~ImGuiItemFlags_NoMarkEdited;
-    bool value_changed = memcmp(&data_backup, p_data, data_type_size) != 0 || (g.LastItemData.ItemFlags & ImGuiItemFlags_MixedValue);
+    bool value_changed = memcmp(&data_backup, p_data, data_type_size) != 0;
+    if (g.LastItemData.ItemFlags & ImGuiItemFlags_MixedValue)
+        if (ImGuiInputTextState* state = GetInputTextState(g.LastItemData.ID))
+            value_changed |= (g.LastItemData.ItemFlags & ImGuiItemFlags_LiveEditOnInputScalar) ? (state->EditedThisFrame | state->ValidatedThisFrame) : state->ValidatedThisFrame;
+
     if (value_changed)
         MarkItemEdited(id);
     return value_changed;
@@ -3921,7 +3925,8 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* p_data
         }
     }
     if (g.LastItemData.ItemFlags & ImGuiItemFlags_MixedValue)
-        value_changed |= ret;
+        if (ImGuiInputTextState* state = GetInputTextState(g.LastItemData.ID))
+            value_changed |= (g.LastItemData.ItemFlags & ImGuiItemFlags_LiveEditOnInputScalar) ? (state->EditedThisFrame | state->ValidatedThisFrame) : state->ValidatedThisFrame;
 
     // Step buttons
     if (has_step_buttons)
@@ -5061,6 +5066,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     if (state != NULL && state->ID == id)
     {
         state->Flags = flags;
+        state->EditedThisFrame = state->ValidatedThisFrame = false;
         //state->LastFrameActive = g.FrameCount;
 
         // Word-wrapping: attempt to keep cursor in view while resizing frame/parent (FIXME-WORDWRAP: would be better to preserve same relative offset)
@@ -5076,7 +5082,6 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     if (g.ActiveId == id)
     {
         IM_ASSERT(state != NULL);
-        state->EditedThisFrame = false;
         state->BufCapacity = buf_size;
         state->WrapWidth = wrap_width;
 
@@ -5479,7 +5484,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             if (g.LastItemData.ItemFlags & ImGuiItemFlags_LiveEditOnInputText)
             {
                 // Apply when modified
-                if (strcmp(state->TextSrc, buf) != 0 || (is_mixed && validated))
+                if (strcmp(state->TextSrc, buf) != 0 || (is_mixed && (state->EditedThisFrame || validated)))
                 {
                     apply_new_text = state->TextSrc;
                     apply_new_text_length = state->TextLen;
@@ -5806,6 +5811,8 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     if (label_size.x > 0)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label, label_end, false);
 
+    if (state && validated)
+        state->ValidatedThisFrame = true;
     if (value_changed)
         MarkItemEdited(id);
 

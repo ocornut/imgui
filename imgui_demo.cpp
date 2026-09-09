@@ -2062,13 +2062,16 @@ static void DemoWindowWidgetsMixedValues()
         // This is designed for advanced property editors which are generally reusable and data-driven.
         HelpMarker("Using ImGuiItemFlags_MixedValue.");
 
+        static bool use_liveedit = false;
         static float items[3] = { 12.0f, 0.0f, 0.0f };
         float* item_ref = &items[0];
+        ImGui::Checkbox("ImGuiItemFlags_LiveEditOnInput", &use_liveedit);
 
         ImGui::SeparatorText("Scalar/Text Widgets");
         const bool is_mixed = memcmp(&items[0], &items[1], sizeof(float)) != 0 || memcmp(&items[0], &items[2], sizeof(float)) != 0;
 
         // Demonstrate Drags, Sliders, Inputs
+        ImGui::PushItemFlag(ImGuiItemFlags_LiveEditOnInput, use_liveedit);
         ImGui::PushItemFlag(ImGuiItemFlags_MixedValue, is_mixed);
         bool edited = false;
         edited |= ImGui::DragFloat("DragFloat", item_ref);
@@ -2084,6 +2087,7 @@ static void DemoWindowWidgetsMixedValues()
         ImGui::InputFloat("item 0 (ref)", &items[0]);
         ImGui::InputFloat("item 1", &items[1]);
         ImGui::InputFloat("item 2", &items[2]);
+        ImGui::PopItemFlag();
 
         // Demonstrate Checkbox(), RadioButton(), Combo(), ColorEdit4()
         ImGui::SeparatorText("Others Widgets");
