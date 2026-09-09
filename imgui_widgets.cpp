@@ -1958,7 +1958,7 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
     const ImGuiID id = window->GetID(label);
     IM_ASSERT((flags & (ImGuiComboFlags_NoArrowButton | ImGuiComboFlags_NoPreview)) != (ImGuiComboFlags_NoArrowButton | ImGuiComboFlags_NoPreview)); // Can't use both flags together
     if (flags & ImGuiComboFlags_WidthFitPreview)
-        IM_ASSERT((flags & (ImGuiComboFlags_NoPreview | (ImGuiComboFlags)ImGuiComboFlags_CustomPreview)) == 0);
+        IM_ASSERT((flags & ImGuiComboFlags_NoPreview) == 0);
 
     const float arrow_size = (flags & ImGuiComboFlags_NoArrowButton) ? 0.0f : GetFrameHeight();
     const char* label_end = FindRenderedTextEnd(label);
@@ -1998,13 +1998,8 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
     }
     RenderFrameBorder(bb.Min, bb.Max, style.FrameRounding);
 
-    // Custom preview
-    if (flags & ImGuiComboFlags_CustomPreview)
-    {
-        g.ComboPreviewData.PreviewRect = ImRect(bb.Min.x, bb.Min.y, value_x2, bb.Max.y);
-        IM_ASSERT(preview_value == NULL || preview_value[0] == 0);
-        preview_value = NULL;
-    }
+    // Store geometry for BeginComboPreview() - only necessary when visible.
+    g.ComboPreviewData.PreviewRect = (flags & ImGuiComboFlags_NoPreview) ? ImRect() : ImRect(bb.Min.x, bb.Min.y, value_x2, bb.Max.y);
 
     // Render preview and label
     if (preview_value != NULL && !(flags & ImGuiComboFlags_NoPreview))
@@ -2086,6 +2081,7 @@ bool ImGui::BeginComboPopup(ImGuiID popup_id, const ImRect& bb, ImGuiComboFlags 
         return false;
     }
     g.BeginComboDepth++;
+    g.CurrentWindowStack.back().ParentLastComboPreviewRect = g.ComboPreviewData.PreviewRect;
     return true;
 }
 
@@ -2093,6 +2089,7 @@ void ImGui::EndCombo()
 {
     ImGuiContext& g = *GImGui;
     g.BeginComboDepth--;
+    g.ComboPreviewData.PreviewRect = g.CurrentWindowStack.back().ParentLastComboPreviewRect;
     char name[16];
     ImFormatString(name, IM_COUNTOF(name), "##Combo_%02d", g.BeginComboDepth); // FIXME: Move those to helpers?
     if (strcmp(g.CurrentWindow->Name, name) != 0)
@@ -2100,19 +2097,26 @@ void ImGui::EndCombo()
     EndPopup();
 }
 
-// Call directly after the BeginCombo/EndCombo block. The preview is designed to only host non-interactive elements
-// (Experimental, see GitHub issues: #1658, #4168)
+// Submit preview contents for BeginCombo()/EndCombo(), to display contents that's more than just a text label.
+// - [BETA] See GitHub issues: #1658, #4168.
+// - Make sure you call this after EndCombo().
+// - The preview is designed to only host non-interactive elements.
+// - Not compatible with ImGuiComboFlags_WidthFitPreview.
+// - 2026-09-08 (1.93.0): removed ImGuiComboFlags_CustomPreview. You can use BeginComboPreview()/EndComboPreview() without an extra flag.
 bool ImGui::BeginComboPreview()
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    ImGuiComboPreviewData* preview_data = &g.ComboPreviewData;
 
     if (window->SkipItems || !(g.LastItemData.StatusFlags & ImGuiItemStatusFlags_Visible))
         return false;
-    IM_ASSERT(g.LastItemData.Rect.Min.x == preview_data->PreviewRect.Min.x && g.LastItemData.Rect.Min.y == preview_data->PreviewRect.Min.y); // Didn't call after BeginCombo/EndCombo block or forgot to pass ImGuiComboFlags_CustomPreview flag?
-    if (!window->ClipRect.Overlaps(preview_data->PreviewRect)) // Narrower test (optional)
+    ImGuiComboPreviewData* preview_data = &g.ComboPreviewData;
+    if (!window->ClipRect.Overlaps(preview_data->PreviewRect) || preview_data->PreviewRect.GetWidth() <= 0.0f) // Narrower test (optional) + handle _NoPreview
         return false;
+    IM_ASSERT_USER_ERROR_RETV(g.LastItemData.Rect.Min.x == preview_data->PreviewRect.Min.x && g.LastItemData.Rect.Min.y == preview_data->PreviewRect.Min.y, false,
+        "Call BeginComboPreview() after BeginCombo(), not after EndCombo()!"); // Calling after EndCombo() works only if you don't nest combos.
+    IM_ASSERT_USER_ERROR_RETV(preview_data->WithinPreview == false, false,
+        "Cannot recurse BeginComboPreview(): call EndComboPreview() before opening another combo.");
 
     // FIXME: This could be contained in a PushWorkRect() api
     preview_data->BackupCursorPos = window->DC.CursorPos;
@@ -2120,6 +2124,10 @@ bool ImGui::BeginComboPreview()
     preview_data->BackupCursorPosPrevLine = window->DC.CursorPosPrevLine;
     preview_data->BackupPrevLineTextBaseOffset = window->DC.PrevLineTextBaseOffset;
     preview_data->BackupLayout = window->DC.LayoutType;
+    preview_data->WithinPreview = true;
+    preview_data->BackupWorkRectMaxX = window->WorkRect.Max.x;
+    preview_data->BackupContentRectMaxX = window->ContentRegionRect.Max.x;
+    window->WorkRect.Max.x = window->ContentRegionRect.Max.x = preview_data->PreviewRect.Max.x - g.Style.FramePadding.x;
     window->DC.CursorPos = preview_data->PreviewRect.Min + g.Style.FramePadding;
     window->DC.CursorMaxPos = window->DC.CursorPos;
     window->DC.LayoutType = ImGuiLayoutType_Horizontal;
@@ -2145,12 +2153,14 @@ void ImGui::EndComboPreview()
         }
     PopClipRect();
     window->DC.CursorPos = preview_data->BackupCursorPos;
-    window->DC.CursorMaxPos = ImMax(window->DC.CursorMaxPos, preview_data->BackupCursorMaxPos);
+    window->DC.CursorMaxPos = ImMax(window->DC.CursorMaxPos, preview_data->BackupCursorMaxPos); // No need to do the same with IdealMaxPos
     window->DC.CursorPosPrevLine = preview_data->BackupCursorPosPrevLine;
     window->DC.PrevLineTextBaseOffset = preview_data->BackupPrevLineTextBaseOffset;
+    window->WorkRect.Max.x = preview_data->BackupWorkRectMaxX;
+    window->ContentRegionRect.Max.x = preview_data->BackupContentRectMaxX;
     window->DC.LayoutType = preview_data->BackupLayout;
     window->DC.IsSameLine = false;
-    preview_data->PreviewRect = ImRect();
+    preview_data->WithinPreview = false;
 }
 
 // Getter for the old Combo() API: const char*[]
@@ -2824,12 +2834,16 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data,
         MarkItemEdited(id);
 
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
-    const char* format_for_display = (g.LastItemData.ItemFlags & ImGuiItemFlags_MixedValue) ? g.MixedValueLabel : format;
+    const bool is_mixed = (g.LastItemData.ItemFlags & ImGuiItemFlags_MixedValue) != 0;
     char value_buf[64];
-    const char* value_buf_end = value_buf + DataTypeFormatString(value_buf, IM_COUNTOF(value_buf), data_type, p_data, format_for_display);
+    const char* value_buf_end = value_buf + DataTypeFormatString(value_buf, IM_COUNTOF(value_buf), data_type, p_data, (is_mixed && g.MixedValueLabel != NULL) ? g.MixedValueLabel : format);
     if (g.LogEnabled)
         LogSetNextTextDecoration("{", "}");
+    if (is_mixed)
+        PushStyleColor(ImGuiCol_Text, g.Style.Colors[ImGuiCol_TextMixedValue]);
     RenderTextClipped(frame_bb.Min, frame_bb.Max, value_buf, value_buf_end, NULL, ImVec2(0.5f, 0.5f));
+    if (is_mixed)
+        PopStyleColor();
 
     if (label_size.x > 0.0f)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label, label_end, false);
@@ -3432,12 +3446,16 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* p_dat
         window->DrawList->AddRectFilled(grab_bb.Min, grab_bb.Max, GetColorU32(g.ActiveId == id ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab), style.GrabRounding);
 
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
-    const char* format_for_display = (g.LastItemData.ItemFlags & ImGuiItemFlags_MixedValue) ? g.MixedValueLabel : format;
+    const bool is_mixed = (g.LastItemData.ItemFlags & ImGuiItemFlags_MixedValue) != 0;
     char value_buf[64];
-    const char* value_buf_end = value_buf + DataTypeFormatString(value_buf, IM_COUNTOF(value_buf), data_type, p_data, format_for_display);
+    const char* value_buf_end = value_buf + DataTypeFormatString(value_buf, IM_COUNTOF(value_buf), data_type, p_data, (is_mixed && g.MixedValueLabel != NULL) ? g.MixedValueLabel : format);
     if (g.LogEnabled)
         LogSetNextTextDecoration("{", "}");
+    if (is_mixed)
+        PushStyleColor(ImGuiCol_Text, g.Style.Colors[ImGuiCol_TextMixedValue]);
     RenderTextClipped(frame_bb.Min, frame_bb.Max, value_buf, value_buf_end, NULL, ImVec2(0.5f, 0.5f));
+    if (is_mixed)
+        PopStyleColor();
 
     if (label_size.x > 0.0f)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label, label_end, false);
@@ -3587,10 +3605,15 @@ bool ImGui::VSliderScalar(const char* label, const ImVec2& size, ImGuiDataType d
 
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
     // For the vertical slider we allow centered text to overlap the frame padding
-    const char* format_for_display = (g.LastItemData.ItemFlags & ImGuiItemFlags_MixedValue) ? g.MixedValueLabel : format;
+    const bool is_mixed = (g.LastItemData.ItemFlags & ImGuiItemFlags_MixedValue) != 0;
     char value_buf[64];
-    const char* value_buf_end = value_buf + DataTypeFormatString(value_buf, IM_COUNTOF(value_buf), data_type, p_data, format_for_display);
+    const char* value_buf_end = value_buf + DataTypeFormatString(value_buf, IM_COUNTOF(value_buf), data_type, p_data, (is_mixed && g.MixedValueLabel != NULL) ? g.MixedValueLabel : format);
+    if (is_mixed)
+        PushStyleColor(ImGuiCol_Text, g.Style.Colors[ImGuiCol_TextMixedValue]);
     RenderTextClipped(ImVec2(frame_bb.Min.x, frame_bb.Min.y + style.FramePadding.y), frame_bb.Max, value_buf, value_buf_end, NULL, ImVec2(0.5f, 0.0f));
+    if (is_mixed)
+        PopStyleColor();
+
     if (label_size.x > 0.0f)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label, label_end, false);
 
@@ -3827,7 +3850,11 @@ bool ImGui::TempInputScalar(const ImRect& bb, ImGuiID id, const char* label, ImG
 
     // Only mark as edited if new value is different
     g.LastItemData.ItemFlags &= ~ImGuiItemFlags_NoMarkEdited;
-    bool value_changed = memcmp(&data_backup, p_data, data_type_size) != 0 || (g.LastItemData.ItemFlags & ImGuiItemFlags_MixedValue);
+    bool value_changed = memcmp(&data_backup, p_data, data_type_size) != 0;
+    if (g.LastItemData.ItemFlags & ImGuiItemFlags_MixedValue)
+        if (ImGuiInputTextState* state = GetInputTextState(g.LastItemData.ID))
+            value_changed |= (g.LastItemData.ItemFlags & ImGuiItemFlags_LiveEditOnInputScalar) ? (state->EditedThisFrame | state->ValidatedThisFrame) : state->ValidatedThisFrame;
+
     if (value_changed)
         MarkItemEdited(id);
     return value_changed;
@@ -3905,7 +3932,8 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* p_data
         }
     }
     if (g.LastItemData.ItemFlags & ImGuiItemFlags_MixedValue)
-        value_changed |= ret;
+        if (ImGuiInputTextState* state = GetInputTextState(g.LastItemData.ID))
+            value_changed |= (g.LastItemData.ItemFlags & ImGuiItemFlags_LiveEditOnInputScalar) ? (state->EditedThisFrame | state->ValidatedThisFrame) : state->ValidatedThisFrame;
 
     // Step buttons
     if (has_step_buttons)
@@ -5045,6 +5073,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     if (state != NULL && state->ID == id)
     {
         state->Flags = flags;
+        state->EditedThisFrame = state->ValidatedThisFrame = false;
         //state->LastFrameActive = g.FrameCount;
 
         // Word-wrapping: attempt to keep cursor in view while resizing frame/parent (FIXME-WORDWRAP: would be better to preserve same relative offset)
@@ -5060,7 +5089,6 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     if (g.ActiveId == id)
     {
         IM_ASSERT(state != NULL);
-        state->EditedThisFrame = false;
         state->BufCapacity = buf_size;
         state->WrapWidth = wrap_width;
 
@@ -5463,7 +5491,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             if (g.LastItemData.ItemFlags & ImGuiItemFlags_LiveEditOnInputText)
             {
                 // Apply when modified
-                if (strcmp(state->TextSrc, buf) != 0 || (is_mixed && validated))
+                if (strcmp(state->TextSrc, buf) != 0 || (is_mixed && (state->EditedThisFrame || validated)))
                 {
                     apply_new_text = state->TextSrc;
                     apply_new_text_length = state->TextLen;
@@ -5567,7 +5595,8 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         if (is_password && !is_displaying_hint)
             PushPasswordFont();
     }
-    if (is_mixed && g.ActiveId != id && apply_new_text == NULL)
+    const bool is_displaying_mixed = is_mixed && g.ActiveId != id && apply_new_text == NULL;
+    if (is_displaying_mixed && g.MixedValueLabel != NULL)
     {
         buf_display = g.MixedValueLabel;
         buf_display_end = buf_display + strlen(g.MixedValueLabel);
@@ -5616,7 +5645,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     ImVec2 draw_scroll;
 
     // Render text. We currently only render selection when the widget is active or while scrolling.
-    const ImU32 text_col = GetColorU32(is_displaying_hint ? ImGuiCol_TextDisabled : ImGuiCol_Text);
+    const ImU32 text_col = GetColorU32(is_displaying_mixed ? ImGuiCol_TextMixedValue : is_displaying_hint ? ImGuiCol_TextDisabled : ImGuiCol_Text);
     if (render_cursor || render_selection)
     {
         // Render text (with cursor and selection)
@@ -5789,6 +5818,8 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     if (label_size.x > 0)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label, label_end, false);
 
+    if (state && validated)
+        state->ValidatedThisFrame = true;
     if (value_changed)
         MarkItemEdited(id);
 
@@ -6590,7 +6621,10 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
     if (is_mixed)
     {
         window->DrawList->AddRectFilled(bb.Min, bb.Max, GetColorU32(ImGuiCol_FrameBg), rounding);
-        RenderTextClipped(ImVec2(bb.Min.x, bb.Min.y + g.Style.FramePadding.y), bb.Max, g.MixedValueLabel, NULL, NULL, ImVec2(0.5f, 0.0f));
+        PushStyleColor(ImGuiCol_Text, g.Style.Colors[ImGuiCol_TextMixedValue]);
+        if (g.MixedValueLabel != NULL)
+            RenderTextClipped(ImVec2(bb.Min.x, bb.Min.y + g.Style.FramePadding.y), bb.Max, g.MixedValueLabel, NULL, NULL, ImVec2(0.5f, 0.0f));
+        PopStyleColor();
     }
     else if ((flags & ImGuiColorEditFlags_AlphaPreviewHalf) && col_rgb.w < 1.0f)
     {
