@@ -401,6 +401,12 @@ static void ImGui_ImplFreeType_LoaderShutdown(ImFontAtlas* atlas)
 
 static bool ImGui_ImplFreeType_FontSrcInit(ImFontAtlas* atlas, ImFontConfig* src)
 {
+    if (src->FontData == NULL || src->FontDataSize <= 0)
+    {
+        IM_ASSERT_USER_ERROR(0, "FreeType requires font data; font families are not supported.");
+        return false;
+    }
+
     ImGui_ImplFreeType_Data* bd = (ImGui_ImplFreeType_Data*)atlas->FontLoaderData;
     ImGui_ImplFreeType_FontSrcData* bd_font_data = IM_NEW(ImGui_ImplFreeType_FontSrcData);
     IM_ASSERT(src->FontLoaderData == nullptr);

@@ -3636,7 +3636,7 @@ struct ImTextureData
 struct ImFontConfig
 {
     // Data Source
-    char            Name[40];               // <auto>   // Name (strictly to ease debugging, hence limited size buffer)
+    char            Name[64];               // <auto>   // Debug name, or UTF-8 font family name when FontData is NULL.
     void*           FontData;               //          // TTF/OTF data
     int             FontDataSize;           //          // TTF/OTF data size
     bool            FontDataOwnedByAtlas;   // true     // TTF/OTF data ownership taken by the owner ImFontAtlas (will delete memory itself). SINCE 1.92, THE DATA NEEDS TO PERSIST FOR WHOLE DURATION OF ATLAS.
@@ -3756,6 +3756,7 @@ struct ImFontAtlas
     IMGUI_API ImFontAtlas();
     IMGUI_API ~ImFontAtlas();
     IMGUI_API ImFont*           AddFont(const ImFontConfig* font_cfg);
+    IMGUI_API ImFont*           AddFontFromFamily(const char* family, float size_pixels = 0.0f, const ImFontConfig* font_cfg = NULL); // Requires a loader supporting font families (e.g. DirectWrite).
     IMGUI_API ImFont*           AddFontDefault(const ImFontConfig* font_cfg = NULL);        // Selects between AddFontDefaultVector() and AddFontDefaultBitmap().
     IMGUI_API ImFont*           AddFontDefaultVector(const ImFontConfig* font_cfg = NULL);  // Embedded scalable font. Recommended at any higher size.
     IMGUI_API ImFont*           AddFontDefaultBitmap(const ImFontConfig* font_cfg = NULL);  // Embedded classic pixel-clean font. Recommended at Size 13px with no scaling.

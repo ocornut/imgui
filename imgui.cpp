@@ -16652,6 +16652,9 @@ static const char* FormatTextureRefForDebugDisplay(char* buf, int buf_size, ImTe
     return buf;
 }
 
+#ifdef IMGUI_ENABLE_DWRITE
+namespace ImGuiDWrite { IMGUI_API const ImFontLoader* GetFontLoader(); }
+#endif
 #ifdef IMGUI_ENABLE_FREETYPE
 namespace ImGuiFreeType { IMGUI_API const ImFontLoader* GetFontLoader(); IMGUI_API bool DebugEditFontLoaderFlags(unsigned int* p_font_builder_flags); }
 #endif
@@ -16700,7 +16703,12 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
     if (TreeNode("Loader", "Loader: \'%s\'", atlas->FontLoaderName ? atlas->FontLoaderName : "NULL"))
     {
         const ImFontLoader* loader_current = atlas->FontLoader;
+        bool has_font_family = false;
+        for (const ImFontConfig& src : atlas->Sources)
+            if (src.FontLoader == NULL)
+                has_font_family |= src.FontData == NULL;
         BeginDisabled(!atlas->RendererHasTextures);
+        BeginDisabled(has_font_family);
 #ifdef IMGUI_ENABLE_STB_TRUETYPE
         const ImFontLoader* loader_stbtruetype = ImFontAtlasGetFontLoaderForStbTruetype();
         if (RadioButton("stb_truetype", loader_current == loader_stbtruetype))
@@ -16735,6 +16743,18 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
         SetItemTooltip("Requires #define IMGUI_ENABLE_FREETYPE + imgui_freetype.cpp.");
         EndDisabled();
 #endif
+        EndDisabled();
+        SameLine();
+    #ifdef IMGUI_ENABLE_DWRITE
+        const ImFontLoader* loader_dwrite = ImGuiDWrite::GetFontLoader();
+        if (RadioButton("DirectWrite", loader_current == loader_dwrite))
+            atlas->SetFontLoader(loader_dwrite);
+    #else
+        BeginDisabled();
+        RadioButton("DirectWrite", false);
+        SetItemTooltip("Requires #define IMGUI_ENABLE_DWRITE + imgui_dwrite.cpp.");
+        EndDisabled();
+    #endif
         EndDisabled();
         TreePop();
     }

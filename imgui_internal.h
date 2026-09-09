@@ -124,9 +124,9 @@ Index of this file:
 #error Use IMGUI_DISABLE_DEFAULT_MATH_FUNCTIONS
 #endif
 
-// Enable stb_truetype by default unless FreeType is enabled.
-// You can compile with both by defining both IMGUI_ENABLE_FREETYPE and IMGUI_ENABLE_STB_TRUETYPE together.
-#ifndef IMGUI_ENABLE_FREETYPE
+// Enable stb_truetype by default unless FreeType or DirectWrite are enabled.
+// You can re-enable stb_truetype by explicitly defining IMGUI_ENABLE_STB_TRUETYPE before including imgui.h.
+#if !defined(IMGUI_ENABLE_FREETYPE) && !defined(IMGUI_ENABLE_DWRITE)
 #define IMGUI_ENABLE_STB_TRUETYPE
 #endif
 
@@ -1031,7 +1031,7 @@ enum ImGuiItemStatusFlags_
     ImGuiItemStatusFlags_HasShortcut        = 1 << 10,  // g.LastItemData.Shortcut valid. Set by SetNextItemShortcut() -> ItemAdd().
     //ImGuiItemStatusFlags_FocusedByTabbing = 1 << 8,   // Removed IN 1.90.1 (Dec 2023). The trigger is part of g.NavActivateId. See commit 54c1bdeceb.
     ImGuiItemStatusFlags_EditedInternal     = 1 << 11,  // Similar to ImGuiItemStatusFlags_Edited but bypassing ImGuiItemFlags_NoMarkEdited.
-    
+
     // Additional status + semantic for ImGuiTestEngine
 #ifdef IMGUI_ENABLE_TEST_ENGINE
     ImGuiItemStatusFlags_Openable           = 1 << 20,  // Item is an openable (e.g. TreeNode)
