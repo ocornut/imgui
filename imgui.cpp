@@ -15357,15 +15357,9 @@ const ImGuiPayload* ImGui::AcceptDragDropPayload(const char* type, ImGuiDragDrop
     flags |= (g.DragDropSourceFlags & ImGuiDragDropFlags_AcceptNoDrawDefaultRect); // Source can also inhibit the preview (useful for external sources that live for 1 frame)
     const bool draw_target_rect = payload.Preview && !(flags & ImGuiDragDropFlags_AcceptNoDrawDefaultRect);
     if (draw_target_rect && g.DragDropTargetFullViewport != 0)
-    {
-        ImRect bb = g.DragDropTargetRect;
-        bb.Expand(-3.5f);
-        RenderDragDropTargetRectEx(GetForegroundDrawList(), bb, g.Style.DragDropTargetRounding);
-    }
+        RenderDragDropTargetRectForViewport(g.DragDropTargetFullViewport, g.DragDropTargetRect);
     else if (draw_target_rect)
-    {
         RenderDragDropTargetRectForItem(r);
-    }
 
     g.DragDropAcceptFrameCount = g.FrameCount;
     if ((g.DragDropSourceFlags & ImGuiDragDropFlags_SourceExtern) && g.DragDropMouseButton == -1)
@@ -15394,6 +15388,17 @@ void ImGui::RenderDragDropTargetRectForItem(const ImRect& bb)
     RenderDragDropTargetRectEx(window->DrawList, bb_display, g.Style.DragDropTargetRounding);
     if (push_clip_rect)
         window->DrawList->PopClipRect();
+}
+
+void ImGui::RenderDragDropTargetRectForViewport(ImGuiID viewport_id, const ImRect& bb)
+{
+    IM_ASSERT(viewport_id != 0);
+    IM_UNUSED(viewport_id); // Unused in this branch
+    ImGuiContext& g = *GImGui;
+    ImGuiViewport* viewport = g.Viewports[0];
+    ImRect bb_padded = bb;
+    bb_padded.Expand(-g.Style.DragDropTargetPadding);
+    RenderDragDropTargetRectEx(GetForegroundDrawList(viewport), bb_padded, g.Style.DragDropTargetRounding);
 }
 
 void ImGui::RenderDragDropTargetRectEx(ImDrawList* draw_list, const ImRect& bb, float rounding)
