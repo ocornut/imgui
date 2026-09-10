@@ -180,16 +180,19 @@ static bool font_src_init(ImFontAtlas*, ImFontConfig* src)
 {
     unique_im<DWriteFontSource> data(IM_NEW(DWriteFontSource));
 
+    // Create "global" objects. System font collection, font fallback handler, etc.
+    com_ptr<IDWriteFontFallback> font_fallback;
     RETURN_FALSE_IF_FAILED(DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory5), (IUnknown**)data->factory.addressof()));
     RETURN_FALSE_IF_FAILED(data->factory->CreateRenderingParams(data->rendering_params.addressof()));
     RETURN_FALSE_IF_FAILED(data->factory->GetSystemFontCollection(data->font_collection.addressof(), FALSE));
-
-    com_ptr<IDWriteFontFallback> font_fallback;
     RETURN_FALSE_IF_FAILED(data->factory->GetSystemFontFallback(font_fallback.addressof()));
     RETURN_FALSE_IF_FAILED(font_fallback->QueryInterface(data->font_fallback.addressof()));
 
+    // Create a `IDWriteFontFace` (a single stylistic variant) out of `src`.
     if (src->FontData || src->FontDataSize)
     {
+        // In-memory font? `IDWriteInMemoryFontFileLoader`!
+
         IM_ASSERT_USER_ERROR(src->FontData != nullptr && src->FontDataSize > 0, "Invalid font data");
 
         // DWriteFontSource assumes that memory_loader != null means it needs to be unregistered.
@@ -208,8 +211,7 @@ static bool font_src_init(ImFontAtlas*, ImFontConfig* src)
     else
     {
         // If no font data is present, we assume the Name field contains the family name of the font.
-        // With DirectWrite, we generally deal with `IDWriteFontFace`s which represent a single stylistic variant.
-        // As such: Name -> Name, but wchar -> Find font family -> Get any variant out of it
+        // Name -> Name, but wchar -> Find font family -> Get any variant out of it.
 
         const int name_utf8_len = (int)strnlen(src->Name, IM_COUNTOF(src->Name));
         const int name_utf16_len = MultiByteToWideChar(CP_UTF8, 0, src->Name, name_utf8_len, &data->family_name[0], IM_COUNTOF(data->family_name) - 1);
@@ -233,6 +235,11 @@ static bool font_src_init(ImFontAtlas*, ImFontConfig* src)
     DWRITE_FONT_METRICS metrics;
     data->font_face->GetMetrics(&metrics);
 
+    // Calculate the ascent/descent of the font in "em".
+    // 1.1em (in total) means that a 20px font has a 22px line height.
+    //
+    // Modern typographical metrics feature a line gap, which indicates the spacing between lines.
+    // Since ImGui has no concept of a line gap, we add 50% onto the ascent/descent respectively.
     const float ascent = metrics.ascent;
     const float descent = metrics.descent;
     const float half_line_gap = (float)metrics.lineGap * 0.5f;
@@ -341,9 +348,8 @@ static bool font_baked_load_glyph(ImFontAtlas* atlas, ImFontConfig* src, ImFontB
     if (glyph_index == 0)
         return false;
 
-    DWRITE_GLYPH_METRICS glyph_metrics;
-    RETURN_FALSE_IF_FAILED(font_face->GetDesignGlyphMetrics(&glyph_index, 1, &glyph_metrics, FALSE));
-
+    // ImGui's font size is actually the line height. Here, we reverse-calculate the actual
+    // font size by simply dividing the height in em. The result is in 96 DPI pixels.
     const float ref_size = baked->OwnerFont->Sources[0]->SizePixels;
     float font_size = baked->Size * src->ExtraSizeScale / (data->ascent + data->descent);
     if (src->MergeMode && src->SizePixels != 0.0f)
@@ -351,7 +357,9 @@ static bool font_baked_load_glyph(ImFontAtlas* atlas, ImFontConfig* src, ImFontB
 
     // DirectWrite yields fractional advance widths, but simultaneously we don't implement oversampling.
     // To prevent ugly smearing, we need to ensure to only return integer advances.
-    const float advance_x = IM_ROUND((float)glyph_metrics.advanceWidth * data->em_per_unit * font_size);
+    DWRITE_GLYPH_METRICS metrics;
+    RETURN_FALSE_IF_FAILED(font_face->GetDesignGlyphMetrics(&glyph_index, 1, &metrics, FALSE));
+    const float advance_x = IM_ROUND((float)metrics.advanceWidth * data->em_per_unit * font_size);
 
     if (out_advance_x)
     {
@@ -362,7 +370,16 @@ static bool font_baked_load_glyph(ImFontAtlas* atlas, ImFontConfig* src, ImFontB
 
     const DWRITE_GLYPH_OFFSET zero_offset = {};
     const float rasterizer_density = src->RasterizerDensity * baked->RasterizerDensity;
-    const DWRITE_GLYPH_RUN glyph_run = { font_face.get(), font_size * rasterizer_density, 1, &glyph_index, nullptr, &zero_offset, FALSE, 0 };
+    const DWRITE_GLYPH_RUN glyph_run = {
+        /* fontFace      */ font_face.get(),
+        /* fontEmSize    */ font_size * rasterizer_density,
+        /* glyphCount    */ 1,
+        /* glyphIndices  */ &glyph_index,
+        /* glyphAdvances */ nullptr,
+        /* glyphOffsets  */ &zero_offset,
+        /* isSideways    */ FALSE,
+        /* bidiLevel     */ 0,
+    };
 
     // If you read SDK headers you may notice the very enticing IDWriteBitmapRenderTarget3::DrawGlyphRunWithColorSupport
     // function, but (and these words are written in anger) that one is exclusive to the Windows App SDK.
@@ -374,6 +391,8 @@ static bool font_baked_load_glyph(ImFontAtlas* atlas, ImFontConfig* src, ImFontB
     // To properly support GASP, a call to GetRecommendedRenderingMode is required.
     DWRITE_RENDERING_MODE1 rendering_mode;
     DWRITE_GRID_FIT_MODE grid_fit_mode;
+    com_ptr<IDWriteGlyphRunAnalysis> analysis;
+    RECT bounds;
     RETURN_FALSE_IF_FAILED(font_face->GetRecommendedRenderingMode(
         /* fontEmSize       */ glyph_run.fontEmSize,
         /* dpiX             */ 96.0f, // fontEmSize is already in display pixels
@@ -386,8 +405,6 @@ static bool font_baked_load_glyph(ImFontAtlas* atlas, ImFontConfig* src, ImFontB
         /* renderingMode    */ &rendering_mode,
         /* gridFitMode      */ &grid_fit_mode
     ));
-
-    com_ptr<IDWriteGlyphRunAnalysis> analysis;
     RETURN_FALSE_IF_FAILED(data->factory->CreateGlyphRunAnalysis(
         /* glyphRun         */ &glyph_run,
         /* transform        */ nullptr,
@@ -399,10 +416,8 @@ static bool font_baked_load_glyph(ImFontAtlas* atlas, ImFontConfig* src, ImFontB
         /* baselineOriginY  */ 0,
         /* glyphRunAnalysis */ analysis.addressof()
     ));
-
     // Even if it says "aliased", it actually produces an antialiased 8-bit grayscale texture.
     // I don't get it either. I don't think anyone at Microsoft does.
-    RECT bounds;
     RETURN_FALSE_IF_FAILED(analysis->GetAlphaTextureBounds(DWRITE_TEXTURE_ALIASED_1x1, &bounds));
 
     out_glyph->Codepoint = codepoint;
