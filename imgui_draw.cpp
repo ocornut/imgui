@@ -36,6 +36,9 @@ Index of this file:
 #include "imgui.h"
 #ifndef IMGUI_DISABLE
 #include "imgui_internal.h"
+#ifdef IMGUI_ENABLE_DWRITE
+#include "misc/dwrite/imgui_dwrite.h"
+#endif
 #ifdef IMGUI_ENABLE_FREETYPE
 #include "misc/freetype/imgui_freetype.h"
 #endif
@@ -3074,7 +3077,6 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg_in)
 {
     // Sanity Checks
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas!");
-    IM_ASSERT((font_cfg_in->FontData != NULL && font_cfg_in->FontDataSize > 0) || (font_cfg_in->FontLoader != NULL));
     //IM_ASSERT(font_cfg_in->SizePixels > 0.0f && "Is ImFontConfig struct correctly initialized?");
     IM_ASSERT(font_cfg_in->RasterizerDensity > 0.0f && "Is ImFontConfig struct correctly initialized?");
     if (font_cfg_in->GlyphOffset.x != 0.0f || font_cfg_in->GlyphOffset.y != 0.0f || font_cfg_in->GlyphMinAdvanceX != 0.0f || font_cfg_in->GlyphMaxAdvanceX != FLT_MAX)
@@ -3288,6 +3290,21 @@ ImFont* ImFontAtlas::AddFontFromMemoryTTF(void* font_data, int font_data_size, f
     font_cfg.SizePixels = size_pixels > 0.0f ? size_pixels : font_cfg.SizePixels;
     if (glyph_ranges)
         font_cfg.GlyphRanges = glyph_ranges;
+    return AddFont(&font_cfg);
+}
+
+ImFont* ImFontAtlas::AddFontFromFamily(const char* family, float size_pixels, const ImFontConfig* font_cfg_template)
+{
+    IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas!");
+    ImFontConfig font_cfg = font_cfg_template ? *font_cfg_template : ImFontConfig();
+    IM_ASSERT(font_cfg.FontData == NULL && font_cfg.FontDataSize == 0);
+    if (family == NULL || family[0] == '\0' || ImStrlen(family) >= IM_COUNTOF(font_cfg.Name))
+    {
+        IM_ASSERT_USER_ERROR(0, "Invalid font family name.");
+        return NULL;
+    }
+    ImStrncpy(font_cfg.Name, family, IM_COUNTOF(font_cfg.Name));
+    font_cfg.SizePixels = size_pixels > 0.0f ? size_pixels : font_cfg.SizePixels;
     return AddFont(&font_cfg);
 }
 
@@ -4334,7 +4351,9 @@ void ImFontAtlasBuildInit(ImFontAtlas* atlas)
     //   and point to it instead of pointing directly to return value of the GetFontLoaderXXX functions.
     if (atlas->FontLoader == NULL)
     {
-#ifdef IMGUI_ENABLE_FREETYPE
+    #ifdef IMGUI_ENABLE_DWRITE
+        atlas->SetFontLoader(ImGuiDWrite::GetFontLoader());
+    #elif defined(IMGUI_ENABLE_FREETYPE)
         atlas->SetFontLoader(ImGuiFreeType::GetFontLoader());
 #elif defined(IMGUI_ENABLE_STB_TRUETYPE)
         atlas->SetFontLoader(ImFontAtlasGetFontLoaderForStbTruetype());
@@ -4711,6 +4730,12 @@ struct ImGui_ImplStbTrueType_FontSrcData
 static bool ImGui_ImplStbTrueType_FontSrcInit(ImFontAtlas* atlas, ImFontConfig* src)
 {
     IM_UNUSED(atlas);
+
+    if (src->FontData == NULL || src->FontDataSize <= 0)
+    {
+        IM_ASSERT_USER_ERROR(0, "stb_truetype requires font data; font families are not supported.");
+        return false;
+    }
 
     ImGui_ImplStbTrueType_FontSrcData* bd_font_data = IM_NEW(ImGui_ImplStbTrueType_FontSrcData);
     IM_ASSERT(src->FontLoaderData == NULL);
