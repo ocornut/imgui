@@ -20,6 +20,10 @@
 #include "../libs/emscripten/emscripten_mainloop_stub.h"
 #endif
 
+#if defined(__ANDROID__)
+#include <SDL3/SDL_main.h>
+#endif
+
 // Main code
 int main(int, char**)
 {
