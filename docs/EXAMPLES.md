@@ -75,6 +75,14 @@ OSX + OpenGL2 example. <BR>
 OSX + OpenGL3 example. <BR>
 = main.mm + imgui_impl_osx.mm + imgui_impl_opengl3.cpp <BR>
 
+[example_emscripten_opengl3/](https://github.com/ocornut/imgui/blob/master/examples/example_emscripten_opengl3/) <BR>
+Emscripten (browser) + OpenGL3/ES2/ES3 example. Uses imgui_impl_emscripten for platform input and imgui_impl_opengl3 for rendering. <BR>
+= main.cpp + imgui_impl_emscripten.cpp + imgui_impl_opengl3.cpp
+
+[example_emscripten_wgpu/](https://github.com/ocornut/imgui/blob/master/examples/example_emscripten_wgpu/) <BR>
+Emscripten (browser) + WebGPU example. Uses imgui_impl_emscripten for platform input and imgui_impl_wgpu for rendering. <BR>
+= main.cpp + imgui_impl_emscripten.cpp + imgui_impl_wgpu.cpp
+
 [example_glfw_wgpu/](https://github.com/ocornut/imgui/blob/master/examples/example_glfw_wgpu/) <BR>
 GLFW + WebGPU example. Supports Emscripten (web), Dawn (native), WGPU (native). <BR>
 = main.cpp + imgui_impl_glfw.cpp + imgui_impl_wgpu.cpp
@@ -271,4 +279,3 @@ when an interactive drag is in progress.
 Note that some setup configurations or GPU drivers may introduce additional display lag depending on their settings.
 If you notice that dragging windows is laggy and you are not sure what the cause is: try drawing a simple
 2D shape directly under the mouse cursor to help identify the issue!
-
