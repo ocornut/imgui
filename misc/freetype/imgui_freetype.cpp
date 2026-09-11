@@ -48,6 +48,10 @@
 #include FT_GLYPH_H             // <freetype/ftglyph.h>
 #include FT_SIZES_H             // <freetype/ftsizes.h>
 #include FT_SYNTHESIS_H         // <freetype/ftsynth.h>
+#if defined(IMGUI_ENABLE_HARFBUZZ_SHAPING)
+#include <hb.h>                 // HarfBuzz shaping (GSUB ligatures: ZWJ families, regional-indicator flags)
+#include <hb-ft.h>              // hb_ft_font_create
+#endif
 
 // Handle LunaSVG and PlutoSVG
 #if defined(IMGUI_ENABLE_FREETYPE_LUNASVG) && defined(IMGUI_ENABLE_FREETYPE_PLUTOSVG)
@@ -168,6 +172,9 @@ struct ImGui_ImplFreeType_FontSrcData
     ImGuiFreeTypeLoaderFlags        UserFlags;          // = ImFontConfig::FontLoaderFlags
     FT_Int32                        LoadFlags;
     ImFontBaked*                    BakedLastActivated;
+#if defined(IMGUI_ENABLE_HARFBUZZ_SHAPING)
+    hb_font_t*                      HbFont;             // HarfBuzz font for shaping (GSUB ligatures). Created in InitFont, destroyed in CloseFont.
+#endif
 };
 
 // Stored in ImFontBaked::FontLoaderDatas: pointer to SourcesCount instances of this. ALLOCATED BY CORE.
@@ -175,6 +182,17 @@ struct ImGui_ImplFreeType_FontSrcBakedData
 {
     FT_Size     FtSize;             // This represent a FT_Face with a given size.
     ImGui_ImplFreeType_FontSrcBakedData() { memset((void*)this, 0, sizeof(*this)); }
+#if defined(IMGUI_ENABLE_HARFBUZZ_SHAPING)
+    ~ImGui_ImplFreeType_FontSrcBakedData() { ShapedGlyphs.clear_destruct(); }
+
+    // Shaped-glyph cache: glyphs baked by FT glyph INDEX (not codepoint),
+    // used by ImGui_ImplFreeType_RenderShapedText for GSUB ligatures
+    // (ZWJ families, regional-indicator flags) whose combined glyph has no
+    // Unicode codepoint and therefore cannot live in ImFontBaked's
+    // codepoint-indexed Glyphs/IndexLookup tables.
+    ImVector<ImFontGlyph>  ShapedGlyphs;
+    ImGuiStorage           ShapedGlyphsByGlyphID;   // FT glyph index -> index in ShapedGlyphs
+#endif
 };
 
 bool ImGui_ImplFreeType_FontSrcData::InitFont(FT_Library ft_library, const ImFontConfig* src, ImGuiFreeTypeLoaderFlags extra_font_loader_flags)
@@ -208,11 +226,27 @@ bool ImGui_ImplFreeType_FontSrcData::InitFont(FT_Library ft_library, const ImFon
     if (UserFlags & ImGuiFreeTypeLoaderFlags_LoadColor)
         LoadFlags |= FT_LOAD_COLOR;
 
+    // Create a HarfBuzz font backed by this FT_Face. Used by
+    // ImGui_ImplFreeType_RenderShapedText to GSUB-shape grapheme clusters
+    // (ZWJ families, regional-indicator flags) into their ligature glyph,
+    // which ImGui's codepoint-by-codepoint RenderText cannot do.
+#if defined(IMGUI_ENABLE_HARFBUZZ_SHAPING)
+    HbFont = hb_ft_font_create(FtFace, NULL);
+    hb_ft_font_set_load_flags(HbFont, LoadFlags);
+#endif
+
     return true;
 }
 
 void ImGui_ImplFreeType_FontSrcData::CloseFont()
 {
+#if defined(IMGUI_ENABLE_HARFBUZZ_SHAPING)
+    if (HbFont)
+    {
+        hb_font_destroy(HbFont);
+        HbFont = NULL;
+    }
+#endif
     if (FtFace)
     {
         FT_Done_Face(FtFace);
@@ -569,6 +603,201 @@ static bool ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConf
 
     return true;
 }
+
+#if defined(IMGUI_ENABLE_HARFBUZZ_SHAPING)
+// Bake a glyph identified by its FreeType glyph INDEX (not a Unicode
+// codepoint) into the atlas, cache it in the per-(src,baked) shaped-glyph
+// cache, and return it. This is the on-demand baking path used by
+// RenderShapedText for GSUB ligature glyphs (ZWJ families, regional-
+// indicator flags) whose combined glyph has no codepoint and thus cannot
+// live in ImFontBaked's codepoint-indexed tables.
+static ImFontGlyph* ImGui_ImplFreeType_BakeGlyphByID(ImFontAtlas* atlas,
+                                                     ImFontConfig* src,
+                                                     ImFontBaked* baked,
+                                                     void* loader_data_for_baked_src,
+                                                     FT_UInt glyph_index)
+{
+    if (glyph_index == 0)
+        return nullptr;
+    ImGui_ImplFreeType_FontSrcData* bd_font_data = (ImGui_ImplFreeType_FontSrcData*)src->FontLoaderData;
+    ImGui_ImplFreeType_FontSrcBakedData* bd_baked_data = (ImGui_ImplFreeType_FontSrcBakedData*)loader_data_for_baked_src;
+
+    // Cache lookup
+    int cached_idx = bd_baked_data->ShapedGlyphsByGlyphID.GetInt((ImGuiID)glyph_index, -1);
+    if (cached_idx >= 0 && cached_idx < bd_baked_data->ShapedGlyphs.Size)
+        return &bd_baked_data->ShapedGlyphs[cached_idx];
+
+    if (atlas->Locked || (baked->OwnerFont->Flags & ImFontFlags_NoLoadGlyphs))
+        return nullptr;
+
+    FT_Activate_Size(bd_baked_data->FtSize);
+    bd_font_data->BakedLastActivated = baked;
+
+    // Load by glyph index directly (no FT_Get_Char_Index).
+    FT_Face face = bd_font_data->FtFace;
+    FT_Error error = FT_Load_Glyph(face, glyph_index, bd_font_data->LoadFlags);
+    if (error != 0)
+        return nullptr;
+    FT_GlyphSlot slot = face->glyph;
+    if (slot->format != FT_GLYPH_FORMAT_BITMAP)
+        FT_Render_Glyph(slot, FT_RENDER_MODE_NORMAL);
+    const FT_Bitmap* ft_bitmap = &slot->bitmap;
+    if (ft_bitmap == nullptr)
+        return nullptr;
+
+    const float rasterizer_density = src->RasterizerDensity * baked->RasterizerDensity;
+    const float advance_x = (slot->advance.x / FT_SCALEFACTOR) / rasterizer_density;
+    const int w = (int)ft_bitmap->width;
+    const int h = (int)ft_bitmap->rows;
+
+    ImFontGlyph g;
+    memset(&g, 0, sizeof(g));
+    g.Codepoint = (ImWchar)glyph_index;   // not a real codepoint; cache key only
+    g.SourceIdx = 0;
+    g.AdvanceX = advance_x;
+    g.Visible = false;
+    g.Colored = false;
+    g.PackId = ImFontAtlasRectId_Invalid;
+
+    if (w != 0 && h != 0)
+    {
+        ImFontAtlasRectId pack_id = ImFontAtlasPackAddRect(atlas, w, h);
+        if (pack_id == ImFontAtlasRectId_Invalid)
+            return nullptr;
+        ImTextureRect* r = ImFontAtlasPackGetRect(atlas, pack_id);
+        atlas->Builder->TempBuffer.resize(w * h * 4);
+        uint32_t* temp_buffer = (uint32_t*)atlas->Builder->TempBuffer.Data;
+        ImGui_ImplFreeType_BlitGlyph(ft_bitmap, temp_buffer, w);
+
+        const float ref_size = baked->OwnerFont->Sources[0]->SizePixels;
+        const float offsets_scale = (ref_size != 0.0f) ? (baked->Size / ref_size) : 1.0f;
+        float font_off_x = ImFloor(src->GlyphOffset.x * offsets_scale + 0.5f);
+        float font_off_y = ImFloor(src->GlyphOffset.y * offsets_scale + 0.5f) + baked->Ascent;
+        float recip = 1.0f / rasterizer_density;
+        float glyph_off_x = (float)slot->bitmap_left;
+        float glyph_off_y = (float)-slot->bitmap_top;
+        g.X0 = glyph_off_x * recip + font_off_x;
+        g.Y0 = glyph_off_y * recip + font_off_y;
+        g.X1 = (glyph_off_x + w) * recip + font_off_x;
+        g.Y1 = (glyph_off_y + h) * recip + font_off_y;
+        g.Visible = true;
+        g.Colored = (ft_bitmap->pixel_mode == FT_PIXEL_MODE_BGRA);
+        g.PackId = pack_id;
+        g.U0 = r->x * atlas->TexUvScale.x;
+        g.V0 = r->y * atlas->TexUvScale.y;
+        g.U1 = (r->x + r->w) * atlas->TexUvScale.x;
+        g.V1 = (r->y + r->h) * atlas->TexUvScale.y;
+        ImFontAtlasBakedSetFontGlyphBitmap(atlas, baked, src, &g, r, (const unsigned char*)temp_buffer, ImTextureFormat_RGBA32, w * 4);
+    }
+
+    int idx = bd_baked_data->ShapedGlyphs.Size;
+    bd_baked_data->ShapedGlyphs.push_back(g);
+    bd_baked_data->ShapedGlyphsByGlyphID.SetInt((ImGuiID)glyph_index, idx);
+    return &bd_baked_data->ShapedGlyphs[idx];
+}
+
+// Shape `text` with HarfBuzz and render it via `draw_list`, baking
+// ligature glyphs on demand by FT glyph index. This is the shaped
+// counterpart of ImFont::RenderText: it forms GSUB ligatures (ZWJ
+// families, regional-indicator flags) that the codepoint-by-codepoint
+// RenderText cannot. On-demand baking may grow the atlas texture
+// mid-frame; we mirror RenderText's cmd_count retry to handle the
+// resulting draw-cmd split.
+IMGUI_API void ImGuiFreeType::RenderShapedText(ImDrawList* draw_list,
+                                              ImFont* font, ImFontBaked* baked,
+                                              float size, const ImVec2& pos,
+                                              ImU32 col, const ImVec4& clip_rect,
+                                              const char* text_begin, const char* text_end)
+{
+begin:
+    float x = IM_TRUNC(pos.x);
+    float y = IM_TRUNC(pos.y);
+    if (!text_end)
+        text_end = text_begin + ImStrlen(text_begin);
+    if (y > clip_rect.w)
+        return;
+
+    ImFontConfig* src = font->Sources[0];
+    ImGui_ImplFreeType_FontSrcData* bd_font_data = (ImGui_ImplFreeType_FontSrcData*)src->FontLoaderData;
+    if (bd_font_data == nullptr || bd_font_data->HbFont == nullptr)
+        return;   // no HarfBuzz font (non-FreeType loader) -> caller should fall back to AddText
+
+    // Single-source fonts: the per-(src,baked) slot is at offset 0.
+    void* loader_data_for_baked_src = (char*)baked->FontLoaderDatas;
+
+    const float scale = size / baked->Size;
+    const ImU32 col_untinted = col | ~IM_COL32_A_MASK;
+
+    // Shape the whole cluster.
+    hb_buffer_t* buf = hb_buffer_create();
+    hb_buffer_add_utf8(buf, text_begin, (int)(text_end - text_begin), 0, -1);
+    hb_buffer_guess_segment_properties(buf);
+    hb_shape(bd_font_data->HbFont, buf, nullptr, 0);
+    unsigned int n_glyph = 0;
+    hb_glyph_info_t* infos = hb_buffer_get_glyph_infos(buf, &n_glyph);
+    hb_glyph_position_t* positions = hb_buffer_get_glyph_positions(buf, &n_glyph);
+
+    const int vtx_count_max = (int)(n_glyph + 1) * 4;
+    const int idx_count_max = (int)(n_glyph + 1) * 6;
+    draw_list->PrimReserve(idx_count_max, vtx_count_max);
+    ImDrawVert*  vtx_write = draw_list->_VtxWritePtr;
+    ImDrawIdx*   idx_write = draw_list->_IdxWritePtr;
+    unsigned int vtx_index = draw_list->_VtxCurrentIdx;
+    const int cmd_count = draw_list->CmdBuffer.Size;
+
+    for (unsigned int i = 0; i < n_glyph; i++)
+    {
+        FT_UInt glyph_id = (FT_UInt)infos[i].codepoint;   // after shaping: glyph index
+        float x_advance = (float)positions[i].x_advance / 64.0f;   // 26.6 -> px
+        float x_offset  = (float)positions[i].x_offset  / 64.0f;
+
+        ImFontGlyph* glyph = ImGui_ImplFreeType_BakeGlyphByID(font->OwnerAtlas, src, baked, loader_data_for_baked_src, glyph_id);
+        if (glyph == nullptr)
+        {
+            x += x_advance * scale;
+            continue;
+        }
+        if (glyph->Visible)
+        {
+            float x1 = x + (glyph->X0 + x_offset) * scale;
+            float x2 = x + (glyph->X1 + x_offset) * scale;
+            float y1 = y + glyph->Y0 * scale;
+            float y2 = y + glyph->Y1 * scale;
+            if (x1 <= clip_rect.z && x2 >= clip_rect.x)
+            {
+                ImU32 glyph_col = glyph->Colored ? col_untinted : col;
+                float u1 = glyph->U0, v1 = glyph->V0, u2 = glyph->U1, v2 = glyph->V1;
+                vtx_write[0].pos.x = x1; vtx_write[0].pos.y = y1; vtx_write[0].col = glyph_col; vtx_write[0].uv.x = u1; vtx_write[0].uv.y = v1;
+                vtx_write[1].pos.x = x2; vtx_write[1].pos.y = y1; vtx_write[1].col = glyph_col; vtx_write[1].uv.x = u2; vtx_write[1].uv.y = v1;
+                vtx_write[2].pos.x = x2; vtx_write[2].pos.y = y2; vtx_write[2].col = glyph_col; vtx_write[2].uv.x = u2; vtx_write[2].uv.y = v2;
+                vtx_write[3].pos.x = x1; vtx_write[3].pos.y = y2; vtx_write[3].col = glyph_col; vtx_write[3].uv.x = u1; vtx_write[3].uv.y = v2;
+                idx_write[0] = (ImDrawIdx)(vtx_index); idx_write[1] = (ImDrawIdx)(vtx_index + 1); idx_write[2] = (ImDrawIdx)(vtx_index + 2);
+                idx_write[3] = (ImDrawIdx)(vtx_index); idx_write[4] = (ImDrawIdx)(vtx_index + 2); idx_write[5] = (ImDrawIdx)(vtx_index + 3);
+                vtx_write += 4; vtx_index += 4; idx_write += 6;
+            }
+        }
+        x += x_advance * scale;
+    }
+
+    hb_buffer_destroy(buf);
+
+    // On-demand baking may have split the draw cmd (texture grew). Retry.
+    if (cmd_count != draw_list->CmdBuffer.Size)
+    {
+        IM_ASSERT(draw_list->CmdBuffer[draw_list->CmdBuffer.Size - 1].ElemCount == 0);
+        draw_list->CmdBuffer.pop_back();
+        draw_list->PrimUnreserve(idx_count_max, vtx_count_max);
+        draw_list->AddDrawCmd();
+        goto begin;
+    }
+
+    draw_list->VtxBuffer.Size = (int)(vtx_write - draw_list->VtxBuffer.Data);
+    draw_list->IdxBuffer.Size = (int)(idx_write - draw_list->IdxBuffer.Data);
+    draw_list->_VtxWritePtr = vtx_write;
+    draw_list->_IdxWritePtr = idx_write;
+    draw_list->_VtxCurrentIdx = (unsigned int)draw_list->VtxBuffer.Size;
+}
+#endif // IMGUI_ENABLE_HARFBUZZ_SHAPING
 
 static bool ImGui_ImplFreetype_FontSrcContainsGlyph(ImFontAtlas* atlas, ImFontConfig* src, ImWchar codepoint)
 {
