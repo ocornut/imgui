@@ -62,9 +62,6 @@ struct ImGui_ImplSDLRenderer3_Data
     SDL_Renderer*           Renderer;       // Main viewport's renderer
     ImVector<SDL_FColor>    ColorBuffer;
 
-    // Render State
-    SDL_ScaleMode           CurrentScaleMode;
-
     ImGui_ImplSDLRenderer3_Data()   { memset((void*)this, 0, sizeof(*this)); }
 };
 
@@ -75,17 +72,22 @@ static ImGui_ImplSDLRenderer3_Data* ImGui_ImplSDLRenderer3_GetBackendData()
     return ImGui::GetCurrentContext() ? (ImGui_ImplSDLRenderer3_Data*)ImGui::GetIO().BackendRendererUserData : nullptr;
 }
 
+static ImGui_ImplSDLRenderer3_RenderState* ImGui_ImplSDLRenderer3_GetRenderState()
+{
+    return (ImGui_ImplSDLRenderer3_RenderState*)ImGui::GetPlatformIO().Renderer_RenderState;
+}
+
 // Functions
 static void ImGui_ImplSDLRenderer3_SetupRenderState(SDL_Renderer* renderer)
 {
-    ImGui_ImplSDLRenderer3_Data* bd = ImGui_ImplSDLRenderer3_GetBackendData();
+    ImGui_ImplSDLRenderer3_RenderState* render_state = ImGui_ImplSDLRenderer3_GetRenderState();
 
     // Clear out any viewports and cliprect set by the user
     // FIXME: Technically speaking there are lots of other things we could backup/setup/restore during our render process.
     SDL_SetRenderViewport(renderer, nullptr);
     SDL_SetRenderClipRect(renderer, nullptr);
 
-    bd->CurrentScaleMode = SDL_SCALEMODE_LINEAR;
+    render_state->CurrentScaleMode = SDL_SCALEMODE_LINEAR;
 }
 
 void ImGui_ImplSDLRenderer3_NewFrame()
@@ -115,8 +117,8 @@ static int SDL_RenderGeometryRaw8BitColor(SDL_Renderer* renderer, ImVector<SDL_F
 
 // Draw callbacks
 static void ImGui_ImplSDLRenderer3_DrawCallback_ResetRenderState(const ImDrawList*, const ImDrawCmd*)   {} // Intentionally empty. Used as an identifier for rendering loop to call its code. Simpler to implement this way.
-static void ImGui_ImplSDLRenderer3_DrawCallback_SetSamplerLinear(const ImDrawList*, const ImDrawCmd*)   { ImGui_ImplSDLRenderer3_Data* bd = ImGui_ImplSDLRenderer3_GetBackendData(); bd->CurrentScaleMode = SDL_SCALEMODE_LINEAR; }
-static void ImGui_ImplSDLRenderer3_DrawCallback_SetSamplerNearest(const ImDrawList*, const ImDrawCmd*)  { ImGui_ImplSDLRenderer3_Data* bd = ImGui_ImplSDLRenderer3_GetBackendData(); bd->CurrentScaleMode = SDL_SCALEMODE_NEAREST; }
+static void ImGui_ImplSDLRenderer3_DrawCallback_SetSamplerLinear(const ImDrawList*, const ImDrawCmd*)   { ImGui_ImplSDLRenderer3_RenderState* render_state = ImGui_ImplSDLRenderer3_GetRenderState(); render_state->CurrentScaleMode = SDL_SCALEMODE_LINEAR; }
+static void ImGui_ImplSDLRenderer3_DrawCallback_SetSamplerNearest(const ImDrawList*, const ImDrawCmd*)  { ImGui_ImplSDLRenderer3_RenderState* render_state = ImGui_ImplSDLRenderer3_GetRenderState(); render_state->CurrentScaleMode = SDL_SCALEMODE_NEAREST; }
 
 void ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* renderer)
 {
@@ -159,19 +161,19 @@ void ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* 
     SDL_GetRenderViewport(renderer, &old.Viewport);
     SDL_GetRenderClipRect(renderer, &old.ClipRect);
 
-    // Setup desired state
-    ImGui_ImplSDLRenderer3_SetupRenderState(renderer);
-
     // Setup render state structure (for callbacks and custom texture bindings)
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     ImGui_ImplSDLRenderer3_RenderState render_state;
     render_state.Renderer = renderer;
     platform_io.Renderer_RenderState = &render_state;
 
+    // Setup desired state
+    ImGui_ImplSDLRenderer3_SetupRenderState(renderer);
+
     // Will project scissor/clipping rectangles into framebuffer space
     ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
     ImVec2 clip_scale = render_scale;
-    SDL_ScaleMode last_scale_mode = bd->CurrentScaleMode;
+    SDL_ScaleMode last_scale_mode = render_state.CurrentScaleMode;
 
     // Render command lists
     for (const ImDrawList* draw_list : draw_data->CmdLists)
@@ -209,12 +211,12 @@ void ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* 
                 const float* uv = (const float*)(const void*)((const char*)(vtx_buffer + pcmd->VtxOffset) + offsetof(ImDrawVert, uv));
                 const SDL_Color* color = (const SDL_Color*)(const void*)((const char*)(vtx_buffer + pcmd->VtxOffset) + offsetof(ImDrawVert, col)); // SDL 2.0.19+
 
-                if (last_scale_mode != bd->CurrentScaleMode)
+                if (last_scale_mode != render_state.CurrentScaleMode)
                     SDL_FlushRenderer(renderer);
 
                 // Bind texture, Draw
                 SDL_Texture* tex = (SDL_Texture*)pcmd->GetTexID();
-                SDL_SetTextureScaleMode(tex, bd->CurrentScaleMode);
+                SDL_SetTextureScaleMode(tex, render_state.CurrentScaleMode);
                 SDL_RenderGeometryRaw8BitColor(renderer, bd->ColorBuffer, tex,
                     xy, (int)sizeof(ImDrawVert),
                     color, (int)sizeof(ImDrawVert),
