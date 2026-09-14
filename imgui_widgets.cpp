@@ -10460,8 +10460,10 @@ static void ImGui::TabBarScrollToTab(ImGuiTabBar* tab_bar, ImGuiID tab_id, ImGui
     if (tab->Flags & ImGuiTabItemFlags_SectionMask_)
         return;
 
+    // When scrolling to make Tab N+1 visible always make a bit of N visible to suggest more scrolling area (since we don't have a scrollbar)
+    // Disable the margin if the scrolling section is too small for the target tab: prefer displaying a maximum of the label.
     ImGuiContext& g = *GImGui;
-    float margin = g.FontSize * 1.0f; // When to scroll to make Tab N+1 visible always make a bit of N visible to suggest more scrolling area (since we don't have a scrollbar)
+    float margin = ImClamp(tab_bar->ScrollingRectMaxX - tab_bar->ScrollingRectMinX - tab->Width, g.Style.ItemInnerSpacing.x, g.FontSize * 1.0f);
     int order = TabBarGetTabOrder(tab_bar, tab);
 
     // Scrolling happens only in the central section (leading/trailing sections are not scrolling)

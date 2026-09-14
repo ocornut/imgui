@@ -60,6 +60,9 @@ Other Changes:
 - TreeNode:
   - Fixed issues/asserts with 32+ deep trees when using ImGuiTreeNodeFlags_DrawLinesXXX
     features or other features requiring stack storage. (#9509) [@lasrod]
+- TabBar:
+  - Improved scroll target when clicking a Tab that is larger than the scrolling
+    region width.
 - Fonts:
   - Reworked `AddFontDefault()` to use `io.DisplayFrameBufferScale` as part of the heuristic
     to select `AddFontDefaultVector()` by default, effectively using ProggyForever instead of
