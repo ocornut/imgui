@@ -10402,6 +10402,14 @@ const char* ImGui::TabBarGetTabName(ImGuiTabBar* tab_bar, ImGuiTabItem* tab)
     return tab_bar->TabsNames.Buf.Data + tab->NameOffset;
 }
 
+ImVec2 ImGui::TabBarGetTabPos(ImGuiTabBar* tab_bar, ImGuiTabItem* tab)
+{
+    if ((tab->Flags & ImGuiTabItemFlags_SectionMask_) == 0)
+        return tab_bar->BarRect.Min + ImVec2(IM_TRUNC(tab->Offset - tab_bar->ScrollingAnim), 0.0f);
+    else
+        return tab_bar->BarRect.Min + ImVec2(tab->Offset, 0.0f);
+}
+
 // The *TabId fields are already set by the docking system _before_ the actual TabItem was created, so we clear them regardless.
 void ImGui::TabBarRemoveTab(ImGuiTabBar* tab_bar, ImGuiID tab_id)
 {
@@ -10855,10 +10863,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     // Layout
     const bool is_central_section = (tab->Flags & ImGuiTabItemFlags_SectionMask_) == 0;
     size.x = tab->Width;
-    if (is_central_section)
-        window->DC.CursorPos = tab_bar->BarRect.Min + ImVec2(IM_TRUNC(tab->Offset - tab_bar->ScrollingAnim), 0.0f);
-    else
-        window->DC.CursorPos = tab_bar->BarRect.Min + ImVec2(tab->Offset, 0.0f);
+    window->DC.CursorPos = TabBarGetTabPos(tab_bar, tab);
     ImVec2 pos = window->DC.CursorPos;
     ImRect bb(pos, pos + size);
 
