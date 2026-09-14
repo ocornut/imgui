@@ -10220,16 +10220,17 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
     }
 
     // Horizontal scrolling buttons
-    // Important: note that TabBarScrollButtons() will alter BarRect.Max.x.
+    // - Important: note that TabBarScrollButtons() will alter BarRect.Max.x.
+    // - Selection skips buttons and might cross through sections if there are Tabs in Leading/Trailing sections.
     const bool can_scroll = (tab_bar->Flags & ImGuiTabBarFlags_FittingPolicyScroll) || (tab_bar->Flags & ImGuiTabBarFlags_FittingPolicyMixed);
     const float width_all_tabs_to_use_for_scroll = (tab_bar->Flags & ImGuiTabBarFlags_FittingPolicyScroll) ? tab_bar->WidthAllTabs : width_all_tabs_after_min_width_shrink;
     tab_bar->ScrollButtonEnabled = ((width_all_tabs_to_use_for_scroll > tab_bar->BarRect.GetWidth() && tab_bar->Tabs.Size > 1) && !(tab_bar->Flags & ImGuiTabBarFlags_NoTabListScrollingButtons) && can_scroll);
     if (tab_bar->ScrollButtonEnabled)
         if (ImGuiTabItem* scroll_and_select_tab = TabBarScrollingButtons(tab_bar))
         {
-            scroll_to_tab_id = scroll_and_select_tab->ID;
             if ((scroll_and_select_tab->Flags & ImGuiTabItemFlags_Button) == 0)
-                tab_bar->SelectedTabId = scroll_to_tab_id;
+                tab_bar->SelectedTabId = scroll_and_select_tab->ID;
+            scroll_to_tab_id = scroll_and_select_tab->ID;
         }
     if (scroll_to_tab_id == 0 && scroll_to_selected_tab)
         scroll_to_tab_id = tab_bar->SelectedTabId;
@@ -10457,6 +10458,13 @@ static void ImGui::TabBarScrollToTab(ImGuiTabBar* tab_bar, ImGuiID tab_id, ImGui
     ImGuiTabItem* tab = TabBarFindTabByID(tab_bar, tab_id);
     if (tab == NULL)
         return;
+
+    // Clamp attempt to scroll to leading/trailing sections items.
+    // This could be done at the TabBarScrollingButtons() call site as well, but here works.
+    if (tab->Flags & ImGuiTabItemFlags_Leading)
+        tab = &tab_bar->Tabs[sections[0].TabCount];
+    else if (tab->Flags & ImGuiTabItemFlags_Trailing)
+        tab = &tab_bar->Tabs[sections[0].TabCount + sections[1].TabCount];
     if (tab->Flags & ImGuiTabItemFlags_SectionMask_)
         return;
 
