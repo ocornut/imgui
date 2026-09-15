@@ -286,6 +286,22 @@ struct ImGui_ImplGlfw_Data
     ImGui_ImplGlfw_Data()   { memset((void*)this, 0, sizeof(*this)); }
 };
 
+// Helper structure we store in the void* PlatformUserData field of each ImGuiViewport to easily retrieve our backend data.
+struct ImGui_ImplGlfw_ViewportData
+{
+    GLFWwindow* Window;             // Stored in ImGuiViewport::PlatformHandle
+    bool        WindowOwned;
+    int         IgnoreWindowPosEventFrame;
+    int         IgnoreWindowSizeEventFrame;
+    GLFWcursor* LastMouseCursor;
+#ifdef _WIN32
+    WNDPROC     PrevWndProc;
+#endif
+
+    ImGui_ImplGlfw_ViewportData()  { memset((void*)this, 0, sizeof(*this)); IgnoreWindowSizeEventFrame = IgnoreWindowPosEventFrame = -1; }
+    ~ImGui_ImplGlfw_ViewportData() { IM_ASSERT(Window == nullptr); }
+};
+
 // Backend data stored in io.BackendPlatformUserData to allow support for multiple Dear ImGui contexts
 // It is STRONGLY preferred that you use docking branch with multi-viewports (== single Dear ImGui context + multiple windows) instead of multiple Dear ImGui contexts.
 // FIXME: multi-context support is not well tested and probably dysfunctional in this backend.
@@ -994,24 +1010,34 @@ static void ImGui_ImplGlfw_UpdateMouseCursor()
 {
     ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData();
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     if ((io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange) || glfwGetInputMode(bd->Window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED)
     {
-        bd->LastMouseCursor = nullptr;  // Invalidate so that if user changes underlying cursor we will update it next time we can.
+        // Invalidate so that if user changes underlying cursor we will update it next time we can.
+        bd->LastMouseCursor = nullptr;
+        for (int n = 0; n < platform_io.Viewports.Size; n++)
+            if (ImGui_ImplGlfw_ViewportData* vd = (ImGui_ImplGlfw_ViewportData*)platform_io.Viewports[n]->PlatformUserData)
+                vd->LastMouseCursor = nullptr;
         return;
     }
 
     ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
-    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     for (int n = 0; n < platform_io.Viewports.Size; n++)
     {
-        GLFWwindow* window = (GLFWwindow*)platform_io.Viewports[n]->PlatformHandle;
+        ImGuiViewport* viewport = platform_io.Viewports[n];
+        GLFWwindow* window = (GLFWwindow*)viewport->PlatformHandle;
+
+        // Cursors are set per-window, so the last applied cursor is tracked per viewport (viewport data is not
+        // available when multi-viewports are disabled, in which case there's only the main viewport to track).
+        ImGui_ImplGlfw_ViewportData* vd = (ImGui_ImplGlfw_ViewportData*)viewport->PlatformUserData;
+        GLFWcursor*& last_mouse_cursor = vd ? vd->LastMouseCursor : bd->LastMouseCursor;
         if (imgui_cursor == ImGuiMouseCursor_None || io.MouseDrawCursor)
         {
-            if (bd->LastMouseCursor != nullptr)
+            if (last_mouse_cursor != nullptr)
             {
                 // Hide OS mouse cursor if imgui is drawing it or if it wants no cursor
                 glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
-                bd->LastMouseCursor = nullptr;
+                last_mouse_cursor = nullptr;
             }
         }
         else
@@ -1020,10 +1046,10 @@ static void ImGui_ImplGlfw_UpdateMouseCursor()
             // FIXME-PLATFORM: Unfocused windows seems to fail changing the mouse cursor with GLFW 3.2, but 3.3 works here.
 #if GLFW_HAS_CREATECURSOR
             GLFWcursor* cursor = bd->MouseCursors[imgui_cursor] ? bd->MouseCursors[imgui_cursor] : bd->MouseCursors[ImGuiMouseCursor_Arrow];
-            if (bd->LastMouseCursor != cursor)
+            if (last_mouse_cursor != cursor)
             {
                 glfwSetCursor(window, cursor);
-                bd->LastMouseCursor = cursor;
+                last_mouse_cursor = cursor;
             }
 #endif
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
@@ -1286,21 +1312,6 @@ void ImGui_ImplGlfw_InstallEmscriptenCallbacks(GLFWwindow* window, const char* c
 // This is an _advanced_ and _optional_ feature, allowing the backend to create and handle multiple viewports simultaneously.
 // If you are new to dear imgui or creating a new binding for dear imgui, it is recommended that you completely ignore this section first..
 //--------------------------------------------------------------------------------------------------------
-
-// Helper structure we store in the void* PlatformUserData field of each ImGuiViewport to easily retrieve our backend data.
-struct ImGui_ImplGlfw_ViewportData
-{
-    GLFWwindow* Window;             // Stored in ImGuiViewport::PlatformHandle
-    bool        WindowOwned;
-    int         IgnoreWindowPosEventFrame;
-    int         IgnoreWindowSizeEventFrame;
-#ifdef _WIN32
-    WNDPROC     PrevWndProc;
-#endif
-
-    ImGui_ImplGlfw_ViewportData()  { memset((void*)this, 0, sizeof(*this)); IgnoreWindowSizeEventFrame = IgnoreWindowPosEventFrame = -1; }
-    ~ImGui_ImplGlfw_ViewportData() { IM_ASSERT(Window == nullptr); }
-};
 
 static void ImGui_ImplGlfw_WindowCloseCallback(GLFWwindow* window)
 {
