@@ -114,6 +114,8 @@ Other Changes:
 Docking+Viewports Branch:
 
 - Backends:
+  - GLFW: fixed applying mouse cursor shapes to secondary viewports, broken in 1.92.6
+    when introducing a cache. (#9545) [@JamesWrigley]
   - Metal: fixed resizing windows losing framebuffer scale. (#6828, #8856) [@laikoken]
 - Examples:
   - SDL3+Metal, GLFW+Metal: fix multi-viewport support.
