@@ -768,10 +768,12 @@ static void ImGui_ImplDX10_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
     }
 }
 
-static void ImGui_ImplDX10_RenderViewport(ImGuiViewport* viewport, void*)
+static void ImGui_ImplDX10_RenderWindow(ImGuiViewport* viewport, void*)
 {
     ImGui_ImplDX10_Data* bd = ImGui_ImplDX10_GetBackendData();
     ImGui_ImplDX10_ViewportData* vd = (ImGui_ImplDX10_ViewportData*)viewport->RendererUserData;
+    if (vd->RTView == nullptr) // Swap chain creation or resize failed (e.g. device removed)
+        return;
     ImVec4 clear_color = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
     bd->pd3dDevice->OMSetRenderTargets(1, &vd->RTView, nullptr);
     if (!(viewport->Flags & ImGuiViewportFlags_NoRendererClear))
@@ -792,7 +794,7 @@ void ImGui_ImplDX10_InitMultiViewportSupport()
     platform_io.Renderer_CreateWindow = ImGui_ImplDX10_CreateWindow;
     platform_io.Renderer_DestroyWindow = ImGui_ImplDX10_DestroyWindow;
     platform_io.Renderer_SetWindowSize = ImGui_ImplDX10_SetWindowSize;
-    platform_io.Renderer_RenderWindow = ImGui_ImplDX10_RenderViewport;
+    platform_io.Renderer_RenderWindow = ImGui_ImplDX10_RenderWindow;
     platform_io.Renderer_SwapBuffers = ImGui_ImplDX10_SwapBuffers;
 }
 

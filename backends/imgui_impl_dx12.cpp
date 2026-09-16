@@ -1256,6 +1256,8 @@ static void ImGui_ImplDX12_RenderWindow(ImGuiViewport* viewport, void*)
 {
     ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
     ImGui_ImplDX12_ViewportData* vd = (ImGui_ImplDX12_ViewportData*)viewport->RendererUserData;
+    if (vd->SwapChain == nullptr)
+        return;
 
     ImGui_ImplDX12_FrameContext* frame_context = ImGui_WaitForNextFrameContext(vd);
     UINT back_buffer_idx = vd->SwapChain->GetCurrentBackBufferIndex();

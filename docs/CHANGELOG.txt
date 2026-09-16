@@ -114,6 +114,8 @@ Other Changes:
 Docking+Viewports Branch:
 
 - Backends:
+  - DX10, DX11, DX12: fixed crash when CreateSwapChain() or CreateRenderTargetView()
+    calls are failing. (#9546)
   - GLFW: fixed applying mouse cursor shapes to secondary viewports, broken in 1.92.6
     when introducing a cache. (#9545) [@JamesWrigley]
   - Metal: fixed resizing windows losing framebuffer scale. (#6828, #8856) [@laikoken]
