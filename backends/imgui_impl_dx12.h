@@ -75,6 +75,8 @@ struct ImGui_ImplDX12_RenderState
     ID3D12GraphicsCommandList*  CommandList;
 };
 
+static inline ImGui_ImplDX12_RenderState* ImGui_ImplDX12_GetRenderState() { return (ImGui_ImplDX12_RenderState*)ImGui::GetPlatformIO().Renderer_RenderState; }
+
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 // Legacy initialization API Obsoleted in 1.91.5
 // - font_srv_cpu_desc_handle and font_srv_gpu_desc_handle are handles to a single SRV descriptor to use for the internal font texture, they must be in 'srv_descriptor_heap'

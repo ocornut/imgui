@@ -82,6 +82,8 @@ struct ImGui_ImplWGPU_RenderState
     WGPURenderPassEncoder       RenderPassEncoder;
 };
 
+static inline ImGui_ImplWGPU_RenderState* ImGui_ImplWGPU_GetRenderState() { return (ImGui_ImplWGPU_RenderState*)ImGui::GetPlatformIO().Renderer_RenderState; }
+
 //-------------------------------------------------------------------------
 // Internal Helpers
 // Those are currently used by our example applications.

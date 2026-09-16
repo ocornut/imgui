@@ -46,4 +46,6 @@ struct ImGui_ImplDX10_RenderState
     //ID3D10SamplerState*   SamplerNearest;         // Use ImDrawList::AddCallback(ImGui::GetPlatform().DrawCallback_SetSamplerNearest)
 };
 
+static inline ImGui_ImplDX10_RenderState* ImGui_ImplDX10_GetRenderState() { return (ImGui_ImplDX10_RenderState*)ImGui::GetPlatformIO().Renderer_RenderState; }
+
 #endif // #ifndef IMGUI_DISABLE

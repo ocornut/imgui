@@ -50,4 +50,6 @@ struct ImGui_ImplSDLRenderer3_RenderState
     SDL_Renderer*       Renderer;
 };
 
+static inline ImGui_ImplSDLRenderer3_RenderState* ImGui_ImplSDLRenderer3_GetRenderState() { return (ImGui_ImplSDLRenderer3_RenderState*)ImGui::GetPlatformIO().Renderer_RenderState; }
+
 #endif // #ifndef IMGUI_DISABLE
