@@ -49,7 +49,7 @@ IMGUI_IMPL_API void     ImGui_ImplSDLRenderer3_UpdateTexture(ImTextureData* tex)
 struct ImGui_ImplSDLRenderer3_RenderState
 {
     SDL_Renderer*       Renderer;
-    SDL_ScaleMode       CurrentScaleMode;
+    SDL_ScaleMode       CurrentScaleMode;   // Current scale mode during render.
 };
 
 static inline ImGui_ImplSDLRenderer3_RenderState* ImGui_ImplSDLRenderer3_GetRenderState() { return (ImGui_ImplSDLRenderer3_RenderState*)ImGui::GetPlatformIO().Renderer_RenderState; }

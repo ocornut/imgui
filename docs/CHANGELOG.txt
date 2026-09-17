@@ -93,7 +93,7 @@ Other Changes:
     and various operators.
   - IO: restore default clipboard/ime/shell platform handlers on ClearPlatformHandlers(), fixing
     issues switching backends mid-session to one relying on default. (#9537, #8945, #2769) [@lstalmir]
-- ImDrawList:
+- DrawList:
   - Per-viewport FramebufferScale for Apple/Retina screen is applied to draw lists:
     - AA Fringe is scaled accordingly.
     - Circle and Curves tessellation error are scaled accordingly.
@@ -106,6 +106,7 @@ Other Changes:
   - QNX: added QNX Screen backend. (#9492) [@mgorchak-blackberry]
   - SDL2: fixed querying framebuffer scale/density when using Metal without
     going through a SDL_Renderer. (#5592) [@lailoken]
+  - SDLRenderer3: restore any temporarily modified texture scale modes at the of `RenderDrawData()`. (#9378)
   - SDLRenderer3: expose CurrentScaleMode in ImGui_ImplSDLRenderer3_RenderState. (#9543, #9378) [@Clownacy]
   - Vulkan: added for support for multiple Vulkan contexts with custom loaders. (#6616) [@lstalmir]
   - WebGPU: fixed passing non-integer sizes to `wgpuRenderPassEncoderSetViewport()`

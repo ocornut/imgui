@@ -25,6 +25,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-09-17: Restore modified texture scale modes at the end of RenderDrawData(). Added CurrentScaleMode in ImGui_ImplSDLRenderer3_RenderState (#9543, #9378)
 //  2026-07-15: Fixed default sampler state to be linear (broken 2026-04-23). (#9470, #9378)
 //  2026-04-23: Added support for standard draw callbacks (in platform_io): DrawCallback_ResetRenderState, DrawCallback_SetSamplerLinear, DrawCallback_SetSamplerNearest. (#9378)
 //  2026-03-12: Fixed invalid assert in ImGui_ImplSDLRenderer3_UpdateTexture() if ImTextureID_Invalid is defined to be != 0, which became the default since 2026-03-12. (#9295)
@@ -58,10 +59,17 @@
 #endif
 
 // SDL_Renderer data
+struct ImGui_ImplSDLRenderer3_TexScaleModeEntry
+{
+    SDL_Texture*    Texture;
+    SDL_ScaleMode   ScaleModeBackup;
+};
+
 struct ImGui_ImplSDLRenderer3_Data
 {
     SDL_Renderer*           Renderer;       // Main viewport's renderer
     ImVector<SDL_FColor>    ColorBuffer;
+    ImVector<ImGui_ImplSDLRenderer3_TexScaleModeEntry> TexScaleModeBackups;  // Backup of texture scale modes
 
     ImGui_ImplSDLRenderer3_Data()   { memset((void*)this, 0, sizeof(*this)); }
 };
@@ -82,7 +90,6 @@ static void ImGui_ImplSDLRenderer3_SetupRenderState(SDL_Renderer* renderer)
     // FIXME: Technically speaking there are lots of other things we could backup/setup/restore during our render process.
     SDL_SetRenderViewport(renderer, nullptr);
     SDL_SetRenderClipRect(renderer, nullptr);
-
     render_state->CurrentScaleMode = SDL_SCALEMODE_LINEAR;
 }
 
@@ -115,6 +122,38 @@ static int SDL_RenderGeometryRaw8BitColor(SDL_Renderer* renderer, ImVector<SDL_F
 static void ImGui_ImplSDLRenderer3_DrawCallback_ResetRenderState(const ImDrawList*, const ImDrawCmd*)   {} // Intentionally empty. Used as an identifier for rendering loop to call its code. Simpler to implement this way.
 static void ImGui_ImplSDLRenderer3_DrawCallback_SetSamplerLinear(const ImDrawList*, const ImDrawCmd*)   { ImGui_ImplSDLRenderer3_RenderState* render_state = ImGui_ImplSDLRenderer3_GetRenderState(); render_state->CurrentScaleMode = SDL_SCALEMODE_LINEAR; }
 static void ImGui_ImplSDLRenderer3_DrawCallback_SetSamplerNearest(const ImDrawList*, const ImDrawCmd*)  { ImGui_ImplSDLRenderer3_RenderState* render_state = ImGui_ImplSDLRenderer3_GetRenderState(); render_state->CurrentScaleMode = SDL_SCALEMODE_NEAREST; }
+
+// SDLRenderer has various design issues which makes it hard to do it compared to regular graphics API.
+// - scale/filtering mode is tied to a texture.
+// - scale/filtering mode is not queued as part of the SDL_RenderGeometryXXX commands, so a change in one texture requires a flush.
+static void ImGui_ImplSDLRenderer3_TexScaleModeUpdate(SDL_Renderer* renderer, SDL_Texture* tex, SDL_ScaleMode desired_scale_mode)
+{
+    ImGui_ImplSDLRenderer3_Data* bd = ImGui_ImplSDLRenderer3_GetBackendData();
+    SDL_ScaleMode tex_scale_mode = desired_scale_mode;
+    if (!SDL_GetTextureScaleMode(tex, &tex_scale_mode) || tex_scale_mode == desired_scale_mode)
+        return;
+    SDL_FlushRenderer(renderer);
+    SDL_SetTextureScaleMode(tex, desired_scale_mode);
+
+    // Store backup of old scale mode
+    for (ImGui_ImplSDLRenderer3_TexScaleModeEntry& entry : bd->TexScaleModeBackups)
+        if (entry.Texture == tex)
+            return;
+    ImGui_ImplSDLRenderer3_TexScaleModeEntry entry = { tex, tex_scale_mode };
+    bd->TexScaleModeBackups.push_back(entry);
+}
+
+static void ImGui_ImplSDLRenderer3_TexScaleModeRestoreBackups(SDL_Renderer* renderer)
+{
+    ImGui_ImplSDLRenderer3_Data* bd = ImGui_ImplSDLRenderer3_GetBackendData();
+    if (bd->TexScaleModeBackups.Size == 0)
+        return;
+    SDL_FlushRenderer(renderer);
+    for (ImGui_ImplSDLRenderer3_TexScaleModeEntry& entry : bd->TexScaleModeBackups)
+        if (entry.ScaleModeBackup != SDL_SCALEMODE_INVALID)
+            SDL_SetTextureScaleMode(entry.Texture, entry.ScaleModeBackup);
+    bd->TexScaleModeBackups.resize(0);
+}
 
 void ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* renderer)
 {
@@ -165,11 +204,11 @@ void ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* 
 
     // Setup desired state
     ImGui_ImplSDLRenderer3_SetupRenderState(renderer);
+    IM_ASSERT(bd->TexScaleModeBackups.Size == 0);
 
     // Will project scissor/clipping rectangles into framebuffer space
     ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
     ImVec2 clip_scale = render_scale;
-    SDL_ScaleMode last_scale_mode = render_state.CurrentScaleMode;
 
     // Render command lists
     for (const ImDrawList* draw_list : draw_data->CmdLists)
@@ -199,20 +238,17 @@ void ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* 
                 if (clip_max.y > (float)fb_height) { clip_max.y = (float)fb_height; }
                 if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)
                     continue;
-
                 SDL_Rect r = { (int)(clip_min.x), (int)(clip_min.y), (int)(clip_max.x - clip_min.x), (int)(clip_max.y - clip_min.y) };
                 SDL_SetRenderClipRect(renderer, &r);
 
+                // Setup texture scale/filtering mode
+                SDL_Texture* tex = (SDL_Texture*)pcmd->GetTexID();
+                ImGui_ImplSDLRenderer3_TexScaleModeUpdate(renderer, tex, render_state.CurrentScaleMode);
+
+                // Draw
                 const float* xy = (const float*)(const void*)((const char*)(vtx_buffer + pcmd->VtxOffset) + offsetof(ImDrawVert, pos));
                 const float* uv = (const float*)(const void*)((const char*)(vtx_buffer + pcmd->VtxOffset) + offsetof(ImDrawVert, uv));
-                const SDL_Color* color = (const SDL_Color*)(const void*)((const char*)(vtx_buffer + pcmd->VtxOffset) + offsetof(ImDrawVert, col)); // SDL 2.0.19+
-
-                if (last_scale_mode != render_state.CurrentScaleMode)
-                    SDL_FlushRenderer(renderer);
-
-                // Bind texture, Draw
-                SDL_Texture* tex = (SDL_Texture*)pcmd->GetTexID();
-                SDL_SetTextureScaleMode(tex, render_state.CurrentScaleMode);
+                const SDL_Color* color = (const SDL_Color*)(const void*)((const char*)(vtx_buffer + pcmd->VtxOffset) + offsetof(ImDrawVert, col));
                 SDL_RenderGeometryRaw8BitColor(renderer, bd->ColorBuffer, tex,
                     xy, (int)sizeof(ImDrawVert),
                     color, (int)sizeof(ImDrawVert),
@@ -227,6 +263,7 @@ void ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* 
     // Restore modified SDL_Renderer state
     SDL_SetRenderViewport(renderer, old.ViewportEnabled ? &old.Viewport : nullptr);
     SDL_SetRenderClipRect(renderer, old.ClipEnabled ? &old.ClipRect : nullptr);
+    ImGui_ImplSDLRenderer3_TexScaleModeRestoreBackups(renderer);
 }
 
 void ImGui_ImplSDLRenderer3_UpdateTexture(ImTextureData* tex)
