@@ -27,7 +27,8 @@
 #include "imgui.h"      // IMGUI_IMPL_API
 #ifndef IMGUI_DISABLE
 
-#include <SDL3/SDL.h>
+// For SDL_ScaleMode which cannot be forward declared.
+#include <SDL3/SDL_render.h>
 
 // Follow "Getting Started" link and check examples/ folder to learn about using backends!
 IMGUI_IMPL_API bool     ImGui_ImplSDLRenderer3_Init(SDL_Renderer* renderer);

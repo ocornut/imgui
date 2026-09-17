@@ -51,7 +51,8 @@
 #endif
 
 // SDL
-#include <SDL3/SDL.h>
+#include <SDL3/SDL_render.h>
+#include <SDL3/SDL_version.h>
 #if !SDL_VERSION_ATLEAST(3,0,0)
 #error This backend requires SDL 3.0.0+
 #endif
