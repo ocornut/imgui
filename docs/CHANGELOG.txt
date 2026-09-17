@@ -102,7 +102,7 @@ Other Changes:
     an existing texture during the frame. (#9528, #8465)
   - Added optional `platform_io.DrawCallback_SetSamplerFromTex` standard backend-agnostic
     draw callback for requesting to use the sampler associated already associated to a texture.
-    Currently only supported by the SDLRenderer3 backend. (#9378)
+    Currently only supported by the OpenGL2/3 and SDLRenderer3 backend. (#9378)
 - Demo:
   - Added `Widgets->Mixed Values` section. (#5518, #5677, #6865)
 - Backends:
