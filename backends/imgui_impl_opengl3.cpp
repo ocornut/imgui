@@ -24,7 +24,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2026-09-07: Round framebuffer dimensions to the nearest integer instead of truncating them. (#9538, 9515, #8628)
+//  2026-09-07: OpenGL: Round framebuffer dimensions to the nearest integer instead of truncating them. (#9538, 9515, #8628)
 //  2026-07-15: OpenGL: Backup and restore GL_UNPACK_ROW_LENGTH and GL_UNPACK_ALIGNMENT in UpdateTexture() to avoid corrupting caller GL state. (#8802, #9473)
 //  2026-06-17: OpenGL: Expose selected render state in ImGui_ImplOpenGL3_RenderState, Allowing to dynamically select between use of glBindSampler() and glTexParameter(). You can access in 'void* platform_io.Renderer_RenderState' during rendering.
 //  2026-06-03: OpenGL: GLSL version detection assume GLSL 410 when GL context is 4.1. Fixes an issue running on macOS with Wine. (#9427, #6577)
@@ -415,44 +415,32 @@ static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, ImGui_Impl
     GL_CALL(glVertexAttribPointer(bd->AttribLocationVtxColor, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(ImDrawVert), (GLvoid*)offsetof(ImDrawVert, col)));
 }
 
+static void ImGui_ImplOpenGL3_DrawCallback_SetSampler(unsigned int sampler_idx, unsigned int tex_parameter_filter)
+{
+    ImGui_ImplOpenGL3_RenderState* render_state = ImGui_ImplOpenGL3_GetRenderState();
+    IM_UNUSED(sampler_idx);
+#ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_BIND_SAMPLER
+    ImGui_ImplOpenGL3_Data* bd = ImGui_ImplOpenGL3_GetBackendData();
+    if (bd->HasBindSampler && render_state->UseBindSampler)
+    {
+        render_state->CurrentSampler = bd->TexSamplers[sampler_idx];
+        render_state->UseTexParameterFilter = false;
+        glBindSampler(0, render_state->CurrentSampler);
+    }
+    else
+#endif
+    {
+        render_state->UseTexParameterFilter = true;
+        render_state->CurrentTexParameterFilter = tex_parameter_filter;
+    }
+}
+
 // Draw callbacks
-static void ImGui_ImplOpenGL3_DrawCallback_ResetRenderState(const ImDrawList*, const ImDrawCmd*)    {} // Intentionally empty. Used as an identifier for rendering loop to call its code. Simpler to implement this way.
-static void ImGui_ImplOpenGL3_DrawCallback_SetSamplerLinear(const ImDrawList*, const ImDrawCmd*)
-{
-    ImGui_ImplOpenGL3_RenderState* render_state = ImGui_ImplOpenGL3_GetRenderState();
-#ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_BIND_SAMPLER
-    ImGui_ImplOpenGL3_Data* bd = ImGui_ImplOpenGL3_GetBackendData();
-    if (bd->HasBindSampler && render_state->UseBindSampler)
-    {
-        render_state->CurrentSampler = bd->TexSamplers[0];
-        render_state->UseTexParameterFilter = false;
-        glBindSampler(0, render_state->CurrentSampler);
-    }
-    else
-#endif
-    {
-        render_state->UseTexParameterFilter = true;
-        render_state->CurrentTexParameterFilter = GL_LINEAR;
-    }
-}
-static void ImGui_ImplOpenGL3_DrawCallback_SetSamplerNearest(const ImDrawList*, const ImDrawCmd*)
-{
-    ImGui_ImplOpenGL3_RenderState* render_state = ImGui_ImplOpenGL3_GetRenderState();
-#ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_BIND_SAMPLER
-    ImGui_ImplOpenGL3_Data* bd = ImGui_ImplOpenGL3_GetBackendData();
-    if (bd->HasBindSampler && render_state->UseBindSampler)
-    {
-        render_state->CurrentSampler = bd->TexSamplers[1];
-        render_state->UseTexParameterFilter = false;
-        glBindSampler(0, render_state->CurrentSampler);
-    }
-    else
-#endif
-    {
-        render_state->UseTexParameterFilter = true;
-        render_state->CurrentTexParameterFilter = GL_NEAREST;
-    }
-}
+// - IMPORTANT: Using DrawCallback_SetSamplerLinear/DrawCallback_SetSamplerNearest will trash glTexParameteri() values for the texture if used on a GL context not supporting glBindSampler()!!
+//   We cannot decently backup/restore that state because glGetTexParameteriv() is slow on many setups.
+static void ImGui_ImplOpenGL3_DrawCallback_ResetRenderState(const ImDrawList*, const ImDrawCmd*)  {} // Intentionally empty. Used as an identifier for rendering loop to call its code. Simpler to implement this way.
+static void ImGui_ImplOpenGL3_DrawCallback_SetSamplerLinear(const ImDrawList*, const ImDrawCmd*)  { ImGui_ImplOpenGL3_DrawCallback_SetSampler(0, GL_LINEAR); }
+static void ImGui_ImplOpenGL3_DrawCallback_SetSamplerNearest(const ImDrawList*, const ImDrawCmd*) { ImGui_ImplOpenGL3_DrawCallback_SetSampler(1, GL_NEAREST); }
 
 // OpenGL3 Render function.
 // Note that this implementation is little overcomplicated because we are saving/setting up/restoring every OpenGL state explicitly.
