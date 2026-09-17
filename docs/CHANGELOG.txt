@@ -107,6 +107,8 @@ Other Changes:
   - Added `Widgets->Mixed Values` section. (#5518, #5677, #6865)
 - Backends:
   - QNX: added QNX Screen backend. (#9492) [@mgorchak-blackberry]
+  - OpenGL2, OpenGL3: added support for `platform_io.DrawCallback_SetSamplerFromTex` draw
+    callback to request using the sampler associated already associated to a texture. (#9378)
   - OpenGL2, OpenGL3: fixed `DrawCallback_ResetRenderState` handler not reseting all states
     in the glTexParameter() path. (#9378)
   - SDL2: fixed querying framebuffer scale/density when using Metal without
