@@ -929,13 +929,23 @@ static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* viewport)
     NSWindow* window = [[ImGui_ImplOSX_Window alloc] initWithContentRect:rect
                                                                styleMask:styleMask
                                                                  backing:NSBackingStoreBuffered
-                                                                   defer:YES
+                                                                   defer:NO
                                                                   screen:screen];
     if (viewport->Flags & ImGuiViewportFlags_TopMost)
         [window setLevel:NSFloatingWindowLevel];
 
     window.title = @"Untitled";
     window.opaque = YES;
+
+    // macOS plays a fade/zoom "appear" animation on every new NSWindow, which shows up as a pop each
+    // time a viewport is torn off. Disable it. Removing the animation exposes a one-frame z-order
+    // "blink" (during the tear-off drag macOS keeps the mouse-down main window frontmost, so this
+    // borderless window's same-level orderFront loses the race): make it a child of the main window so
+    // it stays above its parent during the drag; ImGui_ImplOSX_UpdateWindow detaches it once the mouse
+    // button is released so it becomes a normal, independent window.
+    [window setAnimationBehavior:NSWindowAnimationBehaviorNone];
+    if (bd->Window != nil)
+        [bd->Window addChildWindow:window ordered:NSWindowAbove];
 
     KeyEventResponder* view = [[KeyEventResponder alloc] initWithFrame:rect];
     if (floor(NSAppKitVersionNumber) > NSAppKitVersionNumber10_6 && ceil(NSAppKitVersionNumber) < NSAppKitVersionNumber10_15)
@@ -983,6 +993,17 @@ static void ImGui_ImplOSX_ShowWindow(ImGuiViewport* viewport)
         [vd->Window makeKeyAndOrderFront:nil];
 
     [vd->Window setIsVisible:YES];
+}
+
+static void ImGui_ImplOSX_UpdateWindow(ImGuiViewport* viewport)
+{
+    // The window is parented to the main window on creation (see ImGui_ImplOSX_CreateWindow) so it wins
+    // the z-order race during the tear-off drag. Once that drag ends — detected via the physical mouse
+    // button, since io.MouseDown is unreliable during the OS-driven window-drag loop — detach it so it
+    // becomes a normal, independent window (can be sent behind the main window, drops behind other apps).
+    ImGui_ImplOSX_ViewportData* vd = (ImGui_ImplOSX_ViewportData*)viewport->PlatformUserData;
+    if (vd != nullptr && vd->Window != nil && vd->Window.parentWindow != nil && ([NSEvent pressedMouseButtons] & 1) == 0)
+        [vd->Window.parentWindow removeChildWindow:vd->Window];
 }
 
 static ImVec2 ImGui_ImplOSX_GetWindowPos(ImGuiViewport* viewport)
@@ -1121,6 +1142,7 @@ static void ImGui_ImplOSX_InitMultiViewportSupport()
     platform_io.Platform_CreateWindow = ImGui_ImplOSX_CreateWindow;
     platform_io.Platform_DestroyWindow = ImGui_ImplOSX_DestroyWindow;
     platform_io.Platform_ShowWindow = ImGui_ImplOSX_ShowWindow;
+    platform_io.Platform_UpdateWindow = ImGui_ImplOSX_UpdateWindow;
     platform_io.Platform_SetWindowPos = ImGui_ImplOSX_SetWindowPos;
     platform_io.Platform_GetWindowPos = ImGui_ImplOSX_GetWindowPos;
     platform_io.Platform_SetWindowSize = ImGui_ImplOSX_SetWindowSize;
