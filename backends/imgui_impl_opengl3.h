@@ -73,8 +73,8 @@ struct ImGui_ImplOpenGL3_RenderState
 {
     bool            UseBindSampler;
     bool            UseTexParameterFilter;
-    unsigned int    CurrentSampler;                 // (GLuint) Used if UseBindSampler == true, otherwise always 0
-    unsigned int    CurrentTexParameterFilter;      // (GLuint) Used if UseTexParameterToSetSampler == true
+    unsigned int    CurrentSampler;                 // (GLuint) Used if UseBindSampler == true (and are available), otherwise always 0
+    unsigned int    CurrentTexParameterFilter;      // (GLuint) Used if UseTexParameterFilter == true
 };
 
 static inline ImGui_ImplOpenGL3_RenderState* ImGui_ImplOpenGL3_GetRenderState() { return (ImGui_ImplOpenGL3_RenderState*)ImGui::GetPlatformIO().Renderer_RenderState; }

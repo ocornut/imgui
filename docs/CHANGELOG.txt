@@ -107,6 +107,8 @@ Other Changes:
   - Added `Widgets->Mixed Values` section. (#5518, #5677, #6865)
 - Backends:
   - QNX: added QNX Screen backend. (#9492) [@mgorchak-blackberry]
+  - OpenGL2, OpenGL3: fixed `DrawCallback_ResetRenderState` handler not reseting all states
+    in the glTexParameter() path. (#9378)
   - SDL2: fixed querying framebuffer scale/density when using Metal without
     going through a SDL_Renderer. (#5592) [@lailoken]
   - SDLRenderer3: restore any temporarily modified texture scale modes at the of `RenderDrawData()`. (#9378)

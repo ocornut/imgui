@@ -387,9 +387,12 @@ static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, ImGui_Impl
     glUniform1i(bd->AttribLocationTex, 0);
     glUniformMatrix4fv(bd->AttribLocationProjMtx, 1, GL_FALSE, &ortho_projection[0][0]);
 
-    (void)render_state;
+    render_state->UseBindSampler = bd->HasBindSampler;
+    render_state->UseTexParameterFilter = false;
+    render_state->CurrentSampler = 0;
+    render_state->CurrentTexParameterFilter = 0;
 #ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_BIND_SAMPLER
-    if (render_state->UseBindSampler)
+    if (bd->HasBindSampler && render_state->UseBindSampler)
     {
         render_state->CurrentSampler = bd->TexSamplers[0];
         glBindSampler(0, render_state->CurrentSampler); // We use combined texture/sampler state. Applications using GL 3.3 and GL ES 3.0 may set that otherwise.
@@ -419,7 +422,7 @@ static void ImGui_ImplOpenGL3_DrawCallback_SetSamplerLinear(const ImDrawList*, c
     ImGui_ImplOpenGL3_RenderState* render_state = ImGui_ImplOpenGL3_GetRenderState();
 #ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_BIND_SAMPLER
     ImGui_ImplOpenGL3_Data* bd = ImGui_ImplOpenGL3_GetBackendData();
-    if (bd->HasBindSampler)
+    if (bd->HasBindSampler && render_state->UseBindSampler)
     {
         render_state->CurrentSampler = bd->TexSamplers[0];
         render_state->UseTexParameterFilter = false;
@@ -437,7 +440,7 @@ static void ImGui_ImplOpenGL3_DrawCallback_SetSamplerNearest(const ImDrawList*, 
     ImGui_ImplOpenGL3_RenderState* render_state = ImGui_ImplOpenGL3_GetRenderState();
 #ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_BIND_SAMPLER
     ImGui_ImplOpenGL3_Data* bd = ImGui_ImplOpenGL3_GetBackendData();
-    if (bd->HasBindSampler)
+    if (bd->HasBindSampler && render_state->UseBindSampler)
     {
         render_state->CurrentSampler = bd->TexSamplers[1];
         render_state->UseTexParameterFilter = false;
@@ -522,11 +525,7 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
 
     // Setup render state structure (for callbacks and custom texture bindings)
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
-    ImGui_ImplOpenGL3_RenderState render_state;
-    render_state.UseBindSampler = bd->HasBindSampler;
-    render_state.UseTexParameterFilter = false;
-    render_state.CurrentSampler = 0;
-    render_state.CurrentTexParameterFilter = 0;
+    ImGui_ImplOpenGL3_RenderState render_state = {};
     platform_io.Renderer_RenderState = &render_state;
 
     ImGui_ImplOpenGL3_SetupRenderState(draw_data, &render_state, fb_width, fb_height, vertex_array_object);

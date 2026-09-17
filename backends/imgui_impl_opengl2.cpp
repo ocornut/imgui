@@ -132,6 +132,8 @@ static void ImGui_ImplOpenGL2_SetupRenderState(ImDrawData* draw_data, int fb_wid
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glShadeModel(GL_SMOOTH);
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+
+    bd->UseTexParameterToSetSampler = false;
     bd->NextSampler = GL_LINEAR;
 
     // If you are using this code with non-legacy OpenGL header/contexts (which you should not, prefer using imgui_impl_opengl3.cpp!!),
