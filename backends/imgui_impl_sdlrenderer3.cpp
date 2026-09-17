@@ -25,7 +25,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2026-09-17: Restore modified texture scale modes at the end of RenderDrawData(). Added CurrentScaleMode in ImGui_ImplSDLRenderer3_RenderState (#9543, #9378)
+//  2026-09-17: Restore modified texture scale modes at the end of RenderDrawData(). Added DrawCallback_SetSamplerFromTex support. Added CurrentScaleMode in ImGui_ImplSDLRenderer3_RenderState (#9543, #9378)
 //  2026-07-15: Fixed default sampler state to be linear (broken 2026-04-23). (#9470, #9378)
 //  2026-04-23: Added support for standard draw callbacks (in platform_io): DrawCallback_ResetRenderState, DrawCallback_SetSamplerLinear, DrawCallback_SetSamplerNearest. (#9378)
 //  2026-03-12: Fixed invalid assert in ImGui_ImplSDLRenderer3_UpdateTexture() if ImTextureID_Invalid is defined to be != 0, which became the default since 2026-03-12. (#9295)
@@ -122,6 +122,7 @@ static int SDL_RenderGeometryRaw8BitColor(SDL_Renderer* renderer, ImVector<SDL_F
 static void ImGui_ImplSDLRenderer3_DrawCallback_ResetRenderState(const ImDrawList*, const ImDrawCmd*)   {} // Intentionally empty. Used as an identifier for rendering loop to call its code. Simpler to implement this way.
 static void ImGui_ImplSDLRenderer3_DrawCallback_SetSamplerLinear(const ImDrawList*, const ImDrawCmd*)   { ImGui_ImplSDLRenderer3_RenderState* render_state = ImGui_ImplSDLRenderer3_GetRenderState(); render_state->CurrentScaleMode = SDL_SCALEMODE_LINEAR; }
 static void ImGui_ImplSDLRenderer3_DrawCallback_SetSamplerNearest(const ImDrawList*, const ImDrawCmd*)  { ImGui_ImplSDLRenderer3_RenderState* render_state = ImGui_ImplSDLRenderer3_GetRenderState(); render_state->CurrentScaleMode = SDL_SCALEMODE_NEAREST; }
+static void ImGui_ImplSDLRenderer3_DrawCallback_SetSamplerFromTex(const ImDrawList*, const ImDrawCmd*)  { ImGui_ImplSDLRenderer3_RenderState* render_state = ImGui_ImplSDLRenderer3_GetRenderState(); render_state->CurrentScaleMode = SDL_SCALEMODE_INVALID; } // SDL_SCALEMODE_INVALID = use/keep value in texture.
 
 // SDLRenderer has various design issues which makes it hard to do it compared to regular graphics API.
 // - scale/filtering mode is tied to a texture.
@@ -129,18 +130,38 @@ static void ImGui_ImplSDLRenderer3_DrawCallback_SetSamplerNearest(const ImDrawLi
 static void ImGui_ImplSDLRenderer3_TexScaleModeUpdate(SDL_Renderer* renderer, SDL_Texture* tex, SDL_ScaleMode desired_scale_mode)
 {
     ImGui_ImplSDLRenderer3_Data* bd = ImGui_ImplSDLRenderer3_GetBackendData();
-    SDL_ScaleMode tex_scale_mode = desired_scale_mode;
-    if (!SDL_GetTextureScaleMode(tex, &tex_scale_mode) || tex_scale_mode == desired_scale_mode)
-        return;
-    SDL_FlushRenderer(renderer);
-    SDL_SetTextureScaleMode(tex, desired_scale_mode);
-
-    // Store backup of old scale mode
-    for (ImGui_ImplSDLRenderer3_TexScaleModeEntry& entry : bd->TexScaleModeBackups)
-        if (entry.Texture == tex)
+    if (desired_scale_mode != SDL_SCALEMODE_INVALID)
+    {
+        // Enforce a scale mode
+        SDL_ScaleMode tex_scale_mode = desired_scale_mode;
+        if (!SDL_GetTextureScaleMode(tex, &tex_scale_mode) || tex_scale_mode == desired_scale_mode)
             return;
-    ImGui_ImplSDLRenderer3_TexScaleModeEntry entry = { tex, tex_scale_mode };
-    bd->TexScaleModeBackups.push_back(entry);
+        SDL_FlushRenderer(renderer);
+        SDL_SetTextureScaleMode(tex, desired_scale_mode);
+
+        // Store backup of old scale mode (FIXME-OPT)
+        for (ImGui_ImplSDLRenderer3_TexScaleModeEntry& entry : bd->TexScaleModeBackups)
+            if (entry.Texture == tex)
+            {
+                if (entry.ScaleModeBackup == SDL_SCALEMODE_INVALID)
+                    entry.ScaleModeBackup = tex_scale_mode;
+                return;
+            }
+        ImGui_ImplSDLRenderer3_TexScaleModeEntry entry = { tex, tex_scale_mode };
+        bd->TexScaleModeBackups.push_back(entry);
+    }
+    else
+    {
+        // Use scale mode that was set in texture by user. If there is an entry, restore it and clear the entry.
+        for (ImGui_ImplSDLRenderer3_TexScaleModeEntry& entry : bd->TexScaleModeBackups)
+            if (entry.Texture == tex && entry.ScaleModeBackup != SDL_SCALEMODE_INVALID)
+            {
+                SDL_FlushRenderer(renderer);
+                SDL_SetTextureScaleMode(tex, entry.ScaleModeBackup);
+                entry.ScaleModeBackup = SDL_SCALEMODE_INVALID;
+                return;
+            }
+    }
 }
 
 static void ImGui_ImplSDLRenderer3_TexScaleModeRestoreBackups(SDL_Renderer* renderer)
@@ -345,6 +366,7 @@ bool ImGui_ImplSDLRenderer3_Init(SDL_Renderer* renderer)
     platform_io.DrawCallback_ResetRenderState = ImGui_ImplSDLRenderer3_DrawCallback_ResetRenderState;
     platform_io.DrawCallback_SetSamplerLinear = ImGui_ImplSDLRenderer3_DrawCallback_SetSamplerLinear;
     platform_io.DrawCallback_SetSamplerNearest = ImGui_ImplSDLRenderer3_DrawCallback_SetSamplerNearest;
+    platform_io.DrawCallback_SetSamplerFromTex = ImGui_ImplSDLRenderer3_DrawCallback_SetSamplerFromTex;
 
     bd->Renderer = renderer;
 

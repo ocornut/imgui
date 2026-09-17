@@ -16111,7 +16111,7 @@ void ImGuiPlatformIO::ClearRendererHandlers()
 {
     Renderer_TextureMaxWidth = Renderer_TextureMaxHeight = 0;
     Renderer_RenderState = NULL;
-    DrawCallback_ResetRenderState = DrawCallback_SetSamplerLinear = DrawCallback_SetSamplerNearest = NULL;
+    DrawCallback_ResetRenderState = DrawCallback_SetSamplerLinear = DrawCallback_SetSamplerNearest = DrawCallback_SetSamplerFromTex = NULL;
 }
 
 ImGuiViewport* ImGui::GetMainViewport()

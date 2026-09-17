@@ -4114,6 +4114,7 @@ struct ImGuiPlatformIO
     ImDrawCallback  DrawCallback_ResetRenderState;      // Request to reset the graphics/render state.
     ImDrawCallback  DrawCallback_SetSamplerLinear;      // Request backend to set texture sampling to Linear.
     ImDrawCallback  DrawCallback_SetSamplerNearest;     // Request backend to set texture sampling to Nearest/Point.
+    ImDrawCallback  DrawCallback_SetSamplerFromTex;     // Request backend to use sampler associated to texture - only available in some backends: SDLRenderer3.
     //ImDrawCallback  DrawCallback_SetSamplerCustom;    // Request backend to set texture sampling using Backend Specific data.
 
     //------------------------------------------------------------------
