@@ -113,6 +113,8 @@ Other Changes:
 
 Docking+Viewports Branch:
 
+- Style:
+  - Changed `ImGuiCol_DockingEmptyBg` value for `StyleColorsLight()`.
 - Backends:
   - DX10, DX11, DX12: fixed crash when CreateSwapChain() or CreateRenderTargetView()
     calls are failing. (#9546)
