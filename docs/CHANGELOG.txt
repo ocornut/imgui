@@ -66,6 +66,8 @@ Other Changes:
   - Using <> scrolling buttons while the selected Tab is at either end of the
     section mid-section but not fully visible always makes it fully visible
     (before eventually selecting a Tab in the leading/trailing section)
+- Selectable:
+  - Fixed `ImGuiSelectableFlags_SelectOnNav` triggering during NavInit.
 - Fonts:
   - Reworked `AddFontDefault()` to use `io.DisplayFrameBufferScale` as part of the heuristic
     to select `AddFontDefaultVector()` by default, effectively using ProggyForever instead of
@@ -105,6 +107,7 @@ Other Changes:
     Currently only supported by the OpenGL2/3 and SDLRenderer3 backend. (#9378)
 - Demo:
   - Added `Widgets->Mixed Values` section. (#5518, #5677, #6865)
+  - Style Editor: fixed style/colors combo box applying style when opening Combo.
 - Backends:
   - QNX: added QNX Screen backend. (#9492) [@mgorchak-blackberry]
   - OpenGL2, OpenGL3: added support for `platform_io.DrawCallback_SetSamplerFromTex` draw

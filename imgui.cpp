@@ -4337,7 +4337,7 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
 
     NavJustMovedFromFocusScopeId = NavJustMovedToId = NavJustMovedToFocusScopeId = 0;
     NavJustMovedToKeyMods = ImGuiMod_None;
-    NavJustMovedToIsTabbing = false;
+    NavJustMovedToIsTabbing = NavJustMovedToIsInit = false;
     NavJustMovedToHasSelectionData = false;
 
     // All platforms use Ctrl+Tab but Ctrl<>Super are swapped on Mac...
@@ -14174,6 +14174,7 @@ void ImGui::NavInitRequestApplyResult()
         g.NavJustMovedToFocusScopeId = result->FocusScopeId;
         g.NavJustMovedToKeyMods = 0;
         g.NavJustMovedToIsTabbing = false;
+        g.NavJustMovedToIsInit = true;
         g.NavJustMovedToHasSelectionData = (result->ItemFlags & ImGuiItemFlags_HasSelectionUserData) != 0;
     }
 
@@ -14441,6 +14442,7 @@ void ImGui::NavMoveRequestApplyResult()
         g.NavJustMovedToFocusScopeId = result->FocusScopeId;
         g.NavJustMovedToKeyMods = g.NavMoveKeyMods;
         g.NavJustMovedToIsTabbing = (g.NavMoveFlags & ImGuiNavMoveFlags_IsTabbing) != 0;
+        g.NavJustMovedToIsInit = false;
         g.NavJustMovedToHasSelectionData = (result->ItemFlags & ImGuiItemFlags_HasSelectionUserData) != 0;
         //IMGUI_DEBUG_LOG_NAV("[nav] NavJustMovedFromFocusScopeId = 0x%08X, NavJustMovedToFocusScopeId = 0x%08X\n", g.NavJustMovedFromFocusScopeId, g.NavJustMovedToFocusScopeId);
     }
