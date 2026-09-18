@@ -3090,7 +3090,7 @@ IM_MSVC_RUNTIME_CHECKS_RESTORE
 // [SECTION] ImGuiTextFilter
 //-----------------------------------------------------------------------------
 
-// Helper: Parse and apply text filters. In format "aaaaa[,bbbb][,ccccc]"
+// Helper: Parse and apply text filters e.g. 'aaa bbb -ccc'.
 ImGuiTextFilter::ImGuiTextFilter(const char* default_filter) //-V1077
 {
     InputBuf[0] = 0;
@@ -3104,7 +3104,7 @@ ImGuiTextFilter::ImGuiTextFilter(const char* default_filter) //-V1077
 
 bool ImGuiTextFilter::Draw(const char* label)
 {
-    return DrawWithHint(label, "incl,-excl");
+    return DrawWithHint(label, "incl -excl");
 }
 
 // Use ImGui::SetNextItemWidth() manually if you want to use this.
@@ -3118,17 +3118,20 @@ bool ImGuiTextFilter::DrawWithHint(const char* label, const char* hint)
 
 static void ImGuiTextFilter_BuildAddItem(ImGuiTextFilter* f, const char* word_b, const char* word_e)
 {
-    // Trim (FIXME: UTF-8 support?)
-    while (word_b < word_e && ImCharIsBlankA(word_b[0]))
-        word_b++;
-    while (word_e > word_b && ImCharIsBlankA(word_e[-1]))
-        word_e--;
-    if (word_e - word_b <= 0)
+    // Trim blanks
+    if (word_b < word_e && word_b[0] != '\"')
+    {
+        while (word_b < word_e && ImCharIsBlankA(word_b[0])) // FIXME: UTF-8 support
+            word_b++;
+        while (word_e > word_b && ImCharIsBlankA(word_e[-1]))
+            word_e--;
+    }
+    const bool is_excl = (word_b < word_e && word_b[0] == '-');
+    if (word_e - word_b - (is_excl ? 1 : 0) <= 0)
         return;
 
     // Add to list
-    // FIXME-OPT: on push_front(): as N is derived from user inputs we expect this to be fine.
-    const bool is_excl = (word_b[0] == '-');
+    // FIXME-OPT: about ~push_front(): as N is derived from user inputs we expect this to be fine.
     f->_Items.insert(is_excl ? f->_Items.Data : f->_Items.end(), ImGuiTextFilter::ImGuiTextFilterItem(word_b, word_e));
     if (!is_excl)
         f->_CountInclude++;
@@ -3140,18 +3143,26 @@ void ImGuiTextFilter::Build()
     _Items.resize(0);
     _CountInclude = 0;
     const char* buf_e = InputBuf + ImStrlen(InputBuf);
-    const char* word_b = InputBuf;
-    const char* word_e = word_b;
-    while (word_e < buf_e)
+    const char* word_e;
+    for (const char* word_b = InputBuf; word_b < buf_e; word_b = word_e + 1)
     {
-        if (*word_e == ',')
+        const bool is_excl = (word_b[0] == '-');
+        if (word_b[0] == '\"' || (is_excl && word_b + 1 < buf_e && word_b[1] == '\"'))
         {
-            ImGuiTextFilter_BuildAddItem(this, word_b, word_e);
-            word_b = word_e + 1;
+            // Parsing "word". Store leading " to distinguish -"word" from "-word", but omit trailing ".
+            word_e = ImStrchrRange(word_b + (is_excl ? 2 : 1), buf_e, '\"');
+            if (word_e == NULL)
+                word_e = buf_e;
         }
-        word_e++;
+        else
+        {
+            // Handle both ' ' and ',' separators.
+            for (word_e = word_b; word_e < buf_e; word_e++)
+                if (*word_e == ' ' || *word_e == ',')
+                    break;
+        }
+        ImGuiTextFilter_BuildAddItem(this, word_b, word_e);
     }
-    ImGuiTextFilter_BuildAddItem(this, word_b, word_e);
 }
 
 bool ImGuiTextFilter::PassFilter(const char* text, const char* text_end) const
@@ -3164,16 +3175,15 @@ bool ImGuiTextFilter::PassFilter(const char* text, const char* text_end) const
     // Filters are sorted so that '-' ones are always leading.
     for (const ImGuiTextFilterItem& item : _Items)
     {
-        if (item.Begin[0] == '-')
-        {
-            if (ImStristr(text, text_end, item.Begin + 1, item.End) != NULL) // Exclude
-                return false;
-        }
-        else
-        {
-            if (ImStristr(text, text_end, item.Begin, item.End) != NULL) // Include
-                return true;
-        }
+        const char* word_b = item.Begin;
+        const char* word_e = item.End;
+        const bool is_excl = (word_b[0] == '-');
+        if (is_excl)
+            word_b++;
+        if (word_b < word_e && word_b[0] == '\"')
+            word_b++;
+        if (ImStristr(text, text_end, word_b, word_e) != NULL)
+            return is_excl ? false : true;
     }
 
     // When no inclusion are specified (only exclusions) we implicitly pass

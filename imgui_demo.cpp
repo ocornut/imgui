@@ -1453,7 +1453,7 @@ static void DemoWindowWidgetsComboBoxes()
             }
             ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_F);
             ImGui::SetNextItemWidth(-FLT_MIN);
-            filter.DrawWithHint("##Filter", "Filter (incl,-excl)");
+            filter.DrawWithHint("##Filter", "Filter (incl -excl)");
 
             for (int n = 0; n < IM_COUNTOF(items); n++)
             {
@@ -3947,7 +3947,7 @@ static void DemoWindowWidgetsTextFilter()
             "  \"xxx,yyy\"  display lines containing \"xxx\" or \"yyy\"\n"
             "  \"-xxx\"     hide lines containing \"xxx\"");
         ImGui::SetNextItemWidth(-FLT_MIN);
-        filter.DrawWithHint("##Filter", "Filter (incl,-excl)");
+        filter.DrawWithHint("##Filter", "Filter (incl -excl)");
         const char* lines[] = { "aaa1.c", "bbb1.c", "ccc1.c", "aaa2.cpp", "bbb2.cpp", "ccc2.cpp", "abc.h", "hello, world" };
         for (int i = 0; i < IM_COUNTOF(lines); i++)
             if (filter.PassFilter(lines[i]))
@@ -8833,7 +8833,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
 
             static ImGuiTextFilter filter;
             SetNextItemWidth(-FLT_MIN);
-            filter.DrawWithHint("##FilterColors", "Filter Colors (incl,-excl)");
+            filter.DrawWithHint("##FilterColors", "Filter Colors (incl -excl)");
 
             SetNextWindowSizeConstraints(ImVec2(0.0f, GetTextLineHeightWithSpacing() * 10), ImVec2(FLT_MAX, FLT_MAX));
             BeginChild("##colors", ImVec2(0, 0), ImGuiChildFlags_Borders | ImGuiChildFlags_NavFlattened, ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_AlwaysHorizontalScrollbar);
@@ -9250,7 +9250,7 @@ struct ExampleAppConsole
 
         ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_F, ImGuiInputFlags_Tooltip);
         ImGui::SetNextItemWidth(-FLT_MIN);
-        Filter.DrawWithHint("##Filter", "Filter (incl,-excl)");
+        Filter.DrawWithHint("##Filter", "Filter (incl -excl)");
         ImGui::Separator();
 
         // Reserve enough left-over height for 1 separator + 1 input text
@@ -9586,7 +9586,7 @@ struct ExampleAppLog
         bool copy = ImGui::Button("Copy");
         ImGui::SameLine();
         ImGui::SetNextItemWidth(-FLT_MIN);
-        Filter.DrawWithHint("##Filter", "Filter (incl,-excl)");
+        Filter.DrawWithHint("##Filter", "Filter (incl -excl)");
 
         ImGui::Separator();
 
@@ -9781,7 +9781,7 @@ struct ExampleAppPropertyEditor
             ImGui::Text("(%d root nodes)", root_node->Childs.Size);
             ImGui::SetNextItemWidth(-FLT_MIN);
             ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_F, ImGuiInputFlags_Tooltip);
-            if (ImGui::InputTextWithHint("##Filter", "incl,-excl", Filter.InputBuf, IM_COUNTOF(Filter.InputBuf), ImGuiInputTextFlags_EscapeClearsAll))
+            if (ImGui::InputTextWithHint("##Filter", "incl -excl", Filter.InputBuf, IM_COUNTOF(Filter.InputBuf), ImGuiInputTextFlags_EscapeClearsAll))
                 Filter.Build();
             ImGui::PopItemFlag();
 

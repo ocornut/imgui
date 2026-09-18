@@ -2785,7 +2785,7 @@ struct ImGuiOnceUponAFrame
     operator bool() const { int current_frame = ImGui::GetFrameCount(); if (RefFrame == current_frame) return false; RefFrame = current_frame; return true; }
 };
 
-// Helper: Parse and apply text filters. In format "aaaaa[,bbbb][,ccccc]"
+// Helper: Parse and apply text filters e.g. 'aaa bbb -ccc'.
 struct ImGuiTextFilter
 {
     IMGUI_API           ImGuiTextFilter(const char* default_filter = "");
@@ -2796,7 +2796,7 @@ struct ImGuiTextFilter
 
     // Helper to call InputText() + Build() when buffer is changed.
     IMGUI_API bool      Draw(const char* label = "Filter");
-    IMGUI_API bool      DrawWithHint(const char* label = "Filter", const char* hint = "incl,-excl");
+    IMGUI_API bool      DrawWithHint(const char* label = "Filter", const char* hint = "incl -excl");
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     inline bool         Draw(const char* label, float width)            { if (width != 0.0f) ImGui::SetNextItemWidth(width); return Draw(label); }
 #endif
