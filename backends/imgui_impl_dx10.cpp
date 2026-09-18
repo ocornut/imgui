@@ -103,6 +103,11 @@ static ImGui_ImplDX10_Data* ImGui_ImplDX10_GetBackendData()
     return ImGui::GetCurrentContext() ? (ImGui_ImplDX10_Data*)ImGui::GetIO().BackendRendererUserData : nullptr;
 }
 
+ImGui_ImplDX10_RenderState* ImGui_ImplDX10_GetRenderState()
+{
+    return (ImGui_ImplDX10_RenderState*)ImGui::GetPlatformIO().Renderer_RenderState;
+}
+
 // Forward Declarations
 static void ImGui_ImplDX10_InitMultiViewportSupport();
 static void ImGui_ImplDX10_ShutdownMultiViewportSupport();
