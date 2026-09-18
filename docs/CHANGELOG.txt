@@ -45,6 +45,8 @@ Breaking Changes:
   favor of `style.CurveTessellationMaxError` (default 1.12)` which is in Pixels unit. It is
   easier to tweak + this allows us to easily scale error threshold on high density screens.
   - style.CurveTessellationMaxError == sqrf(style.CurveTessellationTol).
+- ImGuiTextFilter: removed `float width` parameter of `Draw(const char* filter, float width)`:
+  prefer using `SetNextItemWidth(float)` which is standard. Kept inline redirection function.
 - Backends:
   - DirectX12: Removed support for legacy `ImGui_ImplDX12_Init()` signature, which was
     obsoleted in 1.91.6 (December 2014), because it needed to forcefully disable support

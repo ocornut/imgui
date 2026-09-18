@@ -395,6 +395,7 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
  When you are not sure about an old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2026/09/18 (1.93.0) - ImGuiTextFilter: removed `float width` parameter of `Draw(const char* filter, float width)`: prefer using `SetNextItemWidth(float)` which is standard. Kept inline redirection function.
  - 2026/08/03 (1.93.0) - Style: obsoleted `style.CurveTessellationTol (default 1.25)` which was in Pixels² unit in favor of `style.CurveTessellationMaxError` (default 1.12)` which is in Pixels unit.
                          - style.CurveTessellationMaxError == sqrf(style.CurveTessellationTol).
  - 2026/07/20 (1.92.9) - DragXXX, SliderXXX, InputScalar: with `ImGuiItemFlags_LiveEditOnInputScalar` now defaulting to being disabled:
@@ -3101,11 +3102,9 @@ ImGuiTextFilter::ImGuiTextFilter(const char* default_filter) //-V1077
     }
 }
 
-bool ImGuiTextFilter::Draw(const char* label, float width)
+bool ImGuiTextFilter::Draw(const char* label)
 {
-    if (width != 0.0f)
-        ImGui::SetNextItemWidth(width);
-    return DrawWithHint(label);
+    return DrawWithHint(label, "incl,-excl");
 }
 
 // Use ImGui::SetNextItemWidth() manually if you want to use this.
