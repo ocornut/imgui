@@ -1452,7 +1452,8 @@ static void DemoWindowWidgetsComboBoxes()
                 filter.Clear();
             }
             ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_F);
-            filter.Draw("##Filter", -FLT_MIN);
+            ImGui::SetNextItemWidth(-FLT_MIN);
+            filter.DrawWithHint("##Filter", "Filter (incl,-excl)");
 
             for (int n = 0; n < IM_COUNTOF(items); n++)
             {
@@ -3945,7 +3946,8 @@ static void DemoWindowWidgetsTextFilter()
             "  \"xxx\"      display lines containing \"xxx\"\n"
             "  \"xxx,yyy\"  display lines containing \"xxx\" or \"yyy\"\n"
             "  \"-xxx\"     hide lines containing \"xxx\"");
-        filter.Draw();
+        ImGui::SetNextItemWidth(-FLT_MIN);
+        filter.DrawWithHint("##Filter", "Filter (incl,-excl)");
         const char* lines[] = { "aaa1.c", "bbb1.c", "ccc1.c", "aaa2.cpp", "bbb2.cpp", "ccc2.cpp", "abc.h", "hello, world" };
         for (int i = 0; i < IM_COUNTOF(lines); i++)
             if (filter.PassFilter(lines[i]))
@@ -8820,9 +8822,6 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             SameLine(); SetNextItemWidth(GetFontSize() * 10); Combo("##output_type", &output_dest, "To Clipboard\0To TTY\0");
             SameLine(); Checkbox("Only Modified Colors", &output_only_modified);
 
-            static ImGuiTextFilter filter;
-            filter.Draw("Filter colors", GetFontSize() * 16);
-
             static ImGuiColorEditFlags alpha_flags = 0;
             if (RadioButton("Opaque", alpha_flags == ImGuiColorEditFlags_AlphaOpaque))       { alpha_flags = ImGuiColorEditFlags_AlphaOpaque; } SameLine();
             if (RadioButton("Alpha",  alpha_flags == ImGuiColorEditFlags_None))              { alpha_flags = ImGuiColorEditFlags_None; } SameLine();
@@ -8831,6 +8830,10 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
                 "In the color list:\n"
                 "Left-click on color square to open color picker,\n"
                 "Right-click to open edit options menu.");
+
+            static ImGuiTextFilter filter;
+            SetNextItemWidth(-FLT_MIN);
+            filter.DrawWithHint("##FilterColors", "Filter Colors (incl,-excl)");
 
             SetNextWindowSizeConstraints(ImVec2(0.0f, GetTextLineHeightWithSpacing() * 10), ImVec2(FLT_MAX, FLT_MAX));
             BeginChild("##colors", ImVec2(0, 0), ImGuiChildFlags_Borders | ImGuiChildFlags_NavFlattened, ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_AlwaysHorizontalScrollbar);
@@ -9244,7 +9247,10 @@ struct ExampleAppConsole
         if (ImGui::Button("Options"))
             ImGui::OpenPopup("Options");
         ImGui::SameLine();
-        Filter.Draw("Filter (\"incl,-excl\") (\"error\")", 180);
+
+        ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_F, ImGuiInputFlags_Tooltip);
+        ImGui::SetNextItemWidth(-FLT_MIN);
+        Filter.DrawWithHint("##Filter", "Filter (incl,-excl)");
         ImGui::Separator();
 
         // Reserve enough left-over height for 1 separator + 1 input text
@@ -9579,7 +9585,8 @@ struct ExampleAppLog
         ImGui::SameLine();
         bool copy = ImGui::Button("Copy");
         ImGui::SameLine();
-        Filter.Draw("Filter", -100.0f);
+        ImGui::SetNextItemWidth(-FLT_MIN);
+        Filter.DrawWithHint("##Filter", "Filter (incl,-excl)");
 
         ImGui::Separator();
 

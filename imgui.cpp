@@ -3105,7 +3105,13 @@ bool ImGuiTextFilter::Draw(const char* label, float width)
 {
     if (width != 0.0f)
         ImGui::SetNextItemWidth(width);
-    bool value_changed = ImGui::InputText(label, InputBuf, IM_COUNTOF(InputBuf));
+    return DrawWithHint(label);
+}
+
+// Use ImGui::SetNextItemWidth() manually if you want to use this.
+bool ImGuiTextFilter::DrawWithHint(const char* label, const char* hint)
+{
+    bool value_changed = ImGui::InputTextWithHint(label, hint, InputBuf, IM_COUNTOF(InputBuf));
     if (value_changed)
         Build();
     return value_changed;

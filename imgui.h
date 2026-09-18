@@ -2795,7 +2795,8 @@ struct ImGuiTextFilter
     inline bool         IsActive() const { return Filters.Size != 0; }  // Useful if you need e.g. an alternative code-path when there are no filters
 
     // Helper to call InputText() + Build() when buffer is changed.
-    IMGUI_API bool      Draw(const char* label = "Filter (inc,-exc)", float width = 0.0f);
+    IMGUI_API bool      Draw(const char* label = "Filter", float width = 0.0f);
+    IMGUI_API bool      DrawWithHint(const char* label = "Filter", const char* hint = "incl,-excl");
 
     // [Internal] Don't use! Will be replaced with ImStrv.
     struct ImGuiTextRange
