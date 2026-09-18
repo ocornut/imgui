@@ -267,8 +267,11 @@ static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view);
 
 @end
 
+static void ImGui_ImplOSX_RestackSecondaryWindows(bool active); // keep torn-off windows above the main window (see definition)
+
 @interface ImGuiObserver : NSObject
 
+- (void)onApplicationWillBecomeActive:(NSNotification*)aNotification;
 - (void)onApplicationBecomeActive:(NSNotification*)aNotification;
 - (void)onApplicationBecomeInactive:(NSNotification*)aNotification;
 - (void)displaysDidChange:(NSNotification*)aNotification;
@@ -277,16 +280,37 @@ static bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view);
 
 @implementation ImGuiObserver
 
+- (void)onApplicationWillBecomeActive:(NSNotification*)aNotification
+{
+    // Restack on WILL (before the app is actually activated) as well as DID: clicking the main window to
+    // reactivate brings it to the front of the normal level, and doing the restack only on DID leaves the
+    // main window on top of the floating windows for one frame before they are raised. Doing it here,
+    // before activation completes, avoids that flash. (DID still runs below to cover paths that don't post
+    // a WILL notification and to re-assert once the app is truly frontmost.)
+    if (ImGui_ImplOSX_Data* bd = ImGui_ImplOSX_GetBackendData())
+        [bd->Window orderFront:nil];
+    ImGui_ImplOSX_RestackSecondaryWindows(true);
+}
+
 - (void)onApplicationBecomeActive:(NSNotification*)aNotification
 {
     ImGuiIO& io = ImGui::GetIO();
     io.AddFocusEvent(true);
+    // App is frontmost again. Clicking a floating window activates the app but doesn't itself bring the
+    // main window forward, so bring it front here (it stays below the floating windows, which are raised
+    // back above it just below), so the whole app comes forward as a unit above the previously-front app.
+    if (ImGui_ImplOSX_Data* bd = ImGui_ImplOSX_GetBackendData())
+        [bd->Window orderFront:nil];
+    ImGui_ImplOSX_RestackSecondaryWindows(true);
 }
 
 - (void)onApplicationBecomeInactive:(NSNotification*)aNotification
 {
     ImGuiIO& io = ImGui::GetIO();
     io.AddFocusEvent(false);
+    // Another app took focus: drop floating windows to the normal level so its windows occlude them
+    // (instead of the floating windows staying on top of every other app).
+    ImGui_ImplOSX_RestackSecondaryWindows(false);
 }
 
 - (void)displaysDidChange:(NSNotification*)aNotification
@@ -500,6 +524,10 @@ bool ImGui_ImplOSX_Init(NSView* view)
         return s_clipboard.Data;
     };
 
+    [[NSNotificationCenter defaultCenter] addObserver:bd->Observer
+                                             selector:@selector(onApplicationWillBecomeActive:)
+                                                 name:NSApplicationWillBecomeActiveNotification
+                                               object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:bd->Observer
                                              selector:@selector(onApplicationBecomeActive:)
                                                  name:NSApplicationDidBecomeActiveNotification
@@ -903,6 +931,48 @@ struct ImGui_ImplOSX_ViewportData
 
 @end
 
+// Re-stack all torn-off (secondary) viewport windows above the main window, keeping their relative order.
+// While the app is ACTIVE they are independent windows at NSFloatingWindowLevel: above the main window,
+// but NOT children — so dragging the main window does not drag them along. While the app is INACTIVE they
+// become children of the main window at the normal level: children are occluded together with the app by
+// other apps, and — crucially — the window server keeps a child above its parent at ALL times, so a click
+// on the main window to reactivate can't flash it over them for a frame (which a same-level sibling would).
+// Only visible windows are touched (ordering an ordered-out/destroyed window would resurrect it as an empty
+// floater). The main window is excluded (it is not an ImGui_ImplOSX_Window).
+static void ImGui_ImplOSX_RestackSecondaryWindows(bool active)
+{
+    ImGui_ImplOSX_Data* bd = ImGui_ImplOSX_GetBackendData();
+    if (bd == nullptr)
+        return;
+
+    NSMutableArray<NSWindow*>* windows = [NSMutableArray array];
+    for (NSWindow* window in NSApp.orderedWindows) // front-to-back
+        if (window != bd->Window && window.isVisible && [window isKindOfClass:[ImGui_ImplOSX_Window class]])
+            [windows addObject:window];
+
+    if (active)
+    {
+        for (NSWindow* window in windows)
+        {
+            if (window.parentWindow != nil)
+                [window.parentWindow removeChildWindow:window];
+            window.level = NSFloatingWindowLevel;
+        }
+        // Front-to-back: each ordered directly above the main window, so the front-most stays on top.
+        for (NSWindow* window in windows)
+            [window orderWindow:NSWindowAbove relativeTo:bd->Window.windowNumber];
+    }
+    else
+    {
+        for (NSWindow* window in windows)
+            window.level = NSNormalWindowLevel;
+        // Back-to-front: each child added above the previous, so the front-most ends up the topmost child.
+        for (NSWindow* window in windows.reverseObjectEnumerator)
+            if (window.parentWindow != bd->Window)
+                [bd->Window addChildWindow:window ordered:NSWindowAbove];
+    }
+}
+
 static void ConvertNSRect(NSRect* r)
 {
     NSRect firstScreenFrame = NSScreen.screens[0].frame;
@@ -931,20 +1001,20 @@ static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* viewport)
                                                                  backing:NSBackingStoreBuffered
                                                                    defer:NO
                                                                   screen:screen];
-    if (viewport->Flags & ImGuiViewportFlags_TopMost)
-        [window setLevel:NSFloatingWindowLevel];
-
     window.title = @"Untitled";
     window.opaque = YES;
 
-    // macOS plays a fade/zoom "appear" animation on every new NSWindow, which shows up as a pop each
-    // time a viewport is torn off. Disable it. Removing the animation exposes a one-frame z-order
-    // "blink" (during the tear-off drag macOS keeps the mouse-down main window frontmost, so this
-    // borderless window's same-level orderFront loses the race): make it a child of the main window so
-    // it stays above its parent during the drag; ImGui_ImplOSX_UpdateWindow detaches it once the mouse
-    // button is released so it becomes a normal, independent window.
+    // Disable the macOS fade/zoom "appear" animation (a pop on every tear-off). New windows are torn off
+    // while the app is active, so start them at NSFloatingWindowLevel (above the main window, and winning
+    // the z-order race during the tear-off drag). ImGui_ImplOSX_RestackSecondaryWindows then manages
+    // level/parenting as the app gains/loses focus.
     [window setAnimationBehavior:NSWindowAnimationBehaviorNone];
-    if (bd->Window != nil)
+    window.level = NSFloatingWindowLevel;
+    // Parent the new window to the main window for the tear-off: the window server then composites it in the
+    // SAME pass as its parent so it appears immediately. A fresh top-level window otherwise reports
+    // occlusionState=NotVisible for one compositor pass and the torn-off window blinks out for a frame.
+    // ImGui_ImplOSX_UpdateWindow detaches it into an independent floating window once the drag is released.
+    //if (bd->Window != nil)
         [bd->Window addChildWindow:window ordered:NSWindowAbove];
 
     KeyEventResponder* view = [[KeyEventResponder alloc] initWithFrame:rect];
@@ -972,6 +1042,8 @@ static void ImGui_ImplOSX_DestroyWindow(ImGuiViewport* viewport)
         NSWindow* window = vd->Window;
         if (window != nil && vd->WindowOwned)
         {
+            if (window.parentWindow != nil)
+                [window.parentWindow removeChildWindow:window]; // detach if parented (inactive state) before hiding
             window.contentView = nil;
             window.contentViewController = nil;
             [window orderOut:nil];
@@ -997,13 +1069,25 @@ static void ImGui_ImplOSX_ShowWindow(ImGuiViewport* viewport)
 
 static void ImGui_ImplOSX_UpdateWindow(ImGuiViewport* viewport)
 {
-    // The window is parented to the main window on creation (see ImGui_ImplOSX_CreateWindow) so it wins
-    // the z-order race during the tear-off drag. Once that drag ends — detected via the physical mouse
-    // button, since io.MouseDown is unreliable during the OS-driven window-drag loop — detach it so it
-    // becomes a normal, independent window (can be sent behind the main window, drops behind other apps).
+    ImGui_ImplOSX_Data* bd = ImGui_ImplOSX_GetBackendData();
     ImGui_ImplOSX_ViewportData* vd = (ImGui_ImplOSX_ViewportData*)viewport->PlatformUserData;
-    if (vd != nullptr && vd->Window != nil && vd->Window.parentWindow != nil && ([NSEvent pressedMouseButtons] & 1) == 0)
-        [vd->Window.parentWindow removeChildWindow:vd->Window];
+    if (vd == nullptr || vd->Window == nil || bd->Window == nil) {
+        return;
+    }
+
+    // The new window is created as a child of the main window so it composites without a one-frame blink (see
+    // ImGui_ImplOSX_CreateWindow). Detach it into an independent floating window once (a) it is actually
+    // on-screen (occlusionState visible) and (b) the tear-off drag is released (no mouse button held), while
+    // the app is active. The occlusion check matters because Platform_UpdateWindow runs every frame INCLUDING
+    // the creation frame and BEFORE Platform_ShowWindow, so detaching earlier would undo the parenting before
+    // the window is ever composited and bring the blink back. While inactive it stays a child (see
+    // ImGui_ImplOSX_RestackSecondaryWindows).
+    if (vd->Window.parentWindow == bd->Window && NSApp.active && [NSEvent pressedMouseButtons] == 0
+        && (vd->Window.occlusionState & NSWindowOcclusionStateVisible) != 0) {
+        [bd->Window removeChildWindow:vd->Window];
+        vd->Window.level = NSFloatingWindowLevel;
+        [vd->Window orderWindow:NSWindowAbove relativeTo:bd->Window.windowNumber];
+    }
 }
 
 static ImVec2 ImGui_ImplOSX_GetWindowPos(ImGuiViewport* viewport)

@@ -197,6 +197,7 @@ static const NSInteger kActiveRenderFrames = 30;
 #if TARGET_OS_OSX
 @property (nonatomic, assign) CVDisplayLinkRef displayLink;
 @property (nonatomic, strong) id eventMonitor; // local NSEvent monitor that keeps rendering active on input
+@property (nonatomic, strong) id becomeActiveObserver; // resumes rendering when the app is reactivated (Cmd-Tab)
 #endif
 @end
 
@@ -318,6 +319,15 @@ static const NSInteger kActiveRenderFrames = 30;
     self.eventMonitor = [NSEvent addLocalMonitorForEventsMatchingMask:inputMask handler:^NSEvent* (NSEvent* event) {
         weakView.activeFrames = kActiveRenderFrames;
         return event;
+    }];
+    // Reactivating the app (Cmd-Tab, or clicking a window) doesn't produce a local input event, so bump the
+    // render counter on activation too — otherwise the throttle leaves the window on the slow heartbeat for
+    // up to ~1s after switching back, which looks like a lag.
+    self.becomeActiveObserver = [NSNotificationCenter.defaultCenter addObserverForName:NSApplicationDidBecomeActiveNotification
+                                                                                object:nil
+                                                                                 queue:NSOperationQueue.mainQueue
+                                                                            usingBlock:^(NSNotification*) {
+        weakView.activeFrames = kActiveRenderFrames;
     }];
 
     // Start CVDisplayLink for continuous rendering
@@ -502,6 +512,11 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     {
         [NSEvent removeMonitor:_eventMonitor];
         _eventMonitor = nil;
+    }
+    if (_becomeActiveObserver)
+    {
+        [NSNotificationCenter.defaultCenter removeObserver:_becomeActiveObserver];
+        _becomeActiveObserver = nil;
     }
     if (_displayLink)
     {
