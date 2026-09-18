@@ -2792,7 +2792,7 @@ struct ImGuiTextFilter
     IMGUI_API bool      PassFilter(const char* text, const char* text_end = NULL) const;
     IMGUI_API void      Build();                                        // Update internal data when filter changes
     inline void         Clear()          { InputBuf[0] = 0; Build(); }  // Clear filter
-    inline bool         IsActive() const { return Filters.Size != 0; }  // Useful if you need e.g. an alternative code-path when there are no filters
+    inline bool         IsActive() const { return _Items.Size != 0; }   // Useful if you need e.g. an alternative code-path when there are no filters
 
     // Helper to call InputText() + Build() when buffer is changed.
     IMGUI_API bool      Draw(const char* label = "Filter");
@@ -2802,17 +2802,17 @@ struct ImGuiTextFilter
 #endif
 
     // [Internal] Don't use! Will be replaced with ImStrv.
-    struct ImGuiTextRange
+    struct ImGuiTextFilterItem
     {
-        const char* Begin;
-        const char* End;
-        ImGuiTextRange(const char* b, const char* e) { Begin = b; End = e; }
+        const char*     Begin;
+        const char*     End;
+        ImGuiTextFilterItem(const char* b, const char* e) { Begin = b; End = e; }
     };
 
     // [Internal] Members
-    char                    InputBuf[256];
-    ImVector<ImGuiTextRange>Filters;
-    int                     CountInclude;
+    char                InputBuf[256];      // User input buffer
+    int                 _CountInclude;      // >= 0
+    ImVector<ImGuiTextFilterItem> _Items;   // Pre-parsed, trimmed items
 };
 
 // Helper: Growable text buffer for logging/accumulating text

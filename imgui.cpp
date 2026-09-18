@@ -3094,7 +3094,7 @@ IM_MSVC_RUNTIME_CHECKS_RESTORE
 ImGuiTextFilter::ImGuiTextFilter(const char* default_filter) //-V1077
 {
     InputBuf[0] = 0;
-    CountInclude = 0;
+    _CountInclude = 0;
     if (default_filter)
     {
         ImStrncpy(InputBuf, default_filter, IM_COUNTOF(InputBuf));
@@ -3116,7 +3116,7 @@ bool ImGuiTextFilter::DrawWithHint(const char* label, const char* hint)
     return value_changed;
 }
 
-static void ImStrSplit(const char* b, const char* e, char separator, ImVector<ImGuiTextFilter::ImGuiTextRange>* out)
+static void ImStrSplit(const char* b, const char* e, char separator, ImVector<ImGuiTextFilter::ImGuiTextFilterItem>* out)
 {
     out->resize(0);
     const char* wb = b;
@@ -3125,23 +3125,23 @@ static void ImStrSplit(const char* b, const char* e, char separator, ImVector<Im
     {
         if (*we == separator)
         {
-            out->push_back(ImGuiTextFilter::ImGuiTextRange(wb, we));
+            out->push_back(ImGuiTextFilter::ImGuiTextFilterItem(wb, we));
             wb = we + 1;
         }
         we++;
     }
     if (wb != we)
-        out->push_back(ImGuiTextFilter::ImGuiTextRange(wb, we));
+        out->push_back(ImGuiTextFilter::ImGuiTextFilterItem(wb, we));
 }
 
 void ImGuiTextFilter::Build()
 {
-    Filters.resize(0);
-    ImGuiTextRange input_range(InputBuf, InputBuf + ImStrlen(InputBuf));
-    ImStrSplit(InputBuf, InputBuf + ImStrlen(InputBuf), ',', &Filters);
+    _Items.resize(0);
+    ImGuiTextFilterItem input_range(InputBuf, InputBuf + ImStrlen(InputBuf));
+    ImStrSplit(InputBuf, InputBuf + ImStrlen(InputBuf), ',', &_Items);
 
-    CountInclude = 0;
-    for (ImGuiTextRange& f : Filters)
+    _CountInclude = 0;
+    for (ImGuiTextFilterItem& f : _Items)
     {
         while (f.Begin < f.End && ImCharIsBlankA(f.Begin[0]))
             f.Begin++;
@@ -3150,19 +3150,19 @@ void ImGuiTextFilter::Build()
         if (f.Begin == f.End)
             continue;
         if (f.Begin[0] != '-')
-            CountInclude += 1;
+            _CountInclude += 1;
     }
 }
 
 bool ImGuiTextFilter::PassFilter(const char* text, const char* text_end) const
 {
-    if (Filters.Size == 0)
+    if (_Items.Size == 0)
         return true;
 
     if (text == NULL)
         text = text_end = "";
 
-    for (const ImGuiTextRange& f : Filters)
+    for (const ImGuiTextFilterItem& f : _Items)
     {
         if (f.Begin == f.End)
             continue;
@@ -3181,7 +3181,7 @@ bool ImGuiTextFilter::PassFilter(const char* text, const char* text_end) const
     }
 
     // Implicit * grep
-    if (CountInclude == 0)
+    if (_CountInclude == 0)
         return true;
 
     return false;
