@@ -2789,26 +2789,26 @@ struct ImGuiOnceUponAFrame
 struct ImGuiTextFilter
 {
     IMGUI_API           ImGuiTextFilter(const char* default_filter = "");
-    IMGUI_API bool      Draw(const char* label = "Filter (inc,-exc)", float width = 0.0f);  // Helper calling InputText+Build
     IMGUI_API bool      PassFilter(const char* text, const char* text_end = NULL) const;
-    IMGUI_API void      Build();
-    void                Clear()          { InputBuf[0] = 0; Build(); }
-    bool                IsActive() const { return !Filters.empty(); }
+    IMGUI_API void      Build();                                        // Update internal data when filter changes
+    inline void         Clear()          { InputBuf[0] = 0; Build(); }  // Clear filter
+    inline bool         IsActive() const { return Filters.Size != 0; }  // Useful if you need e.g. an alternative code-path when there are no filters
 
-    // [Internal]
+    // Helper to call InputText() + Build() when buffer is changed.
+    IMGUI_API bool      Draw(const char* label = "Filter (inc,-exc)", float width = 0.0f);
+
+    // [Internal] Don't use! Will be replaced with ImStrv.
     struct ImGuiTextRange
     {
-        const char*     b;
-        const char*     e;
-
-        ImGuiTextRange()                                { b = e = NULL; }
-        ImGuiTextRange(const char* _b, const char* _e)  { b = _b; e = _e; }
-        bool            empty() const                   { return b == e; }
-        IMGUI_API void  split(char separator, ImVector<ImGuiTextRange>* out) const;
+        const char* Begin;
+        const char* End;
+        ImGuiTextRange(const char* b, const char* e) { Begin = b; End = e; }
     };
+
+    // [Internal] Members
     char                    InputBuf[256];
     ImVector<ImGuiTextRange>Filters;
-    int                     CountGrep;
+    int                     CountInclude;
 };
 
 // Helper: Growable text buffer for logging/accumulating text

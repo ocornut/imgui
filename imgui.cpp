@@ -3093,7 +3093,7 @@ IM_MSVC_RUNTIME_CHECKS_RESTORE
 ImGuiTextFilter::ImGuiTextFilter(const char* default_filter) //-V1077
 {
     InputBuf[0] = 0;
-    CountGrep = 0;
+    CountInclude = 0;
     if (default_filter)
     {
         ImStrncpy(InputBuf, default_filter, IM_COUNTOF(InputBuf));
@@ -3111,7 +3111,7 @@ bool ImGuiTextFilter::Draw(const char* label, float width)
     return value_changed;
 }
 
-void ImGuiTextFilter::ImGuiTextRange::split(char separator, ImVector<ImGuiTextRange>* out) const
+static void ImStrSplit(const char* b, const char* e, char separator, ImVector<ImGuiTextFilter::ImGuiTextRange>* out)
 {
     out->resize(0);
     const char* wb = b;
@@ -3120,32 +3120,32 @@ void ImGuiTextFilter::ImGuiTextRange::split(char separator, ImVector<ImGuiTextRa
     {
         if (*we == separator)
         {
-            out->push_back(ImGuiTextRange(wb, we));
+            out->push_back(ImGuiTextFilter::ImGuiTextRange(wb, we));
             wb = we + 1;
         }
         we++;
     }
     if (wb != we)
-        out->push_back(ImGuiTextRange(wb, we));
+        out->push_back(ImGuiTextFilter::ImGuiTextRange(wb, we));
 }
 
 void ImGuiTextFilter::Build()
 {
     Filters.resize(0);
     ImGuiTextRange input_range(InputBuf, InputBuf + ImStrlen(InputBuf));
-    input_range.split(',', &Filters);
+    ImStrSplit(InputBuf, InputBuf + ImStrlen(InputBuf), ',', &Filters);
 
-    CountGrep = 0;
+    CountInclude = 0;
     for (ImGuiTextRange& f : Filters)
     {
-        while (f.b < f.e && ImCharIsBlankA(f.b[0]))
-            f.b++;
-        while (f.e > f.b && ImCharIsBlankA(f.e[-1]))
-            f.e--;
-        if (f.empty())
+        while (f.Begin < f.End && ImCharIsBlankA(f.Begin[0]))
+            f.Begin++;
+        while (f.End > f.Begin && ImCharIsBlankA(f.End[-1]))
+            f.End--;
+        if (f.Begin == f.End)
             continue;
-        if (f.b[0] != '-')
-            CountGrep += 1;
+        if (f.Begin[0] != '-')
+            CountInclude += 1;
     }
 }
 
@@ -3159,24 +3159,24 @@ bool ImGuiTextFilter::PassFilter(const char* text, const char* text_end) const
 
     for (const ImGuiTextRange& f : Filters)
     {
-        if (f.b == f.e)
+        if (f.Begin == f.End)
             continue;
-        if (f.b[0] == '-')
+        if (f.Begin[0] == '-')
         {
             // Subtract
-            if (ImStristr(text, text_end, f.b + 1, f.e) != NULL)
+            if (ImStristr(text, text_end, f.Begin + 1, f.End) != NULL)
                 return false;
         }
         else
         {
             // Grep
-            if (ImStristr(text, text_end, f.b, f.e) != NULL)
+            if (ImStristr(text, text_end, f.Begin, f.End) != NULL)
                 return true;
         }
     }
 
     // Implicit * grep
-    if (CountGrep == 0)
+    if (CountInclude == 0)
         return true;
 
     return false;
