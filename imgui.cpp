@@ -3094,6 +3094,7 @@ IM_MSVC_RUNTIME_CHECKS_RESTORE
 ImGuiTextFilter::ImGuiTextFilter(const char* default_filter) //-V1077
 {
     InputBuf[0] = 0;
+    MinWordSize = 1;
     _CountInclude = 0;
     if (default_filter)
     {
@@ -3127,7 +3128,7 @@ static void ImGuiTextFilter_BuildAddItem(ImGuiTextFilter* f, const char* word_b,
             word_e--;
     }
     const bool is_excl = (word_b < word_e && word_b[0] == '-');
-    if (word_e - word_b - (is_excl ? 1 : 0) <= 0)
+    if (word_e - word_b - (is_excl ? 1 : 0) < f->MinWordSize)
         return;
 
     // Add to list
