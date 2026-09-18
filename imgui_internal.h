@@ -418,7 +418,7 @@ IMGUI_API const char*   ImStrSkipBlank(const char* str);                        
 IMGUI_API int           ImStrlenW(const ImWchar* str);                                      // Computer string length (ImWchar string)
 IMGUI_API const char*   ImStrbol(const char* buf_mid_line, const char* buf_begin);          // Find beginning-of-line
 IM_MSVC_RUNTIME_CHECKS_OFF
-inline char             ImToUpper(char c)               { return (c >= 'a' && c <= 'z') ? c &= ~32 : c; }
+inline char             ImToUpper(char c)               { return (c >= 'a' && c <= 'z') ? c & ~32 : c; }
 inline bool             ImCharIsBlankA(char c)          { return c == ' ' || c == '\t'; }
 inline bool             ImCharIsBlankW(unsigned int c)  { return c == ' ' || c == '\t' || c == 0x3000; }
 inline bool             ImCharIsXdigitA(char c)         { return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f'); }
@@ -2651,6 +2651,7 @@ struct ImGuiContext
     ImGuiID                 NavJustMovedToFocusScopeId;         // Just navigated to this focus scope id (result of a successfully MoveRequest).
     ImGuiKeyChord           NavJustMovedToKeyMods;
     bool                    NavJustMovedToIsTabbing;            // Copy of ImGuiNavMoveFlags_IsTabbing. Maybe we should store whole flags.
+    bool                    NavJustMovedToIsInit;               // Copy of ImGuiNavMoveFlags_IsTabbing. Maybe we should store whole flags.
     bool                    NavJustMovedToHasSelectionData;     // Copy of move result's ItemFlags & ImGuiItemFlags_HasSelectionUserData). Maybe we should just store ImGuiNavItemData.
 
     // Navigation: extra config options (will be made public eventually)
@@ -3588,7 +3589,7 @@ namespace ImGui
     // - You are calling ImGui functions after ImGui::EndFrame()/ImGui::Render() and before the next ImGui::NewFrame(), which is also illegal.
     IMGUI_API ImGuiIO&         GetIO(ImGuiContext* ctx);
     IMGUI_API ImGuiPlatformIO& GetPlatformIO(ImGuiContext* ctx);
-    inline    float         GetScale()                  { ImGuiContext& g = *GImGui; return g.Style._MainScale; } // FIXME-DPI: I don't want to formalize this just yet. Because reasons. Please don't use.
+    inline    float         GetScale()                  { ImGuiContext& g = *GImGui; return g.Style._MainScale; } // FIXME-DPI: PLEASE DO NOT USE. I don't want to formalize this just yet. Because reasons.
     inline    ImGuiWindow*  GetCurrentWindowRead()      { ImGuiContext& g = *GImGui; return g.CurrentWindow; }
     inline    ImGuiWindow*  GetCurrentWindow()          { ImGuiContext& g = *GImGui; g.CurrentWindow->WriteAccessed = true; return g.CurrentWindow; }
     IMGUI_API ImGuiWindow*  FindWindowByID(ImGuiID id);
@@ -3966,6 +3967,7 @@ namespace ImGui
     IMGUI_API void          ClearDragDrop();
     IMGUI_API bool          IsDragDropPayloadBeingAccepted();
     IMGUI_API void          RenderDragDropTargetRectForItem(const ImRect& bb);
+    IMGUI_API void          RenderDragDropTargetRectForViewport(ImGuiID viewport_id, const ImRect& bb);
     IMGUI_API void          RenderDragDropTargetRectEx(ImDrawList* draw_list, const ImRect& bb, float rounding);
 
     // Typing-Select API
@@ -3999,6 +4001,7 @@ namespace ImGui
     IMGUI_API ImGuiTabItem* TabBarGetCurrentTab(ImGuiTabBar* tab_bar);
     inline int              TabBarGetTabOrder(ImGuiTabBar* tab_bar, ImGuiTabItem* tab) { return tab_bar->Tabs.index_from_ptr(tab); }
     IMGUI_API const char*   TabBarGetTabName(ImGuiTabBar* tab_bar, ImGuiTabItem* tab);
+    IMGUI_API ImVec2        TabBarGetTabPos(ImGuiTabBar* tab_bar, ImGuiTabItem* tab);
     IMGUI_API void          TabBarAddTab(ImGuiTabBar* tab_bar, ImGuiTabItemFlags tab_flags, ImGuiWindow* window);
     IMGUI_API void          TabBarRemoveTab(ImGuiTabBar* tab_bar, ImGuiID tab_id);
     IMGUI_API void          TabBarCloseTab(ImGuiTabBar* tab_bar, ImGuiTabItem* tab);

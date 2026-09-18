@@ -402,6 +402,8 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
                             you may use GetMainViewport()->Pos to offset hard-coded positions, e.g. SetNextWindowPos(GetMainViewport()->Pos)
                           - likewise io.MousePos and GetMousePos() will use OS coordinates.
                             If you query mouse positions to interact with non-imgui coordinates you will need to offset them, e.g. subtract GetWindowViewport()->Pos.
+
+ - 2026/09/18 (1.93.0) - ImGuiTextFilter: removed `float width` parameter of `Draw(const char* filter, float width)`: prefer using `SetNextItemWidth(float)` which is standard. Kept inline redirection function.
  - 2026/08/03 (1.93.0) - Style: obsoleted `style.CurveTessellationTol (default 1.25)` which was in Pixels² unit in favor of `style.CurveTessellationMaxError` (default 1.12)` which is in Pixels unit.
                          - style.CurveTessellationMaxError == sqrf(style.CurveTessellationTol).
  - 2026/07/20 (1.92.9) - DragXXX, SliderXXX, InputScalar: with `ImGuiItemFlags_LiveEditOnInputScalar` now defaulting to being disabled:
@@ -3154,11 +3156,13 @@ IM_MSVC_RUNTIME_CHECKS_RESTORE
 // [SECTION] ImGuiTextFilter
 //-----------------------------------------------------------------------------
 
-// Helper: Parse and apply text filters. In format "aaaaa[,bbbb][,ccccc]"
+// Helper: Parse and apply text filters e.g. 'aaa bbb -ccc'.
 ImGuiTextFilter::ImGuiTextFilter(const char* default_filter) //-V1077
 {
     InputBuf[0] = 0;
-    CountGrep = 0;
+    FilterOp = '|';
+    MinWordSize = 1;
+    _CountExclude = _CountInclude = 0;
     if (default_filter)
     {
         ImStrncpy(InputBuf, default_filter, IM_COUNTOF(InputBuf));
@@ -3166,85 +3170,93 @@ ImGuiTextFilter::ImGuiTextFilter(const char* default_filter) //-V1077
     }
 }
 
-bool ImGuiTextFilter::Draw(const char* label, float width)
+bool ImGuiTextFilter::Draw(const char* label)
 {
-    if (width != 0.0f)
-        ImGui::SetNextItemWidth(width);
-    bool value_changed = ImGui::InputText(label, InputBuf, IM_COUNTOF(InputBuf));
+    return DrawWithHint(label, "incl -excl");
+}
+
+// Use ImGui::SetNextItemWidth() manually if you want to use this.
+bool ImGuiTextFilter::DrawWithHint(const char* label, const char* hint)
+{
+    bool value_changed = ImGui::InputTextWithHint(label, hint, InputBuf, IM_COUNTOF(InputBuf));
     if (value_changed)
         Build();
     return value_changed;
 }
 
-void ImGuiTextFilter::ImGuiTextRange::split(char separator, ImVector<ImGuiTextRange>* out) const
-{
-    out->resize(0);
-    const char* wb = b;
-    const char* we = wb;
-    while (we < e)
-    {
-        if (*we == separator)
-        {
-            out->push_back(ImGuiTextRange(wb, we));
-            wb = we + 1;
-        }
-        we++;
-    }
-    if (wb != we)
-        out->push_back(ImGuiTextRange(wb, we));
-}
-
+// Parse filter and split into items
 void ImGuiTextFilter::Build()
 {
-    Filters.resize(0);
-    ImGuiTextRange input_range(InputBuf, InputBuf + ImStrlen(InputBuf));
-    input_range.split(',', &Filters);
-
-    CountGrep = 0;
-    for (ImGuiTextRange& f : Filters)
+    _Items.resize(0);
+    _CountExclude = _CountInclude = 0;
+    IM_ASSERT(FilterOp == '|' || FilterOp == '&');
+    const char* buf_e = InputBuf + ImStrlen(InputBuf);
+    const char* word_e;
+    for (const char* word_b = InputBuf; word_b < buf_e; word_b = word_e + 1)
     {
-        while (f.b < f.e && ImCharIsBlankA(f.b[0]))
-            f.b++;
-        while (f.e > f.b && ImCharIsBlankA(f.e[-1]))
-            f.e--;
-        if (f.empty())
+        // Trim blanks
+        while (word_b < buf_e && ImCharIsBlankA(word_b[0])) // FIXME: UTF-8 support
+            word_b++;
+        const bool is_excl = (word_b < buf_e && word_b[0] == '-');
+        if (is_excl)
+            word_b++;
+        const bool is_quote = (word_b < buf_e && word_b[0] == '\"');
+        if (is_quote)
+        {
+            // Parsing quotes. Omit storing leading/trailing quotes.
+            word_e = ImStrchrRange(++word_b, buf_e, '\"');
+            if (word_e == NULL)
+                word_e = buf_e;
+        }
+        else
+        {
+            // Handle both ' ' and ',' separators.
+            for (word_e = word_b; word_e < buf_e; word_e++)
+                if (*word_e == ' ' || *word_e == ',')
+                    break;
+        }
+
+        // Min length
+        if (word_e - word_b < MinWordSize)
             continue;
-        if (f.b[0] != '-')
-            CountGrep += 1;
+
+        // Add to list
+        // The '-' is not stored in items but implicitly inferred using (n < CountExclude).
+        // FIXME-OPT: about ~push_front(): as N is derived from user inputs we expect this to be fine.
+        _Items.insert(is_excl ? _Items.Data : _Items.Data + _Items.Size, ImGuiTextFilter::ImGuiTextFilterItem(word_b, word_e));
+        if (is_excl)
+            _CountExclude++;
+        else
+            _CountInclude++;
     }
 }
 
 bool ImGuiTextFilter::PassFilter(const char* text, const char* text_end) const
 {
-    if (Filters.Size == 0)
+    if (_Items.Size == 0)
         return true;
-
     if (text == NULL)
         text = text_end = "";
 
-    for (const ImGuiTextRange& f : Filters)
+    // Filters are sorted so that '-' ones are always leading.
+    int n;
+    for (n = 0; n < _CountExclude; n++)
+        if (ImStristr(text, text_end, _Items.Data[n].Begin, _Items.Data[n].End) != NULL)
+            return false;
+    const bool is_and_filter = (FilterOp == '&');
+    for (; n < _Items.Size; n++)
     {
-        if (f.b == f.e)
-            continue;
-        if (f.b[0] == '-')
-        {
-            // Subtract
-            if (ImStristr(text, text_end, f.b + 1, f.e) != NULL)
-                return false;
-        }
-        else
-        {
-            // Grep
-            if (ImStristr(text, text_end, f.b, f.e) != NULL)
-                return true;
-        }
+        const bool is_match = ImStristr(text, text_end, _Items.Data[n].Begin, _Items.Data[n].End) != NULL;
+        if (is_match && !is_and_filter)     //  or   incl  1  -> true
+            return true;                    //  or   incl  0  -> continue
+        if (!is_match && is_and_filter)     //  and  incl  1  -> continue
+            return false;                   //  and  incl  0  -> false
     }
 
-    // Implicit * grep
-    if (CountGrep == 0)
+    // When no inclusion are specified (only exclusions) we implicitly pass
+    if (_CountInclude == 0)
         return true;
-
-    return false;
+    return is_and_filter;
 }
 
 //-----------------------------------------------------------------------------
@@ -4420,7 +4432,7 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
 
     NavJustMovedFromFocusScopeId = NavJustMovedToId = NavJustMovedToFocusScopeId = 0;
     NavJustMovedToKeyMods = ImGuiMod_None;
-    NavJustMovedToIsTabbing = false;
+    NavJustMovedToIsTabbing = NavJustMovedToIsInit = false;
     NavJustMovedToHasSelectionData = false;
 
     // All platforms use Ctrl+Tab but Ctrl<>Super are swapped on Mac...
@@ -14885,6 +14897,7 @@ void ImGui::NavInitRequestApplyResult()
         g.NavJustMovedToFocusScopeId = result->FocusScopeId;
         g.NavJustMovedToKeyMods = 0;
         g.NavJustMovedToIsTabbing = false;
+        g.NavJustMovedToIsInit = true;
         g.NavJustMovedToHasSelectionData = (result->ItemFlags & ImGuiItemFlags_HasSelectionUserData) != 0;
     }
 
@@ -15152,6 +15165,7 @@ void ImGui::NavMoveRequestApplyResult()
         g.NavJustMovedToFocusScopeId = result->FocusScopeId;
         g.NavJustMovedToKeyMods = g.NavMoveKeyMods;
         g.NavJustMovedToIsTabbing = (g.NavMoveFlags & ImGuiNavMoveFlags_IsTabbing) != 0;
+        g.NavJustMovedToIsInit = false;
         g.NavJustMovedToHasSelectionData = (result->ItemFlags & ImGuiItemFlags_HasSelectionUserData) != 0;
         //IMGUI_DEBUG_LOG_NAV("[nav] NavJustMovedFromFocusScopeId = 0x%08X, NavJustMovedToFocusScopeId = 0x%08X\n", g.NavJustMovedFromFocusScopeId, g.NavJustMovedToFocusScopeId);
     }
@@ -16078,17 +16092,9 @@ const ImGuiPayload* ImGui::AcceptDragDropPayload(const char* type, ImGuiDragDrop
     flags |= (g.DragDropSourceFlags & ImGuiDragDropFlags_AcceptNoDrawDefaultRect); // Source can also inhibit the preview (useful for external sources that live for 1 frame)
     const bool draw_target_rect = payload.Preview && !(flags & ImGuiDragDropFlags_AcceptNoDrawDefaultRect);
     if (draw_target_rect && g.DragDropTargetFullViewport != 0)
-    {
-        ImGuiViewport* viewport = FindViewportByID(g.DragDropTargetFullViewport);
-        IM_ASSERT(viewport != NULL);
-        ImRect bb = g.DragDropTargetRect;
-        bb.Expand(-3.5f);
-        RenderDragDropTargetRectEx(GetForegroundDrawList(viewport), bb, g.Style.DragDropTargetRounding);
-    }
+        RenderDragDropTargetRectForViewport(g.DragDropTargetFullViewport, g.DragDropTargetRect);
     else if (draw_target_rect)
-    {
         RenderDragDropTargetRectForItem(r);
-    }
 
     g.DragDropAcceptFrameCount = g.FrameCount;
     if ((g.DragDropSourceFlags & ImGuiDragDropFlags_SourceExtern) && g.DragDropMouseButton == -1)
@@ -16117,6 +16123,16 @@ void ImGui::RenderDragDropTargetRectForItem(const ImRect& bb)
     RenderDragDropTargetRectEx(window->DrawList, bb_display, g.Style.DragDropTargetRounding);
     if (push_clip_rect)
         window->DrawList->PopClipRect();
+}
+
+void ImGui::RenderDragDropTargetRectForViewport(ImGuiID viewport_id, const ImRect& bb)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiViewport* viewport = FindViewportByID(viewport_id);
+    IM_ASSERT(viewport != NULL);
+    ImRect bb_padded = bb;
+    bb_padded.Expand(-g.Style.DragDropTargetPadding);
+    RenderDragDropTargetRectEx(GetForegroundDrawList(viewport), bb_padded, g.Style.DragDropTargetRounding);
 }
 
 void ImGui::RenderDragDropTargetRectEx(ImDrawList* draw_list, const ImRect& bb, float rounding)
@@ -16898,7 +16914,7 @@ void ImGuiPlatformIO::ClearRendererHandlers()
     Renderer_CreateWindow = Renderer_DestroyWindow = NULL;
     Renderer_SetWindowSize = NULL;
     Renderer_RenderWindow = Renderer_SwapBuffers = NULL;
-    DrawCallback_ResetRenderState = DrawCallback_SetSamplerLinear = DrawCallback_SetSamplerNearest = NULL;
+    DrawCallback_ResetRenderState = DrawCallback_SetSamplerLinear = DrawCallback_SetSamplerNearest = DrawCallback_SetSamplerFromTex = NULL;
 }
 
 ImGuiViewport* ImGui::GetMainViewport()

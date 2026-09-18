@@ -7,6 +7,7 @@
 //  [X] Renderer: User texture binding. Use 'GLuint' OpenGL texture as texture identifier. Read the FAQ about ImTextureID/ImTextureRef!
 //  [x] Renderer: Large meshes support (64k+ vertices) even with 16-bit indices (ImGuiBackendFlags_RendererHasVtxOffset) [Desktop OpenGL only!]
 //  [X] Renderer: Texture updates support for dynamic font atlas (ImGuiBackendFlags_RendererHasTextures).
+//  [X] Renderer: Expose selected render state for draw callbacks to use. Access with ImGui_ImplOpenGL3_GetRenderState().
 //  [X] Renderer: Multi-viewport support (multiple windows). Enable with 'io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable'.
 
 // About WebGL/ES:
@@ -73,8 +74,8 @@ struct ImGui_ImplOpenGL3_RenderState
 {
     bool            UseBindSampler;
     bool            UseTexParameterFilter;
-    unsigned int    CurrentSampler;                 // (GLuint) Used if UseBindSampler == true, otherwise always 0
-    unsigned int    CurrentTexParameterFilter;      // (GLuint) Used if UseTexParameterToSetSampler == true
+    unsigned int    CurrentSampler;                 // (GLuint) Used if UseBindSampler == true (and are available), otherwise always 0
+    unsigned int    CurrentTexParameterFilter;      // (GLuint) Used if UseTexParameterFilter == true
 };
 
 static inline ImGui_ImplOpenGL3_RenderState* ImGui_ImplOpenGL3_GetRenderState() { return (ImGui_ImplOpenGL3_RenderState*)ImGui::GetPlatformIO().Renderer_RenderState; }

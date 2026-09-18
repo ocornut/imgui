@@ -45,6 +45,8 @@ Breaking Changes:
   favor of `style.CurveTessellationMaxError` (default 1.12)` which is in Pixels unit. It is
   easier to tweak + this allows us to easily scale error threshold on high density screens.
   - style.CurveTessellationMaxError == sqrf(style.CurveTessellationTol).
+- ImGuiTextFilter: removed `float width` parameter of `Draw(const char* filter, float width)`:
+  prefer using `SetNextItemWidth(float)` which is standard. Kept inline redirection function.
 - Backends:
   - DirectX12: Removed support for legacy `ImGui_ImplDX12_Init()` signature, which was
     obsoleted in 1.91.6 (December 2014), because it needed to forcefully disable support
@@ -60,6 +62,14 @@ Other Changes:
 - TreeNode:
   - Fixed issues/asserts with 32+ deep trees when using ImGuiTreeNodeFlags_DrawLinesXXX
     features or other features requiring stack storage. (#9509) [@lasrod]
+- TabBar:
+  - Improved scroll target when clicking a Tab that is larger than the scrolling
+    section width.
+  - Using <> scrolling buttons while the selected Tab is at either end of the
+    section mid-section but not fully visible always makes it fully visible
+    (before eventually selecting a Tab in the leading/trailing section)
+- Selectable:
+  - Fixed `ImGuiSelectableFlags_SelectOnNav` triggering during NavInit.
 - Fonts:
   - Reworked `AddFontDefault()` to use `io.DisplayFrameBufferScale` as part of the heuristic
     to select `AddFontDefaultVector()` by default, effectively using ProggyForever instead of
@@ -73,6 +83,16 @@ Other Changes:
   - Amended context menu right-click opening code to check that the right-click
     hasn't been owned by another items. This is more correct and also necessary
     to avoid Drags/Sliders cancelling also triggering a cancel menu. (#8564, #9534)
+- ImGuiTextFilter:
+  - Added support for space ' ' as separator, which is more standard. (#2435, #30)
+  - Added support for quoted "xxx" blocks to e.g. match words sequences. (#2435)
+  - Fixed filtering when mixing "include" and "-exclude" keyword so that an "-exclude"
+    match always filters out. (#2435) [@kudaba, @ocornut]
+  - Added `DrawWithHint()` function. (#6206, #6395, #6447)
+  - Added a "incl -excl" hint by default when the search field is empty. (#6206, #6395, #6447)
+- Style:
+  - Inverted `ImGuiCol_TitleBgXXX` colors for `StyleColorsLight()` so that the selected
+    window title bar appears brighter.
 - Misc:
   - Added `ImGuiItemFlags_MixedValue` flag for representing mixed/indeterminate values.
     Supported by: Checkbox(), RadioButton(), DragXXX(), SliderXXX(), InputXXX(), ColorXXX()
@@ -87,19 +107,34 @@ Other Changes:
     and various operators.
   - IO: restore default clipboard/ime/shell platform handlers on ClearPlatformHandlers(), fixing
     issues switching backends mid-session to one relying on default. (#9537, #8945, #2769) [@lstalmir]
-- ImDrawList:
+- DrawList:
   - Per-viewport FramebufferScale for Apple/Retina screen is applied to draw lists:
     - AA Fringe is scaled accordingly.
     - Circle and Curves tessellation error are scaled accordingly.
   - Reworked assert in PushTexture() to allow convenience grace period of using a
     texture that was queue for destroy during the frame. Make it safe to stick to
     an existing texture during the frame. (#9528, #8465)
+  - Added optional `platform_io.DrawCallback_SetSamplerFromTex` standard backend-agnostic
+    draw callback for requesting to use the sampler associated already associated to a texture.
+    Currently only supported by the OpenGL2/3 and SDLRenderer3 backend. (#9378)
 - Demo:
   - Added `Widgets->Mixed Values` section. (#5518, #5677, #6865)
+  - Style Editor: fixed style/colors combo box applying style when opening Combo.
 - Backends:
   - QNX: added QNX Screen backend. (#9492) [@mgorchak-blackberry]
+  - OpenGL2, OpenGL3: added support for `platform_io.DrawCallback_SetSamplerFromTex` draw
+    callback to request using the sampler associated already associated to a texture. (#9378)
+  - OpenGL2, OpenGL3: fixed `DrawCallback_ResetRenderState` handler not reseting all states
+    in the glTexParameter() path. (#9378)
   - SDL2: fixed querying framebuffer scale/density when using Metal without
     going through a SDL_Renderer. (#5592) [@lailoken]
+  - SDLRenderer3: restore any temporarily modified texture scale modes at the of `RenderDrawData()`. (#9378)
+  - SDLRenderer3: expose CurrentScaleMode in ImGui_ImplSDLRenderer3_RenderState. (#9543, #9378) [@Clownacy]
+  - SDLRenderer3: added support for `platform_io.DrawCallback_SetSamplerFromTex` draw callback to request
+    using the sampler associated already associated to a texture via `SDL_SetTextureScaleMode()`. (#9378)
+    It is equivalent to setting `render_state->CurrentScaleMode = SDL_SCALEMODE_INVALID`.
+    Note: this  callback is only supported by selected rendering backends: most other graphics API
+    don't have the equivalent of `SDL_SetTextureScaleMode()` and the callback won't work with them.
   - Vulkan: added for support for multiple Vulkan contexts with custom loaders. (#6616) [@lstalmir]
   - WebGPU: fixed passing non-integer sizes to `wgpuRenderPassEncoderSetViewport()`
     when when `FramebufferScale` is >1.0f. (#9515, #8628) [@WayU]

@@ -5,7 +5,7 @@
 //  [X] Renderer: User texture binding. Use 'D3D12_GPU_DESCRIPTOR_HANDLE' as texture identifier. Read the FAQ about ImTextureID/ImTextureRef!
 //  [X] Renderer: Large meshes support (64k+ vertices) even with 16-bit indices (ImGuiBackendFlags_RendererHasVtxOffset).
 //  [X] Renderer: Texture updates support for dynamic font atlas (ImGuiBackendFlags_RendererHasTextures).
-//  [X] Renderer: Expose selected render state for draw callbacks to use. Access in '(ImGui_ImplXXXX_RenderState*)GetPlatformIO().Renderer_RenderState'.
+//  [X] Renderer: Expose selected render state for draw callbacks to use. Access with ImGui_ImplDX12_GetRenderState().
 //  [X] Renderer: Multi-viewport support (multiple windows). Enable with 'io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable'.
 
 // The aim of imgui_impl_dx12.h/.cpp is to be usable in your engine without any modification.
@@ -75,6 +75,8 @@ struct ImGui_ImplDX12_RenderState
     ID3D12Device*               Device;
     ID3D12GraphicsCommandList*  CommandList;
 };
+
+static inline ImGui_ImplDX12_RenderState* ImGui_ImplDX12_GetRenderState() { return (ImGui_ImplDX12_RenderState*)ImGui::GetPlatformIO().Renderer_RenderState; }
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 // Legacy initialization API Obsoleted in 1.91.5

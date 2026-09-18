@@ -3184,18 +3184,18 @@ bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_typ
         float clicked_t = 0.0f;
         if (g.ActiveIdSource == ImGuiInputSource_Mouse)
         {
-            const float mouse_abs_pos = g.IO.MousePos[axis];
+            const float mouse_pos = g.IO.MousePos[axis];
             if (g.ActiveIdIsJustActivated)
             {
                 float grab_t = ScaleRatioFromValueT<TYPE, SIGNEDTYPE, FLOATTYPE>(data_type, *v, v_min, v_max, logarithmic_zero_epsilon, zero_deadzone_halfsize);
                 if (axis == ImGuiAxis_Y)
                     grab_t = 1.0f - grab_t;
                 const float grab_pos = ImLerp(slider_usable_pos_min, slider_usable_pos_max, grab_t);
-                const bool clicked_around_grab = (mouse_abs_pos >= grab_pos - grab_sz * 0.5f - 1.0f) && (mouse_abs_pos <= grab_pos + grab_sz * 0.5f + 1.0f); // No harm being extra generous here.
-                g.SliderGrabClickOffset = (clicked_around_grab && is_floating_point) ? mouse_abs_pos - grab_pos : 0.0f;
+                const bool clicked_around_grab = (mouse_pos >= grab_pos - grab_sz * 0.5f - 1.0f) && (mouse_pos <= grab_pos + grab_sz * 0.5f + 1.0f); // No harm being extra generous here.
+                g.SliderGrabClickOffset = (clicked_around_grab && is_floating_point) ? mouse_pos - grab_pos : 0.0f;
             }
             if (slider_usable_sz > 0.0f)
-                clicked_t = ImSaturate((mouse_abs_pos - g.SliderGrabClickOffset - slider_usable_pos_min) / slider_usable_sz);
+                clicked_t = ImSaturate((mouse_pos - g.SliderGrabClickOffset - slider_usable_pos_min) / slider_usable_sz);
             if (axis == ImGuiAxis_Y)
                 clicked_t = 1.0f - clicked_t;
             set_new_value = true;
@@ -7623,7 +7623,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
         //   - (1) it would require focus scope to be set, need exposing PushFocusScope() or equivalent (e.g. BeginSelection() calling PushFocusScope())
         //   - (2) usage will fail with clipped items
         //   The multi-select API aim to fix those issues, e.g. may be replaced with a BeginSelection() API.
-        if ((flags & ImGuiSelectableFlags_SelectOnNav) && g.NavJustMovedToId != 0 && g.NavJustMovedToFocusScopeId == g.CurrentFocusScopeId)
+        if ((flags & ImGuiSelectableFlags_SelectOnNav) && g.NavJustMovedToId != 0 && g.NavJustMovedToFocusScopeId == g.CurrentFocusScopeId && !g.NavJustMovedToIsInit)
             if (g.NavJustMovedToId == id && (g.NavJustMovedToKeyMods & ImGuiMod_Ctrl) == 0)
                 selected = pressed = auto_selected = true;
     }
@@ -10235,16 +10235,17 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
     }
 
     // Horizontal scrolling buttons
-    // Important: note that TabBarScrollButtons() will alter BarRect.Max.x.
+    // - Important: note that TabBarScrollButtons() will alter BarRect.Max.x.
+    // - Selection skips buttons and might cross through sections if there are Tabs in Leading/Trailing sections.
     const bool can_scroll = (tab_bar->Flags & ImGuiTabBarFlags_FittingPolicyScroll) || (tab_bar->Flags & ImGuiTabBarFlags_FittingPolicyMixed);
     const float width_all_tabs_to_use_for_scroll = (tab_bar->Flags & ImGuiTabBarFlags_FittingPolicyScroll) ? tab_bar->WidthAllTabs : width_all_tabs_after_min_width_shrink;
     tab_bar->ScrollButtonEnabled = ((width_all_tabs_to_use_for_scroll > tab_bar->BarRect.GetWidth() && tab_bar->Tabs.Size > 1) && !(tab_bar->Flags & ImGuiTabBarFlags_NoTabListScrollingButtons) && can_scroll);
     if (tab_bar->ScrollButtonEnabled)
         if (ImGuiTabItem* scroll_and_select_tab = TabBarScrollingButtons(tab_bar))
         {
-            scroll_to_tab_id = scroll_and_select_tab->ID;
             if ((scroll_and_select_tab->Flags & ImGuiTabItemFlags_Button) == 0)
-                tab_bar->SelectedTabId = scroll_to_tab_id;
+                tab_bar->SelectedTabId = scroll_and_select_tab->ID;
+            scroll_to_tab_id = scroll_and_select_tab->ID;
         }
     if (scroll_to_tab_id == 0 && scroll_to_selected_tab)
         scroll_to_tab_id = tab_bar->SelectedTabId;
@@ -10437,6 +10438,14 @@ const char* ImGui::TabBarGetTabName(ImGuiTabBar* tab_bar, ImGuiTabItem* tab)
     return tab_bar->TabsNames.Buf.Data + tab->NameOffset;
 }
 
+ImVec2 ImGui::TabBarGetTabPos(ImGuiTabBar* tab_bar, ImGuiTabItem* tab)
+{
+    if ((tab->Flags & ImGuiTabItemFlags_SectionMask_) == 0)
+        return tab_bar->BarRect.Min + ImVec2(IM_TRUNC(tab->Offset - tab_bar->ScrollingAnim), 0.0f);
+    else
+        return tab_bar->BarRect.Min + ImVec2(tab->Offset, 0.0f);
+}
+
 // The purpose of this call is to register tab in advance so we can control their order at the time they appear.
 // Otherwise calling this is unnecessary as tabs are appending as needed by the BeginTabItem() function.
 void ImGui::TabBarAddTab(ImGuiTabBar* tab_bar, ImGuiTabItemFlags tab_flags, ImGuiWindow* window)
@@ -10505,11 +10514,20 @@ static void ImGui::TabBarScrollToTab(ImGuiTabBar* tab_bar, ImGuiID tab_id, ImGui
     ImGuiTabItem* tab = TabBarFindTabByID(tab_bar, tab_id);
     if (tab == NULL)
         return;
+
+    // Clamp attempt to scroll to leading/trailing sections items.
+    // This could be done at the TabBarScrollingButtons() call site as well, but here works.
+    if (tab->Flags & ImGuiTabItemFlags_Leading)
+        tab = &tab_bar->Tabs[sections[0].TabCount];
+    else if (tab->Flags & ImGuiTabItemFlags_Trailing)
+        tab = &tab_bar->Tabs[sections[0].TabCount + sections[1].TabCount];
     if (tab->Flags & ImGuiTabItemFlags_SectionMask_)
         return;
 
+    // When scrolling to make Tab N+1 visible always make a bit of N visible to suggest more scrolling area (since we don't have a scrollbar)
+    // Disable the margin if the scrolling section is too small for the target tab: prefer displaying a maximum of the label.
     ImGuiContext& g = *GImGui;
-    float margin = g.FontSize * 1.0f; // When to scroll to make Tab N+1 visible always make a bit of N visible to suggest more scrolling area (since we don't have a scrollbar)
+    float margin = ImClamp(tab_bar->ScrollingRectMaxX - tab_bar->ScrollingRectMinX - tab->Width, g.Style.ItemInnerSpacing.x, g.FontSize * 1.0f);
     int order = TabBarGetTabOrder(tab_bar, tab);
 
     // Scrolling happens only in the central section (leading/trailing sections are not scrolling)
@@ -10914,10 +10932,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     // Layout
     const bool is_central_section = (tab->Flags & ImGuiTabItemFlags_SectionMask_) == 0;
     size.x = tab->Width;
-    if (is_central_section)
-        window->DC.CursorPos = tab_bar->BarRect.Min + ImVec2(IM_TRUNC(tab->Offset - tab_bar->ScrollingAnim), 0.0f);
-    else
-        window->DC.CursorPos = tab_bar->BarRect.Min + ImVec2(tab->Offset, 0.0f);
+    window->DC.CursorPos = TabBarGetTabPos(tab_bar, tab);
     ImVec2 pos = window->DC.CursorPos;
     ImRect bb(pos, pos + size);
 

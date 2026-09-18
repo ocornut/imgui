@@ -13,7 +13,7 @@
 //  [X] Renderer: User texture binding. Use 'SDL_Texture*' as texture identifier. Read the FAQ about ImTextureID/ImTextureRef!
 //  [X] Renderer: Large meshes support (64k+ vertices) even with 16-bit indices (ImGuiBackendFlags_RendererHasVtxOffset).
 //  [X] Renderer: Texture updates support for dynamic font atlas (ImGuiBackendFlags_RendererHasTextures).
-//  [X] Renderer: Expose selected render state for draw callbacks to use. Access in '(ImGui_ImplXXXX_RenderState*)GetPlatformIO().Renderer_RenderState'.
+//  [X] Renderer: Expose selected render state for draw callbacks to use. Access with ImGui_ImplSDLRenderer3_GetRenderState().
 // Missing features:
 //  [ ] Renderer: Multi-viewport support (multiple windows).
 
@@ -29,7 +29,8 @@
 #include "imgui.h"      // IMGUI_IMPL_API
 #ifndef IMGUI_DISABLE
 
-struct SDL_Renderer;
+// For SDL_ScaleMode which cannot be forward declared.
+#include <SDL3/SDL_render.h>
 
 // Follow "Getting Started" link and check examples/ folder to learn about using backends!
 IMGUI_IMPL_API bool     ImGui_ImplSDLRenderer3_Init(SDL_Renderer* renderer);
@@ -50,6 +51,9 @@ IMGUI_IMPL_API void     ImGui_ImplSDLRenderer3_UpdateTexture(ImTextureData* tex)
 struct ImGui_ImplSDLRenderer3_RenderState
 {
     SDL_Renderer*       Renderer;
+    SDL_ScaleMode       CurrentScaleMode;   // Current scale mode during render. Set to SDL_SCALEMODE_INVALID to use "SetSamplerFromTex" mode.
 };
+
+static inline ImGui_ImplSDLRenderer3_RenderState* ImGui_ImplSDLRenderer3_GetRenderState() { return (ImGui_ImplSDLRenderer3_RenderState*)ImGui::GetPlatformIO().Renderer_RenderState; }
 
 #endif // #ifndef IMGUI_DISABLE
