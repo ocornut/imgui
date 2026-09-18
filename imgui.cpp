@@ -3094,6 +3094,7 @@ IM_MSVC_RUNTIME_CHECKS_RESTORE
 ImGuiTextFilter::ImGuiTextFilter(const char* default_filter) //-V1077
 {
     InputBuf[0] = 0;
+    FilterOp = '|';
     MinWordSize = 1;
     _CountExclude = _CountInclude = 0;
     if (default_filter)
@@ -3122,6 +3123,7 @@ void ImGuiTextFilter::Build()
 {
     _Items.resize(0);
     _CountExclude = _CountInclude = 0;
+    IM_ASSERT(FilterOp == '|' || FilterOp == '&');
     const char* buf_e = InputBuf + ImStrlen(InputBuf);
     const char* word_e;
     for (const char* word_b = InputBuf; word_b < buf_e; word_b = word_e + 1)
@@ -3171,17 +3173,24 @@ bool ImGuiTextFilter::PassFilter(const char* text, const char* text_end) const
         text = text_end = "";
 
     // Filters are sorted so that '-' ones are always leading.
-    for (int n = 0; n < _Items.Size; n++)
+    int n;
+    for (n = 0; n < _CountExclude; n++)
+        if (ImStristr(text, text_end, _Items.Data[n].Begin, _Items.Data[n].End) != NULL)
+            return false;
+    const bool is_and_filter = (FilterOp == '&');
+    for (; n < _Items.Size; n++)
     {
-        const ImGuiTextFilterItem& item = _Items[n];
-        if (ImStristr(text, text_end, item.Begin, item.End) != NULL)
-            return (n < _CountExclude) ? false : true;
+        const bool is_match = ImStristr(text, text_end, _Items.Data[n].Begin, _Items.Data[n].End) != NULL;
+        if (is_match && !is_and_filter)     //  or   incl  1  -> true
+            return true;                    //  or   incl  0  -> continue
+        if (!is_match && is_and_filter)     //  and  incl  1  -> continue
+            return false;                   //  and  incl  0  -> false
     }
 
     // When no inclusion are specified (only exclusions) we implicitly pass
     if (_CountInclude == 0)
         return true;
-    return false;
+    return is_and_filter;
 }
 
 //-----------------------------------------------------------------------------
