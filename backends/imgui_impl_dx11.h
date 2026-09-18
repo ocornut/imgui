@@ -48,7 +48,6 @@ struct ImGui_ImplDX11_RenderState
     //ID3D11SamplerState*   SamplerLinear;          // Use ImDrawList::AddCallback(ImGui::GetPlatform().DrawCallback_SetSamplerLinear)
     //ID3D11SamplerState*   SamplerNearest;         // Use ImDrawList::AddCallback(ImGui::GetPlatform().DrawCallback_SetSamplerNearest)
 };
-
-static inline ImGui_ImplDX11_RenderState* ImGui_ImplDX11_GetRenderState() { return (ImGui_ImplDX11_RenderState*)ImGui::GetPlatformIO().Renderer_RenderState; }
+IMGUI_IMPL_API ImGui_ImplDX11_RenderState* ImGui_ImplDX11_GetRenderState();
 
 #endif // #ifndef IMGUI_DISABLE

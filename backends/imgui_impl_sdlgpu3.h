@@ -59,7 +59,6 @@ struct ImGui_ImplSDLGPU3_RenderState
 {
     SDL_GPUDevice*      Device;
 };
-
-static inline ImGui_ImplSDLGPU3_RenderState* ImGui_ImplSDLGPU3_GetRenderState() { return (ImGui_ImplSDLGPU3_RenderState*)ImGui::GetPlatformIO().Renderer_RenderState; }
+IMGUI_IMPL_API ImGui_ImplSDLGPU3_RenderState* ImGui_ImplSDLGPU3_GetRenderState();
 
 #endif // #ifndef IMGUI_DISABLE

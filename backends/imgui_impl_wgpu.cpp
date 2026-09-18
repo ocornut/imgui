@@ -129,6 +129,11 @@ static ImGui_ImplWGPU_Data* ImGui_ImplWGPU_GetBackendData()
     return ImGui::GetCurrentContext() ? (ImGui_ImplWGPU_Data*)ImGui::GetIO().BackendRendererUserData : nullptr;
 }
 
+ImGui_ImplWGPU_RenderState* ImGui_ImplWGPU_GetRenderState()
+{
+    return (ImGui_ImplWGPU_RenderState*)ImGui::GetPlatformIO().Renderer_RenderState;
+}
+
 //-----------------------------------------------------------------------------
 // SHADERS
 //-----------------------------------------------------------------------------

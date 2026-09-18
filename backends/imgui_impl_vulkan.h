@@ -175,8 +175,7 @@ struct ImGui_ImplVulkan_RenderState
     VkPipeline          Pipeline;
     VkPipelineLayout    PipelineLayout;
 };
-
-static inline ImGui_ImplVulkan_RenderState* ImGui_ImplVulkan_GetRenderState() { return (ImGui_ImplVulkan_RenderState*)ImGui::GetPlatformIO().Renderer_RenderState; }
+IMGUI_IMPL_API ImGui_ImplVulkan_RenderState* ImGui_ImplVulkan_GetRenderState();
 
 //-------------------------------------------------------------------------
 // Internal / Miscellaneous Vulkan Helpers

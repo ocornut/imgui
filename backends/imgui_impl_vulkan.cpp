@@ -459,6 +459,11 @@ static ImGui_ImplVulkan_Data* ImGui_ImplVulkan_GetBackendData()
     return ImGui::GetCurrentContext() ? (ImGui_ImplVulkan_Data*)ImGui::GetIO().BackendRendererUserData : nullptr;
 }
 
+ImGui_ImplVulkan_RenderState* ImGui_ImplVulkan_GetRenderState()
+{
+    return (ImGui_ImplVulkan_RenderState*)ImGui::GetPlatformIO().Renderer_RenderState;
+}
+
 #ifdef IMGUI_IMPL_VULKAN_USE_LOADER
 // Get the Vulkan function pointers used by the current backend.
 // If no backend is available, return the currently loaded global function pointers (ImGuiImplVulkanFuncs).

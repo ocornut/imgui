@@ -74,8 +74,7 @@ struct ImGui_ImplDX12_RenderState
     ID3D12Device*               Device;
     ID3D12GraphicsCommandList*  CommandList;
 };
-
-static inline ImGui_ImplDX12_RenderState* ImGui_ImplDX12_GetRenderState() { return (ImGui_ImplDX12_RenderState*)ImGui::GetPlatformIO().Renderer_RenderState; }
+IMGUI_IMPL_API ImGui_ImplDX12_RenderState* ImGui_ImplDX12_GetRenderState();
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 // Legacy initialization API Obsoleted in 1.91.5

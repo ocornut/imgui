@@ -103,6 +103,11 @@ static ImGui_ImplDX11_Data* ImGui_ImplDX11_GetBackendData()
     return ImGui::GetCurrentContext() ? (ImGui_ImplDX11_Data*)ImGui::GetIO().BackendRendererUserData : nullptr;
 }
 
+ImGui_ImplDX11_RenderState* ImGui_ImplDX11_GetRenderState()
+{
+    return (ImGui_ImplDX11_RenderState*)ImGui::GetPlatformIO().Renderer_RenderState;
+}
+
 // Functions
 static void ImGui_ImplDX11_SetupRenderState(const ImDrawData* draw_data, ID3D11DeviceContext* device_ctx)
 {

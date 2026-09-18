@@ -133,6 +133,11 @@ static ImGui_ImplDX12_Data* ImGui_ImplDX12_GetBackendData()
     return ImGui::GetCurrentContext() ? (ImGui_ImplDX12_Data*)ImGui::GetIO().BackendRendererUserData : nullptr;
 }
 
+ImGui_ImplDX12_RenderState* ImGui_ImplDX12_GetRenderState()
+{
+    return (ImGui_ImplDX12_RenderState*)ImGui::GetPlatformIO().Renderer_RenderState;
+}
+
 // Buffers used during the rendering of a frame
 struct ImGui_ImplDX12_RenderBuffers
 {
