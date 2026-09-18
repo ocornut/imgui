@@ -2812,6 +2812,7 @@ struct ImGuiTextFilter
     // [Internal] Members
     char                InputBuf[256];      // User input buffer
     ImU8                MinWordSize;        // == 1
+    int                 _CountExclude;      // >= 0
     int                 _CountInclude;      // >= 0
     ImVector<ImGuiTextFilterItem> _Items;   // Pre-parsed, trimmed, reordered items
 };

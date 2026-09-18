@@ -3095,7 +3095,7 @@ ImGuiTextFilter::ImGuiTextFilter(const char* default_filter) //-V1077
 {
     InputBuf[0] = 0;
     MinWordSize = 1;
-    _CountInclude = 0;
+    _CountExclude = _CountInclude = 0;
     if (default_filter)
     {
         ImStrncpy(InputBuf, default_filter, IM_COUNTOF(InputBuf));
@@ -3117,41 +3117,26 @@ bool ImGuiTextFilter::DrawWithHint(const char* label, const char* hint)
     return value_changed;
 }
 
-static void ImGuiTextFilter_BuildAddItem(ImGuiTextFilter* f, const char* word_b, const char* word_e)
-{
-    // Trim blanks
-    if (word_b < word_e && word_b[0] != '\"')
-    {
-        while (word_b < word_e && ImCharIsBlankA(word_b[0])) // FIXME: UTF-8 support
-            word_b++;
-        while (word_e > word_b && ImCharIsBlankA(word_e[-1]))
-            word_e--;
-    }
-    const bool is_excl = (word_b < word_e && word_b[0] == '-');
-    if (word_e - word_b - (is_excl ? 1 : 0) < f->MinWordSize)
-        return;
-
-    // Add to list
-    // FIXME-OPT: about ~push_front(): as N is derived from user inputs we expect this to be fine.
-    f->_Items.insert(is_excl ? f->_Items.Data : f->_Items.end(), ImGuiTextFilter::ImGuiTextFilterItem(word_b, word_e));
-    if (!is_excl)
-        f->_CountInclude++;
-}
-
+// Parse filter and split into items
 void ImGuiTextFilter::Build()
 {
-    // Parse filters
     _Items.resize(0);
-    _CountInclude = 0;
+    _CountExclude = _CountInclude = 0;
     const char* buf_e = InputBuf + ImStrlen(InputBuf);
     const char* word_e;
     for (const char* word_b = InputBuf; word_b < buf_e; word_b = word_e + 1)
     {
-        const bool is_excl = (word_b[0] == '-');
-        if (word_b[0] == '\"' || (is_excl && word_b + 1 < buf_e && word_b[1] == '\"'))
+        // Trim blanks
+        while (word_b < buf_e && ImCharIsBlankA(word_b[0])) // FIXME: UTF-8 support
+            word_b++;
+        const bool is_excl = (word_b < buf_e && word_b[0] == '-');
+        if (is_excl)
+            word_b++;
+        const bool is_quote = (word_b < buf_e && word_b[0] == '\"');
+        if (is_quote)
         {
-            // Parsing "word". Store leading " to distinguish -"word" from "-word", but omit trailing ".
-            word_e = ImStrchrRange(word_b + (is_excl ? 2 : 1), buf_e, '\"');
+            // Parsing quotes. Omit storing leading/trailing quotes.
+            word_e = ImStrchrRange(++word_b, buf_e, '\"');
             if (word_e == NULL)
                 word_e = buf_e;
         }
@@ -3162,7 +3147,19 @@ void ImGuiTextFilter::Build()
                 if (*word_e == ' ' || *word_e == ',')
                     break;
         }
-        ImGuiTextFilter_BuildAddItem(this, word_b, word_e);
+
+        // Min length
+        if (word_e - word_b < MinWordSize)
+            continue;
+
+        // Add to list
+        // The '-' is not stored in items but implicitly inferred using (n < CountExclude).
+        // FIXME-OPT: about ~push_front(): as N is derived from user inputs we expect this to be fine.
+        _Items.insert(is_excl ? _Items.Data : _Items.Data + _Items.Size, ImGuiTextFilter::ImGuiTextFilterItem(word_b, word_e));
+        if (is_excl)
+            _CountExclude++;
+        else
+            _CountInclude++;
     }
 }
 
@@ -3174,17 +3171,11 @@ bool ImGuiTextFilter::PassFilter(const char* text, const char* text_end) const
         text = text_end = "";
 
     // Filters are sorted so that '-' ones are always leading.
-    for (const ImGuiTextFilterItem& item : _Items)
+    for (int n = 0; n < _Items.Size; n++)
     {
-        const char* word_b = item.Begin;
-        const char* word_e = item.End;
-        const bool is_excl = (word_b[0] == '-');
-        if (is_excl)
-            word_b++;
-        if (word_b < word_e && word_b[0] == '\"')
-            word_b++;
-        if (ImStristr(text, text_end, word_b, word_e) != NULL)
-            return is_excl ? false : true;
+        const ImGuiTextFilterItem& item = _Items[n];
+        if (ImStristr(text, text_end, item.Begin, item.End) != NULL)
+            return (n < _CountExclude) ? false : true;
     }
 
     // When no inclusion are specified (only exclusions) we implicitly pass
