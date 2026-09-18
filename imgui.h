@@ -2812,7 +2812,7 @@ struct ImGuiTextFilter
     // [Internal] Members
     char                InputBuf[256];      // User input buffer
     int                 _CountInclude;      // >= 0
-    ImVector<ImGuiTextFilterItem> _Items;   // Pre-parsed, trimmed items
+    ImVector<ImGuiTextFilterItem> _Items;   // Pre-parsed, trimmed, reordered items
 };
 
 // Helper: Growable text buffer for logging/accumulating text

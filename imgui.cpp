@@ -3116,74 +3116,69 @@ bool ImGuiTextFilter::DrawWithHint(const char* label, const char* hint)
     return value_changed;
 }
 
-static void ImStrSplit(const char* b, const char* e, char separator, ImVector<ImGuiTextFilter::ImGuiTextFilterItem>* out)
+static void ImGuiTextFilter_BuildAddItem(ImGuiTextFilter* f, const char* word_b, const char* word_e)
 {
-    out->resize(0);
-    const char* wb = b;
-    const char* we = wb;
-    while (we < e)
-    {
-        if (*we == separator)
-        {
-            out->push_back(ImGuiTextFilter::ImGuiTextFilterItem(wb, we));
-            wb = we + 1;
-        }
-        we++;
-    }
-    if (wb != we)
-        out->push_back(ImGuiTextFilter::ImGuiTextFilterItem(wb, we));
+    // Trim (FIXME: UTF-8 support?)
+    while (word_b < word_e && ImCharIsBlankA(word_b[0]))
+        word_b++;
+    while (word_e > word_b && ImCharIsBlankA(word_e[-1]))
+        word_e--;
+    if (word_e - word_b <= 0)
+        return;
+
+    // Add to list
+    // FIXME-OPT: on push_front(): as N is derived from user inputs we expect this to be fine.
+    const bool is_excl = (word_b[0] == '-');
+    f->_Items.insert(is_excl ? f->_Items.Data : f->_Items.end(), ImGuiTextFilter::ImGuiTextFilterItem(word_b, word_e));
+    if (!is_excl)
+        f->_CountInclude++;
 }
 
 void ImGuiTextFilter::Build()
 {
+    // Parse filters
     _Items.resize(0);
-    ImGuiTextFilterItem input_range(InputBuf, InputBuf + ImStrlen(InputBuf));
-    ImStrSplit(InputBuf, InputBuf + ImStrlen(InputBuf), ',', &_Items);
-
     _CountInclude = 0;
-    for (ImGuiTextFilterItem& f : _Items)
+    const char* buf_e = InputBuf + ImStrlen(InputBuf);
+    const char* word_b = InputBuf;
+    const char* word_e = word_b;
+    while (word_e < buf_e)
     {
-        while (f.Begin < f.End && ImCharIsBlankA(f.Begin[0]))
-            f.Begin++;
-        while (f.End > f.Begin && ImCharIsBlankA(f.End[-1]))
-            f.End--;
-        if (f.Begin == f.End)
-            continue;
-        if (f.Begin[0] != '-')
-            _CountInclude += 1;
+        if (*word_e == ',')
+        {
+            ImGuiTextFilter_BuildAddItem(this, word_b, word_e);
+            word_b = word_e + 1;
+        }
+        word_e++;
     }
+    ImGuiTextFilter_BuildAddItem(this, word_b, word_e);
 }
 
 bool ImGuiTextFilter::PassFilter(const char* text, const char* text_end) const
 {
     if (_Items.Size == 0)
         return true;
-
     if (text == NULL)
         text = text_end = "";
 
-    for (const ImGuiTextFilterItem& f : _Items)
+    // Filters are sorted so that '-' ones are always leading.
+    for (const ImGuiTextFilterItem& item : _Items)
     {
-        if (f.Begin == f.End)
-            continue;
-        if (f.Begin[0] == '-')
+        if (item.Begin[0] == '-')
         {
-            // Subtract
-            if (ImStristr(text, text_end, f.Begin + 1, f.End) != NULL)
+            if (ImStristr(text, text_end, item.Begin + 1, item.End) != NULL) // Exclude
                 return false;
         }
         else
         {
-            // Grep
-            if (ImStristr(text, text_end, f.Begin, f.End) != NULL)
+            if (ImStristr(text, text_end, item.Begin, item.End) != NULL) // Include
                 return true;
         }
     }
 
-    // Implicit * grep
+    // When no inclusion are specified (only exclusions) we implicitly pass
     if (_CountInclude == 0)
         return true;
-
     return false;
 }
 
