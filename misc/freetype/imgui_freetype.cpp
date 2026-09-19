@@ -206,7 +206,18 @@ bool ImGui_ImplFreeType_FontSrcData::InitFont(FT_Library ft_library, const ImFon
         LoadFlags |= FT_LOAD_TARGET_NORMAL;
 
     if (UserFlags & ImGuiFreeTypeLoaderFlags_LoadColor)
+    {
         LoadFlags |= FT_LOAD_COLOR;
+        // Auto-render during FT_Load_Glyph so color glyphs (COLR/COLRv1/
+        // sbix/CBDT) produce a BGRA bitmap immediately. Without
+        // FT_LOAD_RENDER, FT_Load_Glyph leaves the glyph unrendered and
+        // the later FT_Render_Glyph(slot, FT_RENDER_MODE_NORMAL) call in
+        // FontBakedLoadGlyph would render only the base outline (monochrome)
+        // -- for pure-COLR glyphs that yields an empty bitmap and the emoji
+        // never bakes. FontBakedLoadGlyph skips re-rendering when
+        // slot->format == FT_GLYPH_FORMAT_BITMAP.
+        LoadFlags |= FT_LOAD_RENDER;
+    }
 
     return true;
 }
@@ -515,9 +526,18 @@ static bool ImGui_ImplFreeType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConf
         return true;
     }
 
-    // Render glyph into a bitmap (currently held by FreeType)
+    // Render glyph into a bitmap (currently held by FreeType).
+    // When FT_LOAD_COLOR was requested and FreeType already rendered a
+    // color bitmap (slot->format == FT_GLYPH_FORMAT_BITMAP, pixel_mode
+    // BGRA) during FT_Load_Glyph -- because we add FT_LOAD_RENDER to
+    // LoadFlags when LoadColor is set -- do NOT re-render with
+    // FT_RENDER_MODE_NORMAL, which would discard the color layers and
+    // for pure-COLR glyphs yield an empty bitmap. Only call
+    // FT_Render_Glyph when the glyph is not yet rendered (outline form).
     FT_Render_Mode render_mode = (bd_font_data->UserFlags & ImGuiFreeTypeLoaderFlags_Monochrome) ? FT_RENDER_MODE_MONO : FT_RENDER_MODE_NORMAL;
-    FT_Error error = FT_Render_Glyph(slot, render_mode);
+    FT_Error error = 0;
+    if (slot->format != FT_GLYPH_FORMAT_BITMAP)
+        error = FT_Render_Glyph(slot, render_mode);
     const FT_Bitmap* ft_bitmap = &slot->bitmap;
     if (error != 0 || ft_bitmap == nullptr)
         return false;
