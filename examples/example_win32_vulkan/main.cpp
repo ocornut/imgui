@@ -47,6 +47,8 @@ static VkDescriptorPool         g_DescriptorPool = VK_NULL_HANDLE;
 static ImGui_ImplVulkanH_Window g_MainWindowData;
 static uint32_t                 g_MinImageCount = 2;
 static bool                     g_SwapChainRebuild = false;
+static int                      g_FrameBufferWidth = 0;
+static int                      g_FrameBufferHeight = 0;
 
 static void check_vk_result(VkResult err)
 {
@@ -200,6 +202,20 @@ static void SetupVulkan(ImVector<const char*> instance_extensions)
 
 // All the ImGui_ImplVulkanH_XXX structures/functions are optional helpers used by the demo.
 // Your real engine/app may not use them.
+static void RebuildVulkanSwapchain(int fb_width, int fb_height)
+{
+    if (fb_width > 0 && fb_height > 0 && (g_SwapChainRebuild || g_MainWindowData.Width != fb_width || g_MainWindowData.Height != fb_height))
+    {
+        ImGui_ImplVulkan_SetMinImageCount(g_MinImageCount);
+        ImGui_ImplVulkanH_CreateOrResizeWindow(g_Instance, g_PhysicalDevice, g_Device, &g_MainWindowData, g_QueueFamily, g_Allocator, fb_width, fb_height, g_MinImageCount, 0);
+        g_MainWindowData.FrameIndex = 0;
+        g_SwapChainRebuild = false;
+
+        g_FrameBufferWidth = fb_width;
+        g_FrameBufferHeight = fb_height;
+    }
+}
+
 static void SetupVulkanWindow(ImGui_ImplVulkanH_Window* wd, VkSurfaceKHR surface, int width, int height)
 {
     // Check for WSI support
@@ -453,6 +469,8 @@ int main(int, char**)
         if (done)
             break;
 
+        RebuildVulkanSwapchain(g_FrameBufferWidth, g_FrameBufferHeight);
+
         // Start the Dear ImGui frame
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplWin32_NewFrame();
@@ -547,15 +565,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         if (g_Device != VK_NULL_HANDLE && wParam != SIZE_MINIMIZED)
         {
             // Resize swap chain
-            int fb_width = (UINT)LOWORD(lParam);
-            int fb_height = (UINT)HIWORD(lParam);
-            if (fb_width > 0 && fb_height > 0 && (g_SwapChainRebuild || g_MainWindowData.Width != fb_width || g_MainWindowData.Height != fb_height))
-            {
-                ImGui_ImplVulkan_SetMinImageCount(g_MinImageCount);
-                ImGui_ImplVulkanH_CreateOrResizeWindow(g_Instance, g_PhysicalDevice, g_Device, &g_MainWindowData, g_QueueFamily, g_Allocator, fb_width, fb_height, g_MinImageCount, 0);
-                g_MainWindowData.FrameIndex = 0;
-                g_SwapChainRebuild = false;
-            }
+            RebuildVulkanSwapchain((UINT)LOWORD(lParam), (UINT)HIWORD(lParam));
         }
         return 0;
     case WM_SYSCOMMAND:
