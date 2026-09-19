@@ -29,8 +29,6 @@ static std::string          g_IniFilename = "";
 static void Init(struct android_app* app);
 static void Shutdown();
 static void MainLoopStep();
-static int ShowSoftKeyboardInput();
-static int PollUnicodeChars();
 static int GetAssetData(const char* filename, void** out_data);
 
 // Main code
@@ -148,11 +146,13 @@ void Init(struct android_app* app)
     //ImGui::StyleColorsLight();
 
     // Setup Platform/Renderer backends
-    ImGui_ImplAndroid_Init(g_App->window);
+    ImGui_ImplAndroid_Init(g_App->window, app->activity->assetManager, app->activity->clazz);
     ImGui_ImplOpenGL3_Init("#version 300 es");
 
     // Setup scaling
-    float main_scale = 2.0f;
+    ImGui_ImplAndroid_DisplayMetrics display_metrics;
+    ImGui_ImplAndroid_GetDisplayMetrics(&display_metrics);
+    float main_scale = display_metrics.Density > 0.0f ? display_metrics.Density : 2.0f;
     ImGuiStyle& style = ImGui::GetStyle();
     style.ScaleAllSizes(main_scale);        // Bake a fixed style scale. (until we have a solution for dynamic style scaling, changing this requires resetting Style + calling this again)
     style.FontScaleDpi = main_scale;        // Set initial font scale.
@@ -204,16 +204,6 @@ void MainLoopStep()
     static bool show_demo_window = true;
     static bool show_another_window = false;
     static ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-
-    // Poll Unicode characters via JNI
-    // FIXME: do not call this every frame because of JNI overhead
-    PollUnicodeChars();
-
-    // Open on-screen (soft) input if requested by Dear ImGui
-    static bool WantTextInputLast = false;
-    if (io.WantTextInput && !WantTextInputLast)
-        ShowSoftKeyboardInput();
-    WantTextInputLast = io.WantTextInput;
 
     // Start the Dear ImGui frame
     ImGui_ImplOpenGL3_NewFrame();
@@ -295,77 +285,6 @@ void Shutdown()
     ANativeWindow_release(g_App->window);
 
     g_Initialized = false;
-}
-
-// Helper functions
-
-// Unfortunately, there is no way to show the on-screen input from native code.
-// Therefore, we call ShowSoftKeyboardInput() of the main activity implemented in MainActivity.kt via JNI.
-static int ShowSoftKeyboardInput()
-{
-    JavaVM* java_vm = g_App->activity->vm;
-    JNIEnv* java_env = nullptr;
-
-    jint jni_return = java_vm->GetEnv((void**)&java_env, JNI_VERSION_1_6);
-    if (jni_return == JNI_ERR)
-        return -1;
-
-    jni_return = java_vm->AttachCurrentThread(&java_env, nullptr);
-    if (jni_return != JNI_OK)
-        return -2;
-
-    jclass native_activity_clazz = java_env->GetObjectClass(g_App->activity->clazz);
-    if (native_activity_clazz == nullptr)
-        return -3;
-
-    jmethodID method_id = java_env->GetMethodID(native_activity_clazz, "showSoftInput", "()V");
-    if (method_id == nullptr)
-        return -4;
-
-    java_env->CallVoidMethod(g_App->activity->clazz, method_id);
-
-    jni_return = java_vm->DetachCurrentThread();
-    if (jni_return != JNI_OK)
-        return -5;
-
-    return 0;
-}
-
-// Unfortunately, the native KeyEvent implementation has no getUnicodeChar() function.
-// Therefore, we implement the processing of KeyEvents in MainActivity.kt and poll
-// the resulting Unicode characters here via JNI and send them to Dear ImGui.
-static int PollUnicodeChars()
-{
-    JavaVM* java_vm = g_App->activity->vm;
-    JNIEnv* java_env = nullptr;
-
-    jint jni_return = java_vm->GetEnv((void**)&java_env, JNI_VERSION_1_6);
-    if (jni_return == JNI_ERR)
-        return -1;
-
-    jni_return = java_vm->AttachCurrentThread(&java_env, nullptr);
-    if (jni_return != JNI_OK)
-        return -2;
-
-    jclass native_activity_clazz = java_env->GetObjectClass(g_App->activity->clazz);
-    if (native_activity_clazz == nullptr)
-        return -3;
-
-    jmethodID method_id = java_env->GetMethodID(native_activity_clazz, "pollUnicodeChar", "()I");
-    if (method_id == nullptr)
-        return -4;
-
-    // Send the actual characters to Dear ImGui
-    ImGuiIO& io = ImGui::GetIO();
-    jint unicode_character;
-    while ((unicode_character = java_env->CallIntMethod(g_App->activity->clazz, method_id)) != 0)
-        io.AddInputCharacter(unicode_character);
-
-    jni_return = java_vm->DetachCurrentThread();
-    if (jni_return != JNI_OK)
-        return -5;
-
-    return 0;
 }
 
 // Helper to retrieve data placed into the assets/ directory (android/app/src/main/assets)
