@@ -526,7 +526,13 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
             if (event->type == SDL_EVENT_WINDOW_MOVED)
                 viewport->PlatformRequestMove = true;
             if (event->type == SDL_EVENT_WINDOW_RESIZED)
-                viewport->PlatformRequestResize = true;
+            {
+                int x = int(viewport->Size.x), y = int(viewport->Size.y);
+                if (x != event->window.data1 || y != event->window.data2)
+                {
+                    viewport->PlatformRequestResize = true;
+                }
+            }
             return true;
         }
         case SDL_EVENT_GAMEPAD_ADDED:
