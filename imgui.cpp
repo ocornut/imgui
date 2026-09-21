@@ -3124,7 +3124,7 @@ void ImGuiTextFilter::Build()
 
     const char* buf_e = InputBuf + ImStrlen(InputBuf);
     const char* word_e;
-    int seq_incl_start_idx = -1;
+    int seq_start_idx = -1;
     for (const char* word_b = InputBuf; word_b < buf_e; word_b = word_e + 1)
     {
         // Trim blanks
@@ -3158,21 +3158,21 @@ void ImGuiTextFilter::Build()
             {
                 _Items.insert(_Items.Data + _CountExclude, ImGuiTextFilterItem(word_b, word_e));
                 _CountExclude++;
-                if (seq_incl_start_idx != -1)
-                    seq_incl_start_idx++;
+                if (seq_start_idx != -1)
+                    seq_start_idx++;
             }
             else
             {
-                if (seq_incl_start_idx == -1)
-                    seq_incl_start_idx = _Items.Size;
+                if (seq_start_idx == -1)
+                    seq_start_idx = _Items.Size;
                 _Items.insert(_Items.Data + _Items.Size, ImGuiTextFilterItem(word_b, word_e));
-                _Items.Data[seq_incl_start_idx].CountInclude++;
+                _Items.Data[seq_start_idx].CountInclude++;
             }
         }
 
         // Next sequence
         if (word_e[0] == ',')
-            seq_incl_start_idx = -1;
+            seq_start_idx = -1;
     }
 }
 
@@ -3192,19 +3192,19 @@ bool ImGuiTextFilter::PassFilter(const char* text, const char* text_end) const
             return false;
 
     // Process includes
-    ImGuiTextFilterItem* seq_incl_end = _Items.Data + _Items.Size;
-    if (seq == seq_incl_end) // When no inclusion are specified (only exclusions) we implicitly pass
+    ImGuiTextFilterItem* seq_end = _Items.Data + _Items.Size;
+    if (seq == seq_end) // When no inclusion are specified (only exclusions) we implicitly pass
         return true;
-    while (seq < seq_incl_end)
+    while (seq < seq_end)
     {
-        ImGuiTextFilterItem* seq_next = seq + seq->CountInclude;
-        IM_ASSERT_PARANOID(seq->CountInclude > 0 && seq_next <= seq_incl_end);
-        for (; seq < seq_next; seq++)
+        ImGuiTextFilterItem* seq_incl_end = seq + seq->CountInclude;
+        IM_ASSERT_PARANOID(seq->CountInclude > 0 && seq_incl_end <= seq_end);
+        for (; seq < seq_incl_end; seq++)
             if (ImStristr(text, text_end, seq->Begin, seq->Begin + seq->Len) == NULL)
                 break;
-        if (seq == seq_next) // All matched
+        if (seq == seq_incl_end) // All matched
             return true;
-        seq = seq_next; // Try next
+        seq = seq_incl_end; // Try next
     }
     return false;
 }
