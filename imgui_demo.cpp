@@ -3943,15 +3943,24 @@ static void DemoWindowWidgetsTextFilter()
         static ImGuiTextFilter filter;
         ImGui::Text("Filter usage:\n"
             "  \"\"         display all lines\n"
-            "  \"xxx\"      display lines containing \"xxx\"\n"
-            "  \"xxx,yyy\"  display lines containing \"xxx\" or \"yyy\"\n"
-            "  \"-xxx\"     hide lines containing \"xxx\"");
+            "  xxx        display lines containing \"xxx\"\n"
+            "  xxx yyy    display lines containing \"xxx\" and \"yyy\"\n"
+            "  \"xxx yyy\"  display lines containing \"xxx yyy\"\n"
+            "  xxx,yyy    display lines containing \"xxx\" or \"yyy\"\n"
+            "  -xxx       hide lines containing \"xxx\"");
         ImGui::SetNextItemWidth(-FLT_MIN);
         filter.DrawWithHint("##Filter", "Filter (incl -excl)");
-        const char* lines[] = { "aaa1.c", "bbb1.c", "ccc1.c", "aaa2.cpp", "bbb2.cpp", "ccc2.cpp", "abc.h", "hello, world" };
-        for (int i = 0; i < IM_COUNTOF(lines); i++)
-            if (filter.PassFilter(lines[i]))
-                ImGui::BulletText("%s", lines[i]);
+        if (ImGui::BeginChild("##items", ImVec2(-FLT_MIN, ImGui::GetTextLineHeightWithSpacing() * 15), ImGuiChildFlags_FrameStyle))
+        {
+            const char* lines[] = { "aaa1.c", "bbb1.c", "ccc1.c", "aaa2.cpp", "bbb2.cpp", "ccc2.cpp", "abc.h", "hello, world" };
+            for (const char* item : lines)
+                if (filter.PassFilter(item))
+                    ImGui::TextUnformatted(item);
+            for (const char* item : ExampleNames)
+                if (filter.PassFilter(item))
+                    ImGui::TextUnformatted(item);
+        }
+        ImGui::EndChild();
         ImGui::TreePop();
     }
 }

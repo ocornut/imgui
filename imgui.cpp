@@ -3094,9 +3094,7 @@ IM_MSVC_RUNTIME_CHECKS_RESTORE
 ImGuiTextFilter::ImGuiTextFilter(const char* default_filter) //-V1077
 {
     InputBuf[0] = 0;
-    FilterOp = '|';
-    MinWordSize = 1;
-    _CountExclude = _CountInclude = 0;
+    _CountExclude = 0;
     if (default_filter)
     {
         ImStrncpy(InputBuf, default_filter, IM_COUNTOF(InputBuf));
@@ -3118,14 +3116,15 @@ bool ImGuiTextFilter::DrawWithHint(const char* label, const char* hint)
     return value_changed;
 }
 
-// Parse filter and split into items
+// Parse filter and split into a format optimal for PassFilter()
 void ImGuiTextFilter::Build()
 {
     _Items.resize(0);
-    _CountExclude = _CountInclude = 0;
-    IM_ASSERT(FilterOp == '|' || FilterOp == '&');
+    _CountExclude = 0;
+
     const char* buf_e = InputBuf + ImStrlen(InputBuf);
     const char* word_e;
+    int seq_incl_start_idx = -1;
     for (const char* word_b = InputBuf; word_b < buf_e; word_b = word_e + 1)
     {
         // Trim blanks
@@ -3151,20 +3150,33 @@ void ImGuiTextFilter::Build()
         }
 
         // Min length
-        if (word_e - word_b < MinWordSize)
-            continue;
+        if (word_e - word_b > 0)
+        {
+            // Add to list. The '-' is not stored in items but implicitly inferred using (n < CountExclude).
+            // FIXME-OPT: as items are derived from user input buffer and we expect the insert() to behave sanely.
+            if (is_excl)
+            {
+                _Items.insert(_Items.Data + _CountExclude, ImGuiTextFilter::ImGuiTextFilterItem(word_b, word_e));
+                _CountExclude++;
+                if (seq_incl_start_idx != -1)
+                    seq_incl_start_idx++;
+            }
+            else
+            {
+                if (seq_incl_start_idx == -1)
+                    seq_incl_start_idx = _Items.Size;
+                _Items.insert(_Items.Data + _Items.Size, ImGuiTextFilter::ImGuiTextFilterItem(word_b, word_e));
+                _Items.Data[seq_incl_start_idx].CountInclude++;
+            }
+        }
 
-        // Add to list
-        // The '-' is not stored in items but implicitly inferred using (n < CountExclude).
-        // FIXME-OPT: about ~push_front(): as N is derived from user inputs we expect this to be fine.
-        _Items.insert(is_excl ? _Items.Data : _Items.Data + _Items.Size, ImGuiTextFilter::ImGuiTextFilterItem(word_b, word_e));
-        if (is_excl)
-            _CountExclude++;
-        else
-            _CountInclude++;
+        // Next sequence
+        if (word_e[0] == ',')
+            seq_incl_start_idx = -1;
     }
 }
 
+// FIXME: Could use a specialized ImStristr() + pre-convert our filter to uppercase.
 bool ImGuiTextFilter::PassFilter(const char* text, const char* text_end) const
 {
     if (_Items.Size == 0)
@@ -3173,24 +3185,28 @@ bool ImGuiTextFilter::PassFilter(const char* text, const char* text_end) const
         text = text_end = "";
 
     // Filters are sorted so that '-' ones are always leading.
-    int n;
-    for (n = 0; n < _CountExclude; n++)
-        if (ImStristr(text, text_end, _Items.Data[n].Begin, _Items.Data[n].End) != NULL)
+    ImGuiTextFilterItem* seq = _Items.Data;
+    ImGuiTextFilterItem* seq_excl_end = _Items.Data + _CountExclude;
+    for (; seq < seq_excl_end; seq++)
+        if (ImStristr(text, text_end, seq->Begin, seq->Begin + seq->Len) != NULL)
             return false;
-    const bool is_and_filter = (FilterOp == '&');
-    for (; n < _Items.Size; n++)
-    {
-        const bool is_match = ImStristr(text, text_end, _Items.Data[n].Begin, _Items.Data[n].End) != NULL;
-        if (is_match && !is_and_filter)     //  or   incl  1  -> true
-            return true;                    //  or   incl  0  -> continue
-        if (!is_match && is_and_filter)     //  and  incl  1  -> continue
-            return false;                   //  and  incl  0  -> false
-    }
 
-    // When no inclusion are specified (only exclusions) we implicitly pass
-    if (_CountInclude == 0)
+    // Process includes
+    ImGuiTextFilterItem* seq_incl_end = _Items.Data + _Items.Size;
+    if (seq == seq_incl_end) // When no inclusion are specified (only exclusions) we implicitly pass
         return true;
-    return is_and_filter;
+    while (seq < seq_incl_end)
+    {
+        ImGuiTextFilterItem* seq_next = seq + seq->CountInclude;
+        IM_ASSERT_PARANOID(seq->CountInclude > 0 && seq_next <= seq_incl_end);
+        for (; seq < seq_next; seq++)
+            if (ImStristr(text, text_end, seq->Begin, seq->Begin + seq->Len) == NULL)
+                break;
+        if (seq == seq_next) // All matched
+            return true;
+        seq = seq_next; // Try next
+    }
+    return false;
 }
 
 //-----------------------------------------------------------------------------
