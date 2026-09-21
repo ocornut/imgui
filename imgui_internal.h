@@ -368,6 +368,7 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit context pointer
 // - Helper: ImPool<>
 // - Helper: ImChunkStream<>
 // - Helper: ImGuiTextIndex
+// - Helper: ImGuiTextFilterItem
 // - Helper: ImGuiStorage
 //-----------------------------------------------------------------------------
 
@@ -834,6 +835,15 @@ struct ImGuiTextIndex
     const char*     get_line_begin(const char* base, int n) { return base + (Offsets.Size != 0 ? Offsets[n] : 0); }
     const char*     get_line_end(const char* base, int n)   { return base + (n + 1 < Offsets.Size ? (Offsets[n + 1] - 1) : EndOffset); }
     void            append(const char* base, int old_size, int new_size);
+};
+
+// [Internal] Types
+struct ImGuiTextFilterItem
+{
+    const char*     Begin;
+    int             Len;
+    int             CountInclude;       // >0 when beginning of an AND chain.
+    ImGuiTextFilterItem(const char* b, const char* e) { IM_ASSERT(e > b); Begin = b; Len = (int)(e - b); CountInclude = 0; }
 };
 
 // Helper: ImGuiPackedDate (sizeof() == 2)
