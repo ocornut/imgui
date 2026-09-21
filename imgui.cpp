@@ -3222,7 +3222,7 @@ void ImGuiTextFilter::Build()
             // FIXME-OPT: as items are derived from user input buffer and we expect the insert() to behave sanely.
             if (is_excl)
             {
-                _Items.insert(_Items.Data + _CountExclude, ImGuiTextFilter::ImGuiTextFilterItem(word_b, word_e));
+                _Items.insert(_Items.Data + _CountExclude, ImGuiTextFilterItem(word_b, word_e));
                 _CountExclude++;
                 if (seq_incl_start_idx != -1)
                     seq_incl_start_idx++;
@@ -3231,7 +3231,7 @@ void ImGuiTextFilter::Build()
             {
                 if (seq_incl_start_idx == -1)
                     seq_incl_start_idx = _Items.Size;
-                _Items.insert(_Items.Data + _Items.Size, ImGuiTextFilter::ImGuiTextFilterItem(word_b, word_e));
+                _Items.insert(_Items.Data + _Items.Size, ImGuiTextFilterItem(word_b, word_e));
                 _Items.Data[seq_incl_start_idx].CountInclude++;
             }
         }

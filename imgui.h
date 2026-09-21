@@ -2920,6 +2920,7 @@ struct ImGuiOnceUponAFrame
 };
 
 // Helper: Parse and apply text filters e.g. 'aaa bbb' (all), 'aaa,bbb' (any), '-aaa' (exclude), '"Hello, world"' (exact sequence)
+struct ImGuiTextFilterItem;
 struct ImGuiTextFilter
 {
     IMGUI_API           ImGuiTextFilter(const char* default_filter = "");
@@ -2935,19 +2936,10 @@ struct ImGuiTextFilter
     inline bool         Draw(const char* label, float width)            { if (width != 0.0f) ImGui::SetNextItemWidth(width); return Draw(label); }
 #endif
 
-    // [Internal] Types
-    struct ImGuiTextFilterItem
-    {
-        const char*     Begin;
-        int             Len;
-        int             CountInclude;       // >0 when beginning of an AND chain.
-        ImGuiTextFilterItem(const char* b, const char* e) { IM_ASSERT(e > b); Begin = b; Len = (int)(e - b); CountInclude = 0; }
-    };
-
-    // [Internal] Members
+    // Members
     char                InputBuf[256];      // User input buffer
-    int                 _CountExclude;      // >= 0 count of leading exclude
-    ImVector<ImGuiTextFilterItem> _Items;   // Pre-parsed, trimmed, reordered items
+    int                 _CountExclude;      // [Internal] >= 0 count of leading exclude
+    ImVector<ImGuiTextFilterItem> _Items;   // [Internal] Pre-parsed, trimmed, reordered items
 };
 
 // Helper: Growable text buffer for logging/accumulating text
