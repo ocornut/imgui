@@ -840,10 +840,11 @@ struct ImGuiTextIndex
 // [Internal] Types
 struct ImGuiTextFilterItem
 {
-    const char*     Begin;
-    int             Len;
-    int             CountInclude;       // >0 when beginning of an AND chain.
-    ImGuiTextFilterItem(const char* b, const char* e) { IM_ASSERT(e > b); Begin = b; Len = (int)(e - b); CountInclude = 0; }
+    const char*     Begin;              // Pointer within parent's buffer
+    int             Len;                // Length of text (non-zero terminated)
+    short           CountInclude;       // Number of consecutive items forming an end chain. >0 when beginning of an AND chain, =0 otherwise.
+    unsigned short  MatchIncludesMask;  // Storage for multi-sources versions of PassFilter(). Unused by core library.
+    ImGuiTextFilterItem(const char* b, const char* e) { IM_ASSERT(e > b); Begin = b; Len = (int)(e - b); CountInclude = 0; MatchIncludesMask = 0; }
 };
 
 // Helper: ImGuiPackedDate (sizeof() == 2)
