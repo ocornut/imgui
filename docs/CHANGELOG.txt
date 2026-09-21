@@ -84,8 +84,10 @@ Other Changes:
     hasn't been owned by another items. This is more correct and also necessary
     to avoid Drags/Sliders cancelling also triggering a cancel menu. (#8564, #9534)
 - ImGuiTextFilter:
-  - Added support for space ' ' as separator, which is more standard. (#2435, #30)
-  - Added support for quoted "xxx" blocks to e.g. match words sequences. (#2435)
+  - Added support for space as an "and" filter, which is the standard. (#2435, #30)
+     e.g. w/ filter 'hello world' (without quotes) both words needs to be in input data.
+  - Added support for double-quoted "xxx" blocks to e.g. match words sequences. (#2435)
+     e.g. w/ filter "hello world" the exact sequence needs to be in input data.
   - Fixed filtering when mixing "include" and "-exclude" keyword so that an "-exclude"
     match always filters out. (#2435) [@kudaba, @ocornut]
   - Added `DrawWithHint()` function. (#6206, #6395, #6447)
