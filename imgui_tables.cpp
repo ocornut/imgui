@@ -375,7 +375,6 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     const int previous_frame_active = table->LastFrameActive;
     const int instance_no = (previous_frame_active != g.FrameCount) ? 0 : table->InstanceCurrent + 1;
     const ImGuiTableFlags previous_flags = table->Flags;
-    const bool is_new_table = (previous_frame_active == -1);
     table->ID = id;
     table->Flags = flags;
     table->LastFrameActive = g.FrameCount;
@@ -384,6 +383,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     table->IsLayoutLocked = false;
     table->InnerWidth = inner_width;
     table->NavLayer = (ImS8)outer_window->DC.NavLayerCurrent;
+    table->IsNewTable = (previous_frame_active == -1);
     temp_data->UserOuterSize = outer_size;
 
     // Instance data (for instance 0, TableID == TableInstanceID)
@@ -585,7 +585,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     if (table->IsInitializing)
     {
         // Initialize
-        if (is_new_table)
+        if (table->IsNewTable)
         {
             table->SettingsOffset = -1;
             table->IsSettingsRequestLoad = true;
@@ -1756,7 +1756,7 @@ void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, flo
     ImGuiTableColumn* column = &table->Columns[column_idx];
 
     // If topology change goes into reconcile mode
-    if (table->IsReconcileMode == false && column->ID != column_id)
+    if (table->IsReconcileMode == false && column->ID != column_id && !table->IsNewTable)
     {
         table->IsReconcileMode = true;
         table->TempData->ReconcileColumnsRequests.reserve(table->ColumnsCount - column_idx);

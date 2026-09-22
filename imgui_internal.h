@@ -3171,6 +3171,7 @@ struct IMGUI_API ImGuiTable
     ImS8                        NavLayer;                   // ImGuiNavLayer at the time of BeginTable().
     bool                        IsLayoutLocked;             // Set by TableUpdateLayout() which is called when beginning the first row.
     bool                        IsInsideRow;                // Set when inside TableBeginRow()/TableEndRow().
+    bool                        IsNewTable;
     bool                        IsInitializing;
     bool                        IsReconcileMode;
     bool                        IsSortSpecsDirty;
