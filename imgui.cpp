@@ -7755,6 +7755,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             size_t buf_len = (size_t)window->NameBufLen;
             window->Name = ImStrdupcpy(window->Name, &buf_len, name);
             window->NameBufLen = (int)buf_len;
+            window->DrawList->_OwnerName = window->Name;
         }
 
         // UPDATE CONTENTS SIZE, UPDATE HIDDEN STATUS

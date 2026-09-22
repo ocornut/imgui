@@ -124,6 +124,7 @@ Other Changes:
   - Added optional `platform_io.DrawCallback_SetSamplerFromTex` standard backend-agnostic
     draw callback for requesting to use the sampler associated already associated to a texture.
     Currently only supported by the OpenGL2/3 and SDLRenderer3 backend. (#9378)
+  - Fixed dangling ImDrawList::_OwnerName when using animated label. (#9552) [@ubi-dcastonguay]
 - Demo:
   - Added `Widgets->Mixed Values` section. (#5518, #5677, #6865)
   - Style Editor: fixed style/colors combo box applying style when opening Combo.
