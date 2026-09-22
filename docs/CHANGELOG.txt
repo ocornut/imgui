@@ -68,6 +68,9 @@ Other Changes:
   - Using <> scrolling buttons while the selected Tab is at either end of the
     section mid-section but not fully visible always makes it fully visible
     (before eventually selecting a Tab in the leading/trailing section)
+- Tables:
+  - Fixed a bug restoring correct .ini columns order when table use is Sortable
+    but had no user changes. (regression from 1.92.9). (#9519, #9108)
 - Selectable:
   - Fixed `ImGuiSelectableFlags_SelectOnNav` triggering during NavInit.
 - Fonts:

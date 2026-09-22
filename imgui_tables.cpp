@@ -3970,12 +3970,10 @@ void ImGui::TableSaveSettings(ImGuiTable* table)
         if (column->DisplayOrder != n)
             settings->SaveFlags |= ImGuiTableFlags_Reorderable;
         if (column->SortOrder != -1)
-            settings->SaveFlags |= ImGuiTableFlags_Sortable;
+            settings->SaveFlags |= ImGuiTableFlags_Sortable | ImGuiTableFlags_Reorderable; // Because SortOrder saving itself is gated, make sure every column is saved (#9519)
         if (column->IsUserEnabled != ((column->Flags & ImGuiTableColumnFlags_DefaultHide) == 0))
             settings->SaveFlags |= ImGuiTableFlags_Hideable;
     }
-    if (table->Flags & ImGuiTableFlags_Sortable)
-        settings->SaveFlags |= ImGuiTableFlags_Sortable | ImGuiTableFlags_Reorderable;
     settings->SaveFlags &= table->Flags;
     settings->RefScale = save_ref_scale ? table->RefScale : 0.0f;
 
