@@ -122,6 +122,9 @@ Other Changes:
     reference to opening page. (#9615, #7660, #7851) [@pthom]
   - SDL2: on iOS, also restore calling `SDL_StartTextInput()/SDL_StopTextInput()`
     in IME handler. Match Android change in 1.93.0. [@pthom]  (#7636, #9474, #9617)
+  - Vulkan: don't transition swapchain images from `VK_IMAGE_LAYOUT_UNDEFINED` to
+    `VK_IMAGE_LAYOUT_PRESENT_SRC_KHR` on window creation, prevent validation errors in
+    examples and multi-viewport support. (#9553, #9496, #9152) [@sarpsenturk, @LewisJustin]
 
 
 
