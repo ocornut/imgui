@@ -145,7 +145,7 @@ Other Changes:
     don't have the equivalent of `SDL_SetTextureScaleMode()` and the callback won't work with them.
   - Vulkan: added for support for multiple Vulkan contexts with custom loaders. (#6616) [@lstalmir]
   - WebGPU: fixed passing non-integer sizes to `wgpuRenderPassEncoderSetViewport()`
-    when when `FramebufferScale` is >1.0f. (#9515, #8628) [@WayU]
+    when `FramebufferScale` is >1.0f. (#9515, #8628) [@WayU]
   - WebGPU: update to build with wgpu-native 29.0+. (#9377, #9532, #9530) [@lucascompython, @ivan-enzhaev]
 - Examples:
   - MSVC: disabled /JMC in Visual Studio projects (unnecessary overhead).
@@ -1755,7 +1755,7 @@ Non-breaking Fonts/Textures related changes:
 - Fonts: ImFontAtlas::AddFontXXX() can fail more gracefully if error handling is configured
   to not assert (this will be better exposed via future font flags).
 - Fonts: added style.FontScaleBase scaling factor (previously called io.FontGlobalScale).
-- Fonts: added style.FontScaleDpi scaling factor. This is designed to be be changed on
+- Fonts: added style.FontScaleDpi scaling factor. This is designed to be changed on
   per-monitor/per-viewport basis, which `io.ConfigDpiScaleFonts` does automatically.
   (which is why it is separate from FontScaleBase).
 - Fonts: added optional font_size parameter to ImGui::PushFont() function.
@@ -2910,7 +2910,7 @@ Other changes:
 - Backends: Vulkan: Remove Volk/ from volk.h #include directives. (#7722, #6582, #4854)
   [@martin-ejdestig]
 - Examples: SDL3: Remove use of SDL_HINT_IME_NATIVE_UI since new SDL_HINT_IME_IMPLEMENTED_UI
-  values has a more suitable default for our case case.
+  values has a more suitable default for our case.
 - Examples: GLFW+Vulkan, SDL+Vulkan: handle swap chain resize even without Vulkan
   returning VK_SUBOPTIMAL_KHR, which doesn't seem to happen on Wayland. (#7671)
   [@AndreiNego, @ocornut]
