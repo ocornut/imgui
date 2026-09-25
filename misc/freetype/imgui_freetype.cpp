@@ -7,6 +7,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026/09/25: fixed handling of ExtraSizeScale.
 //  2025/06/11: refactored for the new ImFontLoader architecture, and ImGuiBackendFlags_RendererHasTextures support.
 //  2024/10/17: added plutosvg support for SVG Fonts (seems faster/better than lunasvg). Enable by using '#define IMGUI_ENABLE_FREETYPE_PLUTOSVG'. (#7927)
 //  2023/11/13: added support for ImFontConfig::RasterizationDensity field for scaling render density without scaling metrics.
@@ -468,6 +469,8 @@ static bool ImGui_ImplFreeType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig* s
         //LineSpacing     = (float)FT_CEIL(metrics.height) * scale;         // The baseline-to-baseline distance. Note that it usually is larger than the sum of the ascender and descender taken as absolute values. There is also no guarantee that no glyphs extend above or below subsequent baselines when using this distance. Think of it as a value the designer of the font finds appropriate.
         //LineGap         = (float)FT_CEIL(metrics.height - metrics.ascender + metrics.descender) * scale; // The spacing in pixels between one row's descent and the next row's ascent.
         //MaxAdvanceWidth = (float)FT_CEIL(metrics.max_advance) * scale;    // This field gives the maximum horizontal cursor advance for all glyphs in the font.
+        baked->Ascent = ImRoundSigned64(baked->Ascent * rasterizer_density) / rasterizer_density;
+        baked->Descent = ImRoundSigned64(baked->Descent * rasterizer_density) / rasterizer_density;
     }
     return true;
 }
