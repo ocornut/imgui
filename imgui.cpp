@@ -231,7 +231,7 @@ CODE
      This is to increase compatibility, increase maintainability and facilitate use from other languages.
    - C++: ImVec2/ImVec4 do not expose math operators by default, because it is expected that you use your own math types.
      See FAQ "How can I use my own math types instead of ImVec2/ImVec4?" for details about setting up imconfig.h for that.
-     We can can optionally export math operators for ImVec2/ImVec4 using IMGUI_DEFINE_MATH_OPERATORS, which we use internally.
+     We can optionally export math operators for ImVec2/ImVec4 using IMGUI_DEFINE_MATH_OPERATORS, which we use internally.
    - C++: pay attention that ImVector<> manipulates plain-old-data and does not honor construction/destruction
      (so don't use ImVector in your code or at our own risk!).
    - Building: We don't use nor mandate a build system for the main library.
@@ -3190,7 +3190,7 @@ void ImGuiTextFilter::Build()
 
     const char* buf_e = InputBuf + ImStrlen(InputBuf);
     const char* word_e;
-    int seq_incl_start_idx = -1;
+    int seq_start_idx = -1;
     for (const char* word_b = InputBuf; word_b < buf_e; word_b = word_e + 1)
     {
         // Trim blanks
@@ -3224,21 +3224,21 @@ void ImGuiTextFilter::Build()
             {
                 _Items.insert(_Items.Data + _CountExclude, ImGuiTextFilterItem(word_b, word_e));
                 _CountExclude++;
-                if (seq_incl_start_idx != -1)
-                    seq_incl_start_idx++;
+                if (seq_start_idx != -1)
+                    seq_start_idx++;
             }
             else
             {
-                if (seq_incl_start_idx == -1)
-                    seq_incl_start_idx = _Items.Size;
+                if (seq_start_idx == -1)
+                    seq_start_idx = _Items.Size;
                 _Items.insert(_Items.Data + _Items.Size, ImGuiTextFilterItem(word_b, word_e));
-                _Items.Data[seq_incl_start_idx].CountInclude++;
+                _Items.Data[seq_start_idx].CountInclude++;
             }
         }
 
         // Next sequence
         if (word_e[0] == ',')
-            seq_incl_start_idx = -1;
+            seq_start_idx = -1;
     }
 }
 
@@ -3258,19 +3258,19 @@ bool ImGuiTextFilter::PassFilter(const char* text, const char* text_end) const
             return false;
 
     // Process includes
-    ImGuiTextFilterItem* seq_incl_end = _Items.Data + _Items.Size;
-    if (seq == seq_incl_end) // When no inclusion are specified (only exclusions) we implicitly pass
+    ImGuiTextFilterItem* seq_end = _Items.Data + _Items.Size;
+    if (seq == seq_end) // When no inclusion are specified (only exclusions) we implicitly pass
         return true;
-    while (seq < seq_incl_end)
+    while (seq < seq_end)
     {
-        ImGuiTextFilterItem* seq_next = seq + seq->CountInclude;
-        IM_ASSERT_PARANOID(seq->CountInclude > 0 && seq_next <= seq_incl_end);
-        for (; seq < seq_next; seq++)
+        ImGuiTextFilterItem* seq_incl_end = seq + seq->CountInclude;
+        IM_ASSERT_PARANOID(seq->CountInclude > 0 && seq_incl_end <= seq_end);
+        for (; seq < seq_incl_end; seq++)
             if (ImStristr(text, text_end, seq->Begin, seq->Begin + seq->Len) == NULL)
                 break;
-        if (seq == seq_next) // All matched
+        if (seq == seq_incl_end) // All matched
             return true;
-        seq = seq_next; // Try next
+        seq = seq_incl_end; // Try next
     }
     return false;
 }
@@ -8195,6 +8195,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             size_t buf_len = (size_t)window->NameBufLen;
             window->Name = ImStrdupcpy(window->Name, &buf_len, name);
             window->NameBufLen = (int)buf_len;
+            window->DrawList->_OwnerName = window->Name;
         }
 
         // UPDATE CONTENTS SIZE, UPDATE HIDDEN STATUS
@@ -10891,12 +10892,11 @@ void ImGui::TeleportMousePos(const ImVec2& pos)
     //IMGUI_DEBUG_LOG_IO("TeleportMousePos: (%.1f,%.1f)\n", io.MousePos.x, io.MousePos.y);
 }
 
-// NB: prefer to call right after BeginPopup(). At the time Selectable/MenuItem is activated, the popup is already closed!
 ImVec2 ImGui::GetMousePosOnOpeningCurrentPopup()
 {
     ImGuiContext& g = *GImGui;
     if (g.BeginPopupStack.Size > 0)
-        return g.OpenPopupStack[g.BeginPopupStack.Size - 1].OpenMousePos;
+        return g.BeginPopupStack[g.BeginPopupStack.Size - 1].OpenMousePos;
     return g.IO.MousePos;
 }
 
@@ -12759,7 +12759,7 @@ static ImVec2 CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window)
             }
             scroll[axis] = scroll_target - center_ratio * (window->SizeFull[axis] - decoration_size[axis]);
         }
-        scroll[axis] = ImRound64(ImMax(scroll[axis], 0.0f));
+        scroll[axis] = ImRoundPositive64(ImMax(scroll[axis], 0.0f));
         if (!window->Collapsed && !window->SkipItems)
             scroll[axis] = ImMin(scroll[axis], window->ScrollMax[axis]);
     }
@@ -13539,7 +13539,7 @@ bool ImGui::OpenPopupOnItemClick(const char* str_id, ImGuiPopupFlags popup_flags
 // This is a helper to handle the simplest case of associating one named popup to one given widget.
 // - To create a popup associated to the last item, you generally want to pass a NULL value to str_id.
 // - To create a popup with a specific identifier, pass it in str_id.
-//    - This is useful when using using BeginPopupContextItem() on an item which doesn't have an identifier, e.g. a Text() call.
+//    - This is useful when using BeginPopupContextItem() on an item which doesn't have an identifier, e.g. a Text() call.
 //    - This is useful when multiple code locations may want to manipulate/open the same popup, given an explicit id.
 // - You may want to handle the whole on user side if you have specific needs (e.g. tweaking IsItemHovered() parameters).
 //   This is essentially the same as:
