@@ -99,8 +99,12 @@
 //#define IMGUI_ENABLE_FREETYPE_PLUTOSVG
 //#define IMGUI_ENABLE_FREETYPE_LUNASVG
 
+//---- Use DirectWrite to rasterize fonts (Windows only).
+// Requires misc/dwrite/imgui_dwrite.cpp. Takes precedence over IMGUI_ENABLE_FREETYPE.
+//#define IMGUI_ENABLE_DWRITE
+
 //---- Use stb_truetype to build and rasterize the font atlas (default)
-// The only purpose of this define is if you want force compilation of the stb_truetype backend ALONG with the FreeType backend.
+// The only purpose of this define is if you want force compilation of the stb_truetype backend ALONG with the FreeType or DirectWrite backend.
 //#define IMGUI_ENABLE_STB_TRUETYPE
 
 //---- Define constructor and implicit cast operators to convert back<>forth between your math types and ImVec2/ImVec4.
