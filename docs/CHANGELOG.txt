@@ -114,6 +114,9 @@ Other Changes:
     trivial functions when stepping into.
   - Tagged various trivial functions using `IM_NODEBUGSTEP`: `ImVec2()`, `ImVec4()` etc.
     and various operators.
+  - Fixed strict aliasing violation in `ImHashData()` affecting Clang 23 + SSE 4.2 + -flto.
+    Could manifest as `ImFontAtlasBakedGetId()` computation omitting font size from
+    the hashed data. (#9557, #9560) [@sthalik]
   - IO: restore default clipboard/ime/shell platform handlers on ClearPlatformHandlers(), fixing
     issues switching backends mid-session to one relying on default. (#9537, #8945, #2769) [@lstalmir]
 - DrawList:

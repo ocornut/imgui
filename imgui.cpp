@@ -2493,7 +2493,13 @@ ImGuiID ImHashData(const void* data_p, size_t data_size, ImGuiID seed)
 #else
     while (data + 4 <= data_end)
     {
+#if defined(_DEBUG) || defined(_MSC_VER)
         crc = _mm_crc32_u32(crc, *(ImU32*)data);
+#else
+        ImU32 v;
+        memcpy(&v, data, sizeof(ImU32)); // Avoid aliasing violation (#9557)
+        crc = _mm_crc32_u32(crc, v); 
+#endif
         data += 4;
     }
     while (data < data_end)
