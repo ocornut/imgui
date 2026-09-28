@@ -77,6 +77,7 @@
 #endif
 
 // SDL
+#ifndef IMGUI_CXX_MODULE
 #include <SDL3/SDL.h>
 #include <stdio.h>              // for snprintf()
 #if defined(__APPLE__)
@@ -87,6 +88,7 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
+#endif
 #endif
 
 #if !defined(__EMSCRIPTEN__) && !defined(__ANDROID__) && !(defined(__APPLE__) && TARGET_OS_IOS) && !defined(__amigaos4__)

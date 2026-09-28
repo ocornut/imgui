@@ -132,6 +132,7 @@
 #else
 #define GLFW_HAS_WAYLAND    0
 #endif
+#ifndef IMGUI_CXX_MODULE
 #include <GLFW/glfw3.h>
 #ifdef _WIN32
 #undef APIENTRY
@@ -165,6 +166,7 @@
 #define EMSCRIPTEN_USE_EMBEDDED_GLFW3
 #endif
 #endif
+#endif // #ifndef IMGUI_CXX_MODULE
 
 // We gather version tests as define in order to easily see which features are version-dependent.
 #define GLFW_VERSION_COMBINED           (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 + GLFW_VERSION_REVISION)
@@ -241,7 +243,9 @@ struct ImGui_ImplGlfw_Data
 //   (passing install_callbacks=false in ImGui_ImplGlfw_InitXXX functions), set the current dear imgui context and then call our callbacks.
 // - Otherwise we may need to store a GLFWWindow* -> ImGuiContext* map and handle this in the backend, adding a little bit of extra complexity to it.
 // FIXME: some shared resources (mouse cursor shape, gamepad) are mishandled when using multi-context.
+#ifndef IMGUI_CXX_MODULE
 namespace ImGui { extern ImGuiIO& GetIO(ImGuiContext*); }
+#endif
 static ImGui_ImplGlfw_Data* ImGui_ImplGlfw_GetBackendData()
 {
     // Get data for current context

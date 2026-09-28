@@ -133,10 +133,12 @@
 #include "imgui.h"
 #ifndef IMGUI_DISABLE
 #include "imgui_impl_opengl3.h"
+#ifndef IMGUI_CXX_MODULE
 #include <stdio.h>
 #include <stdint.h>     // intptr_t
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
+#endif
 #endif
 
 // Clang/GCC warnings with -Weverything
@@ -158,6 +160,7 @@
 #endif
 
 // GL includes
+#ifndef IMGUI_CXX_MODULE
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #if (defined(__APPLE__) && (TARGET_OS_IOS || TARGET_OS_TV))
 #include <OpenGLES/ES2/gl.h>    // Use GL ES 2
@@ -189,6 +192,7 @@
 #define IMGUI_IMPL_OPENGL_LOADER_IMGL3W
 #include "imgui_impl_opengl3_loader.h"
 #endif
+#endif // #ifndef IMGUI_CXX_MODULE
 
 // Vertex arrays are not supported on ES2/WebGL1 unless Emscripten which uses an extension
 #ifndef IMGUI_IMPL_OPENGL_ES2
@@ -231,7 +235,9 @@
 // [Debugging]
 //#define IMGUI_IMPL_OPENGL_DEBUG
 #ifdef IMGUI_IMPL_OPENGL_DEBUG
+#ifndef IMGUI_CXX_MODULE
 #include <stdio.h>
+#endif
 #define GL_CALL(_CALL)      do { _CALL; GLenum gl_err = glGetError(); if (gl_err != 0) fprintf(stderr, "GL error 0x%x returned from '%s'.\n", gl_err, #_CALL); } while (0)  // Call with error check
 #else
 #define GL_CALL(_CALL)      _CALL   // Call without error check

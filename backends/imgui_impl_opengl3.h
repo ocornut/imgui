@@ -31,6 +31,7 @@
 #include "imgui.h"      // IMGUI_IMPL_API
 #ifndef IMGUI_DISABLE
 
+IMGUI_EXPORT_BEGIN
 // Follow "Getting Started" link and check examples/ folder to learn about using backends!
 IMGUI_IMPL_API bool     ImGui_ImplOpenGL3_Init(const char* glsl_version = nullptr);
 IMGUI_IMPL_API void     ImGui_ImplOpenGL3_Shutdown();
@@ -53,7 +54,7 @@ IMGUI_IMPL_API void     ImGui_ImplOpenGL3_UpdateTexture(ImTextureData* tex);
  && !defined(IMGUI_IMPL_OPENGL_ES3)
 
 // Try to detect GLES on matching platforms
-#if defined(__APPLE__)
+#if defined(__APPLE__) && !defined(IMGUI_CXX_MODULE)
 #include <TargetConditionals.h>
 #endif
 #if (defined(__APPLE__) && (TARGET_OS_IOS || TARGET_OS_TV)) || (defined(__ANDROID__))
@@ -77,5 +78,6 @@ struct ImGui_ImplOpenGL3_RenderState
     unsigned int    CurrentTexParameterFilter;      // (GLuint) Used if UseTexParameterFilter == true
 };
 IMGUI_IMPL_API ImGui_ImplOpenGL3_RenderState* ImGui_ImplOpenGL3_GetRenderState();
+IMGUI_EXPORT_END
 
 #endif // #ifndef IMGUI_DISABLE

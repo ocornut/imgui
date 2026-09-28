@@ -47,10 +47,12 @@
 #include "imgui_impl_dx10.h"
 
 // DirectX
+#ifndef IMGUI_CXX_MODULE
 #include <stdio.h>
 #include <d3d10_1.h>
 #include <d3d10.h>
 #include <d3dcompiler.h>
+#endif
 #ifdef _MSC_VER
 #pragma comment(lib, "d3dcompiler") // Automatically link with d3dcompiler.lib as we are using D3DCompile() below.
 #endif

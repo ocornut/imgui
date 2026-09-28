@@ -34,15 +34,20 @@
 
 // Setup Emscripten default if not specified.
 #if defined(__EMSCRIPTEN__) && !defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) && !defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
+#ifndef IMGUI_CXX_MODULE
 #include <emscripten/version.h>
+#endif
 #define IMGUI_IMPL_WEBGPU_BACKEND_DAWN
 #endif
 
+#ifndef IMGUI_CXX_MODULE
 #include <webgpu/webgpu.h>
 #if defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) && !defined(__EMSCRIPTEN__)
 #include <webgpu/wgpu.h>        // WGPULogLevel
 #endif
+#endif
 
+IMGUI_EXPORT_BEGIN
 // Initialization data, for ImGui_ImplWGPU_Init()
 struct ImGui_ImplWGPU_InitInfo
 {
@@ -115,5 +120,6 @@ struct ImGui_ImplWGPU_CreateSurfaceInfo
 };
 WGPUSurface ImGui_ImplWGPU_CreateWGPUSurfaceHelper(ImGui_ImplWGPU_CreateSurfaceInfo* info);
 #endif // #ifndef __EMSCRIPTEN__
+IMGUI_EXPORT_END
 
 #endif // #ifndef IMGUI_DISABLE

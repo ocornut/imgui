@@ -19,11 +19,14 @@
 #include "imgui.h"      // IMGUI_IMPL_API
 #ifndef IMGUI_DISABLE
 
+#ifndef IMGUI_CXX_MODULE
 struct ID3D11Device;
 struct ID3D11DeviceContext;
 struct ID3D11SamplerState;
 struct ID3D11Buffer;
+#endif
 
+IMGUI_EXPORT_BEGIN
 // Follow "Getting Started" link and check examples/ folder to learn about using backends!
 IMGUI_IMPL_API bool     ImGui_ImplDX11_Init(ID3D11Device* device, ID3D11DeviceContext* device_context);
 IMGUI_IMPL_API void     ImGui_ImplDX11_Shutdown();
@@ -49,5 +52,6 @@ struct ImGui_ImplDX11_RenderState
     //ID3D11SamplerState*   SamplerNearest;         // Use ImDrawList::AddCallback(ImGui::GetPlatform().DrawCallback_SetSamplerNearest)
 };
 IMGUI_IMPL_API ImGui_ImplDX11_RenderState* ImGui_ImplDX11_GetRenderState();
+IMGUI_EXPORT_END
 
 #endif // #ifndef IMGUI_DISABLE

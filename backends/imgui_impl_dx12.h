@@ -21,8 +21,10 @@
 #pragma once
 #include "imgui.h"      // IMGUI_IMPL_API
 #ifndef IMGUI_DISABLE
+#ifndef IMGUI_CXX_MODULE
 #include <dxgiformat.h> // DXGI_FORMAT
 #include <d3d12.h>      // D3D12_CPU_DESCRIPTOR_HANDLE
+#endif
 
 // Clang/GCC warnings with -Weverything
 #if defined(__clang__)
@@ -30,6 +32,7 @@
 #pragma clang diagnostic ignored "-Wold-style-cast" // warning: use of old-style cast
 #endif
 
+IMGUI_EXPORT_BEGIN
 // Initialization data, for ImGui_ImplDX12_Init()
 struct ImGui_ImplDX12_InitInfo
 {
@@ -83,6 +86,8 @@ IMGUI_IMPL_API ImGui_ImplDX12_RenderState* ImGui_ImplDX12_GetRenderState();
 // - DOES NOT SUPPORT ImGuiBackendFlags_RendererHasTextures.
 //IMGUI_IMPL_API bool     ImGui_ImplDX12_Init(ID3D12Device* device, int num_frames_in_flight, DXGI_FORMAT rtv_format, ID3D12DescriptorHeap* srv_descriptor_heap, D3D12_CPU_DESCRIPTOR_HANDLE font_srv_cpu_desc_handle, D3D12_GPU_DESCRIPTOR_HANDLE font_srv_gpu_desc_handle);
 #endif
+
+IMGUI_EXPORT_END
 
 #if defined(__clang__)
 #pragma clang diagnostic pop
