@@ -135,6 +135,7 @@ Index of this file:
 #ifndef IMGUI_DISABLE
 
 // System includes
+#ifndef IMGUI_CXX_MODULE
 #include <ctype.h>          // toupper
 #include <limits.h>         // INT_MIN, INT_MAX
 #include <math.h>           // sqrtf, powf, cosf, sinf, floorf, ceilf
@@ -146,6 +147,7 @@ Index of this file:
 #endif
 #ifdef __EMSCRIPTEN__
 #include <emscripten/version.h>     // __EMSCRIPTEN_MAJOR__ etc.
+#endif
 #endif
 
 // Visual Studio warnings

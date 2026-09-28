@@ -64,10 +64,12 @@ Index of this file:
 //-----------------------------------------------------------------------------
 
 // Includes
+#ifndef IMGUI_CXX_MODULE
 #include <float.h>                  // FLT_MIN, FLT_MAX
 #include <stdarg.h>                 // va_list, va_start, va_end
 #include <stddef.h>                 // ptrdiff_t, NULL
 #include <string.h>                 // memset, memmove, memcpy, strlen, strchr, strcpy, strcmp
+#endif
 
 // Warnings
 #ifdef _MSC_VER

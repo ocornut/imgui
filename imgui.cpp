@@ -1257,10 +1257,14 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
 #include "imgui_internal.h"
 
 // System includes
+#ifndef IMGUI_CXX_MODULE
 #include <stdio.h>      // vsnprintf, sscanf, printf
 #include <stdint.h>     // intptr_t
+#endif
 #ifndef IMGUI_DISABLE_TIME_FUNCTIONS
+#ifndef IMGUI_CXX_MODULE
 #include <time.h>       // time(), localtime_r()/localtime_s()
+#endif
 #if defined(_WIN32)
 static tm* localtime_r(const time_t* timep, tm* result) { return localtime_s(result, timep) == 0 ? result : NULL; }
 #endif
@@ -1282,10 +1286,12 @@ static tm* localtime_r(const time_t* timep, tm* result) { return localtime_s(res
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
+#ifndef IMGUI_CXX_MODULE
 #ifndef __MINGW32__
 #include <Windows.h>        // _wfopen, OpenClipboard
 #else
 #include <windows.h>
+#endif
 #endif
 #if defined(WINAPI_FAMILY) && ((defined(WINAPI_FAMILY_APP) && WINAPI_FAMILY == WINAPI_FAMILY_APP) || (defined(WINAPI_FAMILY_GAMES) && WINAPI_FAMILY == WINAPI_FAMILY_GAMES))
 // The UWP and GDK Win32 API subsets don't support clipboard nor IME functions
@@ -1296,7 +1302,7 @@ static tm* localtime_r(const time_t* timep, tm* result) { return localtime_s(res
 #endif
 
 // [Apple] OS specific includes
-#if defined(__APPLE__)
+#if defined(__APPLE__) && !defined(IMGUI_CXX_MODULE)
 #include <TargetConditionals.h>
 #endif
 
@@ -16282,7 +16288,9 @@ static void Platform_SetClipboardTextFn_DefaultImpl(ImGuiContext*, const char* t
 
 #elif defined(__APPLE__) && defined(TARGET_OS_OSX) && TARGET_OS_OSX && defined(IMGUI_ENABLE_OSX_DEFAULT_CLIPBOARD_FUNCTIONS)
 
+#ifndef IMGUI_CXX_MODULE
 #include <Carbon/Carbon.h>  // Use old API to avoid need for separate .mm file
+#endif
 static PasteboardRef main_clipboard = 0;
 
 // OSX clipboard implementation
@@ -16370,7 +16378,9 @@ static void Platform_SetClipboardTextFn_DefaultImpl(ImGuiContext* ctx, const cha
 
 #ifndef IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS
 #ifdef _WIN32
+#ifndef IMGUI_CXX_MODULE
 #include <shellapi.h>   // ShellExecuteA()
+#endif
 #ifdef _MSC_VER
 #pragma comment(lib, "shell32")
 #endif
@@ -16383,8 +16393,10 @@ static bool Platform_OpenInShellFn_DefaultImpl(ImGuiContext*, const char* path)
     return (INT_PTR)::ShellExecuteW(NULL, L"open", path_wbuf.Data, NULL, NULL, SW_SHOWDEFAULT) > 32;
 }
 #else
+#ifndef IMGUI_CXX_MODULE
 #include <sys/wait.h>
 #include <unistd.h>
+#endif
 static bool Platform_OpenInShellFn_DefaultImpl(ImGuiContext*, const char* path)
 {
 #if defined(__APPLE__)
@@ -16417,7 +16429,9 @@ static bool Platform_OpenInShellFn_DefaultImpl(ImGuiContext*, const char*) { ret
 // Win32 API IME support (for Asian languages, etc.)
 #if defined(_WIN32) && !defined(IMGUI_DISABLE_WIN32_FUNCTIONS) && !defined(IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS)
 
+#ifndef IMGUI_CXX_MODULE
 #include <imm.h>
+#endif
 #ifdef _MSC_VER
 #pragma comment(lib, "imm32")
 #endif
