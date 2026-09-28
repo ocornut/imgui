@@ -4232,7 +4232,7 @@ static int STB_TEXTEDIT_MOVELINESTART_IMPL(ImGuiInputTextState* obj, ImStb::STB_
             const char* p_eol = ImFontCalcWordWrapPositionEx(g.Font, g.FontSize, p, text_end, obj->WrapWidth, ImDrawTextFlags_WrapKeepBlanks);
             if (p == p_cursor) // If we are already on a visible beginning-of-line, return real beginning-of-line (would be same as regular handler below)
                 return (int)(p_bol - obj->TextSrc);
-            if (p_eol == p_cursor && obj->TextA[cursor] != '\n' && obj->LastMoveDirectionLR == ImGuiDir_Left)
+            if (p_eol == p_cursor && obj->TextSrc[cursor] != '\n' && obj->LastMoveDirectionLR == ImGuiDir_Left)
                 return (int)(p_bol - obj->TextSrc);
             if (p_eol >= p_cursor)
                 return (int)(p - obj->TextSrc);
@@ -5057,7 +5057,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
 
     // Select the buffer to render.
     const bool buf_display_from_state = (render_cursor || render_selection || g.ActiveId == id) && !is_readonly && state;
-    bool is_displaying_hint = (hint != NULL && (buf_display_from_state ? state->TextA.Data : buf)[0] == 0) && !is_mixed;
+    bool is_displaying_hint = (hint != NULL && (buf_display_from_state ? state->TextSrc : buf)[0] == 0) && !is_mixed;
 
     // Password pushes a temporary font with only a fallback glyph
     if (is_password && !is_displaying_hint)
@@ -5283,7 +5283,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         {
             if (flags & ImGuiInputTextFlags_EscapeClearsAll)
             {
-                if (state->TextA.Data[0] != 0)
+                if (state->TextSrc[0] != 0)
                 {
                     revert_edit = true;
                 }
@@ -5376,14 +5376,14 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             if (flags & ImGuiInputTextFlags_EscapeClearsAll)
             {
                 // Clear input
-                IM_ASSERT(state->TextA.Data[0] != 0);
+                IM_ASSERT(state->TextSrc[0] != 0);
                 apply_new_text = "";
                 apply_new_text_length = 0;
                 value_changed = true;
                 char empty_string = 0;
                 stb_textedit_replace(state, state->Stb, &empty_string, 0);
             }
-            else if (strcmp(state->TextA.Data, state->TextToRevertTo.Data) != 0)
+            else if (strcmp(state->TextSrc, state->TextToRevertTo.Data) != 0)
             {
                 apply_new_text = state->TextToRevertTo.Data;
                 apply_new_text_length = state->TextToRevertTo.Size - 1;
