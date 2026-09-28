@@ -36,6 +36,12 @@
 #define IMGUI_IMPL_API              IMGUI_API
 #endif
 
+// Constexpr alternatives to some of the macros below (e.g. ImCol32() for IM_COL32()) are declared in imgui.h ('Constexpr alternatives to macros' section) when compiling as C++17 or later.
+// (C++17 is required for 'inline' variables)
+#if (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L) || __cplusplus >= 201703L
+#define IMGUI_HAS_CONSTEXPR
+#endif
+
 // Helper Macros
 // (note: compiling with NDEBUG will usually strip out assert() to nothing, which is NOT recommended because we use asserts to notify of programmer mistakes.)
 #ifndef IM_ASSERT

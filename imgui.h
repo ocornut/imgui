@@ -47,6 +47,7 @@ Index of this file:
 // [SECTION] Font API (ImFontConfig, ImFontGlyph, ImFontGlyphRangesBuilder, ImFontAtlasFlags, ImFontAtlas, ImFontBaked, ImFont)
 // [SECTION] Viewports (ImGuiViewportFlags, ImGuiViewport)
 // [SECTION] ImGuiPlatformIO + other Platform Dependent Interfaces (ImGuiPlatformImeData)
+// [SECTION] Constexpr alternatives to macros
 // [SECTION] Obsolete functions and types
 
 */
@@ -4009,6 +4010,45 @@ struct ImGuiPlatformImeData
 
     ImGuiPlatformImeData()          { memset((void*)this, 0, sizeof(*this)); }
 };
+
+//-----------------------------------------------------------------------------
+// [SECTION] Constexpr alternatives to macros
+// (requires C++17: see IMGUI_HAS_CONSTEXPR in imgui_macros.h)
+//-----------------------------------------------------------------------------
+
+#ifdef IMGUI_HAS_CONSTEXPR
+// Version (= IMGUI_VERSION, IMGUI_VERSION_NUM)
+inline constexpr char      ImGuiVersion[]              = IMGUI_VERSION;
+inline constexpr int       ImGuiVersionNum             = IMGUI_VERSION_NUM;
+
+// Standard Drag and Drop payload types (= IMGUI_PAYLOAD_TYPE_COLOR_3F, IMGUI_PAYLOAD_TYPE_COLOR_4F)
+inline constexpr char      ImGuiPayloadType_Color3F[]  = IMGUI_PAYLOAD_TYPE_COLOR_3F;
+inline constexpr char      ImGuiPayloadType_Color4F[]  = IMGUI_PAYLOAD_TYPE_COLOR_4F;
+
+// Unicode (= IM_UNICODE_CODEPOINT_INVALID, IM_UNICODE_CODEPOINT_MAX)
+inline constexpr ImWchar32 ImUnicodeCodepoint_Invalid  = IM_UNICODE_CODEPOINT_INVALID;
+inline constexpr ImWchar32 ImUnicodeCodepoint_Max      = IM_UNICODE_CODEPOINT_MAX;
+
+// 32-bit encoded colors (= IM_COL32(), IM_COL32_WHITE, IM_COL32_BLACK, IM_COL32_BLACK_TRANS, IM_COL32_X_SHIFT, IM_COL32_A_MASK)
+constexpr ImU32            ImCol32(ImU32 r, ImU32 g, ImU32 b, ImU32 a) { return IM_COL32(r, g, b, a); }
+inline constexpr ImU32     ImCol32_White               = IM_COL32_WHITE;
+inline constexpr ImU32     ImCol32_Black               = IM_COL32_BLACK;
+inline constexpr ImU32     ImCol32_BlackTrans          = IM_COL32_BLACK_TRANS;
+inline constexpr int       ImCol32_RShift              = IM_COL32_R_SHIFT;
+inline constexpr int       ImCol32_GShift              = IM_COL32_G_SHIFT;
+inline constexpr int       ImCol32_BShift              = IM_COL32_B_SHIFT;
+inline constexpr int       ImCol32_AShift              = IM_COL32_A_SHIFT;
+inline constexpr ImU32     ImCol32_AMask               = IM_COL32_A_MASK;
+
+// Size of a static C-style array (= IM_COUNTOF(), but won't compile with pointers)
+template<typename T, size_t N> constexpr int ImCountOf(const T (&arr)[N]) { return IM_COUNTOF(arr); }
+
+// Check that version and structures layouts are matching between compiled imgui code and caller (= IMGUI_CHECKVERSION())
+namespace ImGui
+{
+    inline bool         CheckVersion()                              { return IMGUI_CHECKVERSION(); }
+}
+#endif // #ifdef IMGUI_HAS_CONSTEXPR
 
 //-----------------------------------------------------------------------------
 // [SECTION] Obsolete functions and types
