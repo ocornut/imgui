@@ -57,7 +57,8 @@ Index of this file:
 // Version, configuration file with compile-time options (imconfig.h) and macros
 #include "imgui_macros.h"
 
-#ifndef IMGUI_DISABLE
+// (C++20 modules importing 'imgui', e.g. backends/imgui_impl_*.cppm, get the declarations below from 'import imgui;')
+#if !defined(IMGUI_DISABLE) && !defined(IMGUI_CXX_MODULE_IMPORTED)
 
 //-----------------------------------------------------------------------------
 // [SECTION] Header mess
@@ -4238,4 +4239,4 @@ IMGUI_EXPORT_END
 #endif
 #endif
 
-#endif // #ifndef IMGUI_DISABLE
+#endif // #if !defined(IMGUI_DISABLE) && !defined(IMGUI_CXX_MODULE_IMPORTED)
