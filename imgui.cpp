@@ -1417,7 +1417,7 @@ static void             NavUpdateContextMenuRequest();
 static void             NavUpdateCreateMoveRequest();
 static void             NavUpdateCreateTabbingRequest();
 static float            NavUpdatePageUpPageDown();
-static inline void      NavUpdateAnyRequestFlag();
+static void             NavUpdateAnyRequestFlag();
 static void             NavUpdateCreateWrappingRequest();
 static void             NavEndFrame();
 static bool             NavScoreItem(ImGuiNavItemData* result, const ImRect& nav_bb);

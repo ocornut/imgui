@@ -3,6 +3,10 @@
 
 // Version, compile-time configuration and all preprocessor macros of the public API.
 // - This is included by imgui.h: you don't need to include it yourself when using imgui.h.
+// - Macros are not exported by C++20 modules: when using 'import imgui;' (see imgui.cppm), include this file to access them:
+//     #include "imgui_macros.h"
+//     import imgui;
+//   Use the same compile-time configuration (IMGUI_USER_CONFIG, imconfig.h, defines) as the one the module was built with.
 
 #pragma once
 
@@ -36,9 +40,24 @@
 #define IMGUI_IMPL_API              IMGUI_API
 #endif
 
+// Export declarations from the C++20 named module 'imgui' (see imgui.cppm):
+// - IMGUI_EXPORT namespace ImGui { ... } exports a namespace and everything in it.
+// - Declarations of the global namespace are exported by enclosing them in IMGUI_EXPORT_BEGIN / IMGUI_EXPORT_END.
+//   (out-of-line definitions of member functions can't be exported: keep them outside of those blocks)
+// IMGUI_CXX_MODULE is defined by imgui.cppm only: don't define it yourself. In regular (header) builds, those expand to nothing.
+#ifdef IMGUI_CXX_MODULE
+#define IMGUI_EXPORT                export
+#define IMGUI_EXPORT_BEGIN          export {
+#define IMGUI_EXPORT_END            }
+#else
+#define IMGUI_EXPORT
+#define IMGUI_EXPORT_BEGIN
+#define IMGUI_EXPORT_END
+#endif
+
 // Constexpr alternatives to some of the macros below (e.g. ImCol32() for IM_COL32()) are declared in imgui.h ('Constexpr alternatives to macros' section) when compiling as C++17 or later.
-// (C++17 is required for 'inline' variables)
-#if (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L) || __cplusplus >= 201703L
+// (always the case for the C++20 module; C++17 is required for 'inline' variables)
+#if defined(IMGUI_CXX_MODULE) || (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L) || __cplusplus >= 201703L
 #define IMGUI_HAS_CONSTEXPR
 #endif
 

@@ -95,6 +95,8 @@ Index of this file:
 #pragma GCC diagnostic ignored "-Wclass-memaccess"                  // [__GNUC__ >= 8] warning: 'memset/memcpy' clearing/writing an object of type 'xxxx' with no trivial copy-assignment; use assignment or value-initialization instead
 #endif
 
+IMGUI_EXPORT_BEGIN
+
 //-----------------------------------------------------------------------------
 // [SECTION] Forward declarations and basic types
 //-----------------------------------------------------------------------------
@@ -316,12 +318,14 @@ struct ImTextureRef
 };
 IM_MSVC_RUNTIME_CHECKS_RESTORE
 
+IMGUI_EXPORT_END
+
 //-----------------------------------------------------------------------------
 // [SECTION] Dear ImGui end-user API functions
 // (Note that ImGui:: being a namespace, you can add extra ImGui:: functions in your own separate file. Please don't modify imgui source files!)
 //-----------------------------------------------------------------------------
 
-namespace ImGui
+IMGUI_EXPORT namespace ImGui
 {
     // Context creation and access
     // - Each context create its own ImFontAtlas by default. You may instance one yourself and pass it to CreateContext() to share a font atlas between contexts.
@@ -1097,6 +1101,8 @@ namespace ImGui
     IMGUI_API void          MemFree(void* ptr);
 
 } // namespace ImGui
+
+IMGUI_EXPORT_BEGIN
 
 //-----------------------------------------------------------------------------
 // [SECTION] Flags & Enumerations
@@ -3868,6 +3874,8 @@ struct ImFont
     IMGUI_API bool              IsGlyphRangeUnused(unsigned int c_begin, unsigned int c_last);
 };
 
+IMGUI_EXPORT_END
+
 // This is provided for consistency (but we don't actually use this)
 inline ImTextureID ImTextureRef::GetTexID() const
 {
@@ -3887,6 +3895,8 @@ inline ImTextureID ImDrawCmd::GetTexID() const
         IM_ASSERT(tex_id != ImTextureID_Invalid && "ImDrawCmd is referring to ImTextureData that wasn't uploaded to graphics system. Backend must call ImTextureData::SetTexID() after handling ImTextureStatus_WantCreate request!");
     return tex_id;
 }
+
+IMGUI_EXPORT_BEGIN
 
 //-----------------------------------------------------------------------------
 // [SECTION] Viewports
@@ -4013,12 +4023,15 @@ struct ImGuiPlatformImeData
     ImGuiPlatformImeData()          { memset((void*)this, 0, sizeof(*this)); }
 };
 
+IMGUI_EXPORT_END
+
 //-----------------------------------------------------------------------------
 // [SECTION] Constexpr alternatives to macros
-// (requires C++17: see IMGUI_HAS_CONSTEXPR in imgui_macros.h)
+// (requires C++17: see IMGUI_HAS_CONSTEXPR in imgui_macros.h. Exported by the C++20 module, which doesn't export macros)
 //-----------------------------------------------------------------------------
 
 #ifdef IMGUI_HAS_CONSTEXPR
+IMGUI_EXPORT_BEGIN
 // Version (= IMGUI_VERSION, IMGUI_VERSION_NUM)
 inline constexpr char      ImGuiVersion[]              = IMGUI_VERSION;
 inline constexpr int       ImGuiVersionNum             = IMGUI_VERSION_NUM;
@@ -4044,9 +4057,10 @@ inline constexpr ImU32     ImCol32_AMask               = IM_COL32_A_MASK;
 
 // Size of a static C-style array (= IM_COUNTOF(), but won't compile with pointers)
 template<typename T, size_t N> constexpr int ImCountOf(const T (&arr)[N]) { return IM_COUNTOF(arr); }
+IMGUI_EXPORT_END
 
 // Check that version and structures layouts are matching between compiled imgui code and caller (= IMGUI_CHECKVERSION())
-namespace ImGui
+IMGUI_EXPORT namespace ImGui
 {
     inline bool         CheckVersion()                              { return IMGUI_CHECKVERSION(); }
 }
@@ -4059,7 +4073,7 @@ namespace ImGui
 //-----------------------------------------------------------------------------
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-namespace ImGui
+IMGUI_EXPORT namespace ImGui
 {
     // OBSOLETED in 1.92.9 (from July 2026)
     IMGUI_API void      SetColorEditOptions(ImGuiColorEditFlags flags);         // set current options for if you want to select a default format, picker type, etc. User will be able to change those settings, unless you pass the _NoOptions flag to your calls.
@@ -4154,12 +4168,14 @@ namespace ImGui
     //static inline void  SetScrollPosHere()                    { SetScrollHere(); }                                                // OBSOLETED in 1.42
 }
 
+IMGUI_EXPORT_BEGIN
 //-- OBSOLETED in 1.92.0: ImFontAtlasCustomRect becomes ImTextureRect
 // - ImFontAtlasCustomRect::X,Y          --> ImTextureRect::x,y
 // - ImFontAtlasCustomRect::Width,Height --> ImTextureRect::w,h
 // - ImFontAtlasCustomRect::GlyphColored --> if you need to write to this, instead you can write to 'font->Glyphs.back()->Colored' after calling AddCustomRectFontGlyph()
 // We could make ImTextureRect an union to use old names, but 1) this would be confusing 2) the fix is easy 3) ImFontAtlasCustomRect was always a rather esoteric api.
 typedef ImFontAtlasRect ImFontAtlasCustomRect;
+IMGUI_EXPORT_END
 /*struct ImFontAtlasCustomRect
 {
     unsigned short  X, Y;           // Output   // Packed position in Atlas
