@@ -5697,6 +5697,7 @@ ImVec2 ImFontCalcTextSizeEx(ImFont* font, float size, float max_width, float wra
 
     ImVec2 text_size = ImVec2(0, 0);
     float line_width = 0.0f;
+    ImWchar prev_c = 0;
 
     const bool word_wrap_enabled = (wrap_width > 0.0f);
     const char* word_wrap_eol = NULL;
@@ -5717,6 +5718,7 @@ ImVec2 ImFontCalcTextSizeEx(ImFont* font, float size, float max_width, float wra
                     text_size.x = line_width;
                 text_size.y += line_height;
                 line_width = 0.0f;
+                prev_c = 0;
                 s = ImTextCalcWordWrapNextLineStart(s, text_end, flags); // Wrapping skips upcoming blanks
                 if (flags & ImDrawTextFlags_StopOnNewLine)
                     break;
@@ -5738,6 +5740,7 @@ ImVec2 ImFontCalcTextSizeEx(ImFont* font, float size, float max_width, float wra
             text_size.x = ImMax(text_size.x, line_width);
             text_size.y += line_height;
             line_width = 0.0f;
+            prev_c = 0;
             if (flags & ImDrawTextFlags_StopOnNewLine)
                 break;
             continue;
@@ -5750,6 +5753,8 @@ ImVec2 ImFontCalcTextSizeEx(ImFont* font, float size, float max_width, float wra
         if (char_width < 0.0f)
             char_width = BuildLoadGlyphGetAdvanceOrFallback(baked, c);
         char_width *= scale;
+        if (prev_c && font->KerningFn)
+            char_width += font->KerningFn(font, prev_c, (ImWchar)c, size, font->KerningUserData);
 
         if (line_width + char_width >= max_width)
         {
@@ -5758,6 +5763,7 @@ ImVec2 ImFontCalcTextSizeEx(ImFont* font, float size, float max_width, float wra
         }
 
         line_width += char_width;
+        prev_c = (ImWchar)c;
     }
 
     if (text_size.x < line_width)
@@ -5901,6 +5907,7 @@ begin:
 
     const ImU32 col_untinted = col | ~IM_COL32_A_MASK;
     const char* word_wrap_eol = NULL;
+    ImWchar prev_c = 0;
 
     while (s < text_end)
     {
@@ -5914,6 +5921,7 @@ begin:
             {
                 x = origin_x;
                 y += line_height;
+                prev_c = 0;
                 if (y > clip_rect.w)
                     break; // break out of main loop
                 word_wrap_eol = NULL;
@@ -5935,6 +5943,7 @@ begin:
             {
                 x = origin_x;
                 y += line_height;
+                prev_c = 0;
                 if (y > clip_rect.w)
                     break; // break out of main loop
                 continue;
@@ -5947,6 +5956,8 @@ begin:
         //if (glyph == NULL)
         //    continue;
 
+        if (prev_c && KerningFn)
+            x += KerningFn(this, prev_c, (ImWchar)c, size, KerningUserData);
         float char_width = glyph->AdvanceX * scale;
         if (glyph->Visible)
         {
@@ -5989,6 +6000,7 @@ begin:
                     if (y1 >= y2)
                     {
                         x += char_width;
+                        prev_c = (ImWchar)c;
                         continue;
                     }
                 }
@@ -6011,6 +6023,7 @@ begin:
             }
         }
         x += char_width;
+        prev_c = (ImWchar)c;
     }
 
     // Edge case: calling RenderText() with unloaded glyphs triggering texture change. It doesn't happen via ImGui:: calls because CalcTextSize() is always used.
