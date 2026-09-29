@@ -17710,7 +17710,8 @@ static int CalcFontGlyphSrcOverlapMask(ImFontAtlas* atlas, ImFont* font, unsigne
     for (int src_n = 0; src_n < font->Sources.Size; src_n++)
     {
         ImFontConfig* src = font->Sources[src_n];
-        if (!(src->FontLoader ? src->FontLoader : atlas->FontLoader)->FontSrcContainsGlyph(atlas, src, (ImWchar)codepoint))
+        const ImFontLoader* loader = src->FontLoader ? src->FontLoader : atlas->FontLoader;
+        if (loader->FontSrcGetGlyphIndexFromCodepoint(atlas, src, (ImWchar)codepoint) == 0)
             continue;
         mask |= (1 << src_n);
         count++;

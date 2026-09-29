@@ -3123,7 +3123,7 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg_in)
     }
     if (font_cfg->FontLoader != NULL)
     {
-        IM_ASSERT(font_cfg->FontLoader->FontBakedLoadGlyph != NULL);
+        IM_ASSERT(font_cfg->FontLoader->FontSrcGetGlyphIndexFromCodepoint != NULL && font_cfg->FontLoader->FontBakedLoadGlyph != NULL);
         IM_ASSERT(font_cfg->FontLoader->LoaderInit == NULL && font_cfg->FontLoader->LoaderShutdown == NULL); // FIXME-NEWATLAS: Unsupported yet.
     }
     //                             | Target w/ Implicit RefSize | Target w/ Explicit RefSize |
@@ -4606,10 +4606,15 @@ static ImFontGlyph* ImFontBaked_BuildLoadGlyph(ImFontBaked* baked, ImWchar codep
         if (src->GlyphExcludeRanges && !ImFontAtlasBuildAcceptCodepointForSource(src, codepoint))
             continue;
 
+        int glyph_index = loader->FontSrcGetGlyphIndexFromCodepoint(atlas, src, codepoint);
+        if (glyph_index == 0)
+            continue;
+
         if (only_load_advance_x == NULL)
         {
             ImFontGlyph glyph_buf;
-            if (!loader->FontBakedLoadGlyph(atlas, src, baked, loader_user_data_p, codepoint, &glyph_buf, NULL))
+            glyph_buf.Codepoint = codepoint;
+            if (!loader->FontBakedLoadGlyph(atlas, src, baked, loader_user_data_p, glyph_index, &glyph_buf, NULL))
                 continue;
             // FIXME: Add hooks for e.g. #7962
             glyph_buf.Codepoint = src_codepoint;
@@ -4619,7 +4624,7 @@ static ImFontGlyph* ImFontBaked_BuildLoadGlyph(ImFontBaked* baked, ImWchar codep
         else
         {
             // Special mode but only loading glyphs metrics. Will rasterize and pack later.
-            if (!loader->FontBakedLoadGlyph(atlas, src, baked, loader_user_data_p, codepoint, NULL, only_load_advance_x))
+            if (!loader->FontBakedLoadGlyph(atlas, src, baked, loader_user_data_p, glyph_index, NULL, only_load_advance_x))
                 continue;
             ImFontAtlasBakedAddFontGlyphAdvancedX(atlas, baked, src, codepoint, *only_load_advance_x);
             return NULL;
@@ -4707,10 +4712,8 @@ struct ImGui_ImplStbTrueType_FontSrcData
     float           ScaleFactor;
 };
 
-static bool ImGui_ImplStbTrueType_FontSrcInit(ImFontAtlas* atlas, ImFontConfig* src)
+static bool ImGui_ImplStbTrueType_FontSrcInit(ImFontAtlas*, ImFontConfig* src)
 {
-    IM_UNUSED(atlas);
-
     ImGui_ImplStbTrueType_FontSrcData* bd_font_data = IM_NEW(ImGui_ImplStbTrueType_FontSrcData);
     IM_ASSERT(src->FontLoaderData == NULL);
 
@@ -4742,29 +4745,27 @@ static bool ImGui_ImplStbTrueType_FontSrcInit(ImFontAtlas* atlas, ImFontConfig* 
     return true;
 }
 
-static void ImGui_ImplStbTrueType_FontSrcDestroy(ImFontAtlas* atlas, ImFontConfig* src)
+static void ImGui_ImplStbTrueType_FontSrcDestroy(ImFontAtlas*, ImFontConfig* src)
 {
-    IM_UNUSED(atlas);
     ImGui_ImplStbTrueType_FontSrcData* bd_font_data = (ImGui_ImplStbTrueType_FontSrcData*)src->FontLoaderData;
     IM_DELETE(bd_font_data);
     src->FontLoaderData = NULL;
 }
 
-static bool ImGui_ImplStbTrueType_FontSrcContainsGlyph(ImFontAtlas* atlas, ImFontConfig* src, ImWchar codepoint)
+static int ImGui_ImplStbTrueType_FontSrcGetGlyphIndexFromCodepoint(ImFontAtlas*, ImFontConfig* src, ImWchar codepoint)
 {
-    IM_UNUSED(atlas);
-
     ImGui_ImplStbTrueType_FontSrcData* bd_font_data = (ImGui_ImplStbTrueType_FontSrcData*)src->FontLoaderData;
-    IM_ASSERT(bd_font_data != NULL);
-
-    int glyph_index = stbtt_FindGlyphIndex(&bd_font_data->FontInfo, (int)codepoint);
-    return glyph_index != 0;
+    return stbtt_FindGlyphIndex(&bd_font_data->FontInfo, (int)codepoint);
 }
 
-static bool ImGui_ImplStbTrueType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void*)
+static bool ImGui_ImplStbTrueType_FontSrcContainsGlyph(ImFontAtlas*, ImFontConfig* src, int glyph_index)
 {
-    IM_UNUSED(atlas);
+    ImGui_ImplStbTrueType_FontSrcData* bd_font_data = (ImGui_ImplStbTrueType_FontSrcData*)src->FontLoaderData;
+    return glyph_index > 0 && glyph_index < bd_font_data->FontInfo.numGlyphs;
+}
 
+static bool ImGui_ImplStbTrueType_FontBakedInit(ImFontAtlas*, ImFontConfig* src, ImFontBaked* baked, void*)
+{
     ImGui_ImplStbTrueType_FontSrcData* bd_font_data = (ImGui_ImplStbTrueType_FontSrcData*)src->FontLoaderData;
     if (src->MergeMode == false)
     {
@@ -4780,14 +4781,12 @@ static bool ImGui_ImplStbTrueType_FontBakedInit(ImFontAtlas* atlas, ImFontConfig
     return true;
 }
 
-static bool ImGui_ImplStbTrueType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void*, ImWchar codepoint, ImFontGlyph* out_glyph, float* out_advance_x)
+static bool ImGui_ImplStbTrueType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontConfig* src, ImFontBaked* baked, void*, int glyph_index, ImFontGlyph* out_glyph, float* out_advance_x)
 {
     // Search for first font which has the glyph
     ImGui_ImplStbTrueType_FontSrcData* bd_font_data = (ImGui_ImplStbTrueType_FontSrcData*)src->FontLoaderData;
     IM_ASSERT(bd_font_data);
-    int glyph_index = stbtt_FindGlyphIndex(&bd_font_data->FontInfo, (int)codepoint);
-    if (glyph_index == 0)
-        return false;
+    IM_ASSERT(glyph_index != 0);
 
     // Fonts unit to pixels
     int oversample_h, oversample_v;
@@ -4812,7 +4811,6 @@ static bool ImGui_ImplStbTrueType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontC
     }
 
     // Prepare glyph
-    out_glyph->Codepoint = codepoint;
     out_glyph->AdvanceX = advance * scale_for_layout;
 
     // Pack and retrieve position inside texture atlas
@@ -4874,6 +4872,7 @@ const ImFontLoader* ImFontAtlasGetFontLoaderForStbTruetype()
     loader.Name = "stb_truetype";
     loader.FontSrcInit = ImGui_ImplStbTrueType_FontSrcInit;
     loader.FontSrcDestroy = ImGui_ImplStbTrueType_FontSrcDestroy;
+    loader.FontSrcGetGlyphIndexFromCodepoint = ImGui_ImplStbTrueType_FontSrcGetGlyphIndexFromCodepoint;
     loader.FontSrcContainsGlyph = ImGui_ImplStbTrueType_FontSrcContainsGlyph;
     loader.FontBakedInit = ImGui_ImplStbTrueType_FontBakedInit;
     loader.FontBakedDestroy = NULL;
@@ -5405,7 +5404,7 @@ bool ImFont::IsGlyphInFont(ImWchar c)
     for (ImFontConfig* src : Sources)
     {
         const ImFontLoader* loader = src->FontLoader ? src->FontLoader : atlas->FontLoader;
-        if (loader->FontSrcContainsGlyph != NULL && loader->FontSrcContainsGlyph(atlas, src, c))
+        if (loader->FontSrcGetGlyphIndexFromCodepoint(atlas, src, c) != 0)
             return true;
     }
     return false;
