@@ -4596,35 +4596,34 @@ static ImFontGlyph* ImFontBaked_BuildLoadGlyph(ImFontBaked* baked, ImWchar codep
 
     // Call backend
     char* loader_user_data_p = (char*)baked->FontLoaderDatas;
-    int src_n = 0;
-    for (ImFontConfig* src : font->Sources)
+    char* loader_user_data_p_next = NULL;
+    for (int src_n = 0; src_n < font->Sources.Size; src_n++, loader_user_data_p = loader_user_data_p_next)
     {
+        ImFontConfig* src = font->Sources[src_n];
         const ImFontLoader* loader = src->FontLoader ? src->FontLoader : atlas->FontLoader;
-        if (!src->GlyphExcludeRanges || ImFontAtlasBuildAcceptCodepointForSource(src, codepoint))
+        loader_user_data_p_next = loader_user_data_p + loader->FontBakedSrcLoaderDataSize;
+
+        if (src->GlyphExcludeRanges && !ImFontAtlasBuildAcceptCodepointForSource(src, codepoint))
+            continue;
+
+        if (only_load_advance_x == NULL)
         {
-            if (only_load_advance_x == NULL)
-            {
-                ImFontGlyph glyph_buf;
-                if (loader->FontBakedLoadGlyph(atlas, src, baked, loader_user_data_p, codepoint, &glyph_buf, NULL))
-                {
-                    // FIXME: Add hooks for e.g. #7962
-                    glyph_buf.Codepoint = src_codepoint;
-                    glyph_buf.SourceIdx = src_n;
-                    return ImFontAtlasBakedAddFontGlyph(atlas, baked, src, &glyph_buf);
-                }
-            }
-            else
-            {
-                // Special mode but only loading glyphs metrics. Will rasterize and pack later.
-                if (loader->FontBakedLoadGlyph(atlas, src, baked, loader_user_data_p, codepoint, NULL, only_load_advance_x))
-                {
-                    ImFontAtlasBakedAddFontGlyphAdvancedX(atlas, baked, src, codepoint, *only_load_advance_x);
-                    return NULL;
-                }
-            }
+            ImFontGlyph glyph_buf;
+            if (!loader->FontBakedLoadGlyph(atlas, src, baked, loader_user_data_p, codepoint, &glyph_buf, NULL))
+                continue;
+            // FIXME: Add hooks for e.g. #7962
+            glyph_buf.Codepoint = src_codepoint;
+            glyph_buf.SourceIdx = src_n;
+            return ImFontAtlasBakedAddFontGlyph(atlas, baked, src, &glyph_buf);
         }
-        loader_user_data_p += loader->FontBakedSrcLoaderDataSize;
-        src_n++;
+        else
+        {
+            // Special mode but only loading glyphs metrics. Will rasterize and pack later.
+            if (!loader->FontBakedLoadGlyph(atlas, src, baked, loader_user_data_p, codepoint, NULL, only_load_advance_x))
+                continue;
+            ImFontAtlasBakedAddFontGlyphAdvancedX(atlas, baked, src, codepoint, *only_load_advance_x);
+            return NULL;
+        }
     }
 
     // Lazily load fallback glyph
