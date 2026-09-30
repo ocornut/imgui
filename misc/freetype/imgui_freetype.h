@@ -73,6 +73,16 @@ namespace ImGuiFreeType
     // Display UI to edit ImFontAtlas::FontLoaderFlags (shared) or ImFontConfig::FontLoaderFlags (single source)
     IMGUI_API bool                      DebugEditFontLoaderFlags(ImGuiFreeTypeLoaderFlags* p_font_loader_flags);
 
+#if defined(IMGUI_ENABLE_HARFBUZZ_SHAPING)
+    // Shape `text` with HarfBuzz and render it with `draw_list`, forming
+    // GSUB ligatures (ZWJ families, regional-indicator flags) that the
+    // codepoint-by-codepoint ImFont::RenderText cannot. Requires the
+    // FreeType loader (uses the per-face hb_font_t). Ligature glyphs are
+    // baked on demand by FT glyph index into the atlas. Opt-in API: does
+    // not modify the existing RenderText hot path.
+    IMGUI_API void                      RenderShapedText(ImDrawList* draw_list, ImFont* font, ImFontBaked* baked, float size, const ImVec2& pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end = nullptr);
+#endif
+
     // Obsolete names (will be removed)
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     //IMGUI_API const ImFontBuilderIO* GetBuilderForFreeType(); // Renamed/changed in 1.92. Change 'io.Fonts->FontBuilderIO = ImGuiFreeType::GetBuilderForFreeType()' to 'io.Fonts->SetFontLoader(ImGuiFreeType::GetFontLoader())' if you need runtime selection.
