@@ -4562,6 +4562,12 @@ static void ImFontBaked_BuildGrowIndex(ImFontBaked* baked, int new_size)
     baked->IndexLookup.resize(new_size, IM_FONTGLYPH_INDEX_UNUSED);
 }
 
+// Remap a codepoint to another codepoint
+void ImFont::AddRemapCodepoint(ImWchar from_codepoint, ImWchar to_codepoint)
+{
+    RemapPairs.SetInt((ImGuiID)from_codepoint, (int)to_codepoint);
+}
+
 static void ImFontAtlas_FontHookRemapCodepoint(ImFontAtlas* atlas, ImFont* font, ImWchar* c)
 {
     IM_UNUSED(atlas);
@@ -5344,11 +5350,6 @@ void ImFontAtlasBakedSetFontGlyphBitmap(ImFontAtlas* atlas, ImFontBaked* baked, 
     ImFontAtlasPostProcessData pp_data = { atlas, baked->OwnerFont, src, baked, glyph, tex->GetPixelsAt(r->x, r->y), tex->Format, tex->GetPitch(), r->w, r->h };
     ImFontAtlasTextureBlockPostProcess(&pp_data);
     ImFontAtlasTextureBlockQueueUpload(atlas, tex, r->x, r->y, r->w, r->h);
-}
-
-void ImFont::AddRemapChar(ImWchar from_codepoint, ImWchar to_codepoint)
-{
-    RemapPairs.SetInt((ImGuiID)from_codepoint, (int)to_codepoint);
 }
 
 // Find glyph, load if necessary, return fallback if missing

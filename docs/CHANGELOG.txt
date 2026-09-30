@@ -47,6 +47,8 @@ Breaking Changes:
   - style.CurveTessellationMaxError == sqrf(style.CurveTessellationTol).
 - ImGuiTextFilter: removed `float width` parameter of `Draw(const char* filter, float width)`:
   prefer using `SetNextItemWidth(float)` which is standard. Kept inline redirection function.
+- Fonts: renamed `AddRemapChar()` to `AddRemapCodepoint()` (rarely used, marked internal).
+  (#609, #5748, #9559)
 - Backends:
   - DirectX12: Removed support for legacy `ImGui_ImplDX12_Init()` signature, which was
     obsoleted in 1.91.6 (December 2014), because it needed to forcefully disable support
