@@ -124,9 +124,9 @@ Index of this file:
 #error Use IMGUI_DISABLE_DEFAULT_MATH_FUNCTIONS
 #endif
 
-// Enable stb_truetype by default unless FreeType is enabled.
-// You can compile with both by defining both IMGUI_ENABLE_FREETYPE and IMGUI_ENABLE_STB_TRUETYPE together.
-#ifndef IMGUI_ENABLE_FREETYPE
+// Enable stb_truetype by default unless FreeType or DirectWrite are enabled.
+// You can re-enable stb_truetype by explicitly defining IMGUI_ENABLE_STB_TRUETYPE before including imgui.h.
+#if !defined(IMGUI_ENABLE_FREETYPE) && !defined(IMGUI_ENABLE_DWRITE)
 #define IMGUI_ENABLE_STB_TRUETYPE
 #endif
 
