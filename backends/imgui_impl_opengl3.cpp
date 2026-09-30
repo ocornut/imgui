@@ -944,8 +944,10 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
     glLinkProgram(bd->ShaderHandle);
     CheckProgram(bd->ShaderHandle, "shader program");
 
+#ifndef __vita__
     glDetachShader(bd->ShaderHandle, vert_handle);
     glDetachShader(bd->ShaderHandle, frag_handle);
+#endif
     glDeleteShader(vert_handle);
     glDeleteShader(frag_handle);
 
