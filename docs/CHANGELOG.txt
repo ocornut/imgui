@@ -81,6 +81,8 @@ Other Changes:
   - Reworked `AddFontDefault()` to use `io.DisplayFrameBufferScale` as part of the heuristic
     to select `AddFontDefaultVector()` by default, effectively using ProggyForever instead of
     ProggyClean on most Apple/Retina setups by default.
+  - Added ImFont::AddRemapCodepointToGlyphIndex() allowing to access glyphs that are not
+    mapped to codepoints. (#9559, #5647, #609, #5748, #8466)
   - imgui_freetype: Fixed blurryness rendering `AddFontDefaultVector()`. Caused by a
     non-pixel aligned offset caused by `ExtraSizeScale`. (#9348, #9233) [@redpartizan, @RDMCz]
   - (Internal) ImFontLoader: reworked `FontSrcContainsGlyph`, `FontBakedLoadGlyph` signatures
