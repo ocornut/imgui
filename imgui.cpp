@@ -2074,6 +2074,31 @@ void ImGuiIO::AddFocusEvent(bool focused)
     g.InputEventsQueue.push_back(e);
 }
 
+// Queue a pinch status update.  Represent the pinch event as a wheel event, using MouseWheel.Wheel(X|Y) for the pinch x|y amounts.  Pass the pinch centroid into PosOther.
+void ImGuiIO::AddPinchUpdateEvent(float scale, float span_x, float span_y, float focus_x, float focus_y)
+{
+    IM_ASSERT(Ctx != NULL);
+    ImGuiContext& g = *Ctx;
+
+    if (!AppAcceptingEvents || (scale == 1.0f))
+        return;
+    ImGuiInputEvent e;
+    e.Type = ImGuiInputEventType_MouseWheel;
+    e.Source = ImGuiInputSource_Mouse;
+    e.EventId = g.InputEventsNextEventId++;
+    float norm = ImSqrt(ImPow(span_x,2) + ImPow(span_y,2));
+    e.MouseWheel.WheelX = (1-scale)*100*span_x/norm;
+    e.MouseWheel.WheelY = (1-scale)*100*span_y/norm;
+    e.MouseWheel.MouseSource = g.InputEventsNextMouseSource;
+    g.InputEventsQueue.push_back(e);
+
+    ImVec2 finger_pos_middle(focus_x, focus_y);
+    g.IO.PosOther = finger_pos_middle;
+}
+
+
+
+
 ImGuiPlatformIO::ImGuiPlatformIO()
 {
     // Most fields are initialized with zero
