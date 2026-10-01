@@ -53,6 +53,9 @@ Breaking Changes:
   - DirectX12: Removed support for legacy `ImGui_ImplDX12_Init()` signature, which was
     obsoleted in 1.91.6 (December 2014), because it needed to forcefully disable support
     for `ImGuiBackendFlags_RendererHasTextures`. Use the new signature! (#9487)
+  - OpenGL3: Does not attempt to read `GL_CLIP_ORIGIN` by default as the detection is
+    sub-optimal and not reliable on some setup. Use `ImGui_ImplOpenGL3_SetClipOrigin(0)`
+    to  enable auto-detection, or e.g. `ImGui_ImplOpenGL3_SetClipOrigin(GL_UPPER_LEFT)`.
 
 Other Changes:
 
@@ -148,8 +151,11 @@ Other Changes:
     callback to request using the sampler associated already associated to a texture. (#9378)
   - OpenGL2, OpenGL3: fixed `DrawCallback_ResetRenderState` handler not reseting all states
     in the glTexParameter() path. (#9378)
-  - OpenGL3: avoid querying `glGetIntegerv(GL_CLIP_ORIGIN)` again when using `DrawCallback_ResetRenderState`,
-    at it appear to stall some drivers. (#2186, #3998, #3146, #3143, #8640)
+  - OpenGL3: added `ImGui_ImplOpenGL3_SetClipOrigin()` to specify origin between
+    `GL_LOWER_LEFT` (new default), `GL_UPPER_LEFT` and `0` (autodetect, old default).
+  - OpenGL3: avoid querying `glGetIntegerv(GL_CLIP_ORIGIN)` multiple times when using
+    when using default and using `DrawCallback_ResetRenderState`, at it appear to stall
+    some drivers. (#2186, #3998, #3146, #3143, #8640)
   - SDL2: fixed querying framebuffer scale/density when using Metal without
     going through a SDL_Renderer. (#5592) [@lailoken]
   - SDLRenderer3: restore any temporarily modified texture scale modes at the of `RenderDrawData()`. (#9378)

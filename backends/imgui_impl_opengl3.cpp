@@ -24,7 +24,9 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2026-10-01: OpenGL: Avoid querying glGetIntegerv(GL_CLIP_ORIGIN) again when using DrawCallback_ResetRenderState. (#2186, #3998, #3146, #3143, #8640)
+//  2026-10-01: OpenGL: Added ImGui_ImplOpenGL3_SetClipOrigin() to specify clip origins (GL_LOWER_LEFT/GL_UPPER_LEFT, or use 0 to autodetect). (#2186, #3998, #3146, #3143, #8640)
+//                      (Breaking): we now default to GL_LOWER_LEFT instead of 0=autodetect. Because 1) detection is not reliable and 2) is slow.
+//  2026-10-01: OpenGL: Avoid querying glGetIntegerv(GL_CLIP_ORIGIN) multiple times when using DrawCallback_ResetRenderState. (#2186, #3998, #3146, #3143, #8640)
 //  2026-09-17: OpenGL: Added support for platform_io.DrawCallback_SetSamplerFromTex. (#9378)
 //  2026-09-07: OpenGL: Round framebuffer dimensions to the nearest integer instead of truncating them. (#9538, 9515, #8628)
 //  2026-07-15: OpenGL: Backup and restore GL_UNPACK_ROW_LENGTH and GL_UNPACK_ALIGNMENT in UpdateTexture() to avoid corrupting caller GL state. (#8802, #9473)
@@ -260,7 +262,8 @@ struct ImGui_ImplOpenGL3_Data
     bool            HasPolygonMode;
     bool            HasBindSampler;
     bool            HasClipOrigin;
-    bool            ClipOriginLowerLeft;
+    GLenum          ClipOriginRequest;      // Default = GL_LOWER_LEFT. Change using ImGui_ImplOpenGL3_SetClipOrigin().
+    GLenum          ClipOriginCurrent;
     bool            UseBufferSubData;
 #ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_BIND_SAMPLER
     GLuint          TexSamplers[2];         // Used if HasBindSimpler. (0=linear, 1=nearest)
@@ -370,7 +373,7 @@ static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, ImGui_Impl
     float R = draw_data->DisplayPos.x + draw_data->DisplaySize.x;
     float T = draw_data->DisplayPos.y;
     float B = draw_data->DisplayPos.y + draw_data->DisplaySize.y;
-    if (!bd->ClipOriginLowerLeft) { float tmp = T; T = B; B = tmp; } // Swap top and bottom if origin is upper left
+    if (bd->ClipOriginCurrent == GL_UPPER_LEFT) { float tmp = T; T = B; B = tmp; } // Swap top and bottom
     const float ortho_projection[4][4] =
     {
         { 2.0f/(R-L),   0.0f,         0.0f,   0.0f },
@@ -452,6 +455,14 @@ static void ImGui_ImplOpenGL3_DrawCallback_SetSamplerFromTex(const ImDrawList*, 
     render_state->UseTexParameterFilter = false;
 }
 
+// Default is GL_LOWER_LEFT since 2026/10/01. Used to be auto.
+void    ImGui_ImplOpenGL3_SetClipOrigin(unsigned int clip_origin)
+{
+    IM_ASSERT(clip_origin == 0 || clip_origin == GL_UPPER_LEFT || clip_origin == GL_LOWER_LEFT);
+    ImGui_ImplOpenGL3_Data* bd = ImGui_ImplOpenGL3_GetBackendData();
+    bd->ClipOriginRequest = clip_origin;
+}
+
 // OpenGL3 Render function.
 // Note that this implementation is little overcomplicated because we are saving/setting up/restoring every OpenGL state explicitly.
 // This is in order to be able to run within an OpenGL engine that doesn't do so.
@@ -514,14 +525,15 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
 #endif
 
     // Support for GL 4.5 rarely used glClipControl(GL_UPPER_LEFT)
-    bd->ClipOriginLowerLeft = true;
-#if defined(GL_CLIP_ORIGIN)
-    if (bd->HasClipOrigin)
+    bd->ClipOriginCurrent = bd->ClipOriginRequest;
+    if (bd->ClipOriginCurrent == 0)
     {
-        GLenum current_clip_origin = 0; glGetIntegerv(GL_CLIP_ORIGIN, (GLint*)&current_clip_origin);
-        bd->ClipOriginLowerLeft = (current_clip_origin != GL_UPPER_LEFT);
-    }
+        bd->ClipOriginCurrent = GL_LOWER_LEFT;
+#if defined(GL_CLIP_ORIGIN)
+        if (bd->HasClipOrigin)
+            glGetIntegerv(GL_CLIP_ORIGIN, (GLint*)&bd->ClipOriginCurrent);
 #endif
+    }
 
     // Setup desired GL state
     // Recreate the VAO every time (this is to easily allow multiple GL contexts to be rendered to. VAO are not shared among GL contexts)
@@ -1149,6 +1161,7 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
             bd->HasClipOrigin = true;
     }
 #endif
+    bd->ClipOriginCurrent = bd->ClipOriginRequest = GL_LOWER_LEFT;
 
     return true;
 }
