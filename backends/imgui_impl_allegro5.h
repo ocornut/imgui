@@ -24,9 +24,12 @@
 #include "imgui.h"      // IMGUI_IMPL_API
 #ifndef IMGUI_DISABLE
 
+#ifndef IMGUI_CXX_MODULE
 struct ALLEGRO_DISPLAY;
 union ALLEGRO_EVENT;
+#endif
 
+IMGUI_EXPORT_BEGIN
 // Follow "Getting Started" link and check examples/ folder to learn about using backends!
 IMGUI_IMPL_API bool     ImGui_ImplAllegro5_Init(ALLEGRO_DISPLAY* display);
 IMGUI_IMPL_API void     ImGui_ImplAllegro5_Shutdown();
@@ -41,5 +44,6 @@ IMGUI_IMPL_API void     ImGui_ImplAllegro5_InvalidateDeviceObjects();
 
 // (Advanced) Use e.g. if you need to precisely control the timing of texture updates (e.g. for staged rendering), by setting ImDrawData::Textures = nullptr to handle this manually.
 IMGUI_IMPL_API void     ImGui_ImplAllegro5_UpdateTexture(ImTextureData* tex);
+IMGUI_EXPORT_END
 
 #endif // #ifndef IMGUI_DISABLE

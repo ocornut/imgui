@@ -20,11 +20,13 @@
 #ifndef IMGUI_DISABLE
 #include "imgui_impl_qnx.h"
 
+#ifndef IMGUI_CXX_MODULE
 #include <float.h>
 #include <stdint.h>
 #include <string.h>
 #include <sys/keycodes.h>
 #include <time.h>
+#endif
 
 static unsigned int ImGui_ImplQNX_KeySymToUnicode(unsigned int keysym);
 

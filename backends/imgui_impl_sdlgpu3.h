@@ -25,8 +25,11 @@
 #pragma once
 #include "imgui.h"      // IMGUI_IMPL_API
 #ifndef IMGUI_DISABLE
+#ifndef IMGUI_CXX_MODULE
 #include <SDL3/SDL_gpu.h>
+#endif
 
+IMGUI_EXPORT_BEGIN
 // Initialization data, for ImGui_ImplSDLGPU_Init()
 // - Remember to set ColorTargetFormat to the correct format. If you're rendering to the swapchain, call SDL_GetGPUSwapchainTextureFormat() to query the right value
 struct ImGui_ImplSDLGPU3_InitInfo
@@ -60,5 +63,6 @@ struct ImGui_ImplSDLGPU3_RenderState
     SDL_GPUDevice*      Device;
 };
 IMGUI_IMPL_API ImGui_ImplSDLGPU3_RenderState* ImGui_ImplSDLGPU3_GetRenderState();
+IMGUI_EXPORT_END
 
 #endif // #ifndef IMGUI_DISABLE

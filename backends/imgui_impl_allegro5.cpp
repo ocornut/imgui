@@ -66,6 +66,7 @@
 #include "imgui.h"
 #ifndef IMGUI_DISABLE
 #include "imgui_impl_allegro5.h"
+#ifndef IMGUI_CXX_MODULE
 #include <stdint.h>     // uint64_t
 #include <cstring>      // memcpy
 
@@ -74,6 +75,7 @@
 #include <allegro5/allegro_primitives.h>
 #ifdef _WIN32
 #include <allegro5/allegro_windows.h>
+#endif
 #endif
 #define ALLEGRO_HAS_CLIPBOARD           ((ALLEGRO_VERSION_INT & ~ALLEGRO_UNSTABLE_BIT) >= ((5 << 24) | (1 << 16) | (12 << 8))) // Clipboard only supported from Allegro 5.1.12
 #define ALLEGRO_HAS_DRAW_INDEXED_PRIM   ((ALLEGRO_VERSION_INT & ~ALLEGRO_UNSTABLE_BIT) >= ((5 << 24) | (2 << 16) | ( 5 << 8))) // DX9 implementation of al_draw_indexed_prim() got fixed in Allegro 5.2.5

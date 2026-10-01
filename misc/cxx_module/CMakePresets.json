@@ -1,0 +1,38 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "clang",
+      "displayName": "Clang + Ninja + import std",
+      "inherits": "base",
+      "cacheVariables": { "CMAKE_CXX_COMPILER": "clang++" }
+    }
+  ],
+  "buildPresets": [
+    { "name": "clang", "configurePreset": "clang" }
+  ],
+  "testPresets": [
+    { "name": "base", "hidden": true, "output": { "outputOnFailure": true }, "execution": { "noTestsAction": "error" } },
+    { "name": "clang", "inherits": "base", "configurePreset": "clang" }
+  ],
+  "workflowPresets": [
+    {
+      "name": "clang",
+      "steps": [
+        { "type": "configure", "name": "clang" },
+        { "type": "build", "name": "clang" },
+        { "type": "test", "name": "clang" }
+      ]
+    }
+  ]
+}

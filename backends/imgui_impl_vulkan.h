@@ -64,6 +64,7 @@
 #endif
 
 // Vulkan includes
+#ifndef IMGUI_CXX_MODULE
 #ifdef IMGUI_IMPL_VULKAN_USE_VOLK
 #ifdef IMGUI_IMPL_VULKAN_VOLK_FILENAME
 #include IMGUI_IMPL_VULKAN_VOLK_FILENAME
@@ -73,6 +74,7 @@
 #else
 #include <vulkan/vulkan.h>
 #endif
+#endif
 #if defined(VK_VERSION_1_3) || defined(VK_KHR_dynamic_rendering)
 #define IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
 #endif
@@ -81,6 +83,7 @@
 #define IMGUI_IMPL_VULKAN_MINIMUM_SAMPLED_IMAGE_POOL_SIZE   (8)     // Minimum per atlas
 #define IMGUI_IMPL_VULKAN_MINIMUM_SAMPLER_POOL_SIZE         (2)     // Minimum for linear + nearest
 
+IMGUI_EXPORT_BEGIN
 // Specify settings to create pipeline and swapchain
 struct ImGui_ImplVulkan_PipelineInfo
 {
@@ -272,6 +275,8 @@ struct ImGui_ImplVulkanH_Window
         AttachmentDesc.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     }
 };
+
+IMGUI_EXPORT_END
 
 #if defined(__clang__)
 #pragma clang diagnostic pop

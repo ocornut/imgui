@@ -28,6 +28,7 @@
 #include "imgui.h"      // IMGUI_IMPL_API
 #ifndef IMGUI_DISABLE
 
+IMGUI_EXPORT_BEGIN
 // Follow "Getting Started" link and check examples/ folder to learn about using backends!
 IMGUI_IMPL_API bool     ImGui_ImplOpenGL2_Init();
 IMGUI_IMPL_API void     ImGui_ImplOpenGL2_Shutdown();
@@ -40,5 +41,6 @@ IMGUI_IMPL_API void     ImGui_ImplOpenGL2_DestroyDeviceObjects();
 
 // (Advanced) Use e.g. if you need to precisely control the timing of texture updates (e.g. for staged rendering), by setting ImDrawData::Textures = nullptr to handle this manually.
 IMGUI_IMPL_API void     ImGui_ImplOpenGL2_UpdateTexture(ImTextureData* tex);
+IMGUI_EXPORT_END
 
 #endif // #ifndef IMGUI_DISABLE

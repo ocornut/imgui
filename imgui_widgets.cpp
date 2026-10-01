@@ -45,7 +45,9 @@ Index of this file:
 #include "imgui_internal.h"
 
 // System includes
+#ifndef IMGUI_CXX_MODULE
 #include <stdint.h>     // intptr_t
+#endif
 
 //-------------------------------------------------------------------------
 // Warnings

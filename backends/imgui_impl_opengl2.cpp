@@ -56,7 +56,9 @@
 #include "imgui.h"
 #ifndef IMGUI_DISABLE
 #include "imgui_impl_opengl2.h"
+#ifndef IMGUI_CXX_MODULE
 #include <stdint.h>     // intptr_t
+#endif
 
 // Clang/GCC warnings with -Weverything
 #if defined(__clang__)
@@ -66,6 +68,7 @@
 #endif
 
 // Include OpenGL header (without an OpenGL loader) requires a bit of fiddling
+#ifndef IMGUI_CXX_MODULE
 #if defined(_WIN32) && !defined(APIENTRY)
 #define APIENTRY __stdcall                  // It is customary to use APIENTRY for OpenGL function pointer declarations on all platforms.  Additionally, the Windows OpenGL header needs APIENTRY.
 #endif
@@ -78,11 +81,14 @@
 #else
 #include <GL/gl.h>
 #endif
+#endif
 
 // [Debugging]
 //#define IMGUI_IMPL_OPENGL_DEBUG
 #ifdef IMGUI_IMPL_OPENGL_DEBUG
+#ifndef IMGUI_CXX_MODULE
 #include <stdio.h>
+#endif
 #define GL_CALL(_CALL)      do { _CALL; GLenum gl_err = glGetError(); if (gl_err != 0) fprintf(stderr, "GL error 0x%x returned from '%s'.\n", gl_err, #_CALL); } while (0)  // Call with error check
 #else
 #define GL_CALL(_CALL)      _CALL   // Call without error check

@@ -50,22 +50,26 @@ Index of this file:
 // [SECTION] Header mess
 //-----------------------------------------------------------------------------
 
-#ifndef IMGUI_VERSION
 #include "imgui.h"
-#endif
 
+#ifndef IMGUI_CXX_MODULE
 #include <stdio.h>      // FILE*, sscanf
 #include <stdlib.h>     // NULL, malloc, free, qsort, atoi, atof
 #include <math.h>       // sqrtf, fabsf, fmodf, powf, floorf, ceilf, cosf, sinf
 #include <limits.h>     // INT_MIN, INT_MAX
+#endif
 
 // Enable SSE intrinsics if available
 #if (defined __SSE__ || defined __x86_64__ || defined _M_X64 || (defined(_M_IX86_FP) && (_M_IX86_FP >= 1))) && !defined(IMGUI_DISABLE_SSE) && !defined(_M_ARM64) && !defined(_M_ARM64EC)
 #define IMGUI_ENABLE_SSE
+#ifndef IMGUI_CXX_MODULE
 #include <immintrin.h>
+#endif
 #if (defined __AVX__ || defined __SSE4_2__)
 #define IMGUI_ENABLE_SSE4_2
+#ifndef IMGUI_CXX_MODULE
 #include <nmmintrin.h>
+#endif
 #endif
 #endif
 // Emscripten has partial SSE 4.2 support where _mm_crc32_u32 is not available. See https://emscripten.org/docs/porting/simd.html#id11 and #8213

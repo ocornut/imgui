@@ -27,13 +27,6 @@
 // EVERYTHING ELSE should be asked in 'Issues'! We are building a database of cross-linked knowledge there.
 // Since 1.92, we encourage font loading questions to also be posted in 'Issues'.
 
-// Library Version
-// (Integer encoded as XYYZZ for use in #if preprocessor conditionals, e.g. '#if IMGUI_VERSION_NUM >= 12345')
-#define IMGUI_VERSION       "1.93.0 WIP"
-#define IMGUI_VERSION_NUM   19297
-#define IMGUI_HAS_TABLE             // Added BeginTable() - from IMGUI_VERSION_NUM >= 18000
-#define IMGUI_HAS_TEXTURES          // Added ImGuiBackendFlags_RendererHasTextures - from IMGUI_VERSION_NUM >= 19198
-
 /*
 
 Index of this file:
@@ -54,88 +47,29 @@ Index of this file:
 // [SECTION] Font API (ImFontConfig, ImFontGlyph, ImFontGlyphRangesBuilder, ImFontAtlasFlags, ImFontAtlas, ImFontBaked, ImFont)
 // [SECTION] Viewports (ImGuiViewportFlags, ImGuiViewport)
 // [SECTION] ImGuiPlatformIO + other Platform Dependent Interfaces (ImGuiPlatformImeData)
+// [SECTION] Constexpr alternatives to macros
 // [SECTION] Obsolete functions and types
 
 */
 
 #pragma once
 
-// Configuration file with compile-time options
-// (edit imconfig.h or '#define IMGUI_USER_CONFIG "myfilename.h" from your build system)
-#ifdef IMGUI_USER_CONFIG
-#include IMGUI_USER_CONFIG
-#endif
-#include "imconfig.h"
+// Version, configuration file with compile-time options (imconfig.h) and macros
+#include "imgui_macros.h"
 
-#ifndef IMGUI_DISABLE
+// (C++20 modules importing 'imgui', e.g. backends/imgui_impl_*.cppm, get the declarations below from 'import imgui;')
+#if !defined(IMGUI_DISABLE) && !defined(IMGUI_CXX_MODULE_IMPORTED)
 
 //-----------------------------------------------------------------------------
 // [SECTION] Header mess
 //-----------------------------------------------------------------------------
 
 // Includes
+#ifndef IMGUI_CXX_MODULE
 #include <float.h>                  // FLT_MIN, FLT_MAX
 #include <stdarg.h>                 // va_list, va_start, va_end
 #include <stddef.h>                 // ptrdiff_t, NULL
 #include <string.h>                 // memset, memmove, memcpy, strlen, strchr, strcpy, strcmp
-
-// Define attributes of all API symbols declarations (e.g. for DLL under Windows)
-// IMGUI_API is used for core imgui functions, IMGUI_IMPL_API is used for the default backends files (imgui_impl_xxx.h)
-// Using dear imgui via a shared library is not recommended: we don't guarantee backward nor forward ABI compatibility + this is a call-heavy library and function call overhead adds up.
-#ifndef IMGUI_API
-#define IMGUI_API
-#endif
-#ifndef IMGUI_IMPL_API
-#define IMGUI_IMPL_API              IMGUI_API
-#endif
-
-// Helper Macros
-// (note: compiling with NDEBUG will usually strip out assert() to nothing, which is NOT recommended because we use asserts to notify of programmer mistakes.)
-#ifndef IM_ASSERT
-#include <assert.h>
-#define IM_ASSERT(_EXPR)            assert(_EXPR)                               // You can override the default assert handler by editing imconfig.h
-#endif
-#define IM_COUNTOF(_ARR)            ((int)(sizeof(_ARR) / sizeof(*(_ARR))))     // Size of a static C-style array. Don't use on pointers!
-#define IM_UNUSED(_VAR)             ((void)(_VAR))                              // Used to silence "unused variable warnings". Often useful as asserts may be stripped out from final builds.
-#define IM_STRINGIFY_HELPER(_EXPR)  #_EXPR
-#define IM_STRINGIFY(_EXPR)         IM_STRINGIFY_HELPER(_EXPR)                  // Preprocessor idiom to stringify e.g. an integer or a macro.
-
-// Check that version and structures layouts are matching between compiled imgui code and caller. Read comments above DebugCheckVersionAndDataLayout() for details.
-#define IMGUI_CHECKVERSION()        ImGui::DebugCheckVersionAndDataLayout(IMGUI_VERSION, sizeof(ImGuiIO), sizeof(ImGuiStyle), sizeof(ImVec2), sizeof(ImVec4), sizeof(ImDrawVert), sizeof(ImDrawIdx))
-
-// Helper Macros - IM_FMTARGS, IM_FMTLIST: Apply printf-style warnings to our formatting functions.
-// (MSVC provides an equivalent mechanism via SAL Annotations but it requires the macros in a different
-//  location. e.g. #include <sal.h> + void myprintf(_Printf_format_string_ const char* format, ...),
-//  and only works when using Code Analysis, rather than just normal compiling).
-// (see https://github.com/ocornut/imgui/issues/8871 for a patch to enable this for MSVC's Code Analysis)
-#if !defined(IMGUI_USE_STB_SPRINTF) && defined(__MINGW32__) && !defined(__clang__)
-#define IM_FMTARGS(FMT)             __attribute__((format(gnu_printf, FMT, FMT+1)))
-#define IM_FMTLIST(FMT)             __attribute__((format(gnu_printf, FMT, 0)))
-#elif !defined(IMGUI_USE_STB_SPRINTF) && (defined(__clang__) || defined(__GNUC__))
-#define IM_FMTARGS(FMT)             __attribute__((format(printf, FMT, FMT+1)))
-#define IM_FMTLIST(FMT)             __attribute__((format(printf, FMT, 0)))
-#else
-#define IM_FMTARGS(FMT)
-#define IM_FMTLIST(FMT)
-#endif
-
-// Disable some of MSVC most aggressive Debug runtime checks in function header/footer (used in some simple/low-level functions)
-#if defined(_MSC_VER) && !defined(__clang__)  && !defined(__INTEL_COMPILER) && !defined(IMGUI_DEBUG_PARANOID)
-#define IM_MSVC_RUNTIME_CHECKS_OFF      __pragma(runtime_checks("",off))     __pragma(check_stack(off)) __pragma(strict_gs_check(push,off))
-#define IM_MSVC_RUNTIME_CHECKS_RESTORE  __pragma(runtime_checks("",restore)) __pragma(check_stack())    __pragma(strict_gs_check(pop))
-#else
-#define IM_MSVC_RUNTIME_CHECKS_OFF
-#define IM_MSVC_RUNTIME_CHECKS_RESTORE
-#endif
-
-// Alternative to using a .natstepfilter file or other scripts in misc/debuggers/ to skip debug-stepping selected trivial functions.
-// If you get a compiler error or warning related to use, please report it to us!
-#if (defined(__clang__) && (__clang_major__ >= 7)) || (defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 8)))
-#define IM_NODEBUGSTEP      [[gnu::artificial]]
-#elif defined(_MSC_VER) && (_MSC_VER >= 1915)
-#define IM_NODEBUGSTEP      __declspec(non_user_code)
-#else
-#define IM_NODEBUGSTEP
 #endif
 
 // Warnings
@@ -161,6 +95,8 @@ Index of this file:
 #pragma GCC diagnostic ignored "-Wfloat-equal"                      // warning: comparing floating-point with '==' or '!=' is unsafe
 #pragma GCC diagnostic ignored "-Wclass-memaccess"                  // [__GNUC__ >= 8] warning: 'memset/memcpy' clearing/writing an object of type 'xxxx' with no trivial copy-assignment; use assignment or value-initialization instead
 #endif
+
+IMGUI_EXPORT_BEGIN
 
 //-----------------------------------------------------------------------------
 // [SECTION] Forward declarations and basic types
@@ -350,13 +286,6 @@ IM_MSVC_RUNTIME_CHECKS_RESTORE
 typedef ImU64 ImTextureID;      // Default: store up to 64-bits (any pointer or integer). A majority of backends are ok with that.
 #endif
 
-// Define this if you need to change the invalid value for your backend.
-// - If your backend is using ImTextureID to store an index/offset and you need 0 to be valid, You can add '#define ImTextureID_Invalid ((ImTextureID)-1)' in your imconfig.h file.
-// - From 2026/03/12 to 2026/03/19 we experimented with changing to default to -1, but I worried it would cause too many issues in third-party code so it was reverted.
-#ifndef ImTextureID_Invalid
-#define ImTextureID_Invalid     ((ImTextureID)0)
-#endif
-
 // ImTextureRef = higher-level identifier for a texture. Store a ImTextureID _or_ a ImTextureData*.
 // The identifier is valid even before the texture has been uploaded to the GPU/graphics system.
 // This is what gets passed to functions such as `ImGui::Image()`, `ImDrawList::AddImage()`.
@@ -390,12 +319,14 @@ struct ImTextureRef
 };
 IM_MSVC_RUNTIME_CHECKS_RESTORE
 
+IMGUI_EXPORT_END
+
 //-----------------------------------------------------------------------------
 // [SECTION] Dear ImGui end-user API functions
 // (Note that ImGui:: being a namespace, you can add extra ImGui:: functions in your own separate file. Please don't modify imgui source files!)
 //-----------------------------------------------------------------------------
 
-namespace ImGui
+IMGUI_EXPORT namespace ImGui
 {
     // Context creation and access
     // - Each context create its own ImFontAtlas by default. You may instance one yourself and pass it to CreateContext() to share a font atlas between contexts.
@@ -1172,6 +1103,8 @@ namespace ImGui
 
 } // namespace ImGui
 
+IMGUI_EXPORT_BEGIN
+
 //-----------------------------------------------------------------------------
 // [SECTION] Flags & Enumerations
 //-----------------------------------------------------------------------------
@@ -1543,10 +1476,6 @@ enum ImGuiDragDropFlags_
     //ImGuiDragDropFlags_SourceAutoExpirePayload = ImGuiDragDropFlags_PayloadAutoExpire, // Renamed in 1.90.9
 #endif
 };
-
-// Standard Drag and Drop payload types. You can define you own payload types using short strings. Types starting with '_' are defined by Dear ImGui.
-#define IMGUI_PAYLOAD_TYPE_COLOR_3F     "_COL3F"    // float[3]: Standard type for colors, without alpha. User code may use this type.
-#define IMGUI_PAYLOAD_TYPE_COLOR_4F     "_COL4F"    // float[4]: Standard type for colors. User code may use this type.
 
 // A primary data type
 enum ImGuiDataType_
@@ -2217,16 +2146,6 @@ struct ImGuiTableColumnSortSpecs
 //-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
-// Debug Logging into ShowDebugLogWindow(), tty and more.
-//-----------------------------------------------------------------------------
-
-#ifndef IMGUI_DISABLE_DEBUG_TOOLS
-#define IMGUI_DEBUG_LOG(...)        ImGui::DebugLog(__VA_ARGS__)
-#else
-#define IMGUI_DEBUG_LOG(...)        ((void)0)
-#endif
-
-//-----------------------------------------------------------------------------
 // IM_MALLOC(), IM_FREE(), IM_NEW(), IM_PLACEMENT_NEW(), IM_DELETE()
 // We call C++ constructor on own allocated memory via the placement "new(ptr) Type()" syntax.
 // Defining a custom placement new() with a custom parameter allows us to bypass including <new> which on some platforms complains when user has disabled exceptions.
@@ -2235,10 +2154,6 @@ struct ImGuiTableColumnSortSpecs
 struct ImNewWrapper {};
 inline void* operator new(size_t, ImNewWrapper, void* ptr) { return ptr; }
 inline void  operator delete(void*, ImNewWrapper, void*)   {} // This is only required so we can use the symmetrical new()
-#define IM_ALLOC(_SIZE)                     ImGui::MemAlloc(_SIZE)
-#define IM_FREE(_PTR)                       ImGui::MemFree(_PTR)
-#define IM_PLACEMENT_NEW(_PTR)              new(ImNewWrapper(), _PTR)
-#define IM_NEW(_TYPE)                       new(ImNewWrapper(), ImGui::MemAlloc(sizeof(_TYPE))) _TYPE
 template<typename T> void IM_DELETE(T* p)   { if (p) { p->~T(); ImGui::MemFree(p); } }
 
 //-----------------------------------------------------------------------------
@@ -2768,14 +2683,6 @@ struct ImGuiPayload
 // [SECTION] Helpers (ImGuiOnceUponAFrame, ImGuiTextFilter, ImGuiTextBuffer, ImGuiStorage, ImGuiListClipper, Math Operators, ImColor)
 //-----------------------------------------------------------------------------
 
-// Helper: Unicode defines
-#define IM_UNICODE_CODEPOINT_INVALID 0xFFFD     // Invalid Unicode code point (standard value).
-#ifdef IMGUI_USE_WCHAR32
-#define IM_UNICODE_CODEPOINT_MAX     0x10FFFF   // Maximum Unicode code point supported by this build.
-#else
-#define IM_UNICODE_CODEPOINT_MAX     0xFFFF     // Maximum Unicode code point supported by this build.
-#endif
-
 // Helper: Execute a block of code at maximum once a frame. Convenient if you want to quickly create a UI within deep-nested code that runs multiple times every frame.
 // Usage: static ImGuiOnceUponAFrame oaf; if (oaf) ImGui::Text("This will be called only once per frame");
 struct ImGuiOnceUponAFrame
@@ -2996,29 +2903,6 @@ IM_NODEBUGSTEP inline bool    operator!=(const ImVec4& lhs, const ImVec4& rhs) {
 IM_MSVC_RUNTIME_CHECKS_RESTORE
 #endif
 
-// Helpers macros to generate 32-bit encoded colors
-// - User can declare their own format by #defining the 5 _SHIFT/_MASK macros in their imconfig file.
-// - Any setting other than the default will need custom backend support. The only standard backend that supports anything else than the default is DirectX9.
-#ifndef IM_COL32_R_SHIFT
-#ifdef IMGUI_USE_BGRA_PACKED_COLOR
-#define IM_COL32_R_SHIFT    16
-#define IM_COL32_G_SHIFT    8
-#define IM_COL32_B_SHIFT    0
-#define IM_COL32_A_SHIFT    24
-#define IM_COL32_A_MASK     0xFF000000
-#else
-#define IM_COL32_R_SHIFT    0
-#define IM_COL32_G_SHIFT    8
-#define IM_COL32_B_SHIFT    16
-#define IM_COL32_A_SHIFT    24
-#define IM_COL32_A_MASK     0xFF000000
-#endif
-#endif
-#define IM_COL32(R,G,B,A)    (((ImU32)(A)<<IM_COL32_A_SHIFT) | ((ImU32)(B)<<IM_COL32_B_SHIFT) | ((ImU32)(G)<<IM_COL32_G_SHIFT) | ((ImU32)(R)<<IM_COL32_R_SHIFT))
-#define IM_COL32_WHITE       IM_COL32(255,255,255,255)  // Opaque white = 0xFFFFFFFF
-#define IM_COL32_BLACK       IM_COL32(0,0,0,255)        // Opaque black
-#define IM_COL32_BLACK_TRANS IM_COL32(0,0,0,0)          // Transparent black = 0x00000000
-
 // Helper: ImColor() implicitly converts colors to either ImU32 (packed 4x1 byte) or ImVec4 (4x1 float)
 // Prefer using IM_COL32() macros if you want a guaranteed compile-time ImU32 for usage with ImDrawList API.
 // **Avoid storing ImColor! Store either u32 of ImVec4. This is not a full-featured color class. MAY OBSOLETE.
@@ -3201,11 +3085,6 @@ struct ImGuiSelectionExternalStorage
 // [SECTION] Drawing API (ImDrawCmd, ImDrawIdx, ImDrawVert, ImDrawChannel, ImDrawListSplitter, ImDrawListFlags, ImDrawList, ImDrawData)
 // Hold a series of drawing commands. The user provides a renderer for ImDrawData which essentially contains an array of ImDrawList.
 //-----------------------------------------------------------------------------
-
-// The maximum line width to bake anti-aliased textures for. Build atlas with ImFontAtlasFlags_NoBakedLines to disable baking.
-#ifndef IM_DRAWLIST_TEX_LINES_WIDTH_MAX
-#define IM_DRAWLIST_TEX_LINES_WIDTH_MAX     (32)
-#endif
 
 // ImDrawIdx: vertex index. [Compile-time configurable type]
 // - To use 16-bit indices + allow large meshes: backend need to set 'io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset' and handle ImDrawCmd::VtxOffset (recommended).
@@ -3706,7 +3585,6 @@ struct ImFontGlyphRangesBuilder
 // An opaque identifier to a rectangle in the atlas. -1 when invalid.
 // The rectangle may move and UV may be invalidated, use GetCustomRect() to retrieve it.
 typedef int ImFontAtlasRectId;
-#define ImFontAtlasRectId_Invalid -1
 
 // Output of ImFontAtlas::GetCustomRect() when using custom rectangles.
 // Those values may not be cached/stored as they are only valid for the current value of atlas->TexRef
@@ -3999,6 +3877,8 @@ struct ImFont
     //inline void               AddRemapChar(ImWchar from_codepoint, ImWchar to_codepoint) { AddRemapCodepoint(from_codepoint, to_codepoint); } // Renamed in 1.93.0 (Sep 2026)
 };
 
+IMGUI_EXPORT_END
+
 // This is provided for consistency (but we don't actually use this)
 inline ImTextureID ImTextureRef::GetTexID() const
 {
@@ -4018,6 +3898,8 @@ inline ImTextureID ImDrawCmd::GetTexID() const
         IM_ASSERT(tex_id != ImTextureID_Invalid && "ImDrawCmd is referring to ImTextureData that wasn't uploaded to graphics system. Backend must call ImTextureData::SetTexID() after handling ImTextureStatus_WantCreate request!");
     return tex_id;
 }
+
+IMGUI_EXPORT_BEGIN
 
 //-----------------------------------------------------------------------------
 // [SECTION] Viewports
@@ -4144,6 +4026,49 @@ struct ImGuiPlatformImeData
     ImGuiPlatformImeData()          { memset((void*)this, 0, sizeof(*this)); }
 };
 
+IMGUI_EXPORT_END
+
+//-----------------------------------------------------------------------------
+// [SECTION] Constexpr alternatives to macros
+// (requires C++17: see IMGUI_HAS_CONSTEXPR in imgui_macros.h. Exported by the C++20 module, which doesn't export macros)
+//-----------------------------------------------------------------------------
+
+#ifdef IMGUI_HAS_CONSTEXPR
+IMGUI_EXPORT_BEGIN
+// Version (= IMGUI_VERSION, IMGUI_VERSION_NUM)
+inline constexpr char      ImGuiVersion[]              = IMGUI_VERSION;
+inline constexpr int       ImGuiVersionNum             = IMGUI_VERSION_NUM;
+
+// Standard Drag and Drop payload types (= IMGUI_PAYLOAD_TYPE_COLOR_3F, IMGUI_PAYLOAD_TYPE_COLOR_4F)
+inline constexpr char      ImGuiPayloadType_Color3F[]  = IMGUI_PAYLOAD_TYPE_COLOR_3F;
+inline constexpr char      ImGuiPayloadType_Color4F[]  = IMGUI_PAYLOAD_TYPE_COLOR_4F;
+
+// Unicode (= IM_UNICODE_CODEPOINT_INVALID, IM_UNICODE_CODEPOINT_MAX)
+inline constexpr ImWchar32 ImUnicodeCodepoint_Invalid  = IM_UNICODE_CODEPOINT_INVALID;
+inline constexpr ImWchar32 ImUnicodeCodepoint_Max      = IM_UNICODE_CODEPOINT_MAX;
+
+// 32-bit encoded colors (= IM_COL32(), IM_COL32_WHITE, IM_COL32_BLACK, IM_COL32_BLACK_TRANS, IM_COL32_X_SHIFT, IM_COL32_A_MASK)
+constexpr ImU32            ImCol32(ImU32 r, ImU32 g, ImU32 b, ImU32 a) { return IM_COL32(r, g, b, a); }
+inline constexpr ImU32     ImCol32_White               = IM_COL32_WHITE;
+inline constexpr ImU32     ImCol32_Black               = IM_COL32_BLACK;
+inline constexpr ImU32     ImCol32_BlackTrans          = IM_COL32_BLACK_TRANS;
+inline constexpr int       ImCol32_RShift              = IM_COL32_R_SHIFT;
+inline constexpr int       ImCol32_GShift              = IM_COL32_G_SHIFT;
+inline constexpr int       ImCol32_BShift              = IM_COL32_B_SHIFT;
+inline constexpr int       ImCol32_AShift              = IM_COL32_A_SHIFT;
+inline constexpr ImU32     ImCol32_AMask               = IM_COL32_A_MASK;
+
+// Size of a static C-style array (= IM_COUNTOF(), but won't compile with pointers)
+template<typename T, size_t N> constexpr int ImCountOf(const T (&arr)[N]) { return IM_COUNTOF(arr); }
+IMGUI_EXPORT_END
+
+// Check that version and structures layouts are matching between compiled imgui code and caller (= IMGUI_CHECKVERSION())
+IMGUI_EXPORT namespace ImGui
+{
+    inline bool         CheckVersion()                              { return IMGUI_CHECKVERSION(); }
+}
+#endif // #ifdef IMGUI_HAS_CONSTEXPR
+
 //-----------------------------------------------------------------------------
 // [SECTION] Obsolete functions and types
 // (Will be removed! Read 'API BREAKING CHANGES' section in imgui.cpp for details)
@@ -4151,7 +4076,7 @@ struct ImGuiPlatformImeData
 //-----------------------------------------------------------------------------
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-namespace ImGui
+IMGUI_EXPORT namespace ImGui
 {
     // OBSOLETED in 1.92.9 (from July 2026)
     IMGUI_API void      SetColorEditOptions(ImGuiColorEditFlags flags);         // set current options for if you want to select a default format, picker type, etc. User will be able to change those settings, unless you pass the _NoOptions flag to your calls.
@@ -4246,14 +4171,14 @@ namespace ImGui
     //static inline void  SetScrollPosHere()                    { SetScrollHere(); }                                                // OBSOLETED in 1.42
 }
 
-#define ImDrawCallback_ResetRenderState     (ImDrawCallback)(-8)    // OBSOLETED in 1.92.8: Use ImGui::GetPlatformIO().DrawCallback_ResetRenderState
-
+IMGUI_EXPORT_BEGIN
 //-- OBSOLETED in 1.92.0: ImFontAtlasCustomRect becomes ImTextureRect
 // - ImFontAtlasCustomRect::X,Y          --> ImTextureRect::x,y
 // - ImFontAtlasCustomRect::Width,Height --> ImTextureRect::w,h
 // - ImFontAtlasCustomRect::GlyphColored --> if you need to write to this, instead you can write to 'font->Glyphs.back()->Colored' after calling AddCustomRectFontGlyph()
 // We could make ImTextureRect an union to use old names, but 1) this would be confusing 2) the fix is easy 3) ImFontAtlasCustomRect was always a rather esoteric api.
 typedef ImFontAtlasRect ImFontAtlasCustomRect;
+IMGUI_EXPORT_END
 /*struct ImFontAtlasCustomRect
 {
     unsigned short  X, Y;           // Output   // Packed position in Atlas
@@ -4294,13 +4219,6 @@ typedef ImFontAtlasRect ImFontAtlasCustomRect;
 
 #endif // #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 
-#define IM_ARRAYSIZE                IM_COUNTOF                  // RENAMED IN 1.92.6: IM_ARRAYSIZE -> IM_COUNTOF
-
-// RENAMED IMGUI_DISABLE_METRICS_WINDOW > IMGUI_DISABLE_DEBUG_TOOLS in 1.88 (from June 2022)
-#ifdef IMGUI_DISABLE_METRICS_WINDOW
-#error IMGUI_DISABLE_METRICS_WINDOW was renamed to IMGUI_DISABLE_DEBUG_TOOLS, please use new name.
-#endif
-
 //-----------------------------------------------------------------------------
 
 #if defined(__clang__)
@@ -4323,4 +4241,4 @@ typedef ImFontAtlasRect ImFontAtlasCustomRect;
 #endif
 #endif
 
-#endif // #ifndef IMGUI_DISABLE
+#endif // #if !defined(IMGUI_DISABLE) && !defined(IMGUI_CXX_MODULE_IMPORTED)

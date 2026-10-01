@@ -40,8 +40,10 @@ Index of this file:
 #include "misc/freetype/imgui_freetype.h"
 #endif
 
+#ifndef IMGUI_CXX_MODULE
 #include <stdio.h>      // vsnprintf, sscanf, printf
 #include <stdint.h>     // intptr_t
+#endif
 
 // Visual Studio warnings
 #ifdef _MSC_VER
@@ -150,6 +152,10 @@ namespace IMGUI_STB_NAMESPACE
 #define STBTT_ifloor(x)     ((int)ImFloor(x))
 #define STBTT_iceil(x)      ((int)ImCeil(x))
 #define STBTT_strlen(x)     ImStrlen(x)
+#define STBTT_cos(x)        cos(x)          // Same as stb_truetype defaults, but avoid it including <math.h>/<string.h> itself (e.g. in C++20 module purview)
+#define STBTT_acos(x)       acos(x)
+#define STBTT_memcpy        memcpy
+#define STBTT_memset        memset
 #define STBTT_STATIC
 #define STB_TRUETYPE_IMPLEMENTATION
 #else

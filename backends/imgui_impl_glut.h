@@ -26,6 +26,7 @@
 #ifndef IMGUI_DISABLE
 #include "imgui.h"      // IMGUI_IMPL_API
 
+IMGUI_EXPORT_BEGIN
 // Follow "Getting Started" link and check examples/ folder to learn about using backends!
 IMGUI_IMPL_API bool     ImGui_ImplGLUT_Init();
 IMGUI_IMPL_API void     ImGui_ImplGLUT_InstallFuncs();
@@ -43,5 +44,6 @@ IMGUI_IMPL_API void     ImGui_ImplGLUT_KeyboardFunc(unsigned char c, int x, int 
 IMGUI_IMPL_API void     ImGui_ImplGLUT_KeyboardUpFunc(unsigned char c, int x, int y);       // ~ CharReleasedFunc
 IMGUI_IMPL_API void     ImGui_ImplGLUT_SpecialFunc(int key, int x, int y);                  // ~ KeyPressedFunc
 IMGUI_IMPL_API void     ImGui_ImplGLUT_SpecialUpFunc(int key, int x, int y);                // ~ KeyReleasedFunc
+IMGUI_EXPORT_END
 
 #endif // #ifndef IMGUI_DISABLE

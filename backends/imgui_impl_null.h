@@ -13,6 +13,7 @@
 #include "imgui.h"      // IMGUI_IMPL_API
 #ifndef IMGUI_DISABLE
 
+IMGUI_EXPORT_BEGIN
 // Follow "Getting Started" link and check examples/ folder to learn about using backends!
 
 // Null = NullPlatform + NullRender
@@ -30,5 +31,6 @@ IMGUI_IMPL_API bool     ImGui_ImplNullRender_Init();
 IMGUI_IMPL_API void     ImGui_ImplNullRender_Shutdown();
 IMGUI_IMPL_API void     ImGui_ImplNullRender_NewFrame();
 IMGUI_IMPL_API void     ImGui_ImplNullRender_RenderDrawData(ImDrawData* draw_data);
+IMGUI_EXPORT_END
 
 #endif // #ifndef IMGUI_DISABLE

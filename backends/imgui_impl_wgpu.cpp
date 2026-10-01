@@ -57,8 +57,10 @@
 
 #ifndef IMGUI_DISABLE
 #include "imgui_impl_wgpu.h"
+#ifndef IMGUI_CXX_MODULE
 #include <limits.h>
 #include <stdio.h>
+#endif
 
 // One of IMGUI_IMPL_WEBGPU_BACKEND_DAWN or IMGUI_IMPL_WEBGPU_BACKEND_WGPU must be provided. See imgui_impl_wgpu.h for more details.
 #if !defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) && !defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) && !defined(IMGUI_IMPL_WEBGPU_BACKEND_WGVK)
@@ -69,7 +71,9 @@
 #endif
 
 // Dear ImGui prototypes from imgui_internal.h
+#ifndef IMGUI_CXX_MODULE
 extern ImGuiID ImHashData(const void* data_p, size_t data_size, ImU32 seed);
+#endif
 #define MEMALIGN(_SIZE,_ALIGN)        (((_SIZE) + ((_ALIGN) - 1)) & ~((_ALIGN) - 1))    // Memory align (copied from IM_ALIGN() macro).
 
 // WebGPU data
@@ -1083,10 +1087,12 @@ void ImGui_ImplWGPU_DebugPrintAdapterInfo(const WGPUAdapter& adapter)
 #if defined(__APPLE__)
 // MacOS specific: is necessary to compile with "-x objective-c++" flags
 // (e.g. using cmake: set_source_files_properties(${IMGUI_DIR}/backends/imgui_impl_wgpu.cpp PROPERTIES COMPILE_FLAGS "-x objective-c++") )
+#ifndef IMGUI_CXX_MODULE
 #include <TargetConditionals.h>
 #if TARGET_OS_OSX
 #include <Cocoa/Cocoa.h>
 #include <QuartzCore/CAMetalLayer.h>
+#endif
 #endif
 #endif
 

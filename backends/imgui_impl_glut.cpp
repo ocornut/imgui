@@ -37,11 +37,13 @@
 #include "imgui.h"
 #ifndef IMGUI_DISABLE
 #include "imgui_impl_glut.h"
+#ifndef IMGUI_CXX_MODULE
 #define GL_SILENCE_DEPRECATION
 #ifdef __APPLE__
 #include <GLUT/glut.h>
 #else
 #include <GL/freeglut.h>
+#endif
 #endif
 
 #ifdef _MSC_VER

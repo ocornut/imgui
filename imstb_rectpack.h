@@ -78,7 +78,7 @@
 #define STBRP_DEF extern
 #endif
 
-#ifdef __cplusplus
+#if defined(__cplusplus) && !defined(IMGUI_CXX_MODULE) // [DEAR IMGUI] extern "C" would attach declarations to the global module
 extern "C" {
 #endif
 
@@ -195,7 +195,7 @@ struct stbrp_context
    stbrp_node extra[2]; // we allocate two extra nodes so optimal user-node-count is 'width' not 'width+2'
 };
 
-#ifdef __cplusplus
+#if defined(__cplusplus) && !defined(IMGUI_CXX_MODULE) // [DEAR IMGUI]
 }
 #endif
 

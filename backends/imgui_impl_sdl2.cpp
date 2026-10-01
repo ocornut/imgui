@@ -118,6 +118,7 @@
 #endif
 
 // SDL
+#ifndef IMGUI_CXX_MODULE
 #include <SDL.h>
 #include <SDL_syswm.h>
 #include <stdio.h>              // for snprintf()
@@ -126,6 +127,7 @@
 #endif
 #ifdef __EMSCRIPTEN__
 #include <emscripten/em_js.h>
+#endif
 #endif
 #undef Status // X11 headers are leaking this.
 
@@ -142,11 +144,13 @@
 #define SDL_HAS_METAL                       0
 #endif
 #define SDL_HAS_OPEN_URL                    SDL_VERSION_ATLEAST(2,0,14)
+#ifndef IMGUI_CXX_MODULE
 #if SDL_HAS_VULKAN
 #include <SDL_vulkan.h>
 #endif
 #if SDL_HAS_METAL
 #include <SDL_metal.h>
+#endif
 #endif
 
 // SDL Data
@@ -803,7 +807,7 @@ static void ImGui_ImplSDL2_CloseGamepads()
     bd->Gamepads.resize(0);
 }
 
-void ImGui_ImplSDL2_SetGamepadMode(ImGui_ImplSDL2_GamepadMode mode, struct _SDL_GameController** manual_gamepads_array, int manual_gamepads_count)
+void ImGui_ImplSDL2_SetGamepadMode(ImGui_ImplSDL2_GamepadMode mode, _SDL_GameController** manual_gamepads_array, int manual_gamepads_count)
 {
     ImGui_ImplSDL2_Data* bd = ImGui_ImplSDL2_GetBackendData();
     ImGui_ImplSDL2_CloseGamepads();

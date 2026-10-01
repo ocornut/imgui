@@ -44,7 +44,9 @@
 #include "imgui.h"
 #ifndef IMGUI_DISABLE
 #include "imgui_impl_sdlrenderer2.h"
+#ifndef IMGUI_CXX_MODULE
 #include <stdint.h>     // intptr_t
+#endif
 
 // Clang warnings with -Weverything
 #if defined(__clang__)
@@ -55,8 +57,10 @@
 #endif
 
 // SDL
+#ifndef IMGUI_CXX_MODULE
 #include <SDL_render.h>
 #include <SDL_version.h>
+#endif
 #if !SDL_VERSION_ATLEAST(2,0,17)
 #error This backend requires SDL 2.0.17+ because of SDL_RenderGeometry() function
 #endif

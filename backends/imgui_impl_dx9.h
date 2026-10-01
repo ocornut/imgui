@@ -19,8 +19,11 @@
 #include "imgui.h"      // IMGUI_IMPL_API
 #ifndef IMGUI_DISABLE
 
+#ifndef IMGUI_CXX_MODULE
 struct IDirect3DDevice9;
+#endif
 
+IMGUI_EXPORT_BEGIN
 // Follow "Getting Started" link and check examples/ folder to learn about using backends!
 IMGUI_IMPL_API bool     ImGui_ImplDX9_Init(IDirect3DDevice9* device);
 IMGUI_IMPL_API void     ImGui_ImplDX9_Shutdown();
@@ -33,5 +36,6 @@ IMGUI_IMPL_API void     ImGui_ImplDX9_InvalidateDeviceObjects();
 
 // (Advanced) Use e.g. if you need to precisely control the timing of texture updates (e.g. for staged rendering), by setting ImDrawData::Textures = nullptr to handle this manually.
 IMGUI_IMPL_API void     ImGui_ImplDX9_UpdateTexture(ImTextureData* tex);
+IMGUI_EXPORT_END
 
 #endif // #ifndef IMGUI_DISABLE

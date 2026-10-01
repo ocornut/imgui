@@ -29,8 +29,11 @@
 #ifndef IMGUI_DISABLE
 #include "imgui.h"      // IMGUI_IMPL_API
 
+#ifndef IMGUI_CXX_MODULE
 struct SDL_Renderer;
+#endif
 
+IMGUI_EXPORT_BEGIN
 // Follow "Getting Started" link and check examples/ folder to learn about using backends!
 IMGUI_IMPL_API bool     ImGui_ImplSDLRenderer2_Init(SDL_Renderer* renderer);
 IMGUI_IMPL_API void     ImGui_ImplSDLRenderer2_Shutdown();
@@ -52,5 +55,6 @@ struct ImGui_ImplSDLRenderer2_RenderState
     SDL_Renderer*       Renderer;
 };
 IMGUI_IMPL_API ImGui_ImplSDLRenderer2_RenderState* ImGui_ImplSDLRenderer2_GetRenderState();
+IMGUI_EXPORT_END
 
 #endif // #ifndef IMGUI_DISABLE
