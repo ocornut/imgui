@@ -192,6 +192,10 @@
 #define IMGUI_IMPL_OPENGL_LOADER_IMGL3W
 #include "imgui_impl_opengl3_loader.h"
 #endif
+#ifndef GL_LOWER_LEFT
+#define GL_LOWER_LEFT 0x8CA1
+#define GL_UPPER_LEFT 0x8CA2
+#endif
 
 // Vertex arrays are not supported on ES2/WebGL1 unless Emscripten which uses an extension
 #ifndef IMGUI_IMPL_OPENGL_ES2
@@ -529,7 +533,7 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     if (bd->ClipOriginCurrent == 0)
     {
         bd->ClipOriginCurrent = GL_LOWER_LEFT;
-#if defined(GL_CLIP_ORIGIN)
+#ifdef GL_CLIP_ORIGIN
         if (bd->HasClipOrigin)
             glGetIntegerv(GL_CLIP_ORIGIN, (GLint*)&bd->ClipOriginCurrent);
 #endif
