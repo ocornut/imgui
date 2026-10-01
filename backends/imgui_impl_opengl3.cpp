@@ -24,6 +24,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-10-01: OpenGL: Avoid querying glGetIntegerv(GL_CLIP_ORIGIN) again when using DrawCallback_ResetRenderState. (#2186, #3998, #3146, #3143, #8640)
 //  2026-09-17: OpenGL: Added support for platform_io.DrawCallback_SetSamplerFromTex. (#9378)
 //  2026-09-07: OpenGL: Round framebuffer dimensions to the nearest integer instead of truncating them. (#9538, 9515, #8628)
 //  2026-07-15: OpenGL: Backup and restore GL_UNPACK_ROW_LENGTH and GL_UNPACK_ALIGNMENT in UpdateTexture() to avoid corrupting caller GL state. (#8802, #9473)
@@ -259,6 +260,7 @@ struct ImGui_ImplOpenGL3_Data
     bool            HasPolygonMode;
     bool            HasBindSampler;
     bool            HasClipOrigin;
+    bool            ClipOriginLowerLeft;
     bool            UseBufferSubData;
 #ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_BIND_SAMPLER
     GLuint          TexSamplers[2];         // Used if HasBindSimpler. (0=linear, 1=nearest)
@@ -361,17 +363,6 @@ static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, ImGui_Impl
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 #endif
 
-    // Support for GL 4.5 rarely used glClipControl(GL_UPPER_LEFT)
-#if defined(GL_CLIP_ORIGIN)
-    bool clip_origin_lower_left = true;
-    if (bd->HasClipOrigin)
-    {
-        GLenum current_clip_origin = 0; glGetIntegerv(GL_CLIP_ORIGIN, (GLint*)&current_clip_origin);
-        if (current_clip_origin == GL_UPPER_LEFT)
-            clip_origin_lower_left = false;
-    }
-#endif
-
     // Setup viewport, orthographic projection matrix
     // Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayPos is (0,0) for single viewport apps.
     GL_CALL(glViewport(0, 0, (GLsizei)fb_width, (GLsizei)fb_height));
@@ -379,9 +370,7 @@ static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, ImGui_Impl
     float R = draw_data->DisplayPos.x + draw_data->DisplaySize.x;
     float T = draw_data->DisplayPos.y;
     float B = draw_data->DisplayPos.y + draw_data->DisplaySize.y;
-#if defined(GL_CLIP_ORIGIN)
-    if (!clip_origin_lower_left) { float tmp = T; T = B; B = tmp; } // Swap top and bottom if origin is upper left
-#endif
+    if (!bd->ClipOriginLowerLeft) { float tmp = T; T = B; B = tmp; } // Swap top and bottom if origin is upper left
     const float ortho_projection[4][4] =
     {
         { 2.0f/(R-L),   0.0f,         0.0f,   0.0f },
@@ -522,6 +511,16 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     GLboolean last_enable_scissor_test = glIsEnabled(GL_SCISSOR_TEST);
 #ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_PRIMITIVE_RESTART
     GLboolean last_enable_primitive_restart = (!bd->GlProfileIsES3 && bd->GlVersion >= 310) ? glIsEnabled(GL_PRIMITIVE_RESTART) : GL_FALSE;
+#endif
+
+    // Support for GL 4.5 rarely used glClipControl(GL_UPPER_LEFT)
+    bd->ClipOriginLowerLeft = true;
+#if defined(GL_CLIP_ORIGIN)
+    if (bd->HasClipOrigin)
+    {
+        GLenum current_clip_origin = 0; glGetIntegerv(GL_CLIP_ORIGIN, (GLint*)&current_clip_origin);
+        bd->ClipOriginLowerLeft = (current_clip_origin != GL_UPPER_LEFT);
+    }
 #endif
 
     // Setup desired GL state

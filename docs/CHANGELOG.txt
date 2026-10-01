@@ -148,6 +148,8 @@ Other Changes:
     callback to request using the sampler associated already associated to a texture. (#9378)
   - OpenGL2, OpenGL3: fixed `DrawCallback_ResetRenderState` handler not reseting all states
     in the glTexParameter() path. (#9378)
+  - OpenGL3: avoid querying `glGetIntegerv(GL_CLIP_ORIGIN)` again when using `DrawCallback_ResetRenderState`,
+    at it appear to stall some drivers. (#2186, #3998, #3146, #3143, #8640)
   - SDL2: fixed querying framebuffer scale/density when using Metal without
     going through a SDL_Renderer. (#5592) [@lailoken]
   - SDLRenderer3: restore any temporarily modified texture scale modes at the of `RenderDrawData()`. (#9378)
