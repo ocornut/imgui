@@ -67,6 +67,12 @@ While the current version doesn't make lots of visible use of the new features a
 facilities, they are among the pillars that will make it easier to create prettier
 contents, both for custom rendering and future versions of the library.
 
+Use `ImDrawFlags_StrokeLegacy` mode to emulate old rendering:
+- Per-primitive:      draw_list->AddLine(..., ..., ImDrawFlags_StrokeLegacy);
+- For a given scope:  draw_list->PushDrawFlag(ImDrawFlags_StrokeLegacy, true); draw_list->AddLine(...); draw_list->PopDrawFlag();
+- Globally:           ImGui::Checkbox("DefaultsToStrokeLegacy", &io.ConfigDebugDrawListDefaultsToStrokeLegacy);  // Map to a checkbox
+- Globally:           io.ConfigDebugDrawListDefaultsToStrokeLegacy = io.KeyShift;                                // Map on Shift
+
 Main work courtesy of @memononen.
 Additional work/reviewing/guidance by @ocornut.
 With legacy bits from @thedmd, @potocpav.
@@ -224,6 +230,12 @@ Other Changes:
   - All functions: new rendering code fixes some inconsistencies between graphics APIs
     (e.g. DirectX vs OpenGL) which are using different diamond exits rules. New code should
     work precisely the same regardless of graphics API. (#3116, #3258, #2441) [@memononen]
+  - Debug: added `io.ConfigDebugDrawListDefaultsToStrokeLegacy` to facilitate comparing old/new
+    behaviors. This is equivalent to calling `PushDrawFlag(ImDrawFlags_StrokeLegacy, true)`
+    on every drawlist.
+    Suggested uses, e.g.
+      - `io.ConfigDebugDrawListDefaultsToStrokeLegacy = io.KeyShift; // Map on holding Shift`
+      - `ImGui::Checkbox("DefaultsToStrokeLegacy", &io.ConfigDebugDrawListDefaultsToStrokeLegacy);`
   - Added `ImDrawFlags_AALineEnds` flag to enable anti-aliased line ends.
     - Most noticeable for thick lines.
     - Also helps fill minor gaps if combining multiple individual lines. For best looking

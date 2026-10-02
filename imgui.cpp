@@ -401,7 +401,11 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
                           - ImDrawList 1.92.9 <> 1.93 Interactive Testbed: https://www.dearimgui.com/docs/drawlist_v193 (<-- you can download this locally)
                           - ImDrawList Wiki Reference:                     https://github.com/ocornut/imgui/wiki/Draw-List
                           - Discussion thread:                             https://github.com/ocornut/imgui/issues/9504
-                          - Use ImDrawFlags_StrokeLegacy mode to emulate old rendering per-primitive or per-scope.
+                       - use ImDrawFlags_StrokeLegacy mode to emulate old rendering:
+                          - Per-primitive:      draw_list->AddLine(..., ..., ImDrawFlags_StrokeLegacy);
+                          - For a given scope:  draw_list->PushDrawFlag(ImDrawFlags_StrokeLegacy, true); draw_list->AddLine(...); draw_list->PopDrawFlag();
+                          - Globally:           ImGui::Checkbox("DefaultsToStrokeLegacy", &io.ConfigDebugDrawListDefaultsToStrokeLegacy);  // Map to a checkbox
+                          - Globally:           io.ConfigDebugDrawListDefaultsToStrokeLegacy = io.KeyShift;                                // Map on Shift
                        - AddLine: removed the (+0.5f,+0.5f) offset that was sneakily added to input coordinates by this function, and led to lots of inconsistencies.
                           - This fixes inconsistencies in the API and matches the PathXXX API.
                           - By default, stroke thickness extends on both side of the given segment. e.g for a "pixel-perfect" looking line with thickness=1.0f, coords should be passed as center of each ends of the line.
@@ -5663,6 +5667,8 @@ static void SetupDrawListSharedData()
         g.DrawListSharedData.InitialDrawFlags |= ImDrawFlags_AALines;
     if (g.Style.AntiAliasedLineEnds)
         g.DrawListSharedData.InitialDrawFlags |= ImDrawFlags_AALineEnds;
+    if (g.IO.ConfigDebugDrawListDefaultsToStrokeLegacy)
+        g.DrawListSharedData.InitialDrawFlags |= ImDrawFlags_StrokeLegacy;
     if (!(g.IO.Fonts->Flags & ImFontAtlasFlags_NoBakedRoundCorners))
         g.DrawListSharedData.InitialDrawFlags |= ImDrawFlags_UseTexForRoundCorners | ImDrawFlags_AllowTexForRoundCorners_;
     if (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasVtxOffset)
