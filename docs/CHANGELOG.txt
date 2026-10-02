@@ -181,6 +181,10 @@ Other Changes:
   - All functions: new rendering code fixes some inconsistencies between graphics APIs
     (e.g. DirectX vs OpenGL) which are using different diamond exits rules. New code should
     work precisely the same regardless of graphics API. (#3116, #3258, #2441) [@memononen]
+  - Debug: added `io.ConfigDebugDrawListDefaultsToStrokeLegacy` to facilitate comparing old/new
+    behaviors. This is equivalent to calling `PushDrawFlag(ImDrawFlags_StrokeLegacy, true)`
+    on every drawlist. Suggested use, after NewFrame():
+      `io.ConfigDebugDrawListDefaultsToStrokeLegacy = io.KeyShift; // Map on holding Shift`
   - Added `ImDrawFlags_AALineEnds` flag to enable anti-aliased line ends.
     - Most noticeable for thick lines.
     - Also helps fill minor gaps if combining multiple individual lines. For best looking

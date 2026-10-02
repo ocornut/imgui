@@ -5816,6 +5816,8 @@ static void SetupDrawListSharedData()
         g.DrawListSharedData.InitialDrawFlags |= ImDrawFlags_AALines;
     if (g.Style.AntiAliasedLineEnds)
         g.DrawListSharedData.InitialDrawFlags |= ImDrawFlags_AALineEnds;
+    if (g.IO.ConfigDebugDrawListDefaultsToStrokeLegacy)
+        g.DrawListSharedData.InitialDrawFlags |= ImDrawFlags_StrokeLegacy;
     if (!(g.IO.Fonts->Flags & ImFontAtlasFlags_NoBakedRoundCorners))
         g.DrawListSharedData.InitialDrawFlags |= ImDrawFlags_UseTexForRoundCorners | ImDrawFlags_AllowTexForRoundCorners_;
     if (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasVtxOffset)

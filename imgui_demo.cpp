@@ -640,6 +640,8 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::SameLine(); HelpMarker("Some calls to Begin()/BeginChild() will return false.\n\nWill cycle through window depths then repeat. Windows should be flickering while running.");
             ImGui::Checkbox("io.ConfigDebugIgnoreFocusLoss", &io.ConfigDebugIgnoreFocusLoss);
             ImGui::SameLine(); HelpMarker("Option to deactivate io.AddFocusEvent(false) handling. May facilitate interactions with a debugger when focus loss leads to clearing inputs data.");
+            ImGui::Checkbox("io.ConfigDebugDrawListDefaultsToStrokeLegacy", &io.ConfigDebugDrawListDefaultsToStrokeLegacy);
+            ImGui::SameLine(); HelpMarker("Option to default all ImDrawList to ImDrawFlags_StrokeLegacy mode, mimicking pre-1.93.0 rendering.");
             ImGui::Checkbox("io.ConfigDebugIniSettings", &io.ConfigDebugIniSettings);
             ImGui::SameLine(); HelpMarker("Option to save .ini data with extra comments (particularly helpful for Docking, but makes saving slower).");
 
@@ -9038,6 +9040,8 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
 #endif
 
             Checkbox("Anti-aliased fill", &style.AntiAliasedFill);
+            Checkbox("Debug: DrawList Defaults to _StrokeLegacy", &ImGui::GetIO().ConfigDebugDrawListDefaultsToStrokeLegacy);
+
             PushItemWidth(GetFontSize() * 8);
             DragFloat("Curve Tessellation Max Error", &style.CurveTessellationMaxError, 0.02f, 0.10f, 10.0f, "%.2f");
             if (style.CurveTessellationMaxError < 0.10f)
