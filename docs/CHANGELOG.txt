@@ -94,6 +94,8 @@ Other Changes:
   - (Internal) ImFontLoader: reworked `FontSrcContainsGlyph`, `FontBakedLoadGlyph` signatures
     to take raw glyph index instead of codepoint. Added `FontSrcGetGlyphIndexFromCodepoint`.
     (#9559, #5647, #9540, #8466, #8465)
+  - Added `IMGUI_DISABLE_STB_TRUETYPE` to completely omit the stb_truetype loader
+    code + stb_truetype.h code. (#9573)
 - ColorEdit:
   - ColorButton, ColorEdit, ColorPicker: cancel-out alpha caused by BeginDisabled() so
     disabled color buttons have the same color as non-disabled oness. (#9511)

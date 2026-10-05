@@ -126,7 +126,7 @@ Index of this file:
 
 // Enable stb_truetype by default unless FreeType is enabled.
 // You can compile with both by defining both IMGUI_ENABLE_FREETYPE and IMGUI_ENABLE_STB_TRUETYPE together.
-#ifndef IMGUI_ENABLE_FREETYPE
+#if !defined(IMGUI_ENABLE_FREETYPE) && !defined(IMGUI_ENABLE_STB_TRUETYPE) && !defined(IMGUI_DISABLE_STB_TRUETYPE)
 #define IMGUI_ENABLE_STB_TRUETYPE
 #endif
 
