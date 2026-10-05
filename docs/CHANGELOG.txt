@@ -76,6 +76,9 @@ Other Changes:
 - Tables:
   - Fixed a bug restoring correct .ini columns order when table use is Sortable
     but had no user changes. (regression from 1.92.9). (#9519, #9108)
+  - Fixed a bug tracking topology changes (insert new columns in the middle)
+    when the table is not _Reorderable: new columns would be ordered incorrectly.
+    (#9570, #9108, #9572) [@lailoken]
 - InpuText:
   - Fixed a crash in some cases when using Home key in a WordWrap+ReadOnly field. (#9561)
 - Selectable:
