@@ -4107,6 +4107,12 @@ static int IMGUI_CDECL TableFixDisplayOrderComparer(const void* lhs, const void*
 // Fix invalid display order data: compact values (0,1,3 -> 0,1,2); preserve relative order (0,3,1 -> 0,2,1); deduplicate (0,4,1,1 -> 0,3,1,2)
 void ImGui::TableFixDisplayOrder(ImGuiTable* table)
 {
+    if ((table->Flags & ImGuiTableFlags_Reorderable) == 0)
+    {
+        for (int n = 0; n < table->ColumnsCount; n++)
+            table->DisplayOrderToIndex[n] = table->Columns[n].DisplayOrder = (ImGuiTableColumnIdx)n;
+        return;
+    }
     ImGuiContext& g = *GImGui;
     g.TempBuffer.reserve((int)(sizeof(ImGuiTableFixDisplayOrderColumnData) * table->ColumnsCount)); // FIXME: Maybe wrap those two lines as a helper.
     ImGuiTableFixDisplayOrderColumnData* fdo_columns = (ImGuiTableFixDisplayOrderColumnData*)(void*)g.TempBuffer.Data;

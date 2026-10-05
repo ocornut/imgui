@@ -403,6 +403,7 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
                           - likewise io.MousePos and GetMousePos() will use OS coordinates.
                             If you query mouse positions to interact with non-imgui coordinates you will need to offset them, e.g. subtract GetWindowViewport()->Pos.
 
+ - 2026/09/30 (1.93.0) - ImFont: renamed `AddRemapChar()` to `AddRemapCodepoint()` (rarely used, marked internal). (#609, #5748)
  - 2026/09/18 (1.93.0) - ImGuiTextFilter: removed `float width` parameter of `Draw(const char* filter, float width)`: prefer using `SetNextItemWidth(float)` which is standard. Kept inline redirection function.
  - 2026/08/03 (1.93.0) - Style: obsoleted `style.CurveTessellationTol (default 1.25)` which was in Pixels² unit in favor of `style.CurveTessellationMaxError` (default 1.12)` which is in Pixels unit.
                          - style.CurveTessellationMaxError == sqrf(style.CurveTessellationTol).
@@ -2559,7 +2560,13 @@ ImGuiID ImHashData(const void* data_p, size_t data_size, ImGuiID seed)
 #else
     while (data + 4 <= data_end)
     {
+#if defined(_DEBUG) || defined(_MSC_VER)
         crc = _mm_crc32_u32(crc, *(ImU32*)data);
+#else
+        ImU32 v;
+        memcpy(&v, data, sizeof(ImU32)); // Avoid aliasing violation (#9557)
+        crc = _mm_crc32_u32(crc, v); 
+#endif
         data += 4;
     }
     while (data < data_end)
@@ -22505,6 +22512,7 @@ void ImGui::ShowFontAtlas(ImFontAtlas* atlas)
     if (TreeNode("Loader", "Loader: \'%s\'", atlas->FontLoaderName ? atlas->FontLoaderName : "NULL"))
     {
         const ImFontLoader* loader_current = atlas->FontLoader;
+        IM_UNUSED(loader_current);
         BeginDisabled(!atlas->RendererHasTextures);
 #ifdef IMGUI_ENABLE_STB_TRUETYPE
         const ImFontLoader* loader_stbtruetype = ImFontAtlasGetFontLoaderForStbTruetype();
@@ -23655,7 +23663,8 @@ static int CalcFontGlyphSrcOverlapMask(ImFontAtlas* atlas, ImFont* font, unsigne
     for (int src_n = 0; src_n < font->Sources.Size; src_n++)
     {
         ImFontConfig* src = font->Sources[src_n];
-        if (!(src->FontLoader ? src->FontLoader : atlas->FontLoader)->FontSrcContainsGlyph(atlas, src, (ImWchar)codepoint))
+        const ImFontLoader* loader = src->FontLoader ? src->FontLoader : atlas->FontLoader;
+        if (loader->FontSrcGetGlyphIndexFromCodepoint(atlas, src, (ImWchar)codepoint) == 0)
             continue;
         mask |= (1 << src_n);
         count++;

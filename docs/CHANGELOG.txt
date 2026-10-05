@@ -47,10 +47,15 @@ Breaking Changes:
   - style.CurveTessellationMaxError == sqrf(style.CurveTessellationTol).
 - ImGuiTextFilter: removed `float width` parameter of `Draw(const char* filter, float width)`:
   prefer using `SetNextItemWidth(float)` which is standard. Kept inline redirection function.
+- Fonts: renamed `AddRemapChar()` to `AddRemapCodepoint()` (rarely used, marked internal).
+  (#609, #5748, #9559)
 - Backends:
   - DirectX12: Removed support for legacy `ImGui_ImplDX12_Init()` signature, which was
     obsoleted in 1.91.6 (December 2014), because it needed to forcefully disable support
     for `ImGuiBackendFlags_RendererHasTextures`. Use the new signature! (#9487)
+  - OpenGL3: Does not attempt to read `GL_CLIP_ORIGIN` by default as the detection is
+    sub-optimal and not reliable on some setup. Use `ImGui_ImplOpenGL3_SetClipOrigin(0)`
+    to  enable auto-detection, or e.g. `ImGui_ImplOpenGL3_SetClipOrigin(GL_UPPER_LEFT)`.
 
 Other Changes:
 
@@ -71,14 +76,26 @@ Other Changes:
 - Tables:
   - Fixed a bug restoring correct .ini columns order when table use is Sortable
     but had no user changes. (regression from 1.92.9). (#9519, #9108)
+  - Fixed a bug tracking topology changes (insert new columns in the middle)
+    when the table is not _Reorderable: new columns would be ordered incorrectly.
+    (#9570, #9108, #9572) [@lailoken]
+- InpuText:
+  - Fixed a crash in some cases when using Home key in a WordWrap+ReadOnly field. (#9561)
 - Selectable:
   - Fixed `ImGuiSelectableFlags_SelectOnNav` triggering during NavInit.
 - Fonts:
   - Reworked `AddFontDefault()` to use `io.DisplayFrameBufferScale` as part of the heuristic
     to select `AddFontDefaultVector()` by default, effectively using ProggyForever instead of
     ProggyClean on most Apple/Retina setups by default.
+  - Added ImFont::AddRemapCodepointToGlyphIndex() allowing to access glyphs that are not
+    mapped to codepoints. (#9559, #5647, #609, #5748, #8466)
   - imgui_freetype: Fixed blurryness rendering `AddFontDefaultVector()`. Caused by a
     non-pixel aligned offset caused by `ExtraSizeScale`. (#9348, #9233) [@redpartizan, @RDMCz]
+  - (Internal) ImFontLoader: reworked `FontSrcContainsGlyph`, `FontBakedLoadGlyph` signatures
+    to take raw glyph index instead of codepoint. Added `FontSrcGetGlyphIndexFromCodepoint`.
+    (#9559, #5647, #9540, #8466, #8465)
+  - Added `IMGUI_DISABLE_STB_TRUETYPE` to completely omit the stb_truetype loader
+    code + stb_truetype.h code. (#9573)
 - ColorEdit:
   - ColorButton, ColorEdit, ColorPicker: cancel-out alpha caused by BeginDisabled() so
     disabled color buttons have the same color as non-disabled oness. (#9511)
@@ -114,6 +131,9 @@ Other Changes:
     trivial functions when stepping into.
   - Tagged various trivial functions using `IM_NODEBUGSTEP`: `ImVec2()`, `ImVec4()` etc.
     and various operators.
+  - Fixed strict aliasing violation in `ImHashData()` affecting Clang 23 + SSE 4.2 + -flto.
+    Could manifest as `ImFontAtlasBakedGetId()` computation omitting font size from
+    the hashed data. (#9557, #9560) [@sthalik]
   - IO: restore default clipboard/ime/shell platform handlers on ClearPlatformHandlers(), fixing
     issues switching backends mid-session to one relying on default. (#9537, #8945, #2769) [@lstalmir]
 - DrawList:
@@ -136,6 +156,11 @@ Other Changes:
     callback to request using the sampler associated already associated to a texture. (#9378)
   - OpenGL2, OpenGL3: fixed `DrawCallback_ResetRenderState` handler not reseting all states
     in the glTexParameter() path. (#9378)
+  - OpenGL3: added `ImGui_ImplOpenGL3_SetClipOrigin()` to specify origin between
+    `GL_LOWER_LEFT` (new default), `GL_UPPER_LEFT` and `0` (autodetect, old default).
+  - OpenGL3: avoid querying `glGetIntegerv(GL_CLIP_ORIGIN)` multiple times when using
+    when using default and using `DrawCallback_ResetRenderState`, at it appear to stall
+    some drivers. (#2186, #3998, #3146, #3143, #8640)
   - SDL2: fixed querying framebuffer scale/density when using Metal without
     going through a SDL_Renderer. (#5592) [@lailoken]
   - SDLRenderer3: restore any temporarily modified texture scale modes at the of `RenderDrawData()`. (#9378)
@@ -152,6 +177,8 @@ Other Changes:
 - Examples:
   - MSVC: disabled /JMC in Visual Studio projects (unnecessary overhead).
   - GLFW/SDL2/SDL3+WebGPU: fixed running with wgpu-native missing `wgpuInstanceWaitAny()`. (#9377)
+  - GLFW+Metal: fixed mistakenly calling `ImGui_ImplGlfw_InitForOpenGL()`, which
+    broke multi-viewport support. (#9564) [@ypujante]
   - SDL2+Metal: create Metal context without using a `SDL_Renderer`.
   - QNX+OpenGL3, QNX+Vulkan: added QNX Screen examples. (#9492) [@mgorchak-blackberry]
   - OSX+OpenGL3: added example_apple_opengl3/ (OSX/Cocoa + OpenGL 3.2 Core profile).

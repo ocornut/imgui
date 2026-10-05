@@ -303,6 +303,7 @@ typedef khronos_uint16_t GLushort;
 #define GL_LINK_STATUS                    0x8B82
 #define GL_INFO_LOG_LENGTH                0x8B84
 #define GL_CURRENT_PROGRAM                0x8B8D
+#define GL_LOWER_LEFT                     0x8CA1
 #define GL_UPPER_LEFT                     0x8CA2
 typedef void (APIENTRYP PFNGLBLENDEQUATIONSEPARATEPROC) (GLenum modeRGB, GLenum modeAlpha);
 typedef void (APIENTRYP PFNGLATTACHSHADERPROC) (GLuint program, GLuint shader);
