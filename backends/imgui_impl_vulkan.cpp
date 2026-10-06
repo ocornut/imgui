@@ -27,6 +27,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-10-06: Added support for dynamic rendering with multiple color attachments (PipelineRenderingCreateInfo.colorAttachmentCount > 1): we render to the first one and leave the others untouched. (#9574)
 //  2026-09-07: Round framebuffer dimensions to the nearest integer instead of truncating them. (#9538, 9515, #8628)
 //  2026-09-03: Added for support for multiple Vulkan contexts with custom loaders. (#6616)
 //  2026-04-23: Added support for standard draw callbacks (in platform_io): DrawCallback_ResetRenderState, DrawCallback_SetSamplerLinear, DrawCallback_SetSamplerNearest. (#9378)
@@ -1062,7 +1063,14 @@ static VkPipeline ImGui_ImplVulkan_CreatePipeline(VkDevice device, const VkAlloc
     ms_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     ms_info.rasterizationSamples = (info->MSAASamples != 0) ? info->MSAASamples : VK_SAMPLE_COUNT_1_BIT;
 
-    VkPipelineColorBlendAttachmentState color_attachment[1] = {};
+    // Blend into the first color attachment. With dynamic rendering, other color attachments of the rendering are left untouched (requires independentBlend feature).
+    int color_attachment_count = 1;
+#ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
+    if (bd->VulkanInitInfo.UseDynamicRendering && info->PipelineRenderingCreateInfo.colorAttachmentCount > 1)
+        color_attachment_count = (int)info->PipelineRenderingCreateInfo.colorAttachmentCount;
+#endif
+    ImVector<VkPipelineColorBlendAttachmentState> color_attachment;
+    color_attachment.resize(color_attachment_count, VkPipelineColorBlendAttachmentState()); // colorWriteMask = 0
     color_attachment[0].blendEnable = VK_TRUE;
     color_attachment[0].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
     color_attachment[0].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
@@ -1077,8 +1085,8 @@ static VkPipeline ImGui_ImplVulkan_CreatePipeline(VkDevice device, const VkAlloc
 
     VkPipelineColorBlendStateCreateInfo blend_info = {};
     blend_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-    blend_info.attachmentCount = 1;
-    blend_info.pAttachments = color_attachment;
+    blend_info.attachmentCount = (uint32_t)color_attachment.Size;
+    blend_info.pAttachments = color_attachment.Data;
 
     ImVector<VkDynamicState> dynamic_states = info->ExtraDynamicStates;
     dynamic_states.push_back(VK_DYNAMIC_STATE_VIEWPORT);

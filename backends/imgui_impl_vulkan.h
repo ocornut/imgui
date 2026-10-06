@@ -101,6 +101,7 @@ struct ImGui_ImplVulkan_PipelineInfo
 //   - As an convenience, by setting DescriptorPoolSize > 0 the backend will create one for you.
 // - About dynamic rendering:
 //   - When using dynamic rendering, set UseDynamicRendering=true + fill PipelineInfoMain.PipelineRenderingCreateInfo structure.
+//   - PipelineRenderingCreateInfo may describe multiple color attachments: we render to the first one and leave the others untouched. This requires the 'independentBlend' device feature.
 struct ImGui_ImplVulkan_InitInfo
 {
     uint32_t                        ApiVersion;                 // Fill with API version of Instance, e.g. VK_API_VERSION_1_3 or your value of VkApplicationInfo::apiVersion. May be lower than header version (VK_HEADER_VERSION_COMPLETE)

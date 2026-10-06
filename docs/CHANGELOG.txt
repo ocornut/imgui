@@ -171,6 +171,10 @@ Other Changes:
     Note: this  callback is only supported by selected rendering backends: most other graphics API
     don't have the equivalent of `SDL_SetTextureScaleMode()` and the callback won't work with them.
   - Vulkan: added for support for multiple Vulkan contexts with custom loaders. (#6616) [@lstalmir]
+  - Vulkan: added support for rendering inside a render pass with multiple color attachments
+    (e.g. when merged with other passes): we render to the first color attachment and leave the
+    other ones untouched. (with dynamic rendering, `PipelineRenderingCreateInfo` may describe multiple
+    color attachments. This requires the `independentBlend` device feature). (#9574) [@tqjxlm]
   - WebGPU: fixed passing non-integer sizes to `wgpuRenderPassEncoderSetViewport()`
     when `FramebufferScale` is >1.0f. (#9515, #8628) [@WayU]
   - WebGPU: update to build with wgpu-native 29.0+. (#9377, #9532, #9530) [@lucascompython, @ivan-enzhaev]
