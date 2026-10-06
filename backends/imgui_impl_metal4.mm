@@ -19,6 +19,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-10-06: Added support for render passes with multiple color attachments: we render to the first one and leave the others untouched. (#9574)
 //  2026-09-07: Round framebuffer dimensions to the nearest integer instead of truncating them. (#9538, 9515, #8628)
 //  2026-07-07: Metal 4: Added metal-cpp support. (#9461)
 //  2026-07-02: Metal 4: Added new Metal 4 backend implementation. (#9458)
@@ -46,14 +47,16 @@ struct ImGui_Metal4_ConstantData
 - (instancetype)initWithBuffer:(id<MTLBuffer>)buffer;
 @end
 
+#define IMGUI_IMPL_METAL_MAX_COLOR_ATTACHMENTS  8   // Metal's limit (see Metal Feature Set Tables). Not configurable.
+
 // An object that encapsulates the data necessary to uniquely identify a
 // render pipeline state. These are used as cache keys.
 @interface FramebufferDescriptor : NSObject<NSCopying>
 @property (nonatomic, assign) unsigned long  sampleCount;
-@property (nonatomic, assign) MTLPixelFormat colorPixelFormat;
 @property (nonatomic, assign) MTLPixelFormat depthPixelFormat;
 @property (nonatomic, assign) MTLPixelFormat stencilPixelFormat;
 - (instancetype)initWithRenderPassDescriptor:(MTL4RenderPassDescriptor*)renderPassDescriptor;
+- (MTLPixelFormat)colorPixelFormatAtIndex:(NSUInteger)index;
 @end
 
 @interface MetalTexture : NSObject
@@ -514,23 +517,33 @@ void ImGui_ImplMetal4_Shutdown()
 #pragma mark - FramebufferDescriptor implementation
 
 @implementation FramebufferDescriptor
+{
+    MTLPixelFormat _colorPixelFormats[IMGUI_IMPL_METAL_MAX_COLOR_ATTACHMENTS];
+}
+
 - (instancetype)initWithRenderPassDescriptor:(MTL4RenderPassDescriptor*)renderPassDescriptor
 {
     if ((self = [super init]))
     {
         _sampleCount = renderPassDescriptor.colorAttachments[0].texture.sampleCount;
-        _colorPixelFormat = renderPassDescriptor.colorAttachments[0].texture.pixelFormat;
+        for (NSUInteger n = 0; n < IMGUI_IMPL_METAL_MAX_COLOR_ATTACHMENTS; n++)
+            _colorPixelFormats[n] = renderPassDescriptor.colorAttachments[n].texture.pixelFormat;
         _depthPixelFormat = renderPassDescriptor.depthAttachment.texture.pixelFormat;
         _stencilPixelFormat = renderPassDescriptor.stencilAttachment.texture.pixelFormat;
     }
     return self;
 }
 
+- (MTLPixelFormat)colorPixelFormatAtIndex:(NSUInteger)index
+{
+    return _colorPixelFormats[index];
+}
+
 - (nonnull id)copyWithZone:(nullable NSZone*)zone
 {
     FramebufferDescriptor* copy = [[FramebufferDescriptor allocWithZone:zone] init];
     copy.sampleCount = self.sampleCount;
-    copy.colorPixelFormat = self.colorPixelFormat;
+    memcpy(copy->_colorPixelFormats, _colorPixelFormats, sizeof(_colorPixelFormats));
     copy.depthPixelFormat = self.depthPixelFormat;
     copy.stencilPixelFormat = self.stencilPixelFormat;
     return copy;
@@ -539,10 +552,12 @@ void ImGui_ImplMetal4_Shutdown()
 - (NSUInteger)hash
 {
     NSUInteger sc = _sampleCount & 0x3;
-    NSUInteger cf = _colorPixelFormat & 0x3FF;
+    NSUInteger cf = _colorPixelFormats[0] & 0x3FF;
     NSUInteger df = _depthPixelFormat & 0x3FF;
     NSUInteger sf = _stencilPixelFormat & 0x3FF;
     NSUInteger hash = (sf << 22) | (df << 12) | (cf << 2) | sc;
+    for (NSUInteger n = 1; n < IMGUI_IMPL_METAL_MAX_COLOR_ATTACHMENTS; n++)
+        hash = hash * 31 + _colorPixelFormats[n];
     return hash;
 }
 
@@ -552,7 +567,7 @@ void ImGui_ImplMetal4_Shutdown()
     if (![other isKindOfClass:[FramebufferDescriptor class]])
         return NO;
     return other.sampleCount == self.sampleCount      &&
-    other.colorPixelFormat   == self.colorPixelFormat &&
+    memcmp(other->_colorPixelFormats, _colorPixelFormats, sizeof(_colorPixelFormats)) == 0 &&
     other.depthPixelFormat   == self.depthPixelFormat &&
     other.stencilPixelFormat == self.stencilPixelFormat;
 }
@@ -719,7 +734,7 @@ fragment half4 fragment_main(VertexOut in [[stage_in]],
     pipelineDescriptor.fragmentFunction = fragmentFunction;
     pipelineDescriptor.vertexDescriptor = vertexDescriptor;
     pipelineDescriptor.rasterSampleCount = self.framebufferDescriptor.sampleCount;
-    pipelineDescriptor.colorAttachments[0].pixelFormat = self.framebufferDescriptor.colorPixelFormat;
+    pipelineDescriptor.colorAttachments[0].pixelFormat = [self.framebufferDescriptor colorPixelFormatAtIndex:0];
     pipelineDescriptor.colorAttachments[0].blendingEnabled = YES;
     pipelineDescriptor.colorAttachments[0].rgbBlendOperation = MTLBlendOperationAdd;
     pipelineDescriptor.colorAttachments[0].sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
@@ -727,6 +742,11 @@ fragment half4 fragment_main(VertexOut in [[stage_in]],
     pipelineDescriptor.colorAttachments[0].alphaBlendOperation = MTLBlendOperationAdd;
     pipelineDescriptor.colorAttachments[0].sourceAlphaBlendFactor = MTLBlendFactorOne;
     pipelineDescriptor.colorAttachments[0].destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+    for (NSUInteger n = 1; n < IMGUI_IMPL_METAL_MAX_COLOR_ATTACHMENTS; n++) // Don't write to other color attachments, if any.
+    {
+        pipelineDescriptor.colorAttachments[n].pixelFormat = [self.framebufferDescriptor colorPixelFormatAtIndex:n];
+        pipelineDescriptor.colorAttachments[n].writeMask = MTLColorWriteMaskNone;
+    }
     pipelineDescriptor.depthAttachmentPixelFormat = self.framebufferDescriptor.depthPixelFormat;
     pipelineDescriptor.stencilAttachmentPixelFormat = self.framebufferDescriptor.stencilPixelFormat;
 
