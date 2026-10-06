@@ -146,6 +146,7 @@ Breaking Changes:
       - Legacy `AddRect()` rounding on        -> visible but very glitchy.
       - Legacy `AddRectFilled()` rounding off -> visible and correct.
       - Legacy `AddRectFilled()` rounding on  -> visible but very glitchy.
+      - Use `ImDrawFlags_StrokeLegacy` to use old rendering for cases without rounding, or fix coordinates.
   - Merged `ImDrawListFlags` into `ImDrawFlags`. `ImDrawListFlags` was rarely used directly
     and generally setup by the ImGui context. Keep inline redirection enums (will obsolete).
       - `ImDrawListFlags_AntiAliasedLines`    -> `ImDrawFlags_AALines`

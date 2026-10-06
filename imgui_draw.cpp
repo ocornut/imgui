@@ -871,6 +871,7 @@ float ImDrawList::_CalculateCenterBiasedOffset(float thickness)
 IM_MSVC_RUNTIME_CHECKS_RESTORE
 
 // Check if R is considered to be worthy rounding. Can be only used within ImDrawList due to use of _FringeScale.
+// FIXME-OPT: Given unused padding space in ImDrawList would it make sense to store 0.25f * _FringeScale?
 #define IM_HAS_ROUNDING(RAD)                ((RAD) >= (0.25f * _FringeScale))
 
 // On AddPolyline() and AddConvexPolyFilled() we intentionally avoid using ImVec2 and superfluous function calls to optimize debug/non-inlined builds.
@@ -2306,7 +2307,9 @@ void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, 
         // Arc
         if (is_rounded)
             for (int i = 0; i < arc_point_count - 1; i++)
+            {
                 IM_APPEND_TRI(stem_idx, arc_idx + i, arc_idx + i + 1);
+            }
 
         // Connect with previous
         IM_APPEND_TRI(base_idx + 0, arc_idx, stem_idx);
@@ -2538,6 +2541,13 @@ void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
     float height = p_max.y - p_min.y;
     const float min_dim = ImMin(width, height);
     flags |= Flags;
+
+    if ((flags & ImDrawFlags_StrokeMask_) == ImDrawFlags_StrokeLegacy && rounding < 0.5f) IM_UNLIKELY
+    {
+        PrimReserve(6, 4);
+        PrimRect(p_min, p_max, col);
+        return;
+    }
 
     // The rect is smaller than pixel in one dimension.
     if (min_dim < _FringeScale) IM_UNLIKELY
