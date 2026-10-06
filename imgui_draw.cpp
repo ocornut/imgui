@@ -2735,14 +2735,14 @@ void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int nu
         PathArcTo(center, radius, 0.0f, a_max, num_segments - 1);
     }
 
-    if (_Path.Size < 3)
-        return;
-
-    // Calculate distance to the edge of the polygon describing the circle.
-    // This will be used by _AddPolyline() to clamp the inner stroke expansion, to avoid creating rendering artifacts.
-    const float unit_apothem = ApproxApothem(_Path.Size);
-    const float edge_dist = radius * unit_apothem;
-    _AddPolyline(_Path.Data, _Path.Size, col, thickness, ImDrawFlags_Closed | ImDrawFlags_JoinMiter | stroke_pos, edge_dist);
+    if (_Path.Size >= 3)
+    {
+        // Calculate distance to the edge of the polygon describing the circle.
+        // This will be used by _AddPolyline() to clamp the inner stroke expansion, to avoid creating rendering artifacts.
+        const float unit_apothem = ApproxApothem(_Path.Size);
+        const float edge_dist = radius * unit_apothem;
+        _AddPolyline(_Path.Data, _Path.Size, col, thickness, ImDrawFlags_Closed | ImDrawFlags_JoinMiter | stroke_pos, edge_dist);
+    }
     _Path.Size = 0;
 }
 
