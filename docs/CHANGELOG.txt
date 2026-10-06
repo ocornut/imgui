@@ -152,6 +152,13 @@ Other Changes:
   - Style Editor: fixed style/colors combo box applying style when opening Combo.
 - Backends:
   - QNX: added QNX Screen backend. (#9492) [@mgorchak-blackberry]
+  - Metal, Metal4, Vulkan: added support for rendering inside a render pass with multiple color
+    attachments (e.g. when merged with other passes): we render to the first color attachment
+    and leave the other ones untouched. [@tqjxlm]
+    - Metal, Metal4: pipelines are keyed on all color attachment formats of the render pass
+      descriptor passed to `ImGui_ImplMetal_NewFrame()`/`ImGui_ImplMetal4_NewFrame()`.
+    - Vulkan: with dynamic rendering, `PipelineRenderingCreateInfo` may describe multiple color
+      attachments. This requires the `independentBlend` device feature.
   - OpenGL2, OpenGL3: added support for `platform_io.DrawCallback_SetSamplerFromTex` draw
     callback to request using the sampler associated already associated to a texture. (#9378)
   - OpenGL2, OpenGL3: fixed `DrawCallback_ResetRenderState` handler not reseting all states
