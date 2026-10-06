@@ -401,6 +401,14 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
                           - ImDrawListFlags_AllowVtxOffset          -> ImDrawFlags_UseVtxOffset,
                           - ImDrawListFlags_TextNoPixelSnap         -> ImDrawFlags_TextNoPixelSnap,
                          unifying them allows easily using them for both per-primitives alterations and scope alterations.
+                       - renamed ImDrawFlags_RoundCornersXXXX to ImDrawFlags_RoundXXXX.
+                          - ImDrawFlags_RoundCornersAll             -> ImDrawFlags_RoundAll,
+                          - ImDrawFlags_RoundCornersNone            -> ImDrawFlags_RoundNone,
+                          - ImDrawFlags_RoundCornersTopLeft         -> ImDrawFlags_RoundTopLeft,
+                          - ImDrawFlags_RoundCornersTop             -> ImDrawFlags_RoundTop,
+                          - ImDrawFlags_RoundCornersBottom          -> ImDrawFlags_RoundBottom,
+                          etc.
+                         kept redirection enums (will obsolete).
                        - obsoleted style.AntiAliasedLinesUseTex which now only makes sense for legacy strokes.
  - 2026/09/30 (1.93.0) - ImFont: renamed `AddRemapChar()` to `AddRemapCodepoint()` (rarely used, marked internal). (#609, #5748)
  - 2026/09/18 (1.93.0) - ImGuiTextFilter: removed `float width` parameter of `Draw(const char* filter, float width)`: prefer using `SetNextItemWidth(float)` which is standard. Kept inline redirection function.
@@ -7365,7 +7373,7 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
             if (bg_col & IM_COL32_A_MASK)
             {
                 ImRect bg_rect(window->Pos + ImVec2(0, window->TitleBarHeight), window->Pos + window->Size);
-                ImDrawFlags bg_rounding_flags = (flags & ImGuiWindowFlags_NoTitleBar) ? ImDrawFlags_RoundCornersAll : ImDrawFlags_RoundCornersBottom;
+                ImDrawFlags bg_rounding_flags = (flags & ImGuiWindowFlags_NoTitleBar) ? ImDrawFlags_RoundAll : ImDrawFlags_RoundBottom;
                 ImDrawList* bg_draw_list = window->DrawList;
                 bg_draw_list->AddRectFilled(bg_rect.Min, bg_rect.Max, bg_col, window_rounding, bg_rounding_flags);
             }
@@ -7375,7 +7383,7 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
         if (!(flags & ImGuiWindowFlags_NoTitleBar))
         {
             ImU32 title_bar_col = GetColorU32(title_bar_is_highlight ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg);
-            window->DrawList->AddRectFilled(title_bar_rect.Min, title_bar_rect.Max, title_bar_col, window_rounding, ImDrawFlags_RoundCornersTop);
+            window->DrawList->AddRectFilled(title_bar_rect.Min, title_bar_rect.Max, title_bar_col, window_rounding, ImDrawFlags_RoundTop);
         }
 
         // Menu bar
@@ -7383,7 +7391,7 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
         {
             ImRect menu_bar_rect = window->MenuBarRect();
             menu_bar_rect.ClipWith(window->Rect());  // Soft clipping, in particular child window don't have minimum size covering the menu bar so this is useful for them.
-            window->DrawList->AddRectFilled(menu_bar_rect.Min, menu_bar_rect.Max, GetColorU32(ImGuiCol_MenuBarBg), (flags & ImGuiWindowFlags_NoTitleBar) ? window_rounding : 0.0f, ImDrawFlags_RoundCornersTop);
+            window->DrawList->AddRectFilled(menu_bar_rect.Min, menu_bar_rect.Max, GetColorU32(ImGuiCol_MenuBarBg), (flags & ImGuiWindowFlags_NoTitleBar) ? window_rounding : 0.0f, ImDrawFlags_RoundTop);
             if (style.FrameBorderSize > 0.0f && menu_bar_rect.Max.y < window->Pos.y + window->Size.y)
                 window->DrawList->AddLineH(menu_bar_rect.Min.x + window_border_size, menu_bar_rect.Max.x - window_border_size, menu_bar_rect.Max.y, GetColorU32(ImGuiCol_Border), style.FrameBorderSize, ImDrawFlags_StrokeCenterBiased);
         }

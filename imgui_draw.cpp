@@ -1826,13 +1826,13 @@ void ImDrawList::PathRect(const ImVec2& a, const ImVec2& b, float rounding, ImDr
     const bool has_rounding = IM_HAS_ROUNDING(rounding);
     if (has_rounding)
     {
-        if ((flags & ImDrawFlags_RoundCornersMask_) == 0)
-            flags |= ImDrawFlags_RoundCornersAll;
+        if ((flags & ImDrawFlags_RoundMask_) == 0)
+            flags |= ImDrawFlags_RoundAll;
 
-        rounding = ImMin(rounding, ImFabs(b.x - a.x) * (((flags & ImDrawFlags_RoundCornersTop) == ImDrawFlags_RoundCornersTop) || ((flags & ImDrawFlags_RoundCornersBottom) == ImDrawFlags_RoundCornersBottom) ? 0.5f : 1.0f) - 1.0f);
-        rounding = ImMin(rounding, ImFabs(b.y - a.y) * (((flags & ImDrawFlags_RoundCornersLeft) == ImDrawFlags_RoundCornersLeft) || ((flags & ImDrawFlags_RoundCornersRight) == ImDrawFlags_RoundCornersRight) ? 0.5f : 1.0f) - 1.0f);
+        rounding = ImMin(rounding, ImFabs(b.x - a.x) * (((flags & ImDrawFlags_RoundTop) == ImDrawFlags_RoundTop) || ((flags & ImDrawFlags_RoundBottom) == ImDrawFlags_RoundBottom) ? 0.5f : 1.0f) - 1.0f);
+        rounding = ImMin(rounding, ImFabs(b.y - a.y) * (((flags & ImDrawFlags_RoundLeft) == ImDrawFlags_RoundLeft) || ((flags & ImDrawFlags_RoundRight) == ImDrawFlags_RoundRight) ? 0.5f : 1.0f) - 1.0f);
     }
-    if (!has_rounding || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
+    if (!has_rounding || (flags & ImDrawFlags_RoundMask_) == ImDrawFlags_RoundNone)
     {
         PathLineTo(a);
         PathLineTo(ImVec2(b.x, a.y));
@@ -1841,10 +1841,10 @@ void ImDrawList::PathRect(const ImVec2& a, const ImVec2& b, float rounding, ImDr
     }
     else
     {
-        const float rounding_tl = (flags & ImDrawFlags_RoundCornersTopLeft)     ? rounding : 0.0f;
-        const float rounding_tr = (flags & ImDrawFlags_RoundCornersTopRight)    ? rounding : 0.0f;
-        const float rounding_br = (flags & ImDrawFlags_RoundCornersBottomRight) ? rounding : 0.0f;
-        const float rounding_bl = (flags & ImDrawFlags_RoundCornersBottomLeft)  ? rounding : 0.0f;
+        const float rounding_tl = (flags & ImDrawFlags_RoundTopLeft)     ? rounding : 0.0f;
+        const float rounding_tr = (flags & ImDrawFlags_RoundTopRight)    ? rounding : 0.0f;
+        const float rounding_br = (flags & ImDrawFlags_RoundBottomRight) ? rounding : 0.0f;
+        const float rounding_bl = (flags & ImDrawFlags_RoundBottomLeft)  ? rounding : 0.0f;
         PathArcToFast(ImVec2(a.x + rounding_tl, a.y + rounding_tl), rounding_tl, 6, 9);
         PathArcToFast(ImVec2(b.x - rounding_tr, a.y + rounding_tr), rounding_tr, 9, 12);
         PathArcToFast(ImVec2(b.x - rounding_br, b.y - rounding_br), rounding_br, 0, 3);
@@ -2103,7 +2103,7 @@ void ImDrawList::_AddRectBaked(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
     ImDrawVert* start_vtx_ptr = _VtxWritePtr;
     ImDrawIdx* start_idx_ptr = _IdxWritePtr;
 
-    if (flags & ImDrawFlags_RoundCornersTopLeft)
+    if (flags & ImDrawFlags_RoundTopLeft)
     {
         ImDrawIdx idx = (ImDrawIdx)_VtxCurrentIdx;
         IM_APPEND_VTX(p_min.x, p_min.y, uv_tl, col);
@@ -2114,7 +2114,7 @@ void ImDrawList::_AddRectBaked(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
         IM_APPEND_TRI(idx + 0, idx + 2, idx + 3);
     }
 
-    if (flags & ImDrawFlags_RoundCornersTopRight)
+    if (flags & ImDrawFlags_RoundTopRight)
     {
         ImDrawIdx idx = (ImDrawIdx)_VtxCurrentIdx;
         IM_APPEND_VTX(p_max.x - r, p_min.y, uv_tr, col);
@@ -2125,7 +2125,7 @@ void ImDrawList::_AddRectBaked(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
         IM_APPEND_TRI(idx + 0, idx + 2, idx + 3);
     }
 
-    if (flags & ImDrawFlags_RoundCornersBottomRight)
+    if (flags & ImDrawFlags_RoundBottomRight)
     {
         ImDrawIdx idx = (ImDrawIdx)_VtxCurrentIdx;
         IM_APPEND_VTX(p_max.x - r, p_max.y - r, uv_br, col);
@@ -2136,7 +2136,7 @@ void ImDrawList::_AddRectBaked(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
         IM_APPEND_TRI(idx + 0, idx + 2, idx + 3);
     }
 
-    if (flags & ImDrawFlags_RoundCornersBottomLeft)
+    if (flags & ImDrawFlags_RoundBottomLeft)
     {
         ImDrawIdx idx = (ImDrawIdx)_VtxCurrentIdx;
         IM_APPEND_VTX(p_min.x, p_max.y - r, uv_bl, col);
@@ -2147,10 +2147,10 @@ void ImDrawList::_AddRectBaked(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
         IM_APPEND_TRI(idx + 0, idx + 2, idx + 3);
     }
 
-    const float r_tl = (flags & ImDrawFlags_RoundCornersTopLeft)     ? r : 0;
-    const float r_tr = (flags & ImDrawFlags_RoundCornersTopRight)    ? r : 0;
-    const float r_br = (flags & ImDrawFlags_RoundCornersBottomRight) ? r : 0;
-    const float r_bl = (flags & ImDrawFlags_RoundCornersBottomLeft)  ? r : 0;
+    const float r_tl = (flags & ImDrawFlags_RoundTopLeft)     ? r : 0;
+    const float r_tr = (flags & ImDrawFlags_RoundTopRight)    ? r : 0;
+    const float r_br = (flags & ImDrawFlags_RoundBottomRight) ? r : 0;
+    const float r_bl = (flags & ImDrawFlags_RoundBottomLeft)  ? r : 0;
     const ImVec2 opaque_uv = _Data->TexUvWhitePixel;
 
     {
@@ -2241,7 +2241,7 @@ void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, 
     ImDrawIdx* start_idx_ptr = _IdxWritePtr;
 
     static const ImVec2 corner_offset[4] = { {1,1}, {-1,1}, {-1,-1}, {1,-1} };
-    static const ImDrawFlags corner_flags[4] = { ImDrawFlags_RoundCornersTopLeft, ImDrawFlags_RoundCornersTopRight, ImDrawFlags_RoundCornersBottomRight, ImDrawFlags_RoundCornersBottomLeft };
+    static const ImDrawFlags corner_flags[4] = { ImDrawFlags_RoundTopLeft, ImDrawFlags_RoundTopRight, ImDrawFlags_RoundBottomRight, ImDrawFlags_RoundBottomLeft };
     const float half_fringe = fringe * 0.5f;
     const ImVec2 corner_pos[4] =
     {
@@ -2327,11 +2327,11 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
     // If this assert triggers on legacy code:
     // - 1.92.8 (2025/05): swapped two last parameters order: flags, thickness --> thickness, flags. This should normally be caught by compile-time type-checking.
     // - 1.92.8 (2025/05): changed value of ImDrawList_Closed which was previously guaranteed to be == 1. Hardcoded use of 1 or true should be replaced.
-    // - 1.82.0 (2021/03): changed ImDrawCornerFlags to ImDrawFlags_RoundCornersXXX values.
+    // - 1.82.0 (2021/03): changed ImDrawCornerFlags to ImDrawFlags_RoundXXX values.
     //   If you used hard-coded 1 to 15 or ~0 in flags to configure corner rounding use the new flags!
-    //   - Hard coded support for ~0 == ImDrawFlags_RoundCornersAll.
+    //   - Hard coded support for ~0 == ImDrawFlags_RoundAll.
     //   - Hard coded support for values 0x01 to 0x0F (matching 15 out of 16 old flags combinations) --> see FixRectCornerFlags() in <1.90 code.
-    //   - Hard coded 0x00 with 'float rounding > 0.0f' --> replace with ImDrawFlags_RoundCornersNone or use 'float rounding = 0.0f'.
+    //   - Hard coded 0x00 with 'float rounding > 0.0f' --> replace with ImDrawFlags_RoundNone or use 'float rounding = 0.0f'.
     //   See "API BREAKING CHANGES" section for 1.82, 1.90 and 1.92.8.
     IM_ASSERT_USER_ERROR_RET((flags & ImDrawFlags_InvalidMask_) == 0, "Incorrect parameter. Did you swap 'thickness' and 'flags'?"); // Or misuse of legacy hard-coded ImDrawCornerFlags values
 
@@ -2380,13 +2380,13 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
         return;
     }
 
-    if ((flags & ImDrawFlags_RoundCornersMask_) == 0)
-        flags |= ImDrawFlags_RoundCornersAll;
+    if ((flags & ImDrawFlags_RoundMask_) == 0)
+        flags |= ImDrawFlags_RoundAll;
     if (has_rounding)
     {
         // Constrain rounding to rect dimensions
-        outer_rounding = ImMin(outer_rounding, ImFabs(width) * (((flags & ImDrawFlags_RoundCornersTop) == ImDrawFlags_RoundCornersTop) || ((flags & ImDrawFlags_RoundCornersBottom) == ImDrawFlags_RoundCornersBottom) ? 0.5f : 1.0f) - 1.0f);
-        outer_rounding = ImMin(outer_rounding, ImFabs(height) * (((flags & ImDrawFlags_RoundCornersLeft) == ImDrawFlags_RoundCornersLeft) || ((flags & ImDrawFlags_RoundCornersRight) == ImDrawFlags_RoundCornersRight) ? 0.5f : 1.0f) - 1.0f);
+        outer_rounding = ImMin(outer_rounding, ImFabs(width) * (((flags & ImDrawFlags_RoundTop) == ImDrawFlags_RoundTop) || ((flags & ImDrawFlags_RoundBottom) == ImDrawFlags_RoundBottom) ? 0.5f : 1.0f) - 1.0f);
+        outer_rounding = ImMin(outer_rounding, ImFabs(height) * (((flags & ImDrawFlags_RoundLeft) == ImDrawFlags_RoundLeft) || ((flags & ImDrawFlags_RoundRight) == ImDrawFlags_RoundRight) ? 0.5f : 1.0f) - 1.0f);
     }
 
     const bool is_truncated = IM_IS_TRUNCATED4(outer_min.x, outer_min.y, outer_max.x, outer_max.y) && IM_IS_TRUNCATED4(outer_rounding, thickness, 0.0f, 0.0f); //-V501
@@ -2397,7 +2397,7 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
         if (s_thickness <= 0)
             return;
 
-        if (s_rounding <= 0 || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
+        if (s_rounding <= 0 || (flags & ImDrawFlags_RoundMask_) == ImDrawFlags_RoundNone)
         {
             // Pixel aligned non-rounded rect.
             const ImVec2 opaque_uv = _Data->TexUvWhitePixel;
@@ -2443,7 +2443,7 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
         }
     }
 
-    if (!has_rounding || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
+    if (!has_rounding || (flags & ImDrawFlags_RoundMask_) == ImDrawFlags_RoundNone)
     {
         const ImVec2 points[4] = { outer_min, ImVec2(outer_max.x, outer_min.y), outer_max, ImVec2(outer_min.x, outer_max.y) };
         _AddPolyline(points, 4, col, thickness, ImDrawFlags_Closed | ImDrawFlags_MiterOnly | ImDrawFlags_StrokeInside, half_min_dim);
@@ -2459,10 +2459,10 @@ void ImDrawList::AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, fl
             _AddRectTinyRounding(outer_min, outer_max, col, outer_rounding, thickness, flags);
             return;
         }
-        const float rounding_tl = (flags & ImDrawFlags_RoundCornersTopLeft) ? outer_rounding : 0.0f;
-        const float rounding_tr = (flags & ImDrawFlags_RoundCornersTopRight) ? outer_rounding : 0.0f;
-        const float rounding_br = (flags & ImDrawFlags_RoundCornersBottomRight) ? outer_rounding : 0.0f;
-        const float rounding_bl = (flags & ImDrawFlags_RoundCornersBottomLeft) ? outer_rounding : 0.0f;
+        const float rounding_tl = (flags & ImDrawFlags_RoundTopLeft) ? outer_rounding : 0.0f;
+        const float rounding_tr = (flags & ImDrawFlags_RoundTopRight) ? outer_rounding : 0.0f;
+        const float rounding_br = (flags & ImDrawFlags_RoundBottomRight) ? outer_rounding : 0.0f;
+        const float rounding_bl = (flags & ImDrawFlags_RoundBottomLeft) ? outer_rounding : 0.0f;
         PathArcToFast(ImVec2(outer_min.x + rounding_tl, outer_min.y + rounding_tl), rounding_tl, 6, 9);
         PathArcToFast(ImVec2(outer_max.x - rounding_tr, outer_min.y + rounding_tr), rounding_tr, 9, 12);
         PathArcToFast(ImVec2(outer_max.x - rounding_br, outer_max.y - rounding_br), rounding_br, 0, 3);
@@ -2483,10 +2483,10 @@ void ImDrawList::_AddRectFilledBaked(const ImVec2& p_min, const ImVec2& p_max, I
 
     PrimReserve(9 * 2 * 3, 4 * 4);
 
-    const float r_tl = (flags & ImDrawFlags_RoundCornersTopLeft)     ? r : 0.0f;
-    const float r_tr = (flags & ImDrawFlags_RoundCornersTopRight)    ? r : 0.0f;
-    const float r_br = (flags & ImDrawFlags_RoundCornersBottomRight) ? r : 0.0f;
-    const float r_bl = (flags & ImDrawFlags_RoundCornersBottomLeft)  ? r : 0.0f;
+    const float r_tl = (flags & ImDrawFlags_RoundTopLeft)     ? r : 0.0f;
+    const float r_tr = (flags & ImDrawFlags_RoundTopRight)    ? r : 0.0f;
+    const float r_br = (flags & ImDrawFlags_RoundBottomRight) ? r : 0.0f;
+    const float r_bl = (flags & ImDrawFlags_RoundBottomLeft)  ? r : 0.0f;
 
     ImDrawIdx idx = (ImDrawIdx)_VtxCurrentIdx;
     IM_APPEND_VTX(p_min.x, p_min.y, uv_tl, col);
@@ -2552,7 +2552,7 @@ void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
     }
 
     // When rounding non-integer and under threshold, has_rounding may be false but still affect is_truncated. Likely not worth catering for.
-    const bool has_rounding = (flags & ImDrawFlags_RoundCornersMask_) != ImDrawFlags_RoundCornersNone && IM_HAS_ROUNDING(rounding);
+    const bool has_rounding = (flags & ImDrawFlags_RoundMask_) != ImDrawFlags_RoundNone && IM_HAS_ROUNDING(rounding);
     const bool is_truncated = IM_IS_TRUNCATED4(p_min.x, p_min.y, p_max.x, p_max.y) && IM_IS_TRUNCATED(rounding);
 
     if (_FringeScaleIsInteger && is_truncated)
@@ -2565,11 +2565,11 @@ void ImDrawList::AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 c
             return;
         }
 
-        if ((flags & ImDrawFlags_RoundCornersMask_) == 0)
-            flags |= ImDrawFlags_RoundCornersAll;
+        if ((flags & ImDrawFlags_RoundMask_) == 0)
+            flags |= ImDrawFlags_RoundAll;
 
-        rounding = ImMin(rounding, ImFabs(width) * (((flags & ImDrawFlags_RoundCornersTop) == ImDrawFlags_RoundCornersTop) || ((flags & ImDrawFlags_RoundCornersBottom) == ImDrawFlags_RoundCornersBottom) ? 0.5f : 1.0f) - 1.0f);
-        rounding = ImMin(rounding, ImFabs(height) * (((flags & ImDrawFlags_RoundCornersLeft) == ImDrawFlags_RoundCornersLeft) || ((flags & ImDrawFlags_RoundCornersRight) == ImDrawFlags_RoundCornersRight) ? 0.5f : 1.0f) - 1.0f);
+        rounding = ImMin(rounding, ImFabs(width) * (((flags & ImDrawFlags_RoundTop) == ImDrawFlags_RoundTop) || ((flags & ImDrawFlags_RoundBottom) == ImDrawFlags_RoundBottom) ? 0.5f : 1.0f) - 1.0f);
+        rounding = ImMin(rounding, ImFabs(height) * (((flags & ImDrawFlags_RoundLeft) == ImDrawFlags_RoundLeft) || ((flags & ImDrawFlags_RoundRight) == ImDrawFlags_RoundRight) ? 0.5f : 1.0f) - 1.0f);
 
         const int s_rounding = (int)(rounding * _InvFringeScale);
         if (s_rounding <= 0)
@@ -2994,10 +2994,10 @@ void ImDrawList::AddImageRounded(ImTextureRef tex_ref, const ImVec2& p_min, cons
         return;
 
     IM_ASSERT((flags & 0x0F) == 0 && "Misuse of legacy hardcoded ImDrawCornerFlags values!"); // If this assert triggers on legacy code: see comments in ImDrawList::PathRect().
-    if ((flags & ImDrawFlags_RoundCornersMask_) == 0)
-        flags |= ImDrawFlags_RoundCornersAll;
+    if ((flags & ImDrawFlags_RoundMask_) == 0)
+        flags |= ImDrawFlags_RoundAll;
 
-    if (rounding < 0.5f || (flags & ImDrawFlags_RoundCornersMask_) == ImDrawFlags_RoundCornersNone)
+    if (rounding < 0.5f || (flags & ImDrawFlags_RoundMask_) == ImDrawFlags_RoundNone)
     {
         AddImage(tex_ref, p_min, p_max, uv_min, uv_max, col);
         return;
@@ -7678,14 +7678,14 @@ void ImGui::RenderRectFilledWithHole(ImDrawList* draw_list, const ImRect& outer,
     const bool fill_R = (inner.Max.x < outer.Max.x);
     const bool fill_U = (inner.Min.y > outer.Min.y);
     const bool fill_D = (inner.Max.y < outer.Max.y);
-    if (fill_L) draw_list->AddRectFilled(ImVec2(outer.Min.x, inner.Min.y), ImVec2(inner.Min.x, inner.Max.y), col, rounding, ImDrawFlags_RoundCornersNone | (fill_U ? 0 : ImDrawFlags_RoundCornersTopLeft)    | (fill_D ? 0 : ImDrawFlags_RoundCornersBottomLeft));
-    if (fill_R) draw_list->AddRectFilled(ImVec2(inner.Max.x, inner.Min.y), ImVec2(outer.Max.x, inner.Max.y), col, rounding, ImDrawFlags_RoundCornersNone | (fill_U ? 0 : ImDrawFlags_RoundCornersTopRight)   | (fill_D ? 0 : ImDrawFlags_RoundCornersBottomRight));
-    if (fill_U) draw_list->AddRectFilled(ImVec2(inner.Min.x, outer.Min.y), ImVec2(inner.Max.x, inner.Min.y), col, rounding, ImDrawFlags_RoundCornersNone | (fill_L ? 0 : ImDrawFlags_RoundCornersTopLeft)    | (fill_R ? 0 : ImDrawFlags_RoundCornersTopRight));
-    if (fill_D) draw_list->AddRectFilled(ImVec2(inner.Min.x, inner.Max.y), ImVec2(inner.Max.x, outer.Max.y), col, rounding, ImDrawFlags_RoundCornersNone | (fill_L ? 0 : ImDrawFlags_RoundCornersBottomLeft) | (fill_R ? 0 : ImDrawFlags_RoundCornersBottomRight));
-    if (fill_L && fill_U) draw_list->AddRectFilled(ImVec2(outer.Min.x, outer.Min.y), ImVec2(inner.Min.x, inner.Min.y), col, rounding, ImDrawFlags_RoundCornersTopLeft);
-    if (fill_R && fill_U) draw_list->AddRectFilled(ImVec2(inner.Max.x, outer.Min.y), ImVec2(outer.Max.x, inner.Min.y), col, rounding, ImDrawFlags_RoundCornersTopRight);
-    if (fill_L && fill_D) draw_list->AddRectFilled(ImVec2(outer.Min.x, inner.Max.y), ImVec2(inner.Min.x, outer.Max.y), col, rounding, ImDrawFlags_RoundCornersBottomLeft);
-    if (fill_R && fill_D) draw_list->AddRectFilled(ImVec2(inner.Max.x, inner.Max.y), ImVec2(outer.Max.x, outer.Max.y), col, rounding, ImDrawFlags_RoundCornersBottomRight);
+    if (fill_L) draw_list->AddRectFilled(ImVec2(outer.Min.x, inner.Min.y), ImVec2(inner.Min.x, inner.Max.y), col, rounding, ImDrawFlags_RoundNone | (fill_U ? 0 : ImDrawFlags_RoundTopLeft)    | (fill_D ? 0 : ImDrawFlags_RoundBottomLeft));
+    if (fill_R) draw_list->AddRectFilled(ImVec2(inner.Max.x, inner.Min.y), ImVec2(outer.Max.x, inner.Max.y), col, rounding, ImDrawFlags_RoundNone | (fill_U ? 0 : ImDrawFlags_RoundTopRight)   | (fill_D ? 0 : ImDrawFlags_RoundBottomRight));
+    if (fill_U) draw_list->AddRectFilled(ImVec2(inner.Min.x, outer.Min.y), ImVec2(inner.Max.x, inner.Min.y), col, rounding, ImDrawFlags_RoundNone | (fill_L ? 0 : ImDrawFlags_RoundTopLeft)    | (fill_R ? 0 : ImDrawFlags_RoundTopRight));
+    if (fill_D) draw_list->AddRectFilled(ImVec2(inner.Min.x, inner.Max.y), ImVec2(inner.Max.x, outer.Max.y), col, rounding, ImDrawFlags_RoundNone | (fill_L ? 0 : ImDrawFlags_RoundBottomLeft) | (fill_R ? 0 : ImDrawFlags_RoundBottomRight));
+    if (fill_L && fill_U) draw_list->AddRectFilled(ImVec2(outer.Min.x, outer.Min.y), ImVec2(inner.Min.x, inner.Min.y), col, rounding, ImDrawFlags_RoundTopLeft);
+    if (fill_R && fill_U) draw_list->AddRectFilled(ImVec2(inner.Max.x, outer.Min.y), ImVec2(outer.Max.x, inner.Min.y), col, rounding, ImDrawFlags_RoundTopRight);
+    if (fill_L && fill_D) draw_list->AddRectFilled(ImVec2(outer.Min.x, inner.Max.y), ImVec2(inner.Min.x, outer.Max.y), col, rounding, ImDrawFlags_RoundBottomLeft);
+    if (fill_R && fill_D) draw_list->AddRectFilled(ImVec2(inner.Max.x, inner.Max.y), ImVec2(outer.Max.x, outer.Max.y), col, rounding, ImDrawFlags_RoundBottomRight);
 }
 
 ImDrawFlags ImGui::CalcRoundingFlagsForRectInRect(const ImRect& r_in, const ImRect& r_outer, float threshold)
@@ -7694,9 +7694,9 @@ ImDrawFlags ImGui::CalcRoundingFlagsForRectInRect(const ImRect& r_in, const ImRe
     bool round_r = r_in.Max.x >= r_outer.Max.x - threshold;
     bool round_t = r_in.Min.y <= r_outer.Min.y + threshold;
     bool round_b = r_in.Max.y >= r_outer.Max.y - threshold;
-    return ImDrawFlags_RoundCornersNone
-        | ((round_t && round_l) ? ImDrawFlags_RoundCornersTopLeft : 0) | ((round_t && round_r) ? ImDrawFlags_RoundCornersTopRight : 0)
-        | ((round_b && round_l) ? ImDrawFlags_RoundCornersBottomLeft : 0) | ((round_b && round_r) ? ImDrawFlags_RoundCornersBottomRight : 0);
+    return ImDrawFlags_RoundNone
+        | ((round_t && round_l) ? ImDrawFlags_RoundTopLeft : 0) | ((round_t && round_r) ? ImDrawFlags_RoundTopRight : 0)
+        | ((round_b && round_l) ? ImDrawFlags_RoundBottomLeft : 0) | ((round_b && round_r) ? ImDrawFlags_RoundBottomRight : 0);
 }
 
 // Helper for ColorPicker4()
@@ -7704,8 +7704,8 @@ ImDrawFlags ImGui::CalcRoundingFlagsForRectInRect(const ImRect& r_in, const ImRe
 // Spent a non reasonable amount of time trying to getting this right for ColorButton with rounding+anti-aliasing+ImGuiColorEditFlags_HalfAlphaPreview flag + various grid sizes and offsets, and eventually gave up... probably more reasonable to disable rounding altogether.
 void ImGui::RenderColorRectWithAlphaCheckerboard(ImDrawList* draw_list, ImVec2 p_min, ImVec2 p_max, ImU32 col, float alpha, float grid_step, ImVec2 grid_off, float rounding, ImDrawFlags flags)
 {
-    if ((flags & ImDrawFlags_RoundCornersMask_) == 0)
-        flags = ImDrawFlags_RoundCornersAll;
+    if ((flags & ImDrawFlags_RoundMask_) == 0)
+        flags = ImDrawFlags_RoundAll;
     if (((col & IM_COL32_A_MASK) >> IM_COL32_A_SHIFT) < 0xFF)
     {
         IM_ASSERT(alpha >= 0.0f && alpha <= 1.0f);
@@ -7731,12 +7731,12 @@ void ImGui::RenderColorRectWithAlphaCheckerboard(ImDrawList* draw_list, ImVec2 p
                 float x1 = ImClamp((float)(int)x, p_min.x, p_max.x), x2 = ImMin((float)(int)(x + grid_step), p_max.x);
                 if (x2 <= x1)
                     continue;
-                ImDrawFlags cell_flags = ImDrawFlags_RoundCornersNone; // FIXME: Could use CalcRoundingFlagsForRectInRect()
-                if (y1 <= p_min.y) { if (x1 <= p_min.x) cell_flags |= ImDrawFlags_RoundCornersTopLeft; if (x2 >= p_max.x) cell_flags |= ImDrawFlags_RoundCornersTopRight; }
-                if (y2 >= p_max.y) { if (x1 <= p_min.x) cell_flags |= ImDrawFlags_RoundCornersBottomLeft; if (x2 >= p_max.x) cell_flags |= ImDrawFlags_RoundCornersBottomRight; }
+                ImDrawFlags cell_flags = ImDrawFlags_RoundNone; // FIXME: Could use CalcRoundingFlagsForRectInRect()
+                if (y1 <= p_min.y) { if (x1 <= p_min.x) cell_flags |= ImDrawFlags_RoundTopLeft; if (x2 >= p_max.x) cell_flags |= ImDrawFlags_RoundTopRight; }
+                if (y2 >= p_max.y) { if (x1 <= p_min.x) cell_flags |= ImDrawFlags_RoundBottomLeft; if (x2 >= p_max.x) cell_flags |= ImDrawFlags_RoundBottomRight; }
 
                 // Combine flags
-                cell_flags = (flags == ImDrawFlags_RoundCornersNone || cell_flags == ImDrawFlags_RoundCornersNone) ? ImDrawFlags_RoundCornersNone : (cell_flags & flags);
+                cell_flags = (flags == ImDrawFlags_RoundNone || cell_flags == ImDrawFlags_RoundNone) ? ImDrawFlags_RoundNone : (cell_flags & flags);
                 ImU32 col_bg = dual_layer ? col_bg2 : (((yi + xi) & 1) ? col_bg2 : col_bg1);
                 draw_list->AddRectFilled(ImVec2(x1, y1), ImVec2(x2, y2), col_bg, rounding, cell_flags);
             }

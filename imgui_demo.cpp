@@ -10474,7 +10474,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             ImVec2 start_pos = ImGui::GetCursorScreenPos();
             const float pi = 3.141592f;
             const float spacing = 10.0f;
-            const ImDrawFlags corners_tl_br = ImDrawFlags_RoundCornersTopLeft | ImDrawFlags_RoundCornersBottomRight;
+            const ImDrawFlags corners_tl_br = ImDrawFlags_RoundTopLeft | ImDrawFlags_RoundBottomRight;
             const float half_sz = sz * 0.5f;
             const float half_szi = (float)(int)(sz * 0.5f);
             const int circle_segments = circle_segments_override ? circle_segments_override_v : 0;

@@ -189,6 +189,19 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
+- DrawList:
+  - Renamed all `ImDrawFlags_RoundCornersXXX` flags to `ImDrawFlags_RoundXXX`.
+      - `ImDrawFlags_RoundCornersNone`        -> `ImDrawFlags_RoundNone`
+      - `ImDrawFlags_RoundCornersAll`         -> `ImDrawFlags_RoundAll`
+      - `ImDrawFlags_RoundCornersTopLeft`     -> `ImDrawFlags_RoundTopLeft`
+      - `ImDrawFlags_RoundCornersTopRight`    -> `ImDrawFlags_RoundTopRight`
+      - `ImDrawFlags_RoundCornersBottomLeft`  -> `ImDrawFlags_RoundBottomLeft`
+      - `ImDrawFlags_RoundCornersBottomRight` -> `ImDrawFlags_RoundBottomRight`
+      - `ImDrawFlags_RoundCornersTop`         -> `ImDrawFlags_RoundTop`
+      - `ImDrawFlags_RoundCornersBottom`      -> `ImDrawFlags_RoundBottom`
+      - `ImDrawFlags_RoundCornersLeft`        -> `ImDrawFlags_RoundLeft`
+      - `ImDrawFlags_RoundCornersRight`       -> `ImDrawFlags_RoundRight`
+    Kept redirection enums (will obsolete).
 - Style: obsoleted `style.CurveTessellationTol (default 1.25)` which was in Pixels² unit in
   favor of `style.CurveTessellationMaxError` (default 1.12)` which is in Pixels unit. It is
   easier to tweak + this allows us to easily scale error threshold on high density screens.

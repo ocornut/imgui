@@ -3317,19 +3317,19 @@ enum ImDrawFlags_
     // - "Scope" column: 'OK' = initialized by ImGui based on Style options (e.g. whether anti-aliased is enabled) + may be modified using ImDrawList::PushDrawFlag().
     //                          OK(0)/OK(1) indicates whether this flag is set in the default ImGui Style settings.
 
-    // - Rounding default to ImDrawFlags_RoundCornersAll when 'rounding > 0'.
-    // - So you only need to use the _RoundCorners flags if you want a special configuration (e.g. a rectangle with one rounded corner).
+    // - Rounding default to ImDrawFlags_RoundAll when 'rounding > 0'.
+    // - So you only need to use the ImDrawFlags_RoundXXX flags if you want a special configuration (e.g. a rectangle with one rounded corner).
     // Rounding for AddRectXXX(), PathRect() ------ // Prim/Scope?
-    ImDrawFlags_RoundCornersTopLeft     = 1 << 4,   // OK   --    // Round top-left corner only (when 'rounding > 0.0f', we default to all corners).
-    ImDrawFlags_RoundCornersTopRight    = 1 << 5,   // OK   --    // Round top-right corner only (when 'rounding > 0.0f', we default to all corners).
-    ImDrawFlags_RoundCornersBottomLeft  = 1 << 6,   // OK   --    // Round bottom-left corner only (when 'rounding > 0.0f', we default to all corners).
-    ImDrawFlags_RoundCornersBottomRight = 1 << 7,   // OK   --    // Round bottom-right corner only (when 'rounding > 0.0f', we default to all corners).
-    ImDrawFlags_RoundCornersNone        = 1 << 8,   // OK   --    // Disable rounding even when 'rounding > 0.0f'. This value is NOT zero, it is NOT an implicit flag!
-    ImDrawFlags_RoundCornersAll         = ImDrawFlags_RoundCornersTopLeft | ImDrawFlags_RoundCornersTopRight | ImDrawFlags_RoundCornersBottomLeft | ImDrawFlags_RoundCornersBottomRight, // (Default!!)
-    ImDrawFlags_RoundCornersTop         = ImDrawFlags_RoundCornersTopLeft | ImDrawFlags_RoundCornersTopRight,
-    ImDrawFlags_RoundCornersBottom      = ImDrawFlags_RoundCornersBottomLeft | ImDrawFlags_RoundCornersBottomRight,
-    ImDrawFlags_RoundCornersLeft        = ImDrawFlags_RoundCornersBottomLeft | ImDrawFlags_RoundCornersTopLeft,
-    ImDrawFlags_RoundCornersRight       = ImDrawFlags_RoundCornersBottomRight | ImDrawFlags_RoundCornersTopRight,
+    ImDrawFlags_RoundTopLeft            = 1 << 4,   // OK   --    // Round top-left corner only (when 'rounding > 0.0f', we default to all corners).
+    ImDrawFlags_RoundTopRight           = 1 << 5,   // OK   --    // Round top-right corner only (when 'rounding > 0.0f', we default to all corners).
+    ImDrawFlags_RoundBottomLeft         = 1 << 6,   // OK   --    // Round bottom-left corner only (when 'rounding > 0.0f', we default to all corners).
+    ImDrawFlags_RoundBottomRight        = 1 << 7,   // OK   --    // Round bottom-right corner only (when 'rounding > 0.0f', we default to all corners).
+    ImDrawFlags_RoundNone               = 1 << 8,   // OK   --    // Disable rounding even when 'rounding > 0.0f'. This value is NOT zero, it is NOT an implicit flag!
+    ImDrawFlags_RoundAll                = ImDrawFlags_RoundTopLeft | ImDrawFlags_RoundTopRight | ImDrawFlags_RoundBottomLeft | ImDrawFlags_RoundBottomRight, // (Default!!)
+    ImDrawFlags_RoundTop                = ImDrawFlags_RoundTopLeft | ImDrawFlags_RoundTopRight,
+    ImDrawFlags_RoundBottom             = ImDrawFlags_RoundBottomLeft | ImDrawFlags_RoundBottomRight,
+    ImDrawFlags_RoundLeft               = ImDrawFlags_RoundBottomLeft | ImDrawFlags_RoundTopLeft,
+    ImDrawFlags_RoundRight              = ImDrawFlags_RoundBottomRight | ImDrawFlags_RoundTopRight,
 
     // Stroke Options ----------------------------- // Prim/Scope?
     ImDrawFlags_Closed                  = 1 << 9,   // OK   --     // PathStroke(), AddPolyline(): specify that shape should be closed.
@@ -3365,11 +3365,26 @@ enum ImDrawFlags_
     ImDrawFlags_AllowTexForRoundCorners_= 1 << 23,  // --   OK(1)  // [Internal]
 
     // [Internal]
-    ImDrawFlags_RoundCornersMask_       = ImDrawFlags_RoundCornersAll | ImDrawFlags_RoundCornersNone, // [Internal]
-    ImDrawFlags_AllowInPushScope_       = ImDrawFlags_AAFill | ImDrawFlags_AALines | ImDrawFlags_AALineEnds | ImDrawFlags_StrokeLegacy | ImDrawFlags_TextNoPixelSnap | ImDrawFlags_UseTexForRoundCorners | ImDrawFlags_UseVtxOffset | ImDrawFlags_RoundCornersMask_, // [Internal] Values allowed in PushDrawFlag() scope.
+    ImDrawFlags_RoundMask_              = ImDrawFlags_RoundAll | ImDrawFlags_RoundNone, // [Internal]
+    ImDrawFlags_AllowInPushScope_       = ImDrawFlags_AAFill | ImDrawFlags_AALines | ImDrawFlags_AALineEnds | ImDrawFlags_StrokeLegacy | ImDrawFlags_TextNoPixelSnap | ImDrawFlags_UseTexForRoundCorners | ImDrawFlags_UseVtxOffset | ImDrawFlags_RoundMask_, // [Internal] Values allowed in PushDrawFlag() scope.
     ImDrawFlags_AllowInFrameScope_      = ImDrawFlags_AllowInPushScope_ | ImDrawFlags_AllowTexForRoundCorners_,
     ImDrawFlags_StrokeMask_             = 0x07 << 17,              // [Internal] 
     ImDrawFlags_InvalidMask_            = ~0x7FFFFFF0,             // [Internal] == 0x8000000F. Reserved to detect misuses. 
+
+    // Obsolete names
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    // RENAMED in 1.93.0 (Oct 2026): ImDrawFlags_RoundCornersXXXX -> ImDrawFlags_RoundXXXX.
+    ImDrawFlags_RoundCornersTopLeft     = ImDrawFlags_RoundTopLeft,
+    ImDrawFlags_RoundCornersTopRight    = ImDrawFlags_RoundTopRight,
+    ImDrawFlags_RoundCornersBottomLeft  = ImDrawFlags_RoundBottomLeft,
+    ImDrawFlags_RoundCornersBottomRight = ImDrawFlags_RoundBottomRight,
+    ImDrawFlags_RoundCornersNone        = ImDrawFlags_RoundNone,
+    ImDrawFlags_RoundCornersAll         = ImDrawFlags_RoundAll,
+    ImDrawFlags_RoundCornersTop         = ImDrawFlags_RoundTop,
+    ImDrawFlags_RoundCornersBottom      = ImDrawFlags_RoundBottom,
+    ImDrawFlags_RoundCornersLeft        = ImDrawFlags_RoundLeft,
+    ImDrawFlags_RoundCornersRight       = ImDrawFlags_RoundRight,      
+#endif
 };
 
 // Draw command list
@@ -4330,16 +4345,16 @@ typedef ImFontAtlasRect ImFontAtlasCustomRect;
 //typedef ImDrawFlags ImDrawCornerFlags;
 //enum ImDrawCornerFlags_
 //{
-//    ImDrawCornerFlags_None      = ImDrawFlags_RoundCornersNone,         // Was == 0 prior to 1.82, this is now == ImDrawFlags_RoundCornersNone which is != 0 and not implicit
-//    ImDrawCornerFlags_TopLeft   = ImDrawFlags_RoundCornersTopLeft,      // Was == 0x01 (1 << 0) prior to 1.82. Order matches ImDrawFlags_NoRoundCorner* flag (we exploit this internally).
-//    ImDrawCornerFlags_TopRight  = ImDrawFlags_RoundCornersTopRight,     // Was == 0x02 (1 << 1) prior to 1.82.
-//    ImDrawCornerFlags_BotLeft   = ImDrawFlags_RoundCornersBottomLeft,   // Was == 0x04 (1 << 2) prior to 1.82.
-//    ImDrawCornerFlags_BotRight  = ImDrawFlags_RoundCornersBottomRight,  // Was == 0x08 (1 << 3) prior to 1.82.
-//    ImDrawCornerFlags_All       = ImDrawFlags_RoundCornersAll,          // Was == 0x0F prior to 1.82
-//    ImDrawCornerFlags_Top       = ImDrawCornerFlags_TopLeft | ImDrawCornerFlags_TopRight,
-//    ImDrawCornerFlags_Bot       = ImDrawCornerFlags_BotLeft | ImDrawCornerFlags_BotRight,
-//    ImDrawCornerFlags_Left      = ImDrawCornerFlags_TopLeft | ImDrawCornerFlags_BotLeft,
-//    ImDrawCornerFlags_Right     = ImDrawCornerFlags_TopRight | ImDrawCornerFlags_BotRight,
+//    ImDrawCornerFlags_None      = ImDrawFlags_RoundNone,         // Was == 0 prior to 1.82, this is now == ImDrawFlags_RoundNone which is != 0 and not implicit
+//    ImDrawCornerFlags_TopLeft   = ImDrawFlags_RoundTopLeft,      // Was == 0x01 (1 << 0) prior to 1.82. Order matches ImDrawFlags_NoRoundCorner* flag (we exploit this internally).
+//    ImDrawCornerFlags_TopRight  = ImDrawFlags_RoundTopRight,     // Was == 0x02 (1 << 1) prior to 1.82.
+//    ImDrawCornerFlags_BotLeft   = ImDrawFlags_RoundBottomLeft,   // Was == 0x04 (1 << 2) prior to 1.82.
+//    ImDrawCornerFlags_BotRight  = ImDrawFlags_RoundBottomRight,  // Was == 0x08 (1 << 3) prior to 1.82.
+//    ImDrawCornerFlags_All       = ImDrawFlags_RoundAll,          // Was == 0x0F prior to 1.82
+//    ImDrawCornerFlags_Top       = ImDrawFlags_RoundTopLeft | ImDrawFlags_RoundTopRight,
+//    ImDrawCornerFlags_Bot       = ImDrawFlags_RoundBottomLeft | ImDrawFlags_RoundBottomRight,
+//    ImDrawCornerFlags_Left      = ImDrawFlags_RoundTopLeft | ImDrawFlags_RoundBottomLeft,
+//    ImDrawCornerFlags_Right     = ImDrawFlags_RoundTopRight | ImDrawFlags_RoundBottomRight,
 //};
 
 // RENAMED and MERGED both ImGuiKey_ModXXX and ImGuiModFlags_XXX into ImGuiMod_XXX (from September 2022)
