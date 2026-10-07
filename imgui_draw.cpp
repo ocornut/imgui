@@ -2761,13 +2761,14 @@ void ImDrawList::AddCircleFilled(const ImVec2& center, float radius, ImU32 col, 
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
-    const float diameter = radius * 2.0f;
-    if (diameter < _FringeScale) IM_UNLIKELY
+    // Minimum radius, before the edge-AA will overlap.
+    const float min_radius = _FringeScale * 1.41421356f * 0.5f;
+    if (radius < min_radius) IM_UNLIKELY
     {
-        if (diameter < (1.0f / 255.0f) * _FringeScale)
+        if (radius < (1.0f / 255.0f) * min_radius)
             return;
-        col = ImAlphaMultiply(col, diameter * _InvFringeScale);
-        radius = _FringeScale * 0.5f;
+        col = ImAlphaMultiply(col, radius / min_radius);
+        radius = min_radius;
     }
 
     if (num_segments <= 0 && radius <= _Data->ArcFastRadiusCutoff)
