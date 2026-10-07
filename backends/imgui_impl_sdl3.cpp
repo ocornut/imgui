@@ -477,6 +477,13 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
             bd->WantUpdateGamepadsList = true;
             return true;
         }
+        case SDL_EVENT_PINCH_UPDATE:
+        {
+            io.AddMouseSourceEvent(ImGuiMouseSource_TouchScreen);
+            io.AddPinchUpdateEvent(event->pinch.scale, event->pinch.span_x, event->pinch.span_y, event->pinch.focus_x, event->pinch.focus_y);
+            return true;
+        }
+
         default:
             break;
     }
