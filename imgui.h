@@ -2560,9 +2560,10 @@ struct ImGuiIO
     bool        ConfigDebugIgnoreFocusLoss;     // = false          // Ignore io.AddFocusEvent(false), consequently not calling io.ClearInputKeys()/io.ClearInputMouse() in input processing.
 
     // Option to compare < 1.93.0 rendering details vs 1.93.0 rendering details. (#9504)
-    // - Equivalent to calling PushDrawFlag(ImDrawList_StrokeLegacy,true) on every draw list instances.
+    // - Equivalent to calling PushDrawFlag(ImDrawFlags_StrokeLegacy,true) on every draw list instances.
     // - Suggested use, e.g. io.ConfigDebugDrawListDefaultsToStrokeLegacy = io.KeyShift; // Map to SHIFT modifier
-    bool        ConfigDebugDrawListDefaultsToStrokeLegacy; // false // Default all ImDrawList to ImDrawList_StrokeLegacy mode, mimicking pre-1.93.0 rendering.
+    // - Also see our interactive testbed: https://www.dearimgui.com/docs/drawlist_v193
+    bool        ConfigDebugDrawListDefaultsToStrokeLegacy; // false // Default all ImDrawList to ImDrawFlags_StrokeLegacy mode, mimicking pre-1.93.0 rendering.
 
     //------------------------------------------------------------------
     // Platform Identifiers

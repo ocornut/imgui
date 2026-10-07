@@ -73,6 +73,9 @@ Use `ImDrawFlags_StrokeLegacy` mode to emulate old rendering:
 - Globally:           ImGui::Checkbox("DefaultsToStrokeLegacy", &io.ConfigDebugDrawListDefaultsToStrokeLegacy);  // Map to a checkbox
 - Globally:           io.ConfigDebugDrawListDefaultsToStrokeLegacy = io.KeyShift;                                // Map on Shift
 
+Don't panic! Many applications will not notice any difference! You will more likely
+see differences if you used lots of direct `ImDrawList` calls for custom rendering.
+
 Main work courtesy of @memononen.
 Additional work/reviewing/guidance by @ocornut.
 With legacy bits from @thedmd, @potocpav.
@@ -85,7 +88,7 @@ Refer to our guides:
 
 - ImDrawList 1.92.9 vs 1.93.0 Interactive Testbed
     https://www.dearimgui.com/docs/drawlist_v193
-    (interactively discuss and compare differences between 1.92.9 and 1.93.9)
+    (interactively discuss and compare differences between 1.92.9 and 1.93.0)
     (downloadable HTML file, may be used offline)
 
 - Pixel Perfect Anti-aliased Rendering
@@ -100,7 +103,7 @@ Refer to our guides:
 
 Breaking Changes:
 
-- DrawList:
+- ImDrawList:
   - AddLine(): removed the (+0.5f,+0.5f) offset that was sneakily added to input coordinates. (#9504)
     - This fixes inconsistencies in the API and matches the PathXXX API.
     - By default, stroke thickness extends on both side of the given segment.
@@ -134,21 +137,21 @@ Breaking Changes:
     - All closed shapes with thickness=1.0f will appear identical.
     - The difference for thickness>1.0f shapes may be minimal since very large strokes
       were not well supported for widgets, but stroke will default inside widgets.
-  - AddCircle(), AddNgon(): removed +0.5f offset added to radius.
+  - AddCircle(), AddNgon(): removed -0.5f offset added to radius.
     - This fixes inconsistencies in the API.
     - Use `ImDrawFlags_StrokeLegacy` to use old method if required. Or you can apply the offset manually!
   - AddRectFilled(): non-integer coordinates will now display anti-aliased edges.
     Previously, non-integer coordinates rendered with aliased edges snapped by the
     rasterizer. (#6971)
   - AddRect(), AddRectFilled(): rectangles with inverted coordinates won't be visible
-    unless using ImDrawList_StrokeLegacy mode. With inverted coordinates (min > max):
+    unless using ImDrawFlags_StrokeLegacy mode. With inverted coordinates (min > max):
       - Legacy `AddRect()` rounding off       -> visible but incorrect outer size.
       - Legacy `AddRect()` rounding on        -> visible but very glitchy.
       - Legacy `AddRectFilled()` rounding off -> visible and correct.
       - Legacy `AddRectFilled()` rounding on  -> visible but very glitchy.
       - Use `ImDrawFlags_StrokeLegacy` to use old rendering for cases without rounding, or fix coordinates.
   - Merged `ImDrawListFlags` into `ImDrawFlags`. `ImDrawListFlags` was rarely used directly
-    and generally setup by the ImGui context. Keep inline redirection enums (will obsolete).
+    and generally setup by the ImGui context. 
       - `ImDrawListFlags_AntiAliasedLines`    -> `ImDrawFlags_AALines`
       - `ImDrawListFlags_AntiAliasedFill`     -> `ImDrawFlags_AAFill`
       - `ImDrawListFlags_AllowVtxOffset`      -> `ImDrawFlags_UseVtxOffset`
@@ -171,10 +174,10 @@ Breaking Changes:
     obsolete, as the new line rendering code always uses textures.
   - Enabling `ImFontAtlasFlags_NoBakedLines` in the font atlas will now disable support for
     anti-aliased lines by clearing `style.AntiAliasedLines`/`style.AntiAliasedLineEnds`.
-- Style: obsoleted `style.CurveTessellationTol (default 1.25)` which was in Pixels² unit in
-  favor of `style.CurveTessellationMaxError` (default 1.12)` which is in Pixels unit. It is
+- Style: obsoleted `style.CurveTessellationTol` (default 1.25) which was in Pixels² unit in
+  favor of `style.CurveTessellationMaxError` (default 1.12) which is in Pixels unit. It is
   easier to tweak + this allows us to easily scale error threshold on high density screens.
-  - style.CurveTessellationMaxError == sqrf(style.CurveTessellationTol).
+  - style.CurveTessellationMaxError == sqrtf(style.CurveTessellationTol).
 - ImGuiTextFilter: removed `float width` parameter of `Draw(const char* filter, float width)`:
   prefer using `SetNextItemWidth(float)` which is standard. Kept inline redirection function.
 - Fonts: renamed `AddRemapChar()` to `AddRemapCodepoint()` (rarely used, marked internal).
@@ -221,7 +224,7 @@ Other Changes:
     (#9504, #2183, #2964, #7972 + #9360, #6331, #4250, #4091) [@memononen]
     - Generally fixed rendering of thick strokes/paths.
     - The new stroke expansion now uses corner miter calculation, which keeps thickness along
-      the line segments consistent. If the corner becomes too sharp, it will be bevelled to
+      the line segments consistent. If the corner becomes too sharp, it will be beveled to
       avoid long spikes at corners.
     - There are also some robustness measures for the case where the line thickness is larger
       than the features being drawn.
@@ -233,7 +236,7 @@ Other Changes:
     work precisely the same regardless of graphics API. (#3116, #3258, #2441) [@memononen]
   - Debug: added `io.ConfigDebugDrawListDefaultsToStrokeLegacy` to facilitate comparing old/new
     behaviors. This is equivalent to calling `PushDrawFlag(ImDrawFlags_StrokeLegacy, true)`
-    on every drawlist.
+    on every drawlists.
     Suggested uses, e.g.
       - `io.ConfigDebugDrawListDefaultsToStrokeLegacy = io.KeyShift; // Map on holding Shift`
       - `ImGui::Checkbox("DefaultsToStrokeLegacy", &io.ConfigDebugDrawListDefaultsToStrokeLegacy);`
@@ -292,7 +295,7 @@ Other Changes:
         which may make them appear as protruding a little more.
   - About disabling anti-aliasing:
     - Disabling anti-aliasing is now emulated by applying different UV coordinates.
-      - It does not result in a performance increase or vertex/index data decrease any more.
+      - It does not result in a performance increase or vertex/index data decrease any more
         (however the tendency is that the new code behaves better than old code).
       - But may be a useful stylistic choice in some circumstances.
     - Many thick shapes had broken corners with old no-AA code, and the old no-AA code

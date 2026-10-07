@@ -415,7 +415,7 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
                        - AddRect(), AddCircle(), AddNgon(), AddEllipse(), AddTriangle(), AddQuad(): defaulting to "inside" stroke. All closed shapes with thickness=1.0f will appear identical. The difference for thickness>1.0f shapes may be minimal since very large strokes were not well supported for widgets, but stroke will default inside widgets.
                        - AddCircle(), AddNgon(): removed +0.5f offset added to radius. This fixes inconsistencies in the API. Use `ImDrawFlags_StrokeLegacy` to use old method if required. Or you can apply the offset manually!
                        - AddRectFilled(): non-integer coordinates will now display anti-aliased edges. Previously, non-integer coordinates rendered with aliased edges snapped by the rasterizer.
-                       - AddRect(), AddRectFilled(): rectangles with inverted coordinates won't be visible unless using ImDrawList_StrokeLegacy mode.
+                       - AddRect(), AddRectFilled(): rectangles with inverted coordinates won't be visible unless using ImDrawFlags_StrokeLegacy mode.
                          With inverted coordinates:
                           - Legacy `AddRect()` rounding off         -> visible but incorrect outer size.
                           - Legacy `AddRect()` rounding on          -> visible but very glitchy.
@@ -438,8 +438,8 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
                        - obsoleted style.AntiAliasedLinesUseTex and ImDrawListFlags_AntiAliasedLinesUseTex, as the new line rendering code always uses textures.
  - 2026/09/30 (1.93.0) - ImFont: renamed `AddRemapChar()` to `AddRemapCodepoint()` (rarely used, marked internal). (#609, #5748)
  - 2026/09/18 (1.93.0) - ImGuiTextFilter: removed `float width` parameter of `Draw(const char* filter, float width)`: prefer using `SetNextItemWidth(float)` which is standard. Kept inline redirection function.
- - 2026/08/03 (1.93.0) - Style: obsoleted `style.CurveTessellationTol (default 1.25)` which was in Pixels² unit in favor of `style.CurveTessellationMaxError` (default 1.12)` which is in Pixels unit.
-                         - style.CurveTessellationMaxError == sqrf(style.CurveTessellationTol).
+ - 2026/08/03 (1.93.0) - Style: obsoleted `style.CurveTessellationTol` (default 1.25) which was in Pixels² unit in favor of `style.CurveTessellationMaxError` (default 1.12) which is in Pixels unit.
+                         - style.CurveTessellationMaxError == sqrtf(style.CurveTessellationTol).
  - 2026/07/20 (1.92.9) - DragXXX, SliderXXX, InputScalar: with `ImGuiItemFlags_LiveEditOnInputScalar` now defaulting to being disabled:
                          inputting a value with the keyboard doesn't write intermediate values to backing variable. (#9476)
                          - Before: DragFloat() with user typing "123" --> write back 1, then 12, then 123.
