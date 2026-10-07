@@ -296,6 +296,7 @@ typedef int     (*ImGuiInputTextCallback)(ImGuiInputTextCallbackData* data);    
 typedef void    (*ImGuiSizeCallback)(ImGuiSizeCallbackData* data);              // Callback function for ImGui::SetNextWindowSizeConstraints()
 typedef void*   (*ImGuiMemAllocFunc)(size_t sz, void* user_data);               // Function signature for ImGui::SetAllocatorFunctions()
 typedef void    (*ImGuiMemFreeFunc)(void* ptr, void* user_data);                // Function signature for ImGui::SetAllocatorFunctions()
+typedef void    (*ImGuiDebugDrawCmdCallbackFn)(ImDrawList* overlay_draw_list, const ImDrawList* draw_list, const ImDrawCmd* draw_cmd, bool show_mesh, bool show_aabb, char* out_text, int text_size); // Debug callback for custom draw commands
 
 // ImVec2: 2D vector used to store positions, sizes etc. [Compile-time configurable type]
 // - This is a frequently used type in the API. Consider using IM_VEC2_CLASS_EXTRA to create implicit cast from/to our preferred type.
@@ -2563,6 +2564,11 @@ struct ImGuiIO
     // - Equivalent to calling PushDrawFlag(ImDrawList_StrokeLegacy,true) on every draw list instances.
     // - Suggested use, e.g. io.ConfigDebugDrawListDefaultsToStrokeLegacy = io.KeyShift; // Map to SHIFT modifier
     bool        ConfigDebugDrawListDefaultsToStrokeLegacy; // false // Default all ImDrawList to ImDrawList_StrokeLegacy mode, mimicking pre-1.93.0 rendering.
+
+    // Debug callback for custom draw commands (callbacks) in the Metrics/Debugger draw list viewer.
+    // When set, callback draw commands will show a tree node with descriptive text and mesh/bbox overlay on hover,
+    // instead of just "Callback %p, user_data %p". See ImGuiDebugDrawCmdCallbackFn typedef for parameters.
+    ImGuiDebugDrawCmdCallbackFn DebugDrawCmdCallback; // = NULL
 
     //------------------------------------------------------------------
     // Platform Identifiers
