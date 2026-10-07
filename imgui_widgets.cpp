@@ -932,7 +932,7 @@ bool ImGui::CloseButton(ImGuiID id, const ImVec2& pos)
         window->DrawList->AddRectFilled(bb.Min, bb.Max, bg_col);
     RenderNavCursor(bb, id, ImGuiNavRenderCursorFlags_Compact);
     const ImU32 cross_col = GetColorU32(ImGuiCol_Text);
-    const ImVec2 cross_center = bb.GetCenter() - ImVec2(0.5f, 0.5f);
+    const ImVec2 cross_center = bb.GetCenter();
     const float cross_extent = g.FontSize * 0.5f * 0.7071f - 1.0f;
     const float cross_thickness = 1.0f * (float)(int)g.Style._MainScale; // FIXME-DPI
     window->DrawList->AddLine(cross_center + ImVec2(+cross_extent, +cross_extent), cross_center + ImVec2(-cross_extent, -cross_extent), cross_col, cross_thickness);
@@ -1764,7 +1764,7 @@ void ImGui::SeparatorTextEx(ImGuiID id, const char* label, const char* label_end
 
     const float sep1_x1 = pos.x;
     const float sep2_x2 = bb.Max.x;
-    const float seps_y = ImTrunc((bb.Min.y + bb.Max.y) * 0.5f + 0.999f);
+    float seps_y = ImTrunc((bb.Min.y + bb.Max.y) * 0.5f) + 1.0f;
 
     const float label_avail_w = ImMax(0.0f, sep2_x2 - sep1_x1 - padding.x * 2.0f);
     const ImVec2 label_pos(pos.x + padding.x + ImMax(0.0f, (label_avail_w - label_size.x - extra_w) * style.SeparatorTextAlign.x), pos.y + text_baseline_y); // FIXME-ALIGN
@@ -1778,9 +1778,9 @@ void ImGui::SeparatorTextEx(ImGuiID id, const char* label, const char* label_end
         const float sep1_x2 = label_pos.x - style.ItemSpacing.x;
         const float sep2_x1 = label_pos.x + label_size.x + extra_w + style.ItemSpacing.x;
         if (sep1_x2 > sep1_x1 && separator_thickness > 0.0f)
-            window->DrawList->AddLineH(sep1_x1, sep1_x2, seps_y, separator_col, separator_thickness);
+            window->DrawList->AddLineH(sep1_x1, sep1_x2, seps_y, separator_col, separator_thickness, ImDrawFlags_StrokeCenterBiased);
         if (sep2_x2 > sep2_x1 && separator_thickness > 0.0f)
-            window->DrawList->AddLineH(sep2_x1, sep2_x2, seps_y, separator_col, separator_thickness);
+            window->DrawList->AddLineH(sep2_x1, sep2_x2, seps_y, separator_col, separator_thickness, ImDrawFlags_StrokeCenterBiased);
         if (g.LogEnabled)
             LogSetNextTextDecoration("---", NULL);
         RenderTextEllipsis(window->DrawList, label_pos, ImVec2(bb.Max.x, bb.Max.y + style.ItemSpacing.y), bb.Max.x, label, label_end, &label_size);
@@ -1790,7 +1790,7 @@ void ImGui::SeparatorTextEx(ImGuiID id, const char* label, const char* label_end
         if (g.LogEnabled)
             LogText("---");
         if (separator_thickness > 0.0f)
-            window->DrawList->AddLineH(sep1_x1, sep2_x2, seps_y, separator_col, separator_thickness);
+            window->DrawList->AddLineH(sep1_x1, sep2_x2, seps_y, separator_col, separator_thickness, ImDrawFlags_StrokeCenterBiased);
     }
 }
 
@@ -1987,12 +1987,12 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
     const float value_x2 = ImMax(bb.Min.x, bb.Max.x - arrow_size);
     RenderNavCursor(bb, id);
     if (!(flags & ImGuiComboFlags_NoPreview))
-        window->DrawList->AddRectFilled(bb.Min, ImVec2(value_x2, bb.Max.y), frame_col, style.FrameRounding, (flags & ImGuiComboFlags_NoArrowButton) ? ImDrawFlags_RoundCornersAll : ImDrawFlags_RoundCornersLeft);
+        window->DrawList->AddRectFilled(bb.Min, ImVec2(value_x2, bb.Max.y), frame_col, style.FrameRounding, (flags & ImGuiComboFlags_NoArrowButton) ? ImDrawFlags_RoundAll : ImDrawFlags_RoundLeft);
     if (!(flags & ImGuiComboFlags_NoArrowButton))
     {
         ImU32 bg_col = GetColorU32((popup_open || hovered) ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
         ImU32 text_col = GetColorU32(ImGuiCol_Text);
-        window->DrawList->AddRectFilled(ImVec2(value_x2, bb.Min.y), bb.Max, bg_col, style.FrameRounding, (w <= arrow_size) ? ImDrawFlags_RoundCornersAll : ImDrawFlags_RoundCornersRight);
+        window->DrawList->AddRectFilled(ImVec2(value_x2, bb.Min.y), bb.Max, bg_col, style.FrameRounding, (w <= arrow_size) ? ImDrawFlags_RoundAll : ImDrawFlags_RoundRight);
         if (value_x2 + arrow_size - style.FramePadding.x <= bb.Max.x)
             RenderArrow(window->DrawList, ImVec2(value_x2 + style.FramePadding.y, bb.Min.y + style.FramePadding.y), text_col, ImGuiDir_Down, 1.0f);
     }
@@ -5766,9 +5766,9 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         state->CursorAnim += io.DeltaTime;
         bool cursor_is_visible = (!g.IO.ConfigInputTextCursorBlink) || (state->CursorAnim <= 0.0f) || ImFmod(state->CursorAnim, 1.20f) <= 0.80f;
         ImVec2 cursor_screen_pos = ImTrunc(draw_pos + cursor_offset - draw_scroll);
-        ImRect cursor_screen_rect(cursor_screen_pos.x, cursor_screen_pos.y - g.FontSize + 0.5f, cursor_screen_pos.x + 1.0f, cursor_screen_pos.y - 1.5f);
+        ImRect cursor_screen_rect = ImRect(cursor_screen_pos.x, cursor_screen_pos.y - g.FontSize + 1.0f, cursor_screen_pos.x + 1.0f, cursor_screen_pos.y - 1.0f);
         if (cursor_is_visible && cursor_screen_rect.Overlaps(clip_rect))
-            draw_window->DrawList->AddLineV(cursor_screen_rect.Min.x, cursor_screen_rect.Min.y, cursor_screen_rect.Max.y, GetColorU32(ImGuiCol_InputTextCursor), style.InputTextCursorSize);
+            draw_window->DrawList->AddLineV(cursor_screen_rect.Min.x, cursor_screen_rect.Min.y, cursor_screen_rect.Max.y, GetColorU32(ImGuiCol_InputTextCursor), style.InputTextCursorSize, ImDrawFlags_StrokeInside);
 
         // Notify OS of text input position for advanced IME (-1 x offset so that Windows IME can cover our cursor. Bit of an extra nicety.)
         // This is required for some backends (SDL3) to start emitting character/text inputs.
@@ -6630,10 +6630,10 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
     {
         float mid_x = IM_ROUND((bb.Min.x + bb.Max.x) * 0.5f);
         if ((flags & ImGuiColorEditFlags_AlphaNoBg) == 0)
-            RenderColorRectWithAlphaCheckerboard(window->DrawList, ImVec2(bb.Min.x + grid_step, bb.Min.y), bb.Max, ColorConvertFloat4ToU32(col_rgb), g.Style.Alpha, grid_step, ImVec2(-grid_step, 0.0f), rounding, ImDrawFlags_RoundCornersRight);
+            RenderColorRectWithAlphaCheckerboard(window->DrawList, ImVec2(bb.Min.x + grid_step, bb.Min.y), bb.Max, ColorConvertFloat4ToU32(col_rgb), g.Style.Alpha, grid_step, ImVec2(-grid_step, 0.0f), rounding, ImDrawFlags_RoundRight);
         else
-            window->DrawList->AddRectFilled(ImVec2(bb.Min.x + grid_step, bb.Min.y), bb.Max, GetColorU32(col_rgb), rounding, ImDrawFlags_RoundCornersRight);
-        window->DrawList->AddRectFilled(bb.Min, ImVec2(mid_x, bb.Max.y), GetColorU32(col_rgb_without_alpha), rounding, ImDrawFlags_RoundCornersLeft);
+            window->DrawList->AddRectFilled(ImVec2(bb.Min.x + grid_step, bb.Min.y), bb.Max, GetColorU32(col_rgb), rounding, ImDrawFlags_RoundRight);
+        window->DrawList->AddRectFilled(bb.Min, ImVec2(mid_x, bb.Max.y), GetColorU32(col_rgb_without_alpha), rounding, ImDrawFlags_RoundLeft);
     }
     else
     {
@@ -7315,17 +7315,19 @@ void ImGui::TreeNodeDrawLineToChildNode(const ImVec2& target_pos)
     if ((window->DC.TreeHasStackDataDepthMask & TREE_NODE_GET_DEPTH_MASK(window->DC.TreeDepth - 1)) == 0)
         return;
 
+    // FIXME: Could this be simplified using new stroke flags?
     ImGuiTreeNodeStackData* parent_data = &g.TreeNodeStack.Data[g.TreeNodeStack.Size - 1];
-    float x1 = ImTrunc(parent_data->DrawLinesX1);
+    const float half_size = g.Style.TreeLinesSize * 0.5f;
+    float x1 = ImTrunc(parent_data->DrawLinesX1 - half_size) + half_size; // Draw line centered at X1, but snap to pixels boundary.
     float x2 = ImTrunc(target_pos.x - g.Style.ItemInnerSpacing.x);
-    float y = ImTrunc(target_pos.y);
+    float y = ImTrunc(target_pos.y - half_size) + half_size;
     float rounding = (g.Style.TreeLinesRounding > 0.0f) ? ImMin(x2 - x1, g.Style.TreeLinesRounding) : 0.0f;
     parent_data->DrawLinesToNodesY2 = ImMax(parent_data->DrawLinesToNodesY2, y - rounding);
     if (x1 >= x2)
         return;
-    if (rounding > 0.0f)
+    if (rounding > 0.0f && rounding > half_size)
     {
-        x1 += 0.5f + rounding;
+        x1 += rounding;
         window->DrawList->PathArcToFast(ImVec2(x1, y - rounding), rounding, 6, 3);
         if (x1 < x2)
             window->DrawList->PathLineTo(ImVec2(x2, y));
@@ -7333,7 +7335,10 @@ void ImGui::TreeNodeDrawLineToChildNode(const ImVec2& target_pos)
     }
     else
     {
-        window->DrawList->AddLineH(x1, x2, y, GetColorU32(ImGuiCol_TreeLines), g.Style.TreeLinesSize);
+        // We use AddLine() instead of AddLineH() as we provide coordinates for line center,
+        // in order to make the code use same coordinates for both rounded and non-rounded version. (FIXME-OPT)
+        x1 += half_size; // Avoid overdraw
+        window->DrawList->AddLine(ImVec2(x1, y), ImVec2(x2, y), GetColorU32(ImGuiCol_TreeLines), g.Style.TreeLinesSize);
     }
 }
 
@@ -7356,10 +7361,12 @@ void ImGui::TreeNodeDrawLineToTreePop(const ImGuiTreeNodeStackData* data)
     y2 = ImMin(y2, window->ClipRect.Max.y);
     if (y2 <= y1)
         return;
-    float x = ImTrunc(data->DrawLinesX1);
+    float x = ImTrunc(data->DrawLinesX1 - g.Style.TreeLinesSize * 0.5f) + g.Style.TreeLinesSize * 0.5f; // Draw line centered at X1, but snap to pixels boundary.
     if (data->DrawLinesTableColumn != -1)
         TablePushColumnChannel(data->DrawLinesTableColumn);
-    window->DrawList->AddLineV(x, y1, y2, GetColorU32(ImGuiCol_TreeLines), g.Style.TreeLinesSize);
+
+    // We use AddLine() instead of AddLineV() as we provide coordinates for line center (FIXME-OPT)
+    window->DrawList->AddLine(ImVec2(x, y1), ImVec2(x, y2), GetColorU32(ImGuiCol_TreeLines), g.Style.TreeLinesSize);
     if (data->DrawLinesTableColumn != -1)
         TablePopColumnChannel();
 }
@@ -11055,8 +11062,8 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
         if (tab_contents_visible && (tab_bar->Flags & ImGuiTabBarFlags_DrawSelectedOverline) && style.TabBarOverlineSize > 0.0f)
         {
             // Might be moved to TabItemBackground() ?
-            ImVec2 tl = bb.GetTL() + ImVec2(0, 1.0f * g.CurrentDpiScale);
-            ImVec2 tr = bb.GetTR() + ImVec2(0, 1.0f * g.CurrentDpiScale);
+            ImVec2 tl = bb.GetTL() + ImVec2(0, style.TabBarOverlineSize * 0.5f);
+            ImVec2 tr = bb.GetTR() + ImVec2(0, style.TabBarOverlineSize * 0.5f);
             ImU32 overline_col = GetColorU32(tab_bar_focused ? ImGuiCol_TabSelectedOverline : ImGuiCol_TabDimmedSelectedOverline);
             if (style.TabRounding > 0.0f)
             {
@@ -11067,7 +11074,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
             }
             else
             {
-                display_draw_list->AddLine(tl - ImVec2(0.5f, 0.5f), tr - ImVec2(0.5f, 0.5f), overline_col, style.TabBarOverlineSize);
+                display_draw_list->AddLine(tl, tr, overline_col, style.TabBarOverlineSize);
             }
         }
         RenderNavCursor(bb, id);
@@ -11170,14 +11177,14 @@ void ImGui::TabItemBackground(ImDrawList* draw_list, const ImRect& bb, ImGuiTabI
     const float rounding = ImMax(0.0f, ImMin((flags & ImGuiTabItemFlags_Button) ? g.Style.FrameRounding : g.Style.TabRounding, width * 0.5f - 1.0f));
     const float y1 = bb.Min.y + 1.0f; // Leave a bit of room in title bars.
     const float y2 = bb.Max.y - g.Style.TabBarBorderSize;
-    draw_list->AddRectFilled(bb.Min, ImVec2(bb.Max.x, y2), col, rounding, ImDrawFlags_RoundCornersTop);
+    draw_list->AddRectFilled(ImVec2(bb.Min.x, y1), ImVec2(bb.Max.x, y2), col, rounding, ImDrawFlags_RoundTop);
     if (g.Style.TabBorderSize > 0.0f)
     {
-        draw_list->PathLineTo(ImVec2(bb.Min.x + 0.5f, y2));
-        draw_list->PathArcToFast(ImVec2(bb.Min.x + rounding + 0.5f, y1 + rounding + 0.5f), rounding, 6, 9);
-        draw_list->PathArcToFast(ImVec2(bb.Max.x - rounding - 0.5f, y1 + rounding + 0.5f), rounding, 9, 12);
-        draw_list->PathLineTo(ImVec2(bb.Max.x - 0.5f, y2));
-        draw_list->PathStroke(GetColorU32(ImGuiCol_Border), g.Style.TabBorderSize);
+        draw_list->PathLineTo(ImVec2(bb.Min.x, y2));
+        draw_list->PathArcToFast(ImVec2(bb.Min.x + rounding, y1 + rounding), rounding, 6, 9);
+        draw_list->PathArcToFast(ImVec2(bb.Max.x - rounding, y1 + rounding), rounding, 9, 12);
+        draw_list->PathLineTo(ImVec2(bb.Max.x, y2));
+        draw_list->PathStroke(GetColorU32(ImGuiCol_Border), g.Style.TabBorderSize, ImDrawFlags_StrokeCenterBiased); // Use _StrokeInside?
     }
 }
 

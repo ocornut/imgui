@@ -403,6 +403,47 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
                           - likewise io.MousePos and GetMousePos() will use OS coordinates.
                             If you query mouse positions to interact with non-imgui coordinates you will need to offset them, e.g. subtract GetWindowViewport()->Pos.
 
+   2026/10/07 (1.93.0) - large cleanup/refactor of ImDrawList. many issues and inconsistencies fixed! (#9504)
+                         BELOW IS A SIMPLIFIED/SHORTENED RECAP OF CHANGES. READ CHANGELOG AND LINKS ABOVE FOR MORE DETAILS!
+                         useful links:
+                          - ImDrawList 1.92.9 <> 1.93 Interactive Testbed: https://www.dearimgui.com/docs/drawlist_v193 (<-- you can download this locally)
+                          - ImDrawList Wiki Reference:                     https://github.com/ocornut/imgui/wiki/Draw-List
+                          - Discussion thread:                             https://github.com/ocornut/imgui/issues/9504
+                       - use ImDrawFlags_StrokeLegacy mode to emulate old rendering:
+                          - Per-primitive:      draw_list->AddLine(..., ..., ImDrawFlags_StrokeLegacy);
+                          - For a given scope:  draw_list->PushDrawFlag(ImDrawFlags_StrokeLegacy, true); draw_list->AddLine(...); draw_list->PopDrawFlag();
+                          - Globally:           ImGui::Checkbox("DefaultsToStrokeLegacy", &io.ConfigDebugDrawListDefaultsToStrokeLegacy);  // Map to a checkbox
+                          - Globally:           io.ConfigDebugDrawListDefaultsToStrokeLegacy = io.KeyShift;                                // Map on Shift
+                       - AddLine: removed the (+0.5f,+0.5f) offset that was sneakily added to input coordinates by this function, and led to lots of inconsistencies.
+                          - This fixes inconsistencies in the API and matches the PathXXX API.
+                          - By default, stroke thickness extends on both side of the given segment. e.g for a "pixel-perfect" looking line with thickness=1.0f, coords should be passed as center of each ends of the line.
+                          - Use `ImDrawFlags_StrokeLegacy` to use old offset if required. Or you can apply the offset manually!
+                          - Generally better, simpler and faster to use `AddLineH()`, `AddLineV()` functions added in 1.92.8.
+                          - IF YOU ARE MINDFUL OF PIXEL-PERFECTNESS IN YOUR CUSTOM RENDERING/WIDGETS read Changelog and links above for details.
+                       - AddRect(), AddCircle(), AddNgon(), AddEllipse(), AddTriangle(), AddQuad(): defaulting to "inside" stroke. All closed shapes with thickness=1.0f will appear identical. The difference for thickness>1.0f shapes may be minimal since very large strokes were not well supported for widgets, but stroke will default inside widgets.
+                       - AddCircle(), AddNgon(): removed +0.5f offset added to radius. This fixes inconsistencies in the API. Use `ImDrawFlags_StrokeLegacy` to use old method if required. Or you can apply the offset manually!
+                       - AddRectFilled(): non-integer coordinates will now display anti-aliased edges. Previously, non-integer coordinates rendered with aliased edges snapped by the rasterizer.
+                       - AddRect(), AddRectFilled(): rectangles with inverted coordinates won't be visible unless using ImDrawList_StrokeLegacy mode.
+                         With inverted coordinates:
+                          - Legacy `AddRect()` rounding off         -> visible but incorrect outer size.
+                          - Legacy `AddRect()` rounding on          -> visible but very glitchy.
+                          - Legacy `AddRectFilled()` rounding off   -> visible and correct.
+                          - Legacy `AddRectFilled()` rounding on    -> visible but very glitchy.
+                       - merged ImDrawListFlags into ImDrawFlags. obsoleted ImDrawListFlags (which were rarely used directly):
+                          - ImDrawListFlags_AntiAliasedLines        -> ImDrawFlags_AALines,
+                          - ImDrawListFlags_AntiAliasedFill         -> ImDrawFlags_AAFill,
+                          - ImDrawListFlags_AllowVtxOffset          -> ImDrawFlags_UseVtxOffset,
+                          - ImDrawListFlags_TextNoPixelSnap         -> ImDrawFlags_TextNoPixelSnap,
+                         unifying them allows easily using them for both per-primitives alterations and scope alterations.
+                       - renamed ImDrawFlags_RoundCornersXXXX to ImDrawFlags_RoundXXXX.
+                          - ImDrawFlags_RoundCornersAll             -> ImDrawFlags_RoundAll,
+                          - ImDrawFlags_RoundCornersNone            -> ImDrawFlags_RoundNone,
+                          - ImDrawFlags_RoundCornersTopLeft         -> ImDrawFlags_RoundTopLeft,
+                          - ImDrawFlags_RoundCornersTopRight        -> ImDrawFlags_RoundTopRight,
+                          - ImDrawFlags_RoundCornersTop             -> ImDrawFlags_RoundTop,
+                          - ImDrawFlags_RoundCornersBottom          -> ImDrawFlags_RoundBottom,
+                         etc. kept redirection enums (will obsolete).
+                       - obsoleted style.AntiAliasedLinesUseTex and ImDrawListFlags_AntiAliasedLinesUseTex, as the new line rendering code always uses textures.
  - 2026/09/30 (1.93.0) - ImFont: renamed `AddRemapChar()` to `AddRemapCodepoint()` (rarely used, marked internal). (#609, #5748)
  - 2026/09/18 (1.93.0) - ImGuiTextFilter: removed `float width` parameter of `Draw(const char* filter, float width)`: prefer using `SetNextItemWidth(float)` which is standard. Kept inline redirection function.
  - 2026/08/03 (1.93.0) - Style: obsoleted `style.CurveTessellationTol (default 1.25)` which was in Pixels² unit in favor of `style.CurveTessellationMaxError` (default 1.12)` which is in Pixels unit.
@@ -1606,9 +1647,9 @@ ImGuiStyle::ImGuiStyle()
     MouseCursorScale            = 1.0f;             // Scale software rendered mouse cursor (when io.MouseDrawCursor is enabled). May be removed later.
 
     // Rendering & Tessellation
-    AntiAliasedLines            = true;             // Enable anti-aliased lines/borders. Disable if you are really tight on CPU/GPU.
-    AntiAliasedLinesUseTex      = true;             // Enable anti-aliased lines/borders using textures where possible. Require backend to render with bilinear filtering (NOT point/nearest filtering).
-    AntiAliasedFill             = true;             // Enable anti-aliased filled shapes (rounded rectangles, circles, etc.).
+    AntiAliasedLines            = true;             // Enable anti-aliased lines/borders. Used at the beginning of the frame to set ImDrawFlags_AALines in all draw-lists.
+    AntiAliasedLineEnds         = false;            // Enable anti-aliased lines/borders ends. Nicer for thick lines but more expensive. Used at the beginning of the frame to set ImDrawFlags_AALineEnds in all draw-lists.
+    AntiAliasedFill             = true;             // Enable anti-aliased edges around filled shapes (rounded rectangles, circles, etc.). Used at the beginning of the frame to set ImDrawFlags_AAFill in all draw-lists.
     CurveTessellationMaxError   = 1.12f;            // Maximum error (in pixels) when using PathBezierCurveTo() without a specific number of segments. Decrease for highly tessellated curves (higher quality, more polygons), increase to reduce quality.
     CircleTessellationMaxError  = 0.30f;            // Maximum error (in pixels) allowed when using AddCircle()/AddCircleFilled() or drawing rounded corner rectangles with no explicit segment count specified. Decrease for higher quality but more geometry.
 
@@ -1624,6 +1665,7 @@ ImGuiStyle::ImGuiStyle()
     _NextFrameFontSizeBase      = 0.0f;
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     CurveTessellationTol        = 0.0f;             // Old CurveTessellationTol = CurveTessellationMaxError*CurveTessellationMaxError.
+    AntiAliasedLinesUseTex      = true;             // Enable anti-aliased lines/borders using textures for legacy strokes. Require backend to render with bilinear filtering (NOT point/nearest filtering).
 #endif
 
     // Default theme
@@ -5805,15 +5847,21 @@ static void SetupDrawListSharedData()
     g.DrawListSharedData.ClipRectFullscreen = virtual_space.ToVec4();
     g.DrawListSharedData.CurveTessellationMaxError = g.Style.CurveTessellationMaxError;
     g.DrawListSharedData.SetCircleTessellationMaxError(g.Style.CircleTessellationMaxError);
-    g.DrawListSharedData.InitialFlags = ImDrawListFlags_None;
-    if (g.Style.AntiAliasedLines)
-        g.DrawListSharedData.InitialFlags |= ImDrawListFlags_AntiAliasedLines;
-    if (g.Style.AntiAliasedLinesUseTex && !(g.IO.Fonts->Flags & ImFontAtlasFlags_NoBakedLines))
-        g.DrawListSharedData.InitialFlags |= ImDrawListFlags_AntiAliasedLinesUseTex;
+    g.DrawListSharedData.InitialDrawFlags = ImDrawFlags_None;
+    if (g.IO.Fonts->Flags & ImFontAtlasFlags_NoBakedLines)
+        g.Style.AntiAliasedLines = g.Style.AntiAliasedLineEnds = false;
     if (g.Style.AntiAliasedFill)
-        g.DrawListSharedData.InitialFlags |= ImDrawListFlags_AntiAliasedFill;
+        g.DrawListSharedData.InitialDrawFlags |= ImDrawFlags_AAFill;
+    if (g.Style.AntiAliasedLines)
+        g.DrawListSharedData.InitialDrawFlags |= ImDrawFlags_AALines;
+    if (g.Style.AntiAliasedLineEnds)
+        g.DrawListSharedData.InitialDrawFlags |= ImDrawFlags_AALineEnds;
+    if (g.IO.ConfigDebugDrawListDefaultsToStrokeLegacy)
+        g.DrawListSharedData.InitialDrawFlags |= ImDrawFlags_StrokeLegacy;
+    if (!(g.IO.Fonts->Flags & ImFontAtlasFlags_NoBakedRoundCorners))
+        g.DrawListSharedData.InitialDrawFlags |= ImDrawFlags_UseTexForRoundCorners | ImDrawFlags_AllowTexForRoundCorners_;
     if (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasVtxOffset)
-        g.DrawListSharedData.InitialFlags |= ImDrawListFlags_AllowVtxOffset;
+        g.DrawListSharedData.InitialDrawFlags |= ImDrawFlags_UseVtxOffset;
 }
 
 void ImGui::NewFrame()
@@ -7623,7 +7671,7 @@ static void ImGui::RenderWindowOuterBorders(ImGuiWindow* window)
     if (g.Style.FrameBorderSize > 0 && !(window->Flags & ImGuiWindowFlags_NoTitleBar) && !window->DockIsActive)
     {
         float y = window->Pos.y + window->TitleBarHeight - 1;
-        window->DrawList->AddLineH(window->Pos.x + border_size * 0.5f, window->Pos.x + window->Size.x - border_size * 0.5f, y, border_col, g.Style.FrameBorderSize);
+        window->DrawList->AddLineH(window->Pos.x + border_size, window->Pos.x + window->Size.x - border_size, y, border_col, g.Style.FrameBorderSize, ImDrawFlags_StrokeCenterBiased);
     }
 }
 
@@ -7703,7 +7751,7 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
                 if (window->DockIsActive)
                     bg_rounding_flags = CalcRoundingFlagsForRectInRect(bg_rect, window->DockNode->HostWindow->Rect(), 0.0f);
                 else
-                    bg_rounding_flags = (flags & ImGuiWindowFlags_NoTitleBar) ? ImDrawFlags_RoundCornersAll : ImDrawFlags_RoundCornersBottom;
+                    bg_rounding_flags = (flags & ImGuiWindowFlags_NoTitleBar) ? ImDrawFlags_RoundAll : ImDrawFlags_RoundBottom;
                 ImDrawList* bg_draw_list = window->DockIsActive ? window->DockNode->HostWindow->DrawList : window->DrawList;
                 if (window->DockIsActive)
                     bg_draw_list->ChannelsSetCurrent(DOCKING_HOST_DRAW_CHANNEL_BG);
@@ -7723,7 +7771,7 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
             ImU32 title_bar_col = GetColorU32(title_bar_is_highlight ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg);
             if (window->ViewportOwned)
                 title_bar_col |= IM_COL32_A_MASK; // No alpha
-            window->DrawList->AddRectFilled(title_bar_rect.Min, title_bar_rect.Max, title_bar_col, window_rounding, ImDrawFlags_RoundCornersTop);
+            window->DrawList->AddRectFilled(title_bar_rect.Min, title_bar_rect.Max, title_bar_col, window_rounding, ImDrawFlags_RoundTop);
         }
 
         // Menu bar
@@ -7731,9 +7779,9 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
         {
             ImRect menu_bar_rect = window->MenuBarRect();
             menu_bar_rect.ClipWith(window->Rect());  // Soft clipping, in particular child window don't have minimum size covering the menu bar so this is useful for them.
-            window->DrawList->AddRectFilled(menu_bar_rect.Min, menu_bar_rect.Max, GetColorU32(ImGuiCol_MenuBarBg), (flags & ImGuiWindowFlags_NoTitleBar) ? window_rounding : 0.0f, ImDrawFlags_RoundCornersTop);
+            window->DrawList->AddRectFilled(menu_bar_rect.Min, menu_bar_rect.Max, GetColorU32(ImGuiCol_MenuBarBg), (flags & ImGuiWindowFlags_NoTitleBar) ? window_rounding : 0.0f, ImDrawFlags_RoundTop);
             if (style.FrameBorderSize > 0.0f && menu_bar_rect.Max.y < window->Pos.y + window->Size.y)
-                window->DrawList->AddLineH(menu_bar_rect.Min.x + window_border_size * 0.5f, menu_bar_rect.Max.x - window_border_size * 0.5f, menu_bar_rect.Max.y, GetColorU32(ImGuiCol_Border), style.FrameBorderSize);
+                window->DrawList->AddLineH(menu_bar_rect.Min.x + window_border_size, menu_bar_rect.Max.x - window_border_size, menu_bar_rect.Max.y, GetColorU32(ImGuiCol_Border), style.FrameBorderSize, ImDrawFlags_StrokeCenterBiased);
         }
 
         // Docking: Unhide tab bar (small triangle in the corner), drag from small triangle to quickly undock
@@ -23615,10 +23663,9 @@ void ImGui::DebugNodeDrawList(ImGuiWindow* window, ImGuiViewportP* viewport, con
                 Selectable(buf, false);
                 if (fg_draw_list && IsItemHovered())
                 {
-                    ImDrawListFlags backup_flags = fg_draw_list->Flags;
-                    fg_draw_list->Flags &= ~ImDrawListFlags_AntiAliasedLines; // Disable AA on triangle outlines is more readable for very large and thin triangles.
+                    fg_draw_list->PushDrawFlag(ImDrawFlags_AALines, false); // Disable AA on triangle outlines is more readable for very large and thin triangles.
                     fg_draw_list->AddPolyline(triangle, 3, IM_COL32(255, 255, 0, 255), 1.0f, ImDrawFlags_Closed);
-                    fg_draw_list->Flags = backup_flags;
+                    fg_draw_list->PopDrawFlag();
                 }
             }
         TreePop();
@@ -23634,8 +23681,7 @@ void ImGui::DebugNodeDrawCmdShowMeshAndBoundingBox(ImDrawList* out_draw_list, co
     // Draw wire-frame version of all triangles
     ImRect clip_rect = draw_cmd->ClipRect;
     ImRect vtxs_rect(FLT_MAX, FLT_MAX, -FLT_MAX, -FLT_MAX);
-    ImDrawListFlags backup_flags = out_draw_list->Flags;
-    out_draw_list->Flags &= ~ImDrawListFlags_AntiAliasedLines; // Disable AA on triangle outlines is more readable for very large and thin triangles.
+    out_draw_list->PushDrawFlag(ImDrawFlags_AALines, false); // Disable AA on triangle outlines is more readable for very large and thin triangles.
     for (unsigned int idx_n = draw_cmd->IdxOffset, idx_end = draw_cmd->IdxOffset + draw_cmd->ElemCount; idx_n < idx_end; )
     {
         ImDrawIdx* idx_buffer = (draw_list->IdxBuffer.Size > 0) ? draw_list->IdxBuffer.Data : NULL; // We don't hold on those pointers past iterations as ->AddPolyline() may invalidate them if out_draw_list==draw_list
@@ -23653,7 +23699,7 @@ void ImGui::DebugNodeDrawCmdShowMeshAndBoundingBox(ImDrawList* out_draw_list, co
         out_draw_list->AddRect(ImTrunc(clip_rect.Min), ImTrunc(clip_rect.Max), IM_COL32(255, 0, 255, 255)); // In pink: clipping rectangle submitted to GPU
         out_draw_list->AddRect(ImTrunc(vtxs_rect.Min), ImTrunc(vtxs_rect.Max), IM_COL32(0, 255, 255, 255)); // In cyan: bounding box of triangles
     }
-    out_draw_list->Flags = backup_flags;
+    out_draw_list->PopDrawFlag();
 }
 
 // [DEBUG] Compute mask of inputs with the same codepoint.
@@ -24303,9 +24349,9 @@ void ImGui::DebugDrawLineExtents(ImU32 col)
     float curr_x = window->DC.CursorPos.x;
     float line_y1 = (window->DC.IsSameLine ? window->DC.CursorPosPrevLine.y : window->DC.CursorPos.y);
     float line_y2 = line_y1 + (window->DC.IsSameLine ? window->DC.PrevLineSize.y : window->DC.CurrLineSize.y);
-    window->DrawList->AddLineH(curr_x - 5.0f, curr_x + 5.0f, line_y1, col, 1.0f);
-    window->DrawList->AddLineV(curr_x - 0.5f, line_y1, line_y2, col, 1.0f);
-    window->DrawList->AddLineH(curr_x - 5.0f, curr_x + 5.0f, line_y2, col, 1.0f);
+    window->DrawList->AddLineH(curr_x - 4.0f, curr_x + 5.0f, line_y1, col, 1.0f);
+    window->DrawList->AddLineV(curr_x, line_y1, line_y2, col, 1.0f);
+    window->DrawList->AddLineH(curr_x - 4.0f, curr_x + 5.0f, line_y2, col, 1.0f);
 }
 
 // Draw last item rect in ForegroundDrawList (so it is always visible)

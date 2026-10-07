@@ -517,13 +517,23 @@ inline float  ImSign(float x)            { return (x < 0.0f) ? -1.0f : (x > 0.0f
 inline double ImSign(double x)           { return (x < 0.0) ? -1.0 : (x > 0.0) ? 1.0 : 0.0; }
 #ifdef IMGUI_ENABLE_SSE
 inline float  ImRsqrt(float x)           { return _mm_cvtss_f32(_mm_rsqrt_ss(_mm_set_ss(x))); }
+// Converge to more precise solution using single step of Newton-Raphson method, repeating increases precision
+inline float  ImRsqrtPrecise(float x)    { const float r = _mm_cvtss_f32(_mm_rsqrt_ss(_mm_set_ss(x))); return r * (1.5f - x * 0.5f * r * r); }
 #else
 inline float  ImRsqrt(float x)           { return 1.0f / sqrtf(x); }
+inline float  ImRsqrtPrecise(float x)    { return 1.0f / sqrtf(x); }
 #endif
-inline double ImRsqrt(double x)          { return 1.0 / sqrt(x); }
+inline double ImRsqrt(double x) { return 1.0 / sqrt(x); }
 #endif
+
 // - ImMin/ImMax/ImClamp/ImLerp/ImSwap are used by widgets which support variety of types: signed/unsigned int/long long float/double
-// (Exceptionally using templates here but we could also redefine them for those types)
+// (Specialized version ensure that runtime-check pragmas/macros are applied with caller settings. Template version are less reliable in this regards)
+inline int             ImMin(int lhs, int rhs)                          { return lhs < rhs ? lhs : rhs; }
+inline int             ImMax(int lhs, int rhs)                          { return lhs >= rhs ? lhs : rhs; }
+inline int             ImClamp(int v, int mn, int mx)                   { return (v < mn) ? mn : (v > mx) ? mx : v; }
+inline float           ImMin(float lhs, float rhs)                      { return lhs < rhs ? lhs : rhs; }
+inline float           ImMax(float lhs, float rhs)                      { return lhs >= rhs ? lhs : rhs; }
+inline float           ImClamp(float v, float mn, float mx)             { return (v < mn) ? mn : (v > mx) ? mx : v; }
 template<typename T> T ImMin(T lhs, T rhs)                              { return lhs < rhs ? lhs : rhs; }
 template<typename T> T ImMax(T lhs, T rhs)                              { return lhs >= rhs ? lhs : rhs; }
 template<typename T> T ImClamp(T v, T mn, T mx)                         { return (v < mn) ? mn : (v > mx) ? mx : v; }
@@ -559,6 +569,23 @@ inline float  ImLinearRemapClamp(float s0, float s1, float d0, float d1, float x
 inline ImVec2 ImMul(const ImVec2& lhs, const ImVec2& rhs)               { return ImVec2(lhs.x * rhs.x, lhs.y * rhs.y); }
 inline bool   ImIsFloatAboveGuaranteedIntegerPrecision(float f)         { return f <= -16777216 || f >= 16777216; }
 inline float  ImExponentialMovingAverage(float avg, float sample, int n){ avg -= avg / (float)n; avg += sample / (float)n; return avg; }
+
+inline bool   ImIsTruncated(float x)           { return (float)(int)x == x; }
+#ifdef IMGUI_ENABLE_SSE
+// Returns true if all parameters are whole numbers.
+inline bool   ImIsTruncated4(float x, float y, float z, float w)
+{
+    __m128 v = _mm_set_ps(x, y, z, w);
+    __m128i i = _mm_cvttps_epi32(v);
+    return _mm_movemask_ps(_mm_cmpeq_ps(v, _mm_cvtepi32_ps(i))) == 0xF;
+}
+#else
+inline bool   ImIsTruncated4(float x, float y, float z, float w)
+{
+    return (float)(int)x == x && (float)(int)y == y && (float)(int)z == z && (float)(int)w == w;
+}
+#endif
+
 IM_MSVC_RUNTIME_CHECKS_RESTORE
 
 // Helpers: Geometry
@@ -901,11 +928,28 @@ IMGUI_API ImGuiStoragePair* ImLowerBound(ImGuiStoragePair* in_begin, ImGuiStorag
 #define IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC_R(_N,_MAXERROR)    ((_MAXERROR) / (1 - ImCos(IM_PI / ImMax((float)(_N), IM_PI))))
 #define IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC_ERROR(_N,_RAD)     ((1 - ImCos(IM_PI / ImMax((float)(_N), IM_PI))) / (_RAD))
 
-// ImDrawList: Lookup table size for adaptive arc drawing, cover full circle.
+// ImDrawList: Lookup tables
 #ifndef IM_DRAWLIST_ARCFAST_TABLE_SIZE
-#define IM_DRAWLIST_ARCFAST_TABLE_SIZE                          48 // Number of samples in lookup table.
+#define IM_DRAWLIST_ARCFAST_TABLE_SIZE              (48)    // Number of samples in adaptive arc drawing lookup table.
 #endif
-#define IM_DRAWLIST_ARCFAST_SAMPLE_MAX                          IM_DRAWLIST_ARCFAST_TABLE_SIZE // Sample index _PathArcToFastEx() for 360 angle.
+#define IM_DRAWLIST_ARCFAST_SAMPLE_MAX              IM_DRAWLIST_ARCFAST_TABLE_SIZE // Sample index _PathArcToFastEx() for 360 angle.
+
+#ifndef IM_DRAWLIST_TEX_LINES_WIDTH_MAX
+#define IM_DRAWLIST_TEX_LINES_WIDTH_MAX             (32)    // The maximum line width to bake anti-aliased textures for.
+#endif
+#ifndef IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH
+#define IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH        (4)     // Calculate detailed textures for width [1..IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH]
+#endif
+#ifndef IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT
+#define IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT          (4)     // How many samples per integer thickness level.
+#endif
+#ifndef IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX
+#define IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX        (16)
+#endif
+#ifndef IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX
+#define IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX       (4)     // 0: fill, 1-3: strokes thickness
+#endif
+#define IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_COUNT  ((IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH - 1) * IM_DRAWLIST_TEX_LINES_SAMPLE_COUNT + 1)
 
 // Data shared between all ImDrawList instances
 // Conceptually this could have been called e.g. ImDrawListSharedContext
@@ -914,14 +958,15 @@ IMGUI_API ImGuiStoragePair* ImLowerBound(ImGuiStoragePair* in_begin, ImGuiStorag
 struct IMGUI_API ImDrawListSharedData
 {
     ImVec2          TexUvWhitePixel;            // UV of white pixel in the atlas (== FontAtlas->TexUvWhitePixel)
-    const ImVec4*   TexUvLines;                 // UV of anti-aliased lines in the atlas (== FontAtlas->TexUvLines)
+    const ImVec4*   TexUvLines;                 // UV of anti-aliased lines in the atlas (== FontAtlas->Builder->TexUvLines)
+    const ImVec4*   TexUvCorners;               // UV of rounded corner (== FontAtlas->Builder->TexUvCorners)
     ImFontAtlas*    FontAtlas;                  // Current font atlas
     ImFont*         Font;                       // Current font (used for simplified AddText overload)
     float           FontSize;                   // Current font size (used for simplified AddText overload)
     float           FontScale;                  // Current font scale (== FontSize / Font->FontSize)
     float           CurveTessellationMaxError;  // Tessellation tolerance when using PathBezierCurveTo()
     float           CircleTessellationMaxError; // Number of circle segments to use per pixel of radius for AddCircle() etc
-    ImDrawListFlags InitialFlags;               // Initial flags at the beginning of the frame (it is possible to alter flags on a per-drawlist basis afterwards)
+    ImDrawFlags     InitialDrawFlags;           // Initial flags at the beginning of the frame (it is possible to alter flags on a per-drawlist basis afterwards)
     ImVec4          ClipRectFullscreen;         // Value for PushClipRectFullscreen()
     ImVector<ImVec2> TempBuffer;                // Temporary write buffer
     ImVector<ImDrawList*> DrawLists;            // All draw lists associated to this ImDrawListSharedData
@@ -4335,8 +4380,14 @@ struct ImFontAtlasBuilder
     // Custom rectangle identifiers
     ImFontAtlasRectId           PackIdMouseCursors;     // White pixel + mouse cursors. Also happen to be fallback in case of packing failure.
     ImFontAtlasRectId           PackIdLinesTexData;
+    ImFontAtlasRectId           PackIdLineFractTexData;
+    ImFontAtlasRectId           PackIdCornersTexData;
 
-    ImFontAtlasBuilder()        { memset((void*)this, 0, sizeof(*this)); FrameCount = -1; RectsIndexFreeListStart = -1; PackIdMouseCursors = PackIdLinesTexData = -1; }
+    // Cached UV coordinates
+    ImVec4                      TexUvLines[IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1 + IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_COUNT]; // UVs for baked anti-aliased lines (u0, u1, v, 1/thickness)
+    ImVec4                      TexUvCorners[IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX * IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX];   // UVs for baked anti-aliased corners (0= fill, 1> stroke thickness)
+
+    ImFontAtlasBuilder()        { memset((void*)this, 0, sizeof(*this)); FrameCount = -1; RectsIndexFreeListStart = -1; PackIdMouseCursors = PackIdLinesTexData = PackIdLineFractTexData = PackIdCornersTexData = -1; }
 };
 
 IMGUI_API void              ImFontAtlasBuildInit(ImFontAtlas* atlas);
