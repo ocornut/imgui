@@ -840,7 +840,7 @@ static void ImGui_ImplMetal_CreateWindow(ImGuiViewport* viewport)
     CAMetalLayer* layer = [CAMetalLayer layer];
     layer.device = device;
     layer.framebufferOnly = YES;
-    layer.pixelFormat = bd->SharedMetalContext.framebufferDescriptor.colorPixelFormat;
+    layer.pixelFormat = bd->SharedMetalContext.framebufferDescriptor.colorPixelFormats[0];
 #if TARGET_OS_OSX
     NSWindow* window = (__bridge NSWindow*)handle;
     NSView* view = window.contentView;
