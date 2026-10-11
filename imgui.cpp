@@ -2086,6 +2086,8 @@ void ImGuiIO::AddPinchUpdateEvent(float scale, float span_x, float span_y, float
     e.Source = ImGuiInputSource_Mouse;
     e.EventId = g.InputEventsNextEventId++;
     float norm = ImSqrt(ImPow(span_x,2) + ImPow(span_y,2));
+    if(norm == 0)
+        return;
     e.MouseWheel.WheelX = (1-scale)*100*span_x/norm;
     e.MouseWheel.WheelY = (1-scale)*100*span_y/norm;
     e.MouseWheel.MouseSource = g.InputEventsNextMouseSource;
