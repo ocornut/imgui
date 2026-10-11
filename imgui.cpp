@@ -2095,9 +2095,6 @@ void ImGuiIO::AddPinchUpdateEvent(float scale, float span_x, float span_y, float
     g.IO.PosOther = finger_pos_middle;
 }
 
-
-
-
 ImGuiPlatformIO::ImGuiPlatformIO()
 {
     // Most fields are initialized with zero
