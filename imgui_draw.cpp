@@ -3722,9 +3722,9 @@ void ImTextureData::Create(ImTextureFormat format, int w, int h)
     Height = h;
     BytesPerPixel = ImTextureDataGetFormatBytesPerPixel(format);
     UseColors = false;
-    Pixels = (unsigned char*)IM_ALLOC(Width * Height * BytesPerPixel);
+    Pixels = (unsigned char*)IM_ALLOC((size_t)Width * (size_t)Height * (size_t)BytesPerPixel);
     IM_ASSERT(Pixels != NULL);
-    memset(Pixels, 0, Width * Height * BytesPerPixel);
+    memset(Pixels, 0, (size_t)Width * (size_t)Height * (size_t)BytesPerPixel);
     UsedRect.x = UsedRect.y = UsedRect.w = UsedRect.h = 0;
     UpdateRect.x = UpdateRect.y = (unsigned short)~0;
     UpdateRect.w = UpdateRect.h = 0;
@@ -4215,7 +4215,7 @@ void ImFontAtlasTextureBlockCopy(ImTextureData* src_tex, int src_x, int src_y, I
     IM_ASSERT(dst_x >= 0 && dst_x + w <= dst_tex->Width);
     IM_ASSERT(dst_y >= 0 && dst_y + h <= dst_tex->Height);
     for (int y = 0; y < h; y++)
-        memcpy(dst_tex->GetPixelsAt(dst_x, dst_y + y), src_tex->GetPixelsAt(src_x, src_y + y), w * dst_tex->BytesPerPixel);
+        memcpy(dst_tex->GetPixelsAt(dst_x, dst_y + y), src_tex->GetPixelsAt(src_x, src_y + y), (size_t)w * (size_t)dst_tex->BytesPerPixel);
 }
 
 void ImFontAtlasTextureBlockQueueUpload(ImFontAtlas* atlas, ImTextureData* tex, int x, int y, int w, int h)
@@ -6343,9 +6343,9 @@ static bool ImGui_ImplStbTrueType_FontBakedLoadGlyph(ImFontAtlas* atlas, ImFontC
         // Render
         stbtt_GetGlyphBitmapBox(&bd_font_data->FontInfo, glyph_index, scale_for_raster_x, scale_for_raster_y, &x0, &y0, &x1, &y1);
         ImFontAtlasBuilder* builder = atlas->Builder;
-        builder->TempBuffer.resize(w * h * 1);
+        builder->TempBuffer.resize((size_t)w * (size_t)h);
         unsigned char* bitmap_pixels = builder->TempBuffer.Data;
-        memset(bitmap_pixels, 0, w * h * 1);
+        memset(bitmap_pixels, 0, (size_t)w * (size_t)h);
 
         // Render with oversampling
         // (those functions conveniently assert if pixels are not cleared, which is another safety layer)
