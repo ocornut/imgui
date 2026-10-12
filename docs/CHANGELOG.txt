@@ -435,6 +435,7 @@ Other Changes:
 - Examples:
   - MSVC: disabled /JMC in Visual Studio projects (unnecessary overhead).
   - GLFW/SDL2/SDL3+WebGPU: fixed running with wgpu-native missing `wgpuInstanceWaitAny()`. (#9377)
+  - GLFW/SDL2/SDL3+WebGPU: better select surface format. (#9576) [@ypujante]
   - GLFW+Metal: fixed mistakenly calling `ImGui_ImplGlfw_InitForOpenGL()`, which
     broke multi-viewport support. (#9564) [@ypujante]
   - SDL2+Metal: create Metal context without using a `SDL_Renderer`.

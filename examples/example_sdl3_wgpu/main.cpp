@@ -287,6 +287,16 @@ int main(int, char**)
     return 0;
 }
 
+static WGPUTextureFormat SelectSurfaceFormat(const WGPUSurfaceCapabilities& capabilities)
+{
+    const WGPUTextureFormat preferredFormats[] = { WGPUTextureFormat_BGRA8Unorm, WGPUTextureFormat_RGBA8Unorm, WGPUTextureFormat_BGRA8UnormSrgb, WGPUTextureFormat_RGBA8UnormSrgb };
+    for (WGPUTextureFormat preferredFormat : preferredFormats)
+        for (size_t n = 0; n < capabilities.formatCount; n++)
+            if (capabilities.formats[n] == preferredFormat)
+                return preferredFormat;
+    return capabilities.formatCount > 0 ? capabilities.formats[0] : WGPUTextureFormat_Undefined;
+}
+
 #if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
 static WGPUAdapter RequestAdapter(wgpu::Instance& instance)
 {
@@ -438,8 +448,7 @@ static bool InitWGPU(SDL_Window* window)
 
     WGPUSurfaceCapabilities surface_capabilities = {};
     wgpuSurfaceGetCapabilities(wgpu_surface, adapter.Get(), &surface_capabilities);
-
-    preferred_fmt = surface_capabilities.formats[0];
+    preferred_fmt = SelectSurfaceFormat(surface_capabilities);
 
     // WGPU backend: Adapter and Device acquisition, Surface creation
 #elif defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) || defined(IMGUI_IMPL_WEBGPU_BACKEND_WGVK)
@@ -468,8 +477,7 @@ static bool InitWGPU(SDL_Window* window)
 
     WGPUSurfaceCapabilities surface_capabilities = {};
     wgpuSurfaceGetCapabilities(wgpu_surface, adapter, &surface_capabilities);
-
-    preferred_fmt = surface_capabilities.formats[0];
+    preferred_fmt = SelectSurfaceFormat(surface_capabilities);
 #endif // IMGUI_IMPL_WEBGPU_BACKEND_WGPU
 
     wgpu_surface_configuration.presentMode = WGPUPresentMode_Fifo;
