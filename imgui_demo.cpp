@@ -2062,6 +2062,7 @@ static void DemoWindowWidgetsMixedValues()
 {
     if (ImGui::TreeNode("Mixed Values"))
     {
+        IMGUI_DEMO_MARKER("Widgets/Mixed Values");
         // This is designed for advanced property editors which are generally reusable and data-driven.
         HelpMarker("Using ImGuiItemFlags_MixedValue.");
 
