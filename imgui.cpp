@@ -16737,7 +16737,7 @@ static const char* FormatTextureRefForDebugDisplay(char* buf, int buf_size, ImTe
     char* buf_end = buf + buf_size;
     if (tex_ref._TexData != NULL)
         buf_p += ImFormatString(buf_p, buf_end - buf_p, "#%03d: ", tex_ref._TexData->UniqueID);
-    ImFormatString(buf_p, buf_end - buf_p, "0x%X", ImGui::DebugTextureIDToU64(tex_ref.GetTexID()));
+    ImFormatString(buf_p, buf_end - buf_p, "0x%" IM_PRIX64, ImGui::DebugTextureIDToU64(tex_ref.GetTexID()));
     return buf;
 }
 
