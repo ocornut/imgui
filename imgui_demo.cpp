@@ -1261,6 +1261,7 @@ static void DemoWindowWidgetsColorAndPickers()
             ImGui::OpenPopup("mypicker");
             backup_color = color;
         }
+        float ref_sz = ImGui::GetFrameHeight();
         if (ImGui::BeginPopup("mypicker"))
         {
             ImGui::Text("MY CUSTOM COLOR PICKER WITH AN AMAZING PALETTE!");
@@ -1268,11 +1269,12 @@ static void DemoWindowWidgetsColorAndPickers()
             ImGui::ColorPicker4("##picker", (float*)&color, base_flags | ImGuiColorEditFlags_NoSidePreview | ImGuiColorEditFlags_NoSmallPreview);
             ImGui::SameLine();
 
+            ImVec2 color_button_sz(ref_sz * 3.0f, ref_sz * 2.0f);
             ImGui::BeginGroup(); // Lock X position
             ImGui::Text("Current");
-            ImGui::ColorButton("##current", color, ImGuiColorEditFlags_NoPicker | ImGuiColorEditFlags_AlphaPreviewHalf, ImVec2(60, 40));
+            ImGui::ColorButton("##current", color, ImGuiColorEditFlags_NoPicker | ImGuiColorEditFlags_AlphaPreviewHalf, color_button_sz);
             ImGui::Text("Previous");
-            if (ImGui::ColorButton("##previous", backup_color, ImGuiColorEditFlags_NoPicker | ImGuiColorEditFlags_AlphaPreviewHalf, ImVec2(60, 40)))
+            if (ImGui::ColorButton("##previous", backup_color, ImGuiColorEditFlags_NoPicker | ImGuiColorEditFlags_AlphaPreviewHalf, color_button_sz))
                 color = backup_color;
             ImGui::Separator();
             ImGui::Text("Palette");
@@ -1283,7 +1285,7 @@ static void DemoWindowWidgetsColorAndPickers()
                     ImGui::SameLine(0.0f, ImGui::GetStyle().ItemSpacing.y);
 
                 ImGuiColorEditFlags palette_button_flags = ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoPicker | ImGuiColorEditFlags_NoTooltip;
-                if (ImGui::ColorButton("##palette", saved_palette[n], palette_button_flags, ImVec2(20, 20)))
+                if (ImGui::ColorButton("##palette", saved_palette[n], palette_button_flags))
                     color = ImVec4(saved_palette[n].x, saved_palette[n].y, saved_palette[n].z, color.w); // Preserve alpha!
 
                 // Allow user to drop colors into each palette entry. Note that ColorButton() is already a
@@ -1306,8 +1308,9 @@ static void DemoWindowWidgetsColorAndPickers()
         IMGUI_DEMO_MARKER("Widgets/Color/ColorButton (simple)");
         ImGui::Text("Color button only:");
         static bool no_border = false;
+        const ImVec2 color_button_sz(ref_sz * 2.0f, ref_sz * 2.0f);
         ImGui::Checkbox("ImGuiColorEditFlags_NoBorder", &no_border);
-        ImGui::ColorButton("MyColor##3c", *(ImVec4*)&color, base_flags | (no_border ? ImGuiColorEditFlags_NoBorder : 0), ImVec2(80, 80));
+        ImGui::ColorButton("MyColor##3c", *(ImVec4*)&color, base_flags | (no_border ? ImGuiColorEditFlags_NoBorder : 0), color_button_sz);
 
         IMGUI_DEMO_MARKER("Widgets/Color/ColorPicker");
         ImGui::SeparatorText("Color picker");
@@ -1682,12 +1685,13 @@ static void DemoWindowWidgetsDragAndDrop()
                 "Brianna", "Barry", "Bernard",
                 "Bibi", "Blaine", "Bryn"
             };
+            float sz = ImGui::GetFrameHeight() * 3.0f;
             for (int n = 0; n < IM_COUNTOF(names); n++)
             {
                 ImGui::PushID(n);
                 if ((n % 3) != 0)
                     ImGui::SameLine();
-                ImGui::Button(names[n], ImVec2(60, 60));
+                ImGui::Button(names[n], ImVec2(sz, sz));
 
                 // Our buttons are both drag sources and drag targets here!
                 if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
@@ -2183,10 +2187,12 @@ static void DemoWindowWidgetsPlotting()
         static bool animate = true;
         ImGui::Checkbox("Animate", &animate);
 
+        ImVec2 plot_sz(0.0f, ImGui::GetFrameHeight() * 4.0f);
+
         // Plot as lines and plot as histogram
         static float arr[] = { 0.6f, 0.1f, 1.0f, 0.5f, 0.92f, 0.1f, 0.2f };
         ImGui::PlotLines("Frame Times", arr, IM_COUNTOF(arr));
-        ImGui::PlotHistogram("Histogram", arr, IM_COUNTOF(arr), 0, NULL, 0.0f, 1.0f, ImVec2(0, 80.0f));
+        ImGui::PlotHistogram("Histogram", arr, IM_COUNTOF(arr), 0, NULL, 0.0f, 1.0f, plot_sz);
         //ImGui::SameLine(); HelpMarker("Consider using ImPlot instead!");
 
         // Fill an array of contiguous float values to plot
@@ -2215,7 +2221,7 @@ static void DemoWindowWidgetsPlotting()
             average /= (float)IM_COUNTOF(values);
             char overlay[32];
             sprintf(overlay, "avg %f", average);
-            ImGui::PlotLines("Lines", values, IM_COUNTOF(values), values_offset, overlay, -1.0f, 1.0f, ImVec2(0, 80.0f));
+            ImGui::PlotLines("Lines", values, IM_COUNTOF(values), values_offset, overlay, -1.0f, 1.0f, plot_sz);
         }
 
         // Use functions to generate output
@@ -2233,8 +2239,8 @@ static void DemoWindowWidgetsPlotting()
         ImGui::SameLine();
         ImGui::SliderInt("Sample count", &display_count, 1, 400);
         float (*func)(void*, int) = (func_type == 0) ? Funcs::Sin : Funcs::Saw;
-        ImGui::PlotLines("Lines##2", func, NULL, display_count, 0, NULL, -1.0f, 1.0f, ImVec2(0, 80));
-        ImGui::PlotHistogram("Histogram##2", func, NULL, display_count, 0, NULL, -1.0f, 1.0f, ImVec2(0, 80));
+        ImGui::PlotLines("Lines##2", func, NULL, display_count, 0, NULL, -1.0f, 1.0f, plot_sz);
+        ImGui::PlotHistogram("Histogram##2", func, NULL, display_count, 0, NULL, -1.0f, 1.0f, plot_sz);
 
         ImGui::TreePop();
     }
@@ -4493,27 +4499,34 @@ static void DemoWindowWidgetsVerticalSliders()
     if (ImGui::TreeNode("Vertical Sliders"))
     {
         IMGUI_DEMO_MARKER("Widgets/Vertical Sliders");
-        const float spacing = 4;
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(spacing, spacing));
+
+        ImGuiStyle& style = ImGui::GetStyle();
+        ImVec2 slider_sz(ImGui::GetFrameHeight(), ImGui::GetFrameHeight() * 9);
+
+        ImGui::PushStyleVarX(ImGuiStyleVar_ItemSpacing, (float)(int)(style.ItemSpacing.x * 0.5f));
+        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, (float)(int)(slider_sz.x * 0.25f));
+        ImGui::PushStyleVar(ImGuiStyleVar_GrabRounding, (float)(int)(slider_sz.x * 0.25f));
+        float spacing = style.ItemSpacing.x;
 
         static int int_value = 0;
-        ImGui::VSliderInt("##int", ImVec2(18, 160), &int_value, 0, 5);
+        ImGui::VSliderInt("##int", slider_sz, &int_value, 0, 5);
         ImGui::SameLine();
 
         static float values[7] = { 0.0f, 0.60f, 0.35f, 0.9f, 0.70f, 0.20f, 0.0f };
         ImGui::PushID("set1");
         for (int i = 0; i < 7; i++)
         {
-            if (i > 0) ImGui::SameLine();
+            if (i > 0)ImGui::SameLine();
             ImGui::PushID(i);
             ImGui::PushStyleColor(ImGuiCol_FrameBg, (ImVec4)ImColor::HSV(i / 7.0f, 0.5f, 0.5f));
             ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, (ImVec4)ImColor::HSV(i / 7.0f, 0.6f, 0.5f));
             ImGui::PushStyleColor(ImGuiCol_FrameBgActive, (ImVec4)ImColor::HSV(i / 7.0f, 0.7f, 0.5f));
-            ImGui::PushStyleColor(ImGuiCol_SliderGrab, (ImVec4)ImColor::HSV(i / 7.0f, 0.9f, 0.9f));
-            ImGui::VSliderFloat("##v", ImVec2(18, 160), &values[i], 0.0f, 1.0f, "");
+            ImGui::PushStyleColor(ImGuiCol_SliderGrab, (ImVec4)ImColor::HSV(i / 7.0f, 0.8f, 0.7f));
+            ImGui::PushStyleColor(ImGuiCol_SliderGrabActive, (ImVec4)ImColor::HSV(i / 7.0f, 0.9f, 0.9f));
+            ImGui::VSliderFloat("##v", slider_sz, &values[i], 0.0f, 1.0f, "");
             if (ImGui::IsItemActive() || ImGui::IsItemHovered())
                 ImGui::SetTooltip("%.3f", values[i]);
-            ImGui::PopStyleColor(4);
+            ImGui::PopStyleColor(5);
             ImGui::PopID();
         }
         ImGui::PopID();
@@ -4522,15 +4535,15 @@ static void DemoWindowWidgetsVerticalSliders()
         ImGui::PushID("set2");
         static float values2[4] = { 0.20f, 0.80f, 0.40f, 0.25f };
         const int rows = 3;
-        const ImVec2 small_slider_size(18, (float)(int)((160.0f - (rows - 1) * spacing) / rows));
+        const ImVec2 slider_size_small(slider_sz.x, (float)(int)((slider_sz.y - (rows - 1) * spacing) / rows));
         for (int nx = 0; nx < 4; nx++)
         {
-            if (nx > 0) ImGui::SameLine();
+            if (nx > 0)ImGui::SameLine();
             ImGui::BeginGroup();
             for (int ny = 0; ny < rows; ny++)
             {
                 ImGui::PushID(nx * rows + ny);
-                ImGui::VSliderFloat("##v", small_slider_size, &values2[nx], 0.0f, 1.0f, "");
+                ImGui::VSliderFloat("##v", slider_size_small, &values2[nx], 0.0f, 1.0f, "");
                 if (ImGui::IsItemActive() || ImGui::IsItemHovered())
                     ImGui::SetTooltip("%.3f", values2[nx]);
                 ImGui::PopID();
@@ -4543,15 +4556,17 @@ static void DemoWindowWidgetsVerticalSliders()
         ImGui::PushID("set3");
         for (int i = 0; i < 4; i++)
         {
-            if (i > 0) ImGui::SameLine();
+            if (i > 0)
+                ImGui::SameLine();
             ImGui::PushID(i);
-            ImGui::PushStyleVar(ImGuiStyleVar_GrabMinSize, 40);
-            ImGui::VSliderFloat("##v", ImVec2(40, 160), &values[i], 0.0f, 1.0f, "%.2f\nsec");
+            ImGui::PushStyleVar(ImGuiStyleVar_GrabMinSize, slider_sz.y * 0.25f);
+            ImGui::VSliderFloat("##v", ImVec2(slider_sz.x * 2.0f, slider_sz.y), &values[i], 0.0f, 1.0f, "%.2f\nsec");
             ImGui::PopStyleVar();
             ImGui::PopID();
         }
         ImGui::PopID();
-        ImGui::PopStyleVar();
+
+        ImGui::PopStyleVar(3);
         ImGui::TreePop();
     }
 }
@@ -8164,7 +8179,8 @@ static void DemoWindowInputs()
                 ImGui::SetNextItemWidth(ImGui::GetFontSize() * 15);
                 ImGui::SliderInt("SetNextFrameWantCaptureKeyboard() on hover", &capture_override_keyboard, -1, +1, capture_override_desc[capture_override_keyboard + 1], ImGuiSliderFlags_AlwaysClamp);
 
-                ImGui::ColorButton("##panel", ImVec4(0.7f, 0.1f, 0.7f, 1.0f), ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoDragDrop, ImVec2(128.0f, 96.0f)); // Dummy item
+                float ref_sz = ImGui::GetFrameHeight() * 4.0f;
+                ImGui::ColorButton("##panel", ImVec4(0.7f, 0.1f, 0.7f, 1.0f), ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoDragDrop, ImVec2(ref_sz, ref_sz)); // Dummy item
                 if (ImGui::IsItemHovered() && capture_override_mouse != -1)
                     ImGui::SetNextFrameWantCaptureMouse(capture_override_mouse == 1);
                 if (ImGui::IsItemHovered() && capture_override_keyboard != -1)
