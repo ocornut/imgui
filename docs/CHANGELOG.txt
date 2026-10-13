@@ -193,6 +193,13 @@ Breaking Changes:
 
 Other Changes:
 
+- Style:
+  - StyleColorsDark(): minor refresh of the default style to look more modern:
+    - Changed WindowBg to use a slightly greyer value and removed opacity.
+    - Changed FrameBg values to use a dark black to make frames stand out better.
+    - Tweak TextDisabled, TableHeaderBg, TableBorders to match altered WindowBg.
+  - StyleColorsLight(): inverted `ImGuiCol_TitleBgXXX` colors so that the selected
+    window title bar appears brighter.
 - DrawList:
   - Added flags to specify stroke position in all `ImDrawList` stroking functions: (#9504) [@memononen]
     - `ImDrawFlags_StrokeInside` (default for Rect, Circle/Ellipse, Triangle, Quad, Ngon + AddLineH, AddLineV)
@@ -368,9 +375,6 @@ Other Changes:
     match always filters out. (#2435) [@kudaba, @ocornut]
   - Added `DrawWithHint()` function. (#6206, #6395, #6447)
   - Added a "incl -excl" hint by default when the search field is empty. (#6206, #6395, #6447)
-- Style:
-  - Inverted `ImGuiCol_TitleBgXXX` colors for `StyleColorsLight()` so that the selected
-    window title bar appears brighter.
 - Misc:
   - Added `ImGuiItemFlags_MixedValue` flag for representing mixed/indeterminate values.
     Supported by: Checkbox(), RadioButton(), DragXXX(), SliderXXX(), InputXXX(), ColorXXX()
