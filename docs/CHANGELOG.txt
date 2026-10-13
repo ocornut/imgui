@@ -433,6 +433,7 @@ Other Changes:
     when `FramebufferScale` is >1.0f. (#9515, #8628) [@WayU]
   - WebGPU: update to build with wgpu-native 29.0+. (#9377, #9532, #9530) [@lucascompython, @ivan-enzhaev]
 - Examples:
+  - All: all examples now default to use a little bit of rounding (`FrameRounding` and `GrabRounding`).
   - MSVC: disabled /JMC in Visual Studio projects (unnecessary overhead).
   - GLFW/SDL2/SDL3+WebGPU: fixed running with wgpu-native missing `wgpuInstanceWaitAny()`. (#9377)
   - GLFW/SDL2/SDL3+WebGPU: better select surface format. (#9576) [@ypujante]
