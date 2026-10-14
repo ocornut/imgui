@@ -36,8 +36,10 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
- VERSION 1.93.0 WIP (In Progress)
+ VERSION 1.93.0 (Released 2026-10-14)
 -----------------------------------------------------------------------
+
+Decorated log and release notes: https://github.com/ocornut/imgui/releases/tag/v1.93.0
 
 In 1.93.0, the `ImDrawList` rendering API has been improved to be more robust and
 more consistent over the whole range of shapes. The rendering now matches much closer
@@ -55,10 +57,10 @@ The rendering of common shapes was optimized when the shapes fall on integer coo
 using textures instead of tessellated geometry to draw round corners.
 The varying code-paths are designed to look indistinguishable from each others.
 
-New rendering code fixes some inconsistencies between graphics APIs (e.g. DirectX vs OpenGL)
-which are using different diamond exits rules.
-New code should work precisely the same regardless of graphics API.
-(note that using _StrokeLegacy mode can lead to similar inconsistencies)
+New rendering code fixes some inconsistencies between graphics APIs
+(e.g. DirectX vs OpenGL) which are using different diamond exits rules.
+New code should work precisely the same regardless of which graphics API is used
+(note that using _StrokeLegacy mode can lead to the same old inconsistencies).
 
 New rendering code also deals better with animating thickness and rounding
 (integer values are recommended).
@@ -73,34 +75,35 @@ Use `ImDrawFlags_StrokeLegacy` mode to emulate old rendering:
 - Globally:           ImGui::Checkbox("DefaultsToStrokeLegacy", &io.ConfigDebugDrawListDefaultsToStrokeLegacy);  // Map to a checkbox
 - Globally:           io.ConfigDebugDrawListDefaultsToStrokeLegacy = io.KeyShift;                                // Map on Shift
 
-Main work courtesy of @memononen.
-Additional work/reviewing/guidance by @ocornut.
-With legacy bits from @thedmd, @potocpav.
+Don't panic!
+Many applications will not notice any difference! You will more likely see
+differences if you used lots of direct `ImDrawList` calls for custom rendering.
+
+Credits for ImDrawList changes in 1.93.0:
+- main work courtesy of @memononen.
+- additional work/reviewing/guidance by @ocornut.
+- with legacy bits from @thedmd, @potocpav.
+Other credits marked below, or @ocornut when omitted.
 
 Refer to our guides:
-
 - ImDrawList Vector Rendering Reference
     https://github.com/ocornut/imgui/wiki/Draw-List
     (includes a precise list of differences between 1.92.9 and 1.93.0).
-
 - ImDrawList 1.92.9 vs 1.93.0 Interactive Testbed
     https://www.dearimgui.com/docs/drawlist_v193
-    (interactively discuss and compare differences between 1.92.9 and 1.93.9)
+    (interactively compare differences between 1.92.9 and 1.93.0 + commentary)
     (downloadable HTML file, may be used offline)
-
 - Pixel Perfect Anti-aliased Rendering
     https://github.com/ocornut/imgui/wiki/Pixel-Perfect-Rendering
-
 - How Anti-aliased Polyline Rendering is Implemented
     https://github.com/ocornut/imgui/wiki/Polyline-Rendering
-
-- Main topic:
+- Discussion topic:
     https://github.com/ocornut/imgui/issues/9504
     (if you have a problem to discuss, please open a new issue)
 
 Breaking Changes:
 
-- DrawList:
+- ImDrawList:
   - AddLine(): removed the (+0.5f,+0.5f) offset that was sneakily added to input coordinates. (#9504)
     - This fixes inconsistencies in the API and matches the PathXXX API.
     - By default, stroke thickness extends on both side of the given segment.
@@ -121,8 +124,8 @@ Breaking Changes:
       - Your lines will appear offset by -0.5f pixels on each axis.
         Being anti-aliased diagonal lines, they won't look particularly better or worse, just slightly offset.
         It'll likely only be noticeable if you carefully combined them with other primitives for a pixel-perfect result.
-      - Old `AddLine({x1, y1}, {x2, y2}, col)` --> `AddLine({x1 + 0.5f, y1 + 0.5f}, {x2+ 0.5f, y2 + 0.5f}, col);`          // Same
-        or use `ImDrawFlags_StrokeLegacy`      --> `AddLine({x1, y1}, {x2, y2}, col, thickness, ImDrawFlags_StrokeLegacy); // Offset by +0.5f + disable AA ends.
+      - Old `AddLine({x1, y1}, {x2, y2}, col)` --> `AddLine({x1 + 0.5f, y1 + 0.5f}, {x2+ 0.5f, y2 + 0.5f}, col);`           // Same
+        or use `ImDrawFlags_StrokeLegacy`      --> `AddLine({x1, y1}, {x2, y2}, col, thickness, ImDrawFlags_StrokeLegacy);` // Offset by +0.5f + disable AA ends.
         This reapplies the old offset, and should get you exactly the same result you previously
         got for thickness=1.0f lines. But said result were previously sometimes ambiguous and
         renderer-dependent. (#3116, #3258, #2441)
@@ -134,21 +137,21 @@ Breaking Changes:
     - All closed shapes with thickness=1.0f will appear identical.
     - The difference for thickness>1.0f shapes may be minimal since very large strokes
       were not well supported for widgets, but stroke will default inside widgets.
-  - AddCircle(), AddNgon(): removed +0.5f offset added to radius.
+  - AddCircle(), AddNgon(): removed -0.5f offset added to radius.
     - This fixes inconsistencies in the API.
     - Use `ImDrawFlags_StrokeLegacy` to use old method if required. Or you can apply the offset manually!
   - AddRectFilled(): non-integer coordinates will now display anti-aliased edges.
     Previously, non-integer coordinates rendered with aliased edges snapped by the
     rasterizer. (#6971)
   - AddRect(), AddRectFilled(): rectangles with inverted coordinates won't be visible
-    unless using ImDrawList_StrokeLegacy mode. With inverted coordinates (min > max):
+    unless using `ImDrawFlags_StrokeLegacy` mode. With inverted coordinates (min > max):
       - Legacy `AddRect()` rounding off       -> visible but incorrect outer size.
       - Legacy `AddRect()` rounding on        -> visible but very glitchy.
       - Legacy `AddRectFilled()` rounding off -> visible and correct.
       - Legacy `AddRectFilled()` rounding on  -> visible but very glitchy.
       - Use `ImDrawFlags_StrokeLegacy` to use old rendering for cases without rounding, or fix coordinates.
   - Merged `ImDrawListFlags` into `ImDrawFlags`. `ImDrawListFlags` was rarely used directly
-    and generally setup by the ImGui context. Keep inline redirection enums (will obsolete).
+    and generally setup by the ImGui context. 
       - `ImDrawListFlags_AntiAliasedLines`    -> `ImDrawFlags_AALines`
       - `ImDrawListFlags_AntiAliasedFill`     -> `ImDrawFlags_AAFill`
       - `ImDrawListFlags_AllowVtxOffset`      -> `ImDrawFlags_UseVtxOffset`
@@ -171,10 +174,10 @@ Breaking Changes:
     obsolete, as the new line rendering code always uses textures.
   - Enabling `ImFontAtlasFlags_NoBakedLines` in the font atlas will now disable support for
     anti-aliased lines by clearing `style.AntiAliasedLines`/`style.AntiAliasedLineEnds`.
-- Style: obsoleted `style.CurveTessellationTol (default 1.25)` which was in Pixels² unit in
-  favor of `style.CurveTessellationMaxError` (default 1.12)` which is in Pixels unit. It is
+- Style: obsoleted `style.CurveTessellationTol` (default 1.25) which was in Pixels² unit in
+  favor of `style.CurveTessellationMaxError` (default 1.12) which is in Pixels unit. It is
   easier to tweak + this allows us to easily scale error threshold on high density screens.
-  - style.CurveTessellationMaxError == sqrf(style.CurveTessellationTol).
+  - style.CurveTessellationMaxError == sqrtf(style.CurveTessellationTol).
 - ImGuiTextFilter: removed `float width` parameter of `Draw(const char* filter, float width)`:
   prefer using `SetNextItemWidth(float)` which is standard. Kept inline redirection function.
 - Fonts: renamed `AddRemapChar()` to `AddRemapCodepoint()` (rarely used, marked internal).
@@ -185,12 +188,18 @@ Breaking Changes:
     for `ImGuiBackendFlags_RendererHasTextures`. Use the new signature! (#9487)
   - OpenGL3: Does not attempt to read `GL_CLIP_ORIGIN` by default as the detection is
     sub-optimal and not reliable on some setup. Use `ImGui_ImplOpenGL3_SetClipOrigin(0)`
-    to  enable auto-detection, or e.g. `ImGui_ImplOpenGL3_SetClipOrigin(GL_UPPER_LEFT)`.
-
+    to enable auto-detection, or e.g. `ImGui_ImplOpenGL3_SetClipOrigin(GL_UPPER_LEFT)`.
 
 Other Changes:
 
-- DrawList:
+- Style:
+  - StyleColorsDark(): minor refresh of the default style to look more modern:
+    - Changed WindowBg to use a slightly greyer value and removed opacity.
+    - Changed FrameBg values to use a dark black to make frames stand out better.
+    - Tweak TextDisabled, TableHeaderBg, TableBorders to match altered WindowBg.
+  - StyleColorsLight(): inverted `ImGuiCol_TitleBgXXX` colors so that the selected
+    window title bar appears brighter.
+- ImDrawList:
   - Added flags to specify stroke position in all `ImDrawList` stroking functions: (#9504) [@memononen]
     - `ImDrawFlags_StrokeInside` (default for Rect, Circle/Ellipse, Triangle, Quad, Ngon + AddLineH, AddLineV)
     - `ImDrawFlags_StrokeCenter` (default for Line, Polyline, Beziers, Paths function)
@@ -221,7 +230,7 @@ Other Changes:
     (#9504, #2183, #2964, #7972 + #9360, #6331, #4250, #4091) [@memononen]
     - Generally fixed rendering of thick strokes/paths.
     - The new stroke expansion now uses corner miter calculation, which keeps thickness along
-      the line segments consistent. If the corner becomes too sharp, it will be bevelled to
+      the line segments consistent. If the corner becomes too sharp, it will be beveled to
       avoid long spikes at corners.
     - There are also some robustness measures for the case where the line thickness is larger
       than the features being drawn.
@@ -233,7 +242,7 @@ Other Changes:
     work precisely the same regardless of graphics API. (#3116, #3258, #2441) [@memononen]
   - Debug: added `io.ConfigDebugDrawListDefaultsToStrokeLegacy` to facilitate comparing old/new
     behaviors. This is equivalent to calling `PushDrawFlag(ImDrawFlags_StrokeLegacy, true)`
-    on every drawlist.
+    on every drawlists.
     Suggested uses, e.g.
       - `io.ConfigDebugDrawListDefaultsToStrokeLegacy = io.KeyShift; // Map on holding Shift`
       - `ImGui::Checkbox("DefaultsToStrokeLegacy", &io.ConfigDebugDrawListDefaultsToStrokeLegacy);`
@@ -257,25 +266,25 @@ Other Changes:
   - AddConvexPolyFilled()/PathFillConvex(): improved to handle input geometry more robustly.
     The rendering of sharp corners was improved. Earlier there were issues with sharp corners
     either creating long spikes, or messing up the adjacent edge's anti-aliasing. Now the
-    anti-aliasing fringe calculation is more consistent, and sharp corners get bevelled to
+    anti-aliasing fringe calculation is more consistent, and sharp corners get beveled to
     avoid spikes. There might still be issues when the smallest extent of a long thin polygon
     is less than a pixel. Also supports `ImDrawFlags_JoinMiter`, to facilitate matching
     a stroke using the same flag.
-  - AddRect(), AddRectFilled(): various optimizations for rounded rectangles. (#1962, #9504)
+  - `AddRect()`, `AddRectFilled()`: various optimizations for rounded rectangles. (#1962, #9504)
     - Integer-aligned coordinates and thicknesses will automatically use baked textures,
       saving on both CPU and vertex/index data.
     - Enabled by default. Use `ImFontAtlasFlags_NoBakedRoundCorners` to disable baking
       round corners in font atlas.
     - Added `ImDrawFlags_UseTexForRoundCorners` flag to enable in scope or per-shape.
       Added for consistency and debugging, not really needed in practice.
-  - AddCircle, AddCircleFilled: fixed large circles being under-tessellated
+  - `AddCircle()`, `AddCircleFilled()`: fixed large circles being under-tessellated
     (when above ~140 with default CircleTessellationMaxError).
   - Improved debug-build performance in various locations.
   - Improved minor mismatches when overlapping strokes and filled shapes.
     For example, when using inside strokes,
     - `AddRect()` and `AddRectFilled()` with rounding now overlap better. (#3656)
     - `AddCircle()` and `AddCircleFilled()` now overlap better.
-  - Added ImDrawList::PushDrawFlag()/PopDrawFlag() to alter certain flags for a
+  - Added `ImDrawList::PushDrawFlag()`/`PopDrawFlag()` to alter certain flags for a
     scope and a given `ImDrawList`. (#9489)
     - e.g. `PushDrawFlag(ImDrawFlags_StrokeLegacy, true);` enforce legacy tweaks.
   - About `ImDrawFlags_StrokeLegacy`:
@@ -292,27 +301,31 @@ Other Changes:
         which may make them appear as protruding a little more.
   - About disabling anti-aliasing:
     - Disabling anti-aliasing is now emulated by applying different UV coordinates.
-      - It does not result in a performance increase or vertex/index data decrease any more.
+      - It does not result in a performance increase or vertex/index data decrease any more
         (however the tendency is that the new code behaves better than old code).
       - But may be a useful stylistic choice in some circumstances.
     - Many thick shapes had broken corners with old no-AA code, and the old no-AA code
       was wildly different from the AA code. Not the case any more. (#288)
   - Per-viewport FramebufferScale for Apple/Retina screen is applied to draw lists:
-    - AA Fringe is scaled accordingly.
+    - AA Fringe is scaled accordingly. (#9577)
     - Circle and Curves tessellation error are scaled accordingly.
-  - Reworked assert in PushTexture() to allow convenience grace period of using a
+  - Reworked assert in `PushTexture()` to allow convenience grace period of using a
     texture that was queue for destroy during the frame. Make it safe to stick to
     an existing texture during the frame. (#9528, #8465)
   - Added optional `platform_io.DrawCallback_SetSamplerFromTex` standard backend-agnostic
     draw callback for requesting to use the sampler associated already associated to a texture.
     Currently only supported by the OpenGL2/3 and SDLRenderer3 backend. (#9378)
-  - Fixed dangling ImDrawList::_OwnerName when using animated label. (#9552) [@ubi-dcastonguay]
-
+  - Fixed dangling `ImDrawList::_OwnerName` when using animated label. (#9552) [@ubi-dcastonguay]
+- Mixed Values:
+  - Added `ImGuiItemFlags_MixedValue` flag for representing mixed/indeterminate values.
+    Supported by: Checkbox(), RadioButton(), DragXXX(), SliderXXX(), InputXXX(), ColorXXX()
+    and Combo() functions.
+    The scoped flag is designed for usage by advanced property editors. (#5518, #5677, #6865)
 - Drags, Sliders:
-  - Fixed an overflow using `ImGuiSliderFlags_Logarithmic` with S32/S64 types which
-    leads to clamped interactions. (#9526, #3361, #1823, #1316, #642) [@lailoken]
   - Ongoing drags may be cancelled using Right-Click, Escape or Gamepad Triangle.
     Cancelling reverts to the initial value. (#8564, #9534)
+  - Fixed an overflow using `ImGuiSliderFlags_Logarithmic` with S32/S64 types which
+    leads to clamped interactions. (#9526, #3361, #1823, #1316, #642) [@lailoken]
 - TreeNode:
   - Fixed issues/asserts with 32+ deep trees when using ImGuiTreeNodeFlags_DrawLinesXXX
     features or other features requiring stack storage. (#9509) [@lasrod]
@@ -321,14 +334,14 @@ Other Changes:
     section width.
   - Using <> scrolling buttons while the selected Tab is at either end of the
     section mid-section but not fully visible always makes it fully visible
-    (before eventually selecting a Tab in the leading/trailing section)
+    (before eventually selecting a Tab in the leading/trailing section).
 - Tables:
   - Fixed a bug restoring correct .ini columns order when table use is Sortable
     but had no user changes. (regression from 1.92.9). (#9519, #9108)
   - Fixed a bug tracking topology changes (insert new columns in the middle)
     when the table is not _Reorderable: new columns would be ordered incorrectly.
     (#9570, #9108, #9572) [@lailoken]
-- InpuText:
+- InputText:
   - Fixed a crash in some cases when using Home key in a WordWrap+ReadOnly field. (#9561)
 - Selectable:
   - Fixed `ImGuiSelectableFlags_SelectOnNav` triggering during NavInit.
@@ -336,9 +349,9 @@ Other Changes:
   - Reworked `AddFontDefault()` to use `io.DisplayFrameBufferScale` as part of the heuristic
     to select `AddFontDefaultVector()` by default, effectively using ProggyForever instead of
     ProggyClean on most Apple/Retina setups by default.
-  - Added ImFont::AddRemapCodepointToGlyphIndex() allowing to access glyphs that are not
+  - Added `ImFont::AddRemapCodepointToGlyphIndex()` allowing to access glyphs that are not
     mapped to codepoints. (#9559, #5647, #609, #5748, #8466)
-  - imgui_freetype: Fixed blurryness rendering `AddFontDefaultVector()`. Caused by a
+  - imgui_freetype: Fixed blurriness  rendering `AddFontDefaultVector()`. Caused by a
     non-pixel aligned offset caused by `ExtraSizeScale`. (#9348, #9233) [@redpartizan, @RDMCz]
   - (Internal) ImFontLoader: reworked `FontSrcContainsGlyph`, `FontBakedLoadGlyph` signatures
     to take raw glyph index instead of codepoint. Added `FontSrcGetGlyphIndexFromCodepoint`.
@@ -346,7 +359,7 @@ Other Changes:
   - Added `IMGUI_DISABLE_STB_TRUETYPE` to completely omit the stb_truetype loader
     code + stb_truetype.h code. (#9573)
 - ColorEdit:
-  - ColorButton, ColorEdit, ColorPicker: cancel-out alpha caused by BeginDisabled() so
+  - ColorButton, ColorEdit, ColorPicker: cancel-out alpha caused by `BeginDisabled()` so
     disabled color buttons have the same color as non-disabled oness. (#9511)
   - ColorButton: fixed issues/inconsistencies with checkerboard rendering when combining
     color alpha and global style alpha. (#9511) [@enjmiah, @ocornut]
@@ -365,16 +378,17 @@ Other Changes:
     match always filters out. (#2435) [@kudaba, @ocornut]
   - Added `DrawWithHint()` function. (#6206, #6395, #6447)
   - Added a "incl -excl" hint by default when the search field is empty. (#6206, #6395, #6447)
-- Style:
-  - Inverted `ImGuiCol_TitleBgXXX` colors for `StyleColorsLight()` so that the selected
-    window title bar appears brighter.
+- Widgets:
+  - Checkbox, Menus: check marks use anti-aliased ends.
+  - Tweaked rendering in various locations to avoid blurriness:
+    - Windows: title-bar and menu-bar border (when thickness>1.0f).
+    - SeparatorText: border (when thickness>1.0f).
+    - Tree: hierarchy lines (when thickness>1.0f).
+    - InputText: input caret (when thickness>1.0f).
+    - TabBar: selected overline border (when thickness>1.0f).
 - Misc:
-  - Added `ImGuiItemFlags_MixedValue` flag for representing mixed/indeterminate values.
-    Supported by: Checkbox(), RadioButton(), DragXXX(), SliderXXX(), InputXXX(), ColorXXX()
-    and Combo() functions.
-    The scoped flag is designed for usage by advanced property editors. (#5518, #5677, #6865)
   - Fixed `GetBackgroundDrawList()`/`GetForegroundDrawList()` not being properly reset
-    every frame when cumulated session time is very large (e.g. a few days). [@lailoken]
+    every frame when accumulated  session time is very large (e.g. a few days). [@lailoken]
   - Added `IM_NODEBUGSTEP` helper to tag functions with `__declspec(non_user_code)` (MSVC)
     or `[[gnu::artificial]]` (Clang/GCC) in order to provide a hint to debuggers to skip
     trivial functions when stepping into.
@@ -383,16 +397,8 @@ Other Changes:
   - Fixed strict aliasing violation in `ImHashData()` affecting Clang 23 + SSE 4.2 + -flto.
     Could manifest as `ImFontAtlasBakedGetId()` computation omitting font size from
     the hashed data. (#9557, #9560) [@sthalik]
-  - IO: restore default clipboard/ime/shell platform handlers on ClearPlatformHandlers(), fixing
+  - IO: restore default clipboard/ime/shell platform handlers on `ClearPlatformHandlers()`, fixing
     issues switching backends mid-session to one relying on default. (#9537, #8945, #2769) [@lstalmir]
-- Widgets:
-  - Checkbox, Menus: check marks use anti-aliased ends.
-  - Tweaked rendering in various locations to avoid blurryness:
-    - Windows: title-bar and menu-bar border (when thickness>1.0f).
-    - SeparatorText: border (when thickness>1.0f).
-    - Tree: hierarchy lines (when thickness>1.0f).
-    - InputText: input caret (when thickness>1.0f).
-    - TabBar: selected overline border (when thickness>1.0f).
 - Demo:
   - Added `Widgets->Mixed Values` section. (#5518, #5677, #6865)
   - Custom Rendering section: exposed new flags; showcasing overlapping strokes
@@ -406,7 +412,7 @@ Other Changes:
     and leave the other ones untouched. (#9574) [@tqjxlm]
   - OpenGL2, OpenGL3: added support for `platform_io.DrawCallback_SetSamplerFromTex` draw
     callback to request using the sampler associated already associated to a texture. (#9378)
-  - OpenGL2, OpenGL3: fixed `DrawCallback_ResetRenderState` handler not reseting all states
+  - OpenGL2, OpenGL3: fixed `DrawCallback_ResetRenderState` handler not resetting all states
     in the glTexParameter() path. (#9378)
   - OpenGL3: added `ImGui_ImplOpenGL3_SetClipOrigin()` to specify origin between
     `GL_LOWER_LEFT` (new default), `GL_UPPER_LEFT` and `0` (autodetect, old default).
@@ -430,8 +436,10 @@ Other Changes:
     when `FramebufferScale` is >1.0f. (#9515, #8628) [@WayU]
   - WebGPU: update to build with wgpu-native 29.0+. (#9377, #9532, #9530) [@lucascompython, @ivan-enzhaev]
 - Examples:
+  - All: all examples now default to use a little bit of rounding (`FrameRounding` and `GrabRounding`).
   - MSVC: disabled /JMC in Visual Studio projects (unnecessary overhead).
   - GLFW/SDL2/SDL3+WebGPU: fixed running with wgpu-native missing `wgpuInstanceWaitAny()`. (#9377)
+  - GLFW/SDL2/SDL3+WebGPU: better select surface format. (#9576) [@ypujante]
   - GLFW+Metal: fixed mistakenly calling `ImGui_ImplGlfw_InitForOpenGL()`, which
     broke multi-viewport support. (#9564) [@ypujante]
   - SDL2+Metal: create Metal context without using a `SDL_Renderer`.
