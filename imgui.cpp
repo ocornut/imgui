@@ -4590,6 +4590,28 @@ ImGuiID ImGui::AddContextHook(ImGuiContext* ctx, const ImGuiContextHook* hook)
     return g.HookIdNext;
 }
 
+// Metrics/Debugger: register a hook describing user draw callbacks (see ImGuiDebugDrawCmdHookFn).
+void ImGui::DebugAddDrawCmdHook(ImGuiDebugDrawCmdHookFn hook, void* user_data)
+{
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(hook != NULL);
+    ImGuiDebugDrawCmdHook entry;
+    entry.Callback = hook;
+    entry.UserData = user_data;
+    g.DebugDrawCmdHooks.push_back(entry);
+}
+
+void ImGui::DebugRemoveDrawCmdHook(ImGuiDebugDrawCmdHookFn hook, void* user_data)
+{
+    ImGuiContext& g = *GImGui;
+    for (int n = 0; n < g.DebugDrawCmdHooks.Size; n++)
+        if (g.DebugDrawCmdHooks[n].Callback == hook && g.DebugDrawCmdHooks[n].UserData == user_data)
+        {
+            g.DebugDrawCmdHooks.erase(g.DebugDrawCmdHooks.Data + n);
+            return;
+        }
+}
+
 // Deferred removal, avoiding issue with changing vector while iterating it
 void ImGui::RemoveContextHook(ImGuiContext* ctx, ImGuiID hook_id)
 {
@@ -17384,20 +17406,15 @@ void ImGui::DebugNodeDrawList(ImGuiWindow* window, ImGuiViewportP* viewport, con
     {
         if (pcmd->UserCallback)
         {
-            if (g.IO.DebugDrawCmdCallback)
-            {
-                char buf[300];
-                g.IO.DebugDrawCmdCallback(NULL, draw_list, pcmd, false, false, buf, IM_ARRAYSIZE(buf));
-                bool cb_node_open = TreeNode((void*)(pcmd - draw_list->CmdBuffer.begin()), "Callback: %s", buf);
-                if (IsItemHovered() && (cfg->ShowDrawCmdMesh || cfg->ShowDrawCmdBoundingBoxes) && fg_draw_list)
-                    g.IO.DebugDrawCmdCallback(fg_draw_list, draw_list, pcmd, cfg->ShowDrawCmdMesh, cfg->ShowDrawCmdBoundingBoxes, NULL, 0);
-                if (cb_node_open)
-                    TreePop();
-            }
-            else
-            {
+            bool handled = false;
+            for (ImGuiDebugDrawCmdHook& hook : g.DebugDrawCmdHooks)
+                if (hook.Callback(draw_list, pcmd, fg_draw_list, hook.UserData))
+                {
+                    handled = true;
+                    break;
+                }
+            if (!handled)
                 BulletText("Callback %p, user_data %p", pcmd->UserCallback, pcmd->UserCallbackData);
-            }
             continue;
         }
 
