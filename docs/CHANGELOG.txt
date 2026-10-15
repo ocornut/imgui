@@ -41,6 +41,22 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
+Autumn cleanup of stuff marked obsolete more than two years ago:
+
+- Commented out legacy names/functions which were obsoleted in 1.90.7 (May 2024);
+  - `ImGuiMod_Shortcut`                    --> `ImGuiMod_Ctrl` (since 1.90.7 it maps to Cmd on macOS)
+- Commented out legacy names/functions which were obsoleted in 1.90.9 (July 2024);
+  - `ImGuiCol_TabActive`                   --> `ImGuiCol_TabSelected`
+  - `ImGuiCol_TabUnfocused`                --> `ImGuiCol_TabDimmed`
+  - `ImGuiCol_TabUnfocusedActive`          --> `ImGuiCol_TabDimmedSelected`
+- Commented out legacy names/functions which were obsoleted in 1.91.0 (July 2024);
+  - `ImGuiSelectableFlags_DontClosePopups` --> `ImGuiSelectableFlags_NoAutoClosePopups`
+  - `PushButtonRepeat(bool repeat)`        --> `PushItemFlag(ImGuiItemFlags_ButtonRepeat, repeat)`
+  - `PopButtonRepeat()`                    --> `PopItemFlag()`
+  - `PushTabStop(bool tab_stop)`           --> `PushItemFlag(ImGuiItemFlags_NoTabStop, !tab_stop);`
+  - `PopTabStop()`                         --> `PopItemFlag()`
+
+
 Other Changes:
 
 

@@ -395,6 +395,16 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
  When you are not sure about an old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+   2026/10/15 (1.93.1) - commented out legacy names/functions which were obsoleted from 1.90.7 (May 2024) to 1.91.1 (Sept 2024):
+                          - `ImGuiMod_Shortcut`                  --> `ImGuiMod_Ctrl` (since 1.90.7 it maps to Cmd on macOS)
+                          - `ImGuiCol_TabActive`                 --> `ImGuiCol_TabSelected`
+                          - `ImGuiCol_TabUnfocused`              --> `ImGuiCol_TabDimmed`
+                          - `ImGuiCol_TabUnfocusedActive`        --> `ImGuiCol_TabDimmedSelected`
+                          - `ImGuiSelectableFlags_DontClosePopups`-> `ImGuiSelectableFlags_NoAutoClosePopups`
+                          - `PushButtonRepeat(bool repeat)`      --> `PushItemFlag(ImGuiItemFlags_ButtonRepeat, repeat)`
+                          - `PopButtonRepeat()`                  --> `PopItemFlag()`
+                          - `PushTabStop(bool tab_stop)`         --> `PushItemFlag(ImGuiItemFlags_NoTabStop, !tab_stop);`
+                          - `PopTabStop()`                       --> `PopItemFlag()`
    2026/10/07 (1.93.0) - large cleanup/refactor of ImDrawList. many issues and inconsistencies fixed! (#9504)
                          BELOW IS A SIMPLIFIED/SHORTENED RECAP OF CHANGES. READ CHANGELOG AND LINKS ABOVE FOR MORE DETAILS!
                          useful links:
