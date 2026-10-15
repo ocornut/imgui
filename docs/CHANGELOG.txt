@@ -59,12 +59,16 @@ Autumn cleanup of stuff marked obsolete more than two years ago:
   - `io.GetClipboardTextFn`                --> `platform_io.Platform_GetClipboardTextFn`
   - `io.SetClipboardTextFn`                --> `platform_io.Platform_SetClipboardTextFn`
   - `io.ClipboardUserData`                 --> `platform_io.Platform_ClipboardUserData`
-
-Please also try to get rid of calls to `GetContentRegionMax()`, `GetWindowContentRegionMin()`
-and `GetWindowContentRegionMax()`: you do NOT need those functions. See #7838.
+- Please also try to get rid of calls to `GetContentRegionMax()`, `GetWindowContentRegionMin()`
+  and `GetWindowContentRegionMax()` will may be removed soon-ish: you should not
+  ever need those functions. See #7838.
 
 
 Other Changes:
+
+- ImVec2: added a check for cases where a custom `IM_VEC2_CLASS_EXTRA` macro
+  adds an extra `operator=` to ImVec2. This isn't supported but should not
+  be needed as you should have a constructor to convert from your type to ImVec2.
 
 
 -----------------------------------------------------------------------

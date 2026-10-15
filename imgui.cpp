@@ -11208,6 +11208,15 @@ static void ImGui::ErrorCheckNewFrameSanityChecks()
     // #define IM_ASSERT(EXPR)   do { if (SomeCode(EXPR)) SomeMoreCode(); } while (0)   // Correct!
     if (true) IM_ASSERT(1); else IM_ASSERT(0);
 
+    // Check user IM_VEC2_CLASS_EXTRA macro
+    // (IF YOU GET A "ambiguous overload" COMPILE ERROR HERE: does your IM_VEC2_CLASS_EXTRA macro contains an operator=?
+    //    e.g. ImVec2& operator=(const MyPoint & p) { x = p.x; y = p.y; return *this; }
+    //  You should be able to remove it if you have the corresponding constructor:
+    //    e.g. IM_NODEBUGSTEP constexpr inline ImVec2(const MyPoint& f) : x(f.x), y(f.y) {}
+    //  Allowing you to add this extra operator to ImVec2 would prevent our whole codebase from using v = {x,y} assignment style.
+    //  PLEASE GET IN TOUCH IF REMOVING THE operator= IS A PROBLEM TO YOU)
+    ImVec2 v; v = { 1.0f, 2.0f };
+
     // Emscripten backends are often imprecise in their submission of DeltaTime. (#6114, #3644)
     // Ideally the Emscripten app/backend should aim to fix or smooth this value and avoid feeding zero, but we tolerate it.
 #ifdef __EMSCRIPTEN__
