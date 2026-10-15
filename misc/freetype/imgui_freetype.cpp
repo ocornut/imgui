@@ -1,5 +1,6 @@
-// dear imgui: FreeType font builder (used as a replacement for the stb_truetype builder)
+// dear imgui: FreeType font builder
 // (code)
+// (used as a replacement for the stb_truetype builder)
 
 // Get the latest version at https://github.com/ocornut/imgui/tree/master/misc/freetype
 // Original code by @vuhdo (Aleksei Skriabin) in 2017, with improvements by @mikesart.

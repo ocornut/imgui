@@ -1,4 +1,4 @@
-// dear imgui, v1.93.0
+// dear imgui, v1.93.1 WIP
 // (headers)
 
 // Help:
@@ -29,8 +29,8 @@
 
 // Library Version
 // (Integer encoded as XYYZZ for use in #if preprocessor conditionals, e.g. '#if IMGUI_VERSION_NUM >= 12345')
-#define IMGUI_VERSION       "1.93.0"
-#define IMGUI_VERSION_NUM   19300
+#define IMGUI_VERSION       "1.93.1 WIP"
+#define IMGUI_VERSION_NUM   19301
 #define IMGUI_HAS_TABLE             // Added BeginTable() - from IMGUI_VERSION_NUM >= 18000
 #define IMGUI_HAS_TEXTURES          // Added ImGuiBackendFlags_RendererHasTextures - from IMGUI_VERSION_NUM >= 19198
 #define IMGUI_HAS_VIEWPORT          // In 'docking' WIP branch.
@@ -132,12 +132,14 @@ Index of this file:
 
 // Alternative to using a .natstepfilter file or other scripts in misc/debuggers/ to skip debug-stepping selected trivial functions.
 // If you get a compiler error or warning related to use, please report it to us!
+#ifndef IM_NODEBUGSTEP
 #if (defined(__clang__) && (__clang_major__ >= 7)) || (defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 8)))
 #define IM_NODEBUGSTEP      [[gnu::artificial]]
 #elif defined(_MSC_VER) && (_MSC_VER >= 1915)
 #define IM_NODEBUGSTEP      __declspec(non_user_code)
 #else
 #define IM_NODEBUGSTEP
+#endif
 #endif
 
 // Warnings
@@ -1454,7 +1456,7 @@ enum ImGuiSelectableFlags_
     ImGuiSelectableFlags_SelectOnNav        = 1 << 6,   // Auto-select when moved into, unless Ctrl is held. Automatic when in a BeginMultiSelect() block.
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    ImGuiSelectableFlags_DontClosePopups    = ImGuiSelectableFlags_NoAutoClosePopups,   // Renamed in 1.91.0
+    //ImGuiSelectableFlags_DontClosePopups  = ImGuiSelectableFlags_NoAutoClosePopups,   // Renamed in 1.91.0
     //ImGuiSelectableFlags_AllowItemOverlap = ImGuiSelectableFlags_AllowOverlap,        // Renamed in 1.89.7
 #endif
 };
@@ -1778,7 +1780,7 @@ enum ImGuiKey : int
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     ImGuiKey_COUNT                  = ImGuiKey_NamedKey_END,    // Obsoleted in 1.91.5 because it was misleading (since named keys don't start at 0 anymore)
-    ImGuiMod_Shortcut               = ImGuiMod_Ctrl,            // Removed in 1.90.7, you can now simply use ImGuiMod_Ctrl
+    //ImGuiMod_Shortcut             = ImGuiMod_Ctrl,            // Removed in 1.90.7, you can now simply use ImGuiMod_Ctrl (will auto map to Cmd on Mac)
     //ImGuiKey_ModCtrl = ImGuiMod_Ctrl, ImGuiKey_ModShift = ImGuiMod_Shift, ImGuiKey_ModAlt = ImGuiMod_Alt, ImGuiKey_ModSuper = ImGuiMod_Super, // Renamed in 1.89
     //ImGuiKey_KeyPadEnter = ImGuiKey_KeypadEnter,              // Renamed in 1.87
 #endif
@@ -1924,10 +1926,10 @@ enum ImGuiCol_
     ImGuiCol_COUNT,
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    ImGuiCol_TabActive = ImGuiCol_TabSelected,                  // [renamed in 1.90.9]
-    ImGuiCol_TabUnfocused = ImGuiCol_TabDimmed,                 // [renamed in 1.90.9]
-    ImGuiCol_TabUnfocusedActive = ImGuiCol_TabDimmedSelected,   // [renamed in 1.90.9]
-    ImGuiCol_NavHighlight = ImGuiCol_NavCursor,                 // [renamed in 1.91.4]
+    ImGuiCol_NavHighlight         = ImGuiCol_NavCursor,         // [renamed in 1.91.4]
+    //ImGuiCol_TabActive          = ImGuiCol_TabSelected,       // [renamed in 1.90.9]
+    //ImGuiCol_TabUnfocused       = ImGuiCol_TabDimmed,         // [renamed in 1.90.9]
+    //ImGuiCol_TabUnfocusedActive = ImGuiCol_TabDimmedSelected, // [renamed in 1.90.9]
 #endif
 };
 
@@ -2789,11 +2791,11 @@ struct ImGuiIO
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     float       FontGlobalScale;                    // Moved io.FontGlobalScale to style.FontScaleMain in 1.92.0 (June 2025)
 
-    // Legacy: before 1.91.1, clipboard functions were stored in ImGuiIO instead of ImGuiPlatformIO.
+    // [Moved in 1.91.1] Clipboard functions were stored in ImGuiIO instead of ImGuiPlatformIO.
     // As this is will affect all users of custom engines/backends, we are providing proper legacy redirection (will obsolete).
-    const char* (*GetClipboardTextFn)(void* user_data);
-    void        (*SetClipboardTextFn)(void* user_data, const char* text);
-    void*       ClipboardUserData;
+    //const char* (*GetClipboardTextFn)(void* user_data);                   // --> `platform_io.Platform_GetClipboardTextFn`
+    //void        (*SetClipboardTextFn)(void* user_data, const char* text); // --> `platform_io.Platform_SetClipboardTextFn`
+    //void*       ClipboardUserData;                                        // --> `platform_io.Platform_ClipboardUserData`
 
     //void ClearInputCharacters() { InputQueueCharacters.resize(0); } // [Obsoleted in 1.89.8] Clear the current frame text input buffer. Now included within ClearInputKeys(). Removed this as it is ambiguous/misleading and generally incorrect to use with the existence of a higher-level input queue.
 #endif
@@ -3731,7 +3733,7 @@ struct ImDrawData
     ImVector<ImTextureData*>* Textures;     // List of textures to update. Most of the times the list is shared by all ImDrawData, has only 1 texture and it doesn't need any update. This almost always points to ImGui::GetPlatformIO().Textures[]. May be overridden or set to NULL if you want to manually update textures.
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    int                 CmdListsCount;      // Use CmdLists.Size instead. Number of ImDrawList* to render.
+    int                 CmdListsCount;      // [OBSOLETED in 1.92.9] Use CmdLists.Size instead. Number of ImDrawList* to render.
 #endif
 
     // Functions
@@ -4504,16 +4506,17 @@ namespace ImGui
     // OBSOLETED in 1.91.9 (from February 2025)
     IMGUI_API void      Image(ImTextureRef tex_ref, const ImVec2& image_size, const ImVec2& uv0, const ImVec2& uv1, const ImVec4& tint_col, const ImVec4& border_col); // <-- 'border_col' was removed in favor of ImGuiCol_ImageBorder. If you use 'tint_col', use ImageWithBg() instead.
     // OBSOLETED in 1.91.0 (from July 2024)
-    inline void         PushButtonRepeat(bool repeat)                           { PushItemFlag(ImGuiItemFlags_ButtonRepeat, repeat); }
-    inline void         PopButtonRepeat()                                       { PopItemFlag(); }
-    inline void         PushTabStop(bool tab_stop)                              { PushItemFlag(ImGuiItemFlags_NoTabStop, !tab_stop); }
-    inline void         PopTabStop()                                            { PopItemFlag(); }
     // You do not need those functions! See #7838 on GitHub for more info.
     IMGUI_API ImVec2    GetContentRegionMax();                                  // Content boundaries max (e.g. window boundaries including scrolling, or current column boundaries). You should never need this. Always use GetCursorScreenPos() and GetContentRegionAvail()!
     IMGUI_API ImVec2    GetWindowContentRegionMin();                            // Content boundaries min for the window (roughly (0,0)-Scroll), in window-local coordinates. You should never need this. Always use GetCursorScreenPos() and GetContentRegionAvail()!
     IMGUI_API ImVec2    GetWindowContentRegionMax();                            // Content boundaries max for the window (roughly (0,0)+Size-Scroll), in window-local coordinates. You should never need this. Always use GetCursorScreenPos() and GetContentRegionAvail()!
 
     // Some of the older obsolete names along with their replacement (commented out so they are not reported in IDE)
+    // OBSOLETED in 1.91.0 (from July 2024)
+    //inline void         PushButtonRepeat(bool repeat)                         { PushItemFlag(ImGuiItemFlags_ButtonRepeat, repeat); }
+    //inline void         PopButtonRepeat()                                     { PopItemFlag(); }
+    //inline void         PushTabStop(bool tab_stop)                            { PushItemFlag(ImGuiItemFlags_NoTabStop, !tab_stop); }
+    //inline void         PopTabStop()                                          { PopItemFlag(); }
     // OBSOLETED in 1.90.0 (from September 2023)
     //IMGUI_API bool      Combo(const char* label, int* current_item, bool (*old_callback)(void* user_data, int idx, const char** out_text), void* user_data, int items_count, int popup_max_height_in_items = -1); // Getter signature changed. See 2023/09/15 and 2026/02/27 commits.
     //IMGUI_API bool      ListBox(const char* label, int* current_item, bool (*old_callback)(void* user_data, int idx, const char** out_text), void* user_data, int items_count, int height_in_items = -1);         // Getter signature changed. See 2023/09/15 and 2026/02/27 commits.

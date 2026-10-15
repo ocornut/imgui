@@ -1,4 +1,4 @@
-// dear imgui, v1.93.0
+// dear imgui, v1.93.1 WIP
 // (demo code)
 
 // Help:
@@ -1722,10 +1722,10 @@ static void DemoWindowWidgetsDragAndDrop()
 {
     if (ImGui::TreeNode("Drag and Drop"))
     {
-        IMGUI_DEMO_MARKER("Widgets/Drag and drop");
+        IMGUI_DEMO_MARKER("Widgets/Drag and Drop");
         if (ImGui::TreeNode("Drag and drop in standard widgets"))
         {
-            IMGUI_DEMO_MARKER("Widgets/Drag and drop/Standard widgets");
+            IMGUI_DEMO_MARKER("Widgets/Drag and Drop/Standard widgets");
             // ColorEdit widgets automatically act as drag source and drag target.
             // They are using standardized payload strings IMGUI_PAYLOAD_TYPE_COLOR_3F and IMGUI_PAYLOAD_TYPE_COLOR_4F
             // to allow your own widgets to use colors in their drag and drop interaction.
@@ -1740,7 +1740,7 @@ static void DemoWindowWidgetsDragAndDrop()
 
         if (ImGui::TreeNode("Drag and drop to copy/swap items"))
         {
-            IMGUI_DEMO_MARKER("Widgets/Drag and drop/Copy-swap items");
+            IMGUI_DEMO_MARKER("Widgets/Drag and Drop/Copy-swap items");
             enum Mode
             {
                 Mode_Copy,

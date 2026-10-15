@@ -113,7 +113,7 @@ Calling the `ImGui::ShowDemoWindow()` function will create a demo window showcas
 - [imgui_explorer](https://pthom.github.io/imgui_explorer): Web version of the demo w/ source code browser, courtesy of [@pthom](https://github.com/pthom).
 
 You should be able to build the examples from sources. If you don't, let us know! If you want to have a quick look at some Dear ImGui features, you can download Windows binaries of the demo app here:
-- [imgui-demo-binaries-20260225.zip](https://www.dearimgui.com/binaries/imgui-demo-binaries-20260225.zip) (Windows, 1.92.6, built 2026/02/25, master) or [older binaries](https://www.dearimgui.com/binaries).
+- [imgui-demo-binaries-20261015-win32.zip](https://www.dearimgui.com/binaries/imgui-demo-binaries-20261015-win32.zip) (Win32, 1.93.0, built 2026/10/15, master) or [older binaries](https://www.dearimgui.com/binaries).
 
 ### Gallery
 

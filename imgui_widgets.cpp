@@ -1,4 +1,4 @@
-// dear imgui, v1.93.0
+// dear imgui, v1.93.1 WIP
 // (widgets code)
 
 /*
@@ -2707,7 +2707,7 @@ bool ImGui::DragBehavior(ImGuiID id, ImGuiDataType data_type, void* p_v, float v
         {
             // Canceling action reverts to initial value
             size_t data_size = DataTypeGetInfo(data_type)->Size;
-            bool value_changed = memcmp(p_v, &g.ActiveIdValueOnActivation, data_size);
+            bool value_changed = memcmp(p_v, &g.ActiveIdValueOnActivation, data_size) != 0;
             memcpy(p_v, &g.ActiveIdValueOnActivation, data_size);
             ClearActiveID();
             return value_changed;
@@ -3329,7 +3329,7 @@ bool ImGui::SliderBehavior(const ImRect& bb, ImGuiID id, ImGuiDataType data_type
         {
             // Canceling action reverts to initial value
             size_t data_size = DataTypeGetInfo(data_type)->Size;
-            bool value_changed = memcmp(p_v, &g.ActiveIdValueOnActivation, data_size);
+            bool value_changed = memcmp(p_v, &g.ActiveIdValueOnActivation, data_size) != 0;
             memcpy(p_v, &g.ActiveIdValueOnActivation, data_size);
             ClearActiveID();
             return value_changed;
