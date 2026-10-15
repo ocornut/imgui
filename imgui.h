@@ -3391,7 +3391,8 @@ enum ImDrawFlags_
     ImDrawFlags_RoundCornersTop         = ImDrawFlags_RoundTop,
     ImDrawFlags_RoundCornersBottom      = ImDrawFlags_RoundBottom,
     ImDrawFlags_RoundCornersLeft        = ImDrawFlags_RoundLeft,
-    ImDrawFlags_RoundCornersRight       = ImDrawFlags_RoundRight,      
+    ImDrawFlags_RoundCornersRight       = ImDrawFlags_RoundRight,
+    ImDrawFlags_RoundCornersMask_       = ImDrawFlags_RoundMask_,
 #endif
 };
 

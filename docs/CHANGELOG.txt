@@ -205,6 +205,7 @@ Breaking Changes:
       - `ImDrawFlags_RoundCornersBottom`      -> `ImDrawFlags_RoundBottom`
       - `ImDrawFlags_RoundCornersLeft`        -> `ImDrawFlags_RoundLeft`
       - `ImDrawFlags_RoundCornersRight`       -> `ImDrawFlags_RoundRight`
+      - `ImDrawFlags_RoundCornersMask_`       -> `ImDrawFlags_RoundMask_`
     Kept redirection enums (will obsolete).
   - Marked `ImDrawListFlags_AntiAliasedLinesUseTex` and `style.AntiAliasedLinesUseTex` as
     obsolete, as the new line rendering code always uses textures.
