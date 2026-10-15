@@ -2280,7 +2280,7 @@ void ImDrawList::_AddRectTinyRounding(const ImVec2& p_min, const ImVec2& p_max, 
         const float stem_y = outer_y + corner_offset[corner].y * stem_offset;
         const float inner_x = outer_x + corner_offset[corner].x * thickness;
         const float inner_y = outer_y + corner_offset[corner].y * thickness;
-        const bool is_rounded = (flags & corner_flags[corner]);
+        const bool is_rounded = (flags & corner_flags[corner]) != 0;
 
         const int arc_idx = (int)_VtxCurrentIdx;
         if (is_rounded)
