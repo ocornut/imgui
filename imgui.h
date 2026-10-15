@@ -130,12 +130,14 @@ Index of this file:
 
 // Alternative to using a .natstepfilter file or other scripts in misc/debuggers/ to skip debug-stepping selected trivial functions.
 // If you get a compiler error or warning related to use, please report it to us!
+#ifndef IM_NODEBUGSTEP
 #if (defined(__clang__) && (__clang_major__ >= 7)) || (defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 8)))
 #define IM_NODEBUGSTEP      [[gnu::artificial]]
 #elif defined(_MSC_VER) && (_MSC_VER >= 1915)
 #define IM_NODEBUGSTEP      __declspec(non_user_code)
 #else
 #define IM_NODEBUGSTEP
+#endif
 #endif
 
 // Warnings
