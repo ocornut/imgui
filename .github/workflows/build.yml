@@ -523,7 +523,7 @@ jobs:
 
     - name: Install Dependencies
       run: |
-        brew install glfw3 sdl2 sdl3
+        brew install glfw sdl2 sdl3
 
     - name: Build example_null (extra warnings, clang 64-bit)
       run: make -C examples/example_null WITH_EXTRA_WARNINGS=1
