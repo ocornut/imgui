@@ -2682,9 +2682,9 @@ struct ImGuiIO
 
     // [Moved in 1.91.1] Clipboard functions were stored in ImGuiIO instead of ImGuiPlatformIO.
     // As this is will affect all users of custom engines/backends, we are providing proper legacy redirection (will obsolete).
-    const char* (*GetClipboardTextFn)(void* user_data);
-    void        (*SetClipboardTextFn)(void* user_data, const char* text);
-    void*       ClipboardUserData;
+    //const char* (*GetClipboardTextFn)(void* user_data);                   // --> `platform_io.Platform_GetClipboardTextFn`
+    //void        (*SetClipboardTextFn)(void* user_data, const char* text); // --> `platform_io.Platform_SetClipboardTextFn`
+    //void*       ClipboardUserData;                                        // --> `platform_io.Platform_ClipboardUserData`
 
     //void ClearInputCharacters() { InputQueueCharacters.resize(0); } // [Obsoleted in 1.89.8] Clear the current frame text input buffer. Now included within ClearInputKeys(). Removed this as it is ambiguous/misleading and generally incorrect to use with the existence of a higher-level input queue.
 #endif

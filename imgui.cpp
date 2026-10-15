@@ -405,6 +405,9 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
                           - `PopButtonRepeat()`                  --> `PopItemFlag()`
                           - `PushTabStop(bool tab_stop)`         --> `PushItemFlag(ImGuiItemFlags_NoTabStop, !tab_stop);`
                           - `PopTabStop()`                       --> `PopItemFlag()`
+                          - `io.GetClipboardTextFn`              --> `platform_io.Platform_GetClipboardTextFn`
+                          - `io.SetClipboardTextFn`              --> `platform_io.Platform_SetClipboardTextFn`
+                          - `io.ClipboardUserData`               --> `platform_io.Platform_ClipboardUserData`
    2026/10/07 (1.93.0) - large cleanup/refactor of ImDrawList. many issues and inconsistencies fixed! (#9504)
                          BELOW IS A SIMPLIFIED/SHORTENED RECAP OF CHANGES. READ CHANGELOG AND LINKS ABOVE FOR MORE DETAILS!
                          useful links:
@@ -11254,10 +11257,10 @@ static void ImGui::ErrorCheckNewFrameSanityChecks()
     }
 
     // Remap legacy clipboard handlers (OBSOLETED in 1.91.1, August 2024)
-    if (g.IO.GetClipboardTextFn != NULL && (g.PlatformIO.Platform_GetClipboardTextFn == NULL || g.PlatformIO.Platform_GetClipboardTextFn == Platform_GetClipboardTextFn_DefaultImpl))
-        g.PlatformIO.Platform_GetClipboardTextFn = [](ImGuiContext* ctx) { return ctx->IO.GetClipboardTextFn(ctx->IO.ClipboardUserData); };
-    if (g.IO.SetClipboardTextFn != NULL && (g.PlatformIO.Platform_SetClipboardTextFn == NULL || g.PlatformIO.Platform_SetClipboardTextFn == Platform_SetClipboardTextFn_DefaultImpl))
-        g.PlatformIO.Platform_SetClipboardTextFn = [](ImGuiContext* ctx, const char* text) { return ctx->IO.SetClipboardTextFn(ctx->IO.ClipboardUserData, text); };
+    //if (g.IO.GetClipboardTextFn != NULL && (g.PlatformIO.Platform_GetClipboardTextFn == NULL || g.PlatformIO.Platform_GetClipboardTextFn == Platform_GetClipboardTextFn_DefaultImpl))
+    //    g.PlatformIO.Platform_GetClipboardTextFn = [](ImGuiContext* ctx) { return ctx->IO.GetClipboardTextFn(ctx->IO.ClipboardUserData); };
+    //if (g.IO.SetClipboardTextFn != NULL && (g.PlatformIO.Platform_SetClipboardTextFn == NULL || g.PlatformIO.Platform_SetClipboardTextFn == Platform_SetClipboardTextFn_DefaultImpl))
+    //    g.PlatformIO.Platform_SetClipboardTextFn = [](ImGuiContext* ctx, const char* text) { return ctx->IO.SetClipboardTextFn(ctx->IO.ClipboardUserData, text); };
 
     // Remap legacy CurveTessellationTol into CurveTessellationMaxError (OBSOLETED in 1.93.0, August 2026)
     if (g.Style.CurveTessellationTol != 0.0f)

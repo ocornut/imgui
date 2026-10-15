@@ -55,6 +55,13 @@ Autumn cleanup of stuff marked obsolete more than two years ago:
   - `PopButtonRepeat()`                    --> `PopItemFlag()`
   - `PushTabStop(bool tab_stop)`           --> `PushItemFlag(ImGuiItemFlags_NoTabStop, !tab_stop);`
   - `PopTabStop()`                         --> `PopItemFlag()`
+- Commented out legacy names/functions which were obsoleted in 1.91.1 (Sept 2024);
+  - `io.GetClipboardTextFn`                --> `platform_io.Platform_GetClipboardTextFn`
+  - `io.SetClipboardTextFn`                --> `platform_io.Platform_SetClipboardTextFn`
+  - `io.ClipboardUserData`                 --> `platform_io.Platform_ClipboardUserData`
+
+Please also try to get rid of calls to `GetContentRegionMax()`, `GetWindowContentRegionMin()`
+and `GetWindowContentRegionMax()`: you do NOT need those functions. See #7838.
 
 
 Other Changes:
