@@ -10711,6 +10711,7 @@ void ImGui::UpdateMouseWheel()
             if (do_scroll[ImGuiAxis_X])
             {
                 LockWheelingWindow(window, wheel.x);
+                SetKeyOwner(ImGuiKey_MouseWheelX, window->ID);
                 float max_step = window->InnerRect.GetWidth() * 0.67f;
                 float scroll_step = ImTrunc(ImMin(2 * window->FontRefSize, max_step));
                 SetScrollX(window, window->Scroll.x - wheel.x * scroll_step);
@@ -10719,6 +10720,7 @@ void ImGui::UpdateMouseWheel()
             if (do_scroll[ImGuiAxis_Y])
             {
                 LockWheelingWindow(window, wheel.y);
+                SetKeyOwner(ImGuiKey_MouseWheelY, window->ID);
                 float max_step = window->InnerRect.GetHeight() * 0.67f;
                 float scroll_step = ImTrunc(ImMin(5 * window->FontRefSize, max_step));
                 SetScrollY(window, window->Scroll.y - wheel.y * scroll_step);
