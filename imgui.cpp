@@ -2265,14 +2265,14 @@ ImVec2 ImTriangleClosestPoint(const ImVec2& a, const ImVec2& b, const ImVec2& c,
 int ImStricmp(const char* str1, const char* str2)
 {
     int d;
-    while ((d = ImToUpper(*str2) - ImToUpper(*str1)) == 0 && *str1) { str1++; str2++; }
+    while ((d = ImToUpper(*str1) - ImToUpper(*str2)) == 0 && *str1) { str1++; str2++; }
     return d;
 }
 
 int ImStrnicmp(const char* str1, const char* str2, size_t count)
 {
     int d = 0;
-    while (count > 0 && (d = ImToUpper(*str2) - ImToUpper(*str1)) == 0 && *str1) { str1++; str2++; count--; }
+    while (count > 0 && (d = ImToUpper(*str1) - ImToUpper(*str2)) == 0 && *str1) { str1++; str2++; count--; }
     return d;
 }
 
