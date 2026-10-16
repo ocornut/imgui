@@ -4727,12 +4727,13 @@ void ImGui::RemoveContextHook(ImGuiContext* ctx, ImGuiID hook_id)
 
 // Call context hooks (used by e.g. test engine)
 // We assume a small number of hooks so all stored in same array
+// Iterate by index: a callback may add a hook, which reallocates the array. Hooks added here are called from the next call.
 void ImGui::CallContextHooks(ImGuiContext* ctx, ImGuiContextHookType hook_type)
 {
     ImGuiContext& g = *ctx;
-    for (ImGuiContextHook& hook : g.Hooks)
-        if (hook.Type == hook_type)
-            hook.Callback(&g, &hook);
+    for (int n = 0, hooks_count = g.Hooks.Size; n < hooks_count; n++)
+        if (g.Hooks[n].Type == hook_type)
+            g.Hooks[n].Callback(&g, &g.Hooks[n]);
 }
 
 //-----------------------------------------------------------------------------
