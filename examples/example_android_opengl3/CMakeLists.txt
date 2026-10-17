@@ -11,6 +11,7 @@ add_library(${CMAKE_PROJECT_NAME} SHARED
   ${CMAKE_CURRENT_SOURCE_DIR}/../../imgui.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/../../imgui_demo.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/../../imgui_draw.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../imgui_stacklayout.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/../../imgui_tables.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/../../imgui_widgets.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/../../backends/imgui_impl_android.cpp

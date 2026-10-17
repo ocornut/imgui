@@ -52,6 +52,7 @@ set(IMGUI_EXAMPLE_SOURCE_FILES
         ${IMGUI_DIR}/imgui.cpp
         ${IMGUI_DIR}/imgui_draw.cpp
         ${IMGUI_DIR}/imgui_demo.cpp
+        ${IMGUI_DIR}/imgui_stacklayout.cpp
         ${IMGUI_DIR}/imgui_tables.cpp
         ${IMGUI_DIR}/imgui_widgets.cpp
 )
