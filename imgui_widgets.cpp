@@ -6924,11 +6924,15 @@ bool ImGui::TreeNodeExV(const void* ptr_id, ImGuiTreeNodeFlags flags, const char
 
 // The reason those two functions are not yet in public API is because I would like to design a more feature-full and generic API for this.
 // They are otherwise function (cc: #3823, #9251, #7553, #6754, #5423, #2958, #2079, #1947, #1131, #722)
-bool ImGui::TreeNodeGetOpen(ImGuiID storage_id)
+bool ImGui::TreeNodeGetOpen(ImGuiID storage_id, ImGuiTreeNodeFlags flags)
 {
+    // Leaf node always open (see TreeNodeUpdateNextOpen()).
+    if (flags & ImGuiTreeNodeFlags_Leaf)
+        return true;
+
     ImGuiContext& g = *GImGui;
     ImGuiStorage* storage = g.CurrentWindow->DC.StateStorage;
-    return storage->GetInt(storage_id, 0) != 0;
+    return storage->GetInt(storage_id, (flags & ImGuiTreeNodeFlags_DefaultOpen) ? 1 : 0) != 0;
 }
 
 void ImGui::TreeNodeSetOpen(ImGuiID storage_id, bool is_open)
