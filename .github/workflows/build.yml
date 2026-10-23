@@ -268,6 +268,39 @@ jobs:
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_win32_directx12/example_win32_directx12.vcxproj /p:Platform=x64 /p:Configuration=Release'
 
+  Build-Windows-ARM64:
+    runs-on: windows-11-arm
+    name: Build - Windows ARM64
+
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}/imgui
+
+    env:
+      VS_PATH: C:\Program Files\Microsoft Visual Studio\18\Enterprise
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          path: ${{ github.workspace }}/imgui
+
+      - name: Build example_null (extra warnings, msvc arm64)
+        shell: cmd
+        run: |
+          cd examples\example_null
+          call "%VS_PATH%\VC\Auxiliary\Build\vcvarsarm64.bat"
+          .\build_win.bat /W4
+
+      - name: Run example_null (msvc arm64)
+        shell: cmd
+        run: examples\example_null\Debug\example_null.exe
+
+      - name: Build example_win32_directx11 (msvc arm64)
+        shell: cmd
+        run: |
+          cd examples\example_win32_directx11
+          call "%VS_PATH%\VC\Auxiliary\Build\vcvarsarm64.bat"
+          .\build_win.bat
+
   Build-Linux:
     runs-on: ubuntu-latest
     name: Build - Linux
