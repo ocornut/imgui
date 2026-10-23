@@ -11,6 +11,7 @@ Index of this file:
 // [SECTION] Forward declarations
 // [SECTION] Context pointer
 // [SECTION] STB libraries includes
+// [SECTION] Stack Layout includes
 // [SECTION] Macros
 // [SECTION] Generic helpers
 // [SECTION] ImDrawList support
@@ -227,6 +228,14 @@ typedef ImU16 ImGuiTableDrawChannelIdx;
 
 #ifndef GImGui
 extern IMGUI_API ImGuiContext* GImGui;  // Current implicit context pointer
+#endif
+
+//-------------------------------------------------------------------------
+// [SECTION] Stack Layout includes
+//-------------------------------------------------------------------------
+
+#ifdef IMGUI_HAS_STACK_LAYOUT
+# include "imgui_stacklayout_internal.h"
 #endif
 
 //-----------------------------------------------------------------------------
@@ -3273,6 +3282,7 @@ struct IMGUI_API ImGuiTableTempData
     ImVec1                      HostBackupColumnsOffset;    // Backup of OuterWindow->DC.ColumnsOffset at the end of BeginTable()
     float                       HostBackupItemWidth;        // Backup of OuterWindow->DC.ItemWidth at the end of BeginTable()
     int                         HostBackupItemWidthStackSize;//Backup of OuterWindow->DC.ItemWidthStack.Size at the end of BeginTable()
+    ImGuiLayoutType             HostBackupLayoutType;       // Backup of InnerWindow->DC.LayoutType at the end of BeginTable()
 
     ImGuiTableTempData()        { memset((void*)this, 0, sizeof(*this)); LastTimeActive = -1.0f; }
 };
