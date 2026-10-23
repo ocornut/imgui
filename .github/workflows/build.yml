@@ -268,6 +268,39 @@ jobs:
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_win32_directx12/example_win32_directx12.vcxproj /p:Platform=x64 /p:Configuration=Release'
 
+  Build-Windows-ARM64:
+    runs-on: windows-11-arm
+    name: Build - Windows ARM64
+
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}/imgui
+
+    env:
+      VS_PATH: C:\Program Files\Microsoft Visual Studio\18\Enterprise
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          path: ${{ github.workspace }}/imgui
+
+      - name: Build example_null (extra warnings, msvc arm64)
+        shell: cmd
+        run: |
+          cd examples\example_null
+          call "%VS_PATH%\VC\Auxiliary\Build\vcvarsarm64.bat"
+          .\build_win.bat /W4
+
+      - name: Run example_null (msvc arm64)
+        shell: cmd
+        run: examples\example_null\Debug\example_null.exe
+
+      - name: Build example_win32_directx11 (msvc arm64)
+        shell: cmd
+        run: |
+          cd examples\example_win32_directx11
+          call "%VS_PATH%\VC\Auxiliary\Build\vcvarsarm64.bat"
+          .\build_win.bat
+
   Build-Linux:
     runs-on: ubuntu-latest
     name: Build - Linux
@@ -718,6 +751,61 @@ jobs:
         shell: cmd
         working-directory: ${{ github.workspace }}/imgui_test_engine/imgui_test_suite
         run: '"%MSBUILD_PATH%\MSBuild.exe" imgui_test_suite.vcxproj /p:Platform=x64 /p:Configuration=Release /p:ClFlags=/WX -maxcpucount:%NUMBER_OF_PROCESSORS%'
+
+      - name: Run Tests
+        working-directory: ${{ github.workspace }}/imgui_test_engine/imgui_test_suite
+        run: Release/imgui_test_suite.exe -nogui -nopause -v2 -ve4 tests
+
+      - name: Check for Docking
+        id: check_docking
+        shell: bash
+        working-directory: ${{ github.workspace }}/imgui
+        run: echo "has_dock=$(grep -q "#define IMGUI_HAS_DOCK" imgui.h && echo true || echo false)" >> $GITHUB_OUTPUT
+
+      - name: Run Viewport Tests
+        if: steps.check_docking.outputs.has_dock == 'true'
+        working-directory: ${{ github.workspace }}/imgui_test_engine/imgui_test_suite
+        run: Release/imgui_test_suite.exe -nogui -nopause -v2 -ve4 -viewport-mock viewport
+
+  Test-Windows-ARM64:
+    runs-on: windows-11-arm
+    name: Test - Windows ARM64
+
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}/imgui
+
+    env:
+      MSBUILD_PATH: C:\Program Files\Microsoft Visual Studio\18\Enterprise\MSBuild\Current\Bin\
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          path: ${{ github.workspace }}/imgui
+
+      - uses: actions/checkout@v6
+        continue-on-error: true
+        with:
+          fetch-depth: 1
+          repository: ocornut/imgui_test_engine
+          path: ${{ github.workspace }}/imgui_test_engine
+          submodules: true
+
+      - name: Fix Tests Projects
+        shell: powershell
+        working-directory: ${{ github.workspace }}/imgui_test_engine
+        run: |
+          # Projects have no ARM64 configurations: turn x64 ones into ARM64, using default toolset and latest SDK.
+          gci -recurse -filter "*.vcxproj" | ForEach-Object {
+            (Get-Content $_.FullName) -Replace "\|x64","|ARM64" -Replace "<Platform>x64</Platform>","<Platform>ARM64</Platform>" | Set-Content -Path $_.FullName
+            (Get-Content $_.FullName) -Replace "<PlatformToolset>v\d{3}</PlatformToolset>",'<PlatformToolset>$(DefaultPlatformToolset)</PlatformToolset>' | Set-Content -Path $_.FullName
+            (Get-Content $_.FullName) -Replace "<WindowsTargetPlatformVersion>[\d\.]+</WindowsTargetPlatformVersion>",'<WindowsTargetPlatformVersion>$(LatestTargetPlatformVersion)</WindowsTargetPlatformVersion>' | Set-Content -Path $_.FullName
+          }
+
+      - name: Build Tests
+        shell: cmd
+        working-directory: ${{ github.workspace }}/imgui_test_engine/imgui_test_suite
+        run: '"%MSBUILD_PATH%\MSBuild.exe" imgui_test_suite.vcxproj /p:Platform=ARM64 /p:Configuration=Release /p:ClFlags=/WX -maxcpucount:%NUMBER_OF_PROCESSORS%'
 
       - name: Run Tests
         working-directory: ${{ github.workspace }}/imgui_test_engine/imgui_test_suite

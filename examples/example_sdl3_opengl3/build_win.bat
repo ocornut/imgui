@@ -5,6 +5,7 @@
 @if not defined TARGET_ARCH if "%VisualStudioVersion%"=="14.0" (set TARGET_ARCH=x86& if defined Platform set TARGET_ARCH=%Platform%)
 @if /I "%TARGET_ARCH%"=="x86" goto arch_ok
 @if /I "%TARGET_ARCH%"=="x64" goto arch_ok
+@if /I "%TARGET_ARCH%"=="arm64" goto arch_ok
 @echo Unsupported or uninitialized compiler environment. First run vcvars32.bat (x86) or vcvars64.bat (x64).
 @exit /b 1
 
@@ -15,6 +16,7 @@
 @set LIBS=SDL3.lib opengl32.lib shell32.lib
 @if /I "%TARGET_ARCH%"=="x86" set LIBS=%LIBS% /LIBPATH:%SDL3_DIR%\lib\x86
 @if /I "%TARGET_ARCH%"=="x64" set LIBS=%LIBS% /LIBPATH:%SDL3_DIR%\lib\x64
+@if /I "%TARGET_ARCH%"=="arm64" set LIBS=%LIBS% /LIBPATH:%SDL3_DIR%\lib\arm64
 
 @set OUT_DIR=Debug
 mkdir %OUT_DIR%
