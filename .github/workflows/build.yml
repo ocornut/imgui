@@ -77,7 +77,7 @@ jobs:
         run: |
           cd examples\example_null
           call "%VS_PATH%\VC\Auxiliary\Build\vcvars64.bat"
-          .\build_win32.bat /W4
+          .\build_win.bat /W4
 
       - name: Build example_null (single file build)
         shell: bash

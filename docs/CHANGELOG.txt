@@ -69,6 +69,9 @@ Other Changes:
 - ImVec2: added a check for cases where a custom `IM_VEC2_CLASS_EXTRA` macro
   adds an extra `operator=` to ImVec2. This isn't supported but should not
   be needed as you should have a constructor to convert from your type to ImVec2.
+- Examples: renamed various helper batch files from build_win32.bat to build_win.bat
+  to reflect that they can also build X64 or ARM64, given the right environment.
+  Kept both build_win32.bat and build_win64.bat for examples needing them.
 
 
 -----------------------------------------------------------------------
