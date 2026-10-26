@@ -6176,14 +6176,23 @@ bool ImGui::ColorPicker3(const char* label, float col[3], ImGuiColorEditFlags fl
     return true;
 }
 
+// Helper for RenderArrowsForVerticalBar(). 'pos' is position of the arrow tip. half_sz.x is length from base to tip. half_sz.y is length on each side.
+static void RenderArrowPointingAt(ImDrawList* draw_list, ImVec2 p, ImVec2 half_sz, ImGuiDir direction, ImU32 col)
+{
+    if (direction == ImGuiDir_Left)  { draw_list->AddTriangleFilled(ImVec2(p.x + half_sz.x, p.y - half_sz.y), ImVec2(p.x + half_sz.x, p.y + half_sz.y), p, col); }
+    if (direction == ImGuiDir_Right) { draw_list->AddTriangleFilled(ImVec2(p.x - half_sz.x, p.y + half_sz.y), ImVec2(p.x - half_sz.x, p.y - half_sz.y), p, col); }
+    //if (direction == ImGuiDir_Up)  { draw_list->AddTriangleFilled(ImVec2(p.x + half_sz.x, p.y + half_sz.y), ImVec2(p.x - half_sz.x, p.y + half_sz.y), p, col); }
+    //if (direction == ImGuiDir_Down){ draw_list->AddTriangleFilled(ImVec2(p.x - half_sz.x, p.y - half_sz.y), ImVec2(p.x + half_sz.x, p.y - half_sz.y), p, col); }
+}
+
 // Helper for ColorPicker4()
-static void RenderArrowsForVerticalBar(ImDrawList* draw_list, ImVec2 pos, ImVec2 half_sz, float bar_w, float alpha)
+static void RenderArrowsForVerticalBar(ImDrawList* draw_list, ImVec2 p, ImVec2 half_sz, float bar_w, float alpha)
 {
     ImU32 alpha8 = IM_F32_TO_INT8_SAT(alpha);
-    ImGui::RenderArrowPointingAt(draw_list, ImVec2(pos.x + half_sz.x + 1,         pos.y), ImVec2(half_sz.x + 2, half_sz.y + 1), ImGuiDir_Right, IM_COL32(0,0,0,alpha8));
-    ImGui::RenderArrowPointingAt(draw_list, ImVec2(pos.x + half_sz.x,             pos.y), half_sz,                              ImGuiDir_Right, IM_COL32(255,255,255,alpha8));
-    ImGui::RenderArrowPointingAt(draw_list, ImVec2(pos.x + bar_w - half_sz.x - 1, pos.y), ImVec2(half_sz.x + 2, half_sz.y + 1), ImGuiDir_Left,  IM_COL32(0,0,0,alpha8));
-    ImGui::RenderArrowPointingAt(draw_list, ImVec2(pos.x + bar_w - half_sz.x,     pos.y), half_sz,                              ImGuiDir_Left,  IM_COL32(255,255,255,alpha8));
+    RenderArrowPointingAt(draw_list, ImVec2(p.x + half_sz.x + 1,         p.y), ImVec2(half_sz.x + 2, half_sz.y + 1), ImGuiDir_Right, IM_COL32(0,0,0,alpha8));
+    RenderArrowPointingAt(draw_list, ImVec2(p.x + half_sz.x,             p.y), half_sz,                              ImGuiDir_Right, IM_COL32(255,255,255,alpha8));
+    RenderArrowPointingAt(draw_list, ImVec2(p.x + bar_w - half_sz.x - 1, p.y), ImVec2(half_sz.x + 2, half_sz.y + 1), ImGuiDir_Left,  IM_COL32(0,0,0,alpha8));
+    RenderArrowPointingAt(draw_list, ImVec2(p.x + bar_w - half_sz.x,     p.y), half_sz,                              ImGuiDir_Left,  IM_COL32(255,255,255,alpha8));
 }
 
 // Note: ColorPicker4() only accesses 3 floats if ImGuiColorEditFlags_NoAlpha flag is set.
