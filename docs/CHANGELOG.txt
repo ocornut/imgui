@@ -66,6 +66,7 @@ Autumn cleanup of stuff marked obsolete more than two years ago:
 
 Other Changes:
 
+- Style: `StyleColorsDark()`: tweaked WindowBg to be darker than in 1.93.0.
 - ImVec2: added a check for cases where a custom `IM_VEC2_CLASS_EXTRA` macro
   adds an extra `operator=` to ImVec2. This isn't supported but should not
   be needed as you should have a constructor to convert from your type to ImVec2.
