@@ -10323,7 +10323,7 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
 
     // Lock in visible tab
     tab_bar->VisibleTabContentsId = tab_bar->SelectedTabId;
-    tab_bar->VisibleTabWasSubmitted = false;
+    tab_bar->VisibleTabWasSubmitted = tab_bar->VisibleTabContentsJustAppeared = false;
 
     // Apply request requests
     if (scroll_to_tab_id != 0)
@@ -10866,13 +10866,18 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     // Lock visibility
     // (Note: tab_contents_visible != tab_selected... because Ctrl+Tab operations may preview some tabs without selecting them!)
     bool tab_contents_visible = (tab_bar->VisibleTabContentsId == id);
-    if (tab_contents_visible)
-        tab_bar->VisibleTabWasSubmitted = true;
 
     // On the very first frame of a tab bar we let first tab contents be visible to minimize appearing glitches
     if (!tab_contents_visible && tab_bar->SelectedTabId == 0 && tab_bar_appearing)
         if (tab_bar->Tabs.Size == 1 && !(tab_bar->Flags & ImGuiTabBarFlags_AutoSelectNewTabs))
             tab_contents_visible = true;
+
+    if (tab_contents_visible)
+    {
+        tab_bar->VisibleTabWasSubmitted = true;
+        tab_bar->VisibleTabContentsJustAppeared = tab_contents_visible && !tab->ContentsIsVisible;
+    }
+    tab->ContentsIsVisible = tab_contents_visible;
 
     // Note that tab_is_new is not necessarily the same as tab_appearing! When a tab bar stops being submitted
     // and then gets submitted again, the tabs will have 'tab_appearing=true' but 'tab_is_new=false'.
