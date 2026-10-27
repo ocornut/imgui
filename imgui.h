@@ -2396,6 +2396,10 @@ struct ImGuiStyle
     ImVec2      DisplaySafeAreaPadding;     // Apply to every windows, menus, popups, tooltips: amount where we avoid displaying contents. Adjust if you cannot see the edges of your screen (e.g. on a TV where scaling has not been configured).
     float       MouseCursorScale;           // Scale software rendered mouse cursor (when io.MouseDrawCursor is enabled). We apply per-monitor DPI scaling over this scale. May be removed later.
 
+    // Symbols
+    ImVec2      SymbolArrowSizeFactor;      // Width/height factor of arrows (0.0f..1.0f).
+    float       SymbolArrowThicknessFactor; // Thickness factor of arrows (0.0f..0.5f). 0.0f=Fill. >0.0f=Stroke.
+
     // Rendering & Tessellation
     bool        AntiAliasedLines;           // Enable anti-aliased lines/borders. Used at the beginning of the frame to set ImDrawFlags_AALines in all draw-lists.
     bool        AntiAliasedLineEnds;        // Enable anti-aliased lines/borders ends. Nicer for thick lines but more expensive. Used at the beginning of the frame to set ImDrawFlags_AALineEnds in all draw-lists.

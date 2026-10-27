@@ -8807,6 +8807,10 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             SliderFloat("ImageRounding", &style.ImageRounding, 0.0f, 12.0f, "%.0f");
             SliderFloat("ImageBorderSize", &style.ImageBorderSize, 0.0f, max_border_size, "%.0f");
 
+            SeparatorText("Symbols");
+            DragFloat2("SymbolArrowSizeFactor", &style.SymbolArrowSizeFactor.x, 0.01f, 0.0f, 1.0f);
+            DragFloat("SymbolArrowThicknessFactor", &style.SymbolArrowThicknessFactor, 0.01f, 0.0f, 0.5f);
+
             SeparatorText("Tooltips");
             for (int n = 0; n < 2; n++)
                 if (TreeNodeEx(n == 0 ? "HoverFlagsForTooltipMouse" : "HoverFlagsForTooltipNav"))

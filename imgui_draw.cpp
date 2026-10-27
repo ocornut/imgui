@@ -7558,36 +7558,47 @@ begin:
 // - RenderColorRectWithAlphaCheckerboard()
 //-----------------------------------------------------------------------------
 
-// Render an arrow aimed to be aligned with text (p_min is a position in the same space text would be positioned). To e.g. denote expanded/collapsed state
+static const ImVec2 g_ImGuiDirCosSin[4] = { { -1.0f, 0.0f }, { +1.0f, 0.0f }, { 0.0f, -1.0f }, { 0.0f, +1.0f } };
+
+// arrow_h, arrow_w, arrow_th are normalized: 0.0f..1.0f
+// arrow_th: 0.0f == fill, >0.0f == stroke weight.
+void ImGui::RenderArrowEx(ImDrawList* draw_list, ImVec2 pos, ImU32 col, float cos_a, float sin_a, float scale, ImVec2 arrow_sizes, float arrow_th)
+{
+    const bool is_fill = (arrow_th <= 0.0f);
+    const float r = draw_list->_Data->FontSize * 0.50f * scale;
+    const float thickness = is_fill ? 0.0f : IM_ROUND(ImClamp(r * arrow_th, 1.0f, r * 0.5f));
+
+    // Bias for shape to feel more centered
+    const float bias = is_fill ? (r * 0.05f) : (thickness * 0.8f * 0.7071f);
+    const ImVec2 center = ImVec2(pos.x + r + bias * cos_a, pos.y + r + bias * sin_a);
+
+    const float arrow_h = arrow_sizes.y * r;
+    const float arrow_w = arrow_sizes.x * r;
+    ImVec2 p[3];
+    p[0] = ImVec2(center.x - arrow_h * cos_a - arrow_w * -sin_a, center.y - arrow_h * sin_a - arrow_w * cos_a);
+    p[1] = ImVec2(center.x + arrow_h * cos_a,                    center.y + arrow_h * sin_a);
+    p[2] = ImVec2(center.x - arrow_h * cos_a + arrow_w * -sin_a, center.y - arrow_h * sin_a + arrow_w * cos_a);
+
+    // Pixel align when at a right angle
+    if (is_fill && (cos_a * sin_a >= -FLT_EPSILON) && (cos_a * sin_a <= FLT_EPSILON))
+    {
+        p[0] = ImRoundSigned64(p[0]);
+        p[1] = ImRoundSigned64(p[1]);
+        p[2] = ImRoundSigned64(p[2]);
+    }
+
+    if (is_fill)
+        draw_list->AddConvexPolyFilled(p, 3, col);
+    else
+        draw_list->_AddPolyline(p, 3, col, thickness, ImDrawFlags_StrokeInside | ImDrawFlags_AALineEnds, FLT_MAX); // FIXME-OPT: baked filled shape?
+}
+
+// Render an arrow aimed to be aligned with text.
 void ImGui::RenderArrow(ImDrawList* draw_list, ImVec2 pos, ImU32 col, ImGuiDir dir, float scale)
 {
-    const float h = draw_list->_Data->FontSize * 1.00f;
-    float r = h * 0.40f * scale;
-    ImVec2 center = pos + ImVec2(h * 0.50f * scale, h * 0.50f * scale);
-
-    ImVec2 a, b, c;
-    switch (dir)
-    {
-    case ImGuiDir_Up:
-    case ImGuiDir_Down:
-        if (dir == ImGuiDir_Up) r = -r;
-        a = ImVec2(+0.000f, +0.750f) * r;
-        b = ImVec2(-0.866f, -0.750f) * r;
-        c = ImVec2(+0.866f, -0.750f) * r;
-        break;
-    case ImGuiDir_Left:
-    case ImGuiDir_Right:
-        if (dir == ImGuiDir_Left) r = -r;
-        a = ImVec2(+0.750f, +0.000f) * r;
-        b = ImVec2(-0.750f, +0.866f) * r;
-        c = ImVec2(-0.750f, -0.866f) * r;
-        break;
-    case ImGuiDir_None:
-    case ImGuiDir_COUNT:
-        IM_ASSERT(0);
-        break;
-    }
-    draw_list->AddTriangleFilled(center + a, center + b, center + c, col);
+    ImGuiContext& g = *GImGui;
+    ImVec2 cos_sin = g_ImGuiDirCosSin[dir];
+    RenderArrowEx(draw_list, pos, col, cos_sin.x, cos_sin.y, scale, g.Style.SymbolArrowSizeFactor, g.Style.SymbolArrowThicknessFactor);
 }
 
 void ImGui::RenderBullet(ImDrawList* draw_list, ImVec2 pos, ImU32 col)
