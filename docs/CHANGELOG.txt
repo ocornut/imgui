@@ -66,9 +66,22 @@ Autumn cleanup of stuff marked obsolete more than two years ago:
 
 Other Changes:
 
+- Style: `StyleColorsDark()`: tweaked WindowBg to be darker than in 1.93.0.
+- Style: added `style.SymbolArrowSizeFactor`, `style.SymbolArrowThicknessFactor` to tweak
+  the   shape and look of arrows. Made default arrow stroked. (#5233, #2431, #2235, #6730, #8243)
+    Legacy arrow: size: (0.60f,0.70f), thickness: 0.0f
+       New arrow: size: (0.72f,0.40f), thickness: 0.30f
+- TreeNode:
+  - TreeNodeGetOpen(): added flags parameter to allow passing `ImGuiTreeNodeFlags_DefaultOpen`
+    or `ImGuiTreeNodeFlags_Leaf`. (#9569, #9592, #3823, #9251) [@adalisk-emikhaylov, @Yaki-Blake]
 - ImVec2: added a check for cases where a custom `IM_VEC2_CLASS_EXTRA` macro
   adds an extra `operator=` to ImVec2. This isn't supported but should not
   be needed as you should have a constructor to convert from your type to ImVec2.
+- CI: added some ARM64 builds. (#9593) [@Harishmcw]
+- Examples: renamed various helper batch files from build_win32.bat to build_win.bat
+  to reflect that they can also build X64 or ARM64, given the right environment.
+  Made the script detect the environment when needed (e.g. to specify library path).
+- Examples: added support for ARM64 in selected build_win.bat helpers. (#9593) [@Harishmcw]
 
 
 -----------------------------------------------------------------------
@@ -205,6 +218,7 @@ Breaking Changes:
       - `ImDrawFlags_RoundCornersBottom`      -> `ImDrawFlags_RoundBottom`
       - `ImDrawFlags_RoundCornersLeft`        -> `ImDrawFlags_RoundLeft`
       - `ImDrawFlags_RoundCornersRight`       -> `ImDrawFlags_RoundRight`
+      - `ImDrawFlags_RoundCornersMask_`       -> `ImDrawFlags_RoundMask_`
     Kept redirection enums (will obsolete).
   - Marked `ImDrawListFlags_AntiAliasedLinesUseTex` and `style.AntiAliasedLinesUseTex` as
     obsolete, as the new line rendering code always uses textures.

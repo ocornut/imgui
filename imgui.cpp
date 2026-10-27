@@ -1659,6 +1659,10 @@ ImGuiStyle::ImGuiStyle()
     DockingSeparatorSize        = 2.0f;             // Thickness of resizing border between docked windows
     MouseCursorScale            = 1.0f;             // Scale software rendered mouse cursor (when io.MouseDrawCursor is enabled). May be removed later.
 
+    // Symbols
+    SymbolArrowSizeFactor       = ImVec2(0.72f,0.40f); // Width/height factor of arrows (0.0f..1.0f). Legacy arrows use (0.60f,0.70f)
+    SymbolArrowThicknessFactor  = 0.30f;            // Thickness factor of arrows (0.0f..0.5f). 0.0f=Fill. >0.0f=Stroke. Legacy arrows use 0.0f.
+
     // Rendering & Tessellation
     AntiAliasedLines            = true;             // Enable anti-aliased lines/borders. Used at the beginning of the frame to set ImDrawFlags_AALines in all draw-lists.
     AntiAliasedLineEnds         = false;            // Enable anti-aliased lines/borders ends. Nicer for thick lines but more expensive. Used at the beginning of the frame to set ImDrawFlags_AALineEnds in all draw-lists.
@@ -2331,14 +2335,14 @@ ImVec2 ImTriangleClosestPoint(const ImVec2& a, const ImVec2& b, const ImVec2& c,
 int ImStricmp(const char* str1, const char* str2)
 {
     int d;
-    while ((d = ImToUpper(*str2) - ImToUpper(*str1)) == 0 && *str1) { str1++; str2++; }
+    while ((d = ImToUpper(*str1) - ImToUpper(*str2)) == 0 && *str1) { str1++; str2++; }
     return d;
 }
 
 int ImStrnicmp(const char* str1, const char* str2, size_t count)
 {
     int d = 0;
-    while (count > 0 && (d = ImToUpper(*str2) - ImToUpper(*str1)) == 0 && *str1) { str1++; str2++; count--; }
+    while (count > 0 && (d = ImToUpper(*str1) - ImToUpper(*str2)) == 0 && *str1) { str1++; str2++; count--; }
     return d;
 }
 
@@ -4843,12 +4847,13 @@ void ImGui::RemoveContextHook(ImGuiContext* ctx, ImGuiID hook_id)
 
 // Call context hooks (used by e.g. test engine)
 // We assume a small number of hooks so all stored in same array
+// Iterate by index: a callback may add a hook, which reallocates the array. Hooks added here are called from the next call.
 void ImGui::CallContextHooks(ImGuiContext* ctx, ImGuiContextHookType hook_type)
 {
     ImGuiContext& g = *ctx;
-    for (ImGuiContextHook& hook : g.Hooks)
-        if (hook.Type == hook_type)
-            hook.Callback(&g, &hook);
+    for (int n = 0, hooks_count = g.Hooks.Size; n < hooks_count; n++)
+        if (g.Hooks[n].Type == hook_type)
+            g.Hooks[n].Callback(&g, &g.Hooks[n]);
 }
 
 //-----------------------------------------------------------------------------
@@ -19865,7 +19870,7 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
             if (is_focused || root_node->VisibleWindow == NULL)
                 root_node->VisibleWindow = node->VisibleWindow;
             if (node->TabBar)
-                node->TabBar->VisibleTabId = node->VisibleWindow->TabId;
+                node->TabBar->VisibleTabContentsId = node->VisibleWindow->TabId;
         }
         return;
     }
@@ -20014,7 +20019,7 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
         TabItemEx(tab_bar, window->Name, window->HasCloseButton ? &tab_open : NULL, tab_item_flags, window);
         if (!tab_open)
             node->WantCloseTabId = window->TabId;
-        if (tab_bar->VisibleTabId == window->TabId)
+        if (tab_bar->VisibleTabContentsId == window->TabId)
             node->VisibleWindow = window;
 
         // Store last item data so it can be queried with IsItemXXX functions after the user Begin() call

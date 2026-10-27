@@ -191,7 +191,7 @@ void ImGui::StyleColorsDark(ImGuiStyle* dst)
 
     colors[ImGuiCol_Text]                   = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
     colors[ImGuiCol_TextDisabled]           = ImVec4(0.58f, 0.58f, 0.58f, 1.00f);
-    colors[ImGuiCol_WindowBg]               = ImVec4(0.18f, 0.18f, 0.18f, 1.00f);
+    colors[ImGuiCol_WindowBg]               = ImVec4(0.15f, 0.15f, 0.15f, 1.00f);
     colors[ImGuiCol_ChildBg]                = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
     colors[ImGuiCol_PopupBg]                = ImVec4(0.08f, 0.08f, 0.08f, 0.94f);
     colors[ImGuiCol_Border]                 = ImVec4(0.43f, 0.43f, 0.50f, 0.50f);
@@ -6162,7 +6162,7 @@ static ImFontGlyph* ImFontBaked_BuildLoadGlyph(ImFontBaked* baked, ImWchar codep
     return NULL;
 }
 
-static float ImFontBaked_BuildLoadGlyphAdvanceX(ImFontBaked* baked, ImWchar codepoint)
+float ImFontBaked_BuildLoadGlyphAdvanceX(ImFontBaked* baked, ImWchar codepoint)
 {
     if (baked->Size >= IMGUI_FONT_SIZE_THRESHOLD_FOR_LOADADVANCEXONLYMODE || baked->LoadNoRenderOnLayout)
     {
@@ -7558,7 +7558,6 @@ begin:
 // - RenderBullet()
 // - RenderCheckMark()
 // - RenderArrowDockMenu()
-// - RenderArrowPointingAt()
 // - RenderRectFilledInRangeH()
 // - RenderRectFilledWithHole()
 //-----------------------------------------------------------------------------
@@ -7566,36 +7565,47 @@ begin:
 // - RenderColorRectWithAlphaCheckerboard()
 //-----------------------------------------------------------------------------
 
-// Render an arrow aimed to be aligned with text (p_min is a position in the same space text would be positioned). To e.g. denote expanded/collapsed state
+static const ImVec2 g_ImGuiDirCosSin[4] = { { -1.0f, 0.0f }, { +1.0f, 0.0f }, { 0.0f, -1.0f }, { 0.0f, +1.0f } };
+
+// arrow_h, arrow_w, arrow_th are normalized: 0.0f..1.0f
+// arrow_th: 0.0f == fill, >0.0f == stroke weight.
+void ImGui::RenderArrowEx(ImDrawList* draw_list, ImVec2 pos, ImU32 col, float cos_a, float sin_a, float scale, ImVec2 arrow_sizes, float arrow_th)
+{
+    const bool is_fill = (arrow_th <= 0.0f);
+    const float r = draw_list->_Data->FontSize * 0.50f * scale;
+    const float thickness = is_fill ? 0.0f : IM_ROUND(ImClamp(r * arrow_th, 1.0f, r * 0.5f));
+
+    // Bias for shape to feel more centered
+    const float bias = is_fill ? (r * 0.05f) : (thickness * 0.8f * 0.7071f);
+    const ImVec2 center = ImVec2(pos.x + r + bias * cos_a, pos.y + r + bias * sin_a);
+
+    const float arrow_h = arrow_sizes.y * r;
+    const float arrow_w = arrow_sizes.x * r;
+    ImVec2 p[3];
+    p[0] = ImVec2(center.x - arrow_h * cos_a - arrow_w * -sin_a, center.y - arrow_h * sin_a - arrow_w * cos_a);
+    p[1] = ImVec2(center.x + arrow_h * cos_a,                    center.y + arrow_h * sin_a);
+    p[2] = ImVec2(center.x - arrow_h * cos_a + arrow_w * -sin_a, center.y - arrow_h * sin_a + arrow_w * cos_a);
+
+    // Pixel align when at a right angle
+    if (is_fill && (cos_a * sin_a >= -FLT_EPSILON) && (cos_a * sin_a <= FLT_EPSILON))
+    {
+        p[0] = ImRoundSigned64(p[0]);
+        p[1] = ImRoundSigned64(p[1]);
+        p[2] = ImRoundSigned64(p[2]);
+    }
+
+    if (is_fill)
+        draw_list->AddConvexPolyFilled(p, 3, col);
+    else
+        draw_list->_AddPolyline(p, 3, col, thickness, ImDrawFlags_StrokeInside | ImDrawFlags_AALineEnds, FLT_MAX); // FIXME-OPT: baked filled shape?
+}
+
+// Render an arrow aimed to be aligned with text.
 void ImGui::RenderArrow(ImDrawList* draw_list, ImVec2 pos, ImU32 col, ImGuiDir dir, float scale)
 {
-    const float h = draw_list->_Data->FontSize * 1.00f;
-    float r = h * 0.40f * scale;
-    ImVec2 center = pos + ImVec2(h * 0.50f, h * 0.50f * scale);
-
-    ImVec2 a, b, c;
-    switch (dir)
-    {
-    case ImGuiDir_Up:
-    case ImGuiDir_Down:
-        if (dir == ImGuiDir_Up) r = -r;
-        a = ImVec2(+0.000f, +0.750f) * r;
-        b = ImVec2(-0.866f, -0.750f) * r;
-        c = ImVec2(+0.866f, -0.750f) * r;
-        break;
-    case ImGuiDir_Left:
-    case ImGuiDir_Right:
-        if (dir == ImGuiDir_Left) r = -r;
-        a = ImVec2(+0.750f, +0.000f) * r;
-        b = ImVec2(-0.750f, +0.866f) * r;
-        c = ImVec2(-0.750f, -0.866f) * r;
-        break;
-    case ImGuiDir_None:
-    case ImGuiDir_COUNT:
-        IM_ASSERT(0);
-        break;
-    }
-    draw_list->AddTriangleFilled(center + a, center + b, center + c, col);
+    ImGuiContext& g = *GImGui;
+    ImVec2 cos_sin = g_ImGuiDirCosSin[dir];
+    RenderArrowEx(draw_list, pos, col, cos_sin.x, cos_sin.y, scale, g.Style.SymbolArrowSizeFactor, g.Style.SymbolArrowThicknessFactor);
 }
 
 void ImGui::RenderBullet(ImDrawList* draw_list, ImVec2 pos, ImU32 col)
@@ -7618,19 +7628,6 @@ void ImGui::RenderCheckMark(ImDrawList* draw_list, ImVec2 pos, ImU32 col, float 
     draw_list->PathLineTo(ImVec2(bx, by));
     draw_list->PathLineTo(ImVec2(bx + third * 2.0f, by - third * 2.0f));
     draw_list->PathStroke(col, thickness, ImDrawFlags_AALineEnds);
-}
-
-// Render an arrow. 'pos' is position of the arrow tip. half_sz.x is length from base to tip. half_sz.y is length on each side.
-void ImGui::RenderArrowPointingAt(ImDrawList* draw_list, ImVec2 pos, ImVec2 half_sz, ImGuiDir direction, ImU32 col)
-{
-    switch (direction)
-    {
-    case ImGuiDir_Left:  draw_list->AddTriangleFilled(ImVec2(pos.x + half_sz.x, pos.y - half_sz.y), ImVec2(pos.x + half_sz.x, pos.y + half_sz.y), pos, col); return;
-    case ImGuiDir_Right: draw_list->AddTriangleFilled(ImVec2(pos.x - half_sz.x, pos.y + half_sz.y), ImVec2(pos.x - half_sz.x, pos.y - half_sz.y), pos, col); return;
-    case ImGuiDir_Up:    draw_list->AddTriangleFilled(ImVec2(pos.x + half_sz.x, pos.y + half_sz.y), ImVec2(pos.x - half_sz.x, pos.y + half_sz.y), pos, col); return;
-    case ImGuiDir_Down:  draw_list->AddTriangleFilled(ImVec2(pos.x - half_sz.x, pos.y - half_sz.y), ImVec2(pos.x + half_sz.x, pos.y - half_sz.y), pos, col); return;
-    case ImGuiDir_None: case ImGuiDir_COUNT: break; // Fix warnings
-    }
 }
 
 // This is less wide than RenderArrow() and we use in dock nodes instead of the regular RenderArrow() to denote a change of functionality,

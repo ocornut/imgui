@@ -6183,14 +6183,23 @@ bool ImGui::ColorPicker3(const char* label, float col[3], ImGuiColorEditFlags fl
     return true;
 }
 
+// Helper for RenderArrowsForVerticalBar(). 'pos' is position of the arrow tip. half_sz.x is length from base to tip. half_sz.y is length on each side.
+static void RenderArrowPointingAt(ImDrawList* draw_list, ImVec2 p, ImVec2 half_sz, ImGuiDir direction, ImU32 col)
+{
+    if (direction == ImGuiDir_Left)  { draw_list->AddTriangleFilled(ImVec2(p.x + half_sz.x, p.y - half_sz.y), ImVec2(p.x + half_sz.x, p.y + half_sz.y), p, col); }
+    if (direction == ImGuiDir_Right) { draw_list->AddTriangleFilled(ImVec2(p.x - half_sz.x, p.y + half_sz.y), ImVec2(p.x - half_sz.x, p.y - half_sz.y), p, col); }
+    //if (direction == ImGuiDir_Up)  { draw_list->AddTriangleFilled(ImVec2(p.x + half_sz.x, p.y + half_sz.y), ImVec2(p.x - half_sz.x, p.y + half_sz.y), p, col); }
+    //if (direction == ImGuiDir_Down){ draw_list->AddTriangleFilled(ImVec2(p.x - half_sz.x, p.y - half_sz.y), ImVec2(p.x + half_sz.x, p.y - half_sz.y), p, col); }
+}
+
 // Helper for ColorPicker4()
-static void RenderArrowsForVerticalBar(ImDrawList* draw_list, ImVec2 pos, ImVec2 half_sz, float bar_w, float alpha)
+static void RenderArrowsForVerticalBar(ImDrawList* draw_list, ImVec2 p, ImVec2 half_sz, float bar_w, float alpha)
 {
     ImU32 alpha8 = IM_F32_TO_INT8_SAT(alpha);
-    ImGui::RenderArrowPointingAt(draw_list, ImVec2(pos.x + half_sz.x + 1,         pos.y), ImVec2(half_sz.x + 2, half_sz.y + 1), ImGuiDir_Right, IM_COL32(0,0,0,alpha8));
-    ImGui::RenderArrowPointingAt(draw_list, ImVec2(pos.x + half_sz.x,             pos.y), half_sz,                              ImGuiDir_Right, IM_COL32(255,255,255,alpha8));
-    ImGui::RenderArrowPointingAt(draw_list, ImVec2(pos.x + bar_w - half_sz.x - 1, pos.y), ImVec2(half_sz.x + 2, half_sz.y + 1), ImGuiDir_Left,  IM_COL32(0,0,0,alpha8));
-    ImGui::RenderArrowPointingAt(draw_list, ImVec2(pos.x + bar_w - half_sz.x,     pos.y), half_sz,                              ImGuiDir_Left,  IM_COL32(255,255,255,alpha8));
+    RenderArrowPointingAt(draw_list, ImVec2(p.x + half_sz.x + 1,         p.y), ImVec2(half_sz.x + 2, half_sz.y + 1), ImGuiDir_Right, IM_COL32(0,0,0,alpha8));
+    RenderArrowPointingAt(draw_list, ImVec2(p.x + half_sz.x,             p.y), half_sz,                              ImGuiDir_Right, IM_COL32(255,255,255,alpha8));
+    RenderArrowPointingAt(draw_list, ImVec2(p.x + bar_w - half_sz.x - 1, p.y), ImVec2(half_sz.x + 2, half_sz.y + 1), ImGuiDir_Left,  IM_COL32(0,0,0,alpha8));
+    RenderArrowPointingAt(draw_list, ImVec2(p.x + bar_w - half_sz.x,     p.y), half_sz,                              ImGuiDir_Left,  IM_COL32(255,255,255,alpha8));
 }
 
 // Note: ColorPicker4() only accesses 3 floats if ImGuiColorEditFlags_NoAlpha flag is set.
@@ -6929,13 +6938,15 @@ bool ImGui::TreeNodeExV(const void* ptr_id, ImGuiTreeNodeFlags flags, const char
     return TreeNodeBehavior(id, flags, label, label_end);
 }
 
-// The reason those two functions are not yet in public API is because I would like to design a more feature-full and generic API for this.
-// They are otherwise function (cc: #3823, #9251, #7553, #6754, #5423, #2958, #2079, #1947, #1131, #722)
-bool ImGui::TreeNodeGetOpen(ImGuiID storage_id)
+// I would like to design a more feature-full and generic API for this.
+// (cc: #3823, #9251, #7553, #6754, #5423, #2958, #2079, #1947, #1131, #722, #9569)
+bool ImGui::TreeNodeGetOpen(ImGuiID storage_id, ImGuiTreeNodeFlags flags)
 {
+    if (flags & ImGuiTreeNodeFlags_Leaf)
+        return true;
     ImGuiContext& g = *GImGui;
     ImGuiStorage* storage = g.CurrentWindow->DC.StateStorage;
-    return storage->GetInt(storage_id, 0) != 0;
+    return storage->GetInt(storage_id, (flags & ImGuiTreeNodeFlags_DefaultOpen) ? 1 : 0) != 0;
 }
 
 void ImGui::TreeNodeSetOpen(ImGuiID storage_id, bool is_open)
@@ -7037,9 +7048,10 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
         label_end = FindRenderedTextEnd(label);
     const ImVec2 label_size = CalcTextSize(label, label_end, false);
 
-    const float text_offset_x = g.FontSize + (display_frame ? padding.x * 3 : padding.x * 2);   // Collapsing arrow width + Spacing
+    const float icon_width = g.FontSize + padding.x * 2;
+    const float text_offset_x = display_frame ? icon_width + padding.x : icon_width;    // Collapsing arrow width + Spacing
     const float text_offset_y = use_frame_padding ? ImMax(style.FramePadding.y, window->DC.CurrLineTextBaseOffset) : window->DC.CurrLineTextBaseOffset; // Latch before ItemSize changes it
-    const float text_width = g.FontSize + label_size.x + padding.x * 2;                         // Include collapsing arrow
+    const float text_width = icon_width + label_size.x;                                 // Include collapsing arrow
 
     const float frame_height = label_size.y + padding.y * 2;
     const bool span_all_columns = (flags & ImGuiTreeNodeFlags_SpanAllColumns) != 0 && (g.CurrentTable != NULL);
@@ -7072,6 +7084,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     if (span_all_columns || span_all_columns_label)
     {
         // Modify ClipRect for the ItemAdd(), faster than doing a PushColumnsBackground/PushTableBackgroundChannel for every Selectable..
+        // FIXME: Investigate moving this to an item flag, along duplicate code in Selectable(). How to do optimally?
         const float backup_clip_rect_min_x = window->ClipRect.Min.x;
         const float backup_clip_rect_max_x = window->ClipRect.Max.x;
         window->ClipRect.Min.x = window->ParentWorkRect.Min.x;
@@ -7279,7 +7292,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
             if (flags & ImGuiTreeNodeFlags_Bullet)
                 RenderBullet(window->DrawList, ImVec2(text_pos.x - text_offset_x * 0.5f, text_pos.y + g.FontSize * 0.5f), text_col);
             else if (!is_leaf)
-                RenderArrow(window->DrawList, ImVec2(text_pos.x - text_offset_x + padding.x, text_pos.y + g.FontSize * 0.15f), text_col, is_open ? ((flags & ImGuiTreeNodeFlags_UpsideDownArrow) ? ImGuiDir_Up : ImGuiDir_Down) : ImGuiDir_Right, 0.70f);
+                RenderArrow(window->DrawList, ImVec2(text_pos.x + g.FontSize * 0.15f - text_offset_x + padding.x, text_pos.y + g.FontSize * 0.15f), text_col, is_open ? ((flags & ImGuiTreeNodeFlags_UpsideDownArrow) ? ImGuiDir_Up : ImGuiDir_Down) : ImGuiDir_Right, 0.70f);
             if (g.LogEnabled)
                 LogSetNextTextDecoration(">", NULL);
         }
@@ -10073,7 +10086,7 @@ void    ImGui::EndTabBar()
 
     // Restore the last visible height if no tab is visible, this reduce vertical flicker/movement when a tabs gets removed without calling SetTabItemClosed().
     const bool tab_bar_appearing = (tab_bar->PrevFrameVisible + 1 < g.FrameCount);
-    if (tab_bar->VisibleTabWasSubmitted || tab_bar->VisibleTabId == 0 || tab_bar_appearing)
+    if (tab_bar->VisibleTabWasSubmitted || tab_bar->VisibleTabContentsId == 0 || tab_bar_appearing)
     {
         tab_bar->CurrTabsContentsHeight = ImMax(window->DC.CursorPos.y - tab_bar->BarRect.Max.y, tab_bar->CurrTabsContentsHeight);
         window->DC.CursorPos.y = tab_bar->BarRect.Max.y + tab_bar->CurrTabsContentsHeight;
@@ -10121,7 +10134,7 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
         if (tab->LastFrameVisible < tab_bar->PrevFrameVisible || tab->WantClose)
         {
             // Remove tab
-            if (tab_bar->VisibleTabId == tab->ID) { tab_bar->VisibleTabId = 0; }
+            if (tab_bar->VisibleTabContentsId == tab->ID) { tab_bar->VisibleTabContentsId = 0; }
             if (tab_bar->SelectedTabId == tab->ID) { tab_bar->SelectedTabId = 0; }
             if (tab_bar->NextSelectedTabId == tab->ID) { tab_bar->NextSelectedTabId = 0; }
             continue;
@@ -10326,12 +10339,12 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
         scroll_to_tab_id = tab_bar->SelectedTabId = most_recently_selected_tab->ID;
 
     // Lock in visible tab
-    tab_bar->VisibleTabId = tab_bar->SelectedTabId;
-    tab_bar->VisibleTabWasSubmitted = false;
+    tab_bar->VisibleTabContentsId = tab_bar->SelectedTabId;
+    tab_bar->VisibleTabWasSubmitted = tab_bar->LastTabItemContentsAppearing = false;
 
     // CTRL+TAB can override visible tab temporarily
     if (g.NavWindowingTarget != NULL && g.NavWindowingTarget->DockNode && g.NavWindowingTarget->DockNode->TabBar == tab_bar)
-        tab_bar->VisibleTabId = scroll_to_tab_id = g.NavWindowingTarget->TabId;
+        tab_bar->VisibleTabContentsId = scroll_to_tab_id = g.NavWindowingTarget->TabId;
 
     // Apply request requests
     if (scroll_to_tab_id != 0)
@@ -10481,9 +10494,9 @@ void ImGui::TabBarRemoveTab(ImGuiTabBar* tab_bar, ImGuiID tab_id)
 {
     if (ImGuiTabItem* tab = TabBarFindTabByID(tab_bar, tab_id))
         tab_bar->Tabs.erase(tab);
-    if (tab_bar->VisibleTabId == tab_id)      { tab_bar->VisibleTabId = 0; }
-    if (tab_bar->SelectedTabId == tab_id)     { tab_bar->SelectedTabId = 0; }
-    if (tab_bar->NextSelectedTabId == tab_id) { tab_bar->NextSelectedTabId = 0; }
+    if (tab_bar->VisibleTabContentsId == tab_id){ tab_bar->VisibleTabContentsId = 0; }
+    if (tab_bar->SelectedTabId == tab_id)       { tab_bar->SelectedTabId = 0; }
+    if (tab_bar->NextSelectedTabId == tab_id)   { tab_bar->NextSelectedTabId = 0; }
 }
 
 // Called on manual closure attempt
@@ -10497,7 +10510,7 @@ void ImGui::TabBarCloseTab(ImGuiTabBar* tab_bar, ImGuiTabItem* tab)
         // This will remove a frame of lag for selecting another tab on closure.
         // However we don't run it in the case where the 'Unsaved' flag is set, so user gets a chance to fully undo the closure
         tab->WantClose = true;
-        if (tab_bar->VisibleTabId == tab->ID)
+        if (tab_bar->VisibleTabContentsId == tab->ID)
         {
             tab->LastFrameVisible = -1;
             tab_bar->SelectedTabId = tab_bar->NextSelectedTabId = 0;
@@ -10506,7 +10519,7 @@ void ImGui::TabBarCloseTab(ImGuiTabBar* tab_bar, ImGuiTabItem* tab)
     else
     {
         // Actually select before expecting closure attempt (on an UnsavedDocument tab user is expect to e.g. show a popup)
-        if (tab_bar->VisibleTabId != tab->ID)
+        if (tab_bar->VisibleTabContentsId != tab->ID)
             TabBarQueueFocus(tab_bar, tab);
     }
 }
@@ -10797,6 +10810,12 @@ void    ImGui::EndTabItem()
         PopID();
 }
 
+bool    ImGui::TabItemIsContentsAppearing()
+{
+    ImGuiContext& g = *GImGui;
+    return g.CurrentTabBar->LastTabItemContentsAppearing;
+}
+
 bool    ImGui::TabItemButton(const char* label, ImGuiTabItemFlags flags)
 {
     ImGuiContext& g = *GImGui;
@@ -10911,21 +10930,24 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
             TabBarQueueFocus(tab_bar, tab);
     }
 
+    // On the very first frame of a tab bar we let first tab contents be visible to minimize appearing glitches
+    if (tab_bar->VisibleTabContentsId == 0 && tab_bar->SelectedTabId == 0 && tab_bar_appearing && docked_window == NULL)
+        if (tab_bar->Tabs.Size == 1 && !(tab_bar->Flags & ImGuiTabBarFlags_AutoSelectNewTabs))
+            tab_bar->VisibleTabContentsId = id;
+
     // Lock visibility
     // (Note: tab_contents_visible != tab_selected... because Ctrl+Tab operations may preview some tabs without selecting them!)
-    bool tab_contents_visible = (tab_bar->VisibleTabId == id);
+    const bool tab_contents_visible = (tab_bar->VisibleTabContentsId == id);
     if (tab_contents_visible)
         tab_bar->VisibleTabWasSubmitted = true;
-
-    // On the very first frame of a tab bar we let first tab contents be visible to minimize appearing glitches
-    if (!tab_contents_visible && tab_bar->SelectedTabId == 0 && tab_bar_appearing && docked_window == NULL)
-        if (tab_bar->Tabs.Size == 1 && !(tab_bar->Flags & ImGuiTabBarFlags_AutoSelectNewTabs))
-            tab_contents_visible = true;
+    tab_bar->LastTabItemContentsAppearing = tab_contents_visible && !tab->ContentsIsVisible;
+    tab->ContentsIsVisible = tab_contents_visible;
 
     // Note that tab_is_new is not necessarily the same as tab_appearing! When a tab bar stops being submitted
     // and then gets submitted again, the tabs will have 'tab_appearing=true' but 'tab_is_new=false'.
     if (tab_appearing && (!tab_bar_appearing || tab_is_new))
     {
+        // This path doesn't render the tab.
         ItemAdd(ImRect(), id, NULL, ImGuiItemFlags_NoNav);
         if (is_tab_button)
             return false;

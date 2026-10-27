@@ -777,7 +777,7 @@ namespace ImGui
     IMGUI_API bool          CollapsingHeader(const char* label, bool* p_visible, ImGuiTreeNodeFlags flags = 0); // when 'p_visible != NULL': if '*p_visible==true' display an additional small close button on upper right of the header which will set the bool to false when clicked, if '*p_visible==false' don't display the header.
     IMGUI_API void          SetNextItemOpen(bool is_open, ImGuiCond cond = 0);                  // set next TreeNode/CollapsingHeader open state.
     IMGUI_API void          SetNextItemStorageID(ImGuiID storage_id);                           // set id to use for open/close storage (default to same as item id).
-    IMGUI_API bool          TreeNodeGetOpen(ImGuiID storage_id);                                // retrieve tree node open/close state.
+    IMGUI_API bool          TreeNodeGetOpen(ImGuiID storage_id, ImGuiTreeNodeFlags flags = 0);  // retrieve tree node open/close state.
 
     // Widgets: Selectables
     // - A selectable highlights when hovered, and can display another color when selected.
@@ -2484,6 +2484,10 @@ struct ImGuiStyle
     float       DockingSeparatorSize;       // Thickness of resizing border between docked windows
     float       MouseCursorScale;           // Scale software rendered mouse cursor (when io.MouseDrawCursor is enabled). We apply per-monitor DPI scaling over this scale. May be removed later.
 
+    // Symbols
+    ImVec2      SymbolArrowSizeFactor;      // Width/height factor of arrows (0.0f..1.0f).
+    float       SymbolArrowThicknessFactor; // Thickness factor of arrows (0.0f..0.5f). 0.0f=Fill. >0.0f=Stroke.
+
     // Rendering & Tessellation
     bool        AntiAliasedLines;           // Enable anti-aliased lines/borders. Used at the beginning of the frame to set ImDrawFlags_AALines in all draw-lists.
     bool        AntiAliasedLineEnds;        // Enable anti-aliased lines/borders ends. Nicer for thick lines but more expensive. Used at the beginning of the frame to set ImDrawFlags_AALineEnds in all draw-lists.
@@ -3525,7 +3529,8 @@ enum ImDrawFlags_
     ImDrawFlags_RoundCornersTop         = ImDrawFlags_RoundTop,
     ImDrawFlags_RoundCornersBottom      = ImDrawFlags_RoundBottom,
     ImDrawFlags_RoundCornersLeft        = ImDrawFlags_RoundLeft,
-    ImDrawFlags_RoundCornersRight       = ImDrawFlags_RoundRight,      
+    ImDrawFlags_RoundCornersRight       = ImDrawFlags_RoundRight,
+    ImDrawFlags_RoundCornersMask_       = ImDrawFlags_RoundMask_,
 #endif
 };
 
