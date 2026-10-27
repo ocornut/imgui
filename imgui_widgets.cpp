@@ -10323,7 +10323,7 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
 
     // Lock in visible tab
     tab_bar->VisibleTabContentsId = tab_bar->SelectedTabId;
-    tab_bar->VisibleTabWasSubmitted = tab_bar->VisibleTabContentsJustAppeared = false;
+    tab_bar->VisibleTabWasSubmitted = tab_bar->LastTabItemContentsAppearing = false;
 
     // Apply request requests
     if (scroll_to_tab_id != 0)
@@ -10752,6 +10752,12 @@ void    ImGui::EndTabItem()
         PopID();
 }
 
+bool    ImGui::TabItemIsContentsAppearing()
+{
+    ImGuiContext& g = *GImGui;
+    return g.CurrentTabBar->LastTabItemContentsAppearing;
+}
+
 bool    ImGui::TabItemButton(const char* label, ImGuiTabItemFlags flags)
 {
     ImGuiContext& g = *GImGui;
@@ -10863,20 +10869,17 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
             TabBarQueueFocus(tab_bar, tab);
     }
 
+    // On the very first frame of a tab bar we let first tab contents be visible to minimize appearing glitches
+    if (tab_bar->VisibleTabContentsId == 0 && tab_bar->SelectedTabId == 0 && tab_bar_appearing)
+        if (tab_bar->Tabs.Size == 1 && !(tab_bar->Flags & ImGuiTabBarFlags_AutoSelectNewTabs))
+            tab_bar->VisibleTabContentsId = id;
+
     // Lock visibility
     // (Note: tab_contents_visible != tab_selected... because Ctrl+Tab operations may preview some tabs without selecting them!)
-    bool tab_contents_visible = (tab_bar->VisibleTabContentsId == id);
-
-    // On the very first frame of a tab bar we let first tab contents be visible to minimize appearing glitches
-    if (!tab_contents_visible && tab_bar->SelectedTabId == 0 && tab_bar_appearing)
-        if (tab_bar->Tabs.Size == 1 && !(tab_bar->Flags & ImGuiTabBarFlags_AutoSelectNewTabs))
-            tab_contents_visible = true;
-
+    const bool tab_contents_visible = (tab_bar->VisibleTabContentsId == id);
     if (tab_contents_visible)
-    {
         tab_bar->VisibleTabWasSubmitted = true;
-        tab_bar->VisibleTabContentsJustAppeared = tab_contents_visible && !tab->ContentsIsVisible;
-    }
+    tab_bar->LastTabItemContentsAppearing = tab_contents_visible && !tab->ContentsIsVisible;
     tab->ContentsIsVisible = tab_contents_visible;
 
     // Note that tab_is_new is not necessarily the same as tab_appearing! When a tab bar stops being submitted
