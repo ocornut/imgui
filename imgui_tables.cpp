@@ -482,12 +482,12 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     // (we normally shouldn't alter HostClipRect as we rely on TableMergeDrawChannels() expanding non-clipped column toward the
     // limits of that rectangle, in order for ImDrawListSplitter::Merge() to merge the draw commands. However since the overlap
     // problem only affect scrolling tables in this case we can get away with doing it without extra cost).
+    const float border_size = TABLE_BORDER_SIZE;
     if (inner_window != outer_window)
     {
         // FIXME: Because inner_window's Scrollbar doesn't know about border size, since it's not encoded in window->WindowBorderSize,
         // it already overlaps it and doesn't need an extra offset. Ideally we should be able to pass custom border size with
         // different x/y values to BeginChild().
-        const float border_size = TABLE_BORDER_SIZE;
         if (flags & ImGuiTableFlags_BordersOuterV)
         {
             table->HostClipRect.Min.x = ImMin(table->HostClipRect.Min.x + border_size, table->HostClipRect.Max.x);
@@ -527,8 +527,15 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     table->InnerClipRect = (inner_window == outer_window) ? table->WorkRect : inner_window->ClipRect;
     table->InnerClipRect.ClipWith(table->WorkRect);     // We need this to honor inner_width
     table->InnerClipRect.ClipWithFull(table->HostClipRect);
-    table->InnerClipRect.Max.y = (flags & ImGuiTableFlags_NoHostExtendY) ? ImMin(table->InnerClipRect.Max.y, inner_window->WorkRect.Max.y) : table->HostClipRect.Max.y;
-
+    if (flags & ImGuiTableFlags_NoHostExtendY)
+    {
+        if (flags & ImGuiTableFlags_BordersOuterH)
+            table->InnerClipRect.Max.y = ImClamp(table->OuterRect.Max.y - border_size, table->InnerClipRect.Min.y, table->InnerClipRect.Max.y);
+    }
+    else
+    {
+        table->InnerClipRect.Max.y = table->HostClipRect.Max.y;
+    }
     table->RowPosY1 = table->RowPosY2 = table->WorkRect.Min.y; // This is needed somehow
     table->RowTextBaseline = 0.0f; // This will be cleared again by TableBeginRow()
     table->RowCellPaddingY = 0.0f;
@@ -2734,6 +2741,8 @@ void ImGui::TableSetupDrawChannels(ImGuiTable* table)
     table->Bg0ClipRectForDrawCmd = table->OuterWindow->ClipRect;
     table->Bg2ClipRectForDrawCmd = table->HostClipRect;
     IM_ASSERT(table->BgClipRect.Min.y <= table->BgClipRect.Max.y);
+    if (table->Flags & ImGuiTableFlags_NoHostExtendY)
+        table->Bg2ClipRectForDrawCmd.Max.y = ImMin(table->Bg2ClipRectForDrawCmd.Max.y, table->BgClipRect.Max.y); // Don't apply to Bg0: shapes in Bg0 are already CPU clipped and it makes merging fails.
 }
 
 // This function reorder draw channels based on matching clip rectangle, to facilitate merging them. Called by EndTable().

@@ -81,6 +81,10 @@ Other Changes:
 - Tables:
   - In non-scrolling tables, clamp lower border coordinates to stay within visible
     range (no visible changes, but ImDrawCmd AABB becomes more sensible).
+  - Fixed various issues with using `ImGuiTableFlags_NoHostExtendY`:
+    - Fixed selectable highlight straying off the Y2 clipping limit.
+    - Fixed parent window work rectangle affecting the Y2 clipping limit.
+    - Fixed the Y2 clipping limit overlapping bottom outer border.
 - ImVec2: added a check for cases where a custom `IM_VEC2_CLASS_EXTRA` macro
   adds an extra `operator=` to ImVec2. This isn't supported but should not
   be needed as you should have a constructor to convert from your type to ImVec2.
