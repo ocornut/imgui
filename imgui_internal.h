@@ -3156,6 +3156,7 @@ struct IMGUI_API ImGuiTable
     ImU32                       BorderColorLight;
     float                       BorderX1;
     float                       BorderX2;
+    float                       BorderSize;
     float                       HostIndentX;
     float                       MinColumnWidth;
     float                       OuterPaddingX;

@@ -478,11 +478,14 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     temp_data->HostBackupItemWidthStackSize = outer_window->DC.ItemWidthStack.Size;
     inner_window->DC.PrevLineSize = inner_window->DC.CurrLineSize = ImVec2(0.0f, 0.0f);
 
+    // Border size
+    // FIXME-WIP: Changing this is not currently simple due to ClipRect requirements. Easier to manage with new 1.93 primitives though.
+    const float border_size = table->BorderSize = TABLE_BORDER_SIZE;
+    
     // Make borders not overlap our contents by offsetting HostClipRect (#6765, #7428, #3752)
     // (we normally shouldn't alter HostClipRect as we rely on TableMergeDrawChannels() expanding non-clipped column toward the
     // limits of that rectangle, in order for ImDrawListSplitter::Merge() to merge the draw commands. However since the overlap
     // problem only affect scrolling tables in this case we can get away with doing it without extra cost).
-    const float border_size = TABLE_BORDER_SIZE;
     if (inner_window != outer_window)
     {
         // FIXME: Because inner_window's Scrollbar doesn't know about border size, since it's not encoded in window->WindowBorderSize,
@@ -509,14 +512,14 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     // - PadOuter+PadInner  | Pad ..Content.. Pad | Pad ..Content.. Pad |
     const bool pad_outer_x = (flags & ImGuiTableFlags_NoPadOuterX) ? false : (flags & ImGuiTableFlags_PadOuterX) ? true : (flags & ImGuiTableFlags_BordersOuterV) != 0;
     const bool pad_inner_x = (flags & ImGuiTableFlags_NoPadInnerX) ? false : true;
-    const float inner_spacing_for_border = (flags & ImGuiTableFlags_BordersInnerV) ? TABLE_BORDER_SIZE : 0.0f;
+    const float inner_spacing_for_border = (flags & ImGuiTableFlags_BordersInnerV) ? border_size : 0.0f;
     const float inner_spacing_explicit = (pad_inner_x && (flags & ImGuiTableFlags_BordersInnerV) == 0) ? g.Style.CellPadding.x : 0.0f;
     const float inner_padding_explicit = (pad_inner_x && (flags & ImGuiTableFlags_BordersInnerV) != 0) ? g.Style.CellPadding.x : 0.0f;
     table->CellSpacingX1 = inner_spacing_explicit + inner_spacing_for_border;
     table->CellSpacingX2 = inner_spacing_explicit;
     table->CellPaddingX = inner_padding_explicit;
 
-    const float outer_padding_for_border = (flags & ImGuiTableFlags_BordersOuterV) ? TABLE_BORDER_SIZE : 0.0f;
+    const float outer_padding_for_border = (flags & ImGuiTableFlags_BordersOuterV) ? border_size : 0.0f;
     const float outer_padding_explicit = pad_outer_x ? g.Style.CellPadding.x : 0.0f;
     table->OuterPaddingX = (outer_padding_for_border + outer_padding_explicit) - table->CellPaddingX;
 
@@ -1284,7 +1287,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         }
 
         if (order_n < table->FreezeColumnsCount)
-            host_clip_rect.Min.x = ImClamp(column->MaxX + TABLE_BORDER_SIZE, host_clip_rect.Min.x, host_clip_rect.Max.x);
+            host_clip_rect.Min.x = ImClamp(column->MaxX + table->BorderSize, host_clip_rect.Min.x, host_clip_rect.Max.x);
 
         offset_x += column->WidthGiven + table->CellSpacingX1 + table->CellSpacingX2 + table->CellPaddingX * 2.0f;
     }
@@ -1510,7 +1513,7 @@ void    ImGui::EndTable()
     // but since the later is likely to be impossible to do we'd rather update both axes together.
     if (table->Flags & ImGuiTableFlags_ScrollX)
     {
-        const float outer_padding_for_border = (table->Flags & ImGuiTableFlags_BordersOuterV) ? TABLE_BORDER_SIZE : 0.0f;
+        const float outer_padding_for_border = (table->Flags & ImGuiTableFlags_BordersOuterV) ? table->BorderSize : 0.0f;
         float max_pos_x = inner_window->DC.CursorMaxPos.x;
         if (table->RightMostEnabledColumn != -1)
             max_pos_x = ImMax(max_pos_x, table->Columns[table->RightMostEnabledColumn].WorkMaxX + table->CellPaddingX + table->OuterPaddingX - outer_padding_for_border);
@@ -2175,7 +2178,6 @@ void ImGui::TableEndRow(ImGuiTable* table)
 
         // Decide of top border color
         ImU32 top_border_col = 0;
-        const float border_size = TABLE_BORDER_SIZE;
         if (table->CurrentRow > 0 && (table->Flags & ImGuiTableFlags_BordersInnerH))
             top_border_col = (table->LastRowFlags & ImGuiTableRowFlags_Headers) ? table->BorderColorStrong : table->BorderColorLight;
 
@@ -2222,11 +2224,11 @@ void ImGui::TableEndRow(ImGuiTable* table)
 
         // Draw top border
         if (top_border_col && bg_y1 >= table->BgClipRect.Min.y && bg_y1 < table->BgClipRect.Max.y)
-            window->DrawList->AddLineH(table->BorderX1, table->BorderX2, bg_y1, top_border_col, border_size);
+            window->DrawList->AddLineH(table->BorderX1, table->BorderX2, bg_y1, top_border_col, table->BorderSize);
 
         // Draw bottom border at the row unfreezing mark (always strong)
         if (draw_strong_bottom_border && bg_y2 >= table->BgClipRect.Min.y && bg_y2 < table->BgClipRect.Max.y)
-            window->DrawList->AddLineH(table->BorderX1, table->BorderX2, bg_y2, table->BorderColorStrong, border_size);
+            window->DrawList->AddLineH(table->BorderX1, table->BorderX2, bg_y2, table->BorderColorStrong, table->BorderSize);
     }
 
     // End frozen rows (when we are past the last frozen row line, teleport cursor and alter clipping rectangle)
@@ -2967,9 +2969,8 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
     table->DrawSplitter->SetCurrentChannel(inner_drawlist, TABLE_DRAW_CHANNEL_BG0);
     inner_drawlist->PushClipRect(table->OuterWindow->ClipRect.Min, table->OuterWindow->ClipRect.Max, false);
 
-    const float border_size = TABLE_BORDER_SIZE;
-
     // For e.g. non scrolling table we limit vertex coordinates in order to keep ImDrawCmd AABB roughly within visible range.
+    const float border_size = table->BorderSize;
     const float draw_y2_limit = table->OuterWindow->ClipRect.Max.y + (2.0f * ImMax(border_size, inner_drawlist->_FringeScale));
 
     // Draw inner border and resizing feedback
@@ -3640,8 +3641,9 @@ void ImGui::TableAngledHeadersRowEx(ImGuiID row_id, float angle, float max_label
             if (pass == 1)
             {
                 // Draw border
-                const float border_size = TABLE_BORDER_SIZE;
-                draw_list->AddLine(bg_shape[0] + ImVec2(border_size * 0.5f, 0.0f), bg_shape[3] + ImVec2(border_size * 0.5f, 0.0f), TableGetColumnBorderCol(table, order_n, column_n), border_size);
+                draw_list->AddLine(
+                    bg_shape[0] + ImVec2(table->BorderSize * 0.5f, 0.0f),
+                    bg_shape[3] + ImVec2(table->BorderSize * 0.5f, 0.0f), TableGetColumnBorderCol(table, order_n, column_n), table->BorderSize);
             }
         }
     PopClipRect();
