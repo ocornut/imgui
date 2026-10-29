@@ -2970,13 +2970,15 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
     inner_drawlist->PushClipRect(table->OuterWindow->ClipRect.Min, table->OuterWindow->ClipRect.Max, false);
 
     // For e.g. non scrolling table we limit vertex coordinates in order to keep ImDrawCmd AABB roughly within visible range.
-    const float border_size = table->BorderSize;
-    const float draw_y2_limit = table->OuterWindow->ClipRect.Max.y + (2.0f * ImMax(border_size, inner_drawlist->_FringeScale));
+    const float border_size_outer_w = (table->Flags & ImGuiTableFlags_BordersOuterV) ? table->BorderSize : 0.0f;
+    const float border_size_outer_h = (table->Flags & ImGuiTableFlags_BordersOuterH) ? table->BorderSize : 0.0f;
+    const float border_size_inner = table->BorderSize;
+    const float draw_y2_limit = table->OuterWindow->ClipRect.Max.y + (2.0f * ImMax(border_size_outer_h, inner_drawlist->_FringeScale));
 
     // Draw inner border and resizing feedback
     ImGuiTableInstanceData* table_instance = TableGetInstanceData(table, table->InstanceCurrent);
-    const float draw_y1 = ImMax(table->InnerRect.Min.y, (table->FreezeRowsCount >= 1 ? table->InnerRect.Min.y : table->WorkRect.Min.y) + table->AngledHeadersHeight) + ((table->Flags & ImGuiTableFlags_BordersOuterH) ? border_size : 0.0f);
-    const float draw_y2_body = ImMin(table->InnerRect.Max.y, draw_y2_limit);
+    const float draw_y1 = ImMax(table->InnerRect.Min.y, (table->FreezeRowsCount >= 1 ? table->InnerRect.Min.y : table->WorkRect.Min.y) + table->AngledHeadersHeight) + ((table->Flags & ImGuiTableFlags_BordersOuterH) ? border_size_outer_h : 0.0f);
+    const float draw_y2_body = ImMin(table->InnerRect.Max.y - border_size_outer_h, draw_y2_limit);
     const float draw_y2_head = table->IsUsingHeaders ? ImMin(draw_y2_body, (table->FreezeRowsCount >= 1 ? table->InnerRect.Min.y : table->WorkRect.Min.y) + table_instance->LastTopHeadersRowHeight) : draw_y1;
 
     if (table->Flags & ImGuiTableFlags_BordersInnerV)
@@ -3011,7 +3013,7 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
             else if ((table->Flags & (ImGuiTableFlags_NoBordersInBodyUntilResize | ImGuiTableFlags_NoBordersInBody)) == 0)
                 draw_y2 = draw_y2_body;
             if (draw_y2 > draw_y1)
-                inner_drawlist->AddLineV(column->MaxX, draw_y1, draw_y2, TableGetColumnBorderCol(table, order_n, column_n), border_size);
+                inner_drawlist->AddLineV(column->MaxX, draw_y1, draw_y2, TableGetColumnBorderCol(table, order_n, column_n), border_size_inner);
         }
     }
 
@@ -3029,26 +3031,25 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
         const ImU32 outer_col = table->BorderColorStrong;
         if ((table->Flags & ImGuiTableFlags_BordersOuter) == ImGuiTableFlags_BordersOuter)
         {
-            inner_drawlist->AddRect(outer_border.Min, outer_border.Max, outer_col, 0.0f, border_size);
+            inner_drawlist->AddRect(outer_border.Min, outer_border.Max, outer_col, 0.0f, border_size_outer_w);
         }
         else if (table->Flags & ImGuiTableFlags_BordersOuterV)
         {
-            inner_drawlist->AddLineV(outer_border.Min.x, outer_border.Min.y, outer_border.Max.y, outer_col, border_size);
-            inner_drawlist->AddLineV(outer_border.Max.x - border_size, outer_border.Min.y, outer_border.Max.y, outer_col, border_size);
+            inner_drawlist->AddLineV(outer_border.Min.x, outer_border.Min.y, outer_border.Max.y, outer_col, border_size_outer_w);
+            inner_drawlist->AddLineV(outer_border.Max.x - border_size_outer_w, outer_border.Min.y, outer_border.Max.y, outer_col, border_size_outer_w);
         }
         else if (table->Flags & ImGuiTableFlags_BordersOuterH)
         {
-            inner_drawlist->AddLineH(outer_border.Min.x, outer_border.Max.x, outer_border.Min.y, outer_col, border_size);
-            inner_drawlist->AddLineH(outer_border.Min.x, outer_border.Max.x, outer_border.Max.y - border_size, outer_col, border_size);
+            inner_drawlist->AddLineH(outer_border.Min.x, outer_border.Max.x, outer_border.Min.y, outer_col, border_size_outer_h);
+            inner_drawlist->AddLineH(outer_border.Min.x, outer_border.Max.x, outer_border.Max.y - border_size_outer_h, outer_col, border_size_outer_h);
         }
     }
     if ((table->Flags & ImGuiTableFlags_BordersInnerH) && table->RowPosY2 < table->OuterRect.Max.y)
     {
-        // Draw bottom-most row border between it is above outer border.
-        const float h_inset = (table->Flags & ImGuiTableFlags_BordersOuterV) ? border_size : 0.0f;
+        // Draw bottom-most row border between it and above outer border.
         const float border_y = table->RowPosY2;
         if (border_y >= table->BgClipRect.Min.y && border_y < table->BgClipRect.Max.y)
-            inner_drawlist->AddLineH(table->BorderX1 + h_inset, table->BorderX2 - h_inset, border_y, table->BorderColorLight, border_size);
+            inner_drawlist->AddLineH(table->BorderX1 + border_size_outer_w, table->BorderX2 - border_size_outer_w, border_y, table->BorderColorLight, border_size_inner);
     }
 
     inner_drawlist->PopClipRect();
