@@ -6428,7 +6428,9 @@ static void DemoWindowTables()
         {
             static char text_bufs[3 * 5][16]; // Mini text storage for 3x5 cells
             static bool init = true;
-            if (!show_widget_frame_bg)
+            if (show_widget_frame_bg)
+                ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0.0f);
+            else
                 ImGui::PushStyleColor(ImGuiCol_FrameBg, 0);
             for (int cell = 0; cell < 3 * 5; cell++)
             {
@@ -6440,7 +6442,9 @@ static void DemoWindowTables()
                 ImGui::InputText("##cell", text_bufs[cell], IM_COUNTOF(text_bufs[cell]));
                 ImGui::PopID();
             }
-            if (!show_widget_frame_bg)
+            if (show_widget_frame_bg)
+                ImGui::PopStyleVar();
+            else
                 ImGui::PopStyleColor();
             init = false;
             ImGui::EndTable();
@@ -7050,7 +7054,7 @@ static void DemoWindowTables()
                 // We use a transparent color so we can see the one behind in case our target is RowBg1 and RowBg0 was already targeted by the ImGuiTableFlags_RowBg flag.
                 if (row_bg_type != 0)
                 {
-                    ImU32 row_bg_color = ImGui::GetColorU32(row_bg_type == 1 ? ImVec4(0.7f, 0.3f, 0.3f, 0.65f) : ImVec4(0.2f + row * 0.1f, 0.2f, 0.2f, 0.65f)); // Flat or Gradient?
+                    ImU32 row_bg_color = ImGui::GetColorU32(row_bg_type == 1 ? ImVec4(0.7f, 0.3f, 0.3f, 0.40f) : ImVec4(0.2f + row * 0.1f, 0.2f, 0.2f, 0.40f)); // Flat or Gradient?
                     ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0 + row_bg_target, row_bg_color);
                 }
 
