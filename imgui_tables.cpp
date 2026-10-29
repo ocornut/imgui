@@ -483,27 +483,22 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     const float border_size = table->BorderSize = TABLE_BORDER_SIZE;
     
     // Make borders not overlap our contents by offsetting HostClipRect (#6765, #7428, #3752)
-    // (we normally shouldn't alter HostClipRect as we rely on TableMergeDrawChannels() expanding non-clipped column toward the
-    // limits of that rectangle, in order for ImDrawListSplitter::Merge() to merge the draw commands. However since the overlap
-    // problem only affect scrolling tables in this case we can get away with doing it without extra cost).
-    if (inner_window != outer_window)
+    // - We normally shouldn't alter HostClipRect as we rely on TableMergeDrawChannels() expanding non-clipped column toward the
+    //   limits of that rectangle, in order for ImDrawListSplitter::Merge() to merge the draw commands. However since the overlap
+    //   problem only affect scrolling tables in this case we can get away with doing it without extra cost).
+    // - (FIXME: Because inner_window's Scrollbar doesn't know about border size, since it's not encoded in window->WindowBorderSize,
+    //   it already overlaps it and doesn't need an extra offset. Ideally we should be able to pass custom border size with
+    //   different x/y values to BeginChild().)
+    // - For non-scrolling window, this is applied to table->InnerClipRect below.
+    ImRect border_size_outer =
     {
-        // FIXME: Because inner_window's Scrollbar doesn't know about border size, since it's not encoded in window->WindowBorderSize,
-        // it already overlaps it and doesn't need an extra offset. Ideally we should be able to pass custom border size with
-        // different x/y values to BeginChild().
-        if (flags & ImGuiTableFlags_BordersOuterV)
-        {
-            table->HostClipRect.Min.x = ImMin(table->HostClipRect.Min.x + border_size, table->HostClipRect.Max.x);
-            if (inner_window->DecoOuterSizeX2 == 0.0f)
-                table->HostClipRect.Max.x = ImMax(table->HostClipRect.Max.x - border_size, table->HostClipRect.Min.x);
-        }
-        if (flags & ImGuiTableFlags_BordersOuterH)
-        {
-            table->HostClipRect.Min.y = ImMin(table->HostClipRect.Min.y + border_size, table->HostClipRect.Max.y);
-            if (inner_window->DecoOuterSizeY2 == 0.0f)
-                table->HostClipRect.Max.y = ImMax(table->HostClipRect.Max.y - border_size, table->HostClipRect.Min.y);
-        }
-    }
+        (flags & ImGuiTableFlags_BordersOuterV) ? border_size : 0.0f,
+        (flags & ImGuiTableFlags_BordersOuterH) ? border_size : 0.0f,
+        ((flags & ImGuiTableFlags_BordersOuterV) && ((inner_window == outer_window) || inner_window->DecoOuterSizeX2 == 0.0f)) ? border_size : 0.0f,
+        ((flags & ImGuiTableFlags_BordersOuterH) && ((inner_window == outer_window) || inner_window->DecoOuterSizeY2 == 0.0f)) ? border_size : 0.0f,
+    };
+    if (inner_window != outer_window)
+        table->HostClipRect.ShrinkClamp(border_size_outer.Min, border_size_outer.Max);
 
     // Padding and Spacing
     // - None               ........Content..... Pad .....Content........
@@ -528,17 +523,13 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     table->RowBgColorCounter = 0;
     table->LastRowFlags = ImGuiTableRowFlags_None;
     table->InnerClipRect = (inner_window == outer_window) ? table->WorkRect : inner_window->ClipRect;
+    if (inner_window == outer_window)
+        table->InnerClipRect.ShrinkClamp(border_size_outer.Min, border_size_outer.Max);
     table->InnerClipRect.ClipWith(table->WorkRect);     // We need this to honor inner_width
     table->InnerClipRect.ClipWithFull(table->HostClipRect);
-    if (flags & ImGuiTableFlags_NoHostExtendY)
-    {
-        if (flags & ImGuiTableFlags_BordersOuterH)
-            table->InnerClipRect.Max.y = ImClamp(table->OuterRect.Max.y - border_size, table->InnerClipRect.Min.y, table->InnerClipRect.Max.y);
-    }
-    else
-    {
+    if ((flags & ImGuiTableFlags_NoHostExtendY) == 0)
         table->InnerClipRect.Max.y = table->HostClipRect.Max.y;
-    }
+
     table->RowPosY1 = table->RowPosY2 = table->WorkRect.Min.y; // This is needed somehow
     table->RowTextBaseline = 0.0f; // This will be cleared again by TableBeginRow()
     table->RowCellPaddingY = 0.0f;
@@ -1513,10 +1504,10 @@ void    ImGui::EndTable()
     // but since the later is likely to be impossible to do we'd rather update both axes together.
     if (table->Flags & ImGuiTableFlags_ScrollX)
     {
-        const float outer_padding_for_border = (table->Flags & ImGuiTableFlags_BordersOuterV) ? table->BorderSize : 0.0f;
+        const float border_size_outer_w = (table->Flags & ImGuiTableFlags_BordersOuterV) ? table->BorderSize : 0.0f;
         float max_pos_x = inner_window->DC.CursorMaxPos.x;
         if (table->RightMostEnabledColumn != -1)
-            max_pos_x = ImMax(max_pos_x, table->Columns[table->RightMostEnabledColumn].WorkMaxX + table->CellPaddingX + table->OuterPaddingX - outer_padding_for_border);
+            max_pos_x = ImMax(max_pos_x, table->Columns[table->RightMostEnabledColumn].WorkMaxX + table->CellPaddingX + table->OuterPaddingX - border_size_outer_w);
         if (table->ResizedColumn != -1)
             max_pos_x = ImMax(max_pos_x, table->ResizeLockMinContentsX2);
         inner_window->DC.CursorMaxPos.x = max_pos_x + table->TempData->AngledHeadersExtraWidth;
@@ -3049,7 +3040,7 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
         // Draw bottom-most row border between it and above outer border.
         const float border_y = table->RowPosY2;
         if (border_y >= table->BgClipRect.Min.y && border_y < table->BgClipRect.Max.y)
-            inner_drawlist->AddLineH(table->BorderX1 + border_size_outer_w, table->BorderX2 - border_size_outer_w, border_y, table->BorderColorLight, border_size_inner);
+            inner_drawlist->AddLineH(table->BorderX1, table->BorderX2, border_y, table->BorderColorLight, border_size_inner);
     }
 
     inner_drawlist->PopClipRect();
