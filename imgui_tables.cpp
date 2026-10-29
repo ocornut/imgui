@@ -2951,19 +2951,24 @@ static ImU32 TableGetColumnBorderCol(ImGuiTable* table, int order_n, int column_
 void ImGui::TableDrawBorders(ImGuiTable* table)
 {
     ImGuiWindow* inner_window = table->InnerWindow;
-    if (!table->OuterWindow->ClipRect.Overlaps(table->OuterRect))
+    if (!table->OuterWindow->ClipRect.Overlaps(table->OuterRect)) // Note how OuterWindow->ClipRect == table->Bg0ClipRectForDrawCmd
         return;
 
     ImDrawList* inner_drawlist = inner_window->DrawList;
     table->DrawSplitter->SetCurrentChannel(inner_drawlist, TABLE_DRAW_CHANNEL_BG0);
-    inner_drawlist->PushClipRect(table->Bg0ClipRectForDrawCmd.Min, table->Bg0ClipRectForDrawCmd.Max, false);
+    inner_drawlist->PushClipRect(table->OuterWindow->ClipRect.Min, table->OuterWindow->ClipRect.Max, false);
+
+    const float border_size = TABLE_BORDER_SIZE;
+
+    // For e.g. non scrolling table we limit vertex coordinates in order to keep ImDrawCmd AABB roughly within visible range.
+    const float draw_y2_limit = table->OuterWindow->ClipRect.Max.y + (2.0f * ImMax(border_size, inner_drawlist->_FringeScale));
 
     // Draw inner border and resizing feedback
     ImGuiTableInstanceData* table_instance = TableGetInstanceData(table, table->InstanceCurrent);
-    const float border_size = TABLE_BORDER_SIZE;
     const float draw_y1 = ImMax(table->InnerRect.Min.y, (table->FreezeRowsCount >= 1 ? table->InnerRect.Min.y : table->WorkRect.Min.y) + table->AngledHeadersHeight) + ((table->Flags & ImGuiTableFlags_BordersOuterH) ? border_size : 0.0f);
-    const float draw_y2_body = table->InnerRect.Max.y;
-    const float draw_y2_head = table->IsUsingHeaders ? ImMin(table->InnerRect.Max.y, (table->FreezeRowsCount >= 1 ? table->InnerRect.Min.y : table->WorkRect.Min.y) + table_instance->LastTopHeadersRowHeight) : draw_y1;
+    const float draw_y2_body = ImMin(table->InnerRect.Max.y, draw_y2_limit);
+    const float draw_y2_head = table->IsUsingHeaders ? ImMin(draw_y2_body, (table->FreezeRowsCount >= 1 ? table->InnerRect.Min.y : table->WorkRect.Min.y) + table_instance->LastTopHeadersRowHeight) : draw_y1;
+
     if (table->Flags & ImGuiTableFlags_BordersInnerV)
     {
         for (int order_n = 0; order_n < table->ColumnsCount; order_n++)
@@ -3009,7 +3014,8 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
         // parent. In inner_window, it won't reach out over scrollbars. Another weird solution would be to display part
         // of it in inner window, and the part that's over scrollbars in the outer window..)
         // Either solution currently won't allow us to use a larger border size: the border would clipped.
-        const ImRect outer_border = table->OuterRect;
+        ImRect outer_border = table->OuterRect;
+        outer_border.Max.y = ImMin(outer_border.Max.y, draw_y2_limit); // Clamp but keep bottom border non-visible.
         const ImU32 outer_col = table->BorderColorStrong;
         if ((table->Flags & ImGuiTableFlags_BordersOuter) == ImGuiTableFlags_BordersOuter)
         {
