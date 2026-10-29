@@ -1310,8 +1310,9 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         table->Flags &= ~ImGuiTableFlags_NoHostExtendX;
     if (table->Flags & ImGuiTableFlags_NoHostExtendX)
     {
-        table->OuterRect.Max.x = table->WorkRect.Max.x = unused_x1;
-        table->InnerClipRect.Max.x = ImMin(table->InnerClipRect.Max.x, unused_x1);
+        const float border_size_outer_w = (table->Flags & ImGuiTableFlags_BordersOuterV) ? table->BorderSize : 0.0f;
+        table->OuterRect.Max.x = table->WorkRect.Max.x = ImMin(table->OuterRect.Max.x, unused_x1 + border_size_outer_w);
+        table->InnerClipRect.Max.x = ImClamp(table->OuterRect.Max.x - border_size_outer_w, table->InnerClipRect.Min.x, table->InnerClipRect.Max.x);
     }
     table->InnerWindow->ParentWorkRect = table->WorkRect;
     table->BorderX1 = table->InnerClipRect.Min.x;
@@ -2734,8 +2735,10 @@ void ImGui::TableSetupDrawChannels(ImGuiTable* table)
     table->Bg0ClipRectForDrawCmd = table->OuterWindow->ClipRect;
     table->Bg2ClipRectForDrawCmd = table->HostClipRect;
     IM_ASSERT(table->BgClipRect.Min.y <= table->BgClipRect.Max.y);
+    if (table->Flags & ImGuiTableFlags_NoHostExtendX)
+        table->Bg2ClipRectForDrawCmd.Max.x = ImMin(table->Bg2ClipRectForDrawCmd.Max.x, table->BgClipRect.Max.x); // Don't apply to Bg0: shapes in Bg0 are already CPU clipped and it makes merging fails.
     if (table->Flags & ImGuiTableFlags_NoHostExtendY)
-        table->Bg2ClipRectForDrawCmd.Max.y = ImMin(table->Bg2ClipRectForDrawCmd.Max.y, table->BgClipRect.Max.y); // Don't apply to Bg0: shapes in Bg0 are already CPU clipped and it makes merging fails.
+        table->Bg2ClipRectForDrawCmd.Max.y = ImMin(table->Bg2ClipRectForDrawCmd.Max.y, table->BgClipRect.Max.y); // "
 }
 
 // This function reorder draw channels based on matching clip rectangle, to facilitate merging them. Called by EndTable().
@@ -2893,7 +2896,7 @@ void ImGui::TableMergeDrawChannels(ImGuiTable* table)
                     merge_clip_rect.Min.x = ImMin(merge_clip_rect.Min.x, host_rect.Min.x);
                 if ((merge_group_n & 2) == 0 || !has_freeze_v)
                     merge_clip_rect.Min.y = ImMin(merge_clip_rect.Min.y, host_rect.Min.y);
-                if ((merge_group_n & 1) != 0)
+                if ((merge_group_n & 1) != 0 && (table->Flags & ImGuiTableFlags_NoHostExtendX) == 0)
                     merge_clip_rect.Max.x = ImMax(merge_clip_rect.Max.x, host_rect.Max.x);
                 if ((merge_group_n & 2) != 0 && (table->Flags & ImGuiTableFlags_NoHostExtendY) == 0)
                     merge_clip_rect.Max.y = ImMax(merge_clip_rect.Max.y, host_rect.Max.y);

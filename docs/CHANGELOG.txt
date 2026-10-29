@@ -80,14 +80,14 @@ Other Changes:
     `io.DisplayFramebufferScale` is not an integer (regression in 1.93.0). (#9598)
 - Tables:
   - Fixed various border overshooting issues, some mostly visible with transparent
-    borders: (#4678)
+    borders and under specific conditions: (#4678)
     - On non-scrolling tables, inner horizontal borders slightly overlapped
       outer vertical ones with certain settings.
     - On non-scrolling tables, clamping lower border coordinates to stay within
       visible range (no visible change, but it makes ImDrawCmd AABB more sensible).
     - Fixed vertical inner borders slightly overlapping bottom outer border.
-  - Fixed various issues with using `ImGuiTableFlags_NoHostExtendY`:
-    - Fixed selectable highlight straying off the Y2 clipping limit.
+  - Fixed various issues using `ImGuiTableFlags_NoHostExtendX`/`_NoHostExtendY`:
+    - Fixed selectable highlight straying off the X2/Y2 clipping limit.
     - Fixed parent window work rectangle affecting the Y2 clipping limit.
     - Fixed the Y2 clipping limit overlapping bottom outer border.
 - ImVec2: added a check for cases where a custom `IM_VEC2_CLASS_EXTRA` macro
