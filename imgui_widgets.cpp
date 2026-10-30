@@ -4471,7 +4471,7 @@ void ImGuiInputTextCallbackData::InsertChars(int pos, const char* new_text, cons
     if (new_text_len + BufTextLen + 1 > obj->TextA.Size && is_resizable && !is_readonly)
     {
         IM_ASSERT(Buf == obj->TextA.Data);
-        int new_buf_size = BufTextLen + ImClamp(new_text_len * 4, 32, ImMax(256, new_text_len)) + 1;
+        int new_buf_size = BufTextLen + (int)ImClamp((ImS64)new_text_len * 4, (ImS64)32, (ImS64)ImMax(256, new_text_len)) + 1;
         obj->TextA.resize(new_buf_size + 1);
         obj->TextSrc = obj->TextA.Data;
         Buf = obj->TextA.Data;
