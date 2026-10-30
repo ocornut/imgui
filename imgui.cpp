@@ -3300,7 +3300,7 @@ void ImGuiTextBuffer::append(const char* str, const char* str_end)
     const int needed_sz = write_off + len;
     if (write_off + len >= Buf.Capacity)
     {
-        int new_capacity = Buf.Capacity * 2;
+        int new_capacity = ImMin(Buf.Capacity, INT_MAX / 2) * 2;
         Buf.reserve(needed_sz > new_capacity ? needed_sz : new_capacity);
     }
 
@@ -3335,7 +3335,7 @@ void ImGuiTextBuffer::appendfv(const char* fmt, va_list args)
     const int needed_sz = write_off + len;
     if (write_off + len >= Buf.Capacity)
     {
-        int new_capacity = Buf.Capacity * 2;
+        int new_capacity = ImMin(Buf.Capacity, INT_MAX / 2) * 2;
         Buf.reserve(needed_sz > new_capacity ? needed_sz : new_capacity);
     }
 
