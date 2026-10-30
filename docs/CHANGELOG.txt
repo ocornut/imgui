@@ -66,14 +66,33 @@ Autumn cleanup of stuff marked obsolete more than two years ago:
 
 Other Changes:
 
-- Style: `StyleColorsDark()`: tweaked WindowBg to be darker than in 1.93.0.
-- Style: added `style.SymbolArrowSizeFactor`, `style.SymbolArrowThicknessFactor` to tweak
-  the   shape and look of arrows. Made default arrow stroked. (#5233, #2431, #2235, #6730, #8243)
+- Style:
+  - `StyleColorsDark()`: tweaked WindowBg to be darker than in 1.93.0.
+  - Added `style.SymbolArrowSizeFactor`, `style.SymbolArrowThicknessFactor` to tweak the
+    shape and look of arrows. Made default arrow stroked. (#5233, #2431, #2235, #6730, #8243)
     Legacy arrow: size: (0.60f,0.70f), thickness: 0.0f
        New arrow: size: (0.72f,0.40f), thickness: 0.30f
 - TreeNode:
   - TreeNodeGetOpen(): added flags parameter to allow passing `ImGuiTreeNodeFlags_DefaultOpen`
     or `ImGuiTreeNodeFlags_Leaf`. (#9569, #9592, #3823, #9251) [@adalisk-emikhaylov, @Yaki-Blake]
+- Popups:
+  - Modals: fixed an assert displaying a modal in an environment where
+    `io.DisplayFramebufferScale` is not an integer (regression in 1.93.0). (#9598)
+- Tables:
+  - Fixed various border overshooting issues, some mostly visible with transparent
+    borders and under specific conditions: (#4678)
+    - On non-scrolling tables, inner horizontal borders slightly overlapped
+      outer vertical ones with certain settings.
+    - On non-scrolling tables, clamping lower border coordinates to stay within
+      visible range (no visible change, but it makes ImDrawCmd AABB more sensible).
+    - Fixed vertical inner borders slightly overlapping bottom outer border.
+  - Fixed various issues using `ImGuiTableFlags_NoHostExtendX`/`_NoHostExtendY`:
+    - Fixed selectable highlight straying off the X2/Y2 clipping limit.
+    - Fixed parent window work rectangle affecting the Y2 clipping limit.
+    - Fixed the Y2 clipping limit overlapping bottom outer border.
+- Multi-Select:
+  - Fixed `ImGuiSelectionBasicStorage::GetNextSelectedItem()` reading one past the
+    end of storage when trailing items are unselected (#9604) [@MilosLord]
 - ImVec2: added a check for cases where a custom `IM_VEC2_CLASS_EXTRA` macro
   adds an extra `operator=` to ImVec2. This isn't supported but should not
   be needed as you should have a constructor to convert from your type to ImVec2.

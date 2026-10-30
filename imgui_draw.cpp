@@ -7589,9 +7589,9 @@ void ImGui::RenderArrowEx(ImDrawList* draw_list, ImVec2 pos, ImU32 col, float co
     // Pixel align when at a right angle
     if (is_fill && (cos_a * sin_a >= -FLT_EPSILON) && (cos_a * sin_a <= FLT_EPSILON))
     {
-        p[0] = ImRoundSigned64(p[0]);
-        p[1] = ImRoundSigned64(p[1]);
-        p[2] = ImRoundSigned64(p[2]);
+        p[0] = ImRoundSigned(p[0]);
+        p[1] = ImRoundSigned(p[1]);
+        p[2] = ImRoundSigned(p[2]);
     }
 
     if (is_fill)
