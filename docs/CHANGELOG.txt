@@ -90,6 +90,9 @@ Other Changes:
     - Fixed selectable highlight straying off the X2/Y2 clipping limit.
     - Fixed parent window work rectangle affecting the Y2 clipping limit.
     - Fixed the Y2 clipping limit overlapping bottom outer border.
+- Multi-Select:
+  - Fixed `ImGuiSelectionBasicStorage::GetNextSelectedItem()` reading one past the
+    end of storage when trailing items are unselected (#9604) [@MilosLord]
 - ImVec2: added a check for cases where a custom `IM_VEC2_CLASS_EXTRA` macro
   adds an extra `operator=` to ImVec2. This isn't supported but should not
   be needed as you should have a constructor to convert from your type to ImVec2.

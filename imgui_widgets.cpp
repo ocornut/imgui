@@ -8803,7 +8803,7 @@ bool ImGuiSelectionBasicStorage::GetNextSelectedItem(void** opaque_it, ImGuiID* 
         it = _Storage.Data.Data;
     IM_ASSERT(it >= _Storage.Data.Data && it <= it_end);
     if (it != it_end)
-        while (it->val_i == 0 && it < it_end)
+        while (it < it_end && it->val_i == 0)
             it++;
     const bool has_more = (it != it_end);
     *opaque_it = has_more ? (void**)(it + 1) : (void**)(it);
