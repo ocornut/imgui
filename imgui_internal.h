@@ -3280,6 +3280,7 @@ struct IMGUI_API ImGuiTableTempData
     ImVec1                      HostBackupColumnsOffset;    // Backup of OuterWindow->DC.ColumnsOffset at the end of BeginTable()
     float                       HostBackupItemWidth;        // Backup of OuterWindow->DC.ItemWidth at the end of BeginTable()
     int                         HostBackupItemWidthStackSize;//Backup of OuterWindow->DC.ItemWidthStack.Size at the end of BeginTable()
+    ImGuiLayoutType             HostBackupLayoutType;       // Backup of InnerWindow->DC.LayoutType at the end of BeginTable()
 
     ImGuiTableTempData()        { memset((void*)this, 0, sizeof(*this)); LastTimeActive = -1.0f; }
 };
