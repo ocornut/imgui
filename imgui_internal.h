@@ -2296,6 +2296,11 @@ struct ImGuiIDStackTool
 //-----------------------------------------------------------------------------
 
 typedef void (*ImGuiContextHookCallback)(ImGuiContext* ctx, ImGuiContextHook* hook);
+
+// Callback for ImGuiContext::BeginWindowCallback / EndWindowCallback
+#define IMGUI_HAS_BEGIN_END_WINDOW_CALLBACKS
+typedef void (*ImGuiBeginEndWindowCallback)(ImGuiContext* ctx, void* user_data);
+
 enum ImGuiContextHookType { ImGuiContextHookType_NewFramePre, ImGuiContextHookType_NewFramePost, ImGuiContextHookType_EndFramePre, ImGuiContextHookType_EndFramePost, ImGuiContextHookType_RenderPre, ImGuiContextHookType_RenderPost, ImGuiContextHookType_Shutdown, ImGuiContextHookType_PendingRemoval_ };
 
 struct ImGuiContextHook
@@ -2649,6 +2654,9 @@ struct ImGuiContext
     // Hooks
     ImVector<ImGuiContextHook>          Hooks;                  // Hooks for extensions (e.g. test engine)
     ImGuiID                             HookIdNext;             // Next available HookId
+    ImGuiBeginEndWindowCallback         BeginWindowCallback;    // Called at the start of Begin(), parent window still current (see g.NextWindowData)
+    ImGuiBeginEndWindowCallback         EndWindowCallback;      // Called at the end of End(), parent window current again
+    void*                               BeginEndWindowCallbackUserData;
     ImGuiDemoMarkerCallback             DemoMarkerCallback;
 
     // Localization

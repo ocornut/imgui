@@ -4503,6 +4503,8 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     SettingsLoaded = false;
     SettingsDirtyTimer = 0.0f;
     HookIdNext = 0;
+    BeginWindowCallback = EndWindowCallback = NULL;
+    BeginEndWindowCallbackUserData = NULL;
     DemoMarkerCallback = NULL;
 
     memset(LocalizationTable, 0, sizeof(LocalizationTable));
@@ -7637,6 +7639,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     IM_ASSERT(g.WithinFrameScope);                  // Forgot to call ImGui::NewFrame()
     IM_ASSERT(g.FrameCountEnded != g.FrameCount);   // Called ImGui::Render() or ImGui::EndFrame() and haven't called ImGui::NewFrame() again yet
 
+    if (g.BeginWindowCallback != NULL)
+        g.BeginWindowCallback(&g, g.BeginEndWindowCallbackUserData);
+
     // Find or create
     ImGuiWindow* window = FindWindowByName(name);
     const bool window_just_created = (window == NULL);
@@ -8494,6 +8499,9 @@ void ImGui::End()
 
     g.CurrentWindowStack.pop_back();
     SetCurrentWindow(g.CurrentWindowStack.Size == 0 ? NULL : g.CurrentWindowStack.back().Window);
+
+    if (g.EndWindowCallback != NULL)
+        g.EndWindowCallback(&g, g.BeginEndWindowCallbackUserData);
 }
 
 void ImGui::PushItemFlag(ImGuiItemFlags option, bool enabled)
