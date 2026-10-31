@@ -2298,6 +2298,19 @@ struct ImGuiIDStackTool
 typedef void (*ImGuiContextHookCallback)(ImGuiContext* ctx, ImGuiContextHook* hook);
 enum ImGuiContextHookType { ImGuiContextHookType_NewFramePre, ImGuiContextHookType_NewFramePost, ImGuiContextHookType_EndFramePre, ImGuiContextHookType_EndFramePost, ImGuiContextHookType_RenderPre, ImGuiContextHookType_RenderPost, ImGuiContextHookType_Shutdown, ImGuiContextHookType_PendingRemoval_ };
 
+// Metrics/Debugger: hooks describing user draw callbacks (ImDrawCmd::UserCallback) in DebugNodeDrawList().
+// Hooks are tried in registration order for every callback command; the first one returning true has fully
+// displayed the command (typically a TreeNode() and its contents, and an overlay on hover drawn in
+// 'fg_draw_list', which may be NULL). If none handles it, the default "Callback %p, user_data %p" is shown.
+#define IMGUI_HAS_DEBUG_DRAWCMD_HOOKS   // DebugAddDrawCmdHook() / DebugRemoveDrawCmdHook() are available
+typedef bool (*ImGuiDebugDrawCmdHookFn)(const ImDrawList* draw_list, const ImDrawCmd* draw_cmd, ImDrawList* fg_draw_list, void* user_data);
+
+struct ImGuiDebugDrawCmdHook
+{
+    ImGuiDebugDrawCmdHookFn     Callback;
+    void*                       UserData;
+};
+
 struct ImGuiContextHook
 {
     ImGuiID                     HookId;     // A unique ID assigned by AddContextHook()
@@ -2696,6 +2709,7 @@ struct ImGuiContext
     float                   DebugFlashStyleColorTime;
     ImVec4                  DebugFlashStyleColorBackup;
     ImGuiMetricsConfig      DebugMetricsConfig;
+    ImVector<ImGuiDebugDrawCmdHook> DebugDrawCmdHooks;           // Metrics/Debugger: user draw callback hooks (DebugAddDrawCmdHook)
     ImGuiDebugItemPathQuery DebugItemPathQuery;
     ImGuiIDStackTool        DebugIDStackTool;
     ImGuiDebugAllocInfo     DebugAllocInfo;
@@ -3935,6 +3949,8 @@ namespace ImGui
     IMGUI_API void          DebugNodeColumns(ImGuiOldColumns* columns);
     IMGUI_API void          DebugNodeDrawList(ImGuiWindow* window, ImGuiViewportP* viewport, const ImDrawList* draw_list, const char* label);
     IMGUI_API void          DebugNodeDrawCmdShowMeshAndBoundingBox(ImDrawList* out_draw_list, const ImDrawList* draw_list, const ImDrawCmd* draw_cmd, bool show_mesh, bool show_aabb);
+    IMGUI_API void          DebugAddDrawCmdHook(ImGuiDebugDrawCmdHookFn hook, void* user_data = NULL);
+    IMGUI_API void          DebugRemoveDrawCmdHook(ImGuiDebugDrawCmdHookFn hook, void* user_data = NULL);
     IMGUI_API void          DebugNodeFont(ImFont* font);
     IMGUI_API void          DebugNodeFontGlyphsForSrcMask(ImFont* font, ImFontBaked* baked, int src_mask);
     IMGUI_API void          DebugNodeFontGlyph(ImFont* font, const ImFontGlyph* glyph);
