@@ -490,15 +490,12 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     //   it already overlaps it and doesn't need an extra offset. Ideally we should be able to pass custom border size with
     //   different x/y values to BeginChild().)
     // - For non-scrolling window, this is applied to table->InnerClipRect below.
-    ImRect border_size_outer =
-    {
-        (flags & ImGuiTableFlags_BordersOuterV) ? border_size : 0.0f,
-        (flags & ImGuiTableFlags_BordersOuterH) ? border_size : 0.0f,
-        ((flags & ImGuiTableFlags_BordersOuterV) && ((inner_window == outer_window) || inner_window->DecoOuterSizeX2 == 0.0f)) ? border_size : 0.0f,
-        ((flags & ImGuiTableFlags_BordersOuterH) && ((inner_window == outer_window) || inner_window->DecoOuterSizeY2 == 0.0f)) ? border_size : 0.0f,
-    };
+    temp_data->BorderOuterSizes.Min.x = (flags & ImGuiTableFlags_BordersOuterV) ? border_size : 0.0f;
+    temp_data->BorderOuterSizes.Min.y = (flags & ImGuiTableFlags_BordersOuterH) ? border_size : 0.0f;
+    temp_data->BorderOuterSizes.Max.x = ((flags & ImGuiTableFlags_BordersOuterV) && ((inner_window == outer_window) || inner_window->DecoOuterSizeX2 == 0.0f)) ? border_size : 0.0f;
+    temp_data->BorderOuterSizes.Max.y = ((flags & ImGuiTableFlags_BordersOuterH) && ((inner_window == outer_window) || inner_window->DecoOuterSizeY2 == 0.0f)) ? border_size : 0.0f;
     if (inner_window != outer_window)
-        table->HostClipRect.ShrinkClamp(border_size_outer.Min, border_size_outer.Max);
+        table->HostClipRect.ShrinkClamp(temp_data->BorderOuterSizes.Min, temp_data->BorderOuterSizes.Max);
 
     // Padding and Spacing
     // - None               ........Content..... Pad .....Content........
@@ -536,7 +533,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     table->CurrentRow = -1;
     table->InnerClipRect = (inner_window == outer_window) ? table->WorkRect : inner_window->ClipRect;
     if (inner_window == outer_window)
-        table->InnerClipRect.ShrinkClamp(border_size_outer.Min, border_size_outer.Max);
+        table->InnerClipRect.ShrinkClamp(temp_data->BorderOuterSizes.Min, temp_data->BorderOuterSizes.Max);
     table->InnerClipRect.ClipWith(table->WorkRect);     // We need this to honor inner_width
     table->InnerClipRect.ClipWithFull(table->HostClipRect);
     if ((flags & ImGuiTableFlags_NoHostExtendY) == 0)
@@ -1313,7 +1310,8 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         table->OuterRect.Max.x = table->WorkRect.Max.x = ImMin(table->OuterRect.Max.x, unused_x1 + border_size_outer_w);
         table->InnerClipRect.Max.x = ImClamp(table->OuterRect.Max.x - border_size_outer_w, table->InnerClipRect.Min.x, table->InnerClipRect.Max.x);
     }
-    table->InnerWindow->ParentWorkRect = table->WorkRect;
+    table->InnerWindow->ParentWorkRect = table->WorkRect; // Used by Selectable/TreeNode highlight
+    table->InnerWindow->ParentWorkRect.ShrinkClamp(temp_data->BorderOuterSizes.Min, temp_data->BorderOuterSizes.Max);
     table->BorderX1 = table->InnerClipRect.Min.x;
     table->BorderX2 = table->InnerClipRect.Max.x;
 
