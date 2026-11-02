@@ -518,21 +518,11 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     const float outer_padding_explicit = pad_outer_x ? g.Style.CellPadding.x : 0.0f;
     table->OuterPaddingX = (outer_padding_for_border + outer_padding_explicit) - table->CellPaddingX;
 
-    table->CurrentColumn = -1;
-    table->CurrentRow = -1;
-    table->RowBgColorCounter = 0;
-    table->LastRowFlags = ImGuiTableRowFlags_None;
-    table->InnerClipRect = (inner_window == outer_window) ? table->WorkRect : inner_window->ClipRect;
-    if (inner_window == outer_window)
-        table->InnerClipRect.ShrinkClamp(border_size_outer.Min, border_size_outer.Max);
-    table->InnerClipRect.ClipWith(table->WorkRect);     // We need this to honor inner_width
-    table->InnerClipRect.ClipWithFull(table->HostClipRect);
-    if ((flags & ImGuiTableFlags_NoHostExtendY) == 0)
-        table->InnerClipRect.Max.y = table->HostClipRect.Max.y;
-
     table->RowPosY1 = table->RowPosY2 = table->WorkRect.Min.y; // This is needed somehow
     table->RowTextBaseline = 0.0f; // This will be cleared again by TableBeginRow()
     table->RowCellPaddingY = 0.0f;
+    table->RowBgColorCounter = 0;
+    table->LastRowFlags = ImGuiTableRowFlags_None;
     table->FreezeRowsRequest = table->FreezeRowsCount = 0; // This will be setup by TableSetupScrollFreeze(), if any
     table->FreezeColumnsRequest = table->FreezeColumnsCount = 0;
     table->IsUnfrozenRows = true;
@@ -542,6 +532,15 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     table->AngledHeadersHeight = 0.0f;
     temp_data->AngledHeadersExtraWidth = 0.0f;
 
+    table->CurrentColumn = -1;
+    table->CurrentRow = -1;
+    table->InnerClipRect = (inner_window == outer_window) ? table->WorkRect : inner_window->ClipRect;
+    if (inner_window == outer_window)
+        table->InnerClipRect.ShrinkClamp(border_size_outer.Min, border_size_outer.Max);
+    table->InnerClipRect.ClipWith(table->WorkRect);     // We need this to honor inner_width
+    table->InnerClipRect.ClipWithFull(table->HostClipRect);
+    if ((flags & ImGuiTableFlags_NoHostExtendY) == 0)
+        table->InnerClipRect.Max.y = table->HostClipRect.Max.y;
     // Using opaque colors facilitate overlapping lines of the grid, otherwise we'd need to improve TableDrawBorders()
     table->BorderColorStrong = GetColorU32(ImGuiCol_TableBorderStrong);
     table->BorderColorLight = GetColorU32(ImGuiCol_TableBorderLight);
