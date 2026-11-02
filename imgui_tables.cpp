@@ -2966,6 +2966,33 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
     const float border_size_inner = table->BorderSize;
     const float draw_y2_limit = table->OuterWindow->ClipRect.Max.y + (2.0f * ImMax(border_size_outer_h, inner_drawlist->_FringeScale));
 
+    // Draw outer border
+    if (table->Flags & ImGuiTableFlags_BordersOuter)
+    {
+        // Display outer border offset by 1 which is a simple way to display it without adding an extra draw call
+        // (Without the offset, in outer_window it would be rendered behind cells, because child windows are above their
+        // parent. In inner_window, it won't reach out over scrollbars. Another weird solution would be to display part
+        // of it in inner window, and the part that's over scrollbars in the outer window..)
+        // Either solution currently won't allow us to use a larger border size: the border would clipped.
+        ImRect outer_border = table->OuterRect;
+        outer_border.Max.y = ImMin(outer_border.Max.y, draw_y2_limit); // Clamp but keep bottom border non-visible.
+        const ImU32 outer_col = table->BorderColorStrong;
+        if ((table->Flags & ImGuiTableFlags_BordersOuter) == ImGuiTableFlags_BordersOuter)
+        {
+            inner_drawlist->AddRect(outer_border.Min, outer_border.Max, outer_col, 0.0f, border_size_outer_w);
+        }
+        else if (table->Flags & ImGuiTableFlags_BordersOuterV)
+        {
+            inner_drawlist->AddLineV(outer_border.Min.x, outer_border.Min.y, outer_border.Max.y, outer_col, border_size_outer_w);
+            inner_drawlist->AddLineV(outer_border.Max.x - border_size_outer_w, outer_border.Min.y, outer_border.Max.y, outer_col, border_size_outer_w);
+        }
+        else if (table->Flags & ImGuiTableFlags_BordersOuterH)
+        {
+            inner_drawlist->AddLineH(outer_border.Min.x, outer_border.Max.x, outer_border.Min.y, outer_col, border_size_outer_h);
+            inner_drawlist->AddLineH(outer_border.Min.x, outer_border.Max.x, outer_border.Max.y - border_size_outer_h, outer_col, border_size_outer_h);
+        }
+    }
+
     // Draw inner border and resizing feedback
     ImGuiTableInstanceData* table_instance = TableGetInstanceData(table, table->InstanceCurrent);
     const float draw_y1 = ImMax(table->InnerRect.Min.y, (table->FreezeRowsCount >= 1 ? table->InnerRect.Min.y : table->WorkRect.Min.y) + table->AngledHeadersHeight) + ((table->Flags & ImGuiTableFlags_BordersOuterH) ? border_size_outer_h : 0.0f);
@@ -3008,33 +3035,6 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
         }
     }
 
-    // Draw outer border
-    // FIXME: could use AddRect or explicit VLine/HLine helper?
-    if (table->Flags & ImGuiTableFlags_BordersOuter)
-    {
-        // Display outer border offset by 1 which is a simple way to display it without adding an extra draw call
-        // (Without the offset, in outer_window it would be rendered behind cells, because child windows are above their
-        // parent. In inner_window, it won't reach out over scrollbars. Another weird solution would be to display part
-        // of it in inner window, and the part that's over scrollbars in the outer window..)
-        // Either solution currently won't allow us to use a larger border size: the border would clipped.
-        ImRect outer_border = table->OuterRect;
-        outer_border.Max.y = ImMin(outer_border.Max.y, draw_y2_limit); // Clamp but keep bottom border non-visible.
-        const ImU32 outer_col = table->BorderColorStrong;
-        if ((table->Flags & ImGuiTableFlags_BordersOuter) == ImGuiTableFlags_BordersOuter)
-        {
-            inner_drawlist->AddRect(outer_border.Min, outer_border.Max, outer_col, 0.0f, border_size_outer_w);
-        }
-        else if (table->Flags & ImGuiTableFlags_BordersOuterV)
-        {
-            inner_drawlist->AddLineV(outer_border.Min.x, outer_border.Min.y, outer_border.Max.y, outer_col, border_size_outer_w);
-            inner_drawlist->AddLineV(outer_border.Max.x - border_size_outer_w, outer_border.Min.y, outer_border.Max.y, outer_col, border_size_outer_w);
-        }
-        else if (table->Flags & ImGuiTableFlags_BordersOuterH)
-        {
-            inner_drawlist->AddLineH(outer_border.Min.x, outer_border.Max.x, outer_border.Min.y, outer_col, border_size_outer_h);
-            inner_drawlist->AddLineH(outer_border.Min.x, outer_border.Max.x, outer_border.Max.y - border_size_outer_h, outer_col, border_size_outer_h);
-        }
-    }
     if ((table->Flags & ImGuiTableFlags_BordersInnerH) && table->RowPosY2 < table->OuterRect.Max.y)
     {
         // Draw bottom-most row border between it and above outer border.
