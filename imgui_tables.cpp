@@ -2415,7 +2415,7 @@ void ImGui::TableEndCell(ImGuiTable* table)
 //-------------------------------------------------------------------------
 // [SECTION] Tables: Columns width management
 //-------------------------------------------------------------------------
-// - TableGetMaxColumnWidth() [Internal]
+// - TableCalcMaxColumnWidth() [Internal]
 // - TableGetColumnWidthAuto() [Internal]
 // - TableSetColumnWidth()
 // - TableSetColumnWidthAutoSingle() [Internal]
@@ -3012,14 +3012,21 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
             const bool is_resized = (table->ResizedColumn == column_n) && (table->InstanceInteracted == table->InstanceCurrent);
             const bool is_resizable = (column->Flags & (ImGuiTableColumnFlags_NoResize | ImGuiTableColumnFlags_NoDirectResize_)) == 0;
             const bool is_frozen_separator = (table->FreezeColumnsCount == order_n + 1);
-            if (column->MaxX > table->InnerClipRect.Max.x && !is_resized)
+
+            // FIXME-TABLE: 1-off display hack for right-most column when resizable (!Scroll && Resizable && (NoHostExtendX || RightMostIsFixed)).
+            // Fixing actual width would involve altering width_avail in layout and TableCalcMaxColumnWidth(), which would drop the property
+            // ColumnsGivenWidth == Outer Allocated Width. Worth reworking, but would only make sense if we accept that BorderSize affects layout.
+            float draw_x2 = column->MaxX;
+            if (draw_x2 >= table->InnerClipRect.Max.x && draw_x2 - 1.0f <= table->InnerClipRect.Max.x)
+                draw_x2 = table->InnerClipRect.Max.x;
+            if (draw_x2 >= table->InnerClipRect.Max.x && !is_resized && !is_hovered)
                 continue;
 
             // Decide whether right-most column is visible
             if (column->NextEnabledColumn == -1 && !is_resizable)
                 if ((table->Flags & ImGuiTableFlags_SizingMask_) != ImGuiTableFlags_SizingFixedSame || (table->Flags & ImGuiTableFlags_NoHostExtendX))
                     continue;
-            if (column->MaxX <= column->ClipRect.Min.x) // FIXME-TABLE FIXME-STYLE: Assume BorderSize==1, this is problematic if we want to increase the border size..
+            if (draw_x2 <= column->ClipRect.Min.x) // FIXME-TABLE FIXME-STYLE: Assume BorderSize==1, this is problematic if we want to increase the border size..
                 continue;
 
             // Draw in outer window so right-most column won't be clipped
@@ -3031,7 +3038,7 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
             else if ((table->Flags & (ImGuiTableFlags_NoBordersInBodyUntilResize | ImGuiTableFlags_NoBordersInBody)) == 0)
                 draw_y2 = draw_y2_body;
             if (draw_y2 > draw_y1)
-                inner_drawlist->AddLineV(column->MaxX, draw_y1, draw_y2, TableGetColumnBorderCol(table, order_n, column_n), border_size_inner);
+                inner_drawlist->AddLineV(draw_x2, draw_y1, draw_y2, TableGetColumnBorderCol(table, order_n, column_n), border_size_inner);
         }
     }
 
