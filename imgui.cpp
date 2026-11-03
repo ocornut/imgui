@@ -8449,6 +8449,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             window->Pos = FindBestWindowPosForPopup(window);
         else if ((flags & ImGuiWindowFlags_Tooltip) != 0 && !window_pos_set_by_api && !window_is_child_tooltip)
             window->Pos = FindBestWindowPosForPopup(window);
+        else if (window->SetWindowPosVal.x != FLT_MAX)
+            window->Pos = window->SetWindowPosVal - window->Size * window->SetWindowPosPivot;
 
         // Late create viewport if we don't fit within our current host viewport.
         if (window->ViewportAllowPlatformMonitorExtend >= 0 && !window->ViewportOwned && !(window->Viewport->Flags & ImGuiViewportFlags_IsMinimized))
