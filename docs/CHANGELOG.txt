@@ -102,6 +102,13 @@ Other Changes:
   Made the script detect the environment when needed (e.g. to specify library path).
 - Examples: added support for ARM64 in selected build_win.bat helpers. (#9593) [@Harishmcw]
 
+Docking+Viewports Branch:
+
+- Viewports:
+  - Fixed an issue where in some code paths, a newly created modal in its own
+    viewport would be created with `ImGuiViewportFlags_NoFocusOnAppearing`.
+    On some backends this would prevent the task bar icon from showing.
+
 
 -----------------------------------------------------------------------
  VERSION 1.93.0 (Released 2026-10-14)

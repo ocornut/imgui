@@ -1258,6 +1258,7 @@ static void ImGui_ImplWin32_ShowWindow(ImGuiViewport* viewport)
         ::ShowWindow(vd->Hwnd, SW_SHOW);
 
     // Restore
+    // FIXME: Note that setting parent also disable task bar icon, which is sort of unexpected and both params are picked separately.
     if (avoid_bringing_parent_to_front)
         ::SetWindowLongPtr(vd->Hwnd, GWLP_HWNDPARENT, (LONG_PTR)vd->HwndParent);
 }
