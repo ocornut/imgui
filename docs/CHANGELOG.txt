@@ -107,7 +107,11 @@ Docking+Viewports Branch:
 - Viewports:
   - Fixed an issue where in some code paths, a newly created modal in its own
     viewport would be created with `ImGuiViewportFlags_NoFocusOnAppearing`.
-    On some backends this would prevent the task bar icon from showing.
+- Backends:
+  - Win32: make windows appear with `::SetWindowPos()` w/ `SWP_NOOWNERZORDER` instead
+    of unparenting + `ShowWindow()`. Fixes missing taskbar icon for newly appearing
+    windows that are parented and use `ImGuiViewportFlags_NoFocusOnAppearing`. (#7354, #8669)
+
 
 
 -----------------------------------------------------------------------

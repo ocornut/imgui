@@ -23,6 +23,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2026-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2026-11-03: [Viewports] Make windows appear with ::SetWindowPos() w/ SWP_NOOWNERZORDER instead of unparenting + ShowWindow(). Fixes missing taskbar icon for newly appearing windows that are parented and use ImGuiViewportFlags_NoFocusOnAppearing. (#7354, #8669)
 //  2026-05-19: DPI: ImGui_ImplWin32_EnableDpiAwareness() helper uses SetProcessDpiAwarenessContext() instead of SetThreadDpiAwarenessContext(), fixes DPI scaling issues with e.g. OpenGL. (#9403)
 //  2026-03-31: [Viewports] Fixed setting/getting size when viewports have OS decorations (e.g. io.ConfigViewportsNoDecoration = false) and process is running in Per-Monitor V2 DPI mode. (#8897)
 //  2026-01-28: Inputs: Minor optimization not submitting gamepad input if packet number has not changed (reworked from 2025-09-23 attempt). (#9202, #8556)
@@ -1246,21 +1247,12 @@ static void ImGui_ImplWin32_ShowWindow(ImGuiViewport* viewport)
     ImGui_ImplWin32_ViewportData* vd = (ImGui_ImplWin32_ViewportData*)viewport->PlatformUserData;
     IM_ASSERT(vd->Hwnd != 0);
 
-    // ShowParent() even with SW_SHOWNA also brings parent to front, which is not always desirable,
-    // so we temporarily disable parenting. (#7354, #8669)
-    bool avoid_bringing_parent_to_front = vd->HwndParent != NULL && (viewport->Flags & (ImGuiViewportFlags_NoFocusOnAppearing | ImGuiViewportFlags_NoTaskBarIcon)) != 0;
-    if (avoid_bringing_parent_to_front)
-        ::SetWindowLongPtr(vd->Hwnd, GWLP_HWNDPARENT, (LONG_PTR)nullptr);
-
+    // ShowWindow() even with SW_SHOWNA also brings parent to front, which is not always desirable. We previously temporarily disabled parenting. (#7354, #8669)
+    // Using SetWindowPos() directly w/ SWP_NOOWNERZORDER seems to solve things better and prevent situation where task bar icon does not appear. (#9568)
     if (viewport->Flags & ImGuiViewportFlags_NoFocusOnAppearing)
-        ::ShowWindow(vd->Hwnd, SW_SHOWNA);
+        ::SetWindowPos(vd->Hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOOWNERZORDER | SWP_SHOWWINDOW | SWP_NOACTIVATE);
     else
-        ::ShowWindow(vd->Hwnd, SW_SHOW);
-
-    // Restore
-    // FIXME: Note that setting parent also disable task bar icon, which is sort of unexpected and both params are picked separately.
-    if (avoid_bringing_parent_to_front)
-        ::SetWindowLongPtr(vd->Hwnd, GWLP_HWNDPARENT, (LONG_PTR)vd->HwndParent);
+        ::SetWindowPos(vd->Hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOOWNERZORDER | SWP_SHOWWINDOW);
 }
 
 static void ImGui_ImplWin32_UpdateWindow(ImGuiViewport* viewport)
