@@ -72,6 +72,9 @@ Other Changes:
     shape and look of arrows. Made default arrow stroked. (#5233, #2431, #2235, #6730, #8243)
     Legacy arrow: size: (0.60f,0.70f), thickness: 0.0f
        New arrow: size: (0.72f,0.40f), thickness: 0.30f
+- Windows:
+  - Using `SetNextWindowPos()` with a pivot while a window is hidden and measuring
+    size will still apply temporary position until size is figured out. (#9568)
 - TreeNode:
   - TreeNodeGetOpen(): added flags parameter to allow passing `ImGuiTreeNodeFlags_DefaultOpen`
     or `ImGuiTreeNodeFlags_Leaf`. (#9569, #9592, #3823, #9251) [@adalisk-emikhaylov, @Yaki-Blake]

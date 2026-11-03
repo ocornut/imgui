@@ -3496,6 +3496,7 @@ struct IMGUI_API ImGuiTableTempData
     int                         TableIndex;                 // Index in g.Tables.Buf[] pool
     float                       LastTimeActive;             // Last timestamp this structure was used
     float                       AngledHeadersExtraWidth;    // Used in EndTable()
+    ImRect                      BorderOuterSizes;
     ImVector<ImGuiTableHeaderData> AngledHeadersRequests;   // Used in TableAngledHeadersRow() // FIXME: Single instance is enough?
 
     // Topology change
