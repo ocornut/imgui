@@ -28,6 +28,7 @@
 //  2026-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
 //  2026-11-09: Inputs: iOS: restore SDL_StartTextInput()/SDL_StopTextInput() in IME handler for on-screen keyboard support. (#7636, #9474, #9617)
 //  2026-11-05: [Docking] macOS: fixed stuck down keys/buttons when they were held while the focused viewport gets destroyed. (#9121, #7853)
+//  2026-11-04: [Docking] Create tooltip and popup viewports with SDL_WINDOW_TOOLTIP / SDL_WINDOW_POPUP_MENU so they do not steal focus and stack above always-on-top windows. Fall back to an always-on-top window when creation fails (sdl2-compat). (#7950)
 //  2026-08-06: Fixed querying framebuffer scale when using Metal. (#5592)
 //  2026-07-15: Inputs: Android: restore SDL_StartTextInput()/SDL_StopTextInput() in IME handler for on-screen keyboard support. (#7636, #9474)
 //  2026-04-16: Made ImGui_ImplSDL2_GetContentScaleForWindow(), ImGui_ImplSDL2_GetContentScaleForDisplay() helpers return a minimum of 1.0f, as some Linux setup seems to report <1.0f value and this breaks scaling border size. (#9369)
@@ -1158,7 +1159,32 @@ static void ImGui_ImplSDL2_CreateWindow(ImGuiViewport* viewport)
 #if SDL_HAS_ALWAYS_ON_TOP
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_TopMost) ? SDL_WINDOW_ALWAYS_ON_TOP : 0;
 #endif
+
+    // Viewports for short-lived floating windows (tooltips, popups, menus) carry _NoTaskBarIcon + _NoDecoration
+    // + _NoFocusOnAppearing + _NoFocusOnClick, and among those only tooltips also carry _TopMost + _NoInputs
+    // (see ImGui::WindowSelectViewport()). Create them with the corresponding SDL window type:
+    // SDL_WINDOW_TOOLTIP windows never receive input focus, and SDL_WINDOW_POPUP_MENU windows stack above
+    // SDL_WINDOW_ALWAYS_ON_TOP windows.
+    if ((viewport->Flags & ImGuiViewportFlags_NoFocusOnClick) && (viewport->Flags & ImGuiViewportFlags_NoFocusOnAppearing)
+        && (viewport->Flags & ImGuiViewportFlags_NoDecoration) && (viewport->Flags & ImGuiViewportFlags_NoTaskBarIcon))
+    {
+        if ((viewport->Flags & ImGuiViewportFlags_NoInputs) && (viewport->Flags & ImGuiViewportFlags_TopMost))
+            sdl_flags |= SDL_WINDOW_TOOLTIP;
+        else
+            sdl_flags |= SDL_WINDOW_POPUP_MENU;
+    }
+
     vd->Window = SDL_CreateWindow("No Title Yet", (int)viewport->Pos.x, (int)viewport->Pos.y, (int)viewport->Size.x, (int)viewport->Size.y, sdl_flags);
+    if (vd->Window == nullptr && (sdl_flags & (SDL_WINDOW_TOOLTIP | SDL_WINDOW_POPUP_MENU)))
+    {
+        // sdl2-compat maps tooltip/popup-menu windows onto SDL3 popups, which require a parent window
+        // and therefore fail in SDL_CreateWindow(); approximate with an always-on-top window.
+        sdl_flags &= ~(SDL_WINDOW_TOOLTIP | SDL_WINDOW_POPUP_MENU);
+#if SDL_HAS_ALWAYS_ON_TOP
+        sdl_flags |= SDL_WINDOW_ALWAYS_ON_TOP;
+#endif
+        vd->Window = SDL_CreateWindow("No Title Yet", (int)viewport->Pos.x, (int)viewport->Pos.y, (int)viewport->Size.x, (int)viewport->Size.y, sdl_flags);
+    }
     vd->WindowID = SDL_GetWindowID(vd->Window);
     vd->WindowOwned = true;
     if (use_opengl)
