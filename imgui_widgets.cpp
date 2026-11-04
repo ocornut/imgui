@@ -2649,11 +2649,28 @@ bool ImGui::DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed, const
     {
         if (is_wrapped)
         {
-            // Wrap values
-            if (v_cur < v_min)
-                v_cur += v_max - v_min + (is_floating_point ? 0 : 1);
-            if (v_cur > v_max)
-                v_cur -= v_max - v_min + (is_floating_point ? 0 : 1);
+            if (!is_floating_point && sizeof(TYPE) <= 4)
+            {
+                // Handle multiple wraps using wider arithmetic.
+                const ImS64 min_value = (ImS64)v_min;
+                const ImS64 max_value = (ImS64)v_max;
+                const ImS64 range = max_value - min_value + 1;
+            
+                ImS64 offset = ((ImS64)v_cur - min_value) % range;
+                if (offset < 0)
+                    offset += range;
+            
+                v_cur = (TYPE)(min_value + offset);
+            }
+            else
+            {
+                // Preserve original behavior for floating-point
+                // and 64-bit integer types.
+                if (v_cur < v_min)
+                    v_cur += v_max - v_min + (is_floating_point ? 0 : 1);
+                if (v_cur > v_max)
+                    v_cur -= v_max - v_min + (is_floating_point ? 0 : 1);
+            }
         }
         else
         {
