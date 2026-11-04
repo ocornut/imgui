@@ -117,7 +117,6 @@
 
 #if TARGET_OS_OSX
     ImGui_ImplOSX_Init(self.view);
-    [NSApp activateIgnoringOtherApps:YES];
 #endif
 }
 
@@ -301,6 +300,8 @@
     [appMenuItem setSubmenu:appMenu];
     [mainMenuBar addItem:appMenuItem];
     [NSApp setMainMenu:mainMenuBar];
+
+    [NSApp activateIgnoringOtherApps:YES];
 }
 
 -(BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)sender
@@ -365,7 +366,6 @@ int main(int, const char**)
         AppDelegate *appDelegate = [[AppDelegate alloc] init];   // creates window
         [NSApp setDelegate:appDelegate];
 
-        [NSApp activateIgnoringOtherApps:YES];
         [NSApp run];
     }
     return 0;
