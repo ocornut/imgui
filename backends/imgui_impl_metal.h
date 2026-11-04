@@ -45,6 +45,9 @@ IMGUI_IMPL_API void ImGui_ImplMetal_UpdateTexture(ImTextureData* tex);
 
 #endif
 
+// (Optional) Multi-viewport: enable vsync (CAMetalLayer.displaySyncEnabled) on secondary viewport windows. Default: disabled. macOS only.
+IMGUI_IMPL_API void ImGui_ImplMetal_SetDisplaySyncEnabled(bool enabled);
+
 //-----------------------------------------------------------------------------
 // C++ API
 //-----------------------------------------------------------------------------
