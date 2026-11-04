@@ -96,6 +96,10 @@ Other Changes:
 - Multi-Select:
   - Fixed `ImGuiSelectionBasicStorage::GetNextSelectedItem()` reading one past the
     end of storage when trailing items are unselected (#9604) [@MilosLord]
+- Text: added `ImDrawListSharedData::TextHook` (internal), called by `ImDrawList::AddText()`
+  with the font, position, clip rectangle and string of every text run before its glyphs
+  are emitted, and `ImGuiItemFlags_NoTextSelect` to let such a hook skip items. Enables
+  text selection/copy of any displayed text without changes to widget code.
 - ImVec2: added a check for cases where a custom `IM_VEC2_CLASS_EXTRA` macro
   adds an extra `operator=` to ImVec2. This isn't supported but should not
   be needed as you should have a constructor to convert from your type to ImVec2.
