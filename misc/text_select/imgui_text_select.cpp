@@ -96,6 +96,8 @@ struct ImGuiTextSelectState
     bool            ProbeGlyphHit = false;      // The mouse is over a selectable glyph
     ImGuiID         ProbeGlyphItemId = 0;       // Last item when that glyph was drawn, e.g. the Selectable owning its label
     bool            ProbeGlyphStealable = false;  // That glyph belongs to a TreeNode or row-spanning Selectable: a drag on it may select
+    bool            ProbeUnitHit = false;       // The mouse is over a TextSelectAddText() unit: a point in it snaps to its nearest edge
+    float           ProbeUnitX0 = 0.0f, ProbeUnitX1 = 0.0f;
 
     // A click on a stealable widget's text: a drag past the threshold turns it into a selection, unless the widget used the drag
     bool            StealPending = false;
@@ -906,7 +908,7 @@ static void TextSelectNewFrame(ImGuiContext* ctx, ImGuiContextHook* hook)
     st->ProbeWindow = container != NULL ? container->Window : g.HoveredWindow;
     st->ProbePos = container != NULL ? TextSelectClampToContainer(*container, io.MousePos) : io.MousePos;
     st->Probe = st->Enabled && st->ProbeWindow != NULL && (st->ClickPending || st->Dragging || st->StealPending);
-    st->ProbeLineFound = st->ProbeWordFound = st->ProbeLineExtentFound = st->ProbeGlyphHit = st->ProbeGlyphStealable = false;
+    st->ProbeLineFound = st->ProbeWordFound = st->ProbeLineExtentFound = st->ProbeGlyphHit = st->ProbeGlyphStealable = st->ProbeUnitHit = false;
     st->ProbeTextDistEm = FLT_MAX;
     st->ProbeGlyphItemId = 0;
 
@@ -958,6 +960,10 @@ static ImGuiTextSelectRange TextSelectRangeAtMouse(const ImGuiTextSelectState* s
     {
         x0 = st->ProbeWordX0;
         x1 = st->ProbeWordX1;
+    }
+    else if (st->ProbeUnitHit && window == st->ProbeWindow)
+    {
+        x0 = x1 = (mouse.x - st->ProbeUnitX0 < st->ProbeUnitX1 - mouse.x) ? st->ProbeUnitX0 : st->ProbeUnitX1;
     }
     r.Begin = TextSelectScreenToLocal(window, ImVec2(x0, y), menu_bar);
     r.End = TextSelectScreenToLocal(window, ImVec2(x1, y), menu_bar);
@@ -1301,6 +1307,9 @@ static void TextSelectProbeUnit(ImGuiTextSelectState* st, ImGuiWindow* window, c
         st->ProbeGlyphHit = true;
         st->ProbeGlyphItemId = g.LastItemData.ID;
         st->ProbeGlyphStealable = false;
+        st->ProbeUnitHit = true;
+        st->ProbeUnitX0 = p_min.x;
+        st->ProbeUnitX1 = p_max.x;
         st->ProbeLineY0 = p_min.y;
         st->ProbeLineY1 = p_max.y;
     }
