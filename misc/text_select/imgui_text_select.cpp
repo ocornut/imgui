@@ -55,6 +55,8 @@ struct ImGuiTextSelectState
     bool            Enabled = true;
     ImGuiTextSelectCopyFeedbackCallback CopyFeedback = NULL;
     void*           CopyFeedbackUserData = NULL;
+    ImGuiKeyChord   SelectAllChords[2] = { ImGuiMod_Ctrl | ImGuiKey_A, 0 };
+    ImGuiKeyChord   CopyChords[2] = { ImGuiMod_Ctrl | ImGuiKey_C, ImGuiMod_Ctrl | ImGuiKey_Insert };
     double          FlashStartTime = -1.0;  // Built-in copy feedback: the highlight turns opaque and fades back
     bool            Delimiters[128] = {};
 
@@ -855,6 +857,39 @@ static const ImGuiTextSelectRange* TextSelectExtendContainer(ImGuiTextSelectStat
     return (st->Dragging && has_anchor) ? &st->Anchor : NULL;
 }
 
+// Selects all of the anchor's container; when a previous call already did, widens it first: a table to its window, a
+// child window to its parent. A drag is clamped to its container, so only this leaves the anchor at -far_away.
+static void TextSelectSelectAllInContainer(ImGuiTextSelectState* st)
+{
+    const float far_away = 1e8f;
+    ImGuiTextSelectRange c = st->Anchor;
+    if (c.Begin.x == -far_away && st->Focus.End.x == far_away && !c.MenuBar)
+    {
+        if (c.TableId != 0)
+        {
+            c.TableId = 0;
+        }
+        else if (c.Window != c.Window->RootWindow && c.Window->ParentWindow != NULL)
+        {
+            c.Window = c.Window->ParentWindow;
+            c.WindowId = c.Window->ID;
+        }
+    }
+    c.Begin = c.End = ImVec2(-far_away, -far_away);
+    st->Anchor = c;
+    c.Begin = c.End = ImVec2(far_away, far_away);
+    st->Focus = c;
+    st->Block = false;
+}
+
+static ImGuiKey TextSelectChordPressed(const ImGuiKeyChord (&chords)[2])
+{
+    for (ImGuiKeyChord chord : chords)
+        if (chord != 0 && ImGui::IsKeyChordPressed(chord))
+            return (ImGuiKey)(chord & ~ImGuiMod_Mask_);
+    return ImGuiKey_None;
+}
+
 static void TextSelectNewFrame(ImGuiContext* ctx, ImGuiContextHook* hook)
 {
     ImGuiTextSelectState* st = (ImGuiTextSelectState*)hook->UserData;
@@ -912,6 +947,19 @@ static void TextSelectNewFrame(ImGuiContext* ctx, ImGuiContextHook* hook)
     st->ProbeTextDistEm = FLT_MAX;
     st->ProbeGlyphItemId = 0;
 
+    const ImGuiKey select_all_key = TextSelectChordPressed(st->SelectAllChords);
+    if (select_all_key != ImGuiKey_None && st->RootWindow != NULL && !io.WantTextInput)
+    {
+        const bool owns_window = (g.HoveredWindow != NULL && g.HoveredWindow->RootWindow == st->RootWindow) || (g.NavWindow != NULL && g.NavWindow->RootWindow == st->RootWindow);
+        if (owns_window)
+        {
+            TextSelectSelectAllInContainer(st);
+            TextSelectResolve(st);
+            // Nobody else acts on this select-all key press
+            ImGui::SetKeyOwner(select_all_key, ImGuiKeyOwner_Any, ImGuiInputFlags_LockThisFrame);
+        }
+    }
+
     if (st->CopyRequested)
     {
         st->CopyRequested = false;
@@ -922,7 +970,8 @@ static void TextSelectNewFrame(ImGuiContext* ctx, ImGuiContextHook* hook)
         }
     }
     st->RequestedCopyText.clear();
-    if (!(io.KeyCtrl || io.KeySuper) || !(ImGui::IsKeyPressed(ImGuiKey_C, false) || ImGui::IsKeyPressed(ImGuiKey_Insert, false)))
+    const ImGuiKey copy_key = TextSelectChordPressed(st->CopyChords);
+    if (copy_key == ImGuiKey_None)
         return;
     if (!st->Active)
     {
@@ -936,8 +985,7 @@ static void TextSelectNewFrame(ImGuiContext* ctx, ImGuiContextHook* hook)
     {
         TextSelectBeginCopy(st);
         // Nobody else acts on this copy key press
-        ImGui::SetKeyOwner(ImGuiKey_C, ImGuiKeyOwner_Any, ImGuiInputFlags_LockThisFrame);
-        ImGui::SetKeyOwner(ImGuiKey_Insert, ImGuiKeyOwner_Any, ImGuiInputFlags_LockThisFrame);
+        ImGui::SetKeyOwner(copy_key, ImGuiKeyOwner_Any, ImGuiInputFlags_LockThisFrame);
     }
 }
 
@@ -1223,6 +1271,24 @@ void ImGui::TextSelectSetCopyFeedbackCallback(ImGuiTextSelectCopyFeedbackCallbac
     {
         st->CopyFeedback = callback;
         st->CopyFeedbackUserData = user_data;
+    }
+}
+
+void ImGui::TextSelectSetCopyShortcut(ImGuiKeyChord key_chord, ImGuiKeyChord alt_key_chord)
+{
+    if (ImGuiTextSelectState* st = TextSelectGetState())
+    {
+        st->CopyChords[0] = key_chord;
+        st->CopyChords[1] = alt_key_chord;
+    }
+}
+
+void ImGui::TextSelectSetSelectAllShortcut(ImGuiKeyChord key_chord, ImGuiKeyChord alt_key_chord)
+{
+    if (ImGuiTextSelectState* st = TextSelectGetState())
+    {
+        st->SelectAllChords[0] = key_chord;
+        st->SelectAllChords[1] = alt_key_chord;
     }
 }
 

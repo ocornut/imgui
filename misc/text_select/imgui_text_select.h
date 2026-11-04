@@ -13,10 +13,13 @@
 //   the first and last selected glyphs. Child windows inside the container take part only when they overlap the
 //   rectangle spanned by the two ends (selecting in one of two side-by-side children leaves the other out).
 // - A word is a run of word characters, or a run of delimiter characters (see TextSelectSetWordDelimiters()).
-// - Ctrl+C (Cmd+C on macOS) or Ctrl+Insert copies the selection in reading order: lines from top to bottom,
+// - Ctrl+C (Cmd+C on macOS) or Ctrl+Insert (see TextSelectSetCopyShortcut()) copies the selection in reading order: lines from top to bottom,
 //   fragments on a line from left to right, wide gaps (e.g. table columns) as tabs, soft-wrapped lines joined by a space
 //   (or as given to TextSelectMarkSoftWrap()). The container's rows and columns scrolled out of view are submitted for
 //   that one frame (through ImGuiListClipper and tables' box-select unclip support) and copied; hidden columns are not.
+// - Ctrl+A (Cmd+A on macOS), with a caret or selection in the hovered or focused window, selects everything in its
+//   container; each further press widens it: a table to its window, a child window to its parent, up to the root.
+//   TextSelectSetSelectAllShortcut() changes or disables the key.
 // - Escape, or a click on a widget other than the container's scrollbars, clears the selection.
 // - When io.ConfigWindowsMoveFromTitleBarOnly is off, a click on background farther than the width of an 'M' (in the
 //   text's font) from any text on its line clears the selection and a drag there moves the window; closer, it selects.
@@ -58,6 +61,11 @@ namespace ImGui
     void        TextSelectSetCopyFeedbackCallback(ImGuiTextSelectCopyFeedbackCallback callback, void* user_data);
     // ASCII characters that end a word, besides blanks. Other characters, including all non-ASCII, are word characters.
     void        TextSelectSetWordDelimiters(const char* delimiters);
+    // Default ImGuiMod_Ctrl | ImGuiKey_A (Cmd+A on macOS with io.ConfigMacOSXBehaviors). Either chord selects; 0 disables
+    // it, e.g. (ImGuiMod_Ctrl | ImGuiKey_A, ImGuiMod_Super | ImGuiKey_A) also accepts the other modifier.
+    // Default ImGuiMod_Ctrl | ImGuiKey_C and ImGuiMod_Ctrl | ImGuiKey_Insert. Either chord copies; 0 disables it.
+    void        TextSelectSetCopyShortcut(ImGuiKeyChord key_chord, ImGuiKeyChord alt_key_chord = 0);
+    void        TextSelectSetSelectAllShortcut(ImGuiKeyChord key_chord, ImGuiKeyChord alt_key_chord = 0);
 
     // Text drawn in between is ignored (as ImGuiItemFlags_NoTextSelect), and clicks on that stretch of the current
     // window, from the cursor at Push to the cursor at Pop, do not set the anchor.
@@ -75,7 +83,7 @@ namespace ImGui
     // The next text drawn in the current window continues the previous line (a soft wrap done by the caller):
     // copies join the two with join (a static string, "" for a word cut in two) instead of a newline.
     void        TextSelectMarkSoftWrap(const char* join = " ");
-    // Selects everything in the current window and its child windows (e.g. on Ctrl+A in a text view).
+    // Selects everything in the current window and its child windows, e.g. from a "Select all" menu item.
     void        TextSelectSelectAll();
     // Selects the text inside a rectangle of the current window and copies it on the next frame, with the usual copy
     // feedback, e.g. from a click handler. copy_text, when given, is what reaches the clipboard instead.

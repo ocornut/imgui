@@ -102,6 +102,9 @@ Other Changes:
   text selection/copy of any displayed text without changes to widget code.
 - Misc: added misc/text_select/ extension using the hook above: mouse selection
   (click/drag, word, line, block), highlight, and Ctrl+C/Cmd+C copy of any drawn text.
+  Ctrl+A/Cmd+A selects the selection's container, widening on each press (table ->
+  window -> parent window). Keys are configurable with `TextSelectSetCopyShortcut()`
+  and `TextSelectSetSelectAllShortcut()`.
 - ImVec2: added a check for cases where a custom `IM_VEC2_CLASS_EXTRA` macro
   adds an extra `operator=` to ImVec2. This isn't supported but should not
   be needed as you should have a constructor to convert from your type to ImVec2.
