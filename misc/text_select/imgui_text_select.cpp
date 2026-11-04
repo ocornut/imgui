@@ -75,7 +75,7 @@ struct ImGuiTextSelectState
     bool            Active = false;     // Non-empty selection
     bool            WantCaret = false;  // Anchor without a selection, in the focused root window
     bool            Copying = false;
-    bool            ItemUnclipByLogBackup = false;
+    bool            OwnsLog = false;            // The copy frame started imgui's logging (LogToBuffer()) and finishes it
     bool            BoxSelectUnclip = false;
     ImGuiBoxSelectState BoxSelectBackup;
     bool            ClickPending = false;
@@ -814,8 +814,11 @@ static void TextSelectBeginCopy(ImGuiTextSelectState* st)
     st->Copying = true;
     st->Fragments.resize(0);
     st->FragmentText.clear();
-    st->ItemUnclipByLogBackup = g.ItemUnclipByLog;
-    g.ItemUnclipByLog = true;
+    // Log mode unclips items like g.ItemUnclipByLog alone, but also keeps off-screen child windows (e.g. scrolling
+    // tables) from hiding, which a table laid out in a hidden child asserts on. Depth 0: no tree node auto-opens.
+    st->OwnsLog = !g.LogEnabled;
+    if (st->OwnsLog)
+        ImGui::LogToBuffer(0);
     ImGuiBoxSelectState* bs = &g.BoxSelectState;
     st->BoxSelectUnclip = !bs->IsActive && !bs->IsStarting && !st->Anchor.MenuBar;
     if (!st->BoxSelectUnclip)
@@ -835,7 +838,9 @@ static void TextSelectEndCopy(ImGuiTextSelectState* st)
 {
     ImGuiContext& g = *st->Ctx;
     st->Copying = false;
-    g.ItemUnclipByLog = st->ItemUnclipByLogBackup;
+    if (st->OwnsLog)
+        ImGui::LogFinish();
+    st->OwnsLog = false;
     if (st->BoxSelectUnclip)
         g.BoxSelectState = st->BoxSelectBackup;
     st->BoxSelectUnclip = false;
