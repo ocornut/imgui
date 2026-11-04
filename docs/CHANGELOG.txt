@@ -114,6 +114,10 @@ Docking+Viewports Branch:
   - Win32: make windows appear with `::SetWindowPos()` w/ `SWP_NOOWNERZORDER` instead
     of unparenting + `ShowWindow()`. Fixes missing taskbar icon for newly appearing
     windows that are parented and use `ImGuiViewportFlags_NoFocusOnAppearing`. (#7354, #8669)
+  - Metal: present secondary viewport windows without vsync by default, matching other
+    backends. Multiple vsynced viewports would serialize their presents and drop the frame
+    rate toward refresh rate / N. Added `ImGui_ImplMetal_SetDisplaySyncEnabled()` to enable
+    it, e.g. for apps that hide the main viewport and rely on vsync for pacing. (#9501)
 
 
 

@@ -18,6 +18,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2026-XX-XX: Metal: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2026-11-04: [Docking] Present secondary viewport windows without vsync by default, matching other backends. Added ImGui_ImplMetal_SetDisplaySyncEnabled() to enable it. (#9501)
 //  2026-10-06: Added support for render passes with multiple color attachments: we render to the first one and leave the others untouched. (#9574)
 //  2026-09-07: Round framebuffer dimensions to the nearest integer instead of truncating them. (#9538, 9515, #8628)
 //  2026-08-06: Metal: fixed resizing windows losing framebuffer scale. (#6828, #8856)
@@ -106,6 +107,7 @@ struct ImGui_ImplMetal_Data
 {
     MetalContext*               SharedMetalContext;
     id<MTLRenderCommandEncoder> RenderCommandEncoder;
+    bool                        DisplaySyncEnabled;
 
     ImGui_ImplMetal_Data()      { memset((void*)this, 0, sizeof(*this)); }
 };
@@ -502,6 +504,13 @@ struct ImGuiViewportDataMetal
     bool                        FirstFrame = true;
 };
 
+void ImGui_ImplMetal_SetDisplaySyncEnabled(bool enabled)
+{
+    ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
+    IM_ASSERT(bd != nullptr && "Context or backend not initialized! Did you call ImGui_ImplMetal_Init()?");
+    bd->DisplaySyncEnabled = enabled;
+}
+
 static void ImGui_ImplMetal_CreateWindow(ImGuiViewport* viewport)
 {
     ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
@@ -562,6 +571,8 @@ static void ImGui_ImplMetal_RenderWindow(ImGuiViewport* viewport, void*)
     ImGuiViewportDataMetal* data = (ImGuiViewportDataMetal*)viewport->RendererUserData;
 
 #if TARGET_OS_OSX
+    ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
+    data->MetalLayer.displaySyncEnabled = bd->DisplaySyncEnabled; // Present without vsync by default
     void* handle = viewport->PlatformHandleRaw ? viewport->PlatformHandleRaw : viewport->PlatformHandle;
     NSWindow* window = (__bridge NSWindow*)handle;
 
