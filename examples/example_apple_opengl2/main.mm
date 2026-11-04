@@ -191,19 +191,14 @@
 -(void)setupMenu
 {
     NSMenu* mainMenuBar = [[NSMenu alloc] init];
-    NSMenu* appMenu;
-    NSMenuItem* menuItem;
+    NSMenu* appMenu = [[NSMenu alloc] initWithTitle:@"Dear ImGui OSX+OpenGL2 Example"];
+    NSMenuItem* quitMenuItem = [appMenu addItemWithTitle:@"Quit" action:@selector(terminate:) keyEquivalent:@"q"];
+    [quitMenuItem setTarget:NSApp];
+    [quitMenuItem setKeyEquivalentModifierMask:NSEventModifierFlagCommand];
 
-    appMenu = [[NSMenu alloc] initWithTitle:@"Dear ImGui OSX+OpenGL2 Example"];
-    menuItem = [appMenu addItemWithTitle:@"Quit Dear ImGui OSX+OpenGL2 Example" action:@selector(terminate:) keyEquivalent:@"q"];
-    [menuItem setKeyEquivalentModifierMask:NSEventModifierFlagCommand];
-
-    menuItem = [[NSMenuItem alloc] init];
-    [menuItem setSubmenu:appMenu];
-
-    [mainMenuBar addItem:menuItem];
-
-    appMenu = nil;
+    NSMenuItem* appMenuItem = [[NSMenuItem alloc] init];
+    [appMenuItem setSubmenu:appMenu];
+    [mainMenuBar addItem:appMenuItem];
     [NSApp setMainMenu:mainMenuBar];
 }
 
