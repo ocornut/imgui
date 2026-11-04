@@ -114,6 +114,10 @@ Docking+Viewports Branch:
   - Win32: make windows appear with `::SetWindowPos()` w/ `SWP_NOOWNERZORDER` instead
     of unparenting + `ShowWindow()`. Fixes missing taskbar icon for newly appearing
     windows that are parented and use `ImGuiViewportFlags_NoFocusOnAppearing`. (#7354, #8669)
+  - SDL2: create tooltip and popup/menu viewports with `SDL_WINDOW_TOOLTIP` and
+    `SDL_WINDOW_POPUP_MENU`, so they no longer take focus from the parent window and
+    stack above `SDL_WINDOW_ALWAYS_ON_TOP` windows. Falls back to an always-on-top
+    window when creation fails (sdl2-compat requires a parent for those). (#7950)
 
 
 
