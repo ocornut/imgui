@@ -61,10 +61,12 @@ namespace ImGui
     void        TextSelectSetCopyFeedbackCallback(ImGuiTextSelectCopyFeedbackCallback callback, void* user_data);
     // ASCII characters that end a word, besides blanks. Other characters, including all non-ASCII, are word characters.
     void        TextSelectSetWordDelimiters(const char* delimiters);
+    // Default ImGuiMod_Ctrl | ImGuiKey_C and ImGuiMod_Ctrl | ImGuiKey_Insert. Any chord copies; 0 disables it. With
+    // io.ConfigMacOSXBehaviors ImGuiMod_Ctrl is Cmd and ImGuiMod_Super is Ctrl, so the Ctrl+Insert key is
+    // ImGuiMod_Super | ImGuiKey_Insert there.
+    void        TextSelectSetCopyShortcut(ImGuiKeyChord key_chord, ImGuiKeyChord alt_key_chord = 0, ImGuiKeyChord alt_key_chord2 = 0);
     // Default ImGuiMod_Ctrl | ImGuiKey_A (Cmd+A on macOS with io.ConfigMacOSXBehaviors). Either chord selects; 0 disables
     // it, e.g. (ImGuiMod_Ctrl | ImGuiKey_A, ImGuiMod_Super | ImGuiKey_A) also accepts the other modifier.
-    // Default ImGuiMod_Ctrl | ImGuiKey_C and ImGuiMod_Ctrl | ImGuiKey_Insert. Either chord copies; 0 disables it.
-    void        TextSelectSetCopyShortcut(ImGuiKeyChord key_chord, ImGuiKeyChord alt_key_chord = 0);
     void        TextSelectSetSelectAllShortcut(ImGuiKeyChord key_chord, ImGuiKeyChord alt_key_chord = 0);
 
     // Text drawn in between is ignored (as ImGuiItemFlags_NoTextSelect), and clicks on that stretch of the current

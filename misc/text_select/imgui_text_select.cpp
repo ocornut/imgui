@@ -56,7 +56,7 @@ struct ImGuiTextSelectState
     ImGuiTextSelectCopyFeedbackCallback CopyFeedback = NULL;
     void*           CopyFeedbackUserData = NULL;
     ImGuiKeyChord   SelectAllChords[2] = { ImGuiMod_Ctrl | ImGuiKey_A, 0 };
-    ImGuiKeyChord   CopyChords[2] = { ImGuiMod_Ctrl | ImGuiKey_C, ImGuiMod_Ctrl | ImGuiKey_Insert };
+    ImGuiKeyChord   CopyChords[3] = { ImGuiMod_Ctrl | ImGuiKey_C, ImGuiMod_Ctrl | ImGuiKey_Insert, 0 };
     double          FlashStartTime = -1.0;  // Built-in copy feedback: the highlight turns opaque and fades back
     bool            Delimiters[128] = {};
 
@@ -887,7 +887,8 @@ static void TextSelectSelectAllInContainer(ImGuiTextSelectState* st)
     st->Block = false;
 }
 
-static ImGuiKey TextSelectChordPressed(const ImGuiKeyChord (&chords)[2])
+template<int N>
+static ImGuiKey TextSelectChordPressed(const ImGuiKeyChord (&chords)[N])
 {
     for (ImGuiKeyChord chord : chords)
         if (chord != 0 && ImGui::IsKeyChordPressed(chord))
@@ -1279,12 +1280,13 @@ void ImGui::TextSelectSetCopyFeedbackCallback(ImGuiTextSelectCopyFeedbackCallbac
     }
 }
 
-void ImGui::TextSelectSetCopyShortcut(ImGuiKeyChord key_chord, ImGuiKeyChord alt_key_chord)
+void ImGui::TextSelectSetCopyShortcut(ImGuiKeyChord key_chord, ImGuiKeyChord alt_key_chord, ImGuiKeyChord alt_key_chord2)
 {
     if (ImGuiTextSelectState* st = TextSelectGetState())
     {
         st->CopyChords[0] = key_chord;
         st->CopyChords[1] = alt_key_chord;
+        st->CopyChords[2] = alt_key_chord2;
     }
 }
 
