@@ -16,6 +16,10 @@ misc/freetype/
   Font atlas builder/rasterizer using FreeType instead of stb_truetype.
   Benefit from better FreeType rasterization, in particular for small fonts.
 
+misc/text_select/
+  Text selection extension: select and copy any text Dear ImGui draws, by screen position,
+  without changes to widget code. Relies on ImDrawListSharedData::TextHook.
+
 misc/single_file/
   Single-file header stub.
   We use this to validate compiling all *.cpp files in a same compilation unit.
