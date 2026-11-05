@@ -21,6 +21,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-11-05: [Docking] Present secondary viewport windows without vsync by default, matching other backends. Added ImGui_ImplMetal_SetDisplaySyncEnabled(). (#9501, #9608)
 //  2026-10-06: Added support for render passes with multiple color attachments: we render to the first one and leave the others untouched. (#9574)
 //  2026-09-07: Round framebuffer dimensions to the nearest integer instead of truncating them. (#9538, 9515, #8628)
 //  2026-08-06: Metal 4: fixed resizing windows losing framebuffer scale. (#6828, #8856)
@@ -109,8 +110,9 @@ struct ImGui_ImplMetal4_Data
 {
     MetalContext*                SharedMetalContext;
     id<MTL4RenderCommandEncoder> RenderCommandEncoder;
+    bool                         DisplaySyncEnabled;
 
-    ImGui_ImplMetal4_Data()       { memset((void*)this, 0, sizeof(*this)); }
+    ImGui_ImplMetal4_Data()      { memset((void*)this, 0, sizeof(*this)); }
 };
 
 static ImGui_ImplMetal4_Data*    ImGui_ImplMetal4_GetBackendData()    { return ImGui::GetCurrentContext() ? (ImGui_ImplMetal4_Data*)ImGui::GetIO().BackendRendererUserData : nullptr; }
@@ -825,6 +827,13 @@ struct ImGuiViewportDataMetal
     bool                        FirstFrame = true;
 };
 
+void ImGui_ImplMetal4_SetDisplaySyncEnabled(bool enabled)
+{
+    ImGui_ImplMetal4_Data* bd = ImGui_ImplMetal4_GetBackendData();
+    IM_ASSERT(bd != nullptr && "Context or backend not initialized! Did you call ImGui_ImplMetal4_Init()?");
+    bd->DisplaySyncEnabled = enabled;
+}
+
 static void ImGui_ImplMetal_CreateWindow(ImGuiViewport* viewport)
 {
     ImGui_ImplMetal4_Data* bd = ImGui_ImplMetal4_GetBackendData();
@@ -874,9 +883,12 @@ static void ImGui_ImplMetal_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 
 static void ImGui_ImplMetal_RenderWindow(ImGuiViewport* viewport, void*)
 {
+    ImGui_ImplMetal4_Data* bd = ImGui_ImplMetal4_GetBackendData();
     ImGuiViewportDataMetal* data = (ImGuiViewportDataMetal*)viewport->RendererUserData;
 
 #if TARGET_OS_OSX
+    data->MetalLayer.displaySyncEnabled = bd->DisplaySyncEnabled; // Present without vsync by default
+    
     void* handle = viewport->PlatformHandleRaw ? viewport->PlatformHandleRaw : viewport->PlatformHandle;
     NSWindow* window = (__bridge NSWindow*)handle;
 
@@ -907,7 +919,6 @@ static void ImGui_ImplMetal_RenderWindow(ImGuiViewport* viewport, void*)
     if ((viewport->Flags & ImGuiViewportFlags_NoRendererClear) == 0)
         renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionClear;
 
-    ImGui_ImplMetal4_Data* bd = ImGui_ImplMetal4_GetBackendData();
     id <MTL4CommandBuffer> commandBuffer = [bd->SharedMetalContext.device newCommandBuffer];
     [commandBuffer beginCommandBufferWithAllocator:bd->SharedMetalContext.commandAllocators[bd->SharedMetalContext.currentFrameSlot]];
 

@@ -568,11 +568,12 @@ static void ImGui_ImplMetal_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 
 static void ImGui_ImplMetal_RenderWindow(ImGuiViewport* viewport, void*)
 {
+    ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
     ImGuiViewportDataMetal* data = (ImGuiViewportDataMetal*)viewport->RendererUserData;
 
 #if TARGET_OS_OSX
-    ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
     data->MetalLayer.displaySyncEnabled = bd->DisplaySyncEnabled; // Present without vsync by default
+
     void* handle = viewport->PlatformHandleRaw ? viewport->PlatformHandleRaw : viewport->PlatformHandle;
     NSWindow* window = (__bridge NSWindow*)handle;
 
@@ -591,6 +592,8 @@ static void ImGui_ImplMetal_RenderWindow(ImGuiViewport* viewport, void*)
     CGSize want_size = MakeScaledSize(window.contentView.bounds.size, fb_scale);
     if (!CGSizeEqualToSize(data->MetalLayer.drawableSize, want_size))
         data->MetalLayer.drawableSize = want_size;
+#else
+    IM_UNUSED(bd);
 #endif
 
     id <CAMetalDrawable> drawable = [data->MetalLayer nextDrawable];
