@@ -66,6 +66,8 @@ Autumn cleanup of stuff marked obsolete more than two years ago:
 
 Other Changes:
 
+- Tables: added a context-menu option to reset column sizing to the values passed to `TableSetupColumn()`.
+  Renamed "Size all columns to default" to "Size all columns to fit" to clarify that it performs content fitting.
 - Style:
   - `StyleColorsDark()`: tweaked WindowBg to be darker than in 1.93.0.
   - Added `style.SymbolArrowSizeFactor`, `style.SymbolArrowThicknessFactor` to tweak the

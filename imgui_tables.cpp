@@ -720,6 +720,13 @@ void ImGui::TableApplyQueuedRequests(ImGuiTable* table)
         table->IsResetVisibilityRequest = false;
         table->IsSettingsDirty = true;
     }
+    if (table->IsResetSizingRequest)
+    {
+        for (ImGuiTableColumn& column : table->Columns)
+            TableInitColumnDefaults(table, &column, ImGuiTableFlags_Resizable);
+        table->IsResetSizingRequest = false;
+        table->IsSettingsDirty = true;
+    }
 }
 
 // Apply immediately. See TableQueueSetColumnDisplayOrder() for additional checks/constraints.
@@ -3722,8 +3729,8 @@ static bool MenuItemForColumnReorder(const char* label, bool selected, bool enab
 // Output context menu into current window (generally a popup)
 // FIXME-TABLE: Ideally this should be writable by the user. Full programmatic access to that data?
 // Sections to display are pulled from 'flags_for_section_to_display', which is typically == table->Flags.
-// - ImGuiTableFlags_Resizable   -> display Sizing menu items
-// - ImGuiTableFlags_Reorderable -> display "Reset Order"
+// - ImGuiTableFlags_Resizable   -> display Sizing menu items and "Reset column sizing"
+// - ImGuiTableFlags_Reorderable -> display "Reset order"
 ////- ImGuiTableFlags_Sortable   -> display sorting options (disabled)
 // - ImGuiTableFlags_Hideable    -> display columns visibility menu items
 // It means if you have a custom context menus you can call this section and omit some sections, and add your own.
@@ -3758,12 +3765,15 @@ void ImGui::TableDrawDefaultContextMenu(ImGuiTable* table, ImGuiTableFlags flags
         want_separator = true;
     }
 
-    // Reset Order/Visibility etc.
-    if (flags_for_section_to_display & (ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable))
+    // Reset sizing/order/visibility etc.
+    if (flags_for_section_to_display & (ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable))
         if (BeginMenu(LocalizeGetMsg(ImGuiLocKey_TableReset)))
         {
             //if (MenuItem(LocalizeGetMsg(ImGuiLocKey_TableResetAll))) // FIXME: Hiding because altering Sort Order + requesting auto-fit simultaneously has a tendency to exhibit a sizing glitch.
             //    table->IsResetAllRequest = true;
+            if (flags_for_section_to_display & ImGuiTableFlags_Resizable)
+                if (MenuItem(LocalizeGetMsg(ImGuiLocKey_TableResetSizing)))
+                    table->IsResetSizingRequest = true;
             if (flags_for_section_to_display & ImGuiTableFlags_Reorderable)
                 if (MenuItem(LocalizeGetMsg(ImGuiLocKey_TableResetOrder), NULL, false, !table->IsDefaultDisplayOrder)) // PS: cannot be hidden because it would mess with drag reordering.
                     table->IsResetDisplayOrderRequest = true;
