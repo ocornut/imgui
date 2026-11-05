@@ -6217,7 +6217,8 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
     g.NextItemData.ClearFlags();
 
     const float backup_alpha = g.Style.Alpha;
-    if (g.DisabledStackSize > 0)
+    const bool cancel_disabled_alpha = (g.CurrentItemFlags & ImGuiItemFlags_Disabled) != 0; // BeginDisabled(false) leaves DisabledAlphaBackup unset
+    if (cancel_disabled_alpha)
         g.Style.Alpha = g.DisabledAlphaBackup; // Cancel out effect of BeginDisabled() for color swatches.
 
     PushID(label);
@@ -6579,7 +6580,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
         g.ColorEditCurrentID = 0;
     PopID();
 
-    if (g.DisabledStackSize > 0)
+    if (cancel_disabled_alpha)
         g.Style.Alpha = backup_alpha;
 
     return value_changed;
@@ -6620,7 +6621,8 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
     const bool is_mixed = (g.LastItemData.ItemFlags & ImGuiItemFlags_MixedValue) != 0;
 
     const float backup_alpha = g.Style.Alpha;
-    if (g.DisabledStackSize > 0)
+    const bool cancel_disabled_alpha = (g.CurrentItemFlags & ImGuiItemFlags_Disabled) != 0; // BeginDisabled(false) leaves DisabledAlphaBackup unset
+    if (cancel_disabled_alpha)
         g.Style.Alpha = g.DisabledAlphaBackup; // Cancel out effect of BeginDisabled() for color swatches.
     if (is_mixed)
     {
@@ -6648,7 +6650,7 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
         else
             window->DrawList->AddRectFilled(bb.Min, bb.Max, GetColorU32(col_source), rounding);
     }
-    if (g.DisabledStackSize > 0)
+    if (cancel_disabled_alpha)
         g.Style.Alpha = backup_alpha;
     RenderNavCursor(bb, id);
     if ((flags & ImGuiColorEditFlags_NoBorder) == 0)
