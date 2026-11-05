@@ -24,6 +24,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2026-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2026-11-05: [Docking] macOS: fixed stuck down keys/buttons when they were held while the focused viewport gets destroyed. (#9121, #7853)
 //  2026-03-25: [Docking] Use SDL_HAS_EVENT_DISPLAY_USABLE_BOUNDS_CHANGED (SDL 3.4.0+) when available to avoid refreshing monitor work area every frame on Windows. (#8415)
 //  2026-03-09: [Docking] Fixed an issue dated 2025/04/09 (1.92 WIP) where a refactor+merge caused ImGuiBackendFlags_HasMouseHoveredViewport to never be set, causing foreign windows to be ignored when deciding of hovered viewport. (#9284)
 //  2026-02-13: Inputs: systems other than X11 are back to starting mouse capture on mouse down (reverts 2025-02-26 change). Only X11 requires waiting for a drag by default (not ideal, but a better default for X11 users). Added ImGui_ImplSDL3_SetMouseCaptureMode() for X11 debugger users. (#3650, #6410, #9235)
@@ -128,6 +129,7 @@ struct ImGui_ImplSDL3_Data
     bool                    IsWayland;
     bool                    IsVulkan;
     bool                    WantUpdateMonitors;
+    ImVector<SDL_WindowID>  LastFrameDestroyedWindowIDs;
 
     // IME handling
     SDL_Window*             ImeWindow;
@@ -437,7 +439,8 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
         case SDL_EVENT_MOUSE_BUTTON_DOWN:
         case SDL_EVENT_MOUSE_BUTTON_UP:
         {
-            if (ImGui_ImplSDL3_GetViewportForWindowID(event->button.windowID) == nullptr)
+            ImGuiViewport* viewport = ImGui_ImplSDL3_GetViewportForWindowID(event->button.windowID);
+            if (viewport == nullptr && bd->LastFrameDestroyedWindowIDs.contains(event->button.windowID) == false)
                 return false;
             int mouse_button = -1;
             if (event->button.button == SDL_BUTTON_LEFT) { mouse_button = 0; }
@@ -463,7 +466,7 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
         case SDL_EVENT_KEY_UP:
         {
             ImGuiViewport* viewport = ImGui_ImplSDL3_GetViewportForWindowID(event->key.windowID);
-            if (viewport == nullptr)
+            if (viewport == nullptr && bd->LastFrameDestroyedWindowIDs.contains(event->key.windowID) == false)
                 return false;
             //IMGUI_DEBUG_LOG("SDL_EVENT_KEY_%s : key=0x%08X ('%s'), scancode=%d ('%s'), mod=%X, windowID=%d, viewport=%08X\n",
             //    (event->type == SDL_EVENT_KEY_DOWN) ? "DOWN" : "UP  ", event->key.key, SDL_GetKeyName(event->key.key), event->key.scancode, SDL_GetScancodeName(event->key.scancode), event->key.mod, event->key.windowID, viewport ? viewport->ID : 0);
@@ -1040,6 +1043,8 @@ void ImGui_ImplSDL3_NewFrame()
 
     // Update game controllers (if enabled and available)
     ImGui_ImplSDL3_UpdateGamepads();
+
+    bd->LastFrameDestroyedWindowIDs.resize(0);
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -1101,6 +1106,7 @@ static void ImGui_ImplSDL3_CreateWindow(ImGuiViewport* viewport)
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoTaskBarIcon) ? SDL_WINDOW_UTILITY : 0;
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_TopMost) ? SDL_WINDOW_ALWAYS_ON_TOP : 0;
     vd->Window = SDL_CreateWindow("No Title Yet", (int)viewport->Size.x, (int)viewport->Size.y, sdl_flags);
+    vd->WindowID = SDL_GetWindowID(vd->Window);
 #ifndef __APPLE__ // On Mac, SDL3 Parenting appears to prevent viewport from appearing in another monitor
     SDL_SetWindowParent(vd->Window, vd->ParentWindow);
 #endif
@@ -1121,6 +1127,8 @@ static void ImGui_ImplSDL3_DestroyWindow(ImGuiViewport* viewport)
 {
     if (ImGui_ImplSDL3_ViewportData* vd = (ImGui_ImplSDL3_ViewportData*)viewport->PlatformUserData)
     {
+        ImGui_ImplSDL3_Data* bd = ImGui_ImplSDL3_GetBackendData();
+        bd->LastFrameDestroyedWindowIDs.push_back(vd->WindowID);
         if (vd->GLContext && vd->WindowOwned)
             SDL_GL_DestroyContext(vd->GLContext);
         if (vd->Window && vd->WindowOwned)

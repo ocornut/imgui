@@ -111,6 +111,8 @@ Docking+Viewports Branch:
   - Fixed an issue where in some code paths, a newly created modal in its own
     viewport would be created with `ImGuiViewportFlags_NoFocusOnAppearing`.
 - Backends:
+  - SDL2, SDL3: on macOS: fixed stuck down keys/buttons when they were held while thee
+    focused viewport gets destroyed (Regression on macOS in 1.91.1) (#9121, #7853)
   - Win32: make windows appear with `::SetWindowPos()` w/ `SWP_NOOWNERZORDER` instead
     of unparenting + `ShowWindow()`. Fixes missing taskbar icon for newly appearing
     windows that are parented and use `ImGuiViewportFlags_NoFocusOnAppearing`. (#7354, #8669)
