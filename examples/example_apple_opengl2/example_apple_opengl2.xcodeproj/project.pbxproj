@@ -17,6 +17,7 @@
 		4080A9B020B0347A0036BA46 /* imgui_impl_osx.mm in Sources */ = {isa = PBXBuildFile; fileRef = 4080A99F20B034280036BA46 /* imgui_impl_osx.mm */; };
 		4080A9B320B034E40036BA46 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4080A9B220B034E40036BA46 /* Cocoa.framework */; };
 		4080A9B520B034EA0036BA46 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4080A9B420B034EA0036BA46 /* OpenGL.framework */; };
+		5A1A0030257677FD0038A28D /* imgui_stacklayout.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5A1A002F257677FC0038A28D /* imgui_stacklayout.cpp */; };
 		50798230257677FD0038A28D /* imgui_tables.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5079822F257677FC0038A28D /* imgui_tables.cpp */; };
 /* End PBXBuildFile section */
 
@@ -49,6 +50,7 @@
 		4080A9AC20B0343C0036BA46 /* imconfig.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = imconfig.h; path = ../../imconfig.h; sourceTree = "<group>"; };
 		4080A9B220B034E40036BA46 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
 		4080A9B420B034EA0036BA46 /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
+		5A1A002F257677FC0038A28D /* imgui_stacklayout.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_stacklayout.cpp; path = ../../imgui_stacklayout.cpp; sourceTree = "<group>"; };
 		5079822F257677FC0038A28D /* imgui_tables.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_tables.cpp; path = ../../imgui_tables.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -69,6 +71,7 @@
 		4080A96220B029B00036BA46 = {
 			isa = PBXGroup;
 			children = (
+				5A1A002F257677FC0038A28D /* imgui_stacklayout.cpp */,
 				5079822F257677FC0038A28D /* imgui_tables.cpp */,
 				4080A9AC20B0343C0036BA46 /* imconfig.h */,
 				4080A9A720B0343C0036BA46 /* imgui.cpp */,
@@ -168,6 +171,7 @@
 				4080A9A220B034280036BA46 /* imgui_impl_opengl2.cpp in Sources */,
 				4080A9B020B0347A0036BA46 /* imgui_impl_osx.mm in Sources */,
 				4080A9AE20B0343C0036BA46 /* imgui.cpp in Sources */,
+				5A1A0030257677FD0038A28D /* imgui_stacklayout.cpp in Sources */,
 				50798230257677FD0038A28D /* imgui_tables.cpp in Sources */,
 				07A82EDB213941D00078D120 /* imgui_widgets.cpp in Sources */,
 			);
