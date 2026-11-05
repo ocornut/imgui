@@ -98,6 +98,10 @@ Other Changes:
     end of storage when trailing items are unselected (#9604) [@MilosLord]
 - Drags: fixed handling of `ImGuiSliderFlags_WrapAround`: value could temporarily
   escape the range when dragging fast. (#9612, #9611, #7749) [@swayie, @ocornut]
+- ColorEdit:
+  - ColorButton, ColorEdit, ColorPicker: fixed an issue rendering colors when
+    inside a `BeginDisabled(false)` block, caused by the alpha cancelling-out
+    code in 1.93.0. (#9511, #9613, #9614) [@tksuoran]
 - ImVec2: added a check for cases where a custom `IM_VEC2_CLASS_EXTRA` macro
   adds an extra `operator=` to ImVec2. This isn't supported but should not
   be needed as you should have a constructor to convert from your type to ImVec2.
