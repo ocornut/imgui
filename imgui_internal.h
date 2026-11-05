@@ -975,6 +975,8 @@ struct IMGUI_API ImDrawListSharedData
     ImVector<ImVec2> TempBuffer;                // Temporary write buffer
     ImVector<ImDrawList*> DrawLists;            // All draw lists associated to this ImDrawListSharedData
     ImGuiContext*   Context;                    // [OPTIONAL] Link to Dear ImGui context. 99% of ImDrawList/ImFontAtlas can function without an ImGui context, but this facilitate handling one legacy edge case.
+    void          (*TextHook)(ImDrawList* draw_list, ImFont* font, float font_size, const ImVec2& pos, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width, void* user_data); // [OPTIONAL] Called by AddText() before the glyphs are emitted: anything it draws ends up underneath the text. text_end may be NULL.
+    void*           TextHookUserData;
 
     // Lookup tables
     ImVec2          ArcFastVtx[IM_DRAWLIST_ARCFAST_TABLE_SIZE]; // Sample points on the quarter of the circle.

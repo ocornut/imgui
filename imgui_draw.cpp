@@ -2977,6 +2977,8 @@ void ImDrawList::AddText(ImFont* font, float font_size, const ImVec2& pos, ImU32
         clip_rect.z = ImMin(clip_rect.z, cpu_fine_clip_rect->z);
         clip_rect.w = ImMin(clip_rect.w, cpu_fine_clip_rect->w);
     }
+    if (_Data->TextHook != NULL)
+        _Data->TextHook(this, font, font_size, pos, clip_rect, text_begin, text_end, wrap_width, _Data->TextHookUserData);
     font->RenderText(this, font_size, pos, col, clip_rect, text_begin, text_end, wrap_width, (cpu_fine_clip_rect != NULL) ? ImDrawTextFlags_CpuFineClip : ImDrawTextFlags_None);
 }
 

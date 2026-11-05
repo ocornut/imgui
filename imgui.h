@@ -1330,6 +1330,8 @@ enum ImGuiItemFlags_
     //   - If you use MixedMode and the simplest solution is to ensure LiveEdit is off but widgets where this applies.
     //---------------------------------------------------------------------------------
     ImGuiItemFlags_MixedValue               = 1 << 9,   // false    // [BETA] Represent a mixed/indeterminate value. Replace value label with "-" and apply edits on validation.
+
+    ImGuiItemFlags_NoTextSelect             = 1 << 10,  // false    // Text drawn while set is ignored by text selection implemented via ImDrawListSharedData::TextHook: not highlighted, not copied, and a click on it does not start a selection.
 };
 
 // Flags for ImGui::InputText()
