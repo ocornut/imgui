@@ -2650,10 +2650,12 @@ bool ImGui::DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed, const
         if (is_wrapped)
         {
             // Wrap values
-            if (v_cur < v_min)
-                v_cur += v_max - v_min + (is_floating_point ? 0 : 1);
-            if (v_cur > v_max)
-                v_cur -= v_max - v_min + (is_floating_point ? 0 : 1);
+            const TYPE range = v_max - v_min + (is_floating_point ? 0 : 1);
+            TYPE offset = ImMod((TYPE)(v_cur - v_min), range);
+            if (offset < 0)
+                offset += range;
+            v_cur = (TYPE)(v_min + offset);
+            IM_ASSERT_PARANOID(v_cur >= v_min && v_cur <= v_max);
         }
         else
         {
