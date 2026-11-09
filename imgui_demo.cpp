@@ -4652,6 +4652,8 @@ static void DemoWindowLayout()
         IMGUI_DEMO_MARKER("Layout/Child windows");
         ImGui::SeparatorText("Child windows");
 
+        const float ref_sz = ImGui::GetTextLineHeightWithSpacing();
+
         HelpMarker("Use child windows to begin into a self-contained independent scrolling/clipping regions within a host window.");
         static bool disable_mouse_wheel = false;
         static bool disable_menu = false;
@@ -4663,7 +4665,7 @@ static void DemoWindowLayout()
             ImGuiWindowFlags window_flags = ImGuiWindowFlags_HorizontalScrollbar;
             if (disable_mouse_wheel)
                 window_flags |= ImGuiWindowFlags_NoScrollWithMouse;
-            ImGui::BeginChild("ChildL", ImVec2(ImGui::GetContentRegionAvail().x * 0.5f, 260), ImGuiChildFlags_None, window_flags);
+            ImGui::BeginChild("ChildL", ImVec2(ImGui::GetContentRegionAvail().x * 0.5f, 15 * ref_sz), ImGuiChildFlags_None, window_flags);
             for (int i = 0; i < 100; i++)
                 ImGui::Text("%04d: scrollable region", i);
             ImGui::EndChild();
@@ -4679,7 +4681,7 @@ static void DemoWindowLayout()
             if (!disable_menu)
                 window_flags |= ImGuiWindowFlags_MenuBar;
             ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 5.0f);
-            ImGui::BeginChild("ChildR", ImVec2(0, 260), ImGuiChildFlags_Borders, window_flags);
+            ImGui::BeginChild("ChildR", ImVec2(0, 15 * ref_sz), ImGuiChildFlags_Borders, window_flags);
             if (!disable_menu && ImGui::BeginMenuBar())
             {
                 if (ImGui::BeginMenu("Menu"))
@@ -4708,11 +4710,11 @@ static void DemoWindowLayout()
         ImGui::SeparatorText("Manual-resize");
         {
             HelpMarker("Drag bottom border to resize. Double-click bottom border to auto-fit to vertical contents.");
-            //if (ImGui::Button("Set Height to 200"))
-            //    ImGui::SetNextWindowSize(ImVec2(-FLT_MIN, 200.0f));
+            //if (ImGui::Button("Set Height to 300"))
+            //    ImGui::SetNextWindowSize(ImVec2(-FLT_MIN, 300.0f));
 
             ImGui::PushStyleColor(ImGuiCol_ChildBg, ImGui::GetStyleColorVec4(ImGuiCol_FrameBg));
-            if (ImGui::BeginChild("ResizableChild", ImVec2(-FLT_MIN, ImGui::GetTextLineHeightWithSpacing() * 8), ImGuiChildFlags_Borders | ImGuiChildFlags_ResizeY))
+            if (ImGui::BeginChild("ResizableChild", ImVec2(-FLT_MIN, ref_sz * 8), ImGuiChildFlags_Borders | ImGuiChildFlags_ResizeY))
                 for (int n = 0; n < 10; n++)
                     ImGui::Text("Line %04d", n);
             ImGui::PopStyleColor();
@@ -4724,12 +4726,12 @@ static void DemoWindowLayout()
         {
             static int draw_lines = 3;
             static int max_height_in_lines = 10;
-            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
+            ImGui::SetNextItemWidth(ref_sz * 7);
             ImGui::DragInt("Lines Count", &draw_lines, 0.2f);
-            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
+            ImGui::SetNextItemWidth(ref_sz * 7);
             ImGui::DragInt("Max Height (in Lines)", &max_height_in_lines, 0.2f);
 
-            ImGui::SetNextWindowSizeConstraints(ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * 1), ImVec2(FLT_MAX, ImGui::GetTextLineHeightWithSpacing() * max_height_in_lines));
+            ImGui::SetNextWindowSizeConstraints(ImVec2(0.0f, ref_sz * 1), ImVec2(FLT_MAX, ref_sz * max_height_in_lines));
             if (ImGui::BeginChild("ConstrainedChild", ImVec2(-FLT_MIN, 0.0f), ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY))
                 for (int n = 0; n < draw_lines; n++)
                     ImGui::Text("Line %04d", n);
@@ -4749,7 +4751,7 @@ static void DemoWindowLayout()
             static int offset_x = 0;
             static bool override_bg_color = true;
             static ImGuiChildFlags child_flags = ImGuiChildFlags_Borders | ImGuiChildFlags_ResizeX | ImGuiChildFlags_ResizeY;
-            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
+            ImGui::SetNextItemWidth(ref_sz * 7);
             ImGui::DragInt("Offset X", &offset_x, 1.0f, -1000, 1000);
             ImGui::Checkbox("Override ChildBg color", &override_bg_color);
             ImGui::CheckboxFlags("ImGuiChildFlags_Borders", &child_flags, ImGuiChildFlags_Borders);
@@ -4764,7 +4766,7 @@ static void DemoWindowLayout()
             ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (float)offset_x);
             if (override_bg_color)
                 ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32(255, 0, 0, 100));
-            ImGui::BeginChild("Red", ImVec2(200, 100), child_flags, ImGuiWindowFlags_None);
+            ImGui::BeginChild("Red", ImVec2(ref_sz * 12.0f, ref_sz * 6.0f), child_flags, ImGuiWindowFlags_None);
             if (override_bg_color)
                 ImGui::PopStyleColor();
 
@@ -4861,7 +4863,7 @@ static void DemoWindowLayout()
         if (show_indented_items)
         {
             ImGui::Indent();
-            ImGui::DragFloat("float (indented)##6b", &f);
+            ImGui::DragFloat("##float6b (indented)", &f);
             ImGui::Unindent();
         }
         ImGui::PopItemWidth();
@@ -4926,7 +4928,8 @@ static void DemoWindowLayout()
         static int selection[4] = { 0, 1, 2, 3 };
         for (int i = 0; i < 4; i++)
         {
-            if (i > 0) ImGui::SameLine();
+            if (i > 0)
+                ImGui::SameLine();
             ImGui::PushID(i);
             ImGui::ListBox("", &selection[i], items, IM_COUNTOF(items));
             ImGui::PopID();
@@ -4934,9 +4937,11 @@ static void DemoWindowLayout()
         }
         ImGui::PopItemWidth();
 
+        const float ref_sz = ImGui::GetTextLineHeightWithSpacing();
+
         // Dummy
         IMGUI_DEMO_MARKER("Layout/Basic Horizontal Layout/Dummy");
-        ImVec2 button_sz(40, 40);
+        ImVec2 button_sz(ref_sz * 3.0f, ref_sz * 3.0f);
         ImGui::Button("A", button_sz); ImGui::SameLine();
         ImGui::Dummy(button_sz); ImGui::SameLine();
         ImGui::Button("B", button_sz);
@@ -5078,9 +5083,9 @@ static void DemoWindowLayout()
             ImGui::Indent();
 
             // SmallButton() sets FramePadding to zero. Text baseline is aligned to match baseline of previous Button.
-            ImGui::Button("80x80", ImVec2(80, 80));
+            ImGui::Button("120x120", ImVec2(120, 120));
             ImGui::SameLine();
-            ImGui::Button("50x50", ImVec2(50, 50));
+            ImGui::Button("80x80", ImVec2(80, 80));
             ImGui::SameLine();
             ImGui::Button("Button()");
             ImGui::SameLine();
