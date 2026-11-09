@@ -112,6 +112,10 @@ Other Changes:
   to reflect that they can also build X64 or ARM64, given the right environment.
   Made the script detect the environment when needed (e.g. to specify library path).
 - Examples: added support for ARM64 in selected build_win.bat helpers. (#9593) [@Harishmcw]
+- Backends:
+  - GLFW, SDL2: Emscripten implementation of `Platform_OpenInShellFn` calls
+   `window.open()` with `noopener`: prevents newly opened tab from keeping a
+   reference to opening page. (#9615, #7660, #7851) [@pthom]
 
 
 -----------------------------------------------------------------------
