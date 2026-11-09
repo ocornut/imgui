@@ -67,7 +67,7 @@ Autumn cleanup of stuff marked obsolete more than two years ago:
 Other Changes:
 
 - Style:
-  - `StyleColorsDark()`: tweaked WindowBg to be darker than in 1.93.0.
+  - `StyleColorsDark()`: tweaked WindowBg, PopupBg, ChildBg to be darker than in 1.93.0.
   - Added `style.SymbolArrowSizeFactor`, `style.SymbolArrowThicknessFactor` to tweak the
     shape and look of arrows. Made default arrow stroked. (#5233, #2431, #2235, #6730, #8243)
     Legacy arrow: size: (0.60f,0.70f), thickness: 0.0f
