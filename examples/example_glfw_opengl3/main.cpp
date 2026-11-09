@@ -7,6 +7,7 @@
 // - Documentation        https://dearimgui.com/docs (same as your local docs/ folder).
 // - Introduction, links and more at the top of imgui.cpp
 
+#define IMGUI_DEFINE_MATH_OPERATORS
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -28,6 +29,29 @@
 #ifdef __EMSCRIPTEN__
 #include "../libs/emscripten/emscripten_mainloop_stub.h"
 #endif
+
+#include "imgui_internal.h"
+static void LateLatchMovingWindowForSecondaryViewports()
+{
+    ImGuiContext* ctx = ImGui::GetCurrentContext();
+    ImGuiWindow* window = ctx->MovingWindow;
+    if (window == NULL)
+        return;
+    ImGuiViewportP* viewport = window->Viewport;
+    if (viewport == NULL || viewport->Window != window)
+        return;
+
+    glfwPollEvents();
+
+    // FIXME: Technically should parse input queue until button associated to MovingWindow action is released?
+    ImGuiInputEvent* evt = ImGui::FindLatestInputEvent(ctx, ImGuiInputEventType_MousePos);
+    if (evt == NULL)
+        return;
+    ImVec2 delta = ImVec2(evt->MousePos.PosX, evt->MousePos.PosY) - ctx->IO.MousePos;
+    if (delta.x == 0.0f && delta.y == 0.0f)
+        return;
+    ctx->PlatformIO.Platform_SetWindowPos(viewport, viewport->Pos + delta);
+}
 
 static void glfw_error_callback(int error, const char* description)
 {
@@ -224,6 +248,8 @@ int main(int, char**)
         }
 
         glfwSwapBuffers(window);
+
+        LateLatchMovingWindowForSecondaryViewports();
     }
 #ifdef __EMSCRIPTEN__
     EMSCRIPTEN_MAINLOOP_END;
