@@ -6126,11 +6126,12 @@ static void DemoWindowTables()
         ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuter", &flags, ImGuiTableFlags_BordersOuter);
         ImGui::CheckboxFlags("ImGuiTableFlags_BordersInner", &flags, ImGuiTableFlags_BordersInner);
         ImGui::Unindent();
-
+        
         ImGui::AlignTextToFramePadding(); ImGui::Text("Cell contents:");
         ImGui::SameLine(); ImGui::RadioButton("Text", &contents_type, CT_Text);
         ImGui::SameLine(); ImGui::RadioButton("FillButton", &contents_type, CT_FillButton);
         ImGui::Checkbox("Display headers", &display_headers);
+        ImGui::CheckboxFlags("ImGuiTableFlags_PadOuterX", &flags, ImGuiTableFlags_PadOuterX);
         ImGui::CheckboxFlags("ImGuiTableFlags_NoBordersInBody", &flags, ImGuiTableFlags_NoBordersInBody); ImGui::SameLine(); HelpMarker("Disable vertical borders in columns Body (borders will always appear in Headers)");
         PopStyleCompact();
 
@@ -6358,6 +6359,7 @@ static void DemoWindowTables()
             "Actual padding values are using style.CellPadding.\n\n"
             "In this demo we don't show horizontal borders to emphasize how they don't affect default horizontal padding.");
 
+        ImGui::PushID("flags1");
         static ImGuiTableFlags flags1 = ImGuiTableFlags_BordersV;
         PushStyleCompact();
         ImGui::CheckboxFlags("ImGuiTableFlags_PadOuterX", &flags1, ImGuiTableFlags_PadOuterX);
@@ -6368,9 +6370,11 @@ static void DemoWindowTables()
         ImGui::SameLine(); HelpMarker("Disable inner padding between columns (double inner padding if BordersOuterV is on, single inner padding if BordersOuterV is off)");
         ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuterV", &flags1, ImGuiTableFlags_BordersOuterV);
         ImGui::CheckboxFlags("ImGuiTableFlags_BordersInnerV", &flags1, ImGuiTableFlags_BordersInnerV);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersH", &flags1, ImGuiTableFlags_BordersH);
         static bool show_headers = false;
         ImGui::Checkbox("show_headers", &show_headers);
         PopStyleCompact();
+        ImGui::PopID();
 
         if (ImGui::BeginTable("table_padding", 3, flags1))
         {
@@ -6410,7 +6414,7 @@ static void DemoWindowTables()
         HelpMarker("Setting style.CellPadding to (0,0) or a custom value.");
         static ImGuiTableFlags flags2 = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
         static ImVec2 cell_padding(0.0f, 0.0f);
-        static bool show_widget_frame_bg = true;
+        static bool show_widget_frame_bg = false;
 
         PushStyleCompact();
         ImGui::CheckboxFlags("ImGuiTableFlags_Borders", &flags2, ImGuiTableFlags_Borders);
