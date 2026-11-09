@@ -98,6 +98,8 @@ Other Changes:
     end of storage when trailing items are unselected (#9604) [@MilosLord]
 - Drags: fixed handling of `ImGuiSliderFlags_WrapAround`: value could temporarily
   escape the range when dragging fast. (#9612, #9611, #7749) [@swayie, @ocornut]
+- Checkbox: indeterminate/mixed value inner rectangle never has rounding,
+  to reduce confusion with a radio button. (#5518, #5677, #6865, #2644)
 - ColorEdit:
   - ColorButton, ColorEdit, ColorPicker: fixed an issue rendering colors when
     inside a `BeginDisabled(false)` block, caused by the alpha cancelling-out

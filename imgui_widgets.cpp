@@ -1299,8 +1299,9 @@ bool ImGui::Checkbox(const char* label, bool* v)
         {
             // Undocumented tristate/mixed/indeterminate checkbox (#2644)
             // This may seem awkwardly designed because the aim is to make ImGuiItemFlags_MixedValue supported by all widgets (not just checkbox)
-            ImVec2 pad(ImMax(1.0f, IM_TRUNC(square_sz / 3.6f)), ImMax(1.0f, IM_TRUNC(square_sz / 3.6f)));
-            window->DrawList->AddRectFilled(check_bb.Min + pad, check_bb.Max - pad, check_col, style.FrameRounding);
+            const float pad = ImMax(1.0f, IM_TRUNC(square_sz / 3.6f));
+            const float rounding = 0.0f;// IM_TRUNC(ImMin((square_sz - pad * 2.0f) * 0.20f, style.FrameRounding)); // Clamp rounding
+            window->DrawList->AddRectFilled(check_bb.Min + ImVec2(pad, pad), check_bb.Max - ImVec2(pad, pad), check_col, rounding);
         }
         else if (*v)
         {
