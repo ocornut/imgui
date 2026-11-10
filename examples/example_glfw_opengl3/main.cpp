@@ -44,7 +44,19 @@ static void LateLatchMovingWindowForSecondaryViewports()
     glfwPollEvents();
 
     // FIXME: Technically should parse input queue until button associated to MovingWindow action is released?
-    ImGuiInputEvent* evt = ImGui::FindLatestInputEvent(ctx, ImGuiInputEventType_MousePos);
+    // Latest *valid* mouse position. The GLFW backend queues (-FLT_MAX,-FLT_MAX) when the pointer leaves a
+    // platform window, which easily happens with a small window dragged quickly. Used as-is, that becomes a
+    // huge negative delta and the OS window snaps to 0,0.
+    ImGuiInputEvent* evt = NULL;
+    for (int n = ctx->InputEventsQueue.Size - 1; n >= 0 && evt == NULL; n--)
+    {
+        ImGuiInputEvent* e = &ctx->InputEventsQueue[n];
+        if (e->Type != ImGuiInputEventType_MousePos)
+            continue;
+        ImVec2 p(e->MousePos.PosX, e->MousePos.PosY);
+        if (ImGui::IsMousePosValid(&p))
+            evt = e;
+    }
     if (evt == NULL)
         return;
     ImVec2 delta = ImVec2(evt->MousePos.PosX, evt->MousePos.PosY) - ctx->IO.MousePos;
