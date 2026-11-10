@@ -209,19 +209,14 @@
 -(void)setupMenu
 {
     NSMenu* mainMenuBar = [[NSMenu alloc] init];
-    NSMenu* appMenu;
-    NSMenuItem* menuItem;
+    NSMenu* appMenu = [[NSMenu alloc] initWithTitle:@"Dear ImGui OSX+OpenGL2 Example"];
+    NSMenuItem* quitMenuItem = [appMenu addItemWithTitle:@"Quit" action:@selector(terminate:) keyEquivalent:@"q"];
+    [quitMenuItem setTarget:NSApp];
+    [quitMenuItem setKeyEquivalentModifierMask:NSEventModifierFlagCommand];
 
-    appMenu = [[NSMenu alloc] initWithTitle:@"Dear ImGui OSX+OpenGL2 Example"];
-    menuItem = [appMenu addItemWithTitle:@"Quit Dear ImGui OSX+OpenGL2 Example" action:@selector(terminate:) keyEquivalent:@"q"];
-    [menuItem setKeyEquivalentModifierMask:NSEventModifierFlagCommand];
-
-    menuItem = [[NSMenuItem alloc] init];
-    [menuItem setSubmenu:appMenu];
-
-    [mainMenuBar addItem:menuItem];
-
-    appMenu = nil;
+    NSMenuItem* appMenuItem = [[NSMenuItem alloc] init];
+    [appMenuItem setSubmenu:appMenu];
+    [mainMenuBar addItem:appMenuItem];
     [NSApp setMainMenu:mainMenuBar];
 }
 
@@ -232,10 +227,6 @@
 
 -(void)applicationDidFinishLaunching:(NSNotification *)aNotification
 {
-    // Make the application a foreground application (else it won't receive keyboard events)
-    ProcessSerialNumber psn = {0, kCurrentProcess};
-    TransformProcessType(&psn, kProcessTransformToForegroundApplication);
-
     // Menu
     [self setupMenu];
 
@@ -259,6 +250,8 @@
         NSLog(@"No OpenGL Context!");
 
     [view initialize];
+
+    [NSApp activateIgnoringOtherApps:YES];
 }
 
 @end
@@ -267,14 +260,17 @@
 // Application main() function
 //-----------------------------------------------------------------------------------
 
-int main(int argc, const char* argv[])
+int main(int, const char**)
 {
     @autoreleasepool
     {
-        NSApp = [NSApplication sharedApplication];
-        AppDelegate* delegate = [[AppDelegate alloc] init];
-        [[NSApplication sharedApplication] setDelegate:delegate];
+        [NSApplication sharedApplication];
+        [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+
+        AppDelegate* appDelegate = [[AppDelegate alloc] init];
+        [NSApp setDelegate:appDelegate];
+
         [NSApp run];
     }
-    return NSApplicationMain(argc, argv);
+    return 0;
 }

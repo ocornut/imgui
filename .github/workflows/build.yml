@@ -639,7 +639,7 @@ jobs:
       if: github.event_name == 'workflow_run'
 
   Build-iOS:
-    runs-on: macos-14
+    runs-on: macos-26
     name: Build - iOS
 
     steps:

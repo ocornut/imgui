@@ -120,7 +120,6 @@
 
 #if TARGET_OS_OSX
     ImGui_ImplOSX_Init(self.view);
-    [NSApp activateIgnoringOtherApps:YES];
 #endif
 }
 
@@ -289,6 +288,22 @@
 
 @implementation AppDelegate
 
+-(void)applicationDidFinishLaunching:(NSNotification *)notification
+{
+    NSMenu* mainMenuBar = [[NSMenu alloc] init];
+    NSMenu* appMenu = [[NSMenu alloc] initWithTitle:@"Dear ImGui OSX+Metal Example"];
+    NSMenuItem* quitMenuItem = [appMenu addItemWithTitle:@"Quit" action:@selector(terminate:) keyEquivalent:@"q"];
+    [quitMenuItem setTarget:NSApp];
+    [quitMenuItem setKeyEquivalentModifierMask:NSEventModifierFlagCommand];
+
+    NSMenuItem* appMenuItem = [[NSMenuItem alloc] init];
+    [appMenuItem setSubmenu:appMenu];
+    [mainMenuBar addItem:appMenuItem];
+    [NSApp setMainMenu:mainMenuBar];
+
+    [NSApp activateIgnoringOtherApps:YES];
+}
+
 -(BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)sender
 {
     return YES;
@@ -303,6 +318,7 @@
                                                   styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskResizable | NSWindowStyleMaskMiniaturizable
                                                     backing:NSBackingStoreBuffered
                                                       defer:NO];
+        self.window.title = @"Dear ImGui OSX+Metal Example";
         self.window.contentViewController = rootViewController;
         [self.window center];
         [self.window makeKeyAndOrderFront:self];
@@ -350,7 +366,6 @@ int main(int, const char**)
         AppDelegate *appDelegate = [[AppDelegate alloc] init];   // creates window
         [NSApp setDelegate:appDelegate];
 
-        [NSApp activateIgnoringOtherApps:YES];
         [NSApp run];
     }
     return 0;
