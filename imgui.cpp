@@ -11259,6 +11259,14 @@ static void ImGui::ErrorCheckNewFrameSanityChecks()
     if (g.IO.ConfigErrorRecovery)
         IM_ASSERT(g.IO.ConfigErrorRecoveryEnableAssert || g.IO.ConfigErrorRecoveryEnableDebugLog || g.IO.ConfigErrorRecoveryEnableTooltip || g.ErrorCallback != NULL);
 
+    // Detect if the parameters leading AddFontDefault() to implicitly select either AddFontDefaultBitmap() or AddFontDefaultVector() have changed.
+    if (g.FrameCount == 2 && g.IO.Fonts->Builder->LoadedFontDefaultAsVector != -1)
+    {
+        const bool old_heuristic_result_for_using_vector_font = (bool)g.IO.Fonts->Builder->LoadedFontDefaultAsVector;
+        const bool new_heuristic_result_for_using_vector_font = ImFontAtlasHeuristicShouldUseDefaultVectorFont(g.IO.Fonts);
+        IM_ASSERT_USER_ERROR(old_heuristic_result_for_using_vector_font == new_heuristic_result_for_using_vector_font, "AddFontDefault() font selection heuristic parameters changed between load/init time and now. Verify which parameters have changed or load a default font explicitly!");
+    }
+
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     if (g.IO.FontGlobalScale > 1.0f)
         IM_ASSERT(g.Style.FontScaleMain == 1.0f && "Since 1.92: use style.FontScaleMain instead of g.IO.FontGlobalScale!");

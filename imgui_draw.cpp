@@ -4363,7 +4363,10 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg_in)
     ImFontAtlasFontSourceAddToFont(this, font, font_cfg);
 
     if (is_first_font)
+    {
         ImFontAtlasBuildNotifySetFont(this, NULL, font);
+        Builder->LoadedFontDefaultAsVector = -1;
+    }
     return font;
 }
 
@@ -4389,13 +4392,17 @@ const char* ImGui_GetDefaultCompressedFontDataProggyForever(int* out_size);
 #endif
 
 // This duplicates some of the logic in UpdateFontsNewFrame() which is a bit chicken-and-eggy/tricky to extract due to variety of codepaths and possible initialization ordering.
-static float GetExpectedContextFontSize(ImGuiContext* ctx)
+bool ImFontAtlasHeuristicShouldUseDefaultVectorFont(ImFontAtlas* atlas)
 {
+    ImGuiContext* ctx = atlas->OwnerContext;
+    if (ctx == NULL)
+        return true;
     float fb_scale = (ctx->IO.DisplayFramebufferScale.x != 0.0f) ? ctx->IO.DisplayFramebufferScale.x : 1.0f;
     if (ctx->IO.DisplayFramebufferScale.x == 1.0f && ctx->IO.DisplaySize.x <= 0.0f && ctx->IO.ConfigMacOSXBehaviors)
-        fb_scale = 2.0f; // If called before backend had a chance to init DisplayFramebufferScale. default to expecting Retina.
-    float scale = ctx->Style.FontScaleMain * ctx->Style.FontScaleDpi * fb_scale;
-    return ((ctx->Style.FontSizeBase > 0.0f) ? ctx->Style.FontSizeBase : 13.0f) * scale;
+        fb_scale = 2.0f; // If called before backend had a chance to init DisplayFramebufferScale: default to expecting Retina on macOS/iOS.
+    const float scale = ctx->Style.FontScaleMain * ctx->Style.FontScaleDpi * fb_scale;
+    const float expected_font_size = ((ctx->Style.FontSizeBase > 0.0f) ? ctx->Style.FontSizeBase : 13.0f) * scale;
+    return expected_font_size >= 15.0f;
 }
 
 // Legacy function with heuristic to select Pixel or Vector font.
@@ -4403,10 +4410,11 @@ static float GetExpectedContextFontSize(ImGuiContext* ctx)
 // Prefer calling AddFontDefaultVector() or AddFontDefaultBitmap() based on your own logic.
 ImFont* ImFontAtlas::AddFontDefault(const ImFontConfig* font_cfg)
 {
-    if (OwnerContext == NULL || GetExpectedContextFontSize(OwnerContext) >= 15.0f)
-        return AddFontDefaultVector(font_cfg);
-    else
-        return AddFontDefaultBitmap(font_cfg);
+    const bool use_vector_font = ImFontAtlasHeuristicShouldUseDefaultVectorFont(this);
+    ImFont* font = use_vector_font ? AddFontDefaultVector(font_cfg) : AddFontDefaultBitmap(font_cfg);
+    if (Fonts.Size == 1)
+        Builder->LoadedFontDefaultAsVector = use_vector_font ? 1 : 0;
+    return font;
 }
 
 // Load embedded ProggyClean.ttf. Default size 13, disable oversampling.

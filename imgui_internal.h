@@ -4086,7 +4086,8 @@ struct ImFontAtlasBuilder
     ImVec2i                     MaxRectSize;            // Largest rectangle to pack (de-facto used as a "minimum texture size")
     ImVec2i                     MaxRectBounds;          // Bottom-right most used pixels
     bool                        LockDisableResize;      // Disable resizing texture
-    bool                        PreloadedAllGlyphsRanges; // Set when missing ImGuiBackendFlags_RendererHasTextures features forces atlas to preload everything.
+    bool                        PreloadedAllGlyphsRanges;   // Set when missing ImGuiBackendFlags_RendererHasTextures features forces atlas to preload everything.
+    ImS8                        LoadedFontDefaultAsVector;  // -1, or record with 0/1 whereas AddFontDefault() picked bitmap or vector font.
 
     // Cache of all ImFontBaked
     ImStableVector<ImFontBaked,32> BakedPool;
@@ -4103,7 +4104,7 @@ struct ImFontAtlasBuilder
     ImVec4                      TexUvLines[IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1 + IM_DRAWLIST_TEX_LINES_DETAILED_WIDTH_COUNT]; // UVs for baked anti-aliased lines (u0, u1, v, 1/thickness)
     ImVec4                      TexUvCorners[IM_DRAWLIST_TEX_CORNERS_ROUNDING_MAX * IM_DRAWLIST_TEX_CORNERS_THICKNESS_MAX];   // UVs for baked anti-aliased corners (0= fill, 1> stroke thickness)
 
-    ImFontAtlasBuilder()        { memset((void*)this, 0, sizeof(*this)); FrameCount = -1; RectsIndexFreeListStart = -1; PackIdMouseCursors = PackIdLinesTexData = PackIdLineFractTexData = PackIdCornersTexData = -1; }
+    ImFontAtlasBuilder()        { memset((void*)this, 0, sizeof(*this)); FrameCount = -1; RectsIndexFreeListStart = -1; LoadedFontDefaultAsVector = -1; PackIdMouseCursors = PackIdLinesTexData = PackIdLineFractTexData = PackIdCornersTexData = -1; }
 };
 
 IMGUI_API void              ImFontAtlasBuildInit(ImFontAtlas* atlas);
@@ -4158,6 +4159,7 @@ IMGUI_API void              ImFontAtlasAddDrawListSharedData(ImFontAtlas* atlas,
 IMGUI_API void              ImFontAtlasRemoveDrawListSharedData(ImFontAtlas* atlas, ImDrawListSharedData* data);
 IMGUI_API void              ImFontAtlasUpdateDrawListsTextures(ImFontAtlas* atlas, ImTextureRef old_tex, ImTextureRef new_tex);
 IMGUI_API void              ImFontAtlasUpdateDrawListsSharedData(ImFontAtlas* atlas);
+IMGUI_API bool              ImFontAtlasHeuristicShouldUseDefaultVectorFont(ImFontAtlas* atlas);
 
 IMGUI_API void              ImFontAtlasTextureBlockConvert(const unsigned char* src_pixels, ImTextureFormat src_fmt, int src_pitch, unsigned char* dst_pixels, ImTextureFormat dst_fmt, int dst_pitch, int w, int h);
 IMGUI_API void              ImFontAtlasTextureBlockPostProcess(ImFontAtlasPostProcessData* data);
