@@ -747,12 +747,16 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
 #endif
 
     // Windows: register a WndProc hook so we can intercept some messages.
+    // (no HWND when GLFW doesn't run its Win32 platform, e.g. with GLFW_PLATFORM_NULL: no hook then)
 #ifdef _WIN32
     HWND hwnd = (HWND)main_viewport->PlatformHandleRaw;
-    ::SetPropA(hwnd, "IMGUI_BACKEND_DATA", bd);
-    bd->PrevWndProc = (WNDPROC)::GetWindowLongPtrW(hwnd, GWLP_WNDPROC);
-    IM_ASSERT(bd->PrevWndProc != nullptr);
-    ::SetWindowLongPtrW((HWND)main_viewport->PlatformHandleRaw, GWLP_WNDPROC, (LONG_PTR)ImGui_ImplGlfw_WndProc);
+    if (hwnd != nullptr)
+    {
+        ::SetPropA(hwnd, "IMGUI_BACKEND_DATA", bd);
+        bd->PrevWndProc = (WNDPROC)::GetWindowLongPtrW(hwnd, GWLP_WNDPROC);
+        IM_ASSERT(bd->PrevWndProc != nullptr);
+        ::SetWindowLongPtrW(hwnd, GWLP_WNDPROC, (LONG_PTR)ImGui_ImplGlfw_WndProc);
+    }
 #endif
 
     // Emscripten: the same application can run on various platforms, so we detect the Apple platform at runtime
@@ -811,10 +815,13 @@ void ImGui_ImplGlfw_Shutdown()
 #endif
     // Windows: restore our WndProc hook
 #ifdef _WIN32
-    ImGuiViewport* main_viewport = ImGui::GetMainViewport();
-    ::SetPropA((HWND)main_viewport->PlatformHandleRaw, "IMGUI_BACKEND_DATA", nullptr);
-    ::SetWindowLongPtrW((HWND)main_viewport->PlatformHandleRaw, GWLP_WNDPROC, (LONG_PTR)bd->PrevWndProc);
-    bd->PrevWndProc = nullptr;
+    if (bd->PrevWndProc != nullptr)
+    {
+        ImGuiViewport* main_viewport = ImGui::GetMainViewport();
+        ::SetPropA((HWND)main_viewport->PlatformHandleRaw, "IMGUI_BACKEND_DATA", nullptr);
+        ::SetWindowLongPtrW((HWND)main_viewport->PlatformHandleRaw, GWLP_WNDPROC, (LONG_PTR)bd->PrevWndProc);
+        bd->PrevWndProc = nullptr;
+    }
 #endif
 
     io.BackendPlatformName = nullptr;
