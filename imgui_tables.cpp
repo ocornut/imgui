@@ -705,7 +705,7 @@ void ImGui::TableApplyQueuedRequests(ImGuiTable* table)
         //    table->ReorderColumn = -1;
     }
 
-    // Handle display order / visibility reset requests
+    // Handle reset requests (display order / visibility / sizes)
     if (table->IsResetDisplayOrderRequest)
     {
         for (int n = 0; n < table->ColumnsCount; n++) // Variant of using TableInitColumnDefaults()(
@@ -718,6 +718,13 @@ void ImGui::TableApplyQueuedRequests(ImGuiTable* table)
         for (ImGuiTableColumn& column : table->Columns)
             TableInitColumnDefaults(table, &column, ImGuiTableFlags_Hideable);
         table->IsResetVisibilityRequest = false;
+        table->IsSettingsDirty = true;
+    }
+    if (table->IsResetSizesRequest)
+    {
+        for (ImGuiTableColumn& column : table->Columns)
+            TableInitColumnDefaults(table, &column, ImGuiTableFlags_Resizable);
+        table->IsResetSizesRequest = false;
         table->IsSettingsDirty = true;
     }
 }
@@ -2568,6 +2575,7 @@ void ImGui::TableSetColumnWidthAutoSingle(ImGuiTable* table, int column_n)
     table->AutoFitSingleColumn = (ImGuiTableColumnIdx)column_n;
 }
 
+// FIXME: AutoFitQueue for Stretch columns can do a "reset" if InitStretchWeightOrWidth is valid, therefore might be misnamed.
 void ImGui::TableSetColumnWidthAutoAll(ImGuiTable* table)
 {
     for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
@@ -3759,7 +3767,7 @@ void ImGui::TableDrawDefaultContextMenu(ImGuiTable* table, ImGuiTableFlags flags
     }
 
     // Reset Order/Visibility etc.
-    if (flags_for_section_to_display & (ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable))
+    if (flags_for_section_to_display & (ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_Resizable))
         if (BeginMenu(LocalizeGetMsg(ImGuiLocKey_TableReset)))
         {
             //if (MenuItem(LocalizeGetMsg(ImGuiLocKey_TableResetAll))) // FIXME: Hiding because altering Sort Order + requesting auto-fit simultaneously has a tendency to exhibit a sizing glitch.
@@ -3770,6 +3778,9 @@ void ImGui::TableDrawDefaultContextMenu(ImGuiTable* table, ImGuiTableFlags flags
             if (flags_for_section_to_display & ImGuiTableFlags_Hideable)
                 if (MenuItem(LocalizeGetMsg(ImGuiLocKey_TableResetVisibility), NULL, false, !table->IsDefaultVisibility))
                     table->IsResetVisibilityRequest = true;
+            if (flags_for_section_to_display & ImGuiTableFlags_Resizable)
+                if (MenuItem(LocalizeGetMsg(ImGuiLocKey_TableResetSizing), NULL, false)) // Can't easily implement IsDefaultSize
+                    table->IsResetSizesRequest = true;
             EndMenu();
         }
 

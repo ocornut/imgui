@@ -6796,19 +6796,20 @@ static void DemoWindowTables()
         ImGui::CheckboxFlags("ImGuiTableFlags_Resizable", &flags1, ImGuiTableFlags_Resizable);
         ImGui::CheckboxFlags("ImGuiTableFlags_NoBordersInBodyUntilResize", &flags1, ImGuiTableFlags_NoBordersInBodyUntilResize);
         PopStyleCompact();
-        if (ImGui::BeginTable("table1", 3, flags1))
+        if (ImGui::BeginTable("table1", 4, flags1))
         {
-            // We could also set ImGuiTableFlags_SizingFixedFit on the table and all columns will default to ImGuiTableColumnFlags_WidthFixed.
+            // We could also set ImGuiTableFlags_SizingFixedFit on the table and all columns will default to ImGuiTableColumnFlags_WidthFixed if not specified.
             ImGui::TableSetupColumn("one", ImGuiTableColumnFlags_WidthFixed, 100.0f); // Default to 100.0f
             ImGui::TableSetupColumn("two", ImGuiTableColumnFlags_WidthFixed, 200.0f); // Default to 200.0f
             ImGui::TableSetupColumn("three", ImGuiTableColumnFlags_WidthFixed);       // Default to auto
+            ImGui::TableSetupColumn("four", ImGuiTableColumnFlags_WidthStretch);      // Default to remaining width
             ImGui::TableHeadersRow();
             for (int row = 0; row < 4; row++)
             {
                 ImGui::TableNextRow();
-                for (int column = 0; column < 3; column++)
+                for (int column = 0; column < 4; column++)
                 {
-                    ImGui::TableSetColumnIndex(column);
+                    ImGui::TableNextColumn();
                     if (row == 0)
                         ImGui::Text("(w: %5.1f)", ImGui::GetContentRegionAvail().x);
                     else
@@ -6817,18 +6818,29 @@ static void DemoWindowTables()
             }
             ImGui::EndTable();
         }
+        if (ImGui::BeginTable("table2", 2, flags1))
+        {
+            // We could also set ImGuiTableFlags_SizingFixedFit on the table and all columns will default to ImGuiTableColumnFlags_WidthFixed.
+            ImGui::TableSetupColumn("one", ImGuiTableColumnFlags_WidthStretch, 1.0f); // Default weight
+            ImGui::TableSetupColumn("two", ImGuiTableColumnFlags_WidthStretch, 2.0f); // Default weight
+            ImGui::TableHeadersRow();
+            for (int column = 0; column < 2; column++)
+                if (ImGui::TableNextColumn())
+                    ImGui::Text("Default weight %d%%", (column & 1) ? 200 : 100);
+            ImGui::EndTable();
+        }
 
         HelpMarker(
             "Using TableSetupColumn() to setup explicit width.\n\nUnless _NoKeepColumnsVisible is set, "
             "fixed columns with set width may still be shrunk down if there's not enough space in the host.");
 
-        static ImGuiTableFlags flags2 = ImGuiTableFlags_None;
+        static ImGuiTableFlags flags3 = ImGuiTableFlags_None;
         PushStyleCompact();
-        ImGui::CheckboxFlags("ImGuiTableFlags_NoKeepColumnsVisible", &flags2, ImGuiTableFlags_NoKeepColumnsVisible);
-        ImGui::CheckboxFlags("ImGuiTableFlags_BordersInnerV", &flags2, ImGuiTableFlags_BordersInnerV);
-        ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuterV", &flags2, ImGuiTableFlags_BordersOuterV);
+        ImGui::CheckboxFlags("ImGuiTableFlags_NoKeepColumnsVisible", &flags3, ImGuiTableFlags_NoKeepColumnsVisible);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersInnerV", &flags3, ImGuiTableFlags_BordersInnerV);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuterV", &flags3, ImGuiTableFlags_BordersOuterV);
         PopStyleCompact();
-        if (ImGui::BeginTable("table2", 4, flags2))
+        if (ImGui::BeginTable("table3", 4, flags3))
         {
             // We could also set ImGuiTableFlags_SizingFixedFit on the table and then all columns
             // will default to ImGuiTableColumnFlags_WidthFixed.

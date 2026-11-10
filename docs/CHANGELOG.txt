@@ -82,6 +82,7 @@ Other Changes:
   - Modals: fixed an assert displaying a modal in an environment where
     `io.DisplayFramebufferScale` is not an integer (regression in 1.93.0). (#9598)
 - Tables:
+  - Added "Reset->Reset Sizes" context-menu option. (#9523, #9605)
   - Fixed various border overshooting issues, some mostly visible with transparent
     borders and under specific conditions: (#4678)
     - On non-scrolling tables, inner horizontal borders slightly overlapped
