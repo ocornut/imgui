@@ -454,6 +454,14 @@ static void TextSelectHook(ImDrawList* draw_list, ImFont* font, float font_size,
     const ImVec2 to_local = (do_select && st->Copying) ? TextSelectToLocalOffset(st, window, pos) : ImVec2(0.0f, 0.0f);
     const bool unclipped = st->Copying && window == st->Anchor.Window;
     float copy_x0 = clip.x, copy_x1 = clip.z;
+    if (unclipped)
+    {
+        // An edge the clip shares with the window's clip rectangle was cut by scrolling, not by the widget
+        if (clip.x <= window->ClipRect.Min.x + 0.5f)
+            copy_x0 = -FLT_MAX;
+        if (clip.z >= window->ClipRect.Max.x - 0.5f)
+            copy_x1 = FLT_MAX;
+    }
     if (unclipped && st->Anchor.TableId != 0 && g.CurrentTable != NULL && g.CurrentTable->CurrentColumn >= 0)
     {
         // A column's ClipRect is its cell span cut by the visible area: an edge the clip reaches was cut by scrolling
