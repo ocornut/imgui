@@ -21,6 +21,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-11-16: [Docking] Fixed various multi-viewport related issues.
 //  2026-11-16: Worked around rendering artifacts by aligning 16-bit index buffer addresses to 4 bytes. / Fixed vertex/index buffers being reused by a later draw in the same frame. (#9622, #9625) / Remove the residency set from the command queue on shutdown so the queue can be reused.
 //  2026-11-05: [Docking] Present secondary viewport windows without vsync by default, matching other backends. Added ImGui_ImplMetal_SetDisplaySyncEnabled(). (#9501, #9608)
 //  2026-10-06: Added support for render passes with multiple color attachments: we render to the first one and leave the others untouched. (#9574)
@@ -100,7 +101,7 @@ struct ImGui_Metal4_ConstantData
 @property (nonatomic, strong) NSObject*                     bufferCacheLock;
 @property (nonatomic, assign) double                        lastBufferCachePurge;
 @property (nonatomic, strong) NSArray<id<MTLSharedEvent>>*  events; // for tracking when a commands are complete to reset allocator
-@property (nonatomic) uint64_t                              eventValue;
+@property (nonatomic, strong) NSMutableArray<NSNumber*>*    eventValues; // last value signaled on each event
 @property (nonatomic, strong) NSArray<id<MTL4CommandAllocator>>* commandAllocators;
 @property (nonatomic, strong) NSMutableArray<NSMutableArray<id<MTLBuffer>>*>*  constantBuffers;
 @property (nonatomic) uint64_t                              constantBufferChunkCount;
@@ -170,7 +171,7 @@ void ImGui_ImplMetal4_NewFrame(MTL4RenderPassDescriptor* renderPassDescriptor, i
         ImGui_ImplMetal4_CreateDeviceObjects(bd->SharedMetalContext.device);
     
     bd->SharedMetalContext.currentConstantBufferIndex = 0;
-    [bd->SharedMetalContext.events[frameInFlightIndex] waitUntilSignaledValue:bd->SharedMetalContext.eventValue timeoutMS:UINT64_MAX];
+    [bd->SharedMetalContext.events[frameInFlightIndex] waitUntilSignaledValue:bd->SharedMetalContext.eventValues[frameInFlightIndex].unsignedLongLongValue timeoutMS:UINT64_MAX];
     [bd->SharedMetalContext.commandAllocators[frameInFlightIndex] reset];
 
     // Both application and secondary viewport work for this slot are complete.
@@ -494,10 +495,12 @@ bool ImGui_ImplMetal4_CreateDeviceObjects(id<MTLDevice> device)
 
     NSMutableArray<id<MTL4CommandAllocator>>* commandAllocators = [NSMutableArray array];
     NSMutableArray<id<MTLSharedEvent>>* events = [NSMutableArray array];
+    NSMutableArray<NSNumber*>* eventValues = [NSMutableArray array];
     bd->SharedMetalContext.constantBuffers = [NSMutableArray array];
     for (NSUInteger i = 0; i < bd->SharedMetalContext.framesInFlight; i++)
     {
         events[i] = [device newSharedEvent];
+        eventValues[i] = @0;
         commandAllocators[i] = [device newCommandAllocator];
         bd->SharedMetalContext.constantBuffers[i] = [NSMutableArray array];
         id<MTLBuffer> buffer = [device newBufferWithLength:sizeof(ImGui_Metal4_ConstantData) options:MTLResourceStorageModeShared];
@@ -506,6 +509,7 @@ bool ImGui_ImplMetal4_CreateDeviceObjects(id<MTLDevice> device)
     }
     bd->SharedMetalContext.constantBufferChunkCount = 1;
     bd->SharedMetalContext.events = events;
+    bd->SharedMetalContext.eventValues = eventValues;
 
     MTL4ArgumentTableDescriptor* argumentTableDescriptor = [[MTL4ArgumentTableDescriptor alloc] init];
     argumentTableDescriptor.maxBufferBindCount = 2; // vertex buffer + constant buffer
@@ -969,7 +973,11 @@ static void ImGui_ImplMetal_RenderWindow(ImGuiViewport* viewport, void*)
     [bd->SharedMetalContext.commandQueue commit:&commandBuffer count:1];
     [bd->SharedMetalContext.commandQueue signalDrawable:drawable];
     [drawable present];
-    [bd->SharedMetalContext.commandQueue signalEvent:bd->SharedMetalContext.events[bd->SharedMetalContext.currentFrameSlot] value:++(bd->SharedMetalContext.eventValue)];
+    // Each frame-in-flight slot counts its own event: ImGui_ImplMetal4_NewFrame() waits for the value last signaled on that slot.
+    NSUInteger frameSlot = bd->SharedMetalContext.currentFrameSlot;
+    uint64_t eventValue = bd->SharedMetalContext.eventValues[frameSlot].unsignedLongLongValue + 1;
+    bd->SharedMetalContext.eventValues[frameSlot] = @(eventValue);
+    [bd->SharedMetalContext.commandQueue signalEvent:bd->SharedMetalContext.events[frameSlot] value:eventValue];
 }
 
 static void ImGui_ImplMetal_InitMultiViewportSupport()
