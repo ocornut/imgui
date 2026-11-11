@@ -555,9 +555,11 @@ static void TextSelectHook(ImDrawList* draw_list, ImFont* font, float font_size,
                 end_line();
                 x = origin_x;
                 y += font_size;
-                soft_wrapped = " ";
+                // The wrap position is also where a '\n' ends the line: that one is not a soft wrap
+                const char* next_line = ImTextCalcWordWrapNextLineStart(s, text_end);
+                soft_wrapped = ImMemchr(s, '\n', next_line - s) != NULL ? NULL : " ";
                 word_wrap_eol = NULL;
-                s = ImTextCalcWordWrapNextLineStart(s, text_end);
+                s = next_line;
                 begin_line();
                 continue;
             }
