@@ -140,6 +140,8 @@ Docking+Viewports Branch:
     windows that are parented and use `ImGuiViewportFlags_NoFocusOnAppearing`. (#7354, #8669)
   - Metal, Metal4: present secondary viewport windows without vsync by default, matching other
     backends. Added `ImGui_ImplMetal_SetDisplaySyncEnabled()`. (#9501, #9608) [@lailoken]
+  - Metal4: fixed `ImGui_ImplMetal4_NewFrame()` waiting forever when using more than one
+    frame in flight, once a secondary viewport has been rendered.
 
 
 
