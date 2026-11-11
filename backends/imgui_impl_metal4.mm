@@ -19,6 +19,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-11-16: Fixed vertex/index buffers being reused by a later draw in the same frame. (#9622, #9625)
 //  2026-10-06: Added support for render passes with multiple color attachments: we render to the first one and leave the others untouched. (#9574)
 //  2026-09-07: Round framebuffer dimensions to the nearest integer instead of truncating them. (#9538, 9515, #8628)
 //  2026-07-07: Metal 4: Added metal-cpp support. (#9461)
@@ -82,6 +83,7 @@ struct ImGui_Metal4_ConstantData
 @property (nonatomic, strong) NSArray<id<MTLBuffer>>*       constantBuffers;
 @property (nonatomic, assign) ImGui_Metal4_ConstantData**   constantBufferContentsArray;
 @property (nonatomic, strong) NSMutableArray<NSMutableArray<Metal4Buffer*>*>* bufferCaches;
+@property (nonatomic, strong) NSMutableArray<NSMutableArray<Metal4Buffer*>*>* buffersInFlight; // per frame slot: buffers used since its last NewFrame(), may still be read by the GPU
 @property (nonatomic, strong) NSObject*                     bufferCacheLock;
 @property (nonatomic, assign) double                        lastBufferCachePurge;
 - (id<MTLBuffer>)currentConstantBuffer;
@@ -148,6 +150,13 @@ void ImGui_ImplMetal4_NewFrame(MTL4RenderPassDescriptor* renderPassDescriptor, i
     bd->SharedMetalContext.currentFrameSlot = (NSUInteger)frameInFlightIndex;
     if (bd->SharedMetalContext.depthStencilState == nil)
         ImGui_ImplMetal4_CreateDeviceObjects(bd->SharedMetalContext.device);
+
+    // The application has finished GPU work for this slot before reusing it.
+    @synchronized(bd->SharedMetalContext.bufferCacheLock)
+    {
+        [bd->SharedMetalContext.bufferCaches[frameInFlightIndex] addObjectsFromArray:bd->SharedMetalContext.buffersInFlight[frameInFlightIndex]];
+        [bd->SharedMetalContext.buffersInFlight[frameInFlightIndex] removeAllObjects];
+    }
 }
 
 static void ImGui_ImplMetal4_SetupRenderState(ImDrawData* draw_data, id<MTL4CommandBuffer> commandBuffer,
@@ -315,7 +324,8 @@ void ImGui_ImplMetal4_RenderDrawData(ImDrawData* draw_data, id<MTL4CommandBuffer
     Metal4Context* sharedMetalContext = bd->SharedMetalContext;
     @synchronized(sharedMetalContext.bufferCacheLock)
     {
-        NSMutableArray<Metal4Buffer*>* slotCache = sharedMetalContext.bufferCaches[sharedMetalContext.currentFrameSlot];
+        // Keep these buffers alive and out of the cache until the next NewFrame() for this slot.
+        NSMutableArray<Metal4Buffer*>* slotCache = sharedMetalContext.buffersInFlight[sharedMetalContext.currentFrameSlot];
         [slotCache addObject:vertexBuffer];
         [slotCache addObject:indexBuffer];
     }
@@ -479,9 +489,14 @@ bool ImGui_ImplMetal4_Init(id<MTLDevice> device, id<MTL4CommandQueue> commandQue
     bd->SharedMetalContext.commandQueue = commandQueue;
     bd->SharedMetalContext.framesInFlight = (NSUInteger)framesInFlight;
     NSMutableArray<NSMutableArray<Metal4Buffer*>*>* bufferCaches = [NSMutableArray array];
+    NSMutableArray<NSMutableArray<Metal4Buffer*>*>* buffersInFlight = [NSMutableArray array];
     for (NSUInteger i = 0; i < (NSUInteger)framesInFlight; i++)
+    {
         [bufferCaches addObject:[NSMutableArray array]];
+        [buffersInFlight addObject:[NSMutableArray array]];
+    }
     bd->SharedMetalContext.bufferCaches = bufferCaches;
+    bd->SharedMetalContext.buffersInFlight = buffersInFlight;
     return true;
 }
 
