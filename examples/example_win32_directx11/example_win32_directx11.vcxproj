@@ -86,7 +86,7 @@
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\..;..\..\backends;%(AdditionalIncludeDirectories);</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..;..\..\backends;..\..\..\imgui_test_engine%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <SupportJustMyCode>false</SupportJustMyCode>
     </ClCompile>
@@ -101,7 +101,7 @@
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\..;..\..\backends;%(AdditionalIncludeDirectories);</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..;..\..\backends;..\..\..\imgui_test_engine%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <SupportJustMyCode>false</SupportJustMyCode>
     </ClCompile>
@@ -118,7 +118,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>..\..;..\..\backends;%(AdditionalIncludeDirectories);</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..;..\..\backends;..\..\..\imgui_test_engine%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
@@ -137,7 +137,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>..\..;..\..\backends;%(AdditionalIncludeDirectories);</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..;..\..\backends;..\..\..\imgui_test_engine%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
@@ -151,6 +151,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\imgui_test_engine\imgui_test_engine\imgui_capture_tool.h" />
+    <ClInclude Include="..\..\..\imgui_test_engine\imgui_test_engine\imgui_te_context.h" />
+    <ClInclude Include="..\..\..\imgui_test_engine\imgui_test_engine\imgui_te_coroutine.h" />
+    <ClInclude Include="..\..\..\imgui_test_engine\imgui_test_engine\imgui_te_engine.h" />
+    <ClInclude Include="..\..\..\imgui_test_engine\imgui_test_engine\imgui_te_exporters.h" />
+    <ClInclude Include="..\..\..\imgui_test_engine\imgui_test_engine\imgui_te_imconfig.h" />
+    <ClInclude Include="..\..\..\imgui_test_engine\imgui_test_engine\imgui_te_internal.h" />
+    <ClInclude Include="..\..\..\imgui_test_engine\imgui_test_engine\imgui_te_perftool.h" />
+    <ClInclude Include="..\..\..\imgui_test_engine\imgui_test_engine\imgui_te_ui.h" />
+    <ClInclude Include="..\..\..\imgui_test_engine\imgui_test_engine\imgui_te_utils.h" />
     <ClInclude Include="..\..\imconfig.h" />
     <ClInclude Include="..\..\imgui.h" />
     <ClInclude Include="..\..\imgui_internal.h" />
@@ -158,6 +168,14 @@
     <ClInclude Include="..\..\backends\imgui_impl_win32.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\imgui_test_engine\imgui_test_engine\imgui_capture_tool.cpp" />
+    <ClCompile Include="..\..\..\imgui_test_engine\imgui_test_engine\imgui_te_context.cpp" />
+    <ClCompile Include="..\..\..\imgui_test_engine\imgui_test_engine\imgui_te_coroutine.cpp" />
+    <ClCompile Include="..\..\..\imgui_test_engine\imgui_test_engine\imgui_te_engine.cpp" />
+    <ClCompile Include="..\..\..\imgui_test_engine\imgui_test_engine\imgui_te_exporters.cpp" />
+    <ClCompile Include="..\..\..\imgui_test_engine\imgui_test_engine\imgui_te_perftool.cpp" />
+    <ClCompile Include="..\..\..\imgui_test_engine\imgui_test_engine\imgui_te_ui.cpp" />
+    <ClCompile Include="..\..\..\imgui_test_engine\imgui_test_engine\imgui_te_utils.cpp" />
     <ClCompile Include="..\..\imgui.cpp" />
     <ClCompile Include="..\..\imgui_demo.cpp" />
     <ClCompile Include="..\..\imgui_draw.cpp" />

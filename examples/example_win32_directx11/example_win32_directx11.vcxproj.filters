@@ -24,6 +24,36 @@
     <ClInclude Include="..\..\backends\imgui_impl_dx11.h">
       <Filter>sources</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\imgui_test_engine\imgui_test_engine\imgui_capture_tool.h">
+      <Filter>sources</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\imgui_test_engine\imgui_test_engine\imgui_te_context.h">
+      <Filter>sources</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\imgui_test_engine\imgui_test_engine\imgui_te_coroutine.h">
+      <Filter>sources</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\imgui_test_engine\imgui_test_engine\imgui_te_engine.h">
+      <Filter>sources</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\imgui_test_engine\imgui_test_engine\imgui_te_exporters.h">
+      <Filter>sources</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\imgui_test_engine\imgui_test_engine\imgui_te_imconfig.h">
+      <Filter>sources</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\imgui_test_engine\imgui_test_engine\imgui_te_internal.h">
+      <Filter>sources</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\imgui_test_engine\imgui_test_engine\imgui_te_perftool.h">
+      <Filter>sources</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\imgui_test_engine\imgui_test_engine\imgui_te_ui.h">
+      <Filter>sources</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\imgui_test_engine\imgui_test_engine\imgui_te_utils.h">
+      <Filter>sources</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\imgui.cpp">
@@ -49,6 +79,30 @@
     </ClCompile>
     <ClCompile Include="..\..\imgui_tables.cpp">
       <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\imgui_test_engine\imgui_test_engine\imgui_capture_tool.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\imgui_test_engine\imgui_test_engine\imgui_te_context.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\imgui_test_engine\imgui_test_engine\imgui_te_coroutine.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\imgui_test_engine\imgui_test_engine\imgui_te_engine.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\imgui_test_engine\imgui_test_engine\imgui_te_exporters.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\imgui_test_engine\imgui_test_engine\imgui_te_perftool.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\imgui_test_engine\imgui_test_engine\imgui_te_ui.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\imgui_test_engine\imgui_test_engine\imgui_te_utils.cpp">
+      <Filter>sources</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -30,6 +30,10 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 #include "misc/text_select/imgui_text_select.h"
 #include "misc/text_select/imgui_text_select.cpp"
 
+#include "imgui_test_engine/imgui_te_engine.h"
+#include "imgui_test_engine/imgui_te_ui.h"
+#include "misc/text_select/imgui_text_select_tests.cpp"
+
 // Main code
 int main(int, char**)
 {
@@ -95,6 +99,17 @@ int main(int, char**)
     ImGui_ImplWin32_Init(hwnd);
     ImGui_ImplDX11_Init(g_pd3dDevice, g_pd3dDeviceContext);
 
+    // Setup Test Engine
+    ImGuiTestEngine* engine = ImGuiTestEngine_CreateContext();
+    ImGuiTestEngineIO& test_io = ImGuiTestEngine_GetIO(engine);
+    test_io.ConfigVerboseLevel = ImGuiTestVerboseLevel_Info;
+    test_io.ConfigVerboseLevelOnError = ImGuiTestVerboseLevel_Debug;
+    ImGuiTestEngine_Start(engine, ImGui::GetCurrentContext());
+    ImGuiTestEngine_InstallDefaultCrashHandler();
+
+    // Tests
+    RegisterTests_TextSelect(engine);
+
     // Load Fonts
     // - If fonts are not explicitly loaded, Dear ImGui will select an embedded font: either AddFontDefaultVector() or AddFontDefaultBitmap().
     //   This selection is based on (style.FontSizeBase * style.FontScaleMain * style.FontScaleDpi) reaching a threshold.
@@ -131,7 +146,7 @@ int main(int, char**)
             if (msg.message == WM_QUIT)
                 done = true;
         }
-        if (done)
+        if (done && ImGuiTestEngine_TryAbortEngine(engine))
             break;
 
         // Handle window being minimized or screen locked
@@ -155,6 +170,8 @@ int main(int, char**)
         ImGui_ImplDX11_NewFrame();
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
+
+        ImGuiTestEngine_ShowTestEngineWindows(engine, nullptr);
 
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
         if (show_demo_window)
@@ -207,16 +224,27 @@ int main(int, char**)
             ImGui::RenderPlatformWindowsDefault();
         }
 
+        ImGuiTestEngine_PreSwap(engine);
+
         // Present
-        HRESULT hr = g_pSwapChain->Present(1, 0);   // Present with vsync
-        //HRESULT hr = g_pSwapChain->Present(0, 0); // Present without vsync
+        HRESULT hr;
+        if (test_io.IsRequestingMaxAppSpeed)
+            hr = g_pSwapChain->Present(0, 0); // Present without vsync
+        else
+            hr = g_pSwapChain->Present(1, 0);   // Present with vsync
         g_SwapChainOccluded = (hr == DXGI_STATUS_OCCLUDED);
+
+        ImGuiTestEngine_PostSwap(engine);
     }
+
+    ImGuiTestEngine_Stop(engine);
 
     // Cleanup
     ImGui_ImplDX11_Shutdown();
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
+
+    ImGuiTestEngine_DestroyContext(engine);
 
     CleanupDeviceD3D();
     ::DestroyWindow(hwnd);
