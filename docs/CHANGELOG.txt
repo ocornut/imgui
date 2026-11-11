@@ -125,6 +125,8 @@ Other Changes:
   - Vulkan: don't transition swapchain images from `VK_IMAGE_LAYOUT_UNDEFINED` to
     `VK_IMAGE_LAYOUT_PRESENT_SRC_KHR` on window creation, prevent validation errors in
     examples and multi-viewport support. (#9553, #9496, #9152) [@sarpsenturk, @LewisJustin]
+  - Metal4: renamed internal Objective-C classes (which had the same names as those of the
+    Metal backend) so both backends can be linked into the same binary.
 
 
 Docking+Viewports Branch:
