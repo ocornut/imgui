@@ -480,7 +480,7 @@ static void TextSelectHook(ImDrawList* draw_list, ImFont* font, float font_size,
     if (do_probe)
         max_y = ImMax(max_y, probe_pos.y);
 
-    const bool snap = (draw_list->Flags & ImDrawListFlags_TextNoPixelSnap) == 0;
+    const bool snap = (draw_list->Flags & ImDrawFlags_TextNoPixelSnap) == 0;
     const float origin_x = snap ? IM_TRUNC(pos.x) : pos.x;
     float x = origin_x;
     float y = snap ? IM_TRUNC(pos.y) : pos.y;
