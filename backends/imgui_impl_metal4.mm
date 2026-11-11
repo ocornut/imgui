@@ -94,6 +94,7 @@ struct ImGui_Metal4_ConstantData
 @property (nonatomic, assign) NSUInteger                    framesInFlight;
 @property (nonatomic, assign) NSUInteger                    currentFrameSlot;
 @property (nonatomic, strong) NSMutableArray<NSMutableArray<MetalBuffer*>*>* bufferCaches;
+@property (nonatomic, strong) NSMutableArray<NSMutableArray<MetalBuffer*>*>* buffersInFlight; // per frame slot: buffers used since its last NewFrame(), may still be read by the GPU
 @property (nonatomic, strong) NSObject*                     bufferCacheLock;
 @property (nonatomic, assign) double                        lastBufferCachePurge;
 @property (nonatomic, strong) NSArray<id<MTLSharedEvent>>*  events; // for tracking when a commands are complete to reset allocator
@@ -169,6 +170,13 @@ void ImGui_ImplMetal4_NewFrame(MTL4RenderPassDescriptor* renderPassDescriptor, i
     bd->SharedMetalContext.currentConstantBufferIndex = 0;
     [bd->SharedMetalContext.events[frameInFlightIndex] waitUntilSignaledValue:bd->SharedMetalContext.eventValue timeoutMS:UINT64_MAX];
     [bd->SharedMetalContext.commandAllocators[frameInFlightIndex] reset];
+
+    // Commands of this frame slot are complete: make the vertex/index buffers they used available again.
+    @synchronized(bd->SharedMetalContext.bufferCacheLock)
+    {
+        [bd->SharedMetalContext.bufferCaches[frameInFlightIndex] addObjectsFromArray:bd->SharedMetalContext.buffersInFlight[frameInFlightIndex]];
+        [bd->SharedMetalContext.buffersInFlight[frameInFlightIndex] removeAllObjects];
+    }
 }
 
 static void ImGui_ImplMetal4_SetupRenderState(ImDrawData* draw_data, id<MTL4CommandBuffer> commandBuffer,
@@ -358,7 +366,8 @@ void ImGui_ImplMetal4_RenderDrawData(ImDrawData* draw_data, id<MTL4CommandBuffer
     MetalContext* sharedMetalContext = bd->SharedMetalContext;
     @synchronized(sharedMetalContext.bufferCacheLock)
     {
-        NSMutableArray<MetalBuffer*>* slotCache = sharedMetalContext.bufferCaches[sharedMetalContext.currentFrameSlot];
+        // Not reusable until the next NewFrame() of this frame slot: other viewports are rendered before the GPU is done with them.
+        NSMutableArray<MetalBuffer*>* slotCache = sharedMetalContext.buffersInFlight[sharedMetalContext.currentFrameSlot];
         [slotCache addObject:vertexBuffer];
         [slotCache addObject:indexBuffer];
     }
@@ -531,9 +540,14 @@ bool ImGui_ImplMetal4_Init(id<MTLDevice> device, id<MTL4CommandQueue> commandQue
     bd->SharedMetalContext.commandQueue = commandQueue;
     bd->SharedMetalContext.framesInFlight = (NSUInteger)framesInFlight;
     NSMutableArray<NSMutableArray<MetalBuffer*>*>* bufferCaches = [NSMutableArray array];
+    NSMutableArray<NSMutableArray<MetalBuffer*>*>* buffersInFlight = [NSMutableArray array];
     for (NSUInteger i = 0; i < (NSUInteger)framesInFlight; i++)
+    {
         [bufferCaches addObject:[NSMutableArray array]];
+        [buffersInFlight addObject:[NSMutableArray array]];
+    }
     bd->SharedMetalContext.bufferCaches = bufferCaches;
+    bd->SharedMetalContext.buffersInFlight = buffersInFlight;
     
     ImGui_ImplMetal_InitMultiViewportSupport();
     return true;
