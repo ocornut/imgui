@@ -63,7 +63,6 @@ Autumn cleanup of stuff marked obsolete more than two years ago:
   and `GetWindowContentRegionMax()` will may be removed soon-ish: you should not
   ever need those functions. See #7838.
 
-
 Other Changes:
 
 - Style:
@@ -118,6 +117,7 @@ Other Changes:
   Made the script detect the environment when needed (e.g. to specify library path).
 - Examples: added support for ARM64 in selected build_win.bat helpers. (#9593) [@Harishmcw]
 - Backends:
+  - GLFW: allow initialization with missing HWND. (#9619) [@djohansson]
   - GLFW, SDL2: Emscripten implementation of `Platform_OpenInShellFn` calls
     `window.open()` with `noopener`: prevents newly opened tab from keeping a
     reference to opening page. (#9615, #7660, #7851) [@pthom]
