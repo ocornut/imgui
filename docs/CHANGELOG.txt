@@ -93,6 +93,8 @@ Other Changes:
     - Fixed selectable highlight straying off the X2/Y2 clipping limit.
     - Fixed parent window work rectangle affecting the Y2 clipping limit.
     - Fixed the Y2 clipping limit overlapping bottom outer border.
+  - Fixed layout of items submitted while in horizontal layout mode (e.g. a menu bar).
+    `BeginTable()` resets layout mode to vertical. (#9589) [@themd]
 - Multi-Select:
   - Fixed `ImGuiSelectionBasicStorage::GetNextSelectedItem()` reading one past the
     end of storage when trailing items are unselected (#9604) [@MilosLord]
