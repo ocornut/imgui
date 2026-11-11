@@ -1,5 +1,43 @@
 // dear imgui: text selection extension
-// See imgui_text_select.h
+// See imgui_text_select.h for what the user gets. This is how it is done.
+//
+// DATA
+// - Dear ImGui does not keep the text it draws, and neither does this: the only state kept between frames is the
+//   selection, as two ends (Anchor, Focus). An end is a point, or the extent of a word or line, in coordinates local
+//   to its container (the anchor's window, plus a table or the menu bar): screen position - window position + scroll.
+// - Being selected is a geometric test done again every frame: a glyph is selected when its center lies between the
+//   two ends in reading order (by line, then by x), or inside their rectangle for a block selection.
+//   If the content under a selection changes, so does what is selected.
+//
+// EVERY FRAME
+// - TextSelectNewFrame() (NewFramePost hook): finds the windows of the two ends again, reads the keys, and on a
+//   click or drag frame arms the probe: the request to find out what text is under the mouse.
+// - TextSelectHook(): ImDrawList::AddText() calls it for every text run, before the glyphs are emitted. It returns
+//   early unless the run's window has something to do: it is in the selection's container (highlight), it holds
+//   the caret, or it is being probed. Then it walks the run the way ImFont::RenderText() lays it out (word wrap,
+//   '\n', advances), visiting only the lines one of those tasks needs, and
+//     - adds a filled rectangle under each selected span of glyphs,
+//     - notes the glyph edge nearest to the anchor, for the caret,
+//     - notes the line, word and glyph under the mouse, for the probe.
+// - TextSelectEndFrame() (EndFramePre hook): every widget has run, so g.ActiveId tells whether one took the click.
+//   If none did, the click sets the anchor from the probe and the selection holds the active id until the button
+//   is released; a drag moves the focus and scrolls the container. Caret and bookends are drawn here.
+//
+// CLICK ON A WIDGET
+// - It clears the selection and the widget handles it as usual, with two exceptions.
+//   Alt+Click is decided in TextSelectNewFrame(), which takes the active id before any widget can.
+//   A TreeNode() or row-spanning Selectable() label is "stealable": if the mouse then moves past the drag threshold
+//   and the widget has not used the drag, the selection takes the active id over from it.
+//
+// COPY
+// - Highlighting only looks at text that was submitted, i.e. not clipped. Copy needs all of the selection, so the
+//   key press turns that frame into a copy frame:
+//     - TextSelectBeginCopy() starts LogToBuffer(), which stops ItemAdd() from clipping items, and sets
+//       g.BoxSelectState.UnclipRect to the selection's vertical range, which makes ImGuiListClipper and tables
+//       submit the rows in it. That one frame submits every item in that range.
+//     - TextSelectHook() also records each selected span as a fragment: its text and its local rectangle.
+//     - TextSelectFinishCopy() sorts the fragments by line then by x, joins them (space or tab on a line depending
+//       on the gap, '\n' between lines, the join string after a soft wrap) and sets the clipboard.
 
 #include "imgui_text_select.h"
 #include "imgui_internal.h"
