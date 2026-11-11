@@ -55,7 +55,7 @@ struct ImGui_Metal4_ConstantData
     float ModelViewProjectionMatrix[METAL_IMGUI_VIEWPORTS_PER_CHUNK][4][4];
 };
 
-@interface MetalBuffer : NSObject
+@interface Metal4Buffer : NSObject
 @property (nonatomic, strong) id<MTLBuffer> buffer;
 @property (nonatomic, assign) double        lastReuseTime;
 - (instancetype)initWithBuffer:(id<MTLBuffer>)buffer;
@@ -65,7 +65,7 @@ struct ImGui_Metal4_ConstantData
 
 // An object that encapsulates the data necessary to uniquely identify a
 // render pipeline state. These are used as cache keys.
-@interface FramebufferDescriptor : NSObject<NSCopying>
+@interface Metal4FramebufferDescriptor : NSObject<NSCopying>
 @property (nonatomic, assign) unsigned long  sampleCount;
 @property (nonatomic, assign) MTLPixelFormat depthPixelFormat;
 @property (nonatomic, assign) MTLPixelFormat stencilPixelFormat;
@@ -73,7 +73,7 @@ struct ImGui_Metal4_ConstantData
 - (MTLPixelFormat)colorPixelFormatAtIndex:(NSUInteger)index;
 @end
 
-@interface MetalTexture : NSObject
+@interface Metal4Texture : NSObject
 @property (nonatomic, strong) id<MTLTexture> metalTexture;
 - (instancetype)initWithTexture:(id<MTLTexture>)metalTexture;
 @end
@@ -81,7 +81,7 @@ struct ImGui_Metal4_ConstantData
 // A singleton that stores long-lived objects that are needed by the Metal
 // renderer backend. Stores the render pipeline state cache and the default
 // font texture, and manages the reusable buffer cache.
-@interface MetalContext : NSObject
+@interface Metal4Context : NSObject
 @property (nonatomic, strong) id<MTLDevice>                 device;
 @property (nonatomic, strong) id<MTL4CommandQueue>          commandQueue;
 @property (nonatomic, strong) id<MTLDepthStencilState>      depthStencilState;
@@ -89,11 +89,12 @@ struct ImGui_Metal4_ConstantData
 @property (nonatomic, strong) id<MTLSamplerState>           samplerStateLinear;
 @property (nonatomic, strong) id<MTLSamplerState>           samplerStateNearest;
 @property (nonatomic, strong) id<MTLResidencySet>           residencySet;
-@property (nonatomic, strong) FramebufferDescriptor*        framebufferDescriptor;
+@property (nonatomic, strong) Metal4FramebufferDescriptor*  framebufferDescriptor;
 @property (nonatomic, strong) NSMutableDictionary*          renderPipelineStateCache;
 @property (nonatomic, assign) NSUInteger                    framesInFlight;
 @property (nonatomic, assign) NSUInteger                    currentFrameSlot;
-@property (nonatomic, strong) NSMutableArray<NSMutableArray<MetalBuffer*>*>* bufferCaches;
+@property (nonatomic, strong) NSMutableArray<NSMutableArray<Metal4Buffer*>*>* bufferCaches;
+@property (nonatomic, strong) NSMutableArray<NSMutableArray<Metal4Buffer*>*>* buffersInFlight; // per frame slot: buffers used since its last NewFrame(), may still be read by the GPU
 @property (nonatomic, strong) NSObject*                     bufferCacheLock;
 @property (nonatomic, assign) double                        lastBufferCachePurge;
 @property (nonatomic, strong) NSArray<id<MTLSharedEvent>>*  events; // for tracking when a commands are complete to reset allocator
@@ -102,13 +103,13 @@ struct ImGui_Metal4_ConstantData
 @property (nonatomic, strong) NSMutableArray<NSMutableArray<id<MTLBuffer>>*>*  constantBuffers;
 @property (nonatomic) uint64_t                              constantBufferChunkCount;
 @property (nonatomic) uint64_t                              currentConstantBufferIndex;
-- (MetalBuffer*)dequeueReusableBufferOfLength:(NSUInteger)length device:(id<MTLDevice>)device;
-- (id<MTLRenderPipelineState>)renderPipelineStateForFramebufferDescriptor:(FramebufferDescriptor*)descriptor device:(id<MTLDevice>)device;
+- (Metal4Buffer*)dequeueReusableBufferOfLength:(NSUInteger)length device:(id<MTLDevice>)device;
+- (id<MTLRenderPipelineState>)renderPipelineStateForFramebufferDescriptor:(Metal4FramebufferDescriptor*)descriptor device:(id<MTLDevice>)device;
 @end
 
 struct ImGui_ImplMetal4_Data
 {
-    MetalContext*                SharedMetalContext;
+    Metal4Context*               SharedMetalContext;
     id<MTL4RenderCommandEncoder> RenderCommandEncoder;
     bool                         DisplaySyncEnabled;
 
@@ -143,7 +144,7 @@ void ImGui_ImplMetal4_RenderDrawData(ImDrawData* draw_data,
                                    (__bridge id<MTL4RenderCommandEncoder>)(commandEncoder));
 }
 
-bool ImGui_ImplMetal_CreateDeviceObjects(MTL::Device* device)
+bool ImGui_ImplMetal4_CreateDeviceObjects(MTL::Device* device)
 {
     return ImGui_ImplMetal4_CreateDeviceObjects((__bridge id<MTLDevice>)(device));
 }
@@ -158,9 +159,9 @@ void ImGui_ImplMetal4_NewFrame(MTL4RenderPassDescriptor* renderPassDescriptor, i
     IM_ASSERT(bd != nil && "Context or backend not initialized! Did you call ImGui_ImplMetal4_Init()?");
     IM_ASSERT(frameInFlightIndex < (int)bd->SharedMetalContext.framesInFlight && "frameInFlightIndex out of range! See framesInFlight passed to ImGui_ImplMetal4_Init().");
 #ifdef IMGUI_IMPL_METAL_CPP
-    bd->SharedMetalContext.framebufferDescriptor = [[[FramebufferDescriptor alloc] initWithRenderPassDescriptor:renderPassDescriptor]autorelease];
+    bd->SharedMetalContext.framebufferDescriptor = [[[Metal4FramebufferDescriptor alloc] initWithRenderPassDescriptor:renderPassDescriptor]autorelease];
 #else
-    bd->SharedMetalContext.framebufferDescriptor = [[FramebufferDescriptor alloc] initWithRenderPassDescriptor:renderPassDescriptor];
+    bd->SharedMetalContext.framebufferDescriptor = [[Metal4FramebufferDescriptor alloc] initWithRenderPassDescriptor:renderPassDescriptor];
 #endif
     bd->SharedMetalContext.currentFrameSlot = (NSUInteger)frameInFlightIndex;
     if (bd->SharedMetalContext.depthStencilState == nil)
@@ -169,11 +170,18 @@ void ImGui_ImplMetal4_NewFrame(MTL4RenderPassDescriptor* renderPassDescriptor, i
     bd->SharedMetalContext.currentConstantBufferIndex = 0;
     [bd->SharedMetalContext.events[frameInFlightIndex] waitUntilSignaledValue:bd->SharedMetalContext.eventValue timeoutMS:UINT64_MAX];
     [bd->SharedMetalContext.commandAllocators[frameInFlightIndex] reset];
+
+    // Commands of this frame slot are complete: make the vertex/index buffers they used available again.
+    @synchronized(bd->SharedMetalContext.bufferCacheLock)
+    {
+        [bd->SharedMetalContext.bufferCaches[frameInFlightIndex] addObjectsFromArray:bd->SharedMetalContext.buffersInFlight[frameInFlightIndex]];
+        [bd->SharedMetalContext.buffersInFlight[frameInFlightIndex] removeAllObjects];
+    }
 }
 
 static void ImGui_ImplMetal4_SetupRenderState(ImDrawData* draw_data, id<MTL4CommandBuffer> commandBuffer,
     id<MTL4RenderCommandEncoder> commandEncoder, id<MTLRenderPipelineState> renderPipelineState,
-    MetalBuffer* vertexBuffer, size_t vertexBufferOffset)
+    Metal4Buffer* vertexBuffer, size_t vertexBufferOffset)
 {
     IM_UNUSED(commandBuffer);
     ImGui_ImplMetal4_Data* bd = ImGui_ImplMetal4_GetBackendData();
@@ -232,7 +240,7 @@ static void ImGui_ImplMetal4_DrawCallback_SetSamplerNearest(const ImDrawList*, c
 void ImGui_ImplMetal4_RenderDrawData(ImDrawData* draw_data, id<MTL4CommandBuffer> commandBuffer, id<MTL4RenderCommandEncoder> commandEncoder)
 {
     ImGui_ImplMetal4_Data* bd = ImGui_ImplMetal4_GetBackendData();
-    MetalContext* ctx = bd->SharedMetalContext;
+    Metal4Context* ctx = bd->SharedMetalContext;
 
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
     int fb_width = (int)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x + 0.5f);
@@ -261,8 +269,8 @@ void ImGui_ImplMetal4_RenderDrawData(ImDrawData* draw_data, id<MTL4CommandBuffer
 
     size_t vertexBufferLength = (size_t)draw_data->TotalVtxCount * sizeof(ImDrawVert);
     size_t indexBufferLength = (size_t)draw_data->TotalIdxCount * sizeof(ImDrawIdx);
-    MetalBuffer* vertexBuffer = [ctx dequeueReusableBufferOfLength:vertexBufferLength device:commandBuffer.device];
-    MetalBuffer* indexBuffer = [ctx dequeueReusableBufferOfLength:indexBufferLength device:commandBuffer.device];
+    Metal4Buffer* vertexBuffer = [ctx dequeueReusableBufferOfLength:vertexBufferLength device:commandBuffer.device];
+    Metal4Buffer* indexBuffer = [ctx dequeueReusableBufferOfLength:indexBufferLength device:commandBuffer.device];
 
     bd->RenderCommandEncoder = commandEncoder;
     
@@ -355,10 +363,11 @@ void ImGui_ImplMetal4_RenderDrawData(ImDrawData* draw_data, id<MTL4CommandBuffer
         indexBufferOffset += (size_t)draw_list->IdxBuffer.Size * sizeof(ImDrawIdx);
     }
 
-    MetalContext* sharedMetalContext = bd->SharedMetalContext;
+    Metal4Context* sharedMetalContext = bd->SharedMetalContext;
     @synchronized(sharedMetalContext.bufferCacheLock)
     {
-        NSMutableArray<MetalBuffer*>* slotCache = sharedMetalContext.bufferCaches[sharedMetalContext.currentFrameSlot];
+        // Not reusable until the next NewFrame() of this frame slot: other viewports are rendered before the GPU is done with them.
+        NSMutableArray<Metal4Buffer*>* slotCache = sharedMetalContext.buffersInFlight[sharedMetalContext.currentFrameSlot];
         [slotCache addObject:vertexBuffer];
         [slotCache addObject:indexBuffer];
     }
@@ -370,7 +379,7 @@ void ImGui_ImplMetal4_RenderDrawData(ImDrawData* draw_data, id<MTL4CommandBuffer
 
 static void ImGui_ImplMetal4_DestroyTexture(ImTextureData* tex)
 {
-    if (MetalTexture* backend_tex = (__bridge_transfer MetalTexture*)(tex->BackendUserData))
+    if (Metal4Texture* backend_tex = (__bridge_transfer Metal4Texture*)(tex->BackendUserData))
     {
         IM_ASSERT(backend_tex.metalTexture == (__bridge id<MTLTexture>)(void*)(intptr_t)tex->TexID);
         backend_tex.metalTexture = nil;
@@ -406,7 +415,7 @@ void ImGui_ImplMetal4_UpdateTexture(ImTextureData* tex)
         id <MTLTexture> texture = [bd->SharedMetalContext.device newTextureWithDescriptor:textureDescriptor];
         [bd->SharedMetalContext.residencySet addAllocation:texture];
         [texture replaceRegion:MTLRegionMake2D(0, 0, (NSUInteger)tex->Width, (NSUInteger)tex->Height) mipmapLevel:0 withBytes:tex->Pixels bytesPerRow:(NSUInteger)tex->Width * 4];
-        MetalTexture* backend_tex = [[MetalTexture alloc] initWithTexture:texture];
+        Metal4Texture* backend_tex = [[Metal4Texture alloc] initWithTexture:texture];
 
         // Store identifiers
         tex->SetTexID((ImTextureID)(intptr_t)texture);
@@ -417,7 +426,7 @@ void ImGui_ImplMetal4_UpdateTexture(ImTextureData* tex)
     {
         // Update selected blocks. We only ever write to textures regions which have never been used before!
         // This backend choose to use tex->Updates[] but you can use tex->UpdateRect to upload a single region.
-        MetalTexture* backend_tex = (__bridge MetalTexture*)(tex->BackendUserData);
+        Metal4Texture* backend_tex = (__bridge Metal4Texture*)(tex->BackendUserData);
         for (ImTextureRect& r : tex->Updates)
         {
             [backend_tex.metalTexture replaceRegion:MTLRegionMake2D((NSUInteger)r.x, (NSUInteger)r.y, (NSUInteger)r.w, (NSUInteger)r.h)
@@ -526,14 +535,19 @@ bool ImGui_ImplMetal4_Init(id<MTLDevice> device, id<MTL4CommandQueue> commandQue
     platform_io.DrawCallback_SetSamplerLinear = ImGui_ImplMetal4_DrawCallback_SetSamplerLinear;
     platform_io.DrawCallback_SetSamplerNearest = ImGui_ImplMetal4_DrawCallback_SetSamplerNearest;
 
-    bd->SharedMetalContext = [[MetalContext alloc] init];
+    bd->SharedMetalContext = [[Metal4Context alloc] init];
     bd->SharedMetalContext.device = device;
     bd->SharedMetalContext.commandQueue = commandQueue;
     bd->SharedMetalContext.framesInFlight = (NSUInteger)framesInFlight;
-    NSMutableArray<NSMutableArray<MetalBuffer*>*>* bufferCaches = [NSMutableArray array];
+    NSMutableArray<NSMutableArray<Metal4Buffer*>*>* bufferCaches = [NSMutableArray array];
+    NSMutableArray<NSMutableArray<Metal4Buffer*>*>* buffersInFlight = [NSMutableArray array];
     for (NSUInteger i = 0; i < (NSUInteger)framesInFlight; i++)
+    {
         [bufferCaches addObject:[NSMutableArray array]];
+        [buffersInFlight addObject:[NSMutableArray array]];
+    }
     bd->SharedMetalContext.bufferCaches = bufferCaches;
+    bd->SharedMetalContext.buffersInFlight = buffersInFlight;
     
     ImGui_ImplMetal_InitMultiViewportSupport();
     return true;
@@ -557,7 +571,7 @@ void ImGui_ImplMetal4_Shutdown()
     platform_io.ClearRendererHandlers();
 }
 
-@implementation MetalBuffer
+@implementation Metal4Buffer
 - (instancetype)initWithBuffer:(id<MTLBuffer>)buffer
 {
     if ((self = [super init]))
@@ -569,9 +583,9 @@ void ImGui_ImplMetal4_Shutdown()
 }
 @end
 
-#pragma mark - FramebufferDescriptor implementation
+#pragma mark - Metal4FramebufferDescriptor implementation
 
-@implementation FramebufferDescriptor
+@implementation Metal4FramebufferDescriptor
 {
     MTLPixelFormat _colorPixelFormats[IMGUI_IMPL_METAL_MAX_COLOR_ATTACHMENTS];
 }
@@ -596,7 +610,7 @@ void ImGui_ImplMetal4_Shutdown()
 
 - (nonnull id)copyWithZone:(nullable NSZone*)zone
 {
-    FramebufferDescriptor* copy = [[FramebufferDescriptor allocWithZone:zone] init];
+    Metal4FramebufferDescriptor* copy = [[Metal4FramebufferDescriptor allocWithZone:zone] init];
     copy.sampleCount = self.sampleCount;
     memcpy(copy->_colorPixelFormats, _colorPixelFormats, sizeof(_colorPixelFormats));
     copy.depthPixelFormat = self.depthPixelFormat;
@@ -618,8 +632,8 @@ void ImGui_ImplMetal4_Shutdown()
 
 - (BOOL)isEqual:(id)object
 {
-    FramebufferDescriptor* other = object;
-    if (![other isKindOfClass:[FramebufferDescriptor class]])
+    Metal4FramebufferDescriptor* other = object;
+    if (![other isKindOfClass:[Metal4FramebufferDescriptor class]])
         return NO;
     return other.sampleCount == self.sampleCount      &&
     memcmp(other->_colorPixelFormats, _colorPixelFormats, sizeof(_colorPixelFormats)) == 0 &&
@@ -629,9 +643,9 @@ void ImGui_ImplMetal4_Shutdown()
 
 @end
 
-#pragma mark - MetalTexture implementation
+#pragma mark - Metal4Texture implementation
 
-@implementation MetalTexture
+@implementation Metal4Texture
 - (instancetype)initWithTexture:(id<MTLTexture>)metalTexture
 {
     if ((self = [super init]))
@@ -641,9 +655,9 @@ void ImGui_ImplMetal4_Shutdown()
 
 @end
 
-#pragma mark - MetalContext implementation
+#pragma mark - Metal4Context implementation
 
-@implementation MetalContext
+@implementation Metal4Context
 - (instancetype)init
 {
     if ((self = [super init]))
@@ -659,20 +673,20 @@ void ImGui_ImplMetal4_Shutdown()
 {
 }
 
-- (MetalBuffer*)dequeueReusableBufferOfLength:(NSUInteger)length device:(id<MTLDevice>)device
+- (Metal4Buffer*)dequeueReusableBufferOfLength:(NSUInteger)length device:(id<MTLDevice>)device
 {
     double now = GetMachAbsoluteTimeInSeconds();
-    NSMutableArray<MetalBuffer*>* slotCache = self.bufferCaches[self.currentFrameSlot];
+    NSMutableArray<Metal4Buffer*>* slotCache = self.bufferCaches[self.currentFrameSlot];
 
     @synchronized(self.bufferCacheLock)
     {
         // Purge old buffers that haven't been useful for a while
         if (now - self.lastBufferCachePurge > 1.0)
         {
-            for (NSMutableArray<MetalBuffer*>* cache in self.bufferCaches)
+            for (NSMutableArray<Metal4Buffer*>* cache in self.bufferCaches)
             {
                 NSMutableArray* survivors = [NSMutableArray array];
-                for (MetalBuffer* candidate in cache)
+                for (Metal4Buffer* candidate in cache)
                     if (candidate.lastReuseTime > self.lastBufferCachePurge)
                         [survivors addObject:candidate];
                 [cache setArray:survivors];
@@ -681,8 +695,8 @@ void ImGui_ImplMetal4_Shutdown()
         }
 
         // See if we have a buffer we can reuse, from this frame-in-flight slot's own cache
-        MetalBuffer* bestCandidate = nil;
-        for (MetalBuffer* candidate in slotCache)
+        Metal4Buffer* bestCandidate = nil;
+        for (Metal4Buffer* candidate in slotCache)
             if (candidate.buffer.length >= length && (bestCandidate == nil || bestCandidate.lastReuseTime > candidate.lastReuseTime))
                 bestCandidate = candidate;
 
@@ -697,7 +711,7 @@ void ImGui_ImplMetal4_Shutdown()
     // No luck; make a new buffer
     id<MTLBuffer> backing = [device newBufferWithLength:length options:MTLResourceStorageModeShared];
     [self.residencySet addAllocation:backing];
-    return [[MetalBuffer alloc] initWithBuffer:backing];
+    return [[Metal4Buffer alloc] initWithBuffer:backing];
 }
 
 const char* shaderCode = R"(
@@ -739,7 +753,7 @@ fragment half4 fragment_main(VertexOut in [[stage_in]],
 }
 )";
 
-- (id<MTLRenderPipelineState>)renderPipelineStateForFramebufferDescriptor:(FramebufferDescriptor*)descriptor device:(id<MTLDevice>)device
+- (id<MTLRenderPipelineState>)renderPipelineStateForFramebufferDescriptor:(Metal4FramebufferDescriptor*)descriptor device:(id<MTLDevice>)device
 {
     NSError* error = nil;
 
