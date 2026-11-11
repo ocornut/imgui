@@ -113,6 +113,8 @@ Other Changes:
 - ImVec2: added a check for cases where a custom `IM_VEC2_CLASS_EXTRA` macro
   adds an extra `operator=` to ImVec2. This isn't supported but should not
   be needed as you should have a constructor to convert from your type to ImVec2.
+- Misc: update stb_rect_pack 1.01->1.02 (fixed packing determinism by not
+  depending on qsort() tiebreak).
 - CI: added some ARM64 builds. (#9593) [@Harishmcw]
 - Examples: renamed various helper batch files from build_win32.bat to build_win.bat
   to reflect that they can also build X64 or ARM64, given the right environment.
