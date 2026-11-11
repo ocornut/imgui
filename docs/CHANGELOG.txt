@@ -95,6 +95,9 @@ Other Changes:
     - Fixed the Y2 clipping limit overlapping bottom outer border.
   - Fixed layout of items submitted while in horizontal layout mode (e.g. a menu bar).
     `BeginTable()` resets layout mode to vertical. (#9589) [@themd]
+- InputText:
+  - Up/PageUp on the first line now moves the cursor to the beginning
+    of the line, including when extending a selection. [@blackedout01]
 - Multi-Select:
   - Fixed `ImGuiSelectionBasicStorage::GetNextSelectedItem()` reading one past the
     end of storage when trailing items are unselected (#9604) [@MilosLord]
@@ -113,6 +116,8 @@ Other Changes:
 - ImVec2: added a check for cases where a custom `IM_VEC2_CLASS_EXTRA` macro
   adds an extra `operator=` to ImVec2. This isn't supported but should not
   be needed as you should have a constructor to convert from your type to ImVec2.
+- Misc: update stb_textedit 1.14->1.15, preserving UTF-8 and word-wrapping support.
+  (#6000, #6783, #7925, #3237)
 - Misc: update stb_rect_pack 1.01->1.02 (fixed packing determinism by not
   depending on qsort() tiebreak).
 - CI: added some ARM64 builds. (#9593) [@Harishmcw]
