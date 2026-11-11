@@ -1564,8 +1564,9 @@ bool ImGui::TextLink(const char* label)
         ColorConvertHSVtoRGB(h, s, v, line_colf.x, line_colf.y, line_colf.z);
     }
 
+    // FIXME-TEXT FIXME-DPI: Underline mode. Note how stb_truetype now expose stbtt_GetFontUnderlineMetrics().
     float line_y = bb.Max.y + ImFloor(g.FontBaked->Descent * g.FontBakedScale * 0.20f);
-    window->DrawList->AddLineH(bb.Min.x, bb.Max.x, line_y, GetColorU32(line_colf), 1.0f * (float)(int)g.Style._MainScale); // FIXME-TEXT: Underline mode // FIXME-DPI
+    window->DrawList->AddLineH(bb.Min.x, bb.Max.x, line_y, GetColorU32(line_colf), 1.0f * (float)(int)g.Style._MainScale);
 
     PushStyleColor(ImGuiCol_Text, GetColorU32(text_colf));
     RenderText(bb.Min, label, label_end, false);
