@@ -857,6 +857,7 @@ static void ImGui_ImplMetal_CreateWindow(ImGuiViewport* viewport)
     view.wantsLayer = YES;
 #endif
     data->MetalLayer = layer;
+    [bd->SharedMetalContext.commandQueue addResidencySet:layer.residencySet]; // Required to render into and present the layer's drawables
     data->CommandQueue = [device newCommandQueue];
     data->RenderPassDescriptor = [[MTL4RenderPassDescriptor alloc] init];
     data->Handle = handle;
@@ -866,7 +867,11 @@ static void ImGui_ImplMetal_DestroyWindow(ImGuiViewport* viewport)
 {
     // The main viewport (owned by the application) will always have RendererUserData == 0 since we didn't create the data for it.
     if (ImGuiViewportDataMetal* data = (ImGuiViewportDataMetal*)viewport->RendererUserData)
+    {
+        ImGui_ImplMetal4_Data* bd = ImGui_ImplMetal4_GetBackendData();
+        [bd->SharedMetalContext.commandQueue removeResidencySet:data->MetalLayer.residencySet];
         IM_DELETE(data);
+    }
     viewport->RendererUserData = nullptr;
 }
 
