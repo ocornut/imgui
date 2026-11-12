@@ -40,7 +40,8 @@
 //
 // VERSION HISTORY
 //
-//   !!!! (2025-10-23) changed STB_TEXTEDIT_INSERTCHARS() to return inserted count (instead of 0/1 bool), allowing partial insertion.
+//   x.xx (2026-11-12) changed STB_TEXTEDIT_INSERTCHARS() to return inserted count (instead of 0/1 bool), allowing partial insertion.
+//   x.xx (2026-11-12) add stb_textedit_text(), STB_TEXTEDIT_GETPREVCHARINDEX(), STB_TEXTEDIT_GETNEXTCHARINDEX() to facilitate UTF-8 support while preserving byte indices.
 //   1.15 (2026-11-08) various fixes
 //   1.14 (2021-07-11) page up/down, various fixes
 //   1.13 (2019-02-07) fix bug in undo size management
@@ -183,12 +184,12 @@
 //    STB_TEXTEDIT_K_TEXTSTART2          secondary keyboard input to move cursor to start of text
 //    STB_TEXTEDIT_K_TEXTEND2            secondary keyboard input to move cursor to end of text
 //
-// To support UTF-8:
+// To support UTF-8 while using indices to _bytes_ (instead of indices to _codepoints_):
 //
 //    STB_TEXTEDIT_GETPREVCHARINDEX      returns index of previous character
 //    STB_TEXTEDIT_GETNEXTCHARINDEX      returns index of next character
+//    Call stb_textedit_text() directly to submit text contents.
 //    Do NOT define STB_TEXTEDIT_KEYTOTEXT.
-//    Instead, call stb_textedit_text() directly for text contents.
 //
 // Keyboard input must be encoded as a single integer value; e.g. a character code
 // and some bitflags that represent shift states. to simplify the interface, SHIFT must
@@ -259,8 +260,8 @@
 //          a corresponding character or text event.
 //
 //      text:
-//          (optional) call this to directly send text input the textfield, which is required
-//          for UTF-8 support, because stb_textedit_key() + STB_TEXTEDIT_KEYTOTEXT()
+//          (optional) call this to directly send text input the textfield, which is
+//          helpful for UTF-8 support, because stb_textedit_key() + STB_TEXTEDIT_KEYTOTEXT()
 //          cannot infer text length.
 //
 //      key:
@@ -271,7 +272,7 @@
 //          various definitions like STB_TEXTEDIT_K_LEFT have the is-key-event bit
 //          set, and make STB_TEXTEDIT_KEYTOCHAR check that the is-key-event bit is
 //          clear. STB_TEXTEDIT_KEYTYPE defaults to int, but you can #define it to
-//          anything other type you want before including.
+//          any other type you want before including.
 //          if the STB_TEXTEDIT_KEYTOTEXT function is defined, selected keys are
 //          transformed into text and stb_textedit_text() is automatically called.
 //
@@ -422,12 +423,9 @@ typedef struct
 #define IMSTB_TEXTEDIT_memmove memmove
 #endif
 
-// [DEAR IMGUI]
-// Functions must be implemented for UTF8 support
-// Code in this file that uses those functions is modified for [DEAR IMGUI] and deviates from the original stb_textedit.
-// There is not necessarily a '[DEAR IMGUI]' at the usage sites.
-#ifndef IMSTB_TEXTEDIT_GETPREVCHARINDEX
-#define IMSTB_TEXTEDIT_GETPREVCHARINDEX(OBJ, IDX) ((IDX) - 1)
+// Functions must be implemented for UTF-8 support with indices to bytes.
+#ifndef STB_TEXTEDIT_GETPREVCHARINDEX
+#define STB_TEXTEDIT_GETPREVCHARINDEX(OBJ, IDX) ((IDX) - 1)
 #endif
 #ifndef IMSTB_TEXTEDIT_GETNEXTCHARINDEX
 #define IMSTB_TEXTEDIT_GETNEXTCHARINDEX(OBJ, IDX) ((IDX) + 1)
@@ -787,12 +785,7 @@ static int stb_textedit_paste_internal(IMSTB_TEXTEDIT_STRING *str, STB_TexteditS
    return 0;
 }
 
-#ifndef STB_TEXTEDIT_KEYTYPE
-#define STB_TEXTEDIT_KEYTYPE int
-#endif
-
 // API key: process text input
-// [DEAR IMGUI] Added stb_textedit_text(), extracted out and called by stb_textedit_key() for backward compatibility.
 static void stb_textedit_text(IMSTB_TEXTEDIT_STRING* str, STB_TexteditState* state, const IMSTB_TEXTEDIT_CHARTYPE* text, int text_len)
 {
    // can't add newline in single-line mode
@@ -818,11 +811,15 @@ static void stb_textedit_text(IMSTB_TEXTEDIT_STRING* str, STB_TexteditState* sta
    }
 }
 
-// API char: process a character input (not suitable for UTF-8 codepoints).
+// API char: process a character input
 static void stb_textedit_char(IMSTB_TEXTEDIT_STRING *str, STB_TexteditState *state, IMSTB_TEXTEDIT_CHARTYPE ch)
 {
    stb_textedit_text(str, state, &ch, 1);
 }
+
+#ifndef STB_TEXTEDIT_KEYTYPE
+#define STB_TEXTEDIT_KEYTYPE int
+#endif
 
 // API key: process a keyboard input
 static void stb_textedit_key(IMSTB_TEXTEDIT_STRING *str, STB_TexteditState *state, STB_TEXTEDIT_KEYTYPE key)
@@ -831,10 +828,10 @@ retry:
    switch (key) {
       default: {
 #ifdef STB_TEXTEDIT_KEYTOTEXT
-         // This is not suitable for UTF-8 support.
+         // This is not suitable for UTF-8 support with indices to bytes.
          int c = STB_TEXTEDIT_KEYTOTEXT(key);
          if (c > 0) {
-            IMSTB_TEXTEDIT_CHARTYPE ch = (IMSTB_TEXTEDIT_CHARTYPE)c;
+            IMSTB_TEXTEDIT_CHARTYPE ch = (IMSTB_TEXTEDIT_CHARTYPE) c;
             stb_textedit_char(str, state, ch);
          }
 #endif
