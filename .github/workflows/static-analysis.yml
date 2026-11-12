@@ -23,9 +23,16 @@ jobs:
         run: |
           if [[ "$PVS_STUDIO_LICENSE" != "" ]];
           then
-            wget -q https://files.pvs-studio.com/etc/pubkey.txt
-            sudo apt-key add pubkey.txt
-            sudo wget -O /etc/apt/sources.list.d/viva64.list https://files.pvs-studio.com/etc/viva64.list
+            wget -qO pvs-key.asc https://files.pvs-studio.com/etc/pubkey.txt
+            gpg --dearmor -o pvs-key.gpg pvs-key.asc
+            sudo install -D -m 644 pvs-key.gpg /etc/apt/keyrings/pvs-studio.gpg
+            wget -qO viva64.list https://files.pvs-studio.com/etc/viva64.list
+            sed -E \
+              -e 's|^deb \[|deb [signed-by=/etc/apt/keyrings/pvs-studio.gpg |; t' \
+              -e 's|^deb |deb [signed-by=/etc/apt/keyrings/pvs-studio.gpg] |' \
+              viva64.list > viva64-scoped.list
+            sudo install -m 644 viva64-scoped.list /etc/apt/sources.list.d/viva64.list
+
             sudo apt-get update
             sudo apt-get install -y pvs-studio
             pvs-studio-analyzer credentials -o pvs-studio.lic $PVS_STUDIO_LICENSE
