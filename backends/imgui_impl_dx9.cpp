@@ -90,6 +90,30 @@ static ImGui_ImplDX9_Data* ImGui_ImplDX9_GetBackendData()
 }
 
 // Functions
+
+// Lowest vertex index a command references, and how many vertices the range spans.
+static void ImGui_ImplDX9_CalcVertexRange(const ImDrawIdx* indices, unsigned int count, unsigned int* out_min_index, unsigned int* out_num_vertices)
+{
+    unsigned int min_index = UINT_MAX;
+    unsigned int max_index = 0;
+    for (unsigned int n = 0; n < count; n++)
+    {
+        const unsigned int index = (unsigned int)indices[n];
+        if (index < min_index)
+            min_index = index;
+        if (index > max_index)
+            max_index = index;
+    }
+    if (min_index > max_index)
+    {
+        *out_min_index = 0;
+        *out_num_vertices = 0;
+        return;
+    }
+    *out_min_index = min_index;
+    *out_num_vertices = max_index - min_index + 1;
+}
+
 static void ImGui_ImplDX9_SetupRenderState(ImDrawData* draw_data)
 {
     ImGui_ImplDX9_Data* bd = ImGui_ImplDX9_GetBackendData();
@@ -295,7 +319,13 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
                 // Bind texture, Draw
                 const LPDIRECT3DTEXTURE9 texture = (LPDIRECT3DTEXTURE9)pcmd->GetTexID();
                 device->SetTexture(0, texture);
-                device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, pcmd->VtxOffset + global_vtx_offset, 0, (UINT)draw_list->VtxBuffer.Size, pcmd->IdxOffset + global_idx_offset, pcmd->ElemCount / 3);
+
+                // Calculate vertex range to reduce the number of vertices transformed by the driver when using D3DCREATE_SOFTWARE_VERTEXPROCESSING.
+                UINT min_index = 0, num_vertices = 0;
+                ImGui_ImplDX9_CalcVertexRange(&draw_list->IdxBuffer[pcmd->IdxOffset], pcmd->ElemCount, &min_index, &num_vertices);
+                if (num_vertices == 0)
+                    continue;
+                device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, pcmd->VtxOffset + global_vtx_offset, min_index, num_vertices, pcmd->IdxOffset + global_idx_offset, pcmd->ElemCount / 3);
             }
         }
         global_idx_offset += draw_list->IdxBuffer.Size;

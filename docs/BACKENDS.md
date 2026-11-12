@@ -217,6 +217,8 @@ Note: set `ImGuiBackendFlags_RendererHasVtxOffset` to signify your backend can h
 Otherwise, rendering will be limited to 64K vertices per window, which may be limiting for advanced plot.
 As an alternative, you may also use `#define ImDrawIdx unsigned int` in your `imconfig.h` file to support 32-bit indices.
 
+Note: if your graphics API takes a *vertex range* alongside the draw call (DirectX 9's `DrawIndexedPrimitive(MinIndex, NumVertices)`, for example), pass the range that the command's own indices actually reference, not the size of the whole draw list. On hardware vertex processing the range is only a validation bound and the larger number is free, but a device created with software vertex processing (D3DCREATE_SOFTWARE_VERTEXPROCESSING, common on old integrated GPUs running a generic driver) transforms everything in the declared range for every draw call, which multiplies the frame's vertex work by the number of commands. See `ImGui_ImplDX9_CalcVertexRange()` in `imgui_impl_dx9.cpp`.
+
 ```cpp
 void MyImGuiBackend_RenderDrawData(ImDrawData* draw_data)
 {
