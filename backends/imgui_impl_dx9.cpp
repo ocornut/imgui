@@ -17,6 +17,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-11-13: DirectX9: Pre-transforming vertices and using `D3DFVF_XYZRHW` vertex format, largely increasing performances when in `D3DCREATE_SOFTWARE_VERTEXPROCESSING` mode. (#9628)
 //  2026-04-23: Added support for standard draw callbacks (in platform_io): DrawCallback_ResetRenderState, DrawCallback_SetSamplerLinear, DrawCallback_SetSamplerNearest. (#9378)
 //  2026-03-19: Fixed issue in ImGui_ImplDX9_UpdateTexture() if ImTextureID_Invalid is defined to be != 0, which became the default since 2026-03-12. (#9295, #9310)
 //  2025-09-18: Call platform_io.ClearRendererHandlers() on shutdown.
@@ -71,10 +72,11 @@ struct ImGui_ImplDX9_Data
 struct CUSTOMVERTEX
 {
     float    pos[3];
+    float    rhw;
     D3DCOLOR col;
     float    uv[2];
 };
-#define D3DFVF_CUSTOMVERTEX (D3DFVF_XYZ|D3DFVF_DIFFUSE|D3DFVF_TEX1)
+#define D3DFVF_CUSTOMVERTEX (D3DFVF_XYZRHW|D3DFVF_DIFFUSE|D3DFVF_TEX1)
 
 #ifdef IMGUI_USE_BGRA_PACKED_COLOR
 #define IMGUI_COL_TO_DX9_ARGB(_COL)     (_COL)
@@ -141,7 +143,7 @@ static void ImGui_ImplDX9_SetupRenderState(ImDrawData* draw_data)
     device->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
     device->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
 
-    // Setup orthographic projection matrix
+    // Setup orthographic projection matrix for custom draw callbacks. Our pretransformed vertices bypass these transforms.
     // Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayPos is (0,0) for single viewport apps.
     // Being agnostic of whether <d3dx9.h> or <DirectXMath.h> can be used, we aren't relying on D3DXMatrixIdentity()/D3DXMatrixOrthoOffCenterLH() or DirectX::XMMatrixIdentity()/DirectX::XMMatrixOrthographicOffCenterLH()
     {
@@ -232,18 +234,19 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
         return;
     }
 
-    // Copy and convert all vertices into a single contiguous buffer, convert colors to DX9 default format.
-    // FIXME-OPT: This is a minor waste of resource, the ideal is to use imconfig.h and
-    //  1) to avoid repacking colors:   #define IMGUI_USE_BGRA_PACKED_COLOR
-    //  2) to avoid repacking vertices: #define IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT struct ImDrawVert { ImVec2 pos; float z; ImU32 col; ImVec2 uv; }
+    // Copy and pre-transform all vertices into a single contiguous buffer, convert colors to DX9 default format.
+    // XYZRHW bypasses vertex processing, avoiding repeated software transforms for each draw command. Apply DX9's half-pixel offset here.
+    // Define IMGUI_USE_BGRA_PACKED_COLOR in imconfig.h to avoid repacking colors.
+    const ImVec2 pos_offset(draw_data->DisplayPos.x + 0.5f, draw_data->DisplayPos.y + 0.5f);
     for (const ImDrawList* draw_list : draw_data->CmdLists)
     {
         const ImDrawVert* vtx_src = draw_list->VtxBuffer.Data;
         for (int i = 0; i < draw_list->VtxBuffer.Size; i++)
         {
-            vtx_dst->pos[0] = vtx_src->pos.x;
-            vtx_dst->pos[1] = vtx_src->pos.y;
-            vtx_dst->pos[2] = 0.0f;
+            vtx_dst->pos[0] = vtx_src->pos.x - pos_offset.x;
+            vtx_dst->pos[1] = vtx_src->pos.y - pos_offset.y;
+            vtx_dst->pos[2] = 0.5f;
+            vtx_dst->rhw = 1.0f;
             vtx_dst->col = IMGUI_COL_TO_DX9_ARGB(vtx_src->col);
             vtx_dst->uv[0] = vtx_src->uv.x;
             vtx_dst->uv[1] = vtx_src->uv.y;

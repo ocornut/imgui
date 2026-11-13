@@ -128,6 +128,8 @@ Other Changes:
   Made the script detect the environment when needed (e.g. to specify library path).
 - Examples: added support for ARM64 in selected build_win.bat helpers. (#9593) [@Harishmcw]
 - Backends:
+  - DirectX9: pre-transforming vertices and using `D3DFVF_XYZRHW` vertex format, largely
+    increasing performances when in `D3DCREATE_SOFTWARE_VERTEXPROCESSING` mode. (#9628)
   - GLFW: allow initialization with missing HWND. (#9619) [@djohansson]
   - GLFW, SDL2: Emscripten implementation of `Platform_OpenInShellFn` calls
     `window.open()` with `noopener`: prevents newly opened tab from keeping a
