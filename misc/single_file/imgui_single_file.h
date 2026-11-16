@@ -13,6 +13,9 @@
 #endif
 
 #include "../../imgui.h"
+#ifdef IMGUI_ENABLE_DWRITE
+#include "../../misc/dwrite/imgui_dwrite.h"
+#endif
 #ifdef IMGUI_ENABLE_FREETYPE
 #include "../../misc/freetype/imgui_freetype.h"
 #endif
@@ -23,6 +26,9 @@
 #include "../../imgui_draw.cpp"
 #include "../../imgui_tables.cpp"
 #include "../../imgui_widgets.cpp"
+#ifdef IMGUI_ENABLE_DWRITE
+#include "../../misc/dwrite/imgui_dwrite.cpp"
+#endif
 #ifdef IMGUI_ENABLE_FREETYPE
 #include "../../misc/freetype/imgui_freetype.cpp"
 #endif
