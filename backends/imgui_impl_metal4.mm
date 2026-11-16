@@ -182,11 +182,10 @@ void ImGui_ImplMetal4_NewFrame(MTL4RenderPassDescriptor* renderPassDescriptor, i
     }
 }
 
-static void ImGui_ImplMetal4_SetupRenderState(ImDrawData* draw_data, id<MTL4CommandBuffer> commandBuffer,
+static void ImGui_ImplMetal4_SetupRenderState(ImDrawData* draw_data,
     id<MTL4RenderCommandEncoder> commandEncoder, id<MTLRenderPipelineState> renderPipelineState,
-    Metal4Buffer* vertexBuffer, size_t vertexBufferOffset)
+    Metal4Buffer* vertexBuffer, size_t vertexBufferOffset, uint64_t constantBufferIndex)
 {
-    IM_UNUSED(commandBuffer);
     ImGui_ImplMetal4_Data* bd = ImGui_ImplMetal4_GetBackendData();
     [commandEncoder setCullMode:MTLCullModeNone];
     [commandEncoder setDepthStencilState:bd->SharedMetalContext.depthStencilState];
@@ -219,8 +218,8 @@ static void ImGui_ImplMetal4_SetupRenderState(ImDrawData* draw_data, id<MTL4Comm
         { (R+L)/(L-R),  (T+B)/(B-T), N/(F-N),   1.0f },
     };
     
-    int currentChunk = (int)((float)bd->SharedMetalContext.currentConstantBufferIndex / (float)METAL_IMGUI_VIEWPORTS_PER_CHUNK);
-    int currentIndex = bd->SharedMetalContext.currentConstantBufferIndex % METAL_IMGUI_VIEWPORTS_PER_CHUNK;
+    uint64_t currentChunk = constantBufferIndex / METAL_IMGUI_VIEWPORTS_PER_CHUNK;
+    uint64_t currentIndex = constantBufferIndex % METAL_IMGUI_VIEWPORTS_PER_CHUNK;
     
     int currentFrameIndex = (int)bd->SharedMetalContext.currentFrameSlot;
     id<MTLBuffer> constantBuffer = bd->SharedMetalContext.constantBuffers[currentFrameIndex][currentChunk];
@@ -287,8 +286,9 @@ void ImGui_ImplMetal4_RenderDrawData(ImDrawData* draw_data, id<MTL4CommandBuffer
 
     bd->RenderCommandEncoder = commandEncoder;
     
-    // check if more chunks are required
-    const int chunksRequired = 1 + (int)((float)bd->SharedMetalContext.currentConstantBufferIndex / (float)METAL_IMGUI_VIEWPORTS_PER_CHUNK);
+    // Reserve one projection matrix for this draw data, including any render-state resets.
+    const uint64_t constantBufferIndex = ctx.currentConstantBufferIndex++;
+    const uint64_t chunksRequired = 1 + constantBufferIndex / METAL_IMGUI_VIEWPORTS_PER_CHUNK;
     if (chunksRequired > bd->SharedMetalContext.constantBufferChunkCount)
     {
         for (NSUInteger i = 0; i < bd->SharedMetalContext.framesInFlight; i++)
@@ -300,8 +300,7 @@ void ImGui_ImplMetal4_RenderDrawData(ImDrawData* draw_data, id<MTL4CommandBuffer
         bd->SharedMetalContext.constantBufferChunkCount++;
     }
     
-    ImGui_ImplMetal4_SetupRenderState(draw_data, commandBuffer, commandEncoder, renderPipelineState, vertexBuffer, 0);
-    bd->SharedMetalContext.currentConstantBufferIndex++;
+    ImGui_ImplMetal4_SetupRenderState(draw_data, commandEncoder, renderPipelineState, vertexBuffer, 0, constantBufferIndex);
     
     // Will project scissor/clipping rectangles into framebuffer space
     ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
@@ -323,7 +322,7 @@ void ImGui_ImplMetal4_RenderDrawData(ImDrawData* draw_data, id<MTL4CommandBuffer
             {
                 // User callback, registered via ImDrawList::AddCallback()
                 if (pcmd->UserCallback == ImGui_ImplMetal4_DrawCallback_ResetRenderState)
-                    ImGui_ImplMetal4_SetupRenderState(draw_data, commandBuffer, commandEncoder, renderPipelineState, vertexBuffer, vertexBufferOffset);
+                    ImGui_ImplMetal4_SetupRenderState(draw_data, commandEncoder, renderPipelineState, vertexBuffer, vertexBufferOffset, constantBufferIndex);
                 else
                     pcmd->UserCallback(draw_list, pcmd);
             }
