@@ -62,6 +62,7 @@ Index of this file:
 #pragma clang diagnostic ignored "-Wfloat-equal"                    // warning: comparing floating point with == or != is unsafe // storing and comparing against same constants ok.
 #pragma clang diagnostic ignored "-Wglobal-constructors"            // warning: declaration requires a global destructor         // similar to above, not sure what the exact difference is.
 #pragma clang diagnostic ignored "-Wsign-conversion"                // warning: implicit conversion changes signedness
+#pragma clang diagnostic ignored "-Wunused-function"                // warning: 'xxxx' defined but not used
 #pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"  // warning: zero as null pointer constant                    // some standard header variations use #define NULL 0
 #pragma clang diagnostic ignored "-Wcomma"                          // warning: possible misuse of comma operator here
 #pragma clang diagnostic ignored "-Wreserved-id-macro"              // warning: macro name is a reserved identifier
@@ -112,7 +113,6 @@ namespace IMGUI_STB_NAMESPACE
 
 #if defined(__clang__)
 #pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-function"        // warning: 'xxxx' defined but not used
 #pragma clang diagnostic ignored "-Wmissing-prototypes"
 #pragma clang diagnostic ignored "-Wimplicit-fallthrough"
 #endif

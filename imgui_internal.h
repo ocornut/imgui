@@ -2351,6 +2351,7 @@ enum ImGuiLocKey : int
     //ImGuiLocKey_TableResetAll,
     ImGuiLocKey_TableResetOrder,
     ImGuiLocKey_TableResetVisibility,
+    ImGuiLocKey_TableResetSizing,
     ImGuiLocKey_WindowingMainMenuBar,
     ImGuiLocKey_WindowingPopup,
     ImGuiLocKey_WindowingUntitled,
@@ -3475,6 +3476,7 @@ struct IMGUI_API ImGuiTable
     bool                        IsResetAllRequest;          // Set to queue a call to TableResetSettings() in BeginTable()
     bool                        IsResetDisplayOrderRequest;
     bool                        IsResetVisibilityRequest;
+    bool                        IsResetSizesRequest;
     bool                        IsUnfrozenRows;             // Set when we got past the frozen row.
     bool                        IsDefaultSizingPolicy;      // Set if user didn't explicitly set a sizing policy in BeginTable()
     bool                        IsActiveIdAliveBeforeTable;
@@ -3518,6 +3520,7 @@ struct IMGUI_API ImGuiTableTempData
     ImVec1                      HostBackupColumnsOffset;    // Backup of OuterWindow->DC.ColumnsOffset at the end of BeginTable()
     float                       HostBackupItemWidth;        // Backup of OuterWindow->DC.ItemWidth at the end of BeginTable()
     int                         HostBackupItemWidthStackSize;//Backup of OuterWindow->DC.ItemWidthStack.Size at the end of BeginTable()
+    ImGuiLayoutType             HostBackupLayoutType;       // Backup of InnerWindow->DC.LayoutType at the end of BeginTable()
 
     ImGuiTableTempData()        { memset((void*)this, 0, sizeof(*this)); LastTimeActive = -1.0f; }
 };

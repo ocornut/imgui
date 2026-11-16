@@ -54,6 +54,7 @@ Index of this file:
 // Visual Studio warnings
 #ifdef _MSC_VER
 #pragma warning (disable: 4127)     // condition expression is constant
+#pragma warning (disable: 4505)     // unreferenced local function has been removed (stb stuff)
 #pragma warning (disable: 4996)     // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
 #if defined(_MSC_VER) && _MSC_VER >= 1922 // MSVC 2019 16.2 or later
 #pragma warning (disable: 5054)     // operator '|': deprecated between enumerations of different types
@@ -73,6 +74,7 @@ Index of this file:
 #pragma clang diagnostic ignored "-Wformat"                         // warning: format specifies type 'int' but the argument has type 'unsigned int'
 #pragma clang diagnostic ignored "-Wformat-nonliteral"              // warning: format string is not a string literal            // passing non-literal to vsnformat(). yes, user passing incorrect format strings can crash the code.
 #pragma clang diagnostic ignored "-Wsign-conversion"                // warning: implicit conversion changes signedness
+#pragma clang diagnostic ignored "-Wunused-function"                // warning: 'xxxx' defined but not used
 #pragma clang diagnostic ignored "-Wunused-macros"                  // warning: macro is not used                                // we define snprintf/vsnprintf on Windows so they are available, but not always used.
 #pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"  // warning: zero as null pointer constant                    // some standard header variations use #define NULL 0
 #pragma clang diagnostic ignored "-Wdouble-promotion"               // warning: implicit conversion from 'float' to 'double' when passing argument to function  // using printf() is a misery with this as C++ va_arg ellipsis changes float to double.
@@ -84,6 +86,7 @@ Index of this file:
 #pragma clang diagnostic ignored "-Wswitch-default"                 // warning: 'switch' missing 'default' label
 #elif defined(__GNUC__)
 #pragma GCC diagnostic ignored "-Wpragmas"                          // warning: unknown option after '#pragma GCC diagnostic' kind
+#pragma GCC diagnostic ignored "-Wunused-function"                  // warning: 'xxxx' defined but not used
 #pragma GCC diagnostic ignored "-Wfloat-equal"                      // warning: comparing floating-point with '==' or '!=' is unsafe
 #pragma GCC diagnostic ignored "-Wformat"                           // warning: format '%p' expects argument of type 'int'/'void*', but argument X has type 'unsigned int'/'ImGuiWindow*'
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"                // warning: format not a string literal, format string not checked
@@ -1568,8 +1571,9 @@ bool ImGui::TextLink(const char* label)
         ColorConvertHSVtoRGB(h, s, v, line_colf.x, line_colf.y, line_colf.z);
     }
 
+    // FIXME-TEXT FIXME-DPI: Underline mode. Note how stb_truetype now expose stbtt_GetFontUnderlineMetrics().
     float line_y = bb.Max.y + ImFloor(g.FontBaked->Descent * g.FontBakedScale * 0.20f);
-    window->DrawList->AddLineH(bb.Min.x, bb.Max.x, line_y, GetColorU32(line_colf), 1.0f * (float)(int)g.Style._MainScale); // FIXME-TEXT: Underline mode // FIXME-DPI
+    window->DrawList->AddLineH(bb.Min.x, bb.Max.x, line_y, GetColorU32(line_colf), 1.0f * (float)(int)g.Style._MainScale);
 
     PushStyleColor(ImGuiCol_Text, GetColorU32(text_colf));
     RenderText(bb.Min, label, label_end, false);
@@ -4358,6 +4362,7 @@ static int STB_TEXTEDIT_INSERTCHARS(ImGuiInputTextState* obj, int pos, const cha
 
 #define IMSTB_TEXTEDIT_IMPLEMENTATION
 #define IMSTB_TEXTEDIT_memmove memmove
+
 #include "imstb_textedit.h"
 
 // stb_textedit internally allows for a single undo record to do addition and deletion, but somehow, calling

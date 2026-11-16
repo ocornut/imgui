@@ -476,7 +476,9 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     temp_data->HostBackupCursorMaxPos = inner_window->DC.CursorMaxPos;
     temp_data->HostBackupItemWidth = outer_window->DC.ItemWidth;
     temp_data->HostBackupItemWidthStackSize = outer_window->DC.ItemWidthStack.Size;
+    temp_data->HostBackupLayoutType = inner_window->DC.LayoutType;
     inner_window->DC.PrevLineSize = inner_window->DC.CurrLineSize = ImVec2(0.0f, 0.0f);
+    inner_window->DC.LayoutType = ImGuiLayoutType_Vertical;
 
     // Border size
     // FIXME-WIP: Changing this is not currently simple due to ClipRect requirements. Easier to manage with new 1.93 primitives though.
@@ -705,10 +707,10 @@ void ImGui::TableApplyQueuedRequests(ImGuiTable* table)
         //    table->ReorderColumn = -1;
     }
 
-    // Handle display order / visibility reset requests
+    // Handle reset requests (display order / visibility / sizes)
     if (table->IsResetDisplayOrderRequest)
     {
-        for (int n = 0; n < table->ColumnsCount; n++)
+        for (int n = 0; n < table->ColumnsCount; n++) // Variant of using TableInitColumnDefaults()(
             table->DisplayOrderToIndex[n] = table->Columns[n].DisplayOrder = (ImGuiTableColumnIdx)n;
         table->IsResetDisplayOrderRequest = false;
         table->IsSettingsDirty = true;
@@ -716,8 +718,15 @@ void ImGui::TableApplyQueuedRequests(ImGuiTable* table)
     if (table->IsResetVisibilityRequest)
     {
         for (ImGuiTableColumn& column : table->Columns)
-            column.IsUserEnabled = column.IsUserEnabledNextFrame = (column.Flags & ImGuiTableColumnFlags_DefaultHide) ? 0 : 1;
+            TableInitColumnDefaults(table, &column, ImGuiTableFlags_Hideable);
         table->IsResetVisibilityRequest = false;
+        table->IsSettingsDirty = true;
+    }
+    if (table->IsResetSizesRequest)
+    {
+        for (ImGuiTableColumn& column : table->Columns)
+            TableInitColumnDefaults(table, &column, ImGuiTableFlags_Resizable);
+        table->IsResetSizesRequest = false;
         table->IsSettingsDirty = true;
     }
 }
@@ -1486,6 +1495,7 @@ void    ImGui::EndTable()
     // Finalize table height
     ImGuiTableInstanceData* table_instance = TableGetInstanceData(table, table->InstanceCurrent);
     inner_window->DC.PrevLineSize = temp_data->HostBackupPrevLineSize;
+    inner_window->DC.LayoutType = temp_data->HostBackupLayoutType;
     inner_window->DC.CurrLineSize = temp_data->HostBackupCurrLineSize;
     inner_window->DC.CursorMaxPos = temp_data->HostBackupCursorMaxPos;
     const float inner_content_max_y = ImCeil(table->RowPosY2); // Rounding final position is important as we currently don't round row height ('Demo->Tables->Outer Size' demo uses non-integer heights)
@@ -1685,7 +1695,7 @@ void ImGui::TableInitColumnDefaults(ImGuiTable* table, ImGuiTableColumn* column,
     if (init_mask & ImGuiTableFlags_Resizable)
     {
         float init_width_or_weight = column->InitStretchWeightOrWidth;
-        column->WidthRequest = ((flags & ImGuiTableColumnFlags_WidthFixed) && init_width_or_weight > 0.0f) ? init_width_or_weight : -1.0f;
+        column->WidthRequest = (init_width_or_weight > 0.0f && (flags & ImGuiTableColumnFlags_WidthFixed)) ? init_width_or_weight : -1.0f;
         column->StretchWeight = (init_width_or_weight > 0.0f && (flags & ImGuiTableColumnFlags_WidthStretch)) ? init_width_or_weight : -1.0f;
         if (init_width_or_weight > 0.0f) // Disable auto-fit if an explicit width/weight has been specified
             column->AutoFitQueue = 0x00;
@@ -2568,6 +2578,7 @@ void ImGui::TableSetColumnWidthAutoSingle(ImGuiTable* table, int column_n)
     table->AutoFitSingleColumn = (ImGuiTableColumnIdx)column_n;
 }
 
+// FIXME: AutoFitQueue for Stretch columns can do a "reset" if InitStretchWeightOrWidth is valid, therefore might be misnamed.
 void ImGui::TableSetColumnWidthAutoAll(ImGuiTable* table)
 {
     for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
@@ -3759,7 +3770,7 @@ void ImGui::TableDrawDefaultContextMenu(ImGuiTable* table, ImGuiTableFlags flags
     }
 
     // Reset Order/Visibility etc.
-    if (flags_for_section_to_display & (ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable))
+    if (flags_for_section_to_display & (ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_Resizable))
         if (BeginMenu(LocalizeGetMsg(ImGuiLocKey_TableReset)))
         {
             //if (MenuItem(LocalizeGetMsg(ImGuiLocKey_TableResetAll))) // FIXME: Hiding because altering Sort Order + requesting auto-fit simultaneously has a tendency to exhibit a sizing glitch.
@@ -3770,6 +3781,9 @@ void ImGui::TableDrawDefaultContextMenu(ImGuiTable* table, ImGuiTableFlags flags
             if (flags_for_section_to_display & ImGuiTableFlags_Hideable)
                 if (MenuItem(LocalizeGetMsg(ImGuiLocKey_TableResetVisibility), NULL, false, !table->IsDefaultVisibility))
                     table->IsResetVisibilityRequest = true;
+            if (flags_for_section_to_display & ImGuiTableFlags_Resizable)
+                if (MenuItem(LocalizeGetMsg(ImGuiLocKey_TableResetSizing), NULL, false)) // Can't easily implement IsDefaultSize
+                    table->IsResetSizesRequest = true;
             EndMenu();
         }
 

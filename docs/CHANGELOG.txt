@@ -63,7 +63,6 @@ Autumn cleanup of stuff marked obsolete more than two years ago:
   and `GetWindowContentRegionMax()` will may be removed soon-ish: you should not
   ever need those functions. See #7838.
 
-
 Other Changes:
 
 - Style:
@@ -82,6 +81,7 @@ Other Changes:
   - Modals: fixed an assert displaying a modal in an environment where
     `io.DisplayFramebufferScale` is not an integer (regression in 1.93.0). (#9598)
 - Tables:
+  - Added "Reset->Reset Sizes" context-menu option. (#9523, #9605)
   - Fixed various border overshooting issues, some mostly visible with transparent
     borders and under specific conditions: (#4678)
     - On non-scrolling tables, inner horizontal borders slightly overlapped
@@ -93,6 +93,8 @@ Other Changes:
     - Fixed selectable highlight straying off the X2/Y2 clipping limit.
     - Fixed parent window work rectangle affecting the Y2 clipping limit.
     - Fixed the Y2 clipping limit overlapping bottom outer border.
+  - Fixed layout of items submitted while in horizontal layout mode (e.g. a menu bar).
+    `BeginTable()` resets layout mode to vertical. (#9589) [@themd]
 - Multi-Select:
   - Fixed `ImGuiSelectionBasicStorage::GetNextSelectedItem()` reading one past the
     end of storage when trailing items are unselected (#9604) [@MilosLord]
@@ -111,17 +113,35 @@ Other Changes:
 - ImVec2: added a check for cases where a custom `IM_VEC2_CLASS_EXTRA` macro
   adds an extra `operator=` to ImVec2. This isn't supported but should not
   be needed as you should have a constructor to convert from your type to ImVec2.
+- Misc: update stb_textedit 1.14->1.15.
+  - InputText: Up/PageUp on the first line now moves the cursor to the beginning
+    of the line, including when extending a selection. [@blackedout01]
+- Misc: update stb_truetype 1.26->1.27.
+  - Fonts: fixed incorrect glyph mapping with certain character maps, loading fonts
+    with only a Microsoft Symbol character map, and rendering scaled composite glyphs.
+  - Fixed an out-of-bounds read with single-point off-curve contours.
+- Misc: update stb_rect_pack 1.01->1.02.
+  - Fixed packing determinism by not depending on qsort() tiebreak.
 - CI: added some ARM64 builds. (#9593) [@Harishmcw]
 - Examples: renamed various helper batch files from build_win32.bat to build_win.bat
   to reflect that they can also build X64 or ARM64, given the right environment.
   Made the script detect the environment when needed (e.g. to specify library path).
 - Examples: added support for ARM64 in selected build_win.bat helpers. (#9593) [@Harishmcw]
 - Backends:
+  - DirectX9: pre-transforming vertices and using `D3DFVF_XYZRHW` vertex format, largely
+    increasing performances when in `D3DCREATE_SOFTWARE_VERTEXPROCESSING` mode. (#9628)
+  - GLFW: allow initialization with missing HWND. (#9619) [@djohansson]
   - GLFW, SDL2: Emscripten implementation of `Platform_OpenInShellFn` calls
     `window.open()` with `noopener`: prevents newly opened tab from keeping a
     reference to opening page. (#9615, #7660, #7851) [@pthom]
   - SDL2: on iOS, also restore calling `SDL_StartTextInput()/SDL_StopTextInput()`
     in IME handler. Match Android change in 1.93.0. [@pthom]  (#7636, #9474, #9617)
+  - Metal4: worked around rendering artifacts (e.g. flickering diagonal lines) with
+    16-bit indices by aligning each draw command index buffer address to 4 bytes.
+  - Metal4: fixed vertex/index buffers being reused by a later draw in the same frame
+    before the GPU had processed them. (#9622, #9625) [@lailoken]
+  - Metal4: remove the residency set from the command queue on shutdown to avoid
+    hitting Metal's residency set limit when reinitializing on the same queue.
   - Vulkan: don't transition swapchain images from `VK_IMAGE_LAYOUT_UNDEFINED` to
     `VK_IMAGE_LAYOUT_PRESENT_SRC_KHR` on window creation, prevent validation errors in
     examples and multi-viewport support. (#9553, #9496, #9152) [@sarpsenturk, @LewisJustin]

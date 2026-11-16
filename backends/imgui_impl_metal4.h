@@ -39,6 +39,7 @@ IMGUI_IMPL_API bool ImGui_ImplMetal4_Init(id<MTLDevice> device, id<MTL4CommandQu
 IMGUI_IMPL_API void ImGui_ImplMetal4_Shutdown();
 // frameInFlightIndex must match the slot you use to index your own per-frame-in-flight resources
 // (e.g. the same index used to pick your command buffer/allocator), and must be < framesInFlight passed to Init().
+// Before calling NewFrame(), wait for the GPU to finish any work your application previously submitted for that slot.
 IMGUI_IMPL_API void ImGui_ImplMetal4_NewFrame(MTL4RenderPassDescriptor* renderPassDescriptor, int frameInFlightIndex);
 IMGUI_IMPL_API void ImGui_ImplMetal4_RenderDrawData(ImDrawData* draw_data,
                                                    id<MTL4CommandBuffer> commandBuffer,
