@@ -29,6 +29,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-11-11: Inputs: Keypad keys are submitted as navigation keys (e.g. ImGuiKey_Home instead of ImGuiKey_Keypad7) when Num Lock is off, if the application enabled GLFW_LOCK_KEY_MODS. Requires GLFW 3.3+.
 //  2026-04-21: Added a Win32-specific implementation of ImGui_ImplGlfw_GetContentScaleXXXX functions for legacy GLFW 3.2.
 //  2026-03-25: Mouse cursor is properly restored if changed by user app/code while using glfwSetInputMode(..., GLFW_CURSOR_DISABLED) or ImGuiConfigFlags_NoMouseCursorChange. Amend change from 2025-12-10.
 //  2026-02-10: Try to set IMGUI_IMPL_GLFW_DISABLE_X11 / IMGUI_IMPL_GLFW_DISABLE_WAYLAND automatically if corresponding headers are not accessible. (#9225)
@@ -179,6 +180,7 @@
 #define GLFW_HAS_GETKEYNAME             (GLFW_VERSION_COMBINED >= 3200) // 3.2+ glfwGetKeyName()
 #define GLFW_HAS_GETERROR               (GLFW_VERSION_COMBINED >= 3300) // 3.3+ glfwGetError()
 #define GLFW_HAS_GETPLATFORM            (GLFW_VERSION_COMBINED >= 3400) // 3.4+ glfwGetPlatform()
+#define GLFW_HAS_LOCK_KEY_MODS          (GLFW_VERSION_COMBINED >= 3300) // 3.3+ GLFW_LOCK_KEY_MODS, GLFW_MOD_NUM_LOCK
 
 // Map GLFWWindow* to ImGuiContext*.
 // - Would be simpler if we could use glfwSetWindowUserPointer()/glfwGetWindowUserPointer(), but this is a single and shared resource.
@@ -479,6 +481,37 @@ static int ImGui_ImplGlfw_TranslateUntranslatedKey(int key, int scancode)
     return key;
 }
 
+// GLFW reports keypad keys as such regardless of the Num Lock state (see https://github.com/glfw/glfw/issues/946).
+// If the application enabled GLFW_LOCK_KEY_MODS we can tell when Num Lock is off, and submit the navigation keys
+// that the keypad keys then act as. Note that macos has no Num Lock and GLFW never reports GLFW_MOD_NUM_LOCK there,
+// so keypad keys are left alone.
+static int ImGui_ImplGlfw_TranslateKeypadKey(GLFWwindow* window, int key, int mods)
+{
+#if GLFW_HAS_LOCK_KEY_MODS && !defined(__APPLE__)
+    if (key < GLFW_KEY_KP_0 || key > GLFW_KEY_KP_DECIMAL || (mods & GLFW_MOD_NUM_LOCK) || !glfwGetInputMode(window, GLFW_LOCK_KEY_MODS))
+        return key;
+
+    switch (key)
+    {
+        case GLFW_KEY_KP_0: return GLFW_KEY_INSERT;
+        case GLFW_KEY_KP_1: return GLFW_KEY_END;
+        case GLFW_KEY_KP_2: return GLFW_KEY_DOWN;
+        case GLFW_KEY_KP_3: return GLFW_KEY_PAGE_DOWN;
+        case GLFW_KEY_KP_4: return GLFW_KEY_LEFT;
+        case GLFW_KEY_KP_6: return GLFW_KEY_RIGHT;
+        case GLFW_KEY_KP_7: return GLFW_KEY_HOME;
+        case GLFW_KEY_KP_8: return GLFW_KEY_UP;
+        case GLFW_KEY_KP_9: return GLFW_KEY_PAGE_UP;
+        case GLFW_KEY_KP_DECIMAL: return GLFW_KEY_DELETE;
+        default: return key;
+    }
+#else
+    IM_UNUSED(window);
+    IM_UNUSED(mods);
+    return key;
+#endif
+}
+
 void ImGui_ImplGlfw_KeyCallback(GLFWwindow* window, int keycode, int scancode, int action, int mods)
 {
     ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData(window);
@@ -492,6 +525,7 @@ void ImGui_ImplGlfw_KeyCallback(GLFWwindow* window, int keycode, int scancode, i
     ImGui_ImplGlfw_UpdateKeyModifiers(io, window);
 
     keycode = ImGui_ImplGlfw_TranslateUntranslatedKey(keycode, scancode);
+    keycode = ImGui_ImplGlfw_TranslateKeypadKey(window, keycode, mods);
 
     ImGuiKey imgui_key = ImGui_ImplGlfw_KeyToImGuiKey(keycode, scancode);
     io.AddKeyEvent(imgui_key, (action == GLFW_PRESS));
