@@ -19,7 +19,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2026-11-16: Fixed vertex/index buffers being reused by a later draw in the same frame. (#9622, #9625)
+//  2026-11-16: Worked around rendering artifacts by aligning 16-bit index buffer addresses to 4 bytes. / Fixed vertex/index buffers being reused by a later draw in the same frame. (#9622, #9625)
 //  2026-10-06: Added support for render passes with multiple color attachments: we render to the first one and leave the others untouched. (#9574)
 //  2026-09-07: Round framebuffer dimensions to the nearest integer instead of truncating them. (#9538, 9515, #8628)
 //  2026-07-07: Metal 4: Added metal-cpp support. (#9461)
@@ -36,6 +36,8 @@
 #endif
 
 #pragma mark - Support classes and structs
+
+#define MEMALIGN(_SIZE,_ALIGN) (((_SIZE) + ((_ALIGN) - 1)) & ~((_ALIGN) - 1))
 
 struct ImGui_Metal4_ConstantData
 {
@@ -242,6 +244,16 @@ void ImGui_ImplMetal4_RenderDrawData(ImDrawData* draw_data, id<MTL4CommandBuffer
 
     size_t vertexBufferLength = (size_t)draw_data->TotalVtxCount * sizeof(ImDrawVert);
     size_t indexBufferLength = (size_t)draw_data->TotalIdxCount * sizeof(ImDrawIdx);
+    // Work around Metal 4 corrupting draws whose 16-bit index buffer address is only 2-byte aligned.
+    // Pack each draw at a 4-byte boundary, with at most one padding index per draw.
+    if (sizeof(ImDrawIdx) == 2)
+    {
+        indexBufferLength = 0;
+        for (const ImDrawList* draw_list : draw_data->CmdLists)
+            for (const ImDrawCmd& cmd : draw_list->CmdBuffer)
+                if (cmd.UserCallback == nullptr)
+                    indexBufferLength += MEMALIGN((size_t)cmd.ElemCount * sizeof(ImDrawIdx), 4);
+    }
     Metal4Buffer* vertexBuffer = [ctx dequeueReusableBufferOfLength:vertexBufferLength device:commandBuffer.device];
     Metal4Buffer* indexBuffer = [ctx dequeueReusableBufferOfLength:indexBufferLength device:commandBuffer.device];
 
@@ -258,7 +270,8 @@ void ImGui_ImplMetal4_RenderDrawData(ImDrawData* draw_data, id<MTL4CommandBuffer
     for (const ImDrawList* draw_list : draw_data->CmdLists)
     {
         memcpy((char*)vertexBuffer.buffer.contents + vertexBufferOffset, draw_list->VtxBuffer.Data, (size_t)draw_list->VtxBuffer.Size * sizeof(ImDrawVert));
-        memcpy((char*)indexBuffer.buffer.contents + indexBufferOffset, draw_list->IdxBuffer.Data, (size_t)draw_list->IdxBuffer.Size * sizeof(ImDrawIdx));
+        if (sizeof(ImDrawIdx) == 4)
+            memcpy((char*)indexBuffer.buffer.contents + indexBufferOffset, draw_list->IdxBuffer.Data, (size_t)draw_list->IdxBuffer.Size * sizeof(ImDrawIdx));
 
         for (int cmd_i = 0; cmd_i < draw_list->CmdBuffer.Size; cmd_i++)
         {
@@ -309,16 +322,24 @@ void ImGui_ImplMetal4_RenderDrawData(ImDrawData* draw_data, id<MTL4CommandBuffer
                 [bd->SharedMetalContext.argumentTable setAddress:(vertexBuffer.buffer.gpuAddress + vertexBufferOffset + (pcmd->VtxOffset * sizeof(ImDrawVert))) attributeStride:sizeof(ImDrawVert) atIndex:0];
 
                 size_t indexBufferCmdOffset = indexBufferOffset + (pcmd->IdxOffset * sizeof(ImDrawIdx));
+                size_t indexBufferCmdLength = (size_t)pcmd->ElemCount * sizeof(ImDrawIdx);
+                if (sizeof(ImDrawIdx) == 2)
+                {
+                    indexBufferCmdOffset = indexBufferOffset;
+                    memcpy((char*)indexBuffer.buffer.contents + indexBufferCmdOffset, draw_list->IdxBuffer.Data + pcmd->IdxOffset, indexBufferCmdLength);
+                    indexBufferOffset += MEMALIGN(indexBufferCmdLength, 4);
+                }
                 [commandEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
                                    indexCount:pcmd->ElemCount
                                     indexType:sizeof(ImDrawIdx) == 2 ? MTLIndexTypeUInt16 : MTLIndexTypeUInt32
                                   indexBuffer:indexBuffer.buffer.gpuAddress + indexBufferCmdOffset
-                            indexBufferLength:indexBuffer.buffer.length - indexBufferCmdOffset];
+                            indexBufferLength:indexBufferCmdLength];
             }
         }
 
         vertexBufferOffset += (size_t)draw_list->VtxBuffer.Size * sizeof(ImDrawVert);
-        indexBufferOffset += (size_t)draw_list->IdxBuffer.Size * sizeof(ImDrawIdx);
+        if (sizeof(ImDrawIdx) == 4)
+            indexBufferOffset += (size_t)draw_list->IdxBuffer.Size * sizeof(ImDrawIdx);
     }
 
     Metal4Context* sharedMetalContext = bd->SharedMetalContext;
