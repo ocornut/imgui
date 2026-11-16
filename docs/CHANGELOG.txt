@@ -146,7 +146,6 @@ Other Changes:
     `VK_IMAGE_LAYOUT_PRESENT_SRC_KHR` on window creation, prevent validation errors in
     examples and multi-viewport support. (#9553, #9496, #9152) [@sarpsenturk, @LewisJustin]
 
-
 Docking+Viewports Branch:
 
 - Viewports:
@@ -163,6 +162,7 @@ Docking+Viewports Branch:
   - Metal4: fixed various multi-viewport related issues:
     - reuse the draw's projection matrix on render-state reset.
     - use each secondary viewport's render pass to select its pipeline.
+    - make secondary viewport drawable resources resident before rendering.
     - fixed `ImGui_ImplMetal4_NewFrame()` waiting forever when using more than one frame
       in flight, once a secondary viewport has been rendered. (#9621, #9624) [@lailoken]
 

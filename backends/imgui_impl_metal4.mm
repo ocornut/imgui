@@ -968,6 +968,7 @@ static void ImGui_ImplMetal_RenderWindow(ImGuiViewport* viewport, void*)
 
     id <MTL4CommandBuffer> commandBuffer = [bd->SharedMetalContext.device newCommandBuffer];
     [commandBuffer beginCommandBufferWithAllocator:bd->SharedMetalContext.commandAllocators[bd->SharedMetalContext.currentFrameSlot]];
+    [commandBuffer useResidencySet:data->MetalLayer.residencySet];
 
     id <MTL4RenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
 #ifdef IMGUI_IMPL_METAL_CPP
