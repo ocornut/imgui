@@ -19,7 +19,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2026-11-16: Worked around rendering artifacts by aligning 16-bit index buffer addresses to 4 bytes. / Fixed vertex/index buffers being reused by a later draw in the same frame. (#9622, #9625)
+//  2026-11-16: Worked around rendering artifacts by aligning 16-bit index buffer addresses to 4 bytes. / Fixed vertex/index buffers being reused by a later draw in the same frame. (#9622, #9625) / Remove the residency set from the command queue on shutdown so the queue can be reused.
 //  2026-10-06: Added support for render passes with multiple color attachments: we render to the first one and leave the others untouched. (#9574)
 //  2026-09-07: Round framebuffer dimensions to the nearest integer instead of truncating them. (#9538, 9515, #8628)
 //  2026-07-07: Metal 4: Added metal-cpp support. (#9461)
@@ -425,14 +425,15 @@ bool ImGui_ImplMetal4_CreateDeviceObjects(id<MTLDevice> device)
 {
     ImGui_ImplMetal4_Data* bd = ImGui_ImplMetal4_GetBackendData();
 
-    MTLResidencySetDescriptor* residencySetDescriptor = [[MTLResidencySetDescriptor alloc] init];
-    residencySetDescriptor.initialCapacity = 1000;
-
     NSError* error = nil;
-    bd->SharedMetalContext.residencySet = [device newResidencySetWithDescriptor:residencySetDescriptor error:&error];
-    IM_ASSERT(bd->SharedMetalContext.residencySet != nil && error == nil);
-
-    [bd->SharedMetalContext.commandQueue addResidencySet:bd->SharedMetalContext.residencySet];
+    if (bd->SharedMetalContext.residencySet == nil)
+    {
+        MTLResidencySetDescriptor* residencySetDescriptor = [[MTLResidencySetDescriptor alloc] init];
+        residencySetDescriptor.initialCapacity = 1000;
+        bd->SharedMetalContext.residencySet = [device newResidencySetWithDescriptor:residencySetDescriptor error:&error];
+        IM_ASSERT(bd->SharedMetalContext.residencySet != nil && error == nil);
+        [bd->SharedMetalContext.commandQueue addResidencySet:bd->SharedMetalContext.residencySet];
+    }
 
     MTLDepthStencilDescriptor* depthStencilDescriptor = [[MTLDepthStencilDescriptor alloc] init];
     depthStencilDescriptor.depthWriteEnabled = NO;
@@ -530,6 +531,8 @@ void ImGui_ImplMetal4_Shutdown()
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
 
     ImGui_ImplMetal4_DestroyDeviceObjects();
+    if (bd->SharedMetalContext.residencySet != nil)
+        [bd->SharedMetalContext.commandQueue removeResidencySet:bd->SharedMetalContext.residencySet];
     ImGui_ImplMetal4_DestroyBackendData();
 
     io.BackendRendererName = nullptr;
