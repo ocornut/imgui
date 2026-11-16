@@ -239,7 +239,7 @@ static void ImGui_ImplMetal4_DrawCallback_ResetRenderState(const ImDrawList*, co
 static void ImGui_ImplMetal4_DrawCallback_SetSamplerLinear(const ImDrawList*, const ImDrawCmd*)  { ImGui_ImplMetal4_Data* bd = ImGui_ImplMetal4_GetBackendData(); [bd->SharedMetalContext.argumentTable setSamplerState:bd->SharedMetalContext.samplerStateLinear.gpuResourceID atIndex:0]; }
 static void ImGui_ImplMetal4_DrawCallback_SetSamplerNearest(const ImDrawList*, const ImDrawCmd*) { ImGui_ImplMetal4_Data* bd = ImGui_ImplMetal4_GetBackendData(); [bd->SharedMetalContext.argumentTable setSamplerState:bd->SharedMetalContext.samplerStateNearest.gpuResourceID atIndex:0]; }
 
-void ImGui_ImplMetal4_RenderDrawData(ImDrawData* draw_data, id<MTL4CommandBuffer> commandBuffer, id<MTL4RenderCommandEncoder> commandEncoder)
+static void ImGui_ImplMetal4_RenderDrawData(ImDrawData* draw_data, id<MTL4CommandBuffer> commandBuffer, id<MTL4RenderCommandEncoder> commandEncoder, Metal4FramebufferDescriptor* framebufferDescriptor)
 {
     ImGui_ImplMetal4_Data* bd = ImGui_ImplMetal4_GetBackendData();
     Metal4Context* ctx = bd->SharedMetalContext;
@@ -259,14 +259,14 @@ void ImGui_ImplMetal4_RenderDrawData(ImDrawData* draw_data, id<MTL4CommandBuffer
 
     // Try to retrieve a render pipeline state that is compatible with the framebuffer config for this frame
     // The hit rate for this cache should be very near 100%.
-    id<MTLRenderPipelineState> renderPipelineState = ctx.renderPipelineStateCache[ctx.framebufferDescriptor];
+    id<MTLRenderPipelineState> renderPipelineState = ctx.renderPipelineStateCache[framebufferDescriptor];
     if (renderPipelineState == nil)
     {
         // No luck; make a new render pipeline state
-        renderPipelineState = [ctx renderPipelineStateForFramebufferDescriptor:ctx.framebufferDescriptor device:commandBuffer.device];
+        renderPipelineState = [ctx renderPipelineStateForFramebufferDescriptor:framebufferDescriptor device:commandBuffer.device];
 
         // Cache render pipeline state for later reuse
-        ctx.renderPipelineStateCache[ctx.framebufferDescriptor] = renderPipelineState;
+        ctx.renderPipelineStateCache[framebufferDescriptor] = renderPipelineState;
     }
 
     size_t vertexBufferLength = (size_t)draw_data->TotalVtxCount * sizeof(ImDrawVert);
@@ -396,6 +396,12 @@ void ImGui_ImplMetal4_RenderDrawData(ImDrawData* draw_data, id<MTL4CommandBuffer
     // Commit residency set
     [bd->SharedMetalContext.residencySet commit];
     bd->RenderCommandEncoder = nil;
+}
+
+void ImGui_ImplMetal4_RenderDrawData(ImDrawData* draw_data, id<MTL4CommandBuffer> commandBuffer, id<MTL4RenderCommandEncoder> commandEncoder)
+{
+    ImGui_ImplMetal4_Data* bd = ImGui_ImplMetal4_GetBackendData();
+    ImGui_ImplMetal4_RenderDrawData(draw_data, commandBuffer, commandEncoder, bd->SharedMetalContext.framebufferDescriptor);
 }
 
 static void ImGui_ImplMetal4_DestroyTexture(ImTextureData* tex)
@@ -818,8 +824,8 @@ fragment half4 fragment_main(VertexOut in [[stage_in]],
     pipelineDescriptor.vertexFunction = vertexFunction;
     pipelineDescriptor.fragmentFunction = fragmentFunction;
     pipelineDescriptor.vertexDescriptor = vertexDescriptor;
-    pipelineDescriptor.rasterSampleCount = self.framebufferDescriptor.sampleCount;
-    pipelineDescriptor.colorAttachments[0].pixelFormat = [self.framebufferDescriptor colorPixelFormatAtIndex:0];
+    pipelineDescriptor.rasterSampleCount = descriptor.sampleCount;
+    pipelineDescriptor.colorAttachments[0].pixelFormat = [descriptor colorPixelFormatAtIndex:0];
     pipelineDescriptor.colorAttachments[0].blendingEnabled = YES;
     pipelineDescriptor.colorAttachments[0].rgbBlendOperation = MTLBlendOperationAdd;
     pipelineDescriptor.colorAttachments[0].sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
@@ -829,11 +835,11 @@ fragment half4 fragment_main(VertexOut in [[stage_in]],
     pipelineDescriptor.colorAttachments[0].destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
     for (NSUInteger n = 1; n < IMGUI_IMPL_METAL_MAX_COLOR_ATTACHMENTS; n++) // Don't write to other color attachments, if any.
     {
-        pipelineDescriptor.colorAttachments[n].pixelFormat = [self.framebufferDescriptor colorPixelFormatAtIndex:n];
+        pipelineDescriptor.colorAttachments[n].pixelFormat = [descriptor colorPixelFormatAtIndex:n];
         pipelineDescriptor.colorAttachments[n].writeMask = MTLColorWriteMaskNone;
     }
-    pipelineDescriptor.depthAttachmentPixelFormat = self.framebufferDescriptor.depthPixelFormat;
-    pipelineDescriptor.stencilAttachmentPixelFormat = self.framebufferDescriptor.stencilPixelFormat;
+    pipelineDescriptor.depthAttachmentPixelFormat = descriptor.depthPixelFormat;
+    pipelineDescriptor.stencilAttachmentPixelFormat = descriptor.stencilPixelFormat;
 
     id<MTLRenderPipelineState> renderPipelineState = [device newRenderPipelineStateWithDescriptor:pipelineDescriptor error:&error];
     if (error != nil)
@@ -964,7 +970,12 @@ static void ImGui_ImplMetal_RenderWindow(ImGuiViewport* viewport, void*)
     [commandBuffer beginCommandBufferWithAllocator:bd->SharedMetalContext.commandAllocators[bd->SharedMetalContext.currentFrameSlot]];
 
     id <MTL4RenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
-    ImGui_ImplMetal4_RenderDrawData(viewport->DrawData, commandBuffer, renderEncoder);
+#ifdef IMGUI_IMPL_METAL_CPP
+    Metal4FramebufferDescriptor* framebufferDescriptor = [[[Metal4FramebufferDescriptor alloc] initWithRenderPassDescriptor:renderPassDescriptor] autorelease];
+#else
+    Metal4FramebufferDescriptor* framebufferDescriptor = [[Metal4FramebufferDescriptor alloc] initWithRenderPassDescriptor:renderPassDescriptor];
+#endif
+    ImGui_ImplMetal4_RenderDrawData(viewport->DrawData, commandBuffer, renderEncoder, framebufferDescriptor);
     [renderEncoder endEncoding];
     [commandBuffer endCommandBuffer];
 

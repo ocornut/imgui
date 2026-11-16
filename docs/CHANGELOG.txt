@@ -162,9 +162,9 @@ Docking+Viewports Branch:
     backends. Added `ImGui_ImplMetal_SetDisplaySyncEnabled()`. (#9501, #9608) [@lailoken]
   - Metal4: fixed various multi-viewport related issues:
     - reuse the draw's projection matrix on render-state reset.
+    - use each secondary viewport's render pass to select its pipeline.
     - fixed `ImGui_ImplMetal4_NewFrame()` waiting forever when using more than one frame
       in flight, once a secondary viewport has been rendered. (#9621, #9624) [@lailoken]
-
 
 
 -----------------------------------------------------------------------
