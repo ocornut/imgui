@@ -17668,7 +17668,7 @@ static void ImGui::WindowSelectViewport(ImGuiWindow* window)
             IM_ASSERT(window->DockNode->HostWindow->Viewport == window->ParentWindow->Viewport);
         window->Viewport = window->ParentWindow->Viewport;
     }
-    else if (window->DockNode && window->DockNode->HostWindow)
+    else if (window->DockNode && window->DockNode->HostWindow && window->DockNode->HostWindow->Viewport)
     {
         // This covers the "always inherit viewport from parent window" case for when a window reattach to a node that was just created mid-frame
         window->Viewport = window->DockNode->HostWindow->Viewport;
