@@ -4398,6 +4398,7 @@ const char* ImGui_GetDefaultCompressedFontDataProggyForever(int* out_size);
 #endif
 
 // This duplicates some of the logic in UpdateFontsNewFrame() which is a bit chicken-and-eggy/tricky to extract due to variety of codepaths and possible initialization ordering.
+// Note how multi-viewports w/ io.ConfigDpiScaleFonts=true will alter style.FontScaleDpi
 bool ImFontAtlasHeuristicShouldUseDefaultVectorFont(ImFontAtlas* atlas)
 {
     ImGuiContext* ctx = atlas->OwnerContext;

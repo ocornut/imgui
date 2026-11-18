@@ -11896,6 +11896,7 @@ static void ImGui::ErrorCheckNewFrameSanityChecks()
     // Detect if the parameters leading AddFontDefault() to implicitly select either AddFontDefaultBitmap() or AddFontDefaultVector() have changed.
     if (g.FrameCount == 2 && g.IO.Fonts->Builder->LoadedFontDefaultAsVector != -1)
     {
+        SetCurrentViewport(NULL, (ImGuiViewportP*)GetMainViewport());
         const bool old_heuristic_result_for_using_vector_font = (bool)g.IO.Fonts->Builder->LoadedFontDefaultAsVector;
         const bool new_heuristic_result_for_using_vector_font = ImFontAtlasHeuristicShouldUseDefaultVectorFont(g.IO.Fonts);
         IM_ASSERT_USER_ERROR(old_heuristic_result_for_using_vector_font == new_heuristic_result_for_using_vector_font, "AddFontDefault() font selection heuristic parameters changed between load/init time and now. Verify which parameters have changed or load a default font explicitly!");
@@ -17070,13 +17071,13 @@ void ImGui::SetCurrentViewport(ImGuiWindow* current_window, ImGuiViewportP* view
     g.CurrentViewport = viewport;
     IM_ASSERT(g.CurrentDpiScale > 0.0f && g.CurrentDpiScale < 99.0f); // Typical correct values would be between 1.0f and 4.0f
     //IMGUI_DEBUG_LOG_VIEWPORT("[viewport] SetCurrentViewport changed '%s' 0x%08X\n", current_window ? current_window->Name : NULL, viewport ? viewport->ID : 0);
-    if (g.IO.ConfigDpiScaleFonts)
+    if (g.IO.ConfigDpiScaleFonts && viewport)
         g.Style.FontScaleDpi = g.CurrentDpiScale;
 
     // Notify platform layer of viewport changes
     // FIXME-DPI: This is only currently used for experimenting with handling of multiple DPI
-    if (g.CurrentViewport && g.PlatformIO.Platform_OnChangedViewport)
-        g.PlatformIO.Platform_OnChangedViewport(g.CurrentViewport);
+    if (viewport && g.PlatformIO.Platform_OnChangedViewport)
+        g.PlatformIO.Platform_OnChangedViewport(viewport);
 }
 
 void ImGui::SetWindowViewport(ImGuiWindow* window, ImGuiViewportP* viewport)
