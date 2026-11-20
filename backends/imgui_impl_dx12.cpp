@@ -139,6 +139,24 @@ ImGui_ImplDX12_RenderState* ImGui_ImplDX12_GetRenderState()
     return (ImGui_ImplDX12_RenderState*)ImGui::GetPlatformIO().Renderer_RenderState;
 }
 
+// Wait on synchronization objects without blocking forever if the device is lost.
+// A removed device never signals its fence or its frame latency waitable object again, so an
+// INFINITE wait on either of them would park the calling thread for the lifetime of the process.
+// Returns false if the device was lost, in which case the caller should skip its GPU work.
+static bool ImGui_ImplDX12_WaitForObjects(HANDLE* handles, UINT handles_count)
+{
+    ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
+    for (;;)
+    {
+        // A timed-out wait consumes no signal, so it is safe to retry (our fence event is auto-reset).
+        DWORD wait_result = ::WaitForMultipleObjects(handles_count, handles, TRUE, 1000);
+        if (wait_result != WAIT_TIMEOUT)
+            return wait_result != WAIT_FAILED;
+        if (FAILED(bd->pd3dDevice->GetDeviceRemovedReason()))
+            return false;
+    }
+}
+
 // Buffers used during the rendering of a frame
 struct ImGui_ImplDX12_RenderBuffers
 {
@@ -644,8 +662,9 @@ void ImGui_ImplDX12_UpdateTexture(ImTextureData* tex)
         // - To remove this may need to create NumFramesInFlight x ImGui_ImplDX12_FrameContext in backend data (mimick docking version)
         // - Store per-frame in flight: upload buffer?
         // - Where do cmdList and cmdAlloc fit?
-        bd->Fence->SetEventOnCompletion(bd->FenceLastSignaledValue, bd->FenceEvent);
-        ::WaitForSingleObject(bd->FenceEvent, INFINITE);
+        hr = bd->Fence->SetEventOnCompletion(bd->FenceLastSignaledValue, bd->FenceEvent);
+        if (FAILED(hr) || !ImGui_ImplDX12_WaitForObjects(&bd->FenceEvent, 1))
+            return; // Device lost: leave the texture status unchanged so the upload is retried.
 
         tex->SetStatus(ImTextureStatus_OK);
     }
@@ -1181,11 +1200,13 @@ static void ImGui_WaitForPendingOperations(ImGui_ImplDX12_ViewportData* vd)
 {
     ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
     HRESULT hr = vd->CommandQueue->Signal(bd->Fence, ++bd->FenceLastSignaledValue);
-    IM_ASSERT(hr == S_OK);
+    if (FAILED(hr))
+        return; // Device lost: there is nothing left to wait for.
 
     hr = bd->Fence->SetEventOnCompletion(bd->FenceLastSignaledValue, bd->FenceEvent);
-    IM_ASSERT(hr == S_OK);
-    ::WaitForSingleObject(bd->FenceEvent, INFINITE);
+    if (FAILED(hr))
+        return;
+    ImGui_ImplDX12_WaitForObjects(&bd->FenceEvent, 1);
 }
 
 static ImGui_ImplDX12_FrameContext* ImGui_WaitForNextFrameContext(ImGui_ImplDX12_ViewportData* vd)
@@ -1195,13 +1216,16 @@ static ImGui_ImplDX12_FrameContext* ImGui_WaitForNextFrameContext(ImGui_ImplDX12
     if (bd->Fence->GetCompletedValue() < frame_context->FenceValue)
     {
         HRESULT hr = bd->Fence->SetEventOnCompletion(frame_context->FenceValue, bd->FenceEvent);
-        IM_ASSERT(hr == S_OK);
+        if (FAILED(hr))
+            return nullptr;
         HANDLE waitableObjects[] = { vd->SwapChainWaitableObject, bd->FenceEvent };
-        ::WaitForMultipleObjects(2, waitableObjects, TRUE, INFINITE);
+        if (!ImGui_ImplDX12_WaitForObjects(waitableObjects, 2))
+            return nullptr;
     }
     else
     {
-        ::WaitForSingleObject(vd->SwapChainWaitableObject, INFINITE);
+        if (!ImGui_ImplDX12_WaitForObjects(&vd->SwapChainWaitableObject, 1))
+            return nullptr;
     }
     return frame_context;
 }
@@ -1265,6 +1289,8 @@ static void ImGui_ImplDX12_RenderWindow(ImGuiViewport* viewport, void*)
         return;
 
     ImGui_ImplDX12_FrameContext* frame_context = ImGui_WaitForNextFrameContext(vd);
+    if (frame_context == nullptr)
+        return; // Device lost: skip rendering this viewport.
     UINT back_buffer_idx = vd->SwapChain->GetCurrentBackBufferIndex();
 
     const ImVec4 clear_color = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
