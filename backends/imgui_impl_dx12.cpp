@@ -1197,31 +1197,35 @@ static void ImGui_ImplDX12_CreateWindow(ImGuiViewport* viewport)
         ImGui_ImplDX12_DestroyRenderBuffers(&vd->FrameRenderBuffers[i]);
 }
 
-static void ImGui_WaitForPendingOperations(ImGui_ImplDX12_ViewportData* vd)
+static void ImGui_ImplDX12_WaitForPendingOperations(ImGui_ImplDX12_ViewportData* vd)
 {
     ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
     HRESULT hr = vd->CommandQueue->Signal(bd->Fence, ++bd->FenceLastSignaledValue);
-    IM_ASSERT(hr == S_OK);
-
+    if (FAILED(hr))
+        return; // Device lost: there is nothing left to wait for.
     hr = bd->Fence->SetEventOnCompletion(bd->FenceLastSignaledValue, bd->FenceEvent);
-    IM_ASSERT(hr == S_OK);
-    ::WaitForSingleObject(bd->FenceEvent, INFINITE);
+    if (FAILED(hr))
+        return;
+    ImGui_ImplDX12_WaitForObjects(&bd->FenceEvent, 1);
 }
 
-static ImGui_ImplDX12_FrameContext* ImGui_WaitForNextFrameContext(ImGui_ImplDX12_ViewportData* vd)
+static ImGui_ImplDX12_FrameContext* ImGui_ImplDX12_WaitForNextFrameContext(ImGui_ImplDX12_ViewportData* vd)
 {
     ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
     ImGui_ImplDX12_FrameContext* frame_context = &vd->FrameCtx[vd->FrameIndex % vd->NumFramesInFlight];
     if (bd->Fence->GetCompletedValue() < frame_context->FenceValue)
     {
         HRESULT hr = bd->Fence->SetEventOnCompletion(frame_context->FenceValue, bd->FenceEvent);
-        IM_ASSERT(hr == S_OK);
+        if (FAILED(hr))
+            return nullptr;
         HANDLE waitableObjects[] = { vd->SwapChainWaitableObject, bd->FenceEvent };
-        ::WaitForMultipleObjects(2, waitableObjects, TRUE, INFINITE);
+        if (!ImGui_ImplDX12_WaitForObjects(waitableObjects, 2))
+            return nullptr;
     }
     else
     {
-        ::WaitForSingleObject(vd->SwapChainWaitableObject, INFINITE);
+        if (!ImGui_ImplDX12_WaitForObjects(&vd->SwapChainWaitableObject, 1))
+            return nullptr;
     }
     return frame_context;
 }
@@ -1232,7 +1236,7 @@ static void ImGui_ImplDX12_DestroyWindow(ImGuiViewport* viewport)
     ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
     if (ImGui_ImplDX12_ViewportData* vd = (ImGui_ImplDX12_ViewportData*)viewport->RendererUserData)
     {
-        ImGui_WaitForPendingOperations(vd);
+        ImGui_ImplDX12_WaitForPendingOperations(vd);
 
         vd->CommandQueue = nullptr;
         ::CloseHandle(vd->SwapChainWaitableObject);
@@ -1257,7 +1261,7 @@ static void ImGui_ImplDX12_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
     ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
     ImGui_ImplDX12_ViewportData* vd = (ImGui_ImplDX12_ViewportData*)viewport->RendererUserData;
 
-    ImGui_WaitForPendingOperations(vd);
+    ImGui_ImplDX12_WaitForPendingOperations(vd);
 
     for (UINT i = 0; i < bd->numFramesInFlight; i++)
         SafeRelease(vd->FrameCtx[i].RenderTarget);
@@ -1284,7 +1288,9 @@ static void ImGui_ImplDX12_RenderWindow(ImGuiViewport* viewport, void*)
     if (vd->SwapChain == nullptr)
         return;
 
-    ImGui_ImplDX12_FrameContext* frame_context = ImGui_WaitForNextFrameContext(vd);
+    ImGui_ImplDX12_FrameContext* frame_context = ImGui_ImplDX12_WaitForNextFrameContext(vd);
+    if (frame_context == nullptr)
+        return; // Device lost: skip rendering this viewport.
     UINT back_buffer_idx = vd->SwapChain->GetCurrentBackBufferIndex();
 
     const ImVec4 clear_color = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
