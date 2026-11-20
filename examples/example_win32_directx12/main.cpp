@@ -94,6 +94,7 @@ static UINT64                       g_fenceLastSignaledValue = 0;
 static IDXGISwapChain3*             g_pSwapChain = nullptr;
 static bool                         g_SwapChainTearingSupport = false;
 static bool                         g_SwapChainOccluded = false;
+static bool                         g_DeviceLost = false;
 static HANDLE                       g_hSwapChainWaitableObject = nullptr;
 static ID3D12Resource*              g_mainRenderTargetResource[APP_NUM_BACK_BUFFERS] = {};
 static D3D12_CPU_DESCRIPTOR_HANDLE  g_mainRenderTargetDescriptor[APP_NUM_BACK_BUFFERS] = {};
@@ -103,6 +104,7 @@ bool CreateDeviceD3D(HWND hWnd);
 void CleanupDeviceD3D();
 void CreateRenderTarget();
 void CleanupRenderTarget();
+bool WaitForObjects(HANDLE* handles, UINT handles_count);
 void WaitForPendingOperations();
 FrameContext* WaitForNextFrameContext();
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -229,6 +231,15 @@ int main(int, char**)
         }
         g_SwapChainOccluded = false;
 
+        // Handle device loss, as caused by a GPU driver reset or by undocking a laptop.
+        // A real application would recreate the device and all of its resources here. This example only makes sure
+        // we stop submitting work and keep pumping messages, so the window stays responsive instead of hanging.
+        if (g_DeviceLost)
+        {
+            ::Sleep(10);
+            continue;
+        }
+
         // Start the Dear ImGui frame
         ImGui_ImplDX12_NewFrame();
         ImGui_ImplWin32_NewFrame();
@@ -275,6 +286,11 @@ int main(int, char**)
         ImGui::Render();
 
         FrameContext* frameCtx = WaitForNextFrameContext();
+        if (frameCtx == nullptr)
+        {
+            g_DeviceLost = true;
+            continue;
+        }
         UINT backBufferIdx = g_pSwapChain->GetCurrentBackBufferIndex();
         frameCtx->CommandAllocator->Reset();
 
@@ -314,6 +330,8 @@ int main(int, char**)
         // Present
         HRESULT hr = g_pSwapChain->Present(1, 0);   // Present with vsync
         //HRESULT hr = g_pSwapChain->Present(0, g_SwapChainTearingSupport ? DXGI_PRESENT_ALLOW_TEARING : 0); // Present without vsync
+        if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
+            g_DeviceLost = true;
         g_SwapChainOccluded = (hr == DXGI_STATUS_OCCLUDED);
         g_frameIndex++;
     }
@@ -514,12 +532,30 @@ void CleanupRenderTarget()
         if (g_mainRenderTargetResource[i]) { g_mainRenderTargetResource[i]->Release(); g_mainRenderTargetResource[i] = nullptr; }
 }
 
+// Wait on synchronization objects without blocking forever if the device is lost.
+// A removed device never signals its fence or its frame latency waitable object again, so an
+// INFINITE wait on either of them would park the main thread for the lifetime of the process.
+// Returns false if the device was lost, in which case the caller should skip its GPU work.
+bool WaitForObjects(HANDLE* handles, UINT handles_count)
+{
+    for (;;)
+    {
+        // A timed-out wait consumes no signal, so it is safe to retry (our fence event is auto-reset).
+        DWORD wait_result = ::WaitForMultipleObjects(handles_count, handles, TRUE, 1000);
+        if (wait_result != WAIT_TIMEOUT)
+            return wait_result != WAIT_FAILED;
+        if (FAILED(g_pd3dDevice->GetDeviceRemovedReason()))
+            return false;
+    }
+}
+
 void WaitForPendingOperations()
 {
-    g_pd3dCommandQueue->Signal(g_fence, ++g_fenceLastSignaledValue);
-
-    g_fence->SetEventOnCompletion(g_fenceLastSignaledValue, g_fenceEvent);
-    ::WaitForSingleObject(g_fenceEvent, INFINITE);
+    if (FAILED(g_pd3dCommandQueue->Signal(g_fence, ++g_fenceLastSignaledValue)))
+        return; // Device lost: there is nothing left to wait for.
+    if (FAILED(g_fence->SetEventOnCompletion(g_fenceLastSignaledValue, g_fenceEvent)))
+        return;
+    WaitForObjects(&g_fenceEvent, 1);
 }
 
 FrameContext* WaitForNextFrameContext()
@@ -527,13 +563,16 @@ FrameContext* WaitForNextFrameContext()
     FrameContext* frame_context = &g_frameContext[g_frameIndex % APP_NUM_FRAMES_IN_FLIGHT];
     if (g_fence->GetCompletedValue() < frame_context->FenceValue)
     {
-        g_fence->SetEventOnCompletion(frame_context->FenceValue, g_fenceEvent);
+        if (FAILED(g_fence->SetEventOnCompletion(frame_context->FenceValue, g_fenceEvent)))
+            return nullptr;
         HANDLE waitableObjects[] = { g_hSwapChainWaitableObject, g_fenceEvent };
-        ::WaitForMultipleObjects(2, waitableObjects, TRUE, INFINITE);
+        if (!WaitForObjects(waitableObjects, 2))
+            return nullptr;
     }
-    else
-        ::WaitForSingleObject(g_hSwapChainWaitableObject, INFINITE);
-
+    else if (!WaitForObjects(&g_hSwapChainWaitableObject, 1))
+    {
+        return nullptr;
+    }
     return frame_context;
 }
 
