@@ -20,6 +20,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-11-23: DirectX12: Avoid infinite waits when the device is lost. (#9632, #9633)
 //  2026-09-07: Round framebuffer dimensions to the nearest integer instead of truncating them. (#9538, 9515, #8628)
 //  2026-08-05: DirectX12: *BREAKING CHANGE* Removed support for legacy `ImGui_ImplDX12_Init()` signature obsoleted in 1.91.6 (2024-11-15) because it needed to forcefully disable support for ImGuiBackendFlags_RendererHasTextures. (#9487)
 //  2026-04-23: Added support for standard draw callbacks (in platform_io): DrawCallback_ResetRenderState, DrawCallback_SetSamplerLinear, DrawCallback_SetSamplerNearest. (#9378)
@@ -136,6 +137,24 @@ static ImGui_ImplDX12_Data* ImGui_ImplDX12_GetBackendData()
 ImGui_ImplDX12_RenderState* ImGui_ImplDX12_GetRenderState()
 {
     return (ImGui_ImplDX12_RenderState*)ImGui::GetPlatformIO().Renderer_RenderState;
+}
+
+// Wait on synchronization objects without blocking forever if the device is lost.
+// A removed device never signals its fence or its frame latency waitable object again, so an
+// INFINITE wait on either of them would park the calling thread for the lifetime of the process.
+// Returns false if the device was lost, in which case the caller should skip its GPU work.
+static bool ImGui_ImplDX12_WaitForObjects(HANDLE* handles, UINT handles_count)
+{
+    ImGui_ImplDX12_Data* bd = ImGui_ImplDX12_GetBackendData();
+    for (;;)
+    {
+        // A timed-out wait consumes no signal, so it is safe to retry (our fence event is auto-reset).
+        DWORD wait_result = ::WaitForMultipleObjects(handles_count, handles, TRUE, 1000);
+        if (wait_result != WAIT_TIMEOUT)
+            return wait_result != WAIT_FAILED;
+        if (FAILED(bd->pd3dDevice->GetDeviceRemovedReason()))
+            return false;
+    }
 }
 
 // Buffers used during the rendering of a frame
@@ -568,8 +587,9 @@ void ImGui_ImplDX12_UpdateTexture(ImTextureData* tex)
         // - To remove this may need to create NumFramesInFlight x ImGui_ImplDX12_FrameContext in backend data (mimick docking version)
         // - Store per-frame in flight: upload buffer?
         // - Where do cmdList and cmdAlloc fit?
-        bd->Fence->SetEventOnCompletion(bd->FenceLastSignaledValue, bd->FenceEvent);
-        ::WaitForSingleObject(bd->FenceEvent, INFINITE);
+        hr = bd->Fence->SetEventOnCompletion(bd->FenceLastSignaledValue, bd->FenceEvent);
+        if (FAILED(hr) || !ImGui_ImplDX12_WaitForObjects(&bd->FenceEvent, 1))
+            return; // Device lost: leave the texture status unchanged so the upload is retried.
 
         tex->SetStatus(ImTextureStatus_OK);
     }

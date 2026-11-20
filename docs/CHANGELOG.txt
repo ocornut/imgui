@@ -133,6 +133,7 @@ Other Changes:
 - Backends:
   - DirectX9: pre-transforming vertices and using `D3DFVF_XYZRHW` vertex format, largely
     increasing performances when in `D3DCREATE_SOFTWARE_VERTEXPROCESSING` mode. (#9628)
+  - DirectX12: avoid infinite waits when the device is lost. (#9632, #9633) [@grzybr1]
   - GLFW: allow initialization with missing HWND. (#9619) [@djohansson]
   - GLFW, SDL2: Emscripten implementation of `Platform_OpenInShellFn` calls
     `window.open()` with `noopener`: prevents newly opened tab from keeping a
