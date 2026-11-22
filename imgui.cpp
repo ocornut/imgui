@@ -18796,3 +18796,8 @@ void ImGui::ShowFontSelector(const char* label)
 //-----------------------------------------------------------------------------
 
 #endif // #ifndef IMGUI_DISABLE
+bool ImGui::IsDisabled()
+{
+    ImGuiContext& g = *GImGui;
+    return (g.CurrentItemFlags & ImGuiItemFlags_Disabled) != 0;
+}
