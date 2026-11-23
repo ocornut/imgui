@@ -537,6 +537,10 @@ bool WaitForObjects(HANDLE* handles, UINT handles_count)
 
 void WaitForPendingOperations()
 {
+    // Nothing to wait for if the device has already been torn down: CleanupRenderTarget() calls us,
+    // and CleanupDeviceD3D() may be called more than once while a lost device is being recreated.
+    if (g_pd3dCommandQueue == nullptr || g_fence == nullptr)
+        return;
     if (FAILED(g_pd3dCommandQueue->Signal(g_fence, ++g_fenceLastSignaledValue)))
         return; // Device lost: there is nothing left to wait for.
     if (FAILED(g_fence->SetEventOnCompletion(g_fenceLastSignaledValue, g_fenceEvent)))
