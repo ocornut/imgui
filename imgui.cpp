@@ -6499,6 +6499,12 @@ bool ImGui::IsItemFocused()
     return g.NavId == g.LastItemData.ID && g.NavId != 0;
 }
 
+bool ImGui::IsItemDisabled()
+{
+    ImGuiContext& g = *GImGui;
+    return (g.LastItemData.ItemFlags & ImGuiItemFlags_Disabled);
+}
+
 // Important: this can be useful but it is NOT equivalent to the behavior of e.g.Button()!
 // Most widgets have specific reactions based on mouse-up/down state, mouse position etc.
 bool ImGui::IsItemClicked(ImGuiMouseButton mouse_button)
