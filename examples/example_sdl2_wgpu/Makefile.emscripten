@@ -41,6 +41,7 @@ LDFLAGS += -s NO_EXIT_RUNTIME=0
 LDFLAGS += -s ASSERTIONS=1
 
 # Using Dawn-based WebGPU port (requires Emscripten >= 4.0.10)
+CPPFLAGS += -std=c++20 # Dawn requires C++20
 EMS += --use-port=emdawnwebgpu
 LDFLAGS += --use-port=emdawnwebgpu
 
