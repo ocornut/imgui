@@ -7043,10 +7043,10 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     const ImGuiStyle& style = g.Style;
 
     // When not framed, we vertically increase height up to typical framed widget height
-    const bool display_frame = (flags & ImGuiTreeNodeFlags_Framed) != 0;
-    const bool use_frame_padding = (display_frame || (flags & ImGuiTreeNodeFlags_FramePadding));
+    const bool is_framed = (flags & ImGuiTreeNodeFlags_Framed) != 0;
     const bool is_leaf = (flags & ImGuiTreeNodeFlags_Leaf) != 0;
-    const bool is_framed_undecorated = display_frame && ((flags & (ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_Bullet)) == ImGuiTreeNodeFlags_Leaf); // Framed leaf without bullet has left-adjusted text (#2159)
+    const bool is_framed_undecorated = is_framed && ((flags & (ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_Bullet)) == ImGuiTreeNodeFlags_Leaf); // Framed leaf without bullet has left-adjusted text (#2159)
+    const bool use_frame_padding = (is_framed || (flags & ImGuiTreeNodeFlags_FramePadding));
     const ImVec2 padding = use_frame_padding ? style.FramePadding : ImVec2(style.FramePadding.x, ImMin(window->DC.CurrLineTextBaseOffset, style.FramePadding.y));
 
     if (!label_end)
@@ -7054,9 +7054,9 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     const ImVec2 label_size = CalcTextSize(label, label_end, false);
 
     const float icon_width = is_framed_undecorated ? padding.x : g.FontSize + padding.x * 2;
-    const float text_offset_x = display_frame ? icon_width + padding.x : icon_width;                // Collapsing arrow width + Spacing
+    const float text_offset_x = is_framed ? icon_width + padding.x : icon_width;                // Collapsing arrow width + Spacing
     const float text_offset_y = use_frame_padding ? ImMax(style.FramePadding.y, window->DC.CurrLineTextBaseOffset) : window->DC.CurrLineTextBaseOffset; // Latch before ItemSize changes it
-    const float text_width = icon_width + label_size.x + (display_frame ? padding.x * 2.0f : 0.0f); // Include collapsing arrow
+    const float text_width = icon_width + label_size.x + (is_framed ? padding.x * 2.0f : 0.0f); // Include collapsing arrow
 
     const float frame_height = label_size.y + padding.y * 2;
     const bool span_all_columns = (flags & ImGuiTreeNodeFlags_SpanAllColumns) != 0 && (g.CurrentTable != NULL);
@@ -7073,7 +7073,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
         frame_bb.Max.x += outer_extend;
     }*/
 
-    ImVec2 text_pos(window->DC.CursorPos.x + text_offset_x, window->DC.CursorPos.y + text_offset_y);
+    const ImVec2 text_pos(window->DC.CursorPos.x + text_offset_x, window->DC.CursorPos.y + text_offset_y);
     ItemSize(ImVec2(text_width, frame_height), padding.y);
 
     // For regular tree nodes, we arbitrary allow to click past 2 worth of ItemSpacing
@@ -7082,7 +7082,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
         interact_bb.Max.x = frame_bb.Min.x + text_width + (label_size.x > 0.0f ? style.ItemSpacing.x * 2.0f : 0.0f);
 
     // Compute open and multi-select states before ItemAdd() as it clear NextItem data.
-    ImGuiID storage_id = (g.NextItemData.HasFlags & ImGuiNextItemDataFlags_HasStorageID) ? g.NextItemData.StorageId : id;
+    const ImGuiID storage_id = (g.NextItemData.HasFlags & ImGuiNextItemDataFlags_HasStorageID) ? g.NextItemData.StorageId : id;
     bool is_open = TreeNodeUpdateNextOpen(storage_id, flags);
 
     bool is_visible;
@@ -7263,7 +7263,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
         ImGuiNavRenderCursorFlags nav_render_cursor_flags = ImGuiNavRenderCursorFlags_Compact;
         if (is_multi_select)
             nav_render_cursor_flags |= ImGuiNavRenderCursorFlags_AlwaysDraw; // Always show the nav rectangle
-        if (display_frame)
+        if (is_framed)
         {
             // Framed type
             const ImU32 bg_col = GetColorU32((held && hovered) ? ImGuiCol_HeaderActive : hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header);
@@ -7303,7 +7303,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
             TreeNodeDrawLineToChildNode(ImVec2(text_pos.x - text_offset_x + padding.x, text_pos.y + g.FontSize * 0.5f));
 
         // Label
-        if (display_frame)
+        if (is_framed)
             RenderTextClipped(text_pos, frame_bb.Max, label, label_end, &label_size);
         else
             RenderText(text_pos, label, label_end, false);
