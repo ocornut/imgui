@@ -80,6 +80,7 @@ Other Changes:
   - CollapsingHeader(): avoid extending frame boundaries by `WindowPadding.x*0.5f`
     on each side: it is inconsistent and tends to exhibits issues in various setups.
     (that extension has been here since 1.42). (#9181, #6170)
+  - Fixed combining `ImGuiTreeNodeFlags_Framed` and `ImGuiTreeNodeFlags_SpanLabelWidth`.
 - Popups:
   - Modals: fixed an assert displaying a modal in an environment where
     `io.DisplayFramebufferScale` is not an integer (regression in 1.93.0). (#9598)
