@@ -2782,6 +2782,7 @@ struct ImGuiContext
     ImPool<ImGuiTabBar>             TabBars;
     ImVector<ImGuiPtrOrIndex>       CurrentTabBarStack;
     ImVector<ImGuiShrinkWidthItem>  ShrinkWidthBuffer;
+    ImGuiTabBarFlags                ConfigDockingTabBarFlags;   // Basic TabBar flags for dock nodes. PLEASE LET ME KNOW IF YOU ARE USING THIS. (#9596, #8800, #3421)
 
     // Multi-Select state
     ImGuiBoxSelectState             BoxSelectState;

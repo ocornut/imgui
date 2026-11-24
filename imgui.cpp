@@ -4552,7 +4552,13 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
 
     CurrentTable = NULL;
     TablesTempDataStacked = 0;
+
     CurrentTabBar = NULL;
+    ConfigDockingTabBarFlags = ImGuiTabBarFlags_SaveSettings | ImGuiTabBarFlags_DockNode;           // Don't clear those!
+    ConfigDockingTabBarFlags |= ImGuiTabBarFlags_Reorderable | ImGuiTabBarFlags_AutoSelectNewTabs;  // | ImGuiTabBarFlags_NoTabListScrollingButtons;
+    ConfigDockingTabBarFlags |= ImGuiTabBarFlags_FittingPolicyMixed;                                // Enforce default policy. Since 1.92.2 this is now reasonable. May expose to public IO if needed. (#9596, #8800, #3421)
+    ConfigDockingTabBarFlags |= ImGuiTabBarFlags_DrawSelectedOverline;
+
     CurrentMultiSelect = NULL;
     MultiSelectTempDataStacked = 0;
 
@@ -19998,10 +20004,7 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
         tab_bar->SelectedTabId = tab_bar->NextSelectedTabId = tab_bar->Tabs.back().Window->TabId;
 
     // Begin tab bar
-    ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_Reorderable | ImGuiTabBarFlags_AutoSelectNewTabs; // | ImGuiTabBarFlags_NoTabListScrollingButtons);
-    tab_bar_flags |= ImGuiTabBarFlags_SaveSettings | ImGuiTabBarFlags_DockNode;
-    tab_bar_flags |= ImGuiTabBarFlags_FittingPolicyMixed; // Enforce default policy. Since 1.92.2 this is now reasonable. May expose later if needed. (#8800, #3421)
-    tab_bar_flags |= ImGuiTabBarFlags_DrawSelectedOverline;
+    ImGuiTabBarFlags tab_bar_flags = g.ConfigDockingTabBarFlags;
     if (!host_window->Collapsed && is_focused)
         tab_bar_flags |= ImGuiTabBarFlags_IsFocused;
     tab_bar->ID = node->ID;// GetID("#TabBar");
