@@ -77,6 +77,9 @@ Other Changes:
 - TreeNode:
   - TreeNodeGetOpen(): added flags parameter to allow passing `ImGuiTreeNodeFlags_DefaultOpen`
     or `ImGuiTreeNodeFlags_Leaf`. (#9569, #9592, #3823, #9251) [@adalisk-emikhaylov, @Yaki-Blake]
+  - CollapsingHeader(): avoid extending frame boundaries by `WindowPadding.x*0.5f`
+    on each side: it is inconsistent and tends to exhibits issues in various setups.
+    (that extension has been here since 1.42). (#9181, #6170)
 - Popups:
   - Modals: fixed an assert displaying a modal in an environment where
     `io.DisplayFramebufferScale` is not an integer (regression in 1.93.0). (#9598)
