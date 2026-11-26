@@ -55,8 +55,7 @@ if (ImGui::Button("Save"))
 ImGui::InputText("string", buf, IM_COUNTOF(buf));
 ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
 ```
-<img width="640" height="326" alt="sample code output (dark)" src="https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v193/capture_readme_styles_0000.png" />
-<img width="640" height="326" alt="sample code output (light)" src="https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v193/capture_readme_styles_0001.png" />
+<img width="499" height="276" alt="sample code output (dark)" src="https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v193/capture_readme_styles_0000.png" /> <img width="499" height="276" alt="sample code output (light)" src="https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v193/capture_readme_styles_0001.png" />
 
 ```cpp
 // Create a window called "My First Tool", with a menu bar.
