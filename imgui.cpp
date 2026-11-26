@@ -1,4 +1,4 @@
-// dear imgui, v1.93.1 WIP
+// dear imgui, v1.93.1
 // (main code and documentation)
 
 // Help:
