@@ -7043,9 +7043,10 @@ static ImGuiCol GetWindowBgColorIdx(ImGuiWindow* window)
     return ImGuiCol_WindowBg;
 }
 
-static void CalcResizePosSizeFromAnyCorner(ImGuiWindow* window, const ImVec2& corner_target_arg, const ImVec2& corner_norm, ImVec2* out_pos, ImVec2* out_size)
+// Originally written for resize grips, hence using "corner" terminology, but also used for borders.
+static void CalcResizePosSizeForLocation(ImGuiWindow* window, const ImVec2& target_pos_arg, const ImVec2& corner_norm, ImVec2* out_pos, ImVec2* out_size)
 {
-    ImVec2 corner_target = corner_target_arg;
+    ImVec2 target_pos = target_pos_arg;
     if (window->Flags & ImGuiWindowFlags_ChildWindow) // Clamp resizing of childs within parent
     {
         ImGuiWindow* parent_window = window->ParentWindow;
@@ -7053,12 +7054,12 @@ static void CalcResizePosSizeFromAnyCorner(ImGuiWindow* window, const ImVec2& co
         ImRect limit_rect = parent_window->InnerRect;
         limit_rect.Expand(ImVec2(-ImMax(parent_window->WindowPadding.x, parent_window->WindowBorderSize), -ImMax(parent_window->WindowPadding.y, parent_window->WindowBorderSize)));
         if ((parent_flags & (ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysHorizontalScrollbar)) == 0 || (parent_flags & ImGuiWindowFlags_NoScrollbar))
-            corner_target.x = ImClamp(corner_target.x, limit_rect.Min.x, limit_rect.Max.x);
+            target_pos.x = ImClamp(target_pos.x, limit_rect.Min.x, limit_rect.Max.x);
         if (parent_flags & ImGuiWindowFlags_NoScrollbar)
-            corner_target.y = ImClamp(corner_target.y, limit_rect.Min.y, limit_rect.Max.y);
+            target_pos.y = ImClamp(target_pos.y, limit_rect.Min.y, limit_rect.Max.y);
     }
-    ImVec2 pos_min = ImLerp(corner_target, window->Pos, corner_norm);                // Expected window upper-left
-    ImVec2 pos_max = ImLerp(window->Pos + window->Size, corner_target, corner_norm); // Expected window lower-right
+    ImVec2 pos_min = ImLerp(target_pos, window->Pos, corner_norm);                // Expected window upper-left
+    ImVec2 pos_max = ImLerp(window->Pos + window->Size, target_pos, corner_norm); // Expected window lower-right
     ImVec2 size_expected = pos_max - pos_min;
     ImVec2 size_constrained = CalcWindowSizeAfterConstraint(window, size_expected);
     *out_pos = pos_min;
@@ -7198,7 +7199,7 @@ static int ImGui::UpdateWindowManualResize(ImGuiWindow* window, int* border_hove
             ImVec2 clamp_max = ImVec2(def.CornerPosN.x == 0.0f ? clamp_rect.Max.x : +FLT_MAX, def.CornerPosN.y == 0.0f ? clamp_rect.Max.y : +FLT_MAX);
             ImVec2 corner_target = g.IO.MousePos - g.ActiveIdClickOffset + ImLerp(def.InnerDir * grip_hover_outer_size, def.InnerDir * -grip_hover_inner_size, def.CornerPosN); // Corner of the window corresponding to our corner grip
             corner_target = ImClamp(corner_target, clamp_min, clamp_max);
-            CalcResizePosSizeFromAnyCorner(window, corner_target, def.CornerPosN, &pos_target, &size_target);
+            CalcResizePosSizeForLocation(window, corner_target, def.CornerPosN, &pos_target, &size_target);
         }
 
         // Only lower-left grip is visible before hovering/activating
@@ -7207,6 +7208,7 @@ static int ImGui::UpdateWindowManualResize(ImGuiWindow* window, int* border_hove
             resize_grip_col[resize_grip_n] = GetColorU32(held ? ImGuiCol_ResizeGripActive : hovered ? ImGuiCol_ResizeGripHovered : ImGuiCol_ResizeGrip);
     }
 
+    // Resize borders
     int resize_border_mask = 0x00;
     if (window->Flags & ImGuiWindowFlags_ChildWindow)
         resize_border_mask |= ((window->ChildFlags & ImGuiChildFlags_ResizeX) ? 0x02 : 0) | ((window->ChildFlags & ImGuiChildFlags_ResizeY) ? 0x08 : 0);
@@ -7233,7 +7235,7 @@ static int ImGui::UpdateWindowManualResize(ImGuiWindow* window, int* border_hove
         {
             // Double-clicking bottom or right border auto-fit on this axis
             // FIXME: Support top and right borders: rework CalcResizePosSizeFromAnyCorner() to be reusable in both cases.
-            if (border_n == 1 || border_n == 3) // Right and bottom border
+            if (border_n == ImGuiDir_Right || border_n == ImGuiDir_Down) // Right and bottom border
             {
                 ImVec2 size_auto_fit = CalcWindowAutoFitSize(window, window->ContentSizeIdeal, 1 << axis);
                 size_target[axis] = CalcWindowSizeAfterConstraint(window, size_auto_fit)[axis];
@@ -7279,7 +7281,7 @@ static int ImGui::UpdateWindowManualResize(ImGuiWindow* window, int* border_hove
             ImVec2 clamp_max(border_n == ImGuiDir_Left ? clamp_rect.Max.x : +FLT_MAX, border_n == ImGuiDir_Up ? clamp_rect.Max.y : +FLT_MAX);
             border_target = ImClamp(border_target, clamp_min, clamp_max);
             if (!ignore_resize)
-                CalcResizePosSizeFromAnyCorner(window, border_target, ImMin(def.SegmentN1, def.SegmentN2), &pos_target, &size_target);
+                CalcResizePosSizeForLocation(window, border_target, ImMin(def.SegmentN1, def.SegmentN2), &pos_target, &size_target);
         }
         if (hovered)
             *border_hovered = border_n;
