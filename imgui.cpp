@@ -7242,8 +7242,12 @@ static int ImGui::UpdateWindowManualResize(ImGuiWindow* window, int* border_hove
             if (border_n == ImGuiDir_Right || border_n == ImGuiDir_Down) // Right and bottom border
             {
                 ImVec2 size_auto_fit = CalcWindowAutoFitSize(window, window->ContentSizeIdeal, 1 << axis);
-                size_target[axis] = CalcWindowSizeAfterConstraint(window, size_auto_fit, 1 << axis)[axis];
+                ImVec2 size_desired = window->SizeFull;
+                size_desired[axis] = size_auto_fit[axis];
+                size_target = CalcWindowSizeAfterConstraint(window, size_desired, 1 << axis);
                 ret_auto_fit_mask |= (1 << axis);
+                if (size_target[axis ^ 1] != window->SizeFull[axis ^ 1])
+                    ret_auto_fit_mask |= (1 << (axis ^ 1));
                 hovered = held = false; // So border doesn't show highlighted at new position
             }
             ClearActiveID();

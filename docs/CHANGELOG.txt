@@ -50,6 +50,9 @@ Other Changes:
   - Fixed window positioning when a size constraint changes the other axis
     during border dragging: left/right border drags keep the top edge fixed,
     and top/bottom border drags keep the left edge fixed. (#6210)
+  - Fixed auto-fit when double-clicking a window's right or bottom border
+    ignoring size constraint changes to the other axis (e.g. when enforcing
+    a square or fixed aspect ratio). (#6210)
 - Demo:
   - Fixed "Examples->Constrained-resizing window" using newly added `ResizeAxisMask`
     hint: allow shrinking the Square example from borders; allow resizing the Aspect Ratio
