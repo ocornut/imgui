@@ -43,6 +43,18 @@ Breaking Changes:
 
 Other Changes:
 
+- Windows:
+  - Added `ImGuiSizeCallbackData::ResizeAxisMask` hint identifying which
+    axis drives a resize request, allowing custom constraints to prioritize
+    a single axis. (#6210, #8028)
+  - Fixed window positioning when a size constraint changes the other axis
+    during border dragging: left/right border drags keep the top edge fixed,
+    and top/bottom border drags keep the left edge fixed. (#6210)
+- Demo:
+  - Fixed "Examples->Constrained-resizing window" using newly added `ResizeAxisMask`
+    hint: allow shrinking the Square example from borders; allow resizing the Aspect Ratio
+    example from top/bottom borders and by dragging corners vertically. (#6210, #8028)
+
 
 -----------------------------------------------------------------------
  VERSION 1.93.1 (Released 2026-11-26)

@@ -10174,15 +10174,25 @@ static void ShowExampleAppConstrainedResize(bool* p_open)
     {
         // Helper functions to demonstrate programmatic constraints
         // FIXME: This doesn't take account of decoration size (e.g. title bar), library should make this easier.
-        // FIXME: None of the three demos works consistently when resizing from borders.
         static void AspectRatio(ImGuiSizeCallbackData* data)
         {
             float aspect_ratio = *(float*)data->UserData;
-            data->DesiredSize.y = (float)(int)(data->DesiredSize.x / aspect_ratio);
+            if (data->ResizeAxisMask == 2)
+                data->DesiredSize.x = (float)(int)(data->DesiredSize.y * aspect_ratio);
+            else if (data->ResizeAxisMask == 1 || data->DesiredSize.x / aspect_ratio > data->DesiredSize.y)
+                data->DesiredSize.y = (float)(int)(data->DesiredSize.x / aspect_ratio);
+            else
+                data->DesiredSize.x = (float)(int)(data->DesiredSize.y * aspect_ratio);
         }
         static void Square(ImGuiSizeCallbackData* data)
         {
-            data->DesiredSize.x = data->DesiredSize.y = IM_MAX(data->DesiredSize.x, data->DesiredSize.y);
+            // A single-axis request drives both dimensions. Otherwise, fit the requested rectangle.
+            if (data->ResizeAxisMask == 1)
+                data->DesiredSize.y = data->DesiredSize.x;
+            else if (data->ResizeAxisMask == 2)
+                data->DesiredSize.x = data->DesiredSize.y;
+            else
+                data->DesiredSize.x = data->DesiredSize.y = IM_MAX(data->DesiredSize.x, data->DesiredSize.y);
         }
         static void Step(ImGuiSizeCallbackData* data)
         {
@@ -10207,7 +10217,7 @@ static void ShowExampleAppConstrainedResize(bool* p_open)
     // Options
     static bool auto_resize = false;
     static bool window_padding = true;
-    static int type = 6; // Aspect Ratio
+    static int type = 7; // Aspect Ratio
     static int display_lines = 10;
 
     // Submit constraint

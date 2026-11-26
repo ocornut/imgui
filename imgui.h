@@ -2753,6 +2753,7 @@ struct ImGuiSizeCallbackData
     ImVec2  Pos;            // Read-only.   Window position, for reference.
     ImVec2  CurrentSize;    // Read-only.   Current window size.
     ImVec2  DesiredSize;    // Read-write.  Desired size, based on user's mouse position. Write to this field to restrain resizing.
+    int     ResizeAxisMask; // Read-only.   Axes driving the resizing request. 0=unspecified, 1=X axis only, 2=Y axis only, 3=both axises. Does not restrict which output dimensions may change.
 };
 
 // Data payload for Drag and Drop operations: AcceptDragDropPayload(), GetDragDropPayload()

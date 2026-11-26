@@ -6935,7 +6935,7 @@ static inline ImVec2 CalcWindowMinSize(ImGuiWindow* window)
     return size_min;
 }
 
-static ImVec2 CalcWindowSizeAfterConstraint(ImGuiWindow* window, const ImVec2& size_desired)
+static ImVec2 CalcWindowSizeAfterConstraint(ImGuiWindow* window, const ImVec2& size_desired, int resize_axis_mask)
 {
     ImGuiContext& g = *GImGui;
     ImVec2 new_size = size_desired;
@@ -6952,6 +6952,7 @@ static ImVec2 CalcWindowSizeAfterConstraint(ImGuiWindow* window, const ImVec2& s
             data.Pos = window->Pos;
             data.CurrentSize = window->SizeFull;
             data.DesiredSize = new_size;
+            data.ResizeAxisMask = resize_axis_mask & 0x03;
             g.NextWindowData.SizeCallback(&data);
             new_size = data.DesiredSize;
         }
@@ -7011,7 +7012,7 @@ static ImVec2 CalcWindowAutoFitSize(ImGuiWindow* window, const ImVec2& size_cont
 
         // When the window cannot fit all contents (either because of constraints, either because screen is too small),
         // we are growing the size on the other axis to compensate for expected scrollbar. FIXME: Might turn bigger than ViewportSize-WindowPadding.
-        ImVec2 size_auto_fit_after_constraint = CalcWindowSizeAfterConstraint(window, size_auto_fit);
+        ImVec2 size_auto_fit_after_constraint = CalcWindowSizeAfterConstraint(window, size_auto_fit, axis_mask);
         float size_contents_for_scrollbar_x = (axis_mask & 1) ? size_contents.x : window->ContentSize.x; // See #9352. In theory this should use same logic as `window->ScrollbarY = ...` codepath in Begin(). Needs some plumbling.
         float size_contents_for_scrollbar_y = (axis_mask & 2) ? size_contents.y : window->ContentSize.y;
         bool will_have_scrollbar_x = (size_auto_fit_after_constraint.x < size_contents_for_scrollbar_x + size_pad.x + decoration_w_without_scrollbars && !(window->Flags & ImGuiWindowFlags_NoScrollbar) && (window->Flags & ImGuiWindowFlags_HorizontalScrollbar)) || (window->Flags & ImGuiWindowFlags_AlwaysHorizontalScrollbar);
@@ -7029,8 +7030,8 @@ ImVec2 ImGui::CalcWindowNextAutoFitSize(ImGuiWindow* window)
     ImVec2 size_contents_current;
     ImVec2 size_contents_ideal;
     CalcWindowContentSizes(window, &size_contents_current, &size_contents_ideal);
-    ImVec2 size_auto_fit = CalcWindowAutoFitSize(window, size_contents_ideal, ~0);
-    ImVec2 size_final = CalcWindowSizeAfterConstraint(window, size_auto_fit);
+    ImVec2 size_auto_fit = CalcWindowAutoFitSize(window, size_contents_ideal, 0x03);
+    ImVec2 size_final = CalcWindowSizeAfterConstraint(window, size_auto_fit, 0x03);
     return size_final;
 }
 
@@ -7044,7 +7045,9 @@ static ImGuiCol GetWindowBgColorIdx(ImGuiWindow* window)
 }
 
 // Originally written for resize grips, hence using "corner" terminology, but also used for borders.
-static void CalcResizePosSizeForLocation(ImGuiWindow* window, const ImVec2& target_pos_arg, const ImVec2& corner_norm, ImVec2* out_pos, ImVec2* out_size)
+// - corner_norm selects the target corner/border.
+// - corner_pivot selects which side moves when applying size constraints.
+static void CalcResizePosSizeForLocation(ImGuiWindow* window, const ImVec2& target_pos_arg, const ImVec2& corner_norm, const ImVec2& corner_pivot, int resize_axis_mask, ImVec2* out_pos, ImVec2* out_size)
 {
     ImVec2 target_pos = target_pos_arg;
     if (window->Flags & ImGuiWindowFlags_ChildWindow) // Clamp resizing of childs within parent
@@ -7061,11 +7064,11 @@ static void CalcResizePosSizeForLocation(ImGuiWindow* window, const ImVec2& targ
     ImVec2 pos_min = ImLerp(target_pos, window->Pos, corner_norm);                // Expected window upper-left
     ImVec2 pos_max = ImLerp(window->Pos + window->Size, target_pos, corner_norm); // Expected window lower-right
     ImVec2 size_expected = pos_max - pos_min;
-    ImVec2 size_constrained = CalcWindowSizeAfterConstraint(window, size_expected);
+    ImVec2 size_constrained = CalcWindowSizeAfterConstraint(window, size_expected, resize_axis_mask);
     *out_pos = pos_min;
-    if (corner_norm.x == 0.0f)
+    if (corner_pivot.x == 0.0f)
         out_pos->x -= (size_constrained.x - size_expected.x);
-    if (corner_norm.y == 0.0f)
+    if (corner_pivot.y == 0.0f)
         out_pos->y -= (size_constrained.y - size_expected.y);
     *out_size = size_constrained;
 }
@@ -7090,14 +7093,15 @@ struct ImGuiResizeBorderDef
 {
     ImVec2  InnerDir;               // Normal toward inside
     ImVec2  SegmentN1, SegmentN2;   // End positions, normalized (0,0: upper left)
+    ImVec2  ResizePivotN;           // 0 or 1 on resize axis, 1 on other axis
     float   OuterAngle;             // Angle toward outside
 };
 static const ImGuiResizeBorderDef resize_border_def[4] =
 {
-    { ImVec2(+1, 0), ImVec2(0, 1), ImVec2(0, 0), IM_PI * 1.00f }, // Left
-    { ImVec2(-1, 0), ImVec2(1, 0), ImVec2(1, 1), IM_PI * 0.00f }, // Right
-    { ImVec2(0, +1), ImVec2(0, 0), ImVec2(1, 0), IM_PI * 1.50f }, // Up
-    { ImVec2(0, -1), ImVec2(1, 1), ImVec2(0, 1), IM_PI * 0.50f }  // Down
+    { ImVec2(+1, 0), ImVec2(0, 1), ImVec2(0, 0), ImVec2(0, 1), IM_PI * 1.00f }, // Left border
+    { ImVec2(-1, 0), ImVec2(1, 0), ImVec2(1, 1), ImVec2(1, 1), IM_PI * 0.00f }, // Right border
+    { ImVec2(0, +1), ImVec2(0, 0), ImVec2(1, 0), ImVec2(1, 0), IM_PI * 1.50f }, // Upper border
+    { ImVec2(0, -1), ImVec2(1, 1), ImVec2(0, 1), ImVec2(1, 1), IM_PI * 0.50f }  // Lower border
 };
 
 static ImRect GetResizeBorderRect(ImGuiWindow* window, int border_n, float perp_padding, float thickness)
@@ -7186,8 +7190,8 @@ static int ImGui::UpdateWindowManualResize(ImGuiWindow* window, int* border_hove
         if (held && g.IO.MouseDoubleClicked[0])
         {
             // Auto-fit when double-clicking
-            ImVec2 size_auto_fit = CalcWindowAutoFitSize(window, window->ContentSizeIdeal, ~0);
-            size_target = CalcWindowSizeAfterConstraint(window, size_auto_fit);
+            ImVec2 size_auto_fit = CalcWindowAutoFitSize(window, window->ContentSizeIdeal, 0x03);
+            size_target = CalcWindowSizeAfterConstraint(window, size_auto_fit, 0x03);
             ret_auto_fit_mask = 0x03; // Both axes
             ClearActiveID();
         }
@@ -7199,7 +7203,7 @@ static int ImGui::UpdateWindowManualResize(ImGuiWindow* window, int* border_hove
             ImVec2 clamp_max = ImVec2(def.CornerPosN.x == 0.0f ? clamp_rect.Max.x : +FLT_MAX, def.CornerPosN.y == 0.0f ? clamp_rect.Max.y : +FLT_MAX);
             ImVec2 corner_target = g.IO.MousePos - g.ActiveIdClickOffset + ImLerp(def.InnerDir * grip_hover_outer_size, def.InnerDir * -grip_hover_inner_size, def.CornerPosN); // Corner of the window corresponding to our corner grip
             corner_target = ImClamp(corner_target, clamp_min, clamp_max);
-            CalcResizePosSizeForLocation(window, corner_target, def.CornerPosN, &pos_target, &size_target);
+            CalcResizePosSizeForLocation(window, corner_target, def.CornerPosN, def.CornerPosN, 0x03, &pos_target, &size_target);
         }
 
         // Only lower-left grip is visible before hovering/activating
@@ -7238,7 +7242,7 @@ static int ImGui::UpdateWindowManualResize(ImGuiWindow* window, int* border_hove
             if (border_n == ImGuiDir_Right || border_n == ImGuiDir_Down) // Right and bottom border
             {
                 ImVec2 size_auto_fit = CalcWindowAutoFitSize(window, window->ContentSizeIdeal, 1 << axis);
-                size_target[axis] = CalcWindowSizeAfterConstraint(window, size_auto_fit)[axis];
+                size_target[axis] = CalcWindowSizeAfterConstraint(window, size_auto_fit, 1 << axis)[axis];
                 ret_auto_fit_mask |= (1 << axis);
                 hovered = held = false; // So border doesn't show highlighted at new position
             }
@@ -7258,7 +7262,7 @@ static int ImGui::UpdateWindowManualResize(ImGuiWindow* window, int* border_hove
             if ((window->Flags & ImGuiWindowFlags_ChildWindow) && memcmp(&g.WindowResizeBorderExpectedRect, &border_rect, sizeof(ImRect)) != 0)
                 g.WindowResizeRelativeMode = true;
 
-            const ImVec2 border_curr = (window->Pos + ImMin(def.SegmentN1, def.SegmentN2) * window->Size);
+            const ImVec2 border_curr = (window->Pos + def.ResizePivotN * window->Size);
             const float border_target_rel_mode_for_axis = border_curr[axis] + g.IO.MouseDelta[axis];
             const float border_target_abs_mode_for_axis = g.IO.MousePos[axis] - g.ActiveIdClickOffset[axis] + g.WindowsBorderHoverPadding; // Match ButtonBehavior() padding above.
 
@@ -7281,7 +7285,7 @@ static int ImGui::UpdateWindowManualResize(ImGuiWindow* window, int* border_hove
             ImVec2 clamp_max(border_n == ImGuiDir_Left ? clamp_rect.Max.x : +FLT_MAX, border_n == ImGuiDir_Up ? clamp_rect.Max.y : +FLT_MAX);
             border_target = ImClamp(border_target, clamp_min, clamp_max);
             if (!ignore_resize)
-                CalcResizePosSizeForLocation(window, border_target, ImMin(def.SegmentN1, def.SegmentN2), &pos_target, &size_target);
+                CalcResizePosSizeForLocation(window, border_target, ImMin(def.SegmentN1, def.SegmentN2), def.ResizePivotN, 1 << axis, &pos_target, &size_target);
         }
         if (hovered)
             *border_hovered = border_n;
@@ -7316,7 +7320,8 @@ static int ImGui::UpdateWindowManualResize(ImGuiWindow* window, int* border_hove
             if (accum_floored.x != 0.0f || accum_floored.y != 0.0f)
             {
                 // FIXME-NAV: Should store and accumulate into a separate size buffer to handle sizing constraints properly, right now a constraint will make us stuck.
-                size_target = CalcWindowSizeAfterConstraint(window, window->SizeFull + accum_floored);
+                const int resize_axis_mask = (accum_floored.x != 0.0f ? 0x01 : 0x00) | (accum_floored.y != 0.0f ? 0x02 : 0x00);
+                size_target = CalcWindowSizeAfterConstraint(window, window->SizeFull + accum_floored, resize_axis_mask);
                 g.NavWindowingAccumDeltaSize -= accum_floored;
             }
         }
@@ -7949,12 +7954,12 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // - Using SetNextWindowSize() overrides ImGuiWindowFlags_AlwaysAutoResize, so it can be used on tooltips/popups, etc.
         // - We still process initial auto-fit on collapsed windows to get a window width, but otherwise don't honor ImGuiWindowFlags_AlwaysAutoResize when collapsed.
         // - Auto-fit may only grow window during the first few frames.
+        int size_auto_fit_mask = 0x00;
         {
             const bool size_auto_fit_x_always = !window_size_x_set_by_api && (flags & ImGuiWindowFlags_AlwaysAutoResize) && !window->Collapsed;
             const bool size_auto_fit_y_always = !window_size_y_set_by_api && (flags & ImGuiWindowFlags_AlwaysAutoResize) && !window->Collapsed;
             const bool size_auto_fit_x_current = !window_size_x_set_by_api && (window->AutoFitFramesX > 0);
             const bool size_auto_fit_y_current = !window_size_y_set_by_api && (window->AutoFitFramesY > 0);
-            int size_auto_fit_mask = 0;
             if (size_auto_fit_x_always || size_auto_fit_x_current)
                 size_auto_fit_mask |= (1 << ImGuiAxis_X);
             if (size_auto_fit_y_always || size_auto_fit_y_current)
@@ -7983,7 +7988,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         }
 
         // Apply minimum/maximum window size constraints and final size
-        window->SizeFull = CalcWindowSizeAfterConstraint(window, window->SizeFull);
+        window->SizeFull = CalcWindowSizeAfterConstraint(window, window->SizeFull, size_auto_fit_mask);
         window->Size = window->Collapsed && !(flags & ImGuiWindowFlags_ChildWindow) ? window->TitleBarRect().GetSize() : window->SizeFull;
 
         // POSITION
