@@ -1,4 +1,4 @@
-// dear imgui, v1.93.1 WIP
+// dear imgui, v1.93.1
 // (widgets code)
 
 /*
@@ -7050,35 +7050,37 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     const ImGuiStyle& style = g.Style;
 
     // When not framed, we vertically increase height up to typical framed widget height
-    const bool display_frame = (flags & ImGuiTreeNodeFlags_Framed) != 0;
-    const bool use_frame_padding = (display_frame || (flags & ImGuiTreeNodeFlags_FramePadding));
+    const bool is_framed = (flags & ImGuiTreeNodeFlags_Framed) != 0;
+    const bool is_leaf = (flags & ImGuiTreeNodeFlags_Leaf) != 0;
+    const bool is_framed_undecorated = is_framed && ((flags & (ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_Bullet)) == ImGuiTreeNodeFlags_Leaf); // Framed leaf without bullet has left-adjusted text (#2159)
+    const bool use_frame_padding = (is_framed || (flags & ImGuiTreeNodeFlags_FramePadding));
     const ImVec2 padding = use_frame_padding ? style.FramePadding : ImVec2(style.FramePadding.x, ImMin(window->DC.CurrLineTextBaseOffset, style.FramePadding.y));
 
     if (!label_end)
         label_end = FindRenderedTextEnd(label);
     const ImVec2 label_size = CalcTextSize(label, label_end, false);
 
-    const float icon_width = g.FontSize + padding.x * 2;
-    const float text_offset_x = display_frame ? icon_width + padding.x : icon_width;    // Collapsing arrow width + Spacing
+    const float icon_width = is_framed_undecorated ? padding.x : g.FontSize + padding.x * 2;
+    const float text_offset_x = is_framed ? icon_width + padding.x : icon_width;                // Collapsing arrow width + Spacing
     const float text_offset_y = use_frame_padding ? ImMax(style.FramePadding.y, window->DC.CurrLineTextBaseOffset) : window->DC.CurrLineTextBaseOffset; // Latch before ItemSize changes it
-    const float text_width = icon_width + label_size.x;                                 // Include collapsing arrow
+    const float text_width = icon_width + label_size.x + (is_framed ? padding.x * 2.0f : 0.0f); // Include collapsing arrow
 
     const float frame_height = label_size.y + padding.y * 2;
     const bool span_all_columns = (flags & ImGuiTreeNodeFlags_SpanAllColumns) != 0 && (g.CurrentTable != NULL);
     const bool span_all_columns_label = (flags & ImGuiTreeNodeFlags_LabelSpanAllColumns) != 0 && (g.CurrentTable != NULL);
     ImRect frame_bb;
     frame_bb.Min.x = span_all_columns ? window->ParentWorkRect.Min.x : (flags & ImGuiTreeNodeFlags_SpanFullWidth) ? window->WorkRect.Min.x : window->DC.CursorPos.x;
-    frame_bb.Min.y = window->DC.CursorPos.y + (text_offset_y - padding.y);
     frame_bb.Max.x = span_all_columns ? window->ParentWorkRect.Max.x : (flags & ImGuiTreeNodeFlags_SpanLabelWidth) ? window->DC.CursorPos.x + text_width + padding.x : window->WorkRect.Max.x;
+    frame_bb.Min.y = window->DC.CursorPos.y + (text_offset_y - padding.y);
     frame_bb.Max.y = window->DC.CursorPos.y + (text_offset_y - padding.y) + frame_height;
-    if (display_frame)
+    /*if (display_frame) // Removed 2026/11/24
     {
         const float outer_extend = IM_TRUNC(window->WindowPadding.x * 0.5f); // Framed header expand a little outside of current limits
         frame_bb.Min.x -= outer_extend;
         frame_bb.Max.x += outer_extend;
-    }
+    }*/
 
-    ImVec2 text_pos(window->DC.CursorPos.x + text_offset_x, window->DC.CursorPos.y + text_offset_y);
+    const ImVec2 text_pos(window->DC.CursorPos.x + text_offset_x, window->DC.CursorPos.y + text_offset_y);
     ItemSize(ImVec2(text_width, frame_height), padding.y);
 
     // For regular tree nodes, we arbitrary allow to click past 2 worth of ItemSpacing
@@ -7087,7 +7089,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
         interact_bb.Max.x = frame_bb.Min.x + text_width + (label_size.x > 0.0f ? style.ItemSpacing.x * 2.0f : 0.0f);
 
     // Compute open and multi-select states before ItemAdd() as it clear NextItem data.
-    ImGuiID storage_id = (g.NextItemData.HasFlags & ImGuiNextItemDataFlags_HasStorageID) ? g.NextItemData.StorageId : id;
+    const ImGuiID storage_id = (g.NextItemData.HasFlags & ImGuiNextItemDataFlags_HasStorageID) ? g.NextItemData.StorageId : id;
     bool is_open = TreeNodeUpdateNextOpen(storage_id, flags);
 
     bool is_visible;
@@ -7126,7 +7128,6 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
                 store_tree_node_stack_data = true;
     }
 
-    const bool is_leaf = (flags & ImGuiTreeNodeFlags_Leaf) != 0;
     if (!is_visible)
     {
         if (flags & ImGuiTreeNodeFlags_DrawLinesToNodes)
@@ -7269,7 +7270,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
         ImGuiNavRenderCursorFlags nav_render_cursor_flags = ImGuiNavRenderCursorFlags_Compact;
         if (is_multi_select)
             nav_render_cursor_flags |= ImGuiNavRenderCursorFlags_AlwaysDraw; // Always show the nav rectangle
-        if (display_frame)
+        if (is_framed)
         {
             // Framed type
             const ImU32 bg_col = GetColorU32((held && hovered) ? ImGuiCol_HeaderActive : hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header);
@@ -7281,8 +7282,6 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
                 RenderBullet(window->DrawList, ImVec2(text_pos.x - text_offset_x * 0.60f, text_pos.y + g.FontSize * 0.5f), text_col);
             else if (!is_leaf)
                 RenderArrow(window->DrawList, ImVec2(text_pos.x - text_offset_x + padding.x, text_pos.y), text_col, is_open ? ((flags & ImGuiTreeNodeFlags_UpsideDownArrow) ? ImGuiDir_Up : ImGuiDir_Down) : ImGuiDir_Right, 1.0f);
-            else // Leaf without bullet, left-adjusted text
-                text_pos.x -= text_offset_x - padding.x;
             if (flags & ImGuiTreeNodeFlags_ClipLabelForTrailingButton)
                 frame_bb.Max.x -= g.FontSize + style.FramePadding.x;
             if (g.LogEnabled)
@@ -7311,7 +7310,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
             TreeNodeDrawLineToChildNode(ImVec2(text_pos.x - text_offset_x + padding.x, text_pos.y + g.FontSize * 0.5f));
 
         // Label
-        if (display_frame)
+        if (is_framed)
             RenderTextClipped(text_pos, frame_bb.Max, label, label_end, &label_size);
         else
             RenderText(text_pos, label, label_end, false);

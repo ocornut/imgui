@@ -1,4 +1,4 @@
-// dear imgui, v1.93.1 WIP
+// dear imgui, v1.93.1
 // (demo code)
 
 // Help:
@@ -4542,11 +4542,10 @@ static void DemoWindowWidgetsTreeNodes()
                         ImGui::Text("This is a drag and drop source");
                         ImGui::EndDragDropSource();
                     }
-                    if (node_n == 2 && (base_flags & ImGuiTreeNodeFlags_SpanLabelWidth))
+                    if ((base_flags & ImGuiTreeNodeFlags_SpanLabelWidth))
                     {
-                        // Item 2 has an additional inline button to help demonstrate SpanLabelWidth.
                         ImGui::SameLine();
-                        if (ImGui::SmallButton("button")) {}
+                        ImGui::SmallButton("more"); // Additional inline button to help demonstrate SpanLabelWidth.
                     }
                     if (is_open)
                     {
@@ -4568,6 +4567,11 @@ static void DemoWindowWidgetsTreeNodes()
                         ImGui::SetDragDropPayload("MY_TREENODE_PAYLOAD_TYPE", NULL, 0);
                         ImGui::Text("This is a drag and drop source");
                         ImGui::EndDragDropSource();
+                    }
+                    if ((base_flags & ImGuiTreeNodeFlags_SpanLabelWidth))
+                    {
+                        ImGui::SameLine();
+                        ImGui::SmallButton("more"); // Additional inline button to help demonstrate SpanLabelWidth.
                     }
                 }
             }

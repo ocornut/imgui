@@ -492,9 +492,14 @@ void CleanupDeviceD3D()
 {
     CleanupRenderTarget();
     if (g_pSwapChain) { g_pSwapChain->SetFullscreenState(false, nullptr); g_pSwapChain->Release(); g_pSwapChain = nullptr; }
-    if (g_hSwapChainWaitableObject != nullptr) { CloseHandle(g_hSwapChainWaitableObject); }
-    for (UINT i = 0; i < APP_NUM_FRAMES_IN_FLIGHT; i++)
-        if (g_frameContext[i].CommandAllocator) { g_frameContext[i].CommandAllocator->Release(); g_frameContext[i].CommandAllocator = nullptr; }
+    if (g_hSwapChainWaitableObject != nullptr) { CloseHandle(g_hSwapChainWaitableObject); g_hSwapChainWaitableObject = nullptr; }
+    g_fenceLastSignaledValue = 0;
+    g_frameIndex = 0;
+    for (FrameContext& fc : g_frameContext)
+    {
+        if (fc.CommandAllocator) { fc.CommandAllocator->Release(); fc.CommandAllocator = nullptr; }
+        fc.FenceValue = 0;
+    }
     if (g_pd3dCommandQueue) { g_pd3dCommandQueue->Release(); g_pd3dCommandQueue = nullptr; }
     if (g_pd3dCommandList) { g_pd3dCommandList->Release(); g_pd3dCommandList = nullptr; }
     if (g_pd3dRtvDescHeap) { g_pd3dRtvDescHeap->Release(); g_pd3dRtvDescHeap = nullptr; }
@@ -502,6 +507,7 @@ void CleanupDeviceD3D()
     if (g_fence) { g_fence->Release(); g_fence = nullptr; }
     if (g_fenceEvent) { CloseHandle(g_fenceEvent); g_fenceEvent = nullptr; }
     if (g_pd3dDevice) { g_pd3dDevice->Release(); g_pd3dDevice = nullptr; }
+    g_pd3dSrvDescHeapAlloc.Destroy();
 
 #ifdef DX12_ENABLE_DEBUG_LAYER
     IDXGIDebug1* pDebug = nullptr;
@@ -551,6 +557,10 @@ bool WaitForObjects(HANDLE* handles, UINT handles_count)
 
 void WaitForPendingOperations()
 {
+    // Nothing to wait for if the device has already been torn down: CleanupRenderTarget() calls us,
+    // and CleanupDeviceD3D() may be called more than once while a lost device is being recreated.
+    if (g_pd3dCommandQueue == nullptr || g_fence == nullptr)
+        return;
     if (FAILED(g_pd3dCommandQueue->Signal(g_fence, ++g_fenceLastSignaledValue)))
         return; // Device lost: there is nothing left to wait for.
     if (FAILED(g_fence->SetEventOnCompletion(g_fenceLastSignaledValue, g_fenceEvent)))
