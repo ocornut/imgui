@@ -7,6 +7,10 @@ misc/debuggers/
   Helper files for popular debuggers (Visual Studio, GDB, LLDB).
   e.g. With the .natvis file, types like ImVector<> will be displayed nicely in Visual Studio debugger.
 
+misc/dwrite/
+  Font atlas builder/rasterizer using DirectWrite on Windows.
+  It features an improved rasterization quality over stb_truetype, the ability to load system font families, and system font fallback.
+
 misc/fonts/
   Fonts loading/merging instructions (e.g. How to handle glyph ranges, how to merge icons fonts).
   Command line tool "binary_to_compressed_c" to create compressed arrays to embed data in source code.
