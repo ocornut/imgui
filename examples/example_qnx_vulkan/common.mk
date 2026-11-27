@@ -10,6 +10,7 @@ SRCS = \
     imgui.cpp \
     imgui_demo.cpp \
     imgui_draw.cpp \
+    imgui_stacklayout.cpp \
     imgui_tables.cpp \
     imgui_widgets.cpp \
     imgui_impl_qnx.cpp \

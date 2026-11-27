@@ -18,6 +18,12 @@
     <ClInclude Include="..\..\imgui_internal.h">
       <Filter>imgui</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\imgui_stacklayout.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\imgui_stacklayout_internal.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\backends\imgui_impl_win32.h">
       <Filter>sources</Filter>
     </ClInclude>
@@ -46,6 +52,9 @@
     </ClCompile>
     <ClCompile Include="..\..\backends\imgui_impl_dx11.cpp">
       <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\imgui_stacklayout.cpp">
+      <Filter>imgui</Filter>
     </ClCompile>
     <ClCompile Include="..\..\imgui_tables.cpp">
       <Filter>imgui</Filter>

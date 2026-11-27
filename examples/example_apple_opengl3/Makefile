@@ -3,7 +3,7 @@ CXX = clang++
 EXE = example_apple_opengl3
 IMGUI_DIR = ../../
 SOURCES = main.mm
-SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
+SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_stacklayout.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
 SOURCES += $(IMGUI_DIR)/backends/imgui_impl_osx.mm $(IMGUI_DIR)/backends/imgui_impl_opengl3.cpp
 
 CXXFLAGS = -std=c++11 -ObjC++ -fobjc-arc -Wall -Wextra -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends
