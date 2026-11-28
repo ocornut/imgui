@@ -1,0 +1,68 @@
+# Makefile to use with SDL+Android
+# See https://wiki.libsdl.org/SDL3/README/android
+# for details on how SDL interacts with Android.
+#
+# This Makefile assumes you have wget or curl and Python v3 installed.
+#
+# Running `make -f Makefile.android` will produce these files or directories:
+#  - SDL-main.zip
+#  - SDL-main
+#  - com.imgui.example
+#
+
+# Variables
+PACKAGE_NAME := com.imgui.sdl3renderer3
+VARIANT := copy
+VERSION := 0.1.0
+URL := https://github.com/libsdl-org/SDL/archive/refs/heads/main.zip
+ARCHIVE_NAME := SDL-main.zip
+SDL_ROOT := SDL-main
+CREATED_ANDROID_PROJECT := $(CURDIR)/$(PACKAGE_NAME)
+ANDROID_SRCS_DIR := $(CREATED_ANDROID_PROJECT)/app/jni/src
+SDL_PYTHON_SCRIPT := $(SDL_ROOT)/build-scripts/create-android-project.py
+IMGUI_ROOT := $(realpath $(dir $(lastword $(MAKEFILE_LIST)))../..)
+
+SOURCES := \
+	$(IMGUI_ROOT)/backends/imgui_impl_sdlrenderer3.cpp \
+	$(IMGUI_ROOT)/backends/imgui_impl_sdl3.cpp \
+	$(IMGUI_ROOT)/imgui.cpp \
+	$(IMGUI_ROOT)/imgui_draw.cpp \
+	$(IMGUI_ROOT)/imgui_widgets.cpp \
+	$(IMGUI_ROOT)/imgui_demo.cpp \
+	$(IMGUI_ROOT)/imgui_tables.cpp \
+	main.cpp
+
+HEADERS := $(IMGUI_ROOT)/imstb_rectpack.h \
+	$(IMGUI_ROOT)/imstb_textedit.h \
+	$(IMGUI_ROOT)/imstb_truetype.h \
+	$(IMGUI_ROOT)/imgui.h \
+	$(IMGUI_ROOT)/imgui_internal.h \
+	$(IMGUI_ROOT)/imconfig.h \
+	$(IMGUI_ROOT)/backends/imgui_impl_sdl3.h \
+	$(IMGUI_ROOT)/backends/imgui_impl_sdlrenderer3.h
+
+# Targets
+.PHONY: all clean setup download extract run
+
+all: setup run
+
+clean:
+	rm -rf $(SDL_ROOT) $(ARCHIVE_NAME) $(CREATED_ANDROID_PROJECT)
+
+setup: download extract
+	@echo "Setting up the Android project..."
+	@which python3 > /dev/null || which python > /dev/null || { echo "Error: Python v3 is not installed."; exit 1;}
+
+download:
+	@echo "Downloading Android project..."
+	wget -O $(ARCHIVE_NAME) $(URL) || curl -L -o $(ARCHIVE_NAME) $(URL)
+
+extract:
+	@echo "Extracting Android project..."
+	mkdir -p $(SDL_ROOT)
+	unzip -o $(ARCHIVE_NAME) -d $(CURDIR)
+
+run:
+	@echo "Creating Android project..."
+	python3 $(SDL_PYTHON_SCRIPT) --variant $(VARIANT) --output $(CURDIR) $(PACKAGE_NAME) $(SOURCES)
+	cp -r $(HEADERS) $(ANDROID_SRCS_DIR)
