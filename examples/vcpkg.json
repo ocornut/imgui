@@ -1,0 +1,25 @@
+{
+  "dependencies": [
+    {
+      "name": "freeglut",
+      "platform": "!emscripten"
+    },
+    {
+      "name": "glfw3",
+      "platform": "!emscripten"
+    },
+    {
+      "name": "opengl",
+      "platform": "!emscripten"
+    },
+    {
+      "name": "sdl2",
+      "platform": "!emscripten"
+    },
+    "sdl3",
+    {
+      "name": "vulkan",
+      "platform": "!emscripten"
+    }
+  ]
+}
