@@ -264,7 +264,7 @@ void ImGui_ImplSDLRenderer3_RenderDrawData(ImDrawData* draw_data, SDL_Renderer* 
                 if (clip_max.y > (float)fb_height) { clip_max.y = (float)fb_height; }
                 if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)
                     continue;
-                SDL_Rect r = { (int)(clip_min.x), (int)(clip_min.y), (int)(clip_max.x - clip_min.x), (int)(clip_max.y - clip_min.y) };
+                SDL_Rect r = { (int)(clip_min.x), (int)(clip_min.y), (int)clip_max.x - (int)clip_min.x, (int)clip_max.y - (int)clip_min.y };
                 SDL_SetRenderClipRect(renderer, &r);
 
                 // Setup texture scale/filtering mode

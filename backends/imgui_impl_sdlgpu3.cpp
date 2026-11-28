@@ -294,8 +294,8 @@ void ImGui_ImplSDLGPU3_RenderDrawData(ImDrawData* draw_data, SDL_GPUCommandBuffe
                 SDL_Rect scissor_rect = {};
                 scissor_rect.x = (int)clip_min.x;
                 scissor_rect.y = (int)clip_min.y;
-                scissor_rect.w = (int)(clip_max.x - clip_min.x);
-                scissor_rect.h = (int)(clip_max.y - clip_min.y);
+                scissor_rect.w = (int)clip_max.x - (int)clip_min.x;
+                scissor_rect.h = (int)clip_max.y - (int)clip_min.y;
                 SDL_SetGPUScissor(render_pass,&scissor_rect);
 
                 // Bind DescriptorSet with font or user texture

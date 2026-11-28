@@ -283,8 +283,8 @@ void ImGui_ImplMetal_RenderDrawData(ImDrawData* draw_data, id<MTLCommandBuffer> 
                 {
                     .x = NSUInteger(clip_min.x),
                     .y = NSUInteger(clip_min.y),
-                    .width = NSUInteger(clip_max.x - clip_min.x),
-                    .height = NSUInteger(clip_max.y - clip_min.y)
+                    .width = NSUInteger(clip_max.x) - NSUInteger(clip_min.x),
+                    .height = NSUInteger(clip_max.y) - NSUInteger(clip_min.y)
                 };
                 [commandEncoder setScissorRect:scissorRect];
 
